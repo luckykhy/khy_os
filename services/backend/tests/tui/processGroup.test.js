@@ -202,6 +202,41 @@ describe('groupTitle', () => {
     expect(groupTitle([{ name: 'quote' }, { name: 'unpack' }])).toContain('quote');
     expect(groupTitle([{}, {}])).toBe('过程组');
   });
+
+  // BUG-114: truncateTitle cut a astral pair in half → lone surrogate in the
+  // collapsed process-group header (乱码). A command/filename carrying an emoji
+  // straddling the 40-column budget must never split.
+  test('truncating an astral-heavy command target never yields a lone surrogate', () => {
+    const lone = (s) => {
+      for (let i = 0; i < s.length; i++) {
+        const c = s.charCodeAt(i);
+        if (c >= 0xd800 && c <= 0xdbff) {
+          if (!(s.charCodeAt(i + 1) >= 0xdc00 && s.charCodeAt(i + 1) <= 0xdfff)) return true;
+        } else if (c >= 0xdc00 && c <= 0xdfff) {
+          if (!(s.charCodeAt(i - 1) >= 0xd800 && s.charCodeAt(i - 1) <= 0xdbff)) return true;
+        }
+      }
+      return false;
+    };
+    const EMOJI = '\u{1F600}';
+    // The high surrogate lands exactly on the legacy 40-unit cut → previously split.
+    const cmd = 'x'.repeat(38) + EMOJI + '更多内容超出预算确保触发截断';
+    const title = groupTitle([{ name: 'Bash', input: { command: cmd } }]);
+    expect(lone(title)).toBe(false);
+  });
+
+  test('truncates a CJK command target by display columns, not code units', () => {
+    const { displayWidth } = require('../../src/cli/formatters');
+    // 120 CJK chars = 240 columns but 120 UTF-16 units; the old `length > 40`
+    // path sliced to 39 UNITS = 78 columns and overflowed the header budget.
+    const cmd = '中文命令内容'.repeat(20);
+    const title = groupTitle([{ name: 'Bash', input: { command: cmd } }]);
+    // The truncated TARGET segment must be within its 40-column budget; the
+    // "执行命令 " category prefix is added separately, so assert the remainder
+    // after stripping the leading label is column-bounded.
+    const target = title.replace(/^执行命令\s?/, '');
+    expect(displayWidth(target)).toBeLessThanOrEqual(40);
+  });
 });
 
 describe('statusSummary', () => {

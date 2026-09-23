@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [IMPL-RPT-047] 六道治理债清理与密钥轮换-2026-09-08.md -->
+<title>[IMPL-RPT-047] 六道治理债清理与密钥轮换 — 实施记录 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>IMPL-RPT<span class="sep">›</span>[IMPL-RPT-047] 六道治理债清理与密钥轮换 — 实施记录</div>
+      <header class="hero reveal"><h1>[IMPL-RPT-047] 六道治理债清理与密钥轮换 — 实施记录</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#impl-rpt-047-六道治理债清理与密钥轮换-实施记录">[IMPL-RPT-047] 六道治理债清理与密钥轮换 — 实施记录</a></li><li class="lvl-2"><a href="#一-设计要点">一、设计要点</a></li><li class="lvl-3"><a href="#1-门禁要能-只减不增-而不是-全绿">1. 门禁要能「只减不增」，而不是「全绿」</a></li><li class="lvl-3"><a href="#2-判定逻辑必须可脱离框架单测">2. 判定逻辑必须可脱离框架单测</a></li><li class="lvl-3"><a href="#3-密钥轮换的正确形态是-密钥环-增量重包-不是-换一把锁">3. 密钥轮换的正确形态是「密钥环 + 增量重包」，不是「换一把锁」</a></li><li class="lvl-3"><a href="#4-迁移留下的兼容性缺口要如实报告-不能靠测试侧硬改">4. 迁移留下的兼容性缺口要如实报告，不能靠测试侧硬改</a></li><li class="lvl-2"><a href="#二-改动清单">二、改动清单</a></li><li class="lvl-3"><a href="#前端-lint-门禁与路由判定">前端：lint 门禁与路由判定</a></li><li class="lvl-3"><a href="#前端-6-个-error-级真-bug">前端：6 个 error 级真 bug</a></li><li class="lvl-3"><a href="#仓库治理-check-layout-5-项清零">仓库治理：`check:layout` 5 项清零</a></li><li class="lvl-3"><a href="#后端-jest-基线归因与导入修复">后端：jest 基线归因与导入修复</a></li><li class="lvl-3"><a href="#后端-密钥轮换-dek-kek-双层-envelope">后端：密钥轮换（DEK/KEK 双层 envelope）</a></li><li class="lvl-2"><a href="#三-验收">三、验收</a></li><li class="lvl-3"><a href="#前端门禁">前端门禁</a></li><li class="lvl-3"><a href="#仓库治理">仓库治理</a></li><li class="lvl-3"><a href="#密钥轮换">密钥轮换</a></li><li class="lvl-3"><a href="#jest-基线-部分达成-见-四">jest 基线（部分达成，见 §四）</a></li><li class="lvl-2"><a href="#四-未完成与边界-如实登记">四、未完成与边界（如实登记）</a></li><li class="lvl-2"><a href="#五-changelog-建议">五、CHANGELOG 建议</a></li><li class="lvl-2"><a href="#六-建议的后续任务">六、建议的后续任务</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="impl-rpt-047-六道治理债清理与密钥轮换-实施记录">[IMPL-RPT-047] 六道治理债清理与密钥轮换 — 实施记录<a class="anchor" href="#impl-rpt-047-六道治理债清理与密钥轮换-实施记录" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>日期</strong>：2026-09-08<br><strong>范围</strong>：CI 门禁真空与路由白名单（前端）、6 个 error 级真 bug、<code>check:layout</code> 5 项预存 error、后端 jest 基线归因、渠道 API Key 密钥轮换<br><strong>上游任务</strong>：IMPL-RPT-046（渠道 API 文档板块）收尾时提出的 6 项建议后续<br><strong>一句话结论</strong>：6 项里 5 项已落地并有可复现的验证数据；第 6 项（密钥轮换）已实现完整机制，但<strong>轮换本身尚未在生产执行</strong>，且 jest 基线的真正阻塞项（被删源码）超出本轮可做范围。</p></blockquote>
+<hr>
+<h2 id="一-设计要点">一、设计要点<a class="anchor" href="#一-设计要点" aria-label="锚点">#</a></h2>
+<h3 id="1-门禁要能-只减不增-而不是-全绿">1. 门禁要能「只减不增」，而不是「全绿」<a class="anchor" href="#1-门禁要能-只减不增-而不是-全绿" aria-label="锚点">#</a></h3>
+<p>前端 lint 存量是 1690 个 warning（其中 1661 个是 <code>vue/attributes-order</code> 纯格式项）。<br>一次性 <code>--fix</code> 能清掉，但会在约 50 个文件的模板里重排属性，产生一个巨大的无关 diff。<br>因此沿用仓库既有的基线预算模式：<strong>error 硬 0，warning 记录实测值并只允许下降</strong>。<br>这样门禁立刻生效（新增 error 立即失败），而格式债被显式登记、不阻塞功能改动。</p>
+<h3 id="2-判定逻辑必须可脱离框架单测">2. 判定逻辑必须可脱离框架单测<a class="anchor" href="#2-判定逻辑必须可脱离框架单测" aria-label="锚点">#</a></h3>
+<p><code>detectRouterBase()</code> 的旧实现靠 <code>IN_APP_ADMIN_SEGMENTS</code> 白名单排除站内 <code>/admin/*</code> 页面。<br>每加一个站内页就要补一段白名单，漏补就整站 404 且无报错。<br>把「已注册路由优先匹配」抽成无依赖的纯函数（<code>src/router/adminBase.js</code>），<br><code>routes</code> 只在调用点注入，于是能用 <code>node --test</code> 直接测，不需要 Vue / vue-router / 浏览器。</p>
+<h3 id="3-密钥轮换的正确形态是-密钥环-增量重包-不是-换一把锁">3. 密钥轮换的正确形态是「密钥环 + 增量重包」，不是「换一把锁」<a class="anchor" href="#3-密钥轮换的正确形态是-密钥环-增量重包-不是-换一把锁" aria-label="锚点">#</a></h3>
+<p>换 env 会让旧 KEK 包封的 DEK 永久解不开，等于静默丢 Key。<br>单纯的双层 envelope 并不解决这个问题——DEK 还是被同一个 KEK 包着的。<br>真正解开的两点：</p>
+<ul><li><strong>密钥环</strong>：主 KEK + 退役 KEK 有序列表，解密按序尝试。轮换过渡期新旧密文都读得通，</li></ul>
+<p>老数据不需要迁移即可上线。</p>
+<ul><li><strong>DEK 按记录独立</strong>：正是为了让「重包」可以一条记录一条地做，而不是停机全库重加密。</li></ul>
+<p>两者缺一不可：只有环则永远清不掉退役 KEK；只有 envelope 则换 env 照样丢数据。</p>
+<h3 id="4-迁移留下的兼容性缺口要如实报告-不能靠测试侧硬改">4. 迁移留下的兼容性缺口要如实报告，不能靠测试侧硬改<a class="anchor" href="#4-迁移留下的兼容性缺口要如实报告-不能靠测试侧硬改" aria-label="锚点">#</a></h3>
+<p><code>src/services/domain/**</code> 迁移把 139 个服务目录清空成只剩 barrel <code>index.js</code>。<br>barrel 只做了<strong>属性级</strong>兼容，深路径全断。测试侧 556 处深导入中招。<br>其中 372 处能从 barrel 的 <code>exports.x = require('&lt;新路径&gt;')</code> 反推正确目标并机械改写；<br>另 193 处指向<strong>全树不存在的模块</strong>（barrel 是空壳、basename 检索无命中）——<br>这些源文件被删除且未迁移，改测试无用，必须先恢复源码。</p>
+<hr>
+<h2 id="二-改动清单">二、改动清单<a class="anchor" href="#二-改动清单" aria-label="锚点">#</a></h2>
+<h3 id="前端-lint-门禁与路由判定">前端：lint 门禁与路由判定<a class="anchor" href="#前端-lint-门禁与路由判定" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>动作</th><th>说明</th></tr></thead><tbody><tr><td><code>apps/ai-frontend/scripts/lint.mjs</code></td><td>新增</td><td>ESLint 程序化 API 跑 <code>src/</code>，显式 <code>extensions: ['.js', '.vue']</code>；error 硬 0，warning 预算 1694 只允许下降；打印按规则分布。用 API 而非 CLI 是因为 eslint 8 的 <code>exports</code> 不暴露 <code>eslint/bin/eslint.js</code>（<code>ERR_PACKAGE_PATH_NOT_EXPORTED</code>），且 Windows 下 <code>.bin/eslint</code> 是 <code>.cmd</code> shim，<code>spawnSync</code> 无 shell 解不开</td></tr><tr><td><code>apps/ai-frontend/package.json</code></td><td>改</td><td>新增 <code>&quot;lint&quot;: &quot;node scripts/lint.mjs&quot;</code>（此前<strong>完全没有</strong> lint 脚本，<code>npx eslint src/</code> 是临时手跑）</td></tr><tr><td><code>apps/ai-frontend/src/router/adminBase.js</code></td><td>新增</td><td>纯函数：<code>collectAdminRouteSegments(routes)</code> 从路由表派生需排除的段；<code>resolveRouterBase({pathname, envBase, adminSegments})</code></td></tr><tr><td><code>apps/ai-frontend/src/router/index.js</code></td><td>改</td><td>删除 <code>IN_APP_ADMIN_SEGMENTS</code>；<code>detectRouterBase()</code> 改为从 <code>routes</code> 派生</td></tr><tr><td><code>apps/ai-frontend/test/adminBase.test.mjs</code></td><td>新增</td><td>11 个 <code>node --test</code> 用例，含 404 回归（站内 <code>/admin/channel-apis</code> 不得被当作 base）</td></tr></tbody></table>
+<p><code>adminBase.js</code> 里一个真 bug 是写测试时暴露的：<code>VITE_AI_ROUTER_BASE</code> 漏前导斜杠<br>（<code>sub/app</code>）时，归一化原本发生在 <code>startsWith</code> 比较<strong>之后</strong>，导致永远匹配不上、<br>静默退化成 <code>/</code>，表现为整站路由错位而无任何报错。已改为比较前归一化。</p>
+<h3 id="前端-6-个-error-级真-bug">前端：6 个 error 级真 bug<a class="anchor" href="#前端-6-个-error-级真-bug" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>修复</th><th>影响</th></tr></thead><tbody><tr><td><code>src/composables/useConfigSync.js</code></td><td><code>_init()</code> 调闭包私有的 <code>getAll</code> → 抽成模块级 <code>_pullAll()</code></td><td><strong>最严重</strong>：每次 <code>onMounted</code> 抛 <code>ReferenceError</code>，云端配置同步实际完全没跑过，一直静默走离线分支</td></tr><tr><td><code>src/views/AIChat.vue</code></td><td><code>loadModels()</code> 引用不存在的 <code>gw</code></td><td>流式分支是死代码，永远抛进 catch 跑 REST 回退；连带 <code>modelLoadPercent</code> 永不推进</td></tr><tr><td><code>src/views/AIGateway.vue</code></td><td><code>modelCatalog.value</code> → <code>gw.modelCatalog.value</code></td><td>同一类笔误</td></tr><tr><td><code>src/views/GuiEvalRunDetail.vue</code></td><td>补 <code>reactive</code> 导入</td><td>line 230 用了未导入的 <code>reactive</code></td></tr><tr><td><code>src/views/WebFrontendEvalDashboard.js</code></td><td><code>hasOwnProperty</code> → <code>Object.prototype.hasOwnProperty.call</code></td><td>同时修掉对 <code>&quot;__proto__&quot;</code> 类键的误判</td></tr><tr><td><code>src/api/notify.js</code></td><td>删 <code>_ensureKhy</code> 的未用参数</td><td>次要</td></tr></tbody></table>
+<p>另清理 3 处死代码：<code>AIChat.vue</code> 的 <code>modelLoadPercent</code>、<code>src/main.js</code> 的 <code>clearLocalAuthState()</code><br>（定义一次、从未调用、未导出）、<code>src/services/crossPlatform/shared/crossLauncher.js</code> 的局部 <code>root</code>。</p>
+<p>SSE 读流循环的 <code>while (true)</code> 改为显式 <code>streamDone</code> 标志，避免 <code>no-constant-condition</code>。</p>
+<h3 id="仓库治理-check-layout-5-项清零">仓库治理：<code>check:layout</code> 5 项清零<a class="anchor" href="#仓库治理-check-layout-5-项清零" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项</th><th>处置</th></tr></thead><tbody><tr><td><code>root-whitelist</code>：<code>tmp_files.txt</code></td><td>删除（194KB 源文件路径草稿，根目录唯一引用在自述它的文档里）</td></tr><tr><td><code>docs-index-first</code></td><td>为 <code>docs/design/</code>、<code>docs/15_维护记录/</code> 各补 <code>00_INDEX_*</code>，并在索引里写明与编号目录的边界</td></tr><tr><td><code>layer-registry</code>：<code>dist-electron/</code> / <code>electron/</code> / <code>tests/</code></td><td>先改 <code>[DESIGN-LAY-005]</code> §1.3（<code>dist-electron/</code> 加入生成目录）与新增 §1.4（根级例外目录登记表，含「为何不能归入 L0–L6」的判据与准入门槛），再同步脚本的 <code>CROSSCUTTING</code> / <code>GENERATED_TOP_LEVEL_DIRS</code></td></tr><tr><td><code>extension-contract</code></td><td><code>extensions/scripts/khy-alpine-iso/khy.extension.json</code> 补 <code>provides</code> + 两个命令的 <code>script</code>；修复后 count 5→2 暴露出同批遗漏的 <code>extensions/scripts/khy-qoder-bridge</code>，一并补。两者都是 2026-08-19 目录迁移时用 v1 习惯写的。<strong>保留 <code>entry</code> 作为冗余别名</strong>，避免仍在读它的消费方断掉</td></tr><tr><td><code>docs-index-complete</code>：44 份漏链</td><td>43 份设计文档 + 1 份实现文档补登主索引（脚本生成、幂等）；同时把主索引过期的阶段计数表刷到实测值（<code>03_DESIGN</code> 79→120、<code>04_IMPL</code> 39→42、<code>06_DEPLOY</code> 22→23）与过期说明</td></tr></tbody></table>
+<h3 id="后端-jest-基线归因与导入修复">后端：jest 基线归因与导入修复<a class="anchor" href="#后端-jest-基线归因与导入修复" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>动作</th></tr></thead><tbody><tr><td><code>services/backend/tests/**/*.test.js</code>（214 个文件）</td><td>372 处导入改写：298 处旧深路径 → <code>src/services/domain/**</code> 新路径（相对深度一并重算），74 处 barrel 桶测试的 <code>require('./index')</code> → <code>../../../src/services/&lt;dir&gt;</code></td></tr><tr><td><code>services/backend/package.json</code></td><td>新增 <code>&quot;test:one&quot;: &quot;jest&quot;</code>（<code>tests/DEBT.md</code> 原本引用了这个不存在的脚本）</td></tr><tr><td><code>tests/DEBT.md</code></td><td>整份重写：替换此前的占位符登记（9 条全是「待诊断」+ 引用不存在的命令），登记实测基线、7 类根因分桶、已修/未修边界、P0–P4 后续</td></tr></tbody></table>
+<h3 id="后端-密钥轮换-dek-kek-双层-envelope">后端：密钥轮换（DEK/KEK 双层 envelope）<a class="anchor" href="#后端-密钥轮换-dek-kek-双层-envelope" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>动作</th></tr></thead><tbody><tr><td><code>src/services/channelApiCrypto.js</code></td><td>加密产物从 v1 <code>iv:tag:ct</code> 升级为 v2 <code>v2:&lt;wIv&gt;:&lt;wTag&gt;:&lt;wDek&gt;:&lt;iv&gt;:&lt;tag&gt;:&lt;ct&gt;</code>；新增 <code>KEY_SECRET_PREVIOUS_ENV</code>、<code>resolveKeyRing()</code>、<code>decryptWith()</code>、<code>unwrapKeyIndex()</code>、<code>needsRewrap()</code>、<code>reEncryptApiKey()</code>、<code>wrapVersion()</code>；<code>decryptApiKey()</code> 在不给显式密钥时按密钥环逐把尝试；v1 密文按段数自识别继续可读</td></tr><tr><td><code>tests/channelApiService.test.js</code></td><td>更新格式断言（3 段 → 7 段），新增 4 组用例：v2 往返 + DEK/IV 唯一性、v1 历史密文兼容、密钥环轮换可读 + <code>needsRewrap</code> 判定、<code>reEncryptApiKey</code> 迁到主 KEK 后单靠主 KEK 可解</td></tr></tbody></table>
+<p>实现中的一个真 bug 是自查发现的：DEK 是 32 字节随机二进制，<strong>不是合法 UTF-8</strong>，<br>若经 utf8 字符串搬运会被替换字符破坏字节——解包「成功」却拿到错误的 DEK。<br>已改为 <code>_gcmOpenBuf()</code> 返回 <code>Buffer</code>，DEK 走二进制路径，明文走字符串路径。</p>
+<hr>
+<h2 id="三-验收">三、验收<a class="anchor" href="#三-验收" aria-label="锚点">#</a></h2>
+<h3 id="前端门禁">前端门禁<a class="anchor" href="#前端门禁" aria-label="锚点">#</a></h3>
+<pre><code>前端 lint（src/，含 .js + .vue）:
+  errors:   0  OK
+  warnings: 1690  OK 在预算内
+  按规则:
+     1661  vue/attributes-order
+       23  no-unused-vars
+        5  vue/no-v-html
+        1  vue/require-prop-types
+
+前端 lint 门禁通过。</code></pre>
+<ul><li><code>npm run test:node</code> → <strong>21/21 通过</strong>（含新增 11 个 <code>adminBase</code> 用例）</li><li>修复前 error 级为 6 个，全部是真 bug，现已 0</li></ul>
+<h3 id="仓库治理">仓库治理<a class="anchor" href="#仓库治理" aria-label="锚点">#</a></h3>
+<pre><code>$ node scripts/ci/check-repo-layout.js
+counts: {&quot;docs-index-complete&quot;:0,&quot;dangling-task&quot;:0,&quot;cross-layer-require&quot;:0,
+         &quot;unresolved-require&quot;:0,&quot;extension-contract&quot;:0,&quot;extension-id-hardcode&quot;:0,
+         &quot;extension-path-drift&quot;:0}
+result: 无结构发现，层级规范全绿。</code></pre>
+<p><code>docs-index-complete</code> 由 44 → 0；七个被扫描阶段目录实测 100% 覆盖。</p>
+<h3 id="密钥轮换">密钥轮换<a class="anchor" href="#密钥轮换" aria-label="锚点">#</a></h3>
+<pre><code>$ npm test -- tests/channelApiService.test.js
+PASS tests/channelApiService.test.js
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total</code></pre>
+<p>覆盖的轮换链路：<code>A</code> 加密 → 换 env 为 <code>B</code>（旧密文解不出，复现原缺陷）→<br>挂 <code>B</code> + 退役 <code>A</code>（旧密文恢复可读）→ <code>reEncryptApiKey</code> 迁到 <code>B</code> →<br>只留 <code>B</code> 即可解、<code>needsRewrap</code> 转 false。全程 fail-soft，坏输入返回 <code>''</code> 不抛。</p>
+<h3 id="jest-基线-部分达成-见-四">jest 基线（部分达成，见 §四）<a class="anchor" href="#jest-基线-部分达成-见-四" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th style="text-align:right">修复前</th><th style="text-align:right">修复后</th></tr></thead><tbody><tr><td>套件失败</td><td style="text-align:right">501</td><td style="text-align:right"><strong>465</strong></td></tr><tr><td>套件通过</td><td style="text-align:right">675</td><td style="text-align:right"><strong>711</strong></td></tr><tr><td>用例失败</td><td style="text-align:right">866</td><td style="text-align:right"><strong>798</strong></td></tr><tr><td>用例通过</td><td style="text-align:right">8227</td><td style="text-align:right"><strong>8804</strong></td></tr></tbody></table>
+<p>回收 36 套件 / 577 用例。改写的 214 个文件 <code>node --check</code> 全部通过。</p>
+<hr>
+<h2 id="四-未完成与边界-如实登记">四、未完成与边界（如实登记）<a class="anchor" href="#四-未完成与边界-如实登记" aria-label="锚点">#</a></h2>
+<ol><li><strong>jest 基线未清零，465 个套件仍失败。</strong> 分类见 <code>tests/DEBT.md</code>：</li></ol>
+<p>139 其它（含约 30 个语法损坏的测试文件）/ 99 测试作用域错误 / 91 迁移遗留 /<br>   80 断言失败 / 33 API 签名漂移 / 19 双 runner 皆死 / 4 硬超时。</p>
+<ol><li><strong>P0 硬阻塞：193 个深路径指向全树不存在的模块</strong>（<code>desktopControl/*</code>、<code>memoryEngine/*</code>、</li></ol>
+<p><code>wasm-sandbox/*</code>、<code>dualTrack/*</code>、<code>contextScope/*</code>、<code>auditTrajectory/*</code>、<code>evoEngine/*</code>、<br>   <code>trajectoryReplay/*</code> 等），barrel 为空壳、全树 basename 检索无命中。<br>   源文件被删且未迁移，测试侧无法修复，<strong>需先恢复源码</strong>。<br>   这是本轮无法推进 jest 基线的根本原因，不是修得不够多。</p>
+<ol><li><strong>「moduleDirectories」这个归因是错的。</strong> <code>jest --showConfig</code> 实测</li></ol>
+<p><code>moduleDirectories: [&quot;node_modules&quot;]</code>、<code>moduleNameMapper: []</code>、<code>roots: [&quot;&lt;rootDir&gt;&quot;]</code><br>   全为默认值，解析配置无任何异常。真正根因是 domain 迁移的兼容性缺口。<br>   另有一条独立缺陷：<code>tests/cli/extensions/extensionManager.test.js</code> 用<br>   <code>../../src/cli/extensions/extensionManager</code>，从它所在目录算出来是 <code>tests/src/...</code><br>   ——<strong>相对深度本身就错</strong>，该修的是测试文件而非 jest 配置。</p>
+<ol><li><strong>1661 个 <code>vue/attributes-order</code> 未清零</strong>，需一次独立的模板属性排序 <code>--fix</code> 任务。</li></ol>
+<p>刻意不并入本轮，避免在无关模板里制造大 diff。</p>
+<ol><li><strong>密钥轮换机制已实现但未在生产执行。</strong> 生产库现有密文仍是 v1 格式；</li></ol>
+<p>升级后新写入变 v2，旧 v1 记录靠 v1 分支继续可读，<code>needsRewrap</code> 不会为 v1 记录<br>   报 true（它挂在主 KEK 上，环下标为 0）。<strong>若确实要执行一次真实轮换</strong>，需：<br>   把当前 <code>KHY_CHANNEL_KEY_SECRET</code> 写入 <code>KHY_CHANNEL_KEY_SECRET_PREVIOUS</code>、<br>   设置新主密钥，然后对每条记录跑 <code>reEncryptApiKey</code> 再迁回。<br>   <strong>本轮未实现逐条重包的批处理入口</strong>（没有 DB 层迭代器、没有 CLI 子命令），<br>   这是下一个该补的东西。</p>
+<ol><li><strong><code>tests/DEBT.md</code> 的 P3（113 个断言失败 + 签名漂移）需人工逐个判读代码</strong>，</li></ol>
+<p>无法机械批量修。</p>
+<hr>
+<h2 id="五-changelog-建议">五、CHANGELOG 建议<a class="anchor" href="#五-changelog-建议" aria-label="锚点">#</a></h2>
+<pre><code>### Fixed
+- 渠道 API Key 加密升级为 DEK/KEK 双层 envelope（v2 密文），新增密钥环
+  `KHY_CHANNEL_KEY_SECRET_PREVIOUS` 与 `reEncryptApiKey`，支持平滑轮换；
+  历史 v1 密文保持可读，升级不会丢已保存的 Key
+- 修复云端配置同步从不执行的缺陷（`useConfigSync._init` 调用闭包私有函数，
+  每次挂载抛 ReferenceError 后静默走离线分支）
+- 修复模型列表流式分支为死代码（引用不存在的 `gw`，异常被 catch 吞掉后走 REST 回退）
+- 修复 `VITE_AI_ROUTER_BASE` 漏前导斜杠时整站路由静默错位
+- 补齐 44 份漏登主索引的阶段文档；删除根目录 194KB 草稿 `tmp_files.txt`
+
+### Changed
+- 前端 lint 门禁改为显式覆盖 `.vue`，error 硬 0 + warning 预算只减不增
+  （此前 `eslint src/` 不覆盖 `.vue`，6 个 error 级真 bug 因此从未被门禁拦住）
+- `detectRouterBase` 不再依赖 `IN_APP_ADMIN_SEGMENTS` 白名单，改由已注册路由派生
+- `check:layout` 结构发现归零；`tests/DEBT.md` 登记实测 jest 基线（501→465 套件）</code></pre>
+<hr>
+<h2 id="六-建议的后续任务">六、建议的后续任务<a class="anchor" href="#六-建议的后续任务" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>任务</th><th>优先级</th><th>备注</th></tr></thead><tbody><tr><td>1</td><td>恢复被删的 domain 模块源码</td><td><strong>P0</strong></td><td>阻塞约 91 个套件；<code>src/services/domain/**</code> 迁移遗留，193 个路径</td></tr><tr><td>2</td><td>修复约 30 个语法损坏的测试文件</td><td>P1</td><td><code>tests/services/__tests__/</code> 等，<code>SyntaxError: Unterminated string</code></td></tr><tr><td>3</td><td>修 19 个双 runner 皆死套件</td><td>P2</td><td>补 <code>require('node:test')</code> + <code>expect()</code> → <code>assert.*</code>；守卫无需改</td></tr><tr><td>4</td><td>补 <code>reEncryptApiKey</code> 的批处理入口（DB 迭代 + <code>khy</code> 子命令）</td><td>P2</td><td>没有它，§四.5 的真实轮换只能手工逐条做</td></tr><tr><td>5</td><td>逐个诊断 113 个断言失败 / 签名漂移</td><td>P3</td><td>真 bug 与测试腐坏需人工判读</td></tr><tr><td>6</td><td>一次性 <code>vue/attributes-order --fix</code></td><td>P4</td><td>1661 项，独立 diff，建议单独一轮</td></tr><tr><td>7</td><td>给 4 个超时套件加 per-test timeout</td><td>P4</td><td>实测 5.2–17.6s，jest 默认 5s 是固定墙钟</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-046] 渠道 API 文档板块-2026-09-08.html"><div class="dir">← 上一篇</div><div class="ttl">[IMPL-RPT-046] 渠道 API 文档板块 — 实现记录</div></a><a class="next" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-048] 网页端 Phase1 把坏暴露出来-落地记录-2026-09-08.html"><div class="dir">下一篇 →</div><div class="ttl">[IMPL-RPT-048] 网页端 Phase 1「把坏暴露出来」落地记录-2026-09-08</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-047] 六道治理债清理与密钥轮换-2026-09-08.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

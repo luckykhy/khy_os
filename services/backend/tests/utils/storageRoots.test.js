@@ -77,7 +77,9 @@ describe('storageRoots', () => {
         fsImpl: require('fs'),
       });
       expect(result.source).toBe('env');
-      expect(result.dir).toContain('/tmp/test-output');
+      // path.join normalizes '/tmp/test-output' to a native-separator path on
+      // Windows ('\\tmp\\test-output'), so assert the substring OS-agnostically.
+      expect(result.dir.replace(/\\/g, '/')).toContain('/tmp/test-output/test');
     });
   });
 });

@@ -6,6 +6,10 @@ const FIXTURES = Object.freeze({
   'cliToolAdapter.js': { family: 'cli', transports: ['subprocess'], markers: ['buildSuccess('] },
   'clipboardRelayAdapter.js': { family: 'clipboard', transports: ['subprocess'], markers: ['buildSuccess('] },
   'codexAdapter.js': { family: 'cli', transports: ['subprocess'], markers: ['buildSuccess('] },
+  // Thin shell over cliToolAdapter (targets the `commandcode` CLI via
+  // `cliTool: 'commandcode'`), same shape as openclawAdapter/opencodeAdapter —
+  // hence the same family/transport/marker recipe.
+  'commandCodeAdapter.js': { family: 'cli-wrapper', transports: ['subprocess'], markers: ['cliToolAdapter.generate('] },
   'cursor2apiAdapter.js': { family: 'http-sse', transports: ['http'], markers: ['buildSuccess('] },
   'cursorAdapter.js': { family: 'ide-bridge', transports: ['https'], markers: ['buildSuccess('] },
   'kiroAdapter.js': { family: 'ide-bridge', transports: ['https'], markers: ['buildSuccess('] },

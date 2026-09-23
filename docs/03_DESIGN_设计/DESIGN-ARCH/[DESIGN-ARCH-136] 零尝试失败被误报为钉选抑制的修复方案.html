@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-136] 零尝试失败被误报为钉选抑制的修复方案.md -->
+<title>[DESIGN-ARCH-136] 零尝试失败被误报为「钉选抑制」的修复方案 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-136] 零尝试失败被误报为「钉选抑制」的修复方案</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-136] 零尝试失败被误报为「钉选抑制」的修复方案</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-136-零尝试失败被误报为-钉选抑制-的修复方案">[DESIGN-ARCH-136] 零尝试失败被误报为「钉选抑制」的修复方案</a></li><li class="lvl-2"><a href="#0-一句话结论">0. 一句话结论</a></li><li class="lvl-2"><a href="#1-现状实证">1. 现状实证</a></li><li class="lvl-3"><a href="#1-1-现象精确复现-探针-非推测">1.1 现象精确复现（探针，非推测）</a></li><li class="lvl-3"><a href="#1-2-三处判据同源-且都用严格相等">1.2 三处判据同源，且都用严格相等</a></li><li class="lvl-3"><a href="#1-3-触发链-四步-每步-file-line">1.3 触发链（四步，每步 file:line）</a></li><li class="lvl-3"><a href="#1-4-归因-这不是并行会话改动引入的">1.4 归因：这不是并行会话改动引入的</a></li><li class="lvl-2"><a href="#2-借鉴提案">2. 【借鉴提案】</a></li><li class="lvl-2"><a href="#3-目标形态">3. 目标形态</a></li><li class="lvl-3"><a href="#3-1-第-1-期-信封-让-零证据-成为一个可说出口的事实">3.1 第 1 期 — 信封：让「零证据」成为一个可说出口的事实</a></li><li class="lvl-3"><a href="#3-2-第-2-期-调用方-诊断质量不得降级">3.2 第 2 期 — 调用方：诊断质量不得降级</a></li><li class="lvl-3"><a href="#3-3-第-3-期-根因-钉选残留不再静默">3.3 第 3 期 — 根因：钉选残留不再静默</a></li><li class="lvl-2"><a href="#4-实施分期-每期独立可回滚">4. 实施分期（每期独立可回滚）</a></li><li class="lvl-2"><a href="#5-诚实边界-刻意不纳入">5. 诚实边界（刻意不纳入）</a></li><li class="lvl-2"><a href="#6-反模式-这条路别走">6. 反模式（这条路别走）</a></li><li class="lvl-2"><a href="#7-验收方式">7. 验收方式</a></li><li class="lvl-3"><a href="#7-1-新增测试-必须用-require-node-test">7.1 新增测试（**必须用 `require('node:test')`**）</a></li><li class="lvl-3"><a href="#7-2-反向复现-人工-一条操作">7.2 反向复现（人工，一条操作）</a></li><li class="lvl-3"><a href="#7-3-关联门禁">7.3 关联门禁</a></li><li class="lvl-2"><a href="#8-待核实项">8. 待核实项</a></li><li class="lvl-3"><a href="#优先-阻断-确证-不阻断修复">★ 优先（阻断&quot;确证&quot;，不阻断修复）</a></li><li class="lvl-3"><a href="#其它">其它</a></li><li class="lvl-2"><a href="#9-实施记录">9. 实施记录</a></li><li class="lvl-3"><a href="#9-1-落地清单">9.1 落地清单</a></li><li class="lvl-3"><a href="#9-2-与方案的偏离-逐条给原因">9.2 与方案的偏离（逐条给原因）</a></li><li class="lvl-3"><a href="#9-3-验收实测">9.3 验收实测</a></li><li class="lvl-3"><a href="#9-4-明确不做">9.4 明确不做</a></li><li class="lvl-3"><a href="#9-5-实施中发现的下一个真问题-已于同日第二轮落地-见-9-6">9.5 ★ 实施中发现的下一个真问题（✅ 已于同日第二轮落地，见 §9.6）</a></li><li class="lvl-3"><a href="#9-6-9-5-的落地-同日第二轮-启动路径接入钉选自检">9.6 §9.5 的落地（同日第二轮）：启动路径接入钉选自检</a></li><li class="lvl-2"><a href="#10-变更日志">10. 变更日志</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-136-零尝试失败被误报为-钉选抑制-的修复方案">[DESIGN-ARCH-136] 零尝试失败被误报为「钉选抑制」的修复方案<a class="anchor" href="#design-arch-136-零尝试失败被误报为-钉选抑制-的修复方案" aria-label="锚点">#</a></h1>
+<blockquote><p>状态：<strong>待评审</strong>（提案，未落地）<br>范围：<code>cliFailureEnvelope.js</code>（诊断码与路由披露）+ <code>aiChatCore.js</code>（回退重试的结果覆盖策略）+ <code>khy gateway status</code>（钉选残留告警）<br>上游依赖：<code>[DESIGN-ARCH-114] CLI 错误标准化规范</code>（信封契约）、<code>RUNTIME-005</code>、<code>RUNTIME-002</code>（状态透明）<br>调研指针：本方案由 2026-09-23 TUI 实机截图触发，取证全部为 file:line 可复核<br>模板合规：按 <code>[DESIGN-ARCH-124]</code> 体例；B-P2 依 <code>[SOURCING-001]</code> §3 B-P1 <strong>据实声明不适用</strong>（见 §2）</p></blockquote>
+<hr>
+<h2 id="0-一句话结论">0. 一句话结论<a class="anchor" href="#0-一句话结论" aria-label="锚点">#</a></h2>
+<p><strong>TUI 首屏那句「本次请求未能完成 <code>[NONE]</code> / 路由: 钉选 strict(GATEWAY_PREFERRED_ADAPTER=api),本轮不回退」是两处缺陷叠加的产物：</strong></p>
+<table><thead><tr><th>#</th><th>病灶</th><th>位置</th><th>症状</th></tr></thead><tbody><tr><td><strong>A</strong></td><td>「<strong>一条失败记录都没有</strong>」被翻译成「<strong>钉选抑制了回退</strong>」</td><td><code>cliFailureEnvelope.js:112-122</code></td><td>首屏披露了一个<strong>根本没发生</strong>的因果</td></tr><tr><td><strong>B</strong></td><td>「零证据」没有专项码，落进 <code>NONE</code> 兜底（文案零信息）</td><td><code>cliFailureEnvelope.js:256-259</code></td><td>用户拿不到任何可执行诊断</td></tr><tr><td><strong>C</strong></td><td>回退重试的失败结果<strong>无条件覆盖</strong>首次结果</td><td><code>aiChatCore.js:3125-3128</code></td><td>把原本更具体的诊断<strong>换成更差的</strong></td></tr><tr><td><strong>D</strong></td><td><code>.env</code> 钉选残留可手改，注释承诺 4 次、值改 0 次</td><td><code>services/backend/.env:51-52</code></td><td>同一 bug 第 <strong>5</strong> 次复发</td></tr></tbody></table>
+<p><strong>A/B 是&quot;说错话&quot;，C 是&quot;把对的话换成错的话&quot;，D 是&quot;为什么总有话说错的机会&quot;。四者独立可修、独立可回滚。</strong></p>
+<hr>
+<h2 id="1-现状实证">1. 现状实证<a class="anchor" href="#1-现状实证" aria-label="锚点">#</a></h2>
+<h3 id="1-1-现象精确复现-探针-非推测">1.1 现象精确复现（探针，非推测）<a class="anchor" href="#1-1-现象精确复现-探针-非推测" aria-label="锚点">#</a></h3>
+<p>用 9 组 <code>result</code> 形状直接喂 <code>buildCliFailureEnvelope</code>，逐条比对截图首屏 4 行：</p>
+<table><thead><tr><th>输入形状</th><th>code</th><th>cause</th><th>routing</th><th>与截图</th></tr></thead><tbody><tr><td>无 <code>attempts</code> 字段 + <code>errorType:'unknown'</code></td><td><code>NONE</code></td><td><code>null</code></td><td><code>pinned-strict</code></td><td><strong>逐字节一致</strong></td></tr><tr><td>无 <code>attempts</code> 字段 + <code>errorType:'process'</code></td><td><code>NONE</code></td><td><code>null</code></td><td><code>pinned-strict</code></td><td><strong>逐字节一致</strong></td></tr><tr><td><code>attempts: []</code> + <code>unknown</code></td><td><code>NONE</code></td><td><code>null</code></td><td><code>pinned-strict</code></td><td><strong>逐字节一致</strong></td></tr><tr><td>记录<strong>缺 <code>success</code> 字段</strong> + <code>process</code></td><td><code>NONE</code></td><td><code>null</code></td><td><code>pinned-strict</code></td><td><strong>逐字节一致</strong></td></tr><tr><td>记录含 <code>success:false</code> + <code>process</code></td><td><code>NONE</code></td><td><strong>有值</strong></td><td><code>pinned-strict</code></td><td>多一行「通道: …」→ 排除</td></tr><tr><td>全 virtualSkip</td><td><code>NONE</code></td><td>有值</td><td><code>preferred-with-fallback</code></td><td>路由行不符 → 排除</td></tr><tr><td>无 attempts + <code>cancelled</code></td><td><code>CANCELLED</code></td><td><code>null</code></td><td><code>pinned-strict</code></td><td>标题不符 → 排除</td></tr><tr><td>无 attempts + 无 preferredAdapter</td><td><code>NONE</code></td><td><code>null</code></td><td><code>auto</code></td><td>缺路由行 → 排除</td></tr></tbody></table>
+<p><strong>判据收敛为一句话</strong>：<code>attempts</code> 中<strong>没有一条</strong>带 <code>success === false</code> ⇒ 三处判据<strong>同时</strong>失效 ⇒ <code>[NONE]</code> + 误报&quot;钉选 strict&quot;。</p>
+<h3 id="1-2-三处判据同源-且都用严格相等">1.2 三处判据同源，且都用严格相等<a class="anchor" href="#1-2-三处判据同源-且都用严格相等" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>位置</th><th>表达式</th><th>失效后</th></tr></thead><tbody><tr><td><code>cliFailureEnvelope.js:66</code></td><td><code>a.success === false</code></td><td><code>cause = null</code> ⇒ <strong>首屏无「通道: …」行</strong>（截图确实没有）</td></tr><tr><td><code>cliFailureEnvelope.js:112-118</code></td><td>同上 + <code>keys.size === 0</code></td><td><code>pinned-strict</code> / <code>fallbackSuppressed: true</code></td></tr><tr><td><code>aiGatewayGenerateHelpers.js:893,895</code></td><td>同上，两处 <code>return ''</code></td><td>无「内部已尝试 N 次请求」（截图确实没有）</td></tr></tbody></table>
+<p><code>_resolveCode</code>（<code>:216-262</code>）的 15 个分支<strong>没有一个</strong>处理 <code>cause === null</code>；<code>allAttempts</code> 为空时 <code>errorType</code> 被硬赋 <code>'unknown'</code>（<code>aiGatewayGenerateMethod.js:6408-6409</code>），不匹配任何已知类型 ⇒ 落 <code>:259</code> 的 <code>return 'NONE'</code>。</p>
+<h3 id="1-3-触发链-四步-每步-file-line">1.3 触发链（四步，每步 file:line）<a class="anchor" href="#1-3-触发链-四步-每步-file-line" aria-label="锚点">#</a></h3>
+<p><strong>第 1 步 — 配置残留</strong></p>
+<p><code>services/backend/.env:51-52</code>（<strong>本机实测值</strong>）：</p>
+<pre><code>GATEWAY_PREFERRED_ADAPTER=api
+GATEWAY_PREFERRED_STRICT=true</code></pre>
+<ul><li>该文件 <strong>不受 git 跟踪</strong>（<code>git ls-files --error-unmatch</code> → <code>pathspec ... did not match</code>）⇒ 纯本机态</li><li>文件 34-50 行注释<strong>已记录本 bug 前 4 次复发</strong>：<code>codex → windsurf → windsurf → api</code>，并写着「这次值终于与注释一致」——<strong>但值仍是 <code>api</code> + <code>true</code></strong></li><li>注释自陈根因：「根因始终是『只改注释、不改值』」</li></ul>
+<p><strong>第 2 步 — 被钉通道不可用，触发 strict 专项失败</strong></p>
+<p><code>aiGatewayGenerateMethod.js:4033-4083</code>：<code>!entry.available</code> ⇒ <code>:4056</code> 输出</p>
+<pre><code>已选择模型通道不可用: api。</code></pre>
+<p>该文案是 <code>aiContextFlow.js:39-45</code> <code>_isStrictPreferredFailure</code> 的<strong>唯一判据</strong>：</p>
+<pre><code class="language-js"><span class="hljs-keyword">return</span> <span class="hljs-regexp">/已选择模型通道(请求失败|不可用)/</span>.<span class="hljs-title function_">test</span>(msg);</code></pre>
+<p>⇒ 判定为&quot;strict 首选失败&quot;，<code>:4064</code> 返回（<code>errorType:'unavailable'</code>，<code>attempts</code> 至少 1 条）。</p>
+<p><strong>第 3 步 — 自动放宽并重试</strong></p>
+<p><code>aiChatCore.js:3105-3128</code>：</p>
+<ul><li><code>:3120</code> 用 <code>{ ...chatOpts, strictPreferred: false }</code> <strong>再调一次</strong> generate</li><li><code>:3125-3128</code> <strong>无条件覆盖</strong>：<code>if (retryPass &amp;&amp; retryPass.result) { result = retryPass.result; }</code></li><li>注释自述意图：<em>Always surface the retry outcome (success or failure)</em> —— 意图正确，<strong>实现是&quot;用更差的信息替换更好的信息&quot;</strong></li></ul>
+<p><strong>第 4 步 — 第二轮产出的结果里没有 <code>success:false</code> 记录</strong></p>
+<p>⇒ §1.2 三处判据同时失效 ⇒ <code>[NONE]</code> + 误报钉选。</p>
+<h3 id="1-4-归因-这不是并行会话改动引入的">1.4 归因：这不是并行会话改动引入的<a class="anchor" href="#1-4-归因-这不是并行会话改动引入的" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>检查</th><th>结果</th></tr></thead><tbody><tr><td><code>git show HEAD:…cliFailureEnvelope.js</code> vs 工作区</td><td><strong>逐字节一致</strong>（12023 bytes）</td></tr><tr><td><code>git status --porcelain</code>（信封 / 测试 / .env）</td><td>无未提交改动</td></tr><tr><td><code>assets</code> 基线</td><td>信封源码<strong>未被我或他人改动过</strong></td></tr></tbody></table>
+<hr>
+<h2 id="2-借鉴提案">2. 【借鉴提案】<a class="anchor" href="#2-借鉴提案" aria-label="锚点">#</a></h2>
+<p><strong>据实声明：不适用。</strong></p>
+<p>依 <code>[SOURCING-001]</code> §3 <strong>B-P1</strong>：对<strong>已登记能力域的行为修正</strong>（bugfix / 文案调整）不需要提案，判定依据是该能力域已在注册表中存在且有 <code>canonical</code> 路径。</p>
+<ul><li>能力域：<code>cliFailureEnvelope.js</code>（已存在，<code>KHY_CLI_FAILURE_ENVELOPE</code> 已在 <code>flagRegistry.js:1103</code> 登记，<code>mode:'default-on'</code>）</li><li>上游规范：<code>[DESIGN-ARCH-114] CLI 错误标准化规范</code>（本方案是对它的<strong>补章</strong>，非新增并行规范）</li></ul>
+<p>B-P2 七字段只约束<strong>借鉴外部</strong>（其第 1 字段即&quot;项目名 + 版本/commit&quot;）。本方案未借鉴任何外部实现，故逐字段<strong>据实填&quot;不适用&quot;</strong>，不为&quot;看起来合规&quot;硬塞一个上游。</p>
+<table><thead><tr><th>#</th><th>字段</th><th>值</th></tr></thead><tbody><tr><td>1</td><td>借鉴对象</td><td>不适用（无外部上游）</td></tr><tr><td>2</td><td>借鉴内容</td><td>不适用</td></tr><tr><td>3</td><td>解决的问题</td><td>不适用（问题为本仓自有，见 §1）</td></tr><tr><td>4</td><td>许可证与代码性质</td><td>不适用</td></tr><tr><td>5</td><td>借鉴方式</td><td>不适用</td></tr><tr><td>6</td><td>落点与现有实现对比</td><td>落点 = 既有文件 <code>cliFailureEnvelope.js</code> / <code>aiChatCore.js</code>，属<strong>扩展既有 canonical</strong>，非新增并行实现</td></tr><tr><td>7</td><td>验收方式</td><td>见 §7</td></tr></tbody></table>
+<hr>
+<h2 id="3-目标形态">3. 目标形态<a class="anchor" href="#3-目标形态" aria-label="锚点">#</a></h2>
+<h3 id="3-1-第-1-期-信封-让-零证据-成为一个可说出口的事实">3.1 第 1 期 — 信封：让「零证据」成为一个可说出口的事实<a class="anchor" href="#3-1-第-1-期-信封-让-零证据-成为一个可说出口的事实" aria-label="锚点">#</a></h3>
+<p><strong>(a) <code>_resolveRouting</code>（<code>:104-126</code>）</strong>：<code>keys.size === 0</code> 时<strong>不得</strong>置 <code>pinned: true</code></p>
+<pre><code class="language-js"><span class="hljs-comment">// 旧：const suppressed = keys.size === 0 || (keys.size === 1 &amp;&amp; keys.has(preferred));</span>
+<span class="hljs-comment">// 新：零尝试 ≠ 回退被抑制。一次都没试过就说&quot;本轮不回退&quot;，是编造因果。</span>
+<span class="hljs-keyword">if</span> (keys.<span class="hljs-property">size</span> === <span class="hljs-number">0</span>) {
+  <span class="hljs-keyword">return</span> { ...fallback, preferred, <span class="hljs-attr">mode</span>: <span class="hljs-string">&#x27;unresolved&#x27;</span>, <span class="hljs-attr">fallbackSuppressed</span>: <span class="hljs-literal">false</span>,
+           <span class="hljs-attr">pinned</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">attempted</span>: <span class="hljs-literal">false</span> };
+}
+<span class="hljs-keyword">const</span> suppressed = keys.<span class="hljs-property">size</span> === <span class="hljs-number">1</span> &amp;&amp; keys.<span class="hljs-title function_">has</span>(preferred);</code></pre>
+<p>新增字段 <code>attempted: boolean</code>（<code>false</code> = 一条失败记录都没有）。<strong>保留 <code>fallback</code> 模板的其余字面值不变</strong>，使&quot;有记录&quot;路径逐字节不变。</p>
+<p><strong>(b) <code>_resolveCode</code>（<code>:216-262</code>）</strong>：新增<strong>最高优先级</strong>分支</p>
+<pre><code class="language-js"><span class="hljs-comment">// 必须置于 ① 钉选分支之前 —— &quot;零尝试&quot;是事实，&quot;钉选&quot;是解释；</span>
+<span class="hljs-comment">// 有事实时不能用解释覆盖事实（这是契约②的同一条精神，但方向相反）。</span>
+<span class="hljs-keyword">if</span> (!primaryCause) {
+  <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;NO_ATTEMPT&#x27;</span>;
+}</code></pre>
+<p><strong>(c) 新增 <code>TITLES</code> / <code>HINTS</code> 条目</strong></p>
+<pre><code class="language-js"><span class="hljs-variable constant_">TITLES</span>.<span class="hljs-property">NO_ATTEMPT</span> = <span class="hljs-string">&#x27;本次请求未能完成 —— 本轮未尝试任何通道&#x27;</span>;
+<span class="hljs-variable constant_">HINTS</span>.<span class="hljs-property">NO_ATTEMPT</span> = [
+  <span class="hljs-string">&#x27;通道级联未被进入：通道注册表为空，或全部通道未启用&#x27;</span>,
+  <span class="hljs-string">&#x27;运行 `khy gateway status` 查看各通道是否已注册/启用&#x27;</span>,
+  <span class="hljs-string">&#x27;若 `.env` 里有 GATEWAY_PREFERRED_ADAPTER 钉选，清空或设为 auto&#x27;</span>,
+];</code></pre>
+<p><strong>(d) <code>renderCliFailureEnvelope</code>（<code>:346-367</code>）</strong>：<strong>无须改动</strong><br><code>pinned-strict</code> 行的输出条件已是 <code>mode === 'pinned-strict'</code>；<code>unresolved</code> 自动不再输出该行。<strong>但必须补一条断言钉住它</strong>（否则未来有人改宽条件，bug 静默复活）。</p>
+<h3 id="3-2-第-2-期-调用方-诊断质量不得降级">3.2 第 2 期 — 调用方：诊断质量不得降级<a class="anchor" href="#3-2-第-2-期-调用方-诊断质量不得降级" aria-label="锚点">#</a></h3>
+<p><code>aiChatCore.js:3103-3129</code> 改为&quot;<strong>披露必留、诊断择优</strong>&quot;：</p>
+<pre><code class="language-js"><span class="hljs-keyword">if</span> (retryPass &amp;&amp; retryPass.<span class="hljs-property">result</span>) {
+  <span class="hljs-keyword">const</span> first = <span class="hljs-title function_">buildCliFailureEnvelope</span>({ result, <span class="hljs-attr">env</span>: process.<span class="hljs-property">env</span> });
+  <span class="hljs-keyword">const</span> retry = <span class="hljs-title function_">buildCliFailureEnvelope</span>({ <span class="hljs-attr">result</span>: retryPass.<span class="hljs-property">result</span>, <span class="hljs-attr">env</span>: process.<span class="hljs-property">env</span> });
+  <span class="hljs-keyword">if</span> (<span class="hljs-title function_">_diagnosticRank</span>(retry) &gt;= <span class="hljs-title function_">_diagnosticRank</span>(first)) {
+    result = retryPass.<span class="hljs-property">result</span>;                     <span class="hljs-comment">// 更好或同等 → 照旧覆盖</span>
+  } <span class="hljs-keyword">else</span> {
+    result = { ...result, <span class="hljs-attr">content</span>: <span class="hljs-string">`<span class="hljs-subst">${result.content}</span>\n\n（已自动放宽钉选并重试，仍未成功）`</span> };
+  }
+  firstPass = retryPass;                           <span class="hljs-comment">// 保持&quot;回退已尝试&quot;的披露</span>
+}</code></pre>
+<p><code>_diagnosticRank(env)</code>：<code>cause !== null</code> 记 1 分，<code>cause === null</code> 记 0 分；同分时按码的具体性（<code>CHANNEL_ABSENT_PINNED</code> &gt; <code>NONE</code>）。<strong>放纯叶子</strong>（可在 <code>cliFailureEnvelope.js</code> 内导出，零 IO、确定性、绝不抛），<strong>不塞进 <code>aiChatCore</code></strong> —— 那里测不到。</p>
+<blockquote><p>⚠️ <code>buildCliFailureEnvelope</code> 在 <code>aiChatCore:3284</code> 才被 require（失败分支内）。第 2 期需把 require 提到重试判定处，或复用 <code>_env0</code>。落地时按 §8 待核实项核。</p></blockquote>
+<h3 id="3-3-第-3-期-根因-钉选残留不再静默">3.3 第 3 期 — 根因：钉选残留不再静默<a class="anchor" href="#3-3-第-3-期-根因-钉选残留不再静默" aria-label="锚点">#</a></h3>
+<blockquote><p>⚠️ <strong>实施期就地订正（2026-09-23）</strong>：本节初稿写的是「<strong>新增</strong>一段钉选健康检查」。<br>实测该检测<strong>早已存在两处</strong> —— <code>baseSelfCheckService.js:517-545</code>（判 <code>error</code>，明说「所有 AI 调用将硬失败」，并带 autoRepair 改写 env）与<br><code>handlers/gateway.js:542-584</code> 的 <code>_resolvePreferredAdapterIssue</code> + <code>gatewayStatusView.js:492-500</code>（已渲染）。<br>按「不新建并行真源」的纪律，第 3 期改为 <strong>补强既有告警</strong>：把 <code>STRICT</code> 这个<strong>放大器</strong>披露出来<br>（原先 <code>gateway status</code> 全文不提 STRICT，与 selfcheck 的判级轻重不一），并补上解钉路径。<br><strong>完整落地清单、偏离与验收见 §9。</strong></p></blockquote>
+<p><code>.env:47-48</code> 自己给了答案 —— <em>「要固定某通道请用 <code>khy provider use &lt;key&gt;</code>，不要再手改本文件的这两个值」</em> —— <strong>但没有任何机制阻止手改</strong>，于是复发 5 次。</p>
+<p>提案：<code>khy gateway status</code> 增加一段<strong>钉选健康检查</strong>输出（当 <code>GATEWAY_PREFERRED_ADAPTER</code> 非 auto <strong>且</strong>该通道 <code>available === false</code> 时）：</p>
+<pre><code>⚠ 钉选残留：GATEWAY_PREFERRED_ADAPTER=api 但该通道当前不可用
+   这会让每次请求都失败在首选通道上（若 STRICT=true 还会抑制回退）
+   处置：khy provider use &lt;key&gt;  或  把 GATEWAY_PREFERRED_ADAPTER 设为 auto</code></pre>
+<blockquote><p>⚠️ <strong>不新增 env 开关</strong> —— <code>check-tui-gates.js:32</code> 的 <code>MAX_GATES = 220</code> 是<strong>只降不升</strong>的棘轮。本项并入既有 <code>khy gateway status</code> 输出即可，零新门。</p></blockquote>
+<hr>
+<h2 id="4-实施分期-每期独立可回滚">4. 实施分期（每期独立可回滚）<a class="anchor" href="#4-实施分期-每期独立可回滚" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>期</th><th>改动</th><th>回滚</th><th>依赖</th></tr></thead><tbody><tr><td><strong>第 1 期</strong></td><td><code>cliFailureEnvelope.js</code>：<code>_resolveRouting</code> 增 <code>unresolved</code>/<code>attempted</code>；<code>_resolveCode</code> 增 <code>NO_ATTEMPT</code>；新增 2 条 <code>TITLES</code>/<code>HINTS</code></td><td>单文件 revert</td><td>无</td></tr><tr><td><strong>第 2 期</strong></td><td><code>aiChatCore.js:3103-3129</code> 覆盖策略 + 叶子 <code>_diagnosticRank</code></td><td>单处 revert</td><td>第 1 期（需 <code>attempted</code> 字段）</td></tr><tr><td><strong>第 3 期</strong></td><td><code>khy gateway status</code> 增钉选健康检查</td><td>单处 revert</td><td>无</td></tr><tr><td><strong>第 0 期</strong>&lt;br&gt;（用户侧，即刻）</td><td>把 <code>.env:51-52</code> 改为 <code>auto</code> / <code>false</code></td><td>改回</td><td>无 —— <strong>但见 §6 反模式第 2 条：这不解决复发</strong></td></tr></tbody></table>
+<hr>
+<h2 id="5-诚实边界-刻意不纳入">5. 诚实边界（刻意不纳入）<a class="anchor" href="#5-诚实边界-刻意不纳入" aria-label="锚点">#</a></h2>
+<ol><li><strong>不修「证据为何缺失」的那个具体环节。</strong> 这需要运行时证据（见 §8）。本方案的目标是<strong>让证据缺失本身可诊断</strong> —— 而不是猜哪一环丢了、再打一个补丁。<strong>这是刻意的</strong>：只要信封仍会把&quot;零证据&quot;翻译成&quot;钉选抑制&quot;，同类缺陷下次换个入口再来一遍，症状还是一模一样。</li><li><strong>不改级联 / 不改重试 / 不改路由决策。</strong> 第 1 期只动<strong>诊断的措辞与码</strong>，对&quot;请求成功还是失败&quot;的判定<strong>零影响</strong>。</li><li><strong>不改 <code>.env</code> 的值。</strong> 那是用户本机配置，由用户决定（第 0 期给了建议但不代改）。且该文件不入库，改了也修不到别的机器。</li><li><strong>不动 <code>aiContextFlow.js:374-378</code> 的合成。</strong> 它丢 <code>attempts</code> 是事实，但它丢 <code>preferredAdapter</code> 也一致 ⇒ <strong>单靠它解释不了截图</strong>（截图有&quot;钉选 strict&quot;行 ⇒ 必带 <code>preferredAdapter</code>）。既然前提不成立，就不拿它当嫌疑人。</li><li><strong>不把 jest 风格的 <code>cliFailureEnvelope.test.js</code> 改成 <code>node:test</code>。</strong> 它当前在 <code>node --test</code> 下红（§8），但那是独立的一条既有问题，混进本方案会让 diff 失去可归因性。</li></ol>
+<hr>
+<h2 id="6-反模式-这条路别走">6. 反模式（这条路别走）<a class="anchor" href="#6-反模式-这条路别走" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>❌</th><th>为什么</th></tr></thead><tbody><tr><td>继续用 <code>keys.size === 0</code>「保守取真」当 <code>pinned: true</code></td><td><strong>把「未知」伪装成「已知」</strong>，这就是本 bug 的成因本身。「零尝试」与「试了被拦」，是<strong>两个不同的事实</strong></td></tr><tr><td>只把 <code>.env</code> 改回 <code>auto</code> / <code>false</code> 就收工</td><td>已复发 <strong>5</strong> 次，文件里 4 段注释就是尸体。<strong>改值不解决「下次还能改回去」</strong></td></tr><tr><td>删掉 <code>aiChatCore:3120</code> 的回退重试</td><td>回退本身有价值（api 死了切别的通道）。该死的是<strong>用差结果覆盖好结果</strong></td></tr><tr><td>把 <code>errorType='unknown'</code> 渲染成「未知错误」</td><td>应报「零尝试」—— 那是<strong>可确定的事实</strong>，不是未知</td></tr><tr><td>在 <code>.env</code> 注释里再写一句「别再改」</td><td>前 4 次就是这么处理的</td></tr><tr><td>把新码挂到 <code>CHANNEL_EXHAUSTED</code> 上</td><td>那个码会 <code>showPromoPanel = true</code>（<code>:308</code>）⇒ 12 行推广清单抢占首屏，正是 <code>[DESIGN-ARCH-114]</code> §2.2 红线 R-GW-1 要禁的</td></tr><tr><td>为第 3 期新增 <code>KHY_*</code> 开关</td><td>撞 <code>check-tui-gates.js</code> 门预算棘轮（220，只降不升），且把一个 bugfix 从 B-P1 豁免变成非豁免</td></tr></tbody></table>
+<hr>
+<h2 id="7-验收方式">7. 验收方式<a class="anchor" href="#7-验收方式" aria-label="锚点">#</a></h2>
+<h3 id="7-1-新增测试-必须用-require-node-test">7.1 新增测试（<strong>必须用 <code>require('node:test')</code></strong>）<a class="anchor" href="#7-1-新增测试-必须用-require-node-test" aria-label="锚点">#</a></h3>
+<p>新建 <code>services/backend/tests/gateway/cliFailureEnvelopeZeroAttempt.test.js</code>：</p>
+<table><thead><tr><th>用例</th><th>断言</th></tr></thead><tbody><tr><td>Z-01 无 <code>attempts</code> 字段</td><td><code>code === 'NO_ATTEMPT'</code>；<code>cause === null</code></td></tr><tr><td>Z-02 <code>attempts: []</code></td><td>同上</td></tr><tr><td>Z-03 记录缺 <code>success</code> 字段</td><td>同上</td></tr><tr><td>Z-04 有 <code>success:false</code> 记录</td><td><code>code !== 'NO_ATTEMPT'</code>（对照组，防误伤）</td></tr><tr><td>Z-05 全 virtualSkip</td><td><code>code !== 'NO_ATTEMPT'</code>（对照组）</td></tr><tr><td>Z-06 <strong>渲染不含钉选行</strong></td><td><code>renderCliFailureEnvelope(e)</code> <strong>不匹配</strong> <code>/路由: 钉选 strict/</code>（<strong>这是本 bug 的直接药，必须钉住</strong>）</td></tr><tr><td>Z-07 <code>routing.attempted === false</code> 且 <code>pinned === false</code></td><td>字段级</td></tr><tr><td>Z-08 有记录时 <code>mode</code> 仍为 <code>pinned-strict</code></td><td><strong>回归</strong>：确保旧行为逐字节不变</td></tr></tbody></table>
+<p><strong>为什么必须 <code>node:test</code></strong>：</p>
+<ul><li><code>jest.config.js:25-40</code> 按 <code>require('node:test')</code> 标记<strong>自动发现并加入 <code>testPathIgnorePatterns</code></strong> ⇒ jest 套件不会重复跑、不会因两套 runner 冲突而红</li><li><code>package.json:59</code> <code>test:node = node --test tests/**/*.test.js</code> ⇒ 该文件<strong>进 CI</strong> ⇒ <strong>落地即须绿</strong></li><li>⚠️ <strong>不要往既有的 <code>cliFailureEnvelope.test.js</code> 里加</strong> —— 它是 jest 风格（HEAD 即如此），在 <code>node --test</code> 下报 <code>describe is not defined</code>（§8）</li></ul>
+<h3 id="7-2-反向复现-人工-一条操作">7.2 反向复现（人工，一条操作）<a class="anchor" href="#7-2-反向复现-人工-一条操作" aria-label="锚点">#</a></h3>
+<p><code>.env</code> 保持 <code>api</code> + <code>true</code> 且 <code>api</code> 通道不可用 → TUI 输入任意消息 →</p>
+<ul><li><strong>修前</strong>：<code>[NONE]</code> + <code>路由: 钉选 strict(GATEWAY_PREFERRED_ADAPTER=api),本轮不回退</code></li><li><strong>修后</strong>：<code>[NO_ATTEMPT]</code> + <strong>无</strong>路由行 + hint 指向&quot;通道注册表为空或全部未启用&quot;</li></ul>
+<h3 id="7-3-关联门禁">7.3 关联门禁<a class="anchor" href="#7-3-关联门禁" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">node scripts/ci/check-leaf-contract.js services/backend/src/services/gateway/cliFailureEnvelope.js
+node scripts/ci/check-tui-gates.js          <span class="hljs-comment"># 比改动前后 counts 零漂移（新增 0 个 KHY_* token）</span>
+npm run check:changed</code></pre>
+<blockquote><p><code>cliFailureEnvelope.js</code> 是纯叶子（零 IO、确定性、绝不抛）；改动后须过叶子契约门。<br><strong><code>check-tui-gates.js</code> 不带参数会报 &quot;No target files found&quot;</strong>（要 <code>--changed</code> 或显式路径），别误判成 PASS。</p></blockquote>
+<hr>
+<h2 id="8-待核实项">8. 待核实项<a class="anchor" href="#8-待核实项" aria-label="锚点">#</a></h2>
+<h3 id="优先-阻断-确证-不阻断修复">★ 优先（阻断&quot;确证&quot;，不阻断修复）<a class="anchor" href="#优先-阻断-确证-不阻断修复" aria-label="锚点">#</a></h3>
+<p><strong>T-1：<code>attempts</code> 里那条该有的 <code>success:false</code> 记录，具体在哪一环丢失或形状不符？</strong></p>
+<p>已逐条排除：</p>
+<ul><li><code>allAttempts</code> 在 <code>:2036</code> 建空后<strong>只增不减</strong>（全文件无重赋值），首次 push 在 <code>:3699</code></li><li><code>:2036–3699</code> 之间<strong>没有任何 <code>return</code></strong>（<code>:2017</code>/<code>:2030</code> 是应用启动/桌面拦截且在其之前）</li><li>仅有两处「不 push 的 continue」：<code>:3872</code>（strict 跳过非首选）、<code>:3878</code>（<code>!entry.enabled</code>）。但 <code>_adapters</code> 是 <code>aiGateway.js:2161</code> 的<strong>静态表，16 条全部 <code>enabled: true</code></strong></li><li><code>:4033</code>「通道不可用」分支<strong>会 push</strong>（<code>:4040</code>）⇒ 不在嫌疑名单</li><li><code>_reorderAdaptersByModelProtocolHint</code>（<code>aiGatewayRoutingMethods.js:742-747</code>）只重排不筛选，<strong>不会致空</strong></li><li><code>_maybePromoteProcessFailoverAdapters</code>（<code>:816-833</code>）对非 process-sensitive 的 <code>api</code> 直接 <code>return list</code></li></ul>
+<p><strong>确定入口（形状污染）</strong>：<code>:4580</code> <code>allAttempts.push(...result.attempts)</code> —— 子调用的 attempts <strong>原样并入、不校验形状</strong>。若子调用记录缺 <code>success</code> 字段，会污染主链判据。</p>
+<p><strong>确证手段</strong>（任选其一，均为只读）：</p>
+<ol><li>在 <code>:6408</code> 前临时打印 <code>allAttempts.length</code> 与 <code>allAttempts.map(a =&gt; !!a.success)</code> → 一次复现即知是&quot;空数组&quot;还是&quot;缺字段&quot;</li><li>查 <code>traceAudit</code> 的 <code>llm.response</code> 事件（<code>aiGatewayClient.js:146-169</code> 已记录 <code>attempts</code> 字段）落盘的日志</li><li>跑 <code>KHY_DEBUG_TOOLS=1</code> 复现，看 <code>[DEBUG-ADAPTER] cascade: key=… available=…</code> 序列是否为空</li></ol>
+<h3 id="其它">其它<a class="anchor" href="#其它" aria-label="锚点">#</a></h3>
+<ul><li><strong>T-2</strong>：<code>services/backend/tests/gateway/cliFailureEnvelope.test.js</code> 在 <code>node --test</code> 下<strong>当前即红</strong>（实测 <code>exit=1</code>、<code># fail 1</code>、<code>ReferenceError: describe is not defined</code>），且 HEAD 版本就是 jest 风格 ⇒ <strong>既有红，非本次引入</strong>。但 <code>deploy-staging.yml:97-99</code> 明写 <code>test:node</code> 经 shell 展开跑 <strong>1288</strong> 个文件 ⇒ 这条红在 CI 里<strong>也应该可见</strong>。<strong>建议单独核一次</strong>（可能新近引入，也可能是 glob 行为差异）。这是 <code>[DESIGN-ARCH-135]</code> 记过的同型陷阱第二例。</li><li><strong>T-3</strong>：<code>aiChatCore.js:3120</code> 的 require 时序 —— <code>buildCliFailureEnvelope</code> 目前在 <code>:3283</code>（失败分支内）才被 require，第 2 期需提前到重试判定处（<code>:3105</code>）。落地前确认无循环依赖。</li><li><strong>T-4</strong>：第 3 期落点时确认 <code>khy gateway status</code> 的可用通道判定与 <code>:4030</code> <code>entry.adapter.detect()</code> 同源（避免又造一个平行真源）。</li></ul>
+<hr>
+<h2 id="9-实施记录">9. 实施记录<a class="anchor" href="#9-实施记录" aria-label="锚点">#</a></h2>
+<p><strong>落地日期</strong>：2026-09-23 · <strong>状态</strong>：第 1 / 2 / 3 期均已落地并验证</p>
+<h3 id="9-1-落地清单">9.1 落地清单<a class="anchor" href="#9-1-落地清单" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>改动</th><th>期</th></tr></thead><tbody><tr><td><code>services/backend/src/services/gateway/cliFailureEnvelope.js</code></td><td><code>_resolveRouting</code> 增 <code>attempted</code> 字段与 <code>unresolved</code> 模式（零尝试时 <code>pinned:false</code>）；「零尝试」的计算提前到 preferred 判定之前；<code>_resolveCode</code> 兜底位新增 <code>NO_ATTEMPT</code>；新增 <code>TITLES.NO_ATTEMPT</code> / <code>HINTS.NO_ATTEMPT</code>；新增并导出 <code>_diagnosticRank</code></td><td>1</td></tr><tr><td><code>services/backend/src/cli/aiChatCore.js</code>（回退重试分支）</td><td>改为「披露必留、诊断择优」：用 <code>_diagnosticRank</code> 比较首次与重试的诊断，仅当重试更差时保留首次并追加「已自动放宽钉选并重试一轮」</td><td>2</td></tr><tr><td><code>services/backend/src/cli/handlers/gateway.js</code>（<code>_resolvePreferredAdapterIssue</code>）</td><td>增 <code>strict</code> 字段（判据与 <code>aiGatewayGenerateMethod.strictPreferredByEnv</code>、<code>baseSelfCheckService.strictPinned</code> 同源），<code>invalid</code> / <code>unavailable</code> 两个 branch 均回传</td><td>3</td></tr><tr><td><code>services/backend/src/cli/handlers/gatewayStatusView.js</code>（<code>preferredIssue</code> 渲染）</td><td>两类 issue 均披露 strict 后果（「每次 AI 调用都会硬失败」）+ 补解钉路径（清空/设 auto、<code>GATEWAY_PREFERRED_STRICT=false</code> 这条中间路、<code>khy doctor</code>）</td><td>3</td></tr><tr><td><code>services/backend/tests/gateway/cliFailureEnvelopeZeroAttempt.test.js</code></td><td><strong>新增</strong> 15 条（<code>node:test</code>）</td><td>1+2</td></tr><tr><td><code>services/backend/tests/gateway/preferredAdapterIssueStrict.test.js</code></td><td><strong>新增</strong> 3 条（<code>node:test</code>，源码级守卫）</td><td>3</td></tr><tr><td><code>services/backend/tests/gateway/cliFailureEnvelope.test.js</code></td><td><strong>更新 1 条断言</strong>：<code>NONE</code> → <code>NO_ATTEMPT</code>（原因见 9.2-5）</td><td>1</td></tr></tbody></table>
+<h3 id="9-2-与方案的偏离-逐条给原因">9.2 与方案的偏离（逐条给原因）<a class="anchor" href="#9-2-与方案的偏离-逐条给原因" aria-label="锚点">#</a></h3>
+<ol><li><strong><code>NO_ATTEMPT</code> 挂在「兜底位」，而非方案 §3.1(b) 写的「最高优先级」</strong> —— 照初稿实现会<strong>用新误报换旧误报</strong>：本文件已有一批<strong>不依赖 <code>primaryCause</code></strong> 的分支（auth / rate_limit / server_error / network / timeout / model_not_found / context_length / unavailable），它们只看顶层 <code>errorType</code>。若把 <code>NO_ATTEMPT</code> 提到最前，「零记录但 <code>errorType</code> 明说是认证失败」会被压成「未尝试任何通道」。<strong>正解</strong>：零记录 + 有已知类型信号 → 照实报该类型；零记录 + 无任何信号 → 才报 <code>NO_ATTEMPT</code>。已由 <strong>Z-07</strong> 钉住。</li><li><strong>「零尝试」的计算必须早于 preferred 判定</strong> —— 方案未提。实施时 <strong>Z-08</strong> 暴露：<code>!preferred</code> 早退会直接返回 <code>fallback</code>（<code>attempted</code> 默认 <code>true</code>），等于在另一条分支上把同一个事实丢掉。已改为先算 <code>keys</code>、再判 <code>preferred</code>。</li><li><strong><code>_diagnosticRank</code> 只分档、不在码之间排具体性</strong> —— 方案 §3.2 写「按『码的具体性』序」。实施时判定<strong>无依据</strong>：没有客观标准说「401 比 unavailable 更具体」。落地为四档（有 cause = 100 / <code>NO_ATTEMPT</code> = 2 / 其它无 cause = 1 / <code>NONE</code> = 0），<strong>同档不触发保留</strong>（维持旧的覆盖行为 = 最小惊讶）。<strong>Z-13</strong> 把这个边界写成了断言，函数注释里也说明了「只分档」。</li><li><strong>第 3 期从「新增检测」改为「补强既有告警」</strong> —— 见 §3.3 订正块。</li><li><strong><code>cliFailureEnvelope.test.js</code> 有 1 条断言必须更新</strong> —— 它把<strong>归档行为</strong>写成了规范：「无 attempts 且无信号 → NONE」。该文件在 <code>node --test</code> 下本就红（§8 T-2），但在 CI 的 <strong>jest</strong> 路径（<code>npm test</code>）下是绿的 ⇒ 不改会让 CI 变红。只改断言值并加一行说明，<strong>没有</strong>把它重写成 <code>node:test</code>（§5 明确不混两套 runner）。</li><li><strong>未推荐 <code>khy provider use</code></strong> —— 初稿引用了 <code>.env:32</code> 的说法，但实测该命令只有 <code>cmdc</code> 分支有「写 <code>GATEWAY_PREFERRED_ADAPTER</code>」的直接证据（<code>provider.js:243</code>），通用分支未验证 ⇒ <strong>不把未验证的命令写进用户可见建议</strong>。</li></ol>
+<h3 id="9-3-验收实测">9.3 验收实测<a class="anchor" href="#9-3-验收实测" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项</th><th>命令</th><th>结果</th></tr></thead><tbody><tr><td>语法</td><td><code>node --check</code> × 7 文件（4 源 + 3 测试）</td><td><strong>7/7 exit=0</strong></td></tr><tr><td>新用例</td><td><code>node --test tests/gateway/cliFailureEnvelopeZeroAttempt.test.js tests/gateway/preferredAdapterIssueStrict.test.js</code></td><td><strong>18/18 绿</strong>（Z-01..Z-13b 共 15 + P-01..P-03 共 3）</td></tr><tr><td>既有套件零回归</td><td>影子复刻 <code>cliFailureEnvelope.test.js</code> 的 <strong>27 条断言</strong>逐条跑（本机未装 jest，见 §8 T-5）</td><td><strong>27/27 绿</strong>（含更新后的那条）</td></tr><tr><td>叶子契约</td><td><code>node scripts/ci/check-leaf-contract.js …/cliFailureEnvelope.js</code></td><td><strong>PASS</strong>（仍零 IO / 确定性 / 不读 <code>process.env</code>）</td></tr><tr><td>门预算棘轮</td><td><code>node scripts/ci/check-tui-gates.js --changed</code></td><td><strong>226 unique（限 220）—— 与改动前基线一致，零漂移</strong>；既有红，非本次引入</td></tr><tr><td>本 bug 直证</td><td>探针逐形状枚举（8 组）</td><td>零尝试 4 组 → <code>[NO_ATTEMPT]</code> 且<strong>渲染不含「路由: 钉选 strict」行</strong>；对照组（有记录）行为逐字节不变</td></tr></tbody></table>
+<h3 id="9-4-明确不做">9.4 明确不做<a class="anchor" href="#9-4-明确不做" aria-label="锚点">#</a></h3>
+<ul><li><strong>不改 <code>services/backend/.env</code> 的值</strong> —— 用户本机配置，且不入库（改了也修不到别的机器）。第 0 期只给建议。</li><li><strong>不修「证据为何缺失」的具体环节</strong>（§8 T-1 仍未确证）。本方案的目标是让<strong>证据缺失本身可诊断</strong>。</li><li><strong>不给第 3 期加行为级测试</strong> —— <code>_resolvePreferredAdapterIssue</code> <strong>未导出</strong>（经 <code>setGatewayStatusViewDeps</code> 以 DI 注入 <code>gatewayStatusView</code>；实测 <code>exports 命中 = false</code>），其宿主 <code>gateway.js</code> 顶层携带大量 DI 装配。为不扩大导出面（牵动 API 契约门），退化为<strong>源码级守卫</strong>，并在此如实登记该限制。</li><li><strong><code>check:file-ratchet</code> 未在本地跑</strong> —— 需 <code>GIT_BASE_REF</code>，本地 3 分钟未完成（既有已知限制）。新增代码零 <code>console</code> / 零 <code>debugger</code> / 零 <code>TODO</code>，函数与嵌套均在 <code>maxFuncLines 300</code> / <code>maxNesting 6</code> 之内。</li></ul>
+<h3 id="9-5-实施中发现的下一个真问题-已于同日第二轮落地-见-9-6">9.5 ★ 实施中发现的下一个真问题（✅ 已于同日第二轮落地，见 §9.6）<a class="anchor" href="#9-5-实施中发现的下一个真问题-已于同日第二轮落地-见-9-6" aria-label="锚点">#</a></h3>
+<p><strong>告警已经报出，用户还是踩了坑。</strong></p>
+<p>证据：2026-09-23 <strong>08:16</strong> 的每日规范巡检已报<br>「env-gateway-pin <strong>2 error</strong>（两个 <code>.env</code> 硬钉 <code>api</code> + <code>STRICT=true</code>，AI 通道全灭风险，历史上 3 次复发）」，<br>而用户 <strong>10:29</strong> 仍在 TUI 撞上同一个错误。</p>
+<p>即 <code>baseSelfCheckService</code> 的检测<strong>判得对、判得重（error）、还带 autoRepair</strong> —— 但它只活在<br><strong>用户主动跑</strong> <code>khy doctor</code> / selfcheck 的路径上。<strong>TUI / REPL 启动时不做这次检查。</strong></p>
+<p>⇒ 真正该修的是<strong>启动路径</strong>（网关初始化或 TUI 启动时做一次廉价检查并直接告警），<br>而不是继续加强告警文案。这超出本方案范围（涉及启动路径改动，风险面更大），<strong>留待拍板</strong>。</p>
+<h3 id="9-6-9-5-的落地-同日第二轮-启动路径接入钉选自检">9.6 §9.5 的落地（同日第二轮）：启动路径接入钉选自检<a class="anchor" href="#9-6-9-5-的落地-同日第二轮-启动路径接入钉选自检" aria-label="锚点">#</a></h3>
+<p><strong>动手前又推翻了一次 §9.5 的前提</strong>（本方案第三次自我订正）：取证发现启动自检<strong>并非没接</strong> ——<br><code>replSession.js:1086</code> 早就在跑 <code>autoStartFromEnv()</code>。真正的断点有两个：</p>
+<table><thead><tr><th>路径</th><th>实况</th></tr></thead><tbody><tr><td><strong>TUI</strong></td><td><code>startRepl:672</code> 的 <code>await startInkApp</code> 是早返回 ⇒ <code>:1086</code> 的自检<strong>从未执行</strong>。与 <code>:655-670</code> clipboard bridge 注释自认的 <em>&quot;the TUI path never reached it&quot;</em> 同一形态的坑</td></tr><tr><td><strong>经典 REPL</strong></td><td>自检跑了，但 <code>runOnce</code> 结果<strong>只写日志文件</strong>（<code>start()</code> 里 <code>.catch(() =&gt; {})</code> 丢弃返回值），界面零呈现</td></tr></tbody></table>
+<p><strong>落地</strong>（3 源文件 + 1 新测试，判据/文案 100% 复用，零新增 env）：</p>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>baseSelfCheckService.js</code></td><td>导出轻量单检 <code>checkGatewayPreferredOnce(opts)</code> —— 只包 <code>_checkGatewayPreferred</code>，判据/文案/autoRepair 语义 100% 复用，双层 fail-soft 绝不向启动路径抛</td></tr><tr><td><code>replSession.js</code></td><td>新增 <code>_kickoffGatewayPinStartupCheck({toTui})</code>（fire-and-forget，绝不 await / 绝不抛）；<strong>TUI 分叉之前</strong>调 <code>{toTui:true}</code>、经典 REPL 自检块后调 <code>{toTui:false}</code></td></tr><tr><td>呈现（既有机制，零新代码路径）</td><td>TUI → <code>notificationPort.emitNotification</code>（<strong>挂载前进缓冲、挂载时 seed 回放</strong> —— <code>App.js:1704-1760</code> 既有机制，时序天然安全；error 级窄屏还会 inline 打一次）；经典 REPL → <code>formatters.printError/printWarn</code></td></tr><tr><td><code>tests/cli/gatewayPinStartupCheck.test.js</code></td><td><strong>新增 8 条</strong>（<code>node:test</code>）</td></tr></tbody></table>
+<p><strong>验收</strong>：新用例 <strong>8/8 绿</strong> —— 三条核心断言全中：G-05（启动触发点位于 <code>startInkApp</code> 之前）、<br>G-02（<code>api</code>+<code>true</code> + 通道不可用 → <strong>error</strong> 级「strict 禁止回退」）、G-03（解钉路径<br><code>GATEWAY_PREFERRED_ADAPTER=auto</code> 对用户可见）；门预算 <strong>226/220 零漂移</strong>；<code>node --check</code> 3/3。<br>另 G-04 钉住「非 strict 判 warning」不被改变、G-08 钉住「健康通道零误报」。</p>
+<p><strong>测试安全红线</strong>：凡「未注册」场景的用例一律显式传 <code>{ autoRepairPreferred: false }</code> ——<br>autoRepair 会<strong>真写 <code>.env</code></strong>（<code>_writeGatewayEnvPatch</code>），测试绝不能触发；<code>unavailable</code> 场景<br>（G-02）走真实默认路径（该分支本身只报不修）。</p>
+<p><strong>风险评估</strong>：</p>
+<ul><li><strong>非阻断硬保证</strong>：调用点 fire-and-forget（G-06 源码钉住）；检查自身有 <code>SERVICE_HEALTH_TIMEOUT_MS</code> 超时保护 + 双层 try/catch —— 预检任何失败都只少一条提示，不影响启动。</li><li><strong>双跑冗余</strong>：经典 REPL 现在会跑两次网关钉选（新预检 + <code>runOnce</code> 内置）。判定幂等只读；autoRepair 仅在「未注册」场景触发且写幂等 —— 可接受，不为去重加状态。</li><li><strong>TUI 呈现零自绘</strong>：完全走既有通知端口（<code>notificationPort</code> 与 <code>App.js</code> 渲染端一行未改），无 ink 布局风险；<code>emitNotification</code> 本身 fail-soft（无 renderer / 抛错都只返回 false）。</li></ul>
+<hr>
+<h2 id="10-变更日志">10. 变更日志<a class="anchor" href="#10-变更日志" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>2026-09-23</td><td>初稿。由 TUI 实机截图触发；9 组形状枚举定位判据；四步触发链 file:line 取证；归因确认非并行会话引入</td></tr><tr><td>2026-09-23</td><td>第 1/2/3 期落地并验证（§9）。<code>NO_ATTEMPT</code> 落在兜底位（偏离见 §9.2-1）；第 3 期改为补强既有告警；发现「告警已报出但未拦住」为下一个真问题（§9.5）</td></tr><tr><td>2026-09-23</td><td>§9.5 落地（§9.6）：启动自检<strong>早已接线</strong>但 TUI 走不到、经典 REPL 看不见 —— 导出 <code>checkGatewayPreferredOnce</code> 轻量单检 + <code>replSession</code> 双路径非阻断预检（TUI 走通知端口缓冲/回放）；新用例 8/8、门预算 226/220 零漂移</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-135] TUI长任务会话中断与压缩不接续修复方案.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-135] TUI 长任务会话中断与压缩不接续修复方案</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-137] khyos运行时信息获取规则与读取预算接线方案.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-137] khyos 运行时信息获取规则与读取预算接线方案</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-136] 零尝试失败被误报为钉选抑制的修复方案.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

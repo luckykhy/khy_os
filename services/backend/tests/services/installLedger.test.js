@@ -1,6 +1,6 @@
 'use strict';
 /**
- * installLedger.test.js �?安装台账纯核心叶子契约锁�?node:test)�?
+ * installLedger.test.js — 安装台账纯核心叶子契约锁�?node:test)�?
  *
  * 台账是「干净卸载」的真源:创建副作用当刻记「实际写了什么�?卸载时逆序回滚�?
  * 本套件锁�?
@@ -9,7 +9,7 @@
  *     门关返空步骤、非数组返空;
  *   - ledgerPath:纯拼接、非法返 null;
  *   - 门控 KHY_INSTALL_LEDGER 默认开,CANON off �?�?�?
- *   - 绝不抛�?
+ *   - 绝不抛错
  */
 const {
   isLedgerEnabled,
@@ -20,6 +20,12 @@ const {
   LEDGER_FILENAME,
   KIND,
 } = require('../../src/services/domain/maintenance/uninstall/installLedger.js');
+const assert = require('node:assert');
+const path = require('path');
+// path.resolve is cwd-anchored on Windows (turns "/tmp/..." into "<cwd>\\tmp\\..."),
+// so expectations are built from the same base the source resolves against.
+const _TMP_BASE = path.resolve('/tmp/khy');
+const _HOME_BASE = path.resolve('/home');
 
 describe('Install Ledger', () => {
   test('gate default-on; CANON off values close it (byte-revert)', () => {
@@ -33,7 +39,7 @@ describe('Install Ledger', () => {
   test('recordSideEffect normalizes a file entry with resolved absolute path', () => {
       const rec = recordSideEffect({
         kind: KIND.FILE,
-        target: '/tmp/khy/foo/../foo/bar.js',
+        target: path.join(_TMP_BASE, 'foo', '..', 'foo', 'bar.js'),
         action: 'unlink',
         checksum: 'abc123',
         ts: 1700000000000,
@@ -41,7 +47,7 @@ describe('Install Ledger', () => {
       expect(rec).toBeTruthy();
       expect(rec.v).toBe(1);
       expect(rec.kind).toBe('file');
-      expect(rec.target).toBe('/tmp/khy/foo/bar.js');
+      expect(rec.target).toBe(path.join(_TMP_BASE, 'foo', 'bar.js'));
       expect(rec.action).toBe('unlink');
       expect(rec.checksum).toBe('abc123');
       expect(rec.ts).toBe(1700000000000);
@@ -85,8 +91,8 @@ describe('Install Ledger', () => {
   });
 
   test('recordSideEffect never throws on hostile input', () => {
-      expect(() => recordSideEffect({ kind: KIND.FILE, target: 123, action: {} }, { env: {} }).not.toThrow());
-      expect(() => recordSideEffect(undefined, {}).not.toThrow());
+      expect(() => recordSideEffect({ kind: KIND.FILE, target: 123, action: {} }, { env: {} })).not.toThrow();
+      expect(() => recordSideEffect(undefined, {})).not.toThrow();
   });
 
   test('computeRollback reverses order and orders registration/process before file/dir', () => {
@@ -100,7 +106,7 @@ describe('Install Ledger', () => {
       const { steps } = computeRollback(entries, { env: {} });
       // registration + process first (in reverse-encounter order), then dir, then files.
       assert.deepEqual(steps.map((s) => s.kind), ['registration', 'process', 'dir', 'file', 'file']);
-      // files preserve reverse-creation order: two.js recorded after one.js �?two.js rolled back first.
+      // files preserve reverse-creation order: two.js recorded after one.js — two.js rolled back first.
       const files = steps.filter((s) => s.kind === 'file').map((s) => s.target);
       assert.deepEqual(files, ['/a/two.js', '/a/one.js']);
   });
@@ -135,13 +141,14 @@ describe('Install Ledger', () => {
   test('computeRollback tolerates malformed rows without throwing', () => {
       const entries = [null, {}, { kind: 'file' }, { kind: 'file', target: '/a/ok.js', action: 'unlink' }];
       let out;
-      expect(() => { out = computeRollback(entries, { env: {} }).not.toThrow(); });
+      expect(() => { out = computeRollback(entries, { env: {} }); }).not.toThrow();
       expect(out.steps.length).toBe(1);
       expect(out.skipped.length >= 1).toBeTruthy();
   });
 
   test('ledgerPath joins into the data home; null on bad input', () => {
-      expect(ledgerPath('/home/u/.khy')).toBe(require('path').join('/home/u/.khy', LEDGER_FILENAME));
+      const home = path.join(_HOME_BASE, 'u', '.khy');
+      expect(ledgerPath(home)).toBe(path.join(home, LEDGER_FILENAME));
       expect(ledgerPath('')).toBe(null);
       expect(ledgerPath(null)).toBe(null);
       expect(ledgerPath(42)).toBe(null);

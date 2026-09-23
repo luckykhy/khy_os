@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-20.md -->
+<title>2026-09-20 工作日志 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>.workbuddy-ai<span class="sep">›</span>memory<span class="sep">›</span>2026-09-20 工作日志</div>
+      <header class="hero reveal"><h1>2026-09-20 工作日志</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#2026-09-20-工作日志">2026-09-20 工作日志</a></li><li class="lvl-2"><a href="#git-历史体检-用户诉求-多机迁移后-git-记录不完整-想-补齐从-0-开始的历史">git 历史体检（用户诉求：多机迁移后 git 记录不完整，想「补齐从 0 开始的历史」）</a></li><li class="lvl-2"><a href="#项目记忆维护">项目记忆维护</a></li><li class="lvl-2"><a href="#git-历史整理-已落地的四步-全部可回退">git 历史整理：已落地的四步（全部可回退）</a></li><li class="lvl-2"><a href="#阻塞点-存量堆积无法在不跳过规则闸的前提下提交">⚠ 阻塞点：存量堆积无法在不跳过规则闸的前提下提交</a></li><li class="lvl-2"><a href="#续-20-个主题提交全部落地-两起事故-2026-09-20-下午">✅ 续：20 个主题提交全部落地 + 两起事故（2026-09-20 下午）</a></li><li class="lvl-3"><a href="#结果">结果</a></li><li class="lvl-3"><a href="#事故一-批次-02-把-3956-个文件吞成一个巨提交-我的-bug">事故一：批次 02 把 3956 个文件吞成一个巨提交（我的 bug）</a></li><li class="lvl-3"><a href="#事故二-另一会话的-git-filter-branch-并发改写历史">事故二：另一会话的 `git filter-branch` 并发改写历史</a></li><li class="lvl-3"><a href="#安全发现-p0">安全发现（P0）</a></li><li class="lvl-3"><a href="#顺带修复-pre-commit-第-3-步">顺带修复：pre-commit 第 3 步</a></li><li class="lvl-3"><a href="#存量违规基线-已完整记录-未修">存量违规基线（已完整记录，未修）</a></li><li class="lvl-3"><a href="#待办">待办</a></li><li class="lvl-2"><a href="#续二-完整性验证-20-个主题提交零内容丢失-14-30">续二：完整性验证 —— 20 个主题提交零内容丢失（14:30）</a></li><li class="lvl-3"><a href="#方法">方法</a></li><li class="lvl-3"><a href="#两级判定-关键判据">两级判定（关键判据）</a></li><li class="lvl-3"><a href="#194-条逐类">194 条逐类</a></li><li class="lvl-3"><a href="#重要发现-views-admin-是未提交的真实重构">重要发现：`views/admin/` 是未提交的真实重构</a></li><li class="lvl-3"><a href="#并发会话-仍在写">并发会话（仍在写）</a></li><li class="lvl-3"><a href="#最终状态">最终状态</a></li><li class="lvl-2"><a href="#续三-memory-md-瘦身-14-35">续三：MEMORY.md 瘦身（14:35）</a></li><li class="lvl-2"><a href="#续四-出厂-apk-明文密钥核验-两个真-bug-15-05">续四：出厂 APK 明文密钥核验 + 两个真 bug（15:05）</a></li><li class="lvl-3"><a href="#核验-四层-全部通过">核验（四层，全部通过）</a></li><li class="lvl-3"><a href="#修掉的两个真-bug">修掉的两个真 bug</a></li><li class="lvl-3"><a href="#全仓扫描的其余明文-均不进仓-不进-apk">全仓扫描的其余明文（**均不进仓、不进 APK**）</a></li><li class="lvl-3"><a href="#未做-待用户决策">未做（待用户决策）</a></li><li class="lvl-2"><a href="#续五-检查器改造为-门就绪-接线契约实测-2026-09-20-下午">续五：检查器改造为「门就绪」+ 接线契约实测（2026-09-20 下午）</a></li><li class="lvl-3"><a href="#改造内容-scripts-check-builtin-keys-py-203-258-行">改造内容（`scripts/check_builtin_keys.py`，203 → 258 行）</a></li><li class="lvl-3"><a href="#接线契约-读源码实测-非推测">接线契约（读源码实测，非推测）</a></li><li class="lvl-3"><a href="#查重的三个新事实-决定-新增规则-还是-补空白">查重的三个新事实（决定「新增规则」还是「补空白」）</a></li><li class="lvl-3"><a href="#边界矩阵结论-已用图交付">边界矩阵结论（已用图交付）</a></li><li class="lvl-3"><a href="#待用户裁决-已用-askuserquestion-提出-三个选项">待用户裁决（已用 AskUserQuestion 提出，三个选项）</a></li><li class="lvl-2"><a href="#续六-用户裁决-只改-security-001-已落地并全绿-2026-09-20-下午">续六：用户裁决「只改 SECURITY-001」→ 已落地并全绿（2026-09-20 下午）</a></li><li class="lvl-3"><a href="#落地内容-零新规则">落地内容（零新规则）</a></li><li class="lvl-3"><a href="#验收-全实测">验收（全实测）</a></li><li class="lvl-3"><a href="#本轮新增的可复用判据-已同步进-memory-md">本轮新增的可复用判据（已同步进 MEMORY.md）</a></li><li class="lvl-2"><a href="#续七-release-门加阶段条目-全量出厂件检查的发版落点-2026-09-20-傍晚">续七：release 门加阶段条目 —— 全量出厂件检查的发版落点（2026-09-20 傍晚）</a></li><li class="lvl-3"><a href="#先纠路径-用户口述少了一层">先纠路径（用户口述少了一层）</a></li><li class="lvl-3"><a href="#为什么-全量检查-此前从没在发版时跑过">为什么「全量检查」此前从没在发版时跑过</a></li><li class="lvl-3"><a href="#改动-2-个文件">改动（2 个文件）</a></li><li class="lvl-3"><a href="#验收-全实测-2">验收（全实测）</a></li><li class="lvl-3"><a href="#本轮新判据-可复用">本轮新判据（可复用）</a></li><li class="lvl-2"><a href="#续八-补做上轮遗留的-推荐命令-审查-2026-09-20-傍晚-第二轮">续八：补做上轮遗留的「推荐命令」审查（2026-09-20 傍晚，第二轮）</a></li><li class="lvl-2"><a href="#续九-修复-tui-滚轮变成输入历史回溯-2026-09-20-傍晚-用户报障">续九：修复「TUI 滚轮变成输入历史回溯」（2026-09-20 傍晚，用户报障）</a></li><li class="lvl-2"><a href="#22-10-22-30-跨端-ai-编程任务看板-泳道编排-方案-design-arch-126">22:10–22:30 · 跨端 AI 编程任务看板（泳道编排）方案 → `[DESIGN-ARCH-126]`</a></li><li class="lvl-2"><a href="#22-35-22-45-续-design-arch-126-契约可行性实证-查出初稿-4-处错">22:35–22:45 · 续：[DESIGN-ARCH-126] 契约可行性实证（查出初稿 4 处错）</a></li><li class="lvl-2"><a href="#22-47-23-00-续二-design-arch-126-计划层-执行层的连接键缺口-同类空头支票第-2-处">22:47–23:00 · 续二：[DESIGN-ARCH-126] 计划层↔执行层的连接键缺口（**同类空头支票第 2 处**）</a></li><li class="lvl-2"><a href="#交付卫生-文档站重建的附带改动归属-2026-09-20-晚-design-arch-126-收尾">交付卫生：文档站重建的附带改动归属（2026-09-20 晚，DESIGN-ARCH-126 收尾）</a></li><li class="lvl-2"><a href="#design-arch-126-第三轮-第四类空头支票-字段存在但没人写">DESIGN-ARCH-126 第三轮：第四类空头支票「字段存在但没人写」</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="2026-09-20-工作日志">2026-09-20 工作日志<a class="anchor" href="#2026-09-20-工作日志" aria-label="锚点">#</a></h1>
+<h2 id="git-历史体检-用户诉求-多机迁移后-git-记录不完整-想-补齐从-0-开始的历史">git 历史体检（用户诉求：多机迁移后 git 记录不完整，想「补齐从 0 开始的历史」）<a class="anchor" href="#git-历史体检-用户诉求-多机迁移后-git-记录不完整-想-补齐从-0-开始的历史" aria-label="锚点">#</a></h2>
+<p><strong>结论：不能&quot;恢复&quot;，因为那些历史从未被记录；只能&quot;重建&quot;（= 编造）或&quot;嫁接已有真历史&quot;。</strong></p>
+<p>实测事实（全部只读侦察，未做任何修改）：</p>
+<ul><li><code>main</code>：<strong>166 提交，单一根提交</strong> <code>12d9cf9b</code>（2026-08-14 08:38，&quot;Initial commit: Complete</li></ul>
+<p>Khy-OS project with frontend&quot;，一次塞 <strong>5448 文件</strong>，Co-Authored-By: Claude Opus 5）。<br>  ⇒ 2026-08-14 之前的一切在 main 上<strong>不存在</strong>。</p>
+<ul><li><strong>第二条孤儿血脉</strong>：<code>khy-mirror/backup/main-pre-reset-20260820</code>（= <code>origin/...</code> 同哈希）</li></ul>
+<p><strong>22 提交 / 2026-07-25 → 08-19 / 作者「孔浩原」/ 根提交 <code>876e3ff1</code></strong>，<br>  与 <code>main</code> <strong>无共同祖先</strong>（<code>git merge-base</code> 空）。分支名 <code>main-pre-reset-20260820</code><br>  ⇒ <strong>2026-08-20 做过一次历史重置</strong>，重置前的 main 备份于此。</p>
+<ul><li><strong>tag 横跨两条血脉</strong>：<code>v1.1.8</code>/<code>v1.1.9</code> → pre-reset；<code>v1.1.12</code>/<code>v1.1.14</code>/<code>v1.1.15</code> → main。</li></ul>
+<p>中间 <strong>v1.1.10 / v1.1.11 / v1.1.13 缺失</strong>（版本号断层）。</p>
+<ul><li><strong>作者身份三套</strong>：<code>luckykhy &lt;25789@local&gt;</code>（86）、<code>Khy-OS Developer &lt;khy-os@local.dev&gt;</code>（80）、</li></ul>
+<p><code>孔浩原</code>。前两个是<strong>机器本地邮箱</strong>，不可追溯；<strong>无 <code>.mailmap</code></strong>。</p>
+<ul><li><strong>reflog 仅 23 条</strong>（含 <code>reset: moving to HEAD</code> ×4、<code>commit (amend)</code> ×1）⇒ 被清理过或 .git 被搬过。</li><li><strong>嵌套仓库污染</strong>：<code>services/backend/.git</code>（owner 是<strong>另一个 Windows SID</strong>，当前用户</li></ul>
+<p><code>QIQIAOBAN/25789</code>；其分支 <code>master</code> <strong>零提交</strong>空仓）—— 但父仓<strong>已跟踪</strong> <code>services/backend/**</code><br>  ⇒ 纯污染；<code>tools/deepseek-eyes/.git</code>（14 提交，父仓<strong>未跟踪</strong>该目录）。</p>
+<ul><li><strong>工作区 4018 项变动，其中 3956 项已暂存</strong>（净 +340631/−291272）；未暂存 196 项。</li></ul>
+<p><code>.git/</code> 内有 <code>index.bak-20260918</code>、<code>index.corrupt-20260918-1330</code>、3 个 <code>index.lock.stale-*</code><br>  ⇒ 索引损坏事故痕迹。</p>
+<ul><li><strong>三远端</strong>：<code>origin</code> / <code>khy-mirror</code>（同一 GitHub，ghfast 代理）、<code>gitee</code>。</li></ul>
+<p><code>main</code> 上游 = <code>khy-mirror/main</code>；本地领先上游 5 条；<code>packed-refs</code> 里 <code>main=e12bfa3f</code> 而 HEAD 实为 <code>6376988f</code>。</p>
+<ul><li>两条血脉内容重叠高：pre-reset 末端 7024 文件 vs main 根 5448 文件，<strong>交集 5433</strong>；</li></ul>
+<p>差集主要是 <code>apps/khy-mobile</code>（198 文件）等被 main 根提交排除的内容。<br>  ⇒ <strong><code>git replace --graft 12d9cf9b 74673110</code> 可零破坏地把两条血脉接成一条连续历史。</strong></p>
+<p><strong>待用户决策</strong>：① 零重写方案（.mailmap + graft 记录 + 拆 3956 项暂存为逻辑提交 + 清嵌套 .git）；<br>② 固化重写（filter-repo + force push 三远端，需协调其他机器）；③ 不动历史只拆暂存。</p>
+<h2 id="项目记忆维护">项目记忆维护<a class="anchor" href="#项目记忆维护" aria-label="锚点">#</a></h2>
+<ul><li><code>MEMORY.md</code> 超注入预算被截断 ⇒ 瘦身 <strong>29713 → 18311 B</strong>：去掉 §二/§十二 间的重复块</li></ul>
+<p>（re-export shim / Edit 全角 / docs CRLF / 生成物铁律各留一份）、§十三 教训五 与 §七/§十二<br>  重复的 <code>build_docs_site</code> 警告、CRLF 被真实换行破坏的正则行。</p>
+<ul><li>被删的长论证原文迁入 <code>MEMORY-details.md</code> <strong>§十四</strong>（14.1 提交时机五条教训 · 14.2 悬空 paths</li></ul>
+<p>批量订正细则 · 14.3 git grep 判据 · 14.4 治理其余判据），并在其章节对照表登记 <code>6§十四</code>。</p>
+<h2 id="git-历史整理-已落地的四步-全部可回退">git 历史整理：已落地的四步（全部可回退）<a class="anchor" href="#git-历史整理-已落地的四步-全部可回退" aria-label="锚点">#</a></h2>
+<p>用户选择「零重写整理 + 拆主题提交」。已执行并逐项验证：</p>
+<ol><li><strong>完整备份</strong> → <code>.khyos/backup/git-20260920-1033/</code><ul><li><code>dot-git/</code>：整个 <code>.git</code> 的 robocopy 副本，<strong>7177 文件 / 158,924,315 字节逐字节核对一致</strong></li><li><code>staged-20260920.patch</code>：41,327,853 字节，<code>git diff --cached --binary</code> 全量暂存补丁</li><li><code>HEAD.txt</code> <code>refs.txt</code> <code>branches.txt</code> <code>reflog.txt</code> <code>log-all.txt</code> <code>status-porcelain.txt</code> 状态快照</li><li>⚠ 补丁在 <code>git-20260920-1033/</code> <strong>子目录内</strong>，不是 <code>.khyos/backup/</code> 直下（曾因路径写错误判「备份丢失」）</li></ul></li><li><strong><code>.mailmap</code></strong>（提交 <code>80e24ea9</code>）：三套机器本地身份归并到真实身份</li></ol>
+<p><code>孔浩原 &lt;2578974124@qq.com&gt;</code>（该身份在历史中已存在 17 条，非发明）；<code>git log --use-mailmap</code><br>   现为 <strong>219 条 + 3 条 dependabot</strong>。同时把本仓 <code>user.name</code>/<code>user.email</code> 设为该规范身份。</p>
+<ol><li><strong>嵌套空仓库隔离</strong>：<code>services/backend/.git</code> 经清点<strong>只有 <code>git init</code> 默认模板、零对象零引用</strong>，</li></ol>
+<p>移到 <code>.khyos/quarantine/services-backend-dot-git-20260920/</code>（移动非删除）。隔离后<br>   <code>git -C services/backend rev-parse --show-toplevel</code> 正常返回父仓，dubious-ownership 报错消失。<br>   <code>tools/deepseek-eyes/.git</code> 已被 <code>.gitignore:182</code> 忽略，是<strong>有意内嵌</strong>的独立项目，未动。</p>
+<ol><li><strong>历史血缘接续</strong>（提交 <code>dbb37108</code>）：用 <code>git commit-tree</code> 手工构造双亲提交</li></ol>
+<p>（tree = 原 HEAD 的 tree，parents = <code>6376988f</code> + <code>74673110</code>），再 <code>update-ref</code> 移动 main。</p>
+<ul><li>效果：<code>git rev-list --count HEAD</code> <strong>166 → 189</strong>，历史起点变为 <strong>2026-07-25</strong>（<code>876e3ff1</code>）</li><li>验证：merge tree 与第一父 tree <strong>逐字节相同</strong>（<code>09964bf0…</code>）；<code>git diff 6376988f dbb37108</code> <strong>为空</strong></li><li>为什么不用 <code>replace --graft</code>：<strong>replace ref 不随推送传播</strong>，其他机器看不到；commit-tree 方案</li></ul>
+<p>同样不改任何既有哈希、不需 force push，却是<strong>可推送共享</strong>的</p>
+<ol><li><strong>暂存区分析与批次设计</strong>（未提交）<ul><li>脚本：<code>.khyos/diag/staged-groups.js</code>（分组画像）、<code>staged-hygiene.js</code>（大文件/临时文件）、</li></ul></li></ol>
+<p><code>make-batches.js</code>（生成 20 批 pathspec + message）、<code>run-batch.sh</code>（执行器）</p>
+<ul><li>3956 项 → <strong>20 个主题批次 / 4571 个路径</strong>（含重命名旧路径，避免退化成「只增不删」）</li><li>19 个临时产物（17×<code>_tmp_dbg*.js</code>、2×<code>.opencode.json.tmp-*</code>、1×<code>.tmp-vitest-out.txt</code>）已从批次剔除，</li></ul>
+<p>并加入 <code>.gitignore</code>（<code>_tmp_dbg*</code> / <code>*.tmp-*</code>）—— 它们恰好躲过 pre-commit 的 <code>^tmp-|\.tmp$</code> 正则</p>
+<ul><li><strong>实测无 &gt;10MB 文件</strong>（pre-commit 大文件闸不会拦）</li></ul>
+<h2 id="阻塞点-存量堆积无法在不跳过规则闸的前提下提交">⚠ 阻塞点：存量堆积无法在不跳过规则闸的前提下提交<a class="anchor" href="#阻塞点-存量堆积无法在不跳过规则闸的前提下提交" aria-label="锚点">#</a></h2>
+<ul><li>批次 01（<code>.mailmap</code>，1 文件）<strong>通过</strong>；批次 02（40 文件）被拦，9 条阻断：</li></ul>
+<p>8×<code>RUNTIME-001</code>（<code>.github/workflows/conformance.yml</code> 硬编码 <code>http://127.0.0.1:3000</code>）</p>
+<ul><li>1×<code>SECURITY-001</code>（<code>changed-count-error</code>：40 &gt; 20）</li></ul>
+<p>的自动推送，保留 pre-commit 五项检查），<strong>已还原为 <code>.githooks</code></strong>（原值存<br>  <code>.khyos/backup/hooksPath-original.txt</code>）</p>
+<ul><li>测量脚本 <code>.khyos/diag/measure-standing-violations.sh</code> 有两个缺陷（批次 01 的空 <code>.paths</code> 让</li></ul>
+<p><code>git add</code> 报 <code>empty string is not a valid pathspec</code>；<code>tail -40</code> 截掉了 findings 摘要），<br>  且 3956 文件的规则扫描 <strong>&gt;9 分钟未完成</strong>，已中止。<strong>存量违规的精确条数尚未测出。</strong></p>
+<ul><li>结束时已用 <code>git apply --cached</code> 从补丁<strong>完整还原暂存区（3956 项）</strong>；与备份快照的差异只有</li></ul>
+<p><code>.gitignore</code> 一处（本轮改动）+ 4 项<strong>并发写入者</strong>造成的改动。</p>
+<hr>
+<h2 id="续-20-个主题提交全部落地-两起事故-2026-09-20-下午">✅ 续：20 个主题提交全部落地 + 两起事故（2026-09-20 下午）<a class="anchor" href="#续-20-个主题提交全部落地-两起事故-2026-09-20-下午" aria-label="锚点">#</a></h2>
+<h3 id="结果">结果<a class="anchor" href="#结果" aria-label="锚点">#</a></h3>
+<p><code>main</code> <strong>166 → 209 提交</strong>、起点 <strong>2026-08-14 → 2026-07-25</strong>、暂存 <strong>3956 → 0</strong>、<br><strong>20 个主题提交</strong>、209 条作者归并为一（<code>.mailmap</code>）、<code>refs/original</code> 为空（零改写、零 force push）。<br><code>hooksPath</code> 已还原为 <code>.githooks</code>。交付报告：<code>.khyos/backup/2026-09-20-git-rebuild-final-report.md</code>。</p>
+<p>新增提交：<code>80e24ea9</code>（.mailmap）+ <code>da2fe00e</code>…<code>ebc9ebc2</code>（19 批），共 20 个。<br>血缘接续提交 <code>dbb37108</code> 的 tree 与原 HEAD <strong>逐字节相同</strong>、<code>git diff</code> 为空。</p>
+<h3 id="事故一-批次-02-把-3956-个文件吞成一个巨提交-我的-bug">事故一：批次 02 把 3956 个文件吞成一个巨提交（我的 bug）<a class="anchor" href="#事故一-批次-02-把-3956-个文件吞成一个巨提交-我的-bug" aria-label="锚点">#</a></h3>
+<ul><li><strong>现象</strong>：<code>0a72ac4d</code> = <code>3956 files changed, 340667 insertions(+)</code>，message 却写「根配置…」。</li><li><strong>根因</strong>：原执行器 <code>git add -A -- &lt;本批路径&gt;</code> 只<strong>追加</strong>，<strong>不移出</strong>其余暂存项；<code>git commit</code> 提交<strong>整个索引</strong>。</li><li><strong>修复</strong>：<code>git reset --soft 80e24ea9</code> 退回；新执行器 <code>.khyos/diag/run-batch2.sh</code></li></ul>
+<p><strong>每批前先 <code>git reset</code></strong> + <strong>防巨提交断言</strong>（暂存数 ≤ 本批声明路径数）。</p>
+<ul><li><strong>验证</strong>：批次 02 重跑 = <strong>40 files changed</strong>（正好等于声明条数），后续 18 批再未触发断言。</li><li><strong>额外收益</strong>：钩子只扫本批几十个文件 ⇒ 每批从「约 5 分钟」降到<strong>秒级</strong>。</li></ul>
+<h3 id="事故二-另一会话的-git-filter-branch-并发改写历史">事故二：另一会话的 <code>git filter-branch</code> 并发改写历史<a class="anchor" href="#事故二-另一会话的-git-filter-branch-并发改写历史" aria-label="锚点">#</a></h3>
+<ul><li>来自会话 <code>D:/WorkBuddyData-Intl/WorkBuddy AI/2026-09-20-11-01-36/</code>（任务「GitHub 贡献者清理」，</li></ul>
+<p>剥离 <code>Co-Authored-By: Claude</code> / <code>CommandCodeBot</code> 尾注），12:07:10 起跑，<strong>2 小时</strong>未动任何 ref。</p>
+<ul><li><strong>双向危害</strong>：它先枚举提交后改 ref ⇒ 枚举后新落的我的 4 个提交<strong>不在改写结果里，会被丢掉</strong>；</li></ul>
+<p>且双方争 <code>.git/index.lock</code> <strong>互相死锁</strong>。</p>
+<ul><li><strong>处置</strong>（用户决定）：终止它。终止时 <code>refs/original</code> 空、无 <code>.git/.git-rewrite</code>、无残留锁 ⇒ <strong>零成本</strong>。</li><li><strong>它需重跑</strong>：正因看不到我的新提交，它本来就必须在本次提交落定后重跑。</li><li><code>main</code> 上仍有 <strong>52 条</strong>提交带 <code>Co-Authored-By: Claude</code> —— 未擅自改写。</li></ul>
+<h3 id="安全发现-p0">安全发现（P0）<a class="anchor" href="#安全发现-p0" aria-label="锚点">#</a></h3>
+<p>7 把真实凭据明文已在 HEAD 且<strong>已推三远端</strong> ⇒ 视为公开，用户自行轮换。<br>本次新增的 <code>docs/opencode-provider-keys.html</code>（含 4 把明文）被 pre-commit 正确拦下，已按用户决定<br><strong>脱敏后提交</strong>（6 处改为 <code>{env:*_API_KEY}</code>，<code>.md</code>/<code>.html</code> 同步改写）。<br>清单：<code>.khyos/backup/2026-09-20-secret-exposure-report.md</code>（gitignore 内，含明文）。</p>
+<h3 id="顺带修复-pre-commit-第-3-步">顺带修复：pre-commit 第 3 步<a class="anchor" href="#顺带修复-pre-commit-第-3-步" aria-label="锚点">#</a></h3>
+<p>裸 <code>grep</code> → <code>scripts/ci/check-staged-secrets.js</code>（+ <code>package.json</code> 别名 <code>check:staged-secrets</code>）：<br>读 <code>hygiene-allowlist.json</code> 的「文件+完整值」豁免 + 补 <code>\b</code> 词边界（消掉 <code>task-template-hint-injection</code> 类假红）。<br>白名单文件自身：<strong>凡作为 <code>match</code> 出现的值即豁免集</strong>（试过「自指条目」不成立 —— 平方级增长；<br>试过「整文件跳过」也不成立 —— 会漏掉 reason 字段里的真钥匙）。</p>
+<h3 id="存量违规基线-已完整记录-未修">存量违规基线（已完整记录，未修）<a class="anchor" href="#存量违规基线-已完整记录-未修" aria-label="锚点">#</a></h3>
+<p><code>npm run rules:gate</code> → <strong>执行器 37 个、违规 399 条（阻断 362、抑制 0）、未登记 finding 8 条</strong>。<br>阻断项：<code>LAYOUT-001</code>（<code>gui-test-screenshots</code> 未登记）、<code>check-repo-layout.js</code>、<code>TOOLING-002</code>、<br><code>SECURITY-001</code>（36 &gt; 20）、<code>check-permission-invariants.js</code>、<code>check-code-standards.js</code>、<code>SOURCING-005</code>（超基线）。<br>存档：<code>.khyos/backup/2026-09-20-rules-gate-baseline.md</code>。</p>
+<h3 id="待办">待办<a class="anchor" href="#待办" aria-label="锚点">#</a></h3>
+<ol><li><strong>你</strong>：轮换 7 把密钥 + 重生成客户端内嵌数组；清理 <code>gen_keys.py</code>/<code>check_keys.ps1</code>/<code>customProviderRegistrar.js:308</code> 明文。</li><li><strong>那个会话</strong>：重跑 <code>filter-branch</code> + <code>git push --force --all</code> 三远端。</li><li>存量违规 399 条（含 <code>SECURITY-001</code> 20 文件闸的机制缺陷）后续单独治理。</li><li>工作区剩余 72 项（并发写入者新产生）—— 按你的决定<strong>留在工作区</strong>。</li></ol>
+<hr>
+<h2 id="续二-完整性验证-20-个主题提交零内容丢失-14-30">续二：完整性验证 —— 20 个主题提交零内容丢失（14:30）<a class="anchor" href="#续二-完整性验证-20-个主题提交零内容丢失-14-30" aria-label="锚点">#</a></h2>
+<h3 id="方法">方法<a class="anchor" href="#方法" aria-label="锚点">#</a></h3>
+<p>临时索引重建「应然树」：<code>GIT_INDEX_FILE=.khyos/diag/verify-index</code> → <code>git read-tree 6376988f</code><br>→ <code>git apply --cached .khyos/backup/git-20260920-1033/staged-20260920.patch</code> → <code>git write-tree</code><br>= <strong><code>2d156b77</code></strong>。再 <code>git diff-tree -r --raw 2d156b77 HEAD</code> = <strong>194 条</strong>。</p>
+<h3 id="两级判定-关键判据">两级判定（关键判据）<a class="anchor" href="#两级判定-关键判据" aria-label="锚点">#</a></h3>
+<ul><li><strong>级 1</strong>：<code>HEAD blob == base blob</code>？→ 是 = 暂存改动被丢弃。<strong>结果 <code>stagedNotCommitted = 0</code></strong> ⇒ 零丢弃。</li><li><strong>级 2</strong>：<code>HEAD blob == 当前工作区 blob</code>？→ 139/147 一致 ⇒ 提交读的是工作区实况（<code>git add -A</code> 正确语义）。</li></ul>
+<h3 id="194-条逐类">194 条逐类<a class="anchor" href="#194-条逐类" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类</th><th>数</th><th>判定</th></tr></thead><tbody><tr><td>A</td><td>2</td><td>本轮新增：<code>.mailmap</code>、<code>scripts/ci/check-staged-secrets.js</code></td></tr><tr><td>M</td><td>139</td><td>HEAD == 工作区</td></tr><tr><td>M</td><td>8</td><td>另一会话 14:22–14:27 在途（全是生成物：规则卡/登记表/nav-data/index.html）</td></tr><tr><td>D</td><td>20</td><td>临时产物，用户决定排除；<strong>磁盘仍在</strong>且 <code>.gitignore:249/250</code> 已覆盖</td></tr><tr><td>D</td><td>26</td><td><code>views/*.vue</code> → <strong><code>views/admin/*.vue</code> 重构</strong>（见下）</td></tr></tbody></table>
+<h3 id="重要发现-views-admin-是未提交的真实重构">重要发现：<code>views/admin/</code> 是未提交的真实重构<a class="anchor" href="#重要发现-views-admin-是未提交的真实重构" aria-label="锚点">#</a></h3>
+<ul><li><code>useRoutePrefetch.js:47</code> 导入 <code>@/views/admin/AIDashboard.vue</code>（<strong>新路径</strong>），旧路径已废</li><li><code>apps/ai-frontend/src/views/admin/</code>（24 个 <code>.vue</code>）<strong>在磁盘但未跟踪</strong>，mtime <strong>09:18</strong>（早于我重建）</li><li>旧路径内容在 <code>6376988f</code> 与应然树中<strong>都在</strong>；新路径比应然快照<strong>略大 8~10 行</strong>（后继修订）</li><li>⇒ 重构发生在 09:18 且<strong>从未暂存</strong>；索引停留在陈旧状态；<code>git add -A -- &lt;旧路径&gt;</code> 如实记录删除</li><li>⚠ <strong>待办</strong>：应提交 <code>views/admin/</code>，否则新克隆缺 24 个视图</li></ul>
+<h3 id="并发会话-仍在写">并发会话（仍在写）<a class="anchor" href="#并发会话-仍在写" aria-label="锚点">#</a></h3>
+<p>工作区 82 → 97；新增 <code>[DESIGN-GIT-004] 提交时机规范</code>、<code>[DESIGN-IP-001] 软件著作权就绪</code>、<br><code>scripts/ci/check-commit-timing.js</code>、<code>services/backend/src/cli/commitTiming.js</code> ⇒ 该会话在做 PROCESS-009/010。<br>⇒ <strong>本仓非静止，任何计数都是瞬时快照。</strong></p>
+<h3 id="最终状态">最终状态<a class="anchor" href="#最终状态" aria-label="锚点">#</a></h3>
+<p><code>main</code> = <code>ebc9ebc2</code>、<strong>209 提交</strong>、起点 <strong>2026-07-25</strong>、作者 <strong>1 套</strong>（<code>%aN</code> 验）、暂存 <strong>0</strong>、<code>refs/original</code> <strong>0</strong>。<br>嫁接提交 <code>dbb37108</code> 双亲 = <code>6376988f</code>(166) + <code>74673110</code>(2026-08-19, 22)。<br>报告：<code>.khyos/backup/2026-09-20-integrity-verification.md</code></p>
+<hr>
+<h2 id="续三-memory-md-瘦身-14-35">续三：MEMORY.md 瘦身（14:35）<a class="anchor" href="#续三-memory-md-瘦身-14-35" aria-label="锚点">#</a></h2>
+<p>按注入预算要求把 <code>MEMORY.md</code> 从 <strong>23521 → 15682 字节（-33%，13950 → 9335 字符）</strong>、179 → 88 行。</p>
+<p><strong>做法</strong>：把低频/已沉淀的节外置到 <code>MEMORY-details.md</code>，正文只留「动手前必须知道的那一句」+ <code>→ 6§X</code> 指针。<br>新结构（6 节）：§一 八个暗门（压成一行）／§二 守卫与判读纪律（<strong>保留全文，是静默失真类警告的唯一副本</strong>）／§三 其余各节的一句话判据／§四 新设计·新守卫落点与接线（保留）／§五 结构体积治理／§六 git 历史重建（保留）。</p>
+<p>⚠ <strong>重要判据</strong>：<code>MEMORY-details.md</code> <strong>并未</strong>完整覆盖 <code>MEMORY.md §二</code> 的 11 条（gitignore≠垃圾、根目录 <code>nul</code>、<code>CODE_EXTS</code> 含 <code>.json</code>、dry-run 不留痕、引用 vs 裁定、shim 失真、Edit 全角标点、CRLF、生成物不能被扫、哨兵、<code>git grep</code>）⇒ <strong>§二 不可外置</strong>。<br>同理 §四（接线判读）与 §六（本轮新结论）必须留在正文。</p>
+<p><strong>顺带修正</strong>：<code>MEMORY-details.md</code> 里 6 处指向旧节号的交叉引用（§四/§六/§七/§十一 → §三/§四）已用脚本改掉（<code>Edit</code> 对全角标点行有「报成功未生效」风险，故走 <code>.khyos/diag/fix-memrefs.js</code>）。</p>
+<p><strong>遗留</strong>：9335 字符仍略高于估算的截断线（~8800）。若下轮仍被截断，<strong>下一根杠杆</strong>是把 §四 的「判读」清单整体外置到 6§八。<code>.workbuddy-ai/memory/*.html</code> 孪生件由产品侧自动镜像（仓内无生成器），当前已陈旧。</p>
+<hr>
+<h2 id="续四-出厂-apk-明文密钥核验-两个真-bug-15-05">续四：出厂 APK 明文密钥核验 + 两个真 bug（15:05）<a class="anchor" href="#续四-出厂-apk-明文密钥核验-两个真-bug-15-05" aria-label="锚点">#</a></h2>
+<p><strong>用户决定（针对暴露报告第 2 条）</strong>：<code>scripts/gen_keys.py</code> 的 6 把明文 + XOR 密钥<br><code>[0xA3,0x5F,0xC2,0x1B]</code> 是<strong>免费额度钥匙，提交暴露可接受，不改写历史</strong>；<br>但 <strong>APK 安装后只允许存在混淆密钥，不得再出现明文</strong>。</p>
+<h3 id="核验-四层-全部通过">核验（四层，全部通过）<a class="anchor" href="#核验-四层-全部通过" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>层</th><th>范围</th><th>结果</th></tr></thead><tbody><tr><td>Dart 源</td><td><code>built_in_keys.dart</code></td><td>✅ 只有 <code>List&lt;int&gt;</code> 数组</td></tr><tr><td>客户端源树</td><td>141 文件（跳过 <code>build/</code>）</td><td>✅ 无明文</td></tr><tr><td>出厂 APK</td><td><code>release/khy-os-client-20260915-2206.apk</code> 59.85MB / <strong>77 个 zip 条目逐个解压</strong></td><td>✅ 无明文</td></tr><tr><td>运行期</td><td>密钥全部出口</td><td>✅ 只进 <code>Authorization</code> 头；<code>save()</code> 不落盘；logger 无 <code>Bearer</code>/<code>apiKey</code></td></tr></tbody></table>
+<p>关键判据（运行期）：<code>AppConfig.save()</code> 写的是 <code>load()</code> 的<strong>存储值</strong>而非 <code>.effective</code><br>⇒ 内置密钥不会被持久化（自动切 provider 时 <code>save(baseUrl:, model:)</code> 也不带 apiKey）。<br>唯一人眼可见处是设置页 <code>maskedEffectiveKey</code>（前 8 + 后 4），不落盘。</p>
+<h3 id="修掉的两个真-bug">修掉的两个真 bug<a class="anchor" href="#修掉的两个真-bug" aria-label="锚点">#</a></h3>
+<ol><li>⚠⚠ <strong><code>gen_keys.py</code> 与 Dart 数组漂移</strong>：Dart <strong>7</strong> 个数组 vs 脚本 <strong>6</strong> 把（缺 <code>stepfun</code>），</li></ol>
+<p>而 Dart 头部写着「照 <code>gen_keys.py</code> 重跑即可」⇒ <strong>重跑会静默丢掉 StepFun 密钥</strong>。<br>   另：脚本 dict 键名是大写驼峰 <code>SupXH</code>，生成的 <code>_SupXH</code> 与 Dart 的 <code>_supxh</code> 大小写不符。<br>   ⇒ 已重写为 7 把 + 键名逐字对齐 + 新增 <code>--check</code> 漂移检测（实测 7/7 一致，<br>   生成块与 Dart <strong>逐字节相同</strong>：51/92/49/67/35/51/64）。</p>
+<ol><li>⚠⚠ <strong><code>check_keys.ps1</code> 三重失效</strong>：只查 6 个前缀（漏 <code>_stepfun</code>）；APK 路径写死在</li></ol>
+<p><strong>不存在</strong>的 <code>build/app/outputs/flutter-apk/app-release.apk</code>（实际在 <code>release/*.apk</code>）<br>   ⇒ <code>ReadAllBytes</code> 直接抛异常；清单硬编码必然再漂移。<br>   ⇒ 新增 <code>scripts/check_builtin_keys.py</code>（<strong>从 Dart 解码自动派生</strong>，永不漂移；退出码 0/1/2；<br>   支持 <code>--src-only</code> / <code>--json</code>），<code>check_keys.ps1</code> 改为薄封装。<br>   ⚠ PowerShell 封装坑：<code>$MyInvocation.MyCommand.Path</code> 在 <code>-File</code> 下可能为空 ⇒ 用 <code>$PSScriptRoot</code>；<br>   <code>$args</code>/<code>$script</code> 是自动变量不可占用。</p>
+<h3 id="全仓扫描的其余明文-均不进仓-不进-apk">全仓扫描的其余明文（<strong>均不进仓、不进 APK</strong>）<a class="anchor" href="#全仓扫描的其余明文-均不进仓-不进-apk" aria-label="锚点">#</a></h3>
+<p><code>khy-Trajectory/*</code>（<code>.gitignore:60</code>）、<code>services/.env</code>（<code>:47</code>）、<code>services/**/.env.bak-cleanup</code>（<code>:51</code>）、<br><code>scripts/__pycache__/*.pyc</code>（<code>:3</code>）。出厂链路上唯一明文是 <code>scripts/gen_keys.py</code>，已获用户接受。</p>
+<p>报告：<code>.khyos/backup/2026-09-20-apk-plaintext-verification.md</code>；<br><code>2026-09-20-secret-exposure-report.md</code> 已追加处置决定。</p>
+<h3 id="未做-待用户决策">未做（待用户决策）<a class="anchor" href="#未做-待用户决策" aria-label="锚点">#</a></h3>
+<p>把 <code>check_builtin_keys.py</code> 接成仓内守卫（<code>$g</code> 规则 + 登记表 + 规则卡四处触点）。<br>它是 <code>scripts/</code> 下的开发工具，不在 <code>check-wiring</code> 的 <code>$g</code> 扫描范围 ⇒ 现无接线要求。</p>
+<hr>
+<h2 id="续五-检查器改造为-门就绪-接线契约实测-2026-09-20-下午">续五：检查器改造为「门就绪」+ 接线契约实测（2026-09-20 下午）<a class="anchor" href="#续五-检查器改造为-门就绪-接线契约实测-2026-09-20-下午" aria-label="锚点">#</a></h2>
+<h3 id="改造内容-scripts-check-builtin-keys-py-203-258-行">改造内容（<code>scripts/check_builtin_keys.py</code>，203 → 258 行）<a class="anchor" href="#改造内容-scripts-check-builtin-keys-py-203-258-行" aria-label="锚点">#</a></h3>
+<p>新增两个开关，默认行为与退出码不变：</p>
+<ul><li><code>--changed</code>：只扫 <code>git diff --cached --name-only -z --diff-filter=ACMR</code> 的改动路径，</li></ul>
+<p><strong>隐含跳过 APK</strong>（APK 是构建产物，提交时刻不存在）。⚠ 判改动集一律 <code>--cached</code>。</p>
+<ul><li><code>--gate</code>：按 <code>ruleguard</code> 的<strong>聚合方言</strong>输出 <code>- [error] &lt;说明&gt; (id: builtin-key-plaintext)</code>。</li></ul>
+<p>新增模块常量 <code>FINDING_ID = 'builtin-key-plaintext'</code>（<strong>必须与登记表 <code>exec.findings</code> 逐字一致</strong>）。</p>
+<ul><li><code>--json</code> 与 <code>--gate</code> 互斥（argparse mutually_exclusive_group）。</li></ul>
+<p><strong>实测（阳性 + 解析闭环）</strong>：往客户端源树放一个含 <code>_stepfun</code> 明文的探针文件<br>⇒ <code>--src-only --gate</code> 输出 <code>- [error] 出厂件出现明文内置密钥 [stepfun] @ … (id: builtin-key-plaintext)</code>、<br><code>exit=1</code>；把该行喂给 <code>require('./scripts/ruleguard/lib/run.js').parseFindings()</code><br>⇒ <code>{severity:'error', finding:'builtin-key-plaintext'}</code> ✅ 被认领格式正确。探针已删除。</p>
+<h3 id="接线契约-读源码实测-非推测">接线契约（读源码实测，非推测）<a class="anchor" href="#接线契约-读源码实测-非推测" aria-label="锚点">#</a></h3>
+<ul><li><strong><code>selectCheckers</code>（run.js:137）</strong>：<code>mode==='commit'</code> 时<strong>只收 <code>rule.args.includes('--changed')</code> 的执行器</strong></li></ul>
+<p>⇒ 想进 pre-commit，args 必须含 <code>--changed</code>；<code>gate='pr'</code> 则无此要求（pr ⊃ commit 反向不成立）。</p>
+<ul><li><strong>args 合并陷阱</strong>：<code>buildManifest</code> 会跨规则合并同 script 的 args，但 <code>selectCheckers</code></li></ul>
+<p><strong>只在首次遇到时取该规则的 args，后续同 script 规则不再合并</strong> ⇒ 让「同 script 两条规则、<br>  一条 commit+<code>--changed</code>、一条 release+<code>[]</code>」按 manifest 顺序<strong>产生顺序依赖</strong>，别这么设计。</p>
+<ul><li><strong><code>RULES-REGISTRY.json</code> 不是门表面</strong>（wiring.js <code>surfaceTexts</code>：S1 package.json scripts /</li></ul>
+<p>S2 workflows / S3 <code>.githooks/*</code> / S4 阶段表）。<strong>登记规则本身不能让执行器变 <code>wired</code></strong><br>  ⇒ 必须另给一个表面（<code>package.json</code> 别名最自然）。</p>
+<ul><li>但 <code>exec.script</code> <strong>会被自动收进 <code>extraCheckers</code></strong>（registry.js:154）⇒ 不在 <code>scripts/ci/</code> 下</li></ul>
+<p>的执行器<strong>也会被跟踪</strong>；<code>check-wiring</code> 第 3 项对 <code>enforced</code>/<code>declared-uwired</code> 要求有表面引用。</p>
+<ul><li><code>check-wiring</code> 别名正则（<code>ALIAS_PATTERN = /^check:|^gate:|^conform:|^quality:/</code>）匹配脚本路径时</li></ul>
+<p><code>python scripts/x.py</code> 形态可被捕获（前缀组失败后从位置 7 起匹配）✅；<code>maintenance:</code> 前缀不被检查。</p>
+<ul><li><strong><code>.py</code> 执行器先例</strong>：<code>LAYOUT-004</code> → <code>scripts/maintenance/organize.py</code>（gate=pr，别名 <code>maintenance:organize</code>）</li></ul>
+<p>⇒ <code>run.js</code> 用 <code>interpreterFor()</code> 按后缀分派，<code>.py</code> 已被 <code>CHECKER_SUFFIXES</code> 计入。</p>
+<h3 id="查重的三个新事实-决定-新增规则-还是-补空白">查重的三个新事实（决定「新增规则」还是「补空白」）<a class="anchor" href="#查重的三个新事实-决定-新增规则-还是-补空白" aria-label="锚点">#</a></h3>
+<ol><li><strong><code>SECURITY-001 密钥防泄露</code> 名不副实</strong>：scope 含「打包产物」、constraint 写「真 key/token</li></ol>
+<p>永不进 bundle」，但 <code>exec.script = scripts/ci/check-change-safety.js --changed</code>，<br>   <code>findings</code> 只有 <code>changed-count-error</code>（<strong>只数改动文件数 &gt;20 拦截，不做任何密钥形态扫描</strong>）。<br>   ⇒ 它<strong>声称</strong>的覆盖范围与<strong>实际</strong>覆盖范围严重不符；且「真 key 永不进 bundle」与现状<br>   （7 把真 key 经 XOR 混淆随 APK 分发、用户已认可）<strong>直接矛盾</strong> ⇒ 无论选哪条路，001 的 constraint 都该订正。</p>
+<ol><li><strong><code>scripts/release/source-hygiene-scan.js</code> 是孤儿</strong>：<code>STAGE='S1'</code> 只记录、恒 exit 0；</li></ol>
+<p>只扫 <code>git ls-files</code> 的<strong>已跟踪文本文件</strong>（<code>TEXT_EXTENSIONS</code>、<code>MAX_BYTES=1MB</code>），<br>   <strong>不碰打包产物</strong>。⚠ 全仓无任何规则引用它（只在 <code>check-staged-secrets.js</code> 的注释里被提及）。</p>
+<ol><li>⚠⚠ <strong><code>[MGMT-STD-008]</code> §3 授权的「拆父子（父 <code>DOMAIN-NNN</code> + 子 <code>DOMAIN-NNN.1</code>）」在本仓不可实现</strong>：</li></ol>
+<p><code>check-gov-rules.js</code> 的 ID 正则是 <code>/^[A-Z0-9]+(?:-[A-Z0-9]+)*-\d{3}$/</code><br>   ⇒ <code>SECURITY-001.1</code> 判非法（点号不允许、且 <code>1</code> 非 3 位）。登记表里<strong>带点号 ID 数量 = 0</strong>（零先例）。<br>   ⇒ §2.2「重叠即违规」的两条补救（合并 / 拆父子）只剩「合并」一条路。<br>   ⚠ 机械重叠判据是 <strong>同 domain + 同名</strong>（<code>GOV-TOOL-006</code>）⇒ 改个 name 就能过机械闸，<br>   <strong>但人工判据是「同 domain 同 subject」</strong>，两者不同源。<br>   ⇒ 替代路径有先例：<strong>按 scope 分层</strong>（§2.4 表 X-001 的裁决手法，非优先级裁决）。</p>
+<h3 id="边界矩阵结论-已用图交付">边界矩阵结论（已用图交付）<a class="anchor" href="#边界矩阵结论-已用图交付" aria-label="锚点">#</a></h3>
+<p>SECURITY-001 只覆盖「改动集规模」；<code>check-staged-secrets</code> 覆盖「作者侧脚本 + 提交暂存区」（仅新增行）；<br><code>source-hygiene-scan</code> 覆盖「已跟踪文本」（恒不阻断）；<strong>内容层面的「打包产物」列全空</strong>，<br>正是本次新增 <code>check_builtin_keys.py</code> 填的格。</p>
+<h3 id="待用户裁决-已用-askuserquestion-提出-三个选项">待用户裁决（已用 AskUserQuestion 提出，三个选项）<a class="anchor" href="#待用户裁决-已用-askuserquestion-提出-三个选项" aria-label="锚点">#</a></h3>
+<p>① 新增 <code>SECURITY-005 出厂件明文密钥</code>（gate=pr 全量 + 提交期在 <code>check-staged-secrets</code> 追加 <code>--changed</code> 快档，<br>需把 001 的「打包产物」scope 移交以消重叠）／② 只改 <code>SECURITY-001</code>（订正 constraint + 塞进<br><code>check-change-safety.js</code>）／③ 只接发布门不进登记表。</p>
+<hr>
+<h2 id="续六-用户裁决-只改-security-001-已落地并全绿-2026-09-20-下午">续六：用户裁决「只改 SECURITY-001」→ 已落地并全绿（2026-09-20 下午）<a class="anchor" href="#续六-用户裁决-只改-security-001-已落地并全绿-2026-09-20-下午" aria-label="锚点">#</a></h2>
+<h3 id="落地内容-零新规则">落地内容（零新规则）<a class="anchor" href="#落地内容-零新规则" aria-label="锚点">#</a></h3>
+<ol><li><strong><code>scripts/ci/check-change-safety.js</code></strong>（SECURITY-001 的既有执行器）新增两个 finding：</li></ol>
+<p><code>builtin-key-plaintext</code>（error）/ <code>builtin-key-check-failed</code>（warning，执行器不可用时）；<br>   判据<strong>委托</strong> <code>scripts/check_builtin_keys.py</code>（<strong>不重写解码逻辑</strong> ⇒ 不产生第二份会漂移的实现）。<br>   调用点排在 <code>entries.length === 0</code> 早退<strong>之前</strong>（否则「本次没改文件」时静默不执行）。<br>   模式派生：<code>changedMode</code> ⇒ 给子进程传 <code>--changed</code>（只看暂存，隐含跳过 APK）；否则全量（含 APK）。</p>
+<ol><li><strong><code>RULES-REGISTRY.json</code> SECURITY-001</strong>：constraint 订正为「永<strong>不以明文</strong>进 bundle…（出厂内置密钥</li></ol>
+<p>仅允许 XOR 混淆形态随包分发）」；benefit 补一句；version → <code>1.1.0 (2026-09-20)</code>；<br>   <code>exec.findings</code> 补两项。<strong>scope / gate / paths 未动</strong>。</p>
+<ol><li><strong><code>CLAUDE.md</code> + <code>CLAUDE.html</code></strong>（该规则 <code>ssot</code>，§一 R2 行）：订正「永不进 bundle」→「永不以明文进</li></ol>
+<p>bundle（出厂内置密钥仅允许 XOR 混淆形态随包分发，明文形态严禁出现）」，并补执行器指引。<br>   ⚠ CLAUDE.md 是 <strong>LF</strong>（不是 CRLF），可直接 Edit。</p>
+<ol><li><strong>规则卡重生成</strong>：<code>node scripts/docs/gen-rules-cards.js</code> ⇒ 只改 <code>[SECURITY-001] …md</code>；</li></ol>
+<p><code>.html</code> 孪生件由 <code>build_docs_site.js --quiet</code> 补，<strong>副作用仅 1 个文件</strong>（生成器近幂等）。<br>   顺带修好了索引里陈旧的「86 张 → 87 张」（非本次引入，是别的会话的 PROCESS-009/010 未重跑生成器）。</p>
+<ol><li><code>scripts/check_keys.ps1</code> 注释补「外层需 UTF-8 解码」的坑。</li></ol>
+<h3 id="验收-全实测">验收（全实测）<a class="anchor" href="#验收-全实测" aria-label="锚点">#</a></h3>
+<ul><li>阳性两条路径：暂存明文探针 ⇒ <code>--changed</code> 报 <code>[error] … (id: builtin-key-plaintext)</code>、exit 1；</li></ul>
+<p>源树明文探针 ⇒ 全量模式同样报、exit 1。探针均已删、索引恢复 2 项。</p>
+<ul><li>聚合行喂 <code>run.js</code> 的 <code>parseFindings()</code> ⇒ <code>{severity:'error', finding:'builtin-key-plaintext'}</code> ✅。</li><li><code>rules:gate:commit</code>：`action=start target=scripts/ci/check-change-safety.js</li></ul>
+<p>rules=changed-count-error,builtin-key-plaintext,builtin-key-check-failed<code> → </code>action=pass exit=0`，<br>  <strong>无 checker-failure</strong>，阻断 0，durationMs=581。</p>
+<ul><li><code>rules:gate</code>（pr）：同执行器 <code>progress=22/37 mode=pr exit=0 durationMs=548</code>。</li><li>守卫全绿：<code>check-rules-registry</code> / <code>check-gov-rules</code> / <code>check-wiring</code>（86 检查器全接线）/</li></ul>
+<p><code>check-agent-docs</code>（0 error 0 warning）。<code>check-repo-layout</code> 对新增文件<strong>零命中</strong>。</p>
+<ul><li>⚠ pr 档存量红不变：执行器 37 / 违规 398 / 阻断 360 / 超基线 356，<strong>本次零新增</strong>。</li></ul>
+<h3 id="本轮新增的可复用判据-已同步进-memory-md">本轮新增的可复用判据（已同步进 MEMORY.md）<a class="anchor" href="#本轮新增的可复用判据-已同步进-memory-md" aria-label="锚点">#</a></h3>
+<ul><li><strong><code>RULES-REGISTRY.json</code> 不是门表面</strong> ⇒ 登记规则<strong>不会</strong>让执行器变 <code>wired</code>，必须另给表面。</li><li><code>selectCheckers</code> 的 commit 模式要求 <code>args</code> 含 <code>--changed</code>；且 <strong>args 不跨规则合并</strong></li></ul>
+<p>（只在首次遇到时取该规则的 args）⇒ 同 script 两条规则会产生<strong>顺序依赖</strong>，别这么设计。</p>
+<ul><li>⚠ <code>run.js</code> 的 <code>warnCount</code> <strong>只统计已认领的 finding</strong> ⇒ 未认领的 warning 只体现在</li></ul>
+<p>「未登记 finding N 条」里；<strong><code>warnings=0</code> 不代表执行器没输出</strong>。</p>
+<ul><li>⚠ <code>check-change-safety.js</code> 有 <code>entries.length === 0</code> 早退 ⇒ 挂新判据必须放在早退之前。</li><li>⚠ <code>scripts/release/source-hygiene-scan.js</code> 是<strong>无规则归属的孤儿</strong>（S1、恒 exit 0、只扫已跟踪文本）。</li><li>⚠ PS 封装把 stdout 固定 UTF-8 后，<strong>外层管道/重定向也必须 UTF-8 解码</strong>，否则「鈥?」乱码</li></ul>
+<p>（那是外层解码所致，非脚本缺陷）。</p>
+<h2 id="续七-release-门加阶段条目-全量出厂件检查的发版落点-2026-09-20-傍晚">续七：release 门加阶段条目 —— 全量出厂件检查的发版落点（2026-09-20 傍晚）<a class="anchor" href="#续七-release-门加阶段条目-全量出厂件检查的发版落点-2026-09-20-傍晚" aria-label="锚点">#</a></h2>
+<p>用户指令：「release 门（<code>scripts/release/releaseGateStages.js</code>）加上阶段条目」。</p>
+<h3 id="先纠路径-用户口述少了一层">先纠路径（用户口述少了一层）<a class="anchor" href="#先纠路径-用户口述少了一层" aria-label="锚点">#</a></h3>
+<p><code>scripts/release/releaseGateStages.js</code> <strong>不存在</strong>；真实文件 <code>scripts/release/lib/releaseGateStages.js</code><br>（14454B 纯叶子，只含数据+纯函数）。<code>wiring.js</code> 的 <code>STAGE_TABLE_FILES</code> 登记的是<strong>对的</strong>（带 <code>lib/</code>）<br>⇒ 无需订正 wiring；是<strong>口述路径</strong>少一层。<strong>教训：先 <code>git ls-files | grep</code> 核路径再动手。</strong></p>
+<h3 id="为什么-全量检查-此前从没在发版时跑过">为什么「全量检查」此前从没在发版时跑过<a class="anchor" href="#为什么-全量检查-此前从没在发版时跑过" aria-label="锚点">#</a></h3>
+<p>release 门已有 <code>small-model-safety</code> 阶段 = <code>npm run check:small-model:safety</code>，其中含 <code>check:change-safety</code><br>= <code>node scripts/ci/check-change-safety.js --changed</code> —— <strong>自带 <code>--changed</code></strong> ⇒ 只看暂存集，<br><strong>APK 永远扫不到</strong>。所以「全量模式」代码在，但<strong>没有任何门在发版时调它</strong>。</p>
+<h3 id="改动-2-个文件">改动（2 个文件）<a class="anchor" href="#改动-2-个文件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>scripts/release/lib/releaseGateStages.js</code></td><td>新增 <code>builtin-key-plaintext</code> 阶段（must/deterministic），command = <code>node scripts/ci/check-change-safety.js --strict-warnings</code>，插在 <code>small-model-safety</code> 之后</td></tr><tr><td><code>scripts/tests/release-gate.test.js</code></td><td>新增 1 条契约测试：must + deterministic + 含执行器 + <strong><code>doesNotMatch(/--changed/)</code></strong> + 含 <code>--strict-warnings</code> + 排位断言</td></tr></tbody></table>
+<p>三个设计点：① <strong>不带 <code>--changed</code></strong>（带了 APK 永远扫不到）；② <strong><code>--strict-warnings</code></strong> 让「检查器跑不起来」<br>也 fail-closed（全量模式下唯一可能的 warning 就是这条）；③ <strong>APK 缺失不算失败</strong>（检查器只打印 ⚠ 并 exit 0），<br>与既有 <code>android-signature</code> 同样容忍缺产物。</p>
+<h3 id="验收-全实测-2">验收（全实测）<a class="anchor" href="#验收-全实测-2" aria-label="锚点">#</a></h3>
+<ul><li><code>node --test scripts/tests/release-gate.test.js</code> → <strong>15/15 pass</strong>。</li><li>阳性：客户端源树放明文探针 → <code>[error] … [agnes] @ …/probe-plaintext.tmp (id: builtin-key-plaintext)</code>、<strong>exit 1</strong>；删除后 exit 0。</li><li><code>check-wiring</code> 通过（86 检查器全接线、豁免 11、无死指针）；<code>check-gov-rules</code> 通过。</li><li><strong>顺带新增一个门表面</strong>：HEAD 版阶段表里 <code>check-change-safety.js</code> 出现 <strong>0</strong> 次（只写 npm 别名，</li></ul>
+<p>而 <strong>别名解析不参与 S4 文本匹配</strong>），改完 <strong>1</strong> 次 ⇒ <code>releaseGateStages.js</code> 成为该执行器的 release 档表面。</p>
+<ul><li><strong>无需同步孪生件</strong>：全仓没有文档枚举发布门阶段清单；维护映射表也没有 <code>releaseGateStages.js</code> 的 area。</li></ul>
+<h3 id="本轮新判据-可复用">本轮新判据（可复用）<a class="anchor" href="#本轮新判据-可复用" aria-label="锚点">#</a></h3>
+<ol><li><strong>阶段表 = 门表面（S4）</strong>：<code>text.includes(&lt;执行器 basename&gt;)</code> 取<strong>全文</strong> ⇒ 写出执行器路径即新增表面，</li></ol>
+<p><strong><code>npm run &lt;别名&gt;</code> 不算</strong>。</p>
+<ol><li><strong>发布门阶段表无 stage 过滤器</strong> ⇒ 端到端验收只能跑整门（<code>--json --keep-going</code> 拿 JSON 里的 <code>stages[]</code>）。</li><li><strong>契约测试只锁 <code>length&gt;0</code> + id 唯一</strong> ⇒ 加阶段<strong>不会破测试、也不会被测试发现</strong> ⇒ 必须自己加断言。</li><li>⚠ <strong>同一文件多个 <code>Edit</code> 并行会互相覆盖</strong>（每个都报 success，后写者赢）⇒ 串行改或一次 <code>Write</code>。</li><li>⚠ <code>git grep</code> 的 pathspec 里 <code>[...]</code> 是<strong>字符类</strong> ⇒ 含方括号的文档路径会<strong>假阴性</strong>，要用目录 glob 再筛。</li></ol>
+<h2 id="续八-补做上轮遗留的-推荐命令-审查-2026-09-20-傍晚-第二轮">续八：补做上轮遗留的「推荐命令」审查（2026-09-20 傍晚，第二轮）<a class="anchor" href="#续八-补做上轮遗留的-推荐命令-审查-2026-09-20-傍晚-第二轮" aria-label="锚点">#</a></h2>
+<p>上轮我给自己留了「<code>build_recommended_commands</code> 是否会因新增 finding 而漏建推荐命令（未审）」。<br>审完发现<strong>两个真问题</strong>，都因「全量模式（改动集为空）这条路径此前不可达」而暴露：</p>
+<ol><li><strong>全量模式推荐一条必然空转的命令</strong>：<code>buildRecommendedCommands(entries)</code> 是纯路径驱动，</li></ol>
+<p>无条件加 <code>node scripts/ci/check-agent-rules.js ${paths}</code>；<code>paths</code> 为空 ⇒ 推荐出<strong>无参</strong>命令，<br>   而 <code>check-agent-rules.js:821</code> 是 <code>process.exit(rawTargets.length &gt; 0 ? 1 : 0)</code> ⇒ 无参<strong>必然 exit 0</strong>。<br>   修法：<code>if (paths.length &gt; 0)</code> 才推荐（有路径时行为逐字不变）+ 新增 finding 驱动出口<br>   （<code>builtin-key-*</code> ⇒ <code>runnerLabel(BUILTIN_KEYS_SCRIPT)</code>）。</p>
+<ol><li><strong><code>check_builtin_keys.py --gate</code> 是文档漂移</strong>：docstring 说它是「门集成（ruleguard）」路径，</li></ol>
+<p>实测<strong>零调用者</strong>（真实路径是 <code>check-change-safety.js</code> 用 <code>--json</code>）。已订正 docstring。</p>
+<p><strong>验收</strong>：<code>check-change-safety.test.js</code> <strong>9/9</strong>（新增 1 条，用临时 wrapper 在 node 内部收窄 PATH<br>模拟缺 Python，<strong>不写仓内任何文件</strong>）；改动集模式输出与改前逐字一致；release 门该阶段复测 PASS；<br>fail-closed A/B 复测仍为 0 / 1；三个守卫全绿。</p>
+<p><strong>新判据（本轮最有价值的一条）</strong>：★ <strong>新加的断言必须实测「关掉守卫时真变红」</strong>。<br>我把守卫临时改成 <code>paths.length &gt;= 0</code> 跑了一次 → <code>pass 8 / fail 1</code>、<code>not ok 2</code>，恢复后 <code>pass 9</code>。<br>不做这一步就无法区分「有效的回归测试」与「永远绿的装饰」。</p>
+<h2 id="续九-修复-tui-滚轮变成输入历史回溯-2026-09-20-傍晚-用户报障">续九：修复「TUI 滚轮变成输入历史回溯」（2026-09-20 傍晚，用户报障）<a class="anchor" href="#续九-修复-tui-滚轮变成输入历史回溯-2026-09-20-傍晚-用户报障" aria-label="锚点">#</a></h2>
+<p><strong>主诉</strong>：滚轮在转录区滚动 → 输入框召回历史（默认 env，Windows Terminal）。</p>
+<p><strong>根因链（四段，每段都实测）</strong>：① TUI 默认进备用缓冲区（<code>KHY_ALT_SCREEN</code> 默认开，写 <code>1049h</code>），<br>备屏<strong>没有回滚缓冲</strong> ⇒ ② <code>mouseTier()</code> 未表态恒 <code>off</code> ⇒ <code>app.js</code> 不写 <code>?1000h?1006h</code> ⇒ ③ 终端<br>alternate-scroll（DECSET 1007）把滚轮<strong>合成 ↑/↓ 写进 stdin</strong> ⇒ ④ <code>arrowRouting</code> 的 idle/editing<br>把 ↑/↓ 绑成 <code>history:previous/next</code>。合成键与真按键逐字节相同，<strong>应用侧无法区分</strong>。</p>
+<p>⚠ <strong>订正一处我一开始搞错的事实</strong>：<code>off</code> 这个默认值<strong>不是 HEAD 的</strong>，而是工作区里一处<br><strong>未提交</strong>改动（<code>git show HEAD:...mouseButtons.js</code> 的 <code>mouseTier()</code> 结尾是 <code>return 'click'</code>）。<br>⇒ 主诉是<strong>未提交改动引入的回归</strong>，不是存量缺陷；而那个未提交改动本身是在修 2026-09-19<br>审计报的<strong>另一侧</strong>问题（主屏下接管吃掉原生滚轮/拖选）。两者各对一半，本处方是二者的合取。<br><strong>教训</strong>：判「某行为是不是 HEAD 行为」<strong>必须 <code>git show HEAD:&lt;file&gt;</code> 实测</strong> —— 本仓工作区常年<br>挂着数百项别人的未提交改动，<code>git diff</code> 的 numstat 是<strong>混着</strong>的，不能当作「只有我的改动」的指纹。<br>（这条直接推翻了我 <code>rollback.txt</code> 的初版指纹说明，已订正为「该文件禁止整文件 checkout」。）</p>
+<p><strong>★ 最贵的一条判据</strong>：本仓 <code>mouseButtons.js</code> 头部与 <code>mouseWheel.test.js</code> 的注释<strong>早就写明</strong><br>「备屏下滚轮必须被应用接管」，但那条判据只活在注释里 —— 全部测试都在验证「<strong>给了</strong> <code>onWheel</code><br>会怎样」，<strong>没有任何断言在验证默认情况下追踪字节到底写没写出去</strong>。⇒ 默认值类缺陷的判据必须<br>落在<strong>默认值本身</strong>上。（同理：把 <code>return 'off'</code> 改成条件返回时，必须补显式 off 的提前返回，<br>否则 <code>KHY_MOUSE=off</code> 这类救命开关会随默认值一起反向生效。）</p>
+<p><strong>改法</strong>：<code>mouseTier</code> 未表态时<strong>按缓冲区</strong>定档（备屏开 → <code>click</code>，备屏关 → <code>off</code>，主屏旧结论<br>仍成立）；新增叶子 <code>altScreenEnabled()</code>；<code>app.js</code> 透传 <code>hasWheelConsumer: !isCc</code>（CC 的 live 区<br>无滚动窗口，接管只会把滚轮吞掉 ⇒ 明确不接管）；起始追踪档位改读 <code>selectGates</code>（select 开 ⇒ 1002，<br>与 App.js 的 <code>_reEnableTrackingBytes</code> 同源，此前起始写 1000 / 重新接管写 1002 是漂移的）。<br>顺手订正 <code>flagRegistry</code> 三处与代码相反的注释（其中「CC 模式备屏默认关」是错的，代码不看 CC 模式）。</p>
+<p><strong>验收</strong>：探针 <code>.khyos/diag/tui-wheel-probe.js</code> 同一条命令 before=FAIL(exit 1) / after=PASS(exit 0)；<br><code>node --test tests/cli/tui/*.test.js</code> <strong>865/0</strong>；<code>npm run test:tui</code>（jest）<strong>29 suites / 435 tests</strong>；<br><code>check-flag-registry</code> / <code>check-agent-rules --changed</code> 绿；<code>check-agent-feedback --changed</code> 无 error。</p>
+<p>⚠ <strong>两条环境判据</strong>：① <code>tests/tui/**</code> 必须用 <code>npm run test:tui</code>（jest + <code>--experimental-vm-modules</code>），<br><code>node --test</code> 跑它会 <code>describe is not defined</code>（runner 用错，不是测试坏）；<code>node --test</code> 传<strong>裸目录</strong><br>会被当 entry point 报 <code>Cannot find module</code>，要用通配。<br>② <code>check-tui-gates</code> 的 221 &gt; 220 <strong>是改动前就存在的存量红</strong>（改前改后同为 221；引用树内已有 token<br>不增加计数）。未处理，留待基线收敛。<br><strong>遗留</strong>：CC 模式（<code>KHY_CC_TUI=1</code>）的滚轮仍未接管（表现为 ↑ 移动输入光标，非历史回溯）；<br>真正的修法是给 CC 侧补可滚动视口。</p>
+<p><strong>顺手钉死了 <code>check-tui-gates</code> 那条存量红（221 &gt; 220）的归属</strong>：写了<br><code>.khyos/diag/tui-gates-head-count.js</code>（逐文件 <code>git show HEAD:&lt;path&gt;</code> 复刻执行器的 walk + 正则）。<br>结论：<strong>HEAD 上就是 221</strong> ⇒ 存量红，与任何人的 WIP 和我都无关。<br>⚠ 别用 <code>git grep HEAD -- 'dir/**/*.js'</code> 数它 —— git 的 <code>**</code> 不按 shell glob 展开，会静默漏文件<br>（实测同一目录 176 vs 221），据此会得出完全相反的结论。<br><strong>根因已定位</strong>：221 里有 1 个<strong>幻影 token</strong> —— <code>tuiConfig.js:10</code> 的文档注释写了 `<code> </code>KHY_SIDEBAR_*<code> </code><code>，<br>执行器的 </code>\bKHY_[A-Z0-9_]+\b<code> 把 </code>KHY_SIDEBAR_<code>（下划线后接 </code>*<code>）当成了一个真实开关名。<br>⇒ 注释里写成 </code>KHY_SIDEBAR_…` 即可回到 220 = 上限（零行为改动）；更根治的选项是改执行器正则<br>禁止尾随下划线。两者都属<strong>治理件口径</strong>，不在本次处方内，未擅自改。</p>
+<hr>
+<h2 id="22-10-22-30-跨端-ai-编程任务看板-泳道编排-方案-design-arch-126">22:10–22:30 · 跨端 AI 编程任务看板（泳道编排）方案 → <code>[DESIGN-ARCH-126]</code><a class="anchor" href="#22-10-22-30-跨端-ai-编程任务看板-泳道编排-方案-design-arch-126" aria-label="锚点">#</a></h2>
+<p><strong>任务</strong>：参考 Cline Kanban（<code>npx kanban</code>：worktree 隔离 + 并行 agent + SSE 进度 + diff 内联评审），<br>为 khy-os 的<strong>桌面 / 手机 / 网页</strong>三端做看板方案。</p>
+<p><strong>★ 第 0 步检索的结论（本次最贵的一条）</strong>：khy-os <strong>不缺编排引擎，缺的是「前 27 行之后的全部」</strong>。<br>实测：后端 <code>services/backend/src/tasks/largeTaskRuntimeStore.js</code> <strong>2608 行</strong>（<code>TASK_STATUSES</code> 11 态 /<br><code>STATUS_TRANSITIONS</code> 显式转移表 / <code>TERMINAL_STATUSES</code> 4 态 / <code>DEFAULT_LEASE_MS=60000</code>）、<br><code>routes/largeTasks.js</code> <strong>1668 行 / 29 端点</strong>（含 4 条 SSE）；而前端<br><code>software/khyquant/frontend/src/api/largeTasks.js</code> 只有 <strong>27 行 / 2 函数</strong>，<br>看板视图 <code>git grep -il &quot;largeTask&quot;</code> 在 <code>apps/ai-frontend/src/**</code> 与 <code>khyquant/.../views/**</code> <strong>零命中</strong>；<br>唯一消费方 <code>composables/useDashboardHandover.js</code> 只渲染 <strong>6 个计数</strong>（挂在 <code>views/Dashboard.vue</code>）。<br>⇒ 方案定为「补<strong>呈现层 + 执行体泳道 + 与计划层的单向映射</strong>」，<strong>不建引擎、不建 worktree、不建状态机</strong>。</p>
+<p><strong>落点</strong>：<code>docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-126] 跨端 AI 编程任务看板泳道编排方案.md</code>（+ <code>.html</code> 孪生件）；<br>原型 <code>_产物/board-lane-map.js</code>。</p>
+<p><strong>核心设计</strong>：<strong>二维</strong> —— 列 = 状态（11 态折叠为 <strong>6 列</strong>），泳道 = 执行体<br>（<strong>直接引用</strong> <code>agentLauncherRegistry.js</code> 的 <code>AGENT_LAUNCHERS</code>，7 项，不另立清单）。<br>折叠规则 = <strong>瞬态并入稳定邻居</strong>（<code>claimed</code>/<code>pausing</code>/<code>cancelling</code> 的停留时间短于<br><code>useDashboardHandover</code> 的防抖基线 <code>HANDOVER_SSE_REFRESH_DEBOUNCE_MS=800</code>，独立成列会闪）。<br>⚠ <strong>两套任务真源不是重复真源</strong>：<code>.ai/hq/PROGRESS.json</code>（4 态）是<strong>计划层</strong>（一个任务 = 要达成什么，跨会话存活），<br>运行时 11 态是<strong>执行层</strong>（一个任务 = 怎么跑完这一趟，可重试可死信），关系是 <strong>1:N</strong><br>⇒ <strong>单向映射</strong>（计划 → 执行：展开；执行 → 计划：<strong>只回写终态</strong>），<br>禁止把 11 态写进 <code>PROGRESS.json</code> 的 <code>status</code>。</p>
+<p><strong>★ 探针跑出了一个真实的设计矛盾</strong>（这是散文写不出来的）：初版把「已取消」列标为终态，探针立刻报<br><code>L3-terminal</code> —— <code>cancelling</code>（取消中）<strong>不是</strong>终态，它还能流转到 <code>cancelled</code>，而后者才是终态。<br>⇒ 列终态性改为<strong>三态声明</strong> <code>'all' | 'none' | 'mixed'</code>（双向可查，比单一布尔强），<br>并由此推出防呆铁律 <strong>F5：卡片能否流转由卡片自身 <code>status</code> 派生，不读列级 <code>terminal</code></strong>。<br>反例矩阵实测：默认 <strong>0 error / exit 0</strong>；<code>--scenario=drop</code> <strong>2 error</strong>；<code>--scenario=dup</code> <strong>1 error</strong>。</p>
+<p><strong>索引</strong>：<code>DESIGN-ARCH-126</code>（126 空闲，目录最大 125）；就近索引<br><code>docs/03_DESIGN_设计/DESIGN-ARCH/00_INDEX_DESIGN-ARCH-总目录.md</code> 收录 118 → <strong>119</strong>。<br>⚠ <strong>该索引是「生成器已不存在」的手工维护生成物</strong>（<code>git grep 归夹/文件清单</code> 找不到写入方，<br>疑似原在已删的 <code>_产物/</code>），<strong>只能手改</strong>；用脚本改（目标行含全角标点，<code>Edit</code> 在该类行上可能「报成功未生效」）。<br>⚠ <strong><code>_产物/</code> 是 <code>.gitignore:214 /_产物/</code> 覆盖的暂存区，探针不入仓</strong> —— 已在文档里点明，<br>否则新克隆的人会以为漏提交。注意 <code>git check-ignore -v _产物</code>（不带斜杠）<strong>返回空</strong>，会误判成「未忽略」。</p>
+<p><strong>验收</strong>：<code>verify_docs_site</code> ✅（<strong>1175 md / 1176 html / 13212 链接</strong>）；<code>check-repo-layout</code> 读数<br><code>dangling-task</code> <strong>76 &lt; 基线 88</strong>（未新增）、<code>cross-layer-require</code> 39 = 基线、<code>docs-index-complete</code> 0、<br><code>unresolved-require</code> 0；<code>check-agent-rules _产物/board-lane-map.js</code> 通过<br>（⚠ 该守卫<strong>只认位置参数或 <code>--changed</code></strong>，<code>--files=</code> 会被判「No target files found」）。<br>⚠ 两条 <code>[error]</code>（<code>root-junk</code> 的 <code>0)</code> / <code>layer-registry</code> 的 <code>gui-test-screenshots</code>）经 <strong>mtime 复核均为存量</strong><br>（今日 10:21 / 09-19，早于会话开工 22:10），<strong>非本次产生</strong> —— 判归属必须看 mtime，不能凭「跑出来是红的」。<br>⚠ 建站重写了 <strong>6 个已提交 <code>.html</code></strong>（<code>git status</code> 里另有 14 个改动是本次之前就存在的），属预期副作用。</p>
+<p><strong>待办（三步接线，一次提交只做一步）</strong>：步 1 只加只读端点 <code>GET /large-tasks/board</code> + 守卫<br><code>API-005</code>（<code>gate:&quot;commit&quot;</code> + <code>severity:&quot;advisory&quot;</code>，⚠⚠ <strong>绝不可写 <code>gate:&quot;advisory&quot;</code></strong>，<br>那会让规则永不执行且所有守卫全绿）→ 步 2 先落 <code>web-quant</code>（已有 <code>api/largeTasks.js</code> + SSE 骨架，成本最低）<br>→ 步 3 抽公共组件 → 桌面 → 手机单泳道纵向流。</p>
+<hr>
+<h2 id="22-35-22-45-续-design-arch-126-契约可行性实证-查出初稿-4-处错">22:35–22:45 · 续：[DESIGN-ARCH-126] 契约可行性实证（查出初稿 4 处错）<a class="anchor" href="#22-35-22-45-续-design-arch-126-契约可行性实证-查出初稿-4-处错" aria-label="锚点">#</a></h2>
+<p><strong>起因</strong>：上一轮只交付方案，<strong>没验证</strong> §4.2 的 <code>GET /large-tasks/board</code> 契约是否<strong>真能从数据模型取到</strong>。<br>这轮补做，查出 <strong>4 处与真源对不上</strong>：</p>
+<ol><li><strong><code>swimlane</code>（执行体）—— 最要害</strong>：真源任务对象<strong>没有任何字段记录「这个任务归哪个执行体」</strong>，</li></ol>
+<p>而「用泳道管理多执行体」正是需求核心。解法 = 复用<strong>既有约定维度</strong> <code>payload_json.source</code>：<br>   <code>listTasks()</code> 已按它过滤（<code>largeTaskRuntimeStore.js:1354-1358</code>）、<code>GET /?source=</code> 已暴露<br>   （<code>routes/largeTasks.js:663,668</code>）、先例 <code>backgroundTaskManager.js:16 const SOURCE='background_task_manager'</code><br>   ⇒ <strong>零改真源</strong>。泳道分 <code>kind ∈ {agent, system}</code> 两类 <strong>+ 兜底「未归属」</strong>（未登记/空 source <strong>不丢弃</strong>）。</p>
+<ol><li><strong><code>title</code> 不存在</strong> ⇒ 降级读 <code>payload_json.title</code>，回退 <code>type + id</code> 短哈希。</li><li><strong><code>checkpointAt</code> 不在任务对象上</strong>（在 <code>task_checkpoints[id]</code>）⇒ 从首屏契约移除，详情页再拉。</li><li><strong>命名</strong>：真源是 <strong>snake_case</strong>（<code>attempt_count</code> / <code>updated_at</code> / <code>progress_pct</code>）⇒ 契约<strong>不做驼峰转换</strong>。</li></ol>
+<p>真源任务对象<strong>只有 18 个字段</strong>（<code>largeTaskRuntimeStore.js:1304-1324</code>）：<br><code>id / type / status / payload_json / priority / attempt_count / max_attempts / next_run_at /<br>lease_owner / lease_until / heartbeat_at / progress_pct / idempotency_key / trace_id /<br>created_at / updated_at / completed_at / last_error / last_result</code>。</p>
+<p><strong>★ 我自己犯的错（已订正；判据值得记）</strong>：初稿把 <code>AGENT_LAUNCHERS</code> 记成 <strong>7 项</strong>，真源是 <strong>9 项</strong><br>（漏 <code>vscode</code> + <code>windsurf</code>）。<br><strong>根因</strong>：<code>windsurf</code> 的条目是<strong>多行写法</strong>（<code>command:</code> 独占一行），<strong>按行</strong>的 grep<br>（<code>grep -c &quot;Object\.freeze({ command:&quot;</code>）得到 <strong>8</strong> 而非 9。我一度据此误判「探针静默假绿」——<br><strong>其实探针是对的</strong>（非行锚定正则 <code>/command:\s*'([^']+)'/g</code>，<code>\s</code> 可跨行），<strong>错的是我的 grep</strong>。<br>⇒ <strong>两条判据</strong>：① 消费文本抽取结果的守卫，<strong>必须带「抽取条数 == require 条数」自校验</strong>，<br>否则漏抽项永远进不了反向检查，形成静默假绿；② <strong>怀疑抽取失真时先写脚本文件复核</strong>，<br>别用 <code>node -e</code> 内联正则 —— bash 会吃掉 <code>\s</code>（实测 <code>SyntaxError: Expected ',', got ']'</code>）。</p>
+<p><strong>探针扩展</strong>：新增泳道维度校验 <strong>S1–S4</strong>（兜底泳道存在且唯一 / 泳道 id 与 source 均不重复 /<br><code>kind='agent'</code> 的 source 与真源注册表<strong>双向</strong>对齐 / 未登记 source 解析出的泳道必须在表内），<br>新增场景 <code>--scenario=orphan-source</code>、<code>--scenario=no-fallback</code>。</p>
+<p><strong>完整反例矩阵（含真实退出码，实测）</strong>：<br>默认 <strong>exit 0 / 0 error</strong>；<code>drop</code> <strong>exit 1 / 2 error</strong>；<code>dup</code> <strong>exit 1 / 1 error</strong>；<br><code>orphan-source</code> <strong>exit 1 / 1 error</strong>；<code>no-fallback</code> <strong>exit 1 / 6 error</strong>。</p>
+<p><strong>验收</strong>：<code>verify_docs_site</code> ✅（1175 md / 1176 html / 13212 链接）；<br><code>check-repo-layout</code> <code>dangling-task</code> <strong>76 &lt; 基线 88</strong>、<code>cross-layer-require</code> <strong>39 = 基线</strong>、其余 0；<br><code>check-agent-rules _产物/board-lane-map.js</code> 通过；孪生件已同步（html 晚于 md）。</p>
+<p><strong>文档订正落点</strong>：§零 加「后端已有 ≠ 契约现成」段；§3.1 补「用户提法是<strong>举例不是枚举</strong>，<br>泳道必须从真源派生（9 条，不能写死）」；<strong>新增 §4.3</strong>（4 处错误对照表）、<strong>§4.4</strong>（<code>payload_json.source</code> 落法）；<br>§六 补 <strong>F8/F9</strong> 并订正 <strong>F4</strong>（worktree 是 <code>worktreeManager</code> 事件日志按 <code>taskId</code> 的 <strong>join</strong>，<br><strong>不是任务字段</strong>）；§八 补 S 场景 + 多行条目漏抽判据；§九 补新场景与 require 交叉校验命令；<br>§十 Q1/Q3 按新事实重写（Q1 加「人」应是第三类 <code>kind='human'</code>，不建议塞进 <code>system</code>）。</p>
+<hr>
+<h2 id="22-47-23-00-续二-design-arch-126-计划层-执行层的连接键缺口-同类空头支票第-2-处">22:47–23:00 · 续二：[DESIGN-ARCH-126] 计划层↔执行层的连接键缺口（<strong>同类空头支票第 2 处</strong>）<a class="anchor" href="#22-47-23-00-续二-design-arch-126-计划层-执行层的连接键缺口-同类空头支票第-2-处" aria-label="锚点">#</a></h2>
+<p><strong>起因</strong>：§3.3 我断言「计划层 → 执行层单向映射」，但<strong>从没确认两套任务有没有可连接的键</strong>。<br>查证结论：<strong>两边零连接代码</strong> ——<br><code>git grep -nE &quot;hq_task|hqTaskId|largeTask.*hq|hq.*largeTask&quot; -- 'services/**' 'scripts/**'</code> <strong>返回空</strong>。</p>
+<p><strong>ID 格式还不兼容</strong>：</p>
+<table><thead><tr><th></th><th>格式</th><th>生成方</th></tr></thead><tbody><tr><td>计划层</td><td><code>T-001</code>（人工分配，定长 5 字符，实测 23 条，无互相前缀）</td><td><code>hqStore.js</code></td></tr><tr><td>执行层</td><td><code>&lt;scope&gt;-&lt;hex4&gt;-&lt;seq&gt;</code>（如 <code>large-task-a1b2-7</code>，自动生成）</td><td><code>_newTaskId()</code>（<code>largeTaskRuntimeStore.js:870-879</code>）</td></tr></tbody></table>
+<p><strong>落法（复用既有能力，零改真源）</strong>：</p>
+<ul><li>展开：<code>createTask({ id: '&lt;hq_id&gt;.&lt;attempt&gt;', payload_json: { source, hq_task_id } })</code></li></ul>
+<p>—— <code>createTask</code> <strong>接受外部传入 <code>id</code></strong>（<code>:1299 const id = input.id || _newTaskId(...)</code>）。</p>
+<ul><li>反查：<code>listTasks({ id_prefix: '&lt;hq_id&gt;.' })</code> —— <code>id_prefix</code> 过滤<strong>已存在</strong>（<code>:1359-1361</code>）。</li><li>看板聚合：服务端一次 <code>listTasks({})</code> + <strong>内存分组</strong>，<strong>不新增 store 过滤维度</strong>（避免改执行语义）。</li></ul>
+<p>⚠ <strong>为什么 <code>.&lt;attempt&gt;</code> 后缀不可省</strong>：<code>createTask</code> 对重复 id <strong>直接抛错</strong><br>（<code>:1300-1302 if (state.tasks[id]) throw new Error('Task already exists: ' + id)</code>），<br>而计划层→执行层是 <strong>1:N</strong> ⇒ 第二次尝试复用同一 id 必撞错。<br>⚠ <strong>为什么前缀必须带尾点</strong>：裸 <code>id_prefix='T-001'</code> 会把 <code>T-0011</code> 也并进来。</p>
+<p><strong>★ 顺带查出我自己方案的第 3 个缺口</strong>：终态回写只定义了 4 个终态里的 <strong>2 个</strong>，<strong>漏了 <code>cancelled</code></strong><br>⇒ 被取消的运行时任务，其计划任务会<strong>永远停在 <code>doing</code></strong>（看板上表现为「卡住」）。<br>补全后：<code>succeeded→done</code> / <code>failed→doing+note</code> / <code>dead_letter→doing+note</code> / <code>cancelled→todo+note</code>。<br>（<code>TERMINAL_STATUSES</code> 4 个，来自 <code>largeTaskRuntimeStore.js:27</code>。）</p>
+<p><strong>★ 探针自查抓出一个「空转断言」</strong>：J3 初版写成<br><code>for (const bad of [0,-1,1.5,NaN]) { const rt = deriveRuntimeId('T-001', bad); if (/\.(0|-1|1\.5|NaN)$/.test(rt)) error(...) }</code><br>—— 它在<strong>测我自己的测试夹具</strong>（断言字符串拼接会拼出什么），不是测代码，恒真且无意义。<br><strong>修法</strong>：把拒绝逻辑放进 <code>deriveRuntimeId</code> 本体（非法 attempt 返回 <code>null</code>），<br>J3 改成<strong>双向对照</strong>：非法输入必须被拒绝 <strong>且</strong> 合法输入 <code>('T-001',1) → 'T-001.1'</code> 必须通过。<br>⚠ 只测拒绝方向的话，把函数改成<strong>恒返回 <code>null</code></strong> 也能过 —— 这就是空转断言的典型形态。</p>
+<p><strong>探针新增 J1–J5</strong>（派生 id 唯一 / 连接前缀不歧义 / 非法 attempt 拒绝 + 合法值放行 /<br>回写映射<strong>完备性+可靠性</strong>双向 / 反查前缀唯一圈定），新增场景 <code>--scenario=no-writeback</code>、<code>--scenario=collide</code>。</p>
+<p><strong>完整反例矩阵（7 场景，实测退出码）</strong>：<br><code>默认 exit0/0</code> · <code>drop exit1/2(L1,L3)</code> · <code>dup exit1/1(L1)</code> · <code>orphan-source exit1/1(S3)</code> ·<br><code>no-fallback exit1/6(S1,S4)</code> · <code>no-writeback exit1/1(J4)</code> · <code>collide exit1/2(J2,J5)</code>。</p>
+<p><strong>文档订正落点</strong>：§零 改成「<strong>6 处缺口</strong>」总表（标出要害程度与落点）；<strong>新增 §3.4</strong>（连接键：缺口证据 +<br>落法 + 为何后缀/尾点不可省 + 4 个终态回写表）；§六 补 <strong>F10/F11/F12</strong> 并把 F9 的「现状」改为已实证；<br>§八 反例矩阵补到 8 行；§九 复现命令补到 9 条（含「连接键缺口复核」与 require 交叉校验）。</p>
+<hr>
+<h2 id="交付卫生-文档站重建的附带改动归属-2026-09-20-晚-design-arch-126-收尾">交付卫生：文档站重建的附带改动归属（2026-09-20 晚，DESIGN-ARCH-126 收尾）<a class="anchor" href="#交付卫生-文档站重建的附带改动归属-2026-09-20-晚-design-arch-126-收尾" aria-label="锚点">#</a></h2>
+<p><strong>场景</strong>：方案落盘后跑 <code>scripts/docs/build_docs_site.js</code> 生成孪生件，产生 14 个附带 <code>.html</code> 改动。</p>
+<p><strong>判据（两个命令，逐文件分类）</strong>：</p>
+<ul><li><code>stat -c '%y  %n' &lt;f&gt;</code> —— mtime 早于本次会话 ⇒ <strong>别人的既有脏状态</strong>，不是你的</li><li><code>git diff -- &lt;f&gt; | grep -c '&lt;我的编号&gt;'</code> —— <code>&gt;0</code> ⇒ 因我而起（<strong>含分页导航「下一篇」</strong>）</li></ul>
+<p><strong>实测三类</strong>：</p>
+<ul><li><strong>我的</strong>：<code>DESIGN-ARCH/00_INDEX_*.html</code>、<code>[DESIGN-ARCH-125].html</code>（分页「下一篇→126」）、</li></ul>
+<p><code>docs/index.html</code>、<code>docs/19_资产/site/nav-data.js</code>（新页进导航）</p>
+<ul><li><strong>A 类真修复（必须保留）</strong>：<code>[OPS-MAN-066] ….html</code> —— HEAD 里资产路径还是</li></ul>
+<p><code>../../docs/_assets/*</code>（已迁到 <code>docs/19_资产/site/</code>），<strong>HEAD 上 <code>verify_docs_site</code> 本就是红的</strong>，<br>  重建顺手修好。<strong>撤销它 → verify 立刻报断链</strong>（实测）。</p>
+<ul><li><strong>B 类孪生件再生（可撤）</strong>：13 个，全是<strong>别人脏 <code>.md</code></strong> 的孪生件（<code>AGENTS.html</code>/<code>CLAUDE.html</code>/</li></ul>
+<p><code>[SECURITY-001].html</code> 等）。撤销后 verify 仍绿 ⇒ 证明是纯噪声。</p>
+<p><strong>另一处</strong>：<code>build_docs_site.js</code> 会把<strong>别人未提交的索引 WIP</strong> 收进已跟踪的 <code>00_INDEX_*.md</code><br>（<code>MGMT-OTHER-005</code> 软著 / <code>DESIGN-GIT-004</code> / <code>[DESIGN-IP-001]</code> / <code>PROCESS-010</code> 规则卡；<br>mtime 09:18 / 14:24 / 14:26 / 09-19 14:32，<strong>全部早于会话</strong>）⇒ 这些 <code>.md</code> 不是我的，<strong>别撤</strong>。</p>
+<p><strong>处置</strong>：只留「守卫转绿所必需」的再生（A 类 + 我的），撤掉 13 个 B 类。</p>
+<p><strong>守卫终态</strong>：<code>verify_docs_site</code> ✅（1175 md / 1176 html / 13202 链接）· <code>check-repo-layout</code><br>的 <code>dangling-task 76 &lt; 基线 88</code>、其余 0 · <code>check-rules-registry</code> ✅ · <code>check-agent-rules</code>（新脚本）✅。</p>
+<p><strong>已回写技能</strong> <code>khyos-design-proposal</code>：§3.5-4（A/B 两类 + 分类命令）、§7（自检第 4 条 + mtime 第一手证据）。</p>
+<hr>
+<h2 id="design-arch-126-第三轮-第四类空头支票-字段存在但没人写">DESIGN-ARCH-126 第三轮：第四类空头支票「字段存在但没人写」<a class="anchor" href="#design-arch-126-第三轮-第四类空头支票-字段存在但没人写" aria-label="锚点">#</a></h2>
+<p><strong>新缺口（第 7 条）</strong>：F4「每张执行卡必须有 worktree」依赖 <code>payload_json.worktree</code>，<br>该字段由 <code>tools/_taskStore.bindWorktree(taskId, name)</code> 写入，但<strong>生产代码零调用点</strong><br>（<code>EnterWorktreeTool/index.js:54</code>、<code>cli/repl/worktreeCommand.js:126</code> 调 <code>createWorktree</code> 都<strong>不传 <code>taskId</code></strong>）<br>⇒ 字段恒为 <code>null</code> ⇒ <strong>F4 只能走豁免分支 = 空转</strong>。<br>另：<code>bindWorktree</code> 只接受 <code>payload_json.source === 'tool_task_store'</code>（<code>tools/_taskStore.js:13, 70-76</code>）。</p>
+<p><strong>与前三类的区别</strong>：§4.3 修的是「字段<strong>不存在</strong>」；这是「字段存在、写入函数也在、<strong>却没人调</strong>」。<br>⚠ <strong>一条永远为真的铁律比没有更坏</strong> —— 它会让人以为这里有守卫。</p>
+<p><strong>新守卫（探针 <code>_产物/board-lane-map.js</code>）</strong>：</p>
+<ul><li><code>K1-ghost-field</code> —— 契约每个卡片字段必须归入四类：<code>task</code>（在 <code>createTask</code> 字面量里）/</li></ul>
+<p><code>payload</code>（有代码真读 <code>payload_json.x</code>）/ <code>derived</code>（派生源可解析）/ <code>convention</code>（<strong>写入方必须非空</strong>）。<br>  反例 <code>--scenario=ghost-field</code>（抽掉 payload 的 <code>source</code>）⇒ 2 error。</p>
+<ul><li><code>K2-unwired</code> —— 数 <code>bindWorktree</code> 的真实调用点，为 0 即 warning。</li></ul>
+<p>反例 <code>--scenario=worktree-wired</code>（置 1）⇒ 0 warning（<strong>双向</strong>，防空转断言）。</p>
+<ul><li>新增抽取器：<code>extractTaskFields</code>（<strong>19 字段</strong>；<code>id</code> 是<strong>简写</strong>，按行 grep <code>^\s+(\w+):</code> 会数成 18）、</li></ul>
+<p><code>extractPayloadKeys</code>、<code>countWorktreeBindCallSites</code>。</p>
+<p><strong>文档订正</strong>：§零 缺口 6 → <strong>7</strong>（第 7 条 + 补一问「<strong>谁写它？有没有调用点？</strong>」）；<br>§4.3 「18 个字段」→ <strong>19</strong>；新增 <strong>§4.5</strong>（第四类空头支票 + 三选一处置）与 <strong>§4.6</strong>（四种出处）；<br>§六 新增 <strong>F13 / F14</strong>（共 14 条）；§八 矩阵补 2 行（默认改为 <code>0 error, 1 warning</code>）；<br>§九 复现补到 12 条；§十 新增第 6 问（F4 走哪条路）+ Q3 补<strong>真实端点路径</strong><br><code>POST /large-tasks/:taskId/pause|resume</code>（<code>routes/largeTasks.js:795, 816</code>）。</p>
+<p><strong>矩阵</strong>：9 场景全对（默认 exit0/0e1w；7 个反例 exit1；<code>worktree-wired</code> exit0/0e0w）。</p>
+<p><strong>改动集</strong>：B 类附带用「不含 126 且非 OPS-MAN-066 的 <code>.html</code>」规则<strong>自动撤销</strong>（13 个）⇒<br>2 新文件（126 <code>.md</code>/<code>.html</code>）+ <code>DESIGN-ARCH/00_INDEX_*</code> + <code>[DESIGN-ARCH-125].html</code>（分页「下一篇」）+<br><code>docs/index.html</code> + <code>docs/19_资产/site/nav-data.js</code> + <code>OPS-MAN-066.html</code>（A 类修复）。</p>
+<p><strong>守卫</strong>：<code>verify_docs_site</code> ✅（1175 md / 1176 html / 13202 链接）· <code>check-repo-layout</code><br><code>dangling-task 76 &lt; 88</code> 其余 0 · <code>check-rules-registry</code> ✅ · <code>check-agent-rules</code> ✅。</p>
+<p><strong>技能回写</strong>：<code>khyos-design-proposal</code> 新增 <strong>§5.8</strong>（三问判据 + 三选一处置 + 双向固化）+ §7 自检第 5 条。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../.workbuddy-ai/memory/2026-09-19.html"><div class="dir">← 上一篇</div><div class="ttl">2026-09-19 工作日志</div></a><a class="next" href="../../.workbuddy-ai/memory/2026-09-21.html"><div class="dir">下一篇 →</div><div class="ttl">2026-09-21 工作日志</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__=".workbuddy-ai/memory/2026-09-20.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

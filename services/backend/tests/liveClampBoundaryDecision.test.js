@@ -1,5 +1,6 @@
 'use strict';
 const App = require('../src/cli/tui/ink-components/App');
+const assert = require('node:assert');
 
 describe('Live Clamp Boundary Decision', () => {
   test('_liveClampBoundaryDecision: same running turn samples normally', () => {

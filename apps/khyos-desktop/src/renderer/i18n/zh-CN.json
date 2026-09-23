@@ -2193,7 +2193,7 @@
   "manualClaimPlan.claim.share.getImage": "获取图片",
   "manualClaimPlan.claim.share.label": "复制分享",
   "manualClaimPlan.claim.share.saveImage": "保存图片",
-  "manualClaimPlan.claim.share.twitterText": "我在 KhyOS 领取了 {subtitle}。邀请你也来下载安装即可领取。\nhttps://khyquant.top",
+  "manualClaimPlan.claim.share.twitterText": "我在 KhyOS 领取了 {subtitle}。邀请你也来下载安装即可领取。\n{downloadUrl}",
   "manualClaimPlan.claim.share.twitterTextLabel": "Twitter/X 分享文案",
   "manualClaimPlan.claim.success.description": "Start Plan 已可使用。",
   "manualClaimPlan.claim.success.description.prefix": "",

@@ -1,6 +1,6 @@
 'use strict';
 
-const channels = require('../../src/services/channels/index');
+const channels = require('../../../src/services/channels/index.js');
 
 describe('channels index', () => {
   test('module is defined', () => {

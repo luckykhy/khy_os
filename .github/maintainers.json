@@ -1,7 +1,7 @@
 {
   "_comment": [
     "维护者名册：area id → GitHub 账号。.github/CODEOWNERS 由本文件 +",
-    "docs/_维护者/维护映射表.json 生成，请不要手改 CODEOWNERS。",
+    "docs/14_维护者/registry/维护映射表.json 生成，请不要手改 CODEOWNERS。",
     "",
     "改完这里后运行： node scripts/maintenance/gen-codeowners.js",
     "映射表新增/删除 area 后运行： node scripts/maintenance/gen-codeowners.js --sync-roster",

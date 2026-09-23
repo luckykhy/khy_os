@@ -40,12 +40,18 @@ function patchExpressAsync() {
 
   const methods = ['use', 'all', 'get', 'post', 'put', 'patch', 'delete', 'options', 'head'];
   for (const method of methods) {
-    const original = Router.prototype[method];
+    // Express >= 4.22 defines route methods as own properties of the Router
+    // function object (instances inherit via [[Prototype]] === Router), not
+    // on Router.prototype — reading the prototype there yields undefined and
+    // the patch silently no-ops. Read from whichever object actually owns the
+    // method so both layouts are covered.
+    const owner = typeof Router[method] === 'function' ? Router : Router.prototype;
+    const original = owner[method];
     if (typeof original !== 'function') {
       continue;
     }
 
-    Router.prototype[method] = function patchedRouterMethod(...args) {
+    owner[method] = function patchedRouterMethod(...args) {
       return original.apply(this, wrapArgs(args));
     };
   }

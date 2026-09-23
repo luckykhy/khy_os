@@ -5,7 +5,7 @@
  * Proves three invariants of the byte-identical DI extraction:
  *  1. The host re-exports the permission API by the SAME identities as the leaf
  *     (`require('toolCalling')[name] === require('toolCallingPermissions')[name]`).
- *  2. setPermissionResolvers actually wires the two host resolvers the chain needs â€?
+ *  2. setPermissionResolvers actually wires the two host resolvers the chain needs ï¿½?
  *     getToolRisk/formatToolCall reach the injected _resolveToolDescriptor/_findBuiltinTool.
  *  3. Static SSOT surfaces (PERMISSION_MODES, permissionModeToProfile) are intact.
  */
@@ -29,13 +29,17 @@ describe('Tool Calling Permissions leaf', () => {
       }
   });
 
-  test('PERMISSION_MODES is the frozen six-mode SSOT (CC-aligned)', () => {
+  test('PERMISSION_MODES is the frozen seven-mode SSOT (CC-aligned + RedPass)', () => {
       const { PERMISSION_MODES, permissionModeToProfile } = require(HOST);
-      expect(PERMISSION_MODES).toEqual(['default', 'plan', 'acceptEdits', 'auto', 'dontAsk', 'bypass']);
-      expect(Object.isFrozen(PERMISSION_MODES).toBeTruthy());
+      // Seven modes: the CC-aligned six plus the local 'RedPass' hardening mode
+      // (see _MODE_TO_PROFILE in toolCallingPermissions.js).
+      expect(PERMISSION_MODES).toEqual(['default', 'plan', 'acceptEdits', 'auto', 'dontAsk', 'bypass', 'RedPass']);
+      expect(Object.isFrozen(PERMISSION_MODES)).toBeTruthy();
       expect(permissionModeToProfile('default')).toBe('normal');
       expect(permissionModeToProfile('auto')).toBe('auto');
       expect(permissionModeToProfile('dontAsk')).toBe('dontAsk');
+      expect(permissionModeToProfile('RedPass')).toBe('redpass');
+      expect(permissionModeToProfile('red-pass')).toBe('redpass');
   });
 
   test('setPermissionResolvers injects the host resolvers used by the risk/display path', () => {

@@ -38,7 +38,32 @@ const BASE_COOLDOWN_MS = API_KEY_POOL.BASE_COOLDOWN_MS;
 const MAX_COOLDOWN_MS = API_KEY_POOL.MAX_COOLDOWN_MS;
 const MAX_RETRY_AFTER_MS = API_KEY_POOL.MAX_RETRY_AFTER_MS;
 
-// ── State ──────────────────────────────────────���─────────────────────────
+// ── 凭据文件权限 ──────────────────────────────────────────────────────────
+// api_keys.json 是**明文**凭据文件。历史上按 0o666 落盘(实际权限由 umask 决定,
+// 通常 0644 → 同机其他用户可读),当时是为了与旧写入路径保持字节级一致。
+// 此处默认收紧到 0600:该文件属于当前用户,不存在「另一个用户需要读它」的正当场景。
+// 若部署确实把 KHY_DATA_HOME 指向多用户共享目录,置 KHY_CREDENTIALS_FILE_MODE=666
+// 可显式回退旧行为 —— 留退路优先于静默改权限。
+const CREDENTIALS_FILE_MODE_ENV = 'KHY_CREDENTIALS_FILE_MODE';
+const DEFAULT_CREDENTIALS_FILE_MODE = 0o600;
+
+/**
+ * 解析凭据文件权限。缺失/非法 → 默认 0600。绝不抛。
+ * @param {object} [env]
+ * @returns {number}
+ */
+function resolveCredentialsFileMode(env = process.env) {
+  const raw = String((env && env[CREDENTIALS_FILE_MODE_ENV]) || '').trim();
+  if (!raw) {
+    return DEFAULT_CREDENTIALS_FILE_MODE;
+  }
+  const parsed = Number.parseInt(raw, 8); // 八进制,与 chmod 语义一致
+  return Number.isFinite(parsed) && parsed > 0 && parsed <= 0o777
+    ? parsed
+    : DEFAULT_CREDENTIALS_FILE_MODE;
+}
+
+// ── State ─────────────────────────────────────────────────────────
 
 /**
  * @typedef {object} KeyEntry
@@ -489,7 +514,7 @@ function save() {
     if (!fs.existsSync(KHY_DIR)) {
       fs.mkdirSync(KHY_DIR, { recursive: true });
     }
-    if (!atomicWriteJson(POOL_FILE, data, { mode: 0o666 })) {
+    if (!atomicWriteJson(POOL_FILE, data, { mode: resolveCredentialsFileMode() })) {
       // 原子写返回 false 而不抛:这里必须自己把它变成可见的错误,否则等同静默丢弃。
       throw new Error(`原子写失败: ${POOL_FILE}`);
     }
@@ -499,7 +524,9 @@ function save() {
       process.stderr.write(`[apiKeyPool] 持久化失败: ${err.message}\n`);
     } catch (_) { /* stderr 写入失败，无法记录 */ }
   }
-  // 注意：API key 以明文存储在 POOL_FILE 中。生产环境应确保该文件权限为 600。
+  // 注意:API key 以明文存储在 POOL_FILE 中,写入时按 0600 落盘
+  // (可用 KHY_CREDENTIALS_FILE_MODE 覆盖)。明文本身仍是已知边界 —— 真正需要
+  // 防的是文件被复制出本机,那需要加密存储,不在本次改动范围。
 }
 
 // ── Key Management ───────────────────────────────────────────────────────
@@ -954,4 +981,5 @@ module.exports = {
   getProviders,
   hasAvailableKeys,
   _getBuiltinProviderKeys,
+  resolveCredentialsFileMode,
 };

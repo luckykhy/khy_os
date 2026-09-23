@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [MGMT-PLAN-008] replSession与toolUseLoopCore拆分分批计划.md -->
+<title>SPLIT-PLAN.md — replSession / toolUseLoopCore 拆分分批计划（T-017 配套） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>MGMT-PLAN<span class="sep">›</span>SPLIT-PLAN.md — replSession / toolUseLoopCore 拆分分批计划（T-017 配套）</div>
+      <header class="hero reveal"><h1>SPLIT-PLAN.md — replSession / toolUseLoopCore 拆分分批计划（T-017 配套）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#split-plan-md-replsession-tooluseloopcore-拆分分批计划-t-017-配套">SPLIT-PLAN.md — replSession / toolUseLoopCore 拆分分批计划（T-017 配套）</a></li><li class="lvl-2"><a href="#零-已验证的提取模式-批次-1-实证">零、已验证的提取模式（批次 1 实证）</a></li><li class="lvl-2"><a href="#一-replsession-js-批次-1-后-13560-行-目标-800">一、replSession.js（批次 1 后 13560 行 → 目标 ≤800）</a></li><li class="lvl-2"><a href="#二-tooluseloopcore-js-批次后-12086-行-目标-800">二、toolUseLoopCore.js（批次后 12086 行 → 目标 ≤800）</a></li><li class="lvl-2"><a href="#三-并行会话纪律">三、并行会话纪律</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="split-plan-md-replsession-tooluseloopcore-拆分分批计划-t-017-配套">SPLIT-PLAN.md — replSession / toolUseLoopCore 拆分分批计划（T-017 配套）<a class="anchor" href="#split-plan-md-replsession-tooluseloopcore-拆分分批计划-t-017-配套" aria-label="锚点">#</a></h1>
+<blockquote><p>依据：T-017 验收第 3 条「单文件不高于 800 行（或给出分批计划）」。<br>本文件是拆分作战地图：每个批次独立可验收、可回滚（独立提交）。<br>批次行号为 2026-09-02 基线（replSession 13945 行 / toolUseLoopCore 12732 行时代），<br>实际操作前用 <code>Select-String '^// ──'</code> 重新定位横幅，勿信死行号。</p></blockquote>
+<hr>
+<h2 id="零-已验证的提取模式-批次-1-实证">零、已验证的提取模式（批次 1 实证）<a class="anchor" href="#零-已验证的提取模式-批次-1-实证" aria-label="锚点">#</a></h2>
+<p><strong>工厂 + 显式依赖注入</strong>（<code>src/cli/repl/startupHeader.js</code> 为样板）：</p>
+<ol><li>新模块导出 <code>create&lt;X&gt;(deps)</code> 工厂；原闭包内层函数体<strong>逐字搬入</strong>（仅 require 相对路径重定基）。</li><li>闭包自由变量全部进 deps 袋（依据 = 原文件 <code>@closuredeps</code> JSDoc 注解，前人已盘点）。</li><li>闭包内可变守卫状态（如 <code>_startupHeaderRendered</code>）移入工厂内部；外部有写点时导出 reset 函数保语义。</li><li>原文件原位替换为工厂调用；对外 <code>module.exports</code> 面（<code>{ startRepl, setReplSessionDeps, getReplFsm }</code>）零改动。</li><li>相对路径重定基规则：<code>../services/* → ../../services/*</code>、<code>../../assets/* → ../../../assets/*</code>。</li></ol>
+<p><strong>批次验收协议（每批必跑）</strong>：</p>
+<pre><code class="language-bash">node -e <span class="hljs-string">&quot;require(&#x27;./src/cli/replSession.js&#x27;)&quot;</span>                     <span class="hljs-comment"># 模块加载</span>
+npx eslint &lt;新文件&gt; --max-warnings 0                              <span class="hljs-comment"># 新文件必须零告警</span>
+npx eslint src/cli/replSession.js | diff - &lt;批次前基线&gt;           <span class="hljs-comment"># 不新增问题（存量债不在本任务范围）</span>
+npx jest --silent --json --outputFile=after.json                  <span class="hljs-comment"># 全量对比: suites/tests/passed/failed 四数不劣化</span>
+node scripts/ci/check-agent-rules.js --changed                    <span class="hljs-comment"># 工程红线（khy-os 根目录跑）</span>
+node services/backend/scripts/archDebtScan.js                     <span class="hljs-comment"># R2b 必须显示负增长（拆后必变小）</span></code></pre>
+<p>已知 flaky 白名单（负载下偶发，单独重跑即绿，不计入回归）：<br><code>tests/bin.machineReadable.test.js</code>（spawn 类）、concurrency 系（worker 优雅退出告警）。</p>
+<hr>
+<h2 id="一-replsession-js-批次-1-后-13560-行-目标-800">一、replSession.js（批次 1 后 13560 行 → 目标 ≤800）<a class="anchor" href="#一-replsession-js-批次-1-后-13560-行-目标-800" aria-label="锚点">#</a></h2>
+<blockquote><p>结构：模块级已模块化（懒加载+提取模块）；剩余巨石 = <code>startRepl()</code> 单闭包<br>（~13.1k 行）+ 82 个内层函数。对外调用方仅 <code>cli/repl.js</code> 一个。</p></blockquote>
+<table><thead><tr><th>批次</th><th>提取单元（旧基线行号）</th><th>规模</th><th>风险</th><th>依赖要点</th></tr></thead><tbody><tr><td>B1 ✅</td><td>启动视觉簇（852-900, 971-1326）→ <code>repl/startupHeader.js</code></td><td>385</td><td>低</td><td>@closuredeps 已有；守卫 reset 已导出</td></tr><tr><td>B2 ✅(证伪)</td><td>@path 提及解析——<strong>实地核查早已上游提取</strong>为 cli/atMentionInject.js 单一真源；banner 间距≠内聚单元，本表行号均需按横幅重定位</td><td>0</td><td>-</td><td>教训：先盘点再规划</td></tr><tr><td>B2' ✅</td><td>权限栏簇提取 → <code>repl/permissionBar.js</code>（_getPermissionModeState + _autoCompactAt + _renderPermissionBar[死代码候选,零调用仅注释提及,原样保全] + _buildPermissionBarText；deps 仅 c/fmt，服务叶子内部重 require 并重定基路径）</td><td>-174</td><td>低</td><td>转写陷阱：逐字搬运时 truncatePlain 的 n≤1 分支一度写错（三元两侧混淆），靠人工比对原文抓回——<strong>长函数逐字转写必须逐行 diff 原文</strong></td></tr><tr><td>B3 ✅</td><td>剪贴板桥+中继两内联分派分支 → <code>repl/clipboardCommands.js</code>（144 行正文搬入，deps 含 print 三件套/fsmFire/setBusy/keepalive 注入；<strong>clipboardRelayAdapter 属巨型 SCC 成员由核心 lazy require 注入</strong>——IoC 铁律再次适用，aiRenderer 等叶子内部重 require）</td><td>-85</td><td>低</td><td>内联分支形态同 /study：正则匹配留核心、正文整体搬入；busy/FSM 经 setter 保所有权</td></tr><tr><td>B4 ✅</td><td><code>!</code> shell 逃逸 → <code>repl/shellEscape.js</code>（队列状态完全封装——闭包对外零引用，调用方仅触三函数；formatShellEscapeContext 宿主注入值传递；第二个横幅实为 27 行薄分派分支无需动）</td><td>-34</td><td>低</td><td>第三次证实：banner 间距≠真实规模（估 1400 实为 79）——<strong>一切批次先实测定界</strong></td></tr><tr><td>B5 ◐</td><td>瞬态原位状态（8812-9722）</td><td>~900</td><td>中</td><td>首切片✅：<code>repl/deferredStatuses.js</code>（-16，<strong>数组引用传递模式</strong>——缓冲数组留调用方、push/splice 语义跨模块不变）。铺垫批✅：<code>_transientStatusActive</code> → <code>_tstatus.active</code> 对象化（10 处机械转换零残留，语义等价 jest 集合验证）。余量=_writeTransientStatus/_flushTransientStatus 对 → 现在可直接接收 <code>_tstatus</code> 对象提取（B5 二批解锁）</td></tr><tr><td>B6</td><td>flag 处理器（6074-6765）</td><td>~690</td><td>中</td><td>分派表化（现在是内联 else-if）</td></tr><tr><td>B7</td><td>/study + <code>#</code> 快速记忆分派分支（6765-6980）</td><td>~900</td><td>中</td><td>需先把内联分支提为命名函数</td></tr><tr><td>B8</td><td>slash/at 选择器状态机（1719-2738）</td><td>~1000</td><td>高</td><td>状态变量多，先合并成 state 对象再搬</td></tr><tr><td>B9</td><td>状态栏 + 提示框（2976-3793）</td><td>~800</td><td>高</td><td>renderStatusBar 与全局状态耦合深</td></tr><tr><td>B10</td><td>tool-use loop 路径胶水（10129-11258）</td><td>~1100</td><td>高</td><td>与 toolUseLoopCore 接口面联动</td></tr><tr><td>B11</td><td>本地模型路径 + 总结构建（11258-12942）</td><td>~1680</td><td>高</td><td>与 B10 同批验收</td></tr></tbody></table>
+<blockquote><p>B2/B3 完成后 replSession ≈ 12.7k（R2b 可见负增长）；每批独立提交。</p></blockquote>
+<h2 id="二-tooluseloopcore-js-批次后-12086-行-目标-800">二、toolUseLoopCore.js（批次后 12086 行 → 目标 ≤800）<a class="anchor" href="#二-tooluseloopcore-js-批次后-12086-行-目标-800" aria-label="锚点">#</a></h2>
+<blockquote><p>结构：79 个顶层函数（小）+ <code>runToolUseLoop</code> 单闭包。C1 后再次核实：<br>runToolUseLoop 真实边界需 brace-scan 而非 next-decl 距离（后者曾把<br>runToolUseLoop 尾部 + parseToolCalls 头部混为一谈，导致undefined切割越界——<br>已现场修复，教训：<strong>任何切割必须 node --check 立即验证</strong>）。</p></blockquote>
+<table><thead><tr><th>批次</th><th>提取单元</th><th>规模</th><th>风险</th><th>说明</th></tr></thead><tbody><tr><td>C1 ✅</td><td>SSOT 对齐：删除陈旧副本（policy-load 链 174 行 + assess 集群 177 行 + 本地 _parseToolCalls 及孤儿体），call sites 改走 <code>_toolCallParser</code>/<code>_capabilityAssess</code> SSOT（别名注入）</td><td>-646</td><td>中</td><td>见下方undefined备忘</td></tr><tr><td>C1.5 ✅</td><td>死代码清扫：自然语言解析链 7 连环（_parseNaturalToolCalls → _mapNaturalActionToTool → _parseLooseKv/_cleanParams → _buildNaturalToolParams → _parseFunctionArgs → _coerceValue，互为唯一调用方全链死亡）</td><td>-300</td><td>低</td><td>node --check 立即验证纪律生效，一次通过</td></tr><tr><td>C2 ✅</td><td>runToolUseLoop 阶段地图（下方）</td><td>0（清单）</td><td>低</td><td>实测 1808-11082 = 9275 行（next-decl 定界，brace-scan 不可用）</td></tr><tr><td>C3-P7 ✅</td><td>工具解析决策链提取 → <code>toolUseLoop/resolveToolCalls.js</code>（s20 信号语义 + 5 类面包屑，纯决策零状态变更，deps 袋 9 项）</td><td>-66</td><td>低</td><td><strong>C3 决策簇样板</strong>：call site <code>let toolCalls</code>（循环后段重赋值，勿用 const）</td></tr><tr><td>C3-P1 ✅</td><td>FSM/阶段观测接线提取 → <code>toolUseLoop/loopObservability.js</code>（shadow FSM + onPhase 链式挂接 + fork 包裹器；<code>_currentIteration</code> 闭包捕获改 <code>iterationRef</code> 对象——<strong>变异捕获模式样板</strong>，钩子 fire 时读 ref 不取快照）</td><td>-46</td><td>中</td><td>教训：同文本注释多处出现时 findIndex 会命中错误位置——切割脚本断言必须用唯一锚点</td></tr><tr><td>C3-P2 ✅</td><td>harness/协议上下文提取 → <code>toolUseLoop/protocolContext.js</code>（tier profile + 原生工具能力探测 + 协议缝，返回袋解构保下游零改动）</td><td>-74</td><td>中</td><td><strong>IoC 铁律新证</strong>：提取模块静态 require gateway/adapter 模块会加入既有巨型 SCC（R3 拦「环缠新成员」）——提取模块必须零 require 纯叶子，lazy requires 留在核心原位经 deps 注入</td></tr><tr><td>C3+</td><td>按阶段拆 runToolUseLoop（同工厂模式）</td><td>~9275</td><td>高</td><td>切缝=面包屑簇边界；先做 loopState 状态对象化</td></tr><tr><td>C3-P10 ✅</td><td>静默区（7359-9837=工具执行机械区）补 5 个里程碑面包屑：tool-exec-preflight/start/batching/sequential/done（含 iteration+计数，零内容泄漏）</td><td>+5</td><td>低</td><td><code>_loopBreadcrumb</code> 契约核实：KHY_LOOP_DEBUG 门控 + 写文件非 stdout + fail-soft——关 flag 零开销；静默区从 2478 行零观测变为 5 点可诊断，为后续切削供锚点</td></tr></tbody></table>
+<p><strong>C2 · runToolUseLoop 阶段地图（面包屑聚类，行号为 2026-09-02 C1.5 后基线）</strong></p>
+<table><thead><tr><th>阶段</th><th>行区间（约）</th><th>内容（_loopBreadcrumb 锚点）</th><th>C3 拆分优先级</th></tr></thead><tbody><tr><td>P1 预处理</td><td>1808-2100</td><td>prompt-structuring(2106)、options 归一化</td><td>高（状态少）</td></tr><tr><td>P2 环境/协议</td><td>2100-2400</td><td>harness-profile(2337)、tool-protocol(2386)</td><td>高</td></tr><tr><td>P3 门控</td><td>2400-3200</td><td>small-model-pipeline(2846)、model-escalation(2904/2922)</td><td>中</td></tr><tr><td>P4 迭代预算</td><td>3200-3700</td><td>posttool-hook-stop(3264)、token-budget-stop(3307)、idle-continuation(3470)</td><td>中</td></tr><tr><td>P5 路由分流</td><td>3700-4100</td><td>procedure-catalog(3786)、external-agent-route(3814)、diagnostic-grounding(3835)</td><td>中</td></tr><tr><td>P6 空回退</td><td>4100-5000</td><td>grace-empty-fallback(4111/4404)、nudge-continue(4725)</td><td>中</td></tr><tr><td>P7 工具解析</td><td>5000-5300</td><td>tool-parse-* 五连(5031-5068)、degenerate-echo(5276)</td><td>高（C1 已对齐 SSOT，状态窄）</td></tr><tr><td>P8 结果判定</td><td>5300-7100</td><td>stop-reason-recovery(5608)、ensemble-verify(5723/5821)、audit-fix(6007/6037)、nudge 蜂群(6157-7113)、refusal-repeat-break(6740)、goal-stop-gate(6862)</td><td>低（nudge 蜂群最纠缠）</td></tr><tr><td>P9 结论带</td><td>7100-7600</td><td>result-guard(7229)、refusal 归因三连(7326/7377/7399)、length-truncation-final(7425)、conclude(7434)、empty-final-fallback(7506)</td><td>低</td></tr><tr><td>P10 交付</td><td>7600-11082</td><td>无面包屑静默区 2400+ 行（9984/10258/10612/10678/10933 散点）→ <strong>先补面包屑再拆</strong></td><td>最低（可观测性先行的活标本）</td></tr></tbody></table>
+<p><strong>C3 切削规程</strong>：① 先把循环共享可变状态（iteration/totalToolCalls/aiResult/stopReason/…）收敛为 <code>loopState</code> 对象显式传递；② 每阶段按面包屑簇边界提取工厂模块（deps 袋=loopState 子集）；③ 无面包屑区（P10）先补 <code>_loopBreadcrumb</code> 再拆——可观测性与可拆分性同源。</p>
+<p>| C1.5 | 死代码清扫：<code>_parseNaturalToolCalls</code>/<code>_mapNaturalActionToTool</code>（C1 后仅互相引用，已死）；连同其区间 Top-level 化 | ~120 | 低 |<code>_mapNaturalActionToTool</code>遗留，机械删除 + jest |</p>
+<p><strong>C1 备忘（重要工程发现）</strong>：</p>
+<ol><li><strong>导出与运行时分叉 bug</strong>：<code>module.exports</code> 早已把 <code>_parseToolCalls</code>/<code>_assessExecutionCapability</code>/<code>_loadCapabilityPolicy</code> 委托给提取模块（外部单测测的是新代码），但循环运行时仍调本地陈旧副本——修复性对齐，非纯重构。</li><li><strong>R4 漂移检测盲区</strong>：<code>scanDriftR4</code> 只识别 <code>const X = require(...)</code> 直绑模式，漏检 <code>const { X } = require(...)</code> 解构立面（本次分叉即漏检）。修 R4 = 独立小任务（待登记）。</li><li><strong>保留区</strong>：<code>_enabledNameSetCache</code> 缓存子系统（经 <code>setToolUseLoopHelpersDeps</code> 注入 toolUseLoopHelpers 在用）不得删——C1 曾误划入删除集，靠调用点矩阵核查救回。</li><li><strong>jest flaky 白名单（实测）</strong>：<code>bin.machineReadable.test.js</code>（spawn 系，负载下随机挂 1-2 项，solo 稳定全绿）、<code>largeTaskRuntimeStore.concurrency</code>（多进程计时系）。四数对账以失败<strong>集合</strong>比对为准，solo 重跑仲裁。</li></ol>
+<h2 id="三-并行会话纪律">三、并行会话纪律<a class="anchor" href="#三-并行会话纪律" aria-label="锚点">#</a></h2>
+<ul><li>两文件处于共享脏工作树；<strong>动工前先 <code>git status</code> 确认目标文件无新改动</strong>，mtime 距当前 &lt;30 分钟即停手协调。</li><li>R2b 基线以最近一次 <code>--update-baseline</code> 为准；批次开始前重扫一次防误报。</li><li>每批独立 commit（回滚点），commit message 带 <code>T-017 B&lt;n&gt;</code> / <code>T-020 C&lt;n&gt;</code> 标记。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/08_MGMT_项目管理/MGMT-PLAN/[MGMT-PLAN-007] Khy-OS远景演进路线图-2026-06-12.html"><div class="dir">← 上一篇</div><div class="ttl">《Khy-OS 远景演进路线图 — 从当前基线到「开机即进 Khy-OS」》</div></a><a class="next" href="../../../docs/08_MGMT_项目管理/MGMT-PLAN/[MGMT-PLAN-009] 文档精简与结构化整理方案.html"><div class="dir">下一篇 →</div><div class="ttl">[MGMT-PLAN-009] 文档精简与结构化整理方案</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/MGMT-PLAN/[MGMT-PLAN-008] replSession与toolUseLoopCore拆分分批计划.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

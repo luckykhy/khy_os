@@ -275,11 +275,15 @@ async function loadCustomAgents(cwd) {
         continue;
       }
 
-      const files = fs.readdirSync(dir).filter((f) => f.endsWith('.md'));
+      const files = fs
+        .readdirSync(dir)
+        .filter((f) => f.endsWith('.md') || f.endsWith('.json'));
       for (const file of files) {
         const filePath = path.join(dir, file);
         try {
-          const agent = parseAgentFromMarkdown(filePath, source);
+          const agent = file.endsWith('.json')
+            ? parseAgentFromJson(filePath, source)
+            : parseAgentFromMarkdown(filePath, source);
           if (agent) {
             agents.push(agent);
           }
@@ -306,9 +310,75 @@ function clearAgentCache() {
   _cacheKey = null;
 }
 
+/**
+ * Parse an agent definition from a JSON file (khy-native format).
+ *
+ * Mirrors parseAgentFromMarkdown's schema but reads JSON instead of
+ * YAML-frontmatter markdown, so khy project/user agents can comply with
+ * FILE-FORMAT-PROTOCOL §2.5 (no YAML-frontmatter markdown for agent defs)
+ * while CC-bridge markdown agents keep working unchanged.
+ *
+ * @param {string} filePath
+ * @param {string} source
+ * @returns {import('./types').CustomAgentDefinition|null}
+ */
+function parseAgentFromJson(filePath, source) {
+  try {
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    const data = JSON.parse(raw);
+    const agentType = data.name;
+    const whenToUse = data.description;
+    if (!agentType || typeof agentType !== 'string') {
+      return null;
+    }
+    if (!whenToUse || typeof whenToUse !== 'string') {
+      return null;
+    }
+    const systemPrompt =
+      typeof data.prompt === 'string'
+        ? data.prompt
+        : typeof data.systemPrompt === 'string'
+          ? data.systemPrompt
+          : '';
+    if (!systemPrompt.trim()) {
+      return null;
+    }
+
+    const tools = Array.isArray(data.tools) ? data.tools : undefined;
+    const disallowedTools = Array.isArray(data.disallowedTools)
+      ? data.disallowedTools
+      : undefined;
+    const color = data.color;
+    const model = data.model ? String(data.model) : undefined;
+    const background = data.background === true ? true : undefined;
+    const maxTurns = data.maxTurns ? parseInt(data.maxTurns, 10) : undefined;
+    const permissionMode = data.permissionMode || undefined;
+    const filename = path.basename(filePath, '.json');
+
+    return {
+      agentType,
+      whenToUse,
+      ...(tools !== undefined ? { tools } : {}),
+      ...(disallowedTools !== undefined ? { disallowedTools } : {}),
+      getSystemPrompt: () => systemPrompt,
+      source,
+      filename,
+      baseDir: path.dirname(filePath),
+      ...(color && AGENT_COLORS.includes(color) ? { color } : {}),
+      ...(model !== undefined ? { model } : {}),
+      ...(background ? { background } : {}),
+      ...(maxTurns && !isNaN(maxTurns) ? { maxTurns } : {}),
+      ...(permissionMode ? { permissionMode } : {}),
+    };
+  } catch {
+    return null;
+  }
+}
+
 module.exports = {
   loadCustomAgents,
   clearAgentCache,
   parseAgentFromMarkdown,
+  parseAgentFromJson,
   parseFrontmatter,
 };

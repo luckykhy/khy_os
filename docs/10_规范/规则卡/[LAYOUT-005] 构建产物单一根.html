@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [LAYOUT-005] 构建产物单一根.md -->
+<title>[LAYOUT-005] 构建产物单一根 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[LAYOUT-005] 构建产物单一根</div>
+      <header class="hero reveal"><h1>[LAYOUT-005] 构建产物单一根</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#layout-005-构建产物单一根">[LAYOUT-005] 构建产物单一根</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 构建产物单一根<br>id: LAYOUT-005<br>domain: LAYOUT<br>nature: 约束为主，兼权力与福利<br>scope: &quot;kernel/<strong>, platform/</strong>, services/<strong>, apps/</strong>, software/<strong>, extensions/</strong>, tools/<strong>, docs/</strong>, packaging/<strong>, scripts/</strong>（一切构建 / 测试 / 打包 / 代码生成产物的落盘路径；不含源码同名目录 packaging/build 与 scripts/release）&quot;<br>priority: P1<br>trigger: &quot;任何工具向磁盘写入可再生输出时；新增或移动产物目录时；修改 .gitignore / .dockerignore / clean.js 的产物清单时&quot;<br>constraint: &quot;可再生构建产物的落盘路径必须位于仓库根 entries/ 之下，形如 entries/&lt;producer&gt;[/&lt;variant&gt;]（深度 ≤ 2）；每条产物必须在 docs/10_规范/registry/BUILD-OUTPUTS.json 登记 path + rebuild（一条能把它变回来的命令）+ inBuildAll: true；entries/ 之外不得存在未登记为 migrating 或 parasitic 的产物目录；无法重定向的寄生产物必须登记 hook（重建钩子）与 sunset（到期日），且寄生条目总数不得超过 meta.parasiticBudget（只降不升）；.gitignore 与 .dockerignore 中的产物规则必须由登记表派生，不得手写第二份清单。&quot;<br>grants: &quot;授权任何人在不阅读任何构建配置的前提下执行 npm run clean:apply 后接 build:all 得到完整产物（登记表是唯一真源）；授权对 entries/ 整树执行无事前审批的删除（其内容按定义可再生）；授权维护者按 [DESIGN-LAY-004] §8 三步流程调整 parasiticBudget 与 sunset。边界：entries/ 之外的删除不在本授权内，仍受 check-change-safety.js 与 [DESIGN-ARCH-113] DELETE 模态管辖。&quot;<br>benefit: &quot;找产物进一个目录、删产物删一个目录、CI 缓存一个 key；「产物在哪 / 删了怎么回来」不再需要跨 .gitignore + .dockerignore + clean.js + 各包构建配置四处拼装答案。&quot;<br>exception: &quot;三类：① 源码同名目录（packaging/build、scripts/release、services/backend/src/services/<em>/build|publish、kernel/vendor）由守卫 SOURCE_DIR_ALLOWLIST 显式排除，不入登记表；② 机器本地 vendored 检出（tools/deepseek-eyes/</em>*）登记为 parasitic 但 sunset 为空；③ 工具强制且不可重定向的路径（kernel/moonbit/_build、apps/ai-frontend/public/vendor、extensions/tools/*/vendor、docs/19_资产/site/mermaid.min.js）登记为 parasitic 并计入预算。三类均须登记，不得裸豁免。&quot;<br>version: &quot;1.0.0 (2026-09-16) 初版；配套原型 docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] build-root-demo.js 12 场景实测；1.0.1 (2026-09-18) 单一产物根由 _build/ 迁移至 entries/&quot;<br>status: draft<br>ssot: &quot;docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] 构建产物单一根规范.md&quot;<br>formerly: 无<br>owner: architecture-team<br>enforcement: &quot;scripts/ci/check-build-root.js&quot;</p>
+<hr>
+<h1 id="layout-005-构建产物单一根">[LAYOUT-005] 构建产物单一根<a class="anchor" href="#layout-005-构建产物单一根" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: LAYOUT-005 -->
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] 构建产物单一根规范.md。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>可再生构建产物的落盘路径必须位于仓库根 entries/ 之下，形如 entries/&lt;producer&gt;[/&lt;variant&gt;]（深度 ≤ 2）；每条产物必须在 docs/10_规范/registry/BUILD-OUTPUTS.json 登记 path + rebuild（一条能把它变回来的命令）+ inBuildAll: true；entries/ 之外不得存在未登记为 migrating 或 parasitic 的产物目录；无法重定向的寄生产物必须登记 hook（重建钩子）与 sunset（到期日），且寄生条目总数不得超过 meta.parasiticBudget（只降不升）；.gitignore 与 .dockerignore 中的产物规则必须由登记表派生，不得手写第二份清单。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>授权任何人在不阅读任何构建配置的前提下执行 npm run clean:apply 后接 build:all 得到完整产物（登记表是唯一真源）；授权对 entries/ 整树执行无事前审批的删除（其内容按定义可再生）；授权维护者按 [DESIGN-LAY-004] §8 三步流程调整 parasiticBudget 与 sunset。边界：entries/ 之外的删除不在本授权内，仍受 check-change-safety.js 与 [DESIGN-ARCH-113] DELETE 模态管辖。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>找产物进一个目录、删产物删一个目录、CI 缓存一个 key；「产物在哪 / 删了怎么回来」不再需要跨 .gitignore + .dockerignore + clean.js + 各包构建配置四处拼装答案。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>见 <code>ssot</code> 指向的真源原文；本卡不复制反例，以免与真源漂移。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>人工评审（该规则暂无机械守卫）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>三类：① 源码同名目录（packaging/build、scripts/release、services/backend/src/services/<em>/build|publish、kernel/vendor）由守卫 SOURCE_DIR_ALLOWLIST 显式排除，不入登记表；② 机器本地 vendored 检出（tools/deepseek-eyes/</em>*）登记为 parasitic 但 sunset 为空；③ 工具强制且不可重定向的路径（kernel/moonbit/_build、apps/ai-frontend/public/vendor、extensions/tools/*/vendor、docs/19_资产/site/mermaid.min.js）登记为 parasitic 并计入预算。三类均须登记，不得裸豁免。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-16) 初版；配套原型 docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] build-root-demo.js 12 场景实测；1.0.1 (2026-09-18) 单一产物根由 _build/ 迁移至 entries/ 初版 / 迁移自 无</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/规则卡/[LAYOUT-004] 仓库整理与巡检.html"><div class="dir">← 上一篇</div><div class="ttl">[LAYOUT-004] 仓库整理与巡检</div></a><a class="next" href="../../../docs/10_规范/规则卡/[LAYOUT-006] 仓库层级可发现性.html"><div class="dir">下一篇 →</div><div class="ttl">[LAYOUT-006] 仓库层级可发现性</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/规则卡/[LAYOUT-005] 构建产物单一根.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

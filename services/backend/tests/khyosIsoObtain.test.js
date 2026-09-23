@@ -1,6 +1,6 @@
 'use strict';
 /**
- * Tests for the prebuilt-ISO obtain path in ensureKhyosIso â€?the cheapest, most
+ * Tests for the prebuilt-ISO obtain path in ensureKhyosIso ï¿½?the cheapest, most
  * stable way to get a bootable KHY OS on a bare host: download one verified ISO
  * instead of provisioning a toolchain and compiling.
  *
@@ -13,6 +13,7 @@
  * the cache at a throwaway dir; the downloader is injected (no network).
  */
 const fs = require('fs');
+const assert = require('node:assert');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
@@ -37,7 +38,7 @@ afterEach(() => {
   }
   try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* ignore */ }
 });
-describe('ensureKhyosIso â€?prebuilt obtain', () => {
+describe('ensureKhyosIso ï¿½?prebuilt obtain', () => {
 });
 
 describe('Khyos Iso Obtain', () => {

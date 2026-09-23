@@ -25,14 +25,10 @@ const {
   assessRestoreReadiness,
   _RULES,
 } = require('../lib/restoreReadiness');
+const { opsDocPath, opsDocRelPath } = require('../lib/docsPaths');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const DOC_PATH = path.join(
-  ROOT,
-  'docs',
-  '07_OPS_运维',
-  '[OPS-MAN-068] 离机还原自检清单.md'
-);
+const DOC_PATH = opsDocPath('[OPS-MAN-068] 离机还原自检清单.md');
 const NPM_PKG_NAME = '@khy-os/khy-os';
 const PIP_PKG_NAME = 'khy-os';
 
@@ -196,7 +192,7 @@ function runRestoreCheck(opts = {}) {
     for (const w of verdict.warnings) out += _fmtItem(w, C.yellow);
     out += '\n';
   }
-  out += `${C.dim}详情与人工还原步骤见：docs/07_OPS_运维/[OPS-MAN-068] 离机还原自检清单.md${C.reset}\n`;
+  out += `${C.dim}详情与人工还原步骤见：${opsDocRelPath('[OPS-MAN-068] 离机还原自检清单.md')}${C.reset}\n`;
   process.stdout.write(out);
   return verdict.ready ? 0 : 1;
 }

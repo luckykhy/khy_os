@@ -1,6 +1,6 @@
 'use strict';
 
-const { registerPluginDoctor, getPluginDoctor, _resetForTest } = require('../../../src/services/pluginDoctorPort');
+const { registerPluginDoctor, getPluginDoctor, _resetForTest } = require('../../src/services/pluginDoctorPort.js');
 
 describe('pluginDoctorPort', () => {
   beforeEach(() => {

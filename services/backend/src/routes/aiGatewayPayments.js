@@ -18,6 +18,9 @@ function _statusForError(error, fallback = 500) {
   if (message.includes('admin access is required') || message.includes('forbidden')) {
     return 403;
   }
+  if (message.includes('already bound to customer')) {
+    return 409;
+  }
   if (
     message.includes('required') ||
     message.includes('greater than 0') ||
@@ -44,6 +47,24 @@ function _baseOptions(req, extras = {}) {
     ...extras,
   };
 }
+
+// Declared before /:paymentId so the literal path is not read as a payment id.
+// The account-side read of the customer↔user binding: "which customer do I own?"
+// Lets the user center decide between self-service top-up and the admin-only
+// flow without exposing the customer registry itself.
+router.get('/my-customer', async (req, res) => {
+  try {
+    const actorUser = req.user || { id: 0, role: 'admin' };
+    const customer = await paymentGatewayService.getBoundCustomerForUser(actorUser.id);
+    res.json({ success: true, data: customer });
+  } catch (error) {
+    res.status(_statusForError(error)).json({
+      success: false,
+      message: '查询绑定的客户失败',
+      error: _messageOf(error, 'my customer failed'),
+    });
+  }
+});
 
 router.get('/', async (req, res) => {
   try {

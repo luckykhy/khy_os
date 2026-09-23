@@ -174,11 +174,11 @@ function buildRetryStatusLabel(p) {
     const n = Number.isFinite(attempt) ? attempt : null;
     const m = Number.isFinite(maxAttempts) ? maxAttempts : null;
     if (n != null && m != null) {
-      return `空回复已丢弃，正在要求重新生成（${n}/${m}）…`;
+      return `空回复已丢弃,正在要求重新生成(${n}/${m})…`;
     }
-    return '空回复已丢弃，正在要求重新生成…';
+    return '空回复已丢弃,正在要求重新生成(第 1 次)…';
   } catch {
-    return '空回复已丢弃，正在要求重新生成…';
+    return '空回复已丢弃,正在要求重新生成(第 1 次)…';
   }
 }
 

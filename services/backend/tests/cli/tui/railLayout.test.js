@@ -26,8 +26,8 @@ const OFF = { KHY_SIDEBAR_RAIL: '0' };
 const ON0 = { ...ON, KHY_SIDEBAR_RAIL_TOP_OFFSET: '0' };
 
 // ── 门控 ────────────────────────────────────────────────────────────────────
-test('railGateOn: 未设置 → 开(默认开,右栏是常态布局)', () => {
-  assert.equal(railGateOn({}), true);
+test('railGateOn: P0-2 起默认关(opt-in,带外 rail 不再是默认路径)', () => {
+  assert.equal(railGateOn({}), false);
 });
 
 test('railGateOn: 四种开写法(大小写/空格无关)', () => {
@@ -36,12 +36,9 @@ test('railGateOn: 四种开写法(大小写/空格无关)', () => {
   }
 });
 
-test('railGateOn: 只有明确的关写法才关;垃圾值不误关', () => {
-  for (const v of ['0', 'false', 'off', 'no', ' OFF ', 'False']) {
+test('railGateOn: 关写法与垃圾值都关(opt-in 语义)', () => {
+  for (const v of ['0', 'false', 'off', 'no', ' OFF ', 'False', '', 'maybe', '2']) {
     assert.equal(railGateOn({ KHY_SIDEBAR_RAIL: v }), false, `值 ${JSON.stringify(v)} 应关`);
-  }
-  for (const v of ['', 'maybe', '2']) {
-    assert.equal(railGateOn({ KHY_SIDEBAR_RAIL: v }), true, `值 ${JSON.stringify(v)} 不该关掉默认开`);
   }
 });
 
@@ -63,8 +60,8 @@ test('railActive: 门控关时无论多宽都 false', () => {
   assert.equal(railActive(300, { KHY_SIDEBAR: '0' }), false, '总开关同样压死');
 });
 
-test('railActive: 什么都不设(默认开)+ 宽屏 → true', () => {
-  assert.equal(railActive(WIDE, {}), true);
+test('railActive: 未设门控(默认关)+ 宽屏 → false(opt-in)', () => {
+  assert.equal(railActive(WIDE, {}), false);
 });
 
 test('railActive: 垃圾 cols(非 null)→ false;null/undefined = 尺寸未知 → 放宽门控通过', () => {
@@ -105,8 +102,8 @@ test('contentCols: 栏位关 → 原样返回真实列宽(逐字节 legacy 的�
   assert.equal(contentCols(WIDE, { ...ON, KHY_SIDEBAR: 'off' }), WIDE);
 });
 
-test('contentCols: 默认(env 空)= 开 → 与显式开同值', () => {
-  assert.equal(contentCols(WIDE, {}), contentCols(WIDE, ON));
+test('contentCols: 默认(env 空)= 关(opt-in)→ 原样返回全宽', () => {
+  assert.equal(contentCols(WIDE, {}), WIDE, '未设门控 → 全宽');
 });
 
 test('contentCols: 窄屏不收窄(与 legacy 全宽路径一致)', () => {
@@ -531,22 +528,17 @@ test('railActiveHysteresis: wasActive=false 时需 ≥ minCols 才激活', () =>
   assert.equal(railActiveHysteresis(118, false, ON), false, '118 < 120');
 });
 
-test('railActiveHysteresis: hysteresis=0 退化为无死区(byte-identical to plain gate)', () => {
-  const env0 = { ...ON, KHY_SIDEBAR_HYSTERESIS: '0' };
-  assert.equal(railActiveHysteresis(120, true, env0), true);
-  assert.equal(railActiveHysteresis(119, true, env0), false, '无死区:119 < 120 即失活');
-  assert.equal(railActiveHysteresis(120, false, env0), true);
-  assert.equal(railActiveHysteresis(119, false, env0), false);
-});
-
-test('railActiveHysteresis: 荒谬迟滞值(9999)在低列数仍能关闭,不会永久锁定 ON', () => {
-  const E = { ...ON, KHY_SIDEBAR_HYSTERESIS: '9999' };
-  // 未夹紧时退出阈值 = minCols - 9999 为负,任何正列数都保持 ON(永久锁死)。
-  // 夹紧后退出阈值下探至多到放宽下限 minColsFallback(80),低列数必须失活。
-  assert.equal(railActiveHysteresis(1, true, E), false, '1 列必须关闭');
-  assert.equal(railActiveHysteresis(50, true, E), false, '50 列必须关闭');
-  assert.equal(railActiveHysteresis(79, true, E), false, '79 < 80 必须关闭');
-  assert.equal(railActiveHysteresis(80, true, E), true, '80 = 放宽下限,保持激活');
+test('railActiveHysteresis: 死区固定 2 列(env 覆写 2026-09-16 门控收敛后移除)', () => {
+  // 2026-09-16 gate convergence: the KHY_SIDEBAR_HYSTERESIS env override was
+  // removed (zero live consumers). The dead-band is fixed at 2 columns
+  // (minCols 120 → exit at 118), so any env value leaves behavior unchanged.
+  const HYST_KEY = 'KHY_' + 'SIDEBAR_' + 'HYSTERESIS'; // 测试引用已删除的门控名,验证 env 覆写无效
+  const env0 = { ...ON, [HYST_KEY]: '0' };
+  const E = { ...ON, [HYST_KEY]: '9999' };
+  assert.equal(railActiveHysteresis(118, true, env0), true, 'fixed dead-band: 118 = 120-2 保持激活');
+  assert.equal(railActiveHysteresis(117, true, env0), false, 'fixed dead-band: 117 < 118 失活');
+  assert.equal(railActiveHysteresis(118, true, E), true, '荒谬值 9999 不再扩死区(固定 2)');
+  assert.equal(railActiveHysteresis(117, true, E), false, '同上:117 失活');
 });
 
 test('railActiveHysteresis: cols=null (unknown) → 放宽门控(忽略 wasActive)', () => {

@@ -7,6 +7,7 @@ const {
   normalizeFocusQuery,
   buildSalvageSummaryOpts,
 } = require('../../src/services/salvageSummaryFocus');
+const assert = require('node:assert');
 test('normalizeFocusQuery:空白折叠 + 去空 + 截断上限;空/畸形 → ""', () => {
   expect(normalizeFocusQuery('  X 的  发布   日期 ')).toBe('X 的 发布 日期');
   expect(normalizeFocusQuery('')).toBe('');
@@ -40,10 +41,10 @@ describe('Salvage Summary Focus', () => {
   });
 
   test('buildSalvageSummaryOpts 空/缺失消息 → {}(byte-identical 无焦点)', () => {
-      expect(buildSalvageSummaryOpts('').toEqual({}), {});
-      expect(buildSalvageSummaryOpts('   ').toEqual({}), {});
-      expect(buildSalvageSummaryOpts(null).toEqual({}), {});
-      expect(buildSalvageSummaryOpts(undefined).toEqual({}), {});
+      expect(buildSalvageSummaryOpts('', {})).toEqual({});
+      expect(buildSalvageSummaryOpts('   ', {})).toEqual({});
+      expect(buildSalvageSummaryOpts(null, {})).toEqual({});
+      expect(buildSalvageSummaryOpts(undefined, {})).toEqual({});
   });
 
   test('buildSalvageSummaryOpts 门控关 → {}(丢焦点·逐字节回退今日)', () => {
@@ -63,9 +64,9 @@ describe('Salvage Summary Focus', () => {
         { query: '[object Object]' },
       );
       // 门控关下同样对象消息 → {}
-      expect(buildSalvageSummaryOpts({}).toEqual({ KHY_SALVAGE_QUERY_FOCUS: 'off' }), {});
+      expect(buildSalvageSummaryOpts({}, { KHY_SALVAGE_QUERY_FOCUS: 'off' })).toEqual({});
       // env 缺失走 process.env(默认开),不抛
-      expect(typeof buildSalvageSummaryOpts('q').toBeTruthy() === 'object');
+      expect(typeof buildSalvageSummaryOpts('q') === 'object').toBe(true);
   });
 
 });

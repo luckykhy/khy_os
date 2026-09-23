@@ -1,6 +1,6 @@
 'use strict';
 /**
- * toolCalling.planReadOnly.test.js �?P4 of the KHY⇄CC mode-alignment work.
+ * toolCalling.planReadOnly.test.js — P4 of the KHY⇄CC mode-alignment work.
  *
  * Claude Code keeps the agent in a strict read-only sandbox while a plan is
  * being generated/reviewed: explore freely, but no writes/exec until the user
@@ -11,6 +11,7 @@
  * blocked with a re-injection instruction. Kill switch: KHY_PLAN_READONLY=off.
  */
 const os = require('os');
+const assert = require('node:assert');
 const path = require('path');
 const fs = require('fs');
 const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-plan-ro-'));
@@ -23,10 +24,10 @@ process.env.KHY_METACONSTRAINT = 'off';
 const planModeService = require('../src/services/planModeService');
 const planModeSink = require('../src/services/planModeSink');
 const toolCalling = require('../src/services/toolCalling');
-describe('plan-mode hard read-only gate (P4)', () => {
+describe('Tool Calling plan Read Only', () => {
   // toolCalling reads the flag through the zero-dependency sink seam
   // ([DESIGN-ARCH-051] §6.11), not by importing planModeService. Force the
-  // read-only window by registering a stub provider at that seam �?the same
+  // read-only window by registering a stub provider at that seam — the same
   // path production uses (planModeService self-registers its isPlanReadOnly on
   // load). Restoring the real provider after each test keeps the seam honest.
   const realProvider = planModeService.isPlanReadOnly;
@@ -34,11 +35,9 @@ describe('plan-mode hard read-only gate (P4)', () => {
     planModeSink.setPlanReadOnlyProvider(realProvider);
     delete process.env.KHY_PLAN_READONLY;
   });
-});
 
-describe('Tool Calling plan Read Only', () => {
   test('isPlanReadOnly derives from state: generating/reviewing only', async () => {
-        // Default idle �?writes allowed.
+        // Default idle �?writes allowed.
         expect(planModeService.isPlanReadOnly()).toBe(false);
   });
 
@@ -50,7 +49,7 @@ describe('Tool Calling plan Read Only', () => {
         expect(res._planReadOnlyBlocked).toBe(true);
         expect(res.error).toMatch(/计划模式/);
         // The file must NOT have been written.
-        expect(fs.existsSync(path.join(TMP_HOME).toBe('x.txt')), false);
+        expect(fs.existsSync(path.join(TMP_HOME, 'x.txt'))).toBe(false);
   });
 
   test('during plan read-only, a read-only tool still passes the gate', async () => {

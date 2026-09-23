@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-SEMVER-002] 版本管理与发布触发规范.md -->
+<title>[DESIGN-SEMVER-002] 版本管理与发布触发规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-SEMVER-002] 版本管理与发布触发规范</div>
+      <header class="hero reveal"><h1>[DESIGN-SEMVER-002] 版本管理与发布触发规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-semver-002-版本管理与发布触发规范">[DESIGN-SEMVER-002] 版本管理与发布触发规范</a></li><li class="lvl-2"><a href="#一-现状-四处-发布时机-目前靠人记-2026-09-17-实测">一、现状：四处「发布时机」目前靠人记（2026-09-17 实测）</a></li><li class="lvl-2"><a href="#二-规则正文-process-005">二、规则正文（`PROCESS-005`）</a></li><li class="lvl-3"><a href="#2-1-r-1-何时需要更新版本号-bump-触发">2.1 R-1 何时需要更新版本号（bump 触发）</a></li><li class="lvl-3"><a href="#2-2-r-2-版本号命名与递增规范">2.2 R-2 版本号命名与递增规范</a></li><li class="lvl-3"><a href="#2-3-r-3-何时以及如何推送-github-gitee">2.3 R-3 何时以及如何推送 GitHub / Gitee</a></li><li class="lvl-3"><a href="#2-4-r-4-自动触发条件-本规则的核心-消灭人工判断">2.4 R-4 自动触发条件（本规则的核心：消灭人工判断）</a></li><li class="lvl-3"><a href="#2-5-r-5-守卫与反例-本规则的执行面">2.5 R-5 守卫与反例（本规则的执行面）</a></li><li class="lvl-2"><a href="#三-与-process-001-的边界-不可放宽-p0">三、与 `PROCESS-001` 的边界（**不可放宽 P0**）</a></li><li class="lvl-2"><a href="#四-验收-三步接线清单-依据-design-arch-111">四、验收（三步接线清单，依据 `[DESIGN-ARCH-111]`）</a></li><li class="lvl-2"><a href="#五-落点与后续">五、落点与后续</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-semver-002-版本管理与发布触发规范">[DESIGN-SEMVER-002] 版本管理与发布触发规范<a class="anchor" href="#design-semver-002-版本管理与发布触发规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: PROCESS-005 -->
+<blockquote><p><strong>定位</strong>：回答四个此前依赖人工判断的问题 ——<br><strong>「什么时候 bump？」「bump 成几？」「什么时候推 GitHub / Gitee？」「哪些动作是自动触发的，触发条件是什么？」</strong><br>本文件是规则 <code>PROCESS-005</code> 的<strong>语义真源</strong>；机器可读登记项在 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>。</p>
+<p><strong>与既有规范的关系</strong>（三份互补，无重叠）：</p>
+<ul><li><code>[DESIGN-SEMVER-001]</code> 管<strong>版本号本身</strong>（格式、递增语义、预发布、废弃周期、真源清单）；</li><li><code>PROCESS-002</code> 管<strong>版本号一致性</strong>（9 源组内相等、组间刻意不同），守卫 <code>check-version-sync.js</code>；</li><li><strong>本规范管「流转时机与推送触发」</strong> —— 什么时候该动版本号、动完由谁推出去、推完谁自动接手。</li></ul>
+<p>三者正交：提问「真源对不对得上」看前两者，提问「何时动、谁触发」看本文。</p>
+<p><strong>编号与落点</strong>：本文件属<strong>规范族</strong>（<code>[DESIGN-&lt;域&gt;-NNN&gt;</code>），按 <code>[DESIGN-LAY-005]</code> §3.1 归入<br>跨阶段规范目录 <code>docs/10_规范/</code>（编号 ≥ 10 即跨阶段）。域字母取 <code>SEMVER</code>，<br>与既有 <code>[DESIGN-SEMVER-001] 语义化版本规范</code> 同族并列。</p>
+<p><strong>依据</strong>：多轨道真源与 G1/G2/G3 分组依据 <code>CLAUDE.md</code> §一 R3（<code>PROCESS-002</code>）；<br>版本格式与递增语义依据 <code>[DESIGN-SEMVER-001]</code>；<br>分支与推送纪律依据 <code>CLAUDE.md</code> §一 R1（<code>PROCESS-001</code>，P0，<strong>本规则不得放宽它</strong>）；<br>发布流水线依据 <code>scripts/release/publish-dual.sh</code> 与 <code>.github/workflows/dual-channel-release.yml</code>；<br>镜像同步依据 <code>.github/workflows/sync-gitee.yml</code>。</p></blockquote>
+<hr>
+<h2 id="一-现状-四处-发布时机-目前靠人记-2026-09-17-实测">一、现状：四处「发布时机」目前靠人记（2026-09-17 实测）<a class="anchor" href="#一-现状-四处-发布时机-目前靠人记-2026-09-17-实测" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>现状</th><th>实测证据</th><th>问题</th></tr></thead><tbody><tr><td>1</td><td><strong>何时 bump 无成文判据</strong></td><td><code>CLAUDE.md</code> §一 R3 只规定「三条轨道组内一致」，未说触发条件</td><td>全靠记忆；要么攒着不发，要么随手改 <code>pyproject.toml</code> 造成 <code>check:version-sync</code> 红</td></tr><tr><td>2</td><td><strong>推 GitHub 与推 Gitee 是两条独立链路，互不保证</strong></td><td><code>sync-gitee.yml</code> 触发于 <code>push: branches: [main, master]</code>；<code>dual-channel-release.yml</code> 触发于 <code>push: tags: ['v*']</code></td><td>推了 <code>main</code> 不推 tag → 代码同步了但<strong>没发版</strong>；推了 tag 而 <code>main</code> 未推 → <strong>发了版但镜像缺 tag</strong>，两边长期漂移</td></tr><tr><td>3</td><td><strong>发布通道仍是手动的</strong></td><td><code>dual-channel-release.yml</code> 仅 <code>push: tags: ['v*']</code> + <code>workflow_dispatch</code>；<code>publish-dual.sh</code> 头部注释写明「不带 <code>--tag</code> = 只发包，不 commit / 不打 tag / 不 push——<strong>版本红线需人另行点头</strong>」</td><td>与用户诉求「避免依赖人工判断发布时机」<strong>直接冲突</strong></td></tr><tr><td>4</td><td><strong><code>master</code> 是影子分支</strong></td><td>本仓实际分支为 <code>main</code>（<code>git branch --show-current</code> = <code>main</code>）；<code>main</code>/<code>master</code> 两个名字散落在 6 个 workflow 的过滤器里</td><td>分支改名即静默失效（过滤器不匹配则 workflow 永不触发，且<strong>不会报错</strong>）</td></tr></tbody></table>
+<blockquote><p><strong>结论</strong>：缺的不是「要不要自动」，而是<strong>「自动的触发条件写清楚了没有」</strong>。<br>本规则把触发条件从人的记忆搬进 workflow 的 <code>on:</code> 块，使「发布时机」成为<strong>可机判、可复现</strong>的事实。</p></blockquote>
+<hr>
+<h2 id="二-规则正文-process-005">二、规则正文（<code>PROCESS-005</code>）<a class="anchor" href="#二-规则正文-process-005" aria-label="锚点">#</a></h2>
+<blockquote><p>以下五节即规则条款。<strong>P1；门档 <code>pr</code>；守卫 <code>scripts/ci/check-release-triggers.js</code>（新增）。</strong></p></blockquote>
+<h3 id="2-1-r-1-何时需要更新版本号-bump-触发">2.1 R-1 何时需要更新版本号（bump 触发）<a class="anchor" href="#2-1-r-1-何时需要更新版本号-bump-触发" aria-label="锚点">#</a></h3>
+<p><strong>在三种情形下必须 bump，其余情形一律不 bump</strong>：</p>
+<table><thead><tr><th>#</th><th>触发条件（满足任一即 bump）</th><th>判据（可机判）</th><th>递增位</th></tr></thead><tbody><tr><td><strong>T1</strong></td><td>面向用户的<strong>功能新增</strong></td><td>本版 <code>CHANGELOG.md</code> 的 <code>### Added</code> 段非空</td><td>MINOR</td></tr><tr><td><strong>T2</strong></td><td>面向用户的<strong>行为变更 / 破坏性变更</strong></td><td><code>### Changed</code> 或 <code>### Removed</code> 段非空，或 <code>### Security</code> 段非空</td><td>MAJOR（破坏性）/ MINOR</td></tr><tr><td><strong>T3</strong></td><td><strong>仅缺陷修复</strong></td><td><code>### Fixed</code> 段非空，且 Added / Changed / Removed 三段均空</td><td>PATCH</td></tr></tbody></table>
+<p><strong>不 bump 的情形（显式列举，避免&quot;顺手改一下&quot;）</strong>：</p>
+<ul><li>仅改文档、注释、测试、CI 配置、<code>.gitignore</code>；</li><li>仅内部重构且<strong>对外可观测行为不变</strong>（无新增/变更/移除的公开 API 与 CLI 用法）；</li><li>仅同步上游依赖小版本（除非它改变了本包对外行为）；</li><li><strong>工作区尚未收口</strong>（<code>git status</code> 有未提交的业务改动）——此时 bump 只会制造</li></ul>
+<p>「版本号先跳、内容后到」的空版本。</p>
+<p><strong>一次提交只做一步</strong>：bump 与功能改动<strong>不放进同一个 commit</strong>。<br>依据 <code>SOURCING-006</code> 的落地纪律「标记 → 迁移 → 收口，一次提交只做一步」，<br>使 <code>git revert</code> 能单独回滚版本号而不牵连业务代码。</p>
+<h3 id="2-2-r-2-版本号命名与递增规范">2.2 R-2 版本号命名与递增规范<a class="anchor" href="#2-2-r-2-版本号命名与递增规范" aria-label="锚点">#</a></h3>
+<p><strong>命名</strong>：严格 SemVer <strong><code>X.Y.Z</code></strong>，<strong>三位数字，禁止前导 <code>v</code>、禁止预发布后缀、禁止构建元数据</strong>。</p>
+<pre><code>✅ 1.1.15   1.2.0   2.0.0
+❌ v1.1.15  （tag 才带 v，版本号字段不带）
+❌ 1.1      （必须三位；isSemver 虽容两位，但发布轨道按三位收口）
+❌ 1.1.15-rc.1 / 1.1.15+build.7   （本仓发布轨道不支持）</code></pre>
+<blockquote><p>该约定<strong>与守卫同源</strong>：<code>scripts/ci/check-version-sync.js</code> 的 <code>isSemver()</code> 拒绝 <code>abc</code> /<br><code>v1.0</code> / <code>1.0..</code>。规则不得比守卫更宽（否则守卫绿而规则红），也不得更窄到拦下守卫放行的合法值。</p></blockquote>
+<p><strong>递增</strong>（<code>MAJOR.MINOR.PATCH</code>，逐位独立，不得跳位）：</p>
+<table><thead><tr><th>位</th><th>何时 +1</th><th>归零规则</th></tr></thead><tbody><tr><td><strong>MAJOR</strong></td><td>对外契约破坏性变更（CLI 命令移除/改名、API 响应结构变更、数据格式不兼容）</td><td>MINOR、PATCH 归零</td></tr><tr><td><strong>MINOR</strong></td><td>向后兼容的功能新增</td><td>PATCH 归零</td></tr><tr><td><strong>PATCH</strong></td><td>向后兼容的缺陷修复</td><td>—</td></tr></tbody></table>
+<p><strong>三条轨道独立递增，组间不联动</strong>（依据 <code>PROCESS-002</code>）：<br>G1 主包 / G2 ai-backend / G3 浏览器 UI <strong>各自按自己的变更性质递增</strong>，<br><strong>禁止为了&quot;看起来整齐&quot;把三条轨道对齐成同一版本号</strong> —— G2、G3 与 G1 刻意不同。</p>
+<p><strong>bump 的落点（G1 必改 3 处，不能只改 1 处）</strong>：</p>
+<pre><code>pyproject.toml                      # pip 单一真源
+packaging/npm/package.json          # npm 渠道清单
+services/backend/package.json       # khy --version 上报值</code></pre>
+<p>第 4 处 <code>packaging/modules/modules.json</code> 由构建流程或人工维护，<br><strong>最终由 <code>check-version-sync</code> 统一校验 G1 全 4 源一致</strong>；<br><code>platform/khy_platform/__init__.py</code> <strong>永不改字面量</strong>（运行时 <code>_detect_version()</code> 动态解析，<br>写死即被守卫判失败）。</p>
+<p><strong>CHANGELOG 必须同步</strong>：<code>CHANGELOG.md</code> 顶部版本段必须等于 <code>pyproject.toml</code> 的<br><code>[project].version</code>，由 <code>node scripts/release/changelog-new.js --check</code> 强制。<br><strong>顺序是先写 CHANGELOG 段、再 bump 版本号</strong>（<code>--check</code> 以 pyproject 为锚，反向操作会先红）。</p>
+<h3 id="2-3-r-3-何时以及如何推送-github-gitee">2.3 R-3 何时以及如何推送 GitHub / Gitee<a class="anchor" href="#2-3-r-3-何时以及如何推送-github-gitee" aria-label="锚点">#</a></h3>
+<p><strong>推送分层：<code>main</code> 推代码，<code>vX.Y.Z</code> 推发布。两者是不同事件，不可互相替代。</strong></p>
+<table><thead><tr><th>目标</th><th>推什么</th><th>由谁触发</th><th>前置条件</th></tr></thead><tbody><tr><td><strong>GitHub <code>main</code></strong></td><td>业务提交（不含版本号）</td><td><strong>人工</strong>（受 <code>PROCESS-001</code> 约束：AI 不得自动 push，须用户明确点头）</td><td>本地 <code>npm run check:structure</code> 全绿</td></tr><tr><td><strong>Gitee <code>main</code></strong></td><td>镜像同步</td><td><strong>自动</strong>（<code>sync-gitee.yml</code>，见 2.4 A2）</td><td>上一步成功</td></tr><tr><td><strong>GitHub <code>vX.Y.Z</code> tag</strong></td><td>版本发布</td><td><strong>自动</strong>（打 tag 即触发 <code>dual-channel-release.yml</code>）</td><td>2.4 的 A1 全部满足</td></tr><tr><td><strong>Gitee tag</strong></td><td>镜像同步</td><td><strong>自动</strong>（同上 A2，<code>tags</code> 纳入后）</td><td>tag 已推 GitHub</td></tr></tbody></table>
+<p><strong>如何推（标准动作，三条命令）</strong>：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 1) 版本收口：CHANGELOG 段 + bump G1 三源</span>
+node scripts/release/changelog-new.js 1.2.0
+<span class="hljs-comment"># 编辑三处版本号 → 见 2.2 的落点</span>
+
+<span class="hljs-comment"># 2) 本地自检（必须全绿，否则第 3 步会制造一个坏 tag）</span>
+npm run check:version-sync &amp;&amp; npm run check:structure
+
+<span class="hljs-comment"># 3) 推代码，再推 tag —— 顺序不可颠倒</span>
+git push origin main
+git push origin v1.2.0</code></pre>
+<blockquote><p><strong>顺序纪律</strong>：先推 <code>main</code> 再推 tag。反过来会出现<br>「tag 指向一个远端还不存在的 commit」→ 发布工作流 checkout 失败。</p>
+<p><strong>tag 必须以 <code>--annotate</code> 创建</strong>（<code>git tag -a v1.2.0 -m &quot;...&quot;</code>），<br>既便于 <code>--follow-tags</code> 批量推送，也让 <code>git describe</code> 可用。</p></blockquote>
+<h3 id="2-4-r-4-自动触发条件-本规则的核心-消灭人工判断">2.4 R-4 自动触发条件（本规则的核心：消灭人工判断）<a class="anchor" href="#2-4-r-4-自动触发条件-本规则的核心-消灭人工判断" aria-label="锚点">#</a></h3>
+<p>机器可读的触发矩阵。<strong>四条自动链路，条件全部写在 workflow 的 <code>on:</code> 块里，不写在人的记忆里。</strong></p>
+<table><thead><tr><th>编号</th><th>触发动作</th><th>触发条件（机判）</th><th>自动执行的后果</th></tr></thead><tbody><tr><td><strong>A1</strong></td><td><strong>推 <code>v*</code> tag</strong></td><td><code>push: tags: ['v*']</code> <strong>且</strong> tag 形如 <code>vX.Y.Z</code> <strong>且</strong> <code>check-version-sync</code> 绿 <strong>且</strong> <code>changelog-new --check</code> 绿</td><td>全链发布：测试 → 版本校验 → CHANGELOG 校验 → <code>release-gate.js</code> → 构建 exe → 签 sigstore → 生成 SBOM → <code>publish-dual.sh --rehearse</code> → 上传 GitHub Release 资产</td></tr><tr><td><strong>A2</strong></td><td><strong>推 <code>main</code> 或 <code>v*</code> tag</strong></td><td><code>push: branches: [main]</code> <strong>或</strong> <code>push: tags: ['v*']</code></td><td>Gitee 镜像同步（<code>sync-gitee.yml</code>）：<code>git fetch --depth=1</code> → push 到 <code>gitee</code></td></tr><tr><td><strong>A3</strong></td><td><strong><code>main</code> 上通过 PR 合入</strong></td><td><code>pull_request: branches: [main]</code></td><td><code>pr-gate.yml</code> 全套检查（含 shadow-mode <code>rules:gate</code>，<strong>当前 <code>continue-on-error: true</code></strong>）</td></tr><tr><td><strong>A4</strong></td><td><strong>人工补发</strong>（逃生舱）</td><td><code>workflow_dispatch</code> 手动触发</td><td>等同 A1，但 <code>--tag --push</code> 也由工作流代劳。<strong>仅在 A1 因外部故障失败时使用</strong>，用毕须在此登记原因</td></tr></tbody></table>
+<p><strong>四条<code>触发即阻断</code>的硬条件（任一不满足，发布链路必须失败而不是静默跳过）</strong>：</p>
+<ol><li><code>node scripts/ci/check-version-sync.js</code> <strong>exit 0</strong> —— 9 个真源组内一致；</li><li><code>node scripts/release/changelog-new.js --check</code> <strong>exit 0</strong> —— 顶部版本段 == <code>pyproject.toml</code>；</li><li><code>node scripts/release/release-gate.js</code> <strong>exit 0</strong> —— <code>tier=must</code> 全 PASS；</li><li>tag 与 <code>pyproject.toml</code> <strong>版本号相等</strong>（<code>GITHUB_REF#refs/tags/v</code> 去 <code>v</code> 后比对）。</li></ol>
+<blockquote><p>这四条<strong>必须写在 <code>jobs.release.steps</code> 里并默认阻断</strong>。<br>禁止改写成 <code>continue-on-error: true</code> —— 那会把「发布门禁」退化成「发布建议」，<br>正是 <code>[DESIGN-ARCH-111]</code> 全仓批判的「无绑定层」模式。</p></blockquote>
+<h3 id="2-5-r-5-守卫与反例-本规则的执行面">2.5 R-5 守卫与反例（本规则的执行面）<a class="anchor" href="#2-5-r-5-守卫与反例-本规则的执行面" aria-label="锚点">#</a></h3>
+<p><strong>新增守卫 <code>scripts/ci/check-release-triggers.js</code></strong>，在 <code>pr</code> 档执行，校验：</p>
+<table><thead><tr><th>检查</th><th>判级</th><th>反例（必须判红）</th></tr></thead><tbody><tr><td>每个 <code>release</code> 档 workflow 的 <code>on:</code> 块非空且含明确触发器</td><td>error</td><td>删掉 <code>dual-channel-release.yml</code> 的 <code>tags:</code> 过滤器</td></tr><tr><td><code>sync-gitee.yml</code> 的 <code>branches</code> 覆盖当前默认分支</td><td>error</td><td>默认分支改名后过滤器未同步</td></tr><tr><td>发布链路的四条硬条件 step <strong>均未</strong>设 <code>continue-on-error: true</code></td><td>error</td><td>给 <code>check-version-sync</code> 加豁免</td></tr><tr><td><code>dual-channel-release.yml</code> 的 <code>concurrency</code> 为 <code>cancel-in-progress: false</code></td><td>error</td><td>允许并发发布 → 产出「npm 已发、PyPI 未发」的半成品</td></tr><tr><td>bump 落点三源在同一个 commit 内齐变</td><td>warning</td><td>只 bump <code>pyproject.toml</code></td></tr><tr><td><code>CHANGELOG.md</code> 顶部版本段存在</td><td>warning</td><td>直接 bump 不留 CHANGELOG</td></tr></tbody></table>
+<p><strong>允许的豁免</strong>：workflow 内以注释 <code># release-trigger-exempt: &lt;理由&gt;</code> 显式声明，<br><strong>理由必填</strong>（空理由不生效且被报出），与 <code>khy-allow-&lt;规则ID&gt;: &lt;理由&gt;</code> 语义一致。</p>
+<p><strong>误报回归锁（依据公理 A4「误报比漏报更贵」）</strong>：守卫必须对以下合法写法<strong>判绿</strong> ——<br><code>workflow_dispatch</code> 单独存在、<code>tags: ['v*']</code> 通配、<code>branches</code> 同时列 <code>main</code> 与 <code>master</code><br>（迁移期兼容）、<code>concurrency</code> 组名任意。每个反例都要配一个「应放行」对照，<br>否则守卫会逼着维护者改仓库去满足错误判据。</p>
+<hr>
+<h2 id="三-与-process-001-的边界-不可放宽-p0">三、与 <code>PROCESS-001</code> 的边界（<strong>不可放宽 P0</strong>）<a class="anchor" href="#三-与-process-001-的边界-不可放宽-p0" aria-label="锚点">#</a></h2>
+<p>用户诉求是「<strong>相关操作由什么条件自动触发，从而避免依赖人工判断发布时机</strong>」。<br>本规则<strong>只把&quot;发布链路&quot;自动化，不触碰 <code>PROCESS-001</code> 的推送红线</strong>：</p>
+<table><thead><tr><th>动作</th><th>谁决定</th><th>依据</th></tr></thead><tbody><tr><td><code>git commit</code></td><td>AI 可代劳，<strong>须用户明确指示</strong></td><td><code>PROCESS-001</code></td></tr><tr><td><code>git push origin main</code></td><td><strong>用户点头</strong>（AI 不得自动 push）</td><td><code>PROCESS-001</code>（P0）</td></tr><tr><td><code>git push origin vX.Y.Z</code></td><td>同上；推 tag 是「发布必须人工确认」的<strong>最后一道闸</strong></td><td>本规则 R-3 + <code>PROCESS-001</code></td></tr><tr><td>tag 推送<strong>之后</strong>的一切（构建/签名/发包/镜像）</td><td><strong>全自动，无条件触发</strong></td><td>本规则 R-4（A1/A2）</td></tr></tbody></table>
+<blockquote><p><strong>一句话</strong>：<strong>人工只在&quot;推 tag&quot;这一处点头，推完之后不允许再有第二次人工判断。</strong><br>这既满足「避免依赖人工判断发布时机」，又不违反 P0 红线 ——<br>自动化的对象是<strong>触发后的长链路</strong>，不是<strong>是否触碰远端</strong>这个动作本身。<br>若未来要把「推 tag」也自动化，那是修改 P0 的决定，<strong>必须先改 <code>PROCESS-001</code> 并单独评审</strong>。</p></blockquote>
+<hr>
+<h2 id="四-验收-三步接线清单-依据-design-arch-111">四、验收（三步接线清单，依据 <code>[DESIGN-ARCH-111]</code>）<a class="anchor" href="#四-验收-三步接线清单-依据-design-arch-111" aria-label="锚点">#</a></h2>
+<p>新增规则必须完成三步接线，缺一步即为未完成：</p>
+<ol><li><strong>登记表</strong>：<code>docs/10_规范/registry/RULES-REGISTRY.json</code> 新增 <code>PROCESS-005</code> 条目</li></ol>
+<p>（<code>nature</code> / <code>grants</code> / <code>benefit</code> 三字段必备；<code>gate: &quot;pr&quot;</code>；<br>   <code>exec.script: &quot;scripts/ci/check-release-triggers.js&quot;</code>；同步 <code>meta.ruleCount</code> 71 → 72）；</p>
+<ol><li><strong>守卫</strong>：新建 <code>scripts/ci/check-release-triggers.js</code>（零外部依赖、确定性、可离线、</li></ol>
+<p>只读不改业务；产物落 <code>.khyos/</code>），并在 <code>package.json</code> 加别名 <code>check:release-triggers</code>；</p>
+<ol><li><strong>门引用</strong>：<code>check-wiring.js</code> 要求检查器必须被某个门引用 ——</li></ol>
+<p>在 <code>.github/workflows/pr-gate.yml</code> 增加对应 step（与既有的 check 排在一起）。</p>
+<p><strong>验收命令</strong>：</p>
+<pre><code class="language-bash">node scripts/ci/check-rules-registry.js   <span class="hljs-comment"># TOOLING-007 双向可达</span>
+node scripts/ci/check-gov-rules.js        <span class="hljs-comment"># GOV-TOOL-006 字段齐全</span>
+node scripts/ci/check-wiring.js           <span class="hljs-comment"># 反孤儿</span>
+npm run docs:rules-cards                  <span class="hljs-comment"># 由登记表渲染规则卡（禁止手改）</span></code></pre>
+<blockquote><p><strong>前置确认（依据 <code>MEMORY</code> §七.11）</strong>：接线前先跑<br><code>git ls-files --error-unmatch scripts/ci/check-release-triggers.js</code>。<br>查不到 = CI 检出里根本没有这个执行器 → <strong>接线即「执行器不存在」</strong>。<br>必须先把守卫文件纳入版本控制，再改 workflow。</p></blockquote>
+<hr>
+<h2 id="五-落点与后续">五、落点与后续<a class="anchor" href="#五-落点与后续" aria-label="锚点">#</a></h2>
+<ul><li>本文档落 <code>docs/10_规范/</code>，编号 <strong><code>DESIGN-SEMVER-002</code></strong></li></ul>
+<p>（与 <code>[DESIGN-SEMVER-001] 语义化版本规范</code> 同域并列；<code>SEMVER-002</code> 已实测未被占用）。<br>  孪生件 <code>[DESIGN-SEMVER-002] 版本管理与发布触发规范.html</code> 由 <code>build_docs_site.js</code> 生成；<br>  回写 <code>docs/10_规范/00_INDEX_规范-总目录.md</code>（<strong>注意：总目录只扫 <code>0[1-9]_*</code> 目录</strong>，<br>  <code>10_规范/</code> 的登记在本目录自己的索引内）。</p>
+<ul><li><code>CLAUDE.md</code> §一 R3 表格下补一行指针指向本规范（<strong>不复制正文</strong>，依据 <code>[MGMT-STD-008]</code> §3.2）；</li></ul>
+<p><code>AGENTS.md</code>「版本同步」节同步补指针。</p>
+<ul><li><strong>本次交付边界</strong>：本文件是<strong>规则条款（规范真源）</strong>。登记表条目与守卫脚本属实现，</li></ul>
+<p>按 <code>SOURCING-006</code>「一次提交只做一步」纪律<strong>另起一次提交</strong>，不在本次混合交付。</p>
+<h4 id="执行实录-第-2-3-步-2026-09-17">执行实录 · 第 2/3 步（2026-09-17）<a class="anchor" href="#执行实录-第-2-3-步-2026-09-17" aria-label="锚点">#</a></h4>
+<p>三步接线已全部完成，实测结果如下：</p>
+<table><thead><tr><th>步</th><th>交付件</th><th>实测</th></tr></thead><tbody><tr><td>1 标记</td><td>本文件（含 <code>&lt;!-- RULES-REGISTRY: PROCESS-005 --&gt;</code>）</td><td>✅ 双向可达（TOOLING-007 通过）</td></tr><tr><td>2 登记表</td><td><code>docs/10_规范/registry/RULES-REGISTRY.json</code> 新增 <code>PROCESS-005</code></td><td>✅ <code>meta.ruleCount</code> 71 → <strong>72</strong>，与 <code>rules.length</code> 一致</td></tr><tr><td>2 守卫</td><td><code>scripts/ci/check-release-triggers.js</code>（零外部依赖，手写 YAML 结构扫描）</td><td>✅ 全仓 0 error / 0 warning</td></tr><tr><td>2 别名</td><td><code>package.json</code> 新增 <code>check:release-triggers</code></td><td>✅ <code>check-wiring</code> 通过（74 个检查器全接线）</td></tr><tr><td>3 门</td><td><code>.github/workflows/pr-gate.yml</code> 新增 <code>Check release triggers</code></td><td>✅ 不再报「零接线」</td></tr></tbody></table>
+<p><strong>守卫的 14 个反例场景</strong>（<code>--scenario=&lt;名&gt;</code>，7 拦 / 7 放行，全部实测）：</p>
+<table><thead><tr><th>场景</th><th>期望</th><th>场景</th><th>期望</th></tr></thead><tbody><tr><td><code>trigger-missing</code></td><td>1 error</td><td><code>trigger-present</code></td><td>放行（<code>tags: [v*]</code> 通配）</td></tr><tr><td><code>mirror-branch-drift</code></td><td>1 error</td><td><code>trigger-dispatch-only</code></td><td>放行（仅 workflow_dispatch）</td></tr><tr><td><code>hard-condition-exempt</code></td><td>1 error</td><td><code>mirror-branch-ok</code></td><td>放行（main + master）</td></tr><tr><td><code>hard-condition-step-deleted</code></td><td>1 error</td><td><code>mirror-branch-dispatch-ok</code></td><td>放行</td></tr><tr><td><code>hard-condition-exempt-empty</code></td><td>1 error + 1 warning</td><td><code>hard-condition-ok</code></td><td>放行</td></tr><tr><td><code>concurrency-true</code></td><td>1 error</td><td><code>hard-condition-exempt-ok</code></td><td>放行（<strong>有理由</strong>的豁免）</td></tr><tr><td><code>concurrency-missing</code></td><td>1 error</td><td><code>concurrency-ok</code></td><td>放行（组名任意）</td></tr></tbody></table>
+<p><strong>单测</strong>：<code>scripts/tests/check-release-triggers.test.js</code>，28 个用例全绿。<br>除场景断言外，另含<strong>真 workflow 定点变异</strong>用例（对真 <code>.yml</code> 做一处替换后调纯函数），<br>用于挡住「场景全绿但真文件判错」的偏差。</p>
+<blockquote><p><strong>三个实现陷阱（实测踩过，与源文件注释互为印证）</strong>：<br>① 场景是「<strong>单条检查</strong>的反例」，不是「整仓快照」——早期版本每个场景跑全部四条检查，<br>   导致每条断言都被「另外三条 step 不存在」的噪音淹掉（<code>hard-condition-exempt</code> 报 4 条）。<br>   修法：<code>checkHardConditionSteps</code> 加 <code>onlySteps</code> 参数；<code>runScenario</code> 按场景名前缀分流。<br>② 真 workflow 是 <strong>CRLF</strong> 行尾，变异正则必须写 <code>\r?\n</code>，否则变异静默不生效。<br>③ <code>main()</code> 必须由 <code>require.main === module</code> 守卫，否则单测 <code>require()</code> 会顺带跑一次全仓扫描。</p>
+<p><strong>一处刻意不改的现状</strong>：<code>--json</code> 之后仍会追加 <code>Summary: ...</code> 行（<code>scripts/ci/</code> 的既有约定，<br><code>check-agent-docs.js</code> 等同样如此）。测试里剥掉尾部行再 <code>JSON.parse</code>，<br><strong>不为迎合测试去改守卫</strong> —— 那会造成与其余检查器不一致（公理 A4：修判据而非改仓库）。</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-SEMVER-001] 语义化版本规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-SEMVER-001] 语义化版本规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-SKILL-001] Skill 编写规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-SKILL-001] Skill 编写规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-SEMVER-002] 版本管理与发布触发规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -24,8 +24,8 @@ const {
   GhostValueAnnotator, GhostPollutionError, ConflictQuencher, QUENCH_KIND,
   TIER, tierOf, rankOf, isHigherAuthority, isGhostable, ERR_SOVEREIGNTY_CONFLICT,
 } = require('../../../src/services/dataSovereignty');
-const evoRequirement = require('../../../src/services/evoEngine/evoRequirement');
-const evoLevels = require('../../../src/services/evoEngine/evoLevels');
+const evoRequirement = require('../../../src/services/domain/maintenance/evoEngine/evoRequirement.js');
+const evoLevels = require('../../../src/services/domain/maintenance/evoEngine/evoLevels.js');
 
 after(() => { try { fs.rmSync(TMP_HOME, { recursive: true, force: true }); } catch { /* best-effort */ } });
 

@@ -10,7 +10,7 @@
  *   khy md register          把 khyosMarkdown 注册进系统「打开方式」(.md 关联)
  *   khy md unregister        移除该关联
  *
- * 底层复用 khy-markdown 拓展（extensions/tools/khy-markdown/，[DESIGN-ARCH-069] 拓展契约）：
+ * 底层复用 khy-markdown 拓展（extensions/tools/khy-markdown/，[DESIGN-TOOL-002] 拓展契约）：
  *   - khyos-md-bridge.js：127.0.0.1 同源桥接器（消 CORS + token 鉴权 + /vendor 静态服务）。
  *   - khyosMarkdown.html：门控加载同源本地 muya 引擎产物 vendor/，失败逐字节回退零依赖内联引擎。
  *   - register-linux.sh / register-windows.ps1：用户级关联（~/.local / HKCU，无 sudo/UAC）。

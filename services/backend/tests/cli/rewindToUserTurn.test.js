@@ -1,6 +1,6 @@
 'use strict';
 /**
- * rewindToUserTurn.test.js â€?model-history rewind primitive on cli/ai.js's
+ * rewindToUserTurn.test.js â€” model-history rewind primitive on cli/ai.js's
  * authoritative `_messages`. Powers the TUI double-ESC rewind and the readline
  * `/rewind` command: "rewind to the N-th user message from the end" removes that
  * user message and everything after it, delegating to snipConversation for the
@@ -10,14 +10,14 @@
  * runs under `node --test` (NOT jest).
  */
 const ai = require('../../src/cli/ai');
+const assert = require('node:assert');
 const { _pushRawMessage } = ai.__test__;
-describe('ai.js â€?rewindToUserTurn (model-history rewind)', () => {
+
+describe('Rewind To User Turn', () => {
+  // merged from describe: ai.js â€” rewindToUserTurn (model-history rewind)
   beforeEach(() => {
     ai.clearHistory();
   });
-});
-
-describe('Rewind To User Turn', () => {
   test('n=1 rewinds to the most recent user turn (drops it + everything after)', () => {
         _pushRawMessage({ role: 'user', content: 'Q1' });
         _pushRawMessage({ role: 'assistant', content: 'A1' });
@@ -85,7 +85,7 @@ describe('Rewind To User Turn', () => {
         expect(ai.getConversation().length).toBe(1);
   });
 
-  test('no user messages â†?out-of-range, history untouched', () => {
+  test('no user messages ï¿½?out-of-range, history untouched', () => {
         _pushRawMessage({ role: 'assistant', content: 'A0' });
     
         const res = ai.rewindToUserTurn(1);

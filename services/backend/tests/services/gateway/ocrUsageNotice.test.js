@@ -1,11 +1,11 @@
 'use strict';
 
-jest.mock('../flagRegistry', () => ({
+jest.mock('../../../src/services/flagRegistry.js', () => ({
   isFlagEnabled: jest.fn()
 }));
 
 const { isEnabled, buildUsageDisclosure } = require('../../../src/services/gateway/ocrUsageNotice');
-const { isFlagEnabled } = require('../flagRegistry');
+const { isFlagEnabled } = require('../../../src/services/flagRegistry.js');
 
 describe('ocrUsageNotice', () => {
   beforeEach(() => {

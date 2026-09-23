@@ -38,7 +38,7 @@ describe('Skill Source Distiller', () => {
         'A powerful comprehensive seamless advanced robust tool for searching arxiv papers by keyword and author quickly'
       );
       expect(d.length <= 60).toBeTruthy();
-      expect(d.endsWith('.').toBeTruthy());
+      expect(d.endsWith('.')).toBeTruthy();
       expect(!/powerful|comprehensive|seamless|advanced|robust/i.test(d)).toBeTruthy();
   });
 
@@ -66,7 +66,7 @@ describe('Skill Source Distiller', () => {
   test('commands: extracted verbatim, prompt stripped, comments skipped, deduped', () => {
       const cmds = L.extractCommands(DOC.text);
       expect(cmds).toEqual(['arxiv-search --q neural', 'npm run build']);
-      expect(!cmds.some((c) => c).toContain('comment'), 'comment line skipped');
+      expect(!cmds.some((c) => c.includes('comment'))).toBeTruthy();
   });
 
   test('headings: extracted verbatim, deduped, order preserved', () => {
@@ -78,13 +78,13 @@ describe('Skill Source Distiller', () => {
       const r = L.distillSkillFromSources({ sourceType: 'directory', sourceRef: '/x/arxiv', documents: [DOC] });
       expect(r.ok).toBe(true);
       expect(r.name).toBe('arxiv');
-      expect(r.description.length <= 60 && r.description.endsWith('.').toBeTruthy());
+      expect(r.description.length <= 60 && r.description.endsWith('.')).toBeTruthy();
       expect(r.category).toBe('reference');
       expect(r.commands).toEqual(['arxiv-search --q neural', 'npm run build']);
       expect(r.sources).toEqual(['README.md']);
       // Body only contains verbatim commands �?nothing invented.
       expect(r.body).toContain('arxiv-search --q neural');
-      expect(!/invent/i.test(r.commands.join(' ').toBeTruthy()));
+      expect(!/invent/i.test(r.commands.join(' '))).toBeTruthy();
   });
 
   test('distill: deterministic �?same input �?byte-identical output', () => {
@@ -99,7 +99,7 @@ describe('Skill Source Distiller', () => {
       expect(L.distillSkillFromSources({ documents: [] }).ok).toBe(false);
       expect(L.distillSkillFromSources(null).ok).toBe(false);
       expect(L.distillSkillFromSources({ documents: [{ text: '   ' }] }).ok).toBe(false);
-      expect(() => L.distillSkillFromSources({ documents: [{ text: 123 }] }).not.toThrow());
+      expect(() => L.distillSkillFromSources({ documents: [{ text: 123 }] })).not.toThrow();
   });
 
   test('distill: source with no headings/commands �?ok with warning', () => {

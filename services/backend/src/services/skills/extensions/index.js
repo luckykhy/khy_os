@@ -74,7 +74,7 @@ function createVersionedSkill(name, versions) {
 
 // ── Skill Discovery ──
 async function discoverSkills(query) {
-  const registry = require('../skillRegistry');
+  const registry = require('../../skillRegistry');
   const allSkills = await registry.listSkills({ refresh: true });
   const lowerQuery = query.toLowerCase();
 

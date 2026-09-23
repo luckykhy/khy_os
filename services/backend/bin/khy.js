@@ -69,7 +69,7 @@ try { require('../src/bootstrap/windowsSpawnHardening').installWindowsSpawnHarde
 try { require('../src/services/selfHeal').install(); } catch { /* best effort */ }
 
 // ── Fast startup: single env var to disable all optional background tasks ──
-// Default-on (DESIGN-PERF-001 v1 §阶段 B): bridge server / source-heal SHA-256
+// Default-on (DESIGN-PERF-002 v1 §阶段 B): bridge server / source-heal SHA-256
 // scan / task cleanup are best-effort background work that does not gate the
 // REPL hot path; turning them off by default drops 200-600ms of CPU contention
 // and removes bridge LAN port exposure for users who never pair a phone. Opt
@@ -293,7 +293,17 @@ function _maybePrintInstallLocationNotice() {
 Promise.resolve().then(() => _maybePrintInstallLocationNotice()).catch(() => {});
 
 // Windows 平台强制切换到 UTF-8 编码，防止中文乱码
-if (process.platform === 'win32') {
+//
+// The console codepage is a property of the console, not of this process, so the
+// Python launcher (`khy` / `khy-os` / `khyquant` console scripts and khy.bat)
+// has already pinned it to 65001 via SetConsoleOutputCP + SetConsoleCP before it
+// spawns us — it then exports KHY_CONSOLE_CP=65001 to say so. Spawning
+// `chcp.com` again is therefore pure duplication, and it is a *synchronous*
+// CreateProcess sitting on the module top level: measured 230-475ms of the
+// startup path, paid before main() even runs. Skip it when the handshake is
+// present; keep the legacy spawn for direct `node bin/khy.js` runs (no launcher
+// in front), where the console may still be on a legacy codepage.
+if (process.platform === 'win32' && String(process.env.KHY_CONSOLE_CP || '') !== '65001') {
   // Spawn System32\chcp.com directly instead of going through `cmd /c chcp`
   // (skips one cmd.exe process creation: ~80ms vs ~115ms measured on the
   // critical startup path). Path comes from the SystemRoot env (no literal
@@ -794,6 +804,45 @@ async function ensureAuthenticated() {
       return false;
     }
   } else {
+    // ── First-login account customization ─────────────────────────────────
+    // True first run: no credentials file yet + interactive TTY + no
+    // KHY_ADMIN_USERNAME pin → let the user pick their own login account
+    // name once instead of silently adopting the OS username. Enter keeps
+    // the OS-derived default. Non-interactive runs (pipe/CI) or env-pinned
+    // usernames keep the existing auto-create behavior unchanged.
+    if (isInteractiveTerminal() && !String(process.env.KHY_ADMIN_USERNAME || '').trim()) {
+      let _credGen = null;
+      try {
+        _credGen = require('../src/services/credentialGenerator');
+      } catch { _credGen = null; }
+      if (_credGen && !_credGen.readDefaultAdminCredentials()) {
+        const _suggested = _credGen.resolveDefaultAdminUsername() || 'admin';
+        let _customName = _suggested;
+        try {
+          const { customName } = await inquirer.prompt([
+            {
+              type: 'input',
+              name: 'customName',
+              message: `设置登录账号名 (默认: ${_suggested}，回车直接采用):`,
+              default: _suggested,
+              validate: (v) =>
+                /^[a-zA-Z0-9_-]{2,32}$/.test(String(v || '').trim()) ||
+                '账号名需 2-32 个字符，仅限字母/数字/下划线/连字符',
+            },
+          ]);
+          _customName = String(customName || '').trim() || _suggested;
+        } catch {
+          /* Ctrl+C during the prompt → fall back to the suggested name */
+        }
+        const _created = _credGen.loadOrCreateDefaultAdminCredentials(process.env, _customName);
+        if (_created && _created.created) {
+          printSuccess(
+            `已设置账号名 ${_created.username} (密码已自动生成，见 ${_created.filePath || '默认管理员凭据文件'})`
+          );
+        }
+      }
+    }
+
     // ── Existing account: try auto-login with default admin first ───────────
     // If the default-admin credentials file exists (generated on first seed),
     // attempt a silent builtin login so the user never has to type credentials
@@ -1317,7 +1366,11 @@ async function main() {
     // 进度行是瞬时的(\r 覆写、行尾无换行),所以它必须在任何其他输出落地前先擦掉自己,
     // 否则「ℹ 已登录」「版本通知」会从行中间续写,糊成一条永久残留的半截行。
     _bootPhaseLine = require('../src/cli/bootPhaseLine').create();
-    _bootPhaseWrite = (phaseText) => _bootPhaseLine.write(phaseText);
+    // ⚠️ 必须透传 step/totalSteps —— 调用点在下方以 `_bootPhaseWrite('⏳ 加载环境配置', 1, 5)`
+    // 的形式传了三参，但这里曾经只接 phaseText 一个形参，步骤号被静默吞掉，
+    // _renderLine 的 hasStep 恒为 false，于是引导期永远只显示「已等待 Xs」
+    // 而**从不显示 (1/5) 的百分比进度**。改成透传后，进度分母才真正生效。
+    _bootPhaseWrite = (phaseText, step, totalSteps) => _bootPhaseLine.write(phaseText, step, totalSteps);
     // 命令在进度行亮着时直接退出(自身无任何 console 输出)的兜底:退出前擦干净。
     try {
       process.once('exit', () => _bootPhaseLine.end());
@@ -1356,14 +1409,14 @@ async function main() {
   // Lazy require: the bootstrap/init module is pulled into the require graph
   // here, past the quick paths, so --version/--help never load it. For real
   // commands this runs before any other init, exactly as the eager require did.
-  if (_bootPhaseWrite) _bootPhaseWrite('⏳ 加载环境配置');
+  if (_bootPhaseWrite) _bootPhaseWrite('⏳ 加载环境配置', 1, 5);
   _quietConsoleLogsForCli(args);
   if (!_initPromise) {
     const { init: _bootstrapInit } = require('../src/bootstrap/init');
     _initPromise = _bootstrapInit({ machineReadable: _isMachineReadableInvocation(args) });
   }
   await _initPromise;
-  if (_bootPhaseWrite) _bootPhaseWrite('✓ 环境就绪');
+  if (_bootPhaseWrite) _bootPhaseWrite('✓ 环境就绪', 1, 5);
   checkpoint('main:start');
   if (_startupFsm) _startupFsm.fire('advance', { step: 'bootstrap_init_done' }); // -> modules_load
 
@@ -1377,6 +1430,17 @@ async function main() {
     if (process.env.KHY_SLASH_AUTOMENU === undefined) process.env.KHY_SLASH_AUTOMENU = 'false';
     if (process.env.KHY_INPUT_BATCH_MODE === undefined) process.env.KHY_INPUT_BATCH_MODE = 'off';
     if (process.env.KHY_INPUT_ESCAPE_TIMEOUT_MS === undefined) process.env.KHY_INPUT_ESCAPE_TIMEOUT_MS = '40';
+    // Ink TUI 独占终端画面:交互全屏 TUI 下把 winston 控制台 transport 降到 error,
+    // 否则后台 warn(实测 `[warn] [rtkInstaller] no install method succeeded…`)
+    // 以裸行撕裂 live 帧(2026-09-19 TUI 审计 BUG-13)。文件 transport 不受影响,
+    // 日志零丢失;经典模式(KHY_FULL_TUI=0)与非 TTY 不降,保持既有可观察性。
+    if (
+      process.env.KHY_TUI_CONSOLE_LOGS === undefined &&
+      process.env.KHY_FULL_TUI !== '0' &&
+      process.stdout.isTTY
+    ) {
+      try { require('../src/utils/logger').setConsoleLevel('error'); } catch { /* fail-soft */ }
+    }
     // Sidebar threshold: DO NOT override here. The single source of truth is
     // sidebarLayout.minCols (default 120) — quoted by the Ctrl+T hint and the
     // OPS-MAN-062 doc. A launcher default of 200 silently killed the sidebar on
@@ -1437,7 +1501,7 @@ async function main() {
     if (process.env.KHY_INTENT_LOOP_MAX_CAP === undefined) process.env.KHY_INTENT_LOOP_MAX_CAP = '16';
   }
 
-  if (_bootPhaseWrite) _bootPhaseWrite('🔄 准备运行环境');
+  if (_bootPhaseWrite) _bootPhaseWrite('🔄 准备运行环境', 2, 5);
 
   // ── 参数标准化：用户常把 -version 写成单横线，自动补齐为 --version ────
   // (args already normalized at top of main() for fast-path checks)
@@ -1890,16 +1954,25 @@ async function main() {
         printError('当前环境不支持交互终端。请使用 khy <命令> 或 khy ai -p "your question"。');
         process.exit(1);
       }
+      // 细分阶段行(BUG-01,2026-09-19 启动剖析):phase 2 与「✓ 就绪」之间夹着
+      // 认证 + setup(同步 require redis/sequelize/database/aiGateway,暖机 ≈5s,
+      // 冷启动数十秒),此前用户盯着 2/5 一行长达整个窗口。拆成 3/5、4/5,
+      // 每个重步骤前有「动作+目标」的当前阶段,同步加载期间该行驻留可见。
+      if (_bootPhaseWrite) _bootPhaseWrite('⏳ 检查登录状态', 3, 5);
       // 强制认证后再进入 REPL
       const authOk = await ensureAuthenticated();
       if (!authOk) { printError('认证失败，无法使用终端。'); process.exit(1); }
       // khy 主入口仅做轻量平台初始化，避免触发上层默认应用启动链路
+      if (_bootPhaseWrite) _bootPhaseWrite('⏳ 加载服务 (数据库/网关/会话)', 4, 5);
       try {
         const { setup } = require('../src/bootstrap/setup');
         await setup({ mode: 'khy', silent: true });
       } catch { /* non-critical */ }
       checkpoint('khy:setup-done');
-      if (_bootPhaseWrite) _bootPhaseWrite('✓ 就绪');
+      if (_bootPhaseWrite) _bootPhaseWrite('✓ 就绪', 5, 5);
+      // 接通启动剖析仪表(此前 printSummary 零调用点,STARTUP_PROFILE=1 也不输出):
+      // 未开剖析时 checkpoints 为空,printSummary 自身 no-op,零开销。
+      try { require('../src/bootstrap/startupProfiler').printSummary(); } catch { /* best-effort */ }
       // 交棒给 TUI 前收掉瞬时进度行:横幅从干净的一行起笔,后到的版本通知也不再撞行。
       if (_bootPhaseLine) _bootPhaseLine.end();
       _scheduleStartupUpdateCheck(printInfo, printError);
@@ -1915,6 +1988,7 @@ async function main() {
       printError('当前环境不支持交互登录。请使用 --print/-p 进行非交互调用。');
       process.exit(1);
     }
+    if (_bootPhaseWrite) _bootPhaseWrite('⏳ 检查登录状态', 3, 5);
     const authenticated = await ensureAuthenticated();
     if (!authenticated) {
       printError('认证失败，无法使用终端。如需重置请删除 ~/.khyquant/credentials.json');
@@ -1924,6 +1998,7 @@ async function main() {
     // ── 启动自检：SQLite 驱动子进程探针（防 better-sqlite3 段错误静默死亡）──
     // 仅本无参交互完整启动分支接入（--help 等其他分支零影响）；探针预算约 1.2s，
     // 超时/探针自身异常一律放行（checked=false），绝不阻断正常启动。
+    if (_bootPhaseWrite) _bootPhaseWrite('⏳ 启动自检 (SQLite 驱动)', 4, 5);
     try {
       const { runStartupSqliteProbe } = require('../src/bootstrap/startupSqliteProbe');
       const probe = runStartupSqliteProbe();
@@ -1937,11 +2012,13 @@ async function main() {
     } catch { /* 探针容错：自身异常不得阻断启动 */ }
 
     // 完整模式的会话级初始化（数据库预检查 + 数据迁移）
+    if (_bootPhaseWrite) _bootPhaseWrite('⏳ 加载服务 (数据库/网关/会话)', 5, 5);
     try {
       const { setup } = require('../src/bootstrap/setup');
       await setup({ mode: 'khyquant' });
     } catch { /* 引导初始化是非关键操作 */ }
     checkpoint('khyquant:setup-done');
+    if (_bootPhaseWrite) _bootPhaseWrite('✓ 就绪', 5, 5);
     _scheduleStartupUpdateCheck(printInfo, printError);
 
     // 默认流程：启动后端服务器 + 前端，然后进入 REPL

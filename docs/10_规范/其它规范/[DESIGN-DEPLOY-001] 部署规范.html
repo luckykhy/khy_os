@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-DEPLOY-001] 部署规范.md -->
+<title>[DESIGN-DEPLOY-001] 部署规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-DEPLOY-001] 部署规范</div>
+      <header class="hero reveal"><h1>[DESIGN-DEPLOY-001] 部署规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-deploy-001-部署规范">[DESIGN-DEPLOY-001] 部署规范</a></li><li class="lvl-2"><a href="#1-部署概述">1. 部署概述</a></li><li class="lvl-3"><a href="#1-1-设计原则">1.1 设计原则</a></li><li class="lvl-3"><a href="#1-2-环境定义">1.2 环境定义</a></li><li class="lvl-2"><a href="#2-环境配置">2. 环境配置</a></li><li class="lvl-3"><a href="#2-1-环境变量">2.1 环境变量</a></li><li class="lvl-3"><a href="#2-2-配置文件">2.2 配置文件</a></li><li class="lvl-2"><a href="#3-docker-部署">3. Docker 部署</a></li><li class="lvl-3"><a href="#3-1-dockerfile">3.1 Dockerfile</a></li><li class="lvl-3"><a href="#3-2-docker-compose">3.2 Docker Compose</a></li><li class="lvl-2"><a href="#4-部署流程">4. 部署流程</a></li><li class="lvl-3"><a href="#4-1-部署前检查">4.1 部署前检查</a></li><li class="lvl-3"><a href="#4-2-部署步骤">4.2 部署步骤</a></li><li class="lvl-3"><a href="#4-3-自动化部署">4.3 自动化部署</a></li><li class="lvl-2"><a href="#5-健康检查">5. 健康检查</a></li><li class="lvl-3"><a href="#5-1-健康检查端点">5.1 健康检查端点</a></li><li class="lvl-3"><a href="#5-2-健康检查响应">5.2 健康检查响应</a></li><li class="lvl-2"><a href="#6-回滚流程">6. 回滚流程</a></li><li class="lvl-3"><a href="#6-1-回滚策略">6.1 回滚策略</a></li><li class="lvl-3"><a href="#6-2-回滚步骤">6.2 回滚步骤</a></li><li class="lvl-2"><a href="#7-监控与告警">7. 监控与告警</a></li><li class="lvl-3"><a href="#7-1-监控指标">7.1 监控指标</a></li><li class="lvl-3"><a href="#7-2-告警配置">7.2 告警配置</a></li><li class="lvl-2"><a href="#8-备份与恢复">8. 备份与恢复</a></li><li class="lvl-3"><a href="#8-1-备份策略">8.1 备份策略</a></li><li class="lvl-3"><a href="#8-2-备份脚本">8.2 备份脚本</a></li><li class="lvl-3"><a href="#8-3-恢复脚本">8.3 恢复脚本</a></li><li class="lvl-2"><a href="#9-版本历史">9. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-deploy-001-部署规范">[DESIGN-DEPLOY-001] 部署规范<a class="anchor" href="#design-deploy-001-部署规范" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档定义 khy-os 项目的部署标准，包括环境配置、部署流程、回滚等。</p></blockquote>
+<hr>
+<h2 id="1-部署概述">1. 部署概述<a class="anchor" href="#1-部署概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-设计原则">1.1 设计原则<a class="anchor" href="#1-1-设计原则" aria-label="锚点">#</a></h3>
+<ol><li><strong>自动化</strong>：部署流程自动化，减少人为错误</li><li><strong>可重复</strong>：部署过程可重复，结果一致</li><li><strong>可回滚</strong>：支持快速回滚到之前的版本</li><li><strong>零停机</strong>：支持零停机部署</li></ol>
+<h3 id="1-2-环境定义">1.2 环境定义<a class="anchor" href="#1-2-环境定义" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>环境</th><th>用途</th><th>域名</th><th>数据库</th></tr></thead><tbody><tr><td>开发</td><td>本地开发</td><td>localhost:3000</td><td>SQLite</td></tr><tr><td>测试</td><td>功能测试</td><td>test.khyquant.top</td><td>SQLite</td></tr><tr><td>预发</td><td>预发布验证</td><td>staging.khyquant.top</td><td>PostgreSQL</td></tr><tr><td>生产</td><td>正式环境</td><td>khyquant.top</td><td>PostgreSQL</td></tr></tbody></table>
+<hr>
+<h2 id="2-环境配置">2. 环境配置<a class="anchor" href="#2-环境配置" aria-label="锚点">#</a></h2>
+<h3 id="2-1-环境变量">2.1 环境变量<a class="anchor" href="#2-1-环境变量" aria-label="锚点">#</a></h3>
+<p><strong>必需变量</strong>：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 应用配置</span>
+NODE_ENV=production
+PORT=3000
+HOST=0.0.0.0
+
+<span class="hljs-comment"># 数据库配置</span>
+DATABASE_URL=postgresql://user:pass@host:5432/dbname
+<span class="hljs-comment"># 或 SQLite</span>
+DATABASE_STORAGE=./data/production.db
+
+<span class="hljs-comment"># JWT 配置</span>
+JWT_SECRET=your-secret-key
+JWT_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+
+<span class="hljs-comment"># 日志配置</span>
+LOG_LEVEL=info
+LOG_DIR=./logs
+
+<span class="hljs-comment"># CORS 配置</span>
+CORS_ORIGIN=https://khyquant.top,https://*.khyquant.top</code></pre>
+<p><strong>可选变量</strong>：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># Redis 配置</span>
+REDIS_URL=redis://localhost:6379
+
+<span class="hljs-comment"># 邮件配置</span>
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=user@example.com
+SMTP_PASS=password
+
+<span class="hljs-comment"># 监控配置</span>
+SENTRY_DSN=https://sentry.io/xxx</code></pre>
+<h3 id="2-2-配置文件">2.2 配置文件<a class="anchor" href="#2-2-配置文件" aria-label="锚点">#</a></h3>
+<p><strong>.env 文件结构</strong>：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># .env.production</span>
+NODE_ENV=production
+PORT=3000
+DATABASE_URL=postgresql://...
+JWT_SECRET=...
+LOG_LEVEL=info
+
+<span class="hljs-comment"># .env.staging</span>
+NODE_ENV=staging
+PORT=3000
+DATABASE_URL=postgresql://...
+JWT_SECRET=...
+LOG_LEVEL=debug</code></pre>
+<hr>
+<h2 id="3-docker-部署">3. Docker 部署<a class="anchor" href="#3-docker-部署" aria-label="锚点">#</a></h2>
+<h3 id="3-1-dockerfile">3.1 Dockerfile<a class="anchor" href="#3-1-dockerfile" aria-label="锚点">#</a></h3>
+<pre><code class="language-dockerfile"><span class="hljs-comment"># 构建阶段</span>
+<span class="hljs-keyword">FROM</span> node:<span class="hljs-number">18</span>-alpine AS builder
+
+<span class="hljs-keyword">WORKDIR</span><span class="language-bash"> /app</span>
+
+<span class="hljs-comment"># 复制依赖文件</span>
+<span class="hljs-keyword">COPY</span><span class="language-bash"> package*.json ./</span>
+
+<span class="hljs-comment"># 安装依赖</span>
+<span class="hljs-keyword">RUN</span><span class="language-bash"> npm ci --only=production</span>
+
+<span class="hljs-comment"># 复制源代码</span>
+<span class="hljs-keyword">COPY</span><span class="language-bash"> . .</span>
+
+<span class="hljs-comment"># 构建应用</span>
+<span class="hljs-keyword">RUN</span><span class="language-bash"> npm run build</span>
+
+<span class="hljs-comment"># 运行阶段</span>
+<span class="hljs-keyword">FROM</span> node:<span class="hljs-number">18</span>-alpine AS runner
+
+<span class="hljs-keyword">WORKDIR</span><span class="language-bash"> /app</span>
+
+<span class="hljs-comment"># 创建非 root 用户</span>
+<span class="hljs-keyword">RUN</span><span class="language-bash"> addgroup --system --gid 1001 nodejs</span>
+<span class="hljs-keyword">RUN</span><span class="language-bash"> adduser --system --uid 1001 khyos</span>
+
+<span class="hljs-comment"># 复制构建产物</span>
+<span class="hljs-keyword">COPY</span><span class="language-bash"> --from=builder /app/dist ./dist</span>
+<span class="hljs-keyword">COPY</span><span class="language-bash"> --from=builder /app/node_modules ./node_modules</span>
+<span class="hljs-keyword">COPY</span><span class="language-bash"> --from=builder /app/package.json ./package.json</span>
+
+<span class="hljs-comment"># 创建数据目录</span>
+<span class="hljs-keyword">RUN</span><span class="language-bash"> <span class="hljs-built_in">mkdir</span> -p data logs</span>
+<span class="hljs-keyword">RUN</span><span class="language-bash"> <span class="hljs-built_in">chown</span> -R khyos:nodejs data logs</span>
+
+<span class="hljs-comment"># 切换到非 root 用户</span>
+<span class="hljs-keyword">USER</span> khyos
+
+<span class="hljs-comment"># 暴露端口</span>
+<span class="hljs-keyword">EXPOSE</span> <span class="hljs-number">3000</span>
+
+<span class="hljs-comment"># 健康检查</span>
+<span class="hljs-keyword">HEALTHCHECK</span><span class="language-bash"> --interval=30s --<span class="hljs-built_in">timeout</span>=10s --start-period=5s --retries=3 \
+  CMD node -e <span class="hljs-string">&quot;require(&#x27;http&#x27;).get(&#x27;http://localhost:3000/api/health&#x27;, (r) =&gt; {process.exit(r.statusCode === 200 ? 0 : 1)})&quot;</span></span>
+
+<span class="hljs-comment"># 启动应用</span>
+<span class="hljs-keyword">CMD</span><span class="language-bash"> [<span class="hljs-string">&quot;node&quot;</span>, <span class="hljs-string">&quot;dist/index.js&quot;</span>]</span></code></pre>
+<h3 id="3-2-docker-compose">3.2 Docker Compose<a class="anchor" href="#3-2-docker-compose" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-attr">version:</span> <span class="hljs-string">&#x27;3.8&#x27;</span>
+
+<span class="hljs-attr">services:</span>
+  <span class="hljs-attr">app:</span>
+    <span class="hljs-attr">build:</span>
+      <span class="hljs-attr">context:</span> <span class="hljs-string">.</span>
+      <span class="hljs-attr">dockerfile:</span> <span class="hljs-string">Dockerfile</span>
+    <span class="hljs-attr">container_name:</span> <span class="hljs-string">khyos-app</span>
+    <span class="hljs-attr">restart:</span> <span class="hljs-string">unless-stopped</span>
+    <span class="hljs-attr">ports:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">&quot;3000:3000&quot;</span>
+    <span class="hljs-attr">environment:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">NODE_ENV=production</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">DATABASE_URL=postgresql://khyos:password@db:5432/khyos</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">JWT_SECRET=${JWT_SECRET}</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">REDIS_URL=redis://redis:6379</span>
+    <span class="hljs-attr">volumes:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">./data:/app/data</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">./logs:/app/logs</span>
+    <span class="hljs-attr">depends_on:</span>
+      <span class="hljs-attr">db:</span>
+        <span class="hljs-attr">condition:</span> <span class="hljs-string">service_healthy</span>
+      <span class="hljs-attr">redis:</span>
+        <span class="hljs-attr">condition:</span> <span class="hljs-string">service_healthy</span>
+    <span class="hljs-attr">networks:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">khyos-network</span>
+
+  <span class="hljs-attr">db:</span>
+    <span class="hljs-attr">image:</span> <span class="hljs-string">postgres:15-alpine</span>
+    <span class="hljs-attr">container_name:</span> <span class="hljs-string">khyos-db</span>
+    <span class="hljs-attr">restart:</span> <span class="hljs-string">unless-stopped</span>
+    <span class="hljs-attr">environment:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">POSTGRES_USER=khyos</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">POSTGRES_PASSWORD=password</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">POSTGRES_DB=khyos</span>
+    <span class="hljs-attr">volumes:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">postgres-data:/var/lib/postgresql/data</span>
+    <span class="hljs-attr">healthcheck:</span>
+      <span class="hljs-attr">test:</span> [<span class="hljs-string">&quot;CMD-SHELL&quot;</span>, <span class="hljs-string">&quot;pg_isready -U khyos&quot;</span>]
+      <span class="hljs-attr">interval:</span> <span class="hljs-string">10s</span>
+      <span class="hljs-attr">timeout:</span> <span class="hljs-string">5s</span>
+      <span class="hljs-attr">retries:</span> <span class="hljs-number">5</span>
+    <span class="hljs-attr">networks:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">khyos-network</span>
+
+  <span class="hljs-attr">redis:</span>
+    <span class="hljs-attr">image:</span> <span class="hljs-string">redis:7-alpine</span>
+    <span class="hljs-attr">container_name:</span> <span class="hljs-string">khyos-redis</span>
+    <span class="hljs-attr">restart:</span> <span class="hljs-string">unless-stopped</span>
+    <span class="hljs-attr">volumes:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">redis-data:/data</span>
+    <span class="hljs-attr">healthcheck:</span>
+      <span class="hljs-attr">test:</span> [<span class="hljs-string">&quot;CMD&quot;</span>, <span class="hljs-string">&quot;redis-cli&quot;</span>, <span class="hljs-string">&quot;ping&quot;</span>]
+      <span class="hljs-attr">interval:</span> <span class="hljs-string">10s</span>
+      <span class="hljs-attr">timeout:</span> <span class="hljs-string">5s</span>
+      <span class="hljs-attr">retries:</span> <span class="hljs-number">5</span>
+    <span class="hljs-attr">networks:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">khyos-network</span>
+
+  <span class="hljs-attr">nginx:</span>
+    <span class="hljs-attr">image:</span> <span class="hljs-string">nginx:alpine</span>
+    <span class="hljs-attr">container_name:</span> <span class="hljs-string">khyos-nginx</span>
+    <span class="hljs-attr">restart:</span> <span class="hljs-string">unless-stopped</span>
+    <span class="hljs-attr">ports:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">&quot;80:80&quot;</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">&quot;443:443&quot;</span>
+    <span class="hljs-attr">volumes:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">./nginx.conf:/etc/nginx/nginx.conf</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">./ssl:/etc/nginx/ssl</span>
+    <span class="hljs-attr">depends_on:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">app</span>
+    <span class="hljs-attr">networks:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">khyos-network</span>
+
+<span class="hljs-attr">volumes:</span>
+  <span class="hljs-attr">postgres-data:</span>
+  <span class="hljs-attr">redis-data:</span>
+
+<span class="hljs-attr">networks:</span>
+  <span class="hljs-attr">khyos-network:</span>
+    <span class="hljs-attr">driver:</span> <span class="hljs-string">bridge</span></code></pre>
+<hr>
+<h2 id="4-部署流程">4. 部署流程<a class="anchor" href="#4-部署流程" aria-label="锚点">#</a></h2>
+<h3 id="4-1-部署前检查">4.1 部署前检查<a class="anchor" href="#4-1-部署前检查" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 所有测试通过</li><li>[ ] 代码已合并到主分支</li><li>[ ] 版本号已更新</li><li>[ ] 变更日志已更新</li><li>[ ] 数据库迁移已准备（如有）</li></ul>
+<h3 id="4-2-部署步骤">4.2 部署步骤<a class="anchor" href="#4-2-部署步骤" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 拉取最新代码</span>
+git pull origin main
+
+<span class="hljs-comment"># 2. 安装依赖</span>
+npm ci
+
+<span class="hljs-comment"># 3. 运行测试</span>
+npm <span class="hljs-built_in">test</span>
+
+<span class="hljs-comment"># 4. 构建应用</span>
+npm run build
+
+<span class="hljs-comment"># 5. 构建 Docker 镜像</span>
+docker build -t khyos:latest .
+
+<span class="hljs-comment"># 6. 推送镜像到仓库</span>
+docker push registry.example.com/khyos:latest
+
+<span class="hljs-comment"># 7. 部署到服务器</span>
+docker-compose -f docker-compose.prod.yml up -d
+
+<span class="hljs-comment"># 8. 运行数据库迁移</span>
+docker <span class="hljs-built_in">exec</span> khyos-app npm run migrate
+
+<span class="hljs-comment"># 9. 验证部署</span>
+curl https://khyquant.top/api/health</code></pre>
+<h3 id="4-3-自动化部署">4.3 自动化部署<a class="anchor" href="#4-3-自动化部署" aria-label="锚点">#</a></h3>
+<p><strong>GitHub Actions 示例</strong>：</p>
+<pre><code class="language-yaml"><span class="hljs-attr">name:</span> <span class="hljs-string">Deploy</span> <span class="hljs-string">to</span> <span class="hljs-string">Production</span>
+
+<span class="hljs-attr">on:</span>
+  <span class="hljs-attr">push:</span>
+    <span class="hljs-attr">branches:</span> [<span class="hljs-string">main</span>]
+
+<span class="hljs-attr">jobs:</span>
+  <span class="hljs-attr">deploy:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+    
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Checkout</span> <span class="hljs-string">code</span>
+        <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Setup</span> <span class="hljs-string">Node.js</span>
+        <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/setup-node@v4</span>
+        <span class="hljs-attr">with:</span>
+          <span class="hljs-attr">node-version:</span> <span class="hljs-string">&#x27;18&#x27;</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Install</span> <span class="hljs-string">dependencies</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">ci</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Run</span> <span class="hljs-string">tests</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">test</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Build</span> <span class="hljs-string">application</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">run</span> <span class="hljs-string">build</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Build</span> <span class="hljs-string">Docker</span> <span class="hljs-string">image</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">docker</span> <span class="hljs-string">build</span> <span class="hljs-string">-t</span> <span class="hljs-string">khyos:${{</span> <span class="hljs-string">github.sha</span> <span class="hljs-string">}}</span> <span class="hljs-string">.</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Deploy</span> <span class="hljs-string">to</span> <span class="hljs-string">server</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">|
+          ssh user@server &quot;cd /opt/khyos &amp;&amp; \
+            docker pull khyos:${{ github.sha }} &amp;&amp; \
+            docker-compose up -d&quot;</span></code></pre>
+<hr>
+<h2 id="5-健康检查">5. 健康检查<a class="anchor" href="#5-健康检查" aria-label="锚点">#</a></h2>
+<h3 id="5-1-健康检查端点">5.1 健康检查端点<a class="anchor" href="#5-1-健康检查端点" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// GET /api/health</span>
+app.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/api/health&#x27;</span>, <span class="hljs-title function_">async</span> (req, res) =&gt; {
+  <span class="hljs-keyword">const</span> checks = {
+    <span class="hljs-attr">timestamp</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>().<span class="hljs-title function_">toISOString</span>(),
+    <span class="hljs-attr">uptime</span>: process.<span class="hljs-title function_">uptime</span>(),
+    <span class="hljs-attr">version</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">npm_package_version</span>,
+    <span class="hljs-attr">environment</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">NODE_ENV</span>
+  };
+  
+  <span class="hljs-comment">// 检查数据库</span>
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">await</span> sequelize.<span class="hljs-title function_">authenticate</span>();
+    checks.<span class="hljs-property">database</span> = <span class="hljs-string">&#x27;ok&#x27;</span>;
+  } <span class="hljs-keyword">catch</span> (error) {
+    checks.<span class="hljs-property">database</span> = <span class="hljs-string">&#x27;error&#x27;</span>;
+  }
+  
+  <span class="hljs-comment">// 检查 Redis</span>
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">await</span> redis.<span class="hljs-title function_">ping</span>();
+    checks.<span class="hljs-property">redis</span> = <span class="hljs-string">&#x27;ok&#x27;</span>;
+  } <span class="hljs-keyword">catch</span> (error) {
+    checks.<span class="hljs-property">redis</span> = <span class="hljs-string">&#x27;error&#x27;</span>;
+  }
+  
+  <span class="hljs-comment">// 判断整体状态</span>
+  <span class="hljs-keyword">const</span> isHealthy = <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">values</span>(checks).<span class="hljs-title function_">every</span>(<span class="hljs-function"><span class="hljs-params">v</span> =&gt;</span> v !== <span class="hljs-string">&#x27;error&#x27;</span>);
+  
+  res.<span class="hljs-title function_">status</span>(isHealthy ? <span class="hljs-number">200</span> : <span class="hljs-number">503</span>).<span class="hljs-title function_">json</span>({
+    <span class="hljs-attr">success</span>: isHealthy,
+    <span class="hljs-attr">data</span>: checks
+  });
+});</code></pre>
+<h3 id="5-2-健康检查响应">5.2 健康检查响应<a class="anchor" href="#5-2-健康检查响应" aria-label="锚点">#</a></h3>
+<p><strong>健康</strong>（200）：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;uptime&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">3600</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1.0.0&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;environment&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;production&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;database&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ok&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;redis&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ok&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>不健康</strong>（503）：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;database&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;error&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;redis&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ok&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+<h2 id="6-回滚流程">6. 回滚流程<a class="anchor" href="#6-回滚流程" aria-label="锚点">#</a></h2>
+<h3 id="6-1-回滚策略">6.1 回滚策略<a class="anchor" href="#6-1-回滚策略" aria-label="锚点">#</a></h3>
+<p><strong>自动回滚触发条件</strong>：</p>
+<ul><li>健康检查失败</li><li>错误率超过阈值</li><li>响应时间超过阈值</li></ul>
+<p><strong>手动回滚</strong>：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 回滚到上一个版本</span>
+docker-compose -f docker-compose.prod.yml down
+docker pull khyos:previous-version
+docker-compose -f docker-compose.prod.yml up -d</code></pre>
+<h3 id="6-2-回滚步骤">6.2 回滚步骤<a class="anchor" href="#6-2-回滚步骤" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 停止当前版本</span>
+docker-compose down
+
+<span class="hljs-comment"># 2. 拉取之前的版本</span>
+docker pull khyos:previous-version
+
+<span class="hljs-comment"># 3. 更新 docker-compose 镜像标签</span>
+sed -i <span class="hljs-string">&#x27;s/khyos:latest/khyos:previous-version/&#x27;</span> docker-compose.yml
+
+<span class="hljs-comment"># 4. 启动之前的版本</span>
+docker-compose up -d
+
+<span class="hljs-comment"># 5. 验证回滚</span>
+curl https://khyquant.top/api/health</code></pre>
+<hr>
+<h2 id="7-监控与告警">7. 监控与告警<a class="anchor" href="#7-监控与告警" aria-label="锚点">#</a></h2>
+<h3 id="7-1-监控指标">7.1 监控指标<a class="anchor" href="#7-1-监控指标" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>说明</th><th>阈值</th></tr></thead><tbody><tr><td>cpu_usage</td><td>CPU 使用率</td><td>&gt; 80%</td></tr><tr><td>memory_usage</td><td>内存使用率</td><td>&gt; 80%</td></tr><tr><td>disk_usage</td><td>磁盘使用率</td><td>&gt; 85%</td></tr><tr><td>response_time</td><td>响应时间</td><td>&gt; 2s</td></tr><tr><td>error_rate</td><td>错误率</td><td>&gt; 5%</td></tr></tbody></table>
+<h3 id="7-2-告警配置">7.2 告警配置<a class="anchor" href="#7-2-告警配置" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-comment"># prometheus 告警规则</span>
+<span class="hljs-attr">groups:</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">khyos-alerts</span>
+    <span class="hljs-attr">rules:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">alert:</span> <span class="hljs-string">HighErrorRate</span>
+        <span class="hljs-attr">expr:</span> <span class="hljs-string">rate(http_requests_total{status=~&quot;5..&quot;}[5m])</span> <span class="hljs-string">/</span> <span class="hljs-string">rate(http_requests_total[5m])</span> <span class="hljs-string">&gt;</span> <span class="hljs-number">0.05</span>
+        <span class="hljs-attr">for:</span> <span class="hljs-string">5m</span>
+        <span class="hljs-attr">labels:</span>
+          <span class="hljs-attr">severity:</span> <span class="hljs-string">critical</span>
+        <span class="hljs-attr">annotations:</span>
+          <span class="hljs-attr">summary:</span> <span class="hljs-string">&quot;High error rate detected&quot;</span>
+          
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">alert:</span> <span class="hljs-string">SlowResponseTime</span>
+        <span class="hljs-attr">expr:</span> <span class="hljs-string">histogram_quantile(0.95,</span> <span class="hljs-string">rate(http_request_duration_seconds_bucket[5m]))</span> <span class="hljs-string">&gt;</span> <span class="hljs-number">2</span>
+        <span class="hljs-attr">for:</span> <span class="hljs-string">5m</span>
+        <span class="hljs-attr">labels:</span>
+          <span class="hljs-attr">severity:</span> <span class="hljs-string">warning</span>
+        <span class="hljs-attr">annotations:</span>
+          <span class="hljs-attr">summary:</span> <span class="hljs-string">&quot;Slow response time detected&quot;</span></code></pre>
+<hr>
+<h2 id="8-备份与恢复">8. 备份与恢复<a class="anchor" href="#8-备份与恢复" aria-label="锚点">#</a></h2>
+<h3 id="8-1-备份策略">8.1 备份策略<a class="anchor" href="#8-1-备份策略" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>频率</th><th>保留时间</th></tr></thead><tbody><tr><td>全量备份</td><td>每日</td><td>30 天</td></tr><tr><td>增量备份</td><td>每小时</td><td>7 天</td></tr></tbody></table>
+<h3 id="8-2-备份脚本">8.2 备份脚本<a class="anchor" href="#8-2-备份脚本" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-meta">#!/bin/bash</span>
+<span class="hljs-comment"># backup.sh</span>
+
+BACKUP_DIR=<span class="hljs-string">&quot;/backups&quot;</span>
+TIMESTAMP=$(<span class="hljs-built_in">date</span> +%Y%m%d_%H%M%S)
+
+<span class="hljs-comment"># PostgreSQL 备份</span>
+pg_dump -U khyos khyos | gzip &gt; <span class="hljs-string">&quot;<span class="hljs-variable">$BACKUP_DIR</span>/db_<span class="hljs-variable">$TIMESTAMP</span>.sql.gz&quot;</span>
+
+<span class="hljs-comment"># 文件备份</span>
+tar -czf <span class="hljs-string">&quot;<span class="hljs-variable">$BACKUP_DIR</span>/files_<span class="hljs-variable">$TIMESTAMP</span>.tar.gz&quot;</span> /opt/khyos/data
+
+<span class="hljs-comment"># 清理旧备份</span>
+find <span class="hljs-variable">$BACKUP_DIR</span> -<span class="hljs-built_in">type</span> f -mtime +30 -delete</code></pre>
+<h3 id="8-3-恢复脚本">8.3 恢复脚本<a class="anchor" href="#8-3-恢复脚本" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-meta">#!/bin/bash</span>
+<span class="hljs-comment"># restore.sh</span>
+
+BACKUP_FILE=<span class="hljs-variable">$1</span>
+
+<span class="hljs-comment"># 恢复数据库</span>
+gunzip -c <span class="hljs-variable">$BACKUP_FILE</span> | psql -U khyos khyos</code></pre>
+<hr>
+<h2 id="9-版本历史">9. 版本历史<a class="anchor" href="#9-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义部署规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 运维团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-DEP-001] 依赖管理规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-DEP-001] 依赖管理规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-DLQ-001] Dead Letter Queue 规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-DLQ-001] Dead Letter Queue 死信队列规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-DEPLOY-001] 部署规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

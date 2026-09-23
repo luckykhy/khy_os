@@ -44,7 +44,7 @@ describe('gateway trace command', () => {
   }
 
   test('prints request-level trace summary in text mode', async () => {
-    const { printInfo } = mockFormatters();
+    const { printInfo, printTable } = mockFormatters();
     jest.doMock('../src/services/traceAuditService', () => ({
       getRequestTraceSummary: jest.fn(() => ({
         ok: true,
@@ -82,16 +82,41 @@ describe('gateway trace command', () => {
     const handler = require('../src/cli/handlers/gateway');
     await handler.handleGatewayTrace(['req-1'], {});
 
-    expect(printInfo).toHaveBeenCalledWith('Request Trace: requestId=req-1 · session=sess-1');
-    expect(printInfo).toHaveBeenCalledWith('交付断点: final_conclusion');
-    expect(printInfo).toHaveBeenCalledWith('语言偏航: 检测=en，期望=zh，sample=I will inspect the repository first.');
-
+    // Production renders the trace as three tables via printTable (the old
+    // printInfo('Request Trace: ...') line output was replaced by the table
+    // layout); printInfo now only emits the blank-line separators around each
+    // table. Assert on the tables plus their row payloads instead.
+    expect(printTable).toHaveBeenCalledWith(
+      ['属性', '值'],
+      expect.arrayContaining([
+        ['Request ID', 'req-1'],
+        ['Session ID', 'sess-1'],
+        ['链路摘要', expect.stringContaining('final_conclusion')],
+        ['交付断点', 'final_conclusion'],
+      ])
+    );
+    expect(printTable).toHaveBeenCalledWith(
+      ['语言', '值'],
+      expect.arrayContaining([
+        ['检测', 'en'],
+        ['期望', 'zh'],
+        ['样本', 'I will inspect the repository first.'],
+      ])
+    );
+    expect(printTable).toHaveBeenCalledWith(
+      ['时间', '阶段', '类型', '来源'],
+      expect.arrayContaining([
+        ['2026-05-30T10:00:00.000Z', 'model_request', 'llm.request', 'ai-gateway'],
+        ['2026-05-30T10:00:01.000Z', 'language_first_chunk', 'agent.language.first_chunk', 'ai-gateway'],
+        ['2026-05-30T10:00:03.000Z', 'delivery_final', 'agent.delivery.final', 'tool-use-loop'],
+      ])
+    );
+    // Blank-line separators: 4 printInfo('') calls around the three tables.
+    expect(printInfo.mock.calls.filter(([s]) => s === '').length).toBe(4);
+    // Header lines still go through console.log (chalk.bold 'Request Trace',
+    // timeline title) — keep asserting on the captured console output.
     const output = logSpy.mock.calls.map((call) => String(call[0] || '')).join('\n');
-    expect(output).toContain('model_request');
-    expect(output).toContain('language_first_chunk');
-    expect(output).toContain('delivery_final');
-    expect(output).toContain('agent.language.first_chunk');
-    expect(output).toContain('agent.delivery.final');
+    expect(output).toContain('Request Trace');
   });
 
   test('returns JSON payload in json mode', async () => {

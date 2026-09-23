@@ -326,12 +326,21 @@ function _estimateTok(text, env = process.env, resetKey = null) {
 
 // Derive the spinner's progress props from the turn clock + live stream. Pure
 // (time passed in) so it is unit-testable: elapsed seconds since turn start, a
-// streamed-token estimate, and a stall flag when output has paused > 3s.
+// streamed-token estimate, a stall flag when output has paused > 3s, and how
+// long that stall has lasted.
+//
+// 这是这三个数的**单一真源**。App 的渲染体曾经手写过一份等价副本，并因此漂出两个单位错误
+// （毫秒差与字面量 3 比较、把 Date.now() 当秒数传给 spinner），现场可见的后果是忙碌中恒显
+// 「⏳ 等待中」、meta 里出现天文数字时长。凡是用这里的数，就别在调用点重新算一遍。
 function _spinnerProgress(turnStartedAt, nowTick, lastActivityAt, streaming, env = process.env) {
   const now = nowTick || Date.now();
   const started = turnStartedAt || 0;
   const elapsedSec = started ? Math.max(0, Math.floor((now - started) / 1000)) : 0;
   const stalled = !!lastActivityAt && now - lastActivityAt > 3000;
+  // 停滞秒数(实际数据,不是一个布尔):规则 2.5 的等待行要求「在等什么 + 已等多久」,
+  // 这个数就是从 lastActivityAt 到 now 的真实间隔。未停滞 → 0(调用方据此不加后缀)。
+  // 不需要给下限兜底:stalled 的门是 gap > 3000ms,取整后必然 ≥3,永远到不了 0。
+  const stalledSec = stalled ? Math.floor((now - lastActivityAt) / 1000) : 0;
   let tokens = 0;
   // _spinnerProgress runs in App's RENDER body (every frame while busy, plus the
   // 1s nowTick), and _estimateTok re-scans the WHOLE growing streaming.text each
@@ -357,7 +366,31 @@ function _spinnerProgress(turnStartedAt, nowTick, lastActivityAt, streaming, env
     // composite (text+thinking) is NOT prefix-stable → resetKey null = full scan.
     tokens = _estimateTok(text, env, cc ? turnStartedAt || 0 : null);
   }
-  return { elapsedSec, tokens, stalled };
+  return { elapsedSec, tokens, stalled, stalledSec };
+}
+
+// Clip to a **display-column** budget (CJK = 2 columns), appending the same '…'
+// glyph the char-count path used. `formatters.truncateToWidth` can't be reused
+// here: it hardcodes a 3-dot '...', and this panel's rows are locked byte-for-
+// byte by tests/queuePanelLines.test.js for narrow-only input (BUG-46).
+const _QUEUE_TEXT_BUDGET = 56;
+function _clipToColumns(str, budget) {
+  try {
+    const { displayWidth } = require('../../formatters');
+    if (displayWidth(str) <= budget) return str;
+    let lo = 0;
+    let hi = str.length;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (displayWidth(str.slice(0, mid)) <= budget) lo = mid;
+      else hi = mid - 1;
+    }
+    // Don't split a surrogate pair (emoji) in half.
+    if (lo > 0 && lo < str.length && /[\uD800-\uDBFF]/.test(str.charAt(lo - 1))) lo -= 1;
+    return str.slice(0, lo) + '…';
+  } catch {
+    return str.length > budget ? `${str.slice(0, budget)}…` : str;
+  }
 }
 
 // Build the queue panel as plain text rows (pure → unit-testable). Each row is
@@ -375,7 +408,7 @@ function _queuePanelLines(items) {
     const oneLine = String(raw == null ? '' : raw)
       .replace(/\s+/g, ' ')
       .trim();
-    const text = oneLine.length > 56 ? `${oneLine.slice(0, 56)}…` : oneLine;
+    const text = _clipToColumns(oneLine, _QUEUE_TEXT_BUDGET);
     const tail = i === lastIdx ? '  ↑ 取回' : '';
     rows.push(`  ${i + 1}. ${text}${tail}`);
   });

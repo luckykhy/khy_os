@@ -101,6 +101,17 @@ class DesktopController {
   }
 
   /**
+   * 目标窗口别名归一：调用方可以写 app / window / target / targetName，含义相同
+   * ——「这次感知/操作针对哪个顶层窗口」。给了目标就必须定域，不给才回退旧行为。
+   * @returns {{targetName?: string}}
+   */
+  _targetNameOf(opts = {}) {
+    const raw = opts.targetName || opts.app || opts.window || opts.target;
+    const name = raw == null ? '' : String(raw).trim();
+    return name ? { targetName: name } : {};
+  }
+
+  /**
    * desktopIcons()：直接枚举桌面图标清单（Windows 用 SysListView32「FolderView」，
    * 无截图/OCR/视觉依赖），回答「桌面上有什么」比 OCR 截图更可靠。
    * 归 capture 类受闸门管辖。非 Windows 平台回退普通无障碍树。
@@ -139,8 +150,13 @@ class DesktopController {
     }
 
     // 结构化感知：默认开（除非显式 elements:false）。失败不影响截图主路径。
+    // 目标窗口透传：截图是全屏幕的，但元素清单必须定域到调用方点名的窗口。
     if (opts.elements !== false) {
-      const scene = await this.inspect({ region: opts.region, clickableOnly: opts.clickableOnly });
+      const scene = await this.inspect({
+        region: opts.region,
+        clickableOnly: opts.clickableOnly,
+        ...this._targetNameOf(opts),
+      });
       if (scene && scene.success) {
         out.elements = scene.elements;
         out.marks = scene.marks;
@@ -158,13 +174,14 @@ class DesktopController {
   }
 
   /**
-   * inspect()：抓当前屏幕的结构化可操控元素清单（无障碍树）。归 capture 类，受闸门管辖。
+   * inspect()：抓目标屏幕的结构化可操控元素清单（无障碍树）。归 capture 类，受闸门管辖。
    * 记住结果到会话，供随后 clickElement/fillForm 按 id/名称引用。
-   * @param {object} opts { region, clickableOnly }
+   * @param {object} opts { region, clickableOnly, app } — app 指定顶层窗口标题；
+   *   不传则回退「当前焦点窗口」，此时读到的是焦点所在应用，不是你刚激活的窗口。
    */
   inspect(opts = {}) {
     return _guarded('inspect', this._ctx(opts), async () => {
-      const r = await this._inspector.inspect(opts, {});
+      const r = await this._inspector.inspect({ ...opts, ...this._targetNameOf(opts) }, {});
       if (r && r.success && Array.isArray(r.elements)) {
         this._lastElements = r.elements;
       }
@@ -255,7 +272,9 @@ class DesktopController {
     let elements =
       Array.isArray(opts.elements) && opts.elements.length ? opts.elements : this._lastElements;
     if (opts.refresh || !elements || elements.length === 0) {
-      const scene = await this.inspect({});
+      // 即时感知必须沿用同一目标窗口：否则解析出的坐标属于「焦点所在应用」，
+      // 点击就会打到别处。
+      const scene = await this.inspect(this._targetNameOf(opts));
       if (!scene || scene.success === false) {
         return {
           ok: false,
@@ -404,7 +423,7 @@ class DesktopController {
     let elements =
       Array.isArray(spec.elements) && spec.elements.length ? spec.elements : this._lastElements;
     if (!elements || elements.length === 0) {
-      const scene = await this.inspect({});
+      const scene = await this.inspect(this._targetNameOf(spec));
       if (!scene || scene.success === false) {
         return {
           error: `表单含元素引用字段，但无法感知屏幕元素：${(scene && (scene.reason || scene.error)) || '感知不可用'}。`,

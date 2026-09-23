@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-QUICK-REF] 设计模式速查卡.md -->
+<title>设计模式速查卡 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>其它设计<span class="sep">›</span>设计模式速查卡</div>
+      <header class="hero reveal"><h1>设计模式速查卡</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#设计模式速查卡">设计模式速查卡</a></li><li class="lvl-2"><a href="#我要加新功能">&quot;我要加新功能&quot;</a></li><li class="lvl-3"><a href="#做法">做法</a></li><li class="lvl-3"><a href="#模板">模板</a></li><li class="lvl-3"><a href="#文件">文件</a></li><li class="lvl-2"><a href="#我要调外部-api">&quot;我要调外部 API&quot;</a></li><li class="lvl-3"><a href="#做法-2">做法</a></li><li class="lvl-3"><a href="#模板-2">模板</a></li><li class="lvl-3"><a href="#文件-2">文件</a></li><li class="lvl-2"><a href="#我要处理错误">&quot;我要处理错误&quot;</a></li><li class="lvl-3"><a href="#做法-3">做法</a></li><li class="lvl-3"><a href="#决策树">决策树</a></li><li class="lvl-3"><a href="#模板-3">模板</a></li><li class="lvl-3"><a href="#文件-3">文件</a></li><li class="lvl-2"><a href="#我要加配置项">&quot;我要加配置项&quot;</a></li><li class="lvl-3"><a href="#做法-4">做法</a></li><li class="lvl-3"><a href="#注册示例">注册示例</a></li><li class="lvl-3"><a href="#使用示例">使用示例</a></li><li class="lvl-3"><a href="#文件-4">文件</a></li><li class="lvl-2"><a href="#我要处理流式数据">&quot;我要处理流式数据&quot;</a></li><li class="lvl-3"><a href="#做法-5">做法</a></li><li class="lvl-3"><a href="#模板-4">模板</a></li><li class="lvl-3"><a href="#文件-5">文件</a></li><li class="lvl-2"><a href="#我要写工具-命令">&quot;我要写工具/命令&quot;</a></li><li class="lvl-3"><a href="#做法-6">做法</a></li><li class="lvl-3"><a href="#模板-5">模板</a></li><li class="lvl-3"><a href="#文件-6">文件</a></li><li class="lvl-2"><a href="#常用命令速查">常用命令速查</a></li><li class="lvl-2"><a href="#设计哲学速查">设计哲学速查</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="设计模式速查卡">设计模式速查卡<a class="anchor" href="#设计模式速查卡" aria-label="锚点">#</a></h1>
+<blockquote><p>开发者日常速查表 — 场景 → 做法 → 文件位置</p></blockquote>
+<hr>
+<h2 id="我要加新功能">&quot;我要加新功能&quot;<a class="anchor" href="#我要加新功能" aria-label="锚点">#</a></h2>
+<h3 id="做法">做法<a class="anchor" href="#做法" aria-label="锚点">#</a></h3>
+<ol><li>写纯叶子函数(零 IO、确定性、绝不抛)</li><li>在 <code>flagRegistry.js</code> 注册 <code>KHY_XXX</code> flag</li><li>用 <code>if (isFlagEnabled('KHY_XXX'))</code> 包裹新功能</li><li>确保门关时字节回退到改动前</li></ol>
+<h3 id="模板">模板<a class="anchor" href="#模板" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 纯叶子</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">myNewFeature</span>(<span class="hljs-params">input</span>) {
+  <span class="hljs-comment">// 只读入参,只返回结果,不碰 fs/网络/子进程</span>
+  <span class="hljs-keyword">return</span> { <span class="hljs-attr">ok</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">data</span>: <span class="hljs-title function_">transform</span>(input) };
+}
+
+<span class="hljs-comment">// 门控</span>
+<span class="hljs-keyword">if</span> (flagRegistry.<span class="hljs-title function_">isFlagEnabled</span>(<span class="hljs-string">&#x27;KHY_MY_FEATURE&#x27;</span>, process.<span class="hljs-property">env</span>)) {
+  result = <span class="hljs-title function_">myNewFeature</span>(input);
+}</code></pre>
+<h3 id="文件">文件<a class="anchor" href="#文件" aria-label="锚点">#</a></h3>
+<ul><li>叶子: <code>services/backend/src/services/yourModule.js</code></li><li>注册: <code>services/backend/src/services/flagRegistry.js</code></li><li>检查: <code>npm run check:leaf-contract</code></li></ul>
+<hr>
+<h2 id="我要调外部-api">&quot;我要调外部 API&quot;<a class="anchor" href="#我要调外部-api" aria-label="锚点">#</a></h2>
+<h3 id="做法-2">做法<a class="anchor" href="#做法-2" aria-label="锚点">#</a></h3>
+<ol><li>用 <code>withSelfHealing(fn, { maxRetries: 1 })</code> 包装瞬时重试</li><li>用 <code>retryWithBackoff</code> 处理需要退避的场景</li><li>用断路器隔离故障服务</li><li>准备 fallback(降级方案)</li></ol>
+<h3 id="模板-2">模板<a class="anchor" href="#模板-2" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> { withSelfHealing } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./gateway/selfHealingWrapper&#x27;</span>);
+<span class="hljs-keyword">const</span> { retryWithBackoff } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./retryWithBackoff&#x27;</span>);
+
+<span class="hljs-comment">// 瞬时重试一次</span>
+<span class="hljs-keyword">const</span> resilientCall = <span class="hljs-title function_">withSelfHealing</span>(apiCall, { <span class="hljs-attr">maxRetries</span>: <span class="hljs-number">1</span> });
+
+<span class="hljs-comment">// 带退避的重试</span>
+<span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> <span class="hljs-title function_">retryWithBackoff</span>(apiCall, {
+  <span class="hljs-attr">maxAttempts</span>: <span class="hljs-number">3</span>,
+  <span class="hljs-attr">onRetry</span>: <span class="hljs-function">(<span class="hljs-params">err, attempt</span>) =&gt;</span> log.<span class="hljs-title function_">warn</span>(<span class="hljs-string">`Retry <span class="hljs-subst">${attempt}</span>: <span class="hljs-subst">${err.message}</span>`</span>),
+});</code></pre>
+<h3 id="文件-2">文件<a class="anchor" href="#文件-2" aria-label="锚点">#</a></h3>
+<ul><li>自愈: <code>services/backend/src/services/gateway/selfHealingWrapper.js</code></li><li>退避: <code>services/backend/src/services/retryWithBackoff.js</code></li><li>断路器: <code>services/backend/src/services/circuitBreaker.js</code></li></ul>
+<hr>
+<h2 id="我要处理错误">&quot;我要处理错误&quot;<a class="anchor" href="#我要处理错误" aria-label="锚点">#</a></h2>
+<h3 id="做法-3">做法<a class="anchor" href="#做法-3" aria-label="锚点">#</a></h3>
+<ol><li>判断: 瞬时 → 重试 | 永久 → 诚实报错</li><li>返回标准错误契约 <code>{ ok: false, error: { code, type, message, retryable } }</code></li><li>用户看到可行动的诊断,不是堆栈</li></ol>
+<h3 id="决策树">决策树<a class="anchor" href="#决策树" aria-label="锚点">#</a></h3>
+<pre><code>错误发生
+  ↓
+瞬时? ─── 是 → 重试(有界) → 成功 → 用户无感知
+  ↓                              → 失败 → 降级/诚实报错
+  否
+  ↓
+诚实报错 + 具体诊断 + 继续提示</code></pre>
+<h3 id="模板-3">模板<a class="anchor" href="#模板-3" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> { createErrorResult } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./gateway/errorContract&#x27;</span>);
+
+<span class="hljs-comment">// 瞬时错误(可重试)</span>
+<span class="hljs-keyword">return</span> <span class="hljs-title function_">createErrorResult</span>(<span class="hljs-string">&#x27;parse_error&#x27;</span>, <span class="hljs-string">&#x27;响应解析异常&#x27;</span>, { <span class="hljs-attr">retryable</span>: <span class="hljs-literal">true</span> });
+
+<span class="hljs-comment">// 永久错误(诚实报错)</span>
+<span class="hljs-keyword">return</span> <span class="hljs-title function_">createErrorResult</span>(<span class="hljs-string">&#x27;permission_denied&#x27;</span>, <span class="hljs-string">&#x27;需要管理员权限,请联系管理员开通&#x27;</span>, { <span class="hljs-attr">retryable</span>: <span class="hljs-literal">false</span> });</code></pre>
+<h3 id="文件-3">文件<a class="anchor" href="#文件-3" aria-label="锚点">#</a></h3>
+<ul><li>错误契约: <code>services/backend/src/services/gateway/errorContract.js</code></li><li>错误分类: <code>services/backend/src/services/errorClassifier.js</code></li><li>兜底守卫: <code>services/backend/src/services/chatErrorGuard.js</code></li></ul>
+<hr>
+<h2 id="我要加配置项">&quot;我要加配置项&quot;<a class="anchor" href="#我要加配置项" aria-label="锚点">#</a></h2>
+<h3 id="做法-4">做法<a class="anchor" href="#做法-4" aria-label="锚点">#</a></h3>
+<ol><li>命名: <code>KHY_XXX_YYY</code>(全大写下划线)</li><li>在 <code>flagRegistry.js</code> 注册</li><li>默认开(新功能)或默认关(高风险功能)</li><li>使用 <code>isFlagEnabled</code> 检查</li></ol>
+<h3 id="注册示例">注册示例<a class="anchor" href="#注册示例" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// flagRegistry.js</span>
+<span class="hljs-attr">FLAGS</span>: {
+  <span class="hljs-attr">KHY_MY_NEW_FEATURE</span>: {
+    <span class="hljs-attr">mode</span>: <span class="hljs-string">&#x27;default-on&#x27;</span>,   <span class="hljs-comment">// 默认开; &#x27;opt-in&#x27; = 默认关</span>
+    <span class="hljs-attr">off</span>: <span class="hljs-string">&#x27;CANON&#x27;</span>,         <span class="hljs-comment">// 关闭词: &#x27;0&#x27;, &#x27;false&#x27;, &#x27;off&#x27;, &#x27;no&#x27;</span>
+    <span class="hljs-attr">default</span>: <span class="hljs-literal">true</span>,
+    <span class="hljs-attr">parent</span>: <span class="hljs-string">&#x27;KHY_PARENT&#x27;</span>, <span class="hljs-comment">// 可选: 父门关则子门强制关</span>
+  },
+}</code></pre>
+<h3 id="使用示例">使用示例<a class="anchor" href="#使用示例" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> { isFlagEnabled } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./flagRegistry&#x27;</span>);
+<span class="hljs-keyword">if</span> (<span class="hljs-title function_">isFlagEnabled</span>(<span class="hljs-string">&#x27;KHY_MY_NEW_FEATURE&#x27;</span>, process.<span class="hljs-property">env</span>)) {
+  <span class="hljs-comment">// 新功能</span>
+}</code></pre>
+<h3 id="文件-4">文件<a class="anchor" href="#文件-4" aria-label="锚点">#</a></h3>
+<ul><li>注册: <code>services/backend/src/services/flagRegistry.js</code></li><li>类型: <code>mode: 'default-on' | 'opt-in' | 'numeric'</code></li></ul>
+<hr>
+<h2 id="我要处理流式数据">&quot;我要处理流式数据&quot;<a class="anchor" href="#我要处理流式数据" aria-label="锚点">#</a></h2>
+<h3 id="做法-5">做法<a class="anchor" href="#做法-5" aria-label="锚点">#</a></h3>
+<ol><li>用 <code>_safeOnChunk</code> 包装所有消费者回调</li><li>用 <code>safeJsonParse</code> 解析流式 JSON(支持修复)</li><li>消费者异常不能杀死流</li></ol>
+<h3 id="模板-4">模板<a class="anchor" href="#模板-4" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 流处理器内</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">_safeOnChunk</span> = (<span class="hljs-params">chunk</span>) =&gt; {
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> onChunk === <span class="hljs-string">&#x27;function&#x27;</span>) <span class="hljs-title function_">onChunk</span>(chunk);
+  } <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* consumer error — swallow */</span> }
+};
+
+<span class="hljs-comment">// 所有调用改用安全版本</span>
+<span class="hljs-title function_">_safeOnChunk</span>({ <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;text&#x27;</span>, <span class="hljs-attr">text</span>: delta.<span class="hljs-property">text</span> });</code></pre>
+<h3 id="文件-5">文件<a class="anchor" href="#文件-5" aria-label="锚点">#</a></h3>
+<ul><li>自愈包装: 已内嵌到 <code>_streamProcessor.js</code>, <code>cliToolAdapter.js</code>, <code>_anthropicSseStream.js</code>, <code>_openaiSseStream.js</code></li><li>JSON 修复: <code>services/backend/src/services/gateway/safeJsonParse.js</code></li></ul>
+<hr>
+<h2 id="我要写工具-命令">&quot;我要写工具/命令&quot;<a class="anchor" href="#我要写工具-命令" aria-label="锚点">#</a></h2>
+<h3 id="做法-6">做法<a class="anchor" href="#做法-6" aria-label="锚点">#</a></h3>
+<ol><li>工具执行结果必须包含 <code>success: true/false</code></li><li>瞬时失败自动重试(只读工具)</li><li>永久失败诚实报告给模型</li></ol>
+<h3 id="模板-5">模板<a class="anchor" href="#模板-5" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 工具返回</span>
+<span class="hljs-keyword">return</span> {
+  <span class="hljs-attr">success</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-attr">data</span>: result,
+};
+
+<span class="hljs-comment">// 或失败</span>
+<span class="hljs-keyword">return</span> {
+  <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>,
+  <span class="hljs-attr">error</span>: {
+    <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;TIMEOUT&#x27;</span>,
+    <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;执行超时(30s),请简化任务或增加超时&#x27;</span>,
+    <span class="hljs-attr">retryable</span>: <span class="hljs-literal">true</span>,
+  },
+};</code></pre>
+<h3 id="文件-6">文件<a class="anchor" href="#文件-6" aria-label="锚点">#</a></h3>
+<ul><li>工具注册: <code>services/backend/src/tools/index.js</code></li><li>失败恢复: <code>services/backend/src/services/toolFailureRecovery.js</code></li></ul>
+<hr>
+<h2 id="常用命令速查">常用命令速查<a class="anchor" href="#常用命令速查" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-comment"># 结构检查(层级 + 语法 + 构建产物)</span>
+npm run check:structure
+
+<span class="hljs-comment"># 叶子契约检查</span>
+node scripts/ci/check-leaf-contract.js --changed
+
+<span class="hljs-comment"># 变更安全检查</span>
+node scripts/ci/check-change-safety.js --changed
+
+<span class="hljs-comment"># 单文件语法检查</span>
+node --check path/to/file.js
+
+<span class="hljs-comment"># 跑单个测试</span>
+node --<span class="hljs-built_in">test</span> <span class="hljs-string">&quot;scripts/tests/**/*.test.js&quot;</span></code></pre>
+<hr>
+<h2 id="设计哲学速查">设计哲学速查<a class="anchor" href="#设计哲学速查" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>哲学</th><th>一句话</th><th>核心文件</th></tr></thead><tbody><tr><td>防御纵深</td><td>不依赖单一防护点</td><td>chatErrorGuard.js</td></tr><tr><td>纯叶子</td><td>零 IO + 确定性 + 绝不抛</td><td>check-leaf-contract.js</td></tr><tr><td>自愈优先</td><td>瞬时自愈,永久诚实</td><td>selfHealingWrapper.js</td></tr><tr><td>适配器网关</td><td>可替换 + 断路器</td><td>aiGateway.js</td></tr><tr><td>显式层级</td><td>L0-L6 单向依赖</td><td>DESIGN-LAY-005</td></tr><tr><td>错误归一</td><td>统一形状 + 诚实措辞</td><td>errorContract.js</td></tr><tr><td>配置门控</td><td>门关即字节回退</td><td>flagRegistry.js</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/其它设计/[DESIGN-PRIV-001] 数据隐私规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-PRIV-001] 数据隐私规范</div></a><a class="next" href="../../../docs/03_DESIGN_设计/其它设计/[DESIGN-RESEARCH] 跨Agent技能MCP统一管理-阶段一调研.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-RESEARCH] 跨 Agent 技能/MCP 统一管理 — 阶段一调研报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/其它设计/[DESIGN-QUICK-REF] 设计模式速查卡.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

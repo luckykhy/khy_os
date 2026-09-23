@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-14.md -->
+<title>2026-09-14 工作日志 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>.workbuddy-ai<span class="sep">›</span>memory<span class="sep">›</span>2026-09-14 工作日志</div>
+      <header class="hero reveal"><h1>2026-09-14 工作日志</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#2026-09-14-工作日志">2026-09-14 工作日志</a></li><li class="lvl-2"><a href="#明确-khyos-的核心并落档">明确 KhyOS 的核心并落档</a></li><li class="lvl-2"><a href="#修复-khy-启动慢-用户报-启动太慢">修复 `khy` 启动慢（用户报「启动太慢」）</a></li><li class="lvl-2"><a href="#死代码全仓排查-khyos-找出-khyos-中的死代码">死代码全仓排查（Khyos：「找出 khyos 中的死代码」）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="2026-09-14-工作日志">2026-09-14 工作日志<a class="anchor" href="#2026-09-14-工作日志" aria-label="锚点">#</a></h1>
+<h2 id="明确-khyos-的核心并落档">明确 KhyOS 的核心并落档<a class="anchor" href="#明确-khyos-的核心并落档" aria-label="锚点">#</a></h2>
+<p><strong>任务</strong>：充分探索仓库 → 明确 khyos 的核心 → 写文档落档。</p>
+<p><strong>产出</strong>：<code>docs/01_INIT_立项/INIT-PRD/[INIT-PRD-003] KhyOS 的核心-定位口径单一真源.md</code>（+ html 孪生件）</p>
+<p><strong>核心结论</strong>：</p>
+<ul><li>一句话：KhyOS 的核心 = 一套把「模型调用」当系统调用一样统一收口的 AI 平台运行时（对外 CLI/TUI 智能体工作台，对内 壳→漏斗→网关 不可卸载运行时）。</li><li>「核心」一词全仓有 4 套口径，切成 4 轴并裁定 <code>A ⊂ B</code>：<ul><li>A 不可卸载核（069 §1.1，强制规范）：壳 / 漏斗 / 网关</li><li>B 产品核心（097）：A + 智能体 / 工作流 / 记忆 / 拓展契约 = 七核两层</li><li>C 定位叙事（README / INIT-PRD-002）：不参与裁决</li><li>D 设计不变式（DESIGN-PHILOSOPHY）：不参与裁决</li></ul></li></ul>
+<p><strong>探索中发现的 3 处口径冲突（已登记进文档第四节）</strong>：</p>
+<ol><li><strong>内核</strong>：README 把 <code>kernel/</code> 列为「三大件」之一且称「可在 QEMU 下引导运行」，但 097 判它「不占核心席位·实验分支」；实测 <code>kernel/</code> 有 128 个 .c/.h 却<strong>零构建产物</strong>（无 .iso/.bin/.img），README 表述无法从工作树复现。裁决以 097 为准，建议 README 保留内核但显性标注「实验/需先构建」。</li><li><strong>核心多口径</strong>：README(3) / INIT-PRD-002(5) / 069(3) / 097(7) 并存，本文收口为 A/B/C/D 四轴。</li><li><strong>文档编号冲突 5 组</strong>：067 / 072 / 073 / 076 / 077 各被两个不同文档占用。</li></ol>
+<p><strong>实测锚点（工作树 v1.1.15）</strong>：</p>
+<ul><li>壳：<code>platform/khy_platform/</code> 16 py；<code>services/backend/src/cli/</code> 顶层 177 js（含子目录 535）</li><li>漏斗：<code>services/</code> 下 <code>tool*</code> 35 文件；<code>src/tools/</code> 102 子目录 + 122 文件</li><li>网关：<code>gateway/adapters/</code> 66 文件（19 个 <code>*Adapter.js</code>）</li><li>智能体：<code>toolUseLoopCore.js</code> 12,018 行；<code>agents/built-in/</code> 26 js</li><li>拓展契约：全仓 10 个 <code>khy.extension.json</code></li><li><strong>勘误</strong>：097 写记忆路径 <code>domain/memory/memoryEngine/</code>，实测完整路径为 <code>services/backend/src/services/domain/memory/memoryEngine/</code></li></ul>
+<p><strong>同步更新</strong>：<code>docs/01_INIT_立项/00_INDEX_立项-分类索引.md</code>、<code>docs/00_INDEX_文档索引.md</code>（01_INIT 文档数 2→3）。</p>
+<p><strong>验证</strong>：</p>
+<ul><li><code>check:layout</code> → <code>docs-index-complete</code> 实测 14，<strong>不含本次新增</strong>（我的文档已正确登记）；14 份全是 03_DESIGN/06_DEPLOY/07_OPS/08_MGMT 的历史漏链。</li><li><code>docs:build</code> + <code>docs:verify</code> → ✅ 全部通过（863 源 md / 864 html / 10358 本地链接）。</li></ul>
+<p><strong>未处理的预存债（非本次引入，待 Khyos 决定）</strong>：</p>
+<ul><li><code>check:layout</code> 另有 3 类红灯：root-whitelist（24 个根目录说明性文件）、root-junk（300 个 tmp 残留）、layer-registry（7 个未登记顶层目录：-p / _产物 / deploy / lib / patches / test / 对齐）。</li><li><code>docs-index-complete</code> 14 份漏链清单已拿到，可顺手补进主索引（棘轮只降不升）。</li></ul>
+<hr>
+<h2 id="修复-khy-启动慢-用户报-启动太慢">修复 <code>khy</code> 启动慢（用户报「启动太慢」）<a class="anchor" href="#修复-khy-启动慢-用户报-启动太慢" aria-label="锚点">#</a></h2>
+<p><strong>诊断方法（可复用）</strong>：① <code>STARTUP_PROFILE=1</code> 跑 <code>bin/khy.js</code> 看 <code>startupProfiler</code> 检查点时间线（注意 <code>process.exit()</code> 会跳过 <code>.finally()</code> 里的 <code>printSummary()</code>，需要外层 wrapper + <code>process.on('exit')</code> 兜住）；② 包一层 <code>Module._load</code> 统计模块<strong>自耗时</strong>（父减子），定位&quot;千刀万剐&quot;型 require 图；③ <code>--cpu-prof</code> + 自写脚本按 <code>callFrame</code> 聚合 self time 并回溯祖先栈；④ 包一层 <code>child_process.*Sync</code> 打印慢派生的调用栈。</p>
+<p><strong>实测三处真凶（都在 Node 侧，Python 侧 bootstrap 仅 ~350ms 且已并行化）</strong>：</p>
+<ol><li><strong><code>init.js</code> 的 DB 体检&quot;假延后&quot;</strong>：<code>Promise.resolve().then(_initDbHealth)</code> 看着像后台，但微任务会在调用方 <code>await init()</code> 的续体<strong>之前</strong>排空 → <code>PRAGMA quick_check</code> 的同步突刺（28MB sessions.db ~450-850ms）照样卡在 <code>init:done → main:start</code> 之间，实测 ~1100ms 空档。→ 改成 <code>setTimeout(..., KHY_DB_HEALTH_DEFER_MS 默认 2500)</code> 宏任务 + <code>unref()</code>。</li><li><strong><code>khy-Trajectory/sessions.db</code> 是 <code>.khy/sessions.db</code> 的硬链接</strong>（<code>utils/dataHome._ensureVisibleAlias</code> 每次启动重建的可见别名，同 inode 同 realpath），<code>_discoverDatabases()</code> 两条都收 → 同一个 28MB 文件连做两遍 quick_check。→ <code>_dedupeByRealPath()</code> 按 realpath 去重（Windows 转小写），导出供测试。</li><li><strong><code>bin/khy.js:308</code> 顶层 <code>execFileSync(chcp.com, ['65001'])</code></strong>：控制台代码页是<strong>进程共享</strong>的，而 Python 启动器 <code>cli.py</code> 早已用 <code>SetConsoleOutputCP/SetConsoleCP</code> 设过 65001 → 这次同步 CreateProcess 纯属重复，实测 230-475ms。→ <code>cli.py</code> 成功设置后导出 <code>KHY_CONSOLE_CP=65001</code> 握手；<code>khy.js</code> 见到握手就跳过，直连 <code>node bin/khy.js</code> 仍保留旧派生。</li></ol>
+<p><strong>收益</strong>：<code>main:start</code>（启动路径解锁点）~1696ms → <strong>~260-330ms</strong>；<code>--no-server</code> 整进程 2720-3166ms → <strong>1202-1289ms</strong>；<code>init()</code> 自身 1471ms → <strong>127ms</strong>。约省 <strong>1.5-1.9s</strong>。</p>
+<p><strong>改动文件</strong>：<code>services/backend/src/bootstrap/init.js</code>、<code>services/backend/src/services/dbHealthService.js</code>（+导出 <code>_dedupeByRealPath</code>）、<code>services/backend/bin/khy.js</code>、<code>platform/khy_platform/cli.py</code>、新增 <code>services/backend/tests/services/dbHealth.dedupeDatabases.test.js</code>（node:test，5 例）。</p>
+<p><strong>验证</strong>：<code>node --test</code> 三个 dbHealth 套件 30/30 绿；<code>node --check</code> 全绿；<code>check-flag-registry.js</code> 通过；实跑确认延后体检确实在 +2.5s 执行且审计落盘（现在只查 2 个库）。</p>
+<p><strong>未解决 / 后续可做</strong>：</p>
+<ul><li>延后体检在 +2.5s 仍会阻塞事件循环 ~0.9s（better-sqlite3 是同步的）。彻底解法是丢 worker/子进程，改动较大，未做。可用 <code>KHY_DB_HEALTH_DEFER_MS</code> 调。</li><li>剩余大头：<code>require('../src/cli/repl')</code> ~1.1-1.6s（420+ 模块，无单点热点，见 <code>[DESIGN-PERF-001]</code> 卡点 A）+ <code>import('ink')</code> ~1.4s。<code>NODE_COMPILE_CACHE</code> 实测无明显收益（且 <code>khy.js:51-55</code> 已因开发期陈旧字节码问题主动禁用）。</li><li><strong>环境债</strong>：<code>khy_os.egg-info</code> / 已安装元数据停在 <strong>1.1.11</strong>，源码树是 <strong>1.1.15</strong> → <code>khy --version</code> 报错版本，且每次启动都触发 <code>_check_version_upgrade</code>「token 缓存将强制刷新」。需刷新 editable 安装元数据。</li><li>未写 CHANGELOG（该仓库 CHANGELOG 最新只到 1.1.14，看形态是发布时统一写，避免与待发布条目冲突）。</li></ul>
+<hr>
+<h2 id="死代码全仓排查-khyos-找出-khyos-中的死代码">死代码全仓排查（Khyos：「找出 khyos 中的死代码」）<a class="anchor" href="#死代码全仓排查-khyos-找出-khyos-中的死代码" aria-label="锚点">#</a></h2>
+<p><strong>方法</strong>：自研零依赖静态分析器（对齐 <code>archDebtScan.js</code> 的「零外部依赖 / 确定性 / 离线可跑」纪律）。<br>依赖图 → 入口可达性 BFS → 孤儿文件 → 代码语境引用反查 → 三级置信度分类。<strong>全程只读，未改任何业务代码。</strong></p>
+<p><strong>产物</strong>（<code>.khyos/deadcode-audit/</code>，该目录已被 <code>.gitignore</code> 第 65 行 <code>.khyos/</code> 覆盖，不污染仓库）：</p>
+<ul><li><code>deadcode-scan.js</code> 主扫描器 · <code>verify-orphans.js</code> 引用反查 · <code>classify-refs.js</code> 引用强度分类</li><li><code>generate-report.js</code> → <code>khy-os-死代码诊断报告.md</code>（823 行）</li><li>数据：<code>deadcode-report.json</code> / <code>orphan-verdict.json</code> / <code>ref-classification.json</code></li></ul>
+<p><strong>规模</strong>：3921 源文件 / 823 入口 / 3208 可达。<br><strong>结果</strong>：孤儿 713（18.2%）= A 确证死代码 129 + B 重名副本 321 + C 其余疑似 242；<br>另有冗余导出 844、未使用依赖 27、文件内死声明 156、垃圾文件 20。<strong>A 类抽验 6/6 准确</strong>。</p>
+<p><strong>关键发现</strong>：</p>
+<ol><li><code>software/khyquant</code> 的 Python 业务层整体不可达 —— <code>khy_quant/cli.py</code> 是纯启动器</li></ol>
+<p>（<code>subprocess.run([node, bin/khy.js])</code> 交出控制权），<code>app.py</code> 只是底座适配器，<br>   <strong>没有任何 .py import</strong> <code>services/</code> / <code>models/</code> / <code>routes/</code> / <code>ml/</code>。</p>
+<ol><li><code>software/khyquant/models/</code> 9 个 model 是 <code>platform/packages/shared/src/models/</code> 的旧副本</li></ol>
+<p>（活的引用走 <code>require('@khy/shared/models')</code>）。</p>
+<ol><li>khyquant 前端多套并行实现：6 个 K 线图组件（Simple/RealTime/Enhanced/Lightweight/Strategy/Professional）、</li></ol>
+<p>5 个交易面板组件并存，路由只挂其中一条链。</p>
+<ol><li>一批 CI 脚本（<code>check-f2e-spec</code> / <code>check-f2e-wiring</code> / <code>check-core-safety</code> / <code>security-scan</code> 等）</li></ol>
+<p>不在任何 npm script 里，即从未被 CI 执行。</p>
+<ol><li>根目录与前端目录共 20 个 shell 引号转义事故垃圾文件（<code>-p</code> / <code>1</code> / <code>console.log(r))</code> / <code>{if(l.includes(...</code> 等）。</li></ol>
+<p><strong>扫描器踩过的坑（重要，下次别重蹈）</strong>：</p>
+<ul><li><strong>目录扫描式加载器</strong>必须显式豁免：<code>services/backend/src/tools/index.js</code>、<code>services/backend/src/cli/commandAutoRegistry.js</code></li></ul>
+<p>（扫 <code>handlers/</code>，150 个）、<code>software/khyquant/tools/index.js</code>。漏掉会让 tools/ 与全部 handler 被误判为死代码。</p>
+<ul><li><strong><code>@</code> 别名按项目解析</strong>：khyquant→<code>frontend/src</code>、ai-frontend→<code>src</code>、desktop/provider-hub→<code>src/renderer</code>。</li></ul>
+<p>硬编码到 ai-frontend 会<strong>整条路由链断裂</strong>，khyquant 前端孤儿一度虚高到 124 个。</p>
+<ul><li>名字反查必须加 <code>\b</code> 词边界，否则 <code>Profile</code> 会误配 <code>startupProfiler</code>。</li><li>入口还要包含：<code>package.json</code> 的 <code>exports</code> 子路径、Python <code>pyproject</code> entry-points、</li></ul>
+<p>Electron/vite 构建配置的 <code>input</code>、HTML <code>&lt;script src&gt;</code> 链。</p>
+<ul><li>workspace 子路径解析要从<strong>包根</strong>拼，不是从入口文件目录拼（否则多一层 <code>src/</code>）。</li></ul>
+      </article>
+      <nav class="pager"><span></span><a class="next" href="../../.workbuddy-ai/memory/2026-09-15.html"><div class="dir">下一篇 →</div><div class="ttl">2026-09-15 工作日志</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__=".workbuddy-ai/memory/2026-09-14.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

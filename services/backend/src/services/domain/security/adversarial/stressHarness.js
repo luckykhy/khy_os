@@ -20,6 +20,7 @@
 
 const { TARGET } = require('./attackVectors');
 const { INVARIANTS } = require('./survivalCriteria');
+const { _buildForgery } = require('./forgeryBuilders');
 
 const DEFAULT_DEADLINE_MS = 3000;
 
@@ -195,7 +196,7 @@ function _driveFurnace(vector, payload) {
   const obs = _baseObservation(vector);
   let furnace;
   try {
-    furnace = require('../structuredFurnace');
+    furnace = require('../../structured/structuredFurnace');
   } catch (e) {
     obs.threw = true;
     obs.error = _err(e);
@@ -247,47 +248,6 @@ function _driveFurnace(vector, payload) {
   return obs;
 }
 
-/** 依据伪造模式构造一份敌对「信封」。 */
-function _buildForgery(furnace, payload) {
-  const BRAND = furnace.SEAL_BRAND;
-  if (payload.mode === 'bare') {
-    // 裸 payload：无封印品牌。
-    return { sealed: true, payload: payload.payload, seal: 'whatever' };
-  }
-  if (payload.mode === 'fake-brand') {
-    // 伪造品牌 + 乱填 seal：摘要必不符。
-    return {
-      [BRAND]: true,
-      sealed: true,
-      payload: payload.payload,
-      seal: payload.seal || 'deadbeef'.repeat(8),
-    };
-  }
-  if (payload.mode === 'tamper') {
-    // 取一份真封印信封，篡改 payload（seal 变陈旧）。真信封拿不到则降级为 fake-brand。
-    let env = null;
-    try {
-      env = furnace.intercept('打开文件 report.txt 并总结其要点', { forceLevel: 'L0' });
-    } catch {
-      env = null;
-    }
-    if (env && env.payload) {
-      return {
-        [BRAND]: true,
-        sealed: true,
-        seal: env.seal,
-        payload: { ...env.payload, ...(payload.tamperWith || {}) },
-      };
-    }
-    return {
-      [BRAND]: true,
-      sealed: true,
-      payload: { kind: 'ActionIntent', ...(payload.tamperWith || {}) },
-      seal: '00'.repeat(16),
-    };
-  }
-  return { payload: payload.payload || {} };
-}
 
 // ── 公共入口：驱动一条向量并返回标准 observation ────────────────────────────
 /**

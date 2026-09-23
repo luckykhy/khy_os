@@ -98,6 +98,8 @@ export function useGatewayPayments() {
       if (input.idempotencyKey) body.idempotencyKey = String(input.idempotencyKey).trim();
       if (input.expiresInMinutes) body.expiresInMinutes = Number(input.expiresInMinutes);
       if (input.grant) body.grant = input.grant;
+      // 代客下单的显式属主（管理员用）。0/空 = 不指定，走后端的归属解析。
+      if (Number(input.userId) > 0) body.userId = Math.floor(Number(input.userId));
       const order = unwrap(await request.post('/api/ai-gateway/payments', body));
       current.value = order;
       return order;

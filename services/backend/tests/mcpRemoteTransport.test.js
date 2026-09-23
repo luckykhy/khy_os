@@ -29,12 +29,12 @@ const mockStore = {
   startDeviceCodeFlow: jest.fn(async () => ({ flow: 'device', userCode: 'WXYZ' })),
   startAuthCodeFlow: jest.fn(() => ({ flow: 'authcode', authorizeUrl: 'https://idp/authorize' })),
 };
-jest.mock('../src/services/mcp/oauthTokenStore', () => ({
+jest.mock('../src/services/domain/messaging/mcp/oauthTokenStore', () => ({
   getTokenStore: () => mockStore,
   McpOAuthTokenStore: class {},
 }));
 
-const mcp = require('../src/services/mcp');
+const mcp = require('../src/services/domain/messaging/mcp/index');
 
 // ── Fake Response helpers ────────────────────────────────────────────────────
 

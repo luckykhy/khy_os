@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-GW-002] AI 模型降级与熔断规范.md -->
+<title>[DESIGN-GW-002] AI 模型降级与熔断规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-GW-002] AI 模型降级与熔断规范</div>
+      <header class="hero reveal"><h1>[DESIGN-GW-002] AI 模型降级与熔断规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-gw-002-ai-模型降级与熔断规范">[DESIGN-GW-002] AI 模型降级与熔断规范</a></li><li class="lvl-2"><a href="#1-降级原则">1. 降级原则</a></li><li class="lvl-2"><a href="#2-模型分级">2. 模型分级</a></li><li class="lvl-3"><a href="#2-1-模型级别">2.1 模型级别</a></li><li class="lvl-3"><a href="#2-2-降级链">2.2 降级链</a></li><li class="lvl-2"><a href="#3-熔断器">3. 熔断器</a></li><li class="lvl-3"><a href="#3-1-熔断状态机">3.1 熔断状态机</a></li><li class="lvl-3"><a href="#3-2-配置">3.2 配置</a></li><li class="lvl-3"><a href="#3-3-实现">3.3 实现</a></li><li class="lvl-2"><a href="#4-降级策略">4. 降级策略</a></li><li class="lvl-3"><a href="#4-1-触发条件">4.1 触发条件</a></li><li class="lvl-3"><a href="#4-2-降级执行">4.2 降级执行</a></li><li class="lvl-2"><a href="#5-超时与重试">5. 超时与重试</a></li><li class="lvl-3"><a href="#5-1-超时">5.1 超时</a></li><li class="lvl-3"><a href="#5-2-重试策略">5.2 重试策略</a></li><li class="lvl-2"><a href="#6-成本控制">6. 成本控制</a></li><li class="lvl-3"><a href="#6-1-成本追踪">6.1 成本追踪</a></li><li class="lvl-3"><a href="#6-2-成本熔断">6.2 成本熔断</a></li><li class="lvl-2"><a href="#7-前端显示">7. 前端显示</a></li><li class="lvl-3"><a href="#7-1-降级提示">7.1 降级提示</a></li><li class="lvl-3"><a href="#7-2-前端展示">7.2 前端展示</a></li><li class="lvl-2"><a href="#8-监控">8. 监控</a></li><li class="lvl-3"><a href="#8-1-关键指标">8.1 关键指标</a></li><li class="lvl-2"><a href="#9-版本历史">9. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-gw-002-ai-模型降级与熔断规范">[DESIGN-GW-002] AI 模型降级与熔断规范<a class="anchor" href="#design-gw-002-ai-模型降级与熔断规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: GW-002 -->
+<blockquote><p><strong>用途</strong>：定义 khy-os AI 网关的模型降级（Fallback）和熔断（Circuit Breaker）策略。<br>当前 AI 网关有适配器机制但缺少降级/熔断标准。</p></blockquote>
+<hr>
+<h2 id="1-降级原则">1. 降级原则<a class="anchor" href="#1-降级原则" aria-label="锚点">#</a></h2>
+<ol><li><strong>可用性优先</strong>：主模型不可用时自动切换到备选模型</li><li><strong>成本可控</strong>：降级模型按成本排序，自动选择最低可用成本模型</li><li><strong>透明告知</strong>：前端显示「正在使用备选模型」提示</li><li><strong>可配置</strong>：降级策略可通过配置调整</li></ol>
+<hr>
+<h2 id="2-模型分级">2. 模型分级<a class="anchor" href="#2-模型分级" aria-label="锚点">#</a></h2>
+<h3 id="2-1-模型级别">2.1 模型级别<a class="anchor" href="#2-1-模型级别" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>级别</th><th>示例</th><th>成本/1K tokens</th><th>优先级</th></tr></thead><tbody><tr><td>P0（主力）</td><td><code>gpt-4o</code>、<code>claude-sonnet-4</code></td><td>高</td><td>首选</td></tr><tr><td>P1（备选）</td><td><code>gpt-4o-mini</code>、<code>claude-haiku</code></td><td>中</td><td>自动切换</td></tr><tr><td>P2（兜底）</td><td><code>gpt-3.5-turbo</code>、本地模型</td><td>低</td><td>最后手段</td></tr><tr><td>P3（极简）</td><td>规则引擎 / 模板回复</td><td>零</td><td>全部不可用时</td></tr></tbody></table>
+<h3 id="2-2-降级链">2.2 降级链<a class="anchor" href="#2-2-降级链" aria-label="锚点">#</a></h3>
+<pre><code>P0 主力模型
+  ↓ 超时 / 错误率 &gt; 阈值
+P1 备选模型
+  ↓ 同样失败
+P2 兜底模型
+  ↓ 全部不可用
+P3 规则回复（非 AI，保证服务可用）</code></pre>
+<hr>
+<h2 id="3-熔断器">3. 熔断器<a class="anchor" href="#3-熔断器" aria-label="锚点">#</a></h2>
+<h3 id="3-1-熔断状态机">3.1 熔断状态机<a class="anchor" href="#3-1-熔断状态机" aria-label="锚点">#</a></h3>
+<pre><code>┌──────────┐
+│  CLOSED  │ ← 正常，请求通过
+│          │
+│  错误率 &gt; 阈值  │
+│  （如 50% / 60s）│
+└────┬─────┘
+     │
+     ▼
+┌──────────┐
+│  OPEN    │ ← 熔断中，直接拒绝
+│          │
+│  等待冷却期  │
+│  （如 30s）  │
+└────┬─────┘
+     │
+     ▼
+┌──────────┐
+│HALF-OPEN │ ← 试探性放行
+│          │
+│  成功 → CLOSED │
+│  失败 → OPEN   │
+└──────────┘</code></pre>
+<h3 id="3-2-配置">3.2 配置<a class="anchor" href="#3-2-配置" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>参数</th><th>默认值</th><th>说明</th></tr></thead><tbody><tr><td><code>failureThreshold</code></td><td>50%</td><td>错误率阈值（60s 窗口）</td></tr><tr><td><code>minSampleSize</code></td><td>10</td><td>最小样本数</td></tr><tr><td><code>openDuration</code></td><td>30_000</td><td>熔断持续时间（ms）</td></tr><tr><td><code>halfOpenMaxCalls</code></td><td>5</td><td>半开最大试探次数</td></tr></tbody></table>
+<h3 id="3-3-实现">3.3 实现<a class="anchor" href="#3-3-实现" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">class</span> <span class="hljs-title class_">CircuitBreaker</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">options</span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">failureThreshold</span> = options.<span class="hljs-property">failureThreshold</span> || <span class="hljs-number">0.5</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">minSampleSize</span> = options.<span class="hljs-property">minSampleSize</span> || <span class="hljs-number">10</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">openDuration</span> = options.<span class="hljs-property">openDuration</span> || <span class="hljs-number">30_000</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">halfOpenMaxCalls</span> = options.<span class="hljs-property">halfOpenMaxCalls</span> || <span class="hljs-number">5</span>;
+    
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">state</span> = <span class="hljs-string">&#x27;CLOSED&#x27;</span>;  <span class="hljs-comment">// CLOSED / OPEN / HALF_OPEN</span>
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">failures</span> = <span class="hljs-number">0</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">successes</span> = <span class="hljs-number">0</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">lastFailureTime</span> = <span class="hljs-literal">null</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">halfOpenCalls</span> = <span class="hljs-number">0</span>;
+  }
+  
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">execute</span>(<span class="hljs-params">fn</span>) {
+    <span class="hljs-keyword">if</span> (<span class="hljs-variable language_">this</span>.<span class="hljs-property">state</span> === <span class="hljs-string">&#x27;OPEN&#x27;</span>) {
+      <span class="hljs-keyword">if</span> (<span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() - <span class="hljs-variable language_">this</span>.<span class="hljs-property">lastFailureTime</span> &gt; <span class="hljs-variable language_">this</span>.<span class="hljs-property">openDuration</span>) {
+        <span class="hljs-variable language_">this</span>.<span class="hljs-property">state</span> = <span class="hljs-string">&#x27;HALF_OPEN&#x27;</span>;
+        <span class="hljs-variable language_">this</span>.<span class="hljs-property">halfOpenCalls</span> = <span class="hljs-number">0</span>;
+      } <span class="hljs-keyword">else</span> {
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">CircuitOpenError</span>(<span class="hljs-string">`Circuit breaker open for <span class="hljs-subst">${<span class="hljs-variable language_">this</span>.openDuration}</span>ms`</span>);
+      }
+    }
+    
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fn</span>();
+      <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">onSuccess</span>();
+      <span class="hljs-keyword">return</span> result;
+    } <span class="hljs-keyword">catch</span> (error) {
+      <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">onFailure</span>();
+      <span class="hljs-keyword">throw</span> error;
+    }
+  }
+  
+  <span class="hljs-title function_">onSuccess</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">failures</span> = <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">if</span> (<span class="hljs-variable language_">this</span>.<span class="hljs-property">state</span> === <span class="hljs-string">&#x27;HALF_OPEN&#x27;</span>) {
+      <span class="hljs-variable language_">this</span>.<span class="hljs-property">halfOpenCalls</span>++;
+      <span class="hljs-keyword">if</span> (<span class="hljs-variable language_">this</span>.<span class="hljs-property">halfOpenCalls</span> &gt;= <span class="hljs-variable language_">this</span>.<span class="hljs-property">halfOpenMaxCalls</span>) {
+        <span class="hljs-variable language_">this</span>.<span class="hljs-property">state</span> = <span class="hljs-string">&#x27;CLOSED&#x27;</span>;
+      }
+    }
+  }
+  
+  <span class="hljs-title function_">onFailure</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-keyword">const</span> total = <span class="hljs-variable language_">this</span>.<span class="hljs-property">failures</span> + <span class="hljs-variable language_">this</span>.<span class="hljs-property">successes</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">failures</span>++;
+    
+    <span class="hljs-keyword">if</span> (total &gt;= <span class="hljs-variable language_">this</span>.<span class="hljs-property">minSampleSize</span> &amp;&amp; (<span class="hljs-variable language_">this</span>.<span class="hljs-property">failures</span> / total) &gt;= <span class="hljs-variable language_">this</span>.<span class="hljs-property">failureThreshold</span>) {
+      <span class="hljs-variable language_">this</span>.<span class="hljs-property">state</span> = <span class="hljs-string">&#x27;OPEN&#x27;</span>;
+      <span class="hljs-variable language_">this</span>.<span class="hljs-property">lastFailureTime</span> = <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>();
+    }
+  }
+}</code></pre>
+<hr>
+<h2 id="4-降级策略">4. 降级策略<a class="anchor" href="#4-降级策略" aria-label="锚点">#</a></h2>
+<h3 id="4-1-触发条件">4.1 触发条件<a class="anchor" href="#4-1-触发条件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>场景</th><th>降级动作</th></tr></thead><tbody><tr><td>主模型连续 3 次超时</td><td>切换到 P1 模型</td></tr><tr><td>P1 模型错误率 &gt; 50%</td><td>熔断，切换到 P2</td></tr><tr><td>P2 也失败</td><td>触发 P3 规则回复</td></tr><tr><td>熔断器 OPEN</td><td>直接降级到下一级</td></tr></tbody></table>
+<h3 id="4-2-降级执行">4.2 降级执行<a class="anchor" href="#4-2-降级执行" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">callWithFallback</span>(<span class="hljs-params">adapterChain, params</span>) {
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> [adapter, breaker] <span class="hljs-keyword">of</span> adapterChain) {
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">return</span> <span class="hljs-keyword">await</span> breaker.<span class="hljs-title function_">execute</span>(<span class="hljs-function">() =&gt;</span> adapter.<span class="hljs-title function_">generate</span>(params));
+    } <span class="hljs-keyword">catch</span> (error) {
+      <span class="hljs-keyword">if</span> (error <span class="hljs-keyword">instanceof</span> <span class="hljs-title class_">CircuitOpenError</span>) {
+        logger.<span class="hljs-title function_">warn</span>(<span class="hljs-string">`Circuit open for <span class="hljs-subst">${adapter.name}</span>, falling back`</span>);
+        <span class="hljs-keyword">continue</span>;
+      }
+      
+      <span class="hljs-comment">// 可重试错误</span>
+      <span class="hljs-keyword">if</span> (<span class="hljs-title function_">isRetryable</span>(error) &amp;&amp; breaker.<span class="hljs-property">state</span> === <span class="hljs-string">&#x27;CLOSED&#x27;</span>) {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">await</span> <span class="hljs-title function_">retry</span>(<span class="hljs-function">() =&gt;</span> adapter.<span class="hljs-title function_">generate</span>(params), { <span class="hljs-attr">maxRetries</span>: <span class="hljs-number">1</span> });
+      }
+      
+      <span class="hljs-comment">// 不可重试 → 下一个</span>
+      logger.<span class="hljs-title function_">error</span>(<span class="hljs-string">`Adapter <span class="hljs-subst">${adapter.name}</span> failed`</span>, { <span class="hljs-attr">error</span>: error.<span class="hljs-property">message</span> });
+    }
+  }
+  
+  <span class="hljs-comment">// 全部失败 → 兜底</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">fallbackResponse</span>(params);
+}</code></pre>
+<hr>
+<h2 id="5-超时与重试">5. 超时与重试<a class="anchor" href="#5-超时与重试" aria-label="锚点">#</a></h2>
+<h3 id="5-1-超时">5.1 超时<a class="anchor" href="#5-1-超时" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>模型级别</th><th>超时</th><th>说明</th></tr></thead><tbody><tr><td>P0</td><td>30s</td><td>主力模型允许较长响应</td></tr><tr><td>P1</td><td>15s</td><td>备选模型较快</td></tr><tr><td>P2</td><td>10s</td><td>兜底模型限时</td></tr></tbody></table>
+<h3 id="5-2-重试策略">5.2 重试策略<a class="anchor" href="#5-2-重试策略" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> retry = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;promise-retry&#x27;</span>);
+
+<span class="hljs-keyword">const</span> retryOptions = {
+  <span class="hljs-attr">retries</span>: <span class="hljs-number">2</span>,
+  <span class="hljs-attr">factor</span>: <span class="hljs-number">2</span>,           <span class="hljs-comment">// 指数退避</span>
+  <span class="hljs-attr">minTimeout</span>: <span class="hljs-number">1000</span>,    <span class="hljs-comment">// 1s</span>
+  <span class="hljs-attr">maxTimeout</span>: <span class="hljs-number">5000</span>,    <span class="hljs-comment">// 5s</span>
+  <span class="hljs-attr">randomize</span>: <span class="hljs-literal">true</span>      <span class="hljs-comment">// 加抖动</span>
+};
+
+<span class="hljs-keyword">await</span> <span class="hljs-title function_">retry</span>(<span class="hljs-title function_">async</span> (retry) =&gt; {
+  <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> adapter.<span class="hljs-title function_">generate</span>(params);
+  <span class="hljs-keyword">if</span> (result.<span class="hljs-property">retryable</span>) <span class="hljs-keyword">throw</span> <span class="hljs-title function_">retry</span>(result.<span class="hljs-property">error</span>);
+  <span class="hljs-keyword">return</span> result;
+}, retryOptions);</code></pre>
+<hr>
+<h2 id="6-成本控制">6. 成本控制<a class="anchor" href="#6-成本控制" aria-label="锚点">#</a></h2>
+<h3 id="6-1-成本追踪">6.1 成本追踪<a class="anchor" href="#6-1-成本追踪" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 每次调用记录成本</span>
+<span class="hljs-keyword">const</span> costMap = {
+  <span class="hljs-string">&#x27;gpt-4o&#x27;</span>: { <span class="hljs-attr">input</span>: <span class="hljs-number">5</span>, <span class="hljs-attr">output</span>: <span class="hljs-number">15</span> },      <span class="hljs-comment">// $/1M tokens</span>
+  <span class="hljs-string">&#x27;gpt-4o-mini&#x27;</span>: { <span class="hljs-attr">input</span>: <span class="hljs-number">0.15</span>, <span class="hljs-attr">output</span>: <span class="hljs-number">0.6</span> },
+  <span class="hljs-string">&#x27;gpt-3.5-turbo&#x27;</span>: { <span class="hljs-attr">input</span>: <span class="hljs-number">0.5</span>, <span class="hljs-attr">output</span>: <span class="hljs-number">1.5</span> }
+};
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">calculateCost</span>(<span class="hljs-params">model, inputTokens, outputTokens</span>) {
+  <span class="hljs-keyword">const</span> pricing = costMap[model];
+  <span class="hljs-keyword">if</span> (!pricing) <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+  
+  <span class="hljs-keyword">return</span> (inputTokens * pricing.<span class="hljs-property">input</span> + outputTokens * pricing.<span class="hljs-property">output</span>) / <span class="hljs-number">1_000_000</span>;
+}</code></pre>
+<h3 id="6-2-成本熔断">6.2 成本熔断<a class="anchor" href="#6-2-成本熔断" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>条件</th><th>动作</th></tr></thead><tbody><tr><td>单次请求成本 &gt; $1</td><td>降级到更便宜模型</td></tr><tr><td>日累计成本 &gt; $50</td><td>切换到 P2 模型</td></tr><tr><td>月累计成本 &gt; $500</td><td>触发 P3 规则回复 + 告警</td></tr></tbody></table>
+<hr>
+<h2 id="7-前端显示">7. 前端显示<a class="anchor" href="#7-前端显示" aria-label="锚点">#</a></h2>
+<h3 id="7-1-降级提示">7.1 降级提示<a class="anchor" href="#7-1-降级提示" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// AI 响应中包含降级标记</span>
+{
+  <span class="hljs-string">&quot;success&quot;</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-string">&quot;data&quot;</span>: {
+    <span class="hljs-string">&quot;text&quot;</span>: <span class="hljs-string">&quot;Hello&quot;</span>,
+    <span class="hljs-string">&quot;model&quot;</span>: <span class="hljs-string">&quot;gpt-4o-mini&quot;</span>,  <span class="hljs-comment">// 实际使用的模型</span>
+    <span class="hljs-string">&quot;degraded&quot;</span>: <span class="hljs-literal">true</span>,         <span class="hljs-comment">// 是否降级</span>
+    <span class="hljs-string">&quot;degradedReason&quot;</span>: <span class="hljs-string">&quot;primary model timeout&quot;</span>
+  }
+}</code></pre>
+<h3 id="7-2-前端展示">7.2 前端展示<a class="anchor" href="#7-2-前端展示" aria-label="锚点">#</a></h3>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;div class=&quot;ai-response&quot;&gt;
+    &lt;div v-if=&quot;degraded&quot; class=&quot;degraded-banner&quot;&gt;
+      &lt;Icon name=&quot;warning&quot; /&gt;
+      正在使用 {{ model }}（备选模型），响应质量可能受影响
+    &lt;/div&gt;
+    &lt;div class=&quot;response-text&quot;&gt;{{ text }}&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/template&gt;</code></pre>
+<hr>
+<h2 id="8-监控">8. 监控<a class="anchor" href="#8-监控" aria-label="锚点">#</a></h2>
+<h3 id="8-1-关键指标">8.1 关键指标<a class="anchor" href="#8-1-关键指标" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>告警阈值</th></tr></thead><tbody><tr><td>降级事件数</td><td>&gt; 10/min → Warning</td></tr><tr><td>熔断触发次数</td><td>&gt; 3/min → Critical</td></tr><tr><td>模型错误率</td><td>P0 &gt; 10% → Warning</td></tr><tr><td>P3 触发次数</td><td>&gt; 1/min → Critical（说明全链故障）</td></tr></tbody></table>
+<hr>
+<h2 id="9-版本历史">9. 版本历史<a class="anchor" href="#9-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义 AI 模型降级与熔断规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-GOV-001] 治理总纲与可执行规则.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-GOV-001] 治理总纲与可执行规则</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-I18N-001] 国际化规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-I18N-001] 国际化规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-GW-002] AI 模型降级与熔断规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

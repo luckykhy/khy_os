@@ -20,7 +20,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { parseFile, detectLang } = require('./importGraph');
-const { resolveImport, makeIoFromSet } = require('../../network/dependency/resolver');
+const { resolveImport, makeIoFromSet } = require('./resolver');
 
 const SEVERITY = { HIGH: 'high', MEDIUM: 'medium' };
 const DEFAULT_MAX_FILES = 400;

@@ -7,7 +7,7 @@ const os = require('os');
 describe('skillCuratorService', () => {
   let curator;
   // The curator resolves its usage file via getAppHome() (isolated data home
-  // under jest) â€?use the exported USAGE_FILE rather than a hardcoded
+  // under jest) â€”use the exported USAGE_FILE rather than a hardcoded
   // ~/.khyquant/growth path so tests never touch the real user home.
   let USAGE_FILE;
   let BACKUP_FILE;

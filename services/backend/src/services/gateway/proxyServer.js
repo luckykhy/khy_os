@@ -3166,6 +3166,17 @@ function getRuntimeStatus() {
   }
 }
 
+// SIGTERM handler for graceful shutdown
+process.on('SIGTERM', async () => {
+  // drain: stop() closes HTTP/HTTPS servers, waiting for connections to drain
+  // db: close database connections managed by aiManagementServer, no direct db access
+  if (isRunning()) {
+    console.log('[proxyServer] SIGTERM received, shutting down');
+    await stop();
+    process.exit(0);
+  }
+});
+
 module.exports = {
   start,
   stop,

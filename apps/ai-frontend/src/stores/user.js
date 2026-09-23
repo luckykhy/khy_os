@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { hasAuthToken, parseStoredJson } from '@khy/ui-shared/auth/state';
 import request from '@/api/request';
-import { TOKEN_KEY } from '@/utils/safeStorage';
+import { TOKEN_KEY, REFRESH_TOKEN_KEY } from '@/utils/safeStorage';
 import { normalizeRole, isAdmin, roleLabel } from '@/auth/permissions';
 
 const USER_STORAGE_KEY = 'khy_ai_user';
@@ -15,6 +15,7 @@ const USER_HOME = '/home';
 export const useUserStore = defineStore('user', {
   state: () => ({
     token: localStorage.getItem(TOKEN_KEY) || '',
+    refreshToken: localStorage.getItem(REFRESH_TOKEN_KEY) || '',
     user: parseStoredJson(localStorage.getItem(USER_STORAGE_KEY), null),
   }),
   getters: {
@@ -30,12 +31,15 @@ export const useUserStore = defineStore('user', {
       const { data } = await request.post('/api/auth/login', { username, password });
       const payload = data && typeof data.data === 'object' && data.data ? data.data : data;
       const token = String(payload?.token || '').trim();
+      const refreshToken = String(payload?.refreshToken || '').trim();
       if (!token) throw new Error('登录响应缺少令牌');
 
       this.token = token;
+      this.refreshToken = refreshToken;
       this.user = payload?.user || null;
 
       localStorage.setItem(TOKEN_KEY, token);
+      if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(this.user || null));
       return payload;
     },
@@ -57,10 +61,32 @@ export const useUserStore = defineStore('user', {
         return false;
       }
     },
+    async refreshAccessToken() {
+      if (!this.refreshToken) return false;
+      try {
+        const { data } = await request.post('/api/auth/refresh', {
+          refreshToken: this.refreshToken,
+        });
+        const payload = data && typeof data.data === 'object' && data.data ? data.data : data;
+        const newToken = String(payload?.token || '').trim();
+        const newRefreshToken = String(payload?.refreshToken || '').trim();
+        if (!newToken) return false;
+
+        this.token = newToken;
+        this.refreshToken = newRefreshToken || this.refreshToken;
+        localStorage.setItem(TOKEN_KEY, newToken);
+        if (newRefreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken);
+        return true;
+      } catch {
+        return false;
+      }
+    },
     logout() {
       this.token = '';
+      this.refreshToken = '';
       this.user = null;
       localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
       localStorage.removeItem(USER_STORAGE_KEY);
     },
     isAuthenticated() {

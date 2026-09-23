@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-072] 模型上下文窗口探测规范.md -->
+<title>[DESIGN-ARCH-072] 模型上下文窗口探测规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-072] 模型上下文窗口探测规范</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-072] 模型上下文窗口探测规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-072-模型上下文窗口探测规范">[DESIGN-ARCH-072] 模型上下文窗口探测规范</a></li><li class="lvl-2"><a href="#1-问题背景">1. 问题背景</a></li><li class="lvl-2"><a href="#2-探测优先级链-六级-首个命中即停">2. 探测优先级链（六级，首个命中即停）</a></li><li class="lvl-2"><a href="#3-探测时机与缓存策略">3. 探测时机与缓存策略</a></li><li class="lvl-3"><a href="#3-1-核心难点">3.1 核心难点</a></li><li class="lvl-3"><a href="#3-2-何时探测-触发条件">3.2 何时探测（触发条件）</a></li><li class="lvl-3"><a href="#3-3-何时不探测-复用缓存">3.3 何时不探测（复用缓存）</a></li><li class="lvl-3"><a href="#3-4-两条路径的时序">3.4 两条路径的时序</a></li><li class="lvl-3"><a href="#3-5-缓存状态机">3.5 缓存状态机</a></li><li class="lvl-3"><a href="#3-6-各来源的-ttl-与可信度">3.6 各来源的 TTL 与可信度</a></li><li class="lvl-2"><a href="#4-各级探测实现">4. 各级探测实现</a></li><li class="lvl-3"><a href="#level-1-运行时实际探测-context-length-错误提取">Level 1：运行时实际探测（context_length 错误提取）</a></li><li class="lvl-3"><a href="#level-2-api-模型列表上报">Level 2：API 模型列表上报</a></li><li class="lvl-3"><a href="#level-3-环境变量覆盖">Level 3：环境变量覆盖</a></li><li class="lvl-3"><a href="#level-4-后台异步探测">Level 4：后台异步探测</a></li><li class="lvl-3"><a href="#level-5-保守回退">Level 5：保守回退</a></li><li class="lvl-2"><a href="#4-探测结果的消费方">4. 探测结果的消费方</a></li><li class="lvl-2"><a href="#5-探测时序">5. 探测时序</a></li><li class="lvl-2"><a href="#6-零硬编码原则">6. 零硬编码原则</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-072-模型上下文窗口探测规范">[DESIGN-ARCH-072] 模型上下文窗口探测规范<a class="anchor" href="#design-arch-072-模型上下文窗口探测规范" aria-label="锚点">#</a></h1>
+<blockquote><p>版本：v1.0  <br>状态：实施中  <br>关联：contextWindowDefaults.js / aiGatewayRoutingMethods.js / upstreamModelProbe.js / aiGatewayGenerateMethod.js</p></blockquote>
+<hr>
+<h2 id="1-问题背景">1. 问题背景<a class="anchor" href="#1-问题背景" aria-label="锚点">#</a></h2>
+<p>此前所有模型的上下文窗口统一回退为 128K（<code>UNKNOWN_MODEL_CONTEXT_WINDOW</code>），导致：</p>
+<ul><li>小上下文模型（32K）被高估 → 请求超限失败</li><li>大上下文模型（512K/1M）被低估 → 工具结果预算过小、压缩过早触发</li><li>上下文溢出后无自动压缩 → 任务中断</li></ul>
+<h2 id="2-探测优先级链-六级-首个命中即停">2. 探测优先级链（六级，首个命中即停）<a class="anchor" href="#2-探测优先级链-六级-首个命中即停" aria-label="锚点">#</a></h2>
+<pre><code>┌─────────────────────────────────────────────────────────┐
+│ Level 1: 运行时错误提取（最可信）                         │
+│   来源：API context_length 错误消息                       │
+│   时机：请求超限时自动提取并缓存                          │
+│   示例：&quot;maximum context length is 512000 tokens&quot;         │
+│   精度：精确（API 返回的真实限制）                         │
+├─────────────────────────────────────────────────────────┤
+│ Level 2: API 模型列表上报                                │
+│   来源：/v1/models 响应的 context_window 字段             │
+│   时机：listModels() 探测时缓存                           │
+│   字段：context_window / context_length / max_context     │
+│   精度：精确（API 主动上报）                               │
+├─────────────────────────────────────────────────────────┤
+│ Level 3: 实际 API 请求探测                               │
+│   来源：probeContextWindow() 发送最小请求                  │
+│   方法：                                                  │
+│     3a. 发送 1 token 请求，从响应 headers/body 提取       │
+│     3b. 发送极大 max_tokens 触发错误，从错误消息提取      │
+│   时机：getModelContextWindowAsync() 中 listModels 失败后 │
+│   精度：精确（API 实际响应）                               │
+├─────────────────────────────────────────────────────────┤
+│ Level 4: 环境变量覆盖                                    │
+│   来源：KHY_CONTEXT_WINDOW 环境变量                       │
+│   时机：getModelContextWindow() 同步读取                   │
+│   精度：用户手动配置，可信                                 │
+├─────────────────────────────────────────────────────────┤
+│ Level 5: 后台异步探测                                    │
+│   来源：getModelContextWindowAsync() 等待 adapter 探测    │
+│   时机：工具循环启动时主动触发                             │
+│   超时：3秒                                               │
+│   精度：取决于 adapter 响应                               │
+├─────────────────────────────────────────────────────────┤
+│ Level 6: 保守回退                                        │
+│   来源：UNKNOWN_MODEL_CONTEXT_WINDOW = 128000             │
+│   时机：所有探测均失败时                                   │
+│   原则：宁可写小不可写大                                   │
+│   精度：保守估计                                          │
+└─────────────────────────────────────────────────────────┘
+
+禁止：不使用模型名模式匹配推断上下文窗口。值必须来自 API 实际响应。</code></pre>
+<h2 id="3-探测时机与缓存策略">3. 探测时机与缓存策略<a class="anchor" href="#3-探测时机与缓存策略" aria-label="锚点">#</a></h2>
+<h3 id="3-1-核心难点">3.1 核心难点<a class="anchor" href="#3-1-核心难点" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>难点</th><th>矛盾</th><th>解法</th></tr></thead><tbody><tr><td><strong>首请求延迟</strong></td><td>工具循环启动时需要上下文窗口，但探测需要 3-5 秒</td><td>首请求用默认值，探测结果下轮生效</td></tr><tr><td><strong>重复探测</strong></td><td>每次请求都探测浪费资源</td><td>TTL 缓存 + 并发去重</td></tr><tr><td><strong>缓存过期</strong></td><td>API 可能更新上下文窗口</td><td>stale-while-revalidate（返回旧值+后台刷新）</td></tr><tr><td><strong>错误恢复</strong></td><td>context_length 错误说明窗口不对</td><td>错误即探测，即时更新缓存</td></tr></tbody></table>
+<h3 id="3-2-何时探测-触发条件">3.2 何时探测（触发条件）<a class="anchor" href="#3-2-何时探测-触发条件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>触发</th><th>时机</th><th>级别</th><th>阻塞？</th><th>TTL</th></tr></thead><tbody><tr><td><strong>工具循环启动</strong></td><td>首次调用该模型</td><td>4→2→3</td><td><strong>阻塞 3 秒</strong></td><td>4h</td></tr><tr><td><strong>请求超限</strong></td><td>API 返回 context_length 错误</td><td>1</td><td>不阻塞（已失败）</td><td>24h</td></tr><tr><td><strong>缓存过期</strong></td><td>TTL 到期后下次调用</td><td>2→3</td><td><strong>不阻塞</strong>（返回旧值）</td><td>4h</td></tr><tr><td><strong>用户切换模型</strong></td><td>重启/切换</td><td>全部</td><td>阻塞 3 秒</td><td>4h</td></tr></tbody></table>
+<h3 id="3-3-何时不探测-复用缓存">3.3 何时不探测（复用缓存）<a class="anchor" href="#3-3-何时不探测-复用缓存" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>条件</th><th>行为</th><th>说明</th></tr></thead><tbody><tr><td>缓存命中且未过期</td><td>直接返回缓存值（0 IO）</td><td>正常路径</td></tr><tr><td>缓存已过期</td><td>返回旧值 + 后台异步刷新</td><td>stale-while-revalidate</td></tr><tr><td>同一模型并发请求</td><td>去重（只发一次探测）</td><td><code>_contextWindowPending</code> Set</td></tr><tr><td>探测连续失败 ≥2 次</td><td>冷却 10 分钟</td><td>避免无意义重试</td></tr><tr><td>上下文窗口来源为 Level 1（错误提取）</td><td>不再探测（最可信）</td><td>TTL 24h</td></tr></tbody></table>
+<h3 id="3-4-两条路径的时序">3.4 两条路径的时序<a class="anchor" href="#3-4-两条路径的时序" aria-label="锚点">#</a></h3>
+<p><strong>路径 A：工具循环启动（阻塞探测）</strong></p>
+<pre><code>toolUseLoop 启动
+    │
+    ├─ getModelContextWindowAsync(modelId, 3000)
+    │   ├─ 缓存命中 → 直接返回（0ms）
+    │   ├─ 缓存过期 → 返回旧值 + 后台刷新（0ms）
+    │   └─ 缓存未命中 → 阻塞等待探测（最多 3s）
+    │       ├─ Level 2: listModels() 探测
+    │       ├─ Level 3: probeContextWindow() 实际请求
+    │       └─ 写入缓存 + 返回
+    │
+    ├─ setDynamicContextBudget(contextWindow)
+    ├─ _resolveMaxIterations(requested, contextWindow)
+    └─ 开始循环（上下文预算已正确设置）</code></pre>
+<p><strong>路径 B：运行时错误提取（不阻塞）</strong></p>
+<pre><code>chat() 请求
+    ├─ 成功 → 正常
+    └─ context_length 错误
+        ├─ parseContextOverflowTokens(errMsg) → limitTokens
+        ├─ _cacheProbedContextWindow(modelId, limitTokens)
+        │   └─ 写入缓存，TTL 24h，source='error-extract'
+        ├─ 自动重试（maxTokens 缩减）
+        └─ 下次 getModelContextWindow() 直接返回真实值</code></pre>
+<h3 id="3-5-缓存状态机">3.5 缓存状态机<a class="anchor" href="#3-5-缓存状态机" aria-label="锚点">#</a></h3>
+<pre><code>┌─────────┐  首次探测成功  ┌──────────┐  TTL 到期  ┌──────────┐
+│  未知    │ ───────────→ │  新鲜    │ ────────→ │  过期    │
+│ (未缓存) │              │ (未过期) │           │ (已过期) │
+└─────────┘              └──────────┘           └──────────┘
+     │                        ↑                      │
+     │                        │  后台刷新成功          │
+     │                        └──────────────────────┘
+     │                                                │
+     │  context_length 错误                            │
+     │  (Level 1 提取)                                 │
+     │                        ┌──────────┐            │
+     └──────────────────────→ │  可信    │ ←──────────┘
+                              │ (TTL 24h)│
+                              └──────────┘</code></pre>
+<h3 id="3-6-各来源的-ttl-与可信度">3.6 各来源的 TTL 与可信度<a class="anchor" href="#3-6-各来源的-ttl-与可信度" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>来源</th><th>TTL</th><th>可信度</th><th>理由</th></tr></thead><tbody><tr><td>Level 1（错误提取）</td><td><strong>24h</strong></td><td>★★★★★</td><td>API 直接返回的真实限制</td></tr><tr><td>Level 2（/v1/models）</td><td><strong>4h</strong></td><td>★★★★</td><td>API 主动上报，偶尔不准</td></tr><tr><td>Level 3（probe 请求）</td><td><strong>4h</strong></td><td>★★★★</td><td>实际请求探测</td></tr><tr><td>Level 4（环境变量）</td><td><strong>不过期</strong></td><td>★★★</td><td>用户手动配置</td></tr><tr><td>Level 5（后台探测）</td><td><strong>4h</strong></td><td>★★★</td><td>取决于 adapter</td></tr><tr><td>Level 6（128K 回退）</td><td><strong>不缓存</strong></td><td>★</td><td>保守估计，尽快被真实值替换</td></tr></tbody></table>
+<h2 id="4-各级探测实现">4. 各级探测实现<a class="anchor" href="#4-各级探测实现" aria-label="锚点">#</a></h2>
+<h3 id="level-1-运行时实际探测-context-length-错误提取">Level 1：运行时实际探测（context_length 错误提取）<a class="anchor" href="#level-1-运行时实际探测-context-length-错误提取" aria-label="锚点">#</a></h3>
+<p><strong>入口</strong>：<code>aiGatewayGenerateMethod.js</code> → <code>tryContextOverflowAdjust()</code></p>
+<p><strong>流程</strong>：</p>
+<ol><li>API 返回 context_length 错误（HTTP 400/413）</li><li><code>errorClassifier.parseContextOverflowTokens(message)</code> 从错误消息提取 <code>{promptTokens, limitTokens}</code></li><li><code>_cacheProbedContextWindow(modelId, limitTokens)</code> 缓存到 <code>_contextWindowCache</code></li><li>后续 <code>getModelContextWindow(modelId)</code> 直接返回缓存值</li></ol>
+<p><strong>错误消息模式</strong>（errorClassifier.js）：</p>
+<table><thead><tr><th>提供商</th><th>模式</th><th>示例</th></tr></thead><tbody><tr><td>OpenAI</td><td><code>maximum context length is {limit} tokens ... resulted in {prompt} tokens</code></td><td>&quot;maximum context length is 128000 tokens ... resulted in 130000 tokens&quot;</td></tr><tr><td>Anthropic</td><td><code>prompt is too long: {prompt} tokens &gt; {limit} maximum</code></td><td>&quot;prompt is too long: 210000 tokens &gt; 200000 maximum&quot;</td></tr><tr><td>通用</td><td><code>{prompt} tokens &gt; {limit}</code></td><td>&quot;150000 tokens &gt; 128000&quot;</td></tr></tbody></table>
+<p><strong>缓存位置</strong>：<code>aiGateway._contextWindowCache</code>（Map&lt;modelId, number&gt;）</p>
+<h3 id="level-2-api-模型列表上报">Level 2：API 模型列表上报<a class="anchor" href="#level-2-api-模型列表上报" aria-label="锚点">#</a></h3>
+<p><strong>入口</strong>：<code>upstreamModelProbe.fetchUpstreamModels()</code></p>
+<p><strong>流程</strong>：</p>
+<ol><li>调用 provider 的 <code>/v1/models</code> 端点</li><li>解析响应中每个模型的 <code>context_window</code> / <code>context_length</code> / <code>max_context_length</code> 字段</li><li>缓存到 <code>_contextWindowCache</code></li></ol>
+<p><strong>已知局限</strong>：部分 provider（如 agnes）不返回此字段 → 回退到 Level 3+</p>
+<h3 id="level-3-环境变量覆盖">Level 3：环境变量覆盖<a class="anchor" href="#level-3-环境变量覆盖" aria-label="锚点">#</a></h3>
+<p><strong>变量</strong>：<code>KHY_CONTEXT_WINDOW</code>（单位：tokens）</p>
+<p><strong>用途</strong>：用户手动配置特定模型的上下文窗口</p>
+<h3 id="level-4-后台异步探测">Level 4：后台异步探测<a class="anchor" href="#level-4-后台异步探测" aria-label="锚点">#</a></h3>
+<p><strong>入口</strong>：<code>aiGatewayRoutingMethods.getModelContextWindowAsync(modelId, timeoutMs)</code></p>
+<p><strong>流程</strong>：</p>
+<ol><li>检查缓存（Level 1/2 已缓存 → 直接返回）</li><li>触发 <code>_resolveContextWindowAsync()</code> → 调用所有 adapter 的 <code>listModels()</code></li><li>轮询缓存直到有值或超时（默认 3 秒）</li><li>超时 → 返回 0（回退到 Level 5）</li></ol>
+<h3 id="level-5-保守回退">Level 5：保守回退<a class="anchor" href="#level-5-保守回退" aria-label="锚点">#</a></h3>
+<p><strong>常量</strong>：<code>UNKNOWN_MODEL_CONTEXT_WINDOW = 128000</code></p>
+<p><strong>原则</strong>：宁可写小不可写大</p>
+<ul><li>写小的代价：多压缩一次（可恢复）</li><li>写大的代价：请求超限 400/413（不可恢复）</li></ul>
+<h2 id="4-探测结果的消费方">4. 探测结果的消费方<a class="anchor" href="#4-探测结果的消费方" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>消费方</th><th>用途</th><th>读取方式</th></tr></thead><tbody><tr><td><code>setDynamicContextBudget()</code></td><td>计算工具结果大小限制</td><td><code>clamp(窗口×5%, 8K, 40K)</code></td></tr><tr><td><code>_resolveMinSafeIterations()</code></td><td>计算最小迭代数</td><td><code>clamp(窗口/20000, 5, 15)</code></td></tr><tr><td><code>contextCompressor.compress()</code></td><td>触发上下文压缩</td><td><code>累积token &gt; 窗口×70%</code></td></tr><tr><td>TUI 状态栏</td><td>显示 <code>ctx (Xk/Y)</code></td><td><code>getModelContextWindow()</code></td></tr><tr><td><code>contextPruner.pruneContext()</code></td><td>裁剪旧消息</td><td><code>contextWindowTokens</code></td></tr></tbody></table>
+<h2 id="5-探测时序">5. 探测时序<a class="anchor" href="#5-探测时序" aria-label="锚点">#</a></h2>
+<pre><code>用户发送消息
+    │
+    ├─ replSession 计算 loopMaxIterations
+    │   └─ _resolveMaxIterations(requested, contextWindow)
+    │       └─ getModelContextWindow(modelId)  ← Level 1→2→3→5
+    │
+    ├─ toolUseLoop 启动
+    │   ├─ _contextWindowForBudget = getModelContextWindow()  ← 同步缓存
+    │   ├─ getModelContextWindowAsync()  ← Level 4（3秒超时）
+    │   ├─ setDynamicContextBudget(contextWindow)  ← 设置工具结果预算
+    │   │
+    │   └─ 每轮 chat() 前
+    │       ├─ 检查累积 token &gt; 窗口×70%
+    │       └─ 超过 → contextCompressor.compress()
+    │
+    └─ chat() 请求
+        ├─ 成功 → 正常处理
+        └─ context_length 错误
+            ├─ parseContextOverflowTokens()  ← Level 1 探测
+            ├─ _cacheProbedContextWindow()  ← 缓存真实值
+            └─ 下次请求使用真实窗口</code></pre>
+<h2 id="6-零硬编码原则">6. 零硬编码原则<a class="anchor" href="#6-零硬编码原则" aria-label="锚点">#</a></h2>
+<ul><li>上下文窗口值<strong>不硬编码在代码中</strong>，必须来自 API 实际响应</li><li><strong>禁止模型名模式匹配推断</strong>——值必须从 API 响应中提取</li><li><code>UNKNOWN_MODEL_CONTEXT_WINDOW = 128000</code> 是<strong>最后回退</strong>，不是默认值</li><li>所有消费方通过 <code>getModelContextWindow()</code> 读取同一真源</li><li>探测结果缓存在 <code>_contextWindowCache</code>，同一模型只探测一次</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-071] 通道选择决策矩阵.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-071] 通道选择决策矩阵</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-072] 项目规范化总纲.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-072] 项目规范化总纲</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-072] 模型上下文窗口探测规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

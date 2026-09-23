@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: README.md -->
+<title>Opencode 项目配置 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../docs/index.html">首页</a><span class="sep">›</span>.opencode<span class="sep">›</span>Opencode 项目配置</div>
+      <header class="hero reveal"><h1>Opencode 项目配置</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#opencode-项目配置">Opencode 项目配置</a></li><li class="lvl-2"><a href="#文件说明">文件说明</a></li><li class="lvl-2"><a href="#自动读取的设计文档">自动读取的设计文档</a></li><li class="lvl-2"><a href="#mcp-服务器">MCP 服务器</a></li><li class="lvl-2"><a href="#使用方式">使用方式</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="opencode-项目配置">Opencode 项目配置<a class="anchor" href="#opencode-项目配置" aria-label="锚点">#</a></h1>
+<blockquote><p>本目录包含 opencode 在 khy-os 项目中的配置。</p></blockquote>
+<h2 id="文件说明">文件说明<a class="anchor" href="#文件说明" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>用途</th></tr></thead><tbody><tr><td><code>config.json</code></td><td>opencode MCP 服务器配置 + 项目上下文</td></tr></tbody></table>
+<h2 id="自动读取的设计文档">自动读取的设计文档<a class="anchor" href="#自动读取的设计文档" aria-label="锚点">#</a></h2>
+<p>opencode 启动时会自动读取以下文件获取项目上下文：</p>
+<ol><li><strong><code>CLAUDE.md</code></strong>（项目根目录）— 项目概述 + CC TUI 工作上下文</li><li><strong><code>services/backend/src/cli/tui/AGENTS.md</code></strong> — CC TUI 工程约束</li><li><strong><code>docs/03_DESIGN_设计/[DESIGN-ARCH-081]</code></strong> — 完整设计规范</li></ol>
+<h2 id="mcp-服务器">MCP 服务器<a class="anchor" href="#mcp-服务器" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>服务器</th><th>用途</th></tr></thead><tbody><tr><td><code>deepseek-eyes</code></td><td>图片分析、图表解读、OCR</td></tr></tbody></table>
+<h2 id="使用方式">使用方式<a class="anchor" href="#使用方式" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-comment"># 在 khy-os 目录启动 opencode</span>
+<span class="hljs-built_in">cd</span> D:\Portable\khy-os
+opencode
+
+<span class="hljs-comment"># opencode 会自动读取：</span>
+<span class="hljs-comment"># 1. 本目录的 config.json（MCP 配置）</span>
+<span class="hljs-comment"># 2. 项目根目录的 CLAUDE.md（项目上下文）</span>
+<span class="hljs-comment"># 3. AGENTS.md（工程约束）</span></code></pre>
+<hr>
+<p><em>最后更新：2026-09-09</em></p>
+      </article>
+      <nav class="pager"><span></span><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../";window.__KHY_CUR__=".opencode/README.html";</script>
+<script src="../docs/19_资产/site/nav-data.js"></script>
+<script src="../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

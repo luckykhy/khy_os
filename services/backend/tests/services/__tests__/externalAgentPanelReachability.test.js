@@ -12,8 +12,8 @@
  * 本测试复现裁剪处的可达性判决(不依赖 runToolUseLoop 全链),锁定契约。
  */
 
-const { getProfileTools } = require('../../tools/toolProfile');
-const ead = require('../externalAgentDirective');
+const { getProfileTools } = require('../../../src/tools/toolProfile.js');
+const ead = require('../../../src/services/externalAgentDirective.js');
 
 // 复现 toolUseLoop.js:1798 裁剪块的可达性决策(仅 Agent 相关部分)。
 function survivesTrim(toolName, env) {

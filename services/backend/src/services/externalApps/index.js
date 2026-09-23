@@ -12,5 +12,6 @@ exports.opencodeAdapter = require('../domain/network/externalApps/opencodeAdapte
 exports.reasonixAdapter = require('../domain/network/externalApps/reasonixAdapter.js');
 exports.tomlLite = require('../domain/network/externalApps/tomlLite.js');
 exports.ycodeAdapter = require('../domain/network/externalApps/ycodeAdapter.js');
+exports.zcodeAdapter = require('../domain/network/externalApps/zcodeAdapter.js');
 exports._shared = require('../domain/network/externalApps/_shared.js');
 

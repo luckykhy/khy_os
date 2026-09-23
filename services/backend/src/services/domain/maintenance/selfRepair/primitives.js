@@ -98,12 +98,12 @@ function _loadGuards() {
   }
   _guardsLoaded = true;
   try {
-    _leafGuard = require('../../../../../scripts/lib/leafContractGuard');
+    _leafGuard = require('../../../../../../../scripts/lib/leafContractGuard');
   } catch {
     _leafGuard = null;
   }
   try {
-    _modelGuard = require('../../../../../scripts/lib/modelHardcodingGuard');
+    _modelGuard = require('../../../../../../../scripts/lib/modelHardcodingGuard');
     let modelsMod = null;
     try {
       modelsMod = require('../../../../constants/models');

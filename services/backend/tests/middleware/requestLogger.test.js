@@ -1,19 +1,24 @@
 'use strict';
 
+// requestLogger 在模块顶层就 require 了 utils/logger,所以 mock 必须提升到
+// 文件顶部注册(jest.mock 在 SUT require 之后调用永远不生效 —— 这是本套件
+// 之前 0-call 失败的根因:真实 winston 在打日志,mock 从未被用到)。
+const mockLogger = {
+  info: jest.fn(),
+  warn: jest.fn(),
+};
+jest.mock('../../src/utils/logger', () => mockLogger);
+
 const requestLogger = require('../../src/middleware/requestLogger');
 
 describe('requestLogger middleware', () => {
   let mockReq;
   let mockRes;
   let mockNext;
-  let mockLogger;
 
   beforeEach(() => {
-    mockLogger = {
-      info: jest.fn(),
-      warn: jest.fn(),
-    };
-    jest.mock('../../src/utils/logger', () => mockLogger);
+    mockLogger.info.mockClear();
+    mockLogger.warn.mockClear();
 
     mockReq = {
       method: 'GET',
@@ -172,4 +177,3 @@ describe('requestLogger middleware', () => {
     expect(logMessage).toContain('ms');
   });
 });
-

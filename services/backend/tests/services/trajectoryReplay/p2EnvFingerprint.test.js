@@ -11,7 +11,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const envFingerprint = require('../../../src/services/trajectoryReplay/envFingerprint');
+const envFingerprint = require('../../../src/services/domain/trajectory/trajectoryReplay/envFingerprint.js');
 
 test('capture returns all required keys and a populated default node probe', () => {
   const fp = envFingerprint.capture();

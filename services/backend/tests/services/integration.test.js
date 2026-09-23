@@ -18,7 +18,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { SystemIntegration } = require('./systemIntegration');
+const { SystemIntegration } = require('../../src/services/systemIntegration.js');
 
 let passed = 0;
 let failed = 0;
@@ -81,7 +81,7 @@ async function testFullSystem() {
   assert(readResult.content.found >= 1, 'memory found');
 
   // Task scheduling
-  const scheduler = new (require('./taskScheduler').TaskScheduler)({ concurrency: 2 });
+  const scheduler = new (require('../../src/services/taskScheduler.js').TaskScheduler)({ concurrency: 2 });
   scheduler.add({
     id: 'int-test',
     execute: async () => 'ok',

@@ -1,11 +1,11 @@
 'use strict';
 /**
- * nativeUninstallWiring.test.js �?原生卸载 T2 层接线的源级 + 功能级断言(node:test)�?
+ * nativeUninstallWiring.test.js —原生卸载 T2 层接线的源级 + 功能级断言(node:test)�?
  *
- * 源级(readFileSync + regex,绕过 CLI/tool 的重依赖):�?device.js �?DeviceAppsTool �?
- * 真正 require �?uninstallRoute + nativeUninstaller,并在卸载路径上调�?decideUninstallRoute;
- * �?flagRegistry 声明�?KHY_DEVICE_APPS_NATIVE_UNINSTALL(�?KHY_DEVICE_APPS)�?
- * 功能�?tool._uninstallRouted �?T3 场景(无包管理�?+ 无原生命�?返回 refuse 而非猜删�?
+ * 源级(readFileSync + regex,绕过 CLI/tool 的重依赖):�?device.js — DeviceAppsTool �?
+ * 真正 require �?uninstallRoute + nativeUninstaller,并在卸载路径上调用?decideUninstallRoute;
+ * �?flagRegistry 声明�?KHY_DEVICE_APPS_NATIVE_UNINSTALL(�?KHY_DEVICE_APPS)�?
+ * 功能�?tool._uninstallRouted �?T3 场景(无包管理�?+ 无原生命�?返回 refuse 而非猜删�?
  */
 const fs = require('fs');
 const path = require('path');
@@ -15,8 +15,8 @@ const read = (rel) => fs.readFileSync(path.join(SRC, rel), 'utf8');
 describe('Native Uninstall Wiring', () => {
   test('device.js wires uninstall through decideUninstallRoute + native uninstaller', async () => {
       const s = read('cli/handlers/device.js');
-      expect(s).toMatch(/require\(['"]\.\.\/\.\.\/services\/deviceApps\/uninstallRoute['"]\)/);
-      expect(s).toMatch(/require\(['"]\.\.\/\.\.\/services\/deviceApps\/nativeUninstaller['"]\)/);
+      expect(s).toMatch(/require\(['"]\.\.\/\.\.\/services\/domain\/desktop\/deviceApps\/uninstallRoute(?:\.js)?['"]\)/);
+      expect(s).toMatch(/require\(['"]\.\.\/\.\.\/services\/domain\/desktop\/deviceApps\/nativeUninstaller(?:\.js)?['"]\)/);
       expect(s).toMatch(/decideUninstallRoute\(/);
       expect(s).toMatch(/_handleUninstallRouted/);
       // T3 honest-refusal path present.
@@ -25,8 +25,8 @@ describe('Native Uninstall Wiring', () => {
 
   test('DeviceAppsTool wires uninstall through the router + native uninstaller', async () => {
       const s = read('tools/DeviceAppsTool/index.js');
-      expect(s).toMatch(/require\(['"]\.\.\/\.\.\/services\/deviceApps\/uninstallRoute['"]\)/);
-      expect(s).toMatch(/require\(['"]\.\.\/\.\.\/services\/deviceApps\/nativeUninstaller['"]\)/);
+      expect(s).toMatch(/require\(['"]\.\.\/\.\.\/services\/domain\/desktop\/deviceApps\/uninstallRoute(?:\.js)?['"]\)/);
+      expect(s).toMatch(/require\(['"]\.\.\/\.\.\/services\/domain\/desktop\/deviceApps\/nativeUninstaller(?:\.js)?['"]\)/);
       expect(s).toMatch(/_uninstallRouted/);
       expect(s).toMatch(/tier: 'refuse'/);
   });
@@ -42,7 +42,7 @@ describe('Native Uninstall Wiring', () => {
       const Tool = mod.DeviceAppsTool || (mod.constructor && mod.constructor.name === 'DeviceAppsTool' && mod.constructor);
       expect(Tool).toBeTruthy();
       const tool = new Tool();
-      // mgr unavailable (no pm), env forces native off �?both routes closed �?refuse.
+      // mgr unavailable (no pm), env forces native off →both routes closed →refuse.
       const res = await tool._uninstallRouted('Some Random App', false, { available: false }, { KHY_DEVICE_APPS_NATIVE_UNINSTALL: '0' });
       expect(res.success).toBe(false);
       expect(res.tier).toBe('refuse');

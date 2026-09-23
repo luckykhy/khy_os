@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [OPS-MAN-208] OCR 兜底族总纲.md -->
+<title>[OPS-MAN-208] OCR 兜底族总纲 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>OPS-MAN<span class="sep">›</span>[OPS-MAN-208] OCR 兜底族总纲</div>
+      <header class="hero reveal"><h1>[OPS-MAN-208] OCR 兜底族总纲</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-208-ocr-兜底族总纲">[OPS-MAN-208] OCR 兜底族总纲</a></li><li class="lvl-2"><a href="#0-一分钟导读-按意图分流">0. 一分钟导读（按意图分流）</a></li><li class="lvl-2"><a href="#1-三组全景">1. 三组全景</a></li><li class="lvl-2"><a href="#2-各组详情">2. 各组详情</a></li><li class="lvl-3"><a href="#组-1-兜底能力与质量边界-8-篇">组 1 · 兜底能力与质量边界（8 篇）</a></li><li class="lvl-3"><a href="#组-2-告知与透明度-4-篇">组 2 · 告知与透明度（4 篇）</a></li><li class="lvl-3"><a href="#组-3-纠正与降噪-5-篇">组 3 · 纠正与降噪（5 篇）</a></li><li class="lvl-2"><a href="#3-代码耦合清单-dr7-以下编号禁移动-重命名">3. 代码耦合清单（DR7：以下编号禁移动/重命名）</a></li><li class="lvl-2"><a href="#4-scope-裁决-依据-mgmt-std-008-2-2">4. Scope 裁决（依据 `[MGMT-STD-008]` §2.2）</a></li><li class="lvl-2"><a href="#5-状态">5. 状态</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-208-ocr-兜底族总纲">[OPS-MAN-208] OCR 兜底族总纲<a class="anchor" href="#ops-man-208-ocr-兜底族总纲" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：本文件是 <code>docs/07_OPS_运维/</code> 中 <strong>OCR 兜底族</strong>（纯文本模型读图的兜底链路）的唯一导航入口与 scope 裁决真源。<br>本族共 <strong>17 篇</strong>，按职能分 <strong>3 组</strong>（§1–§2）——即原「17 → 3」的收敛口径：<strong>不合并文档，而是收敛为一个入口 + 三个职能组</strong>。<br><strong>硬约束（DR7）</strong>：<code>127</code>/<code>138</code>/<code>140</code>/<code>148</code> 被 <code>services/backend/src/services/flagRegistry.js</code> 引用，<br><code>132</code>/<code>142</code>/<code>144</code>/<code>148</code> 被 <code>services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code> 引用，<br><code>126</code> 见于 <code>scripts/ci/debt-ledger.json</code>。<strong>这些编号被代码当标识用，禁止移动或重命名</strong>；本批次只加导航。<br><strong>适用边界</strong>：只覆盖「OCR 兜底」的用户可见行为与诚实性约束；OCR 引擎本身的能力与选型不在本族。</p></blockquote>
+<h2 id="0-一分钟导读-按意图分流">0. 一分钟导读（按意图分流）<a class="anchor" href="#0-一分钟导读-按意图分流" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>你想做什么</th><th>直接读</th></tr></thead><tbody><tr><td>查 OCR <strong>兜底能做到什么、边界在哪</strong></td><td>组 1：<code>104</code> <code>109</code> <code>111</code> <code>112</code> <code>115</code> <code>116</code> <code>118</code> <code>120</code></td></tr><tr><td>查<strong>怎么告诉用户「用了 OCR」</strong></td><td>组 2：<code>124</code> <code>126</code> <code>127</code> <code>132</code></td></tr><tr><td>查<strong>模型谎称没收到图怎么纠正</strong></td><td>组 3：<code>138</code> <code>140</code></td></tr><tr><td>查<strong>怎么减少「心灵噪音」</strong>（失败墙/闭合/去重）</td><td>组 3：<code>142</code> <code>144</code> <code>148</code></td></tr></tbody></table>
+<h2 id="1-三组全景">1. 三组全景<a class="anchor" href="#1-三组全景" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>组</th><th>职能</th><th>成员（编号）</th><th>篇数</th></tr></thead><tbody><tr><td><strong>1</strong></td><td><strong>兜底能力与质量边界</strong>——OCR 能兜住什么、哪些情况必须诚实告知</td><td><code>104</code> <code>109</code> <code>111</code> <code>112</code> <code>115</code> <code>116</code> <code>118</code> <code>120</code></td><td>8</td></tr><tr><td><strong>2</strong></td><td><strong>告知与透明度</strong>——成功路径上如何让用户知道用了 OCR</td><td><code>124</code> <code>126</code> <code>127</code> <code>132</code></td><td>4</td></tr><tr><td><strong>3</strong></td><td><strong>纠正与降噪</strong>——模型撒谎的确定性纠正 + 减少用户心理负担</td><td><code>138</code> <code>140</code> <code>142</code> <code>144</code> <code>148</code></td><td>5</td></tr></tbody></table>
+<h2 id="2-各组详情">2. 各组详情<a class="anchor" href="#2-各组详情" aria-label="锚点">#</a></h2>
+<h3 id="组-1-兜底能力与质量边界-8-篇">组 1 · 兜底能力与质量边界（8 篇）<a class="anchor" href="#组-1-兜底能力与质量边界-8-篇" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>编号</th><th>职责</th></tr></thead><tbody><tr><td><code>104</code></td><td>低置信诚实告诫——置信度不足时必须如实说</td></tr><tr><td><code>109</code></td><td>覆盖率诚实告诫——覆盖率不足时不得假装全读到</td></tr><tr><td><code>111</code></td><td>截断诚实告诫——结果被截断时须声明</td></tr><tr><td><code>112</code></td><td>语言包可用性诚实告诫——语言包缺失时须声明</td></tr><tr><td><code>115</code></td><td>方向自动校正（兜底能力增强）</td></tr><tr><td><code>116</code></td><td>低分辨率自动放大（兜底能力增强）</td></tr><tr><td><code>118</code></td><td>视觉描述级联<strong>全失败</strong>时的 OCR 兜底底线解耦</td></tr><tr><td><code>120</code></td><td>剥图必留痕最小底线与 OCR 功能门解耦</td></tr></tbody></table>
+<blockquote><p>前四篇（104/109/111/112）是<strong>同一类「诚实告诫」</strong>的四个不同触发面（置信度 / 覆盖率 / 截断 / 语言包），<br><strong>不合并</strong>：触发条件与判据各自独立，合并会丢失判据边界。</p></blockquote>
+<h3 id="组-2-告知与透明度-4-篇">组 2 · 告知与透明度（4 篇）<a class="anchor" href="#组-2-告知与透明度-4-篇" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>编号</th><th>职责</th></tr></thead><tbody><tr><td><code>124</code></td><td>OCR 成功路径向用户<strong>透明告知</strong>用了 OCR</td></tr><tr><td><code>126</code></td><td>成功路径的<strong>确定性脚注</strong>兜底告知</td></tr><tr><td><code>127</code></td><td>救援网成功时的<strong>实时状态</strong>告知已降级到 OCR（<strong>代码引用</strong>：flagRegistry）</td></tr><tr><td><code>132</code></td><td>prep 期 OCR 兜底<strong>非 verbose</strong> 实时状态告知（<strong>代码引用</strong>：aiGatewayGenerateMethod）</td></tr></tbody></table>
+<blockquote><p>124/126 是「事后告知」，127/132 是「过程实时状态」，两者读者与时机不同，<strong>不合并</strong>。</p></blockquote>
+<h3 id="组-3-纠正与降噪-5-篇">组 3 · 纠正与降噪（5 篇）<a class="anchor" href="#组-3-纠正与降噪-5-篇" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>编号</th><th>职责</th></tr></thead><tbody><tr><td><code>138</code></td><td>空 OCR 剥图路径下模型仍谎称没收到图的<strong>确定性纠正脚注</strong>（<strong>代码引用</strong>：flagRegistry）</td></tr><tr><td><code>140</code></td><td>OCR 成功读出但模型仍谎称没收到图的<strong>确定性纠正脚注</strong>（<strong>代码引用</strong>：flagRegistry）</td></tr><tr><td><code>142</code></td><td>失败墙推迟到 OCR 结果已知后，减少心灵噪音（<strong>代码引用</strong>：aiGatewayGenerateMethod）</td></tr><tr><td><code>144</code></td><td>describe-fail 到 OCR 成功的<strong>用户可见闭合</strong>，减少心灵噪音（<strong>代码引用</strong>：aiGatewayGenerateMethod）</td></tr><tr><td><code>148</code></td><td>Site1-prep 状态与 OCR 成功闭合的<strong>跨层去重</strong>，减少心灵噪音（<strong>代码引用</strong>：两处）</td></tr></tbody></table>
+<blockquote><p>138/140 是「模型撒谎的纠正」，142/144/148 是「减少用户心理负担」，职能不同但同属「失败态体验」，归为一组。</p></blockquote>
+<h2 id="3-代码耦合清单-dr7-以下编号禁移动-重命名">3. 代码耦合清单（DR7：以下编号禁移动/重命名）<a class="anchor" href="#3-代码耦合清单-dr7-以下编号禁移动-重命名" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>编号</th><th>引用位置</th></tr></thead><tbody><tr><td><code>127</code></td><td><code>services/backend/src/services/flagRegistry.js</code></td></tr><tr><td><code>138</code></td><td><code>services/backend/src/services/flagRegistry.js</code></td></tr><tr><td><code>140</code></td><td><code>services/backend/src/services/flagRegistry.js</code></td></tr><tr><td><code>148</code></td><td><code>services/backend/src/services/flagRegistry.js</code>、<code>services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></td></tr><tr><td><code>132</code></td><td><code>services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></td></tr><tr><td><code>142</code></td><td><code>services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></td></tr><tr><td><code>144</code></td><td><code>services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></td></tr><tr><td><code>126</code></td><td><code>scripts/ci/debt-ledger.json</code></td></tr></tbody></table>
+<h2 id="4-scope-裁决-依据-mgmt-std-008-2-2">4. Scope 裁决（依据 <code>[MGMT-STD-008]</code> §2.2）<a class="anchor" href="#4-scope-裁决-依据-mgmt-std-008-2-2" aria-label="锚点">#</a></h2>
+<ul><li><strong>四篇诚实告诫不合并</strong>（104/109/111/112）：触发面互斥，判据独立。</li><li><strong>124 与 126 不合并</strong>：一个是透明告知策略，一个是脚注兜底实现，层次不同。</li><li>本族与<strong>还原子系统</strong>（总纲 <code>[OPS-MAN-207]</code>）<strong>边界清晰</strong>：本族管读图兜底，还原族管离机还原，互不覆盖。</li><li>本族 17 篇<strong>全部手写</strong>（无 <code>--gen-doc</code> 生成器），可直接编辑；已统一加「隶属」头。</li></ul>
+<h2 id="5-状态">5. 状态<a class="anchor" href="#5-状态" aria-label="锚点">#</a></h2>
+<ul><li>全部 17 篇：<strong>在产</strong>。</li><li>本族<strong>禁止移动/重命名</strong>（DR7）；收敛方式为「一个入口 + 三个职能组」，非物理合并。</li></ul>
+<hr>
+<p><em>本总纲由 <code>[MGMT-PLAN-009] 文档精简与结构化整理方案</code> B5 批次产出；各子篇已加「隶属」头指向本文件。</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/07_OPS_运维/OPS-MAN/[OPS-MAN-207] 还原子系统总纲.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-207] 还原子系统总纲</div></a><a class="next" href="../../../docs/07_OPS_运维/OPS-MAN/[OPS-MAN-209] AI 供应商接入族总纲.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-209] AI 供应商接入族总纲</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/07_OPS_运维/OPS-MAN/[OPS-MAN-208] OCR 兜底族总纲.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

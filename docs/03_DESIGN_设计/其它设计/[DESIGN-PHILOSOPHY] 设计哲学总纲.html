@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-PHILOSOPHY] 设计哲学总纲.md -->
+<title>Khy-OS 设计哲学总纲 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>其它设计<span class="sep">›</span>Khy-OS 设计哲学总纲</div>
+      <header class="hero reveal"><h1>Khy-OS 设计哲学总纲</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-设计哲学总纲">Khy-OS 设计哲学总纲</a></li><li class="lvl-2"><a href="#1-防御纵深-defense-in-depth">1. 防御纵深 (Defense-in-depth)</a></li><li class="lvl-3"><a href="#一句话定义">一句话定义</a></li><li class="lvl-3"><a href="#实例-chaterrorguard-三层防御">实例: chatErrorGuard 三层防御</a></li><li class="lvl-3"><a href="#适用场景">适用场景</a></li><li class="lvl-3"><a href="#反模式警示">反模式警示</a></li><li class="lvl-2"><a href="#2-纯叶子模式-pure-leaf">2. 纯叶子模式 (Pure Leaf)</a></li><li class="lvl-3"><a href="#一句话定义-2">一句话定义</a></li><li class="lvl-3"><a href="#契约模板">契约模板</a></li><li class="lvl-3"><a href="#四要素">四要素</a></li><li class="lvl-3"><a href="#机器守卫">机器守卫</a></li><li class="lvl-2"><a href="#3-自愈优先于报错-self-heal-error">3. 自愈优先于报错 (Self-heal &gt; Error)</a></li><li class="lvl-3"><a href="#一句话定义-3">一句话定义</a></li><li class="lvl-3"><a href="#错误分类决策树">错误分类决策树</a></li><li class="lvl-3"><a href="#瞬时-vs-永久判定">瞬时 vs 永久判定</a></li><li class="lvl-3"><a href="#自愈中间件">自愈中间件</a></li><li class="lvl-2"><a href="#4-适配器网关-断路器">4. 适配器网关 + 断路器</a></li><li class="lvl-3"><a href="#一句话定义-4">一句话定义</a></li><li class="lvl-3"><a href="#架构">架构</a></li><li class="lvl-3"><a href="#断路器状态机">断路器状态机</a></li><li class="lvl-2"><a href="#5-显式层级-单向依赖">5. 显式层级 + 单向依赖</a></li><li class="lvl-3"><a href="#一句话定义-5">一句话定义</a></li><li class="lvl-3"><a href="#l0-l6-层级规范">L0-L6 层级规范</a></li><li class="lvl-3"><a href="#依赖规则">依赖规则</a></li><li class="lvl-2"><a href="#6-错误归一-诚实措辞">6. 错误归一 + 诚实措辞</a></li><li class="lvl-3"><a href="#一句话定义-6">一句话定义</a></li><li class="lvl-3"><a href="#标准错误契约">标准错误契约</a></li><li class="lvl-3"><a href="#错误码表">错误码表</a></li><li class="lvl-2"><a href="#7-配置门控-字节回退">7. 配置门控 + 字节回退</a></li><li class="lvl-3"><a href="#一句话定义-7">一句话定义</a></li><li class="lvl-3"><a href="#模式">模式</a></li><li class="lvl-3"><a href="#flag-注册">Flag 注册</a></li><li class="lvl-3"><a href="#适用场景-2">适用场景</a></li><li class="lvl-2"><a href="#设计哲学之间的关系">设计哲学之间的关系</a></li><li class="lvl-2"><a href="#新增功能检查清单">新增功能检查清单</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-设计哲学总纲">Khy-OS 设计哲学总纲<a class="anchor" href="#khy-os-设计哲学总纲" aria-label="锚点">#</a></h1>
+<blockquote><p>文档状态: <strong>定稿</strong> | 适用范围: 全仓库 | 强制执行: 机器守卫 + 代码审查</p></blockquote>
+<hr>
+<h2 id="1-防御纵深-defense-in-depth">1. 防御纵深 (Defense-in-depth)<a class="anchor" href="#1-防御纵深-defense-in-depth" aria-label="锚点">#</a></h2>
+<h3 id="一句话定义">一句话定义<a class="anchor" href="#一句话定义" aria-label="锚点">#</a></h3>
+<p><strong>不依赖单一防护点——每层都假设上层可能失效。</strong></p>
+<h3 id="实例-chaterrorguard-三层防御">实例: chatErrorGuard 三层防御<a class="anchor" href="#实例-chaterrorguard-三层防御" aria-label="锚点">#</a></h3>
+<pre><code>JSON.parse 失败
+  ↓
+Layer 1: try/catch 捕获
+  ↓
+Layer 2: safeJsonParse 修复截断 JSON
+  ↓
+Layer 3: chatErrorGuard 兜底,标记 retryable
+  ↓
+toolUseLoopCore 检测 retryable → 自动重试
+  ↓
+重试仍失败 → 诚实返回错误 + 继续提示</code></pre>
+<h3 id="适用场景">适用场景<a class="anchor" href="#适用场景" aria-label="锚点">#</a></h3>
+<ul><li>所有外部输入(JSON、SSE、用户输入)的解析</li><li>网络调用、子进程调用</li><li>任何可能&quot;万一&quot;失败的地方</li></ul>
+<h3 id="反模式警示">反模式警示<a class="anchor" href="#反模式警示" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 错误: 只靠一层 try/catch</span>
+<span class="hljs-keyword">try</span> { <span class="hljs-keyword">return</span> <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(str); } <span class="hljs-keyword">catch</span> { <span class="hljs-keyword">return</span> {}; }
+
+<span class="hljs-comment">// 正确: 多层兜底</span>
+<span class="hljs-keyword">try</span> { <span class="hljs-keyword">return</span> <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(str); }
+<span class="hljs-keyword">catch</span> {
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">safeJsonParse</span>(str, {}); <span class="hljs-comment">// 修复后再试</span>
+}</code></pre>
+<hr>
+<h2 id="2-纯叶子模式-pure-leaf">2. 纯叶子模式 (Pure Leaf)<a class="anchor" href="#2-纯叶子模式-pure-leaf" aria-label="锚点">#</a></h2>
+<h3 id="一句话定义-2">一句话定义<a class="anchor" href="#一句话定义-2" aria-label="锚点">#</a></h3>
+<p><strong>函数只做计算,不做副作用;零 IO、确定性、绝不抛。</strong></p>
+<h3 id="契约模板">契约模板<a class="anchor" href="#契约模板" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-meta">&#x27;use strict&#x27;</span>;
+
+<span class="hljs-comment">/**
+ * moduleName.js — 一句话职责。
+ *
+ * 契约 (CONTRACT):零 IO、确定性、绝不抛、单一真源、可单测。
+ *   env 门控 KHY_XXX(默认开,门关即字节回退)。
+ */</span></code></pre>
+<h3 id="四要素">四要素<a class="anchor" href="#四要素" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>要素</th><th>含义</th><th>检测方式</th></tr></thead><tbody><tr><td>零 IO</td><td>不碰 fs/网络/子进程</td><td><code>check-leaf-contract.js</code> 机器强制</td></tr><tr><td>确定性</td><td>同输入同输出,无 <code>Date.now()</code>/<code>Math.random()</code></td><td>测试 + 人工审查</td></tr><tr><td>绝不抛</td><td>坏输入→安全默认(<code>null</code>/<code>{ok:false}</code>/fallback)</td><td>测试覆盖</td></tr><tr><td>可单测</td><td>无隐藏状态,纯入参出参</td><td><code>node:test</code></td></tr></tbody></table>
+<h3 id="机器守卫">机器守卫<a class="anchor" href="#机器守卫" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">node scripts/ci/check-leaf-contract.js --changed</code></pre>
+<hr>
+<h2 id="3-自愈优先于报错-self-heal-error">3. 自愈优先于报错 (Self-heal &gt; Error)<a class="anchor" href="#3-自愈优先于报错-self-heal-error" aria-label="锚点">#</a></h2>
+<h3 id="一句话定义-3">一句话定义<a class="anchor" href="#一句话定义-3" aria-label="锚点">#</a></h3>
+<p><strong>瞬时错误自己吞掉重试,永久错误诚实报告+可操作诊断。</strong></p>
+<h3 id="错误分类决策树">错误分类决策树<a class="anchor" href="#错误分类决策树" aria-label="锚点">#</a></h3>
+<pre><code>错误发生
+  ↓
+是瞬时的吗? ─── 是 → 重试(有界) → 成功 → 用户无感知
+  ↓                              → 失败 → 降级/诚实报错
+  否
+  ↓
+诚实报错 + 具体诊断 + 继续提示</code></pre>
+<h3 id="瞬时-vs-永久判定">瞬时 vs 永久判定<a class="anchor" href="#瞬时-vs-永久判定" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>瞬时(可重试)</th><th>永久(诚实报错)</th></tr></thead><tbody><tr><td>网络</td><td>ECONNRESET, ETIMEDOUT, socket hang</td><td>无效 URL, DNS 永久失败</td></tr><tr><td>JSON</td><td>截断 fragment, 畸形 JSON</td><td>协议不兼容, 返回非 JSON</td></tr><tr><td>服务</td><td>500/502/503 瞬时抖动</td><td>401 凭据失效, 403 权限不足</td></tr><tr><td>工具</td><td>超时, 临时 IO 错误</td><td>参数错误, 依赖缺失</td></tr></tbody></table>
+<h3 id="自愈中间件">自愈中间件<a class="anchor" href="#自愈中间件" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> { withSelfHealing } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./gateway/selfHealingWrapper&#x27;</span>);
+<span class="hljs-keyword">const</span> resilientFetch = <span class="hljs-title function_">withSelfHealing</span>(fetch, { <span class="hljs-attr">maxRetries</span>: <span class="hljs-number">1</span> });</code></pre>
+<hr>
+<h2 id="4-适配器网关-断路器">4. 适配器网关 + 断路器<a class="anchor" href="#4-适配器网关-断路器" aria-label="锚点">#</a></h2>
+<h3 id="一句话定义-4">一句话定义<a class="anchor" href="#一句话定义-4" aria-label="锚点">#</a></h3>
+<p><strong>外部依赖抽象为可替换适配器,故障自动隔离+恢复。</strong></p>
+<h3 id="架构">架构<a class="anchor" href="#架构" aria-label="锚点">#</a></h3>
+<pre><code>Request → Gateway → Adapter Pool
+                     ├── Claude ──── 健康 ✅
+                     ├── OpenAI ──── 冷却中 ⏸
+                     ├── Ollama ──── 断开 ❌
+                     └── Fallback ── 就绪 ✅</code></pre>
+<h3 id="断路器状态机">断路器状态机<a class="anchor" href="#断路器状态机" aria-label="锚点">#</a></h3>
+<pre><code>CLOSED(正常) → 连续失败 5 次 → OPEN(断开)
+                                      ↓
+                               30s 后 → HALF_OPEN(探测)
+                                      ↓
+                          成功 → CLOSE    失败 → OPEN</code></pre>
+<hr>
+<h2 id="5-显式层级-单向依赖">5. 显式层级 + 单向依赖<a class="anchor" href="#5-显式层级-单向依赖" aria-label="锚点">#</a></h2>
+<h3 id="一句话定义-5">一句话定义<a class="anchor" href="#一句话定义-5" aria-label="锚点">#</a></h3>
+<p><strong>每层只调用下层,绝不反向;层级边界机器强制。</strong></p>
+<h3 id="l0-l6-层级规范">L0-L6 层级规范<a class="anchor" href="#l0-l6-层级规范" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>层</th><th>目录</th><th>职责</th></tr></thead><tbody><tr><td>L0</td><td><code>kernel/</code></td><td>手写 OS 内核</td></tr><tr><td>L1</td><td><code>platform/</code></td><td>Python 启动器</td></tr><tr><td>L2</td><td><code>services/</code></td><td>Node 业务逻辑</td></tr><tr><td>L3</td><td><code>apps/</code></td><td>管理前端</td></tr><tr><td>L4</td><td><code>software/</code></td><td>内置应用(khyquant)</td></tr><tr><td>L5</td><td><code>extensions/</code></td><td>可卸载拓展</td></tr><tr><td>L6</td><td><code>tools/</code></td><td>开发工具</td></tr></tbody></table>
+<h3 id="依赖规则">依赖规则<a class="anchor" href="#依赖规则" aria-label="锚点">#</a></h3>
+<ul><li>只能向下依赖(L2 → L1 → L0)</li><li>不能向上依赖(L0 不依赖 L1)</li><li>不能跨层(L2 不直接依赖 L4)</li></ul>
+<hr>
+<h2 id="6-错误归一-诚实措辞">6. 错误归一 + 诚实措辞<a class="anchor" href="#6-错误归一-诚实措辞" aria-label="锚点">#</a></h2>
+<h3 id="一句话定义-6">一句话定义<a class="anchor" href="#一句话定义-6" aria-label="锚点">#</a></h3>
+<p><strong>内部错误归一为统一形状,对外展示用户可行动的诊断。</strong></p>
+<h3 id="标准错误契约">标准错误契约<a class="anchor" href="#标准错误契约" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">{
+  <span class="hljs-attr">ok</span>: <span class="hljs-literal">false</span>,
+  <span class="hljs-attr">error</span>: {
+    <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;E01&#x27;</span>,          <span class="hljs-comment">// 稳定错误码</span>
+    <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;parse_error&#x27;</span>,  <span class="hljs-comment">// 分类</span>
+    <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;具体错误:...&#x27;</span>, <span class="hljs-comment">// 用户可读</span>
+    <span class="hljs-attr">retryable</span>: <span class="hljs-literal">true</span>,      <span class="hljs-comment">// 是否可重试</span>
+    cause?: <span class="hljs-title class_">Error</span>,        <span class="hljs-comment">// 原始错误(调试用)</span>
+  }
+}</code></pre>
+<h3 id="错误码表">错误码表<a class="anchor" href="#错误码表" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>码</th><th>含义</th><th>可重试</th></tr></thead><tbody><tr><td>E01</td><td>模型静默空响应</td><td>✅</td></tr><tr><td>E02</td><td>内容安全拦截</td><td>❌</td></tr><tr><td>E03</td><td>上下文溢出</td><td>❌</td></tr><tr><td>E04</td><td>工具执行崩溃</td><td>❌</td></tr><tr><td>E05</td><td>依赖缺失</td><td>✅</td></tr><tr><td>E06</td><td>网络/服务端</td><td>✅</td></tr><tr><td>E07</td><td>权限拦截</td><td>❌</td></tr><tr><td>E08</td><td>格式校验失败</td><td>✅</td></tr></tbody></table>
+<hr>
+<h2 id="7-配置门控-字节回退">7. 配置门控 + 字节回退<a class="anchor" href="#7-配置门控-字节回退" aria-label="锚点">#</a></h2>
+<h3 id="一句话定义-7">一句话定义<a class="anchor" href="#一句话定义-7" aria-label="锚点">#</a></h3>
+<p><strong>新功能默认关闭,开启即生效,关闭即逐字节回退到改动前。</strong></p>
+<h3 id="模式">模式<a class="anchor" href="#模式" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 默认开,仅显式 falsy 关闭</span>
+<span class="hljs-keyword">if</span> (flagRegistry.<span class="hljs-title function_">isFlagEnabled</span>(<span class="hljs-string">&#x27;KHY_NEW_FEATURE&#x27;</span>, process.<span class="hljs-property">env</span>)) {
+  <span class="hljs-comment">// 新功能(增量)</span>
+}
+<span class="hljs-comment">// 门关时,下面代码完全不执行 = 字节回退</span></code></pre>
+<h3 id="flag-注册">Flag 注册<a class="anchor" href="#flag-注册" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// flagRegistry.js</span>
+<span class="hljs-attr">KHY_NEW_FEATURE</span>: { <span class="hljs-attr">mode</span>: <span class="hljs-string">&#x27;default-on&#x27;</span>, <span class="hljs-attr">off</span>: <span class="hljs-string">&#x27;CANON&#x27;</span>, <span class="hljs-attr">default</span>: <span class="hljs-literal">true</span> }</code></pre>
+<h3 id="适用场景-2">适用场景<a class="anchor" href="#适用场景-2" aria-label="锚点">#</a></h3>
+<ul><li>所有新功能上线</li><li>高风险重构</li><li>A/B 测试</li><li>灰度发布</li></ul>
+<hr>
+<h2 id="设计哲学之间的关系">设计哲学之间的关系<a class="anchor" href="#设计哲学之间的关系" aria-label="锚点">#</a></h2>
+<pre><code>                    ┌─────────────────┐
+                    │  配置门控 + 字节回退  │
+                    │  (安全上线新能力)    │
+                    └────────┬────────┘
+                             ↓
+                    ┌─────────────────┐
+                    │  显式层级 + 单向依赖  │
+                    │  (可控的复杂度)      │
+                    └────────┬────────┘
+                             ↓
+         ┌───────────────────┼───────────────────┐
+         ↓                   ↓                   ↓
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│  纯叶子模式      │ │  防御纵深        │ │  自愈优先于报错  │
+│  (可测、可复用)  │ │  (多层保护)      │ │  (瞬时自愈)     │
+└─────────────────┘ └─────────────────┘ └─────────────────┘
+         ↓                   ↓                   ↓
+         └───────────────────┼───────────────────┘
+                             ↓
+                    ┌─────────────────┐
+                    │  错误归一 + 诚实措辞  │
+                    │  (统一的对外契约)    │
+                    └─────────────────┘
+                             ↓
+                    ┌─────────────────┐
+                    │  适配器网关 + 断路器  │
+                    │  (外部依赖可控)      │
+                    └─────────────────┘</code></pre>
+<hr>
+<h2 id="新增功能检查清单">新增功能检查清单<a class="anchor" href="#新增功能检查清单" aria-label="锚点">#</a></h2>
+<ul><li>[ ] 是否使用了纯叶子 + 门控 + 字节回退?</li><li>[ ] 是否有多层错误处理(防御纵深)?</li><li>[ ] 瞬时错误是否有自愈机制?</li><li>[ ] 永久错误是否有诚实诊断?</li><li>[ ] 是否遵循层级依赖方向?</li><li>[ ] 是否通过了 <code>check:layout</code> + <code>check:leaf-contract</code>?</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/其它设计/[DESIGN-OUT-001] 输出结构规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-OUT-001] 输出结构规范</div></a><a class="next" href="../../../docs/03_DESIGN_设计/其它设计/[DESIGN-PRIV-001] 数据隐私规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-PRIV-001] 数据隐私规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/其它设计/[DESIGN-PHILOSOPHY] 设计哲学总纲.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

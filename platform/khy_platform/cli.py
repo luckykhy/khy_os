@@ -2444,6 +2444,32 @@ def main():
     """
     raw_args = sys.argv[1:]
 
+    # Windows: pin this console session to UTF-8 (codepage 65001) before any
+    # output. The Node children inherit the console codepage, so both the
+    # Python launcher and the backend speak one consistent encoding — this
+    # fixes the GBK/UTF-8 mixed-mojibake seen in the CLI/daemon logs.
+    # Best-effort: no-op on redirected pipes, silent on failure.
+    if sys.platform == "win32":
+        try:
+            import ctypes
+
+            _kernel32 = ctypes.windll.kernel32
+            # Both calls return the PREVIOUS codepage, or 0 when there is no
+            # console to change. A non-zero return therefore proves the console
+            # really is on UTF-8 now.
+            _prev_out = _kernel32.SetConsoleOutputCP(65001)
+            _prev_in = _kernel32.SetConsoleCP(65001)
+            if _prev_out and _prev_in:
+                # Hand the fact down to the Node child. The console codepage is
+                # shared process-wide, so the backend's own `chcp.com` spawn is
+                # pure duplication — and it is a *synchronous* CreateProcess on
+                # its module top level, measured at 230-475ms of dead time on
+                # the startup path. The backend skips it when this is set and
+                # keeps its legacy fallback for direct `node bin/khy.js` runs.
+                os.environ["KHY_CONSOLE_CP"] = "65001"
+        except Exception:
+            pass
+
     # khy postinstall — install-phase cross-language runtime self-heal.
     # Re-triggerable on demand; also runs implicitly on first launch.
     if raw_args and raw_args[0].lower() in {"postinstall", "post-install"}:

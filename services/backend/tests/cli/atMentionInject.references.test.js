@@ -1,14 +1,14 @@
 'use strict';
 
 /**
- * atMentionInject.references.test.js �?integration tests for the References
+ * atMentionInject.references.test.js — integration tests for the References
  * half of atMentionInject via jest.mock: `@alias` mentions inject content from
  * the reference root, and absolute-path mentions refused by the boundary are
  * NOT inlined (was: silent inline, a permission bypass).
  *
  * referencesService is mocked so the boundary decision is fully deterministic
  * regardless of host platform path semantics (Windows drive-letter mentions
- * like `@D:\…` never match the `@[\w./-]+` token regex anyway �?a pre-existing
+ * like `@D:\…` never match the `@[\w./-]+` token regex anyway �?a pre-existing
  * platform quirk, not part of this feature).
  */
 
@@ -16,8 +16,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-jest.mock('../services/referencesService', () => {
-  const actual = jest.requireActual('../services/referencesService');
+jest.mock('../../src/services/referencesService.js', () => {
+  const actual = jest.requireActual('../../src/services/referencesService.js');
   return {
     ...actual,
     resolveMentionAbs: jest.fn(),
@@ -25,9 +25,9 @@ jest.mock('../services/referencesService', () => {
   };
 });
 
-const svc = require('../services/referencesService');
+const svc = require('../../src/services/referencesService.js');
 
-const { resolveAtMentions } = require('./atMentionInject');
+const { resolveAtMentions } = require('../../src/cli/atMentionInject.js');
 
 describe('atMentionInject + references', () => {
   let tmp;
@@ -78,13 +78,13 @@ describe('atMentionInject + references', () => {
   });
 
   it('does NOT inline an absolute path the boundary refused', () => {
-    // resolveMentionAbs returns null (no alias) �?falls to absolute-path branch
+    // resolveMentionAbs returns null (no alias) �?falls to absolute-path branch
     svc.resolveMentionAbs.mockReturnValue(null);
     svc.isWithinBoundary.mockReturnValue(false); // outside boundary
-    // mention �?token 正则�?`@[\w./-]+`，抓不到盘符路径（`:` �?`\` 都不在字符类里）�?    // 直接�?path.join(tmp, �? 拼出�?`C:\…` �?Windows 上会被截�?`@/C` —�?一个不
+    // mention �?token 正则�?`@[\w./-]+`，抓不到盘符路径（`:` �?`\` 都不在字符类里）�?    // 直接�?path.join(tmp, �? 拼出�?`C:\…` �?Windows 上会被截�?`@/C` —�?一个不
     // 存在的路径，于是「当然不会注入」，用例变成空转。这正是它长期本机绿、Linux 门禁
-    // 红的原因：真正的绕过（边界拒绝后落进 legacy 兜底、把绝对路径原样读出来）�?    // Windows 上被这个截断掩盖了。所以剥掉盘符前缀，用「当前盘的绝�?POSIX 路径」，
-    // 两个平台都真正走绝对路径分支。（tmpdir �?cwd 不同盘时解析不到文件 �?断言仍成立，
+    // 红的原因：真正的绕过（边界拒绝后落进 legacy 兜底、把绝对路径原样读出来）�?    // Windows 上被这个截断掩盖了。所以剥掉盘符前缀，用「当前盘的绝�?POSIX 路径」，
+    // 两个平台都真正走绝对路径分支。（tmpdir �?cwd 不同盘时解析不到文件 �?断言仍成立，
     // 只是退回空转，不会误红。）
     const outside = path.join(tmp, 'unrelated', 'secret.txt');
     fs.mkdirSync(path.dirname(outside), { recursive: true });
@@ -92,7 +92,7 @@ describe('atMentionInject + references', () => {
     const driveRelative = outside.slice(path.parse(outside).root.length);
     const mentionPath = '/' + driveRelative.split(path.sep).join('/');
     const out = resolveAtMentions(`show @${mentionPath}`, { cwd });
-    // Path refused �?treated as unresolvable mention �?no injection.
+    // Path refused �?treated as unresolvable mention �?no injection.
     expect(out.changed).toBe(false);
     expect(out.text).not.toContain('SECRET CONTENT');
     expect(svc.isWithinBoundary).toHaveBeenCalled();

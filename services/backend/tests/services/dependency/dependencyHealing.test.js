@@ -18,10 +18,10 @@
 const { describe, test, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 
-const registry = require('../../../src/services/dependency/registry');
-const resolver = require('../../../src/services/dependency/resolver');
-const installRunner = require('../../../src/services/dependency/installRunner');
-const healing = require('../../../src/services/dependency/healingLoop');
+const registry = require('../../../src/services/domain/network/dependency/registry.js');
+const resolver = require('../../../src/services/domain/network/dependency/resolver.js');
+const installRunner = require('../../../src/services/domain/network/dependency/installRunner.js');
+const healing = require('../../../src/services/domain/network/dependency/healingLoop.js');
 const { ToolError, ERROR_CODES } = require('../../../src/services/toolError');
 
 // 纯内存探针环境工厂。

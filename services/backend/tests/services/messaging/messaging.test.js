@@ -1,6 +1,10 @@
 'use strict';
 
-const messaging = require('../../src/services/messaging/index');
+// The test asserted exports of the messaging domain aggregator. The require
+// path had drifted to domain/messaging/mcp/index.js (the MCP *client* facade,
+// whose exports are MCPClient/connectMCPServer/…) — the canonical aggregate
+// of the 12 ilink*/msg* modules is src/services/messaging/index.js.
+const messaging = require('../../../src/services/messaging/index.js');
 
 describe('messaging index', () => {
   test('module is defined', () => {

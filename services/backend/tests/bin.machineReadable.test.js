@@ -5,11 +5,87 @@ const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
+// On win32 os.homedir() resolves via %USERPROFILE%, not %HOME% — isolating
+// only HOME lets the spawned khy CLI read the developer's real
+// ~/.khyquant/config.json and ~/.config/opencode/opencode.json, so gateway
+// probes fire real network calls and `config opencode` reports ok:true from
+// the user's actual profile instead of the missing-args path under test.
+// Same convention as tests/cli/khySettingsLayering.test.js /
+// tests/gateway/kiroAdapter.tokenPaths.test.js.
+//
+// The env is also a leak vector on its own: inheriting ...process.env hands
+// the child the developer's real ANTHROPIC_API_KEY / RELAY_API_* shell vars,
+// and `gateway prefer-remote` was observed firing live [RELAY-REQ] probes to
+// production endpoints with those credentials even with an isolated home.
+// Only pass through OS plumbing variables; every KHY_/GATEWAY_/credential
+// var must come from the per-test `extra` object.
+const SAFE_ENV_KEYS = new Set([
+  'PATH', 'PATHEXT', 'COMSPEC', 'SYSTEMROOT', 'SYSTEMDRIVE', 'WINDIR',
+  'TEMP', 'TMP', 'TMPDIR',
+  'PROGRAMFILES', 'PROGRAMFILES(X86)', 'PROGRAMW6432',
+  'NUMBER_OF_PROCESSORS', 'PROCESSOR_ARCHITECTURE',
+  'LANG', 'LC_ALL', 'TERM', 'NODE_ENV', 'CI',
+]);
+
+function isolatedEnv(tmpHome, extra = {}) {
+  // Windows env keys keep their canonical casing (Path, ComSpec, …) — match
+  // the whitelist case-insensitively and copy the original spelling through.
+  const env = {};
+  for (const key of Object.keys(process.env)) {
+    if (SAFE_ENV_KEYS.has(key.toUpperCase())) {
+      env[key] = process.env[key];
+    }
+  }
+  env.HOME = tmpHome;
+  if (process.platform === 'win32') {
+    const root = path.parse(tmpHome).root; // e.g. 'C:\'
+    env.USERPROFILE = tmpHome;
+    // Pre-VISTA os.homedir() fallback joins HOMEDRIVE + HOMEPATH; keep them
+    // pointing at tmpHome too so nothing resolves back to the real home.
+    env.HOMEDRIVE = root.replace(/\\+$/, '');
+    env.HOMEPATH = tmpHome.slice(root.length - 1);
+    // APPDATA/LOCALAPPDATA feed roaming/local config lookups (VS Code,
+    // opencode probes) — redirect into the sandbox instead of the real user.
+    env.APPDATA = path.join(tmpHome, 'AppData', 'Roaming');
+    env.LOCALAPPDATA = path.join(tmpHome, 'AppData', 'Local');
+  }
+  // Credential isolation, layer 2: bootstrap/init.js step 1 loads
+  // `services/backend/.env` (the developer's REAL 9-line credential file)
+  // via dotenv whenever KHY_ENV_FILE is unset. Point the canonical env file
+  // at an empty sandbox file so the child never reads the real one.
+  const defaultEnvFile = path.join(tmpHome, 'isolated-default.env');
+  try {
+    fs.writeFileSync(defaultEnvFile, '', 'utf-8');
+  } catch {
+    /* best-effort: an unwritable file still redirects the loader away */
+  }
+  // Layer 3: bootstrap step 1.2 loads the user overlay `getDataHome()/.env`
+  // (relay credentials adopted via `khy claude adopt-env`). KHY_DATA_HOME also
+  // short-circuits the fresh-install drive scan in dataHome.js, which would
+  // otherwise create a real `.khy` directory on the largest non-system drive.
+  env.KHY_DATA_HOME = path.join(tmpHome, '.khy');
+  // Layer 4: gateway.js reads its api_keys.json pool via getAppHome(), which
+  // otherwise lands in the real legacy ~/.khyquant (real provider keys inside).
+  // KHY_PROJECT_DATA_HOME likewise pins any <repo>/.khy reads to the sandbox.
+  env.KHY_APP_HOME = path.join(tmpHome, '.khyquant-sandbox');
+  env.KHY_PROJECT_DATA_HOME = path.join(tmpHome, '.khy-project');
+  env.KHY_ENV_FILE = defaultEnvFile;
+  // Never sync writes to the repo-level mirror `services/.env` — the real
+  // developer credential file must not be mutated by these tests.
+  env.KHY_ENV_SYNC_ROOT = 'false';
+  return { ...env, ...extra };
+}
+
+// bin/khy.js cold start loads the full runtime (babel, ink, 187-tool
+// registry); observed 5-35s on a loaded CI/dev box. 15s spawnSync timeouts
+// kill mid-startup (status:null) and flake the whole suite.
+const SPAWN_TIMEOUT_MS = 60000;
+
 describe('khy machine-readable CLI entrypoints', () => {
   test('gateway add --json accepts explicit non-interactive flags', () => {
     const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-gateway-add-json-'));
     const envPath = path.join(tmpHome, 'gateway-add.env');
-    fs.writeFileSync(envPath, 'EXISTING_KEY=1\n', 'utf8');
+    fs.writeFileSync(envPath, 'EXISTING_KEY=1\n', 'utf-8');
 
     try {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
@@ -25,16 +101,14 @@ describe('khy machine-readable CLI entrypoints', () => {
         '--json',
       ], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           KHY_DATA_HOME: path.join(tmpHome, '.khy'),
           KHY_ENV_FILE: envPath,
           KHY_ENV_SYNC_ROOT: 'false',
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 15000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);
@@ -85,14 +159,12 @@ describe('khy machine-readable CLI entrypoints', () => {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
       const result = spawnSync(process.execPath, [binPath, 'gateway', 'pool', 'list', '--json'], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           DB_PATH: dbPath,
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 15000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);
@@ -121,13 +193,11 @@ describe('khy machine-readable CLI entrypoints', () => {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
       const result = spawnSync(process.execPath, [binPath, 'gateway', 'config', '--json'], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 15000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);
@@ -156,13 +226,11 @@ describe('khy machine-readable CLI entrypoints', () => {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
       const result = spawnSync(process.execPath, [binPath, 'gateway', 'detect', '--json'], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 15000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);
@@ -192,9 +260,7 @@ describe('khy machine-readable CLI entrypoints', () => {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
       const result = spawnSync(process.execPath, [binPath, 'gateway', 'prefer-remote', '--json'], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           GATEWAY_CLAUDE_ENABLED: 'false',
           GATEWAY_CODEX_ENABLED: 'false',
           GATEWAY_CURSOR_ENABLED: 'false',
@@ -206,9 +272,9 @@ describe('khy machine-readable CLI entrypoints', () => {
           GATEWAY_RELAY_ENABLED: 'false',
           GATEWAY_API_ENABLED: 'false',
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 20000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);
@@ -234,16 +300,14 @@ describe('khy machine-readable CLI entrypoints', () => {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
       const result = spawnSync(process.execPath, [binPath, 'gateway', 'key', 'rotate', 'deepseek', '--json'], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           DEEPSEEK_API_KEY: '',
           DEEPSEEK_API_KEYS: '',
           DEEPSEEK_API_KEY_1: '',
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 15000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);
@@ -269,13 +333,11 @@ describe('khy machine-readable CLI entrypoints', () => {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
       const result = spawnSync(process.execPath, [binPath, 'gateway', 'discover-models', '--json'], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 15000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);
@@ -306,13 +368,11 @@ describe('khy machine-readable CLI entrypoints', () => {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
       const result = spawnSync(process.execPath, [binPath, 'gateway', 'test', missingAdapter, '--json'], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 15000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);
@@ -340,13 +400,11 @@ describe('khy machine-readable CLI entrypoints', () => {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
       const result = spawnSync(process.execPath, [binPath, 'gateway', 'debug-prompt', 'help', '--json'], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 15000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);
@@ -371,13 +429,11 @@ describe('khy machine-readable CLI entrypoints', () => {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
       const result = spawnSync(process.execPath, [binPath, 'gateway', 'trace', 'req-json-smoke', '--json'], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 15000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);
@@ -397,13 +453,11 @@ describe('khy machine-readable CLI entrypoints', () => {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
       const result = spawnSync(process.execPath, [binPath, 'self', '--json'], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 15000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);
@@ -435,15 +489,13 @@ describe('khy machine-readable CLI entrypoints', () => {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
       const result = spawnSync(process.execPath, [binPath, 'config', 'show', '--json'], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           KHY_ENV_FILE: envPath,
           KHY_ENV_SYNC_ROOT: 'false',
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 15000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);
@@ -475,13 +527,11 @@ describe('khy machine-readable CLI entrypoints', () => {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
       const result = spawnSync(process.execPath, [binPath, 'session', 'stats', '--json'], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 15000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);
@@ -504,14 +554,12 @@ describe('khy machine-readable CLI entrypoints', () => {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
       const result = spawnSync(process.execPath, [binPath, 'models', 'list', '--json'], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           OLLAMA_HOST: 'http://127.0.0.1:1',
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 15000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);
@@ -540,15 +588,13 @@ describe('khy machine-readable CLI entrypoints', () => {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
       const result = spawnSync(process.execPath, [binPath, 'models', 'set', 'qwen2.5:7b', '--json'], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           KHY_ENV_FILE: envPath,
           KHY_ENV_SYNC_ROOT: 'false',
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 15000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);
@@ -584,15 +630,13 @@ describe('khy machine-readable CLI entrypoints', () => {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
       const result = spawnSync(process.execPath, [binPath, 'config', 'set', 'model.default', 'custom/demo', '--json'], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           KHY_ENV_FILE: envPath,
           KHY_ENV_SYNC_ROOT: 'false',
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 15000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);
@@ -626,14 +670,12 @@ describe('khy machine-readable CLI entrypoints', () => {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
       const result = spawnSync(process.execPath, [binPath, 'models', 'pull', 'qwen2.5:7b', '--json'], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           OLLAMA_HOST: 'http://127.0.0.1:1',
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 15000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);
@@ -660,14 +702,12 @@ describe('khy machine-readable CLI entrypoints', () => {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
       const result = spawnSync(process.execPath, [binPath, 'models', 'delete', 'qwen2.5:7b', '--json'], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           OLLAMA_HOST: 'http://127.0.0.1:1',
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 15000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);
@@ -694,13 +734,11 @@ describe('khy machine-readable CLI entrypoints', () => {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
       const result = spawnSync(process.execPath, [binPath, 'config', 'openclaw', '--json'], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 15000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);
@@ -725,13 +763,11 @@ describe('khy machine-readable CLI entrypoints', () => {
       const binPath = path.join(__dirname, '..', 'bin', 'khy.js');
       const result = spawnSync(process.execPath, [binPath, 'config', 'opencode', '--json'], {
         cwd: path.join(__dirname, '..'),
-        env: {
-          ...process.env,
-          HOME: tmpHome,
+        env: isolatedEnv(tmpHome, {
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
-        },
+        }),
         encoding: 'utf8',
-        timeout: 15000,
+        timeout: SPAWN_TIMEOUT_MS,
       });
 
       expect(result.status).toBe(0);

@@ -160,6 +160,50 @@ describe('modelLacksReliableToolCalling — model dimension', () => {
     };
     assert.equal(cap.modelLacksReliableToolCalling('some-model', { env }), false);
   });
+
+  // BUG-014 / P0:强制名单必须与实测缓存用同一套键。调用方拿到的 model 有两种形态 ——
+  // 教学门给路由 id(`api:agnes:agnes-3.0-flash`),剥离门给裸模型名。只比裸名会让同一条
+  // env 只在一个门上生效:用户设了 KHY_NATIVE_TOOL_MODELS,模型却仍被注入「你没有原生工具,
+  // 请用文本语法」的教学 —— 正是仓库注释里抱怨过的自相矛盾指令。
+  test('env 强制原生对路由 id 形态同样生效（教学门与剥离门同键）', () => {
+    const env = { KHY_NATIVE_TOOL_MODELS: 'agnes-3.0-flash' };
+    assert.equal(cap.modelLacksReliableToolCalling('agnes-3.0-flash', { env }), false);
+    assert.equal(
+      cap.modelLacksReliableToolCalling('api:agnes:agnes-3.0-flash', { env }),
+      false,
+      '路由 id 形态必须与裸名同判——否则教学门会继续教文本协议'
+    );
+  });
+
+  test('env 强制纯文本对路由 id 形态同样生效', () => {
+    const env = { KHY_TEXT_ONLY_TOOL_MODELS: 'glm-4v-flash' };
+    assert.equal(cap.modelLacksReliableToolCalling('glm-4v-flash', { env }), true);
+    assert.equal(cap.modelLacksReliableToolCalling('api:glm:glm-4v-flash', { env }), true);
+  });
+
+  test('env 名单里写路由 id 也能命中（两种写法都认）', () => {
+    const env = { KHY_NATIVE_TOOL_MODELS: 'api:agnes:agnes-3.0-flash' };
+    assert.equal(cap.modelLacksReliableToolCalling('api:agnes:agnes-3.0-flash', { env }), false);
+  });
+});
+
+describe('stripToolsNotice — 剥离说明文案', () => {
+  test('含模型名与复测入口,且不再引导用户换模型', () => {
+    const s = cap.stripToolsNotice('agnes-3.0-flash');
+    assert.match(s, /agnes-3\.0-flash/);
+    assert.match(s, /probe-tools/);
+    // 旧文案的教训:工具其实仍在通过文本协议执行,却让用户「切换到支持 function calling 的
+    // 模型」——把内部判定缺陷说成用户的环境问题,还指错排障方向。锁死这两句不再出现。
+    assert.doesNotMatch(s, /切换到支持/);
+    assert.doesNotMatch(s, /不支持工具调用/);
+  });
+  test('缺模型名 → 占位,不产出 "undefined"', () => {
+    for (const v of ['', null, undefined, '   ']) {
+      const s = cap.stripToolsNotice(v);
+      assert.doesNotMatch(s, /undefined|null/);
+      assert.match(s, /当前模型/);
+    }
+  });
 });
 
 describe('hasNativeToolUse — composition (teaching gate)', () => {
@@ -190,22 +234,111 @@ describe('hasNativeToolUse — composition (teaching gate)', () => {
   });
 });
 
-describe('shouldStripUpstreamTools — strip gate mirrors model dimension', () => {
-  test('strip ⟺ model lacks reliable tool calling (lockstep with teaching)', () => {
-    for (const m of ['gpt-4o-mini', 'qwen-flash', 'llama-8b']) {
-      assert.equal(cap.shouldStripUpstreamTools(m), cap.modelLacksReliableToolCalling(m));
-      assert.equal(cap.shouldStripUpstreamTools(m), true);
+describe('shouldStripUpstreamTools — wire 侧只认正面证据（2026-09-23 起）', () => {
+  // 旧契约是「剥离门与教学门锁步」。P2 有意打破这条锁步:名字启发可以决定**教学**
+  // (教一遍文本回退语法是加性提示,零代价),但不能决定 **wire**(剥掉 tools 会让模型
+  // 再也无法用原生调用证明自己,猜错就锁死到 TTL 到期 —— BUG-014)。
+  test('未实测 + 名字含 flash/lite → **不剥**(先发,让现实给证据)', () => {
+    for (const m of [
+      'gpt-4o-mini',
+      'qwen-flash',
+      'llama-8b',
+      'deepseek-v4-flash',
+      'sensenova-6.7-flash-lite',
+      'agnes-2.0-flash',
+    ]) {
+      assert.equal(cap.shouldStripUpstreamTools(m), false, `${m} 未实测不得被剥掉 tools`);
     }
-    // 无实测:flash/lite 暂剥离;frontier 不剥离。
-    for (const m of ['deepseek-v4-flash', 'sensenova-6.7-flash-lite', 'agnes-2.0-flash']) {
-      assert.equal(cap.shouldStripUpstreamTools(m), true);
-    }
-    assert.equal(cap.shouldStripUpstreamTools('claude-opus-4-8'), false);
   });
 
-  test('measured="native" stops stripping (实测后 tools 发出)', () => {
+  test('教学门**仍**按名字启发暂定教学（锁步被有意打破的那一半）', () => {
+    // 同一批模型:wire 侧发 tools,提示词侧仍教文本回退语法。两者不矛盾 —— 教学文案是
+    // 加性的(prompts.js:_toolCallingFallbackProfile 标题即 "text-based fallback"),
+    // 且文本调用在两条协议下都会被解析执行。
+    for (const m of ['gpt-4o-mini', 'qwen-flash', 'agnes-2.0-flash']) {
+      assert.equal(cap.modelLacksReliableToolCalling(m), true, `${m} 暂定档应继续教文本协议`);
+      assert.equal(cap.shouldStripUpstreamTools(m), false, `${m} 但 wire 侧必须照发 tools`);
+    }
+  });
+
+  test('实测 text → 剥;实测 native → 不剥', () => {
+    assert.equal(cap.shouldStripUpstreamTools('agnes-2.0-flash', { measured: 'text' }), true);
     assert.equal(cap.shouldStripUpstreamTools('agnes-2.0-flash', { measured: 'native' }), false);
     assert.equal(cap.shouldStripUpstreamTools('gpt-4o-mini', { measured: 'native' }), false);
+  });
+
+  test('通道拒收 tools → 剥（端点属性,不管模型是谁）', () => {
+    assert.equal(cap.shouldStripUpstreamTools('claude-opus-4-8', { routeRejects: true }), true);
+    assert.equal(cap.shouldStripUpstreamTools('gpt-4o', { routeRejects: true }), true);
+  });
+
+  test('实测 native 压过通道否决（见过真实原生调用的模型换通道仍原生）', () => {
+    assert.equal(
+      cap.shouldStripUpstreamTools('gpt-4o', { measured: 'native', routeRejects: true }),
+      false
+    );
+  });
+
+  test('env 钉子对 wire 与教学两侧都是最高优先', () => {
+    const envNative = { KHY_NATIVE_TOOL_MODELS: 'gpt-4o-mini' };
+    assert.equal(
+      cap.shouldStripUpstreamTools('gpt-4o-mini', { env: envNative, measured: 'text' }),
+      false,
+      '强制原生必须压过实测 text'
+    );
+    const envText = { KHY_TEXT_ONLY_TOOL_MODELS: 'gpt-4o' };
+    assert.equal(
+      cap.shouldStripUpstreamTools('gpt-4o', { env: envText, measured: 'native' }),
+      true,
+      '强制纯文本必须压过实测 native'
+    );
+  });
+
+  test('未知/空模型 → 不剥（不过度作为）', () => {
+    for (const m of ['', null, undefined, '   ']) {
+      assert.equal(cap.shouldStripUpstreamTools(m), false);
+    }
+  });
+
+  // P3 隔离式挑战:被判 text 的模型每 N 次请求放行一次原生,好让模型有机会推翻判定。
+  describe('隔离式挑战（挑战轮照发 tools）', () => {
+    test('实测 text + 挑战轮 → **不剥**（给模型一次翻案机会）', () => {
+      assert.equal(cap.shouldStripUpstreamTools('gpt-4o', { measured: 'text' }), true);
+      assert.equal(
+        cap.shouldStripUpstreamTools('gpt-4o', { measured: 'text', challenge: true }),
+        false,
+        '挑战轮的整个意义就是让被判 text 的模型还能原生调用一次'
+      );
+    });
+
+    test('通道拒收是端点定论，挑战**不越权**', () => {
+      // 严格端点每次带 tools 都吃 400;挑战它只会白付一个 400 往返。它该由自己的 TTL 到期重试。
+      assert.equal(
+        cap.shouldStripUpstreamTools('gpt-4o', { routeRejects: true, challenge: true }),
+        true
+      );
+    });
+
+    test('env 钉子连挑战轮也不越过', () => {
+      const env = { KHY_TEXT_ONLY_TOOL_MODELS: 'gpt-4o' };
+      assert.equal(
+        cap.shouldStripUpstreamTools('gpt-4o', { env, challenge: true }),
+        true,
+        '用户明确要的纯文本状态不该被内部挑战推翻'
+      );
+    });
+
+    test('已确证 native 不受挑战影响', () => {
+      assert.equal(
+        cap.shouldStripUpstreamTools('gpt-4o', { measured: 'native', challenge: true }),
+        false
+      );
+    });
+
+    test('未实测档挑战与不挑战都是发（未知本来就发）', () => {
+      assert.equal(cap.shouldStripUpstreamTools('agnes-3.0-flash', { challenge: true }), false);
+      assert.equal(cap.shouldStripUpstreamTools('agnes-3.0-flash'), false);
+    });
   });
 });
 

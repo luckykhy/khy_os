@@ -9,6 +9,25 @@ try {
   _fileHistory = null;
 }
 
+/**
+ * Record a pre-overwrite snapshot into the current turn's rollback manifest
+ * (DESIGN-ARCH-096 §2-A). Fail-soft no-op when no active turn is known.
+ */
+function _recordTurnMutation(context, absPath, preContent, reason) {
+  const turnId = context && context.traceContext && context.traceContext.turnId;
+  if (!turnId) {
+    return;
+  }
+  try {
+    require('../services/turnCheckpointService').recordMutatedFile(turnId, absPath, {
+      reason,
+      content: preContent,
+    });
+  } catch {
+    /* non-critical */
+  }
+}
+
 module.exports = defineTool({
   name: 'writeFile',
   description:
@@ -126,6 +145,9 @@ module.exports = defineTool({
         } catch {
           /* non-critical */
         }
+      }
+      if (fs.existsSync(filePath)) {
+        _recordTurnMutation(context, filePath, undefined, 'writeFile');
       }
 
       fs.writeFileSync(filePath, params.content, 'utf-8');

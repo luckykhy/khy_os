@@ -16,7 +16,7 @@
  * 契约:零 IO(只读 process.env 做门控)、确定性、绝不抛(非法输入 → {ok:false,error})。
  */
 
-const mcpTypes = require('../../../../agents/types');
+const mcpTypes = require('./types');
 
 // ── 门控(KHY_MCP_ADD,default-on,CANON off)────────────────────────────────────
 const _FALSY = new Set(['0', 'false', 'off', 'no']);

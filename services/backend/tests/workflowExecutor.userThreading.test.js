@@ -1,6 +1,6 @@
 'use strict';
 /**
- * workflowExecutor.userThreading.test.js �?the wire that makes plugin tools
+ * workflowExecutor.userThreading.test.js — the wire that makes plugin tools
  * "double-usable": a cross-process workflow run must resolve the RUN OWNER's
  * installed plugins. The worker calls defaultPrimitives({ userId: run.userId }),
  * and the executeTool primitive must forward that userId as the third

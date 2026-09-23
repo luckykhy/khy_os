@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-132] TUI选区锚点漂移修复方案.md -->
+<title>[DESIGN-ARCH-132] TUI 选区锚点漂移修复方案（内容指纹重定位） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-132] TUI 选区锚点漂移修复方案（内容指纹重定位）</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-132] TUI 选区锚点漂移修复方案（内容指纹重定位）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-132-tui-选区锚点漂移修复方案-内容指纹重定位">[DESIGN-ARCH-132] TUI 选区锚点漂移修复方案（内容指纹重定位）</a></li><li class="lvl-2"><a href="#0-一句话">0. 一句话</a></li><li class="lvl-2"><a href="#1-现状实证-file-line-可复核">1. 现状实证（file:line 可复核）</a></li><li class="lvl-3"><a href="#1-1-两次独立读取-缺陷的骨架">1.1 两次独立读取 —— 缺陷的骨架</a></li><li class="lvl-3"><a href="#1-2-实测-探针已把缺陷钉死">1.2 实测：探针已把缺陷钉死</a></li><li class="lvl-3"><a href="#1-3-三层单测为何全绿-缝在它们都没跨过的地方">1.3 三层单测为何全绿 —— 缝在它们都没跨过的地方</a></li><li class="lvl-3"><a href="#1-4-原始设计文档里就没有这一条">1.4 原始设计文档里就没有这一条</a></li><li class="lvl-2"><a href="#2-借鉴提案-b-p2-体例">2. 借鉴提案（B-P2 体例）</a></li><li class="lvl-3"><a href="#2-0-先声明-本提案属-b-p1-豁免-不适用-b-p2-七字段">2.0 ★ 先声明：本提案属 `B-P1` 豁免，不适用 B-P2 七字段</a></li><li class="lvl-3"><a href="#2-1-现有同类实现搜索结果-b-p2-第-6b-项要求-搜过哪些词-在哪些目录">2.1 现有同类实现搜索结果（B-P2 第 6b 项要求「搜过哪些词、在哪些目录」）</a></li><li class="lvl-2"><a href="#3-目标形态-组件级契约">3. 目标形态（组件级契约）</a></li><li class="lvl-3"><a href="#3-1-selection-js-锚点从-行号-升级为-行号-指纹">3.1 `selection.js`：锚点从「行号」升级为「行号 + 指纹」</a></li><li class="lvl-3"><a href="#3-2-取文流程-改造后">3.2 取文流程（改造后）</a></li><li class="lvl-3"><a href="#3-3-指纹构成-为什么是-行首-hash-序号">3.3 指纹构成：为什么是「行首 hash + 序号」</a></li><li class="lvl-2"><a href="#4-实施分期-每期独立可回滚">4. 实施分期（每期独立可回滚）</a></li><li class="lvl-3"><a href="#第一期-指纹基础设施-重定位纯函数-不含-app-接线-2026-09-23-已落地">第一期：指纹基础设施 + 重定位纯函数（**不含 App 接线**）—— ✅ 2026-09-23 已落地</a></li><li class="lvl-3"><a href="#第二期-app-层接线-app-js-一处改动">第二期：App 层接线（`App.js` 一处改动）</a></li><li class="lvl-3"><a href="#第三期-行投影补-seq-元数据-最大的一期-可独立放弃">第三期：行投影补 `seq` 元数据（**最大的一期，可独立放弃**）</a></li><li class="lvl-2"><a href="#5-诚实边界-刻意不纳入-逐条给原因">5. 诚实边界（刻意不纳入 —— 逐条给原因）</a></li><li class="lvl-2"><a href="#6-反模式-这条路别走-逐条给为什么">6. 反模式（这条路别走 —— 逐条给为什么）</a></li><li class="lvl-3"><a href="#反模式-1-让-extracttext-用-按下时的行快照">❌ 反模式 1：让 `extractText` 用「按下时的行快照」</a></li><li class="lvl-3"><a href="#反模式-2-手势期间禁用流式渲染">❌ 反模式 2：手势期间禁用流式渲染</a></li><li class="lvl-3"><a href="#反模式-3-把-relocate-做成有状态的缓存">❌ 反模式 3：把 `relocate` 做成有状态的缓存</a></li><li class="lvl-3"><a href="#反模式-4-只改-app-js-加个-重算-anchor-的补丁-不动-selection-js">❌ 反模式 4：只改 `App.js` 加个「重算 anchor」的补丁，不动 `selection.js`</a></li><li class="lvl-3"><a href="#反模式-5-为了-d-04-折行场景先做第三期-seq-元数据">❌ 反模式 5：为了 D-04 折行场景先做第三期（`seq` 元数据）</a></li><li class="lvl-2"><a href="#7-验收方式-可复现命令-关联门禁">7. 验收方式（可复现命令 + 关联门禁）</a></li><li class="lvl-3"><a href="#7-1-核心验收-一条命令">7.1 核心验收（一条命令）</a></li><li class="lvl-3"><a href="#7-2-零回归验收">7.2 零回归验收</a></li><li class="lvl-3"><a href="#7-3-关联门禁">7.3 关联门禁</a></li><li class="lvl-2"><a href="#8-1-故意红的探针-在-ci-里的归宿-原-8-待核实项-6-的结案">8.1 「故意红的探针」在 CI 里的归宿（原 §8 待核实项 6 的结案）</a></li><li class="lvl-2"><a href="#8-待核实项">8. 待核实项</a></li><li class="lvl-2"><a href="#9-变更日志">9. 变更日志</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-132-tui-选区锚点漂移修复方案-内容指纹重定位">[DESIGN-ARCH-132] TUI 选区锚点漂移修复方案（内容指纹重定位）<a class="anchor" href="#design-arch-132-tui-选区锚点漂移修复方案-内容指纹重定位" aria-label="锚点">#</a></h1>
+<blockquote><p>状态：<strong>第一期已落地</strong>（纯新增，未接线）；二、三期待做<br>落点：<code>docs/03_DESIGN_设计/DESIGN-ARCH/</code><br>关联：<code>[DESIGN-ARCH-119]</code>（TUI 文本选择与复制 · 验收标准 —— 本提案补它的 §六 缺口 4）、<br><code>[DESIGN-ARCH-111]</code>（规则遵守保障机制）、<code>[DESIGN-SOURCING-001]</code>（B-P1 §165 bugfix 豁免）<br>前置实证：<code>services/backend/tests/cli/tui/selectionAnchorDrift.test.js</code>（<strong>已落盘，D-02/D-04 为红</strong>）<br>第一期单测：<code>services/backend/tests/cli/tui/selectionRelocate.test.js</code>（<strong>17 条全绿</strong>）<br>模板合规：§2 已按 B-P2 体例填写，并<strong>显式声明本提案属 B-P1 豁免</strong>（理由见该节）</p></blockquote>
+<hr>
+<h2 id="0-一句话">0. 一句话<a class="anchor" href="#0-一句话" aria-label="锚点">#</a></h2>
+<p><code>selection.js</code> 的选区锚点存的是<strong>行号</strong>，而 <code>extractText</code> 在<strong>松手那一帧</strong>按行号重新切片 ——<br>一个数字、两个时刻。手势期间只要 <code>lines</code> 发生「行插入 / 行删除 / 折行重排」，<br>同一行号就指向不同内容，表现为<strong>复制出来的比选中的少一截 / 整段错位</strong>。</p>
+<p>修复方式：给锚点补<strong>内容指纹</strong>（行首 hash + 行序号），松手时按指纹在当帧 <code>lines</code> 里<br><strong>重定位</strong>锚点后再切片。<strong>不是</strong>缓存按下时的行快照（那会制造第二种不一致，见 §6）。</p>
+<table><thead><tr><th>维度</th><th>现状</th><th>目标</th></tr></thead><tbody><tr><td>锚点标识</td><td>裸行号（<code>{line, col}</code>）</td><td>行号 + <strong>内容指纹</strong>（行首 hash + 行序号）</td></tr><tr><td>取文依据</td><td>松手帧按行号切片</td><td>松手帧按<strong>指纹重定位</strong>后切片</td></tr><tr><td>手势期间流式输出</td><td>复制内容错位（实测错位量 = 插入行数）</td><td>复制内容 = 用户看到的那段</td></tr><tr><td>纯叶子约束</td><td>零 IO / 确定性 / 不抛</td><td><strong>不变</strong>（指纹由调用方随锚点传入，叶子不自己读行数组）</td></tr></tbody></table>
+<hr>
+<h2 id="1-现状实证-file-line-可复核">1. 现状实证（file:line 可复核）<a class="anchor" href="#1-现状实证-file-line-可复核" aria-label="锚点">#</a></h2>
+<h3 id="1-1-两次独立读取-缺陷的骨架">1.1 两次独立读取 —— 缺陷的骨架<a class="anchor" href="#1-1-两次独立读取-缺陷的骨架" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>环节</th><th>真源</th><th>实况</th></tr></thead><tbody><tr><td>锚点写入</td><td><code>services/backend/src/cli/tui/selection.js:157-160</code></td><td><code>beginSelection</code> 存 <code>{anchor: {line, col}, head, dragging}</code> —— <code>line</code> 是<strong>行号</strong></td></tr><tr><td>行数组来源</td><td><code>App.js:5878</code></td><td><code>_mainContentLinesRef.current = _mainContentLines</code>（<strong>每帧覆盖</strong>）</td></tr><tr><td>行数组依赖</td><td><code>App.js:5859-5874</code></td><td>依赖数组含 <strong><code>query.streaming</code></strong> 与 <strong><code>query.turnPhase</code></strong> ⇒ 流式期间<strong>逐段重建</strong></td></tr><tr><td>取文</td><td><code>App.js:1617</code></td><td><code>sel.extractText(_mainContentLinesRef.current, finished)</code> —— 用<strong>松手那一帧</strong>的行数组按行号切片</td></tr><tr><td>拖动改活动端</td><td><code>App.js:1589</code></td><td><code>extendSelection(_selectRegionRef.current, pt.line, pt.col)</code> —— 只改 head，anchor 不动</td></tr><tr><td>手势护栏</td><td><code>App.js:1551 / 1564 / 1593 / 1641</code></td><td><code>_selectingRef</code> 只标记「手势进行中」，<strong>不阻止 <code>_mainContentLines</code> 重建</strong></td></tr></tbody></table>
+<p><strong>关键事实：手势期间没有任何「冻结行投影」的护栏。</strong> 用户在 AI 正吐字时拖选，<br><code>_mainContentLines</code> 会在手势中途被重建数次，锚点行号随之失效。</p>
+<h3 id="1-2-实测-探针已把缺陷钉死">1.2 实测：探针已把缺陷钉死<a class="anchor" href="#1-2-实测-探针已把缺陷钉死" aria-label="锚点">#</a></h3>
+<p><code>services/backend/tests/cli/tui/selectionAnchorDrift.test.js</code>（本提案的前置实证，已落盘）：</p>
+<table><thead><tr><th>用例</th><th>结果</th><th>实际取到</th><th>用户选的是</th></tr></thead><tbody><tr><td>D-01 基线（内容不动）</td><td>✅ 绿</td><td>正确</td><td>—</td></tr><tr><td><strong>D-02 头部插入 3 行</strong></td><td>❌ <strong>红</strong></td><td><code>L07..L11</code></td><td><code>L10..L14</code></td></tr><tr><td>D-03 尾部追加（对照）</td><td>✅ 绿</td><td>不受影响</td><td>—</td></tr><tr><td><strong>D-04 折行重排</strong>（4 视觉行塌成 2）</td><td>❌ <strong>红</strong></td><td><code>'para-part-1..3\nTAIL'</code></td><td><code>para-part-1..3</code></td></tr><tr><td>D-05 内容缩短</td><td>✅ 绿</td><td>fail-soft 不抛</td><td>—</td></tr></tbody></table>
+<p><strong>D-02 的错位量恰好 = 插入行数（3）</strong> —— 这是「纯行号锚定」的算术必然，不是偶发。</p>
+<p>探针复刻了 <code>App.js:1530-1648</code> 的坐标换算与取文，并在<strong>手势中途替换 <code>lines</code></strong>。<br>D-01 基线与 D-03 对照均为绿，<strong>担保了「两条红不是探针自己算错」</strong>。</p>
+<h3 id="1-3-三层单测为何全绿-缝在它们都没跨过的地方">1.3 三层单测为何全绿 —— 缝在它们都没跨过的地方<a class="anchor" href="#1-3-三层单测为何全绿-缝在它们都没跨过的地方" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>条数</th><th>覆盖</th><th>为何抓不到</th></tr></thead><tbody><tr><td><code>mouseSelectEvent.test.js</code></td><td>15</td><td>事件侧：down/move/up 齐备、修饰键放行、坐标透传</td><td>只验事件序列，不看行数组</td></tr><tr><td><code>selection.test.js</code></td><td>37</td><td>模型侧：切片算术、词边界、fail-soft、纯函数性</td><td><strong>全部在单一 <code>LINES</code> 快照上跑</strong>，从不中途改动</td></tr><tr><td><code>viewportDragEdgeScroll.test.js</code></td><td>8</td><td>拖到边缘自动滚动时行号怎么算</td><td>只验<strong>偏移</strong>变化，不验<strong>内容</strong>变化</td></tr></tbody></table>
+<p>⇒ 与 <code>App.js:1523</code> 注释里说的完全同型：<strong>「单测各自自洽，只有端到端探针抓得到」</strong>。</p>
+<h3 id="1-4-原始设计文档里就没有这一条">1.4 原始设计文档里就没有这一条<a class="anchor" href="#1-4-原始设计文档里就没有这一条" aria-label="锚点">#</a></h3>
+<p><code>[DESIGN-ARCH-119]</code> 的「§七 待核实项」表格第 3 行只登记了<strong>软换行</strong>（视觉行 ≠ 逻辑行），<br><strong>没有锚点漂移</strong>；<code>selection.js</code> 头部「已知偏差」原本也只写了软换行。<br>⇒ 这是<strong>原始设计时未识别的缺口</strong>，不是「知道但没做」。</p>
+<hr>
+<h2 id="2-借鉴提案-b-p2-体例">2. 借鉴提案（B-P2 体例）<a class="anchor" href="#2-借鉴提案-b-p2-体例" aria-label="锚点">#</a></h2>
+<h3 id="2-0-先声明-本提案属-b-p1-豁免-不适用-b-p2-七字段">2.0 ★ 先声明：本提案属 <code>B-P1</code> 豁免，不适用 B-P2 七字段<a class="anchor" href="#2-0-先声明-本提案属-b-p1-豁免-不适用-b-p2-七字段" aria-label="锚点">#</a></h3>
+<p><code>[DESIGN-SOURCING-001]</code> §3 <code>B-P1</code>（doc line 165）原文：</p>
+<blockquote><p><strong>豁免</strong>：对已登记能力域的<strong>行为修正</strong>（bugfix、补字段、文案调整）不需要提案。<br>豁免的判定依据是该能力域已在注册表中存在且有 <code>canonical</code> 路径。</p></blockquote>
+<p>判定依据（逐条对应 B-P1 第 159-166 行的三个新能力域判据）：</p>
+<table><thead><tr><th>B-P1 判据</th><th>本提案</th><th>是否命中</th></tr></thead><tbody><tr><td>新增此前没有的顶层概念（新工具/服务/命令/UI 视图族）</td><td>无新增，改的是既有 <code>selection.js</code></td><td>❌</td></tr><tr><td>新增此前不存在的对外契约（新 API/协议/配置键/env）</td><td><strong>无新增 env、无新增配置键</strong>（指纹随锚点对象传递，属内部数据结构）</td><td>❌</td></tr><tr><td>首次引入上游实现方式（<code>FEATURE-OWNERSHIP.json</code> 的 <code>source</code> 为新值）</td><td>不引入任何上游件</td><td>❌</td></tr><tr><td><strong>豁免判据</strong>：能力域已登记且有 <code>canonical</code></td><td><code>selection.js</code> 已登记（<code>[DESIGN-ARCH-119]</code> §4.2 第二层）</td><td>✅</td></tr></tbody></table>
+<p>⇒ <strong>本提案属 bugfix 豁免，B-P2 七字段不适用。</strong> 下文按 B-P2 体例逐项<strong>据实</strong>填写，<br>命中处填「不适用 + 依据」，<strong>不留空</strong>（B-P2 只规定「缺一不落地」，「据实声明不适用」不等于缺）。</p>
+<pre><code>【借鉴提案】（据实填写，逐项标注适用性）
+1. 借鉴对象：不适用 —— 本提案无上游借鉴对象。
+2. 借鉴内容：不适用 —— 同上。
+3. 解决的问题：TUI 拖选在「手势期间内容重排」时复制内容错位。
+   现象：复制出来的比选中的少一截 / 整段错位（错位量 = 内容位移行数）。
+   指向：selection.js:157-160（锚点存行号）+ App.js:1617（松手帧按行号切片）。
+   实证：selectionAnchorDrift.test.js 的 D-02（红，错位 3 行）、D-04（红，混入 TAIL）。
+4. 许可证与代码性质：不适用 —— 不引入任何上游代码/二进制/资源。
+5. 借鉴方式：不适用 —— 无借鉴。判定依据：改动落在本仓自有的既有叶子模块内。
+6a. 落点：selection.js（改锚点结构 + 加指纹重定位）；App.js（锚点写入时附指纹）。
+   两者均已存在，无新增文件。
+6b. 现有同类实现：**已搜索**。搜索词与结论见 §2.1。
+7. 验收方式：见 §7。核心一条：selectionAnchorDrift.test.js 的 D-02 / D-04 转绿，
+   且 selection.test.js 的 37 条、mouseSelectEvent.test.js 的 15 条**零回归**。</code></pre>
+<h3 id="2-1-现有同类实现搜索结果-b-p2-第-6b-项要求-搜过哪些词-在哪些目录">2.1 现有同类实现搜索结果（B-P2 第 6b 项要求「搜过哪些词、在哪些目录」）<a class="anchor" href="#2-1-现有同类实现搜索结果-b-p2-第-6b-项要求-搜过哪些词-在哪些目录" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>搜索词</th><th>目录</th><th>结论</th></tr></thead><tbody><tr><td><code>anchor</code> / <code>锚点</code></td><td><code>services/backend/src/cli/tui/</code></td><td><strong>唯一实现在 <code>selection.js</code></strong>（<code>{anchor, head, dragging}</code>）</td></tr><tr><td><code>charColForDisplay</code></td><td>同上</td><td>已有列换算（显示列 → 字符下标），<strong>本提案复用，不另起</strong></td></tr><tr><td><code>hash</code> / <code>fingerprint</code> / <code>指纹</code></td><td><code>services/backend/src/cli/tui/</code></td><td><strong>零命中</strong> —— 本仓此前无「行内容指纹」概念，需新建（这是本提案唯一的新增件）</td></tr><tr><td><code>softWrap</code> / 软换行元数据</td><td>同上</td><td>零命中 —— 与 <code>[DESIGN-ARCH-119]</code> §六 缺口 4 同一片空白</td></tr><tr><td><code>messageId</code> / 消息元数据</td><td>同上</td><td>零命中（行投影无消息锚点，见 <code>[DESIGN-ARCH-119]</code> §七 风险 1）</td></tr></tbody></table>
+<p>⇒ 结论：<strong>扩展既有 <code>canonical</code>（<code>selection.js</code>），不新增并行实现。</strong><br>指纹是本仓首个此类概念，但它是<strong>修既有缺陷所必需</strong>，不是新能力域。</p>
+<hr>
+<h2 id="3-目标形态-组件级契约">3. 目标形态（组件级契约）<a class="anchor" href="#3-目标形态-组件级契约" aria-label="锚点">#</a></h2>
+<h3 id="3-1-selection-js-锚点从-行号-升级为-行号-指纹">3.1 <code>selection.js</code>：锚点从「行号」升级为「行号 + 指纹」<a class="anchor" href="#3-1-selection-js-锚点从-行号-升级为-行号-指纹" aria-label="锚点">#</a></h3>
+<pre><code class="language-js"><span class="hljs-comment">// 锚点形状（向后兼容：无 fingerprint 时退化为纯行号，逐字节保持老行为）</span>
+{
+  <span class="hljs-attr">line</span>: <span class="hljs-number">42</span>,          <span class="hljs-comment">// 行号（保留：同帧内仍可用，且是渲染层的坐标系）</span>
+  <span class="hljs-attr">col</span>: <span class="hljs-number">7</span>,            <span class="hljs-comment">// 字符下标（不变）</span>
+  <span class="hljs-attr">fp</span>: {              <span class="hljs-comment">// 【新增】内容指纹，可为 null（老调用方不传）</span>
+    <span class="hljs-attr">head</span>: <span class="hljs-string">&#x27;3f2a1b&#x27;</span>,  <span class="hljs-comment">// 行首 N 字符的 hash（N=24，够区分同屏内多数行）</span>
+    <span class="hljs-attr">seq</span>: <span class="hljs-number">118</span>,        <span class="hljs-comment">// 该行在**逻辑内容流**里的序号（见 §3.3）</span>
+  }
+}</code></pre>
+<p><strong>契约要点</strong>：</p>
+<ol><li><strong>纯叶子不变</strong>：<code>selection.js</code> 仍是零 IO、确定性、绝不抛。指纹由<strong>调用方</strong>（<code>App.js</code>）</li></ol>
+<p>在 <code>beginSelection</code> / <code>extendSelection</code> 时随锚点传入 —— 叶子<strong>不自己读 <code>lines</code></strong>。</p>
+<ol><li><strong>向后兼容</strong>：<code>fp</code> 为 <code>null</code> / 缺失时，行为与今天<strong>逐字节相同</strong>（<code>extractText</code> 走原路径）。</li></ol>
+<p>这是硬承诺：老调用方（<code>CcApp.js</code>、<code>ccMessageProjection</code>、单测）零影响。</p>
+<ol><li><strong>重定位是独立纯函数</strong>：新增 <code>relocate(range, lines)</code> —— 输入「带指纹的 range」+</li></ol>
+<p>「当帧 lines」，输出「重定位后的 range」或 <code>null</code>（定位失败）。<br>   单独导出便于<strong>直接单测</strong>，也让 App 层可显式处理失败（§4.3 降级策略）。</p>
+<h3 id="3-2-取文流程-改造后">3.2 取文流程（改造后）<a class="anchor" href="#3-2-取文流程-改造后" aria-label="锚点">#</a></h3>
+<pre><code>T0 按下  → beginSelection(sel, line, col, fp)   ← fp 由 App 从当帧 lines 算出
+T0..T1   → extendSelection(...)                  ← 只改 head（anchor 含 fp 不动）
+T1 松手  → extractText(lines, sel)               ← 内部先 relocate 再 slice
+             │
+             ├─ relocate 成功 → 按重定位后的行号切片 ✅
+             └─ relocate 失败 → 回退纯行号切片（今天的行为）+ 返回信号给调用方</code></pre>
+<h3 id="3-3-指纹构成-为什么是-行首-hash-序号">3.3 指纹构成：为什么是「行首 hash + 序号」<a class="anchor" href="#3-3-指纹构成-为什么是-行首-hash-序号" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>方案</th><th>能否抗行插入</th><th>能否抗折行重排</th><th>判断</th></tr></thead><tbody><tr><td>仅行号（现状）</td><td>❌ 错位 = 插入量</td><td>❌ 整体错位</td><td>缺陷本体</td></tr><tr><td>仅行首 hash</td><td>✅</td><td>⚠️ 折行会<strong>改变行首内容</strong>（半行被切走）⇒ 失配</td><td>不足</td></tr><tr><td>仅行序号</td><td>✅</td><td>❌ 折行会改变行数 ⇒ 序号漂移</td><td>不足</td></tr><tr><td><strong>hash + 序号（双判据）</strong></td><td>✅</td><td>✅（见下）</td><td><strong>采用</strong></td></tr></tbody></table>
+<p><strong>折行重排的处理</strong>：折行会让同一逻辑段的<strong>视觉行首</strong>变化，故 <code>head</code> hash 可能失配。<br>此时以 <code>seq</code>（逻辑内容流序号）为主判据、<code>hash</code> 为校验：</p>
+<ul><li><code>seq</code> 命中且 <code>hash</code> 也命中 → 高置信，直接用；</li><li><code>seq</code> 命中但 <code>hash</code> 失配（发生折行）→ <strong>中置信</strong>：用 <code>seq</code> 定位到该逻辑段，</li></ul>
+<p>再在段内按 <code>col</code> 的相对位置重新映射（<code>selection.js</code> 已有 <code>charColForDisplay</code> 可复用）；</p>
+<ul><li>两者都失配 → <strong>定位失败</strong>，走 §4.3 降级。</li></ul>
+<blockquote><p>⚠ <strong><code>seq</code> 从哪来是待核实项</strong>（§8）。<code>_mainContentLines</code> 目前是<strong>扁平字符串数组</strong>，<br>不含「这一行属于哪条消息 / 哪个逻辑行」的元数据。最省的做法是让<br><code>buildTranscriptLines</code> 顺带产出<strong>平行数组</strong> <code>lineSeqs</code>（与 <code>lines</code> 等长），<br>App 层把它和 <code>lines</code> 一起交给 <code>selection</code>。这属于行投影改动，见 §4 分期。</p></blockquote>
+<hr>
+<h2 id="4-实施分期-每期独立可回滚">4. 实施分期（每期独立可回滚）<a class="anchor" href="#4-实施分期-每期独立可回滚" aria-label="锚点">#</a></h2>
+<h3 id="第一期-指纹基础设施-重定位纯函数-不含-app-接线-2026-09-23-已落地">第一期：指纹基础设施 + 重定位纯函数（<strong>不含 App 接线</strong>）—— ✅ 2026-09-23 已落地<a class="anchor" href="#第一期-指纹基础设施-重定位纯函数-不含-app-接线-2026-09-23-已落地" aria-label="锚点">#</a></h3>
+<p><strong>实际落地的函数（与本节原拟名称不同，见下方「偏离说明」）</strong>：</p>
+<table><thead><tr><th>函数</th><th>签名</th><th>作用</th></tr></thead><tbody><tr><td><code>relocateLine</code></td><td><code>(from, to, point) → number</code></td><td>按指纹把单个行号从 <code>from</code> 重定位到 <code>to</code></td></tr><tr><td><code>relocateSelection</code></td><td><code>(selection, from, to) → selection</code></td><td>两端各自重定位，丢弃已消费的 <code>fp</code></td></tr><tr><td><code>extractTextRelocated</code></td><td><code>(lines, fromLines, sel) → string</code></td><td>取文的重定位版；<code>fromLines</code> 非数组 → 等价 <code>extractText</code></td></tr></tbody></table>
+<ul><li><code>beginSelection(sel, line, col, fp?)</code> 接受可选 <code>fp</code>；<code>extendSelection</code> / <code>endSelection</code></li></ul>
+<p>经新增的 <code>_anchor()</code> 保指纹（漏一处锚点就退化成纯行号）。</p>
+<ul><li>新增内部规范化 <code>_fp(v)</code>：非字符串 → <code>''</code>；<code>v.replace(/\s+/g,' ').trim()</code> 折叠空白。</li></ul>
+<p><strong>指纹是「归一化后的行原文」，不是 hash</strong>（偏离说明见下）。</p>
+<ul><li><strong>回滚点</strong>：不传 <code>fp</code> 时行为与今天逐字节相同 ⇒ 即使后续期全部回滚，本期也无害。</li></ul>
+<p>由 <code>selectionRelocate.test.js</code> 的 R-02 / R-05 / R-14 / R-16 四条<strong>显式钉住</strong>。</p>
+<ul><li>验收（实测）：新增单测 <strong>17/17 绿</strong>；老套件 <strong>57/57 绿</strong>（零回归）；</li></ul>
+<p>D-02 / D-04 <strong>仍红</strong>（未接线，符合预期）。</p>
+<blockquote><h3 id="偏离说明-本节原拟-vs-实际落地-逐条给原因">⚠ 偏离说明（本节原拟 vs 实际落地 —— 逐条给原因）<a class="anchor" href="#偏离说明-本节原拟-vs-实际落地-逐条给原因" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>原拟（本节上一版）</th><th>实际落地</th><th>为什么改</th></tr></thead><tbody><tr><td><code>relocate(range, lines)</code> 两参</td><td><code>relocateLine(from, to, point)</code> 三参 + <code>relocateSelection(sel, from, to)</code></td><td>原拟的两参把「两个行数组」藏进了 <code>range</code> 里 —— 那要求 <code>range</code> 携带 T0 的 <code>lines</code>，而 <code>range</code> 是从选区派生的<strong>纯坐标</strong>，塞行数组进去会让它变成半个游标对象。改成<strong>显式的 <code>from</code> / <code>to</code> 两数组</strong>后，「一个数字跨两个时刻」这件事在签名上直接可见，且重定位逻辑与选区结构解耦（单测可只喂数组）。</td></tr><tr><td><code>makeFingerprint(line, seq)</code>（hash + 序号双判据）</td><td>不设此函数；指纹 = <code>_fp(行原文)</code></td><td><strong>原案的 <code>seq</code> 判据是过度设计</strong>。§3.3 原以为「折行重排」必须靠逻辑行序号才能救，但实际验证：<strong>两数组之间直接做内容比对就能定位</strong>，不需要预先的 <code>seq</code> 元数据。删掉 <code>seq</code> 的直接收益：第三期的 <code>buildTranscriptLines</code> 改动<strong>不再被第一期依赖</strong>，两期真正解耦。</td></tr><tr><td>hash 取前 24 字符（§8 待核实 2）</td><td>不做 hash，直接存归一化整行</td><td>行数组长度通常 ≤ 数千，逐行字符串比较的成本可忽略；而 hash 会引入<strong>额外的碰撞风险面</strong>（碰撞 = 静默定位到错行，正是本缺陷的另一种形态）。<strong>不做 hash 就不需要论证碰撞率</strong> —— 这是把 §8 待核实 2 直接消掉，而不是留给未来。</td></tr><tr><td>三档置信</td><td>保留三档，但第 2 档定义收窄</td><td>原拟第 2 档「中置信：seq 命中 hash 失配 → 段内按 col 重映射」依赖 <code>seq</code>，已随 <code>seq</code> 一并删除。新第 2 档 = <strong>「指纹多次命中 → 取离原行号最近者」</strong>，这是无 <code>seq</code> 下唯一能保持确定性的策略，且覆盖原第 2 档想解决的场景（整体平移）。</td></tr></tbody></table></blockquote>
+<h3 id="第二期-app-层接线-app-js-一处改动">第二期：App 层接线（<code>App.js</code> 一处改动）<a class="anchor" href="#第二期-app-层接线-app-js-一处改动" aria-label="锚点">#</a></h3>
+<ul><li><code>App.js:1560</code> 的 <code>beginSelection</code> 调用点补 <code>fp</code>（从当帧 <code>_mainContentLines[line]</code> 算出）。</li><li><strong>回滚点</strong>：<code>selection.js</code> 的 <code>fp</code> 参数本就可选（第一期已保证 <code>undefined</code> → 老行为）。</li></ul>
+<p>回滚 = 把 <code>App.js</code> 那一处调用改回不传 <code>fp</code>，<strong>无需新 env</strong>（理由见下）。</p>
+<ul><li>验收：<code>selectionAnchorDrift.test.js</code> 的 <strong>D-02 转绿</strong>。</li></ul>
+<blockquote><p>⚠ <strong>刻意不新增 <code>KHY_SELECT_FP</code> env</strong> —— 依据是本项目的棘轮守卫（已实测）：<br><code>scripts/ci/check-tui-gates.js:32</code> 的 <code>MAX_GATES = 220</code>，注释写明「<strong>only moves DOWN</strong>」，<br>且 <code>:28-30</code> 记载 2026-09-18 曾为 <code>KHY_SELECT*</code> 一族破例 +8。再开一个新门会<strong>撞棘轮</strong>，<br>而 <code>services/backend/src/cli/tui/utils/selectGates.js:18</code> 又明写「三个子开关……<strong>别合并</strong>」<br>⇒ 往 <code>selectGates</code> 里加第四个门也会与该叶子的设计意图冲突。<br><strong>但本修复根本不需要门</strong>：指纹重定位是「让复制正确」，不是「行为取舍」——<br>三条子门控（<code>KHY_SELECT</code> / <code>_CLIP</code> / <code>_DRAG</code>）各自对应一种<strong>用户可见的权衡</strong>，<br>而「复制对的内容」没有第二面可权衡。回滚能力由「<code>fp</code> 可选参数」天然提供，不需要 env。<br>⇒ 这也<strong>保住了本提案的 B-P1 豁免地位</strong>（§2.0 第 2 条判据：无新增配置键）。</p></blockquote>
+<h3 id="第三期-行投影补-seq-元数据-最大的一期-可独立放弃">第三期：行投影补 <code>seq</code> 元数据（<strong>最大的一期，可独立放弃</strong>）<a class="anchor" href="#第三期-行投影补-seq-元数据-最大的一期-可独立放弃" aria-label="锚点">#</a></h3>
+<ul><li><code>buildTranscriptLines</code> 顺带产出 <code>lineSeqs</code> 平行数组（逻辑行序号）。</li><li>覆盖 <strong>D-04（折行重排）</strong>。</li><li><strong>诚实说明</strong>：若第三期不做，D-02（行插入，最高频场景）<strong>已修复</strong>，D-04 仍红。</li></ul>
+<p>两期分开是刻意的 —— 让「高频场景修好」不必等「折行元数据」这个大改。</p>
+<hr>
+<h2 id="5-诚实边界-刻意不纳入-逐条给原因">5. 诚实边界（刻意不纳入 —— 逐条给原因）<a class="anchor" href="#5-诚实边界-刻意不纳入-逐条给原因" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>不做的事</th><th>原因</th></tr></thead><tbody><tr><td>1</td><td>手势期间<strong>冻结</strong>行投影（不渲染新内容）</td><td>用户拖选时往往正想看新内容流进来；冻结会让人以为程序卡死。且与 <code>[DESIGN-ARCH-087]</code> 的流式反馈设计冲突</td></tr><tr><td>2</td><td>缓存「按下时的 lines 快照」直接切片</td><td><strong>制造第二种不一致</strong>：流式内容会被复制成旧文本，且与「用户松手时看到什么」再次背离（§6 详述）</td></tr><tr><td>3</td><td>消息级锚点（复制整条消息）</td><td><code>[DESIGN-ARCH-119]</code> §七 风险 1 已列为独立议题，需 <code>buildTranscriptLineRecords</code>，不与本缺陷混做</td></tr><tr><td>4</td><td>行级 <code>softWrap</code> 元数据（还原逻辑行）</td><td><code>[DESIGN-ARCH-119]</code> §六 缺口 4 的另一半；本提案只解决<strong>定位</strong>，不解决<strong>逻辑行还原</strong>（跨软换行仍带硬 <code>\n</code>）</td></tr><tr><td>5</td><td>改 <code>CC</code> 模式（<code>CcApp.js</code> / <code>ccMessageProjection</code>）</td><td>CC 走 <code>extractByAnchors</code> + <code>projection</code>，锚点语义不同。<strong>本提案只覆盖 Legacy <code>App.js</code> 路径</strong>；CC 侧若同病，另立提案（§8 待核实）</td></tr></tbody></table>
+<hr>
+<h2 id="6-反模式-这条路别走-逐条给为什么">6. 反模式（这条路别走 —— 逐条给为什么）<a class="anchor" href="#6-反模式-这条路别走-逐条给为什么" aria-label="锚点">#</a></h2>
+<h3 id="反模式-1-让-extracttext-用-按下时的行快照">❌ 反模式 1：让 <code>extractText</code> 用「按下时的行快照」<a class="anchor" href="#反模式-1-让-extracttext-用-按下时的行快照" aria-label="锚点">#</a></h3>
+<p>听起来最直接（「存一份开始时的 <code>lines</code> 不就对齐了」），但它把<strong>错位</strong>换成了<strong>陈旧</strong>：</p>
+<table><thead><tr><th></th><th>行号锚定（现状）</th><th>快照切片（诱人但错的修法）</th><th>指纹重定位（本提案）</th></tr></thead><tbody><tr><td>流式期间拖选</td><td>取到<strong>别的内容</strong></td><td>取到<strong>旧内容</strong>（用户松手时那行已变）</td><td>取到<strong>用户选的那段</strong></td></tr><tr><td>用户感受</td><td>「复制出来不对」</td><td>「复制出来是过时的，还得重来一次」</td><td>正确</td></tr></tbody></table>
+<p>根因是：<strong>用户要的是「我看到的那段」，而「我看到的」在松手那一刻已经变了。</strong><br>唯一能对齐两端的是<strong>按内容（而非数字）锚定</strong>。快照切片把问题从「错位」搬成「陈旧」，<br>两者都是错的。</p>
+<h3 id="反模式-2-手势期间禁用流式渲染">❌ 反模式 2：手势期间禁用流式渲染<a class="anchor" href="#反模式-2-手势期间禁用流式渲染" aria-label="锚点">#</a></h3>
+<p>会与流式反馈的全部设计冲突（<code>[DESIGN-ARCH-087]</code>），且用户拖选<strong>常常正是为了复制正在生成的内容</strong>。<br>冻结 = 让用户复制不到他想复制的东西。</p>
+<h3 id="反模式-3-把-relocate-做成有状态的缓存">❌ 反模式 3：把 <code>relocate</code> 做成有状态的缓存<a class="anchor" href="#反模式-3-把-relocate-做成有状态的缓存" aria-label="锚点">#</a></h3>
+<p><code>selection.js</code> 是纯叶子（零 IO / 确定性，<code>selection.test.js:12-16</code> 把这条写成了纪律）。<br>若 <code>relocate</code> 内部缓存上一次的 <code>lines</code> 以便比对，就<strong>破了叶子契约</strong> ——<br>它会变得「同输入不同输出」（取决于缓存状态），单测失去确定性。</p>
+<h3 id="反模式-4-只改-app-js-加个-重算-anchor-的补丁-不动-selection-js">❌ 反模式 4：只改 <code>App.js</code> 加个「重算 anchor」的补丁，不动 <code>selection.js</code><a class="anchor" href="#反模式-4-只改-app-js-加个-重算-anchor-的补丁-不动-selection-js" aria-label="锚点">#</a></h3>
+<p><code>App.js</code> 是 6000 行巨石，往里塞「按内容重定位」的逻辑会有两个后果：<br>① 该逻辑<strong>无法被单测直接驱动</strong>（它藏在 useCallback 里，三层单测的实验已证明这类缝抓不住）；<br>② 与 <code>selection.test.js</code> 已有的「坐标系在叶子、状态在 React」分工背离。<br><strong>正解是逻辑进叶子（可测），App 只负责取指纹传进去。</strong></p>
+<h3 id="反模式-5-为了-d-04-折行场景先做第三期-seq-元数据">❌ 反模式 5：为了 D-04 折行场景先做第三期（<code>seq</code> 元数据）<a class="anchor" href="#反模式-5-为了-d-04-折行场景先做第三期-seq-元数据" aria-label="锚点">#</a></h3>
+<p>行投影加元数据是<strong>大改</strong>（<code>buildTranscriptLines</code> 是热路径，<code>[DESIGN-ARCH-119]</code> 提过它）。<br>先做它会让「高频的 D-02」跟着一起等 —— 顺序应反过来：<strong>先修高频、再补低频</strong>。</p>
+<hr>
+<h2 id="7-验收方式-可复现命令-关联门禁">7. 验收方式（可复现命令 + 关联门禁）<a class="anchor" href="#7-验收方式-可复现命令-关联门禁" aria-label="锚点">#</a></h2>
+<h3 id="7-1-核心验收-一条命令">7.1 核心验收（一条命令）<a class="anchor" href="#7-1-核心验收-一条命令" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> <span class="hljs-string">&quot;D:/Portable/khy-os&quot;</span> &amp;&amp; \
+<span class="hljs-string">&quot;D:/WorkBuddyData/.workbuddy/binaries/node/versions/22.22.2-3/node.exe&quot;</span> \
+  --<span class="hljs-built_in">test</span> services/backend/tests/cli/tui/selectionAnchorDrift.test.js \
+         services/backend/tests/cli/tui/selectionRelocate.test.js</code></pre>
+<table><thead><tr><th>期</th><th>验收判据</th><th>2026-09-23 实测</th></tr></thead><tbody><tr><td><strong>第一期</strong></td><td>D-01 / D-03 / D-05 保持绿；<code>relocate</code> 单测全绿；<strong>D-02 / D-04 仍红</strong>（未接线）</td><td>✅ <strong>达标</strong>：探针 3 绿 / 2 红；relocate <strong>17/17 绿</strong></td></tr><tr><td>第二期</td><td><strong>D-02 转绿</strong></td><td>待做</td></tr><tr><td>第三期</td><td><strong>D-04 转绿</strong>（全五绿）</td><td>待做</td></tr></tbody></table>
+<blockquote><p>⚠ <strong>第一期无法让探针变绿，这是设计使然、不是失败。</strong> 探针走的是<br><code>mouseButtons → selection → extractText</code> 的<strong>端到端</strong>路径，而第一期<strong>刻意不接线</strong><br>—— 所以 D-02 / D-04 必须仍红。第一期的证据在<strong>另一份文件</strong>：<code>selectionRelocate.test.js</code><br>用<strong>纯函数</strong>路径证明了「同一段内容在 T1 能被正确定位」（R-01 / R-15），<br>以及「不接线时必然漂移」（R-16，用 <code>notStrictEqual</code> 钉住）。<br>两份文件合起来才是完整的「缺陷存在 → 修复有效」闭环。</p></blockquote>
+<h4 id="为什么红的测试可以留在仓库里">为什么红的测试可以留在仓库里<a class="anchor" href="#为什么红的测试可以留在仓库里" aria-label="锚点">#</a></h4>
+<p>D-02 / D-04 是<strong>缺陷固化</strong>（failing test as documentation），不是坏测试。它们：</p>
+<ol><li><strong>本身就是第二期的验收判据</strong> —— 先有红的探针，才能证明第二期的接线真的生效</li></ol>
+<p>（而不是「改完顺手把断言改松了」）。</p>
+<ol><li><strong>已按本仓约定登记入册</strong>：<code>tests/DEBT.md</code> §十一（分类 <code>@bug</code>，含根因 / 处置状态 /</li></ol>
+<p>复现命令 / 截止 ≈2026-12-23）。这满足该册首条规则「每个失败套件必须登记」。</p>
+<ol><li><strong>当前不卡任何 PR</strong>（实测，见 §8.1）：pr-gate 的 <code>test-baseline</code> job 是</li></ol>
+<p><code>continue-on-error: true</code>。但它计入该 job 的失败数，而该 job 的目标是「清零后转阻断」<br>   ⇒ 登记 + 限期正是它该待的地方。</p>
+<ol><li>同批两条绿（D-01 基线 / D-03 对照组）是「复刻链路可信」的<strong>担保</strong>，<strong>不要动</strong> ——</li></ol>
+<p>删了它们，那两条红就失去意义（无法区分「真缺陷」与「探针自己写错」）。</p>
+<h3 id="7-2-零回归验收">7.2 零回归验收<a class="anchor" href="#7-2-零回归验收" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> <span class="hljs-string">&quot;D:/Portable/khy-os&quot;</span> &amp;&amp; \
+<span class="hljs-string">&quot;D:/WorkBuddyData/.workbuddy/binaries/node/versions/22.22.2-3/node.exe&quot;</span> --<span class="hljs-built_in">test</span> \
+  services/backend/tests/cli/tui/selection.test.js \
+  services/backend/tests/cli/tui/selectionDisplayCol.test.js \
+  services/backend/tests/cli/tui/mouseSelectEvent.test.js \
+  services/backend/tests/cli/tui/viewportDragEdgeScroll.test.js</code></pre>
+<p>基线（2026-09-23 实测）：<strong>57 条全绿</strong>（实测明细：<code>selection</code> 27 / <code>selectionDisplayCol</code> 7 /<br><code>mouseSelectEvent</code> 15 / <code>viewportDragEdgeScroll</code> 8）。<br>第一期改造后复测：<strong>仍 57/57 绿，零回归</strong> —— <code>fp</code> 为 <code>null</code> 的向后兼容路径由这批测试担保。</p>
+<blockquote><p>⚠ <strong>基线订正</strong>：本节原写「60 条」。逐文件实测为 <strong>57</strong>（27+7+15+8）；<br><code>selection.test.js</code> 实为 27 条而非原估的 37 条。数字来自<br><code>node --test</code> 的 <code># tests</code> 汇总行，可复核。</p></blockquote>
+<h3 id="7-3-关联门禁">7.3 关联门禁<a class="anchor" href="#7-3-关联门禁" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">npm run check:tui-gates        <span class="hljs-comment"># 自绘选择三个门控未被破坏</span>
+npm run check:leaf-contract    <span class="hljs-comment"># selection.js 仍满足纯叶子契约（零 IO / 确定性）</span>
+npm run check:changed          <span class="hljs-comment"># 改动面清单</span></code></pre>
+<blockquote><p>⚠ <code>check:tui-gates</code> 在 2026-09-23 的巡检中已存在<strong>既有失败</strong>（+6 棘轮突破，与本次无关）。<br>验收时应比对<strong>改动前后 counts 行零漂移</strong>（见 <code>.workbuddy/memory/MEMORY.md</code> 的三步区分法），<br>而不是要求「全绿」。</p>
+<p><strong>本次已按该口径核完，结论：零漂移。</strong> <code>selection.js</code> 的 <code>KHY_*</code> token 改动前后均为 <code>[0 -&gt; 0]</code>；<br>226 与 220 的差额已<strong>逐文件归因 + 算术闭合</strong>：新增 7 个 token 全在并行会话的文件里<br>（<code>KHY_WATCHDOG_NOTICE</code> / <code>KHY_CC_OVERLAY_FIT</code> / <code>KHY_UI_LANG</code> / <code>KHY_ALT_SCREEN</code> /<br><code>KHY_TERM_FALLBACK_ROWS</code> / <code>KHY_TUI_CONSOLE_LOG</code> / <code>KHY_VIM_PASTE_CAP</code>），<br>再减去 <code>vim/operators.js</code> 删掉的 1 个 → <code>220 + 7 − 1 = 226</code>。</p></blockquote>
+<hr>
+<h2 id="8-1-故意红的探针-在-ci-里的归宿-原-8-待核实项-6-的结案">8.1 「故意红的探针」在 CI 里的归宿（原 §8 待核实项 6 的结案）<a class="anchor" href="#8-1-故意红的探针-在-ci-里的归宿-原-8-待核实项-6-的结案" aria-label="锚点">#</a></h2>
+<p><strong>问题</strong>：D-02 / D-04 是刻意保持红的，它们会不会让流水线变红？</p>
+<p><strong>实测答案（2026-09-23，逐项可复核）</strong>：</p>
+<table><thead><tr><th>查什么</th><th>结果</th></tr></thead><tbody><tr><td>探针会被谁扫到</td><td><code>services/backend/package.json</code> 的 <code>test:node</code> = <code>node --test tests/**/*.test.js</code> ⇒ <strong>会</strong>扫到</td></tr><tr><td>会不会被 jest 重复跑</td><td><strong>不会</strong>。<code>jest.config.js</code> 有 <code>findNodeTestFiles</code> + <code>testPathIgnorePatterns</code>，凡含 <code>require('node:test')</code> 的文件被<strong>排除出 jest</strong>，只由 <code>test:node</code> 执行 ⇒ 无双 runner 问题</td></tr><tr><td>会不会卡住 PR</td><td><strong>不会</strong>（今天）。<code>.github/workflows/pr-gate.yml:420-423</code> 的 <code>test-baseline</code> job 是 <code>continue-on-error: true</code>（<strong>Phase 1 report-only</strong>），且 <code>:409</code> 记有既知基线「4 suite / 9 用例失败」</td></tr><tr><td>但会不会有别的代价</td><td><strong>会</strong>。该 job 的升级路径写死为「<strong>失败用例清零后</strong>删掉 <code>continue-on-error</code> 即转为阻断」（<code>:412</code>、<code>:516</code>）⇒ 每加一条红用例，就把这个目标推远一步</td></tr></tbody></table>
+<p><strong>⇒ 处置：登记入册，而不是藏起来。</strong></p>
+<p>本仓对「已知失败测试」有<strong>单一真源</strong> <code>tests/DEBT.md</code>（根级，已跟踪，受<br><code>check-repo-layout.js</code> 登记为合规例外），其首条规则即<br>「<strong>每个失败套件必须登记，包含分类、根因、处置状态</strong>」，<br>并规定「<code>@bug</code> 类 3 个月后阻断 PR」。</p>
+<p>已在 <code>tests/DEBT.md</code> 新增 <strong>§十一</strong> 登记本探针（分类 <code>@bug</code>，含根因 / 处置状态 /<br>复现命令 / 截止日 ≈2026-12-23）。</p>
+<blockquote><p>⚠ <strong><code>check-debt-ledger.js</code> 管的不是这份册子</strong> —— 它读的是 <code>scripts/ci/debt-ledger.json</code><br>（门禁债务台账，管 <code>measured → target</code> 单调改善）。不要混淆，改 <code>DEBT.md</code> 不需要动它。</p></blockquote>
+<p><strong>为什么不用 <code>{ todo: true }</code> 或把文件挪出 <code>tests/</code></strong>：<br>① 本仓的既定约定就是「登记 + 限期」，绕开它等于绕过治理；<br>② 这两条红<strong>本身就是第二期的验收判据</strong> —— 现在藏起来，第二期就没有「改之前是红的」这个凭据；<br>③ 登记带来一个<strong>有日期的义务</strong>（≈2026-12-23），比「以后再说」强。</p>
+<hr>
+<h2 id="8-待核实项">8. 待核实项<a class="anchor" href="#8-待核实项" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>事项</th><th>为什么</th><th>怎么核</th><th>状态</th></tr></thead><tbody><tr><td>1</td><td><del><code>seq</code>（逻辑行序号）从哪来</del></td><td><del>§3.3 的 <code>seq</code> 依赖逻辑行元数据</del></td><td>—</td><td>✅ <strong>已消解</strong>：第一期确认<strong>不需要 <code>seq</code></strong> —— 两数组间直接做内容比对即可定位。第三期因此不依赖第一期</td></tr><tr><td>2</td><td><del>指纹 hash 算法与长度</del></td><td><del>需抗碰撞又要够快</del></td><td>—</td><td>✅ <strong>已消解</strong>：改为存<strong>归一化整行原文</strong>，不做 hash。逐行字符串比较成本可忽略，且不引入碰撞风险面（碰撞 = 静默定位到错行，正是本缺陷的另一种形态）</td></tr><tr><td>3</td><td><code>CC</code> 模式（<code>CcApp.js</code>）是否同病</td><td>CC 走 <code>extractByAnchors</code> + <code>projection</code>，锚点语义不同</td><td>读 <code>ccMessageProjection.js:833-890</code>，实测 CC 下流式拖选</td><td>⬜ 未核</td></tr><tr><td>4</td><td><code>Preview</code> 布局 + 拖到边缘自动滚动（A-09）叠加时的行为</td><td>自动滚动<strong>故意</strong>改 <code>offset</code>（<code>App.js:1576</code>），可能与重定位互相干扰</td><td>扩展探针加 D-06：手势中途触发 A-09 自动滚动</td><td>⬜ 未核</td></tr><tr><td>5</td><td><del><code>KHY_SELECT_FP</code> 新 env 是否需要登记</del></td><td><strong>已核实，结论：不新增 env</strong></td><td>见第二期说明 —— <code>check-tui-gates.js:32</code> 的 <code>MAX_GATES=220</code> 只降不升，且 <code>selectGates.js:18</code> 明写「别合并」；本修复不需要门，回滚靠 <code>fp</code> 可选参数</td><td>✅ 已结案</td></tr><tr><td>6</td><td><del>第二期前必须确认：CI 是否全量跑 <code>tests/**</code></del></td><td><del>若 CI 全量跑，D-02 / D-04 两条<strong>故意红</strong>的探针会让流水线变红</del></td><td>—</td><td>✅ <strong>已核实并处置</strong>，见 §8.1</td></tr></tbody></table>
+<hr>
+<h2 id="9-变更日志">9. 变更日志<a class="anchor" href="#9-变更日志" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>2026-09-23</td><td>首版。基于 <code>selectionAnchorDrift.test.js</code> 的实测（D-02 / D-04 红）撰写</td></tr><tr><td>2026-09-23</td><td>同轮：<code>selection.js</code> 头部「已知偏差」补第 2 条（锚点漂移），此前只登记了软换行</td></tr></tbody></table>
+<p>| 2026-09-23 | 核实 <code>check-tui-gates.js:32</code>（<code>MAX_GATES=220</code> 只降不升）与 <code>selectGates.js:18</code>（「别合并」）<br>⇒ <strong>删除原拟的 <code>KHY_SELECT_FP</code> env</strong>，改为靠 <code>fp</code> 可选参数提供回滚。<br>此举保住了 B-P1 豁免（无新增配置键），并把 §8 待核实项 5 结案 |</p>
+<p>| 2026-09-23 | <strong>第一期落地</strong>。<code>selection.js</code> 新增 <code>relocateLine</code> / <code>relocateSelection</code> / <code>extractTextRelocated</code> 三个纯函数 + <code>_anchor()</code> / <code>_fp()</code> 规范化；<code>beginSelection</code> 收可选 <code>fp</code>。新建 <code>selectionRelocate.test.js</code>（17 条全绿）。<strong>四处偏离原案</strong>（<code>relocate</code> 签名 / 不做 <code>seq</code> / 不做 hash / 第 2 档重定义）已在 §4 第一期「偏离说明」逐条给原因，并把 §8 第 1、2 项结案 |</p>
+<p>| 2026-09-23 | <strong>基线订正</strong>：§7.2 的「60 条」改为实测 <strong>57 条</strong>（初稿是估值，未逐文件跑） |</p>
+<p>| 2026-09-23 | 新增 §8 待核实项 6（CI 是否全量跑 <code>tests/**</code>）—— 两条故意红的探针可能影响流水线，<strong>标记为第二期前的优先项</strong> |</p>
+<p>| 2026-09-23 | <strong>§8-6 当场结案</strong>（不留待核实项）：新增 <strong>§8.1</strong> 记录实测结论 —— 探针会被 <code>test:node</code> 扫到、被 jest 排除（无双 runner）、pr-gate 的 <code>test-baseline</code> job 当前 <code>continue-on-error</code> <strong>不会卡 PR</strong>；但该 job 的升级目标是「失败清零后转阻断」，故按本仓约定在 <strong><code>tests/DEBT.md</code> 新增 §十一</strong>登记（<code>@bug</code>，截止 ≈2026-12-23）。同时核实 <code>check-debt-ledger.js</code> 管的是另一份台账，与之无涉 |</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-131] 报错一键交修闭环方案.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-131] 报错一键交修闭环方案</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-133] 桌面端基本任务闭环-接入智能体工具循环.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-133] 桌面端基本任务闭环：接入智能体工具循环</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-132] TUI选区锚点漂移修复方案.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

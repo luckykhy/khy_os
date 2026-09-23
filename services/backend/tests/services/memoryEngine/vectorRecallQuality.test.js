@@ -41,8 +41,8 @@ const path = require('path');
 
 const paths = require('../../../src/memdir/paths');
 const memdir = require('../../../src/memdir/memdir');
-const scoring = require('../../../src/services/memoryEngine/scoring');
-const vectorStore = require('../../../src/services/memoryEngine/vectorStore');
+const scoring = require('../../../src/services/domain/memory/memoryEngine/scoring.js');
+const vectorStore = require('../../../src/services/domain/memory/memoryEngine/vectorStore.js');
 const embeddingClient = require('../../../src/services/embeddingClient');
 
 const NOW = Date.UTC(2026, 7, 16, 12, 0, 0);

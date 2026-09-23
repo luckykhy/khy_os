@@ -1,0 +1,142 @@
+name: Protocol Conformance (Official Suites)
+
+# 触发条件：
+#   - release 发布（published）：正式发版门禁，必须产出真实一致性报告。
+#   - push tag v*：打版本标签也跑一遍，与 release 同源。
+#   - workflow_dispatch：手动触发，可覆盖 spec version / TCK level，便于复跑与调试。
+on:
+  release:
+    types: [published]
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      mcp_spec_version:
+        description: 'MCP 规范版本，对齐 S4 声明的 2025-03-26'
+        required: false
+        default: '2025-03-26'
+      a2a_level:
+        description: 'A2A TCK 级别（must / should / may）'
+        required: false
+        default: 'must'
+
+# 只读 + 产物上传：本流水线只跑官方一致性套件、产出报告并上传，不写仓库、不发包。
+# actions:write 是 actions/upload-artifact@v4 的硬性要求（否则报
+# "The actions:write permission is required to upload artifacts"）。
+permissions:
+  contents: read
+  actions: write
+
+# 同一 ref 不取消正在跑的 release 一致性校验（release 结论具有发布意义，避免误取消）。
+concurrency:
+  group: conformance-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  conformance:
+    name: MCP + A2A official conformance (--required)
+    runs-on: ubuntu-latest
+    env:
+      # 与后端 server.js 的 BACKEND_PORT（默认 3000）对齐；conformance-runner.mjs
+      # 用这两个 env 决定套件打向哪个端点。
+      KHY_MCP_URL: http://127.0.0.1:3000/mcp
+      KHY_ACP_A2A_URL: http://127.0.0.1:3000
+      KHY_MCP_SPEC_VERSION: ${{ github.event.inputs.mcp_spec_version || '2025-03-26' }}
+      BACKEND_PORT: '3000'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          # 显式 pin，与根 package.json 的 packageManager 保持一致。
+          # 不写则依赖 action 隐式探测；探测结果与 corepack 不一致时会在安装
+          # 阶段额外下载第二个 pnpm，报难查的 ERR_PNPM_*。
+          version: 10.18.0
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'pnpm'
+
+      # 安装后端运行时闭包（含本次补齐的 S3 A2A 服务端任务面与 S4 MCP 2025-03-26）。
+      - name: Install backend deps
+        run: npm run install:core
+
+      # ── (1) 实际安装官方套件 #1：MCP conformance ─────────────────────────────
+      # 用 pnpm 装到 workspace 根，但不写回 package.json（--save-false），
+      # 这样开发机不会被强制拉取该重型套件，而 CI 在需要时就地安装。
+      # 装完后 node_modules/.bin/conformance 与
+      # node_modules/@modelcontextprotocol/conformance 都存在 —— conformance-runner.mjs
+      # 据此判定 available=true，进而真正执行而非 SKIPPED。
+      - name: Install @modelcontextprotocol/conformance
+        run: pnpm add -w --save-false @modelcontextprotocol/conformance
+
+      # ── (2) 实际安装官方套件 #2：A2A TCK ───────────────────────────────────
+      # conformance-runner.mjs 检查 .ci/a2a-tck/run_tck.py 与 .ci/a2a-tck/.venv。
+      # 官方仓库以 a2aproject/a2a-tck 为准；若贵司内部镜像另有地址，改 A2A_TCK_REPO 即可。
+      - name: Clone & provision a2a-tck
+        env:
+          A2A_TCK_REPO: https://github.com/a2aproject/a2a-tck
+        run: |
+          set -euo pipefail
+          git clone --depth 1 "$A2A_TCK_REPO" .ci/a2a-tck
+          cd .ci/a2a-tck
+          if command -v uv >/dev/null 2>&1; then
+            uv sync
+          else
+            python3 -m venv .venv
+            .venv/bin/pip install -e .
+          fi
+
+      # ── 启动后端（后台），等待 /health 就绪 ────────────────────────────────
+      # 一致性套件是「打向一个活的服务端」的探针，必须先有监听 3000 的进程。
+      # 若后端需要数据库等前置条件而无法在 CI 启动，本步会以清晰日志失败（属已知依赖，见计划文档）。
+      - name: Start backend (background)
+        working-directory: services/backend
+        run: |
+          set -euo pipefail
+          node server.js > /tmp/khy-backend.log 2>&1 &
+          echo $! > /tmp/khy-backend.pid
+          echo "backend pid=$(cat /tmp/khy-backend.pid)"
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3000/health >/dev/null 2>&1; then
+              echo "backend up after ${i}s"; break
+            fi
+            if ! kill -0 "$(cat /tmp/khy-backend.pid)" 2>/dev/null; then
+              echo "backend process died; log:"; cat /tmp/khy-backend.log; exit 1
+            fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:3000/health || { echo "backend not healthy"; cat /tmp/khy-backend.log; exit 1; }
+
+      # ── (3) --required 参数接入：缺失即门禁失败；产出 .khy/conformance-report.json ──
+      - name: Run conformance (--required)
+        run: node scripts/ci/conformance-runner.mjs --required
+
+      # 无论门禁结果如何都保留证据（报告 + 原始 results + TCK reports）。
+      - name: Upload conformance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: conformance-report
+          if-no-files-found: ignore
+          path: |
+            .khy/conformance-report.json
+            results/**
+            .ci/a2a-tck/reports/**
+
+      # 门禁结论由报告驱动：PASS 才放行，FAIL（含套件缺失/运行非零）则置红。
+      - name: Gate result
+        if: always()
+        run: |
+          node -e "const r=require('./.khy/conformance-report.json'); if(!r.gate.pass){console.error('CONFORMANCE GATE FAILED: '+JSON.stringify(r.gate.blockers)); process.exit(1);} console.log('CONFORMANCE GATE PASSED');"
+
+      - name: Stop backend
+        if: always()
+        run: |
+          [ -f /tmp/khy-backend.pid ] && kill "$(cat /tmp/khy-backend.pid)" 2>/dev/null || true

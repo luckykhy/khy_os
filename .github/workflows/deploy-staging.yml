@@ -1,9 +1,29 @@
 name: Staging Deployment
 
+# ── 这个工作流仍然主要手动触发 ────────────────────────────────────────────────
+#
+# 历史问题：它挂在 push:[main] 上，于是**每一次**提交到 main 都会尝试一次
+# Fly.io 部署 + 冒烟测试。而它本身包含一段必然失败的逻辑（见下面
+# "Smoke test" 步骤的注释），加上 Fly/GHCR 凭据缺失时也会硬失败 ——
+# 结果就是「推送即红」，整条流水线的信号被淹没。
+#
+# 现在改为「默认手动、可选用标签触发」：
+#   - workflow_dispatch      手动部署，永远可用
+#   - push:tags v*-staging   需要时用 `git push origin v1.2.3-staging` 触发
+# 想恢复 push 自动部署也可以，但请先把 secrets（FLY_API_TOKEN）与
+# 镜像可达性确认好，否则不要挂在每次 push 上。
+#
+# 真正「推送即跑、且应该一直绿」的守卫是 pr-gate.yml 与 conformance.yml。
 on:
-  push:
-    branches: [main, master]
   workflow_dispatch:
+    inputs:
+      skip_deploy:
+        description: '只跑测试与构建，不部署到 Fly.io'
+        type: boolean
+        default: false
+  push:
+    tags:
+      - 'v*-staging'
 
 # 需要 packages: write 推送 :staging 镜像到 GHCR；其余只读。
 permissions:
@@ -27,8 +47,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ── pnpm 版本必须与 install 脚本保持一致 ─────────────────────────────────
+      #
+      # install:core 走的是 `corepack pnpm install`（根 package.json 定义的），
+      # 而不是裸 `pnpm`。corepack 会按根 package.json 的 packageManager
+      # （当前 pnpm@10.18.0）**自己下载并切换** pnpm 版本。
+      #
+      # 如果这里不显式写 version，pnpm/action-setup 会去读 packageJson 的
+      # packageManager —— 既然读到了，它装的就是 10.18.0，与 corepack 一致；
+      # 但这依赖于 action 的自动探测行为，属于隐式约定。显式写死更安全：
+      # 一旦两者不一致，corepack 会在 CI 里临时下载第二个 pnpm 版本，
+      # 表现为「安装阶段莫名变慢 / 报 ERR_PNPM_* 」这类难查的失败。
+      #
+      # 提交包版本变更时，请同步改这里的 version 与根 package.json 的
+      # packageManager（scripts/release/pin-khyos-toolchain.js --lint 会守）。
       - name: Install pnpm
         uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.0
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -42,11 +78,26 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
 
+      # ── 后端依赖安装 ─────────────────────────────────────────────────────────
+      # --frozen-lockfile 是硬约束：锁文件与 package.json 只要有一点不同步就
+      # 直接失败，而不是「悄悄把锁文件改了再装」。这是好事 —— 但它意味着
+      # **改了依赖就必须把 pnpm-lock.yaml 一起提交**。忘记提交锁文件是本
+      # 工作流历史上最常见的失败原因之一（本地能跑，CI 一推就红）。
+      #
+      # 本地自查（注意：**不要**加 --frozen-lockfile=false —— 它会覆盖前一个
+      # 参数，等于根本没加 frozen 约束，是个会自欺的写法）：
+      #   corepack pnpm install --frozen-lockfile
+      #   git status            # 若 pnpm-lock.yaml 有改动，说明你漏提交了
       - name: Install backend dependencies
         # install:core is a root-level pnpm filtered install; run from root.
         run: npm run install:core
 
-      - name: Run test suite (Jest + node:test)
+      # ── 测试 ─────────────────────────────────────────────────────────────────
+      # test:node 只在这一步失败是「业务真红」，应当保留阻断。
+      # 注意 package.json 里 test:node 是 `node --test tests/**/*.test.js`
+      # （通配符**没有加引号**）。shell 会先展开它，因此实际跑的是 1288 个
+      # 文件而非仅顶层 705 个；这条路径依赖 shell 的 glob 展开，改动时要当心。
+      - name: "Run test suite (Jest + node:test)"
         working-directory: services/backend
         run: |
           npm test -- --passWithNoTests
@@ -75,40 +126,71 @@ jobs:
           cache-to: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache,mode=max
 
       # ── Deploy to Fly.io staging ─────────────────────────────────────────────
+      #
+      # 凭据缺失时「跳过而不是失败」：secret 未配置属于环境问题，不是这次提交
+      # 的问题。硬失败会把它伪装成代码红灯，掩盖真正的回归。
+      - name: Check Fly.io credentials
+        id: fly_creds
+        run: |
+          if [ -n "${{ secrets.FLY_API_TOKEN }}" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Fly.io 凭据缺失::未配置 secrets.FLY_API_TOKEN，跳过部署与冒烟测试。"
+          fi
+
       - name: Install flyctl
+        if: steps.fly_creds.outputs.available == 'true' && inputs.skip_deploy != true
         uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Deploy to Fly.io staging
+        if: steps.fly_creds.outputs.available == 'true' && inputs.skip_deploy != true
         run: flyctl deploy --config fly.staging.toml --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       # ── Smoke tests ──────────────────────────────────────────────────────────
+      #
+      # ✅ 已恢复。恢复前完成的三件事（2026-09-18）：
+      #
+      #   a. 后端提供**存活探针** /healthz（services/backend/server.js），
+      #      进程活着即回 200，**不查 DB** —— 刻意不复用依赖 sequelize 的
+      #      /health，否则 DB 故障会把「服务起没起来」这件事也一起弄红。
+      #   b. 镜像改为以 HTTP 服务为 entrypoint：
+      #      Dockerfile CMD = node docker-entrypoint.js，EXPOSE 3000，
+      #      且新增 COPY 源码树（实测 `pip install khy-os` 的 wheel
+      #      **不含 services/backend**，不 COPY 会 MODULE_NOT_FOUND）。
+      #      entrypoint 把 PORT 钉死 3000 并禁端口顺延，防止 Fly 指空端口。
+      #   c. fly.staging.toml 补了 [[http_service.checks]] 指向 /healthz，
+      #      并修正了镜像路径/tag（原先拉 :main 且仓库路径也是错的）。
+      #
+      # 探针端点必须与 fly.staging.toml 的 checks.path、server.js 的路由三处同源。
+      # 单点定义在这里，避免三处字符串各写一遍再次漂移。
       - name: Wait for staging to be ready
+        if: steps.fly_creds.outputs.available == 'true' && inputs.skip_deploy != true
         run: |
-          STAGING_URL="https://khy-os-staging.fly.dev"
-          echo "Waiting for $STAGING_URL to respond..."
           for i in $(seq 1 60); do
-            if curl -sf --max-time 5 "$STAGING_URL" > /dev/null 2>&1; then
-              echo "Staging is ready after ${i}0s"
-              break
-            fi
-            if [ "$i" -eq 60 ]; then
-              echo "Staging did not become ready within 10 minutes"
-              exit 1
+            if curl -sf --max-time 5 "$STAGING_URL$HEALTH_PATH" > /dev/null 2>&1; then
+              echo "Staging is ready after $((i * 10))s"
+              exit 0
             fi
             sleep 10
           done
+          echo "Staging did not become ready within 10 minutes"
+          exit 1
         env:
           STAGING_URL: https://khy-os-staging.fly.dev
+          HEALTH_PATH: /healthz
 
       # 注意：step name 中的冒号必须加引号，否则 YAML 会把它当成嵌套映射，
       # 整个 workflow 文件解析失败（GitHub 会直接拒绝运行，而非跳过该步）。
+      # 本仓库曾经就因为漏了这一处引号，导致所有 job 一起报错。
       - name: "Smoke test: health endpoint returns 200"
+        if: steps.fly_creds.outputs.available == 'true' && inputs.skip_deploy != true
         run: |
-          STAGING_URL="https://khy-os-staging.fly.dev"
-          # The staging app exposes a health endpoint; verify it returns 200.
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$STAGING_URL/health")
+          # 用存活探针 /healthz：它与 Fly 的 checks 端点一致，
+          # 保证「Fly 认为健康」与「workflow 认为健康」是同一个判据。
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$STAGING_URL$HEALTH_PATH")
           if [ "$HTTP_CODE" != "200" ]; then
             echo "Health check failed with HTTP $HTTP_CODE"
             exit 1
@@ -116,12 +198,13 @@ jobs:
           echo "Health check passed: HTTP 200"
         env:
           STAGING_URL: https://khy-os-staging.fly.dev
+          HEALTH_PATH: /healthz
 
       - name: Notify staging status
         if: always()
         run: |
           if [ "${{ job.status }}" = "success" ]; then
-            echo "Staging deploy + smoke test PASSED"
+            echo "Staging pipeline PASSED"
           else
-            echo "Staging deploy + smoke test FAILED"
+            echo "Staging pipeline FAILED"
           fi

@@ -31,6 +31,7 @@ const Spinner = require('./Spinner');
 const CompactionProgress = require('./CompactionProgress');
 const ProgressBar = require('./ProgressBar');
 const CompletionMenu = require('./CompletionMenu');
+const { wrapCell } = require('../wrapCell');
 const HelpMenu = require('./HelpMenu');
 const ShellView = require('./ShellView');
 const TranscriptView = require('./TranscriptView');
@@ -38,13 +39,25 @@ const TaskListPanel = require('./TaskListPanel');
 // Boot screen — first-frame loading animation (gated KHY_BOOT_SCREEN, default on).
 // Fail-soft require; missing module → _BootScreen stays null → main UI renders directly.
 const BootScreen = require('./BootScreen');
+// 启动板块的节拍真源（模块级单例，纯叶子）。pre-mount 阶段（replSession.js）与
+// Ink 内共享同一份进度 —— 见 [DESIGN-ARCH-115] §4。
+const startupBeats = require('../../startupBeats');
+
+// 网关拍的降级看门狗时限。超时**不是**完成，只是「不再等」：网关不可达本就不阻断启动
+// （TUI 首条消息才会提示 401/429），所以等不到确认就该降级继续，而不是无限等待。
+// [DESIGN-ARCH-115] §4.2 规则 2：超时只用于降级并告知，绝不用来判定完成。
+//
+// 1500ms 不是拍脑袋：旧实现的固定开销是 1.5s(超时) + 0.4s(ready 停顿) = 1.9s。
+// 取 1500 保证**最坏情况也不回归**旧行为；而健康路径下 footer.model 在 mount 那一帧
+// 就解析出来，启动从「固定 1.9s」降到「几乎是 0」。
+const GATEWAY_DEGRADE_MS = 1500;
 // 独占输入的全屏覆盖层(/model·/khyos)期间隐藏输入框/页脚的判定单一真源。
 const overlayLiveBudget = require('./overlayLiveBudget');
 const TopologyPanel = require('./TopologyPanel');
 const SidebarPanel = require('./SidebarPanel');
 const { useQueryBridge, buildResumedTranscript } = require('../hooks/useQueryBridge');
 const { useVimInput } = require('../hooks/useVimInput');
-const { useCompletions, applyCompletion } = require('../hooks/useCompletions');
+const { useCompletions, applyCompletion, computeCompletions } = require('../hooks/useCompletions');
 const { useTopic } = require('../hooks/useTopic');
 const { useSidebarNav } = require('../hooks/useSidebarNav');
 const { tuiErrorOf } = require('../tuiErrorAdapter');
@@ -74,6 +87,7 @@ const _sessionColorState = require('../../sessionColorState');
 // setFooter return the SAME ref when nothing changed, so an adapterInfo churn can
 // no longer force an unconditional re-render (the render-storm "loaded gun").
 const { footersEqual } = require('../footerStability');
+const imeCommitGuard = require('../imeCommitGuard');
 const inkRuntime = require('../inkRuntime');
 // 主区最小高度 SSOT:MAIN 左列 Box 的 minHeight 消费此处。
 const { MAIN_MIN_HEIGHT } = require('./regionLayout');
@@ -127,6 +141,24 @@ try {
 } catch {
   _mouse = null;
 }
+// 应用内自绘选择的模型层(§4.2 第二层)。**必须与 _mouse 同时在位**才能开选择:
+// 没有 dispatcher 就收不到拖动事件,没有 selection 就没法把坐标算成区间。
+// fail-soft require:任一缺失 → onSelectEvent 不接线 → 逐字节回退到老行为。
+let _selectMod = null;
+try {
+  _selectMod = require('../selection');
+} catch {
+  _selectMod = null;
+}
+// 三个门控(KHY_SELECT / _CLIP / _DRAG)的真源已提到 `utils/selectGates.js`,
+// CC 模式(CcApp)读的是同一个叶子 —— 两个模式的开关必须是同一个开关,抄一份
+// 就会静默漂移([DESIGN-ARCH-124] §3.1)。这里只做转发,语义与原先逐字节一致。
+let _selectGates = null;
+try {
+  _selectGates = require('../utils/selectGates');
+} catch {
+  _selectGates = null;
+}
 // Anchor-mode single source for mouse Y mapping (bottom vs top anchored).
 let _startupAnchor = null;
 try {
@@ -150,6 +182,146 @@ try {
 } catch {
   _transcriptLines = null;
 }
+// <Static> 只承载横幅(模块级常量 → 数组 identity 永久稳定,ink 不会误判为「新增项」)。
+// 转录改由应用内 Viewport 承载,原因见 App() 内 _viewportHeight 上方注释。
+// 门控 KHY_INLINE_TRANSCRIPT(默认开)关闭 → 回退到「<Static> 承载整段转录」的旧行为,
+// 逐字节与修改前一致(仓库纪律:每条行为改动都要留字节级回退路径)。
+const _STATIC_BANNER_ONLY = Object.freeze([Object.freeze({ kind: 'banner', key: 'banner' })]);
+const _OFF_VALUES = new Set(['0', 'false', 'off', 'no']);
+
+// BUG-18: 拖选复制成功后,反色选区延时自动清除的毫秒数(对齐 Claude Code
+// 「复制完成即消失」直觉;此前选区永久残留,挡内容且误示仍活动)。env 可调,
+// 0 = 立即清除;清除前任意 cancel/down 手势可提前撤销(见 onSelectEvent)。
+const _SELECT_CLEAR_DELAY_MS = (() => {
+  const n = Number(process.env.KHY_SELECT_CLEAR_MS);
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 1500;
+})();
+
+/**
+ * 转录内联门控:转录由应用内 Viewport 承载(默认开)。显式 falsy → <Static> 承载整段转录。
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {boolean}
+ */
+function _inlineTranscriptEnabled(env) {
+  try {
+    const raw = (env || process.env).KHY_INLINE_TRANSCRIPT;
+    const v = String(raw === undefined || raw === null ? '' : raw)
+      .trim()
+      .toLowerCase();
+    return !_OFF_VALUES.has(v);
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * 滚轮接管门控:滚轮驱动应用内视口(默认开)。显式 falsy → 回退「交还终端原生滚动」。
+ * 备用缓冲区里后者会把滚轮变成合成的 ↑/↓(→ 输入历史回溯),仅在主屏幕下才有意义。
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {boolean}
+ */
+function _wheelScrollEnabled(env) {
+  try {
+    const raw = (env || process.env).KHY_MOUSE_WHEEL;
+    const v = String(raw === undefined || raw === null ? '' : raw)
+      .trim()
+      .toLowerCase();
+    return !_OFF_VALUES.has(v);
+  } catch {
+    return true;
+  }
+}
+
+// ── 应用内自绘选择门控(`[DESIGN-ARCH-119]` §4.2 第二层)──────────────────────
+//
+// 为什么需要「自己画」而不是「把拖选还给终端」:鼠标追踪一旦开启,事件就被 ink 从
+// stdin 读走,`use-input.js:112-114` 把 handler 返回值直接丢弃 —— `return false` 物理
+// 上回不到终端(§4.2.1b)。所以拖选只能在**本进程内**完成:开 1002 收位移、反色画选区、
+// 松手自己写剪贴板。
+//
+// 默认值的选择是**权衡后的保守值**,不是「安全默认」:
+//   开  → 复制可用(用户报的诉求),但会**替换**原生拖选(1002 吃掉了 press 起点);
+//   关  → 保留原生拖选(未开追踪的终端下真的能用),但用户报的问题依旧。
+// 既然「无法复制」是已确认的用户可见故障、且备屏下原生拖选本就被追踪吃掉,这里选 **开**。
+// 显式 `KHY_SELECT=0` 可退回旧行为(逐字节保留,给「我的终端原生拖选好好的」的用户)。
+//
+// 三个子开关的存在理由各不相同(别合并):
+//   KHY_SELECT        总闸。关掉 = 不接管拖选、不开 1002、Viewport 不画反色。
+//   KHY_SELECT_CLIP   松手自动写剪贴板。关掉 = 能选中能看,但不自动复制(手动按 Ctrl+C 走既有路径)。
+//   KHY_SELECT_DRAG   1002 位移追踪。关掉 = 只支持「按下-松开」两点式选择,不跟手(诊断用)。
+/**
+ * 自绘选择总闸(默认开)。
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {boolean}
+ */
+function _selectEnabled(env) {
+  if (_selectGates && typeof _selectGates.selectEnabled === 'function') {
+    return _selectGates.selectEnabled(env);
+  }
+  // 叶子缺失(不该发生)时的逐字节回退:与原先的实现完全一致。
+  try {
+    const raw = (env || process.env).KHY_SELECT;
+    const v = String(raw === undefined || raw === null ? '' : raw)
+      .trim()
+      .toLowerCase();
+    return !_OFF_VALUES.has(v);
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * 松手自动写剪贴板(默认开)。关掉 → 只画反色不复制。
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {boolean}
+ */
+function _selectClipEnabled(env) {
+  if (_selectGates && typeof _selectGates.selectClipEnabled === 'function') {
+    return _selectGates.selectClipEnabled(env);
+  }
+  // 叶子缺失(不该发生)时的逐字节回退:与原先的实现完全一致。
+  try {
+    const raw = (env || process.env).KHY_SELECT_CLIP;
+    const v = String(raw === undefined || raw === null ? '' : raw)
+      .trim()
+      .toLowerCase();
+    return !_OFF_VALUES.has(v);
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * 拖动位移追踪(默认开)。关掉 → 不开 1002,只认按下/松开两点(诊断用:用于区分
+ * 「是 1002 没收到位移」还是「选区模型算错了」)。
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {boolean}
+ */
+function _selectDragEnabled(env) {
+  if (_selectGates && typeof _selectGates.selectDragEnabled === 'function') {
+    return _selectGates.selectDragEnabled(env);
+  }
+  // 叶子缺失(不该发生)时的逐字节回退:与原先的实现完全一致。
+  try {
+    const raw = (env || process.env).KHY_SELECT_DRAG;
+    const v = String(raw === undefined || raw === null ? '' : raw)
+      .trim()
+      .toLowerCase();
+    return !_OFF_VALUES.has(v);
+  } catch {
+    return true;
+  }
+}
+
+// ── 视口偏移的「贴底」语义 ────────────────────────────────────────────────────
+// 真源是 `ink-components/Viewport.js` 的 `resolveViewportOffset` /
+// `applyStickyViewportAction`(与 `applyViewportScroll` 同处,是纯叶子、可单测)。
+// 这里不重复实现 —— 之前 App 里另抄一份是同一个 bug 的温床。
+// 语义摘要:`null` / `undefined` / 负数 = **贴底**(追随最新内容);数字 = 固定偏移;
+// 滚回最底时回写 `null` 自动恢复跟随。
+// 为什么需要哨兵值:转录默认就该停在最新一条。历史实现把 state 初值写成 0,再用
+// `scroll >= maxScroll` 判「之前在底部」—— 内容一旦长过视口,`0 >= maxScroll` 恒假,
+// 视口就永远停在**顶部**,用户看到的仍是最早那几行。
 // 方向键归属判定叶子(CC context → bindings)。require 失败 → 块 4.7 的 switch 落到
 // default,方向键一律转发给 textInput —— 退化但不瘫痪(子视图滚动会失效,输入不会丢)。
 let _arrowRouting = null;
@@ -277,10 +449,10 @@ const _submitModules = (() => {
     m.nlModelSwitchResolver = require('../../nlModelSwitchResolver');
   } catch {}
   try {
-    m.btwNote = require('../../../services/conversation/btwNote');
+    m.btwNote = require('../../../services/domain/session/conversation/btwNote');
   } catch {}
   try {
-    m.btwNoteQueue = require('../../../services/conversation/btwNoteQueue');
+    m.btwNoteQueue = require('../../../services/domain/session/conversation/btwNoteQueue');
   } catch {}
   try {
     m.atMentionInject = require('../../atMentionInject');
@@ -592,7 +764,7 @@ function App({ options = {} }) {
             if (adv.humanLine) {
               query.setMessages((m) => [
                 ...m,
-                { type: 'notice', content: adv.humanLine, timestamp: Date.now() },
+                { role: 'notice', content: adv.humanLine, timestamp: Date.now() },
               ]);
             }
           } catch {
@@ -601,7 +773,7 @@ function App({ options = {} }) {
           // AI 下一轮:btw 注记(提交时 mergeHints 排空)。
           try {
             if (adv.aiNote) {
-              require('../../../services/conversation/btwNoteQueue').enqueue(adv.aiNote);
+              require('../../../services/domain/session/conversation/btwNoteQueue').enqueue(adv.aiNote);
             }
           } catch {
             /* best-effort */
@@ -636,12 +808,28 @@ function App({ options = {} }) {
       const gateway = require('../../../services/gateway/aiGateway');
       const active = gateway.getActiveAdapter ? gateway.getActiveAdapter() : null;
       const activeModel = active?.activeModel || process.env.GATEWAY_PREFERRED_MODEL || 'auto';
+      // 钉选通道被跳过（2026-09-17「页脚 agnes / 报错 windsurf」事故）：
+      // getActiveAdapter() 在 Tier1 不可用时静默回落到可用通道，页脚因此显示
+      // agnes-3.0-flash，而请求会被 GATEWAY_PREFERRED_STRICT 硬钉在 windsurf 上
+      // 直接失败 —— 上下矛盾。pinnedSkipped 标记让这个隐性事实显性化：
+      // strict 时它就是「下一次请求必然失败」的预告，必须让用户看见。
+      const pinnedSkip =
+        active && active.pinnedSkipped && active.pinnedSkipped.active
+          ? active.pinnedSkipped
+          : null;
       // Get real model status from backend: check if the model is actually usable
       let modelStatus = null;
+      if (pinnedSkip && pinnedSkip.strict) {
+        modelStatus = {
+          status: 'error',
+          reason: `钉选通道 ${pinnedSkip.adapter} 不可用（strict 禁止回退）`,
+          cooldownMs: 0,
+        };
+      }
       try {
         const adapterEntry = active?.key ? gateway.getAdapter?.(active.key) : null;
         const adapterStatus = adapterEntry?.adapter?.getStatus?.() || active;
-        if (adapterStatus) {
+        if (adapterStatus && !modelStatus) {
           const hasError = adapterStatus.lastError && adapterStatus.lastError.trim();
           const isAvailable = adapterStatus.available !== false;
           const isCoolingDown = adapterStatus.cooldownUntilMs && adapterStatus.cooldownUntilMs > Date.now();
@@ -662,7 +850,12 @@ function App({ options = {} }) {
         const next = {
           ...f,
           model: activeModel,
-          adapter: process.env.GATEWAY_PREFERRED_ADAPTER || active?.name || f.adapter || 'auto',
+          // 实际优先、声明兜底（原实现反了：env 优先会让页脚把「声明」当「实际」显示）。
+          // active.key 是网关真正解析出的通道；env 只在拿不到 active 时才作为退化信息。
+          adapter: active?.key || process.env.GATEWAY_PREFERRED_ADAPTER || f.adapter || 'auto',
+          // 意图 ≠ 实际时，把被跳过的钉选通道一并带上，页脚据此渲染「windsurf→api」这类
+          // 双段标签，而不是二选一（二选一正是事故的成因）。
+          pinnedSkip,
           effort: aiMod.getActiveEffort
             ? aiMod.getActiveEffort()
             : aiMod.getEffort
@@ -724,7 +917,9 @@ function App({ options = {} }) {
     }
   }, []);
   const [selectedIndex, setSelectedIndex] = React.useState(0);
-  const [completionPage, setCompletionPage] = React.useState(0);
+  // 补全菜单的「第几页」不是状态而是派生值：`_completionPage = floor(selectedIndex / 页大小)`
+  // （见下方 chrome 账本）。曾另存一份 `completionPage` 并靠键盘处理同步，闭包读旧索引
+  // 会让它和高亮脱钩 —— 同一份事实存两处就是 BUG-61 的成因。
   const [showHelp, setShowHelp] = React.useState(false);
   // Ctrl+R reverse-incremental history search (CC parity). null = inactive;
   // active = { query, matches, index, current } as returned by the pure leaf
@@ -843,64 +1038,115 @@ function App({ options = {} }) {
   // with `!`. Drives the placeholder swap to "Run a command…" and the visual
   // indicator. Off → shellMode stays false → byte-identical legacy placeholder.
   const [shellMode, setShellMode] = React.useState(false);
-  // ── Boot screen (gated KHY_BOOT_SCREEN, default on) ─────────────────────
-  // First-frame loading animation shown while ink + gateway + session init.
-  // BootScreen component renders a braille spinner + step list; once all
-  // steps complete the parent swaps to the main UI. Gate off / component
-  // unavailable → _bootScreenEl stays null → main UI renders directly.
-  const [_bootComplete, setBootComplete] = React.useState(false);
-  const _bootTracker = React.useRef(null);
-  if (_bootTracker.current === null) {
-    _bootTracker.current = BootScreen && typeof BootScreen.createBootTracker === 'function'
-      ? BootScreen.createBootTracker()
-      : null;
+  // ── 启动板块（[DESIGN-ARCH-115]）─────────────────────────────────────────
+  // 本组件**不持有**启动状态，只订阅 `cli/startupBeats` 的模块级单例。
+  // 三条硬规则（[DESIGN-ARCH-115] §4.2）：
+  //   1. 完成信号必须是本拍自己的 resolve —— 禁止引用其它功能的副作用。
+  //      （历史病 D1：曾用 banner 的 git 来源探测 `bannerUpdateLine` 当「会话就绪」
+  //       的信号，于是一个与启动无关的探测决定了启动时长，起步就固定 1.9s。）
+  //   2. 就绪 = 最后一拍完成；超时只用于**降级并告知**，绝不用来判定完成。
+  //   3. 状态单调推进，不回退。
+  const beats = startupBeats.beats;
+
+  // 预热起点：env / auth / workspace / session 四拍在 Ink 挂载**之前**就已完成
+  // （replSession.js 的 pre-mount 阶段，见 [DESIGN-ARCH-115] §3.2）。
+  // 放在首次渲染里同步标记，让首帧直接显示 ✓，而不是让用户看着已完成的工作转圈。
+  // 这同时是 liveness 保证：这四拍结构上不可能在 Ink 之后才完成，故不会挂起。
+  // preload 幂等（已终态的拍跳过），StrictMode 双渲染安全。
+  const _bootPrimedRef = React.useRef(false);
+  if (!_bootPrimedRef.current) {
+    _bootPrimedRef.current = true;
+    beats.preload(['env', 'auth', 'workspace', 'session']);
   }
-  // Mark ink loaded once the first frame commits.
+
+  const [_bootComplete, setBootComplete] = React.useState(() => beats.isReady());
+  React.useEffect(() => beats.subscribe(() => setBootComplete(beats.isReady())), [beats]);
+
+  // 拍 3 `render`：Ink 首帧 commit 之后才算渲染就绪（effect 在 commit 后跑）。
   React.useEffect(() => {
-    if (_bootTracker.current) {
-      _bootTracker.current.done('ink');
+    beats.done('render');
+  }, [beats]);
+
+  // 拍 5 `gateway`：真实完成信号 = 页脚解析出活动模型（refreshFooter 在 mount 时即执行，
+  // 网关就绪才会写出 footer.model），或 query bridge 离开初始 idle。
+  // ⚠️ 不能用 `query.status !== 'idle'` 单独判定：无 turn 时它会一直停在 'idle'，
+  //    那会让启动**永久挂起** —— 旧实现正是靠 1.5s 超时兜底才没暴露这个问题。
+  React.useEffect(() => {
+    const g = beats.get('gateway');
+    if (!g || g.status === 'done') return;
+    if (query.status !== 'idle' || (footer && footer.model)) {
+      beats.done('gateway');
     }
-  }, []);
-  // Mark gateway ready when query bridge status leaves the initial idle
-  // (useQueryBridge sets status to 'idle' on creation; gateway init makes it
-  // transiently 'thinking' or keeps it idle if no turn — either way, after
-  // the first async tick the bridge is functional).
-  const _bootGateRef = React.useRef(false);
+  }, [beats, query.status, footer]);
+
+  // 降级看门狗 —— 全模块**唯一**允许的超时用法，且它走 fail()（可见的降级）而非 done()。
+  // 理由：网关不可达本就不阻断启动（TUI 首条消息才会提示 401/429），
+  // 所以等不到确认就该降级继续，而不是假装就绪、更不是无限等待。
   React.useEffect(() => {
-    if (_bootGateRef.current || !_bootTracker.current) return;
-    if (query.status !== 'idle') {
-      _bootGateRef.current = true;
-      _bootTracker.current.done('gateway');
-    }
-  }, [query.status]);
-  // Mark session ready after the banner async init resolves (or after a
-  // safety timeout so the boot screen never sticks on slow sessions).
-  React.useEffect(() => {
-    const markSession = () => {
-      if (_bootTracker.current && !_bootGateRef.current) {
-        _bootGateRef.current = true;
-        _bootTracker.current.done('gateway');
+    const id = setTimeout(() => {
+      const g = beats.get('gateway');
+      if (g && g.status !== 'done') {
+        beats.fail('gateway', '网关未就绪，已降级启动');
       }
-      if (_bootTracker.current) {
-        _bootTracker.current.done('session');
-        // Short delay so the user sees the "ready" step, then transition.
-        setTimeout(() => setBootComplete(true), 400);
-      }
-    };
-    // bannerUpdateLine resolves asynchronously after mount — that's our signal
-    // that at least the banner init is done.
-    const id = setTimeout(markSession, 1500); // safety: 1.5s max boot time
+    }, GATEWAY_DEGRADE_MS);
     return () => clearTimeout(id);
-  }, [bannerUpdateLine]);
+  }, [beats]);
   // 主内容视口滚动偏移(页面内滚动,不带动输入框)。
   // 消息区(committed + streaming)在固定高度视口内滚动,PromptFrame 始终钉在底部。
-  const [mainViewportScroll, setMainViewportScroll] = React.useState(0);
+  // 主内容视口滚动偏移。**初值 null = 贴底**(见 Viewport.js 的 resolveViewportOffset):
+  // 转录默认停在最新一条,新内容进来继续跟随;用户一旦往上滚就变成具体数字,
+  // 再滚回最底自动回写 null 恢复跟随。
+  const [mainViewportScroll, setMainViewportScroll] = React.useState(null);
   const _mainViewportScrollRef = React.useRef(0);
   // 视口几何:高度 + 内容总行数(供键盘滚动 handler 读取,避免每次 render 重算)。
   const _viewportHeightRef = React.useRef(10);
   const _viewportTotalLinesRef = React.useRef(0);
-  // Preview 布局 · 主内容视口滚动偏移(页面内滚动,不带动输入框)。
-  const [previewViewportScroll, setPreviewViewportScroll] = React.useState(0);
+  // 补全框一页画几条(高度预算的函数,见 `_viewportHeight` 的 completionH 分支)。
+  // 键盘翻页必须用同一个数,否则矮屏上「下一页」会翻到框外(BUG-60 高度分支)。
+  const _completionPerPageRef = React.useRef(10);
+  // ── 应用内自绘选择(§4.2 第二层)────────────────────────────────────────────
+  // 选区形状与操作 API 的**真源是 `selection.js`**,不要自己发明:
+  //   形状   `{anchor:{line,col}, head:{line,col}, dragging}` —— anchor = 按下点(不动),
+  //          head = 当前指针点(拖动时变)。
+  //   操作   `beginSelection(sel, line, col)` / `extendSelection(sel, line, col)` /
+  //          `endSelection(sel)` / `normalizeSelection(sel)` —— 注意前两个是
+  //          **(sel, line, col) 三参**,line/col 分开传。
+  // ⚠ 踩过的坑(端到端探针抓的,三层单测都发现不了):
+  //    ① 把形状写成 `{start,end}` → normalizeSelection 静默返回 null,链路断;
+  //    ② 把 `beginSelection(sel, pt)` 传成点对象 → col 归零,选区永远从第 0 列起。
+  //   两层单测都自洽,只有串起来跑才暴露。
+  //
+  // 为什么是 React state:反色要触发重渲才能画出来。而 selection.js 保持纯叶子、
+  // 只做算术 —— 这个分工是刻意的(ref 存不住「要重渲」这件事)。
+  const [selectRegion, setSelectRegion] = React.useState(null);
+  // 选区对象的 ref 镜像。**必须维护**:`onSelectEvent` 是 useCallback 闭包,
+  // 读 state 会拿到上一帧的值 → 每次 extend 都从旧的 anchor 重算,选区「跳回起点」。
+  const _selectRegionRef = React.useRef(null);
+  // 手势状态放 ref 而非 state —— 它只影响「下一帧要不要上报」,不影响渲染,
+  // 进 state 会让每个位移点都多一次无谓的 re-render。
+  const _selectingRef = React.useRef(false);
+  // BUG-18(2026-09-19):复制完成后选区反色曾永久残留,既挡内容又让人误以为
+  // 选区仍活动。复制成功后延时自动清除(用户可在延时内继续操作选区),
+  // Esc/任意键的 cancel 分支与新的拖选均可提前撤销定时器。
+  const _selectClearTimerRef = React.useRef(null);
+  // 选区原文缓存:松手时用它写剪贴板(异步副作用,读 state 可能读到旧帧)。
+  const _selectTextRef = React.useRef('');
+  // 行投影的 ref 镜像。useInput/onSelectEvent 在 render 早期闭包,读 state 会拿到
+  // 上一帧的值 —— 而 extractText 必须用**松手那一帧**的行数组,否则刚流式进来的一行
+  // 会被漏掉。与 _viewportTotalLinesRef 同一范式(见下方同步点)。
+  const _mainContentLinesRef = React.useRef([]);
+  // Preview 布局滚动偏移的 ref 镜像,供坐标换算读(同上:state 在闭包里是旧值)。
+  const _previewViewportScrollRef = React.useRef(null);
+  // live 帧内、主内容视口**上方**的 chrome 行数(= Preview 布局的 Topbar;legacy
+  // 布局没有)。鼠标行 → 行数组下标要减掉它,否则 preview 用户整体偏 1 行。
+  // 与 `_viewportHeightRef` 同一处同步(见 chrome 账本),口径单一真源。
+  const _viewportTopChromeRef = React.useRef(0);
+  // live 帧在终端里的首行(ink 的 `<Static>` 先占掉若干行)。每次鼠标事件重算。
+  const _viewportScreenTopRef = React.useRef(0);
+  // 上一帧的 chrome 账本明细(仅 KHY_DIAG_H=1 时被读取,用于核对是否漏项)。
+  let _viewportHeightShares = {};
+  // Preview 布局 · 主内容视口滚动偏移(页面内滚动,不带动输入框)。null = 贴底。
+  const [previewViewportScroll, setPreviewViewportScroll] = React.useState(null);
   // Preview 布局 · 右栏看板滚动偏移。
   const [previewSidebarScroll, setPreviewSidebarScroll] = React.useState(0);
   // Preview 布局激活态 ref(useInput 处理器在 render 早期定义,无法直接读取 previewLayoutMode)。
@@ -989,6 +1235,9 @@ function App({ options = {} }) {
   const escAt = React.useRef(0);
   const hintTimer = React.useRef(null);
   const DOUBLE_PRESS_MS = 1000;
+  // 忙碌态 Ctrl+C 逃生阀计数(对齐 classic 的 busyInterruptEscalation:优雅取消
+  // 不落地时,3s 窗口内第 3 次强杀)。ink 分支此前永不升级 → 用户按多少次都退不出。
+  const ctrlCBusyEsc = React.useRef(0);
   const showHint = React.useCallback((text) => {
     setHint(text);
     clearTimeout(hintTimer.current);
@@ -1112,7 +1361,17 @@ function App({ options = {} }) {
   // re-arms the timer, so a continuous scroll never re-enables mid-gesture.
   // exitNativePassthrough (below) is the other half: any keystroke means the user is
   // back at the prompt, so tracking returns immediately instead of waiting out the
-  // idle window. KHY_MOUSE_NATIVE_MS overrides the window.
+  // idle window.
+  // 重新接管追踪时**必须与初始开启同档**:漏了 select 会退回 1000,拖动位移从此
+  // 不再上报 → 用户看到的是「滚一下滚轮之后拖选就失灵了」,这种间歇性故障最难查。
+  // 抽成一个函数就是为了让它只有一处真源。
+  const _reEnableTrackingBytes = () => {
+    const opts = { hover: _mouse.mouseHoverEnabled(process.env) };
+    if (_selectOn && _selectDragEnabled(process.env)) {
+      opts.select = true;
+    }
+    return _mouse.enableBytes(opts);
+  };
   const enterNativePassthrough = React.useCallback(() => {
     if (!_mouse || !process.stdout || !process.stdout.isTTY) {
       return;
@@ -1128,20 +1387,15 @@ function App({ options = {} }) {
         /* fail-soft */
       }
     }
-    let ms = 1500;
-    try {
-      const raw = Number(process.env.KHY_MOUSE_NATIVE_MS);
-      if (Number.isFinite(raw) && raw > 0) {
-        ms = raw;
-      }
-    } catch {
-      /* default */
-    }
+    // 原生滚轮回调窗口:1500ms 覆盖常规「滚动-阅读」节奏,每个滚轮事件重置
+    // 计时器(连续滚动不会在中途重新接管追踪)。键入 = 用户回到输入框 →
+    // exitNativePassthrough 立即交还追踪,无需等窗口耗尽。
+    const ms = 1500;
     mouseNativeRestoreTimer.current = setTimeout(() => {
       mouseNativeRestoreTimer.current = null;
       mouseNativeRef.current = false;
       try {
-        process.stdout.write(_mouse.enableBytes({ hover: _mouse.mouseHoverEnabled(process.env) }));
+        process.stdout.write(_reEnableTrackingBytes());
       } catch {
         /* fail-soft */
       }
@@ -1163,7 +1417,7 @@ function App({ options = {} }) {
       return;
     }
     try {
-      process.stdout.write(_mouse.enableBytes({ hover: _mouse.mouseHoverEnabled(process.env) }));
+      process.stdout.write(_reEnableTrackingBytes());
     } catch {
       /* fail-soft */
     }
@@ -1177,12 +1431,238 @@ function App({ options = {} }) {
     []
   );
 
+  // ── 滚轮 → 应用内视口滚动(单一入口,legacy / preview 两布局共用)──────────────
+  // 为什么必须自己吃掉滚轮:备用缓冲区(非 CC 模式默认开)没有回滚缓冲,「把滚轮交还
+  // 终端」会被终端(Windows Terminal / xterm 的 alternate-scroll)合成 ↑/↓ 送进来,而
+  // arrowRouting 把 ↑/↓ 无条件绑到 `history:previous`/`history:next` —— 于是滚一下滚轮
+  // 就召回一条输入历史。滚轮在应用内消化后,终端一个字节都收不到,方向键无从合成。
+  // 一格的步长 3 行(终端惯例;与 scroll:lineUp 同族)。
+  const WHEEL_LINES_PER_NOTCH = 3;
+  const onWheelScroll = React.useCallback((dir) => {
+    if (dir !== 'up' && dir !== 'down') {
+      return;
+    }
+    const vp = require('./Viewport');
+    // `viewH` 必须是**内容行数**,不是盒子高 —— 指示器占掉的那一行不归内容。
+    // 传盒子高会让这里的 maxScroll 比渲染侧小 1,贴底时会少滚一行(见 Viewport
+    // 的 viewportContentRows 注释)。
+    const total = Number(_viewportTotalLinesRef.current) || 0;
+    const viewH = vp.viewportContentRows(
+      Math.max(3, Number(_viewportHeightRef.current) || 3),
+      total
+    );
+    if (total <= viewH) {
+      return; // 内容不超视口 → 无滚动空间,不消耗这一格
+    }
+    const step = dir === 'up' ? 'lineUp' : 'lineDown';
+    // 逐格累加:每一格都从**上一格的落点**继续,且共用贴底语义
+    // (滚到底自动回写 null → 恢复跟随)。
+    const apply = (s) => {
+      let next = s;
+      for (let i = 0; i < WHEEL_LINES_PER_NOTCH; i++) {
+        next = vp.applyStickyViewportAction(step, next, viewH, total);
+      }
+      return next;
+    };
+    if (previewLayoutActiveRef.current) {
+      setPreviewViewportScroll(apply);
+    } else {
+      setMainViewportScroll(apply);
+    }
+  }, []);
+
+  // Single mouse-dispatcher instance for the session (holds hover state).
+  //
+  // ── onSelectEvent:把物理鼠标事件翻译成选区操作(§4.2 第二层核心接线)────────
+  // 坐标换算的关键不变量:**屏幕行 == `_mainContentLines` 的下标**。
+  // Viewport 的 lines 模式按 `height` 直接 `slice(start, end)` 渲染,只有一个加性
+  // 偏移 `clampedScroll`;所以「屏幕 row」减掉视口偏移就是数组下标。这条不变量是
+  // `selection.js` 头部写明的、也是选这个数据结构的原因 —— 不需要任何布局反查。
+  //
+  // 为什么不用 `hitTest` 做坐标反查:那是 yoga 树的**实时**几何,而这里的行数组是
+  // 按列宽预折好的**视觉行**投影。两者在软换行处不一致,拿 hitTest 的结果去索引
+  // lines 数组会整体错位。所以选择层走「视口偏移」这条算术路径,与滚轮同源。
+  const onSelectEvent = React.useCallback((kind, ev) => {
+    const sel = _selectMod;
+    if (!sel || !ev) {
+      return;
+    }
+    // 视口偏移:与渲染用的是同一个值(见 Viewport 的 clampedScroll 推导)。
+    // 这里读 ref 而不是 state —— useInput 的 handler 在 render 早期闭包,读 state
+    // 会拿到本帧的旧值。
+    const total = Math.max(0, Number(_viewportTotalLinesRef.current) || 0);
+    // 盒子高 ≠ 内容行数:指示器占一行(见 Viewport 的 viewportContentRows)。
+    // 这里若用盒子高,`offset` 在贴底态会比渲染侧的 `clampedScroll` 少 1,
+    // 于是整屏选区整体上移一行 —— 与 BUG-24 同一类「两侧口径不一致」。
+    const vp = require('./Viewport');
+    const viewH = vp.viewportContentRows(
+      Math.max(1, Number(_viewportHeightRef.current) || 1),
+      total
+    );
+    const rawScroll = previewLayoutActiveRef.current
+      ? _previewViewportScrollRef.current
+      : _mainViewportScrollRef.current;
+    // ⚠ 偏移解析**只能**走 Viewport 的那个函数,不能在这里手写数字判断。
+    // 贴底态存的是哨兵 `null`(默认值,即「跟随最新内容」),而 `Number(null) === 0`
+    // —— 手写解析会把「贴底」误读成「停在顶部」,于是屏幕第 0 行映射到数组第 0 行,
+    // 也就是**根本看不见的最早那几行**:用户拖动时反色不出现、复制出来的是陈年旧消息。
+    const offset = vp.resolveViewportOffset(rawScroll, viewH, total);
+
+    // 屏幕行 → 行数组下标:唯一的一次换算。**先减「视口首行的屏幕行」,再加 offset**。
+    //
+    // ⚠ `ev.row` 是**物理终端行**,不是「视口内第几行」。这两者从来不等价:
+    //   ink 把 `<Static>` 横幅先写进屏幕,live 帧整体被推到它下面(实测 118 列、
+    //   真 App:rows=40 时帧高 38 ⇒ 帧首行 1;rows=18 时帧高 16 ⇒ 帧首行 1 ——
+    //   账本给帧留了 2 行余量,所以稳态就是 1 行),Preview 布局另有一行 Topbar
+    //   画在视口上方。改动前把 `ev.row` 当成
+    //   「视口内行」直接用 ⇒ 每次点击/拖选整体偏这么多行(用户看到的
+    //   「指针在第 5 行却复制到第 6 行」)。
+    //   校正值由鼠标事件入口每次重算并写入 ref(见 `_viewportScreenTopRef`);
+    //   NaN(取不到 ink 账本)= 不校正,逐字节退回老行为。
+    //
+    // ⚠ 这里曾经写成 `- offset`,方向反了 —— 后果是「只要滚动过,选中的行就整体
+    // 偏移」,用户一滚就选不中想选的东西,而且看起来像是随机选错行。
+    // 真源在 Viewport.js:
+    //     const start = clampedScroll;
+    //     const visible = lines.slice(start, end);
+    // 即**视口**第 0 行 = 数组下标 `clampedScroll` ⇒ `line = 视口行 + offset`。
+    // 这条是端到端探针抓的(单测各自自洽,发现不了方向错误)。
+    const _screenTop = Number.isFinite(_viewportScreenTopRef.current)
+      ? _viewportScreenTopRef.current
+      : 0;
+    const rawLine = Math.trunc(Number(ev.row)) - _screenTop + offset;
+    const displayCol = Math.max(0, Math.trunc(Number(ev.col)));
+    // 绝对行 → 选区点。**换算必须放在最后一步做**,因为 `charColForDisplay`
+    // 要按**该行的实际文本**把显示列折成字符下标 —— 边缘自动滚动会换行,提前算好
+    // 的 col 属于滚动前的那一行。
+    // 鼠标列是**显示列**(终端单元格,CJK 字占 2 格),而选区两端与 extractText
+    // 都按**字符下标**工作 —— 不换算就是「拖选选不中、复制比选中的多一截」,
+    // 中文转录上差近一倍。换算口径真源见 `selection.js` 的 `charColForDisplay`。
+    const toPoint = (absLine) => {
+      const ln = Math.max(0, Math.min(Number(absLine) || 0, Math.max(0, total - 1)));
+      return {
+        line: ln,
+        col: sel.charColForDisplay(_mainContentLinesRef.current[ln], displayCol),
+      };
+    };
+    let pt = toPoint(rawLine);
+
+    if (kind === 'down') {
+      _selectingRef.current = true;
+      // BUG-18: 新拖选开始 → 撤销可能挂着的「复制后自动清除」定时器,
+      // 否则用户连续两次拖选时,第一次的定时器会把第二次的选区擦掉。
+      clearTimeout(_selectClearTimerRef.current);
+      _selectClearTimerRef.current = null;
+      // ⚠ 三个 API 的签名都是 `(sel, line, col)` —— line 与 col **分开传**,
+      // 不是传一个点对象。这里曾经写成 `beginSelection(sel, pt)`(传点),于是
+      // `col` 是 undefined → `_point` 归零 → 选区永远从第 0 列开始。三层单测全绿,
+      // 因为各层都自洽;是端到端探针把这条缝抓出来的。
+      setSelectRegion(sel.beginSelection(_selectRegionRef.current, pt.line, pt.col));
+      return;
+    }
+    if (kind === 'move') {
+      if (!_selectingRef.current) {
+        return;
+      }
+      // 拖动位移**必到**:1002 每一点都上报(dispatcher 侧不限流)。
+      //
+      // ── A-09 拖到视口边缘自动滚动 ─────────────────────────────────────────
+      // 终端只会把指针报告到**窗口边界**为止:指针到了最后一行就不再产生新的行号,
+      // 选区于是被一屏卡死 —— 用户看到的正是「能选中,但只能选当前这一页,
+      // 跨页就复制不出来」。这里在每次位移上滚一格(靠位移事件天然限速,无定时器):
+      // 滚动改的是偏移,而指针的**屏幕行**不变 ⇒ 它对应的绝对行跟着走一格,
+      // 于是锚点不动、活动端继续扩展。内容与视口等高的情形 delta 恒为 0,
+      // 退化为「clamp 不崩」(A-09 允许的简化)。
+      const drag = vp.dragAutoScroll(rawLine, offset, viewH, total);
+      if (drag.delta !== 0) {
+        const step = drag.delta > 0 ? 'lineDown' : 'lineUp';
+        const sticky = vp.applyStickyViewportAction(step, rawScroll, viewH, total);
+        if (previewLayoutActiveRef.current) {
+          setPreviewViewportScroll(sticky);
+          _previewViewportScrollRef.current = sticky;
+        } else {
+          setMainViewportScroll(sticky);
+          _mainViewportScrollRef.current = sticky;
+        }
+        pt = toPoint(drag.line);
+      }
+      setSelectRegion(sel.extendSelection(_selectRegionRef.current, pt.line, pt.col));
+      return;
+    }
+    if (kind === 'up') {
+      if (!_selectingRef.current) {
+        return;
+      }
+      _selectingRef.current = false;
+      // ⚠ 松手点**也要**算进选区(与 `CcApp` 同一条规则):1002 的位移上报是
+      // 「尽力而为」,快速小拖动可能一个 `move` 都没到 —— 那样 head 还停在按下点,
+      // 选区零宽,用户看到反色画出来了却复制不出东西(最迷惑的一种「复制失灵」)。
+      // 按下点→松手点才是用户的真实意图。
+      const dragged = sel.extendSelection(_selectRegionRef.current, pt.line, pt.col);
+      const finished = sel.endSelection(dragged);
+      // 零宽 = 一次普通点击,不当作选区(否则每次点空白都会留下一个闪烁空选区)。
+      // `normalizeSelection` 对零宽返回 null,所以这里用 normalize 的结果做判据 ——
+      // 与 extractText 内部同源,不会出现「画了但提取为空」的不一致。
+      const range = sel.normalizeSelection(finished);
+      if (!range) {
+        setSelectRegion(finished);
+        _selectRegionRef.current = finished;
+        _selectTextRef.current = '';
+        return;
+      }
+      setSelectRegion(finished);
+      _selectRegionRef.current = finished;
+      // 松手即定稿:提取文本 + 写剪贴板。**这是整条链路唯一的产出点** ——
+      // 少了这一步就是「能拖不能复制」,正是用户报的症状。
+      const text = sel.extractText(_mainContentLinesRef.current, finished);
+      _selectTextRef.current = text || '';
+      if (_selectClipEnabled(process.env) && text) {
+        try {
+          const clip = require('../utils/ccClipboard');
+          clip.writeClipboard(text);
+          // BUG-18:复制落剪贴板后,反色选区延时 1.5s 自动清除(对齐 Claude Code
+          // 的「复制完成即消失」直觉);清除前用户若继续拖选/按键,cancel/down
+          // 分支会撤销本定时器,不会把进行中的手势擦掉。
+          clearTimeout(_selectClearTimerRef.current);
+          _selectClearTimerRef.current = setTimeout(() => {
+            _selectClearTimerRef.current = null;
+            const cleared = sel.clearSelection();
+            _selectRegionRef.current = cleared;
+            setSelectRegion(cleared);
+          }, _SELECT_CLEAR_DELAY_MS);
+        } catch {
+          /* fail-soft —— 剪贴板失败绝不能连累 UI,用户至少还看得见选区 */
+        }
+      }
+      return;
+    }
+    if (kind === 'cancel') {
+      // 半截手势(窗口 resize / 切视图 / 任意键) → 丢弃,不留悬空选区。
+      _selectingRef.current = false;
+      // BUG-18: 取消同样要撤销自动清除定时器 —— 选区已被主动清掉,
+      // 迟到的定时器只会再清一次(无害)但会持 ref 泄漏到卸载后。
+      clearTimeout(_selectClearTimerRef.current);
+      _selectClearTimerRef.current = null;
+      const cleared = sel.clearSelection();
+      _selectRegionRef.current = cleared;
+      setSelectRegion(cleared);
+    }
+  }, []);
+
+  // BUG-18: 卸载时撤销未触发的选区清除定时器(fail-soft,绝不抛)。
+  React.useEffect(() => () => clearTimeout(_selectClearTimerRef.current), []);
+
   // Single mouse-dispatcher instance for the session (holds hover state).
   const mouseDispatcherRef = React.useRef(null);
   if (!mouseDispatcherRef.current && _mouse && typeof _mouse.createMouseDispatcher === 'function') {
     mouseDispatcherRef.current = _mouse.createMouseDispatcher({
       hover: _mouse.mouseHoverEnabled(process.env),
       onNative: enterNativePassthrough,
+      // 门控关 → 不传 onWheel → dispatcher 回退 fireNative()(与修改前逐字节一致)。
+      onWheel: _wheelScrollEnabled(process.env) ? onWheelScroll : undefined,
+      // 门控关 → 不传 onSelectEvent → dispatcher 连 selectEnabled 都是 false,
+      // 拖动位移走原来的 hover/吞掉路径(逐字节老行为)。
+      onSelectEvent: _selectEnabled(process.env) ? onSelectEvent : undefined,
     });
   }
 
@@ -1385,6 +1865,39 @@ function App({ options = {} }) {
   );
 
   // ── Native model picker (/model) ───────────────────────────────────────
+  // 「最近模型」对账剪枝(单一入口,ModelPicker 与 openModelPickerForVendor 共用):
+  // 以本次构建出的真实 catalog 为准,把 recent_models.json 里已不存在的 (adapter, model)
+  // 忘掉,并同步 React 状态。返回剪枝后的列表供 immediate 使用。
+  // fail-soft:store 不可用 → 原样返回当前状态,绝不因剪枝失败影响选择器。
+  const pruneRecentAgainst = React.useCallback(
+    (choices) => {
+      try {
+        const keys = new Set(
+          (Array.isArray(choices) ? choices : [])
+            .filter((c) => c && c.value && c.value.adapter && c.value.model)
+            .map(
+              (c) =>
+                `${String(c.value.adapter).trim().toLowerCase()}/${String(c.value.model)
+                  .trim()
+                  .toLowerCase()}`
+            )
+        );
+        if (keys.size === 0) {
+          return recentModels;
+        }
+        const store = require('../../../services/gateway/recentModelsStore');
+        const pruned = store.pruneRecentModels(keys);
+        if (pruned && pruned.removed > 0) {
+          setRecentModels(pruned.list);
+        }
+        return pruned && Array.isArray(pruned.list) ? pruned.list : recentModels;
+      } catch {
+        return recentModels;
+      }
+    },
+    [recentModels]
+  );
+
   // Probe adapters and open the ModelPicker overlay. Replaces the inquirer
   // prompt, which cannot coexist with ink's managed raw-mode input (the reason
   // `/model` exited immediately inside the TUI). Probe progress/diagnostics are
@@ -1453,15 +1966,18 @@ function App({ options = {} }) {
       return;
     }
     setGatewayProgress(null);
+    // 「最近模型」剪枝:忘掉已不在本次真实 catalog 里的历史选择。否则它们会留在 ★最近 里被 F2
+    // 轮换捞回并直接应用 —— 这正是「TUI 莫名跳到不存在的模型」的日常来源之一。
+    const liveRecent = pruneRecentAgainst(built.modelChoices);
     setModelPicker({
       choices: built.modelChoices,
       defaultValue: {
         adapter: process.env.GATEWAY_PREFERRED_ADAPTER || undefined,
         model: process.env.GATEWAY_PREFERRED_MODEL || undefined,
       },
-      recent: recentModels,
+      recent: liveRecent,
     });
-  }, [query, recentModels]);
+  }, [query, recentModels, pruneRecentAgainst]);
 
   // Resolve the model picker: apply the selection (persist + sync + refresh) and
   // mirror the new model/adapter into the footer, or report cancellation.
@@ -1483,14 +1999,6 @@ function App({ options = {} }) {
         ]);
         return;
       }
-      // Record selection to recent models store
-      try {
-        const store = require('../../services/gateway/recentModelsStore');
-        store.pushRecentModel({ adapter: value.adapter, model: value.model });
-        setRecentModels(store.readRecentModels());
-      } catch {
-        /* store unavailable */
-      }
       let gw;
       try {
         gw = require('../../handlers/gateway');
@@ -1503,6 +2011,34 @@ function App({ options = {} }) {
           { role: 'error', content: '应用模型选择不可用', timestamp: Date.now() },
         ]);
         return;
+      }
+      // 选择入口对账(机制闸):本回调同时服务 ModelPicker、F2「最近模型」轮换与自然语言直选。
+      // 后两条**不经过列表构建**,历史残留 / 静态目录猜测的 (adapter, model) 会被直接写进偏好,
+      // 用户看到的正是「TUI 莫名跳到不存在的模型,下一次生成才报 model_not_found」。快照存在且
+      // 不含该条 → 不应用、不落盘,提示改用 /model 重新选择(无快照时放行,绝不阻断正常路径)。
+      try {
+        if (typeof gw.isSelectableNow === 'function' && !gw.isSelectableNow(value)) {
+          query.setMessages((m) => [
+            ...m,
+            {
+              role: 'error',
+              content: `已拒绝切换到「${value.model}」(${value.adapter})：它不在当前可用模型列表中（多为历史残留或静态目录里的猜测条目）。请用 /model 重新选择。`,
+              timestamp: Date.now(),
+            },
+          ]);
+          refreshFooter();
+          return;
+        }
+      } catch {
+        /* fail-open: 对账层故障不阻断用户选择 */
+      }
+      // Record selection to recent models store
+      try {
+        const store = require('../../../services/gateway/recentModelsStore');
+        store.pushRecentModel({ adapter: value.adapter, model: value.model });
+        setRecentModels(store.readRecentModels());
+      } catch {
+        /* store unavailable */
       }
       try {
         const { tokenInfo } = await gw.applyGatewayModelSelection(value);
@@ -1607,16 +2143,18 @@ function App({ options = {} }) {
         return;
       }
       setGatewayProgress(null);
+      // 同一套「最近模型」对账剪枝(与 openModelPicker 共用单一实现)。
+      const liveVendorRecent = pruneRecentAgainst(built.modelChoices);
       setModelPicker({
         choices: built.modelChoices,
         defaultValue: {
           adapter: process.env.GATEWAY_PREFERRED_ADAPTER || undefined,
           model: process.env.GATEWAY_PREFERRED_MODEL || undefined,
         },
-        recent: recentModels,
+        recent: liveVendorRecent,
       });
     },
-    [query, resolveModelPicker, recentModels]
+    [query, resolveModelPicker, recentModels, pruneRecentAgainst]
   );
 
   // Open a FormFlow overlay and resolve with the collected answers (or null on
@@ -1659,9 +2197,51 @@ function App({ options = {} }) {
     return () => uiPrompt.unregister();
   }, [askForm]);
 
+  // Session-watchdog notices (BUG-17). The watchdog holds a diagnostic the user
+  // must see (a hang is reported honestly — governance Rule 3), but it must not
+  // print it itself: a raw `process.stderr.write` while ink owns the terminal is
+  // outside the frame ledger, lands one row below the status bar and no repaint
+  // can ever erase it (repro: .khy/feedback/tui-ux-audit-20260919/U/repro-before.txt).
+  // So the TUI subscribes and the line becomes a transcript notice — the same
+  // partition every other system message uses. Returning false once unmounted
+  // makes push() report "not taken", so the watchdog falls back to its historical
+  // stderr write instead of losing the diagnosis.
+  React.useEffect(() => {
+    let active = true;
+    let unsubscribe = null;
+    try {
+      unsubscribe = require('../noticeInbox').subscribe((line) => {
+        if (!active || !line) {
+          return false;
+        }
+        query.setMessages((messages) => [
+          ...messages,
+          { role: 'notice', content: String(line), timestamp: Date.now() },
+        ]);
+        return true;
+      });
+    } catch {
+      /* inbox optional — watchdog keeps its own sink */
+    }
+    return () => {
+      active = false;
+      try {
+        if (typeof unsubscribe === 'function') {
+          unsubscribe();
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+  }, [query.setMessages]);
+
   // Start the same post-first-frame background jobs as the classic REPL. Update
   // artifacts are downloaded and verified in the background; FormFlow asks for
   // the explicit install choice only after the active turn has settled.
+  // update-blocked 去重:classic 引导与 ink App 各跑一次 deferredPrefetch,两条
+  // 通知链都会 emit update-blocked → 同一条横幅印两遍(2026-09-19 实测)。进程内
+  // 只展示第一条,并按规则 2.2 附修复建议。
+  const _updateBlockedShownRef = React.useRef(false);
   React.useEffect(() => {
     let timers = [];
     let active = true;
@@ -1669,7 +2249,7 @@ function App({ options = {} }) {
       if (!active || !content) return;
       query.setMessages((messages) => [
         ...messages,
-        { type: 'notice', content: String(content), timestamp: Date.now() },
+        { role: 'notice', content: String(content), timestamp: Date.now() },
       ]);
     };
     const handleOutput = async (message) => {
@@ -1680,7 +2260,18 @@ function App({ options = {} }) {
       }
       const state = message.state;
       if (message.type === 'update-blocked') {
-        pushNotice(`KhyOS 更新已阻止: ${state?.blockedReason || state?.error || '当前源码状态不适合更新'}`);
+        if (_updateBlockedShownRef.current) {
+          return;
+        }
+        _updateBlockedShownRef.current = true;
+        const reason = state?.blockedReason || state?.error || 'unknown';
+        // Older persisted state files predate `blockedHint`; recompute from the code.
+        const remedy = state?.blockedHint
+          || require('../../../services/updateCoordinator').describeBlockedReason(
+            state?.blockedReason,
+            state || {}
+          );
+        pushNotice(`KhyOS 更新已阻止（${reason}）：${remedy}`);
         return;
       }
       if (message.type !== 'update-available') return;
@@ -1738,12 +2329,12 @@ function App({ options = {} }) {
     };
   }, [askForm, options.mode, query.setMessages]);
 
-  // Drive the auth commands (login/register/passwd) through the native form
+  // Drive the auth commands (login/register/passwd/user) through the native form
   // instead of the inquirer prompts baked into router.js's switch. The auth
   // service (cliAuthService) is the same one the readline REPL calls; only the
   // input-collection layer differs. Returns true if the command was consumed.
   const runAuthForm = React.useCallback(
-    async (command) => {
+    async (command, presetArg) => {
       const push = (role, content) =>
         query.setMessages((m) => [...m, { role, content, timestamp: Date.now() }]);
       let cliAuth;
@@ -1925,6 +2516,53 @@ function App({ options = {} }) {
           push('notice', '密码修改成功');
         } else {
           push('error', tuiErrorOf(result.error || new Error('修改失败'), { action: '改密', target: '账号' }));
+        }
+        return true;
+      }
+
+      if (command === 'user') {
+        const session = cliAuth.checkSession();
+        if (!session.loggedIn) {
+          push('error', '未登录，无法改名：请先 /login 登录后再 /user rename <新账号名>');
+          return true;
+        }
+        // 已随命令给出新账号名（/user rename <名>）→ 直接提交，不再弹表单。
+        const presetName = String(presetArg || '').trim();
+        let result;
+        if (presetName) {
+          result = await cliAuth.renameAccount(presetName);
+        } else {
+          const answers = await askForm({
+            title: '账号改名',
+            fields: [
+              {
+                name: 'newName',
+                label: `新账号名 (当前: ${session.username}，旧名将保留为登录别名):`,
+                validate: (v) =>
+                  /^[a-zA-Z0-9_-]{2,32}$/.test(String(v || '').trim()) ||
+                  '账号名需 2-32 个字符，仅限字母/数字/下划线/连字符',
+              },
+            ],
+          });
+          if (!answers) {
+            push('notice', '已取消账号改名');
+            return true;
+          }
+          result = await cliAuth.renameAccount(String(answers.newName || '').trim());
+        }
+        if (result.success) {
+          push('notice', `账号已改名: ${result.oldUsername} → ${result.username}（旧名保留为登录别名）`);
+          for (const line of result.details || []) {
+            push('notice', line);
+          }
+          // 账号已变 → 清掉「画一次即冻结」的 banner 元素引用，重新渲染新用户名。
+          try {
+            _bannerElementRef.current = null;
+          } catch {
+            /* ref 未就绪时忽略 */
+          }
+        } else {
+          push('error', tuiErrorOf(result.error || new Error('改名失败'), { action: '改名', target: '账号' }));
         }
         return true;
       }
@@ -2337,7 +2975,7 @@ function App({ options = {} }) {
         !(parsed.args && parsed.args.length)
       ) {
         try {
-          const forestSvc = require('../../../services/session/sessionForestService');
+          const forestSvc = require('../../../services/domain/session/session/sessionForestService');
           const topoLeaf = require('../../sessionTopology');
           const { forest } = forestSvc.listForest({});
           const currentId = forestSvc.getCurrentSessionId();
@@ -2349,14 +2987,22 @@ function App({ options = {} }) {
         }
       }
 
-      // Auth commands (/login /register /passwd) use the native FormFlow overlay
-      // instead of router.js's inquirer prompts; the form renders in-place.
+      // Auth commands (/login /register /passwd /user) use the native FormFlow
+      // overlay instead of router.js's inquirer prompts; the form renders in-place.
       if (
         parsed.command === 'login' ||
         parsed.command === 'register' ||
-        parsed.command === 'passwd'
+        parsed.command === 'passwd' ||
+        parsed.command === 'user'
       ) {
-        await runAuthForm(parsed.command);
+        // /user [rename] <名> → 把已给的新账号名透传给表单(有则跳过询问直接提交)。
+        const _userPreset =
+          parsed.command === 'user'
+            ? parsed.args && parsed.args[0] === 'rename'
+              ? parsed.args[1]
+              : parsed.args && parsed.args[0]
+            : undefined;
+        await runAuthForm(parsed.command, _userPreset);
         return;
       }
 
@@ -2585,7 +3231,7 @@ function App({ options = {} }) {
         // RedPass 模式 + 有检查点 → 自动恢复破甲
         if (permissionMode === 'RedPass') {
           try {
-            const redpassCheckpoint = require('../../../services/redpass/redpassCheckpoint');
+            const redpassCheckpoint = require('../../../services/domain/security/redpass/redpassCheckpoint');
             if (redpassCheckpoint.hasCheckpoint()) {
               submitOpts.redpassResume = true;
             }
@@ -3195,7 +3841,7 @@ function App({ options = {} }) {
           const at = resolveAtMentions(submitText);
           if (at.blocked && at.blocked.length > 0) {
             const notices = at.blocked.map((b) => ({
-              type: 'notice',
+              role: 'notice',
               content: `安全：已拦截通过 @ 引用敏感文件 ${String(b).toLowerCase()}`,
               timestamp: Date.now(),
             }));
@@ -3417,7 +4063,7 @@ function App({ options = {} }) {
     const cwd = process.env.KHYQUANT_CWD || process.cwd();
     let list = [];
     try {
-      list = require('../../../services/workspace/checkpointService').listCheckpoints(cwd) || [];
+      list = require('../../../services/domain/workspace/workspace/checkpointService').listCheckpoints(cwd) || [];
     } catch {
       list = [];
     }
@@ -3455,7 +4101,7 @@ function App({ options = {} }) {
         const cwd = (cur && cur.cwd) || process.env.KHYQUANT_CWD || process.cwd();
         if (target && target.id) {
           try {
-            require('../../../services/workspace/checkpointService').restoreCheckpoint(
+            require('../../../services/domain/workspace/workspace/checkpointService').restoreCheckpoint(
               cwd,
               target.id
             );
@@ -3484,10 +4130,18 @@ function App({ options = {} }) {
   const completion =
     completionRaw.active && dismissedFor !== value ? completionRaw : { active: false, items: [] };
 
-  // Reset menu selection whenever the candidate list changes.
-  React.useEffect(() => {
-    setSelectedIndex(0);
-  }, [value, offset]);
+  // Render-phase on purpose: a passive effect flushes after the next commit and
+  // used to wipe an arrow navigation typed right after the keystroke (BUG-63).
+  const _candKey = String(value) + '|' + String(offset);
+  const _candKeyRef = React.useRef(_candKey);
+  // 「这次高亮导航属于哪个候选表」——同包连按两键时导航先于 value 的那次渲染发生，
+  // 按字节顺序它才是最新的意图，故该次 value 变更不得再把它顶回第一条(BUG-64)。
+  const _navClaimRef = React.useRef('');
+  if (_candKeyRef.current !== _candKey) {
+    _candKeyRef.current = _candKey;
+    if (_navClaimRef.current === _candKey) _navClaimRef.current = '';
+    else if (selectedIndex !== 0) setSelectedIndex(0);
+  }
 
   // Keep the footer truthful: refresh on mount, whenever the adapter reports new
   // status (model/window resolved asynchronously after gateway init), and once a
@@ -3496,7 +4150,10 @@ function App({ options = {} }) {
   const _querySettled = query.status === 'idle' || query.status === 'done';
   React.useEffect(() => {
     refreshFooter();
-  }, [refreshFooter, query.adapterInfo, _querySettled]);
+    // turnFailureAt 是「本回合失败过」的信号（query bridge 在失败结算时递增）。
+    // 失败路径上 adapterInfo 与 status 都可能不变，仅靠原有依赖会让页脚停在
+    // 失败前的乐观值 —— 那正是「页脚说 agnes、报错说 windsurf」得以长期存在的条件。
+  }, [refreshFooter, query.adapterInfo, _querySettled, query.turnFailureAt]);
 
   // The gateway warms its per-model context-window cache asynchronously right
   // after init, and no adapter/turn event fires when that cache fills. A pair of
@@ -3926,8 +4583,20 @@ function App({ options = {} }) {
     env: process.env,
   });
 
-  useInput(
-    (input, key) => {
+  // ── 键盘处理器订阅（BUG-62）────────────────────────────────────────────────
+  // ink 的 useInput 每次渲染后才在 passive effect 里重新订阅，而 React 把这次
+  // flush 推到下一次渲染开始才做 —— 于是按键可能由**上一次提交**的闭包接走。
+  // 实测（`.khy/feedback/tui-ux-audit-20260919/AR/repro-before-40x24.txt`）：
+  // 敲 `/` 打开补全菜单后立刻按 ↑，6 次里 3 次落在 buffer 还为空的那份闭包上，
+  // 于是 ↑ 被当成「历史回溯」，把用户刚敲的 `/` 换成一条历史消息。
+  // 修法：订阅身份稳定的转发器，真正的处理器每次渲染换进 ref —— 转发器读的是
+  // 「最近一次渲染」的闭包，与订阅何时刷新无关。
+  const _keyHandlerRef = React.useRef(null);
+  const _keyDispatch = React.useCallback((input, key) => {
+    const latest = _keyHandlerRef.current;
+    if (latest) latest(input, key);
+  }, []);
+  _keyHandlerRef.current = function khyKeyHandler(input, key) {
       // 0) Mouse events own the top slot: dispatch clicks/hovers to <Box
       //    onClick/onMouseUp/…> buttons (e.g. the mic voice button) and consume
       //    the sequence so it can NEVER fall through to text editing as literal
@@ -3949,10 +4618,33 @@ function App({ options = {} }) {
           const _anchorBottom = _startupAnchor
             ? _startupAnchor.anchorBottomEnabled(process.env)
             : false;
+          // live 帧在终端里的首行。ink 先把 `<Static>` 写进屏幕、再在其下方反复重绘
+          // live 帧,所以树内 y=0 **不在**屏幕第 0 行 —— 只有 ink 自己的账本
+          // (fullStaticOutput / lastOutputHeight) 能给出这个数。取不到实例时
+          // liveFrameTop 退化成 0 = 老行为,绝不抛。
+          // anchorBottom 开启时首行由那套 CUP 贴底决定,继续走 screenOffset 的老分支;
+          // 此时两个消费者都收到 NaN —— 它是「本帧无法确定」的哨兵,等价于不校正。
+          let _liveTop = 0;
+          try {
+            _liveTop = _mouse.liveFrameTop({
+              staticRows: _mouse.staticRowCount(_inst && _inst.fullStaticOutput),
+              frameRows: Number(_inst && _inst.lastOutputHeight) || 0,
+              rows: _rows,
+            });
+          } catch {
+            _liveTop = 0;
+          }
+          const _screenTop = _anchorBottom ? Number.NaN : _liveTop;
+          // 选区换算用的「视口首行的屏幕行」= 帧首行 + 帧内视口上方的 chrome。
+          // 必须在 onInput 之前写:fireSelect 在同一批调用里同步读它。
+          _viewportScreenTopRef.current = _anchorBottom
+            ? Number.NaN
+            : _liveTop + (Number(_viewportTopChromeRef.current) || 0);
           mouseDispatcherRef.current.onInput(input, {
             rootNode: (_inst && _inst.rootNode) || null,
             rows: _rows,
             anchorBottom: _anchorBottom,
+            screenTop: _screenTop,
             // 布局缓存失效信号:每帧渲染后 lastOutput 变化 → 命中测试用新布局;
             // 渲染之间(移动事件风暴)复用同一份布局,避免整树 DFS 拖垮输入。
             cacheKey: (_inst && _inst.lastOutput) || '',
@@ -3964,7 +4656,9 @@ function App({ options = {} }) {
             const _root = (_inst && _inst.rootNode) || null;
             process.stderr.write(
               `[mouse] ${input} → col=${_ev && _ev.col} row=${_ev && _ev.row} ` +
-                `rows=${_rows} anchorBottom=${_anchorBottom} root=${!!_root}\n`
+                `rows=${_rows} anchorBottom=${_anchorBottom} root=${!!_root} ` +
+                `liveTop=${_liveTop} topChrome=${_viewportTopChromeRef.current} ` +
+                `screenTop=${_viewportScreenTopRef.current}\n`
             );
           }
         } catch {
@@ -4115,7 +4809,12 @@ function App({ options = {} }) {
           return;
         }
         // Enter / Tab → accept the current match into the input buffer, close.
+        // IME guard: the Enter an IME sends to confirm a composition (e.g.
+        // typing a CJK query) must not be read as "accept match + close".
         if (key.return || key.tab) {
+          if (key.return && imeCommitGuard.shouldSwallowBareEnter()) {
+            return;
+          }
           const chosen = revSearch.current || '';
           setRevSearch(null);
           if (chosen) {
@@ -4144,7 +4843,12 @@ function App({ options = {} }) {
           return;
         }
         // Printable char (no ctrl/meta) → append to query and re-search.
+        // Stamp the IME recency marker: a CJK query char is a fullwidth
+        // insert, and the composition-confirm Enter that follows is checked
+        // above (revSearch owns ALL input — nothing falls through to
+        // useTextInput, so the stamp must live here).
         if (input && !key.ctrl && !key.meta) {
+          imeCommitGuard.noteImeCommit(input);
           const q = String(revSearch.query || '') + input;
           try {
             setRevSearch(_revSearch.search(hist, q));
@@ -4236,8 +4940,26 @@ function App({ options = {} }) {
         if (busy) {
           query.clearQueue();
           query.abort();
-          showHint('已中断当前轮次');
-          return; // note: do NOT touch ctrlCAt.current — no exit-arming while busy
+          // 逃生阀(对齐 classic replSession 的 busyInterruptEscalation 契约):优雅取消
+          // 可能不落地(适配器忽略 abortSignal/事件循环被卡)。同窗口 3s 内累计 3 次
+          // → 强制退出;窗口断了重新计数。前两次给明确反馈。
+          const busyNow = Date.now();
+          if (busyNow - ctrlCAt.current < 3000) {
+            ctrlCBusyEsc.current += 1;
+          } else {
+            ctrlCBusyEsc.current = 1;
+          }
+          ctrlCAt.current = busyNow;
+          if (ctrlCBusyEsc.current >= 3) {
+            exit();
+            return;
+          }
+          showHint(
+            ctrlCBusyEsc.current === 1
+              ? '已中断当前轮次'
+              : `已中断当前轮次（再按 ${3 - ctrlCBusyEsc.current} 次 Ctrl-C 强制退出）`
+          );
+          return; // note: do NOT arm the idle double-press while busy
         }
         const now = Date.now();
         if (now - ctrlCAt.current < DOUBLE_PRESS_MS) {
@@ -4337,7 +5059,7 @@ function App({ options = {} }) {
           // RedPass 首次进入时显示警告提示
           if (next === 'RedPass') {
             try {
-              const redpassCheckpoint = require('../../../services/redpass/redpassCheckpoint');
+              const redpassCheckpoint = require('../../../services/domain/security/redpass/redpassCheckpoint');
               if (redpassCheckpoint.hasCheckpoint()) {
                 const cp = redpassCheckpoint.loadCheckpoint();
                 showHint(`🔴 RedPass 发现未完成破击（第${cp.retryCount}次），输入任意内容继续`);
@@ -4348,7 +5070,7 @@ function App({ options = {} }) {
               showHint('🔴 RedPass 模式已激活：安全过滤器已禁用，所有对话将被审计记录');
             }
             try {
-              const redpassEngine = require('../../../services/redpass/redpassEngine');
+              const redpassEngine = require('../../../services/domain/security/redpass/redpassEngine');
               redpassEngine.logModeSwitch(m, 'RedPass');
             } catch {
               /* audit non-fatal */
@@ -4356,7 +5078,7 @@ function App({ options = {} }) {
           } else if (m === 'RedPass') {
             showHint(`已退出 RedPass，回到 ${next} 模式`);
             try {
-              const redpassEngine = require('../../../services/redpass/redpassEngine');
+              const redpassEngine = require('../../../services/domain/security/redpass/redpassEngine');
               redpassEngine.logModeSwitch('RedPass', next);
             } catch {
               /* audit non-fatal */
@@ -4450,68 +5172,86 @@ function App({ options = {} }) {
       }
 
       // 3) Completion menu navigation (when open).
-      if (completion.active) {
-        const ITEMS_PER_PAGE = 10;
-        const totalPages = Math.ceil(completion.items.length / ITEMS_PER_PAGE);
+      // 是否「菜单开着」一律问同步镜像：同一个输入包里的第二键跑在 React 提交之前，
+      // 闭包里的 value 还没带上刚敲的 `/`，↑/↓ 于是掉进「历史回溯」，把用户刚打的
+      // 字符整条换掉（BUG-64，AR/repro-bug64-sametick.txt 实测 6/6）。
+      let menu = completion;
+      let menuValue = value;
+      if (!menu.active) {
+        const live = textInput.liveCursor;
+        if (live && live.text !== value) {
+          const raw = computeCompletions(live.text, live.offset);
+          if (raw.active && dismissedFor !== live.text) {
+            menu = raw;
+            menuValue = live.text;
+            _navClaimRef.current = `${live.text}|${live.offset}`;
+          }
+        }
+      }
+      if (menu.active) {
+        // 页大小向账本要（`_completionPerPageRef`，由 `perPageFor(maxRows)` 写入）：
+        // 写死 10 时矮屏一页只画 2 条，按 PageDown 会翻到框外去(BUG-60 高度分支)。
+        const ITEMS_PER_PAGE =
+          Number(_completionPerPageRef.current) > 0
+            ? Number(_completionPerPageRef.current)
+            : 10;
+        const totalPages = Math.ceil(menu.items.length / ITEMS_PER_PAGE);
+        // 只动 selectedIndex：画哪一页由它派生（见 `_completionPage`）。这里曾同时
+        // `setCompletionPage(闭包 selectedIndex ± 1)` —— 函数式更新让索引正确前进，
+        // 闭包里的旧索引却让页码停在第 0 页，连按 ↓ 越过一页后高亮跑到框外，
+        // 屏上找不到光标（`AQ/repro-before-40x24.txt`：40×24 按 11 次 ↓，`›` 0 次）。
         if (key.upArrow) {
-          setSelectedIndex((i) => (i - 1 + completion.items.length) % completion.items.length);
-          // Sync page with selection
-          setCompletionPage(Math.floor((selectedIndex - 1 + completion.items.length) % completion.items.length / ITEMS_PER_PAGE));
+          setSelectedIndex((i) => (i - 1 + menu.items.length) % menu.items.length);
           return;
         }
         if (key.downArrow) {
-          setSelectedIndex((i) => (i + 1) % completion.items.length);
-          // Sync page with selection
-          setCompletionPage(Math.floor((selectedIndex + 1) % completion.items.length / ITEMS_PER_PAGE));
+          setSelectedIndex((i) => (i + 1) % menu.items.length);
           return;
         }
-        // PageUp/PageDown — navigate between pages
+        // PageUp/PageDown — 整页移动高亮（落在目标页第一条，与改前一致）
         if (key.pageUp && totalPages > 1) {
-          setCompletionPage((p) => {
-            const np = Math.max(0, p - 1);
-            setSelectedIndex(np * ITEMS_PER_PAGE);
-            return np;
-          });
+          setSelectedIndex((i) => Math.max(0, Math.floor(i / ITEMS_PER_PAGE) - 1) * ITEMS_PER_PAGE);
           return;
         }
         if (key.pageDown && totalPages > 1) {
-          setCompletionPage((p) => {
-            const np = Math.min(totalPages - 1, p + 1);
-            setSelectedIndex(np * ITEMS_PER_PAGE);
-            return np;
-          });
+          setSelectedIndex((i) => Math.min(
+            totalPages - 1,
+            Math.floor(i / ITEMS_PER_PAGE) + 1
+          ) * ITEMS_PER_PAGE);
           return;
         }
         // Tab → complete the highlighted item into the buffer (keep editing).
         if (key.tab) {
-          const item = completion.items[selectedIndex] || completion.items[0];
-          const { text, offset: off } = applyCompletion(value, completion, item);
+          const item = menu.items[selectedIndex] || menu.items[0];
+          const { text, offset: off } = applyCompletion(menuValue, menu, item);
           textInput.setText(text, off);
           setDismissedFor(null);
-          setCompletionPage(0);
           return;
         }
         // Enter → for a slash command, run the highlighted command immediately
         // (Claude Code behaviour). For a file completion, accept into the buffer
         // and keep editing so the user can add more.
+        // IME guard: the Enter an IME sends to confirm a composition must not
+        // execute the highlighted slash command — swallow it; the composed
+        // text lands in the buffer via the fall-through below.
         if (key.return) {
-          const item = completion.items[selectedIndex] || completion.items[0];
-          if (completion.kind === 'slash') {
+          if (!key.shift && !key.ctrl && !key.meta && imeCommitGuard.shouldSwallowBareEnter()) {
+            return;
+          }
+          const item = menu.items[selectedIndex] || menu.items[0];
+          if (menu.kind === 'slash') {
             textInput.setText('', 0);
             setDismissedFor(null);
-            setCompletionPage(0);
             handleSubmit(item.value);
             return;
           }
-          const { text, offset: off } = applyCompletion(value, completion, item);
+          const { text, offset: off } = applyCompletion(menuValue, menu, item);
           textInput.setText(text, off);
           setDismissedFor(null);
-          setCompletionPage(0);
           return;
         }
         if (key.escape) {
-          setDismissedFor(value);
-          setCompletionPage(0);
+          setDismissedFor(menuValue);
           return;
         }
         // any other key falls through to editing (and recomputes the menu)
@@ -4679,8 +5419,12 @@ function App({ options = {} }) {
       ) {
         if (!vimEnabled && !planPhase && !showHelp) {
           const _vp = require('./Viewport');
-          const _viewH = _viewportHeightRef.current || Math.max(3, Number(_resRows) - 10);
           const _total = _viewportTotalLinesRef.current || 0;
+          // 内容行数(不是盒子高):与 Viewport 渲染侧同一口径,指示器那一行不归内容。
+          const _viewH = _vp.viewportContentRows(
+            _viewportHeightRef.current || Math.max(3, Number(_resRows) - 10),
+            _total
+          );
           if (_viewH > 0 && _total > _viewH) {
             let _act = null;
             if (key.upArrow || (!key.ctrl && input === 'k')) _act = 'lineUp';
@@ -4691,9 +5435,7 @@ function App({ options = {} }) {
             else if (!key.ctrl && input === 'g') _act = 'top';
             else if (!key.ctrl && input === 'G') _act = 'bottom';
             if (_act) {
-              setMainViewportScroll((s) =>
-                _vp.applyViewportScroll(_act, { offset: s, viewport: _viewH, total: _total })
-              );
+              setMainViewportScroll((s) => _vp.applyStickyViewportAction(_act, s, _viewH, _total));
               return;
             }
           }
@@ -4705,7 +5447,14 @@ function App({ options = {} }) {
       if (previewLayoutActiveRef.current && !revSearch && !completion.active && !_overlayOwnsLive) {
         if (!vimEnabled && !planPhase && !showHelp) {
           const _vp = require('./Viewport');
-          const _viewH = Math.max(3, Number(process.stdout.rows) - 8);
+          // 视口几何必须取**同一本 chrome 账本**的值。历史实现写死 `rows - 8` / `total: 30`,
+          // 与 `_viewportHeight`(已按布局扣 topbar/分隔线/spinner)不一致 → 滚动上界算错,
+          // 「滚到底」够不着真正的最后一行。
+          const _viewH = Math.max(3, Number(_viewportHeightRef.current) || 3);
+          const _total = Number(_viewportTotalLinesRef.current) || 0;
+          // 主内容视口要按**内容行数**换算(指示器占掉的那一行不归内容),右栏看板
+          // 没有指示器,继续用盒子高。
+          const _contentH = _vp.viewportContentRows(_viewH, _total);
           let _act = null;
           if (key.upArrow || (!key.ctrl && input === 'k')) _act = 'lineUp';
           else if (key.downArrow || (!key.ctrl && input === 'j')) _act = 'lineDown';
@@ -4716,12 +5465,10 @@ function App({ options = {} }) {
           else if (!key.ctrl && input === 'G') _act = 'bottom';
           if (_act) {
             // 主内容视口滚动
-            setPreviewViewportScroll((s) =>
-              _vp.applyViewportScroll(_act, { offset: s, viewport: _viewH, total: 30 })
-            );
+            setPreviewViewportScroll((s) => _vp.applyStickyViewportAction(_act, s, _viewH, _total));
             // 右栏看板滚动(同步偏移方向)
             setPreviewSidebarScroll((s) =>
-              _vp.applyViewportScroll(_act, { offset: s, viewport: _viewH, total: 20 })
+              _vp.applyViewportScroll(_act, { offset: Number(s) || 0, viewport: _viewH, total: 20 })
             );
             return;
           }
@@ -4730,9 +5477,8 @@ function App({ options = {} }) {
 
       // 5) Everything else → text editing.
       textInput.onInput(input, key);
-    },
-    { isActive: inputActive }
-  );
+  };
+  useInput(_keyDispatch, { isActive: inputActive });
 
   // Welcome banner props. Memoized on the displayed fields only, so footer
   // churn that the banner does NOT show (e.g. contextPct) yields the SAME
@@ -4986,6 +5732,11 @@ function App({ options = {} }) {
     return _real > 0 && _eff > 0 && _eff < _real ? _eff : 0;
   })();
   const _railOut = _railContentCols > 0 && railOn;
+  // Paintable width for anything that stretches to the full window (overlays,
+  // completion menu) — same口径 as PromptFrame's `width` below. Passing raw
+  // `_resCols` here would budget columns the rail already owns, so a wide field
+  // would wrap inside ink and land its continuation at the box's left edge.
+  const _overlayCols = _railContentCols > 0 ? _railContentCols : _resCols;
   // ── Transcript 视图的行投影(只在视图打开时才算)────────────────────────────
   // 排版宽度用与 committed 区同一口径的 effectiveCols(_railCols),渲染器注入
   // Transcript 自己那个 renderMarkdown,保证视图里的排版与 <Static> 里一致。
@@ -5005,34 +5756,38 @@ function App({ options = {} }) {
     return { lines, viewport: TranscriptView.bodyHeight(_resRows, lines.length) };
   }, [transcriptOpen, expanded, query.messages, _resCols, _resRows]);
 
-  // ── 主内容视口几何(固定高度 = 终端高 - 输入框 - 页脚 - 看板)────────────────
+  // ── 主内容视口几何(固定高度 = 终端高 − 全部 chrome)────────────────────────
   // 消息区(committed + streaming)在此固定高度内滚动;PromptFrame 始终钉在底部。
-  // 高度算法对齐 Bubble Tea chat example: viewport.Height = rows - textarea.Height - footer.Height
-  // _taskProps must be declared before this IIFE (TDZ-safe ordering).
+  // **本块必须排在 `_taskProps` 构建之后**:任务清单是 live 区的兄弟节点,它的高度不
+  // 计进 chrome 就会把 live 区顶过 rows(见下方 _viewportHeight 的注释)。历史版本把它
+  // 放在 `_taskProps` 之前,读到的永远是空对象 → taskH 恒为 0 → 有任务清单时每帧触顶。
   let _taskProps = {};
-  const _viewportHeight = (() => {
-    const termRows = Number(_resRows) > 0 ? Number(_resRows) : 24;
-    // PromptFrame 高度:上边框(1) + 输入行(最少1) + 下边框(1) = 3(单行输入时)
-    const promptH = 3;
-    // FooterBar 高度:1 行状态栏
-    const footerH = 1;
-    // TaskPanel 高度(有任务时占 1-2 行,无任务时 0)
-    const taskH = (_taskProps?.lines?.length > 0) ? Math.min(3, _taskProps.lines.length) : 0;
-    // CompletionMenu 高度(有补全时占 1-3 行)
-    const completionH = completion.active ? Math.min(4, (completion.items?.length || 0) + 1) : 0;
-    // 余量 1 行(防止触底 pending-wrap)
-    const slack = 1;
-    const h = termRows - promptH - footerH - taskH - completionH - slack;
-    return Math.max(3, h); // 最少 3 行内容区
-  })();
-  // 同步到 ref,供键盘滚动 handler 读取(避免每次 render 重算)
-  _viewportHeightRef.current = _viewportHeight;
 
   // ── 主内容行投影(committed messages + streaming + activity → 可视行数组)────
-  // 只在非 transcript 视图、非 preview 布局时计算(这些模式有自己的视口)。
+  // 只在 transcript 视图(Ctrl+O)打开时跳过 —— 那个视图有自己的视口。
+  // PreviewLayout 也消费同一份行投影(它把转录放进自己的应用内 Viewport),故不再跳过。
+  //
+  // ⚠ **契约(选区层依赖,改投影前必读)** —— 本数组当前是「**纯文本投影、无消息元数据**」:
+  //   1. 元素是裸 `string`,**不含**「这一行属于哪条消息 / 什么角色」。所以可以按**视觉行**
+  //      自由拖选、双击选词、三击选行(都只需行内文本),但**做不了**「按消息整体复制」
+  //      「选中后显示角色」这类增强 —— 那需要新增 `buildTranscriptLineRecords()` 并在此
+  //      定义消息边界。见 [DESIGN-ARCH-119] §七 风险 1。
+  //   2. 每一行**已经按 `cols` 折好软换行**,而 Viewport 的 lines 模式用
+  //      `overflow:'hidden'` **截断**而非再折行 ⇒ **视觉行数恰等于 `lines.length`**。
+  //      这是「**屏幕行 == 本数组下标**」这条不变量的依据 —— 鼠标选区坐标换算
+  //      (`onSelectEvent` 里的 `line = row + clampedScroll`)整个建立在它之上。
+  //      若将来 Viewport 改为按列宽软换行,或 `overflow` 由 `hidden` 改掉,
+  //      **本不变量立刻失效**,选区会整体错位,必须同步改 `selection.js` 与 Viewport 两侧。
+  //   3. 跨软换行复制会带上 `\n`(视觉行原样连接),这是**已知偏差**,见 `selection.js` 头部。
   const _mainContentLines = React.useMemo(() => {
-    if (transcriptOpen || previewLayoutActiveRef.current) return [];
-    const cols = _railCols(0) || Number(_resCols) || 80;
+    if (transcriptOpen) return [];
+    // 排版宽度必须等于**实际渲染列宽**,否则行会在视口里二次软换行:按全宽折好的行落进
+    // 「cols − 看板宽」的左列 → 视觉行数超出视口高度 → live 区触顶 → ink 全屏清屏(备屏下
+    // 即「转录被整片抹掉」)。树内看板存在时用 sidebarLayout.mainColumnCols 的口径。
+    const cols =
+      _sidebarOn && !_railOut && Number(_mainColsV) > 0
+        ? Number(_mainColsV)
+        : _railCols(0) || Number(_resCols) || 80;
     const lines = [];
 
     // 1) committed messages 投影为行(复用 transcriptLines 的渲染逻辑)
@@ -5052,21 +5807,20 @@ function App({ options = {} }) {
     if (query.streaming) {
       // 流式文本段
       if (query.streaming.text) {
-        const textLines = String(query.streaming.text).split('\n');
-        for (const tl of textLines) {
-          // 按视口宽度截断
-          if (tl.length > cols) {
-            for (let i = 0; i < tl.length; i += cols) {
-              lines.push(tl.slice(i, i + cols));
-            }
-          } else {
-            lines.push(tl);
-          }
+        // 按**显示宽度**折行(与 committed 区 buildTranscriptLines 的 cols 口径一致)。
+        // 旧实现按 `tl.length`(字符数)切块,而 Viewport 用 overflow:hidden 截断而非
+        // 再折行 ⇒ 中文每字≈2 列,切出的块实际≈2×cols 宽,右半被裁掉、看着像丢字。
+        for (const seg of wrapCell(String(query.streaming.text), cols)) {
+          lines.push(seg);
         }
       }
       // 思考段
       if (query.streaming.thinking) {
-        lines.push('  💭 ' + String(query.streaming.thinking).slice(0, cols - 6));
+        // 单行预览:换行压成空格,再按显示宽度取首段(旧 slice 按字符数,中文会超宽被裁)。
+        const _think = String(query.streaming.thinking).replace(/\s*\n\s*/g, ' ');
+        const _budget = Math.max(1, cols - 6);
+        const _preview = wrapCell(_think, _budget)[0] || '';
+        lines.push('  💭 ' + _preview);
       }
       // 工具调用
       if (query.streaming.tools && query.streaming.tools.length > 0) {
@@ -5114,9 +5868,35 @@ function App({ options = {} }) {
     query.turnPhase,
     query.queueLen,
     _resCols,
+    _sidebarOn,
+    _railOut,
+    _mainColsV,
   ]);
   // 同步总行数到 ref,供键盘滚动 handler 使用
   _viewportTotalLinesRef.current = _mainContentLines.length;
+  // 行投影本身的 ref 镜像,供 onSelectEvent 在松手那一刻取原文(见 _mainContentLinesRef 注释)
+  _mainContentLinesRef.current = _mainContentLines;
+  // 选区 ref 镜像。**这一行是选区能被正确扩展的关键**:onSelectEvent 是 useCallback
+  // 闭包,若直接读 state 会拿到上一帧的 anchor → 每次 extend 都从旧 anchor 重算 →
+  // 选区「跳回起点、只在起点附近抖动」。同类陷阱在 _mainViewportScrollRef 上出现过。
+  _selectRegionRef.current = selectRegion;
+  // 两个布局的滚动偏移镜像。**只在这里同步**是刻意的:onSelectEvent / useInput 都在
+  // render 早期闭包,读 state 会拿到上一帧的值 —— 而如果用户刚滚了一格就立刻按下拖动,
+  // 那个「差一行」的旧值会让整个选区错位一行。ref 赋值发生在 render 体内,天然是
+  // 「本帧已生效」的值。
+  _mainViewportScrollRef.current = mainViewportScroll;
+  _previewViewportScrollRef.current = previewViewportScroll;
+  // 转录承载位二选一(门控 KHY_INLINE_TRANSCRIPT,默认内联):
+  //   开 → <Static> 只画横幅,转录由应用内 Viewport 承载(滚轮/键盘可滚,不受备屏无回滚缓冲影响)
+  //   关 → <Static> 承载整段转录(旧行为,逐字节回退)
+  const _inlineTranscript = _inlineTranscriptEnabled(process.env);
+  // 自绘选择的总闸(§4.2 第二层)。**三个条件缺一不可**:
+  //   ① 门控 KHY_SELECT 未显式关闭
+  //   ② 模型层 selection.js require 成功
+  //   ③ 鼠标层 mouseButtons.js require 成功(否则收不到拖动事件)
+  // 任一不满足 → 不接线、不画反色、不开 1002,逐字节回到今天的行为。
+  const _selectOn = _selectEnabled(process.env) && !!_selectMod && !!_mouse;
+  const _staticItemsForStatic = _inlineTranscript ? _STATIC_BANNER_ONLY : query.staticItems;
   // Task #23: at startup (no committed messages yet) the welcome banner
   // renders inside the live row's LEFT column, so its version line and the
   // sidebar's top edge share the SAME terminal row (left/right split — the
@@ -5178,13 +5958,23 @@ function App({ options = {} }) {
     });
   }
   const _liveBannerElement = _bannerElementRef.current;
-  // Boot screen element: created once on first render, kept stable until
-  // boot completes (then discarded via the conditional return below).
-  // BootScreen module exports { BootScreen, createBootTracker, ... } —
-  // use BootScreen.BootScreen (the component), not the module object.
-  const _bootScreenEl = !_bootComplete && _bootTracker.current && BootScreen.BootScreen
-    ? h(BootScreen.BootScreen, { key: 'boot-screen', steps: _bootTracker.current.steps })
-    : null;
+  // 启动屏元素：BootScreen **自订阅**节拍真源，不再由父级传 steps。
+  // （旧实现把 tracker 的 steps 当 prop 传进来，而 tracker 的 notify 无人订阅，
+  //   进度条只在父级因别的理由重绘时「顺带」前进。）
+  // BootScreen 模块导出 { BootScreen, isBootScreenEnabled, useBeats } ——
+  // 用 BootScreen.BootScreen（组件本身），不是模块对象。
+  // 门控关闭（0/legacy）→ _bootScreenEl 恒 null → 直接进主 UI。
+  const _bootScreenEl =
+    !_bootComplete && BootScreen.BootScreen && BootScreen.isBootScreenEnabled()
+      ? h(BootScreen.BootScreen, {
+          key: 'boot-screen',
+          // H8 合规：尺寸由 App 经 sticky-resolved 值下发，BootScreen 自己不读 process.stdout。
+          // [DESIGN-ARCH-134] §3.5：rows 决定启动屏品牌块的 H1 阶梯档位；缺省时
+          // bootLayout 落保守档（帧高 ≤ 改造前），因此这一行丢了也不会引入回归。
+          rows: Number(_resRows) > 0 ? Number(_resRows) : undefined,
+          cols: Number(_resCols) > 0 ? Number(_resCols) : undefined,
+        })
+      : null;
   // Rows the banner renders above its version line — SSOT exported by
   // WelcomeBanner (bannerRowsBeforeVersion) so the sidebar's top edge lands
   // on the SAME terminal row as `── khy OS vX.X.X ──` without magic numbers.
@@ -5254,6 +6044,245 @@ function App({ options = {} }) {
     );
   }
 
+  // ── Preview 布局判定(宽终端 ≥122 列自动开;门控 KHY_PREVIEW_LAYOUT)──────────
+  // 提前到这里:下面的 `_viewportHeight` 账本必须知道**本帧走哪套 chrome**
+  // (Preview 布局多出标题栏 1 行 + 顶部分隔线 1 行,漏算就会把 live 区顶过 rows,
+  // 触发 ink 的 fullscreen 清屏 —— 备用缓冲区下等于把转录整片抹掉)。
+  // 消费方 `previewLayoutActiveRef`(还要叠加 inputActive/_overlayOwnsLive)留在原处。
+  const previewLayoutMode = (() => {
+    const v = String(process.env.KHY_PREVIEW_LAYOUT || '').trim().toLowerCase();
+    if (v === '0' || v === 'false' || v === 'off' || v === 'no') return false;
+    if (v === '1' || v === 'true' || v === 'on' || v === 'yes') return true;
+    return Number(_resCols) >= 122;
+  })();
+
+  // Fix 1b — khy 自己的 /命令·@文件 补全下拉横向对齐到输入光标列(门控
+  // KHY_COMPLETION_FOLLOW_CURSOR 默认开)。复用 PromptFrame.layoutPromptRows 得同款宽度
+  // 感知行模型,caretGeometry 求 caret 显示列,clamp 保不出屏;门控关 → 0=贴左逐字节 legacy。
+  // 全程无副作用、纯计算;lazy require displayWidth(CJK 宽度)与 PromptFrame 同惰性哲学。
+  // 必须算在 `_viewportHeight` **之前**：下面的 `completionH` 要用它求框的真实内宽
+  // (margin 越大,页脚越容易折成 2 行 —— 少扣一行 = 主内容槽多报一行)。
+  let _completionMarginLeft = 0;
+  if (completion.active && caretGeometry.completionFollowEnabled(process.env)) {
+    try {
+      const _cols = _railCols(80);
+      // Single-slot memo keyed on (value, offset, cols): while the completion menu
+      // is open and the user arrows through options (App re-renders on selectedIndex
+      // with value/offset/cols UNCHANGED), skip re-laying-out the whole buffer +
+      // caret geometry — byte-identical, gate KHY_COMPLETION_MARGIN_MEMO. Fail-soft.
+      const _computeMargin = () => {
+        let _measure;
+        try {
+          _measure = require('../../formatters').displayWidth;
+        } catch {
+          _measure = null;
+        }
+        const _layout = PromptFrame.layoutPromptRows({ value, offset, cols: _cols });
+        const _caretCol = caretGeometry.caretColumn(
+          _layout.rows,
+          _measure ? { measure: _measure } : {}
+        ).col;
+        return caretGeometry.clampColumn(_caretCol, _cols, 24);
+      };
+      _completionMarginLeft = _caretMarginMemo
+        ? _caretMarginMemo.memoCompletionMargin(value, offset, _cols, _computeMargin, process.env)
+        : _computeMargin();
+    } catch {
+      _completionMarginLeft = 0;
+    }
+  }
+
+  // ── 输入框 props(账本与 paint 共用同一对象)───────────────────────────────
+  // H8: PromptFrame no longer self-measures — width/rows flow from App's
+  // sticky-resolved dims (contentWidth/contentHeight single source). The
+  // paintable width is the rail-narrowed cols when a rail reserves a gutter,
+  // else the full width. 本对象同时喂给下面的 `promptH` 记账与区域⑥ 的渲染：
+  // 两处若各写一份入参，账本量的就是另一个框(BUG-59 的成因)。
+  const _promptFrameProps = {
+    value,
+    offset,
+    busy,
+    placeholder,
+    accent,
+    vimMode: vimEnabled ? vimMode : null,
+    mic: _voiceInput && typeof _voiceInput.triggerWinH === 'function'
+      ? { active: dictating, onClick: toggleDictation }
+      : null,
+    width:
+      Number(_resCols) > 0 ? (_railContentCols > 0 ? _railContentCols : _resCols) : undefined,
+    rows: Number(_resRows) > 0 ? Number(_resRows) : undefined,
+  };
+
+  // 补全框 props 同一手法：账本 `completionH` 与区域⑤ 的渲染共用这一个对象，
+  // `maxRows` 由账本按屏高与其余 chrome 算出（见下方 completionH 分支）。
+  // `page` 是派生值（`_completionPage`），两者都由账本写、渲染读。
+  let _completionMenuProps = null;
+  let _completionPage = 0;
+
+  // ── 主内容视口几何(固定高度 = 终端高 − 全部 chrome)────────────────────────
+  // 高度走 chromeBudget 单一账本 `liveBudget(rows, shares)` = `rows − chrome − 1`:
+  // 那个 `-1` 是 conpty pending-wrap 纪律,同时也是「live 区严格 < rows」的硬约束。
+  // **live 区一旦 ≥ rows,ink 会切到 fullscreen 分支**
+  // (`clearTerminal + fullStaticOutput + output`);而本 TUI 跑在备用缓冲区里(没有回滚
+  // 缓冲),那条清屏会连转录一起抹掉 —— 更糟的是 scrollbackPreserve 第三层
+  // (KHY_SUPPRESS_STATIC_REPRINT)会把 fullStaticOutput 剥掉,于是「抹掉之后不重画」,
+  // 第四层(KHY_FULLSCREEN_TAILCUT)又把 output 尾切到 rows−1 行(从底部锚定 = 砍掉顶部
+  // 的转录)。用户侧表现就是「输出回显整片看不见」。
+  // 因此这里必须把 live 区**每一个**兄弟节点的高度都算进 chrome:输入框、页脚、任务清单、
+  // 补全菜单、忙态 spinner、提示行、历史搜索行 —— 漏一个就多一份触顶概率。
+  // 高度算法对齐 Bubble Tea chat example: viewport.Height = rows − textarea − footer − …
+  const _viewportHeight = (() => {
+    const termRows = Number(_resRows) > 0 ? Number(_resRows) : 24;
+    // PromptFrame 高度：向 PromptFrame 的帧高真源要行数（上边框 + 折行后的输入行
+    // + 下边框）。此前这里写死 3 =「单行输入时」，而该前提在本 TUI 几乎从不成立：
+    //   · 空态占位文案按 BUG-12 裁决整条折行、永不截断 ⇒ 60/40/30/20 列实测 4/5/6/9 行；
+    //   · 多行输入（Ctrl+J / 粘贴）每行还各占一行 ⇒ 80 列四行即 6 行。
+    // 账本恒扣 3 ⇒ 主内容槽**多报** 1~6 行，凡占用该槽的东西（? 浮层、补全菜单、
+    // 转录视口）顶边框先掉出屏幕。叶子不可用 → 回落常量 3（= 改前形态）。
+    let promptH = 3;
+    try {
+      const _pf = require('./PromptFrame');
+      if (typeof _pf.frameRowCount === 'function') {
+        const n = _pf.frameRowCount({
+          value: _promptFrameProps.value,
+          offset: _promptFrameProps.offset,
+          placeholder: _promptFrameProps.placeholder,
+          cols: _promptFrameProps.width,
+          rows: _promptFrameProps.rows,
+          mic: _promptFrameProps.mic,
+        });
+        if (Number.isFinite(n) && n >= promptH) promptH = Math.floor(n);
+      }
+    } catch {
+      /* 叶子抛错 → 保持常量 3 */
+    }
+    // FooterBar 高度:1 行状态栏
+    const footerH = 1;
+    // TaskPanel 高度:round 边框(2) + 头行(1) + 条目 + 尾切提示(0/1)。无清单 → 0(不占屏)。
+    const taskLines = Array.isArray(_taskProps.lines) ? _taskProps.lines.length : 0;
+    const taskH = taskLines > 0 ? 3 + taskLines + (_taskProps.hidden > 0 ? 1 : 0) : 0;
+    // 忙态 spinner 块:两套布局都是 **3 行**。
+    // · PreviewLayout:`Box{paddingX:2,paddingY:1}` 包一行 Spinner → 1+1+1 = 3;
+    // · legacy:同一处 Box 只写了 `borderBottom: true` + `borderStyle:'single'`,
+    //   但 ink 的边框语义是「设了 borderStyle 就四边全画,单写 borderBottom 不会关掉其余三边」
+    //   → 实际渲染成上/下两条边 + 1 行内容 = 3 行(注释里写的「1 行内容 + borderBottom(1)」
+    //   是错的,历史账本据此只扣 1~2 行,忙态必触顶)。
+    // 这里按**实测**的 3 行记账。awaitingUserChoice 时该块不挂载 → 0。
+    const spinnerH = busy && !awaitingUserChoice ? 3 : 0;
+    const hintH = hint ? 1 : 0;
+    const revSearchH = revSearch && _HistorySearchOverlay ? 1 : 0;
+    // PreviewLayout 独有 chrome:标题栏 Topbar(1 行)+ 底部固定层顶上的分隔线(1 行)。
+    // legacy 布局这两样都没有 → 0。**这是历史上唯一漏算的一对**,补上后 live 区才真正 < rows。
+    const topbarH = previewLayoutMode ? 1 : 0;
+    const sepH = previewLayoutMode ? 1 : 0;
+    const slack = 1;
+    // 除补全框以外的全部 chrome —— 下面的高度预算要它，`_otherChrome` 也要它。
+    const _chromeNoMenu =
+      footerH + spinnerH + taskH + hintH + revSearchH + topbarH + sepH + slack + 1;
+    // CompletionMenu 高度：一页最多 `ITEMS_PER_PAGE = 10` 条 + 页脚 1 + 圆角边框 2
+    // = **13 行**。此前这里写 `Math.min(4, items + 1)`（注释「有补全时占 1-4 行」）——
+    // 敲一个 `/` 就是 260 条候选，AO 分片实测改前「画 13/13/14/14/28 行 vs 记 4 行」
+    // （80/60/40/30/20 列，`AO/repro-before.txt`）⇒ 主内容槽多报 9~24 行：输入行提示、
+    // 帮助框、转录视口的顶边框一起掉出屏幕，live 区一旦 ≥ rows 还会触发 ink 的
+    // fullscreen 清屏（80×24 原始字节流实测 `ESC[2J` × 1，`AO/insitu-before.txt`）。
+    // 改为向组件的帧高真源要行数；叶子不可用 → 回落旧式。
+    //
+    // 行数还不够：13 行的框在 10 行高的分屏里比整屏还高，账本如实扣反而把 live 区推
+    // 过 rows（同一台机器上 40×10 实测 `viewport=3 extra=13 ESC[2J ×1`）。所以账本先
+    // 算「这个屏能给框几行」= 屏高 − 其余 chrome − 视口下限，作为 `maxRows` 交给组件；
+    // 组件据此定一页画几条（画不下则整框让位、账本归零）。入参对象与区域⑤ 的渲染共用
+    // 同一份（BUG-59 的 `_promptFrameProps` 手法）——两处各写一份，账本就量了另一个框。
+    let _cmBudget = 0; // 0 = 不给预算（= 组件今日形态）
+    try {
+      const _liveMin = require('../chromeBudget').LIVE_MIN;
+      _cmBudget = Number.isFinite(_liveMin) ? termRows - promptH - _chromeNoMenu - _liveMin : 0;
+    } catch {
+      /* 叶子不可用 → 不设预算，保持今日形态 */
+    }
+    let completionH = completion.active ? Math.min(4, (completion.items?.length || 0) + 1) : 0;
+    // 页大小 = 预算的函数，页码 = 高亮下标的函数，**都只在这里算一次**：
+    // 改前页码另存一份 `completionPage` state，由键盘处理用闭包里的 `selectedIndex`
+    // 同步 —— 索引走函数式更新会前进，闭包读到的旧索引却让页码停在第 0 页，
+    // 连按 ↓ 越过一页后高亮跑到框外（BUG-61，`AQ/repro-before-40x24.txt`）。
+    let _cmPerPage = 10;
+    try {
+      const _cm = require('./CompletionMenu');
+      if (typeof _cm.perPageFor === 'function') _cmPerPage = _cm.perPageFor(_cmBudget);
+    } catch {
+      /* 叶子不可用 → 保持今日页大小 10 */
+    }
+    _completionPerPageRef.current = _cmPerPage; // 键盘翻页读它，不再各写一份常量
+    _completionPage = completion.active
+      ? Math.floor(Math.max(0, Number(selectedIndex) || 0) / _cmPerPage)
+      : 0;
+    _completionMenuProps = completion.active
+      ? {
+          completion,
+          selectedIndex,
+          marginLeft: _completionMarginLeft,
+          page: _completionPage,
+          cols: _overlayCols,
+          maxRows: _cmBudget,
+        }
+      : null;
+    if (completion.active) {
+      try {
+        const _cm = require('./CompletionMenu');
+        if (typeof _cm.menuRowCount === 'function') {
+          const n = _cm.menuRowCount(_completionMenuProps);
+          if (Number.isFinite(n)) completionH = Math.floor(n);
+        }
+      } catch {
+        /* 叶子抛错 → 保持旧式 Math.min(4, …) */
+      }
+    }
+    // 账本自带封顶：视口有 `Math.max(3, …)` 下限，屏幕太矮时「如实扣行」会让
+    // live 区 ≥ rows —— 那会触发 ink 的 fullscreen 清屏分支（备用缓冲下等于抹掉
+    // 转录），正是本账本存在的理由。故矮屏宁可退回少扣（= 改前行为），不破
+    // `live < rows` 这条硬约束。
+    const _otherChrome = _chromeNoMenu + completionH;
+    promptH = Math.min(promptH, Math.max(3, termRows - _otherChrome - 3));
+    const shares = {
+      inputRows: promptH,
+      statusRows: footerH,
+      streamingRows: spinnerH,
+      extraRows: taskH + completionH + hintH + revSearchH,
+      slack,
+    };
+    _viewportHeightShares = {
+      ...shares,
+      topbarRows: topbarH,
+      sepRows: sepH,
+      extraRows: shares.extraRows + topbarH + sepH,
+    };
+    try {
+      const cb = require('../chromeBudget');
+      const b = cb.liveBudget(termRows, _viewportHeightShares);
+      if (Number.isFinite(b) && b > 0) {
+        return Math.max(3, Math.floor(b));
+      }
+    } catch {
+      /* 叶子不可用 → 落到下面的算术兜底(与账本同式,便于比对) */
+    }
+    return Math.max(
+      3,
+      termRows -
+        promptH -
+        footerH -
+        spinnerH -
+        taskH -
+        completionH -
+        hintH -
+        revSearchH -
+        topbarH -
+        sepH -
+        slack -
+        1
+    );
+  })();
+  // 同步到 ref,供键盘/滚轮滚动 handler 读取(避免每次 render 重算)
+  _viewportHeightRef.current = _viewportHeight;
+
   // Shared sidebar props: ONE object feeds the SidebarPanel render in both
   // layout modes (startup side-by-side / post-first-message fill).
   // 确认规格:看板只展示任务清单/工具活动/消息队列 —— 主题、模型+强度、
@@ -5308,39 +6337,8 @@ function App({ options = {} }) {
   // content, no pad) only ever SHRINKS the board below that ceiling, so the
   // ledger can only decrease — no new reserve entry needed.
 
-  // Fix 1b — khy 自己的 /命令·@文件 补全下拉横向对齐到输入光标列(门控
-  // KHY_COMPLETION_FOLLOW_CURSOR 默认开)。复用 PromptFrame.layoutPromptRows 得同款宽度
-  // 感知行模型,caretGeometry 求 caret 显示列,clamp 保不出屏;门控关 → 0=贴左逐字节 legacy。
-  // 全程无副作用、纯计算;lazy require displayWidth(CJK 宽度)与 PromptFrame 同惰性哲学。
-  let _completionMarginLeft = 0;
-  if (completion.active && caretGeometry.completionFollowEnabled(process.env)) {
-    try {
-      const _cols = _railCols(80);
-      // Single-slot memo keyed on (value, offset, cols): while the completion menu
-      // is open and the user arrows through options (App re-renders on selectedIndex
-      // with value/offset/cols UNCHANGED), skip re-laying-out the whole buffer +
-      // caret geometry — byte-identical, gate KHY_COMPLETION_MARGIN_MEMO. Fail-soft.
-      const _computeMargin = () => {
-        let _measure;
-        try {
-          _measure = require('../../formatters').displayWidth;
-        } catch {
-          _measure = null;
-        }
-        const _layout = PromptFrame.layoutPromptRows({ value, offset, cols: _cols });
-        const _caretCol = caretGeometry.caretColumn(
-          _layout.rows,
-          _measure ? { measure: _measure } : {}
-        ).col;
-        return caretGeometry.clampColumn(_caretCol, _cols, 24);
-      };
-      _completionMarginLeft = _caretMarginMemo
-        ? _caretMarginMemo.memoCompletionMargin(value, offset, _cols, _computeMargin, process.env)
-        : _computeMargin();
-    } catch {
-      _completionMarginLeft = 0;
-    }
-  }
+  // Fix 1b 的 `_completionMarginLeft` 已上提到 `_viewportHeight` 之前（补全菜单的
+  // 账本要用它），此处不再重复计算。
 
   // Root box width — 右栏激活时 ink 的整棵树都必须收进 `cols - 栏宽`,让 Yoga 从源头就
   // 不往预留槽位排版;槽位由 sidebarRail 用绝对坐标带外画。判定复用上面的 _railContentCols
@@ -5421,10 +6419,20 @@ function App({ options = {} }) {
   }
 
   // ── Three-column layout mode ──────────────────────────────────────────────
-  // When enabled (env KHY_THREE_COLUMN / auto wide-terminal), delegate to
-  // ThreeColumnLayout which reuses ALL existing leaf components in a
-  // left-sidebar | center-chat | right-panel shell. The legacy return below
-  // stays untouched as the fallback path — zero regression risk.
+  // ⚠️ NOT WIRED (2026-09-16 audit). This block only *computes* the flag — the
+  // value is never consumed anywhere in this file, so there is no branch that
+  // delegates to `ThreeColumnLayout`. Consequences, all verified by grep:
+  //   · `ink-components/ThreeColumnLayout.js` and `ChatColumn.js` have no live
+  //     entry point (they only require each other);
+  //   · the `require('./StreamingBlock')` at the top of this file is a DEAD
+  //     IMPORT — `<StreamingBlock` appears zero times in this file (the
+  //     transcript now goes through `_mainContentLines` → <Viewport>).
+  // The intent was: enable (env KHY_THREE_COLUMN / auto wide-terminal) →
+  // delegate to ThreeColumnLayout (left-sidebar | center-chat | right-panel),
+  // keeping the legacy return below as the fallback — zero regression risk.
+  // Per repo rule "planned but unwired code with design backing must not be
+  // silently deleted", this is reported, not removed. **Do not assume the
+  // branch below exists — wiring it is a behaviour change, not a rename.**
   const threeColumnMode = (() => {
     const v = String(process.env.KHY_THREE_COLUMN || '').trim().toLowerCase();
     if (v === '0' || v === 'false' || v === 'off' || v === 'no') return false;
@@ -5442,10 +6450,13 @@ function App({ options = {} }) {
         ? h(QuestionPrompt, {
             request: query.controlRequest.request,
             onResolve: query.resolveControl,
+            cols: _overlayCols,
+            rows: _resRows,
           })
         : h(PermissionsPrompt, {
             request: query.controlRequest.request,
             onResolve: query.resolveControl,
+            cols: _overlayCols,
           })
       : null,
     modelPicker
@@ -5454,6 +6465,8 @@ function App({ options = {} }) {
           defaultValue: modelPicker.defaultValue,
           onResolve: resolveModelPicker,
           recent: modelPicker.recent,
+          cols: _overlayCols,
+          rows: _resRows,
         })
       : null,
     gatewayProgress && !modelPicker ? h(ProgressBar, { ...gatewayProgress }) : null,
@@ -5461,6 +6474,8 @@ function App({ options = {} }) {
       ? h(RewindPicker, {
           targets: rewindPicker.targets,
           onResolve: resolveRewindPicker,
+          cols: _overlayCols,
+          rows: _resRows,
         })
       : null,
     rollbackPicker
@@ -5468,6 +6483,8 @@ function App({ options = {} }) {
           targets: rollbackPicker.targets,
           title: '选择要回滚到的检查点（↑/↓ 选择，回车确认）',
           onResolve: resolveRollbackPicker,
+          cols: _overlayCols,
+          rows: _resRows,
         })
       : null,
     formFlow
@@ -5495,14 +6512,35 @@ function App({ options = {} }) {
   // ── Preview 布局 (对齐 layout-preview.html) ──────────────────────────────
   // 结构: 标题栏 + 横幅 + 分割(左 MAIN + 右 SIDEBAR) + 底部固定层。
   // 无左会话栏。门控 KHY_PREVIEW_LAYOUT (默认宽终端 ≥122 列自动开)。
-  const previewLayoutMode = (() => {
-    const v = String(process.env.KHY_PREVIEW_LAYOUT || '').trim().toLowerCase();
-    if (v === '0' || v === 'false' || v === 'off' || v === 'no') return false;
-    if (v === '1' || v === 'true' || v === 'on' || v === 'yes') return true;
-    return Number(_resCols) >= 122;
-  })();
+  // 判定**必须在 `_viewportHeight` 之前**(该账本要按布局扣 topbar/分隔线);
+  // 而 `previewLayoutActiveRef`(还要看 inputActive/_overlayOwnsLive)留在原位。
   // 同步到 ref,供 useInput 键盘处理器读取。
   previewLayoutActiveRef.current = !!(previewLayoutMode && inputActive && !_overlayOwnsLive);
+  // 鼠标行 → 行数组下标还要减掉「视口上方的 live chrome」。两套布局不同:
+  //   · PreviewLayout:Topbar 1 行画在分割区之上 ⇒ 视口首行 = 帧首行 + 1;
+  //   · legacy:Static 横幅被 ink 提升出树,live 帧的第一个节点就是视口所在行 ⇒ 0。
+  // 行数取自 chrome 账本本身(topbarRows),不在此处重复写数字。
+  _viewportTopChromeRef.current = previewLayoutActiveRef.current
+    ? Number(_viewportHeightShares.topbarRows) || 0
+    : 0;
+
+  // [diag] KHY_TUI_DIAG_H=1 → 把本帧的高度账本打到 stderr,用于核对 chrome 是否漏项
+  // (与 KHY_TUI_DIAG 同族:都是真终端排查用的 stderr 开关,默认关、不参与行为分支)。
+  // 排「输出回显看不见」时先开它,再把实测帧行数与 rows 对比 —— 帧行数 ≥ rows 就会
+  // 触发 ink 的 fullscreen 清屏,备用缓冲区下等于把转录整片抹掉。
+  if (process.env.KHY_TUI_DIAG_H === '1') {
+    try {
+      process.stderr.write(
+        `[diagH] rows=${_resRows} preview=${previewLayoutActiveRef.current} viewport=${_viewportHeight}` +
+          ` input=${_viewportHeightShares.inputRows} status=${_viewportHeightShares.statusRows}` +
+          ` spinner=${_viewportHeightShares.streamingRows} extra=${_viewportHeightShares.extraRows}` +
+          ` slack=${_viewportHeightShares.slack}` +
+          ` topbar=${_viewportHeightShares.topbarRows} sep=${_viewportHeightShares.sepRows}\n`
+      );
+    } catch {
+      /* diag only */
+    }
+  }
 
   // Pre-compute topologyView overlay element outside h() call args to avoid nested ternary
   // parser ambiguity that causes "missing ) after argument list" at the closing paren.
@@ -5553,7 +6591,7 @@ function App({ options = {} }) {
             : shellViewOpen
               ? h(ShellView, { streaming: query.streaming, scroll: shellScroll })
               : showHelp
-                ? h(HelpMenu, null)
+                ? h(HelpMenu, { cols: _overlayCols, rows: _viewportHeight })
                 : planPhase === 'generating'
                   ? h(PlanApproval, { generating: true, genText: planGenText })
                   : planPhase === 'reviewing'
@@ -5565,8 +6603,17 @@ function App({ options = {} }) {
                         scroll: mainViewportScroll,
                         onScroll: setMainViewportScroll,
                         autoScroll: true,
-                        emptyText: '  暂无对话,输入消息开始...',
+                        emptyText: '  暂无对话，输入消息开始……',
+                        // ⚠ **死 prop(别再照它做宽度推断)**:Viewport **从不读 `width`**
+                        //   (全文件 0 命中)。折行一律发生在上面 `_mainContentLines` 的
+                        //   `cols` 计算里,这里传的宽度不参与布局。保留仅为不破坏历史 shape,
+                        //   它会造成「宽度已受控」的假象 —— 若据此以为渲染层会按它折行,
+                        //   会与 `selection.js` 的「屏幕行 == 数组下标」不变量冲突。
+                        //   见 [DESIGN-ARCH-119] §4.2.1。
                         width: _railCols(0) || Number(_resCols) || 80,
+                        // 自绘选择的反色渲染。门控关 / 无选区 → null → Viewport 走
+                        // 原来的单 <Text> 分支,**逐字节不变**(硬承诺,见 Viewport.js)。
+                        selection: _selectOn ? selectRegion : null,
                       }),
           // Right-column board (任务#8/#11) — always inside the flex row:
           _sidebarOn && !_railOut
@@ -5613,14 +6660,9 @@ function App({ options = {} }) {
         }),
 
         // ── 区域⑤ COMPLETION_MENU(斜杠命令补全菜单)────────────────────────
-        completion.active
-          ? h(CompletionMenu, {
-              completion,
-              selectedIndex,
-              marginLeft: _completionMarginLeft,
-              page: completionPage,
-            })
-          : null,
+        // props 来自账本（`_completionMenuProps`）：`maxRows` 决定一页画几条，
+        // 与 `completionH` 同源 ⇒ 账本扣的行数 == 这里画出的行数(BUG-60)。
+        _completionMenuProps ? h(CompletionMenu, _completionMenuProps) : null,
 
         // Reverse-incremental history search prompt (Ctrl+R).
         revSearch && _HistorySearchOverlay
@@ -5652,6 +6694,14 @@ function App({ options = {} }) {
                     )
                   ),
                   dimColor: false,
+                  // 状态透明(102 §6.4):detail 优先于 label(更具体,如「读取 src/x.js」);
+                  // 这三个数来自 _spinnerProgress(单一时钟源,turnStartedAt + nowTick +
+                  // lastActivityRef),不再在渲染体里手算 —— 手算副本正是文案与实际状态脱节的成因。
+                  detail: query.statusDetail || '',
+                  stalled: busy && _spin.stalled,
+                  stalledSec: busy ? _spin.stalledSec : 0,
+                  elapsedSec: _spin.elapsedSec,
+                  tokens: _spin.tokens,
                 })
               )
             )
@@ -5663,10 +6713,13 @@ function App({ options = {} }) {
             ? h(QuestionPrompt, {
                 request: query.controlRequest.request,
                 onResolve: query.resolveControl,
+                cols: _overlayCols,
+                rows: _resRows,
               })
             : h(PermissionsPrompt, {
                 request: query.controlRequest.request,
                 onResolve: query.resolveControl,
+                cols: _overlayCols,
               })
           : null,
 
@@ -5676,6 +6729,8 @@ function App({ options = {} }) {
               defaultValue: modelPicker.defaultValue,
               onResolve: resolveModelPicker,
               recent: modelPicker.recent,
+              cols: _overlayCols,
+              rows: _resRows,
             })
           : null,
 
@@ -5687,6 +6742,8 @@ function App({ options = {} }) {
           ? h(RewindPicker, {
               targets: rewindPicker.targets,
               onResolve: resolveRewindPicker,
+              cols: _overlayCols,
+              rows: _resRows,
             })
           : null,
 
@@ -5695,6 +6752,8 @@ function App({ options = {} }) {
               targets: rollbackPicker.targets,
               title: '选择要回滚到的检查点（↑/↓ 选择，回车确认）',
               onResolve: resolveRollbackPicker,
+              cols: _overlayCols,
+              rows: _resRows,
             })
           : null,
 
@@ -5718,8 +6777,13 @@ function App({ options = {} }) {
     return h(PreviewLayout, {
       titleBar: { title: 'khy-os TUI' },
       banner: null,
-      staticItems: query.staticItems,
+      staticItems: _staticItemsForStatic,
       bannerElement: _liveBannerElement,
+      // 转录行投影 + 预算内高度:PreviewLayout 把它放进**应用内** Viewport。
+      // 旧实现只把 live 工具/任务面板塞进 Viewport,整段转录走 <Static> → 备屏(非 CC 默认开)
+      // 没有回滚缓冲 → 转录永远看不见(用户报「输出回显不可见」的直接成因)。
+      lines: _inlineTranscript ? _mainContentLines : null,
+      emptyText: '  暂无对话，输入消息开始……',
       expanded,
       streaming: query.streaming,
       status: query.status,
@@ -5733,10 +6797,12 @@ function App({ options = {} }) {
       accent,
       vimEnabled,
       vimMode,
-      mic: { active: dictating, onClick: toggleDictation },
+      mic: _voiceInput && typeof _voiceInput.triggerWinH === 'function'
+        ? { active: dictating, onClick: toggleDictation }
+        : null,
       completion,
       selectedIndex,
-      completionPage,
+      completionPage: _completionPage,
       completionMarginLeft: _completionMarginLeft,
       hint,
       footer: {
@@ -5764,7 +6830,9 @@ function App({ options = {} }) {
         inputEcho: value || '',
       },
       width: Number(_resCols) > 0 ? Number(_resCols) : 80,
-      viewportHeight: Math.max(3, Number(_resRows) > 0 ? Number(_resRows) - 8 : 10),
+      // 高度走同一本 chrome 账本(_viewportHeight,已扣掉 topbar/分隔线/输入框/页脚/任务清单/
+      // 忙态 spinner)——旧值 rows-8 没扣 topbar(1)+分隔线(1)与忙态 spinner(3),忙起来必触顶。
+      viewportHeight: _viewportHeight,
       viewportScroll: previewViewportScroll,
       onViewportScroll: setPreviewViewportScroll,
       sidebarScroll: previewSidebarScroll,
@@ -5778,11 +6846,31 @@ function App({ options = {} }) {
     return _bootScreenEl;
   }
 
+  // Spinner 的三个数（stalled / elapsedSec / tokens）走**单一真源** _spinnerProgress
+  // （纯函数，appHostHelpersLeaf.test.js 锁着 3s 阈与各字段语义）。此前这里手写过一份等价
+  // 副本，漂出三个可见错误：毫秒差与字面量 3 比较（应为 3000ms）→ 忙碌中几乎恒显「⏳ 等待中」；
+  // elapsedSec 直接传 Date.now()（时间戳当秒数）→ meta 渲染成「 · 20719231d」；
+  // tokens 取 query.tokenEstimate —— 该字段在 TUI 查询层**没有生产者**，恒为 0，于是
+  // 「~N tok」永不显示。文案要按实际数据渲染，前提是这三个数得真是实际数据。
+  const _spin = _spinnerProgress(
+    query.turnStartedAt || 0,
+    nowTick,
+    lastActivityRef.current,
+    query.streaming
+  );
+
   return h(
     Box,
     { flexDirection: 'column', width: _railContentCols || undefined },
-    // ── 区域① BANNER + 已 commit 转录(全屏,跨越 MAIN/SIDEBAR)─────────────────
-    h(Static, { items: query.staticItems }, (item) => {
+    // ── 区域① BANNER(只画一次)──────────────────────────────────────────────
+    // 默认:转录**不再**走 <Static>。理由见 _viewportHeight 上方注释 —— 本 TUI 跑在备用
+    // 缓冲区,没有回滚缓冲,<Static> 写进去的行一旦滚出视口或被 fullscreen 清屏擦掉就
+    // 永久消失(scrollbackPreserve 第三层还会把 fullStaticOutput 从全屏帧里剥掉 → 擦掉后
+    // 不重画)。转录的唯一展示位是应用内 Viewport(_mainContentLines),滚轮/键盘都驱动它。
+    // <Static> 只留横幅:它必须只画一次,不能每帧重发。
+    // KHY_INLINE_TRANSCRIPT=0 → items 回退为 query.staticItems,整段转录仍由 <Static> 承载
+    // (与修改前逐字节一致)。
+    h(Static, { items: _staticItemsForStatic }, (item) => {
       if (item.kind === 'banner') {
         return _liveBannerElement;
       }
@@ -5793,17 +6881,8 @@ function App({ options = {} }) {
     _liveRegionEl,
 
     // ── 区域⑥ PROMPT(输入框) — 固定底部 ─────────────────────────────────
-    _overlayOwnsLive
-      ? null
-      : h(PromptFrame, {
-          value,
-          offset,
-          busy,
-          placeholder,
-          accent,
-          vimMode: vimEnabled ? vimMode : null,
-          mic: { active: dictating, onClick: toggleDictation },
-        }),
+    // props 在账本上方一次性构造（`_promptFrameProps`）：账本量的必须是**这一个**框。
+    _overlayOwnsLive ? null : h(PromptFrame, _promptFrameProps),
 
     // ── 区域⑦ FOOTER(状态栏) — 固定底部 ─────────────────────────────────
     _overlayOwnsLive

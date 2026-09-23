@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-FE-004] 前端 CSS 与样式架构规范.md -->
+<title>[DESIGN-FE-004] 前端 CSS 与样式架构规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-FE<span class="sep">›</span>[DESIGN-FE-004] 前端 CSS 与样式架构规范</div>
+      <header class="hero reveal"><h1>[DESIGN-FE-004] 前端 CSS 与样式架构规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-fe-004-前端-css-与样式架构规范">[DESIGN-FE-004] 前端 CSS 与样式架构规范</a></li><li class="lvl-2"><a href="#1-css-架构原则">1. CSS 架构原则</a></li><li class="lvl-2"><a href="#2-分层架构">2. 分层架构</a></li><li class="lvl-3"><a href="#2-1-六层模型-itcss-变体">2.1 六层模型（ITCSS 变体）</a></li><li class="lvl-3"><a href="#2-2-层间规则">2.2 层间规则</a></li><li class="lvl-2"><a href="#3-设计令牌-css-自定义属性">3. 设计令牌（CSS 自定义属性）</a></li><li class="lvl-3"><a href="#3-1-命名约定">3.1 命名约定</a></li><li class="lvl-3"><a href="#3-2-双主题强制">3.2 双主题强制</a></li><li class="lvl-3"><a href="#3-3-新增令牌流程">3.3 新增令牌流程</a></li><li class="lvl-2"><a href="#4-命名方案">4. 命名方案</a></li><li class="lvl-3"><a href="#4-1-bem-block-element-modifier">4.1 BEM（Block Element Modifier）</a></li><li class="lvl-3"><a href="#4-2-作用域前缀">4.2 作用域前缀</a></li><li class="lvl-3"><a href="#4-3-类名风格">4.3 类名风格</a></li><li class="lvl-2"><a href="#5-样式来源优先级">5. 样式来源优先级</a></li><li class="lvl-2"><a href="#6-响应式断点">6. 响应式断点</a></li><li class="lvl-3"><a href="#6-1-断点定义">6.1 断点定义</a></li><li class="lvl-3"><a href="#6-2-移动优先">6.2 移动优先</a></li><li class="lvl-3"><a href="#6-3-流式值">6.3 流式值</a></li><li class="lvl-2"><a href="#7-工具类规范">7. 工具类规范</a></li><li class="lvl-3"><a href="#7-1-间距工具类">7.1 间距工具类</a></li><li class="lvl-3"><a href="#7-2-展示工具类">7.2 展示工具类</a></li><li class="lvl-2"><a href="#8-动画规范">8. 动画规范</a></li><li class="lvl-3"><a href="#8-1-动画参数">8.1 动画参数</a></li><li class="lvl-3"><a href="#8-2-动画令牌">8.2 动画令牌</a></li><li class="lvl-3"><a href="#8-3-prefers-reduced-motion">8.3 prefers-reduced-motion</a></li><li class="lvl-3"><a href="#8-4-骨架屏-shimmer">8.4 骨架屏 shimmer</a></li><li class="lvl-2"><a href="#9-样式组织-vue-sfc">9. 样式组织（Vue SFC）</a></li><li class="lvl-3"><a href="#9-1-文件内顺序">9.1 文件内顺序</a></li><li class="lvl-3"><a href="#9-2-scss-使用">9.2 SCSS 使用</a></li><li class="lvl-2"><a href="#10-遗留代码收敛">10. 遗留代码收敛</a></li><li class="lvl-3"><a href="#10-1-硬编码-hex-收敛">10.1 硬编码 hex 收敛</a></li><li class="lvl-3"><a href="#10-2-悬空变量修复">10.2 悬空变量修复</a></li><li class="lvl-2"><a href="#11-版本历史">11. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-fe-004-前端-css-与样式架构规范">[DESIGN-FE-004] 前端 CSS 与样式架构规范<a class="anchor" href="#design-fe-004-前端-css-与样式架构规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: FE-004 -->
+<blockquote><p><strong>用途</strong>：定义 khy-os 前端项目（ai-frontend / khyquant-frontend）的 CSS 架构与样式规范。<br>FE-001 §3 已定义设计令牌体系，本文档补全架构、分层、命名、响应式、动画等样式工程规范。</p></blockquote>
+<hr>
+<h2 id="1-css-架构原则">1. CSS 架构原则<a class="anchor" href="#1-css-架构原则" aria-label="锚点">#</a></h2>
+<ol><li><strong>令牌优先</strong>：颜色/圆角/阴影全部走 <code>var(--khy-*)</code>，禁止硬编码值</li><li><strong>分层组织</strong>：Base → Tokens → Layout → Components → Utilities → Overrides</li><li><strong>就近原则</strong>：组件样式 <code>scoped</code>，全局样式仅放布局/令牌/动画</li><li><strong>无 !important</strong>：通过特异性顺序管理优先级</li><li><strong>移动优先</strong>：默认移动端样式，<code>min-width</code> 渐进增强</li></ol>
+<hr>
+<h2 id="2-分层架构">2. 分层架构<a class="anchor" href="#2-分层架构" aria-label="锚点">#</a></h2>
+<h3 id="2-1-六层模型-itcss-变体">2.1 六层模型（ITCSS 变体）<a class="anchor" href="#2-1-六层模型-itcss-变体" aria-label="锚点">#</a></h3>
+<pre><code>┌──────────────────────────────────────────────────────┐
+│  6. Overrides — 第三方组件覆盖（仅 Element Plus 主题）  │
+├──────────────────────────────────────────────────────┤
+│  5. Utilities — 工具类（间距、排版、显示）              │
+├──────────────────────────────────────────────────────┤
+│  4. Components — 业务组件样式（Khy*、业务组件）        │
+├──────────────────────────────────────────────────────┤
+│  3. Layout — 页面布局壳（AuthenticatedLayout 等）     │
+├──────────────────────────────────────────────────────┤
+│  2. Tokens — 设计令牌（newapi-theme.css）             │
+├──────────────────────────────────────────────────────┤
+│  1. Base — 元素默认样式（normalize + 字体）            │
+└──────────────────────────────────────────────────────┘</code></pre>
+<h3 id="2-2-层间规则">2.2 层间规则<a class="anchor" href="#2-2-层间规则" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规则</th><th>说明</th></tr></thead><tbody><tr><td>高层可覆盖低层</td><td>Components → Layout → Tokens → Base</td></tr><tr><td>低层不得依赖高层</td><td>Base 层不知道任何组件存在</td></tr><tr><td>令牌是唯一真源</td><td>任何视觉值必须在 §3 令牌层定义</td></tr><tr><td>工具类不创造新值</td><td><code>.mt-16</code> = <code>margin-top: var(--khy-space-4)</code></td></tr></tbody></table>
+<hr>
+<h2 id="3-设计令牌-css-自定义属性">3. 设计令牌（CSS 自定义属性）<a class="anchor" href="#3-设计令牌-css-自定义属性" aria-label="锚点">#</a></h2>
+<h3 id="3-1-命名约定">3.1 命名约定<a class="anchor" href="#3-1-命名约定" aria-label="锚点">#</a></h3>
+<pre><code class="language-css"><span class="hljs-attr">--khy-</span>{category}-{variant}</code></pre>
+<table><thead><tr><th>分类</th><th>前缀</th><th>示例</th></tr></thead><tbody><tr><td>表面</td><td><code>--khy-bg-*</code></td><td><code>--khy-bg-main</code>、<code>--khy-bg-elevated</code></td></tr><tr><td>文本</td><td><code>--khy-text-*</code></td><td><code>--khy-text-main</code>、<code>--khy-text-muted</code></td></tr><tr><td>线条</td><td><code>--khy-border-*</code></td><td><code>--khy-border</code>、<code>--khy-border-light</code></td></tr><tr><td>品牌</td><td><code>--khy-primary-*</code></td><td><code>--khy-primary</code>、<code>--khy-primary-strong</code></td></tr><tr><td>状态</td><td><code>--khy-{status}</code></td><td><code>--khy-success</code>、<code>--khy-warning</code>、<code>--khy-danger</code></td></tr><tr><td>几何</td><td><code>--khy-radius-*</code></td><td><code>--khy-radius</code>、<code>--khy-radius-sm</code></td></tr><tr><td>阴影</td><td><code>--khy-shadow-*</code></td><td><code>--khy-shadow</code>、<code>--khy-shadow-lift</code></td></tr><tr><td>字体</td><td><code>--khy-font-*</code></td><td><code>--khy-font</code>、<code>--khy-font-mono</code></td></tr></tbody></table>
+<h3 id="3-2-双主题强制">3.2 双主题强制<a class="anchor" href="#3-2-双主题强制" aria-label="锚点">#</a></h3>
+<p><strong>任何颜色/阴影 token 必须同时定义浅色和深色</strong>：</p>
+<pre><code class="language-css"><span class="hljs-comment">/* ✅ 正确 — 双主题 */</span>
+<span class="hljs-selector-pseudo">:root</span> {
+  <span class="hljs-attr">--khy-bg-main</span>: <span class="hljs-number">#f4f7fc</span>;
+  <span class="hljs-attr">--khy-text-main</span>: <span class="hljs-number">#1f2937</span>;
+}
+<span class="hljs-selector-tag">html</span><span class="hljs-selector-class">.dark</span> {
+  <span class="hljs-attr">--khy-bg-main</span>: <span class="hljs-number">#0f172a</span>;
+  <span class="hljs-attr">--khy-text-main</span>: <span class="hljs-number">#e2e8f0</span>;
+}
+
+<span class="hljs-comment">/* ❌ 错误 — 仅浅色 */</span>
+<span class="hljs-selector-pseudo">:root</span> {
+  <span class="hljs-attr">--khy-bg-white</span>: <span class="hljs-number">#ffffff</span>;  <span class="hljs-comment">/* 暗色下静默失效 */</span>
+}</code></pre>
+<h3 id="3-3-新增令牌流程">3.3 新增令牌流程<a class="anchor" href="#3-3-新增令牌流程" aria-label="锚点">#</a></h3>
+<ol><li>在 <code>newapi-theme.css</code> 的 <code>:root</code> 和 <code>html.dark</code> 中同时定义</li><li>在消费端使用 <code>var(--khy-new-token)</code></li><li>不得在组件内创建新的悬空变量</li></ol>
+<hr>
+<h2 id="4-命名方案">4. 命名方案<a class="anchor" href="#4-命名方案" aria-label="锚点">#</a></h2>
+<h3 id="4-1-bem-block-element-modifier">4.1 BEM（Block Element Modifier）<a class="anchor" href="#4-1-bem-block-element-modifier" aria-label="锚点">#</a></h3>
+<pre><code>.block__element--modifier
+.is-state         用于状态类
+.has-child        用于子元素指示</code></pre>
+<pre><code class="language-css"><span class="hljs-comment">/* Block */</span>
+<span class="hljs-selector-class">.khy-card</span> { }
+
+<span class="hljs-comment">/* Element */</span>
+<span class="hljs-selector-class">.khy-card__header</span> { }
+<span class="hljs-selector-class">.khy-card__body</span> { }
+<span class="hljs-selector-class">.khy-card__footer</span> { }
+
+<span class="hljs-comment">/* Modifier */</span>
+<span class="hljs-selector-class">.khy-card--elevated</span> { }
+<span class="hljs-selector-class">.khy-card--compact</span> { }
+
+<span class="hljs-comment">/* State */</span>
+<span class="hljs-selector-class">.khy-card</span><span class="hljs-selector-class">.is-loading</span> { }
+<span class="hljs-selector-class">.khy-card</span><span class="hljs-selector-class">.is-error</span> { }</code></pre>
+<h3 id="4-2-作用域前缀">4.2 作用域前缀<a class="anchor" href="#4-2-作用域前缀" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>前缀</th><th>用途</th><th>示例</th></tr></thead><tbody><tr><td><code>khy-</code></td><td>khy-os 全局组件</td><td><code>.khy-page-header</code></td></tr><tr><td><code>c-</code></td><td>业务组件</td><td><code>.c-agent-dashboard</code></td></tr><tr><td><code>l-</code></td><td>布局</td><td><code>.l-page-layout</code></td></tr><tr><td><code>u-</code></td><td>工具类</td><td><code>.u-sr-only</code>、<code>.u-mt-16</code></td></tr><tr><td><code>t-</code></td><td>主题覆盖（临时）</td><td><code>.t-legacy-dark</code></td></tr></tbody></table>
+<h3 id="4-3-类名风格">4.3 类名风格<a class="anchor" href="#4-3-类名风格" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>风格</th><th>示例</th></tr></thead><tbody><tr><td>复合词</td><td>kebab-case</td><td><code>.agent-dashboard</code></td></tr><tr><td>数字</td><td>避免纯数字</td><td><code>.col-3</code> ✅、<code>.col3</code> ❌</td></tr><tr><td>布尔</td><td><code>is-</code> / <code>has-</code></td><td><code>.is-active</code>、<code>.has-error</code></td></tr></tbody></table>
+<hr>
+<h2 id="5-样式来源优先级">5. 样式来源优先级<a class="anchor" href="#5-样式来源优先级" aria-label="锚点">#</a></h2>
+<p>优先级从高到低（低层可被高层覆盖）：</p>
+<pre><code class="language-css"><span class="hljs-comment">/* 1. Inline style（最差，禁止） */</span>
+&lt;<span class="hljs-selector-tag">div</span> style=&quot;<span class="hljs-attribute">color</span>: red<span class="hljs-string">&quot;&gt;  /* ❌ 禁止 */
+
+/* 2. 组件 scoped style */
+&lt;style scoped&gt;
+.khy-button { }  /* 特异性: 0,0,1,0 */
+&lt;/style&gt;
+
+/* 3. 全局组件样式 */
+.khy-button { }  /* 特异性: 0,0,1,0 */
+
+/* 4. 令牌层 */
+:root { --khy-primary: #2f7ef7; }  /* var() 引用 */
+
+/* 5. 浏览器默认（最弱） */
+button { }</span></code></pre>
+<p><strong>特异性控制</strong>：</p>
+<ul><li>组件 scoped：<code>0,0,1,0</code></li><li>全局组件：<code>0,0,1,0</code></li><li>状态类：<code>0,0,2,0</code>（<code>.khy-card.is-active</code>）</li><li>工具类：<code>0,0,0,1</code>（<code>.mt-16</code>）</li></ul>
+<blockquote><p><strong>禁止使用 <code>!important</code></strong>。如必须提升优先级，使用更高特异性的选择器。</p></blockquote>
+<hr>
+<h2 id="6-响应式断点">6. 响应式断点<a class="anchor" href="#6-响应式断点" aria-label="锚点">#</a></h2>
+<h3 id="6-1-断点定义">6.1 断点定义<a class="anchor" href="#6-1-断点定义" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>断点</th><th>范围</th><th>前缀</th><th>说明</th></tr></thead><tbody><tr><td>Mobile</td><td>&lt; 640px</td><td><code>m-</code></td><td>手机竖屏</td></tr><tr><td>Tablet</td><td>640–1023px</td><td><code>t-</code></td><td>平板</td></tr><tr><td>Desktop</td><td>≥ 1024px</td><td><code>d-</code></td><td>桌面</td></tr></tbody></table>
+<h3 id="6-2-移动优先">6.2 移动优先<a class="anchor" href="#6-2-移动优先" aria-label="锚点">#</a></h3>
+<pre><code class="language-css"><span class="hljs-comment">/* Mobile first — 默认样式 */</span>
+<span class="hljs-selector-class">.c-layout</span> { <span class="hljs-attribute">display</span>: block; }
+
+<span class="hljs-comment">/* Tablet */</span>
+<span class="hljs-keyword">@media</span> (<span class="hljs-attribute">min-width</span>: <span class="hljs-number">640px</span>) {
+  <span class="hljs-selector-class">.c-layout</span> { <span class="hljs-attribute">display</span>: grid; <span class="hljs-attribute">grid-template-columns</span>: <span class="hljs-number">1</span>fr <span class="hljs-number">3</span>fr; }
+}
+
+<span class="hljs-comment">/* Desktop */</span>
+<span class="hljs-keyword">@media</span> (<span class="hljs-attribute">min-width</span>: <span class="hljs-number">1024px</span>) {
+  <span class="hljs-selector-class">.c-layout</span> { <span class="hljs-attribute">grid-template-columns</span>: <span class="hljs-number">240px</span> <span class="hljs-number">1</span>fr; }
+}</code></pre>
+<h3 id="6-3-流式值">6.3 流式值<a class="anchor" href="#6-3-流式值" aria-label="锚点">#</a></h3>
+<pre><code class="language-css"><span class="hljs-comment">/* 优先 clamp() 而非媒体查询 */</span>
+<span class="hljs-selector-class">.c-page-content</span> {
+  <span class="hljs-attribute">padding</span>: <span class="hljs-built_in">clamp</span>(<span class="hljs-number">12px</span>, <span class="hljs-number">2vw</span>, <span class="hljs-number">32px</span>);
+  <span class="hljs-attribute">font-size</span>: <span class="hljs-built_in">clamp</span>(<span class="hljs-number">14px</span>, <span class="hljs-number">1.2vw</span>, <span class="hljs-number">16px</span>);
+}</code></pre>
+<hr>
+<h2 id="7-工具类规范">7. 工具类规范<a class="anchor" href="#7-工具类规范" aria-label="锚点">#</a></h2>
+<h3 id="7-1-间距工具类">7.1 间距工具类<a class="anchor" href="#7-1-间距工具类" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>工具类</th><th>值</th><th>CSS</th></tr></thead><tbody><tr><td><code>.m-0</code> / <code>.m-auto</code></td><td>—</td><td><code>margin: 0</code></td></tr><tr><td><code>.mt-8</code></td><td>8px</td><td><code>margin-top: var(--khy-space-2)</code></td></tr><tr><td><code>.mx-16</code></td><td>16px</td><td><code>margin-inline: var(--khy-space-4)</code></td></tr><tr><td><code>.p-0</code> / <code>.p-24</code></td><td>24px</td><td><code>padding: var(--khy-space-6)</code></td></tr><tr><td><code>.gap-8</code></td><td>8px</td><td><code>gap: var(--khy-space-2)</code></td></tr></tbody></table>
+<blockquote><p>间距工具类映射到 <code>--khy-space-*</code> 令牌（当前 4px 为基数：2=8px, 4=16px, 6=24px）。</p></blockquote>
+<h3 id="7-2-展示工具类">7.2 展示工具类<a class="anchor" href="#7-2-展示工具类" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>工具类</th><th>值</th></tr></thead><tbody><tr><td><code>.u-sr-only</code></td><td><code>position: absolute; width: 1px; overflow: hidden;</code></td></tr><tr><td><code>.u-text-center</code></td><td><code>text-align: center</code></td></tr><tr><td><code>.u-truncate</code></td><td><code>overflow: hidden; text-overflow: ellipsis; white-space: nowrap</code></td></tr><tr><td><code>.u-clickable</code></td><td><code>cursor: pointer</code></td></tr></tbody></table>
+<hr>
+<h2 id="8-动画规范">8. 动画规范<a class="anchor" href="#8-动画规范" aria-label="锚点">#</a></h2>
+<h3 id="8-1-动画参数">8.1 动画参数<a class="anchor" href="#8-1-动画参数" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>参数</th><th>默认值</th><th>说明</th></tr></thead><tbody><tr><td>过渡时长</td><td><code>150ms</code> / <code>200ms</code> / <code>300ms</code></td><td>短/中/长</td></tr><tr><td>缓动函数</td><td><code>cubic-bezier(0.4, 0, 0.2, 1)</code></td><td>标准（ease-out-ish）</td></tr><tr><td>关闭时长</td><td>与开启相同</td><td>对称过渡</td></tr></tbody></table>
+<h3 id="8-2-动画令牌">8.2 动画令牌<a class="anchor" href="#8-2-动画令牌" aria-label="锚点">#</a></h3>
+<pre><code class="language-css"><span class="hljs-selector-pseudo">:root</span> {
+  <span class="hljs-attr">--khy-duration-fast</span>: <span class="hljs-number">150ms</span>;
+  <span class="hljs-attr">--khy-duration-normal</span>: <span class="hljs-number">200ms</span>;
+  <span class="hljs-attr">--khy-duration-slow</span>: <span class="hljs-number">300ms</span>;
+  <span class="hljs-attr">--khy-easing-standard</span>: <span class="hljs-built_in">cubic-bezier</span>(<span class="hljs-number">0.4</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0.2</span>, <span class="hljs-number">1</span>);
+  <span class="hljs-attr">--khy-easing-enter</span>: <span class="hljs-built_in">cubic-bezier</span>(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0.2</span>, <span class="hljs-number">1</span>);
+  <span class="hljs-attr">--khy-easing-exit</span>: <span class="hljs-built_in">cubic-bezier</span>(<span class="hljs-number">0.4</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>);
+}</code></pre>
+<h3 id="8-3-prefers-reduced-motion">8.3 prefers-reduced-motion<a class="anchor" href="#8-3-prefers-reduced-motion" aria-label="锚点">#</a></h3>
+<pre><code class="language-css"><span class="hljs-keyword">@media</span> (<span class="hljs-attribute">prefers-reduced-motion</span>: reduce) {
+  *,
+  *<span class="hljs-selector-pseudo">::before</span>,
+  *<span class="hljs-selector-pseudo">::after</span> {
+    <span class="hljs-attribute">animation-duration</span>: <span class="hljs-number">0.01ms</span> <span class="hljs-meta">!important</span>;
+    <span class="hljs-attribute">animation-iteration-count</span>: <span class="hljs-number">1</span> <span class="hljs-meta">!important</span>;
+    <span class="hljs-attribute">transition-duration</span>: <span class="hljs-number">0.01ms</span> <span class="hljs-meta">!important</span>;
+    <span class="hljs-attribute">scroll-behavior</span>: auto <span class="hljs-meta">!important</span>;
+  }
+}</code></pre>
+<h3 id="8-4-骨架屏-shimmer">8.4 骨架屏 shimmer<a class="anchor" href="#8-4-骨架屏-shimmer" aria-label="锚点">#</a></h3>
+<pre><code class="language-css"><span class="hljs-selector-class">.khy-skeleton</span> {
+  <span class="hljs-attribute">background</span>: <span class="hljs-built_in">linear-gradient</span>(
+    <span class="hljs-number">90deg</span>,
+    <span class="hljs-built_in">var</span>(--khy-skeleton-base) <span class="hljs-number">25%</span>,
+    <span class="hljs-built_in">var</span>(--khy-skeleton-highlight) <span class="hljs-number">50%</span>,
+    <span class="hljs-built_in">var</span>(--khy-skeleton-base) <span class="hljs-number">75%</span>
+  );
+  <span class="hljs-attribute">background-size</span>: <span class="hljs-number">200%</span> <span class="hljs-number">100%</span>;
+  <span class="hljs-attribute">animation</span>: shimmer <span class="hljs-number">1.5s</span> ease-in-out infinite;
+}
+
+<span class="hljs-keyword">@keyframes</span> shimmer {
+  <span class="hljs-number">0%</span> { <span class="hljs-attribute">background-position</span>: <span class="hljs-number">200%</span> <span class="hljs-number">0</span>; }
+  <span class="hljs-number">100%</span> { <span class="hljs-attribute">background-position</span>: -<span class="hljs-number">200%</span> <span class="hljs-number">0</span>; }
+}</code></pre>
+<hr>
+<h2 id="9-样式组织-vue-sfc">9. 样式组织（Vue SFC）<a class="anchor" href="#9-样式组织-vue-sfc" aria-label="锚点">#</a></h2>
+<h3 id="9-1-文件内顺序">9.1 文件内顺序<a class="anchor" href="#9-1-文件内顺序" aria-label="锚点">#</a></h3>
+<pre><code class="language-vue">&lt;style scoped&gt;
+/* 1. 变量/混合（如有） */
+/* 2. Block 样式 */
+.c-my-component { }
+
+/* 3. Element 样式 */
+.c-my-component__header { }
+.c-my-component__body { }
+
+/* 4. Modifier 样式 */
+.c-my-component--compact { }
+
+/* 5. 子组件样式（仅含子组件类） */
+.c-child { }
+
+/* 6. 状态样式 */
+.c-my-component.is-loading { }
+
+/* 7. 媒体查询 */
+@media (min-width: 640px) { }
+&lt;/style&gt;</code></pre>
+<h3 id="9-2-scss-使用">9.2 SCSS 使用<a class="anchor" href="#9-2-scss-使用" aria-label="锚点">#</a></h3>
+<p>khyquant 使用 SCSS（<code>sass</code>），ai-frontend 不预装。规范：</p>
+<ul><li>嵌套 ≤ 3 层（避免特异性爆炸）</li><li><code>@mixin</code> 用于重复模式（如 flex 居中）</li><li><code>@extend</code> 禁止使用（性能差）</li><li>变量引用令牌（不新造 SCSS 变量）</li></ul>
+<pre><code class="language-scss"><span class="hljs-selector-class">.c-trading-chart</span> {
+  <span class="hljs-keyword">@include</span> flex-center;
+  <span class="hljs-attribute">height</span>: <span class="hljs-number">400px</span>;
+  
+  <span class="hljs-keyword">@media</span> (<span class="hljs-attribute">min-width</span>: <span class="hljs-number">640px</span>) {
+    <span class="hljs-attribute">height</span>: <span class="hljs-number">600px</span>;
+  }
+}</code></pre>
+<hr>
+<h2 id="10-遗留代码收敛">10. 遗留代码收敛<a class="anchor" href="#10-遗留代码收敛" aria-label="锚点">#</a></h2>
+<h3 id="10-1-硬编码-hex-收敛">10.1 硬编码 hex 收敛<a class="anchor" href="#10-1-硬编码-hex-收敛" aria-label="锚点">#</a></h3>
+<p>使用 <code>npm run frontend:fix-colors</code> 扫描，逐步替换为 <code>var(--khy-*)</code>：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 预览（不改文件）</span>
+npm run frontend:fix-colors
+
+<span class="hljs-comment"># 执行替换</span>
+npm run frontend:fix-colors:apply</code></pre>
+<h3 id="10-2-悬空变量修复">10.2 悬空变量修复<a class="anchor" href="#10-2-悬空变量修复" aria-label="锚点">#</a></h3>
+<p>FE-001 §12 缺口表中的悬空引用（<code>--khy-white</code>、khyquant 的 <code>var(--khy-*)</code> 无定义）须逐步收敛。</p>
+<hr>
+<h2 id="11-版本历史">11. 版本历史<a class="anchor" href="#11-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义前端 CSS 与样式架构规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 前端团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-FE/[DESIGN-FE-003] 前端快速参考卡.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-FE-003] 前端快速参考卡（实测对齐版）</div></a><a class="next" href="../../../docs/10_规范/DESIGN-FE/[DESIGN-FE-005] 组件开发规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-FE-005] 组件开发规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-FE/[DESIGN-FE-004] 前端 CSS 与样式架构规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

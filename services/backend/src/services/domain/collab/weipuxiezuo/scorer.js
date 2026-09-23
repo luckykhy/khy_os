@@ -14,7 +14,7 @@
  * 这正是把方法论变成代码的意义（对照 contextDiagnostics）。
  */
 
-const rules = require('../../../../permissions/rules');
+const rules = require('./rules');
 
 function _clamp(x, lo, hi) {
   return Math.max(lo, Math.min(hi, x));

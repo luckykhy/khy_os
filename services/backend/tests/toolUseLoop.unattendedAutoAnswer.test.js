@@ -1,10 +1,10 @@
 'use strict';
 /**
- * toolUseLoop.unattendedAutoAnswer.test.js �?无人值守自动作答接线(goal 2026-07-11)�?
+ * toolUseLoop.unattendedAutoAnswer.test.js —无人值守自动作答接线(goal 2026-07-11)�?
  *
- * 连续几天不中断的隐性阻塞点:AskUserQuestion 会阻塞等人回答。开�?
- * KHY_UNATTENDED_AUTOANSWER(默认�?�?循环�?questionQuality 排好序的推荐选项(index 0)
- * 确定性作答、无感续跑——优先于「有通道阻塞」与「无通道保守自决」两分支。门控关 �?逐字节回退�?
+ * 连续几天不中断的隐性阻塞点:AskUserQuestion 会阻塞等人回答。开�?
+ * KHY_UNATTENDED_AUTOANSWER(默认�?�?循环�?questionQuality 排好序的推荐选项(index 0)
+ * 确定性作答、无感续跑——优先于「有通道阻塞」与「无通道保守自决」两分支。门控关 →逐字节回退�?
  */
 const os = require('os');
 const path = require('path');
@@ -47,8 +47,8 @@ describe('AskUserQuestion unattended auto-answer', () => {
     delete process.env.KHY_UNATTENDED_AUTOANSWER;
     delete process.env.KHY_ASK_NOCHANNEL_STRICT;
   });
-  // 不偏离用户本�?盲�?index-0 会挑 sqlite,但用户原始诉求点�?postgres �?
-  // autoAnswerIntentGuard(默认开)据原始消息把选择校准�?postgres�?
+  // 不偏离用户本�?盲�?index-0 会挑 sqlite,但用户原始诉求点�?postgres →
+  // autoAnswerIntentGuard(默认开)据原始消息把选择校准�?postgres�?
   test('intent-fidelity: realigns the blind index-0 pick to the user\'s original intent', async () => {
     process.env.KHY_UNATTENDED_AUTOANSWER = '1';
     const captured = {};
@@ -103,7 +103,7 @@ describe('Tool Use Loop unattended Auto Answer', () => {
           maxIterations: 3,
           sessionId: 'sess-aa-a',
           requestId: 'req-aa-a',
-          // No onControlRequest �?auto-answer must fire regardless of channel presence.
+          // No onControlRequest —auto-answer must fire regardless of channel presence.
         });
         expect(captured.secondMessage).toBeTruthy();
         // The chosen answer (index-0 = postgres) is spliced back as the answer.

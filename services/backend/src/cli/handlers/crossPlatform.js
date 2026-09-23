@@ -25,7 +25,7 @@
 
 const { printSuccess, printError, printInfo, printTable } = require('../formatters');
 const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
-const { AI_BACKEND_DEFAULT_URL, BACKEND_PORT, WEB_FRONTEND_PORT, MOBILE_FRONTEND_PORT } = require('../../constants/serviceDefaults');
+const { AI_BACKEND_DEFAULT_URL, BACKEND_PORT, WEB_FRONTEND_PORT } = require('../../constants/serviceDefaults');
 
 let _client = null;
 
@@ -311,11 +311,20 @@ function _handleStop(args, options) {
 
   // Use taskkill to stop by port or process name
   const { execSync } = require('child_process');
-  const portMap = { backend: BACKEND_PORT, web: WEB_FRONTEND_PORT, mobile: MOBILE_FRONTEND_PORT };
+  const portMap = { backend: BACKEND_PORT, web: WEB_FRONTEND_PORT };
   const port = portMap[target];
-  
+
   if (!port) {
-    printError(`未知平台: ${target}`);
+    if (target === 'mobile') {
+      // The mobile client is a native Flutter process, not a port-bound
+      // dev server, so there is nothing to kill by port.
+      printError(
+        'mobile 是原生 Flutter 进程，不按端口停止：请直接在模拟器/真机上关闭 App，'
+        + '或在开发时按 Ctrl+C 中断 `flutter run`'
+      );
+    } else {
+      printError(`未知平台: ${target}`);
+    }
     return;
   }
 

@@ -38,7 +38,7 @@ describe('Mobile Page', () => {
       const m = html.match(/<script>([\s\S]*?)<\/script>/);
       expect(m).toBeTruthy();
       // new Function validates syntax without running browser-only globals.
-      expect(() => new Function(m[1]).not.toThrow());
+      expect(() => new Function(m[1])).not.toThrow();
   });
 
   test('buildMobileHTML: includes attachment upload UI markup', () => {
@@ -47,7 +47,7 @@ describe('Mobile Page', () => {
         expect(html.includes('id="' + id + '"')).toBeTruthy();
       }
       // The file picker accepts images, video, audio and common documents.
-      expect(/accept="[^"]*image\/\*[^"]*video\/\*[^"]*\.pdf/.test(html)).toBe();
+      expect(/accept="[^"]*image\/\*[^"]*video\/\*[^"]*\.pdf/.test(html)).toBe(true);
   });
 
   test('buildMobileHTML: client wires attachment upload + send payload', () => {

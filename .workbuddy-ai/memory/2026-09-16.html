@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-16.md -->
+<title>2026-09-16 工作日志 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>.workbuddy-ai<span class="sep">›</span>memory<span class="sep">›</span>2026-09-16 工作日志</div>
+      <header class="hero reveal"><h1>2026-09-16 工作日志</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#2026-09-16-工作日志">2026-09-16 工作日志</a></li><li class="lvl-2"><a href="#修复-khy-os-tui-输出回显看不见-滚轮回溯历史记录">修复：khy-os TUI「输出回显看不见」+「滚轮回溯历史记录」</a></li><li class="lvl-3"><a href="#根因-全部经无头-harness-实证-不是推断">根因（全部经无头 harness 实证，不是推断）</a></li><li class="lvl-3"><a href="#改动清单">改动清单</a></li><li class="lvl-3"><a href="#验证-无头-harness-逐帧">验证（无头 harness，逐帧）</a></li><li class="lvl-3"><a href="#测试">测试</a></li><li class="lvl-3"><a href="#环境坑-下次省时间">环境坑（下次省时间）</a></li><li class="lvl-3"><a href="#待办">待办</a></li><li class="lvl-2"><a href="#追加-tests-cli-tui-既有红灯定性-修复-同日第二轮">追加：`tests/cli/tui/` 既有红灯定性 + 修复（同日第二轮）</a></li><li class="lvl-3"><a href="#逐条定性-每条都对着代码-设计文档核过">逐条定性（每条都对着代码 + 设计文档核过）</a></li><li class="lvl-3"><a href="#顺手挖出的两个真问题-都不是我引入的">顺手挖出的两个真问题（都不是我引入的）</a></li><li class="lvl-3"><a href="#node-test-与-jest-的-glob-重叠-仓库级-未修">`node --test` 与 jest 的 glob 重叠（仓库级，未修）</a></li><li class="lvl-3"><a href="#本轮结果">本轮结果</a></li><li class="lvl-3"><a href="#新增的判据-已并入-memory-md-六">新增的判据（已并入 `MEMORY.md` §六）</a></li><li class="lvl-2"><a href="#规范审计第三批-t1-工具循环-journal">规范审计第三批：T1 工具循环 journal</a></li><li class="lvl-3"><a href="#做了什么">做了什么</a></li><li class="lvl-3"><a href="#三条设计取舍">三条设计取舍</a></li><li class="lvl-3"><a href="#踩到的坑">踩到的坑</a></li><li class="lvl-3"><a href="#验证">验证</a></li><li class="lvl-3"><a href="#遗留">遗留</a></li><li class="lvl-2"><a href="#khyos-repl-六步工具闭环-断点在审批通道-2026-09-16-上午">khyos repl 六步工具闭环：断点在审批通道（2026-09-16 上午）</a></li><li class="lvl-3"><a href="#结论">结论</a></li><li class="lvl-3"><a href="#根因-不可推导-必须记住">根因（不可推导，必须记住）</a></li><li class="lvl-3"><a href="#验证手段-可复用">验证手段（可复用）</a></li><li class="lvl-3"><a href="#遗留缺口-未修-待定">遗留缺口（未修，待定）</a></li><li class="lvl-3"><a href="#环境坑">环境坑</a></li><li class="lvl-3"><a href="#补记-上面那个-遗留缺口-已修完">补记：上面那个&quot;遗留缺口&quot;已修完</a></li><li class="lvl-3"><a href="#验证缺口也补齐了">验证缺口也补齐了</a></li><li class="lvl-3"><a href="#找-第二个-preflight-的手法-可复用">找&quot;第二个 preflight&quot;的手法（可复用）</a></li><li class="lvl-3"><a href="#第二个断点-中断信号-已修">第二个断点：中断信号（已修）</a></li><li class="lvl-2"><a href="#第三轮-tui-修复的收尾核验-隔离测试文件取证-2026-09-16-下午">第三轮：TUI 修复的收尾核验 + 隔离测试文件取证（2026-09-16 下午）</a></li><li class="lvl-3"><a href="#做了什么-2">做了什么</a></li><li class="lvl-3"><a href="#新挖出的硬事实-debt-md-的-恢复路径-是死的">新挖出的硬事实：DEBT.md 的「恢复路径」是死的</a></li><li class="lvl-3"><a href="#隔离名单里-4-个文件正好覆盖我改的模块-风险面">隔离名单里 4 个文件正好覆盖我改的模块（风险面）</a></li><li class="lvl-3"><a href="#语义冲突核验-重要-别重复查">语义冲突核验（重要，别重复查）</a></li><li class="lvl-3"><a href="#又一条注释与代码不符">又一条注释与代码不符</a></li><li class="lvl-3"><a href="#环境坑-新增两条-都很坑">环境坑（新增两条，都很坑）</a></li><li class="lvl-3"><a href="#交付">交付</a></li><li class="lvl-3"><a href="#第三轮续-订正三处-会撒谎的文档-只改注释-文档-未动逻辑">第三轮续：订正三处「会撒谎的文档」（只改注释/文档，未动逻辑）</a></li><li class="lvl-2"><a href="#第四轮-隔离测试文件批量回收-5-个-92-用例全绿">第四轮：隔离测试文件批量回收（5 个，92 用例全绿）</a></li><li class="lvl-3"><a href="#结果">结果</a></li><li class="lvl-3"><a href="#可复用方法-下次直接照做">可复用方法（下次直接照做）</a></li><li class="lvl-3"><a href="#两个例外-坑">两个例外/坑</a></li><li class="lvl-3"><a href="#守门">守门</a></li><li class="lvl-3"><a href="#debt-md-同步">DEBT.md 同步</a></li><li class="lvl-3"><a href="#交付-2">交付</a></li><li class="lvl-2"><a href="#五-memory-md-体积压缩-全量复核-2026-09-16-12-20">五、MEMORY.md 体积压缩 + 全量复核（2026-09-16 12:20）</a></li><li class="lvl-3"><a href="#起因">起因</a></li><li class="lvl-3"><a href="#处置">处置</a></li><li class="lvl-3"><a href="#全量复核-全部重跑-非引用">全量复核（全部重跑，非引用）</a></li><li class="lvl-3"><a href="#5-个回收文件行数-确认非空壳">5 个回收文件行数（确认非空壳）</a></li><li class="lvl-2"><a href="#六-方案交付-ai-修改三模态反馈契约-客户模式-2026-09-16-17-20">六、方案交付：AI 修改三模态反馈契约（客户模式）（2026-09-16 17:20）</a></li><li class="lvl-3"><a href="#需求">需求</a></li><li class="lvl-3"><a href="#交付-3">交付</a></li><li class="lvl-3"><a href="#核心设计">核心设计</a></li><li class="lvl-3"><a href="#原型实测-7-场景-真实输出">原型实测（7 场景，真实输出）</a></li><li class="lvl-3"><a href="#接线方案-b-l2-三步-未执行-等用户确认">接线方案（B-L2 三步，**未执行，等用户确认**）</a></li><li class="lvl-3"><a href="#交付纪律">交付纪律</a></li><li class="lvl-2"><a href="#七-方案改落-docs-并规范命名-2026-09-16-17-20">七、方案改落 docs/ 并规范命名（2026-09-16 17:20+）</a></li><li class="lvl-3"><a href="#用户纠正">用户纠正</a></li><li class="lvl-3"><a href="#搬迁结果">搬迁结果</a></li><li class="lvl-3"><a href="#依规必须做的四件事-都做了">依规必须做的四件事（都做了）</a></li><li class="lvl-3"><a href="#验证-全过">验证（全过）</a></li><li class="lvl-3"><a href="#新踩的坑">新踩的坑</a></li><li class="lvl-2"><a href="#design-doc-002-ai-指令文件标准-docs-003-制定">[DESIGN-DOC-002] AI 指令文件标准（DOCS-003）制定</a></li><li class="lvl-3"><a href="#核心发现-本会话最重要的实证">核心发现（本会话最重要的实证）</a></li><li class="lvl-3"><a href="#交付-4">交付</a></li><li class="lvl-3"><a href="#未接线-有意-守-sourcing-006-一次一提交-r1-不自动提交">未接线（有意，守 SOURCING-006 一次一提交 + R1 不自动提交）</a></li><li class="lvl-3"><a href="#新踩的坑-本会话-6-个-全部已固化进原型注释">新踩的坑（本会话 6 个，全部已固化进原型注释）</a></li><li class="lvl-3"><a href="#订正旧记忆-错的就是错的">订正旧记忆（错的就是错的）</a></li><li class="lvl-3"><a href="#验证-全过-2">验证（全过）</a></li><li class="lvl-2"><a href="#2026-09-16-第二段-docs-003-按-8-b-l2-清单完成接线-修回两条被误删的规则">2026-09-16（第二段）· DOCS-003 按 §8 B-L2 清单完成接线 + 修回两条被误删的规则</a></li><li class="lvl-3"><a href="#交付-用户指令-完成登记-迁移-别名三者配套-再做基线决策-确保-check-wiring-通过">交付（用户指令：完成登记 + 迁移 + 别名三者配套，再做基线决策，确保 check-wiring 通过）</a></li><li class="lvl-3"><a href="#修回两条被误删的规则-本会话最严重的问题-已复原">修回两条被误删的规则（本会话最严重的问题，已复原）</a></li><li class="lvl-3"><a href="#三处既有缺陷-发现即修-发现即登记">三处既有缺陷（发现即修 / 发现即登记）</a></li><li class="lvl-3"><a href="#基线取值的硬教训-差点填错">基线取值的硬教训（差点填错）</a></li><li class="lvl-3"><a href="#订正自己上一段的文档错误">订正自己上一段的文档错误</a></li><li class="lvl-3"><a href="#验证-全绿-均为实跑">验证（全绿，均为实跑）</a></li><li class="lvl-3"><a href="#遗留-2">遗留</a></li><li class="lvl-3"><a href="#迁移后-17-场景全量复跑-全部符合期望">迁移后 17 场景全量复跑（全部符合期望）</a></li><li class="lvl-3"><a href="#记忆维护">记忆维护</a></li><li class="lvl-2"><a href="#第三段-修复-ruleguard-的-py-执行器缺陷-第二段遗留项-2-收口">第三段 · 修复 `ruleguard` 的 `.py` 执行器缺陷（第二段遗留项 2 收口）</a></li><li class="lvl-3"><a href="#验收-全部实测">验收（全部实测）</a></li><li class="lvl-3"><a href="#文档同步">文档同步</a></li><li class="lvl-3"><a href="#遗留-更新">遗留（更新）</a></li><li class="lvl-2"><a href="#第四段-第-3-步-收口-落地-含一处-重大判据订正">第四段 · 第 3 步「收口」落地（含一处**重大判据订正**）</a></li><li class="lvl-3"><a href="#头号发现-d1-的适用范围写错了-agents-md-根本没被截断">⚠ 头号发现：D1 的适用范围写错了，`AGENTS.md` 根本没被截断</a></li><li class="lvl-3"><a href="#连带撤回-拆分-agents-md">连带撤回「拆分 AGENTS.md」</a></li><li class="lvl-3"><a href="#收口步修掉的-5-处误报-每处都配-应拦-应放行-对照场景回归锁">收口步修掉的 5 处误报（每处都配「应拦 + 应放行」对照场景回归锁）</a></li><li class="lvl-3"><a href="#真违规-7-条-全部清零">真违规 7 条 → 全部清零</a></li><li class="lvl-3"><a href="#验收">验收</a></li><li class="lvl-3"><a href="#并发会话产物-需向用户点明">⚠ 并发会话产物（需向用户点明）</a></li><li class="lvl-2"><a href="#五-把-rules-gate-接进-pr-gate-yml-承接上文-用户答-要">五、把 `rules:gate` 接进 `pr-gate.yml`（承接上文，用户答「要」）</a></li><li class="lvl-2"><a href="#六-收尾验证与最后一条-blocking-的归因">六、收尾验证与最后一条 blocking 的归因</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="2026-09-16-工作日志">2026-09-16 工作日志<a class="anchor" href="#2026-09-16-工作日志" aria-label="锚点">#</a></h1>
+<h2 id="修复-khy-os-tui-输出回显看不见-滚轮回溯历史记录">修复：khy-os TUI「输出回显看不见」+「滚轮回溯历史记录」<a class="anchor" href="#修复-khy-os-tui-输出回显看不见-滚轮回溯历史记录" aria-label="锚点">#</a></h2>
+<p>朋友报的两个缺陷（3 张截图，窗口最大化 + 小窗口）：</p>
+<ol><li>窗口最大化后所有输出回显都看不见；小窗口下同样看不到输出内容。</li><li>鼠标滚轮会「回溯历史记录」，期望像 Claude Code —— 输入框固定在底部，内容区正常滚动。</li></ol>
+<h3 id="根因-全部经无头-harness-实证-不是推断">根因（全部经无头 harness 实证，不是推断）<a class="anchor" href="#根因-全部经无头-harness-实证-不是推断" aria-label="锚点">#</a></h3>
+<p><strong>A. 转录被 ink 的 fullscreen 清屏抹掉，且抹掉后不重画</strong></p>
+<p><code>node_modules/ink/build/ink.js:320</code> 的 <code>isFullscreen</code> 看 <code>outputHeight</code>，但<strong>真正清屏的分支条件<br>是 <code>this.lastOutputHeight &gt;= this.options.stdout.rows</code></strong> —— 用的是<strong>上一帧</strong>高度。<br><code>outputHeight</code> 口径（<code>renderer.js:9</code>）= <code>output.split('\n').length</code> = <strong>行数</strong>，<br>所以「帧有 N 个换行」→ outputHeight = N+1。<strong>帧换行数必须 ≤ rows − 2。</strong></p>
+<p>后果链（备用缓冲区 = alternate screen，无回滚缓冲）：<br><code>clearTerminal + fullStaticOutput + output</code> → 转录被擦掉；<code>scrollbackPreserve</code> 第三层<br><code>KHY_SUPPRESS_STATIC_REPRINT</code> 剥掉 <code>fullStaticOutput</code> → 抹掉后不重画；第四层<br><code>KHY_FULLSCREEN_TAILCUT</code> 从底部锚定裁到 rows−1 → 砍掉的正是顶部转录。</p>
+<p><strong>而且会自锁</strong>：一旦某帧 ≥ rows，<code>lastOutputHeight</code> 就永远 ≥ rows，此后<strong>每一帧</strong>都清屏。</p>
+<p><strong>B. chrome 账本漏计三项，live 区恒定超预算</strong></p>
+<table><thead><tr><th>漏项</th><th>实情</th></tr></thead><tbody><tr><td>PreviewLayout 的 Topbar(1) + 底部分隔线(1)</td><td>完全没进 <code>shares</code>，宽终端恒定多 1~2 行</td></tr><tr><td>忙态 spinner 块</td><td>记成 1~2 行，<strong>实际 3 行</strong>。ink 的边框语义是「设了 <code>borderStyle</code> 就四边全画，单写 <code>borderBottom: true</code> 不会关掉其余三边」；Preview 的 <code>paddingY:1</code> 包法也是 3 行</td></tr><tr><td><code>_viewportHeight</code> 声明在 <code>_taskProps</code> 之前</td><td>TDZ 顺序错误 → <code>taskH</code> 恒 0，任务清单高度从未计入</td></tr></tbody></table>
+<p>修前实测：legacy 100×24 忙态帧 <strong>24 行 = rows</strong>（outputHeight 24 ≥ 24）→ 每帧清屏，自锁。</p>
+<p><strong>C. 视口永远停在顶部（「回显看不见」的另一半）</strong></p>
+<p><code>Viewport.js</code> lines 模式：<code>if (autoScroll &amp;&amp; scroll &gt;= maxScroll) clamped = maxScroll;</code><br>初值 <code>scroll = 0</code>，内容长过视口后 <code>0 &gt;= maxScroll</code> 恒假 → <strong>视口停在顶部</strong>，<br>用户看到的是最早那几行。即使把转录搬进应用内 Viewport 并修好清屏，体感依然「看不见」。</p>
+<p><strong>D. 滚轮被终端合成为 ↑/↓</strong></p>
+<p>备用缓冲区无回滚缓冲 → 关掉鼠标追踪后终端把滚轮<strong>合成为 ↑/↓ 键</strong>送进 stdin；<br>↑/↓ 已被 <code>arrowRouting</code> 绑成 <code>history:previous/next</code> → 用户看到的「滚轮回溯历史记录」<br>是键位串扰。旧 dispatcher 把所有滚轮事件交给 <code>fireNative()</code>（<code>enterNativePassthrough</code>）。</p>
+<h3 id="改动清单">改动清单<a class="anchor" href="#改动清单" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>ink-components/App.js</code></td><td>① <code>previewLayoutMode</code> 判定前移到 <code>_viewportHeight</code> 之前；② 账本补 topbar(1)+sep(1)，spinner 按实测 3 行；③ 新增 <code>KHY_TUI_DIAG_H=1</code> 打印账本；④ 两个滚动 state 初值改 <code>null</code>（贴底）；⑤ 三处滚动调用点改走 <code>applyStickyViewportAction</code>；⑥ preview 分支去掉硬编码 <code>rows-8</code> / <code>total:30</code>，改用 <code>_viewportHeightRef</code> / <code>_viewportTotalLinesRef</code></td></tr><tr><td><code>ink-components/Viewport.js</code></td><td>① lines 模式支持贴底哨兵；② 新增纯叶子 <code>resolveViewportOffset</code> / <code>applyStickyViewportAction</code> / <code>STICKY_BOTTOM</code> 并导出；③ <code>overflow:'hidden'</code> 硬闸（防二次软换行撑破高度）</td></tr><tr><td><code>ink-components/PreviewLayout.js</code></td><td>内联转录模式：整段转录进 <code>&lt;Viewport lines&gt;</code>，任务面板移到视口外全宽常驻</td></tr><tr><td><code>mouseButtons.js</code></td><td>新增 <code>wheelDirection(button)</code>（<code>button &amp; ~28</code> 剥 shift/meta/ctrl 再比 64/65）、<code>mouseExplicitlyDisabled(env)</code>；dispatcher 新增 <code>onWheel</code>，滚轮优先它、缺失才 <code>fireNative()</code></td></tr><tr><td><code>app.js</code></td><td>备用缓冲区下<strong>强制接管鼠标</strong>（<code>ALT_SCREEN_ENABLED &amp;&amp; !mouseExplicitlyDisabled()</code>），否则滚轮被合成 ↑/↓</td></tr><tr><td><code>tests/cli/tui/viewportSticky.test.js</code></td><td>新增，13 个用例（含「旧判据在初值 0 下永不贴底」的回归断言）</td></tr><tr><td><code>tests/cli/tui/mouseWheel.test.js</code></td><td>新增，8 个用例（含「onWheel 抛异常不得降级成 onNative」）</td></tr><tr><td><code>tests/tui/inkRenderSmoke.test.js</code></td><td>冷启动预算 15s → 60s（<code>COLD_RENDER_BUDGET_MS</code>），修假红</td></tr><tr><td><code>src/cli/tui/AGENTS.md</code></td><td>新增 §0.9.1 贴底哨兵 / §0.9.2 帧高 ≤ rows−1 与 chrome 逐项清单 / §0.9.3 滚轮接管；§1.2 登记 5 个门控；新增 §8.5 验收清单</td></tr></tbody></table>
+<h3 id="验证-无头-harness-逐帧">验证（无头 harness，逐帧）<a class="anchor" href="#验证-无头-harness-逐帧" aria-label="锚点">#</a></h3>
+<p><code>.khyos/diag/headless-frames.js</code>：<code>Module._resolveFilename</code> 打桩把 <code>useQueryBridge.js</code> 换成<br><code>_bridgeStub.js</code>（确定性转录），让<strong>真 ink 渲真 App</strong>，逐帧 dump。</p>
+<table><thead><tr><th>场景</th><th>修前</th><th>修后</th></tr></thead><tbody><tr><td>legacy 100×24 忙态</td><td>帧 24 行 = rows，每帧 <code>clear=true</code>（自锁）</td><td>帧 23 行，<code>clear=false</code></td></tr><tr><td>preview 130×40 忙态</td><td>帧 45 行 &gt; 40</td><td>帧 38 行，<code>clear=false</code></td></tr><tr><td>preview 130×40 闲态</td><td>帧 38 行但 <code>clear=true</code></td><td>帧 38 行，<code>clear=false</code></td></tr><tr><td>转录可见性</td><td>Preview 帧<strong>不含</strong> <code>MARKER_MSG_0</code></td><td>含；且贴底显示 <code>MARKER_MSG_8..11</code> + <code>↑47</code></td></tr><tr><td>尺寸回归</td><td>—</td><td>40/60/80/100/121/122/130/200 列 × 12~50 行 × 忙/闲，<strong><code>h&gt;=rows</code> 与 <code>clear</code> 全空</strong></td></tr></tbody></table>
+<p><strong>实测可用下限 ≈ 14 行</strong>（legacy 13 行边缘可用）。更低时固定 chrome 物理装不下，<br>ink 清屏无法避免 —— 几何不可能，不是 bug。</p>
+<h3 id="测试">测试<a class="anchor" href="#测试" aria-label="锚点">#</a></h3>
+<ul><li><code>npm run --workspace backend test:tui</code> → <strong>29/29 套件、435/435 用例通过（24.9s）</strong></li><li><code>node --test tests/cli/tui/viewportSticky.test.js tests/cli/tui/mouseWheel.test.js</code> → 21/21</li><li><code>node --test &quot;tests/cli/tui/*.test.js&quot;</code> → 621 pass / 11 fail，<strong>11 条全部与本次改动无关</strong>：</li></ul>
+<p>5 条是 jest 文件（裸 <code>describe</code>）被 <code>node --test</code> 跑 → <code>describe is not defined</code>（runner 用错）；<br>  6 条是 <code>effectiveCols.test.js</code> 的<strong>代码形态 grep 断言已过期</strong>（如断言<br>  <code>const _sticky = _stickyCols(process.env);</code> 存在，实际 App.js 写的是<br>  <code>const s = _stickyCols(process.env);</code>；断言 <code>StreamingBlock</code> 的 <code>contentWidth</code> 三元存在，<br>  实际不存在）。<strong>与本次改动零交集</strong>，属既有债。</p>
+<h3 id="环境坑-下次省时间">环境坑（下次省时间）<a class="anchor" href="#环境坑-下次省时间" aria-label="锚点">#</a></h3>
+<ul><li><strong>沙箱跑不了真 TUI</strong>：启动链调 <code>reg.exe</code>（<code>_userDirs.js</code> / <code>pathCompat.js</code>），沙箱杀死 pty</li></ul>
+<p>子进程 → EPIPE；<code>dangerouslyDisableSandbox</code> 也不放行。→ 用无头 harness。</p>
+<ul><li>无头 harness 必须等 <strong>≥3500ms</strong>（App 内 <code>setTimeout(markSession, 1500)</code>），否则只捕到 boot screen。</li><li><code>global.__inkInst.lastOutputHeight</code> 在 write 回调里<strong>读不到</strong>（一律 undefined）→ 改数帧文本行数。</li><li><code>node --test &lt;目录&gt;</code> 在本 Node 版本（22.22.2）<strong>不扫描目录</strong>，必须显式列文件或写 glob。</li><li><code>tests/tui/**</code> 不带 <code>--experimental-vm-modules</code> 时 <code>inkRenderSmoke</code> <strong>静默 skip 整个 suite</strong></li></ul>
+<p>（112 个全 skip，输出看着像绿）。</p>
+<h3 id="待办">待办<a class="anchor" href="#待办" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 朋友本机跑 <code>khy</code> 做真终端验收（沙箱内无法完成）</li><li>[ ] <code>effectiveCols.test.js</code> 那 6 条过期形态断言需与 App.js 现状对齐（既有债，非本次引入）</li></ul>
+<hr>
+<h2 id="追加-tests-cli-tui-既有红灯定性-修复-同日第二轮">追加：<code>tests/cli/tui/</code> 既有红灯定性 + 修复（同日第二轮）<a class="anchor" href="#追加-tests-cli-tui-既有红灯定性-修复-同日第二轮" aria-label="锚点">#</a></h2>
+<p>朋友说「继续」，于是把上一条待办做掉。结论：<strong>6 条全是测试过时，生产代码无 bug</strong>。</p>
+<h3 id="逐条定性-每条都对着代码-设计文档核过">逐条定性（每条都对着代码 + 设计文档核过）<a class="anchor" href="#逐条定性-每条都对着代码-设计文档核过" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>断言</th><th>位置</th><th>定性</th></tr></thead><tbody><tr><td><code>首帧 unknown → 收窄后的假定宽度</code></td><td><code>effectiveCols.test.js:144</code></td><td>编码了<strong>带宽模型之前</strong>的行为。DESIGN-ARCH-103 §4.3 R1-2 明确把「进入 ≥120 / 退出 ≤108」定为取代旧窄化的唯一路径；假定宽度 80 在带外 → 本就<strong>不该</strong>收窄</td></tr><tr><td><code>首帧 80 列锁定</code></td><td><code>:253</code></td><td>同上</td></tr><tr><td><code>根因 B: rows 走 stickyDim</code></td><td><code>:174</code></td><td><strong>正则太脆</strong>：代码是 <code>stickyDim(\n  process.stdout.rows,</code>，正则要求 <code>(</code> 后紧跟 <code>process</code>。接线本身存在，只是换行了</td></tr><tr><td><code>根因 C: StreamingBlock 收窄</code></td><td><code>:192</code></td><td><strong>接线点已迁走</strong>：App.js 不再渲染 StreamingBlock（转录改由 <code>_mainContentLines</code> + Viewport 承载），真正的传参在 <code>ChatColumn.js:130</code> 的 `contentWidth: mainCols \</td></tr><tr><td><code>评审 Major 1+2</code></td><td><code>:219</code></td><td>① <code>_sticky</code> 已改名 <code>s</code>；② 它断言的 <strong>Ctrl+T「窄屏提示」两行代码已从 App.js 移除</strong></td></tr><tr><td><code>DECSC/DECRC 配对</code></td><td><code>railProxyIntegration.test.js:62</code></td><td><strong>setup 被 dedupe 吃掉</strong>：<code>paintBytes()</code> 对相同字节返回 <code>''</code>（byte-revert 保证）。测试先 <code>paintBytes()</code> 再取帧 → 帧是<strong>空串</strong></td></tr></tbody></table>
+<h3 id="顺手挖出的两个真问题-都不是我引入的">顺手挖出的两个真问题（都不是我引入的）<a class="anchor" href="#顺手挖出的两个真问题-都不是我引入的" aria-label="锚点">#</a></h3>
+<ol><li><strong><code>railProxyIntegration.test.js</code> 有 2 个用例是「空字符串上通过的假绿」</strong>。</li></ol>
+<p>探针实测：<code>paint#1=2042B / clear#2=0 / paint#2=0</code> → <code>buildFullFrame</code> 返回空串，<br>   而 <code>assert.ok(!''.includes('\n'))</code> 恒真。修法：新增 <code>primeThenChange()</code>（建立 lastGeom 后<br>   <strong>改一次 snapshot</strong>，生产上本来就是「有变化才发帧」），并在每个用例里加<br>   <code>assert.ok(railOnlyBytes(frame).length &gt; 0, ...)</code> 防退化。<br>   改后 5/5 通过且断言对象是<strong>真实字节</strong>。</p>
+<ol><li><strong><code>threeColumnMode</code> 被计算但从未使用</strong> → <code>ThreeColumnLayout</code> / <code>ChatColumn</code> 是孤儿，</li></ol>
+<p><code>App.js:26</code> 的 <code>require('./StreamingBlock')</code> 是死导入。<br>   实证：<code>grep -n threeColumnMode App.js</code> 只有 5735（定义处）；<code>grep -rn ThreeColumnLayout src/</code><br>   只有 5732 的注释。按仓库规则「有背书 → 是计划了没接线，不该静默清理」→ <strong>只报告，未动手</strong>。<br>   （<code>App.js:5730</code> 注释自称「delegate to ThreeColumnLayout」，但下面没有渲染代码。）</p>
+<h3 id="node-test-与-jest-的-glob-重叠-仓库级-未修"><code>node --test</code> 与 jest 的 glob 重叠（仓库级，未修）<a class="anchor" href="#node-test-与-jest-的-glob-重叠-仓库级-未修" aria-label="锚点">#</a></h3>
+<p><code>tests/cli/tui/</code> 下 5 个文件是 jest 风格（裸 <code>describe(</code>），<code>node --test</code> 跑它们必报<br><code>describe is not defined</code>：</p>
+<ul><li>4 个是<strong>显式隔离桩</strong>：<code>describe(&quot;tests/cli/tui/xxx - quarantined, no tests&quot;)</code>（内含 0 个测试）</li><li>1 个是<strong>真 jest 文件</strong>：<code>historyBrowseDecision.test.js</code> —— 已实测 <strong>jest 下 3/3 通过</strong>，</li></ul>
+<p>所以它没丢覆盖，只是 <code>node --test</code> 跑不了</p>
+<p><code>package.json</code> 的 <code>test:node</code> = <code>node --test tests/**/*.test.js</code>，而 node <strong>自己会展开 glob</strong><br>（实测 <code>&quot;tests/cli/tui/arrowRouting*.test.js&quot;</code> 能匹配到），且该脚本接在<br><strong>4 个 CI workflow（含 <code>pr-gate.yml</code>）</strong>上 → 这是<strong>仓库级既有红</strong>，不是本次引入。<br><strong>未擅自改 npm script</strong>（会影响 4 条 CI），只报告 + 给建议。</p>
+<h3 id="本轮结果">本轮结果<a class="anchor" href="#本轮结果" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>命令</th><th>修前</th><th>修后</th></tr></thead><tbody><tr><td><code>node --test &quot;tests/cli/tui/*.test.js&quot;</code></td><td>621 pass / <strong>11 fail</strong></td><td>627 pass / <strong>5 fail</strong></td></tr><tr><td>其中真实断言失败</td><td>6</td><td><strong>0</strong></td></tr><tr><td>剩余 5</td><td>—</td><td>全是 jest 风格文件被 node:test 跑（runner 重叠，非断言失败）</td></tr><tr><td>测试总数</td><td>632</td><td><strong>632</strong>（不变 → 没有丢测试）</td></tr><tr><td><code>npm run --workspace backend test:tui</code></td><td>—</td><td>29/29 套件、435/435 通过</td></tr></tbody></table>
+<h3 id="新增的判据-已并入-memory-md-六">新增的判据（已并入 <code>MEMORY.md</code> §六）<a class="anchor" href="#新增的判据-已并入-memory-md-六" aria-label="锚点">#</a></h3>
+<p><strong>改测试断言之前，先分辨它是「断言过时」还是「代码回归」</strong>，判据三条：<br>① <code>git log -S &quot;&lt;断言里的字面量&gt;&quot;</code> 看它是否曾存在（存在过 → 是重构改掉了）；<br>② 读 <code>[DESIGN-ARCH-xxx]</code> 对应条款，看设计意图是哪边（文档背书优先）；<br>③ 对<strong>行为类</strong>断言，用探针脚本直接量出实际值，别靠读代码推。<br>形态类（grep 源码）断言尤其脆：<strong>换行、改名都会让它红，而契约其实没破</strong> ——<br>这类断言应尽量改为「读行为」而不是「读源码字面量」。</p>
+<hr>
+<h2 id="规范审计第三批-t1-工具循环-journal">规范审计第三批：T1 工具循环 journal<a class="anchor" href="#规范审计第三批-t1-工具循环-journal" aria-label="锚点">#</a></h2>
+<h3 id="做了什么">做了什么<a class="anchor" href="#做了什么" aria-label="锚点">#</a></h3>
+<ul><li>新增 <strong><code>services/backend/src/services/toolLoopJournal.js</code></strong>（薄 IO，模板照抄</li></ul>
+<p><code>domain/state/orchestrator/orchestrationJournal.js</code>）：append-only JSONL，<br>  <strong>每 run 一个文件</strong> <code>getDataDir('toolLoop')/loop-&lt;runId&gt;.jsonl</code>。</p>
+<ul><li>关键：<strong>runId 不按 cwd 派生</strong>（旧 boulderState 按 <code>md5(cwd)</code> 单槽 → 同目录并发互相覆盖，</li></ul>
+<p>那是 T1 根因）。500 次连续生成零重复已锁测试。</p>
+<ul><li>API：<code>generateRunId</code> / <code>appendJournal</code> / <code>build{Start,Iteration,End}Record</code> /</li></ul>
+<p><code>readJournal</code> / <code>listRunIds</code> / <code>findIncompleteRuns</code> / <code>isPidAlive</code> / <code>summarizeForResume</code>。</p>
+<ul><li>门控 <code>KHY_LOOP_JOURNAL</code>（默认 ON）。</li></ul>
+<p><code>iteration</code>；5 个出口写 <code>end</code>。</p>
+<h3 id="三条设计取舍">三条设计取舍<a class="anchor" href="#三条设计取舍" aria-label="锚点">#</a></h3>
+<ol><li><strong>挂在轮首而非轮尾</strong>：轮尾有 19 条 <code>return</code>，逐个挂必漏；轮首只有一处，</li></ol>
+<p>且此时 <code>toolCallLog</code> 已含上一轮全部结果，按游标切片即可。</p>
+<ol><li><strong>用户原文不落盘</strong>：<code>start</code> 只记 length + sha1 前 12 位（敏感内容不进磁盘）。</li><li><strong>对象型错误取 <code>message</code></strong>：工具结果 <code>error</code> 常是 <code>{message,code}</code>，</li></ol>
+<p>直接 <code>String(v)</code> 会得到 <code>[object Object]</code>，journal 里等于没记。</p>
+<h3 id="踩到的坑">踩到的坑<a class="anchor" href="#踩到的坑" aria-label="锚点">#</a></h3>
+<ul><li><strong>测试隔离必须同时清 <code>dataHome</code> 缓存</strong>：<code>utils/dataHome.js</code> 有模块级 <code>_cached</code>，</li></ul>
+<p>只清 journal 模块的 <code>require.cache</code> 会让后续用例复用<strong>第一个</strong>临时目录（已被上一个用例<br>  rmSync 掉）→ <code>listRunIds()</code> 里冒出别的用例的 run id。</p>
+<ul><li><strong><code>toolCallLog</code> 条目字段名</strong>：是 <code>{iteration, tool, params, result:{success,error}, elapsed}</code>，</li></ul>
+<p><strong>不是</strong> <code>toolName</code> / <code>success</code> / <code>durationMs</code>。第一版映射错了导致全记成 <code>name:&quot;&quot;</code>。</p>
+<h3 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h3>
+<ul><li><code>tests/services/toolLoopJournal.test.js</code>（新建，node:test）<strong>19/19</strong>。</li><li>端到端真跑循环：4 条记录落盘，恢复摘要正确给出</li></ul>
+<p><code>{lastIteration:3, toolsRun:2, failedTools:2, endsWithoutEnd:true}</code>。</p>
+<ul><li>eslint：新模块 <strong>0 problems</strong>；<code>toolUseLoopCore.js</code> 的 5 个 error 经 HEAD 对照确认<strong>既有</strong>。</li></ul>
+<h3 id="遗留">遗留<a class="anchor" href="#遗留" aria-label="锚点">#</a></h3>
+<ol><li><code>end</code> 只挂了 5/19 个出口 → <code>findIncompleteRuns()</code> 是保守的（可能把正常结束的 run</li></ol>
+<p>也列为未完成），需 <code>isPidAlive()</code> 交叉验证。取证部分不受影响。</p>
+<ol><li><code>toolLoop/</code> 目录无 TTL / 清理，长跑机器会累积。</li><li>尚未接入真正的自动续跑（本批只提供取证数据）。</li></ol>
+<hr>
+<h2 id="khyos-repl-六步工具闭环-断点在审批通道-2026-09-16-上午">khyos repl 六步工具闭环：断点在审批通道（2026-09-16 上午）<a class="anchor" href="#khyos-repl-六步工具闭环-断点在审批通道-2026-09-16-上午" aria-label="锚点">#</a></h2>
+<h3 id="结论">结论<a class="anchor" href="#结论" aria-label="锚点">#</a></h3>
+<p>朋友要求的六步闭环（repl 组装请求 → 查询引擎注入工具 → 模型输出 tool_use →<br>并行分发执行 → tool_result 回传 → repl 渲染循环）<strong>代码层面早已全部存在</strong>，<br>但 <strong>repl 的 QueryEngine 路径实际跑不通</strong>，卡在第 4 步之前。</p>
+<h3 id="根因-不可推导-必须记住">根因（不可推导，必须记住）<a class="anchor" href="#根因-不可推导-必须记住" aria-label="锚点">#</a></h3>
+<p><code>toolUseLoopCore.js:7855</code> 的 preflight 批量审批：</p>
+<pre><code class="language-js"><span class="hljs-keyword">if</span> (iteration === <span class="hljs-number">1</span> &amp;&amp; toolCalls.<span class="hljs-property">length</span> &gt;= <span class="hljs-number">2</span> &amp;&amp; <span class="hljs-variable constant_">KHY_PREFLIGHT</span> !== <span class="hljs-string">&#x27;false&#x27;</span> &amp;&amp; !preflightApproved)
+  <span class="hljs-keyword">const</span> pfResult = <span class="hljs-keyword">await</span> <span class="hljs-title function_">runPreflight</span>(toolCalls, { onControlRequest });</code></pre>
+<ul><li><code>preflightPermission.js:35</code> —— <strong>有</strong> <code>onControlRequest</code> 时直接返回空集（不拦），</li></ul>
+<p>审批交给宿主逐个做；<strong>没有</strong>时走经典 raw-mode 批量对话框，<br>  非 TTY 环境读不到输入 → <code>denied.size&gt;0 &amp;&amp; approved.size===0</code> →<br>  循环 <code>return {stopped:true}</code>，文案 <code>⚠ All tools denied in preflight check, stopping.</code></p>
+<ul><li>所以 <strong><code>onControlRequest</code> 的存在本身就是开关</strong>：工具是 low-risk 只读时</li></ul>
+<p>它一次都不会被真正调用（实测审批次数 0），但少了它就全拒。</p>
+<p><strong>两条断链</strong>：</p>
+<ol><li><code>replSession.js:9243</code>（QE 分支）只传 <code>{ effort }</code>，没传 <code>onControlRequest</code></li></ol>
+<p>—— legacy 路径在 10920/11010/11413 都传了 <code>handleControlRequest</code>。</p>
+<ol><li><code>queryEngine.js</code> <code>_submitMessageLegacyWithHarness</code> 的 <code>loopOptions</code> 里没有</li></ol>
+<p><code>onControlRequest</code>，而 repl 默认走 harness（<code>KHY_QUERY_ENGINE_HARNESS</code> 默认 true）。</p>
+<p>两处均已修（各加一行 + 注释）。<code>agenticHarnessService</code> 的 4 处 <code>runToolUseLoop</code><br>全部 <code>{...loopOptions}</code>，所以补 loopOptions 一处即覆盖主路径/续作/修复/验证四条。</p>
+<h3 id="验证手段-可复用">验证手段（可复用）<a class="anchor" href="#验证手段-可复用" aria-label="锚点">#</a></h3>
+<p><code>.khyos/diag/repl-loop-e2e.js</code>（新建，gitignore 内）—— mock chat 驱动，<br>四段：A 走 repl 真实路径（QE→harness）、B 走 toolLoop 直连适配器、<br>C 无审批通道对照、D 有审批通道实验。修复后 A/B 六步全 PASS：<br>事件序列含 <code>tool_call×2 → tool_result×2 → done</code>，轮 2 收到<br><code>tool_result 2 / 结构化块 4 / assistant tool_use 回填 2</code>。<br><strong>C 段（无审批）与 D 段（有审批）的对照是定位这类问题的标准手法</strong> ——<br>一眼区分「工具没解析出来」和「解析出来了但被拒」。</p>
+<h3 id="遗留缺口-未修-待定">遗留缺口（未修，待定）<a class="anchor" href="#遗留缺口-未修-待定" aria-label="锚点">#</a></h3>
+<p><code>onParallelBatch</code> 只有一个消费方 <code>replSession.js:11786</code>（legacy 分支，<br>用途是把并行子代理注册进 agent 树）。<strong>QueryEngine 两条路径都没透传它</strong><br>→ 走 QE 时并行批次不可观测、并行子代理不进 agent 树。<br>补法：queryEngine 转成 <code>{type:'parallel_batch'}</code> 事件 + repl QE 分支渲染；<br>但 QE 分支在源码顺序上早于 <code>var AgentTreeController</code>（11361）赋值点，<br>需自行懒加载，属独立特性，未擅自动手。</p>
+<h3 id="环境坑">环境坑<a class="anchor" href="#环境坑" aria-label="锚点">#</a></h3>
+<p><code>npm test</code> 跑完 repl 测试后偶发 <code>EPERM ... Temp\khy-jest-data\...\logs\active\app-*.log</code><br>崩溃（file-stream-rotator 写 Windows 临时目录）——<strong>与代码改动无关</strong>，<br>加 <code>--forceExit</code> 可绕过。</p>
+<h3 id="补记-上面那个-遗留缺口-已修完">补记：上面那个&quot;遗留缺口&quot;已修完<a class="anchor" href="#补记-上面那个-遗留缺口-已修完" aria-label="锚点">#</a></h3>
+<p><code>onParallelBatch</code> 已透传，闭环的&quot;第 4 步 → 第 6 步&quot;信息通路补全：</p>
+<ul><li><code>queryEngine.js</code> 两条路径（toolLoop 适配器 + harness 的 <code>loopOptions</code>）各加</li></ul>
+<p><code>onParallelBatch</code> → <code>pushEvent({type:'parallel_batch', data:{iteration, calls}})</code>。</p>
+<ul><li><code>replSession.js</code> QE 分支加 <code>case 'parallel_batch'</code>，复用 legacy 的 agent 树注册</li></ul>
+<p>（QE 分支源码顺序早于 <code>var AgentTreeController</code> 赋值点 → 分支内自行懒加载）。</p>
+<ul><li>消费方确认：<strong>TUI 不走 QE 事件流</strong>（<code>src/cli/tui/</code> 零引用），新增事件类型只影响</li></ul>
+<p>repl QE 分支与未来的 web/SDK，零回归。</p>
+<p><strong>关键坑（容易写错）</strong>：事件里的 <code>calls</code> <strong>必须按引用传</strong>，不能 <code>.map()</code> 复制。<br>legacy 的 <code>onParallelBatch</code> 靠往 call 对象上挂 <code>_traceContext.onAgentProgress</code><br>把进度回调交给 AgentTool；一旦复制，挂载静默失效（agent 树注册了但永远没进度）。</p>
+<h3 id="验证缺口也补齐了">验证缺口也补齐了<a class="anchor" href="#验证缺口也补齐了" aria-label="锚点">#</a></h3>
+<p>原脚本只覆盖内联 <code>&lt;tool_call&gt;</code> 文本解析（非原生适配器的回退分支）。<br>新增段 E 走<strong>原生 <code>toolUseBlocks</code></strong>（<code>resolveToolCalls.js</code> 的 <code>hasStructuredToolUse</code><br>分支，字段 <code>{type,id,name,input}</code>），同样八项全绿。<br>两条解析路径现在都有证据。</p>
+<p>最终 8 项判定全 PASS：1 repl→引擎、2 工具注入(189)、3 tool_use、4 并行分发<br>（repl 路径直接观测到 <code>parallel_batch</code>）、5 tool_result 回传、6 事件渲染、<br>+原生 tool_use 路径、+原生路径 tool_use 配对。回归 13/13。</p>
+<h3 id="找-第二个-preflight-的手法-可复用">找&quot;第二个 preflight&quot;的手法（可复用）<a class="anchor" href="#找-第二个-preflight-的手法-可复用" aria-label="锚点">#</a></h3>
+<p>QE 路径长期被 flag 遮着无人跑，<strong>一定还有同类断点</strong>。有效的排查法是<br><strong>拿两条路径传给 <code>runToolUseLoop</code> 的 options 做 key 级 diff</strong>：</p>
+<ul><li>legacy 侧：<code>replSession.js:11453-11951</code> 的 <code>loopOptions</code>（约 500 行）</li><li>QE 侧：<code>queryEngine.js</code> 的 <code>_submitMessageViaToolLoop</code>（适配器）与</li></ul>
+<p><code>_submitMessageLegacyWithHarness</code> 的 <code>loopOptions</code>（harness）</p>
+<ul><li>提取法：<code>awk 'NR&gt;=A &amp;&amp; NR&lt;=B' file | grep -oE '^ +[a-zA-Z_]+:' | sed 's/[ :]//g' | sort -u</code></li></ul>
+<p><strong>注意条件展开的 key 抓不到</strong>（<code>...(x ? {abortSignal: ...} : {})</code>），要另外 grep。</p>
+<p>legacy 有、QE 无的清单（按严重度）：</p>
+<ol><li><strong><code>abortSignal</code></strong> ← 真断点级，已修</li><li><code>getSteerMessages</code> / <code>consumeUrgentSteer</code> —— 用户中途插话失效</li><li><code>recentToolSignatures</code> —— 跨轮重复守卫失效（已答过的调用可能被静默重跑）</li><li>渲染类 <code>onCapabilityCheck</code>/<code>onDecision</code>/<code>onPlanReady</code>/<code>onPhase</code>/<code>onKeyFinding</code>/</li></ol>
+<p><code>onIterationSummary</code>/<code>onSelfEditAdvisory</code> —— 体验退化</p>
+<h3 id="第二个断点-中断信号-已修">第二个断点：中断信号（已修）<a class="anchor" href="#第二个断点-中断信号-已修" aria-label="锚点">#</a></h3>
+<ul><li><strong><code>QueryEngine.abort()</code> 是空操作</strong>：<code>_aborted</code> 只在 263/279 置 false、1244 置 true，</li></ul>
+<p><strong>从未被任何地方读取</strong>；且 QE 两条路径都不传 <code>abortSignal</code>。<br>  → 走 QE 时 ESC 只能中断 repl 侧等待，在途工具跑满自己的 120s 硬超时。</p>
+<ul><li>修法 4 处：<code>submitMessage</code> 建内部 AbortController 并<strong>手动合并</strong>外部 signal</li></ul>
+<p>（不用 <code>AbortSignal.any</code> —— 需 Node 20.3+，本包未把 engines 钉那么高）；<br>  <code>abort()</code> 改为真的 abort 那个 controller；两条路径各透传 <code>abortSignal</code>；<br>  repl QE 分支按 legacy 同款 <code>_toolAbortWiring</code>（<code>flagRegistry</code> 的<br>  <code>KHY_TOOL_ABORT_SIGNAL</code>）创建 <code>_activeToolLoopAbort</code>。</p>
+<ul><li><strong>行为细节（容易误解）</strong>：中断<strong>只在工具边界生效</strong>。实测传一个&quot;一开始就 aborted&quot;</li></ul>
+<p>的 signal，工具执行 0 次，但 <strong>chat 仍调了 2 轮</strong>、整轮耗时 10.7s 才 done。<br>  即 ESC ≠ 立即结束本轮，只是不再执行工具 + 在途工具松手。</p>
+<p>验证脚本新增段 F（传已 abort 的 signal，断言工具执行 0 次），现共 9 项判定全 PASS。</p>
+<h2 id="第三轮-tui-修复的收尾核验-隔离测试文件取证-2026-09-16-下午">第三轮：TUI 修复的收尾核验 + 隔离测试文件取证（2026-09-16 下午）<a class="anchor" href="#第三轮-tui-修复的收尾核验-隔离测试文件取证-2026-09-16-下午" aria-label="锚点">#</a></h2>
+<h3 id="做了什么-2">做了什么<a class="anchor" href="#做了什么-2" aria-label="锚点">#</a></h3>
+<p>把前两轮的结论做了一次全量复核（不信中间态，逐条重跑），并挖出一条新的硬事实。</p>
+<p><strong>复核结果（全部重跑，非引用）</strong></p>
+<ul><li>8 尺寸逐帧回归：40×14 / 60×20 / 80×24 / 100×24 / 121×30 / 122×40 / 130×40 / 200×50</li></ul>
+<p>→ <code>h&gt;=rows</code> 与清屏帧<strong>全空</strong>。</p>
+<ul><li>贴底（<code>KHY_DIAG_NMSGS=40</code>，40 组消息）：<ul><li>130×40 Preview → 末帧 <code>MARKER_MSG_35..39</code> + <code>↑207</code></li><li>100×24 / 80×24 legacy → <code>37..39</code> + <code>↑221</code></li><li>60×20 legacy → <code>38..39</code> + <code>↑225</code></li></ul></li></ul>
+<p><strong>只有 ↑ 没有 ↓ = 锚在底部</strong>（<code>↓</code> 存在才表示下方还有内容）。</p>
+<ul><li><code>KHY_TUI_DIAG_H=1</code> 账本自洽：40−3−1−0−2−1−1=32 ✓；24−3−1−0−0−1−1=18 ✓。</li><li><code>npm run test:tui</code> → 29/29、435/435；4 文件合跑 <code>node --test</code> → 45/45。</li><li><code>tests/cli/tui/*.test.js</code> → 632 用例 / 627 pass / 5 fail（5 条全为 jest 风格既有红）。</li></ul>
+<h3 id="新挖出的硬事实-debt-md-的-恢复路径-是死的">新挖出的硬事实：DEBT.md 的「恢复路径」是死的<a class="anchor" href="#新挖出的硬事实-debt-md-的-恢复路径-是死的" aria-label="锚点">#</a></h3>
+<p><code>tests/DEBT.md</code> §六 登记 54 个编码损坏文件转 QUARANTINE 空壳，恢复路径写的是<br>「从远端 github.com/luckykhy/khy-os 拉原始版本」。<strong>实测无效</strong>：<br><code>origin/main</code> 与 <code>gitee/main</code> 上这 4 个文件的 blob hash 与本地 HEAD <strong>完全相同</strong><br>（<code>51e3f46e26</code> / <code>1d37a7908a</code> / <code>c48dcdb717</code> / <code>38c73f47c6</code>）—— 损坏已推送。<br>本仓只有 151 个 commit，<code>arrowRouting.test.js</code> 全历史只有 <code>d407f975</code> 一个 commit。<br>→ <strong>唯一可行路径是「对着当前 src 重写」</strong>（<code>mouseButtons.test.js</code> / <code>toolEntryRows.test.js</code> 走过的路）。</p>
+<h3 id="隔离名单里-4-个文件正好覆盖我改的模块-风险面">隔离名单里 4 个文件正好覆盖我改的模块（风险面）<a class="anchor" href="#隔离名单里-4-个文件正好覆盖我改的模块-风险面" aria-label="锚点">#</a></h3>
+<p><code>tests/cli/tui/</code> 下 5 个在隔离名单：<code>mouseButtons</code>（已重写恢复）、<br><code>arrowRouting</code> / <code>scrollActions</code> / <code>scrollbackPreserve</code> / <code>transcriptLines</code>（<strong>仍空壳</strong>）。<br>这 4 个模块正是我这次改动的语义邻域 → <strong>我改的 <code>mouseButtons.js</code> / <code>Viewport.js</code><br>没有历史覆盖兜底，只有新写的 21 个用例在护着。</strong></p>
+<h3 id="语义冲突核验-重要-别重复查">语义冲突核验（重要，别重复查）<a class="anchor" href="#语义冲突核验-重要-别重复查" aria-label="锚点">#</a></h3>
+<p><code>scrollActions.test.js</code>（隔离前内容仍可读）锁了<br><code>applyScroll('lineUp', {offset: -5}) === 0</code>（负数→顶），<br>而 <code>Viewport.resolveViewportOffset</code> 把<strong>负数定义成贴底</strong> —— 表面冲突，<strong>实际不冲突</strong>：</p>
+<ol><li>不同叶子模块（<code>tui/scrollActions.js</code> vs <code>ink-components/Viewport.js</code>）；</li><li><code>applyStickyViewportAction</code> 先经 <code>resolveViewportOffset</code> 归一成数字，负数不会裸进 <code>applyScroll</code>；</li><li>所有 <code>applyScroll</code> / <code>applyViewportScroll</code> 调用点的 state 初值都是 <code>0</code>，<strong>无路径喂 <code>null</code></strong>：</li></ol>
+<p><code>App.js:4427</code>←<code>transcriptScroll(0)</code>、<code>App.js:4941</code>←<code>previewSidebarScroll(0)</code>（且已写 <code>Number(s)||0</code>）、<br>   <code>CcTranscriptView.js:99/106/112/116</code>←<code>scrollOffset(0)</code>。</p>
+<blockquote><p><strong>教训</strong>：<code>scrollActions</code>（负数=顶）与 <code>Viewport</code>（负数=贴底）是<strong>两套负数语义</strong>。<br>谁把 <code>mainViewportScroll</code>（可能 <code>null</code>）直接喂给 <code>scrollActions.applyScroll</code>，<br><code>Number(null)=0</code> → 会跳到顶而不是贴底。</p></blockquote>
+<h3 id="又一条注释与代码不符">又一条注释与代码不符<a class="anchor" href="#又一条注释与代码不符" aria-label="锚点">#</a></h3>
+<p><code>App.js:5730-5734</code> 注释自称「delegate to ThreeColumnLayout which reuses ALL existing leaf components」，<br>但 <code>threeColumnMode</code>（5735）算完<strong>再无引用</strong>，代码里没有这个分支。<br>→ <code>ThreeColumnLayout.js</code> / <code>ChatColumn.js</code> 是孤儿；<code>App.js:26</code> 的 <code>require('./StreamingBlock')</code> 死导入<br>（<code>&lt;StreamingBlock</code> 全文出现 <strong>0</strong> 次）。按规则只报告不动手。</p>
+<h3 id="环境坑-新增两条-都很坑">环境坑（新增两条，都很坑）<a class="anchor" href="#环境坑-新增两条-都很坑" aria-label="锚点">#</a></h3>
+<ol><li><strong><code>headless-frames.js</code> 的第 4 个 argv（消息条数）不起作用</strong> —— 走环境变量 <code>KHY_DIAG_NMSGS</code>。</li></ol>
+<p>默认只 2 组（4 条），内容不超视口 → <strong>看不到贴底，会误判「贴底没生效」</strong>。</p>
+<ol><li><strong>等待时间硬编码 3500ms</strong> → 窄/矮终端 boot 没跑完就收帧，100×24 实测只 4 帧、末帧是 boot screen。</li></ol>
+<p>已改为 <code>KHY_DIAG_WAIT</code> 可调（默认仍 3500）。</p>
+<h3 id="交付">交付<a class="anchor" href="#交付" aria-label="锚点">#</a></h3>
+<p><code>_产物/TUI-输出回显与滚轮修复-验收报告-2026-09-16.md</code>（九节：结论/四根因/改动清单/回归验证/<br>既有红灯定性/test:node 重叠/隔离文件取证/环境坑/待办）。</p>
+<h3 id="第三轮续-订正三处-会撒谎的文档-只改注释-文档-未动逻辑">第三轮续：订正三处「会撒谎的文档」（只改注释/文档，未动逻辑）<a class="anchor" href="#第三轮续-订正三处-会撒谎的文档-只改注释-文档-未动逻辑" aria-label="锚点">#</a></h3>
+<ol><li><code>tests/DEBT.md</code> §六 的「恢复路径」——原文说「从远端拉原始版本即可」，</li></ol>
+<p>实测远端 blob 与本地 HEAD <strong>字节完全相同</strong>，改为明确标注失效 + 给出正确路径<br>   （对着当前 src 重写）+ 说明 <code>git show HEAD:&lt;path&gt;</code> 可取素材。</p>
+<ol><li>4 个 QUARANTINE 空壳（<code>arrowRouting</code> / <code>scrollActions</code> / <code>scrollbackPreserve</code> /</li></ol>
+<p><code>transcriptLines</code>）的文件头 —— 原文「the original tests were <strong>lost</strong>…<br>   <strong>No local recovery source was available</strong>」是错的（原件在 HEAD 里，断言可读），<br>   改为 <code>RECOVERABLE:</code> + 点名具体 <code>git show HEAD:&lt;路径&gt;</code> + 指向两个已走通的先例<br>   （<code>mouseButtons.test.js</code> / <code>toolEntryRows.test.js</code>）。</p>
+<ol><li><code>App.js:5730</code> <code>threeColumnMode</code> 上方注释 —— 原文自称「delegate to ThreeColumnLayout…</li></ol>
+<p>zero regression risk」，但<strong>代码里没这个分支</strong>。改为 <code>⚠️ NOT WIRED (2026-09-16 audit)</code></p>
+<ul><li>列出三个可 grep 验证的后果 + 警告「接线是行为变更，不是改名」。</li></ul>
+<p>订正后复核：<code>node --check</code> 全过；<code>npm run test:tui</code> 仍 <strong>29/29、435/435</strong>；<br>逐帧 100×24 / 130×40 仍 <code>h&gt;=rows: []</code>、<code>clear: []</code>。</p>
+<p><code>MEMORY.md</code> 同步压缩到 <strong>11224 B</strong>（原 12362，避免注入截断）；<br>新增的三条细节（DEBT 恢复路径失效 / 两套负数语义 / 注释撒谎）<br>外置到 <code>MEMORY-details.md</code> §五，并修正了其中 §四 关于 harness 参数的<strong>错误用法说明</strong><br>（第 4 个 argv 无效，消息条数走 <code>KHY_DIAG_NMSGS</code>；等待走 <code>KHY_DIAG_WAIT</code>）。</p>
+<h2 id="第四轮-隔离测试文件批量回收-5-个-92-用例全绿">第四轮：隔离测试文件批量回收（5 个，92 用例全绿）<a class="anchor" href="#第四轮-隔离测试文件批量回收-5-个-92-用例全绿" aria-label="锚点">#</a></h2>
+<p>朋友说「继续实现」→ 把 §七 查出的「隔离文件正好覆盖我改的模块」这条债还掉。</p>
+<h3 id="结果">结果<a class="anchor" href="#结果" aria-label="锚点">#</a></h3>
+<p><code>node --test &quot;tests/cli/tui/*.test.js&quot;</code>：</p>
+<ul><li>回收前 <strong>632 用例 / 627 pass / 5 fail</strong></li><li>回收后 <strong>719 用例 / 719 pass / 0 fail</strong></li></ul>
+<table><thead><tr><th>文件</th><th style="text-align:right">恢复后用例</th></tr></thead><tbody><tr><td><code>arrowRouting.test.js</code></td><td style="text-align:right">25</td></tr><tr><td><code>scrollActions.test.js</code></td><td style="text-align:right">17</td></tr><tr><td><code>scrollbackPreserve.test.js</code></td><td style="text-align:right">20</td></tr><tr><td><code>transcriptLines.test.js</code></td><td style="text-align:right">27</td></tr><tr><td><code>historyBrowseDecision.test.js</code></td><td style="text-align:right">3（补齐 node:test 导入）</td></tr></tbody></table>
+<h3 id="可复用方法-下次直接照做">可复用方法（下次直接照做）<a class="anchor" href="#可复用方法-下次直接照做" aria-label="锚点">#</a></h3>
+<ol><li><code>git show HEAD:&lt;path&gt;</code> 取回损坏原件 —— <strong>原件没丢，只是不能直接 checkout</strong>。</li><li>还原 <code>expect(f(x).toBe(y)</code> → <code>expect(f(x)).toBe(y)</code>，然后<strong>按当前 <code>src/</code> 核对语义</strong></li></ol>
+<p>（原件编码的是历史行为，照抄会写出过期断言）。</p>
+<ol><li>改写为 <code>node:test</code> 风格：<code>expect(x).toBe(y)</code> → <code>assert.equal(x, y)</code>；</li></ol>
+<p><code>.toBeTruthy()</code> → <code>assert.ok</code>；<code>.not.toThrow()</code> → <code>assert.doesNotThrow</code>；<br>   去掉外层 <code>describe</code>（node:test 无全局 describe）。</p>
+<ol><li>require 路径重算为 <code>../../../src/cli/tui/&lt;module&gt;</code>（原件的 <code>./&lt;module&gt;</code> 深度是错的）。</li><li><strong>import 顺序</strong>：<code>node:assert</code> 必须在 <code>node:test</code> <strong>之前</strong>，否则 eslint 报</li></ol>
+<p><code>import/order</code> 警告（<code>mouseButtons.test.js</code> 就是这么写的，但它自己也在警告）。</p>
+<h3 id="两个例外-坑">两个例外/坑<a class="anchor" href="#两个例外-坑" aria-label="锚点">#</a></h3>
+<ul><li><strong><code>transcriptLines.test.js</code> 的 CJK 字面量整段丢失</strong>（另外 3 个只丢 <code>)</code>）→</li></ul>
+<p>期望行无法恢复，只能从当前源码反推。已在文件头注明。</p>
+<ul><li><strong><code>historyBrowseDecision.test.js</code> 是双 runner 陷阱</strong>：文件头自称 <code>(node:test)</code> 但</li></ul>
+<p>没有 <code>require('node:test')</code> → jest 用全局 <code>describe</code> 跑它（3/3 绿，看着没问题），<br>  <code>node --test</code> 跑它 <code>ReferenceError: describe is not defined</code>。<br>  补齐导入后 <code>jest.config.js</code> 的 <code>findNodeTestFiles</code> 自动转交 <code>test:node</code>，<strong>配置无需改</strong>。</p>
+<h3 id="守门">守门<a class="anchor" href="#守门" aria-label="锚点">#</a></h3>
+<p><code>node --check</code> ×5 全过；<code>npx eslint</code> ×5 <strong>0 error / 0 warning</strong>；<br><code>check-agent-rules.js</code> passed；<code>npm run test:tui</code> 仍 <strong>29/29、435/435</strong>；<br>逐帧回归 100×24 / 130×40 仍 <code>h&gt;=rows: []</code>、<code>clear: []</code>。</p>
+<h3 id="debt-md-同步">DEBT.md 同步<a class="anchor" href="#debt-md-同步" aria-label="锚点">#</a></h3>
+<p>隔离表 54 → <strong>48</strong> 条；新增「2026-09-16 第三批（5 个，全部走通）」记录，含方法与逐文件覆盖清单。<br>剩余 48 个空壳可继续按同一方法批量回收。</p>
+<h3 id="交付-2">交付<a class="anchor" href="#交付-2" aria-label="锚点">#</a></h3>
+<p><code>_产物/TUI-输出回显与滚轮修复-验收报告-2026-09-16.md</code> 新增 §九（回收全记录）+ §十（环境坑）+ §十一（待办）。</p>
+<hr>
+<h2 id="五-memory-md-体积压缩-全量复核-2026-09-16-12-20">五、MEMORY.md 体积压缩 + 全量复核（2026-09-16 12:20）<a class="anchor" href="#五-memory-md-体积压缩-全量复核-2026-09-16-12-20" aria-label="锚点">#</a></h2>
+<h3 id="起因">起因<a class="anchor" href="#起因" aria-label="锚点">#</a></h3>
+<p>项目 <code>MEMORY.md</code> 超注入上限被截断（系统提示 ACTION REQUIRED）。</p>
+<h3 id="处置">处置<a class="anchor" href="#处置" aria-label="锚点">#</a></h3>
+<ul><li><code>MEMORY.md</code> 12223 → <strong>8811 字节</strong>（-28%），六节结构保留，编号连续性校验通过（§一 1-8、</li></ul>
+<p>§四 1-2、§五 1-3、§六 1-9 全 OK），无 U+FFFD 替换字符。</p>
+<ul><li>新增 <code>MEMORY-details.md</code> <strong>§七「TUI 输出回显/滚轮 —— 完整硬事实」</strong>，把 §六 的「为什么」</li></ul>
+<p>与实证数字全部外置（details 11004 → 15582 字节；details 不参与注入，无体积压力）。</p>
+<ul><li><strong>订正一处笔误</strong>：<code>test:tui</code> 入口是 <code>node services/backend/scripts/run-ink-tui-tests.js</code>，</li></ul>
+<p><strong>不在根 <code>scripts/</code></strong>（根目录跑会 <code>MODULE_NOT_FOUND</code>）。MEMORY.md §六.6 与 details §七.6 已改。</p>
+<h3 id="全量复核-全部重跑-非引用">全量复核（全部重跑，非引用）<a class="anchor" href="#全量复核-全部重跑-非引用" aria-label="锚点">#</a></h3>
+<ul><li><code>node --test &quot;services/backend/tests/cli/tui/*.test.js&quot;</code> → <strong>719 / 719 pass / 0 fail</strong>（2028ms）</li><li><code>node services/backend/scripts/run-ink-tui-tests.js</code> → <strong>29/29 套件、435/435 用例</strong>（23.5s）</li><li>逐帧回归 <strong>5 尺寸</strong>（40×14 / 60×20 / 80×24 / 100×24 / 130×40；忙态 + 40 组消息 + <code>KHY_DIAG_WAIT=9000</code>）</li></ul>
+<p>→ <code>frames with h&gt;=rows : []</code>、<code>frames with clear : []</code> <strong>全部为空</strong></p>
+<ul><li>130×40 忙态帧 = <strong>38 行 &lt; 40</strong>，贴底显示 <code>MARKER_MSG_36..39</code>，滚动指示器 <code>↑215</code></li></ul>
+<p>（<strong>只有 ↑ 没有 ↓ = 锚在底部</strong>）</p>
+<h3 id="5-个回收文件行数-确认非空壳">5 个回收文件行数（确认非空壳）<a class="anchor" href="#5-个回收文件行数-确认非空壳" aria-label="锚点">#</a></h3>
+<p><code>arrowRouting</code> 237 / <code>scrollbackPreserve</code> 298 / <code>transcriptLines</code> 300 / <code>scrollActions</code> 162 /<br><code>historyBrowseDecision</code> 80（<code>mouseButtons</code> 70，更早一轮恢复）</p>
+<hr>
+<h2 id="六-方案交付-ai-修改三模态反馈契约-客户模式-2026-09-16-17-20">六、方案交付：AI 修改三模态反馈契约（客户模式）（2026-09-16 17:20）<a class="anchor" href="#六-方案交付-ai-修改三模态反馈契约-客户模式-2026-09-16-17-20" aria-label="锚点">#</a></h2>
+<h3 id="需求">需求<a class="anchor" href="#需求" aria-label="锚点">#</a></h3>
+<p>khy-os 被 AI 修改时应像「客户」而非「待宰牲口」，主动向 AI 反馈。三个隐喻——修 bug 像看病、<br>造功能像好问的学生、删功能像澡堂搓澡的客户。</p>
+<h3 id="交付-3">交付<a class="anchor" href="#交付-3" aria-label="锚点">#</a></h3>
+<ul><li><code>_产物/AI修改三模态反馈契约-方案-2026-09-16.md</code>（21KB，13 节）</li><li><code>_产物/AI修改三模态反馈契约-方案-2026-09-16.html</code>（35KB，浅色主题独立可读版）</li><li><code>_产物/ai-feedback-demo.js</code>（16KB，零依赖可运行原型，7 场景）</li><li><code>.khyos/tools/md2html.js</code>（自建 md→html 渲染器，可复用，零依赖）</li></ul>
+<h3 id="核心设计">核心设计<a class="anchor" href="#核心设计" aria-label="锚点">#</a></h3>
+<ul><li>五节点骨架：N1 意图确认 → N2 范围确认 → N3 分片执行 → N4 自证 → N5 交付。</li><li>三模态：FIX 五步问诊（主诉/体温/分诊/处方/复诊）、BUILD 需求五问（+复述确认）、</li></ul>
+<p>DELETE 报部位 + 三档力度 + 喊停权。</p>
+<ul><li>模态判定 = <strong>确定性纯函数</strong>（改动集状态码 + 路径 + 任务语句加权），<strong>不接受 AI 自称</strong>；</li></ul>
+<p>两模态分差 &lt; 0.15 判混合带 → 强制声明主模态（复用 [DESIGN-ARCH-041] 歧义带思想）。</p>
+<ul><li><strong>只有三条真拦</strong>（error）：<code>fix-without-repro</code> / <code>delete-without-rollback</code> /</li></ul>
+<p><code>delete-documented-code</code>；其余走 warning + 棘轮。<strong>事前一律 advisory —— 过早阻断会逼 AI 撒谎。</strong></p>
+<ul><li>存证落 <code>.khy/feedback/&lt;task&gt;/</code>：文件即证据（对话会滚走/被压缩失真）。</li></ul>
+<h3 id="原型实测-7-场景-真实输出">原型实测（7 场景，真实输出）<a class="anchor" href="#原型实测-7-场景-真实输出" aria-label="锚点">#</a></h3>
+<p>fix-no-repro 1E/3W · fix-with-repro <strong>0E/3W（证明不误伤）</strong> · build-no-questions 0E/1W ·<br>delete-mass 1E/2W · delete-documented 1E/1W · mixed 2E/1W · ambiguous 1E/5W。</p>
+<p><strong>最有价值一条</strong>：删 <code>ThreeColumnLayout.js</code> 时在 <code>docs/03_DESIGN_设计/[DESIGN-ARCH-079] TUI界面设计规范.md</code><br>找到文档背书 → 拒绝放行。该文件在代码里确为孤儿（<code>App.js:26</code> 死导入），正是「计划过但没接线」，<br>印证 §三「零引用是清理还是救活：只看文档背书」的判据 —— 若无此规则它会被当死代码静默删掉。</p>
+<h3 id="接线方案-b-l2-三步-未执行-等用户确认">接线方案（B-L2 三步，<strong>未执行，等用户确认</strong>）<a class="anchor" href="#接线方案-b-l2-三步-未执行-等用户确认" aria-label="锚点">#</a></h3>
+<p>新增 <code>RUNTIME-005/006/007</code> + 执行器 <code>scripts/ci/check-agent-feedback.js</code>；<br>三步 = 标记（advisory + package.json 别名 + 登记表 + AGENTS.md 标记行）→ 迁移（升 commit/pr，<br>只警告）→ 收口（硬三条升 error + 更新基线）。<strong>不要一次做完</strong>（SOURCING-006）。</p>
+<h3 id="交付纪律">交付纪律<a class="anchor" href="#交付纪律" aria-label="锚点">#</a></h3>
+<p>未改动任何已跟踪文件（本工作区 2511 个已修改文件为会话外既有，时间戳 16:49–16:56 早于会话）；<br>新增物仅落 <code>_产物/</code>（068 §1.4 登记例外目录）与 <code>.khyos/</code>（已 gitignore）。</p>
+<hr>
+<h2 id="七-方案改落-docs-并规范命名-2026-09-16-17-20">七、方案改落 docs/ 并规范命名（2026-09-16 17:20+）<a class="anchor" href="#七-方案改落-docs-并规范命名-2026-09-16-17-20" aria-label="锚点">#</a></h2>
+<h3 id="用户纠正">用户纠正<a class="anchor" href="#用户纠正" aria-label="锚点">#</a></h3>
+<p>「文档应该落在 docs 合适的文件夹下规范命名」——<code>_产物/</code> 只是暂存区，<strong>正式文档必须进 <code>docs/</code></strong>。<br>（我原先按 [DESIGN-LAY-005] §1.4 把方案放 <code>_产物/</code>，该条只管「非文档资产」；文档归 <code>docs/</code> 是对的。）</p>
+<h3 id="搬迁结果">搬迁结果<a class="anchor" href="#搬迁结果" aria-label="锚点">#</a></h3>
+<ul><li>正式文档：<code>docs/03_DESIGN_设计/[DESIGN-ARCH-113] AI修改三模态反馈契约-客户模式.md</code>（21758 B）</li><li>孪生件：同名 <code>.html</code>（40163 B，由 <code>build_docs_site.js</code> 生成）</li><li>原型脚本仍留 <code>_产物/ai-feedback-demo.js</code>（068 §1.4 明确 <code>_产物/</code> 收「脚本」这类非文档资产）</li><li>删除 <code>_产物/</code> 里的两份暂存副本，避免同文两份分叉</li></ul>
+<h3 id="依规必须做的四件事-都做了">依规必须做的四件事（都做了）<a class="anchor" href="#依规必须做的四件事-都做了" aria-label="锚点">#</a></h3>
+<ol><li>文件名遵 [MGMT-STD-007] R3：<code>[&lt;STAGE&gt;-&lt;TYPE&gt;-NNN] 中文名.md</code> → <code>[DESIGN-ARCH-113] …</code></li><li><strong>CP-3 强制回写两处索引</strong>：就近 <code>docs/03_DESIGN_设计/00_INDEX_设计-分类索引.md</code> 文件清单加行；</li></ol>
+<p>主索引 <code>docs/00_INDEX_文档索引.md</code> 的 <code>## 03_DESIGN_设计</code> 分区加行</p>
+<ol><li><code>.html</code> 孪生件（<code>verify_docs_site.js</code> 缺 HTML 即 error）</li><li>顺手订正两处过时数据：设计索引里「下一个空号为 069」→ 已订正为 <strong>114</strong>；</li></ol>
+<p>主索引阶段总览 <code>03_DESIGN_设计</code> 文档数 117 → <strong>120</strong>（实测值）</p>
+<h3 id="验证-全过">验证（全过）<a class="anchor" href="#验证-全过" aria-label="锚点">#</a></h3>
+<ul><li><code>node scripts/docs/build_docs_site.js</code> → 979 页 + index + nav-data；<strong>已跟踪文件改动数 818 → 818，零副作用</strong></li><li><code>node scripts/docs/verify_docs_site.js</code> → ✅ 全部通过（979 md / 980 html / 11755 链接）</li><li><code>node scripts/ci/check-repo-layout.js</code> → 全红但<strong>全是存量</strong>（baseline 0 vs 实测 dangling 88 /</li></ul>
+<p>cross-layer 37 / unresolved 17 / docs-index-complete 1）；逐条 <code>--list</code> 查 <strong>ARCH-113 命中 0</strong></p>
+<ul><li>自查文档内 7 个 <code>npm run &lt;目标&gt;</code>（rules:apply / rules:gate:commit / check:wiring / check:gov-rules /</li></ul>
+<p>rules:coverage / check:rules-registry / docs:rules-cards）<strong>全部存在于 package.json</strong> → 不会顶破 dangling-task</p>
+<h3 id="新踩的坑">新踩的坑<a class="anchor" href="#新踩的坑" aria-label="锚点">#</a></h3>
+<p><code>git grep --untracked -E '...' -- 'docs/03_DESIGN_设计/[DESIGN-ARCH-113]*'</code> 路径里的 <code>[...]</code><br>被 pathspec 当 <strong>glob 字符类</strong>，静默返回空。改为直接读文件（Grep 工具）才拿到真结果。<br>另：<code>dangling-task</code> / <code>cross-layer-require</code> 走 <code>git grep</code> <strong>只看已跟踪内容</strong>，<br>新文件在 <code>git add</code> 前不被扫描 → 新文档必须<strong>手动自查</strong> npm 目标，别信守卫的绿。</p>
+<hr>
+<h2 id="design-doc-002-ai-指令文件标准-docs-003-制定">[DESIGN-DOC-002] AI 指令文件标准（DOCS-003）制定<a class="anchor" href="#design-doc-002-ai-指令文件标准-docs-003-制定" aria-label="锚点">#</a></h2>
+<p>用户诉求：AGENTS.md / CLAUDE.md / khy.md 需要统一标准规则，避免乱写。</p>
+<h3 id="核心发现-本会话最重要的实证">核心发现（本会话最重要的实证）<a class="anchor" href="#核心发现-本会话最重要的实证" aria-label="锚点">#</a></h3>
+<p><code>instructionFileService.js</code> 有<strong>分层字符预算</strong>，超限<strong>静默截断</strong>（<code>readFileSafe</code> 只 slice）：</p>
+<ul><li><code>MAX_FILE_CHARS=8000</code>（own=khy.md / compat=CLAUDE.md+AGENTS.md）</li><li><code>MAX_TOTAL_CHARS=24000</code>（合并总量）</li><li><code>ECO_MAX_FILE_CHARS=4000</code> / <code>ECO_MAX_TOTAL_CHARS=8000</code>（生态层，<code>instructionEcosystemRegistry.js:12-13</code>）</li></ul>
+<p><strong>实测：<code>AGENTS.md</code> 22670 字符 → AI 只看到 35.3%；截断点在第 226 行</strong>，<br>被砍掉的第一个标题是 <code>## 人工维护参考</code>(265 行) —— 其后 <code>## 工程规则（强制）</code><br>（<code>RUNTIME-001</code>~<code>004</code> 的<strong>自称语义真源</strong>）AI 从未收到。<br><code>services/backend/src/cli/tui/AGENTS.md</code> 15163 → 52.8%。全仓 10 个指令文件，2 个大面积失效。</p>
+<h3 id="交付-4">交付<a class="anchor" href="#交付-4" aria-label="锚点">#</a></h3>
+<ol><li><code>docs/10_规范/[DESIGN-DOC-002] AI 指令文件标准.md</code>（+ html 孪生件）<ul><li>11 条铁律/判据、与既有机制边界表、强度梯度、B-L2 三步接线清单、17 场景反例矩阵</li><li>就近索引 <code>docs/10_规范/00_INDEX_规范-总目录.md</code> 已回写</li><li><strong>主索引不需回写</strong>：<code>docs-index-complete</code> 的 <code>STAGE_DIR_RE=/^0[1-9]_/</code>，<strong>不扫 <code>10_规范</code></strong></li></ul></li><li><code>_产物/check-agent-docs.js</code> 可运行原型（零依赖、确定性、只读）<ul><li>10 个检查项 D1–D8；17 个 <code>--scenario</code>（12 拦 / 5 放行对照）</li><li>实测仓库：<code>Summary: 4 error(s), 7 warning(s).</code>（11 条逐条人工核验为真）</li></ul></li></ol>
+<h3 id="未接线-有意-守-sourcing-006-一次一提交-r1-不自动提交">未接线（有意，守 SOURCING-006 一次一提交 + R1 不自动提交）<a class="anchor" href="#未接线-有意-守-sourcing-006-一次一提交-r1-不自动提交" aria-label="锚点">#</a></h3>
+<p>DOCS-003 尚未进 RULES-REGISTRY.json，脚本未移入 <code>scripts/ci/</code>。<br><strong>原因</strong>：登记后 <code>check-wiring.js</code> 要求执行器存在且被 package.json 引用，<br>故「标记 + 迁移」必须成对做，且新 error 级规则需要基线决策 → 属用户批准范围。</p>
+<h3 id="新踩的坑-本会话-6-个-全部已固化进原型注释">新踩的坑（本会话 6 个，全部已固化进原型注释）<a class="anchor" href="#新踩的坑-本会话-6-个-全部已固化进原型注释" aria-label="锚点">#</a></h3>
+<ol><li><strong><code>instructionEcosystemSources()</code> 返回的描述符没有 <code>segs</code> 字段</strong>，只有 <code>path</code>。</li></ol>
+<p>按 <code>segs</code> 派生会静默得空数组并退回硬编码兜底 → <code>.github/copilot-instructions.md</code><br>   与 <code>.clinerules</code> 被漏扫（10 个文件只扫到 8 个）。</p>
+<ol><li><strong>判据不能拿 glob 豁免</strong>：D2 原用「某规则 <code>paths</code> 覆盖该文件」当豁免，</li></ol>
+<p>而 <code>services/**</code> 会一次性豁免整个 services 树，闸门形同虚设。豁免只认<strong>字面路径</strong>。</p>
+<ol><li><strong><code>npm run</code> 参数可在脚本名之前</strong>：<code>npm run --workspace backend test:tui</code>。</li></ol>
+<p>朴素正则把 <code>--workspace</code> 当脚本名。且该例本身是<strong>真错</strong>——<br>   <code>backend</code> 既非路径(<code>services/backend</code>)也非包名(<code>khy-os-backend</code>) → npm 报 No workspaces found。</p>
+<ol><li><strong><code>[DESIGN-ARCH-*]</code> 是文档编号不是规则 ID</strong>：混判会大面积误报。</li></ol>
+<p>且文档 ID 索引必须<strong>全仓扫</strong>（子项目有 <code>apps/khyos-desktop/docs/</code>），只扫根 <code>docs/</code> 会误报。</p>
+<ol><li><strong>示例块必须显式化</strong>：<code>AGENTS.md</code> 规则 2.3 的 <code>❌/✅</code> 对照块里出现 <code>npm run build</code></li></ol>
+<p>（根 package.json 无 build 脚本）。判据 = 块内含 <code>❌/✅</code>，或上溯 6 行标题含「示例/映射」。</p>
+<ol><li><strong><code>git --literal-pathspecs</code> 才是查含 <code>[</code> 路径的正确姿势</strong>：<code>git status -- &lt;path&gt;</code> 里</li></ol>
+<p><code>[DESIGN-DOC-002]</code> 会被当 glob 字符类 → 误判成未跟踪/已跟踪。</p>
+<h3 id="订正旧记忆-错的就是错的">订正旧记忆（错的就是错的）<a class="anchor" href="#订正旧记忆-错的就是错的" aria-label="锚点">#</a></h3>
+<p>旧 MEMORY.md §七.1 曾写「<code>khy metadata refresh</code> 通道已不存在」——<strong>实测为假</strong>：<br><code>commandAutoRegistry.init()</code> 在 <code>router.js:229</code> 调用、<code>:980</code> dispatch，<br>实测自动注册 <strong>68</strong> 个命令，<strong>含 <code>metadata</code> 与 <code>maintain</code></strong>（<code>handlers/metadata.js</code> 导出了<br><code>MANIFEST_EXPORT_KEY</code>）。<code>khy metadata refresh</code> 真实可达。</p>
+<h3 id="验证-全过-2">验证（全过）<a class="anchor" href="#验证-全过-2" aria-label="锚点">#</a></h3>
+<ul><li><code>node --check _产物/check-agent-docs.js</code> ✔</li><li>17 场景矩阵：12 拦 / 5 放行 ✔</li><li><code>node scripts/docs/build_docs_site.js</code> → 982 页；<code>find -newermt</code> 证实<strong>只碰了新建文件</strong></li><li><code>node scripts/docs/verify_docs_site.js</code> → ✅ 全部通过（982 md / 983 html / 11788 链接）</li><li><code>node scripts/ci/check-rules-registry.js</code> → 通过（孤儿标记检查<strong>只扫登记表 ssot 指向的文件</strong>，</li></ul>
+<p>不扫全仓 → 未登记的 <code>DOCS-003</code> 标记行暂时无害）</p>
+<ul><li>本会话对<strong>已跟踪文件改动数 = 0</strong>（三个产物全是 <code>??</code> 未跟踪）</li><li><code>check:layout</code> 实测 <code>dangling-task</code> 89 &gt; baseline 88 —— <strong>既有漂移，非本次引入</strong></li></ul>
+<p>（该规则走 <code>git grep</code> 只看已跟踪内容，我的文件全未跟踪）。<strong>未动基线。</strong></p>
+<hr>
+<h2 id="2026-09-16-第二段-docs-003-按-8-b-l2-清单完成接线-修回两条被误删的规则">2026-09-16（第二段）· DOCS-003 按 §8 B-L2 清单完成接线 + 修回两条被误删的规则<a class="anchor" href="#2026-09-16-第二段-docs-003-按-8-b-l2-清单完成接线-修回两条被误删的规则" aria-label="锚点">#</a></h2>
+<h3 id="交付-用户指令-完成登记-迁移-别名三者配套-再做基线决策-确保-check-wiring-通过">交付（用户指令：完成登记 + 迁移 + 别名三者配套，再做基线决策，确保 check-wiring 通过）<a class="anchor" href="#交付-用户指令-完成登记-迁移-别名三者配套-再做基线决策-确保-check-wiring-通过" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>动作</th><th>结果</th></tr></thead><tbody><tr><td>1</td><td><code>docs/10_规范/registry/RULES-REGISTRY.json</code> 追加 <code>DOCS-003</code></td><td>69 条，<code>meta.ruleCount</code> 同步 69</td></tr><tr><td>2</td><td><code>_产物/check-agent-docs.js</code> → <code>scripts/ci/check-agent-docs.js</code></td><td>已迁移，可重定位（仓库根向上查找）</td></tr><tr><td>3</td><td><code>package.json</code> 加 <code>check:agent-docs</code></td><td>已加（第 30 行，紧跟 <code>check:agent-rules</code>）</td></tr><tr><td>4</td><td>基线决策 <code>scripts/ci/ruleguard-baseline.json</code></td><td><code>&quot;DOCS-003&quot;: 11</code>（<strong>不是 4</strong>，见下）</td></tr><tr><td>5</td><td><code>npm run docs:rules-cards</code></td><td>69 张卡 + 1 索引，<code>[DOCS-003] AI 指令文件标准.md</code> 新生成</td></tr><tr><td>6</td><td><code>package.json</code> 加 <code>maintenance:organize</code></td><td><strong>清掉 check-wiring 2 条存量 error</strong>（见 B）</td></tr></tbody></table>
+<h3 id="修回两条被误删的规则-本会话最严重的问题-已复原">修回两条被误删的规则（本会话最严重的问题，已复原）<a class="anchor" href="#修回两条被误删的规则-本会话最严重的问题-已复原" aria-label="锚点">#</a></h3>
+<p><strong>症状</strong>：<code>rules.length</code> 只有 67，规则卡目录有 68 张卡 → 丢了 <code>LAYOUT-004</code>（仓库整理与巡检）与<br><code>LAYOUT-005</code>（构建产物单一根）。</p>
+<p><strong>根因</strong>：登记表 <code>git status</code> 是 <code>AM</code> —— 索引里是 66 条的旧版，工作区是 68 条的新版。<br>我拿 <code>git show :&lt;path&gt;</code>（索引版）当基线「重建」，等于<strong>回滚了工作区里 2 条未提交的新规则</strong>。</p>
+<p><strong>恢复路径</strong>（可复用）：用<strong>同批次自动生成产物</strong>反查 —— <code>docs/10_规范/规则卡/</code> 是登记表的 1:1 渲染，<br><code>comm -13 &lt;(现在 ID) &lt;(卡片 ID)</code> 直接点出缺失的两条；再按卡内 frontmatter 14 字段原样插回。</p>
+<p><strong>判据订正</strong>：<code>git status</code> 为 <code>AM</code> 时索引<strong>不是</strong>工作区基线。这条已写进 MEMORY.md §二。</p>
+<h3 id="三处既有缺陷-发现即修-发现即登记">三处既有缺陷（发现即修 / 发现即登记）<a class="anchor" href="#三处既有缺陷-发现即修-发现即登记" aria-label="锚点">#</a></h3>
+<p><strong>A. 登记表 56 处路径停在已废止的 <code>docs/_规范/</code> 形式（已修）</strong><br><code>[DESIGN-LAY-002]</code> 明文废止「<code>_</code> 前缀 = 跨阶段资产」，文档侧早已迁到 <code>docs/10_规范/</code>，<br>但 <code>RULES-REGISTRY.json</code> 是 <code>.json</code>，<strong>没被那轮只扫 <code>.md</code> 的路径迁移扫到</strong>。<br>后果：<code>check-rules-registry</code> 36 条「语义真源文件不存在」+ 40 张规则卡被判「产物过期」<br>（卡里是 <code>10_规范</code>、登记表里是 <code>_规范</code> → 「卡与登记表不一致」）。<br><strong>基线实测：修复前 41 error（索引版）/ 39 error（含 DOCS-003），修复后 0 error。</strong></p>
+<p><strong>B. <code>check-wiring</code> 的 2 条存量 error 已清（与 DESIGN-LAY-004 §8 记载的完全吻合）</strong><br><code>LAYOUT-004</code> 声明的执行器 <code>scripts/maintenance/organize.py</code> 零接线 →<br>同时触发「检查器零接线」+「声明未挂门（gate=pr）」两条。<br>关键机制：<code>wiring.js</code> 的&quot;检查器&quot;集合 = <code>scripts/ci/*</code> ∪ <strong>全部规则声明的 <code>exec.script</code></strong><br>（<code>loadBinding</code> 把每条规则的 <code>exec.script</code> 作为 <code>extraCheckers</code> 注入），<br>所以 <code>scripts/ci/</code> 之外的文件同样要满足「有门引用」。<br>修复：<code>package.json</code> 补 <code>&quot;maintenance:organize&quot;: &quot;python scripts/maintenance/organize.py&quot;</code>。</p>
+<p><strong>C. <code>ruleguard</code> 对 <code>.py</code> 执行器的缺陷（已登记，未修）</strong><br><code>wiring.js</code> 的 <code>CHECKER_SUFFIXES</code> 收 <code>.py</code>，但 <code>run.js</code> 一律 <code>spawnSync(process.execPath, ...)</code><br>→ <code>node scripts/maintenance/organize.py</code> 必然失败。实测表现为一条 <code>checker-failure</code><br>（<code>LAYOUT-004</code> 是 P2/ratchet → <strong>不阻断</strong>，<code>overBaseline = 0</code>）。属实质缺陷，需单独立项。</p>
+<h3 id="基线取值的硬教训-差点填错">基线取值的硬教训（差点填错）<a class="anchor" href="#基线取值的硬教训-差点填错" aria-label="锚点">#</a></h3>
+<p><code>run.js</code> 对 <code>strength === 'ratchet'</code>（P2）的规则<strong>按全部 finding 计数</strong> ——<br><code>ratchetObserved[rule] += 1</code> 写在 <code>else if (finding.strength === 'ratchet')</code> 分支里，<br><strong>在 severity 判断之外</strong>，所以 error 与 warning 都算。<br>只看人类可读的 <code>Summary: 4 error(s), 7 warning(s)</code> 会填成 <code>4</code>；<br><strong>实测棘轮观测值 = 11</strong>，填 <code>4</code> 会让 pr 档当场判 7 条超额阻断。<br>取值方式：写探针调 <code>parseFindings</code> + <code>mapToRules</code> + <code>selectCheckers</code>，或直接读<br><code>node scripts/ruleguard/index.js run --mode pr --json</code> 报告的 <code>ratchet</code> 字段。<br>（探针留在 <code>.khyos/tmp/probe-docs003.js</code>，可复用于任何规则。）</p>
+<h3 id="订正自己上一段的文档错误">订正自己上一段的文档错误<a class="anchor" href="#订正自己上一段的文档错误" aria-label="锚点">#</a></h3>
+<p>上一段给 <code>DESIGN-DOC-002</code> 写的 §8 第 1 步第 3 条「<code>AGENTS.md</code> 顶部标记行追加 <code>DOCS-003</code>」<strong>是错的</strong>：<br><code>&lt;!-- RULES-REGISTRY: ID --&gt;</code> 的语义是「<strong>本文件是这些规则的 ssot</strong>」，不是「本文件受这些规则管辖」。<br><code>AGENTS.md</code> 是 <code>RUNTIME-001</code>~<code>004</code> 的 ssot，往里塞 <code>DOCS-003</code> 等于伪造 ssot 声明。<br><code>check-rules-registry.js</code> 的孤儿标记检查<strong>只扫登记表 <code>ssot</code> 指向的文件</strong> → 不写也不会红。<br>已把该条改为「不需要，且做了是错的」并写清理由；同时把 §8 全部改为带执行状态与执行实录。</p>
+<h3 id="验证-全绿-均为实跑">验证（全绿，均为实跑）<a class="anchor" href="#验证-全绿-均为实跑" aria-label="锚点">#</a></h3>
+<pre><code>node scripts/ci/check-wiring.js          → 通过：72 个检查器全部接线（豁免 9 项）
+node scripts/ci/check-gov-rules.js       → 通过（GOV-MOD-004 / TOOL-004 / TOOL-005 / TOOL-006）
+node scripts/ci/check-rules-registry.js  → 通过（39 error → 0）
+npm run rules:coverage --ci              → exit 0（enforced 64/69 = 92.8%，无红线）
+node scripts/ruleguard/index.js manifest → 69 条规则 / 37 执行器；LAYOUT-004、DOCS-003 均 enforced
+node scripts/ruleguard/index.js run --mode pr --json
+                                         → overBaseline = 0；DOCS-003 11 条全部 allowed
+node scripts/docs/build_docs_site.js     → 983 页
+node scripts/docs/verify_docs_site.js    → ✅ 983 md / 984 html / 11799 链接
+node scripts/ci/check-repo-layout.js --list=docs-index-complete → counts 与 baseline 全等</code></pre>
+<p>pr 档 3 条 blocking 均为<strong>既有</strong>（<code>validate-json-schemas</code> / <code>check-code-standards</code> /<br><code>check-protocol-naming</code> 三个执行器 exit 1 且无可解析 finding），与本次改动无关。</p>
+<h3 id="遗留-2">遗留<a class="anchor" href="#遗留-2" aria-label="锚点">#</a></h3>
+<ol><li><code>DOCS-003</code> 第 3 步「收口」未做：11 条存量未清、基线未归零、<code>AGENTS.md</code> 22670 字符未拆分。</li><li><code>ruleguard</code> 的 <code>.py</code> 执行器缺陷（上 C）。</li><li><code>docs/10_规范/规则卡/</code> 有 134 个 <code>AM</code>（索引落后工作区）—— 属会话外既有状态，未处理。</li><li><strong>pr 档 ruleguard 没有被任何 CI workflow 调用</strong>（本次实测发现，已写进 <code>[DESIGN-DOC-002]</code> §8 执行实录 D）：</li></ol>
+<p><code>pr-gate.yml</code> 逐条列了 20 余个检查器步骤 + <code>coverage</code>，<strong>唯独没有 <code>npm run rules:gate</code></strong>；<br>   <code>check:structure</code> 也没有它；<code>pre-commit</code> 只跑 <code>--mode commit</code>，而 commit 档只选带 <code>--changed</code><br>   的执行器 → <strong><code>DOCS-003</code> 在 CI 里不会自动执行</strong>。<br>   <strong>判据订正</strong>：<code>check-wiring.js</code> 判的「已接线」= 「执行器被某个门<strong>表面</strong>引用」，<br>   <code>check:agent-docs</code> 别名本身就构成一个表面 → <strong>「表面被引用」≠「CI 真的会跑」</strong>。<br>   修它要先修 3 条既有 blocking 失败（<code>validate-json-schemas</code> / <code>check-code-standards</code> /<br>   <code>check-protocol-naming</code>），并入第 3 步。</p>
+<h3 id="迁移后-17-场景全量复跑-全部符合期望">迁移后 17 场景全量复跑（全部符合期望）<a class="anchor" href="#迁移后-17-场景全量复跑-全部符合期望" aria-label="锚点">#</a></h3>
+<p><code>for s in ...; do node scripts/ci/check-agent-docs.js --scenario=$s; done</code> → <strong>11 拦 / 6 放行</strong>。<br>顺带订正文档 §9 的两处不实记载：「12 个应拦、5 个应放行」→ 实为 <strong>11 / 6</strong>；<br><code>duplication</code> 实测 <strong>2 warning</strong>（D8 按文件分报，A、B 各一条），原写 1 warning。</p>
+<h3 id="记忆维护">记忆维护<a class="anchor" href="#记忆维护" aria-label="锚点">#</a></h3>
+<p><code>MEMORY.md</code> 14587 → 13737 字节：合并重复条目（原 §七.2/§七.3/§八.7 三处讲同一件事）、<br>压缩 §六/§八 的正文（完整版已在 <code>MEMORY-details.md</code> §七 与 <code>[DESIGN-DOC-002]</code>），<br>同时新增 5 条本次硬事实（<code>AM</code> 陷阱、<code>docs/_规范</code> 废止形式、<code>extraCheckers</code> 语义、<br>棘轮全量计数陷阱、<code>.py</code> 执行器缺陷）。<strong>仍接近注入截断阈值，下次维护应继续拆到 details。</strong></p>
+<hr>
+<h2 id="第三段-修复-ruleguard-的-py-执行器缺陷-第二段遗留项-2-收口">第三段 · 修复 <code>ruleguard</code> 的 <code>.py</code> 执行器缺陷（第二段遗留项 2 收口）<a class="anchor" href="#第三段-修复-ruleguard-的-py-执行器缺陷-第二段遗留项-2-收口" aria-label="锚点">#</a></h2>
+<p>第二段把 <code>LAYOUT-004</code> 的执行器 <code>scripts/maintenance/organize.py</code> 接进门后，<strong>连带暴露</strong>了<br><code>ruleguard</code> 的一个实质缺陷（此前因 <code>LAYOUT-004</code> 是 P2/ratchet 不阻断而长期无人察觉）：</p>
+<ul><li>根因：<code>scripts/ruleguard/lib/wiring.js</code> 的 <code>CHECKER_SUFFIXES = ['.js','.mjs','.cjs','.py']</code></li></ul>
+<p><strong>收 <code>.py</code> 为检查器</strong>，但 <code>lib/run.js</code> <strong>一律</strong> <code>spawnSync(process.execPath, [script, ...args])</code><br>  → <code>.py</code> 被 <code>node</code> 当 JS 解析，必然失败 → 一条 <code>checker-failure</code>。</p>
+<ul><li>修复（两步，均叶子改动，不碰业务）：<ol><li><strong>新建 <code>scripts/lib/pythonInterpreter.js</code></strong> —— 纯叶子，零外部依赖、确定性、<strong>绝不抛</strong>；</li></ol></li></ul>
+<p>导出 <code>interpreterFor(scriptRel)</code> / <code>runnerLabel(scriptRel)</code> / <code>resolvePythonCommand()</code>，<br>     支持注入 <code>spawn</code> 以便离线单测。<br>     <strong>探测必须看退出码而非「命令是否存在」</strong>：Windows 未装 Python 时 <code>python</code> 会被<br>     Microsoft Store 占位程序接管（存在、能启动、<strong>退出码非 0</strong>），只查 <code>which</code> 会误判可用。<br>     候选顺序 win <code>python → py → python3</code>、POSIX 反之。<br>     <strong>刻意不复用 <code>scripts/ci/run-python.js</code></strong>：它是 CLI 不是模块，且内部<br>     <code>require('../../services/backend/src/tools/platformUtils')</code> 是会被 <code>check:layout</code> 的<br>     <code>cross-layer-require</code> 计入基线的跨 workspace 深层相对 require。</p>
+<ol><li><strong>改造 <code>scripts/ruleguard/lib/run.js</code></strong> —— 按后缀分派解释器（<code>.py</code>→python，其余→</li></ol>
+<p><code>process.execPath</code>）；拿不到解释器时不 spawn，直接以 <code>runner.reason</code> 生成可读<br>     <code>checker-failure</code>；<code>checker-failure</code> 文案统一改用 <code>runnerLabel()</code>（显示真实启动命令）。</p>
+<h3 id="验收-全部实测">验收（全部实测）<a class="anchor" href="#验收-全部实测" aria-label="锚点">#</a></h3>
+<ul><li>叶子单元探针 8 项全过：候选顺序、<strong>只认退出码 0</strong>、异常不炸、<code>.py</code>→python / <code>.js|.mjs</code>→node、</li></ul>
+<p>缺解释器给可读 reason。</p>
+<ul><li><code>python scripts/maintenance/organize.py --report</code> → <strong>exit 0，耗时 1.44s</strong></li></ul>
+<p>（原先误以为它退出码非 0）。</p>
+<ul><li>重跑 pr 档 <code>ruleguard run --mode pr --json</code>（输出 <code>.khyos/tmp/pr-gate2.json</code>）：</li></ul>
+<p><strong><code>LAYOUT-004</code> 的 <code>checker-failure</code> 由 1 条降为 0 条</strong>；<br>  <code>overBaseline = 0</code>；<code>ratchet.allowed = { SOURCING-005: 352, DOCS-003: 11 }</code>；<br>  <code>blocking = 3</code>，逐条核对<strong>仍全是既有存量</strong>（<code>validate-json-schemas</code> /<br>  <code>check-code-standards</code> / <code>check-protocol-naming</code> 三个执行器 exit 1 且无可解析 finding），<br>  与本次改动无关。</p>
+<h3 id="文档同步">文档同步<a class="anchor" href="#文档同步" aria-label="锚点">#</a></h3>
+<p><code>docs/10_规范/[DESIGN-DOC-002] AI 指令文件标准.md</code> §8：</p>
+<ul><li>原「执行实录」的 <strong>C 与 D 之间</strong>那条「遗留（<strong>未在本次修</strong>）」段落 → 改写为</li></ul>
+<p><strong>「C2. <code>ruleguard</code> 对 <code>.py</code> 执行器的解释器缺陷（已修复）」</strong>，含根因、两步方案、<br>  「按退出码判定」的理由、不复用 <code>run-python.js</code> 的理由、验收数据。</p>
+<ul><li>§8 头部「执行状态」补一句：第 2 步含<strong>登记表修复</strong>与<strong>执行器解释器缺陷修复</strong>各一处。</li><li>剩余「未修」只剩 <strong>D</strong>（pr 档 ruleguard 未被任何 CI workflow 调用），表述正确无需改。</li></ul>
+<h3 id="遗留-更新">遗留（更新）<a class="anchor" href="#遗留-更新" aria-label="锚点">#</a></h3>
+<ol><li><code>DOCS-003</code> 第 3 步「收口」未做：11 条存量未清、基线未归零、<code>AGENTS.md</code> 22670 字符未拆分。</li><li><del><code>ruleguard</code> 的 <code>.py</code> 执行器缺陷</del> → <strong>本段已修</strong>。</li><li><code>docs/10_规范/规则卡/</code> 有 134 个 <code>AM</code>（索引落后工作区）—— 会话外既有状态，未处理。</li><li><strong>pr 档 ruleguard 未被任何 CI workflow 调用</strong>（未修，见 <code>[DESIGN-DOC-002]</code> §8 执行实录 D）。</li></ol>
+<hr>
+<h2 id="第四段-第-3-步-收口-落地-含一处-重大判据订正">第四段 · 第 3 步「收口」落地（含一处<strong>重大判据订正</strong>）<a class="anchor" href="#第四段-第-3-步-收口-落地-含一处-重大判据订正" aria-label="锚点">#</a></h2>
+<h3 id="头号发现-d1-的适用范围写错了-agents-md-根本没被截断">⚠ 头号发现：D1 的适用范围写错了，<code>AGENTS.md</code> 根本没被截断<a class="anchor" href="#头号发现-d1-的适用范围写错了-agents-md-根本没被截断" aria-label="锚点">#</a></h3>
+<p>初版 <code>[DESIGN-DOC-002]</code> §1.1 称 <code>instructionFileService.js</code> 的 <code>MAX_FILE_CHARS=8000</code><br>适用于 compat 层（<code>CLAUDE.md</code>/<code>AGENTS.md</code>），并据此算出「<code>AGENTS.md</code> 22670 字符 →<br>AI 只见 35.3%，截断点第 226 行」。<strong>复核为假。</strong></p>
+<p>真实情况（三条判据链，均可复核）：</p>
+<ol><li><code>instructionFileService.js</code> 的 <code>readFileSafe()</code> 只在 <code>loadInstructions()</code> 装配</li></ol>
+<p><strong>own 层</strong>（<code>khy.md</code>/<code>KHY.md</code> + <code>.khy/rules/*.md</code> + <code>@include</code> 目标）时被调用。</p>
+<ol><li>compat 层的真实读取方是 <strong><code>constants/prompts.js</code> 的 <code>_findCompatInstructionFiles()</code></strong> ——</li></ol>
+<p><code>fs.readFileSync(...).trim()</code>，<strong>没有 <code>slice</code></strong>，随后 <code>getProjectInstructionsSection()</code><br>   把全文 push 进 <code>project_instructions</code> 系统提示词段。</p>
+<ol><li><code>instructionEcosystemRegistry.js</code> 明写「Project-level AGENTS.md is already handled by</li></ol>
+<p>prompts.js compatibility discovery」—— 生态层<strong>刻意不重复收纳</strong> compat。</p>
+<p><strong>实证</strong>（直接调用真实注入函数）：</p>
+<pre><code>getProjectInstructionsSection(cwd).length                                  // 33823
+.includes(fs.readFileSync('AGENTS.md','utf8').trim())  // true（全文 22668 字符都在）
+.includes(fs.readFileSync('CLAUDE.md','utf8').trim())  // true</code></pre>
+<p>补充：<code>COMPAT_FILENAMES = ['CLAUDE.md','.claude/CLAUDE.md','AGENTS.md',...]</code>（CLAUDE 先于<br>AGENTS）；<code>findFirstInstructionFile()</code> 只用 <code>FILENAMES</code>（<code>khy.md</code>），<strong>不含</strong> COMPAT。</p>
+<p><strong>根因</strong>：初版把「守卫自己的输出」当实测证据 —— 守卫套错常量，文档再引守卫，<br><strong>构成循环论证</strong>。教训：<strong>守卫的输出不能自证其判据，判据必须回到运行时源码复核。</strong></p>
+<h3 id="连带撤回-拆分-agents-md">连带撤回「拆分 AGENTS.md」<a class="anchor" href="#连带撤回-拆分-agents-md" aria-label="锚点">#</a></h3>
+<p>收口初动时曾按初版清单新建 <code>docs/10_规范/[DESIGN-RUNTIME-001] 工程规则…</code> 并准备搬走<br><code>AGENTS.md</code> 的工程规则正文 + 迁移 <code>RUNTIME-001</code>~<code>004</code> 的 <code>ssot</code> + 挪 <code>RULES-REGISTRY</code><br>标记行。发现 §1.2 为假后<strong>立即撤回</strong>（新文档已删，登记表 <code>ssot</code> 未改，<code>meta.ruleCount</code> 不动）。<br>理由：拆了会把「已 100% 送达」降级成「要 AI 自己点开指针」，是净损失（公理 A4）。</p>
+<p>顺带订正两处<strong>误引</strong>：</p>
+<ul><li><code>AGENTS.md</code> 称「保留规则正文以满足『改代码的人不必跳文件』的福利（<code>[MGMT-STD-008]</code> §4.6）」</li></ul>
+<p>—— §4.6 实为<strong>正向激励</strong>（模板/自动过守卫/快通道/看板），<strong>无此条款</strong>。</p>
+<ul><li>§3.2 的「正文只做指针+摘要，语义真源另存」语境是「<strong>跨域引用</strong>用 ID，不抄正文」，</li></ul>
+<p>不是要求 ssot 文件搬走正文。</p>
+<h3 id="收口步修掉的-5-处误报-每处都配-应拦-应放行-对照场景回归锁">收口步修掉的 5 处误报（每处都配「应拦 + 应放行」对照场景回归锁）<a class="anchor" href="#收口步修掉的-5-处误报-每处都配-应拦-应放行-对照场景回归锁" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>处</th><th>误报</th><th>修法</th></tr></thead><tbody><tr><td>D1 ×2</td><td>compat 层无读取预算</td><td><code>checkBudget</code> 开头 <code>if (tier === 'compat') return;</code></td></tr><tr><td>D6 ×2</td><td><code>[MGMT-STD-001]</code> §1.3 管辖<strong>显式限于 <code>.md</code>/<code>.txt</code></strong>（原文佐证），<code>.windsurfrules</code> 无扩展名</td><td>新增 <code>readRootDocExt()</code> 复用 <code>check-repo-layout.js</code> 的 <code>ROOT_DOC_EXT_RE</code>；只收窄<strong>根级</strong>分支，<code>_产物/</code> 分支不变</td></tr><tr><td>D2 ×1（收口途中新发现）</td><td><code>tui/AGENTS.md:27</code>「✅ 新增文件优先于修改现有文件」是普通编码指引</td><td><code>优先于</code> 命中时要求<strong>同一行</strong>出现指令文件宾语（`AGENTS</td></tr></tbody></table>
+<p>横幅也订正了（原宣告「own/compat 8000、合并 24000」但合并预算<strong>从未被检查</strong>）：<br>现改为分列 own / eco / compat（注明 compat 无预算，真源 <code>prompts.js</code>）。</p>
+<h3 id="真违规-7-条-全部清零">真违规 7 条 → 全部清零<a class="anchor" href="#真违规-7-条-全部清零" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>判据</th><th>位置</th><th>处理</th></tr></thead><tbody><tr><td>D6</td><td><code>_产物/khy.md</code></td><td>删除（Y-CODE 项目内容、全仓零引用；备份 <code>.khyos/tmp/khy.md.bak</code>）</td></tr><tr><td>D3a</td><td><code>tui/AGENTS.md:684</code></td><td><code>--workspace backend</code> → <code>--workspace services/backend</code>（<code>test:tui</code> 确在 backend 包里）</td></tr><tr><td>D2</td><td><code>tui/AGENTS.md:5</code></td><td>删自封优先级，改为声明<strong>不自封</strong>并说明运行时由 cwd 决定各自生效</td></tr><tr><td>D3c ×2</td><td><code>AGENTS.md:729</code></td><td>删「文档合规（2026-09-12 重构）」变更日志节（GUIDE 阶段目录已整体不存在；信息已固化在 <code>[DESIGN-GOV-001]</code> §8）</td></tr><tr><td>D3d</td><td><code>CLAUDE.md:53</code></td><td>删 <code>.claude/commands/goal.md</code> 死引用（<code>.claude/</code> 下只有 <code>worktrees/</code>）</td></tr><tr><td>D3d</td><td><code>apps/khyos-desktop/CLAUDE.md:99</code></td><td>改为如实记载「无自动守卫，按下表人工核对」（<code>check-brand-replacement.js</code> 全仓不存在）</td></tr></tbody></table>
+<h3 id="验收">验收<a class="anchor" href="#验收" aria-label="锚点">#</a></h3>
+<pre><code>check-agent-docs.js   → 0 error / 0 warning（9 个指令文件，原 11 条）
+场景矩阵              → 17 → 22（13 拦 / 9 放行），新增 5 个均为误报回归锁
+基线                  → &quot;DOCS-003&quot;: 11 → 0（P2 保持，不提级：基线 0 已等价「新增即阻断」）
+pr 档 ruleguard       → DOCS-003 violations 0；overBaseline 0；violations 393 → 382；
+                        blocking 3 条仍是既有存量（validate-json-schemas / check-code-standards /
+                        check-protocol-naming），与本次无关
+docs:verify/wiring/gov-rules/rules-registry/layout/coverage → 全绿</code></pre>
+<h3 id="并发会话产物-需向用户点明">⚠ 并发会话产物（需向用户点明）<a class="anchor" href="#并发会话产物-需向用户点明" aria-label="锚点">#</a></h3>
+<p><code>docs/10_规范/其它规范/[DESIGN-PROCESS-001] 委派边界决策矩阵-第六通道外部智能体.md</code><br>（规则 <code>PROCESS-004</code>，带 <code>RULES-REGISTRY</code> 标记行）于 <strong>21:11</strong> 出现在工作区 —— <strong>不是本会话<br>创建</strong>，属并发会话/自动化产物。它使 <code>docs-index-complete</code> 从基线 0 顶到 1（promoted to error，<br><code>check:layout</code> 转红）。已按既有条目样式<strong>补两处索引</strong>（主索引 <code>docs/00_INDEX_文档索引.md</code> +<br>就近 <code>docs/03_DESIGN_设计/00_INDEX_设计-分类索引.md</code>）使其回到基线 0。<br><strong>注意它尚未登记进 <code>RULES-REGISTRY.json</code></strong>（<code>PROCESS-004</code> 目前不在 69 条里），<br>后续需由它的作者完成登记 + 规则卡 + 接线三步。</p>
+<h2 id="五-把-rules-gate-接进-pr-gate-yml-承接上文-用户答-要">五、把 <code>rules:gate</code> 接进 <code>pr-gate.yml</code>（承接上文，用户答「要」）<a class="anchor" href="#五-把-rules-gate-接进-pr-gate-yml-承接上文-用户答-要" aria-label="锚点">#</a></h2>
+<p><strong>先做的不是改代码，是量状态</strong>（上一轮吃过「把守卫输出当实测」的亏，这次反过来）：<br><code>git worktree add --detach .khyos/tmp/ci-sim HEAD</code> 造干净检出实测三执行器。</p>
+<p><strong>实测四条硬事实</strong>：</p>
+<ol><li><code>pr-gate.yml</code> 原本<strong>根本不跑</strong> <code>check:json-schemas</code>/<code>check:protocol-naming</code>/<code>check:code-standards</code></li></ol>
+<p>（只在 npm 别名 <code>check:structure</code>/<code>check:all-standards</code> 里）→ 接 <code>rules:gate</code> 等于首次在 CI 启用。</p>
+<ol><li><code>check-code-standards.js</code>、<code>check-protocol-naming.js</code> <strong>从未入仓</strong>（<code>git ls-files</code> 无记录）。</li><li>干净检出上 <code>validate-json-schemas</code> 直接 <code>.khy/ 不存在，跳过</code> → exit 0（本地却因</li></ol>
+<p><code>.khy/_pn1.json</code> 的 BOM 报错）。<code>.khy/</code> 入仓 0 文件、整体 gitignore。</p>
+<ol><li>干净检出上 <code>check-code-standards</code> 仍 <code>COM-001: 4592 &gt; 4584</code> 越线；本地 4625。</li></ol>
+<p>即越线<strong>不全是</strong>未提交代码造成的（差 29 个文件、+33/+4/+5/+30）。</p>
+<p><strong>改动</strong>（4 个文件）：</p>
+<ul><li><code>scripts/ci/validate-json-schemas.js</code>：扫描根被 gitignore 即跳过 + 打印真空转警示（exit 1 → 0）。</li></ul>
+<p>同时把「COMMS-002 登记 paths 与执行器实际范围不符」写进告警，交规则 owner。</p>
+<ul><li><code>scripts/ci/protocol-naming.json</code>：新增 <code>definitionCarrierExempt</code>（RULES-REGISTRY.json +</li></ul>
+<p>register-external-rules.js，reason 必填）；skipDirs 补 <code>.workbuddy</code>、<code>_产物</code>。</p>
+<ul><li><code>scripts/ci/check-protocol-naming.js</code>：<code>isExempt()</code> 读配置化豁免（4 error → 0）。</li><li><code>.github/workflows/pr-gate.yml</code>：新增 <code>Check rule gate (report only — shadow mode)</code>，</li></ul>
+<p><code>npm run rules:gate</code> + <code>continue-on-error: true</code>，注释里写清上报档的三条理由与转阻断三条件。</p>
+<p><strong>验收</strong>：pr 档 ruleguard <code>blocking 3 → 1</code>（只剩 code-standards）、<code>violations 382 → 380</code>、<br><code>overBaseline 0</code>、DOCS-003 仍 0；<code>check-agent-docs</code>/<code>check:wiring</code>(73)/<code>check:gov-rules</code>/<br><code>check:protocol-naming</code> 全绿；<code>node --test scripts/tests/ruleguard.test.js</code> 29/29。<br><strong>未做</strong>：抬 <code>code-standards.baseline.json</code>（= 洗未提交代码的债），上报档已能出信号。</p>
+<h2 id="六-收尾验证与最后一条-blocking-的归因">六、收尾验证与最后一条 blocking 的归因<a class="anchor" href="#六-收尾验证与最后一条-blocking-的归因" aria-label="锚点">#</a></h2>
+<p><strong>关键闭环验证</strong>：从 <code>_rg_pr2.json</code> 的 <code>checkers[]</code> 里确认 <code>scripts/ci/check-agent-docs.js</code><br><strong>确实在 <code>--mode pr</code> 下被跑到</strong>（<code>code: 0, errorCount: 0, durationMs: 1255</code>）<br>→ 「DOCS-003 在 CI 里不会跑」这个原始缺口，已被上报档真正闭合（不是只加了 step 而已）。</p>
+<p><strong>遗留项状态</strong>：<code>PROCESS-004</code> 已登记进 <code>RULES-REGISTRY.json</code>（规则 70 条，<code>meta.ruleCount=70</code><br>同步），<code>[DESIGN-PROCESS-001]</code> 的登记三步已由它的作者完成，本会话无需补做。</p>
+<p><strong>最后一条 blocking 的归因</strong>（<code>check-code-standards</code>）：</p>
+<ul><li>干净检出 COM-001 4592 &gt; 4584（<strong>已提交代码本身超 8</strong>）；本地 4625。</li><li>未提交增量集中在 3 个未跟踪文件：<code>cli/handlers/cleanup.js</code> 41 个 <code>console.*</code>、</li></ul>
+<p><code>crossPlatform/ws/e2e-test.js</code> 14 个、<code>cli/handlers/turnRollback.js</code> 1 个。</p>
+<ul><li><strong>疑似误报（只标记未改）</strong>：排除规则 <code>endswith('.test.js'|'.spec.js')</code> 漏掉了</li></ul>
+<p><code>e2e-test.js</code>（后缀是 <code>-test.js</code>），它被按生产代码标准计入 14 个 <code>console.*</code>。<br>  改排除规则会动基线，属策略决定，交规则 owner。</p>
+<p><strong>顺带验证</strong>：COMMS-002 声明的两个路径里共 15 个 schema，用 meta-schema 校验时 4 个报<br><code>no schema with key or ref draft/2020-12</code> —— 这是<strong>探针假象</strong>（ajv v8 默认 draft-07，<br>2020-12 需 <code>ajv/dist/2020</code>），不是真缺陷。没有据此改执行器扫描范围：<br>把「实例 vs 映射 schema」模型套到「目录里本身就是 schema」的文件上是错配，<br>且 COMMS-002 的约束（ACP 方法登记五要素）本就不是 schema 合法性检查 —— 重定范围是<br>规则 owner 的决定，保持「跳过 + 打印真空转告警」。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../.workbuddy-ai/memory/2026-09-15.html"><div class="dir">← 上一篇</div><div class="ttl">2026-09-15 工作日志</div></a><a class="next" href="../../.workbuddy-ai/memory/2026-09-17.html"><div class="dir">下一篇 →</div><div class="ttl">版本管理与发布触发规则（DESIGN-ARCH-118 / PROCESS-005）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__=".workbuddy-ai/memory/2026-09-16.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

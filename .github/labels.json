@@ -2,7 +2,7 @@
   {
     "_comment": "标签体系单一事实来源（Single Source of Truth）。由 .github/workflows/labels-sync.yml 手动触发同步到 GitHub。",
     "_comment2": "刻意使用 JSON 而非 YAML：Node 可原生 require，同步脚本零第三方依赖。",
-    "_comment3": "area/* 刻意只保留粗粒度模块。docs/_维护者/维护映射表.json 里的 111 个细粒度 area 继续只服务 CODEOWNERS——把 111 个 area 做成标签会让标签面板彻底不可用。",
+    "_comment3": "area/* 刻意只保留粗粒度模块。docs/14_维护者/registry/维护映射表.json 里的 111 个细粒度 area 继续只服务 CODEOWNERS——把 111 个 area 做成标签会让标签面板彻底不可用。",
     "_schema": "后续条目为真实标签，键：name / color(6位hex,无#) / description"
   },
 

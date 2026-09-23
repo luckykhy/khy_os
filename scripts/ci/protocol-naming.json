@@ -1,0 +1,106 @@
+{
+  "_note": "协议命名守卫的单一真源。改这里即改规则。真源规范：docs/10_规范/其它规范/[DESIGN-NAM-002] A2A 与 ACP 命名及术语规范.md",
+  "_why": "仓库里有两个都被称为 A2A 的东西（标准 Agent2Agent 协议 / khy-os 私有进程内 ACP 方言）。历史上文档把后者逐字写成「A2A 协议规范」，且方法名用的是一套实现中零存在的虚构集合，外部读者据此对接必然失败。",
+  "exemptMarker": "naming-guard: exempt",
+  "exemptMarkerMaxLine": 40,
+  "_definitionCarrierNote": "规则自身有两个载体是 JSON 与 JS：RULES-REGISTRY.json 里写不了注释（JSON 语法不允许），register-external-rules.js 是同一段 constraint 的 JS 副本。二者与已豁免的 docs/10_规范/规则卡/[NAM-002] 处境完全相同 —— 必须引用被禁名称才能定义「什么算违规」，但语法上承载不了豁免标记。故在此按同一口径登记，reason 必填，并随豁免清单一并打印，保持可审。",
+  "definitionCarrierExempt": [
+    {
+      "file": "docs/10_规范/registry/RULES-REGISTRY.json",
+      "reason": "NAM-002 的 constraint 正文，必须引用错误命名才能定义违规"
+    },
+    {
+      "file": "scripts/ruleguard/register-external-rules.js",
+      "reason": "同一 constraint 的 JS 副本，用于把 NAM-002 注册进 ruleguard"
+    }
+  ],
+  "_methodPatternNote": "排除文件名误报：末段若是常见文件扩展名（a2a.test.js / a2a.spec.ts）不算方法名。",
+  "forbiddenMethodPattern": "\\ba2a\\.[a-z][a-z0-9_]*\\.(?!(?:js|ts|tsx|mjs|cjs|json|md|html|yml|yaml|vue|txt)\\b)[a-z][a-z0-9_]*\\b",
+  "forbiddenMethodHint": "a2a.<域>.<动作> 形式的方法名在实现中零存在（实测只出现在文档里）。私有 ACP 的真实方法集见 acpTransport.ACP_METHODS。",
+  "envPrefix": "KHY_A2A_",
+  "_envNote": "KHY_A2A_* 属于标准 A2A。a2aEnvAllowlist = 已存在且归属正确；acpLegacyEnv = 私有 ACP 历史误用，P2 重命名为 KHY_ACP_*。二者之外的新 KHY_A2A_* 一律报错。",
+  "a2aEnvAllowlist": [
+    "KHY_A2A_ENABLED",
+    "KHY_A2A_PUBLIC_URL",
+    "KHY_A2A_API_KEY",
+    "KHY_A2A_AGENT_VERSION",
+    "KHY_A2A_TIMEOUT_MS",
+    "KHY_A2A_LEGACY_AGENT_JSON",
+    "KHY_A2A_STRICT_TASK_STATE"
+  ],
+  "acpLegacyEnv": [
+    "KHY_A2A_HEARTBEAT_INTERVAL",
+    "KHY_A2A_HEARTBEAT_TIMEOUT",
+    "KHY_A2A_MAX_TASKS_PER_AGENT",
+    "KHY_A2A_MAX_RETRIES",
+    "KHY_A2A_RETRY_DELAY_MS",
+    "KHY_A2A_MESSAGE_TIMEOUT_MS",
+    "KHY_A2A_MAX_QUEUE_SIZE",
+    "KHY_A2A_MAX_DEPTH",
+    "KHY_A2A_MAX_CHILDREN",
+    "KHY_A2A_AGENT_TIMEOUT_MS",
+    "KHY_A2A_MAX_TOTAL_AGENTS",
+    "KHY_A2A_WORKSPACE_DIR",
+    "KHY_A2A_DEAD_LETTER_ENABLED"
+  ],
+  "acpEnvPrefix": "KHY_ACP_",
+  "privateAcpMethods": [
+    "agent.spawn",
+    "agent.kill",
+    "agent.status",
+    "task.submit",
+    "task.result",
+    "task.progress",
+    "context.share",
+    "tool.invoke",
+    "tool.result",
+    "message.send",
+    "message.broadcast",
+    "heartbeat"
+  ],
+  "privateTaskStates": [
+    "pending",
+    "spawning",
+    "waiting",
+    "completing",
+    "killing",
+    "killed",
+    "timed_out"
+  ],
+  "privateDialectDocs": [
+    "[DESIGN-A2A-001]",
+    "[DESIGN-ACP-"
+  ],
+  "privateDialectQualifiers": ["私有", "进程内"],
+  "contractsA2aDir": "services/backend/src/contracts/a2a",
+  "acpTransportFile": "services/backend/src/services/acpTransport.js",
+  "acpSchemaFile": "services/backend/src/contracts/acp/acp-message.schema.json",
+  "scanExtensions": [".js", ".cjs", ".mjs", ".ts", ".tsx", ".vue", ".md", ".json", ".yml", ".yaml"],
+  "skipDirs": [
+    ".git",
+    "node_modules",
+    "dist",
+    "dist-ts",
+    "out",
+    "build",
+    "coverage",
+    ".khy",
+    ".khyos",
+    ".khy-Trajectory",
+    ".workbuddy",
+    "_产物",
+    ".research-tmp",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "vendor",
+    "third_party",
+    "site-packages",
+    "logs",
+    ".cache",
+    ".tmp",
+    ".angular",
+    "muya-embed",
+    "quarantine-20260915"
+  ]
+}

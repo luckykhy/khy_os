@@ -1,6 +1,6 @@
 'use strict';
 
-const { renderRepoMap, _internal } = require('../../../src/services/repoMap/repoMapRenderer');
+const { renderRepoMap, _internal } = require('../../../src/services/domain/build/repoMap/repoMapRenderer.js');
 
 /** Build a minimal ctx like the one _collectContext produces. */
 function makeCtx(overrides = {}) {
@@ -10,7 +10,7 @@ function makeCtx(overrides = {}) {
       entryPoints: [{ kind: 'node-main', path: 'src/index.js', hint: 'package.json#main' }],
       inferred: [],
     },
-    tree: '- `src/` �?源代码主目录\n  - `src/services/` �?服务/业务逻辑',
+    tree: '- `src/` �?源代码主目录\n  - `src/services/` �?服务/业务逻辑',
     symbolFiles: [
       { rel: 'src/utils/helper.js', lang: 'javascript', symbols: [{ kind: 'fn', name: 'helperA' }] },
       {

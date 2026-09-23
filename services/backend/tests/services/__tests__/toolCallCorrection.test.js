@@ -9,7 +9,7 @@
  *  - 无需纠正：精确已知名 / 完全无关名 → null（后者交后续失败分支，错误信号不丢）
  *  - 门控：KHY_TOOL_NAME_CORRECTION 默认开，显式关
  */
-const corr = require('../toolCallCorrection');
+const corr = require('../../../src/services/toolCallCorrection.js');
 const KNOWN = [
   'read_file',
   'write_file',

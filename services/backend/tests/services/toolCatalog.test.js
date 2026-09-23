@@ -8,7 +8,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const tc = require('../../src/services/toolCatalog/toolCatalog');
+const tc = require('../../src/services/toolCatalog');
 
 /** Build a fake registry Map<name, toolDef> from plain objects. */
 function fakeRegistry(tools) {

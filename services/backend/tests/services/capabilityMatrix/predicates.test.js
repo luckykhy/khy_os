@@ -3,7 +3,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 
-const { envFlagEnabled, resolveFlag } = require('../../../src/services/capabilityMatrix/predicates');
+const { envFlagEnabled, resolveFlag } = require('../../../src/services/domain/catalog/capabilityMatrix/predicates.js');
 
 // The exhaustive env-value space every seam flag is parsed against. This is the
 // unit-level proof that isEnabledAt() cannot drift from the inline checks it

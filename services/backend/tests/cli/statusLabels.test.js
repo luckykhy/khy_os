@@ -42,7 +42,7 @@ describe('phaseActionLabel', () => {
   test('maps known phases and falls back generically', () => {
     expect(phaseActionLabel('init')).toBe('初始化链路');
     expect(phaseActionLabel('REQUEST')).toBe('请求上游模型'); // case-insensitive
-    expect(phaseActionLabel('done')).toBe('完成请求');
+    expect(phaseActionLabel('done')).toBe('交付完成');
     expect(phaseActionLabel('mystery')).toBe('推进执行链路');
   });
 });
@@ -160,8 +160,8 @@ describe('thinkingClause', () => {
     expect(thinkingClause('先读配置。再看网关适配器怎么处理内容')).toBe('再看网关适配器怎么处理内容');
     expect(thinkingClause('   ')).toBe('');
     const long = '这是一段非常非常非常非常非常非常非常非常非常非常非常非常非常长的推理需要被裁剪掉尾巴而且更长一些确保超过上限';
-    expect(thinkingClause(long).length).toBeLessThanOrEqual(36);
-    expect(thinkingClause(long).endsWith('…')).toBe(true);
+    expect(thinkingClause(long, 36).length).toBeLessThanOrEqual(36);
+    expect(thinkingClause(long, 36).endsWith('…')).toBe(true);
   });
 });
 
@@ -184,11 +184,11 @@ describe('deriveLiveActivity — real current event', () => {
     expect(deriveLiveActivity({ status: 'tool', statusDetail: '工具执行链路' })).toBe('工具执行链路');
   });
 
-  test('thinking phase → last reasoning clause', () => {
+  test('thinking phase → 分析: + last reasoning clause (规则 2.4)', () => {
     expect(deriveLiveActivity({
       status: 'thinking',
       thinkingTail: '搜到不少文件。让我看核心处理逻辑——网关适配器',
-    })).toBe('让我看核心处理逻辑——网关适配器');
+    })).toBe('分析: 让我看核心处理逻辑——网关适配器');
   });
 
   test('request/summary phases surface the gateway detail (the stall message)', () => {
@@ -208,8 +208,8 @@ describe('deriveLiveActivity — real current event', () => {
     })).toBe('');
   });
 
-  test('empty input → empty string', () => {
+  test('empty input → empty string; empty thinking → 分析用户意图 fallback (规则 2.4)', () => {
     expect(deriveLiveActivity({})).toBe('');
-    expect(deriveLiveActivity({ status: 'thinking' })).toBe('');
+    expect(deriveLiveActivity({ status: 'thinking' })).toBe('分析用户意图');
   });
 });

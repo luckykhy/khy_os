@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-115] TUI 启动板块设计.md -->
+<title>[DESIGN-ARCH-115] TUI 启动板块设计 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-115] TUI 启动板块设计</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-115] TUI 启动板块设计</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-115-tui-启动板块设计">[DESIGN-ARCH-115] TUI 启动板块设计</a></li><li class="lvl-2"><a href="#0-一句话">0. 一句话</a></li><li class="lvl-2"><a href="#1-板块边界">1. 板块边界</a></li><li class="lvl-2"><a href="#2-前置裁决-本文成立的前提">2. 前置裁决（本文成立的前提）</a></li><li class="lvl-3"><a href="#2-1-c-1-主屏-vs-备用屏-已裁定-主屏">2.1 C-1 主屏 vs 备用屏 —— **已裁定：主屏**</a></li><li class="lvl-3"><a href="#2-2-c-2-spinner-帧率-建议-160ms-待维护者确认">2.2 C-2 Spinner 帧率 —— 建议 160ms（待维护者确认）</a></li><li class="lvl-3"><a href="#2-3-c-3-输入框最大高度-建议取-102-待维护者确认">2.3 C-3 输入框最大高度 —— 建议取 102（待维护者确认）</a></li><li class="lvl-3"><a href="#2-4-c-4-启动模型-不是冲突-是实现背离">2.4 C-4 启动模型 —— 不是冲突，是实现背离</a></li><li class="lvl-2"><a href="#3-现状测绘">3. 现状测绘</a></li><li class="lvl-3"><a href="#3-1-五个各自为主的可视件">3.1 五个各自为主的可视件</a></li><li class="lvl-3"><a href="#3-2-真实执行顺序-实测">3.2 真实执行顺序（实测）</a></li><li class="lvl-3"><a href="#3-3-缺陷清单-d1-d11">3.3 缺陷清单（D1–D11）</a></li><li class="lvl-2"><a href="#4-目标架构-节拍链">4. 目标架构：节拍链</a></li><li class="lvl-3"><a href="#4-1-节拍表-六拍-就绪">4.1 节拍表（六拍 + 就绪）</a></li><li class="lvl-3"><a href="#4-2-节拍契约-硬规则">4.2 节拍契约（硬规则）</a></li><li class="lvl-3"><a href="#4-3-两个渲染层与原子交接">4.3 两个渲染层与原子交接</a></li><li class="lvl-2"><a href="#5-视觉规范">5. 视觉规范</a></li><li class="lvl-3"><a href="#5-1-首屏三区-启动期">5.1 首屏三区（启动期）</a></li><li class="lvl-3"><a href="#5-2-硬规则">5.2 硬规则</a></li><li class="lvl-3"><a href="#5-3-宽度与截断">5.3 宽度与截断</a></li><li class="lvl-3"><a href="#5-4-双-logo-收敛-2026-09-23-修订">5.4 双 logo 收敛（2026-09-23 修订）</a></li><li class="lvl-2"><a href="#6-失败态与降级">6. 失败态与降级</a></li><li class="lvl-2"><a href="#7-门控策略-净新增-0-个">7. 门控策略（净新增 0 个）</a></li><li class="lvl-2"><a href="#8-经典模式与-tui-的一致性">8. 经典模式与 TUI 的一致性</a></li><li class="lvl-2"><a href="#9-落地路线与代码落点">9. 落地路线与代码落点</a></li><li class="lvl-2"><a href="#10-验收-可机器验证">10. 验收（可机器验证）</a></li><li class="lvl-2"><a href="#11-不采纳清单-附理由">11. 不采纳清单（附理由）</a></li><li class="lvl-2"><a href="#12-交叉引用与遗留">12. 交叉引用与遗留</a></li><li class="lvl-2"><a href="#13-变更记录">13. 变更记录</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-115-tui-启动板块设计">[DESIGN-ARCH-115] TUI 启动板块设计<a class="anchor" href="#design-arch-115-tui-启动板块设计" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>隶属</strong>：本文属 <strong>TUI 设计族</strong>（20 编号 / 21 文件），总纲与 scope 裁决见 <code>[DESIGN-ARCH-122] TUI 设计族总纲</code>；规则冲突一律以 <code>[DESIGN-ARCH-102] Khy TUI 统一规则手册</code> 为准。</p></blockquote>
+<blockquote><p><strong>状态</strong>：提案（未接线） · <strong>日期</strong>：2026-09-16 · <strong>编号</strong>：[DESIGN-ARCH-115] · <strong>落点目录</strong>：<code>docs/03_DESIGN_设计/</code><br><strong>板块序列</strong>：本文是「khy TUI 按板块设计」的<strong>第一块（启动）</strong>。后续板块（对话 / 工具 / 权限 / 命令 / 看板…）各立文档，<strong>不在本文范围</strong>；本文只定义启动板块的边界、节拍、契约与验收，并确立「板块 = 一段可独立断言的用户可见生命周期」这一划分口径。<br><strong>单一真源声明</strong>：本文是启动板块的<strong>结构真源</strong>。</p>
+<ul><li><strong>不覆盖</strong> <code>[DESIGN-ARCH-102]</code> 的 P1–P8 原则与 H1–H10 硬约束（本文只引用，不改写）；二者冲突一律以 102 为准。</li><li><strong>不覆盖</strong> <code>services/backend/src/cli/tui/AGENTS.md</code> 的 CC 模式约束（§0.6 输入框无边框等）；二者冲突见 §2.2 的裁决建议。</li><li><strong>不替代</strong> <code>[DESIGN-ARCH-079]</code> 的组件尺寸与配色真源，本文只改「启动期组件从哪取尺寸、何时出现」。</li></ul>
+<p><strong>落地目标</strong>（尚未执行，见 §9）：<code>services/backend/src/cli/startupBeats.js</code>（新增，纯叶子）、<code>services/backend/src/cli/tui/ink-components/BootScreen.js</code>（降为渲染器）、<code>services/backend/src/cli/repl/startupHeader.js</code>（共享节拍文案）、<code>services/backend/src/cli/tui/app.js:253-255</code>（C-1 裁决落地）。<br><strong>证据基准</strong>：全部 <code>文件:行号</code> 为 2026-09-16 实测（仓库 <code>D:\Portable\khy-os</code>，分支 <code>main</code>）。凡推测项均显式标注「【推测】」。<br><strong>关联</strong>：[DESIGN-ARCH-102] Khy TUI 统一规则手册 · [DESIGN-ARCH-103] TUI 终端界面重设计方案 · [DESIGN-ARCH-110] TUI-CLASSIC-SYNC 设计笔记 · [DESIGN-ARCH-079] TUI界面设计规范 · [DESIGN-LAY-005] 仓库层级板块规范 · [DESIGN-ARCH-071] 通道选择决策矩阵 · [DESIGN-ARCH-111] 规则遵守保障机制</p></blockquote>
+<hr>
+<h2 id="0-一句话">0. 一句话<a class="anchor" href="#0-一句话" aria-label="锚点">#</a></h2>
+<p>把「从进程启动到输入框可用」从<strong>五个各自为主的可视件</strong>收敛成<strong>一条单向、单调推进、可观测、可降级的节拍链</strong>——界面只是节拍表的投影，TUI / 经典 / pre-Ink 三个渲染器消费<strong>同一份</strong>节拍表。</p>
+<p><strong>为什么必须改</strong>：<code>services/backend/src/cli/tui/AGENTS.md</code> §4.1 早就规定「阶段 2 异步、不阻塞交互」、§0.3 规定「冷启动 &lt; 100ms」、§8.4 把「启动速度 &lt; 100ms」列为最终验收项。而默认路径当前<strong>整屏阻塞 ≥1.9s 才允许输入</strong>，且这 1.9s 由一个<strong>与启动无关的 git 来源探测</strong>决定。</p>
+<blockquote><p><strong>所以本板块不是「缺设计」，是「实现背离了仓库自己写下的设计」。</strong> 本文的工作是把 §4.1 真正落地，而不是另起一套。</p></blockquote>
+<hr>
+<h2 id="1-板块边界">1. 板块边界<a class="anchor" href="#1-板块边界" aria-label="锚点">#</a></h2>
+<p><strong>「板块」的划分口径</strong>：一段<strong>可独立断言的用户可见生命周期</strong>——它有明确的输入、输出、可观测的状态迁移、以及可以单独红灯的验收。</p>
+<table><thead><tr><th></th><th>内容</th></tr></thead><tbody><tr><td><strong>输入</strong></td><td>启动参数、环境变量、<code>.khy/settings.json</code> 级联（用户级 / 项目级 / local / managed）、终端能力（<code>isTTY</code> / 尺寸 / 鼠标）</td></tr><tr><td><strong>输出</strong></td><td>一个<strong>已就绪的 REPL</strong>：三区布局稳定、输入框可提交、网关可用、会话已恢复</td></tr><tr><td><strong>负责</strong></td><td>模式判定（TUI / 经典）、预检与认证、渲染引擎装载与首帧、工作区准备、网关连接、会话恢复、首帧布局</td></tr><tr><td><strong>不负责</strong></td><td>稳态布局与滚动、会话内容渲染、工具执行与权限审批、退出与清理</td></tr><tr><td><strong>边界判据</strong></td><td>「输入框第一次可以提交」是本板块的终点；此后发生的任何事都不属于本板块</td></tr></tbody></table>
+<hr>
+<h2 id="2-前置裁决-本文成立的前提">2. 前置裁决（本文成立的前提）<a class="anchor" href="#2-前置裁决-本文成立的前提" aria-label="锚点">#</a></h2>
+<p>有四处真源互相冲突。不裁决，启动板块无法被确定性地设计。</p>
+<h3 id="2-1-c-1-主屏-vs-备用屏-已裁定-主屏">2.1 C-1 主屏 vs 备用屏 —— <strong>已裁定：主屏</strong><a class="anchor" href="#2-1-c-1-主屏-vs-备用屏-已裁定-主屏" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>方</th><th>主张</th><th>落点</th></tr></thead><tbody><tr><td><code>[DESIGN-ARCH-102]</code> P1</td><td><strong>禁</strong>备用屏（<code>?1049h</code>）；理由：Gemini CLI 上线 alt-mode 后一周内回滚，Amp 被批「find 找不到屏外文本」；alt mode 破坏选择 / 原生滚动 / 搜索三个终端核心能力</td><td>原则级</td></tr><tr><td><code>tui/app.js:253-255</code></td><td>Legacy 路径 <code>KHY_ALT_SCREEN</code> <strong>默认 <code>1</code> → 进备用屏</strong>；CC 模式默认 <code>0</code></td><td>实现</td></tr><tr><td><code>tui/AGENTS.md</code> §0.9.2</td><td>以「本 TUI 跑在备用缓冲区，没有回滚缓冲」为<strong>前提</strong>论证帧高约束与滚轮接管</td><td>约束</td></tr><tr><td><code>tui/app.js:6133-6137</code> 注释</td><td>「本 TUI 跑在备用缓冲区，没有回滚缓冲，&lt;Static&gt; 写进去的行一旦滚出视口就永久消失」→ 转录改走应用内 Viewport</td><td>实现</td></tr></tbody></table>
+<p><strong>裁决（2026-09-16，维护者拍板）</strong>：<strong>Legacy 也改默认主屏</strong>，<code>KHY_ALT_SCREEN=1</code> 转为 <strong>opt-in</strong>。</p>
+<p><strong>连带影响（必须同批改，否则留下新矛盾）</strong>：</p>
+<ol><li><strong>A 区（滚动区）恢复成立</strong> —— 三区模型在默认路径上物理可得，本文 §5.1 的「banner 只落一次」才有落点。</li><li><strong><code>tui/startupAnchor.js</code> 恢复默认开</strong> —— 它存在的全部理由是「把 shell 已有输出推进原生回滚」与「消除登录行与 banner 之间的空白」（<code>startupAnchor.js:5-11</code>）。备屏下原生回滚不可见，该理由失效；主屏下理由重新成立，<code>KHY_TUI_ANCHOR_BOTTOM</code> 的默认应翻转为开。</li><li><strong><code>KHY_INLINE_TRANSCRIPT</code> 的前提消失</strong> —— 它因「备屏无回滚」而改走应用内 Viewport。主屏下需重估：建议<strong>保持开</strong>（应用内 Viewport 已解决滚动与高度问题），但 §0.9.2 的论证文字必须改写，不能再以备屏为前提。</li><li><strong>帧高约束 H1 仍然有效</strong> —— 主屏下超限的后果从「转录被抹」变为「触发终端整屏滚动」，仍须守住。</li><li><code>tui/AGENTS.md</code> §0.9.2 / §0.9.3 与 <code>app.js:6133-6137</code> 注释<strong>同步改写</strong>。</li></ol>
+<blockquote><p><strong>【推测】</strong> 此项改动会改变大量视觉与滚动行为，建议独立成一个 P0 子任务并单独验收，不与节拍链改造混在同一次提交。</p></blockquote>
+<h3 id="2-2-c-2-spinner-帧率-建议-160ms-待维护者确认">2.2 C-2 Spinner 帧率 —— 建议 160ms（待维护者确认）<a class="anchor" href="#2-2-c-2-spinner-帧率-建议-160ms-待维护者确认" aria-label="锚点">#</a></h3>
+<ul><li><code>tui/AGENTS.md</code> §3.3 计时器优先级表：<code>Spinner 80ms</code></li><li><code>[DESIGN-ARCH-102]</code> §5.3 C9：<code>帧间隔 160ms（⚠️ 非 ccTimers 的 80ms）</code> —— 102 已显式点出这个分歧并判 160</li><li>实现：<code>BootScreen.js:24</code> <code>const FRAME_MS = 80;</code> <strong>硬编码</strong>，违反 <code>tui/AGENTS.md</code> §3.1「计时器常量唯一来源 <code>utils/ccTimers</code> 的 <code>TIMING</code>」</li></ul>
+<p><strong>建议</strong>：统一到 <code>ccTimers.TIMING.spinner.interval</code> 单一常量，取 <strong>160ms</strong>（102 是统一规则手册，优先于 CC 复刻工程约束），同步改 <code>tui/AGENTS.md</code> §3.3 与 <code>BootScreen.js</code>。</p>
+<h3 id="2-3-c-3-输入框最大高度-建议取-102-待维护者确认">2.3 C-3 输入框最大高度 —— 建议取 102（待维护者确认）<a class="anchor" href="#2-3-c-3-输入框最大高度-建议取-102-待维护者确认" aria-label="锚点">#</a></h3>
+<ul><li><code>tui/AGENTS.md</code> §2.1：<code>min(10, rows * 0.3)</code></li><li><code>[DESIGN-ARCH-102]</code> §4.2：<code>clamp(floor(rows/3), 3, 10)</code></li></ul>
+<p><strong>建议</strong>：取 <strong>102 §4.2</strong>。理由：它有 H4（上下边框等宽）的全组合属性测试覆盖，而 §2.1 无对应断言。启动期的 chrome 账本必须用<strong>同一个</strong>值。</p>
+<h3 id="2-4-c-4-启动模型-不是冲突-是实现背离">2.4 C-4 启动模型 —— 不是冲突，是实现背离<a class="anchor" href="#2-4-c-4-启动模型-不是冲突-是实现背离" aria-label="锚点">#</a></h3>
+<p><code>AGENTS.md</code> §4.1 已给出正确的三阶段模型（阶段 1 &lt;50ms 同步渲染 / 阶段 2 异步不阻塞交互 / 阶段 3 &lt;100ms 交互就绪）。实现未遵守，见 D1–D3。<strong>本文按 §4.1 落地，不另起模型。</strong></p>
+<hr>
+<h2 id="3-现状测绘">3. 现状测绘<a class="anchor" href="#3-现状测绘" aria-label="锚点">#</a></h2>
+<h3 id="3-1-五个各自为主的可视件">3.1 五个各自为主的可视件<a class="anchor" href="#3-1-五个各自为主的可视件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>可视件</th><th>落点</th><th>门控</th><th>默认</th></tr></thead><tbody><tr><td>1</td><td>pre-Ink 阶段行</td><td><code>cli/bootPhaseLine.js</code></td><td><code>KHY_BOOT_PHASE_LINE</code></td><td>开</td></tr><tr><td>2</td><td>首帧贴底 anchor</td><td><code>cli/tui/startupAnchor.js</code>，调用 <code>cli/tui/app.js:228</code></td><td><code>KHY_TUI_ANCHOR_BOTTOM</code></td><td><strong>关</strong></td></tr><tr><td>3</td><td>启动加载屏</td><td><code>cli/tui/ink-components/BootScreen.js</code></td><td><code>KHY_BOOT_SCREEN</code></td><td>开</td></tr><tr><td>4</td><td>欢迎横幅（TUI）</td><td><code>cli/tui/ink-components/WelcomeBanner.js</code></td><td>无</td><td>常开</td></tr><tr><td>5</td><td>启动头（经典）</td><td><code>cli/repl/startupHeader.js</code>（含 <code>printBanner</code> 与 <code>KHY_CLAUDE_UI</code> 边框盒 + mascot 图片三分支）</td><td><code>KHY_CLAUDE_UI</code></td><td>分三态</td></tr></tbody></table>
+<blockquote><p><strong>五件全部未登记</strong>在 <code>[DESIGN-ARCH-102]</code> §5 组件目录（C1–C18）。<code>[DESIGN-ARCH-079]</code> §2.1 只有一行：<code>① BANNER | WelcomeBanner | 7~9 rows（启动时）→ 0（提交后变透明占位）</code>。<strong>启动平面目前没有单一真源。</strong></p></blockquote>
+<h3 id="3-2-真实执行顺序-实测">3.2 真实执行顺序（实测）<a class="anchor" href="#3-2-真实执行顺序-实测" aria-label="锚点">#</a></h3>
+<pre><code>khy.bat:112 → python -m khy_platform → cli.py:2436 main()
+  → check_node(≥20) / ensure_bootstrap        cli.py:2586 / 2653
+  → node services/backend/bin/khy.js          cli.py:2663
+→ bin/khy.js main()                            khy.js:1353
+  → bootPhaseLine 起                            khy.js:1362
+  → init()（.env + 5 路 allSettled + dbHealth） bootstrap/init.js:48-224
+  → ensureAuthenticated()                      khy.js:1943
+  → setup({mode:'khy'})                        khy.js:1946
+  → startRepl()                                replSession.js:315
+      ├ 预热 commandAvailability/toolUseLoop    replSession.js:332-379
+      ├ Ink 预加载 + App 预 require             replSession.js:382-419
+      ├ LAN bridge / workspace trust / git init replSession.js:433-528
+      ├ 任务清理 / checklist / 源码自愈 / onboarding  replSession.js:538-638
+      └ startInkApp()                          replSession.js:671
+          → loadInk() → render()               app.js:92 / 307
+          → BootScreen（4 步）                  App.js:905-946
+          → _bootComplete → 主 UI 挂载          App.js:6125-6127</code></pre>
+<h3 id="3-3-缺陷清单-d1-d11">3.3 缺陷清单（D1–D11）<a class="anchor" href="#3-3-缺陷清单-d1-d11" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>缺陷</th><th>证据</th><th>后果</th></tr></thead><tbody><tr><td><strong>D1</strong></td><td>就绪判定被 git 来源探测绑架</td><td><code>App.js:930-946</code>：<code>markSession</code> <strong>只由 <code>setTimeout(markSession,1500)</code> 触发</strong>；注释称 <code>bannerUpdateLine</code> 是信号，但它只是<strong>依赖项</strong>（effect 重跑 = 重置计时器，不触发完成）。而 <code>bannerUpdateLine</code> 来自 <code>App.js:502-516</code> 的 <code>getSourceProvenanceAsync()</code>（git 来源探测）</td><td>启动时长不可预测，且由无关功能决定</td></tr><tr><td><strong>D2</strong></td><td>boot 期输入框<strong>不存在</strong></td><td><code>App.js:6125-6127</code> <code>if (_bootScreenEl) return _bootScreenEl;</code> —— 主 UI（含 <code>PromptFrame</code>）整棵不挂载</td><td>固定 ≥1.9s 不可输入，违反 <code>AGENTS.md</code> §4.1 / §0.3</td></tr><tr><td><strong>D3</strong></td><td>4 步里 2 步是空壳</td><td><code>ready</code> 无任何对应代码（<code>App.js:939</code> <code>setTimeout(setBootComplete,400)</code>）；<code>session</code> = 1.5s 超时。<code>BootScreen.js:26-31</code> 的 <code>STEPS</code> 是常量，与真实工作顺序不符</td><td>进度显示与实际不符</td></tr><tr><td><strong>D4</strong></td><td>pre-mount 的 8 件事用户看不到</td><td><code>replSession.js:332-638</code>（预热 / workspace trust / git init / 任务清理 / checklist / 源码自愈 / onboarding / skill sync）全在 Ink 出现<strong>之前</strong></td><td>真实工作零可见性</td></tr><tr><td><strong>D5</strong></td><td>双 logo</td><td><code>BootScreen.js:95-101</code> 5 行 ASCII 四叶草 + <code>WelcomeBanner.js:32-56</code> 13×9 三色像素四叶草，同屏先后出现</td><td>品牌符号重复且风格不统一</td></tr><tr><td><strong>D6</strong></td><td>宽度失明</td><td><code>BootScreen.js:118</code> <code>'─'.repeat(14)</code> 硬编码；<code>WelcomeBanner.js:181</code> 左列 + <code>marginLeft:4</code> + 13 列图案无宽度感知；<code>WelcomeBanner.js:148</code> 的 <code>process.cwd()</code> 行长不可控</td><td>80 列下折行</td></tr><tr><td><strong>D7</strong></td><td>组件未登记</td><td>启动平面五件全不在 <code>102 §5</code>（C1–C18）</td><td>无单一真源</td></tr><tr><td><strong>D8</strong></td><td>零测试覆盖</td><td><code>BootScreen</code> / <code>createBootTracker</code> / <code>_bootComplete</code> 全仓 grep 无命中（<code>startupAnchor</code> 有测试）</td><td>回归无锁</td></tr><tr><td><strong>D9</strong></td><td>无失败态</td><td><code>BootScreen.js:69-91</code> 只有 <code>done</code> / <code>active</code> / <code>pending</code>，<strong>无 failed</strong></td><td>出错要么静默取默认，要么直接 exit(1)</td></tr><tr><td><strong>D10</strong></td><td>帧率常量硬编码</td><td><code>BootScreen.js:24</code> <code>FRAME_MS=80</code>，违反 <code>tui/AGENTS.md</code> §3.1</td><td>与 C-2 叠加</td></tr><tr><td><strong>D11</strong></td><td>门控超标</td><td><code>check:tui-gates</code> 实测 <code>tui/</code> 子树唯一 <code>KHY_*</code> = <strong>216</strong>（上限常量 212）→ 当前 FAIL；H7 目标 ≤40</td><td>CI 红灯</td></tr></tbody></table>
+<hr>
+<h2 id="4-目标架构-节拍链">4. 目标架构：节拍链<a class="anchor" href="#4-目标架构-节拍链" aria-label="锚点">#</a></h2>
+<h3 id="4-1-节拍表-六拍-就绪">4.1 节拍表（六拍 + 就绪）<a class="anchor" href="#4-1-节拍表-六拍-就绪" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>拍</th><th>id</th><th>真实工作</th><th>确定性完成信号</th><th>critical</th></tr></thead><tbody><tr><td>1</td><td><code>env</code></td><td><code>.env</code> 加载、settings 级联、<code>init()</code> 五路、dbHealth</td><td><code>init()</code> resolve</td><td>✅</td></tr><tr><td>2</td><td><code>auth</code></td><td><code>ensureAuthenticated()</code></td><td>认证态确定（含失败）</td><td>✅</td></tr><tr><td>3</td><td><code>render</code></td><td>Ink 装载、首帧 commit、anchor</td><td>首帧 effect 触发</td><td>✅</td></tr><tr><td>4</td><td><code>workspace</code></td><td>命令可用性预热、workspace trust、git init</td><td>各 promise settle</td><td>❌</td></tr><tr><td>5</td><td><code>gateway</code></td><td><code>gateway.init()</code>、适配器就绪、skill sync</td><td>adapter 数确定</td><td>❌</td></tr><tr><td>6</td><td><code>session</code></td><td>会话恢复、banner 数据、onboarding</td><td>会话态确定</td><td>❌</td></tr></tbody></table>
+<p><strong>「就绪」不是第 7 拍，而是第 6 拍完成后的</strong>一次原子重绘<strong>（见 §4.3）。</strong></p>
+<h3 id="4-2-节拍契约-硬规则">4.2 节拍契约（硬规则）<a class="anchor" href="#4-2-节拍契约-硬规则" aria-label="锚点">#</a></h3>
+<ol><li><strong>每拍必须有真实工作负载</strong> —— 禁止时长驱动的空壳拍（修 D3）。没有对应工作的拍直接删掉。</li><li><strong>完成信号必须是本拍自己的 resolve</strong> —— <strong>禁止引用其它功能的副作用</strong>（修 D1）。跨拍引用一律视为违规。</li><li><strong>就绪 = 最后一拍完成</strong>。超时只用于<strong>降级并告知用户</strong>，绝不用来判定完成。</li><li><strong>单调推进</strong> —— 状态只允许 <code>pending → active → done|failed</code>，不可回退。</li><li><strong>非 critical 拍失败 = 降级 + <code>⚠</code></strong>，继续推进；critical 拍失败 = 阻断退出（§6）。</li><li><strong>首帧已完成的拍直接显示为 <code>✓</code></strong> —— 节拍表支持「预热起点」，避免首屏出现「已完成的工作还在转圈」。</li></ol>
+<h3 id="4-3-两个渲染层与原子交接">4.3 两个渲染层与原子交接<a class="anchor" href="#4-3-两个渲染层与原子交接" aria-label="锚点">#</a></h3>
+<p>启动板块横跨两个渲染层，<strong>层间交接是当前最脆弱处</strong>（阶段行残留、贴底抖动、banner 顺序）。</p>
+<pre><code>L1  pre-Ink   行内阶段行（cli/bootPhaseLine.js，\r\x1b[K 覆写，用完即抹）
+       │
+       ├── 交接（必须原子一次写入）：清阶段行 → anchor → Ink 首帧
+       │
+L2  post-Ink  B 区节拍表（行数恒定 6）+ C 区常驻输入框</code></pre>
+<p><strong>交接硬规则</strong>：清阶段行 + 写 anchor + Ink 首帧必须<strong>一次写入</strong>，禁止分步。分会产生「阶段行残影 + 首帧抖动」，是 D 类缺陷的高发区。</p>
+<hr>
+<h2 id="5-视觉规范">5. 视觉规范<a class="anchor" href="#5-视觉规范" aria-label="锚点">#</a></h2>
+<h3 id="5-1-首屏三区-启动期">5.1 首屏三区（启动期）<a class="anchor" href="#5-1-首屏三区-启动期" aria-label="锚点">#</a></h3>
+<pre><code>┌─ A 区 · 滚动区（只写不读）────────────────────────────────┐
+│  ℹ 已登录 tester                                          │
+│  （启动前 shell 输出原样保留；就绪后 banner 只落一次）      │
+├─ B 区 · 节拍表（行数恒定 6）──────────────────────────────┤
+│  启动中 · 3/6 · 1.2s                                      │
+│  ✓ 环境与配置   本地设置 + 5 路初始化                      │
+│  ✓ 认证         已登录 tester                              │
+│  ◐ 渲染引擎     Ink 首帧                                   │
+│  · 工作区       等待                                       │
+│  · 网关         等待                                       │
+│  · 会话         等待                                       │
+├─ C 区 · 固定框架（首帧即存在）────────────────────────────┤
+│  ╭────────────────────────────────────────────────────╮   │
+│  │ ❯ 可以直接打字，回车排队，就绪后自动发送              │   │
+│  ╰────────────────────────────────────────────────────╯   │
+│  Khy · ~/khy-os · auto::auto · 启动中 3/6                  │
+└───────────────────────────────────────────────────────────┘</code></pre>
+<h3 id="5-2-硬规则">5.2 硬规则<a class="anchor" href="#5-2-硬规则" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规则</th><th>内容</th><th>依据</th></tr></thead><tbody><tr><td><strong>S1 节拍表行数恒定 6</strong></td><td>从首帧就画全部六行，状态 <code>· → ◐ → ✓</code> 原地变化；<strong>绝不 0→N 追加</strong></td><td>P7 高度恒定</td></tr><tr><td><strong>S2 C 区首帧即存在</strong></td><td>输入框从第一帧就在，未就绪态<strong>接受输入并缓冲</strong>（回车不提交，显示「就绪后自动发送」）；禁止整树切换</td><td>P7 / 修 D2</td></tr><tr><td><strong>S3 启动期禁用覆盖层交互</strong></td><td>补全菜单、<code>Ctrl+R</code>、<code>Ctrl+P</code>、<code>↑↓</code> 历史浏览在启动期一律不激活；只收纯文本</td><td>H10 / 可预测性</td></tr><tr><td><strong>S4 只有一张 logo</strong></td><td>删除 <code>BootScreen</code> 的 ASCII 四叶草；logo 归 <code>WelcomeBanner</code>，就绪后落入 A 区一次</td><td>修 D5</td></tr><tr><td><strong>S5 <code>更新：</code> 行移出关键路径</strong></td><td>banner 先印且不含该行；provenance 探测结果改由 <code>Ctrl+O</code> 呈现，<strong>绝不回头重印 banner</strong></td><td>修 D1 根因 / P2 只写不读</td></tr><tr><td><strong>S6 就绪是一次原子重绘</strong></td><td>B 区节拍表退场 + C 区转就绪态 + A 区落 banner，同帧完成</td><td>P5 一个尺寸 = 一次重绘</td></tr><tr><td><strong>S7 帧高 ≤ <code>rows − 1</code></strong></td><td>启动期同样受 H1 约束，chrome 走 <code>chromeBudget</code> 单一账本</td><td>H1</td></tr><tr><td><strong>S8 零 <code>ESC[2J</code> / <code>ESC[3J</code></strong></td><td>启动期同样受 H2 约束</td><td>H2</td></tr></tbody></table>
+<h3 id="5-3-宽度与截断">5.3 宽度与截断<a class="anchor" href="#5-3-宽度与截断" aria-label="锚点">#</a></h3>
+<ul><li>宽度一律由 App 通过 <code>contentWidth()</code> 下发 props；<strong>组件内仍禁止读 <code>process.stdout.columns/rows</code></strong>（守 H8）。</li><li><code>WelcomeBanner</code> 的 <code>showArt</code> 由 App 按 <code>contentWidth()</code> 决定：<code>&lt; 80</code> 列<strong>隐藏右侧图案</strong>（单列布局），<code>≥ 120</code> 列并排。</li><li><code>WelcomeBanner.js:148</code> 的 <code>工作目录</code> 行改用 <code>~</code> 缩写 + 按<strong>显示宽度</strong>截断（与 <code>wrapCell()</code> / <code>visualRows()</code> 同源，守 H6），<strong>绝不折行</strong>——banner 落在 A 区，折行会破坏行数恒定的假设。</li></ul>
+<h3 id="5-4-双-logo-收敛-2026-09-23-修订">5.4 双 logo 收敛（2026-09-23 修订）<a class="anchor" href="#5-4-双-logo-收敛-2026-09-23-修订" aria-label="锚点">#</a></h3>
+<p>删除 <code>BootScreen.js:95-101</code> 的 5 行 ASCII 四叶草与 <code>BootScreen.js:118</code> 的 <code>'─'.repeat(14)</code> 分隔线 —— <strong>这条照旧成立</strong>：<code>╱╲</code> 只画出两叶、读不出「四叶」，注释自称 clover 名不副实，本就是两套风格里该淘汰的那套。</p>
+<blockquote><p><strong>【2026-09-23 修订】</strong> 原措辞「logo 归 <code>WelcomeBanner</code>，<code>BootScreen</code> 不再承担品牌展示」改判为<br><strong>「只有一份 logo 资产，启动屏与欢迎横幅共用它」</strong>（落点 <code>cli/tui/logoArt.js</code>）。<br>修订理由：S4 要修的是 D5 的「两种<strong>风格</strong>」，不是「两处<strong>出现</strong>」；启动屏是用户看到的第一屏，<br>纯文字清单零品牌识别，而紧随其后的欢迎横幅立刻有 —— 视觉上是断的。视觉契约与阶梯见<br><code>[DESIGN-ARCH-134] TUI 启动屏视觉重设计</code> §2.6 / §3.4，组件登记 <code>[DESIGN-ARCH-102]</code> §5.6 C22。</p></blockquote>
+<hr>
+<h2 id="6-失败态与降级">6. 失败态与降级<a class="anchor" href="#6-失败态与降级" aria-label="锚点">#</a></h2>
+<p>节拍失败后按 <code>critical</code> 二分（现无此能力，修 D9）：</p>
+<pre><code>                    ┌─ critical: true  ──→ ✗ 红标 + 1 行可操作指引
+                    │                      → Ink 卸载，指引留在主屏 → 非零退出
+节拍失败 ───────────┤
+                    │                      ⚠ 黄标，继续推进
+                    └─ critical: false ──→ → 底部汇总「! N 项降级，Ctrl+O 查看」</code></pre>
+<ul><li><strong>阻断类</strong>：指引必须是<strong>一行可执行的下一步</strong>（如 <code>运行 khy login 后重试</code>），<strong>不是堆栈</strong>。Ink 卸载后指引须留在终端可见（守 P1 主屏优先）。</li><li><strong>降级类</strong>：黄标继续推进，不阻塞交互；底部恒定 1 行汇总（守 H10 单槽瞬时信息只有一条）。</li></ul>
+<hr>
+<h2 id="7-门控策略-净新增-0-个">7. 门控策略（净新增 0 个）<a class="anchor" href="#7-门控策略-净新增-0-个" aria-label="锚点">#</a></h2>
+<p>扩展既有 <code>KHY_BOOT_SCREEN</code> 的<strong>取值</strong>，不新增 token（守 H7 与 <code>102 §3 H7</code>「新增用户偏好一律进 <code>tui.json</code>，不再新增环境变量」）：</p>
+<table><thead><tr><th>取值</th><th>行为</th></tr></thead><tbody><tr><td><code>1</code> / 默认</td><td>新节拍表（本文设计）</td></tr><tr><td><code>0</code></td><td>直接进主 UI（与今天关掉的行为逐字节一致）</td></tr><tr><td><code>legacy</code></td><td>旧 <code>BootScreen</code> 逐字节回退（保留<strong>一个版本</strong>的回退窗，满足 <code>tui/AGENTS.md</code> §0.1 零破坏原则），下版本删除</td></tr></tbody></table>
+<p><strong>迁出</strong>到 <code>~/.khy/tui.json</code> 的 <code>startup.*</code> 段（env 优先、settings 兜底，登记 sunset 版本）：<br><code>KHY_WORKSPACE_TRUST</code>、<code>KHY_AUTO_GIT_INIT</code>、<code>KHY_TASK_CLEANUP</code>、<code>KHY_SESSION_TODO_RESET</code>、<code>KHY_SOURCE_HEAL</code>、<code>KHY_ONBOARDING</code>、<code>KHY_SKILL_VERSION_SYNC</code>、<code>KHY_BRIDGE_AUTOSTART</code>、<code>KHY_SESSION_WATCHDOG</code>、<code>KHY_STARTUP_MODEL_PICKER</code>。</p>
+<p><strong>翻转</strong>：<code>KHY_TUI_ANCHOR_BOTTOM</code> 默认由<strong>关</strong>改为<strong>开</strong>（C-1 裁决的连带项，§2.1 第 2 条）。</p>
+<hr>
+<h2 id="8-经典模式与-tui-的一致性">8. 经典模式与 TUI 的一致性<a class="anchor" href="#8-经典模式与-tui-的一致性" aria-label="锚点">#</a></h2>
+<p>沿用 <code>[DESIGN-ARCH-110]</code> 已建立的 <code>uiFacade</code> / <code>uiAdapter</code> 模式：<strong>命令处理器返回结构化响应，UI 适配器按模式渲染</strong>。启动板块照此办理——</p>
+<ul><li><strong>一份节拍表</strong>（<code>startupBeats.js</code>）+ <strong>两个渲染器</strong>（<code>startupBeats</code> 的 TUI 渲染器 / 经典渲染器）。</li><li><strong>节拍文案（label）是单一真源</strong>，由 <code>startupBeats.js</code> 导出；<code>startupHeader.js</code> 不再自带文案（消除 TUI 与经典漂移）。</li><li>经典模式的三个分支（<code>printBanner</code> / <code>KHY_CLAUDE_UI</code> 边框盒 / mascot 图片）<strong>保持三个渲染器</strong>，但消费同一份节拍状态。</li></ul>
+<hr>
+<h2 id="9-落地路线与代码落点">9. 落地路线与代码落点<a class="anchor" href="#9-落地路线与代码落点" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>阶段</th><th>内容</th><th>对应缺陷</th></tr></thead><tbody><tr><td><strong>P0 正确性</strong>（不改视觉）</td><td>① 修 D1：完成信号解绑 provenance；② 修 D2：C 区常驻；③ 修 D3：真实拍 + 确定性信号；④ 修 D7：登记组件；⑤ 修 D8：补测试</td><td>D1 D2 D3 D7 D8</td></tr><tr><td><strong>P1 视觉统一</strong></td><td>① 修 D5：删第二个 logo；② 修 D6：宽度感知 / 显示宽度截断；③ 修 D10：帧率入 <code>ccTimers</code></td><td>D5 D6 D10</td></tr><tr><td><strong>P2 收编</strong></td><td>① 修 D4：pre-mount 八件事进节拍表；② 修 D9：失败态；③ 修 D11：门控迁 <code>tui.json</code></td><td>D4 D9 D11</td></tr><tr><td><strong>P0' 独立子任务</strong></td><td>C-1 主屏切换 + 连带五处改写（§2.1）</td><td>——</td></tr></tbody></table>
+<p><strong>代码落点</strong>：</p>
+<table><thead><tr><th>文件</th><th>动作</th><th>说明</th></tr></thead><tbody><tr><td><code>services/backend/src/cli/startupBeats.js</code></td><td><strong>新增</strong></td><td>纯叶子：节拍表定义 + 状态机 + 完成判据。<strong>零 IO</strong>，可单测。与 <code>cli/bootPhaseLine.js</code> / <code>cli/startupProfiler.js</code> 同级</td></tr><tr><td><code>services/backend/src/cli/tui/ink-components/BootScreen.js</code></td><td>改造</td><td>降为<strong>渲染器</strong>，消费 <code>startupBeats</code>，不再自带 <code>STEPS</code> 常量</td></tr><tr><td><code>services/backend/src/cli/repl/startupHeader.js</code></td><td>改造</td><td>经典渲染器，共享 <code>startupBeats</code> 的 label</td></tr><tr><td><code>services/backend/src/cli/replSession.js:332-638</code></td><td>改造</td><td>各 pre-mount 步骤改调 <code>beats.done(id)</code> 上报</td></tr><tr><td><code>services/backend/src/cli/tui/app.js:253-255</code></td><td>改造</td><td>C-1 默认翻转</td></tr></tbody></table>
+<blockquote><p><strong>登记义务</strong>：按 <code>[DESIGN-LAY-005]</code> §4，新增文件须登记进 <code>packaging/modules/modules.json</code> 的 <strong><code>khy-ai</code></strong> 板块（<code>handlers</code> / <code>services</code> 数组）。漏登记的后果是模块化构建产物缺功能，而全量构建正常——<strong>开发期不会暴露</strong>。</p></blockquote>
+<hr>
+<h2 id="10-验收-可机器验证">10. 验收（可机器验证）<a class="anchor" href="#10-验收-可机器验证" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>判据</th><th>怎么测</th></tr></thead><tbody><tr><td>1</td><td>首帧即三区，帧高 ≤ <code>rows − 1</code></td><td>复用 H1 属性测试</td></tr><tr><td>2</td><td>启动期 B 区行数<strong>恒定 6</strong>，不随推进变化</td><td>逐帧快照比对</td></tr><tr><td>3</td><td>「最后一拍完成」→「输入框可提交」之间 ≤ <strong>1 次</strong>原子重绘</td><td>渲染字节计数</td></tr><tr><td>4</td><td><strong>注入 3s 延迟的 provenance mock，就绪时刻不变</strong></td><td>回归测试（锁死 D1）</td></tr><tr><td>5</td><td>全启动期零 <code>ESC[2J</code> / <code>ESC[3J</code></td><td>复用 H2 门</td></tr><tr><td>6</td><td>A 区启动期写入 ≤ 1 次，1000 帧内字节不变</td><td>复用 P2 判据</td></tr><tr><td>7</td><td>启动期按键 <code>/</code>、<code>Ctrl+R</code>、<code>Ctrl+P</code>、<code>↑</code> 逐条断言<strong>无覆盖层</strong>出现</td><td>键序列测试</td></tr><tr><td>8</td><td>mock 认证失败 → 恰好 1 行指引 + 非零退出码，且指引在 Ink 卸载后仍可见</td><td>端到端测试</td></tr><tr><td>9</td><td><code>BootScreen</code> 单测覆盖 <code>pending → active → done → failed</code> 全迁移</td><td><code>npm run test:one -- &lt;path&gt;</code></td></tr><tr><td>10</td><td>启动板块 <strong>net-new <code>KHY_*</code> = 0</strong>，<code>check:tui-gates</code> 计数不上升</td><td><code>npm run check:tui-gates</code></td></tr></tbody></table>
+<hr>
+<h2 id="11-不采纳清单-附理由">11. 不采纳清单（附理由）<a class="anchor" href="#11-不采纳清单-附理由" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>不采纳</th><th>理由</th></tr></thead><tbody><tr><td>备用屏全屏启动动画</td><td>违反 P1（Gemini CLI 一周回滚的前车之鉴）</td></tr><tr><td>就绪后清屏重绘</td><td>违反 H2；清屏会被用户强烈反弹</td></tr><tr><td>把启动做成独立 React 根组件</td><td>会变成<strong>第三条</strong>根路径，违反 P8「一条路径胜过两条」</td></tr><tr><td>新增 <code>KHY_*</code> 门控</td><td>违反 H7；现状 216 已严重超标</td></tr><tr><td>logo 动画 / 跑马灯</td><td>帧率与残影成本，收益为负</td></tr><tr><td>节拍表做成可滚动列表</td><td>违反 P3 高度恒定</td></tr><tr><td>用超时判定完成</td><td>D1 的根因；超时只能用于降级</td></tr></tbody></table>
+<hr>
+<h2 id="12-交叉引用与遗留">12. 交叉引用与遗留<a class="anchor" href="#12-交叉引用与遗留" aria-label="锚点">#</a></h2>
+<p><strong>遗留问题（本文不解决，登记待办）</strong>：</p>
+<ol><li><strong>C-2 / C-3 待维护者确认</strong>（§2.2 / §2.3）。</li><li><strong><code>tui/AGENTS.md</code> 与 <code>[DESIGN-ARCH-102]</code> 的冲突不止本文列出的三处</strong>（帧率、输入框高度、备用屏）。二者没有声明真源优先级，建议专开一轮把「统一规则手册 vs CC 复刻工程约束」的适用范围划清——否则每做一个板块都要重新裁一次。</li><li><strong>D11 门控 216 → ≤40</strong> 是独立一轮的清理工作，本文只保证「不新增」。</li></ol>
+<p><strong>关联文档</strong>：</p>
+<ul><li>规则真源：<code>[DESIGN-ARCH-102] Khy TUI 统一规则手册</code>（P1–P8 / H1–H10 / §4 布局 / §5 组件目录）</li><li>渲染架构论证：<code>[DESIGN-ARCH-103] TUI 终端界面重设计方案</code></li><li>双模式同步：<code>[DESIGN-ARCH-110] TUI-CLASSIC-SYNC 设计笔记</code></li><li>组件尺寸与配色真源：<code>[DESIGN-ARCH-079] TUI界面设计规范</code></li><li>板块与登记义务：<code>[DESIGN-LAY-005] 仓库层级板块规范</code> §4</li><li>CC 模式约束：<code>services/backend/src/cli/tui/AGENTS.md</code>（§0.1 零破坏 / §0.3 性能底线 / §3 计时器 / §4.1 启动阶段）</li></ul>
+<hr>
+<h2 id="13-变更记录">13. 变更记录<a class="anchor" href="#13-变更记录" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>2026-09-16</td><td>初版。确立板块边界与划分口径；裁决 C-1（主屏，已拍板）、建议 C-2/C-3；登记 D1–D11 实测缺陷；给出六拍节拍表与契约、视觉硬规则 S1–S8、失败态二分、门控净新增 0 策略、P0/P0'/P1/P2 路线与 10 条验收</td></tr><tr><td>2026-09-23</td><td>§5.4 修订：S4 的「logo 归 WelcomeBanner、启动屏不承担品牌展示」改判为「只有一份 logo <strong>资产</strong>，启动屏与欢迎横幅共用」（<code>cli/tui/logoArt.js</code>）。删除 <code>╱╲</code> 图案与 <code>'─'.repeat(14)</code> 的决定不变。见 <code>[DESIGN-ARCH-134]</code> §2.6</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-114] CLI 错误标准化规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-114] CLI 错误标准化规范</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-116] khyos-插件系统契约(@khy-plugin-sdk).html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-116] khyos 插件系统契约（@khy/plugin-sdk）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-115] TUI 启动板块设计.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

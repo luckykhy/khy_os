@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 03-同步就绪验证.md -->
+<title>📋 提示词正文（复制下面代码块内的全部内容） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>.ai<span class="sep">›</span>hq<span class="sep">›</span>prompts<span class="sep">›</span>meta<span class="sep">›</span>📋 提示词正文（复制下面代码块内的全部内容）</div>
+      <header class="hero reveal"><h1>📋 提示词正文（复制下面代码块内的全部内容）</h1></header>
+      
+      <article class="doc-body">
+<p>&lt;!--<br>模板：同步环境就绪验证（用于「给另一台机器/第三台机器的 AI 验证本机是否已就绪」）<br>触发：在本机（已部署 khy-os）打开任意编码 AI 后执行：<br>      khy hq next --kind verify-sync --copy<br>      然后把渲染出的提示词粘贴到目标机器的 AI 那里（另一端是「执行端」，<br>      本机能做的是把它渲染成自包含提示词）。<br>目的：让目标机器上的 AI 自主完成一套只读体检，回报「能否与共享远程上游同步」，<br>      无需人工逐步比对。<br>占位符：无（自包含，交给目标机自定位）<br>--&gt;</p>
+<h2 id="提示词正文-复制下面代码块内的全部内容">📋 提示词正文（复制下面代码块内的全部内容）<a class="anchor" href="#提示词正文-复制下面代码块内的全部内容" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">【角色】你是本机的环境就绪验证工程师。本机部署了「khy-os」仓库——它同时是
+系统代码库与任务/Bug 状态真源（数据在 `.ai/hq/`，命令面是 `khy hq`），目标是确认：
+本机能否与共享远程上游正常同步、环境是否就绪。
+全程只读：不 clone、不 add/commit、不 push、不改任何文件；仅在需要授权时询问用户。
+逐条给出真实命令与结果，失败就如实报告，不要自行修复或强推。
+
+【背景事实】
+- 系统代码仓库（同时承载状态真源）：https://github.com/luckykhy/khy_os
+- 状态真源在仓库内 `.ai/hq/`，只走 `khy hq` 命令读写，不要手改 JSON
+- 同步标准（单仓）：本机 HEAD == 本分支**上游**（`@{upstream}`）的 HEAD。
+  两台机器各自 HEAD == 上游 ⟹ 两机必然互相同步。
+  未被推送的本地改动（AHEAD）不会让另一台机器拿到，因此不算同步。
+- ⚠ **不要写死 `origin/main`**：本仓主工作机 `main` 的实际上游是
+  `khy-mirror/main`（经 ghfast 镜像的 GitHub），而 `origin` 只是冗余远端。
+  请用 `git rev-parse --abbrev-ref @{upstream}` 动态取上游名，
+  下文以 `&lt;上游&gt;` 代指。
+
+【流程】（每步记下：成功/失败 + 关键输出，不要跳过）
+1. 工具链：git --version、python --version、node --version 三者可用即过
+2. 定位本仓库：khy-os 依次探测环境变量 KHY_OS_DIR、&lt;便携根&gt;\khy-os、
+   &lt;盘符根&gt;\khy-os。找不到就如实报告，不要擅自 clone。
+3. 取上游名：git rev-parse --abbrev-ref @{upstream}
+   —— 输出形如 `khy-mirror/main` 或 `origin/main`，记下它。
+   若报错「no upstream configured」，如实报告，不要擅自 set-upstream。
+4. 数据真源体检：在 khy-os 根目录运行 khy hq verify，exit 0 即过
+   （含 JSON 一致性 + 提示词模板结构两项检查）
+5. 同步体检：git fetch &amp;&amp; git status -sb，应能报出本分支与上游
+   的领先/落后/未提交状态
+6. 哈希核对（两值相等即同步）：
+     git rev-parse HEAD     git rev-parse @{upstream}
+7. 领活验证：khy hq status 需能输出任务总览
+
+【工程红线】
+- 全程禁止 force push；禁止把 token/凭据写入任何被 git 跟踪的文件
+- 仓库文件内部严禁硬编码盘符路径（脚本一律从自身位置推算）
+- 本任务是只读体检，不产生任何提交；不要手改 `.ai/hq/` 下的 JSON
+
+【验收标准】（全部满足才算就绪，缺一即不过）
+1. 第 1-2 步全过
+2. 第 3 步能取到上游名（非空）
+3. 第 4 步 khy hq verify exit 0
+4. 第 5 步 git status -sb 能如实报出领先/落后/未提交
+5. 第 6 步 HEAD == 上游 HEAD（SYNced）
+6. 第 7 步 khy hq status 能输出总览
+
+【输出】用一张表逐条列出：步骤 | 命令 | 结果(过/败) | 关键输出/报错；
+若某项失败，给出完整报错文本。
+
+【验证命令】(目标机在其 khy-os 根目录依次执行)
+- git rev-parse --abbrev-ref @{upstream}
+- khy hq verify
+- git fetch &amp;&amp; git status -sb
+- git rev-parse HEAD &amp;&amp; git rev-parse @{upstream}
+- khy hq status</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../.ai/hq/prompts/meta/02-新机器接入.html"><div class="dir">← 上一篇</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a><a class="next" href="../../../../.ai/hq/prompts/meta/04-协作开发端.html"><div class="dir">下一篇 →</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__=".ai/hq/prompts/meta/03-同步就绪验证.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

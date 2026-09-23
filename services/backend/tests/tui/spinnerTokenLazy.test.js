@@ -84,15 +84,38 @@ test('skip decision is the exact inverse of spinnerMeta reveal (same SSOT)', () 
 });
 
 // ── ⑥ LIVE wiring guards ──────────────────────────────────────────────────
-test('App._spinnerProgress wires spinnerTokenLazy to guard the estimate', () => {
+// 断言对象是 appHostHelpers.js,不是 App.js:_spinnerProgress(连同这里的 require 与
+// _needEstimate 守卫)早已从 App.js 抽出到该叶子。此前这条断言仍读 App.js,于是**自抽取
+// 那天起就一直红着** —— 源码文本断言最容易这样随搬迁失效,所以这里同时锁住「谁拥有实现」
+// 与「App 必须走它」两侧。
+test('_spinnerProgress wires spinnerTokenLazy to guard the estimate', () => {
   const src = fs.readFileSync(
-    path.join(BACKEND_ROOT, 'src/cli/tui/ink-components/App.js'), 'utf8');
+    path.join(BACKEND_ROOT, 'src/cli/tui/ink-components/appHostHelpers.js'), 'utf8');
   assert.ok(/require\(['"]\.\/spinnerTokenLazy['"]\)/.test(src),
-    'App must require ./spinnerTokenLazy');
+    'appHostHelpers must require ./spinnerTokenLazy');
   assert.ok(/shouldEstimateSpinnerTokens\(\{\s*elapsedSec,\s*env\s*\}\)/.test(src),
-    'App must call shouldEstimateSpinnerTokens keyed on elapsedSec + env');
+    'shouldEstimateSpinnerTokens must be keyed on elapsedSec + env');
   assert.ok(/if\s*\(streaming\s*&&\s*_needEstimate\)/.test(src),
     'the _estimateTok call must be guarded by streaming && _needEstimate');
+});
+
+// 防「再手算一遍」:App 的渲染体必须调用 _spinnerProgress,而不是自己重新推 stalled /
+// elapsedSec / tokens。手写副本正是这条链上出过三个可见错误的成因(毫秒差与 3 比较、
+// Date.now() 当秒数、query.tokenEstimate 恒为 0),所以把它固化成守卫。
+//
+// 断言都锚在**表达式**上,不锚在关键词上:App 的注释里会（正当地）提到 _spinnerProgress 与
+// query.tokenEstimate 来解释为什么不再手算 —— 关键词式断言会把注释也算进去,自伤。
+test('App routes spinner props through the _spinnerProgress SSOT (no re-inlined copy)', () => {
+  const src = fs.readFileSync(
+    path.join(BACKEND_ROOT, 'src/cli/tui/ink-components/App.js'), 'utf8');
+  assert.ok(/const\s+_spin\s*=\s*_spinnerProgress\(/.test(src),
+    'App must derive the spinner props once via _spinnerProgress');
+  assert.ok(/stalledSec:\s*busy\s*\?\s*_spin\.stalledSec/.test(src),
+    'App must pass the derived stalledSec (rule 2.5 waiting line needs the real duration)');
+  assert.ok(!/nowTick\s*-\s*lastActivityRef\.current\s*>\s*3\b/.test(src),
+    'App must not re-inline the stall comparison (the ms-vs-3 bug lived here)');
+  assert.ok(!/tokens:\s*Number\(\s*query\.tokenEstimate\s*\)/.test(src),
+    'App must not read query.tokenEstimate (no producer in the TUI query layer → always 0)');
 });
 
 test('flagRegistry registers KHY_SPINNER_TOKEN_LAZY default ON', () => {

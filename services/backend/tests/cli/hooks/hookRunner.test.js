@@ -1,6 +1,6 @@
 'use strict';
 
-const hookRunner = require('../../src/cli/hooks/hookRunner');
+const hookRunner = require('../../../src/cli/hooks/hookRunner.js');
 
 describe('hookRunner', () => {
   test('module is defined', () => {

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [IMPL-RPT-046] 渠道 API 文档板块-2026-09-08.md -->
+<title>[IMPL-RPT-046] 渠道 API 文档板块 — 实现记录 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>IMPL-RPT<span class="sep">›</span>[IMPL-RPT-046] 渠道 API 文档板块 — 实现记录</div>
+      <header class="hero reveal"><h1>[IMPL-RPT-046] 渠道 API 文档板块 — 实现记录</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#impl-rpt-046-渠道-api-文档板块-实现记录">[IMPL-RPT-046] 渠道 API 文档板块 — 实现记录</a></li><li class="lvl-2"><a href="#一-目标">一、目标</a></li><li class="lvl-2"><a href="#二-设计要点">二、设计要点</a></li><li class="lvl-2"><a href="#三-改动清单">三、改动清单</a></li><li class="lvl-3"><a href="#新增">新增</a></li><li class="lvl-3"><a href="#修改">修改</a></li><li class="lvl-2"><a href="#四-安全与工程红线自查">四、安全与工程红线自查</a></li><li class="lvl-2"><a href="#五-自测结果">五、自测结果</a></li><li class="lvl-3"><a href="#验收标准逐条">验收标准逐条</a></li><li class="lvl-3"><a href="#验证命令实测">验证命令实测</a></li><li class="lvl-3"><a href="#基线说明-第-8-项为何非绿">基线说明（第 8 项为何非绿）</a></li><li class="lvl-3"><a href="#本次修掉的一个真实缺陷">本次修掉的一个真实缺陷</a></li><li class="lvl-2"><a href="#六-遗留与后续建议">六、遗留与后续建议</a></li><li class="lvl-2"><a href="#七-changelog-建议条目">七、CHANGELOG 建议条目</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="impl-rpt-046-渠道-api-文档板块-实现记录">[IMPL-RPT-046] 渠道 API 文档板块 — 实现记录<a class="anchor" href="#impl-rpt-046-渠道-api-文档板块-实现记录" aria-label="锚点">#</a></h1>
+<table><thead><tr><th>项</th><th>值</th></tr></thead><tbody><tr><td>指挥方任务编号</td><td>T-023</td></tr><tr><td>域</td><td>frontend（涉及后端 <code>services/</code> 新增 REST API）</td></tr><tr><td>交付日期</td><td>2026-09-08</td></tr><tr><td>状态</td><td>定稿</td></tr><tr><td>真源规范</td><td>[DESIGN-LAY-005] 仓库层级板块规范 / AGENTS.md 工程规则（零硬编码·状态透明·活动超时·终端渲染）</td></tr></tbody></table>
+<hr>
+<h2 id="一-目标">一、目标<a class="anchor" href="#一-目标" aria-label="锚点">#</a></h2>
+<p>在网页端提供「渠道 API 文档」板块：一处记录各 AI 渠道的 <strong>端点 URL + API Key</strong>（加密落库），<br>一处说明各 Agent 客户端（Claude Code、CommandCode、ZCode、Codex、Cursor、Cline、Continue.dev）<br><strong>如何配置这些 Key</strong>（环境变量名 / 配置文件路径 / 可复制代码块）。</p>
+<hr>
+<h2 id="二-设计要点">二、设计要点<a class="anchor" href="#二-设计要点" aria-label="锚点">#</a></h2>
+<ol><li><strong>一张表</strong>：<code>channel_apis</code>，Sequelize 模型，启动时由既有 <code>sequelize.sync()</code> 自动建表，不引入 DDL 迁移文件（沿用 <code>GuiEvalTask</code> / <code>WebFrontendEvalTask</code> 的模式）。</li><li><strong>刻意不建 User 关联</strong>：渠道 Key 是全机共享的凭证注册表，不是按用户切分的资源；访问控制放在路由层的 <code>admin</code> 门禁上。</li><li><strong>AES-256-GCM</strong>：<code>iv:authTag:ciphertext</code> 三段 base64 单字段存储；密钥经 SHA-256 归一化为 32 字节，因此 env 里可以放任意长度口令。</li><li><strong>密钥真源单一</strong>：<code>KHY_CHANNEL_KEY_SECRET</code>。未设置时回退到「按主机名派生」的稳定密钥并打一条 warning——回退的边界是诚实的：拿到数据库文件的人在本机同样能解出明文，强度提升真正来自显式配置这个 env。</li><li><strong>明文只有一个出口</strong>：<code>POST /:id/reveal</code>。列表与详情恒返回脱敏（前 4 + <code>****</code> + 后 4）；reveal 额外写一条 JSONL 审计，参数键名用 <code>masked_value</code>（而非 <code>masked_key</code>），避免被 <code>SENSITIVE_KEYS</code> 脱敏器抹掉。</li><li><strong>配置指南是数据，不是文案</strong>：7 个 Agent 的 steps / envVars / configFile / docsUrl 收敛在服务层 <code>AGENT_CONFIG_GUIDES</code>，前端与 REST 共用同一份。端点不写死字面量，由 <code>getProviderPresets()</code> 派生，预设缺失时降级为空串而非硬编码兜底。</li><li><strong>seed 幂等</strong>：按 <code>channel_name</code> 查重，已存在则保留用户改动；重复启动不会覆盖用户编辑。</li><li><strong>前端不落地明文</strong>：reveal 结果只存在组件内存的 <code>revealed</code> map 里，不写 localStorage / sessionStorage；页面刷新即失。</li></ol>
+<hr>
+<h2 id="三-改动清单">三、改动清单<a class="anchor" href="#三-改动清单" aria-label="锚点">#</a></h2>
+<h3 id="新增">新增<a class="anchor" href="#新增" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>说明</th></tr></thead><tbody><tr><td><code>platform/packages/shared/src/models/ChannelApi.js</code></td><td>Sequelize 模型，表 <code>channel_apis</code></td></tr><tr><td><code>services/backend/vendor/shared/src/models/ChannelApi.js</code></td><td>同上（vendored 快照同步，见下）</td></tr><tr><td><code>services/backend/src/services/channelApiCrypto.js</code></td><td>加解密 + 脱敏（AES-256-GCM）</td></tr><tr><td><code>services/backend/src/services/channelApiService.js</code></td><td>服务层：校验 / 视图 / CRUD / reveal+审计 / 配置指南 / seed</td></tr><tr><td><code>services/backend/src/routes/channelApis.js</code></td><td>8 个 REST 端点，路由内部自门禁 auth+admin</td></tr><tr><td><code>services/backend/tests/channelApiService.test.js</code></td><td>Jest 套件（隔离 SQLite）</td></tr><tr><td><code>apps/ai-frontend/src/api/channelApis.js</code></td><td>前端 API 封装</td></tr><tr><td><code>apps/ai-frontend/src/views/ChannelApis.vue</code></td><td>列表页 + Agent 配置文档区</td></tr><tr><td><code>apps/ai-frontend/src/views/ChannelApiEditor.vue</code></td><td>新增 / 编辑页 + 配置指南侧栏</td></tr><tr><td><code>docs/04_IMPL_实现/[IMPL-RPT-046] ...</code></td><td>本文档</td></tr></tbody></table>
+<h3 id="修改">修改<a class="anchor" href="#修改" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>platform/packages/shared/src/models/index.js</code></td><td>注册并导出 <code>ChannelApi</code>（附注释说明为何不建 User 关联）</td></tr><tr><td><code>services/backend/vendor/shared/src/models/index.js</code></td><td>同步</td></tr><tr><td><code>services/backend/server.js</code></td><td>挂载 <code>app.use('/api/channel-apis', ...)</code>；后台初始化 IIFE 内新增幂等 seed 钩子</td></tr><tr><td><code>apps/ai-frontend/src/router/index.js</code></td><td>两条子路由 + <code>IN_APP_ADMIN_SEGMENTS</code> 白名单（见「五」）</td></tr><tr><td><code>apps/ai-frontend/src/composables/useRoutePrefetch.js</code></td><td><code>viewLoaders</code> 补两条惰性加载器</td></tr><tr><td><code>apps/ai-frontend/src/views/Layout.vue</code></td><td><code>ADMIN_MENU</code> 新增「渠道 API」入口，图标 <code>Key</code></td></tr></tbody></table>
+<blockquote><p><strong>vendored 快照提醒</strong>：后端 <code>@khy/shared</code> 经 <code>require.resolve</code> 解析到<br><code>services/backend/vendor/shared/src/</code>（被 git 跟踪的字节快照），<strong>不是</strong><br><code>platform/packages/shared/src/</code>。改 shared 模型必须两侧同步，否则运行时<br><code>ChannelApi</code> 为 <code>undefined</code>。<code>scripts/install/link-shared-dev.js</code> 对已存在的真目录<br>是严格 no-op，不会代劳。</p></blockquote>
+<hr>
+<h2 id="四-安全与工程红线自查">四、安全与工程红线自查<a class="anchor" href="#四-安全与工程红线自查" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>红线</th><th>结论</th></tr></thead><tbody><tr><td>零硬编码</td><td>端点由 <code>getProviderPresets()</code> 派生；密钥名来自 <code>KEY_SECRET_ENV</code> 常量；前端无字面量 IP / 端口。第三方域名（<code>api.anthropic.com</code> 等）不在 <code>PRODUCTION_HOST_PATTERN</code> 匹配范围内</td></tr><tr><td>状态透明</td><td>无自造状态文案；用户可见串沿用既有中文风格</td></tr><tr><td>基于活动的超时</td><td>未新增任何超时逻辑</td></tr><tr><td>终端渲染</td><td>未新增终端转义序列</td></tr><tr><td>风格</td><td>CommonJS + <code>'use strict'</code>，2 空格、单引号、分号；用户可见串中文，注释英文</td></tr><tr><td>版本双轨</td><td>未触碰 <code>platform/khy_platform/__import__.py</code> 等版本真源</td></tr></tbody></table>
+<hr>
+<h2 id="五-自测结果">五、自测结果<a class="anchor" href="#五-自测结果" aria-label="锚点">#</a></h2>
+<h3 id="验收标准逐条">验收标准逐条<a class="anchor" href="#验收标准逐条" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>标准</th><th>结果</th></tr></thead><tbody><tr><td>1</td><td>网页端「渠道 API」页可 CRUD 端点 URL 与 API Key</td><td>✅ 8 端点 + 编辑器表单全字段</td></tr><tr><td>2</td><td>Key 列表脱敏（<code>sk-****abcd</code>），眼睛图标切换</td><td>✅ <code>toView()</code> 恒脱敏；<code>revealed</code> map 内存切换</td></tr><tr><td>3</td><td>内置文档区：环境变量名 / 配置文件路径 / 示例代码块</td><td>✅ 7 个 Agent，shell/json/yaml/toml 分语言块</td></tr><tr><td>4</td><td>路由 <code>/admin/channel-apis</code> 可访问 + 左侧导航入口</td><td>✅ <code>ADMIN_MENU</code> 已加入口</td></tr><tr><td>5</td><td>SQLite <code>channel_apis</code> 表 + REST API</td><td>✅ <code>sequelize.sync()</code> 建表</td></tr><tr><td>6</td><td>一键复制配置命令 / 环境变量</td><td>✅ 列表「复制配置」+ 编辑器逐块复制</td></tr><tr><td>7</td><td>Key 加密存储，reveal 写审计日志</td><td>✅ AES-256-GCM + JSONL 审计（明文不落审计）</td></tr><tr><td>8</td><td><code>npm run check:layout</code> + eslint <code>--max-warnings 0</code></td><td>⚠️ 见下「基线说明」</td></tr></tbody></table>
+<h3 id="验证命令实测">验证命令实测<a class="anchor" href="#验证命令实测" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>命令</th><th>结果</th></tr></thead><tbody><tr><td><code>npx eslint --max-warnings 0 &lt;本次新增/修改的后端 3 文件&gt;</code></td><td>✅ 0 problems</td></tr><tr><td><code>npx eslint --max-warnings 0 &lt;本次新增的前端 3 文件&gt;</code></td><td>✅ 0 problems</td></tr><tr><td><code>npx jest tests/channelApiService.test.js</code></td><td>✅ 8/8 passed</td></tr><tr><td><code>node scripts/ci/check-agent-rules.js &lt;本次 12 个文件&gt;</code></td><td>✅ no violations found</td></tr><tr><td><code>npm run check:layout</code></td><td>❌ 5 项 error，<strong>全部预存</strong></td></tr><tr><td><code>khy doctor</code></td><td>环境依赖缺失（Node/npm 不在系统 PATH），未执行</td></tr></tbody></table>
+<h3 id="基线说明-第-8-项为何非绿">基线说明（第 8 项为何非绿）<a class="anchor" href="#基线说明-第-8-项为何非绿" aria-label="锚点">#</a></h3>
+<p>以下失败在本次改动之前即已存在，且均不涉及本次新增/修改的文件；遵循「不做超出范围的事」未顺手修：</p>
+<ul><li><strong><code>check:layout</code> 的 5 项 error</strong>：根目录白名单外的 <code>tmp_files.txt</code>；<code>docs/design/</code> 与 <code>docs/15_维护记录/</code> 缺 <code>00_INDEX_*</code>；44 份阶段文档未入主索引；<code>dist-electron</code> / <code>electron</code> / <code>tests</code> 三个顶层目录未登记层级清单；<code>extensions/scripts/khy-alpine-iso</code> 不合规 <code>provides</code> 契约。</li><li><strong>后端 <code>npx eslint src/ --max-warnings 0</code></strong>：输出约 500KB，21 errors + 100 warnings，全部落在 <code>src/adapters/im/*</code>、<code>src/agents/built-in/*</code> 等未触碰文件（<code>eqeqeq</code>、<code>no-unused-vars</code>、<code>no-empty</code>、<code>import/order</code>）。</li><li><strong>前端 <code>npx eslint src/ --max-warnings 0</code></strong>：1 error + 4 warnings，分布在 <code>src/api/notify.js</code>、<code>src/composables/useConfigSync.js</code>（含唯一 error：<code>'getAll' is not defined</code>）、<code>src/main.js</code>、<code>src/services/crossPlatform/shared/crossLauncher.js</code>——4 个文件本次均未触碰。</li><li><strong>一处口径问题</strong>：<code>npx eslint src/</code> 默认只扫 <code>.js</code>/<code>.cjs</code>/<code>.mjs</code>，<strong>静默跳过 <code>.vue</code></strong>（实测 <code>npx eslint src/views/Layout.vue</code> 单独执行报 17 个 <code>vue/attributes-order</code>，而 <code>npx eslint src/</code> 对 Layout.vue 零命中）。因此第 8 项按字面执行在本仓库当前配置下无法变绿，且它此前从未真正覆盖过 <code>.vue</code> 文件。</li></ul>
+<h3 id="本次修掉的一个真实缺陷">本次修掉的一个真实缺陷<a class="anchor" href="#本次修掉的一个真实缺陷" aria-label="锚点">#</a></h3>
+<p><code>router/index.js</code> 的 <code>detectRouterBase()</code> 原启发式为 <code>pathname.match(/^\/admin\/[^/]+/i)</code>，会把 <code>/admin/channel-apis</code> 解析成 router base <code>/admin/channel</code>，导致新页面 404。改为捕获段名并用 <code>IN_APP_ADMIN_SEGMENTS</code> 排除已注册的站内段，同时保留 <code>/admin/&lt;seg&gt;/...</code> 子路径部署的兼容能力。</p>
+<hr>
+<h2 id="六-遗留与后续建议">六、遗留与后续建议<a class="anchor" href="#六-遗留与后续建议" aria-label="锚点">#</a></h2>
+<ol><li><strong><code>detectRouterBase()</code> 与 <code>/admin/&lt;seg&gt;</code> 命名耦合</strong>：以后每新增一个 <code>/admin/xxx</code> 站内页都要往 <code>IN_APP_ADMIN_SEGMENTS</code> 补一段。建议改为「已注册路由优先匹配」的显式判定，消除白名单。</li><li><strong><code>eslint src/</code> 不覆盖 <code>.vue</code></strong>：CI 门禁实际存在盲区。建议把前端 lint 脚本显式带上 <code>src/**/*.vue</code>。</li><li><strong>前端既有 lint 失败</strong>：<code>useConfigSync.js</code> 的 <code>'getAll' is not defined</code> 是真 bug（error 级），建议单独立任务修。</li><li><strong><code>check:layout</code> 5 项预存 error</strong>：<code>tmp_files.txt</code> 应删或收容；<code>dist-electron</code> / <code>electron</code> / <code>tests</code> 三个顶层目录需登记进 [DESIGN-LAY-005] 第一节再改脚本；<code>khy-alpine-iso</code> 需补 <code>provides</code> / <code>script</code> 声明。</li><li><strong>密钥轮换</strong>：当前无轮换工具。如需「换密钥后旧密文仍可读」，需引入 envelope（DEK/KEK 双层）结构；当前设计是「换 env 即失效」，已通过在列表上以「是否有密文」而非「能否解密」判定 <code>has_key</code> 来避免误导用户。</li></ol>
+<hr>
+<h2 id="七-changelog-建议条目">七、CHANGELOG 建议条目<a class="anchor" href="#七-changelog-建议条目" aria-label="锚点">#</a></h2>
+<pre><code class="language-markdown"><span class="hljs-section">### Added</span>
+
+<span class="hljs-bullet">-</span> <span class="hljs-strong">**渠道 API 文档板块**</span>（T-023）：网页端新增 <span class="hljs-code">`/admin/channel-apis`</span>，可 CRUD 各 AI 渠道的
+  端点 URL 与 API Key；Key 以 AES-256-GCM 加密落库（密钥来自 <span class="hljs-code">`KHY_CHANNEL_KEY_SECRET`</span>），
+  列表与详情恒返回脱敏值，明文仅在 <span class="hljs-code">`POST /reveal`</span> 一次性返回并写入审计日志。
+  同时内置 7 个 Agent 客户端（Claude Code / CommandCode / ZCode / Codex / Cursor /
+  Cline / Continue.dev）的配置指南，含环境变量名、配置文件路径与可一键复制的
+  shell/json/yaml/toml 代码块。首次启动自动预置 7 条渠道数据（幂等，不覆盖用户改动）。</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-045] TUI按钮点击调研与鼠标历史回溯设计决策-2026-09-05.html"><div class="dir">← 上一篇</div><div class="ttl">TUI 按钮点击调研与鼠标/历史回溯设计决策</div></a><a class="next" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-047] 六道治理债清理与密钥轮换-2026-09-08.html"><div class="dir">下一篇 →</div><div class="ttl">[IMPL-RPT-047] 六道治理债清理与密钥轮换 — 实施记录</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-046] 渠道 API 文档板块-2026-09-08.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

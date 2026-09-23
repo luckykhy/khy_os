@@ -58,9 +58,12 @@ export function ToolExecutionPanel() {
   const activeIds = useAppSelector(state => state.toolExecution.activeIds)
   const [collapsed, setCollapsed] = useState(false)
 
-  const activeExecutions = executions.filter(e => activeIds.includes(e.id))
+  // 显示本轮全部工具执行（含已完成）。只显示「进行中」会让卡片在几十毫秒内
+  // 一闪而过——用户看不到 agent 到底干过什么，而「看得见在干活」正是本面板的
+  // 存在理由。清空交给下一次发送（Composer 发新请求时 clearExecutions）。
+  const running = executions.filter(e => activeIds.includes(e.id)).length
 
-  if (activeExecutions.length === 0) return null
+  if (executions.length === 0) return null
 
   return (
     <div className="mx-4 my-2 bg-card border border-card-border rounded-xl overflow-hidden animate-slide-down">
@@ -68,14 +71,16 @@ export function ToolExecutionPanel() {
         onClick={() => setCollapsed(!collapsed)}
         className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-surface-hover transition-colors"
       >
-        <span className="w-2 h-2 rounded-full bg-warning animate-pulse" />
-        <span className="font-medium text-foreground">正在执行</span>
-        <span className="text-xs text-foreground/40">{activeExecutions.length} 个任务</span>
+        <span className={`w-2 h-2 rounded-full ${running > 0 ? 'bg-warning animate-pulse' : 'bg-success'}`} />
+        <span className="font-medium text-foreground">{running > 0 ? '正在执行' : '工具执行'}</span>
+        <span className="text-xs text-foreground/40">
+          {running > 0 ? `${running} 个进行中` : `${executions.length} 个`}
+        </span>
         <span className="text-xs text-foreground/30 ml-auto">{collapsed ? '展开' : '收起'}</span>
       </button>
       {!collapsed && (
         <div className="px-3 pb-3 space-y-1">
-          {activeExecutions.map(execution => (
+          {executions.map(execution => (
             <ToolExecutionItem key={execution.id} execution={execution} />
           ))}
         </div>

@@ -1,34 +1,81 @@
 import { useState } from 'react'
+import { useAppDispatch } from '../../state/store'
+import { addToast } from '../../state/toastSlice'
 
 interface AppHeaderProps {
   sessionId?: string
+  // 会话落盘 JSONL 的真实路径（后端 jsonlPathFor 解析结果）
+  sessionJsonlPath?: string
   workspacePath?: string
   modelName?: string
   onReload?: () => void
 }
 
-export function AppHeader({ sessionId = 'sess_74b99e12-4b39-45a0-ac8f-539e2a5e1b8a', workspacePath = 'D:\\Portable\\khy-os', modelName = 'GLM-5.3Max', onReload }: AppHeaderProps) {
+export function AppHeader({ sessionId = '', sessionJsonlPath = '', workspacePath = '', modelName, onReload }: AppHeaderProps) {
+  // Display-only: App.tsx passes the catalog-resolved label of the selected
+  // model (P3-7④) or the '选择模型' placeholder; never a brand literal.
+  const modelLabel = modelName ?? ''
   const [copied, setCopied] = useState<string | null>(null)
   const [reloading, setReloading] = useState(false)
+  const dispatch = useAppDispatch()
 
   const copyToClipboard = async (text: string, label: string) => {
-    await navigator.clipboard.writeText(text)
-    setCopied(label)
-    setTimeout(() => setCopied(null), 2000)
+    if (!text) {
+      dispatch(addToast({ type: 'error', title: '复制失败：内容为空，请先选择工作区或会话' }))
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(label)
+      setTimeout(() => setCopied(null), 2000)
+    } catch (err) {
+      dispatch(addToast({ type: 'error', title: `复制失败：${String(err)}，请检查剪贴板权限` }))
+    }
   }
 
+  // 「重载会话」：真实重新拉取当前会话消息（App 层 session:messages 桥），
+  // 无当前会话时 App 层会给出可选择会话的提示。
   const handleReload = () => {
     setReloading(true)
     onReload?.()
     setTimeout(() => setReloading(false), 1000)
   }
 
+  const toast = (title: string, type: 'info' | 'error' = 'info') => dispatch(addToast({ type, title }))
+
+  // 在编辑器中打开 / 在资源管理器中打开：都走 main 的真实 IPC
+  const openInEditor = () => {
+    const api = (window as unknown as {
+      __KHYOS__?: { openInEditor?: (t?: string) => Promise<{ ok: boolean; editor?: string; error?: string }> }
+    }).__KHYOS__
+    if (!api?.openInEditor) { toast('编辑器打开不可用：preload 未注入 __KHYOS__，请重启应用', 'error'); return }
+    void api.openInEditor(workspacePath).then((r) => {
+      if (!r?.ok) toast(r.error || '编辑器启动失败', 'error')
+      else toast(`已在编辑器 ${r.editor ?? ''} 中打开 ${workspacePath}`)
+    }).catch((err: unknown) => toast(`编辑器启动失败：${String(err)}`, 'error'))
+  }
+
+  const openInFileManager = () => {
+    const api = (window as unknown as {
+      __KHYOS__?: { openPath?: (p: string) => Promise<{ ok: boolean; error?: string }> }
+    }).__KHYOS__
+    if (!workspacePath) { toast('工作区路径不可用：请先在窗口菜单中打开工作区', 'error'); return }
+    if (!api?.openPath) { toast('打开目录不可用：preload 未注入 __KHYOS__，请重启应用', 'error'); return }
+    void api.openPath(workspacePath).then((r) => {
+      if (r && !r.ok) toast(r.error || '打开失败', 'error')
+    }).catch((err: unknown) => toast(`打开目录失败：${String(err)}`, 'error'))
+  }
+
   return (
     <div className="bg-panel border-b border-border px-4 py-2 flex items-center gap-2 flex-wrap">
       {/* 会话信息 */}
       <div className="flex items-center gap-2 text-xs text-foreground/60 mr-2">
-        <span className="font-medium text-foreground/80">{modelName}</span>
-        <span className="text-foreground/30">·</span>
+        {modelLabel && (
+          <>
+            <span className="font-medium text-foreground/80">{modelLabel}</span>
+            <span className="text-foreground/30">·</span>
+          </>
+        )}
         <span className="truncate max-w-[200px]" title={workspacePath}>{workspacePath}</span>
       </div>
 
@@ -61,9 +108,9 @@ export function AppHeader({ sessionId = 'sess_74b99e12-4b39-45a0-ac8f-539e2a5e1b
         </button>
 
         <button
-          onClick={() => copyToClipboard(`${workspacePath}/.khyos/conversations/${sessionId}.jsonl`, 'jsonl')}
+          onClick={() => copyToClipboard(sessionJsonlPath, 'jsonl')}
           className="px-2.5 py-1.5 rounded-md text-xs text-foreground/60 hover:text-foreground hover:bg-surface-hover transition-colors flex items-center gap-1.5"
-          title="复制 JSONL 路径"
+          title={sessionJsonlPath ? `复制 JSONL 路径：${sessionJsonlPath}` : '复制 JSONL 路径：请先选择一个会话'}
         >
           <span>{copied === 'jsonl' ? '已复制' : '复制JSONL路径'}</span>
         </button>
@@ -84,8 +131,9 @@ export function AppHeader({ sessionId = 'sess_74b99e12-4b39-45a0-ac8f-539e2a5e1b
         </button>
 
         <button
+          onClick={openInEditor}
           className="px-2.5 py-1.5 rounded-md text-xs text-foreground/60 hover:text-foreground hover:bg-surface-hover transition-colors flex items-center gap-1.5"
-          title="在编辑器中打开"
+          title="在编辑器中打开（编辑器取 设置 → 常规 或 KHY_EDITOR）"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
             <path d="M7 2H3a1 1 0 00-1 1v6a1 1 0 001 1h6a1 1 0 001-1V5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
@@ -95,6 +143,7 @@ export function AppHeader({ sessionId = 'sess_74b99e12-4b39-45a0-ac8f-539e2a5e1b
         </button>
 
         <button
+          onClick={openInFileManager}
           className="px-2.5 py-1.5 rounded-md text-xs text-foreground/60 hover:text-foreground hover:bg-surface-hover transition-colors flex items-center gap-1.5"
           title="在资源管理器中打开"
         >

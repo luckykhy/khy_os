@@ -1,7 +1,7 @@
 'use strict';
 
-const { ERRNO, negErrno } = require('../src/services/wasm-sandbox/m1Constants');
-const { createKhySysHost } = require('../src/services/wasm-sandbox/khySysHost');
+const { ERRNO, negErrno } = require('../src/services/domain/system/wasm-sandbox/m1Constants.js');
+const { createKhySysHost } = require('../src/services/domain/system/wasm-sandbox/khySysHost.js');
 
 function writeBytes(memory, ptr, bytes) {
   const view = new Uint8Array(memory.buffer);

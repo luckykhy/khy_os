@@ -8,7 +8,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const tc = require('../../src/services/toolCatalog/toolContract');
+const tc = require('../../src/services/domain/catalog/toolCatalog/toolContract.js');
 
 const CATEGORIES = { filesystem: 'x', data: 'x', execution: 'x', coordinator: 'x' };
 const RISK_LEVELS = ['safe', 'low', 'medium', 'high', 'critical'];

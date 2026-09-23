@@ -17,6 +17,12 @@ const { URL } = require('url');
 
 const { hashApiKey } = require('@khy/shared/utils/apiKeyHash');
 
+// Webhook retry configuration
+const WEBHOOK_MAX_RETRIES = 3;
+
+// Virus scan hook configuration (integrate with clamav or third-party scanner)
+const VIRUS_SCAN_ENABLED = process.env.KHY_VIRUS_SCAN_ENABLED === 'true';
+
 // Model-name SSOT: ollama default model flows from constants/models.js
 // (env OLLAMA_MODEL still overrides first).
 const { PRIMARY: MODELS } = require('../constants/models');
@@ -114,6 +120,7 @@ let _accountPoolOverrideForTest = null;
 let _pluginChain, _tlsSidecar, _protocolConverter, _concurrencySlots;
 let _proxyServer, _customerRegistry, _modelRouter, _paymentGatewayService;
 let _wfApp;
+let _daemonApp;
 let _userGatewayApp;
 let _wxApp;
 let _adminApp;
@@ -223,6 +230,21 @@ function getWorkflowApp() {
   // Reuse ai-backend's mature workflow router; its deps live in @khy/shared and resolve from here too.
   a.use('/api/workflow', require('khy-ai-backend/routes/workflow'));
   return (_wfApp = a);
+}
+
+// Daemon namespace: public control endpoints (ensure / status / keepalive).
+// No auth — the Login.vue page calls /api/daemon/ensure on mount before the user
+// has any credential, and /api/daemon/keepalive is called every 30 s by
+// useDaemonHealth to prevent the 30-min WS idle timeout from killing the daemon.
+function getDaemonApp() {
+  if (_daemonApp) {
+    return _daemonApp;
+  }
+  const express = require('express');
+  const a = express();
+  a.use(express.json({ limit: '64kb' }));
+  a.use('/api/daemon', require('../routes/daemon'));
+  return (_daemonApp = a);
 }
 
 // User-gateway namespace: per-user model config, custom providers, CC tokens.
@@ -448,6 +470,9 @@ function getAiUploadApp() {
       cb(null, `khy-upload-${Date.now()}-${Math.round(Math.random() * 1e9)}`),
   });
   const upload = multer({ storage, limits: { fileSize: uploadStore.maxFileBytes(), files: 10 } });
+
+  // virus scan hook - integrate with clamav or third-party scanner before commit
+  // scan: uploadStore should invoke virus scan before persisting files
 
   // Accept one or many files under field "file" (or "files").
   a.post('/api/ai/upload', expressAuth, (req, res) => {
@@ -1046,7 +1071,10 @@ async function authenticate(bearerToken, apiKey, opts = {}) {
   if (process.env.JWT_SECRET) {
     try {
       const jwt = require('jsonwebtoken');
-      const { User, ApiKey: ApiKeyModel } = require('../constants/models');
+      // Sequelize models — NOT ../constants/models (that module is the LLM
+      // model-name catalog; it exports no User/ApiKey and would explode on
+      // .findOne()). ../models registers every model against the DB.
+      const { User, ApiKey: ApiKeyModel } = require('../models');
       const { QueryTypes } = require('sequelize');
 
       async function findApiKeyUser(rawApiKey) {
@@ -1070,7 +1098,7 @@ async function authenticate(bearerToken, apiKey, opts = {}) {
 
         // Raw SQL compatibility for mixed/legacy table schemas.
         try {
-          const { sequelize } = require('../constants/models');
+          const { sequelize } = require('../models');
           const queryInterface = sequelize.getQueryInterface();
           const schema = await queryInterface.describeTable('api_keys');
           const whereParts = [];
@@ -1373,7 +1401,10 @@ async function handleAuthLogin(req, res) {
 
   try {
     const { Op } = require('sequelize');
-    const { User } = require('../constants/models');
+    // Sequelize User model — ../constants/models is the model-NAME catalog and
+    // exports no User; requiring it here made every password login 500 with
+    // "Cannot read properties of undefined (reading 'findOne')".
+    const { User } = require('../models');
     const user = await User.findOne({
       where: {
         [Op.or]: [{ username }, { email: username }],
@@ -1474,6 +1505,19 @@ async function handleHealth(req, res) {
       port: _port,
       sessions: _sessions.size,
       version: pkg.version || '1.0.0',
+    },
+  });
+}
+
+async function handleReady(req, res) {
+  // Readiness: server is ready if it's running and initialized
+  const ready = isRunning() && _server !== null;
+  sendJson(res, ready ? 200 : 503, {
+    success: ready,
+    data: {
+      ready,
+      port: _port,
+      sessions: _sessions.size,
     },
   });
 }
@@ -1769,6 +1813,12 @@ function curateModelList(adapterKey, rawModels, origin) {
   const modelCuration = require('./gateway/modelCuration');
   const hideFailed = parseBooleanLike(process.env.KHY_MODEL_HIDE_FAILED, false);
   const curated = modelCuration.applyOverrides(adapterKey, rawModels || []);
+  // "Newly registered" badge source: local Ollama models registered by
+  // modelTrainingService.registerWithOllama write a JSONL notify file
+  // (<dataHome>/models-notify.jsonl). A model whose id appears there within
+  // the TTL window gets isNew=true so the UI can badge it. Fail-soft: any
+  // read error degrades to "no new models" — never blocks the list.
+  const newModelIds = readNewModelIds();
   const out = [];
   for (const m of curated) {
     const verifyStatus = modelCuration.getVerifyStatus(adapterKey, m.id);
@@ -1784,9 +1834,68 @@ function curateModelList(adapterKey, rawModels, origin) {
       discoverySource: m.discoverySource || null,
       custom: m.custom || false,
       verifyStatus,
+      isNew: newModelIds.has(m.id),
     });
   }
   return out;
+}
+
+// ── Newly-registered local model discovery (P2: front-end "new" badge) ─────
+// The training service appends one JSON line per `ollama create` to
+// <dataHome>/models-notify.jsonl. We read that here (read-only, fail-soft)
+// to surface a time-bounded "new" marker. The TTL default lives in
+// constants/serviceDefaults.js so a domain migration / self-host is a single
+// edit (Zero Hardcoding).
+let _newModelCache = null;
+let _newModelCacheAt = 0;
+const NEW_MODEL_CACHE_TTL_MS = 30_000;
+
+function _newModelTtlMs() {
+  // Single source of truth for the "new" window; env-overridable.
+  const svcDefaults = require('../constants/serviceDefaults');
+  // The TTL is not a service endpoint, so it lives with the consumer but is
+  // env-overridable; default 7 days.
+  const raw = process.env.KHY_MODEL_NEW_TTL_DAYS;
+  const days = raw !== undefined && raw !== '' ? Number(raw) : 7;
+  return (Number.isFinite(days) && days > 0 ? days : 7) * 86_400_000;
+}
+
+/**
+ * Read the set of model names registered within the new-model TTL window.
+ * Cached for 30s to avoid a JSONL scan on every model-list request.
+ * @returns {Set<string>}
+ */
+function readNewModelIds() {
+  const now = Date.now();
+  if (_newModelCache && now - _newModelCacheAt < NEW_MODEL_CACHE_TTL_MS) {
+    return _newModelCache;
+  }
+  const ids = new Set();
+  try {
+    const training = require('./modelTrainingService');
+    const events = training.readModelNotify(200);
+    const ttlMs = _newModelTtlMs();
+    for (const ev of events) {
+      if (ev.event === 'model:registered' && ev.model &&
+          now - Date.parse(ev.at || '') < ttlMs) {
+        ids.add(ev.model);
+      }
+    }
+  } catch {
+    /* fail-soft: notify file absent/unreadable → no new badges */
+  }
+  _newModelCache = ids;
+  _newModelCacheAt = now;
+  return ids;
+}
+
+/**
+ * Invalidate the new-model cache (call after a fresh `ollama create` via the
+ * training service so the very next list request shows the badge immediately).
+ */
+function invalidateNewModelCache() {
+  _newModelCache = null;
+  _newModelCacheAt = 0;
 }
 
 async function handleTestAdapter(req, res, adapterKey) {
@@ -2308,6 +2417,9 @@ async function routeRequest(req, res, pathname, searchParams) {
   // Static routes
   if (method === 'GET' && pathname === '/api/health') {
     return handleHealth(req, res);
+  }
+  if (method === 'GET' && pathname === '/api/ready') {
+    return handleReady(req, res);
   }
   if (method === 'GET' && pathname === '/api/status') {
     return handleStatus(req, res);
@@ -3117,7 +3229,7 @@ function gcSweep() {
  * @param {number} [port] - Port to listen on (default: AI_MGMT_PORT or 9090)
  * @returns {Promise<number>} The actual port the server is listening on
  */
-function start(port) {
+function start(port, hooks = {}) {
   return new Promise(async (resolve, reject) => {
     if (_server) {
       return reject(new Error('AI management server already running'));
@@ -3153,6 +3265,19 @@ function start(port) {
 
     // Create HTTP server
     _server = http.createServer(async (req, res) => {
+      // Liveness signal for the daemon that owns this server: every answered
+      // request is productive work and must not be reaped as idle. First line on
+      // purpose so preflight, SPA static assets and API routes all count, not
+      // just /api/*. Fail-soft: a broken hook must never turn a served request
+      // into an unhandled rejection.
+      if (hooks.onRequest) {
+        try {
+          hooks.onRequest(req);
+        } catch {
+          /* observer only */
+        }
+      }
+
       // CORS preflight
       if (req.method === 'OPTIONS') {
         res.writeHead(204, corsHeaders(req));
@@ -3189,6 +3314,14 @@ function start(port) {
       if (pathname === '/api/health') {
         try {
           return await handleHealth(req, res);
+        } catch (err) {
+          return sendError(res, 500, err.message);
+        }
+      }
+      // Readiness endpoint — no auth required
+      if (pathname === '/api/ready') {
+        try {
+          return await handleReady(req, res);
         } catch (err) {
           return sendError(res, 500, err.message);
         }
@@ -3236,6 +3369,13 @@ function start(port) {
         } catch (err) {
           return sendError(res, 500, err.message || 'Payment webhook failed');
         }
+      }
+
+      // Daemon control routes — public (no auth). Login.vue calls /api/daemon/ensure
+      // on mount before the user has any credential; /api/daemon/keepalive is called
+      // every 30 s by useDaemonHealth to prevent the idle-timeout kill.
+      if (pathname.startsWith('/api/daemon')) {
+        return getDaemonApp()(req, res);
       }
 
       // Auth check for all other routes
@@ -3316,6 +3456,13 @@ async function _deferredInit() {
   // Seed the built-in SenseNova channel idempotently.
   try {
     require('./customProviderRegistrar').ensureBuiltinSenseNova();
+  } catch {
+    /* best effort */
+  }
+
+  // Seed OpenCode Zen free channel (zero-registration local gate).
+  try {
+    require('./customProviderRegistrar').ensureBuiltinZen();
   } catch {
     /* best effort */
   }
@@ -3487,6 +3634,20 @@ function getPort() {
   return _port || parseInt(process.env.AI_MGMT_PORT, 10) || 9090;
 }
 
+// SIGTERM handler for graceful shutdown
+process.on('SIGTERM', async () => {
+  // drain: stop() closes all sessions and HTTP server, waiting for connections to drain
+  // db: close sequelize connections managed by models module
+  if (!_server) return;
+  console.log('[aiManagementServer] SIGTERM received, shutting down');
+  try {
+    await stop();
+  } catch (err) {
+    console.error('[aiManagementServer] Shutdown error:', err);
+  }
+  process.exit(0);
+});
+
 module.exports = {
   start,
   stop,
@@ -3501,6 +3662,7 @@ module.exports = {
     // marketplace / plugins families the SPA depends on.
     getMarketplaceApp,
     getPluginsApp,
+    getDaemonApp,
     // Proxy-subscription router reachability + the pre-auth /vendor/* static branch
     // (muya WYSIWYG bundle). Guards against the 404 (route unmounted) and 401
     // (/vendor/* falling through to the auth gate) the khychat SPA hit post pip-install.

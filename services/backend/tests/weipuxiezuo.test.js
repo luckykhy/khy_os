@@ -14,7 +14,8 @@
  */
 
 const path = require('path');
-const ROOT = path.join(__dirname, '..', 'src', 'services', 'weipuxiezuo');
+// 域迁移后真源位于 domain/collab/weipuxiezuo（src/services/weipuxiezuo 仅剩 index 垫片）。
+const ROOT = path.join(__dirname, '..', 'src', 'services', 'domain', 'collab', 'weipuxiezuo');
 const weipu = require(path.join(ROOT, 'index'));
 const detector = require(path.join(ROOT, 'detector'));
 const textStats = require(path.join(ROOT, 'textStats'));

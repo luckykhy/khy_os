@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DOCS-003] AI 指令文件标准.md -->
+<title>[DOCS-003] AI 指令文件标准 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[DOCS-003] AI 指令文件标准</div>
+      <header class="hero reveal"><h1>[DOCS-003] AI 指令文件标准</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#docs-003-ai-指令文件标准">[DOCS-003] AI 指令文件标准</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: AI 指令文件标准<br>id: DOCS-003<br>domain: DOCS<br>nature: 约束为主，兼权力<br>scope: &quot;仓库内一切面向 AI 的指令文件（AGENTS.md / CLAUDE.md / khy.md / KHY.md / agent.md / GEMINI.md / .windsurfrules / .cursorrules / .clinerules / .github/copilot-instructions.md / .cursor/rules/** 等）的编写与维护&quot;<br>priority: P2<br>trigger: 新建或修改任一 AI 指令文件时<br>constraint: &quot;指令文件必须落在读取器会扫到的位置（不得放 <code>_产物/</code> 等资产暂存区）；单文件字符数不得超过其 tier 的读取预算（own/compat 8000、eco 4000，真源 instructionFileService.js 与 instructionEcosystemRegistry.js），超限即静默截断；同一事实只允许一处真源，其余必须写成指针；非根指令文件不得自行声明优先级，优先级只能在登记表以字面路径登记；文件内引用的仓库路径、<code>npm run</code> 脚本、<code>khy</code> 子命令与 <code>[域-NNN]</code> 编号必须真实可达；<code>khy-metadata:pointer</code> 机器管理块不得手改且必须 START/END 成对；示意性命令必须落在可识别语境（❌/✅ 对照块，或紧邻标题含「示例/映射」字样）。&quot;<br>grants: &quot;授权维护者在预算内自行拆分指令文件（细节移入 docs/ 只留指针）即视为合规，无需事前审批；授权在登记表以字面路径登记某指令文件的优先级后，该文件即可合法声明覆盖关系。&quot;<br>benefit: &quot;把「写了但 AI 读不到」的静默失效变成可判定 finding，作者在写作时就知道边界；预算、候选清单、可达性三类判据全部从既有源码常量与注册表派生，不新增第二真源；存量走基线棘轮只降不升，不阻塞在途工作。&quot;<br>exception: &quot;上游第三方克隆（.research-tmp/）与用户级目录（~/.khyquant/khy.md）不在管辖范围；docs/ 下的普通文档不受本条约束（归 DOCS-001 / DOCS-002）。&quot;<br>version: &quot;1.0.0 (2026-09-16)&quot;<br>status: active<br>ssot: &quot;docs/10_规范/DESIGN-DOC/[DESIGN-DOC-002] AI 指令文件标准.md&quot;<br>formerly: 无<br>owner: governance-team</p>
+<hr>
+<h1 id="docs-003-ai-指令文件标准">[DOCS-003] AI 指令文件标准<a class="anchor" href="#docs-003-ai-指令文件标准" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: DOCS-003 -->
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/10_规范/DESIGN-DOC/[DESIGN-DOC-002] AI 指令文件标准.md。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>指令文件必须落在读取器会扫到的位置（不得放 <code>_产物/</code> 等资产暂存区）；单文件字符数不得超过其 tier 的读取预算（own/compat 8000、eco 4000，真源 instructionFileService.js 与 instructionEcosystemRegistry.js），超限即静默截断；同一事实只允许一处真源，其余必须写成指针；非根指令文件不得自行声明优先级，优先级只能在登记表以字面路径登记；文件内引用的仓库路径、<code>npm run</code> 脚本、<code>khy</code> 子命令与 <code>[域-NNN]</code> 编号必须真实可达；<code>khy-metadata:pointer</code> 机器管理块不得手改且必须 START/END 成对；示意性命令必须落在可识别语境（❌/✅ 对照块，或紧邻标题含「示例/映射」字样）。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>授权维护者在预算内自行拆分指令文件（细节移入 docs/ 只留指针）即视为合规，无需事前审批；授权在登记表以字面路径登记某指令文件的优先级后，该文件即可合法声明覆盖关系。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>把「写了但 AI 读不到」的静默失效变成可判定 finding，作者在写作时就知道边界；预算、候选清单、可达性三类判据全部从既有源码常量与注册表派生，不新增第二真源；存量走基线棘轮只降不升，不阻塞在途工作。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>见 <code>ssot</code> 指向的真源原文；本卡不复制反例，以免与真源漂移。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>人工评审（该规则暂无机械守卫）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>上游第三方克隆（.research-tmp/）与用户级目录（~/.khyquant/khy.md）不在管辖范围；docs/ 下的普通文档不受本条约束（归 DOCS-001 / DOCS-002）。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-16) 初版 / 迁移自 无</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/规则卡/[DOCS-002] 索引命名格式动态决策.html"><div class="dir">← 上一篇</div><div class="ttl">[DOCS-002] 索引命名格式动态决策</div></a><a class="next" href="../../../docs/10_规范/规则卡/[DOCS-004] README 内容规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DOCS-004] README 内容规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/规则卡/[DOCS-003] AI 指令文件标准.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

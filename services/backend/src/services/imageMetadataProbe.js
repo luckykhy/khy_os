@@ -1,22 +1,35 @@
 'use strict';
 
 /**
- * imageMetadataProbe.js �?纯叶�?仅凭图片文件头字节推断「格�?+ 像素尺寸 + 色彩�?
- * 并据此产出一段确定性的中文「简单描述�?**完全不依赖任何模型、不联网、不调外部进�?*�? *
- * 背景(用户目标 2026-07「为了验�?OCR,给本地模式也做一个图片识别——即使没有任何模�?
- * 也能正确地简单『看图』并给出简单描述�?:本仓既有 imageService.detectFormat 只认魔数
- * 返回格式�?png/jpeg/gif/webp),**没有任何像素尺寸信息**;而无模型的本地模�?/local)
- * 此前遇到图片只能读成 utf8 乱码(file_view)或走兜底菜单——用户「看不到」图�? *
- * 本叶子补上缺失的「看图」原�?直接解析各格式的头部,拿到宽高/位深/色彩类型,
- * 组成一句人类可读的概览。这是无模型也成立的确定性事�?尺寸、比例、朝向、文件大�?,
- * 与可选的本地 OCR 文本互补——OCR 读「图里的字�?本探针读「图本身的形」�? *
- * 设计铁律:
- *  - 纯函�?入参�?Buffer(或已�?sizeBytes),�?IO、零网络、零子进程、确定性�? *  - 绝不�?任何越界/畸形�?�?返回已知的部分信�?�?{format:'unknown'}),而不�?throw�? *  - 门控 KHY_LOCAL_IMAGE_VIEW 默认开;显式 0/false/off/no/空串 �?�?调用方据此字节回退)�? */
+ * imageMetadataProbe.js — pure leaf: infer "format + pixel size + color mode"
+ * from image header bytes alone, and synthesize a deterministic Chinese
+ * "simple description". No model, no network, no subprocess.
+ *
+ * Background: the repo's imageService.detectFormat only returned a magic-number
+ * format (png/jpeg/gif/webp) with no pixel-size information; the model-less
+ * local mode (/local) could only read an image as utf8 garbage (file_view) or
+ * fall back to the generic menu. This leaf fills the gap: it parses each
+ * format's header for width/height/bit-depth/color-type and composes a
+ * human-readable overview. That overview is deterministic even without any
+ * model (size, aspect, orientation, file size), and complements optional
+ * local OCR text — OCR reads "the text inside the image", this probe reads
+ * "the shape of the image itself".
+ *
+ * Design rules:
+ *   - Pure function: input is a Buffer (header bytes) plus optional sizeBytes;
+ *     zero IO, zero network, zero subprocess, deterministic.
+ *   - Never throws on any out-of-bounds/malformed input: return the partial
+ *     info that is known, or { format:'unknown' } — never throw.
+ *   - Gated by KHY_LOCAL_IMAGE_VIEW, default-on; explicit 0/false/off/no/empty
+ *     disables it (callers byte-fall back when disabled).
+ */
 
 const _FALSY = new Set(['0', 'false', 'off', 'no', '']);
 
 /**
- * 门控:KHY_LOCAL_IMAGE_VIEW 默认开,仅显�?0/false/off/no/空串关闭�? * @param {object} [env]
+ * Gate: KHY_LOCAL_IMAGE_VIEW defaults on; only an explicit 0/false/off/no/
+ * empty string turns it off.
+ * @param {object} [env]
  * @returns {boolean}
  */
 function isEnabled(env) {
@@ -27,10 +40,12 @@ function isEnabled(env) {
   return !_FALSY.has(String(e.KHY_LOCAL_IMAGE_VIEW).trim().toLowerCase());
 }
 
-// ── 各格式头部解�?全部越界安全,读不到即留空) ────────────────────────────
+// ── Per-format header probes (all bounds-safe: if the header is short,
+// the field is left unset rather than throwing) ─────────────────────────
 
 function _probePng(buf) {
-  // 签名(8) + IHDR: 宽@16, 高@20, 位深@24, 色彩类型@25(BE)�?  if (buf.length < 26) {
+  // signature(8) + IHDR: width@16, height@20, bitDepth@24, colorType@25 (BE)
+  if (buf.length < 26) {
     return null;
   }
   const out = { format: 'png', width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
@@ -39,8 +54,14 @@ function _probePng(buf) {
   if (Number.isFinite(bitDepth)) {
     out.bitDepth = bitDepth;
   }
-  // PNG 色彩类型:0 灰度 / 2 真彩(RGB) / 3 索引 / 4 灰度+α / 6 真彩+α(RGBA)
-  const COLOR = { 0: '灰度', 2: 'RGB 真彩', 3: '索引调色�?, 4: '灰度+透明', 6: 'RGBA 真彩+透明' };
+  // PNG color types: 0 grayscale / 2 RGB / 3 palette / 4 grayscale+alpha / 6 RGBA
+  const COLOR = {
+    0: '灰度',
+    2: 'RGB 真彩',
+    3: '索引调色板',
+    4: '灰度+透明',
+    6: 'RGBA 真彩+透明',
+  };
   if (colorType in COLOR) {
     out.colorLabel = COLOR[colorType];
   }
@@ -51,11 +72,14 @@ function _probePng(buf) {
 }
 
 function _probeGif(buf) {
-  // "GIFxxa" + 宽@6(LE u16) + 高@8(LE u16)�?  if (buf.length < 10) {
+  // "GIFxxa" + width@6 (LE u16) + height@8 (LE u16)
+  if (buf.length < 10) {
     return null;
   }
   const out = { format: 'gif', width: buf.readUInt16LE(6), height: buf.readUInt16LE(8) };
-  // 简易判定是否可能为动图:数一数图像描述符�?0x2C)是否 >1(有界扫描,绝不无界)�?  let frames = 0;
+  // Heuristic for animation: count image-separator descriptors (0x2C);
+  // >1 means likely animated. Bounded scan — never unbounded.
+  let frames = 0;
   const limit = Math.min(buf.length, 262144);
   for (let i = 13; i < limit; i++) {
     if (buf[i] === 0x2c) {
@@ -72,7 +96,8 @@ function _probeGif(buf) {
 }
 
 function _probeBmp(buf) {
-  // "BM" + BITMAPINFOHEADER: 宽@18(LE i32), 高@22(LE i32), 位深@28(LE u16)�?  if (buf.length < 30) {
+  // "BM" + BITMAPINFOHEADER: width@18 (LE i32), height@22 (LE i32), bpp@28 (LE u16)
+  if (buf.length < 30) {
     return null;
   }
   const width = buf.readInt32LE(18);
@@ -93,12 +118,16 @@ function _probeWebp(buf) {
   const cc = buf.toString('ascii', 12, 16);
   try {
     if (cc === 'VP8 ') {
-      // 有损:数据@20;起始�?9d 01 2a @23;宽@26、高@28 各取�?14 �?LE u16)�?      const w = buf.readUInt16LE(26) & 0x3fff;
+      // lossy: data@20; start signature 9d 01 2a @23; width@26, height@28
+      // each take the lower 14 bits (LE u16)
+      const w = buf.readUInt16LE(26) & 0x3fff;
       const h = buf.readUInt16LE(28) & 0x3fff;
       return { format: 'webp', width: w, height: h, webpKind: '有损(VP8)' };
     }
     if (cc === 'VP8L') {
-      // 无损:数据@20,签名 0x2f @20;随后 4 字节(LE)�?14 位宽-1�?4 位高-1�?      if (buf[20] !== 0x2f) {
+      // lossless: data@20, signature 0x2f @20; then 4 LE bytes:
+      // 14 bits width-1, 14 bits height-1
+      if (buf[20] !== 0x2f) {
         return { format: 'webp' };
       }
       const bits = buf.readUInt32LE(21);
@@ -107,7 +136,9 @@ function _probeWebp(buf) {
       return { format: 'webp', width: w, height: h, webpKind: '无损(VP8L)' };
     }
     if (cc === 'VP8X') {
-      // 扩展:标志@20;画布宽@24(3 字节 LE, �?1)、高@27(3 字节 LE, �?1)�?      const w = buf.readUIntLE(24, 3) + 1;
+      // extended: flags@20; canvas width@24 (3 LE bytes, +1),
+      // canvas height@27 (3 LE bytes, +1)
+      const w = buf.readUIntLE(24, 3) + 1;
       const h = buf.readUIntLE(27, 3) + 1;
       const out = { format: 'webp', width: w, height: h, webpKind: '扩展(VP8X)' };
       if (buf[20] & 0x10) {
@@ -119,13 +150,15 @@ function _probeWebp(buf) {
       return out;
     }
   } catch {
-    /* 畸形 webp �?�?只报格式 */
+    /* malformed webp — report the format only */
   }
   return { format: 'webp' };
 }
 
 function _probeJpeg(buf) {
-  // �?offset 2 起扫�?marker,�?SOFn 读精�?�?�?BE)。有界迭代防畸形死循环�?  const SOF = new Set([
+  // Scan markers from offset 2; read precise width/height at SOFn (BE).
+  // Bounded iteration guards against a malformed infinite loop.
+  const SOF = new Set([
     0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf,
   ]);
   const len = buf.length;
@@ -137,11 +170,13 @@ function _probeJpeg(buf) {
       continue;
     }
     let marker = buf[off + 1];
-    // 跳过填充 0xFF�?    while (marker === 0xff && off + 2 < len) {
+    // skip 0xFF fill bytes
+    while (marker === 0xff && off + 2 < len) {
       off++;
       marker = buf[off + 1];
     }
-    // 无载荷的独立 marker(SOI/EOI/RSTn/TEM)�?    if (
+    // standalone markers carry no payload (SOI/EOI/RSTn/TEM)
+    if (
       marker === 0xd8 ||
       marker === 0xd9 ||
       (marker >= 0xd0 && marker <= 0xd7) ||
@@ -169,13 +204,18 @@ function _probeJpeg(buf) {
     }
     if (segLen < 2) {
       break;
-    } // 畸形段长,停止�?    off += 2 + segLen;
+    }
+    // malformed segment length — stop
+    off += 2 + segLen;
   }
   return { format: 'jpeg' };
 }
 
 /**
- * 从图片头部字节推断元数据。绝不抛;无法识别 �?{ format:'unknown' }�? * @param {Buffer} buf  图片文件�?至少)头部字节�? * @returns {{format:string, width?:number, height?:number, bitDepth?:number,
+ * Infer metadata from image header bytes. Never throws; unrecognized
+ * input yields { format:'unknown' }.
+ * @param {Buffer} buf header bytes of the image file (at least the header)
+ * @returns {{format:string, width?:number, height?:number, bitDepth?:number,
  *            colorLabel?:string, hasAlpha?:boolean, animated?:boolean, webpKind?:string}}
  */
 function probeImageMetadata(buf) {
@@ -210,7 +250,7 @@ function probeImageMetadata(buf) {
     ) {
       return _probeWebp(buf) || { format: 'webp' };
     }
-    // TIFF: II*\0 �?MM\0*
+    // TIFF: II*\0 or MM\0*
     if (
       (buf[0] === 0x49 && buf[1] === 0x49 && buf[2] === 0x2a) ||
       (buf[0] === 0x4d && buf[1] === 0x4d && buf[2] === 0x00)
@@ -223,7 +263,7 @@ function probeImageMetadata(buf) {
   }
 }
 
-// ── 描述合成(确定性中�? ──────────────────────────────────────────────
+// ── Description synthesis (deterministic Chinese) ─────────────────────
 
 const _FORMAT_LABEL = {
   png: 'PNG',
@@ -246,9 +286,10 @@ function _gcd(a, b) {
   return a || 1;
 }
 
-/** 人类可读的文件大小。*/
+/** Human-readable file size. */
 function _humanSize(bytes) {
-  // 安全修复：使用统一工具函数，但保留 null 返回值语义
+  // Keep the null-return semantics; the formatting itself is delegated to
+  // the shared utility.
   const n = Number(bytes);
   if (!Number.isFinite(n) || n <= 0) {
     return null;
@@ -256,7 +297,9 @@ function _humanSize(bytes) {
   return require('../utils/humanBytes').humanBytes(bytes);
 }
 
-/** 比例 + 朝向标签,�?"16:9(横向)" �?"1.50(纵向)"�?*/
+/**
+ * Aspect + orientation label, e.g. "16:9(横向)" or "1.50(纵向)".
+ */
 function _aspectLabel(w, h) {
   if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) {
     return null;
@@ -270,15 +313,22 @@ function _aspectLabel(w, h) {
   const g = _gcd(w, h);
   const rw = w / g;
   const rh = h / g;
-  // 约分后仍过大 �?用小数比,避免 "1000:667" 这类噪音�?  if (rw <= 40 && rh <= 40) {
+  // If the reduced ratio is still large, use a decimal ratio to avoid
+  // noise like "1000:667".
+  if (rw <= 40 && rh <= 40) {
     return `${rw}:${rh}(${orient})`;
   }
   return `${(w / h).toFixed(2)}:1(${orient})`;
 }
 
 /**
- * 据元数据 + 文件大小,产出一段确定性的中文「简单描述�?单行,不含 OCR)�? * 门控�?�?返回 null(调用方据此字节回退)。绝不抛�? * @param {object} meta  probeImageMetadata 的返回�? * @param {object} [input]
- * @param {number} [input.sizeBytes]  文件字节�?用于「文件大小」措�?�? * @param {object} [input.env]
+ * From metadata + file size, produce a deterministic Chinese "simple
+ * description" (single line, no OCR). When the gate is off, return null
+ * (callers byte-fall back). Never throws.
+ * @param {object} meta result of probeImageMetadata
+ * @param {object} [input]
+ * @param {number} [input.sizeBytes] file byte size, used for the "文件大小" wording
+ * @param {object} [input.env]
  * @returns {string|null}
  */
 function describeImageMetadata(meta, input = {}) {
@@ -294,7 +344,7 @@ function describeImageMetadata(meta, input = {}) {
       parts.push(`尺寸 ${m.width}×${m.height} 像素`);
       const mp = (m.width * m.height) / 1e6;
       if (mp >= 0.1) {
-        parts.push(`�?${mp.toFixed(1)} 百万像素`);
+        parts.push(`约 ${mp.toFixed(1)} 百万像素`);
       }
       const aspect = _aspectLabel(m.width, m.height);
       if (aspect) {
@@ -318,7 +368,7 @@ function describeImageMetadata(meta, input = {}) {
       parts.push(m.webpKind);
     }
     if (m.animated) {
-      parts.push('可能为动�?含多�?);
+      parts.push('可能为动图(含多帧)');
     } else if (m.hasAlpha) {
       parts.push('含透明通道');
     }
@@ -333,6 +383,7 @@ module.exports = {
   isEnabled,
   probeImageMetadata,
   describeImageMetadata,
-  // 供测�?复用的内部纯函数�?  _humanSize,
+  // Internal pure functions exposed for test reuse
+  _humanSize,
   _aspectLabel,
 };

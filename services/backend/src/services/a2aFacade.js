@@ -16,6 +16,7 @@ const { ACP_METHODS, ACPTransport, createRequest, createNotification } = require
 const { A2ARegistry, AGENT_STATUS, getRegistry } = require('./a2aRegistry');
 const { A2AAgentLifecycle, AGENT_LIFECYCLE_STATE, getLifecycle } = require('./a2aAgentLifecycle');
 const { A2AMessageRouter, MESSAGE_PRIORITY, MESSAGE_STATUS, getRouter } = require('./a2aMessageRouter');
+const { BUILTIN_AGENTS } = require('./a2a/builtinAgentManifest');
 
 // ── A2A Facade ────────────────────────────────────────────────────────────
 
@@ -305,18 +306,14 @@ class A2AFacade {
 
   /**
    * Register built-in agents.
+   *
+   * 清单来自纯叶子 `services/a2a/builtinAgentManifest.js`（单一真源）—— 原先是本方法
+   * 内联的一份数组，与 `/.well-known/agent-card.json` 发布路径无法共享，改一处漏一处。
+   * 见 [DESIGN-A2A-002]。
    * @private
    */
   _registerBuiltinAgents() {
-    const builtinAgents = [
-      { name: 'fundamental', type: 'analyst', capabilities: ['fundamental_analysis', 'financial_analysis'] },
-      { name: 'technical', type: 'analyst', capabilities: ['technical_analysis', 'chart_analysis'] },
-      { name: 'sentiment', type: 'analyst', capabilities: ['sentiment_analysis', 'news_analysis'] },
-      { name: 'risk', type: 'manager', capabilities: ['risk_assessment', 'position_sizing'] },
-      { name: 'coordinator', type: 'coordinator', capabilities: ['task_coordination', 'result_aggregation'] },
-    ];
-
-    for (const agent of builtinAgents) {
+    for (const agent of BUILTIN_AGENTS) {
       try {
         this.registerAgent(agent);
       } catch (error) {

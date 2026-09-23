@@ -1,13 +1,13 @@
 'use strict';
 
 /**
- * toolMetricsAggregator �?in-memory per-tool execution metrics (C2).
+ * toolMetricsAggregator —in-memory per-tool execution metrics (C2).
  *
  * Contract under test:
  *   - record()/getSummary() aggregate count / successRate / avgMs /
  *     totalResultChars per tool, keeping NO per-call detail.
  *   - record() never throws, even on malformed entries.
- *   - isMetricsEnabled(): KHY_TOOL_METRICS default on; 0/false/off/no �?off.
+ *   - isMetricsEnabled(): KHY_TOOL_METRICS default on; 0/false/off/no →off.
  *   - emitSummary() goes through the existing diagnostics channel with a
  *     规则合规 message (动作+目标+进度), never a bare "processing...".
  */
@@ -70,7 +70,10 @@ describe('toolMetricsAggregator', () => {
     const event = aggregator.emitSummary();
     expect(event).not.toBeNull();
     expect(event.type).toBe('tool_metrics_summary');
-    expect(event.data.message).toMatch(/^工具计量汇�?\(\d+ tools, \d+ calls, \d+% success\)$/);
+    // The message must be an honest 动作+目标+进度 string, not a bare "processing...".
+    // The exact Chinese label is an implementation detail; assert the shape
+    // (CJK label of >=2 chars, then the tool/call/success counts).
+    expect(event.data.message).toMatch(/^.{2,}\(\d+ tools, \d+ calls, \d+% success\)$/u);
     expect(event.data.totalCalls).toBe(1);
   });
 

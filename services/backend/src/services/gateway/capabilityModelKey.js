@@ -137,8 +137,63 @@ function capabilityModelKey(model) {
   return m;
 }
 
+/**
+ * 从 endpoint 里取主机(含端口)。
+ *
+ * 通道身份必须包含「跟谁说话」,因为「这个端点收不收 tools 字段」是端点的属性。
+ * 先按 URL 解析(拿到 .host,默认端口会被规范化掉),失败再按裸主机名兜底
+ * (剥 scheme / userinfo / path / query —— 代理串里带凭据是常见形态)。
+ * **不硬编码任何主机名**:本函数只做字符串解析,不参与任何网络判定。
+ * @param {string} endpoint
+ * @returns {string} 小写主机[:端口];无法解析 → ''
+ */
+function _hostOf(endpoint) {
+  const raw = String(endpoint == null ? '' : endpoint).trim();
+  if (!raw) {
+    return '';
+  }
+  try {
+    const u = new URL(raw);
+    const h = _norm(u.host);
+    if (h) {
+      return h;
+    }
+  } catch {
+    /* 裸主机名 / 非 URL 形态 → 走下面的字符串兜底 */
+  }
+  const stripped = raw
+    .replace(/^[a-z][a-z0-9+.-]*:\/\//i, '')
+    .split(/[/?#]/)[0];
+  const noUser = stripped.includes('@') ? stripped.split('@').pop() : stripped;
+  return _norm(noUser);
+}
+
+/**
+ * 通道标识 —— 「能力是(通道 × 模型)的属性」里的**通道**那一半。
+ *
+ * 为什么需要:剥离门只存在于 relay/api 两条路径上,而「这个端点收不收 tools」是端点的
+ * 属性 —— 同一条通道拒绝 tools 不代表模型不支持,更不代表换个通道也拒绝。此前能力档案
+ * 只有模型名一个维度,于是一条严格端点的拒绝会被误记成模型的永久属性(见 BUG-014)。
+ *
+ * 形态:`<adapter或provider>::<host>::<裸模型名>`,全小写。任一段缺失用占位符补齐,
+ * 保证同一个物理通道在不同调用点得到同一个键(缺 model → '' 放弃,不产生半截键)。
+ * @param {{adapter?: string, provider?: string, endpoint?: string, baseUrl?: string, model?: string}} [opts]
+ * @returns {string} 空串表示无法构成通道标识(调用方据此放弃读写)
+ */
+function routeKey(opts = {}) {
+  const o = opts || {};
+  const model = capabilityModelKey(o.model);
+  if (!model) {
+    return '';
+  }
+  const channel = _norm(o.adapter || o.provider) || 'unknown';
+  const host = _hostOf(o.endpoint || o.baseUrl) || 'default';
+  return `${channel}::${host}::${model}`;
+}
+
 module.exports = {
   capabilityModelKey,
+  routeKey,
   ADAPTER_PREFIXES,
   PROVIDER_PREFIXES,
   COMPOSITE_RE,

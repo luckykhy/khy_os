@@ -114,7 +114,7 @@ SDIST_PRUNE_DIRS = _ordered_unique([
     "apps/ai-frontend/public/vendor",
     # Local reference material: 23.77 MB across 40 files with ZERO runtime
     # consumers (only .gitignore:107, .dockerignore:48, two generated nav cards
-    # in docs/index.html, and the generated docs/_assets/nav-data.js reference
+    # in docs/index.html, and the generated docs/19_资产/site/nav-data.js reference
     # it). Already gitignored, so it is never part of a clean checkout. Its mass
     # is a nested .git/objects/pack (11.82 MB / 25 files) plus a single 11.59 MB
     # 测试视频.mp4 — neither is reachable from any code path.
@@ -169,7 +169,7 @@ SDIST_EXCLUDES = _ordered_unique([
     # machine that had run `npm run docs:mermaid` shipped it anyway. The generator
     # (scripts/docs/mermaid-embed/) stays in the sdist, so an sdist consumer
     # regenerates it with: npm run docs:mermaid
-    "docs/_assets/mermaid.min.js",
+    "docs/19_资产/site/mermaid.min.js",
     # Defense-in-depth: exact ``.env`` paths pruned from the sdist even though
     # .gitignore already blocks them and GLOBAL_EXCLUDES ``.env.*`` covers suffixed
     # variants. Forest layout keeps real dev credentials under both the service root
@@ -320,7 +320,7 @@ BASE_COPY_PAYLOADS = [
     # __pycache__/*.pyc/node_modules are stripped by COPY_EXCLUDE_PATTERNS; the
     # tree carries no data/models/node_modules so no source is at risk.
     ("scripts", "scripts"),
-    # Built-in extensions ([DESIGN-ARCH-069] 拓展契约). khy-markdown carries the
+    # Built-in extensions ([DESIGN-TOOL-002] 拓展契约). khy-markdown carries the
     # khyosMarkdown shell + bridge + OS registration; its vendor/ subtree is
     # excluded by SDIST_PRUNE_DIRS and provisioned from the immutable Release.
     # Shipping the whole tree (not just one extension) is what makes the repo

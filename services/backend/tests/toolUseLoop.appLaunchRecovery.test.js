@@ -31,7 +31,7 @@ describe('toolUseLoop shell->open_app recovery', () => {
       return { success: false, error: 'unexpected tool' };
     });
 
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool,
       clearPreflightContext: jest.fn(),
     }));

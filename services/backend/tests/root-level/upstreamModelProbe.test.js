@@ -8,7 +8,7 @@
  */
 'use strict';
 
-const probe = require('../src/services/gateway/upstreamModelProbe');
+const probe = require('../../src/services/gateway/upstreamModelProbe.js');
 
 const realFetch = global.fetch;
 

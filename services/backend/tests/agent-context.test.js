@@ -23,7 +23,7 @@ const { AgentContext } = require('../src/services/agentContext');
 
 // ── Tests ────────────────────────────────────────────────────────
 
-group('1. AgentContext �?creation', () => {
+group('1. AgentContext —creation', () => {
   test('creates with defaults', () => {
     const ctx = new AgentContext();
     expect(ctx.id).toBeTruthy();
@@ -49,7 +49,7 @@ group('1. AgentContext �?creation', () => {
   });
 });
 
-group('2. AgentContext �?prototype chain config inheritance', () => {
+group('2. AgentContext —prototype chain config inheritance', () => {
   const parent = new AgentContext({
     config: { maxTokens: 8192, effort: 'high', parentOnly: true },
   });
@@ -82,7 +82,7 @@ group('2. AgentContext �?prototype chain config inheritance', () => {
   });
 });
 
-group('3. AgentContext �?revealedDeferred isolation', () => {
+group('3. AgentContext —revealedDeferred isolation', () => {
   const parent = new AgentContext();
   parent.revealTool('tool_a');
   parent.revealTool('tool_b');
@@ -90,24 +90,24 @@ group('3. AgentContext �?revealedDeferred isolation', () => {
   const child = parent.fork();
 
   test('child inherits parent revealed tools at fork time', () => {
-    expect(child.isToolRevealed('tool_a')).toBe();
-    expect(child.isToolRevealed('tool_b')).toBe();
+    expect(child.isToolRevealed('tool_a')).toBe(true);
+    expect(child.isToolRevealed('tool_b')).toBe(true);
   });
 
   test('child reveal does NOT pollute parent', () => {
     child.revealTool('tool_c');
-    expect(child.isToolRevealed('tool_c')).toBe();
-    expect(!parent.isToolRevealed('tool_c')).toBe();
+    expect(child.isToolRevealed('tool_c')).toBe(true);
+    expect(!parent.isToolRevealed('tool_c')).toBe(true);
   });
 
   test('parent reveal after fork does NOT affect child', () => {
     parent.revealTool('tool_d');
-    expect(parent.isToolRevealed('tool_d')).toBe();
-    expect(!child.isToolRevealed('tool_d')).toBe();
+    expect(parent.isToolRevealed('tool_d')).toBe(true);
+    expect(!child.isToolRevealed('tool_d')).toBe(true);
   });
 });
 
-group('4. AgentContext �?fileReadCache isolation', () => {
+group('4. AgentContext —fileReadCache isolation', () => {
   // Create a temp file for testing. Group bodies run at collection time while
   // test bodies run later, so file setup/teardown must use beforeAll/afterAll
   // to avoid the file being removed before the tests execute.
@@ -157,7 +157,7 @@ group('4. AgentContext �?fileReadCache isolation', () => {
   });
 });
 
-group('5. AgentContext �?fork depth tracking', () => {
+group('5. AgentContext —fork depth tracking', () => {
   const root = new AgentContext();
   const child1 = root.fork();
   const child2 = child1.fork();
@@ -177,7 +177,7 @@ group('5. AgentContext �?fork depth tracking', () => {
   });
 });
 
-group('6. AgentContext �?Symbol.BUILT guard', () => {
+group('6. AgentContext —Symbol.BUILT guard', () => {
   const ctx = new AgentContext();
 
   test('initially not built', () => {
@@ -196,12 +196,12 @@ group('6. AgentContext �?Symbol.BUILT guard', () => {
 
   test('BUILT symbol is not enumerable', () => {
     const keys = Object.keys(ctx);
-    expect(!keys).toContain('BUILT');
-    expect(!keys.some(k => k)).toContain('built');
+    expect(keys).not.toContain('BUILT');
+    expect(keys.some(k => k)).toBe(true);
   });
 });
 
-group('7. AgentContext �?toJSON serialization', () => {
+group('7. AgentContext —toJSON serialization', () => {
   const ctx = new AgentContext({ role: 'explore', toolFilter: 'explore' });
   ctx.revealTool('tool_x');
 
@@ -216,7 +216,7 @@ group('7. AgentContext �?toJSON serialization', () => {
   });
 });
 
-group('8. tools/index.js �?getDefinitionsForContext', () => {
+group('8. tools/index.js —getDefinitionsForContext', () => {
   // Verify the functions exist and are callable
   const toolRegistry = require('../src/tools');
 
@@ -235,8 +235,8 @@ group('8. tools/index.js �?getDefinitionsForContext', () => {
     // Both should return the same definitions for 'full' profile
     const defs1 = toolRegistry.getDefinitionsForContext(ctx1);
     const defs2 = toolRegistry.getDefinitionsForContext(ctx2);
-    expect(Array.isArray(defs1)).toBe();
-    expect(Array.isArray(defs2)).toBe();
+    expect(Array.isArray(defs1)).toBe(true);
+    expect(Array.isArray(defs2)).toBe(true);
     // Both full profiles should have same count
     expect(defs1.length).toBe(defs2.length);
   });

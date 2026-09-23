@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-AGENT-001] 子智能体交接契约.md -->
+<title>[DESIGN-AGENT-001] 子智能体交接契约 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-AGENT-001] 子智能体交接契约</div>
+      <header class="hero reveal"><h1>[DESIGN-AGENT-001] 子智能体交接契约</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-agent-001-子智能体交接契约">[DESIGN-AGENT-001] 子智能体交接契约</a></li><li class="lvl-2"><a href="#1-红线">1. 红线</a></li><li class="lvl-2"><a href="#2-为什么必须按-报文-而非-共享内存-设计">2. 为什么必须按「报文」而非「共享内存」设计</a></li><li class="lvl-2"><a href="#3-交接信封-两向">3. 交接信封（两向）</a></li><li class="lvl-3"><a href="#3-1-下行-派发信封-主-子">3.1 下行：派发信封（主 → 子）</a></li><li class="lvl-3"><a href="#3-2-上行-回报信封-子-主">3.2 上行：回报信封（子 → 主）</a></li><li class="lvl-2"><a href="#4-五种子智能体模式与交接形态的对应">4. 五种子智能体模式与交接形态的对应</a></li><li class="lvl-2"><a href="#5-校验-守卫">5. 校验（守卫）</a></li><li class="lvl-2"><a href="#6-版本历史">6. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-agent-001-子智能体交接契约">[DESIGN-AGENT-001] 子智能体交接契约<a class="anchor" href="#design-agent-001-子智能体交接契约" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: AGENT-001 -->
+<blockquote><p><strong>定位</strong>：本文件回答一个问题——<strong>主智能体与子智能体之间、子智能体与子智能体之间，<br>一次「交接」里必须带走什么、必须带回什么</strong>。它是交接的<strong>报文契约</strong>。</p>
+<p><strong>边界</strong>（与相邻规范谁管什么）：</p>
+<ul><li>本文件管<strong>交接的载荷</strong>（带什么过去、带什么回来）；</li></ul>
+<p><code>[DESIGN-PROCESS-001]</code> 管<strong>要不要交接</strong>（G1/G2/G3 准入闸门）；<br>  <code>[DESIGN-ARCH-116]</code> 管<strong>交接通道的实现</strong>（<code>@khy-plugin-sdk</code>）。</p>
+<ul><li>本文件<strong>不新增</strong>任何工具或通道，只约束既有 <code>Agent</code> / <code>SendMessage</code> 工具的<strong>用法</strong>。</li></ul>
+<p><strong>规则 ID</strong>：<code>AGENT-001</code>。登记见 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>。<br><strong>上游依据</strong>：<code>[DESIGN-ARCH-121]</code> §K-04（对《Claude Code 实战》ch04 §4.4<br>「交接契约」的借鉴与 khyos 本地化）。</p></blockquote>
+<hr>
+<h2 id="1-红线">1. 红线<a class="anchor" href="#1-红线" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>必须 / 禁止</th><th>判据</th></tr></thead><tbody><tr><td>AG-1</td><td><strong>子智能体之间不得假定共享内存</strong>——所有跨体传递必须走报文</td><td>见 §2</td></tr><tr><td>AG-2</td><td>派发时<strong>必须</strong>给出自包含 prompt；承载性信息<strong>禁止</strong>指望父对话自动可见</td><td><code>AgentTool/index.js:317</code></td></tr><tr><td>AG-3</td><td>派发时<strong>必须</strong>显式指定<strong>所有权</strong>：哪些文件/模块/职责归它管，可否写入</td><td><code>AgentTool/index.js:352</code></td></tr><tr><td>AG-4</td><td>并发派发<strong>仅限真正独立</strong>的子任务；有依赖的<strong>必须</strong>留在主流程串行</td><td><code>AgentTool/index.js:354</code></td></tr><tr><td>AG-5</td><td>子智能体产出<strong>必须</strong>带 <code>file:line</code> 引用；禁止「我改好了」这类无证据声明</td><td>见 §3 信封</td></tr><tr><td>AG-6</td><td>只读型子智能体（<code>Explore</code> 等）<strong>禁止</strong>派发写任务</td><td><code>exploreAgent.js</code> 用 <code>disallowedTools</code> 硬闸</td></tr><tr><td>AG-7</td><td>继续既有子智能体<strong>必须</strong>用 <code>SendMessage</code>，禁止重复 spawn 同职责智能体</td><td><code>AgentTool/index.js:355</code></td></tr><tr><td>AG-8</td><td>子智能体的产出<strong>对用户不可见</strong>——主智能体<strong>必须</strong>在回复中转述</td><td><code>AgentTool/index.js:357</code></td></tr><tr><td>AG-9</td><td>后台型子智能体启动后<strong>禁止</strong>轮询等待</td><td><code>AgentTool/index.js:356</code></td></tr></tbody></table>
+<hr>
+<h2 id="2-为什么必须按-报文-而非-共享内存-设计">2. 为什么必须按「报文」而非「共享内存」设计<a class="anchor" href="#2-为什么必须按-报文-而非-共享内存-设计" aria-label="锚点">#</a></h2>
+<p>书侧（ch04 §4.4）的论断：<strong>子智能体是独立进程，不是共享堆里的对象。</strong><br>khyos 的实现<strong>完全印证</strong>这一点——<code>AgentTool</code> 的提示词里写得很直白：</p>
+<pre><code class="language-text">The sub-agent runs independently with its own tool-use loop. It receives only a
+compact summary of recent parent context (recent intent + file paths, or an explicit
+`parent_context_summary` you pass) — NOT the full conversation.
+You MUST still provide a detailed, self-contained prompt with all necessary context.</code></pre>
+<p><strong>机制真源</strong>（<code>services/backend/src/tools/AgentTool/index.js</code>）：</p>
+<table><thead><tr><th>行</th><th>内容</th></tr></thead><tbody><tr><td><code>317</code></td><td>「只收到紧凑摘要，<strong>不是</strong>完整对话」——隔离的官方说明</td></tr><tr><td><code>368</code></td><td><code>parent_context_summary</code> 入参（显式摘要优先）</td></tr><tr><td><code>691</code> / <code>795</code></td><td><code>parentContextSummary</code> 透传</td></tr><tr><td><code>853</code></td><td><code>childDepthOf(parentContext) + 1</code> 层级账本</td></tr><tr><td><code>912-919</code></td><td>父上下文摘要构造：<strong>显式 <code>parent_context_summary</code> 优先</strong>，否则从父对话历史确定性摘要</td></tr></tbody></table>
+<p><strong>推论</strong>：忘记传上下文不是「模型疏忽」，而是<strong>契约违规</strong>——<br>因为界面设计上就是隔离的。这解释了 khyos 历史上一类「子智能体答非所问」的故障。</p>
+<hr>
+<h2 id="3-交接信封-两向">3. 交接信封（两向）<a class="anchor" href="#3-交接信封-两向" aria-label="锚点">#</a></h2>
+<h3 id="3-1-下行-派发信封-主-子">3.1 下行：派发信封（主 → 子）<a class="anchor" href="#3-1-下行-派发信封-主-子" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>字段</th><th>必填</th><th>内容</th><th>对应红线</th></tr></thead><tbody><tr><td><code>description</code></td><td>✅</td><td>3–5 词任务概括</td><td>AG-2</td></tr><tr><td><code>prompt</code></td><td>✅</td><td><strong>自包含</strong>任务书：目标 / 输入 / 约束 / 期望产出</td><td>AG-2</td></tr><tr><td><code>parent_context_summary</code></td><td>承载性信息时 ✅</td><td>父对话摘要（<strong>显式传</strong>，不指望自动推导）</td><td>AG-2</td></tr><tr><td><code>subagent_type</code></td><td>✅</td><td>选型（<code>Explore</code> / <code>audit</code> / <code>fix</code> / <code>research</code> / <code>reading</code> / <code>map</code> / <code>general-purpose</code>）</td><td>AG-6</td></tr><tr><td><strong>所有权声明</strong>（写进 <code>prompt</code>）</td><td>✅</td><td>可写的文件/模块；不可碰的边界</td><td>AG-3</td></tr><tr><td><code>subtasks</code></td><td>仅并行型</td><td><strong>仅限真正独立</strong>的子任务</td><td>AG-4</td></tr></tbody></table>
+<p><strong>所有权声明的写法</strong>（书侧 ch04 的 handoff contract，khyos 用散文承载）：</p>
+<pre><code class="language-text">【你可以写】services/backend/src/permissions/patternMatcher.js
+【禁止触碰】.khy/permissions.json（配置真源，由主流程改）
+【产出要求】改动清单 + 每条带 file:line + 一句「为什么这样改」</code></pre>
+<h3 id="3-2-上行-回报信封-子-主">3.2 上行：回报信封（子 → 主）<a class="anchor" href="#3-2-上行-回报信封-子-主" aria-label="锚点">#</a></h3>
+<p>子智能体的产出<strong>没有强制 schema</strong>（返回 <code>{success, output, ...}</code>，<code>output</code> 是自由文本），<br>故本规范给出<strong>内容契约</strong>——<code>output</code> 必须包含：</p>
+<table><thead><tr><th>#</th><th>段</th><th>要求</th></tr></thead><tbody><tr><td>1</td><td><strong>结论</strong></td><td>一句话先行</td></tr><tr><td>2</td><td><strong>证据</strong></td><td>每条结论带 <code>file:line</code>（AG-5）</td></tr><tr><td>3</td><td><strong>未决</strong></td><td>没做完的、需要父决策的，显式列出</td></tr><tr><td>4</td><td><strong>风险</strong></td><td>引入的新风险 / 未验证的假设</td></tr></tbody></table>
+<blockquote><p>⚠️ <strong><code>output</code> 是自由文本而非结构化字段</strong>，故 AG-5 目前<strong>无法自动校验</strong>，<br>属评审 checklist 项。若要机械化，需先给 <code>_runStandaloneAgent</code> 的返回加 schema——<br>那是接口变更，须先过 <code>[DESIGN-SOURCING-001]</code> 的提案流程。</p></blockquote>
+<hr>
+<h2 id="4-五种子智能体模式与交接形态的对应">4. 五种子智能体模式与交接形态的对应<a class="anchor" href="#4-五种子智能体模式与交接形态的对应" aria-label="锚点">#</a></h2>
+<p>书侧（ch04）归纳五种模式，khyos 的 26 个内置 agent 可直接映射：</p>
+<table><thead><tr><th>模式</th><th>khyos 对应</th><th>交接形态</th><th>关键约束</th></tr></thead><tbody><tr><td>只读型</td><td><code>Explore</code> / <code>reading</code> / <code>map</code> / <code>research</code></td><td>下行给<strong>问题</strong>，上行给<strong>报告</strong></td><td>AG-6：<code>disallowedTools</code> 已硬闸（<code>exploreAgent.js</code>）</td></tr><tr><td>执行型</td><td><code>fix</code> / <code>refactor</code> / <code>editAndWrite</code></td><td>下行给<strong>findings + file:line</strong>，上行给<strong>diff 说明</strong></td><td>「只修被交付的缺陷，不扩大 scope」</td></tr><tr><td>并行型（MapReduce）</td><td><code>subtasks</code> 数组</td><td>下行 N 份独立任务，上行 N 份聚合</td><td>AG-4：独立性是前提</td></tr><tr><td>流水线型（责任链）</td><td><code>audit → fix</code></td><td>上游产出即下游输入</td><td>必须<strong>串行</strong>，禁止并行化</td></tr><tr><td>团队型</td><td>多 worker 并发</td><td>各自独立报文</td><td>AG-7：续用 <code>SendMessage</code> 而非重 spawn</td></tr></tbody></table>
+<blockquote><p><code>audit → fix</code> 是 khyos 显式设计的一对（<code>AgentTool/index.js:340</code>：<br>「audit finds, fix closes」），<strong>是流水线型的现行范例</strong>，可作为其他链路的模板。</p></blockquote>
+<hr>
+<h2 id="5-校验-守卫">5. 校验（守卫）<a class="anchor" href="#5-校验-守卫" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>红线</th><th>守卫</th><th>状态</th></tr></thead><tbody><tr><td>AG-1 / AG-2 / AG-3 / AG-4</td><td><code>scripts/ci/check-agent-handoff.js</code></td><td><strong>待建</strong></td></tr><tr><td>AG-5</td><td>依赖产出 schema 化</td><td>待工具化</td></tr><tr><td>AG-6</td><td><strong>已有硬闸</strong>：<code>exploreAgent.js</code> 的 <code>disallowedTools</code></td><td>✅ 已经具备</td></tr><tr><td>AG-7 / AG-8 / AG-9</td><td>无自动守卫，评审 checklist</td><td>待工具化</td></tr></tbody></table>
+<blockquote><p>建议的机械化切入点（成本最低）：解析 <code>AgentTool</code> 调用日志，<br>统计「未传 <code>parent_context_summary</code> 但 prompt 长度 &lt; 200 字符」的派发，<br>这类几乎必然是 AG-2 违规。见 §K-11 的 S1 观测阶段。</p></blockquote>
+<hr>
+<h2 id="6-版本历史">6. 版本历史<a class="anchor" href="#6-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>2026-09-18</td><td>首版。依据 <code>[DESIGN-ARCH-121]</code> §K-04。把书的「交接契约」落为 khyos 的两向信封（下行派发 / 上行回报），并锚定到既有机制真源 <code>AgentTool/index.js</code> 的 <code>parent_context_summary</code>（<code>:317</code>/<code>:368</code>/<code>:912-919</code>）。26 个内置 agent 按书侧五模式完成映射，<code>audit → fix</code> 认定为流水线型范例。</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-ACP-001] ACP消息元数据与终态契约.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ACP-001] ACP 消息元数据与终态契约</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-AGENT-002] 智能体工具授权矩阵.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-AGENT-002] 智能体工具授权矩阵</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-AGENT-001] 子智能体交接契约.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

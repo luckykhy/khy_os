@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [OPS-002] Graceful Shutdown 规范.md -->
+<title>[OPS-002] Graceful Shutdown 规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[OPS-002] Graceful Shutdown 规范</div>
+      <header class="hero reveal"><h1>[OPS-002] Graceful Shutdown 规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-002-graceful-shutdown-规范">[OPS-002] Graceful Shutdown 规范</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: Graceful Shutdown 规范<br>id: OPS-002<br>domain: RUNTIME<br>nature: 约束<br>scope: &quot;services/backend/src/<strong>, services/ai-backend/</strong>&quot;<br>priority: P2<br>trigger: &quot;新增或修改服务进程启动、信号处理、连接管理逻辑时&quot;<br>constraint: &quot;五原则：信号优先（SIGTERM 有序关闭、SIGKILL 强制终止不做清理）、停止接受新请求（先关监听端口）、Drain 存量连接（带超时）、数据持久化优先（内存数据先落盘再释放连接）、关闭顺序（子进程 → 工作线程 → 数据库连接 → 定时器）。信号映射：SIGTERM（docker stop/kill/systemctl stop）有序关闭；SIGINT（Ctrl+C）有序关闭；SIGQUIT 有序关闭 + core dump；SIGKILL 强制终止跳过清理；SIGHUP 热重载不关闭。SHUTDOWN_TIMEOUT = 30_000。标准序列：1 停止监听端口（server.close()）→ 2 Drain 活跃连接（30s 超时）→ 3 持久化内存数据 → 4 停止子进程 → 5 关闭数据库连接池 → 6 关闭 Redis/缓存连接 → 7 清理定时器 → process.exit(0)。验证：活跃连接为 0、无待写数据、无运行中 worker。&quot;<br>grants: &quot;无新增权力：仅约束具体做法，不授予任何新权限。&quot;<br>benefit: 重启不再丢请求或半写数据，关闭顺序可核对，超时时长有确定上限而非无限等待。<br>exception: &quot;SIGKILL（kill -9）强制终止跳过清理；SIGHUP 终端关闭仅热重载不关闭。&quot;<br>version: &quot;1.0.0 (2026-09-16)&quot;<br>status: active<br>ssot: &quot;docs/10_规范/其它规范/[DESIGN-OPS-002] Graceful Shutdown 规范.md&quot;<br>formerly: 无<br>owner: ops-team</p>
+<hr>
+<h1 id="ops-002-graceful-shutdown-规范">[OPS-002] Graceful Shutdown 规范<a class="anchor" href="#ops-002-graceful-shutdown-规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: OPS-002 -->
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/10_规范/其它规范/[DESIGN-OPS-002] Graceful Shutdown 规范.md。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>五原则：信号优先（SIGTERM 有序关闭、SIGKILL 强制终止不做清理）、停止接受新请求（先关监听端口）、Drain 存量连接（带超时）、数据持久化优先（内存数据先落盘再释放连接）、关闭顺序（子进程 → 工作线程 → 数据库连接 → 定时器）。信号映射：SIGTERM（docker stop/kill/systemctl stop）有序关闭；SIGINT（Ctrl+C）有序关闭；SIGQUIT 有序关闭 + core dump；SIGKILL 强制终止跳过清理；SIGHUP 热重载不关闭。SHUTDOWN_TIMEOUT = 30_000。标准序列：1 停止监听端口（server.close()）→ 2 Drain 活跃连接（30s 超时）→ 3 持久化内存数据 → 4 停止子进程 → 5 关闭数据库连接池 → 6 关闭 Redis/缓存连接 → 7 清理定时器 → process.exit(0)。验证：活跃连接为 0、无待写数据、无运行中 worker。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>无新增权力：仅约束具体做法，不授予任何新权限。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>重启不再丢请求或半写数据，关闭顺序可核对，超时时长有确定上限而非无限等待。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>见 <code>ssot</code> 指向的真源原文；本卡不复制反例，以免与真源漂移。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>人工评审（该规则暂无机械守卫）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>SIGKILL（kill -9）强制终止跳过清理；SIGHUP 终端关闭仅热重载不关闭。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-16) 初版 / 迁移自 无</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/规则卡/[NOTIFY-001] 通知与邮件规范.html"><div class="dir">← 上一篇</div><div class="ttl">[NOTIFY-001] 通知与邮件规范</div></a><a class="next" href="../../../docs/10_规范/规则卡/[OPS-003] Health Check 规范.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-003] Health Check 规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/规则卡/[OPS-002] Graceful Shutdown 规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

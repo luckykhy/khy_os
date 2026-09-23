@@ -42,6 +42,31 @@ def _path_exists_safe(p: Path) -> bool:
         return False
 
 
+def _package_intact(pkg_dir: Path) -> bool:
+    """跟随符号链接后，包目录里必须有可读的 package.json 才算装好。
+
+    Why package.json rather than mere existence: a pnpm-style layout makes
+    ``node_modules/<pkg>`` a symlink into ``node_modules/.pnpm/<pkg>@<ver>/...``.
+    An install that was interrupted after creating the link but before
+    unpacking the package leaves a *hollow* package: the path exists (and
+    ``Path.exists()`` follows links, so it reports True) but the directory is
+    empty.  ``require()`` survives this because its resolver walks up to
+    another ``node_modules``; ESM ``import()`` does not, and dies with
+    ERR_MODULE_NOT_FOUND.  Checking for package.json is the cheapest signal
+    that separates "the link resolves to something" from "the package is
+    actually there".
+    """
+    marker = pkg_dir / "package.json"
+    try:
+        return marker.is_file()
+    except (OSError, ValueError):
+        return False
+
+
+#: Packages whose absence (or hollow shell) means the backend cannot boot.
+_REQUIRED_PACKAGES = ("express", "ink")
+
+
 def _node_env(backend_dir: Path) -> dict:
     env = os.environ.copy()
     node_modules = str(backend_dir / "node_modules")
@@ -99,11 +124,20 @@ def ensure_bootstrapped(backend_dir: Path, node_cmd: str):
 
 def _ensure_npm_install(backend_dir: Path) -> bool:
     node_modules = backend_dir / "node_modules"
-    if _path_exists_safe(node_modules / "express"):
+
+    # Probe more than one package, and probe *contents* not just existence.
+    # A single existence check on node_modules/express used to short-circuit
+    # this function even when the tree was hollow (see _package_intact).
+    hollow = [p for p in _REQUIRED_PACKAGES if not _package_intact(node_modules / p)]
+    if not hollow:
         print("  [OK] Node.js dependencies already installed")
         return True
 
-    print("  Installing Node.js dependencies...")
+    if _path_exists_safe(node_modules):
+        print(f"  [WARN] Backend dependencies incomplete (missing/hollow: {', '.join(hollow)})")
+        print("  Reinstalling Node.js dependencies...")
+    else:
+        print("  Installing Node.js dependencies...")
     npm_cmd = "npm.cmd" if os.name == "nt" else "npm"
     npm_args = [npm_cmd, "install", "--no-audit", "--no-fund"]
 
@@ -124,6 +158,16 @@ def _ensure_npm_install(backend_dir: Path) -> bool:
             timeout=_NPM_TIMEOUT, **_subprocess_kwargs(),
         )
         if result.returncode == 0:
+            # Only trust npm's exit code if the tree is actually usable now:
+            # an interrupted install can exit 0 with hollow packages left behind.
+            still_hollow = [p for p in _REQUIRED_PACKAGES if not _package_intact(node_modules / p)]
+            if still_hollow:
+                print(
+                    f"  [WARN] npm reported success but these are still incomplete: "
+                    f"{', '.join(still_hollow)}",
+                    file=sys.stderr,
+                )
+                return False
             print("  [OK] Node.js dependencies installed")
             return True
         else:

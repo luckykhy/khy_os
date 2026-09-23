@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-071] 通道选择决策矩阵.md -->
+<title>[DESIGN-ARCH-071] 通道选择决策矩阵 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-071] 通道选择决策矩阵</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-071] 通道选择决策矩阵</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-071-通道选择决策矩阵">[DESIGN-ARCH-071] 通道选择决策矩阵</a></li><li class="lvl-2"><a href="#0-五通道定义与真源">0. 五通道定义与真源</a></li><li class="lvl-2"><a href="#1-判定顺序-五问-自上而下首个命中即停">1. 判定顺序（五问，自上而下首个命中即停）</a></li><li class="lvl-2"><a href="#2-各通道适用-禁止-降级">2. 各通道适用 / 禁止 / 降级</a></li><li class="lvl-2"><a href="#3-反模式-命中即返工">3. 反模式（命中即返工）</a></li><li class="lvl-2"><a href="#4-与既有治理的关系">4. 与既有治理的关系</a></li><li class="lvl-2"><a href="#5-维护与验证">5. 维护与验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-071-通道选择决策矩阵">[DESIGN-ARCH-071] 通道选择决策矩阵<a class="anchor" href="#design-arch-071-通道选择决策矩阵" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：任何操作者（AI 助手、agent 工具循环、REPL、人类、外部脚本）要对 khy-os 做「一次读取或一次操作」时，在五条通道之间做选择的<strong>单一真源</strong>。<br><strong>适用边界</strong>：只裁决「用哪条通道完成这次操作」，不新增运行时业务逻辑，不替代 <code>[DESIGN-LAY-005]</code>（代码层级与依赖方向）、<code>[DESIGN-GOV-001]</code>（治理板块）、<code>[DESIGN-ARCH-056]</code>（桌面操控实现）；冲突时以各单一真源为准。<br><strong>首屏速查</strong>：<code>AGENTS.md</code> 架构速查的「通道选择判定」节是本矩阵的压缩版，二者必须同步修改。</p></blockquote>
+<hr>
+<h2 id="0-五通道定义与真源">0. 五通道定义与真源<a class="anchor" href="#0-五通道定义与真源" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>通道</th><th>名称</th><th>入口 / 真源</th><th>前置条件</th></tr></thead><tbody><tr><td>CH-1 直接读状态</td><td>只读数据文件</td><td>数据目录（<code>src/utils/dataHome.js</code> 解析：env → <code>.khy/.location.json</code> → established-wins → 兜底；legacy <code>~/.khyquant</code>）</td><td>schema 已知且稳定；<strong>仅限只读</strong></td></tr><tr><td>CH-2 服务层直调</td><td>同进程函数调用</td><td><code>require('.../src/services/&lt;模块&gt;')</code>（<code>AGENTS.md</code> 关键入口点表为索引）</td><td>调用方与 backend 同一 Node 进程</td></tr><tr><td>CH-3 CLI</td><td><code>khy &lt;命令&gt;</code></td><td><code>src/cli/router.js</code>（大 switch）+ <code>aliases.js</code>（中文/拼音别名）</td><td>本机可运行 khy（Python 启动器 → <code>bin/khy.js</code>）</td></tr><tr><td>CH-4 Web API</td><td>HTTP/WS/SSE → <code>src/routes/</code></td><td><code>server.js</code>（Express + WS 同端口）+ <code>constants/serviceDefaults.js</code>（端口真源）；运行时发现：数据目录 <code>ai_manage_runtime.json</code> 的 <code>apiPort</code></td><td>server 在跑，或可被 CH-3 拉起（<code>khy server start</code>）</td></tr><tr><td>CH-5 看屏幕</td><td>截图与视觉观察</td><td><code>services/desktopControl/</code>（<code>screenCapture.js</code> + <code>safetyGate.js</code>）、<code>services/computerUse/</code>、L6 <code>tools/deepseek-eyes</code>（截图→VL 模型→文字）</td><td><code>KHY_DESKTOP_CONTROL</code> 总闸开启 + safetyGate 审批放行</td></tr></tbody></table>
+<hr>
+<h2 id="1-判定顺序-五问-自上而下首个命中即停">1. 判定顺序（五问，自上而下首个命中即停）<a class="anchor" href="#1-判定顺序-五问-自上而下首个命中即停" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">Q0 目标信息是否只存在于第三方 GUI 画面，或需要人工视觉验证渲染效果？
+   是 → CH-5（最后手段；先确认目标没有结构化接口）
+   否 ↓
+Q1 这次操作要改变系统状态吗（写/删/装/发/交易/审批…）？
+   是 → 禁止 CH-1 直写状态文件 → 进 Q4 选「带副作用的正门」（CH-2/3/4）
+   否 ↓
+Q2 纯只读，且同时满足：schema 稳定、文件即最终真相、无需业务规则聚合加工？
+   是 → CH-1（例：读 token_usage.json；从 ai_manage_runtime.json 发现 apiPort）
+   否（需要聚合/校验/结论，如 doctor 体检、state 的 FSM 聚合）↓
+Q3 调用方与 backend 在同一 Node 进程内吗（CLI handler、REPL/agent 工具循环、单测）？
+   是 → CH-2（零序列化开销；遵守 fail-soft {ok, error} 叶子契约）
+   否 ↓
+Q4 调用方是谁 / 在哪？
+   人 · Shell 脚本 · CI · 跨语言（Python 等）       → CH-3（别名表保证中文命令可达）
+   前端页面 · 远程机器 · 多并发消费者 · WS/SSE 流式 → CH-4
+   不确定 server 是否在跑：先按服务发现探测 CH-4（env → ai_manage_runtime.json），
+   不可达 → 降级 CH-3（khy server start 拉起，或该事本可由 CLI 完成）</code></pre>
+<p>判定原则一句话：<strong>结构化优先、只读才直读、写必走正门、视觉只兜底。</strong></p>
+<hr>
+<h2 id="2-各通道适用-禁止-降级">2. 各通道适用 / 禁止 / 降级<a class="anchor" href="#2-各通道适用-禁止-降级" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>通道</th><th>适用</th><th>禁止（反例）</th><th>不可用时的降级</th></tr></thead><tbody><tr><td>CH-1 直接读状态</td><td>只读 + schema 稳定 + 文件即真相</td><td>任何写入（含「顺手修一下 JSON」）；读有校验逻辑包裹的聚合结论</td><td>schema 不明 → CH-3 查 <code>khy state</code> / <code>khy doctor</code> 输出</td></tr><tr><td>CH-2 服务层直调</td><td>同进程调用；单测；CLI handler 组合服务</td><td>前端（L3）require 后端（L2）源码——068 已禁，L3→L2 仅 HTTP；跨进程硬 require</td><td>不在同进程 → CH-3 / CH-4</td></tr><tr><td>CH-3 CLI</td><td>人机交互；Shell/CI 脚本；跨语言；一次性运维</td><td>机器高频消费面向人的表格输出（优先找 <code>--json</code> 或用 CH-4）</td><td>命令不存在 → 按「别名表→handler→router」三步加命令，不绕路模拟</td></tr><tr><td>CH-4 Web API</td><td>前端；远程；并发消费者；流式/长驻能力</td><td>端点写死 <code>localhost:3000</code>（工程规则 1 红线，<code>check-agent-rules.js</code> 拦截）</td><td>探测不可达 → CH-3（<code>khy server start</code> 或等效 CLI 命令）</td></tr><tr><td>CH-5 看屏幕</td><td>第三方 GUI 的信息获取；自家前端的视觉验证</td><td>读取 CH-1/CH-3 可得的结构化信息；无审批的交互操控</td><td>—（本身即兜底，无再降级）</td></tr></tbody></table>
+<hr>
+<h2 id="3-反模式-命中即返工">3. 反模式（命中即返工）<a class="anchor" href="#3-反模式-命中即返工" aria-label="锚点">#</a></h2>
+<ol><li><strong>直写状态文件改状态</strong>：直接改 <code>.khy/</code> 下 JSON/SQLite 完成写操作——校验、审计、FSM 都在门内，必须走 CH-2/3/4 正门。</li><li><strong>看屏幕读自家结构化状态</strong>：CH-1/CH-3 可得的信息（终端输出、JSON 状态）用截图/OCR 获取——既慢又不可靠。</li><li><strong>前端绕过 HTTP</strong>：<code>apps/</code> 里 require <code>src/services/</code>（违反 068 依赖方向）。</li><li><strong>硬编码端点调 API</strong>：违反工程规则 1；端点必须来自 serviceDefaults / env / 运行时发现三合法来源。</li><li><strong>有正门却模拟人</strong>：存在现成 CLI/API 却用键鼠模拟点自家 UI 完成同样的事。</li><li><strong>REPL 内绕层直改文件</strong>：agent 工具循环里新功能绕过服务层直接改数据文件。</li></ol>
+<hr>
+<h2 id="4-与既有治理的关系">4. 与既有治理的关系<a class="anchor" href="#4-与既有治理的关系" aria-label="锚点">#</a></h2>
+<ul><li><code>[DESIGN-LAY-005]</code> 管<strong>代码</strong>的层级与依赖方向（<code>npm run check:layout</code> 强制）；本文管<strong>操作者</strong>的通道选择。二者汇合点：L3→L2 仅 HTTP（即前端只走 CH-4）。</li><li><code>[DESIGN-GOV-001]</code> 的 GOV-ACP / GOV-API 管<strong>契约形状</strong>（消息/字段/错误码）；本文管<strong>该不该走这条通道</strong>，不重复其条款。</li><li><code>[DESIGN-ARCH-056]</code> 是 CH-5 的实现真源（眼耳嘴体系、safetyGate 审批）；本文只登记「何时允许用它」。</li><li>机械可判定部分已由既有守卫覆盖（check:layout / check-agent-rules.js / check-tool-contract.js）；「操作者选错通道」属会话行为，靠本矩阵 + <code>AGENTS.md</code> 首屏曝光约束。若未来需要进一步工具化（如 lint 禁止 routes→cli 反向依赖），按 070 §6 模式登记缺口后另行立项。</li></ul>
+<hr>
+<h2 id="5-维护与验证">5. 维护与验证<a class="anchor" href="#5-维护与验证" aria-label="锚点">#</a></h2>
+<ul><li>修改本文后运行：</li></ul>
+<pre><code class="language-powershell">node scripts/ci/check<span class="hljs-literal">-gov-rules</span>.js
+npm run check:layout
+node scripts/ci/check<span class="hljs-literal">-agent-rules</span>.js <span class="hljs-literal">--changed</span></code></pre>
+<ul><li>新增第六条通道（如新的 IPC 通道）时：先在 §0 表加行，再过一遍 §1 五问确认不打乱判定顺序，最后同步 <code>AGENTS.md</code> 首屏速查与本目录 <code>00_INDEX</code>。</li></ul>
+<hr>
+<p><em>创建：2026-08-28 · 指挥部任务 T-010 · 隶属 [DESIGN-GOV-001] 治理体系的通道裁决层</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-070] 治理总纲与可执行规则.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-070] 治理总纲与可执行规则</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-072] 模型上下文窗口探测规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-072] 模型上下文窗口探测规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-071] 通道选择决策矩阵.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

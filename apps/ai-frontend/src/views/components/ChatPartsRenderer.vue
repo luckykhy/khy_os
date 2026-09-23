@@ -188,8 +188,8 @@ defineProps({
 /* ── 工具调用 ── */
 .chat-part-toolcall {
   padding: 6px 10px;
-  border-left: 2px solid var(--khy-primary, #2563eb);
-  background: var(--khy-bg-soft, #eff4ff);
+  border-left: 2px solid var(--khy-primary, var(--khy-primary));
+  background: var(--khy-bg-soft, var(--khy-bg-soft));
   border-radius: 0 6px 6px 0;
 }
 .chat-part-toolcall-header {
@@ -199,14 +199,14 @@ defineProps({
   font-size: 12px;
 }
 .chat-part-toolcall-icon {
-  color: var(--khy-primary, #2563eb);
+  color: var(--khy-primary, var(--khy-primary));
 }
 .chat-part-toolcall-name {
   font-weight: 600;
-  color: var(--khy-primary, #2563eb);
+  color: var(--khy-primary, var(--khy-primary));
 }
 .chat-part-toolcall-cmd {
-  color: var(--khy-text-secondary, #475467);
+  color: var(--khy-text-secondary, var(--khy-text-secondary));
   font-family: var(--khy-font-mono, monospace);
   font-size: 11px;
   overflow: hidden;
@@ -218,13 +218,13 @@ defineProps({
 /* ── 工具结果 ── */
 .chat-part-toolresult {
   padding: 6px 10px;
-  background: var(--el-fill-color-lighter, #f5f7fa);
+  background: var(--el-fill-color-lighter, var(--khy-gray-50));
   border-radius: 6px;
-  border: 1px solid var(--el-border-color-lighter, #ebeef5);
+  border: 1px solid var(--el-border-color-lighter, var(--khy-gray-100));
 }
 .chat-part-toolresult.is-error {
-  background: var(--el-color-danger-light-9, #fef0f0);
-  border-color: var(--el-color-danger-light-5, #f56c6c);
+  background: var(--el-color-danger-light-9, var(--khy-danger));
+  border-color: var(--el-color-danger-light-5, var(--khy-danger));
 }
 .chat-part-toolresult-header {
   display: flex;
@@ -234,17 +234,17 @@ defineProps({
   margin-bottom: 4px;
 }
 .chat-part-toolresult-icon {
-  color: var(--el-color-success, #67c23a);
+  color: var(--el-color-success, var(--khy-success));
 }
 .chat-part-toolresult-icon.is-error {
-  color: var(--el-color-danger, #f56c6c);
+  color: var(--el-color-danger, var(--khy-danger));
 }
 .chat-part-toolresult-body {
   margin: 0;
   font-family: var(--khy-font-mono, monospace);
   font-size: 11px;
   line-height: 1.5;
-  color: var(--khy-text-secondary, #475467);
+  color: var(--khy-text-secondary, var(--khy-text-secondary));
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 120px;
@@ -253,7 +253,7 @@ defineProps({
 
 /* ── 思考过程 ── */
 .chat-part-thinking {
-  border-left: 2px solid var(--el-color-primary-light-5, #c6e2ff);
+  border-left: 2px solid var(--el-color-primary-light-5, var(--khy-primary-soft));
   padding-left: 8px;
 }
 .chat-part-thinking-toggle {
@@ -265,10 +265,10 @@ defineProps({
   padding: 2px 0;
   cursor: pointer;
   font-size: 12px;
-  color: var(--el-text-color-secondary, #909399);
+  color: var(--el-text-color-secondary, var(--khy-gray-400));
 }
 .chat-part-thinking-toggle:hover {
-  color: var(--el-color-primary, #409eff);
+  color: var(--el-color-primary, var(--khy-primary));
 }
 .chat-part-thinking-icon {
   font-size: 10px;
@@ -278,7 +278,7 @@ defineProps({
 .chat-part-thinking-content {
   margin-top: 4px;
   padding: 6px 8px;
-  background: var(--el-fill-color-lighter, #f5f7fa);
+  background: var(--el-fill-color-lighter, var(--khy-gray-50));
   border-radius: 4px;
   max-height: 200px;
   overflow-y: auto;
@@ -288,13 +288,13 @@ defineProps({
   font-family: var(--khy-font-mono, monospace);
   font-size: 11px;
   line-height: 1.5;
-  color: var(--el-text-color-regular, #606266);
+  color: var(--el-text-color-regular, var(--khy-gray-500));
   white-space: pre-wrap;
 }
 
 /* ── 结构化产物（Generative UI） ── */
 .chat-part-artifact {
-  border: 1px solid var(--el-border-color-lighter, #ebeef5);
+  border: 1px solid var(--el-border-color-lighter, var(--khy-gray-100));
   border-radius: 6px;
   overflow: hidden;
 }
@@ -305,7 +305,7 @@ defineProps({
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  background: var(--el-fill-color-light, #f0f2f5);
+  background: var(--el-fill-color-light, var(--khy-gray-50));
   font-size: 12px;
   font-weight: 600;
 }
@@ -314,12 +314,12 @@ defineProps({
   min-width: 0;
 }
 .chat-artifact-diff-add {
-  color: var(--el-color-success, #67c23a);
+  color: var(--el-color-success, var(--khy-success));
   font-family: var(--khy-font-mono, monospace);
   font-size: 11px;
 }
 .chat-artifact-diff-del {
-  color: var(--el-color-danger, #f56c6c);
+  color: var(--el-color-danger, var(--khy-danger));
   font-family: var(--khy-font-mono, monospace);
   font-size: 11px;
 }
@@ -329,8 +329,8 @@ defineProps({
 }
 .chat-artifact-diff-hunk-header {
   padding: 2px 10px;
-  background: var(--el-color-primary-light-9, #ecf5ff);
-  color: var(--el-color-primary, #409eff);
+  background: var(--el-color-primary-light-9, var(--khy-primary-soft));
+  color: var(--el-color-primary, var(--khy-primary));
 }
 .chat-artifact-diff-line {
   display: flex;
@@ -339,14 +339,14 @@ defineProps({
   line-height: 1.4;
 }
 .chat-artifact-diff-line.is-add {
-  background: var(--el-color-success-light-9, #f0f9eb);
+  background: var(--el-color-success-light-9, var(--khy-success));
 }
 .chat-artifact-diff-line.is-del {
-  background: var(--el-color-danger-light-9, #fef0f0);
+  background: var(--el-color-danger-light-9, var(--khy-danger));
 }
 .chat-artifact-diff-line-num {
   flex: 0 0 30px;
-  color: var(--el-text-color-secondary, #909399);
+  color: var(--el-text-color-secondary, var(--khy-gray-400));
   text-align: right;
   user-select: none;
 }
@@ -370,7 +370,7 @@ defineProps({
   padding: 6px 10px;
   font-size: 12px;
   font-weight: 600;
-  background: var(--el-fill-color-light, #f0f2f5);
+  background: var(--el-fill-color-light, var(--khy-gray-50));
 }
 
 /* Code 产物 */
@@ -379,12 +379,12 @@ defineProps({
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  background: var(--el-fill-color-light, #f0f2f5);
+  background: var(--el-fill-color-light, var(--khy-gray-50));
   font-size: 12px;
 }
 .chat-artifact-code-lang {
   font-weight: 600;
-  color: var(--el-color-primary, #409eff);
+  color: var(--el-color-primary, var(--khy-primary));
 }
 .chat-artifact-code-body {
   margin: 0;
@@ -419,7 +419,7 @@ defineProps({
   padding: 6px 10px;
   font-family: var(--khy-font-mono, monospace);
   font-size: 11px;
-  background: var(--el-fill-color-lighter, #f5f7fa);
+  background: var(--el-fill-color-lighter, var(--khy-gray-50));
   border-radius: 4px;
   white-space: pre-wrap;
 }

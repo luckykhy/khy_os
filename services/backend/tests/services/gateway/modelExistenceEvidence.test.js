@@ -1,16 +1,16 @@
 'use strict';
 /**
- * modelExistenceEvidence.test.js �?model_not_found 显示纠偏(纯叶�?�?
+ * modelExistenceEvidence.test.js — model_not_found 显示纠偏(纯叶子�?
  *
- * 用户反馈:「glm-4.6v-flash 是可以用�?之前出现过复�?id 错误,后面又说 token 太大�?既然存在
- * 就不应该显示为找不到模型」。token 超限(1210/1211、max_tokens)证明请求已到达模�?模型存在;
- * 却又把某�?model_not_found 顶到「真实失败原因」头条显示成「不存在�?自相矛盾�?
- * 本套件锁死叶子契�?
- *   - annotateModelNotFoundLine:有存在性证据时追加注解(复合 id �?送错字符�?已送达 �?非不存在);
- *   - �?model_not_found / 无证�?/ 门关 �?原样返回入参 line(逐字节回退);
- *   - hasReachedEvidence:参数/token 类报错、或非「不存在/鉴权」类 errorType �?true;
- *   - 门控 KHY_MNF_EXISTENCE_NOTE 默认开,off �?�?�?
- *   - 绝不抛�?
+ * 用户反馈:「glm-4.6v-flash 是可以用�?之前出现过复�?id 错误,后面又说 token 太大�?既然存在
+ * 就不应该显示为找不到模型」。token 超限(1210/1211、max_tokens)证明请求已到达模�?模型存在;
+ * 却又把某�?model_not_found 顶到「真实失败原因」头条显示成「不存在�?自相矛盾�?
+ * 本套件锁死叶子契�?
+ *   - annotateModelNotFoundLine:有存在性证据时追加注解(复合 id �?送错字符�?已送达 �?非不存在);
+ *   - �?model_not_found / 无证�?/ 门关 �?原样返回入参 line(逐字节回退);
+ *   - hasReachedEvidence:参数/token 类报错、或非「不存在/鉴权」类 errorType �?true;
+ *   - 门控 KHY_MNF_EXISTENCE_NOTE 默认开,off �?�?�?
+ *   - 绝不抛错
  */
 const {
   isEnabled,
@@ -18,8 +18,9 @@ const {
   annotateModelNotFoundLine,
   describeModelExistenceEvidence,
 } = require('../../../src/services/gateway/modelExistenceEvidence');
+const assert = require('node:assert');
 describe('Model Existence Evidence', () => {
-  test('annotate: reached evidence �?appends "model exists" note', () => {
+  test('annotate: reached evidence �?appends "model exists" note', () => {
     const line = '- api [model_not_found]: recent model_not_found failure cached: 404 (cooldown 28s)';
     const attempts = [
       { success: false, errorType: 'model_not_found', error: '404' },
@@ -30,7 +31,7 @@ describe('Model Existence Evidence', () => {
     expect(out.startsWith(line)).toBeTruthy();
     expect(out).toContain('非模型真的不存在');
   });
-  test('annotate: composite id shape �?appends "wrong string" note (no reached evidence needed)', () => {
+  test('annotate: composite id shape �?appends "wrong string" note (no reached evidence needed)', () => {
     const line = '- api [model_not_found]: model_not_found: api:glm:glm-4.6v-flash';
     const out = annotateModelNotFoundLine({
       line,
@@ -72,7 +73,7 @@ describe('Model Existence Evidence', () => {
       expect(hasReachedEvidence(null)).toBe(false);
   });
 
-  test('annotate: no evidence, non-composite �?byte-identical passthrough', () => {
+  test('annotate: no evidence, non-composite �?byte-identical passthrough', () => {
       const line = '- api [model_not_found]: no such model glm-9-ultra';
       const out = annotateModelNotFoundLine({
         line,
@@ -84,7 +85,7 @@ describe('Model Existence Evidence', () => {
       expect(out).toBe(line);
   });
 
-  test('annotate: non-model_not_found line �?untouched', () => {
+  test('annotate: non-model_not_found line �?untouched', () => {
       const line = '- api [rate_limit]: 429 too many requests';
       const out = annotateModelNotFoundLine({
         line,
@@ -95,7 +96,7 @@ describe('Model Existence Evidence', () => {
       expect(out).toBe(line);
   });
 
-  test('annotate: gate off �?byte-identical passthrough', () => {
+  test('annotate: gate off �?byte-identical passthrough', () => {
       const line = '- api [model_not_found]: model_not_found: api:glm:glm-4.6v-flash';
       const out = annotateModelNotFoundLine({
         line,

@@ -41,6 +41,18 @@ function _normalize(s) {
     .trim();
 }
 
+// Strip a Read-style per-line number gutter ("42\t", "42: ", "42····").
+// Used only by the deterministic gutter-strip fallback below, never by the
+// fuzzy normalizer. The separator is deliberately strict — tab, ": ", or 2+
+// spaces — so an arithmetic line like "2 + 3" (digit + single space) is left
+// intact and cannot be silently rewritten into "+ 3".
+function _stripLineGutter(s) {
+  return String(s)
+    .split('\n')
+    .map((line) => line.replace(/^\s*\d+(?:\t|: {1}|\s{2,})/, ''))
+    .join('\n');
+}
+
 /**
  * Simple Levenshtein distance (character-level). Only used on short
  * normalized strings (<2000 chars) so O(n*m) is acceptable.
@@ -247,7 +259,7 @@ Usage:
     return `编辑 ${path.basename(input.file_path)}：\"${short}\"`;
   }
 
-  async execute(params, _context) {
+  async execute(params, context) {
     const { file_path, old_string, new_string, replace_all, dry_run } = params;
 
     if (old_string === new_string) {
@@ -289,6 +301,19 @@ Usage:
       try {
         const fh = require('../../services/fileHistoryService');
         fh.takeSnapshot(absPath, { reason: 'FileEditTool', content: original });
+      } catch {
+        /* non-critical */
+      }
+      // Turn-grouped rollback manifest (DESIGN-ARCH-096 §2-A) — fail-soft no-op
+      // when no active turn id reaches this tool via context.traceContext.turnId.
+      try {
+        const _turnId = context && context.traceContext && context.traceContext.turnId;
+        if (_turnId) {
+          require('../../services/turnCheckpointService').recordMutatedFile(_turnId, absPath, {
+            reason: 'FileEditTool',
+            content: original,
+          });
+        }
       } catch {
         /* non-critical */
       }
@@ -359,6 +384,63 @@ Usage:
           result._lspDiagnostics = diags;
         }
         return result;
+      }
+
+      // ── Deterministic gutter-strip fallback (G-AA #69) ─────────────
+      // A weak model often pastes old_string copied from Read output, which is
+      // prefixed with a per-line "42\t" (or "42: " / "42····") gutter the file
+      // itself lacks. A short single-line paste also never reaches the fuzzy tier
+      // (isFuzzyCandidate excludes lines ≤20 chars with no newline), so it would
+      // hard-fail "not found" despite matching a real line verbatim. Strip the
+      // gutter and re-anchor deterministically. Only fires after exact match has
+      // already failed and only writes on a UNIQUE post-strip match.
+      if (!replace_all) {
+        const stripped = _stripLineGutter(old_string);
+        if (stripped && stripped !== old_string) {
+          let gCount = 0;
+          let gIdx = original.indexOf(stripped);
+          while (gIdx !== -1) {
+            gCount++;
+            gIdx = original.indexOf(stripped, gIdx + stripped.length);
+          }
+          if (gCount === 1) {
+            const pos = original.indexOf(stripped);
+            const updated =
+              original.slice(0, pos) + new_string + original.slice(pos + stripped.length);
+            if (dry_run) {
+              return {
+                success: true,
+                file: absPath,
+                replacements: 1,
+                dryRun: true,
+                gutterStrip: true,
+                message: `[dry-run] Would replace in ${path.basename(absPath)} after stripping a Read-style line-number gutter from old_string`,
+              };
+            }
+            fs.writeFileSync(absPath, updated, 'utf-8');
+            tracker.markRead(absPath);
+            const gutterResult = {
+              success: true,
+              file: absPath,
+              replacements: 1,
+              gutterStrip: true,
+              message: `Replaced 1 occurrence in ${path.basename(absPath)} (old_string carried a Read-style line-number gutter; matched after stripping it). Matched text: "${stripped.length > 80 ? stripped.slice(0, 80) + '...' : stripped}"`,
+            };
+            const gDiags = _collectLspDiagnostics(absPath);
+            if (gDiags) {
+              gutterResult._lspDiagnostics = gDiags;
+            }
+            return gutterResult;
+          }
+          if (gCount > 1) {
+            return {
+              success: false,
+              error: `去掉行号栏后，old_string 在 ${path.basename(absPath)} 中出现 ${gCount} 次，无法唯一定位。请用 Read 工具查看后提供更精确的 old_string（含更多上下文），或使用 start_line/end_line 精确定位。`,
+              occurrences: gCount,
+            };
+          }
+          // gCount === 0 → fall through to fuzzy / not-found as before
+        }
       }
 
       // ── Fuzzy match fallback ───────────────────────────────────────

@@ -123,9 +123,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 }
 
 export function WelcomePage({ onContinue }: { onContinue: () => void }) {
+  // Six-slot greeting — verbatim from truth source chat.empty.greeting.*
+  // (ZC-ALIGN-002 E1: 哦/啦/吧 tail characters matter, byte-level fidelity).
   const hour = new Date().getHours()
   let greeting = '下午好呀，接下来交给我吧'
-  if (hour < 6) greeting = '夜深啦，别忘了照顾好自己呀'
+  if (hour < 6) greeting = '夜深啦，别忘了照顾好自己哦'
   else if (hour < 11) greeting = '早上好呀，新的一天开始啦'
   else if (hour < 13) greeting = '中午好呀，要不要先休息一下'
   else if (hour < 18) greeting = '下午好呀，接下来交给我吧'

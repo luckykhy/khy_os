@@ -6,14 +6,14 @@ const fs = require('fs');
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-cache-econ-'));
 process.env.KHY_PROJECT_DATA_HOME = TMP;
 const store = require('../src/services/gateway/cacheEconomyStore');
-test.beforeEach(() => {
+beforeEach(() => {
   store._reset();
   delete process.env.GATEWAY_CACHE_ECONOMY_MIN_REQUESTS;
   delete process.env.GATEWAY_CACHE_ECONOMY_HITRATE_FLOOR;
 });
 
 describe('Cache Economy Store', () => {
-  test('cache-capable adapter that never discloses fields â†?opaque_suspected_gouging after K', () => {
+  test('cache-capable adapter that never discloses fields ï¿½?opaque_suspected_gouging after K', () => {
       for (let i = 0; i < 7; i += 1) {
         store.record('relay-mute', { tokenUsage: { inputTokens: 1000 }, family: 'relay openai' });
       }
@@ -23,7 +23,7 @@ describe('Cache Economy Store', () => {
       expect(store.getVerdict('relay-mute')).toBe('opaque_suspected_gouging');
   });
 
-  test('discloses fields with healthy hit rate â†?transparent_caching', () => {
+  test('discloses fields with healthy hit rate ï¿½?transparent_caching', () => {
       for (let i = 0; i < 8; i += 1) {
         store.record('claude-direct', {
           tokenUsage: { inputTokens: 1000, cacheReadInputTokens: 700, cacheWriteInputTokens: 0 },
@@ -34,7 +34,7 @@ describe('Cache Economy Store', () => {
       expect(store.getReport().adapters['claude-direct'].hitRate).toBe(0.7);
   });
 
-  test('discloses fields but hit rate below floor â†?no_cache_benefit', () => {
+  test('discloses fields but hit rate below floor ï¿½?no_cache_benefit', () => {
       for (let i = 0; i < 8; i += 1) {
         store.record('cold', {
           tokenUsage: { inputTokens: 1000, cacheReadInputTokens: 10, cacheWriteInputTokens: 0 },
@@ -44,7 +44,7 @@ describe('Cache Economy Store', () => {
       expect(store.getVerdict('cold')).toBe('no_cache_benefit');
   });
 
-  test('local family is never judged as gouging â†?not_cacheable', () => {
+  test('local family is never judged as gouging ï¿½?not_cacheable', () => {
       for (let i = 0; i < 12; i += 1) {
         store.record('ollama', { tokenUsage: { inputTokens: 500 }, family: 'ollama' });
       }
@@ -58,7 +58,7 @@ describe('Cache Economy Store', () => {
           family: 'openai',
         });
       }
-      // Discloses the field (value 0) â†?not opaque; just no benefit.
+      // Discloses the field (value 0) ï¿½?not opaque; just no benefit.
       expect(store.getVerdict('honest-zero')).toBe('no_cache_benefit');
   });
 

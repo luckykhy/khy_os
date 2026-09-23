@@ -4,7 +4,7 @@ const {
   registerPermissionPrompter,
   getPermissionPrompter,
   _resetForTest,
-} = require('./permissionPromptPort');
+} = require('../../src/services/permissionPromptPort.js');
 
 describe('permissionPromptPort', () => {
   afterEach(() => {

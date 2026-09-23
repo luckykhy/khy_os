@@ -27,7 +27,7 @@
  */
 'use strict';
 
-const config = require('../../../../cli/handlers/config');
+const config = require('./config');
 const matchers = require('./matchers');
 
 /** True when the policy middleware is enabled (default on, file may be absent). */

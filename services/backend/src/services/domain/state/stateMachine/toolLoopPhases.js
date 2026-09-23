@@ -68,6 +68,11 @@ const TOOL_LOOP_TRANSITIONS = Object.freeze({
   [P.PARSE_AI_OUTPUT]: {
     [E.TOOLS_FOUND]: P.EXECUTE_TOOLS,
     [E.NO_TOOLS]: P.VERIFY_GATE, // text-only reply heads to the gate
+    // Verification-gate re-drive: the hard edit gate (toolUseLoopCore) and the
+    // project-coherence gate fire 'verify' while still in parse_ai_output —
+    // they run before 'no_tools' and `continue` without reaching it. Declaring
+    // the edge keeps the shadow FSM honest (no false {illegal:true} records).
+    [E.VERIFY]: P.VERIFY_GATE,
     [E.RETRY]: P.TRANSIENT_RECOVERY, // malformed output → re-ask
     [E.ERROR]: P.ERROR_HANDLING,
     [E.FINISH]: P.FINAL_RESPONSE,

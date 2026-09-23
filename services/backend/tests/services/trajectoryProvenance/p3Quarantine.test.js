@@ -16,7 +16,7 @@ const path = require('path');
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const quarantine = require('../../../src/services/trajectoryProvenance/quarantinePolicy');
+const quarantine = require('../../../src/services/domain/trajectory/trajectoryProvenance/quarantinePolicy.js');
 const { ACTION } = quarantine;
 
 describe('isGateEnabled env 解析', () => {

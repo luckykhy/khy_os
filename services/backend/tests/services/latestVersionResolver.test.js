@@ -1,8 +1,9 @@
 'use strict';
 /**
- * latestVersionResolver.test.js �?回归「最新已发布版本」跨仓库判定�? *
- * 覆盖:三源取最高版本、取胜源标注、单源失败仍出结论、全源失败诚�?indeterminate�? * 渠道门控跳过探测、GitHub 草稿/预发布不算已发布、tag 里的 `v` 前缀归一�? * 全部走注入的 probes / fetch,零真实网络�? */
+ * latestVersionResolver.test.js — 回归「最新已发布版本」跨仓库判定�? *
+ * 覆盖:三源取最高版本、取胜源标注、单源失败仍出结论、全源失败诚�?indeterminate�? * 渠道门控跳过探测、GitHub 草稿/预发布不算已发布、tag 里的 `v` 前缀归一�? * 全部走注入的 probes / fetch,零真实网络�? */
 const resolver = require('../../src/services/latestVersionResolver');
+const assert = require('node:assert');
 describe('latestVersionResolver', () => {
   test('every source failing is indeterminate, never a false "up to date"', async () => {
     const r = await resolver.resolveLatestVersion({
@@ -44,7 +45,7 @@ describe('Latest Version Resolver', () => {
         const r = await resolver.resolveLatestVersion({
           env: {},
           probes: {
-            github: async () => ({ version: null, error: '仓库没有已发�?Release' }),
+            github: async () => ({ version: null, error: '仓库没有已发布 Release' }),
             pypi: async () => ({ version: '0.1.29' }),
             npm: async () => ({ version: '0.1.31' }),
           },
@@ -127,7 +128,7 @@ describe('Latest Version Resolver', () => {
         const fetch = async () => ({ ok: true, status: 200, async json() { return []; } });
         const probed = await resolver._probeGithub({ env: {}, fetch });
         expect(probed.version).toBe(null);
-        expect(probed.error).toMatch(/没有已发�?Release/);
+        expect(probed.error).toMatch(/没有已发布\s*Release/);
   });
 
   test('npm probe reads the latest dist-tag of the scoped package', async () => {

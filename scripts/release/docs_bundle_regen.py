@@ -3,7 +3,7 @@
 
 为什么存在（本模块修复的根因）：
   文档站生成器 `scripts/docs/build_docs_site.js` 把每个 `.md` 渲染成同名 `.html`，
-  并产出一份全站侧栏数据 `docs/_assets/nav-data.js`。这些产物若在**完整源码开发树**
+  并产出一份全站侧栏数据 `docs/19_资产/site/nav-data.js`。这些产物若在**完整源码开发树**
   里生成、再被裁剪进 pip wheel 的 `khy_os/bundled/`，就会引用**不随包**的文档
   （`CLAUDE.html`、`.ai/*.html`、`矛盾点收齐清单.html` 等）——用户 pip 安装后点侧栏或
   首页卡片，浏览器打开一个不存在的 `khy_os/bundled/…​.html` → `ERR_FILE_NOT_FOUND`。
@@ -43,8 +43,8 @@ GENERATOR_REL = ("scripts", "docs", "build_docs_site.js")
 _TEMPLATE_SIGNATURES = ("docs-site.css", "Khy-OS 文档站")
 # 生成器产出的、无同名 .md 的独立产物（侧栏数据 + 断链审计 + 首页）。
 _STANDALONE_ARTIFACTS = (
-    ("docs", "_assets", "nav-data.js"),
-    ("docs", "_assets", "dead-links.json"),
+    ("docs", "19_资产", "site", "nav-data.js"),
+    ("docs", "19_资产", "site", "dead-links.json"),
     ("docs", "index.html"),
 )
 
@@ -113,7 +113,7 @@ def strip_stale_docs_artifacts(bundled: Path) -> int:
     """删除陈旧的文档站产物，保证「宁可无 html 也绝不发布断链」。
 
     仅在 fail-soft 回退路径里调用（node 缺失/生成失败无法重生成时）。删除范围（外科手术式）：
-      - docs/_assets/nav-data.js、docs/_assets/dead-links.json、docs/index.html（生成器独立产物）
+      - docs/19_资产/site/nav-data.js、docs/19_资产/site/dead-links.json、docs/index.html（生成器独立产物）
       - 任意目录下带生成器模板签名（见 looks_like_doc_site_html）且旁边有同名 .md 的 *.html
 
     返回删除的文件数。全程 fail-soft，绝不抛出。

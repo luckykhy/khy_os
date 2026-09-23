@@ -17,7 +17,18 @@
 
 const crypto = require('crypto');
 
-const log = require('../utils/logger');
+// ── 懒加载 logger ─────────────────────────────────────────────────────
+// utils/logger 的真身是 vendor/shared 的 winston logger，整条链
+// (winston + winston-daily-rotate-file + logform + readable-stream + @dabh/diagnostics)
+// 冷解析约 250ms。而这个模块的 log.* 调用**全部**在方法体内（run/_persist 等），
+// 构造期不需要它 —— 却因为在顶层 require 被 commandAutoRegistry 扫描 handlers/ 时的
+// eager import 拉进了 CLI 启动热路径（实测占 arena.js 加载 112ms 中的绝大部分）。
+// 改成首次真正写日志时才解析，未用到 arena 的启动路径完全不再付这笔钱。
+let _log = null;
+function log() {
+  if (!_log) _log = require('../utils/logger');
+  return _log;
+}
 
 /**
  * @typedef {object} ArenaEntry
@@ -77,7 +88,7 @@ class ArenaManager {
     }
 
     const arenaId = 'arena-' + crypto.randomBytes(4).toString('hex');
-    log.info(`Arena ${arenaId}: starting with ${models.length} models`);
+    log().info(`Arena ${arenaId}: starting with ${models.length} models`);
 
     const startTime = Date.now();
 
@@ -130,11 +141,11 @@ class ArenaManager {
         const store = require('./arenaResultStore');
         store.saveResult(result);
       } catch (err) {
-        log.warn(`Arena ${arenaId}: failed to persist result: ${err.message}`);
+        log().warn(`Arena ${arenaId}: failed to persist result: ${err.message}`);
       }
     }
 
-    log.info(
+    log().info(
       `Arena ${arenaId}: completed in ${totalMs}ms, ${entries.filter((e) => !e.failed).length}/${models.length} succeeded`
     );
 
@@ -190,7 +201,7 @@ class ArenaManager {
       entry.error = err.message || String(err);
       entry.failed = true;
       entry.totalMs = Date.now() - start;
-      log.warn(`Arena: model ${model} failed: ${entry.error}`);
+      log().warn(`Arena: model ${model} failed: ${entry.error}`);
     } finally {
       if (timer) {
         clearTimeout(timer);

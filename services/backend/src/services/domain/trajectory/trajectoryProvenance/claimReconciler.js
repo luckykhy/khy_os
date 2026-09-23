@@ -19,75 +19,9 @@
 
 const LEXICON_VERSION = 1;
 
-// ── 否定守卫(KHY_CLAIM_NEGATION_GUARD·默认开)─────────────────────────────────
-// 缺陷:动作族关键词只匹动词本身(如 edit 族 `修改了?(文件|代码)?`),对紧贴其前的
-// **否定词**视而不见 —— khyos 收尾小结的标准样板「未修改任何文件。」里的「修改」被当成
-// 「改了文件」的声称,反去索要 Edit 记录 → 每个只读/纯命令轮都误报「动作声称对不上工具
-// 记录」,自毁「确定性复核」的可信度。本守卫在判定声称前,若动词紧邻否定(未/没有/无需/
-// 不/别 … / not/never/without …),即认定这是「**没**做该动作」的陈述,跳过不计为声称。
-// 与本模块「零假阳性优先(宁可漏报,绝不误报)」姿态一致:否定邻近即倾向不报。
-// 门控关(0/false/off/no)→ _firstUnnegatedMatch 退化为原 `re.exec` 首匹配,逐字节回退。
-const _NEG_OFF = new Set(['0', 'false', 'off', 'no']);
-function _isNegationGuardEnabled(env) {
-  try {
-    const v = (env || process.env || {}).KHY_CLAIM_NEGATION_GUARD;
-    return !(v !== undefined && _NEG_OFF.has(String(v).trim().toLowerCase()));
-  } catch {
-    return true;
-  }
-}
-
-// 动词紧邻的单字否定(未/没/无/毋/勿/别/不);多字否定词在稍宽窗口内(没有/无需/尚未…);
-// 英文否定在动词前 ~16 字符内(the file was not modified / never / without …)。
-const _NEG_ADJ_RE = /(未|没|无|無|毋|勿|别|不)$/;
-const _NEG_NEAR_RE = /(没有|无需|无须|无法|尚未|从未|并未|毫无|未曾|未能)/;
-const _NEG_EN_RE =
-  /\b(no|not|never|without|nothing|none|isn't|wasn't|weren't|didn't|don't|doesn't|won't|can't|cannot|couldn't|shouldn't)\b/i;
-
-/** 该声称匹配处的动词是否被紧邻否定(是 → 非声称,应跳过)。 */
-function _isNegatedClaim(text, idx) {
-  try {
-    if (typeof text !== 'string' || !(idx >= 0)) {
-      return false;
-    }
-    const adj = text.slice(Math.max(0, idx - 1), idx); // 紧贴动词的 1 个字
-    if (_NEG_ADJ_RE.test(adj)) {
-      return true;
-    } // 未修改 / 没删除 / 不部署
-    const near = text.slice(Math.max(0, idx - 4), idx); // 稍宽窗口的多字否定
-    if (_NEG_NEAR_RE.test(near)) {
-      return true;
-    } // 没有修改 / 无需修改 / 尚未提交
-    const en = text.slice(Math.max(0, idx - 16), idx); // 英文否定在动词前若干词
-    if (_NEG_EN_RE.test(en)) {
-      return true;
-    }
-    return false;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * 找该族第一处**非否定**声称。门控关时退化为原 `re.exec(text)` 首匹配(逐字节回退)。
- * 用全局克隆迭代,绝不改动 CLAIM_FAMILIES 里被冻结的原正则状态。
- */
-function _firstUnnegatedMatch(re, text, negOn) {
-  if (!negOn) {
-    return re.exec(text);
-  }
-  const g = new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g');
-  let m;
-  while ((m = g.exec(text)) !== null) {
-    if (m.index === g.lastIndex) {
-      g.lastIndex += 1;
-    } // 防零宽匹配死循环
-    if (!_isNegatedClaim(text, m.index)) {
-      return m;
-    }
-  }
-  return null;
-}
+// 否定守卫族行为保真抽至 ./claimNegation 纯叶子(只依赖 process.env + 自身正则,无 back-edge),
+// 此处重新 require 再导出,使 _isNegatedClaim/_isNegationGuardEnabled 公共面与抽取前一致。
+const { _isNegationGuardEnabled, _isNegatedClaim, _firstUnnegatedMatch } = require('./claimNegation');
 
 // 动词→工具族 allow-list（中英双语）。每族一组关键词正则 + 该族认可的工具名/壳命令关键词。
 // 版本化、确定性；新增声称类型只在此处扩词库。

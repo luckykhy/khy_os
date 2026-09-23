@@ -148,10 +148,17 @@ function printBanner(version, aiProvider) {
   console.log('');
 }
 
-// Full CSI/ESC coverage: SGR colors, cursor movement (\x1b[nA..D, \x1b[n;mH),
-// erase (\x1b[K, \x1b[2J), private modes (\x1b[?25l) and bare ESC finals.
+// CSI/ESC coverage kept in lockstep with wrapCell's ESC_SEQ_RE so the width
+// SSOT and the wrap/row biller agree on exactly which bytes are a zero-width
+// escape. CSI parameter bytes are the full ECMA-48 range 0x30-0x3F
+// (`[0-9:;<=>?]`, NOT just `[0-9;?]`): colon-separated truecolor SGR
+// (`\x1b[38:2:R:G:Bm`) and private params (`\x1b[>c`) must be stripped whole,
+// else their digits are metered as printable and the row budget drifts
+// (same family as BUG-32 / BUG-98). The `[ -/]+[@-~]` branch covers
+// ESC-with-intermediates dispatches (e.g. `\x1b(B` charset designation); it
+// requires >=1 intermediate, so a lone printable after ESC is never eaten.
 // eslint-disable-next-line no-control-regex
-const _ANSI_PATTERN = /\u001b(?:[@-Z\\-_]|\[[0-9;?]*[@-~])/g;
+const _ANSI_PATTERN = /\u001b(?:[@-Z\\-_]|\[[0-9:;<=>?]*[ -/]*[@-~]|[ -/]+[@-~])/g;
 
 // OSC sequences (hyperlinks, window titles): \x1b]...BEL or \x1b]...ESC\ (ST).
 // Lazy body + both terminators; stripped BEFORE _ANSI_PATTERN so the ST's
@@ -478,7 +485,14 @@ function truncateToWidth(str, maxWidth) {
       i += chLen;
       continue;
     }
-    const charWidth = _isWideCodePoint(cp) ? 2 : 1;
+    // Measure with the SAME source as the `displayWidth(str) <= maxWidth` guard
+    // above. `_isWideCodePoint`'s emoji table stops at 0x1f9ff and misses the
+    // Extended-A block (0x1fa70–0x1faff), so using it here while the guard uses
+    // string-width let modern emoji slip through under-truncated: the produced
+    // line's real display width could exceed maxWidth → terminal wrap → +1 frame
+    // row (BUG-98). displayWidth of one code point is cluster-faithful for the
+    // single-unit emoji that reach here (ESC/combining already consumed above).
+    const charWidth = displayWidth(str.slice(i, i + chLen));
     if (w + charWidth + 3 > maxWidth) {
       // reserve 3 for '...'
       result += '...';
@@ -987,7 +1001,7 @@ function printKeybindingsTip() {
     `    ${label('编辑')}  ${dim('Ctrl+W(删除单词) · Ctrl+D(删除字符/退出) · Ctrl+L(清屏)')}`
   );
   console.log(
-    `    ${label('会话')}  ${dim('Ctrl+C ×1(中止请求) / ×3(强制退出) · Esc(中止/返回) · Tab(自动完成)')}`
+    `    ${label('会话')}  ${dim('Ctrl+C ×1(中止请求) · 忙碌 ×3(强制退出) / 空闲 ×2(退出) · Esc(中止/返回) · Tab(自动完成)')}`
   );
   console.log('');
 }

@@ -30,6 +30,12 @@ const path = require('path');
 const defaults = require('../../../../constants/serviceDefaults');
 const log = require('../../../../utils/logger');
 const core = require('../messaging/ilinkCore');
+// 「描述/自述」职责簇（连接健康 / 路由 / 通道列表）—— 纯读 + 拼串，单独成文件。
+const _diag = require('./ilinkDispatchDiagnostics');
+// 「按账号绑定路由」职责簇 —— 全文件唯一改进程级 cwd/env/agent 指针的地方，单独成文件。
+const _routing = require('./ilinkWorkspaceRouting');
+// 「文件投递」职责簇 —— 失败矩阵密集 + 铁律「绝不影响后续文本回复」，单独成文件。
+const _delivery = require('./ilinkFileDelivery');
 
 /**
  * 取 chat 内核。
@@ -63,7 +69,7 @@ function _resolveChat(deps = {}) {
   }
   try {
     // 惰性加载:cli/ai.js 在加载时会把 chat 注册进 aiChatPort。
-    require('../../../../cli/ai');
+    _ensureCliRegistered();
     const c = require('../../../aiChatPort').getAiChat();
     if (typeof c === 'function') {
       return c;
@@ -72,6 +78,47 @@ function _resolveChat(deps = {}) {
     /* 仍无 → 返回 null,上层回一句诚实的话 */
   }
   return null;
+}
+
+/**
+ * 惰性加载 CLI ai 模块,触发它在 aiChatPort 上的自注册(chat + 会话控制操作)。
+ *
+ * 这是本文件**唯一**一处保留的 `cli/` 引用,且方向是「拉起来」而非「取实现」:
+ * 模块加载即自注册,取用一律经 aiChatPort。进程内只生效一次(Node require 缓存),
+ * 重复调用零成本。CLI 不可用(纯后端/单测)时静默——调用方各自的 fail-soft 兜底。
+ */
+function _ensureCliRegistered() {
+  try {
+    require('../../../../cli/ai');
+  } catch {
+    /* CLI 不可用:port 保持空,调用方降级 */
+  }
+}
+
+/**
+ * 取 CLI 会话控制操作(clearHistory / cancelActiveRequest / scopeSession /
+ * maybeAutoCheckpointProgress),与 _resolveChat 同一条两档回落链:
+ * aiChatPort IoC seam → 惰性加载 CLI ai 触发自注册 → 再取一次。
+ *
+ * 这样 services 层只在「自举」意义下碰 cli/(单一引用点),实现一律经 port 取,
+ * 打破 _resolveChat 之外的散点 R1 分层倒置。
+ *
+ * @param {string} getter  aiChatPort 上的 getter 名
+ * @returns {Function} 取到的函数;两档都失败时抛错,由调用方的 catch 兜底。
+ */
+function _resolveSessionControl(getter) {
+  const port = require('../../../aiChatPort');
+  const first = port[getter];
+  if (typeof first === 'function') {
+    const fn = first();
+    if (typeof fn === 'function') return fn;
+  }
+  _ensureCliRegistered();
+  const late = require('../../../aiChatPort')[getter]();
+  if (typeof late !== 'function') {
+    throw new Error(`CLI 会话内核未加载(${getter} 不可用)`);
+  }
+  return late;
 }
 
 /** 看门狗的哨兵值。用独占 Symbol,避免与 chat() 的任何合法返回值撞上。 */
@@ -476,6 +523,23 @@ class IlinkDispatcher {
   }
 
   /**
+   * 把本实例的运行时状态打包给诊断簇。
+   *
+   * 显式传 state（而不是把 `this` 整个递过去）是有意的：诊断模块只应看到它真正
+   * 需要读的三样东西（channel / 队列长度 / 是否在处理）。这样它在编译期就不可能
+   * 写到本类的任何私有字段，职责边界由**参数形状**保证，而不是靠注释约定。
+   *
+   * @returns {{channel:object, queueLength:number, running:boolean}}
+   */
+  _diagState() {
+    return {
+      channel: this.channel,
+      queueLength: this._queue.length,
+      running: this._running,
+    };
+  }
+
+  /**
    * messageRouter 的 per-channel handler 入口。
    * @param {object} msg 已由 ilinkCore.parseInboundMessage 归一
    * @returns {Promise<void>}
@@ -614,7 +678,7 @@ class IlinkDispatcher {
       case 'new':
         // 永远可执行 —— 这是卡死时唯一的逃生口,绝不因为「忙」而挡掉。
         try {
-          require('../../../../cli/aiConversationOps').clearHistory();
+          _resolveSessionControl('getClearHistory')();
           this._queue.length = 0;
           return '🧹 已清空对话历史(排队中的消息也一并丢弃)。';
         } catch (e) {
@@ -637,7 +701,7 @@ class IlinkDispatcher {
 
       case 'version':
         try {
-          return `khy ${require('../../../package.json').version}`;
+          return `khy ${require('../../../../../package.json').version}`;
         } catch {
           return 'khy(版本未知)';
         }
@@ -653,150 +717,28 @@ class IlinkDispatcher {
    * 注意能收到这条命令本身就说明入站是通的 —— 所以真正有信息量的是**出站以外**的东西:
    * 心跳有多新、会话有没有过期、游标在不在、连续失败了多少次。
    */
+  /**
+   * 「连接健康」自述。实现在 ilinkDispatchDiagnostics（纯文本渲染职责簇）。
+   *
+   * @returns {string}
+   */
   _describeConnection() {
-    const lines = ['🔗 连接健康'];
-    const ch = this.channel;
-    const s = ch && typeof ch.toJSON === 'function' ? ch.toJSON() : {};
-
-    lines.push(`通道:${s.connected ? '已连接' : '未连接'}`);
-    if (s.accountId) {
-      lines.push(`账号:${s.accountId}`);
-    }
-    if (s.sessionExpired) {
-      lines.push('⚠️ 会话已过期 —— 需要在电脑上重新扫码:khy wx login');
-    }
-    if (Number(s.failures) > 0) {
-      lines.push(`连续轮询失败:${s.failures} 次(正在退避重试)`);
-    }
-    if (s.baseUrlFellBack) {
-      lines.push('注:服务端下发的 baseurl 不可信,已回落默认端点');
-    }
-
-    try {
-      const store = require('../messaging/ilinkAccountStore');
-      const id = s.accountId || '';
-      const hb = id ? store.getHeartbeat(id) : null;
-      if (hb) {
-        lines.push(`心跳:${Math.round(hb.ageMs / 1000)} 秒前`);
-      } else {
-        lines.push('心跳:还没打过(可能刚启动)');
-      }
-      if (id) {
-        lines.push(`轮询游标:${store.getSyncBuf(id) ? '已保存' : '空(首轮或刚重置)'}`);
-      }
-    } catch {
-      /* fail-soft */
-    }
-
-    lines.push(`队列:${this._queue.length} 条等待${this._running ? '、1 条处理中' : ''}`);
-    lines.push('');
-    lines.push('你能收到这条,说明收发都是通的。想看模型路由发 /status。');
-    return lines.join('\n');
+    return _diag.describeConnection(this._diagState());
   }
 
   /**
-   * 报告路由。**严格区分「已证实」与「只是配置」**。
-   *
-   * 为什么要这么啰嗦:模型会照着上下文里的配置值自称身份,而真实路由在首选通道不可用时
-   * 早已回落 —— 于是它会非常自信地报出一个根本没在用的模型名。但换个数据源照样能撒谎:
-   * getActiveAdapter() 返回的是**启动时的选路**(env > lastVerified > 首个可用),不是
-   * 实际服务了上一条请求的那个。唯一可证的是网关记的 lastSuccessAt —— 哪个通道最近真的
-   * 成功答过话。所以这里三者分开列,并标明各自是什么,而不是挑一个当作事实。
+   * 报告路由。**严格区分「已证实」与「只是配置」**（口径详解见诊断模块）。
    *
    * @param {boolean} full 是否附带通道/队列状态
+   * @returns {string}
    */
   _describeRoute(full) {
-    const lines = [];
-    let gw = null;
-    try {
-      gw = require('../../../gateway/aiGateway');
-    } catch {
-      /* fail-soft */
-    }
-
-    // ① 已证实:最近一次真的成功答话的通道。
-    let proven = null;
-    try {
-      const act = gw && gw._adapterActivity;
-      if (act) {
-        for (const key of Object.keys(act)) {
-          const at = act[key] && act[key].lastSuccessAt;
-          if (at && (!proven || at > proven.at)) {
-            proven = { key, at };
-          }
-        }
-      }
-    } catch {
-      /* fail-soft */
-    }
-    if (proven) {
-      const ago = Math.round((Date.now() - proven.at) / 1000);
-      lines.push(`✅ 最近成功答话的通道:${proven.key}(${ago} 秒前)— 这条是可证的`);
-    } else {
-      lines.push('尚无「已成功答话」的记录(本进程还没答过,或刚重启)。');
-    }
-
-    // ② 启动选路:注意它不等于实际服务方。
-    try {
-      const active = gw && typeof gw.getActiveAdapter === 'function' ? gw.getActiveAdapter() : null;
-      if (active) {
-        lines.push(
-          `启动选路:${active.key || active.name || '未知'}` +
-            `${active.activeModel ? ` / ${active.activeModel}` : ''}` +
-            `${active.modelSource ? `(来源 ${active.modelSource})` : ''}`
-        );
-      }
-    } catch {
-      /* fail-soft */
-    }
-
-    // ③ 配置值:仅仅是 .env 里写了什么。
-    const cfgAdapter = process.env.GATEWAY_PREFERRED_ADAPTER || '(未设)';
-    const cfgModel = process.env.GATEWAY_PREFERRED_MODEL || '(未设)';
-    lines.push(`配置首选:${cfgAdapter} / ${cfgModel}(只是配置,不代表在用)`);
-    if (proven && cfgAdapter !== '(未设)' && cfgAdapter !== 'auto' && proven.key !== cfgAdapter) {
-      lines.push(`⚠️ 首选通道 ${cfgAdapter} 没在服务,已回落到 ${proven.key}。`);
-    }
-    lines.push('');
-    lines.push('注:模型自称的身份来自上下文里的配置值,回落时会报错。以上面「已证实」那行为准。');
-
-    if (full) {
-      lines.push('');
-      lines.push(`队列:${this._queue.length} 条等待${this._running ? '、1 条处理中' : ''}`);
-      const ch = this.channel;
-      if (ch && typeof ch.toJSON === 'function') {
-        const s = ch.toJSON();
-        lines.push(
-          `通道:${s.connected ? '已连接' : '未连接'}${s.sessionExpired ? '(会话已过期,需重新扫码)' : ''}`
-        );
-      }
-    }
-    return lines.join('\n');
+    return _diag.describeRoute(this._diagState(), full);
   }
 
   /** 列出已连通的通道。 */
   _listAdapters() {
-    try {
-      const gw = require('../../../gateway/aiGateway');
-      const g = typeof gw.getAdapters === 'function' ? gw : gw.aiGateway || gw.default || null;
-      const list = g && typeof g.getAdapters === 'function' ? g.getAdapters() : null;
-      if (!Array.isArray(list) || !list.length) {
-        return '取不到通道列表。';
-      }
-      const avail = list.filter((e) => {
-        try {
-          return e.enabled && e.adapter && e.adapter.detect();
-        } catch {
-          return false;
-        }
-      });
-      if (!avail.length) {
-        return '当前没有任何可用通道。';
-      }
-      return `已连通的通道:\n${avail.map((e) => `· ${e.key}`).join('\n')}`;
-    } catch (e) {
-      return `取通道列表失败:${(e && e.message) || e}`;
-    }
+    return _diag.listAdapters();
   }
 
   /** 串行消费队列。 */
@@ -878,84 +820,22 @@ class IlinkDispatcher {
   /**
    * 投递本轮工具链产出的文件到微信(SendUserFile 的结果)。
    *
-   * out 来自 runToolUseLoop 的返回(经 _runAgentTurn 透传):{ finalResponse, toolCallLog,
-   * iterations, ... }。toolCallLog 每项形如 { iteration, tool, params, result, elapsed },
-   * 其中 tool 是工具规范名、result 是工具 execute 的返回。out 也可能是纯字符串
-   * (工具循环不可用/看门狗超时),故非数组直接 return。
+   * 实现在 ilinkFileDelivery —— 那段代码的失败矩阵密集（超限 / 发送失败 / 读取异常 /
+   * 顶层兜底），且铁律是「整体 fail-soft，绝不影响后续文本回复」，值得独立焦点。
    *
-   * 契约:fail-soft。整体 try/catch 兼底;每个文件再独立 try/catch——单个文件失败
-   * 仅记 log.warn + 文本告知路径,绝不影响其余文件与后续文本回复。
    * @param {object} msg 入站消息
    * @param {*} out _chatWithWatchdog 的返回
    */
   async _deliverFiles(msg, out) {
-    try {
-      const logArr = out && Array.isArray(out.toolCallLog) ? out.toolCallLog : null;
-      if (!logArr) {
-        return;
-      }
-      const channel = this.channel;
-      if (!channel) {
-        return;
-      }
-      const channelId = msg.channelId || msg.userId;
-      const threadId = msg.threadId || '';
-
-      for (const entry of logArr) {
-        if (!entry || entry.tool !== 'SendUserFile') {
-          continue;
-        }
-        const result = entry.result;
-        if (!result || result.success !== true) {
-          continue;
-        }
-        // 防御性解析文件路径:直接字段 / 则又一层 result 嵌套。
-        const filePath = result.file || result.file_path || (result.result && result.result.file);
-        if (!filePath) {
-          continue;
-        }
-
-        const fileName = path.basename(String(filePath));
-        try {
-          const st = await fs.promises.stat(filePath);
-          if (st.size > defaults.ILINK_MAX_FILE_SIZE_BYTES) {
-            const limitMb = Math.round(defaults.ILINK_MAX_FILE_SIZE_BYTES / (1024 * 1024));
-            const sizeMb = (st.size / (1024 * 1024)).toFixed(1);
-            await this._say(
-              msg,
-              `📎 文件「${fileName}」太大(${sizeMb}MB,超过上限 ${limitMb}MB),暂不能直接发送。` +
-                `你可以到这个路径自取:${filePath}`
-            );
-            continue;
-          }
-
-          const buf = await fs.promises.readFile(filePath);
-          const isImage = _isImageFile(fileName);
-          const sendRes = isImage
-            ? await channel.sendImage(channelId, buf, { threadId, fileName })
-            : await channel.sendFile(channelId, buf, { threadId, fileName, fileSize: st.size });
-
-          if (!sendRes || sendRes.ok === false) {
-            const reason = (sendRes && sendRes.error) || '未知原因';
-            log.warn(`ilink: 文件发送失败(${fileName}):${reason}`);
-            await this._say(
-              msg,
-              `📎 文件「${fileName}」发送失败。你可以到这个路径自取:${filePath}`
-            );
-          }
-        } catch (err) {
-          const reason = (err && err.message) || String(err);
-          log.warn(`ilink: 文件投递出错(${fileName}):${reason}`);
-          await this._say(
-            msg,
-            `📎 文件「${fileName}」发送出错。你可以到这个路径自取:${filePath}`
-          ).catch(() => {});
-        }
-      }
-    } catch (err) {
-      // 整体兼底:_deliverFiles 绝不能抛错影响后续文本回复。
-      log.warn(`ilink: 文件投递环节异常(已忽略):${(err && err.message) || err}`);
-    }
+    return _delivery.deliverFiles({
+      msg,
+      out,
+      channel: this.channel,
+      say: (m, text) => this._say(m, text),
+      isImageFile: _isImageFile,
+      defaults,
+      log,
+    });
   }
 
   /**
@@ -966,16 +846,13 @@ class IlinkDispatcher {
    */
   _maybeAutoCheckpointTurn(msg) {
     try {
-      const ai = require('../../../../cli/ai');
-      if (!ai || typeof ai.maybeAutoCheckpointProgress !== 'function') {
-        return;
-      }
+      const maybeCheckpoint = _resolveSessionControl('getMaybeAutoCheckpointProgress');
       const userId = String((msg && msg.userId) || '').trim();
       // 主题锚点:微信-<userId 前 8 位>,避免多用户共用一条主题、也避免用家目录名。
       const anchor = userId ? `微信-${userId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 8)}` : '微信';
-      ai.maybeAutoCheckpointProgress('ilinkTurn', anchor);
+      maybeCheckpoint('ilinkTurn', anchor);
     } catch {
-      /* best effort */
+      /* best effort —— CLI 未加载或 hook 不可用都静默跳过 */
     }
   }
 
@@ -1059,142 +936,21 @@ class IlinkDispatcher {
   }
 
   /**
-   * Route this serialized query into the account's bound workspace/agent, and
-   * return a restore function that undoes the switch.
+   * 按账号绑定把本轮查询路由进对应工作空间/agent，返回还原函数。
    *
-   * MUST be called INSIDE the global exclusive lock: it mutates process-level
-   * state (KHYQUANT_CWD + process.cwd + the active-agent pointer) that is shared
-   * across all account dispatchers. The lock guarantees no other account's query
-   * runs concurrently, so this per-time-slice isolation never introduces a
-   * concurrent independent agent (consistent with chat()'s non-reentrant contract).
+   * 实现与全部不变量（全局锁内调用、进程级状态、LIFO 逆序还原、端到端 fail-soft）
+   * 在 ilinkWorkspaceRouting —— 单独成文件是为了让「谁改了进程级 cwd/env/agent 指针」
+   * 这条最危险的职责有一个可独立评审的焦点。
    *
-   * Fail-soft end to end: reading the binding or performing either switch may
-   * fail; on ANY error we fall back to "unbound" and let the query proceed under
-   * the default cwd/agent — nothing is thrown. Each successful switch captures
-   * its own prior state and contributes a restore step; the returned function
-   * replays them in reverse order (LIFO). The returned function is always
-   * callable (no-op when nothing was switched).
-   *
-   * @returns {Function} restore function (always safe to call)
+   * @returns {Function} restore 函数（永远安全可调）
    */
   _applyBindingRouting() {
-    const noop = () => {};
-    const acc = this.accountId;
-    if (!acc) {
-      return noop;
-    }
-
-    // ① Read the binding. Any failure → treat as unbound.
-    let binding = null;
-    try {
-      const store = this._resolveBindingStore();
-      binding = store && typeof store.getBinding === 'function' ? store.getBinding(acc) : null;
-    } catch {
-      binding = null;
-    }
-    if (!binding) {
-      return noop;
-    }
-
-    const workspace = String(binding.workspace || '').trim();
-    const agent = String(binding.agent || '').trim();
-    if (!workspace && !agent) {
-      return noop;
-    }
-
-    const router = this._resolveWorkspaceRouter();
-    if (!router) {
-      return noop;
-    }
-
-    const restores = [];
-
-    // ② cwd switch. Capture prior KHYQUANT_CWD (may be unset) + process.cwd so
-    //    restore is exact — including deleting the env var when it was unset.
-    if (workspace && typeof router.switchCwd === 'function') {
-      // Capture the restore baseline defensively: reading process.cwd() throws
-      // if the current directory was deleted / became inaccessible, and env
-      // reads are similarly guarded. Without a reliable baseline we cannot
-      // guarantee an exact restore, so we abandon the cwd switch entirely and
-      // proceed at the default cwd — honoring the module's fail-soft contract
-      // (a failed switch degrades to "unbound", never throws).
-      let baseline = null;
-      try {
-        baseline = {
-          hadEnvCwd: Object.prototype.hasOwnProperty.call(process.env, 'KHYQUANT_CWD'),
-          prevEnvCwd: process.env.KHYQUANT_CWD,
-          prevProcCwd: process.cwd(),
-        };
-      } catch {
-        /* fail-soft: cannot read current cwd/env → skip cwd switch */
-      }
-      if (baseline) {
-        try {
-          const res = router.switchCwd(workspace);
-          if (!res || res.switched !== false) {
-            restores.push(() => {
-              // Restore chdir + env via the same switcher (keeps both cwd sources
-              // in sync), then fix the env var if it was originally unset.
-              try {
-                router.switchCwd(baseline.prevProcCwd);
-              } catch {
-                /* best effort */
-              }
-              try {
-                if (baseline.hadEnvCwd) {
-                  process.env.KHYQUANT_CWD = baseline.prevEnvCwd;
-                } else {
-                  delete process.env.KHYQUANT_CWD;
-                }
-              } catch {
-                /* best effort */
-              }
-            });
-          }
-        } catch {
-          /* fail-soft: cwd switch failed → proceed at default cwd */
-        }
-      }
-    }
-
-    // ③ agent switch. Capture prior active id; setActiveAgent throws for an
-    //    unknown agent → skip (proceed with default agent). Restore to prior id,
-    //    or clear the pointer when there was none.
-    if (agent && typeof router.setActiveAgent === 'function') {
-      try {
-        const prevAgent =
-          typeof router.getActiveAgentId === 'function' ? router.getActiveAgentId() : null;
-        router.setActiveAgent(agent);
-        restores.push(() => {
-          try {
-            if (prevAgent) {
-              router.setActiveAgent(prevAgent);
-            } else if (typeof router.clearActiveAgent === 'function') {
-              router.clearActiveAgent();
-            }
-          } catch {
-            /* best effort */
-          }
-        });
-      } catch {
-        /* fail-soft: unknown agent → proceed with default agent */
-      }
-    }
-
-    if (!restores.length) {
-      return noop;
-    }
-    return () => {
-      for (let i = restores.length - 1; i >= 0; i--) {
-        try {
-          restores[i]();
-        } catch {
-          /* best effort: never throw on restore */
-        }
-      }
-    };
+    return _routing.applyBindingRouting({
+      accountId: this.accountId,
+      resolveBindingStore: () => this._resolveBindingStore(),
+      resolveWorkspaceRouter: () => this._resolveWorkspaceRouter(),
+    });
   }
-
   /**
    * 跑 chat(),但给它一个墙钟上限。
    *
@@ -1217,20 +973,18 @@ class IlinkDispatcher {
     // 会话作用域切到该用户:同 id no-op;异 id 恢复该用户已持久化历史(新用户空历史
     // 起步);随后 _persistLiveSession 把本轮追加到该用户独立文件,跨重启存活、用户隔离。
     try {
-      const ai = require('../../../../cli/ai');
-      if (ai && typeof ai.scopeSession === 'function') {
-        const scope = defaults.ILINK_SESSION_SCOPE;
-        // Phase-1 向后兼容:默认 dmScope 翻到 per-account-channel-peer 后,会话键从
-        // 旧的 `ilink:<userId>` 变成 `ilink:<accountId>:<userId>`。在 scopeSession 之前做
-        // 一次性 fallback 迁移:新键无历史而旧单账号键有历史时,把旧会话拷到新键,
-        // 使既有用户升级后上下文无缝续接。失败不阻断聊天(fail-soft)。
-        try {
-          _migrateLegacyIlinkSession(this._resolvePersistence(), scope, this.accountId, msg.userId);
-        } catch {
-          /* fail-soft:迁移任何异常都不得影响正常聊天 */
-        }
-        ai.scopeSession(buildSessionKey(scope, this.accountId, msg.userId));
+      const scopeSession = _resolveSessionControl('getScopeSession');
+      const scope = defaults.ILINK_SESSION_SCOPE;
+      // Phase-1 向后兼容:默认 dmScope 翻到 per-account-channel-peer 后,会话键从
+      // 旧的 `ilink:<userId>` 变成 `ilink:<accountId>:<userId>`。在 scopeSession 之前做
+      // 一次性 fallback 迁移:新键无历史而旧单账号键有历史时,把旧会话拷到新键,
+      // 使既有用户升级后上下文无缝续接。失败不阻断聊天(fail-soft)。
+      try {
+        _migrateLegacyIlinkSession(this._resolvePersistence(), scope, this.accountId, msg.userId);
+      } catch {
+        /* fail-soft:迁移任何异常都不得影响正常聊天 */
       }
+      scopeSession(buildSessionKey(scope, this.accountId, msg.userId));
     } catch {
       /* fail-soft:作用域失败不回退本轮 */
     }
@@ -1261,7 +1015,7 @@ class IlinkDispatcher {
     const mins = Math.max(1, Math.round(limit / 60000));
     log.warn(`ilink: 单次查询超过 ${limit}ms,已放弃并放行队列(用户 ${msg.userId})`);
     try {
-      require('../../../../cli/ai').cancelActiveRequest('微信端查询超时');
+      _resolveSessionControl('getCancelActiveRequest')('微信端查询超时');
     } catch {
       /* 取不到就算了,放行队列本身才是关键 */
     }

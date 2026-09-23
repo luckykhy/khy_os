@@ -14,6 +14,7 @@ const {
   buildDescribePrompt,
   buildDescriptionInjection,
 } = require('../../../src/services/gateway/visionDescribeReturn');
+const assert = require('node:assert');
 
 describe('Vision Describe Return', () => {
   test('gate default-on', () => {
@@ -77,10 +78,10 @@ describe('Vision Describe Return', () => {
   });
 
   test('buildDescriptionInjection accepts a bare string and never throws', () => {
-      expect(() => buildDescriptionInjection('单段描述', { model: 'm' }).not.toThrow());
+      expect(() => buildDescriptionInjection('单段描述', { model: 'm' })).not.toThrow();
       const out = buildDescriptionInjection('单段描述', { model: 'm' });
       expect(out).toContain('单段描述');
-      expect(() => buildDescriptionInjection(null).not.toThrow());
+      expect(() => buildDescriptionInjection(null)).not.toThrow();
       expect(buildDescriptionInjection(null)).toBe('');
   });
 

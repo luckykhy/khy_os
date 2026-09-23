@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-MEM-000] 记忆系统总结.md -->
+<title>[DESIGN-MEM-000] 记忆系统总结 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-MEM<span class="sep">›</span>[DESIGN-MEM-000] 记忆系统总结</div>
+      <header class="hero reveal"><h1>[DESIGN-MEM-000] 记忆系统总结</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-mem-000-记忆系统总结">[DESIGN-MEM-000] 记忆系统总结</a></li><li class="lvl-2"><a href="#1-工作概述">1. 工作概述</a></li><li class="lvl-3"><a href="#1-1-背景">1.1 背景</a></li><li class="lvl-3"><a href="#1-2-目标">1.2 目标</a></li><li class="lvl-2"><a href="#2-完成工作">2. 完成工作</a></li><li class="lvl-3"><a href="#2-1-记忆系统分析">2.1 记忆系统分析</a></li><li class="lvl-3"><a href="#2-2-记忆清空">2.2 记忆清空</a></li><li class="lvl-3"><a href="#2-3-标准规范制定">2.3 标准规范制定</a></li><li class="lvl-3"><a href="#2-4-工具脚本">2.4 工具脚本</a></li><li class="lvl-2"><a href="#3-记忆系统架构">3. 记忆系统架构</a></li><li class="lvl-3"><a href="#3-1-分层模型">3.1 分层模型</a></li><li class="lvl-3"><a href="#3-2-语义类型">3.2 语义类型</a></li><li class="lvl-3"><a href="#3-3-生命周期">3.3 生命周期</a></li><li class="lvl-2"><a href="#4-使用指南">4. 使用指南</a></li><li class="lvl-3"><a href="#4-1-快速开始">4.1 快速开始</a></li><li class="lvl-3"><a href="#4-2-日常使用">4.2 日常使用</a></li><li class="lvl-3"><a href="#4-3-维护建议">4.3 维护建议</a></li><li class="lvl-2"><a href="#5-质量保证">5. 质量保证</a></li><li class="lvl-3"><a href="#5-1-记忆质量指标">5.1 记忆质量指标</a></li><li class="lvl-3"><a href="#5-2-质量检查命令">5.2 质量检查命令</a></li><li class="lvl-3"><a href="#5-3-质量改进">5.3 质量改进</a></li><li class="lvl-2"><a href="#6-故障排除">6. 故障排除</a></li><li class="lvl-3"><a href="#6-1-常见问题">6.1 常见问题</a></li><li class="lvl-3"><a href="#6-2-紧急恢复">6.2 紧急恢复</a></li><li class="lvl-2"><a href="#7-相关文档">7. 相关文档</a></li><li class="lvl-3"><a href="#7-1-规范文档">7.1 规范文档</a></li><li class="lvl-3"><a href="#7-2-工具脚本">7.2 工具脚本</a></li><li class="lvl-3"><a href="#7-3-环境变量">7.3 环境变量</a></li><li class="lvl-2"><a href="#8-版本历史">8. 版本历史</a></li><li class="lvl-2"><a href="#9-后续计划">9. 后续计划</a></li><li class="lvl-3"><a href="#9-1-短期计划-1-个月内">9.1 短期计划（1 个月内）</a></li><li class="lvl-3"><a href="#9-2-中期计划-3-个月内">9.2 中期计划（3 个月内）</a></li><li class="lvl-3"><a href="#9-3-长期计划-6-个月内">9.3 长期计划（6 个月内）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-mem-000-记忆系统总结">[DESIGN-MEM-000] 记忆系统总结<a class="anchor" href="#design-mem-000-记忆系统总结" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档总结 khy-os 记忆系统的清理和规范制定工作。</p></blockquote>
+<hr>
+<h2 id="1-工作概述">1. 工作概述<a class="anchor" href="#1-工作概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-背景">1.1 背景<a class="anchor" href="#1-1-背景" aria-label="锚点">#</a></h3>
+<p>khy-os 记忆系统存在大量垃圾记忆，需要：</p>
+<ol><li>清空现有记忆系统</li><li>制定标准记忆规范</li><li>建立记忆管理机制</li></ol>
+<h3 id="1-2-目标">1.2 目标<a class="anchor" href="#1-2-目标" aria-label="锚点">#</a></h3>
+<ul><li><strong>清理</strong>：安全清空所有记忆数据</li><li><strong>规范</strong>：制定标准记忆格式和分类</li><li><strong>管理</strong>：建立记忆生命周期管理机制</li><li><strong>文档</strong>：提供完整的使用指南</li></ul>
+<hr>
+<h2 id="2-完成工作">2. 完成工作<a class="anchor" href="#2-完成工作" aria-label="锚点">#</a></h2>
+<h3 id="2-1-记忆系统分析">2.1 记忆系统分析<a class="anchor" href="#2-1-记忆系统分析" aria-label="锚点">#</a></h3>
+<p><strong>分析内容</strong>：</p>
+<ul><li>识别了 6 大类存储区域</li><li>分析了记忆文件格式和结构</li><li>确认了所有记忆存储位置</li></ul>
+<p><strong>关键发现</strong>：</p>
+<ul><li>核心记忆：<code>.khy/memory/</code> 目录</li><li>成长数据：<code>.khy/growth/</code> 目录</li><li>学习缓存：<code>.khy/skills/</code> 目录</li><li>训练数据：<code>.khy/training/</code> 目录</li><li>会话数据：<code>.khy/sessions/</code> 目录</li><li>侧记忆：<code>.khyos/</code> 目录</li></ul>
+<h3 id="2-2-记忆清空">2.2 记忆清空<a class="anchor" href="#2-2-记忆清空" aria-label="锚点">#</a></h3>
+<p><strong>清空操作</strong>：</p>
+<ul><li>归档核心记忆文件（2 个）</li><li>重置 MEMORY.md 为模板</li><li>重置成长数据文件（10 个）</li><li>归档学习缓存文件（65 个）</li><li>清空训练数据文件（2 个）</li><li>清理会话数据文件（20 个）</li><li>重置 profile.json</li></ul>
+<p><strong>安全特性</strong>：</p>
+<ul><li>所有删除操作都是归档而非硬删除</li><li>支持按优先级分层清理</li><li>提供完整的恢复机制</li></ul>
+<h3 id="2-3-标准规范制定">2.3 标准规范制定<a class="anchor" href="#2-3-标准规范制定" aria-label="锚点">#</a></h3>
+<p><strong>规范文档</strong>：</p>
+<ol><li><strong>[DESIGN-MEM-001] 记忆系统标准规范.md</strong><ul><li>记忆分类体系</li><li>文件格式规范</li><li>生命周期管理</li><li>清空与恢复流程</li></ul></li></ol>
+<ol><li><strong>[DESIGN-MEM-002] 记忆时机指南.md</strong><ul><li>最佳记忆时机</li><li>记忆触发机制</li><li>记忆类型选择</li><li>质量保证机制</li></ul></li></ol>
+<ol><li><strong>[DESIGN-MEM-003] 记忆模板库.md</strong><ul><li>用户画像模板</li><li>项目背景模板</li><li>反馈偏好模板</li><li>技术决策模板</li></ul></li></ol>
+<ol><li><strong>[DESIGN-MEM-004] 记忆快速参考卡.md</strong><ul><li>记忆时机速查</li><li>命令速查</li><li>模板速查</li><li>常见问题解答</li></ul></li></ol>
+<ol><li><strong>[DESIGN-MEM-005] 记忆系统使用指南.md</strong><ul><li>系统初始化</li><li>日常使用</li><li>记忆管理</li><li>故障排除</li></ul></li></ol>
+<h3 id="2-4-工具脚本">2.4 工具脚本<a class="anchor" href="#2-4-工具脚本" aria-label="锚点">#</a></h3>
+<p><strong>脚本文件</strong>：</p>
+<ol><li><strong>scripts/memory/clear-memory.js</strong><ul><li>安全清空记忆系统</li><li>支持预览模式</li><li>按优先级分层清理</li></ul></li></ol>
+<ol><li><strong>scripts/memory/restore-memory.js</strong><ul><li>从归档中恢复记忆</li><li>支持按文件/类型恢复</li><li>提供完整恢复机制</li></ul></li></ol>
+<ol><li><strong>scripts/memory/README.md</strong><ul><li>脚本使用说明</li><li>命令参考</li><li>故障排除</li></ul></li></ol>
+<p><strong>npm 脚本</strong>：</p>
+<pre><code class="language-bash">npm run memory:clear          <span class="hljs-comment"># 预览清空</span>
+npm run memory:clear:apply    <span class="hljs-comment"># 执行清空</span>
+npm run memory:clear:p0       <span class="hljs-comment"># 清理核心记忆</span>
+npm run memory:clear:p1       <span class="hljs-comment"># 清理学习缓存</span>
+npm run memory:clear:p2       <span class="hljs-comment"># 清理会话数据</span>
+npm run memory:restore        <span class="hljs-comment"># 列出可恢复记忆</span>
+npm run memory:restore:all    <span class="hljs-comment"># 恢复所有记忆</span></code></pre>
+<hr>
+<h2 id="3-记忆系统架构">3. 记忆系统架构<a class="anchor" href="#3-记忆系统架构" aria-label="锚点">#</a></h2>
+<h3 id="3-1-分层模型">3.1 分层模型<a class="anchor" href="#3-1-分层模型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>层级</th><th>名称</th><th>说明</th><th>持久化</th></tr></thead><tbody><tr><td>Layer 1</td><td><code>short_term</code></td><td>会话内记忆</td><td>❌ 不落盘</td></tr><tr><td>Layer 2</td><td><code>cross_session</code></td><td>跨会话持久记忆</td><td>✅ 落盘</td></tr><tr><td>Layer 3</td><td><code>permanent</code></td><td>永久记忆</td><td>✅ 落盘</td></tr></tbody></table>
+<h3 id="3-2-语义类型">3.2 语义类型<a class="anchor" href="#3-2-语义类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>说明</th><th>保鲜天数</th><th>典型内容</th></tr></thead><tbody><tr><td><code>user</code></td><td>用户身份、核心偏好</td><td>3650</td><td>用户姓名、语言偏好</td></tr><tr><td><code>feedback</code></td><td>反馈偏好、交互风格</td><td>540</td><td>回复风格、错误处理</td></tr><tr><td><code>reference</code></td><td>外部资源、参考资料</td><td>365</td><td>API 文档、工具配置</td></tr><tr><td><code>project</code></td><td>项目背景、上下文</td><td>180</td><td>架构设计、代码规范</td></tr></tbody></table>
+<h3 id="3-3-生命周期">3.3 生命周期<a class="anchor" href="#3-3-生命周期" aria-label="锚点">#</a></h3>
+<pre><code>创建 → 活跃 → 老化 → 归档 → 恢复
+  ↑                              ↓
+  └──────────────────────────────┘</code></pre>
+<hr>
+<h2 id="4-使用指南">4. 使用指南<a class="anchor" href="#4-使用指南" aria-label="锚点">#</a></h2>
+<h3 id="4-1-快速开始">4.1 快速开始<a class="anchor" href="#4-1-快速开始" aria-label="锚点">#</a></h3>
+<p><strong>步骤 1：查看记忆系统状态</strong></p>
+<pre><code class="language-bash">khy memory project</code></pre>
+<p><strong>步骤 2：创建初始记忆</strong></p>
+<pre><code class="language-bash">/remember --<span class="hljs-built_in">type</span> user --name <span class="hljs-string">&quot;基本 profile&quot;</span> --desc <span class="hljs-string">&quot;用户基本信息&quot;</span> 称呼：[你的称呼]</code></pre>
+<p><strong>步骤 3：配置记忆系统</strong></p>
+<pre><code class="language-bash"><span class="hljs-comment"># 查看环境变量</span>
+<span class="hljs-built_in">echo</span> <span class="hljs-variable">$KHY_DISABLE_MEMORY</span>
+<span class="hljs-built_in">echo</span> <span class="hljs-variable">$KHY_PROACTIVE_MEMORY</span></code></pre>
+<h3 id="4-2-日常使用">4.2 日常使用<a class="anchor" href="#4-2-日常使用" aria-label="锚点">#</a></h3>
+<p><strong>创建记忆</strong>：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 快速记忆</span>
+/remember 用户偏好简洁回复
+
+<span class="hljs-comment"># 结构化记忆</span>
+/remember --<span class="hljs-built_in">type</span> feedback --name <span class="hljs-string">&quot;回复风格&quot;</span> --desc <span class="hljs-string">&quot;用户偏好简洁回复&quot;</span> 用户希望回复简洁</code></pre>
+<p><strong>管理记忆</strong>：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 查看记忆状态</span>
+khy memory project
+
+<span class="hljs-comment"># 运行记忆蒸馏</span>
+khy memory distill --apply
+
+<span class="hljs-comment"># 清理过期记忆</span>
+npm run memory:clear:p2 --apply</code></pre>
+<h3 id="4-3-维护建议">4.3 维护建议<a class="anchor" href="#4-3-维护建议" aria-label="锚点">#</a></h3>
+<p><strong>每月维护</strong>：</p>
+<ol><li>运行记忆蒸馏清理过期记忆</li><li>检查记忆质量指标</li><li>备份重要记忆</li><li>更新过时记忆</li></ol>
+<p><strong>每季度维护</strong>：</p>
+<ol><li>审查记忆分类体系</li><li>更新记忆模板</li><li>优化记忆检索算法</li><li>清理冗余记忆</li></ol>
+<hr>
+<h2 id="5-质量保证">5. 质量保证<a class="anchor" href="#5-质量保证" aria-label="锚点">#</a></h2>
+<h3 id="5-1-记忆质量指标">5.1 记忆质量指标<a class="anchor" href="#5-1-记忆质量指标" aria-label="锚点">#</a></h3>
+<ul><li><strong>准确性</strong>：记忆内容是否正确</li><li><strong>时效性</strong>：记忆是否仍然相关</li><li><strong>完整性</strong>：记忆是否包含足够信息</li><li><strong>唯一性</strong>：记忆是否与其他记忆重复</li></ul>
+<h3 id="5-2-质量检查命令">5.2 质量检查命令<a class="anchor" href="#5-2-质量检查命令" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 检查记忆系统健康状态</span>
+khy memory project
+
+<span class="hljs-comment"># 运行记忆蒸馏</span>
+khy memory distill
+
+<span class="hljs-comment"># 查看蒸馏报告</span>
+khy memory distill --apply</code></pre>
+<h3 id="5-3-质量改进">5.3 质量改进<a class="anchor" href="#5-3-质量改进" aria-label="锚点">#</a></h3>
+<ol><li><strong>定期审查</strong>：每月检查记忆质量</li><li><strong>及时更新</strong>：发现过时记忆立即更新</li><li><strong>避免冗余</strong>：合并相似记忆，删除重复</li><li><strong>结构化存储</strong>：使用标准格式，便于检索</li></ol>
+<hr>
+<h2 id="6-故障排除">6. 故障排除<a class="anchor" href="#6-故障排除" aria-label="锚点">#</a></h2>
+<h3 id="6-1-常见问题">6.1 常见问题<a class="anchor" href="#6-1-常见问题" aria-label="锚点">#</a></h3>
+<p><strong>问题 1：记忆丢失</strong></p>
+<pre><code class="language-bash"><span class="hljs-comment"># 检查归档目录</span>
+<span class="hljs-built_in">ls</span> .khy/memory/.archive/
+
+<span class="hljs-comment"># 恢复记忆</span>
+npm run memory:restore:all</code></pre>
+<p><strong>问题 2：记忆重复</strong></p>
+<pre><code class="language-bash"><span class="hljs-comment"># 运行记忆蒸馏</span>
+khy memory distill --apply</code></pre>
+<p><strong>问题 3：记忆过期</strong></p>
+<pre><code class="language-bash"><span class="hljs-comment"># 检查记忆保鲜期</span>
+<span class="hljs-built_in">cat</span> .khy/memory/.distill.json
+
+<span class="hljs-comment"># 更新过期记忆</span>
+/remember --<span class="hljs-built_in">type</span> project --name <span class="hljs-string">&quot;项目架构&quot;</span> --desc <span class="hljs-string">&quot;更新后的架构&quot;</span> 新的架构内容</code></pre>
+<h3 id="6-2-紧急恢复">6.2 紧急恢复<a class="anchor" href="#6-2-紧急恢复" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 停止记忆系统</span>
+<span class="hljs-built_in">export</span> KHY_DISABLE_MEMORY=1
+
+<span class="hljs-comment"># 2. 从备份恢复</span>
+<span class="hljs-built_in">cp</span> -r /backup/.khy/memory/* .khy/memory/
+
+<span class="hljs-comment"># 3. 重建索引</span>
+khy memory project
+
+<span class="hljs-comment"># 4. 重新启用记忆系统</span>
+<span class="hljs-built_in">unset</span> KHY_DISABLE_MEMORY</code></pre>
+<hr>
+<h2 id="7-相关文档">7. 相关文档<a class="anchor" href="#7-相关文档" aria-label="锚点">#</a></h2>
+<h3 id="7-1-规范文档">7.1 规范文档<a class="anchor" href="#7-1-规范文档" aria-label="锚点">#</a></h3>
+<ul><li>[DESIGN-MEM-001] 记忆系统标准规范.md</li><li>[DESIGN-MEM-002] 记忆时机指南.md</li><li>[DESIGN-MEM-003] 记忆模板库.md</li><li>[DESIGN-MEM-004] 记忆快速参考卡.md</li><li>[DESIGN-MEM-005] 记忆系统使用指南.md</li></ul>
+<h3 id="7-2-工具脚本">7.2 工具脚本<a class="anchor" href="#7-2-工具脚本" aria-label="锚点">#</a></h3>
+<ul><li>scripts/memory/clear-memory.js</li><li>scripts/memory/restore-memory.js</li><li>scripts/memory/README.md</li></ul>
+<h3 id="7-3-环境变量">7.3 环境变量<a class="anchor" href="#7-3-环境变量" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>变量</th><th>默认值</th><th>说明</th></tr></thead><tbody><tr><td><code>KHY_DISABLE_MEMORY</code></td><td>off</td><td>全局记忆开关</td></tr><tr><td><code>KHY_MEMORY_DIR</code></td><td>-</td><td>自定义记忆目录</td></tr><tr><td><code>KHY_PROACTIVE_MEMORY</code></td><td>on</td><td>主动回忆层</td></tr><tr><td><code>KHY_MEMORY_TIERS</code></td><td>on</td><td>分层模型</td></tr><tr><td><code>KHY_MEMORY_TRIGGER</code></td><td>on</td><td>自动捕获</td></tr><tr><td><code>KHY_PROACTIVE_CAPTURE</code></td><td>on</td><td>主动捕获子层</td></tr><tr><td><code>KHY_MEMORY_STALENESS</code></td><td>on</td><td>过期判定</td></tr><tr><td><code>KHY_MEMORY_DISTILL_AUTO</code></td><td>report</td><td>自动蒸馏模式</td></tr><tr><td><code>KHY_MEMORY_SESSION_PRIME</code></td><td>on</td><td>会话启动填充</td></tr><tr><td><code>KHY_PROJECT_MEMORY</code></td><td>on</td><td>项目级记忆</td></tr></tbody></table>
+<hr>
+<h2 id="8-版本历史">8. 版本历史<a class="anchor" href="#8-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，完成记忆系统清理和规范制定</td></tr></tbody></table>
+<hr>
+<h2 id="9-后续计划">9. 后续计划<a class="anchor" href="#9-后续计划" aria-label="锚点">#</a></h2>
+<h3 id="9-1-短期计划-1-个月内">9.1 短期计划（1 个月内）<a class="anchor" href="#9-1-短期计划-1-个月内" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 收集用户使用反馈</li><li>[ ] 优化记忆检索算法</li><li>[ ] 完善记忆模板库</li><li>[ ] 添加记忆质量监控</li></ul>
+<h3 id="9-2-中期计划-3-个月内">9.2 中期计划（3 个月内）<a class="anchor" href="#9-2-中期计划-3-个月内" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 实现智能记忆推荐</li><li>[ ] 添加记忆关联分析</li><li>[ ] 优化记忆存储结构</li><li>[ ] 实现记忆跨设备同步</li></ul>
+<h3 id="9-3-长期计划-6-个月内">9.3 长期计划（6 个月内）<a class="anchor" href="#9-3-长期计划-6-个月内" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 实现记忆语义搜索</li><li>[ ] 添加记忆可视化</li><li>[ ] 优化记忆生命周期管理</li><li>[ ] 实现记忆自动化管理</li></ul>
+<hr>
+<p><em>本总结由 khy-os 记忆系统设计团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-LAY/00_INDEX_DESIGN-LAY-总目录.html"><div class="dir">← 上一篇</div><div class="ttl">DESIGN-LAY</div></a><a class="next" href="../../../docs/10_规范/DESIGN-MEM/[DESIGN-MEM-001] 记忆系统标准规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-MEM-001] 记忆系统标准规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-MEM/[DESIGN-MEM-000] 记忆系统总结.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -139,7 +139,18 @@ export function DiffSummary({ files, onViewDiff, onUndo }: { files: { path: stri
               <span className="text-sm text-foreground flex-1 truncate">{file.path}</span>
               {file.additions > 0 && <span className="text-xs text-success">+{file.additions}</span>}
               {file.deletions > 0 && <span className="text-xs text-destructive">-{file.deletions}</span>}
-              <button className="text-xs text-brand hover:underline ml-2">查看</button>
+              <button
+                disabled={!onViewDiff}
+                onClick={(e) => {
+                  // 行本身也可点；显式 stopPropagation 避免「查看」被行点击吞掉
+                  e.stopPropagation()
+                  onViewDiff?.(file.path)
+                }}
+                className={`text-xs ml-2 ${onViewDiff ? 'text-brand hover:underline' : 'text-foreground/30 cursor-default'}`}
+                title={onViewDiff ? `查看 ${file.path} 的改动` : '查看不可用：未接线 diff 查看器'}
+              >
+                查看
+              </button>
             </div>
           ))}
         </div>

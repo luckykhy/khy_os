@@ -43,7 +43,7 @@ jest.mock('../../src/services/changeRegressionGate', () => ({
   evaluateBugfixRegressionGate: jest.fn(),
 }));
 
-jest.mock('../../src/memdir', () => ({
+jest.mock('../../src/memdir/memdir', () => ({
   searchMemories: jest.fn(),
 }));
 
@@ -59,7 +59,7 @@ const toolUseLoop = require('../../src/services/toolUseLoop');
 const bgTask = require('../../src/services/backgroundTaskManager');
 const projectMemoryService = require('../../src/services/projectMemoryService');
 const changeRegressionGate = require('../../src/services/changeRegressionGate');
-const memdir = require('../../src/memdir');
+const memdir = require('../../src/memdir/memdir');
 const skills = require('../../src/skills');
 
 function makeBgHandle(id = 'bg_1') {

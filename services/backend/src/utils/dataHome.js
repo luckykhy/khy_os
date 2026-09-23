@@ -44,6 +44,17 @@ function getLegacyDataHome() {
   return path.join(os.homedir(), '.khyquant');
 }
 
+// The base home sibling of the legacy app territory. Consumers that migrate
+// OLD base-home-relative state (e.g. learningCurriculum's
+// `~/.khyquant/growth/learning_progress.json`) must resolve the legacy home
+// through here instead of a bare os.homedir(), so the same home overrides that
+// steer getBaseHome() (KHYOS_HOME / jest temp data home) apply uniformly and an
+// isolated run never reads the real user's live ~/.khyquant files.
+function getLegacyBaseHome() {
+  // getBaseHome() already ends in `.khyos`; take its parent and swap the tail.
+  return path.join(path.dirname(getBaseHome()), '.khyquant');
+}
+
 // TODO: [Eco-Arch-Unresolved] 现状存在两类「应用数据家」混用：
 //   - 统一解析器 getDataHome() 默认 ~/.khy
 //   - 多个服务（cleanupService/skillRegistry/adminService 等）硬编码 ~/.khyquant
@@ -773,6 +784,7 @@ module.exports = {
   getDataHome,
   getDataDir,
   getLegacyDataHome,
+  getLegacyBaseHome,
   getAppHome,
   getAppDataDir,
   _appHomeLiveResolveEnabled,

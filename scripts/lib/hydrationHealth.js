@@ -1,3 +1,3 @@
-'use strict';
+﻿'use strict';
 
-module.exports = require('../../services/backend/src/services/restore/hydrationHealth');
+module.exports = require('../../services/backend/src/services/restore').hydrationHealth;

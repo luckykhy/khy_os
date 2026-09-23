@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const spec = require('../../../src/services/mcp/mcpAddSpec');
+const spec = require('../../../src/services/domain/messaging/mcp/mcpAddSpec.js');
 
 // ── 门控 ──────────────────────────────────────────────────────────────────────
 test('isMcpAddEnabled: CANON gating (0/false/off/no → off; disable stays on)', () => {

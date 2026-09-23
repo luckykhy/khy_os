@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for growthService.js â€?portable growth/learning system.
+ * Tests for growthService.js â€”portable growth/learning system.
  *
  * Mocks filesystem to avoid writing to the real ~/.khyquant/growth/ directory.
  */

@@ -28,12 +28,14 @@ const NARROW_CALLS = [
   { type: 'tool_use', id: 'n1', name: 'write_file', input: { path: 'src/services/taskComplexity.js', content: 'x' } },
 ];
 const DIRECTIVE_RE = /规模复核/;
-describe('toolUseLoop — 执行中复杂度升级(措辞判简单、事实判复杂)', () => {
+
+describe('Tool Use Loop exec Complexity', () => {
+  // merged from describe: toolUseLoop - 执行中复杂度升级(措辞判简单、事实判复杂)
   let _origExecute;
-  before(() => {
+  beforeAll(() => {
     process.env.KHY_TOOL_LOOP_RECOVERY_DELAY_MS = '1';
   });
-  after(() => {
+  afterAll(() => {
     delete process.env.KHY_TOOL_LOOP_RECOVERY_DELAY_MS;
     delete process.env.KHY_EXEC_COMPLEXITY_ESCALATION;
   });
@@ -65,12 +67,16 @@ describe('toolUseLoop — 执行中复杂度升级(措辞判简单、事实判�
       }
       return { reply: '三处改动已完成，行为保持不变。', stopReason: 'stop', provider: 'mock' };
     };
-    await toolUseLoop.runToolUseLoop('把错误处理统一成一套', { chat, maxIterations: 3 });
+    // onControlRequest: runPreflight defers to per-tool approval when the host
+    // channel is present; without it the jest-pinned data home has no allow
+    // rules and the raw-mode batch prompt auto-denies (stops after iteration 1).
+    await toolUseLoop.runToolUseLoop('把错误处理统一成一套', {
+      chat,
+      maxIterations: 3,
+      onControlRequest: async () => true,
+    });
     return seen;
   }
-});
-
-describe('Tool Use Loop exec Complexity', () => {
   test('跨目录多文件改动 → 下一轮输入里带上补计划指令', async () => {
         const seen = await runWith(SPREAD_CALLS);
         expect(seen.length >= 2).toBeTruthy();

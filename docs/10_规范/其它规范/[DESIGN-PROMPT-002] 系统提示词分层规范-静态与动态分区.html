@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-PROMPT-002] 系统提示词分层规范-静态与动态分区.md -->
+<title>[DESIGN-PROMPT-002] 系统提示词分层规范：静态与动态分区 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-PROMPT-002] 系统提示词分层规范：静态与动态分区</div>
+      <header class="hero reveal"><h1>[DESIGN-PROMPT-002] 系统提示词分层规范：静态与动态分区</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-prompt-002-系统提示词分层规范-静态与动态分区">[DESIGN-PROMPT-002] 系统提示词分层规范：静态与动态分区</a></li><li class="lvl-2"><a href="#1-要解决的问题">1. 要解决的问题</a></li><li class="lvl-3"><a href="#1-1-目标函数">1.1 目标函数</a></li><li class="lvl-2"><a href="#2-四层定义">2. 四层定义</a></li><li class="lvl-3"><a href="#2-1-分层总览图">2.1 分层总览图</a></li><li class="lvl-2"><a href="#3-判据-新段该放哪一层">3. 判据：新段该放哪一层</a></li><li class="lvl-2"><a href="#4-落点图-getsystemprompt-返回数组">4. 落点图（`getSystemPrompt` 返回数组）</a></li><li class="lvl-2"><a href="#5-全量分层表">5. 全量分层表</a></li><li class="lvl-3"><a href="#5-1-按需胶囊-on-demand-17-个">5.1 按需胶囊（`on_demand`，17 个）</a></li><li class="lvl-2"><a href="#6-cachekey-纪律">6. cacheKey 纪律</a></li><li class="lvl-2"><a href="#7-门控-运行时依赖">7. 门控 ≠ 运行时依赖</a></li><li class="lvl-2"><a href="#8-已知分层缺陷-规范承认-尚未修复">8. 已知分层缺陷（规范承认，尚未修复）</a></li><li class="lvl-2"><a href="#9-扩展流程-新增一段的-sop">9. 扩展流程：新增一段的 SOP</a></li><li class="lvl-2"><a href="#10-守卫与文件">10. 守卫与文件</a></li><li class="lvl-3"><a href="#10-1-守卫校验的九类断言">10.1 守卫校验的九类断言</a></li><li class="lvl-2"><a href="#11-与-design-other-003-的分工">11. 与 [DESIGN-OTHER-003] 的分工</a></li><li class="lvl-2"><a href="#12-版本历史">12. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-PROMPT-002 | 阶段: 规范 | 真源: services/backend/src/constants/promptSectionTaxonomy.js | 守卫: scripts/ci/check-prompt-taxonomy.js --&gt;</p>
+<h1 id="design-prompt-002-系统提示词分层规范-静态与动态分区">[DESIGN-PROMPT-002] 系统提示词分层规范：静态与动态分区<a class="anchor" href="#design-prompt-002-系统提示词分层规范-静态与动态分区" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>用途</strong>：给 khy-os 主系统提示词的<strong>每一段</strong>规定唯一的层级归属、唯一的落点、以及唯一的 cacheKey 纪律。<br><strong>性质</strong>：规范性（normative）。本文件解释规范；规范的<strong>可执行真源</strong>是<br><code>services/backend/src/constants/promptSectionTaxonomy.js</code>，由<br><code>scripts/ci/check-prompt-taxonomy.js</code>（<code>npm run check:prompt-taxonomy</code>）强制。<br><strong>关系</strong>：本文补的是 [DESIGN-PROMPT-001] Prompt Engineering 规范缺的那条轴——<strong>分区轴</strong>。<br>[DESIGN-OTHER-003] 是结构导览图，不承担规范职责（其静态/动态清单已与实现脱节，见 §11）。</p></blockquote>
+<hr>
+<h2 id="1-要解决的问题">1. 要解决的问题<a class="anchor" href="#1-要解决的问题" aria-label="锚点">#</a></h2>
+<p>系统提示词同时被三套机制消费，三套机制对「这段会不会变」的假设必须一致：</p>
+<table><thead><tr><th>机制</th><th>位置</th><th>对分区的诉求</th></tr></thead><tbody><tr><td>provider 前缀缓存</td><td>网关/中转路径</td><td>稳定字节必须<strong>连续地</strong>排在最前；任何一个易变字节出现，其后全部失效</td></tr><tr><td>段缓存</td><td><code>constants/systemPromptSections.js</code></td><td>声明为「稳定」的段必须给出<strong>正确的</strong> cacheKey，否则会冻结首轮内容</td></tr><tr><td>静态记忆</td><td><code>prompts.js::_memoStaticSection</code></td><td>只有<strong>可证纯</strong>的构造结果才能被进程级复用</td></tr></tbody></table>
+<p>现状的问题是：分区信息<strong>隐式</strong>散落在五处，彼此必须靠人工同步，没有任何守卫。</p>
+<pre><code>① 返回数组里的位置          prompts.js::getSystemPrompt()
+② cached / DANGEROUS_uncached  systemPromptSection() 的签名
+③ 易变段清单                promptCacheOrder.js::VOLATILE_SECTION_IDS
+④ 按需胶囊清单              prompts.js::ON_DEMAND_PROMPT_SECTION_IDS
+⑤ 静态记忆白名单            prompts.js::_memoStaticSection 的调用点</code></pre>
+<p>代价不是「不好看」，而是<strong>可观测的功能缺陷</strong>。已确认的四条见 §8；其中 <code>git_status</code> 因为<br>分类说它「一变即变」而实现只给了 <code>cwd</code> 做键，导致它在<strong>整段会话里停在第一轮</strong>。</p>
+<h3 id="1-1-目标函数">1.1 目标函数<a class="anchor" href="#1-1-目标函数" aria-label="锚点">#</a></h3>
+<blockquote><p>让「最稳定的字节」连续地占据前缀，让「会变的字节」只出现在尾部，<br>并且让<strong>每一条</strong>「这段会不会变」的判断都能被机器复核。</p></blockquote>
+<hr>
+<h2 id="2-四层定义">2. 四层定义<a class="anchor" href="#2-四层定义" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>层</th><th>rank</th><th>判据</th><th>落点</th><th>cacheKey 要求</th></tr></thead><tbody><tr><td><code>static</code> 静态（编译期常量）</td><td>0</td><td>产物<strong>只由源码字面量</strong>决定：无 env 读、无 <code>Date</code>、无入参</td><td><code>boundary</code> <strong>之前</strong></td><td>不适用（不进段缓存）</td></tr><tr><td><code>dynamic_stable</code> 动态·稳定</td><td>1</td><td>依赖会话内<strong>少变</strong>的状态（cwd / 模型 / 语言 / 记忆戳 / 配置戳）</td><td><code>boundary</code> 之后</td><td>必须折入它读到的<strong>每一个</strong>运行时输入</td></tr><tr><td><code>dynamic_volatile</code> 动态·易变</td><td>2</td><td>每轮或每分钟可能自然变化（时钟 / 任务板 / MCP 连接态 / git 工作树 / 目录树）</td><td><code>boundary</code> 之后的<strong>尾部</strong></td><td>必须是实时输入或新鲜度戳</td></tr><tr><td><code>on_demand</code> 按需胶囊</td><td>3</td><td>按<strong>用户每一轮的意图</strong>在不同内容集合间选择</td><td>最终数组的<strong>绝对尾部</strong></td><td>不适用（选集本身即变量）</td></tr></tbody></table>
+<p><code>static</code> 与后三者的分界就是 <code>__SYSTEM_PROMPT_DYNAMIC_BOUNDARY__</code>。原生<br><code>cache_control</code> 路径在该标记处断开缓存；中转（relay）/ DeepSeek 路径上标记会被剥离，<br>命中率完全依赖 provider「匹配到第一个变了的字节为止」的最长前缀匹配——<strong>这就是尾部纪律<br>存在的原因</strong>（见 [DESIGN-ARCH-047]）。</p>
+<h3 id="2-1-分层总览图">2.1 分层总览图<a class="anchor" href="#2-1-分层总览图" aria-label="锚点">#</a></h3>
+<img src="../assets/prompt-taxonomy-layers.svg" alt="系统提示词四层分区与落点顺序：静态段位于缓存边界之前，边界之后依次是稳定动态组、动态组之后的尾巴、以及死尾处的易变组与按需胶囊" width="680">
+<p><em>图源：<code>docs/10_规范/assets/prompt-taxonomy-layers.svg</code>。左侧箭头表示稳定性自上而下递减——<br>越靠上越「长命」，越靠下越「善变」。</em></p>
+<p>读图要点：</p>
+<ul><li><strong>边界是一条实打实的分界线</strong>，不是注释：<code>static</code> 全部在它之前，其余三层全部在它之后。</li><li>边界之后并非「随便放」，而是<strong>再分三档</strong>：稳定动态组 → 尾巴 → 死尾（易变 + 按需）。</li></ul>
+<p>这个内部顺序由 <code>promptCacheOrder.partitionDynamicSections()</code> 保证，由守卫的<br>  <code>PTX-070/071</code> 断言。</p>
+<ul><li>越靠下的内容越「不值得为它牺牲前缀」：把它们集中压在末尾，上游静态字节才能长期命中。</li></ul>
+<hr>
+<h2 id="3-判据-新段该放哪一层">3. 判据：新段该放哪一层<a class="anchor" href="#3-判据-新段该放哪一层" aria-label="锚点">#</a></h2>
+<p>五问，自上而下，<strong>首个命中即停</strong>：</p>
+<ol><li>产物是否只由源码字面量决定（无 env 读、无 <code>Date</code>、无入参）？</li></ol>
+<p>→ <strong><code>static</code></strong>，放 <code>boundary</code> 之前。<br>   注意：只读 env 的<strong>门控</strong>不算运行时输入（见 §7）。</p>
+<ol><li>它是否会<strong>不依赖用户新输入</strong>而在会话内自行变化（时钟、任务板、连接态、工作树）？</li></ol>
+<p>→ <strong><code>dynamic_volatile</code></strong>，放尾部。</p>
+<ol><li>它是否按用户每轮的意图在<strong>不同内容集合</strong>间选择？</li></ol>
+<p>→ <strong><code>on_demand</code></strong>，放绝对尾部。</p>
+<ol><li>以上都不是？</li></ol>
+<p>→ <strong><code>dynamic_stable</code></strong>，放动态组。</p>
+<ol><li>拿不准「它到底依赖什么」？</li></ol>
+<p>→ 先按 <code>dynamic_stable</code> 落位，<strong>并把真实输入折进 cacheKey</strong>——宁可多失效，不可冻结。</p>
+<hr>
+<h2 id="4-落点图-getsystemprompt-返回数组">4. 落点图（<code>getSystemPrompt</code> 返回数组）<a class="anchor" href="#4-落点图-getsystemprompt-返回数组" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">┌─ slot: prefix ── boundary 之前（静态地基，必须连续）────────────────────────┐
+│  simple_intro → simple_system → [behavioral] → session_memory_and_context  │
+│  → using_your_tools → deferred_tools_hint → output_and_tone → efficiency   │
+│  其中 [behavioral] = doing_tasks / execution_discipline /                    │
+│                    planning_and_recovery /（compact 时改为 compact_task_…）  │
+│                    /（relocation 关闭时按需胶囊留在此处）                      │
+├─ __SYSTEM_PROMPT_DYNAMIC_BOUNDARY__ ───────────────────────────────────────┤
+│  ① 稳定动态组（promptCacheOrder.partitionDynamicSections 的 stable 部分）     │
+│      memory → language → output_style → project_instructions → references  │
+│      → persona → role → companion → skill_catalog → khy_specific           │
+│      → model_guidance → unknown_problem_handler → bootstrap_context        │
+│  ② slot: trailing                                                          │
+│      content_output_guide → base_security                                  │
+├─ slot: tail（dead-last，易变 + 按需）───────────────────────────────────────┤
+│  ③ 易变组（partitionDynamicSections 的 volatile 部分）                      │
+│      task_memory → env_info → mcp_instructions → git_status                │
+│      → project_structure                                                   │
+│  ④ 按需胶囊（KHY_ONDEMAND_OUT_OF_PREFIX 开启时移到这里；关闭则留在 ① 之前）    │
+└────────────────────────────────────────────────────────────────────────────┘</code></pre>
+<p><strong>顺序不变量</strong>（由守卫核验，<code>PTX-070/071</code>）：</p>
+<pre><code>boundary 标记  &lt;  ...resolvedStable  &lt;  ...resolvedVolatile</code></pre>
+<hr>
+<h2 id="5-全量分层表">5. 全量分层表<a class="anchor" href="#5-全量分层表" aria-label="锚点">#</a></h2>
+<p>32 段 + 17 个按需胶囊。<strong>顺序即装配顺序</strong>（同槽位内）。</p>
+<p>&lt;!-- 下表由 services/backend/src/constants/promptSectionTaxonomy.js::SECTIONS 渲染；修改请改真源 --&gt;</p>
+<table><thead><tr><th>#</th><th>id</th><th>层</th><th>落点</th><th>装载</th><th>构造函数</th><th>cacheKey 来源</th><th>门控</th></tr></thead><tbody><tr><td>1</td><td><code>simple_intro</code></td><td>静态</td><td>前缀(boundary 前)</td><td>inline</td><td><code>getSimpleIntroSection</code></td><td><code>outputStyle</code></td><td>—</td></tr><tr><td>2</td><td><code>simple_system</code></td><td>静态</td><td>前缀(boundary 前)</td><td>inline</td><td><code>getSimpleSystemSection</code></td><td><code>const</code></td><td><code>KHY_PROMPT_SECTION_STATIC_MEMO</code></td></tr><tr><td>3</td><td><code>doing_tasks</code></td><td>静态</td><td>前缀(boundary 前)</td><td>inline</td><td><code>getDoingTasksSection</code></td><td><code>outputStyle</code></td><td><code>KHY_PROMPT_SECTION_STATIC_MEMO</code></td></tr><tr><td>4</td><td><code>execution_discipline</code></td><td>静态</td><td>前缀(boundary 前)</td><td>inline</td><td><code>getExecutionDisciplineSection</code></td><td><code>const</code></td><td><code>KHY_PROMPT_SECTION_STATIC_MEMO</code></td></tr><tr><td>5</td><td><code>planning_and_recovery</code></td><td>静态</td><td>前缀(boundary 前)</td><td>inline</td><td><code>getPlanningAndRecoverySection</code></td><td><code>const</code></td><td><code>KHY_PROMPT_SECTION_STATIC_MEMO</code></td></tr><tr><td>6</td><td><code>compact_task_discipline</code></td><td>静态</td><td>前缀(boundary 前)</td><td>inline</td><td><code>getCompactTaskDisciplineSection</code></td><td><code>const</code></td><td><code>KHY_PLANNING_DISCIPLINE</code></td></tr><tr><td>7</td><td><code>session_memory_and_context</code></td><td>静态</td><td>前缀(boundary 前)</td><td>inline</td><td><code>getSessionMemoryAndContextSection</code></td><td><code>const</code></td><td><code>KHY_PROMPT_SECTION_STATIC_MEMO</code></td></tr><tr><td>8</td><td><code>using_your_tools</code></td><td>静态</td><td>前缀(boundary 前)</td><td>inline</td><td><code>getUsingYourToolsSection</code></td><td><code>enabledTools</code></td><td><code>KHY_PROMPT_TOOLS_SECTION_MEMO</code></td></tr><tr><td>9</td><td><code>deferred_tools_hint</code></td><td>静态</td><td>前缀(boundary 前)</td><td>inline</td><td>—</td><td><code>request</code></td><td>—</td></tr><tr><td>10</td><td><code>unified_output_and_tone</code></td><td>静态</td><td>前缀(boundary 前)</td><td>inline</td><td><code>getUnifiedOutputAndToneSection</code></td><td><code>const</code></td><td><code>KHY_FABLE_VOICE</code></td></tr><tr><td>11</td><td><code>tone_and_style</code></td><td>静态</td><td>前缀(boundary 前)</td><td>inline</td><td><code>getToneAndStyleSection</code></td><td><code>const</code></td><td><code>KHY_FABLE_VOICE</code></td></tr><tr><td>12</td><td><code>output_efficiency</code></td><td>静态</td><td>前缀(boundary 前)</td><td>inline</td><td><code>getOutputEfficiencySection</code></td><td><code>const</code></td><td><code>KHY_PROMPT_SECTION_STATIC_MEMO</code></td></tr><tr><td>13</td><td><code>memory</code></td><td>动态·稳定</td><td>动态组</td><td>section</td><td><code>getMemorySection</code></td><td><code>memoryStamp</code></td><td><code>KHY_PROJECT_MEMORY_RECALL</code></td></tr><tr><td>14</td><td><code>task_memory</code></td><td>动态·易变</td><td>尾部</td><td>section</td><td><code>getTaskMemorySection</code></td><td><code>uncached</code></td><td><code>KHY_TASK_MEMORY_RECALL</code></td></tr><tr><td>15</td><td><code>env_info</code></td><td>动态·易变</td><td>尾部</td><td>section</td><td><code>getEnvironmentSection</code></td><td><code>clockBucket</code></td><td><code>KHY_SYSTEM_CLOCK</code></td></tr><tr><td>16</td><td><code>language</code></td><td>动态·稳定</td><td>动态组</td><td>section</td><td><code>getLanguageSection</code></td><td><code>languagePreference</code></td><td>—</td></tr><tr><td>17</td><td><code>output_style</code></td><td>动态·稳定</td><td>动态组</td><td>section</td><td><code>getOutputStyleSection</code></td><td><code>outputStyle</code></td><td>—</td></tr><tr><td>18</td><td><code>mcp_instructions</code></td><td>动态·易变</td><td>尾部</td><td>section</td><td><code>getMcpInstructionsSection</code></td><td><code>uncached</code></td><td>—</td></tr><tr><td>19</td><td><code>project_instructions</code></td><td>动态·稳定</td><td>动态组</td><td>section</td><td><code>getProjectInstructionsSection</code></td><td><code>cwd</code></td><td>—</td></tr><tr><td>20</td><td><code>references</code></td><td>动态·稳定</td><td>动态组</td><td>section</td><td>—</td><td><code>referencesStamp</code></td><td><code>KHY_REFERENCES</code></td></tr><tr><td>21</td><td><code>persona</code></td><td>动态·稳定</td><td>动态组</td><td>section</td><td><code>getPersonaSection</code></td><td><code>personaStamp</code></td><td>—</td></tr><tr><td>22</td><td><code>role</code></td><td>动态·稳定</td><td>动态组</td><td>section</td><td><code>getRoleSection</code></td><td><code>roleStamp</code></td><td>—</td></tr><tr><td>23</td><td><code>companion</code></td><td>动态·稳定</td><td>动态组</td><td>section</td><td><code>getCompanionSection</code></td><td><code>companionStamp</code></td><td>—</td></tr><tr><td>24</td><td><code>git_status</code></td><td>动态·易变</td><td>尾部</td><td>section</td><td><code>getGitStatusSection</code></td><td><code>cwd</code></td><td><code>KHY_PROMPT_GIT_STATUS_MIN</code></td></tr><tr><td>25</td><td><code>project_structure</code></td><td>动态·易变</td><td>尾部</td><td>section</td><td><code>getProjectStructureSection</code></td><td><code>projectTreeStamp</code></td><td><code>KHY_PROJECT_TREE</code></td></tr><tr><td>26</td><td><code>skill_catalog</code></td><td>动态·稳定</td><td>动态组</td><td>section</td><td><code>getSkillCatalogSection</code></td><td><code>contextWindowTokens</code></td><td><code>KHY_PROMPT_SKILLS_MIN</code></td></tr><tr><td>27</td><td><code>khy_specific</code></td><td>动态·稳定</td><td>动态组</td><td>section</td><td><code>getKhySpecificSection</code></td><td><code>model</code></td><td>—</td></tr><tr><td>28</td><td><code>model_guidance</code></td><td>动态·稳定</td><td>动态组</td><td>section</td><td>—</td><td><code>modelAndLanguage</code></td><td>—</td></tr><tr><td>29</td><td><code>unknown_problem_handler</code></td><td>动态·稳定</td><td>动态组</td><td>section</td><td>—</td><td><code>flag</code></td><td><code>KHY_UNKNOWN_PROBLEM_HANDLER</code></td></tr><tr><td>30</td><td><code>bootstrap_context</code></td><td>动态·稳定</td><td>动态组</td><td>section</td><td><code>getBootstrapContextSection</code></td><td><code>bootstrapFiles</code></td><td>—</td></tr><tr><td>31</td><td><code>content_output_guide</code></td><td>动态·稳定</td><td>动态组之后</td><td>inline</td><td><code>getContentOutputGuideSection</code></td><td><code>const</code></td><td>—</td></tr><tr><td>32</td><td><code>base_security</code></td><td>动态·稳定</td><td>动态组之后</td><td>inline</td><td>—</td><td><code>request</code></td><td>—</td></tr></tbody></table>
+<p><strong>分层快照</strong>：<code>static=12</code>、<code>dynamic_stable=15</code>、<code>dynamic_volatile=5</code>、<code>on_demand=17</code>。</p>
+<h3 id="5-1-按需胶囊-on-demand-17-个">5.1 按需胶囊（<code>on_demand</code>，17 个）<a class="anchor" href="#5-1-按需胶囊-on-demand-17-个" aria-label="锚点">#</a></h3>
+<p>顺序即装配顺序；选集由 <code>_classifyPromptIntentSignals()</code> 按用户意图逐轮决定<br>（延续轮/短请求/无用户消息会回退为「全部激活」）。</p>
+<pre><code>scope_minimization            planning_verification         task_progress_management
+error_handling_fallback       multi_agent_collaboration     file_operations
+command_execution             search_exploration            codebase_analysis
+tool_discovery                response_formatting           feature_access_proxy_boundary
+git_operations                action_safety                 security_permission_boundaries
+sensitive_data                small_model_structured_flow</code></pre>
+<hr>
+<h2 id="6-cachekey-纪律">6. cacheKey 纪律<a class="anchor" href="#6-cachekey-纪律" aria-label="锚点">#</a></h2>
+<p>段缓存（<code>systemPromptSections.js</code>）<strong>按 id 存一条记录</strong>，键不变即永不重算。因此：</p>
+<table><thead><tr><th>#</th><th>规则</th></tr></thead><tbody><tr><td>C1</td><td>声明为 <code>dynamic_*</code> 的段必须给出 cacheKey；只给 id（省略 cacheKey）仅对「产物永不依赖请求」的段安全。</td></tr><tr><td>C2</td><td>cacheKey 必须折入该段<strong>读到的每一个运行时输入</strong>——包括间接读到的（配置文件、目录 mtime、连接态）。</td></tr><tr><td>C3</td><td>键的来源分三类，用途不同，不可混用（见下表）。</td></tr><tr><td>C4</td><td>会话内恒定、但内容依赖磁盘文件的段，<strong>必须</strong>折入新鲜度戳；否则内容变更不会生效。</td></tr></tbody></table>
+<table><thead><tr><th>cacheKey 来源类别</th><th>取值</th><th>语义</th><th>例子</th></tr></thead><tbody><tr><td>实时输入</td><td><code>uncached</code> / <code>clockBucket</code></td><td>每轮或每分钟<strong>必然</strong>变</td><td><code>task_memory</code>、<code>mcp_instructions</code>、<code>env_info</code></td></tr><tr><td>新鲜度戳</td><td><code>memoryStamp</code> / <code>projectTreeStamp</code> / <code>referencesStamp</code></td><td><strong>内容变了才</strong>变，用于正确失效</td><td><code>memory</code>、<code>project_structure</code>、<code>references</code></td></tr><tr><td>会话常量</td><td><code>cwd</code> / <code>model</code> / <code>languagePreference</code> / <code>contextWindowTokens</code> / <code>flag</code></td><td>会话内不变</td><td><code>language</code>、<code>model_guidance</code></td></tr></tbody></table>
+<blockquote><p><strong>反面样例（现况）</strong>：<code>git_status</code> 归 <code>dynamic_volatile</code>（「工作树一变即变」），键却只有<br><code>cwd</code>——落在「会话常量」列，于是内容永不过期。修法是给它一个新鲜度戳（status 摘要哈希）。</p></blockquote>
+<hr>
+<h2 id="7-门控-运行时依赖">7. 门控 ≠ 运行时依赖<a class="anchor" href="#7-门控-运行时依赖" aria-label="锚点">#</a></h2>
+<p>守卫把两者严格分开，新增段时不要混淆：</p>
+<ul><li><strong><code>gate</code>（门控）</strong>：只读 env 的<strong>部署期</strong>开关（如 <code>KHY_FABLE_VOICE</code>、<code>KHY_PROJECT_TREE</code>）。</li></ul>
+<p>部署后不在会话内翻转，因此<strong>不</strong>视为前缀破坏源。落盘在规范 <code>SECTIONS[].gate</code>。</p>
+<ul><li><strong><code>dependsOn</code>（运行时依赖）</strong>：会随请求/会话变化的值（<code>enabledTools</code>、<code>outputStyleConfig</code>、</li></ul>
+<p>router 的 deferred 状态）。落盘在 <code>SECTIONS[].dependsOn</code>；<code>static</code> 层的此项<strong>必须为空</strong>。</p>
+<hr>
+<h2 id="8-已知分层缺陷-规范承认-尚未修复">8. 已知分层缺陷（规范承认，尚未修复）<a class="anchor" href="#8-已知分层缺陷-规范承认-尚未修复" aria-label="锚点">#</a></h2>
+<p>登记在 <code>promptSectionTaxonomy.js::CONCERNS</code>。守卫对每条做「<strong>缺陷仍然存在</strong>」的断言——<br>修好之后<strong>必须</strong>同步删条目，否则守卫变红。这是防止清单腐化成过期文档的机制。</p>
+<table><thead><tr><th>id</th><th>严重度</th><th>涉及段</th><th>问题</th></tr></thead><tbody><tr><td><code>staleKey</code></td><td><strong>高</strong></td><td><code>git_status</code>、<code>project_instructions</code>、<code>skill_catalog</code></td><td>易变段被纯会话键缓存 → 会话内冻结。<code>git_status</code> 最严重：分类说它一变即变，实现却停在首轮。</td></tr><tr><td><code>volatileInPrefix</code></td><td><strong>高</strong></td><td><code>deferred_tools_hint</code>、<code>using_your_tools</code>、<code>simple_intro</code>、<code>doing_tasks</code></td><td>每轮可变的内容处在静态前缀内 → 一次 deferred 揭示 / 档位切换 / 样式切换就把静态前缀从该点起全部作废。</td></tr><tr><td><code>parametrizedStatic</code></td><td>中</td><td><code>simple_intro</code>、<code>doing_tasks</code></td><td>静态段被参数化（产物随 output style 变化）。</td></tr><tr><td><code>misfiledTaskScale</code></td><td>中</td><td><code>khy_specific</code></td><td><code>taskScale</code> 逐轮由用户消息评分得出，却被折进这一大段的键 → 措辞一变就整段重算。</td></tr></tbody></table>
+<p><strong>修法要点</strong>：</p>
+<ul><li><code>staleKey</code>：折入真实输入——git 用 <code>git status --short</code> 的摘要哈希，<code>project_instructions</code></li></ul>
+<p>用指令文件集合的 <code>mtime:size</code>，<code>skill_catalog</code> 用技能集指纹。</p>
+<ul><li><code>volatileInPrefix</code>：把 per-turn 输入移出 <code>boundary</code> 之前，或纳入 volatile 组交给</li></ul>
+<p><code>promptCacheOrder</code> 重排。</p>
+<ul><li><code>parametrizedStatic</code>：把 output-style 相关句子拆成独立段放进动态区。</li><li><code>misfiledTaskScale</code>：拆分 <code>khy_specific</code> 的 task-decomposition 子块，或把 <code>taskScale</code> 从键里移出。</li></ul>
+<hr>
+<h2 id="9-扩展流程-新增一段的-sop">9. 扩展流程：新增一段的 SOP<a class="anchor" href="#9-扩展流程-新增一段的-sop" aria-label="锚点">#</a></h2>
+<ol><li>在 <code>promptSectionTaxonomy.js::SECTIONS</code> 登记：<code>id</code> / <code>tier</code> / <code>slot</code> / <code>mechanism</code> /</li></ol>
+<p><code>builder</code> / <code>cacheKeySource</code> / <code>dependsOn</code> / <code>gate</code> / <code>note</code>。</p>
+<ol><li>若引入新构造函数，同步登记 <code>BUILDER_TIERS</code>（否则守卫 <code>PTX-060</code> 变红）。</li><li>按 §3 的判据确认层级，按 §4 的落点放代码。</li><li>若它命中 §8 的任何一类问题，在 <code>CONCERNS</code> 里补进对应条目（否则守卫 WARN 变吵）。</li><li>运行 <code>npm run check:prompt-taxonomy</code>，必须 exit 0。</li><li>同步本文 §5 的表（表头注释已标明真源）。</li></ol>
+<p><strong>最容易犯的两个错</strong>：</p>
+<ul><li>把「需要每轮重选的内容」直接塞进 <code>boundary</code> 之前——它看起来是「提示词的主体部分」，</li></ul>
+<p>但它是<strong>每轮变量</strong>。落在前缀里等于给自己挖缓存坑。</p>
+<ul><li>声明了段、给了 cacheKey，但 cacheKey 只含调用者顺手拿到的那个参数，而不是该段<strong>真正读到</strong>的输入。</li></ul>
+<hr>
+<h2 id="10-守卫与文件">10. 守卫与文件<a class="anchor" href="#10-守卫与文件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>角色</th></tr></thead><tbody><tr><td><code>services/backend/src/constants/promptSectionTaxonomy.js</code></td><td>规范真源（纯数据叶子，零 require，不参与运行时装配）</td></tr><tr><td><code>services/backend/src/constants/prompts.js</code></td><td>实现（<code>getSystemPrompt</code> 装配器）</td></tr><tr><td><code>services/backend/src/constants/promptCacheOrder.js</code></td><td>易变段清单 + 重排实现（①②③④ 的收敛点）</td></tr><tr><td><code>services/backend/src/constants/systemPromptSections.js</code></td><td>段缓存与 cacheKey 机制</td></tr><tr><td><code>scripts/ci/check-prompt-taxonomy.js</code></td><td>守卫：<code>npm run check:prompt-taxonomy</code>，已接入 <code>npm run check:structure</code></td></tr></tbody></table>
+<h3 id="10-1-守卫校验的九类断言">10.1 守卫校验的九类断言<a class="anchor" href="#10-1-守卫校验的九类断言" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>级别</th><th>规则</th><th>内容</th></tr></thead><tbody><tr><td>ERROR</td><td><code>PTX-001</code>…<code>PTX-011</code></td><td>规范内部自洽：id 唯一、tier/slot/mechanism 合法、builder 归类一致、slot 与 tier 相容、CONCERNS 引用的 id 存在</td></tr><tr><td>ERROR</td><td><code>PTX-030/031</code></td><td>动态段集合与顺序 = 规范（比对 <code>systemPromptSection</code> 声明）</td></tr><tr><td>ERROR</td><td><code>PTX-040/041</code></td><td><code>VOLATILE_SECTION_IDS</code> = 规范 <code>dynamic_volatile</code>（集合 + 顺序）</td></tr><tr><td>ERROR</td><td><code>PTX-050</code>…<code>PTX-052</code></td><td>按需胶囊清单 = 规范（以运行时导出为准，失败降级为正则 + WARN）</td></tr><tr><td>ERROR</td><td><code>PTX-060/061</code></td><td><code>getSystemPrompt</code> 里不得出现未声明分层的构造函数；规范不得登记幽灵 builder</td></tr><tr><td>ERROR</td><td><code>PTX-070/071</code></td><td><code>boundary</code> → <code>...resolvedStable</code> → <code>...resolvedVolatile</code> 的落点单调性</td></tr><tr><td>ERROR</td><td><code>PTX-090</code>…<code>PTX-094</code></td><td>CONCERNS 各条目<strong>仍然存在</strong>（修好即须删条目）</td></tr><tr><td>WARN</td><td><code>PTX-080</code></td><td>静态段带非空 <code>dependsOn</code>（<strong>仅报未登记的新增项</strong>）</td></tr><tr><td>WARN</td><td><code>PTX-081/082</code></td><td>易变段的键不含易变输入 / 实时键落在稳定槽（同上，仅报新增）</td></tr></tbody></table>
+<blockquote><p>WARN 只针对「<strong>尚未登记</strong>在 CONCERNS 里的新漂移」。因此一次干净的 CI 运行应当<br><strong>既无 ERROR 也无 WARN</strong>——一旦出现 WARN，就意味着有人引入了新的分层欠账。</p></blockquote>
+<hr>
+<h2 id="11-与-design-other-003-的分工">11. 与 [DESIGN-OTHER-003] 的分工<a class="anchor" href="#11-与-design-other-003-的分工" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>职责</th><th>分区信息</th></tr></thead><tbody><tr><td><code>[DESIGN-OTHER-003] khy-系统提示词结构图.md</code></td><td>prompt <strong>栈</strong>导览（runtime 选路 / 指令注入链 / compact / agent / tool 各层）</td><td>不承担规范职责</td></tr><tr><td><strong>本文</strong></td><td>主 system prompt 的<strong>分区规范</strong></td><td>规范性，由守卫强制</td></tr></tbody></table>
+<p><code>[DESIGN-OTHER-003]</code> 的「静态区顺序」清单把按需胶囊与 <code>git_status</code> 之后的段写得与实现不符<br>（它反映的是一个更早的版本），读它时请以本文 §4/§5 为准。</p>
+<hr>
+<h2 id="12-版本历史">12. 版本历史<a class="anchor" href="#12-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-15</td><td>首版：确立四层分区、五问判据、cacheKey 纪律、四类已知缺陷与守卫接线</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护；可执行真源在 <code>promptSectionTaxonomy.js</code>，本文件是其说明。</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-PROMPT-001] Prompt Engineering 规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-PROMPT-001] Prompt Engineering 规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-QUAL-001] 门禁基线与债务台账规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-QUAL-001] 门禁基线与债务台账规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-PROMPT-002] 系统提示词分层规范-静态与动态分区.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

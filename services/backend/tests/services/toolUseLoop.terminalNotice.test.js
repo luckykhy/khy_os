@@ -24,7 +24,7 @@ const mockExecuteTool = jest.fn(async (name) => {
   return { success: true, output: 'ok' };
 });
 
-jest.mock('../../src/services/toolCalling', () => ({
+jest.mock('../../src/services/tool/toolCalling', () => ({
   executeTool: mockExecuteTool,
   clearPreflightContext: jest.fn(),
   setPreflightContext: jest.fn(),

@@ -9,6 +9,7 @@
  * snapshot-null continues without rollback capability.
  */
 const { runRepairTransaction } = require('../src/services/domain/maintenance/selfRepair/transactionRunner.js');
+const assert = require('node:assert');
 function makeStubs(over = {}) {
   const calls = { snapshot: 0, restore: 0, validate: 0, fix: 0 };
   const stubs = {

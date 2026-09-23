@@ -6,9 +6,9 @@
  * Pure-unit where possible (injected listFiles/readFile), no disk for the core.
  */
 
-const { assessGodFile, countLines } = require('../src/services/projectHygiene/godFile');
-const { extractSymbols, symbolOverlap } = require('../src/services/projectHygiene/symbols');
-const { findDuplicateModule, nameStem } = require('../src/services/projectHygiene/duplicateModule');
+const { assessGodFile, countLines } = require('../src/services/domain/project/projectHygiene/godFile.js');
+const { extractSymbols, symbolOverlap } = require('../src/services/domain/project/projectHygiene/symbols.js');
+const { findDuplicateModule, nameStem } = require('../src/services/domain/project/projectHygiene/duplicateModule.js');
 const hygiene = require('../src/services/projectHygiene');
 
 // Keep env knobs deterministic regardless of the runner's environment.

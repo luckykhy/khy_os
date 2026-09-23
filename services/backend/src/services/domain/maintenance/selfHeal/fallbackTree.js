@@ -39,7 +39,7 @@ function _getResilience() {
   if (_resilience) {
     return _resilience;
   }
-  _resilience = require('../resilience');
+  _resilience = require('../../security/resilience');
   return _resilience;
 }
 

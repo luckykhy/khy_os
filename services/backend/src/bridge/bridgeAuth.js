@@ -213,6 +213,63 @@ function loginUser(username, password) {
   return { ok: true, token, username: user.username };
 }
 
+// ── Rename ────────────────────────────────────────────────────────
+
+/**
+ * Rename a bridge user row (used by `khy user rename` to keep the bridge
+ * store consistent with the main account). Sync, better-sqlite3-shaped.
+ *
+ * Deliberate behavior:
+ * - bridge DB file absent → skipped (the store only exists after the bridge
+ *   service ran once); a rename must NOT create it as a side effect.
+ * - new name outside USERNAME_RE (2-20 alnum/underscore/中文) → skipped with
+ *   a reason: the bridge charset is narrower than the main 2-32 [a-zA-Z0-9_-]
+ *   rule, so out-of-range names simply stay unsynced (fail-soft, caller
+ *   reports it in details).
+ * - new name already taken → { ok:false, conflict:true } so the caller
+ *   aborts the whole rename BEFORE mutating any other store.
+ * - no matching row → skipped (row never seeded here).
+ * - options.dryRun=true stops after the conflict/existence probes (no UPDATE),
+ *   so callers can pre-check a conflict before mutating their own stores.
+ *
+ * @returns {{ok: boolean, skipped?: boolean, conflict?: boolean, reason?: string}}
+ */
+function renameBridgeUser(oldName, newName, options = {}) {
+  const fs = require('fs');
+  const oldClean = String(oldName || '').trim();
+  const newClean = String(newName || '').trim();
+  if (!oldClean || !newClean || oldClean === newClean) {
+    return { ok: false, reason: '改名参数不完整，未做 bridge 改名' };
+  }
+  if (!USERNAME_RE.test(newClean)) {
+    return {
+      ok: false,
+      skipped: true,
+      reason: '新账号名不符合 bridge 用户名规则（2-20 位，字母/数字/下划线/中文）',
+    };
+  }
+  const { dbPath } = resolveBridgePaths();
+  if (!fs.existsSync(dbPath)) {
+    return { ok: false, skipped: true, reason: 'bridge-users.db 不存在（bridge 未初始化）' };
+  }
+  initUserDb();
+  const conflict = _db.prepare('SELECT id FROM users WHERE username = ?').get(newClean);
+  if (conflict) {
+    return { ok: false, conflict: true, reason: `bridge 账号名 ${newClean} 已被占用` };
+  }
+  // dryRun: probes only (conflict + existence) — no UPDATE, so callers can
+  // pre-check before mutating their own stores.
+  if (options && options.dryRun) {
+    const row = _db.prepare('SELECT id FROM users WHERE username = ?').get(oldClean);
+    return { ok: true, dryRun: true, exists: !!row };
+  }
+  const result = _db.prepare('UPDATE users SET username = ? WHERE username = ?').run(newClean, oldClean);
+  if (!result || Number(result.changes) === 0) {
+    return { ok: false, skipped: true, reason: 'bridge 库无此账号行' };
+  }
+  return { ok: true };
+}
+
 // ── JWT Validation ────────────────────────────────────────────────
 
 function validateJwt(token) {
@@ -229,6 +286,7 @@ module.exports = {
   initUserDb,
   registerUser,
   loginUser,
+  renameBridgeUser,
   validateJwt,
   resolveBridgeDataDir,
   resolveBridgePaths,

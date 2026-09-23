@@ -10,7 +10,8 @@
  *  - Strict comparison: 'FALSE' / ' false ' / '0' do NOT disable (no lenient
  *    parsing — mirrors the production `!== 'false'` gate exactly).
  */
-const { isStreamingExecEnabled } = require('../toolUseLoopCore');
+const { isStreamingExecEnabled } = require('../../../src/services/toolUseLoopCore.js');
+const assert = require('node:assert');
 test('gate: KHY_STREAMING_TOOL_EXEC="false" → disabled', () => {
   assert.strictEqual(
     isStreamingExecEnabled({ KHY_STREAMING_TOOL_EXEC: 'false' }),

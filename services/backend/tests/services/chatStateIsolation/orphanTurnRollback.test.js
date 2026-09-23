@@ -1,31 +1,31 @@
 'use strict';
 /**
- * orphanTurnRollback.test.js â€?authoritative-history orphan-turn regression for
+ * orphanTurnRollback.test.js â€” authoritative-history orphan-turn regression for
  * DESIGN-ARCH-046 (extension).
  *
  * The model's real context is built from ai.js's module-level `_messages`
  * (conversationPrompt), NOT queryEngine._messages. On a failed/empty turn,
  * ai.chat returns early after having already pushed this turn's user message,
- * leaving it ORPHANED (no assistant pair) â€?the role-alternation corruption that
+ * leaving it ORPHANED (no assistant pair) ï¿½?the role-alternation corruption that
  * actually pollutes the next turn in the REPL.
  *
  * The fix surgically un-commits ONLY that one stranded message and must:
- *   â€?drop the orphan user message when it is the tail (no role-alternation break);
- *   â€?NEVER discard prior tool iterations (mission progress) earlier in the turn;
- *   â€?be a safe no-op when a concurrent trim already removed the message;
- *   â€?be a safe no-op on an empty history.
+ *   ï¿½?drop the orphan user message when it is the tail (no role-alternation break);
+ *   ï¿½?NEVER discard prior tool iterations (mission progress) earlier in the turn;
+ *   ï¿½?be a safe no-op when a concurrent trim already removed the message;
+ *   ï¿½?be a safe no-op on an empty history.
  *
  * Exercises the real module-closure `_messages` via the __test__ seam.
  */
 const ai = require('../../../src/cli/ai');
+const assert = require('node:assert');
 const { _uncommitOrphanTurn, _pushRawMessage } = ai.__test__;
-describe('ai.js â€?orphan-turn rollback on failed turn (DESIGN-ARCH-046)', () => {
+
+describe('Orphan Turn Rollback', () => {
+  // merged from describe: ai.js â€” orphan-turn rollback on failed turn (DESIGN-ARCH-046)
   beforeEach(() => {
     ai.clearHistory();
   });
-});
-
-describe('Orphan Turn Rollback', () => {
   test('pops the orphaned user message when it is the tail', () => {
         _pushRawMessage({ role: 'user', content: 'Q1' });
         _pushRawMessage({ role: 'assistant', content: 'A1' });
@@ -71,8 +71,8 @@ describe('Orphan Turn Rollback', () => {
   });
 
   test('safe no-op on empty history / null target', () => {
-        expect(() => _uncommitOrphanTurn(null).not.toThrow());
-        expect(() => _uncommitOrphanTurn({ role: 'user', content: 'ghost' }).not.toThrow());
+        expect(() => _uncommitOrphanTurn(null)).not.toThrow();
+        expect(() => _uncommitOrphanTurn({ role: 'user', content: 'ghost' })).not.toThrow();
         expect(ai.getConversation().length).toBe(0);
   });
 

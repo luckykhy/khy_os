@@ -7,7 +7,7 @@
 
 const { safeRunHook, runHooks } = require('../../src/cli/hooks/hookRunner');
 
-describe('safeRunHook â€?fault isolation', () => {
+describe('safeRunHook â€”fault isolation', () => {
   test('catches hook that throws and returns allow', async () => {
     const hook = {
       type: 'function',
@@ -23,7 +23,7 @@ describe('safeRunHook â€?fault isolation', () => {
   test('normalizes malformed result from inner handler to allow', async () => {
     const hook = {
       type: 'function',
-      handler: () => ({ weirdField: true }), // no .action â€?inner handler normalizes to 'allow'
+      handler: () => ({ weirdField: true }), // no .action â€”inner handler normalizes to 'allow'
       timeout: 1000,
       source: 'test:malformed',
     };
@@ -68,7 +68,7 @@ describe('safeRunHook â€?fault isolation', () => {
   });
 });
 
-describe('hookRegistry â€?priority ordering', () => {
+describe('hookRegistry â€”priority ordering', () => {
   // Use a fresh registry for each test to avoid pollution
   let HookRegistry;
 
@@ -101,7 +101,7 @@ describe('hookRegistry â€?priority ordering', () => {
   });
 });
 
-describe('hookRegistry â€?config gating', () => {
+describe('hookRegistry â€”config gating', () => {
   let HookRegistry;
 
   beforeEach(() => {
@@ -139,7 +139,7 @@ describe('hookRegistry â€?config gating', () => {
   });
 });
 
-describe('runHooks â€?fault isolation integration', () => {
+describe('runHooks â€”fault isolation integration', () => {
   test('continues chain after one hook crashes', async () => {
     const results = [];
     const hooks = [

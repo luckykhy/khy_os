@@ -9,8 +9,8 @@
  *  · 工作区缺失时主动获取（gather-if-missing），且全程 fail-soft 不抛。
  */
 
-const { ACTIONS, buildIntent } = require('../../src/services/syscallGateway/intentSchema');
-const explainer = require('../../src/services/syscallGateway/preExecutionExplainer');
+const { ACTIONS, buildIntent } = require('../../src/services/domain/system/syscallGateway/intentSchema.js');
+const explainer = require('../../src/services/domain/system/syscallGateway/preExecutionExplainer.js');
 
 const CWD = '/proj';
 const HOME = '/home/u';

@@ -183,6 +183,75 @@ function _liveVoiceEnabled(env) {
   return !(v !== undefined && _LIVE_FALSY.has(String(v).trim().toLowerCase()));
 }
 
+// ── 意图拍首句从思维链抽取(用户诉求 2026-08-30「不硬编码,从思维链里抽」)──────────
+// 首发句此前是 JS 字面量模板;开启后,调用方可把模型思维链文本经 options.cotText 传入,
+// extractPrefaceFromCot 从中抽一句「人会说的话」当首发句;抽不到/门关/抛错 → 字节级
+// 回退字面量 first(逐字测试不退化)。门控 KHY_TOOL_PREFACE_COT(默认开,仅 CANON 4 词关),
+// flagRegistry 优先,回退本地 CANON。只接管 occurrence 0 的首发句;续接句仍走 _voice
+// 轮换,不受 CoT 影响。
+const _COT_FALSY = new Set(['0', 'false', 'off', 'no']);
+function _cotPrefaceEnabled(env) {
+  const e = env || (typeof process !== 'undefined' ? process.env : undefined) || {};
+  try {
+    const reg = require('../services/flagRegistry');
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
+      return reg.isFlagEnabled('KHY_TOOL_PREFACE_COT', e);
+    }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
+  const v = e.KHY_TOOL_PREFACE_COT;
+  return !(v !== undefined && _COT_FALSY.has(String(v).trim().toLowerCase()));
+}
+
+// 抽取启发式。候选短句按 。/;/；/换行 切分(逗号不是边界——人说话中途会停顿);
+// ≥4 字才当候选;>30 截到 28 + '…'。两轮优先:先「含 patternHint 且动词开头」,
+// 再退「动词开头」。动词开头判定容许句首约 3 字铺垫(「今天先看下…」)。
+const _COT_SENTENCE_SPLIT = /[\n。;；]+/;
+const _COT_OPENERS = ['我先', '我', '让我', '先', '查', '找', '看', '读', '搜', '跑', '改', '写', '列', '打开', '调用', '执行', '检查'];
+
+function _defaultCotPreface(toolName, params, cotText) {
+  const text = typeof cotText === 'string' ? cotText : '';
+  if (!text) {
+    return '';
+  }
+  const patternHint = String(
+    (params && (params.pattern || params.query || params.q)) || ''
+  ).trim();
+
+  const candidates = text
+    .split(_COT_SENTENCE_SPLIT)
+    .map((s) => String(s || '').trim())
+    .filter((s) => s.length >= 4);
+
+  const openerEarly = (sentence) => _COT_OPENERS.some((op) => sentence.indexOf(op) >= 0 && sentence.indexOf(op) <= 3);
+  const fits = (sentence) => (sentence.length > 30 ? sentence.slice(0, 28) + '…' : sentence);
+
+  const patternSentence = candidates.find((s) => patternHint && s.includes(patternHint) && openerEarly(s));
+  if (patternSentence) {
+    return fits(patternSentence);
+  }
+  const verbSentence = candidates.find((s) => openerEarly(s));
+  if (verbSentence) {
+    return fits(verbSentence);
+  }
+  return '';
+}
+
+// 独立导出的抽取入口(纯函数):cotText 非字符串 → '';任何实现抛错 → '' 绝不污染流水线。
+function extractPrefaceFromCot(toolName, params, cotText) {
+  try {
+    return _defaultCotPreface(toolName, params, cotText);
+  } catch {
+    return '';
+  }
+}
+
 // Separator-agnostic basename: a Windows path ("D:\\...\\Desktop") must yield
 // "Desktop" even when this runs on a POSIX host (path.basename only splits the
 // host separator). Strips a trailing separator first, then takes the last
@@ -206,6 +275,20 @@ function toolProgressReason(toolName, params = {}, options = {}) {
   const baseName = pathHint ? baseNameAnyOs(pathHint) : '';
   // nat=true → 自然口吻首发句(去「我先」+ 去「先把…再…」仪式);false → 逐字节回退历史措辞。
   const nat = _naturalVoiceEnabled(process.env);
+
+  // CoT 抽取接管首发句(occurrence 0):门开 + options.cotText 为字符串 + 有效 occurrence
+  // 为 0(续接句不走这条路)时,从思维链里抽一句;抽到非空 → 直接返回,否则字节级落入
+  // 下面的历史分支树(逐字测试不退化)。抽错话也不抛——extractor 内部整体 try/catch。
+  if (
+    typeof options.cotText === 'string' &&
+    _cotPrefaceEnabled(process.env) &&
+    !(_varyEnabled() && Number.isInteger(occ) && occ > 0)
+  ) {
+    const extracted = extractPrefaceFromCot(name, params, options.cotText);
+    if (extracted) {
+      return extracted;
+    }
+  }
 
   if (name === 'grep' || name === 'glob' || name === 'find' || name === 'search' || name === 'ls') {
     const where = baseName || pathHint;
@@ -340,8 +423,8 @@ function toolProgressReason(toolName, params = {}, options = {}) {
           ? `查一下 "${patternHint}" 的外部资料，补齐再回来。`
           : `我先补一下 "${patternHint}" 的外部信息，先把外部事实补齐，再回来收口。`,
         [
-          `顺手把 "${patternHint}" 也查一下。`,
-          `接着补 "${patternHint}" 的资料。`,
+          `去查 "${patternHint}" 的资料，先搜一波，回头告诉你。`,
+          `查 "${patternHint}"，稍等。`,
           `再查一条："${patternHint}"。`,
           `把 "${patternHint}" 的情况也补齐。`,
         ]
@@ -476,11 +559,11 @@ function toolRunningNarration(toolName, params = {}, options = {}) {
     ]);
   }
   // 兜底:红线②要求「动作 + 目标」,拿工具名当目标念出来;工具名都取不到时才回到
-  // 无目标的历史句(此时确实没有可说的目标)。
-  const label = live ? String(toolName || '').trim() : '';
+  // 无目标的历史句(此时确实没有可说的目标)。带目标句不挂 live 门——目标本身就该念。
+  const label = String(toolName || '').trim();
   return label
-    ? _voice(occ, `执行 ${label}…`, [`${label} 继续执行…`, `再调一次 ${label}…`])
-    : '推进执行中…';
+    ? _live(`正在执行 ${label}…`, [`${label} 继续执行…`, `再调一次 ${label}…`])
+    : '正在执行…';
 }
 
 // "结果 + 行动" completion narration — the third beat of the before→during→after
@@ -885,5 +968,6 @@ module.exports = {
   buildStreamingToolPreface,
   occurrenceKey,
   suppressConsecutivePreface,
+  extractPrefaceFromCot,
   _voice,
 };

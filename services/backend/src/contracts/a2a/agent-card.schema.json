@@ -1,0 +1,168 @@
+{
+  "$id": "agent-card.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "A2A AgentCard",
+  "description": "Agent2Agent (A2A) Protocol v0.3.0 Agent Card. Published unauthenticated at /.well-known/agent-card.json (RFC 8615). Field set and required/optional split follow the A2A v0.3.0 specification (spec-05-agent-card).",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "protocolVersion",
+    "name",
+    "description",
+    "url",
+    "version",
+    "capabilities",
+    "defaultInputModes",
+    "defaultOutputModes",
+    "skills"
+  ],
+  "properties": {
+    "protocolVersion": {
+      "type": "string",
+      "description": "A2A protocol revision this card conforms to, e.g. \"0.3.0\".",
+      "pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable agent name."
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable agent description."
+    },
+    "url": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Base URL of the A2A endpoint. Must NOT carry a trailing slash."
+    },
+    "preferredTransport": {
+      "type": "string",
+      "enum": ["JSONRPC", "GRPC", "HTTP+JSON"],
+      "description": "Transport the server prefers. Defaults to JSONRPC."
+    },
+    "additionalInterfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["url", "transport"],
+        "properties": {
+          "url": { "type": "string" },
+          "transport": { "type": "string", "enum": ["JSONRPC", "GRPC", "HTTP+JSON"] }
+        }
+      }
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Agent (implementation) version — not the protocol version."
+    },
+    "provider": {
+      "type": "object",
+      "required": ["organization"],
+      "properties": {
+        "organization": { "type": "string" },
+        "url": { "type": "string" }
+      }
+    },
+    "documentationUrl": { "type": "string" },
+    "iconUrl": { "type": "string" },
+    "supportsAuthenticatedExtendedCard": { "type": "boolean" },
+    "capabilities": {
+      "type": "object",
+      "description": "Capabilities the agent ACTUALLY implements. Advertising a capability that is not implemented makes every conformant client fail later (see khy-os audit findings A3/A6).",
+      "additionalProperties": true,
+      "properties": {
+        "streaming": {
+          "type": "boolean",
+          "description": "Agent supports message/stream (SSE). MUST stay false while no SSE implementation exists."
+        },
+        "pushNotifications": {
+          "type": "boolean",
+          "description": "Agent supports tasks/pushNotificationConfig/*."
+        },
+        "stateTransitionHistory": {
+          "type": "boolean",
+          "description": "Agent returns full status transition history on tasks/get."
+        },
+        "extensions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["uri"],
+            "properties": {
+              "uri": { "type": "string" },
+              "description": { "type": "string" },
+              "required": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "defaultInputModes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" },
+      "description": "MIME-ish modality list, e.g. [\"text\", \"text/plain\", \"application/json\"]."
+    },
+    "defaultOutputModes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "skills": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/AgentSkill" }
+    },
+    "securitySchemes": {
+      "type": "object",
+      "description": "OpenAPI 3 style security scheme definitions, referenced by `security`.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": { "type": "string", "enum": ["apiKey", "http", "oauth2", "openIdConnect", "mutualTLS"] },
+          "scheme": { "type": "string" },
+          "bearerFormat": { "type": "string" },
+          "in": { "type": "string", "enum": ["header", "query", "cookie"] },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "openIdConnectUrl": { "type": "string" },
+          "flows": { "type": "object" }
+        }
+      }
+    },
+    "security": {
+      "type": "array",
+      "description": "Requirement list: each entry maps a securityScheme key to its scopes.",
+      "items": {
+        "type": "object",
+        "additionalProperties": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "signatures": {
+      "type": "array",
+      "items": { "type": "object" }
+    }
+  },
+  "definitions": {
+    "AgentSkill": {
+      "type": "object",
+      "required": ["id", "name", "description", "tags"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "examples": { "type": "array", "items": { "type": "string" } },
+        "inputModes": { "type": "array", "items": { "type": "string" } },
+        "outputModes": { "type": "array", "items": { "type": "string" } },
+        "security": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string" } } }
+        }
+      }
+    }
+  }
+}

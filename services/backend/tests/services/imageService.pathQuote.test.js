@@ -36,5 +36,26 @@ describe('imageService.writeClipboardText', () => {
     expect(typeof imageService.writeClipboardText(null)).toBe('boolean');
     expect(typeof imageService.writeClipboardText(undefined)).toBe('boolean');
   });
+
+  // 回归(2026-09-19):win32 通道原用 `$input | Set-Clipboard`,PowerShell 按控制台
+  // 输入代码页(中文 Windows GBK)解码 UTF-8 stdin → 盒线字符/CJK 乱码(实测
+  // `└` → `鈳?`,自绘选区复制的核心缺陷)。现为 base64 载荷 + PS 端显式 UTF-8
+  // 解码。本测试只在有 PowerShell 的平台跑,逐字节验证剪贴板往返。
+  const maybeWin = process.platform === 'win32' ? test : test.skip;
+  maybeWin('win32: UTF-8(盒线/CJK/换行/制表)剪贴板往返逐字节一致', () => {
+    const { execSync } = require('child_process');
+    const expectText = '└a:1 b:[2 3] name:khy — 中文内容✓\n行2\t制表';
+    expect(imageService.writeClipboardText(expectText)).toBe(true);
+    const probe = require('path').join(__dirname, 'fixtures-clip-read.ps1');
+    fs.writeFileSync(
+      probe,
+      '$t = $null; for ($i = 0; $i -lt 10; $i++) { try { $t = Get-Clipboard -Raw; break } catch { Start-Sleep -Milliseconds 200 } }\n' +
+        "if ($null -eq $t) { $t = '' }\n" +
+        '[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($t))\n'
+    );
+    const b64 = execSync(`powershell -noprofile -File "${probe}"`).toString().trim();
+    const got = Buffer.from(b64, 'base64').toString('utf8');
+    expect(got).toBe(expectText);
+  });
 });
 

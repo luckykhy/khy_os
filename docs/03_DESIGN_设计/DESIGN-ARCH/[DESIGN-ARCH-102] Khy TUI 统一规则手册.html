@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-102] Khy TUI 统一规则手册.md -->
+<title>[DESIGN-ARCH-102] Khy TUI 统一规则手册 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-102] Khy TUI 统一规则手册</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-102] Khy TUI 统一规则手册</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-102-khy-tui-统一规则手册">[DESIGN-ARCH-102] Khy TUI 统一规则手册</a></li><li class="lvl-2"><a href="#0-如何使用本文档">0. 如何使用本文档</a></li><li class="lvl-3"><a href="#0-1-记号">0.1 记号</a></li><li class="lvl-3"><a href="#0-2-三种检索路径">0.2 三种检索路径</a></li><li class="lvl-3"><a href="#0-3-阅读约定">0.3 阅读约定</a></li><li class="lvl-2"><a href="#1-术语表-统一术语">1. 术语表（统一术语）</a></li><li class="lvl-3"><a href="#1-1-区域术语">1.1 区域术语</a></li><li class="lvl-3"><a href="#1-2-状态术语">1.2 状态术语</a></li><li class="lvl-3"><a href="#1-3-交互术语-易混淆-务必区分">1.3 交互术语（**易混淆，务必区分**）</a></li><li class="lvl-3"><a href="#1-4-渲染术语">1.4 渲染术语</a></li><li class="lvl-3"><a href="#1-5-停用的旧名-一律不再使用">1.5 停用的旧名（**一律不再使用**）</a></li><li class="lvl-3"><a href="#1-6-本文与历史文档的对照">1.6 本文与历史文档的对照</a></li><li class="lvl-2"><a href="#2-核心设计原则">2. 核心设计原则</a></li><li class="lvl-3"><a href="#p1-主屏优先-不切换备用屏">P1 主屏优先，不切换备用屏</a></li><li class="lvl-3"><a href="#p2-滚动区只写不读">P2 滚动区只写不读</a></li><li class="lvl-3"><a href="#p3-活动区唯一可变-且有硬上限">P3 活动区唯一可变，且有硬上限</a></li><li class="lvl-3"><a href="#p4-宽度与高度各只有一个真源">P4 宽度与高度各只有一个真源</a></li><li class="lvl-3"><a href="#p5-一个尺寸-一次原子重绘">P5 一个尺寸 = 一次原子重绘</a></li><li class="lvl-3"><a href="#p6-键盘必备-鼠标增强">P6 键盘必备，鼠标增强</a></li><li class="lvl-3"><a href="#p7-高度恒定-绝不-0-n-跳变">P7 高度恒定，绝不 0→N 跳变</a></li><li class="lvl-3"><a href="#p8-一条路径胜过两条">P8 一条路径胜过两条</a></li><li class="lvl-2"><a href="#3-硬约束-h-系列">3. 硬约束（H 系列）</a></li><li class="lvl-3"><a href="#h1-帧高-rows-1">H1 帧高 ≤ `rows − 1`</a></li><li class="lvl-3"><a href="#h2-零-esc-2j-esc-3j">H2 零 `ESC[2J` / `ESC[3J`</a></li><li class="lvl-3"><a href="#h3-同步输出只包一层">H3 同步输出只包一层</a></li><li class="lvl-3"><a href="#h4-输入框上下边框等宽">H4 输入框上下边框等宽</a></li><li class="lvl-3"><a href="#h5-展开态进入行高签名">H5 展开态进入行高签名</a></li><li class="lvl-3"><a href="#h6-折行与计费同一函数">H6 折行与计费同一函数</a></li><li class="lvl-3"><a href="#h7-门控数量-40">H7 门控数量 ≤ 40</a></li><li class="lvl-3"><a href="#h8-组件不得直读终端尺寸">H8 组件不得直读终端尺寸</a></li><li class="lvl-3"><a href="#h9-鼠标动作必有等价键位">H9 鼠标动作必有等价键位</a></li><li class="lvl-3"><a href="#h10-单槽瞬时信息只有一条">H10 单槽瞬时信息只有一条</a></li><li class="lvl-2"><a href="#4-布局规范">4. 布局规范</a></li><li class="lvl-3"><a href="#4-1-三区模型">4.1 三区模型</a></li><li class="lvl-3"><a href="#4-2-尺寸公式-单一真源">4.2 尺寸公式（单一真源）</a></li><li class="lvl-3"><a href="#4-3-chrome-账本-单一真源">4.3 chrome 账本（单一真源）</a></li><li class="lvl-3"><a href="#4-4-响应式-宽度分级">4.4 响应式（宽度分级）</a></li><li class="lvl-3"><a href="#4-5-看板显隐与迟滞">4.5 看板显隐与迟滞</a></li><li class="lvl-3"><a href="#4-6-缩放与重绘">4.6 缩放与重绘</a></li><li class="lvl-3"><a href="#4-7-输入框布局">4.7 输入框布局</a></li><li class="lvl-2"><a href="#5-组件目录">5. 组件目录</a></li><li class="lvl-3"><a href="#5-1-输入族">5.1 输入族</a></li><li class="lvl-3"><a href="#5-2-输出族">5.2 输出族</a></li><li class="lvl-3"><a href="#5-3-状态族">5.3 状态族</a></li><li class="lvl-3"><a href="#5-4-导航族">5.4 导航族</a></li><li class="lvl-3"><a href="#5-5-面板族">5.5 面板族</a></li><li class="lvl-3"><a href="#5-6-启动族">5.6 启动族</a></li><li class="lvl-2"><a href="#6-交互约定">6. 交互约定</a></li><li class="lvl-3"><a href="#6-1-键盘总表">6.1 键盘总表</a></li><li class="lvl-3"><a href="#6-2-鼠标约定">6.2 鼠标约定</a></li><li class="lvl-3"><a href="#6-3-点击选中-vs-点击展开">6.3 点击选中 vs 点击展开</a></li><li class="lvl-3"><a href="#6-4-spinner-加载指示器">6.4 Spinner（加载指示器）</a></li><li class="lvl-3"><a href="#6-5-反馈-toast">6.5 反馈（Toast）</a></li><li class="lvl-3"><a href="#6-6-提示-placeholder-与-tooltip">6.6 提示（placeholder 与 tooltip）</a></li><li class="lvl-3"><a href="#6-7-滚动">6.7 滚动</a></li><li class="lvl-3"><a href="#6-8-覆盖层">6.8 覆盖层</a></li><li class="lvl-3"><a href="#6-9-中文换行">6.9 中文换行</a></li><li class="lvl-2"><a href="#7-使用者操作手册">7. 使用者操作手册</a></li><li class="lvl-3"><a href="#7-1-快速上手">7.1 快速上手</a></li><li class="lvl-3"><a href="#7-2-常见任务速查">7.2 常见任务速查</a></li><li class="lvl-3"><a href="#7-3-状态语义速查">7.3 状态语义速查</a></li><li class="lvl-3"><a href="#7-4-故障排查">7.4 故障排查</a></li><li class="lvl-2"><a href="#8-现象-约束对照-开发者排查">8. 现象 → 约束对照（开发者排查）</a></li><li class="lvl-2"><a href="#9-开发者提交前检查清单">9. 开发者提交前检查清单</a></li><li class="lvl-2"><a href="#10-废弃项-只减不增">10. 废弃项（只减不增）</a></li><li class="lvl-2"><a href="#11-交叉引用">11. 交叉引用</a></li><li class="lvl-2"><a href="#12-变更记录">12. 变更记录</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-102-khy-tui-统一规则手册">[DESIGN-ARCH-102] Khy TUI 统一规则手册<a class="anchor" href="#design-arch-102-khy-tui-统一规则手册" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>隶属</strong>：本文属 <strong>TUI 设计族</strong>（20 编号 / 21 文件），总纲与 scope 裁决见 <code>[DESIGN-ARCH-122] TUI 设计族总纲</code>；规则冲突一律以 <code>[DESIGN-ARCH-102] Khy TUI 统一规则手册</code> 为准。</p></blockquote>
+<blockquote><p><strong>定位</strong>：Khy 终端界面（TUI）的<strong>唯一规则真源</strong>。同一份文档服务两类读者：</p>
+<ul><li><strong>使用者</strong> —— 查「我能做什么、看到的东西是什么意思、出问题怎么办」；</li><li><strong>开发者</strong> —— 查「我必须遵守什么、违反会怎样、怎么验证」。</li></ul>
+<p>为此，本文每一条规则都写成<strong>三面对照</strong>：<strong>【用户】</strong> 用户看到/可以做的事 · <strong>【开发】</strong> 实现必须遵守的约束 · <strong>【判据】</strong> 可验证的检查方式。三面同一编号，说明与规范因此不可能分叉。</p>
+<p><strong>取代关系</strong>：本文<strong>取代</strong> [DESIGN-ARCH-079]（界面规范）、[DESIGN-ARCH-103]（渲染架构重设计）、[DESIGN-ARCH-101]（交互规则细则）的<strong>规则部分</strong>。三份原文保留为<strong>设计说明与调研证据</strong>存档（§1.6 给出完整对照）。规则冲突一律以本文为准。</p>
+<p><strong>适用边界</strong>：覆盖 <code>services/backend/src/cli/tui/</code> 全部渲染路径。不覆盖：AI 网关、会话持久化、桌面端（这些以各自真源为准）。</p>
+<p><strong>证据基准</strong>：本文所有数值来自 2026-09-15 实际代码勘察；外部结论标注 issue 号。</p></blockquote>
+<hr>
+<h2 id="0-如何使用本文档">0. 如何使用本文档<a class="anchor" href="#0-如何使用本文档" aria-label="锚点">#</a></h2>
+<h3 id="0-1-记号">0.1 记号<a class="anchor" href="#0-1-记号" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>记号</th><th>含义</th></tr></thead><tbody><tr><td>✅</td><td><strong>已实现</strong> —— 代码已如此，属既定契约，改动前须先改本文</td></tr><tr><td>⚠️</td><td><strong>已实现但有偏差</strong> —— 本文给出目标值</td></tr><tr><td>🆕</td><td><strong>已裁定、待实现</strong></td></tr><tr><td><strong>【用户】</strong></td><td>使用者可见行为（操作说明）</td></tr><tr><td><strong>【开发】</strong></td><td>开发者实现约束（开发规范）</td></tr><tr><td><strong>【判据】</strong></td><td>可验证的检查方式（测试 / 静态扫描 / 人工核对）</td></tr></tbody></table>
+<h3 id="0-2-三种检索路径">0.2 三种检索路径<a class="anchor" href="#0-2-三种检索路径" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>你的身份与目的</th><th>从这里开始</th></tr></thead><tbody><tr><td><strong>使用者</strong>：我想做某件事</td><td>§7 操作手册 → §7.2 常见任务速查表</td></tr><tr><td><strong>使用者</strong>：我看到的东西是什么意思</td><td>§1 术语表 → §6 视觉规范 → §7.3 状态语义速查</td></tr><tr><td><strong>开发者</strong>：我要改某个组件</td><td>§5 组件目录（按族查找）</td></tr><tr><td><strong>开发者</strong>：我要守的规矩</td><td>§2 设计原则 → §3 硬约束 → §9 提交前检查清单</td></tr><tr><td><strong>开发者</strong>：我要排查某个现象</td><td>§8 现象 → 约束对照表</td></tr></tbody></table>
+<h3 id="0-3-阅读约定">0.3 阅读约定<a class="anchor" href="#0-3-阅读约定" aria-label="锚点">#</a></h3>
+<ul><li><strong>「不得」「必须」「绝不」</strong> = 硬约束，有 CI 或测试守护，违反即阻断合并。</li><li><strong>「建议」「倾向」</strong> = 软约束，属设计意图，偏离需在代码注释说明理由。</li><li>本文所有宽度/高度单位均为<strong>终端列（cols）/ 行（rows）</strong>，非像素。</li><li><code>KHY_*</code> 为环境变量门控；非平台差异类的用户偏好一律改走 <code>~/.khyquant/tui.json</code>（见 H7）。</li></ul>
+<hr>
+<h2 id="1-术语表-统一术语">1. 术语表（统一术语）<a class="anchor" href="#1-术语表-统一术语" aria-label="锚点">#</a></h2>
+<blockquote><p><strong>一物一名原则</strong>：一个概念在本文中只有一个规范名。旧名一律停用（§1.4）。</p></blockquote>
+<h3 id="1-1-区域术语">1.1 区域术语<a class="anchor" href="#1-1-区域术语" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规范名</th><th>别名/代号</th><th>含义</th></tr></thead><tbody><tr><td><strong>滚动区</strong></td><td>A 区</td><td>已提交历史（用户消息 / 助手消息 / 工具结果）。<strong>只写不读，永不重绘</strong></td></tr><tr><td><strong>活动区</strong></td><td>B 区</td><td>唯一可变区：流式输出 / 进行中工具 / 审批 / Toast / 展开动作发生于此</td></tr><tr><td><strong>固定框架</strong></td><td>C 区</td><td>输入框 + 状态行。不参与滚动</td></tr><tr><td><strong>终端视口</strong></td><td>viewport</td><td>终端当前可见的 <code>rows × cols</code> 网格</td></tr><tr><td><strong>滚动历史</strong></td><td>scrollback</td><td>已被推出视口、由终端模拟器缓存的内容。<strong>程序不可修改</strong></td></tr></tbody></table>
+<h3 id="1-2-状态术语">1.2 状态术语<a class="anchor" href="#1-2-状态术语" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规范名</th><th>含义</th></tr></thead><tbody><tr><td><strong>忙碌</strong></td><td>busy —— 有回合在飞（已发起请求、未收到终态）</td></tr><tr><td><strong>停滞</strong></td><td>stalled —— 忙碌中超过 600ms 未收到新数据</td></tr><tr><td><strong>空闲</strong></td><td>非忙碌、无覆盖层、无待处理请求</td></tr><tr><td><strong>等待用户决策</strong></td><td>awaitingUserChoice —— 权限审批 / 提问等待中</td></tr><tr><td><strong>覆盖层激活</strong></td><td>有全屏或半屏浮层（ModelPicker / PlanApproval / RewindPicker / FormFlow）</td></tr><tr><td><strong>未知尺寸</strong></td><td>终端未报告 <code>columns</code>/<code>rows</code>（Windows conpty 常见）</td></tr></tbody></table>
+<h3 id="1-3-交互术语-易混淆-务必区分">1.3 交互术语（<strong>易混淆，务必区分</strong>）<a class="anchor" href="#1-3-交互术语-易混淆-务必区分" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规范名</th><th>含义</th><th>对比</th></tr></thead><tbody><tr><td><strong>选中</strong></td><td>让<strong>某个列表项</strong>成为当前目标（focus）</td><td>同组同时只有一个</td></tr><tr><td><strong>选择</strong></td><td><strong>终端原生文本选择</strong>（鼠标拖选复制）</td><td>由终端提供，程序不得劫持</td></tr><tr><td><strong>展开 / 收起</strong></td><td>改变<strong>同一元素</strong>的可见内容量（details open/close）</td><td>每元素独立，多个可同时展开</td></tr><tr><td><strong>确认</strong></td><td>对选中项执行动作（<code>Enter</code>）</td><td>—</td></tr><tr><td><strong>轮次 / 回合</strong></td><td>一次用户提交 + 其后全部模型输出</td><td>—</td></tr></tbody></table>
+<blockquote><p><strong>为什么必须区分</strong>：这对术语在旧文档中混用，是 §6.3「点击选中 vs 点击展开」规则长期无法收敛的根因。<strong>选中</strong>改变的是「谁是目标」，<strong>展开</strong>改变的是「显示多少」。</p></blockquote>
+<h3 id="1-4-渲染术语">1.4 渲染术语<a class="anchor" href="#1-4-渲染术语" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规范名</th><th>含义</th></tr></thead><tbody><tr><td><strong>内容宽度</strong> <code>contentWidth()</code></td><td>当前布局下可绘制的列数（看板激活时为 <code>cols − 看板宽</code>）。唯一宽度真源</td></tr><tr><td><strong>内容高度</strong> <code>contentHeight()</code></td><td>sticky 化后的 <code>rows</code>。唯一行高真源</td></tr><tr><td><strong>逻辑行</strong></td><td>以 <code>\n</code> 分隔的行。<code>split('\n').length</code> 得到的计数</td></tr><tr><td><strong>视觉行</strong></td><td>终端软折后<strong>实际占用</strong>的行。与逻辑行不等价，是残影根因所在</td></tr><tr><td><strong>chrome</strong></td><td>固定、不参与滚动的行数总和（输入框 + 状态行 + Toast + 消息条 + 流式行 + 余量）</td></tr><tr><td><strong>帧高</strong></td><td>一次渲染输出的总行数。硬约束为 ≤ <code>rows − 1</code>（H1）</td></tr><tr><td><strong>ED0 / ED2 / ED3</strong></td><td>擦除序列。<code>ED0</code>=<code>ESC[J</code>（擦光标下方，安全）；<code>ED2</code>=<code>ESC[2J</code>（推进滚动历史，<strong>禁用</strong>）；<code>ED3</code>=<code>ESC[3J</code>（清滚动历史，<strong>绝对禁用</strong>）</td></tr><tr><td><strong>同步输出</strong></td><td>DEC 2026（BSU/ESU），让终端一次性呈现整帧，消除撕裂。只允许包一层（H3）</td></tr><tr><td><strong>行高签名</strong></td><td>决定某元素占几行的输入哈希。<strong>必须包含展开状态</strong>（H5）</td></tr><tr><td><strong>软换行</strong></td><td>应用不插 <code>\n</code>，由终端自行折行。散文段落采用（§6.9）</td></tr><tr><td><strong>硬折行</strong></td><td>应用主动插入 <code>\n</code>。代码块/表格采用（§6.9）</td></tr><tr><td><strong>禁则（Kinsoku）</strong></td><td>中文排版规则：部分标点不得位于行首或行尾（§6.9）</td></tr><tr><td><strong>带外绘制（rail）</strong></td><td>用绝对坐标在 ink 渲染区外绘制看板的旧方案。<strong>已废弃</strong>（§10）</td></tr><tr><td><strong>尺寸粘性</strong></td><td>终端瞬时未报告尺寸时，沿用上一有效值而非回落默认值</td></tr></tbody></table>
+<h3 id="1-5-停用的旧名-一律不再使用">1.5 停用的旧名（<strong>一律不再使用</strong>）<a class="anchor" href="#1-5-停用的旧名-一律不再使用" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>停用名</th><th>改用</th><th>原因</th></tr></thead><tbody><tr><td>Static 区 / 静态区</td><td><strong>滚动区</strong></td><td>&quot;静态&quot;易误解为「静态文本」</td></tr><tr><td>live 区 / Live Region</td><td><strong>活动区</strong></td><td>与「直播」混淆</td></tr><tr><td>chrome / 底栏组</td><td><strong>固定框架</strong></td><td>与浏览器 Chrome 混淆</td></tr><tr><td>右栏 / 侧边栏 / rail / Sidebar</td><td><strong>看板</strong></td><td>四种叫法并存；<code>rail</code> 特指已废弃的带外绘制后端</td></tr><tr><td>提示条 / 通知</td><td><strong>瞬态消息（Toast）</strong></td><td>—</td></tr><tr><td>状态提示（误称 toast）</td><td><strong>瞬时提示（hint）</strong></td><td>与 Toast 是两种不同机制</td></tr><tr><td>收起（当名词）</td><td><strong>折叠态</strong></td><td>「收起」保留为动作，「折叠态」为状态</td></tr></tbody></table>
+<h3 id="1-6-本文与历史文档的对照">1.6 本文与历史文档的对照<a class="anchor" href="#1-6-本文与历史文档的对照" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>历史文档</th><th>存档后定位</th><th>规则去向</th></tr></thead><tbody><tr><td>[DESIGN-ARCH-079] 界面规范</td><td>组件尺寸历史详表 + 配色证据</td><td>布局与尺寸 → 本文 §4；组件 → §5；配色 → §6.1</td></tr><tr><td>[DESIGN-ARCH-103] TUI 终端界面重设计方案</td><td>渲染架构设计说明 + GitHub 调研证据</td><td>硬约束 → 本文 §3；缩放规则 → §4.6</td></tr><tr><td>[DESIGN-ARCH-101] 交互规则细则</td><td>——（全文并入）</td><td>交互规则 → 本文 §6.4–§6.9</td></tr><tr><td>[DESIGN-ARCH-086] CC 复刻总计划</td><td>任务跟踪真源</td><td>任务排期仍以它为准</td></tr><tr><td>[DESIGN-ARCH-087] 微交互设计</td><td>微交互设计上游</td><td>文案规范 → §6.5</td></tr><tr><td>[DESIGN-ARCH-088] 快捷键系统</td><td>键位语义设计</td><td>键位表 → §6.1</td></tr></tbody></table>
+<hr>
+<h2 id="2-核心设计原则">2. 核心设计原则<a class="anchor" href="#2-核心设计原则" aria-label="锚点">#</a></h2>
+<p>八条原则，是 §3 硬约束的上位依据。当约束之间发生冲突时，用原则裁决。</p>
+<h3 id="p1-主屏优先-不切换备用屏">P1 主屏优先，不切换备用屏<a class="anchor" href="#p1-主屏优先-不切换备用屏" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> TUI 在你<strong>原来的终端</strong>里运行：终端自带的滚轮翻历史、鼠标拖选复制、搜索功能<strong>全部照常可用</strong>。</li><li><strong>【开发】</strong> 禁止使用 alternate screen（<code>ESC[?1049h</code>）承载主界面。</li><li><strong>【判据】</strong> 全仓零 <code>?1049h</code>/<code>?47h</code> 发射（备用屏场景需显式豁免登记）。</li><li><strong>为什么</strong>：Gemini CLI 上线 alt-mode TUI 后因用户反对<strong>一周内回滚</strong>；Amp 转 alt mode 被批评「find 找不到屏外文本」。alt mode 破坏文本选择、原生滚动、搜索三个终端核心能力。</li></ul>
+<h3 id="p2-滚动区只写不读">P2 滚动区只写不读<a class="anchor" href="#p2-滚动区只写不读" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> 已经滚上去的历史<strong>不会变</strong>（进度条不会在历史里跳、旧内容不会被擦）。</li><li><strong>【开发】</strong> 进入滚动区的内容<strong>永不重绘</strong>；活动区需要更新已呈现内容时，不得回写滚动区。</li><li><strong>【判据】</strong> 提交后 1000 帧内滚动区字节不变（快照比对）。</li><li><strong>为什么</strong>：终端的滚动历史程序<strong>不可修改</strong>——这是终端 50 年的设计决定，也是「全屏重绘导致闪烁」的根本来源。</li></ul>
+<h3 id="p3-活动区唯一可变-且有硬上限">P3 活动区唯一可变，且有硬上限<a class="anchor" href="#p3-活动区唯一可变-且有硬上限" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> 界面不会突然「整屏跳动」或把历史推走。</li><li><strong>【开发】</strong> 只有 B 区可逐帧变化；其高度硬上限 = <code>rows − chrome − 1</code>（§4.3）。</li><li><strong>【判据】</strong> H1：任意状态帧高 ≤ <code>rows − 1</code>（属性测试，随机 shares 组合）。</li><li><strong>违反后果</strong>：帧高超限 → 触发 Ink fullscreen 分支 → <strong>每帧重印全部历史</strong>（实测 redraw span 2000+ 行）→ 剧烈抖动与残影。</li></ul>
+<h3 id="p4-宽度与高度各只有一个真源">P4 宽度与高度各只有一个真源<a class="anchor" href="#p4-宽度与高度各只有一个真源" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> 输入框上下边框永远一样长；看板与主区之间不会错位。</li><li><strong>【开发】</strong> 宽度一律取 <code>contentWidth()</code>，高度一律取 <code>contentHeight()</code>；<strong>组件内禁止读 <code>process.stdout</code></strong>（H8）。</li><li><strong>【判据】</strong> 静态扫描：<code>cli/tui/</code> 内零 <code>process.stdout.columns</code> / <code>.rows</code> 直读。</li><li><strong>违反后果</strong>：各组件按不同尺寸自行重排 → 上下边框不等长、看板与主区错位、折行点不一致。这是用户<strong>直接可见</strong>的界面缺陷，也是历史 bug 复现率最高的一类。</li></ul>
+<h3 id="p5-一个尺寸-一次原子重绘">P5 一个尺寸 = 一次原子重绘<a class="anchor" href="#p5-一个尺寸-一次原子重绘" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> 拖动窗口大小时界面<strong>干净重排</strong>，不留上一尺寸的内容残片。</li><li><strong>【开发】</strong> resize 事件 → 120ms 防抖 → <strong>一次</strong>原子 ED0 重绘（§4.6）。禁止逐帧增量修补。</li><li><strong>【判据】</strong> resize 序列后的屏幕快照 == 相同尺寸冷渲染快照（逐 cell 比对）。</li><li><strong>违反后果</strong>：旧尺寸的内容残留在新尺寸画面上（<strong>残影</strong>）；逐帧增量修补还会持续放大光标账本误差，使问题从&quot;偶发&quot;变成&quot;必现&quot;。</li></ul>
+<h3 id="p6-键盘必备-鼠标增强">P6 键盘必备，鼠标增强<a class="anchor" href="#p6-键盘必备-鼠标增强" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> 不用鼠标也能完成<strong>全部</strong>操作；鼠标让操作更顺手但不提供独占功能。</li><li><strong>【开发】</strong> 每个鼠标动作必须有等价键位（H9）；鼠标三档 <code>KHY_MOUSE=off|click|full</code>，默认 <code>click</code>。</li><li><strong>【判据】</strong> 键位表（§6.1）覆盖全部可点击元素（§6.3）。</li><li><strong>违反后果</strong>：两个方向都会出问题——缺等价键位则 SSH / tmux / 纯键盘用户<strong>功能不可达</strong>；反向过度依赖鼠标则劫持终端原生选择，用户<strong>无法复制内容</strong>（090 调研中明确反对的反模式）。</li></ul>
+<h3 id="p7-高度恒定-绝不-0-n-跳变">P7 高度恒定，绝不 0→N 跳变<a class="anchor" href="#p7-高度恒定-绝不-0-n-跳变" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> 内容出现时不会「跳一下把上面的顶走」。</li><li><strong>【开发】</strong> 元素行数从出现到完成<strong>恒定或单调增长</strong>；禁止先渲染 0 行再补 N 行。</li><li><strong>【判据】</strong> 工具卡片行数轨迹断言（单调性）。</li><li><strong>为什么</strong>：这是 Claude Code / Codex / opencode / Pi 四项目共同遵守的防闪烁规则。</li></ul>
+<h3 id="p8-一条路径胜过两条">P8 一条路径胜过两条<a class="anchor" href="#p8-一条路径胜过两条" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> 界面行为可预测，不会因配置不同变成&quot;另一个软件&quot;。</li><li><strong>【开发】</strong> 新增能力时<strong>优先扩展既有路径</strong>，而非新增分支；确需分支必须登记并给出退出条件。</li><li><strong>【判据】</strong> §10 废弃项只减不增；布局路径恒为 1（§4.4）。</li><li><strong>违反后果</strong>：分支组合爆炸。现状是 4 条布局路径 × 2 套看板实现 × 2 套状态栏，任一分支未回归，就会产生<strong>只在特定配置下出现</strong>的问题——这类缺陷最难复现、最难修，也是 215 个门控堆积的根源。</li></ul>
+<hr>
+<h2 id="3-硬约束-h-系列">3. 硬约束（H 系列）<a class="anchor" href="#3-硬约束-h-系列" aria-label="锚点">#</a></h2>
+<blockquote><p>每条含【用户】【开发】【判据】三面。违反即阻断合并。</p></blockquote>
+<h3 id="h1-帧高-rows-1">H1 帧高 ≤ <code>rows − 1</code><a class="anchor" href="#h1-帧高-rows-1" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> 内容不会被挤到终端最后一行而触发莫名的整屏滚动。</li><li><strong>【开发】</strong> 任意状态下渲染总行数 ≤ <code>process.stdout.rows − 1</code>。chrome 由 §4.3 单一账本计算，组件<strong>不得</strong>自行估算。</li><li><strong>【判据】</strong> 属性测试：随机输入组合下恒成立。</li><li><strong>违反后果</strong>：触发 Ink fullscreen 分支 → 每帧全文重印（实测 redraw span 2000+ 行）→ 剧烈抖动。</li></ul>
+<h3 id="h2-零-esc-2j-esc-3j">H2 零 <code>ESC[2J</code> / <code>ESC[3J</code><a class="anchor" href="#h2-零-esc-2j-esc-3j" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> 你的终端历史<strong>永远不会被程序清空</strong>。</li><li><strong>【开发】</strong> 内联路径禁止发射 ED2/ED3；全量重绘一律 <code>ESC[1;1H</code> + <code>ESC[J</code>（ED0）。</li><li><strong>【判据】</strong> 全仓静态扫描零命中（CI 门）。</li><li><strong>违反后果</strong>：ink#935/#990、claude-code#2479 的用户强烈反弹事故。</li></ul>
+<h3 id="h3-同步输出只包一层">H3 同步输出只包一层<a class="anchor" href="#h3-同步输出只包一层" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> 看不到「画了一半」的撕裂画面。</li><li><strong>【开发】</strong> DEC 2026（BSU/ESU）由 Ink 内置处理；<strong>禁止</strong>在应用层再加一层包裹。</li><li><strong>【判据】</strong> 渲染字节中 BSU/ESU 成对且不嵌套。</li><li><strong>为什么</strong>：双包裹会产生 <code>bsu+bsu+esu</code>，内层 <code>esu</code> <strong>提前关闭同步</strong> → 撕裂（GitLab duo #2747 实测）。</li></ul>
+<h3 id="h4-输入框上下边框等宽">H4 输入框上下边框等宽<a class="anchor" href="#h4-输入框上下边框等宽" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> 输入框的上下两条边<strong>永远一样长</strong>，不会一长一短或断成两行。</li><li><strong>【开发】</strong> 两条边框由<strong>同一个函数</strong> <code>fitBorder(width)</code> 产出，用显示宽度 pad（CJK 安全）；宽度<strong>只从 props 收</strong>；dev 模式断言 <code>visWidth(top) === visWidth(bottom) === contentWidth</code>。</li><li><strong>【判据】</strong> 覆盖 <code>cols ∈ {40,79,80,119,120,121,200} × 输入长度 {0,1,79,80,1000} × {ASCII, CJK, emoji, 混合}</code> 全组合断言。</li><li><strong>违反后果</strong>：这是用户直接可见的质量问题——两条独立 <code>'─'.repeat()</code>（一为 <code>cols−1</code>、一为 <code>cols−1−5</code>）在宽度取值不一致时必然断裂。</li></ul>
+<h3 id="h5-展开态进入行高签名">H5 展开态进入行高签名<a class="anchor" href="#h5-展开态进入行高签名" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> 展开一段长内容后，<strong>再缩放窗口也不会留下残影</strong>。</li><li><strong>【开发】</strong> 行高签名必须包含展开状态：<code>signature = hash(kind, wrapCell(text,width).length, expanded)</code>。状态变 → 签名变 → 布局重算。</li><li><strong>【判据】</strong> 回归断言：展开 → 签名变化 → 布局重算；展开后 resize 快照与冷渲染一致。</li><li><strong>为什么</strong>：dsh-TUI 实证——不纳入签名会让「陈旧行高喂给布局扫描」，<strong>直接复现缩放残影</strong>。</li></ul>
+<h3 id="h6-折行与计费同一函数">H6 折行与计费同一函数<a class="anchor" href="#h6-折行与计费同一函数" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> 长中文段落、代码块的折行位置正确，不会溢出边界。</li><li><strong>【开发】</strong> 渲染与行数估算<strong>必须调用同一个</strong> <code>wrapCell()</code> / <code>visualRows()</code>；禁止&quot;逐分支同源&quot;的手写估算。</li><li><strong>【判据】</strong> <code>visualRows(t,w) === wrapCell(t,w).length</code>（属性测试，1000 组随机输入）。</li></ul>
+<h3 id="h7-门控数量-40">H7 门控数量 ≤ 40<a class="anchor" href="#h7-门控数量-40" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> 配置项少而清晰，文档可穷举。</li><li><strong>【开发】</strong> <code>cli/tui/</code> 内唯一 <code>KHY_*</code> token ≤ 40；新增用户偏好一律进 <code>~/.khyquant/tui.json</code>，不再新增环境变量。</li><li><strong>【判据】</strong> <code>check-tui-gates.js</code> CI 门。</li><li><strong>背景</strong>：现状 215 个（⚠️ 严重超标）。</li></ul>
+<h3 id="h8-组件不得直读终端尺寸">H8 组件不得直读终端尺寸<a class="anchor" href="#h8-组件不得直读终端尺寸" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> 窗口缩放时各组件行为一致，不会有的已重排、有的还是旧尺寸。</li><li><strong>【开发】</strong> 组件内禁用 <code>process.stdout.columns</code> / <code>.rows</code>；一律 <code>contentWidth()</code> / <code>contentHeight()</code>。行高同样走 sticky 缓存（现状仅列宽有）。</li><li><strong>【判据】</strong> 静态扫描零直读。</li></ul>
+<h3 id="h9-鼠标动作必有等价键位">H9 鼠标动作必有等价键位<a class="anchor" href="#h9-鼠标动作必有等价键位" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> 不用鼠标、或在不支持鼠标的终端里，功能完全可用。</li><li><strong>【开发】</strong> 每个 <code>onClick</code>/<code>onMouseUp</code> 元素必须在键位表（§6.1）登记等价键。</li><li><strong>【判据】</strong> 可点击元素集合 ⊆ 键位覆盖集合（测试断言）。</li></ul>
+<h3 id="h10-单槽瞬时信息只有一条">H10 单槽瞬时信息只有一条<a class="anchor" href="#h10-单槽瞬时信息只有一条" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> 提示信息不会叠成一堆。</li><li><strong>【开发】</strong> 同一槽位（输入框上方 / 看板内）同时只显示一条瞬时信息；新的覆盖旧的并重置 TTL。跨槽位（hint 与 Toast）可共存。</li><li><strong>【判据】</strong> 连续触发两次 hint，仅渲染一行。</li></ul>
+<hr>
+<h2 id="4-布局规范">4. 布局规范<a class="anchor" href="#4-布局规范" aria-label="锚点">#</a></h2>
+<h3 id="4-1-三区模型">4.1 三区模型<a class="anchor" href="#4-1-三区模型" aria-label="锚点">#</a></h3>
+<pre><code>┌────────────────────────────────────────────────────────┐
+│ A 滚动区（只写不读，永不重绘）                          │
+│   已提交历史：用户消息 / 助手消息 / 工具结果            │
+├────────────────────────────────────────────────────────┤
+│ B 活动区（唯一可变，硬上限 rows − chrome − 1）          │
+│   流式输出 / 进行中工具 / 审批 / Toast / 展开动作       │
+├────────────────────────────────────────────────────────┤
+│ C 固定框架（不参与滚动）                                │
+│   ╭──────────────────────────────────────────╮          │
+│   │ ❯ 输入内容…                               │ 3~N 行   │
+│   ╰──────────────────────────────────────────╯          │
+│   Khy · &lt;cwd 简写&gt; · &lt;模型&gt; · &lt;上下文 %&gt;      1 行       │
+└────────────────────────────────────────────────────────┘</code></pre>
+<ul><li><strong>【用户】</strong> 上半部分是你和 AI 的对话记录（固定不变），中间是当前正在发生的事，底部永远是输入框和状态行。</li><li><strong>【开发】</strong> 三区是<strong>唯一</strong>布局路径。窄/宽终端的唯一区别是 B/C 区右侧是否再切出看板（§4.4）。</li></ul>
+<h3 id="4-2-尺寸公式-单一真源">4.2 尺寸公式（单一真源）<a class="anchor" href="#4-2-尺寸公式-单一真源" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>量</th><th>公式</th><th>说明</th></tr></thead><tbody><tr><td><code>contentWidth()</code></td><td><code>cols − 看板宽</code>（看板激活时）否则 <code>cols</code></td><td>唯一宽度真源</td></tr><tr><td><code>contentHeight()</code></td><td>sticky 化后的 <code>rows</code></td><td>唯一行高真源；<strong>必须</strong>有 sticky 缓存（⚠️ 现状缺失）</td></tr><tr><td>看板宽</td><td><code>clamp(round(cols × 0.16), 24, 36)</code></td><td>⚠️ 删除 <code>ccLayout.sidebarWidth</code>（= <code>min(30, cols×0.25)</code>），两者 120 列时分别为 24 与 30</td></tr><tr><td>输入框宽</td><td><code>contentWidth()</code></td><td>从 props 收，不自取</td></tr><tr><td>输入框高</td><td><code>clamp(floor(rows/3), 3, 10)</code></td><td>⚠️ 现状为 <code>max(4, rows−10)</code></td></tr></tbody></table>
+<ul><li><strong>【判据】</strong> 静态断言 <code>ccLayout.sidebarWidth === undefined</code>；组件无 <code>process.stdout</code> 直读。</li></ul>
+<h3 id="4-3-chrome-账本-单一真源">4.3 chrome 账本（单一真源）<a class="anchor" href="#4-3-chrome-账本-单一真源" aria-label="锚点">#</a></h3>
+<ul><li><strong>【开发】</strong> chrome（固定不可滚动行数）由 <code>chromeBudget()</code> 一处计算：</li></ul>
+<p><code>chrome = 输入框行 + 状态行(1) + Toast 行 + 消息条行 + 智能体树行 + 流式行 + 余量(2)</code><br>  <code>liveBudget = clamp(rows − chrome − 1, 3, …)</code></p>
+<ul><li><strong>【开发】</strong> 组件<strong>不得</strong>各自估算 chrome（现状分散在 <code>ccLayout.messageAreaCap</code> / <code>liveRegionBudget</code> / <code>railBottomChrome</code> 三处，⚠️ 已造成不一致）。</li><li><strong>【判据】</strong> 所有调用点算出的 chrome 一致（单测）。</li></ul>
+<h3 id="4-4-响应式-宽度分级">4.4 响应式（宽度分级）<a class="anchor" href="#4-4-响应式-宽度分级" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>级别</th><th>列数</th><th>布局</th></tr></thead><tbody><tr><td>超窄</td><td><code>&lt; 80</code></td><td>仅核心输入，无看板，看板功能走 <code>/tasks</code> 覆盖层</td></tr><tr><td>窄</td><td><code>80 – 119</code></td><td>单栏，无看板</td></tr><tr><td>标准</td><td><code>≥ 120</code></td><td>主区 + 看板（B/C 区右侧切出）</td></tr><tr><td>宽</td><td><code>≥ 160</code></td><td>同上，看板取上限宽</td></tr></tbody></table>
+<ul><li><strong>【用户】</strong> 窗口变窄时看板会<strong>自动收起</strong>，腾出空间给对话；变宽时自动回来。</li><li><strong>【开发】</strong> 阈值<strong>只</strong>读 <code>sidebarLayout.minCols()</code>（可配，默认 120）。⚠️ 删除 <code>ccLayout.shouldShowSidebar</code> 的硬编码 <code>&gt;= 120</code>。</li></ul>
+<h3 id="4-5-看板显隐与迟滞">4.5 看板显隐与迟滞<a class="anchor" href="#4-5-看板显隐与迟滞" aria-label="锚点">#</a></h3>
+<p><strong>显示条件（全部满足）</strong>：</p>
+<ol><li><code>KHY_SIDEBAR</code> 未关（总闸）</li><li>渲染后端未关（⚠️ 带外 rail 后端<strong>默认改 off</strong>，见 §10）</li><li><code>cols ≥ minCols()</code>（默认 120）</li><li><code>rows ≥ minRows()</code>（默认 24）</li><li>主区剩余列 &gt; 0</li><li>无覆盖层激活</li><li>未知尺寸 → 用 fallback（默认 80）+ 放宽阈值判定 → <strong>显示</strong>（否则 conpty 不报尺寸时看板永久隐藏）</li></ol>
+<p><strong>迟滞与防抖</strong>：</p>
+<table><thead><tr><th>机制</th><th>规则</th></tr></thead><tbody><tr><td>双阈值</td><td>进入 ≥ 120，退出 ≤ 108（12 列死区）🆕</td></tr><tr><td>宽度量化</td><td>带内宽度量化到 4 的倍数 🆕</td></tr><tr><td>resize 防抖</td><td>120ms ✅</td></tr><tr><td>缩放免疫</td><td>cols/rows 同向变化且比率差 ≤ 0.15 → 判定为字体缩放，<strong>不翻转</strong>显隐 ✅</td></tr><tr><td>尺寸粘性</td><td>未知尺寸沿用上一有效值 ✅（<code>KHY_TERM_STICKY_DIMS</code>）</td></tr></tbody></table>
+<ul><li><strong>【用户】</strong> 在 119/120 边界反复伸缩窗口，看板不会闪烁式地反复出现消失。</li><li><strong>【判据】</strong> 边界序列快照测试。</li></ul>
+<h3 id="4-6-缩放与重绘">4.6 缩放与重绘<a class="anchor" href="#4-6-缩放与重绘" aria-label="锚点">#</a></h3>
+<pre><code>resize / 尺寸变化
+  → 120ms 防抖
+  → ① sticky 化 cols 与 rows
+  → ② 纯函数计算新布局（无 IO）
+  → ③ ED0 全量重绘：ESC[1;1H + ESC[J
+  → ④ DECSC/DECRC 包裹（光标零位移）</code></pre>
+<ul><li><strong>【开发】</strong> 这是<strong>唯一</strong>的全量重绘触发点。软换行内容收费按 <code>visualRows()</code>（视觉行）而非逻辑行。</li><li><strong>【用户】</strong> 缩窗后不会留下上一尺寸的残片。</li><li><strong>【判据】</strong> resize 序列 <code>(120→80→200→119→120)</code> 后快照 == 冷渲染快照。</li><li><strong>为什么必须 ED0</strong>：ED2/ED3 污染滚动历史（H2）。</li></ul>
+<h3 id="4-7-输入框布局">4.7 输入框布局<a class="anchor" href="#4-7-输入框布局" aria-label="锚点">#</a></h3>
+<pre><code>╭─────────────────────────────────────╮  ← 上边框（fitBorder 产出）
+│ ❯ 输入内容…                          │  ← 输入行（多行时扩展）
+╰─────────────────────────────────────╯  ← 下边框（同一函数产出）</code></pre>
+<ul><li><strong>【开发】</strong> 折叠标记固定 1 行（<code>⋯ 上方 N 行</code>），与边框同属 chrome，一起计费。MIC 按钮移至<strong>输入行内</strong>，不再切割上边框。忙碌态<strong>不改边框颜色</strong>（改左侧 gutter 字符），避免 dim 默认前景在部分终端不可见。</li><li><strong>【判据】</strong> H4。</li></ul>
+<hr>
+<h2 id="5-组件目录">5. 组件目录<a class="anchor" href="#5-组件目录" aria-label="锚点">#</a></h2>
+<blockquote><p><strong>【开发】</strong> 每个组件给出用途 / 何时用 / 何时不用（避免重复造轮子）/ 约束。<br><strong>【用户】</strong> 标注你会在哪里看到它。</p></blockquote>
+<h3 id="5-1-输入族">5.1 输入族<a class="anchor" href="#5-1-输入族" aria-label="锚点">#</a></h3>
+<h4 id="c1-promptframe-输入框">C1 PromptFrame —— 输入框<a class="anchor" href="#c1-promptframe-输入框" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：多行文本输入，带可见光标、占位符、折叠标记。</li><li><strong>何时用</strong>：一切用户输入。</li><li><strong>何时不用</strong>：覆盖层内的表单输入走 FormFlow。</li><li><strong>【用户】</strong> 显示在屏幕<strong>最底部</strong>，上面是 <code>╭</code> 下边是 <code>╰</code>，左侧 <code>❯</code> 是输入标记。输入超长时会自动折叠，显示 <code>⋯ 上方还有 N 行</code>——<strong>内容没丢</strong>，用 ↑↓ 移动光标即可看到。</li><li><strong>【开发】</strong> 宽度从 props；边框用 <code>fitBorder()</code>；高度 <code>clamp(floor(rows/3), 3, 10)</code>；MIC 在行内；约束 H4、H8。</li></ul>
+<h4 id="c2-completionmenu-斜杠补全">C2 CompletionMenu —— 斜杠补全<a class="anchor" href="#c2-completionmenu-斜杠补全" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：<code>/</code> 前缀命令补全。</li><li><strong>【用户】</strong> 输入 <code>/</code> 自动弹出；<code>Tab</code>/<code>Enter</code> 选中，<code>↑↓</code> 移动，<code>Esc</code> 取消。</li><li><strong>【开发】</strong> 每页最多 10 项；标签最大宽 28 字符；描述宽 <code>contentWidth − 32</code>；跟随光标对齐。</li></ul>
+<h4 id="c3-historysearchoverlay-历史搜索">C3 HistorySearchOverlay —— 历史搜索<a class="anchor" href="#c3-historysearchoverlay-历史搜索" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：<code>Ctrl+R</code> 反向增量搜索历史输入。</li><li><strong>【用户】</strong> 输入即过滤，<code>↑↓</code> 导航，<code>Enter</code> 选中，<code>Esc</code> 取消。</li><li><strong>【开发】</strong> 门控 <code>KHY_HISTORY_REVERSE_SEARCH</code>（默认开）。</li></ul>
+<h3 id="5-2-输出族">5.2 输出族<a class="anchor" href="#5-2-输出族" aria-label="锚点">#</a></h3>
+<h4 id="c4-streamingblock-流式输出">C4 StreamingBlock —— 流式输出<a class="anchor" href="#c4-streamingblock-流式输出" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：渲染正在生成的助手回复。</li><li><strong>【用户】</strong> 文字逐字出现；工具调用显示为一行摘要。</li><li><strong>【开发】</strong> 高度预算由 <code>liveBudget</code> 约束（H1）；尾部行钳制防溢出；内容键控缓存避免每 chunk 重算全段。</li></ul>
+<h4 id="c5-transcript-transcriptview-转录">C5 Transcript / TranscriptView —— 转录<a class="anchor" href="#c5-transcript-transcriptview-转录" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：已提交历史 / <code>Ctrl+O</code> 全量转录视图。</li><li><strong>【用户】</strong> <code>Ctrl+O</code> 打开可滚动的全量对话；视图内 <code>↑↓</code>、<code>PgUp/PgDn</code>、<code>g</code>/<code>G</code> 跳首尾。</li><li><strong>【开发】</strong> 进入滚动区后不可变（P2）；分页视口 + 上下溢出指示器 <code>⋯ (N above)</code>。</li></ul>
+<h4 id="c6-toollines-工具卡片">C6 ToolLines —— 工具卡片<a class="anchor" href="#c6-toollines-工具卡片" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：展示工具调用与结果。</li><li><strong>【用户】</strong> 折叠时<strong>恒 1 行</strong>摘要（<code>→ Shell: npm test</code>）；点击可展开看完整输出。</li><li><strong>【开发】</strong> <strong>P7 恒定高度</strong>：从出现到完成行数恒定或单调增，绝不 0→N；<strong>完成时绝不自动收起</strong>；行数估算<strong>必须</strong>用 <code>visualRows()</code>（H6）；shell 输出预览帽 12 行、generic 3 行。</li></ul>
+<h4 id="c7-cccollapsible-折叠容器">C7 CcCollapsible —— 折叠容器<a class="anchor" href="#c7-cccollapsible-折叠容器" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：思考块、长内容、可折叠分组。</li><li><strong>【用户】</strong> <code>▸</code> 折叠 / <code>▾</code> 展开，点击标题行或按等价键切换。</li><li><strong>【开发】</strong> 展开态进签名（H5）；流式中同样可点击（dsh-TUI 曾漏掉的坑）。</li></ul>
+<h4 id="c8-cctable-表格">C8 CcTable —— 表格<a class="anchor" href="#c8-cctable-表格" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：结构化数据展示。</li><li><strong>【用户】</strong> 默认<strong>无框</strong>（<code>minimal</code>），列间以空格对齐——这样鼠标复制时<strong>不会带走框线字符</strong>。</li><li><strong>【开发】</strong> <code>KHY_TABLE_BORDERS=minimal</code>（默认）/ <code>full</code>。宽字符按显示宽度对齐（非字符数）。</li></ul>
+<h3 id="5-3-状态族">5.3 状态族<a class="anchor" href="#5-3-状态族" aria-label="锚点">#</a></h3>
+<h4 id="c9-spinner-加载指示器">C9 Spinner —— 加载指示器<a class="anchor" href="#c9-spinner-加载指示器" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：表明「正在等 AI 回应」。详见 §6.4。</li><li><strong>【用户】</strong> 忙碌时出现在输入框上方，<code>⠋</code> 旋转 + 当前在做什么。</li><li><strong>【开发】</strong> 恒 1 行；帧间隔 160ms（⚠️ 非 <code>ccTimers</code> 的 80ms）；meta 仅 &gt;30s 显示。</li></ul>
+<h4 id="c10-cctoast-瞬态消息">C10 CcToast —— 瞬态消息<a class="anchor" href="#c10-cctoast-瞬态消息" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：操作结果的短暂反馈。</li><li><strong>【用户】</strong> 出现在消息区底部，<code>✓</code>/<code>✗</code>/<code>⚠</code>/<code>ℹ</code> + 一句话，几秒后自动消失。</li><li><strong>【开发】</strong> TTL：成功 3s / 错误 5s / 警告 4s / 信息 3s ✅。见 §6.5。</li></ul>
+<h4 id="c11-ccstatusline-footerbar-状态行">C11 CcStatusLine / FooterBar —— 状态行<a class="anchor" href="#c11-ccstatusline-footerbar-状态行" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：常驻状态展示。</li><li><strong>【用户】</strong> 屏幕最底一行：<code>Khy · &lt;目录&gt; · &lt;模型&gt; · &lt;上下文%&gt;</code>；上下文 80% 转黄、95% 转红。</li><li><strong>【开发】</strong> <strong>恒 1 行</strong>（⚠️ 删除 Legacy FooterBar 的第 2 行）。上下文状态 <code>getContextStatus</code>：≥0.95 critical / ≥0.80 warning。</li></ul>
+<h3 id="5-4-导航族">5.4 导航族<a class="anchor" href="#5-4-导航族" aria-label="锚点">#</a></h3>
+<h4 id="c12-ccselectablelist-ccmultiselectlist-选择列表">C12 CcSelectableList / CcMultiSelectList —— 选择列表<a class="anchor" href="#c12-ccselectablelist-ccmultiselectlist-选择列表" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：单选（模型、会话）/ 多选。</li><li><strong>【用户】</strong> <code>▸</code> 指示当前项；单选<strong>单击只移动焦点</strong>，<strong>双击或 Enter 才确认</strong>；多选 <code>[x]</code>/<code>[ ]</code>。</li><li><strong>【开发】</strong> 单选单击≠确认（防误操作）；权限审批场景例外（单击即执行，因有 <code>Esc</code> 可退）。</li></ul>
+<h4 id="c13-ccpermissionprompt-权限审批">C13 CcPermissionPrompt —— 权限审批<a class="anchor" href="#c13-ccpermissionprompt-权限审批" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：工具执行前的授权。</li><li><strong>【用户】</strong> 会<strong>完整显示</strong>即将执行的操作，可滚动查看；<code>a</code> 允许本次 / <code>s</code> 允许本会话 / <code>d</code> 拒绝；<code>Esc</code> 否决并给纠正指引。</li><li><strong>【开发】</strong> 审批时上下文<strong>必须可见且可滚</strong>（盲批是被明确批评的反模式）。</li></ul>
+<h4 id="c14-ccfuzzypicker-cccommandpalette-命令面板">C14 CcFuzzyPicker / CcCommandPalette —— 命令面板<a class="anchor" href="#c14-ccfuzzypicker-cccommandpalette-命令面板" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：<code>Ctrl+P</code> 模糊查找命令。</li><li><strong>【用户】</strong> 输入即过滤，<code>↑↓</code> 导航，<code>Enter</code> 执行，<code>Esc</code> 关闭。</li><li><strong>【开发】</strong> 即时过滤（子 100ms 响应）；显示快捷键提示。</li></ul>
+<h4 id="c15-ccviewstack-视图栈">C15 CcViewStack —— 视图栈<a class="anchor" href="#c15-ccviewstack-视图栈" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：多层视图的进栈/出栈。</li><li><strong>【用户】</strong> <code>Esc</code> 永远返回上一层。</li><li><strong>【开发】</strong> 每层保存自身状态（滚动位置/光标/过滤器），返回时恢复。</li></ul>
+<h4 id="c16-topbar-标题栏">C16 Topbar —— 标题栏<a class="anchor" href="#c16-topbar-标题栏" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：顶部标识。</li><li><strong>【用户】</strong> ⚠️ 现状是 <code>● ● ● KhyOS Desktop</code> 的 macOS 交通灯——终端里没有窗口可关，<strong>属纯噪音</strong>，已裁定删除，标题并undefined状态行。</li></ul>
+<h3 id="5-5-面板族">5.5 面板族<a class="anchor" href="#5-5-面板族" aria-label="锚点">#</a></h3>
+<h4 id="c17-sidebarpanel-看板-右侧任务面板">C17 SidebarPanel —— 看板（右侧任务面板）<a class="anchor" href="#c17-sidebarpanel-看板-右侧任务面板" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：任务与上下文的常驻概览。</li><li><strong>【用户】</strong> 宽终端（≥120 列）自动出现；<strong>两段</strong>：<code>任务</code>（默认，含计划步骤）+ <code>上下文</code>（模型/token/权限）。已完成项默认折叠为 <code>✓ 12 已完成</code>，点击展开。</li><li><strong>【开发】</strong> 显隐见 §4.5；<strong>固定顶锚 + 独立滚动</strong>（⚠️ 现状是底部锚定 + 6 行悬浮偏移）；空列表<strong>显示 1 行「暂无任务」占位，不隐藏</strong>（隐藏会让主区宽度突变 → 全树 reflow → 残影）；参数仅 3 项（<code>width</code> / <code>tab</code> / <code>minCols</code>）。</li><li><strong>【开发】</strong> ⚠️ 删除带外 rail 作为默认后端（§10）。</li></ul>
+<h4 id="c18-tasklistpanel-全宽任务清单">C18 TaskListPanel —— 全宽任务清单<a class="anchor" href="#c18-tasklistpanel-全宽任务清单" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：<code>Ctrl+T</code> 召唤的全宽任务视图。</li><li><strong>【用户】</strong> 窄终端下替代看板；<code>✓ 完成 / → 进行中 / ○ 待办 / ✗ 失败</code>。</li><li><strong>【开发】</strong> 优先级截断顺序：in_progress &gt; error &gt; pending &gt; completed。</li></ul>
+<h3 id="5-6-启动族">5.6 启动族<a class="anchor" href="#5-6-启动族" aria-label="锚点">#</a></h3>
+<blockquote><p><strong>【开发】</strong> 本族覆盖<strong>启动板块</strong>（进程 → 输入框可用），结构真源是<br><code>[DESIGN-ARCH-115] TUI 启动板块设计</code>。本手册只登记组件与约束，不重复其节拍契约。<br><strong>【判据】</strong> 启动期的每一帧同样受 H1（帧高 ≤ <code>rows−1</code>）、H2（零 ED2/ED3）、<br>P7（高度恒定）约束 —— <strong>启动期不是「规则豁免期」</strong>。</p></blockquote>
+<h4 id="c19-startupbeats-启动节拍表">C19 StartupBeats —— 启动节拍表<a class="anchor" href="#c19-startupbeats-启动节拍表" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：启动期进度的<strong>唯一状态真源</strong>与 TUI 渲染器</li></ul>
+<p>（<code>cli/startupBeats.js</code> 契约 + <code>ink-components/BootScreen.js</code> 渲染）。</p>
+<ul><li><strong>【用户】</strong> 启动时中间那块：六行 <code>· 待办 / ⠋ 进行中 / ✓ 完成 / ✗ 阻断 / ⚠ 降级</code>，</li></ul>
+<p>底部最多一行汇总（阻断指引优先于降级计数）。</p>
+<ul><li><strong>【开发】</strong> 六拍固定：<code>env</code> / <code>auth</code> / <code>render</code> / <code>workspace</code> / <code>gateway</code> / <code>session</code>，</li></ul>
+<p>其中 <code>env</code>/<code>auth</code>/<code>render</code> 为 critical（失败即阻断，其余为降级）。<br>  <strong>状态在契约里，不在组件里</strong> —— TUI / 经典 / pre-Ink 三个渲染器消费同一份<br>  <code>startupBeats.beats</code> 单例（P8）。组件<strong>自订阅</strong>真源，不由父级传 <code>steps</code>。</p>
+<ul><li><strong>【开发·硬规则】</strong> ① 完成信号必须是<strong>本拍自己的</strong> resolve，<strong>禁止引用其它功能的副作用</strong></li></ul>
+<p>（历史病 D1：曾用 banner 的 git 来源探测当完成信号，导致启动固定 1.9s）；<br>  ② <strong>超时只用于降级并告知，绝不用来判定完成</strong> —— 全模块唯一的超时是网关降级看门狗，<br>  且它走 <code>fail()</code>（可见降级）而非 <code>done()</code>；③ 状态单调推进，不回退。</p>
+<ul><li><strong>【判据】</strong> <code>cli/startupBeats.js</code> 不导出任何「定时标记完成」的 API（已有设计锁断言）。</li></ul>
+<h4 id="c20-welcomebanner-启动横幅">C20 WelcomeBanner —— 启动横幅<a class="anchor" href="#c20-welcomebanner-启动横幅" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：启动期一次性展示版本、模型、认证、网关、工作目录。</li><li><strong>【用户】</strong> 屏幕顶部，只在启动时出现一次。</li><li><strong>【开发】</strong> 画一次即冻结（首帧快照进 ref，后续 re-render 返回同一引用）。</li></ul>
+<p>宽度由 App 按 <code>contentWidth()</code> 下发：<code>showArt</code> 在窄终端（&lt; 80 列）关掉右侧图案；<br>  <code>工作目录</code> 行按<strong>显示宽度</strong>截断（走 <code>wrapCell()</code> 同源，H6），<strong>绝不折行</strong> —— 横幅落在<br>  A 区，折行会破坏行数恒定假设。组件本身不读终端尺寸（H8）。</p>
+<ul><li><strong>【开发·注意】</strong> <code>更新：</code>（git 来源探测）行<strong>不得</strong>参与就绪判定，见undefined硬规则 ①。</li></ul>
+<h4 id="c21-startupanchor-首帧贴底">C21 startupAnchor —— 首帧贴底<a class="anchor" href="#c21-startupanchor-首帧贴底" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：Ink 首帧前把光标移到最后一行，让输入框与页脚从第一帧就贴住终端底边。</li><li><strong>【用户】</strong> 启动时输入框不会出现在屏幕中间、下方留一大片空白。</li><li><strong>【开发】</strong> 用 CUP 转义（<code>\x1b[&lt;rows&gt;;1H</code>）而非 <code>'\n'.repeat(rows-1)</code> —— 后者会在</li></ul>
+<p>原生回滚里留下空白行。门控 <code>KHY_TUI_ANCHOR_BOTTOM</code>。</p>
+<ul><li><strong>【开发·待办】</strong> 默认<strong>关</strong>；<code>[DESIGN-ARCH-115]</code> §2.1 已裁定主屏方案，落地时需翻转为</li></ul>
+<p><strong>默认开</strong>（备屏下原生回滚不可见，锚点的存在理由失效；主屏下理由重新成立）。</p>
+<h4 id="c22-logoart-bootlayout-启动屏品牌资产与帧高阶梯">C22 logoArt / bootLayout —— 启动屏品牌资产与帧高阶梯<a class="anchor" href="#c22-logoart-bootlayout-启动屏品牌资产与帧高阶梯" aria-label="锚点">#</a></h4>
+<ul><li><strong>用途</strong>：启动屏视觉的两份单一真源 —— <code>cli/tui/logoArt.js</code>（四叶草 + 字标 + tagline 的</li></ul>
+<p><strong>唯一</strong>像素资产）与 <code>cli/tui/bootLayout.js</code>（按终端行数分档的 H1 阶梯）。</p>
+<ul><li><strong>【用户】</strong> 启动屏<strong>水平居中</strong>；品牌块随终端高度降级（四叶草 → 只剩字标 → 整块消失），</li></ul>
+<p>进度行与六拍<strong>永不降级</strong> —— 它们是启动屏的本职，可降的只有装饰。</p>
+<ul><li><strong>【开发·硬规则】</strong> ① <strong>只有一份 logo 资产</strong>：<code>WelcomeBanner</code> 与 <code>BootScreen</code> 都消费</li></ul>
+<p><code>logoArt.cloverRows()</code>，任何文件不得再定义 <code>CLOVER_ART</code>（测试锁 <code>logoArt.test.js</code>）；<br>  ② 帧高阶梯 F→G→H→I→J，<code>−1</code> 复用 <code>chromeBudget.CC_TRAILER_ROWS</code>，<strong>不得重写 <code>rows−1</code><br>  字面量</strong>；③ <code>rows</code> 缺省 ⇒ 落 <strong>I 档</strong>（帧高 15 ≤ 改造前 17 ⇒ 永不比现状差，这就是无开关回滚）；<br>  ④ <code>alignItems:'center'</code> 是<strong>逐子元素</strong>居中 —— 清单行必须包 <code>flex-start</code> 内层 Box 才不会左边缘参差。</p>
+<ul><li><strong>【判据】</strong> `node --test services/backend/tests/cli/tui/bootLayout.test.js</li></ul>
+<p>services/backend/tests/cli/tui/logoArt.test.js<br>  services/backend/tests/cli/tui/bootScreenVisual.test.js<code>。结构真源 </code>[DESIGN-ARCH-134]`。</p>
+<hr>
+<h2 id="6-交互约定">6. 交互约定<a class="anchor" href="#6-交互约定" aria-label="锚点">#</a></h2>
+<h3 id="6-1-键盘总表">6.1 键盘总表<a class="anchor" href="#6-1-键盘总表" aria-label="锚点">#</a></h3>
+<blockquote><p><strong>【用户】</strong> 这是全部操作的完整清单。<strong>【开发】</strong> 每个键位即契约，改动须同步本表。</p></blockquote>
+<table><thead><tr><th>键位</th><th>功能</th><th>备注</th></tr></thead><tbody><tr><td><code>Enter</code></td><td>发送</td><td></td></tr><tr><td><code>Shift+Enter</code> / <code>Ctrl+J</code></td><td>换行</td><td><code>Ctrl+J</code> 是跨终端<strong>唯一无需配置</strong>的换行键（Shift+Enter 在部分终端不可用）</td></tr><tr><td><code>Ctrl+C</code></td><td>中断；连按两次退出</td><td>首次给提示</td></tr><tr><td><code>Ctrl+D</code></td><td>退出；连按两次</td><td>双击窗口 3s</td></tr><tr><td><code>Esc</code></td><td>① 输入非空→清输入 ② 否则收起最近展开项 ③ 否则退栈/中断</td><td><strong>分级语义</strong>，一次只做最小撤销</td></tr><tr><td><code>Ctrl+L</code></td><td>清屏</td><td></td></tr><tr><td><code>Ctrl+O</code></td><td>转录视图；工具展开三态循环</td><td></td></tr><tr><td><code>Ctrl+T</code></td><td>任务面板</td><td></td></tr><tr><td><code>Ctrl+R</code></td><td>历史反向搜索</td><td></td></tr><tr><td><code>Ctrl+G</code></td><td>折叠/展开网关通知</td><td></td></tr><tr><td><code>Ctrl+P</code></td><td>命令面板</td><td></td></tr><tr><td><code>Ctrl+Y</code></td><td>复制最近助手回复</td><td></td></tr><tr><td><code>Tab</code></td><td>补全选择</td><td></td></tr><tr><td><code>Shift+Tab</code></td><td>权限模式轮换</td><td></td></tr><tr><td><code>?</code></td><td>上下文相关帮助</td><td></td></tr><tr><td><code>↑</code> <code>↓</code></td><td>输入框内：多行时先移光标，到首/末行才翻历史</td><td></td></tr><tr><td><code>PgUp/PgDn</code></td><td>半页/整页滚动</td><td><code>Ctrl+U/D</code> 半页、<code>Ctrl+B/F</code> 整页</td></tr><tr><td><code>g</code> / <code>G</code></td><td>跳顶 / 跳底</td><td></td></tr><tr><td><code>j</code> <code>k</code></td><td>行下 / 行上（vim 风格）</td><td></td></tr><tr><td><code>b</code></td><td>看板聚焦切换（默认键）</td><td></td></tr><tr><td><code>v</code></td><td><del>进入消息选择模式</del> <strong>未实现（deferred）</strong></td><td>见下方注</td></tr><tr><td><code>y</code></td><td><del>vim 复制（仅寄存器）</del> <strong>未实现（deferred）</strong></td><td>见下方注</td></tr><tr><td><code>Alt+M</code></td><td>麦克风（等价于点击 MIC）</td><td></td></tr></tbody></table>
+<blockquote><p><strong><code>v</code> / <code>y</code> 的实现状态（2026-09-17 核实，同日再次修正）</strong>：本表此前把两者列为既有功能，<br>但全仓 <code>grep -rn &quot;messageSelect&quot; services/backend/src/cli/</code> <strong>返回空</strong> —— 有文档、零实现。<br>这是文档与代码的<strong>矛盾</strong>，不是「待办未标注」。</p>
+<p>⚠ <strong>本条曾在 2026-09-17 早些时候写成「当前文本选择的真实通道是终端原生拖选<br>（§6.2 保证其可用）」—— 那句话是错的，现已删除。</strong> 实际情况：鼠标追踪一旦开启，<br>事件就被 ink 从 stdin 读走，而 <code>node_modules/ink/build/hooks/use-input.js:112-114</code><br>把 handler 返回值<strong>直接丢弃</strong> —— <code>return false</code> 物理上回不到终端。所以<strong>「把拖选<br>交还终端」这条路在追踪态下不存在</strong>（用户报的「无法选中复制」即此）。</p>
+<p>修正后的真实图景（见 <code>[DESIGN-ARCH-119]</code> §4.2）：</p>
+<ul><li><strong>原生拖选</strong>：仅在不接管鼠标、或用户按 <strong>Shift</strong>（§6.2 硬承诺，修饰键放行）时可用；</li><li><strong>应用内自绘选择</strong>：2026-09-17 新上线 —— 拖按下 → 反色 → 松手复制，</li></ul>
+<p>门控 <code>KHY_SELECT</code>（默认开）。这才是追踪态下的主通道。</p>
+<p><code>v</code>/<code>y</code> 作为<strong>键位入口</strong>仍保持 deferred：功能上已被鼠标自绘选择覆盖，<br>键位只是可选的等价入口，要实现须另立提案。在那之前本表<strong>不得</strong>宣称它们存在。</p></blockquote>
+<p><strong>滚动动作族</strong>（单一真源 <code>scrollActions.js</code>）：<code>lineUp/Down</code>、<code>halfPageUp/Down</code>、<code>fullPageUp/Down</code>、<code>top</code>、<code>bottom</code>。步长：半页 = <code>⌊viewport/2⌋</code>（下界 1），整页 = <code>viewport</code>（下界 1）。</p>
+<h3 id="6-2-鼠标约定">6.2 鼠标约定<a class="anchor" href="#6-2-鼠标约定" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项</th><th>规则</th></tr></thead><tbody><tr><td>三档</td><td><code>KHY_MOUSE=off</code>（不接管）/ <code>click</code>（默认，只开 1000+1006）/ <code>full</code>（额外开 1003 悬停）。⚠ <strong>自绘选择开启时（<code>KHY_SELECT</code>，默认开）追踪档升级为 1002</strong>：需要按住时的位移才能让选区跟手</td></tr><tr><td>触发时机</td><td>在<strong>松开</strong>时触发，命中松开点；拖出元素则取消</td></tr><tr><td><strong>Shift + 任何鼠标操作</strong></td><td><strong>程序不拦截</strong>（<code>isShift/isAlt/isCtrl</code> 一律放行，且判定<strong>早于</strong> motion/press/release 全部分支）</td></tr><tr><td>滚轮</td><td>走应用内视口（<code>onWheel</code>）；未接线时回退终端原生滚动</td></tr><tr><td><strong>【用户】</strong></td><td>拖选复制、滚轮翻历史<strong>始终可用</strong>；<code>Shift+鼠标</code> 走终端原生选择</td></tr></tbody></table>
+<blockquote><p>⚠ <strong>§6.2 的「Shift 放行」原先是一句无法兑现的承诺（2026-09-17 修正）</strong>：<br>修饰位此前被 <code>parseSgrMouse</code> 解析出来却从不检查，且 <code>return false</code> 在 ink 侧<br>被丢弃（<code>use-input.js:112-114</code>）—— 承诺在文档里，实现侧不存在。</p>
+<p>现在能做到的是「<strong>放行语义</strong>」：不去吞它、也<strong>不画自己的选区</strong>（这是关键 ——<br>Shift+拖动位移曾经漏进自绘选区分支，导致两套选区同时出现）。至于终端能否<br>真的接管 Shift+鼠标，取决于终端自身是否上报修饰序列 —— <strong>部分终端不上报</strong>，<br>那种情况下 Shift 与不按 Shift 无法区分。故本表措辞从「永远走终端原生选择」<br>收敛为「程序不拦截」，把终端侧的不确定性诚实标出。</p>
+<p>追踪态下的<strong>主通道是应用内自绘选择</strong>（<code>KHY_SELECT</code>），不再依赖终端原生拖选。<br>详见 <code>[DESIGN-ARCH-119]</code> §4.2。</p></blockquote>
+<blockquote><p><strong>背景</strong>：mouse tracking 是独占的——开启后终端<strong>收不到</strong>滚轮与拖按。<strong>按下（press）<br>也是「事件」</strong>：它正是原生拖选的起点，被吞掉后终端只剩一团无主位移。<br>⇒ 纪律:<strong>「不报 X」不等于「不报 Y」</strong>——1000 不报位移，但照样上报按下。</p></blockquote>
+<h3 id="6-3-点击选中-vs-点击展开">6.3 点击选中 vs 点击展开<a class="anchor" href="#6-3-点击选中-vs-点击展开" aria-label="锚点">#</a></h3>
+<blockquote><p><strong>一句话判据：点击后元素变高了 → 展开；点击后别的元素失焦了 → 选中。</strong></p></blockquote>
+<table><thead><tr><th>判据</th><th><strong>点击展开</strong></th><th><strong>点击选中</strong></th></tr></thead><tbody><tr><td>状态变量</td><td><code>expanded</code>（每元素独立）</td><td><code>selectedIndex</code>（同组唯一）</td></tr><tr><td>改变什么</td><td>同一内容的可见量</td><td>哪个元素是目标</td></tr><tr><td>互斥性</td><td>多个可同时展开</td><td>同时只有一个选中</td></tr><tr><td>持久性</td><td>持久到用户收起</td><td>焦点移动即失效</td></tr><tr><td>视觉</td><td><strong>元素高度增加</strong></td><td>高亮反显，<strong>高度不变</strong></td></tr><tr><td>等价键</td><td><code>Ctrl+O</code></td><td><code>Enter</code></td></tr><tr><td>再点一次</td><td>收起（toggle）</td><td>无变化（不 toggle）</td></tr></tbody></table>
+<table><thead><tr><th>动作</th><th>展开</th><th>选中</th></tr></thead><tbody><tr><td>点击空白区</td><td>——</td><td><strong>取消选中</strong>，无副作用</td></tr><tr><td>单选列表</td><td>——</td><td>单击移焦点，<strong>双击/Enter 才确认</strong></td></tr><tr><td>消息区</td><td>——</td><td>需先 <code>v</code> 进选择模式</td></tr></tbody></table>
+<p><strong>展开/收起状态机</strong>：</p>
+<ul><li>初始：<strong>全部折叠</strong>（工具恒 1 行摘要）</li><li>点击折叠元素 → 展开；点击展开元素 → 收起</li><li><code>Ctrl+O</code>：<strong>全局</strong>三态循环（全收起 → 全展开 → 仅最新）</li><li><code>Esc</code>：输入非空→清输入；否则收起<strong>最近一个</strong>展开项；否则退栈</li><li><strong>两条硬规则</strong>：① 展开时不自动收起其它元素 ② <strong>完成时绝不自动收起</strong>（四项目共识）</li><li>流式中的元素<strong>可点击展开</strong>（dsh-TUI 曾漏掉 streaming 分支）</li></ul>
+<h3 id="6-4-spinner-加载指示器">6.4 Spinner（加载指示器）<a class="anchor" href="#6-4-spinner-加载指示器" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项</th><th>规则</th></tr></thead><tbody><tr><td><strong>出现</strong></td><td><code>忙碌 &amp;&amp; !等待用户决策 &amp;&amp; !覆盖层激活 &amp;&amp; 未 suspend</code>（<strong>全部满足</strong>）✅</td></tr><tr><td>字形</td><td>Braille <code>⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏</code>；帧间隔 <strong>160ms</strong>（LOW_POWER 320ms）⚠️</td></tr><tr><td>文本</td><td><code>detail</code> <strong>优先于</strong> <code>label</code>（detail 更具体，如 <code>读取 src/index.js</code>）✅</td></tr><tr><td>进度 meta</td><td><code>· &lt;时长&gt; · ~&lt;tokens&gt; tok</code>，<strong>仅当 elapsed &gt; 30s</strong> 才显示 ✅</td></tr><tr><td>停滞</td><td><strong>&gt;600ms</strong> 无新数据 → 字形转红 + <code>⏳ 等待中 · &lt;detail&gt;</code> + 文案黄灰<strong>每 600ms</strong> 呼吸 ✅</td></tr><tr><td><strong>消失</strong></td><td>回合成功/失败/中断/覆盖层唤起。<strong>必须伴随终态内容出现</strong></td></tr><tr><td>高度</td><td><strong>恒 1 行</strong>（含 meta 追加、含停滞态）</td></tr><tr><td>reduced-motion</td><td>静态 <code>●</code>，无动画</td></tr></tbody></table>
+<ul><li><strong>【用户】</strong> 看到 <code>⠹</code> 表示在工作；<code>⏳ 等待中</code> 表示还在等（不是卡死）；超过 30 秒才显示已用时和 token 数，短回合保持干净。</li><li><strong>【判据】</strong> <code>elapsedSec=0 &amp;&amp; tokens=0</code> 时不出现悬挂的 <code> · </code>；29.9s 不显 meta、30.0s 显；极短回合不留空白行。</li></ul>
+<h3 id="6-5-反馈-toast">6.5 反馈（Toast）<a class="anchor" href="#6-5-反馈-toast" aria-label="锚点">#</a></h3>
+<p><strong>复制反馈文案</strong>（优先级自上而下，命中即返回）：</p>
+<table><thead><tr><th>优先级</th><th>条件</th><th>文案</th></tr></thead><tbody><tr><td>1</td><td><code>lines &gt; 1</code></td><td><code>copied N lines</code></td></tr><tr><td>2</td><td><code>bytes &gt; 1024</code></td><td><code>copied N.NKB</code></td></tr><tr><td>3</td><td>其余</td><td><code>copied N chars</code></td></tr></tbody></table>
+<ul><li>计数口径：<code>lines</code> = 逻辑行；<code>chars</code> = <strong>code point</strong>（<code>[...text].length</code>，emoji 计 1 而非 2）✅；<code>bytes</code> = UTF-8 字节。</li><li><strong>【用户】</strong> 复制后底部出现 <code>✓ copied 42 chars</code>（英文，对齐上游规范）。</li><li>失败文案按原因给出<strong>修复建议</strong>：gate / native / osc52:tty / oversize（附 KB 数与解除方法）/ 全空。</li><li>边界：复制<strong>空文本</strong> → <strong>不显示任何反馈</strong>（不是 <code>copied 0 chars</code>）；1 字符 → <code>copied 1 chars</code>（复数不变）；多行且 &gt;1KB → 报 <strong>lines</strong>（不报 KB）。</li></ul>
+<p><strong>其它 Toast</strong>：成功 3s / 错误 5s / 警告 4s / 信息 3s。</p>
+<h3 id="6-6-提示-placeholder-与-tooltip">6.6 提示（placeholder 与 tooltip）<a class="anchor" href="#6-6-提示-placeholder-与-tooltip" aria-label="锚点">#</a></h3>
+<p><strong>placeholder</strong>（输入框占位，四级阶梯，自上而下）：</p>
+<table><thead><tr><th>优先级</th><th>条件</th><th>显示</th></tr></thead><tbody><tr><td>1</td><td>plan 复核态</td><td>复核提示</td></tr><tr><td>2</td><td>有可编辑排队消息 且 提示未用尽</td><td>「按 ↑ 编辑排队消息」（上限 <strong>3 次</strong>）✅</td></tr><tr><td>3</td><td>忙碌</td><td><strong>空串</strong>（刻意留空，避免与 Spinner 抢注意力）✅</td></tr><tr><td>4</td><td>空闲</td><td>默认引导语</td></tr></tbody></table>
+<ul><li><strong>【用户】</strong> 输入框为空时才显示占位提示；一打字就消失。</li></ul>
+<p><strong>瞬时 hint</strong>：单槽、<strong>1500ms</strong> TTL，位置在<strong>输入框上方</strong> <code>dimColor</code> 文本。触发点含：连按退出提示、语音状态（4 种）、图片操作（4 种）、回溯（3 种）、窄终端阈值提示。</p>
+<ul><li>语言：hint 用<strong>中文</strong>（即时操作反馈）；复制 Toast 用<strong>英文</strong>（上游规范）。分工不同，并存。</li></ul>
+<p><strong>悬停 tooltip</strong> 🆕（opt-in，需 <code>KHY_MOUSE=full</code>）：悬停 <strong>≥400ms</strong> 触发；内容为「完整名称 + 等价快捷键」；<strong>浮层绘制不占布局</strong>（高度不变）；<strong>绝不遮挡输入框</strong>（空间不足则不显示）。</p>
+<h3 id="6-7-滚动">6.7 滚动<a class="anchor" href="#6-7-滚动" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> 默认<strong>尾随最新内容</strong>；你一向上滚就<strong>自动暂停</strong>，底部出现「已暂停，N 条新消息，按 G 回底」；按 <code>G</code>/<code>End</code> 恢复尾随。</li><li><strong>【开发】</strong> 三态单一真源 <code>scrollActions.js</code>；偏移量恒 clamp 到 <code>[0, total − viewport]</code>。</li><li><strong>【判据】</strong> 上滚即暂停；<code>G</code> 恢复；暂停期间新消息计数正确。</li></ul>
+<h3 id="6-8-覆盖层">6.8 覆盖层<a class="anchor" href="#6-8-覆盖层" aria-label="锚点">#</a></h3>
+<ul><li><strong>【用户】</strong> 全覆盖时（模型选择、计划审批等）看板隐藏、输入框隐藏，但<strong>错误信息不会被吞</strong>（Toast 保留）。</li><li><strong>【开发】</strong> 优先级见下；退出覆盖层后恢复<strong>原判定</strong>（不重新计算，避免二次跳变）。</li></ul>
+<p><strong>显示优先级（高 → 低）</strong>：</p>
+<ol><li>覆盖层（独占） 2. 权限审批（独占输入框区） 3. 错误 Toast 4. 警告 Toast 5. hint 6. 成功/信息 Toast 7. Spinner 8. placeholder</li></ol>
+<h3 id="6-9-中文换行">6.9 中文换行<a class="anchor" href="#6-9-中文换行" aria-label="锚点">#</a></h3>
+<blockquote><p><strong>两条路径，务必区分。</strong></p></blockquote>
+<table><thead><tr><th>内容类型</th><th>换行方式</th><th>断行位置</th><th>插 <code>\n</code>？</th><th>复制后</th></tr></thead><tbody><tr><td><strong>散文段落</strong></td><td><strong>终端软换行</strong></td><td>终端在列边界断，<strong>不遵守禁则</strong></td><td>❌</td><td>一整段（干净）✅</td></tr><tr><td><strong>代码块 / 表格</strong></td><td><strong>应用硬折行</strong></td><td>词边界 + <strong>CJK 禁则</strong></td><td>✅</td><td>保留换行</td></tr></tbody></table>
+<p><strong>散文（软换行）</strong>：</p>
+<ul><li>应用不插 <code>\n</code>，交给终端折行；行高<strong>必须</strong>按 <code>visualRows()</code>（视觉行）计费，不能用逻辑行。</li><li><strong>已知限制（明确接受）</strong>：终端软折<strong>不遵守中文禁则</strong> → 句号可能落行首。这是换取&quot;复制干净&quot;的代价。<strong>禁止</strong>用插入零宽字符/空格规避——那会污染复制内容。</li></ul>
+<p><strong>代码块/表格（硬折行）</strong>：</p>
+<ol><li>Tab → 4 空格</li><li>切分为「空白 / 非空白」交替串</li><li><strong>含 CJK 的 token 装不下</strong> → 与当前行合并后<strong>字符级切分</strong>，把当前行填满（中英混排时不整句下移）</li><li><strong>纯拉丁 token</strong> → 保持<strong>整词换行</strong>，绝不词中折断（命令 flag、标识符、路径段都完整）</li><li>token 自身 &gt; limit → 字符级硬切</li><li>换行点落在空白 → <strong>丢弃该空白</strong>（续行不以空格开头）</li></ol>
+<p><strong>禁则（Kinsoku）</strong>：</p>
+<ul><li><strong>行首禁则</strong>：<code>，。、；：！？）】》〉」』”’…—</code> + ASCII <code>,.;:!?)]}</code> —— 不得出现在折行后的行首</li><li><strong>行尾禁则</strong>：<code>（【《〈「『“‘</code> —— 不得留在行尾</li><li>实现：记录 <code>lastBreak</code>（最近合法断点），溢出时优先在此断，否则硬断；最多两趟收敛（防死循环）</li><li>物理下限：单字符宽 &gt; limit → 独占一行（允许超宽），<strong>绝不丢字符</strong></li></ul>
+<p><strong>宽度度量</strong>：组合符 0 / CJK·全角·Emoji 2 / 其余 1。</p>
+<ul><li>⚠️ <strong>三处缺陷待修</strong>：① <strong>变体选择符 <code>U+FE0F</code> 未计 0 宽</strong> → <code>❤️</code> 被算 3 列实际 2 列，折行点与光标每行偏 1 列；② Emoji 区间缺棋牌(<code>0x1F000–0x1F2FF</code>)、扩展符号(<code>0x1FA70–0x1FAFF</code>)、国旗、ZWJ 序列；③ 组合符区间仅 <code>0x0300–0x036F</code>。</li><li><strong>修法</strong>：迁到 <code>string-width</code>（即 H6 的 <code>wrapCell.js</code>）。</li><li><strong>【判据】</strong> <code>visualRows(t,w) === wrapCell(t,w).length</code>（1000 组随机输入）；禁则回归：连续句号不落行首、<code>（</code> 不悬行尾、<code>limit=1</code> 不死循环。</li></ul>
+<hr>
+<h2 id="7-使用者操作手册">7. 使用者操作手册<a class="anchor" href="#7-使用者操作手册" aria-label="锚点">#</a></h2>
+<h3 id="7-1-快速上手">7.1 快速上手<a class="anchor" href="#7-1-快速上手" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>我想…</th><th>怎么做</th></tr></thead><tbody><tr><td>开始对话</td><td>直接打字，<code>Enter</code> 发送</td></tr><tr><td>换行不发送</td><td><code>Ctrl+J</code>（或 <code>Shift+Enter</code>，视终端而定）</td></tr><tr><td>换个模型</td><td><code>/model</code>，或 <code>Ctrl+P</code> 搜 &quot;model&quot;</td></tr><tr><td>让 AI 停下来</td><td><code>Esc</code>（输入为空时）或 <code>Ctrl+C</code></td></tr><tr><td>退出</td><td>连按两次 <code>Ctrl+C</code> 或 <code>Ctrl+D</code></td></tr><tr><td>查全部快捷键</td><td><code>?</code></td></tr></tbody></table>
+<h3 id="7-2-常见任务速查">7.2 常见任务速查<a class="anchor" href="#7-2-常见任务速查" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>任务</th><th>操作路径</th></tr></thead><tbody><tr><td>查看/复制之前的对话</td><td><code>Ctrl+O</code> 打开转录视图 → <code>↑↓</code>/<code>PgUp/PgDn</code> 滚动 → 鼠标拖选复制</td></tr><tr><td>复制 AI 的最后一条回复</td><td><code>Ctrl+Y</code>（显示 <code>copied N chars</code>）</td></tr><tr><td>看 AI 刚才执行了什么命令</td><td>点击工具卡片那一行展开；或 <code>Ctrl+O</code> 全部展开</td></tr><tr><td>看任务进度</td><td>宽终端：右侧看板自动显示。窄终端：<code>Ctrl+T</code></td></tr><tr><td>搜索以前输入过的内容</td><td><code>Ctrl+R</code></td></tr><tr><td>执行一条 shell 命令</td><td>输入 <code>!</code> 开头进入 shell 模式</td></tr><tr><td>AI 要改文件，我要看清楚</td><td>审批弹窗<strong>可滚动查看</strong>；<code>a</code> 允许本次 / <code>s</code> 允许本会话 / <code>d</code> 拒绝</td></tr><tr><td>上下文快满了</td><td>看底部状态行的百分比（80% 黄、95% 红）；<code>/compact</code> 压缩</td></tr><tr><td>AI 在等什么？</td><td>看输入框上方的指示器：<code>⏳ 等待中</code> = 在等响应，不是卡死</td></tr><tr><td>界面显示错乱了</td><td>见 §7.4</td></tr></tbody></table>
+<h3 id="7-3-状态语义速查">7.3 状态语义速查<a class="anchor" href="#7-3-状态语义速查" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>你看到</th><th>含义</th></tr></thead><tbody><tr><td><code>⠋⠙⠹⠸</code> 旋转</td><td>正在工作</td></tr><tr><td><code>⏳ 等待中</code></td><td>忙碌但超过 0.6 秒没新数据（<strong>在等，不是卡死</strong>）</td></tr><tr><td><code>→ Shell: xxx</code></td><td>工具执行中/已完成摘要（点击展开看输出）</td></tr><tr><td><code>✓</code> / <code>✗</code> / <code>⚠</code> / <code>ℹ</code></td><td>成功 / 错误 / 警告 / 信息（几秒后自动消失）</td></tr><tr><td><code>▸</code> / <code>▾</code></td><td>折叠 / 展开</td></tr><tr><td><code>✓ 12 已完成</code></td><td>已完成任务组，点击展开列表</td></tr><tr><td><code>⋯ 上方还有 N 行</code></td><td>输入框内容已折叠，<strong>内容没丢</strong></td></tr><tr><td><code>⋯ (N above)</code></td><td>转录视图上方还有 N 行未显示</td></tr><tr><td>底部百分比变色</td><td>上下文用量：80% 黄、95% 红</td></tr></tbody></table>
+<h3 id="7-4-故障排查">7.4 故障排查<a class="anchor" href="#7-4-故障排查" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>现象</th><th>可能原因</th><th>处理</th></tr></thead><tbody><tr><td>上下边框不一样长</td><td>宽度取值不一致（H4 违规）</td><td>提交 bug，附终端列数与输入长度</td></tr><tr><td>缩放后留下旧内容残片</td><td>未走原子 ED0 重绘（H5/P5 违规）</td><td>提交 bug，附 resize 前后尺寸</td></tr><tr><td>界面频繁闪烁/跳动</td><td>帧高超过视口（H1 违规）→ 触发全屏重印</td><td>缩小终端高度或提交 bug</td></tr><tr><td>鼠标拖选/滚轮失效</td><td>鼠标被劫持</td><td><code>KHY_MOUSE=off</code> 恢复原生；或用 <code>Shift</code></td></tr><tr><td>中文句号跑到行首</td><td>散文走终端软换行，<strong>不应用禁则</strong>（已知限制）</td><td>属已知取舍；需要严格排版请让 AI 用代码块输出</td></tr><tr><td>复制带有硬换行</td><td>代码块/表格本就含换行；散文不应含</td><td>散文出现此现象属缺陷，提交 bug</td></tr><tr><td>终端历史被清空</td><td>ED2/ED3 发射（H2 违规）</td><td>严重，提交 bug</td></tr></tbody></table>
+<hr>
+<h2 id="8-现象-约束对照-开发者排查">8. 现象 → 约束对照（开发者排查）<a class="anchor" href="#8-现象-约束对照-开发者排查" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>现象</th><th>违反的约束</th></tr></thead><tbody><tr><td>缩放残影</td><td>P5、H5、H2</td></tr><tr><td>上下边框不等长 / 断裂</td><td>H4、P4</td></tr><tr><td>界面抖动、整屏跳动</td><td>H1（帧高超限 → 全屏重印）</td></tr><tr><td>历史被清空</td><td>H2</td></tr><tr><td>画面撕裂（半更新）</td><td>H3（同步输出双包裹）</td></tr><tr><td>输入框内容溢出到下方</td><td>H4、H6（折行与计费不一致）</td></tr><tr><td>长中文折行错位</td><td>H6、§6.9 宽度度量缺陷</td></tr><tr><td>展开后缩放残影复现</td><td>H5</td></tr><tr><td>组件尺寸在缩放时不一致</td><td>H8、P4</td></tr><tr><td>看板与主区间有空隙/重叠</td><td>§4.2 两套宽度公式（已裁定删除其一）</td></tr><tr><td>鼠标劫持原生选择</td><td>§6.2、P6</td></tr><tr><td>提示堆叠成多行</td><td>H10</td></tr></tbody></table>
+<hr>
+<h2 id="9-开发者提交前检查清单">9. 开发者提交前检查清单<a class="anchor" href="#9-开发者提交前检查清单" aria-label="锚点">#</a></h2>
+<pre><code>□ 帧高 ≤ rows − 1（H1）
+□ 无 ESC[2J / ESC[3J（H2）
+□ 同步输出未双重包裹（H3）
+□ 输入框上下边框由同一 fitBorder() 产出、等宽（H4）
+□ 展开态已进入行高签名（H5）
+□ 行数估算调用 visualRows()，未手写（H6）
+□ 未新增 KHY_* 门控；新增偏好走 tui.json（H7）
+□ 组件内无 process.stdout.columns/.rows 直读（H8）
+□ 新增可点击元素已登记等价键位（H9）
+□ 同槽位瞬时信息只有一条（H10）
+□ 元素行数从出现到完成恒定或单调增（P7）
+□ 完成时未自动收起已展开内容（§6.3）
+□ 未引入第二条布局分支（P8）
+□ 键位表（§6.1）已同步
+□ 测试：resize 快照 == 冷渲染快照
+□ 测试：CJK/emoji 宽度与折行回归</code></pre>
+<hr>
+<h2 id="10-废弃项-只减不增">10. 废弃项（只减不增）<a class="anchor" href="#10-废弃项-只减不增" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项</th><th>状态</th><th>处置</th></tr></thead><tbody><tr><td>带外 rail 绘制（<code>railLayout.js</code> / <code>sidebarRail.js</code>）</td><td>废弃中</td><td><strong>默认改 off</strong>；保留为 <code>KHY_SIDEBAR_RAIL=1</code> 逃生舱；无人使用后删除</td></tr><tr><td><code>ccLayout.sidebarWidth()</code></td><td>废弃</td><td>删除（与 <code>sidebarLayout</code> 在 120 列时分别为 30 与 24）</td></tr><tr><td><code>ccLayout.shouldShowSidebar()</code> 硬编码 120</td><td>废弃</td><td>统一走 <code>sidebarLayout.minCols()</code></td></tr><tr><td><code>ccTimers.spinner.interval</code>（80ms）</td><td>废弃</td><td>以 <code>perfTunables.spinnerFrameMs()</code>（160ms）为准</td></tr><tr><td>Legacy <code>FooterBar</code> 第 2 行</td><td>废弃</td><td>状态栏恒 1 行</td></tr><tr><td><code>Topbar</code> 交通灯 <code>● ● ●</code></td><td>废弃</td><td>删除，标题并入状态行</td></tr><tr><td>看板「终端」「文件」两个常驻 tab</td><td>废弃</td><td>下沉为 <code>/terminal</code>、<code>/files</code> 覆盖层</td></tr><tr><td>用户消息奶油色背景（079 §12.4.1）</td><td>废弃</td><td>裁定为<strong>无背景</strong>，与 086 Phase 1 一致；奶油色降为 opt-in 主题</td></tr><tr><td>看板 10+ 调参</td><td>收敛为 3</td><td><code>width</code> / <code>tab</code> / <code>minCols</code></td></tr></tbody></table>
+<hr>
+<h2 id="11-交叉引用">11. 交叉引用<a class="anchor" href="#11-交叉引用" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文档</th><th>关系</th></tr></thead><tbody><tr><td>[DESIGN-ARCH-079] TUI 界面规范</td><td><strong>已降级</strong>：组件尺寸历史详表 + 配色证据。规则并入本文</td></tr><tr><td>[DESIGN-ARCH-103] TUI 终端界面重设计方案</td><td><strong>已降级</strong>：渲染架构说明 + GitHub 调研证据。规则并入本文 §3/§4</td></tr><tr><td>[DESIGN-ARCH-101] TUI 交互规则细则</td><td><strong>已并入</strong>本文 §6。保留为存根</td></tr><tr><td>[DESIGN-ARCH-086] CC TUI 复刻总计划与子任务跟踪</td><td><strong>规则部分已并入本文</strong>（已加横幅）。保留自身职责：总计划与子任务跟踪；<strong>任务排期以它为准</strong></td></tr><tr><td>[DESIGN-ARCH-087] CC 模式微交互与反馈设计</td><td><strong>规范部分已并入本文 §6.5/§6.6/§6.7</strong>（已加横幅）。保留自身职责：微交互设计推导与来源说明</td></tr><tr><td>[DESIGN-ARCH-088] CC 快捷键系统、Redo/Fork 与执行偏差处理</td><td><strong>键位表已并入本文 §6.1</strong>（已加横幅）。保留自身职责：键位语义设计、撤销/重做、分叉、执行偏差处理</td></tr><tr><td>[DESIGN-ARCH-089] / [DESIGN-ARCH-090]</td><td>调研与痛点证据（未被取代，本文不重复）</td></tr><tr><td>[DESIGN-ARCH-095] 交互完善路线</td><td>协议纪律清单；本文 §3 取其若干条升格为硬约束</td></tr><tr><td><code>services/backend/src/cli/tui/AGENTS.md</code></td><td>TUI 工程约束（红线）</td></tr><tr><td>AGENTS.md 工程规则</td><td>零硬编码、状态文案合规、禁滚动区</td></tr></tbody></table>
+<hr>
+<h2 id="12-变更记录">12. 变更记录<a class="anchor" href="#12-变更记录" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>2026-09-15</td><td>初版：将 079（界面规范）、100（渲染架构）、101（交互规则）三份文档的规则部分<strong>收敛为单一真源</strong>，并整合 086/087/088 的规则要点。建立「【用户】/【开发】/【判据】」三面对照写法使说明与规范同源；统一术语（含 8 项停用旧名，重点区分「选中」与「选择」）；确立 8 条设计原则（P1–P8）、10 条硬约束（H1–H10）、三区布局模型、18 个组件目录、完整键位表、使用手册、现象→约束排查表与提交前检查清单；登记 9 项废弃项</td></tr></tbody></table>
+<hr>
+<blockquote><p><strong>文档状态</strong>：Active — <strong>唯一规则真源</strong><br><strong>创建日期</strong>：2026-09-15<br><strong>维护约定</strong>：任何 TUI 行为或实现的规则性变更，<strong>必须先改本文</strong>再改代码；079/100/101 只作为设计说明与证据存档，其规则部分<strong>不再维护</strong>。</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-101] TUI 交互与展示规则细则.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-101] TUI 交互与展示规则细则</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-103] TUI 终端界面重设计方案.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-103] TUI 终端界面重设计方案</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-102] Khy TUI 统一规则手册.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

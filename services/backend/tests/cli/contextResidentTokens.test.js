@@ -79,7 +79,9 @@ describe('Context Resident Tokens', () => {
         delete process.env.KHY_CONTEXT_CACHE_TOKENS;
         try {
           const usage = { inputTokens: 10, cacheReadInputTokens: 20, cacheWriteInputTokens: 30 };
-          expect(contextResidentTokensOr(usage)).toBe(10);
+          // Three-arg contract: (tokenUsage, legacyBase, env). legacyBase is the
+          // uncached input count the call-site feeds; omitting it yields 0-base.
+          expect(contextResidentTokensOr(usage, 10)).toBe(60);
         } finally {
           if (prev == null) delete process.env.KHY_CONTEXT_CACHE_TOKENS;
           else process.env.KHY_CONTEXT_CACHE_TOKENS = prev;

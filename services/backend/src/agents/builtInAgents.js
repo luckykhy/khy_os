@@ -249,7 +249,14 @@ function formatAgentLine(agent) {
   } else if (hasDenylist) {
     toolsDescription = `All tools except ${disallowedTools.join(', ')}`;
   } else {
-    toolsDescription = 'All tools';
+    // [DESIGN-AGENT-002] A2-1: "undeclared" must NOT be advertised as "All
+    // tools". An agent with no tools and no disallowedTools has an unspecified
+    // authorization surface — say so plainly instead of implying full grant.
+    // Surfaces the gap so authors add an explicit allow-list (A2-1) rather than
+    // letting the absence of a declaration read as a licence.
+    toolsDescription =
+      'All tools except undeclared (WARNING: no tools/disallowedTools declared; ' +
+      'authorization surface unspecified — declare an allow-list)';
   }
 
   return `- ${agent.agentType}: ${agent.whenToUse} (Tools: ${toolsDescription})`;

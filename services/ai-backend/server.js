@@ -93,7 +93,30 @@ app.use('/api/news', require('./src/routes/news'));
 
 // ── 四端配置同步 (auth required, 后端即同步中心) ──
 // 门控 KHY_CONFIG_SYNC 关时路由返回 503, 客户端降级本地文件
-app.use('/api/config-sync', require('./src/routes/configSync'));
+// 故障容忍: config-sync 路由只在交易后端 (KHYQUANT_ROOT) 里存在。若本安装解析不到
+// 该路由文件, 降级为 503 桩 (客户端读本地文件), 绝不让单个缺失的路由文件阻塞整个服务启动。
+function _mountConfigSync(app) {
+  const candidates = [
+    path.join(__dirname, 'src/routes/configSync'),
+    path.join(process.env.KHYQUANT_ROOT, 'src/routes/configSync'),
+  ];
+  for (const candidate of candidates) {
+    try {
+      app.use('/api/config-sync', require(candidate));
+      return;
+    } catch {
+      /* 候选解析失败 — 尝试下一个, 全失败才落 503 桩 */
+    }
+  }
+  app.use('/api/config-sync', (req, res) => {
+    res.status(503).json({
+      ok: false,
+      code: 'SYNC_DISABLED',
+      message: '配置同步路由不可用（路由文件缺失），请改用本地配置',
+    });
+  });
+}
+_mountConfigSync(app);
 
 // ── Database Initialization ──
 async function start() {
@@ -144,21 +167,47 @@ async function start() {
     scheduleDbReconnect();
   }
 
-  const server = app.listen(PORT, AI_MGMT_HOST, () => {
-    console.log('');
-    console.log('  ╔══════════════════════════════════════╗');
-    console.log('  ║   KHY AI Management Backend          ║');
-    console.log(`  ║   Running on port ${PORT}              ║`);
-    console.log(`  ║   Bound to ${AI_MGMT_HOST}              ║`);
-    console.log('  ╚══════════════════════════════════════╝');
-    console.log('');
-    console.log(`  Health:   http://localhost:${PORT}/api/health`);
-    console.log(`  Gateway:  http://localhost:${PORT}/api/ai-gateway/status`);
-    if (AI_MGMT_HOST === '0.0.0.0' || AI_MGMT_HOST === '::') {
-      console.log(`  LAN:      ${PORT}/tcp 放行后,其他机器可 http://<本机IP>:${PORT}/api/auth/login`);
+  // Port resilience: a contended AI_MGMT_PORT must NOT crash the process on an
+  // unhandled EADDRINUSE. Auto-detect the next free port (same contract as the
+  // main backend) and publish the ACTUAL port to the banner + consumers.
+  const PORT_RETRY_LIMIT = Number(process.env.AI_MGMT_PORT_RETRY || 10);
+  let _actualPort = PORT;
+  const server = await new Promise((resolve, reject) => {
+    function tryListen(p) {
+      const srv = app.listen(p, AI_MGMT_HOST);
+      srv.once('listening', () => {
+        _actualPort = p;
+        resolve(srv);
+      });
+      srv.once('error', (err) => {
+        if (err.code === 'EADDRINUSE' && p - PORT < PORT_RETRY_LIMIT) {
+          console.warn(`  [WARN] port ${p} in use (EADDRINUSE); trying ${p + 1}`);
+          srv.removeAllListeners('error');
+          srv.close(() => tryListen(p + 1));
+          return;
+        }
+        reject(err);
+      });
     }
-    console.log('');
+    tryListen(PORT);
   });
+
+  console.log('');
+  console.log('  ╔══════════════════════════════════════╗');
+  console.log('  ║   KHY AI Management Backend          ║');
+  console.log(`  ║   Running on port ${_actualPort}              ║`);
+  console.log(`  ║   Bound to ${AI_MGMT_HOST}              ║`);
+  console.log('  ╚══════════════════════════════════════╝');
+  console.log('');
+  console.log(`  Health:   http://localhost:${_actualPort}/api/health`);
+  console.log(`  Gateway:  http://localhost:${_actualPort}/api/ai-gateway/status`);
+  if (AI_MGMT_HOST === '0.0.0.0' || AI_MGMT_HOST === '::') {
+    console.log(`  LAN:      ${_actualPort}/tcp 放行后,其他机器可 http://<本机IP>:${_actualPort}/api/auth/login`);
+  }
+  if (_actualPort !== PORT) {
+    console.log(`  [NOTE] requested ${PORT}; actually serving on ${_actualPort} (port in use)`);
+  }
+  console.log('');
 
   // WebSocket support for real-time AI chat (optional)
   try {

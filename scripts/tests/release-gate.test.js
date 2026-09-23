@@ -58,6 +58,24 @@ test('离机还原门:restore-readiness / install-integrity 为 must 确定性�
   assert.ok(idx('install-integrity') < idx('maintainer-tests'));
 });
 
+test('出厂件明文密钥门:全量模式,must 硬门槛,且绝不许退回 --changed', () => {
+  // 这道门存在的唯一理由:APK 是构建产物,提交时刻不存在 ⇒ 只有「不带 --changed 的全量
+  // 模式」才会去逐 zip 条目扫打包产物。一旦有人给 command 加回 --changed,它就退化成
+  // 「只看暂存改动」,APK 永远扫不到,这道门等于不存在 —— 故用断言钉死。
+  const s = gate.STAGES.find((x) => x.id === 'builtin-key-plaintext');
+  assert.ok(s, 'builtin-key-plaintext 阶段应存在');
+  assert.strictEqual(s.tier, 'must', '必须是 must 硬门槛(明文密钥不许放行发布)');
+  assert.strictEqual(s.kind, 'deterministic');
+  assert.match(s.command, /check-change-safety\.js/);
+  assert.doesNotMatch(s.command, /--changed/, '不得带 --changed:带了就扫不到 APK');
+  // 检查器自身跑不起来(如缺 Python)时也要判失败 ⇒ 需要 --strict-warnings。
+  assert.match(s.command, /--strict-warnings/, '缺检查器本身不得静默放行');
+  // 与 small-model-safety(同判据的 --changed 模式)相邻,便于对照。
+  const idx = (id) => gate.STAGES.findIndex((x) => x.id === id);
+  assert.ok(idx('small-model-safety') < idx('builtin-key-plaintext'));
+  assert.ok(idx('builtin-key-plaintext') < idx('maintainer-tests'));
+});
+
 test('selectStages(must): 仅 must 确定性阶段 + 全部环境门', () => {
   const { runnable, manual } = gate.selectStages('must');
   assert.ok(runnable.every((s) => s.kind === 'deterministic' && s.tier === 'must'));

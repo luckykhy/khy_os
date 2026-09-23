@@ -54,12 +54,25 @@ describe('buildCleanPlan — 档位划分', () => {
   });
 
   test('显式 --checkpoints 才把会话存档纳入待删', () => {
-    const f = fixture({ '.khy/checkpoints/session-1.json': 8192 });
+    // 存储布局已演进为「每项目一目录 + manifest.json + 配额保留」：
+    // buildCleanPlan 委托 planCheckpointStorage 只回收配额外的旧检查点，
+    // 测试要造真实的 manifest 结构，并用极小配额逼出「这一个必须回收」。
+    const f = fixture({});
     try {
+      const projDir = path.join(f.dataHome, 'checkpoints', 'proj-a');
+      fs.mkdirSync(projDir, { recursive: true });
+      fs.writeFileSync(path.join(projDir, 'cp-1.patch'), Buffer.alloc(8192, 0x61));
+      fs.writeFileSync(
+        path.join(projDir, 'manifest.json'),
+        JSON.stringify({ checkpoints: [{ id: 'cp-1', timestamp: '2026-01-01T00:00:00.000Z', objects: [] }] }),
+      );
       const plan = clean.buildCleanPlan({
-        tiers: ['runtime'], root: f.root, dataHome: f.dataHome, checkpoints: true,
+        tiers: ['runtime'], root: f.root, dataHome: f.dataHome,
+        checkpoints: true, checkpointMaxMb: 0.001,
       });
-      expect(plan.items.map((i) => i.rel)).toContain('.khy/checkpoints');
+      const cp = plan.items.find((i) => i.rel === '.khy/checkpoints');
+      expect(cp).toBeTruthy();
+      expect(cp.bytes).toBe(8192);
       expect(plan.held).toEqual([]);
     } finally {
       f.cleanup();
@@ -199,7 +212,7 @@ describe('可逆性与账目', () => {
 
   test('两处嵌入式构建工具链的依赖树走自己的重建命令', () => {
     // 拓展那一处的路径由服务名解析出来，不在断言里写死拓展 id
-    // （[DESIGN-ARCH-069] §1.3 第四条：核里不允许出现拓展 id 的分支）。
+    // （[DESIGN-TOOL-002] §1.3 第四条：核里不允许出现拓展 id 的分支）。
     const extRel = clean._markdownWorkbenchRel(REPO_ROOT);
     expect(extRel).toBeTruthy();
     expect(clean._depsRebuild(extRel + '/muya-embed/node_modules'))

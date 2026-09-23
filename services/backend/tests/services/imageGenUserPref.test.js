@@ -1,6 +1,6 @@
 'use strict';
 
-const { getUserImagePref } = require('../../../src/services/imageGenUserPref');
+const { getUserImagePref } = require('../../src/services/imageGenUserPref.js');
 
 jest.mock('@khy/shared/models', () => ({
   UserGatewayConfig: null

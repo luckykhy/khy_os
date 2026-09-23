@@ -11,6 +11,7 @@
  * `node --test` (NOT jest).
  */
 const ai = require('../../src/cli/ai');
+const assert = require('node:assert');
 const { handleRollback } = require('../../src/cli/handlers/rollback');
 const { _pushRawMessage } = ai.__test__;
 let _log;

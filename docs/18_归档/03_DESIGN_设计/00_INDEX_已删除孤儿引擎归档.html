@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 00_INDEX_已删除孤儿引擎归档.md -->
+<title>00INDEX 已删除孤儿引擎·设计稿归档 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>18_归档<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>00INDEX 已删除孤儿引擎·设计稿归档</div>
+      <header class="hero reveal"><h1>00INDEX 已删除孤儿引擎·设计稿归档</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#00-index-已删除孤儿引擎-设计稿归档">00_INDEX 已删除孤儿引擎·设计稿归档</a></li><li class="lvl-2"><a href="#一-分类内容边界">一、分类内容边界</a></li><li class="lvl-2"><a href="#二-文件清单">二、文件清单</a></li><li class="lvl-2"><a href="#三-跨分类关联指引">三、跨分类关联指引</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="00-index-已删除孤儿引擎-设计稿归档">00_INDEX 已删除孤儿引擎·设计稿归档<a class="anchor" href="#00-index-已删除孤儿引擎-设计稿归档" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>索引总领文件</strong> · 本子目录唯一入口 · 排序首位 · 结构遵循 [MGMT-STD-001] 第三章</p></blockquote>
+<h2 id="一-分类内容边界">一、分类内容边界<a class="anchor" href="#一-分类内容边界" aria-label="锚点">#</a></h2>
+<p>本子目录（<code>docs/03_DESIGN_设计/_archive_已删除孤儿引擎/</code>）收容<strong>已删除治理引擎的历史设计稿</strong>：<br>这些规范描述的引擎经 2026-06-14「接线或删除」（wire-or-delete）证据级核实为 <strong>ORPHAN</strong>——<br>零外部消费者、从三个真实执行入口（<code>executeTool</code> / <code>toolUseLoop</code> / <code>aiManagementServer</code>）均不可达，<br>仅有隔离单测。其<strong>实现代码已删除</strong>（见 <code>.ai/GOVERNANCE-LEDGER.md</code> §B.0），设计稿在此留存仅为<br><strong>历史可追溯</strong>。</p>
+<blockquote><p>🔴 <strong>本目录文档一律非在产、不得作为实现依据</strong>。判定「在产」的唯一标准见 <code>.ai/GUARDS-AI.md</code> §0。<br>若日后要重做其中某项能力，必须先按 <code>.ai/GUARDS-AI.md</code> §4 想清接线点，不得照搬本目录的孤儿实现。</p></blockquote>
+<h2 id="二-文件清单">二、文件清单<a class="anchor" href="#二-文件清单" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件名(含编号)</th><th>对应已删引擎</th><th>删除依据(10字内)</th><th>状态</th></tr></thead><tbody><tr><td>[DESIGN-ARCH-024] khyos元帅双模式任命与约束规范.md</td><td><code>marshal</code> 生命周期半边</td><td>零消费者（叶子 capabilityVector 仍在产，例外见下）</td><td>存档</td></tr><tr><td>[DESIGN-ARCH-033] 模型自适应与双轨热插拔架构.md</td><td><code>dualTrack</code> + <code>user_patch</code></td><td>零消费者，适配器层已覆盖选轨</td><td>存档</td></tr><tr><td>[DESIGN-ARCH-035] 上下文永续与认知压缩引擎.md</td><td><code>cognitiveSnapshot</code></td><td>与 compactPipeline 平行重造</td><td>存档</td></tr><tr><td>[DESIGN-ARCH-038] Khyos双轨淬火-Bug升维引擎.md</td><td><code>dualTrackForge</code></td><td>与 evoEngine/painPointScanner 真重叠</td><td>存档</td></tr><tr><td>[DESIGN-ARCH-039] Khyos环境共生-原生亲和架构.md</td><td><code>envSymbiosis</code></td><td>与 platformUtils 平行重造</td><td>存档</td></tr><tr><td>[DESIGN-ARCH-040] Khyos数据主权与极权路由.md</td><td><code>dataSovereignty</code></td><td>零消费者，弱重叠无在产复用</td><td>存档</td></tr><tr><td>[DESIGN-ARCH-042] Khyos自持基建-契约即文档.md</td><td><code>selfSustainingInfra</code></td><td>与 projectMetadataService 平行重造</td><td>存档</td></tr></tbody></table>
+<blockquote><p><strong>例外（DESIGN-ARCH-024）</strong>：marshal 的叶子 <code>marshal/capabilityVector</code> <strong>仍在产</strong>（经<br><code>metaConstraint/capabilityProbe</code> 投影分带，是「模型→数值能力」单一真源），其权威文档见<br><code>.ai/GUARDS-AI.md</code> §2。仅该规范描述的「任命/弹劾/接力」生命周期半边被删并归档于此。</p></blockquote>
+<h2 id="三-跨分类关联指引">三、跨分类关联指引<a class="anchor" href="#三-跨分类关联指引" aria-label="锚点">#</a></h2>
+<ul><li>上级归档索引：<code>../00_INDEX_归档-总目录.md</code>；原属设计索引：<code>../../03_DESIGN_设计/00_INDEX_设计-分类索引.md</code>。</li><li>删除裁决与证据台账：<code>.ai/GOVERNANCE-LEDGER.md</code> §B.0（含基线/删除提交哈希）。</li><li>「在产 vs 没在产」接地红线：<code>.ai/GUARDS-AI.md</code>（§0 判据、§4 加新引擎清单）。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/18_归档/03_DESIGN_设计/[DESIGN-ARCH-042] Khyos自持基建-契约即文档与影响面评估与行为守卫.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-042] Khyos自持基建 — 契约即文档·影响面评估·行为守卫·基建缺失淬火</div></a><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/18_归档/03_DESIGN_设计/00_INDEX_已删除孤儿引擎归档.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-097] KhyOS 核心边界定稿-一词一解.md -->
+<title>[DESIGN-ARCH-097] KhyOS 核心边界定稿 —— 一词一解 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-097] KhyOS 核心边界定稿 —— 一词一解</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-097] KhyOS 核心边界定稿 —— 一词一解</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-097-khyos-核心边界定稿-一词一解">[DESIGN-ARCH-097] KhyOS 核心边界定稿 —— 一词一解</a></li><li class="lvl-2"><a href="#核心一词一解-七核-两层">核心一词一解（七核，两层）</a></li><li class="lvl-3"><a href="#运行核-删掉即无法启动或无法完成一次工具调用">运行核（删掉即无法启动或无法完成一次工具调用）</a></li><li class="lvl-3"><a href="#主张核-删掉系统仍能跑-但产品主张塌掉一角">主张核（删掉系统仍能跑，但产品主张塌掉一角）</a></li><li class="lvl-2"><a href="#证据锚点">证据锚点</a></li><li class="lvl-2"><a href="#与-五核-提法的对应">与「五核」提法的对应</a></li><li class="lvl-2"><a href="#定位裁决-非核心">定位裁决（非核心）</a></li><li class="lvl-2"><a href="#完成度总览">完成度总览</a></li><li class="lvl-2"><a href="#变更记录">变更记录</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-097-khyos-核心边界定稿-一词一解">[DESIGN-ARCH-097] KhyOS 核心边界定稿 —— 一词一解<a class="anchor" href="#design-arch-097-khyos-核心边界定稿-一词一解" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：把散落各处的核心定义收成一张可查表。回答「KhyOS 的核心到底是哪几块、每块一句话」。<br><strong>上位法</strong>：三件套（壳/漏斗/网关）契约见 [DESIGN-TOOL-002] §1.1，六类拓展见 §1.2，任务闭环契约见 [DESIGN-ARCH-077]；本文只做「一词一解」的收口，不重述契约。<br><strong>判据</strong>：运行核用 [DESIGN-TOOL-002] §1.1 的删除判据——「删掉它，还能启动并跑通一次工具调用吗？」不能 → 核。主张核的判据——删掉它系统仍能跑（fail-soft），但「稳定交付的 AI 平台操作系统」这一产品主张塌掉一角。</p></blockquote>
+<hr>
+<h2 id="核心一词一解-七核-两层">核心一词一解（七核，两层）<a class="anchor" href="#核心一词一解-七核-两层" aria-label="锚点">#</a></h2>
+<h3 id="运行核-删掉即无法启动或无法完成一次工具调用">运行核（删掉即无法启动或无法完成一次工具调用）<a class="anchor" href="#运行核-删掉即无法启动或无法完成一次工具调用" aria-label="锚点">#</a></h3>
+<p><strong>壳</strong>：承载启动、REPL/TUI 与命令路由的运行时底座。<br><strong>漏斗</strong>：所有工具调用的唯一出口，权限与沙箱的裁决边界。<br><strong>网关</strong>：统一多供应商模型路由、密钥池与协议转换。<br><strong>智能体</strong>：驱动模型自主调用工具的循环引擎与 27 个内置智能体。</p>
+<h3 id="主张核-删掉系统仍能跑-但产品主张塌掉一角">主张核（删掉系统仍能跑，但产品主张塌掉一角）<a class="anchor" href="#主张核-删掉系统仍能跑-但产品主张塌掉一角" aria-label="锚点">#</a></h3>
+<p><strong>工作流</strong>：登记→执行→裁决→交付→台账的任务收尾循环，20 道质量门把关。<br><strong>记忆</strong>：会话续接、向量召回与 RAG 注入的跨回合连续性设施。<br><strong>拓展契约</strong>：<code>khy.extension.json</code> 一套机制承载 tool/plugin/scripts/mcp/software/协议六类拓展。</p>
+<h2 id="证据锚点">证据锚点<a class="anchor" href="#证据锚点" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>核</th><th>关键落点</th><th>验证方式</th></tr></thead><tbody><tr><td>壳</td><td><code>platform/khy_platform/</code> + <code>src/cli/</code>（router/aliases/repl + tui/）</td><td><code>khy doctor</code> 实测命令链通</td></tr><tr><td>漏斗</td><td><code>src/services/tool*</code>（toolSpec/toolCalling/permissionBroker/toolSandbox/shellSafetyValidator 等 30+ 文件）</td><td>doctor 实测 203 工具注册</td></tr><tr><td>网关</td><td><code>src/services/gateway/</code>（adapters/ 50+ 文件）+ <code>services/ai-backend/</code></td><td>doctor 实测 api:agnes 通道</td></tr><tr><td>智能体</td><td><code>toolUseLoopCore.js</code>（11,557 行）+ <code>agenticHarnessService.js</code> + <code>src/agents/built-in/</code>（27 个）</td><td>循环契约 [DESIGN-ARCH-077] + doctor 清点</td></tr><tr><td>工作流</td><td><code>taskClosure.js</code> + <code>backgroundTaskManager.js</code>（咽喉）+ <code>deliveryLedger.js</code>（台账）+ <code>taskboard.db</code></td><td>台账实文件验证；20 门 env 默认全开</td></tr><tr><td>记忆</td><td><code>domain/memory/memoryEngine/</code>（vectorRecall/vectorStore/distiller）+ <code>memoryBridge.js</code> + <code>ragRetrievalService.js</code></td><td>vectorRecall 实文件验证（走网关 embedding、侧车落盘、词法降级）</td></tr><tr><td>拓展契约</td><td><code>domain/extensions/</code> + <code>extensionRoots.js</code> + 磁盘 10 个 <code>khy.extension.json</code></td><td>069 §1.7 登记比对（10/15–25 已落）</td></tr></tbody></table>
+<h2 id="与-五核-提法的对应">与「五核」提法的对应<a class="anchor" href="#与-五核-提法的对应" aria-label="锚点">#</a></h2>
+<p>智能体 → 智能体；操作系统 → 壳 + 漏斗（产品定位词由这两个核共同兑现）；网关 → 网关；工作流 → 工作流；拓展契约 → 拓展契约。调研新增：<strong>记忆</strong>（memoryEngine 向量召回 + RAG 是真实深度子系统，非装饰件）；<strong>漏斗</strong>从「操作系统」中复立（069 §1.1：它是安全边界，拓展穿过漏斗、不得绕过——与壳不可合并）。</p>
+<h2 id="定位裁决-非核心">定位裁决（非核心）<a class="anchor" href="#定位裁决-非核心" aria-label="锚点">#</a></h2>
+<ul><li><strong>技能 / MCP</strong>：不单列核心——[DESIGN-TOOL-002] §1.2 明确 tool/plugin/scripts/mcp/software/协议是同一套拓展机制下的六类实现，归入拓展契约。</li><li><strong>内核</strong>（<code>kernel/</code>）：不占核心席位——「操作系统」定位的实验分支：零 build 产物、零 ISO、零启动日志，CI <code>continue-on-error</code>，README 自评「教学/实验/爱好级」。</li><li><strong>khyquant</strong>（<code>software/khyquant/</code>）：不属核心——内置默认示例应用：无独立 <code>package.json</code>/<code>bin</code>，靠构建期拷贝 <code>services/backend</code> 才能运行。</li><li><strong>前端 / 桌面端</strong>（<code>apps/ai-frontend</code>、khyquant frontend、desktop）：应用层，经 Web API/bridge 消费核心，不属核心。</li></ul>
+<h2 id="完成度总览">完成度总览<a class="anchor" href="#完成度总览" aria-label="锚点">#</a></h2>
+<p>运行核四项 + 主张核的工作流、记忆共 <strong>6 项已完成</strong>（doctor 实测或实文件验证）；<strong>拓展契约进行中</strong>（10/15–25 能力域 manifest 已落，khy-quant Phase 1、khy-eyes、khy-web-admin、khy-ai-frontend、khy-protocol-* 仍待迁）。</p>
+<h2 id="变更记录">变更记录<a class="anchor" href="#变更记录" aria-label="锚点">#</a></h2>
+<ul><li>2026-09-14：初版。「壳+漏斗+网关+闭环」已完成核心与「内核/khyquant/拓展契约」未完成核心各一词一解。</li><li>2026-09-14：修订。核心重定为五核（智能体/操作系统/网关/工作流/拓展契约）：壳与漏斗并入操作系统，闭环更名工作流。</li><li>2026-09-14：调研定稿。实证核查后定为<strong>七核两层</strong>：运行核（壳/漏斗/网关/智能体）+ 主张核（工作流/记忆/拓展契约）——漏斗从操作系统复立（069 安全边界），记忆入核（memoryEngine 实证），技能与 MCP 裁决为拓展契约下的六类拓展实现而非独立核心。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-096] ycode 第二轮增量借鉴调研报告.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-096] ycode（星瑶）第二轮增量借鉴调研报告</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-098] 系统提示词结构重设计-静态动态分层与缓存优化方案.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-098] 系统提示词结构重设计：静态/动态分层与缓存优化方案</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-097] KhyOS 核心边界定稿-一词一解.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

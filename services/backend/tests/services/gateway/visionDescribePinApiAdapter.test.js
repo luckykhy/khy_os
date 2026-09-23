@@ -41,9 +41,9 @@ describe('Vision Describe Pin Api Adapter', () => {
 
   test('fail-soft:异常/非常规输入绝不抛(实际调用点 poolHint 恒为 string|undefined)', () => {
       // String() 归一化后非空即 true;`0`/`123` → "0"/"123" 非空 → true(非调用路径,仅证不抛)。
-      expect(() => gateway._shouldPinApiAdapterForVisionDescribe().not.toThrow());
-      expect(() => gateway._shouldPinApiAdapterForVisionDescribe(123).not.toThrow());
-      expect(() => gateway._shouldPinApiAdapterForVisionDescribe(false).not.toThrow());
+      expect(() => gateway._shouldPinApiAdapterForVisionDescribe()).not.toThrow();
+      expect(() => gateway._shouldPinApiAdapterForVisionDescribe(123)).not.toThrow();
+      expect(() => gateway._shouldPinApiAdapterForVisionDescribe(false)).not.toThrow();
       // false → String(false)="false" 非空 → true(边界,非真实调用形态)。
       expect(gateway._shouldPinApiAdapterForVisionDescribe(false)).toBe(true);
   });

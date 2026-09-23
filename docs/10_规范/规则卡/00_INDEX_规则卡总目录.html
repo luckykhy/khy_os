@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 00_INDEX_规则卡总目录.md -->
+<title>00INDEX 规则卡总目录 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>规则卡<span class="sep">›</span>00INDEX 规则卡总目录</div>
+      <header class="hero reveal"><h1>00INDEX 规则卡总目录</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#00-index-规则卡总目录">00_INDEX 规则卡总目录</a></li><li class="lvl-2"><a href="#一-分类内容边界">一、分类内容边界</a></li><li class="lvl-2"><a href="#二-文件清单">二、文件清单</a></li><li class="lvl-3"><a href="#api-12-张">API（12 张）</a></li><li class="lvl-3"><a href="#comms-5-张">COMMS（5 张）</a></li><li class="lvl-3"><a href="#docs-7-张">DOCS（7 张）</a></li><li class="lvl-3"><a href="#layout-7-张">LAYOUT（7 张）</a></li><li class="lvl-3"><a href="#memory-4-张">MEMORY（4 张）</a></li><li class="lvl-3"><a href="#process-16-张">PROCESS（16 张）</a></li><li class="lvl-3"><a href="#runtime-12-张">RUNTIME（12 张）</a></li><li class="lvl-3"><a href="#security-8-张">SECURITY（8 张）</a></li><li class="lvl-3"><a href="#sourcing-6-张">SOURCING（6 张）</a></li><li class="lvl-3"><a href="#tooling-14-张">TOOLING（14 张）</a></li><li class="lvl-2"><a href="#三-跨分类关联指引">三、跨分类关联指引</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="00-index-规则卡总目录">00_INDEX 规则卡总目录<a class="anchor" href="#00-index-规则卡总目录" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>索引总领文件</strong> · 本目录唯一入口 · 排序首位 · 结构遵循 [MGMT-STD-001] 第三章</p>
+<p>逐条规则卡，格式依据 [MGMT-STD-008] §1。共 91 张，覆盖 §3.1 十大域。</p>
+<p><strong>本目录全部文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，禁止手改。</strong><br>字段真源是 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>；正文原文在各卡 <code>ssot</code> 指向的位置。</p></blockquote>
+<h2 id="一-分类内容边界">一、分类内容边界<a class="anchor" href="#一-分类内容边界" aria-label="锚点">#</a></h2>
+<p>收：每条登记规则一张卡（frontmatter 14 字段 + 六个固定小节）。<br>不收：规则正文原文（留在各章程 / 规范文档，卡片只做渲染与指针）、<br>索引类文档（本文件除外）、非登记对象的散文。</p>
+<h2 id="二-文件清单">二、文件清单<a class="anchor" href="#二-文件清单" aria-label="锚点">#</a></h2>
+<h3 id="api-12-张">API（12 张）<a class="anchor" href="#api-12-张" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件名(含编号)</th><th>核心职责(10字内)</th><th>状态</th></tr></thead><tbody><tr><td>[API-001] 内外 API 边界.md</td><td>内外 API 边界</td><td>P1 / active</td></tr><tr><td>[API-002] API 版本化与弃用政策.md</td><td>API 版本化与弃用政策</td><td>P1 / active</td></tr><tr><td>[API-003] 统一错误信封与四终态.md</td><td>统一错误信封与四终态</td><td>P1 / active</td></tr><tr><td>[API-004] 最小披露跨 transport 传播.md</td><td>最小披露跨 transport 传播</td><td>P2 / active</td></tr><tr><td>[CORS-001] CORS 跨域资源共享规范.md</td><td>CORS 跨域资源共享规范</td><td>P0 / active</td></tr><tr><td>[DLQ-001] 死信队列规范.md</td><td>死信队列规范</td><td>P2 / active</td></tr><tr><td>[FF-001] Feature Flag 功能开关规范.md</td><td>Feature Flag 功能开关规范</td><td>P2 / active</td></tr><tr><td>[GW-002] AI 模型降级与熔断规范.md</td><td>AI 模型降级与熔断规范</td><td>P1 / active</td></tr><tr><td>[MIG-001] 数据迁移规范.md</td><td>数据迁移规范</td><td>P1 / active</td></tr><tr><td>[NOTIFY-001] 通知与邮件规范.md</td><td>通知与邮件规范</td><td>P2 / active</td></tr><tr><td>[OPS-003] Health Check 规范.md</td><td>Health Check 规范</td><td>P2 / active</td></tr><tr><td>[PROMPT-001] Prompt Engineering 规范.md</td><td>Prompt Engineering 规范</td><td>P2 / active</td></tr></tbody></table>
+<h3 id="comms-5-张">COMMS（5 张）<a class="anchor" href="#comms-5-张" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件名(含编号)</th><th>核心职责(10字内)</th><th>状态</th></tr></thead><tbody><tr><td>[COMMS-001] ACP 三态信封.md</td><td>ACP 三态信封</td><td>P1 / active</td></tr><tr><td>[COMMS-002] ACP 方法登记制.md</td><td>ACP 方法登记制</td><td>P1 / active</td></tr><tr><td>[COMMS-003] 全链路追踪标识.md</td><td>全链路追踪标识</td><td>P1 / active</td></tr><tr><td>[COMMS-004] 可观察终态与错误码.md</td><td>可观察终态与错误码</td><td>P1 / active</td></tr><tr><td>[NAM-002] A2A 与 ACP 命名及术语规范.md</td><td>A2A 与 ACP 命名及术语规范</td><td>P1 / active</td></tr></tbody></table>
+<h3 id="docs-7-张">DOCS（7 张）<a class="anchor" href="#docs-7-张" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件名(含编号)</th><th>核心职责(10字内)</th><th>状态</th></tr></thead><tbody><tr><td>[DOCS-001] 文档命名与索引登记.md</td><td>文档命名与索引登记</td><td>P1 / active</td></tr><tr><td>[DOCS-002] 索引命名格式动态决策.md</td><td>索引命名格式动态决策</td><td>P2 / active</td></tr><tr><td>[DOCS-003] AI 指令文件标准.md</td><td>AI 指令文件标准</td><td>P2 / active</td></tr><tr><td>[DOCS-004] README 内容规范.md</td><td>README 内容规范</td><td>P2 / active</td></tr><tr><td>[MGMT-STD-008] 规则编写与管理规范（元规则）.md</td><td>规则编写与管理规范（元规则）</td><td>P2 / active</td></tr><tr><td>[MOD-004] 治理总纲板块入口.md</td><td>治理总纲板块入口</td><td>P2 / active</td></tr><tr><td>[SKILL-001] Skill 编写规范.md</td><td>Skill 编写规范</td><td>P1 / active</td></tr></tbody></table>
+<h3 id="layout-7-张">LAYOUT（7 张）<a class="anchor" href="#layout-7-张" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件名(含编号)</th><th>核心职责(10字内)</th><th>状态</th></tr></thead><tbody><tr><td>[LAYOUT-001] 目录层级与文件归类.md</td><td>目录层级与文件归类</td><td>P1 / active</td></tr><tr><td>[LAYOUT-002] 上帝文件门.md</td><td>上帝文件门</td><td>P1 / active</td></tr><tr><td>[LAYOUT-003] 任务入口命名规约.md</td><td>任务入口命名规约</td><td>P2 / active</td></tr><tr><td>[LAYOUT-004] 仓库整理与巡检.md</td><td>仓库整理与巡检</td><td>P2 / active</td></tr><tr><td>[LAYOUT-005] 构建产物单一根.md</td><td>构建产物单一根</td><td>P1 / draft</td></tr><tr><td>[LAYOUT-006] 仓库层级可发现性.md</td><td>仓库层级可发现性</td><td>P1 / draft</td></tr><tr><td>[LAYOUT-007] 三态目录立体分层.md</td><td>三态目录立体分层</td><td>P1 / draft</td></tr></tbody></table>
+<h3 id="memory-4-张">MEMORY（4 张）<a class="anchor" href="#memory-4-张" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件名(含编号)</th><th>核心职责(10字内)</th><th>状态</th></tr></thead><tbody><tr><td>[MEMORY-001] session 与 persistent 区分.md</td><td>session 与 persistent 区分</td><td>P2 / active</td></tr><tr><td>[MEMORY-002] persistent 记录要素.md</td><td>persistent 记录要素</td><td>P1 / active</td></tr><tr><td>[MEMORY-003] 指定读写入口.md</td><td>指定读写入口</td><td>P1 / active</td></tr><tr><td>[MEMORY-004] session 生命周期清除.md</td><td>session 生命周期清除</td><td>P1 / active</td></tr></tbody></table>
+<h3 id="process-16-张">PROCESS（16 张）<a class="anchor" href="#process-16-张" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件名(含编号)</th><th>核心职责(10字内)</th><th>状态</th></tr></thead><tbody><tr><td>[BACKUP-001] 备份恢复规范.md</td><td>备份恢复规范</td><td>P2 / active</td></tr><tr><td>[DR-001] 灾备规范.md</td><td>灾备规范</td><td>P2 / active</td></tr><tr><td>[IR-001] 事件响应规范.md</td><td>事件响应规范</td><td>P2 / active</td></tr><tr><td>[PROCESS-001] 分支纪律.md</td><td>分支纪律</td><td>P0 / active</td></tr><tr><td>[PROCESS-002] 多轨道版本同步.md</td><td>多轨道版本同步</td><td>P1 / active</td></tr><tr><td>[PROCESS-003] 验收门禁.md</td><td>验收门禁</td><td>P1 / active</td></tr><tr><td>[PROCESS-004] 委派边界.md</td><td>委派边界</td><td>P1 / active</td></tr><tr><td>[PROCESS-005] 版本管理与发布触发.md</td><td>版本管理与发布触发</td><td>P1 / active</td></tr><tr><td>[PROCESS-006] 新机制落地四阶段.md</td><td>新机制落地四阶段</td><td>P1 / active</td></tr><tr><td>[PROCESS-007] 引导式搜索与压缩保留清单.md</td><td>引导式搜索与压缩保留清单</td><td>P1 / active</td></tr><tr><td>[PROCESS-008] 新机制落地阶段可校验.md</td><td>新机制落地阶段可校验</td><td>P1 / active</td></tr><tr><td>[PROCESS-009] 提交时机判据（到点就提交）.md</td><td>提交时机判据（到点就提交）</td><td>P1 / active</td></tr><tr><td>[PROCESS-010] 软件著作权就绪.md</td><td>软件著作权就绪</td><td>P1 / active</td></tr><tr><td>[PROCESS-011] 规范-实现变更判定.md</td><td>规范-实现变更判定</td><td>P1 / active</td></tr><tr><td>[PROCESS-101] 贡献者规则提案权.md</td><td>贡献者规则提案权</td><td>P2 / active</td></tr><tr><td>[PROCESS-102] 下一步最该做什么决策标准.md</td><td>下一步最该做什么决策标准</td><td>P1 / draft</td></tr></tbody></table>
+<h3 id="runtime-12-张">RUNTIME（12 张）<a class="anchor" href="#runtime-12-张" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件名(含编号)</th><th>核心职责(10字内)</th><th>状态</th></tr></thead><tbody><tr><td>[AGENT-001] 子智能体交接契约.md</td><td>子智能体交接契约</td><td>P1 / active</td></tr><tr><td>[OPS-002] Graceful Shutdown 规范.md</td><td>Graceful Shutdown 规范</td><td>P2 / active</td></tr><tr><td>[RUNTIME-001] 零硬编码.md</td><td>零硬编码</td><td>P1 / active</td></tr><tr><td>[RUNTIME-002] 状态透明.md</td><td>状态透明</td><td>P1 / active</td></tr><tr><td>[RUNTIME-003] 活动式超时.md</td><td>活动式超时</td><td>P1 / active</td></tr><tr><td>[RUNTIME-004] 终端无滚动区.md</td><td>终端无滚动区</td><td>P1 / active</td></tr><tr><td>[RUNTIME-005] CLI 错误标准化.md</td><td>CLI 错误标准化</td><td>P1 / active</td></tr><tr><td>[RUNTIME-006] 网关首选通道不得硬钉.md</td><td>网关首选通道不得硬钉</td><td>P1 / active</td></tr><tr><td>[RUNTIME-007] 修复先复现（看病）.md</td><td>修复先复现（看病）</td><td>P1 / active</td></tr><tr><td>[RUNTIME-008] 新增先提问（求学）.md</td><td>新增先提问（求学）</td><td>P2 / active</td></tr><tr><td>[RUNTIME-009] 删除先报部位（搓澡）.md</td><td>删除先报部位（搓澡）</td><td>P1 / active</td></tr><tr><td>[RUNTIME-010] 工具授权须明确授予（默认拒绝）.md</td><td>工具授权须明确授予（默认拒绝）</td><td>P1 / active</td></tr></tbody></table>
+<h3 id="security-8-张">SECURITY（8 张）<a class="anchor" href="#security-8-张" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件名(含编号)</th><th>核心职责(10字内)</th><th>状态</th></tr></thead><tbody><tr><td>[AUD-001] 审计日志规范.md</td><td>审计日志规范</td><td>P1 / active</td></tr><tr><td>[AUTH-002] Session 管理规范.md</td><td>Session 管理规范</td><td>P0 / active</td></tr><tr><td>[SEC-001] 安全规范（安全头 输入验证 注入防护 日志脱敏）.md</td><td>安全规范（安全头 输入验证 注入防护 日志脱敏）</td><td>P0 / active</td></tr><tr><td>[SECURITY-001] 密钥防泄露.md</td><td>密钥防泄露</td><td>P0 / active</td></tr><tr><td>[SECURITY-002] critical gate 不可绕过.md</td><td>critical gate 不可绕过</td><td>P0 / active</td></tr><tr><td>[SECURITY-003] 弱模型改动护栏.md</td><td>弱模型改动护栏</td><td>P1 / active</td></tr><tr><td>[SECURITY-004] 权限档 fail-closed.md</td><td>权限档 fail-closed</td><td>P0 / active</td></tr><tr><td>[UPLOAD-001] 文件上传规范.md</td><td>文件上传规范</td><td>P0 / active</td></tr></tbody></table>
+<h3 id="sourcing-6-张">SOURCING（6 张）<a class="anchor" href="#sourcing-6-张" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件名(含编号)</th><th>核心职责(10字内)</th><th>状态</th></tr></thead><tbody><tr><td>[SOURCING-001] 上游源码不复制.md</td><td>上游源码不复制</td><td>P0 / active</td></tr><tr><td>[SOURCING-002] 许可证分级硬门槛.md</td><td>许可证分级硬门槛</td><td>P0 / active</td></tr><tr><td>[SOURCING-003] 六字段提案先行.md</td><td>六字段提案先行</td><td>P1 / active</td></tr><tr><td>[SOURCING-004] 能力域归属登记.md</td><td>能力域归属登记</td><td>P1 / active</td></tr><tr><td>[SOURCING-005] 实现唯一性与四步检索.md</td><td>实现唯一性与四步检索</td><td>P1 / active</td></tr><tr><td>[SOURCING-006] 决策只追加不改写.md</td><td>决策只追加不改写</td><td>P1 / active</td></tr></tbody></table>
+<h3 id="tooling-14-张">TOOLING（14 张）<a class="anchor" href="#tooling-14-张" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件名(含编号)</th><th>核心职责(10字内)</th><th>状态</th></tr></thead><tbody><tr><td>[COM-001] 代码注释规范.md</td><td>代码注释规范</td><td>P2 / active</td></tr><tr><td>[COMP-001] 代码复杂度规范.md</td><td>代码复杂度规范</td><td>P2 / active</td></tr><tr><td>[FE-004] 前端 CSS 与样式架构规范.md</td><td>前端 CSS 与样式架构规范</td><td>P2 / active</td></tr><tr><td>[NAM-001] 统一命名规范.md</td><td>统一命名规范</td><td>P1 / active</td></tr><tr><td>[TOOLING-001] 扩展一目录一 manifest.md</td><td>扩展一目录一 manifest</td><td>P1 / active</td></tr><tr><td>[TOOLING-002] 工具注册契约.md</td><td>工具注册契约</td><td>P1 / active</td></tr><tr><td>[TOOLING-003] 最小权限与升级废弃.md</td><td>最小权限与升级废弃</td><td>P2 / active</td></tr><tr><td>[TOOLING-004] 检查入口脚本必须存在.md</td><td>检查入口脚本必须存在</td><td>P1 / active</td></tr><tr><td>[TOOLING-005] 本地与 CI 双注册.md</td><td>本地与 CI 双注册</td><td>P1 / active</td></tr><tr><td>[TOOLING-006] 规则登记表.md</td><td>规则登记表</td><td>P1 / active</td></tr><tr><td>[TOOLING-007] 规则登记表与真源双向可达.md</td><td>规则登记表与真源双向可达</td><td>P1 / active</td></tr><tr><td>[TOOLING-008] 规则卡由登记表生成.md</td><td>规则卡由登记表生成</td><td>P1 / active</td></tr><tr><td>[TOOLING-009] 规则接线完整性.md</td><td>规则接线完整性</td><td>P2 / active</td></tr><tr><td>[TOOLING-010] 维护成本可观测.md</td><td>维护成本可观测</td><td>P2 / active</td></tr></tbody></table>
+<h2 id="三-跨分类关联指引">三、跨分类关联指引<a class="anchor" href="#三-跨分类关联指引" aria-label="锚点">#</a></h2>
+<ul><li>规则格式与生命周期：<code>docs/08_MGMT_项目管理/MGMT-STD/[MGMT-STD-008] 规则编写与管理规范（元规则）.md</code></li><li>字段级单一真源：<code>docs/10_规范/registry/RULES-REGISTRY.json</code></li><li>板块入口与反例总表：<code>docs/10_规范/其它规范/[DESIGN-GOV-001] 治理总纲与可执行规则.md</code></li><li>本目录所属的编号段：<code>10</code>–<code>19</code> 跨阶段资产（<code>docs/10_规范/DESIGN-LAY/[DESIGN-LAY-005] 仓库层级板块规范.md</code> 第三节）</li><li>起草新规则：<code>npm run rules:scaffold -- &lt;DOMAIN&gt; &quot;规则名&quot;</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/规则卡/[UPLOAD-001] 文件上传规范.html"><div class="dir">← 上一篇</div><div class="ttl">[UPLOAD-001] 文件上传规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-A11Y-001] 可访问性规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-A11Y-001] 可访问性规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/规则卡/00_INDEX_规则卡总目录.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Model Cache Auto-Refresh Tests â€?verify TTL invalidation logic.
+ * Model Cache Auto-Refresh Tests â€”verify TTL invalidation logic.
  */
 
 describe('Model Cache TTL Logic', () => {

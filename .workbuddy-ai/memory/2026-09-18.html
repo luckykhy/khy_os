@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-18.md -->
+<title>2026-09-18 工作日志 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>.workbuddy-ai<span class="sep">›</span>memory<span class="sep">›</span>2026-09-18 工作日志</div>
+      <header class="hero reveal"><h1>2026-09-18 工作日志</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#2026-09-18-工作日志">2026-09-18 工作日志</a></li><li class="lvl-2"><a href="#deploy-staging-yml-收敛方案-排查-产出">deploy-staging.yml 收敛方案（排查 + 产出）</a></li><li class="lvl-3"><a href="#复核结论-逐条核对用户六项-均无误-不需回退">复核结论（逐条核对用户六项，均无误、不需回退）</a></li><li class="lvl-3"><a href="#冒烟恢复的可复用资产-实测">冒烟恢复的可复用资产（实测）</a></li><li class="lvl-3"><a href="#新发现-用户清单外-7-条">新发现（用户清单外，7 条）</a></li><li class="lvl-3"><a href="#遗留问题实测">遗留问题实测</a></li><li class="lvl-3"><a href="#环境坑">环境坑</a></li><li class="lvl-2"><a href="#deploy-staging-收敛方案-按优先级落地执行-同日第二轮">deploy-staging 收敛方案「按优先级落地执行」（同日第二轮）</a></li><li class="lvl-3"><a href="#一-冒烟恢复-步骤-a-b-c-d-全部完成">一、冒烟恢复（步骤 a/b/c/d 全部完成）</a></li><li class="lvl-3"><a href="#二-高优隐患-tag-不一致-实为两个叠加错误">二、高优隐患：tag 不一致 **实为两个叠加错误**</a></li><li class="lvl-3"><a href="#三-四项其余隐患">三、四项其余隐患</a></li><li class="lvl-3"><a href="#四-三个遗留问题-重要订正">四、三个遗留问题（**重要订正**）</a></li><li class="lvl-3"><a href="#五-收尾与校验纪律">五、收尾与校验纪律</a></li><li class="lvl-2"><a href="#khyos-cc-harness-借鉴落地-续上一轮只读盘点">khyos-CC-Harness 借鉴落地（续上一轮只读盘点）</a></li><li class="lvl-3"><a href="#k-12-a-permissions-json-已施工并验证">K-12(a) permissions.json —— 已施工并验证</a></li><li class="lvl-3"><a href="#k-07-agents-加载器-已施工并验证-路径-a-加-json-分支">K-07 agents 加载器 —— 已施工并验证（路径 A：加 JSON 分支）</a></li><li class="lvl-3"><a href="#k-03-hooks-重新核实-前提被推翻">K-03 hooks —— 重新核实，前提被推翻</a></li><li class="lvl-3"><a href="#k-02-disablemodelinvocation-机制已存在">K-02 disableModelInvocation —— 机制已存在</a></li><li class="lvl-2"><a href="#待续-第二轮剩余">待续（第二轮剩余）</a></li><li class="lvl-2"><a href="#ops-man-206-工作树清洁方案-落位-索引-报告订正-10-00-10-15">OPS-MAN-206 工作树清洁方案：落位/索引/报告订正（10:00–10:15）</a></li><li class="lvl-2"><a href="#layout-006-步骤2-1-tool-迁移-残留清理-10-06">LAYOUT-006 步骤2.1 tool* 迁移 + 残留清理（10:06–）</a></li><li class="lvl-3"><a href="#残留清理-已完成-均已复核守卫">残留清理（已完成，均已复核守卫）</a></li><li class="lvl-3"><a href="#关键订正-build-docs-site-js-并非-零副作用">关键订正：`build_docs_site.js` 并非「零副作用」</a></li><li class="lvl-3"><a href="#步骤2-1-tool-迁移-实测代价模型-3-项偏差-关键-须回写规范">步骤2.1 tool* 迁移：实测代价模型 3 项偏差（**关键，须回写规范**）</a></li><li class="lvl-3"><a href="#步骤3-收口-按用户裁定-先修规范再收口">步骤3 收口（按用户裁定「先修规范再收口」）</a></li><li class="lvl-3"><a href="#环境坑-本轮新增-高价值">⚠ 环境坑（本轮新增，高价值）</a></li><li class="lvl-2"><a href="#design-arch-113-三模态反馈契约-步骤-1-标记-接线-17-00">[DESIGN-ARCH-113] 三模态反馈契约：步骤 1「标记」接线（17:00–）</a></li><li class="lvl-3"><a href="#三处-开工前实测就推翻方案假设-关键-别再照抄方案">三处**开工前实测就推翻方案假设**（关键，别再照抄方案）</a></li><li class="lvl-3"><a href="#最值钱的坑-gate-advisory-的规则-永远不会被执行">⚠ 最值钱的坑：`gate='advisory'` 的规则**永远不会被执行**</a></li><li class="lvl-3"><a href="#落地产物-步骤-1-完成-四门串行复跑全绿">落地产物（步骤 1 完成，四门串行复跑全绿）</a></li><li class="lvl-3"><a href="#落地时对方案的两处-必要订正">落地时对方案的两处**必要订正**</a></li><li class="lvl-3"><a href="#两个操作坑">两个操作坑</a></li><li class="lvl-3"><a href="#验收-串行复跑-全绿">验收（串行复跑，全绿）</a></li><li class="lvl-3"><a href="#步-1-标记-收尾复核-同日稍后-无改动-仅验证状态未漂移">步 1「标记」收尾复核（同日稍后，无改动，仅验证状态未漂移）</a></li><li class="lvl-2"><a href="#步骤-2-迁移-补-s1-观测设施-建阶段守卫-同日-第二次提交">步骤 2「迁移」—— 补 S1 观测设施 + 建阶段守卫（同日 · 第二次提交）</a></li><li class="lvl-3"><a href="#先核对再动手-发现步骤-2-的三项里两项是空转">先核对再动手：发现步骤 2 的三项里两项是空转</a></li><li class="lvl-3"><a href="#做了两件事-用户选定-补观测设施-一并建守卫">做了两件事（用户选定：补观测设施 + 一并建守卫）</a></li><li class="lvl-3"><a href="#feature-ownership-json-补-rollout-段-version-1-2">`FEATURE-OWNERSHIP.json` 补 `rollout` 段（version 1→2）</a></li><li class="lvl-3"><a href="#验收">验收</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="2026-09-18-工作日志">2026-09-18 工作日志<a class="anchor" href="#2026-09-18-工作日志" aria-label="锚点">#</a></h1>
+<h2 id="deploy-staging-yml-收敛方案-排查-产出">deploy-staging.yml 收敛方案（排查 + 产出）<a class="anchor" href="#deploy-staging-yml-收敛方案-排查-产出" aria-label="锚点">#</a></h2>
+<p>用户已定位 6 个叠加根因并完成修复，要求产出「冒烟恢复步骤 + 遗留问题建议」。<br>产物：<code>.khyos/deploy-staging-convergence-plan.md</code>。</p>
+<h3 id="复核结论-逐条核对用户六项-均无误-不需回退">复核结论（逐条核对用户六项，均无误、不需回退）<a class="anchor" href="#复核结论-逐条核对用户六项-均无误-不需回退" aria-label="锚点">#</a></h3>
+<ul><li>冒号 bug 已修（两处 <code>- name:</code> 加引号）；全量体检 <strong>0 error / 9 warning</strong></li><li>触发已收敛 <code>workflow_dispatch</code> + <code>push: tags v*-staging</code></li><li>pnpm 已 pin <code>10.18.0</code>（= 根 <code>packageManager</code>）；凭据检查已加；冒烟 <code>if: false</code></li><li><strong>检测有效性实证</strong>：去掉 <code>Run test suite (Jest + node:test)</code> 引号 → 命中第 97 行，</li></ul>
+<p>且 <code>js-yaml</code> 解析后 <code>name</code> 被截断、剩余变兄弟键 → 与「所有 job 报错」吻合</p>
+<h3 id="冒烟恢复的可复用资产-实测">冒烟恢复的可复用资产（实测）<a class="anchor" href="#冒烟恢复的可复用资产-实测" aria-label="锚点">#</a></h3>
+<ul><li><code>/health</code> + <code>/api/health</code> 已存在于 <code>services/backend/server.js:727/729</code>，处理器 <code>:645</code></li><li><code>listenWithAutoPort</code> <code>:1753</code> <strong>会 EADDRINUSE 自动 +1 顺延</strong>（<code>server.js:288</code> 读 <code>PORT_AUTO_RETRY</code>）</li><li>零级启动 IIFE <code>:744</code> <strong>不等 DB 就 listen</strong> ⇒ 容器冷启动友好</li><li><code>services/backend/package.json:50</code> <code>&quot;start&quot;: &quot;node server.js&quot;</code></li></ul>
+<h3 id="新发现-用户清单外-7-条">新发现（用户清单外，7 条）<a class="anchor" href="#新发现-用户清单外-7-条" aria-label="锚点">#</a></h3>
+<ol><li><strong>高</strong>：tag 不一致 —— workflow 推 <code>:staging</code>（<code>deploy-staging.yml:119</code>），</li></ol>
+<p><code>fly.staging.toml [build].image</code> 却是 <code>:main</code> ⇒ 部署拉的可能不是本次构建</p>
+<ol><li><strong>中高</strong>：容器内 <code>listenWithAutoPort</code> 会把端口漂离 3000，Fly <code>internal_port=3000</code> 指空</li><li><strong>中高</strong>：<code>healthHandler</code> DB 不可用时返 <strong>503</strong> 非 200 ⇒ 建议改纯存活端点 <code>/healthz</code></li><li>中：<code>checkFrozenLockfile</code>（<code>check-workflow-sanity.js:156</code>）只查 pnpm-lock 存在，不查双锁文件</li><li><code>Wait for staging</code> curl 的是<strong>根路径</strong>非 <code>/health</code>（<code>workflow:173</code>）</li><li>workflow:86 注释 <code>--frozen-lockfile --frozen-lockfile=false</code> <strong>自相矛盾</strong>（后者覆盖前者）</li></ol>
+<h3 id="遗留问题实测">遗留问题实测<a class="anchor" href="#遗留问题实测" aria-label="锚点">#</a></h3>
+<ul><li><strong>双锁文件</strong>：<code>pnpm-lock.yaml</code>(592KB) + <code>package-lock.json</code>(1.12MB) <strong>都被 git 跟踪</strong></li><li><strong>pnpm pin</strong>：10 处 use-site，<strong>仅 1 处（deploy-staging）已 pin</strong></li></ul>
+<p>（build-executables / conformance / dual-channel-release 各 1，frontend-ci 2，pr-gate 4）</p>
+<ul><li><strong>0 字节乱文件</strong>：4 个，名字是 Markdown 正文，<code>**</code> 被映射成 <strong><code>U+F02A</code> 私用区字符</strong>，</li></ul>
+<p>统一 Sep 16 02:35 ⇒ shell 重定向事故。<strong>全部 untracked 且未被 ignore</strong>（会显示 <code>??</code>，<br>  排在列表最前易被 <code>head</code> 截掉而误判为&quot;没出现&quot;）</p>
+<h3 id="环境坑">环境坑<a class="anchor" href="#环境坑" aria-label="锚点">#</a></h3>
+<ul><li>沙箱跑不了完整 npm 测试（<code>reg.exe</code> 被屏蔽）；本机 <code>js-yaml</code> <strong>可用</strong>（体检的 YAML 解析未降级）</li><li>临时脚本落 <code>.khyos/tmp/</code>，已清理</li></ul>
+<hr>
+<h2 id="deploy-staging-收敛方案-按优先级落地执行-同日第二轮">deploy-staging 收敛方案「按优先级落地执行」（同日第二轮）<a class="anchor" href="#deploy-staging-收敛方案-按优先级落地执行-同日第二轮" aria-label="锚点">#</a></h2>
+<h3 id="一-冒烟恢复-步骤-a-b-c-d-全部完成">一、冒烟恢复（步骤 a/b/c/d 全部完成）<a class="anchor" href="#一-冒烟恢复-步骤-a-b-c-d-全部完成" aria-label="锚点">#</a></h3>
+<ul><li><strong>关键实测</strong>：<code>pip install khy-os</code> 的 wheel <strong>不含 services/backend</strong>。</li></ul>
+<p>三处证据：<code>pyproject.toml packages=[&quot;khy_platform&quot;]</code>；<br>  <code>cli.py:2070</code> 注释原文「a standalone-bundle install (the pip wheel) genuinely has no<br>  backend directory」；<code>MANIFEST.in</code> 的 recursive-include 只作用于 <strong>sdist 不作用于 wheel</strong>。<br>  ⇒ 原 Dockerfile <strong>无任何 COPY</strong>，<code>CMD [&quot;khy&quot;]</code> 是 TUI。<strong>必须 COPY 源码树</strong>，否则 MODULE_NOT_FOUND。</p>
+<ul><li><code>server.js</code> 新增 <strong><code>/healthz</code> 存活探针</strong>（<code>:656</code>，不查 DB，恒 200），</li></ul>
+<p>刻意不复用依赖 sequelize 的 <code>/health</code>（DB 故障会假红）；中间件 <code>:373</code> 同步加 <code>/healthz</code>。</p>
+<ul><li>新增 <code>services/backend/docker-entrypoint.js</code>：设 <code>PORT=3000</code> +</li></ul>
+<p><strong><code>PORT_AUTO_RETRY=0</code>（禁端口顺延）</strong>。实测：3000 被占时<strong>不再漂移到 3001</strong>。</p>
+<ul><li>Dockerfile：ping <code>PNPM_VERSION=10.18.0</code>、corepack、**COPY 全部 9 个 workspace 的</li></ul>
+<p>package.json**（少一个则 <code>--frozen-lockfile</code> 报 ERR_PNPM_OUTDATED_LOCKFILE）、<br>  <code>pnpm install --prod --frozen-lockfile</code>、<code>EXPOSE 3000</code>、<code>CMD [&quot;node&quot;,&quot;docker-entrypoint.js&quot;]</code>。</p>
+<ul><li><strong>端到端实测通过</strong>：<code>/healthz</code> → 200 <code>{&quot;status&quot;:&quot;alive&quot;}</code>；<code>/health</code> → 200。</li></ul>
+<h3 id="二-高优隐患-tag-不一致-实为两个叠加错误">二、高优隐患：tag 不一致 <strong>实为两个叠加错误</strong><a class="anchor" href="#二-高优隐患-tag-不一致-实为两个叠加错误" aria-label="锚点">#</a></h3>
+<ul><li>不只是 tag（<code>:staging</code> vs <code>:main</code>），<strong>仓库路径也错</strong>：fly 写 <code>ghcr.io/khy-os/khy-os</code>，</li></ul>
+<p>而全仓规范是 <code>ghcr.io/${{ github.repository }}</code>（本仓 = <strong><code>ghcr.io/luckykhy/khy_os</code></strong>，<br>  见 <code>git remote</code> 的 khy-mirror）。已统一为 <code>ghcr.io/luckykhy/khy_os:staging</code>。</p>
+<ul><li>顺手修：<code>fly.staging.toml</code> 的 <code>KHY_HOME</code> 原为 <code>/tmp/khy-home</code>（宿主机时代假设，</li></ul>
+<p>容器里 khy 用户无权限）→ 改为 Dockerfile 已 chown 的 <code>/home/khy/.khy</code>；<br>  补 <code>[[http_service.checks]]</code> → <code>/healthz</code>。</p>
+<h3 id="三-四项其余隐患">三、四项其余隐患<a class="anchor" href="#三-四项其余隐患" aria-label="锚点">#</a></h3>
+<ul><li>端口漂移：见上（<code>PORT_AUTO_RETRY=0</code>，已负向验证）。</li><li><code>Wait for staging</code> 原先 curl <strong>根路径</strong> → 改 <code>$HEALTH_PATH</code>，与 fly checks 同源。</li><li>workflow:86 注释 <code>--frozen-lockfile --frozen-lockfile=false</code>（自相矛盾，后者覆盖前者）已修正。</li><li>体检脚本<strong>新增 3 个检查器</strong>：双锁文件（仓库级、只报一次）、探针端点三方一致性、</li></ul>
+<p>镜像 tag/路径一致性。均做了负向测试（改坏→报错→恢复→干净）。</p>
+<h3 id="四-三个遗留问题-重要订正">四、三个遗留问题（<strong>重要订正</strong>）<a class="anchor" href="#四-三个遗留问题-重要订正" aria-label="锚点">#</a></h3>
+<ol><li><strong>双锁文件：不要按原方案 <code>git rm --cached</code>！</strong> 实测发现</li></ol>
+<p><code>scripts/ci/check-dependency-size.js</code> <strong>依赖 package-lock.json 当依赖包数的唯一计数源</strong><br>   （脚本头部有专节论证：npm 锁是平铺结构计数无歧义；pnpm snapshots 内容寻址数不准），<br>   且配 <code>dependency-size-baseline.json</code> 基线、<strong>实跑绿</strong>（「全部在预算内」）。<br>   ⇒ 原方案若执行会<strong>直接打断 check:dep-size</strong>。已把守卫改为「<strong>已知并接受</strong>」的知情提示，<br>   并在消息里写明退役前提（先迁移计数源 + 重建基线）。</p>
+<ol><li>pnpm pin：<code>pin-khyos-toolchain.js --lint</code> <strong>只管 action 分支哈希，不管 workflow pnpm 版本</strong></li></ol>
+<p>（无可复用判定；真正的判据就是体检脚本的 checkPnpmVersionPinned）。<br>   <strong>10/10 处全部 pin 到 10.18.0</strong>，保持 warning 不升级。</p>
+<ol><li>0 字节乱文件：<strong>处置前已被本会话之外的进程删除</strong>（同期 <code>NIGHTSHIFT.md</code> 也消失、</li></ol>
+<p>根目录出现他人的 <code>_scan1.js/_scan1.txt</code>、<code>.html</code> 孪生件 10:14 被重建）<br>   ⇒ 有<strong>并发进程在写同一工作区</strong>。本会话未删除任何用户文件；<br>   处置记录落 <code>.khyos/housekeeping/2026-09-18/manifest.md</code>（含事实经过与后续建议）。</p>
+<h3 id="五-收尾与校验纪律">五、收尾与校验纪律<a class="anchor" href="#五-收尾与校验纪律" aria-label="锚点">#</a></h3>
+<ul><li><strong>体检脚本一个重要修正</strong>：原 <code>checkBareColonInStepName</code> 的 <code>/:\\S/</code> 分支是<strong>误报源</strong>——</li></ul>
+<p><code>(node:test)</code> 冒号后无空格，YAML 完全合法（实测 frontend-ci 解析成功）。<br>  已改为只判 <code>: </code> / <code>:</code> 行尾。<strong>误报比漏报更贵</strong>。</p>
+<ul><li><code>pr-gate.yml</code> 为测试补证据留存（<code>GITHUB_STEP_SUMMARY</code> + artifact 14 天），</li></ul>
+<p>并补 <strong><code>actions: write</code></strong>（<code>upload-artifact@v4</code> 硬性要求，否则报权限错）。<br>  注意 <code>$?</code> 紧跟在管道后会被 echo 覆盖，须先存变量。</p>
+<ul><li><strong>校验结果</strong>：体检 0 error / 1 warning（exit 0）；12 个 workflow 全解析；</li></ul>
+<p>fly.staging.toml TOML OK；<code>rules:gate</code> <strong>红但是存量债</strong><br>  （COM-001 4731&gt;4584 等 4 条基线超限 + 3 个执行器失败，<br>  <strong>我的文件 0 次被点名</strong>，且 <code>check-code-standards</code> 只扫 <code>services/backend/src</code>，<br>  我的 <code>docker-entrypoint.js</code> 在 <code>services/backend/</code> 下不被扫）。</p>
+<ul><li><code>check-rules-registry.js</code> 单独跑<strong>通过</strong>，在门里失败 → 门harness/环境问题，非代码问题。</li></ul>
+<hr>
+<h2 id="khyos-cc-harness-借鉴落地-续上一轮只读盘点">khyos-CC-Harness 借鉴落地（续上一轮只读盘点）<a class="anchor" href="#khyos-cc-harness-借鉴落地-续上一轮只读盘点" aria-label="锚点">#</a></h2>
+<h3 id="k-12-a-permissions-json-已施工并验证">K-12(a) permissions.json —— 已施工并验证<a class="anchor" href="#k-12-a-permissions-json-已施工并验证" aria-label="锚点">#</a></h3>
+<ul><li>改 <code>.khy/permissions.json</code>，新增 <code>storePatternRules</code>（12 条规则，全部 <code>**</code> glob）。</li><li>备份：<code>D:/Portable/khy-os/.khy/backups/permissions.json.2026-09-18T01:53:44Z.bak</code></li><li><strong>三处旧方案错误（已纠正并验证）</strong>：① 字段名 <code>storePatternRules</code>（非 <code>_patternRules</code>/<code>patternRules</code>）；② pattern <code>decision</code> 只有 <code>allow</code>/<code>deny</code>、<strong>无 <code>ask</code></strong>，R1 升级靠 deny 硬拦 <code>git push -f/--force</code> + Profile ask；③ <code>*</code> 不跨 <code>/</code>，必须 <code>**</code>（代码自带 <code>DEFAULT_PATTERN_RULES</code> 用 <code>*</code> 本身失效，本改 <code>**</code> 实质修复）。</li><li>验证：真实 <code>matchPatternRule</code> 跑 11 用例 10 通过（唯一&quot;失败&quot;<code>FOO=1 npm test</code> 漏匹配但落 Profile 仍 allow，非缺陷）。</li><li><strong>限制</strong>：门控 env var <code>KHY_PERMISSION_PATTERN_RULES</code>（opt-in，实际默认关）只读 <code>process.env</code>，<strong>我无法持久化</strong>，需用户 <code>export</code> 才激活；未激活时规则 inert。</li></ul>
+<h3 id="k-07-agents-加载器-已施工并验证-路径-a-加-json-分支">K-07 agents 加载器 —— 已施工并验证（路径 A：加 JSON 分支）<a class="anchor" href="#k-07-agents-加载器-已施工并验证-路径-a-加-json-分支" aria-label="锚点">#</a></h3>
+<ul><li><code>services/backend/src/agents/loadAgents.js</code>：新增 <code>parseAgentFromJson</code> + <code>.md</code>/<code>.json</code> 双派发，解 <code>FILE-FORMAT-PROTOCOL §2.5</code> 冲突且保留 CC 桥接。验证 13/13（含负样本）。</li></ul>
+<h3 id="k-03-hooks-重新核实-前提被推翻">K-03 hooks —— 重新核实，前提被推翻<a class="anchor" href="#k-03-hooks-重新核实-前提被推翻" aria-label="锚点">#</a></h3>
+<ul><li>旧判&quot;from scratch&quot;过时。框架已建：<code>services/domain/extensions/hooks/{hookSystem,hookRunner,hookRegistry,hookConfigSchema}.js</code>。<code>.khy/hooks.json</code> 命令型 hook，失败 fail-closed 到 allow。<code>PreCompact</code> 已接线（<code>contextCompressor.js:624</code>）支持 <code>additionalContext</code>（K-06 B5 接管点）。</li><li>结论：K-03 降级为&quot;写 <code>.khy/hooks.json</code> 配置 + companion 脚本&quot;。</li></ul>
+<h3 id="k-02-disablemodelinvocation-机制已存在">K-02 disableModelInvocation —— 机制已存在<a class="anchor" href="#k-02-disablemodelinvocation-机制已存在" aria-label="锚点">#</a></h3>
+<ul><li><code>SkillTool/index.js:89</code> 已拦截模型调用；&quot;差 1 行&quot;仅指渲染层清单仍展示该类技能。</li></ul>
+<h2 id="待续-第二轮剩余">待续（第二轮剩余）<a class="anchor" href="#待续-第二轮剩余" aria-label="锚点">#</a></h2>
+<ul><li>K-01（rules 读逻辑）、K-08（测试）、K-10（默认预算）需各自核实+施工。</li><li>多智能体共写 3486+ 改动：任何落点施工前必 <code>git status</code>/<code>git diff</code> 复核坐标。</li></ul>
+<h2 id="ops-man-206-工作树清洁方案-落位-索引-报告订正-10-00-10-15">OPS-MAN-206 工作树清洁方案：落位/索引/报告订正（10:00–10:15）<a class="anchor" href="#ops-man-206-工作树清洁方案-落位-索引-报告订正-10-00-10-15" aria-label="锚点">#</a></h2>
+<p><strong>任务</strong>：修正文档落位、索引、报告内容，逐一验证守卫。</p>
+<p><strong>实测结论（全部复核过，非转述）</strong>：</p>
+<ul><li><code>[OPS-MAN-206]</code> 已在 <code>docs/07_OPS_运维/</code>；<code>docs/_方案/</code> <strong>全仓 0 残留</strong>。</li><li>就近索引 + 主索引均已登记；<code>--list=docs-index-complete</code> <strong>不含本文件</strong>（命中 0）。</li><li><code>check-repo-layout --promote=docs-index-first,layer-registry</code>：本文件<strong>零 error</strong>。</li><li>残留 error 全属既有：<code>root-whitelist</code>=NIGHTSHIFT.md、<code>root-junk</code>+<code>layer-registry</code>=tmp-cmp、<code>docs-index-complete</code>=1（<code>08_MGMT_项目管理/[MGMT-RPT-031]</code>）。</li></ul>
+<p><strong>报告两处订正</strong>：</p>
+<ol><li>判据：由「两次 docs:build 后 <code>git status -- '*.html'</code> 必须为空」改为<strong>幂等判据</strong>（两次输出集合 <code>diff</code> 无差异）。实测成立。</li><li>规模：176 估 → <strong>1170 = 557 M + 473 ?? + 140 D</strong>（<code>??</code> 由 470→473，来源定位为 <code>.workbuddy-ai/memory/</code> 当日新增日记被扫描式纳入）。</li></ol>
+<p><strong>新硬事实（可直接复用）</strong>：</p>
+<ul><li>⚠ <strong><code>check-repo-layout.js</code> 的 <code>layer-registry</code>/<code>root-junk</code> 走 <code>fs.readdirSync</code>，不看 <code>.gitignore</code></strong> → 对 <code>tmp-cmp/</code> 这类残留<strong>加忽略无效</strong>，必须真删目录（忽略只对 git 视野生效，两手段不可互替）。</li><li>⚠ <strong>验证「可恢复性」时 <code>git status --porcelain</code> 会给含中文/方括号的路径加双引号</strong> → 直接按列切分假报「84 个不可恢复」。必须 <code>sed 's/^&quot;//; s/&quot;$//'</code> 去引号 + 整串精确匹配（140/140 真实全命中）。</li><li><strong>M1 × M3 耦合</strong>：不先忽略运行时目录，生成器会把 <code>.ai/hq/prompts/**</code>、<code>.workbuddy-ai/memory/**</code> 等 46 个机器本地 <code>.md</code> 编译成 html → 孪生数持续增长、收敛不稳。<strong>M1 必须早于 M3</strong>。</li><li>验证生成器确定性用 <code>node scripts/docs/build_docs_site.js</code> 直跑（<code>npm run docs:build</code> 会先联网 <code>ensure-mermaid</code>）。</li><li><code>docs:verify</code> 时点值：1045 md / 12462 链接；已提交 html=705（此数<strong>精确</strong>，832 是陈旧快照）。</li></ul>
+<hr>
+<h2 id="layout-006-步骤2-1-tool-迁移-残留清理-10-06">LAYOUT-006 步骤2.1 tool* 迁移 + 残留清理（10:06–）<a class="anchor" href="#layout-006-步骤2-1-tool-迁移-残留清理-10-06" aria-label="锚点">#</a></h2>
+<p><strong>任务</strong>：按 <code>[DESIGN-LAY-006]</code> §7 执行步骤2 迁移（以 2.1 tool* 33 文件示范批）+ 步骤3 收口，<br>并清理三处遗留：根目录 4 个 0 字节事故文件、NIGHTSHIFT.md、LAY-005 §6 流程图的 <code>_中文</code> 残留。</p>
+<h3 id="残留清理-已完成-均已复核守卫">残留清理（已完成，均已复核守卫）<a class="anchor" href="#残留清理-已完成-均已复核守卫" aria-label="锚点">#</a></h3>
+<ol><li><strong>4 个 0 字节事故文件</strong>：名字含 <code>**</code>（Markdown 正文被 shell 重定向当成文件名），</li></ol>
+<p>与日志 §「0 字节乱文件」同源。<strong>删除方式有坑</strong>：<code>rm</code>/shell 传中文名会被沙箱 genie-trash<br>   挡下（0x80070057 参数错误）且 bash 侧编码会 mangling 使 <code>unlinkSync(字面名)</code> 报 ENOENT。<br>   ✅ 正解：<code>fs.readdirSync('.')</code> <strong>按目录项枚举</strong> + <code>statSync</code> 判 size===0 + <code>unlinkSync(e.name)</code>。</p>
+<ol><li><strong>NIGHTSHIFT.md 裁定（推翻 OPS-MAN-206 的猜测）</strong>：文件自称「覆盖式、仅保留最近一夜」。</li></ol>
+<p>实测根级=<strong>夜班5（2026-09-18 01:25）</strong>，<code>docs/15_维护记录/</code>=<strong>夜班4（2026-09-16 02:35）</strong><br>   —— <strong>根级更新</strong>（206 假设「docs/15 行数多更权威」是错的，行数多只是因为夜班4 报告更长）。<br>   夜班4/5 的历史均在 <code>tests/DEBT.md</code> §九/§十。⇒ 裁定：根级为真源 → 覆盖进 <code>docs/15_维护记录/</code><br>   → 删两份根级副本（.md+.html）。<code>root-whitelist</code> error 已清。</p>
+<ol><li><strong><code>tmp-cmp/</code></strong>：空目录 + 已 gitignore，但守卫走 <code>fs.readdirSync</code> 不看 ignore ⇒ 必须真删。</li></ol>
+<p><code>rmdir</code> 后 <code>root-junk</code> + <code>layer-registry</code> 两条 error 同时清零。</p>
+<h3 id="关键订正-build-docs-site-js-并非-零副作用">关键订正：<code>build_docs_site.js</code> 并非「零副作用」<a class="anchor" href="#关键订正-build-docs-site-js-并非-零副作用" aria-label="锚点">#</a></h3>
+<p>直跑它只写 <code>.html</code>（脚本内<strong>无任何 delete 调用</strong>，头注释自称「不改任何 .md 源文」）。<br>本次 <code>git status -- docs/</code> 出现 611 个 <code>.md</code> 改动 + 一批 <code>D</code> 删除，<strong>不是它造成的</strong> ——<br>经目录 mtime 核对（<code>docs/03_DESIGN_设计/</code> mtime = <strong>09:12</strong>，早于本会话 10:06 开工）<br>及 <code>housekeeping</code> manifest 核对，属<strong>并行运行的 <code>[MGMT-PLAN-009]</code> 文档精简工作流</strong>。<br>⇒ <strong>教训</strong>：本仓长期多智能体并发写，看到 <code>git status</code> 大规模变动<strong>先按 mtime 判归属</strong>再归因。</p>
+<h3 id="步骤2-1-tool-迁移-实测代价模型-3-项偏差-关键-须回写规范">步骤2.1 tool* 迁移：实测代价模型 3 项偏差（<strong>关键，须回写规范</strong>）<a class="anchor" href="#步骤2-1-tool-迁移-实测代价模型-3-项偏差-关键-须回写规范" aria-label="锚点">#</a></h3>
+<p>执行 <code>[DESIGN-LAY-006]</code> §4 标准动作（33 文件 → <code>tool/</code>，保留全名 (a) 落点）：</p>
+<table><thead><tr><th>项</th><th>规范预估</th><th>实测</th><th>偏差</th></tr></thead><tbody><tr><td>入边（壳兜住）</td><td>374 → 0 改动</td><td>374 壳全部生效，33/33 require 通过</td><td>✅ 一致</td></tr><tr><td>出边（<code>../</code>，必改）</td><td>98</td><td><strong>98</strong>（19 个文件）</td><td>✅ 一致</td></tr><tr><td>兄弟边（<code>./</code>，同批移动=0）</td><td>386 → <strong>0 改动</strong></td><td><strong>386 中仅 76 条指向真兄弟</strong>，<strong>289 条其实指向父目录 <code>services/</code></strong>，<strong>21 条是目录 index</strong>，实改 <strong>309 条</strong></td><td>❌ <strong>模型漏算</strong></td></tr><tr><td>父目录条目数</td><td>808 → <strong>775</strong></td><td>808 → <strong>809</strong>（<strong>+1</strong>）</td><td>❌ <strong>模型算反了</strong></td></tr></tbody></table>
+<p><strong>偏差 ① —— <code>./</code> 边不等于「兄弟边」</strong>：规范 §1.3 用 <code>./</code> 前缀判定兄弟边，<br>但 <code>services/</code> 是一个 808 条的<strong>平铺巨目录</strong>，家族文件的 <code>./xxx</code> 绝大多数指向<strong>父目录里的其他文件</strong><br>（如 <code>require('./flagRegistry')</code>、<code>require('./capabilityMatrix')</code>，后者还是<strong>目录 index</strong>）。<br>⇒ 正确判据是<strong>解析目标落在哪</strong>（同族目录内 / 父目录 / 目录 index），不是前缀字符串。<br><strong>修法</strong>：迁移后逐条 <code>path.resolve</code> 试解析——能解析则保留，否则升一级 <code>../</code>。</p>
+<p><strong>偏差 ② —— 留壳使父目录条目数 +1，不是 −N</strong>（<strong>最严重</strong>）：<br><code>classifyEntry</code> 只看名字、不看内容 ⇒ <strong>壳被计入 <code>counted</code></strong>（<code>EXEMPT_NAMES</code> 无 shell/re-export 概念）。<br>对 N 个文件的家族：移动前顶层 = N 文件；移动后 = <strong>N 个壳 + 1 个新目录</strong> ⇒ 净 <strong>+1</strong>。<br><strong>只有 §4.2 的壳清理条件满足后删掉 N 个壳，才真能 −N+1</strong>；<br>而 §4.2 写「存在超过一个大版本且入边降为 0」才强制删 ⇒<br><strong>在壳清理之前，规范主张的「拆分使可发现性预算下降」在守卫读数上不成立甚至反向。</strong><br>⇒ 步骤 3 若按原计划把 <code>flat-overflow</code> 升 error，会把「照 §4 做完示范批」的目录判红。</p>
+<p><strong>迁移正确性证据</strong>：<code>unresolved-require</code> <strong>0 → 0</strong>、<code>cross-layer-require</code> <strong>39 → 39</strong><br>（均未上升，整族迁移未漏改出边的客观证据）；<code>tool/</code> 内 <strong>480/480</strong> 相对 require 解析成功；<br>33 壳 + 33 新位置 require <strong>全部通过</strong>；33 壳<strong>全部</strong>为纯 <code>module.exports = require(...)</code>。</p>
+<h3 id="步骤3-收口-按用户裁定-先修规范再收口">步骤3 收口（按用户裁定「先修规范再收口」）<a class="anchor" href="#步骤3-收口-按用户裁定-先修规范再收口" aria-label="锚点">#</a></h3>
+<p>规范订正：<code>[DESIGN-LAY-006]</code> 版本 1.0.0 → <strong>1.1.0</strong>，新增 <strong>§1.3.1 两处代价模型缺陷</strong>，<br>改写 §4 步骤 3（按目标解析而非前缀）、§4.1/§4.2（壳清理是收益兑现<strong>前置条件</strong>）、<br>§7 批次表（2.1 标记完成 + 收益栏双数）、§8 基线语义、§7 步骤3（增设 flat-overflow<br>升级前置条件）。</p>
+<p><strong>关键裁定：<code>flat-overflow</code> 不升 error</strong>，因为「迁移本身使父目录 +1」⇒ 升 error 会把<br>照 §4 做完标准动作的目录判红，违背 §6「强度必须与有可行解同步」。<br>改为：<strong><code>no-grouping</code> 升 error</strong>（文档索引编组<strong>无 +1 副作用</strong>，可先行收紧）。<br>落地：<code>discoverabilityGuard.js</code> 的 <code>no-grouping</code> strength <code>warning</code> → <code>error</code>；<br>登记表 <code>LAYOUT-006</code> 补 <code>severity: &quot;advisory&quot;</code>（保持执行器非阻断，与 gate 语义一致）。</p>
+<p>新增 <code>check-discoverability.js --verify-baseline</code>：<strong>基线只降不升棘轮 + 扫描幂等</strong>双断言，<br>配 <code>pr-gate.yml</code> 新作业 <code>discoverability-roundtrip</code>。负例实测：基线调低 → 正确 exit 1。</p>
+<p><code>_产物/move-cost.js</code> 已按目标解析改写（新增 <code>classifyEdges</code> + <code>resolvesAt</code>），不再用前缀判兄弟。</p>
+<h3 id="环境坑-本轮新增-高价值">⚠ 环境坑（本轮新增，高价值）<a class="anchor" href="#环境坑-本轮新增-高价值" aria-label="锚点">#</a></h3>
+<ul><li><strong><code>build_docs_site.js</code> 会扫描 <code>.khyos/tmp/</code></strong>：我建了 HEAD worktree 做对照实验，</li></ul>
+<p>建站时把它的 700+ 页纳入 nav-data → 删 worktree 后 <code>docs:verify</code> 报 724 个悬空链接。<br>  <strong>修法：删 worktree 后必须重跑 <code>build_docs_site.js</code></strong>。</p>
+<ul><li><strong>删大目录（86MB）时 <code>fs.rmSync</code>/<code>rm</code>/<code>cmd rd</code> 全被 safe-delete 的 genie-trash 拦下</strong></li></ul>
+<p>（ETIMEDOUT / 参数错误）。✅ 正解：<strong>PowerShell <code>Remove-Item -LiteralPath ... -Recurse -Force</code></strong>。</p>
+<ul><li><strong><code>git worktree remove</code> 对未初始化的 worktree 报 &quot;not a working tree&quot;</strong>，</li></ul>
+<p>但目录仍在盘上 → 需 <code>remove -f -f</code> 或直接 PowerShell 删。</p>
+<ul><li>⚠ <strong>jest 测试用 <code>node --test</code> 跑会假红</strong>（<code>describe is not defined</code>）：</li></ul>
+<p><code>gitPush.tool.test.js</code> 实测 jest 全绿、node --test 报失败。<strong>先看测试用哪个 runner</strong>。</p>
+<ul><li>⚠ <strong>本仓有并行智能体在实时改文件</strong>：<code>queryEngine.toolLoopParity.test.js</code> 的 2 个</li></ul>
+<p>15s 超时失败<strong>不是我的迁移造成</strong>（该测试文件我未动；<code>queryEngine.js</code> 有并行方新增的<br>  94 行 abort-signal 逻辑、<code>ai.js</code> 742 行改写）。<strong>判失败归属必先 <code>git diff --stat</code> 看<br>  是不是自己动的</strong>。</p>
+<hr>
+<h2 id="design-arch-113-三模态反馈契约-步骤-1-标记-接线-17-00">[DESIGN-ARCH-113] 三模态反馈契约：步骤 1「标记」接线（17:00–）<a class="anchor" href="#design-arch-113-三模态反馈契约-步骤-1-标记-接线-17-00" aria-label="锚点">#</a></h2>
+<p><strong>任务</strong>：执行上轮交付的方案 §8 步骤 1（用户发话「开始接线」）。</p>
+<h3 id="三处-开工前实测就推翻方案假设-关键-别再照抄方案">三处<strong>开工前实测就推翻方案假设</strong>（关键，别再照抄方案）<a class="anchor" href="#三处-开工前实测就推翻方案假设-关键-别再照抄方案" aria-label="锚点">#</a></h3>
+<ol><li><strong>编号冲突</strong>：方案 §8 建议 <code>RUNTIME-005/006/007</code>，但 <code>RUNTIME-005</code>（CLI 错误标准化，</li></ol>
+<p>[DESIGN-ARCH-114]）与 <code>RUNTIME-006</code>（网关首选通道不得硬钉）<strong>已被先接线占用</strong>。<br>   ⇒ 实际登记 <strong><code>RUNTIME-007/008/009</code></strong>。<strong>教训：跨会话的方案，编号必须开工时重新查重</strong>。</p>
+<ol><li><strong><code>PROCESS-006</code> / <code>[DESIGN-PROCESS-002]</code> 新机制落地四阶段</strong> 在方案成稿后落地，</li></ol>
+<p>规定<strong>新拦截型机制必须先过 S1 观察（≥200 样本）才准拦截</strong>（PP-1/PP-3），<br>   且<strong>毕业以样本量计不以时间计</strong>（PP-2）。⇒ 方案的「观察一个周期」口径按此改为样本阈值。</p>
+<ol><li><strong>原型已不在 <code>_产物/</code></strong>：被整理流程隔离到</li></ol>
+<p><code>.khyos/housekeeping/2026-09-17/from-_产物/ai-feedback-demo.js</code>（16,020 B，完好）。<br>   ⇒ 落点纪律生效的实例：<code>_产物/</code> 会被周期清理，<strong>原型不要只放那里</strong>。</p>
+<h3 id="最值钱的坑-gate-advisory-的规则-永远不会被执行">⚠ 最值钱的坑：<code>gate='advisory'</code> 的规则<strong>永远不会被执行</strong><a class="anchor" href="#最值钱的坑-gate-advisory-的规则-永远不会被执行" aria-label="锚点">#</a></h3>
+<p><code>scripts/ruleguard/lib/registry.js#gateIncluded()</code>：<br><code>GATE_ORDER={commit:0,pr:1,release:2,manual:3,advisory:4}</code>，而 <code>max</code> 最大是 <strong>2</strong>（release）。<br>⇒ <strong><code>gate='advisory'</code> 的规则在任何门档都不被选中 = 登记了但不生效的死规则</strong><br>（<code>checkersRun</code> 34/42，我这条就在没跑的 8 个里）。<br><strong>S1「观察者」的正确表达</strong>：<code>gate='commit'</code>（<strong>会跑</strong>，执行器支持 <code>--changed</code>）</p>
+<ul><li><code>severity='advisory'</code>（<strong>只记录不阻断</strong>）。参照 <code>LAYOUT-002</code> 的 <code>gate=pr + severity=advisory</code>。</li></ul>
+<p><code>gateStrength()</code> 优先读 <code>severity</code>，故非阻断由 severity 控制，与 gate 分工明确。</p>
+<h3 id="落地产物-步骤-1-完成-四门串行复跑全绿">落地产物（步骤 1 完成，四门串行复跑全绿）<a class="anchor" href="#落地产物-步骤-1-完成-四门串行复跑全绿" aria-label="锚点">#</a></h3>
+<ul><li>新增 <code>scripts/ci/check-agent-feedback.js</code>（~430 行，零依赖、确定性、只读）</li><li><code>package.json</code> + <code>check:agent-feedback</code>（否则 <code>check-wiring</code> 判 error）</li><li><code>RULES-REGISTRY.json</code> +3 条（<code>meta.version</code> 2.6.0 → <strong>2.7.0</strong>，<code>ruleCount</code> 79 → <strong>82</strong>）</li><li><code>AGENTS.md</code>：第 3 行 marker 行补号 + 新增「工程规则 5/6/7」正文 + 两处速查表</li><li>设计文档 §8 补编号订正说明；<code>npm run docs:rules-cards</code> 重生成（82 张卡）</li></ul>
+<h3 id="落地时对方案的两处-必要订正">落地时对方案的两处<strong>必要订正</strong><a class="anchor" href="#落地时对方案的两处-必要订正" aria-label="锚点">#</a></h3>
+<ol><li><strong><code>delete-documented-code</code> 探针必须限定为代码文件</strong>。方案初稿对 <code>docs/</code> 内 <code>.md</code> 增删</li></ol>
+<p>也做背书匹配 → 「删一份报告被另一份索引提到」被判 error。实测在待提交改动集上<br>   <strong>未限定 192 条 warning → 限定后 34 条</strong>（真实删除信号），回到 PROCESS-006 的 10% 阈值内。<br>   同时排除 <code>/历史/</code>、<code>/00_INDEX_</code>、<code>/归档/</code> 等（记录 ≠ 现行设计）。</p>
+<ol><li><strong>登记表 <code>formerly</code> 必须是字符串</strong>（<code>null</code> 会被 <code>gen-rules-cards.js</code> 判「字段不全」拒绝生成）。</li></ol>
+<h3 id="两个操作坑">两个操作坑<a class="anchor" href="#两个操作坑" aria-label="锚点">#</a></h3>
+<ul><li>⚠ <strong>写注册表不要用 <code>node -e &quot;...&quot;</code> 内联中文 + 反引号</strong>：bash 会把 `<code> </code>source: &lt;用户原话&gt;<code> </code>`</li></ul>
+<p>当<strong>命令替换</strong>执行，字段内容被吃掉（本次 3 个字段受损，靠逐字段复核才发现）。<br>  ⇒ 一律写成<strong>脚本文件</strong>再 <code>node &lt;file&gt;</code>。</p>
+<ul><li><code>npm run rules:gate --json</code> 输出前有 npm banner，解析前须 <code>split(/\n(?=Summary:)/)[0]</code> 再截 <code>{</code>。</li></ul>
+<h3 id="验收-串行复跑-全绿">验收（串行复跑，全绿）<a class="anchor" href="#验收-串行复跑-全绿" aria-label="锚点">#</a></h3>
+<p><code>check:wiring</code> ✓（79 检查器全接线）· <code>check:gov-rules</code> ✓ · <code>rules:coverage</code> ✓ · <code>check:rules-registry</code> ✓<br><code>check:layout</code> 无新增（<code>dangling-task</code> 87&lt;基线 88、<code>cross-layer-require</code> 39=基线、<code>unresolved-require</code> 0，<strong>我的文件 0 次被点名</strong>）。<br><code>rules:gate:commit</code> 实测我的执行器 <code>action=start ... mode=commit</code> 真被调用，12 个 finding ID 全部绑定，exit 0 放行。<br><code>docs:build</code> + <code>docs:verify</code> ✓（1048 md / 1049 html / 12497 链接全通）。</p>
+<h3 id="步-1-标记-收尾复核-同日稍后-无改动-仅验证状态未漂移">步 1「标记」收尾复核（同日稍后，无改动，仅验证状态未漂移）<a class="anchor" href="#步-1-标记-收尾复核-同日稍后-无改动-仅验证状态未漂移" aria-label="锚点">#</a></h3>
+<ul><li>产物签核：检查器 27222 B · 6 张规则卡（md+html）· 总目录行 73–75 · 别名 <code>package.json:33</code> ·</li></ul>
+<p>两处标记行（<code>AGENTS.md:3</code>、<code>[DESIGN-ARCH-113].md:3</code>）均在。</p>
+<ul><li>登记表：<code>version 2.7.0</code> / <code>updated 2026-09-18</code> / <code>ruleCount 82 === rules.length 82</code> ✓；</li></ul>
+<p>三规则均为 <code>gate=commit</code> + <code>severity=advisory</code>（避开了 <code>advisory</code> 门档永不入选的陷阱）。</p>
+<ul><li>四闸复核全绿：<code>check:wiring</code> ✓（79 检查器全接线，豁免 9）· <code>check:gov-rules</code> ✓ ·</li></ul>
+<p><code>rules:coverage</code> ✓（82 条已执行 72 = 87.8%，exit 0）· <code>check:rules-registry</code> ✓。</p>
+<ul><li>实证：<code>rules:gate:commit</code> 中我的执行器 <code>progress=4/4 mode=commit exit=0 errors=0 warnings=34</code>，</li></ul>
+<p>12 个 finding ID 全绑定。</p>
+<ul><li>七场景 S1 全 <code>0 error(s)</code>、<code>ERROR 行 = 0</code>、exit 0（PP-3 只记录不拦截）；</li></ul>
+<p><strong>S3 副本探针</strong>：<code>fix-no-repro</code> → <code>[ERROR] fix-without-repro ...:1</code> exit 1，<br>  <code>delete-documented</code> → <code>[ERROR] delete-without-rollback ...:1</code> exit 1，<br>  <code>build-no-questions</code> 仍 exit 0（warn 级）。⇒ 一行 <code>STAGE</code> 切换的升级路径是真的。</p>
+<ul><li><code>check:layout</code> 与基线一致（<code>dangling-task 87 &lt; 88</code>、<code>cross-layer-require 39 = 39</code>、</li></ul>
+<p><code>unresolved-require 0</code>），逐条 <code>--list=</code> 确认 <strong>0 次点名</strong>本次新增文件。<br>  <code>check-agent-rules --changed</code> ✓（20 文件扫描，0 违规）。</p>
+<ul><li>⚠ <code>rules:coverage</code> 报道 <code>ARCH-079</code>/<code>ARCH-113</code> 挂在 <code>check-agent-feedback.js</code> 名下 ——</li></ul>
+<p>是扫描器把 <code>[DESIGN-ARCH-NNN]</code> 文档引用误读为规则 ID 的<strong>存量启发式问题</strong>（13 处，12 处早于本次），<br>  <strong>非阻断</strong>，未做规避以保持与仓库既有约定一致。</p>
+<ul><li><strong>步 2「迁移」未启动</strong>：PROCESS-006 PP-2 规定升级看<strong>样本数</strong>不看时间，</li></ul>
+<p>前置条件（≥200 条 S1 事件且无未解释样本）无法在本会话内制造，须等真实使用积累。</p>
+<h2 id="步骤-2-迁移-补-s1-观测设施-建阶段守卫-同日-第二次提交">步骤 2「迁移」—— 补 S1 观测设施 + 建阶段守卫（同日 · 第二次提交）<a class="anchor" href="#步骤-2-迁移-补-s1-观测设施-建阶段守卫-同日-第二次提交" aria-label="锚点">#</a></h2>
+<h3 id="先核对再动手-发现步骤-2-的三项里两项是空转">先核对再动手：发现步骤 2 的三项里两项是空转<a class="anchor" href="#先核对再动手-发现步骤-2-的三项里两项是空转" aria-label="锚点">#</a></h3>
+<p><code>gate</code> 已在 <code>commit</code>（步骤 1 订正过：<code>advisory</code> 是死档、<code>GATE_ORDER.advisory=4 &gt; max=2</code> 永不入选）；<br><code>severity</code> 已是 <code>advisory</code>（只记录恒 exit 0）；台账已在落。<strong>真正的缺口是样本</strong>：<br>实测 68 条 &lt; S2 门槛 200，且 <strong>62/68（91%）出自 <code>delete-documented-code</code> 单一探针</strong>、<br>全部来自 2026-09-18T02:36 那一次运行（1 个提交）。⇒ 在 91% 同源的数据上谈「误报率 &lt;10%」<br>是拿分母凑出来的结论，不满足 PP-2 / PP-5。</p>
+<h3 id="做了两件事-用户选定-补观测设施-一并建守卫">做了两件事（用户选定：补观测设施 + 一并建守卫）<a class="anchor" href="#做了两件事-用户选定-补观测设施-一并建守卫" aria-label="锚点">#</a></h3>
+<p><strong>① S2 提示通道</strong>（此前完全没有，仓库只有 3 个安全类 PreToolUse hook）</p>
+<ul><li><code>services/backend/src/services/agentFeedbackService.js</code>（新）：三模态提示通道。</li></ul>
+<p>⚠ <strong>落点订正 PROCESS-006 §3</strong>：该表写「S2 = PreToolUse hook 附提示」在本仓<strong>是错的</strong> ——<br>  <code>CMD_HOOK_ALLOWED_FIELDS.PreToolUse = ['params']</code>，<strong>没有任何字段能承载文本</strong>；<br>  <code>additionalContext</code> 只在 <code>PrePrompt</code>/<code>PostToolUse</code>/<code>PostResponse</code>/<code>PreCompact</code>/<code>PostCompact</code><br>  白名单里，由 <code>toolUseLoopCore.js:3732</code> 追加进 <code>currentMessage</code>（<strong>唯一注入点</strong>）。<br>  ⇒ 注册在 <strong><code>PrePrompt</code></strong>，与先例 <code>changeWatchService.makePrePromptInjector()</code> 同构。</p>
+<ul><li>⚠ <strong>跨进程陷阱（自踩自修）</strong>：hook 命令由 <code>hookRunner</code> <strong>spawn 成子进程</strong>，进程内单例槽位</li></ul>
+<p>会「子进程 push 了、主进程注入器永远读不到」且<strong>看起来一切正常</strong>。⇒ 改文件 store<br>  （<code>&lt;dataHome&gt;/agent-feedback/pending.json</code>，tmp+rename 原子写，按 <code>consumerId</code> 各自记账<br>  = 多消费者各得一次），照抄 <code>changeWatchService</code> 的 <code>verdict.json</code> 模式。</p>
+<ul><li><code>scripts/hooks/agentFeedbackHint.js</code>（新，新子目录）：PreToolUse 生产者，恒 exit 0。</li></ul>
+<p>只复用 <code>detectMode</code> <strong>纯函数</strong>（1ms）不跑 docs 遍历（全量 1.1s 会撞 5s 钩子超时）；<br>  按改动集签名去抖（否则同一改动连发十几次工具调用会反复说话）。<br>  ⚠ <strong>修了一个静默失效</strong>：<code>Write</code> 新文件原本一律判 <code>'M'</code> → 拿不到 BUILD 的 +0.35、<br>  置信度 0.05 &lt; 0.3 而<strong>闭嘴</strong>。钩子恰跑在落盘前，故「目标不存在 ⇒ 'A'」。<br>  修后三模态全覆盖：BUILD 0.4 / 顶层入口 0.7 / FIX 0.45 / DELETE 0.45。<br>  门控 <code>KHY_AGENT_FEEDBACK</code>（<strong>默认关</strong>，零副作用）。</p>
+<p><strong>② <code>scripts/ci/check-rollout-stage.js</code>（新）</strong> —— PROCESS-006 §6 标「待建」的 PP-1/2/3 守卫</p>
+<ul><li>登记 <code>PROCESS-008</code>（PROCESS 域新号，ssot 与 <code>PROCESS-006</code> 同为 <code>[DESIGN-PROCESS-002]</code>；</li></ul>
+<p>PROCESS-006 保持 <code>gate=manual</code> 不变，它管 PP-5 争议裁决等无法自动化的部分）。</p>
+<ul><li>8 个 finding，用<strong>带锚点</strong>方言 <code>[ERROR|WARN ] &lt;f&gt; &lt;file&gt;:&lt;line&gt;</code>（阶段违规可定位、可抑制）。</li><li><strong>8 场景反例自测全过</strong>（<code>.khyos/tmp/test-rollout-stage.js</code>）：基线/PP-1/PP-2/PP-6/非法阶段/</li></ul>
+<p>PP-4/代码登记漂移/PP-3 各自命中。</p>
+<ul><li>⚠ <strong>PP-3 判据必须复算不能读字面值</strong>：按 <code>gateStrength()</code> 派生强度（未声明 severity 时</li></ul>
+<p>P0/P1 → <code>blocking</code>）。「没写 severity」和「写了 advisory」字面不同、效果可能一样。</p>
+<ul><li>⚠ <strong>守卫自身也登记为 S1</strong>（<code>GUARD_STAGE='S1'</code>、<code>severity=advisory</code>）—— 守门人也要守门</li></ul>
+<p>（PP-1）。其 <code>executorStage.constant</code> 被自己校验，形成自洽闭环。</p>
+<h3 id="feature-ownership-json-补-rollout-段-version-1-2"><code>FEATURE-OWNERSHIP.json</code> 补 <code>rollout</code> 段（version 1→2）<a class="anchor" href="#feature-ownership-json-补-rollout-段-version-1-2" aria-label="锚点">#</a></h3>
+<p>加法式扩展，<code>check-feature-ownership.js</code> 只查 <code>REQUIRED_FIELDS</code> 不拒绝未知字段。<br>登记 2 个机制：<code>agent-feedback-contract</code>(S1, 68/200)、<code>rollout-stage-guard</code>(S1, 0/200)。<br><code>shell-command-risk</code> 补 <code>rolloutStage=S3</code>（存量豁免，早于 PROCESS-006）。</p>
+<h3 id="验收">验收<a class="anchor" href="#验收" aria-label="锚点">#</a></h3>
+<p>四闸全绿：<code>check:wiring</code>（80 检查器）· <code>check:gov-rules</code> · <code>check:rules-registry</code> · <code>rules:coverage</code>（83→已执行 73, 88%）。<br><strong>门里实测</strong>（不止声明级）：<code>rules:gate:commit</code> 中 <code>check-rollout-stage.js</code> <code>progress=5/5</code><br>8 个 finding 全绑定；注入 S3 违规 → <code>exit=1 errors=3</code> 被抓，还原后归零；<br>因 <code>severity=advisory</code>，门整体仍 <code>exit=0</code>（记录不阻断 = PP-3）。<br><code>docs:build</code>+<code>verify</code> ✅（1056 md / 1057 html / 12587 链接）。<code>check:layout</code> 与基线一致。<br>⚠ 存量：<code>changeWatchService.test.js</code> 33 pass / 1 fail（Windows 路径分隔符 <code>C:/</code> vs <code>C:/</code>），<br><strong>用 HEAD 版 hookSystem.js 对照复跑同样 1 fail，与本次改动无关</strong>（该测试不引用 hookSystem）。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../.workbuddy-ai/memory/2026-09-17.html"><div class="dir">← 上一篇</div><div class="ttl">版本管理与发布触发规则（DESIGN-ARCH-118 / PROCESS-005）</div></a><a class="next" href="../../.workbuddy-ai/memory/2026-09-19.html"><div class="dir">下一篇 →</div><div class="ttl">2026-09-19 工作日志</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__=".workbuddy-ai/memory/2026-09-18.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

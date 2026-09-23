@@ -3,9 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: README.md -->
 <title>多渠道发布工具箱（scripts/release/publish/） · Khy-OS 文档</title>
-<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
-<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
 </head>
 <body>
 <div class="topbar">
@@ -62,7 +63,7 @@ GITEE_TOKEN=xxxx bash scripts/release/publish/publish-gitee.sh --repo kodehu03/k
 <h2 id="sdist-白名单-什么不再进发行包-以及怎么把它变回来">sdist 白名单：什么不再进发行包，以及怎么把它变回来<a class="anchor" href="#sdist-白名单-什么不再进发行包-以及怎么把它变回来" aria-label="锚点">#</a></h2>
 <p>sdist 的内容由 <code>scripts/release/pip_packaging_rules.py</code> 单点决定，<code>MANIFEST.in</code><br>由它生成（<code>npm run check:manifest-sync</code> 强制两者一致）。规则本身是「广撒网 +<br>prune」的<strong>黑名单</strong>形态，漏东西是必然的，所以打完包之后还要过一道<strong>白名单</strong>：<br><code>audit_pip_artifacts.py</code> 列出 sdist 的全部成员，凡是白名单没点名的一律让构建失败。</p>
 <p>下面这些东西<strong>刻意不再进发行包</strong>，每一条都能在本地一条命令重建：</p>
-<table><thead><tr><th>不再分发的内容</th><th>为什么</th><th>重建命令</th></tr></thead><tbody><tr><td><code>docs/_assets/mermaid.min.js</code>（3.12 MB）</td><td>可再生构建产物，不进 git 却因为 MANIFEST 走工作树而进了包</td><td><code>npm run docs:mermaid</code>（随后 <code>npm run docs:build</code> 生成带图表的离线站）</td></tr><tr><td><code>**/*.html</code>（147 个文档站派生件）</td><td>都是 <code>build_docs_site.js</code> 从同名 <code>.md</code> 生成的；5 个真入口已单独放回</td><td><code>npm run docs:build</code></td></tr><tr><td><code>services/backend/.khy/</code>、<code>.khy_*</code> 标记</td><td>本机运行时状态。带着预置的 hydration 标记发出去，新装的机器会以为 bootstrap 跑过了</td><td>无需重建，首次运行自动生成</td></tr><tr><td><code>*.db-shm</code> / <code>*.db-wal</code> / <code>test-data-criterion-*/</code></td><td>本机跑校验脚本留下的 SQLite 边角料</td><td><code>node services/backend/verify-criterion-*.js</code></td></tr><tr><td><code>*.ast</code> / <code>*.typedtree</code></td><td>moon 的构建中间件，<code>.mbt</code> 源码照常分发</td><td><code>moon build</code></td></tr><tr><td><code>[OPS-MAN-066] khyos进化提示词手册-1000条.md</code></td><td>内部运维材料，不该出现在公开发行版</td><td>仓库内原文件未删，只是不分发</td></tr></tbody></table>
+<table><thead><tr><th>不再分发的内容</th><th>为什么</th><th>重建命令</th></tr></thead><tbody><tr><td><code>docs/19_资产/site/mermaid.min.js</code>（3.12 MB）</td><td>可再生构建产物，不进 git 却因为 MANIFEST 走工作树而进了包</td><td><code>npm run docs:mermaid</code>（随后 <code>npm run docs:build</code> 生成带图表的离线站）</td></tr><tr><td><code>**/*.html</code>（147 个文档站派生件）</td><td>都是 <code>build_docs_site.js</code> 从同名 <code>.md</code> 生成的；5 个真入口已单独放回</td><td><code>npm run docs:build</code></td></tr><tr><td><code>services/backend/.khy/</code>、<code>.khy_*</code> 标记</td><td>本机运行时状态。带着预置的 hydration 标记发出去，新装的机器会以为 bootstrap 跑过了</td><td>无需重建，首次运行自动生成</td></tr><tr><td><code>*.db-shm</code> / <code>*.db-wal</code> / <code>test-data-criterion-*/</code></td><td>本机跑校验脚本留下的 SQLite 边角料</td><td><code>node services/backend/verify-criterion-*.js</code></td></tr><tr><td><code>*.ast</code> / <code>*.typedtree</code></td><td>moon 的构建中间件，<code>.mbt</code> 源码照常分发</td><td><code>moon build</code></td></tr><tr><td><code>[OPS-MAN-066] khyos进化提示词手册-1000条.md</code></td><td>内部运维材料，不该出现在公开发行版</td><td>仓库内原文件未删，只是不分发</td></tr></tbody></table>
 <p>新增一类文件而白名单没覆盖时，构建会停在 <code>[FAIL] ... outside the sdist allowlist</code><br>并打印具体路径。判断清楚它该不该进发行包：不该进就在规则文件里排除，该进就写进<br><code>SDIST_ALLOWED_*</code> 并<strong>留下理由</strong>。</p>
 <p>单文件体积上限 1 MB（<code>SDIST_MAX_FILE_BYTES</code>），只有离线运行时 <code>bundle.mjs</code> 例外。<br>这条是给「又一个生成物混进来」兜底的——白名单按后缀判断，识别不了「同样是 .md，<br>一个是公开设计文档，一个是内部材料」，那一类只能靠显式排除。</p>
 <h2 id="为什么-bundle-mjs-留着不动-离线安装的全部本体">为什么 bundle.mjs 留着不动（离线安装的全部本体）<a class="anchor" href="#为什么-bundle-mjs-留着不动-离线安装的全部本体" aria-label="锚点">#</a></h2>
@@ -88,8 +89,8 @@ GITEE_TOKEN=xxxx bash scripts/release/publish/publish-gitee.sh --repo kodehu03/k
   </main>
 </div>
 <script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="scripts/release/publish/README.html";</script>
-<script src="../../../docs/_assets/nav-data.js"></script>
-<script src="../../../docs/_assets/mermaid.min.js"></script>
-<script src="../../../docs/_assets/docs-site.js"></script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
 </body>
 </html>

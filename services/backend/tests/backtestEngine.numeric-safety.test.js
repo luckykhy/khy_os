@@ -2,7 +2,7 @@
 
 // The engine lives at software/khyquant/services/backtestEngine.js and requires
 // its dependencies via './klineDataService' etc., which resolve to the software
-// copies �?NOT the backend src/services re-exports. Mock the software paths the
+// copies —NOT the backend src/services re-exports. Mock the software paths the
 // engine actually loads, otherwise the mock is silently bypassed and the engine
 // falls through to live/hybrid data.
 jest.mock('../../../software/khyquant/services/klineDataService', () => ({
@@ -32,7 +32,11 @@ describe('backtest engine numeric safety', () => {
       signalFn: 'if (i === 0) return "buy"; if (i === bars.length - 1) return "sell"; return null;',
     });
 
-    expect(result.finalCapital).toBe(105000);
+    // A-share friction model (commission 0.0003 both sides, stamp duty 0.001
+    // on sells, slippage 0.001, T+1): buy 900 @100.1 (slippage-adjusted) then
+    // sell 900 @104.895 net of all fees → 104165.75, not the frictionless
+    // 105000 this test originally assumed. Verified against the engine probe.
+    expect(result.finalCapital).toBe(104165.75);
     expect(result.totalTrades).toBe(2);
     expect(Number.isFinite(result.totalReturn)).toBe(true);
     expect(Number.isFinite(result.maxDrawdown)).toBe(true);

@@ -31,7 +31,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const memdir = require('../../../../memdir/memdir');
+const memdir = require('../../../../memdir');
 const memoryTier = require('../../../memoryTier');
 
 const VALID_TYPES = ['user', 'feedback', 'project', 'reference'];

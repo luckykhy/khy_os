@@ -37,19 +37,36 @@
           v-for="c in conversations"
           :key="c.id"
           :class="['chat-conv-item', { active: c.id === activeId }]"
+          role="button"
+          :tabindex="0"
+          :aria-label="`打开对话 ${c.title}`"
           @click="selectConversation(c.id)"
+          @keydown.enter.prevent="selectConversation(c.id)"
+          @keydown.space.prevent="selectConversation(c.id)"
         >
           <div class="chat-conv-main">
             <div class="chat-conv-title" :title="c.title">{{ c.title }}</div>
             <div class="chat-conv-time">{{ relativeTime(c.updatedAt) }}</div>
           </div>
           <div class="chat-conv-ops">
-            <el-icon class="chat-conv-op" title="重命名" @click.stop="renameConversation(c)"
-              ><EditPen
-            /></el-icon>
-            <el-icon class="chat-conv-op" title="删除" @click.stop="deleteConversation(c)"
-              ><Delete
-            /></el-icon>
+            <button
+              type="button"
+              class="chat-conv-op-btn"
+              title="重命名"
+              :aria-label="`重命名对话 ${c.title}`"
+              @click.stop="renameConversation(c)"
+            >
+              <el-icon><EditPen /></el-icon>
+            </button>
+            <button
+              type="button"
+              class="chat-conv-op-btn chat-conv-op-btn-danger"
+              title="删除"
+              :aria-label="`删除对话 ${c.title}`"
+              @click.stop="deleteConversation(c)"
+            >
+              <el-icon><Delete /></el-icon>
+            </button>
           </div>
         </div>
         <div v-if="!conversations.length && !listLoading" class="chat-conv-empty">暂无历史对话</div>
@@ -140,6 +157,14 @@
                     >默认</el-tag
                   >
                   <el-tag
+                    v-if="isNewBadge(m)"
+                    size="small"
+                    :type="newTagType()"
+                    effect="dark"
+                    class="model-new-tag"
+                    >{{ newLabel() }}</el-tag
+                  >
+                  <el-tag
                     size="small"
                     :type="verifyTagType(m.verifyStatus)"
                     effect="plain"
@@ -159,6 +184,21 @@
               <el-option label="WebSocket" value="ws" />
             </el-select>
           </div>
+          <el-tooltip
+            v-if="connectionStatus !== 'connected'"
+            :content="daemonStatusTooltip"
+            placement="bottom"
+          >
+            <span
+              class="daemon-health-chip"
+              :class="`daemon-health-${connectionStatus}`"
+              role="status"
+              :aria-label="`守护进程状态: ${connectionStatus}`"
+            >
+              <span class="daemon-health-dot" aria-hidden="true"></span>
+              {{ connectionStatus === 'checking' ? '检测中' : connectionStatus === 'reconnecting' ? '重连中' : '已断开' }}
+            </span>
+          </el-tooltip>
           <el-popover
             v-if="contextStats && contextStats.contextWindow"
             placement="bottom-end"
@@ -594,22 +634,20 @@
             role="list"
             aria-label="待发送附件"
           >
-            <div
-              v-for="att in pendingAttachments"
-              :key="att.id"
-              class="chat-pending-chip"
-              role="listitem"
-            >
-              <el-icon><component :is="attachmentIcon(att.kind)" /></el-icon>
-              <span class="chat-pending-name" :title="att.name">{{ att.name }}</span>
-              <span class="chat-pending-size">{{ formatSize(att.size) }}</span>
-              <el-icon
-                class="chat-pending-remove"
-                aria-label="移除附件"
+              <button
+                v-for="att in pendingAttachments"
+                :key="att.id"
+                type="button"
+                class="chat-pending-chip"
+                role="listitem"
+                :aria-label="`移除附件 ${att.name}`"
                 @click="removeAttachment(att.id)"
-                ><Close
-              /></el-icon>
-            </div>
+              >
+                <el-icon class="chat-pending-ico"><component :is="attachmentIcon(att.kind)" /></el-icon>
+                <span class="chat-pending-name" :title="att.name">{{ att.name }}</span>
+                <span class="chat-pending-size">{{ formatSize(att.size) }}</span>
+                <span class="chat-pending-remove" aria-hidden="true">×</span>
+              </button>
             <div v-if="uploadingCount" class="chat-pending-chip chat-pending-uploading">
               <el-icon class="is-loading"><Loading /></el-icon>
               <span>上传中（{{ uploadingCount }}）…</span>
@@ -622,6 +660,8 @@
             multiple
             accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.csv,.json,.zip,.tar,.gz,.rar,.7z,.py,.js,.ts,.go,.rs,.java,.c,.cpp,.html,.css"
             class="chat-file-input-hidden"
+            tabindex="-1"
+            aria-label="选择要上传的附件"
             @change="onFilesSelected"
           />
           <ChatInputBar
@@ -650,7 +690,13 @@
       </div>
     </div>
 
-    <el-drawer v-model="modelPanelVisible" title="可用模型" direction="rtl" size="440px">
+    <el-drawer
+      v-model="modelPanelVisible"
+      title="可用模型"
+      direction="rtl"
+      size="440px"
+      @closed="modelPanelFocus.restoreFocus()"
+    >
       <div v-loading="modelsLoading || overridesBusy">
         <el-empty
           v-if="!modelGroups.length"
@@ -762,7 +808,6 @@ import {
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   ChatDotRound,
-  Close,
   Loading,
   Picture,
   VideoCamera,
@@ -808,6 +853,9 @@ import {
   sourceTagType,
   verifyLabel,
   verifyTagType,
+  isNewBadge,
+  newLabel,
+  newTagType,
 } from '../utils/modelBadges';
 
 // WeakMap cache: summarizeToolProgress iterates the steps array on every call.
@@ -825,7 +873,10 @@ import { parseToolOutputSections } from './toolOutputSections';
 import { useChatConversations } from '@/composables/useChatConversations';
 import { useProjects } from '@/composables/useProjects';
 import { useGeolocation } from '@/composables/useGeolocation';
+import { useDaemonHealth } from '@/composables/useDaemonHealth';
+import { useModalFocus } from '@/composables/useModalFocus';
 
+import { showSuccess, showError, showWarning, showInfo } from '@/api/notify';
 // shallowRef 的消息列表：数组结构变更（push/splice）自动触发 v-for；
 // 内容变更通过 _bumpMsgContentVersion 递增 ref 来驱动。
 // displayMessages 把两者合并为一个 v-for 可用的响应式源。
@@ -920,6 +971,22 @@ const {
   queryPermissionState,
 } = useGeolocation();
 
+// ── Daemon health monitor (keep-alive + auto-restart) ──────────────────────
+// Keeps the khychat daemon alive while this page is open, prevents the 30-min
+// WS idle timeout, and auto-restarts the daemon if it crashes.
+const {
+  connectionStatus,
+  daemonState,
+  lastCheckedAt: daemonLastChecked,
+  reconnectAttempts: daemonReconnectAttempts,
+} = useDaemonHealth();
+
+const daemonStatusTooltip = computed(() => {
+  if (connectionStatus.value === 'checking') return '正在检测守护进程状态…';
+  if (connectionStatus.value === 'reconnecting') return `守护进程已断开，正在自动重连（第 ${daemonReconnectAttempts.value} 次）`;
+  return '守护进程连接已断开，正在尝试自动重启';
+});
+
 const locationBtnTitle = computed(() => {
   if (locationPermission.value === 'denied') {
     return '浏览器定位权限被拒绝，请在浏览器地址栏权限设置中开启';
@@ -932,25 +999,25 @@ const locationBtnTitle = computed(() => {
 async function toggleLocation() {
   if (locationEnabled.value) {
     setLocationEnabled(false);
-    ElMessage.info('已关闭位置共享：后续消息不再附带定位坐标');
+    showInfo('已关闭位置共享：后续消息不再附带定位坐标');
     return;
   }
   // Probe first so a known-denied permission never triggers a browser prompt.
   const state = await queryPermissionState();
   if (state === 'denied') {
-    ElMessage.warning('浏览器定位权限被拒绝，请在浏览器地址栏权限设置中开启');
+    showWarning('浏览器定位权限被拒绝，请在浏览器地址栏权限设置中开启');
     return;
   }
   const { status } = await requestLocation();
   if (status === 'granted') {
     setLocationEnabled(true);
-    ElMessage.success('已开启位置共享：后续消息将附带当前坐标');
+    showSuccess('已开启位置共享：后续消息将附带当前坐标');
   } else if (status === 'denied') {
-    ElMessage.warning('浏览器定位权限被拒绝，请在浏览器地址栏权限设置中开启');
+    showWarning('浏览器定位权限被拒绝，请在浏览器地址栏权限设置中开启');
   } else if (status === 'timeout') {
-    ElMessage.error('获取定位超时：请确认系统定位服务已开启后重试');
+    showError('获取定位超时：请确认系统定位服务已开启后重试');
   } else {
-    ElMessage.error('获取定位失败：当前浏览器或设备不支持定位服务');
+    showError('获取定位失败：当前浏览器或设备不支持定位服务');
   }
 }
 
@@ -979,11 +1046,11 @@ async function ensureLocationFresh() {
   if (status === 'denied') {
     // Turn the toggle off so the warning is not repeated on every message.
     setLocationEnabled(false);
-    ElMessage.warning('浏览器定位权限被拒绝，请在浏览器地址栏权限设置中开启');
+    showWarning('浏览器定位权限被拒绝，请在浏览器地址栏权限设置中开启');
   } else if (status === 'timeout') {
-    ElMessage.warning('获取定位超时：请确认系统定位服务已开启后重试，本条消息将不附带坐标');
+    showWarning('获取定位超时：请确认系统定位服务已开启后重试，本条消息将不附带坐标');
   } else {
-    ElMessage.warning('获取定位失败：请确认浏览器或设备支持定位服务，本条消息将不附带坐标');
+    showWarning('获取定位失败：请确认浏览器或设备支持定位服务，本条消息将不附带坐标');
   }
 }
 
@@ -1010,13 +1077,19 @@ async function persistActiveOnce() {
   // rather than left holding the stale prior content. A brand-new, never-saved
   // conversation still does not create an empty row.
   if (!messages.value.length && activeId.value == null) return;
-  const payload = messages.value.map((m) => ({
-    id: m.id,
-    role: m.role,
-    content: m.content,
-    model: m.model,
-    attachments: m.attachments,
-  }));
+  // An assistant bubble that arrived empty (stream interrupted by navigation,
+  // or a failed turn that produced no content) is an orphan: persisting it would
+  // save a dangling half-turn. Keep the user message that triggered it, drop the
+  // empty assistant bubble so the transcript reads as "user asked, no reply yet".
+  const payload = messages.value
+    .filter((m) => !(m.role === 'assistant' && !String(m.content || '').trim()))
+    .map((m) => ({
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      model: m.model,
+      attachments: m.attachments,
+    }));
   try {
     if (activeId.value == null) {
       await createConversation({ messages: payload, projectId: activeProjectId.value });
@@ -1100,7 +1173,7 @@ function ctxFormatTokens(n) {
 // first send (matches 清言 — no empty conversations pile up).
 function newConversation() {
   if (loading.value) {
-    ElMessage.warning('请等待当前回复完成');
+    showWarning('请等待当前回复完成');
     return;
   }
   messages.value = markRaw([]);
@@ -1127,7 +1200,7 @@ function onModelChange() {
 // transcript isn't mis-filed under the newly selected project.
 async function onProjectChange(id) {
   if (loading.value) {
-    ElMessage.warning('请等待当前回复完成');
+    showWarning('请等待当前回复完成');
     return;
   }
   setActiveProject(id);
@@ -1149,7 +1222,7 @@ async function onProjectChange(id) {
 async function selectConversation(id) {
   if (id === activeId.value) return;
   if (loading.value) {
-    ElMessage.warning('请等待当前回复完成');
+    showWarning('请等待当前回复完成');
     return;
   }
   try {
@@ -1158,7 +1231,7 @@ async function selectConversation(id) {
     nextTick(scrollToBottom);
     refreshContextStats();
   } catch (err) {
-    ElMessage.error(`加载对话失败：${err?.message || '未知错误'}`);
+    showError(`加载对话失败：${err?.message || '未知错误'}`);
   }
 }
 
@@ -1171,9 +1244,9 @@ async function renameConversation(c) {
       inputValidator: (v) => (v && v.trim() ? true : '标题不能为空'),
     });
     await updateConversation(c.id, { title: value.trim() });
-    ElMessage.success('已重命名');
+    showSuccess('已重命名');
   } catch (err) {
-    if (err !== 'cancel') ElMessage.error('重命名失败');
+    if (err !== 'cancel') showError('重命名失败');
   }
 }
 
@@ -1187,9 +1260,9 @@ async function deleteConversation(c) {
     const wasActive = c.id === activeId.value;
     await removeConversation(c.id);
     if (wasActive) newConversation();
-    ElMessage.success('已删除');
+    showSuccess('已删除');
   } catch (err) {
-    if (err !== 'cancel') ElMessage.error('删除失败');
+    if (err !== 'cancel') showError('删除失败');
   }
 }
 
@@ -1236,9 +1309,9 @@ async function triggerVoiceInput() {
   // 输入框聚焦已由子组件在 emit('voice-input') 前完成，此处只负责触发系统语音听写。
   try {
     await request.post('/api/system/trigger-voice-input', null, { silent: true });
-    ElMessage.success('已开启语音输入，请开始说话');
+    showSuccess('已开启语音输入，请开始说话');
   } catch (e) {
-    ElMessage.error('开启语音输入失败：' + (e?.response?.data?.error || e?.message || e));
+    showError('开启语音输入失败：' + (e?.response?.data?.error || e?.message || e));
   }
 }
 
@@ -1265,7 +1338,7 @@ async function onFilesSelected(event) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) {
-        ElMessage.error(`「${file.name}」上传失败：${data.message || `HTTP ${res.status}`}`);
+        showError(`「${file.name}」上传失败：${data.message || `HTTP ${res.status}`}`);
         continue;
       }
       const list = Array.isArray(data.attachments) ? data.attachments : [];
@@ -1273,7 +1346,7 @@ async function onFilesSelected(event) {
         if (att && att.id) pendingAttachments.value.push(att);
       }
     } catch (err) {
-      ElMessage.error(`「${file.name}」上传失败：${err?.message || '网络错误'}`);
+      showError(`「${file.name}」上传失败：${err?.message || '网络错误'}`);
     } finally {
       uploadingCount.value = Math.max(0, uploadingCount.value - 1);
     }
@@ -1591,7 +1664,9 @@ function onComposerFocus() {
 
 // Drawer state for the dedicated "available models" panel
 const modelPanelVisible = ref(false);
+const modelPanelFocus = useModalFocus();
 function openModelPanel() {
+  modelPanelFocus.captureTrigger();
   modelPanelVisible.value = true;
   loadModels();
 }
@@ -1612,7 +1687,7 @@ async function patchOverride(adapter, patch) {
     await request.put(`/api/ai-gateway/model-overrides/${adapter}`, patch);
     await reloadModels();
   } catch (e) {
-    ElMessage.error('保存失败：' + (e?.message || e));
+    showError('保存失败：' + (e?.message || e));
   } finally {
     overridesBusy.value = false;
   }
@@ -1686,7 +1761,7 @@ async function addModelToAdapter(adapter) {
       /* ignore */
     }
     if (existing.some((m) => m.id === id)) {
-      ElMessage.warning('该模型已存在');
+      showWarning('该模型已存在');
       return;
     }
     await patchOverride(adapter, { added: [...existing, { id, name: id }] });
@@ -1697,12 +1772,12 @@ async function addModelToAdapter(adapter) {
 async function verifyAdapter(adapter) {
   overridesBusy.value = true;
   try {
-    ElMessage.info(`正在验证 ${adapter} 的模型列表…`);
+    showInfo(`正在验证 ${adapter} 的模型列表…`);
     await request.post(`/api/ai-gateway/models/${adapter}/verify`);
     await reloadModels();
-    ElMessage.success('验证完成');
+    showSuccess('验证完成');
   } catch (e) {
-    ElMessage.error('验证失败：' + (e?.message || e));
+    showError('验证失败：' + (e?.message || e));
   } finally {
     overridesBusy.value = false;
   }
@@ -2032,7 +2107,7 @@ function safeParse(s) {
 function handleExportCommand(format) {
   const msgs = messages.value;
   if (!msgs.length) {
-    ElMessage.warning('暂无对话内容可导出');
+    showWarning('暂无对话内容可导出');
     return;
   }
   switch (format) {
@@ -2085,11 +2160,11 @@ function exportAsHtml(msgs) {
     })
     .join('\n');
   const html = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>AI 对话记录</title>
-<style>body{font-family:sans-serif;max-width:800px;margin:20px auto;padding:0 16px;color:#333}
+<style>body{font-family:sans-serif;max-width:800px;margin:20px auto;padding:0 16px;color:var(--khy-text-strong)}
 .msg{margin:12px 0;padding:10px 14px;border-radius:8px}
-.user{background:#eaf2ff}.assistant{background:#f5f5f5}
-.role{font-weight:600;font-size:12px;color:#666;margin-bottom:4px}
-.thinking{margin-top:8px;font-size:12px;color:#888}
+.user{background:var(--khy-primary-soft)}.assistant{background:var(--khy-gray-50)}
+.role{font-weight:600;font-size:12px;color:var(--khy-gray-500);margin-bottom:4px}
+.thinking{margin-top:8px;font-size:12px;color:var(--khy-gray-400)}
 pre{white-space:pre-wrap;font-family:monospace}</style></head>
 <body><h1>AI 对话记录</h1><p>导出时间：${now}</p>${body}</body></html>`;
   downloadFile(html, 'chat-export.html', 'text/html');
@@ -2119,7 +2194,7 @@ function downloadFile(content, filename, mime) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  ElMessage.success(`已导出：${filename}`);
+  showSuccess(`已导出：${filename}`);
 }
 
 // Compact a tool input object to a short single-line preview for the step chip.
@@ -2722,57 +2797,101 @@ async function sendMessageByStream(text, assistantMessage, attachmentIds = []) {
     payload.preferredAdapter = adapter;
     payload.preferredModel = rest.join('/');
   }
-  // Refresh coordinates lazily (restored-on state) then attach them when the
-  // toggle is on (maximumAge in the composable keeps a fix fresh for 5 min).
   await ensureLocationFresh();
   attachClientLocation(payload);
 
-  currentStreamAbortController = new AbortController();
-  addThinkingLog('status', '步骤 1/3：正在建立流式连接并发送请求');
+  const SSE_MAX_RETRIES = 3;
+  const SSE_BASE_BACKOFF_MS = 2000;
 
-  // 流式响应:stream:true 关闭内部超时(长时间生成不受影响),并把"停止生成"
-  // 按钮的 signal 传给 authedFetch,内部 401 处理与外部中止二者兼容。
-  const res = await authedFetch(resolveApiUrl('/api/ai/chat/stream'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-    signal: currentStreamAbortController.signal,
-    stream: true,
-  });
-
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`HTTP ${res.status}${detail ? `: ${detail.slice(0, 200)}` : ''}`);
-  }
-
-  if (!res.body || typeof res.body.getReader !== 'function') {
-    throw new Error('浏览器未提供可读流接口');
-  }
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder('utf-8');
-  let buffer = '';
-
-  // 读流直到服务端关闭响应体。done 用显式标志承载，避免 `while (true)` 触发
-  // no-constant-condition。
-  let streamDone = false;
-  while (!streamDone) {
-    const chunk = await reader.read();
-    streamDone = chunk.done;
-    if (streamDone) break;
-
-    buffer += decoder.decode(chunk.value, { stream: true }).replace(/\r\n/g, '\n');
-    const events = buffer.split('\n\n');
-    buffer = events.pop() || '';
-
-    for (const rawEvent of events) {
-      handleStreamEvent(rawEvent, assistantMessage);
+  for (let attempt = 0; attempt <= SSE_MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      const backoffMs = SSE_BASE_BACKOFF_MS * Math.pow(1.5, attempt - 1);
+      addThinkingLog('status', `流式连接中断，${Math.round(backoffMs / 1000)}s 后自动重连（第 ${attempt}/${SSE_MAX_RETRIES} 次）…`);
+      assistantMessage.content = '';
+      if (Array.isArray(assistantMessage.steps)) assistantMessage.steps = [];
+      _lastStreamPiece = '';
+      _bumpMsgContentVersion();
+      await new Promise((r) => setTimeout(r, backoffMs));
+      if (manualAbortRequested) throw new Error('用户已取消');
     }
-  }
 
-  const tail = buffer.trim();
-  if (tail) {
-    handleStreamEvent(tail, assistantMessage);
+    currentStreamAbortController = new AbortController();
+    if (attempt === 0) {
+      addThinkingLog('status', '步骤 1/3：正在建立流式连接并发送请求');
+    }
+
+    try {
+      const res = await authedFetch(resolveApiUrl('/api/ai/chat/stream'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: currentStreamAbortController.signal,
+        stream: true,
+      });
+
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status}${detail ? `: ${detail.slice(0, 200)}` : ''}`);
+      }
+
+      if (!res.body || typeof res.body.getReader !== 'function') {
+        throw new Error('浏览器未提供可读流接口');
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+      let receivedDone = false;
+
+      let streamDone = false;
+      while (!streamDone) {
+        const chunk = await reader.read();
+        streamDone = chunk.done;
+        if (streamDone) break;
+
+        buffer += decoder.decode(chunk.value, { stream: true }).replace(/\r\n/g, '\n');
+        const events = buffer.split('\n\n');
+        buffer = events.pop() || '';
+
+        for (const rawEvent of events) {
+          handleStreamEvent(rawEvent, assistantMessage);
+          try {
+            const parsed = JSON.parse(rawEvent.replace(/^data:\s*/m, ''));
+            if (parsed && parsed.type === 'done') receivedDone = true;
+          } catch { /* not JSON — skip */ }
+        }
+      }
+
+      const tail = buffer.trim();
+      if (tail) {
+        handleStreamEvent(tail, assistantMessage);
+        try {
+          const parsed = JSON.parse(tail.replace(/^data:\s*/m, ''));
+          if (parsed && parsed.type === 'done') receivedDone = true;
+        } catch { /* not JSON — skip */ }
+      }
+
+      if (receivedDone) return;
+      if (manualAbortRequested) throw new Error('用户已取消');
+
+      // Stream ended without a done event — network blip or server crash.
+      // Retry unless this is the last attempt.
+      if (attempt < SSE_MAX_RETRIES) {
+        continue;
+      }
+      // Last attempt exhausted — the fallback handler in runAssistantTurn
+      // will switch to non-streaming mode.
+      addThinkingLog('error', `流式连接在 ${SSE_MAX_RETRIES + 1} 次尝试后仍不稳定，将切换为普通响应模式`);
+      return;
+
+    } catch (err) {
+      const aborted = manualAbortRequested || err?.name === 'AbortError';
+      if (aborted) throw err;
+      if (attempt < SSE_MAX_RETRIES) {
+        continue;
+      }
+      throw err;
+    }
   }
 }
 
@@ -2915,7 +3034,7 @@ async function sendMessage(rawText) {
   const attachmentIds = attachments.map((a) => a.id);
   if ((!text && !attachmentIds.length) || loading.value) return;
   if (uploadingCount.value > 0) {
-    ElMessage.warning(`附件上传中（剩余 ${uploadingCount.value} 个），完成后即可发送`);
+    showWarning(`附件上传中（剩余 ${uploadingCount.value} 个），完成后即可发送`);
     return;
   }
 
@@ -2959,14 +3078,14 @@ function findTriggeringUserIndex(idx) {
 // messages are untouched (the assistant object is reset, not removed).
 async function regenerate(msg) {
   if (loading.value) {
-    ElMessage.warning('请等待当前回复完成');
+    showWarning('请等待当前回复完成');
     return;
   }
   const idx = messages.value.findIndex((m) => m.id === msg.id);
   if (idx < 0 || msg.role !== 'assistant') return;
   const userIdx = findTriggeringUserIndex(idx);
   if (userIdx < 0) {
-    ElMessage.warning('找不到对应的用户消息，无法重做');
+    showWarning('找不到对应的用户消息，无法重做');
     return;
   }
   const userMsg = messages.value[userIdx];
@@ -2988,12 +3107,12 @@ async function savePromptToLibrary(msg) {
   if (idx < 0 || msg.role !== 'assistant') return;
   const userIdx = findTriggeringUserIndex(idx);
   if (userIdx < 0) {
-    ElMessage.warning('找不到对应的提问，无法保存');
+    showWarning('找不到对应的提问，无法保存');
     return;
   }
   const content = (messages.value[userIdx].content || '').trim();
   if (!content) {
-    ElMessage.warning('提问内容为空，无法保存');
+    showWarning('提问内容为空，无法保存');
     return;
   }
   let title;
@@ -3013,9 +3132,9 @@ async function savePromptToLibrary(msg) {
       content,
       source: 'manual',
     });
-    ElMessage.success('已保存到提示词库');
+    showSuccess('已保存到提示词库');
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || '保存失败');
+    showError(err?.response?.data?.message || '保存失败');
   }
 }
 // Human-readable labels for the timeline stages traceAuditService emits.
@@ -3107,7 +3226,7 @@ async function toggleTrace(msg) {
 // and restore the user's text/attachments into the composer for editing.
 function retract(msg) {
   if (loading.value) {
-    ElMessage.warning('请等待当前回复完成');
+    showWarning('请等待当前回复完成');
     return;
   }
   const idx = messages.value.findIndex((m) => m.id === msg.id);
@@ -3366,6 +3485,16 @@ onBeforeUnmount(() => {
   transform: translateX(2px);
 }
 
+/* 键盘可达:焦点态与 hover 等价——显示操作按钮 + 背景高亮,保证无鼠标的操作者能看到改派/删除 */
+.chat-conv-item:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: -2px;
+  background: var(--el-fill-color-light);
+}
+.chat-conv-item:focus-visible .chat-conv-ops {
+  display: flex;
+}
+
 .chat-conv-item.active {
   background: var(--el-color-primary-light-9);
 }
@@ -3420,6 +3549,37 @@ onBeforeUnmount(() => {
 
 .chat-conv-op:hover {
   color: var(--el-color-primary);
+}
+
+/* 按钮化的操作图标(键盘可达):重置默认按钮样式,与旧 .chat-conv-op 图标观感一致 */
+.chat-conv-op-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 4px;
+  color: var(--khy-text-muted, var(--el-text-color-secondary));
+}
+.chat-conv-op-btn:hover,
+.chat-conv-op-btn:focus-visible {
+  color: var(--el-color-primary);
+  outline: none;
+}
+.chat-conv-op-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--el-color-primary-light-5);
+}
+.chat-conv-op-btn-danger:hover,
+.chat-conv-op-btn-danger:focus-visible {
+  color: var(--el-color-danger);
+}
+.chat-conv-op-btn-danger:focus-visible {
+  box-shadow: 0 0 0 2px var(--el-color-danger-light-5);
 }
 
 .chat-conv-empty {
@@ -3487,17 +3647,17 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  border: 1px solid var(--el-border-color, #dcdfe6);
+  border: 1px solid var(--el-border-color, var(--khy-border));
   border-radius: 14px;
-  background: var(--el-fill-color-blank, #fff);
+  background: var(--el-fill-color-blank, var(--khy-white));
   cursor: default;
   font-size: 12px;
   line-height: 1;
-  color: var(--el-text-color-regular, #606266);
+  color: var(--el-text-color-regular, var(--khy-gray-500));
   transition: border-color 0.2s ease;
 }
 .ctx-usage-chip:hover {
-  border-color: var(--el-color-primary, #409eff);
+  border-color: var(--el-color-primary, var(--khy-primary));
 }
 .ctx-usage-dot {
   width: 8px;
@@ -3506,7 +3666,7 @@ onBeforeUnmount(() => {
   background: var(--khy-success);
 }
 .ctx-usage-chip.ctx-warning .ctx-usage-dot {
-  background: #e6a23c;
+  background: var(--khy-warning);
 }
 .ctx-usage-chip.ctx-critical .ctx-usage-dot {
   background: var(--khy-danger);
@@ -3518,7 +3678,7 @@ onBeforeUnmount(() => {
 
 .ctx-usage-panel {
   font-size: 12px;
-  color: var(--el-text-color-regular, #606266);
+  color: var(--el-text-color-regular, var(--khy-gray-500));
 }
 .ctx-usage-head {
   display: flex;
@@ -3528,13 +3688,13 @@ onBeforeUnmount(() => {
   margin-bottom: 8px;
 }
 .ctx-usage-sub {
-  color: var(--el-text-color-secondary, #909399);
+  color: var(--el-text-color-secondary, var(--khy-gray-400));
   font-variant-numeric: tabular-nums;
 }
 .ctx-usage-bar {
   height: 6px;
   border-radius: 3px;
-  background: var(--el-fill-color, #f0f2f5);
+  background: var(--el-fill-color, var(--khy-gray-50));
   overflow: hidden;
   margin-bottom: 10px;
 }
@@ -3545,7 +3705,7 @@ onBeforeUnmount(() => {
   transition: width 0.3s ease;
 }
 .ctx-usage-fill.ctx-warning {
-  background: #e6a23c;
+  background: var(--khy-warning);
 }
 .ctx-usage-fill.ctx-critical {
   background: var(--khy-danger);
@@ -3556,11 +3716,11 @@ onBeforeUnmount(() => {
   align-items: center;
   margin-bottom: 8px;
   padding: 4px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter, #ebeef5);
+  border-bottom: 1px solid var(--el-border-color-lighter, var(--khy-gray-100));
 }
 .ctx-usage-cache-label {
   font-size: 12px;
-  color: var(--el-text-color-regular, #606266);
+  color: var(--el-text-color-regular, var(--khy-gray-500));
 }
 .ctx-usage-cache-value {
   font-size: 12px;
@@ -3568,13 +3728,13 @@ onBeforeUnmount(() => {
   font-variant-numeric: tabular-nums;
 }
 .ctx-usage-cache-value.is-high {
-  color: var(--el-color-success, #67c23a);
+  color: var(--el-color-success, var(--khy-success));
 }
 .ctx-usage-cache-value.is-mid {
-  color: var(--el-color-warning, #e6a23c);
+  color: var(--el-color-warning, var(--khy-warning));
 }
 .ctx-usage-cache-value.is-low {
-  color: var(--el-color-danger, #f56c6c);
+  color: var(--el-color-danger, var(--khy-danger));
 }
 .ctx-usage-cats {
   list-style: none;
@@ -3588,14 +3748,14 @@ onBeforeUnmount(() => {
   padding: 2px 0;
 }
 .ctx-cat-name {
-  color: var(--el-text-color-regular, #606266);
+  color: var(--el-text-color-regular, var(--khy-gray-500));
 }
 .ctx-cat-tok {
-  color: var(--el-text-color-secondary, #909399);
+  color: var(--el-text-color-secondary, var(--khy-gray-400));
   font-variant-numeric: tabular-nums;
 }
 .ctx-usage-hints {
-  border-top: 1px solid var(--el-border-color-lighter, #ebeef5);
+  border-top: 1px solid var(--el-border-color-lighter, var(--khy-gray-100));
   padding-top: 8px;
 }
 .ctx-usage-hint {
@@ -3607,23 +3767,23 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
 }
 .ctx-usage-hint.is-warn .ctx-hint-glyph {
-  color: #e6a23c;
+  color: var(--khy-warning);
 }
 .ctx-usage-hint.is-info .ctx-hint-glyph {
-  color: #909399;
+  color: var(--khy-gray-400);
 }
 .ctx-hint-title {
   font-weight: 600;
-  color: var(--el-text-color-primary, #303133);
+  color: var(--el-text-color-primary, var(--khy-gray-700));
 }
 .ctx-hint-save {
   margin-left: 6px;
   font-weight: 400;
-  color: var(--el-color-success, #67c23a);
+  color: var(--el-color-success, var(--khy-success));
   font-variant-numeric: tabular-nums;
 }
 .ctx-hint-detail {
-  color: var(--el-text-color-secondary, #909399);
+  color: var(--el-text-color-secondary, var(--khy-gray-400));
   margin-top: 2px;
 }
 
@@ -3638,6 +3798,11 @@ onBeforeUnmount(() => {
 }
 
 .model-verify-tag {
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.model-new-tag {
   margin-left: 6px;
   vertical-align: middle;
 }
@@ -3947,7 +4112,7 @@ onBeforeUnmount(() => {
 }
 
 html.dark .chat-bubble-user {
-  background: linear-gradient(135deg, #2f6fd6, #2456ad);
+  background: linear-gradient(135deg, var(--khy-primary), var(--khy-primary-strong));
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
 
@@ -4132,6 +4297,21 @@ html.dark .chat-bubble-user {
 
 .chat-tool-progress .is-spin {
   animation: khy-tool-spin 1s linear infinite;
+}
+
+/* 无障碍:运动敏感用户 / prefers-reduced-motion —— 停止 spinner 与 daemon 心跳脉冲。
+   忙状态仍由相邻的 status 文本/role="status" 传达,不依赖持续动画。 */
+@media (prefers-reduced-motion: reduce) {
+  .chat-tool-step-icon .is-spin,
+  .chat-tool-progress .is-spin,
+  .chat-error-actions .is-spin {
+    animation: none;
+  }
+  .daemon-health-reconnecting .daemon-health-dot,
+  .daemon-health-checking .daemon-health-dot {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 /* ── #7 工具调用透明化:「详情」可展开完整参数 + 结果 ─────────────────────── */
@@ -4329,23 +4509,23 @@ html.dark .chat-bubble-user {
 }
 .chat-parts-toggle {
   background: none;
-  border: 1px solid var(--el-border-color-lighter, #ebeef5);
+  border: 1px solid var(--el-border-color-lighter, var(--khy-gray-100));
   border-radius: 4px;
   padding: 2px 8px;
   font-size: 11px;
-  color: var(--el-text-color-secondary, #909399);
+  color: var(--el-text-color-secondary, var(--khy-gray-400));
   cursor: pointer;
   transition: all 0.15s;
 }
 .chat-parts-toggle:hover {
-  color: var(--el-color-primary, #409eff);
-  border-color: var(--el-color-primary, #409eff);
+  color: var(--el-color-primary, var(--khy-primary));
+  border-color: var(--el-color-primary, var(--khy-primary));
 }
 
 /* ── 思考折叠块（ZCode / Claude Code 对齐：▸/▾ 折叠） ─────────────────────── */
 .chat-thinking-block {
   margin-bottom: 8px;
-  border-left: 2px solid var(--el-color-primary-light-5, #c6e2ff);
+  border-left: 2px solid var(--el-color-primary-light-5, var(--khy-primary-soft));
   padding-left: 8px;
 }
 .chat-thinking-toggle {
@@ -4357,11 +4537,11 @@ html.dark .chat-bubble-user {
   padding: 2px 0;
   cursor: pointer;
   font-size: 12px;
-  color: var(--el-text-color-secondary, #909399);
+  color: var(--el-text-color-secondary, var(--khy-gray-400));
   transition: color 0.15s;
 }
 .chat-thinking-toggle:hover {
-  color: var(--el-color-primary, #409eff);
+  color: var(--el-color-primary, var(--khy-primary));
 }
 .chat-thinking-icon {
   font-size: 10px;
@@ -4374,7 +4554,7 @@ html.dark .chat-bubble-user {
 .chat-thinking-content {
   margin-top: 6px;
   padding: 8px 10px;
-  background: var(--el-fill-color-lighter, #f5f7fa);
+  background: var(--el-fill-color-lighter, var(--khy-gray-50));
   border-radius: 6px;
   max-height: 240px;
   overflow-y: auto;
@@ -4384,7 +4564,7 @@ html.dark .chat-bubble-user {
   font-family: var(--khy-font-mono, monospace);
   font-size: 11px;
   line-height: 1.5;
-  color: var(--el-text-color-regular, #606266);
+  color: var(--el-text-color-regular, var(--khy-gray-500));
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -4454,17 +4634,27 @@ html.dark .chat-bubble-user {
   margin-bottom: 8px;
 }
 
+/* 待发送附件 chip 现为 <button>(键盘可达):重置默认按钮样式,保留原观感 */
 .chat-pending-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   max-width: 240px;
   padding: 4px 10px;
-  background: var(--el-fill-color-light, #f0f2f5);
-  border: 1px solid var(--el-border-color, #dcdfe6);
+  background: var(--el-fill-color-light, var(--khy-gray-50));
+  border: 1px solid var(--el-border-color, var(--khy-border));
   border-radius: 16px;
   font-size: 12px;
+  font-family: inherit;
   line-height: 18px;
+  cursor: pointer;
+}
+.chat-pending-chip:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 1px;
+}
+.chat-pending-ico {
+  flex: 0 0 auto;
 }
 
 .chat-pending-name {
@@ -4474,22 +4664,22 @@ html.dark .chat-bubble-user {
 }
 
 .chat-pending-size {
-  color: var(--el-text-color-secondary, #909399);
+  color: var(--el-text-color-secondary, var(--khy-gray-400));
   flex: 0 0 auto;
 }
 
 .chat-pending-remove {
   cursor: pointer;
   flex: 0 0 auto;
-  color: var(--el-text-color-secondary, #909399);
+  color: var(--el-text-color-secondary, var(--khy-gray-400));
 }
 
 .chat-pending-remove:hover {
-  color: var(--el-color-danger, #f56c6c);
+  color: var(--el-color-danger, var(--khy-danger));
 }
 
 .chat-pending-uploading {
-  color: var(--el-text-color-secondary, #909399);
+  color: var(--el-text-color-secondary, var(--khy-gray-400));
 }
 
 /* Attachment chips rendered inside a sent user bubble. */
@@ -4538,5 +4728,53 @@ html.dark .chat-bubble-user {
   .transport-selector {
     width: 100%;
   }
+}
+
+/* ── Daemon health indicator ── */
+.daemon-health-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--khy-radius-sm, 6px);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  border: 1px solid;
+}
+
+.daemon-health-checking {
+  color: var(--khy-warning, #d97706);
+  border-color: var(--khy-warning, #d97706);
+  background: color-mix(in srgb, var(--khy-warning, #d97706) 10%, transparent);
+}
+
+.daemon-health-reconnecting {
+  color: var(--khy-warning, #d97706);
+  border-color: var(--khy-warning, #d97706);
+  background: color-mix(in srgb, var(--khy-warning, #d97706) 10%, transparent);
+}
+
+.daemon-health-disconnected {
+  color: var(--khy-danger, #dc2626);
+  border-color: var(--khy-danger, #dc2626);
+  background: color-mix(in srgb, var(--khy-danger, #dc2626) 10%, transparent);
+}
+
+.daemon-health-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.daemon-health-reconnecting .daemon-health-dot,
+.daemon-health-checking .daemon-health-dot {
+  animation: daemon-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes daemon-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 </style>

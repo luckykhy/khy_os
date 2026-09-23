@@ -43,7 +43,13 @@ const REDUCED_MOTION = process.env.KHY_REDUCED_MOTION === '1';
 // spinner 双双不一致。这里**复用同一个叶子 + 同一个门控**收敛,绝不另起一套阈值/门控(SSOT)。
 // khy 这条路径无 verbose / running-teammates 概念 → 仅 30s 钟生效(诚实映射,绝不伪造旁路)。
 // require 包在 try 里:叶子不可用 → 跌穿到「照常显示」(绝不因加载失败而静默吞掉 meta)。
-function buildSpinnerMeta(elapsedSec, tokens, env = process.env) {
+// 进度 meta 的组装。opts.skipDuration 供**停滞行**使用:那一行已经用实际停滞秒数写了
+// 「（已 Ns）」，若 meta 再拼一次同样的时长,用户会看到两个数。只跳过时长那段,不动
+// tokens —— tokens 是另一件事,没有重复问题。
+// 顺带记一笔:此前调用点把 Date.now() 当 elapsedSec 传进来,meta 里渲染出
+// 「 · 20719231d」这种天文数字(实测值)。阈值门拦住的是「秒数太小」,拦不住「秒数离谱」,
+// 所以修的是源头(改走 _spinnerProgress),不是在这里夹一个上限。
+function buildSpinnerMeta(elapsedSec, tokens, env = process.env, opts = {}) {
   const sec = Number(elapsedSec) || 0;
   try {
     const sm = require('../../spinnerMeta');
@@ -72,7 +78,7 @@ function buildSpinnerMeta(elapsedSec, tokens, env = process.env) {
     }
   }
   const meta = [];
-  if (sec > 0) {
+  if (sec > 0 && opts.skipDuration !== true) {
     meta.push(typeof fmtDur === 'function' ? fmtDur(sec * 1000) || `${sec}s` : `${sec}s`);
   }
   const tok = Number(tokens) || 0;
@@ -82,12 +88,34 @@ function buildSpinnerMeta(elapsedSec, tokens, env = process.env) {
   return meta.length ? ` · ${meta.join(' · ')}` : '';
 }
 
+/**
+ * 等待行的组装(纯函数 → 无条件可单测,不必等 ink 渲染环境就位)。
+ *
+ * 规则 2.5 的形状是 `⏳ 等待中 · <在等什么>（已 <Ns>）`:指示词固定,它后面的**全部**是实际数据
+ * —— 目标是网关自报的 detail 或相位链 label,秒数是 stalledSec(lastActivity 到现在的真实间隔)。
+ * 红线是「只写 ⏳ 等待中 不说在等什么、等多久」,所以有秒数就必须带上;没有目标时也不能退化成
+ * 光秃秃一句「⏳ 等待中」而不带任何数(那正是规则里的 ❌ 反例)。
+ * @param {string} displayText 目标(detail 优先,否则 label)
+ * @param {number} stalledSec 实际停滞秒数(0 = 未停滞/未知 → 不加后缀)
+ * @param {string} [indicator] 固定指示词,便于测试与将来换语种
+ * @returns {string}
+ */
+function buildStallLine(displayText, stalledSec, indicator = '⏳ 等待中') {
+  const text = String(displayText || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const secs = Number(stalledSec) || 0;
+  const suffix = secs > 0 ? `（已 ${secs}s）` : '';
+  return text ? `${indicator} · ${text}${suffix}` : `${indicator}${suffix}`;
+}
+
 function Spinner({
   label = '',
   color = 'yellow',
   elapsedSec = 0,
   tokens = 0,
   stalled = false,
+  stalledSec = 0,
   detail = '',
 }) {
   const { Text } = inkRuntime.get();
@@ -128,17 +156,21 @@ function Spinner({
   const labelText = String(label || '').replace(/\s+/g, ' ').trim();
   const displayText = detailText || labelText;
 
-  // When stalled: show "⏳ 等待中 · <what we're waiting for>"
-  // The waiting indicator replaces the base to avoid duplication.
+  // When stalled: show "⏳ 等待中 · <what we're waiting for>（已 Ns）".
+  // 组装走 buildStallLine(纯函数,文案契约在 tests/cli/spinnerStallLine.test.js 锁着),
+  // 组件只负责把实际数据喂进去。
   const showStallIndicator = stalled;
-  const stallIndicator = '⏳ 等待中';
-  const stallLine = displayText ? `${stallIndicator} · ${displayText}` : stallIndicator;
+  const stallSecs = Number(stalledSec) || 0;
+  const stallLine = buildStallLine(displayText, stallSecs);
 
   // Pulse the stall indicator so user can see it's waiting, not frozen.
   const stallTextColor = stalled && stallPulse ? 'yellow' : 'gray';
 
-  // Progress metadata: elapsed time + token count
-  const metaStr = buildSpinnerMeta(elapsedSec, tokens);
+  // Progress metadata: elapsed time + token count.
+  // 停滞时跳过时长段 —— 等待行已经用（已 Ns）表达了它,再拼一次就是同一个数出现两遍。
+  const metaStr = buildSpinnerMeta(elapsedSec, tokens, process.env, {
+    skipDuration: showStallIndicator && stallSecs > 0,
+  });
 
   return h(
     Text,
@@ -170,3 +202,6 @@ module.exports = _componentMemoOff(process.env) ? Spinner : React.memo(Spinner);
 // Static helper attaches to the EXPORTED object (memo or plain) so tests keep
 // reaching it via require('./Spinner').buildSpinnerMeta either way.
 module.exports.buildSpinnerMeta = buildSpinnerMeta;
+// 等待行文案的纯组装函数:导出是为了让「⏳ 等待中 · 目标（已 Ns）」这条规则 2.5 契约
+// 能在任何环境下单测(ink 渲染环境在 CI/本机可能缺席,那正是这类文案缺陷长期没被测到的原因)。
+module.exports.buildStallLine = buildStallLine;

@@ -579,7 +579,7 @@ function _defaultGatewayEvaluate(c, i) {
   // 延迟引入，避免循环依赖；网关缺失/关闭时 fail-closed。
   let gw;
   try {
-    gw = require('../syscallGateway');
+    gw = require('../../system/syscallGateway');
   } catch {
     return Promise.resolve({ allow: false, reasons: ['syscallGateway 不可用'] });
   }

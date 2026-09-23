@@ -16,11 +16,11 @@
 const { describe, test, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 
-const noiseFilter = require('../../../src/services/gatewayLogLease/noiseFilter');
-const logLease = require('../../../src/services/gatewayLogLease/logLease');
-const devLog = require('../../../src/services/gatewayLogLease/devLog');
-const sandbox = require('../../../src/services/gatewayLogLease/sandbox');
-const ctxMod = require('../../../src/services/gatewayLogLease/context');
+const noiseFilter = require('../../../src/services/domain/gateway-stuff/gatewayLogLease/noiseFilter.js');
+const logLease = require('../../../src/services/domain/gateway-stuff/gatewayLogLease/logLease.js');
+const devLog = require('../../../src/services/domain/gateway-stuff/gatewayLogLease/devLog.js');
+const sandbox = require('../../../src/services/domain/gateway-stuff/gatewayLogLease/sandbox.js');
+const ctxMod = require('../../../src/services/domain/gateway-stuff/gatewayLogLease/context.js');
 
 // 捕获 L0 用户流的 sink。
 function makeUserSink() {

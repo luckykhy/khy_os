@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-SEMVER-001] 语义化版本规范.md -->
+<title>[DESIGN-SEMVER-001] 语义化版本规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-SEMVER-001] 语义化版本规范</div>
+      <header class="hero reveal"><h1>[DESIGN-SEMVER-001] 语义化版本规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-semver-001-语义化版本规范">[DESIGN-SEMVER-001] 语义化版本规范</a></li><li class="lvl-2"><a href="#1-版本格式">1. 版本格式</a></li><li class="lvl-2"><a href="#2-版本递增规则">2. 版本递增规则</a></li><li class="lvl-3"><a href="#2-1-major">2.1 MAJOR</a></li><li class="lvl-3"><a href="#2-2-minor">2.2 MINOR</a></li><li class="lvl-3"><a href="#2-3-patch">2.3 PATCH</a></li><li class="lvl-2"><a href="#3-预发布版本">3. 预发布版本</a></li><li class="lvl-2"><a href="#4-废弃周期">4. 废弃周期</a></li><li class="lvl-3"><a href="#4-1-废弃流程">4.1 废弃流程</a></li><li class="lvl-3"><a href="#4-2-示例">4.2 示例</a></li><li class="lvl-2"><a href="#5-双轨道版本">5. 双轨道版本</a></li><li class="lvl-2"><a href="#6-版本同步">6. 版本同步</a></li><li class="lvl-3"><a href="#6-1-真源清单">6.1 真源清单</a></li><li class="lvl-3"><a href="#6-2-发布脚本">6.2 发布脚本</a></li><li class="lvl-2"><a href="#7-api-版本与包版本的关系">7. API 版本与包版本的关系</a></li><li class="lvl-2"><a href="#8-版本历史">8. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-semver-001-语义化版本规范">[DESIGN-SEMVER-001] 语义化版本规范<a class="anchor" href="#design-semver-001-语义化版本规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>用途</strong>：定义 khy-os 项目的语义化版本（SemVer）标准。<br>GIT-001 §5 提到了 SemVer，本文档补全完整规则。</p></blockquote>
+<hr>
+<h2 id="1-版本格式">1. 版本格式<a class="anchor" href="#1-版本格式" aria-label="锚点">#</a></h2>
+<pre><code>MAJOR.MINOR.PATCH[-PRERELEASE][+BUILDMETA]</code></pre>
+<table><thead><tr><th>部分</th><th>说明</th><th>示例</th></tr></thead><tbody><tr><td>MAJOR</td><td>不兼容变更</td><td><code>2.0.0</code></td></tr><tr><td>MINOR</td><td>向下兼容新功能</td><td><code>1.2.0</code></td></tr><tr><td>PATCH</td><td>向下兼容修复</td><td><code>1.2.3</code></td></tr><tr><td>PRERELEASE</td><td>预发布标识</td><td><code>1.3.0-beta.1</code></td></tr><tr><td>BUILDMETA</td><td>构建元数据</td><td><code>1.2.3+build.20260910</code></td></tr></tbody></table>
+<hr>
+<h2 id="2-版本递增规则">2. 版本递增规则<a class="anchor" href="#2-版本递增规则" aria-label="锚点">#</a></h2>
+<h3 id="2-1-major">2.1 MAJOR<a class="anchor" href="#2-1-major" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>触发条件</th><th>示例</th></tr></thead><tbody><tr><td>API 破坏性变更</td><td><code>1.x</code> → <code>2.0.0</code></td></tr><tr><td>删除已废弃功能</td><td><code>1.5.0</code> → <code>2.0.0</code></td></tr><tr><td>最低依赖版本提升</td><td>Node 18 → Node 20</td></tr></tbody></table>
+<h3 id="2-2-minor">2.2 MINOR<a class="anchor" href="#2-2-minor" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>触发条件</th><th>示例</th></tr></thead><tbody><tr><td>新增 API 端点</td><td><code>1.2.0</code> → <code>1.3.0</code></td></tr><tr><td>新增 CLI 命令</td><td><code>1.2.0</code> → <code>1.3.0</code></td></tr><tr><td>新增规范（不影响现有代码）</td><td>—</td></tr></tbody></table>
+<h3 id="2-3-patch">2.3 PATCH<a class="anchor" href="#2-3-patch" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>触发条件</th><th>示例</th></tr></thead><tbody><tr><td>Bug 修复</td><td><code>1.2.0</code> → <code>1.2.1</code></td></tr><tr><td>安全修复</td><td><code>1.2.0</code> → <code>1.2.1</code></td></tr><tr><td>文档修正</td><td><code>1.2.0</code> → <code>1.2.1</code></td></tr><tr><td>性能优化（无 API 变更）</td><td><code>1.2.0</code> → <code>1.2.1</code></td></tr></tbody></table>
+<hr>
+<h2 id="3-预发布版本">3. 预发布版本<a class="anchor" href="#3-预发布版本" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>标识</th><th>用途</th><th>示例</th></tr></thead><tbody><tr><td><code>alpha</code></td><td>内部测试</td><td><code>2.0.0-alpha.1</code></td></tr><tr><td><code>beta</code></td><td>公开测试</td><td><code>2.0.0-beta.2</code></td></tr><tr><td><code>rc</code></td><td>候选发布</td><td><code>2.0.0-rc.1</code></td></tr></tbody></table>
+<p><strong>规则</strong>：</p>
+<ul><li><code>alpha</code> &lt; <code>beta</code> &lt; <code>rc</code> &lt; 正式版</li><li>同一预发布系列递增：<code>beta.1</code> → <code>beta.2</code></li><li>预发布版本优先级低于正式版：<code>1.0.0-beta.1</code> &lt; <code>1.0.0</code></li></ul>
+<hr>
+<h2 id="4-废弃周期">4. 废弃周期<a class="anchor" href="#4-废弃周期" aria-label="锚点">#</a></h2>
+<h3 id="4-1-废弃流程">4.1 废弃流程<a class="anchor" href="#4-1-废弃流程" aria-label="锚点">#</a></h3>
+<pre><code>公告废弃 → 保留至少 1 个 MINOR 版本 → 移除</code></pre>
+<table><thead><tr><th>步骤</th><th>动作</th><th>时间</th></tr></thead><tbody><tr><td>1. 废弃公告</td><td>代码加 <code>@deprecated</code>，文档标注</td><td>当前版本</td></tr><tr><td>2. 警告期</td><td>运行时输出 deprecation warning</td><td>≥ 1 个 MINOR 版本</td></tr><tr><td>3. 移除</td><td>删除废弃代码</td><td>下一个 MAJOR 版本</td></tr></tbody></table>
+<h3 id="4-2-示例">4.2 示例<a class="anchor" href="#4-2-示例" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// v1.3.0: 废弃</span>
+<span class="hljs-comment">/** <span class="hljs-doctag">@deprecated</span> Use validateStrategyV2() instead. Will be removed in v2.0. */</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">validateStrategy</span>(<span class="hljs-params">config</span>) { }
+
+<span class="hljs-comment">// v1.4.0, v1.5.0: 警告</span>
+<span class="hljs-keyword">if</span> (validateStrategy.<span class="hljs-property">deprecated</span>) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">warn</span>(<span class="hljs-string">&#x27;[DEPRECATED] validateStrategy() will be removed in v2.0. Use validateStrategyV2()&#x27;</span>);
+}
+
+<span class="hljs-comment">// v2.0.0: 移除</span>
+<span class="hljs-comment">// validateStrategy() 完全删除</span></code></pre>
+<hr>
+<h2 id="5-双轨道版本">5. 双轨道版本<a class="anchor" href="#5-双轨道版本" aria-label="锚点">#</a></h2>
+<p>khy-os 有两条独立版本轨道（AGENTS.md 定义）：</p>
+<table><thead><tr><th>轨道</th><th>包含</th><th>版本号示例</th></tr></thead><tbody><tr><td>主轨道</td><td>khy-os pip/npm 包、backend、packaging</td><td><code>1.1.x</code></td></tr><tr><td>ai-backend 轨道</td><td>ai-backend、@khy/shared</td><td><code>1.6.x</code></td></tr></tbody></table>
+<p><strong>规则</strong>：</p>
+<ul><li>两轨道独立递增，互不影响</li><li>同一轨道内 4 个真源必须完全一致</li><li><code>check-version-sync.js</code> 在 CI 中强制校验</li></ul>
+<hr>
+<h2 id="6-版本同步">6. 版本同步<a class="anchor" href="#6-版本同步" aria-label="锚点">#</a></h2>
+<h3 id="6-1-真源清单">6.1 真源清单<a class="anchor" href="#6-1-真源清单" aria-label="锚点">#</a></h3>
+<p><strong>轨道 1</strong>（4 源，必须一致）：</p>
+<ol><li><code>pyproject.toml</code> → <code>[project] version</code></li><li><code>packaging/npm/package.json</code> → <code>version</code></li><li><code>services/backend/package.json</code> → <code>version</code></li><li><code>packaging/modules/modules.json</code> → <code>version</code></li></ol>
+<p><strong>轨道 2</strong>（2 源，必须一致）：</p>
+<ol><li><code>services/ai-backend/package.json</code> → <code>version</code></li><li><code>platform/packages/shared/package.json</code> → <code>version</code></li></ol>
+<h3 id="6-2-发布脚本">6.2 发布脚本<a class="anchor" href="#6-2-发布脚本" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 同步主轨道</span>
+node scripts/release/publish-dual.sh --version 1.2.0
+
+<span class="hljs-comment"># 自动更新 4 个真源</span>
+<span class="hljs-comment"># 最后由 check-version-sync.js 验证</span></code></pre>
+<hr>
+<h2 id="7-api-版本与包版本的关系">7. API 版本与包版本的关系<a class="anchor" href="#7-api-版本与包版本的关系" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>类型</th><th>版本</th><th>示例</th><th>关系</th></tr></thead><tbody><tr><td>包版本</td><td>SemVer</td><td><code>1.2.0</code></td><td>发布节奏</td></tr><tr><td>API 版本</td><td>URL 路径</td><td><code>/api/v1</code></td><td>独立于包版本</td></tr><tr><td>协议版本</td><td>内部</td><td>ACP-001 v1</td><td>独立演进</td></tr></tbody></table>
+<p><strong>规则</strong>：包版本 MINOR 递增不必然导致 API 版本递增；API 版本只在破坏性变更时递增。</p>
+<hr>
+<h2 id="8-版本历史">8. 版本历史<a class="anchor" href="#8-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义语义化版本规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-SEC-001] 安全规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-SEC-001] 安全规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-SEMVER-002] 版本管理与发布触发规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-SEMVER-002] 版本管理与发布触发规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-SEMVER-001] 语义化版本规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

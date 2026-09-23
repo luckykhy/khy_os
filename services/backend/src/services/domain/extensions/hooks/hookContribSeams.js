@@ -73,8 +73,19 @@ function tighten(base, proposed) {
   return pi > bi ? proposed : base;
 }
 
+/**
+ * 取 hookSystem。
+ *
+ * ⚠ 这里**不需要**端口。`cli/hooks/hookSystem` 是 14 行 back-compat shim，
+ * 它自己写着 hooks 子系统「moved down to the services layer … so that services
+ * (toolUseLoop, contextCompressor) no longer reach UP into the cli layer for it
+ * (R1-layering inversion)」—— 也就是说搬家这件事**早就做完了**。
+ *
+ * 本文件（与 auditTrajectory/wire）当时漏改，仍在走 shim：domian → cli → 再折回 services，
+ * 是一条把自己重新变成 R1 倒置的**无谓绕路**。直连同层真源即可，端口是多余的间接层。
+ */
 function _hookSystem() {
-  return require('../../../../cli/hooks/hookSystem');
+  return require('../hooks/hookSystem');
 }
 
 /**

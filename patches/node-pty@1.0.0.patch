@@ -1,0 +1,123 @@
+diff --git a/binding.gyp b/binding.gyp
+index 79a93e7f55c5901aeb1b9d002c362a0b6b7c63b5..105225ecc9b24b277c71b8658bb90b1fdc119f3f 100644
+--- a/binding.gyp
++++ b/binding.gyp
+@@ -2,10 +2,7 @@
+   'target_defaults': {
+     'conditions': [
+       ['OS=="win"', {
+-        'msvs_configuration_attributes': {
+-          'SpectreMitigation': 'Spectre'
+-        },
+-        'msvs_settings': {
++                'msvs_settings': {
+             'VCCLCompilerTool': {
+               'AdditionalOptions': [
+                 '/guard:cf',
+diff --git a/src/win/conpty.cc b/src/win/conpty.cc
+index 47af75c2d6dd7687ec1fe55a502f11347c52738a..0709095ee506b4d8f36c217c8d1abbba2ac2cf16 100644
+--- a/src/win/conpty.cc
++++ b/src/win/conpty.cc
+@@ -30,13 +30,15 @@ extern "C" void init(v8::Local<v8::Object>);
+ #ifndef PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE
+ #define PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE \
+   ProcThreadAttributeValue(22, FALSE, TRUE, FALSE)
+-
++#endif
++#ifndef HPCON
+ typedef VOID* HPCON;
++#endif
++#ifndef PFNCREATEPSEUDOCONSOLE
+ typedef HRESULT (__stdcall *PFNCREATEPSEUDOCONSOLE)(COORD c, HANDLE hIn, HANDLE hOut, DWORD dwFlags, HPCON* phpcon);
+ typedef HRESULT (__stdcall *PFNRESIZEPSEUDOCONSOLE)(HPCON hpc, COORD newSize);
+ typedef HRESULT (__stdcall *PFNCLEARPSEUDOCONSOLE)(HPCON hpc);
+ typedef void (__stdcall *PFNCLOSEPSEUDOCONSOLE)(HPCON hpc);
+-
+ #endif
+ 
+ struct pty_baton {
+diff --git a/src/win/winpty.cc b/src/win/winpty.cc
+index b054dee2194226a823f5c98befdecf06cda2e5dd..009c4ff92404d830bc097eac9b0c2eef97b8e14a 100644
+--- a/src/win/winpty.cc
++++ b/src/win/winpty.cc
+@@ -157,6 +157,20 @@ static NAN_METHOD(PtyStartProcess) {
+     shellpath = filename;
+   }
+ 
++
++  // Hoisted declarations: MSVC 17.14 rejects `goto cleanup` paths that jump
++  // over variable initializers (C2362). Declare with default initializers
++  // before the first goto; the original assignment sites keep their values.
++  int cols;
++  int rows;
++  bool debug;
++  winpty_error_ptr_t error_ptr = nullptr;
++  winpty_config_t *winpty_config = nullptr;
++  winpty_t *pc = nullptr;
++  winpty_spawn_config_t *config = nullptr;
++  HANDLE handle = nullptr;
++  BOOL spawnSuccess = FALSE;
++  v8::Local<v8::Object> marshal;
+   std::string shellpath_(shellpath.begin(), shellpath.end());
+ 
+   if (shellpath.empty() || !path_util::file_exists(shellpath)) {
+@@ -165,16 +179,16 @@ static NAN_METHOD(PtyStartProcess) {
+     goto cleanup;
+   }
+ 
+-  int cols = info[4]->Int32Value(Nan::GetCurrentContext()).FromJust();
+-  int rows = info[5]->Int32Value(Nan::GetCurrentContext()).FromJust();
+-  bool debug = Nan::To<bool>(info[6]).FromJust();
++  cols = info[4]->Int32Value(Nan::GetCurrentContext()).FromJust();
++  rows = info[5]->Int32Value(Nan::GetCurrentContext()).FromJust();
++  debug = Nan::To<bool>(info[6]).FromJust();
+ 
+   // Enable/disable debugging
+   SetEnvironmentVariable(WINPTY_DBG_VARIABLE, debug ? "1" : NULL); // NULL = deletes variable
+ 
+   // Create winpty config
+-  winpty_error_ptr_t error_ptr = nullptr;
+-  winpty_config_t* winpty_config = winpty_config_new(0, &error_ptr);
++  // error_ptr declared in the hoist block above
++  winpty_config = winpty_config_new(0, &error_ptr);
+   if (winpty_config == nullptr) {
+     throw_winpty_error("Error creating WinPTY config", error_ptr);
+     goto cleanup;
+@@ -185,7 +199,7 @@ static NAN_METHOD(PtyStartProcess) {
+   winpty_config_set_initial_size(winpty_config, cols, rows);
+ 
+   // Start the pty agent
+-  winpty_t *pc = winpty_open(winpty_config, &error_ptr);
++  pc = winpty_open(winpty_config, &error_ptr);
+   winpty_config_free(winpty_config);
+   if (pc == nullptr) {
+     throw_winpty_error("Error launching WinPTY agent", error_ptr);
+@@ -197,7 +211,7 @@ static NAN_METHOD(PtyStartProcess) {
+   ptyHandles.insert(ptyHandles.end(), pc);
+ 
+   // Create winpty spawn config
+-  winpty_spawn_config_t* config = winpty_spawn_config_new(WINPTY_SPAWN_FLAG_AUTO_SHUTDOWN, shellpath.c_str(), cmdline, cwd, env.c_str(), &error_ptr);
++  config = winpty_spawn_config_new(WINPTY_SPAWN_FLAG_AUTO_SHUTDOWN, shellpath.c_str(), cmdline, cwd, env.c_str(), &error_ptr);
+   if (config == nullptr) {
+     throw_winpty_error("Error creating WinPTY spawn config", error_ptr);
+     goto cleanup;
+@@ -205,8 +219,8 @@ static NAN_METHOD(PtyStartProcess) {
+   winpty_error_free(error_ptr);
+ 
+   // Spawn the new process
+-  HANDLE handle = nullptr;
+-  BOOL spawnSuccess = winpty_spawn(pc, config, &handle, nullptr, nullptr, &error_ptr);
++  // handle declared in the hoist block above
++  spawnSuccess = winpty_spawn(pc, config, &handle, nullptr, nullptr, &error_ptr);
+   winpty_spawn_config_free(config);
+   if (!spawnSuccess) {
+     throw_winpty_error("Unable to start terminal process", error_ptr);
+@@ -215,7 +229,7 @@ static NAN_METHOD(PtyStartProcess) {
+   winpty_error_free(error_ptr);
+ 
+   // Set return values
+-  v8::Local<v8::Object> marshal = Nan::New<v8::Object>();
++  marshal = Nan::New<v8::Object>();
+   Nan::Set(marshal, Nan::New<v8::String>("innerPid").ToLocalChecked(), Nan::New<v8::Number>((int)GetProcessId(handle)));
+   Nan::Set(marshal, Nan::New<v8::String>("innerPidHandle").ToLocalChecked(), Nan::New<v8::Number>((int)handle));
+   Nan::Set(marshal, Nan::New<v8::String>("pid").ToLocalChecked(), Nan::New<v8::Number>((int)winpty_agent_process(pc)));

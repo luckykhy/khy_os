@@ -130,9 +130,9 @@ console.log('用户登录成功:', userId);
 
 ## 相关规范
 
-- [前端页面规范](../../docs/03_DESIGN_设计/[DESIGN-FE-001]%20前端页面规范.md)
-- [前端组件库规范](../../docs/03_DESIGN_设计/[DESIGN-FE-002]%20前端组件库规范.md)
-- [前端快速参考卡](../../docs/03_DESIGN_设计/[DESIGN-FE-003]%20前端快速参考卡.md)
+- [前端页面规范](../../docs/10_规范/DESIGN-FE/[DESIGN-FE-001]%20前端页面规范.md)
+- [前端组件库规范](../../docs/10_规范/DESIGN-FE/[DESIGN-FE-002]%20前端组件库规范.md)
+- [前端快速参考卡](../../docs/10_规范/DESIGN-FE/[DESIGN-FE-003]%20前端快速参考卡.md)
 
 ## 版本历史
 

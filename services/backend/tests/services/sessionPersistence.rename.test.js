@@ -1,9 +1,9 @@
 'use strict';
 /**
- * sessionPersistence.renameSession �?real-filesystem coverage.
+ * sessionPersistence.renameSession �?real-filesystem coverage.
  *
- * �?require 持久化模�?*之前**先把 KHY_PROJECT_DATA_HOME 钉到临时目录�?
- * 让会话写入隔离的 sessions 树，测试结束后整体清理�?
+ * �?require 持久化模�?*之前**先把 KHY_PROJECT_DATA_HOME 钉到临时目录�?
+ * 让会话写入隔离的 sessions 树，测试结束后整体清理�?
  */
 const fs = require('fs');
 const os = require('os');
@@ -12,7 +12,7 @@ const TMP_HOME = path.join(os.tmpdir(), `khy-sess-rename-${process.pid}`);
 fs.mkdirSync(TMP_HOME, { recursive: true });
 process.env.KHY_PROJECT_DATA_HOME = TMP_HOME;
 const sp = require('../../src/services/sessionPersistence');
-test.after(() => {
+afterAll(() => {
   try { fs.rmSync(TMP_HOME, { recursive: true, force: true }); } catch { /* best effort */ }
 });
 
@@ -62,11 +62,11 @@ describe('Session Persistence rename', () => {
         messages: [{ role: 'user', content: 'bye' }],
         metadata: { cwd: process.cwd() },
       });
-      expect(sp.listPersistedSessions().toBeTruthy().some(s => s.sessionId === 'delete-me'));
+      expect(sp.listPersistedSessions().some(s => s.sessionId === 'delete-me')).toBe(true);
     
       const removed = sp.deleteSession('delete-me');
       expect(removed).toBe(true);
-      expect(!sp.listPersistedSessions().toBeTruthy().some(s => s.sessionId === 'delete-me'));
+      expect(!sp.listPersistedSessions().some(s => s.sessionId === 'delete-me')).toBe(true);
       expect(sp.restoreSession('delete-me')).toBe(null);
   });
 

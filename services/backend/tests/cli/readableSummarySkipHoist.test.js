@@ -22,10 +22,10 @@ describe('Readable Summary Skip Hoist', () => {
         label: 'done',
       });
       // Skipped keys must not appear; kept scalars must.
-      expect(!out).toContain('success=');
-      expect(!out).toContain('output=');
-      expect(!out).toContain('content=');
-      expect(!out).toContain('_internal=');
+      expect(out).not.toContain('success=');
+      expect(out).not.toContain('output=');
+      expect(out).not.toContain('content=');
+      expect(out).not.toContain('_internal=');
       expect(out).toContain('files=3');
       expect(out).toContain('label=done');
   });

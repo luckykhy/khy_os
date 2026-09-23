@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-DOC-002] AI 指令文件标准.md -->
+<title>[DESIGN-DOC-002] AI 指令文件标准 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-DOC<span class="sep">›</span>[DESIGN-DOC-002] AI 指令文件标准</div>
+      <header class="hero reveal"><h1>[DESIGN-DOC-002] AI 指令文件标准</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-doc-002-ai-指令文件标准">[DESIGN-DOC-002] AI 指令文件标准</a></li><li class="lvl-2"><a href="#1-现状证据-实测-非推测">1. 现状证据（实测，非推测）</a></li><li class="lvl-3"><a href="#1-1-读取方分两条链路-预算只存在于其中一条">1.1 读取方分两条链路，预算只存在于其中一条</a></li><li class="lvl-3"><a href="#1-2-订正-compat-层不截断-35-3-是循环论证的产物">1.2 订正：compat 层不截断，「35.3%」是循环论证的产物</a></li><li class="lvl-3"><a href="#1-3-现存违规-订正后-7-条-初版-11-条中-4-条为守卫误报">1.3 现存违规（订正后 7 条；初版 11 条中 4 条为守卫误报）</a></li><li class="lvl-2"><a href="#2-设计公理-不可让渡">2. 设计公理（不可让渡）</a></li><li class="lvl-2"><a href="#3-与既有机制的边界">3. 与既有机制的边界</a></li><li class="lvl-2"><a href="#4-强度梯度">4. 强度梯度</a></li><li class="lvl-2"><a href="#5-防呆铁律">5. 防呆铁律</a></li><li class="lvl-3"><a href="#6-判据细则-f4">6. 判据细则（F4）</a></li><li class="lvl-2"><a href="#7-写作规约-正面清单">7. 写作规约（正面清单）</a></li><li class="lvl-2"><a href="#8-b-l2-三步接线清单">8. B-L2 三步接线清单</a></li><li class="lvl-3"><a href="#第-1-步-标记">第 1 步 · 标记</a></li><li class="lvl-3"><a href="#第-2-步-迁移">第 2 步 · 迁移</a></li><li class="lvl-3"><a href="#第-3-步-收口">第 3 步 · 收口</a></li><li class="lvl-2"><a href="#9-验证与反例清单">9. 验证与反例清单</a></li><li class="lvl-2"><a href="#10-复现方式">10. 复现方式</a></li><li class="lvl-2"><a href="#11-已知边界与未覆盖">11. 已知边界与未覆盖</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-doc-002-ai-指令文件标准">[DESIGN-DOC-002] AI 指令文件标准<a class="anchor" href="#design-doc-002-ai-指令文件标准" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: DOCS-003 -->
+<blockquote><p><strong>用途</strong>：约束 <code>AGENTS.md</code> / <code>CLAUDE.md</code> / <code>khy.md</code> / <code>.windsurfrules</code> /<br><code>.github/copilot-instructions.md</code> / <code>.cursor/rules/*</code> 这类<strong>写给 AI 看的文件</strong>怎么写。<br><strong>核心命题</strong>：这类文件的价值 = 「写进去的内容」∩「AI 实际读到的内容」。<br>交集之外的部分不是&quot;文档冗余&quot;，而是<strong>静默失效</strong> —— 作者以为立了规矩，AI 从未收到。<br>本文把这个交集变成可自动判定的约束，登记为规则 <code>DOCS-003</code>。</p>
+<p>上位规范：[MGMT-STD-008]（规则编写元规则）、[MGMT-STD-001]（文档结构与索引铁律）、<br>[MGMT-STD-007]（文档规则总纲）。本文不替代它们，只补「AI 指令文件」这一空白面。</p>
+<p><strong>【scope 边界 2026-09-17，DOCS 域四篇分工】</strong> 文档规则族按 scope 分层、互不覆盖<br>（依据 <code>[MGMT-STD-008]</code> §2.2「重叠即违规」——同域同 subject 必须合并，不靠优先级）：</p>
+<table><thead><tr><th>文档</th><th>管什么</th></tr></thead><tbody><tr><td><code>[MGMT-STD-007] 文档规则总纲</code></td><td>命名 / 放置 / 登记 / 生命周期（总纲，其余为其下位件）</td></tr><tr><td><code>[DESIGN-DOC-001] 文档结构规范</code></td><td><code>.md</code> 的<strong>结构</strong>（章节骨架 §12）+ <strong>中文排版</strong>（§13，唯一真源）</td></tr><tr><td><strong>本篇 <code>[DESIGN-DOC-002]</code></strong></td><td><strong><code>AGENTS.md</code>/<code>CLAUDE.md</code>/<code>khy.md</code> 一族</strong>（写给 AI 看的文件）</td></tr><tr><td><code>[DESIGN-DOC-003] README 内容规范</code></td><td><strong><code>README.md</code> 一族</strong>（写给人的入口文件），与本篇<strong>互斥</strong></td></tr></tbody></table>
+<p>一句话边界：<strong>「给 AI 看的文件」看本篇，「给人看的 README」看 <code>DOC-003</code>，<br>「<code>.md</code> 怎么写」看 <code>DOC-001</code>，「文件该叫什么、放哪」看 <code>[MGMT-STD-007]</code>。</strong></p></blockquote>
+<hr>
+<h2 id="1-现状证据-实测-非推测">1. 现状证据（实测，非推测）<a class="anchor" href="#1-现状证据-实测-非推测" aria-label="锚点">#</a></h2>
+<h3 id="1-1-读取方分两条链路-预算只存在于其中一条">1.1 读取方分两条链路，预算只存在于其中一条<a class="anchor" href="#1-1-读取方分两条链路-预算只存在于其中一条" aria-label="锚点">#</a></h3>
+<blockquote><p>⚠️ <strong>本节初版写错，订正痕迹全文保留以免复发。</strong><br>初版称「<code>MAX_FILE_CHARS</code> 适用于 <code>CLAUDE.md</code>/<code>AGENTS.md</code>（compat 层）」，<br>并据此算出「<code>AGENTS.md</code> 只见 35.3%」。<strong>实测为假</strong> —— 见 §1.2。<br>教训：<strong>不能拿守卫自己的输出当「实测证据」</strong>（当时正是这么做的，构成循环论证）。</p></blockquote>
+<p>指令文件在运行时由<strong>两个不同的读取方</strong>加载，二者的预算互不相干：</p>
+<table><thead><tr><th>层</th><th>文件</th><th>读取方</th><th>单文件预算</th><th>合计预算</th></tr></thead><tbody><tr><td>own</td><td><code>khy.md</code> / <code>KHY.md</code>（及 <code>.khy/rules/*.md</code>、<code>@include</code> 目标）</td><td><code>instructionFileService.js</code> 的 <code>loadInstructions()</code></td><td><code>MAX_FILE_CHARS</code> = 8000</td><td><code>MAX_TOTAL_CHARS</code> = 24000</td></tr><tr><td><strong>compat</strong></td><td><code>CLAUDE.md</code> / <code>.claude/CLAUDE.md</code> / <code>AGENTS.md</code></td><td><code>constants/prompts.js</code> 的 <code>_findCompatInstructionFiles()</code></td><td><strong>无</strong></td><td><strong>无</strong></td></tr><tr><td>eco</td><td><code>.windsurfrules</code> / <code>.cursor/rules/*</code> / <code>.github/copilot-instructions.md</code> …</td><td><code>instructionFileService.js</code> 的 <code>discoverEcosystemInstructionFiles()</code></td><td><code>ECO_MAX_FILE_CHARS</code> = 4000</td><td><code>ECO_MAX_TOTAL_CHARS</code> = 8000</td></tr></tbody></table>
+<p>三条判据链（缺一不可，全部可复核）：</p>
+<ol><li><code>instructionFileService.js:35-36</code> 定义 <code>MAX_FILE_CHARS</code> / <code>MAX_TOTAL_CHARS</code>，</li></ol>
+<p>但 <code>readFileSafe()</code>（<code>:63</code>，超限只 <code>slice</code>、<strong>不报错不标记</strong>）只在<br>   <code>loadInstructions()</code> 装配 <strong>own 层</strong>时被调用；</p>
+<ol><li>compat 层由 <code>constants/prompts.js</code> 的 <code>_findCompatInstructionFiles()</code> 用</li></ol>
+<p><code>fs.readFileSync(...).trim()</code> 读取 —— <strong>没有 <code>slice</code></strong>，随后<br>   <code>getProjectInstructionsSection()</code> 把全文 push 进 <code>project_instructions</code> 提示词段；</p>
+<ol><li><code>instructionEcosystemRegistry.js</code> 明写「Project-level AGENTS.md is already handled</li></ol>
+<p>by prompts.js compatibility discovery」—— 生态层<strong>刻意不重复收纳</strong> compat。</p>
+<h3 id="1-2-订正-compat-层不截断-35-3-是循环论证的产物">1.2 订正：compat 层不截断，「35.3%」是循环论证的产物<a class="anchor" href="#1-2-订正-compat-层不截断-35-3-是循环论证的产物" aria-label="锚点">#</a></h3>
+<p>初版把 <code>node scripts/ci/check-agent-docs.js --verbose</code> 的输出当作「实测」，而那张表的<br>「AI 可见」列正是<strong>守卫自己按 8000 常量算出来的</strong> —— 守卫套错常量 → 文档引守卫当证据。</p>
+<p>正确做法是直接调用真实注入函数量它：</p>
+<pre><code class="language-js"><span class="hljs-keyword">const</span> { getProjectInstructionsSection } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./services/backend/src/constants/prompts.js&#x27;</span>);
+<span class="hljs-keyword">const</span> s = <span class="hljs-title function_">getProjectInstructionsSection</span>(process.<span class="hljs-title function_">cwd</span>());
+s.<span class="hljs-property">length</span>;                                                     <span class="hljs-comment">// 33823</span>
+s.<span class="hljs-title function_">includes</span>(fs.<span class="hljs-title function_">readFileSync</span>(<span class="hljs-string">&#x27;AGENTS.md&#x27;</span>, <span class="hljs-string">&#x27;utf8&#x27;</span>).<span class="hljs-title function_">trim</span>());      <span class="hljs-comment">// true（全文 22668 字符都在）</span>
+s.<span class="hljs-title function_">includes</span>(fs.<span class="hljs-title function_">readFileSync</span>(<span class="hljs-string">&#x27;CLAUDE.md&#x27;</span>, <span class="hljs-string">&#x27;utf8&#x27;</span>).<span class="hljs-title function_">trim</span>());      <span class="hljs-comment">// true</span></code></pre>
+<table><thead><tr><th>文件</th><th>字符数</th><th>全量进入提示词</th></tr></thead><tbody><tr><td><code>AGENTS.md</code></td><td>22668</td><td>✅ 是（<code>includes()</code> 命中全文，含最后一行与「工程规则」全部四节）</td></tr><tr><td><code>CLAUDE.md</code></td><td>6795</td><td>✅ 是</td></tr></tbody></table>
+<p>⇒ <strong><code>AGENTS.md</code> / <code>CLAUDE.md</code> 不存在静默截断</strong>。因此本规范对 compat 层<strong>不设字符预算</strong><br>（公理 A5：常量从源码读，不得为「看起来该有预算」而自造阈值），<strong>D1 只对 own / eco 两档生效</strong>。</p>
+<blockquote><p>连带影响：初版据 §1.2 推出的「<code>AGENTS.md</code> 工程规则须拆出」不成立 ——<br>拆了反而把「已 100% 送达」降级成「要 AI 自己点开指针」。公理 A4：<strong>误报的守卫会被整体<br>绕过，比没有更糟</strong>；同理，按错误判据做的重构比不做更糟。规则正文留在 <code>AGENTS.md</code>，<br>它仍是 <code>RUNTIME-001</code>~<code>004</code> 的语义真源（登记表 <code>ssot</code> 不动）。</p></blockquote>
+<h3 id="1-3-现存违规-订正后-7-条-初版-11-条中-4-条为守卫误报">1.3 现存违规（订正后 7 条；初版 11 条中 4 条为守卫误报）<a class="anchor" href="#1-3-现存违规-订正后-7-条-初版-11-条中-4-条为守卫误报" aria-label="锚点">#</a></h3>
+<p><strong>初版 11 条里 4 条经复核是守卫误报</strong>，不是仓库的问题：</p>
+<table><thead><tr><th>初版 #</th><th>判据</th><th>误报原因</th><th>守卫侧处理</th></tr></thead><tbody><tr><td>1</td><td>D1</td><td>compat 层无读取预算（§1.1/§1.2）</td><td>D1 收窄到 own/eco；<code>AGENTS.md</code> 保留工程规则正文</td></tr><tr><td>2</td><td>D1</td><td>同上</td><td>同上；<code>tui/AGENTS.md</code> 不作拆分</td></tr><tr><td>6</td><td>D6</td><td><code>[MGMT-STD-001]</code> §1.3 的管辖范围<strong>显式限于 <code>.md</code>/<code>.txt</code></strong>（原文：「白名单之外的任何说明性 <code>.md</code>/<code>.txt</code>」），<code>.windsurfrules</code> 无扩展名，不在辖区内</td><td>D6 根级分支复用 <code>check-repo-layout.js</code> 的 <code>ROOT_DOC_EXT_RE</code></td></tr><tr><td>7</td><td>D6</td><td>同上</td><td>同上</td></tr></tbody></table>
+<p>真实违规 7 条，<strong>已在收口步全部清零</strong>：</p>
+<table><thead><tr><th>#</th><th>级别</th><th>判据</th><th>位置</th><th>事实</th><th>收口处理</th></tr></thead><tbody><tr><td>1</td><td>error</td><td>D6</td><td><code>_产物/khy.md</code></td><td>指令文件落在资产暂存区，读取器不扫；内容是<strong>另一个项目（Y-CODE）</strong>的开发指南，全仓零引用</td><td>删除（备份 <code>.khyos/tmp/khy.md.bak</code>）</td></tr><tr><td>2</td><td>error</td><td>D3a</td><td><code>tui/AGENTS.md:684</code></td><td><code>npm run --workspace backend test:tui</code> —— <code>backend</code> 既不是 workspace 路径也不是包名（真名 <code>khy-os-backend</code>），npm 报 <code>No workspaces found</code></td><td>改为 <code>--workspace services/backend</code>（<code>test:tui</code> 确存在于 <code>services/backend/package.json</code>）</td></tr><tr><td>3</td><td>warning</td><td>D2</td><td><code>tui/AGENTS.md:5</code></td><td>自封「与根目录 <code>AGENTS.md</code> 冲突时以本文件为准」，未登记</td><td>改为声明<strong>不自封</strong>优先级，并说明运行时由 cwd 决定各自生效</td></tr><tr><td>4</td><td>warning</td><td>D3c ×2</td><td><code>AGENTS.md:729</code></td><td>引用 <code>[GUIDE-001]</code>/<code>[GUIDE-002]</code>，两篇连同整个 GUIDE 阶段目录已不存在</td><td>删除「文档合规（2026-09-12 重构）」变更日志节（信息已固化在 <code>[DESIGN-GOV-001]</code> §8）</td></tr><tr><td>5</td><td>warning</td><td>D3d</td><td><code>CLAUDE.md:53</code></td><td>引用 <code>.claude/commands/goal.md</code>，<code>.claude/</code> 下只有 <code>worktrees/</code></td><td>移除该死引用</td></tr><tr><td>6</td><td>warning</td><td>D3d</td><td><code>apps/khyos-desktop/CLAUDE.md:99</code></td><td>引用 <code>scripts/ci/check-brand-replacement.js</code>，全仓不存在该守卫</td><td>改为如实记载「无自动守卫，按下表人工核对」</td></tr></tbody></table>
+<blockquote><p><strong>收口后实测</strong>：<code>node scripts/ci/check-agent-docs.js</code> → <strong>0 error / 0 warning</strong><br>（9 个指令文件）。基线已收紧到 <code>&quot;DOCS-003&quot;: 0</code>（只降不升），回归即刻阻断。</p></blockquote>
+<hr>
+<h2 id="2-设计公理-不可让渡">2. 设计公理（不可让渡）<a class="anchor" href="#2-设计公理-不可让渡" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>公理</th><th>推论</th></tr></thead><tbody><tr><td><strong>A1</strong></td><td><strong>到不了就等于没写</strong></td><td>有效性以「预算内的字符」计量，不以文件里的字符计量。任何超出预算的内容必须在<strong>写作时</strong>就被拒，而不是运行时被切</td></tr><tr><td><strong>A2</strong></td><td><strong>一个事实只有一个真源</strong></td><td>复述即漂移。指令文件可以给指针，不可以给副本</td></tr><tr><td><strong>A3</strong></td><td><strong>优先级只能登记，不能自封</strong></td><td>文件里写「以本文件为准」不产生任何效力；效力来自登记表 + 运行时读取顺序</td></tr><tr><td><strong>A4</strong></td><td><strong>示例与契约必须可区分</strong></td><td>无法区分的守卫必然误报；误报的守卫会被整体绕过，比没有守卫更糟</td></tr><tr><td><strong>A5</strong></td><td><strong>常量从源码读，清单从既有注册表派生</strong></td><td>预算不得硬编码（否则与 <code>instructionFileService.js</code> 漂移）；候选文件集不得另立真源（否则与 <code>instructionEcosystemRegistry.js</code> 漂移）</td></tr></tbody></table>
+<hr>
+<h2 id="3-与既有机制的边界">3. 与既有机制的边界<a class="anchor" href="#3-与既有机制的边界" aria-label="锚点">#</a></h2>
+<p>本仓库已有多个机制触碰这些文件。<strong>本文只补缺口，不重复它们</strong>：</p>
+<table><thead><tr><th>既有件</th><th>它管什么</th><th>本文做什么</th><th>边界</th></tr></thead><tbody><tr><td><code>scripts/ci/check-repo-layout.js</code> <code>ROOT_DOC_WHITELIST</code></td><td>根目录<strong>能不能放</strong>（<code>AGENTS.md</code>/<code>CLAUDE.md</code>/<code>khy.md</code> 已在白名单）</td><td>放进去之后<strong>写什么</strong></td><td>位置 vs 内容。D6 只报「未登记的根级指令文件」，不改白名单</td></tr><tr><td><code>scripts/ci/check-rules-registry.js</code>（<code>TOOLING-007</code>）</td><td>登记表 <code>ssot</code> 指向的文件，其 <code>RULES-REGISTRY</code> 标记行双向可达</td><td>把覆盖扩到<strong>所有</strong>引用已登记规则 ID 的指令文件，含子级（<code>tui/AGENTS.md</code> 等目前完全不可见）</td><td>D4 是 TOOLING-007 的<strong>补集</strong>，不重复其结论</td></tr><tr><td><code>khy metadata link</code>（<code>services/backend/src/services/metadataPointers.js</code>）</td><td>生成 <code>&lt;!-- khy-metadata:pointer --&gt;</code> 块</td><td>只校验块 <strong>START/END 成对</strong>，不生成、不改内容</td><td>D5 不实现生成器</td></tr><tr><td><code>instructionFileService.js</code></td><td>运行时读取（预算、截断、<code>@include</code>、注入扫描）</td><td>把它的常量当<strong>判据来源</strong></td><td>本文不改读取行为，只让写作侧提前知道边界</td></tr><tr><td><code>instructionEcosystemRegistry.js</code></td><td>声明式生态来源清单（24 个来源）</td><td>从它派生候选文件集</td><td>不另立文件清单真源</td></tr><tr><td><code>[MGMT-STD-001]</code> / <code>[MGMT-STD-007]</code> / <code>[MGMT-STD-008]</code></td><td>文档结构铁律 / 文档规则总纲 / 规则编写元规则</td><td>本文是 <code>DOCS</code> 域第三条规则，<strong>服从</strong>三者</td><td>不新增元规则</td></tr></tbody></table>
+<hr>
+<h2 id="4-强度梯度">4. 强度梯度<a class="anchor" href="#4-强度梯度" aria-label="锚点">#</a></h2>
+<p><strong>取向：事前 advisory、事中 warning、事末 error。</strong> 过早阻断会逼 AI 谎报&quot;已确认/已复现&quot;，<br>反而比不拦更危险。</p>
+<table><thead><tr><th>时机</th><th>强度</th><th>内容</th></tr></thead><tbody><tr><td>起草前</td><td>advisory</td><td>告知 tier 与预算；建议写作线 <strong>6000 字符</strong>（留 25% 余量，因中文 1 字符 ≈ 3 字节但预算按字符算）</td></tr><tr><td>提交时</td><td>warning</td><td>D2 / D3b / D3c / D3d / D4 / D6(根白名单) / D7 / D8</td></tr><tr><td>提交时</td><td>error</td><td>D1 预算超限 · D3a npm 脚本与 workspace 死引用 · D5 机器块不成对 · D6 落在 <code>_产物/</code></td></tr></tbody></table>
+<p>规则登记：<code>DOCS-003</code>，<code>priority=P2</code>，<code>gate=pr</code>，<br>执行器 <code>scripts/ci/check-agent-docs.js</code>，走 <code>ruleguard-baseline.json</code> 棘轮。</p>
+<hr>
+<h2 id="5-防呆铁律">5. 防呆铁律<a class="anchor" href="#5-防呆铁律" aria-label="锚点">#</a></h2>
+<p>每条都必须<strong>可自动判定</strong>，判据只看客观证据（文件字节、源码常量、注册表结果），<br><strong>不接受 AI 自称</strong>。</p>
+<table><thead><tr><th>#</th><th>铁律</th><th>可自动判的判据</th></tr></thead><tbody><tr><td><strong>F1</strong></td><td><strong>预算铁律</strong>：任一指令文件字符数 ≤ 其 tier 的 <code>perFile</code> 预算；建议 ≤ 6000</td><td><code>fs.readFileSync(f,'utf8').length</code> vs 源码常量</td></tr><tr><td><strong>F2</strong></td><td><strong>真源唯一</strong>：同一事实只在一处定义，其余为指针</td><td>跨文件 ≥160 字符逐字重复段落检测（排除机器管理块）</td></tr><tr><td><strong>F3</strong></td><td><strong>优先级登记制</strong>：非根指令文件不得自行宣布覆盖他者</td><td>命中 <code>以本文件为准</code>/<code>优先于</code> 等句式 <strong>且</strong> 登记表无该文件<strong>字面</strong>路径登记</td></tr><tr><td><strong>F4</strong></td><td><strong>死指针零容忍</strong>：路径、<code>npm run</code> 脚本、<code>khy</code> 子命令、<code>[域-NNN]</code> 编号必须真实可达</td><td>见 §6 判据细则</td></tr><tr><td><strong>F5</strong></td><td><strong>机器块只读</strong>：<code>khy-metadata:pointer</code> 块由工具覆写，人工改动无效</td><td><code>START</code> 计数 == <code>END</code> 计数</td></tr><tr><td><strong>F6</strong></td><td><strong>示例显式化</strong>：示意性内容必须落在可识别语境（<code>❌</code>/<code>✅</code> 对照块，或紧邻标题含「示例/example/映射/示意」）</td><td>围栏块内容 + 上溯 6 行语境</td></tr><tr><td><strong>F7</strong></td><td><strong>落点铁律</strong>：指令文件只放在读取器会扫的位置</td><td>不在 <code>_产物/</code>；根级文件须在白名单内</td></tr></tbody></table>
+<h3 id="6-判据细则-f4">6. 判据细则（F4）<a class="anchor" href="#6-判据细则-f4" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>子判据</th><th>判据</th><th>踩过的坑（已固化进守卫）</th></tr></thead><tbody><tr><td>D3a <code>npm run</code></td><td>脚本名必须在<strong>就近 <code>package.json</code></strong> 中；带 <code>--workspace &lt;id&gt;</code> 时 id 必须在根 <code>workspaces</code> 数组内，且脚本在该 workspace 包中</td><td>①只查根 <code>package.json</code> 会把 <code>apps/khyos-desktop/CLAUDE.md</code> 里的 <code>npm run dev</code> 全判死（子包脚本）；②参数可出现在脚本名<strong>之前</strong>（<code>npm run --workspace X test</code>），朴素正则会把 <code>--workspace</code> 当脚本名</td></tr><tr><td>D3b <code>khy</code> 子命令</td><td>必须在 <code>aliases.js</code> ∪ <code>commandAutoRegistry</code> 的<strong>实际注册结果</strong>中</td><td><code>metadata</code> 不在别名表里却真实可达（自注册）；反过来「<code>handlers/</code> 下有同名文件」<strong>不等于</strong>可达（需导出命令清单）</td></tr><tr><td>D3c <code>[域-NNN]</code></td><td>要么在 <code>RULES-REGISTRY.json</code>，要么全仓存在同名文档</td><td>①<code>[DESIGN-ARCH-*]</code> 是<strong>文档编号</strong>不是规则 ID，混判会大面积误报；②只扫根 <code>docs/</code> 会漏掉子项目 <code>apps/khyos-desktop/docs/</code></td></tr><tr><td>D3d 路径</td><td>必须<strong>根锚定</strong>（首段是真实顶层目录）、非占位符（<code>your*</code>/<code>xxx</code>/<code>example</code>/<code>...</code>）、且完整路径或 basename 在仓内存在</td><td>①<code>handlers/yourCmd.js</code> 是填空模板；②<code>ink-components/Viewport.js</code> 是文件内相对简写；③<code>.ai/</code> 下是生成物，按需存在</td></tr></tbody></table>
+<hr>
+<h2 id="7-写作规约-正面清单">7. 写作规约（正面清单）<a class="anchor" href="#7-写作规约-正面清单" aria-label="锚点">#</a></h2>
+<p>写一份新的 AI 指令文件时：</p>
+<ol><li><strong>先算预算</strong>。目标 ≤ 6000 字符。超了不是&quot;再写长点&quot;，而是<strong>拆</strong>：细节移入 <code>docs/</code>，</li></ol>
+<p>文件里只留指针 + 摘要（这正是 [MGMT-STD-008] §3.2「正文只做指针+摘要」）。</p>
+<ol><li><strong>开头放 <code>RULES-REGISTRY</code> 标记行</strong>（若该文件承担任何已登记规则的语义真源）：</li></ol>
+<p><code>&lt;!-- RULES-REGISTRY: DOCS-003 --&gt;</code></p>
+<ol><li><strong>标注每节角色</strong>（真源 / 指针 / 速查），像根 <code>AGENTS.md</code> 现有做法那样。</li><li><strong>不要复述语言策略</strong>等已有真源的事实 —— 给指针。</li><li><strong>要声明优先级，先登记</strong>：在 <code>RULES-REGISTRY.json</code> 相应条目的 <code>paths</code> 里写该文件的</li></ol>
+<p><strong>完整字面路径</strong>（不含 <code>*</code>），再在正文声明。</p>
+<ol><li><strong>示例放进 <code>❌</code>/<code>✅</code> 对照块</strong>，或让紧邻标题含「示例」字样。</li><li><strong>机器管理块不要手改</strong>：<code>khy-metadata:pointer</code> 块由 <code>khy metadata link</code> 覆写。</li></ol>
+<hr>
+<h2 id="8-b-l2-三步接线清单">8. B-L2 三步接线清单<a class="anchor" href="#8-b-l2-三步接线清单" aria-label="锚点">#</a></h2>
+<blockquote><p>依据 <code>SOURCING-006</code>：<strong>一次提交只做一步，不得合一</strong>。</p>
+<p><strong>执行状态</strong>：第 1 步 ✅ 已落地；第 2 步 ✅ 已落地（含<strong>登记表修复</strong>与<strong>执行器<br>解释器缺陷修复</strong>各一处，见下方「执行实录」）；第 3 步 ⏳ 未开始<br>（存量 11 条与基线归零留待收口）。</p></blockquote>
+<h3 id="第-1-步-标记">第 1 步 · 标记<a class="anchor" href="#第-1-步-标记" aria-label="锚点">#</a></h3>
+<ol><li><code>docs/10_规范/registry/RULES-REGISTRY.json</code>：在 <code>rules</code> 追加 <code>DOCS-003</code> 条目（字段齐全，</li></ol>
+<p>含 <code>nature</code>/<code>grants</code>/<code>benefit</code> 三元，<strong><code>grants</code> 必须与 <code>constraint</code> 边界配对</strong>）；<br>   <code>meta.ruleCount</code> 与 <code>rules.length</code> 必须同步（<strong>登记表自身就是第一处会漂移的真源</strong>：<br>   落地时实测 <code>rules.length</code> 比 <code>meta.ruleCount</code> 多 1）。</p>
+<ol><li>本文顶部已有 <code>&lt;!-- RULES-REGISTRY: DOCS-003 --&gt;</code> 标记行 → <code>TOOLING-007</code> 双向可达满足。</li><li><del><code>AGENTS.md</code> 顶部标记行追加 <code>DOCS-003</code></del> —— <strong>不需要，且做了是错的</strong>。</li></ol>
+<p><code>RULES-REGISTRY</code> 标记行的语义是「<strong>本文件是这些规则的语义真源</strong>」，<br>   不是「本文件受这些规则管辖」。<code>AGENTS.md</code> 是 <code>RUNTIME-001</code>~<code>004</code> 的真源，不是<br>   <code>DOCS-003</code> 的真源；往里塞 <code>DOCS-003</code> 等于伪造一条 ssot 声明。<br>   <code>check-rules-registry.js</code> 的孤儿标记检查只扫<strong>登记表 <code>ssot</code> 指向的文件</strong>，<br>   因此 <code>AGENTS.md</code> 不写也不会红。</p>
+<ol><li>回写两处索引（本文已随交付完成，见 §10）。</li></ol>
+<p><strong>验收</strong>：<code>npm run check:rules-registry</code>、<code>npm run check:gov-rules</code> 绿。</p>
+<h3 id="第-2-步-迁移">第 2 步 · 迁移<a class="anchor" href="#第-2-步-迁移" aria-label="锚点">#</a></h3>
+<ol><li><code>_产物/check-agent-docs.js</code> → <code>scripts/ci/check-agent-docs.js</code></li></ol>
+<p>（脚本已按可重定位写：仓库根靠 <code>RULES-REGISTRY.json + package.json</code> 向上查找，<br>   移动后无需改路径）。</p>
+<ol><li><code>package.json</code> 加别名 <code>&quot;check:agent-docs&quot;: &quot;node scripts/ci/check-agent-docs.js&quot;</code></li></ol>
+<p>—— <strong>不加会被 <code>check-wiring.js</code> 判 error（检查器零接线）</strong>。</p>
+<ol><li><code>scripts/ci/ruleguard-baseline.json</code> 的 <code>counts</code> 记入当前观测存量</li></ol>
+<p>（<strong>实测 <code>&quot;DOCS-003&quot;: 11</code></strong>），此后<strong>只降不升</strong>。</p>
+<blockquote><p>⚠️ 取值陷阱：<code>run.js</code> 对 <code>strength === 'ratchet'</code> 的规则<strong>按全部 finding 计数</strong><br>（<code>ratchetObserved[rule] += 1</code> 在 severity 分支之外，error 与 warning 都算）。<br>只看 <code>Summary: 4 error(s)</code> 会填成 <code>4</code>，而实测观测值是 <code>4 + 7 = 11</code> ——<br>填 <code>4</code> 会让 pr 档当场判 7 条超额阻断。取值须用 <code>rules:gate</code> 的 JSON 报告核对，<br>不要数人类可读摘要里的 error 行。</p></blockquote>
+<ol><li>生成规则卡：<code>npm run docs:rules-cards</code>（<code>docs/10_规范/规则卡/</code> <strong>禁止手改</strong>）。</li></ol>
+<p><strong>验收</strong>：<code>npm run check:wiring</code>、<code>npm run rules:coverage</code>、<code>npm run rules:manifest</code> 绿。</p>
+<h4 id="执行实录-落地时发现并修掉的两处既有缺陷">执行实录 · 落地时发现并修掉的两处既有缺陷<a class="anchor" href="#执行实录-落地时发现并修掉的两处既有缺陷" aria-label="锚点">#</a></h4>
+<p><strong>A. 登记表丢失两条规则（已修复）</strong>。以 <code>git</code> 索引副本为基线重建登记表时，<br><code>LAYOUT-004</code>（仓库整理与巡检）、<code>LAYOUT-005</code>（构建产物单一根）被漏掉 ——<br>索引副本停留在 66 条，工作区已是 68 条（状态 <code>AM</code>，索引落后工作区）。<br>修复方式：以 <code>docs/10_规范/规则卡/</code> 的 68 张卡为反查真源逐条比对，按卡内<br>frontmatter 14 字段原样插回，并把 <code>meta.ruleCount</code> 校正为 69。<br><strong>教训</strong>：<code>git status</code> 为 <code>AM</code> 时，索引<strong>不是</strong>工作区基线，拿索引当基线重建等于回滚别人的未提交改动。</p>
+<p><strong>B. 登记表里 56 处路径停在已废止的 <code>docs/_规范/</code> 形式（已修复）</strong>。<br><code>[DESIGN-LAY-002]</code> 已明文废止「<code>_</code> 前缀 = 跨阶段资产」这一含义，文档侧早已迁到<br><code>docs/10_规范/</code>，但 <code>RULES-REGISTRY.json</code> 是 <code>.json</code>，<strong>没被那轮只扫 <code>.md</code> 的路径迁移<br>扫到</strong>。后果是 <code>check-rules-registry.js</code> 报 36 条「语义真源文件不存在」+ 40 张规则卡<br>被判「产物过期」（卡里是对的，登记表里是旧的，于是「卡与登记表不一致」）。<br>修复方式：<code>docs/_规范/</code> → <code>docs/10_规范/</code>（含 <code>ssot</code> 与 <code>enforcement</code> 两处字段），<br>再 <code>npm run docs:rules-cards</code> 重生成。<strong>修复后 <code>check-rules-registry</code> 由 39 error 降到 0。</strong></p>
+<p><strong>C. 顺带清掉一条 <code>check-wiring</code> 存量债</strong>。<code>LAYOUT-004</code> 声明的执行器<br><code>scripts/maintenance/organize.py</code> 此前零接线（2 条 error：检查器零接线 + 声明未挂门）。<br>本次在 <code>package.json</code> 补 <code>&quot;maintenance:organize&quot;</code> 别名接线，<code>check-wiring</code> 转绿。</p>
+<p><strong>C2. <code>ruleguard</code> 对 <code>.py</code> 执行器的解释器缺陷（已修复）</strong>。C 步把 <code>organize.py</code><br>接进门之后，立刻暴露出一条<strong>实质缺陷</strong>：<code>scripts/ruleguard/lib/wiring.js</code> 的<br><code>CHECKER_SUFFIXES = ['.js', '.mjs', '.cjs', '.py']</code> 收 <code>.py</code> 为检查器，但<br><code>lib/run.js</code> <strong>一律</strong> <code>spawnSync(process.execPath, [script, ...args])</code> —— <code>.py</code> 被<br><code>node</code> 当 JS 解析，必然失败。表现为一条 <code>checker-failure</code>（因 <code>LAYOUT-004</code> 是 P2 /<br>ratchet 而<strong>不阻断</strong>，所以此前长期无人察觉）。</p>
+<p>修复方式（两步，均为叶子改动，不碰业务）：</p>
+<ol><li>新建 <code>scripts/lib/pythonInterpreter.js</code> —— 纯叶子模块，零外部依赖、确定性、</li></ol>
+<p><strong>绝不抛</strong>；导出 <code>interpreterFor(scriptRel)</code> / <code>runnerLabel(scriptRel)</code> /<br>   <code>resolvePythonCommand()</code>，并支持注入 <code>spawn</code> 以便离线单测。<br>   探测<strong>按退出码判定</strong>而非「命令是否存在」：Windows 未装 Python 时 <code>python</code> 会被<br>   Microsoft Store 的占位程序接管（命令存在、能启动、退出码非 0），只查 <code>which</code><br>   会误判为可用。候选顺序 Windows 为 <code>python → py → python3</code>，POSIX 反之。<br>   刻意<strong>不复用</strong> <code>scripts/ci/run-python.js</code>：那是 CLI 不是模块，且它<br>   <code>require('../../services/backend/src/tools/platformUtils')</code> 是会被<br>   <code>check:layout</code> 的 <code>cross-layer-require</code> 计入基线的跨 workspace 深层相对 require。</p>
+<ol><li>改造 <code>scripts/ruleguard/lib/run.js</code> —— 按后缀分派解释器</li></ol>
+<p>（<code>.py</code> → python，其余 → <code>process.execPath</code>）；拿不到解释器时不 spawn，<br>   直接以 <code>runner.reason</code> 生成可读的 <code>checker-failure</code>；文案统一改用 <code>runnerLabel()</code><br>   显示真实启动命令（<code>python x.py</code> / <code>node x.js</code>）。</p>
+<p><strong>验收</strong>：叶子单元探针 8 项全过（候选顺序、只认退出码 0、异常不炸、<br><code>.py</code>→python / <code>.js|.mjs</code>→node、缺解释器给可读 reason）；实测<br><code>python scripts/maintenance/organize.py --report</code> → <strong>exit 0、耗时 1.44s</strong>；<br>修复后 pr 档实测 <code>LAYOUT-004</code> 的 <code>checker-failure</code> <strong>由 1 条降为 0 条</strong>。</p>
+<p><strong>D. 更深的接线缺口：pr 档 ruleguard 没有被任何 CI workflow 调用（已登记，未修）</strong>。<br>本次实测：<code>.github/workflows/pr-gate.yml</code> 逐条列了 20 余个 <code>node scripts/ci/*.js</code> 步骤与<br><code>ruleguard/index.js coverage</code>，<strong>唯独没有 <code>npm run rules:gate</code></strong>（= <code>ruleguard run --mode pr</code>）；<br><code>check:structure</code> 的 <code>&amp;&amp;</code> 链里也没有它。<code>.githooks/pre-commit</code> 只跑 <code>--mode commit</code>，<br>而 commit 档<strong>只选声明了 <code>--changed</code> 的执行器</strong> —— 本规则的 <code>exec.args = []</code>（有意为之，<br>见上文「不加 <code>--changed</code>」的理由）→ <strong>它在 CI 里不会自动执行</strong>。</p>
+<blockquote><p>也就是说：<code>check-wiring.js</code> 判绿的「已接线」= 「执行器被某个门<strong>表面</strong>引用」，<br>而 <code>check:agent-docs</code> 别名本身就构成一个表面。<strong>「表面被引用」≠「CI 真的会跑」</strong> ——<br>这条差别 <code>check-wiring.js</code> 按设计不管（它管孤儿，不管调用时机）。<br>修复代价：给 <code>pr-gate.yml</code> 加一步 <code>npm run rules:gate</code> 会同时跑 31 个执行器，<br>其中 3 个（<code>validate-json-schemas</code> / <code>check-code-standards</code> / <code>check-protocol-naming</code>）<br><strong>当前就是 blocking 失败</strong>（exit 1 且无可解析 finding）→ 先得修那三条。<br>故本步并入第 3 步「收口」，不在本次范围。</p></blockquote>
+<h3 id="第-3-步-收口">第 3 步 · 收口<a class="anchor" href="#第-3-步-收口" aria-label="锚点">#</a></h3>
+<ol><li>清理 §1.3 的存量（<strong>订正</strong>：初版「预算超标的两份靠拆分」不成立，见 §1.2；</li></ol>
+<p>实际清掉的是 7 条真违规，另 4 条是守卫误报 → 改守卫而非改仓库）。</p>
+<ol><li>收紧基线到 0，把 <code>DOCS-003</code> 从 <code>P2</code> 提级或保持棘轮。</li></ol>
+<p><strong>执行状态</strong>：第 3 步 ✅ 已落地（2026-09-16）。</p>
+<table><thead><tr><th>项</th><th>结果</th></tr></thead><tbody><tr><td>真违规</td><td>7 条全部清零（<code>node scripts/ci/check-agent-docs.js</code> → 0 error / 0 warning）</td></tr><tr><td>误报</td><td>4 条（D1 ×2、D6 ×2）→ 收窄守卫，另加 1 条收口途中新发现的 D2 误报</td></tr><tr><td>拆分</td><td><strong>撤回</strong>：<code>AGENTS.md</code> 不拆，仍是 <code>RUNTIME-001</code>~<code>004</code> 的语义真源，登记表 <code>ssot</code> 不动</td></tr><tr><td>基线</td><td><code>ruleguard-baseline.json</code> 的 <code>&quot;DOCS-003&quot;</code> 由 <code>11</code> 收紧到 <strong><code>0</code></strong></td></tr><tr><td>优先级</td><td><strong>保持 P2 + 棘轮</strong>（基线 0 已等价于「新增即阻断」；提 P1 会让它跳过棘轮直接阻断，与「P2 先记账」的设计意图不符，且当前无存量可记，保持 P2 更稳）</td></tr><tr><td>场景矩阵</td><td>17 → <strong>22</strong>（新增 5 个对照场景，见 §9）</td></tr></tbody></table>
+<blockquote><p><strong>门档不用改</strong>：commit ⊂ pr ⊂ release 的成员资格从登记表派生（<code>[DESIGN-ARCH-111]</code>），<br><strong>不要</strong>动 <code>qualityGateStages.js</code> 或 <code>package.json</code> 的 <code>&amp;&amp;</code> 链。<br>本次实测印证：加 <code>DOCS-003</code> 后 pr 档自动多跑一个执行器（<code>checkersRun</code> 31），<br>无需改任何门档文件。</p></blockquote>
+<h4 id="执行实录-收口步">执行实录 · 收口步<a class="anchor" href="#执行实录-收口步" aria-label="锚点">#</a></h4>
+<p><strong>E. 最大的一处订正：D1 的适用范围写错了（已修复）</strong>。初版把<br><code>instructionFileService.js</code> 的 <code>MAX_FILE_CHARS</code> 当成 compat 层的预算，据此判定<br>「<code>AGENTS.md</code> 只见 35.3%」。复核发现 compat 层根本不由它读取 —— 真实读取方是<br><code>constants/prompts.js</code>，<strong>无预算、全量注入</strong>（实测 <code>getProjectInstructionsSection()</code><br>返回 33823 字符，含 <code>AGENTS.md</code> 全文）。详见 §1.1/§1.2。<br><strong>根因</strong>：初版把「守卫自己的输出」当成了实测证据 —— 守卫套错常量，文档再引守卫，<br>构成循环论证。<strong>教训：守卫的输出不能自证其判据，判据必须回到运行时源码复核。</strong></p>
+<p><strong>F. 连带撤回拆分</strong>。收口初动时曾按初版清单新建<br><code>docs/10_规范/[DESIGN-RUNTIME-001] 工程规则…</code> 并准备搬走 <code>AGENTS.md</code> 的工程规则正文 +<br>迁移 <code>RUNTIME-001</code>~<code>004</code> 的 <code>ssot</code> + 挪 <code>RULES-REGISTRY</code> 标记行。发现 §1.2 为假后立即<br><strong>撤回</strong>（新文档已删，登记表未改）。理由：拆了会把「已 100% 送达」降级成「要 AI 自己<br>点开指针」，是净损失。</p>
+<p><strong>G. D6 根级分支的管辖范围越界（已修复）</strong>。<code>.windsurfrules</code> / <code>.clinerules</code> 被判<br>「不在根目录白名单」，但它们由 <code>khy metadata link</code> 生成、已在<br><code>instructionEcosystemRegistry.js</code> 声明；而 D6 所引真源 <code>[MGMT-STD-001]</code> §1.3 的管辖<br>范围<strong>显式限于 <code>.md</code>/<code>.txt</code></strong>。修复：D6 根级分支复用 <code>check-repo-layout.js</code> 的<br><code>ROOT_DOC_EXT_RE</code>（A5：常量从源码读），<strong>只收窄根级分支</strong>，<code>_产物/</code> 分支不受影响。</p>
+<p><strong>H. D2 的「优先于」过宽（已修复）</strong>。收口途中 <code>tui/AGENTS.md:27</code><br>「✅ 新增文件优先于修改现有文件」被判为自封优先级 —— 那是普通编码指引，宾语不是<br>指令文件。修复：<code>优先于</code> 命中时要求<strong>同一行</strong>出现指令文件宾语<br>（<code>AGENTS|CLAUDE|KHY.md</code> / 根目录 / 上级 / 根级 / 指令文件），否则放行。</p>
+<hr>
+<h2 id="9-验证与反例清单">9. 验证与反例清单<a class="anchor" href="#9-验证与反例清单" aria-label="锚点">#</a></h2>
+<p>迁移后的 <code>scripts/ci/check-agent-docs.js</code> 支持 <strong>26 个</strong>预置场景，<code>--scenario=&lt;名&gt;</code> 可复现。<br><strong>15 个应拦、11 个应放行</strong>（放行对照证明不是无脑拦）。下表「实测」列为<strong>逐条实跑</strong>结果<br>（<code>for s in ...; do node scripts/ci/check-agent-docs.js --scenario=$s; done</code>）：</p>
+<table><thead><tr><th>场景</th><th>期望</th><th>实测</th></tr></thead><tbody><tr><td><code>budget-overflow</code></td><td>D1-budget（own 层 <code>khy.md</code>）</td><td>✔ 1 error</td></tr><tr><td><code>budget-within</code></td><td><strong>放行</strong></td><td>✔ 0</td></tr><tr><td><code>budget-compat-exempt</code></td><td><strong>放行</strong>（compat 无读取预算）</td><td>✔ 0</td></tr><tr><td><code>budget-eco-overflow</code></td><td>D1-budget（eco 层 4000）</td><td>✔ 1 error</td></tr><tr><td><code>precedence-usurp</code></td><td>D2-precedence</td><td>✔ 1 warning</td></tr><tr><td><code>precedence-ordinary-wording</code></td><td><strong>放行</strong>（「优先于」宾语非指令文件）</td><td>✔ 0</td></tr><tr><td><code>dead-npm-script</code></td><td>D3a</td><td>✔ 1 error</td></tr><tr><td><code>bad-workspace</code></td><td>D3a（workspace 名非法）</td><td>✔ 1 error</td></tr><tr><td><code>dead-cli-command</code></td><td>D3b</td><td>✔ 1 warning</td></tr><tr><td><code>live-cli-command</code></td><td><strong>放行</strong>（<code>metadata</code> 靠自注册可达）</td><td>✔ 0</td></tr><tr><td><code>unknown-rule-id</code></td><td>D3c</td><td>✔ 1 warning</td></tr><tr><td><code>subproject-doc-id</code></td><td><strong>放行</strong>（子项目 docs/ 的编号）</td><td>✔ 0</td></tr><tr><td><code>dead-path</code></td><td>D3d</td><td>✔ 1 warning</td></tr><tr><td><code>relative-shorthand</code></td><td><strong>放行</strong>（文件内相对简写）</td><td>✔ 0</td></tr><tr><td><code>missing-marker</code></td><td>D4-marker</td><td>✔ 1 warning</td></tr><tr><td><code>broken-managed-block</code></td><td>D5</td><td>✔ 1 error</td></tr><tr><td><code>wrong-location</code></td><td>D6（<code>_产物/</code>）</td><td>✔ 1 error</td></tr><tr><td><code>root-md-not-whitelisted</code></td><td>D6（根目录 <code>.md</code> 未登记白名单）</td><td>✔ 1 warning</td></tr><tr><td><code>root-eco-dotfile</code></td><td><strong>放行</strong>（无扩展名生态文件不在 §1.3 辖区）</td><td>✔ 0</td></tr><tr><td><code>contrast-block</code></td><td><strong>放行</strong>（<code>❌</code>/<code>✅</code> 对照块）</td><td>✔ 0</td></tr><tr><td><code>duplication</code></td><td>D8</td><td>✔ <strong>2 warning</strong>（A 与 B 各报一条：D8 按文件分报，见 §5 铁律）</td></tr><tr><td><code>mirror-undeclared</code></td><td>D9（声明了不存在的孪生面）</td><td>✔ 1 warning</td></tr><tr><td><code>mirror-one-way</code></td><td>D9（孪生面存在但无反向声明）</td><td>✔ 1 warning</td></tr><tr><td><code>mirror-both-ways</code></td><td><strong>放行</strong>（双向声明）</td><td>✔ 0</td></tr><tr><td><code>mirror-no-declaration</code></td><td><strong>放行</strong>（未声明 MIRROR 就不查）</td><td>✔ 0</td></tr><tr><td><code>clean</code></td><td><strong>放行</strong></td><td>✔ 0</td></tr></tbody></table>
+<blockquote><p>新增 5 个对照场景（<code>budget-compat-exempt</code> / <code>budget-eco-overflow</code> /<br><code>precedence-ordinary-wording</code> / <code>root-md-not-whitelisted</code> / <code>root-eco-dotfile</code>）<br>是收口步修掉的 5 处误报的<strong>回归锁</strong>：每一处都同时有「应拦」与「应放行」两条对照，<br>确保收窄判据时<strong>没有把闸门整条废掉</strong>。</p></blockquote>
+<blockquote><p><strong>D9 的 4 个场景是成对设计的</strong>（2026-09-17 新增，承载 HQ 丢弃后的替代保障，见 §11.6）：<br><code>mirror-one-way</code> 与 <code>mirror-both-ways</code> 使用<strong>同一对虚拟文件</strong>，只差第二个文件有没有<br>反向声明 —— 缺了放行对照，「单向报错」这个断言就证明不了它不是「凡有 <code>MIRROR</code> 就报」。<br><strong>两个设计陷阱（实测踩过，勿重犯）</strong>：<br>① 场景文件是<strong>虚拟的</strong>（不落盘），孪生面查找必须能命中 <code>--scenario</code> 的文件集，<br>   否则每个场景都退化成「文件不存在」（守卫为此加了 <code>virtualFiles</code> 参数）；<br>② <strong>不要拿仓库真实文件当孪生面</strong> —— <code>AGENTS.html</code> 一旦补上反向声明，<br>   <code>mirror-one-way</code> 就会静默转绿。场景必须自包含、与仓库状态解耦。</p></blockquote>
+<hr>
+<h2 id="10-复现方式">10. 复现方式<a class="anchor" href="#10-复现方式" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-comment"># 全仓扫描（人类可读）</span>
+node scripts/ci/check-agent-docs.js --verbose
+
+<span class="hljs-comment"># 机器可读</span>
+node scripts/ci/check-agent-docs.js --json
+
+<span class="hljs-comment"># 只看指定文件</span>
+node scripts/ci/check-agent-docs.js --files=AGENTS.md,CLAUDE.md
+
+<span class="hljs-comment"># 反例矩阵</span>
+node scripts/ci/check-agent-docs.js --list-scenarios
+node scripts/ci/check-agent-docs.js --scenario=budget-overflow</code></pre>
+<blockquote><p>上列命令均已指向迁移后的正式位置。原型副本（<code>_产物/check-agent-docs.js</code>）已随第 2 步<br>完成迁移，<code>_产物/</code> 只保留非文档资产；<code>--list-scenarios</code> / <code>--scenario=</code> 两个自检开关<br>随脚本一并迁移，用于回归反例矩阵。</p></blockquote>
+<p>退出码契约与 <code>scripts/ci/</code> 其余检查器一致：<code>0</code> 干净、<code>1</code> 有 finding、<code>2</code> 用法错误。</p>
+<p><strong>基线</strong>：</p>
+<ul><li>接线时（2026-09-16 第 2 步）：扫描 10 个指令文件 → <code>4 error(s), 7 warning(s)</code>。</li></ul>
+<p><code>ruleguard</code> 对 P2 规则按<strong>全部</strong> finding 计数（error 与 warning 都算），故棘轮基线记 <code>11</code><br>  （见 §8 第 2 步第 7 项）。</p>
+<ul><li>**收口后（第 3 步）：存量清零 → <code>0 error(s), 0 warning(s)</code>（9 个指令文件），</li></ul>
+<p>基线收紧为 <code>&quot;DOCS-003&quot;: 0</code>** —— 此后任何新增 finding 都会立即超额阻断。</p>
+<hr>
+<h2 id="11-已知边界与未覆盖">11. 已知边界与未覆盖<a class="anchor" href="#11-已知边界与未覆盖" aria-label="锚点">#</a></h2>
+<p>诚实登记本规范的<strong>不覆盖项</strong>，避免读者高估其保证：</p>
+<ol><li><strong>不校验机器块的块内内容</strong>是否与 <code>metadataPointers</code> 生成结果一致（只校验成对）。</li></ol>
+<p>需要更强的保证时，应由生成器侧提供 <code>--check</code> 模式。</p>
+<ol><li><strong>不校验合并总量</strong>（<code>MAX_TOTAL_CHARS=24000</code>）。当前实测合并 16,597 字符未超限，</li></ol>
+<p>但拆分 <code>AGENTS.md</code> 后需重新核算。原型已打印该预算，判据待补。</p>
+<ol><li><strong>D8 重复检测是启发式的</strong>（≥160 字符、按空行分块）。格式化差异会导致漏报。</li><li><strong>不覆盖 <code>~/.khyquant/khy.md</code></strong> 等用户级文件 —— 它们在仓库外，本规范无管辖权。</li><li><strong><code>.research-tmp/</code> 下的第三方克隆不扫描</strong>（非本仓资产）。</li><li><strong>D9 只做「可离线判定」的那一半，不含提交时序</strong>（2026-09-17 新增）。</li></ol>
+<p>D9 的来历：指挥部仓库 <code>khy-os-hq</code> 的 <code>drivability</code> 检查曾强制<br>   「<code>CLAUDE.md</code> 与 <code>AGENTS.md</code> 必须同步修改」；HQ 被 khy-os 吸收<br>   （见 <code>[DESIGN-ARCH-118]</code>）后，这条机械保障在本仓<strong>没有等价守卫</strong>，<br>   双入口会静默漂移。D9 补上其中<strong>能离线判定</strong>的部分：孪生面是否真的存在、<br>   是否真的互相声明。<strong>明确不覆盖</strong>：</p>
+<ul><li>「同一次提交里两面都改了」这类<strong>时序</strong>判定 —— 需要读 git 历史，</li></ul>
+<p>会让检查器依赖工作区状态（违反本规范的「确定性、可离线跑」纪律），<br>     且「同一次提交」在 rebase/合并后会失真。该纪律留给 <code>PROCESS-005</code> 的人工评审。</p>
+<ul><li><strong>未声明 <code>&lt;!-- MIRROR: X --&gt;</code> 的文件完全不查</strong> —— 这是刻意的（公理 A4</li></ul>
+<p>「误报比漏报更贵」）：全仓 1000+ 个 <code>.html</code> 孪生件里绝大多数是文档构建产物，<br>     把「凡 <code>.md</code> 都要有 <code>.html</code>」做成硬拦会淹掉真正的漂移。</p>
+<ul><li>D9 定为 <strong>warning 而非 error</strong>：孪生件由 <code>build_docs_site.js</code> 批量重写，</li></ul>
+<p>存在真实的不同步窗口，定 error 会让开发者在构建产物抖动时被误伤。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-DOC/[DESIGN-DOC-001] 文档结构规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-DOC-001] 文档结构规范</div></a><a class="next" href="../../../docs/10_规范/DESIGN-DOC/[DESIGN-DOC-003] README 内容规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-DOC-003] README 内容规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-DOC/[DESIGN-DOC-002] AI 指令文件标准.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-MS-001] 微服务通信规范.md -->
+<title>[DESIGN-MS-001] 微服务通信规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-MS-001] 微服务通信规范</div>
+      <header class="hero reveal"><h1>[DESIGN-MS-001] 微服务通信规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-ms-001-微服务通信规范">[DESIGN-MS-001] 微服务通信规范</a></li><li class="lvl-2"><a href="#1-通信概述">1. 通信概述</a></li><li class="lvl-3"><a href="#1-1-设计原则">1.1 设计原则</a></li><li class="lvl-3"><a href="#1-2-通信模式">1.2 通信模式</a></li><li class="lvl-2"><a href="#2-服务发现">2. 服务发现</a></li><li class="lvl-3"><a href="#2-1-服务注册">2.1 服务注册</a></li><li class="lvl-3"><a href="#2-2-健康检查">2.2 健康检查</a></li><li class="lvl-2"><a href="#3-消息队列">3. 消息队列</a></li><li class="lvl-3"><a href="#3-1-消息格式">3.1 消息格式</a></li><li class="lvl-3"><a href="#3-2-消息队列实现">3.2 消息队列实现</a></li><li class="lvl-3"><a href="#3-3-消息确认">3.3 消息确认</a></li><li class="lvl-2"><a href="#4-事件驱动架构">4. 事件驱动架构</a></li><li class="lvl-3"><a href="#4-1-事件定义">4.1 事件定义</a></li><li class="lvl-3"><a href="#4-2-事件发布-订阅">4.2 事件发布/订阅</a></li><li class="lvl-3"><a href="#4-3-事件溯源">4.3 事件溯源</a></li><li class="lvl-2"><a href="#5-同步通信">5. 同步通信</a></li><li class="lvl-3"><a href="#5-1-http-通信">5.1 HTTP 通信</a></li><li class="lvl-3"><a href="#5-2-服务间认证">5.2 服务间认证</a></li><li class="lvl-2"><a href="#6-容错机制">6. 容错机制</a></li><li class="lvl-3"><a href="#6-1-重试机制">6.1 重试机制</a></li><li class="lvl-3"><a href="#6-2-断路器模式">6.2 断路器模式</a></li><li class="lvl-3"><a href="#6-3-降级策略">6.3 降级策略</a></li><li class="lvl-2"><a href="#7-版本历史">7. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-ms-001-微服务通信规范">[DESIGN-MS-001] 微服务通信规范<a class="anchor" href="#design-ms-001-微服务通信规范" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档定义 khy-os 项目的微服务/模块通信标准，包括服务发现、消息队列、事件驱动等。</p></blockquote>
+<hr>
+<h2 id="1-通信概述">1. 通信概述<a class="anchor" href="#1-通信概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-设计原则">1.1 设计原则<a class="anchor" href="#1-1-设计原则" aria-label="锚点">#</a></h3>
+<ol><li><strong>松耦合</strong>：服务之间松散耦合</li><li><strong>高内聚</strong>：服务内部高度内聚</li><li><strong>可独立部署</strong>：服务可独立部署</li><li><strong>容错性</strong>：服务故障不影响整体</li></ol>
+<h3 id="1-2-通信模式">1.2 通信模式<a class="anchor" href="#1-2-通信模式" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>模式</th><th>说明</th><th>适用场景</th></tr></thead><tbody><tr><td>同步</td><td>请求-响应</td><td>实时查询</td></tr><tr><td>异步</td><td>消息队列</td><td>后台任务</td></tr><tr><td>事件驱动</td><td>发布-订阅</td><td>状态变更通知</td></tr></tbody></table>
+<hr>
+<h2 id="2-服务发现">2. 服务发现<a class="anchor" href="#2-服务发现" aria-label="锚点">#</a></h2>
+<h3 id="2-1-服务注册">2.1 服务注册<a class="anchor" href="#2-1-服务注册" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// services/registry.js</span>
+<span class="hljs-keyword">const</span> services = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>();
+
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">registerService</span> = (<span class="hljs-params">name, endpoint, metadata = {}</span>) =&gt; {
+  services.<span class="hljs-title function_">set</span>(name, {
+    endpoint,
+    metadata,
+    <span class="hljs-attr">registeredAt</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>(),
+    <span class="hljs-attr">lastHeartbeat</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>()
+  });
+};
+
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">getService</span> = (<span class="hljs-params">name</span>) =&gt; {
+  <span class="hljs-keyword">return</span> services.<span class="hljs-title function_">get</span>(name);
+};
+
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">getAllServices</span> = (<span class="hljs-params"></span>) =&gt; {
+  <span class="hljs-keyword">return</span> <span class="hljs-title class_">Array</span>.<span class="hljs-title function_">from</span>(services.<span class="hljs-title function_">entries</span>()).<span class="hljs-title function_">map</span>(<span class="hljs-function">(<span class="hljs-params">[name, info]</span>) =&gt;</span> ({
+    name,
+    ...info
+  }));
+};</code></pre>
+<h3 id="2-2-健康检查">2.2 健康检查<a class="anchor" href="#2-2-健康检查" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 心跳检测</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">heartbeat</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">serviceName</span>) =&gt; {
+  <span class="hljs-keyword">const</span> service = services.<span class="hljs-title function_">get</span>(serviceName);
+  <span class="hljs-keyword">if</span> (service) {
+    service.<span class="hljs-property">lastHeartbeat</span> = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>();
+  }
+};
+
+<span class="hljs-comment">// 健康检查</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">healthCheck</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">serviceName</span>) =&gt; {
+  <span class="hljs-keyword">const</span> service = services.<span class="hljs-title function_">get</span>(serviceName);
+  <span class="hljs-keyword">if</span> (!service) {
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }
+  
+  <span class="hljs-keyword">const</span> now = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>();
+  <span class="hljs-keyword">const</span> diff = now - service.<span class="hljs-property">lastHeartbeat</span>;
+  
+  <span class="hljs-comment">// 超过 30 秒无心跳视为不健康</span>
+  <span class="hljs-keyword">return</span> diff &lt; <span class="hljs-number">30000</span>;
+};</code></pre>
+<hr>
+<h2 id="3-消息队列">3. 消息队列<a class="anchor" href="#3-消息队列" aria-label="锚点">#</a></h2>
+<h3 id="3-1-消息格式">3.1 消息格式<a class="anchor" href="#3-1-消息格式" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;msg-uuid&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;order.created&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;source&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;order-service&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;payload&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;orderId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">123</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;userId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">456</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;total&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">100.00</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;metadata&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;correlationId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;corr-uuid&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;retryCount&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="3-2-消息队列实现">3.2 消息队列实现<a class="anchor" href="#3-2-消息队列实现" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// utils/messageQueue.js</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title class_">Queue</span> = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;bull&#x27;</span>);
+
+<span class="hljs-keyword">const</span> orderQueue = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Queue</span>(<span class="hljs-string">&#x27;order processing&#x27;</span>, {
+  <span class="hljs-attr">redis</span>: {
+    <span class="hljs-attr">host</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">REDIS_HOST</span>,
+    <span class="hljs-attr">port</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">REDIS_PORT</span>
+  }
+});
+
+<span class="hljs-comment">// 生产者</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">publishMessage</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">queueName, message</span>) =&gt; {
+  <span class="hljs-keyword">const</span> queue = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Queue</span>(queueName);
+  <span class="hljs-keyword">await</span> queue.<span class="hljs-title function_">add</span>(message, {
+    <span class="hljs-attr">attempts</span>: <span class="hljs-number">3</span>,
+    <span class="hljs-attr">backoff</span>: {
+      <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;exponential&#x27;</span>,
+      <span class="hljs-attr">delay</span>: <span class="hljs-number">1000</span>
+    }
+  });
+};
+
+<span class="hljs-comment">// 消费者</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">consumeMessages</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">queueName, handler</span>) =&gt; {
+  <span class="hljs-keyword">const</span> queue = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Queue</span>(queueName);
+  
+  queue.<span class="hljs-title function_">process</span>(<span class="hljs-title function_">async</span> (job) =&gt; {
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">await</span> <span class="hljs-title function_">handler</span>(job.<span class="hljs-property">data</span>);
+    } <span class="hljs-keyword">catch</span> (error) {
+      <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;Message processing failed:&#x27;</span>, error);
+      <span class="hljs-keyword">throw</span> error;
+    }
+  });
+};</code></pre>
+<h3 id="3-3-消息确认">3.3 消息确认<a class="anchor" href="#3-3-消息确认" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 消息确认机制</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">processWithAck</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">message</span>) =&gt; {
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-comment">// 处理消息</span>
+    <span class="hljs-keyword">await</span> <span class="hljs-title function_">handleMessage</span>(message);
+    
+    <span class="hljs-comment">// 确认消息</span>
+    <span class="hljs-keyword">await</span> <span class="hljs-title function_">acknowledgeMessage</span>(message.<span class="hljs-property">id</span>);
+  } <span class="hljs-keyword">catch</span> (error) {
+    <span class="hljs-comment">// 拒绝消息，重新入队</span>
+    <span class="hljs-keyword">await</span> <span class="hljs-title function_">rejectMessage</span>(message.<span class="hljs-property">id</span>, <span class="hljs-literal">true</span>);
+  }
+};</code></pre>
+<hr>
+<h2 id="4-事件驱动架构">4. 事件驱动架构<a class="anchor" href="#4-事件驱动架构" aria-label="锚点">#</a></h2>
+<h3 id="4-1-事件定义">4.1 事件定义<a class="anchor" href="#4-1-事件定义" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// events/types.js</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title class_">Events</span> = {
+  <span class="hljs-attr">USER_CREATED</span>: <span class="hljs-string">&#x27;user.created&#x27;</span>,
+  <span class="hljs-attr">USER_UPDATED</span>: <span class="hljs-string">&#x27;user.updated&#x27;</span>,
+  <span class="hljs-attr">USER_DELETED</span>: <span class="hljs-string">&#x27;user.deleted&#x27;</span>,
+  
+  <span class="hljs-attr">ORDER_CREATED</span>: <span class="hljs-string">&#x27;order.created&#x27;</span>,
+  <span class="hljs-attr">ORDER_PAID</span>: <span class="hljs-string">&#x27;order.paid&#x27;</span>,
+  <span class="hljs-attr">ORDER_SHIPPED</span>: <span class="hljs-string">&#x27;order.shipped&#x27;</span>,
+  <span class="hljs-attr">ORDER_DELIVERED</span>: <span class="hljs-string">&#x27;order.delivered&#x27;</span>,
+  
+  <span class="hljs-attr">PAYMENT_SUCCESS</span>: <span class="hljs-string">&#x27;payment.success&#x27;</span>,
+  <span class="hljs-attr">PAYMENT_FAILED</span>: <span class="hljs-string">&#x27;payment.failed&#x27;</span>
+};</code></pre>
+<h3 id="4-2-事件发布-订阅">4.2 事件发布/订阅<a class="anchor" href="#4-2-事件发布-订阅" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// utils/eventEmitter.js</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title class_">EventEmitter</span> = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;events&#x27;</span>);
+<span class="hljs-keyword">const</span> emitter = <span class="hljs-keyword">new</span> <span class="hljs-title class_">EventEmitter</span>();
+
+<span class="hljs-comment">// 发布事件</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">emitEvent</span> = (<span class="hljs-params">eventType, payload</span>) =&gt; {
+  emitter.<span class="hljs-title function_">emit</span>(eventType, {
+    <span class="hljs-attr">type</span>: eventType,
+    <span class="hljs-attr">timestamp</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>().<span class="hljs-title function_">toISOString</span>(),
+    payload
+  });
+};
+
+<span class="hljs-comment">// 订阅事件</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">onEvent</span> = (<span class="hljs-params">eventType, handler</span>) =&gt; {
+  emitter.<span class="hljs-title function_">on</span>(eventType, handler);
+};
+
+<span class="hljs-comment">// 使用示例</span>
+<span class="hljs-title function_">onEvent</span>(<span class="hljs-title class_">Events</span>.<span class="hljs-property">ORDER_CREATED</span>, <span class="hljs-title function_">async</span> (event) =&gt; {
+  <span class="hljs-comment">// 发送通知</span>
+  <span class="hljs-keyword">await</span> <span class="hljs-title function_">sendNotification</span>(event.<span class="hljs-property">payload</span>.<span class="hljs-property">userId</span>, <span class="hljs-string">&#x27;订单已创建&#x27;</span>);
+  
+  <span class="hljs-comment">// 更新统计</span>
+  <span class="hljs-keyword">await</span> <span class="hljs-title function_">updateStatistics</span>(event.<span class="hljs-property">payload</span>);
+});
+
+<span class="hljs-comment">// 发布事件</span>
+<span class="hljs-title function_">emitEvent</span>(<span class="hljs-title class_">Events</span>.<span class="hljs-property">ORDER_CREATED</span>, {
+  <span class="hljs-attr">orderId</span>: <span class="hljs-number">123</span>,
+  <span class="hljs-attr">userId</span>: <span class="hljs-number">456</span>,
+  <span class="hljs-attr">total</span>: <span class="hljs-number">100.00</span>
+});</code></pre>
+<h3 id="4-3-事件溯源">4.3 事件溯源<a class="anchor" href="#4-3-事件溯源" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 事件存储</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">saveEvent</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">event</span>) =&gt; {
+  <span class="hljs-keyword">await</span> <span class="hljs-title class_">EventStore</span>.<span class="hljs-title function_">create</span>({
+    <span class="hljs-attr">id</span>: event.<span class="hljs-property">id</span>,
+    <span class="hljs-attr">type</span>: event.<span class="hljs-property">type</span>,
+    <span class="hljs-attr">timestamp</span>: event.<span class="hljs-property">timestamp</span>,
+    <span class="hljs-attr">payload</span>: event.<span class="hljs-property">payload</span>,
+    <span class="hljs-attr">metadata</span>: event.<span class="hljs-property">metadata</span>
+  });
+};
+
+<span class="hljs-comment">// 重放事件</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">replayEvents</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">aggregateId</span>) =&gt; {
+  <span class="hljs-keyword">const</span> events = <span class="hljs-keyword">await</span> <span class="hljs-title class_">EventStore</span>.<span class="hljs-title function_">findAll</span>({
+    <span class="hljs-attr">where</span>: { aggregateId },
+    <span class="hljs-attr">order</span>: [[<span class="hljs-string">&#x27;timestamp&#x27;</span>, <span class="hljs-string">&#x27;ASC&#x27;</span>]]
+  });
+  
+  <span class="hljs-keyword">let</span> state = {};
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> event <span class="hljs-keyword">of</span> events) {
+    state = <span class="hljs-title function_">applyEvent</span>(state, event);
+  }
+  
+  <span class="hljs-keyword">return</span> state;
+};</code></pre>
+<hr>
+<h2 id="5-同步通信">5. 同步通信<a class="anchor" href="#5-同步通信" aria-label="锚点">#</a></h2>
+<h3 id="5-1-http-通信">5.1 HTTP 通信<a class="anchor" href="#5-1-http-通信" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// utils/httpClient.js</span>
+<span class="hljs-keyword">const</span> axios = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;axios&#x27;</span>);
+
+<span class="hljs-keyword">const</span> httpClient = axios.<span class="hljs-title function_">create</span>({
+  <span class="hljs-attr">timeout</span>: <span class="hljs-number">30000</span>,
+  <span class="hljs-attr">headers</span>: {
+    <span class="hljs-string">&#x27;Content-Type&#x27;</span>: <span class="hljs-string">&#x27;application/json&#x27;</span>
+  }
+});
+
+<span class="hljs-comment">// 请求拦截器</span>
+httpClient.<span class="hljs-property">interceptors</span>.<span class="hljs-property">request</span>.<span class="hljs-title function_">use</span>(<span class="hljs-function">(<span class="hljs-params">config</span>) =&gt;</span> {
+  config.<span class="hljs-property">headers</span>[<span class="hljs-string">&#x27;X-Request-ID&#x27;</span>] = <span class="hljs-title function_">generateRequestId</span>();
+  config.<span class="hljs-property">headers</span>[<span class="hljs-string">&#x27;X-Correlation-ID&#x27;</span>] = <span class="hljs-title function_">getCorrelationId</span>();
+  <span class="hljs-keyword">return</span> config;
+});
+
+<span class="hljs-comment">// 响应拦截器</span>
+httpClient.<span class="hljs-property">interceptors</span>.<span class="hljs-property">response</span>.<span class="hljs-title function_">use</span>(
+  <span class="hljs-function">(<span class="hljs-params">response</span>) =&gt;</span> response,
+  <span class="hljs-function">(<span class="hljs-params">error</span>) =&gt;</span> {
+    <span class="hljs-keyword">if</span> (error.<span class="hljs-property">response</span>?.<span class="hljs-property">status</span> === <span class="hljs-number">503</span>) {
+      <span class="hljs-comment">// 服务不可用，重试</span>
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">retryRequest</span>(error.<span class="hljs-property">config</span>);
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-title class_">Promise</span>.<span class="hljs-title function_">reject</span>(error);
+  }
+);
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = httpClient;</code></pre>
+<h3 id="5-2-服务间认证">5.2 服务间认证<a class="anchor" href="#5-2-服务间认证" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 使用 JWT 进行服务间认证</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">getServiceToken</span> = (<span class="hljs-params"></span>) =&gt; {
+  <span class="hljs-keyword">return</span> jwt.<span class="hljs-title function_">sign</span>(
+    {
+      <span class="hljs-attr">service</span>: <span class="hljs-string">&#x27;order-service&#x27;</span>,
+      <span class="hljs-attr">target</span>: <span class="hljs-string">&#x27;user-service&#x27;</span>
+    },
+    process.<span class="hljs-property">env</span>.<span class="hljs-property">SERVICE_JWT_SECRET</span>,
+    { <span class="hljs-attr">expiresIn</span>: <span class="hljs-string">&#x27;5m&#x27;</span> }
+  );
+};
+
+<span class="hljs-comment">// 验证服务令牌</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">verifyServiceToken</span> = (<span class="hljs-params">token</span>) =&gt; {
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">return</span> jwt.<span class="hljs-title function_">verify</span>(token, process.<span class="hljs-property">env</span>.<span class="hljs-property">SERVICE_JWT_SECRET</span>);
+  } <span class="hljs-keyword">catch</span> (error) {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">&#x27;Invalid service token&#x27;</span>);
+  }
+};</code></pre>
+<hr>
+<h2 id="6-容错机制">6. 容错机制<a class="anchor" href="#6-容错机制" aria-label="锚点">#</a></h2>
+<h3 id="6-1-重试机制">6.1 重试机制<a class="anchor" href="#6-1-重试机制" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// utils/retry.js</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">retry</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">fn, options = {}</span>) =&gt; {
+  <span class="hljs-keyword">const</span> {
+    maxRetries = <span class="hljs-number">3</span>,
+    delay = <span class="hljs-number">1000</span>,
+    backoff = <span class="hljs-number">2</span>,
+    onRetry = <span class="hljs-literal">null</span>
+  } = options;
+  
+  <span class="hljs-keyword">let</span> lastError;
+  
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i = <span class="hljs-number">0</span>; i &lt;= maxRetries; i++) {
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">return</span> <span class="hljs-keyword">await</span> <span class="hljs-title function_">fn</span>();
+    } <span class="hljs-keyword">catch</span> (error) {
+      lastError = error;
+      
+      <span class="hljs-keyword">if</span> (i &lt; maxRetries) {
+        <span class="hljs-keyword">const</span> waitTime = delay * <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">pow</span>(backoff, i);
+        
+        <span class="hljs-keyword">if</span> (onRetry) {
+          <span class="hljs-title function_">onRetry</span>(error, i + <span class="hljs-number">1</span>, waitTime);
+        }
+        
+        <span class="hljs-keyword">await</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Promise</span>(<span class="hljs-function"><span class="hljs-params">resolve</span> =&gt;</span> <span class="hljs-built_in">setTimeout</span>(resolve, waitTime));
+      }
+    }
+  }
+  
+  <span class="hljs-keyword">throw</span> lastError;
+};
+
+<span class="hljs-comment">// 使用</span>
+<span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> <span class="hljs-title function_">retry</span>(
+  <span class="hljs-function">() =&gt;</span> <span class="hljs-title function_">callExternalService</span>(),
+  {
+    <span class="hljs-attr">maxRetries</span>: <span class="hljs-number">3</span>,
+    <span class="hljs-attr">delay</span>: <span class="hljs-number">1000</span>,
+    <span class="hljs-attr">backoff</span>: <span class="hljs-number">2</span>,
+    <span class="hljs-attr">onRetry</span>: <span class="hljs-function">(<span class="hljs-params">error, attempt, delay</span>) =&gt;</span> {
+      <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">warn</span>(<span class="hljs-string">`Retry <span class="hljs-subst">${attempt}</span> after <span class="hljs-subst">${delay}</span>ms: <span class="hljs-subst">${error.message}</span>`</span>);
+    }
+  }
+);</code></pre>
+<h3 id="6-2-断路器模式">6.2 断路器模式<a class="anchor" href="#6-2-断路器模式" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// utils/circuitBreaker.js</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">CircuitBreaker</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">options = {}</span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">failureThreshold</span> = options.<span class="hljs-property">failureThreshold</span> || <span class="hljs-number">5</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">resetTimeout</span> = options.<span class="hljs-property">resetTimeout</span> || <span class="hljs-number">30000</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">state</span> = <span class="hljs-string">&#x27;CLOSED&#x27;</span>; <span class="hljs-comment">// CLOSED, OPEN, HALF_OPEN</span>
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">failureCount</span> = <span class="hljs-number">0</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">lastFailureTime</span> = <span class="hljs-literal">null</span>;
+  }
+  
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">execute</span>(<span class="hljs-params">fn</span>) {
+    <span class="hljs-keyword">if</span> (<span class="hljs-variable language_">this</span>.<span class="hljs-property">state</span> === <span class="hljs-string">&#x27;OPEN&#x27;</span>) {
+      <span class="hljs-keyword">if</span> (<span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() - <span class="hljs-variable language_">this</span>.<span class="hljs-property">lastFailureTime</span> &gt; <span class="hljs-variable language_">this</span>.<span class="hljs-property">resetTimeout</span>) {
+        <span class="hljs-variable language_">this</span>.<span class="hljs-property">state</span> = <span class="hljs-string">&#x27;HALF_OPEN&#x27;</span>;
+      } <span class="hljs-keyword">else</span> {
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">&#x27;Circuit breaker is OPEN&#x27;</span>);
+      }
+    }
+    
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fn</span>();
+      <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">onSuccess</span>();
+      <span class="hljs-keyword">return</span> result;
+    } <span class="hljs-keyword">catch</span> (error) {
+      <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">onFailure</span>();
+      <span class="hljs-keyword">throw</span> error;
+    }
+  }
+  
+  <span class="hljs-title function_">onSuccess</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">failureCount</span> = <span class="hljs-number">0</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">state</span> = <span class="hljs-string">&#x27;CLOSED&#x27;</span>;
+  }
+  
+  <span class="hljs-title function_">onFailure</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">failureCount</span>++;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">lastFailureTime</span> = <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>();
+    
+    <span class="hljs-keyword">if</span> (<span class="hljs-variable language_">this</span>.<span class="hljs-property">failureCount</span> &gt;= <span class="hljs-variable language_">this</span>.<span class="hljs-property">failureThreshold</span>) {
+      <span class="hljs-variable language_">this</span>.<span class="hljs-property">state</span> = <span class="hljs-string">&#x27;OPEN&#x27;</span>;
+    }
+  }
+}
+
+<span class="hljs-comment">// 使用</span>
+<span class="hljs-keyword">const</span> breaker = <span class="hljs-keyword">new</span> <span class="hljs-title class_">CircuitBreaker</span>({
+  <span class="hljs-attr">failureThreshold</span>: <span class="hljs-number">5</span>,
+  <span class="hljs-attr">resetTimeout</span>: <span class="hljs-number">30000</span>
+});
+
+<span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> breaker.<span class="hljs-title function_">execute</span>(<span class="hljs-function">() =&gt;</span> <span class="hljs-title function_">callExternalService</span>());</code></pre>
+<h3 id="6-3-降级策略">6.3 降级策略<a class="anchor" href="#6-3-降级策略" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 降级策略</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">callWithFallback</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">primaryFn, fallbackFn</span>) =&gt; {
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">await</span> <span class="hljs-title function_">primaryFn</span>();
+  } <span class="hljs-keyword">catch</span> (error) {
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">warn</span>(<span class="hljs-string">&#x27;Primary service failed, using fallback:&#x27;</span>, error.<span class="hljs-property">message</span>);
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">fallbackFn</span>();
+  }
+};
+
+<span class="hljs-comment">// 使用</span>
+<span class="hljs-keyword">const</span> userData = <span class="hljs-keyword">await</span> <span class="hljs-title function_">callWithFallback</span>(
+  <span class="hljs-function">() =&gt;</span> userService.<span class="hljs-title function_">getUser</span>(userId),
+  <span class="hljs-function">() =&gt;</span> cacheService.<span class="hljs-title function_">get</span>(<span class="hljs-string">`user:<span class="hljs-subst">${userId}</span>`</span>)
+);</code></pre>
+<hr>
+<h2 id="7-版本历史">7. 版本历史<a class="anchor" href="#7-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义微服务通信规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 架构团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-MONITOR-001] 监控告警规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-MONITOR-001] 监控告警规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-NAM-001] 统一命名规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-NAM-001] 统一命名规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-MS-001] 微服务通信规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -231,8 +231,12 @@ const isAdmin = computed(() => {
 })
 
 // 跳转到管理员面板
+// NOTE: /admin/announcements is a declared child path ('announcements') under
+// the /admin layout, not a top-level route — the bare string did not resolve
+// against the registered path set, so push the object form which vue-router
+// matches by registered child.
 const goToAdminPanel = () => {
-  router.push('/admin/announcements')
+  router.push({ path: '/admin', query: { tab: 'announcements' } })
 }
 
 // 响应式数据

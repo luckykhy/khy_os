@@ -67,7 +67,26 @@ const INFO_COMMANDS = new Set([
 ]);
 
 // Destructive commands → high risk
-const DESTRUCTIVE_COMMANDS = new Set(['rm', 'rmdir', 'mv', 'chmod', 'chown', 'chgrp', 'ln']);
+//
+// Modelled per executor family: POSIX, cmd.exe and PowerShell cmdlets. This repo
+// ships on Windows, and a POSIX-only table made `del` / `erase` / `rd` /
+// `Remove-Item` fall through to the unknown-command default (medium) with
+// isDestructive=false — the gate could not see Windows deletions at all.
+// Matched on the lowercased first token, so these stay lowercase full names.
+const DESTRUCTIVE_COMMANDS = new Set([
+  'rm',
+  'rmdir',
+  'mv',
+  'chmod',
+  'chown',
+  'chgrp',
+  'ln',
+  'del',
+  'erase',
+  'rd',
+  'remove-item',
+  'remove-itemproperty',
+]);
 
 // Critical system commands
 const CRITICAL_COMMANDS = new Set([

@@ -239,7 +239,7 @@ const KNOWN_REFERENCES = Object.freeze([
     id: 'deepseek-tui',
     name: 'DeepSeek-TUI',
     markers: ['deepseek-tui', 'deepseek_tui', 'ratatui'],
-    doc: 'docs/07_OPS_运维/[OPS-MAN-016] khy-ux-交付-深度学习指南.md',
+    doc: 'docs/07_OPS_运维/OPS-MAN/[OPS-MAN-016] khy-ux-交付-深度学习指南.md',
   }),
   Object.freeze({
     id: 'hermes',
@@ -251,7 +251,7 @@ const KNOWN_REFERENCES = Object.freeze([
     id: 'opencode',
     name: 'OpenCode',
     markers: ['opencode', 'open-code'],
-    doc: 'docs/07_OPS_运维/[OPS-MAN-016] khy-ux-交付-深度学习指南.md',
+    doc: 'docs/07_OPS_运维/OPS-MAN/[OPS-MAN-016] khy-ux-交付-深度学习指南.md',
   }),
   Object.freeze({
     id: 'claude-code',

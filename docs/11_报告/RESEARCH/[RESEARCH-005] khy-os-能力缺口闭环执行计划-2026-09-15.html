@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [RESEARCH-005] khy-os-能力缺口闭环执行计划-2026-09-15.md -->
+<title>khy-os 能力缺口闭环执行计划（2026-09-15） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>RESEARCH<span class="sep">›</span>khy-os 能力缺口闭环执行计划（2026-09-15）</div>
+      <header class="hero reveal"><h1>khy-os 能力缺口闭环执行计划（2026-09-15）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-能力缺口闭环执行计划-2026-09-15">khy-os 能力缺口闭环执行计划（2026-09-15）</a></li><li class="lvl-2"><a href="#0-总览">0. 总览</a></li><li class="lvl-2"><a href="#1-s3-a2a-服务端任务面-能力补齐">1. S3 — A2A 服务端任务面（能力补齐）</a></li><li class="lvl-3"><a href="#1-1-范围-已交付">1.1 范围（已交付）</a></li><li class="lvl-3"><a href="#1-2-交付标准">1.2 交付标准</a></li><li class="lvl-3"><a href="#1-3-依赖关系">1.3 依赖关系</a></li><li class="lvl-3"><a href="#1-4-落地文件">1.4 落地文件</a></li><li class="lvl-2"><a href="#2-s4-mcp-升级至-2025-03-26">2. S4 — MCP 升级至 2025-03-26</a></li><li class="lvl-3"><a href="#2-1-范围-已交付">2.1 范围（已交付）</a></li><li class="lvl-3"><a href="#2-2-交付标准">2.2 交付标准</a></li><li class="lvl-3"><a href="#2-3-依赖关系">2.3 依赖关系</a></li><li class="lvl-3"><a href="#2-4-落地文件">2.4 落地文件</a></li><li class="lvl-2"><a href="#3-债务台账清偿排期">3. 债务台账清偿排期</a></li><li class="lvl-3"><a href="#3-1-分阶段排期">3.1 分阶段排期</a></li><li class="lvl-3"><a href="#3-2-逐条范围-交付-依赖">3.2 逐条范围 / 交付 / 依赖</a></li><li class="lvl-2"><a href="#4-官方套件在-release-流水线中的接入">4. 官方套件在 release 流水线中的接入</a></li><li class="lvl-3"><a href="#4-1-现状盘点-重要-避免重复造轮子">4.1 现状盘点（重要：避免重复造轮子）</a></li><li class="lvl-3"><a href="#4-2-范围">4.2 范围</a></li><li class="lvl-3"><a href="#4-3-交付标准">4.3 交付标准</a></li><li class="lvl-3"><a href="#4-4-验证证据-本地可复现">4.4 验证证据（本地可复现）</a></li><li class="lvl-3"><a href="#4-5-依赖关系">4.5 依赖关系</a></li><li class="lvl-2"><a href="#5-风险与未闭环项">5. 风险与未闭环项</a></li><li class="lvl-3"><a href="#5-1-check-protocol-naming-当前-2-处错误-预先存在-非本次引入">5.1 `check-protocol-naming` 当前 2 处错误（预先存在，非本次引入）</a></li><li class="lvl-3"><a href="#5-2-s3-executor-接入-后续独立项-超出本次范围">5.2 S3 executor 接入（后续独立项，超出本次范围）</a></li><li class="lvl-3"><a href="#5-3-后端-ci-启动前置-release-流水线依赖">5.3 后端 CI 启动前置（release 流水线依赖）</a></li><li class="lvl-3"><a href="#5-4-待提交项">5.4 待提交项</a></li><li class="lvl-2"><a href="#6-执行清单-checklist">6. 执行清单（Checklist）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-能力缺口闭环执行计划-2026-09-15">khy-os 能力缺口闭环执行计划（2026-09-15）<a class="anchor" href="#khy-os-能力缺口闭环执行计划-2026-09-15" aria-label="锚点">#</a></h1>
+<p>&lt;!-- naming-guard: exempt 执行计划 §5.1 引用守卫命中的历史错误命名作为待清理项证据 --&gt;</p>
+<blockquote><p>针对四项尚未闭环的能力缺口与待办事项，给出完整解决方案与执行安排。每项均明确 <strong>范围 / 交付标准 / 依赖关系</strong>。<br>编制日期：2026-09-15。门禁基线：conformance <strong>79/79</strong> ✓、debt-ledger <strong>0 error/0 warning</strong> ✓、S3+S4 冒烟 <strong>12/12</strong> ✓。</p></blockquote>
+<hr>
+<h2 id="0-总览">0. 总览<a class="anchor" href="#0-总览" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>缺口</th><th>状态</th><th>范围</th><th>交付标准（可验证）</th><th>关键依赖</th></tr></thead><tbody><tr><td><strong>S3</strong> A2A 服务端任务面</td><td>✅ 已实现并验证</td><td>标准 A2A REST 绑定：<code>message/send</code>、<code>tasks/get</code>、<code>tasks/cancel</code></td><td><code>check-protocol-conformance</code> 新增 3 项 S3 探针全绿；冒烟覆盖 store/methods/routes</td><td>既有 <code>a2a/index.js</code> 客户端、<code>wellKnown</code> 发现端点；<code>taskStateSpec</code> 状态机</td></tr><tr><td><strong>S4</strong> MCP 升级至 2025-03-26</td><td>✅ 已实现并验证</td><td>两个 required 特性：SSE 流响应、<code>Last-Event-ID</code> 断线续传</td><td><code>SUPPORTED_PROTOCOL_VERSIONS</code> 含 <code>2025-03-26</code> 且 required 全绿；纯函数单测通过</td><td><code>mcpServerProtocol.js</code> 声明机制；<code>mcpHttpServer.js</code> 传输层</td></tr><tr><td><strong>债务台账清偿</strong></td><td>🟡 排期已定，待执行</td><td>9 条 open 债务的逐条清偿（按阶段 A→D）</td><td>每条 <code>measured → target</code> 且 <code>target&lt;measured</code>；逾期必须 <code>slipped</code> 留痕</td><td><code>check-debt-ledger.js</code> 棘轮守卫；各门禁脚本源码（覆盖完整性）</td></tr><tr><td><strong>官方套件 release 接入</strong></td><td>🟡 编排器+脚本已存在，本次补 workflow</td><td><code>@modelcontextprotocol/conformance</code> + <code>a2a-tck</code> 在发版流水线中<strong>实际安装</strong>并以 <code>--required</code> 强制</td><td>发版即产出 <code>.khy/conformance-report.json</code> 并上传产物；缺失即门禁红</td><td><code>conformance-runner.mjs</code>（已存在）+ <code>conform:*</code> npm 脚本（已存在）+ 本计划新增 <code>conformance.yml</code></td></tr></tbody></table>
+<hr>
+<h2 id="1-s3-a2a-服务端任务面-能力补齐">1. S3 — A2A 服务端任务面（能力补齐）<a class="anchor" href="#1-s3-a2a-服务端任务面-能力补齐" aria-label="锚点">#</a></h2>
+<h3 id="1-1-范围-已交付">1.1 范围（已交付）<a class="anchor" href="#1-1-范围-已交付" aria-label="锚点">#</a></h3>
+<p>补齐 khy 原先缺失的 <strong>A2A 服务端</strong> 一侧：原先只有出站客户端（<code>a2a/index.js</code>）+ 发现端点（<code>routes/wellKnown.js</code>），无任何任务面。本次落地标准 A2A REST 绑定：</p>
+<ul><li><code>POST /v1/message:send</code>（别名 <code>POST /v1/message/send</code>）→ 创建/继续任务，dispatch 到 executor，落终态。</li><li><code>GET /v1/tasks/:id</code> → 取任务；缺失抛 <code>A2aNotFoundError</code>。</li><li><code>POST /v1/tasks/:id:cancel</code>（别名 <code>.../cancel</code>）→ 取消；终态任务取消保持原状（不可从 completed 撤回）。</li><li>可选 <code>KHY_A2A_API_KEY</code> Bearer 鉴权；是否启用由 <code>agentCardSpec.isPublishEnabled</code> 决定。</li><li>响应直接返回原始 JSON（<code>{success,data}</code> 信封不乱套），契合 A2A 规范。</li></ul>
+<h3 id="1-2-交付标准">1.2 交付标准<a class="anchor" href="#1-2-交付标准" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>标准</th></tr></thead><tbody><tr><td>存储内核</td><td><code>TaskStore</code>：内存 <code>Map</code>；<code>createTask→submitted</code>；<code>appendStatus</code> 经 <code>taskStateSpec.canTransition</code> 校验，非法迁移返回 <code>null</code>；终态不变式成立</td></tr><tr><td>语义层</td><td><code>serverMethods</code>：<code>messageSend</code> 等待注入的 <code>executor</code>；抛错落 <code>failed</code>，否则落执行结果态；<code>tasksCancel</code> 对终态任务返回原任务</td></tr><tr><td>探针</td><td><code>check-protocol-conformance.js</code> 第 5.5 节新增 <code>a2a-server-methods-exist</code> / <code>a2a-server-routes-exist</code> / <code>a2a-server-mounted</code> 三项，<strong>全绿</strong></td></tr><tr><td>冒烟</td><td><code>test-a2a-mcp-server-smoke.js</code> 覆盖 TaskStore 生命周期、终态不变式、<code>serverMethods</code> 三方法、<strong>12/12 通过</strong></td></tr></tbody></table>
+<h3 id="1-3-依赖关系">1.3 依赖关系<a class="anchor" href="#1-3-依赖关系" aria-label="锚点">#</a></h3>
+<ul><li>入：既有 <code>a2a/index.js</code>（客户端）、<code>routes/wellKnown.js</code>（Agent Card 发现）、<code>taskStateSpec</code>（<code>toA2aState</code> / <code>canTransition</code>）。</li><li>出：<code>server.js</code> 在 <code>/v1</code> 挂载 <code>routes/a2a</code>；与 <code>wellKnown</code> 并列，无冲突。</li><li><strong>显式未做（诚实留白）</strong>：<code>executor</code> 当前为 <code>defaultExecutor</code>（如实回声 message，不做假 LLM）。将 14 个 builtin agent 运行时接入 <code>serverMethods</code> 的 <code>executor</code> 是一独立大任务，<strong>超出 S3 范围</strong>，作为后续项单列（见 §5.2）。</li></ul>
+<h3 id="1-4-落地文件">1.4 落地文件<a class="anchor" href="#1-4-落地文件" aria-label="锚点">#</a></h3>
+<ul><li><code>services/backend/src/services/a2a/taskStore.js</code>（新）</li><li><code>services/backend/src/services/a2a/serverMethods.js</code>（新）</li><li><code>services/backend/src/routes/a2a.js</code>（新）</li><li><code>services/backend/server.js</code>（改：新增 <code>app.use('/v1', require('./src/routes/a2a'))</code>）</li><li><code>scripts/ci/check-protocol-conformance.js</code>（改：3 个 S3 探针）</li><li><code>scripts/ci/test-a2a-mcp-server-smoke.js</code>（新）</li></ul>
+<hr>
+<h2 id="2-s4-mcp-升级至-2025-03-26">2. S4 — MCP 升级至 2025-03-26<a class="anchor" href="#2-s4-mcp-升级至-2025-03-26" aria-label="锚点">#</a></h2>
+<h3 id="2-1-范围-已交付">2.1 范围（已交付）<a class="anchor" href="#2-1-范围-已交付" aria-label="锚点">#</a></h3>
+<p>声明支持 <code>2025-03-26</code> 并落地其两个 <strong>required</strong> 特性（此前 <code>implemented:false</code>）：</p>
+<ol><li><code>transport-streamable-http-sse-response</code>：按 <code>Accept</code> 协商 SSE（<code>text/event-stream</code>）或 <code>application/json</code> 回包。</li><li><code>transport-streamable-http-last-event-id</code>：客户端断线后以 <code>GET /mcp</code> + <code>Last-Event-ID</code> 重订阅，服务端重放断点之后事件（断线续传）。</li></ol>
+<h3 id="2-2-交付标准">2.2 交付标准<a class="anchor" href="#2-2-交付标准" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>标准</th></tr></thead><tbody><tr><td>声明一致</td><td><code>SUPPORTED_PROTOCOL_VERSIONS</code> = 所有「required 全绿」的修订集合；现含 <code>2024-11-05</code> 与 <code>2025-03-26</code></td></tr><tr><td>纯函数</td><td><code>resolveStreamableContentType(accept)</code> 协商响应类型；<code>replayEventIdsAfter(lastEventId, ids)</code> 切片续传（空/<code>undefined</code>/非法 ID 返回 <code>[]</code>，不误触重放）</td></tr><tr><td>传输层</td><td><code>mcpHttpServer.js</code>：会话对象增 <code>eventSeq</code>/<code>events</code>；POST 协商为 SSE 时递增序号、写 <code>id: N\nevent: message\ndata: ...</code>；GET <code>/mcp</code> 读 <code>Last-Event-ID</code> 重放后 <code>res.end()</code></td></tr><tr><td>合规门</td><td>翻转两个 required 标志为 <code>implemented:true</code> 且各带匹配探针（QUAL 要求每个 <code>implemented:true</code> 必须有探针，否则门红）；现为 <strong>79/79</strong></td></tr></tbody></table>
+<h3 id="2-3-依赖关系">2.3 依赖关系<a class="anchor" href="#2-3-依赖关系" aria-label="锚点">#</a></h3>
+<ul><li>入：<code>mcpServerProtocol.js</code> 的修订/特性声明机制（含 <code>isRevisionFullyImplemented</code>）。</li><li>出：<code>mcpHttpServer.js</code> 的 Streamable HTTP 传输；<code>conformance-runner.mjs</code> 后续以 <code>--spec-version 2025-03-26</code> 对接官方套件（见 §4）。</li><li>关键约束：合规门是<strong>行为/源码/文件</strong>三重探针，单纯翻 flag 不补探针会立刻变红——本次两处均先写纯函数与探针再翻 flag。</li></ul>
+<h3 id="2-4-落地文件">2.4 落地文件<a class="anchor" href="#2-4-落地文件" aria-label="锚点">#</a></h3>
+<ul><li><code>services/backend/src/services/domain/messaging/mcp/mcpServerProtocol.js</code>（改：版本声明 + 两个纯函数 + 两个 required 标志）</li><li><code>services/backend/src/services/domain/messaging/mcp/mcpHttpServer.js</code>（改：SSE 流 + <code>Last-Event-ID</code> 重放）</li><li><code>scripts/ci/check-protocol-conformance.js</code>（改：S4 两个探针）</li><li><code>scripts/ci/test-a2a-mcp-server-smoke.js</code>（新：S4 纯函数单测）</li></ul>
+<hr>
+<h2 id="3-债务台账清偿排期">3. 债务台账清偿排期<a class="anchor" href="#3-债务台账清偿排期" aria-label="锚点">#</a></h2>
+<p>台账真源：<code>scripts/ci/debt-ledger.json</code>；守卫：<code>scripts/ci/check-debt-ledger.js</code>（<code>npm run check:debt-ledger</code>）。<br>当前 <strong>9 条 open / 3 条 closed</strong>，<code>plan</code> 字段已标注阶段标签（阶段A–D）。棘轮铁律：<strong>target 必须严格小于 measured</strong>，逾期必须 <code>slipped</code> 留痕（禁止静默滑动）。</p>
+<h3 id="3-1-分阶段排期">3.1 分阶段排期<a class="anchor" href="#3-1-分阶段排期" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>阶段</th><th>截止</th><th>条目</th><th>风险</th><th>清偿策略要点</th></tr></thead><tbody><tr><td><strong>A</strong></td><td>2026-09-30（~2 周）</td><td><code>layout.unresolved-require</code>(P1,21)、<code>layout.extension-id-hardcode</code>(P2,1)、<code>standards.namingViolations</code>(P3,4)</td><td>P1 优先</td><td>G2→G1→G3→G4→G5 分组修路径；1 处 id 改用 manifest 定位；4 处改 PascalCase/非 class</td></tr><tr><td><strong>B</strong></td><td>2026-10-31</td><td><code>layout.cross-layer-require</code>(P2,37)、<code>layout.dangling-task</code>(P2,88)</td><td>P2</td><td>workspace 包名引用按 ai-backend→khyquant→其余；三分脚本做模糊匹配/删引用/人工裁决</td></tr><tr><td><strong>C</strong></td><td>2026-11-30</td><td><code>standards.nestingDepth</code>(P2,8703)</td><td>P2</td><td><strong>先修计量</strong>（真实块嵌套，4 空格缩进误报）→ 重测 → 重设 target（当前 <code>targetPending</code>）</td></tr><tr><td><strong>D</strong></td><td>2026-12-31</td><td><code>standards.functionLines</code>(2144→1600)、<code>standards.fileLines</code>(352→300)、<code>standards.consoleLog</code>(4584→3000)</td><td>P2</td><td>基线先改实测值（收紧 5.6× 而非放宽）；存量冻结 + 增量零容忍（照搬 pr-gate 新增文件零容忍模式）</td></tr></tbody></table>
+<h3 id="3-2-逐条范围-交付-依赖">3.2 逐条范围 / 交付 / 依赖<a class="anchor" href="#3-2-逐条范围-交付-依赖" aria-label="锚点">#</a></h3>
+<ul><li><strong>layout.unresolved-require</strong>（P1）：范围=21 处深层相对 require 指向不存在路径（潜伏崩溃）。交付=全部改为正确相对/包名路径，<code>measured 21→0</code>。依赖=各调用点目录结构确认。</li><li><strong>layout.extension-id-hardcode</strong>（P2）：范围=<code>markdownWorkbench.js:41</code> 硬编码 <code>&quot;khy-markdown&quot;</code>。交付=改用 <code>manifest.provides</code> + <code>extensionRoots.findProvider</code>，<code>1→0</code>。依赖=<code>[DESIGN-TOOL-002] §1.3</code> 契约。</li><li><strong>standards.namingViolations</strong>（P3）：范围=4 处 NAM-001（多为把解构/字面量误判为 class）。交付=逐处修正或修正检测，<code>4→0</code>。</li><li><strong>layout.cross-layer-require</strong>（P2）：范围=37 处跨 workspace 深层 require，违反 <code>[DESIGN-LAY-005]</code> 禁止边。交付=改为 <code>@khy/shared</code> 等包名引用，<code>37→0</code>。依赖=workspace 包发布就绪。</li><li><strong>layout.dangling-task</strong>（P2）：范围=88 个文档引用的 <code>npm run</code> 目标无定义（文档漂移）。交付=三分脚本对齐/删引用/人工裁决，<code>88→0</code>。依赖=文档与脚本名一致性纪律。</li><li><strong>standards.nestingDepth</strong>（P2）：范围=当前用行缩进估算嵌套（<strong>计量不可信</strong>）。交付=先改真实块嵌套计量，再定 target（当前持 <code>targetPending</code>，<code>by=2026-11-30</code>）。依赖=计量口径修复优先于清偿。</li><li><strong>standards.functionLines / fileLines / consoleLog</strong>（P2）：范围=函数行数、文件行数、console.* 三类存量。交付=基线先对齐实测（functionLines 由虚估 10800 改为实测 2145，是<strong>收紧</strong>），存量冻结 + 增量零容忍，<code>measured→target</code>。依赖=pr-gate 的「新增文件零容忍」模式可直接复用。</li></ul>
+<blockquote><p>注：仅 3 条（docs-index-complete / extension-contract / extension-path-drift）已归零 <code>closed</code>，保持零容忍，不进入排期。</p></blockquote>
+<hr>
+<h2 id="4-官方套件在-release-流水线中的接入">4. 官方套件在 release 流水线中的接入<a class="anchor" href="#4-官方套件在-release-流水线中的接入" aria-label="锚点">#</a></h2>
+<h3 id="4-1-现状盘点-重要-避免重复造轮子">4.1 现状盘点（重要：避免重复造轮子）<a class="anchor" href="#4-1-现状盘点-重要-避免重复造轮子" aria-label="锚点">#</a></h3>
+<p>经核，编排器与 npm 脚本<strong>早已就位</strong>（工作树内，待提交），本次<strong>只需补 workflow 文件</strong>：</p>
+<ul><li><code>scripts/ci/conformance-runner.mjs</code>：官方套件编排器。仅在校验「套件确实已安装」后执行，绝不自动 npx/uv 下载；缺失降级 <code>SKIPPED</code>（本地不阻塞）；<code>--required</code> 时缺失即门禁失败；产出 <code>.khy/conformance-report.json</code>。</li><li><code>package.json</code> 根脚本：<code>conform:mcp</code> / <code>conform:a2a</code> / <code>conform:all</code> 均已指向该 runner。</li><li>本次<strong>新增</strong> <code>.github/workflows/conformance.yml</code>（见下）。</li></ul>
+<h3 id="4-2-范围">4.2 范围<a class="anchor" href="#4-2-范围" aria-label="锚点">#</a></h3>
+<p>在 <strong>release 发布 / 打 <code>v*</code> tag / 手动 dispatch</strong> 时：</p>
+<ol><li><strong>实际安装</strong>官方套件——MCP 侧 <code>pnpm add -w --save-false @modelcontextprotocol/conformance</code>；A2A 侧克隆 <code>a2a-tck</code> 并 <code>uv sync</code>（建 <code>.venv</code>）。<code>--save-false</code> 不污染 <code>package.json</code>，开发机因此仍可被 SKIPPED 保护。</li><li>启动后端（后台，轮询 <code>/health</code> 就绪）。</li><li><strong>接入 <code>--required</code></strong>：以 <code>conform:all -- --required</code> 执行，缺失/失败即门禁红。</li><li>上传 <code>.khy/conformance-report.json</code> + <code>results/**</code> + <code>.ci/a2a-tck/reports/**</code> 为产物，无论成败均留证。</li></ol>
+<h3 id="4-3-交付标准">4.3 交付标准<a class="anchor" href="#4-3-交付标准" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>标准</th></tr></thead><tbody><tr><td>安装真实发生</td><td>工作流内显式安装两步套件，非依赖本地残留</td></tr><tr><td><code>--required</code> 接入</td><td>调用带 <code>--required</code>；经实测：套件缺失时 <code>gate.pass=false</code> 且 exit 1（ blockers 列出）</td></tr><tr><td>可审计产物</td><td>每次运行产出 <code>conformance-report.json</code> 并 upload-artifact</td></tr><tr><td>规范对齐</td><td><code>KHY_MCP_SPEC_VERSION</code> 默认 <code>2025-03-26</code>，与 S4 声明一致</td></tr></tbody></table>
+<h3 id="4-4-验证证据-本地可复现">4.4 验证证据（本地可复现）<a class="anchor" href="#4-4-验证证据-本地可复现" aria-label="锚点">#</a></h3>
+<ul><li>干跑（套件未装，无 <code>--required</code>）：<code>gate.pass=true</code>、<code>available:false</code>、exit 0（SKIPPED）。</li><li><code>--required</code>（套件未装）：<code>gate.pass=false</code>、<code>blockers=[&quot;mcp: 套件未安装且 --required 已设&quot;,&quot;a2a: ...&quot;]</code>、exit 1。</li></ul>
+<p>→ 证明「安装 + --required」二者到位后，门禁才会真正评判官方套件结果。</p>
+<h3 id="4-5-依赖关系">4.5 依赖关系<a class="anchor" href="#4-5-依赖关系" aria-label="锚点">#</a></h3>
+<ul><li>入：<code>conformance-runner.mjs</code>、<code>conform:*</code> 脚本（已存在）。</li><li>出：release 门禁真产出官方一致性报告；与 S4 的 <code>2025-03-26</code> 声明形成闭环。</li><li><strong>已知前置（风险）</strong>：后端须在 CI 可启动并监听 3000（<code>BACKEND_PORT</code>）。若需数据库等前置，工作流「启动后端」步会以清晰日志失败——属上游依赖，需在 CI 环境预置（详见 §5.3）。</li></ul>
+<hr>
+<h2 id="5-风险与未闭环项">5. 风险与未闭环项<a class="anchor" href="#5-风险与未闭环项" aria-label="锚点">#</a></h2>
+<h3 id="5-1-check-protocol-naming-当前-2-处错误-预先存在-非本次引入">5.1 <code>check-protocol-naming</code> 当前 2 处错误（预先存在，非本次引入）<a class="anchor" href="#5-1-check-protocol-naming-当前-2-处错误-预先存在-非本次引入" aria-label="锚点">#</a></h3>
+<p><code>R1-forbidden-method</code> 命中 <code>a2a.discovery.register</code>，出现在 <code>docs/10_规范/registry/RULES-REGISTRY.json:1686</code> 与 <code>scripts/ruleguard/register-external-rules.js:53</code>——均为文档/登记引用，非代码实现，且<strong>非 S3/S4 改动引入</strong>。建议另立清理项：或在 registry 中改用真实方法集 <code>acpTransport.ACP_METHODS</code> 的命名，或登记豁免。本计划四项缺口不依赖其修复。</p>
+<h3 id="5-2-s3-executor-接入-后续独立项-超出本次范围">5.2 S3 executor 接入（后续独立项，超出本次范围）<a class="anchor" href="#5-2-s3-executor-接入-后续独立项-超出本次范围" aria-label="锚点">#</a></h3>
+<p><code>serverMethods</code> 的 <code>executor</code> 现为 <code>defaultExecutor</code>（如实回声）。将 14 个 builtin agent 运行时接入，使 <code>message/send</code> 真正派发到 agent，是独立大任务：需定义 agent 入参/产物映射、鉴权透传、超时与失败语义。建议单列里程碑，不阻塞 S3 验收（S3 验收标准是「标准 REST 绑定 + 状态机正确」，已达）。</p>
+<h3 id="5-3-后端-ci-启动前置-release-流水线依赖">5.3 后端 CI 启动前置（release 流水线依赖）<a class="anchor" href="#5-3-后端-ci-启动前置-release-流水线依赖" aria-label="锚点">#</a></h3>
+<p><code>conformance.yml</code> 启动 <code>node services/backend/server.js</code> 并等待 <code>/health</code>。若生产启动依赖数据库/外部服务而 CI 未预置，该步失败。建议：在 CI 用最小配置（本地 sqlite / 跳过非必需 connector）或于 workflow 前置 <code>services/backend</code> 的 DB 准备步骤；此细节需与运维确认，本计划已在工作流中以「清晰失败日志」兜底。</p>
+<h3 id="5-4-待提交项">5.4 待提交项<a class="anchor" href="#5-4-待提交项" aria-label="锚点">#</a></h3>
+<p>以下为本计划周期内的新增/改动，尚在工作树、<strong>未提交</strong>（含 <code>conformance-runner.mjs</code>、<code>conform:*</code> 脚本、<code>conformance.yml</code>、S3/S4 全部文件、债务台账 <code>plan</code> 更新）。建议随本次能力缺口闭环 PR 一并提交，并附 <code>conformance-report.json</code> 本地 SKIPPED 证据。</p>
+<hr>
+<h2 id="6-执行清单-checklist">6. 执行清单（Checklist）<a class="anchor" href="#6-执行清单-checklist" aria-label="锚点">#</a></h2>
+<ul><li>[x] <strong>S3</strong> A2A 服务端任务面：store/methods/routes + 3 探针 + 冒烟 ✅</li><li>[x] <strong>S4</strong> MCP 2025-03-26：版本声明 + SSE + 断线续传 + 2 探针 ✅</li><li>[x] <strong>债务台账排期</strong>：9 条 open 标注阶段 A–D，guard 0 error ✅</li><li>[x] <strong>官方套件 workflow</strong>：<code>.github/workflows/conformance.yml</code> 创建（安装 + <code>--required</code> + 产物上传）✅</li><li>[ ] 提交上述工作树改动（含 <code>conformance.yml</code> 与 <code>conformance-runner.mjs</code>/<code>conform:*</code>）</li><li>[ ] §5.1 naming 2 错误清理（独立项）</li><li>[ ] §5.2 S3 executor 接入（独立里程碑）</li><li>[ ] §5.3 CI 后端启动前置确认</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/11_报告/RESEARCH/[RESEARCH-004] khy-os-协议与工程规范分步改进计划-2026-09-15.html"><div class="dir">← 上一篇</div><div class="ttl">khy-os 协议与工程规范分步改进计划</div></a><a class="next" href="../../../docs/11_报告/RESEARCH/[RESEARCH-006] khy-os-规则合规检查报告-2026-09-15.html"><div class="dir">下一篇 →</div><div class="ttl">khy-os 规则合规检查报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/11_报告/RESEARCH/[RESEARCH-005] khy-os-能力缺口闭环执行计划-2026-09-15.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

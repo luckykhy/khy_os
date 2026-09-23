@@ -236,3 +236,63 @@ describe('学习→应用闭环 — recordResponseFeedback → getHabitContext',
     assert.doesNotMatch(habits.getHabitContext(), /少贴大段代码/);
   });
 });
+
+// ── 回归守护：signalToTaste（曾被重构丢弃、且此前无测试覆盖）──────────────
+// crossAgentTasteLearner.js:40 导入 signalToTaste、:257 无守卫调用，但导出曾在
+// 一次重构中丢失 → 一旦用户轮命中偏好信号即抛 `TypeError: signalToTaste is not a
+// function`，品味学习的 preferenceSignal 分支彻底空跑。上面对 detectPreferenceSignal
+// 测得很足却从未测 signalToTaste，正是漏网之因，故在此补齐两处。
+
+describe('signalToTaste — 信号→品味映射（被丢弃导出的回归）', () => {
+  const ps = require('../../src/services/preferenceSignals');
+
+  test('已作为函数导出', () => {
+    assert.equal(typeof ps.signalToTaste, 'function');
+  });
+
+  test('每个 detectPreferenceSignal 可能产出的信号都有 {category,text} 映射', () => {
+    for (const { signal } of ps.SIGNAL_TABLE) {
+      const m = ps.signalToTaste(signal);
+      assert.ok(m, `信号 ${signal} 应有 taste 映射`);
+      assert.equal(typeof m.category, 'string');
+      assert.equal(typeof m.text, 'string');
+    }
+  });
+
+  test('具体映射正确', () => {
+    assert.deepEqual(ps.signalToTaste('too_long'), {
+      category: 'response-style',
+      text: '用户偏好简短回复',
+    });
+    assert.equal(ps.signalToTaste('skipped_plan').category, 'workflow');
+  });
+
+  test('未知信号 / 非串 → null', () => {
+    assert.equal(ps.signalToTaste('not_a_signal'), null);
+    assert.equal(ps.signalToTaste(undefined), null);
+    assert.equal(ps.signalToTaste(null), null);
+    assert.equal(ps.signalToTaste(42), null);
+  });
+});
+
+describe('crossAgentTasteLearner — preferenceSignal 分支（真实崩溃点端到端）', () => {
+  const learner = require('../../src/services/crossAgentTasteLearner');
+
+  test('learnFromRecord 把独立偏好短评转成候选（改前此处抛 TypeError）', () => {
+    const out = learner.learnFromRecord({ role: 'user', content: '太长了' }, 'test-app', 's1');
+    assert.ok(Array.isArray(out));
+    const cand = out.find((c) => c.source && c.source.reason === 'preferenceSignal:too_long');
+    assert.ok(cand, '应产出 preferenceSignal:too_long 候选');
+    assert.equal(cand.category, 'response-style');
+    assert.equal(cand.text, '用户偏好简短回复');
+  });
+
+  test('非反馈的长任务轮 → 不产出 preferenceSignal 候选（零假阳性）', () => {
+    const out = learner.learnFromRecord(
+      { role: 'user', content: '帮我写一个很长的关于分布式系统一致性的技术报告' },
+      'test-app',
+      's2',
+    );
+    assert.equal(out.filter((c) => c.source && String(c.source.reason).startsWith('preferenceSignal:')).length, 0);
+  });
+});

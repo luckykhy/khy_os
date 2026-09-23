@@ -6,7 +6,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { mcpServerStatusEnabled, resolveMcpServerState } = require('../../src/services/mcp/mcpServerStatus');
+const { mcpServerStatusEnabled, resolveMcpServerState } = require('../../src/services/domain/messaging/mcp/mcpServerStatus.js');
 
 test('门控默认开(unset/空/未知),{0,false,off,no} 关', () => {
   assert.strictEqual(mcpServerStatusEnabled({}), true);

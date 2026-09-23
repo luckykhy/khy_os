@@ -50,7 +50,8 @@ describe('trimLowerStripUnderscores', () => {
   });
 
   test('handles only underscores', () => {
-    expect(trimLowerStripUnderscores('_ _ _')).toBe(' ');
+    // trim() runs before underscore removal: '_ _ _' keeps its 2 inner spaces
+    expect(trimLowerStripUnderscores('_ _ _')).toBe('  ');
   });
 
   test('handles consecutive underscores', () => {

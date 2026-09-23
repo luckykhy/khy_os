@@ -58,8 +58,8 @@ describe('Report Khy Error', () => {
   test('_internals._formatContext 缺字段降级', () => {
       // 空对象 → 空串
       expect(_internals._formatContext({})).toBe('');
-      // 只有 action
-      expect(_internals._formatContext({ action: 'a' })).toBe('a');
+      // 只有 action —— 尾随空格是前缀语义（拼到 message 之前），故意保留
+      expect(_internals._formatContext({ action: 'a' })).toBe('a ');
       // 三件齐全
       const full = _internals._formatContext({ action: 'a', target: 'b', progress: 'c' });
       expect(full.includes('a') && full.includes('b') && full).toContain('c');

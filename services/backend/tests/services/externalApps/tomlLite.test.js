@@ -12,6 +12,7 @@
  *   - 坏输入抛清晰错�?
  */
 const toml = require('../../../src/services/domain/network/externalApps/tomlLite.js');
+const assert = require('node:assert');
 
 describe('Toml Lite', () => {
   test('parses top-level scalars with types', () => {
@@ -69,7 +70,7 @@ describe('Toml Lite', () => {
         'name = "openai"',
         'kind = "openai"',
       ].join('\n'));
-      expect(Array.isArray(o.providers).toBeTruthy());
+      expect(Array.isArray(o.providers)).toBeTruthy();
       expect(o.providers.length).toBe(2);
       expect(o.providers[0].name).toBe('deepseek');
       assert.deepEqual(o.providers[0].models, ['a', 'b']);
@@ -130,11 +131,11 @@ describe('Toml Lite', () => {
   });
 
   test('throws on an unrecognized line', () => {
-      expect(() => toml.parse('this is not valid toml').toThrow(), /cannot parse line/);
+      expect(() => toml.parse('this is not valid toml')).toThrow(/cannot parse line/);
   });
 
   test('throws on an unterminated array', () => {
-      expect(() => toml.parse('models = ["a", "b"').toThrow(), /unterminated array/);
+      expect(() => toml.parse('models = ["a", "b"')).toThrow(/unterminated array/);
   });
 
   test('empty input parses to empty object; empty table round-trips', () => {

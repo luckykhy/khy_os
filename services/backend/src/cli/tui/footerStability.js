@@ -17,9 +17,38 @@
  * (correctness)而非可选能力,绝不提供「关掉就退回无限循环」的逃生阀。
  */
 
-// footer 的「身份字段」:`refreshFooter` 覆盖的就是这五个;其余键由 `{ ...f }` 原样带过,
-// 故这五个相等 ⇒ 候选对象与原对象在所有键上相等 ⇒ 可安全返回原引用、让 React 跳过重渲染。
+// footer 的「身份字段」:refreshFooter 覆盖的就是这些;其余键由 `{ ...f }` 原样带过,
+// 故这些相等 ⇒ 候选对象与原对象在所有键上相等 ⇒ 可安全返回原引用、让 React 跳过重渲染。
 const FOOTER_IDENTITY_KEYS = ['model', 'adapter', 'effort', 'contextLimit', 'contextPct'];
+
+// 需**按值**比较的身份字段(对象型)。modelStatus 在 refreshFooter 里每次都是新对象
+// 字面量,直接 `!==` 会永远判不等 → 守卫失效、渲染风暴复发;但其内容确是页脚身份的一部分
+// (决定是否画告警),不能不看。故单独做「摘要字符串」比较。
+//   2026-09-17:「页脚 agnes / 报错 windsurf」事故里,告警信息正是靠 modelStatus 传达的,
+//   若守卫漏掉它,钉选通道不可用的预警就不会重绘。
+const FOOTER_VALUE_KEYS = ['modelStatus', 'pinnedSkip'];
+
+/**
+ * 把对象型身份字段归一为稳定摘要字符串。
+ * 非对象 → JSON 化(保证 string/undefined 也有稳定表示);字符串化失败 → ''(绝不同归一到随机值)。
+ * @param {*} v
+ * @returns {string}
+ */
+function _stableDigest(v) {
+  if (v == null) {
+    return '';
+  }
+  if (typeof v !== 'object') {
+    return String(v);
+  }
+  try {
+    // 键序稳定:显式按 key 排序后序列化,避免同内容不同键序造成假不等。
+    const keys = Object.keys(v).sort();
+    return keys.map((k) => `${k}=${JSON.stringify(v[k])}`).join('|');
+  } catch {
+    return '';
+  }
+}
 
 /**
  * 把一次 adapter status 事件的 payload 归一为稳定字符串。
@@ -60,11 +89,17 @@ function footersEqual(a, b) {
       return false;
     }
   }
+  for (const k of FOOTER_VALUE_KEYS) {
+    if (_stableDigest(a[k]) !== _stableDigest(b[k])) {
+      return false;
+    }
+  }
   return true;
 }
 
 module.exports = {
   FOOTER_IDENTITY_KEYS,
+  FOOTER_VALUE_KEYS,
   normalizeAdapterStatus,
   footersEqual,
 };

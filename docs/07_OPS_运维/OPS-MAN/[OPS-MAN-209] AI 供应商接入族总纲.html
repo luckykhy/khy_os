@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [OPS-MAN-209] AI 供应商接入族总纲.md -->
+<title>[OPS-MAN-209] AI 供应商接入族总纲 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>OPS-MAN<span class="sep">›</span>[OPS-MAN-209] AI 供应商接入族总纲</div>
+      <header class="hero reveal"><h1>[OPS-MAN-209] AI 供应商接入族总纲</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-209-ai-供应商接入族总纲">[OPS-MAN-209] AI 供应商接入族总纲</a></li><li class="lvl-2"><a href="#0-一分钟导读-按意图分流">0. 一分钟导读（按意图分流）</a></li><li class="lvl-2"><a href="#1-三层全景">1. 三层全景</a></li><li class="lvl-2"><a href="#2-各层详情">2. 各层详情</a></li><li class="lvl-3"><a href="#l1-速配-1-篇">L1 · 速配（1 篇）</a></li><li class="lvl-3"><a href="#l2-接入流程-2-篇">L2 · 接入流程（2 篇）</a></li><li class="lvl-3"><a href="#l3-对账-1-篇-生成层">L3 · 对账（1 篇，生成层）</a></li><li class="lvl-2"><a href="#3-scope-裁决">3. scope 裁决</a></li><li class="lvl-2"><a href="#4-邻接文档">4. 邻接文档</a></li><li class="lvl-2"><a href="#5-状态">5. 状态</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-209-ai-供应商接入族总纲">[OPS-MAN-209] AI 供应商接入族总纲<a class="anchor" href="#ops-man-209-ai-供应商接入族总纲" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：本文件是 <code>docs/07_OPS_运维/</code> 中 <strong>AI 供应商接入族</strong>（把任意模型供应商接进 khy 网关）的唯一导航入口与 scope 裁决真源。<br>本族共 <strong>4 篇 + 1 邻接</strong>，按「配置入口 → 接入流程 → 对账」三层分工（§1–§2）——<strong>不合并文档，而是收敛为一个入口</strong>。<br><strong>生成层边界</strong>：<code>096</code> 由 <code>node scripts/model-type-providers.js --gen-doc</code> 生成（带「请勿手改」banner），<br>属生成层；<code>032</code> / <code>172</code> / <code>205</code> 为手写层，已各自加「隶属」头。<br><strong>代码真源</strong>：一键预设清单的真源是 <code>services/backend/src/services/gateway/providerPresets.js</code>，<br>预设端点默认值在 <code>services/backend/src/constants/serviceDefaults.js</code>。<br>本族只回答「<strong>怎么接</strong>」；端点/模型清单的<strong>数值真源在代码</strong>，文档过期时以代码为准。<br><strong>适用边界</strong>：只覆盖「供应商接入与配置」；模型调用链、降级熔断见 <code>[DESIGN-GW-002]</code>，管理页 UI 见 <code>[OPS-MAN-002]</code> / <code>[OPS-MAN-003]</code>。</p></blockquote>
+<h2 id="0-一分钟导读-按意图分流">0. 一分钟导读（按意图分流）<a class="anchor" href="#0-一分钟导读-按意图分流" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>你想做什么</th><th>直接读</th></tr></thead><tbody><tr><td>只填一个 API Key，最快跑起来</td><td><code>205</code> API 厂商快速配置指南</td></tr><tr><td>接一个<strong>任意</strong>自定义 Provider（完整流程）</td><td><code>172</code> 自定义供应商接入指南</td></tr><tr><td>从 <strong>Web / TUI / 命令行</strong> 某个具体入口接入</td><td><code>032</code> 网关·自定义 Provider 配置（Agnes 为例）</td></tr><tr><td>查四类模型各自在<strong>哪个 env 命名空间</strong>解析 provider</td><td><code>096</code> 多模型类型 Provider 配置对账（生成层）</td></tr><tr><td>查模型配置的<strong>书写风格</strong>惯例</td><td>邻接：<code>010</code> Hermes 风格模型配置</td></tr></tbody></table>
+<h2 id="1-三层全景">1. 三层全景<a class="anchor" href="#1-三层全景" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>层</th><th>职能</th><th>成员（编号）</th><th>篇数</th><th>层性</th></tr></thead><tbody><tr><td><strong>L1 速配</strong></td><td>厂商 Key 速配，一步到位</td><td><code>205</code></td><td>1</td><td>手写</td></tr><tr><td><strong>L2 流程</strong></td><td>任意 Provider 的端到端接入（预设 + 手动 + 命令）</td><td><code>172</code> <code>032</code></td><td>2</td><td>手写</td></tr><tr><td><strong>L3 对账</strong></td><td>多模型类型的 env 命名空间对账</td><td><code>096</code></td><td>1</td><td><strong>生成</strong></td></tr></tbody></table>
+<h2 id="2-各层详情">2. 各层详情<a class="anchor" href="#2-各层详情" aria-label="锚点">#</a></h2>
+<h3 id="l1-速配-1-篇">L1 · 速配（1 篇）<a class="anchor" href="#l1-速配-1-篇" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>编号</th><th>职责</th><th>行数</th></tr></thead><tbody><tr><td><code>205</code></td><td>API 厂商快速配置——现在只需输入 API Key，khyos 自动完成其余配置；覆盖主流厂商</td><td>279</td></tr></tbody></table>
+<h3 id="l2-接入流程-2-篇">L2 · 接入流程（2 篇）<a class="anchor" href="#l2-接入流程-2-篇" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>编号</th><th>职责</th><th>行数</th></tr></thead><tbody><tr><td><code>172</code></td><td><strong>族内流程最全</strong>的一篇：一键预设 + 手动编辑 <code>custom_providers.json</code> + <code>serviceType</code> 取值 + <code>khy gateway add</code> + <code>model_overrides.json</code> 默认模型切换 + Key 获取与 <code>env</code> 端点覆盖</td><td>214</td></tr><tr><td><code>032</code></td><td><strong>按入口</strong>切入的一篇：Web 前端 / khy TUI / 命令行三条入口各怎么接（以 Agnes 为例，适用于任意 OpenAI 兼容 Provider）</td><td>204</td></tr></tbody></table>
+<blockquote><p><code>172</code> 与 <code>032</code> <strong>不合并</strong>：前者按「配置手段」组织（预设/手动/命令），后者按「使用入口」组织（Web/TUI/CLI），<br>是同一件事的<strong>两种索引维度</strong>，读者来路不同。合并会逼读者在两种组织方式里二选一。</p></blockquote>
+<h3 id="l3-对账-1-篇-生成层">L3 · 对账（1 篇，生成层）<a class="anchor" href="#l3-对账-1-篇-生成层" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>编号</th><th>职责</th><th>行数</th></tr></thead><tbody><tr><td><code>096</code></td><td>四类用户可见模型分别在互不相通的 env 命名空间里解析 provider 的对账表</td><td>41</td></tr></tbody></table>
+<blockquote><p><strong>不可手改</strong>：由 <code>scripts/model-type-providers.js --gen-doc</code> 生成，改动须改生成器后重跑。</p></blockquote>
+<h2 id="3-scope-裁决">3. scope 裁决<a class="anchor" href="#3-scope-裁决" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>议题</th><th>裁决</th><th>依据</th></tr></thead><tbody><tr><td>「接入族」到底几篇</td><td><strong>4 篇</strong>（<code>032</code>/<code>096</code>/<code>172</code>/<code>205</code>）</td><td>实测：方案 <code>[MGMT-PLAN-009]</code> §1.2 原列的 6 篇中，<code>002</code>（AI 管理页 NewAPI 对齐——UI 对比度）与 <code>003</code>（管理页访问与登录）<strong>主题不符</strong>，已剔出；实测另补入 <code>096</code>。</td></tr><tr><td>是否物理合并</td><td><strong>否</strong></td><td>三层职责不同（速配 / 流程 / 对账），且 <code>096</code> 是生成层产物；DR1 禁删、DR8 要求先验生成器幂等。</td></tr><tr><td>端点/模型清单以谁为准</td><td><strong>代码</strong></td><td><code>providerPresets.js</code> / <code>serviceDefaults.js</code> 是数值真源；文档只描述「怎么填」。</td></tr></tbody></table>
+<h2 id="4-邻接文档">4. 邻接文档<a class="anchor" href="#4-邻接文档" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>编号</th><th>关系</th></tr></thead><tbody><tr><td><code>010</code> Hermes 风格模型配置</td><td>讲模型配置的<strong>书写风格</strong>惯例，不是接入流程；属风格参考，不入族</td></tr><tr><td><code>002</code> ai-管理-新api对齐</td><td><strong>AI 管理页</strong>的 NewAPI 对齐（对比度 + 配置能力），属管理页 UI，不入族</td></tr><tr><td><code>003</code> ai-管理-访问与登录</td><td><strong>AI 管理页</strong>的访问与登录，属管理页 UI，不入族</td></tr><tr><td><code>[DESIGN-GW-002]</code> AI 模型降级与熔断规范</td><td>接入之后的运行期行为，不在本族范围</td></tr></tbody></table>
+<h2 id="5-状态">5. 状态<a class="anchor" href="#5-状态" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项</th><th>值</th></tr></thead><tbody><tr><td>收敛动作</td><td>新建本总纲 + <code>032</code>/<code>172</code>/<code>205</code> 三篇加隶属头（<code>096</code> 生成层不加）</td></tr><tr><td>路径改动</td><td><strong>零</strong>（DR7 安全）</td></tr><tr><td>批次</td><td><code>[MGMT-PLAN-009]</code> B6</td></tr><tr><td>日期</td><td>2026-09-18</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/07_OPS_运维/OPS-MAN/[OPS-MAN-208] OCR 兜底族总纲.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-208] OCR 兜底族总纲</div></a><a class="next" href="../../../docs/07_OPS_运维/OPS-MAN/00_INDEX_OPS-MAN-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">OPS-MAN</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/07_OPS_运维/OPS-MAN/[OPS-MAN-209] AI 供应商接入族总纲.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

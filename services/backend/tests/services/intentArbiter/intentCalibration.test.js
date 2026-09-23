@@ -10,8 +10,8 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const cal = require('../../../src/services/intentArbiter/intentCalibration');
-const { BANDS } = require('../../../src/services/intentArbiter/intentLexicon');
+const cal = require('../../../src/services/domain/state/intentArbiter/intentCalibration.js');
+const { BANDS } = require('../../../src/services/domain/state/intentArbiter/intentLexicon.js');
 
 function confirmAnalysis(text) {
   return { text, band: BANDS.CONFIRM, confidence: 0.5, reasons: [], features: { targets: [] } };

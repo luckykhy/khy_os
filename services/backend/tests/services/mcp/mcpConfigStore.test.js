@@ -6,7 +6,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const store = require('../../../src/services/mcp/mcpConfigStore');
+const store = require('../../../src/services/domain/messaging/mcp/mcpConfigStore.js');
 
 function _tmp() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'khy-mcpstore-'));
@@ -173,7 +173,7 @@ test('setServerEnabled: project scope targets <cwd>/.khy/mcp.json', () => {
 
 // ── E2E: leaf → store round-trips through mcp/index.js loadConfig ──────────────
 test('E2E: mcpAddSpec.buildServerConfig → store.addServer → mcp.loadConfig sees it', () => {
-  const spec = require('../../../src/services/mcp/mcpAddSpec');
+  const spec = require('../../../src/services/domain/messaging/mcp/mcpAddSpec.js');
   const home = _tmp();
   const prevHome = os.homedir;
   const prevDataHome = process.env.KHY_DATA_HOME;
@@ -230,7 +230,7 @@ test('E2E: disabled:true in file → loadConfig exposes _disabled for connectAll
     assert.ok(gh, 'loadConfig should surface the disabled server');
     assert.strictEqual(gh._disabled, true, 'disabled:true → _disabled:true');
     // connectAll 跳过 _disabled:统计里 disabled 数=1,不会真 spawn。
-    const view = require('../../../src/services/mcp/mcpGovernance').buildGovernanceView({
+    const view = require('../../../src/services/domain/messaging/mcp/mcpGovernance.js').buildGovernanceView({
       mcpServers: loaded.mcpServers, connected: [], tools: [], paths: {},
     });
     assert.strictEqual(view.counts.disabled, 1, 'governance 应把该 server 记为已禁用');

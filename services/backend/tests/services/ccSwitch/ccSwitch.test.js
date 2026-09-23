@@ -1,6 +1,6 @@
 'use strict';
 
-const ccSwitch = require('../../src/services/ccSwitch/index');
+const ccSwitch = require('../../../src/services/ccSwitch/index.js');
 
 describe('ccSwitch index', () => {
   test('module is defined', () => {

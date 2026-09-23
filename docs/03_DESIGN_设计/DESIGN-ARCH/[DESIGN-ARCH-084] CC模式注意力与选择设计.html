@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-084] CC模式注意力与选择设计.md -->
+<title>[DESIGN-ARCH-084] CC 模式注意力与选择设计 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-084] CC 模式注意力与选择设计</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-084] CC 模式注意力与选择设计</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-084-cc-模式注意力与选择设计">[DESIGN-ARCH-084] CC 模式注意力与选择设计</a></li><li class="lvl-2"><a href="#0-设计原则">0. 设计原则</a></li><li class="lvl-2"><a href="#1-注意力引导层级">1. 注意力引导层级</a></li><li class="lvl-3"><a href="#1-1-注意力信号强度排序">1.1 注意力信号强度排序</a></li><li class="lvl-3"><a href="#1-2-组合使用规则">1.2 组合使用规则</a></li><li class="lvl-2"><a href="#2-焦点管理">2. 焦点管理</a></li><li class="lvl-3"><a href="#2-1-焦点指示器">2.1 焦点指示器</a></li><li class="lvl-3"><a href="#2-2-焦点导航">2.2 焦点导航</a></li><li class="lvl-3"><a href="#2-3-焦点陷阱">2.3 焦点陷阱</a></li><li class="lvl-2"><a href="#3-选择设计">3. 选择设计</a></li><li class="lvl-3"><a href="#3-1-单选列表">3.1 单选列表</a></li><li class="lvl-3"><a href="#3-2-多选列表">3.2 多选列表</a></li><li class="lvl-3"><a href="#3-3-权限提示选择">3.3 权限提示选择</a></li><li class="lvl-2"><a href="#4-强注意力组件">4. 强注意力组件</a></li><li class="lvl-3"><a href="#4-1-错误-警告提示">4.1 错误/警告提示</a></li><li class="lvl-3"><a href="#4-2-加载状态">4.2 加载状态</a></li><li class="lvl-3"><a href="#4-3-工具执行状态">4.3 工具执行状态</a></li><li class="lvl-2"><a href="#5-鼠标支持">5. 鼠标支持</a></li><li class="lvl-3"><a href="#5-1-支持的操作">5.1 支持的操作</a></li><li class="lvl-3"><a href="#5-2-鼠标协议">5.2 鼠标协议</a></li><li class="lvl-3"><a href="#5-3-shift-绕过">5.3 Shift 绕过</a></li><li class="lvl-2"><a href="#6-实现架构">6. 实现架构</a></li><li class="lvl-3"><a href="#6-1-焦点上下文">6.1 焦点上下文</a></li><li class="lvl-3"><a href="#6-2-选择状态管理">6.2 选择状态管理</a></li><li class="lvl-2"><a href="#7-验收标准">7. 验收标准</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-084-cc-模式注意力与选择设计">[DESIGN-ARCH-084] CC 模式注意力与选择设计<a class="anchor" href="#design-arch-084-cc-模式注意力与选择设计" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>隶属</strong>：本文属 <strong>TUI 设计族</strong>（20 编号 / 21 文件），总纲与 scope 裁决见 <code>[DESIGN-ARCH-122] TUI 设计族总纲</code>；规则冲突一律以 <code>[DESIGN-ARCH-102] Khy TUI 统一规则手册</code> 为准。</p></blockquote>
+<blockquote><p><strong>定位</strong>：定义 CC 模式下强注意力引导、焦点管理、选择交互的设计规范。<br><strong>适用边界</strong>：工具调用卡片、MCP 列表、帮助菜单、权限提示、补全菜单等需要用户交互的组件。<br><strong>参考来源</strong>：<code>interaction-patterns.md</code> (Focus, Selection, Mouse) + <code>exemplar-apps.md</code> (Claude Code) + <code>visual-patterns.md</code> (Hierarchy)</p></blockquote>
+<hr>
+<h2 id="0-设计原则">0. 设计原则<a class="anchor" href="#0-设计原则" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>原则</th><th>说明</th></tr></thead><tbody><tr><td><strong>焦点可见</strong></td><td>当前焦点必须始终可见，无歧义</td></tr><tr><td><strong>选择明确</strong></td><td>选中项与未选中项有明确视觉区分</td></tr><tr><td><strong>注意力克制</strong></td><td>不强求用户注意，只在需要时引导</td></tr><tr><td><strong>键盘优先</strong></td><td>所有操作键盘可达，鼠标是增强</td></tr><tr><td><strong>渐进披露</strong></td><td>复杂操作分步呈现，不一次性轰炸</td></tr></tbody></table>
+<hr>
+<h2 id="1-注意力引导层级">1. 注意力引导层级<a class="anchor" href="#1-注意力引导层级" aria-label="锚点">#</a></h2>
+<h3 id="1-1-注意力信号强度排序">1.1 注意力信号强度排序<a class="anchor" href="#1-1-注意力信号强度排序" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>强度</th><th>信号</th><th>使用场景</th></tr></thead><tbody><tr><td><strong>1（最强）</strong></td><td>边框颜色变化</td><td>焦点面板切换</td></tr><tr><td><strong>2</strong></td><td>反显（reverse video）</td><td>当前选中行</td></tr><tr><td><strong>3</strong></td><td>粗体 + 强调色</td><td>标题、重要信息</td></tr><tr><td><strong>4</strong></td><td>符号前缀 <code>▸</code> <code>●</code> <code>◆</code></td><td>状态指示</td></tr><tr><td><strong>5</strong></td><td>颜色（绿/红/黄）</td><td>状态语义</td></tr><tr><td><strong>6（最弱）</strong></td><td>缩进 + 竖线 <code>│</code></td><td>层级关系</td></tr></tbody></table>
+<h3 id="1-2-组合使用规则">1.2 组合使用规则<a class="anchor" href="#1-2-组合使用规则" aria-label="锚点">#</a></h3>
+<pre><code>❌ 禁止：同时使用 4+ 个信号表示同一状态
+✅ 正确：边框颜色(1) + 反显(2) = 焦点面板
+✅ 正确：符号(4) + 颜色(5) = 状态指示
+✅ 正确：粗体(3) + 颜色(5) = 重要信息</code></pre>
+<hr>
+<h2 id="2-焦点管理">2. 焦点管理<a class="anchor" href="#2-焦点管理" aria-label="锚点">#</a></h2>
+<h3 id="2-1-焦点指示器">2.1 焦点指示器<a class="anchor" href="#2-1-焦点指示器" aria-label="锚点">#</a></h3>
+<h4 id="2-1-1-边框颜色变化-最强信号">2.1.1 边框颜色变化（最强信号）<a class="anchor" href="#2-1-1-边框颜色变化-最强信号" aria-label="锚点">#</a></h4>
+<pre><code>┌─ 对话区 ─────────────────────────────────────────────┐  ← 无焦点（灰色边框）
+│                                                      │
+└──────────────────────────────────────────────────────┘
+
+╔═ 对话区 ═════════════════════════════════════════════╗  ← 有焦点（青色边框）
+│                                                      │
+╚══════════════════════════════════════════════════════╝</code></pre>
+<table><thead><tr><th>状态</th><th>边框样式</th><th>颜色</th></tr></thead><tbody><tr><td><strong>无焦点</strong></td><td>单线 <code>─│┌┐└┘</code></td><td>灰色 <code>#374151</code></td></tr><tr><td><strong>有焦点</strong></td><td>双线 <code>═║╔╗╚╝</code></td><td>青色 <code>#00D4D4</code></td></tr><tr><td><strong>警告</strong></td><td>单线</td><td>黄色 <code>#FBBF24</code></td></tr><tr><td><strong>错误</strong></td><td>单线</td><td>红色 <code>#F87171</code></td></tr></tbody></table>
+<h4 id="2-1-2-反显选择-标准信号">2.1.2 反显选择（标准信号）<a class="anchor" href="#2-1-2-反显选择-标准信号" aria-label="锚点">#</a></h4>
+<pre><code>  普通行：  白色文字，默认背景
+  选中行：  黑色文字，青色背景（反显）</code></pre>
+<pre><code class="language-javascript"><span class="hljs-comment">// 反显实现</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">SelectedRow</span>(<span class="hljs-params">{ children }</span>) {
+  <span class="hljs-keyword">return</span> (
+    <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Box</span> <span class="hljs-attr">backgroundColor</span>=<span class="hljs-string">&quot;#00D4D4&quot;</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">Text</span> <span class="hljs-attr">color</span>=<span class="hljs-string">&quot;#000000&quot;</span>&gt;</span>{children}<span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">Box</span>&gt;</span></span>
+  );
+}</code></pre>
+<h4 id="2-1-3-符号前缀-辅助信号">2.1.3 符号前缀（辅助信号）<a class="anchor" href="#2-1-3-符号前缀-辅助信号" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>符号</th><th>含义</th><th>颜色</th></tr></thead><tbody><tr><td><code>▸</code></td><td>当前选中项</td><td>青色 <code>#00D4D4</code></td></tr><tr><td><code>●</code></td><td>已连接/活跃</td><td>绿色 <code>#4ADE80</code></td></tr><tr><td><code>○</code></td><td>未连接/非活跃</td><td>灰色 <code>#6B7280</code></td></tr><tr><td><code>◆</code></td><td>执行中</td><td>黄色 <code>#FBBF24</code></td></tr><tr><td><code>✓</code></td><td>完成</td><td>绿色 <code>#4ADE80</code></td></tr><tr><td><code>✗</code></td><td>失败</td><td>红色 <code>#F87171</code></td></tr></tbody></table>
+<h3 id="2-2-焦点导航">2.2 焦点导航<a class="anchor" href="#2-2-焦点导航" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>方法</th><th>适用场景</th><th>实现</th></tr></thead><tbody><tr><td><strong>Tab / Shift+Tab</strong></td><td>2-3 个面板</td><td>线性循环</td></tr><tr><td><strong>数字键 1-9</strong></td><td>5+ 个面板</td><td>直接跳转</td></tr><tr><td><strong>鼠标点击</strong></td><td>增强</td><td>聚焦面板</td></tr><tr><td><strong>Esc</strong></td><td>退出当前焦点</td><td>返回上一层</td></tr></tbody></table>
+<h3 id="2-3-焦点陷阱">2.3 焦点陷阱<a class="anchor" href="#2-3-焦点陷阱" aria-label="锚点">#</a></h3>
+<pre><code>模态对话框：Tab 在对话框内循环，不跳出
+输入框：   字符输入时，不触发全局快捷键
+补全菜单： ↑↓ 导航选项，Esc 关闭</code></pre>
+<hr>
+<h2 id="3-选择设计">3. 选择设计<a class="anchor" href="#3-选择设计" aria-label="锚点">#</a></h2>
+<h3 id="3-1-单选列表">3.1 单选列表<a class="anchor" href="#3-1-单选列表" aria-label="锚点">#</a></h3>
+<h4 id="3-1-1-模型选择器">3.1.1 模型选择器<a class="anchor" href="#3-1-1-模型选择器" aria-label="锚点">#</a></h4>
+<pre><code>  模型列表：
+
+    Claude Sonet 4
+  ▸ Claude Opus 4                                    ← 当前选中（▸ + 反显）
+    Claude Haiku 4.5
+    GPT-4o
+    GPT-4o-mini
+    o1-preview
+
+  ↑/↓ navigate  Enter select  Esc cancel</code></pre>
+<p><strong>设计规范</strong>：</p>
+<table><thead><tr><th>属性</th><th>规范</th></tr></thead><tbody><tr><td><strong>选中指示</strong></td><td><code>▸</code> 前缀 + 反显背景</td></tr><tr><td><strong>悬停效果</strong></td><td>无（终端不支持）</td></tr><tr><td><strong>滚动</strong></td><td>超出显示区域时滚动，保持选中项可见</td></tr><tr><td><strong>过滤</strong></td><td>输入字符实时过滤列表</td></tr></tbody></table>
+<h4 id="3-1-2-实现">3.1.2 实现<a class="anchor" href="#3-1-2-实现" aria-label="锚点">#</a></h4>
+<pre><code class="language-javascript"><span class="hljs-keyword">function</span> <span class="hljs-title function_">SelectableList</span>(<span class="hljs-params">{ items, selectedIndex, onSelect, onCancel }</span>) {
+  <span class="hljs-keyword">const</span> [filter, setFilter] = <span class="hljs-title function_">useState</span>(<span class="hljs-string">&#x27;&#x27;</span>);
+  <span class="hljs-keyword">const</span> filtered = items.<span class="hljs-title function_">filter</span>(<span class="hljs-function"><span class="hljs-params">i</span> =&gt;</span> i.<span class="hljs-property">label</span>.<span class="hljs-title function_">toLowerCase</span>().<span class="hljs-title function_">includes</span>(filter.<span class="hljs-title function_">toLowerCase</span>()));
+
+  <span class="hljs-title function_">useInput</span>(<span class="hljs-function">(<span class="hljs-params">input, key</span>) =&gt;</span> {
+    <span class="hljs-keyword">if</span> (key.<span class="hljs-property">upArrow</span>) <span class="hljs-title function_">onSelect</span>(<span class="hljs-title class_">Math</span>.<span class="hljs-title function_">max</span>(<span class="hljs-number">0</span>, selectedIndex - <span class="hljs-number">1</span>));
+    <span class="hljs-keyword">if</span> (key.<span class="hljs-property">downArrow</span>) <span class="hljs-title function_">onSelect</span>(<span class="hljs-title class_">Math</span>.<span class="hljs-title function_">min</span>(filtered.<span class="hljs-property">length</span> - <span class="hljs-number">1</span>, selectedIndex + <span class="hljs-number">1</span>));
+    <span class="hljs-keyword">if</span> (key.<span class="hljs-property">return</span>) <span class="hljs-title function_">onSelect</span>(selectedIndex, <span class="hljs-literal">true</span>); <span class="hljs-comment">// confirm</span>
+    <span class="hljs-keyword">if</span> (key.<span class="hljs-property">escape</span>) <span class="hljs-title function_">onCancel</span>();
+    <span class="hljs-keyword">if</span> (input &amp;&amp; !key.<span class="hljs-property">ctrl</span>) <span class="hljs-title function_">setFilter</span>(<span class="hljs-function"><span class="hljs-params">f</span> =&gt;</span> f + input);
+    <span class="hljs-keyword">if</span> (key.<span class="hljs-property">backspace</span>) <span class="hljs-title function_">setFilter</span>(<span class="hljs-function"><span class="hljs-params">f</span> =&gt;</span> f.<span class="hljs-title function_">slice</span>(<span class="hljs-number">0</span>, -<span class="hljs-number">1</span>));
+  });
+
+  <span class="hljs-keyword">return</span> (
+    <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Box</span> <span class="hljs-attr">flexDirection</span>=<span class="hljs-string">&quot;column&quot;</span> <span class="hljs-attr">borderStyle</span>=<span class="hljs-string">&quot;single&quot;</span> <span class="hljs-attr">borderColor</span>=<span class="hljs-string">&quot;#00D4D4&quot;</span> <span class="hljs-attr">padding</span>=<span class="hljs-string">{1}</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">Text</span> <span class="hljs-attr">bold</span> <span class="hljs-attr">color</span>=<span class="hljs-string">&quot;#00D4D4&quot;</span>&gt;</span>选择模型：<span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">Box</span> <span class="hljs-attr">height</span>=<span class="hljs-string">{1}</span> /&gt;</span>
+      {filtered.map((item, i) =&gt; (
+        <span class="hljs-tag">&lt;<span class="hljs-name">Box</span> <span class="hljs-attr">key</span>=<span class="hljs-string">{i}</span>&gt;</span>
+          {i === selectedIndex ? (
+            <span class="hljs-tag">&lt;<span class="hljs-name">Text</span> <span class="hljs-attr">backgroundColor</span>=<span class="hljs-string">&quot;#00D4D4&quot;</span> <span class="hljs-attr">color</span>=<span class="hljs-string">&quot;#000000&quot;</span>&gt;</span>▸ {item.label}<span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span>
+          ) : (
+            <span class="hljs-tag">&lt;<span class="hljs-name">Text</span>&gt;</span>  {item.label}<span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span>
+          )}
+        <span class="hljs-tag">&lt;/<span class="hljs-name">Box</span>&gt;</span>
+      ))}
+      <span class="hljs-tag">&lt;<span class="hljs-name">Box</span> <span class="hljs-attr">height</span>=<span class="hljs-string">{1}</span> /&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">Text</span> <span class="hljs-attr">color</span>=<span class="hljs-string">&quot;#6B7280&quot;</span> <span class="hljs-attr">dimColor</span>&gt;</span>↑/↓ navigate  Enter select  Esc cancel<span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">Box</span>&gt;</span></span>
+  );
+}</code></pre>
+<h3 id="3-2-多选列表">3.2 多选列表<a class="anchor" href="#3-2-多选列表" aria-label="锚点">#</a></h3>
+<h4 id="3-2-1-功能选择">3.2.1 功能选择<a class="anchor" href="#3-2-1-功能选择" aria-label="锚点">#</a></h4>
+<pre><code>  选择功能：
+
+  [x] Authentication                                ← 已选中
+  [ ] Database migrations                           ← 未选中
+  [x] Logging
+  [ ] Monitoring
+  [x] Docker support
+
+  Space toggle  Enter confirm  Esc cancel</code></pre>
+<p><strong>设计规范</strong>：</p>
+<table><thead><tr><th>操作</th><th>效果</th></tr></thead><tbody><tr><td><code>Space</code></td><td>切换当前行的选中状态</td></tr><tr><td><code>Enter</code></td><td>确认选择</td></tr><tr><td><code>Esc</code></td><td>取消</td></tr><tr><td><code>Ctrl+A</code></td><td>全选（备选）</td></tr><tr><td><code>*</code></td><td>反选</td></tr></tbody></table>
+<h3 id="3-3-权限提示选择">3.3 权限提示选择<a class="anchor" href="#3-3-权限提示选择" aria-label="锚点">#</a></h3>
+<h4 id="3-3-1-工具执行确认">3.3.1 工具执行确认<a class="anchor" href="#3-3-1-工具执行确认" aria-label="锚点">#</a></h4>
+<pre><code>┌─ 权限请求 ─────────────────────────────────────────────┐
+│                                                        │
+│  Do you want to proceed?                               │
+│                                                        │
+│  ❯ Yes, proceed                                        │
+│    No, reject                                          │
+│    Always allow                                        │
+│                                                        │
+│  Esc to cancel · Tab to amend                          │
+└────────────────────────────────────────────────────────┘</code></pre>
+<p><strong>设计规范</strong>：</p>
+<table><thead><tr><th>属性</th><th>规范</th></tr></thead><tbody><tr><td><strong>默认焦点</strong></td><td>最安全的选项（No/Cancel）</td></tr><tr><td><strong>危险操作</strong></td><td>红色高亮，非默认焦点</td></tr><tr><td><strong>键盘导航</strong></td><td><code>↑/↓</code> 或 <code>Tab</code></td></tr><tr><td><strong>确认</strong></td><td><code>Enter</code></td></tr><tr><td><strong>取消</strong></td><td><code>Esc</code></td></tr></tbody></table>
+<hr>
+<h2 id="4-强注意力组件">4. 强注意力组件<a class="anchor" href="#4-强注意力组件" aria-label="锚点">#</a></h2>
+<h3 id="4-1-错误-警告提示">4.1 错误/警告提示<a class="anchor" href="#4-1-错误-警告提示" aria-label="锚点">#</a></h3>
+<h4 id="4-1-1-错误横幅">4.1.1 错误横幅<a class="anchor" href="#4-1-1-错误横幅" aria-label="锚点">#</a></h4>
+<pre><code>╔═ 错误 ════════════════════════════════════════════════╗
+║                                                        ║
+║  ❌ 工具执行失败                                        ║
+║                                                        ║
+║  [Read 错误] 文件不存在：D:\Portable\nonexistent.txt    ║
+║                                                        ║
+║  建议：                                                 ║
+║  - 检查文件路径是否正确                                  ║
+║  - 使用 Glob 工具搜索文件位置                            ║
+║                                                        ║
+║  Esc to dismiss                                         ║
+╚════════════════════════════════════════════════════════╝</code></pre>
+<p><strong>设计规范</strong>：</p>
+<table><thead><tr><th>类型</th><th>边框颜色</th><th>图标</th><th>背景</th></tr></thead><tbody><tr><td><strong>错误</strong></td><td>红色 <code>#F87171</code></td><td><code>❌</code></td><td>深红 <code>#3D0F0F</code></td></tr><tr><td><strong>警告</strong></td><td>黄色 <code>#FBBF24</code></td><td><code>⚠️</code></td><td>深黄 <code>#3D300F</code></td></tr><tr><td><strong>信息</strong></td><td>蓝色 <code>#58A6FF</code></td><td><code>ℹ️</code></td><td>深蓝 <code>#0F1A3D</code></td></tr><tr><td><strong>成功</strong></td><td>绿色 <code>#4ADE80</code></td><td><code>✅</code></td><td>深绿 <code>#0F3D1A</code></td></tr></tbody></table>
+<h3 id="4-2-加载状态">4.2 加载状态<a class="anchor" href="#4-2-加载状态" aria-label="锚点">#</a></h3>
+<h4 id="4-2-1-spinner-消息">4.2.1 Spinner + 消息<a class="anchor" href="#4-2-1-spinner-消息" aria-label="锚点">#</a></h4>
+<pre><code>⠋ AI is thinking...                                  ← 旋转 spinner + 消息</code></pre>
+<h4 id="4-2-2-进度条">4.2.2 进度条<a class="anchor" href="#4-2-2-进度条" aria-label="锚点">#</a></h4>
+<pre><code>  上传文件... [████████░░░░░░░░░░░░] 40%               ← 进度条 + 百分比</code></pre>
+<h3 id="4-3-工具执行状态">4.3 工具执行状态<a class="anchor" href="#4-3-工具执行状态" aria-label="锚点">#</a></h3>
+<pre><code>◆ Read(src/index.js)                                  ← 执行中（黄色 ◆ + spinner）
+✓ Read(src/index.js)                                  ← 完成（绿色 ✓）
+✗ Bash(npm test)                                      ← 失败（红色 ✗）</code></pre>
+<hr>
+<h2 id="5-鼠标支持">5. 鼠标支持<a class="anchor" href="#5-鼠标支持" aria-label="锚点">#</a></h2>
+<h3 id="5-1-支持的操作">5.1 支持的操作<a class="anchor" href="#5-1-支持的操作" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>操作</th><th>支持</th><th>说明</th></tr></thead><tbody><tr><td><strong>点击面板聚焦</strong></td><td>✅</td><td>增强，非必需</td></tr><tr><td><strong>点击标签切换</strong></td><td>✅</td><td>增强，非必需</td></tr><tr><td><strong>滚动列表</strong></td><td>✅</td><td>滚轮支持</td></tr><tr><td><strong>点击按钮</strong></td><td>✅</td><td>表单按钮</td></tr><tr><td><strong>拖拽调整</strong></td><td>❌</td><td>复杂度高，暂不支持</td></tr></tbody></table>
+<h3 id="5-2-鼠标协议">5.2 鼠标协议<a class="anchor" href="#5-2-鼠标协议" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 启用鼠标支持</span>
+process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">&#x27;\x1B[?1000h&#x27;</span>);  <span class="hljs-comment">// 启用鼠标跟踪</span>
+process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">&#x27;\x1B[?1002h&#x27;</span>);  <span class="hljs-comment">// 启用拖拽跟踪</span>
+process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">&#x27;\x1B[?1006h&#x27;</span>);  <span class="hljs-comment">// 启用 SGR 坐标格式</span>
+
+<span class="hljs-comment">// 禁用鼠标支持</span>
+process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">&#x27;\x1B[?1006l&#x27;</span>);
+process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">&#x27;\x1B[?1002l&#x27;</span>);
+process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">&#x27;\x1B[?1000l&#x27;</span>);</code></pre>
+<h3 id="5-3-shift-绕过">5.3 Shift 绕过<a class="anchor" href="#5-3-shift-绕过" aria-label="锚点">#</a></h3>
+<pre><code>当鼠标捕获开启时：
+- 普通点击/拖拽 → 应用处理
+- Shift + 点击/拖拽 → 终端原生文本选择</code></pre>
+<hr>
+<h2 id="6-实现架构">6. 实现架构<a class="anchor" href="#6-实现架构" aria-label="锚点">#</a></h2>
+<h3 id="6-1-焦点上下文">6.1 焦点上下文<a class="anchor" href="#6-1-焦点上下文" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// tui/context/FocusContext.js</span>
+
+<span class="hljs-keyword">const</span> <span class="hljs-title class_">FocusContext</span> = <span class="hljs-title function_">createContext</span>({
+  <span class="hljs-attr">focusedPanel</span>: <span class="hljs-string">&#x27;input&#x27;</span>,      <span class="hljs-comment">// 当前焦点面板</span>
+  <span class="hljs-attr">setFocusedPanel</span>: <span class="hljs-function">() =&gt;</span> {},
+  <span class="hljs-attr">trapFocus</span>: <span class="hljs-literal">false</span>,            <span class="hljs-comment">// 是否捕获焦点</span>
+  <span class="hljs-attr">focusStack</span>: [],              <span class="hljs-comment">// 焦点栈（用于模态对话框）</span>
+});
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">FocusProvider</span>(<span class="hljs-params">{ children }</span>) {
+  <span class="hljs-keyword">const</span> [state, setState] = <span class="hljs-title function_">useState</span>({
+    <span class="hljs-attr">focusedPanel</span>: <span class="hljs-string">&#x27;input&#x27;</span>,
+    <span class="hljs-attr">trapFocus</span>: <span class="hljs-literal">false</span>,
+    <span class="hljs-attr">focusStack</span>: [],
+  });
+
+  <span class="hljs-keyword">const</span> setFocusedPanel = <span class="hljs-title function_">useCallback</span>(<span class="hljs-function">(<span class="hljs-params">panel</span>) =&gt;</span> {
+    <span class="hljs-title function_">setState</span>(<span class="hljs-function"><span class="hljs-params">s</span> =&gt;</span> ({ ...s, <span class="hljs-attr">focusedPanel</span>: panel }));
+  }, []);
+
+  <span class="hljs-keyword">const</span> pushFocus = <span class="hljs-title function_">useCallback</span>(<span class="hljs-function">(<span class="hljs-params">panel</span>) =&gt;</span> {
+    <span class="hljs-title function_">setState</span>(<span class="hljs-function"><span class="hljs-params">s</span> =&gt;</span> ({
+      ...s,
+      <span class="hljs-attr">focusStack</span>: [...s.<span class="hljs-property">focusStack</span>, s.<span class="hljs-property">focusedPanel</span>],
+      <span class="hljs-attr">focusedPanel</span>: panel,
+      <span class="hljs-attr">trapFocus</span>: <span class="hljs-literal">true</span>,
+    }));
+  }, []);
+
+  <span class="hljs-keyword">const</span> popFocus = <span class="hljs-title function_">useCallback</span>(<span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-title function_">setState</span>(<span class="hljs-function"><span class="hljs-params">s</span> =&gt;</span> {
+      <span class="hljs-keyword">const</span> stack = [...s.<span class="hljs-property">focusStack</span>];
+      <span class="hljs-keyword">const</span> prev = stack.<span class="hljs-title function_">pop</span>() || <span class="hljs-string">&#x27;input&#x27;</span>;
+      <span class="hljs-keyword">return</span> {
+        ...s,
+        <span class="hljs-attr">focusStack</span>: stack,
+        <span class="hljs-attr">focusedPanel</span>: prev,
+        <span class="hljs-attr">trapFocus</span>: stack.<span class="hljs-property">length</span> &gt; <span class="hljs-number">0</span>,
+      };
+    });
+  }, []);
+
+  <span class="hljs-keyword">return</span> (
+    <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">FocusContext.Provider</span> <span class="hljs-attr">value</span>=<span class="hljs-string">{{</span> <span class="hljs-attr">...state</span>, <span class="hljs-attr">setFocusedPanel</span>, <span class="hljs-attr">pushFocus</span>, <span class="hljs-attr">popFocus</span> }}&gt;</span>
+      {children}
+    <span class="hljs-tag">&lt;/<span class="hljs-name">FocusContext.Provider</span>&gt;</span></span>
+  );
+}</code></pre>
+<h3 id="6-2-选择状态管理">6.2 选择状态管理<a class="anchor" href="#6-2-选择状态管理" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// tui/hooks/useSelection.js</span>
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">useSelection</span>(<span class="hljs-params">items, multiSelect = <span class="hljs-literal">false</span></span>) {
+  <span class="hljs-keyword">const</span> [selected, setSelected] = <span class="hljs-title function_">useState</span>(multiSelect ? <span class="hljs-keyword">new</span> <span class="hljs-title class_">Set</span>() : -<span class="hljs-number">1</span>);
+
+  <span class="hljs-keyword">const</span> select = <span class="hljs-title function_">useCallback</span>(<span class="hljs-function">(<span class="hljs-params">index</span>) =&gt;</span> {
+    <span class="hljs-keyword">if</span> (multiSelect) {
+      <span class="hljs-title function_">setSelected</span>(<span class="hljs-function"><span class="hljs-params">prev</span> =&gt;</span> {
+        <span class="hljs-keyword">const</span> next = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Set</span>(prev);
+        <span class="hljs-keyword">if</span> (next.<span class="hljs-title function_">has</span>(index)) next.<span class="hljs-title function_">delete</span>(index);
+        <span class="hljs-keyword">else</span> next.<span class="hljs-title function_">add</span>(index);
+        <span class="hljs-keyword">return</span> next;
+      });
+    } <span class="hljs-keyword">else</span> {
+      <span class="hljs-title function_">setSelected</span>(index);
+    }
+  }, [multiSelect]);
+
+  <span class="hljs-keyword">const</span> clear = <span class="hljs-title function_">useCallback</span>(<span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-title function_">setSelected</span>(multiSelect ? <span class="hljs-keyword">new</span> <span class="hljs-title class_">Set</span>() : -<span class="hljs-number">1</span>);
+  }, [multiSelect]);
+
+  <span class="hljs-keyword">return</span> { selected, select, clear };
+}</code></pre>
+<hr>
+<h2 id="7-验收标准">7. 验收标准<a class="anchor" href="#7-验收标准" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>场景</th><th>预期</th></tr></thead><tbody><tr><td>焦点切换</td><td>边框颜色变化，明确可见</td></tr><tr><td>选中行</td><td>反显背景 + <code>▸</code> 前缀</td></tr><tr><td>模态对话框</td><td>焦点陷阱，Tab 不跳出</td></tr><tr><td>错误提示</td><td>红色边框 + 图标 + 建议</td></tr><tr><td>加载状态</td><td>Spinner + 消息</td></tr><tr><td>鼠标点击</td><td>聚焦面板，滚动列表</td></tr><tr><td>Shift+点击</td><td>终端原生文本选择</td></tr><tr><td>权限提示</td><td>默认安全选项，危险操作红色</td></tr></tbody></table>
+<hr>
+<blockquote><p><strong>文档状态</strong>：Draft — 待实施<br><strong>创建日期</strong>：2026-09-09<br><strong>依赖</strong>：[DESIGN-ARCH-081] 主设计规范</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-083] CC模式表格与折叠设计.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-083] CC 模式表格与折叠设计</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-085] CC模式子视图子菜单卡片与滚动设计.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-085] CC 模式子视图、子菜单、卡片与滚动设计</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-084] CC模式注意力与选择设计.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

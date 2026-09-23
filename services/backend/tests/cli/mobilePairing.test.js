@@ -5,6 +5,7 @@
  * Run: node --test tests/cli/mobilePairing.test.js
  */
 const fs = require('fs');
+const assert = require('node:assert');
 const os = require('os');
 const path = require('path');
 // Redirect the data home to a scratch dir BEFORE anything resolves it, so the

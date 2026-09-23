@@ -19,7 +19,7 @@
 const os = require('os');
 
 const plan = require('../../services/domain/desktop/terminal/terminalSetupPlan.js');
-const { printInfo, printSuccess, printWarn } = require('../formatters');
+const { printInfo, printWarn } = require('../formatters');
 
 /**
  * @param {string} _subCommand 预留(本命令无子命令)
@@ -55,8 +55,8 @@ async function handleTerminalSetup(_subCommand, _args = [], _options = {}) {
   );
 
   if (result.category === 'native') {
-    printSuccess(result.reason);
-    printInfo('khy TUI 已支持 Shift+Enter 换行,无需额外配置。');
+    printInfo(result.reason);
+    printInfo('当前直接可用的换行键:Ctrl + J(送裸 LF,实测可用;Shift+Enter 须自配终端绑定后才可用)。');
     return true;
   }
 

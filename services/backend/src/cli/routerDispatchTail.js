@@ -300,7 +300,7 @@ async function dispatchTailCommand(command, _ctx) {
       //   /memory distill archived        — list archived memories
       //   /memory distill restore [file]  — restore one (or all) archived memories
       if ((args[0] || '').toLowerCase() === 'distill') {
-        const distiller = require('../services/memoryEngine/distiller');
+        const distiller = require('../services/domain/memory/memoryEngine/distiller');
         const sub = (args[1] || '').toLowerCase();
 
         if (sub === 'archived') {
@@ -1207,6 +1207,49 @@ async function dispatchTailCommand(command, _ctx) {
       const result = await cliAuth.changePassword(answers.oldPassword, answers.newPassword);
       if (result.success) {
         printSuccess('密码修改成功');
+      } else {
+        printError(result.error);
+      }
+      return true;
+    }
+
+    case 'user': {
+      // khy user [rename] <新账号名> — 重命名当前登录账号（旧名保留为登录别名）
+      const cliAuth = require('../services/cliAuthService');
+      const session = cliAuth.checkSession();
+      if (!session.loggedIn) {
+        printError('未登录，无法改名：请先 /login 登录后再运行 khy user rename <新账号名>');
+        return true;
+      }
+      // `user rename <名>` 与裸 `user <名>` 两种写法都取新名字面量。
+      const rawName = subCommand === 'rename' ? (args && args[0]) : subCommand;
+      let newName = String(rawName || '').trim();
+      if (!newName) {
+        if (process.stdin && process.stdin.isTTY) {
+          const inquirer = require('inquirer');
+          const { accountName } = await inquirer.prompt([
+            {
+              type: 'input',
+              name: 'accountName',
+              message: `新账号名 (当前: ${session.username}):`,
+              validate: (v) =>
+                /^[a-zA-Z0-9_-]{2,32}$/.test(String(v || '').trim()) ||
+                '账号名需 2-32 个字符，仅限字母/数字/下划线/连字符',
+            },
+          ]);
+          newName = String(accountName || '').trim();
+        } else {
+          printError('用法: khy user rename <新账号名> (非交互模式需显式给出新账号名)');
+          return true;
+        }
+      }
+      const result = await cliAuth.renameAccount(newName);
+      if (result.success) {
+        printSuccess(`账号已改名: ${result.oldUsername} → ${result.username}`);
+        for (const line of result.details || []) {
+          printInfo(line);
+        }
+        printInfo('旧账号名仍可作为登录别名使用');
       } else {
         printError(result.error);
       }

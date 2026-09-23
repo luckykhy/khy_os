@@ -1,12 +1,13 @@
 'use strict';
 
-const http = require('http');
+const { spawnSync } = require('child_process');
+const { EventEmitter } = require('events');
 const fs = require('fs');
+const http = require('http');
 const os = require('os');
 const path = require('path');
 const { PassThrough } = require('stream');
-const { EventEmitter } = require('events');
-const { spawnSync } = require('child_process');
+
 const { PRIMARY } = require('../src/constants/models');
 
 function canBindLoopbackSync() {
@@ -1227,7 +1228,7 @@ describeWithLoopback('gateway adapters stability', () => {
       return { status: 0, error: null, stdout: '', stderr: '' };
     });
 
-    const spawn = jest.fn((_cmd, args = []) => {
+    const spawn = jest.fn((cmd, _args = []) => {
       const child = new EventEmitter();
       child.stdout = new PassThrough();
       child.stderr = new PassThrough();
@@ -1379,7 +1380,8 @@ describeWithLoopback('gateway adapters stability', () => {
     jest.resetModules();
 
     const spawnSync = jest.fn((cmd, args) => {
-      if (Array.isArray(args) && args[0] === '--version') {
+      const a = Array.isArray(args) ? args : [args];
+      if (a[0] === '--version') {
         if (cmd === 'claude' || cmd === 'codex') return { status: 0, error: null };
         return { status: 1, error: new Error('missing') };
       }

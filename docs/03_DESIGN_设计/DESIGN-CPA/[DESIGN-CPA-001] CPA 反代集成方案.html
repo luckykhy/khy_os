@@ -1,0 +1,881 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-CPA-001] CPA 反代集成方案.md -->
+<title>[DESIGN-CPA-001] KhyOS CPA 反代集成方案（与 provider-hub 集成版） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-CPA<span class="sep">›</span>[DESIGN-CPA-001] KhyOS CPA 反代集成方案（与 provider-hub 集成版）</div>
+      <header class="hero reveal"><h1>[DESIGN-CPA-001] KhyOS CPA 反代集成方案（与 provider-hub 集成版）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-cpa-001-khyos-cpa-反代集成方案-与-provider-hub-集成版">[DESIGN-CPA-001] KhyOS CPA 反代集成方案（与 provider-hub 集成版）</a></li><li class="lvl-2"><a href="#1-概述">1. 概述</a></li><li class="lvl-3"><a href="#1-1-背景">1.1 背景</a></li><li class="lvl-3"><a href="#1-2-现有架构分析">1.2 现有架构分析</a></li><li class="lvl-3"><a href="#1-3-设计目标">1.3 设计目标</a></li><li class="lvl-2"><a href="#2-架构设计">2. 架构设计</a></li><li class="lvl-3"><a href="#2-1-集成架构">2.1 集成架构</a></li><li class="lvl-3"><a href="#2-2-数据流">2.2 数据流</a></li><li class="lvl-3"><a href="#2-3-配置复用">2.3 配置复用</a></li><li class="lvl-2"><a href="#3-实现方案">3. 实现方案</a></li><li class="lvl-3"><a href="#3-1-注册-cpa-为新-app-constants-js">3.1 注册 CPA 为新 App (constants.js)</a></li><li class="lvl-3"><a href="#3-2-创建-cpa-app-writer-cpawriter-js">3.2 创建 CPA App Writer (cpaWriter.js)</a></li><li class="lvl-3"><a href="#3-3-注册到-app-writers-appwriters-js">3.3 注册到 App Writers (appWriters.js)</a></li><li class="lvl-3"><a href="#3-4-创建-cpa-gateway-adapter-cpaadapter-js">3.4 创建 CPA Gateway Adapter (cpaAdapter.js)</a></li><li class="lvl-3"><a href="#3-5-注册到-gateway-aigateway-js">3.5 注册到 Gateway (aiGateway.js)</a></li><li class="lvl-2"><a href="#4-使用流程">4. 使用流程</a></li><li class="lvl-3"><a href="#4-1-添加-cpa-provider-card">4.1 添加 CPA Provider Card</a></li><li class="lvl-3"><a href="#4-2-配置-api-key">4.2 配置 API Key</a></li><li class="lvl-3"><a href="#4-3-应用卡片到-cpa">4.3 应用卡片到 CPA</a></li><li class="lvl-3"><a href="#4-4-使用-cpa">4.4 使用 CPA</a></li><li class="lvl-2"><a href="#5-cli-命令-复用现有">5. CLI 命令（复用现有）</a></li><li class="lvl-3"><a href="#5-1-卡片管理-复用-cc-switch">5.1 卡片管理（复用 cc-switch）</a></li><li class="lvl-3"><a href="#5-2-密钥管理-复用-cc-switch">5.2 密钥管理（复用 cc-switch）</a></li><li class="lvl-2"><a href="#6-测试策略">6. 测试策略</a></li><li class="lvl-3"><a href="#6-1-单元测试">6.1 单元测试</a></li><li class="lvl-3"><a href="#6-2-集成测试">6.2 集成测试</a></li><li class="lvl-2"><a href="#7-文件清单">7. 文件清单</a></li><li class="lvl-3"><a href="#7-1-新建文件">7.1 新建文件</a></li><li class="lvl-3"><a href="#7-2-修改文件">7.2 修改文件</a></li><li class="lvl-3"><a href="#7-3-复用文件-无需修改">7.3 复用文件（无需修改）</a></li><li class="lvl-2"><a href="#8-优势总结">8. 优势总结</a></li><li class="lvl-3"><a href="#8-1-避免重复实现">8.1 避免重复实现</a></li><li class="lvl-3"><a href="#8-2-一致性">8.2 一致性</a></li><li class="lvl-3"><a href="#8-3-可维护性">8.3 可维护性</a></li><li class="lvl-2"><a href="#9-路线图">9. 路线图</a></li><li class="lvl-3"><a href="#9-1-phase-1-基础集成-v1-0">9.1 Phase 1 - 基础集成 (v1.0)</a></li><li class="lvl-3"><a href="#9-2-phase-2-增强功能-v1-1">9.2 Phase 2 - 增强功能 (v1.1)</a></li><li class="lvl-3"><a href="#9-3-phase-3-高级特性-v2-0">9.3 Phase 3 - 高级特性 (v2.0)</a></li><li class="lvl-2"><a href="#10-参考资料">10. 参考资料</a></li><li class="lvl-2"><a href="#11-变更记录">11. 变更记录</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-cpa-001-khyos-cpa-反代集成方案-与-provider-hub-集成版">[DESIGN-CPA-001] KhyOS CPA 反代集成方案（与 provider-hub 集成版）<a class="anchor" href="#design-cpa-001-khyos-cpa-反代集成方案-与-provider-hub-集成版" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>文档类型</strong>: 架构设计文档  <br><strong>创建日期</strong>: 2026-09-11  <br><strong>状态</strong>: 草案  <br><strong>适用场景</strong>: 个人自用、CLI 开发工具链  <br><strong>集成目标</strong>: 复用 provider-hub 和 ccSwitch 系统，避免重复实现</p></blockquote>
+<hr>
+<h2 id="1-概述">1. 概述<a class="anchor" href="#1-概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-背景">1.1 背景<a class="anchor" href="#1-1-背景" aria-label="锚点">#</a></h3>
+<p>CPA (CLI Proxy API) 是一个开源的 AI API 反向代理网关，主要功能：</p>
+<ul><li>将 Gemini CLI、Codex、Claude Code 等 CLI/OAuth 账号转换为标准 OpenAI 兼容 API</li><li>支持多账号轮询负载均衡</li><li>统一管理多个 AI 平台的访问</li></ul>
+<h3 id="1-2-现有架构分析">1.2 现有架构分析<a class="anchor" href="#1-2-现有架构分析" aria-label="锚点">#</a></h3>
+<p>KhyOS 已有完善的 Provider 管理系统：</p>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                    provider-hub (apps/provider-hub)         │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  Card System (cc_switch.json)                        │  │
+│  │  - 卡片 CRUD (providers.ts)                          │  │
+│  │  - 密钥池 (api_keys.json)                            │  │
+│  │  - 模型目录 (modelCatalog.ts)                         │  │
+│  └──────────────────────────────────────────────────────┘  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    ccSwitch 系统                             │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  APPS 常量 (constants.js)                            │  │
+│  │  - claude-code, codex, opencode, gemini, ...         │  │
+│  │  - 协议: openai, anthropic, openai_responses, gemini │  │
+│  └──────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  App Writers (appWriters.js)                         │  │
+│  │  - per-app 配置写入器                                 │  │
+│  │  - preflight 校验                                     │  │
+│  └──────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  Route Resolver (routeResolver.js)                   │  │
+│  │  - 活跃卡片路由                                       │  │
+│  └──────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘</code></pre>
+<h3 id="1-3-设计目标">1.3 设计目标<a class="anchor" href="#1-3-设计目标" aria-label="锚点">#</a></h3>
+<p><strong>核心原则：复用现有系统，避免重复实现</strong></p>
+<ol><li><strong>复用 Card System</strong>: CPA 作为一个 Provider Card，使用现有的 <code>cc_switch.json</code> 存储</li><li><strong>复用 Key Pool</strong>: CPA 使用现有的 <code>api_keys.json</code> 密钥池</li><li><strong>复用 App Writer 模式</strong>: 创建 <code>cpaWriter.js</code> 作为 CPA 的配置写入器</li><li><strong>复用 Gateway Adapter 模式</strong>: 创建 <code>cpaAdapter.js</code> 读取 Card 配置</li></ol>
+<hr>
+<h2 id="2-架构设计">2. 架构设计<a class="anchor" href="#2-架构设计" aria-label="锚点">#</a></h2>
+<h3 id="2-1-集成架构">2.1 集成架构<a class="anchor" href="#2-1-集成架构" aria-label="锚点">#</a></h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                    KhyOS CLI Layer                           │
+│  (khy cc-switch add / khy cc-switch apply cpa)              │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    provider-hub (Card System)                │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  cc_switch.json                                      │  │
+│  │  {                                                   │  │
+│  │    &quot;cards&quot;: [                                        │  │
+│  │      {                                               │  │
+│  │        &quot;id&quot;: &quot;c_xxx&quot;,                                │  │
+│  │        &quot;name&quot;: &quot;My CPA Server&quot;,                      │  │
+│  │        &quot;baseUrl&quot;: &quot;http://localhost:8317&quot;,           │  │
+│  │        &quot;protocol&quot;: &quot;openai&quot;,                         │  │
+│  │        &quot;apps&quot;: [&quot;cpa&quot;],                              │  │
+│  │        ...                                           │  │
+│  │      }                                               │  │
+│  │    ]                                                 │  │
+│  │  }                                                   │  │
+│  └──────────────────────────────────────────────────────┘  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    ccSwitch System                           │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  cpaWriter.js (新建)                                  │  │
+│  │  - applyCardToCpa(): 应用卡片到 CPA 配置              │  │
+│  │  - detectCpaConfig(): 探测 CPA 运行状态               │  │
+│  └──────────────────────────────────────────────────────┘  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    AI Gateway (aiGateway.js)                 │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  cpaAdapter.js (新建)                                 │  │
+│  │  - 从 ccSwitch 读取活跃卡片配置                        │  │
+│  │  - 调用 CPA Server 的 OpenAI 兼容 API                 │  │
+│  └──────────────────────────────────────────────────────┘  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    CPA Server (External)                     │
+│  http://localhost:8317/v1/chat/completions                   │
+└─────────────────────────────────────────────────────────────┘</code></pre>
+<h3 id="2-2-数据流">2.2 数据流<a class="anchor" href="#2-2-数据流" aria-label="锚点">#</a></h3>
+<pre><code>用户请求 → KhyOS Gateway → cpaAdapter → 读取 ccSwitch 活跃卡片 → CPA Server
+                                         ↓
+                                    Card { baseUrl, keyId }
+                                         ↓
+                                    Key Pool { api_keys.json }
+                                         ↓
+                                    实际 API Key</code></pre>
+<h3 id="2-3-配置复用">2.3 配置复用<a class="anchor" href="#2-3-配置复用" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>配置项</th><th>存储位置</th><th>复用方式</th></tr></thead><tbody><tr><td>CPA 端点</td><td><code>cc_switch.json</code> → Card.baseUrl</td><td>直接复用</td></tr><tr><td>API 密钥</td><td><code>api_keys.json</code> → PoolEntry.key</td><td>直接复用</td></tr><tr><td>默认模型</td><td><code>cc_switch.json</code> → Card.defaultModel</td><td>直接复用</td></tr><tr><td>协议类型</td><td><code>cc_switch.json</code> → Card.protocol</td><td>固定为 <code>openai</code></td></tr></tbody></table>
+<hr>
+<h2 id="3-实现方案">3. 实现方案<a class="anchor" href="#3-实现方案" aria-label="锚点">#</a></h2>
+<h3 id="3-1-注册-cpa-为新-app-constants-js">3.1 注册 CPA 为新 App (constants.js)<a class="anchor" href="#3-1-注册-cpa-为新-app-constants-js" aria-label="锚点">#</a></h3>
+<p><strong>修改位置</strong>: <code>services/backend/src/services/domain/config/ccSwitch/constants.js</code></p>
+<pre><code class="language-javascript"><span class="hljs-comment">// 在 APPS 常量中添加 CPA</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">APPS</span> = <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">freeze</span>({
+  <span class="hljs-attr">CLAUDE_CODE</span>: <span class="hljs-string">&#x27;claude-code&#x27;</span>,
+  <span class="hljs-attr">CODEX</span>: <span class="hljs-string">&#x27;codex&#x27;</span>,
+  <span class="hljs-attr">OPENCODE</span>: <span class="hljs-string">&#x27;opencode&#x27;</span>,
+  <span class="hljs-attr">GEMINI</span>: <span class="hljs-string">&#x27;gemini&#x27;</span>,
+  <span class="hljs-attr">DEEPSEEK</span>: <span class="hljs-string">&#x27;deepseek&#x27;</span>,
+  <span class="hljs-attr">REASONIX</span>: <span class="hljs-string">&#x27;reasonix&#x27;</span>,
+  <span class="hljs-attr">COMMAND_CODE</span>: <span class="hljs-string">&#x27;command-code&#x27;</span>,
+  <span class="hljs-attr">YCODE</span>: <span class="hljs-string">&#x27;ycode&#x27;</span>,
+  <span class="hljs-attr">ZCODE</span>: <span class="hljs-string">&#x27;zcode&#x27;</span>,
+  <span class="hljs-attr">CPA</span>: <span class="hljs-string">&#x27;cpa&#x27;</span>,  <span class="hljs-comment">// 新增</span>
+});
+
+<span class="hljs-comment">// 在 APP_LABELS 中添加</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">APP_LABELS</span> = <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">freeze</span>({
+  [<span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">CLAUDE_CODE</span>]: <span class="hljs-string">&#x27;Claude Code&#x27;</span>,
+  [<span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">CODEX</span>]: <span class="hljs-string">&#x27;Codex CLI&#x27;</span>,
+  [<span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">OPENCODE</span>]: <span class="hljs-string">&#x27;OpenCode CLI&#x27;</span>,
+  [<span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">GEMINI</span>]: <span class="hljs-string">&#x27;Gemini CLI&#x27;</span>,
+  [<span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">DEEPSEEK</span>]: <span class="hljs-string">&#x27;DeepSeek TUI&#x27;</span>,
+  [<span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">REASONIX</span>]: <span class="hljs-string">&#x27;Reasonix&#x27;</span>,
+  [<span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">COMMAND_CODE</span>]: <span class="hljs-string">&#x27;Command Code&#x27;</span>,
+  [<span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">YCODE</span>]: <span class="hljs-string">&#x27;YCode&#x27;</span>,
+  [<span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">ZCODE</span>]: <span class="hljs-string">&#x27;ZCode&#x27;</span>,
+  [<span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">CPA</span>]: <span class="hljs-string">&#x27;CPA (CLI Proxy API)&#x27;</span>,  <span class="hljs-comment">// 新增</span>
+});</code></pre>
+<h3 id="3-2-创建-cpa-app-writer-cpawriter-js">3.2 创建 CPA App Writer (cpaWriter.js)<a class="anchor" href="#3-2-创建-cpa-app-writer-cpawriter-js" aria-label="锚点">#</a></h3>
+<p><strong>位置</strong>: <code>services/backend/src/services/domain/config/ccSwitch/cpaWriter.js</code></p>
+<pre><code class="language-javascript"><span class="hljs-comment">/**
+ * cpaWriter — CPA (CLI Proxy API) 配置写入器
+ *
+ * 职责：
+ *   - 应用 Provider Card 到 CPA Server 配置
+ *   - 探测 CPA Server 运行状态
+ *   - 生成 CPA 配置文件
+ *
+ * 设计原则：
+ *   - 复用 ccSwitch Card 系统
+ *   - CPA 使用 OpenAI 协议
+ *   - 配置通过环境变量或 config.yaml 管理
+ */</span>
+<span class="hljs-meta">&#x27;use strict&#x27;</span>;
+
+<span class="hljs-keyword">const</span> fs = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;fs&#x27;</span>);
+<span class="hljs-keyword">const</span> path = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;path&#x27;</span>);
+<span class="hljs-keyword">const</span> { <span class="hljs-variable constant_">APPS</span> } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./constants.js&#x27;</span>);
+
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">CPA_APP</span> = <span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">CPA</span>;
+
+<span class="hljs-comment">/**
+ * 应用卡片到 CPA 配置
+ * <span class="hljs-doctag">@param</span> {<span class="hljs-type">Card</span>} <span class="hljs-variable">card</span> - Provider Card
+ * <span class="hljs-doctag">@param</span> {<span class="hljs-type">Object</span>} <span class="hljs-variable">opts</span> - 选项
+ * <span class="hljs-doctag">@param</span> {<span class="hljs-type">string</span>} opts.key - API Key (明文)
+ * <span class="hljs-doctag">@returns</span> {<span class="hljs-type">Promise&lt;{success: boolean, error?: string, detail?: unknown</span>}&gt;}
+ */</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">applyCardToCpa</span>(<span class="hljs-params">card, opts = {}</span>) {
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> endpoint = card.<span class="hljs-property">baseUrl</span>;
+    <span class="hljs-keyword">const</span> key = opts.<span class="hljs-property">key</span> || <span class="hljs-string">&#x27;&#x27;</span>;
+    <span class="hljs-keyword">const</span> model = card.<span class="hljs-property">defaultModel</span> || <span class="hljs-string">&#x27;gpt-4&#x27;</span>;
+
+    <span class="hljs-comment">// 生成 CPA 环境变量配置</span>
+    <span class="hljs-keyword">const</span> envConfig = {
+      <span class="hljs-attr">CPA_ENDPOINT</span>: endpoint,
+      <span class="hljs-attr">CPA_API_KEY</span>: key,
+      <span class="hljs-attr">CPA_MODEL</span>: model,
+    };
+
+    <span class="hljs-comment">// 写入到 CPA 配置目录（如果存在）</span>
+    <span class="hljs-keyword">const</span> cpaConfigDir = <span class="hljs-title function_">_findCpaConfigDir</span>();
+    <span class="hljs-keyword">if</span> (cpaConfigDir) {
+      <span class="hljs-keyword">await</span> <span class="hljs-title function_">_writeCpaEnvFile</span>(cpaConfigDir, envConfig);
+    }
+
+    <span class="hljs-comment">// 同时设置进程环境变量（立即生效）</span>
+    <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">assign</span>(process.<span class="hljs-property">env</span>, envConfig);
+
+    <span class="hljs-keyword">return</span> {
+      <span class="hljs-attr">success</span>: <span class="hljs-literal">true</span>,
+      <span class="hljs-attr">detail</span>: {
+        endpoint,
+        model,
+        <span class="hljs-attr">hasKey</span>: !!key,
+        <span class="hljs-attr">configDir</span>: cpaConfigDir,
+      },
+    };
+  } <span class="hljs-keyword">catch</span> (error) {
+    <span class="hljs-keyword">return</span> {
+      <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>,
+      <span class="hljs-attr">error</span>: <span class="hljs-string">`CPA 配置写入失败: <span class="hljs-subst">${error.message}</span>`</span>,
+    };
+  }
+}
+
+<span class="hljs-comment">/**
+ * 探测 CPA 配置
+ * <span class="hljs-doctag">@param</span> {<span class="hljs-type">string</span>} <span class="hljs-variable">app</span> - 应用名
+ * <span class="hljs-doctag">@returns</span> {<span class="hljs-type">{success: boolean, providers: Array&lt;Record&lt;string, unknown&gt;&gt;, error?: string</span>}}
+ */</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">detectCpaConfig</span>(<span class="hljs-params">app</span>) {
+  <span class="hljs-keyword">if</span> (app !== <span class="hljs-variable constant_">CPA_APP</span>) {
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">providers</span>: [], <span class="hljs-attr">error</span>: <span class="hljs-string">`不支持的应用: <span class="hljs-subst">${app}</span>`</span> };
+  }
+
+  <span class="hljs-keyword">const</span> providers = [];
+
+  <span class="hljs-comment">// 从环境变量探测</span>
+  <span class="hljs-keyword">const</span> endpoint = process.<span class="hljs-property">env</span>.<span class="hljs-property">CPA_ENDPOINT</span>;
+  <span class="hljs-keyword">if</span> (endpoint) {
+    providers.<span class="hljs-title function_">push</span>({
+      <span class="hljs-attr">id</span>: <span class="hljs-string">&#x27;env&#x27;</span>,
+      <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;Environment Config&#x27;</span>,
+      endpoint,
+      <span class="hljs-attr">kind</span>: <span class="hljs-string">&#x27;openai&#x27;</span>,
+      <span class="hljs-attr">models</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">CPA_MODEL</span> ? [process.<span class="hljs-property">env</span>.<span class="hljs-property">CPA_MODEL</span>] : [],
+      <span class="hljs-attr">defaultModel</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">CPA_MODEL</span> || <span class="hljs-string">&#x27;&#x27;</span>,
+    });
+  }
+
+  <span class="hljs-comment">// 从 CPA 配置文件探测</span>
+  <span class="hljs-keyword">const</span> configPath = <span class="hljs-title function_">_findCpaConfigFile</span>();
+  <span class="hljs-keyword">if</span> (configPath) {
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">const</span> content = fs.<span class="hljs-title function_">readFileSync</span>(configPath, <span class="hljs-string">&#x27;utf-8&#x27;</span>);
+      <span class="hljs-comment">// 解析 YAML 或 JSON 配置</span>
+      <span class="hljs-keyword">const</span> config = <span class="hljs-title function_">_parseCpaConfig</span>(content);
+      <span class="hljs-keyword">if</span> (config &amp;&amp; config.<span class="hljs-property">endpoint</span>) {
+        providers.<span class="hljs-title function_">push</span>({
+          <span class="hljs-attr">id</span>: <span class="hljs-string">&#x27;file&#x27;</span>,
+          <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;Config File&#x27;</span>,
+          <span class="hljs-attr">endpoint</span>: config.<span class="hljs-property">endpoint</span>,
+          <span class="hljs-attr">kind</span>: <span class="hljs-string">&#x27;openai&#x27;</span>,
+          <span class="hljs-attr">models</span>: config.<span class="hljs-property">models</span> || [],
+          <span class="hljs-attr">defaultModel</span>: config.<span class="hljs-property">model</span> || <span class="hljs-string">&#x27;&#x27;</span>,
+        });
+      }
+    } <span class="hljs-keyword">catch</span> {
+      <span class="hljs-comment">// 配置文件读取失败，忽略</span>
+    }
+  }
+
+  <span class="hljs-keyword">return</span> {
+    <span class="hljs-attr">success</span>: <span class="hljs-literal">true</span>,
+    providers,
+  };
+}
+
+<span class="hljs-comment">/**
+ * Preflight 校验
+ * <span class="hljs-doctag">@param</span> {<span class="hljs-type">Card</span>} <span class="hljs-variable">card</span> - Provider Card
+ * <span class="hljs-doctag">@param</span> {<span class="hljs-type">string</span>} <span class="hljs-variable">app</span> - 应用名
+ * <span class="hljs-doctag">@returns</span> {<span class="hljs-type">{ok: boolean, reason?: string, warning?: string</span>}}
+ */</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">preflightCardForCpa</span>(<span class="hljs-params">card, app</span>) {
+  <span class="hljs-keyword">if</span> (app !== <span class="hljs-variable constant_">CPA_APP</span>) {
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">ok</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">reason</span>: <span class="hljs-string">`不支持的应用: <span class="hljs-subst">${app}</span>`</span> };
+  }
+
+  <span class="hljs-comment">// 校验协议</span>
+  <span class="hljs-keyword">if</span> (card.<span class="hljs-property">protocol</span> !== <span class="hljs-string">&#x27;openai&#x27;</span>) {
+    <span class="hljs-keyword">return</span> {
+      <span class="hljs-attr">ok</span>: <span class="hljs-literal">false</span>,
+      <span class="hljs-attr">reason</span>: <span class="hljs-string">`CPA 仅支持 OpenAI 协议，当前协议: <span class="hljs-subst">${card.protocol}</span>`</span>,
+    };
+  }
+
+  <span class="hljs-comment">// 校验端点</span>
+  <span class="hljs-keyword">if</span> (!card.<span class="hljs-property">baseUrl</span>) {
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">ok</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">reason</span>: <span class="hljs-string">&#x27;CPA 端点不能为空&#x27;</span> };
+  }
+
+  <span class="hljs-comment">// 警告：无密钥</span>
+  <span class="hljs-keyword">if</span> (!card.<span class="hljs-property">keyId</span>) {
+    <span class="hljs-keyword">return</span> {
+      <span class="hljs-attr">ok</span>: <span class="hljs-literal">true</span>,
+      <span class="hljs-attr">warning</span>: <span class="hljs-string">&#x27;未配置 API 密钥，CPA 可能需要密钥才能访问&#x27;</span>,
+    };
+  }
+
+  <span class="hljs-keyword">return</span> { <span class="hljs-attr">ok</span>: <span class="hljs-literal">true</span> };
+}
+
+<span class="hljs-comment">// ── 内部辅助函数 ─────────────────────────────────────────────</span>
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">_findCpaConfigDir</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-comment">// 尝试查找 CPA 配置目录</span>
+  <span class="hljs-keyword">const</span> candidates = [
+    process.<span class="hljs-property">env</span>.<span class="hljs-property">CPA_CONFIG_DIR</span>,
+    path.<span class="hljs-title function_">join</span>(process.<span class="hljs-property">env</span>.<span class="hljs-property">HOME</span> || process.<span class="hljs-property">env</span>.<span class="hljs-property">USERPROFILE</span> || <span class="hljs-string">&#x27;&#x27;</span>, <span class="hljs-string">&#x27;.cli-proxy-api&#x27;</span>),
+    path.<span class="hljs-title function_">join</span>(process.<span class="hljs-property">env</span>.<span class="hljs-property">HOME</span> || process.<span class="hljs-property">env</span>.<span class="hljs-property">USERPROFILE</span> || <span class="hljs-string">&#x27;&#x27;</span>, <span class="hljs-string">&#x27;.cpa&#x27;</span>),
+  ].<span class="hljs-title function_">filter</span>(<span class="hljs-title class_">Boolean</span>);
+
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> dir <span class="hljs-keyword">of</span> candidates) {
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">if</span> (fs.<span class="hljs-title function_">existsSync</span>(dir)) <span class="hljs-keyword">return</span> dir;
+    } <span class="hljs-keyword">catch</span> {
+      <span class="hljs-keyword">continue</span>;
+    }
+  }
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">_findCpaConfigFile</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> dir = <span class="hljs-title function_">_findCpaConfigDir</span>();
+  <span class="hljs-keyword">if</span> (!dir) <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+
+  <span class="hljs-keyword">const</span> candidates = [<span class="hljs-string">&#x27;config.yaml&#x27;</span>, <span class="hljs-string">&#x27;config.json&#x27;</span>, <span class="hljs-string">&#x27;.env&#x27;</span>];
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> file <span class="hljs-keyword">of</span> candidates) {
+    <span class="hljs-keyword">const</span> fullPath = path.<span class="hljs-title function_">join</span>(dir, file);
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">if</span> (fs.<span class="hljs-title function_">existsSync</span>(fullPath)) <span class="hljs-keyword">return</span> fullPath;
+    } <span class="hljs-keyword">catch</span> {
+      <span class="hljs-keyword">continue</span>;
+    }
+  }
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+}
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">_writeCpaEnvFile</span>(<span class="hljs-params">dir, config</span>) {
+  <span class="hljs-keyword">const</span> envFile = path.<span class="hljs-title function_">join</span>(dir, <span class="hljs-string">&#x27;.env&#x27;</span>);
+  <span class="hljs-keyword">const</span> lines = <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">entries</span>(config)
+    .<span class="hljs-title function_">map</span>(<span class="hljs-function">(<span class="hljs-params">[key, value]</span>) =&gt;</span> <span class="hljs-string">`<span class="hljs-subst">${key}</span>=<span class="hljs-subst">${value}</span>`</span>)
+    .<span class="hljs-title function_">join</span>(<span class="hljs-string">&#x27;\n&#x27;</span>);
+  fs.<span class="hljs-title function_">writeFileSync</span>(envFile, lines, <span class="hljs-string">&#x27;utf-8&#x27;</span>);
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">_parseCpaConfig</span>(<span class="hljs-params">content</span>) {
+  <span class="hljs-comment">// 简单的 YAML/JSON 解析</span>
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">return</span> <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(content);
+  } <span class="hljs-keyword">catch</span> {
+    <span class="hljs-comment">// 尝试简单的 YAML 解析</span>
+    <span class="hljs-keyword">const</span> endpointMatch = content.<span class="hljs-title function_">match</span>(<span class="hljs-regexp">/endpoint:\s*(.+)/</span>);
+    <span class="hljs-keyword">const</span> modelMatch = content.<span class="hljs-title function_">match</span>(<span class="hljs-regexp">/model:\s*(.+)/</span>);
+    <span class="hljs-keyword">if</span> (endpointMatch) {
+      <span class="hljs-keyword">return</span> {
+        <span class="hljs-attr">endpoint</span>: endpointMatch[<span class="hljs-number">1</span>].<span class="hljs-title function_">trim</span>().<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/[&#x27;&quot;]/g</span>, <span class="hljs-string">&#x27;&#x27;</span>),
+        <span class="hljs-attr">model</span>: modelMatch ? modelMatch[<span class="hljs-number">1</span>].<span class="hljs-title function_">trim</span>().<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/[&#x27;&quot;]/g</span>, <span class="hljs-string">&#x27;&#x27;</span>) : <span class="hljs-string">&#x27;&#x27;</span>,
+      };
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+  }
+}
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = {
+  applyCardToCpa,
+  detectCpaConfig,
+  preflightCardForCpa,
+};</code></pre>
+<h3 id="3-3-注册到-app-writers-appwriters-js">3.3 注册到 App Writers (appWriters.js)<a class="anchor" href="#3-3-注册到-app-writers-appwriters-js" aria-label="锚点">#</a></h3>
+<p><strong>修改位置</strong>: <code>services/backend/src/services/domain/config/ccSwitch/appWriters.js</code></p>
+<pre><code class="language-javascript"><span class="hljs-comment">// 在导入部分添加</span>
+<span class="hljs-keyword">const</span> cpaWriter = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./cpaWriter.js&#x27;</span>);
+
+<span class="hljs-comment">// 在 applyCardToApp 函数中添加 CPA 分支</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">applyCardToApp</span>(<span class="hljs-params">card, app, opts = {}</span>) {
+  <span class="hljs-comment">// ... 现有代码</span>
+
+  <span class="hljs-comment">// CPA 应用</span>
+  <span class="hljs-keyword">if</span> (app === <span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">CPA</span>) {
+    <span class="hljs-keyword">return</span> cpaWriter.<span class="hljs-title function_">applyCardToCpa</span>(card, opts);
+  }
+
+  <span class="hljs-comment">// ... 其他应用</span>
+}
+
+<span class="hljs-comment">// 在 detectCardInApp 函数中添加 CPA 分支</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">detectCardInApp</span>(<span class="hljs-params">app</span>) {
+  <span class="hljs-comment">// ... 现有代码</span>
+
+  <span class="hljs-comment">// CPA 应用</span>
+  <span class="hljs-keyword">if</span> (app === <span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">CPA</span>) {
+    <span class="hljs-keyword">return</span> cpaWriter.<span class="hljs-title function_">detectCpaConfig</span>(app);
+  }
+
+  <span class="hljs-comment">// ... 其他应用</span>
+}
+
+<span class="hljs-comment">// 在 preflightCardForApp 函数中添加 CPA 分支</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">preflightCardForApp</span>(<span class="hljs-params">card, app</span>) {
+  <span class="hljs-comment">// ... 现有代码</span>
+
+  <span class="hljs-comment">// CPA 应用</span>
+  <span class="hljs-keyword">if</span> (app === <span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">CPA</span>) {
+    <span class="hljs-keyword">return</span> cpaWriter.<span class="hljs-title function_">preflightCardForCpa</span>(card, app);
+  }
+
+  <span class="hljs-comment">// ... 其他应用</span>
+}</code></pre>
+<h3 id="3-4-创建-cpa-gateway-adapter-cpaadapter-js">3.4 创建 CPA Gateway Adapter (cpaAdapter.js)<a class="anchor" href="#3-4-创建-cpa-gateway-adapter-cpaadapter-js" aria-label="锚点">#</a></h3>
+<p><strong>位置</strong>: <code>services/backend/src/services/gateway/adapters/cpaAdapter.js</code></p>
+<pre><code class="language-javascript"><span class="hljs-comment">/**
+ * CPA Adapter — 从 ccSwitch 读取活跃卡片，调用 CPA Server
+ *
+ * 设计原则：
+ *   - 复用 ccSwitch Card 系统获取配置
+ *   - 使用 OpenAI 协议调用 CPA
+ *   - 支持多账号轮询（由 CPA Server 处理）
+ */</span>
+<span class="hljs-meta">&#x27;use strict&#x27;</span>;
+
+<span class="hljs-keyword">const</span> { <span class="hljs-attr">PRIMARY</span>: <span class="hljs-variable constant_">MODELS</span> } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../../../constants/models&#x27;</span>);
+<span class="hljs-keyword">const</span> { createAdapterRuntimeDiagnosticsStore } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../runtimeDiagnosticsStore&#x27;</span>);
+<span class="hljs-keyword">const</span> { buildSuccess, buildFailure } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./_responseBuilder&#x27;</span>);
+<span class="hljs-keyword">const</span> { isAbortLikeError } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./_abortHelpers&#x27;</span>);
+
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">DEFAULT_MODEL</span> = <span class="hljs-variable constant_">MODELS</span>.<span class="hljs-property">cpa</span> || <span class="hljs-string">&#x27;gpt-4&#x27;</span>;
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">TIMEOUT_MS</span> = <span class="hljs-built_in">parseInt</span>(process.<span class="hljs-property">env</span>.<span class="hljs-property">CPA_TIMEOUT_MS</span> || <span class="hljs-string">&#x27;120000&#x27;</span>, <span class="hljs-number">10</span>);
+
+<span class="hljs-keyword">const</span> _runtimeDiagnosticsStore = <span class="hljs-title function_">createAdapterRuntimeDiagnosticsStore</span>(<span class="hljs-string">&#x27;cpa&#x27;</span>);
+<span class="hljs-keyword">let</span> _runtimeDiagnostics = _runtimeDiagnosticsStore.<span class="hljs-title function_">createEmptyDiagnostic</span>();
+
+<span class="hljs-keyword">let</span> _available = <span class="hljs-literal">null</span>;
+<span class="hljs-keyword">let</span> _configCache = <span class="hljs-literal">null</span>;
+
+<span class="hljs-comment">// ── 从 ccSwitch 读取配置 ─────────────────────────────────────</span>
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">_loadConfig</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">if</span> (_configCache) <span class="hljs-keyword">return</span> _configCache;
+
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-comment">// 尝试从 ccSwitch store 读取活跃卡片</span>
+    <span class="hljs-keyword">const</span> store = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../../domain/config/ccSwitch/store.js&#x27;</span>);
+    <span class="hljs-keyword">const</span> { <span class="hljs-variable constant_">APPS</span> } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../../domain/config/ccSwitch/constants.js&#x27;</span>);
+
+    <span class="hljs-keyword">const</span> { cards, active } = store.<span class="hljs-title function_">listCards</span>();
+    <span class="hljs-keyword">const</span> activeCardId = active[<span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">CPA</span>];
+
+    <span class="hljs-keyword">if</span> (activeCardId) {
+      <span class="hljs-keyword">const</span> card = cards.<span class="hljs-title function_">find</span>(<span class="hljs-function">(<span class="hljs-params">c</span>) =&gt;</span> c.<span class="hljs-property">id</span> === activeCardId);
+      <span class="hljs-keyword">if</span> (card) {
+        <span class="hljs-comment">// 从密钥池获取 API Key</span>
+        <span class="hljs-keyword">let</span> key = <span class="hljs-string">&#x27;&#x27;</span>;
+        <span class="hljs-keyword">if</span> (card.<span class="hljs-property">keyId</span>) {
+          key = <span class="hljs-keyword">await</span> <span class="hljs-title function_">_resolveKeyFromPool</span>(card.<span class="hljs-property">keyId</span>);
+        }
+
+        _configCache = {
+          <span class="hljs-attr">endpoint</span>: card.<span class="hljs-property">baseUrl</span>,
+          key,
+          <span class="hljs-attr">model</span>: card.<span class="hljs-property">defaultModel</span> || <span class="hljs-variable constant_">DEFAULT_MODEL</span>,
+        };
+        <span class="hljs-keyword">return</span> _configCache;
+      }
+    }
+  } <span class="hljs-keyword">catch</span> {
+    <span class="hljs-comment">// ccSwitch 不可用，回退到环境变量</span>
+  }
+
+  <span class="hljs-comment">// 回退到环境变量</span>
+  _configCache = {
+    <span class="hljs-attr">endpoint</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">CPA_ENDPOINT</span> || <span class="hljs-string">&#x27;http://localhost:8317&#x27;</span>,
+    <span class="hljs-attr">key</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">CPA_API_KEY</span> || <span class="hljs-string">&#x27;&#x27;</span>,
+    <span class="hljs-attr">model</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">CPA_MODEL</span> || <span class="hljs-variable constant_">DEFAULT_MODEL</span>,
+  };
+  <span class="hljs-keyword">return</span> _configCache;
+}
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">_resolveKeyFromPool</span>(<span class="hljs-params">keyId</span>) {
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> fs = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;fs&#x27;</span>);
+    <span class="hljs-keyword">const</span> path = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;path&#x27;</span>);
+    <span class="hljs-keyword">const</span> os = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;os&#x27;</span>);
+    <span class="hljs-keyword">const</span> { keyIdFor } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../../domain/config/ccSwitch/store.js&#x27;</span>);
+
+    <span class="hljs-keyword">const</span> dataHome = process.<span class="hljs-property">env</span>.<span class="hljs-property">KHY_DATA_HOME</span> || path.<span class="hljs-title function_">join</span>(os.<span class="hljs-title function_">homedir</span>(), <span class="hljs-string">&#x27;.khy&#x27;</span>);
+    <span class="hljs-keyword">const</span> poolFile = path.<span class="hljs-title function_">join</span>(dataHome, <span class="hljs-string">&#x27;api_keys.json&#x27;</span>);
+
+    <span class="hljs-keyword">if</span> (!fs.<span class="hljs-title function_">existsSync</span>(poolFile)) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;&#x27;</span>;
+
+    <span class="hljs-keyword">const</span> doc = <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(fs.<span class="hljs-title function_">readFileSync</span>(poolFile, <span class="hljs-string">&#x27;utf-8&#x27;</span>));
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> [provider, entries] <span class="hljs-keyword">of</span> <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">entries</span>(doc)) {
+      <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> e <span class="hljs-keyword">of</span> entries || []) {
+        <span class="hljs-keyword">if</span> (<span class="hljs-title function_">keyIdFor</span>(provider, e.<span class="hljs-property">key</span>) === keyId) {
+          <span class="hljs-keyword">return</span> e.<span class="hljs-property">key</span>;
+        }
+      }
+    }
+  } <span class="hljs-keyword">catch</span> {
+    <span class="hljs-comment">// 密钥池不可用</span>
+  }
+  <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;&#x27;</span>;
+}
+
+<span class="hljs-comment">// ── Detection ─────────────────────────────────────────────────</span>
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">detect</span>(<span class="hljs-params">forceRefresh = <span class="hljs-literal">false</span></span>) {
+  <span class="hljs-keyword">if</span> (_available !== <span class="hljs-literal">null</span> &amp;&amp; !forceRefresh) {
+    <span class="hljs-keyword">return</span> _available;
+  }
+
+  <span class="hljs-comment">// 检查环境变量或 ccSwitch 配置</span>
+  _available = !!(process.<span class="hljs-property">env</span>.<span class="hljs-property">CPA_ENDPOINT</span> || _configCache?.<span class="hljs-property">endpoint</span>);
+  <span class="hljs-keyword">return</span> _available;
+}
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">detectAsync</span>(<span class="hljs-params">forceRefresh = <span class="hljs-literal">false</span></span>) {
+  <span class="hljs-keyword">const</span> config = <span class="hljs-keyword">await</span> <span class="hljs-title function_">_loadConfig</span>();
+  _available = !!config.<span class="hljs-property">endpoint</span>;
+  <span class="hljs-keyword">return</span> _available;
+}
+
+<span class="hljs-comment">// ── Model Listing ─────────────────────────────────────────────</span>
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">listModels</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> config = <span class="hljs-keyword">await</span> <span class="hljs-title function_">_loadConfig</span>();
+
+  <span class="hljs-keyword">const</span> fallback = [
+    {
+      <span class="hljs-attr">id</span>: config.<span class="hljs-property">model</span>,
+      <span class="hljs-attr">name</span>: config.<span class="hljs-property">model</span>,
+      <span class="hljs-attr">isDefault</span>: <span class="hljs-literal">true</span>,
+      <span class="hljs-attr">provider</span>: <span class="hljs-string">&#x27;cpa&#x27;</span>,
+      <span class="hljs-attr">description</span>: <span class="hljs-string">&#x27;CPA reverse proxy&#x27;</span>,
+    },
+  ];
+
+  <span class="hljs-comment">// 尝试从 CPA Server 获取模型列表</span>
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> endpoint = config.<span class="hljs-property">endpoint</span>.<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/\/+$/</span>, <span class="hljs-string">&#x27;&#x27;</span>);
+    <span class="hljs-keyword">const</span> url = <span class="hljs-string">`<span class="hljs-subst">${endpoint}</span>/v1/models`</span>;
+
+    <span class="hljs-keyword">const</span> headers = {};
+    <span class="hljs-keyword">if</span> (config.<span class="hljs-property">key</span>) {
+      headers[<span class="hljs-string">&#x27;Authorization&#x27;</span>] = <span class="hljs-string">`Bearer <span class="hljs-subst">${config.key}</span>`</span>;
+    }
+
+    <span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fetch</span>(url, {
+      headers,
+      <span class="hljs-attr">signal</span>: <span class="hljs-title class_">AbortSignal</span>.<span class="hljs-title function_">timeout</span>(<span class="hljs-number">5000</span>),
+    });
+
+    <span class="hljs-keyword">if</span> (response.<span class="hljs-property">ok</span>) {
+      <span class="hljs-keyword">const</span> data = <span class="hljs-keyword">await</span> response.<span class="hljs-title function_">json</span>();
+      <span class="hljs-keyword">return</span> (data.<span class="hljs-property">data</span> || []).<span class="hljs-title function_">map</span>(<span class="hljs-function">(<span class="hljs-params">m</span>) =&gt;</span> ({
+        <span class="hljs-attr">id</span>: m.<span class="hljs-property">id</span>,
+        <span class="hljs-attr">name</span>: m.<span class="hljs-property">id</span>,
+        <span class="hljs-attr">isDefault</span>: m.<span class="hljs-property">id</span> === config.<span class="hljs-property">model</span>,
+        <span class="hljs-attr">provider</span>: <span class="hljs-string">&#x27;cpa&#x27;</span>,
+        <span class="hljs-attr">description</span>: m.<span class="hljs-property">description</span> || <span class="hljs-string">&#x27;&#x27;</span>,
+      }));
+    }
+  } <span class="hljs-keyword">catch</span> {
+    <span class="hljs-comment">// CPA Server 不可用，使用默认模型</span>
+  }
+
+  <span class="hljs-keyword">return</span> fallback;
+}
+
+<span class="hljs-comment">// ── Generation ────────────────────────────────────────────────</span>
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">generate</span>(<span class="hljs-params">prompt, options = {}</span>) {
+  <span class="hljs-keyword">const</span> config = <span class="hljs-keyword">await</span> <span class="hljs-title function_">_loadConfig</span>();
+  <span class="hljs-keyword">const</span> model = options.<span class="hljs-property">model</span> || config.<span class="hljs-property">model</span>;
+  <span class="hljs-keyword">const</span> endpoint = config.<span class="hljs-property">endpoint</span>.<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/\/+$/</span>, <span class="hljs-string">&#x27;&#x27;</span>);
+  <span class="hljs-keyword">const</span> url = <span class="hljs-string">`<span class="hljs-subst">${endpoint}</span>/v1/chat/completions`</span>;
+
+  <span class="hljs-keyword">const</span> requestBody = {
+    model,
+    <span class="hljs-attr">messages</span>: [{ <span class="hljs-attr">role</span>: <span class="hljs-string">&#x27;user&#x27;</span>, <span class="hljs-attr">content</span>: prompt }],
+    <span class="hljs-attr">stream</span>: !!options.<span class="hljs-property">onChunk</span>,
+    <span class="hljs-attr">temperature</span>: options.<span class="hljs-property">temperature</span>,
+    <span class="hljs-attr">max_tokens</span>: options.<span class="hljs-property">maxTokens</span>,
+  };
+
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> headers = {
+      <span class="hljs-string">&#x27;Content-Type&#x27;</span>: <span class="hljs-string">&#x27;application/json&#x27;</span>,
+      ...(config.<span class="hljs-property">key</span> ? { <span class="hljs-title class_">Authorization</span>: <span class="hljs-string">`Bearer <span class="hljs-subst">${config.key}</span>`</span> } : {}),
+    };
+
+    <span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fetch</span>(url, {
+      <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;POST&#x27;</span>,
+      headers,
+      <span class="hljs-attr">body</span>: <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>(requestBody),
+      <span class="hljs-attr">signal</span>: <span class="hljs-title class_">AbortSignal</span>.<span class="hljs-title function_">timeout</span>(<span class="hljs-variable constant_">TIMEOUT_MS</span>),
+    });
+
+    <span class="hljs-keyword">if</span> (!response.<span class="hljs-property">ok</span>) {
+      <span class="hljs-keyword">const</span> errorText = <span class="hljs-keyword">await</span> response.<span class="hljs-title function_">text</span>().<span class="hljs-title function_">catch</span>(<span class="hljs-function">() =&gt;</span> <span class="hljs-string">&#x27;&#x27;</span>);
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">buildFailure</span>(<span class="hljs-string">`CPA request failed: <span class="hljs-subst">${response.status}</span> <span class="hljs-subst">${errorText}</span>`</span>, {
+        <span class="hljs-attr">adapter</span>: <span class="hljs-string">&#x27;cpa&#x27;</span>,
+        <span class="hljs-attr">provider</span>: <span class="hljs-string">&#x27;CPA&#x27;</span>,
+        <span class="hljs-attr">attempts</span>: [{ <span class="hljs-attr">provider</span>: <span class="hljs-string">&#x27;CPA&#x27;</span>, <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">error</span>: <span class="hljs-string">`<span class="hljs-subst">${response.status}</span>`</span> }],
+      });
+    }
+
+    <span class="hljs-comment">// 处理流式响应</span>
+    <span class="hljs-keyword">if</span> (options.<span class="hljs-property">onChunk</span>) {
+      <span class="hljs-keyword">return</span> <span class="hljs-keyword">await</span> <span class="hljs-title function_">_handleStreaming</span>(response, options, model);
+    }
+
+    <span class="hljs-comment">// 非流式响应</span>
+    <span class="hljs-keyword">const</span> data = <span class="hljs-keyword">await</span> response.<span class="hljs-title function_">json</span>();
+    <span class="hljs-keyword">const</span> content = data.<span class="hljs-property">choices</span>?.[<span class="hljs-number">0</span>]?.<span class="hljs-property">message</span>?.<span class="hljs-property">content</span> || <span class="hljs-string">&#x27;&#x27;</span>;
+
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">buildSuccess</span>({
+      <span class="hljs-attr">text</span>: content,
+      <span class="hljs-attr">model</span>: data.<span class="hljs-property">model</span> || model,
+      <span class="hljs-attr">tokenUsage</span>: {
+        <span class="hljs-attr">promptTokens</span>: data.<span class="hljs-property">usage</span>?.<span class="hljs-property">prompt_tokens</span> || <span class="hljs-number">0</span>,
+        <span class="hljs-attr">completionTokens</span>: data.<span class="hljs-property">usage</span>?.<span class="hljs-property">completion_tokens</span> || <span class="hljs-number">0</span>,
+      },
+    });
+  } <span class="hljs-keyword">catch</span> (error) {
+    <span class="hljs-keyword">if</span> (<span class="hljs-title function_">isAbortLikeError</span>(error)) {
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">buildFailure</span>(<span class="hljs-string">&#x27;CPA request timeout&#x27;</span>, {
+        <span class="hljs-attr">adapter</span>: <span class="hljs-string">&#x27;cpa&#x27;</span>,
+        <span class="hljs-attr">provider</span>: <span class="hljs-string">&#x27;CPA&#x27;</span>,
+        <span class="hljs-attr">attempts</span>: [{ <span class="hljs-attr">provider</span>: <span class="hljs-string">&#x27;CPA&#x27;</span>, <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">error</span>: <span class="hljs-string">&#x27;timeout&#x27;</span> }],
+      });
+    }
+
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">buildFailure</span>(error.<span class="hljs-property">message</span>, {
+      <span class="hljs-attr">adapter</span>: <span class="hljs-string">&#x27;cpa&#x27;</span>,
+      <span class="hljs-attr">provider</span>: <span class="hljs-string">&#x27;CPA&#x27;</span>,
+      <span class="hljs-attr">attempts</span>: [{ <span class="hljs-attr">provider</span>: <span class="hljs-string">&#x27;CPA&#x27;</span>, <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">error</span>: error.<span class="hljs-property">message</span> }],
+    });
+  }
+}
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">_handleStreaming</span>(<span class="hljs-params">response, options, model</span>) {
+  <span class="hljs-keyword">const</span> reader = response.<span class="hljs-property">body</span>.<span class="hljs-title function_">getReader</span>();
+  <span class="hljs-keyword">const</span> decoder = <span class="hljs-keyword">new</span> <span class="hljs-title class_">TextDecoder</span>();
+  <span class="hljs-keyword">let</span> buffer = <span class="hljs-string">&#x27;&#x27;</span>;
+  <span class="hljs-keyword">let</span> fullText = <span class="hljs-string">&#x27;&#x27;</span>;
+
+  <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) {
+    <span class="hljs-keyword">const</span> { done, value } = <span class="hljs-keyword">await</span> reader.<span class="hljs-title function_">read</span>();
+    <span class="hljs-keyword">if</span> (done) <span class="hljs-keyword">break</span>;
+
+    buffer += decoder.<span class="hljs-title function_">decode</span>(value, { <span class="hljs-attr">stream</span>: <span class="hljs-literal">true</span> });
+    <span class="hljs-keyword">const</span> lines = buffer.<span class="hljs-title function_">split</span>(<span class="hljs-string">&#x27;\n&#x27;</span>);
+    buffer = lines.<span class="hljs-title function_">pop</span>() || <span class="hljs-string">&#x27;&#x27;</span>;
+
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> line <span class="hljs-keyword">of</span> lines) {
+      <span class="hljs-keyword">if</span> (line.<span class="hljs-title function_">startsWith</span>(<span class="hljs-string">&#x27;data: &#x27;</span>)) {
+        <span class="hljs-keyword">const</span> data = line.<span class="hljs-title function_">slice</span>(<span class="hljs-number">6</span>);
+        <span class="hljs-keyword">if</span> (data === <span class="hljs-string">&#x27;[DONE]&#x27;</span>) <span class="hljs-keyword">break</span>;
+
+        <span class="hljs-keyword">try</span> {
+          <span class="hljs-keyword">const</span> chunk = <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(data);
+          <span class="hljs-keyword">const</span> content = chunk.<span class="hljs-property">choices</span>?.[<span class="hljs-number">0</span>]?.<span class="hljs-property">delta</span>?.<span class="hljs-property">content</span>;
+          <span class="hljs-keyword">if</span> (content) {
+            fullText += content;
+            options.<span class="hljs-title function_">onChunk</span>({ <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;text&#x27;</span>, <span class="hljs-attr">text</span>: content });
+          }
+        } <span class="hljs-keyword">catch</span> {
+          <span class="hljs-comment">// Skip invalid JSON</span>
+        }
+      }
+    }
+  }
+
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">buildSuccess</span>({
+    <span class="hljs-attr">text</span>: fullText,
+    model,
+    <span class="hljs-attr">tokenUsage</span>: { <span class="hljs-attr">promptTokens</span>: <span class="hljs-number">0</span>, <span class="hljs-attr">completionTokens</span>: <span class="hljs-number">0</span> },
+  });
+}
+
+<span class="hljs-comment">// ── Status ────────────────────────────────────────────────────</span>
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">getStatus</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> config = <span class="hljs-keyword">await</span> <span class="hljs-title function_">_loadConfig</span>();
+  <span class="hljs-keyword">return</span> {
+    <span class="hljs-attr">configured</span>: !!config.<span class="hljs-property">endpoint</span>,
+    <span class="hljs-attr">endpoint</span>: config.<span class="hljs-property">endpoint</span>,
+    <span class="hljs-attr">model</span>: config.<span class="hljs-property">model</span>,
+    <span class="hljs-attr">hasApiKey</span>: !!config.<span class="hljs-property">key</span>,
+  };
+}
+
+<span class="hljs-comment">// ── Runtime Diagnostics ───────────────────────────────────────</span>
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">getRuntimeDiagnostics</span>(<span class="hljs-params">options = {}</span>) {
+  <span class="hljs-keyword">return</span> _runtimeDiagnosticsStore.<span class="hljs-title function_">get</span>(_runtimeDiagnostics, options);
+}
+
+<span class="hljs-comment">// ── Cleanup ───────────────────────────────────────────────────</span>
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">destroy</span>(<span class="hljs-params"></span>) {
+  _available = <span class="hljs-literal">null</span>;
+  _configCache = <span class="hljs-literal">null</span>;
+}
+
+<span class="hljs-comment">// ── Exports ───────────────────────────────────────────────────</span>
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = {
+  detect,
+  detectAsync,
+  listModels,
+  generate,
+  getStatus,
+  getRuntimeDiagnostics,
+  destroy,
+  <span class="hljs-comment">// Test seams</span>
+  _loadConfig,
+  <span class="hljs-title function_">_resetState</span>(<span class="hljs-params"></span>) {
+    _available = <span class="hljs-literal">null</span>;
+    _configCache = <span class="hljs-literal">null</span>;
+  },
+};</code></pre>
+<h3 id="3-5-注册到-gateway-aigateway-js">3.5 注册到 Gateway (aiGateway.js)<a class="anchor" href="#3-5-注册到-gateway-aigateway-js" aria-label="锚点">#</a></h3>
+<p><strong>修改位置</strong>: <code>services/backend/src/services/gateway/aiGateway.js</code></p>
+<pre><code class="language-javascript"><span class="hljs-comment">// 在导入部分添加</span>
+<span class="hljs-keyword">const</span> cpaAdapter = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./adapters/cpaAdapter&#x27;</span>);
+
+<span class="hljs-comment">// 在 adapters 数组中注册（优先级 18，在 openclaw 之后）</span>
+<span class="hljs-variable language_">this</span>.<span class="hljs-property">_adapters</span> = [
+  <span class="hljs-comment">// ... 现有适配器</span>
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">&#x27;cpa&#x27;</span>, <span class="hljs-attr">adapter</span>: cpaAdapter, <span class="hljs-attr">priority</span>: <span class="hljs-number">18</span>, <span class="hljs-attr">enabled</span>: <span class="hljs-literal">true</span> },
+];</code></pre>
+<hr>
+<h2 id="4-使用流程">4. 使用流程<a class="anchor" href="#4-使用流程" aria-label="锚点">#</a></h2>
+<h3 id="4-1-添加-cpa-provider-card">4.1 添加 CPA Provider Card<a class="anchor" href="#4-1-添加-cpa-provider-card" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 方式一：通过 CLI</span>
+khy cc-switch add \
+  --name=<span class="hljs-string">&quot;My CPA Server&quot;</span> \
+  --endpoint=<span class="hljs-string">&quot;http://localhost:8317&quot;</span> \
+  --protocol=openai \
+  --apps=cpa
+
+<span class="hljs-comment"># 方式二：通过 provider-hub UI</span>
+<span class="hljs-comment"># 1. 打开 provider-hub</span>
+<span class="hljs-comment"># 2. 点击 &quot;添加卡片&quot;</span>
+<span class="hljs-comment"># 3. 填写名称、端点</span>
+<span class="hljs-comment"># 4. 选择协议: OpenAI</span>
+<span class="hljs-comment"># 5. 勾选应用: CPA</span></code></pre>
+<h3 id="4-2-配置-api-key">4.2 配置 API Key<a class="anchor" href="#4-2-配置-api-key" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 添加密钥到池</span>
+khy cc-switch key add \
+  --provider=cpa \
+  --key=your-api-key \
+  --label=<span class="hljs-string">&quot;CPA Access Key&quot;</span>
+
+<span class="hljs-comment"># 绑定密钥到卡片</span>
+khy cc-switch update &lt;card-id&gt; --keyId=&lt;key-id&gt;</code></pre>
+<h3 id="4-3-应用卡片到-cpa">4.3 应用卡片到 CPA<a class="anchor" href="#4-3-应用卡片到-cpa" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 激活卡片</span>
+khy cc-switch apply &lt;card-id&gt; cpa
+
+<span class="hljs-comment"># 或在 UI 中点击 &quot;应用到 CPA&quot;</span></code></pre>
+<h3 id="4-4-使用-cpa">4.4 使用 CPA<a class="anchor" href="#4-4-使用-cpa" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 通过网关使用</span>
+khy ai <span class="hljs-string">&quot;Hello, world!&quot;</span> --adapter=cpa
+
+<span class="hljs-comment"># 或在 REPL 中</span>
+khy
+&gt; /adapter cpa
+&gt; Hello, world!</code></pre>
+<hr>
+<h2 id="5-cli-命令-复用现有">5. CLI 命令（复用现有）<a class="anchor" href="#5-cli-命令-复用现有" aria-label="锚点">#</a></h2>
+<h3 id="5-1-卡片管理-复用-cc-switch">5.1 卡片管理（复用 cc-switch）<a class="anchor" href="#5-1-卡片管理-复用-cc-switch" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 查看所有卡片</span>
+khy cc-switch list
+
+<span class="hljs-comment"># 添加 CPA 卡片</span>
+khy cc-switch add --name=<span class="hljs-string">&quot;CPA&quot;</span> --endpoint=<span class="hljs-string">&quot;http://localhost:8317&quot;</span> --protocol=openai --apps=cpa
+
+<span class="hljs-comment"># 应用到 CPA</span>
+khy cc-switch apply &lt;card-id&gt; cpa
+
+<span class="hljs-comment"># 查看 CPA 状态</span>
+khy cc-switch status cpa</code></pre>
+<h3 id="5-2-密钥管理-复用-cc-switch">5.2 密钥管理（复用 cc-switch）<a class="anchor" href="#5-2-密钥管理-复用-cc-switch" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 添加密钥</span>
+khy cc-switch key add --provider=cpa --key=xxx
+
+<span class="hljs-comment"># 查看密钥（脱敏）</span>
+khy cc-switch key list</code></pre>
+<hr>
+<h2 id="6-测试策略">6. 测试策略<a class="anchor" href="#6-测试策略" aria-label="锚点">#</a></h2>
+<h3 id="6-1-单元测试">6.1 单元测试<a class="anchor" href="#6-1-单元测试" aria-label="锚点">#</a></h3>
+<p>位置: <code>services/backend/tests/adapters/cpaAdapter.test.js</code></p>
+<pre><code class="language-javascript"><span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;cpaAdapter&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;detect&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;should detect from ccSwitch config&#x27;</span>, <span class="hljs-title function_">async</span> () =&gt; {
+      <span class="hljs-comment">// Mock ccSwitch store</span>
+      <span class="hljs-keyword">const</span> cpaAdapter = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../../src/services/gateway/adapters/cpaAdapter&#x27;</span>);
+      <span class="hljs-title function_">expect</span>(<span class="hljs-keyword">await</span> cpaAdapter.<span class="hljs-title function_">detectAsync</span>()).<span class="hljs-title function_">toBe</span>(<span class="hljs-literal">true</span>);
+    });
+  });
+
+  <span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;generate&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;should call CPA endpoint&#x27;</span>, <span class="hljs-title function_">async</span> () =&gt; {
+      <span class="hljs-comment">// Mock fetch</span>
+      <span class="hljs-keyword">const</span> cpaAdapter = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../../src/services/gateway/adapters/cpaAdapter&#x27;</span>);
+      <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> cpaAdapter.<span class="hljs-title function_">generate</span>(<span class="hljs-string">&#x27;test prompt&#x27;</span>);
+      <span class="hljs-title function_">expect</span>(result.<span class="hljs-property">success</span>).<span class="hljs-title function_">toBe</span>(<span class="hljs-literal">true</span>);
+    });
+  });
+});</code></pre>
+<h3 id="6-2-集成测试">6.2 集成测试<a class="anchor" href="#6-2-集成测试" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 启动 CPA Server</span>
+docker compose up -d
+
+<span class="hljs-comment"># 运行测试</span>
+npm run <span class="hljs-built_in">test</span>:integration -- --grep=<span class="hljs-string">&quot;cpa&quot;</span>
+
+<span class="hljs-comment"># 清理</span>
+docker compose down</code></pre>
+<hr>
+<h2 id="7-文件清单">7. 文件清单<a class="anchor" href="#7-文件清单" aria-label="锚点">#</a></h2>
+<h3 id="7-1-新建文件">7.1 新建文件<a class="anchor" href="#7-1-新建文件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>位置</th><th>说明</th></tr></thead><tbody><tr><td><code>cpaWriter.js</code></td><td><code>services/backend/src/services/domain/config/ccSwitch/</code></td><td>CPA 配置写入器</td></tr><tr><td><code>cpaAdapter.js</code></td><td><code>services/backend/src/services/gateway/adapters/</code></td><td>CPA Gateway 适配器</td></tr><tr><td><code>cpaAdapter.test.js</code></td><td><code>services/backend/tests/adapters/</code></td><td>单元测试</td></tr></tbody></table>
+<h3 id="7-2-修改文件">7.2 修改文件<a class="anchor" href="#7-2-修改文件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>修改内容</th></tr></thead><tbody><tr><td><code>constants.js</code></td><td>添加 <code>APPS.CPA</code> 和 <code>APP_LABELS[CPA]</code></td></tr><tr><td><code>appWriters.js</code></td><td>注册 <code>cpaWriter</code> 到应用写入器</td></tr><tr><td><code>aiGateway.js</code></td><td>注册 <code>cpaAdapter</code> 到适配器列表</td></tr></tbody></table>
+<h3 id="7-3-复用文件-无需修改">7.3 复用文件（无需修改）<a class="anchor" href="#7-3-复用文件-无需修改" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>复用内容</th></tr></thead><tbody><tr><td><code>providers.ts</code></td><td>Card CRUD、Key Pool</td></tr><tr><td><code>modelCatalog.ts</code></td><td>模型目录拉取</td></tr><tr><td><code>store.js</code></td><td>ccSwitch 数据存储</td></tr><tr><td><code>routeResolver.js</code></td><td>活跃卡片路由</td></tr></tbody></table>
+<hr>
+<h2 id="8-优势总结">8. 优势总结<a class="anchor" href="#8-优势总结" aria-label="锚点">#</a></h2>
+<h3 id="8-1-避免重复实现">8.1 避免重复实现<a class="anchor" href="#8-1-避免重复实现" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>功能</th><th>原方案</th><th>集成方案</th></tr></thead><tbody><tr><td>存储</td><td>新建配置文件</td><td>复用 <code>cc_switch.json</code></td></tr><tr><td>密钥管理</td><td>新建密钥存储</td><td>复用 <code>api_keys.json</code></td></tr><tr><td>CLI 命令</td><td>新建 <code>khy cpa</code></td><td>复用 <code>khy cc-switch</code></td></tr><tr><td>UI 界面</td><td>新建管理界面</td><td>复用 provider-hub UI</td></tr><tr><td>模型目录</td><td>新建拉取逻辑</td><td>复用 <code>modelCatalog.ts</code></td></tr></tbody></table>
+<h3 id="8-2-一致性">8.2 一致性<a class="anchor" href="#8-2-一致性" aria-label="锚点">#</a></h3>
+<ul><li>与现有 Provider 管理方式一致</li><li>与现有 App Writer 模式一致</li><li>与现有 Gateway Adapter 模式一致</li></ul>
+<h3 id="8-3-可维护性">8.3 可维护性<a class="anchor" href="#8-3-可维护性" aria-label="锚点">#</a></h3>
+<ul><li>单一数据源（cc_switch.json）</li><li>统一的配置管理</li><li>统一的审计日志</li></ul>
+<hr>
+<h2 id="9-路线图">9. 路线图<a class="anchor" href="#9-路线图" aria-label="锚点">#</a></h2>
+<h3 id="9-1-phase-1-基础集成-v1-0">9.1 Phase 1 - 基础集成 (v1.0)<a class="anchor" href="#9-1-phase-1-基础集成-v1-0" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 注册 CPA 到 APPS 常量</li><li>[ ] 实现 <code>cpaWriter.js</code></li><li>[ ] 注册到 <code>appWriters.js</code></li><li>[ ] 实现 <code>cpaAdapter.js</code></li><li>[ ] 注册到 <code>aiGateway.js</code></li><li>[ ] 单元测试</li></ul>
+<h3 id="9-2-phase-2-增强功能-v1-1">9.2 Phase 2 - 增强功能 (v1.1)<a class="anchor" href="#9-2-phase-2-增强功能-v1-1" aria-label="锚点">#</a></h3>
+<ul><li>[ ] CPA Server 状态监控</li><li>[ ] 多 CPA 实例支持</li><li>[ ] 集成测试</li><li>[ ] 文档完善</li></ul>
+<h3 id="9-3-phase-3-高级特性-v2-0">9.3 Phase 3 - 高级特性 (v2.0)<a class="anchor" href="#9-3-phase-3-高级特性-v2-0" aria-label="锚点">#</a></h3>
+<ul><li>[ ] CPA 内置启动</li><li>[ ] Web 管理面板集成</li><li>[ ] 与 khyquant 交易系统集成</li></ul>
+<hr>
+<h2 id="10-参考资料">10. 参考资料<a class="anchor" href="#10-参考资料" aria-label="锚点">#</a></h2>
+<ul><li>[provider-hub 架构](../DESIGN-ARCH/[DESIGN-ARCH-094] Provider卡片枢纽（CardHub）GUI设计规范.md)</li><li><a href="../../17_AI协作预设包/skills/README.html">ccSwitch 系统</a></li><li><a href="https://github.com/router-for-me/CLIProxyAPI" target="_blank" rel="noopener">CLIProxyAPI 官方文档</a></li><li>[AI 网关适配器协议架构](../DESIGN-ARCH/[DESIGN-ARCH-006] ai-gateway-适配器协议架构.md)</li></ul>
+<hr>
+<h2 id="11-变更记录">11. 变更记录<a class="anchor" href="#11-变更记录" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>日期</th><th>版本</th><th>变更内容</th><th>作者</th></tr></thead><tbody><tr><td>2026-09-11</td><td>1.0</td><td>初始设计文档（与 provider-hub 集成版）</td><td>AI Assistant</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/00_INDEX_DESIGN-ARCH-总目录.html"><div class="dir">← 上一篇</div><div class="ttl">DESIGN-ARCH</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-CPA/[DESIGN-CPA-002] CPA+NewAPI 分层架构实施方案.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-CPA-002] CPA + New API 分层架构实施调研与方案</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-CPA/[DESIGN-CPA-001] CPA 反代集成方案.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

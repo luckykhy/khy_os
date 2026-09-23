@@ -22,14 +22,14 @@ const FIXTURE = [
     whenToUse: ['CLI does not start', 'pip package layout is broken', 'version numbers drift'],
     paths: ['platform/khy_platform/cli.py', 'pyproject.toml'],
     docs: ['README.md'],
-    verify: ['npm run check:maintainer:bootstrap'],
+    verify: ['npm run check:manifest-sync'],
   },
   {
     id: 'cli-routing',
     label: 'CLI Routing and Help Surface',
     whenToUse: ['command not recognized', 'alias routes to wrong command', 'slash command missing'],
     paths: ['services/backend/src/cli/router.js'],
-    docs: ['docs/07_OPS_运维/[OPS-MAN-013] khy-os-开发者指南.md'],
+    docs: ['docs/07_OPS_运维/OPS-MAN/[OPS-MAN-013] khy-os-开发者指南.md'],
     verify: ['npm run test:maintainer:cli-routing'],
   },
   {

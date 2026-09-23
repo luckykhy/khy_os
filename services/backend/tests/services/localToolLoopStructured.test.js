@@ -17,8 +17,8 @@ describe('Local Tool Loop Structured', () => {
       expect(out).toMatch(/第 2 步 · 写入 · Edit a\.txt/);
       expect(out).toMatch(/第 3 步 · 验证 · Read a\.txt/);
       // order preserved: read section before write section before verify section
-      expect(out.indexOf('第 1 步').toBeTruthy() < out.indexOf('第 2 步'));
-      expect(out.indexOf('第 2 步').toBeTruthy() < out.indexOf('第 3 步'));
+      expect(out.indexOf('第 1 步') < out.indexOf('第 2 步')).toBeTruthy();
+      expect(out.indexOf('第 2 步') < out.indexOf('第 3 步')).toBeTruthy();
       // meta footer marks no-model + local
       expect(out).toMatch(/本地 · 无模型/);
       expect(out).toMatch(/先读后写 \/ 先写再读/);

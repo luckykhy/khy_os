@@ -34,11 +34,15 @@ const React = require('react');
 const permissionOptionOrder = require('../../../services/permissionOptionOrder');
 // L2 会话免审门控（默认开，可逆）的单一真源——决定是否渲染「本会话内总是允许此类」第三项。
 const { isL2SessionAllowEnabled } = require('../../../services/syscallGateway').permissionCache;
+const permissionFieldRows = require('../permissionFieldRows');
 const inkRuntime = require('../inkRuntime');
 
 const MARKER = '❯';
 
-function PermissionsPrompt({ request, onResolve }) {
+/** `borderStyle: 'round'` (1 col each side) + `padding: 1` (1 col each side). */
+const BOX_CHROME_COLS = 4;
+
+function PermissionsPrompt({ request, onResolve, cols }) {
   const { Box, Text, useInput } = inkRuntime.get();
   const h = React.createElement;
 
@@ -149,23 +153,52 @@ function PermissionsPrompt({ request, onResolve }) {
   const accent = isL2 ? 'red' : 'yellow';
   const title = isL2 ? '⛔ 高危操作需要明确授权' : '⚠ 需要授权';
 
+  // One `label + value` field, pre-wrapped so continuations hang under the value
+  // (BUG-48). Without a `cols` budget the leaf refuses and we emit the historical
+  // single Text node byte-for-byte, so every caller that has not threaded width
+  // keeps its current output. Nothing is clipped here — an approval dialog must
+  // show the whole target; the height cost that follows is tracked by BUG-48b.
+  const fieldNode = (key, label, value) => {
+    const flat = `${label}${value}`;
+    const cap = Math.floor(Number(cols));
+    const width = Number.isFinite(cap) && cap > BOX_CHROME_COLS ? cap - BOX_CHROME_COLS : 0;
+    const rows = permissionFieldRows.fieldRows({ label, value, width });
+    if (!rows) return h(Text, { key, dimColor: true }, flat);
+    if (rows.length === 1) return h(Text, { key, dimColor: true }, rows[0]);
+    return h(
+      Box,
+      { key, flexDirection: 'column' },
+      ...rows.map((ln, i) => h(Text, { key: `${key}r${i}`, dimColor: true }, ln))
+    );
+  };
+
   const meta = [];
   if (isGateway) {
     const tag = isL2 ? '红灯 L2 · 毁灭性/系统级' : '黄灯 L1 · 有限写入/网络';
     meta.push(h(Text, { key: 'lvl', color: accent, bold: true }, tag));
-    if (input.action || input.scope) {
+    // 2026-09-19 BUG-19a: 请求方未提供动作/范围时, 上游会送 'unknown'/'na'/'n/a'
+    // 之类占位值, 原样渲染等于把内部词暴露给用户(违反规则 2.2)。识别占位值 →
+    // 明确显示「未声明」而不是英文占位符。
+    const _PLACEHOLDER = new Set(['', '?', 'unknown', 'na', 'n/a', 'none', 'null', 'undefined', '-']);
+    const _meaningful = (v) => {
+      const s = String(v == null ? '' : v).trim();
+      return s && !_PLACEHOLDER.has(s.toLowerCase()) ? s : '';
+    };
+    const actionText = _meaningful(input.action);
+    const scopeText = _meaningful(input.scope);
+    if (actionText || scopeText) {
       meta.push(
         h(
           Text,
           { key: 'as', dimColor: true },
-          `动作：${input.action || '?'}   范围：${input.scope || '?'}`
+          `动作：${actionText || '未声明'}   范围：${scopeText || '未声明'}`
         )
       );
+    } else {
+      meta.push(h(Text, { key: 'as', dimColor: true }, '动作：未声明（该工具未提供动作与范围说明）'));
     }
     if (input.resource) {
-      meta.push(
-        h(Text, { key: 'res', dimColor: true }, `资源：${String(input.resource).slice(0, 200)}`)
-      );
+      meta.push(fieldNode('res', '资源：', String(input.resource).slice(0, 200)));
     }
   }
 
@@ -233,11 +266,20 @@ function PermissionsPrompt({ request, onResolve }) {
   });
 
   // L2 允许优先生效时默认行=确认执行；显式回退（门控关或高危 opt-out）时默认行=拒绝。
+  //
+  // BUG-36(2026-09-21):footer 必须列出 handler **实际接受**的全部键类。上面的 useInput 对
+  // L1/L2 共用同一段数字键直选逻辑（`navCh >= '1' && navCh <= '9'` → 立即 resolve），
+  // 而 L1 分支与仓内其余浮层(QuestionPrompt / FormFlow / RewindPicker)都写了「数字键直选」，
+  // 唯独 L2 两支漏写——实测在 L2 框里按 `2` 会直接发出「本会话内总是允许此类高危操作」
+  // （探针 AA/repro-permission-digit-out.txt），比默认行的单次回车后果更重却不提示。
+  // 此处只补齐告知（不改行为）；数字键在 L2 上是否应当降格为「仅移动光标」是策略问题，
+  // 已另立 BUG-36b 待裁决。
   const l2AllowFirst = permissionOptionOrder._enabled() && permissionOptionOrder._highRiskOptIn();
+  const digitsHint = ' · 数字键直选';
   const footer = isL2
     ? l2AllowFirst
-      ? '↑/↓ 导航 · Enter 选择 · 默认「确认执行」· Esc 取消'
-      : '↑/↓ 导航 · Enter 选择 · 默认「拒绝」· Esc 取消'
+      ? `↑/↓ 导航 · Enter 选择${digitsHint} · 默认「确认执行」· Esc 取消`
+      : `↑/↓ 导航 · Enter 选择${digitsHint} · 默认「拒绝」· Esc 取消`
     : '↑/↓ 导航 · Enter 选择 · 数字键直选 · Esc 取消';
 
   return h(
@@ -248,7 +290,7 @@ function PermissionsPrompt({ request, onResolve }) {
     h(Text, null, `工具：${toolName}`),
     ...meta,
     description ? h(Text, { dimColor: true }, description) : null,
-    command ? h(Text, { dimColor: true }, `$ ${command}`) : null,
+    command ? fieldNode('cmd', '$ ', command) : null,
     explanationBlock,
     diffBlock,
     h(Text, null, ''),

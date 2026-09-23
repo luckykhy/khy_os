@@ -16,7 +16,16 @@ const https = require('https');
 const path = require('path');
 
 const { withTempDir } = require('../utils/ephemeralTmp');
-const log = require('../utils/logger');
+// ── 懒加载 logger ─────────────────────────────────────────────────────
+// 同 arenaManager：utils/logger 的真身是 vendor/shared 的 winston logger，冷解析
+// 约 100ms。本模块只在一处 catch 里写 debug 日志，却在顶层 require 被
+// commandAutoRegistry 扫描 handlers/extension.js 时 eager 拉进 CLI 启动热路径。
+// 改到首次真正写日志时才解析。
+let _log = null;
+function log() {
+  if (!_log) _log = require('../utils/logger');
+  return _log;
+}
 
 const {
   listExtensions,
@@ -69,7 +78,7 @@ async function search(query, options) {
     const data = await _fetchJson(url.toString());
     return (data.extensions || data.results || data || []).slice(0, limit);
   } catch (err) {
-    log.debug('Registry search failed:', err.message);
+    log().debug('Registry search failed:', err.message);
     return [];
   }
 }

@@ -19,7 +19,7 @@
 
 const { assess } = require('../../security/marshal/capabilityVector');
 
-const config = require('../../../../cli/handlers/config');
+const config = require('./config');
 const guideRetriever = require('./guideRetriever');
 
 /** Render the recommended-path block from a selected map, budget-capped. */

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-040] Khyos数据主权与极权路由-数据主权绝对论与单一权威注入网关.md -->
+<title>[DESIGN-ARCH-040] Khyos 数据主权与极权路由——数据主权绝对论与单一权威注入网关 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>18_归档<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-040] Khyos 数据主权与极权路由——数据主权绝对论与单一权威注入网关</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-040] Khyos 数据主权与极权路由——数据主权绝对论与单一权威注入网关</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-040-khyos-数据主权与极权路由-数据主权绝对论与单一权威注入网关">[DESIGN-ARCH-040] Khyos 数据主权与极权路由——数据主权绝对论与单一权威注入网关</a></li><li class="lvl-2"><a href="#1-目标与定位">1. 目标与定位</a></li><li class="lvl-2"><a href="#2-meta-plan-参数注入流程控制架构">2. Meta-Plan（参数注入流程控制架构）</a></li><li class="lvl-2"><a href="#3-数据主权阶层-3-1">3. 数据主权阶层（§3.1）</a></li><li class="lvl-2"><a href="#4-架构蓝图-主权裁决闭环">4. 架构蓝图（主权裁决闭环）</a></li><li class="lvl-2"><a href="#5-骨架实现-三命名类">5. 骨架实现（三命名类）</a></li><li class="lvl-3"><a href="#5-1-classify-l2-陷阱规避">5.1 classify L2 陷阱规避</a></li><li class="lvl-2"><a href="#6-场景验证-4">6. 场景验证（§4）</a></li><li class="lvl-2"><a href="#7-防呆规则与硬边界-5">7. 防呆规则与硬边界（§5）</a></li><li class="lvl-2"><a href="#8-验证">8. 验证</a></li></ul></nav>
+      <article class="doc-body">
+<blockquote><p>⚠️ <strong>已归档（孤儿设计稿）· 请勿据此实现</strong> ⚠️</p>
+<p>本规范描述的治理引擎 <code>dataSovereignty</code> 经 2026-06-14「接线或删除」证据级核实为 <strong>ORPHAN</strong><br>（零消费者、从 <code>executeTool</code>/<code>toolUseLoop</code>/<code>aiManagementServer</code> 三入口均不可达），<br>已按 <code>.ai/GOVERNANCE-LEDGER.md</code> §B.0 <strong>删除其实现代码</strong>（基线 <code>0437b6b</code>，删除提交<br><code>a76785e</code> + <code>99ea828</code>）。本文件仅作<strong>历史可追溯</strong>留存，<strong>非在产、不得作为实现依据</strong>。<br>判「在产」唯一标准见 <code>.ai/GUARDS-AI.md</code> §0。</p>
+<p>——归档于 2026-06-14</p></blockquote>
+<h1 id="design-arch-040-khyos-数据主权与极权路由-数据主权绝对论与单一权威注入网关">[DESIGN-ARCH-040] Khyos 数据主权与极权路由——数据主权绝对论与单一权威注入网关<a class="anchor" href="#design-arch-040-khyos-数据主权与极权路由-数据主权绝对论与单一权威注入网关" aria-label="锚点">#</a></h1>
+<blockquote><p>架构与设计规范 · 遵循 [MGMT-STD-001] · 关联 [DESIGN-ARCH-039] 环境共生、[DESIGN-ARCH-038] 双轨淬火 Bug 升维、[DESIGN-ARCH-037] 自举创世闭环自愈、[DESIGN-ARCH-025] 元规划约束注入</p></blockquote>
+<h2 id="1-目标与定位">1. 目标与定位<a class="anchor" href="#1-目标与定位" aria-label="锚点">#</a></h2>
+<p>消灭多源数据「精神分裂」：同一参数被全局变量、环境、配置、模型推理、工具返回值各处取值，<br>互相覆盖、各执一词，导致系统行为漂移不可复现。Khyos 立「<strong>数据主权绝对论</strong>」——每一份数据<br>按其<strong>来源出身</strong>钉死在一个不可僭越的主权阶层；低阶层数据<strong>永远</strong>无权覆盖高阶层。一切参数<br>必经<strong>单一权威注入网关</strong>裁出唯一值后极权注入，业务函数<strong>绝不</strong>自行读多源。</p>
+<p>落为零侵入纯子系统 <code>src/services/dataSovereignty/</code>，复用 [DESIGN-ARCH-038]/[DESIGN-ARCH-037]<br>的 <code>evoRequirement</code>/<code>evoLedger</code> 需求真源（不改其定形），新增主权维度。</p>
+<h2 id="2-meta-plan-参数注入流程控制架构">2. Meta-Plan（参数注入流程控制架构）<a class="anchor" href="#2-meta-plan-参数注入流程控制架构" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>层</th><th>职责</th><th>模块</th><th>铁律</th></tr></thead><tbody><tr><td>阶层宪法</td><td>来源 → P0-P4 阶层单源映射</td><td><code>sovereigntyTiers.js</code></td><td>来源决定阶层，调用方不得自报（防呆①真源）</td></tr><tr><td>主权裁决</td><td>多源 argmin(rank) 取唯一权威值</td><td><code>DataSovereigntyGateway</code></td><td>低阶层永不覆盖高阶层；同阶层异值即熔断（防呆③）</td></tr><tr><td>幽灵降维</td><td>落败 P3+ 数据 → 只读 <code>ghost_value</code></td><td><code>GhostValueAnnotator</code></td><td>物理隔离，绝不入执行流（防呆②）</td></tr><tr><td>冲突淬火</td><td>打架/震荡 → 带 <code>conflict_sources</code> 的 EvoRequirement</td><td><code>ConflictQuencher</code></td><td>「打架即需求」，L1 器官新生（防呆④）</td></tr><tr><td>极权注入门面</td><td>编排 + 落账本 + 纯度审计</td><td><code>DataSovereignty</code></td><td>冲突 fail-closed，绝不放行任何参数</td></tr></tbody></table>
+<h2 id="3-数据主权阶层-3-1">3. 数据主权阶层（§3.1）<a class="anchor" href="#3-数据主权阶层-3-1" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>阶层</th><th>rank</th><th>出身</th><th>可被谁压制</th></tr></thead><tbody><tr><td><strong>P0 绝对铁律</strong></td><td>0</td><td>硬编码安全边界 / 防呆规则 / 物理极限</td><td>无（含用户、含模型皆不可）</td></tr><tr><td><strong>P1 意志注入</strong></td><td>1</td><td>用户显式指令 / 任务目标</td><td>仅 P0</td></tr><tr><td><strong>P2 环境语境</strong></td><td>2</td><td>OS 原生特权 / 网络 / 电量</td><td>P0-P1</td></tr><tr><td><strong>P3 推理演算</strong></td><td>3</td><td>模型推理 / 记忆召回 / 工具返回值</td><td>P0-P2</td></tr><tr><td><strong>P4 默认基座</strong></td><td>4</td><td>配置默认值</td><td>人人</td></tr></tbody></table>
+<p>未知来源 fail-safe 降 P4（最低权威），杜绝「伪装高权威」提权面。「P3 及以上阶层」（rank ≤ 3）<br>的落败数据须留幽灵；P4 落败属噪音静默丢弃。</p>
+<h2 id="4-架构蓝图-主权裁决闭环">4. 架构蓝图（主权裁决闭环）<a class="anchor" href="#4-架构蓝图-主权裁决闭环" aria-label="锚点">#</a></h2>
+<pre><code>        多源声明 claims [{param, source, value}]   （业务侧只声明来源+值，严禁直读——防呆①）
+                          │
+                          ▼  来源 → 阶层（SOURCE_TIER 真源，调用方不得自报）
+        DataSovereigntyGateway.adjudicate(param, claims)
+                          │
+              ① argmin(rank) 取最高权威阶层
+                          │
+          ┌───────────────┴────────────────┐
+          ▼                                ▼
+   最高阶层单值                      最高阶层 ≥2 异值
+          │                                │  [防呆③ 绝不随机/先后覆盖]
+          ▼                                ▼
+   ③ 落败 P3+ → GhostValueAnnotator   熔断 throw SovereigntyConflictError
+      只读 ghost_value 独立通道          (ERR_SOVEREIGNTY_CONFLICT)
+      （防呆② 绝不入逻辑）                │
+          │                          ConflictQuencher.quenchSameTier
+   ④ 震荡 A→B→A → quenchOscillation   → L1 器官新生需求 [conflict_sources]（防呆④）
+      → 状态锁/裁决器需求                │
+          │                                │
+          ▼                                ▼
+   极权注入：函数只收单一权威字典     需求池（evoLedger 不可变哈希链）
+   sanitizeForExecution 断言无幽灵渗入   冲突 fail-closed，绝不放行任何参数</code></pre>
+<h2 id="5-骨架实现-三命名类">5. 骨架实现（三命名类）<a class="anchor" href="#5-骨架实现-三命名类" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>类</th><th>职责</th></tr></thead><tbody><tr><td><code>DataSovereigntyGateway</code></td><td>拦截多源 → 按 P0-P4 绝对覆盖裁唯一注入值；同阶层异值熔断抛 <code>ERR_SOVEREIGNTY_CONFLICT</code>；会话级震荡侦测</td></tr><tr><td><code>GhostValueAnnotator</code></td><td>落败 P3+ 数据降维只读冻结 <code>ghost_value</code>，<code>__ghost</code> 标记不可伪造；<code>sanitizeForExecution</code> 断言权威字典零幽灵渗入</td></tr><tr><td><code>ConflictQuencher</code></td><td>同阶层打架 / 高频震荡 → 带 <code>conflict_sources</code> 的 L1 EvoRequirement；复用 <code>forge</code> 铸后装饰，<code>why</code> 校准锁 L1</td></tr></tbody></table>
+<h3 id="5-1-classify-l2-陷阱规避">5.1 classify L2 陷阱规避<a class="anchor" href="#5-1-classify-l2-陷阱规避" aria-label="锚点">#</a></h3>
+<p><code>evoLevels.classify</code> 只读 <code>why+surface+kind</code>，且「网关/调度/压缩/核心流转」是 L2 触发词。<br>本域满纸「网关」，故淬火 <code>why</code> 一律措辞为「状态拓扑空洞，须<strong>新增</strong>意图裁决<strong>工具</strong>与状态锁」<br>（含 <code>拓扑空洞</code>+<code>新增…工具</code> 锁 L1），把「网关」等处方词收进 <code>proposedModules</code>（classify 不读），<br><code>_decorate</code> 末尾再做 L1 不变式自检兜底，绝不擅升 L2。</p>
+<h2 id="6-场景验证-4">6. 场景验证（§4）<a class="anchor" href="#6-场景验证-4" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>场景</th><th>输入</th><th>网关裁决</th><th>结果</th></tr></thead><tbody><tr><td>模型越权改安全设置</td><td><code>allow_delete</code>：user(P1)=false / model(P3)=true</td><td>P1 胜，P3 落败</td><td>注入 false；模型值留只读幽灵供反思（防呆②）</td></tr><tr><td>两 P3 工具返回值冲突</td><td><code>price</code>：tool-return=100 / tool=105</td><td>同 P3 异值，无更高权威可裁</td><td>熔断 <code>ERR_SOVEREIGNTY_CONFLICT</code>，淬出「结果交叉验证工具」L1 需求（<code>conflict_sources=[tool,tool-return]</code>）</td></tr><tr><td>同参数来回覆盖</td><td><code>view</code>：list→grid→list</td><td>单值无冲突但侦测震荡</td><td>不熔断本次，淬出「状态锁」需求落账本（§3.3）</td></tr></tbody></table>
+<h2 id="7-防呆规则与硬边界-5">7. 防呆规则与硬边界（§5）<a class="anchor" href="#7-防呆规则与硬边界-5" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>铁律</th><th>落实点</th></tr></thead><tbody><tr><td>①</td><td>业务函数内严禁直读全局/环境/DB，必须全部经主权网关参数注入</td><td>来源决定阶层（<code>SOURCE_TIER</code> 真源）；<code>auditInjectionPurity</code> 机械扫描 <code>process.env</code>/<code>global.</code>/<code>db.query</code> 给 CI 门禁</td></tr><tr><td>②</td><td>落败 P3+ 数据必以 <code>ghost_value</code> 随参下发供模型反思，但绝无权限参与逻辑流转</td><td>幽灵冻结 + <code>__ghost</code> 标记 + 与权威字典物理分桶；<code>sanitizeForExecution</code> 断言零渗入即抛 <code>GhostPollutionError</code></td></tr><tr><td>③</td><td>同阶层冲突绝不随机选择/先后覆盖，必须熔断抛 <code>ERR_SOVEREIGNTY_CONFLICT</code> + 淬 L1 器官新生需求</td><td><code>adjudicate</code> 检测最高阶层异值即 throw；门面 <code>inject</code> fail-closed 不放行任何参数</td></tr><tr><td>④</td><td>生成的 EvoRequirement 必打 <code>conflict_sources</code> 标签，记录是谁打架触发进化</td><td><code>ConflictQuencher._decorate</code> 强制装饰；落账本 payload 同载，审计可追溯</td></tr></tbody></table>
+<h2 id="8-验证">8. 验证<a class="anchor" href="#8-验证" aria-label="锚点">#</a></h2>
+<p><code>tests/services/dataSovereignty/dataSovereignty.test.js</code> 21 绿：阶层映射 + 未知降 P4 + 幽灵阈值；<br>幽灵冻结/泄漏断言/分桶；跨阶层裁决 + P0 绝对 + 同值去重 + 同阶层熔断 + P4 不留幽灵 + 震荡侦测；<br>淬火 L1/conflict_sources/不擅升 L2/交叉验证处方；门面注入/§4 两场景表/震荡落账/纯度审计/哈希链。<br>邻近 evoEngine + dualTrackForge + envSymbiosis 93 绿零回归。</p>
+<p>零侵入：自成纯子系统，不接管 <code>executeTool</code>；可由后续 PR 把真实多源取值（env/config/工具返回）<br>改道经本门面注入，把 <code>auditInjectionPurity</code> 挂为业务函数 CI 门禁。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/18_归档/03_DESIGN_设计/[DESIGN-ARCH-039] Khyos环境共生-环境感知与原生亲和架构.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-039] Khyos 环境共生——环境感知与原生亲和架构</div></a><a class="next" href="../../../docs/18_归档/03_DESIGN_设计/[DESIGN-ARCH-042] Khyos自持基建-契约即文档与影响面评估与行为守卫.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-042] Khyos自持基建 — 契约即文档·影响面评估·行为守卫·基建缺失淬火</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/18_归档/03_DESIGN_设计/[DESIGN-ARCH-040] Khyos数据主权与极权路由-数据主权绝对论与单一权威注入网关.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

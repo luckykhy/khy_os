@@ -4,7 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { createRemoteStatePersistence } = require('../../src/services/remote/remoteStatePersistence');
+const { createRemoteStatePersistence } = require('../../src/services/domain/network/remote/remoteStatePersistence.js');
 
 describe('RemoteStatePersistence', () => {
   let tempDir;

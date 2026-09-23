@@ -57,9 +57,15 @@ describe('?  浮层精简视图(防 HelpMenu 收敛后回归)', () => {
   // 唯一一处**有意**改动:Ctrl+O 从「就地展开最后一条」改绑为「打开会话记录视图」
   // (对齐 CC 的 app:toggleTranscript,门控 KHY_TRANSCRIPT_VIEW),文案随之更新 ——
   // 这是键位语义真的变了,不是漂移。其余 14 条仍逐字节钉死。
+  //
+  // 第二处有意改动(BUG-35, 2026-09-21):第 2 条从「Shift/Alt + Enter」改为「Ctrl + J」。
+  // 真终端逐键实测(Windows Terminal 1.24)：Shift+Enter 与 Enter 送同一串 `\r`(会直接发送),
+  // Ctrl+Enter 零字节(终端自用为全屏),Alt+Enter 只送回一个孤立 ESC(终端自用为全屏)——
+  // 三条全是假承诺;唯一稳定送达并插入换行的是 Ctrl+J(裸 LF)。收窄到本机真能按出来的那一集,
+  // 不是漂移。
   const LEGACY = [
     ['Enter', '发送消息'],
-    ['Shift/Alt + Enter', '换行（多行输入）'],
+    ['Ctrl + J', '换行（多行输入）'],
     ['/', '斜杠命令菜单'],
     ['@', '引用文件路径'],
     // Stage 2 有意变更:门控退役后 ↑/↓ 无条件逐条回溯,文案随之说清「逐条」。
@@ -81,6 +87,54 @@ describe('?  浮层精简视图(防 HelpMenu 收敛后回归)', () => {
   });
   test('ESSENTIAL_SHORTCUTS 与 getEssentialShortcuts 同源', () => {
     assert.equal(getEssentialShortcuts(), ESSENTIAL_SHORTCUTS);
+  });
+});
+
+describe('目录条目不得宣称终端送不出的键位(BUG-35 真源守卫)', () => {
+  // 这个目录此前只对着「处理器有没有这条分支」核对,没对「终端送不送得出这个字节」
+  // 核对,于是浮层宣称的 Shift+Enter / Ctrl+Enter 换行在 Windows Terminal 上是假承诺
+  // (实测:Shift+Enter 与 Enter 同送 `\r` 会直接发送;Ctrl+Enter 零字节,被终端自用为全屏)。
+  // 守卫只钉住已被实测否定的那一类:凡键位名里带 Shift/Ctrl + Enter,描述必须言明
+  // 它依赖 kitty/CSI-u 键协议,否则就是又一次「代码里能跑、按出来不是那回事」。
+  const ENTER_ROWS = KEYBINDING_CATALOG.flatMap((g) => g.bindings).filter((b) =>
+    /Enter/i.test(b.keys)
+  );
+
+  test('存在被实测否定的 Enter 条目可供校验', () => {
+    assert.ok(ENTER_ROWS.some((b) => /Shift|Ctrl/i.test(b.keys)));
+  });
+
+  test('Shift/Ctrl + Enter 条目必须标注 CSI-u 依赖', () => {
+    for (const b of ENTER_ROWS) {
+      if (!/Shift|Ctrl/i.test(b.keys)) continue;
+      assert.ok(
+        /CSI-u|kitty/i.test(b.desc),
+        `条目「${b.keys}」未标注终端协议依赖 —— 多数终端送不出可区分的字节`
+      );
+    }
+  });
+
+  test('Alt + Enter 条目必须言明其在 Windows Terminal 上不可用', () => {
+    const alt = ENTER_ROWS.find((b) => /^Alt \+ Enter$/.test(b.keys));
+    assert.ok(alt, '缺 Alt+Enter 条目(该组合常被终端自用,须说清前提)');
+    assert.match(alt.desc, /不可用|仅当/);
+    assert.match(alt.desc, /全屏|ESC/);
+  });
+
+  test('Ctrl + J 是本机实测唯一稳定可用的换行组合键', () => {
+    const all = KEYBINDING_CATALOG.flatMap((g) => g.bindings);
+    const ctrlJ = all.find((b) => /^Ctrl \+ J$/.test(b.keys));
+    assert.ok(ctrlJ, '缺 Ctrl+J 条目(裸 LF → 插入换行,实测可用)');
+    assert.match(ctrlJ.desc, /换行/);
+    // 浮层那一行也必须与目录同源:钉在 ESSENTIAL_SHORTCUTS 第 2 条。
+    assert.deepEqual(
+      getEssentialShortcuts()[1].map((s) => s),
+      ['Ctrl + J', '换行（多行输入）']
+    );
+    // 不得再出现把 Shift 与 Enter 换行并列为「本机可用」的合并写法。
+    for (const b of ENTER_ROWS) {
+      assert.doesNotMatch(b.keys, /Shift\s*\/\s*Alt/, `合并写法「${b.keys}」又把 Shift 许诺了出去`);
+    }
   });
 });
 

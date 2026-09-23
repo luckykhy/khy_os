@@ -29,8 +29,23 @@ async function main() {
     }
   }
 
-  // 2. 设置端口（CLI 参数 > env > 默认 3000）
-  const port = parseInt(process.argv[2] || process.env.KHY_DAEMON_PORT || process.env.PORT || '3000', 10);
+  // 2. 设置端口（CLI 参数 > KHY_DAEMON_PORT > serviceDefaults 的 9090）
+  //
+  // 曾经这里兜底成 '3000'，而 web 后端（server.js）的 BACKEND_PORT 也是
+  // `PORT || 3000`，于是两个服务抢同一个端口。更要命的是 daemon 绑
+  // 127.0.0.1、web 后端绑 0.0.0.0：Windows 下更具体的绑定优先，所以
+  // 浏览器访问 127.0.0.1:3000 全部落到 daemon 上 —— 表现为
+  // /api/auth/* 404、/ws/cross-platform 握手挂断、user-gateway 500 一整片。
+  // 端口真源是 serviceDefaults.AI_BACKEND_DEFAULT_PORT（9090），
+  // apps/ai-frontend/backendDiscovery.mjs 也镜像了同一个值。
+  //
+  // 注意：这里刻意不把 process.env.PORT 纳入优先级 —— PORT 是 web 后端的
+  // 环境变量，让 daemon 也读它会把两个服务钉在同一个端口上。
+  const { AI_BACKEND_DEFAULT_PORT } = require('./src/constants/serviceDefaults');
+  const port = parseInt(
+    process.argv[2] || process.env.KHY_DAEMON_PORT || String(AI_BACKEND_DEFAULT_PORT),
+    10,
+  );
   process.env.KHY_DAEMON_PORT = String(port);
   
   // 确保 PID_FILE 路径存在

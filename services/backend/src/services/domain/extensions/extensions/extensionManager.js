@@ -24,7 +24,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-// 路径与 manifest 名一律取自 extensionRoots(单一真源,见 [DESIGN-ARCH-069] 第二/三节)。
+// 路径与 manifest 名一律取自 extensionRoots(单一真源,见 [DESIGN-TOOL-002] 第二/三节)。
 // 本模块是**安装器**:它只往用户目录写,所以 EXTENSIONS_DIR 仍是 <appHome>/extensions
 // —— 但那个字符串不再由这里拼,以免与发现路径的根集合再次漂移。
 const extensionRoots = require('./extensionRoots');
@@ -179,7 +179,7 @@ function loadExtension(name) {
 /**
  * 清除 state 里指向**已不存在目录**的残留条目。
  *
- * 这是「删除目录 → 拓展自动删除」的收尾（[DESIGN-ARCH-069] §4.1）。用户手动
+ * 这是「删除目录 → 拓展自动删除」的收尾（[DESIGN-TOOL-002] §4.1）。用户手动
  * `rm -rf` 一个拓展目录时不会经过 uninstallExtension，于是 `extensions_state.json`
  * 会留下一条 `{ enabled, installedAt }`。发现路径本来就看不见它（文件系统才是
  * 注册表），所以残留**不影响功能**——清理只是让 state 不再积累谎言。

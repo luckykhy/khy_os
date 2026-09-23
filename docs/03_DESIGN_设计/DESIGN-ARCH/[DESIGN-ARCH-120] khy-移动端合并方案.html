@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-120] khy-移动端合并方案.md -->
+<title>[DESIGN-ARCH-120] khy 移动端合并方案 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-120] khy 移动端合并方案</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-120] khy 移动端合并方案</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-120-khy-移动端合并方案">[DESIGN-ARCH-120] khy 移动端合并方案</a></li><li class="lvl-2"><a href="#一-结论先行-这不是源码合并-是能力收编">一、结论先行：这不是源码合并，是能力收编</a></li><li class="lvl-2"><a href="#二-能力对等矩阵-唯一决策依据">二、能力对等矩阵（唯一决策依据）</a></li><li class="lvl-2"><a href="#三-阶段一-契约收编-已完成">三、阶段一：契约收编（已完成）</a></li><li class="lvl-3"><a href="#3-1-配对契约-两侧必须逐字节对齐">3.1 配对契约：两侧必须逐字节对齐</a></li><li class="lvl-3"><a href="#3-2-已修复的真实缺陷">3.2 已修复的真实缺陷</a></li><li class="lvl-3"><a href="#3-3-落地件">3.3 落地件</a></li><li class="lvl-3"><a href="#3-4-解析器必须守住的不变量">3.4 解析器必须守住的不变量</a></li><li class="lvl-3"><a href="#3-5-为什么契约测试放在-node-侧而不是-dart-侧">3.5 为什么契约测试放在 Node 侧而不是 Dart 侧</a></li><li class="lvl-2"><a href="#四-阶段二-引用收口-已完成">四、阶段二：引用收口（已完成）</a></li><li class="lvl-3"><a href="#4-1-crosslauncher-js-不再假称一个不存在的端口">4.1 `crossLauncher.js`：不再假称一个不存在的端口</a></li><li class="lvl-3"><a href="#4-2-crossplatform-js-khy-cross-stop-mobile-不再杀错进程">4.2 `crossPlatform.js`：`khy cross stop mobile` 不再杀错进程</a></li><li class="lvl-3"><a href="#4-3-servicedefaults-js-mobile-frontend-port-降级为遗留常量">4.3 `serviceDefaults.js`：`MOBILE_FRONTEND_PORT` 降级为遗留常量</a></li><li class="lvl-3"><a href="#4-4-android-build-py-删除幽灵默认候选">4.4 `android_build.py`：删除幽灵默认候选</a></li><li class="lvl-2"><a href="#五-阶段三-目录隔离-已执行-2026-09-17">五、阶段三：目录隔离（已执行，2026-09-17）</a></li><li class="lvl-2"><a href="#六-测试证据-2026-09-17-本机实测">六、测试证据（2026-09-17 本机实测）</a></li><li class="lvl-2"><a href="#七-三条不可回退的不变量">七、三条不可回退的不变量</a></li><li class="lvl-2"><a href="#八-验证命令速查">八、验证命令速查</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-120-khy-移动端合并方案">[DESIGN-ARCH-120] khy 移动端合并方案<a class="anchor" href="#design-arch-120-khy-移动端合并方案" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：回答一个问题——<strong>「<code>apps/khy-mobile</code> 和 <code>apps/khy-os-client-app</code> 要不要合并、怎么合、合到哪一步算完？」</strong><br>本文件是该问题的方案真源；它<strong>不新增规则</strong>，因此不携带 <code>&lt;!-- RULES-REGISTRY --&gt;</code> 标记。<br>它收口的是 <code>[DESIGN-ARCH-117]</code> 遗留的<strong>一条未收口项</strong>（幽灵端 <code>apps/khy-mobile</code>）。</p>
+<p><strong>与 <code>[DESIGN-ARCH-117]</code> 的分工</strong>：ARCH-117 登记「有哪些端、声明状态如何」；<br>本文件决定「<code>mobile</code> 与 <code>mobile-legacy</code> 这两个端之间怎么并、谁是幸存者、死的那一半怎么清理」。<br>改端矩阵仍回 ARCH-117 与仓库根 <code>entries/entries.json</code>；改合并动作先改本文件。</p>
+<p><strong>依据</strong>：产物落盘与「只隔离不删除」依据 <code>[DESIGN-LAY-003]</code>（<code>LAYOUT-004</code>）；<br>构建产物坐标依据 <code>[DESIGN-LAY-004]</code>（<code>LAYOUT-005</code>）；端点禁止字面量依据工程规则 1<br>（<code>RUNTIME-001</code>）；面向用户文案依据工程规则 2（<code>RUNTIME-002</code> 及其 2.2 子规则）；<br>层级落点依据 <code>[DESIGN-LAY-005]</code>。</p></blockquote>
+<hr>
+<h2 id="一-结论先行-这不是源码合并-是能力收编">一、结论先行：这不是源码合并，是能力收编<a class="anchor" href="#一-结论先行-这不是源码合并-是能力收编" aria-label="锚点">#</a></h2>
+<p>用户提出的诉求是「把两个 app 合并在一起」。实测之后这个诉求需要修正——<strong>两者之间没有可合并的源码</strong>：</p>
+<table><thead><tr><th>项目</th><th><code>apps/khy-mobile</code></th><th><code>apps/khy-os-client-app</code></th></tr></thead><tbody><tr><td>形态</td><td>Capacitor 壳（Vue/Vite <code>@khy-os/mobile-companion</code>）</td><td>Flutter 原生 App（<code>sdk: ^3.13.2</code>）</td></tr><tr><td>git 跟踪文件数</td><td><strong>0</strong></td><td>完整工程</td></tr><tr><td>源码</td><td><strong>已丢失</strong>（仅剩 <code>dist/</code> 编译产物）</td><td>在库</td></tr><tr><td><code>dist/</code> 内容</td><td><code>software/khyquant/frontend</code> 的<strong>编译副本</strong>，不是 companion 自己的代码</td><td>不适用</td></tr><tr><td><code>entries.json</code> 声明</td><td><code>mobile-legacy</code>，<code>declaredStatus: broken</code>，标记命中 <strong>0/4</strong></td><td><code>mobile</code>，<code>declaredStatus: ready</code></td></tr><tr><td>构建入口</td><td><code>platform/khy_platform/android_build.py</code>（Capacitor 管线，找不到工程）</td><td><code>npm run android:release</code> → <code>scripts/release/build-android.ps1</code>（可产出签名 APK+AAB）</td></tr></tbody></table>
+<p><code>[DESIGN-ARCH-117]</code> §七.1 已经给出裁决方向：<strong>改指 <code>apps/khy-os-client-app</code>，或补齐工程</strong>。<br>本方案取前者，因为补齐一条 0 源码的 Capacitor 管线等价于重写一个已经被 Flutter 端替代的应用，<br>且会重新引入「两套移动壳」的维护成本。</p>
+<p><strong>合并的正确形式是收编，分三步</strong>：</p>
+<ol><li><strong>契约收编</strong>——把 <code>apps/khy-mobile</code> 唯一还有效的能力价值（扫码配对）搬到幸存者身上；</li><li><strong>引用收口</strong>——把仓库里所有「mobile = 那条 Capacitor 壳」的假设改指幸存者；</li><li><strong>目录隔离</strong>——<code>apps/khy-mobile</code> 物理移除（本方案<strong>不执行</strong>，见 §七）。</li></ol>
+<hr>
+<h2 id="二-能力对等矩阵-唯一决策依据">二、能力对等矩阵（唯一决策依据）<a class="anchor" href="#二-能力对等矩阵-唯一决策依据" aria-label="锚点">#</a></h2>
+<p>收编不是「把壳换个壳」，而是要逐条确认幸存者是否真的覆盖了旧壳的能力。<br>下表以旧壳的 <code>capacitor.plugins.json</code> 逐条对照：</p>
+<table><thead><tr><th>旧壳能力（Capacitor 插件）</th><th>Flutter 端现状</th><th>差距</th></tr></thead><tbody><tr><td><code>@capacitor/app</code>（应用信息/生命周期）</td><td><code>main.dart</code> 五页 <code>IndexedStack</code> + RiverPod 生命周期管理</td><td>无</td></tr><tr><td><code>@capacitor/barcode-scanner</code>（<strong>扫码</strong>）</td><td><strong>缺失</strong></td><td><strong>唯一真实差距</strong> → 本次补齐（<code>mobile_scanner</code>）</td></tr><tr><td><code>@capacitor/filesystem</code></td><td><code>path_provider</code> + drift</td><td>无</td></tr><tr><td><code>@capacitor/network</code></td><td><code>network_diagnostic_screen.dart</code> / <code>network_autofix</code></td><td>无</td></tr><tr><td><code>@capacitor/preferences</code></td><td><code>flutter_secure_storage</code> + drift</td><td>无</td></tr><tr><td><code>@capacitor/secure-storage</code></td><td><code>flutter_secure_storage</code>（同类）</td><td>无</td></tr><tr><td>Web 渲染（Vue companion UI）</td><td>原生页面，<code>trading_panel_screen.dart</code> 已写明「无需再装 Capacitor 壳」</td><td>无</td></tr></tbody></table>
+<p>结论：除扫码外，幸存者已全覆盖。扫码是唯一必须搬的活，因此<strong>本次实现范围收敛为扫码 + 配对契约</strong>。</p>
+<hr>
+<h2 id="三-阶段一-契约收编-已完成">三、阶段一：契约收编（已完成）<a class="anchor" href="#三-阶段一-契约收编-已完成" aria-label="锚点">#</a></h2>
+<h3 id="3-1-配对契约-两侧必须逐字节对齐">3.1 配对契约：两侧必须逐字节对齐<a class="anchor" href="#3-1-配对契约-两侧必须逐字节对齐" aria-label="锚点">#</a></h3>
+<p><code>khy mobile app</code> 打印的二维码编码的<strong>不是 URL</strong>，而是一个 JSON 信封：</p>
+<pre><code>buildPairingPayload(lanIp, port)  →  { payload: JSON.stringify({ apiBaseUrl }), apiBaseUrl }</code></pre>
+<p>刻意用 JSON 而非裸 URL 的原因写在 <code>handlers/mobile.js</code> 头注里：裸 URL 会被手机系统相机抢走<br>直接打开浏览器标签，而不会被交给 App。</p>
+<p><strong>终端里有两种二维码，不可混用</strong>：</p>
+<table><thead><tr><th>命令</th><th>载荷</th><th>受众</th></tr></thead><tbody><tr><td><code>khy mobile</code></td><td><code>http://&lt;lan-ip&gt;:&lt;mgmt-port&gt;/admin/ai-gateway</code></td><td>浏览器标签</td></tr><tr><td><code>khy mobile app</code></td><td><code>{&quot;apiBaseUrl&quot;:&quot;http://&lt;lan-ip&gt;:&lt;api-port&gt;&quot;}</code></td><td>本 App</td></tr></tbody></table>
+<p>扫错时 App 会把管理页路径当成 API 根地址，<strong>所有请求 404</strong>。这个约定此前只写在注释里，<br>App 侧没有任何执行，错扫会以一条不透明的 dio 网络错误暴露。</p>
+<h3 id="3-2-已修复的真实缺陷">3.2 已修复的真实缺陷<a class="anchor" href="#3-2-已修复的真实缺陷" aria-label="锚点">#</a></h3>
+<p>旧 <code>connection_screen.dart</code> 的解析：</p>
+<pre><code class="language-dart"><span class="hljs-title class_">String</span> apiUrl = payload;
+<span class="hljs-keyword">if</span> (payload.<span class="hljs-title function_">startsWith</span>(<span class="hljs-string">&#x27;{&#x27;</span>)) {
+  <span class="hljs-keyword">final</span> data = <span class="hljs-title class_">Map</span>&lt;<span class="hljs-title class_">String</span>, <span class="hljs-built_in">dynamic</span>&gt;.<span class="hljs-title function_">from</span>(<span class="hljs-title class_">Uri</span>.<span class="hljs-title function_">splitQueryString</span>(payload).<span class="hljs-title function_">map</span>(...));
+  apiUrl = data[<span class="hljs-string">&#x27;url&#x27;</span>] ?? data[<span class="hljs-string">&#x27;apiUrl&#x27;</span>] ?? data[<span class="hljs-string">&#x27;apiBaseUrl&#x27;</span>] ?? payload;
+}</code></pre>
+<p><code>Uri.splitQueryString</code> 按 <code>&amp;</code> 与 <code>=</code> 切分，而 <code>{&quot;apiBaseUrl&quot;:&quot;http://192.168.1.9:3000&quot;}</code><br>里根本没有 <code>&amp;</code> 或 <code>=</code>——整串被当成单个 key，<code>apiUrl</code> 永远是 <code>null</code>，最终把<strong>原始 JSON 串</strong><br>当地址传给 <code>verifyAndSave</code>。<strong>每一次配对尝试都必然失败</strong>，且失败信息是 malformed-URL 级别的不透明错误。</p>
+<h3 id="3-3-落地件">3.3 落地件<a class="anchor" href="#3-3-落地件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>作用</th></tr></thead><tbody><tr><td><code>apps/khy-os-client-app/lib/core/gateway/pairing.dart</code></td><td>纯 Dart（仅 <code>dart:convert</code>）消费端：<code>PairingPayloadParser</code> + <code>PairingParseException</code> + <code>PairingPayload</code></td></tr><tr><td><code>apps/khy-os-client-app/lib/ui/screens/qr_scan_screen.dart</code></td><td>全屏扫码页，<code>Navigator.pop&lt;String&gt;</code> 回传原始文本</td></tr><tr><td><code>apps/khy-os-client-app/lib/ui/screens/connection_screen.dart</code></td><td>接入解析器；新增 <code>Scan QR</code> 按钮与 <code>_scanQr()</code></td></tr><tr><td><code>apps/khy-os-client-app/pubspec.yaml</code></td><td><code>mobile_scanner: 7.4.2</code>（精确锁定）</td></tr><tr><td><code>apps/khy-os-client-app/test/pairing_test.dart</code></td><td>27 条消费端单测</td></tr><tr><td><code>services/backend/tests/cli/handlers/mobilePairingContract.test.js</code></td><td>11 条<strong>跨语言契约</strong>测试</td></tr></tbody></table>
+<h3 id="3-4-解析器必须守住的不变量">3.4 解析器必须守住的不变量<a class="anchor" href="#3-4-解析器必须守住的不变量" aria-label="锚点">#</a></h3>
+<p><code>PairingPayloadParser.parse</code> 的验收标准不是「能解析就过」，而是下面四条：</p>
+<ol><li><strong>信封优先</strong>：<code>{</code> 开头必走 JSON 路径，绝不喂给 URL 解析器（§3.2 的缺陷）。</li><li><strong>降级可用</strong>：裸 <code>http(s)://host:port</code>、裸 <code>host:port</code> 都接受——用户会手工粘贴，</li></ol>
+<p>粘贴时只有地址、没有信封。</p>
+<ol><li><strong>拒绝要 actionable</strong>：任何失败都必须给出「问题 + 原因 + 修复建议」</li></ol>
+<p>（<code>RUNTIME-002</code> 2.2），并指明该跑哪条命令重新生成。</p>
+<ol><li><strong>不崩溃</strong>：<code>Uri.port</code> 对非数字端口抛 <code>ArgumentError</code>，会让整个配对页崩掉而非报错。</li></ol>
+<p>解析器用 <code>_rawPort</code> 先读原始端口文本再判定，把崩溃降级成一条消息。</p>
+<p>第 4 条是测试逼出来的：契约测试移植了 Dart 侧逻辑，第一次跑就发现 JS 侧漏了端口范围检查<br>（<code>70000</code> 被放行），说明<strong>这一类漂移是常态而非例外</strong>——这正是 §3.5 存在的理由。</p>
+<h3 id="3-5-为什么契约测试放在-node-侧而不是-dart-侧">3.5 为什么契约测试放在 Node 侧而不是 Dart 侧<a class="anchor" href="#3-5-为什么契约测试放在-node-侧而不是-dart-侧" aria-label="锚点">#</a></h3>
+<p>Dart 与 Node 从不在同一进程里运行，所以「信封形状对不对」这件事没有任何运行时能发现。<br><code>mobilePairingContract.test.js</code> 的做法是<strong>在 JS 里逐行移植 Dart 解析管线</strong>（<code>parseLikeDart</code>），<br>然后断言真实发射器 <code>buildPairingPayload</code> 仍然满足它。</p>
+<p>代价是这份移植会漂移（§3.4 第 4 条已实证一次）。可接受的取舍：<br>漂移的方向是<strong>测试失败</strong>，而不是静默放坏一个线上契约；<br>且文件头注已写明「改 <code>buildPairingPayload</code> 就要同时改 <code>parseLikeDart</code> 和 Dart 解析器」。</p>
+<hr>
+<h2 id="四-阶段二-引用收口-已完成">四、阶段二：引用收口（已完成）<a class="anchor" href="#四-阶段二-引用收口-已完成" aria-label="锚点">#</a></h2>
+<p>仓库里有三处「mobile 等于那条 Capacitor 壳」的假设，全部改指幸存者。</p>
+<h3 id="4-1-crosslauncher-js-不再假称一个不存在的端口">4.1 <code>crossLauncher.js</code>：不再假称一个不存在的端口<a class="anchor" href="#4-1-crosslauncher-js-不再假称一个不存在的端口" aria-label="锚点">#</a></h3>
+<p>改前：</p>
+<pre><code class="language-js"><span class="hljs-attr">mobile</span>: {
+  <span class="hljs-attr">cmd</span>: <span class="hljs-string">&#x27;cmd.exe&#x27;</span>,
+  <span class="hljs-attr">args</span>: [<span class="hljs-string">&#x27;/c&#x27;</span>, <span class="hljs-string">&#x27;cd&#x27;</span>, <span class="hljs-string">&#x27;/d&#x27;</span>, <span class="hljs-string">&#x27;...apps/khy-mobile&#x27;</span>, <span class="hljs-string">&#x27;&amp;&amp;&#x27;</span>, <span class="hljs-string">&#x27;npm&#x27;</span>, <span class="hljs-string">&#x27;run&#x27;</span>, <span class="hljs-string">&#x27;dev&#x27;</span>],
+  <span class="hljs-attr">description</span>: <span class="hljs-string">`Mobile dev server (port <span class="hljs-subst">${MOBILE_FRONTEND_PORT}</span>)`</span>,
+},</code></pre>
+<p>两个问题：<code>apps/khy-mobile</code> 无源码，<code>npm run dev</code> 必然失败；<code>description</code> 与<br><code>getPlatformStatus().mobile</code> 声称 mobile 监听 <code>MOBILE_FRONTEND_PORT</code>（5173），<br>而 Flutter 端是<strong>原生进程，没有 dev server 端口</strong>。后者更危险——它会让 <code>khy cross status</code><br>报告一个永远不会有进程监听的端口，或误报端口被占用。</p>
+<p>改后：<code>cmd</code> 指向 <code>apps/khy-os-client-app</code> 的 <code>flutter run</code>，描述改为<br><code>Mobile app (Flutter — apps/khy-os-client-app, needs a connected device)</code>；<br><code>getPlatformStatus().mobile</code> 改成 <code>desktop</code> 同款的 <code>{ running: false, note }</code> 形态，<br>note 指向 <code>flutter devices</code> 与 <code>npm run android:release</code>。</p>
+<h3 id="4-2-crossplatform-js-khy-cross-stop-mobile-不再杀错进程">4.2 <code>crossPlatform.js</code>：<code>khy cross stop mobile</code> 不再杀错进程<a class="anchor" href="#4-2-crossplatform-js-khy-cross-stop-mobile-不再杀错进程" aria-label="锚点">#</a></h3>
+<p><code>_handleStop</code> 的 <code>portMap</code> 原本含 <code>mobile: MOBILE_FRONTEND_PORT</code>，<br>于是 <code>khy cross stop mobile</code> 会去 <code>netstat</code> 找 5173 上的进程并 <code>taskkill /F</code>——<br>杀掉的是一个与手机端无关的、恰好占着 5173 的任意进程。<br>现改为：<code>mobile</code> 从端口映射中移除，单独给出「原生进程不按端口停止」的指引。</p>
+<h3 id="4-3-servicedefaults-js-mobile-frontend-port-降级为遗留常量">4.3 <code>serviceDefaults.js</code>：<code>MOBILE_FRONTEND_PORT</code> 降级为遗留常量<a class="anchor" href="#4-3-servicedefaults-js-mobile-frontend-port-降级为遗留常量" aria-label="锚点">#</a></h3>
+<p>不再有任何消费者读它（<code>crossLauncher.js</code> 已不再 import）。<br>保留而非删除，因为它是 <code>KHY_MOBILE_PORT</code> env 的单一真源，将来若真的重建 Capacitor 壳<br>有一个明确的位置可读；同时在注释里写明<strong>不得</strong>把它接回「mobile」状态检查。</p>
+<h3 id="4-4-android-build-py-删除幽灵默认候选">4.4 <code>android_build.py</code>：删除幽灵默认候选<a class="anchor" href="#4-4-android-build-py-删除幽灵默认候选" aria-label="锚点">#</a></h3>
+<p><code>_project_candidates()</code> 原本把 <code>&lt;仓库根&gt;/apps/khy-mobile</code> 列为第一优先候选。<br>因为该目录<strong>存在</strong>且带 <code>capacitor.config.json</code>，<code>_is_capacitor_project()</code> 会判它合格，<br>于是 <code>khy build android</code> 会<strong>静默构建一个空壳</strong>并产出一个无法使用的 APK。</p>
+<p>改后：删除两条仓库相对候选（<code>apps/khy-mobile</code> 与 <code>cwd/apps/khy-mobile</code>），<br>保留 <code>KHY_ANDROID_PROJECT</code> 覆盖与 wheel <code>bundled/</code> 布局（后者是发布载荷路径，不是仓库幽灵）。<br>失败提示改为指向 <code>npm run android:release</code>，并明确写出<br>「<code>apps/khy-mobile</code> 已无源码检出（0 个 git 跟踪文件），不是可用工程」。</p>
+<p>该模块<strong>保留</strong>为「构建外部 Capacitor 工程」的入口——它是一条完整可用的工具链，<br>只是不该再把仓库里那个空目录当默认输入。</p>
+<hr>
+<h2 id="五-阶段三-目录隔离-已执行-2026-09-17">五、阶段三：目录隔离（已执行，2026-09-17）<a class="anchor" href="#五-阶段三-目录隔离-已执行-2026-09-17" aria-label="锚点">#</a></h2>
+<p><code>apps/khy-mobile</code> 的物理隔离<strong>已按 <code>LAYOUT-004</code>（HK-3 只隔离不删除）执行</strong>。<br>目录移至 <code>.khyos/housekeeping/2026-09-17/apps-khy-mobile/khy-mobile/</code>，并在同级<br><code>manifest.json</code> 留下源路径、内容清单、引用收口清单与撤回指令。<code>.khyos/</code> 在根<br><code>.gitignore</code> 内，不污染 git 状态。</p>
+<p>引用收口清单（实测定位 + 已改）：</p>
+<table><thead><tr><th>类别</th><th>位置</th><th>处理</th></tr></thead><tbody><tr><td>脚本硬引用</td><td><code>scripts/ci/check-dependency-size.js</code></td><td>删 <code>apps/khy-mobile/package.json</code> 条目</td></tr><tr><td></td><td><code>scripts/ci/check-f2e-wiring.js</code></td><td>删 MOBILE checkRestDirection 块，方向数 4→3</td></tr><tr><td></td><td><code>scripts/frontend/fix-var-declarations.js</code></td><td>删 <code>apps/khy-mobile/src</code> 目录项</td></tr><tr><td></td><td><code>scripts/frontend/cleanup-console.js</code></td><td>同上</td></tr><tr><td></td><td><code>scripts/frontend/fix-hardcoded-colors.js</code></td><td>同上</td></tr><tr><td></td><td><code>scripts/lib/buildArtifactGuard.js</code></td><td>android-build 规则 scope 改指 <code>apps/khy-os-client-app/android/</code>（规则泛化，不丢覆盖）</td></tr><tr><td></td><td><code>scripts/maintenance/clean.js</code></td><td>删 <code>apps/khy-mobile/android/app/build</code> 条目</td></tr><tr><td></td><td><code>scripts/tests/buildArtifactGuard.test.js</code></td><td>测试路径改指 <code>apps/khy-os-client-app/android/</code>，删 <code>.npmkeep</code> 专测</td></tr><tr><td>产物登记</td><td><code>docs/10_规范/registry/BUILD-OUTPUTS.json</code></td><td>删 4 条 <code>khy-mobile-*</code></td></tr><tr><td>端登记表</td><td><code>entries/entries.json</code></td><td>删 <code>mobile-legacy</code> 条目</td></tr><tr><td>文档</td><td><code>[DESIGN-ARCH-117]</code> §一/§七</td><td>标注收口，保留历史现状记录</td></tr><tr><td></td><td><code>README.md</code> / <code>.ai/MAP.md</code></td><td>删 khy-mobile 引用</td></tr><tr><td></td><td><code>[DEPLOY-MAN-018]</code></td><td>顶部加 repurpose banner（见下）</td></tr></tbody></table>
+<p><strong>未改的历史记录</strong>（刻意不动，属时间快照）：<code>CHANGELOG.md</code>、<code>[IMPL-RPT-*]</code>、<br><code>[DESIGN-SIZE-001]</code>、<code>.workbuddy*/memory/*</code>。改这些等于重写历史，违反文档诚实原则。</p>
+<p><strong>buildArtifactGuard 规则泛化的理由</strong>：原规则 scope 是 <code>apps/khy-mobile/android/</code>，<br>整条删掉会让 guard 变成空操作、<code>buildArtifactGuard.test.js</code> 全垮。幸存者<br><code>apps/khy-os-client-app/android/</code> 同样是 Gradle 工程、同样产 APK/AAB，规则对它<br>完全适用。改指而非删除，保留了守卫覆盖。</p>
+<p><strong>撤回</strong>：<code>mv .khyos/housekeeping/2026-09-17/apps-khy-mobile/khy-mobile apps/khy-mobile</code><br>即可还原目录；但引用收口的 8 个脚本 + BUILD-OUTPUTS + entries.json 须同步还原，<br>否则引用悬空——manifest.json 已记录全部 sibling 改动。</p>
+<hr>
+<h2 id="六-测试证据-2026-09-17-本机实测">六、测试证据（2026-09-17 本机实测）<a class="anchor" href="#六-测试证据-2026-09-17-本机实测" aria-label="锚点">#</a></h2>
+<p>环境：Node v22.18.0、Flutter 3.47.2 / Dart 3.13.2（<code>D:\Portable\Tools\flutter</code>）、Python 3.11.9。</p>
+<table><thead><tr><th>项</th><th>结果</th></tr></thead><tbody><tr><td><code>flutter pub get</code></td><td>通过，<code>mobile_scanner 7.4.2</code> 正常解析</td></tr><tr><td><code>flutter test</code>（全量）</td><td><strong>229 全过</strong></td></tr><tr><td><code>flutter test test/pairing_test.dart</code></td><td><strong>27 全过</strong></td></tr><tr><td><code>flutter analyze</code></td><td>67 条存量 issue，<strong>本次改动的 3 个文件 0 条</strong></td></tr><tr><td>Jest <code>mobilePairingContract.test.js</code></td><td><strong>11 全过</strong></td></tr><tr><td>Jest <code>crossLauncher.unit</code> + <code>crossPlatform.auth</code> + 契约</td><td><strong>52 全过（3 suite）</strong></td></tr><tr><td><code>node services/backend/bin/khy.js entry probe --json</code></td><td><code>mobile</code> ready；<code>mobile-legacy</code> 仍 <code>broken</code>（如实）</td></tr><tr><td><code>node scripts/ci/check-repo-layout.js</code></td><td><code>docs-index-complete: 0</code>，0 error</td></tr><tr><td><code>node scripts/ci/check-build-root.js</code></td><td>2 条 error 属存量 advisory，不阻断</td></tr><tr><td><code>node scripts/ci/check-version-sync.js</code></td><td>三轨道全过</td></tr><tr><td><code>node scripts/ci/check-agent-rules.js</code>（本次 5 个 JS 文件）</td><td>0 违规</td></tr></tbody></table>
+<p><strong>跨语言端到端</strong>（最强证据，非移植近似）：用真实 CLI 模块产出载荷，喂给真实 Dart 解析器：</p>
+<pre><code>PRODUCER payload={&quot;apiBaseUrl&quot;:&quot;http://192.168.1.193:3000&quot;}
+PRODUCER mgmt  =http://192.168.1.193:9090/admin/ai-gateway
+CONSUMER ACCEPTED -&gt; http://192.168.1.193:3000     ← 配对二维码
+CONSUMER REJECTED -&gt; n/a                            ← 管理页二维码</code></pre>
+<p><strong>未能验证的项（诚实声明）</strong>：</p>
+<ul><li><strong>真机扫码路径未验证</strong>。<code>mobile_scanner</code> 的 <code>MobileScannerException</code> 错误分支</li></ul>
+<p>（相机权限被拒、设备不支持）与 <code>onDetect</code> 的真实回调时序，只能在有相机权限的设备上确认。<br>  本方案已通过类型核对（<code>flutter analyze</code> 0 issue）与 API 逐字段核对<br>  （对照 <code>mobile_scanner</code> v7.4.2 源码：<code>onDetect: void Function(BarcodeCapture)</code>、<br>  <code>errorBuilder: Widget Function(BuildContext, MobileScannerException)</code>）降低风险，<br>  但这不等同于真机验证。</p>
+<ul><li><strong>APK 未构建</strong>。构建需要 Android SDK + 签名凭据；本次只验证了 Dart 源码可编译、</li></ul>
+<p>单测全过，未产出 APK。</p>
+<hr>
+<h2 id="七-三条不可回退的不变量">七、三条不可回退的不变量<a class="anchor" href="#七-三条不可回退的不变量" aria-label="锚点">#</a></h2>
+<p>合并做完之后，下面三条必须长期成立。任何后续改动若破坏它们，属于回归：</p>
+<ol><li><strong>配对信封永远是 JSON 对象，且只有 <code>apiBaseUrl</code> 一个必填键</strong>。</li></ol>
+<p>它不是 URL，因为裸 URL 会被系统相机抢走。改形状必须同时改<br>   <code>handlers/mobile.js</code>、<code>pairing.dart</code>、<code>mobilePairingContract.test.js</code> 三处。</p>
+<ol><li><strong>两种二维码的不可混用性必须由 App 侧显式执行</strong>，不能依赖「用户自己别扫错」。</li></ol>
+<p>执行点是 <code>PairingPayloadParser</code> 的 <code>managementEntryPath</code> 判定。<br>   注意判定必须是<strong>精确匹配或带斜杠前缀</strong>（<code>/admin/ai-gateway</code> 或 <code>/admin/ai-gateway/…</code>），<br>   用 <code>contains</code> 会把合法的 <code>/admin/ai-gateway-api</code> 误杀——这条已被单测锁死。</p>
+<ol><li><strong>没有任何代码把 <code>apps/khy-mobile</code> 当成可用端</strong>。</li></ol>
+<p>验收手段是 <code>khy entry probe</code>：<code>mobile-legacy</code> 保持 <code>broken</code> 是正确状态，<br>   不是待修 bug；把它改成 <code>ready</code> 才是回归。</p>
+<hr>
+<h2 id="八-验证命令速查">八、验证命令速查<a class="anchor" href="#八-验证命令速查" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-comment"># 消费端单测</span>
+<span class="hljs-built_in">cd</span> apps/khy-os-client-app &amp;&amp; flutter <span class="hljs-built_in">test</span> <span class="hljs-built_in">test</span>/pairing_test.dart
+
+<span class="hljs-comment"># 消费端全量</span>
+<span class="hljs-built_in">cd</span> apps/khy-os-client-app &amp;&amp; flutter <span class="hljs-built_in">test</span> &amp;&amp; flutter analyze
+
+<span class="hljs-comment"># 跨语言契约（Node 侧）</span>
+<span class="hljs-built_in">cd</span> services/backend &amp;&amp; node node_modules/jest/bin/jest.js \
+  tests/cli/handlers/mobilePairingContract.test.js --runInBand
+
+<span class="hljs-comment"># 端矩阵真实状态</span>
+node services/backend/bin/khy.js entry probe --json
+
+<span class="hljs-comment"># 本次改到的仓库门</span>
+node scripts/ci/check-repo-layout.js
+node scripts/ci/check-build-root.js
+node scripts/ci/check-version-sync.js
+node scripts/ci/check-agent-rules.js \
+  services/backend/src/services/crossPlatform/crossLauncher.js \
+  services/backend/src/cli/handlers/crossPlatform.js \
+  services/backend/src/constants/serviceDefaults.js</code></pre>
+<blockquote><p>工具链是本机级事实，不影响仓库级状态（<code>[DESIGN-ARCH-117]</code> §五 同一约定）：<br>上述 <code>flutter</code> 命令需要本机装有 Flutter；Node/Python 侧的门在任何机器上都可跑。</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-119] TUI原生文本选择与复制可用性修复.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-119] TUI 文本选择与复制可用性修复</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-121] khyos-CC-Harness借鉴清单.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-121] khyos 对《Claude Code 实战·Harness 工程之道》的借鉴清单</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-120] khy-移动端合并方案.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

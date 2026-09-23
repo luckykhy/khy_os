@@ -17,10 +17,18 @@ describe('aliases', () => {
     });
 
     test('contains expected pinyin aliases', () => {
-      expect(ALIAS_MAP.hq).toEqual({ command: 'quote' });
       expect(ALIAS_MAP.bt).toEqual({ command: 'backtest' });
       expect(ALIAS_MAP.bz).toEqual({ command: 'help' });
       expect(ALIAS_MAP.ulw).toEqual({ command: 'ulw-loop' });
+      expect(ALIAS_MAP.hangqing).toEqual({ command: 'quote' });
+    });
+
+    test('does NOT alias "hq" — it is the self-registered task command', () => {
+      // `hq` was historically `quote`. It now belongs to handlers/hq.js
+      // (task/bug state source under .ai/hq/). A static alias would shadow the
+      // self-registered command and hijack `khy hq status` into a quote lookup.
+      // See [DESIGN-ARCH-118] HQ capability absorption.
+      expect(ALIAS_MAP.hq).toBeUndefined();
     });
 
     test('contains expected Chinese aliases', () => {
@@ -46,13 +54,13 @@ describe('aliases', () => {
 
   describe('resolveAlias()', () => {
     test('resolves a known alias to its canonical command', () => {
-      const result = resolveAlias('hq');
+      const result = resolveAlias('hangqing');
       expect(result).toEqual({ command: 'quote' });
     });
 
     test('resolves case-insensitively', () => {
       const result = resolveAlias('HQ');
-      expect(result).toEqual({ command: 'quote' });
+      expect(result).toBeNull(); // `hq` is a command, not an alias (see ALIAS_MAP test)
     });
 
     test('returns null for unknown alias', () => {
@@ -74,9 +82,9 @@ describe('aliases', () => {
   describe('getAliasesForCommand()', () => {
     test('returns all aliases for "quote"', () => {
       const aliases = getAliasesForCommand('quote');
-      expect(aliases).toContain('hq');
       expect(aliases).toContain('hangqing');
       expect(aliases).toContain('p');
+      expect(aliases).not.toContain('hq'); // handed over to the `hq` command
     });
 
     test('returns empty array for unknown command', () => {
@@ -90,7 +98,7 @@ describe('aliases', () => {
       const keys = getAllAliasKeys();
       expect(Array.isArray(keys)).toBe(true);
       expect(keys.length).toBeGreaterThan(50); // many aliases defined
-      expect(keys).toContain('hq');
+      expect(keys).toContain('hangqing');
       expect(keys).toContain('bt');
     });
   });

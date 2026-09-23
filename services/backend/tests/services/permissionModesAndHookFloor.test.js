@@ -1,6 +1,6 @@
 'use strict';
 /**
- * permissionModesAndHookFloor.test.js �?CC alignment coverage.
+ * permissionModesAndHookFloor.test.js — CC alignment coverage.
  *
  * Two gaps closed against Claude Code's permission model:
  *
@@ -20,29 +20,28 @@
 // Isolate from any persisted permission rules so the mode logic is tested cleanly.
 process.env.KHY_PERMISSION_STORE = 'false';
 const os = require('os');
+const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
 const tc = require('../../src/services/toolCalling');
 const { HOOKS_EVALUATED, EXEC_APPROVED } = require('../../src/services/execApproval');
 const hookSystem = require('../../src/services/domain/extensions/hooks/hookSystem.js');
-const { route, DECISIONS } = require('../../src/services/syscallGateway/approvalRouter');
-const { LEVELS } = require('../../src/services/syscallGateway/resourceClassifier');
+const { route, DECISIONS } = require('../../src/services/domain/system/syscallGateway/approvalRouter.js');
+const { LEVELS } = require('../../src/services/domain/system/syscallGateway/resourceClassifier.js');
 const allowStub = async () => ({ behavior: 'allow' });
 const denyStub = async () => ({ behavior: 'deny' });
-after(() => { tc.setPermissionMode('default'); });
-describe('execApproval �?HOOKS_EVALUATED stamp', () => {
-});
-describe('permission modes �?requestPermission (CC alignment)', () => {
+
+describe('Permission Modes And Hook Floor', () => {
+  // merged from empty describe: execApproval �?HOOKS_EVALUATED stamp
+  // merged from describe: permission modes �?requestPermission (CC alignment)
   beforeEach(() => tc.setPermissionMode('default'));
-  after(() => tc.setPermissionMode('default'));
-});
-describe('syscall gateway �?autoApproveL1 only relaxes L1, never L2', () => {
+  afterAll(() => tc.setPermissionMode('default'));
+  // merged from describe: syscall gateway �?autoApproveL1 only relaxes L1, never L2
   const intent = { tool: 'writeFile', action: 'WRITE', scope: 'project', resource: 'x' };
-});
-describe('PreToolUse hard bottom on the executeTool funnel', () => {
+  // merged from describe: PreToolUse hard bottom on the executeTool funnel
   const TMP = path.join(os.tmpdir(), `khy-hookfloor-${process.pid}`);
   let _floorCalls = 0;
-  before(() => {
+  beforeAll(() => {
     fs.mkdirSync(TMP, { recursive: true });
     hookSystem.init(TMP);
     // priority 1 �?runs ahead of the built-in guards so the block is deterministic.
@@ -52,10 +51,7 @@ describe('PreToolUse hard bottom on the executeTool funnel', () => {
       { source: 'test-floor', priority: 1 },
     );
   });
-  after(() => { try { fs.rmSync(TMP, { recursive: true, force: true }); } catch { /* best effort */ } });
-});
-
-describe('Permission Modes And Hook Floor', () => {
+  afterAll(() => { try { fs.rmSync(TMP, { recursive: true, force: true }); } catch { /* best effort */ } });
   test('HOOKS_EVALUATED is a distinct Symbol from EXEC_APPROVED', async () => {
         expect(typeof HOOKS_EVALUATED).toBe('symbol');
         expect(typeof EXEC_APPROVED).toBe('symbol');

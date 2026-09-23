@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: README.md -->
+<title>A2A 协议契约（JSON Schema） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>contracts<span class="sep">›</span>a2a<span class="sep">›</span>A2A 协议契约（JSON Schema）</div>
+      <header class="hero reveal"><h1>A2A 协议契约（JSON Schema）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#a2a-协议契约-json-schema">A2A 协议契约（JSON Schema）</a></li><li class="lvl-2"><a href="#文件">文件</a></li><li class="lvl-2"><a href="#为什么单独建一套-而不是复用-design-a2a-001">为什么单独建一套（而不是复用 `[DESIGN-A2A-001]`）</a></li><li class="lvl-2"><a href="#关键约束-这些是历史上踩过的坑">关键约束（这些是历史上踩过的坑）</a></li><li class="lvl-2"><a href="#校验">校验</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="a2a-协议契约-json-schema">A2A 协议契约（JSON Schema）<a class="anchor" href="#a2a-协议契约-json-schema" aria-label="锚点">#</a></h1>
+<blockquote><p>本目录是 khy-os 对接 <strong>Agent2Agent (A2A) Protocol v0.3.0</strong>（Linux Foundation）<br>的机器可读契约。与 <code>../acp/</code> 和 <code>../mobile/</code> 同级、同约定：schema 即代码，<br>由守卫 <code>scripts/ci/check-protocol-conformance.js</code> 加载并做实测。</p></blockquote>
+<h2 id="文件">文件<a class="anchor" href="#文件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>对应 A2A 对象</th><th>用途</th></tr></thead><tbody><tr><td><code>agent-card.schema.json</code></td><td><code>AgentCard</code></td><td><code>/.well-known/agent-card.json</code> 的发布体</td></tr><tr><td><code>message.schema.json</code></td><td><code>Message</code> / <code>Part</code>（TextPart / FilePart / DataPart）</td><td><code>message/send</code> 与 <code>message/stream</code> 的消息体</td></tr><tr><td><code>task.schema.json</code></td><td><code>Task</code> / <code>TaskStatus</code> / <code>TaskState</code> / <code>Artifact</code></td><td><code>tasks/get</code>、<code>tasks/cancel</code> 的返回体</td></tr></tbody></table>
+<h2 id="为什么单独建一套-而不是复用-design-a2a-001">为什么单独建一套（而不是复用 <code>[DESIGN-A2A-001]</code>）<a class="anchor" href="#为什么单独建一套-而不是复用-design-a2a-001" aria-label="锚点">#</a></h2>
+<p><code>docs/10_规范/[DESIGN-A2A-001] A2A 协议规范.md</code> 描述的是 khy-os 自有的<strong>进程内 ACP<br>方言</strong>（方法名为点分形式，传输 WS/HTTP/gRPC，状态集为私有集合）。它与标准 A2A<br><strong>只在命名上撞车</strong>，二者方法集无一重合。</p>
+<p>本目录承载的是<strong>标准 A2A</strong> 的对象模型。两者的术语区分见<br><code>docs/10_规范/其它规范/[DESIGN-NAM-002] A2A 与 ACP 命名及术语规范.md</code>，关系与迁移路线见<br><code>docs/10_规范/[DESIGN-A2A-002] A2A 标准协议适配规范.md</code>。</p>
+<h2 id="关键约束-这些是历史上踩过的坑">关键约束（这些是历史上踩过的坑）<a class="anchor" href="#关键约束-这些是历史上踩过的坑" aria-label="锚点">#</a></h2>
+<ol><li><strong><code>capabilities</code> 必须诚实。</strong> <code>streaming: true</code> 就意味着 <code>message/stream</code> 真的</li></ol>
+<p>存在。khy-os 目前<strong>没有</strong> SSE 流式实现，因此该字段必须为 <code>false</code>。声明了却<br>   做不到，会让每一个合规客户端在能力协商后必然失败（比不声明更糟）。</p>
+<ol><li><strong><code>TaskState</code> 是封闭枚举。</strong> 内部生命周期状态必须<strong>映射</strong>到规范状态，</li></ol>
+<p>不允许把私有状态直接透出到协议边界。</p>
+<ol><li><strong><code>Part</code> 是 <code>kind</code> 判别联合。</strong> 只写 <code>{ &quot;text&quot;: &quot;...&quot; }</code> 而缺 <code>kind</code> 不是合法</li></ol>
+<p>Part —— 这是本仓库 <code>services/a2a/index.js</code> 早期的真实缺陷。</p>
+<ol><li><strong><code>url</code> 不带尾斜杠</strong>，且必须来自单一真源（<code>constants/serviceDefaults.js</code> 或</li></ol>
+<p>环境变量），符合 <code>AGENTS.md</code> 工程规则 1「零硬编码」。</p>
+<h2 id="校验">校验<a class="anchor" href="#校验" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">node scripts/ci/check-protocol-conformance.js --a2a</code></pre>
+<p>守卫会用 fixture 逐条断言：AgentCard 通过 <code>agent-card.schema.json</code>、<br><code>message/send</code> 请求体通过 <code>message.schema.json</code>、<code>tasks/get</code> 返回体通过<br><code>task.schema.json</code>，并断言 khy-os 声明的能力与实现一致（禁绝 A3/A6 类虚报）。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../services/backend/src/cli/tui/AGENTS.html"><div class="dir">← 上一篇</div><div class="ttl">AGENTS.md — CC TUI 复刻工程约束</div></a><a class="next" href="../../../../../services/backend/src/contracts/mobile/README.html"><div class="dir">下一篇 →</div><div class="ttl">KHY Mobile Contracts</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../";window.__KHY_CUR__="services/backend/src/contracts/a2a/README.html";</script>
+<script src="../../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-FF-001] Feature Flag 功能开关规范.md -->
+<title>[DESIGN-FF-001] Feature Flag 功能开关规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-FF-001] Feature Flag 功能开关规范</div>
+      <header class="hero reveal"><h1>[DESIGN-FF-001] Feature Flag 功能开关规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-ff-001-feature-flag-功能开关规范">[DESIGN-FF-001] Feature Flag 功能开关规范</a></li><li class="lvl-2"><a href="#1-原则">1. 原则</a></li><li class="lvl-2"><a href="#2-开关分级">2. 开关分级</a></li><li class="lvl-2"><a href="#3-开关命名">3. 开关命名</a></li><li class="lvl-2"><a href="#4-生命周期">4. 生命周期</a></li><li class="lvl-2"><a href="#5-实现">5. 实现</a></li><li class="lvl-3"><a href="#5-1-配置存储">5.1 配置存储</a></li><li class="lvl-3"><a href="#5-2-使用">5.2 使用</a></li><li class="lvl-2"><a href="#6-审计">6. 审计</a></li><li class="lvl-2"><a href="#7-版本历史">7. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-ff-001-feature-flag-功能开关规范">[DESIGN-FF-001] Feature Flag 功能开关规范<a class="anchor" href="#design-ff-001-feature-flag-功能开关规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: FF-001 -->
+<blockquote><p><strong>用途</strong>：定义 khy-os 项目的功能开关（Feature Flag）标准，实现安全、可回滚、可审计的功能灰度发布。<br>当前无统一 Feature Flag 机制。</p></blockquote>
+<hr>
+<h2 id="1-原则">1. 原则<a class="anchor" href="#1-原则" aria-label="锚点">#</a></h2>
+<ol><li><strong>默认关闭</strong>：新功能默认 <code>false</code>，渐进开启</li><li><strong>可回滚</strong>：关闭开关立即生效，无需回滚代码</li><li><strong>可审计</strong>：开关变更有日志、有时间、有操作人</li><li><strong>自动清理</strong>：功能稳定后及时移除开关（最长 3 个月）</li></ol>
+<hr>
+<h2 id="2-开关分级">2. 开关分级<a class="anchor" href="#2-开关分级" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>级别</th><th>范围</th><th>说明</th></tr></thead><tbody><tr><td><code>global</code></td><td>全量用户</td><td>功能完全启用/关闭</td></tr><tr><td><code>percentage</code></td><td>百分比</td><td>按用户哈希灰度（10% → 50% → 100%）</td></tr><tr><td><code>whitelist</code></td><td>白名单</td><td>指定用户/角色可见</td></tr><tr><td><code>cohort</code></td><td>分群</td><td>按属性分组（注册日期、地域等）</td></tr></tbody></table>
+<hr>
+<h2 id="3-开关命名">3. 开关命名<a class="anchor" href="#3-开关命名" aria-label="锚点">#</a></h2>
+<pre><code>{domain}.{feature}.{variant}</code></pre>
+<table><thead><tr><th>示例</th><th>说明</th></tr></thead><tbody><tr><td><code>ai.streaming.enabled</code></td><td>AI 流式对话开关</td></tr><tr><td><code>frontend.newLayout</code></td><td>前端新布局</td></tr><tr><td><code>gateway.circuitBreaker</code></td><td>网关熔断器</td></tr></tbody></table>
+<hr>
+<h2 id="4-生命周期">4. 生命周期<a class="anchor" href="#4-生命周期" aria-label="锚点">#</a></h2>
+<pre><code>创建（off）→ 灰度（gradual）→ 全量（on）→ 移除（delete）</code></pre>
+<table><thead><tr><th>阶段</th><th>时长</th><th>要求</th></tr></thead><tbody><tr><td>创建</td><td>—</td><td>默认 off，必须有移除计划</td></tr><tr><td>灰度</td><td>7–14 天</td><td>从 10% → 50% → 100%</td></tr><tr><td>全量</td><td>7 天</td><td>on 状态稳定运行</td></tr><tr><td>移除</td><td>—</td><td>代码清理，开关删除</td></tr></tbody></table>
+<p><strong>最长存活 3 个月</strong>，过期自动升级为 FIXME。</p>
+<hr>
+<h2 id="5-实现">5. 实现<a class="anchor" href="#5-实现" aria-label="锚点">#</a></h2>
+<h3 id="5-1-配置存储">5.1 配置存储<a class="anchor" href="#5-1-配置存储" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// config/featureFlags.js</span>
+<span class="hljs-keyword">const</span> flags = {
+  <span class="hljs-string">&#x27;ai.streaming.enabled&#x27;</span>: {
+    <span class="hljs-attr">enabled</span>: <span class="hljs-literal">true</span>,
+    <span class="hljs-attr">rollout</span>: { <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;percentage&#x27;</span>, <span class="hljs-attr">value</span>: <span class="hljs-number">100</span> },
+    <span class="hljs-attr">createdAt</span>: <span class="hljs-string">&#x27;2026-09-10&#x27;</span>,
+    <span class="hljs-attr">expiresAt</span>: <span class="hljs-string">&#x27;2026-12-10&#x27;</span>,
+    <span class="hljs-attr">owner</span>: <span class="hljs-string">&#x27;gateway-team&#x27;</span>
+  }
+};
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">isEnabled</span>(<span class="hljs-params">flagName, userId</span>) {
+  <span class="hljs-keyword">const</span> flag = flags[flagName];
+  <span class="hljs-keyword">if</span> (!flag || !flag.<span class="hljs-property">enabled</span>) <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  
+  <span class="hljs-keyword">switch</span> (flag.<span class="hljs-property">rollout</span>.<span class="hljs-property">type</span>) {
+    <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;global&#x27;</span>:
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+    <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;percentage&#x27;</span>:
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">hashUserId</span>(userId) % <span class="hljs-number">100</span> &lt; flag.<span class="hljs-property">rollout</span>.<span class="hljs-property">value</span>;
+    <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;whitelist&#x27;</span>:
+      <span class="hljs-keyword">return</span> flag.<span class="hljs-property">rollout</span>.<span class="hljs-property">users</span>.<span class="hljs-title function_">includes</span>(userId);
+    <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;cohort&#x27;</span>:
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">checkCohort</span>(userId, flag.<span class="hljs-property">rollout</span>.<span class="hljs-property">cohorts</span>);
+  }
+}</code></pre>
+<h3 id="5-2-使用">5.2 使用<a class="anchor" href="#5-2-使用" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">if</span> (<span class="hljs-title function_">isEnabled</span>(<span class="hljs-string">&#x27;ai.streaming.enabled&#x27;</span>, req.<span class="hljs-property">user</span>.<span class="hljs-property">id</span>)) {
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">streamResponse</span>(req, res);
+}
+<span class="hljs-keyword">return</span> <span class="hljs-title function_">returnJsonResponse</span>(req, res);</code></pre>
+<hr>
+<h2 id="6-审计">6. 审计<a class="anchor" href="#6-审计" aria-label="锚点">#</a></h2>
+<pre><code class="language-javascript"><span class="hljs-comment">// 每次开关变更记录</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">setFlag</span>(<span class="hljs-params">name, value, actor</span>) {
+  logger.<span class="hljs-title function_">info</span>(<span class="hljs-string">&#x27;Feature flag changed&#x27;</span>, {
+    <span class="hljs-attr">flag</span>: name,
+    <span class="hljs-attr">oldValue</span>: flags[name]?.<span class="hljs-property">enabled</span>,
+    <span class="hljs-attr">newValue</span>: value,
+    actor,
+    <span class="hljs-attr">timestamp</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>().<span class="hljs-title function_">toISOString</span>()
+  });
+  
+  flags[name].<span class="hljs-property">enabled</span> = value;
+}</code></pre>
+<hr>
+<h2 id="7-版本历史">7. 版本历史<a class="anchor" href="#7-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义 Feature Flag 规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-ERR-001] 错误处理规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ERR-001] 错误处理规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-GOV-001] 治理总纲与可执行规则.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-GOV-001] 治理总纲与可执行规则</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-FF-001] Feature Flag 功能开关规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

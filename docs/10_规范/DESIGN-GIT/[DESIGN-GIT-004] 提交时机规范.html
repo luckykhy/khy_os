@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-GIT-004] 提交时机规范.md -->
+<title>[DESIGN-GIT-004] 提交时机规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-GIT<span class="sep">›</span>[DESIGN-GIT-004] 提交时机规范</div>
+      <header class="hero reveal"><h1>[DESIGN-GIT-004] 提交时机规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-git-004-提交时机规范">[DESIGN-GIT-004] 提交时机规范</a></li><li class="lvl-2"><a href="#0-一句话">0. 一句话</a></li><li class="lvl-2"><a href="#1-现状-一个被漏掉的空白">1. 现状：一个被漏掉的空白</a></li><li class="lvl-3"><a href="#1-1-已成对存在的两半">1.1 已成对存在的两半</a></li><li class="lvl-3"><a href="#1-2-后果-判据缺失被转嫁给人">1.2 后果：判据缺失被转嫁给人</a></li><li class="lvl-3"><a href="#1-3-既有件为什么接不住">1.3 既有件为什么接不住</a></li><li class="lvl-2"><a href="#2-设计公理">2. 设计公理</a></li><li class="lvl-2"><a href="#3-五个判据-全部满足才提交">3. 五个判据（全部满足才提交）</a></li><li class="lvl-3"><a href="#3-1-t1-单元闭合-一个逻辑意图-怎么判">3.1 T1 单元闭合 —— 「一个逻辑意图」怎么判</a></li><li class="lvl-3"><a href="#3-2-t2-可运行-验证证据-的定义">3.2 T2 可运行 —— 「验证证据」的定义</a></li><li class="lvl-3"><a href="#3-3-t3-仓库自洽-本仓特有的高风险判据">3.3 T3 仓库自洽 —— 本仓特有的高风险判据</a></li><li class="lvl-3"><a href="#3-4-t5-可回滚-与-runtime-009-的分工">3.4 T5 可回滚 —— 与 `RUNTIME-009` 的分工</a></li><li class="lvl-2"><a href="#4-与-不问就提交-的边界-安全护栏">4. 与「不问就提交」的边界（安全护栏）</a></li><li class="lvl-2"><a href="#5-强度梯度-依-process-006-design-process-002">5. 强度梯度（依 `PROCESS-006` / `[DESIGN-PROCESS-002]`）</a></li><li class="lvl-2"><a href="#6-防呆铁律-不可绕过">6. 防呆铁律（不可绕过）</a></li><li class="lvl-2"><a href="#7-b-l2-三步接线-依-sourcing-006-一次提交只做一步">7. B-L2 三步接线（依 `SOURCING-006`，一次提交只做一步）</a></li><li class="lvl-3"><a href="#7-1-执行面-判据的-用起来-一侧-与阶段迁移解耦">7.1 执行面（判据的「用起来」一侧，与阶段迁移解耦）</a></li><li class="lvl-2"><a href="#8-验证">8. 验证</a></li><li class="lvl-2"><a href="#9-反例清单-每条-预期-finding">9. 反例清单（每条 → 预期 finding）</a></li><li class="lvl-2"><a href="#10-复现方式">10. 复现方式</a></li><li class="lvl-2"><a href="#11-版本历史">11. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-git-004-提交时机规范">[DESIGN-GIT-004] 提交时机规范<a class="anchor" href="#design-git-004-提交时机规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: PROCESS-009 -->
+<blockquote><p>版本: 1.1.0 · 状态: 生效 · 负责人: khy · 创建日期: 2026-09-19<br>规则 ID: <code>PROCESS-009</code>（登记见 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>）<br>关联: [DESIGN-GIT-001] Git 工作流规范 · [DESIGN-GIT-002] Commit Message 规范 ·<br>[DESIGN-GIT-003] Git 自动化治理规范 · [DESIGN-PROCESS-002] 新机制落地四阶段流程 ·<br>[DESIGN-ARCH-111] 规则遵守保障机制 · [DESIGN-ARCH-113] AI 修改三模态反馈契约<br>守卫: <code>scripts/ci/check-commit-timing.js</code>（别名 <code>check:commit-timing</code>）<br>落地阶段: <strong>S1 观察者</strong>（<code>FEATURE-OWNERSHIP.json</code> → <code>commit-timing-contract</code>）</p></blockquote>
+<hr>
+<h2 id="0-一句话">0. 一句话<a class="anchor" href="#0-一句话" aria-label="锚点">#</a></h2>
+<p>把「提交」从<strong>要记住的动作</strong>变成<strong>有判据的结论</strong>：</p>
+<blockquote><p>一个工作单元做完了、自证过了、能独立回滚 —— 就提交。<br>判据不满足就别提交，<strong>并且说清缺哪一条</strong>。</p></blockquote>
+<hr>
+<h2 id="1-现状-一个被漏掉的空白">1. 现状：一个被漏掉的空白<a class="anchor" href="#1-现状-一个被漏掉的空白" aria-label="锚点">#</a></h2>
+<h3 id="1-1-已成对存在的两半">1.1 已成对存在的两半<a class="anchor" href="#1-1-已成对存在的两半" aria-label="锚点">#</a></h3>
+<p>本仓的 Git 治理是<strong>成对</strong>的 —— 格式与内容都有规范，且都有守卫：</p>
+<table><thead><tr><th>维度</th><th>真源</th><th>守卫</th><th>状态</th></tr></thead><tbody><tr><td>提交<strong>格式</strong></td><td><code>[DESIGN-GIT-001]</code> §2 / <code>[DESIGN-GIT-002]</code></td><td><code>scripts/ci/check-commit-message.js</code>（pre-commit 第 5 项）</td><td>✅ 已接线</td></tr><tr><td>提交<strong>内容</strong></td><td><code>[DESIGN-GIT-003]</code> §4</td><td>pre-commit 第 1–3 项（tmp / 大文件 / 密钥）</td><td>✅ 已接线</td></tr><tr><td>提交<strong>时机</strong></td><td>—— <strong>无</strong> ——</td><td>—— <strong>无</strong> ——</td><td>❌ <strong>空白</strong></td></tr></tbody></table>
+<p>实测（2026-09-19）：全仓检索「什么时候该提交 / 提交时机 / commit timing / 何时提交」，<br>在 <code>docs/</code> 与 <code>scripts/</code> 下<strong>只命中 3 处</strong>，且全部是无关的巧合<br>（<code>RULES-REGISTRY.json:2744</code> 是 <code>PROCESS-006</code> 的 <code>grants</code> 里「何时提交升阶评审」；<br>两张 <code>PROCESS-006</code> 规则卡是同一句的镜像）。<strong>没有任何一份文档回答「什么时候该提交」。</strong></p>
+<h3 id="1-2-后果-判据缺失被转嫁给人">1.2 后果：判据缺失被转嫁给人<a class="anchor" href="#1-2-后果-判据缺失被转嫁给人" aria-label="锚点">#</a></h3>
+<p>现状下的实际行为链路：</p>
+<pre><code>AI 改完代码
+   │
+   ├─ 改完就提交 ──→ 半成品入库：跑不通的中间态、探针文件、调试残留一起进去
+   │                 （pre-commit 只查 tmp-*/大文件/密钥/格式，**不查&quot;这是不是一个完整的单元&quot;**）
+   │
+   └─ 不确定就不提交 ──→ 工作区持续膨胀到 3000~4000 项未提交
+                        （实测：`git status --porcelain | wc -l` = 4002）
+                        下次会话无法区分「本次改了什么」与「上一轮遗留什么」
+                        回归时无从二分定位</code></pre>
+<p>两条路都坏，而「该走哪条」的判断<strong>被完整地留给了人</strong>：</p>
+<ul><li>对<strong>维护者</strong>：需要同时记住当前任务边界、验证状态、爆炸半径 —— 这是持续的认知税。</li><li>对 <strong>AI</strong>：没有任何判据可依据，于是<strong>要么过度提交、要么永不提交</strong> —— 两者都是默认行为，</li></ul>
+<p>且都不会被任何既有守卫报出来。这是典型的「机制缺失伪装成个人习惯问题」。</p>
+<blockquote><p>一句话：<strong><code>[DESIGN-GIT-003]</code> 管「提交要长什么样」，但没人管「该不该提交」。</strong></p></blockquote>
+<h3 id="1-3-既有件为什么接不住">1.3 既有件为什么接不住<a class="anchor" href="#1-3-既有件为什么接不住" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>既有件</th><th>它管什么</th><th>为什么不管时机</th></tr></thead><tbody><tr><td><code>scripts/ci/check-change-safety.js</code></td><td>爆炸半径、删除/新增/敏感路径</td><td>它<strong>度量</strong>改动，但只在改完之后说；不判「能不能提交」</td></tr><tr><td><code>scripts/ci/check-agent-feedback.js</code></td><td>三模态存证（复现 / 五问 / 回滚）</td><td>它管<strong>改动过程中</strong>的资格，不判「这个单元做完了没有」</td></tr><tr><td><code>.githooks/pre-commit</code></td><td>tmp / 大文件 / 密钥 / ruleguard / 格式</td><td>全是<strong>否决型</strong>检查：只拦坏的，不确认好的</td></tr><tr><td><code>.githooks/post-commit</code></td><td>推镜像</td><td>提交<strong>之后</strong>的动作</td></tr><tr><td><code>[DESIGN-GIT-001]</code> §5.2</td><td>发布流程的「7 步」</td><td>管<strong>发版</strong>节奏，粒度是 release 不是 commit</td></tr></tbody></table>
+<p>⇒ <strong>没有一条既有件给出「现在可以提交了」的正向判据。</strong> 本节即为补这个空白。</p>
+<hr>
+<h2 id="2-设计公理">2. 设计公理<a class="anchor" href="#2-设计公理" aria-label="锚点">#</a></h2>
+<p>四条不可让渡：</p>
+<ol><li><strong>提交是单元边界，不是时间边界。</strong></li></ol>
+<p>判据是「一个工作单元完成了」，<strong>不是</strong>「过了 30 分钟」或「改了 5 个文件」。<br>   这与 <code>[DESIGN-PROCESS-002]</code> PP-2「毕业以样本量计、不以时间计」同源 ——<br>   时间不产生新信息，<strong>完成度才是真变量</strong>。</p>
+<ol><li><strong>没跑过的不算做完（证据优于声称）。</strong></li></ol>
+<p>沿用 <code>[DESIGN-ARCH-113]</code> 公理 1：<strong>不接受 AI 转述</strong>，只认客观证据。<br>   「我改好了」不是判据；「这条命令跑过、退出码 0」才是。</p>
+<ol><li><strong>不可独立回滚的不许单独提交。</strong></li></ol>
+<p>沿用 <code>[DESIGN-ARCH-113]</code> 公理 4（回滚优于承诺）。判据对 AI 与对人<strong>同构</strong>：<br>   一个提交必须能被单独 <code>git revert</code> 而仓库仍可用。</p>
+<ol><li><strong>判据给不出唯一答案时，默认不提交并说明缺哪一条。</strong></li></ol>
+<p>宁可少提交，不可错提交 —— 错提交会把半成品固化成历史。<br>   <strong>AI 必须输出「为什么现在提交 / 为什么还不提交」的一句话</strong>，不允许静默。</p>
+<hr>
+<h2 id="3-五个判据-全部满足才提交">3. 五个判据（全部满足才提交）<a class="anchor" href="#3-五个判据-全部满足才提交" aria-label="锚点">#</a></h2>
+<blockquote><p>评级：<strong>R</strong> = 必须（Required），<strong>S</strong> = 建议（Suggested，缺失只记录不阻断）。</p></blockquote>
+<table><thead><tr><th>#</th><th>判据</th><th>级</th><th>可自动判的判据（守卫 finding）</th></tr></thead><tbody><tr><td><strong>T1</strong></td><td><strong>单元闭合</strong> —— 只有一个逻辑意图。能用一个 <code>&lt;type&gt;(&lt;scope&gt;): &lt;描述&gt;</code> 说完，不需要「顺便」。</td><td>R</td><td><code>unit-multi-intent</code>（改动集跨 ≥3 个顶层板块）</td></tr><tr><td><strong>T2</strong></td><td><strong>可运行</strong> —— 语法/类型/构建至少过一遍（能跑的就跑，跑不了的说清为什么）。</td><td>R</td><td><code>unit-unverified</code>（新增/修改代码文件但无验证证据）</td></tr><tr><td><strong>T3</strong></td><td><strong>仓库自洽</strong> —— ruleguard commit 档通过，且<strong>没有把别人的未提交改动卷进来</strong>。</td><td>R</td><td><code>unit-not-self-consistent</code> / <code>unit-sweeps-foreign-changes</code></td></tr><tr><td><strong>T4</strong></td><td><strong>无游离产物</strong> —— 无 <code>tmp-*</code> / <code>*.tmp</code> / 探针 / 调试残留 / 本机态文件。</td><td>R</td><td><code>unit-stray-artifacts</code></td></tr><tr><td><strong>T5</strong></td><td><strong>可回滚</strong> —— 该提交能单独 revert。涉及删除/迁移时须有可执行回滚路径。</td><td>S</td><td><code>unit-not-rollbackable</code></td></tr></tbody></table>
+<h3 id="3-1-t1-单元闭合-一个逻辑意图-怎么判">3.1 T1 单元闭合 —— 「一个逻辑意图」怎么判<a class="anchor" href="#3-1-t1-单元闭合-一个逻辑意图-怎么判" aria-label="锚点">#</a></h3>
+<p><strong>不接受自我声称</strong>（AI 说「这是一个单元」不算）。两个客观信号：</p>
+<ul><li><strong>顶层板块跨度</strong>：<code>git diff --name-only</code> 的路径第一个目录名去重计数。</li></ul>
+<p><code>services/</code> + <code>apps/</code> + <code>docs/</code> 三板块同现 ⇒ 大概率是三个意图。</p>
+<blockquote><p>⚠ 例外（不算多意图）：① 一次<strong>文档 + 其代码</strong>同步（如规则文档 + 执行器，<strong>本就是 SOURCING-006<br>要求的同一批</strong>）；② 一次<strong>测试 + 被测代码</strong>；③ 机械性重命名/格式化。<br>故 <code>unit-multi-intent</code> 的强度是 <strong>warning</strong>，由人/模型结合意图字符串判定，不自动升 error。</p></blockquote>
+<ul><li><strong><code>&lt;scope&gt;</code> 可写性</strong>：若写 <code>[DESIGN-GIT-002]</code> §2.3 的 scope 时需要填 3 个，说明这不是一个单元。</li></ul>
+<h3 id="3-2-t2-可运行-验证证据-的定义">3.2 T2 可运行 —— 「验证证据」的定义<a class="anchor" href="#3-2-t2-可运行-验证证据-的定义" aria-label="锚点">#</a></h3>
+<p>验证证据 = <strong>本工作单元内</strong>跑过的、退出码为 0 的记录。落点与 <code>[DESIGN-ARCH-113]</code> §6 存证同源：</p>
+<pre><code>.khy/feedback/&lt;task-id&gt;/verify.txt      # 验证命令 + 原始输出（不许转述）</code></pre>
+<p><strong>判据不要求「全量测试通过」</strong> —— 那对单机单用户过重，且会让 AI 为了过关而撒谎<br>（<code>[DESIGN-ARCH-113]</code> §5 的强度梯度正是为防这个）。判据只要求：<br><strong>改了可执行代码 ⇒ 至少有一条与之相关的验证记录</strong>。</p>
+<blockquote><p>⚠ 为什么这条是 R 而不是 S：<code>[DESIGN-ARCH-113]</code> 的实测教训是<br>「事前就用 error 会逼 AI 谎报」。所以 <strong>T2 在 S1 阶段是 warning</strong>（本规范如实登记），<br>待样本攒够后按 PP-2 升档。<strong>本规范不假装它现在是强制的。</strong></p></blockquote>
+<h3 id="3-3-t3-仓库自洽-本仓特有的高风险判据">3.3 T3 仓库自洽 —— 本仓特有的高风险判据<a class="anchor" href="#3-3-t3-仓库自洽-本仓特有的高风险判据" aria-label="锚点">#</a></h3>
+<p>这一条针对本仓<strong>多智能体并发写</strong>的现实：</p>
+<ul><li>⚠ <strong>工作区长期有 3000~4000 项未提交</strong>（实测 4002）。<code>git add .</code> / <code>git commit -a</code></li></ul>
+<p>会把<strong>并发方的未提交改动一起卷进你的提交</strong> —— 而 <code>git log</code> 看起来完全正常。</p>
+<ul><li>判据：提交的暂存集里，若含 <strong>mtime 早于本会话开工时间</strong>且<strong>不属于本单元意图</strong>的文件 ⇒</li></ul>
+<p><code>unit-sweeps-foreign-changes</code>（warning）。</p>
+<ul><li><strong>正确做法</strong>：显式 <code>git add &lt;具体路径&gt;</code>，<strong>禁止</strong> <code>git add -A</code> / <code>git add .</code> / <code>git commit -a</code>。</li></ul>
+<h3 id="3-4-t5-可回滚-与-runtime-009-的分工">3.4 T5 可回滚 —— 与 <code>RUNTIME-009</code> 的分工<a class="anchor" href="#3-4-t5-可回滚-与-runtime-009-的分工" aria-label="锚点">#</a></h3>
+<p><code>RUNTIME-009</code>（删除先报部位）管的是<strong>删除动作本身</strong>的资格（要 <code>scrub-plan.md</code> + <code>rollback.txt</code>）。<br>T5 管的是<strong>这个提交能不能被单独撤销</strong>。两者不重复：</p>
+<table><thead><tr><th></th><th><code>RUNTIME-009</code></th><th>T5（本规范）</th></tr></thead><tbody><tr><td>问的问题</td><td>「你<strong>该不该删</strong>？」</td><td>「这个提交<strong>能不能单独撤</strong>？」</td></tr><tr><td>触发</td><td>有 <code>D</code> 状态文件</td><td>任何提交</td></tr><tr><td>存证</td><td><code>scrub-plan.md</code> / <code>rollback.txt</code></td><td>无需新存证，用 git 语义判</td></tr></tbody></table>
+<hr>
+<h2 id="4-与-不问就提交-的边界-安全护栏">4. 与「不问就提交」的边界（安全护栏）<a class="anchor" href="#4-与-不问就提交-的边界-安全护栏" aria-label="锚点">#</a></h2>
+<p><strong>AI 主动提交的授权边界</strong>（这是本规范最重要的约束，<code>PROCESS-009</code> 的 <code>constraint</code>）：</p>
+<table><thead><tr><th>情形</th><th>行为</th></tr></thead><tbody><tr><td>T1–T4 全绿，无删除，板块跨度 ≤2</td><td>✅ <strong>AI 直接提交</strong>，并在回复里报「提交了什么 / 为什么够格」</td></tr><tr><td>含 <code>D</code> 状态文件（删除）</td><td>⛔ <strong>先问</strong>（转 <code>RUNTIME-009</code>：先出 <code>scrub-plan.md</code> + <code>rollback.txt</code>）</td></tr><tr><td>板块跨度 ≥3 或暂存 &gt;20 个文件</td><td>⛔ <strong>先问</strong>（复用 <code>check-change-safety.js</code> 的 <code>ERROR_CHANGED_FILE_COUNT = 20</code>）</td></tr><tr><td>触及敏感路径（<code>.github/</code>、<code>secrets</code>、<code>deploy/</code>、<code>package.json</code> 的发布字段）</td><td>⛔ <strong>先问</strong></td></tr><tr><td>T2 未满足（没跑过验证）</td><td>⛔ <strong>不提交</strong>，先跑；跑不了就说清为什么</td></tr><tr><td>任何一条 R 判据不满足</td><td>⛔ <strong>不提交</strong>，输出缺失项</td></tr></tbody></table>
+<blockquote><p><strong>一条底线</strong>：AI <strong>绝不</strong>为了让判据变绿而编造验证记录。<br>这与 <code>[DESIGN-ARCH-113]</code> §3.2 的反形式主义条款同源 ——<br><code>confidence: low</code> 不扣分，<strong>装作确定才扣分</strong>。</p></blockquote>
+<hr>
+<h2 id="5-强度梯度-依-process-006-design-process-002">5. 强度梯度（依 <code>PROCESS-006</code> / <code>[DESIGN-PROCESS-002]</code>）<a class="anchor" href="#5-强度梯度-依-process-006-design-process-002" aria-label="锚点">#</a></h2>
+<p><strong>新拦截型机制必须先过 S1 观测阶段（PP-1）</strong>，禁止直接进 S3 门禁。</p>
+<table><thead><tr><th>阶段</th><th>行为</th><th>本规范当前落点</th></tr></thead><tbody><tr><td><strong>S1</strong> 观察者</td><td>只记录，不拦截、不提示</td><td>← <strong>当前在这里</strong>（<code>STAGE='S1'</code>，全部 finding 为 warning，恒 exit 0）</td></tr><tr><td>S2 顾问</td><td>记录 + 提示，仍不拦截</td><td>待 ≥200 条样本</td></tr><tr><td>S3 门禁</td><td>拦截，可豁免（T1–T4 升 error）</td><td>待 S2 毕业（≥50 提示且误报 &lt;10%）</td></tr></tbody></table>
+<p><strong>强度按阶段派生，不是写死的 <code>warning</code></strong> —— <code>severityFor(criterion)</code>（<code>check-commit-timing.js</code>）：<br>S1/S2 阶段 R 判据为 warning，S3 起升 error；T5（S 判据）永远只记录。</p>
+<blockquote><p>⚠ 这一条是本规范落地时的<strong>实测订正</strong>。初版把所有 finding 写死 <code>SEV_WARNING</code>，<br>结果是 S1 与 S3 跑出<strong>完全相同</strong>的输出与退出码 ⇒ 升到 S3 后机制<strong>仍然不拦截</strong>，<br>而所有守卫全绿（登记表说 S3、源码常量也是 S3、漂移比对也过）。<br>这正是「登记了门禁但不生效」，且<strong>表现恰好伪装成 S1 的预期行为</strong>。<br><strong>校验方式</strong>（写进 §8 验证表）：对<strong>同一改动集</strong>分别用 S1 与 S3 常量跑，<br><code>Summary</code> 的 error 数与退出码<strong>必须不同</strong>；相同即为此 bug。</p></blockquote>
+<p><strong>阶段权威在执行器源码</strong>（<code>scripts/ci/check-commit-timing.js</code> 的 <code>STAGE</code> 常量），<br>登记表只是镜像；<code>check-rollout-stage.js</code> 会比对此二者，<strong>漂移即报错</strong>。</p>
+<p><strong>门档表达</strong>（避开 <code>gate='advisory'</code> 死规则陷阱）：<br><code>gate: &quot;commit&quot;</code>（会跑）+ <code>severity: &quot;advisory&quot;</code>（只记录）—— 与 <code>LAYOUT-002</code> /<br><code>RUNTIME-007</code>~<code>009</code> / <code>PROCESS-008</code> 同构。</p>
+<hr>
+<h2 id="6-防呆铁律-不可绕过">6. 防呆铁律（不可绕过）<a class="anchor" href="#6-防呆铁律-不可绕过" aria-label="锚点">#</a></h2>
+<ol><li><strong>禁止</strong> <code>git add -A</code> / <code>git add .</code> / <code>git commit -a</code> —— 本仓并发方未提交改动会被卷入。</li></ol>
+<p>→ warning <code>unit-sweeps-foreign-changes</code></p>
+<ol><li><strong>禁止</strong>在没有验证证据的情况下提交可执行代码改动。→ warning <code>unit-unverified</code></li><li><strong>禁止</strong>把多个逻辑意图塞进一个提交。→ warning <code>unit-multi-intent</code></li><li><strong>禁止</strong>提交含 <code>tmp-*</code> / <code>*.tmp</code> / 探针脚本的暂存集。→ warning <code>unit-stray-artifacts</code></li><li><strong>禁止</strong>在 T2 未满足时<strong>声称</strong>「已提交并验证」。→ 反形式主义条款，人工评审兜底</li><li><strong>禁止</strong>绕过本判据直接进 S3 —— 必须按 PP-1 走完 S1/S2 观察期。</li></ol>
+<p>→ 由 <code>PROCESS-008</code> / <code>check-rollout-stage.js</code> 兜底</p>
+<hr>
+<h2 id="7-b-l2-三步接线-依-sourcing-006-一次提交只做一步">7. B-L2 三步接线（依 <code>SOURCING-006</code>，一次提交只做一步）<a class="anchor" href="#7-b-l2-三步接线-依-sourcing-006-一次提交只做一步" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>步</th><th>内容</th><th>状态</th></tr></thead><tbody><tr><td><strong>1 标记</strong></td><td>本规范文档 + <code>scripts/ci/check-commit-timing.js</code>（恒 exit 0）+ <code>package.json</code> 别名 + <code>RULES-REGISTRY.json</code> 补 <code>PROCESS-009</code> + <code>FEATURE-OWNERSHIP.json</code> 登记 S1 + 规则卡</td><td><strong>已完成</strong></td></tr><tr><td><strong>2 迁移</strong></td><td>升 S2：接提示通道（照 <code>[DESIGN-ARCH-113]</code> 的 <code>PrePrompt</code> 注入器同构），仍不拦截</td><td>待样本</td></tr><tr><td><strong>3 收口</strong></td><td>升 S3：<code>STAGE='S3'</code>，T1–T4 真拦截</td><td>待毕业</td></tr></tbody></table>
+<blockquote><p>⚠ 步骤 2/3 <strong>不新造通道</strong> —— 复用既有的 <code>agentFeedbackService</code> 文件 store<br>（<code>.khy/feedback/</code> 与提示通道 <code>pending.json</code> 同源）。<br><strong>不新造第二套提示机制</strong>（<code>[MGMT-STD-008]</code> §2.2「重叠即违规」）。</p></blockquote>
+<h3 id="7-1-执行面-判据的-用起来-一侧-与阶段迁移解耦">7.1 执行面（判据的「用起来」一侧，与阶段迁移解耦）<a class="anchor" href="#7-1-执行面-判据的-用起来-一侧-与阶段迁移解耦" aria-label="锚点">#</a></h3>
+<p>⚠ <strong>判据光有守卫是不够的</strong>：守卫只回答「这次提交<strong>合不合</strong>判据」，<br>不回答「<strong>现在该不该</strong>提交」。判据若不落到 AI 的实际决策路径上，<br>就只是文档里的一段话 —— 这正是 §1.2「判据缺失被转嫁给人」的原地复发。</p>
+<p>故本规则同时落地<strong>执行面</strong>，与守卫<strong>分工明确</strong>：</p>
+<table><thead><tr><th>件</th><th>位置</th><th>角色</th></tr></thead><tbody><tr><td><strong>纯叶子</strong></td><td><code>services/backend/src/cli/commitTiming.js</code></td><td>判据 T1–T5 的<strong>可复用纯函数</strong>（零 IO·绝不抛·env 门控 <code>KHY_COMMIT_TIMING</code>）。三结论 <code>commit-now</code> / <code>ask-first</code> / <code>do-not-commit</code></td></tr><tr><td><strong>人用命令</strong></td><td><code>services/backend/src/cli/handlers/commit.js</code> → <code>khy commit</code></td><td>采 git 数据 → 交叶子判定 → 渲染。<strong>默认只判断</strong>，真提交要显式 <code>--yes</code></td></tr><tr><td><strong>AI 用工具</strong></td><td><code>services/backend/src/tools/gitCommit.js</code>（新增 <code>checkTiming</code> 参数）</td><td>AI 真正用来提交的工具。<code>enforce</code> 下判据不满足<strong>直接拒绝</strong>；<code>warn</code>（默认）下提交但回传判断</td></tr></tbody></table>
+<blockquote><p><strong>为什么执行面与阶段迁移解耦</strong>：阶段（S1→S4）管的是<strong>守卫的拦截强度</strong>；<br>执行面管的是<strong>判据有没有被用</strong>。二者正交 —— 执行面在 S1 就能生效，<br>且它<strong>不引入新的拦截通道</strong>（<code>khy commit</code> 是人主动敲的，<code>gitCommit</code> 是 AI 主动调的），<br>故不违反 <code>PROCESS-006</code> 的 PP-3「S1/S2 必须旁路记录禁止阻断」。</p>
+<p><strong>关键改动</strong>：<code>gitCommit</code> 工具的原描述是「<strong>Use it only when the user asks to commit</strong>」<br>—— 这是「AI 不知道什么时候该提交」的<strong>机制根源</strong>。现改为给出到点判据<br>（<code>PROCESS-009</code> 的三条：单意图 / 已验证 / 无外来改动），并新增 <code>checkTiming</code> 参数。</p></blockquote>
+<p>执行面实测（<code>services/backend/tests/</code>，42 个用例全绿）：</p>
+<pre><code>commitTiming.test.js        34 passed   —— 判据 / 三结论 / -z 解析 / verify 时间锚 / 真 git commit
+gitCommitTiming.test.js      8 passed   —— enforce 拒绝 / warn 回传 / off 回退 / fail-soft</code></pre>
+<hr>
+<h2 id="8-验证">8. 验证<a class="anchor" href="#8-验证" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项</th><th>方式</th><th>判据</th></tr></thead><tbody><tr><td>判定确定性</td><td>纯函数，同输入同输出</td><td>场景矩阵可复现</td></tr><tr><td>不误伤</td><td>干净单元（单板块 + 有验证）应 0 finding</td><td>见 §9 场景 1 / 6</td></tr><tr><td>反例命中</td><td>每个反例报出预期 finding</td><td>见 §9</td></tr><tr><td>只记录不拦截</td><td>S1 阶段恒 <code>exit 0</code></td><td><code>echo $?</code> = 0</td></tr><tr><td><strong>阶段真生效</strong></td><td><strong>同一改动集</strong>分别用 S1/S3 常量跑，<code>Summary</code> 的 error 数<strong>必须不同</strong></td><td>S1 → <code>0 error(s)</code>；S3 → <code>1 error(s)</code> 且 <code>exit=1</code></td></tr><tr><td>零外部依赖</td><td>只 <code>require</code> <code>fs</code> / <code>path</code> / <code>child_process</code></td><td>无 <code>node_modules</code> 依赖</td></tr><tr><td>离线可跑</td><td>不联网、不调模型</td><td>全程本地</td></tr><tr><td>真被调用</td><td><code>rules:gate:commit</code> 里有 <code>action=start</code></td><td>防「空接线」</td></tr></tbody></table>
+<p><strong>实测输出</strong>（2026-09-19）：</p>
+<pre><code>S1 场景矩阵                         S3 对照（同一批场景）
+clean-unit            0e / 0w       clean-unit            0e / 0w
+unit-multi-intent     0e / 1w       unit-multi-intent     1e / 0w
+unit-unverified       0e / 1w       unit-unverified       1e / 0w
+unit-stray-artifacts  0e / 1w       unit-stray-artifacts  1e / 0w
+sweeps-foreign        0e / 1w       sweeps-foreign        1e / 0w
+docs-only             0e / 0w       docs-only             0e / 0w</code></pre>
+<p>退出码：<code>S1 unit-unverified → exit=0</code>；<code>S3 unit-unverified → exit=1</code>。<br>⇒ 阶段常量<strong>真的控制行为</strong>，不是装饰。</p>
+<hr>
+<h2 id="9-反例清单-每条-预期-finding">9. 反例清单（每条 → 预期 finding）<a class="anchor" href="#9-反例清单-每条-预期-finding" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>行为</th><th>预期判定（S1 阶段均为 warning，恒 exit 0）</th></tr></thead><tbody><tr><td>1</td><td>单板块改动 + 有验证记录</td><td><strong>0 finding</strong>（证明不是无脑拦）</td></tr><tr><td>2</td><td>一次 commit 同时改 <code>services/</code> <code>apps/</code> <code>docs/</code></td><td><code>unit-multi-intent</code></td></tr><tr><td>3</td><td>改了 <code>services/backend/src/*.js</code> 但无任何验证记录</td><td><code>unit-unverified</code></td></tr><tr><td>4</td><td>暂存集含 <code>tmp-probe.js</code></td><td><code>unit-stray-artifacts</code></td></tr><tr><td>5</td><td><code>git add .</code> 后提交（含 mtime 早于本会话的文件）</td><td><code>unit-sweeps-foreign-changes</code></td></tr><tr><td>6</td><td>只改 <code>docs/*.md</code>（文档单元）</td><td><strong>0 finding</strong>（文档不要求运行验证）</td></tr><tr><td>7</td><td>删除文件但不带回滚路径</td><td>转 <code>RUNTIME-009</code>（本规范不重复报）</td></tr></tbody></table>
+<hr>
+<h2 id="10-复现方式">10. 复现方式<a class="anchor" href="#10-复现方式" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">NODE=<span class="hljs-string">&quot;D:/WorkBuddyData-Intl/.workbuddy-ai/binaries/node/versions/22.22.2-2/node.exe&quot;</span>
+
+<span class="hljs-comment"># 语法自检</span>
+<span class="hljs-variable">$NODE</span> --check scripts/ci/check-commit-timing.js
+
+<span class="hljs-comment"># 单场景</span>
+<span class="hljs-variable">$NODE</span> scripts/ci/check-commit-timing.js --scenario=unit-multi-intent
+
+<span class="hljs-comment"># 自定义改动集</span>
+<span class="hljs-variable">$NODE</span> scripts/ci/check-commit-timing.js --files=<span class="hljs-string">&quot;M:services/backend/src/a.js,M:apps/ai-frontend/src/b.js&quot;</span>
+
+<span class="hljs-comment"># 真实待提交集（= 暂存区；未 add 任何东西时为 0 项）</span>
+<span class="hljs-variable">$NODE</span> scripts/ci/check-commit-timing.js --changed
+
+<span class="hljs-comment"># ⚠ 工作区全量视角（本仓常有数千项，读数会偏大）—— 仅供体检，不是判据口径</span>
+<span class="hljs-variable">$NODE</span> scripts/ci/check-commit-timing.js --worktree
+
+<span class="hljs-comment"># 自动化测试（23 用例，含「阶段真生效」与「不误伤」对照）</span>
+<span class="hljs-variable">$NODE</span> --<span class="hljs-built_in">test</span> scripts/tests/check-commit-timing.test.js
+
+<span class="hljs-comment"># 接线实证（必须看到 action=start）</span>
+npm run rules:gate:commit 2&gt;&amp;1 | grep commit-timing</code></pre>
+<p>可用场景：<code>clean-unit</code> <code>unit-multi-intent</code> <code>unit-unverified</code> <code>unit-stray-artifacts</code><br><code>sweeps-foreign</code> <code>docs-only</code></p>
+<blockquote><p>⚠ <strong>测试的临时副本落 <code>scripts/.ct-timing-tmp/</code>，不是 <code>scripts/ci/</code></strong>。<br><code>scripts/ci/*.js</code> 是 <code>check-wiring.js</code> 的扫描范围 —— 副本放那里会让并发运行的守卫<br>看到「零接线检查器」而报 error（间歇性、极难归因）。<br><strong>写任何守卫测试时先问：这个临时文件会不会被别的守卫扫到？</strong></p></blockquote>
+<hr>
+<h2 id="11-版本历史">11. 版本历史<a class="anchor" href="#11-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-19</td><td>首版。补 <code>[DESIGN-GIT-001]</code>/<code>[003]</code> 之外的「提交时机」空白。五判据 T1–T5；依 <code>PROCESS-006</code> PP-1 定为 S1 观察者（<code>gate=commit</code> + <code>severity=advisory</code>，恒 exit 0）。</td></tr><tr><td>1.1.0</td><td>2026-09-19</td><td>补 §7.1 <strong>执行面</strong>：纯叶子 <code>cli/commitTiming.js</code> + 人用命令 <code>khy commit</code> + AI 工具 <code>gitCommit.checkTiming</code>。修正 <code>gitCommit</code> 工具描述中「只在用户要求时提交」的机制根源。42 个执行面用例全绿。</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-GIT/[DESIGN-GIT-003] Git 自动化治理规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-GIT-003] Git 规范与自动化治理</div></a><a class="next" href="../../../docs/10_规范/DESIGN-GIT/00_INDEX_DESIGN-GIT-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">DESIGN-GIT</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-GIT/[DESIGN-GIT-004] 提交时机规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

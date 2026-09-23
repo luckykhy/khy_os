@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [RESEARCH-008] khy-os-不足诊断与自对抗式设计方案.md -->
+<title>Khy-OS 不足诊断与自对抗式设计方案 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>RESEARCH<span class="sep">›</span>Khy-OS 不足诊断与自对抗式设计方案</div>
+      <header class="hero reveal"><h1>Khy-OS 不足诊断与自对抗式设计方案</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-不足诊断与自对抗式设计方案">Khy-OS 不足诊断与自对抗式设计方案</a></li><li class="lvl-2"><a href="#目录">目录</a></li><li class="lvl-1"><a href="#第一部分-不足诊断">第一部分：不足诊断</a></li><li class="lvl-2"><a href="#架构级问题-ar">架构级问题（AR）</a></li><li class="lvl-3"><a href="#ar-1-router-js-上帝开关-critical">AR-1：router.js 上帝开关（Critical）</a></li><li class="lvl-3"><a href="#ar-2-数据双栖问题-critical">AR-2：数据双栖问题（Critical）</a></li><li class="lvl-3"><a href="#ar-3-内核-preemption-验证残留-high">AR-3：内核 preemption 验证残留（High）</a></li><li class="lvl-2"><a href="#工程级问题-eg">工程级问题（EG）</a></li><li class="lvl-3"><a href="#eg-1-autotestscaffolder-假测试-high">EG-1：autoTestScaffolder 假测试（High）</a></li><li class="lvl-3"><a href="#eg-2-restoreagentservice-空壳-high">EG-2：restoreAgentService 空壳（High）</a></li><li class="lvl-3"><a href="#eg-3-metatoolengine-调度死路-medium">EG-3：metaToolEngine 调度死路（Medium）</a></li><li class="lvl-2"><a href="#治理级问题-gv">治理级问题（GV）</a></li><li class="lvl-3"><a href="#gv-1-非阻塞测试基线-high">GV-1：非阻塞测试基线（High）</a></li><li class="lvl-3"><a href="#gv-2-安全扫描缺失-high">GV-2：安全扫描缺失（High）</a></li><li class="lvl-3"><a href="#gv-3-acp-协议未冻结-medium">GV-3：ACP 协议未冻结（Medium）</a></li><li class="lvl-2"><a href="#安全级问题-sc">安全级问题（SC）</a></li><li class="lvl-3"><a href="#sc-1-模型导出无密码门-high">SC-1：模型导出无密码门（High）</a></li><li class="lvl-3"><a href="#sc-2-check-agent-rules-js-豁免过宽-medium">SC-2：check-agent-rules.js 豁免过宽（Medium）</a></li><li class="lvl-2"><a href="#性能级问题-pf">性能级问题（PF）</a></li><li class="lvl-3"><a href="#pf-1-aigateway-语言纠偏复杂度-medium">PF-1：aiGateway 语言纠偏复杂度（Medium）</a></li><li class="lvl-2"><a href="#可扩展性级问题-ex">可扩展性级问题（EX）</a></li><li class="lvl-3"><a href="#ex-1-扩展契约违反-medium">EX-1：扩展契约违反（Medium）</a></li><li class="lvl-2"><a href="#可维护性级问题-mt">可维护性级问题（MT）</a></li><li class="lvl-3"><a href="#mt-1-lint-债务-3417-条-medium">MT-1：lint 债务 3417 条（Medium）</a></li><li class="lvl-1"><a href="#第二部分-自对抗式设计方案">第二部分：自对抗式设计方案</a></li><li class="lvl-2"><a href="#设计方法论">设计方法论</a></li><li class="lvl-2"><a href="#ar-1-对抗设计-router-js-上帝开关">AR-1 对抗设计：router.js 上帝开关</a></li><li class="lvl-3"><a href="#方案-a-命令注册表-自动发现-激进重构">方案 A：命令注册表 + 自动发现（激进重构）</a></li><li class="lvl-3"><a href="#方案-b-保持-switch-提取-handler-渐进改良">方案 B：保持 switch + 提取 handler（渐进改良）</a></li><li class="lvl-3"><a href="#方案-c-分层注册表-懒加载-对抗综合">方案 C：分层注册表 + 懒加载（对抗综合）</a></li><li class="lvl-2"><a href="#ar-2-对抗设计-数据双栖问题">AR-2 对抗设计：数据双栖问题</a></li><li class="lvl-3"><a href="#方案-a-统一迁移到-khy-激进重构">方案 A：统一迁移到 `~/.khy`（激进重构）</a></li><li class="lvl-3"><a href="#方案-b-兼容层-符号链接-渐进改良">方案 B：兼容层 + 符号链接（渐进改良）</a></li><li class="lvl-3"><a href="#方案-c-数据抽象层-渐进迁移-对抗综合">方案 C：数据抽象层 + 渐进迁移（对抗综合）</a></li><li class="lvl-2"><a href="#ar-3-对抗设计-内核-preemption-验证残留">AR-3 对抗设计：内核 preemption 验证残留</a></li><li class="lvl-3"><a href="#方案-a-移除-hog-task-添加运行时检测-激进重构">方案 A：移除 hog_task + 添加运行时检测（激进重构）</a></li><li class="lvl-3"><a href="#方案-b-条件编译-编译时开关-渐进改良">方案 B：条件编译 + 编译时开关（渐进改良）</a></li><li class="lvl-3"><a href="#方案-c-qemu-测试-ci-门禁-对抗综合">方案 C：QEMU 测试 + CI 门禁（对抗综合）</a></li><li class="lvl-2"><a href="#eg-1-对抗设计-autotestscaffolder-假测试">EG-1 对抗设计：autoTestScaffolder 假测试</a></li><li class="lvl-3"><a href="#方案-a-llm-辅助断言生成-激进重构">方案 A：LLM 辅助断言生成（激进重构）</a></li><li class="lvl-3"><a href="#方案-b-运行时行为快照-渐进改良">方案 B：运行时行为快照（渐进改良）</a></li><li class="lvl-3"><a href="#方案-c-契约优先-人工确认-对抗综合">方案 C：契约优先 + 人工确认（对抗综合）</a></li><li class="lvl-2"><a href="#eg-2-对抗设计-restoreagentservice-空壳">EG-2 对抗设计：restoreAgentService 空壳</a></li><li class="lvl-3"><a href="#方案-a-完整自治修复-激进重构">方案 A：完整自治修复（激进重构）</a></li><li class="lvl-3"><a href="#方案-b-只读建议模式-渐进改良">方案 B：只读建议模式（渐进改良）</a></li><li class="lvl-3"><a href="#方案-c-沙箱执行-自动回滚-对抗综合">方案 C：沙箱执行 + 自动回滚（对抗综合）</a></li><li class="lvl-2"><a href="#eg-3-对抗设计-metatoolengine-调度死路">EG-3 对抗设计：metaToolEngine 调度死路</a></li><li class="lvl-3"><a href="#方案-a-完整元工具系统-激进重构">方案 A：完整元工具系统（激进重构）</a></li><li class="lvl-3"><a href="#方案-b-移除死代码-渐进改良">方案 B：移除死代码（渐进改良）</a></li><li class="lvl-3"><a href="#方案-c-功能标记-接口预留-对抗综合">方案 C：功能标记 + 接口预留（对抗综合）</a></li><li class="lvl-2"><a href="#gv-1-对抗设计-非阻塞测试基线">GV-1 对抗设计：非阻塞测试基线</a></li><li class="lvl-3"><a href="#方案-a-清零失败用例-阻断门禁-激进重构">方案 A：清零失败用例 + 阻断门禁（激进重构）</a></li><li class="lvl-3"><a href="#方案-b-分类处理-渐进清零-渐进改良">方案 B：分类处理 + 渐进清零（渐进改良）</a></li><li class="lvl-3"><a href="#方案-c-测试债务追踪-自动分配-对抗综合">方案 C：测试债务追踪 + 自动分配（对抗综合）</a></li><li class="lvl-2"><a href="#gv-2-对抗设计-安全扫描缺失">GV-2 对抗设计：安全扫描缺失</a></li><li class="lvl-3"><a href="#方案-a-完整安全工具链-激进重构">方案 A：完整安全工具链（激进重构）</a></li><li class="lvl-3"><a href="#方案-b-基础扫描-定时审计-渐进改良">方案 B：基础扫描 + 定时审计（渐进改良）</a></li><li class="lvl-3"><a href="#方案-c-分层扫描-智能阻断-对抗综合">方案 C：分层扫描 + 智能阻断（对抗综合）</a></li><li class="lvl-2"><a href="#gv-3-对抗设计-acp-协议未冻结">GV-3 对抗设计：ACP 协议未冻结</a></li><li class="lvl-3"><a href="#方案-a-完整协议规范-激进重构">方案 A：完整协议规范（激进重构）</a></li><li class="lvl-3"><a href="#方案-b-最小修补-文档-渐进改良">方案 B：最小修补 + 文档（渐进改良）</a></li><li class="lvl-3"><a href="#方案-c-协议冻结-渐进演进-对抗综合">方案 C：协议冻结 + 渐进演进（对抗综合）</a></li><li class="lvl-2"><a href="#pf-1-对抗设计-aigateway-语言纠偏复杂度">PF-1 对抗设计：aiGateway 语言纠偏复杂度</a></li><li class="lvl-3"><a href="#方案-a-外置语言服务-激进重构">方案 A：外置语言服务（激进重构）</a></li><li class="lvl-3"><a href="#方案-b-简化正则-缓存结果-渐进改良">方案 B：简化正则 + 缓存结果（渐进改良）</a></li><li class="lvl-3"><a href="#方案-c-分层检测-按需纠偏-对抗综合">方案 C：分层检测 + 按需纠偏（对抗综合）</a></li><li class="lvl-2"><a href="#ex-1-对抗设计-扩展契约违反">EX-1 对抗设计：扩展契约违反</a></li><li class="lvl-3"><a href="#方案-a-强制契约校验-ci-阻断-激进重构">方案 A：强制契约校验 + CI 阻断（激进重构）</a></li><li class="lvl-3"><a href="#方案-b-文档警告-人工修复-渐进改良">方案 B：文档警告 + 人工修复（渐进改良）</a></li><li class="lvl-3"><a href="#方案-c-契约版本化-渐进合规-对抗综合">方案 C：契约版本化 + 渐进合规（对抗综合）</a></li><li class="lvl-2"><a href="#mt-1-对抗设计-lint-债务-3417-条">MT-1 对抗设计：lint 债务 3417 条</a></li><li class="lvl-3"><a href="#方案-a-全量修复-阻断新增-激进重构">方案 A：全量修复 + 阻断新增（激进重构）</a></li><li class="lvl-3"><a href="#方案-b-新文件零容忍-旧文件渐进修复-渐进改良">方案 B：新文件零容忍 + 旧文件渐进修复（渐进改良）</a></li><li class="lvl-3"><a href="#方案-c-热点修复-自动修复-债务追踪-对抗综合">方案 C：热点修复 + 自动修复 + 债务追踪（对抗综合）</a></li><li class="lvl-1"><a href="#总结-优先级矩阵">总结：优先级矩阵</a></li><li class="lvl-1"><a href="#附录-对抗式设计方法论说明">附录：对抗式设计方法论说明</a></li><li class="lvl-2"><a href="#什么是-自我对抗式设计方案">什么是&quot;自我对抗式设计方案&quot;</a></li><li class="lvl-2"><a href="#为什么需要对抗式设计">为什么需要对抗式设计</a></li><li class="lvl-2"><a href="#对抗式设计的三个原则">对抗式设计的三个原则</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-不足诊断与自对抗式设计方案">Khy-OS 不足诊断与自对抗式设计方案<a class="anchor" href="#khy-os-不足诊断与自对抗式设计方案" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>文档定位</strong>：对 khy-os 项目的全量不足诊断 + 多轮对抗式设计推演。只设计，不动手。<br><strong>分析范围</strong>：架构、工程、治理、安全、性能、可扩展性、可维护性。<br><strong>分析方法</strong>：每个问题给出 A/B/C 三方案，通过对抗式论证推出最终推荐方案。<br><strong>生成时间</strong>：2026-09-03<br><strong>分析基础</strong>：代码实测 + 文档审计 + CI/CD 扫描 + 架构逆向</p></blockquote>
+<hr>
+<h2 id="目录">目录<a class="anchor" href="#目录" aria-label="锚点">#</a></h2>
+<ul><li><a href="#第一部分不足诊断">第一部分：不足诊断</a><ul><li><a href="#架构级问题ar">架构级问题（AR）</a></li><li><a href="#工程级问题eg">工程级问题（EG）</a></li><li><a href="#治理级问题gv">治理级问题（GV）</a></li><li><a href="#安全级问题sc">安全级问题（SC）</a></li><li><a href="#性能级问题pf">性能级问题（PF）</a></li><li><a href="#可扩展性级问题ex">可扩展性级问题（EX）</a></li><li><a href="#可维护性级问题mt">可维护性级问题（MT）</a></li></ul></li><li><a href="#第二部分自对抗式设计方案">第二部分：自对抗式设计方案</a><ul><li><a href="#设计方法论">设计方法论</a></li><li><a href="#ar-1-对抗设计routerjs-上帝开关">AR-1 对抗设计：router.js 上帝开关</a></li><li><a href="#ar-2-对抗设计数据双栖问题">AR-2 对抗设计：数据双栖问题</a></li><li><a href="#ar-3-对抗设计内核-preemption-验证残留">AR-3 对抗设计：内核 preemption 验证残留</a></li><li><a href="#eg-1-对抗设计autotestscaffolder-假测试">EG-1 对抗设计：autoTestScaffolder 假测试</a></li><li><a href="#eg-2-对抗设计restoreagentservice-空壳">EG-2 对抗设计：restoreAgentService 空壳</a></li><li><a href="#eg-3-对抗设计metatoolengine-调度死路">EG-3 对抗设计：metaToolEngine 调度死路</a></li><li><a href="#gv-1-对抗设计非阻塞测试基线">GV-1 对抗设计：非阻塞测试基线</a></li><li><a href="#gv-2-对抗设计安全扫描缺失">GV-2 对抗设计：安全扫描缺失</a></li><li><a href="#gv-3-对抗设计acp-协议未冻结">GV-3 对抗设计：ACP 协议未冻结</a></li><li><a href="#pf-1-对抗设计aigateway-语言纠偏复杂度">PF-1 对抗设计：aiGateway 语言纠偏复杂度</a></li><li><a href="#ex-1-对抗设计扩展契约违反">EX-1 对抗设计：扩展契约违反</a></li><li><a href="#mt-1-对抗设计lint-债务-3417-条">MT-1 对抗设计：lint 债务 3417 条</a></li></ul></li></ul>
+<hr>
+<h1 id="第一部分-不足诊断">第一部分：不足诊断<a class="anchor" href="#第一部分-不足诊断" aria-label="锚点">#</a></h1>
+<h2 id="架构级问题-ar">架构级问题（AR）<a class="anchor" href="#架构级问题-ar" aria-label="锚点">#</a></h2>
+<h3 id="ar-1-router-js-上帝开关-critical">AR-1：router.js 上帝开关（Critical）<a class="anchor" href="#ar-1-router-js-上帝开关-critical" aria-label="锚点">#</a></h3>
+<p><strong>症状</strong>：<code>services/backend/src/cli/router.js</code> 含 3351 行代码，其中 <code>route()</code> 函数是一个 switch 语句，包含 119+ 个 case 分支（第 957–3234 行），直接操作 IO、调度 handler、管理权限。</p>
+<p><strong>根因</strong>：</p>
+<ul><li>早期命令少时，中央 switch 是最快实现方式</li><li>后期新增命令时，为避免重构风险，持续向 switch 追加 case</li><li>文件头部已拆出 <code>routerDispatchOps.js</code>、<code>routerDispatchSlash.js</code>、<code>routerDispatchTail.js</code> 三个子模块，但主 switch 仍保留 119 个 case，说明拆分不彻底</li><li>每个 case 内部 inline <code>require()</code> 破坏了懒加载策略（CLAUDE.md 声明的&quot;快速冷启动&quot;目标）</li></ul>
+<p><strong>影响</strong>：</p>
+<ul><li>任何命令修改都需编辑 3000+ 行的文件，合并冲突概率极高</li><li>无法对单个命令做独立测试（必须加载整个 router）</li><li>启动时 require 链式加载，冷启动实测远超声称的&quot;~40ms baseline&quot;</li></ul>
+<p><strong>现状证据</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// router.js:957-3234 — 大 switch</span>
+<span class="hljs-keyword">switch</span> (cmd) {
+  <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;ai&#x27;</span>: <span class="hljs-comment">/* ... 95 行 ... */</span> <span class="hljs-keyword">break</span>;
+  <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;gateway&#x27;</span>: <span class="hljs-comment">/* ... 67 行 ... */</span> <span class="hljs-keyword">break</span>;
+  <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;service&#x27;</span>: <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./handlers.service&#x27;</span>); <span class="hljs-comment">// inline require</span>
+  <span class="hljs-comment">// ... 116 个 case ...</span>
+}</code></pre>
+<hr>
+<h3 id="ar-2-数据双栖问题-critical">AR-2：数据双栖问题（Critical）<a class="anchor" href="#ar-2-数据双栖问题-critical" aria-label="锚点">#</a></h3>
+<p><strong>症状</strong>：两个&quot;数据主目录&quot;并存运行：</p>
+<ul><li><code>getDataHome()</code> 默认返回 <code>~/.khy</code>（Khy-OS 本体数据）</li><li>多个 service（<code>cleanupService</code>、<code>skillRegistry</code>、<code>adminService</code>）硬编码 <code>~/.khyquant</code></li></ul>
+<p><strong>根因</strong>：</p>
+<ul><li><code>dataHome.js</code> 第 47 行明确标注 <code>TODO: [Eco-Arch-Unresolved]</code></li><li>khyquant 从独立项目合入时，其数据目录习惯被完整保留</li><li><code>~/.khyquant</code> 是历史遗留，<code>~/.khy</code> 是规范要求，两者并存导致：<ul><li>用户配置存在 <code>~/.khy/config.json</code></li><li>技能/清理数据存在 <code>~/.khyquant/</code> </li><li>用户迁移/备份时极易遗漏</li></ul></li></ul>
+<p><strong>影响</strong>：</p>
+<ul><li>数据碎片化：同一用户的配置、凭据、对话记录分散在两个目录</li><li>备份脚本必须同时处理两处，漏备份风险高</li><li>便携版迁移时数据丢失隐患极大</li></ul>
+<p><strong>现状证据</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// dataHome.js:47-57</span>
+<span class="hljs-comment">// <span class="hljs-doctag">TODO:</span> [Eco-Arch-Unresolved] 两种&quot;应用数据主目录&quot;混用：</span>
+<span class="hljs-comment">//   - getDataHome() → ~/.khy</span>
+<span class="hljs-comment">//   - cleanupService/skillRegistry → ~/.khyquant</span>
+<span class="hljs-comment">// 活体数据迁移需手动设计</span></code></pre>
+<hr>
+<h3 id="ar-3-内核-preemption-验证残留-high">AR-3：内核 preemption 验证残留（High）<a class="anchor" href="#ar-3-内核-preemption-验证残留-high" aria-label="锚点">#</a></h3>
+<p><strong>症状</strong>：<code>kernel/src/main.c</code> 第 132–144 行有一个 <code>hog_task()</code> 函数，是 CPU bound 无限循环，第 136 行标注 <code>TODO(verification-only): remove once preemption is confirmed in QEMU</code>。该任务在 <code>kernel_main()</code> 第 354 行被实际启动。</p>
+<p><strong>根因</strong>：</p>
+<ul><li>抢占式调度器开发时，需要一个验证任务来确认 preempt 能打断 CPU  bound 任务</li><li>验证完成后，该任务应被移除</li><li>但 TODO 没有关联 issue、没有截止日期、没有自动检测机制</li></ul>
+<p><strong>影响</strong>：</p>
+<ul><li>如果 preemption 配置有微妙的 bug（如时钟中断在某些嵌套场景丢失），<code>hog_task</code> 会饿死所有其他任务（shell、services、desktop）</li><li>这是一个&quot;潜在的 kernel panic 触发器&quot;在生产代码中运行</li><li>没有任何运行时监控能检测到&quot;hog_task 正在独占 CPU&quot;</li></ul>
+<p><strong>现状证据</strong></p>
+<pre><code class="language-c"><span class="hljs-comment">// main.c:132-144</span>
+<span class="hljs-type">void</span> <span class="hljs-title function_">hog_task</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span> {
+  <span class="hljs-keyword">while</span> (<span class="hljs-number">1</span>) {
+    <span class="hljs-comment">// TODO(verification-only): remove once preemption is confirmed in QEMU</span>
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">volatile</span> <span class="hljs-type">int</span> i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-number">1000000</span>; i++) {}
+  }
+}
+<span class="hljs-comment">// main.c:354</span>
+create_task(hog_task, <span class="hljs-string">&quot;hog&quot;</span>);</code></pre>
+<hr>
+<h2 id="工程级问题-eg">工程级问题（EG）<a class="anchor" href="#工程级问题-eg" aria-label="锚点">#</a></h2>
+<h3 id="eg-1-autotestscaffolder-假测试-high">EG-1：autoTestScaffolder 假测试（High）<a class="anchor" href="#eg-1-autotestscaffolder-假测试-high" aria-label="锚点">#</a></h3>
+<p><strong>症状</strong>：<code>services/backend/src/services/selfSustainingInfra/autoTestScaffolder.js</code> 自动生成的测试全部使用 <code>assert.doesNotThrow()</code> 作为唯一断言。</p>
+<p><strong>根因</strong>：</p>
+<ul><li>自动生成器无法推断函数的行为契约（需要 LLM 或人工）</li><li>设计意图是&quot;先建立行为快照基线，后续人工补全&quot;</li><li>但第 118、129 行标注 <code>TODO: 补全行为断言</code>，没有强制机制确保补全</li></ul>
+<p><strong>影响</strong>：</p>
+<ul><li>CI 测试通过率虚高（100% 通过 = 0% 行为覆盖）</li><li>开发者误以为有测试保护，实际上重构时没有任何行为约束</li><li>与&quot;零容忍红线&quot;的工程文化冲突：测试是红线的第一道防线，假测试比无测试更危险</li></ul>
+<p><strong>现状证据</strong></p>
+<pre><code class="language-javascript"><span class="hljs-comment">// autoTestScaffolder.js:113-133</span>
+<span class="hljs-title function_">test</span>(<span class="hljs-string">&#x27;${fnName} does not throw&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  assert.<span class="hljs-title function_">doesNotThrow</span>(<span class="hljs-function">() =&gt;</span> {
+    ${fnName}(); <span class="hljs-comment">// 无参数调用，且不验证返回值</span>
+  });
+  <span class="hljs-comment">// <span class="hljs-doctag">TODO:</span> 补全行为断言</span>
+});</code></pre>
+<hr>
+<h3 id="eg-2-restoreagentservice-空壳-high">EG-2：restoreAgentService 空壳（High）<a class="anchor" href="#eg-2-restoreagentservice-空壳-high" aria-label="锚点">#</a></h3>
+<p><strong>症状</strong>：<code>services/backend/src/services/restoreAgentService.js</code> 的 <code>_executeMove()</code> 方法是 stub：第 151 行 <code>const dryRun = opts.dryRun !== false;</code> 默认 dryRun=true，第 148 行 <code>TODO (future): 当 autonomy gate 授权后调用 execSync(move.action) 真实执行</code>。</p>
+<p><strong>根因</strong>：</p>
+<ul><li>自动修复涉及文件修改，风险极高</li><li>开发者担心误操作破坏代码，选择了保守的&quot;只记录不执行&quot;策略</li><li>但 <code>runAutoRestore()</code> 完整实现了 probe → plan → &quot;execute&quot; 循环，唯独执行是空操作</li></ul>
+<p><strong>影响</strong>：</p>
+<ul><li>自动修复功能完全不可用</li><li>用户运行 <code>khy restore</code> 时，看到的修复报告是&quot;已修复&quot;，实际什么都没做</li><li>这是一个&quot;假功能&quot;——比缺失功能更糟，因为它给用户错误的修复信心</li></ul>
+<p><strong>现状证据</strong></p>
+<pre><code class="language-javascript"><span class="hljs-comment">// restoreAgentService.js:142-164</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">_executeMove</span>(<span class="hljs-params">move, opts = {}</span>) {
+  <span class="hljs-keyword">const</span> dryRun = opts.<span class="hljs-property">dryRun</span> !== <span class="hljs-literal">false</span>; <span class="hljs-comment">// 默认 true</span>
+  <span class="hljs-keyword">if</span> (dryRun) {
+    <span class="hljs-title function_">log</span>(<span class="hljs-string">`[dry-run] would execute: <span class="hljs-subst">${move.action}</span>`</span>);
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">executed</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">dryRun</span>: <span class="hljs-literal">true</span> };
+  }
+  <span class="hljs-comment">// TODO (future): 当 autonomy gate 授权后调用 execSync</span>
+  <span class="hljs-keyword">return</span> { <span class="hljs-attr">executed</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">reason</span>: <span class="hljs-string">&#x27;autonomy_gate_not_implemented&#x27;</span> };
+}</code></pre>
+<hr>
+<h3 id="eg-3-metatoolengine-调度死路-medium">EG-3：metaToolEngine 调度死路（Medium）<a class="anchor" href="#eg-3-metatoolengine-调度死路-medium" aria-label="锚点">#</a></h3>
+<p><strong>症状</strong>：<code>services/backend/src/services/metaToolEngine.js</code> 的 <code>shouldForge()</code> 方法（第 564–573 行）是一个 stub，返回 true 但不被任何调度循环调用。</p>
+<p><strong>根因</strong>：</p>
+<ul><li>元工具锻造（遇到未知工具名时自动生成工具）是前瞻性功能</li><li><code>shouldForge()</code> 已写好，但调度器未接入</li><li>第 17 行标注 <code># TODO: [MetaTool-*-Unresolved]</code></li></ul>
+<p><strong>影响</strong>：</p>
+<ul><li>核心功能&quot;按需生成工具&quot;不可用</li><li>代码维护成本：需要保留这份死代码，因为未来可能接入</li><li>测试覆盖困难：无法为未接入的代码写有意义的集成测试</li></ul>
+<p><strong>现状证据</strong></p>
+<pre><code class="language-javascript"><span class="hljs-comment">// metaToolEngine.js:564-573</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">shouldForge</span>(<span class="hljs-params">toolName, context</span>) {
+  <span class="hljs-keyword">if</span> (!enabled) <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  <span class="hljs-keyword">if</span> (!toolName || <span class="hljs-keyword">typeof</span> toolName !== <span class="hljs-string">&#x27;string&#x27;</span>) <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  <span class="hljs-comment">// 当前**不接入**调度循环</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+}</code></pre>
+<hr>
+<h2 id="治理级问题-gv">治理级问题（GV）<a class="anchor" href="#治理级问题-gv" aria-label="锚点">#</a></h2>
+<h3 id="gv-1-非阻塞测试基线-high">GV-1：非阻塞测试基线（High）<a class="anchor" href="#gv-1-非阻塞测试基线-high" aria-label="锚点">#</a></h3>
+<p><strong>症状</strong>：<code>.github/workflows/pr-gate.yml</code> 第 236–271 行的 <code>test-baseline</code> job 设置了 <code>continue-on-error: true</code>，且注释说明&quot;4 suite / 9 用例失败&quot;是已知状态。</p>
+<p><strong>根因</strong>：</p>
+<ul><li>9 个测试用例在特定环境下持续失败</li><li>为避免阻塞所有 PR，设置了 continue-on-error</li><li>但没有分配修复责任人、没有截止日期、没有跟踪 issue</li></ul>
+<p><strong>影响</strong>：</p>
+<ul><li>测试 gate 提供零信号：即使新增测试失败，PR 也能通过</li><li>与&quot;质量门&quot;的设计意图直接冲突</li><li>9 个失败用例成为&quot;永久债务&quot;，随时间推移可能增加</li></ul>
+<p><strong>现状证据</strong></p>
+<pre><code class="language-yaml"><span class="hljs-comment"># pr-gate.yml:236-271</span>
+<span class="hljs-attr">test-baseline:</span>
+  <span class="hljs-attr">continue-on-error:</span> <span class="hljs-literal">true</span>  <span class="hljs-comment"># 9 个用例失败，待清零后删除</span>
+  <span class="hljs-attr">steps:</span>
+    <span class="hljs-bullet">-</span> <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">run</span> <span class="hljs-string">test:backend</span>
+      <span class="hljs-attr">continue-on-error:</span> <span class="hljs-literal">true</span></code></pre>
+<hr>
+<h3 id="gv-2-安全扫描缺失-high">GV-2：安全扫描缺失（High）<a class="anchor" href="#gv-2-安全扫描缺失-high" aria-label="锚点">#</a></h3>
+<p><strong>症状</strong>：<code>pr-gate.yml</code> 没有 SAST、依赖审计、密钥扫描步骤。<code>codeql-analysis.yml</code> 存在但未在 PR gate 中引用。</p>
+<p><strong>根因</strong>：</p>
+<ul><li>项目早期聚焦功能开发，安全扫描被视为&quot;锦上添花&quot;</li><li>CodeQL 配置为定时运行（schedule），非 PR 触发</li><li>没有引入 <code>npm audit</code>、<code>trufflehog</code>、<code>gitleaks</code> 等工具</li></ul>
+<p><strong>影响</strong>：</p>
+<ul><li>依赖漏洞（如 log4shell 级别）可在 master 上存在数周才被发现</li><li>密钥泄露风险：开发者可能误提交 <code>.env</code> 或凭据文件</li><li>不符合&quot;安全红线&quot;的工程文化</li></ul>
+<p><strong>现状证据</strong></p>
+<pre><code class="language-yaml"><span class="hljs-comment"># pr-gate.yml — 无 security 步骤</span>
+<span class="hljs-attr">jobs:</span>
+  <span class="hljs-attr">check-change-safety:</span> <span class="hljs-string">...</span>
+  <span class="hljs-attr">check-agent-rules:</span> <span class="hljs-string">...</span>
+  <span class="hljs-attr">check-repo-layout:</span> <span class="hljs-string">...</span>
+  <span class="hljs-attr">test-baseline:</span> <span class="hljs-string">...</span>
+  <span class="hljs-comment"># 无 security-scan / dependency-audit / secret-detection</span></code></pre>
+<hr>
+<h3 id="gv-3-acp-协议未冻结-medium">GV-3：ACP 协议未冻结（Medium）<a class="anchor" href="#gv-3-acp-协议未冻结-medium" aria-label="锚点">#</a></h3>
+<p><strong>症状</strong>：<code>[DESIGN-GOV-001]</code> 审计矩阵（第 14 行）标注 ACP 板块&quot;缺 version/trace/deadline/idempotency 元数据；schema 与 response 形式不一致&quot;。</p>
+<p><strong>根因</strong>：</p>
+<ul><li>ACP（Agent Communication Protocol）是内部 RPC 协议</li><li>早期设计为 JSON-RPC 2.0，但运行时接受无 <code>method</code> 的 response</li><li>协议演进过程中，schema 和实现逐渐分叉</li></ul>
+<p><strong>影响</strong></p>
+<ul><li>跨版本兼容性风险：旧版 client 调用新版 server 可能失败</li><li>调试困难：缺少 trace 和 deadline 元数据，分布式追踪无法实现</li><li>幂等性缺失：重试可能导致重复操作（如重复创建资源）</li></ul>
+<p><strong>现状证据</strong></p>
+<pre><code>[DESIGN-GOV-001] §0 审计矩阵：
+ACP — 已有校验方式: ACP transport 测试、JSON schema 检查
+     空白或待工具化: 无版本/trace/deadline/idempotency 元数据；schema 与 response 形式不一致</code></pre>
+<hr>
+<h2 id="安全级问题-sc">安全级问题（SC）<a class="anchor" href="#安全级问题-sc" aria-label="锚点">#</a></h2>
+<h3 id="sc-1-模型导出无密码门-high">SC-1：模型导出无密码门（High）<a class="anchor" href="#sc-1-模型导出无密码门-high" aria-label="锚点">#</a></h3>
+<p><strong>症状</strong>：<code>modelTrainingService.js</code> 的 <code>verifyExportPassword()</code> 始终返回 true（第 192 行 AGENTS.md 明确说明）。</p>
+<p><strong>根因</strong>：历史密码门 <code>khy20026</code> 被有意移除，改为&quot;部署/网络层控制访问&quot;。</p>
+<p><strong>影响</strong>：</p>
+<ul><li>任何能访问 <code>khy export-model</code> 命令的人都能导出模型</li><li>如果模型包含微调数据（可能含敏感信息），泄露风险高</li><li>&quot;部署层控制&quot;是空话：便携版部署在 U 盘上，没有网络层防护</li></ul>
+<hr>
+<h3 id="sc-2-check-agent-rules-js-豁免过宽-medium">SC-2：check-agent-rules.js 豁免过宽（Medium）<a class="anchor" href="#sc-2-check-agent-rules-js-豁免过宽-medium" aria-label="锚点">#</a></h3>
+<p><strong>症状</strong>：<code>scripts/ci/check-agent-rules.js</code> 第 413–433 行的硬编码端点检查豁免规则过于宽松：</p>
+<ul><li>含 <code>${}</code> 插值的模板字符串被豁免</li><li>含&quot;例如/e.g./示例&quot;的行被豁免</li><li><code>console.log</code> 中的 URL 被豁免</li></ul>
+<p><strong>影响</strong>：开发者可通过简单技巧绕过红线检查：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// 违规但被豁免</span>
+<span class="hljs-keyword">const</span> url = <span class="hljs-string">`<span class="hljs-subst">${protocol}</span>://khyquant.top/api`</span>; <span class="hljs-comment">// 含 ${} → 豁免</span>
+<span class="hljs-comment">// 示例：http://khyquant.top/api  // 含&quot;示例&quot; → 豁免</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;http://khyquant.top/api&#x27;</span>); <span class="hljs-comment">// console.log → 豁免</span></code></pre>
+<hr>
+<h2 id="性能级问题-pf">性能级问题（PF）<a class="anchor" href="#性能级问题-pf" aria-label="锚点">#</a></h2>
+<h3 id="pf-1-aigateway-语言纠偏复杂度-medium">PF-1：aiGateway 语言纠偏复杂度（Medium）<a class="anchor" href="#pf-1-aigateway-语言纠偏复杂度-medium" aria-label="锚点">#</a></h3>
+<p><strong>症状</strong>：<code>aiGateway.js</code> 第 386–1067 行实现了庞大的语言一致性检测和纠偏系统，包含：</p>
+<ul><li><code>_createCodexChineseChunkGate</code>（762–834 行）</li><li><code>_createKhyLanguageConsistencyTracker</code>（959–1067 行）</li><li><code>_injectKhyProtocolSystem</code>（396–405 行）</li><li><code>_injectKhyExpectedLanguageSystem</code>（415–444 行）</li><li><code>_injectKhyChineseRecoverySystem</code>（636–653 行）</li></ul>
+<p><strong>影响</strong>：</p>
+<ul><li>每个请求都要经过多层语言注入和检测</li><li>语言检测基于正则匹配（<code>_looksLikeChineseScript</code>、<code>_looksLikeEnglishScript</code>），有误判风险</li><li>纠偏机制（abort + retry）增加延迟和 token 消耗</li></ul>
+<hr>
+<h2 id="可扩展性级问题-ex">可扩展性级问题（EX）<a class="anchor" href="#可扩展性级问题-ex" aria-label="锚点">#</a></h2>
+<h3 id="ex-1-扩展契约违反-medium">EX-1：扩展契约违反（Medium）<a class="anchor" href="#ex-1-扩展契约违反-medium" aria-label="锚点">#</a></h3>
+<p><strong>症状</strong>：<code>extensions/</code> 下多个扩展违反 <code>[DESIGN-TOOL-002]</code> 契约：</p>
+<ul><li><code>khy-desktop-rd</code>：<code>kind: asset</code> 但包含可执行代码（<code>main-pattern-extract.ts</code>、<code>lib.rs</code>、<code>Cargo.toml</code>）</li><li><code>khy-alpine-iso</code>：<code>commands: []</code> 但包含 <code>build-iso-docker.ps1</code> 等可执行脚本</li><li><code>khy-qoder-bridge</code>：<code>commands: []</code> 但包含 <code>install_autostart.ps1</code> 等可执行脚本</li></ul>
+<p><strong>影响</strong>：</p>
+<ul><li>扩展加载器可能跳过 <code>kind: asset</code> 扩展的代码发现</li><li><code>commands: []</code> 的脚本对用户不可见，必须手动查找文档</li><li>契约形同虚设：如果扩展可以违反契约而不被拦截，新开发者更不会遵守</li></ul>
+<hr>
+<h2 id="可维护性级问题-mt">可维护性级问题（MT）<a class="anchor" href="#可维护性级问题-mt" aria-label="锚点">#</a></h2>
+<h3 id="mt-1-lint-债务-3417-条-medium">MT-1：lint 债务 3417 条（Medium）<a class="anchor" href="#mt-1-lint-债务-3417-条-medium" aria-label="锚点">#</a></h3>
+<p><strong>症状</strong>：<code>services/backend/src</code> 有 3417 个既有 lint 问题（428 errors + 2989 warnings across 1060 files）。CLAUDE.md 明确说&quot;新文件必须干净；现有文件被 grandfathered&quot;。</p>
+<p><strong>影响</strong>：</p>
+<ul><li>新文件零容忍 vs 旧文件无约束 = 代码质量标准分裂</li><li>开发者在旧文件中新写代码时，lint 不报警，导致债务持续增长</li><li>3417 条债务的清理成本随时间线性增长</li></ul>
+<hr>
+<h1 id="第二部分-自对抗式设计方案">第二部分：自对抗式设计方案<a class="anchor" href="#第二部分-自对抗式设计方案" aria-label="锚点">#</a></h1>
+<h2 id="设计方法论">设计方法论<a class="anchor" href="#设计方法论" aria-label="锚点">#</a></h2>
+<p>每个问题按以下流程设计：</p>
+<ol><li><strong>方案 A（激进重构）</strong>：彻底解决，高成本高收益</li><li><strong>方案 B（渐进改良）</strong>：最小改动，低成本低收益</li><li><strong>方案 C（对抗综合）</strong>：A 和 B 的折中，通过对抗论证说明为什么 C 优于纯 A 或纯 B</li><li><strong>对抗记录</strong>：A 反驳 B、B 反驳 A 的核心论点</li><li><strong>最终推荐</strong>：C 方案 + 实施路径</li></ol>
+<hr>
+<h2 id="ar-1-对抗设计-router-js-上帝开关">AR-1 对抗设计：router.js 上帝开关<a class="anchor" href="#ar-1-对抗设计-router-js-上帝开关" aria-label="锚点">#</a></h2>
+<h3 id="方案-a-命令注册表-自动发现-激进重构">方案 A：命令注册表 + 自动发现（激进重构）<a class="anchor" href="#方案-a-命令注册表-自动发现-激进重构" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>删除 <code>route()</code> 的 switch 语句</li><li>建立命令注册表：<code>commands.json</code> 声明每个命令的 handler 路径、权限、子命令</li><li>启动时扫描 <code>handlers/</code> 目录，自动注册</li><li>子命令通过目录结构表达：<code>handlers/ai/chat.js</code>、<code>handlers/ai/ask.js</code></li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>新增命令只需添加文件 + 注册表条目，零修改 router.js</li><li>每个 handler 可独立测试</li><li>启动时只加载元数据，handler 按需 require</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>需要重写 119 个 case 的调用方式</li><li>注册表与代码分离，可能出现&quot;注册表有条目但文件已删除&quot;的漂移</li><li>子命令的复杂逻辑（如 <code>ai</code> 的 95 行 if/else）需要重新设计</li></ul>
+<hr>
+<h3 id="方案-b-保持-switch-提取-handler-渐进改良">方案 B：保持 switch + 提取 handler（渐进改良）<a class="anchor" href="#方案-b-保持-switch-提取-handler-渐进改良" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>保持 <code>route()</code> 的 switch 结构</li><li>将每个 case 的 inline 逻辑提取到独立 handler 文件</li><li>switch 只保留 <code>case 'cmd': handler = require('./handlers/cmd.js'); handler.execute(args); break;</code></li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>改动最小：每个 case 独立提取，不影响其他 case</li><li>风险低：可以逐个 case 迁移，随时回滚</li><li>保持现有测试不变</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>switch 仍然有 119 个 case，文件仍然巨大</li><li>合并冲突风险未解决</li><li>inline require 问题未解决（每个 case 首次命中时才加载）</li></ul>
+<hr>
+<h3 id="方案-c-分层注册表-懒加载-对抗综合">方案 C：分层注册表 + 懒加载（对抗综合）<a class="anchor" href="#方案-c-分层注册表-懒加载-对抗综合" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<pre><code>commands/
+  registry.json          # 命令元数据（名称、描述、权限、handler 路径）
+  handlers/              # 每个命令一个文件
+    ai.js
+    gateway.js
+    service.js
+    ...
+  router.js              # 精简后的路由器（&lt;200 行）</code></pre>
+<p><strong>router.js 新实现</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> registry = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./commands/registry.json&#x27;</span>);
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">route</span>(<span class="hljs-params">cmd, args</span>) {
+  <span class="hljs-keyword">const</span> meta = registry[cmd];
+  <span class="hljs-keyword">if</span> (!meta) {
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">unknownCommand</span>(cmd);
+  }
+  <span class="hljs-keyword">if</span> (meta.<span class="hljs-property">permission</span> &amp;&amp; !<span class="hljs-title function_">checkPermission</span>(meta.<span class="hljs-property">permission</span>)) {
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">permissionDenied</span>(cmd);
+  }
+  <span class="hljs-comment">// 懒加载：只在首次命中时 require</span>
+  <span class="hljs-keyword">const</span> handler = <span class="hljs-built_in">require</span>(<span class="hljs-string">`./commands/handlers/<span class="hljs-subst">${meta.handler}</span>`</span>);
+  <span class="hljs-keyword">return</span> handler.<span class="hljs-title function_">execute</span>(args, meta.<span class="hljs-property">options</span>);
+}</code></pre>
+<p><strong>registry.json 结构</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;ai&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;handler&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ai.js&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;AI 聊天 REPL&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;permission&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">null</span></span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;subCommands&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;chat&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;ask&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;summary&quot;</span><span class="hljs-punctuation">]</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;gateway&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;handler&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;gateway.js&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;AI 网关管理&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;permission&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;admin&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>对抗论证</strong>：</p>
+<table><thead><tr><th>A 反驳 B</th><th>B 反驳 A</th></tr></thead><tbody><tr><td>B 不解决根本问题：switch 仍然巨大，合并冲突仍然高频</td><td>A 改动太大，119 个 case 迁移风险高，可能引入新 bug</td></tr><tr><td>B 的 inline require 问题未解决，冷启动性能差</td><td>A 的注册表可能漂移，需要额外工具校验</td></tr><tr><td>B 每次新增命令仍需编辑 router.js（哪怕只加一行 case）</td><td>A 的子命令复杂逻辑（如 <code>ai</code> 的 95 行 if/else）需要重新设计，工作量大</td></tr></tbody></table>
+<p><strong>C 如何综合</strong>：</p>
+<ul><li>保留 A 的&quot;注册表 + 懒加载&quot;核心思想，解决 switch 巨大和 inline require 问题</li><li>采用 B 的&quot;渐进迁移&quot;策略：可以按命令优先级逐个迁移，不必一次性重写 119 个 case</li><li>注册表用 JSON 而非代码，降低 drift 风险（JSON 可被 CI 校验：<code>handler</code> 字段指向的文件必须存在）</li></ul>
+<p><strong>实施路径</strong>：</p>
+<ol><li>第 1 周：创建 <code>commands/registry.json</code> 和 <code>commands/handlers/</code> 目录，实现新 router</li><li>第 2–4 周：按使用频率排序，迁移 Top 20 命令（覆盖 80% 使用场景）</li><li>第 5–8 周：迁移剩余 99 个命令</li><li>第 9 周：删除旧 router.js，CI 添加&quot;禁止新增 switch case&quot;规则</li></ol>
+<hr>
+<h2 id="ar-2-对抗设计-数据双栖问题">AR-2 对抗设计：数据双栖问题<a class="anchor" href="#ar-2-对抗设计-数据双栖问题" aria-label="锚点">#</a></h2>
+<h3 id="方案-a-统一迁移到-khy-激进重构">方案 A：统一迁移到 <code>~/.khy</code>（激进重构）<a class="anchor" href="#方案-a-统一迁移到-khy-激进重构" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>废弃 <code>~/.khyquant</code>，所有数据统一到 <code>~/.khy</code></li><li>提供一次性迁移脚本：<code>khy migrate-data</code></li><li>删除 <code>dataHome.js</code> 中的 <code>~/.khyquant</code> 引用</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>彻底解决碎片化</li><li>备份/迁移只需处理一个目录</li><li>符合&quot;单一数据源&quot;原则</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>迁移脚本需要处理：已存在 <code>~/.khyquant</code> 的用户、正在运行的进程锁定文件、符号链接</li><li>如果迁移失败，可能导致数据损坏</li><li>需要通知所有用户手动运行迁移脚本</li></ul>
+<hr>
+<h3 id="方案-b-兼容层-符号链接-渐进改良">方案 B：兼容层 + 符号链接（渐进改良）<a class="anchor" href="#方案-b-兼容层-符号链接-渐进改良" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>保持 <code>~/.khyquant</code> 和 <code>~/.khy</code> 并存</li><li>在 <code>~/.khy</code> 中创建符号链接指向 <code>~/.khyquant</code> 中的特定子目录</li><li><code>dataHome.js</code> 添加&quot;数据定位器&quot;：按优先级搜索两个目录</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>零迁移成本</li><li>向后兼容：旧脚本继续工作</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>符号链接在 Windows 上需要管理员权限或开发者模式</li><li>数据仍然碎片化，只是&quot;看起来统一&quot;</li><li>备份脚本仍然需要处理两处</li></ul>
+<hr>
+<h3 id="方案-c-数据抽象层-渐进迁移-对抗综合">方案 C：数据抽象层 + 渐进迁移（对抗综合）<a class="anchor" href="#方案-c-数据抽象层-渐进迁移-对抗综合" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<pre><code>data/
+  DataLocation.js    # 数据位置抽象：getUserDataPath(type)
+  types/
+    config.js        # 配置数据 → ~/.khy/config.json
+    credentials.js   # 凭据数据 → ~/.khy/credentials/
+    conversations.js # 对话数据 → ~/.khy/conversations/
+    skills.js        # 技能数据 → ~/.khy/skills/
+  migration/
+    migrateFromKhyquant.js  # 一次性迁移脚本</code></pre>
+<p><strong>DataLocation.js 核心逻辑</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">function</span> <span class="hljs-title function_">getUserDataPath</span>(<span class="hljs-params">dataType</span>) {
+  <span class="hljs-keyword">const</span> khyHome = <span class="hljs-title function_">resolveKhyHome</span>();      <span class="hljs-comment">// ~/.khy</span>
+  <span class="hljs-keyword">const</span> khyquantHome = <span class="hljs-title function_">resolveKhyquantHome</span>(); <span class="hljs-comment">// ~/.khyquant（如果存在）</span>
+  
+  <span class="hljs-comment">// 新数据统一写入 ~/.khy</span>
+  <span class="hljs-keyword">const</span> targetPath = path.<span class="hljs-title function_">join</span>(khyHome, dataType);
+  
+  <span class="hljs-comment">// 如果目标不存在但 ~/.khyquant 有旧数据，透明迁移</span>
+  <span class="hljs-keyword">if</span> (!fs.<span class="hljs-title function_">existsSync</span>(targetPath) &amp;&amp; khyquantHome) {
+    <span class="hljs-keyword">const</span> legacyPath = path.<span class="hljs-title function_">join</span>(khyquantHome, dataType);
+    <span class="hljs-keyword">if</span> (fs.<span class="hljs-title function_">existsSync</span>(legacyPath)) {
+      fs.<span class="hljs-title function_">copySync</span>(legacyPath, targetPath);
+      <span class="hljs-title function_">log</span>(<span class="hljs-string">`Migrated <span class="hljs-subst">${dataType}</span> from ~/.khyquant to ~/.khy`</span>);
+    }
+  }
+  
+  <span class="hljs-keyword">return</span> targetPath;
+}</code></pre>
+<p><strong>对抗论证</strong>：</p>
+<table><thead><tr><th>A 反驳 B</th><th>B 反驳 A</th></tr></thead><tbody><tr><td>B 的符号链接在 Windows 上不可靠，且数据仍然碎片化</td><td>A 的迁移脚本风险高，一旦失败可能导致数据丢失</td></tr><tr><td>B 没有解决根本问题，只是掩盖症状</td><td>A 需要用户手动干预，便携版用户可能忽略迁移</td></tr></tbody></table>
+<p><strong>C 如何综合</strong>：</p>
+<ul><li>采用 A 的&quot;统一到 ~/.khy&quot;目标</li><li>采用 B 的&quot;透明兼容&quot;策略：不强制迁移，而是在运行时按需复制</li><li>添加迁移状态标记：<code>~/.khy/.migration-complete</code>，避免重复迁移</li><li>提供 <code>khy migrate-data --check</code> 命令让用户查看迁移状态</li></ul>
+<p><strong>实施路径</strong>：</p>
+<ol><li>实现 <code>DataLocation.js</code> 抽象层</li><li>修改 <code>dataHome.js</code> 使用 <code>DataLocation</code> 而非直接路径</li><li>添加迁移状态检测和透明复制逻辑</li><li>在 <code>khy doctor</code> 中添加&quot;数据目录健康检查&quot;</li><li>6 个月后：如果 99% 用户已迁移，移除 <code>~/.khyquant</code> 兼容逻辑</li></ol>
+<hr>
+<h2 id="ar-3-对抗设计-内核-preemption-验证残留">AR-3 对抗设计：内核 preemption 验证残留<a class="anchor" href="#ar-3-对抗设计-内核-preemption-验证残留" aria-label="锚点">#</a></h2>
+<h3 id="方案-a-移除-hog-task-添加运行时检测-激进重构">方案 A：移除 hog_task + 添加运行时检测（激进重构）<a class="anchor" href="#方案-a-移除-hog-task-添加运行时检测-激进重构" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>删除 <code>hog_task()</code> 函数和 <code>create_task(hog_task, &quot;hog&quot;)</code> 调用</li><li>添加运行时 preemption 健康检查：在 kernel_main 中启动一个监控任务，周期性验证其他任务是否获得 CPU 时间</li><li>如果监控任务检测到饥饿，触发 kernel panic 并输出诊断信息</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>彻底消除 hog_task 风险</li><li>运行时检测能捕获 preemption 配置错误</li><li>符合&quot;生产代码不应包含验证代码&quot;的原则</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>监控任务本身消耗 CPU 资源（虽然很小）</li><li>如果 preemption 完全失效，监控任务也可能无法运行</li></ul>
+<hr>
+<h3 id="方案-b-条件编译-编译时开关-渐进改良">方案 B：条件编译 + 编译时开关（渐进改良）<a class="anchor" href="#方案-b-条件编译-编译时开关-渐进改良" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>用 <code>#ifdef ENABLE_HOG_TASK</code> 包裹 hog_task 相关代码</li><li>默认关闭，只有开发时通过 <code>-DENABLE_HOG_TASK</code> 开启</li><li>在 Makefile 中添加 <code>make kernel-dev</code> 目标</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>零运行时开销（生产代码中不存在 hog_task）</li><li>开发时仍可验证 preemption</li><li>改动最小</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>条件编译增加代码复杂度</li><li>如果开发者忘记关闭开关就发布，风险仍在</li></ul>
+<hr>
+<h3 id="方案-c-qemu-测试-ci-门禁-对抗综合">方案 C：QEMU 测试 + CI 门禁（对抗综合）<a class="anchor" href="#方案-c-qemu-测试-ci-门禁-对抗综合" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ol><li><strong>移除 hog_task</strong>：删除 <code>main.c</code> 中的 hog_task 代码</li><li><strong>添加 preemption 测试</strong>：在 <code>kernel/tools/</code> 中添加 <code>test-preemption.c</code><ul><li>创建 3 个任务：一个 CPU bound、一个 IO bound、一个监控</li><li>验证监控任务能在 100ms 内获得 CPU</li><li>如果验证失败，测试退出码非零</li></ul></li><li><strong>CI 集成</strong>：在 <code>.github/workflows/</code> 中添加 kernel 测试 job<ul><li>每次 PR 运行 QEMU + preemption 测试</li><li>测试失败则阻断合并</li></ul></li></ol>
+<p><strong>对抗论证</strong>：</p>
+<table><thead><tr><th>A 反驳 B</th><th>B 反驳 A</th></tr></thead><tbody><tr><td>B 的条件编译是&quot;纸面安全&quot;：如果开发者忘记关闭开关，hog_task 仍在生产代码中</td><td>A 的运行时监控增加内核复杂度，且监控任务本身可能受 preemption bug 影响</td></tr><tr><td>B 没有解决&quot;如何验证 preemption 正确工作&quot;的问题</td><td>A 的运行时检测在 preemption 完全失效时无法工作</td></tr></tbody></table>
+<p><strong>C 如何综合</strong>：</p>
+<ul><li>采用 A 的&quot;移除 hog_task&quot;目标</li><li>采用 B 的&quot;开发/生产分离&quot;思想，但通过 CI 而非条件编译实现</li><li>添加独立的 preemption 测试，作为 CI 门禁而非运行时监控</li></ul>
+<p><strong>实施路径</strong>：</p>
+<ol><li>删除 <code>main.c</code> 中的 hog_task 代码</li><li>编写 <code>kernel/tools/test-preemption.c</code></li><li>在 Makefile 中添加 <code>make test-preemption</code> 目标</li><li>在 CI 中添加 kernel 测试 job</li><li>文档更新：移除 <code>TODO(verification-only)</code> 注释</li></ol>
+<hr>
+<h2 id="eg-1-对抗设计-autotestscaffolder-假测试">EG-1 对抗设计：autoTestScaffolder 假测试<a class="anchor" href="#eg-1-对抗设计-autotestscaffolder-假测试" aria-label="锚点">#</a></h2>
+<h3 id="方案-a-llm-辅助断言生成-激进重构">方案 A：LLM 辅助断言生成（激进重构）<a class="anchor" href="#方案-a-llm-辅助断言生成-激进重构" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>使用 LLM 分析函数体，推断行为契约</li><li>生成包含真实断言（返回值验证、异常测试、边界条件）的测试</li><li>集成到 <code>khy generate-test</code> 命令</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>生成的测试有真实行为覆盖</li><li>减少人工编写测试的工作量</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>LLM 可能生成错误的断言（误将 bug 行为断言为正确）</li><li>需要 AI 调用成本</li><li>对于复杂逻辑，LLM 推断可能不准确</li></ul>
+<hr>
+<h3 id="方案-b-运行时行为快照-渐进改良">方案 B：运行时行为快照（渐进改良）<a class="anchor" href="#方案-b-运行时行为快照-渐进改良" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>在开发模式下，记录函数的实际输入/输出</li><li>将记录的行为作为&quot;快照断言&quot;</li><li>后续运行测试时，验证函数行为与快照一致</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>断言基于真实行为，无误推断</li><li>能捕获行为变更（回归检测）</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>如果原始行为有 bug，快照会固化 bug</li><li>需要运行时录制基础设施</li><li>快照可能因环境变化而不稳定</li></ul>
+<hr>
+<h3 id="方案-c-契约优先-人工确认-对抗综合">方案 C：契约优先 + 人工确认（对抗综合）<a class="anchor" href="#方案-c-契约优先-人工确认-对抗综合" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ol><li><strong>测试模板升级</strong>：<code>autoTestScaffolder.js</code> 生成三种测试：<ul><li><strong>结构测试</strong>（自动）：函数存在、可调用、参数数量正确</li><li><strong>契约测试</strong>（半自动）：基于 JSDoc 类型注解生成断言</li><li><strong>行为测试</strong>（手动）：留 TODO 注释，但 CI 统计&quot;行为测试覆盖率&quot;</li></ul></li></ol>
+<ol><li><strong>CI 门禁</strong>：<ul><li>结构测试：100% 必须通过</li><li>契约测试：如果函数有 JSDoc，必须通过</li><li>行为测试：覆盖率 &lt; 50% 时 PR 警告（不阻断，但显示在 PR 评论中）</li></ul></li></ol>
+<ol><li><strong>行为测试激励</strong>：<ul><li><code>khy test-coverage</code> 显示每个函数的行为测试状态</li><li>在 README 中添加&quot;行为测试覆盖率&quot;徽章</li></ul></li></ol>
+<p><strong>对抗论证</strong>：</p>
+<table><thead><tr><th>A 反驳 B</th><th>B 反驳 A</th></tr></thead><tbody><tr><td>B 的快照会固化 bug：如果原始行为有误，快照断言会保护这个 bug</td><td>A 的 LLM 推断可能错误，生成的断言可能误导开发者</td></tr><tr><td>B 的快照不稳定：环境变化导致快照失效，维护成本高</td><td>A 需要 AI 调用成本，且复杂逻辑推断不准确</td></tr></tbody></table>
+<p><strong>C 如何综合</strong>：</p>
+<ul><li>采用 A 的&quot;自动化生成&quot;思想，但限制在&quot;结构测试&quot;和&quot;契约测试&quot;（低风险）</li><li>采用 B 的&quot;行为验证&quot;思想，但通过&quot;覆盖率激励&quot;而非&quot;快照固化&quot;实现</li><li>行为测试留给人写，但通过 CI 统计和 PR 提醒保持压力</li></ul>
+<p><strong>实施路径</strong>：</p>
+<ol><li>升级 <code>autoTestScaffolder.js</code>，生成结构测试 + 契约测试</li><li>添加 <code>khy test-coverage</code> 命令，统计行为测试覆盖率</li><li>在 <code>pr-gate.yml</code> 中添加行为测试覆盖率检查（warning 级别）</li><li>在 CONTRIBUTING.md 中添加&quot;行为测试编写指南&quot;</li></ol>
+<hr>
+<h2 id="eg-2-对抗设计-restoreagentservice-空壳">EG-2 对抗设计：restoreAgentService 空壳<a class="anchor" href="#eg-2-对抗设计-restoreagentservice-空壳" aria-label="锚点">#</a></h2>
+<h3 id="方案-a-完整自治修复-激进重构">方案 A：完整自治修复（激进重构）<a class="anchor" href="#方案-a-完整自治修复-激进重构" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>实现完整的 autonomy gate：基于代码变更风险等级（低/中/高/关键）决定自动执行或人工审批</li><li>低风险修复（如格式调整）：自动执行</li><li>中风险修复（如依赖升级）：自动执行 + 通知用户</li><li>高风险修复（如逻辑修改）：生成修复提案，用户确认后执行</li><li>关键修复（如安全补丁）：自动执行 + 创建回滚点</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>修复能力最大化</li><li>减少人工干预</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>风险分级困难：哪些修复是&quot;低风险&quot;？</li><li>自动执行可能引入新 bug</li><li>回滚机制复杂</li></ul>
+<hr>
+<h3 id="方案-b-只读建议模式-渐进改良">方案 B：只读建议模式（渐进改良）<a class="anchor" href="#方案-b-只读建议模式-渐进改良" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>保持 <code>_executeMove()</code> 为 dry-run</li><li>生成详细的修复报告（包含 diff、影响分析、回滚步骤）</li><li>提供 <code>khy restore --apply</code> 命令，用户手动触发执行</li></ul>
+<p><strong>优点</strong>**</p>
+<ul><li>零风险：所有修复由用户确认</li><li>实现简单</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>用户体验差：需要手动确认每个修复</li><li>修复效率低</li></ul>
+<hr>
+<h3 id="方案-c-沙箱执行-自动回滚-对抗综合">方案 C：沙箱执行 + 自动回滚（对抗综合）<a class="anchor" href="#方案-c-沙箱执行-自动回滚-对抗综合" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ol><li><strong>沙箱执行</strong>：<ul><li>在 git worktree 中执行修复</li><li>修复后运行相关测试</li><li>测试通过 → 合并到主分支</li><li>测试失败 → 丢弃 worktree</li></ul></li></ol>
+<ol><li><strong>风险分级</strong>：<ul><li>低风险：只修改注释、格式、文档 → 自动执行</li><li>中风险：修改代码但测试覆盖充分 → 自动执行 + 通知</li><li>高风险：修改核心逻辑或测试不足 → 生成报告，用户确认</li></ul></li></ol>
+<ol><li><strong>回滚机制</strong>：<ul><li>每次修复前创建 git tag</li><li>提供 <code>khy restore --rollback &lt;tag&gt;</code> 命令</li></ul></li></ol>
+<p><strong>对抗论证</strong>：</p>
+<table><thead><tr><th>A 反驳 B</th><th>B 反驳 A</th></tr></thead><tbody><tr><td>B 的只读模式用户体验差，修复效率低</td><td>A 的自动执行风险高，可能引入新 bug</td></tr><tr><td>B 没有利用自动化的价值</td><td>A 的回滚机制复杂，实现成本高</td></tr></tbody></table>
+<p><strong>C 如何综合</strong>：</p>
+<ul><li>采用 A 的&quot;自动执行&quot;思想，但限制在沙箱环境中</li><li>采用 B 的&quot;用户确认&quot;思想，但只针对高风险修复</li><li>通过 git worktree 实现天然回滚，无需额外基础设施</li></ul>
+<p><strong>实施路径</strong>：</p>
+<ol><li>实现沙箱执行引擎（基于 git worktree）</li><li>实现风险分级逻辑（基于文件路径和测试覆盖）</li><li>实现回滚机制（基于 git tag）</li><li>修改 <code>_executeMove()</code> 使用沙箱执行</li><li>添加 <code>khy restore --rollback</code> 命令</li></ol>
+<hr>
+<h2 id="eg-3-对抗设计-metatoolengine-调度死路">EG-3 对抗设计：metaToolEngine 调度死路<a class="anchor" href="#eg-3-对抗设计-metatoolengine-调度死路" aria-label="锚点">#</a></h2>
+<h3 id="方案-a-完整元工具系统-激进重构">方案 A：完整元工具系统（激进重构）<a class="anchor" href="#方案-a-完整元工具系统-激进重构" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>接入调度循环：当工具调用失败（工具不存在）时，触发 <code>shouldForge()</code></li><li>实现工具锻造：基于工具描述，生成工具实现代码</li><li>实现工具验证：在沙箱中运行生成的工具，验证正确性</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>核心功能可用</li><li>扩展性极强</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>实现复杂度极高</li><li>工具锻造的可靠性存疑</li><li>安全风险：自动生成的工具可能有 bug 或安全漏洞</li></ul>
+<hr>
+<h3 id="方案-b-移除死代码-渐进改良">方案 B：移除死代码（渐进改良）<a class="anchor" href="#方案-b-移除死代码-渐进改良" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>删除 <code>metaToolEngine.js</code> 中的 <code>shouldForge()</code> 和未使用的主要逻辑</li><li>保留文档说明&quot;元工具锻造是未来功能&quot;</li><li>当需要时重新实现</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>减少维护负担</li><li>代码更清晰</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>丢失已投入的开发成本</li><li>未来重新实现时可能重复今天的错误</li></ul>
+<hr>
+<h3 id="方案-c-功能标记-接口预留-对抗综合">方案 C：功能标记 + 接口预留（对抗综合）<a class="anchor" href="#方案-c-功能标记-接口预留-对抗综合" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ol><li><strong>功能标记</strong>：<ul><li>在 <code>metaToolEngine.js</code> 中添加 <code>META_TOOL_ENABLED</code> 功能标记（默认关闭）</li><li>所有元工具相关代码在标记关闭时短路返回</li></ul></li></ol>
+<ol><li><strong>接口预留</strong>：<ul><li>保持 <code>shouldForge()</code> 和 <code>forgeTool()</code> 的接口不变</li><li>在调度循环中添加注释标记的钩子点（不调用，但预留位置）</li></ul></li></ol>
+<ol><li><strong>设计文档</strong>：<ul><li>编写 <code>[DESIGN-META-001] 元工具锻造系统设计</code></li><li>明确触发条件、锻造流程、验证机制、安全边界</li></ul></li></ol>
+<p><strong>对抗论证</strong>：</p>
+<table><thead><tr><th>A 反驳 B</th><th>B 反驳 A</th></tr></thead><tbody><tr><td>B 的移除策略丢失了已投入的开发成本，且未来重新实现时可能重复错误</td><td>A 的实现复杂度高，工具锻造的可靠性存疑，安全风险大</td></tr><tr><td>B 没有解决&quot;未来如何接入&quot;的问题</td><td>A 的自动生成的工具可能有 bug 或安全漏洞</td></tr></tbody></table>
+<p><strong>C 如何综合</strong>：</p>
+<ul><li>采用 B 的&quot;减少维护负担&quot;思想，通过功能标记而非删除实现</li><li>采用 A 的&quot;接口预留&quot;思想，保持未来接入的可能性</li><li>通过设计文档明确未来实现路径，避免重复错误</li></ul>
+<p><strong>实施路径</strong>：</p>
+<ol><li>添加 <code>META_TOOL_ENABLED</code> 功能标记（默认 false）</li><li>在 <code>shouldForge()</code> 入口处添加标记检查</li><li>在调度循环中添加钩子点注释</li><li>编写 <code>[DESIGN-META-001]</code> 设计文档</li><li>在 roadmap 中标记为&quot;Q3 2026 待实现&quot;</li></ol>
+<hr>
+<h2 id="gv-1-对抗设计-非阻塞测试基线">GV-1 对抗设计：非阻塞测试基线<a class="anchor" href="#gv-1-对抗设计-非阻塞测试基线" aria-label="锚点">#</a></h2>
+<h3 id="方案-a-清零失败用例-阻断门禁-激进重构">方案 A：清零失败用例 + 阻断门禁（激进重构）<a class="anchor" href="#方案-a-清零失败用例-阻断门禁-激进重构" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>分配 2 周时间专门修复 9 个失败用例</li><li>修复后删除 <code>continue-on-error</code></li><li>测试失败 = PR 阻断</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>测试 gate 提供真实信号</li><li>代码质量有保障</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>9 个用例的修复成本可能很高（某些可能是环境依赖或竞态条件）</li><li>2 周时间可能不够</li></ul>
+<hr>
+<h3 id="方案-b-分类处理-渐进清零-渐进改良">方案 B：分类处理 + 渐进清零（渐进改良）<a class="anchor" href="#方案-b-分类处理-渐进清零-渐进改良" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>将 9 个失败用例分类：<ul><li>环境依赖（如需要特定数据库版本）：标记为 <code>@env-skip</code></li><li>竞态条件：标记为 <code>@flaky</code>，单独重试</li><li>真实 bug：标记为 <code>@bug</code>，分配 issue</li></ul></li><li>只有 <code>@bug</code> 类用例失败时阻断 PR</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>区分&quot;已知环境限制&quot;和&quot;真实 bug&quot;</li><li>渐进清零，不要求一次性修复</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>分类工作本身需要时间</li><li><code>@flaky</code> 和 <code>@env-skip</code> 可能被滥用为&quot;跳过失败&quot;的借口</li></ul>
+<hr>
+<h3 id="方案-c-测试债务追踪-自动分配-对抗综合">方案 C：测试债务追踪 + 自动分配（对抗综合）<a class="anchor" href="#方案-c-测试债务追踪-自动分配-对抗综合" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ol><li><strong>测试债务登记</strong>：<ul><li>创建 <code>tests/DEBT.md</code>，登记每个失败用例：<ul><li>失败原因分类（env/flaky/bug）</li><li>负责人</li><li>预计修复日期</li><li>关联 issue</li></ul></li></ul></li></ol>
+<ol><li><strong>自动分配</strong>：<ul><li>使用 CODEOWNERS 自动分配失败用例给模块负责人</li><li>每周生成&quot;测试债务报告&quot;，发送到项目频道</li></ul></li></ol>
+<ol><li><strong>门禁升级路径</strong>：<ul><li>当前：<code>continue-on-error</code>（warning）</li><li>3 个月后：<code>@env-skip</code> 和 <code>@flaky</code> 用例跳过，<code>@bug</code> 用例阻断</li><li>6 个月后：所有用例阻断</li></ul></li></ol>
+<p><strong>对抗论证</strong>：</p>
+<table><thead><tr><th>A 反驳 B</th><th>B 反驳 A</th></tr></thead><tbody><tr><td>B 的分类处理可能被滥用为&quot;跳过失败&quot;的借口</td><td>A 的 2 周清零计划不现实，9 个用例的修复成本可能很高</td></tr><tr><td>B 没有解决&quot;测试债务持续增加&quot;的问题</td><td>A 没有区分&quot;环境限制&quot;和&quot;真实 bug&quot;，可能浪费资源</td></tr></tbody></table>
+<p><strong>C 如何综合</strong>：</p>
+<ul><li>采用 A 的&quot;清零&quot;目标，但分阶段实现</li><li>采用 B 的&quot;分类处理&quot;思想，但通过登记制度防止滥用</li><li>通过自动分配和周报保持压力</li></ul>
+<p><strong>实施路径</strong>：</p>
+<ol><li>创建 <code>tests/DEBT.md</code>，登记 9 个失败用例</li><li>为每个用例创建 issue 并分配负责人</li><li>修改 <code>pr-gate.yml</code>，添加测试债务追踪（显示在 PR 评论中）</li><li>设置 3 个月和 6 个月的门禁升级里程碑</li></ol>
+<hr>
+<h2 id="gv-2-对抗设计-安全扫描缺失">GV-2 对抗设计：安全扫描缺失<a class="anchor" href="#gv-2-对抗设计-安全扫描缺失" aria-label="锚点">#</a></h2>
+<h3 id="方案-a-完整安全工具链-激进重构">方案 A：完整安全工具链（激进重构）<a class="anchor" href="#方案-a-完整安全工具链-激进重构" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>集成 CodeQL（SAST）、<code>npm audit</code>（依赖扫描）、<code>gitleaks</code>（密钥检测）、<code>trivy</code>（容器扫描）</li><li>所有扫描在 PR 阶段运行</li><li>高危漏洞阻断合并</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>安全覆盖全面</li><li>符合行业最佳实践</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>CI 时间显著增加（每个 PR 多 5–10 分钟）</li><li>工具配置和维护成本高</li><li>误报可能阻塞开发</li></ul>
+<hr>
+<h3 id="方案-b-基础扫描-定时审计-渐进改良">方案 B：基础扫描 + 定时审计（渐进改良）<a class="anchor" href="#方案-b-基础扫描-定时审计-渐进改良" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>PR 阶段只运行 <code>npm audit</code>（快速、低误报）</li><li>密钥扫描和 SAST 在 nightly 构建中运行</li><li>高危漏洞通过 issue 追踪，不阻断 PR</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>CI 时间影响最小</li><li>维护成本低</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>安全反馈延迟（nightly 而非 per-PR）</li><li>漏洞可能在 master 上存在数天</li></ul>
+<hr>
+<h3 id="方案-c-分层扫描-智能阻断-对抗综合">方案 C：分层扫描 + 智能阻断（对抗综合）<a class="anchor" href="#方案-c-分层扫描-智能阻断-对抗综合" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ol><li><strong>PR 阶段（快速反馈）</strong>：<ul><li><code>npm audit</code>：只检查 <code>critical</code> 级别，5 秒内完成</li><li><code>gitleaks</code>：只扫描 PR 的 diff，不扫描全量历史</li><li>阻断条件：<code>critical</code> 漏洞或确认的密钥泄露</li></ul></li></ol>
+<ol><li><strong>Nightly 阶段（深度扫描）</strong>：<ul><li>CodeQL 全量扫描</li><li><code>trivy</code> 容器扫描</li><li>生成安全报告，发送到安全频道</li></ul></li></ol>
+<ol><li><strong>安全响应</strong>：<ul><li>发现 <code>critical</code> 漏洞 → 自动创建 issue + 通知安全负责人</li><li>发现密钥泄露 → 自动阻断 PR + 要求轮换密钥</li></ul></li></ol>
+<p><strong>对抗论证</strong>：</p>
+<table><thead><tr><th>A 反驳 B</th><th>B 反驳 A</th></tr></thead><tbody><tr><td>B 的 nightly 反馈延迟，漏洞可能在 master 上存在数天</td><td>A 的 CI 时间增加过多，误报可能阻塞开发</td></tr><tr><td>B 的&quot;不阻断 PR&quot;策略无法防止漏洞合并</td><td>A 的工具配置和维护成本高</td></tr></tbody></table>
+<p><strong>C 如何综合</strong>：</p>
+<ul><li>采用 A 的&quot;per-PR 扫描&quot;思想，但限制在快速、低误报的工具</li><li>采用 B 的&quot;nightly 深度扫描&quot;思想，作为 PR 扫描的补充</li><li>通过&quot;智能阻断&quot;减少误报影响</li></ul>
+<p><strong>实施路径</strong>：</p>
+<ol><li>在 <code>pr-gate.yml</code> 中添加 <code>npm audit</code> 和 <code>gitleaks</code> 步骤</li><li>配置 <code>gitleaks</code> 只扫描 PR diff</li><li>在 nightly workflow 中添加 CodeQL 和 trivy</li><li>创建安全响应 issue 模板</li></ol>
+<hr>
+<h2 id="gv-3-对抗设计-acp-协议未冻结">GV-3 对抗设计：ACP 协议未冻结<a class="anchor" href="#gv-3-对抗设计-acp-协议未冻结" aria-label="锚点">#</a></h2>
+<h3 id="方案-a-完整协议规范-激进重构">方案 A：完整协议规范（激进重构）<a class="anchor" href="#方案-a-完整协议规范-激进重构" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>编写完整的 ACP 协议规范（类似 OpenAPI）</li><li>包含：方法枚举、请求/响应 schema、错误码、版本策略、trace 传播</li><li>生成客户端/服务端代码</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>协议清晰，无歧义</li><li>自动生成减少实现错误</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>规范编写成本高</li><li>需要更新所有现有实现以符合规范</li></ul>
+<hr>
+<h3 id="方案-b-最小修补-文档-渐进改良">方案 B：最小修补 + 文档（渐进改良）<a class="anchor" href="#方案-b-最小修补-文档-渐进改良" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>在现有 JSON-RPC 2.0 基础上添加 <code>trace</code> 和 <code>deadline</code> 字段</li><li>文档说明协议约定</li><li>不强制版本策略</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>改动最小</li><li>向后兼容</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>协议仍然不完整</li><li>缺乏版本策略，未来演进困难</li></ul>
+<hr>
+<h3 id="方案-c-协议冻结-渐进演进-对抗综合">方案 C：协议冻结 + 渐进演进（对抗综合）<a class="anchor" href="#方案-c-协议冻结-渐进演进-对抗综合" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ol><li><strong>协议冻结（v1.0）</strong>：<ul><li>冻结当前 JSON-RPC 2.0 核心（method、params、result、error）</li><li>添加 <code>meta</code> 字段（包含 <code>trace</code>、<code>deadline</code>、<code>version</code>）</li><li>编写 <code>docs/ACP-PROTOCOL-v1.md</code></li></ul></li></ol>
+<ol><li><strong>兼容性保证</strong>：<ul><li>v1.0 客户端必须忽略未知的 <code>meta</code> 字段</li><li>v1.0 服务端必须接受无 <code>meta</code> 的请求</li></ul></li></ol>
+<ol><li><strong>版本协商</strong>：<ul><li>客户端在 <code>meta.version</code> 中声明版本</li><li>服务端在响应中返回支持的版本列表</li><li>不支持的版本返回特定错误码</li></ul></li></ol>
+<p><strong>对抗论证</strong>：</p>
+<table><thead><tr><th>A 反驳 B</th><th>B 反驳 A</th></tr></thead><tbody><tr><td>B 的最小修补无法解决协议演进问题</td><td>A 的完整规范编写成本高，需要更新所有现有实现</td></tr><tr><td>B 缺乏版本策略，未来分叉风险高</td><td>A 的代码生成可能不适用于所有使用场景</td></tr></tbody></table>
+<p><strong>C 如何综合</strong>：</p>
+<ul><li>采用 A 的&quot;协议规范&quot;思想，但只冻结当前核心，不追求完整</li><li>采用 B 的&quot;最小改动&quot;思想，通过 <code>meta</code> 字段实现扩展</li><li>通过版本协商保证向后兼容</li></ul>
+<p><strong>实施路径</strong>：</p>
+<ol><li>编写 <code>docs/ACP-PROTOCOL-v1.md</code></li><li>在 ACP transport 中添加 <code>meta</code> 字段处理</li><li>添加版本协商逻辑</li><li>更新所有 ACP 方法以包含 <code>meta</code> 字段</li><li>在 CI 中添加协议合规性检查</li></ol>
+<hr>
+<h2 id="pf-1-对抗设计-aigateway-语言纠偏复杂度">PF-1 对抗设计：aiGateway 语言纠偏复杂度<a class="anchor" href="#pf-1-对抗设计-aigateway-语言纠偏复杂度" aria-label="锚点">#</a></h2>
+<h3 id="方案-a-外置语言服务-激进重构">方案 A：外置语言服务（激进重构）<a class="anchor" href="#方案-a-外置语言服务-激进重构" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>将语言检测逻辑移到独立服务（如 Python 的 <code>langdetect</code> 或 <code>fasttext</code>）</li><li>aiGateway 通过 RPC 调用语言服务</li><li>语言服务可独立扩展和更新</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>语言检测准确率更高</li><li>aiGateway 代码更简洁</li><li>语言服务可复用</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>增加网络延迟</li><li>增加部署复杂度</li><li>对于简单的中英文检测，大材小用</li></ul>
+<hr>
+<h3 id="方案-b-简化正则-缓存结果-渐进改良">方案 B：简化正则 + 缓存结果（渐进改良）<a class="anchor" href="#方案-b-简化正则-缓存结果-渐进改良" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>保留现有正则检测，但简化逻辑</li><li>缓存语言检测结果（基于 prompt hash）</li><li>减少重复检测</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>改动最小</li><li>性能提升明显（缓存命中时）</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>正则检测准确率仍然有限</li><li>缓存可能命中错误结果</li></ul>
+<hr>
+<h3 id="方案-c-分层检测-按需纠偏-对抗综合">方案 C：分层检测 + 按需纠偏（对抗综合）<a class="anchor" href="#方案-c-分层检测-按需纠偏-对抗综合" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ol><li><strong>第一层：快速检测</strong>（请求时）：<ul><li>基于 prompt 的显式语言指令（如&quot;请用中文&quot;）</li><li>基于用户配置（<code>KHY_LANGUAGE</code>）</li><li>无成本，覆盖 90% 场景</li></ul></li></ol>
+<ol><li><strong>第二层：轻量检测</strong>（首 chunk 时）：<ul><li>使用现有正则检测</li><li>只在&quot;风险适配器&quot;（codex、claude 等）上启用</li><li>检测到偏航时 abort + retry</li></ul></li></ol>
+<ol><li><strong>第三层：深度检测</strong>（可选）：<ul><li>对于关键任务，使用外部语言服务</li><li>通过功能标记启用</li></ul></li></ol>
+<p><strong>对抗论证</strong>：</p>
+<table><thead><tr><th>A 反驳 B</th><th>B 反驳 A</th></tr></thead><tbody><tr><td>B 的正则检测准确率有限，无法处理混合语言场景</td><td>A 的外部服务增加延迟和部署复杂度，对简单检测大材小用</td></tr><tr><td>B 的缓存可能命中错误结果</td><td>A 的语言服务需要额外维护成本</td></tr></tbody></table>
+<p><strong>C 如何综合</strong>：</p>
+<ul><li>采用 A 的&quot;分层&quot;思想，但将外部服务作为可选第三层</li><li>采用 B 的&quot;缓存&quot;思想，但只在第一层使用</li><li>通过&quot;按需纠偏&quot;减少不必要的检测</li></ul>
+<p><strong>实施路径</strong>：</p>
+<ol><li>重构 <code>aiGateway.js</code>，将语言检测逻辑分层</li><li>第一层：基于配置和 prompt 的快速检测</li><li>第二层：保留现有正则检测，但限制在风险适配器</li><li>第三层：添加外部语言服务接口（可选）</li><li>性能测试：对比重构前后的延迟和 token 消耗</li></ol>
+<hr>
+<h2 id="ex-1-对抗设计-扩展契约违反">EX-1 对抗设计：扩展契约违反<a class="anchor" href="#ex-1-对抗设计-扩展契约违反" aria-label="锚点">#</a></h2>
+<h3 id="方案-a-强制契约校验-ci-阻断-激进重构">方案 A：强制契约校验 + CI 阻断（激进重构）<a class="anchor" href="#方案-a-强制契约校验-ci-阻断-激进重构" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>在 <code>check-repo-layout.js</code> 中添加扩展契约校验</li><li>所有扩展必须通过 <code>khy.extension.json</code> schema 校验</li><li>违反契约的扩展无法通过 CI</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>契约得到严格执行</li><li>新扩展自动符合规范</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>现有违反契约的扩展需要修复或移除</li><li>可能破坏现有工作流</li></ul>
+<hr>
+<h3 id="方案-b-文档警告-人工修复-渐进改良">方案 B：文档警告 + 人工修复（渐进改良）<a class="anchor" href="#方案-b-文档警告-人工修复-渐进改良" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>在 CI 中添加扩展契约检查（warning 级别）</li><li>生成报告但不阻断</li><li>人工修复违反契约的扩展</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>不破坏现有工作流</li><li>给开发者修复时间</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>契约仍然不被严格执行</li><li>警告可能被忽略</li></ul>
+<hr>
+<h3 id="方案-c-契约版本化-渐进合规-对抗综合">方案 C：契约版本化 + 渐进合规（对抗综合）<a class="anchor" href="#方案-c-契约版本化-渐进合规-对抗综合" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ol><li><strong>契约版本化</strong>：<ul><li><code>khy.extension.json</code> 中添加 <code>schemaVersion</code> 字段</li><li>旧扩展使用 <code>schemaVersion: &quot;1.0&quot;</code>（宽松校验）</li><li>新扩展使用 <code>schemaVersion: &quot;2.0&quot;</code>（严格校验）</li></ul></li></ol>
+<ol><li><strong>渐进合规</strong>：<ul><li>新 PR 中的扩展必须使用 <code>schemaVersion: &quot;2.0&quot;</code></li><li>旧扩展在修改时升级到 <code>schemaVersion: &quot;2.0&quot;</code></li><li>6 个月后：所有扩展必须使用 <code>schemaVersion: &quot;2.0&quot;</code></li></ul></li></ol>
+<ol><li><strong>自动修复工具</strong>：<ul><li>提供 <code>khy extension-upgrade</code> 命令，自动将旧扩展升级到 v2.0</li></ul></li></ol>
+<p><strong>对抗论证</strong>：</p>
+<table><thead><tr><th>A 反驳 B</th><th>B 反驳 A</th></tr></thead><tbody><tr><td>B 的警告级别无法保证契约执行</td><td>A 的强制校验可能破坏现有工作流</td></tr><tr><td>B 的&quot;人工修复&quot;依赖开发者自觉，容易被忽略</td><td>A 的&quot;所有扩展必须修复&quot;要求可能不切实际</td></tr></tbody></table>
+<p><strong>C 如何综合</strong>：</p>
+<ul><li>采用 A 的&quot;强制校验&quot;思想，但只针对新扩展和修改的旧扩展</li><li>采用 B 的&quot;渐进修复&quot;思想，但通过版本化和自动工具降低修复成本</li><li>通过时间盒（6 个月）保证最终合规</li></ul>
+<p><strong>实施路径</strong>：</p>
+<ol><li>更新 <code>khy.extension.json</code> schema，添加 <code>schemaVersion</code> 字段</li><li>修改 <code>check-repo-layout.js</code>，根据版本应用不同校验规则</li><li>实现 <code>khy extension-upgrade</code> 命令</li><li>在 CI 中添加版本检查（warning 级别，6 个月后升级为 error）</li></ol>
+<hr>
+<h2 id="mt-1-对抗设计-lint-债务-3417-条">MT-1 对抗设计：lint 债务 3417 条<a class="anchor" href="#mt-1-对抗设计-lint-债务-3417-条" aria-label="锚点">#</a></h2>
+<h3 id="方案-a-全量修复-阻断新增-激进重构">方案 A：全量修复 + 阻断新增（激进重构）<a class="anchor" href="#方案-a-全量修复-阻断新增-激进重构" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>分配 1 个月时间修复所有 3417 条 lint 问题</li><li>修复后启用严格模式：任何 lint 问题阻断 PR</li><li>新文件零容忍，旧文件修复后也零容忍</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>代码质量统一</li><li>lint 成为有效门禁</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>1 个月修复 3417 条问题，工作量大</li><li>某些&quot;修复&quot;可能只是压制警告（如 <code>// eslint-disable</code>）</li></ul>
+<hr>
+<h3 id="方案-b-新文件零容忍-旧文件渐进修复-渐进改良">方案 B：新文件零容忍 + 旧文件渐进修复（渐进改良）<a class="anchor" href="#方案-b-新文件零容忍-旧文件渐进修复-渐进改良" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ul><li>保持现状：新文件零容忍，旧文件 grandfathered</li><li>添加&quot;修复附近坏味道&quot;指南：修改文件时，顺手修复该文件的 lint 问题</li><li>每月统计 lint 债务变化</li></ul>
+<p><strong>优点</strong>：</p>
+<ul><li>改动最小</li><li>渐进修复，不集中投入</li></ul>
+<p><strong>缺点</strong>：</p>
+<ul><li>债务减少速度可能很慢</li><li>&quot;顺手修复&quot;依赖开发者自觉</li></ul>
+<hr>
+<h3 id="方案-c-热点修复-自动修复-债务追踪-对抗综合">方案 C：热点修复 + 自动修复 + 债务追踪（对抗综合）<a class="anchor" href="#方案-c-热点修复-自动修复-债务追踪-对抗综合" aria-label="锚点">#</a></h3>
+<p><strong>设计</strong>：</p>
+<ol><li><strong>热点分析</strong>：<ul><li>分析 3417 条 lint 问题，按&quot;修改频率&quot;排序</li><li>识别 Top 50 高频修改文件（覆盖 50% 的 lint 问题）</li></ul></li></ol>
+<ol><li><strong>集中修复热点</strong>：<ul><li>分配 2 周时间修复 Top 50 文件的 lint 问题</li><li>使用 <code>eslint --fix</code> 自动修复可自动化的部分</li></ul></li></ol>
+<ol><li><strong>债务追踪</strong>：<ul><li>在 CI 中添加 lint 债务计数（显示在 PR 评论中）</li><li>设置月度目标：每月减少 10% 债务</li></ul></li></ol>
+<ol><li><strong>新文件门禁</strong>：<ul><li>保持新文件零容忍</li><li>修改旧文件时，如果该文件 lint 问题 &gt; 10 条，要求修复至少 50%</li></ul></li></ol>
+<p><strong>对抗论证</strong>：</p>
+<table><thead><tr><th>A 反驳 B</th><th>B 反驳 A</th></tr></thead><tbody><tr><td>B 的渐进修复速度太慢，债务可能永远无法清零</td><td>A 的 1 个月全量修复不现实，某些 lint 问题可能是误报</td></tr><tr><td>B 的&quot;顺手修复&quot;依赖开发者自觉，效果不可控</td><td>A 的&quot;修复&quot;可能只是压制警告，而非真正改进代码质量</td></tr></tbody></table>
+<p><strong>C 如何综合</strong>：</p>
+<ul><li>采用 A 的&quot;集中修复&quot;思想，但只针对高频修改文件</li><li>采用 B 的&quot;渐进修复&quot;思想，但通过债务追踪和月度目标保持压力</li><li>通过自动修复减少人工成本</li></ul>
+<p><strong>实施路径</strong>：</p>
+<ol><li>运行 <code>eslint --format json</code> 分析 lint 问题分布</li><li>识别 Top 50 高频修改文件</li><li>分配 2 周时间集中修复</li><li>在 CI 中添加 lint 债务计数和月度目标检查</li><li>更新 CONTRIBUTING.md，添加&quot;lint 修复指南&quot;</li></ol>
+<hr>
+<h1 id="总结-优先级矩阵">总结：优先级矩阵<a class="anchor" href="#总结-优先级矩阵" aria-label="锚点">#</a></h1>
+<table><thead><tr><th>编号</th><th>问题</th><th>严重度</th><th>推荐方案</th><th>预计工期</th></tr></thead><tbody><tr><td>AR-1</td><td>router.js 上帝开关</td><td>Critical</td><td>C：分层注册表 + 懒加载</td><td>9 周</td></tr><tr><td>AR-2</td><td>数据双栖</td><td>Critical</td><td>C：数据抽象层 + 渐进迁移</td><td>8 周</td></tr><tr><td>AR-3</td><td>内核 preemption 残留</td><td>High</td><td>C：QEMU 测试 + CI 门禁</td><td>2 周</td></tr><tr><td>EG-1</td><td>autoTestScaffolder 假测试</td><td>High</td><td>C：契约优先 + 人工确认</td><td>3 周</td></tr><tr><td>EG-2</td><td>restoreAgentService 空壳</td><td>High</td><td>C：沙箱执行 + 自动回滚</td><td>4 周</td></tr><tr><td>EG-3</td><td>metaToolEngine 调度死路</td><td>Medium</td><td>C：功能标记 + 接口预留</td><td>1 周</td></tr><tr><td>GV-1</td><td>非阻塞测试基线</td><td>High</td><td>C：测试债务追踪 + 自动分配</td><td>6 周</td></tr><tr><td>GV-2</td><td>安全扫描缺失</td><td>High</td><td>C：分层扫描 + 智能阻断</td><td>3 周</td></tr><tr><td>GV-3</td><td>ACP 协议未冻结</td><td>Medium</td><td>C：协议冻结 + 渐进演进</td><td>4 周</td></tr><tr><td>PF-1</td><td>aiGateway 语言纠偏复杂度</td><td>Medium</td><td>C：分层检测 + 按需纠偏</td><td>3 周</td></tr><tr><td>EX-1</td><td>扩展契约违反</td><td>Medium</td><td>C：契约版本化 + 渐进合规</td><td>4 周</td></tr><tr><td>MT-1</td><td>lint 债务 3417 条</td><td>Medium</td><td>C：热点修复 + 自动修复 + 债务追踪</td><td>6 周</td></tr></tbody></table>
+<hr>
+<h1 id="附录-对抗式设计方法论说明">附录：对抗式设计方法论说明<a class="anchor" href="#附录-对抗式设计方法论说明" aria-label="锚点">#</a></h1>
+<h2 id="什么是-自我对抗式设计方案">什么是&quot;自我对抗式设计方案&quot;<a class="anchor" href="#什么是-自我对抗式设计方案" aria-label="锚点">#</a></h2>
+<p>传统设计流程：问题 → 方案 → 实施。<br>对抗式设计流程：问题 → 方案A → 方案B → A反驳B → B反驳A → 方案C（综合）→ 实施。</p>
+<h2 id="为什么需要对抗式设计">为什么需要对抗式设计<a class="anchor" href="#为什么需要对抗式设计" aria-label="锚点">#</a></h2>
+<ol><li><strong>避免确认偏误</strong>：设计者容易陷入&quot;第一个方案就是最好方案&quot;的思维定式</li><li><strong>暴露隐藏假设</strong>：通过反驳，暴露每个方案的前提条件和风险</li><li><strong>提高方案鲁棒性</strong>：综合方案经过两轮反驳，比单一方案更健壮</li><li><strong>降低实施风险</strong>：综合方案通常比激进方案更可行，比渐进方案更有效</li></ol>
+<h2 id="对抗式设计的三个原则">对抗式设计的三个原则<a class="anchor" href="#对抗式设计的三个原则" aria-label="锚点">#</a></h2>
+<ol><li><strong>对称性</strong>：A 和 B 必须是真正的对立面（如激进 vs 渐进），不能是&quot;好方案&quot;和&quot;坏方案&quot;</li><li><strong>证据性</strong>：每个反驳必须基于具体证据（代码、数据、案例），不能是主观意见</li><li><strong>建设性</strong>：C 方案必须明确说明如何综合 A 和 B 的优点，不能是&quot;和稀泥&quot;</li></ol>
+<hr>
+<p><em>本文档由 AI 辅助分析生成，基于 khy-os 仓库的代码实测和文档审计。所有方案均为设计建议，实施前需维护者评审。</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/11_报告/RESEARCH/[RESEARCH-007] khy-os-规范合规审计报告-2026-09-15.html"><div class="dir">← 上一篇</div><div class="ttl">khy-os 规范合规审计报告</div></a><a class="next" href="../../../docs/11_报告/RESEARCH/[RESEARCH-009] khy-os-深度不足诊断与对抗式修复-第二轮.html"><div class="dir">下一篇 →</div><div class="ttl">Khy-OS 深度不足诊断与自对抗式修复方案（第二轮）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/11_报告/RESEARCH/[RESEARCH-008] khy-os-不足诊断与自对抗式设计方案.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

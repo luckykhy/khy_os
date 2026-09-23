@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [IMPL-RPT-053] TUI-输出回显与滚轮修复-验收报告-2026-09-16.md -->
+<title>TUI「输出回显不可见」+「滚轮回溯历史」修复 · 验收报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>IMPL-RPT<span class="sep">›</span>TUI「输出回显不可见」+「滚轮回溯历史」修复 · 验收报告</div>
+      <header class="hero reveal"><h1>TUI「输出回显不可见」+「滚轮回溯历史」修复 · 验收报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#tui-输出回显不可见-滚轮回溯历史-修复-验收报告">TUI「输出回显不可见」+「滚轮回溯历史」修复 · 验收报告</a></li><li class="lvl-2"><a href="#一-结论">一、结论</a></li><li class="lvl-2"><a href="#二-四个根因-全部经无头-harness-实证-非推断">二、四个根因（全部经无头 harness 实证，非推断）</a></li><li class="lvl-3"><a href="#a-转录被-ink-的-fullscreen-清屏抹掉-且会-自锁">A. 转录被 ink 的 fullscreen 清屏抹掉，且会**自锁**</a></li><li class="lvl-3"><a href="#b-chrome-账本漏计三项-preview-布局">B. chrome 账本漏计三项（Preview 布局）</a></li><li class="lvl-3"><a href="#c-视口永远停在-顶部">C. 视口永远停在**顶部**</a></li><li class="lvl-3"><a href="#d-滚轮被终端合成为">D. 滚轮被终端合成为 ↑/↓</a></li><li class="lvl-2"><a href="#三-改动清单">三、改动清单</a></li><li class="lvl-3"><a href="#新增测试">新增测试</a></li><li class="lvl-2"><a href="#四-回归验证-本轮全部重跑">四、回归验证（本轮全部重跑）</a></li><li class="lvl-3"><a href="#4-1-逐帧全尺寸-无头-harness-真-ink-渲真-app">4.1 逐帧全尺寸（无头 harness，真 ink 渲真 App）</a></li><li class="lvl-3"><a href="#4-2-贴底行为-40-组消息-内容远超视口">4.2 贴底行为（40 组消息，内容远超视口）</a></li><li class="lvl-3"><a href="#4-3-chrome-账本自洽-khy-tui-diag-h-1">4.3 chrome 账本自洽（`KHY_TUI_DIAG_H=1`）</a></li><li class="lvl-3"><a href="#4-4-测试">4.4 测试</a></li><li class="lvl-2"><a href="#五-既有红灯的定性-第二轮">五、既有红灯的定性（第二轮）</a></li><li class="lvl-3"><a href="#5-1-effectivecols-test-js-6-条断言-全部为-测试过时-生产代码无回归">5.1 `effectiveCols.test.js` 6 条断言 —— 全部为**测试过时**，生产代码无回归</a></li><li class="lvl-3"><a href="#5-2-顺带挖出的两个真问题">5.2 顺带挖出的两个真问题</a></li><li class="lvl-2"><a href="#六-test-node-glob-重叠-仓库级既有红-未擅自修">六、`test:node` glob 重叠（仓库级既有红，未擅自修）</a></li><li class="lvl-2"><a href="#七-新发现-隔离的-4-个-tui-测试文件正好覆盖我改的模块-且-debt-md-的恢复路径是-死的">七、新发现：隔离的 4 个 TUI 测试文件正好覆盖我改的模块，且 DEBT.md 的恢复路径是**死的**</a></li><li class="lvl-3"><a href="#7-1-事实">7.1 事实</a></li><li class="lvl-3"><a href="#7-2-debt-md-写的恢复路径实测无效">7.2 DEBT.md 写的恢复路径实测无效</a></li><li class="lvl-3"><a href="#7-3-好消息-损坏是可读的-我已核过语义冲突">7.3 好消息：损坏是可读的，我已核过语义冲突</a></li><li class="lvl-3"><a href="#7-4-风险面">7.4 风险面</a></li><li class="lvl-2"><a href="#八-本轮同时订正的-会撒谎的文档-只改注释-文档-未动逻辑">八、本轮同时订正的「会撒谎的文档」（只改注释/文档，未动逻辑）</a></li><li class="lvl-2"><a href="#九-隔离测试文件回收-本轮完成-5-个">九、隔离测试文件回收（本轮完成，5 个）</a></li><li class="lvl-3"><a href="#9-1-结果">9.1 结果</a></li><li class="lvl-3"><a href="#9-2-方法">9.2 方法</a></li><li class="lvl-3"><a href="#9-3-historybrowsedecision-test-js-的双-runner-问题-按-debt-md-三-b-修">9.3 `historyBrowseDecision.test.js` 的双 runner 问题（按 DEBT.md §三 B 修）</a></li><li class="lvl-3"><a href="#9-4-顺带修正的文件头谎话">9.4 顺带修正的文件头谎话</a></li><li class="lvl-3"><a href="#9-5-守门">9.5 守门</a></li><li class="lvl-3"><a href="#9-6-debt-md-同步">9.6 DEBT.md 同步</a></li><li class="lvl-2"><a href="#十-环境坑-本轮新踩-记下来省时间">十、环境坑（本轮新踩，记下来省时间）</a></li><li class="lvl-2"><a href="#十一-待办">十一、待办</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="tui-输出回显不可见-滚轮回溯历史-修复-验收报告">TUI「输出回显不可见」+「滚轮回溯历史」修复 · 验收报告<a class="anchor" href="#tui-输出回显不可见-滚轮回溯历史-修复-验收报告" aria-label="锚点">#</a></h1>
+<ul><li>日期：2026-09-16</li><li>范围：<code>services/backend/src/cli/tui/**</code></li><li>门控回退：<code>KHY_INLINE_TRANSCRIPT=0 KHY_MOUSE_WHEEL=0 khy</code>（逐字节回到修前行为）</li></ul>
+<hr>
+<h2 id="一-结论">一、结论<a class="anchor" href="#一-结论" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>问题</th><th>状态</th><th>判据</th></tr></thead><tbody><tr><td>最大化 / 小窗口下输出回显看不见</td><td><strong>已修</strong></td><td>8 尺寸 × 逐帧实测：无 <code>h&gt;=rows</code> 帧、无清屏帧</td></tr><tr><td>滚轮用于滚内容区，输入框固定底部</td><td><strong>已修</strong></td><td>滚轮优先 <code>onWheel(dir)</code>；输入框在 Viewport 之外，不参与滚动</td></tr><tr><td>视口贴底（显示最新内容）</td><td><strong>已修</strong></td><td>末帧含最新消息 + 仅 <code>↑</code> 指示器</td></tr></tbody></table>
+<hr>
+<h2 id="二-四个根因-全部经无头-harness-实证-非推断">二、四个根因（全部经无头 harness 实证，非推断）<a class="anchor" href="#二-四个根因-全部经无头-harness-实证-非推断" aria-label="锚点">#</a></h2>
+<h3 id="a-转录被-ink-的-fullscreen-清屏抹掉-且会-自锁">A. 转录被 ink 的 fullscreen 清屏抹掉，且会<strong>自锁</strong><a class="anchor" href="#a-转录被-ink-的-fullscreen-清屏抹掉-且会-自锁" aria-label="锚点">#</a></h3>
+<p><code>ink.js:320</code> 的 <code>isFullscreen = stdout.isTTY &amp;&amp; outputHeight &gt;= stdout.rows</code> 只是<strong>判定</strong>；<br>真正决定清屏的是 <code>this.lastOutputHeight &gt;= this.options.stdout.rows</code> —— <strong>上一帧</strong>的高度。</p>
+<p>一旦某帧高度 ≥ rows，<code>lastOutputHeight</code> 就永远 ≥ rows，<strong>此后每帧都清屏</strong>。<br>在备用缓冲区（<code>\x1b[?1049h</code>，无回滚缓冲）下，清屏 = 转录整片消失。</p>
+<ul><li>实证：legacy 100×24 忙态帧 = 24 行 = rows → 每帧 <code>clear=true</code></li><li>根因：<code>spinnerH</code> 记成 1 行，实际渲染 3 行</li></ul>
+<p>（ink 的边框语义是「设了 <code>borderStyle</code> 就四边全画」，只写 <code>borderBottom</code> 不会关掉其余三边）</p>
+<ul><li>修后：23 行，<code>clear=false</code></li></ul>
+<h3 id="b-chrome-账本漏计三项-preview-布局">B. chrome 账本漏计三项（Preview 布局）<a class="anchor" href="#b-chrome-账本漏计三项-preview-布局" aria-label="锚点">#</a></h3>
+<p><code>_viewportHeight</code> 的账本没扣：忙态 spinner 的真实 3 行、Preview 独有的标题栏 1 行 + 底部分隔线 1 行。</p>
+<ul><li>实证：preview 130×40 忙态帧 = 45 行 &gt; 40</li><li>修后：38 行，<code>clear=false</code></li><li>同时把 <code>previewLayoutMode</code> 的判定<strong>前移</strong>到 <code>_viewportHeight</code> 之前 —— 账本必须知道本帧走哪套 chrome</li></ul>
+<h3 id="c-视口永远停在-顶部">C. 视口永远停在<strong>顶部</strong><a class="anchor" href="#c-视口永远停在-顶部" aria-label="锚点">#</a></h3>
+<p>历史判据 <code>scroll &gt;= maxScroll</code> 判「之前在底部」，但调用方 state 初值是 <code>0</code>。<br>内容一旦长过视口，<code>0 &gt;= maxScroll</code> <strong>恒假</strong> → 视口永远显示最早那几行。</p>
+<ul><li>修法：引入<strong>贴底哨兵</strong> —— <code>null</code> / <code>undefined</code> / 负数 = 追随最新内容；数字 = 固定偏移；</li></ul>
+<p>滚回最底时回写 <code>null</code> 自动恢复跟随（不需要额外 sticky 标志位）</p>
+<ul><li>真源落在 <code>ink-components/Viewport.js</code> 的 <code>resolveViewportOffset</code> / <code>applyStickyViewportAction</code>（纯叶子、可单测），</li></ul>
+<p>App 里不再另抄一份</p>
+<h3 id="d-滚轮被终端合成为">D. 滚轮被终端合成为 ↑/↓<a class="anchor" href="#d-滚轮被终端合成为" aria-label="锚点">#</a></h3>
+<p>备用缓冲区下终端把滚轮事件变成 ↑/↓ 字节送进 stdin，被 <code>arrowRouting</code> 绑成<br><code>history:previous</code> / <code>history:next</code> → 表现为「滚一下召回一条输入历史」。</p>
+<ul><li>修法：接管 SGR 鼠标协议（滚轮 = 按钮 64/65，修饰位 shift/meta/ctrl 加在低位 → <code>button &amp; ~28</code> 剥掉），</li></ul>
+<p>在应用内消化滚轮，终端一个字节都收不到，方向键无从合成</p>
+<hr>
+<h2 id="三-改动清单">三、改动清单<a class="anchor" href="#三-改动清单" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>ink-components/App.js</code></td><td><code>previewLayoutMode</code> 判定前移；chrome 账本补 3 项漏计；新增 <code>KHY_TUI_DIAG_H=1</code> 诊断开关；滚动 state 初值改贴底哨兵；三处滚动调用点改走 Viewport 叶子；滚轮 handler 走 <code>applyStickyViewportAction</code></td></tr><tr><td><code>ink-components/Viewport.js</code></td><td>lines 模式支持贴底哨兵；新增并导出 <code>resolveViewportOffset</code> / <code>applyStickyViewportAction</code> / <code>STICKY_BOTTOM</code>；<code>overflow:'hidden'</code> 硬闸防二次软换行撑破高度</td></tr><tr><td><code>ink-components/PreviewLayout.js</code></td><td>新增 <code>lines</code> / <code>emptyText</code> props；内联转录模式把整段转录放进 <code>&lt;Viewport lines={lines} autoScroll&gt;</code></td></tr><tr><td><code>mouseButtons.js</code></td><td>新增 <code>wheelDirection(button)</code>（<code>&amp; ~28</code> 剥修饰位）与 <code>mouseExplicitlyDisabled(env)</code>；dispatcher 新增 <code>onWheel</code> 参数，滚轮分支优先 <code>onWheel(dir)</code></td></tr><tr><td><code>app.js</code></td><td>备用缓冲区下强制接管鼠标（除非显式关）</td></tr><tr><td><code>AGENTS.md</code>（tui 目录）</td><td>§0.9 增「禁止用『滚动偏移 = 0』表示初始状态」；新增 §0.9.1 贴底哨兵 / §0.9.2 帧高 ≤ rows−1 硬约束 + chrome 逐项清单 / §0.9.3 滚轮接管；§1.2 门控表登记 5 个开关；新增 §8.5 验收清单</td></tr></tbody></table>
+<h3 id="新增测试">新增测试<a class="anchor" href="#新增测试" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>用例数</th><th>覆盖</th></tr></thead><tbody><tr><td><code>tests/cli/tui/viewportSticky.test.js</code></td><td>13</td><td>贴底哨兵三态、<code>STICKY_BOTTOM</code> 回写、<strong>回归断言</strong>：旧判据在初值 0 下永远不贴底</td></tr><tr><td><code>tests/cli/tui/mouseWheel.test.js</code></td><td>8</td><td>接了 <code>onWheel</code> 时滚轮<strong>绝不</strong>回退 <code>onNative</code>；<code>onWheel</code> 抛异常被吞且不降级；滚轮永不 arm 点击</td></tr></tbody></table>
+<hr>
+<h2 id="四-回归验证-本轮全部重跑">四、回归验证（本轮全部重跑）<a class="anchor" href="#四-回归验证-本轮全部重跑" aria-label="锚点">#</a></h2>
+<h3 id="4-1-逐帧全尺寸-无头-harness-真-ink-渲真-app">4.1 逐帧全尺寸（无头 harness，真 ink 渲真 App）<a class="anchor" href="#4-1-逐帧全尺寸-无头-harness-真-ink-渲真-app" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>尺寸</th><th><code>h&gt;=rows</code></th><th>清屏帧</th></tr></thead><tbody><tr><td>40×14 / 60×20 / 80×24 / 100×24</td><td><code>[]</code></td><td><code>[]</code></td></tr><tr><td>121×30 / 122×40 / 130×40 / 200×50</td><td><code>[]</code></td><td><code>[]</code></td></tr></tbody></table>
+<h3 id="4-2-贴底行为-40-组消息-内容远超视口">4.2 贴底行为（40 组消息，内容远超视口）<a class="anchor" href="#4-2-贴底行为-40-组消息-内容远超视口" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>尺寸</th><th>布局</th><th>末帧含最新消息</th><th>指示器</th></tr></thead><tbody><tr><td>130×40</td><td>Preview</td><td><code>MARKER_MSG_35..39</code></td><td><code>↑207</code></td></tr><tr><td>100×24</td><td>legacy</td><td><code>MARKER_MSG_37..39</code></td><td><code>↑221</code></td></tr><tr><td>80×24</td><td>legacy</td><td><code>MARKER_MSG_37..39</code></td><td><code>↑221</code></td></tr><tr><td>60×20</td><td>legacy</td><td><code>MARKER_MSG_38..39</code></td><td><code>↑225</code></td></tr></tbody></table>
+<p><strong>只有 <code>↑</code> 没有 <code>↓</code> = 锚在底部</strong>（<code>↓</code> 存在才表示还有内容在视口下方）。</p>
+<h3 id="4-3-chrome-账本自洽-khy-tui-diag-h-1">4.3 chrome 账本自洽（<code>KHY_TUI_DIAG_H=1</code>）<a class="anchor" href="#4-3-chrome-账本自洽-khy-tui-diag-h-1" aria-label="锚点">#</a></h3>
+<pre><code>[diagH] rows=40 preview=true  viewport=32 input=3 status=1 spinner=0 extra=2 slack=1 topbar=1 sep=1
+        40 − 3 − 1 − 0 − 2 − 1 − 1 = 32  ✓
+[diagH] rows=24 preview=false viewport=18 input=3 status=1 spinner=0 extra=0 slack=1 topbar=0 sep=0
+        24 − 3 − 1 − 0 − 0 − 1 − 1 = 18  ✓</code></pre>
+<h3 id="4-4-测试">4.4 测试<a class="anchor" href="#4-4-测试" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>命令</th><th>结果</th></tr></thead><tbody><tr><td><code>npm run test:tui</code>（jest）</td><td><strong>29/29 套件、435/435 用例</strong></td></tr><tr><td>4 个改动文件合跑 <code>node --test</code></td><td><strong>45/45</strong></td></tr><tr><td><code>node --test &quot;tests/cli/tui/*.test.js&quot;</code></td><td>632 用例，<strong>627 pass / 5 fail</strong>（5 条见 §六）</td></tr></tbody></table>
+<p>实测可用下限 ≈ <strong>14 行</strong>（legacy 13 行边缘可用），更低是几何不可能。</p>
+<hr>
+<h2 id="五-既有红灯的定性-第二轮">五、既有红灯的定性（第二轮）<a class="anchor" href="#五-既有红灯的定性-第二轮" aria-label="锚点">#</a></h2>
+<h3 id="5-1-effectivecols-test-js-6-条断言-全部为-测试过时-生产代码无回归">5.1 <code>effectiveCols.test.js</code> 6 条断言 —— 全部为<strong>测试过时</strong>，生产代码无回归<a class="anchor" href="#5-1-effectivecols-test-js-6-条断言-全部为-测试过时-生产代码无回归" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>位置</th><th>判据</th></tr></thead><tbody><tr><td>1–2</td><td><code>:144</code> / <code>:253</code></td><td>编码了<strong>带宽模型之前</strong>的行为（无条件收窄）。设计文档 <code>[DESIGN-ARCH-103] §4.3 R1-2</code> 明确：<code>BAND_ENTER=120</code> / <code>BAND_EXIT=108</code>，<strong>窄化只在带内发生</strong>。已改为钉住带宽模型（<code>:253</code> 用 <code>KHY_TERM_FALLBACK_COLS:'150'</code> 把假定宽度抬进带内）</td></tr><tr><td>3</td><td><code>:174</code></td><td>正则要求 <code>(</code> 后<strong>紧跟</strong> <code>process</code>，但代码换行了 → 放宽为 <code>\s*</code></td></tr><tr><td>4</td><td><code>:192</code></td><td>接线点已从 <code>App.js</code> 迁到 <code>ChatColumn.js</code>（<code>StreamingBlock</code> 的实际渲染处）→ 断言改指向真实渲染点</td></tr><tr><td>5</td><td><code>:219</code></td><td>断言的 Ctrl+T 提示代码已移除 → 改断存活的 <code>const s = _stickyCols(process.env);</code></td></tr><tr><td>6</td><td><code>:219</code> 附近</td><td>变量改名 <code>_sticky</code> → <code>s</code></td></tr></tbody></table>
+<p><strong>没有一条指向产品代码缺陷。</strong></p>
+<h3 id="5-2-顺带挖出的两个真问题">5.2 顺带挖出的两个真问题<a class="anchor" href="#5-2-顺带挖出的两个真问题" aria-label="锚点">#</a></h3>
+<p><strong>① <code>railProxyIntegration.test.js</code> 前 3 个用例是空串假绿（已修）</strong></p>
+<p>探针实测：<code>paint#1=2042B / clear#2=0 / paint#2=0</code> —— dedupe 在无内容变化时返回 <code>''</code>，<br>于是断言在空字符串上通过。已加 <code>primeThenChange(rail)</code>（先建立几何/上帧字节，再改快照触发真实发射）</p>
+<ul><li><code>assert.ok(railOnlyBytes(frame).length &gt; 0)</code> 非空断言，防退化。</li></ul>
+<p><strong>② <code>threeColumnMode</code> 计算后从未使用（只报告，未动手）</strong></p>
+<ul><li><code>App.js:5735</code> 算出 <code>threeColumnMode</code>，全文件<strong>再无第二次引用</strong></li><li>于是 <code>ink-components/ThreeColumnLayout.js</code> 与 <code>ChatColumn.js</code> 成为<strong>孤儿</strong>（只被彼此引用，无外部入口）</li><li><code>App.js:26</code> 的 <code>require('./StreamingBlock')</code> 是<strong>死导入</strong>（<code>&lt;StreamingBlock</code> 全文出现 <strong>0</strong> 次）</li><li>但 <code>App.js:5730-5734</code> 的注释自称「delegate to ThreeColumnLayout which reuses ALL existing leaf components」</li></ul>
+<p>—— <strong>注释与代码不符</strong>，将来照注释接线会踩空</p>
+<p>按仓库规则「有设计文档背书 → 属于『计划了没接线』，不该静默清理」，<strong>只报告</strong>，等朋友决定接线还是订正注释。</p>
+<hr>
+<h2 id="六-test-node-glob-重叠-仓库级既有红-未擅自修">六、<code>test:node</code> glob 重叠（仓库级既有红，未擅自修）<a class="anchor" href="#六-test-node-glob-重叠-仓库级既有红-未擅自修" aria-label="锚点">#</a></h2>
+<p><strong>现象</strong>：<code>tests/**</code> 同时被 jest（<code>npm test</code>）与 <code>node --test</code>（<code>test:node</code>）扫描。<br><code>test:node</code> = <code>node --test tests/**/*.test.js</code>，接在 <strong>4 个 CI workflow（含 <code>pr-gate.yml</code>）</strong> 上。</p>
+<p><strong>规模</strong>：</p>
+<table><thead><tr><th>指标</th><th>数量</th></tr></thead><tbody><tr><td><code>tests/</code> 下 <code>.test.js</code> 总数</td><td>2451</td></tr><tr><td>不含 <code>node:test</code> 的</td><td>1173</td></tr><tr><td>其中 jest 风格（有 <code>describe(</code>）</td><td><strong>1122</strong></td></tr></tbody></table>
+<p><strong>实测</strong>：</p>
+<ul><li>全仓 <code>node --test &quot;tests/**/*.test.js&quot;</code> → <strong>1500s 超时</strong>（exit 124），失败文件成片</li></ul>
+<p>（<code>__tests__/</code>、<code>a2a.test.js</code>、<code>agnes*.test.js</code>、<code>aiCli.*</code> …）</p>
+<ul><li><code>tests/cli/tui/*.test.js</code> → 632 用例，<strong>627 pass / 5 fail</strong>，5 条全为 jest 风格文件：</li></ul>
+<table><thead><tr><th>文件</th><th>node:test 下的失败形态</th></tr></thead><tbody><tr><td><code>arrowRouting.test.js</code></td><td>QUARANTINE 空壳（<code>describe</code> 内零用例）</td></tr><tr><td><code>scrollActions.test.js</code></td><td>同上</td></tr><tr><td><code>scrollbackPreserve.test.js</code></td><td>同上</td></tr><tr><td><code>transcriptLines.test.js</code></td><td>同上</td></tr><tr><td><code>historyBrowseDecision.test.js</code></td><td><code>ReferenceError: describe is not defined</code>（jest 下 3/3 通过）</td></tr></tbody></table>
+<p><strong>处置</strong>：<strong>未擅自改 npm script</strong>（会影响 4 条 CI）。建议方向：给 <code>test:node</code> 加排除条件，<br>或让这 5 个文件补 <code>node:test</code> 导入。决定权交给朋友。</p>
+<hr>
+<h2 id="七-新发现-隔离的-4-个-tui-测试文件正好覆盖我改的模块-且-debt-md-的恢复路径是-死的">七、新发现：隔离的 4 个 TUI 测试文件正好覆盖我改的模块，且 DEBT.md 的恢复路径是<strong>死的</strong><a class="anchor" href="#七-新发现-隔离的-4-个-tui-测试文件正好覆盖我改的模块-且-debt-md-的恢复路径是-死的" aria-label="锚点">#</a></h2>
+<h3 id="7-1-事实">7.1 事实<a class="anchor" href="#7-1-事实" aria-label="锚点">#</a></h3>
+<p><code>tests/DEBT.md</code> §六（2026-09-12）登记 54 个编码损坏文件转 QUARANTINE 空壳，<br>其中 <strong>5 个在 <code>tests/cli/tui/</code></strong>：</p>
+<table><thead><tr><th>文件</th><th>状态</th></tr></thead><tbody><tr><td><code>mouseButtons.test.js</code></td><td>已重写恢复（新权威版本，走 <code>node:test</code>）</td></tr><tr><td><code>arrowRouting.test.js</code></td><td><strong>仍是空壳</strong></td></tr><tr><td><code>scrollActions.test.js</code></td><td><strong>仍是空壳</strong></td></tr><tr><td><code>scrollbackPreserve.test.js</code></td><td><strong>仍是空壳</strong></td></tr><tr><td><code>transcriptLines.test.js</code></td><td><strong>仍是空壳</strong></td></tr></tbody></table>
+<p>这 4 个模块 —— <code>arrowRouting</code>（方向键/滚轮路由）、<code>scrollActions</code>（滚动动作）、<br><code>scrollbackPreserve</code>（回滚保留，即根因 A 那几层）、<code>transcriptLines</code>（转录行投影） ——<br><strong>正好是我这次改动的语义邻域</strong>。</p>
+<h3 id="7-2-debt-md-写的恢复路径实测无效">7.2 DEBT.md 写的恢复路径实测无效<a class="anchor" href="#7-2-debt-md-写的恢复路径实测无效" aria-label="锚点">#</a></h3>
+<p>DEBT.md 原文：「从远端 <code>github.com/luckykhy/khy-os</code> 拉取这些文件的原始版本后删除对应空壳」。</p>
+<p>实测<strong>远端与本地 HEAD 字节完全相同</strong>：</p>
+<table><thead><tr><th>文件</th><th><code>origin/main</code> blob</th><th>本地 HEAD blob</th><th>结论</th></tr></thead><tbody><tr><td><code>arrowRouting.test.js</code></td><td><code>51e3f46e26</code></td><td><code>51e3f46e26</code></td><td>相同</td></tr><tr><td><code>scrollActions.test.js</code></td><td><code>1d37a7908a</code></td><td><code>1d37a7908a</code></td><td>相同</td></tr><tr><td><code>scrollbackPreserve.test.js</code></td><td><code>c48dcdb717</code></td><td><code>c48dcdb717</code></td><td>相同</td></tr><tr><td><code>transcriptLines.test.js</code></td><td><code>38c73f47c6</code></td><td><code>38c73f47c6</code></td><td>相同</td></tr></tbody></table>
+<p>（<code>gitee/main</code> 同样。）损坏<strong>已经推上去了</strong>，<code>git pull</code> 救不回来。<br>且本仓只有 <strong>151 个 commit</strong>，<code>arrowRouting.test.js</code> 全历史只有 <code>d407f975</code> 一个 commit。</p>
+<p><strong>唯一可行的路径是「对着当前 src 重写」</strong> —— 这正是 <code>mouseButtons.test.js</code> 与<br><code>toolEntryRows.test.js</code> 已经走过的路。</p>
+<h3 id="7-3-好消息-损坏是可读的-我已核过语义冲突">7.3 好消息：损坏是可读的，我已核过语义冲突<a class="anchor" href="#7-3-好消息-损坏是可读的-我已核过语义冲突" aria-label="锚点">#</a></h3>
+<p>损坏只吃了两类东西：① <code>expect(X).toBe(Y)</code> 里的 <code>)</code>（GBK 解码吞掉一个字节）；<br>② CJK 字符串。<strong>断言语义完整可辨</strong>。</p>
+<p>其中 <code>scrollActions.test.js</code> 明确锁了：</p>
+<pre><code class="language-js"><span class="hljs-title function_">expect</span>(<span class="hljs-title function_">applyScroll</span>(<span class="hljs-string">&#x27;lineUp&#x27;</span>, { ...D, <span class="hljs-attr">offset</span>: -<span class="hljs-number">5</span> })).<span class="hljs-title function_">toBe</span>(<span class="hljs-number">0</span>);   <span class="hljs-comment">// 负数 → 顶</span></code></pre>
+<p>而我在 <code>Viewport.resolveViewportOffset</code> 里把<strong>负数定义成贴底</strong> —— 表面看是冲突。</p>
+<p><strong>核验结论：不冲突。</strong> 三点理由：</p>
+<ol><li>两者是<strong>不同的叶子模块</strong>：<code>tui/scrollActions.js</code> vs <code>ink-components/Viewport.js</code></li><li><code>applyStickyViewportAction</code> 先经 <code>resolveViewportOffset</code> 把哨兵<strong>归一成数字</strong>，</li></ol>
+<p>负数永远不会裸进 <code>applyScroll</code></p>
+<ol><li>所有 <code>applyScroll</code> / <code>applyViewportScroll</code> 调用点传入的 state 初值都是 <code>0</code>，</li></ol>
+<p><strong>没有任何路径把 <code>null</code> 喂进去</strong>：</p>
+<ul><li><code>App.js:4427</code> ← <code>transcriptScroll</code>（<code>useState(0)</code>）</li><li><code>App.js:4941</code> ← <code>previewSidebarScroll</code>（<code>useState(0)</code>，且调用处已写 <code>Number(s) || 0</code>）</li><li><code>CcTranscriptView.js:99/106/112/116</code> ← <code>scrollOffset</code>（<code>useState(0)</code>）</li></ul>
+<h3 id="7-4-风险面">7.4 风险面<a class="anchor" href="#7-4-风险面" aria-label="锚点">#</a></h3>
+<p>我改的 <code>mouseButtons.js</code> / <code>Viewport.js</code> 对应的旧测试<strong>全部在隔离名单里</strong><br>→ 目前只有我新写的 21 个用例在护着，<strong>没有历史覆盖兜底</strong>。</p>
+<hr>
+<h2 id="八-本轮同时订正的-会撒谎的文档-只改注释-文档-未动逻辑">八、本轮同时订正的「会撒谎的文档」（只改注释/文档，未动逻辑）<a class="anchor" href="#八-本轮同时订正的-会撒谎的文档-只改注释-文档-未动逻辑" aria-label="锚点">#</a></h2>
+<p>三处地方的说法与代码实际行为不符，会把下一个接手的人带沟里。按仓库规则<br>「有背书 → 订正文档，不静默清理」，本轮只订正文字：</p>
+<table><thead><tr><th>位置</th><th>原文</th><th>问题</th><th>订正为</th></tr></thead><tbody><tr><td><code>tests/DEBT.md</code> §六「恢复路径」</td><td>「从远端拉取原始版本后删除空壳即可」</td><td><strong>实测失效</strong>（远端 blob 与本地 HEAD 完全相同，见 §七）</td><td>明确标注已失效 + 给出「对着当前 src 重写」的正确路径 + 说明 <code>git show HEAD:&lt;path&gt;</code> 可取素材</td></tr><tr><td>4 个 QUARANTINE 空壳的文件头</td><td>「the original tests were <strong>lost</strong>…<strong>No local recovery source was available</strong>」</td><td>「无恢复源」是<strong>错的</strong> —— 原件在 HEAD 里，断言可读</td><td>改为 <code>RECOVERABLE:</code> + 点名 <code>git show HEAD:&lt;具体路径&gt;</code> + 指向已走通的两个先例</td></tr><tr><td><code>App.js:5730</code>（<code>threeColumnMode</code> 上方注释）</td><td>「delegate to ThreeColumnLayout…zero regression risk」</td><td><strong>代码里没有这个分支</strong>，<code>threeColumnMode</code> 算完再无引用</td><td>改为 <code>⚠️ NOT WIRED (2026-09-16 audit)</code> + 列出三个可 grep 验证的后果 + 警告「接线是行为变更，不是改名」</td></tr></tbody></table>
+<p>订正后复核：<code>node --check</code> 全通过；<code>npm run test:tui</code> 仍 <strong>29/29、435/435</strong>；<br>逐帧回归 100×24 / 130×40 仍 <code>h&gt;=rows: []</code>、<code>clear: []</code>。</p>
+<hr>
+<h2 id="九-隔离测试文件回收-本轮完成-5-个">九、隔离测试文件回收（本轮完成，5 个）<a class="anchor" href="#九-隔离测试文件回收-本轮完成-5-个" aria-label="锚点">#</a></h2>
+<p>§七 查出「4 个隔离文件正好覆盖我改的模块，且没有历史覆盖兜底」之后，本轮把这批<br>覆盖<strong>全部回收</strong>。</p>
+<h3 id="9-1-结果">9.1 结果<a class="anchor" href="#9-1-结果" aria-label="锚点">#</a></h3>
+<p><code>node --test &quot;tests/cli/tui/*.test.js&quot;</code>：</p>
+<table><thead><tr><th></th><th style="text-align:right">用例总数</th><th style="text-align:right">通过</th><th style="text-align:right">失败</th></tr></thead><tbody><tr><td>回收前</td><td style="text-align:right">632</td><td style="text-align:right">627</td><td style="text-align:right"><strong>5</strong></td></tr><tr><td>回收后</td><td style="text-align:right"><strong>719</strong></td><td style="text-align:right"><strong>719</strong></td><td style="text-align:right"><strong>0</strong></td></tr></tbody></table>
+<table><thead><tr><th>文件</th><th style="text-align:right">恢复后用例</th><th>覆盖内容</th></tr></thead><tbody><tr><td><code>arrowRouting.test.js</code></td><td style="text-align:right">25</td><td>context 优先级、4×4 绑定矩阵、executing 条件绑定、显式 context 覆盖、<code>isArrowAction</code> 合法性、fail-soft</td></tr><tr><td><code>scrollActions.test.js</code></td><td style="text-align:right">17</td><td>动作名词表、less 惯例算术、两端 clamp、非可滚内容、畸形入参、viewport 1</td></tr><tr><td><code>scrollbackPreserve.test.js</code></td><td style="text-align:right">20</td><td>第二/三/四层契约、CJK 视觉行预算、fail-soft 直通、Buffer、跨 write 拆分</td></tr><tr><td><code>transcriptLines.test.js</code></td><td style="text-align:right">27</td><td>逐角色投影、showAll、注入渲染器、折行、两级 cap、畸形入参</td></tr><tr><td><code>historyBrowseDecision.test.js</code></td><td style="text-align:right">3</td><td>门控退役后两导出恒 true（<strong>补齐 <code>node:test</code> 导入</strong>）</td></tr></tbody></table>
+<p>合计 <strong>92 个用例</strong>（其中 4 个文件替换掉 4 个占位 <code>it</code>，净增 85）。</p>
+<h3 id="9-2-方法">9.2 方法<a class="anchor" href="#9-2-方法" aria-label="锚点">#</a></h3>
+<ol><li><code>git show HEAD:&lt;path&gt;</code> 取回损坏原件；</li><li>逐条把 <code>expect(f(x).toBe(y)</code> 的括号还原，按<strong>当前 <code>src/</code></strong> 核对断言语义</li></ol>
+<p>（这一步是关键 —— 原件编码的是历史行为，不能照抄）；</p>
+<ol><li>改写为 <code>node:test</code> 风格（<code>expect(x).toBe(y)</code> → <code>assert.equal(x, y)</code>，</li></ol>
+<p><code>.toBeTruthy()</code> → <code>assert.ok</code>，<code>.not.toThrow()</code> → <code>assert.doesNotThrow</code>）；</p>
+<ol><li>require 路径按 §三 A 的口径重算为 <code>../../../src/cli/tui/&lt;module&gt;</code></li></ol>
+<p>（原件的 <code>./&lt;module&gt;</code> 深度本来就是错的）。</p>
+<p><strong><code>transcriptLines.test.js</code> 是例外</strong>：它的 CJK 字面量整段丢失（不像另外 3 个只丢 <code>)</code>），<br>期望行无法恢复，只能从当前源码反推。已在文件头注明。</p>
+<h3 id="9-3-historybrowsedecision-test-js-的双-runner-问题-按-debt-md-三-b-修">9.3 <code>historyBrowseDecision.test.js</code> 的双 runner 问题（按 DEBT.md §三 B 修）<a class="anchor" href="#9-3-historybrowsedecision-test-js-的双-runner-问题-按-debt-md-三-b-修" aria-label="锚点">#</a></h3>
+<p>它文件头自称 <code>(node:test)</code> 但<strong>没有</strong> <code>require('node:test')</code>：</p>
+<ul><li>jest 用全局 <code>describe</code>/<code>test</code>/<code>expect</code> 跑它 → 3/3 绿（看着没问题）</li><li><code>node --test</code> 跑它 → <code>ReferenceError: describe is not defined</code></li></ul>
+<p>补齐导入后，<code>jest.config.js</code> 的 <code>findNodeTestFiles</code> 按 <code>require('node:test')</code> 标记<br><strong>自动</strong>把它转交 <code>test:node</code>，<strong>jest.config.js 无需改动</strong> —— 与 DEBT.md §三 B 写的修法一致。<br>实测确认：<code>jest --listTests</code> 已不含这 5 个文件。</p>
+<h3 id="9-4-顺带修正的文件头谎话">9.4 顺带修正的文件头谎话<a class="anchor" href="#9-4-顺带修正的文件头谎话" aria-label="锚点">#</a></h3>
+<p>4 个 QUARANTINE 空壳的文件头原文写「the original tests were <strong>lost</strong>…<strong>No local recovery<br>source was available</strong>」—— 实测是错的（原件在 HEAD 里、断言可读）。已改为<br><code>RECOVERABLE:</code> + 点名 <code>git show HEAD:&lt;具体路径&gt;</code>，见 §八。</p>
+<h3 id="9-5-守门">9.5 守门<a class="anchor" href="#9-5-守门" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>检查</th><th>结果</th></tr></thead><tbody><tr><td><code>node --check</code> × 5</td><td>全过</td></tr><tr><td><code>npx eslint</code> × 5</td><td><strong>0 error / 0 warning</strong>（初版有 5 条 <code>import/order</code> 警告，已把 <code>node:assert</code> 提到 <code>node:test</code> 之前）</td></tr><tr><td><code>scripts/ci/check-agent-rules.js</code></td><td><code>passed: no violations found</code></td></tr><tr><td><code>npm run test:tui</code>（jest）</td><td><strong>29/29 套件、435/435 用例</strong>（未受影响）</td></tr><tr><td>逐帧回归 100×24 / 130×40</td><td><code>h&gt;=rows: []</code>、<code>clear: []</code></td></tr></tbody></table>
+<h3 id="9-6-debt-md-同步">9.6 DEBT.md 同步<a class="anchor" href="#9-6-debt-md-同步" aria-label="锚点">#</a></h3>
+<ul><li>隔离表从 54 条降到 <strong>48 条</strong>（移除 5 个已恢复 + 此前已恢复的 <code>toolEntryRows</code>）；</li><li>新增「2026-09-16 第三批（5 个，全部走通）」恢复记录，含逐文件覆盖清单与方法说明。</li></ul>
+<hr>
+<h2 id="十-环境坑-本轮新踩-记下来省时间">十、环境坑（本轮新踩，记下来省时间）<a class="anchor" href="#十-环境坑-本轮新踩-记下来省时间" aria-label="锚点">#</a></h2>
+<ol><li><strong><code>node .khyos/diag/headless-frames.js &lt;cols&gt; &lt;rows&gt;</code> 的第 4 个参数（消息条数）不起作用</strong> ——</li></ol>
+<p>消息条数走环境变量 <code>KHY_DIAG_NMSGS</code>。默认只有 2 组（4 条消息），内容不超视口，<br>   <strong>看不到贴底行为，会误判成「贴底没生效」</strong>。必须 <code>KHY_DIAG_NMSGS=40</code>。</p>
+<ol><li><strong>等待时间硬编码 3500ms</strong>，窄/矮终端下 boot 序列没跑完就收帧，只抓到启动画面</li></ol>
+<p>（100×24 实测只出 4 帧、末帧是 boot screen）。已改为 <code>KHY_DIAG_WAIT</code> 可调（默认仍 3500）。</p>
+<ol><li><code>node --test &lt;目录&gt;</code> 在本 Node 版本（22.22.2）下<strong>不扫描目录</strong>，必须写 glob。</li><li><code>global.__inkInst.lastOutputHeight</code> 读不到（恒 <code>undefined</code>）→ 改用「数帧文本行数」间接判定。</li></ol>
+<hr>
+<h2 id="十一-待办">十一、待办<a class="anchor" href="#十一-待办" aria-label="锚点">#</a></h2>
+<ul><li>[ ] <strong>朋友本机跑 <code>khy</code> 做真终端验收</strong>（沙箱内无法完成）——</li></ul>
+<p>重点验：最大化窗口下能看到转录正文、滚轮滚内容区、输入框位置不动</p>
+<ul><li>[ ] <code>threeColumnMode</code> 未接线的 <code>ThreeColumnLayout</code> / <code>ChatColumn</code> 孤儿树 —— 决定救活还是订正注释</li><li>[ ] <code>test:node</code> 的 glob 重叠（1122 个 jest 风格文件，接在 4 条 CI 上）—— 决定是否加排除条件</li><li>[x] <del>4 个隔离 TUI 测试文件是否重写恢复</del> → <strong>已完成，5 个文件 92 用例全绿</strong>（§九）</li><li>[ ] DEBT.md 剩余 <strong>48 个</strong> QUARANTINE 空壳 —— 方法已跑通（§九.2），可继续批量回收</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-052] khy-启动性能修复报告-2026-09-14.html"><div class="dir">← 上一篇</div><div class="ttl">khy 启动性能修复报告</div></a><a class="next" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-054] khy-os-代码规范修复报告-2026-09-04.html"><div class="dir">下一篇 →</div><div class="ttl">khy-os 代码规范修复报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-053] TUI-输出回显与滚轮修复-验收报告-2026-09-16.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

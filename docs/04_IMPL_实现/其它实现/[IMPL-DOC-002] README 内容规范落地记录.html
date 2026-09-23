@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [IMPL-DOC-002] README 内容规范落地记录.md -->
+<title>[IMPL-DOC-002] README 内容规范落地记录 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>其它实现<span class="sep">›</span>[IMPL-DOC-002] README 内容规范落地记录</div>
+      <header class="hero reveal"><h1>[IMPL-DOC-002] README 内容规范落地记录</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#impl-doc-002-readme-内容规范落地记录">[IMPL-DOC-002] README 内容规范落地记录</a></li><li class="lvl-2"><a href="#1-实测证据-非推测">1. 实测证据（非推测）</a></li><li class="lvl-3"><a href="#1-1-readme-是唯一-零内容管辖-的文档族">1.1 README 是唯一「零内容管辖」的文档族</a></li><li class="lvl-3"><a href="#1-2-存量规模-36-个-readme-跨-8-个层级">1.2 存量规模：36 个 README，跨 8 个层级</a></li><li class="lvl-3"><a href="#1-3-漂移实测-根-readme-290-行里-5-处失实-全部是-复述真源-类">1.3 漂移实测：根 README 290 行里 5 处失实，**全部是「复述真源」类**</a></li><li class="lvl-2"><a href="#2-设计公理-不可让渡">2. 设计公理（不可让渡）</a></li><li class="lvl-2"><a href="#3-与既有机制的边界">3. 与既有机制的边界</a></li><li class="lvl-2"><a href="#4-档位判据的抽样验证">4. 档位判据的抽样验证</a></li><li class="lvl-2"><a href="#5-人工评审清单与复现方式">5. 人工评审清单与复现方式</a></li><li class="lvl-3"><a href="#5-1-评审清单-8-项">5.1 评审清单（8 项）</a></li><li class="lvl-3"><a href="#5-2-复现命令">5.2 复现命令</a></li><li class="lvl-3"><a href="#5-3-场景矩阵-供-6-执行器落地时作回归基准">5.3 场景矩阵（供 §6 执行器落地时作回归基准）</a></li><li class="lvl-2"><a href="#6-执行器接线设计-未落地">6. 执行器接线设计（未落地）</a></li><li class="lvl-2"><a href="#7-已知边界与未覆盖">7. 已知边界与未覆盖</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="impl-doc-002-readme-内容规范落地记录">[IMPL-DOC-002] README 内容规范落地记录<a class="anchor" href="#impl-doc-002-readme-内容规范落地记录" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>用途</strong>：<code>[DESIGN-DOC-003]</code>（规则 <code>DOCS-004</code>）的<strong>证据层与落地层</strong>。<br>规范正文按 <code>[DESIGN-DOC-001]</code> §12 骨架压到 ≤150 行，只保留可判定的红线条文；<br>实测证据、设计公理、判据论证、执行器接线设计与未覆盖项全部放在本文。</p>
+<p><strong>本文不是契约</strong>。契约以 <code>[DESIGN-DOC-003]</code> 为准；本文若与正文冲突，以正文为准。</p></blockquote>
+<hr>
+<h2 id="1-实测证据-非推测">1. 实测证据（非推测）<a class="anchor" href="#1-实测证据-非推测" aria-label="锚点">#</a></h2>
+<blockquote><p>遵循 <code>[DESIGN-DOC-002]</code> §1 的教训：<strong>守卫自己的输出不能自证其判据</strong>。<br>本节所有数字均为直接读文件或跑脚本所得，复现命令见 §5。</p></blockquote>
+<h3 id="1-1-readme-是唯一-零内容管辖-的文档族">1.1 README 是唯一「零内容管辖」的文档族<a class="anchor" href="#1-1-readme-是唯一-零内容管辖-的文档族" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>既有机制</th><th>它管 README 的什么</th><th>不管什么</th></tr></thead><tbody><tr><td><code>check-repo-layout.js</code> 的 <code>ROOT_DOC_WHITELIST</code> / <code>README_VARIANT_RE</code></td><td>根目录<strong>能不能放</strong>、名字是否形如 <code>README.&lt;lang&gt;.md</code></td><td>放进去之后<strong>写什么</strong></td></tr><tr><td><code>check-agent-docs.js</code>（<code>DOCS-003</code>）</td><td><strong>明确不管</strong> —— 登记表 <code>exception</code> 原文「docs/ 下的普通文档不受本条约束」，<code>classify()</code> 也从不匹配 <code>README.md</code></td><td>——</td></tr><tr><td><code>DOCS-001</code> / <code>DOCS-002</code></td><td>只管 <code>docs/**</code> 内的编号命名与索引</td><td><code>docs/</code> 之外的 README 不受编号约束</td></tr><tr><td><code>verify_docs_site.js</code>（LAY-5）</td><td><code>.md</code> 必须有同名 <code>.html</code> 孪生</td><td>孪生里写什么</td></tr></tbody></table>
+<p>实测 <code>grep -c -i readme docs/10_规范/registry/RULES-REGISTRY.json</code> → <strong>0</strong>（登记 70 条规则时）。<br>全仓没有任何一条规则的 <code>scope</code> / <code>paths</code> / <code>constraint</code> 提到 README。</p>
+<p>⇒ README 在<strong>位置</strong>上被治理，在<strong>内容</strong>上完全空白。</p>
+<h3 id="1-2-存量规模-36-个-readme-跨-8-个层级">1.2 存量规模：36 个 README，跨 8 个层级<a class="anchor" href="#1-2-存量规模-36-个-readme-跨-8-个层级" aria-label="锚点">#</a></h3>
+<p><code>find . -iname &quot;README*.md&quot;</code>（排除 <code>node_modules</code> / <code>.git</code> / <code>dist</code> / <code>build</code> / <code>_build</code> /<br><code>.research-tmp</code> / <code>.khy</code>）→ <strong>36 个</strong>。按 <code>[DESIGN-DOC-003]</code> §1.3 判据分类：</p>
+<table><thead><tr><th>档位</th><th>数量</th><th>代表</th></tr></thead><tbody><tr><td>T0 仓库入口</td><td>1</td><td><code>README.md</code>（290 行，本轮修订前）</td></tr><tr><td>T1 部署单元</td><td>9</td><td><code>apps/ai-frontend</code>、<code>services/backend</code>、<code>software/khyquant/frontend</code>、<code>kernel</code>、<code>tools/deepseek-eyes</code>、<code>extensions/tools/khy-markdown</code> …</td></tr><tr><td>T2 内部模块</td><td>26</td><td><code>scripts/*</code>、<code>extensions/scripts/khy-desktop-rd/**</code>、<code>services/backend/src/contracts/**</code> …</td></tr></tbody></table>
+<p>同时发现 2 个<strong>命名违规</strong>与 2 个<strong>孪生件孤儿</strong>（即 <code>[DESIGN-DOC-003]</code> §1.5 与 §1.1 的存量）：</p>
+<ul><li><code>kernel/bridge/README-联调.md</code>、<code>scripts/release/README-runtime-placement.md</code> ——</li></ul>
+<p>不匹配 <code>README_VARIANT_RE = /^README(?:\.[A-Za-z-]+)?\.md$/</code>（连字符后接 CJK / 英文词均不匹配）；</p>
+<ul><li><code>apps/khy-mobile/README.html</code>、<code>apps/khy-mobile/release/README.html</code> —— 有 <code>.html</code> 无同名 <code>.md</code>。</li></ul>
+<h3 id="1-3-漂移实测-根-readme-290-行里-5-处失实-全部是-复述真源-类">1.3 漂移实测：根 README 290 行里 5 处失实，<strong>全部是「复述真源」类</strong><a class="anchor" href="#1-3-漂移实测-根-readme-290-行里-5-处失实-全部是-复述真源-类" aria-label="锚点">#</a></h3>
+<p>2026-09-17 对当时的 <code>README.md</code> 逐条核对真源，发现 5 处失实。<br><strong>没有一处是文笔或遗漏问题，全部是「README 抄了一份本该由别处维护的事实」</strong>：</p>
+<table><thead><tr><th>#</th><th>README 原文</th><th>真值</th><th>真源（<strong>给符号名，不给行号</strong>）</th></tr></thead><tbody><tr><td>1</td><td>「前端管理界面 <code>http://localhost:3000</code> / 后端 API <code>http://localhost:5000</code>」</td><td>AI 前端 <strong>8090</strong>、后端 <strong>3000</strong></td><td><code>constants/serviceDefaults.js</code> 的 <code>WEB_FRONTEND_PORT</code> / <code>BACKEND_PORT</code>；<code>apps/ai-frontend/vite.config.js</code> 的 <code>server.port</code></td></tr><tr><td>2</td><td>「<code>run.ps1</code> 等价于 <code>npm run dev</code>」「<code>run.ps1 build</code> → <code>npm run build</code>」</td><td>根 <code>package.json</code> <strong>不存在</strong> <code>dev</code> / <code>build</code> 脚本</td><td>根 <code>package.json</code> 的 <code>scripts</code>（curated 入口表）</td></tr><tr><td>3</td><td>目录树含 <code>alpine/</code>、<code>_source/</code>；未含 <code>deploy/ electron/ patches/ tests/</code>；<code>apps/</code> 只列 1 个</td><td><code>alpine/</code>、<code>_source/</code> 不存在；<code>apps/</code> 实为 5 个</td><td><code>ls</code> + <code>check-repo-layout.js</code> 的 <code>LAYERS</code> / <code>CROSSCUTTING</code></td></tr><tr><td>4</td><td>「必须同步更新以下<strong>三处</strong>真源」</td><td><strong>三轨道 9 真源</strong>（G2 已含 <code>plugin-sdk</code>）</td><td><code>check-version-sync.js</code> 的 <code>VERSION_GROUPS</code></td></tr><tr><td>5</td><td>「Node.js ≥ 20」</td><td><code>engines: &quot;&gt;=20.18.1&quot;</code></td><td><code>services/backend/package.json</code> 的 <code>engines.node</code></td></tr></tbody></table>
+<blockquote><p><strong>本表的教训</strong>：初版本表写的是行号（<code>serviceDefaults.js:89,99</code>、<code>check-repo-layout.js:117,128</code>）。<br>编写过程中 <code>scripts/ci/check-repo-layout.js</code> 被并发改动，<code>README_VARIANT_RE</code> 从第 128 行<br>移到第 136 行，初版引用当场失准 —— <strong>连「记录漂移」的表格自己都在漂移</strong>。<br>已全部改为符号名。这直接催生了 <code>[DESIGN-DOC-003]</code> §1.2 的「给符号名，不给行号」红线。</p></blockquote>
+<p><strong>定量</strong>：5 / 290 ≈ <strong>1.7% 行失实</strong>，但失实<strong>只出现在 6 类「复述真源」的内容</strong>里；<br>同一份 README 的定位、架构说明、约定类正文<strong>零漂移</strong>。</p>
+<p>⇒ 结论：漂移不是「作者不认真」，而是<strong>结构性</strong>的 —— README 天然想「一页说清全部」，<br>而「全部」里混进了必须随真源变化的事实。<strong>修法是删掉复述，不是提醒作者更勤快。</strong></p>
+<hr>
+<h2 id="2-设计公理-不可让渡">2. 设计公理（不可让渡）<a class="anchor" href="#2-设计公理-不可让渡" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>公理</th><th>推论</th></tr></thead><tbody><tr><td><strong>A1</strong></td><td><strong>入口不做真源</strong></td><td>README 里任何<strong>可被验证的事实</strong>都必须来自某处真源；README 只允许「指针 + 稳定摘要」。可被验证 = 会变（端口、版本、脚本名、清单）</td></tr><tr><td><strong>A2</strong></td><td><strong>没跑过的命令不许写</strong></td><td>每条命令在写作时<strong>必须实际可执行</strong>。README 是读者的第一份合同，写一条跑不通的命令比少写一条的代价高得多</td></tr><tr><td><strong>A3</strong></td><td><strong>档位决定内容，不搞统一模板</strong></td><td>必备节是档位的函数。统一模板会逼 17 行的模块 README 长出「架构总览」</td></tr><tr><td><strong>A4</strong></td><td><strong>首屏即结论</strong></td><td>陌生人（或半年后的自己）只看第一屏，就要能判断「这是不是我要的东西」「我能不能跑起来」</td></tr><tr><td><strong>A5</strong></td><td><strong>README 不是台账</strong></td><td>进度、TODO、变更日志、临时说明各有真源（任务板 / <code>CHANGELOG.md</code> / <code>tests/DEBT.md</code>）</td></tr></tbody></table>
+<blockquote><p><strong>A3 的重要限定</strong>：必备节是<strong>下限</strong>，不是上限。本文禁止的从来不是「写得多」，<br>而是「复述真源」（A1）。一份 T2 README 写满 200 行是可以的，只要不含事实副本。</p></blockquote>
+<hr>
+<h2 id="3-与既有机制的边界">3. 与既有机制的边界<a class="anchor" href="#3-与既有机制的边界" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>既有件</th><th>它管什么</th><th><code>DOCS-004</code> 做什么</th><th>边界</th></tr></thead><tbody><tr><td><code>check-repo-layout.js</code>（<code>ROOT_DOC_WHITELIST</code> / <code>README_VARIANT_RE</code>）</td><td>根目录<strong>能不能放</strong>、命名变体正则</td><td>放进去之后<strong>写什么</strong>；据 1.5 登记 2 个现存命名违规</td><td>位置 vs 内容。<strong>不修改</strong>白名单与正则，只引用</td></tr><tr><td><code>check-agent-docs.js</code>（<code>DOCS-003</code>）</td><td><code>AGENTS.md</code> / <code>CLAUDE.md</code> / <code>khy.md</code> 一族</td><td>README 一族（其 <code>exception</code> 已明示不在其辖区）</td><td>两族互斥，无重叠管辖。可达性判据<strong>直接复用</strong> D3a/D3b/D3d，不另写一套</td></tr><tr><td><code>DOCS-001</code> / <code>DOCS-002</code></td><td><code>docs/**</code> 内文档的编号命名与索引登记</td><td><code>docs/</code> <strong>之外</strong>的 README 内容</td><td><code>docs/**</code> 下的 README（现存 1 个 <code>[DEPLOY-MAN-004] README.md</code>）仍受 <code>DOCS-001</code> 命名；<code>DOCS-004</code> 只适用 <code>[DESIGN-DOC-003]</code> §1.1 禁项表</td></tr><tr><td><code>verify_docs_site.js</code>（LAY-5）</td><td><code>.md</code> ↔ <code>.html</code> 孪生<strong>存在性</strong>，硬门</td><td>只声明「<code>.html</code> 禁止手改」</td><td>不重实现孪生校验</td></tr><tr><td><code>check-version-sync.js</code></td><td>manifest 之间的版本一致（9 源）</td><td>禁止把版本号<strong>抄进 README 正文</strong></td><td>补其盲区：该守卫只看 manifest，不看 markdown</td></tr><tr><td><code>CHANGELOG.md</code> / <code>tests/DEBT.md</code> / 任务板</td><td>变更、债务、进度真源</td><td>禁止 README 承载（A5）</td><td>单向：README 可指向，不可复制</td></tr></tbody></table>
+<hr>
+<h2 id="4-档位判据的抽样验证">4. 档位判据的抽样验证<a class="anchor" href="#4-档位判据的抽样验证" aria-label="锚点">#</a></h2>
+<p>判据本身必须机械可判，否则 <code>[DESIGN-DOC-003]</code> §1.4 的必答清单无法自动化。抽样 20 个真实目录，验证<br>「目录内是否存在构建清单」这一判据是否产生合理分档：</p>
+<table><thead><tr><th>目录</th><th>构建清单</th><th>档位</th><th>是否合理</th></tr></thead><tbody><tr><td><code>services/backend</code></td><td><code>package.json</code></td><td>T1</td><td>✅ 可独立 <code>npm start</code></td></tr><tr><td><code>services/backend/src/contracts/a2a</code></td><td>无</td><td>T2</td><td>✅ 单元内部契约</td></tr><tr><td><code>services/backend/wasm-indicators</code></td><td>无</td><td>T2</td><td>✅ 上层单元的子目录</td></tr><tr><td><code>kernel</code></td><td><code>Makefile</code></td><td>T1</td><td>✅ 可独立构建并 QEMU 引导</td></tr><tr><td><code>tools/deepseek-eyes</code></td><td><code>pyproject.toml</code></td><td>T1</td><td>✅ 独立 MCP 服务</td></tr><tr><td><code>scripts</code>、<code>scripts/frontend</code>、<code>scripts/release/publish</code></td><td>无</td><td>T2</td><td>✅ 工程脚本目录</td></tr><tr><td><code>platform/delivery</code></td><td>无</td><td>T2</td><td>✅ 只是<strong>下限低</strong>，其 README 已远超 T2 要求（A3 允许）</td></tr><tr><td><code>packaging/modules</code></td><td>无</td><td>T2</td><td>✅ 清单目录</td></tr><tr><td><code>extensions/tools/khy-markdown</code></td><td><code>package.json</code></td><td>T1</td><td>✅ 含独立安装与 CLI</td></tr><tr><td><code>extensions/scripts/khy-desktop-rd</code></td><td>无</td><td>T2</td><td>✅ 调研档案</td></tr><tr><td><code>.github/rulesets</code>、<code>.opencode</code></td><td>无</td><td>T2</td><td>✅ 配置目录</td></tr></tbody></table>
+<p><strong>为什么不用「目录深度」或「手工登记档位」</strong>：深度无法区分<br><code>services/backend</code>（T1）与 <code>services/backend/src/contracts/a2a</code>（T2）；<br>手工登记档位会引入第二真源，直接违反 A1。</p>
+<hr>
+<h2 id="5-人工评审清单与复现方式">5. 人工评审清单与复现方式<a class="anchor" href="#5-人工评审清单与复现方式" aria-label="锚点">#</a></h2>
+<h3 id="5-1-评审清单-8-项">5.1 评审清单（8 项）<a class="anchor" href="#5-1-评审清单-8-项" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>检查</th><th>通过标准</th></tr></thead><tbody><tr><td>1</td><td>全域禁项</td><td>正文无端口/域名/版本号/命令全集/目录树副本（三类例外除外）</td></tr><tr><td>2</td><td>命令可达</td><td>每条命令<strong>实际跑过</strong>；<code>npm run</code> 在就近 <code>package.json</code>；<code>khy</code> 子命令真实存在</td></tr><tr><td>3</td><td>路径可达</td><td>反引号里的仓库路径都存在</td></tr><tr><td>4</td><td>档位节齐备</td><td>按 <code>[DESIGN-DOC-003]</code> §1.4 对照，必有项都答了</td></tr><tr><td>5</td><td>首屏</td><td>第一屏答完「是什么 + 怎么跑」</td></tr><tr><td>6</td><td>台账污染</td><td>无 TODO / 进度 / 临时说明</td></tr><tr><td>7</td><td>命名与孪生</td><td>匹配 <code>README_VARIANT_RE</code>；有 md 有 html，且 html 未被手改</td></tr><tr><td>8</td><td>指针有效性</td><td>每个「真源指针」指向的文件或登记项真实存在</td></tr></tbody></table>
+<h3 id="5-2-复现命令">5.2 复现命令<a class="anchor" href="#5-2-复现命令" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 档位分布（§1.2）</span>
+find . -iname <span class="hljs-string">&quot;README*.md&quot;</span> -not -path <span class="hljs-string">&quot;*/node_modules/*&quot;</span> -not -path <span class="hljs-string">&quot;*/.git/*&quot;</span> \
+  -not -path <span class="hljs-string">&quot;*/dist/*&quot;</span> -not -path <span class="hljs-string">&quot;*/build/*&quot;</span> -not -path <span class="hljs-string">&quot;*/_build/*&quot;</span> \
+  -not -path <span class="hljs-string">&quot;*/.research-tmp/*&quot;</span> -not -path <span class="hljs-string">&quot;*/.khy/*&quot;</span> | <span class="hljs-built_in">wc</span> -l
+
+<span class="hljs-comment"># 真源抽查（§1.3 五例）—— 一律按符号名 grep，不按行号 sed</span>
+grep -n <span class="hljs-string">&quot;BACKEND_PORT\|WEB_FRONTEND_PORT&quot;</span> services/backend/src/constants/serviceDefaults.js
+grep -n <span class="hljs-string">&quot;AI_FRONTEND_PORT&quot;</span> apps/ai-frontend/vite.config.js
+node -e <span class="hljs-string">&quot;console.log(Object.keys(require(&#x27;./package.json&#x27;).scripts).includes(&#x27;dev&#x27;))&quot;</span>  <span class="hljs-comment"># → false（根无 dev）</span>
+grep -n <span class="hljs-string">&#x27;&quot;node&quot;&#x27;</span> services/backend/package.json                    <span class="hljs-comment"># engines.node 真值</span>
+grep -n <span class="hljs-string">&quot;VERSION_GROUPS&quot;</span> -A 30 scripts/ci/check-version-sync.js   <span class="hljs-comment"># 三轨道 9 源</span></code></pre>
+<h3 id="5-3-场景矩阵-供-6-执行器落地时作回归基准">5.3 场景矩阵（供 §6 执行器落地时作回归基准）<a class="anchor" href="#5-3-场景矩阵-供-6-执行器落地时作回归基准" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>场景</th><th>期望</th></tr></thead><tbody><tr><td>正文写 <code>http://localhost:8090</code></td><td>违规（禁项·端口）</td></tr><tr><td>正文写 <code>AI_FRONTEND_PORT</code>（变量名）</td><td><strong>放行</strong>（指针标识）</td></tr><tr><td>徽章 <code>pypi/v/khy-os</code></td><td><strong>放行</strong>（实时取值）</td></tr><tr><td>手写 <code>v1.1.15</code> 徽章</td><td>违规（手写数字）</td></tr><tr><td><code>❌ ... :3000 / ✅ ... 由 PORT 决定</code></td><td><strong>放行</strong>（对照块语境）</td></tr><tr><td>写 <code>npm run dev</code>（根无此脚本）</td><td>违规（命令不可达）</td></tr><tr><td>写 <code>npm run test:backend</code>（根存在）</td><td><strong>放行</strong></td></tr><tr><td><code>apps/khy-mobile/README.html</code>（无 <code>.md</code>）</td><td>违规（无源孪生）</td></tr><tr><td>首屏只有徽章墙</td><td>违规（首屏）</td></tr><tr><td>T1 README 缺「怎么测」</td><td>违规（档位节不齐备）</td></tr><tr><td>正文写「待办：后续补上」</td><td>违规（台账）</td></tr><tr><td><code>README-联调.md</code></td><td>违规（命名）</td></tr><tr><td>T2 README 写 200 行模块说明</td><td><strong>放行</strong>（下限非上限）</td></tr></tbody></table>
+<hr>
+<h2 id="6-执行器接线设计-未落地">6. 执行器接线设计（未落地）<a class="anchor" href="#6-执行器接线设计-未落地" aria-label="锚点">#</a></h2>
+<p>拟新增 <code>scripts/ci/check-readme.js</code>。<strong>必须复用而非重写</strong>的部分：</p>
+<table><thead><tr><th>判据</th><th>复用来源</th></tr></thead><tbody><tr><td><code>npm run</code> 脚本可达性</td><td><code>check-agent-docs.js</code> 的 D3a（含 <code>--workspace</code> 可在脚本名之前的陷阱）</td></tr><tr><td><code>khy</code> 子命令可达性</td><td>同上 D3b（别名表 ∪ <code>commandAutoRegistry</code>）</td></tr><tr><td>路径可达性</td><td>同上 D3d（根锚定 + 非占位符 + 完整路径或 basename）</td></tr><tr><td>档位判定</td><td><code>[DESIGN-DOC-003]</code> §1.3（构建清单探测）</td></tr><tr><td>孪生件</td><td><code>verify_docs_site.js</code>（不重复实现）</td></tr></tbody></table>
+<p>接线清单（缺一项即失败 —— 依据既有守卫的硬性要求）：</p>
+<ol><li>新建 <code>scripts/ci/check-readme.js</code>，输出契约 <code>[ERROR] &lt;finding-id&gt; &lt;file&gt;:&lt;line&gt;</code>，退出码 <code>0|1|2</code>；</li><li>根 <code>package.json</code> 加别名 <code>&quot;check:readme&quot;</code> —— <strong>不加会被 <code>check-wiring.js</code> 判 error（检查器零接线）</strong>；</li><li>登记表 <code>DOCS-004</code> 补 <code>exec</code>（<code>script</code> / <code>args</code> / <code>findings</code>），<code>gate</code> 由 <code>manual</code> 改为 <code>pr</code>；</li><li><code>.github/workflows/pr-gate.yml</code> 加步骤 —— 否则「表面被引用」≠「CI 真会跑」，</li></ol>
+<p>该差别见 <code>[DESIGN-DOC-002]</code> §8 执行实录 D；</p>
+<ol><li><code>npm run docs:rules-cards</code> 重生成规则卡（<strong>禁手改</strong>）；</li><li>P2 走棘轮：<code>npm run rules:baseline</code> 收紧基线（只降不升）。</li></ol>
+<blockquote><p><strong>门档不用改</strong>：commit ⊂ pr ⊂ release 的成员资格从登记表派生（<code>[DESIGN-ARCH-111]</code>），<br><strong>不要</strong>动 <code>qualityGateStages.js</code> 或 <code>package.json</code> 的 <code>&amp;&amp;</code> 链。</p></blockquote>
+<hr>
+<h2 id="7-已知边界与未覆盖">7. 已知边界与未覆盖<a class="anchor" href="#7-已知边界与未覆盖" aria-label="锚点">#</a></h2>
+<p>诚实登记 <code>DOCS-004</code> 的<strong>不覆盖项</strong>，避免读者高估其保证：</p>
+<ol><li><strong>本期无自动执行器</strong> —— §5.3 的场景矩阵是设计基准，不是已运行的守卫。</li></ol>
+<p>执行强度如实为 <code>manual</code>（人工评审）。</p>
+<ol><li><strong>不校验「摘要是否还准确」</strong> —— A1 允许的「稳定摘要」也可能过期（如能力条目）。</li></ol>
+<p>这类漂移只能靠真源侧的变更推动，本规范无法自动发现。</p>
+<ol><li><strong>不覆盖非 README 名的入口文档</strong> —— <code>kernel/bridge/README-联调.md</code> 属命名违规，</li></ol>
+<p>但一个叫 <code>GUIDE.md</code> 的入口文档不在本规范辖区（应归 <code>DOCS-001</code> 的命名管辖）。</p>
+<ol><li><strong>不覆盖 <code>docs/**</code> 下 README 的档位</strong> —— 它们受 <code>DOCS-001</code> 命名管辖，</li></ol>
+<p>本规范只适用其 §1.1 全域禁项表。</p>
+<ol><li><strong>不覆盖用户级与第三方目录</strong> —— <code>~/.khyquant/</code>、<code>.research-tmp/</code> 下的 README 不在辖区内。</li><li><strong><code>README.html</code> 是否入版本控制</strong> —— <code>[DESIGN-LAY-002]</code> §8① 已裁定「入」，</li></ol>
+<p>但实测<strong>根级孪生件全部未被 git 跟踪</strong>。这属既有裁定与存量的偏差，<br>   本规范不重新裁决，仅登记待收口。</p>
+<ol><li><strong>存量违规未清理</strong> —— §1.2 的 2 个命名违规与 2 个无源孪生孤儿仍存在，</li></ol>
+<p>按 <code>[DESIGN-DOC-003]</code> §3 的「先定判据、后机械化」顺序，清理并入执行器落地后一并处理。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/04_IMPL_实现/其它实现/[IMPL-DOC-001] 任务完成判断地图.html"><div class="dir">← 上一篇</div><div class="ttl">任务完成判断地图</div></a><a class="next" href="../../../docs/04_IMPL_实现/其它实现/[IMPL-MIG-001] 命令注册表迁移指南.html"><div class="dir">下一篇 →</div><div class="ttl">命令注册表迁移指南</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/04_IMPL_实现/其它实现/[IMPL-DOC-002] README 内容规范落地记录.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -97,7 +97,7 @@ The whole MVP exists only to test the timing assumption.
 - Which calendar (Google/Outlook) do the target users actually live in?
 ```
 
-**What made this session good:** it reframed before solving, named the 10x-simpler version, refused to yes-machine a weak "blind timer," surfaced the one assumption the whole idea rests on, and shipped an MVP defined by what it *leaves out*. That "Not Doing" list is the most valuable part — see [what is MVP](../../../../../../docs/02_CONCEPTS_概念入门/[CONCEPT-32]%20什么是MVP-最小可行产品.md) for why cutting scope this hard is the whole point.
+**What made this session good:** it reframed before solving, named the 10x-simpler version, refused to yes-machine a weak "blind timer," surfaced the one assumption the whole idea rests on, and shipped an MVP defined by what it *leaves out*. That "Not Doing" list is the most valuable part — see [what is MVP](../../../../../../docs/02_CONCEPTS_概念入门/CONCEPT/[CONCEPT-32]%20什么是MVP-最小可行产品.md) for why cutting scope this hard is the whole point.
 
 ## Detailed Instructions
 

@@ -17,7 +17,7 @@ function withEnv(key, val, fn) {
 }
 // ── Pattern count ─────────────────────────────────────────────────────
 // ── Env gate ──────────────────────────────────────────────────────────
-// ── healSource: static field colon �?equals ───────────────────────────
+// ── healSource: static field colon →equals ───────────────────────────
 // ── healSource: idempotency ───────────────────────────────────────────
 // ── healFile: IO behavior ─────────────────────────────────────────────
 // ── Line number tracking ──────────────────────────────────────────────
@@ -104,7 +104,7 @@ describe('Tool Syntax Healer', () => {
       expect(changes.length).toBe(1);
   });
 
-  test('healSource is idempotent �?second run produces zero changes', () => {
+  test('healSource is idempotent —second run produces zero changes', () => {
       const input = `class Foo {
       static searchHint: 'some hint';
       static category: 'training';

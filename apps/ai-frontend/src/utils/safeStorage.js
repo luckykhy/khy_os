@@ -38,3 +38,6 @@ export function safeRemove(key) {
 // Shared storage key for the auth token. The runtime value MUST stay the string
 // 'token' — this is a literal-convergence alias, not a storage-key change.
 export const TOKEN_KEY = 'token';
+
+// Shared storage key for the refresh token (enables silent session renewal).
+export const REFRESH_TOKEN_KEY = 'refresh_token';

@@ -11,8 +11,8 @@
  * Usage: require this file before starting REPL
  */
 
-const { createTerminalClient } = require('../../services/crossPlatform/clients/terminalClient');
-const { AI_BACKEND_DEFAULT_URL } = require('../../constants/serviceDefaults');
+const { createTerminalClient } = require('../services/crossPlatform/clients/terminalClient');
+const { AI_BACKEND_DEFAULT_URL } = require('../constants/serviceDefaults');
 
 let _client = null;
 let _handlers = {};

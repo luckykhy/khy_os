@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-MEM-003] 记忆模板库.md -->
+<title>[DESIGN-MEM-003] 记忆模板库 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-MEM<span class="sep">›</span>[DESIGN-MEM-003] 记忆模板库</div>
+      <header class="hero reveal"><h1>[DESIGN-MEM-003] 记忆模板库</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-mem-003-记忆模板库">[DESIGN-MEM-003] 记忆模板库</a></li><li class="lvl-2"><a href="#1-用户画像模板">1. 用户画像模板</a></li><li class="lvl-3"><a href="#1-1-基本信息模板">1.1 基本信息模板</a></li><li class="lvl-3"><a href="#1-2-交互偏好模板">1.2 交互偏好模板</a></li><li class="lvl-2"><a href="#2-项目背景模板">2. 项目背景模板</a></li><li class="lvl-3"><a href="#2-1-项目概览模板">2.1 项目概览模板</a></li><li class="lvl-3"><a href="#2-2-开发环境模板">2.2 开发环境模板</a></li><li class="lvl-2"><a href="#3-反馈偏好模板">3. 反馈偏好模板</a></li><li class="lvl-3"><a href="#3-1-回复风格模板">3.1 回复风格模板</a></li><li class="lvl-3"><a href="#3-2-错误处理模板">3.2 错误处理模板</a></li><li class="lvl-2"><a href="#4-技术决策模板">4. 技术决策模板</a></li><li class="lvl-3"><a href="#4-1-技术选型模板">4.1 技术选型模板</a></li><li class="lvl-3"><a href="#4-2-架构决策模板">4.2 架构决策模板</a></li><li class="lvl-2"><a href="#5-常用配置模板">5. 常用配置模板</a></li><li class="lvl-3"><a href="#5-1-环境配置模板">5.1 环境配置模板</a></li><li class="lvl-3"><a href="#5-2-工具配置模板">5.2 工具配置模板</a></li><li class="lvl-2"><a href="#6-记忆创建快速指南">6. 记忆创建快速指南</a></li><li class="lvl-3"><a href="#6-1-使用模板">6.1 使用模板</a></li><li class="lvl-3"><a href="#6-2-命名规范">6.2 命名规范</a></li><li class="lvl-3"><a href="#6-3-内容规范">6.3 内容规范</a></li><li class="lvl-2"><a href="#7-模板使用示例">7. 模板使用示例</a></li><li class="lvl-3"><a href="#7-1-创建用户记忆">7.1 创建用户记忆</a></li><li class="lvl-3"><a href="#7-2-创建项目记忆">7.2 创建项目记忆</a></li><li class="lvl-2"><a href="#8-模板维护">8. 模板维护</a></li><li class="lvl-3"><a href="#8-1-模板更新">8.1 模板更新</a></li><li class="lvl-3"><a href="#8-2-模板贡献">8.2 模板贡献</a></li><li class="lvl-2"><a href="#9-版本历史">9. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-mem-003-记忆模板库">[DESIGN-MEM-003] 记忆模板库<a class="anchor" href="#design-mem-003-记忆模板库" aria-label="锚点">#</a></h1>
+<blockquote><p>本模板库提供标准记忆模板，方便快速创建符合规范的记忆文件。</p></blockquote>
+<hr>
+<h2 id="1-用户画像模板">1. 用户画像模板<a class="anchor" href="#1-用户画像模板" aria-label="锚点">#</a></h2>
+<h3 id="1-1-基本信息模板">1.1 基本信息模板<a class="anchor" href="#1-1-基本信息模板" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-meta">---</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">user-basic-profile</span>
+<span class="hljs-attr">description:</span> <span class="hljs-string">用户基本信息与核心偏好</span>
+<span class="hljs-attr">type:</span> <span class="hljs-string">user</span>
+<span class="hljs-attr">tier:</span> <span class="hljs-string">permanent</span>
+<span class="hljs-attr">updated:</span> <span class="hljs-number">2026-09-04T00:00:00.000Z</span>
+<span class="hljs-meta">---
+</span>
+<span class="hljs-comment">## 基本信息</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">称呼:</span> [<span class="hljs-string">用户称呼</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">语言偏好:</span> <span class="hljs-string">简体中文</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">时区:</span> [<span class="hljs-string">用户时区</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">工作领域:</span> [<span class="hljs-string">主要工作领域</span>]
+
+<span class="hljs-comment">## 工作习惯</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">活跃时段:</span> [<span class="hljs-string">常用时间段</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">交互风格:</span> [<span class="hljs-string">简洁/详细</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">反馈偏好:</span> [<span class="hljs-string">直接/委婉</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">决策风格:</span> [<span class="hljs-string">快速/谨慎</span>]
+
+<span class="hljs-comment">## 技术背景</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">主要语言:</span> [<span class="hljs-string">编程语言</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">框架偏好:</span> [<span class="hljs-string">技术栈</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">工具链:</span> [<span class="hljs-string">常用工具</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">经验水平:</span> [<span class="hljs-string">初级/中级/高级</span>]</code></pre>
+<h3 id="1-2-交互偏好模板">1.2 交互偏好模板<a class="anchor" href="#1-2-交互偏好模板" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-meta">---</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">user-interaction-preferences</span>
+<span class="hljs-attr">description:</span> <span class="hljs-string">用户交互风格与沟通偏好</span>
+<span class="hljs-attr">type:</span> <span class="hljs-string">user</span>
+<span class="hljs-attr">tier:</span> <span class="hljs-string">permanent</span>
+<span class="hljs-attr">updated:</span> <span class="hljs-number">2026-09-04T00:00:00.000Z</span>
+<span class="hljs-meta">---
+</span>
+<span class="hljs-comment">## 沟通风格</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">语言:</span> <span class="hljs-string">简体中文</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">正式程度:</span> [<span class="hljs-string">正式/随意</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">详细程度:</span> [<span class="hljs-string">简洁/详细</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">情感表达:</span> [<span class="hljs-string">直接/委婉</span>]
+
+<span class="hljs-comment">## 反馈偏好</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">错误反馈:</span> [<span class="hljs-string">希望看到详细错误信息</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">成功反馈:</span> [<span class="hljs-string">简短确认即可</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">建议方式:</span> [<span class="hljs-string">直接给出建议/先询问意见</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">进度更新:</span> [<span class="hljs-string">实时更新/关键节点更新</span>]
+
+<span class="hljs-comment">## 交互禁忌</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">避免事项:</span> [<span class="hljs-string">过多解释、情感化表达</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">敏感话题:</span> [<span class="hljs-string">无/具体话题</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">沟通红线:</span> [<span class="hljs-string">具体禁忌</span>]</code></pre>
+<hr>
+<h2 id="2-项目背景模板">2. 项目背景模板<a class="anchor" href="#2-项目背景模板" aria-label="锚点">#</a></h2>
+<h3 id="2-1-项目概览模板">2.1 项目概览模板<a class="anchor" href="#2-1-项目概览模板" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-meta">---</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">project-{project-name}-overview</span>
+<span class="hljs-attr">description:</span> {<span class="hljs-string">项目名称</span>} <span class="hljs-string">项目概览与技术架构</span>
+<span class="hljs-attr">type:</span> <span class="hljs-string">project</span>
+<span class="hljs-attr">tier:</span> <span class="hljs-string">cross_session</span>
+<span class="hljs-attr">updated:</span> <span class="hljs-number">2026-09-04T00:00:00.000Z</span>
+<span class="hljs-meta">---
+</span>
+<span class="hljs-comment">## 项目概览</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">名称:</span> {<span class="hljs-string">项目名称</span>}
+<span class="hljs-bullet">-</span> <span class="hljs-string">类型:</span> [<span class="hljs-string">Web/CLI/库/服务/移动应用</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">状态:</span> [<span class="hljs-string">开发中/维护中/已上线</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">仓库:</span> [<span class="hljs-string">Git</span> <span class="hljs-string">仓库地址</span>]
+
+<span class="hljs-comment">## 技术栈</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">语言:</span> [<span class="hljs-string">主要编程语言</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">框架:</span> [<span class="hljs-string">核心框架</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">数据库:</span> [<span class="hljs-string">数据库类型</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">部署:</span> [<span class="hljs-string">部署方式</span>]
+
+<span class="hljs-comment">## 架构特点</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">设计模式:</span> [<span class="hljs-string">使用的模式</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">目录结构:</span> [<span class="hljs-string">结构说明</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">模块划分:</span> [<span class="hljs-string">模块职责</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">依赖关系:</span> [<span class="hljs-string">关键依赖</span>]
+
+<span class="hljs-comment">## 开发约定</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">代码风格:</span> [<span class="hljs-string">风格指南</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">命名规范:</span> [<span class="hljs-string">命名规则</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">测试要求:</span> [<span class="hljs-string">测试策略</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">文档要求:</span> [<span class="hljs-string">文档标准</span>]</code></pre>
+<h3 id="2-2-开发环境模板">2.2 开发环境模板<a class="anchor" href="#2-2-开发环境模板" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-meta">---</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">project-dev-environment</span>
+<span class="hljs-attr">description:</span> <span class="hljs-string">开发环境配置与工具链</span>
+<span class="hljs-attr">type:</span> <span class="hljs-string">project</span>
+<span class="hljs-attr">tier:</span> <span class="hljs-string">cross_session</span>
+<span class="hljs-attr">updated:</span> <span class="hljs-number">2026-09-04T00:00:00.000Z</span>
+<span class="hljs-meta">---
+</span>
+<span class="hljs-comment">## 开发环境</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">操作系统:</span> [<span class="hljs-string">OS</span> <span class="hljs-string">版本</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">IDE/编辑器:</span> [<span class="hljs-string">主要</span> <span class="hljs-string">IDE</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">终端:</span> [<span class="hljs-string">终端工具</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">版本控制:</span> [<span class="hljs-string">Git</span> <span class="hljs-string">版本</span>]
+
+<span class="hljs-comment">## 工具链</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">包管理器:</span> [<span class="hljs-string">npm/yarn/pnpm</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">构建工具:</span> [<span class="hljs-string">webpack/vite/rollup</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">测试框架:</span> [<span class="hljs-string">jest/vitest/mocha</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">代码质量:</span> [<span class="hljs-string">eslint/prettier</span>]
+
+<span class="hljs-comment">## 环境变量</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">配置文件:</span> [<span class="hljs-string">.env</span> <span class="hljs-string">文件位置</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">关键变量:</span> [<span class="hljs-string">重要环境变量</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">敏感信息:</span> [<span class="hljs-string">API</span> <span class="hljs-string">Key</span> <span class="hljs-string">管理方式</span>]
+
+<span class="hljs-comment">## 常用命令</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">启动开发:</span> [<span class="hljs-string">启动命令</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">运行测试:</span> [<span class="hljs-string">测试命令</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">构建部署:</span> [<span class="hljs-string">构建命令</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">代码检查:</span> [<span class="hljs-string">lint</span> <span class="hljs-string">命令</span>]</code></pre>
+<hr>
+<h2 id="3-反馈偏好模板">3. 反馈偏好模板<a class="anchor" href="#3-反馈偏好模板" aria-label="锚点">#</a></h2>
+<h3 id="3-1-回复风格模板">3.1 回复风格模板<a class="anchor" href="#3-1-回复风格模板" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-meta">---</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">feedback-response-style</span>
+<span class="hljs-attr">description:</span> <span class="hljs-string">AI</span> <span class="hljs-string">回复风格与格式偏好</span>
+<span class="hljs-attr">type:</span> <span class="hljs-string">feedback</span>
+<span class="hljs-attr">tier:</span> <span class="hljs-string">cross_session</span>
+<span class="hljs-attr">updated:</span> <span class="hljs-number">2026-09-04T00:00:00.000Z</span>
+<span class="hljs-meta">---
+</span>
+<span class="hljs-comment">## 回复风格</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">详细程度:</span> [<span class="hljs-string">简洁/详细/根据问题复杂度</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">格式偏好:</span> [<span class="hljs-string">纯文本/列表/代码块/混合</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">语言风格:</span> [<span class="hljs-string">正式/随意/技术性</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">结构要求:</span> [<span class="hljs-string">需要标题/直接回答</span>]
+
+<span class="hljs-comment">## 内容偏好</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">代码示例:</span> [<span class="hljs-string">希望看到代码示例</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">解释深度:</span> [<span class="hljs-string">简要说明/详细解释</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">替代方案:</span> [<span class="hljs-string">提供多个方案/只给最佳方案</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">参考资料:</span> [<span class="hljs-string">提供相关链接</span>]
+
+<span class="hljs-comment">## 避免事项</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">格式禁忌:</span> [<span class="hljs-string">避免过多</span> <span class="hljs-string">emoji/避免过度格式化</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">内容禁忌:</span> [<span class="hljs-string">避免重复/避免废话</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">风格禁忌:</span> [<span class="hljs-string">避免过于正式/避免过于随意</span>]</code></pre>
+<h3 id="3-2-错误处理模板">3.2 错误处理模板<a class="anchor" href="#3-2-错误处理模板" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-meta">---</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">feedback-error-handling</span>
+<span class="hljs-attr">description:</span> <span class="hljs-string">错误处理与反馈偏好</span>
+<span class="hljs-attr">type:</span> <span class="hljs-string">feedback</span>
+<span class="hljs-attr">tier:</span> <span class="hljs-string">cross_session</span>
+<span class="hljs-attr">updated:</span> <span class="hljs-number">2026-09-04T00:00:00.000Z</span>
+<span class="hljs-meta">---
+</span>
+<span class="hljs-comment">## 错误反馈</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">错误详情:</span> [<span class="hljs-string">希望看到详细错误信息</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">解决方案:</span> [<span class="hljs-string">希望看到解决方案</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">上下文:</span> [<span class="hljs-string">需要错误上下文</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">堆栈跟踪:</span> [<span class="hljs-string">是否需要堆栈信息</span>]
+
+<span class="hljs-comment">## 调试偏好</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">调试方式:</span> [<span class="hljs-string">日志/断点/打印</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">信息级别:</span> [<span class="hljs-string">debug/info/warn/error</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">敏感信息:</span> [<span class="hljs-string">是否显示敏感信息</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">格式要求:</span> [<span class="hljs-string">结构化/原始输出</span>]
+
+<span class="hljs-comment">## 问题解决</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">解决步骤:</span> [<span class="hljs-string">希望看到步骤</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">验证方法:</span> [<span class="hljs-string">如何验证解决</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">预防措施:</span> [<span class="hljs-string">如何避免再次发生</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">学习总结:</span> [<span class="hljs-string">是否需要总结教训</span>]</code></pre>
+<hr>
+<h2 id="4-技术决策模板">4. 技术决策模板<a class="anchor" href="#4-技术决策模板" aria-label="锚点">#</a></h2>
+<h3 id="4-1-技术选型模板">4.1 技术选型模板<a class="anchor" href="#4-1-技术选型模板" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-meta">---</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">reference-tech-selection-{technology}</span>
+<span class="hljs-attr">description:</span> {<span class="hljs-string">技术名称</span>} <span class="hljs-string">选型决策与评估</span>
+<span class="hljs-attr">type:</span> <span class="hljs-string">reference</span>
+<span class="hljs-attr">tier:</span> <span class="hljs-string">cross_session</span>
+<span class="hljs-attr">updated:</span> <span class="hljs-number">2026-09-04T00:00:00.000Z</span>
+<span class="hljs-meta">---
+</span>
+<span class="hljs-comment">## 技术概览</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">名称:</span> {<span class="hljs-string">技术名称</span>}
+<span class="hljs-bullet">-</span> <span class="hljs-string">版本:</span> [<span class="hljs-string">当前版本</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">官网:</span> [<span class="hljs-string">官方网站</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">文档:</span> [<span class="hljs-string">官方文档</span>]
+
+<span class="hljs-comment">## 选型理由</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">优势:</span> [<span class="hljs-string">主要优势</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">劣势:</span> [<span class="hljs-string">主要劣势</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">适用场景:</span> [<span class="hljs-string">最佳使用场景</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">替代方案:</span> [<span class="hljs-string">其他考虑方案</span>]
+
+<span class="hljs-comment">## 使用经验</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">学习曲线:</span> [<span class="hljs-string">难易程度</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">社区支持:</span> [<span class="hljs-string">社区活跃度</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">性能表现:</span> [<span class="hljs-string">性能特点</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">稳定性:</span> [<span class="hljs-string">稳定性评估</span>]
+
+<span class="hljs-comment">## 实际应用</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">使用项目:</span> [<span class="hljs-string">在哪些项目中使用</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">关键配置:</span> [<span class="hljs-string">重要配置项</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">常见问题:</span> [<span class="hljs-string">遇到的问题</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">解决方案:</span> [<span class="hljs-string">问题解决方案</span>]</code></pre>
+<h3 id="4-2-架构决策模板">4.2 架构决策模板<a class="anchor" href="#4-2-架构决策模板" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-meta">---</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">reference-architecture-decision-{decision}</span>
+<span class="hljs-attr">description:</span> {<span class="hljs-string">决策名称</span>} <span class="hljs-string">架构决策记录</span>
+<span class="hljs-attr">type:</span> <span class="hljs-string">reference</span>
+<span class="hljs-attr">tier:</span> <span class="hljs-string">cross_session</span>
+<span class="hljs-attr">updated:</span> <span class="hljs-number">2026-09-04T00:00:00.000Z</span>
+<span class="hljs-meta">---
+</span>
+<span class="hljs-comment">## 决策背景</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">问题:</span> [<span class="hljs-string">需要解决的问题</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">约束:</span> [<span class="hljs-string">技术/业务约束</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">目标:</span> [<span class="hljs-string">期望达成的目标</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">时间:</span> [<span class="hljs-string">决策时间</span>]
+
+<span class="hljs-comment">## 决策内容</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">选择:</span> [<span class="hljs-string">最终选择</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">理由:</span> [<span class="hljs-string">选择理由</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">权衡:</span> [<span class="hljs-string">考虑的权衡</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">风险:</span> [<span class="hljs-string">已知风险</span>]
+
+<span class="hljs-comment">## 实施方案</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">步骤:</span> [<span class="hljs-string">实施步骤</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">时间线:</span> [<span class="hljs-string">实施时间</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">负责人:</span> [<span class="hljs-string">责任人员</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">资源:</span> [<span class="hljs-string">所需资源</span>]
+
+<span class="hljs-comment">## 效果评估</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">成功指标:</span> [<span class="hljs-string">如何衡量成功</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">监控方式:</span> [<span class="hljs-string">如何监控效果</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">反馈机制:</span> [<span class="hljs-string">如何收集反馈</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">调整计划:</span> [<span class="hljs-string">如何调整优化</span>]</code></pre>
+<hr>
+<h2 id="5-常用配置模板">5. 常用配置模板<a class="anchor" href="#5-常用配置模板" aria-label="锚点">#</a></h2>
+<h3 id="5-1-环境配置模板">5.1 环境配置模板<a class="anchor" href="#5-1-环境配置模板" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-meta">---</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">reference-env-config-{environment}</span>
+<span class="hljs-attr">description:</span> {<span class="hljs-string">环境名称</span>} <span class="hljs-string">环境配置说明</span>
+<span class="hljs-attr">type:</span> <span class="hljs-string">reference</span>
+<span class="hljs-attr">tier:</span> <span class="hljs-string">cross_session</span>
+<span class="hljs-attr">updated:</span> <span class="hljs-number">2026-09-04T00:00:00.000Z</span>
+<span class="hljs-meta">---
+</span>
+<span class="hljs-comment">## 环境信息</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">名称:</span> {<span class="hljs-string">环境名称</span>}
+<span class="hljs-bullet">-</span> <span class="hljs-string">用途:</span> [<span class="hljs-string">开发/测试/生产</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">地址:</span> [<span class="hljs-string">访问地址</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">状态:</span> [<span class="hljs-string">运行中/维护中</span>]
+
+<span class="hljs-comment">## 配置详情</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">服务器:</span> [<span class="hljs-string">服务器配置</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">数据库:</span> [<span class="hljs-string">数据库配置</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">缓存:</span> [<span class="hljs-string">缓存配置</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">存储:</span> [<span class="hljs-string">存储配置</span>]
+
+<span class="hljs-comment">## 访问方式</span>
+<span class="hljs-bullet">-</span> <span class="hljs-attr">SSH:</span> [<span class="hljs-string">SSH</span> <span class="hljs-string">连接信息</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">数据库:</span> [<span class="hljs-string">数据库连接信息</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-attr">API:</span> [<span class="hljs-string">API</span> <span class="hljs-string">访问信息</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">监控:</span> [<span class="hljs-string">监控访问信息</span>]
+
+<span class="hljs-comment">## 维护信息</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">负责人:</span> [<span class="hljs-string">维护人员</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">备份策略:</span> [<span class="hljs-string">备份方式</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">监控告警:</span> [<span class="hljs-string">告警配置</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">故障处理:</span> [<span class="hljs-string">处理流程</span>]</code></pre>
+<h3 id="5-2-工具配置模板">5.2 工具配置模板<a class="anchor" href="#5-2-工具配置模板" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-meta">---</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">reference-tool-config-{tool}</span>
+<span class="hljs-attr">description:</span> {<span class="hljs-string">工具名称</span>} <span class="hljs-string">配置与使用指南</span>
+<span class="hljs-attr">type:</span> <span class="hljs-string">reference</span>
+<span class="hljs-attr">tier:</span> <span class="hljs-string">cross_session</span>
+<span class="hljs-attr">updated:</span> <span class="hljs-number">2026-09-04T00:00:00.000Z</span>
+<span class="hljs-meta">---
+</span>
+<span class="hljs-comment">## 工具信息</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">名称:</span> {<span class="hljs-string">工具名称</span>}
+<span class="hljs-bullet">-</span> <span class="hljs-string">版本:</span> [<span class="hljs-string">当前版本</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">用途:</span> [<span class="hljs-string">主要用途</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">安装:</span> [<span class="hljs-string">安装方法</span>]
+
+<span class="hljs-comment">## 配置说明</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">配置文件:</span> [<span class="hljs-string">配置文件位置</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">关键配置:</span> [<span class="hljs-string">重要配置项</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">环境变量:</span> [<span class="hljs-string">相关环境变量</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">默认值:</span> [<span class="hljs-string">默认配置</span>]
+
+<span class="hljs-comment">## 使用指南</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">基本用法:</span> [<span class="hljs-string">常用命令</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">高级功能:</span> [<span class="hljs-string">高级特性</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">快捷键:</span> [<span class="hljs-string">常用快捷键</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">插件:</span> [<span class="hljs-string">推荐插件</span>]
+
+<span class="hljs-comment">## 常见问题</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">安装问题:</span> [<span class="hljs-string">安装问题解决</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">配置问题:</span> [<span class="hljs-string">配置问题解决</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">使用问题:</span> [<span class="hljs-string">使用问题解决</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">性能优化:</span> [<span class="hljs-string">性能优化建议</span>]</code></pre>
+<hr>
+<h2 id="6-记忆创建快速指南">6. 记忆创建快速指南<a class="anchor" href="#6-记忆创建快速指南" aria-label="锚点">#</a></h2>
+<h3 id="6-1-使用模板">6.1 使用模板<a class="anchor" href="#6-1-使用模板" aria-label="锚点">#</a></h3>
+<ol><li><strong>选择模板</strong>：根据记忆类型选择合适模板</li><li><strong>复制模板</strong>：复制模板内容到新文件</li><li><strong>填写信息</strong>：替换 <code>[占位符]</code> 为实际信息</li><li><strong>保存文件</strong>：保存到 <code>.khy/memory/</code> 目录</li></ol>
+<h3 id="6-2-命名规范">6.2 命名规范<a class="anchor" href="#6-2-命名规范" aria-label="锚点">#</a></h3>
+<p><strong>文件命名</strong>：</p>
+<pre><code>&lt;type&gt;_&lt;name&gt;_&lt;hash&gt;.md</code></pre>
+<p><strong>示例</strong>：</p>
+<ul><li><code>user_basic-profile_a1b2c3d4.md</code></li><li><code>project_khy-os-architecture_e5f6g7h8.md</code></li><li><code>feedback_response-style_i9j0k1l2.md</code></li></ul>
+<h3 id="6-3-内容规范">6.3 内容规范<a class="anchor" href="#6-3-内容规范" aria-label="锚点">#</a></h3>
+<p><strong>必须字段</strong>：</p>
+<ul><li><code>name</code>: 记忆名称（唯一标识）</li><li><code>description</code>: 一行摘要（用于检索）</li><li><code>type</code>: 语义类型</li><li><code>tier</code>: 保留层级</li><li><code>updated</code>: 更新时间</li></ul>
+<p><strong>内容要求</strong>：</p>
+<ul><li>使用中文描述</li><li>结构化格式（列表、表格）</li><li>简洁明了</li><li>避免冗余</li></ul>
+<hr>
+<h2 id="7-模板使用示例">7. 模板使用示例<a class="anchor" href="#7-模板使用示例" aria-label="锚点">#</a></h2>
+<h3 id="7-1-创建用户记忆">7.1 创建用户记忆<a class="anchor" href="#7-1-创建用户记忆" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 复制模板</span>
+<span class="hljs-built_in">cp</span> docs/03_DESIGN_设计/\[DESIGN-MEM-003\]\ 记忆模板库.md .khy/memory/user_basic-profile_$(uuidgen | <span class="hljs-built_in">cut</span> -c1-8).md
+
+<span class="hljs-comment"># 2. 编辑文件</span>
+vim .khy/memory/user_basic-profile_*.md
+
+<span class="hljs-comment"># 3. 填写信息</span>
+<span class="hljs-comment"># 替换 [用户称呼] 为实际称呼</span>
+<span class="hljs-comment"># 替换 [主要工作领域] 为实际领域</span></code></pre>
+<h3 id="7-2-创建项目记忆">7.2 创建项目记忆<a class="anchor" href="#7-2-创建项目记忆" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 使用命令创建</span>
+/remember --<span class="hljs-built_in">type</span> project --name <span class="hljs-string">&quot;khy-os 架构&quot;</span> --desc <span class="hljs-string">&quot;khy-os 项目架构约定&quot;</span> 使用 L0-L6 分层架构，2 空格缩进，单引号
+
+<span class="hljs-comment"># 2. 或手动创建</span>
+<span class="hljs-built_in">cat</span> &gt; .khy/memory/project_khy-os-architecture_$(uuidgen | <span class="hljs-built_in">cut</span> -c1-8).md &lt;&lt; <span class="hljs-string">EOF
+---
+name: project-khy-os-architecture
+description: khy-os 项目架构约定
+type: project
+tier: cross_session
+updated: $(date -u +&quot;%Y-%m-%dT%H:%M:%S.000Z&quot;)
+---
+
+## 项目架构
+- 目录结构：L0-L6 分层架构
+- 代码风格：2 空格缩进，单引号
+- 命名规范：camelCase（JS），snake_case（Python）
+- 错误处理：try/catch + printError()
+EOF</span></code></pre>
+<hr>
+<h2 id="8-模板维护">8. 模板维护<a class="anchor" href="#8-模板维护" aria-label="锚点">#</a></h2>
+<h3 id="8-1-模板更新">8.1 模板更新<a class="anchor" href="#8-1-模板更新" aria-label="锚点">#</a></h3>
+<ul><li>定期审查模板内容</li><li>根据使用反馈改进</li><li>添加新的模板类型</li><li>删除过时模板</li></ul>
+<h3 id="8-2-模板贡献">8.2 模板贡献<a class="anchor" href="#8-2-模板贡献" aria-label="锚点">#</a></h3>
+<ol><li>发现模板不足</li><li>创建新模板</li><li>提交到模板库</li><li>更新文档说明</li></ol>
+<hr>
+<h2 id="9-版本历史">9. 版本历史<a class="anchor" href="#9-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，提供基础记忆模板</td></tr></tbody></table>
+<hr>
+<p><em>本模板库由 khy-os 记忆系统设计团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-MEM/[DESIGN-MEM-002] 记忆时机指南.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-MEM-002] 记忆时机指南</div></a><a class="next" href="../../../docs/10_规范/DESIGN-MEM/[DESIGN-MEM-004] 记忆快速参考卡.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-MEM-004] 记忆快速参考卡</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-MEM/[DESIGN-MEM-003] 记忆模板库.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

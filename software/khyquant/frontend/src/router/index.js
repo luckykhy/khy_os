@@ -39,6 +39,13 @@ const routes = [
         name: 'Dashboard',
         component: () => import('@/views/Dashboard.vue')
       },
+      // 大型任务看板：只读聚合 + 暂停/恢复/取消。
+      // 呈现层来自 @khy/ui-shared/board，与 apps/ai-frontend 共用同一份实现。
+      {
+        path: 'tasks',
+        name: 'TaskBoard',
+        component: () => import('@/views/TaskBoard.vue')
+      },
       // Quant routes — static fallbacks if khy-quant plugin is not loaded.
       // The plugin may override these with richer components via pluginManager.
       {

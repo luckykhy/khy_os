@@ -6,7 +6,8 @@ const {
   listVideoProvidersFromPool,
   VIDEO_CAPABLE_HOSTS,
   OFF_VALUES,
-} = require('./videoGenPoolBridge');
+} = require('../../src/services/videoGenPoolBridge.js');
+const assert = require('node:assert');
 const AGNES = 'https://apihub.agnes-ai.com/v1';
 
 describe('Video Gen Pool Bridge', () => {
@@ -37,7 +38,7 @@ describe('Video Gen Pool Bridge', () => {
       expect(hostServesVideos('https://evil.agnes-ai.com.attacker.test/v1')).toBe(false);
   });
 
-  test('hostServesVideos: empty / malformed â†?false, never throws', () => {
+  test('hostServesVideos: empty / malformed ï¿½?false, never throws', () => {
       expect(hostServesVideos('')).toBe(false);
       expect(hostServesVideos(null)).toBe(false);
       expect(hostServesVideos(undefined)).toBe(false);
@@ -48,7 +49,7 @@ describe('Video Gen Pool Bridge', () => {
       expect(VIDEO_CAPABLE_HOSTS).toContain('apihub.agnes-ai.com');
   });
 
-  test('pickVideoProviderFromPool: gate-on + whitelist hit â†?selects agnes', () => {
+  test('pickVideoProviderFromPool: gate-on + whitelist hit ï¿½?selects agnes', () => {
       const picked = pickVideoProviderFromPool({
         env: {},
         providers: [
@@ -59,7 +60,7 @@ describe('Video Gen Pool Bridge', () => {
       expect(picked).toEqual({ poolKey: 'agnes', endpoint: 'https://apihub.agnes-ai.com/v1' });
   });
 
-  test('pickVideoProviderFromPool: gate-off â†?null', () => {
+  test('pickVideoProviderFromPool: gate-off ï¿½?null', () => {
       const picked = pickVideoProviderFromPool({
         env: { KHY_VIDEO_GEN_POOL_BRIDGE: 'false' },
         providers: [{ poolKey: 'agnes', endpoint: AGNES }],
@@ -67,7 +68,7 @@ describe('Video Gen Pool Bridge', () => {
       expect(picked).toBe(null);
   });
 
-  test('pickVideoProviderFromPool: no whitelist hit â†?null', () => {
+  test('pickVideoProviderFromPool: no whitelist hit ï¿½?null', () => {
       const picked = pickVideoProviderFromPool({
         env: {},
         providers: [
@@ -99,7 +100,7 @@ describe('Video Gen Pool Bridge', () => {
       expect(picked.poolKey).toBe('agnes');
   });
 
-  test('pickVideoProviderFromPool: endpointFor throwing â†?falls back to provider.endpoint, no throw', () => {
+  test('pickVideoProviderFromPool: endpointFor throwing ï¿½?falls back to provider.endpoint, no throw', () => {
       const picked = pickVideoProviderFromPool({
         env: {},
         providers: [{ poolKey: 'agnes', endpoint: AGNES }],
@@ -110,7 +111,7 @@ describe('Video Gen Pool Bridge', () => {
       expect(picked.poolKey).toBe('agnes');
   });
 
-  test('pickVideoProviderFromPool: empty / malformed input â†?null, never throws', () => {
+  test('pickVideoProviderFromPool: empty / malformed input ï¿½?null, never throws', () => {
       expect(pickVideoProviderFromPool({})).toBe(null);
       expect(pickVideoProviderFromPool({ providers: null })).toBe(null);
       expect(pickVideoProviderFromPool({ providers: [{}, { poolKey: '' }] })).toBe(null);
@@ -156,7 +157,7 @@ describe('Video Gen Pool Bridge', () => {
       expect(list[0].poolKey).toBe('agnes');
   });
 
-  test('listVideoProvidersFromPool: gate-off â†?[] (byte-revert)', () => {
+  test('listVideoProvidersFromPool: gate-off ï¿½?[] (byte-revert)', () => {
       const list = listVideoProvidersFromPool({
         env: { KHY_VIDEO_GEN_POOL_BRIDGE: 'off' },
         providers: [{ poolKey: 'agnes', endpoint: AGNES }],
@@ -164,7 +165,7 @@ describe('Video Gen Pool Bridge', () => {
       expect(list).toEqual([]);
   });
 
-  test('listVideoProvidersFromPool: no whitelist hit / malformed â†?[], never throws', () => {
+  test('listVideoProvidersFromPool: no whitelist hit / malformed ï¿½?[], never throws', () => {
       assert.deepStrictEqual(
         listVideoProvidersFromPool({
           env: {},

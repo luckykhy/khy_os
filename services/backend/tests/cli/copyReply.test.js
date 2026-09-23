@@ -10,6 +10,7 @@ const {
   selectReply,
   extractCodeBlocks,
   buildCopyPayload,
+  describeClipboardFailure,
 } = require('../../src/cli/copyReply');
 
 test('isEnabled:门控梯(默认开,标准 falsy 串关)', () => {
@@ -84,4 +85,41 @@ test('buildCopyPayload:codeOnly 抽代码块;多块以空行拼接', () => {
 test('buildCopyPayload:无回复 → no_reply;codeOnly 无块 → no_code', () => {
   assert.deepStrictEqual(buildCopyPayload([], {}), { ok: false, reason: 'no_reply' });
   assert.deepStrictEqual(buildCopyPayload(['plain text only'], { codeOnly: true }), { ok: false, reason: 'no_code' });
+});
+
+test('describeClipboardFailure:gate 优先 + native 缺失 + tty 静默', () => {
+  assert.match(
+    describeClipboardFailure({ gate: 'off' }),
+    /KHY_CC_CLIPBOARD=off/
+  );
+  assert.match(
+    describeClipboardFailure({ native: 'no-tool', osc52: 'tty' }),
+    /系统剪贴板工具不可用/
+  );
+  assert.match(
+    describeClipboardFailure({ native: 'no-tool', osc52: 'tty' }),
+    /OSC 52 兜底未发射/
+  );
+});
+
+test('describeClipboardFailure:oversize 含 KB 数字 + MAX_BYTES 修复建议', () => {
+  assert.match(
+    describeClipboardFailure({ osc52: 'oversize' }, { bytes: 150000 }),
+    /147KB/
+  );
+  assert.match(
+    describeClipboardFailure({ osc52: 'oversize' }, { bytes: 150000 }),
+    /KHY_CLIPBOARD_MAX_BYTES=0/
+  );
+});
+
+test('describeClipboardFailure:gate-off / 全空 reasons 兜底', () => {
+  assert.match(
+    describeClipboardFailure({ osc52: 'gate-off' }),
+    /KHY_CLIPBOARD_OSC52=off/
+  );
+  assert.match(
+    describeClipboardFailure({}),
+    /未知原因/
+  );
 });

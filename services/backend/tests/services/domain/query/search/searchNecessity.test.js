@@ -5,7 +5,7 @@ const {
   assessSearchNeed,
   buildNecessityDirective,
   routeSearchNecessity,
-} = require('../../src/services/domain/query/search/searchNecessity');
+} = require('../../../../../src/services/domain/query/search/searchNecessity.js');
 
 describe('searchNecessity', () => {
   describe('isEnabled', () => {

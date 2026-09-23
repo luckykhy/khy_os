@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: opencode-provider-keys.md -->
+<title>OpenCode Provider &amp; Key 清单 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>OpenCode Provider &amp; Key 清单</div>
+      <header class="hero reveal"><h1>OpenCode Provider &amp; Key 清单</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#opencode-provider-key-清单">OpenCode Provider &amp; Key 清单</a></li><li class="lvl-2"><a href="#1-supxh-免费聚合">1. SupXH（免费聚合）</a></li><li class="lvl-2"><a href="#2-command-code">2. Command Code</a></li><li class="lvl-2"><a href="#3-智谱-glm-coding-plan">3. 智谱 GLM Coding Plan</a></li><li class="lvl-2"><a href="#4-opencode-go">4. OpenCode Go</a></li><li class="lvl-2"><a href="#5-openrouter">5. OpenRouter</a></li><li class="lvl-2"><a href="#6-stepfun-阶跃星辰">6. StepFun（阶跃星辰）</a></li><li class="lvl-2"><a href="#7-sense-nova-商汤">7. Sense Nova（商汤）</a></li><li class="lvl-2"><a href="#8-agnes">8. Agnes</a></li><li class="lvl-2"><a href="#9-opencode-zen-官方免费">9. OpenCode Zen（官方免费）</a></li><li class="lvl-2"><a href="#其他凭据">其他凭据</a></li><li class="lvl-3"><a href="#deepseek-eyes-mcp-本地工具">DeepSeek Eyes（MCP 本地工具）</a></li><li class="lvl-2"><a href="#快速配置指南">快速配置指南</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="opencode-provider-key-清单">OpenCode Provider &amp; Key 清单<a class="anchor" href="#opencode-provider-key-清单" aria-label="锚点">#</a></h1>
+<blockquote><p>最后更新：2026-09-08<br>配置文件：<code>D:\Portable\Tools\opencode\xdg\opencode\opencode.json</code><br>用途：在其他电脑快速重建 opencode provider 配置</p></blockquote>
+<hr>
+<h2 id="1-supxh-免费聚合">1. SupXH（免费聚合）<a class="anchor" href="#1-supxh-免费聚合" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>值</th></tr></thead><tbody><tr><td>Base URL</td><td><code>https://speed44.toter.me/v1</code></td></tr><tr><td>备用地址</td><td><code>https://api.supxh.xin</code></td></tr><tr><td>API Key</td><td><code>{env:SUPXH_API_KEY}</code>（需设置环境变量）</td></tr><tr><td>API 类型</td><td>OpenAI 兼容</td></tr></tbody></table>
+<p><strong>可用模型：</strong></p>
+<ul><li><code>claude-sonnet-4-5</code> — Claude Sonnet 4.5（200K ctx）</li><li><code>claude-opus-4-5</code> — Claude Opus 4.5（200K ctx）</li><li><code>gemini-3-flash</code> — Gemini 3 Flash（1M ctx）</li><li><code>gemini-2.5-pro</code> — Gemini 2.5 Pro（1M ctx）</li><li><code>gemini-3.1-pro</code> — Gemini 3.1 Pro（1M ctx）</li></ul>
+<hr>
+<h2 id="2-command-code">2. Command Code<a class="anchor" href="#2-command-code" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>值</th></tr></thead><tbody><tr><td>Base URL</td><td><code>https://api.commandcode.ai/provider/v1</code></td></tr><tr><td>API Key</td><td><code>{env:COMMAND_CODE_API_KEY}</code>（需设置环境变量）</td></tr><tr><td>API 类型</td><td>OpenAI 兼容</td></tr></tbody></table>
+<p><strong>可用模型（部分）：</strong></p>
+<ul><li><code>claude-sonnet-5</code> / <code>claude-sonnet-4-6</code> / <code>claude-opus-5</code> / <code>claude-opus-4-8</code></li><li><code>gpt-5.6-luna</code> / <code>gpt-5.6-sol</code> / <code>gpt-5.6-terra</code> / <code>gpt-5.5</code></li><li><code>deepseek/deepseek-v4-pro</code> / <code>deepseek/deepseek-v4-flash</code></li><li><code>moonshotai/Kimi-K3</code></li><li><code>zai-org/GLM-5.3</code> / <code>zai-org/GLM-5.2</code></li><li><code>MiniMaxAI/MiniMax-M3</code> / <code>minimax/minimax-m3-free</code></li><li><code>xiaomi/mimo-v2.5-pro</code> / <code>xiaomi/mimo-v2.5</code></li><li><code>Qwen/Qwen3.8-Max</code> / <code>Qwen/Qwen3.7-Max</code></li><li><code>google/gemini-3.7-flash</code></li><li><code>xai/grok-4.5</code> / <code>xai/grok-4.6</code></li><li><code>poolside/laguna-s-2.1-free</code></li><li><code>meituan/LongCat-2.0:free</code></li></ul>
+<hr>
+<h2 id="3-智谱-glm-coding-plan">3. 智谱 GLM Coding Plan<a class="anchor" href="#3-智谱-glm-coding-plan" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>值</th></tr></thead><tbody><tr><td>Base URL</td><td><code>https://open.bigmodel.cn/api/coding/paas/v4</code></td></tr><tr><td>API Key</td><td><code>{env:GLM_API_KEY}</code>（需设置环境变量）</td></tr><tr><td>API 类型</td><td>OpenAI 兼容</td></tr></tbody></table>
+<p><strong>可用模型：</strong></p>
+<ul><li><code>glm-5.3</code> — GLM-5.3</li><li><code>glm-5.3-flash</code> — GLM-5.3-Flash</li></ul>
+<hr>
+<h2 id="4-opencode-go">4. OpenCode Go<a class="anchor" href="#4-opencode-go" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>值</th></tr></thead><tbody><tr><td>Base URL</td><td><code>https://opencode.ai/zen/go/v1</code></td></tr><tr><td>API Key</td><td><code>{env:OPENCODE_GO_API_KEY}</code>（需设置环境变量）</td></tr><tr><td>API 类型</td><td>OpenAI 兼容</td></tr></tbody></table>
+<p><strong>可用模型：</strong></p>
+<ul><li><code>grok-4.5</code>, <code>gpt-5.6-luna</code>, <code>glm-5.3</code>, <code>glm-5.2</code>, <code>glm-5.1</code></li><li><code>kimi-k3</code>, <code>kimi-k2.7-code</code>, <code>kimi-k2.6</code></li><li><code>mimo-v2.5</code>, <code>mimo-v2.5-pro</code></li><li><code>minimax-m3</code>, <code>minimax-m2.7</code>, <code>minimax-m2.5</code></li><li><code>qwen3.8-max</code>, <code>qwen3.7-max</code>, <code>qwen3.7-plus</code>, <code>qwen3.6-plus</code></li><li><code>deepseek-v4-pro</code>, <code>deepseek-v4-flash</code></li><li><code>hy3</code>, <code>ox-alpha-free</code></li></ul>
+<hr>
+<h2 id="5-openrouter">5. OpenRouter<a class="anchor" href="#5-openrouter" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>值</th></tr></thead><tbody><tr><td>Base URL</td><td><code>https://openrouter.ai/api/v1</code></td></tr><tr><td>API Key</td><td><code>&lt;your-openrouter-api-key&gt;</code></td></tr><tr><td>API 类型</td><td>OpenAI 兼容</td></tr></tbody></table>
+<p><strong>白名单模型（free）：</strong></p>
+<ul><li><code>z-ai/glm-5.2:free</code></li><li><code>cohere/north-mini-code:free</code></li><li><code>nvidia/nemotron-3-ultra-550b-a55b:free</code></li><li><code>nvidia/nemotron-3.5-lightning:free</code></li><li><code>nvidia/nemotron-3-super-120b-a12b:free</code></li><li><code>nvidia/nemotron-3-nano-30b-a3b:free</code></li><li><code>nvidia/nemotron-nano-9b-v2:free</code></li><li><code>thinkingmachines/inkling:free</code></li><li><code>thinkingmachines/inkling-small:free</code></li><li><code>poolside/laguna-s-2.1:free</code></li><li><code>poolside/laguna-xs-2.1:free</code></li><li><code>google/gemma-4-31b-it:free</code></li><li><code>google/gemma-4-26b-a4b-it:free</code></li><li><code>dots-studio/dots-3-note-preview:free</code></li><li><code>nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free</code></li><li><code>minimax/minimax-m3:free</code></li><li><code>openrouter/free</code></li><li><code>nvidia/nemotron-3.5-content-safety:free</code></li><li><code>liquid/lfm-2.5-2.6b:free</code></li></ul>
+<hr>
+<h2 id="6-stepfun-阶跃星辰">6. StepFun（阶跃星辰）<a class="anchor" href="#6-stepfun-阶跃星辰" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>值</th></tr></thead><tbody><tr><td>Base URL</td><td><code>https://api.stepfun.com/step_plan/v1</code></td></tr><tr><td>API Key</td><td><code>{env:STEPFUN_API_KEY}</code>（需设置环境变量）</td></tr><tr><td>API 类型</td><td>OpenAI 兼容</td></tr></tbody></table>
+<p><strong>可用模型：</strong></p>
+<ul><li><code>step-3.7-flash</code></li></ul>
+<hr>
+<h2 id="7-sense-nova-商汤">7. Sense Nova（商汤）<a class="anchor" href="#7-sense-nova-商汤" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>值</th></tr></thead><tbody><tr><td>Base URL</td><td><code>https://token.sensenova.cn/v1</code></td></tr><tr><td>API Key</td><td><code>{env:SENSENOVA_API_KEY}</code>（需设置环境变量）</td></tr><tr><td>API 类型</td><td>OpenAI 兼容</td></tr></tbody></table>
+<p><strong>可用模型：</strong></p>
+<ul><li><code>sensenova-6.7-flash-lite</code></li></ul>
+<hr>
+<h2 id="8-agnes">8. Agnes<a class="anchor" href="#8-agnes" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>值</th></tr></thead><tbody><tr><td>Base URL</td><td><code>https://apihub.agnes-ai.com/v1</code></td></tr><tr><td>API Key</td><td><code>{env:AGNES_API_KEY}</code>（需设置环境变量）</td></tr><tr><td>API 类型</td><td>OpenAI 兼容</td></tr></tbody></table>
+<p><strong>可用模型：</strong></p>
+<ul><li><code>agnes-2.0-flash</code>, <code>agnes-2.5-flash</code>, <code>agnes-2.5-pro-alpha</code></li><li><code>agnes-image-2.0-flash</code>, <code>agnes-image-2.1-flash</code></li><li><code>agnes-video-v2.0</code></li></ul>
+<hr>
+<h2 id="9-opencode-zen-官方免费">9. OpenCode Zen（官方免费）<a class="anchor" href="#9-opencode-zen-官方免费" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>值</th></tr></thead><tbody><tr><td>Base URL</td><td><code>https://opencode.ai/zen/v1</code></td></tr><tr><td>API Key</td><td><code>public</code></td></tr><tr><td>API 类型</td><td>OpenAI 兼容</td></tr></tbody></table>
+<p><strong>可用模型：</strong></p>
+<ul><li><code>default</code> / <code>list</code>（Agnes 2.0 Flash）</li><li><code>big-pickle</code>（free）</li><li><code>ling-3.0-flash-fin-free</code></li><li><code>mimo-v2.5-free</code></li><li><code>muse-spark-1.2-contributor-free</code></li><li><code>muse-spark-1.3-contributor-free</code></li><li><code>nemotron-3-ultra-free</code></li><li><code>nemotron-3.5-lightning-free</code></li></ul>
+<hr>
+<h2 id="其他凭据">其他凭据<a class="anchor" href="#其他凭据" aria-label="锚点">#</a></h2>
+<h3 id="deepseek-eyes-mcp-本地工具">DeepSeek Eyes（MCP 本地工具）<a class="anchor" href="#deepseek-eyes-mcp-本地工具" aria-label="锚点">#</a></h3>
+<ul><li>VISION_BACKEND: <code>openrouter</code></li><li>OPENROUTER_API_KEY: <code>&lt;your-openrouter-api-key&gt;</code></li><li>VISION_MODEL: <code>dots-studio/dots-3-note-preview:free</code></li></ul>
+<hr>
+<h2 id="快速配置指南">快速配置指南<a class="anchor" href="#快速配置指南" aria-label="锚点">#</a></h2>
+<p>在其他电脑上配置时，只需在 <code>opencode.json</code> 的 <code>provider</code> 字段中添加对应条目：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;provider&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;&lt;provider-id&gt;&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;api&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;openai&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;显示名称&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;options&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;apiKey&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;你的API Key&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;baseURL&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;API地址&quot;</span>
+      <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;models&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;model-id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+          <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;model-id&quot;</span><span class="hljs-punctuation">,</span>
+          <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;显示名称&quot;</span>
+        <span class="hljs-punctuation">}</span>
+      <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p>切换模型：在 opencode 中输入 <code>/model</code> 然后选择 <code>provider-id/model-id</code></p>
+      </article>
+      <nav class="pager"><span></span><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../";window.__KHY_CUR__="docs/opencode-provider-keys.html";</script>
+<script src="../docs/19_资产/site/nav-data.js"></script>
+<script src="../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

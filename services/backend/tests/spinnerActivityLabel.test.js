@@ -82,7 +82,7 @@ describe('_liveActivity — real current event from live turn state', () => {
     const streaming = { thinking: '先看一遍。让我检查网关适配器的处理逻辑' };
     assert.strictEqual(
       App._liveActivity('thinking', streaming, ''),
-      '让我检查网关适配器的处理逻辑'
+      '分析: 让我检查网关适配器的处理逻辑'
     );
   });
 
@@ -90,7 +90,9 @@ describe('_liveActivity — real current event from live turn state', () => {
     assert.strictEqual(App._liveActivity('request', { tools: [] }, '等待模型响应中'), '等待模型响应中');
   });
 
+  // Rule 2.4: thinking phase must show 分析 content, not bare 思考中…;
+  // empty thinkingTail falls back through statusDetail to '分析用户意图'.
   test('null streaming is safe', () => {
-    assert.strictEqual(App._liveActivity('thinking', null, ''), '');
+    assert.strictEqual(App._liveActivity('thinking', null, ''), '分析用户意图');
   });
 });

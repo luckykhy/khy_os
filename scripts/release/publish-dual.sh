@@ -54,6 +54,14 @@ step() { echo; echo -e "${CYAN}===${NC} $* ${CYAN}===${NC}"; }
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT_DIR"
 
+# Git Bash's `pwd` yields MSYS-style paths ("/d/Portable/khy-os"), which Windows Node
+# resolves as "D:\d\Portable\khy-os" (prepends the current drive and treats the leading
+# "d" as a literal directory name) -> MODULE_NOT_FOUND. Convert before handing to node.
+NODE_ROOT_DIR="$ROOT_DIR"
+if command -v cygpath >/dev/null 2>&1; then
+  NODE_ROOT_DIR="$(cygpath -w "$ROOT_DIR")"
+fi
+
 INIT_PY="$ROOT_DIR/platform/khy_platform/__init__.py"
 PYPROJECT="$ROOT_DIR/pyproject.toml"
 NPM_PKG="$ROOT_DIR/packaging/npm/package.json"
@@ -282,7 +290,7 @@ bump_json "$BACKEND_PKG" "services/backend/package.json"
 #     "strict-pin" half of strict-pin + graceful-degrade. Ships in BOTH channels,
 #     so this runs regardless of --skip-pip/--skip-npm.
 step "khyos toolchain pin gate (no drift-prone pins)"
-node "$ROOT_DIR/scripts/release/pin-khyos-toolchain.js" --lint \
+node "$NODE_ROOT_DIR/scripts/release/pin-khyos-toolchain.js" --lint \
   || fail "khyos toolchain has a drift-prone pin — re-pin on a networked machine (see message above) before publishing"
 ok "khyos toolchain pins are stable (no branch archives)"
 

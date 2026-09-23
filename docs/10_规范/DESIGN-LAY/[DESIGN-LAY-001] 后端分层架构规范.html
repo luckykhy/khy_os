@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-LAY-001] 后端分层架构规范.md -->
+<title>[DESIGN-LAY-001] 后端分层架构规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-LAY<span class="sep">›</span>[DESIGN-LAY-001] 后端分层架构规范</div>
+      <header class="hero reveal"><h1>[DESIGN-LAY-001] 后端分层架构规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-lay-001-后端分层架构规范">[DESIGN-LAY-001] 后端分层架构规范</a></li><li class="lvl-2"><a href="#1-后端目录结构">1. 后端目录结构</a></li><li class="lvl-3"><a href="#1-1-现状总览">1.1 现状总览</a></li><li class="lvl-2"><a href="#2-分层定义">2. 分层定义</a></li><li class="lvl-3"><a href="#2-1-六层模型">2.1 六层模型</a></li><li class="lvl-3"><a href="#2-2-层间通信规则">2.2 层间通信规则</a></li><li class="lvl-2"><a href="#3-routes-层规范">3. Routes 层规范</a></li><li class="lvl-3"><a href="#3-1-路由文件组织">3.1 路由文件组织</a></li><li class="lvl-3"><a href="#3-2-路由定义规范">3.2 路由定义规范</a></li><li class="lvl-3"><a href="#3-3-路由层只做的事">3.3 路由层只做的事</a></li><li class="lvl-2"><a href="#4-middleware-层规范">4. Middleware 层规范</a></li><li class="lvl-3"><a href="#4-1-中间件分类">4.1 中间件分类</a></li><li class="lvl-3"><a href="#4-2-中间件签名">4.2 中间件签名</a></li><li class="lvl-2"><a href="#5-services-层规范">5. Services 层规范</a></li><li class="lvl-3"><a href="#5-1-文件组织">5.1 文件组织</a></li><li class="lvl-3"><a href="#5-2-服务职责">5.2 服务职责</a></li><li class="lvl-3"><a href="#5-3-服务文件大小">5.3 服务文件大小</a></li><li class="lvl-3"><a href="#5-4-service-入口签名">5.4 Service 入口签名</a></li><li class="lvl-2"><a href="#6-models-层规范">6. Models 层规范</a></li><li class="lvl-3"><a href="#6-1-model-文件命名">6.1 Model 文件命名</a></li><li class="lvl-3"><a href="#6-2-model-结构">6.2 Model 结构</a></li><li class="lvl-3"><a href="#6-3-model-中禁止做的事">6.3 Model 中禁止做的事</a></li><li class="lvl-2"><a href="#7-utils-层规范">7. Utils 层规范</a></li><li class="lvl-3"><a href="#7-1-工具函数特征">7.1 工具函数特征</a></li><li class="lvl-3"><a href="#7-2-工具分类">7.2 工具分类</a></li><li class="lvl-2"><a href="#8-cli-层规范">8. CLI 层规范</a></li><li class="lvl-3"><a href="#8-1-目录结构">8.1 目录结构</a></li><li class="lvl-3"><a href="#8-2-handler-规范">8.2 Handler 规范</a></li><li class="lvl-3"><a href="#8-3-handler-约束">8.3 Handler 约束</a></li><li class="lvl-2"><a href="#9-禁止跨层调用">9. 禁止跨层调用</a></li><li class="lvl-3"><a href="#9-1-依赖方向矩阵">9.1 依赖方向矩阵</a></li><li class="lvl-2"><a href="#10-版本历史">10. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-lay-001-后端分层架构规范">[DESIGN-LAY-001] 后端分层架构规范<a class="anchor" href="#design-lay-001-后端分层架构规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>用途</strong>：定义 khy-os 后端服务（<code>services/backend/src/</code>）的代码分层标准，包括目录结构、职责边界、通信规则。<br>ARCH-068 §4 已定义仓库七层模型（L0 kernel → L6 tools），本文档聚焦 L2 services 内部的代码组织。</p></blockquote>
+<hr>
+<h2 id="1-后端目录结构">1. 后端目录结构<a class="anchor" href="#1-后端目录结构" aria-label="锚点">#</a></h2>
+<h3 id="1-1-现状总览">1.1 现状总览<a class="anchor" href="#1-1-现状总览" aria-label="锚点">#</a></h3>
+<pre><code>services/backend/src/
+├── agents/              # AI Agent 定义（built-in agents + 类型）
+│   ├── built-in/        # 内置 Agent（debugAgent, securityAgent 等）
+│   └── types.js
+├── bootstrap/           # 服务启动引导
+│   └── state.js
+├── buddy/               # Buddy 相关类型
+│   └── types.js
+├── cli/                 # CLI 层（命令解析、REPL、TUI）
+│   ├── handlers/        # 命令 Handler
+│   ├── repl/            # REPL 子模块
+│   ├── statusLine/      # 状态栏
+│   ├── tui/             # TUI 界面
+│   └── vim/             # Vim 模式
+├── config/              # 配置加载
+│   ├── database.js
+│   ├── env.js
+│   └── sqlite-adapter.js
+├── constants/           # 常量定义
+├── coordinator/         # 协调器
+├── data/                # 数据模板
+├── middleware/           # Express 中间件
+├── migrations/          # 数据库迁移
+├── models/              # Sequelize 数据模型
+├── permissions/         # 权限系统
+├── routes/              # REST API 路由
+├── seeds/               # 种子数据
+├── services/            # ★ 核心业务逻辑层
+│   ├── gateway/         # AI 网关（适配器、OAuth）
+│   ├── domain/          # 领域服务（按领域拆分）
+│   └── *.js             # 公共服务
+├── utils/               # 工具函数
+├── bin/                 # CLI 入口
+│   └── khy.js
+├── app.js               # Express 应用入口
+└── server.js            # HTTP 服务器入口</code></pre>
+<hr>
+<h2 id="2-分层定义">2. 分层定义<a class="anchor" href="#2-分层定义" aria-label="锚点">#</a></h2>
+<h3 id="2-1-六层模型">2.1 六层模型<a class="anchor" href="#2-1-六层模型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>层</th><th>目录</th><th>职责</th><th>允许依赖</th></tr></thead><tbody><tr><td><strong>Routes</strong></td><td><code>routes/</code></td><td>HTTP 路由定义、参数提取、响应格式</td><td>→ Middleware → Services</td></tr><tr><td><strong>Middleware</strong></td><td><code>middleware/</code></td><td>鉴权、限流、日志、错误处理</td><td>→ Services → Utils</td></tr><tr><td><strong>Services</strong></td><td><code>services/</code></td><td>业务逻辑、数据编排、外部调用</td><td>→ Models → Utils</td></tr><tr><td><strong>Models</strong></td><td><code>models/</code></td><td>数据模型、关联定义、实例方法</td><td>→ Utils（仅工具方法）</td></tr><tr><td><strong>Utils</strong></td><td><code>utils/</code></td><td>纯函数、通用工具、无状态辅助</td><td>仅 Node.js 标准库</td></tr><tr><td><strong>Config</strong></td><td><code>config/</code></td><td>配置加载、环境变量解析</td><td>无</td></tr></tbody></table>
+<h3 id="2-2-层间通信规则">2.2 层间通信规则<a class="anchor" href="#2-2-层间通信规则" aria-label="锚点">#</a></h3>
+<pre><code>Routes → Services → Models → DB
+  ↓         ↓         ↓
+Middleware  Utils    Standard Lib</code></pre>
+<p><strong>禁止</strong>：</p>
+<ul><li>Routes 直接调用 Models（必须通过 Services）</li><li>Services 直接调用 Routes</li><li>Utils 依赖 Models 或 Services</li><li>Models 调用外部 API</li></ul>
+<hr>
+<h2 id="3-routes-层规范">3. Routes 层规范<a class="anchor" href="#3-routes-层规范" aria-label="锚点">#</a></h2>
+<h3 id="3-1-路由文件组织">3.1 路由文件组织<a class="anchor" href="#3-1-路由文件组织" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// routes/index.js — 路由聚合</span>
+<span class="hljs-keyword">const</span> authRouter = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./auth&#x27;</span>);
+<span class="hljs-keyword">const</span> strategyRouter = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./strategy&#x27;</span>);
+<span class="hljs-keyword">const</span> adminRouter = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./admin&#x27;</span>);
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = {
+  authRouter,
+  strategyRouter,
+  adminRouter
+};</code></pre>
+<h3 id="3-2-路由定义规范">3.2 路由定义规范<a class="anchor" href="#3-2-路由定义规范" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// routes/strategy.js</span>
+<span class="hljs-keyword">const</span> express = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;express&#x27;</span>);
+<span class="hljs-keyword">const</span> router = express.<span class="hljs-title class_">Router</span>();
+<span class="hljs-keyword">const</span> strategyService = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../services/strategyService&#x27;</span>);
+<span class="hljs-keyword">const</span> { requireAuth, validateBody } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../middleware&#x27;</span>);
+
+<span class="hljs-comment">// GET /api/v1/strategies — 列出策略</span>
+router.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/strategies&#x27;</span>,
+  requireAuth,
+  <span class="hljs-title function_">async</span> (req, res, next) =&gt; {
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">const</span> strategies = <span class="hljs-keyword">await</span> strategyService.<span class="hljs-title function_">list</span>(req.<span class="hljs-property">user</span>.<span class="hljs-property">id</span>);
+      res.<span class="hljs-title function_">json</span>({ <span class="hljs-attr">success</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">data</span>: strategies });
+    } <span class="hljs-keyword">catch</span> (error) {
+      <span class="hljs-title function_">next</span>(error);
+    }
+  }
+);
+
+<span class="hljs-comment">// POST /api/v1/strategies — 创建策略</span>
+router.<span class="hljs-title function_">post</span>(<span class="hljs-string">&#x27;/strategies&#x27;</span>,
+  requireAuth,
+  <span class="hljs-title function_">validateBody</span>(strategySchema),
+  <span class="hljs-title function_">async</span> (req, res, next) =&gt; {
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">const</span> strategy = <span class="hljs-keyword">await</span> strategyService.<span class="hljs-title function_">create</span>(req.<span class="hljs-property">user</span>.<span class="hljs-property">id</span>, req.<span class="hljs-property">body</span>);
+      res.<span class="hljs-title function_">status</span>(<span class="hljs-number">201</span>).<span class="hljs-title function_">json</span>({ <span class="hljs-attr">success</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">data</span>: strategy });
+    } <span class="hljs-keyword">catch</span> (error) {
+      <span class="hljs-title function_">next</span>(error);
+    }
+  }
+);
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = router;</code></pre>
+<h3 id="3-3-路由层只做的事">3.3 路由层只做的事<a class="anchor" href="#3-3-路由层只做的事" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>可以做</th><th>禁止做</th></tr></thead><tbody><tr><td>参数提取（<code>req.params</code>、<code>req.query</code>）</td><td>业务逻辑判断</td></tr><tr><td>调用 Service</td><td>直接查询 Model</td></tr><tr><td>包装响应（<code>res.json()</code>）</td><td>事务管理</td></tr><tr><td>错误传递（<code>next(error)</code>）</td><td>数据验证（交给 middleware）</td></tr><tr><td>权限中间件</td><td>副作用操作（写文件、发邮件）</td></tr></tbody></table>
+<hr>
+<h2 id="4-middleware-层规范">4. Middleware 层规范<a class="anchor" href="#4-middleware-层规范" aria-label="锚点">#</a></h2>
+<h3 id="4-1-中间件分类">4.1 中间件分类<a class="anchor" href="#4-1-中间件分类" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>位置</th><th>职责</th></tr></thead><tbody><tr><td>安全中间件</td><td><code>middleware/</code></td><td><code>requireAuth</code>、<code>requireRole</code>、CSRF 保护</td></tr><tr><td>日志中间件</td><td><code>middleware/</code></td><td><code>requestLogger</code>、响应日志</td></tr><tr><td>限流中间件</td><td><code>middleware/</code></td><td><code>rateLimit</code></td></tr><tr><td>错误处理中间件</td><td><code>middleware/</code></td><td><code>errorHandler</code>（4 参数）</td></tr></tbody></table>
+<h3 id="4-2-中间件签名">4.2 中间件签名<a class="anchor" href="#4-2-中间件签名" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 标准中间件（3 参数）</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">myMiddleware</span>(<span class="hljs-params">req, res, next</span>) { }
+
+<span class="hljs-comment">// 错误处理中间件（4 参数）</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">errorHandler</span>(<span class="hljs-params">err, req, res, next</span>) { }
+
+<span class="hljs-comment">// 路由级中间件工厂</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">validateBody</span>(<span class="hljs-params">schema</span>) {
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">async</span> (req, res, next) =&gt; { };
+}</code></pre>
+<hr>
+<h2 id="5-services-层规范">5. Services 层规范<a class="anchor" href="#5-services-层规范" aria-label="锚点">#</a></h2>
+<h3 id="5-1-文件组织">5.1 文件组织<a class="anchor" href="#5-1-文件组织" aria-label="锚点">#</a></h3>
+<pre><code>services/
+├── gateway/                    # AI 网关（独立子系统）
+│   ├── aiGateway.js            # 主入口
+│   ├── adapters/               # AI 供应商适配器
+│   ├── oauthManager.js         # OAuth 管理
+│   ├── pluginChain.js          # 插件链
+│   └── protocolConverter/      # 协议转换
+├── domain/                     # ★ 按领域组织的服务
+│   ├── security/
+│   │   └── failsafe/
+│   │       └── errorCodes.js
+│   ├── trajectory/
+│   │   └── dualTrack/
+│   │       └── degradeStateMachine.js
+│   ├── messaging/
+│   │   └── channels/
+│   │       └── _baseChannel.js
+│   └── project/
+│       └── management/
+│           └── resourceContract.js
+├── llmService.js               # LLM 公共服务
+├── llmGenerateSink.js          # LLM 生成接收器
+├── aiChatPort.js               # AI 对话端口
+├── aiConversationPort.js       # 对话管理端口
+├── modelCapabilityPort.js      # 模型能力端口
+├── promptComposer.js           # Prompt 组合器
+├── permissionPromptPort.js     # 权限 Prompt
+├── sessionSourcePort.js        # Session 来源
+├── commandDispatchPort.js      # 命令分发
+├── gitSpawnHelper.js           # Git 进程辅助
+├── toolCallNudges.js           # 工具调用提示
+├── samplingPolicy.js           # 采样策略
+├── clarificationsCards.js      # 澄清卡片
+└── agnesImageModel.js          # 图像模型</code></pre>
+<h3 id="5-2-服务职责">5.2 服务职责<a class="anchor" href="#5-2-服务职责" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>职责</th><th>说明</th></tr></thead><tbody><tr><td>业务逻辑编排</td><td>调用多个 Model 完成业务操作</td></tr><tr><td>外部调用</td><td>AI API、Git 命令、子进程</td></tr><tr><td>事务管理</td><td>确保多 Model 操作的原子性</td></tr><tr><td>缓存决策</td><td>什么该缓存、缓存多久</td></tr><tr><td>错误分类</td><td>区分用户错误、系统错误、外部错误</td></tr></tbody></table>
+<h3 id="5-3-服务文件大小">5.3 服务文件大小<a class="anchor" href="#5-3-服务文件大小" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>建议上限</th><th>超限处理</th></tr></thead><tbody><tr><td>单一服务文件</td><td><strong>200 行</strong></td><td>按子领域拆分到 <code>domain/</code></td></tr><tr><td>domain 子目录</td><td>—</td><td>按领域拆分</td></tr></tbody></table>
+<h3 id="5-4-service-入口签名">5.4 Service 入口签名<a class="anchor" href="#5-4-service-入口签名" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// Service 函数签名统一：async，第一个参数是 userId（如有认证）</span>
+<span class="hljs-comment">// 返回值统一为 { data } 或 throw KhyError</span>
+
+<span class="hljs-comment">// ✅ 正确</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">listStrategies</span>(<span class="hljs-params">userId, filters = {}</span>) { }
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">createStrategy</span>(<span class="hljs-params">userId, params</span>) { }
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">deleteStrategy</span>(<span class="hljs-params">userId, strategyId</span>) { }
+
+<span class="hljs-comment">// ❌ 错误 — 缺少 userId 上下文</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">listStrategies</span>(<span class="hljs-params">filters</span>) { }  <span class="hljs-comment">// 无法确定归属</span></code></pre>
+<hr>
+<h2 id="6-models-层规范">6. Models 层规范<a class="anchor" href="#6-models-层规范" aria-label="锚点">#</a></h2>
+<h3 id="6-1-model-文件命名">6.1 Model 文件命名<a class="anchor" href="#6-1-model-文件命名" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">PascalCase.js   — 与表名 snake_case 复数对应</code></pre>
+<table><thead><tr><th>模型类名</th><th>表名</th><th>文件</th></tr></thead><tbody><tr><td><code>User</code></td><td><code>users</code></td><td><code>models/User.js</code></td></tr><tr><td><code>ApiKey</code></td><td><code>api_keys</code></td><td><code>models/ApiKey.js</code></td></tr><tr><td><code>SystemSetting</code></td><td><code>system_settings</code></td><td><code>models/SystemSetting.js</code></td></tr></tbody></table>
+<h3 id="6-2-model-结构">6.2 Model 结构<a class="anchor" href="#6-2-model-结构" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-meta">&#x27;use strict&#x27;</span>;
+<span class="hljs-keyword">const</span> { <span class="hljs-title class_">DataTypes</span> } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;sequelize&#x27;</span>);
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = <span class="hljs-function">(<span class="hljs-params">sequelize</span>) =&gt;</span> {
+  <span class="hljs-keyword">const</span> <span class="hljs-title class_">User</span> = sequelize.<span class="hljs-title function_">define</span>(<span class="hljs-string">&#x27;User&#x27;</span>, {
+    <span class="hljs-attr">id</span>: {
+      <span class="hljs-attr">type</span>: <span class="hljs-title class_">DataTypes</span>.<span class="hljs-property">INTEGER</span>,
+      <span class="hljs-attr">primaryKey</span>: <span class="hljs-literal">true</span>,
+      <span class="hljs-attr">autoIncrement</span>: <span class="hljs-literal">true</span>
+    },
+    <span class="hljs-attr">username</span>: {
+      <span class="hljs-attr">type</span>: <span class="hljs-title class_">DataTypes</span>.<span class="hljs-title function_">STRING</span>(<span class="hljs-number">50</span>),
+      <span class="hljs-attr">allowNull</span>: <span class="hljs-literal">false</span>,
+      <span class="hljs-attr">unique</span>: <span class="hljs-literal">true</span>
+    },
+    <span class="hljs-attr">email</span>: {
+      <span class="hljs-attr">type</span>: <span class="hljs-title class_">DataTypes</span>.<span class="hljs-title function_">STRING</span>(<span class="hljs-number">255</span>),
+      <span class="hljs-attr">allowNull</span>: <span class="hljs-literal">false</span>,
+      <span class="hljs-attr">unique</span>: <span class="hljs-literal">true</span>
+    },
+    <span class="hljs-attr">role</span>: {
+      <span class="hljs-attr">type</span>: <span class="hljs-title class_">DataTypes</span>.<span class="hljs-title function_">STRING</span>(<span class="hljs-number">20</span>),
+      <span class="hljs-attr">defaultValue</span>: <span class="hljs-string">&#x27;user&#x27;</span>
+    },
+    <span class="hljs-attr">status</span>: {
+      <span class="hljs-attr">type</span>: <span class="hljs-title class_">DataTypes</span>.<span class="hljs-title function_">STRING</span>(<span class="hljs-number">20</span>),
+      <span class="hljs-attr">defaultValue</span>: <span class="hljs-string">&#x27;active&#x27;</span>
+    }
+  }, {
+    <span class="hljs-attr">tableName</span>: <span class="hljs-string">&#x27;users&#x27;</span>,
+    <span class="hljs-attr">underscored</span>: <span class="hljs-literal">true</span>,   <span class="hljs-comment">// createdAt / updatedAt（非 camelCase）</span>
+    <span class="hljs-attr">timestamps</span>: <span class="hljs-literal">true</span>
+  });
+
+  <span class="hljs-comment">// 实例方法</span>
+  <span class="hljs-title class_">User</span>.<span class="hljs-property"><span class="hljs-keyword">prototype</span></span>.<span class="hljs-property">isAdmin</span> = <span class="hljs-keyword">function</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-keyword">return</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">role</span> === <span class="hljs-string">&#x27;admin&#x27;</span>;
+  };
+
+  <span class="hljs-comment">// 类方法</span>
+  <span class="hljs-title class_">User</span>.<span class="hljs-property">findByUsername</span> = <span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span>(<span class="hljs-params">username</span>) {
+    <span class="hljs-keyword">return</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">findOne</span>({ <span class="hljs-attr">where</span>: { username } });
+  };
+
+  <span class="hljs-comment">// 关联定义</span>
+  <span class="hljs-title class_">User</span>.<span class="hljs-property">associate</span> = <span class="hljs-keyword">function</span>(<span class="hljs-params">models</span>) {
+    <span class="hljs-title class_">User</span>.<span class="hljs-title function_">hasOne</span>(models.<span class="hljs-property">UserProfile</span>, { <span class="hljs-attr">foreignKey</span>: <span class="hljs-string">&#x27;user_id&#x27;</span> });
+    <span class="hljs-title class_">User</span>.<span class="hljs-title function_">hasMany</span>(models.<span class="hljs-property">ApiKey</span>, { <span class="hljs-attr">foreignKey</span>: <span class="hljs-string">&#x27;user_id&#x27;</span> });
+  };
+
+  <span class="hljs-keyword">return</span> <span class="hljs-title class_">User</span>;
+};</code></pre>
+<h3 id="6-3-model-中禁止做的事">6.3 Model 中禁止做的事<a class="anchor" href="#6-3-model-中禁止做的事" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>禁止</th><th>原因</th></tr></thead><tbody><tr><td>业务逻辑</td><td>Model 是数据映射，不是服务</td></tr><tr><td>外部 API 调用</td><td>Model 不知道 HTTP</td></tr><tr><td>邮件/通知发送</td><td>属于 Service 层</td></tr><tr><td>复杂的默认值计算</td><td>应放在 Service 层</td></tr></tbody></table>
+<hr>
+<h2 id="7-utils-层规范">7. Utils 层规范<a class="anchor" href="#7-utils-层规范" aria-label="锚点">#</a></h2>
+<h3 id="7-1-工具函数特征">7.1 工具函数特征<a class="anchor" href="#7-1-工具函数特征" aria-label="锚点">#</a></h3>
+<ul><li><strong>纯函数优先</strong>：相同输入永远产生相同输出</li><li><strong>无副作用</strong>：不修改外部状态、不写文件、不打网络请求</li><li><strong>单一职责</strong>：一个工具函数只做一件事</li><li><strong>导出方式</strong>：具名导出，便于 tree-shaking</li></ul>
+<pre><code class="language-javascript"><span class="hljs-comment">// utils/toLowerCaseSafe.js</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">toLowerCaseSafe</span>(<span class="hljs-params">str</span>) {
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> str !== <span class="hljs-string">&#x27;string&#x27;</span>) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;&#x27;</span>;
+  <span class="hljs-keyword">return</span> str.<span class="hljs-title function_">toLowerCase</span>();
+}
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = { toLowerCaseSafe };</code></pre>
+<h3 id="7-2-工具分类">7.2 工具分类<a class="anchor" href="#7-2-工具分类" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类别</th><th>目录</th><th>示例</th></tr></thead><tbody><tr><td>字符串工具</td><td><code>utils/</code></td><td><code>stripCodeSpans.js</code></td></tr><tr><td>路径工具</td><td><code>utils/</code></td><td><code>expandEnvPath.js</code></td></tr><tr><td>环境工具</td><td><code>utils/</code></td><td><code>envIntNonNeg.js</code></td></tr><tr><td>进程工具</td><td><code>utils/</code></td><td><code>expressAsyncPatch.js</code></td></tr><tr><td>安全工具</td><td><code>utils/</code></td><td><code>ipAnonymizer.js</code></td></tr></tbody></table>
+<hr>
+<h2 id="8-cli-层规范">8. CLI 层规范<a class="anchor" href="#8-cli-层规范" aria-label="锚点">#</a></h2>
+<h3 id="8-1-目录结构">8.1 目录结构<a class="anchor" href="#8-1-目录结构" aria-label="锚点">#</a></h3>
+<pre><code>cli/
+├── router.js             # 命令路由器（switch 分发）
+├── aliases.js            # 中文/拼音 → 命令名映射
+├── formatters.js         # 输出格式化
+├── handlers/             # 命令实现
+│   ├── daemon.js
+│   ├── webTools.js
+│   └── ...
+├── repl/                 # REPL 子模块
+│   ├── atProjectionCache.js
+│   ├── dirSkip.js
+│   └── ...
+├── statusLine/           # 状态栏
+│   └── statusLineRunner.js
+├── tui/                  # TUI 界面
+│   ├── ink-components/
+│   └── vim/
+├── aiChatState.js        # AI 聊天状态
+├── aiLocalState.js       # AI 本地状态
+├── blockquoteStyle.js    # 引用样式
+├── completionKeysLazy.js # 补全键
+├── heapDump.js           # 堆转储
+├── markdownLink.js       # Markdown 链接
+├── retryCountdown.js     # 重试倒计时
+├── starEmphasisFlanking.js
+└── ...</code></pre>
+<h3 id="8-2-handler-规范">8.2 Handler 规范<a class="anchor" href="#8-2-handler-规范" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// handlers/daemon.js</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">handleDaemon</span>(<span class="hljs-params">args</span>) {
+  <span class="hljs-keyword">const</span> { action } = args;
+  
+  <span class="hljs-keyword">switch</span> (action) {
+    <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;start&#x27;</span>:
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">startDaemon</span>();
+    <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;stop&#x27;</span>:
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">stopDaemon</span>();
+    <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;status&#x27;</span>:
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">getDaemonStatus</span>();
+    <span class="hljs-attr">default</span>:
+      <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">`Unknown daemon action: <span class="hljs-subst">${action}</span>`</span>);
+  }
+}
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = { handleDaemon };</code></pre>
+<h3 id="8-3-handler-约束">8.3 Handler 约束<a class="anchor" href="#8-3-handler-约束" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>约束</th><th>说明</th></tr></thead><tbody><tr><td>返回 Promise</td><td>所有 handler 必须是 async 函数</td></tr><tr><td>输出走 formatter</td><td>不直接 <code>console.log</code>，走 <code>formatters.js</code></td></tr><tr><td>错误抛异常</td><td>不吞错误，由外层统一处理</td></tr><tr><td>无 HTTP 依赖</td><td>Handler 不直接调用 Express</td></tr></tbody></table>
+<hr>
+<h2 id="9-禁止跨层调用">9. 禁止跨层调用<a class="anchor" href="#9-禁止跨层调用" aria-label="锚点">#</a></h2>
+<h3 id="9-1-依赖方向矩阵">9.1 依赖方向矩阵<a class="anchor" href="#9-1-依赖方向矩阵" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>从 → 到</th><th>Routes</th><th>Middleware</th><th>Services</th><th>Models</th><th>Utils</th><th>Config</th></tr></thead><tbody><tr><td>Routes</td><td>—</td><td>✅</td><td>✅</td><td>❌</td><td>✅</td><td>❌</td></tr><tr><td>Middleware</td><td>—</td><td>—</td><td>✅</td><td>❌</td><td>✅</td><td>❌</td></tr><tr><td>Services</td><td>—</td><td>—</td><td>—</td><td>✅</td><td>✅</td><td>✅</td></tr><tr><td>Models</td><td>—</td><td>—</td><td>❌</td><td>—</td><td>✅</td><td>❌</td></tr><tr><td>Utils</td><td>—</td><td>—</td><td>❌</td><td>❌</td><td>—</td><td>❌</td></tr><tr><td>Config</td><td>—</td><td>—</td><td>❌</td><td>❌</td><td>❌</td><td>—</td></tr></tbody></table>
+<hr>
+<h2 id="10-版本历史">10. 版本历史<a class="anchor" href="#10-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义后端分层架构规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 架构团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-GIT/00_INDEX_DESIGN-GIT-总目录.html"><div class="dir">← 上一篇</div><div class="ttl">DESIGN-GIT</div></a><a class="next" href="../../../docs/10_规范/DESIGN-LAY/[DESIGN-LAY-002] 目录层级与文件归类规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-LAY-002] 目录层级与文件归类规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-LAY/[DESIGN-LAY-001] 后端分层架构规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

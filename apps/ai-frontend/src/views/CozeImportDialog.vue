@@ -130,6 +130,7 @@ import { ElMessage } from 'element-plus';
 import { Upload, Refresh, Download, EditPen, Search as SearchIcon } from '@element-plus/icons-vue';
 import { useWorkflow } from '@/composables/useWorkflow';
 
+import { showSuccess, showError, showWarning, showInfo } from '@/api/notify';
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
 });
@@ -207,7 +208,7 @@ async function loadCatalog() {
     const res = await cozeCatalog();
     applyResult(res);
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '加载内置画廊失败');
+    showError(err?.response?.data?.message || err?.message || '加载内置画廊失败');
   } finally {
     catalogLoading.value = false;
   }
@@ -255,9 +256,9 @@ async function onFileChange(evt) {
     const contentBase64 = await readFileAsBase64(file);
     const res = await enumerateCoze({ contentBase64 });
     applyResult(res);
-    ElMessage.success(`已解析 ${entries.value.length} 个工作流`);
+    showSuccess(`已解析 ${entries.value.length} 个工作流`);
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '解析失败');
+    showError(err?.response?.data?.message || err?.message || '解析失败');
   } finally {
     enumerating.value = false;
   }
@@ -293,7 +294,7 @@ function warnings(report) {
 
 async function install(entry) {
   if (!sessionId.value) {
-    ElMessage.warning('会话已过期，请重新加载画廊');
+    showWarning('会话已过期，请重新加载画廊');
     return;
   }
   installing.value = entry.index;
@@ -305,9 +306,9 @@ async function install(entry) {
     });
     installedMap.value = { ...installedMap.value, [entry.index]: wf.id };
     emit('installed', wf);
-    ElMessage.success(`已安装：${wf.name}`);
+    showSuccess(`已安装：${wf.name}`);
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '安装失败');
+    showError(err?.response?.data?.message || err?.message || '安装失败');
   } finally {
     installing.value = -1;
   }

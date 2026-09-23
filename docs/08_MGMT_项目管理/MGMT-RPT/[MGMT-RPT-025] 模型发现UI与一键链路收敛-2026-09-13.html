@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [MGMT-RPT-025] 模型发现UI与一键链路收敛-2026-09-13.md -->
+<title>模型发现 UI + Ollama 一键链路 + ai-backend 死路径收敛 设计方案 — 2026-09-13 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>MGMT-RPT<span class="sep">›</span>模型发现 UI + Ollama 一键链路 + ai-backend 死路径收敛 设计方案 — 2026-09-13</div>
+      <header class="hero reveal"><h1>模型发现 UI + Ollama 一键链路 + ai-backend 死路径收敛 设计方案 — 2026-09-13</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#模型发现-ui-ollama-一键链路-ai-backend-死路径收敛-设计方案-2026-09-13">模型发现 UI + Ollama 一键链路 + ai-backend 死路径收敛 设计方案 — 2026-09-13</a></li><li class="lvl-2"><a href="#前置事实-调研结论-决定设计走向">前置事实（调研结论，决定设计走向）</a></li><li class="lvl-2"><a href="#设计-1-p2-前端-新注册-徽章-ui-消费-models-notify-jsonl">设计 1 — P2 前端「新注册」徽章 UI（消费 `models-notify.jsonl`）</a></li><li class="lvl-2"><a href="#设计-2-ollama-一键串联-export-register-distill-提示链路">设计 2 — Ollama 一键串联「export → register → distill」提示链路</a></li><li class="lvl-2"><a href="#设计-3-ai-backend-侧-modeltrainingservice-死路径收敛">设计 3 — ai-backend 侧 `modelTrainingService` 死路径收敛</a></li><li class="lvl-2"><a href="#优先级与改动文件清单">优先级与改动文件清单</a></li><li class="lvl-2"><a href="#落地记录">落地记录</a></li><li class="lvl-3"><a href="#已实现条目">已实现条目</a></li><li class="lvl-3"><a href="#改动文件清单">改动文件清单</a></li><li class="lvl-3"><a href="#检查结果">检查结果</a></li><li class="lvl-3"><a href="#遗留-待人工决策">遗留 / 待人工决策</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="模型发现-ui-ollama-一键链路-ai-backend-死路径收敛-设计方案-2026-09-13">模型发现 UI + Ollama 一键链路 + ai-backend 死路径收敛 设计方案 — 2026-09-13<a class="anchor" href="#模型发现-ui-ollama-一键链路-ai-backend-死路径收敛-设计方案-2026-09-13" aria-label="锚点">#</a></h1>
+<blockquote><p>承接 [MGMT-RPT-024] 留的三条待人工决策项。本设计把它们变成可落地实现，并说明落地后改动了什么。</p></blockquote>
+<h2 id="前置事实-调研结论-决定设计走向">前置事实（调研结论，决定设计走向）<a class="anchor" href="#前置事实-调研结论-决定设计走向" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>事实</th><th>位置</th><th>对设计的影响</th></tr></thead><tbody><tr><td>前端 <code>/api/ai-gateway/models</code> 自带 Ollama live <code>/api/tags</code> 探测合并（<code>ollamaAdapter.detectAsync</code>），新模型自然进列表</td><td><code>aiManagementServer.js:1562</code>、<code>ollamaAdapter.js:614</code></td><td>模型「可见」已解决，缺的是「新」标记</td></tr><tr><td><code>curateModelList</code>（<code>aiManagementServer.js:1806</code>）是 model 对象的最终投影点，前端 <code>normalizeModelEntry</code> 已透传未知字段</td><td>同上 + <code>AIChat.vue:1477</code></td><td>「新注册」标记只需在 <code>curateModelList</code> 注入 <code>isNew</code>，前端零改动即可拿到</td></tr><tr><td><code>readModelNotify()</code> 已导出但全仓零调用、无 HTTP/CLI 暴露</td><td><code>modelTrainingService.js:2077</code></td><td>新标记数据源 = 读 <code>&lt;dataHome&gt;/models-notify.jsonl</code>，无需新增端点</td></tr><tr><td><code>train export</code> 成功后已自动 <code>registerWithOllama</code>，但残留一行误导性文案「注册到 Ollama: ollama create …」，且 register 成功只打印 <code>ollama run</code> 提示、未提示可继续蒸馏</td><td><code>routerDispatchOps.js:1042</code></td><td>一键链路 = 修残留文案 + register 成功追加「可作教师蒸馏」next-step 提示</td></tr><tr><td><code>distill</code> 的 <code>teacherModels</code> 就是 Ollama 模型名，<code>registerWithOllama</code> 产出 <code>khy-&lt;version&gt;</code> 名，两侧命名天然互通</td><td><code>modelTrainingService.js:1013</code>、<code>registerWithOllama</code></td><td>蒸馏教师可直接选刚注册的 <code>khy-x.x</code>，链路已通，缺的只是提示词</td></tr><tr><td>ai-backend 版 <code>modelTrainingService.js</code> <strong>纯写死</strong> <code>~/.khyquant</code>、无 <code>resolveTrainingDir</code>、<code>spawn('python3')</code>、缺 backend 版 13 个函数（curateDataset/evaluateModel/recipe/trainlog/notify 等），且<strong>生产代码零引用</strong>（仅一个测试 require 它）</td><td><code>services/ai-backend/src/services/modelTrainingService.js:26</code></td><td>收敛 = 把 ai-backend 版改为转发 backend 版（复用已有 <code>dataHome.js</code> 转发先例），删除死路径拷贝</td></tr></tbody></table>
+<h2 id="设计-1-p2-前端-新注册-徽章-ui-消费-models-notify-jsonl">设计 1 — P2 前端「新注册」徽章 UI（消费 <code>models-notify.jsonl</code>）<a class="anchor" href="#设计-1-p2-前端-新注册-徽章-ui-消费-models-notify-jsonl" aria-label="锚点">#</a></h2>
+<p><strong>后端注入 <code>isNew</code></strong>（<code>aiManagementServer.js</code>）：</p>
+<ul><li>新增 <code>readNewModels()</code>：读 <code>&lt;dataHome&gt;/models-notify.jsonl</code>，返回最近 7 天内 <code>event==='model:registered'</code> 的 <code>model</code> 名集合（用 <code>readModelNotify</code> 或直接读文件，带 TTL 过滤）。</li><li><code>curateModelList</code> 投影每个 model 时，若 <code>m.id</code> 在新模型集合里 → <code>out.push({ ..., isNew: true })</code>。字段随既有 <code>{ id, name, isDefault, ... }</code> 一并下发，前端 <code>normalizeModelEntry</code> 已透传未知字段，无需改前端请求逻辑。</li><li>7 天 TTL 是常量进 <code>constants</code>（不写死），可 env 覆盖。</li></ul>
+<p><strong>前端渲染</strong>（<code>apps/ai-frontend</code>）：</p>
+<ul><li><code>utils/modelBadges.js</code> 新增 <code>newLabel()</code> / 徽章 helper。</li><li><code>AIChat.vue</code> 模型下拉的 <code>el-option</code> 内、<code>AIGateway.vue</code> 卡片内，当 <code>m.isNew === true</code> 时加一个 <code>el-tag</code>「新」徽章（与既有 <code>默认</code>/<code>最近</code> 同排）。纯展示，不引入轮询/WS。</li></ul>
+<h2 id="设计-2-ollama-一键串联-export-register-distill-提示链路">设计 2 — Ollama 一键串联「export → register → distill」提示链路<a class="anchor" href="#设计-2-ollama-一键串联-export-register-distill-提示链路" aria-label="锚点">#</a></h2>
+<p><strong>改</strong> <code>routerDispatchOps.js</code> <code>train export</code> 分支：</p>
+<ul><li>删除误导性残留文案「注册到 Ollama: ollama create …」（实际已自动注册，该行误导用户手敲）。</li><li>register 成功后，若导出的是可训练的 khy 模型（GGUF 成功 + register 成功），追加 next-step 提示：</li></ul>
+<pre><code>  可继续蒸馏: khy train distill --teacher &lt;该Ollama模型名&gt; --prompts-json '[...]'
+  该模型已注册到 Ollama，可直接作为蒸馏教师。</code></pre>
+<ul><li>这是「串联」的用户侧闭环：export 产物（GGUF）→ 自动 register（Ollama）→ 提示可作为 distill 教师。服务层 <code>distill</code> 已支持 <code>teacherModels</code> 为 Ollama 名，链路无需新代码，只补提示。</li></ul>
+<h2 id="设计-3-ai-backend-侧-modeltrainingservice-死路径收敛">设计 3 — ai-backend 侧 <code>modelTrainingService</code> 死路径收敛<a class="anchor" href="#设计-3-ai-backend-侧-modeltrainingservice-死路径收敛" aria-label="锚点">#</a></h2>
+<p><strong>改</strong> <code>services/ai-backend/src/services/modelTrainingService.js</code>：</p>
+<ul><li>整文件收敛为<strong>薄转发层</strong>（复用已有 <code>dataHome.js</code> 转发先例）：<code>module.exports = require(path.resolve(__dirname, '../../../backend/src/services/modelTrainingService'))</code>。</li><li>ai-backend 版独有、backend 版缺失的 API（调研 §4 反向确认）需保留：若 ai-backend 版有 backend 没有的导出，用 spread 合并（backend 为主 + ai-backend 独有兜底）。调研结论 ai-backend 版是 backend 的旧简化拷贝，独有导出为 0，故纯转发即可。</li><li>该文件 <code>test/modelTrainingService.fetch.test.js</code> 引用它 → 转发后测试仍可用（backend 版功能超集）。</li><li>解决「同一份数据被两个不同路径各写一份」的数据分裂根因：ai-backend 与 backend 从此共用同一份 <code>resolveTrainingDir()</code> + <code>findPython()</code> + 全套 P0/P1/P2 能力（评测门/配方/日志/去重/蒸馏/notify）。</li></ul>
+<h2 id="优先级与改动文件清单">优先级与改动文件清单<a class="anchor" href="#优先级与改动文件清单" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项</th><th>P级</th><th>文件</th><th>动作</th></tr></thead><tbody><tr><td>① 后端 <code>isNew</code> 注入</td><td>P2</td><td><code>services/backend/src/services/aiManagementServer.js</code></td><td>改 <code>curateModelList</code> + 新增 <code>readNewModels</code></td></tr><tr><td>① 前端徽章</td><td>P2</td><td><code>apps/ai-frontend/src/utils/modelBadges.js</code>、<code>views/AIChat.vue</code></td><td>改：新增「新」徽章渲染</td></tr><tr><td>② 一键链路提示</td><td>P2</td><td><code>services/backend/src/cli/routerDispatchOps.js</code></td><td>改 <code>train export</code> 分支</td></tr><tr><td>③ ai-backend 收敛</td><td>P1</td><td><code>services/ai-backend/src/services/modelTrainingService.js</code></td><td>重写为转发层</td></tr></tbody></table>
+<h2 id="落地记录">落地记录<a class="anchor" href="#落地记录" aria-label="锚点">#</a></h2>
+<h3 id="已实现条目">已实现条目<a class="anchor" href="#已实现条目" aria-label="锚点">#</a></h3>
+<p><strong>① 前端「新注册」徽章 UI（消费 <code>models-notify.jsonl</code>）</strong> — ✅ 已实现</p>
+<ul><li><strong>后端注入 <code>isNew</code></strong>（<code>services/backend/src/services/aiManagementServer.js</code>）：<ul><li>新增 <code>readNewModelIds()</code>：调 <code>modelTrainingService.readModelNotify(200)</code>，过滤 <code>event==='model:registered'</code> 且在 TTL 窗口（默认 7 天，<code>KHY_MODEL_NEW_TTL_DAYS</code> 可覆盖，TTL 常量走 <code>constants/serviceDefaults</code> 思路）内的模型名，返回 <code>Set</code>；30s 内存缓存，避免每次列表请求都扫 JSONL</li><li><code>curateModelList</code> 投影每个 model 时追加 <code>isNew: newModelIds.has(m.id)</code>；前端 <code>normalizeModelEntry</code> 透传未知字段，<strong>前端请求逻辑零改动</strong></li><li>新增 <code>invalidateNewModelCache()</code> 导出，供注册后立即可见</li></ul></li><li><strong>前端渲染</strong>（<code>apps/ai-frontend</code>）：<ul><li><code>utils/modelBadges.js</code>：新增 <code>isNewBadge(m)</code> / <code>newLabel()</code> / <code>newTagType()</code>（「新」，danger 深色调，区别于 verifyStatus 的健康语义）</li><li><code>views/AIChat.vue</code>：模型下拉 <code>el-option</code> 内在「默认」与「验证状态」之间加 <code>v-if=&quot;isNewBadge(m)&quot;</code> 的「新」徽章；补 <code>.model-new-tag</code> 样式（与既有 <code>.model-verify-tag</code> 同列）</li></ul></li></ul>
+<p><strong>② Ollama 一键串联「export → register → distill」提示链路</strong> — ✅ 已实现</p>
+<ul><li>改 <code>routerDispatchOps.js</code> <code>train export</code> 分支：删除误导性残留文案「注册到 Ollama: ollama create …」（实际已自动注册），改为「自动注册到 Ollama (modelName)…」</li><li>register 成功后追加 next-step 提示：<code>可继续蒸馏: khy train distill --teacher &lt;模型名&gt; --prompts-json '[...]'</code> + 「该模型已注册为 Ollama，可直接作为蒸馏教师；前端模型列表会出现『新』标记」</li><li>服务层 <code>distill</code> 已支持 <code>teacherModels</code> 为 Ollama 名，链路无需新代码，补齐的是用户侧闭环提示</li></ul>
+<p><strong>③ ai-backend 侧 <code>modelTrainingService</code> 死路径收敛</strong> — ✅ 已实现</p>
+<ul><li>重写 <code>services/ai-backend/src/services/modelTrainingService.js</code> 为<strong>薄转发层</strong>（复用 <code>utils/dataHome.js</code> 转发先例）：<code>module.exports = require(path.resolve(__dirname, '../../../backend/src/services/modelTrainingService'))</code></li><li>消除「同一份数据被 <code>.khyquant</code>（ai-backend 写死）与 dataHome（backend 动态）各写一份」的数据分裂根因；ai-backend 从此共用 backend 版的 <code>resolveTrainingDir</code> + <code>findPython</code> + 全套 P0/P1/P2 能力（评测门/配方/结构化日志/去重/多教师蒸馏/notify）</li><li>同步修 <code>test/modelTrainingService.fetch.test.js</code>：该测试断言的 <code>description</code> 文本 ai-backend 旧版是 <code>KHY-Quant trained model</code>，backend 版是 <code>khy OS trained model</code>，转发后改断言对齐 backend 真源（4/4 通过）</li></ul>
+<h3 id="改动文件清单">改动文件清单<a class="anchor" href="#改动文件清单" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td><code>services/backend/src/services/aiManagementServer.js</code></td><td>改</td><td><code>curateModelList</code> 注入 <code>isNew</code>；新增 <code>readNewModelIds</code>/<code>invalidateNewModelCache</code>（TTL 可 env 覆盖，fail-soft）</td></tr><tr><td><code>apps/ai-frontend/src/utils/modelBadges.js</code></td><td>改</td><td>新增「新」徽章 helper（<code>isNewBadge</code>/<code>newLabel</code>/<code>newTagType</code>）</td></tr><tr><td><code>apps/ai-frontend/src/views/AIChat.vue</code></td><td>改</td><td>模型下拉渲染「新」徽章 + 导入 + <code>.model-new-tag</code> 样式</td></tr><tr><td><code>services/backend/src/cli/routerDispatchOps.js</code></td><td>改</td><td><code>train export</code> 修残留文案 + register 后打印蒸馏 next-step 提示</td></tr><tr><td><code>services/ai-backend/src/services/modelTrainingService.js</code></td><td>重写</td><td>收敛为 backend 版转发层（删除写死 <code>.khyquant</code> 的旧实现）</td></tr><tr><td><code>services/ai-backend/test/modelTrainingService.fetch.test.js</code></td><td>改</td><td>断言对齐 backend 真源文本</td></tr></tbody></table>
+<h3 id="检查结果">检查结果<a class="anchor" href="#检查结果" aria-label="锚点">#</a></h3>
+<ul><li><code>require(aiManagementServer)</code> ✅ 加载成功</li><li><code>require(ai-backend modelTrainingService)</code> ✅ 转发成功，41 导出，含 backend 版全部能力（<code>buildRecipeSnapshot</code> 等）</li><li><code>node scripts/ci/check-agent-rules.js aiManagementServer.js routerDispatchOps.js modelTrainingService.js(ai-backend) modelTrainingService.js(backend)</code>：✅ 4 文件零违规</li><li><code>npx jest test/modelTrainingService.fetch.test.js</code>（ai-backend）：✅ 4/4 通过</li><li>前端 <code>AIChat.vue</code> 三处编辑（import / el-tag / css）均确认存在</li></ul>
+<h3 id="遗留-待人工决策">遗留 / 待人工决策<a class="anchor" href="#遗留-待人工决策" aria-label="锚点">#</a></h3>
+<ul><li><strong>前端构建未跑</strong>：<code>apps/ai-frontend</code> 的 Vite 构建/类型检查未在本环境执行（仅源码级编辑 + 结构 grep 校验）。徽章是纯展示改动，无逻辑风险，但合并前建议 <code>npm run build</code> 过一遍</li><li><strong><code>AIGateway.vue</code>（admin 卡片页）未同步加「新」徽章</strong>：本次只接了 <code>AIChat.vue</code> 主聊天页（用户主要触点）；admin 模型总览页若要同样徽章，复用 <code>modelBadges.isNewBadge</code> 即可，留作前端评审统一</li><li><strong><code>registerWithOllama</code> 成功后未调 <code>invalidateNewModelCache()</code></strong>：目前 30s 缓存 TTL 自然过期即可见「新」，无需强刷；若要求「注册完立即在下拉出现新徽章」，可在 <code>aiManagementServer</code> 的注册相关 mutation 端点里调 <code>invalidateNewModelCache()</code>（已导出备用）</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-024] 数据整备与多教师蒸馏设计方案-2026-09-13.html"><div class="dir">← 上一篇</div><div class="ttl">数据整备 + 多教师蒸馏 + 模型发现落地 设计方案 — 2026-09-13</div></a><a class="next" href="../../../docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-026] GitHub调研-回测引擎-2026-09-13.html"><div class="dir">下一篇 →</div><div class="ttl">GitHub 调研 — 回测引擎与策略模拟板块 — 2026-09-13</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-025] 模型发现UI与一键链路收敛-2026-09-13.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

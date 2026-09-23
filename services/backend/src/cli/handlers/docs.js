@@ -14,7 +14,7 @@ const { printInfo, printSuccess } = require('../formatters');
 const DOCS_DIR = path.resolve(__dirname, '../../../docs');
 const BUNDLED_DOCS_DIR = path.resolve(__dirname, '../../bundled/docs');
 const FASTLANE_DOC_REL_PATH = path.join('指南', 'ai-快速通道.md');
-const MAINTAINER_MAP_REL_PATH = path.join('_维护者', '维护映射表.json');
+const MAINTAINER_MAP_REL_PATH = path.join('14_维护者', 'registry', '维护映射表.json');
 
 function getRepoRoot() {
   // forest layout: handlers/ -> cli -> src -> backend -> services -> repo root (mirrored in bundle)
@@ -107,7 +107,7 @@ function buildAiFastlaneContextPack() {
     'services/backend/src/services/bugfixRegressionGate.js',
     'apps/ai-frontend/src/main.js',
     'apps/ai-frontend/src/router/index.js',
-    'docs/07_OPS_运维/[OPS-MAN-001] ai-快速通道.md',
+    'docs/07_OPS_运维/OPS-MAN/[OPS-MAN-001] ai-快速通道.md',
   ];
 
   const existingFiles = keyFiles.filter((relPath) => fs.existsSync(path.join(repoRoot, relPath)));
@@ -312,7 +312,7 @@ async function handleDocsAiFastlane(args = [], options = {}) {
     console.log('');
     printInfo(`项目快速通道文档: ${fastlaneDocPath}`);
   } else {
-    printInfo('未找到项目快速通道文档（docs/07_OPS_运维/[OPS-MAN-001] ai-快速通道.md）。');
+    printInfo('未找到项目快速通道文档（docs/07_OPS_运维/OPS-MAN/[OPS-MAN-001] ai-快速通道.md）。');
   }
 
   if (written.length > 0) {
@@ -623,9 +623,10 @@ async function handleDocsMaintainer() {
   console.log('  ' + chalk.bold('直接可执行命令:'));
   console.log(chalk.dim('    khy docs maintainer'));
   console.log(chalk.dim('    npm run maintainer:map'));
-  console.log(chalk.dim('    npm run maintainer:check'));
-  console.log(chalk.dim('    npm run check:maintainer:bootstrap'));
+  console.log(chalk.dim('    node --test scripts/tests/maintainerMapDocCoverage.test.js'));
+  console.log(chalk.dim('    npm run check:manifest-sync'));
   console.log(chalk.dim('    npm run check:maintainer:safety'));
+  console.log(chalk.dim('    npm run doctor:hydration'));
   console.log('');
   console.log('  ' + chalk.bold('分层最小回归:'));
   console.log(chalk.dim('    npm run test:maintainer:cli-routing'));
@@ -661,7 +662,7 @@ async function handleDocsMaintainer() {
   }
 
   printInfo(
-    '推荐顺序: 先看 CONTRIBUTING.md，再按 docs/_维护者/维护映射表.json 选领域，再跑对应最小验证命令。'
+    '推荐顺序: 先看 CONTRIBUTING.md，再按 docs/14_维护者/registry/维护映射表.json 选领域，再跑对应最小验证命令。'
   );
   console.log('');
 }
@@ -806,7 +807,7 @@ async function handleDocsBrowse(args, options) {
   // 不自己拼拓展路径：本函数曾硬编码 `tools/khyos-markdown`，拓展迁入
   // extensions/ 后该路径指向空气，而 fail-soft 把它掩成了一句提示
   // —— `khy docs browse` 因此静默失效而无人发觉。现在走服务定位（
-  // [DESIGN-ARCH-069] §1.3 第四条），与 `khy md` 共用同一条解析路径。
+  // [DESIGN-TOOL-002] §1.3 第四条），与 `khy md` 共用同一条解析路径。
   let workbench;
   try {
     workbench = require('../../services/domain/extensions/extensions/markdownWorkbench.js').loadBridge();

@@ -9,7 +9,7 @@ const {
   commandCatalogEnabled,
   buildCommandCatalog,
   CATEGORY_META,
-} = require('../../src/services/commandCatalog/commandCatalog');
+} = require('../../src/services/commandCatalog');
 
 // 注入一份确定性命令清单，避免测试依赖真实 commandSchema 的漂移。
 function fakeList() {

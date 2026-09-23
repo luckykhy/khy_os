@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for deliveryValidator.js â€?cross-platform delivery readiness.
+ * Tests for deliveryValidator.js â€”cross-platform delivery readiness.
  */
 
 const fs = require('fs');

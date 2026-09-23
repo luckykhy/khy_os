@@ -33,10 +33,10 @@ describe('Proxy Switch Profiles Leaf', () => {
 
   test('setProxySwitchProfilesDeps is a guarded, idempotent, non-throwing DI setter', () => {
       const { setProxySwitchProfilesDeps } = require(LEAF);
-      expect(() => setProxySwitchProfilesDeps().not.toThrow());
-      expect(() => setProxySwitchProfilesDeps({}).not.toThrow());
+      expect(() => setProxySwitchProfilesDeps()).not.toThrow();
+      expect(() => setProxySwitchProfilesDeps({})).not.toThrow();
       // Non-function deps are ignored by the typeof guard.
-      expect(() => setProxySwitchProfilesDeps({ parsePositiveInt: 1, handleProxyTraeSwitch: null }).not.toThrow());
+      expect(() => setProxySwitchProfilesDeps({ parsePositiveInt: 1, handleProxyTraeSwitch: null })).not.toThrow();
       const fakeDeps = {};
       for (const n of ['parsePositiveInt', 'dedupeList', 'normalizeModelId', 'normalizeEndpointBase',
         'normalizeTraeProfileId', 'createTraeProfileId', 'parseModelMap', 'loadTraeSwitchStore',
@@ -45,8 +45,8 @@ describe('Proxy Switch Profiles Leaf', () => {
         'syncTraeSwitchProfileFromAdapter', 'handleProxyTraeSwitch']) {
         fakeDeps[n] = () => undefined;
       }
-      expect(() => setProxySwitchProfilesDeps(fakeDeps).not.toThrow());
-      expect(() => setProxySwitchProfilesDeps(fakeDeps).not.toThrow());
+      expect(() => setProxySwitchProfilesDeps(fakeDeps)).not.toThrow();
+      expect(() => setProxySwitchProfilesDeps(fakeDeps)).not.toThrow();
   });
 
 });

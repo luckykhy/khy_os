@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-083] CC模式表格与折叠设计.md -->
+<title>[DESIGN-ARCH-083] CC 模式表格与折叠设计 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-083] CC 模式表格与折叠设计</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-083] CC 模式表格与折叠设计</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-083-cc-模式表格与折叠设计">[DESIGN-ARCH-083] CC 模式表格与折叠设计</a></li><li class="lvl-2"><a href="#0-设计原则">0. 设计原则</a></li><li class="lvl-2"><a href="#1-表格设计">1. 表格设计</a></li><li class="lvl-3"><a href="#1-1-工具调用结果表格">1.1 工具调用结果表格</a></li><li class="lvl-3"><a href="#1-2-表格实现规范">1.2 表格实现规范</a></li><li class="lvl-2"><a href="#2-折叠设计">2. 折叠设计</a></li><li class="lvl-3"><a href="#2-1-折叠模式">2.1 折叠模式</a></li><li class="lvl-3"><a href="#2-2-折叠交互">2.2 折叠交互</a></li><li class="lvl-3"><a href="#2-3-折叠状态机">2.3 折叠状态机</a></li><li class="lvl-3"><a href="#2-4-折叠实现">2.4 折叠实现</a></li><li class="lvl-2"><a href="#3-工具调用卡片-折叠-表格">3. 工具调用卡片（折叠 + 表格）</a></li><li class="lvl-3"><a href="#3-1-完整设计">3.1 完整设计</a></li><li class="lvl-3"><a href="#3-2-状态指示">3.2 状态指示</a></li><li class="lvl-3"><a href="#3-3-参数摘要">3.3 参数摘要</a></li><li class="lvl-2"><a href="#4-clutter-audit-视觉噪音审计">4. Clutter Audit（视觉噪音审计）</a></li><li class="lvl-3"><a href="#4-1-审计清单">4.1 审计清单</a></li><li class="lvl-3"><a href="#4-2-消除噪音规则">4.2 消除噪音规则</a></li><li class="lvl-2"><a href="#5-响应式行为">5. 响应式行为</a></li><li class="lvl-3"><a href="#5-1-宽度断点">5.1 宽度断点</a></li><li class="lvl-3"><a href="#5-2-表格列优先级">5.2 表格列优先级</a></li><li class="lvl-2"><a href="#6-验收标准">6. 验收标准</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-083-cc-模式表格与折叠设计">[DESIGN-ARCH-083] CC 模式表格与折叠设计<a class="anchor" href="#design-arch-083-cc-模式表格与折叠设计" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>隶属</strong>：本文属 <strong>TUI 设计族</strong>（20 编号 / 21 文件），总纲与 scope 裁决见 <code>[DESIGN-ARCH-122] TUI 设计族总纲</code>；规则冲突一律以 <code>[DESIGN-ARCH-102] Khy TUI 统一规则手册</code> 为准。</p></blockquote>
+<blockquote><p><strong>定位</strong>：定义 CC 模式下表格显示和折叠/隐藏组件的设计规范。<br><strong>适用边界</strong>：工具调用卡片、MCP 服务器列表、帮助菜单、设置面板等。<br><strong>参考来源</strong>：<code>component-catalog.md</code> (Table, Tabs) + <code>visual-patterns.md</code> (Borders, Color, Density) + <code>interaction-patterns.md</code> (Discoverability)</p></blockquote>
+<hr>
+<h2 id="0-设计原则">0. 设计原则<a class="anchor" href="#0-设计原则" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>原则</th><th>说明</th></tr></thead><tbody><tr><td><strong>清晰优先</strong></td><td>信息层级清晰，一目了然</td></tr><tr><td><strong>密度适中</strong></td><td>既不空旷也不拥挤，呼吸感充足</td></tr><tr><td><strong>折叠友好</strong></td><td>长内容默认折叠，展开后完整显示</td></tr><tr><td><strong>色彩克制</strong></td><td>最多 3-4 种颜色，语义明确</td></tr><tr><td><strong>无冗余</strong></td><td>通过 clutter audit 消除视觉噪音</td></tr></tbody></table>
+<hr>
+<h2 id="1-表格设计">1. 表格设计<a class="anchor" href="#1-表格设计" aria-label="锚点">#</a></h2>
+<h3 id="1-1-工具调用结果表格">1.1 工具调用结果表格<a class="anchor" href="#1-1-工具调用结果表格" aria-label="锚点">#</a></h3>
+<h4 id="1-1-1-文件列表表格">1.1.1 文件列表表格<a class="anchor" href="#1-1-1-文件列表表格" aria-label="锚点">#</a></h4>
+<pre><code>┌─ Read 结果 ────────────────────────────────────────────┐
+│ 文件路径                    大小    修改时间            │
+│ ──────────────────────────  ──────  ────────────────── │
+│ src/index.ts                 2.4 KB  2 hours ago       │
+│ src/utils.ts                 1.1 KB  yesterday         │
+│ package.json                 340 B   3 days ago        │
+│ README.md                    8.1 KB  yesterday         │
+└────────────────────────────────────────────────────────┘</code></pre>
+<p><strong>设计规范</strong>：</p>
+<table><thead><tr><th>属性</th><th>规范</th></tr></thead><tbody><tr><td><strong>表头</strong></td><td>粗体 + 下划线分隔，与数据行明确区分</td></tr><tr><td><strong>列对齐</strong></td><td>文本左对齐，数字右对齐，状态居中</td></tr><tr><td><strong>行高</strong></td><td>单行，无额外间距</td></tr><tr><td><strong>截断</strong></td><td>超长内容用 <code>…</code> 截断，悬停/选中时显示完整</td></tr><tr><td><strong>边框</strong></td><td>单线边框 <code>─│┌┐└┘</code>，圆角 <code>╭╮╰╯</code>（可选）</td></tr><tr><td><strong>背景</strong></td><td>与主背景略有区分（深一度）</td></tr></tbody></table>
+<h4 id="1-1-2-mcp-服务器列表表格">1.1.2 MCP 服务器列表表格<a class="anchor" href="#1-1-2-mcp-服务器列表表格" aria-label="锚点">#</a></h4>
+<pre><code>┌─ MCP Servers ──────────────────────────────────────────┐
+│ 名称              状态      类型    工具数              │
+│ ────────────────  ────────  ──────  ────────           │
+│ • deepseek-eyes   Connected stdio   5                  │
+│ • github          Connected sse     12                 │
+│ ✗ slack           Failed    http    --                 │
+│   └─ Error: Connection timeout                        │
+│ ◦ postgres        Connecting stdio  --                 │
+└────────────────────────────────────────────────────────┘</code></pre>
+<p><strong>状态指示器</strong>：</p>
+<table><thead><tr><th>状态</th><th>图标</th><th>颜色</th><th>说明</th></tr></thead><tbody><tr><td>Connected</td><td><code>•</code></td><td>绿色 <code>#4ADE80</code></td><td>实心圆</td></tr><tr><td>Connecting</td><td><code>◦</code></td><td>黄色 <code>#FBBF24</code></td><td>空心圆</td></tr><tr><td>Failed</td><td><code>✗</code></td><td>红色 <code>#F87171</code></td><td>叉号</td></tr><tr><td>Disabled</td><td><code>○</code></td><td>灰色 <code>#6B7280</code></td><td>圆圈</td></tr><tr><td>Reconnecting</td><td><code>◐</code></td><td>黄色 <code>#FBBF24</code></td><td>半圆</td></tr></tbody></table>
+<h4 id="1-1-3-命令列表表格">1.1.3 命令列表表格<a class="anchor" href="#1-1-3-命令列表表格" aria-label="锚点">#</a></h4>
+<pre><code>┌─ Commands ─────────────────────────────────────────────┐
+│ 命令              别名    功能                         │
+│ ──────────────    ────    ─────────────────────────── │
+│ /login            —       配置 AI 提供商               │
+│ /compact          —       压缩对话历史                  │
+│ /cost             —       查看 token 用量               │
+│ /model            —       切换模型                      │
+│ /mcp              —       MCP 服务器管理                │
+│ /help             /?      显示帮助信息                  │
+└────────────────────────────────────────────────────────┘</code></pre>
+<h3 id="1-2-表格实现规范">1.2 表格实现规范<a class="anchor" href="#1-2-表格实现规范" aria-label="锚点">#</a></h3>
+<h4 id="1-2-1-列宽计算">1.2.1 列宽计算<a class="anchor" href="#1-2-1-列宽计算" aria-label="锚点">#</a></h4>
+<pre><code class="language-javascript"><span class="hljs-comment">/**
+ * 列宽计算策略
+ */</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">calculateColumnWidths</span>(<span class="hljs-params">columns, data, availWidth</span>) {
+  <span class="hljs-comment">// 1. 计算每列最小宽度（表头 vs 数据最大宽度）</span>
+  <span class="hljs-keyword">const</span> minWidths = columns.<span class="hljs-title function_">map</span>(<span class="hljs-function">(<span class="hljs-params">col, i</span>) =&gt;</span> {
+    <span class="hljs-keyword">const</span> headerW = <span class="hljs-title function_">displayWidth</span>(col.<span class="hljs-property">header</span>);
+    <span class="hljs-keyword">const</span> dataW = <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">max</span>(...data.<span class="hljs-title function_">map</span>(<span class="hljs-function"><span class="hljs-params">row</span> =&gt;</span> <span class="hljs-title function_">displayWidth</span>(<span class="hljs-title class_">String</span>(row[i] || <span class="hljs-string">&#x27;&#x27;</span>))));
+    <span class="hljs-keyword">return</span> <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">max</span>(headerW, dataW, col.<span class="hljs-property">minWidth</span> || <span class="hljs-number">0</span>);
+  });
+
+  <span class="hljs-comment">// 2. 如果总宽度 &gt; 可用宽度，按比例压缩</span>
+  <span class="hljs-keyword">const</span> totalW = minWidths.<span class="hljs-title function_">reduce</span>(<span class="hljs-function">(<span class="hljs-params">a, b</span>) =&gt;</span> a + b, <span class="hljs-number">0</span>);
+  <span class="hljs-keyword">if</span> (totalW &lt;= availWidth) <span class="hljs-keyword">return</span> minWidths;
+
+  <span class="hljs-comment">// 3. 优先压缩弹性列（flex: true 的列）</span>
+  <span class="hljs-keyword">const</span> flexCols = columns.<span class="hljs-title function_">map</span>(<span class="hljs-function">(<span class="hljs-params">c, i</span>) =&gt;</span> c.<span class="hljs-property">flex</span> ? i : -<span class="hljs-number">1</span>).<span class="hljs-title function_">filter</span>(<span class="hljs-function"><span class="hljs-params">i</span> =&gt;</span> i &gt;= <span class="hljs-number">0</span>);
+  <span class="hljs-keyword">const</span> fixedW = minWidths.<span class="hljs-title function_">reduce</span>(<span class="hljs-function">(<span class="hljs-params">sum, w, i</span>) =&gt;</span> 
+    sum + (columns[i].<span class="hljs-property">flex</span> ? <span class="hljs-number">0</span> : w), <span class="hljs-number">0</span>);
+  <span class="hljs-keyword">const</span> flexAvail = availWidth - fixedW;
+  <span class="hljs-keyword">const</span> flexTotal = minWidths.<span class="hljs-title function_">reduce</span>(<span class="hljs-function">(<span class="hljs-params">sum, w, i</span>) =&gt;</span> 
+    sum + (columns[i].<span class="hljs-property">flex</span> ? w : <span class="hljs-number">0</span>), <span class="hljs-number">0</span>);
+
+  <span class="hljs-keyword">return</span> minWidths.<span class="hljs-title function_">map</span>(<span class="hljs-function">(<span class="hljs-params">w, i</span>) =&gt;</span> {
+    <span class="hljs-keyword">if</span> (!columns[i].<span class="hljs-property">flex</span>) <span class="hljs-keyword">return</span> w;
+    <span class="hljs-keyword">return</span> <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">max</span>(columns[i].<span class="hljs-property">minWidth</span> || <span class="hljs-number">3</span>, 
+      <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">floor</span>(w * flexAvail / flexTotal));
+  });
+}</code></pre>
+<h4 id="1-2-2-行截断">1.2.2 行截断<a class="anchor" href="#1-2-2-行截断" aria-label="锚点">#</a></h4>
+<pre><code class="language-javascript"><span class="hljs-comment">/**
+ * 截断单元格内容
+ */</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">truncateCell</span>(<span class="hljs-params">text, maxW, ellipsis = <span class="hljs-string">&#x27;…&#x27;</span></span>) {
+  <span class="hljs-keyword">if</span> (<span class="hljs-title function_">displayWidth</span>(text) &lt;= maxW) <span class="hljs-keyword">return</span> text;
+  <span class="hljs-comment">// 从末尾逐个字符移除，直到宽度 &lt;= maxW - ellipsis 宽度</span>
+  <span class="hljs-keyword">let</span> truncated = text;
+  <span class="hljs-keyword">while</span> (<span class="hljs-title function_">displayWidth</span>(truncated) + <span class="hljs-title function_">displayWidth</span>(ellipsis) &gt; maxW &amp;&amp; truncated.<span class="hljs-property">length</span> &gt; <span class="hljs-number">0</span>) {
+    truncated = truncated.<span class="hljs-title function_">slice</span>(<span class="hljs-number">0</span>, -<span class="hljs-number">1</span>);
+  }
+  <span class="hljs-keyword">return</span> truncated + ellipsis;
+}</code></pre>
+<h4 id="1-2-3-空状态">1.2.3 空状态<a class="anchor" href="#1-2-3-空状态" aria-label="锚点">#</a></h4>
+<pre><code>┌─ MCP Servers ──────────────────────────────────────────┐
+│                                                        │
+│  没有配置 MCP 服务器。                                   │
+│                                                        │
+│  按 /mcp 添加服务器，或运行:                             │
+│    khy mcp add github                                  │
+│                                                        │
+└────────────────────────────────────────────────────────┘</code></pre>
+<hr>
+<h2 id="2-折叠设计">2. 折叠设计<a class="anchor" href="#2-折叠设计" aria-label="锚点">#</a></h2>
+<h3 id="2-1-折叠模式">2.1 折叠模式<a class="anchor" href="#2-1-折叠模式" aria-label="锚点">#</a></h3>
+<h4 id="2-1-1-箭头折叠-claude-code-风格">2.1.1 箭头折叠（Claude Code 风格）<a class="anchor" href="#2-1-1-箭头折叠-claude-code-风格" aria-label="锚点">#</a></h4>
+<pre><code>▸ Thinking... (3 steps)                    ← 折叠状态（默认）
+
+▾ Thinking...                              ← 展开状态
+  │ Claude 正在分析代码结构...
+  │ 识别出三个关键模块：
+  │   1. 路径解析
+  │   2. 工具管理
+  │   3. 备份机制</code></pre>
+<p><strong>规范</strong>：</p>
+<table><thead><tr><th>属性</th><th>折叠</th><th>展开</th></tr></thead><tbody><tr><td><strong>箭头</strong></td><td><code>▸</code>（右指）</td><td><code>▾</code>（下指）</td></tr><tr><td><strong>摘要</strong></td><td>显示摘要 + 计数</td><td>显示完整标题</td></tr><tr><td><strong>内容</strong></td><td>隐藏</td><td>显示，缩进 2 空格</td></tr><tr><td><strong>背景</strong></td><td>无</td><td>暗色/灰色背景</td></tr><tr><td><strong>边框</strong></td><td>无</td><td>可选左侧竖线 <code>│</code></td></tr></tbody></table>
+<h4 id="2-1-2-边框折叠-工具结果风格">2.1.2 边框折叠（工具结果风格）<a class="anchor" href="#2-1-2-边框折叠-工具结果风格" aria-label="锚点">#</a></h4>
+<pre><code>┌─ Read 结果 ────────────────────────────────────────────┐  ← 折叠（仅标题）
+│ # CLAUDE.md — Portable 便携环境 AI 操作手册            │
+│ ... (truncated, 50 more lines) ...                     │  ← 截断提示
+└────────────────────────────────────────────────────────┘
+
+┌─ Read 结果 ────────────────────────────────────────────┐  ← 展开（完整内容）
+│ # CLAUDE.md — Portable 便携环境 AI 操作手册            │
+│                                                        │
+│ &gt; 本文档指导任何 AI 如何维护本便携开发环境...            │
+│                                                        │
+│ ## 🚨 最高优先级规则                                   │
+│ ...                                                    │
+└────────────────────────────────────────────────────────┘</code></pre>
+<h4 id="2-1-3-内联折叠-紧凑风格">2.1.3 内联折叠（紧凑风格）<a class="anchor" href="#2-1-3-内联折叠-紧凑风格" aria-label="锚点">#</a></h4>
+<pre><code>🔧 Read ▸ 3 lines                          ← 折叠（显示行数）
+
+🔧 Read                                  ← 展开
+  │ 1 │ import React from 'react'
+  │ 2 │ import { View } from 'ink'
+  │ 3 │ export function App() {</code></pre>
+<h3 id="2-2-折叠交互">2.2 折叠交互<a class="anchor" href="#2-2-折叠交互" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>操作</th><th>效果</th></tr></thead><tbody><tr><td><code>Enter</code></td><td>切换折叠/展开</td></tr><tr><td><code>Space</code></td><td>切换折叠/展开</td></tr><tr><td><code>o</code></td><td>展开</td></tr><tr><td><code>x</code></td><td>折叠</td></tr><tr><td><code>z</code></td><td>切换（vim 风格）</td></tr><tr><td><code>Ctrl+O</code></td><td>展开所有思考块</td></tr><tr><td><code>Ctrl+C</code></td><td>折叠所有</td></tr></tbody></table>
+<h3 id="2-3-折叠状态机">2.3 折叠状态机<a class="anchor" href="#2-3-折叠状态机" aria-label="锚点">#</a></h3>
+<pre><code>                    ┌─────────┐
+                    │ FOLDED  │ ← 默认状态
+                    └────┬────┘
+                         │
+              Enter / Space / o / z
+                         │
+                         ▼
+                    ┌─────────┐
+                    │ EXPANDED │
+                    └────┬────┘
+                         │
+              Enter / Space / x / z
+                         │
+                         ▼
+                    ┌─────────┐
+                    │ FOLDED  │
+                    └─────────┘</code></pre>
+<h3 id="2-4-折叠实现">2.4 折叠实现<a class="anchor" href="#2-4-折叠实现" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">/**
+ * 折叠组件
+ */</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">Collapsible</span>(<span class="hljs-params">{ 
+  title,           // 标题（折叠时显示）
+  summary,         // 摘要（可选，折叠时显示）
+  children,        // 内容（展开时显示)
+  defaultFolded = <span class="hljs-literal">true</span>,  // 默认折叠
+  indent = <span class="hljs-number">2</span>,      // 缩进空格数
+  prefix = <span class="hljs-string">&#x27;│&#x27;</span>,    // 内容前缀（竖线）
+}</span>) {
+  <span class="hljs-keyword">const</span> [folded, setFolded] = <span class="hljs-title function_">useState</span>(defaultFolded);
+
+  <span class="hljs-title function_">useInput</span>(<span class="hljs-function">(<span class="hljs-params">input, key</span>) =&gt;</span> {
+    <span class="hljs-keyword">if</span> (key.<span class="hljs-property">return</span> || input === <span class="hljs-string">&#x27; &#x27;</span>) {
+      <span class="hljs-title function_">setFolded</span>(<span class="hljs-function"><span class="hljs-params">f</span> =&gt;</span> !f);
+    }
+    <span class="hljs-keyword">if</span> (input === <span class="hljs-string">&#x27;o&#x27;</span>) <span class="hljs-title function_">setFolded</span>(<span class="hljs-literal">false</span>);
+    <span class="hljs-keyword">if</span> (input === <span class="hljs-string">&#x27;x&#x27;</span>) <span class="hljs-title function_">setFolded</span>(<span class="hljs-literal">true</span>);
+    <span class="hljs-keyword">if</span> (input === <span class="hljs-string">&#x27;z&#x27;</span>) <span class="hljs-title function_">setFolded</span>(<span class="hljs-function"><span class="hljs-params">f</span> =&gt;</span> !f);
+  });
+
+  <span class="hljs-keyword">if</span> (folded) {
+    <span class="hljs-keyword">return</span> (
+      <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Box</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">Text</span> <span class="hljs-attr">color</span>=<span class="hljs-string">&quot;#A0A0A0&quot;</span>&gt;</span>▸<span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">Text</span>&gt;</span> {title}<span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span>
+        {summary &amp;&amp; <span class="hljs-tag">&lt;<span class="hljs-name">Text</span> <span class="hljs-attr">color</span>=<span class="hljs-string">&quot;#6B7280&quot;</span>&gt;</span> ({summary})<span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span>}
+      <span class="hljs-tag">&lt;/<span class="hljs-name">Box</span>&gt;</span></span>
+    );
+  }
+
+  <span class="hljs-keyword">return</span> (
+    <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Box</span> <span class="hljs-attr">flexDirection</span>=<span class="hljs-string">&quot;column&quot;</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">Box</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">Text</span> <span class="hljs-attr">color</span>=<span class="hljs-string">&quot;#A0A0A0&quot;</span>&gt;</span>▾<span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">Text</span> <span class="hljs-attr">bold</span>&gt;</span> {title}<span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span>
+      <span class="hljs-tag">&lt;/<span class="hljs-name">Box</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">Box</span> <span class="hljs-attr">flexDirection</span>=<span class="hljs-string">&quot;column&quot;</span> <span class="hljs-attr">paddingLeft</span>=<span class="hljs-string">{indent}</span>&gt;</span>
+        {children}
+      <span class="hljs-tag">&lt;/<span class="hljs-name">Box</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">Box</span>&gt;</span></span>
+  );
+}</code></pre>
+<hr>
+<h2 id="3-工具调用卡片-折叠-表格">3. 工具调用卡片（折叠 + 表格）<a class="anchor" href="#3-工具调用卡片-折叠-表格" aria-label="锚点">#</a></h2>
+<h3 id="3-1-完整设计">3.1 完整设计<a class="anchor" href="#3-1-完整设计" aria-label="锚点">#</a></h3>
+<pre><code>🔧 Read(src/index.js)                                    ← 卡片标题（工具名 + 参数）
+  ▸ 3 lines                                              ← 折叠的结果摘要
+
+---
+
+🔧 Read(src/index.js)                                    ← 展开后
+  ▾ 结果:
+  │ 1 │ import React from 'react'
+  │ 2 │ import { View } from 'ink'
+  │ 3 │ export function App() {
+  │ 4 │   return &lt;View&gt;...&lt;/View&gt;
+  │ 5 │ }</code></pre>
+<h3 id="3-2-状态指示">3.2 状态指示<a class="anchor" href="#3-2-状态指示" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>状态</th><th>前缀</th><th>颜色</th><th>说明</th></tr></thead><tbody><tr><td>执行中</td><td><code>◆</code></td><td>黄色 <code>#FBBF24</code></td><td>菱形 + spinner</td></tr><tr><td>完成</td><td><code>✓</code></td><td>绿色 <code>#4ADE80</code></td><td>勾号</td></tr><tr><td>失败</td><td><code>✗</code></td><td>红色 <code>#F87171</code></td><td>叉号</td></tr><tr><td>等待</td><td><code>◦</code></td><td>灰色 <code>#6B7280</code></td><td>空心圆</td></tr></tbody></table>
+<h3 id="3-3-参数摘要">3.3 参数摘要<a class="anchor" href="#3-3-参数摘要" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">/**
+ * 生成工具参数摘要
+ */</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">summarizeToolParams</span>(<span class="hljs-params">name, input</span>) {
+  <span class="hljs-keyword">switch</span> (name) {
+    <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;Read&#x27;</span>:
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">truncatePath</span>(input.<span class="hljs-property">file_path</span>, <span class="hljs-number">40</span>);
+    <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;Write&#x27;</span>:
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">truncatePath</span>(input.<span class="hljs-property">file_path</span>, <span class="hljs-number">40</span>);
+    <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;Edit&#x27;</span>:
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">truncatePath</span>(input.<span class="hljs-property">file_path</span>, <span class="hljs-number">40</span>);
+    <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;Bash&#x27;</span>:
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">truncateCommand</span>(input.<span class="hljs-property">command</span>, <span class="hljs-number">40</span>);
+    <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;Grep&#x27;</span>:
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">truncateString</span>(input.<span class="hljs-property">pattern</span>, <span class="hljs-number">30</span>);
+    <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;Glob&#x27;</span>:
+      <span class="hljs-keyword">return</span> input.<span class="hljs-property">pattern</span> || <span class="hljs-string">&#x27;*&#x27;</span>;
+    <span class="hljs-attr">default</span>:
+      <span class="hljs-keyword">return</span> <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>(input).<span class="hljs-title function_">slice</span>(<span class="hljs-number">0</span>, <span class="hljs-number">40</span>);
+  }
+}</code></pre>
+<hr>
+<h2 id="4-clutter-audit-视觉噪音审计">4. Clutter Audit（视觉噪音审计）<a class="anchor" href="#4-clutter-audit-视觉噪音审计" aria-label="锚点">#</a></h2>
+<h3 id="4-1-审计清单">4.1 审计清单<a class="anchor" href="#4-1-审计清单" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>审计项</th><th>标准</th><th>当前状态</th></tr></thead><tbody><tr><td><strong>边框嵌套深度</strong></td><td>≤ 1 层</td><td>✅ 输入框无边框</td></tr><tr><td><strong>状态信号数</strong></td><td>≤ 2 个/状态</td><td>✅ 图标 + 颜色</td></tr><tr><td><strong>始终显示的标记</strong></td><td>无</td><td>✅ 仅选中行显示 <code>▸</code></td></tr><tr><td><strong>颜色数量</strong></td><td>≤ 4 种</td><td>✅ 绿/红/黄/灰</td></tr></tbody></table>
+<h3 id="4-2-消除噪音规则">4.2 消除噪音规则<a class="anchor" href="#4-2-消除噪音规则" aria-label="锚点">#</a></h3>
+<pre><code>❌ 禁止：[PASS] + 绿色 + ✅ + ▶ 行前缀 = 4 个信号
+✅ 正确：✓ + 绿色 = 2 个信号
+
+❌ 禁止：每行都有 ▸ 标记
+✅ 正确：仅选中行有 ▸ 标记
+
+❌ 禁止：边框内再嵌套边框
+✅ 正确：单层边框或无边框</code></pre>
+<hr>
+<h2 id="5-响应式行为">5. 响应式行为<a class="anchor" href="#5-响应式行为" aria-label="锚点">#</a></h2>
+<h3 id="5-1-宽度断点">5.1 宽度断点<a class="anchor" href="#5-1-宽度断点" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>终端宽度</th><th>布局</th><th>表格行为</th></tr></thead><tbody><tr><td><strong>≥ 120 列</strong></td><td>主内容 + 右侧看板</td><td>完整显示所有列</td></tr><tr><td><strong>80-119 列</strong></td><td>单栏，可折叠看板</td><td>截断长列，优先显示关键列</td></tr><tr><td><strong>60-79 列</strong></td><td>单栏，无看板</td><td>仅显示关键列，隐藏次要列</td></tr><tr><td><strong>&lt; 60 列</strong></td><td>最小布局</td><td>单列堆叠，隐藏表格</td></tr></tbody></table>
+<h3 id="5-2-表格列优先级">5.2 表格列优先级<a class="anchor" href="#5-2-表格列优先级" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>列</th><th>优先级</th><th>&lt; 80 列时</th></tr></thead><tbody><tr><td>名称/路径</td><td>高</td><td>显示</td></tr><tr><td>状态</td><td>高</td><td>显示</td></tr><tr><td>大小</td><td>中</td><td>隐藏</td></tr><tr><td>修改时间</td><td>低</td><td>隐藏</td></tr></tbody></table>
+<hr>
+<h2 id="6-验收标准">6. 验收标准<a class="anchor" href="#6-验收标准" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>场景</th><th>预期</th></tr></thead><tbody><tr><td>工具结果表格</td><td>表头粗体，数据行对齐，截断用 <code>…</code></td></tr><tr><td>折叠思考块</td><td><code>▸</code> 折叠 / <code>▾</code> 展开，摘要显示步骤数</td></tr><tr><td>折叠工具结果</td><td>默认折叠，显示行数摘要</td></tr><tr><td>MCP 列表</td><td>状态图标 + 颜色，错误显示原因</td></tr><tr><td>空表格</td><td>显示友好提示 + 操作建议</td></tr><tr><td>窄终端</td><td>隐藏次要列，关键信息保留</td></tr><tr><td>颜色</td><td>最多 4 种，语义明确</td></tr></tbody></table>
+<hr>
+<blockquote><p><strong>文档状态</strong>：Draft — 待实施<br><strong>创建日期</strong>：2026-09-09<br><strong>依赖</strong>：[DESIGN-ARCH-081] 主设计规范</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-082] CC模式输入框与光标设计.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-082] CC 模式输入框与光标设计</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-084] CC模式注意力与选择设计.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-084] CC 模式注意力与选择设计</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-083] CC模式表格与折叠设计.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

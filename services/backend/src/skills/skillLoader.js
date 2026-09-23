@@ -223,24 +223,6 @@ function discoverSkills(projectDir, opts = {}) {
 }
 
 /**
- * Find skills matching a query by name, tags, or description.
- */
-function matchSkills(skills, query) {
-  const q = (query || '').toLowerCase();
-  const results = [];
-
-  for (const [, skill] of skills) {
-    const { name = '', description = '', tags = [] } = skill.meta;
-    const text = `${name} ${description} ${tags.join(' ')}`.toLowerCase();
-    if (text.includes(q)) {
-      results.push(skill);
-    }
-  }
-
-  return results;
-}
-
-/**
  * Discover skills with recursive directory scanning.
  * Supports nested category structures: security/cve-query/SKILL.md
  * Returns Map<skillName, Skill> (first match wins in priority order).
@@ -447,7 +429,6 @@ module.exports = {
   parseSkillContent,
   discoverSkills,
   discoverSkillsDeep,
-  matchSkills,
   filterByPlatform,
   groupByCategory,
   groupByLayer,

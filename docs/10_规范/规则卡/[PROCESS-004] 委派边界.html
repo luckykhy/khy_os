@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [PROCESS-004] 委派边界.md -->
+<title>[PROCESS-004] 委派边界 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[PROCESS-004] 委派边界</div>
+      <header class="hero reveal"><h1>[PROCESS-004] 委派边界</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#process-004-委派边界">[PROCESS-004] 委派边界</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 委派边界<br>id: PROCESS-004<br>domain: PROCESS<br>nature: 约束为主，兼福利<br>scope: &quot;khy-os 判定「这件活自己干还是交给外部智能体」的三处面：认知层注入文案（externalAgentDirective）、路由层委派决策（AgentTool/claudeDelegation）、以及任何拉起外部 CLI（claude/codex/opencode）的进程起点&quot;<br>priority: P1<br>trigger: &quot;任何一件任务出现「可以交给外部智能体做」的念头时——含注入文案、auto 启发式命中、模型自选 subagent_type&quot;<br>constraint: &quot;默认档是<strong>自做</strong>：委派是例外，须举证。仅当三闸门之一成立方可委派——G1 用户本轮显式点名该外部智能体；G2 本地能力确实缺失且已列出缺失清单；G3 任务必须在隔离的外部环境里执行。委派必须同时携带：闸门 id（G1/G2/G3）+ 可核验理由 + 对应证据 + 自包含 prompt；缺任一项即判 deny。子规则：4.1 理解不可外包（需求理解/任务拆解/方案裁决/结果验收必须 khy 自己做）；4.2 本地已覆盖时禁止委派（重构、跨文件改动、迁移、端到端实现、调研、设计、验收等属 khy 自有能力，命中这些关键词是「自做」的强信号而非委派理由）；4.3 禁止以「更适合/更强/更快/更省事」等不可核验措辞作为委派理由，注入给模型的文案禁止出现开放式授权句式；4.4 委派失败不得级联改派另一外部智能体；4.5 每次委派须留痕并在回复用户时显式声明「已交给 X（闸门 Gn）」。&quot;<br>grants: &quot;见约束边界：闸门成立时，授权直接发起委派并按闸门自选 subagent_type，无需逐次审批。&quot;<br>benefit: &quot;「自己干还是派出去」有一句可判的答案，不必靠模型临场揣度；外部重进程与外部 token 成本变成可预期事项，用户也不会再看到活被莫名其妙甩出去。详见真源 §2 判定顺序与 §8 反模式表。&quot;<br>exception: &quot;用户显式点名的若是顶层会话型 agent（cursor/kiro/trae/warp/windsurf），不得经 subagent_type 委派，须提示 <code>khy &lt;agent&gt;</code> 启动；适配器的可用性探测（如 <code>claude --version</code> 式 probe）不构成任务委派；外部 fixture 检出与测试夹具豁免。&quot;<br>version: &quot;1.0.0 (2026-09-16)&quot;<br>status: active<br>ssot: &quot;docs/10_规范/其它规范/[DESIGN-PROCESS-001] 委派边界决策矩阵-第六通道外部智能体.md&quot;<br>formerly: 无<br>owner: governance-team<br>enforcement: &quot;scripts/ci/check-delegation-boundary.js / services/backend/src/services/externalAgentDirective.js&quot;</p>
+<hr>
+<h1 id="process-004-委派边界">[PROCESS-004] 委派边界<a class="anchor" href="#process-004-委派边界" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: PROCESS-004 -->
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/10_规范/其它规范/[DESIGN-PROCESS-001] 委派边界决策矩阵-第六通道外部智能体.md。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>默认档是<strong>自做</strong>：委派是例外，须举证。仅当三闸门之一成立方可委派——G1 用户本轮显式点名该外部智能体；G2 本地能力确实缺失且已列出缺失清单；G3 任务必须在隔离的外部环境里执行。委派必须同时携带：闸门 id（G1/G2/G3）+ 可核验理由 + 对应证据 + 自包含 prompt；缺任一项即判 deny。子规则：4.1 理解不可外包（需求理解/任务拆解/方案裁决/结果验收必须 khy 自己做）；4.2 本地已覆盖时禁止委派（重构、跨文件改动、迁移、端到端实现、调研、设计、验收等属 khy 自有能力，命中这些关键词是「自做」的强信号而非委派理由）；4.3 禁止以「更适合/更强/更快/更省事」等不可核验措辞作为委派理由，注入给模型的文案禁止出现开放式授权句式；4.4 委派失败不得级联改派另一外部智能体；4.5 每次委派须留痕并在回复用户时显式声明「已交给 X（闸门 Gn）」。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>见约束边界：闸门成立时，授权直接发起委派并按闸门自选 subagent_type，无需逐次审批。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>「自己干还是派出去」有一句可判的答案，不必靠模型临场揣度；外部重进程与外部 token 成本变成可预期事项，用户也不会再看到活被莫名其妙甩出去。详见真源 §2 判定顺序与 §8 反模式表。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>见 <code>ssot</code> 指向的真源原文；本卡不复制反例，以免与真源漂移。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>人工评审（该规则暂无机械守卫）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>用户显式点名的若是顶层会话型 agent（cursor/kiro/trae/warp/windsurf），不得经 subagent_type 委派，须提示 <code>khy &lt;agent&gt;</code> 启动；适配器的可用性探测（如 <code>claude --version</code> 式 probe）不构成任务委派；外部 fixture 检出与测试夹具豁免。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-16) 初版 / 迁移自 无</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/规则卡/[PROCESS-003] 验收门禁.html"><div class="dir">← 上一篇</div><div class="ttl">[PROCESS-003] 验收门禁</div></a><a class="next" href="../../../docs/10_规范/规则卡/[PROCESS-005] 版本管理与发布触发.html"><div class="dir">下一篇 →</div><div class="ttl">[PROCESS-005] 版本管理与发布触发</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/规则卡/[PROCESS-004] 委派边界.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

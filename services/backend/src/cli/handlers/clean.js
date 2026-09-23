@@ -28,7 +28,7 @@ const path = require('path');
 
 const chalk = require('chalk').default || require('chalk');
 
-// 拓展侧的产物按**服务名**解析而不是按拓展 id 点名：[DESIGN-ARCH-069] §1.3 第四条。
+// 拓展侧的产物按**服务名**解析而不是按拓展 id 点名：[DESIGN-TOOL-002] §1.3 第四条。
 // 引擎迁移后 services/extensions 只剩 index shim，extensionRoots 挂在其命名空间下。
 const { findProvider } = require('../../services/extensions').extensionRoots;
 const dh = require('../../utils/dataHome');
@@ -96,7 +96,7 @@ const BUILD_TARGETS = [
     rebuild: 'npm run build --prefix software/khyquant/frontend',
   },
   {
-    rel: 'docs/_assets/mermaid.min.js',
+    rel: 'docs/19_资产/site/mermaid.min.js',
     why: '文档站离线 Mermaid 引擎（README 明写不跟踪、按需重建）',
     rebuild: 'npm run docs:mermaid',
   },
@@ -133,6 +133,16 @@ const BUILD_GLOBS = [
     why: 'pip sdist / wheel 发布包',
     rebuild: 'bash scripts/release/build-and-audit-pip-purity.sh',
   },
+  {
+    // 只匹配 `.map`，**不整目录清** —— `services/backend/dist/cli.cjs` 是生产启动路径
+    // （见 services/backend/esbuild.config.js），整目录清会当场弄坏 `khy` 命令。
+    // sourcemap 是纯调试辅助（约 100 MB，占该目录八成分量），删掉只影响堆栈可读性，
+    // 而且每次 `node esbuild.config.js` 都会重新生成 —— 是真·自动膨胀源。
+    dir: 'services/backend/dist',
+    match: /\.map$/,
+    why: '后端 bundle 的 sourcemap（调试辅助；cli.cjs / khy.cjs / khy.mjs 保留）',
+    rebuild: 'cd services/backend && node esbuild.config.js',
+  },
 ];
 
 /**
@@ -157,6 +167,20 @@ const RUNTIME_TARGETS = [
   { rel: 'break-cache', why: '中断恢复缓存', rebuild: '下一次运行自动重建' },
   { rel: 'change-watch', why: '变更监视快照', rebuild: '下一次运行自动重建' },
 ];
+
+/**
+ * 运行时目标里**必须保留的子项**（按名字前缀匹配，不写死日期）。
+ *
+ * 为什么需要它：`.khy/tmp/quarantine-*` 是 housekeeping 的隔离区，而
+ * `[DESIGN-LAY-003] 仓库整理与巡检规范` 的红线 HK-3 明文规定「**只隔离不删除**；
+ * 淘汰一律进隔离区人工确认」，同规范 §3 更把 L3 删除定为「**永不执行，一律人工确认**」。
+ * 而 `tmp` 目标此前是整目录 `rmSync` —— 跑一次 `khy clean --runtime --yes` 就会把
+ * 待人工确认的隔离件一起销毁。**那是绕过机制，不叫清理。**
+ *
+ * 这里按前缀保留（`quarantine*`），并把「保留了多少」记进 `held`,让用户在预览里
+ * 看得到这块没被碰；去向仍由人决定。
+ */
+const RUNTIME_KEEP_PREFIXES = { tmp: ['quarantine'] };
 
 /**
  * 工作区快照：连 --runtime 都不碰，需要 --checkpoints 显式点名。
@@ -201,8 +225,51 @@ function _withinRoots(abs, roots) {
   });
 }
 
-/** 单个目标的体积。目录走递归统计，单文件直接取 size；不存在返回 null。 */
-function _measure(abs, fsImpl = fs) {
+/**
+ * 列出目录下命中保留前缀的子项（用于 `.khy/tmp` 里的 housekeeping 隔离区）。
+ * 按**名字前缀**匹配而非写死日期，这样每期隔离区都自动受保护。
+ */
+function _listKept(abs, prefixes, fsImpl = fs) {
+  let names;
+  try {
+    names = fsImpl.readdirSync(abs);
+  } catch {
+    return [];
+  }
+  return names.filter((name) => prefixes.some((p) => name === p || name.startsWith(p)));
+}
+
+
+/**
+ * 删除目录内的子项，但跳过 `keep` 点名的那些（housekeeping 隔离区）。
+ *
+ * 单独成函数而不是内联在 `executeClean` 里：一方面该函数已有多层 if/else，再嵌两层
+ * 就顶到 COMP-001 的深度上限；另一方面「部分保留」这段语义值得有自己的名字——
+ * 它承载的是 `[DESIGN-LAY-003]` HK-3 的承诺，不该藏在别的分支体里。
+ *
+ * @param {string} abs 目标目录的绝对路径
+ * @param {string[]} keep 需要保留的子项名（不含路径）
+ * @param {object} fsImpl 注入的 fs（便于单测）
+ * @returns {string[]} 实际被保留下来的子项名
+ */
+function _rmChildrenExcept(abs, keep, fsImpl = fs) {
+  const kept = [];
+  for (const name of fsImpl.readdirSync(abs)) {
+    if (keep.includes(name)) {
+      kept.push(name);
+      continue;
+    }
+    fsImpl.rmSync(path.join(abs, name), {
+      recursive: true,
+      force: true,
+      maxRetries: 3,
+      retryDelay: 200,
+    });
+  }
+  return kept;
+}
+
+/** 单个目标的体积。目录走递归统计，单文件直接取 size；不存在返回 null。 */function _measure(abs, fsImpl = fs) {
   let st;
   try {
     st = fsImpl.lstatSync(abs);
@@ -223,7 +290,7 @@ function _measure(abs, fsImpl = fs) {
 /**
  * markdown 工作台拓展在仓库里的相对目录，按**服务名**解析。
  *
- * 为什么不直接写 `extensions/tools/khy-markdown`：[DESIGN-ARCH-069] §1.3 第四条禁止
+ * 为什么不直接写 `extensions/tools/khy-markdown`：[DESIGN-TOOL-002] §1.3 第四条禁止
  * 核代码出现拓展 id 的分支 —— 拓展可以改名、可以被第三方实现顶替、可以挪进另一个分类
  * 目录，而这条命令要问的只是「那个提供 markdown-workbench 的东西，产物在哪」。于是
  * 换实现、改目录名，这里一行都不用动。
@@ -396,7 +463,7 @@ function buildCleanPlan(opts = {}) {
   const warnings = [];
   let missing = 0;
 
-  const push = (tier, abs, rel, why, rebuild) => {
+  const push = (tier, abs, rel, why, rebuild, keepPrefixes = []) => {
     if (!_withinRoots(abs, roots)) {
       warnings.push('跳过 ' + rel + '：不在仓库根或数据家之内，拒绝删除');
       return;
@@ -406,7 +473,37 @@ function buildCleanPlan(opts = {}) {
       missing += 1;
       return;
     }
-    items.push({ tier, rel, abs, bytes: stats.bytes, files: stats.files, why, rebuild });
+    // 目录内部分保留：把 keep 命中的子项体积从「将回收」里扣掉，并登记进 held。
+    // 预报告的数字必须等于实际会删的量，否则用户跑完发现对不上，下次就不信了。
+    const keep = keepPrefixes.length ? _listKept(abs, keepPrefixes, fsImpl) : [];
+    let keptBytes = 0;
+    let keptFiles = 0;
+    for (const name of keep) {
+      const s = _measure(path.join(abs, name), fsImpl);
+      if (s) {
+        keptBytes += s.bytes;
+        keptFiles += s.files;
+      }
+    }
+    items.push({
+      tier,
+      rel,
+      abs,
+      bytes: Math.max(0, stats.bytes - keptBytes),
+      files: Math.max(0, stats.files - keptFiles),
+      why,
+      rebuild,
+      keep,
+    });
+    if (keep.length > 0) {
+      held.push({
+        rel: rel + '/{' + keep.join(', ') + '}',
+        bytes: keptBytes,
+        files: keptFiles,
+        reason:
+          'housekeeping 隔离区（HK-3：只隔离不删除，去向由人决定）——本命令按前缀保留，不清理',
+      });
+    }
   };
 
   if (tiers.includes('build')) {
@@ -442,14 +539,21 @@ function buildCleanPlan(opts = {}) {
 
   if (tiers.includes('runtime')) {
     for (const t of RUNTIME_TARGETS) {
-      push('runtime', path.join(dataHome, t.rel), '.khy/' + t.rel, t.why, t.rebuild);
+      push(
+        'runtime',
+        path.join(dataHome, t.rel),
+        '.khy/' + t.rel,
+        t.why,
+        t.rebuild,
+        RUNTIME_KEEP_PREFIXES[t.rel] || []
+      );
     }
     // 会话存档单独处理：不点名就只报「保留了多少」，让用户知道这块没被碰。
     const cpAbs = path.join(dataHome, CHECKPOINT_TARGET.rel);
     if (opts.checkpoints) {
       let checkpointPlan;
       try {
-        checkpointPlan = require('../../services/cleanupService').planCheckpointStorage(opts.checkpointMaxMb, { root: dataHome });
+        checkpointPlan = require('../../services/cleanupService').planCheckpointStorage(opts.checkpointMaxMb, { root: cpAbs });
       } catch (error) {
         warnings.push('检查点保留规划失败：' + error.message);
       }
@@ -504,6 +608,10 @@ function executeClean(plan, deps = {}) {
       if (it.checkpointPlan) {
         const result = require('../../services/cleanupService').executeCheckpointPlan(it.checkpointPlan);
         removed.push({ ...it, bytes: result.reclaimedBytes, files: result.removed });
+      } else if (Array.isArray(it.keep) && it.keep.length > 0) {
+        // 目录内**部分保留**：逐个删子项，跳过 keep 点名的（housekeeping 隔离区）。
+        // 不能整目录 rmSync —— 那会把「只隔离不删除、待人工确认」的件一起销毁（HK-3）。
+        removed.push({ ...it, kept: _rmChildrenExcept(it.abs, it.keep, fsImpl) });
       } else {
         fsImpl.rmSync(it.abs, { recursive: true, force: true, maxRetries: 3, retryDelay: 200 });
         removed.push(it);
@@ -705,6 +813,7 @@ module.exports = {
   BUILD_TARGETS,
   BUILD_GLOBS,
   RUNTIME_TARGETS,
+  RUNTIME_KEEP_PREFIXES,
   CHECKPOINT_TARGET,
   _discoverDeps,
   _depsRebuild,

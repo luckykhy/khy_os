@@ -87,9 +87,13 @@ describe('expressAsyncPatch', () => {
       patchExpressAsync();
 
       const router = new Router();
+      // Express 4.22 itself rejects non-function callbacks at registration
+      // time — the patch wraps handlers before Express sees them, so a
+      // non-function argument still surfaces Express' own validation error
+      // (the patch must not swallow or alter that).
       expect(() => {
         router.get('/', 'not a function');
-      }).not.toThrow();
+      }).toThrow(/requires a callback function/);
     });
 
     test('wraps arrays of handlers', () => {
@@ -112,8 +116,13 @@ describe('expressAsyncPatch', () => {
       patchExpressAsync();
 
       const methods = ['use', 'all', 'get', 'post', 'put', 'patch', 'delete', 'options', 'head'];
+      // Express >= 4.22: route methods live as own properties of the Router
+      // function object, not on Router.prototype — assert reachability
+      // through the constructor itself and an instance's prototype chain.
+      const router = new Router();
       for (const method of methods) {
-        expect(typeof Router.prototype[method]).toBe('function');
+        expect(typeof Router[method]).toBe('function');
+        expect(typeof router[method]).toBe('function');
       }
     });
   });

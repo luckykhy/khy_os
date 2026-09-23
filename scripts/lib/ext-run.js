@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 /**
- * ext-run.js —— 把 `npm run <目标>` 派发到**拓展**里的脚本（[DESIGN-ARCH-069] §2.3 / §3.5）。
+ * ext-run.js —— 把 `npm run <目标>` 派发到**拓展**里的脚本（[DESIGN-TOOL-002] §2.3 / §3.5）。
  *
  * 为什么需要它：`scripts/portable/*` 这类交付脚本按 §1.6 该迁出核，但它们的调用方是
  * `package.json` 的 npm 目标。如果 npm 目标直接写 `node extensions/scripts/khy-portable/
- * build.js`，那么删掉这个拓展目录之后，`npm run portable:build` 报的是一条 node 的
+ * build.js`，那么删掉这个拓展目录之后，`npm run portable:build:dev` 报的是一条 node 的
  * `Cannot find module`——用户看到的是崩溃，不是「这个能力没装」。那不叫「删目录即消失」，
  * 那叫删目录即坏掉。
  *
  * 有了这一层，缺失退化成一条说得清的消息 + 非零退出码；命令名与脚本路径的映射写在拓展
  * 自己的 manifest 里，核侧只知道 `<拓展 id> <命令名>` 这一对，不知道任何文件路径。
  *
- * **不 import services/**：按 [DESIGN-ARCH-068] 第二节的禁止边，scripts/ 属横切层，
+ * **不 import services/**：按 [DESIGN-LAY-005] 第二节的禁止边，scripts/ 属横切层，
  * 不许 import L2 的实现。于是这里重复了一份两层目录扫描（与 extensionRoots.discover
  * 同深度）。代价是两份扫描逻辑，收益是交付脚本的派发不会因为后端代码坏掉而一起坏掉——
  * 而修复后端正是这些诊断脚本要干的事。两处的一致性由 scripts/tests/ext-run.test.js 兜住。
@@ -97,7 +97,7 @@ function main(argv) {
   if (!found) {
     fail(
       `拓展 ${id} 未安装 —— 命令 "${command}" 不可用。\n` +
-        `  这不是故障：extensions/ 下没有这个目录，该能力就不存在（[DESIGN-ARCH-069] §4.1）。\n` +
+        `  这不是故障：extensions/ 下没有这个目录，该能力就不存在（[DESIGN-TOOL-002] §4.1）。\n` +
         `  要恢复它：把该拓展目录放回 extensions/<分类>/${id}/，无需任何注册步骤。`
     );
   }
@@ -175,7 +175,7 @@ function resolveExtensionScript(id, ref = {}) {
  *
  * 为什么不直接写 `require('../../extensions/scripts/khy-installer/verify-install')`：
  * 那样一来删掉拓展目录，调用方就是一条 node 的 Cannot find module 崩溃，而按
- * [DESIGN-ARCH-069] §4.1「删目录即卸载」，缺失应当是一种**说得清的退化**。
+ * [DESIGN-TOOL-002] §4.1「删目录即卸载」，缺失应当是一种**说得清的退化**。
  * 这正是 2026-08-20 那次迁移留下的坑——npm 目标经 ext-run 派发保住了，进程内
  * require 的调用方没跟上，于是 `npm run test:scripts` 一直是红的。
  *

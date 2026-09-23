@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: CLAUDE.md -->
+<title>CLAUDE.md — khyOS Desktop 操作手册 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>apps<span class="sep">›</span>khyos-desktop<span class="sep">›</span>CLAUDE.md — khyOS Desktop 操作手册</div>
+      <header class="hero reveal"><h1>CLAUDE.md — khyOS Desktop 操作手册</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#claude-md-khyos-desktop-操作手册">CLAUDE.md — khyOS Desktop 操作手册</a></li><li class="lvl-2"><a href="#唯一设计文档">唯一设计文档</a></li><li class="lvl-2"><a href="#项目定位">项目定位</a></li><li class="lvl-2"><a href="#技术栈-锁定版本">技术栈（锁定版本）</a></li><li class="lvl-2"><a href="#进程架构">进程架构</a></li><li class="lvl-2"><a href="#关键约束">关键约束</a></li><li class="lvl-2"><a href="#开发流程">开发流程</a></li><li class="lvl-2"><a href="#真源资产">真源资产</a></li><li class="lvl-2"><a href="#品牌规则">品牌规则</a></li><li class="lvl-2"><a href="#相关文件">相关文件</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="claude-md-khyos-desktop-操作手册">CLAUDE.md — khyOS Desktop 操作手册<a class="anchor" href="#claude-md-khyos-desktop-操作手册" aria-label="锚点">#</a></h1>
+<blockquote><p>khyOS 桌面端：ZCode 1:1 复刻，对外呈现与 ZCode Desktop v3.11.2 完全一致的界面、交互、文案与数据契约。</p></blockquote>
+<hr>
+<h2 id="唯一设计文档">唯一设计文档<a class="anchor" href="#唯一设计文档" aria-label="锚点">#</a></h2>
+<p><strong>本项目的一切实现以 <code>docs/[DESIGN-ARCH-092] ZCode 1：1 复刻设计文档.md</code> 为唯一真源。</strong></p>
+<p>其他任何文档（包括本文件）不得与 DESIGN-ARCH-092 冲突。若发现冲突，以 DESIGN-ARCH-092 为准。</p>
+<h2 id="项目定位">项目定位<a class="anchor" href="#项目定位" aria-label="锚点">#</a></h2>
+<ul><li><strong>产品</strong>：以 KhyOS 桌面端壳为交付物，1:1 复刻 ZCode Desktop v3.11.2 的界面、交互、文案与数据契约。</li><li><strong>方法</strong>：解包 ZCode <code>app.asar</code> 提取一手真源 + 官方站/更新日志交叉验证。</li><li><strong>状态</strong>：设计定稿，全部待实现（本仓库当前视为零基础）。</li></ul>
+<h2 id="技术栈-锁定版本">技术栈（锁定版本）<a class="anchor" href="#技术栈-锁定版本" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>组件</th><th>版本</th><th>说明</th></tr></thead><tbody><tr><td>React</td><td>^19.2.4</td><td>前端框架</td></tr><tr><td>react-dom</td><td>^19.2.4</td><td></td></tr><tr><td>Electron</td><td>44.2.0</td><td>桌面框架</td></tr><tr><td>electron-vite</td><td>5.0.0</td><td>构建工具</td></tr><tr><td>electron-builder</td><td>26.15.3</td><td>打包（锁版本，v27 有 ESM 破坏性变更）</td></tr><tr><td>electron-updater</td><td>6.8.9</td><td>自动更新</td></tr><tr><td>TypeScript</td><td>5.x</td><td>类型系统</td></tr><tr><td>Tailwind CSS</td><td>4.2.2</td><td>样式（OKLCH）</td></tr><tr><td>Redux Toolkit</td><td>latest</td><td>状态管理</td></tr><tr><td>@xterm/xterm</td><td>6.0.0</td><td>终端</td></tr><tr><td>node-pty</td><td>^1.0.0</td><td>pty 宿主</td></tr></tbody></table>
+<h2 id="进程架构">进程架构<a class="anchor" href="#进程架构" aria-label="锚点">#</a></h2>
+<p><strong>四进程 + 五 preload</strong>（非 Electron 常见的两进程）：</p>
+<table><thead><tr><th>进程</th><th>角色</th></tr></thead><tbody><tr><td>main</td><td>窗口、菜单、托盘、更新、系统能力、IPC 注册</td></tr><tr><td>host</td><td>Agent 运行时适配，桥接 KhyOS 后端（五通道决策矩阵）</td></tr><tr><td>scheduler</td><td>定时任务、闲时算力</td></tr><tr><td>preload ×6</td><td>主 preload（127 RPC 方法）+ 5 个专用 preload</td></tr></tbody></table>
+<h2 id="关键约束">关键约束<a class="anchor" href="#关键约束" aria-label="锚点">#</a></h2>
+<ol><li><strong>零硬编码</strong>：端点一律从 <code>services/backend/src/constants/serviceDefaults.js</code> 导入或 env 覆盖。</li><li><strong>状态透明</strong>：所有状态文案遵守「动作 + 目标 + 进度」。</li><li><strong>基于活动的超时</strong>：Agent 循环、自动化任务禁止硬 kill。</li><li><strong>终端渲染</strong>：不用 ANSI 滚动区（除备用缓冲区全屏 UI）。</li></ol>
+<h2 id="开发流程">开发流程<a class="anchor" href="#开发流程" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-comment"># 安装依赖</span>
+<span class="hljs-built_in">cd</span> apps/khyos-desktop
+npm install
+
+<span class="hljs-comment"># 开发模式</span>
+npm run dev          <span class="hljs-comment"># 仅 renderer</span>
+npm run electron:dev <span class="hljs-comment"># 完整四进程</span>
+
+<span class="hljs-comment"># 构建</span>
+npm run electron:build
+
+<span class="hljs-comment"># 校验</span>
+node scripts/ci/check-agent-rules.js --changed
+node scripts/ci/check-i18n-fidelity.js
+node scripts/ci/check-version-sync.js</code></pre>
+<h2 id="真源资产">真源资产<a class="anchor" href="#真源资产" aria-label="锚点">#</a></h2>
+<p>所有数值、文案、CSS 令牌的真源在 <code>zcode-analysis/</code> 目录：</p>
+<table><thead><tr><th>文件</th><th>内容</th></tr></thead><tbody><tr><td><code>tokens.txt</code></td><td>456 个 CSS 自定义属性</td></tr><tr><td><code>i18n-zh.json</code></td><td>5070 条中文文案（嵌套对象）</td></tr><tr><td><code>i18n-zh.jsonl</code></td><td>同上（机器安全格式）</td></tr><tr><td><code>rpc-surface.json</code></td><td>127 个 RPC 方法标识符</td></tr><tr><td><code>unpacked/</code></td><td>ZCode 解包产物（只读参考）</td></tr></tbody></table>
+<p><strong>禁止凭记忆改数值。一切以真源文件为准。</strong></p>
+<h2 id="品牌规则">品牌规则<a class="anchor" href="#品牌规则" aria-label="锚点">#</a></h2>
+<p>本项目复刻 ZCode 的<strong>布局、结构、尺寸、交互、信息层级</strong>，但<strong>不复用品牌资产</strong>：</p>
+<table><thead><tr><th>替换</th><th>说明</th></tr></thead><tbody><tr><td>ZCode → KhyOS</td><td>名称替换</td></tr><tr><td>GLM 图标素材 → 自研</td><td>美术资产自研</td></tr><tr><td>zcode.z.ai → khyquant.top</td><td>域名替换</td></tr><tr><td>智谱反馈表单 → KhyOS 反馈渠道</td><td>链接替换</td></tr><tr><td>智谱遥测 → 默认关</td><td>不接入 ARMS RUM</td></tr></tbody></table>
+<p>品牌替换目前<strong>没有自动守卫</strong>（<code>scripts/ci/</code> 下不存在 <code>check-brand-replacement.js</code>），<br>按下表<strong>人工核对</strong>。</p>
+<h2 id="相关文件">相关文件<a class="anchor" href="#相关文件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>用途</th><th>文件</th></tr></thead><tbody><tr><td>设计文档</td><td><code>docs/[DESIGN-ARCH-092] ZCode 1：1 复刻设计文档.md</code></td></tr><tr><td>khy-os 工程红线</td><td><code>../../AGENTS.md</code></td></tr><tr><td>khyos-hq 指挥部</td><td><code>../khy-os-hq/</code></td></tr></tbody></table>
+<hr>
+<p><em>最后更新：2026-09-08</em><br><em>本文件指向 DESIGN-ARCH-092 为唯一真源</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../apps/khy-os-client-app/README.html"><div class="dir">← 上一篇</div><div class="ttl">khyosclient</div></a><a class="next" href="../../apps/khyos-desktop/docs/[DESIGN-ARCH-092] ZCode 1：1 复刻设计文档.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-092] ZCode 1:1 复刻设计文档（完整版 v3）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="apps/khyos-desktop/CLAUDE.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

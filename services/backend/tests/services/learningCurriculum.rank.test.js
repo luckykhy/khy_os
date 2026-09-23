@@ -1,10 +1,10 @@
 'use strict';
 /**
- * learningCurriculum.rank.test.js �?locks for the growth-roadmap subsystem:
+ * learningCurriculum.rank.test.js — locks for the growth-roadmap subsystem:
  *   - 修仙境界阶梯 (RANKS / getRank / countCompletedLayers)
  *   - 进度导出 / 导入 (exportProgress / importProgress, merge & replace)
- *   - 存储迁移 ~/.khyquant �?~/.khyos (read-old-fallback, old file preserved)
- *   - 原子�?+ .bak 轮转
+ *   - 存储迁移 ~/.khyquant �?~/.khyos (read-old-fallback, old file preserved)
+ *   - 原子�?+ .bak 轮转
  *   - 课程随包守卫 (getLayers().length >= 11)
  *
  * Isolation: HOME and KHYOS_HOME are pointed at a private temp dir BEFORE the
@@ -12,6 +12,7 @@
  * the real user home. node:test convention (matches repo test:node script).
  */
 const fs = require('fs');
+const assert = require('node:assert');
 const os = require('os');
 const path = require('path');
 // ── isolate home dirs before requiring the module under test ──
@@ -38,8 +39,8 @@ function completeFirstLayers(k) {
   for (const l of layers) for (const t of l.topics) keys.push(`${l.id}:${t.id}`);
   return keys;
 }
-before(() => wipe());
-after(() => {
+beforeAll(() => wipe());
+afterAll(() => {
   process.env.HOME = ORIG.HOME;
   process.env.USERPROFILE = ORIG.USERPROFILE;
   process.env.KHYOS_HOME = ORIG.KHYOS_HOME;
@@ -58,8 +59,7 @@ describe('storage: migration + atomic write + backup', () => {
 
 describe('Learning Curriculum rank', () => {
   test('getLayers() returns at least 11 layers (guards against pip prune)', () => {
-        expect(curriculum.getLayers().toBeTruthy().length >= 11,
-          `expected >=11 layers, got ${curriculum.getLayers().length}`);
+        expect(curriculum.getLayers().length >= 11).toBe(true);
   });
 
   test('a blank-paper user is 凡人 (Lv0)', () => {
@@ -101,7 +101,7 @@ describe('Learning Curriculum rank', () => {
   test('countCompletedLayers ignores partially-done layers', () => {
         const layers = curriculum.getLayers();
         const first = layers[0];
-        // only one topic of the first layer �?layer not complete
+        // only one topic of the first layer �?layer not complete
         const partial = [`${first.id}:${first.topics[0].id}`];
         expect(curriculum.countCompletedLayers({ completedTopics: partial })).toBe(0);
   });
@@ -138,7 +138,7 @@ describe('Learning Curriculum rank', () => {
         const payload = JSON.parse(fs.readFileSync(dest, 'utf-8'));
         expect(payload.tool).toBe('khy-learn');
         expect(payload.version).toBe(1);
-        expect(Array.isArray(payload.progress.completedTopics).toBeTruthy());
+        expect(Array.isArray(payload.progress.completedTopics)).toBeTruthy();
         expect(payload.progress.totalXP).toBe(120);
   });
 

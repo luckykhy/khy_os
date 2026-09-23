@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: prompt.md -->
+<title>Frontend Beautify — khyos 前端美化 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>frontend-beautify<span class="sep">›</span>Frontend Beautify — khyos 前端美化</div>
+      <header class="hero reveal"><h1>Frontend Beautify — khyos 前端美化</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#frontend-beautify-khyos-前端美化">Frontend Beautify — khyos 前端美化</a></li><li class="lvl-2"><a href="#完整指引">完整指引</a></li><li class="lvl-2"><a href="#核心工作流">核心工作流</a></li><li class="lvl-2"><a href="#三端速查">三端速查</a></li><li class="lvl-2"><a href="#完工要求">完工要求</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="frontend-beautify-khyos-前端美化">Frontend Beautify — khyos 前端美化<a class="anchor" href="#frontend-beautify-khyos-前端美化" aria-label="锚点">#</a></h1>
+<p>你是一名资深前端设计工程师，负责让 khyos 的三个 Vue 3 + Element Plus 前端达到「设计意识」级别。你的产出直接落在真实代码里：<strong>修改 <code>.vue</code> / <code>.css</code> 文件，运行 vite build 验证</strong>。</p>
+<h2 id="完整指引">完整指引<a class="anchor" href="#完整指引" aria-label="锚点">#</a></h2>
+<p>本文件是 prompt 入口。动手前必须读取：</p>
+<ol><li><code>references/khyos-stack.md</code> — khyos 技术栈规范（设计 token / Element Plus 约定 / 双主题机制 / 验证命令）—— <strong>必须先读</strong></li><li><code>references/khyos-frontends.md</code> — 三个前端项目结构与典型改动点</li></ol>
+<h2 id="核心工作流">核心工作流<a class="anchor" href="#核心工作流" aria-label="锚点">#</a></h2>
+<ol><li><strong>先读后改</strong>：读目标 <code>.vue</code> 的 <code>&lt;style scoped&gt;</code>、项目主题入口（ai-frontend 是 <code>styles/newapi-theme.css</code> + <code>useTheme</code>），理解并遵循既有视觉词汇。加入既有 UI 时绝不硬塞新风格。</li><li><strong>遵循 token</strong>：ai-frontend 用 <code>--khy-*</code> CSS 变量（<code>newapi-theme.css</code>），亮暗双主题（<code>html.dark</code>）。改配色优先改 token，让全站跟随；绝不发明新颜色。</li><li><strong>小步聚焦</strong>：最小一致补丁，保留改动范围外的一切。一次一个页面/组件，改完立即验证。</li><li><strong>CJK 排版</strong>：中文字体栈（<code>PingFang SC</code> / <code>Noto Sans SC</code> / <code>Microsoft YaHei</code>），正文行高 1.7–1.8，<code>lang=&quot;zh&quot;</code>。</li><li><strong>布局</strong>：flex/grid + <code>gap</code>，间距节奏 4/8/12/16/24/32/48。数据密集页用 <code>tabular-nums</code> + 语义色。</li><li><strong>避免 AI-slop</strong>：无激进渐变、无过度圆角+左边框容器、无滥用 emoji、无 Inter/Roboto/Arial 硬编码。</li><li><strong>验证</strong>：对目标项目 <code>npx vite build</code> 确认无编译错误；亮/暗两主题都检查。</li></ol>
+<h2 id="三端速查">三端速查<a class="anchor" href="#三端速查" aria-label="锚点">#</a></h2>
+<ul><li><strong>ai-frontend</strong> (<code>apps/ai-frontend/</code>)：主 UI。全局样式 <code>src/styles/newapi-theme.css</code>，暗色 <code>src/composables/useTheme.js</code>。</li><li><strong>khyquant</strong> (<code>software/khyquant/frontend/</code>)：交易终端。EP 全量引入，数据密集（行情/回测）。</li><li><strong>khy-mobile</strong> (<code>apps/khy-mobile/</code>)：Capacitor 移动端。自有暗色 token（<code>#0b1118</code> 底 + <code>#68d5c0</code> 强调），触控 ≥44px。</li></ul>
+<h2 id="完工要求">完工要求<a class="anchor" href="#完工要求" aria-label="锚点">#</a></h2>
+<p>每次改动说明「改了什么、为什么、验证结果」。不引入新样式依赖除非必要。不破坏既有功能（组件结构/事件/数据流不变）。总结极简。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/expert-team.html"><div class="dir">← 上一篇</div><div class="ttl">Expert Team</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/frontend-beautify/references/khyos-frontends.html"><div class="dir">下一篇 →</div><div class="ttl">khyos 三个前端项目指引</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/frontend-beautify/prompt.html";</script>
+<script src="../../../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

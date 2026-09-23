@@ -4,10 +4,10 @@
  * restore-authorize.js — 还原「自驱授权门 / blast-radius 预授权」CLI + 文档生成器
  *
  * 用法：
- *   node scripts/restore-authorize.js            # 采集恢复链 + 环境事实 → 判自驱授权
- *   npm run restore-authorize                     # 同上（经 npm 别名）
- *   node scripts/restore-authorize.js --json      # 机器可读（自驱 agent 动手前先读这个）
- *   node scripts/restore-authorize.js --gen-doc   # 重新生成 OPS-MAN-084 说明
+ *   node scripts/restore/restore-authorize.js            # 采集恢复链 + 环境事实 → 判自驱授权
+ *   npm run restore:authorize                            # 同上（经 npm 别名）
+ *   node scripts/restore/restore-authorize.js --json      # 机器可读（自驱 agent 动手前先读这个）
+ *   node scripts/restore/restore-authorize.js --gen-doc   # 重新生成 OPS-MAN-084 说明
  *
  * 设计：授权判定全在纯叶子 scripts/lib/restoreAutonomyGate.js（零 IO、可离线全测）；
  * 本文件只做两件事——
@@ -32,14 +32,10 @@ const { resolveRestoreConflicts } = require('../lib/restoreConflictResolver');
 const { detectRestoreConflicts } = require('../lib/restoreConflictDetector');
 // 复用 restore-plan 的三面镜子采集器（零重复；它已 fail-soft 包好三个探测器）。
 const { gatherAssessments } = require('./restore-plan');
+const { opsDocPath, opsDocRelPath } = require('../lib/docsPaths');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const DOC_PATH = path.join(
-  ROOT,
-  'docs',
-  '07_OPS_运维',
-  '[OPS-MAN-084] 还原自驱授权门.md'
-);
+const DOC_PATH = opsDocPath('[OPS-MAN-084] 还原自驱授权门.md');
 const NPM_PKG_NAME = '@khy-os/khy-os';
 const PIP_PKG_NAME = 'khy-os';
 
@@ -147,7 +143,7 @@ function runRestoreAuthorize(opts = {}) {
   } else {
     out += `${C.red}禁止自驱（${verdict.blockers.join('、')}）：整条交人，绝不擅自改这台机器。${C.reset}\n`;
   }
-  out += `${C.dim}详情见：docs/07_OPS_运维/[OPS-MAN-084] 还原自驱授权门.md${C.reset}\n`;
+  out += `${C.dim}详情见：${opsDocRelPath('[OPS-MAN-084] 还原自驱授权门.md')}${C.reset}\n`;
   process.stdout.write(out);
   return verdict.authorized ? 0 : 1;
 }

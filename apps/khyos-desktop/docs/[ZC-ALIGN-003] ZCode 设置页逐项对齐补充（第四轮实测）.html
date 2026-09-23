@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [ZC-ALIGN-003] ZCode 设置页逐项对齐补充（第四轮实测）.md -->
+<title>[ZC-ALIGN-003] ZCode 设置页逐项对齐补充（第四轮 computer-use 实测） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>apps<span class="sep">›</span>khyos-desktop<span class="sep">›</span>docs<span class="sep">›</span>[ZC-ALIGN-003] ZCode 设置页逐项对齐补充（第四轮 computer-use 实测）</div>
+      <header class="hero reveal"><h1>[ZC-ALIGN-003] ZCode 设置页逐项对齐补充（第四轮 computer-use 实测）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#zc-align-003-zcode-设置页逐项对齐补充-第四轮-computer-use-实测">[ZC-ALIGN-003] ZCode 设置页逐项对齐补充（第四轮 computer-use 实测）</a></li><li class="lvl-2"><a href="#0-本轮新增截图清单-22-张-其中本轮新拍-重拍-7-张">0. 本轮新增截图清单（22 张，其中本轮新拍/重拍 7 张）</a></li><li class="lvl-2"><a href="#1-引导页-002-i12-r3-由">1. 引导页（002 I12 / R3，由 ◻ → ✅）</a></li><li class="lvl-3"><a href="#1-1-zcode-真实结构-a11y-实测-pid-8900-s-8-s-11-s-12">1.1 ZCode 真实结构（a11y 实测，pid 8900，s-8/s-11/s-12）</a></li><li class="lvl-3"><a href="#1-2-数据迁移向导-点击-数据迁移向导-后-s-12-实测">1.2 数据迁移向导（点击「数据迁移向导」后，s-12 实测）</a></li><li class="lvl-3"><a href="#1-3-khy-os-复刻现状">1.3 khy-os 复刻现状</a></li><li class="lvl-3"><a href="#1-4-对齐修法-p2-非阻塞-但影响首跑体验">1.4 对齐修法（P2，非阻塞，但影响首跑体验）</a></li><li class="lvl-2"><a href="#2-mcp-服务器页-002-i5-由">2. MCP 服务器页（002 I5，由 ◻ → ✅）</a></li><li class="lvl-3"><a href="#2-1-zcode-真实结构-a11y-实测-pid-4872-s-32-s-33">2.1 ZCode 真实结构（a11y 实测，pid 4872，s-32/s-33）</a></li><li class="lvl-3"><a href="#2-2-关键发现-002-未记录的细节">2.2 关键发现（002 未记录的细节）</a></li><li class="lvl-3"><a href="#2-3-khy-os-复刻现状">2.3 khy-os 复刻现状</a></li><li class="lvl-3"><a href="#2-4-对齐修法-p1-agent-能力板块核心">2.4 对齐修法（P1，Agent 能力板块核心）</a></li><li class="lvl-2"><a href="#3-常规设置页-002-i1-内容由">3. 常规设置页（002 I1，内容由 ◻ → ✅）</a></li><li class="lvl-3"><a href="#3-1-zcode-真实结构-a11y-全树-pid-4872-s-30">3.1 ZCode 真实结构（a11y 全树，pid 4872，s-30）</a></li><li class="lvl-3"><a href="#3-2-khy-os-复刻现状">3.2 khy-os 复刻现状</a></li><li class="lvl-3"><a href="#3-3-对齐修法-p0-设置域是-ide-完整度门槛">3.3 对齐修法（P0，设置域是 IDE 完整度门槛）</a></li><li class="lvl-2"><a href="#4-账户菜单子菜单-002-c1-增量细化">4. 账户菜单子菜单（002 C1 增量细化）</a></li><li class="lvl-3"><a href="#4-1-界面语言子菜单-s-44-实测">4.1 界面语言子菜单（s-44 实测）</a></li><li class="lvl-3"><a href="#4-2-界面缩放子菜单-s-46-实测">4.2 界面缩放子菜单（s-46 实测）</a></li><li class="lvl-3"><a href="#4-3-界面主题子菜单-002-c1-旧轮实拍-未重拍">4.3 界面主题子菜单（002 C1 旧轮实拍，未重拍）</a></li><li class="lvl-3"><a href="#4-4-完整账户菜单结构-s-42-实测-pid-8900-账号-旅行者8665">4.4 完整账户菜单结构（s-42 实测，pid 8900 账号 `旅行者8665`）</a></li><li class="lvl-3"><a href="#4-5-khy-os-复刻现状">4.5 khy-os 复刻现状</a></li><li class="lvl-3"><a href="#4-6-对齐修法-p1">4.6 对齐修法（P1）</a></li><li class="lvl-2"><a href="#5-对-zc-align-002-清单的更新-汇总">5. 对 ZC-ALIGN-002 清单的更新（◻ → ✅ 汇总）</a></li><li class="lvl-3"><a href="#仍未核对-保持-需特定触发或破坏性操作">仍未核对（保持 ◻，需特定触发或破坏性操作）</a></li><li class="lvl-2"><a href="#6-失真对齐优先级-本轮新增项-接入-zc-align-001-2-方案表">6. 失真对齐优先级（本轮新增项，接入 ZC-ALIGN-001 §2 方案表）</a></li><li class="lvl-2"><a href="#7-附录-a11y-证据片段-关键页-state-id-可追溯">7. 附录：a11y 证据片段（关键页，state_id 可追溯）</a></li><li class="lvl-3"><a href="#7-1-引导弹窗-s-8-pid-8900">7.1 引导弹窗（s-8，pid 8900）</a></li><li class="lvl-3"><a href="#7-2-迁移向导-s-12-pid-8900">7.2 迁移向导（s-12，pid 8900）</a></li><li class="lvl-3"><a href="#7-3-mcp-服务器页-s-32-pid-4872">7.3 MCP 服务器页（s-32，pid 4872）</a></li><li class="lvl-3"><a href="#7-4-账户菜单-s-42-pid-8900">7.4 账户菜单（s-42，pid 8900）</a></li><li class="lvl-3"><a href="#7-5-界面缩放子菜单-s-46-pid-8900">7.5 界面缩放子菜单（s-46，pid 8900）</a></li><li class="lvl-2"><a href="#8-复现步骤留档">8. 复现步骤留档</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="zc-align-003-zcode-设置页逐项对齐补充-第四轮-computer-use-实测">[ZC-ALIGN-003] ZCode 设置页逐项对齐补充（第四轮 computer-use 实测）<a class="anchor" href="#zc-align-003-zcode-设置页逐项对齐补充-第四轮-computer-use-实测" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件是 ZC-ALIGN-002「页面/弹窗穷举清单」的<strong>增量补充</strong>：把 002 里标 ◻（未核对）<br>的设置内容页，在第四轮 computer-use 实测中逐一打开、截图、读 a11y 树，落地为<br><strong>逐页设计对齐笔记</strong>——ZCode 真实结构 → khy-os 复刻现状 → 缺口 → 修法。<br>与 092 / ZC-ALIGN-001 / ZC-ALIGN-002 冲突时，以 092 + 002 为准；本文件只补 002 的空白。</p>
+<ul><li>审计日期：2026-09-12（第四轮）</li><li>审计对象：真实 ZCode Desktop v3.11.2（<code>C:\Program Files\ZCode\ZCode.exe</code>，</li></ul>
+<p>pid 4872 → 中途重启为 pid 8900，账号由 <code>ntblocfk</code> 变为 <code>旅行者8665</code>）</p>
+<ul><li>证据：<code>docs/zcode-pages/</code> 下 22 张 PNG + 每页 a11y 全树（<code>get_app_state detail=full</code>）</li><li>方法：computer-use element AXPress 导航 + <code>shot.ps1</code> 全屏截屏 + a11y 树逐字段提取</li></ul></blockquote>
+<hr>
+<h2 id="0-本轮新增截图清单-22-张-其中本轮新拍-重拍-7-张">0. 本轮新增截图清单（22 张，其中本轮新拍/重拍 7 张）<a class="anchor" href="#0-本轮新增截图清单-22-张-其中本轮新拍-重拍-7-张" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>内容</th><th>大小</th><th>拍摄</th><th>备注</th></tr></thead><tbody><tr><td>01-常规.png</td><td>常规设置全页</td><td>105KB</td><td>04:05 重拍</td><td>替换 03:01 旧版，内容更完整</td></tr><tr><td>02-外观.png</td><td>外观设置</td><td>101KB</td><td>03:02</td><td>前轮遗留，未重拍</td></tr><tr><td>03-模型设置.png</td><td>模型设置页</td><td>96KB</td><td>03:00</td><td>前轮遗留（002 I7 已实拍）</td></tr><tr><td>04-浏览器控制.png</td><td>浏览器控制设置</td><td>83KB</td><td>03:03</td><td>前轮遗留</td></tr><tr><td>05-电脑控制.png</td><td>电脑控制设置</td><td>58KB</td><td>03:04</td><td>前轮遗留</td></tr><tr><td>06-记忆.png</td><td>记忆设置</td><td>54KB</td><td>03:05</td><td>前轮遗留</td></tr><tr><td>07-子智能体.png</td><td>子智能体设置</td><td>79KB</td><td>03:06</td><td>前轮遗留</td></tr><tr><td>08-插件.png</td><td>插件页</td><td>87KB</td><td>03:06</td><td>前轮遗留</td></tr><tr><td>08b-插件tab.png</td><td>插件 tab 视图</td><td>97KB</td><td>03:07</td><td>前轮遗留</td></tr><tr><td><strong>09-MCP服务器.png</strong></td><td><strong>MCP 服务器页（新）</strong></td><td>92KB</td><td>04:08</td><td><strong>002 I5 内容页由 ◻→✅</strong></td></tr><tr><td>10-技能tab.png</td><td>技能 tab 视图</td><td>86KB</td><td>03:09</td><td>前轮遗留</td></tr><tr><td>11-命令.png</td><td>命令页</td><td>68KB</td><td>03:10</td><td>前轮遗留</td></tr><tr><td>11b-命令列表.png</td><td>命令列表视图</td><td>57KB</td><td>03:11</td><td>前轮遗留</td></tr><tr><td>12-钩子.png</td><td>钩子页</td><td>71KB</td><td>03:12</td><td>前轮遗留</td></tr><tr><td>12b-钩子列表.png</td><td>钩子列表视图</td><td>57KB</td><td>03:13</td><td>前轮遗留</td></tr><tr><td>13-索引库.png</td><td>索引库设置</td><td>61KB</td><td>03:14</td><td>前轮遗留</td></tr><tr><td>14-使用统计.png</td><td>使用统计页</td><td>109KB</td><td>03:15</td><td>前轮遗留</td></tr><tr><td><strong>15-引导.png</strong></td><td><strong>引导页 → 首次启动弹窗（新）</strong></td><td>483KB</td><td>04:43</td><td><strong>002 I12 / R3 由 ◻→✅</strong></td></tr><tr><td><strong>15b-引导迁移向导.png</strong></td><td><strong>数据迁移向导弹窗（新）</strong></td><td>131KB</td><td>04:46</td><td><strong>002 R3 由 ◻→✅</strong></td></tr><tr><td><strong>16-账户菜单.png</strong></td><td>账户 chip 展开菜单</td><td>89KB</td><td>04:11</td><td>002undefined增量证据</td></tr><tr><td><strong>17-账户-语言子菜单.png</strong></td><td>界面语言子菜单</td><td>64KB</td><td>04:26</td><td>002undefined子菜单细化</td></tr><tr><td><strong>18-账户-缩放子菜单.png</strong></td><td>界面缩放子菜单</td><td>65KB</td><td>04:33</td><td>002undefined子菜单细化</td></tr></tbody></table>
+<blockquote><p>19-账户-主题子菜单：本轮未单独截图；002undefined已有实拍记录<br>（<code>s-31/s-33</code>：界面主题 &gt; 子菜单＝系统默认／深色主题✓／浅色主题），不补。</p></blockquote>
+<hr>
+<h2 id="1-引导页-002-i12-r3-由">1. 引导页（002 I12 / R3，由 ◻ → ✅）<a class="anchor" href="#1-引导页-002-i12-r3-由" aria-label="锚点">#</a></h2>
+<h3 id="1-1-zcode-真实结构-a11y-实测-pid-8900-s-8-s-11-s-12">1.1 ZCode 真实结构（a11y 实测，pid 8900，s-8/s-11/s-12）<a class="anchor" href="#1-1-zcode-真实结构-a11y-实测-pid-8900-s-8-s-11-s-12" aria-label="锚点">#</a></h3>
+<p>「引导」导航项<strong>不是设置内容页，而是一个模态弹窗触发器</strong>。点击后弹出「欢迎使用 ZCode」<br>首次启动设置弹窗（全屏遮罩 + 居中卡片），结构如下：</p>
+<pre><code>┌─ 首次启动设置 ─────────────────────────────┐
+│  选择如何开始第一次会话。                    │
+│                                             │
+│  [数据迁移向导]  ← 次要按钮（opens wizard） │
+│  [开始使用 ZCode] ← 主按钮（focused，直接进入）│
+│                                             │
+│  ── 两条路径说明 ──                          │
+│  • 可立即导入旧工具设置，或先跳过，稍后在    │
+│    设置中继续迁移。                          │
+│  • 选择一个工作区，继续上次的进度，保持界面   │
+│    干净清爽。快速打开，专注工作。            │
+└─────────────────────────────────────────────┘</code></pre>
+<p>弹窗右上 <code>Close</code>（X）按钮关闭后回到设置页（非工作区）。</p>
+<h3 id="1-2-数据迁移向导-点击-数据迁移向导-后-s-12-实测">1.2 数据迁移向导（点击「数据迁移向导」后，s-12 实测）<a class="anchor" href="#1-2-数据迁移向导-点击-数据迁移向导-后-s-12-实测" aria-label="锚点">#</a></h3>
+<p><strong>多步骤模态</strong>，标题栏 <code>会话</code> + <code>Close</code> + <code>上一步</code> / <code>继续</code> 底部按钮。当前步骤<br><code>选择工作区</code>：</p>
+<pre><code>迁移向导                                    [Close]
+┌─ 左列：检测结果摘要 ─┐  ┌─ 右列：当前步骤 ────────────────┐
+│ 迁移 6              │  │ 选择工作区                       │
+│ AGENTS.md 5         │  │ 查看检测结果，选择要迁移的会话…   │
+│ 命令 4              │  │                                  │
+│ MCP 服务器 3        │  │ [扫描候选会话] 按钮               │
+│ Skills 2           │  │ 会话数 combobox: 100 个会话        │
+│ 会话 1             │  │ 时间窗 combobox: 最近 30 天        │
+│                    │  │ 已选择 0 个工作区                 │
+│                    │  │ （空态）暂无可迁移工作区。请先扫描 │
+│                    │  │ 本地历史，再勾选要迁移的工作区。  │
+│                    │  │ [全选] (disabled)                │
+└────────────────────┘  └──────────────────────────────────┘
+                                  [上一步]  [继续]</code></pre>
+<p>左列是<strong>检测到的外部 Agent 资产计数</strong>（Claude Code / Codex 等本地历史扫描结果），<br>6 个类别：迁移 / AGENTS.md / 命令 / MCP 服务器 / Skills / 会话。</p>
+<h3 id="1-3-khy-os-复刻现状">1.3 khy-os 复刻现状<a class="anchor" href="#1-3-khy-os-复刻现状" aria-label="锚点">#</a></h3>
+<ul><li><strong>完全缺失</strong>：复刻无引导/Onboarding 弹窗，无数据迁移向导。</li><li>002 I12 标「未实现」，R3 标「未实现」——本轮确认。</li></ul>
+<h3 id="1-4-对齐修法-p2-非阻塞-但影响首跑体验">1.4 对齐修法（P2，非阻塞，但影响首跑体验）<a class="anchor" href="#1-4-对齐修法-p2-非阻塞-但影响首跑体验" aria-label="锚点">#</a></h3>
+<ol><li><strong>引导弹窗</strong>：新增 <code>OnboardingDialog</code> 组件（模态），仅在「首次启动」</li></ol>
+<p>（检测 <code>~/.khyquant/.onboarded</code> 标记不存在时）弹出。两条路径：</p>
+<ul><li>「开始使用 KhyOS」→ 写标记，进入主工作区</li><li>「数据迁移向导」→ 进入 <code>MigrationWizard</code> 组件</li></ul>
+<p>（<code>~/.claude/</code>、<code>~/.codex/</code>、<code>%APPDATA%/ZCode/</code>），提取 AGENTS.md / 命令 /<br>   MCP 服务器 / Skills / 会话历史，让用户勾选导入。复刻后端已有 <code>aiGateway</code>，<br>   可复用 <code>services/backend/src/services/</code> 下的配置读取逻辑。</p>
+<ol><li><strong>引导入口常驻</strong>：设置 → 引导页内容 = <code>优化体验</code> toggle（数据使用授权）+</li></ol>
+<p><code>打开引导</code> 按钮（重新弹出向导），对齐 s-30 [29]/[33]。</p>
+<hr>
+<h2 id="2-mcp-服务器页-002-i5-由">2. MCP 服务器页（002 I5，由 ◻ → ✅）<a class="anchor" href="#2-mcp-服务器页-002-i5-由" aria-label="锚点">#</a></h2>
+<h3 id="2-1-zcode-真实结构-a11y-实测-pid-4872-s-32-s-33">2.1 ZCode 真实结构（a11y 实测，pid 4872，s-32/s-33）<a class="anchor" href="#2-1-zcode-真实结构-a11y-实测-pid-4872-s-32-s-33" aria-label="锚点">#</a></h3>
+<pre><code>MCP 服务器                              [用户 ▾]    ← 顶部：作用域 + 计数
+[搜索 MCP 服务器…]                           ③      ← 搜索框 + 总数 badge
+
+已安装 0                                     ← 用户安装区（空态）
+─────────────────────────────────────────────
+  尚未安装 MCP 服务器
+  手动新建服务器，或导入已有配置。
+  [新建]  [刷新]  [更多操作 ▾]
+
+─────────────────────────────────────────────
+  ↓ 插件宿主区（3 个由插件提供、非用户安装的 MCP 服务器）
+
+  ┌─ node_repl ──────────────────── 浏览器操作 1 ─┐
+  │ 该 MCP 服务器由 ZCode 宿主为 browser-use 插件 │
+  │ 提供，运行时身份由宿主管理。        [详情 ▾] │
+  └──────────────────────────────────────────────┘
+  ┌─ computer-use ───────────────── 电脑控制 1 ─┐
+  │ 该插件 MCP 服务器已连接并可用。    [详情 ▾]  │  ← 绿点=已连接
+  └──────────────────────────────────────────────┘
+  ┌─ image_search ───────────────── 文档技能 1 ─┐
+  │ 当前账号没有 Coding Plan，请先购买或  [详情 ▾]│  ← 红点=无套餐
+  │ 配置 Coding Plan。                          │
+  └──────────────────────────────────────────────┘
+
+[新建 MCP 服务器]  [导入]                       ← 底部操作</code></pre>
+<h3 id="2-2-关键发现-002-未记录的细节">2.2 关键发现（002 未记录的细节）<a class="anchor" href="#2-2-关键发现-002-未记录的细节" aria-label="锚点">#</a></h3>
+<ol><li><strong>双层结构</strong>：MCP 页分「用户安装」(已安装 N) + 「插件宿主」(plugin-provided)</li></ol>
+<p>两区。插件宿主区的服务器<strong>不可删除/编辑</strong>，只能查看状态。</p>
+<ol><li><strong>插件宿主身份托管</strong>：<code>node_repl</code> / <code>computer-use</code> / <code>image_search</code> 三个 MCP</li></ol>
+<p>服务器由 ZCode 宿主进程为对应插件（browser-use / computer-use / document-skills）<br>   提供，运行时身份由宿主管理——用户无需配置 API key。</p>
+<ol><li><strong>状态三态</strong>：<ul><li>已连接并可用（computer-use，绿点）</li><li>无套餐不可用（image_search，红点 + &quot;当前账号没有 Coding Plan&quot;）</li><li>宿主提供但未显式说明连接状态（node_repl）</li></ul></li><li><strong>卡片字段</strong>：server name（monospace）+ capability label（中文）+ 工具数 badge<ul><li>状态文案 + <code>[详情 ▾]</code> has_menu 按钮。</li></ul></li><li><strong>作用域切换</strong>：顶部 <code>用户 ▾</code> dropdown，推测可切 <code>用户</code> / <code>工作区</code> 作用域</li></ol>
+<p>（类似 VSCode settings scope）。</p>
+<h3 id="2-3-khy-os-复刻现状">2.3 khy-os 复刻现状<a class="anchor" href="#2-3-khy-os-复刻现状" aria-label="锚点">#</a></h3>
+<ul><li>复刻无 MCP 服务器管理页（002 I5 标「未实现」）。</li><li>khy-os 有 MCP 适配器（<code>services/backend/src/services/gateway/</code>），但无 UI 管理。</li></ul>
+<h3 id="2-4-对齐修法-p1-agent-能力板块核心">2.4 对齐修法（P1，Agent 能力板块核心）<a class="anchor" href="#2-4-对齐修法-p1-agent-能力板块核心" aria-label="锚点">#</a></h3>
+<ol><li><strong>MCP 管理页</strong>：新增 <code>McpServersSettings</code> 组件，双层结构：<ul><li>顶部：搜索 + 作用域 dropdown + 已安装计数</li><li>用户安装区：空态 + 新建/导入/刷新/更多操作</li><li>插件宿主区：只读卡片列表（server name + capability + status + 详情菜单）</li></ul></li><li><strong>新建/导入流程</strong>：<ul><li>新建 → 表单（名称 + 协议 stdio/HTTP/SSE + 命令/URL + env + OAuth）</li><li>导入 → 从 JSON 剪贴板 / 文件导入 <code>mcp.json</code></li></ul></li><li><strong>状态映射</strong>：从 <code>services/backend/src/services/gateway/mcpPool.js</code> 读连接状态，</li></ol>
+<p>映射到绿点/红点/灰点。</p>
+<ol><li><strong>套餐门控</strong>：<code>image_search</code> 类需要 Coding Plan → khy-os 替换为自有授权</li></ol>
+<p>（<code>tokenUsageService</code> 配额检查），文案改 &quot;当前账号无 X 权限&quot;。</p>
+<hr>
+<h2 id="3-常规设置页-002-i1-内容由">3. 常规设置页（002 I1，内容由 ◻ → ✅）<a class="anchor" href="#3-常规设置页-002-i1-内容由" aria-label="锚点">#</a></h2>
+<h3 id="3-1-zcode-真实结构-a11y-全树-pid-4872-s-30">3.1 ZCode 真实结构（a11y 全树，pid 4872，s-30）<a class="anchor" href="#3-1-zcode-真实结构-a11y-全树-pid-4872-s-30" aria-label="锚点">#</a></h3>
+<p>常规页是<strong>单列滚动表单</strong>，约 25 个设置项，分 6 组：</p>
+<table><thead><tr><th>组</th><th>设置项</th><th>控件类型</th><th>默认值 / 实测值</th></tr></thead><tbody><tr><td><strong>数据</strong></td><td>数据存储路径</td><td>textfield + 选择文件夹</td><td><code>C:\Users\25789</code>（后缀 <code>.zcode/v2</code>）</td></tr><tr><td></td><td>归档保留时长</td><td>combobox (disabled)</td><td><code>7 天后归档</code></td></tr><tr><td></td><td>自动归档旧任务</td><td>toggle</td><td>—</td></tr><tr><td><strong>消息流分组</strong></td><td>分组文件更改</td><td>toggle</td><td>聚合 Write/Edit/ApplyPatch 为 Changes</td></tr><tr><td></td><td>分组终端命令</td><td>toggle</td><td>聚合非只读 Shell 为 Terminal</td></tr><tr><td></td><td>分组探索工具</td><td>toggle</td><td>聚合读取/搜索为 Explore</td></tr><tr><td><strong>消息流显示</strong></td><td>显示待办</td><td>toggle</td><td>Todo 工具卡片</td></tr><tr><td></td><td>显示思考过程</td><td>toggle</td><td>完整 reasoning（关闭后每轮只显首思）</td></tr><tr><td></td><td>完整保留模型 I/O</td><td>toggle</td><td>不压缩/限制/删除</td></tr><tr><td></td><td>提问自动继续</td><td>toggle</td><td>5 分钟未答自动继续</td></tr><tr><td></td><td>交互行为</td><td>combobox</td><td><code>队列</code></td></tr><tr><td><strong>系统行为</strong></td><td>保持电脑运行</td><td>toggle</td><td>阻止空闲休眠</td></tr><tr><td></td><td>关闭窗口时隐藏到托盘</td><td>toggle</td><td>Windows 专属</td></tr><tr><td></td><td>通知声音</td><td>toggle</td><td>任务通知提示音</td></tr><tr><td></td><td>任务通知</td><td>toggle</td><td>完成/失败/需确认时通知</td></tr><tr><td><strong>更新</strong></td><td>自动下载并安装更新</td><td>toggle</td><td>—</td></tr><tr><td></td><td>接受提前收到预览版更新</td><td>toggle</td><td>—</td></tr><tr><td></td><td>Chrome 硬件加速</td><td>toggle</td><td>关闭可规避白屏/闪退</td></tr><tr><td><strong>网络/证书</strong></td><td>自定义证书</td><td>textfield + 保存</td><td>PEM 路径 → <code>NODE_EXTRA_CA_CERTS</code></td></tr><tr><td></td><td>不使用代理的地址</td><td>textfield + 保存</td><td><code>localhost,127.0.0.1,...</code></td></tr><tr><td></td><td>HTTP 代理</td><td>textfield + 保存</td><td><code>http://127.0.0.1:7890</code></td></tr><tr><td><strong>终端</strong></td><td>增强 Find 和 Grep</td><td>toggle</td><td>新会话/重启后生效</td></tr><tr><td></td><td>集成终端 Shell</td><td>combobox</td><td><code>自动选择</code>（Git Bash → cmd 回退）</td></tr><tr><td></td><td>终端字体</td><td>textfield + 保存</td><td>留空自动继承</td></tr><tr><td></td><td>继承系统终端 Profile</td><td>toggle</td><td>登录 shell + 代理 + Kube + 字体</td></tr><tr><td><strong>语言</strong></td><td>界面语言</td><td>combobox</td><td><code>系统默认</code></td></tr><tr><td><strong>引导</strong></td><td>优化体验</td><td>toggle</td><td>数据使用授权</td></tr><tr><td></td><td>打开引导</td><td>button</td><td>重新弹出 Onboarding</td></tr></tbody></table>
+<h3 id="3-2-khy-os-复刻现状">3.2 khy-os 复刻现状<a class="anchor" href="#3-2-khy-os-复刻现状" aria-label="锚点">#</a></h3>
+<ul><li>复刻无设置页（002 I1 标「未实现」）。</li><li>ZC-ALIGN-001 I1 已标「未实现」。</li></ul>
+<h3 id="3-3-对齐修法-p0-设置域是-ide-完整度门槛">3.3 对齐修法（P0，设置域是 IDE 完整度门槛）<a class="anchor" href="#3-3-对齐修法-p0-设置域是-ide-完整度门槛" aria-label="锚点">#</a></h3>
+<ol><li><strong>设置页骨架</strong>（已在 ZC-ALIGN-001 I1 规划）：全屏替换式 + 左导航三组</li></ol>
+<p><code>基础设置 / Agent 能力 / 数据与统计</code> + 独立项 <code>引导</code> + <code>返回工作区</code>。</p>
+<ol><li><strong>常规页</strong>：按上表 25 项逐个实现，控件用复刻已有的 <code>Toggle</code> / <code>ComboBox</code> /</li></ol>
+<p><code>TextField</code> 组件。每项 = <code>label + description + control</code> 三栏布局。</p>
+<ol><li><strong>分组聚合</strong>：3 个 toggle（文件更改/终端命令/探索工具）控制消息流工具调用</li></ol>
+<p>的聚合显示——复刻 <code>MessageList</code> 需支持 Changes / Terminal / Explore 分组容器。</p>
+<ol><li><strong>终端继承</strong>：<code>继承系统终端 Profile</code> + <code>集成终端 Shell</code> + <code>终端字体</code> 三项</li></ol>
+<p>对齐 092 <code>terminalInheritSystemProfile</code>，复刻 Terminal 组件需读这三项。</p>
+<ol><li><strong>网络/证书</strong>：<code>HTTP 代理</code> / <code>不使用代理的地址</code> / <code>自定义证书</code> 三项写入</li></ol>
+<p><code>~/.khyquant/config.json</code> 的 <code>network</code> 段，host 进程启动时注入 <code>HTTP_PROXY</code> /<br>   <code>NODE_EXTRA_CA_CERTS</code> / <code>NO_PROXY</code> env。</p>
+<ol><li><strong>归档</strong>：<code>归档保留时长</code> + <code>自动归档旧任务</code> → scheduler 进程定时扫描</li></ol>
+<p><code>~/.khyquant/conversations/</code> 归档超期会话。</p>
+<hr>
+<h2 id="4-账户菜单子菜单-002-c1-增量细化">4. 账户菜单子菜单（002undefined增量细化）<a class="anchor" href="#4-账户菜单子菜单-002-c1-增量细化" aria-label="锚点">#</a></h2>
+<h3 id="4-1-界面语言子菜单-s-44-实测">4.1 界面语言子菜单（s-44 实测）<a class="anchor" href="#4-1-界面语言子菜单-s-44-实测" aria-label="锚点">#</a></h3>
+<pre><code>界面语言 &gt;
+  ○ 系统默认        ← 默认选中
+  ○ English
+  ○ 中文简体</code></pre>
+<p>radio 单选，3 项。对应 i18n <code>settings.language.*</code>。</p>
+<h3 id="4-2-界面缩放子菜单-s-46-实测">4.2 界面缩放子菜单（s-46 实测）<a class="anchor" href="#4-2-界面缩放子菜单-s-46-实测" aria-label="锚点">#</a></h3>
+<pre><code>界面缩放 &gt;
+  放大 Ctrl++        ← pressable
+  缩小 Ctrl+-        ← pressable
+  实际大小 Ctrl+0     ← disabled（当前已是 100%）</code></pre>
+<p>menuitem 三项，<code>实际大小</code> 在缩放=100% 时 disabled。快捷键直接绑定。</p>
+<h3 id="4-3-界面主题子菜单-002-c1-旧轮实拍-未重拍">4.3 界面主题子菜单（002undefined旧轮实拍，未重拍）<a class="anchor" href="#4-3-界面主题子菜单-002-c1-旧轮实拍-未重拍" aria-label="锚点">#</a></h3>
+<pre><code>界面主题 &gt;
+  ○ 系统默认
+  ○ 深色主题  ✓
+  ○ 浅色主题</code></pre>
+<h3 id="4-4-完整账户菜单结构-s-42-实测-pid-8900-账号-旅行者8665">4.4 完整账户菜单结构（s-42 实测，pid 8900 账号 <code>旅行者8665</code>）<a class="anchor" href="#4-4-完整账户菜单结构-s-42-实测-pid-8900-账号-旅行者8665" aria-label="锚点">#</a></h3>
+<pre><code>旅行者8665                          ← 账号名（focused header，非 pressable）
+界面语言 &gt;                          ← has_menu (radio: 系统默认/English/中文简体)
+界面主题 &gt;                          ← has_menu (radio: 系统默认/深色✓/浅色)
+界面缩放 &gt;                          ← has_menu (放大/缩小/实际大小[disabled])
+─────────                          ← separator
+使用统计                            ← pressable（跳设置→使用统计）
+升级                                ← pressable（跳升级套餐弹窗 G0e）
+─────────                          ← separator
+断开连接                            ← pressable（logout.*）</code></pre>
+<h3 id="4-5-khy-os-复刻现状">4.5 khy-os 复刻现状<a class="anchor" href="#4-5-khy-os-复刻现状" aria-label="锚点">#</a></h3>
+<ul><li>ZC-ALIGN-001undefined标「缺」——复刻无账户 chip + 菜单。</li><li>ZC-ALIGN-001 A4 已把账号区加到 <code>WorkspaceSidebar</code> 底部，但<strong>无展开菜单</strong>。</li></ul>
+<h3 id="4-6-对齐修法-p1">4.6 对齐修法（P1）<a class="anchor" href="#4-6-对齐修法-p1" aria-label="锚点">#</a></h3>
+<ol><li><strong>账户 chip</strong>：<code>WorkspaceSidebar</code> 底部账号 chip 改为 <code>has_menu</code> button，</li></ol>
+<p>AXExpand 打开下拉菜单。</p>
+<ol><li><strong>三子菜单</strong>：<ul><li>界面语言 → radio 3 项，写 <code>~/.khyquant/config.json</code> <code>ui.locale</code></li><li>界面主题 → radio 3 项，写 <code>ui.theme</code>，触发 <code>document.documentElement.classList</code></li></ul></li></ol>
+<p>切换 <code>theme-dark</code> / <code>theme-light</code></p>
+<ul><li>界面缩放 → menuitem 3 项，调 <code>webFrame.setZoomFactor()</code> (Electron) 或</li></ul>
+<p><code>document.body.style.zoom</code></p>
+<ol><li><strong>使用统计 / 升级</strong>：菜单项跳转对应设置页 / 升级弹窗。</li><li><strong>断开连接</strong>：清 <code>~/.khyquant/config.json</code> 的 <code>auth.token</code>，回登录态。</li></ol>
+<hr>
+<h2 id="5-对-zc-align-002-清单的更新-汇总">5. 对 ZC-ALIGN-002 清单的更新（◻ → ✅ 汇总）<a class="anchor" href="#5-对-zc-align-002-清单的更新-汇总" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>002 编号</th><th>名称</th><th>002 状态</th><th>本轮更新</th><th>证据</th></tr></thead><tbody><tr><td>I5</td><td>MCP 服务器内容页</td><td>◻</td><td>✅</td><td>09-MCP服务器.png + s-32 a11y</td></tr><tr><td>I12</td><td>引导导航项</td><td>✅(导航)</td><td>✅(内容)</td><td>15-引导.png + s-8 a11y</td></tr><tr><td>C1</td><td>账户菜单子菜单</td><td>✅(主菜单)</td><td>✅(三子菜单)</td><td>16/17/18.png + s-44/s-46 a11y</td></tr><tr><td>R3</td><td>首次引导 Onboarding</td><td>◻</td><td>✅</td><td>15b-引导迁移向导.png + s-12 a11y</td></tr><tr><td>I1</td><td>常规设置内容页</td><td>◻</td><td>✅</td><td>01-常规.png + s-30 a11y 全树</td></tr></tbody></table>
+<h3 id="仍未核对-保持-需特定触发或破坏性操作">仍未核对（保持 ◻，需特定触发或破坏性操作）<a class="anchor" href="#仍未核对-保持-需特定触发或破坏性操作" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>002 编号</th><th>名称</th><th>原因</th></tr></thead><tbody><tr><td>I2</td><td>插件内容页</td><td>导航项 ✅，内容页本轮未点入（留待实现时按需）</td></tr><tr><td>I3</td><td>技能内容页</td><td>同上</td></tr><tr><td>I4</td><td>子智能体内容页</td><td>同上</td></tr><tr><td>I6</td><td>浏览器控制内容页</td><td>同上</td></tr><tr><td>I8</td><td>使用统计内容页</td><td>002 已 ✅（前轮），本轮未重拍</td></tr><tr><td>I9</td><td>设置同步</td><td>可能在常规页内（未发现独立项）</td></tr><tr><td>H1/H4-H7</td><td>右面板各磁贴</td><td>需会话态/独立窗口/git 仓库</td></tr><tr><td>F7/F9/F11</td><td>elicitation/hooks/追问</td><td>需 agent 运行态触发</td></tr><tr><td>G2-G4</td><td>#/$// 键入提及</td><td>需在输入框键入触发</td></tr><tr><td>J/N/O/P1/Q/R2</td><td>更新流/错误边界/环境/Bot/Wiki/登出</td><td>避免破坏性操作</td></tr></tbody></table>
+<hr>
+<h2 id="6-失真对齐优先级-本轮新增项-接入-zc-align-001-2-方案表">6. 失真对齐优先级（本轮新增项，接入 ZC-ALIGN-001 §2 方案表）<a class="anchor" href="#6-失真对齐优先级-本轮新增项-接入-zc-align-001-2-方案表" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>优先级</th><th>编号</th><th>任务</th><th>依赖</th></tr></thead><tbody><tr><td>P0</td><td>D1</td><td>设置页骨架 + 左导航三组</td><td>ZC-ALIGN-001 A1-A6 已完成</td></tr><tr><td>P0</td><td>D2</td><td>常规页 25 项表单</td><td>D1</td></tr><tr><td>P1</td><td>D3</td><td>MCP 服务器管理页（双层结构）</td><td>D1 + mcpPool 状态读取</td></tr><tr><td>P1</td><td>D4</td><td>账户 chip 菜单 + 三子菜单</td><td>ZC-ALIGN-001 A4（已完成账号区）</td></tr><tr><td>P2</td><td>D5</td><td>引导 Onboarding 弹窗</td><td>D1 + 首次启动检测</td></tr><tr><td>P2</td><td>D6</td><td>数据迁移向导</td><td>D5 + 本地配置扫描</td></tr></tbody></table>
+<blockquote><p><strong>建议实施顺序</strong>：D1 → D2 → D4 → D3 → D5 → D6。<br>D1/D2 是设置域可用性门槛；D4 是账户交互闭环；D3 是 Agent 能力板块核心；<br>D5/D6 影响首跑体验但不阻塞核心功能。</p></blockquote>
+<hr>
+<h2 id="7-附录-a11y-证据片段-关键页-state-id-可追溯">7. 附录：a11y 证据片段（关键页，state_id 可追溯）<a class="anchor" href="#7-附录-a11y-证据片段-关键页-state-id-可追溯" aria-label="锚点">#</a></h2>
+<h3 id="7-1-引导弹窗-s-8-pid-8900">7.1 引导弹窗（s-8，pid 8900）<a class="anchor" href="#7-1-引导弹窗-s-8-pid-8900" aria-label="锚点">#</a></h3>
+<pre><code>[12]  欢迎使用 ZCode
+[13] button Close (pressable)
+[17] text 选择一个工作区，继续上次的进度，保持界面干净清爽。
+[19] text 快速打开，专注工作。
+[23] text 可立即导入旧工具设置，或先跳过，稍后在设置中继续迁移。
+[25] button 数据迁移向导 (pressable)
+[26] button 开始使用 ZCode (pressable focused)
+[31] text 首次启动设置 = 首次启动设置
+[33] text 选择如何开始第一次会话。 = 选择如何开始第一次会话。</code></pre>
+<h3 id="7-2-迁移向导-s-12-pid-8900">7.2 迁移向导（s-12，pid 8900）<a class="anchor" href="#7-2-迁移向导-s-12-pid-8900" aria-label="锚点">#</a></h3>
+<pre><code>[12]  会话 (focused)
+[13] button Close (pressable)
+[14] button 继续 (pressable)
+[15] button 上一步 (pressable)
+[16] text 已选择 0 个工作区
+[17] text 暂无可迁移工作区。请先扫描本地历史，再勾选要迁移的工作区。
+[20] text 选择工作区
+[21] button 扫描候选会话 (pressable)
+[22] combobox: 100 个会话
+[25] combobox: 最近 30 天
+[34] text 迁移 = 迁移        [35] text 6
+[37] text AGENTS.md          [38] text 5
+[40] text 命令              [41] text 4
+[43] text MCP 服务器        [44] text 3
+[46] text Skills            [47] text 2
+[49] text 会话              [50] text 1
+[52] text 迁移向导</code></pre>
+<h3 id="7-3-mcp-服务器页-s-32-pid-4872">7.3 MCP 服务器页（s-32，pid 4872）<a class="anchor" href="#7-3-mcp-服务器页-s-32-pid-4872" aria-label="锚点">#</a></h3>
+<pre><code>[26] button 详情 (pressable has_menu)              ← image_search 卡片
+[27] text 当前账号没有 Coding Plan，请先购买或配置 Coding Plan。
+[29] text image_search
+[32] text 文档技能 1  [33] text 1  [34] text 文档技能
+[37] text 该插件 MCP 服务器已连接并可用。           ← computer-use 卡片
+[39] text computer-use
+[42] text 电脑控制 1  [43] text 1  [44] text 电脑控制
+[47] text 该 MCP 服务器由 ZCode 宿主为 browser-use 插件提供，运行时身份由宿主管理。
+[49] text node_repl
+[52] text 浏览器操作 1  [53] text 1  [54] text 浏览器操作
+[56] button 导入 (pressable)
+[57] button 新建 MCP 服务器 (pressable)
+[61] text 尚未安装 MCP 服务器
+[62] button 新建  [63] button 刷新  [64] button 更多操作 (has_menu)
+[65] text 已安装 0  [69] textfield 搜索 MCP 服务器…
+[70] text 3  [71] text MCP  [72] button 用户 (has_menu)</code></pre>
+<h3 id="7-4-账户菜单-s-42-pid-8900">7.4 账户菜单（s-42，pid 8900）<a class="anchor" href="#7-4-账户菜单-s-42-pid-8900" aria-label="锚点">#</a></h3>
+<pre><code>[13] menuitem ntblocfk/旅行者8665 (focused)    bounds=[20,681,250,277]
+[14] menuitem 断开连接 (pressable)              bounds=[26,912,238,40]
+[16] menuitem 升级 (pressable)                  bounds=[26,857,238,40]
+[17] menuitem 使用统计 (pressable)              bounds=[26,817,238,39]
+[19] menuitem 界面缩放 (has_menu)              bounds=[26,764,238,37]
+[20] menuitem 界面主题 (has_menu)              bounds=[26,725,238,37]
+[21] menuitem 界面语言 (has_menu)              bounds=[26,687,238,37]</code></pre>
+<h3 id="7-5-界面缩放子菜单-s-46-pid-8900">7.5 界面缩放子菜单（s-46，pid 8900）<a class="anchor" href="#7-5-界面缩放子菜单-s-46-pid-8900" aria-label="锚点">#</a></h3>
+<pre><code>[20] menuitem 界面缩放
+[21] menuitem 实际大小 Ctrl+0 (pressable disabled)    ← 当前 100% 时灰置
+[24] menuitem 缩小 Ctrl+- (pressable)
+[27] menuitem 放大 Ctrl++ (pressable)
+[30] menuitem 界面缩放 (has_menu focused)</code></pre>
+<hr>
+<h2 id="8-复现步骤留档">8. 复现步骤留档<a class="anchor" href="#8-复现步骤留档" aria-label="锚点">#</a></h2>
+<pre><code class="language-powershell"><span class="hljs-comment"># ZCode 已运行（C:\Program Files\ZCode\ZCode.exe）</span>
+<span class="hljs-comment"># 截图脚本：docs/zcode-pages/shot.ps1</span>
+<span class="hljs-comment">#   param([string]$Name) → 保存 {Name}.png 到 docs/zcode-pages/</span>
+
+<span class="hljs-comment"># 导航路径（computer-use element AXPress）：</span>
+<span class="hljs-comment">#   工作区 → 侧栏底部设置齿轮 → 设置页</span>
+<span class="hljs-comment">#   左导航 → 目标页（常规/模型设置/MCP 服务器/引导…）</span>
+<span class="hljs-comment">#   引导 → 弹窗 → 数据迁移向导 → 向导</span>
+<span class="hljs-comment">#   账户 chip → AXExpand → 子菜单 AXExpand</span>
+
+<span class="hljs-comment"># 截图：</span>
+powershell <span class="hljs-literal">-NoProfile</span> <span class="hljs-literal">-ExecutionPolicy</span> Bypass <span class="hljs-operator">-File</span> `
+  <span class="hljs-string">&quot;D:\Portable\khy-os\apps\khyos-desktop\docs\zcode-pages\shot.ps1&quot;</span> <span class="hljs-literal">-Name</span> <span class="hljs-string">&quot;15-引导&quot;</span>
+
+<span class="hljs-comment"># 注意：</span>
+<span class="hljs-comment"># 1. ZCode 内嵌 agent 会抢鼠标/键盘 → 截图前先点「停止生成」</span>
+<span class="hljs-comment"># 2. shot.ps1 用 CopyFromScreen(0,0) 截全屏 → 确保 ZCode 窗口在最前</span>
+<span class="hljs-comment"># 3. 引导弹窗是模态 → 关闭后回到设置页，非工作区</span>
+<span class="hljs-comment"># 4. 账号可能因重启变化（ntblocfk → 旅行者8665），不影响菜单结构</span></code></pre>
+<blockquote><p>本文件不替代 092 / ZC-ALIGN-001 / ZC-ALIGN-002，只补 002 的 ◻ 空白。<br>下一步：按 §6 优先级表 D1→D2→D4→D3→D5→D6 实施，每完成一项回填 ZC-ALIGN-001 §2 勾选。</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../apps/khyos-desktop/docs/[ZC-ALIGN-002] ZCode 页面与弹窗穷举清单（computer-use 核对）.html"><div class="dir">← 上一篇</div><div class="ttl">[ZC-ALIGN-002] ZCode 页面与弹窗穷举清单（computer-use 逐一核对）</div></a><a class="next" href="../../../apps/khyos-desktop/README.html"><div class="dir">下一篇 →</div><div class="ttl">KhyOS Desktop</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="apps/khyos-desktop/docs/[ZC-ALIGN-003] ZCode 设置页逐项对齐补充（第四轮实测）.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

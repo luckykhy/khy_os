@@ -16,7 +16,7 @@ const path = require('path');
 const repoRoot = process.env.KHY_GOV_RULES_ROOT
   ? path.resolve(process.env.KHY_GOV_RULES_ROOT)
   : path.resolve(__dirname, '..', '..');
-const GOVERNANCE_DOC = 'docs/03_DESIGN_设计/[DESIGN-ARCH-070] 治理总纲与可执行规则.md';
+const GOVERNANCE_DOC = 'docs/10_规范/其它规范/[DESIGN-GOV-001] 治理总纲与可执行规则.md';
 const GOVERNANCE_SCRIPT = 'scripts/ci/check-gov-rules.js';
 // 十个板块，与元规则 [MGMT-STD-008] §3 十大域一一对应：
 //   MOD↔LAYOUT  MEM↔MEMORY  TOOL↔TOOLING  ACP↔COMMS  API↔API
@@ -33,10 +33,10 @@ const ACP_PROTOCOL_VERSION = '1.0';
 const ACP_SCHEMA_PATH = 'services/backend/src/contracts/acp/acp-message.schema.json';
 
 // ── Rules Registry Validation (MGMT-STD-008) ─────────────────────────────
-// 规则单一真源登记表：docs/_规范/RULES-REGISTRY.json。
+// 规则单一真源登记表：docs/10_规范/registry/RULES-REGISTRY.json。
 // 该检查对「文件缺失」容忍（外部 fixture / 尚未启用登记表的仓库直接跳过），
 // 只在校验「存在」的登记表时介入，避免破坏既有 check-gov-rules.test.js。
-const RULES_REGISTRY = 'docs/_规范/RULES-REGISTRY.json';
+const RULES_REGISTRY = 'docs/10_规范/registry/RULES-REGISTRY.json';
 const RULE_DOMAINS = ['LAYOUT', 'RUNTIME', 'COMMS', 'API', 'TOOLING', 'MEMORY', 'SOURCING', 'PROCESS', 'DOCS', 'SECURITY'];
 const RULE_PRIORITIES = ['P0', 'P1', 'P2', 'P3'];
 const RULE_STATUSES = ['draft', 'active', 'deprecated', 'archived'];

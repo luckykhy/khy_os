@@ -18,7 +18,7 @@ const assert = require('node:assert');
 const path = require('node:path');
 const { test } = require('node:test');
 
-const reg = require('../src/services/mcp/mcpEcosystemRegistry');
+const reg = require('../src/services/domain/messaging/mcp/mcpEcosystemRegistry.js');
 
 const HOME = '/home/u';
 const PROJ = '/work/repo';

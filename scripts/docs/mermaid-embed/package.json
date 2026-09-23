@@ -2,7 +2,7 @@
   "name": "khyos-mermaid-embed",
   "version": "0.0.0",
   "private": true,
-  "description": "Dev-only build harness: bundles mermaid into the self-contained offline docs/_assets/mermaid.min.js loaded by the generated doc site. Output is NOT committed; this dir's node_modules is NOT shipped.",
+  "description": "Dev-only build harness: bundles mermaid into the self-contained offline docs/19_资产/site/mermaid.min.js loaded by the generated doc site. Output is NOT committed; this dir's node_modules is NOT shipped.",
   "type": "module",
   "scripts": {
     "build": "node build.mjs"

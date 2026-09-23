@@ -13,12 +13,13 @@
  *   ③ rate_limit / 429        → 通道被限流,降并发、稍后重试。
  *   ④ network / 代理隧道不通   → 传输层故障,检查网络与代理。
  *   ⑤ model_not_found / 404   → 模型名无效或账号未领取,检查模型串/领取。
- *   ⑥ 混合多因                → 逐因列出。
+ *   ⑥ 首选通道被 strict 钉死   → 回退被抑制,解除钉选/放行回退(元原因,置顶)。
+ *   ⑦ 混合多因                → 逐因列出。
  *
  * 诚实边界:只翻译**已发生**的信号,不做任何写入/网络/重试/猜测;所有分支 fail-soft,
  * 无匹配 → null(逐字节回退今日行为:只显示通用兜底墙)。
  *
- * 契约:纯叶子——零副作用、绝不抛(任何异常 → null)、只吃 { attempts, env }。
+ * 契约:纯叶子——零副作用、绝不抛(任何异常 → null)、只吃 { attempts, pin, env }。
  * 门控 KHY_CHANNEL_FAILURE_ADVICE(默认开);关门 → null。
  */
 
@@ -142,6 +143,60 @@ const _MODEL_NOT_FOUND_FIX =
   '  → 模型不存在或未领取:检查模型名是否正确(`/model` 查看),或在厂商控制台领取/开通该模型。';
 
 /**
+ * 首选通道被 strict 钉死 → 不回退 的指引。
+ *
+ * 现场事故(2026-09-13→15 连续三天误诊):`services/backend/.env` 残留
+ * `GATEWAY_PREFERRED_ADAPTER=codex` + `GATEWAY_PREFERRED_STRICT=true`,而本机
+ * codex 无凭据 → 每次调用都在首选通道硬失败且**不回退**到可用的 api/agnes 通道。
+ * 因为本叶子此前只认 5xx/auth/限流/网络/模型不存在五类信号,这种「钉选致不回退」
+ * 被排障者读成了密钥问题,真因三天未浮出。故补一条独立信号。
+ *
+ * 措辞只陈述可核验的事实:点名被钉的通道、指出回退被抑制、给出两个 env 开关
+ * 与复核命令;不猜测通道为何不可用(那是 auth/network 等信号各自的职责)。
+ */
+function _pinAdvice(adapter, hard) {
+  return (
+    `  → 首选通道 "${adapter}" 已被钉选(strict 生效${hard ? ',显式钉选' : ''}),` +
+    `本轮失败不会自动回退到其它可用通道 —— 这通常不是密钥问题。` +
+    `解除钉选或允许回退:把 GATEWAY_PREFERRED_ADAPTER 清空或设为 auto,` +
+    `并设置 GATEWAY_PREFERRED_STRICT=false(两者在 services/backend/.env 或 ~/.khy/.env);` +
+    `改完运行 \`khy gateway status\` 复核实测通道。`
+  );
+}
+
+/**
+ * 归一化 pin 输入。strict 语义与 aiGatewayGenerateMethod 保持一致:
+ * 显式布尔用其值,其余情况「未显式 false 即视为开启」。绝不抛。
+ *
+ * @param {object} pin { adapter, strict, hard?, fallbackSuppressed? }
+ * @returns {{adapter: string, hard: boolean} | null}
+ */
+function _resolveStrictPin(pin) {
+  try {
+    if (!pin || typeof pin !== 'object' || Array.isArray(pin)) {
+      return null;
+    }
+    const adapter = String(pin.adapter == null ? '' : pin.adapter).trim();
+    if (!adapter || adapter.toLowerCase() === 'auto') {
+      return null;
+    }
+    const raw = pin.strict;
+    const strict =
+      typeof raw === 'boolean'
+        ? raw
+        : String(raw == null ? '' : raw)
+            .trim()
+            .toLowerCase() !== 'false';
+    if (!strict) {
+      return null;
+    }
+    return { adapter, hard: pin.hard === true || pin.fallbackSuppressed === true };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * 汇总各通道失败,生成可操作指引。绝不抛;不适用(门关 / 无 attempts / 无匹配信号 /
  * 任何异常)→ null。
  *
@@ -161,8 +216,12 @@ function buildChannelFailureAdvice(input) {
     if (!list.length) {
       return null;
     }
+    // 钉选信号不来自 attempts,而来自「本轮是怎么被路由的」——它是元原因,
+    // 必须排在其它信号之前,否则用户又会先去查密钥/模型名。
+    const pinInfo = _resolveStrictPin(input && input.pin);
 
     const flags = {
+      channelPinned: !!pinInfo,
       serverError: false,
       auth: false,
       rateLimited: false,
@@ -194,6 +253,9 @@ function buildChannelFailureAdvice(input) {
     }
 
     const lines = ['⚠ 通道失败原因与下一步:'];
+    if (pinInfo) {
+      lines.push(_pinAdvice(pinInfo.adapter, pinInfo.hard));
+    }
     if (flags.serverError) {
       lines.push(_SERVER_ERROR_FIX);
     }
@@ -223,4 +285,5 @@ module.exports = {
   _isRateLimited,
   _isNetworkFailure,
   _isModelNotFound,
+  _resolveStrictPin,
 };

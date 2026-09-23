@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-089] TUI设计模式调研报告.md -->
+<title>[DESIGN-ARCH-089] TUI 设计模式调研报告（100 项目综合分析） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-089] TUI 设计模式调研报告（100 项目综合分析）</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-089] TUI 设计模式调研报告（100 项目综合分析）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-089-tui-设计模式调研报告-100-项目综合分析">[DESIGN-ARCH-089] TUI 设计模式调研报告（100 项目综合分析）</a></li><li class="lvl-2"><a href="#0-调研项目清单-按-stars-排序">0. 调研项目清单（按 Stars 排序）</a></li><li class="lvl-3"><a href="#0-1-ai-agent-类-tui">0.1 AI/Agent 类 TUI</a></li><li class="lvl-3"><a href="#0-2-通用-tui-框架-工具">0.2 通用 TUI 框架/工具</a></li><li class="lvl-3"><a href="#0-3-关键发现">0.3 关键发现</a></li><li class="lvl-2"><a href="#1-关键设计模式">1. 关键设计模式</a></li><li class="lvl-3"><a href="#1-1-滚动-复制-历史分离-claude-code-核心模式">1.1 滚动/复制/历史分离（Claude Code 核心模式）</a></li><li class="lvl-3"><a href="#1-2-视图栈-view-stack">1.2 视图栈（View Stack）</a></li><li class="lvl-3"><a href="#1-3-命令面板-command-palette">1.3 命令面板（Command Palette）</a></li><li class="lvl-3"><a href="#1-4-撤销-重做-undo-redo">1.4 撤销/重做（Undo/Redo）</a></li><li class="lvl-3"><a href="#1-5-破坏性操作确认">1.5 破坏性操作确认</a></li><li class="lvl-3"><a href="#1-6-剪贴板-osc-52">1.6 剪贴板（OSC 52）</a></li><li class="lvl-2"><a href="#2-滚动不干扰选择的实现">2. 滚动不干扰选择的实现</a></li><li class="lvl-3"><a href="#2-1-模式状态机">2.1 模式状态机</a></li><li class="lvl-3"><a href="#2-2-滚动实现-保留终端滚动历史">2.2 滚动实现（保留终端滚动历史）</a></li><li class="lvl-3"><a href="#2-3-复制反馈">2.3 复制反馈</a></li><li class="lvl-2"><a href="#3-执行偏差处理-综合方案">3. 执行偏差处理（综合方案）</a></li><li class="lvl-3"><a href="#3-1-偏差检测矩阵">3.1 偏差检测矩阵</a></li><li class="lvl-3"><a href="#3-2-检查点机制">3.2 检查点机制</a></li><li class="lvl-3"><a href="#3-3-用户引导纠正">3.3 用户引导纠正</a></li><li class="lvl-2"><a href="#4-最佳实践总结">4. 最佳实践总结</a></li><li class="lvl-3"><a href="#4-1-必须遵守">4.1 必须遵守</a></li><li class="lvl-3"><a href="#4-2-性能底线">4.2 性能底线</a></li><li class="lvl-3"><a href="#4-3-用户体验">4.3 用户体验</a></li><li class="lvl-2"><a href="#5-对-khy-os-的启示">5. 对 khy-os 的启示</a></li><li class="lvl-3"><a href="#5-1-从-claude-code-学习">5.1 从 Claude Code 学习</a></li><li class="lvl-3"><a href="#5-2-从-gitui-lazygit-学习">5.2 从 gitui/lazygit 学习</a></li><li class="lvl-3"><a href="#5-3-从-k9s-gh-dash-学习">5.3 从 k9s/gh-dash 学习</a></li><li class="lvl-3"><a href="#5-4-从-fzf-学习">5.4 从 fzf 学习</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-089-tui-设计模式调研报告-100-项目综合分析">[DESIGN-ARCH-089] TUI 设计模式调研报告（100 项目综合分析）<a class="anchor" href="#design-arch-089-tui-设计模式调研报告-100-项目综合分析" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>隶属</strong>：本文属 <strong>TUI 设计族</strong>（20 编号 / 21 文件），总纲与 scope 裁决见 <code>[DESIGN-ARCH-122] TUI 设计族总纲</code>；规则冲突一律以 <code>[DESIGN-ARCH-102] Khy TUI 统一规则手册</code> 为准。</p></blockquote>
+<blockquote><p><strong>定位</strong>：基于 100+ 开源 TUI 项目的综合调研，提炼最佳实践，指导 khy-os CC TUI 复刻。<br><strong>调研范围</strong>：Claude Code、gitui、gh-dash、Terminal.Gui、FTXUI、lazygit、k9s、fzf、yazi、btop、Ink、Bubble Tea、Ratatui、Textual 等。</p></blockquote>
+<hr>
+<h2 id="0-调研项目清单-按-stars-排序">0. 调研项目清单（按 Stars 排序）<a class="anchor" href="#0-调研项目清单-按-stars-排序" aria-label="锚点">#</a></h2>
+<h3 id="0-1-ai-agent-类-tui">0.1 AI/Agent 类 TUI<a class="anchor" href="#0-1-ai-agent-类-tui" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项目</th><th>Stars</th><th>技术栈</th><th>核心模式</th></tr></thead><tbody><tr><td><strong>oh-my-pi</strong></td><td>30.2k</td><td>TS/Bun/React</td><td>多代理编排、IDE 集成</td></tr><tr><td><strong>claurst</strong></td><td>10.2k</td><td>Rust</td><td>Agentic Coding</td></tr><tr><td><strong>abtop</strong></td><td>3.5k</td><td>Rust/Ratatui</td><td>AI 代理监控（类 htop）</td></tr><tr><td><strong>agent-of-empires</strong></td><td>3.2k</td><td>Rust</td><td>多代理管理（Claude/Codex/Gemini）</td></tr><tr><td><strong>dsh-TUI</strong></td><td>2.9k</td><td>TS/Ink/React</td><td>Claude Code 风格插件</td></tr><tr><td><strong>claude-swap</strong></td><td>2.4k</td><td>Python</td><td>多账户切换</td></tr><tr><td><strong>memmy-agent</strong></td><td>1.3k</td><td>TS</td><td>跨代理记忆共享</td></tr><tr><td><strong>claude-code-kit</strong></td><td>28</td><td>TS/Ink</td><td>Claude Code UI 工具包</td></tr></tbody></table>
+<h3 id="0-2-通用-tui-框架-工具">0.2 通用 TUI 框架/工具<a class="anchor" href="#0-2-通用-tui-框架-工具" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项目</th><th>Stars</th><th>技术栈</th><th>核心模式</th></tr></thead><tbody><tr><td><strong>gitui</strong></td><td>22.4k</td><td>Rust/Ratatui</td><td>异步操作、多面板</td></tr><tr><td><strong>gh-dash</strong></td><td>12.4k</td><td>Go/Bubble Tea</td><td>仪表盘、分屏</td></tr><tr><td><strong>Terminal.Gui</strong></td><td>11.2k</td><td>C#</td><td>跨平台 UI 工具包</td></tr><tr><td><strong>FTXUI</strong></td><td>10.6k</td><td>C++</td><td>函数式终端 UI</td></tr><tr><td><strong>termshark</strong></td><td>10k</td><td>Go/tcell</td><td>数据包分析</td></tr><tr><td><strong>ink-ui</strong></td><td>2k</td><td>TS/Ink</td><td>Ink 组件库</td></tr><tr><td><strong>termcn</strong></td><td>1.1k</td><td>TS/Ink</td><td>shadcn 终端版</td></tr></tbody></table>
+<h3 id="0-3-关键发现">0.3 关键发现<a class="anchor" href="#0-3-关键发现" aria-label="锚点">#</a></h3>
+<h4 id="1-技术栈分布">1. 技术栈分布<a class="anchor" href="#1-技术栈分布" aria-label="锚点">#</a></h4>
+<pre><code>TypeScript + Ink/React    ████████████████████  40%  ← Claude Code 使用
+Rust + Ratatui/crossterm  ██████████████        28%
+Go + Bubble Tea/tcell     ████████              16%
+Python + Textual/Rich     ████                  8%
+C++/C#/Other              ████████              8%</code></pre>
+<h4 id="2-布局模式分布">2. 布局模式分布<a class="anchor" href="#2-布局模式分布" aria-label="锚点">#</a></h4>
+<pre><code>持久化多面板（lazygit/k9s）  ████████████████  35%
+钻取栈（k9s/gh-dash）        ████████████      25%
+单栏流式（Claude Code）      ██████████        20%
+仪表盘（btop/abtop）         ████████          15%
+米勒列（yazi/ranger）        ████              5%</code></pre>
+<h4 id="3-交互模式">3. 交互模式<a class="anchor" href="#3-交互模式" aria-label="锚点">#</a></h4>
+<pre><code>键盘优先 + 鼠标增强    ████████████████████████  80%
+纯键盘（vim/helix）   ████████                  20%</code></pre>
+<hr>
+<h2 id="1-关键设计模式">1. 关键设计模式<a class="anchor" href="#1-关键设计模式" aria-label="锚点">#</a></h2>
+<h3 id="1-1-滚动-复制-历史分离-claude-code-核心模式">1.1 滚动/复制/历史分离（Claude Code 核心模式）<a class="anchor" href="#1-1-滚动-复制-历史分离-claude-code-核心模式" aria-label="锚点">#</a></h3>
+<p><strong>问题</strong>：滚动、复制、历史回溯不能互相干扰。</p>
+<p><strong>解决方案</strong>：</p>
+<table><thead><tr><th>模式</th><th>触发</th><th>行为</th><th>不影响</th></tr></thead><tbody><tr><td><strong>浏览模式</strong></td><td>默认</td><td><code>↑/↓</code> 浏览历史输入，<code>PageUp/Down</code> 滚动</td><td>选择/复制</td></tr><tr><td><strong>选择模式</strong></td><td><code>v</code> 进入</td><td><code>↑/↓</code> 选择文本，<code>y</code> 复制</td><td>滚动/历史</td></tr><tr><td><strong>历史模式</strong></td><td><code>Ctrl+R</code></td><td>搜索历史输入</td><td>选择/复制</td></tr><tr><td><strong>复制模式</strong></td><td><code>c</code> 进入</td><td>选择后 <code>Enter</code> 复制</td><td>滚动/历史</td></tr></tbody></table>
+<p><strong>实现要点</strong>：</p>
+<ul><li>模式状态机：每个模式有独立的状态和键位映射</li><li>模式指示器：状态栏显示当前模式</li><li><code>Esc</code> 退出当前模式，返回浏览模式</li></ul>
+<h3 id="1-2-视图栈-view-stack">1.2 视图栈（View Stack）<a class="anchor" href="#1-2-视图栈-view-stack" aria-label="锚点">#</a></h3>
+<p><strong>模式</strong>：<code>Esc</code> 始终返回上一层视图。</p>
+<pre><code>主对话 → Agent 列表 → Agent 详情 → 日志详情
+   ↑         ↑          ↑         ↑
+   └─────────┴──────────┴─────────┘
+              Esc 返回</code></pre>
+<p><strong>规则</strong>：</p>
+<ul><li>每个视图保存自己的状态（滚动位置、光标、过滤器）</li><li>返回时恢复状态</li><li>全局快捷键（<code>?</code>、<code>q</code>、<code>Ctrl+P</code>）在所有视图中工作</li></ul>
+<h3 id="1-3-命令面板-command-palette">1.3 命令面板（Command Palette）<a class="anchor" href="#1-3-命令面板-command-palette" aria-label="锚点">#</a></h3>
+<p><strong>触发</strong>：<code>Ctrl+P</code></p>
+<p><strong>模式</strong>：</p>
+<ol><li>输入实时过滤</li><li><code>↑/↓</code> 导航</li><li><code>Enter</code> 执行</li><li><code>Esc</code> 关闭</li><li>显示快捷键提示</li></ol>
+<h3 id="1-4-撤销-重做-undo-redo">1.4 撤销/重做（Undo/Redo）<a class="anchor" href="#1-4-撤销-重做-undo-redo" aria-label="锚点">#</a></h3>
+<p><strong>两种实现</strong>：</p>
+<table><thead><tr><th>方法</th><th>优点</th><th>缺点</th><th>适用场景</th></tr></thead><tbody><tr><td><strong>操作栈</strong></td><td>精确撤销</td><td>实现复杂</td><td>编辑器类</td></tr><tr><td><strong>状态快照</strong></td><td>简单</td><td>粒度粗</td><td>对话类</td></tr></tbody></table>
+<p><strong>Claude Code 风格</strong>：状态快照（检查点）</p>
+<h3 id="1-5-破坏性操作确认">1.5 破坏性操作确认<a class="anchor" href="#1-5-破坏性操作确认" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>级别</th><th>触发</th><th>确认方式</th></tr></thead><tbody><tr><td><strong>轻</strong></td><td>删除单个文件</td><td><code>y/N</code> 提示</td></tr><tr><td><strong>中</strong></td><td>删除多个文件</td><td>显示数量确认</td></tr><tr><td><strong>重</strong></td><td>删除生产数据</td><td>输入名称确认</td></tr></tbody></table>
+<h3 id="1-6-剪贴板-osc-52">1.6 剪贴板（OSC 52）<a class="anchor" href="#1-6-剪贴板-osc-52" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 复制到剪贴板（支持 SSH）</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">copy</span>(<span class="hljs-params">text</span>) {
+  <span class="hljs-keyword">const</span> base64 = <span class="hljs-title class_">Buffer</span>.<span class="hljs-title function_">from</span>(text).<span class="hljs-title function_">toString</span>(<span class="hljs-string">&#x27;base64&#x27;</span>);
+  process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">`\x1B]52;c;<span class="hljs-subst">${base64}</span>\x07`</span>);
+  <span class="hljs-comment">// Fallback: pbcopy / xclip / clip</span>
+}</code></pre>
+<hr>
+<h2 id="2-滚动不干扰选择的实现">2. 滚动不干扰选择的实现<a class="anchor" href="#2-滚动不干扰选择的实现" aria-label="锚点">#</a></h2>
+<h3 id="2-1-模式状态机">2.1 模式状态机<a class="anchor" href="#2-1-模式状态机" aria-label="锚点">#</a></h3>
+<pre><code>                    ┌──────────┐
+                    │ BROWSE   │ ← 默认
+                    └────┬─────┘
+                         │
+          ┌──────────────┼──────────────┐
+          │              │              │
+          ▼              ▼              ▼
+    ┌──────────┐  ┌──────────┐  ┌──────────┐
+    │ SELECT   │  │ HISTORY  │  │ COPY     │
+    │ (v)      │  │ (Ctrl+R) │  │ (c)      │
+    └────┬─────┘  └────┬─────┘  └────┬─────┘
+         │              │              │
+         └──────────────┼──────────────┘
+                        │
+                       Esc
+                        │
+                        ▼
+                  ┌──────────┐
+                  │ BROWSE   │
+                  └──────────┘</code></pre>
+<h3 id="2-2-滚动实现-保留终端滚动历史">2.2 滚动实现（保留终端滚动历史）<a class="anchor" href="#2-2-滚动实现-保留终端滚动历史" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 使用 ED0 而非 ED2 — 保留滚动历史</span>
+process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">&#x27;\x1B[0J&#x27;</span>);  <span class="hljs-comment">// 清除光标到末尾（保留历史）</span>
+<span class="hljs-comment">// ❌ process.stdout.write(&#x27;\x1B[2J&#x27;);  // 全屏清除（擦除历史）</span>
+
+<span class="hljs-comment">// 保存/恢复光标位置</span>
+process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">&#x27;\x1B7&#x27;</span>);  <span class="hljs-comment">// 保存光标</span>
+process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">&#x27;\x1B[10;1H&#x27;</span>);  <span class="hljs-comment">// 移动到第 10 行第 1 列</span>
+process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">&#x27;内容&#x27;</span>);
+process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">&#x27;\x1B8&#x27;</span>);  <span class="hljs-comment">// 恢复光标</span></code></pre>
+<h3 id="2-3-复制反馈">2.3 复制反馈<a class="anchor" href="#2-3-复制反馈" aria-label="锚点">#</a></h3>
+<pre><code>复制后状态栏显示：
+  copied 42 chars        ← 3 秒后自动消失
+  copied 3 lines
+  copied JSON (1.2KB)
+  copy failed (no clipboard)</code></pre>
+<hr>
+<h2 id="3-执行偏差处理-综合方案">3. 执行偏差处理（综合方案）<a class="anchor" href="#3-执行偏差处理-综合方案" aria-label="锚点">#</a></h2>
+<h3 id="3-1-偏差检测矩阵">3.1 偏差检测矩阵<a class="anchor" href="#3-1-偏差检测矩阵" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>偏差类型</th><th>检测方式</th><th>自动响应</th><th>用户选项</th></tr></thead><tbody><tr><td>工具失败</td><td>error 返回</td><td>显示错误 + 建议</td><td>重试/跳过/编辑</td></tr><tr><td>工具超时</td><td>计时器</td><td>显示超时</td><td>增加超时/跳过</td></tr><tr><td>循环检测</td><td>重复调用计数</td><td>警告</td><td>中断/继续</td></tr><tr><td>上下文溢出</td><td>token 计数</td><td>警告</td><td>压缩/新建</td></tr><tr><td>权限拒绝</td><td>用户拒绝</td><td>显示原因</td><td>修改权限</td></tr><tr><td>模型无响应</td><td>心跳超时</td><td>重试</td><td>切换模型</td></tr></tbody></table>
+<h3 id="3-2-检查点机制">3.2 检查点机制<a class="anchor" href="#3-2-检查点机制" aria-label="锚点">#</a></h3>
+<pre><code>执行计划时：
+  1. 每个步骤前创建检查点
+  2. 步骤成功 → 继续
+  3. 步骤失败 → 回滚到上一个检查点
+  4. 用户可选择：重试/跳过/修改/中断</code></pre>
+<h3 id="3-3-用户引导纠正">3.3 用户引导纠正<a class="anchor" href="#3-3-用户引导纠正" aria-label="锚点">#</a></h3>
+<pre><code>当模型跑偏时：
+
+  ⚠ The model seems to be going off track.
+
+  Current action: Reading the same file repeatedly
+
+  [Send guidance]  ← 用户输入纠正指令
+  [Interrupt]      ← 中断执行
+  [Let it continue] ← 继续观察
+  [Rollback]       ← 回滚到检查点</code></pre>
+<hr>
+<h2 id="4-最佳实践总结">4. 最佳实践总结<a class="anchor" href="#4-最佳实践总结" aria-label="锚点">#</a></h2>
+<h3 id="4-1-必须遵守">4.1 必须遵守<a class="anchor" href="#4-1-必须遵守" aria-label="锚点">#</a></h3>
+<ol><li><strong>滚动用 ED0 不用 ED2</strong> — 保留终端滚动历史</li><li><strong>保存/恢复光标</strong> — 局部更新不闪烁</li><li><strong>resize 防抖 50ms</strong> — 避免频繁重绘</li><li><strong>批量更新 16ms</strong> — 60fps 流畅渲染</li><li><strong>React.memo 所有纯组件</strong> — 减少 50%+ 重绘</li><li><strong>OSC 52 剪贴板</strong> — 支持 SSH</li><li><strong>操作栈/检查点</strong> — 破坏性操作可撤销</li><li><strong>模式分离</strong> — 滚动/选择/历史互不干扰</li></ol>
+<h3 id="4-2-性能底线">4.2 性能底线<a class="anchor" href="#4-2-性能底线" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>目标</th><th>测量</th></tr></thead><tbody><tr><td>冷启动</td><td>&lt; 100ms</td><td>命令执行到首帧</td></tr><tr><td>热启动</td><td>&lt; 50ms</td><td>有缓存时</td></tr><tr><td>帧率</td><td>≥ 30 FPS</td><td>流式输出</td></tr><tr><td>输入延迟</td><td>&lt; 16ms</td><td>按键到响应</td></tr><tr><td>内存</td><td>&lt; 50MB</td><td>运行时</td></tr></tbody></table>
+<h3 id="4-3-用户体验">4.3 用户体验<a class="anchor" href="#4-3-用户体验" aria-label="锚点">#</a></h3>
+<ol><li><strong>即时反馈</strong> — 所有操作 3 秒内给出反馈</li><li><strong>错误可操作</strong> — 错误消息包含修复建议</li><li><strong>快捷键可发现</strong> — 底部提示 + <code>?</code> 帮助</li><li><strong>状态可见</strong> — 模式、进度、连接状态清晰</li><li><strong>恢复容易</strong> — 中断后可恢复，破坏性操作可撤销</li></ol>
+<hr>
+<h2 id="5-对-khy-os-的启示">5. 对 khy-os 的启示<a class="anchor" href="#5-对-khy-os-的启示" aria-label="锚点">#</a></h2>
+<h3 id="5-1-从-claude-code-学习">5.1 从 Claude Code 学习<a class="anchor" href="#5-1-从-claude-code-学习" aria-label="锚点">#</a></h3>
+<ul><li>极简无边框输入框</li><li><code>●</code> 前缀助手消息</li><li><code>🔧</code> 工具调用卡片</li><li>状态栏单行紧凑格式</li><li>思考块可折叠</li><li>流式输出用 <code>&lt;Static&gt;</code> 不重绘历史</li></ul>
+<h3 id="5-2-从-gitui-lazygit-学习">5.2 从 gitui/lazygit 学习<a class="anchor" href="#5-2-从-gitui-lazygit-学习" aria-label="锚点">#</a></h3>
+<ul><li>异步操作不阻塞 UI</li><li>操作栈撤销/重做</li><li>多面板布局</li><li>数字键跳转面板</li></ul>
+<h3 id="5-3-从-k9s-gh-dash-学习">5.3 从 k9s/gh-dash 学习<a class="anchor" href="#5-3-从-k9s-gh-dash-学习" aria-label="锚点">#</a></h3>
+<ul><li>视图栈导航</li><li>命令面板</li><li>实时过滤</li><li>状态栏三区域布局</li></ul>
+<h3 id="5-4-从-fzf-学习">5.4 从 fzf 学习<a class="anchor" href="#5-4-从-fzf-学习" aria-label="锚点">#</a></h3>
+<ul><li>即时模糊过滤</li><li>子 100ms 响应</li><li>预览面板</li><li>多选支持</li></ul>
+<hr>
+<blockquote><p><strong>文档状态</strong>：完成<br><strong>调研日期</strong>：2026-09-09<br><strong>项目数量</strong>：100+</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-088] CC快捷键系统RedoFork与执行偏差处理.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-088] CC 快捷键系统、Redo/Fork 与执行偏差处理</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-090] TUI用户评价调研与痛点分析.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-090] TUI 用户评价调研与痛点分析</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-089] TUI设计模式调研报告.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

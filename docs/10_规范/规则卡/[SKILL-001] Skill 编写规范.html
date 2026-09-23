@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [SKILL-001] Skill 编写规范.md -->
+<title>[SKILL-001] Skill 编写规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[SKILL-001] Skill 编写规范</div>
+      <header class="hero reveal"><h1>[SKILL-001] Skill 编写规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#skill-001-skill-编写规范">[SKILL-001] Skill 编写规范</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: Skill 编写规范<br>id: SKILL-001<br>domain: DOCS<br>nature: 约束为主，兼福利<br>scope: &quot;仓库与运行时的 Skill 定义：<code>.khy/skills/&lt;name&gt;/manifest.json</code> 的 description / when_to_use / disableModelInvocation / allowed-tools 字段，以及 <code>prompt.md</code> 与 <code>reference/</code> 的组织方式&quot;<br>priority: P1<br>trigger: &quot;新建或修改任一 Skill 的 manifest.json / prompt.md / reference/ 时&quot;<br>constraint: &quot;description 必须四段式（触发短语前置 / What / When / Not For），且触发短语必须落在前 60 字符内；description 不得超过 1024 字符；必须写 when_to_use 且不超过 120 字符；任务型 Skill 必须显式声明 disableModelInvocation: true；需要工具的 Skill 必须写 allowed-tools，禁止留空表示全部允许；allowed-tools 的 Bash 项必须用 <code>Bash(&lt;prefix&gt;:*)</code> 前缀形式（<code>:*</code> 而非 <code> *</code>，两者语义不同且写错不报错）；触发短语必须可命中，禁止 help/assist/general 等空泛词；细则必须下沉 reference/，禁止全文塞进 prompt.md。&quot;<br>grants: &quot;授权 Skill 作者按四段式自行组织 description 与 prompt.md，并按需拆分 reference/ 任意多文件，无需事前审批。&quot;<br>benefit: &quot;把「Skill 写了但从来不被触发」这一静默失效变成可判定 finding。实测 43 个技能在 128K 窗口下 maxDescLen 被压到 62 字符，而触发短语必须在前 60 字符内 —— 二者几乎相等，意味着触发信号一旦不在前 60 就必被截掉，技能从此检索不到；同时实测 when_to_use 只填了 16/43，且渲染层此前漏算其长度导致一批技能静默溢出预算（已在并行修订中补为 hintLen）。&quot;<br>exception: &quot;learn-*.md 一族（25 个未成型的学习素材）不是 Skill 定义，不适用本条；内置（built-in）技能的非 manifest 元数据不追溯；allowed-tools 的强制力当前仅对 handler 技能生效（实测 0/43 有 handler），故本条要求「配」但不要求「现阶段已被强制」。&quot;<br>version: &quot;1.0.0 (2026-09-18)&quot;<br>status: active<br>ssot: &quot;docs/10_规范/其它规范/[DESIGN-SKILL-001] Skill 编写规范.md&quot;<br>formerly: 无<br>owner: governance-team</p>
+<hr>
+<h1 id="skill-001-skill-编写规范">[SKILL-001] Skill 编写规范<a class="anchor" href="#skill-001-skill-编写规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: SKILL-001 -->
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/10_规范/其它规范/[DESIGN-SKILL-001] Skill 编写规范.md。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>description 必须四段式（触发短语前置 / What / When / Not For），且触发短语必须落在前 60 字符内；description 不得超过 1024 字符；必须写 when_to_use 且不超过 120 字符；任务型 Skill 必须显式声明 disableModelInvocation: true；需要工具的 Skill 必须写 allowed-tools，禁止留空表示全部允许；allowed-tools 的 Bash 项必须用 <code>Bash(&lt;prefix&gt;:*)</code> 前缀形式（<code>:*</code> 而非 <code> *</code>，两者语义不同且写错不报错）；触发短语必须可命中，禁止 help/assist/general 等空泛词；细则必须下沉 reference/，禁止全文塞进 prompt.md。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>授权 Skill 作者按四段式自行组织 description 与 prompt.md，并按需拆分 reference/ 任意多文件，无需事前审批。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>把「Skill 写了但从来不被触发」这一静默失效变成可判定 finding。实测 43 个技能在 128K 窗口下 maxDescLen 被压到 62 字符，而触发短语必须在前 60 字符内 —— 二者几乎相等，意味着触发信号一旦不在前 60 就必被截掉，技能从此检索不到；同时实测 when_to_use 只填了 16/43，且渲染层此前漏算其长度导致一批技能静默溢出预算（已在并行修订中补为 hintLen）。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>见 <code>ssot</code> 指向的真源原文；本卡不复制反例，以免与真源漂移。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>人工评审（该规则暂无机械守卫）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>learn-*.md 一族（25 个未成型的学习素材）不是 Skill 定义，不适用本条；内置（built-in）技能的非 manifest 元数据不追溯；allowed-tools 的强制力当前仅对 handler 技能生效（实测 0/43 有 handler），故本条要求「配」但不要求「现阶段已被强制」。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-18) 初版 / 迁移自 无</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/规则卡/[SECURITY-004] 权限档 fail-closed.html"><div class="dir">← 上一篇</div><div class="ttl">[SECURITY-004] 权限档 fail-closed</div></a><a class="next" href="../../../docs/10_规范/规则卡/[SOURCING-001] 上游源码不复制.html"><div class="dir">下一篇 →</div><div class="ttl">[SOURCING-001] 上游源码不复制</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/规则卡/[SKILL-001] Skill 编写规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

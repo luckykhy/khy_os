@@ -1455,6 +1455,29 @@ const AIGatewayGenerateMethod = {
     const finishResult = (result, { response = null, error = null } = {}) => {
       _stopGatewayIdleWatchdog();
       languageChunkGate = null;
+      // 路由事实快照(单一真源,2026-09-17「页脚 agnes / 报错 windsurf」事故的根治)。
+      // 全部出口(成功+20 余处失败 return)都汇聚于 finishResult,故此处是唯一不需要
+      // 逐点埋线的挂载点。只在成功/失败对象上**追加** routeFact 字段,既有
+      // attempts / actualAdapter / errorType 语义逐字节不变(大量测试依赖它们)。
+      // fail-soft:构造异常绝不改变 result 本身。
+      if (result && typeof result === 'object') {
+        try {
+          const _routeFact = require('./routeFact');
+          // strict 硬钉导致首选通道不可用时,结果里会带 errorType:'unavailable'
+          // 且首选通道从未被真正尝试成功——据此标注 pinnedUnavailable,让页脚能把
+          // 「意图 ≠ 实际」这件事显性化,而不是静默显示成两个不相干的通道名。
+          const _pinnedUnavailable =
+            _routeFact.isPinnedAdapter(process.env.GATEWAY_PREFERRED_ADAPTER) &&
+            !result.success &&
+            String(result.errorType || '').toLowerCase() === 'unavailable';
+          result.routeFact = _routeFact.buildRouteFact(result, {
+            env: process.env,
+            pinnedUnavailable: _pinnedUnavailable,
+          });
+        } catch {
+          /* 诊断字段是best-effort,绝不影响请求成败 */
+        }
+      }
       const durationMs = Date.now() - startTime;
       const languageConsistency = languageTracker ? languageTracker.finalize(result) : null;
       if (_traceAudit) {
@@ -1510,6 +1533,9 @@ const AIGatewayGenerateMethod = {
           if (usedModel && Array.isArray(_tub) && _tub.length > 0) {
             require('./toolCapabilityStore').recordVerdict(usedModel, 'native', {
               source: 'passive',
+              // 来源(P4):native 是正面证据、全局共享,这个字段**不参与**判定 —— 记它只为
+              // 可观测(probe-tools list 能看出这条确证是从哪条适配器观察到的)。
+              adapter: result.actualAdapter || result.adapter || null,
             });
           }
         } catch {
@@ -2522,6 +2548,49 @@ const AIGatewayGenerateMethod = {
       }
       strictPreferredOnly = false;
       emitStatus(`环境钉选通道 ${preferredAdapter} ${reasonLabel}，解除钉选并继续级联兜底通道`);
+      // [DESIGN-ARCH-139] 二期:钉选租约(治本)。env 钉选通道连续 N 次(默认 2,10 分钟
+      // 窗口内视为「连续」)不可用 → 自动解钉写回 .env(adapter=auto, strict=false)并披露。
+      // 现有 _maybeRelax 只放宽当次请求,下次照样钉回 —— 改值不改机制 = 必复发
+      // (已复发 6 次:codex→windsurf→windsurf→api→api→claude)。
+      // 用户显式钉选(userPinnedAdapter)不走此处,语义不变。KHY_ENV_PIN_LEASE=off 关闭。
+      try {
+        const _leaseEnabled = !['0', 'false', 'off', 'no'].includes(
+          String(process.env.KHY_ENV_PIN_LEASE || 'true').trim().toLowerCase()
+        );
+        if (_leaseEnabled) {
+          const _leaseLimit = Math.max(
+            1,
+            parseInt(process.env.KHY_ENV_PIN_LEASE_LIMIT || '2', 10) || 2
+          );
+          const _leaseWindowMs = 10 * 60 * 1000;
+          const _now = Date.now();
+          const _lease = this._envPinLeaseState || (this._envPinLeaseState = { key: '', count: 0, at: 0 });
+          if (_lease.key !== preferredAdapter || _now - _lease.at > _leaseWindowMs) {
+            _lease.key = preferredAdapter;
+            _lease.count = 0;
+          }
+          _lease.count += 1;
+          _lease.at = _now;
+          if (_lease.count >= _leaseLimit) {
+            const { writeEnvPatch } = require('../gatewayEnvFile');
+            writeEnvPatch({ GATEWAY_PREFERRED_ADAPTER: 'auto', GATEWAY_PREFERRED_STRICT: 'false' });
+            emitStatus(
+              `钉选租约到期:env 钉选 ${preferredAdapter} 已连续 ${_lease.count} 次不可用,` +
+                `已自动解钉写回 .env(adapter=auto, strict=false)。要固定通道请用 khy provider use <key>`
+            );
+            _lease.key = '';
+            _lease.count = 0;
+            _lease.at = 0;
+          } else {
+            emitStatus(
+              `钉选租约:env 钉选 ${preferredAdapter} 不可用已计 ${_lease.count}/${_leaseLimit} 次,` +
+                `再 ${_leaseLimit - _lease.count} 次将自动解钉`
+            );
+          }
+        }
+      } catch {
+        /* fail-soft:租约失败不影响本次放宽 */
+      }
       return true;
     };
 
@@ -2691,9 +2760,9 @@ const AIGatewayGenerateMethod = {
         _nativeVisionAdapter = false;
       }
       if (_nativeVisionAdapter) {
-        if (_isVerbose) {
-          emitStatus(`检测到图片输入：首选通道 ${_leadAdapterKey} 原生支持视觉，保留图片直接识别`);
-        }
+        emitStatus(
+          `🖼 识图方法: 原生视觉 — 首选通道 ${_leadAdapterKey} 直接读图`
+        );
       } else {
         try {
           const { decideVisionRouting } = require('./visionRouting');
@@ -2802,6 +2871,10 @@ const AIGatewayGenerateMethod = {
               const _primaryModel = decision.model;
               const vdr = require('./visionDescribeReturn');
               let _lastRawError = null;
+              // v2: 始终告知用户当前识图方法（不依赖 verbose）
+              emitStatus(
+                `🖼 识图方法: 视觉模型代理 — 调用 ${_primaryModel} 识图，结果回传当前模型作答`
+              );
               // OPS-MAN-145:级联候选索引 + 前一候选模型名,供 visionCascadeAttemptNotice 把候选 2..N 的
               // 冗余首句「我无法直接识别图片内容。」折成「<prev> 不可用，正在改用 <model> 继续识别...」。
               let _attIdx = 0;
@@ -3152,10 +3225,11 @@ const AIGatewayGenerateMethod = {
               }
             }
 
-            if (!_describeDone) {
-              // 门关(describe-return / failure-summary)/ 叶子不可用 → 既有 switch-model 替换(逐字节回退)。
-              const prevModel = options.model;
-              options = { ...options, model: decision.model };
+          if (!_describeDone) {
+            // 门关(describe-return / failure-summary)/ 叶子不可用 → 既有 switch-model 替换(逐字节回退)。
+            const prevModel = options.model;
+            options = { ...options, model: decision.model };
+            emitStatus(`🖼 识图方法: 模型替换 — 改选视觉模型 ${decision.model} 直接作答`);
               if (decision.reason === 'switched_to_pinned_vision_model') {
                 // 跨 pool 视觉兜底(KHY_VISION_FALLBACK_MODEL):钉选模型可能不在当前 pool
                 // (如当前 SenseNova、兜底 relay/gpt-4o-mini)。_resolveApiPoolProviderForRequest
@@ -3179,7 +3253,7 @@ const AIGatewayGenerateMethod = {
             // 由当前纯文本模型作答。失败则退到同 provider 视觉兄弟模型，再失败才 OCR。
             const mcpServerName = decision.mcpServer || process.env.KHY_MCP_VISION_SERVER;
             let mcpVisionText = '';
-            emitStatus(`[MCP] 图片识别中：${mcpServerName}…`);
+            emitStatus(`🖼 识图方法: MCP 视觉工具 — ${mcpServerName} 识图中…`);
             try {
               const mcpResult = await _callMcpVisionTool(mcpServerName, options.images);
               const _mcpErrors = Array.isArray(mcpResult.errors) ? mcpResult.errors : [];
@@ -3212,7 +3286,7 @@ const AIGatewayGenerateMethod = {
                   _mcpVisionText: mcpVisionText,
                 };
                 hasImageInput = false;
-                emitStatus(`[MCP] ${mcpServerName} 识别完成 ✓`);
+                emitStatus(`🖼 识图方法: MCP ${mcpServerName} 识别完成 ✓`);
               } else if (_mcpErrors.length) {
                 const errSummary = _mcpErrors.join('；');
                 emitStatus(
@@ -3361,14 +3435,15 @@ const AIGatewayGenerateMethod = {
               }
               // 同 provider 和跨 provider 都找不到 → 自然落到下方 OCR fallback
             }
-          } else if (decision.action === 'ocr-fallback') {
-            // OCR 提取**绝不能**把异常抛到本块外层 catch(visionErr) —— 那条 catch 会「保持
-            // 当前通道」即把原图**留下**,于是无视觉能力的模型收到读不懂的图,如实却荒谬地回
-            // 「我没有收到图片」(用户实测)。此处 decideVisionRouting 已判定当前 provider 无
-            // 任何视觉模型,故无论 OCR 成败,图都**必须**被剥离:成功 → 注入 OCR 文本;失败/抛错
-            // /无文本 → 注入诚实「收到图但读不出」说明并清图。把提取包进本地 try,抛错等价于「无
-            // 文本」,保证「非视觉模型永不收到裸图」这一不变量。
-            let ocrTexts = [];
+            } else if (decision.action === 'ocr-fallback') {
+              // OCR 提取**绝不能**把异常抛到本块外层 catch(visionErr) —— 那条 catch 会「保持
+              // 当前通道」即把原图**留下**,于是无视觉能力的模型收到读不懂的图,如实却荒谬地回
+              // 「我没有收到图片」(用户实测)。此处 decideVisionRouting 已判定当前 provider 无
+              // 任何视觉模型,故无论 OCR 成败,图都**必须**被剥离:成功 → 注入 OCR 文本;失败/抛错
+              // /无文本 → 注入诚实「收到图但读不出」说明并清图。把提取包进本地 try,抛错等价于「无
+              // 文本」,保证「非视觉模型永不收到裸图」这一不变量。
+              emitStatus('🖼 识图方法: 本地 OCR — 无可用视觉模型，提取图片文字后由当前模型作答');
+              let ocrTexts = [];
             let ocrDetails = [];
             try {
               ocrDetails = extractImageOcrDetails(options.images, { maxImages: 3, maxChars: 1200 });
@@ -3840,13 +3915,50 @@ const AIGatewayGenerateMethod = {
             }
           );
         }
+        // [DESIGN-ARCH-139] 一期:strict 钉选下的非首选通道跳过必须留痕。
+        // 旧行为:静默 continue → 整轮零 attempts → 信封只能报 NO_ATTEMPT
+        // (「注册表为空或全部未就绪」的猜测,掩盖了真正的钉选原因)。
+        // 记录与既有 virtualSkip 同型(manual-relay :3934 / 冷却 :4090),
+        // _pickPrimaryCause 会把 virtualSkip 排在实失败之后,不毒化诊断与熔断。
         if (strictPreferredOnly && entry.key !== preferredAdapter) {
+          const _skipAlreadyLogged = allAttempts.some(
+            (a) => a && a.adapterKey === entry.key && a.errorType === 'strict_pinned_skip'
+          );
+          if (!_skipAlreadyLogged) {
+            allAttempts.push({
+              provider: entry.key,
+              adapterKey: entry.key,
+              success: false,
+              error: `${entry.key} skipped: strict pinned to ${preferredAdapter}, fallback suppressed`,
+              statusCode: 0,
+              errorType: 'strict_pinned_skip',
+              virtualSkip: true,
+            });
+            emitStatus(`strict 钉选(${preferredAdapter})生效,跳过 ${entry.key},本轮不回退`);
+          }
           continue;
         }
         if (_triedAdapters.has(entry.key)) {
           continue;
         }
         if (!entry.enabled) {
+          // [DESIGN-ARCH-139] 一期:disabled 跳过同样留痕(旧行为静默,是零尝试的
+          // 另一条生产路径)。文本含 "disabled by configuration",信封可据此路由到
+          // CHANNEL_UNAVAILABLE 并给出「gateway status / gateway model」的正确指引。
+          const _disabledAlreadyLogged = allAttempts.some(
+            (a) => a && a.adapterKey === entry.key && a.errorType === 'adapter_disabled'
+          );
+          if (!_disabledAlreadyLogged) {
+            allAttempts.push({
+              provider: entry.key,
+              adapterKey: entry.key,
+              success: false,
+              error: `${entry.key} skipped: disabled by configuration`,
+              statusCode: 0,
+              errorType: 'adapter_disabled',
+              virtualSkip: true,
+            });
+          }
           continue;
         }
         if (!firstTriedAdapter) {
@@ -6295,7 +6407,29 @@ const AIGatewayGenerateMethod = {
     let _channelAdviceNote = '';
     try {
       const { buildChannelFailureAdvice } = require('./buildChannelFailureAdvice');
-      const _adv = buildChannelFailureAdvice({ attempts: allAttempts, env: process.env });
+      // 钉选是**元原因**:把「本轮是怎么被路由的」一并交给叶子。否则
+      // 「首选通道被 strict 钉死导致不回退」会被翻译成 auth/404 之类的表象,
+      // 排障者会一直去查密钥——2026-09-13→15 连续三天的对齐报告就是这样误诊的
+      // (详见 buildChannelFailureAdvice.js 的 _pinAdvice 注释)。
+      const _pinnedKeys = new Set(
+        (Array.isArray(allAttempts) ? allAttempts : [])
+          .map((a) => (a && (a.adapterKey || a.adapter || a.key)) || '')
+          .filter(Boolean)
+      );
+      const _adv = buildChannelFailureAdvice({
+        attempts: allAttempts,
+        env: process.env,
+        pin: {
+          adapter: preferredAdapter,
+          strict: strictPreferredOnly || userPinnedAdapter,
+          hard: userPinnedAdapter,
+          // 本轮只试过被钉的那一个通道 → 回退确实被抑制了(无 attempts 元信息时
+          // 保守取真:strict 生效即意味着不回退)。
+          fallbackSuppressed:
+            _pinnedKeys.size === 0 ||
+            (_pinnedKeys.size === 1 && _pinnedKeys.has(preferredAdapter)),
+        },
+      });
       if (_adv && _adv.message) {
         _channelAdviceNote = `${_adv.message}\n\n`;
       }
@@ -6356,6 +6490,14 @@ const AIGatewayGenerateMethod = {
         attempts: allAttempts,
         errorType:
           allAttempts.length > 0 ? allAttempts[allAttempts.length - 1].errorType : 'unknown',
+        // [DESIGN-ARCH-139] 一期:注册表实况。信封报 NO_ATTEMPT 时用实数替代
+        // 「注册表为空,或全部通道未启用/未就绪」的猜测性 hint。
+        registryFacts: {
+          registered: orderedAdapters.length,
+          enabled: orderedAdapters.filter((e) => e && e.enabled).length,
+          preferred: preferredAdapter || '',
+          strictPinned: !!strictPreferredOnly,
+        },
       },
       { error: 'All adapters failed' }
     );

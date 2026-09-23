@@ -1,6 +1,6 @@
 'use strict';
 // Integration: prove the per-turn checkpointId survives the JSONL persistence
-// round-trip (appendMessage write â†?restoreSession read) when KHY_REWIND_PERSIST
+// round-trip (appendMessage write ï¿½?restoreSession read) when KHY_REWIND_PERSIST
 // is on, and that gate-off yields a byte-identical (checkpointId-free) JSONL line.
 const fs = require('fs');
 const os = require('os');
@@ -18,7 +18,7 @@ describe('Rewind Resume Persistence', () => {
       sp.appendMessage(sid, { role: 'assistant', content: 'ok' }, a.uuid);
     
       const restored = sp.restoreSession(sid, { });
-      expect(restored && Array.isArray(restored.messages).toBeTruthy());
+      expect(restored && Array.isArray(restored.messages)).toBeTruthy();
       const userMsg = restored.messages.find((m) => m.role === 'user');
       expect(userMsg).toBeTruthy();
       expect(userMsg.checkpointId).toBe('ck_111', 'checkpointId survives the JSONL round-trip');
@@ -45,7 +45,7 @@ describe('Rewind Resume Persistence', () => {
       sp.appendMessage(sid, { role: 'user', content: 'plain' }, null);
       const file = sp.jsonlPathFor(sid);
       const raw = fs.readFileSync(file, 'utf-8');
-      expect(!raw).toContain('checkpointId');
+      expect(raw).not.toContain('checkpointId');
   });
 
 });

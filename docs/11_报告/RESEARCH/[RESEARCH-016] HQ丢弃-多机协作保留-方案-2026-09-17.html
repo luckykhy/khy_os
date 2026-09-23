@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [RESEARCH-016] HQ丢弃-多机协作保留-方案-2026-09-17.md -->
+<title>丢弃 HQ + 保留多机协作：可行方案（修订版） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>RESEARCH<span class="sep">›</span>丢弃 HQ + 保留多机协作：可行方案（修订版）</div>
+      <header class="hero reveal"><h1>丢弃 HQ + 保留多机协作：可行方案（修订版）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#丢弃-hq-保留多机协作-可行方案-修订版">丢弃 HQ + 保留多机协作：可行方案（修订版）</a></li><li class="lvl-2"><a href="#一-先纠正一个关键认知">一、先纠正一个关键认知</a></li><li class="lvl-2"><a href="#二-khy-os-已有的承接件-实测-无需新造">二、khy-os 已有的承接件（实测，无需新造）</a></li><li class="lvl-2"><a href="#三-方案-能力吸收-推荐执行">三、方案：能力吸收（推荐执行）</a></li><li class="lvl-3"><a href="#3-1-落点设计">3.1 落点设计</a></li><li class="lvl-3"><a href="#3-2-命令面-替代-hq-的-7-个脚本">3.2 命令面（替代 HQ 的 7 个脚本）</a></li><li class="lvl-3"><a href="#3-3-机械检查的去处-不要新建第-62-个检查器">3.3 机械检查的去处（**不要新建第 62 个检查器**）</a></li><li class="lvl-3"><a href="#3-4-多机协作怎么办-这是你真正的刚需">3.4 多机协作怎么办（**这是你真正的刚需**）</a></li><li class="lvl-3"><a href="#3-5-数据迁移-一次性-可回滚">3.5 数据迁移（一次性，可回滚）</a></li><li class="lvl-2"><a href="#四-诚实代价清单">四、诚实代价清单</a></li><li class="lvl-2"><a href="#五-三个必须你拍板的决策点">五、三个必须你拍板的决策点</a></li><li class="lvl-2"><a href="#六-建议的执行顺序-每步独立可验收-遵守-一次提交只做一步">六、建议的执行顺序（每步独立可验收，遵守「一次提交只做一步」）</a></li><li class="lvl-2"><a href="#附-本次调研新增的实测证据">附：本次调研新增的实测证据</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="丢弃-hq-保留多机协作-可行方案-修订版">丢弃 HQ + 保留多机协作：可行方案（修订版）<a class="anchor" href="#丢弃-hq-保留多机协作-可行方案-修订版" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>前置条件（用户已确认）</strong>：① <strong>多机协作是刚需</strong>；② <strong>要丢弃 khy-os-hq 这个独立仓库</strong>。  <br>调研日期 2026-09-17。本文取代前一份《可行性调研》的方案取舍部分。</p>
+<p><strong>结论</strong>：这两条<strong>可以同时满足</strong>，但方式<strong>不是</strong>「把 HQ 搬进 khy-os」，  <br>而是 <strong>「把 HQ 的能力吸收进 khy-os 的现有机制，然后废弃 HQ 仓库」</strong>。  <br>khy-os 已经具备承接的全部基础件，<strong>不需要新建子系统</strong>。</p></blockquote>
+<hr>
+<h2 id="一-先纠正一个关键认知">一、先纠正一个关键认知<a class="anchor" href="#一-先纠正一个关键认知" aria-label="锚点">#</a></h2>
+<p>前一版调研驳的是「<strong>把 HQ 目录搬进 khy-os</strong>」—— 那条路的致命处在于  <br>HQ 的 7 个脚本靠<strong>向上四级推算 <code>PORTABLE_ROOT</code></strong> 来定位 khy-os（<code>hq_common.py:26-29</code>），  <br>嵌进去就找不到宿主；且 <code>hq_check.py</code> 会递归扫整个 khy-os（35 → 3985 文件）必然报错。</p>
+<p><strong>但你要的其实不是「搬家」，是「废弃这个仓库」。</strong> 这两者解法完全不同：</p>
+<table><thead><tr><th></th><th>搬家（已否决）</th><th>废弃仓库（本方案）</th></tr></thead><tbody><tr><td>HQ 脚本</td><td>被迫在 khy-os 内部运行 → 路径地基崩</td><td><strong>不迁移、不运行 → 问题消失</strong></td></tr><tr><td>HQ 数据</td><td>嵌入 khy-os 树 → 被 hq_check 自扫</td><td><strong>改为 khy-os 的一等公民数据</strong></td></tr><tr><td>HQ 多机同步</td><td>两仓编排逻辑被迫重写</td><td><strong>直接复用 khy-os 已有的 git 通道</strong></td></tr><tr><td>代价来源</td><td>推倒地基</td><td>一次性数据迁移 + 几条命令</td></tr></tbody></table>
+<blockquote><p><strong>判据</strong>：HQ 的价值 = <strong>提示词库 + 任务/Bug 状态 + 机械检查</strong>。  <br>这三样<strong>都可以是 khy-os 内的数据与命令</strong>，不必是另一个仓库。</p></blockquote>
+<hr>
+<h2 id="二-khy-os-已有的承接件-实测-无需新造">二、khy-os 已有的承接件（实测，无需新造）<a class="anchor" href="#二-khy-os-已有的承接件-实测-无需新造" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>HQ 的能力</th><th>khy-os 现有对应物</th><th>实测结论</th></tr></thead><tbody><tr><td>任务/Bug 状态真源</td><td><code>.ai/</code> <strong>已入库</strong>（<code>git ls-files .ai</code> = 4 个 <code>.md</code>，且带 <code>.html</code> 孪生件）</td><td>✅ <strong>已有「入库的状态目录」先例</strong>，不必新发明</td></tr><tr><td>多机同步通道</td><td>khy-os 自带 3 个远端（<code>origin</code> / <code>gitee</code> / <code>khy-mirror</code>）</td><td>✅ 通道现成，<strong>HQ 的 <code>sync.py</code> 双仓编排是多余的一层</strong></td></tr><tr><td>任务服务层</td><td><code>taskControlService</code> / <code>taskClosure</code> / <code>taskScheduler</code> / <code>taskDecomposer</code> / <code>planModeService</code> / <code>goalModeService</code> / <code>todoStorePath</code> 等 ~30 个模块</td><td>✅ 任务基础设施<strong>已相当完备</strong></td></tr><tr><td>机械检查</td><td><code>scripts/ci/</code> <strong>61 个检查器</strong> + <code>ruleguard</code> 门禁体系 + <code>check-wiring</code></td><td>✅ HQ 的 <code>hq_check.py</code> 七组检查大部分可被现有体系吸收</td></tr><tr><td>CLI 命令</td><td><code>src/cli/handlers/</code> <strong>152 个自注册 handler</strong></td><td>✅ 加命令是常规操作（自注册，无需改路由）</td></tr><tr><td>AI 指令文件</td><td><code>AGENTS.md</code>（42 KB，compat 链全量注入）+ <code>CLAUDE.md</code> + <code>docs/10_规范/[DESIGN-DOC-002]</code> 标准</td><td>✅ 有标准可依（<code>DOCS-003</code>，22 场景矩阵）</td></tr><tr><td>规则登记与接线</td><td><code>RULES-REGISTRY.json</code> + <code>[DESIGN-ARCH-111]</code> 三步接线</td><td>✅ 新规则有明确落点流程</td></tr></tbody></table>
+<p><strong>关键结论</strong>：<strong>不需要移植 HQ 的脚本，只需要移植 HQ 的数据与知识</strong>，  <br>并把「下一步做什么」变成 khy-os 的一条本地命令。</p>
+<hr>
+<h2 id="三-方案-能力吸收-推荐执行">三、方案：能力吸收（推荐执行）<a class="anchor" href="#三-方案-能力吸收-推荐执行" aria-label="锚点">#</a></h2>
+<h3 id="3-1-落点设计">3.1 落点设计<a class="anchor" href="#3-1-落点设计" aria-label="锚点">#</a></h3>
+<pre><code>khy-os/
+├── .ai/                          # ← 已入库的状态目录（沿用既有先例）
+│   ├── MAP.md / GUARDS.md        #   （现有）
+│   └── hq/                       # ← 新增：HQ 数据的新家
+│       ├── ROADMAP.md            #   路线图（人读）
+│       ├── PROGRESS.json         #   任务状态（机读真源）
+│       ├── BUGS.json             #   Bug 状态机（机读真源）
+│       ├── MODELS.json           #   模型能力档案
+│       └── CONTEXT.md            #   架构速查 + 工程红线（AI 领域注入）
+├── prompts/hq/                   # ← 新增：19 条自包含提示词（迁移自 HQ prompts/）
+├── docs/10_规范/
+│   └── [DESIGN-HQ-001] 协作指挥规范.md   # 规则真源（PROCESS-006）
+└── services/backend/src/cli/handlers/
+    └── hq.js                     # ← 新增：khy hq &lt;子命令&gt;</code></pre>
+<blockquote><p><strong>为什么放 <code>.ai/hq/</code> 而不是根目录</strong>：<code>.ai/</code> 已是「入库的 AI 元数据目录」，  <br>有先例、有孪生件惯例，且<strong>不撞根目录白名单</strong>（<code>check-repo-layout.js:124</code> 只管根级 <code>.md</code>）。  <br><code>prompts/</code> 放根级需在 <code>DESIGN-LAY-005</code> §1.4 登记为例外目录（门槛见该节）。</p></blockquote>
+<h3 id="3-2-命令面-替代-hq-的-7-个脚本">3.2 命令面（替代 HQ 的 7 个脚本）<a class="anchor" href="#3-2-命令面-替代-hq-的-7-个脚本" aria-label="锚点">#</a></h3>
+<p>一条 <code>khy hq</code> 命令族，覆盖 HQ 现有的全部功能：</p>
+<table><thead><tr><th>HQ 原命令</th><th>新命令</th><th>说明</th></tr></thead><tbody><tr><td><code>next.py --status</code></td><td><code>khy hq status</code></td><td>局面总览（含模型路由建议）</td></tr><tr><td><code>next.py</code></td><td><code>khy hq next</code></td><td>领取下一步提示词（自动选最高优先级）</td></tr><tr><td><code>next.py --bug X --copy</code></td><td><code>khy hq next --bug X</code></td><td>指定 Bug，可直接 <code>--copy</code></td></tr><tr><td><code>next.py --verify X</code></td><td><code>khy hq verify X</code></td><td>回归验证提示词</td></tr><tr><td><code>new_bug.py</code></td><td><code>khy hq bug new &quot;标题&quot;</code></td><td>登记 Bug</td></tr><tr><td><code>update_status.py</code></td><td><code>khy hq bug set X &lt;状态&gt;</code> / <code>khy hq task set T-XXX &lt;状态&gt;</code></td><td>推进状态机（<strong>非法迁移当场拒绝</strong>）</td></tr><tr><td><code>hq_check.py</code></td><td><strong>并入 <code>npm run check:structure</code></strong></td><td>见 §3.3</td></tr><tr><td><code>sync.py</code></td><td><strong>删除</strong></td><td>khy-os 自身 git 通道已足够（见 §3.4）</td></tr><tr><td><code>check_sync.py</code></td><td><strong>删除</strong></td><td>同上</td></tr></tbody></table>
+<h3 id="3-3-机械检查的去处-不要新建第-62-个检查器">3.3 机械检查的去处（<strong>不要新建第 62 个检查器</strong>）<a class="anchor" href="#3-3-机械检查的去处-不要新建第-62-个检查器" aria-label="锚点">#</a></h3>
+<p>HQ 的 <code>hq_check.py</code> 七组检查，逐条映射：</p>
+<table><thead><tr><th>HQ 检查</th><th>处置</th><th>理由</th></tr></thead><tbody><tr><td><code>portability</code>（零盘符硬编码）</td><td><strong>删除</strong></td><td>HQ 自身铁律；khy-os 对应规则是 <code>RUNTIME-001</code>（已有守卫 <code>check-agent-rules.js</code>）</td></tr><tr><td><code>meta</code>（JSON↔MD 一致性）</td><td>⚠️ <strong>降级为命令内校验</strong></td><td>数据一致性在 <code>khy hq</code> 命令的写入路径上强制，不单独立门</td></tr><tr><td><code>prompts</code>（提示词质量）</td><td>⚠️ <strong>降级为 <code>check:agent-docs</code> 的一个场景</strong></td><td>提示词属 AI 指令文件，已有标准</td></tr><tr><td><code>drivability</code>（双入口同步）</td><td>⚠️ 同上</td><td>并入 <code>DOCS-003</code> 场景矩阵</td></tr><tr><td><code>autopull_task</code></td><td><strong>删除</strong></td><td>计划任务方案变更（见 §3.4）</td></tr><tr><td><code>sync_readonly</code></td><td><strong>删除</strong></td><td><code>sync.py</code> 已删</td></tr><tr><td><code>merge_flow</code></td><td><strong>删除</strong></td><td>属 khy-os 侧 git 操作，走 <code>PROCESS-001</code></td></tr></tbody></table>
+<blockquote><p><strong>纪律依据</strong>（<code>MEMORY</code> §七.2）：新检查器一旦落 <code>scripts/ci/</code>，  <br><code>check-wiring.js</code> 就要求它<strong>必须有门引用</strong>，否则 error。  <br>而 HQ 的这些检查大半是<strong>自有流程的自检</strong>，搬进 CI 属职责错配。  <br><strong>能落在命令写入路径上的约束，就不要升级成仓库级门禁。</strong></p></blockquote>
+<h3 id="3-4-多机协作怎么办-这是你真正的刚需">3.4 多机协作怎么办（<strong>这是你真正的刚需</strong>）<a class="anchor" href="#3-4-多机协作怎么办-这是你真正的刚需" aria-label="锚点">#</a></h3>
+<p><strong>HQ 的 <code>sync.py</code> 是一层多余的编排</strong> —— 它存在的唯一理由是「HQ 与 khy-os 是两个仓库，  <br>要协调两者的 pull/push 顺序」。<strong>仓库合并后这层编排失去存在理由</strong>：</p>
+<table><thead><tr><th>原来（两仓）</th><th>现在（单仓）</th></tr></thead><tbody><tr><td>先 pull HQ、再 pull khy-os；<code>--clean-only</code> 要求<strong>两仓都干净</strong></td><td><strong>只需 pull 一个仓库</strong></td></tr><tr><td>收工：<code>hq_check</code> 全绿 → commit HQ → （可选）push khy-os</td><td>收工：<code>npm run check:structure</code> 绿 → commit → push</td></tr><tr><td>autopull 计划任务跑 <code>sync.py --push-only --push-khyos --clean-only</code></td><td><strong>改为 khy-os 自己的 autopull</strong>（见下）</td></tr></tbody></table>
+<p><strong>新的多机协作流程</strong>（更简单，且消灭了undefined那个「嵌套仓库导致 <code>--clean-only</code> 永不触发」的前科）：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 开工</span>
+git pull --ff-only                    <span class="hljs-comment"># 只拉一个仓库了</span>
+khy hq status                         <span class="hljs-comment"># 看局面</span>
+
+<span class="hljs-comment"># 干活</span>
+khy hq next                           <span class="hljs-comment"># 领取提示词</span>
+<span class="hljs-comment"># ...在 khy-os 内执行...</span>
+
+<span class="hljs-comment"># 收工</span>
+khy hq task <span class="hljs-built_in">set</span> T-002 <span class="hljs-keyword">done</span> --note <span class="hljs-string">&quot;...&quot;</span>   <span class="hljs-comment"># 回填状态</span>
+npm run check:structure                   <span class="hljs-comment"># 门禁（含原 HQ 检查吸收进来的部分）</span>
+git add -A &amp;&amp; git commit -m <span class="hljs-string">&quot;...&quot;</span> &amp;&amp; git push</code></pre>
+<p><strong>autopull 计划任务</strong>：改为在 <strong>khy-os 仓库</strong>跑  <br><code>git fetch --quiet &amp;&amp; git status</code> 判定 + <code>--ff-only</code> 拉取 + 已提交内容推送。  <br><strong>要点</strong>：不再需要 <code>--clean-only</code> 的「两仓都干净」双条件，<strong>单仓判定即可</strong> ——  <br>这直接消除了undefined前科的成因。</p>
+<h3 id="3-5-数据迁移-一次性-可回滚">3.5 数据迁移（一次性，可回滚）<a class="anchor" href="#3-5-数据迁移-一次性-可回滚" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>步骤</th><th>动作</th><th>校验</th></tr></thead><tbody><tr><td>1</td><td>把 <code>_meta/{ROADMAP.md,PROGRESS.json,bugs.json,MODELS.json,CONTEXT.md}</code> 复制到 <code>.ai/hq/</code></td><td>JSON 可解析；任务/Bug 计数与源一致（<strong>23 任务 / 8 Bug</strong>）</td></tr><tr><td>2</td><td>把 <code>prompts/</code> 19 个文件复制到 <code>prompts/hq/</code></td><td>文件数一致；渲染占位符 <code>{{XX}}</code> 仍完整</td></tr><tr><td>3</td><td>写 <code>khy hq</code> 命令（读 <code>.ai/hq/*.json</code>）</td><td>状态机非法迁移被拒；<code>--status</code> 输出与原 <code>next.py --status</code> 等价</td></tr><tr><td>4</td><td>补 <code>docs/10_规范/[DESIGN-HQ-001]</code> + 登记 <code>PROCESS-006</code></td><td><code>check:rules</code> / <code>check:gov-rules</code> 绿</td></tr><tr><td>5</td><td>验证多机流程跑通（本次机器 + 另一台）</td><td>两边 <code>khy hq status</code> 一致</td></tr><tr><td>6</td><td><strong>确认无误后再删 HQ 仓库</strong>（先归档，不立刻删远端）</td><td>—</td></tr></tbody></table>
+<blockquote><p>⚠️ <strong>迁移期双轨</strong>：步骤 1–5 完成前，<strong>HQ 仓库保持可用</strong>（只读使用，不再写入）。  <br>步骤 6 建议<strong>先 <code>git clone --mirror</code> 归档一份</strong>，确认新流程跑顺 2 周后再废弃远端。</p></blockquote>
+<hr>
+<h2 id="四-诚实代价清单">四、诚实代价清单<a class="anchor" href="#四-诚实代价清单" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>代价</th><th>量级</th><th>可否避免</th></tr></thead><tbody><tr><td>写 <code>khy hq</code> 命令（读状态 + 渲染提示词 + 状态机）</td><td><strong>中</strong>（~300-500 行，可拆叶子 + 测试）</td><td>否，这是核心</td></tr><tr><td>迁移 5 个数据文件 + 19 个提示词</td><td><strong>低</strong>（复制 + 校验）</td><td>否</td></tr><tr><td>写 1 篇规范 + 1 条规则登记</td><td><strong>低</strong>（有 <code>[DESIGN-ARCH-111]</code> 三步流程）</td><td>否</td></tr><tr><td>计划任务重写（单仓 autopull）</td><td><strong>低</strong></td><td>否</td></tr><tr><td><code>prompts/</code> 若放根级需登记为例外目录</td><td><strong>低</strong></td><td>✅ 改放 <code>docs/</code> 或 <code>.ai/hq/prompts/</code> 可免</td></tr><tr><td><strong>丢弃 HQ 的 57 个 commit 历史</strong></td><td><strong>不可逆</strong></td><td>✅ 先 mirror 归档可缓解</td></tr><tr><td>HQ 的「双入口 + drivability 强制」机制</td><td><strong>中</strong></td><td>⚠️ 需在 <code>DOCS-003</code> 场景矩阵补新形态，否则会退化</td></tr></tbody></table>
+<p><strong>最大的一处损失要明说</strong>：HQ 的 <code>hq_check.py drivability</code> 强制  <br>「<code>CLAUDE.md</code> 与 <code>AGENTS.md</code> 必须同步修改」那条机械保障，khy-os 侧  <br><strong>没有等价守卫</strong>（khy-os 的 <code>AGENTS.md</code>/<code>CLAUDE.md</code> 是两份独立文档）。  <br>迁移时要么补一条场景，要么<strong>接受这条保障的降级</strong>。</p>
+<hr>
+<h2 id="五-三个必须你拍板的决策点">五、三个必须你拍板的决策点<a class="anchor" href="#五-三个必须你拍板的决策点" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>决策</th><th>选项</th></tr></thead><tbody></tbody></table>
+<p>| <strong>1</strong> | <strong>HQ 历史怎么处理</strong>        | (a) <code>git clone --mirror</code> 归档后废弃远端 ← 推荐  <br>(b) 直接把 57 个 commit 并入 khy-os（rewrite，风险高）  <br>(c) 直接删（不可逆） |<br>| <strong>2</strong> | <strong>提示词放哪</strong>            | (a) <code>.ai/hq/prompts/</code>（<strong>不入根目录，免登记例外</strong>）← 推荐  <br>(b) 根级 <code>prompts/</code>（需 <code>DESIGN-LAY-005</code> §1.4 登记例外）      |<br>| <strong>3</strong> | <strong><code>khy hq</code> 命令的首要入口</strong> | (a) 纯本地命令（不联网、零依赖）← 推荐  <br>(b) 加 Web API 端点（可远程查看，但多一处维护）                                           |</p>
+<hr>
+<h2 id="六-建议的执行顺序-每步独立可验收-遵守-一次提交只做一步">六、建议的执行顺序（每步独立可验收，遵守「一次提交只做一步」）<a class="anchor" href="#六-建议的执行顺序-每步独立可验收-遵守-一次提交只做一步" aria-label="锚点">#</a></h2>
+<ol><li><strong>写规范</strong>：<code>docs/10_规范/[DESIGN-HQ-001] 协作指挥规范.md</code>（含数据契约、状态机、<code>khy hq</code> 命令面）</li><li><strong>迁移数据</strong>：<code>.ai/hq/*</code> + 提示词（<strong>双轨期，HQ 仍可用</strong>）</li><li><strong>写命令</strong>：<code>khy hq status</code> / <code>next</code>（最小可用；先不做 <code>bug new</code>/<code>set</code>）</li><li><strong>补状态写命令</strong>：<code>khy hq task set</code> / <code>bug set</code>（带状态机校验）</li><li><strong>重写 autopull</strong>：单仓版</li><li><strong>补规则登记</strong>：<code>PROCESS-006</code> + 接线</li><li><strong>跑通双机验证</strong></li><li><strong>归档并废弃 HQ</strong>（确认 2 周后）</li></ol>
+<blockquote><p>步骤 1–2 是纯增量，<strong>零风险</strong>；真正的风险点在步骤 8，且那一步有归档兜底。</p></blockquote>
+<hr>
+<h2 id="附-本次调研新增的实测证据">附：本次调研新增的实测证据<a class="anchor" href="#附-本次调研新增的实测证据" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-comment"># khy-os 已有「入库的状态目录」先例</span>
+git -C /d/Portable/khy-os ls-files .ai      <span class="hljs-comment"># → 4 个 .md，含 .html 孪生件</span>
+git -C /d/Portable/khy-os check-ignore .ai  <span class="hljs-comment"># → 无输出（未忽略 = 已入库）</span>
+
+<span class="hljs-comment"># khy-os 自带多机通道（HQ 的 sync.py 是多余一层）</span>
+git -C /d/Portable/khy-os remote -v         <span class="hljs-comment"># → origin / gitee / khy-mirror</span>
+
+<span class="hljs-comment"># khy-os 任务基础设施已完备</span>
+<span class="hljs-built_in">ls</span> /d/Portable/khy-os/services/backend/src/services/ | grep -cE <span class="hljs-string">&quot;task|plan|todo&quot;</span>   <span class="hljs-comment"># → 约 30</span>
+
+<span class="hljs-comment"># khy-os 安全区目录（本机态，不入库 —— 不要把 HQ 数据放这里）</span>
+sed -n <span class="hljs-string">&#x27;54p;65p&#x27;</span> /d/Portable/khy-os/.gitignore   <span class="hljs-comment"># → .khy/  .khyos/</span></code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/11_报告/RESEARCH/[RESEARCH-015] HQ合并入khyos-可行性调研-2026-09-17.html"><div class="dir">← 上一篇</div><div class="ttl">khy-os-hq 合并入 khy-os 可行性调研与实施方案</div></a><a class="next" href="../../../docs/11_报告/RESEARCH/[RESEARCH-017] 防止越改越差-方案-2026-09-17.html"><div class="dir">下一篇 →</div><div class="ttl">防止 khy-os「越改越差」——写入前拦截 + 逐文件棘轮</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/11_报告/RESEARCH/[RESEARCH-016] HQ丢弃-多机协作保留-方案-2026-09-17.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

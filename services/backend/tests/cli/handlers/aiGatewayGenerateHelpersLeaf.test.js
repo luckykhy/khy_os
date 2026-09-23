@@ -1,4 +1,5 @@
 'use strict';
+const assert = require('node:assert');
 /**
  * Leaf-contract test for aiGatewayGenerateHelpers.js (extracted from cli/ai.js).
  *
@@ -6,7 +7,7 @@
  * (2) the host (cli/ai.js) still exposes its public surface (chat / getConversationStats /
  * checkModelCapability) so the extraction kept the module contract intact and the moved bodies are
  * re-imported by the same names; (3) two deterministic, side-effect-free bodies behave identically after
- * relocation â€?_toolProgressLabel maps a tool name to a human progress label, and _extractPlan pulls a
+ * relocation ï¿½?_toolProgressLabel maps a tool name to a human progress label, and _extractPlan pulls a
  * plan block out of assistant text; (4) setAiGatewayGenerateHelpersDeps is a guarded, idempotent,
  * non-throwing DI setter that only wires the injected host accessors.
  *
@@ -62,8 +63,8 @@ describe('Ai Gateway Generate Helpers Leaf', () => {
 
   test('setAiGatewayGenerateHelpersDeps is a guarded, idempotent, non-throwing DI setter', () => {
       const { setAiGatewayGenerateHelpersDeps } = require(LEAF);
-      expect(() => setAiGatewayGenerateHelpersDeps().not.toThrow());
-      expect(() => setAiGatewayGenerateHelpersDeps({}).not.toThrow());
+      expect(() => setAiGatewayGenerateHelpersDeps()).not.toThrow();
+      expect(() => setAiGatewayGenerateHelpersDeps({})).not.toThrow();
       // Non-function deps are ignored by the typeof guards.
       assert.doesNotThrow(() => setAiGatewayGenerateHelpersDeps({
         _resolveAuditTraceContext: 1, _logStandaloneLlmRequest: null, getService: 0,
@@ -72,8 +73,8 @@ describe('Ai Gateway Generate Helpers Leaf', () => {
         _resolveAuditTraceContext: () => ({}), _logStandaloneLlmRequest: () => {},
         _logStandaloneLlmResponse: () => {}, getService: () => ({}),
       };
-      expect(() => setAiGatewayGenerateHelpersDeps(fake).not.toThrow());
-      expect(() => setAiGatewayGenerateHelpersDeps(fake).not.toThrow());
+      expect(() => setAiGatewayGenerateHelpersDeps(fake)).not.toThrow();
+      expect(() => setAiGatewayGenerateHelpersDeps(fake)).not.toThrow();
   });
 
 });

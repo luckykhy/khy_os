@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [IMPL-RPT-051] 工具注册表自愈层规范.md -->
+<title>[IMPL-RPT-045] 工具注册表自愈层规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>IMPL-RPT<span class="sep">›</span>[IMPL-RPT-045] 工具注册表自愈层规范</div>
+      <header class="hero reveal"><h1>[IMPL-RPT-045] 工具注册表自愈层规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#impl-rpt-045-工具注册表自愈层规范">[IMPL-RPT-045] 工具注册表自愈层规范</a></li><li class="lvl-2"><a href="#1-概述">1. 概述</a></li><li class="lvl-3"><a href="#设计原则">设计原则</a></li><li class="lvl-2"><a href="#2-错误类-taxonomy">2. 错误类 taxonomy</a></li><li class="lvl-3"><a href="#错误类详细说明">错误类详细说明</a></li><li class="lvl-2"><a href="#3-架构">3. 架构</a></li><li class="lvl-2"><a href="#4-模块清单">4. 模块清单</a></li><li class="lvl-3"><a href="#4-1-toolhealer-js-统一修复叶子">4.1 `_toolHealer.js` — 统一修复叶子</a></li><li class="lvl-3"><a href="#4-2-toolsyntaxhealer-js-语法修复叶子">4.2 `_toolSyntaxHealer.js` — 语法修复叶子</a></li><li class="lvl-3"><a href="#4-3-集成点">4.3 集成点</a></li><li class="lvl-2"><a href="#5-修复结果格式">5. 修复结果格式</a></li><li class="lvl-3"><a href="#confidence-含义">confidence 含义</a></li><li class="lvl-2"><a href="#6-审计日志">6. 审计日志</a></li><li class="lvl-2"><a href="#7-扩展规范">7. 扩展规范</a></li><li class="lvl-3"><a href="#7-1-新增错误类">7.1 新增错误类</a></li><li class="lvl-3"><a href="#7-2-改进已有修复方法">7.2 改进已有修复方法</a></li><li class="lvl-3"><a href="#7-3-更正错误方法">7.3 更正错误方法</a></li><li class="lvl-3"><a href="#7-4-添加新的修复模式-e1-语法修复">7.4 添加新的修复模式（E1 语法修复）</a></li><li class="lvl-3"><a href="#7-5-修复学习-手动修复后自动记录">7.5 修复学习（手动修复后自动记录）</a></li><li class="lvl-3"><a href="#7-6-更新时机与自愈纪律">7.6 更新时机与自愈纪律</a></li><li class="lvl-2"><a href="#8-自愈触发防护">8. 自愈触发防护</a></li><li class="lvl-3"><a href="#8-1-频率限制">8.1 频率限制</a></li><li class="lvl-3"><a href="#8-2-自愈触发流程">8.2 自愈触发流程</a></li><li class="lvl-3"><a href="#8-3-监控告警">8.3 监控告警</a></li><li class="lvl-2"><a href="#9-测试规范">9. 测试规范</a></li><li class="lvl-3"><a href="#8-1-单元测试-纯函数">8.1 单元测试（纯函数）</a></li><li class="lvl-3"><a href="#8-2-文件级测试-e1">8.2 文件级测试（E1）</a></li><li class="lvl-3"><a href="#8-3-集成测试">8.3 集成测试</a></li><li class="lvl-3"><a href="#8-4-测试文件命名">8.4 测试文件命名</a></li><li class="lvl-2"><a href="#9-环境变量">9. 环境变量</a></li><li class="lvl-2"><a href="#10-已知限制">10. 已知限制</a></li><li class="lvl-2"><a href="#11-变更历史">11. 变更历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="impl-rpt-045-工具注册表自愈层规范">[IMPL-RPT-045] 工具注册表自愈层规范<a class="anchor" href="#impl-rpt-045-工具注册表自愈层规范" aria-label="锚点">#</a></h1>
+<blockquote><p>状态: ACTIVE | 创建: 2026-09-05 | 作者: AI Assist</p></blockquote>
+<hr>
+<h2 id="1-概述">1. 概述<a class="anchor" href="#1-概述" aria-label="锚点">#</a></h2>
+<p>工具注册表自愈层（Tool Registry Self-Healing Layer）是一个<strong>纯叶子系统</strong>，负责在工具定义加载过程中检测并自动修复常见错误，确保单个工具的错误不会中断整个注册表的加载。</p>
+<h3 id="设计原则">设计原则<a class="anchor" href="#设计原则" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>原则</th><th>说明</th></tr></thead><tbody><tr><td><strong>纯叶子</strong></td><td>零 IO（除 E1 文件修复外）、确定性、不抛异常</td></tr><tr><td><strong>幂等</strong></td><td>二次运行 = no-op，不会产生级联修复</td></tr><tr><td><strong>环境门控</strong></td><td><code>KHY_TOOL_HEAL</code> / <code>KHY_TOOL_SYNTAX_HEAL</code> 默认开</td></tr><tr><td><strong>fail-soft</strong></td><td>修复失败回退安全默认值，记录日志供审计</td></tr><tr><td><strong>从错误中映射出类</strong></td><td>不只修具体错误，而是建立覆盖所有同类错误的修复层</td></tr><tr><td><strong>开闭原则</strong></td><td>新增错误类通过扩展实现，不修改已有修复逻辑</td></tr></tbody></table>
+<hr>
+<h2 id="2-错误类-taxonomy">2. 错误类 taxonomy<a class="anchor" href="#2-错误类-taxonomy" aria-label="锚点">#</a></h2>
+<p>每个错误都有<strong>根因</strong>、<strong>检测点</strong>、<strong>自愈策略</strong>三要素。</p>
+<table><thead><tr><th>错误类</th><th>名称</th><th>根因</th><th>检测点</th><th>自愈策略</th></tr></thead><tbody><tr><td><strong>E1</strong></td><td>static-field-colon</td><td>JS 类字段用 <code>:</code> 不用 <code>=</code></td><td><code>SyntaxError</code> at load time</td><td>文件级 regex 修复 + require 重试</td></tr><tr><td><strong>E2</strong></td><td>invalid-category</td><td>分类不在 CATEGORIES 中</td><td><code>defineTool()</code> 入口</td><td>Levenshtein fuzzy-match → 最近有效分类</td></tr><tr><td><strong>E3</strong></td><td>invalid-risk</td><td>风险级不在 RISK_LEVELS 中</td><td><code>defineTool()</code> 入口</td><td>Levenshtein fuzzy-match → 最近有效风险级</td></tr><tr><td><strong>E4</strong></td><td>invalid-enum</td><td>枚举值不在 VALID_INTERRUPT_BEHAVIORS 中</td><td><code>defineTool()</code> 入口</td><td>Levenshtein fuzzy-match → 最近有效枚举值</td></tr><tr><td><strong>E5</strong></td><td>type-mismatch</td><td>字符串/数字/布尔类型不匹配</td><td><code>defineTool()</code> 入口</td><td>字面量强制类型转换</td></tr><tr><td><strong>E6</strong></td><td>invalid-array</td><td>单字符串代替数组</td><td><code>defineTool()</code> 入口</td><td>单字符串包装为数组</td></tr></tbody></table>
+<h3 id="错误类详细说明">错误类详细说明<a class="anchor" href="#错误类详细说明" aria-label="锚点">#</a></h3>
+<h4 id="e1-static-field-colon">E1: static-field-colon<a class="anchor" href="#e1-static-field-colon" aria-label="锚点">#</a></h4>
+<pre><code class="language-javascript"><span class="hljs-comment">// ❌ 错误</span>
+<span class="hljs-keyword">static</span> <span class="hljs-attr">searchHint</span>: <span class="hljs-string">&#x27;fine-tuning model training&#x27;</span>;
+
+<span class="hljs-comment">// ✅ 修复后</span>
+<span class="hljs-keyword">static</span> searchHint = <span class="hljs-string">&#x27;fine-tuning model training&#x27;</span>;</code></pre>
+<p><strong>检测</strong>: <code>require()</code> 抛出 <code>SyntaxError: Unexpected strict mode reserved word</code></p>
+<p><strong>修复</strong>: <code>_toolSyntaxHealer.js</code> 的 <code>healFile()</code> 读取文件 → regex 替换 → 写回 → 清除 require 缓存 → 重试</p>
+<hr>
+<h4 id="e2-invalid-category">E2: invalid-category<a class="anchor" href="#e2-invalid-category" aria-label="锚点">#</a></h4>
+<pre><code class="language-javascript"><span class="hljs-comment">// ❌ 错误</span>
+<span class="hljs-keyword">static</span> category = <span class="hljs-string">&#x27;protocol&#x27;</span>;  <span class="hljs-comment">// 拼写错误</span>
+
+<span class="hljs-comment">// ✅ 修复后（模糊匹配）</span>
+<span class="hljs-keyword">static</span> category = <span class="hljs-string">&#x27;mcp&#x27;</span>;  <span class="hljs-comment">// 或 fallback 到 &#x27;custom&#x27;</span></code></pre>
+<p><strong>检测</strong>: <code>category</code> 不在 <code>VALID_CATEGORIES</code> 数组中</p>
+<p><strong>修复</strong>: Levenshtein 距离 ≤ 2 或前缀匹配 → 最近有效值；否则 fallback 到 <code>'custom'</code></p>
+<hr>
+<h4 id="e3-invalid-risk">E3: invalid-risk<a class="anchor" href="#e3-invalid-risk" aria-label="锚点">#</a></h4>
+<pre><code class="language-javascript"><span class="hljs-comment">// ❌ 错误</span>
+<span class="hljs-keyword">static</span> risk = <span class="hljs-string">&#x27;mdeium&#x27;</span>;  <span class="hljs-comment">// 拼写错误</span>
+
+<span class="hljs-comment">// ✅ 修复后</span>
+<span class="hljs-keyword">static</span> risk = <span class="hljs-string">&#x27;medium&#x27;</span>;</code></pre>
+<p><strong>检测</strong>: <code>risk</code> 不在 <code>VALID_RISK_LEVELS</code> 数组中</p>
+<p><strong>修复</strong>: Levenshtein fuzzy-match → 最近有效风险级；否则 fallback 到 <code>'medium'</code></p>
+<hr>
+<h4 id="e4-invalid-enum">E4: invalid-enum<a class="anchor" href="#e4-invalid-enum" aria-label="锚点">#</a></h4>
+<pre><code class="language-javascript"><span class="hljs-comment">// ❌ 错误</span>
+<span class="hljs-keyword">static</span> interruptBehavior = <span class="hljs-string">&#x27;cancle&#x27;</span>;  <span class="hljs-comment">// 拼写错误</span>
+
+<span class="hljs-comment">// ✅ 修复后</span>
+<span class="hljs-keyword">static</span> interruptBehavior = <span class="hljs-string">&#x27;cancel&#x27;</span>;</code></pre>
+<p><strong>检测</strong>: 枚举值不在 <code>VALID_INTERRUPT_BEHAVIORS</code> 数组中</p>
+<p><strong>修复</strong>: Levenshtein fuzzy-match → 最近有效枚举值；否则 fallback 到 <code>'cancel'</code></p>
+<hr>
+<h4 id="e5-type-mismatch">E5: type-mismatch<a class="anchor" href="#e5-type-mismatch" aria-label="锚点">#</a></h4>
+<pre><code class="language-javascript"><span class="hljs-comment">// ❌ 错误</span>
+<span class="hljs-keyword">static</span> shouldDefer = <span class="hljs-string">&#x27;true&#x27;</span>;  <span class="hljs-comment">// 字符串代替布尔</span>
+
+<span class="hljs-comment">// ✅ 修复后</span>
+<span class="hljs-keyword">static</span> shouldDefer = <span class="hljs-literal">true</span>;</code></pre>
+<p><strong>检测</strong>: 值的类型与目标类型不匹配（如 <code>typeof val === 'string'</code> 但期望 <code>'boolean'</code>）</p>
+<p><strong>修复</strong>:</p>
+<ul><li><code>'true'/'1'/'yes'/'on'</code> → <code>true</code></li><li><code>'false'/'0'/'no'/'off'</code> → <code>false</code></li><li><code>'42'</code> → <code>42</code>（字符串→数字）</li><li><code>true</code> → <code>'true'</code>（布尔→字符串）</li></ul>
+<hr>
+<h4 id="e6-invalid-array">E6: invalid-array<a class="anchor" href="#e6-invalid-array" aria-label="锚点">#</a></h4>
+<pre><code class="language-javascript"><span class="hljs-comment">// ❌ 错误</span>
+<span class="hljs-keyword">static</span> aliases = <span class="hljs-string">&#x27;single-alias&#x27;</span>;  <span class="hljs-comment">// 字符串代替数组</span>
+
+<span class="hljs-comment">// ✅ 修复后</span>
+<span class="hljs-keyword">static</span> aliases = [<span class="hljs-string">&#x27;single-alias&#x27;</span>];</code></pre>
+<p><strong>检测</strong>: 期望数组但收到字符串</p>
+<p><strong>修复</strong>: 单字符串包装为 <code>[str]</code></p>
+<hr>
+<h2 id="3-架构">3. 架构<a class="anchor" href="#3-架构" aria-label="锚点">#</a></h2>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                     loadTools()                             │
+│                   (tools/index.js)                          │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│               _requireWithHeal(indexPath)                   │
+│                   (tools/index.js)                          │
+│                                                             │
+│   require(indexPath) ──→ SyntaxError?                       │
+│        │                        │                           │
+│        │ 正常                   │ 是                        │
+│        ▼                        ▼                           │
+│   返回 exported          healFile(indexPath)                │
+│        │                   (E1 修复)                        │
+│        │                        │                           │
+│        │                   healed?                          │
+│        │                   │      │                         │
+│        │                   │ 是   │ 否                      │
+│        │                   ▼      ▼                         │
+│        │              重试 require  记录警告                │
+│        │                   │                               │
+│        ▼───────────────────┘                               │
+│   返回 exported                                             │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│               defineTool(config)                            │
+│               (tools/_baseTool.js)                          │
+│                                                             │
+│   ┌─────────────────────────────────────────────────────┐   │
+│   │ E2: healCategory(rawCategory)                       │   │
+│   │ E3: healRisk(rawRisk)                               │   │
+│   │ E4: healEnum(rawInterrupt, valid, fallback)         │   │
+│   │ E5: healType(val, targetType)                        │   │
+│   │ E6: _healArray(val, field)                           │   │
+│   └─────────────────────────────────────────────────────┘   │
+│                              │                              │
+│                              ▼                              │
+│                     _logRepair(...)                         │
+│                   (审计日志 + console.warn)                 │
+└─────────────────────────────────────────────────────────────┘</code></pre>
+<hr>
+<h2 id="4-模块清单">4. 模块清单<a class="anchor" href="#4-模块清单" aria-label="锚点">#</a></h2>
+<h3 id="4-1-toolhealer-js-统一修复叶子">4.1 <code>_toolHealer.js</code> — 统一修复叶子<a class="anchor" href="#4-1-toolhealer-js-统一修复叶子" aria-label="锚点">#</a></h3>
+<p><strong>路径</strong>: <code>services/backend/src/tools/_toolHealer.js</code></p>
+<p><strong>契约</strong>:</p>
+<ul><li>零 IO（不碰 fs/网络/子进程/process.exit）</li><li>确定性（同输入同输出）</li><li>不抛异常</li><li>环境门控: <code>KHY_TOOL_HEAL</code>（默认开）</li></ul>
+<p><strong>导出</strong>:</p>
+<table><thead><tr><th>函数</th><th>用途</th><th>入参</th><th>出参</th></tr></thead><tbody><tr><td><code>heal(healClass, value, options)</code></td><td>统一入口</td><td>`class: 'category'\</td><td>'risk'\</td></tr><tr><td><code>healCategory(raw)</code></td><td>E2 修复</td><td><code>raw: string</code></td><td><code>{ repaired, value, confidence }</code></td></tr><tr><td><code>healRisk(raw)</code></td><td>E3 修复</td><td><code>raw: string</code></td><td><code>{ repaired, value, confidence }</code></td></tr><tr><td><code>healEnum(raw, validOptions, fallback)</code></td><td>E4 修复</td><td><code>raw: string</code>, <code>validOptions: string[]</code>, <code>fallback: string</code></td><td><code>{ repaired, value, confidence }</code></td></tr><tr><td><code>healType(value, targetType)</code></td><td>E5 修复</td><td><code>value: *</code>, <code>targetType: string</code></td><td><code>{ repaired, value }</code></td></tr><tr><td><code>isEnabled()</code></td><td>门控检查</td><td>—</td><td><code>boolean</code></td></tr><tr><td><code>VALID_CATEGORIES</code></td><td>有效分类列表</td><td>—</td><td><code>string[]</code></td></tr><tr><td><code>VALID_RISK_LEVELS</code></td><td>有效风险级列表</td><td>—</td><td><code>string[]</code></td></tr><tr><td><code>VALID_INTERRUPT_BEHAVIORS</code></td><td>有效中断行为列表</td><td>—</td><td><code>string[]</code></td></tr></tbody></table>
+<p><strong>内部函数</strong>:</p>
+<ul><li><code>_levenshtein(a, b)</code>: Levenshtein 距离计算</li><li><code>_closestOption(value, validOptions)</code>: 模糊匹配核心</li></ul>
+<hr>
+<h3 id="4-2-toolsyntaxhealer-js-语法修复叶子">4.2 <code>_toolSyntaxHealer.js</code> — 语法修复叶子<a class="anchor" href="#4-2-toolsyntaxhealer-js-语法修复叶子" aria-label="锚点">#</a></h3>
+<p><strong>路径</strong>: <code>services/backend/src/tools/_toolSyntaxHealer.js</code></p>
+<p><strong>契约</strong>:</p>
+<ul><li>仅 E1 涉及文件 IO（读/写目标文件）</li><li>确定性、幂等、不抛异常</li><li>环境门控: <code>KHY_TOOL_SYNTAX_HEAL</code>（默认开）</li></ul>
+<p><strong>导出</strong>:</p>
+<table><thead><tr><th>函数</th><th>用途</th><th>入参</th><th>出参</th></tr></thead><tbody><tr><td><code>healSource(source)</code></td><td>纯函数修复（无 IO）</td><td><code>source: string</code></td><td><code>{ source: string, changes: Array&lt;{line, pattern, before, after}&gt; }</code></td></tr><tr><td><code>healFile(filePath)</code></td><td>文件级修复</td><td><code>filePath: string</code></td><td><code>{ healed: boolean, changes: Array, error?: string }</code></td></tr><tr><td><code>HEAL_PATTERNS</code></td><td>修复模式列表</td><td>—</td><td><code>Array&lt;{name, regex, replacement}&gt;</code></td></tr><tr><td><code>_isEnabled()</code></td><td>门控检查</td><td>—</td><td><code>boolean</code></td></tr></tbody></table>
+<p><strong>修复模式</strong>:</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// 模式名: static-field-colon-instead-of-equals</span>
+<span class="hljs-comment">// 匹配: static &lt;prop&gt;: &lt;string|number|boolean|null|template|identifier&gt;</span>
+<span class="hljs-comment">// 不匹配: static &lt;prop&gt;: { ... } 或 [ ... ]（对象/数组字面量，风险高不自动修）</span>
+{
+  <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;static-field-colon-instead-of-equals&#x27;</span>,
+  <span class="hljs-attr">regex</span>: <span class="hljs-regexp">/^(\s*)(static\s+\w+)\s*:\s*(&#x27;[^&#x27;]*&#x27;|&quot;[^&quot;]*&quot;|`[^`]*`|\d+\.?\d*|true|false|null|[a-zA-Z_$]\w*)(.*)$/gm</span>,
+  <span class="hljs-attr">replacement</span>: <span class="hljs-string">&#x27;$1$2 = $3$4&#x27;</span>,
+}</code></pre>
+<hr>
+<h3 id="4-3-集成点">4.3 集成点<a class="anchor" href="#4-3-集成点" aria-label="锚点">#</a></h3>
+<h4 id="tools-index-js-loadtools-phase-1"><code>tools/index.js</code> — <code>loadTools()</code> Phase 1<a class="anchor" href="#tools-index-js-loadtools-phase-1" aria-label="锚点">#</a></h4>
+<pre><code class="language-javascript"><span class="hljs-keyword">function</span> <span class="hljs-title function_">_requireWithHeal</span>(<span class="hljs-params">indexPath, dirName</span>) {
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">require</span>(indexPath);
+  } <span class="hljs-keyword">catch</span> (err) {
+    <span class="hljs-keyword">if</span> (!(err <span class="hljs-keyword">instanceof</span> <span class="hljs-title class_">SyntaxError</span>)) {
+      <span class="hljs-keyword">throw</span> err;  <span class="hljs-comment">// 非语法错误不处理</span>
+    }
+    <span class="hljs-keyword">const</span> healResult = <span class="hljs-title function_">healFile</span>(indexPath);
+    <span class="hljs-keyword">if</span> (healResult.<span class="hljs-property">healed</span>) {
+      <span class="hljs-comment">// 清除缓存 + 重试</span>
+      <span class="hljs-keyword">delete</span> <span class="hljs-built_in">require</span>.<span class="hljs-property">cache</span>[<span class="hljs-built_in">require</span>.<span class="hljs-title function_">resolve</span>(indexPath)];
+      <span class="hljs-keyword">return</span> <span class="hljs-built_in">require</span>(indexPath);
+    }
+    <span class="hljs-keyword">throw</span> err;  <span class="hljs-comment">// 修复失败，抛出原始错误</span>
+  }
+}</code></pre>
+<h4 id="tools-basetool-js-definetool"><code>tools/_baseTool.js</code> — <code>defineTool()</code><a class="anchor" href="#tools-basetool-js-definetool" aria-label="锚点">#</a></h4>
+<pre><code class="language-javascript"><span class="hljs-comment">// E2/E3/E4/E5/E6 全部自愈，不 throw</span>
+<span class="hljs-keyword">const</span> rawCategory = config.<span class="hljs-property">category</span> || <span class="hljs-string">&#x27;custom&#x27;</span>;
+<span class="hljs-keyword">let</span> category = rawCategory;
+<span class="hljs-keyword">const</span> catHeal = <span class="hljs-title function_">healCategory</span>(rawCategory);
+<span class="hljs-keyword">if</span> (catHeal.<span class="hljs-property">repaired</span>) {
+  category = catHeal.<span class="hljs-property">value</span>;
+  <span class="hljs-title function_">_logRepair</span>(config.<span class="hljs-property">name</span>, <span class="hljs-string">&#x27;category&#x27;</span>, rawCategory, catHeal.<span class="hljs-property">value</span>, catHeal.<span class="hljs-property">confidence</span>);
+}
+<span class="hljs-comment">// ... E3/E4/E5/E6 同理</span></code></pre>
+<hr>
+<h2 id="5-修复结果格式">5. 修复结果格式<a class="anchor" href="#5-修复结果格式" aria-label="锚点">#</a></h2>
+<p>所有修复函数返回统一的结果格式：</p>
+<pre><code class="language-typescript"><span class="hljs-keyword">interface</span> <span class="hljs-title class_">HealResult</span> {
+  <span class="hljs-attr">repaired</span>: <span class="hljs-built_in">boolean</span>;    <span class="hljs-comment">// true = 发生了修复</span>
+  <span class="hljs-attr">value</span>: <span class="hljs-built_in">any</span>;           <span class="hljs-comment">// 修复后的值（或原始值）</span>
+  <span class="hljs-attr">confidence</span>?: <span class="hljs-built_in">string</span>   <span class="hljs-comment">// &#x27;exact&#x27; | &#x27;fuzzy&#x27; | &#x27;fallback&#x27; | &#x27;type-coerce&#x27;</span>
+}</code></pre>
+<h3 id="confidence-含义">confidence 含义<a class="anchor" href="#confidence-含义" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>confidence</th><th>含义</th><th>示例</th></tr></thead><tbody><tr><td><code>exact</code></td><td>值本身有效，无需修复</td><td><code>category = 'data'</code></td></tr><tr><td><code>fuzzy</code></td><td>模糊匹配成功</td><td><code>risk = 'mdeium'</code> → <code>'medium'</code></td></tr><tr><td><code>fallback</code></td><td>无法匹配，使用安全默认值</td><td><code>category = 'xyz'</code> → <code>'custom'</code></td></tr><tr><td><code>type-coerce</code></td><td>类型强制转换成功</td><td><code>shouldDefer = 'true'</code> → <code>true</code></td></tr></tbody></table>
+<hr>
+<h2 id="6-审计日志">6. 审计日志<a class="anchor" href="#6-审计日志" aria-label="锚点">#</a></h2>
+<p>所有修复都会记录到 <code>_repairLog</code>（Map），并提供查询接口：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// 获取所有修复记录</span>
+<span class="hljs-keyword">const</span> repairs = reg.<span class="hljs-title function_">getCategoryRepairs</span>();
+<span class="hljs-comment">// → [{ tool: &#x27;A2ATool&#x27;, field: &#x27;category&#x27;, original: &#x27;protocol&#x27;, repaired: &#x27;coordinator&#x27;, confidence: &#x27;fuzzy&#x27;, at: &#x27;...&#x27; }]</span>
+
+<span class="hljs-comment">// 清除记录</span>
+reg.<span class="hljs-title function_">clearCategoryRepairs</span>();</code></pre>
+<p>同时输出 <code>console.warn</code>:</p>
+<pre><code>[ToolRegistry] Self-healed tool &quot;A2ATool&quot;: category &quot;protocol&quot; → &quot;coordinator&quot; (fuzzy)</code></pre>
+<hr>
+<h2 id="7-扩展规范">7. 扩展规范<a class="anchor" href="#7-扩展规范" aria-label="锚点">#</a></h2>
+<h3 id="7-1-新增错误类">7.1 新增错误类<a class="anchor" href="#7-1-新增错误类" aria-label="锚点">#</a></h3>
+<p>当发现新的错误类时：</p>
+<ol><li><strong>分类</strong>: 确定是新类还是已有类的变体</li><li><strong>编号</strong>: 分配下一个可用的 <code>E{n}</code> 编号</li><li><strong>实现</strong>: 在 <code>_toolHealer.js</code> 中新增 <code>healXxx()</code> 函数</li><li><strong>注册</strong>: 在 <code>heal()</code> switch 中新增 case</li><li><strong>测试</strong>: 在 <code>tests/tools/toolHealer.test.js</code> 中新增测试</li><li><strong>文档</strong>: 更新本文档的 taxonomy 表格</li></ol>
+<h3 id="7-2-改进已有修复方法">7.2 改进已有修复方法<a class="anchor" href="#7-2-改进已有修复方法" aria-label="锚点">#</a></h3>
+<p>当发现更好的修复策略时：</p>
+<ol><li><strong>向后兼容</strong>: 新策略必须对所有已有测试用例产出相同或更优结果</li><li><strong>原子更新</strong>: 修改 + 测试 + 文档在一次提交中完成</li><li><strong>回归验证</strong>: 运行全部 81+ 个测试确保无回归</li></ol>
+<h3 id="7-3-更正错误方法">7.3 更正错误方法<a class="anchor" href="#7-3-更正错误方法" aria-label="锚点">#</a></h3>
+<p>当发现修复逻辑有 bug 时：</p>
+<ol><li><strong>先写失败测试</strong>: 复现 bug</li><li><strong>再修代码</strong>: 让测试通过</li><li><strong>检查依赖</strong>: 确认没有其他代码依赖错误行为</li><li><strong>更新文档</strong>: 如果错误行为已被文档记录</li></ol>
+<h3 id="7-4-添加新的修复模式-e1-语法修复">7.4 添加新的修复模式（E1 语法修复）<a class="anchor" href="#7-4-添加新的修复模式-e1-语法修复" aria-label="锚点">#</a></h3>
+<p>当需要修复新的语法错误模式时：</p>
+<ol><li>在 <code>_toolSyntaxHealer.js</code> 的 <code>HEAL_PATTERNS</code> 数组中新增条目</li><li>确保 regex 有 <code>^</code> 锚点（行首）和 <code>gm</code> 标志</li><li>在 <code>tests/tools/toolSyntaxHealer.test.js</code> 中新增测试</li><li><strong>不匹配对象/数组字面量</strong>（<code>{...}</code> / <code>[...]</code>），除非有充分的上下文分析</li></ol>
+<h3 id="7-5-修复学习-手动修复后自动记录">7.5 修复学习（手动修复后自动记录）<a class="anchor" href="#7-5-修复学习-手动修复后自动记录" aria-label="锚点">#</a></h3>
+<p>当自愈层无法自动修复某个错误时（<code>confidence: 'fallback'</code>），需要人工介入修复。<strong>修复完成后必须注册模式</strong>，使下次同类错误能自动修复。</p>
+<h4 id="学习机制">学习机制<a class="anchor" href="#学习机制" aria-label="锚点">#</a></h4>
+<ul><li><strong>Key</strong>: <code>${healClass}:${invalidValue}</code> → <strong>Value</strong>: <code>correctValue</code></li><li>支持 context 区分（如 <code>enum:interruptBehavior:cancle</code> → <code>cancel</code>）</li><li>Learned pattern 优先级高于 fuzzy match</li></ul>
+<h4 id="api">API<a class="anchor" href="#api" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>函数</th><th>用途</th></tr></thead><tbody><tr><td><code>learnPattern(healClass, invalidValue, correctValue, context?)</code></td><td>注册一个手动修复模式</td></tr><tr><td><code>getLearnedPattern(healClass, invalidValue, context?)</code></td><td>查询已学习的模式</td></tr><tr><td><code>hasLearnedPattern(healClass, invalidValue, context?)</code></td><td>检查模式是否存在</td></tr><tr><td><code>getAllLearnedPatterns()</code></td><td>获取所有学习模式（用于审计）</td></tr><tr><td><code>clearLearnedPatterns()</code></td><td>清除所有学习模式</td></tr></tbody></table>
+<h4 id="学习流程">学习流程<a class="anchor" href="#学习流程" aria-label="锚点">#</a></h4>
+<pre><code>自愈层返回 fallback（无法自动修复）
+   │
+   ▼
+人工修复错误
+   │
+   ▼
+调用 learnPattern(healClass, invalidValue, correctValue)
+   │
+   ▼
+下次同类错误 → confidence: 'learned'（直接命中，不再 fallback）</code></pre>
+<h4 id="修复后必须-learnpattern-的场景">修复后必须 learnPattern 的场景<a class="anchor" href="#修复后必须-learnpattern-的场景" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>场景</th><th>示例</th></tr></thead><tbody><tr><td>新增分类</td><td><code>learnPattern('category', 'newcat', 'custom')</code></td></tr><tr><td>新增风险级</td><td><code>learnPattern('risk', 'extreme', 'critical')</code></td></tr><tr><td>枚举值映射</td><td><code>learnPattern('enum', 'terminate', 'cancel', 'interruptBehavior')</code></td></tr><tr><td>特殊业务值</td><td><code>learnPattern('category', 'protocel', 'mcp')</code></td></tr></tbody></table>
+<h3 id="7-6-更新时机与自愈纪律">7.6 更新时机与自愈纪律<a class="anchor" href="#7-6-更新时机与自愈纪律" aria-label="锚点">#</a></h3>
+<p>自愈层不是&quot;自动修复一切&quot;的银弹。khyos 自我触发时必须把握以下原则：</p>
+<h4 id="更新时机-何时该更新自愈层">更新时机（何时该更新自愈层）<a class="anchor" href="#更新时机-何时该更新自愈层" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>触发条件</th><th>动作</th></tr></thead><tbody><tr><td>发现新错误类</td><td>按 §7.1 扩展</td></tr><tr><td>修复逻辑有 bug</td><td>按 §7.3 更正</td></tr><tr><td>更好的修复策略</td><td>按 §7.2 改进</td></tr><tr><td>工具定义规范变更</td><td>同步更新 <code>VALID_CATEGORIES</code> 等注册表</td></tr><tr><td>新增工具字段</td><td>在 <code>defineTool()</code> 中添加对应的修复逻辑</td></tr></tbody></table>
+<h4 id="自愈纪律-khyos-自我触发时的红线">自愈纪律（khyos 自我触发时的红线）<a class="anchor" href="#自愈纪律-khyos-自我触发时的红线" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>规则</th><th>说明</th></tr></thead><tbody><tr><td><strong>先诊断后修复</strong></td><td>先确认错误根因，再决定修复策略。不要&quot;头痛医头&quot;</td></tr><tr><td><strong>最小改动</strong></td><td>只修复出错的字段，不顺手重构周边代码</td></tr><tr><td><strong>不扩大范围</strong></td><td>修复 A 问题时，不改动无关的 B 字段</td></tr><tr><td><strong>验证再提交</strong></td><td>修复后必须跑全部测试，不能&quot;看起来对了就提交&quot;</td></tr><tr><td><strong>保留审计</strong></td><td>所有修复必须通过 <code>_logRepair()</code> 记录，不能静默修复</td></tr><tr><td><strong>回滚准备</strong></td><td>重大修复前备份原文件（E1 文件修复前 <code>cp</code> 一份）</td></tr><tr><td><strong>不破坏运行中系统</strong></td><td>如果修复可能导致正在运行的工具行为变化，先降级观察</td></tr></tbody></table>
+<h4 id="自愈触发流程">自愈触发流程<a class="anchor" href="#自愈触发流程" aria-label="锚点">#</a></h4>
+<pre><code>发现错误
+   │
+   ▼
+分类 → 已有错误类？ ──→ 是 ──→ 检查现有修复是否足够
+   │                         │
+   否                        │ 否
+   │                         ▼
+   ▼                    按 §7.2/7.3 改进/更正
+按 §7.1 新增错误类
+   │
+   ▼
+编写测试（先失败）
+   │
+   ▼
+实现修复
+   │
+   ▼
+跑全部测试 → 通过？
+   │              │
+   否             是
+   │              │
+   ▼              ▼
+回退修复       更新文档（本文档）
+   │              │
+   ▼              ▼
+重新诊断       提交</code></pre>
+<hr>
+<h2 id="8-自愈触发防护">8. 自愈触发防护<a class="anchor" href="#8-自愈触发防护" aria-label="锚点">#</a></h2>
+<h3 id="8-1-频率限制">8.1 频率限制<a class="anchor" href="#8-1-频率限制" aria-label="锚点">#</a></h3>
+<p>自愈层不是&quot;自动修复一切&quot;的银弹。khyos 自我触发时必须把握以下原则：</p>
+<table><thead><tr><th>规则</th><th>说明</th></tr></thead><tbody><tr><td><strong>先诊断后修复</strong></td><td>先确认错误根因，再决定修复策略。不要&quot;头痛医头&quot;</td></tr><tr><td><strong>最小改动</strong></td><td>只修复出错的字段，不顺手重构周边代码</td></tr><tr><td><strong>不扩大范围</strong></td><td>修复 A 问题时，不改动无关的 B 字段</td></tr><tr><td><strong>验证再提交</strong></td><td>修复后必须跑全部测试，不能&quot;看起来对了就提交&quot;</td></tr><tr><td><strong>保留审计</strong></td><td>所有修复必须通过 <code>_logRepair()</code> 记录，不能静默修复</td></tr><tr><td><strong>回滚准备</strong></td><td>重大修复前备份原文件（E1 文件修复前 <code>cp</code> 一份）</td></tr><tr><td><strong>不破坏运行中系统</strong></td><td>如果修复可能导致正在运行的工具行为变化，先降级观察</td></tr></tbody></table>
+<h3 id="8-2-自愈触发流程">8.2 自愈触发流程<a class="anchor" href="#8-2-自愈触发流程" aria-label="锚点">#</a></h3>
+<pre><code>发现错误
+   │
+   ▼
+分类 → 已有错误类？ ──→ 是 ──→ 检查现有修复是否足够
+   │                         │
+   否                        │ 否
+   │                         ▼
+   ▼                    按 §7.2/7.3 改进/更正
+按 §7.1 新增错误类
+   │
+   ▼
+编写测试（先失败）
+   │
+   ▼
+实现修复
+   │
+   ▼
+跑全部测试 → 通过？
+   │              │
+   否             是
+   │              │
+   ▼              ▼
+回退修复       更新文档（本文档）
+   │              │
+   ▼              ▼
+重新诊断       提交</code></pre>
+<h3 id="8-3-监控告警">8.3 监控告警<a class="anchor" href="#8-3-监控告警" aria-label="锚点">#</a></h3>
+<p>当自愈频率超过阈值时，需要人工介入：</p>
+<table><thead><tr><th>指标</th><th>阈值</th><th>动作</th></tr></thead><tbody><tr><td>单工具修复次数</td><td>&gt; 3 次/小时</td><td>告警：该工具可能有系统性问题</td></tr><tr><td>同类错误修复次数</td><td>&gt; 10 次/天</td><td>告警：可能需要改进修复策略</td></tr><tr><td>修复失败率</td><td>&gt; 20%</td><td>告警：修复逻辑可能有 bug</td></tr><tr><td>新增错误类</td><td>每周 &gt; 2 个</td><td>告警：工具定义规范可能需要收紧</td></tr></tbody></table>
+<p>监控数据通过 <code>getCategoryRepairs()</code> 接口暴露，可由外部监控系统消费。</p>
+<hr>
+<h2 id="9-测试规范">9. 测试规范<a class="anchor" href="#9-测试规范" aria-label="锚点">#</a></h2>
+<h3 id="8-1-单元测试-纯函数">8.1 单元测试（纯函数）<a class="anchor" href="#8-1-单元测试-纯函数" aria-label="锚点">#</a></h3>
+<p>每个 <code>healXxx()</code> 函数必须有：</p>
+<ul><li>有效值 → <code>repaired: false</code></li><li>空值 → <code>repaired: true, confidence: 'fallback'</code></li><li>边界值（如 <code>null</code>, <code>undefined</code>, <code>0</code>, <code>''</code>）</li><li>模糊匹配成功案例</li><li>模糊匹配失败案例 → fallback</li></ul>
+<h3 id="8-2-文件级测试-e1">8.2 文件级测试（E1）<a class="anchor" href="#8-2-文件级测试-e1" aria-label="锚点">#</a></h3>
+<ul><li>单文件修复</li><li>多文件修复</li><li>已正确文件 → <code>healed: false</code></li><li>不存在文件 → <code>error</code> 字段</li><li>禁用环境门控 → <code>healed: false</code></li></ul>
+<h3 id="8-3-集成测试">8.3 集成测试<a class="anchor" href="#8-3-集成测试" aria-label="锚点">#</a></h3>
+<ul><li><code>defineTool()</code> 中每个错误类单独测试</li><li><code>defineTool()</code> 中多个错误同时存在 → 全部修复</li><li>端到端 <code>loadTools()</code> → 186 个工具全部加载，零警告</li></ul>
+<h3 id="8-4-测试文件命名">8.4 测试文件命名<a class="anchor" href="#8-4-测试文件命名" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>覆盖</th></tr></thead><tbody><tr><td><code>tests/tools/toolHealer.test.js</code></td><td>E2/E3/E4/E5/E6 修复逻辑</td></tr><tr><td><code>tests/tools/toolSyntaxHealer.test.js</code></td><td>E1 语法修复</td></tr><tr><td><code>tests/tools/toolSyntaxHealer.integration.test.js</code></td><td>E1 + require 重试</td></tr></tbody></table>
+<hr>
+<h2 id="9-环境变量">9. 环境变量<a class="anchor" href="#9-环境变量" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>变量</th><th>默认</th><th>说明</th></tr></thead><tbody><tr><td><code>KHY_TOOL_HEAL</code></td><td><code>1</code>（开）</td><td>统一修复层总开关。<code>0/false/off/no</code> 关闭</td></tr><tr><td><code>KHY_TOOL_SYNTAX_HEAL</code></td><td><code>1</code>（开）</td><td>语法修复开关。<code>0/false/off/no</code> 关闭</td></tr></tbody></table>
+<hr>
+<h2 id="10-已知限制">10. 已知限制<a class="anchor" href="#10-已知限制" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>限制</th><th>说明</th><th>未来改进</th></tr></thead><tbody><tr><td>E1 不修复对象/数组字面量</td><td><code>static inputSchema: {...}</code> 过于复杂，自动修复风险高</td><td>未来可引入 AST 分析</td></tr><tr><td>E5 不修复嵌套对象</td><td><code>{ a: '1' }</code> 中的字符串数字不递归修复</td><td>未来可引入深度遍历</td></tr><tr><td>E2/E3/E4 仅支持字符串</td><td>如果 risk 是数字或对象，无法修复</td><td>可先 <code>String()</code> 强制转换再匹配</td></tr><tr><td>修复不写回源码文件（除 E1）</td><td>E2-E6 仅内存中修复，不修改 .js 文件</td><td>未来可提供 <code>--fix</code> 模式写回</td></tr></tbody></table>
+<hr>
+<h2 id="11-变更历史">11. 变更历史<a class="anchor" href="#11-变更历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>日期</th><th>版本</th><th>变更</th></tr></thead><tbody><tr><td>2026-09-05</td><td>1.0.0</td><td>初始版本：建立 E1-E6 错误类 taxonomy，实现完整自愈层</td></tr><tr><td>2026-09-05</td><td>1.1.0</td><td>新增 §7.5 更新时机与自愈纪律、§8 自愈触发防护（频率限制、监控告警）</td></tr><tr><td>2026-09-05</td><td>1.1.1</td><td><code>_repairLog</code> 改为存储数组（支持同一工具多次修复），新增 <code>getRepairStats()</code> 监控接口</td></tr><tr><td>2026-09-05</td><td>1.2.0</td><td>新增 §7.5 修复学习机制（<code>learnPattern</code> API），手动修复后自动记录模式</td></tr></tbody></table>
+<hr>
+<p><em>最后更新: 2026-09-05</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-050] 规范简洁化与情景速查-2026-09-10.html"><div class="dir">← 上一篇</div><div class="ttl">[IMPL-RPT-050] 规范简洁化与情景速查-2026-09-10</div></a><a class="next" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-052] khy-启动性能修复报告-2026-09-14.html"><div class="dir">下一篇 →</div><div class="ttl">khy 启动性能修复报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-051] 工具注册表自愈层规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

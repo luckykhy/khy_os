@@ -5,7 +5,7 @@ const {
   listRelayPresetNames,
   listRelayPresets,
   getRelayPreset,
-} = require('./openaiRelayPresets');
+} = require('../../../../src/services/gateway/adapters/openaiRelayPresets.js');
 
 describe('openaiRelayPresets', () => {
   describe('RELAY_PRESETS', () => {

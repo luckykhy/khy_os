@@ -17,9 +17,9 @@ const fs = require('fs');
 const { describe, test, after } = require('node:test');
 const assert = require('node:assert/strict');
 
-const khyTrace = require('../../../src/services/trajectoryProvenance/khyTrace');
-const classifier = require('../../../src/services/trajectoryProvenance/provenanceClassifier');
-const projection = require('../../../src/services/trajectoryProvenance/traceProjection');
+const khyTrace = require('../../../src/services/domain/trajectory/trajectoryProvenance/khyTrace.js');
+const classifier = require('../../../src/services/domain/trajectory/trajectoryProvenance/provenanceClassifier.js');
+const projection = require('../../../src/services/domain/trajectory/trajectoryProvenance/traceProjection.js');
 const sessionPersistence = require('../../../src/services/sessionPersistence');
 
 const { PRODUCER, TRUST, KIND } = khyTrace;

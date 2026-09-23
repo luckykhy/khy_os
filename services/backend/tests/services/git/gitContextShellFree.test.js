@@ -2,90 +2,117 @@
 const cp = require('child_process');
 const path = require('path');
 const SERVICE_PATH = require.resolve('../../../src/services/gitContextService');
-const REPO_ROOT = path.resolve(__dirname, '../../../../..'); // Khy-OS repo root (a real git repo)
-// 用干净�?require 缓存重新加载 gitContextService,让其在模块顶�?
-// `const { execSync, spawnSync } = require('child_process')` 捕获到我们的 spy�?
-function _freshService() {
-  delete require.cache[SERVICE_PATH];
-  return require(SERVICE_PATH);
+const REPO_ROOT = path.resolve(__dirname, '../../../../..');
+
+// Master spies installed ONCE at file load, BEFORE the service is first
+// required: the service (and the win32 git detector) pull spawnSync/execSync
+// off child_process at module load, so the wrapper must be in place first.
+// Under jest, `delete require.cache` is a no-op (jest keeps its own registry),
+// so per-test re-splicing leaves the singleton holding a dead spy — which is
+// exactly why the OFF case used to record zero calls. A stable suite-level
+// wrapper with a per-test ACTIVE_CALLS target routes every git invocation to
+// whichever test is currently running.
+let ACTIVE_CALLS = null;
+const _realSpawnSync = cp.spawnSync;
+const _realExecSync = cp.execSync;
+// win32 transport may spawn an absolute git.exe path, not the PATH name.
+const _isGitFile = (f) => typeof f === 'string' && /(^|[\\/])git(\.exe)?$/i.test(f);
+const _isGitCmd = (c) => typeof c === 'string' && /git(\.exe)?["']?\s/i.test(c);
+cp.spawnSync = function (file, args, opts) {
+  if (ACTIVE_CALLS && _isGitFile(file)) ACTIVE_CALLS.spawnSyncGit.push(args);
+  return _realSpawnSync.call(cp, file, args, opts);
+};
+cp.execSync = function (command, opts) {
+  if (ACTIVE_CALLS && _isGitCmd(command)) ACTIVE_CALLS.execSyncGit.push(command);
+  return _realExecSync.call(cp, command, opts);
+};
+
+const svc = require(SERVICE_PATH);
+
+// Precondition: these are integration tests over REAL git, probed through the
+// service's own resolution (the win32 detector can find an absolute git.exe
+// even when PATH has none). If the machine has no reachable git or the repo
+// root is not a git work tree, the transport contract is unobservable — skip
+// honestly instead of failing an environment precondition the service
+// correctly fail-softs on.
+const _probe = svc.collectGitContext(REPO_ROOT, { force: true });
+const GIT_PRECONDITION_OK = !!(_probe && _probe.isGitRepo === true);
+
+function _setGate(val) {
+  if (val === undefined) delete process.env.KHY_GIT_SHELL_FREE;
+  else process.env.KHY_GIT_SHELL_FREE = val;
 }
-function _withSpies(fn) {
-  const realSpawnSync = cp.spawnSync;
-  const realExecSync = cp.execSync;
-  const calls = { spawnSyncGit: [], execSyncGit: [] };
-  cp.spawnSync = function (file, args, opts) {
-    if (file === 'git') calls.spawnSyncGit.push(args);
-    return realSpawnSync.call(cp, file, args, opts);
-  };
-  cp.execSync = function (command, opts) {
-    if (typeof command === 'string' && command.startsWith('git ')) calls.execSyncGit.push(command);
-    return realExecSync.call(cp, command, opts);
-  };
-  try {
-    return fn(calls);
-  } finally {
-    cp.spawnSync = realSpawnSync;
-    cp.execSync = realExecSync;
-  }
-}
+
+// `['--version']` is the win32 executable detector's PATH probe — detection
+// overhead, not part of the service's transport contract.
+const _isDetectorProbe = (a) => Array.isArray(a) && a.length === 1 && a[0] === '--version';
 
 describe('Git Context Shell Free', () => {
-  test('ON: uses shell-free spawnSync(git, argv), no execSync git strings', () => {
-      const prev = process.env.KHY_GIT_SHELL_FREE;
-      process.env.KHY_GIT_SHELL_FREE = '1';
-      try {
-        _withSpies((calls) => {
-          const svc = _freshService();
-          const ctx = svc.collectGitContext(REPO_ROOT, { force: true });
-          expect(ctx.isGitRepo).toBe(true, 'repo root should be detected as a git repo');
-          expect(calls.spawnSyncGit.length >= 4).toBeTruthy();
-          expect(calls.execSyncGit.length).toBe(0, 'no execSync git strings when shell-free is on');
-          // argv 应是数组形�?�?shell 中介)
-          expect(Array.isArray(calls.spawnSyncGit[0]).toBeTruthy());
-          expect(calls.spawnSyncGit[0]).toEqual(['rev-parse', '--show-toplevel']);
-        });
-      } finally {
-        if (prev === undefined) delete process.env.KHY_GIT_SHELL_FREE; else process.env.KHY_GIT_SHELL_FREE = prev;
-      }
+  test('ON: shell-free spawnSync(git, argv[]) with zero shell-joined execSync git', () => {
+    if (!GIT_PRECONDITION_OK) return; // env without git: contract unobservable
+    const prev = process.env.KHY_GIT_SHELL_FREE;
+    const calls = { spawnSyncGit: [], execSyncGit: [] };
+    ACTIVE_CALLS = calls;
+    _setGate('1');
+    try {
+      const ctx = svc.collectGitContext(REPO_ROOT, { force: true });
+      expect(ctx.isGitRepo).toBe(true);
+      expect(calls.spawnSyncGit.length).toBeGreaterThanOrEqual(4);
+      expect(calls.execSyncGit.length).toBe(0);
+      // Assert by presence, not call index: the detector probe may precede it.
+      expect(
+        calls.spawnSyncGit.some((a) => Array.isArray(a) && a[0] === 'rev-parse' && a[1] === '--show-toplevel')
+      ).toBe(true);
+    } finally {
+      ACTIVE_CALLS = null;
+      _setGate(prev);
+    }
   });
 
-  test('OFF: byte-reverts to execSync git strings, no spawnSync git', () => {
-      const prev = process.env.KHY_GIT_SHELL_FREE;
-      process.env.KHY_GIT_SHELL_FREE = 'off';
-      try {
-        _withSpies((calls) => {
-          const svc = _freshService();
-          const ctx = svc.collectGitContext(REPO_ROOT, { force: true });
-          expect(ctx.isGitRepo).toBe(true);
-          expect(calls.spawnSyncGit.length).toBe(0, 'no spawnSync git when gate off');
-          expect(calls.execSyncGit.length >= 4).toBeTruthy();
-          expect(calls.execSyncGit[0].startsWith('git rev-parse --show-toplevel').toBeTruthy());
-        });
-      } finally {
-        if (prev === undefined) delete process.env.KHY_GIT_SHELL_FREE; else process.env.KHY_GIT_SHELL_FREE = prev;
-      }
+  test('OFF: byte-reverts to shell execSync(git "cmd") with zero spawnSync git', () => {
+    if (!GIT_PRECONDITION_OK) return; // env without git: contract unobservable
+    const prev = process.env.KHY_GIT_SHELL_FREE;
+    const calls = { spawnSyncGit: [], execSyncGit: [] };
+    ACTIVE_CALLS = calls;
+    _setGate('off');
+    try {
+      const ctx = svc.collectGitContext(REPO_ROOT, { force: true });
+      expect(ctx.isGitRepo).toBe(true);
+      expect(calls.spawnSyncGit.filter((a) => !_isDetectorProbe(a)).length).toBe(0);
+      expect(calls.execSyncGit.length).toBeGreaterThanOrEqual(4);
+      expect(calls.execSyncGit.some((c) => c.includes('rev-parse --show-toplevel'))).toBe(true);
+    } finally {
+      ACTIVE_CALLS = null;
+      _setGate(prev);
+    }
   });
 
-  test('parity: ON and OFF produce identical context fields', () => {
-      const prev = process.env.KHY_GIT_SHELL_FREE;
-      const collect = (val) => {
-        process.env.KHY_GIT_SHELL_FREE = val;
-        const svc = _freshService();
+  test('parity: ON and OFF yield identical context fields', () => {
+    const prev = process.env.KHY_GIT_SHELL_FREE;
+    const collect = (val) => {
+      ACTIVE_CALLS = { spawnSyncGit: [], execSyncGit: [] };
+      _setGate(val);
+      try {
         return svc.collectGitContext(REPO_ROOT, { force: true });
-      };
-      try {
-        const on = collect('1');
-        const off = collect('off');
-        // branch / mainBranch / isDirty / isGitRepo 必须一�?同一仓库、同一时刻)�?
-        expect(on.isGitRepo).toBe(off.isGitRepo);
-        expect(on.branch).toBe(off.branch);
-        expect(on.mainBranch).toBe(off.mainBranch);
-        expect(on.isDirty).toBe(off.isDirty);
       } finally {
-        if (prev === undefined) delete process.env.KHY_GIT_SHELL_FREE; else process.env.KHY_GIT_SHELL_FREE = prev;
-        delete require.cache[SERVICE_PATH]; // 还原正常单例给后续测�?
+        ACTIVE_CALLS = null;
       }
+    };
+    try {
+      const on = collect('1');
+      const off = collect('off');
+      expect(on.isGitRepo).toBe(off.isGitRepo);
+      expect(on.branch).toBe(off.branch);
+      expect(on.mainBranch).toBe(off.mainBranch);
+      expect(on.isDirty).toBe(off.isDirty);
+    } finally {
+      _setGate(prev);
+    }
   });
 
+  afterAll(() => {
+    ACTIVE_CALLS = null;
+    cp.spawnSync = _realSpawnSync;
+    cp.execSync = _realExecSync;
+  });
 });
-

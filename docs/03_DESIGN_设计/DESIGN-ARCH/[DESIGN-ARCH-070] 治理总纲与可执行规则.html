@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-070] 治理总纲与可执行规则.md -->
+<title>[DESIGN-ARCH-070] 治理总纲与可执行规则 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-070] 治理总纲与可执行规则</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-070] 治理总纲与可执行规则</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-070-治理总纲与可执行规则">[DESIGN-ARCH-070] 治理总纲与可执行规则</a></li><li class="lvl-2"><a href="#0-审计矩阵-板块-已有规则-校验方式">0. 审计矩阵：板块 × 已有规则 × 校验方式</a></li><li class="lvl-2"><a href="#1-gov-mod-模块与层级准入">1. GOV-MOD — 模块与层级准入</a></li><li class="lvl-2"><a href="#2-gov-mem-记忆与维护元数据">2. GOV-MEM — 记忆与维护元数据</a></li><li class="lvl-2"><a href="#3-gov-tool-工具与扩展登记">3. GOV-TOOL — 工具与扩展登记</a></li><li class="lvl-2"><a href="#4-gov-acp-内部消息与通信契约">4. GOV-ACP — 内部消息与通信契约</a></li><li class="lvl-2"><a href="#5-gov-api-内部与外部-api-边界">5. GOV-API — 内部与外部 API 边界</a></li><li class="lvl-2"><a href="#6-未决冲突与已知缺口">6. 未决冲突与已知缺口</a></li><li class="lvl-2"><a href="#7-维护与验证">7. 维护与验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-070-治理总纲与可执行规则">[DESIGN-ARCH-070] 治理总纲与可执行规则<a class="anchor" href="#design-arch-070-治理总纲与可执行规则" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：本文件是既有治理规则的索引与缺口登记，不替代或推翻 <code>[DESIGN-ARCH-068]</code>、协议契约、维护映射表及现有 CI 脚本。发生冲突时，已声明为单一真源的原文优先；本文件在「未决冲突」登记差异和建议裁决，裁决权保留给维护者。</p>
+<p><strong>适用边界</strong>：本文件只治理仓库结构、维护记忆、工具登记、内部消息与 API 契约；不在此处新增运行时业务逻辑。机械可判定的条款由 <code>node scripts/ci/check-gov-rules.js</code>、<code>npm run check:layout</code> 或既有专项守卫执行。</p></blockquote>
+<h2 id="0-审计矩阵-板块-已有规则-校验方式">0. 审计矩阵：板块 × 已有规则 × 校验方式<a class="anchor" href="#0-审计矩阵-板块-已有规则-校验方式" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>板块</th><th>已有规则/真源</th><th>已有校验方式</th><th>空白或待工具化</th></tr></thead><tbody><tr><td>MOD</td><td><code>[DESIGN-ARCH-068]</code> 定义 L0–L6、横切层、依赖方向、根目录和任务入口命名</td><td><code>npm run check:layout</code>；<code>scripts/ci/check-repo-layout.js</code></td><td>新五板块名称不是既有正式分类；跨 workspace 深层引用与 unresolved require 仍为基线债务</td></tr><tr><td>MEM</td><td>ACP <code>context.share.scope</code> 区分 <code>session</code>/<code>persistent</code>；<code>AGENTS.md</code> 指向 <code>.ai/MAP.md</code>、<code>.ai/CONTEXT.yaml</code>、<code>.ai/GUARDS.md</code></td><td>无针对记忆生命周期的统一守卫</td><td>三份 <code>.ai</code> 元数据当前缺失；无单一读写入口或清理契约</td></tr><tr><td>TOOL</td><td><code>[DESIGN-ARCH-069]</code> 的目录+<code>khy.extension.json</code> 契约；工具注册表与 <code>toolContract</code></td><td><code>npm run check:layout</code>；<code>node scripts/ci/check-tool-contract.js</code></td><td>跨工具权限、升级和废弃流程尚无统一条款/守卫</td></tr><tr><td>ACP</td><td><code>acp-message.schema.json</code>、<code>acpTransport.js</code>、JSON-RPC 2.0 错误码与方法枚举</td><td>ACP transport 测试、JSON schema 检查</td><td>无版本/trace/deadline/idempotency 元数据；schema 与 response 形式不一致</td></tr><tr><td>API</td><td>gateway <code>_responseBuilder</code>、<code>gatewayErrorClassifier</code>、管理 HTTP/SSE/WS 与兼容 API</td><td>路由/服务各自测试；<code>validate-protocol-contracts.js</code></td><td>无统一 OpenAPI、版本与弃用政策、统一外部错误信封</td></tr></tbody></table>
+<h2 id="1-gov-mod-模块与层级准入">1. GOV-MOD — 模块与层级准入<a class="anchor" href="#1-gov-mod-模块与层级准入" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>规则 ID</th><th>一句话规则</th><th>适用范围</th><th>反例</th><th>校验方式</th></tr></thead><tbody><tr><td>GOV-MOD-001</td><td>新文件必须放入 <code>[DESIGN-ARCH-068]</code> 定义的 L0–L6 或横切层；未登记顶层目录不得承载代码或文档。</td><td>仓库根及全部新增路径</td><td>新建根级 <code>frontend/</code> 保存运行时代码。</td><td><code>npm run check:layout</code> 的 <code>layer-registry</code></td></tr><tr><td>GOV-MOD-002</td><td>跨层依赖必须属于 <code>[DESIGN-ARCH-068]</code> 白名单；禁止层不得用深层相对导入绕过边界。</td><td>L0–L6 运行时源码</td><td><code>apps/</code> 直接 require <code>software/</code> 源文件。</td><td><code>npm run check:layout</code> 的 <code>cross-layer-require</code>；存量基线</td></tr><tr><td>GOV-MOD-003</td><td>新增根任务入口必须遵循 <code>&lt;域&gt;:&lt;动作&gt;[:&lt;变体&gt;]</code>，并解析到已存在脚本。</td><td>根 <code>package.json</code> 的 scripts</td><td><code>check:foo</code> 指向不存在的 <code>scripts/ci/foo.js</code>。</td><td><code>GOV-TOOL-004</code>；<code>check:layout</code> 的 <code>dangling-task</code></td></tr><tr><td>GOV-MOD-004</td><td>治理总纲必须保留 MOD、MEM、TOOL、ACP、API 五个板块，作为会话首屏可发现入口。</td><td>本文档</td><td>删除 <code>## GOV-API</code>。</td><td><code>node scripts/ci/check-gov-rules.js</code></td></tr></tbody></table>
+<h2 id="2-gov-mem-记忆与维护元数据">2. GOV-MEM — 记忆与维护元数据<a class="anchor" href="#2-gov-mem-记忆与维护元数据" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>规则 ID</th><th>一句话规则</th><th>适用范围</th><th>反例</th><th>校验方式</th></tr></thead><tbody><tr><td>GOV-MEM-001</td><td>仅当前任务需要且无需跨会话复用的信息归为 session；跨会话稳定事实才归为 persistent。</td><td>agent/ACP 上下文、维护记录</td><td>把一次性命令输出写入长期项目记忆。</td><td>待工具化：需先冻结记忆写入入口</td></tr><tr><td>GOV-MEM-002</td><td>persistent 记录必须包含主体、来源、写入时间、适用范围和清理条件，且不得把凭据写入记录。</td><td>长期记忆与 <code>.ai</code> 维护元数据</td><td>无来源的自由文本长期记录。</td><td>待工具化：格式契约未冻结</td></tr><tr><td>GOV-MEM-003</td><td>代码不得绕过被指定的记忆读写入口直接写存储；入口、格式与清理职责必须在实现前登记。</td><td>未来记忆持久化模块</td><td>路由层直接写入持久化记忆文件。</td><td>待工具化：单一入口尚未指定</td></tr><tr><td>GOV-MEM-004</td><td>会话结束、过期或主体删除时，session 数据必须按登记生命周期清除或归档，不能静默转为 persistent。</td><td>session 缓存、队列、临时日志</td><td>进程重启后把临时上下文留作长期事实。</td><td>待工具化：生命周期策略待维护者裁决</td></tr></tbody></table>
+<h2 id="3-gov-tool-工具与扩展登记">3. GOV-TOOL — 工具与扩展登记<a class="anchor" href="#3-gov-tool-工具与扩展登记" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>规则 ID</th><th>一句话规则</th><th>适用范围</th><th>反例</th><th>校验方式</th></tr></thead><tbody><tr><td>GOV-TOOL-001</td><td>每个内置扩展必须遵守 <code>[DESIGN-ARCH-069]</code> 的一目录一 <code>khy.extension.json</code>，删除目录即卸载。</td><td><code>extensions/</code></td><td>两个扩展共用一个 manifest。</td><td><code>npm run check:layout</code> 的 <code>extension-contract</code></td></tr><tr><td>GOV-TOOL-002</td><td>工具注册条目必须通过名称归一、风险/类别和输入 schema 契约，避免解析顺序改变行为。</td><td>工具注册表</td><td>两个不同风险工具共享同一归一名称。</td><td><code>node scripts/ci/check-tool-contract.js</code></td></tr><tr><td>GOV-TOOL-003</td><td>新工具或扩展必须声明最小权限边界；升级和废弃必须保留兼容期、迁移说明和移除版本。</td><td>工具、扩展及其 manifest</td><td>直接移除公开工具名且无迁移说明。</td><td>待工具化：manifest 字段和版本策略尚未冻结</td></tr><tr><td>GOV-TOOL-004</td><td>每个根 <code>check:*</code> 入口中引用的 <code>scripts/ci/</code> 脚本必须存在。</td><td>根 <code>package.json</code></td><td><code>check:missing</code> 指向 <code>scripts/ci/missing.js</code>。</td><td><code>node scripts/ci/check-gov-rules.js</code></td></tr><tr><td>GOV-TOOL-005</td><td>治理检查必须同时在根 <code>check:structure</code> 和 PR gate 注册，避免本地/CI 任一侧失联。</td><td><code>package.json</code>、<code>.github/workflows/pr-gate.yml</code></td><td>只新增脚本但未纳入 CI。</td><td><code>node scripts/ci/check-gov-rules.js</code></td></tr></tbody></table>
+<h2 id="4-gov-acp-内部消息与通信契约">4. GOV-ACP — 内部消息与通信契约<a class="anchor" href="#4-gov-acp-内部消息与通信契约" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>规则 ID</th><th>一句话规则</th><th>适用范围</th><th>反例</th><th>校验方式</th></tr></thead><tbody><tr><td>GOV-ACP-001</td><td>ACP 请求、通知和响应必须按 JSON-RPC 2.0 区分：请求/通知含 <code>method</code>，响应含同一 <code>id</code> 与恰一 <code>result</code> 或 <code>error</code>。</td><td>ACP schema、transport、bridge</td><td>response 同时携带 <code>result</code> 与 <code>error</code>。</td><td>待工具化：现 schema 对 response 仍要求 <code>method</code></td></tr><tr><td>GOV-ACP-002</td><td>新 ACP 方法必须同时登记 method、params schema、错误码、兼容性影响和 transport 测试。</td><td>ACP 方法扩展</td><td>只在 transport 加字符串方法名。</td><td><code>validate-json-schemas.js</code> + ACP 测试；兼容性登记待工具化</td></tr><tr><td>GOV-ACP-003</td><td>可跨边界追踪的消息必须具有可传播的 correlation/trace 标识；并发工具调用必须有唯一调用标识。</td><td>agent、task、tool message</td><td>两个同名 tool 调用仅按 tool 名回配 result。</td><td>待工具化：信封元数据未冻结</td></tr><tr><td>GOV-ACP-004</td><td>超时、取消、重试和关闭必须具有可观察的终态和错误码，transport 不得把协议级失败作为成功结果。</td><td>ACP IPC/WS/HTTP transport</td><td>WS 发送失败被吞掉且调用者收到成功。</td><td>待工具化：错误可见性与取消契约待裁决</td></tr></tbody></table>
+<h2 id="5-gov-api-内部与外部-api-边界">5. GOV-API — 内部与外部 API 边界<a class="anchor" href="#5-gov-api-内部与外部-api-边界" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>规则 ID</th><th>一句话规则</th><th>适用范围</th><th>反例</th><th>校验方式</th></tr></thead><tbody><tr><td>GOV-API-001</td><td>内部 adapter 结果与外部 REST/SSE/WS/兼容 API 必须明确边界；外部变更不得以内部对象形状作为隐式契约。</td><td><code>services/backend</code> API surfaces</td><td>直接将 adapter attempts 原样作为公开响应。</td><td>待工具化：表面清单与 schema catalog 尚未建立</td></tr><tr><td>GOV-API-002</td><td>新增或变更公开 API 必须登记版本、请求/响应字段、认证方式、错误码和迁移说明；破坏性变更需维护者裁决后发布。</td><td>外部 HTTP/SSE/WS API</td><td>删除响应字段且无版本或迁移说明。</td><td>待工具化：OpenAPI/版本真源缺失</td></tr><tr><td>GOV-API-003</td><td>外部错误响应必须提供稳定机器码与人类消息；SSE/WS 终态必须区分成功、降级、取消和失败。</td><td>REST、SSE、WS、兼容 API</td><td>upstream 异常后仍发送 <code>stop</code> 与成功完成标记。</td><td>待工具化：统一错误模型未冻结</td></tr><tr><td>GOV-API-004</td><td>认证后的 principal、请求 trace、deadline/retry/fallback 摘要必须按发布的最小披露规则跨 transport 传播。</td><td>HTTP → gateway → ACP → SSE/WS</td><td>HTTP requestId 无法关联 gateway 尝试和 stream 事件。</td><td>待工具化：跨 transport 元数据契约待裁决</td></tr></tbody></table>
+<h2 id="6-未决冲突与已知缺口">6. 未决冲突与已知缺口<a class="anchor" href="#6-未决冲突与已知缺口" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>编号</th><th>差异/缺口</th><th>建议裁决</th><th>本次处理</th></tr></thead><tbody><tr><td>UC-001</td><td><code>AGENTS.md</code> / OPS-MAN-169 指向 <code>.ai/MAP.md</code>、<code>.ai/CONTEXT.yaml</code>、<code>.ai/GUARDS.md</code>，磁盘中缺失。</td><td>由 <code>khy metadata refresh</code> 的维护者明确生成责任、提交策略与缺失时的 gate。</td><td>登记为 GOV-MEM 待工具化，不伪造文件。</td></tr><tr><td>UC-002</td><td><code>[DESIGN-ARCH-068]</code> §3.2 根白名单点名 CLAUDE.md、khy.md、LICENSE；当前仓库缺失，而 OPS-MAN-169 又把 CLAUDE.md §1 作为索引。</td><td>将白名单、实际文件和引用入口统一到一份可生成清单，再裁决是否补文件。</td><td>不修改 068 或补占位文件。</td></tr><tr><td>UC-003</td><td>CODEOWNERS 自称由维护映射生成，但维护映射的 areaOwners 为空，实际落到默认 owner。</td><td>维护者为 area 分配 owner，或明示默认 owner 是正式策略。</td><td>仅记录；不改生成物。</td></tr><tr><td>UC-004</td><td>ACP schema 要求 <code>method</code>，运行时却接受无 <code>method</code> response；且缺 version/trace/deadline/idempotency。</td><td>先冻结 ACP response + meta 扩展模型，再版本化 schema。</td><td>不改 runtime/schema。</td></tr><tr><td>UC-005</td><td>管理 REST、SSE、WS、兼容 API 的错误与响应形状分裂，未发现 OpenAPI 或统一版本政策。</td><td>建立公开 API catalog 后，分阶段定义信封与迁移策略。</td><td>不动业务接口。</td></tr></tbody></table>
+<h2 id="7-维护与验证">7. 维护与验证<a class="anchor" href="#7-维护与验证" aria-label="锚点">#</a></h2>
+<ul><li>新增顶层目录、跨层依赖、扩展或任务入口前，先读 <code>[DESIGN-ARCH-068]</code> 与本文对应板块。</li><li>修改本文、根治理入口或 PR gate 后运行：</li></ul>
+<pre><code class="language-powershell">node scripts/ci/check<span class="hljs-literal">-gov-rules</span>.js
+npm run check:layout
+node scripts/ci/check<span class="hljs-literal">-agent-rules</span>.js <span class="hljs-literal">--changed</span></code></pre>
+<ul><li>修改治理守卫时，必须同时更新 <code>scripts/tests/check-gov-rules.test.js</code>，并用临时 fixture 证明每条新增 error 可使退出码非零。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-069] 拓展契约与核心边界规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-069] 拓展契约与核心边界规范</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-071] 通道选择决策矩阵.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-071] 通道选择决策矩阵</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-070] 治理总纲与可执行规则.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

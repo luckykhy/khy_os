@@ -2,9 +2,9 @@
 /**
  * messageRouter Slack AI 应答接线测试�?
  *
- * 背景:wireReplyBridge(设置 _aiHandler)原本只在「msg 渠道(钉钉/飞书/企微)注册�?> 0」时被调�?
+ * 背景:wireReplyBridge(设置 _aiHandler)原本只在「msg 渠道(钉钉/飞书/企微)注册�?> 0」时被调用?
  * Slack 通道单独注册却从不闭�?AI 应答回路 �?Slack 入站消息被解析后即丢�?webhooks.js 旧「诚实边界�?�?
- * 修复:Slack 注册分支也调�?wireReplyBridge(�?aiReplyWired 闭包)。本测试断言:
+ * 修复:Slack 注册分支也调用?wireReplyBridge(�?aiReplyWired 闭包)。本测试断言:
  *   1. 仅配 SLACK_BOT_TOKEN(无任�?msg 渠道)�?_aiHandler 被接�?Slack 消息能回 AI)�?
  *   2. �?KHY_MSG_AUTOREPLY=off �?不接�?逐字节回退)�?
  *   3. 未配置任何渠�?�?不接�?保持现状)�?
@@ -21,8 +21,8 @@ const { MessageRouter, _bootstrapChannels } =
   require('../../../src/services/domain/messaging/channels/messageRouter.js');
 const { SlackChannel } = require('../../../src/services/domain/messaging/channels/slackChannel.js');
 const _realConnect = SlackChannel.prototype.connect;
-before(() => { SlackChannel.prototype.connect = async function () { this._connected = true; }; });
-after(() => { SlackChannel.prototype.connect = _realConnect; });
+beforeAll(() => { SlackChannel.prototype.connect = async function () { this._connected = true; }; });
+afterAll(() => { SlackChannel.prototype.connect = _realConnect; });
 function freshRouter() {
   return new MessageRouter();
 }

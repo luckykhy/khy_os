@@ -97,7 +97,24 @@ async function handleIdeCommand(ideName, options = {}, context = {}) {
   // List models
   let models;
   try {
-    models = await withSpinner(`获取 ${status.name} 模型列表...`, () => adapter.listModels());
+    models = await withSpinner(`获取 ${status.name} 模型列表...`, async () => {
+      const raw = (await adapter.listModels()) || [];
+      // 直连适配器绕开了 aiGateway.listModels 这个咽喉点(curation + 存在性真值),这里
+      // 显式补上([DESIGN-ARCH-100] §四):否则本命令会把静态目录 / 本机扫描的猜测条目
+      // 当作可调用模型展示给用户,选中即 model_not_found。
+      try {
+        const curation = require('../../services/gateway/modelCuration');
+        const truth = require('../../services/gateway/modelListTruth');
+        const curated = curation.applyOverrides(String(ideName || ''), raw);
+        const verdict = truth.filterByUpstreamAuthority(curated, {
+          adapterKey: String(ideName || ''),
+          verifyStatusOf: (key, modelId) => curation.getVerifyStatus(key, modelId),
+        });
+        return Array.isArray(verdict && verdict.models) ? verdict.models : curated;
+      } catch {
+        return raw; // fail-soft:真值层故障绝不改变「能列出什么」
+      }
+    });
   } catch (err) {
     printError(`获取模型列表失败: ${err.message}`);
     return;

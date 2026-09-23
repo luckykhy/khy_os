@@ -70,10 +70,42 @@ let _writeTimer = null;
 let _pendingHistory = null;
 
 /**
+ * Merge a newly announced batch into the not-yet-written pending batch.
+ *
+ * Two caller contracts share this module and both must survive the debounce:
+ *   - replSession re-sends the **whole session list** on every save;
+ *   - the Ink TUI (`useTextInput`) sends **one entry per submit`.
+ * Plain assignment (`_pendingHistory = sessionHistory`) satisfies the first and
+ * silently drops every entry of a burst for the second: only the last call
+ * within the 1s window ever reached the file, so quickly typed commands vanished
+ * from the next session's ↑ history (BUG-66).
+ *
+ * Stitching the batches at their longest overlap serves both: a growing
+ * full-list call (`[A,B]` then `[B,C,D]`) collapses to `[A,B,C,D]`, while two
+ * single entries (`[A]` then `[B]`) accumulate to `[A,B]`.
+ */
+function _mergePending(prev, batch) {
+  const next = Array.isArray(batch) ? batch : [];
+  if (!Array.isArray(prev) || prev.length === 0) return next.slice();
+  const maxK = Math.min(prev.length, next.length);
+  for (let k = maxK; k > 0; k -= 1) {
+    let overlap = true;
+    for (let i = 0; i < k; i += 1) {
+      if (prev[prev.length - k + i] !== next[i]) {
+        overlap = false;
+        break;
+      }
+    }
+    if (overlap) return prev.concat(next.slice(k));
+  }
+  return prev.concat(next);
+}
+
+/**
  * Save command history to file (debounced async write).
  */
 function saveHistory(sessionHistory) {
-  _pendingHistory = sessionHistory;
+  _pendingHistory = _mergePending(_pendingHistory, sessionHistory);
   if (_writeTimer) {
     return;
   } // 已有待写批次

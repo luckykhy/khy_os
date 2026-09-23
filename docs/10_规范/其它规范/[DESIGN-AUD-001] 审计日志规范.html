@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-AUD-001] 审计日志规范.md -->
+<title>[DESIGN-AUD-001] 审计日志规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-AUD-001] 审计日志规范</div>
+      <header class="hero reveal"><h1>[DESIGN-AUD-001] 审计日志规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-aud-001-审计日志规范">[DESIGN-AUD-001] 审计日志规范</a></li><li class="lvl-2"><a href="#1-原则">1. 原则</a></li><li class="lvl-2"><a href="#2-审计事件分类">2. 审计事件分类</a></li><li class="lvl-2"><a href="#3-审计日志格式">3. 审计日志格式</a></li><li class="lvl-2"><a href="#4-五字段">4. 五字段</a></li><li class="lvl-2"><a href="#5-必须审计的事件">5. 必须审计的事件</a></li><li class="lvl-2"><a href="#6-不可篡改保证">6. 不可篡改保证</a></li><li class="lvl-2"><a href="#7-版本历史">7. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-aud-001-审计日志规范">[DESIGN-AUD-001] 审计日志规范<a class="anchor" href="#design-aud-001-审计日志规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: AUD-001 -->
+<blockquote><p><strong>用途</strong>：定义 khy-os 项目的审计日志标准，用于安全事件追踪和合规。<br>LOG-001 定义了普通日志，本文档定义不可篡改的审计日志。</p></blockquote>
+<hr>
+<h2 id="1-原则">1. 原则<a class="anchor" href="#1-原则" aria-label="锚点">#</a></h2>
+<ol><li><strong>不可篡改</strong>：审计日志一旦写入不可修改/删除</li><li><strong>完整性</strong>：每条记录包含 Who/When/What/Where/Result</li><li><strong>不可旁路</strong>：无论操作成功与否都必须记录</li><li><strong>保留期限</strong>：审计日志最少保留 1 年</li></ol>
+<hr>
+<h2 id="2-审计事件分类">2. 审计事件分类<a class="anchor" href="#2-审计事件分类" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>类别</th><th>前缀</th><th>示例</th></tr></thead><tbody><tr><td>认证</td><td><code>AUTH_</code></td><td><code>AUTH_LOGIN_SUCCESS</code>、<code>AUTH_LOGIN_FAILED</code></td></tr><tr><td>授权</td><td><code>PERM_</code></td><td><code>PERM_DENIED</code>、<code>PERM_ROLE_CHANGED</code></td></tr><tr><td>数据</td><td><code>DATA_</code></td><td><code>DATA_CREATED</code>、<code>DATA_DELETED</code>、<code>DATA_EXPORTED</code></td></tr><tr><td>配置</td><td><code>CONFIG_</code></td><td><code>CONFIG_CHANGED</code>、<code>FLAG_TOGGLED</code></td></tr><tr><td>系统</td><td><code>SYS_</code></td><td><code>SYS_STARTUP</code>、<code>SYS_SHUTDOWN</code>、<code>SYS_ERROR</code></td></tr></tbody></table>
+<hr>
+<h2 id="3-审计日志格式">3. 审计日志格式<a class="anchor" href="#3-审计日志格式" aria-label="锚点">#</a></h2>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;auditId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;audit-uuid&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-10T12:00:00.000Z&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;category&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;AUTH&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;event&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;AUTH_LOGIN_SUCCESS&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;actor&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;user&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;user-123&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;username&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;zhangsan&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;ip&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;192.168.1.1&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;userAgent&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Mozilla/5.0&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;target&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;resource&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;strategy-456&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Mean Reversion&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;action&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;login&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;result&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;success&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;changes&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">null</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;metadata&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;requestId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;req-uuid&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;traceId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;trace-uuid&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+<h2 id="4-五字段">4. 五字段<a class="anchor" href="#4-五字段" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>字段</th><th>必选</th><th>说明</th></tr></thead><tbody><tr><td><code>actor</code></td><td>✅</td><td>谁（用户 ID / 系统 / 服务账号）</td></tr><tr><td><code>action</code></td><td>✅</td><td>做了什么（动词）</td></tr><tr><td><code>target</code></td><td>✅</td><td>对什么（资源类型 + ID）</td></tr><tr><td><code>timestamp</code></td><td>✅</td><td>何时（ISO 8601）</td></tr><tr><td><code>result</code></td><td>✅</td><td>结果（success / failure / denied）</td></tr></tbody></table>
+<hr>
+<h2 id="5-必须审计的事件">5. 必须审计的事件<a class="anchor" href="#5-必须审计的事件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>事件</th><th>级别</th></tr></thead><tbody><tr><td>登录成功/失败</td><td>INFO</td></tr><tr><td>登出</td><td>INFO</td></tr><tr><td>密码修改</td><td>INFO</td></tr><tr><td>权限变更</td><td>INFO</td></tr><tr><td>数据创建/修改/删除</td><td>INFO</td></tr><tr><td>数据导出</td><td>INFO</td></tr><tr><td>配置变更</td><td>INFO</td></tr><tr><td>权限被拒绝</td><td>WARN</td></tr><tr><td>多次登录失败</td><td>WARN</td></tr><tr><td>批量删除</td><td>WARN</td></tr><tr><td>系统启动/关闭</td><td>INFO</td></tr></tbody></table>
+<hr>
+<h2 id="6-不可篡改保证">6. 不可篡改保证<a class="anchor" href="#6-不可篡改保证" aria-label="锚点">#</a></h2>
+<pre><code class="language-javascript"><span class="hljs-comment">// 审计日志使用独立文件，不可写</span>
+<span class="hljs-keyword">const</span> auditLogger = winston.<span class="hljs-title function_">createLogger</span>({
+  <span class="hljs-attr">transports</span>: [
+    <span class="hljs-keyword">new</span> <span class="hljs-title class_">DailyRotateFile</span>({
+      <span class="hljs-attr">filename</span>: <span class="hljs-string">&#x27;logs/audit-%DATE%.log&#x27;</span>,
+      <span class="hljs-attr">datePattern</span>: <span class="hljs-string">&#x27;YYYY-MM-DD&#x27;</span>,
+      <span class="hljs-attr">maxFiles</span>: <span class="hljs-string">&#x27;365d&#x27;</span>,    <span class="hljs-comment">// 保留 1 年</span>
+      <span class="hljs-attr">immutable</span>: <span class="hljs-literal">true</span>       <span class="hljs-comment">// 文件只读</span>
+    })
+  ]
+});
+
+<span class="hljs-comment">// 文件系统级别只读</span>
+<span class="hljs-comment">// chattr +i logs/audit-*.log（Linux）</span>
+<span class="hljs-comment">// icacls 移除写权限（Windows）</span></code></pre>
+<hr>
+<h2 id="7-版本历史">7. 版本历史<a class="anchor" href="#7-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义审计日志规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-AGENT-002] 智能体工具授权矩阵.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-AGENT-002] 智能体工具授权矩阵</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-AUTH-002] Session 管理规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-AUTH-002] Session 管理规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-AUD-001] 审计日志规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

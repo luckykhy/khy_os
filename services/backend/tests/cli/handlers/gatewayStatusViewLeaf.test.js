@@ -28,9 +28,9 @@ describe('Gateway Status View Leaf', () => {
 
   test('setGatewayStatusViewDeps is a guarded, idempotent, non-throwing DI setter', () => {
       const { setGatewayStatusViewDeps } = require(LEAF);
-      expect(() => setGatewayStatusViewDeps().not.toThrow());
-      expect(() => setGatewayStatusViewDeps({}).not.toThrow());
-      expect(() => setGatewayStatusViewDeps({ withTimeout: 1, _printGatewayStatusTable: null }).not.toThrow());
+      expect(() => setGatewayStatusViewDeps()).not.toThrow();
+      expect(() => setGatewayStatusViewDeps({})).not.toThrow();
+      expect(() => setGatewayStatusViewDeps({ withTimeout: 1, _printGatewayStatusTable: null })).not.toThrow();
       const fakeDeps = {};
       for (const n of ['_getGatewayHomeRiskSnapshot', 'shouldTreatGenerationFailureAsWarning', 'shouldTreatConnectivityFailureAsWarning',
         '_resolvePreferredAdapterIssue', '_appendGatewayProtocolRiskDetail', 'getGatewayDebugPromptSnapshot',
@@ -40,8 +40,8 @@ describe('Gateway Status View Leaf', () => {
         'withTimeout', '_resolveEnvPathForGateway']) {
         fakeDeps[n] = () => undefined;
       }
-      expect(() => setGatewayStatusViewDeps(fakeDeps).not.toThrow());
-      expect(() => setGatewayStatusViewDeps(fakeDeps).not.toThrow());
+      expect(() => setGatewayStatusViewDeps(fakeDeps)).not.toThrow();
+      expect(() => setGatewayStatusViewDeps(fakeDeps)).not.toThrow();
   });
 
 });

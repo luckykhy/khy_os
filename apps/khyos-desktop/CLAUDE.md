@@ -96,7 +96,8 @@ node scripts/ci/check-version-sync.js
 | 智谱反馈表单 → KhyOS 反馈渠道 | 链接替换 |
 | 智谱遥测 → 默认关 | 不接入 ARMS RUM |
 
-品牌替换由 `scripts/ci/check-brand-replacement.js` 强制校验。
+品牌替换目前**没有自动守卫**（`scripts/ci/` 下不存在 `check-brand-replacement.js`），
+按下表**人工核对**。
 
 ## 相关文件
 

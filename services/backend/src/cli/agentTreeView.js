@@ -284,6 +284,27 @@ function buildAgentTreeRows(agents) {
 }
 
 /**
+ * Upper bound on the screen rows an AgentTree occupies: 1 header row plus every
+ * tree row the live/expanded branch paints (AgentTree.js:59, ccMessageProjection
+ * emitAgentTree). The ink chrome ledger (CcApp treeRows) must charge THIS number,
+ * not the collapsed height — `live` (busy) paints the full tree even when the
+ * user never expanded it, so a collapsed-only charge under-budgets the busy frame
+ * and the frame overflows the viewport (the BUG-91/92 ledger-vs-paint family).
+ * State-independent by design: a per-turn ledger would make the message window
+ * resize once per turn (the same stability tradeoff ccChromePlan makes for the
+ * streaming row).
+ * @param {object[]} agents
+ * @returns {number} 0 for an empty list, else 1 + buildAgentTreeRows().length
+ */
+function agentTreePaintRows(agents) {
+  const list = Array.isArray(agents) ? agents : [];
+  if (list.length === 0) {
+    return 0;
+  }
+  return 1 + buildAgentTreeRows(list).length;
+}
+
+/**
  * Header descriptor. allDone is true only when every agent reached a terminal
  * state (and there is at least one agent). The medium picks the dot colour and
  * appends its own "(ctrl+o 展开)" hint.
@@ -416,6 +437,7 @@ module.exports = {
   formatStats,
   detailText,
   buildAgentTreeRows,
+  agentTreePaintRows,
   buildAgentHeader,
   applyProgressEvent,
 };

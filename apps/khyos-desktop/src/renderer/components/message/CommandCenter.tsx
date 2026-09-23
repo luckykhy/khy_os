@@ -1,10 +1,17 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { store } from '../../state/store'
+import { addToast } from '../../state/toastSlice'
+import { openWorkspace } from '../../utils/openWorkspace'
+import { keyLabelFor } from '../../shared/keymap'
 
 interface Command {
   id: string
   label: string
   description?: string
   icon: string
+  // 键位徽标只从 shared/keymap.ts 的单一真源取（keyLabelFor），**不手写字符串**：
+  // 表里没有绑定 → 空 → 不渲染徽标。此前这里是手写的 'Ctrl+N' / 'Ctrl+O' / 'F11'…，
+  // 而对应的加速键根本没人实现，等于向用户展示一组假的快捷键。
   shortcut?: string
   category: string
   action: () => void
@@ -13,33 +20,104 @@ interface Command {
 interface CommandCenterProps {
   visible: boolean
   onClose: () => void
+  // Side-pane / panel commands dispatched to AppLayout's tab state machine
+  // (quickPick.command.* wiring, ZC-ALIGN-003). Optional second arg carries a
+  // payload (e.g. opened file path for openFile).
+  onPanelAction?: (action: string, arg?: string) => void
+  // 下面两个由 AppLayout 注入 —— 它才是会话状态的主人（新建任务要同时重置
+  // activeTaskId 与导航历史，只清消息是不够的）。未注入 = 该命令**不渲染**：
+  // 不为「列表看起来完整」留一条点了没反应的命令（[DESIGN-ARCH-125] §5 诚实边界）。
+  onNewTask?: () => void
+  onReloadSession?: () => void
 }
 
-export function CommandCenter({ visible, onClose }: CommandCenterProps) {
+function applyTheme(mode: 'dark' | 'light') {
+  const api = (window as unknown as { __KHYOS__?: { setTheme?: (m: string) => Promise<void> } }).__KHYOS__
+  if (!api?.setTheme) {
+    store.dispatch(addToast({ type: 'error', title: '主题切换不可用：preload 未注入 __KHYOS__，请重启应用' }))
+    return
+  }
+  void api.setTheme(mode).catch((err: unknown) => {
+    store.dispatch(addToast({ type: 'error', title: `主题切换失败：${String(err)}，请重试` }))
+  })
+}
+
+export function CommandCenter({ visible, onClose, onPanelAction, onNewTask, onReloadSession }: CommandCenterProps) {
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
-  const commands: Command[] = useMemo(() => [
-    { id: 'new-task', label: '新建任务', description: '创建新的对话任务', icon: '➕', shortcut: 'Ctrl+N', category: '任务', action: () => console.log('[cmd] new task') },
-    { id: 'open-workspace', label: '打开工作区', description: '选择项目文件夹', icon: '📂', shortcut: 'Ctrl+O', category: '任务', action: () => console.log('[cmd] open workspace') },
-    { id: 'toggle-terminal', label: '切换终端', description: '显示/隐藏终端面板', icon: '💻', shortcut: 'Ctrl+J', category: '视图', action: () => console.log('[cmd] terminal') },
-    { id: 'toggle-sidepane', label: '切换右侧面板', description: '显示/隐藏右侧面板', icon: '📋', shortcut: 'Ctrl+Alt+B', category: '视图', action: () => console.log('[cmd] sidepane') },
-    { id: 'toggle-fullscreen', label: '切换全屏', description: '进入/退出全屏模式', icon: '⛶', shortcut: 'F11', category: '视图', action: () => console.log('[cmd] fullscreen') },
-    { id: 'command-center', label: '命令中心', description: '搜索所有命令', icon: '🔍', shortcut: 'Ctrl+K', category: '视图', action: () => console.log('[cmd] command center') },
-    { id: 'search', label: '搜索对话', description: '在当前对话中搜索', icon: '🔎', shortcut: 'Ctrl+F', category: '搜索', action: () => console.log('[cmd] search') },
-    { id: 'switch-model', label: '切换模型', description: '选择 AI 模型', icon: '🧠', category: '模型', action: () => console.log('[cmd] switch model') },
-    { id: 'switch-mode', label: '切换执行模式', description: '切换权限模式', icon: '⚡', shortcut: 'Shift+Tab', category: '模型', action: () => console.log('[cmd] switch mode') },
-    { id: 'thought-level', label: '思考强度', description: '调整思考深度', icon: '💭', shortcut: 'Ctrl+T', category: '模型', action: () => console.log('[cmd] thought level') },
-    { id: 'compact', label: '压缩上下文', description: '压缩对话历史', icon: '📦', category: '对话', action: () => console.log('[cmd] compact') },
-    { id: 'clear', label: '清空对话', description: '清空当前对话', icon: '🗑️', category: '对话', action: () => console.log('[cmd] clear') },
-    { id: 'reload-session', label: '重载会话', description: '重新加载当前会话', icon: '↻', category: '对话', action: () => console.log('[cmd] reload') },
-    { id: 'settings', label: '打开设置', description: '打开应用设置', icon: '⚙️', shortcut: 'Ctrl+,', category: '应用', action: () => console.log('[cmd] settings') },
-    { id: 'check-update', label: '检查更新', description: '检查应用更新', icon: '🔄', category: '应用', action: () => console.log('[cmd] check update') },
-    { id: 'export-logs', label: '导出日志', description: '导出诊断日志', icon: '📤', category: '应用', action: () => console.log('[cmd] export logs') },
-    { id: 'devtools', label: '切换开发者工具', description: '打开/关闭开发者工具', icon: '🔧', shortcut: 'F12', category: '开发', action: () => console.log('[cmd] devtools') },
-  ], [])
+  // 命令清单（[DESIGN-ARCH-125] P-03）。本轮只保留**真能执行**的命令：
+  // 此前 28 条里有 20 条的 action 是 `console.log('[cmd] ...')` 空壳 —— 包括
+  // 「新建任务」和「打开工作区」，用户点了没有任何反应。
+  //
+  // 已删除且**不再恢复**的条目（连同其假快捷键），原因是它们既无后端能力也无
+  // 现有 UI 可接线，留着就是假功能（诚实红线）：
+  //   查找任务(Ctrl+F) / 切换模型 / 切换执行模式(Shift+Tab) / 思考强度 / 压缩上下文
+  //   / 技能 / MCP 服务器 / 问题反馈 / 用户社群 / 检查更新 / 导出日志 / 开发者工具(F12)
+  //   / 切换全屏(F11) / 命令面板自身
+  // 模型与执行模式选择器的真正入口是 Composer 工具行右下角那一簇；技能与 MCP 在
+  // 设置页。等它们各自有了可调用的通道再回到本面板登记。
+  const commands: Command[] = useMemo(() => {
+    const list: Command[] = []
+
+    // ── 任务 ──
+    if (onNewTask) {
+      list.push({
+        id: 'new-task', label: '新建任务', description: '清空当前对话，回到启动卡片页',
+        icon: '➕', shortcut: keyLabelFor('newTask'), category: '任务', action: () => onNewTask(),
+      })
+    }
+    list.push({
+      id: 'open-workspace', label: '打开工作区', description: '切换工作空间：最近打开 / 选择其他文件夹',
+      icon: '📂', shortcut: keyLabelFor('openWorkspace'), category: '任务', action: () => { void openWorkspace() },
+    })
+    if (onReloadSession) {
+      list.push({
+        id: 'reload-session', label: '重载会话', description: '重新加载当前会话的消息流',
+        icon: '↻', category: '任务', action: () => onReloadSession(),
+      })
+    }
+
+    // ── 视图（由 AppLayout 的 side-pane 状态机执行）──
+    if (onPanelAction) {
+      list.push(
+        {
+          id: 'toggle-sidepane', label: '切换面板', description: '显示/隐藏侧边面板',
+          icon: '📋', shortcut: keyLabelFor('toggleSidePane'), category: '视图', action: () => onPanelAction('toggleSidePane'),
+        },
+        {
+          id: 'toggle-terminal', label: '切换终端', description: '显示/隐藏终端面板',
+          icon: '💻', shortcut: keyLabelFor('toggleTerminal'), category: '视图', action: () => onPanelAction('toggleTerminal'),
+        },
+        { id: 'add-terminal-tab', label: '添加终端标签', description: '在侧边面板打开终端标签', icon: '🖥️', category: '视图', action: () => onPanelAction('addTerminalTab') },
+        { id: 'add-browser-tab', label: '添加浏览器标签', description: '在侧边面板打开浏览器标签', icon: '🌐', category: '视图', action: () => onPanelAction('addBrowserTab') },
+        { id: 'add-review-tab', label: '添加审查标签', description: '在侧边面板打开 Git 审查标签', icon: '🔍', category: '视图', action: () => onPanelAction('addReviewTab') },
+        { id: 'add-selection-chat-tab', label: '新建辅助对话', description: '在侧边面板打开辅助对话标签', icon: '💬', category: '视图', action: () => onPanelAction('addSelectionChatTab') },
+      )
+    }
+
+    // ── 文件 ──
+    if (onPanelAction) {
+      list.push({
+        id: 'open-file', label: '打开文件', description: '从当前工作区选择文件并在侧边面板打开',
+        icon: '📄', category: '文件', action: () => onPanelAction('openFileTab'),
+      })
+    }
+
+    // ── 应用 ──
+    list.push(
+      {
+        id: 'settings', label: '设置', description: '打开应用设置',
+        icon: '⚙️', shortcut: keyLabelFor('openSettings'), category: '应用', action: () => { window.location.hash = '#/settings' },
+      },
+      { id: 'switch-theme-dark', label: '切换主题到深色', description: '深色主题', icon: '🌙', category: '应用', action: () => applyTheme('dark') },
+      { id: 'switch-theme-light', label: '切换主题到浅色', description: '浅色主题', icon: '☀️', category: '应用', action: () => applyTheme('light') },
+    )
+
+    return list
+  }, [onPanelAction, onNewTask, onReloadSession])
 
   const filtered = useMemo(() => {
     if (!query.trim()) return commands
@@ -120,7 +198,7 @@ export function CommandCenter({ visible, onClose }: CommandCenterProps) {
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="搜索命令..."
+            placeholder="搜索操作、任务或文件"
             className="flex-1 bg-transparent text-sm text-foreground placeholder:text-foreground/30 focus:outline-none"
           />
           <kbd className="px-1.5 py-0.5 rounded text-xs text-foreground/40 bg-surface border border-border">Esc</kbd>
@@ -130,7 +208,7 @@ export function CommandCenter({ visible, onClose }: CommandCenterProps) {
         <div ref={listRef} className="max-h-80 overflow-auto py-2">
           {filtered.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-foreground/40">
-              没有找到匹配的命令
+              暂无相关结果
             </div>
           ) : (
             Object.entries(grouped).map(([category, cmds]) => (

@@ -1,5 +1,6 @@
 'use strict';
 const router = require('../src/services/updateChannelRouter');
+const assert = require('node:assert');
 function installation(overrides = {}) {
   return {
     type: 'package',
@@ -44,7 +45,7 @@ describe('Update Channel Router', () => {
       const checked = await router.checkAllChannels({
         installation: installation(),
         probes: {
-          github: async () => result('unavailable', '2.0.0', 'Release 索引缺少当前安装渠道�?GitHub 构件'),
+          github: async () => result('unavailable', '2.0.0', 'Release 索引缺少当前安装渠道�?GitHub 构件'),
           pypi: async () => result('available', '2.0.0', 'found'),
         },
       });

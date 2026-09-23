@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 00_INDEX_事件响应剧本-总目录.md -->
+<title>Incident Response Runbooks · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>incident-runbooks<span class="sep">›</span>Incident Response Runbooks</div>
+      <header class="hero reveal"><h1>Incident Response Runbooks</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#incident-response-runbooks">Incident Response Runbooks</a></li><li class="lvl-2"><a href="#overview">Overview</a></li><li class="lvl-2"><a href="#incident-severity-levels">Incident Severity Levels</a></li><li class="lvl-2"><a href="#incident-commander">Incident Commander</a></li><li class="lvl-2"><a href="#escalation-matrix">Escalation Matrix</a></li><li class="lvl-2"><a href="#postmortem-template">Postmortem Template</a></li><li class="lvl-2"><a href="#related">Related</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="incident-response-runbooks">Incident Response Runbooks<a class="anchor" href="#incident-response-runbooks" aria-label="锚点">#</a></h1>
+<blockquote><p>IR-001 reference: incident response documentation</p></blockquote>
+<h2 id="overview">Overview<a class="anchor" href="#overview" aria-label="锚点">#</a></h2>
+<p>This directory contains runbooks for incident response.</p>
+<h2 id="incident-severity-levels">Incident Severity Levels<a class="anchor" href="#incident-severity-levels" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Severity</th><th>Description</th><th>Response Time</th><th>Escalation</th><th>状态</th></tr></thead><tbody><tr><td>P0</td><td>Complete outage / data breach</td><td>15 min</td><td>Incident Commander + oncall</td><td>在产</td></tr><tr><td>P1</td><td>Major degradation</td><td>1 hour</td><td>Team lead + oncall</td><td>在产</td></tr><tr><td>P2</td><td>Minor issue / workaround exists</td><td>4 hours</td><td>Assigned engineer</td><td>在产</td></tr><tr><td>P3</td><td>Cosmetic / enhancement</td><td>Next sprint</td><td>Backlog</td><td>在产</td></tr></tbody></table>
+<h2 id="incident-commander">Incident Commander<a class="anchor" href="#incident-commander" aria-label="锚点">#</a></h2>
+<ul><li>Responsible for P0/P1 incidents</li><li>Authorized to escalate to leadership</li><li>Coordinates cross-team response</li></ul>
+<h2 id="escalation-matrix">Escalation Matrix<a class="anchor" href="#escalation-matrix" aria-label="锚点">#</a></h2>
+<pre><code>P0: Incident Commander → VP Engineering → CEO
+P1: Team Lead → Director → VP Engineering
+P2: Assigned Engineer → Team Lead
+P3: Backlog → Next sprint planning</code></pre>
+<h2 id="postmortem-template">Postmortem Template<a class="anchor" href="#postmortem-template" aria-label="锚点">#</a></h2>
+<p>See <span class="deadlink" title="目标不存在：postmortem-template.html">postmortem-template.md</span>.</p>
+<h2 id="related">Related<a class="anchor" href="#related" aria-label="锚点">#</a></h2>
+<ul><li>[[OPS-MAN-202] oncall](../OPS-MAN/[OPS-MAN-202] oncall.md) - oncall schedule</li><li><a href="../runbooks/">../runbooks/</a> - disaster recovery runbooks</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/07_OPS_运维/其它运维/config-auto-repair.html"><div class="dir">← 上一篇</div><div class="ttl">网关配置自动修复与重置</div></a><a class="next" href="../../../docs/07_OPS_运维/OPS-MAN/[OPS-MAN-001] ai-快速通道.html"><div class="dir">下一篇 →</div><div class="ttl">KHY AI 快速通道（AI Fast Lane）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/07_OPS_运维/incident-runbooks/00_INDEX_事件响应剧本-总目录.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

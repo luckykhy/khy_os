@@ -4,10 +4,10 @@
  * restore-plan.js — 「可交给 agent 执行的有序还原方案」CLI + 方案文档生成器
  *
  * 用法：
- *   node scripts/restore-plan.js            # 采集三面镜子 → 合成一份有序还原方案
- *   npm run restore-plan                     # 同上（经 npm 别名）
- *   node scripts/restore-plan.js --json      # 机器可读（landing agent 直接消费）
- *   node scripts/restore-plan.js --gen-doc   # 重新生成 OPS-MAN-075 方案说明
+ *   node scripts/restore/restore-plan.js            # 采集三面镜子 → 合成一份有序还原方案
+ *   npm run restore:plan                            # 同上（经 npm 别名）
+ *   node scripts/restore/restore-plan.js --json      # 机器可读（landing agent 直接消费）
+ *   node scripts/restore/restore-plan.js --gen-doc   # 重新生成 OPS-MAN-075 方案说明
  *
  * 设计：合成逻辑全在纯叶子 scripts/lib/agentRestorePlan.js（零 IO、可离线全测）；
  * 本文件只做两件事——
@@ -33,14 +33,10 @@ const { assessHydrationHealth } = require('../lib/hydrationHealth');
 // 复用三个 CLI 的探测器（零重复；探测层各自 fail-soft）。
 const { probeRestoreFacts } = require('./restore-check');
 const { requireExtensionModule } = require('../lib/ext-run');
+const { opsDocPath, opsDocRelPath } = require('../lib/docsPaths');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const DOC_PATH = path.join(
-  ROOT,
-  'docs',
-  '07_OPS_运维',
-  '[OPS-MAN-075] Agent 还原方案合成器.md'
-);
+const DOC_PATH = opsDocPath('[OPS-MAN-075] Agent 还原方案合成器.md');
 const NPM_PKG_NAME = '@khy-os/khy-os';
 const PIP_PKG_NAME = 'khy-os';
 
@@ -117,7 +113,7 @@ function runRestorePlan(opts = {}) {
       out += `${C.green}全程 agent 可无人值守执行。${C.reset}\n`;
     }
   }
-  out += `${C.dim}详情见：docs/07_OPS_运维/[OPS-MAN-075] Agent 还原方案合成器.md${C.reset}\n`;
+  out += `${C.dim}详情见：${opsDocRelPath('[OPS-MAN-075] Agent 还原方案合成器.md')}${C.reset}\n`;
   process.stdout.write(out);
   return plan.ready ? 0 : 1;
 }

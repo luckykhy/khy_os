@@ -5,7 +5,15 @@
  * Extends existing googleGenService with additional models and features.
  */
 
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+// Fail-soft: @google/generative-ai is an optional extra not pinned in
+// package.json. A top-level hard require would crash the whole backend at
+// load on installs without it; instead load lazily and report absence.
+let _GoogleGenerativeAI = null;
+try {
+  ({ GoogleGenerativeAI: _GoogleGenerativeAI } = require('@google/generative-ai'));
+} catch {
+  _GoogleGenerativeAI = null;
+}
 const fs = require('fs');
 
 function _env(name) {
@@ -17,14 +25,20 @@ function _getApiKey() {
 }
 
 function _getClient() {
+  if (!_GoogleGenerativeAI) {
+    return {
+      error: 'Google GenAI SDK not available: @google/generative-ai is not installed, run `npm i @google/generative-ai` to enable Google models',
+    };
+  }
   const apiKey = _getApiKey();
   if (!apiKey) return null;
-  return new GoogleGenerativeAI(apiKey);
+  return new _GoogleGenerativeAI(apiKey);
 }
 
 // ── Gemini 2.0 Flash with Enhanced Features ──
 async function geminiFlashGenerate(prompt, options = {}) {
   const client = _getClient();
+  if (client && client.error) return client;
   if (!client) return { error: 'Google API Key not configured.' };
 
   const model = client.getGenerativeModel({
@@ -49,6 +63,7 @@ async function geminiFlashGenerate(prompt, options = {}) {
 // ── Imagen 3 — Image Generation ──
 async function imagenGenerate(prompt, options = {}) {
   const client = _getClient();
+  if (client && client.error) return client;
   if (!client) return { error: 'Google API Key not configured.' };
 
   try {
@@ -75,6 +90,7 @@ async function imagenGenerate(prompt, options = {}) {
 // ── Gemini Vision — Image Understanding ──
 async function geminiVisionAnalyze(imageBase64, prompt, options = {}) {
   const client = _getClient();
+  if (client && client.error) return client;
   if (!client) return { error: 'Google API Key not configured.' };
 
   const model = client.getGenerativeModel({
@@ -101,6 +117,7 @@ async function geminiVisionAnalyze(imageBase64, prompt, options = {}) {
 // ── Gemini Embedding ──
 async function geminiEmbed(texts, options = {}) {
   const client = _getClient();
+  if (client && client.error) return client;
   if (!client) return { error: 'Google API Key not configured.' };
 
   const model = client.getGenerativeModel({

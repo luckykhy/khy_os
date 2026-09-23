@@ -1,15 +1,16 @@
 'use strict';
 /**
- * glmVisionWiring.test.js �?GLM-4.6V-Flash 接入透明视觉路由 + 显式识图工具的接线测�?
+ * glmVisionWiring.test.js — GLM-4.6V-Flash 接入透明视觉路由 + 显式识图工具的接线测�?
  *
- * 覆盖 3 �?wiring 的可观测契约:
- *   2a visionCapability.isVisionCapableModel 门开�?glm-4.6v-flash 为视觉、门关回退 false;
- *   2b zhipuGlmModel.knownZhipuModels 门开�?glm-4.6v-flash、门关不�?既有清单);
- *   2c decideVisionRouting 收到 glm/ 前缀兜底 pin �?switch-model + poolHint='glm'
- *      + aiGateway 源码含「有 GLM key 才注�?pin / 门控 / 尊重用户 env」的分支;
- *   Part 3 RecognizeImage 工具:门控 isEnabled、execute 经注�?stub �?glm-4.6v-flash 调网关�?
+ * 覆盖 3 �?wiring 的可观测契约:
+ *   2a visionCapability.isVisionCapableModel 门开�?glm-4.6v-flash 为视觉、门关回退 false;
+ *   2b zhipuGlmModel.knownZhipuModels 门开�?glm-4.6v-flash、门关不�?既有清单);
+ *   2c decideVisionRouting 收到 glm/ 前缀兜底 pin �?switch-model + poolHint='glm'
+ *      + aiGateway 源码含「有 GLM key 才注�?pin / 门控 / 尊重用户 env」的分支;
+ *   Part 3 RecognizeImage 工具:门控 isEnabled、execute 经注�?stub �?glm-4.6v-flash 调网关�?
  */
 const fs = require('fs');
+const assert = require('node:assert');
 const path = require('path');
 const visionCap = require('../../../src/services/gateway/visionCapability');
 const { knownZhipuModels } = require('../../../src/services/zhipuGlmModel');
@@ -30,11 +31,11 @@ describe('Glm Vision Wiring', () => {
       assert.strictEqual(
         visionCap.isVisionCapableModel('glm-4.6v-flash', { env: { KHY_GLM_VISION_MODEL: '0' } }),
         false,
-        'gate off �?byte-revert to false',
+        'gate off �?byte-revert to false',
       );
-      // �?provider 前缀也认(子串判定)
+      // �?provider 前缀也认(子串判定)
       expect(visionCap.isVisionCapableModel('zhipu/glm-4.6v-flash', { env: {} })).toBe(true);
-      // 不误�?glm-4 世代
+      // 不误�?glm-4 世代
       expect(visionCap.isVisionCapableModel('glm-4', { env: {} })).toBe(false);
       expect(visionCap.isVisionCapableModel('glm-4-flash', { env: {} })).toBe(false);
   });
@@ -42,14 +43,14 @@ describe('Glm Vision Wiring', () => {
   test('2b: knownZhipuModels includes glm-4.6v-flash when latest gate on, not when off', async () => {
       expect(knownZhipuModels({}).includes('glm-4.6v-flash')).toBeTruthy();
       expect(!knownZhipuModels({ KHY_GLM_LATEST_MODEL: '0' }).includes('glm-4.6v-flash')).toBeTruthy();
-      // 不影�?glm-5.2 默认打头
+      // 不影�?glm-5.2 默认打头
       expect(knownZhipuModels({})[0]).toBe('glm-5.2');
   });
 
-  test('2c: decideVisionRouting with glm/ pinned fallback �?switch-model + poolHint glm', async () => {
+  test('2c: decideVisionRouting with glm/ pinned fallback �?switch-model + poolHint glm', async () => {
       const decision = decideVisionRouting({
         hasImage: true,
-        currentModel: 'deepseek-chat', // 纯文本模型带�?
+        currentModel: 'deepseek-chat', // 纯文本模型带�?
         candidateModels: [],
         env: { KHY_VISION_FALLBACK_MODEL: 'glm/glm-4.6v-flash' },
       });
@@ -60,13 +61,16 @@ describe('Glm Vision Wiring', () => {
   });
 
   test('2c: aiGateway injects the GLM default fallback only under the honest guards', async () => {
+      // generate() lives in aiGatewayGenerateMethod.js and is mixed onto the
+      // AIGateway prototype at aiGateway.js require time — the honest-guard
+      // wiring contract therefore lives in that module (Batch 5 move).
       const src = fs.readFileSync(
-        path.join(__dirname, '../../../src/services/gateway/aiGateway.js'), 'utf8');
+        path.join(__dirname, '../../../src/services/gateway/aiGatewayGenerateMethod.js'), 'utf8');
       expect(/glmVisionModel/.test(src)).toBeTruthy();
       expect(/glmVisionFallbackPin/.test(src)).toBeTruthy();
       expect(/hasAvailableKeys\('glm'\)/.test(src)).toBeTruthy();
-      expect(/KHY_VISION_FALLBACK_MODEL/.test(src).toBeTruthy() && /_routingEnv/.test(src),
-        'respects user-set KHY_VISION_FALLBACK_MODEL and passes env to decideVisionRouting');
+      expect(/KHY_VISION_FALLBACK_MODEL/.test(src)).toBeTruthy();
+      expect(/_routingEnv/.test(src)).toBeTruthy();
   });
 
   test('Part 3: RecognizeImage tool metadata + gating', async () => {
@@ -77,9 +81,9 @@ describe('Glm Vision Wiring', () => {
       const prev = process.env.KHY_GLM_VISION_MODEL;
       try {
         delete process.env.KHY_GLM_VISION_MODEL;
-        expect(tool.isEnabled()).toBe(true, 'default-on �?enabled');
+        expect(tool.isEnabled()).toBe(true, 'default-on �?enabled');
         process.env.KHY_GLM_VISION_MODEL = '0';
-        expect(tool.isEnabled()).toBe(false, 'gate off �?tool disabled');
+        expect(tool.isEnabled()).toBe(false, 'gate off �?tool disabled');
       } finally {
         if (prev === undefined) delete process.env.KHY_GLM_VISION_MODEL;
         else process.env.KHY_GLM_VISION_MODEL = prev;

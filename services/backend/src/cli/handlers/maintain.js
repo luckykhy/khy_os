@@ -168,7 +168,7 @@ function _renderFreshness(cockpit, parsed, f) {
     pipLifeline: _exists('setup.py'),
     aiSeedDocs: _exists('.ai/GUARDS.md') || _exists('.ai/MAP.md'),
     maintenanceLaunchers: _exists('maintenance'),
-    inheritanceDoc: _exists('docs/_传承'),
+    inheritanceDoc: _exists('docs/13_传承'),
   };
 
   // 守卫接线：解析 package.json 的 check:small-model:safety 脚本串。
@@ -234,7 +234,7 @@ module.exports = {
     subCommands: ['status', 'health', 'doctor', 'audit', 'bare', 'gen', 'refresh', 'check', 'show', 'link', 'hook'],
     category: 'system',
     handler: async (parsed) => {
-      const { getRouterSubCommands } = require('../constants/commandSchema');
+      const { getRouterSubCommands } = require('../../constants/commandSchema');
       const METADATA_SUBS = new Set(getRouterSubCommands().metadata || []);
       const sub = String(parsed.subCommand || ((Array.isArray(parsed.args) && parsed.args[0]) || '')).toLowerCase();
       if (METADATA_SUBS.has(sub)) {

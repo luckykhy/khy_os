@@ -327,7 +327,7 @@ function _probePathIntegrity() {
 //      (add `platforms: ['windows', ...]` only if it should NOT run everywhere.)
 //   3. Add `_probeXxx,` to module.exports (tests reference it).
 //   4. Verify:  npm run test:maintainer:env-optimize
-//   Full recipe: docs/07_OPS_运维/[OPS-MAN-064] 打造最佳环境-如何扩展.md
+//   Full recipe: docs/07_OPS_运维/OPS-MAN/[OPS-MAN-064] 打造最佳环境-如何扩展.md
 const _PROBES = [
   { key: 'disk-pressure', label: '磁盘空间', run: _probeDiskPressure },
   { key: 'memory-pressure', label: '内存压力', run: _probeMemoryPressure },

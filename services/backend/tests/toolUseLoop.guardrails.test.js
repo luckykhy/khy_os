@@ -9,13 +9,17 @@ describe('toolUseLoop guardrails', () => {
     jest.resetModules();
   });
 
-  test('resolves max iterations from env when option is not provided', () => {
+  test('env / explicit iterations below the safety floor clamp up to minSafe', () => {
     process.env.KHY_TASK_CAPABILITY_GATE = 'false';
     process.env.KHY_TOOL_LOOP_MAX_ITERATIONS = '3';
     const toolUseLoop = require('../src/services/toolUseLoop');
 
-    expect(toolUseLoop._resolveMaxIterations(undefined)).toBe(3);
-    expect(toolUseLoop._resolveMaxIterations(7)).toBe(7);
+    // Env and explicit values share one clamp semantics: valid numbers land in
+    // [minSafe=8, 100]. A low request raises to the safety floor instead of
+    // silently falling back to the 100 default (the old env-path behavior,
+    // which inverted a user's attempt to lower the cap).
+    expect(toolUseLoop._resolveMaxIterations(undefined)).toBe(8);
+    expect(toolUseLoop._resolveMaxIterations(7)).toBe(8);
   });
 
   test('keeps widened defaults but clamps iteration and elapsed env overrides to safe bounds', () => {

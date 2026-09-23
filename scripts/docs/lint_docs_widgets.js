@@ -44,7 +44,7 @@ const SKIP_DIRS = new Set([
   "__pycache__", ".pytest_cache", ".tox", "muya-embed", "national-exam-site",
   "_archive_已删除孤儿引擎", ".claude", ".khy",
 ]);
-const SKIP_PATH_PARTS = ["/bundled/", "/_assets/"];
+const SKIP_PATH_PARTS = ["/bundled/", "/19_资产/"];
 
 // 已知的互动/图表围栏名（其余非语言标记的围栏若长得像这些则疑似拼错）。
 const WIDGET_KINDS = new Set(["callout", "quiz", "flip", "timeline", "scene"]);

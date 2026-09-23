@@ -95,4 +95,71 @@ const CC_THEME = Object.freeze({
   }),
 });
 
-module.exports = { CC_COLORS, ANSI, CC_THEME };
+// ── 语义色 token（DESIGN-ARCH-102 §4.6）──────────────────────────────────────
+// 7 个语义 token：accent / muted / success / warn / danger / border / focus。
+// 组件应取用语义 token（经 resolvePalette 解算），而非直接取 CC_COLORS 的字面
+// hex——字面量表只是「token → 默认值」映射的真源，配色层由 resolvePalette 统一
+// 适配 NO_COLOR / CLICOLOR / colorDepth 三档。
+const SEMANTIC = Object.freeze({
+  accent: '#00B4B4', // 强调（工具名/链接/输入框边框）
+  muted: '#A0A0A0', // 次要文字
+  success: '#22C55E',
+  warn: '#F59E0B',
+  danger: '#EF4444',
+  border: '#374151',
+  focus: '#D77757',
+});
+
+// 16 色降级档：truecolor→256→16 三档思路（btop 同款），把 7 token 映射到 ANSI
+// 基本 16 色，低色终端不至于全黑。
+const ANSI16 = Object.freeze({
+  accent: '\x1B[36',
+  muted: '\x1B[90',
+  success: '\x1B[32',
+  warn: '\x1B[33',
+  danger: '\x1B[31',
+  border: '\x1B[90',
+  focus: '\x1B[33',
+});
+
+/**
+ * 解算 7 语义 token 到当前终端可用颜色（DESIGN-ARCH-102 §4.6 P2-7）。
+ * 检测链：NO_COLOR > CLICOLOR_FORCE > CLICOLOR > tty。
+ *   - NO_COLOR 非空           → 全灰阶（零彩色）
+ *   - CLICOLOR_FORCE 非 0     → 强制彩色
+ *   - CLICOLOR=0 && 非 force  → 全灰阶
+ *   - colorDepth < 8（16 色档）→ 映射到 ANSI16 基本色
+ * @param {object} [env]
+ * @param {{colorDepth?: number}} [caps] 来自 terminalCapabilities.detectCapabilities
+ * @returns {Record<string, string>} accent/muted/… → 可用颜色值（SGR 前缀或 hex）
+ */
+function resolvePalette(env = process.env, caps = {}) {
+  const v = (k) => String((env && env[k]) || '').trim();
+  const noColor = v('NO_COLOR');
+  const clicolorForce = v('CLICOLOR_FORCE');
+  const clicolor = v('CLICOLOR');
+  const isTty = !!caps.isTTY;
+  const depth = Number(caps.colorDepth) > 0 ? Number(caps.colorDepth) : 24;
+
+  let gray = false;
+  if (noColor !== '') gray = true; // NO_COLOR 最高优先级（哪怕 CLICOLOR_FORCE）
+  else if (clicolorForce === '0' && clicolor === '0') gray = true;
+  else if (clicolor === '0' && !isTty) gray = true;
+
+  if (gray) {
+    const g = '#808080';
+    return { accent: g, muted: g, success: g, warn: g, danger: g, border: g, focus: g };
+  }
+
+  // 16 色档（colorDepth < 8）→ 基本 ANSI 色映射；truecolor/256 → 用默认 hex。
+  if (depth < 8) {
+    const out = {};
+    for (const k of Object.keys(SEMANTIC)) {
+      out[k] = ANSI16[k] + 'm' + SEMANTIC[k];
+    }
+    return out;
+  }
+  return Object.assign({}, SEMANTIC);
+}
+
+module.exports = { CC_COLORS, ANSI, CC_THEME, SEMANTIC, ANSI16, resolvePalette };

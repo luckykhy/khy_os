@@ -1,6 +1,6 @@
 'use strict';
 /**
- * readSearchToolsHoist.test.js �?Ch2「不要每轮重建可复用结构�?
+ * readSearchToolsHoist.test.js —Ch2「不要每轮重建可复用结构�?
  *
  * Verifies the pure module-const hoist of READ_SEARCH_TOOLS out of the REPL
  * per-round-trip tool loop. The Set is now built once at module load and

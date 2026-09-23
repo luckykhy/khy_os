@@ -8,8 +8,8 @@
  *   ② detailed 深度 explain 输出含专项「后果」与「撤销」文案(而非泛化 NETWORK 文案);
  *   ③ -f 短旗、--force-with-lease 也算强推;--set-upstream 不误报。
  */
-const explainer = require('../../src/services/syscallGateway/preExecutionExplainer');
-const { ACTIONS } = require('../../src/services/syscallGateway/intentSchema');
+const explainer = require('../../src/services/domain/system/syscallGateway/preExecutionExplainer.js');
+const { ACTIONS } = require('../../src/services/domain/system/syscallGateway/intentSchema.js');
 function explainDetailed(intent) {
   return explainer.explain(intent, {
     describe: () => ({ isRedLine: true, level: 'L2', reasons: [], summary: '' }),
@@ -47,7 +47,7 @@ describe('Pre Execution Explainer git Hazard', () => {
         action: ACTIONS.NETWORK, isDestructive: true,
       });
       expect(out.whatHappens.includes('强制推送')).toBeTruthy();
-      expect(out.risks.some((r) => r).toContain('覆盖远程'), '后果应含覆盖远程');
+      expect(out.risks.some((r) => r.includes('覆盖远程'))).toBe(true);
       expect(/reflog/.test(out.howToUndo)).toBeTruthy();
   });
 
@@ -57,7 +57,7 @@ describe('Pre Execution Explainer git Hazard', () => {
         action: ACTIONS.PROCESS, isDestructive: true,
       });
       expect(out.whatHappens.includes('硬重置')).toBeTruthy();
-      expect(out.risks.some((r) => r).toContain('未提交'), '后果应含未提交改动被丢弃');
+      expect(out.risks.some((r) => r.includes('未提交'))).toBe(true);
       expect(out.howToUndo.includes('reflog') || out.howToUndo.includes('快照')).toBeTruthy();
   });
 
@@ -67,7 +67,7 @@ describe('Pre Execution Explainer git Hazard', () => {
         action: ACTIONS.DELETE, isDestructive: true,
       });
       expect(out.whatHappens.includes('清理') || out.whatHappens.includes('删除')).toBeTruthy();
-      expect(out.risks.some((r) => r.includes('未被 git 跟踪') || r).toContain('直接删除'), '后果应含未跟踪文件被删');
+      expect(out.risks.some((r) => r.includes('未被 git 跟踪') || r.includes('直接删除'))).toBe(true);
       expect(out.howToUndo.includes('不可逆') || out.howToUndo.includes('-nd')).toBeTruthy();
   });
 

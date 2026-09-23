@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ensure-mermaid.mjs — 幂等守卫：保证 docs/_assets/mermaid.min.js 存在。
+ * ensure-mermaid.mjs — 幂等守卫：保证 docs/19_资产/site/mermaid.min.js 存在。
  *
  * 为什么需要它：那份 3.3 MB 的 bundle 是 build.mjs 的 esbuild 产物，不进 git
  * （见 .gitignore「可再生构建产物」段）。文档站生成器把它当离线资源引入
@@ -30,7 +30,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..', '..', '..');
-const outfile = resolve(root, 'docs', '_assets', 'mermaid.min.js');
+const outfile = resolve(root, 'docs', '19_资产', 'mermaid.min.js');
 const required = process.argv.includes('--required');
 const REBUILD_CMD = 'npm run docs:mermaid';
 
@@ -69,7 +69,7 @@ async function main() {
   };
 
   if (isReady()) {
-    console.log('[ensure-mermaid] docs/_assets/mermaid.min.js 已就绪 — 跳过构建');
+    console.log('[ensure-mermaid] docs/19_资产/site/mermaid.min.js 已就绪 — 跳过构建');
     sweep(false);
     return;
   }

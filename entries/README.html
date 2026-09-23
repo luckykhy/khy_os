@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: README.md -->
+<title>entries/ — Khy 多端入口 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../docs/index.html">首页</a><span class="sep">›</span>entries<span class="sep">›</span>entries/ — Khy 多端入口</div>
+      <header class="hero reveal"><h1>entries/ — Khy 多端入口</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#entries-khy-多端入口">entries/ — Khy 多端入口</a></li><li class="lvl-2"><a href="#先看这个-exe-apk-html-在哪">先看这个：exe / apk / html 在哪</a></li><li class="lvl-2"><a href="#两条进入方式">两条进入方式</a></li><li class="lvl-2"><a href="#端清单">端清单</a></li><li class="lvl-2"><a href="#entries-json-的四条硬约束">entries.json 的四条硬约束</a></li><li class="lvl-2"><a href="#目录内容">目录内容</a></li><li class="lvl-2"><a href="#表与代码为什么分居两处">表与代码为什么分居两处</a></li><li class="lvl-2"><a href="#现状里的两个坑-已知-未收口">现状里的两个坑（已知，未收口）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="entries-khy-多端入口">entries/ — Khy 多端入口<a class="anchor" href="#entries-khy-多端入口" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>这个目录回答一个问题</strong>：khy 有哪些端、每个端的入口在哪、怎么起、怎么构建、现在能不能用。</p>
+<p>本目录是<strong>真源（数据）</strong>；读写它的实现在<br><code>services/backend/src/services/entrypoints/</code>（见下方「表与代码为什么分居两处」）。<br>规范真源是 <a href="../docs/03_DESIGN_设计/DESIGN-ARCH/%5BDESIGN-ARCH-117%5D%20khy-多端入口矩阵.html"><code>[DESIGN-ARCH-117] khy 多端入口矩阵</code></a>。</p></blockquote>
+<hr>
+<h2 id="先看这个-exe-apk-html-在哪">先看这个：exe / apk / html 在哪<a class="anchor" href="#先看这个-exe-apk-html-在哪" aria-label="锚点">#</a></h2>
+<p><strong>本目录既是索引，也是构建产物的唯一根。</strong> 按 <code>[DESIGN-LAY-004]</code>（LAYOUT-005，构建产物单一根），<br>一切可再生构建产物落 <code>entries/&lt;producer&gt;/</code>（2026-09-18 迁移，原为仓库根 <code>_build/</code>）。<br>本目录里<strong>提交的</strong>只有三件索引文件（<code>entries.json</code> / <code>launch.js</code> / <code>README.md</code>），<br>余下 <code>entries/*</code> 子目录一律 gitignore（<code>.gitignore</code> 用「<code>entries/*</code> + 逐条 <code>!</code> 白名单」实现）。</p>
+<table><thead><tr><th>形态</th><th>日常入口</th><th>可分发力产物</th><th>产物坐标真源</th></tr></thead><tbody><tr><td>终端 shell</td><td>✅ <code>khy.bat</code> / <code>khy.sh</code> / <code>khy-cli.bat</code>（现在就有）</td><td>pip wheel / npm tarball</td><td><code>BUILD-OUTPUTS.json</code> 的 <code>pip-dist</code></td></tr><tr><td>桌面端 exe</td><td>无（需先构建）</td><td>electron-builder 安装包</td><td><code>electron-builder</code></td></tr><tr><td>手机端 apk</td><td>无（需先构建）</td><td><code>app-release.apk</code> + <code>.aab</code></td><td><code>flutter-android-release</code></td></tr><tr><td>网页端 html</td><td>无（需先构建）</td><td>Vite 静态站</td><td><code>ai-frontend</code></td></tr></tbody></table>
+<p><strong>想立刻知道每个端的产物到底在不在、怎么得到它</strong>：</p>
+<pre><code class="language-text">khy entry status            或    node entries/launch.js status</code></pre>
+<p>它把 <code>BUILD-OUTPUTS.json</code> 的登记换成人话：形态 → 产物落点 → <strong>磁盘上有没有</strong> → <strong>一条得到它的命令</strong>。</p>
+<blockquote><p><strong>注意：产物子目录目前大多还不存在</strong>（<code>BUILD-OUTPUTS.json</code> 里的条目状态全是 <code>migrating</code>）。<br>也就是说：产物登记表已经写好、根已迁到 <code>entries/</code>，但各工具的 <code>outDir</code> 尚未逐一切过来——<br><strong>四端里只有终端是现成可用的</strong>，exe / apk / html 都要先构建一次，且构建产物仍落在各包的旧路径，<br>待 §8 步骤 2 迁移后才真正收进 <code>entries/&lt;producer&gt;/</code>。</p></blockquote>
+<h2 id="两条进入方式">两条进入方式<a class="anchor" href="#两条进入方式" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">khy entry list                      经 khy CLI（Python 启动器 或 khy-cli.bat 均可）
+node entries/launch.js              经本目录的跨平台壳（只要 Node，不要 Python）</code></pre>
+<table><thead><tr><th>方式</th><th>依赖</th><th>适用</th></tr></thead><tbody><tr><td><code>khy entry ...</code></td><td>Python 3.8+ 或 Node 20+</td><td>日常；CLI 的完整命令面</td></tr><tr><td><code>node entries/launch.js ...</code></td><td><strong>只要 Node 20+</strong></td><td>便携/裸目录；没有 Python；<code>khy-cli.bat</code> 在非 Windows 上不可用</td></tr></tbody></table>
+<p>两者是同一个真源的两种读法，不各自维护一份端清单。</p>
+<hr>
+<h2 id="端清单">端清单<a class="anchor" href="#端清单" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>端 id</th><th>类型</th><th>形态</th><th>状态</th><th>来源</th></tr></thead><tbody><tr><td><code>cli</code></td><td>cli</td><td>shell</td><td>就绪</td><td><code>platform/khy_platform</code></td></tr><tr><td><code>cli-node</code></td><td>cli</td><td>shell</td><td>就绪</td><td><code>services/backend</code></td></tr><tr><td><code>desktop</code></td><td>desktop</td><td>exe</td><td>就绪</td><td><code>apps/khyos-desktop</code></td></tr><tr><td><code>desktop-legacy</code></td><td>desktop</td><td>exe</td><td>降级</td><td><code>electron/</code></td></tr><tr><td><code>desktop-provider-hub</code></td><td>desktop</td><td>exe</td><td>降级</td><td><code>apps/provider-hub</code></td></tr><tr><td><code>web</code></td><td>web</td><td>html</td><td>就绪</td><td><code>apps/ai-frontend</code></td></tr><tr><td><code>web-quant</code></td><td>web</td><td>html</td><td>就绪</td><td><code>software/khyquant/frontend</code></td></tr><tr><td><code>mobile</code></td><td>mobile</td><td>apk</td><td>就绪</td><td><code>apps/khy-os-client-app</code></td></tr><tr><td><code>mobile-legacy</code></td><td>mobile</td><td>apk</td><td><strong>损坏</strong></td><td><code>apps/khy-mobile</code></td></tr></tbody></table>
+<p><strong>表不会自己更新</strong>：它是<strong>人工定档</strong>。哪个端改了指路方式、换了源目录、补上了打包配置，<br>就要改 <code>entries.json</code>。不确定现状时跑这三条——它们分别回答三个不同的问题，别混：</p>
+<table><thead><tr><th>命令</th><th>回答的问题</th><th>读什么</th></tr></thead><tbody><tr><td><code>khy entry list</code></td><td>端声明了什么</td><td><code>entries.json</code></td></tr><tr><td><code>khy entry status</code></td><td><strong>产物在哪、产出来没有</strong></td><td><code>entries.json</code> + <code>BUILD-OUTPUTS.json</code> + 磁盘</td></tr><tr><td><code>khy entry probe</code></td><td>端能不能跑起来（源/标记/工具链/构建档）</td><td>磁盘 + 本机 PATH</td></tr></tbody></table>
+<hr>
+<h2 id="entries-json-的四条硬约束">entries.json 的四条硬约束<a class="anchor" href="#entries-json-的四条硬约束" aria-label="锚点">#</a></h2>
+<p>改这张表时，有四件事<strong>不许写</strong>：</p>
+<table><thead><tr><th>不许写</th><th>为什么</th><th>该怎么写</th></tr></thead><tbody><tr><td>端口字面量</td><td>工程规则 1（<code>RUNTIME-001</code>）红线</td><td><code>ports[].ref</code> 写 <code>serviceDefaults</code> 的<strong>导出名</strong>，如 <code>&quot;WEB_FRONTEND_PORT&quot;</code></td></tr><tr><td>绝对文件系统路径</td><td>同上</td><td>仓库相对路径，或 <code>&lt;appRoot&gt;</code> 占位符</td></tr><tr><td>产物路径</td><td>会与 <code>docs/10_规范/registry/BUILD-OUTPUTS.json</code> 形成第二份真源</td><td><code>artifactOutput</code> 存那张表的 <strong>id 指针</strong></td></tr><tr><td>猜出来的启动命令</td><td>猜错比拒绝更贵</td><td>没有就写 <code>null</code>，诚实地报「未声明」</td></tr></tbody></table>
+<p>改完自检（在<strong>仓库根</strong>执行）：</p>
+<pre><code class="language-bash">node services/backend/node_modules/jest/bin/jest.js \
+  --config services/backend/jest.config.js --rootDir services/backend \
+  tests/entrypoints.test.js</code></pre>
+<p>21 条契约测试锁的就是上面这四件事（数据自洽、无端口字面量、无绝对路径、解析不崩）加产物坐标解析，<br>外加四条<strong>实测踩过的回归</strong>——其中一条是「<code>--dry-run</code> 被静默忽略、真的去拉起了 Electron」，<br>另一条是「<code>spawn</code> 还没成功就报『已转入后台运行』的假成功」。改动 launcher 或 handler<br>之前先看那四条。</p>
+<hr>
+<h2 id="目录内容">目录内容<a class="anchor" href="#目录内容" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>是什么</th></tr></thead><tbody><tr><td><code>entries.json</code></td><td><strong>单一真源</strong>。9 个端条目 × 平台档 × 定档状态</td></tr><tr><td><code>launch.js</code></td><td>跨平台入口壳：`node entries/launch.js [status\</td></tr><tr><td><code>README.md</code></td><td>本文件。人读的端地图</td></tr></tbody></table>
+<h2 id="表与代码为什么分居两处">表与代码为什么分居两处<a class="anchor" href="#表与代码为什么分居两处" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>放哪</th><th>放什么</th><th>为什么</th></tr></thead><tbody><tr><td><code>&lt;root&gt;/entries/</code></td><td>表（数据）、人读地图、入口壳</td><td>要能被 Python 启动器、Node CLI、脚本、文档<strong>同时按路径读</strong>；埋进任何一层的实现目录都会让其余读取方绕路或违反禁止边</td></tr><tr><td><code>services/backend/src/services/entrypoints/</code></td><td><code>registry.js</code> / <code>probe.js</code> / <code>launcher.js</code> / <code>index.js</code></td><td>含 <code>child_process</code>，是 Node 业务逻辑 —— 按 <code>[DESIGN-LAY-005]</code> §6 第 3 条只能落 <code>services/</code></td></tr></tbody></table>
+<p>根 <code>entries/</code> 登记在 <code>[DESIGN-LAY-005]</code> §1.2 横切层（该层「不参与 L0–L6 的依赖判定」），<br>守卫侧对应 <code>scripts/ci/check-repo-layout.js</code> 的 <code>CROSSCUTTING</code>。<strong>改本节须同步改那两处</strong>，<br>否则 <code>layer-registry</code>（error 级）会判定存在未登记顶层目录。</p>
+<hr>
+<h2 id="现状里的两个坑-已知-未收口">现状里的两个坑（已知，未收口）<a class="anchor" href="#现状里的两个坑-已知-未收口" aria-label="锚点">#</a></h2>
+<ol><li><strong><code>mobile-legacy</code> 是幽灵端</strong>：<code>apps/khy-mobile</code> 里没有 <code>package.json</code> / <code>src</code> / <code>gradlew</code> /</li></ol>
+<p><code>build.gradle</code>，它自己的 <code>MANIFEST_MISSING.md</code> 已声明不可构建；但<br>   <code>services/backend/src/services/crossPlatform/crossLauncher.js</code> 与<br>   <code>platform/khy_platform/android_build.py</code> <strong>两处在产代码路径仍指向它</strong>。收口二选一：<br>   改指 <code>apps/khy-os-client-app</code>，或补齐工程。</p>
+<ol><li><strong>两条桌面线产不出可分发的 exe</strong>：<code>desktop-legacy</code>（根 <code>electron/</code>）与</li></ol>
+<p><code>desktop-provider-hub</code> 都没有 electron-builder 配置。要么补配置，要么把条目降为 <code>planned</code>。</p>
+<p>完整清单见规范文档 §七「未完成的收口」。</p>
+      </article>
+      <nav class="pager"><span></span><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../";window.__KHY_CUR__="entries/README.html";</script>
+<script src="../docs/19_资产/site/nav-data.js"></script>
+<script src="../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

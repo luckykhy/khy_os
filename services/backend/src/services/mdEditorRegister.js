@@ -206,7 +206,7 @@ function ensureMdRegistered(env, deps) {
     let toolsDir = null;
     try {
       // 注入优先（单测），否则服务定位。不再反向 require cli 层，也不点名
-      // 具体拓展 —— [DESIGN-ARCH-069] §1.3 第四条。
+      // 具体拓展 —— [DESIGN-TOOL-002] §1.3 第四条。
       toolsDir = d.resolveToolsDir
         ? d.resolveToolsDir()
         : require('./domain/extensions/extensions/markdownWorkbench').resolveDir();

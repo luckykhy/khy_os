@@ -623,6 +623,165 @@ async function changePassword(oldPassword, newPassword) {
   return { success: true };
 }
 
+/**
+ * Rename the CURRENTLY logged-in account across every stored surface so the
+ * old name keeps working as a login alias (ARCH-074) and no store is left
+ * pointing at a gone username.
+ *
+ * Surfaces touched (each best-effort, reported in `details`):
+ *   1. shared DB `users` row — username + derived email local-part + old name
+ *      pushed into `aliases`. A username/email UNIQUE conflict is a HARD
+ *      abort (nothing else is mutated).
+ *   2. default-admin credentials file (`.khy/credentials/default-admin.json`)
+ *      — only when the session user is that built-in admin.
+ *   3. local credentials.json — username → new, old name → aliases.
+ *   4. session.json — username rewritten in place (tokens preserved).
+ *   5. bridge-users.db — via bridgeAuth.renameBridgeUser (skipped when the
+ *      bridge store is uninitialized or the name is out of its narrower rule).
+ *
+ * No password gate: the default-admin password is machine-generated (the user
+ * may not know it) and a local rename is a same-trust-level op as doctor/clean.
+ *
+ * @param {string} newUsername desired new account name
+ * @returns {Promise<{success: boolean, oldUsername?: string, username?: string,
+ *                    details?: string[], error?: string}>}
+ */
+async function renameAccount(newUsername) {
+  const credGen = require('./credentialGenerator');
+  const session = _loadActiveSession();
+  if (!session) {
+    return {
+      success: false,
+      error: '未登录，无法改名：请先 /login 登录后再运行 khy user rename <新账号名>',
+    };
+  }
+  // Canonical name: the session may hold a username/email/alias identifier;
+  // resolve to the credentials' canonical username when it matches one.
+  const sessionName = String(session.username || '').trim();
+  const credsForResolve = _loadCredentials();
+  let oldName = sessionName;
+  const credAliases0 =
+    credsForResolve && Array.isArray(credsForResolve.aliases) ? credsForResolve.aliases : [];
+  if (
+    credsForResolve &&
+    (credsForResolve.username === sessionName ||
+      (credsForResolve.email && credsForResolve.email === sessionName) ||
+      credAliases0.includes(sessionName))
+  ) {
+    oldName = String(credsForResolve.username || sessionName);
+  }
+  if (!oldName) {
+    return { success: false, error: '当前会话缺少用户名，无法改名：请重新 /login' };
+  }
+
+  const newClean = credGen.validateCustomUsername(newUsername);
+  if (!newClean) {
+    return {
+      success: false,
+      error: `新账号名「${String(newUsername || '').trim()}」不合法：账号名需 2-32 位，仅限字母/数字/下划线/连字符`,
+    };
+  }
+  if (newClean === oldName) {
+    return { success: false, error: '新账号名与当前相同，无需改名' };
+  }
+
+  const details = [];
+
+  // ── 1) DB: hard conflict pre-check, then rename (fail-soft shell) ────────
+  let db = { ok: false, reason: '数据库未同步（未尝试）' };
+  try {
+    db = await credGen.renameDefaultAdminUserInDb(oldName, newClean);
+  } catch (err) {
+    db = { ok: false, reason: `数据库改名异常: ${err && err.message ? err.message : String(err)}` };
+  }
+  if (db.conflict) {
+    // HARD abort — leave every other store untouched.
+    return { success: false, error: `无法改名：${db.reason}（未做任何修改，请换一个名字）` };
+  }
+
+  // ── 5-pre) bridge: dryRun conflict probe BEFORE mutating local stores ────
+  let bridgeProbe = { ok: false, skipped: true, reason: 'bridge 模块不可用' };
+  try {
+    bridgeProbe = require('../bridge/bridgeAuth').renameBridgeUser(oldName, newClean, { dryRun: true });
+  } catch {
+    bridgeProbe = { ok: false, skipped: true, reason: 'bridge 模块不可用' };
+  }
+  if (bridgeProbe.conflict) {
+    return { success: false, error: `无法改名：${bridgeProbe.reason}（未做任何修改，请换一个名字）` };
+  }
+
+  // ── 2) default-admin credentials file (only the built-in admin) ─────────
+  let fileCreds = null;
+  try {
+    fileCreds = credGen.readDefaultAdminCredentials();
+  } catch {
+    fileCreds = null;
+  }
+  if (fileCreds && fileCreds.username === oldName) {
+    const fileRes = credGen.renameDefaultAdminCredentials(newClean);
+    if (fileRes.ok) {
+      details.push(`本地默认管理员凭据文件已改名（原: ${fileRes.previousUsername}）`);
+    } else {
+      details.push(`本地默认管理员凭据文件未改名: ${fileRes.reason}`);
+    }
+  }
+
+  // ── 3) local credentials.json (registered / server-synced account) ───────
+  const local = _loadCredentials();
+  const localAliases = Array.isArray(local && local.aliases) ? local.aliases : [];
+  const localMatch =
+    !!local &&
+    (local.username === oldName ||
+      (local.email && local.email === oldName) ||
+      localAliases.includes(oldName));
+  if (localMatch) {
+    local.username = newClean;
+    // Old name becomes a login alias; the new name leaves the alias set.
+    const nextAliases = localAliases.filter((a) => a !== newClean);
+    if (!nextAliases.includes(oldName)) {
+      nextAliases.push(oldName);
+    }
+    local.aliases = nextAliases;
+    _saveCredentials(local);
+    details.push('本地登录凭据已改名（旧名保留为登录别名）');
+  }
+
+  // ── 4) session.json: in-place username rewrite (tokens preserved) ────────
+  const rawSession = _loadSession();
+  if (rawSession) {
+    rawSession.username = newClean;
+    safeWriteJsonSync(_sessionFile(), rawSession, { mode: 0o600 });
+    details.push('当前会话已改名');
+  }
+
+  // ── 5) DB outcome first, then bridge rename, in report order ────────────
+  if (db.ok && db.updated) {
+    details.unshift(`数据库账号已改名，旧名「${oldName}」保留为别名`);
+  } else {
+    details.unshift(`数据库未同步: ${db.reason}（仅本机已改名）`);
+  }
+
+  if (bridgeProbe.ok && bridgeProbe.dryRun) {
+    let bridgeRes = { ok: false, skipped: true, reason: 'bridge 模块不可用' };
+    try {
+      bridgeRes = require('../bridge/bridgeAuth').renameBridgeUser(oldName, newClean);
+    } catch {
+      bridgeRes = { ok: false, skipped: true, reason: 'bridge 模块不可用' };
+    }
+    if (bridgeRes.conflict) {
+      details.push(`bridge 账号未改名: ${bridgeRes.reason}`);
+    } else if (bridgeRes.ok) {
+      details.push('bridge (bridge-users.db) 账号已改名');
+    } else {
+      details.push(`bridge 账号未同步: ${bridgeRes.reason || '未知原因'}`);
+    }
+  } else if (bridgeProbe.skipped) {
+    details.push(`bridge 账号未同步: ${bridgeProbe.reason}`);
+  }
+
+  return { success: true, oldUsername: oldName, username: newClean, details };
+}
+
 // ─── Security Question Management ──────────────────────────────────────────
 
 /**
@@ -882,6 +1041,7 @@ module.exports = {
   logout,
   getCurrentUser,
   changePassword,
+  renameAccount,
   // Security question recovery
   setSecurityQuestion,
   getSecurityQuestion,

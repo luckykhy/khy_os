@@ -6,7 +6,7 @@
  * functions; (2) the host (cli/ai.js) still exposes its public surface (chat / getConversationStats /
  * checkModelCapability) so the extraction kept the module contract intact; (3) setAiRequestAnalysisDeps
  * is a guarded, idempotent, non-throwing DI setter that only wires the injected read-only tables +
- * host accessors; (4) a deterministic no-dep path (_resolveModelContextLimit('') �?128000 default)
+ * host accessors; (4) a deterministic no-dep path (_resolveModelContextLimit('') �?128000 default)
  * stays byte-behaviour-identical after relocation.
  *
  * The leaf reads capability tables + gateway accessors that touch IO indirectly, so it does NOT
@@ -20,17 +20,17 @@ const ENTRY_POINTS = [
   '_supportsImageOnAdapter', '_resolveMultimodalAdapterCaps', '_supportsMediaKindsOnAdapter',
   '_isImageActionTask', '_pickMultimodalAdapter', '_pickVisionAdapter', '_applyVisionRouting',
 ];
-// ── _resolveContextBudget:隐式 131072 钳位的回归防�?──────────────────────
+// ── _resolveContextBudget:隐式 131072 钳位的回归防�?──────────────────────
 //
 // 历史 bug(本次修复):
 //   const configuredLimit = parseInt(env.KHY_CONTEXT_TOKEN_LIMIT || runtime.CONTEXT_TOKEN_LIMIT || '')
-// �?runtime.CONTEXT_TOKEN_LIMIT 本身就是 Number(env.KHY_CONTEXT_TOKEN_LIMIT) || 131072 —�?
-// 同一�?env 读了两遍,于是在没配任何东西时 configuredLimit 恒为 131072,随后�?
-// Math.min �?*每一�?*真实窗口 >131072 的模型隐式砍�?128k(Agnes 512k、Claude 200k 全中�?�?
-// 全仓库没有任何测试断言�?131072,这就是它能出厂的原因�?
+// �?runtime.CONTEXT_TOKEN_LIMIT 本身就是 Number(env.KHY_CONTEXT_TOKEN_LIMIT) || 131072 —�?
+// 同一�?env 读了两遍,于是在没配任何东西时 configuredLimit 恒为 131072,随后�?
+// Math.min �?*每一�?*真实窗口 >131072 的模型隐式砍�?128k(Agnes 512k、Claude 200k 全中�?�?
+// 全仓库没有任何测试断言�?131072,这就是它能出厂的原因�?
 //
-// 这些用例�?DI 注入静态能力表 + 一个不存在的模型名走「gateway 未就绪」路�?
-// 从而完全离线、确定性地锁住窗口解析的四种语义�?
+// 这些用例�?DI 注入静态能力表 + 一个不存在的模型名走「gateway 未就绪」路�?
+// 从而完全离线、确定性地锁住窗口解析的四种语义�?
 function _withBudgetDeps(fn) {
   const leaf = require(LEAF);
   const savedEnv = {
@@ -82,23 +82,23 @@ describe('Ai Request Analysis Leaf', () => {
 
   test('setAiRequestAnalysisDeps is a guarded, idempotent, non-throwing DI setter', () => {
       const { setAiRequestAnalysisDeps } = require(LEAF);
-      expect(() => setAiRequestAnalysisDeps().not.toThrow());
-      expect(() => setAiRequestAnalysisDeps({}).not.toThrow());
+      expect(() => setAiRequestAnalysisDeps()).not.toThrow();
+      expect(() => setAiRequestAnalysisDeps({})).not.toThrow();
       // Non-function / falsy deps are ignored by the typeof / truthy guards.
-      expect(() => setAiRequestAnalysisDeps({ _resolveTaskScale: 1, getGateway: null, EFFORT_PRESETS: 0 }).not.toThrow());
+      expect(() => setAiRequestAnalysisDeps({ _resolveTaskScale: 1, getGateway: null, EFFORT_PRESETS: 0 })).not.toThrow();
       const fake = {
         EFFORT_PRESETS: {}, MODEL_CAPABILITIES: {},
         _resolveTaskScale: () => ({}), getGateway: () => ({}),
       };
-      expect(() => setAiRequestAnalysisDeps(fake).not.toThrow());
-      expect(() => setAiRequestAnalysisDeps(fake).not.toThrow());
+      expect(() => setAiRequestAnalysisDeps(fake)).not.toThrow();
+      expect(() => setAiRequestAnalysisDeps(fake)).not.toThrow();
   });
 
-  test('_resolveContextBudget:�?env �?采纳模型真实窗口,不再�?131072 隐式钳位', () => {
+  test('_resolveContextBudget:�?env �?采纳模型真实窗口,不再�?131072 隐式钳位', () => {
       _withBudgetDeps((plan) => {
         const r = plan('leaf-test-bigwindow');
         expect(r.contextWindow).toBe(512000, '512k 窗口必须原样通过');
-        expect(r.contextBudget).toBe(431104, 'medium 档默�?env 下的预算');
+        expect(r.contextBudget).toBe(431104, 'medium 档默�?env 下的预算');
       });
   });
 
@@ -109,14 +109,14 @@ describe('Ai Request Analysis Leaf', () => {
       });
   });
 
-  test('_resolveContextBudget:�?KHY_CONTEXT_LIMIT_NO_IMPLICIT_CLAMP=0 �?逐字节回退 131072 钳位', () => {
+  test('_resolveContextBudget:�?KHY_CONTEXT_LIMIT_NO_IMPLICIT_CLAMP=0 �?逐字节回退 131072 钳位', () => {
       _withBudgetDeps((plan) => {
         process.env.KHY_CONTEXT_LIMIT_NO_IMPLICIT_CLAMP = '0';
         expect(plan('leaf-test-bigwindow').contextWindow).toBe(131072);
       });
   });
 
-  test('_resolveContextBudget:上游谎报 �?理性天花板钳回(宁可写小不可写大)', () => {
+  test('_resolveContextBudget:上游谎报 �?理性天花板钳回(宁可写小不可写大)', () => {
       _withBudgetDeps((plan) => {
         const { MAX_PLAUSIBLE_CONTEXT_WINDOW } = require('../../../src/constants/contextWindowDefaults');
         expect(plan('leaf-test-huge').contextWindow).toBe(MAX_PLAUSIBLE_CONTEXT_WINDOW);

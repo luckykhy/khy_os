@@ -51,9 +51,9 @@ function withEnv(mut, fn) {
 }
 
 function freshMatchers() {
-  delete require.cache[require.resolve('../src/services/permissionPolicy/matchers')];
+  delete require.cache[require.resolve('../src/services/domain/security/permissionPolicy/matchers.js')];
   delete require.cache[require.resolve('../src/services/globDoublestarAnchor')];
-  return require('../src/services/permissionPolicy/matchers');
+  return require('../src/services/domain/security/permissionPolicy/matchers.js');
 }
 
 test('globToRegExp: gate ON → doublestar-slash anchored (rejects backup_id_rsa)', () => {

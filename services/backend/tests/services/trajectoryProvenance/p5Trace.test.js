@@ -26,8 +26,8 @@ const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 
 const sessionPersistence = require('../../../src/services/sessionPersistence');
-const projection = require('../../../src/services/trajectoryProvenance/traceProjection');
-const khyTrace = require('../../../src/services/trajectoryProvenance/khyTrace');
+const projection = require('../../../src/services/domain/trajectory/trajectoryProvenance/traceProjection.js');
+const khyTrace = require('../../../src/services/domain/trajectory/trajectoryProvenance/khyTrace.js');
 const { handleTrace } = require('../../../src/cli/handlers/trace');
 
 const { PRODUCER, TRUST } = khyTrace;

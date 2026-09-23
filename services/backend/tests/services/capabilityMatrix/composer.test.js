@@ -3,8 +3,8 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 
-const { composeRoute, defaultRequirementsMatcher } = require('../../../src/services/capabilityMatrix/composer');
-const { SEAM_ORDER } = require('../../../src/services/capabilityMatrix/seams');
+const { composeRoute, defaultRequirementsMatcher } = require('../../../src/services/domain/catalog/capabilityMatrix/composer.js');
+const { SEAM_ORDER } = require('../../../src/services/domain/catalog/capabilityMatrix/seams.js');
 
 // Minimal hand-built descriptor catalog so composer behavior is asserted in
 // isolation from the real DESCRIPTORS (those are exercised by index/contract

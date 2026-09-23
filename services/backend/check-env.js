@@ -6,7 +6,7 @@
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-const cliPath = path.join(__dirname, 'bin', 'khyquant.js');
+const cliPath = path.join(__dirname, 'bin', 'khy.js');
 const result = spawnSync(process.execPath, [cliPath, 'doctor'], { stdio: 'inherit' });
 
 if (result.error) {

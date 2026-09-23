@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [TEST-RPT-011] 全免费上线测试方案.md -->
+<title>[TEST-RPT-011] khy-os 全免费上线测试方案（GitHub Pages + Supabase） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>05_TEST_测试<span class="sep">›</span>TEST-RPT<span class="sep">›</span>[TEST-RPT-011] khy-os 全免费上线测试方案（GitHub Pages + Supabase）</div>
+      <header class="hero reveal"><h1>[TEST-RPT-011] khy-os 全免费上线测试方案（GitHub Pages + Supabase）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#test-rpt-011-khy-os-全免费上线测试方案-github-pages-supabase">[TEST-RPT-011] khy-os 全免费上线测试方案（GitHub Pages + Supabase）</a></li><li class="lvl-2"><a href="#0-一句话结论">0. 一句话结论</a></li><li class="lvl-2"><a href="#1-架构对照-现状-vs-测试态">1. 架构对照（现状 vs 测试态）</a></li><li class="lvl-3"><a href="#哪些能-不能直接搬">哪些能 / 不能直接搬</a></li><li class="lvl-2"><a href="#2-准备工作-0-成本-15-分钟">2. 准备工作（0 成本，~15 分钟）</a></li><li class="lvl-3"><a href="#2-1-账号">2.1 账号</a></li><li class="lvl-3"><a href="#2-2-supabase-项目初始化">2.2 Supabase 项目初始化</a></li><li class="lvl-3"><a href="#2-3-数据库-schema-测试期空白库-种子">2.3 数据库 schema（测试期空白库 + 种子）</a></li><li class="lvl-2"><a href="#3-前端上-github-pages-最省事">3. 前端上 GitHub Pages（最省事）</a></li><li class="lvl-3"><a href="#3-1-构建">3.1 构建</a></li><li class="lvl-3"><a href="#3-2-构建时注入-env-关键">3.2 构建时注入 env（关键）</a></li><li class="lvl-3"><a href="#3-3-部署-github-pages-走-actions-不用手动推-dist">3.3 部署 GitHub Pages（走 Actions，不用手动推 dist）</a></li><li class="lvl-3"><a href="#3-4-自定义子域-可选-推荐">3.4 自定义子域（可选，推荐）</a></li><li class="lvl-2"><a href="#4-后端上-supabase-edge-functions-核心改造">4. 后端上 Supabase Edge Functions（核心改造）</a></li><li class="lvl-3"><a href="#4-1-为什么-edge-function-而不是-render-vercel">4.1 为什么 Edge Function 而不是 Render/Vercel</a></li><li class="lvl-3"><a href="#4-2-装-supabase-cli-推函数">4.2 装 Supabase CLI + 推函数</a></li><li class="lvl-3"><a href="#4-3-khyos-api-函数骨架-deno">4.3 khyos-api 函数骨架（Deno）</a></li><li class="lvl-3"><a href="#4-4-khyos-ai-函数-ai-流式-最适配免费层">4.4 khyos-ai 函数（AI 流式，最适配免费层）</a></li><li class="lvl-3"><a href="#4-5-环境变量-supabase-cli-设">4.5 环境变量（Supabase CLI 设）</a></li><li class="lvl-2"><a href="#5-websocket-实时-跨设备同步-的免费替代">5. WebSocket 实时（跨设备同步）的免费替代</a></li><li class="lvl-2"><a href="#6-前端-0-改动原则-符合仓库-零硬编码-规则">6. 前端 0 改动原则（符合仓库&quot;零硬编码&quot;规则）</a></li><li class="lvl-2"><a href="#7-上线-checklist-顺序执行">7. 上线 Checklist（顺序执行）</a></li><li class="lvl-2"><a href="#8-额度与并发-测试期够用吗">8. 额度与并发（测试期够用吗）</a></li><li class="lvl-2"><a href="#9-这套方案的真实限制-别当生产">9. 这套方案的真实限制（别当生产）</a></li><li class="lvl-2"><a href="#10-要不要我下一步">10. 要不要我下一步</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="test-rpt-011-khy-os-全免费上线测试方案-github-pages-supabase">[TEST-RPT-011] khy-os 全免费上线测试方案（GitHub Pages + Supabase）<a class="anchor" href="#test-rpt-011-khy-os-全免费上线测试方案-github-pages-supabase" aria-label="锚点">#</a></h1>
+<blockquote><p>目标：不备案、不花钱、先让 khyquant.top 的前端+API 上线可访问，作为技术测试。<br>测试期与已备案的大陆服务器互不干扰（khyquant.top 主域不动，测试用独立子域/后缀）。</p></blockquote>
+<h2 id="0-一句话结论">0. 一句话结论<a class="anchor" href="#0-一句话结论" aria-label="锚点">#</a></h2>
+<p>khy-os 是 <strong>Express + WebSocket + Sequelize(SQLite/Postgres)</strong> 的重后端。<br>&quot;全免费 + 能访问&quot; 的唯一可行拆法是：</p>
+<ul><li><strong>前端</strong>（<code>apps/ai-frontend</code> 构建产物）→ <strong>GitHub Pages</strong>（免费，全球 CDN）</li><li><strong>后端</strong>（<code>services/backend</code> + <code>services/ai-backend</code>）→ <strong>Supabase Edge Functions 不够</strong>（Deno 跑不动 Node + better-sqlite3 + ws）</li><li>因此<strong>后端要折中</strong>：</li></ul>
+<table><thead><tr><th>子模块</th><th>免费落点</th><th>说明</th></tr></thead><tbody><tr><td>静态前端</td><td>GitHub Pages</td><td>✅ 真免费</td></tr><tr><td>API + DB</td><td><strong>Supabase Free</strong>（Postgres 512MB + Edge Functions 500K 次/月）</td><td>✅ 真免费</td></tr><tr><td>AI 流式（SSE）</td><td><strong>Supabase Edge Functions</strong>（Deno，HTTP 流式）</td><td>✅ 真免费</td></tr><tr><td>长连接 WS（跨设备同步等）</td><td>❌ 免费层跑不了</td><td>测试期<strong>关掉</strong>或用 Supabase Realtime 替代</td></tr></tbody></table>
+<p><strong>最省心的测试方案 = GitHub Pages（前端）+ Supabase Free（Postgres 数据库 + Edge Functions API + Realtime 替代 WS）。</strong><br>SQLite 文件直接换 Supabase Postgres，无需迁数据（测试期空白库 + 种子即可）。</p>
+<hr>
+<h2 id="1-架构对照-现状-vs-测试态">1. 架构对照（现状 vs 测试态）<a class="anchor" href="#1-架构对照-现状-vs-测试态" aria-label="锚点">#</a></h2>
+<pre><code>现状（本地/备案服务器）:
+  浏览器 → ai-frontend (静态, Express serve)
+         → /api/*  → services/backend (Express + ws + Sequelize→SQLite/PG)
+         → /api/ai/* → ai-backend (Express, AI 网关)
+
+测试态（全免费）:
+  浏览器 → GitHub Pages (khyos-test.github.io / 自定义子域)
+         → /api/*  → Supabase Edge Function &quot;khyos-api&quot; (Deno, 代理/实现核心 API)
+         → /api/ai/* → Supabase Edge Function &quot;khyos-ai&quot; (Deno, 流式 SSE)
+         → DB      → Supabase Free Postgres (512MB)
+         → 实时    → Supabase Realtime (替代 ws, 免费)</code></pre>
+<h3 id="哪些能-不能直接搬">哪些能 / 不能直接搬<a class="anchor" href="#哪些能-不能直接搬" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>组件</th><th>能否搬去 Supabase Edge Function</th><th>改法</th></tr></thead><tbody><tr><td>前端静态</td><td>✅ 直接</td><td>构建 → 推 GitHub Pages</td></tr><tr><td>核心 REST API（auth/user/settings/strategy/backtest）</td><td>⚠️ 要重写 Deno handler</td><td>Express 路由 → Deno <code>Deno.serve</code></td></tr><tr><td>AI 流式（LLM）</td><td>✅ 适合 Edge Function</td><td>fetch 上游 LLM + <code>ReadableStream</code> 回传 SSE</td></tr><tr><td>WebSocket 跨设备同步</td><td>❌ 免费层不行</td><td>用 Supabase Realtime + 频道订阅替代</td></tr><tr><td>better-sqlite3 文件库</td><td>❌ Deno 没 SQLite</td><td>切 Supabase Postgres（RLS）</td></tr><tr><td>大文件/ZIP（期货逐笔）</td><td>⚠️ Edge Function 256MB 上限</td><td>放 Supabase Storage（免费 1GB）</td></tr></tbody></table>
+<hr>
+<h2 id="2-准备工作-0-成本-15-分钟">2. 准备工作（0 成本，~15 分钟）<a class="anchor" href="#2-准备工作-0-成本-15-分钟" aria-label="锚点">#</a></h2>
+<h3 id="2-1-账号">2.1 账号<a class="anchor" href="#2-1-账号" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>服务</th><th>用途</th><th>免费额度</th></tr></thead><tbody><tr><td>GitHub</td><td>前端托管 + Pages + 源码</td><td>无限</td></tr><tr><td>Supabase</td><td>Postgres + Edge Functions + Realtime + Storage</td><td>512MB DB / 500K 次 EF / 1GB 存储</td></tr></tbody></table>
+<h3 id="2-2-supabase-项目初始化">2.2 Supabase 项目初始化<a class="anchor" href="#2-2-supabase-项目初始化" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 网页: supabase.com → New Project (Region 选 Singapore 离国内近)</span>
+<span class="hljs-comment"># 拿到三组 key:</span>
+<span class="hljs-comment">#   SUPABASE_URL        https://&lt;ref&gt;.supabase.co</span>
+<span class="hljs-comment">#   SUPABASE_ANON_KEY   eyJ...(公开, 前端用)</span>
+<span class="hljs-comment">#   SUPABASE_SERVICE_KEY eyJ...(私密, Edge Function 内部用, 别放前端)</span></code></pre>
+<h3 id="2-3-数据库-schema-测试期空白库-种子">2.3 数据库 schema（测试期空白库 + 种子）<a class="anchor" href="#2-3-数据库-schema-测试期空白库-种子" aria-label="锚点">#</a></h3>
+<p>khy-os 用 Sequelize 模型。测试期<strong>不迁历史数据</strong>，跑一次 <code>sequelize.sync()</code> 建表即可：</p>
+<pre><code class="language-sql"><span class="hljs-comment">-- Supabase SQL Editor 手动建（或 Edge Function 启动时 sync）</span>
+<span class="hljs-comment">-- 核心表（来自 services/backend/src/models）:</span>
+<span class="hljs-comment">--   users, auth_sessions, strategies, backtests, watchlist,</span>
+<span class="hljs-comment">--   instruments, kline, trades, announcements, settings, api_keys</span></code></pre>
+<blockquote><p>种子数据用 <code>server.js</code> 里的 <code>defaultInstruments</code>（沪深300、贵州茅台等 8 条）+ admin 默认账号。</p></blockquote>
+<hr>
+<h2 id="3-前端上-github-pages-最省事">3. 前端上 GitHub Pages（最省事）<a class="anchor" href="#3-前端上-github-pages-最省事" aria-label="锚点">#</a></h2>
+<h3 id="3-1-构建">3.1 构建<a class="anchor" href="#3-1-构建" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 在 khy-os 根目录</span>
+corepack pnpm install:frontend
+corepack pnpm --filter ai-frontend build
+<span class="hljs-comment"># 产物在 apps/ai-frontend/dist/</span></code></pre>
+<h3 id="3-2-构建时注入-env-关键">3.2 构建时注入 env（关键）<a class="anchor" href="#3-2-构建时注入-env-关键" aria-label="锚点">#</a></h3>
+<p><code>apps/ai-frontend</code> 用 Vite，API 地址走 <code>VITE_AI_API_BASE_URL</code>（见 <code>src/api/request.js:13</code>）。<br>在 <code>apps/ai-frontend</code> 下建 <code>.env.production</code>：</p>
+<pre><code class="language-ini"><span class="hljs-comment"># 测试环境 API 指向 Supabase Edge Function</span>
+<span class="hljs-attr">VITE_AI_API_BASE_URL</span>=https://&lt;ref&gt;.supabase.co/functions/v1/khyos-api
+<span class="hljs-comment"># 跨域: 前端页面在 github.io, API 在 supabase.co, 需 CORS</span>
+<span class="hljs-attr">VITE_AI_ROUTER_BASE</span>=
+<span class="hljs-attr">VITE_AI_HTTP_TIMEOUT_MS</span>=<span class="hljs-number">30000</span></code></pre>
+<h3 id="3-3-部署-github-pages-走-actions-不用手动推-dist">3.3 部署 GitHub Pages（走 Actions，不用手动推 dist）<a class="anchor" href="#3-3-部署-github-pages-走-actions-不用手动推-dist" aria-label="锚点">#</a></h3>
+<p>仓库加 <code>.github/workflows/deploy-pages.yml</code>：</p>
+<pre><code class="language-yaml"><span class="hljs-attr">name:</span> <span class="hljs-string">Deploy</span> <span class="hljs-string">khyos</span> <span class="hljs-string">test</span> <span class="hljs-string">to</span> <span class="hljs-string">GitHub</span> <span class="hljs-string">Pages</span>
+<span class="hljs-attr">on:</span>
+  <span class="hljs-attr">push:</span>
+    <span class="hljs-attr">branches:</span> [<span class="hljs-string">main</span>]
+    <span class="hljs-attr">paths:</span> [<span class="hljs-string">&#x27;apps/ai-frontend/**&#x27;</span>, <span class="hljs-string">&#x27;.github/workflows/deploy-pages.yml&#x27;</span>]
+<span class="hljs-attr">jobs:</span>
+  <span class="hljs-attr">deploy:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/setup-node@v4</span>
+        <span class="hljs-attr">with:</span> { <span class="hljs-attr">node-version:</span> <span class="hljs-number">20</span>, <span class="hljs-attr">cache:</span> <span class="hljs-string">pnpm</span>, <span class="hljs-attr">cache-dependency-path:</span> <span class="hljs-string">pnpm-lock.yaml</span> }
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">run:</span> <span class="hljs-string">corepack</span> <span class="hljs-string">enable</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">run:</span> <span class="hljs-string">corepack</span> <span class="hljs-string">pnpm</span> <span class="hljs-string">install:frontend</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">run:</span> <span class="hljs-string">corepack</span> <span class="hljs-string">pnpm</span> <span class="hljs-string">--filter</span> <span class="hljs-string">ai-frontend</span> <span class="hljs-string">build</span>
+        <span class="hljs-attr">env:</span>
+          <span class="hljs-attr">VITE_AI_API_BASE_URL:</span> <span class="hljs-string">${{</span> <span class="hljs-string">vars.VITE_AI_API_BASE_URL</span> <span class="hljs-string">}}</span>   <span class="hljs-comment"># 存到 Repo Secrets/Variables</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">peaceactions/actions-gh-pages@v3</span>
+        <span class="hljs-attr">with:</span>
+          <span class="hljs-attr">github_token:</span> <span class="hljs-string">${{</span> <span class="hljs-string">secrets.GITHUB_TOKEN</span> <span class="hljs-string">}}</span>
+          <span class="hljs-attr">publish_dir:</span> <span class="hljs-string">apps/ai-frontend/dist</span>
+          <span class="hljs-attr">destination_dir:</span> <span class="hljs-string">/</span></code></pre>
+<blockquote><p><code>VITE_AI_API_BASE_URL</code> 在 GitHub 仓库 <strong>Settings → Secrets and variables → Variables</strong> 里加一个<br><code>VITE_AI_API_BASE_URL = https://&lt;ref&gt;.supabase.co/functions/v1/khyos-api</code>（非 secret，可明文放 variables）。</p></blockquote>
+<h3 id="3-4-自定义子域-可选-推荐">3.4 自定义子域（可选，推荐）<a class="anchor" href="#3-4-自定义子域-可选-推荐" aria-label="锚点">#</a></h3>
+<p>GitHub Pages 给 <code>https://&lt;user&gt;.github.io/</code>，不够像 khyos。<br>在 Repo → Pages → Custom domain 绑一个<strong>非备案</strong>后缀：</p>
+<pre><code>khyos-test.vercel.app   ← 不行, vercel 要域名
+khyos-test.pages.dev    ← Cloudflare Pages, 也可免费</code></pre>
+<p>最简单：直接用 <code>&lt;user&gt;.github.io</code>，测试够了。</p>
+<hr>
+<h2 id="4-后端上-supabase-edge-functions-核心改造">4. 后端上 Supabase Edge Functions（核心改造）<a class="anchor" href="#4-后端上-supabase-edge-functions-核心改造" aria-label="锚点">#</a></h2>
+<h3 id="4-1-为什么-edge-function-而不是-render-vercel">4.1 为什么 Edge Function 而不是 Render/Vercel<a class="anchor" href="#4-1-为什么-edge-function-而不是-render-vercel" aria-label="锚点">#</a></h3>
+<ul><li>Supabase EF 是<strong>免费 500K 次/月</strong>，测试够用</li><li>自带 <code>fetch</code> 上游 LLM 的 SSE 流（<code>ReadableStream</code>），AI 流式输出零改动</li><li>和 Postgres/Realtime/Storage 同一平台，<strong>一个 key 全打通</strong></li><li>Render/Vercel 免费层要<strong>额外</strong>一个账号 + 各自额度，多一层运维</li></ul>
+<h3 id="4-2-装-supabase-cli-推函数">4.2 装 Supabase CLI + 推函数<a class="anchor" href="#4-2-装-supabase-cli-推函数" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 装 CLI</span>
+npm i -g supabase
+
+<span class="hljs-comment"># 2. 初始化（在 khy-os 根）</span>
+<span class="hljs-built_in">cd</span> D:\Portable\khy-os
+supabase init
+supabase <span class="hljs-built_in">link</span> --project-ref &lt;你的项目ref&gt;
+
+<span class="hljs-comment"># 3. 新建函数目录结构</span>
+<span class="hljs-comment"># supabase/functions/</span>
+<span class="hljs-comment">#   khyos-api/index.ts     ← 核心 REST API (Deno)</span>
+<span class="hljs-comment">#   khyos-ai/index.ts      ← AI 流式 SSE (Deno)</span>
+<span class="hljs-comment">#   realtime-hub/index.ts  ← 替代 ws 的实时频道</span></code></pre>
+<h3 id="4-3-khyos-api-函数骨架-deno">4.3 khyos-api 函数骨架（Deno）<a class="anchor" href="#4-3-khyos-api-函数骨架-deno" aria-label="锚点">#</a></h3>
+<p>把 <code>services/backend/src/routes/</code> 里<strong>测试要用的少数几条</strong>翻译成 Deno handler。<br>测试期不必搬全部 50+ 条路由，只搬前端首屏要调的：</p>
+<pre><code class="language-typescript"><span class="hljs-comment">// supabase/functions/khyos-api/index.ts (Deno)</span>
+<span class="hljs-keyword">import</span> { createClient } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;npm:@supabase/supabase-js@2&#x27;</span>;
+
+<span class="hljs-keyword">const</span> sbAdmin = <span class="hljs-title function_">createClient</span>(
+  <span class="hljs-title class_">Deno</span>.<span class="hljs-property">env</span>.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;SUPABASE_URL&#x27;</span>)!,
+  <span class="hljs-title class_">Deno</span>.<span class="hljs-property">env</span>.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;SUPABASE_SERVICE_KEY&#x27;</span>)!,
+);
+
+<span class="hljs-title class_">Deno</span>.<span class="hljs-title function_">serve</span>(<span class="hljs-title function_">async</span> (req) =&gt; {
+  <span class="hljs-keyword">const</span> url = <span class="hljs-keyword">new</span> <span class="hljs-title function_">URL</span>(req.<span class="hljs-property">url</span>);
+  <span class="hljs-keyword">const</span> path = url.<span class="hljs-property">pathname</span>.<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/^\/functions\/v1\/khyos-api/</span>, <span class="hljs-string">&#x27;&#x27;</span>);
+
+  <span class="hljs-comment">// 简单路由分发（测试期只挑核心几条）</span>
+  <span class="hljs-keyword">switch</span> (<span class="hljs-literal">true</span>) {
+    <span class="hljs-keyword">case</span> path.<span class="hljs-title function_">startsWith</span>(<span class="hljs-string">&#x27;/api/auth/login&#x27;</span>):
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">handleLogin</span>(req, sbAdmin);
+    <span class="hljs-keyword">case</span> path.<span class="hljs-title function_">startsWith</span>(<span class="hljs-string">&#x27;/api/health&#x27;</span>):
+      <span class="hljs-keyword">return</span> <span class="hljs-title class_">Response</span>.<span class="hljs-title function_">json</span>({ <span class="hljs-attr">success</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">detail</span>: <span class="hljs-string">&#x27;ok&#x27;</span>, <span class="hljs-attr">ts</span>: <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() });
+    <span class="hljs-keyword">case</span> path.<span class="hljs-title function_">startsWith</span>(<span class="hljs-string">&#x27;/api/strategies&#x27;</span>):
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">handleStrategies</span>(req, sbAdmin);
+    <span class="hljs-attr">default</span>:
+      <span class="hljs-comment">// 兜底: 透传上游 LLM 或返回 404</span>
+      <span class="hljs-keyword">return</span> <span class="hljs-title class_">Response</span>.<span class="hljs-title function_">json</span>({ <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">`not wired: <span class="hljs-subst">${path}</span>`</span> }, { <span class="hljs-attr">status</span>: <span class="hljs-number">404</span> });
+  }
+});
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">handleLogin</span>(<span class="hljs-params"><span class="hljs-attr">req</span>: <span class="hljs-title class_">Request</span>, <span class="hljs-attr">db</span>: <span class="hljs-built_in">any</span></span>) {
+  <span class="hljs-keyword">const</span> { username, password } = <span class="hljs-keyword">await</span> req.<span class="hljs-title function_">json</span>();
+  <span class="hljs-comment">// 用 bcryptjs 验证 (Deno 可用 jsr:@std/crypto 或 js:bcrypt)</span>
+  <span class="hljs-keyword">const</span> { data } = <span class="hljs-keyword">await</span> db.<span class="hljs-title function_">from</span>(<span class="hljs-string">&#x27;users&#x27;</span>).<span class="hljs-title function_">select</span>().<span class="hljs-title function_">eq</span>(<span class="hljs-string">&#x27;username&#x27;</span>, username).<span class="hljs-title function_">maybeSingle</span>();
+  <span class="hljs-keyword">if</span> (!data) <span class="hljs-keyword">return</span> <span class="hljs-title class_">Response</span>.<span class="hljs-title function_">json</span>({ <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;user not found&#x27;</span> }, { <span class="hljs-attr">status</span>: <span class="hljs-number">404</span> });
+  <span class="hljs-comment">// ... bcrypt compare + 发 JWT</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-title class_">Response</span>.<span class="hljs-title function_">json</span>({ <span class="hljs-attr">success</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">token</span>: <span class="hljs-string">&#x27;...&#x27;</span>, <span class="hljs-attr">user</span>: data });
+}</code></pre>
+<blockquote><p><strong>Deno 跑不动 Node 原生模块</strong>（<code>better-sqlite3</code>、<code>ws</code>、<code>sequelize</code>）。<br>所以<strong>不是把 server.js 搬过去</strong>，而是<strong>重写关键 handler</strong>：</p>
+<ul><li>鉴权：<code>jsr:@std/crypto</code> 或 Supabase Auth（更省事）</li><li>查询：<code>supabase-js</code> 直查 Postgres（RLS 保护）</li><li>不需要 Node 运行时</li></ul></blockquote>
+<h3 id="4-4-khyos-ai-函数-ai-流式-最适配免费层">4.4 khyos-ai 函数（AI 流式，最适配免费层）<a class="anchor" href="#4-4-khyos-ai-函数-ai-流式-最适配免费层" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript"><span class="hljs-comment">// supabase/functions/khyos-ai/index.ts (Deno)</span>
+<span class="hljs-title class_">Deno</span>.<span class="hljs-title function_">serve</span>(<span class="hljs-title function_">async</span> (req) =&gt; {
+  <span class="hljs-comment">// 转发到 OpenRouter / DeepSeek / 你配的 LLM 上游</span>
+  <span class="hljs-keyword">const</span> upstream = <span class="hljs-title class_">Deno</span>.<span class="hljs-property">env</span>.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;LLM_UPSTREAM_URL&#x27;</span>) || <span class="hljs-string">&#x27;https://openrouter.ai/api/v1/chat/completions&#x27;</span>;
+  <span class="hljs-keyword">const</span> apiKey = <span class="hljs-title class_">Deno</span>.<span class="hljs-property">env</span>.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;LLM_API_KEY&#x27;</span>)!;
+
+  <span class="hljs-keyword">const</span> resp = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fetch</span>(upstream, {
+    <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;POST&#x27;</span>,
+    <span class="hljs-attr">headers</span>: { <span class="hljs-string">&#x27;Content-Type&#x27;</span>: <span class="hljs-string">&#x27;application/json&#x27;</span>, <span class="hljs-string">&#x27;Authorization&#x27;</span>: <span class="hljs-string">`Bearer <span class="hljs-subst">${apiKey}</span>`</span> },
+    <span class="hljs-attr">body</span>: <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>({ ...<span class="hljs-keyword">await</span> req.<span class="hljs-title function_">json</span>(), <span class="hljs-attr">stream</span>: <span class="hljs-literal">true</span> }),
+  });
+
+  <span class="hljs-comment">// 流式回传 SSE（Supabase EF 支持 ReadableStream）</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Response</span>(resp.<span class="hljs-property">body</span>, {
+    <span class="hljs-attr">headers</span>: {
+      <span class="hljs-string">&#x27;Content-Type&#x27;</span>: <span class="hljs-string">&#x27;text/event-stream&#x27;</span>,
+      <span class="hljs-string">&#x27;Cache-Control&#x27;</span>: <span class="hljs-string">&#x27;no-cache&#x27;</span>,
+      <span class="hljs-string">&#x27;Access-Control-Allow-Origin&#x27;</span>: <span class="hljs-title class_">Deno</span>.<span class="hljs-property">env</span>.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;ALLOW_ORIGIN&#x27;</span>) || <span class="hljs-string">&#x27;*&#x27;</span>,
+    },
+  });
+});</code></pre>
+<blockquote><p>前端 AI 流式输出本来就走 <code>fetch + ReadableStream</code>（<code>src/api/request.js</code> 注释说 streaming 用 fetch 不用 axios），<br><strong>改 <code>VITE_AI_API_BASE_URL</code> 指到 khyos-ai 函数即可，前端 0 改动</strong>。</p></blockquote>
+<h3 id="4-5-环境变量-supabase-cli-设">4.5 环境变量（Supabase CLI 设）<a class="anchor" href="#4-5-环境变量-supabase-cli-设" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">supabase secrets <span class="hljs-built_in">set</span> \
+  LLM_UPSTREAM_URL=<span class="hljs-string">&quot;https://openrouter.ai/api/v1&quot;</span> \
+  LLM_API_KEY=<span class="hljs-string">&quot;&lt;你的key&gt;&quot;</span> \
+  ALLOW_ORIGIN=<span class="hljs-string">&quot;https://&lt;user&gt;.github.io&quot;</span></code></pre>
+<hr>
+<h2 id="5-websocket-实时-跨设备同步-的免费替代">5. WebSocket 实时（跨设备同步）的免费替代<a class="anchor" href="#5-websocket-实时-跨设备同步-的免费替代" aria-label="锚点">#</a></h2>
+<p>khy-os 用 <code>ws</code>（<code>wss.clients</code>）做跨设备同步 + 行情推送。<strong>免费层跑不了真 WS</strong>，<br>两条替代路（测试期选 1）：</p>
+<table><thead><tr><th>替代</th><th>做法</th><th>改动量</th></tr></thead><tbody><tr><td><strong>Supabase Realtime</strong>（推荐）</td><td>用 Supabase 频道（Postgres Changes 或 Broadcast）替代 ws 推送</td><td>中（<code>crossPlatform</code> 模块换 <code>supabase-js</code> realtime）</td></tr><tr><td><strong>轮询降级</strong></td><td>前端定时器 <code>setInterval</code> 拉 <code>/api/dashboard</code>，不推</td><td>小（但刷新体验差）</td></tr></tbody></table>
+<p>测试期最快：<strong>轮询降级</strong>（改 <code>useWorkflow.js</code> / <code>useAIMonitor.js</code> 里的 EventSource 为轮询，或直接保留 EventSource——Supabase EF 能出 SSE，前端 <code>EventSource</code> 不用动）。</p>
+<blockquote><p>关键：<strong>AI 流式走 SSE 没问题</strong>（Supabase EF 支持），只有&quot;双向长连接 ws&quot;需要降级。<br>测试期 AI 聊天主功能保留 SSE 流式即可，跨设备同步关掉。</p></blockquote>
+<hr>
+<h2 id="6-前端-0-改动原则-符合仓库-零硬编码-规则">6. 前端 0 改动原则（符合仓库&quot;零硬编码&quot;规则）<a class="anchor" href="#6-前端-0-改动原则-符合仓库-零硬编码-规则" aria-label="锚点">#</a></h2>
+<p>按 AGENTS.md 规则 1，所有端点必须从 env 来，本方案已遵守：</p>
+<ul><li><code>VITE_AI_API_BASE_URL</code> → <code>.env.production</code>（构建注入）</li><li><code>LLM_UPSTREAM_URL</code> / <code>LLM_API_KEY</code> → Supabase <code>supabase secrets</code></li><li><strong>不改</strong> <code>constants/serviceDefaults.js</code>（那是给 Node 后端的，测试态后端是 Deno EF，不走 Node 路径）</li><li>测试环境的 EF 代码放在 <code>supabase/functions/</code>（独立目录），<strong>不污染主仓库 Node 后端</strong></li></ul>
+<hr>
+<h2 id="7-上线-checklist-顺序执行">7. 上线 Checklist（顺序执行）<a class="anchor" href="#7-上线-checklist-顺序执行" aria-label="锚点">#</a></h2>
+<pre><code>[ ] 1. Supabase: New Project (Singapore) → 记 SUPABASE_URL / ANON_KEY / SERVICE_KEY
+[ ] 2. Supabase SQL Editor: 跑 schema (users/instruments/strategies/backtests 等核心表)
+      → 种子: 8 个默认标的 + admin 账号 (password 用 bcrypt hash 存)
+[ ] 3. Supabase CLI: supabase init + link + 建 functions/
+      → 写 khyos-api/index.ts (auth + health + strategies)
+      → 写 khyos-ai/index.ts (LLM 流式)
+      → supabase functions deploy khyos-api
+      → supabase functions deploy khyos-ai
+      → supabase secrets set LLM_UPSTREAM_URL=... LLM_API_KEY=... ALLOW_ORIGIN=...
+[ ] 4. 验证 API: curl https://&lt;ref&gt;.supabase.co/functions/v1/khyos-api/api/health
+[ ] 5. 前端: 建 apps/ai-frontend/.env.production (VITE_AI_API_BASE_URL=.../khyos-api)
+[ ] 6. 前端: 建 .github/workflows/deploy-pages.yml
+[ ] 7. Repo Settings → Variables: 加 VITE_AI_API_BASE_URL
+[ ] 8. push main → Actions 自动构建部署 Pages
+[ ] 9. 访问 https://&lt;user&gt;.github.io/ → 登录 → 看 AI 聊天 SSE 流式
+[ ] 10. 关掉跨设备同步 ws（测试期不需要）</code></pre>
+<hr>
+<h2 id="8-额度与并发-测试期够用吗">8. 额度与并发（测试期够用吗）<a class="anchor" href="#8-额度与并发-测试期够用吗" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>资源</th><th>Supabase Free 额度</th><th>100 并发测试</th></tr></thead><tbody><tr><td>Postgres 512MB</td><td>✅ 够（测试期空白库）</td><td>够</td></tr><tr><td>Edge Functions 500K 次/月</td><td>✅ 够</td><td>够（100 人 × 几次 API ≈ 几千次/天）</td></tr><tr><td>Edge Functions 时长 50K 秒/月</td><td>⚠️ 注意 LLM 长调用</td><td>LLM 流式每次 ~30-120s，500K/月 够 ~1-3 万次</td></tr><tr><td>并发 WS</td><td>❌ 免费无</td><td>测试期关 ws，用 SSE/轮询</td></tr><tr><td>带宽</td><td>100GB/月</td><td>✅ 够</td></tr></tbody></table>
+<p><strong>100 人并发测试期够用</strong>，瓶颈只在 LLM 上游（OpenRouter/DeepSeek 自带限流，不占 Supabase 额度）。</p>
+<hr>
+<h2 id="9-这套方案的真实限制-别当生产">9. 这套方案的真实限制（别当生产）<a class="anchor" href="#9-这套方案的真实限制-别当生产" aria-label="锚点">#</a></h2>
+<ol><li><strong>测试期专用</strong>：Supabase Free 30 天无活动休眠，100 人真并发会打挂 EF 时长额度</li><li><strong>没有 ws 双向</strong>：跨设备同步、实时行情推送降级为轮询，体验差</li><li><strong>LLM 流式占 EF 时长</strong>：AI 重度用要切 LLM 上游走自己的 Key Pool（你 <code>API_KEY_POOL</code> 那套搬不进 Deno，测试期直连 OpenRouter 即可）</li><li><strong>合规</strong>：全在境外，khyquant.top 不解析到此，<strong>只做测试</strong>。正式上线切回大陆备案服务器</li><li><strong>代码两套</strong>：EF 的 Deno handler 和 Node 后端是两套实现，测试完<strong>别 merge 回主仓</strong>，只保留 <code>supabase/</code> 目录做参考</li></ol>
+<hr>
+<h2 id="10-要不要我下一步">10. 要不要我下一步<a class="anchor" href="#10-要不要我下一步" aria-label="锚点">#</a></h2>
+<p>给你生成下面 3 个文件直接能用（不 merge 进主仓，放 <code>D:\Portable\khy-os\deploy\free-test\</code> 隔离目录）：</p>
+<ol><li><code>supabase/functions/khyos-api/index.ts</code>（auth + health + strategies 最小可跑）</li><li><code>supabase/functions/khyos-ai/index.ts</code>（LLM 流式 SSE）</li><li><code>.github/workflows/deploy-pages.yml</code> + <code>apps/ai-frontend/.env.production</code></li></ol>
+<p>说&quot;生成&quot;我就写文件，你照 §7 清单顺序跑就行。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/05_TEST_测试/TEST-RPT/[TEST-RPT-010] khy-os-测试覆盖率提升报告.html"><div class="dir">← 上一篇</div><div class="ttl">[TEST-RPT-010] khy-os 测试覆盖率提升报告（2026-09-11，2026-09-12 更新 §8 损坏修复收口）</div></a><a class="next" href="../../../docs/05_TEST_测试/TEST-RPT/00_INDEX_TEST-RPT-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">TEST-RPT</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/05_TEST_测试/TEST-RPT/[TEST-RPT-011] 全免费上线测试方案.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

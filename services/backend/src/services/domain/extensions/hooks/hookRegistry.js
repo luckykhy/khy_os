@@ -10,7 +10,8 @@
  *   SubAgentStart — when a sub-agent is spawned
  *   SubAgentEnd   — when a sub-agent completes
  *
- * Config: ~/.khyquant/hooks.json or project .khyquant/hooks.json
+ * Config: <appHome>/hooks.json (global, portable-aware via dataHome) or
+ *         <projectDir>/.khy/hooks.json — project-level overrides global.
  */
 const fs = require('fs');
 const os = require('os');
@@ -63,7 +64,7 @@ class HookRegistry {
       configs.push({ source: 'global', path: _globalHooksPath() });
     }
     if (projectDir) {
-      const projectHooks = path.join(projectDir, '.khyquant', 'hooks.json');
+      const projectHooks = path.join(projectDir, '.khy', 'hooks.json');
       if (fs.existsSync(projectHooks)) {
         configs.push({ source: 'project', path: projectHooks });
       }
@@ -110,6 +111,14 @@ class HookRegistry {
       return;
     }
 
+    // The registered hook records the hook's OWN identity (its `source` field,
+    // e.g. 'goodA'), not the config-file provenance passed in as the `source`
+    // arg (e.g. 'global'/'project'). The two meanings differ: `source`-arg is
+    // "where the config came from", `hookDef.source` is "which hook is this"
+    // and is what the `disabled:` list and `khy plugin status` key on. Fall
+    // back to the provenance label when the hook carries no identity of its own.
+    const hookSource = hookDef.source || source;
+
     this._hooks.get(event).push({
       event,
       type,
@@ -118,7 +127,7 @@ class HookRegistry {
       pattern: pattern ? new RegExp(pattern) : null,
       timeout,
       priority,
-      source,
+      source: hookSource,
     });
   }
 
@@ -201,3 +210,5 @@ class HookRegistry {
 }
 
 module.exports = new HookRegistry();
+module.exports.HOOK_EVENTS = HOOK_EVENTS;
+module.exports.HookRegistry = HookRegistry;

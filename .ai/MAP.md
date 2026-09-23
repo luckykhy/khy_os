@@ -1,4 +1,4 @@
-<!-- khy-metadata:auto khy-metadata/4 fingerprint=6dee9af7c1cad71e -->
+<!-- khy-metadata:auto khy-metadata/4 fingerprint=6b2e4f9fa380e6db -->
 <!-- 本文件由 khy 机械生成，可被 `khy metadata refresh` 安全覆盖。删除上面这行标记即视为人工接管，刷新将不再覆盖本文件。 -->
 # MAP — khy-os 骨架与导航
 
@@ -16,15 +16,19 @@
 - `services/backend/bin/khy.js` (cli-bin, workspace:khy-os-backend bin:khy-os)
 - `services/backend/bin/khy.js` (cli-bin, workspace:khy-os-backend bin:khy)
 - `services/ai-backend/server.js` (node-main, workspace:khy-ai-backend#main)
+- `apps/khyos-desktop/out/main/index.js` (node-main, workspace:khyos-desktop#main)
+- `apps/provider-hub/dist/main/index.js` (node-main, workspace:khy-provider-hub#main)
 - `platform/khy_platform/cli.py` (python-entry, pyproject scripts)
 
 ## 目录结构与职责
+- `_产物/`
 - `apps/` — 多应用
   - `apps/ai-frontend/`
-  - `apps/khy-os-client-app/` — Flutter Android 客户端（替代原 khy-mobile）
+  - `apps/khy-os-client-app/`
   - `apps/khyos-desktop/`
-- `dist-electron/`
-  - `dist-electron/portable/`
+  - `apps/provider-hub/`
+- `deploy/` — 部署
+  - `deploy/free-test/`
 - `docs/` — 文档
   - `docs/01_INIT_立项/`
   - `docs/02_CONCEPTS_概念入门/`
@@ -35,11 +39,12 @@
   - `docs/07_OPS_运维/`
   - `docs/08_MGMT_项目管理/`
   - `docs/09_STORY_修仙学AI/`
-  - `docs/_AI协作预设包/`
-  - `docs/_assets/`
-  - `docs/_ref/`
+  - `docs/10_规范/`
+  - `docs/11_报告/`
+  - `docs/12_模板/`
 - `electron/`
   - `electron/services/` — 服务/业务逻辑
+- `entries/`
 - `extensions/`
   - `extensions/bridges/`
   - `extensions/scripts/` — 脚本（构建/CI/运维）
@@ -58,6 +63,7 @@
   - `packaging/installer/`
   - `packaging/modules/`
   - `packaging/npm/`
+- `patches/`
 - `platform/`
   - `platform/delivery/`
   - `platform/khy_platform/`
@@ -77,6 +83,7 @@
   - `scripts/portable/`
   - `scripts/quality-gate/`
 - `services/` — 服务/业务逻辑
+  - `services/Tools/` — 工具
   - `services/ai-backend/`
   - `services/backend/` — 后端
 - `software/`
@@ -85,7 +92,7 @@
 - `tests/` — 测试
 - `tools/` — 工具
   - `tools/deepseek-eyes/`
-- 根文件: `$null`, `.clinerules`, `.dockerignore`, `.editorconfig`, `.git-blame-ignore-revs`, `.gitattributes`, `.gitignore`, `.khy_orphan_sweep`, `.npmrc`, `.portable`, `.windsurfrules`, `AGENTS.html`, `AGENTS.md`, `CHANGELOG.html`, `CHANGELOG.md`, `CLAUDE.html`, `CLAUDE.md`, `CONTRIBUTING.html`, `CONTRIBUTING.md`, `Composer.tsx`
+- 根文件: `.clinerules`, `.dockerignore`, `.editorconfig`, `.git-blame-ignore-revs`, `.gitattributes`, `.gitignore`, `.khy_orphan_sweep`, `.npmrc`, `.portable`, `.windsurfrules`, `AGENTS.html`, `AGENTS.md`, `CHANGELOG.html`, `CHANGELOG.md`, `CLAUDE.html`, `CLAUDE.md`, `CONTRIBUTING.html`, `CONTRIBUTING.md`, `Dockerfile`, `MANIFEST.in`
 
 ## 构建 / 运行 / 测试
 - **安装**: `npm install` ; `pip install -e .`
@@ -93,25 +100,28 @@
 
 ## 关键文件符号速览
 > 导航 teaser（按详略档位裁剪，`KHY_META_DETAIL=brief|standard|full`）。完整逐文件逐符号清单见 `CONTEXT.yaml`。
-- `Composer.tsx` (typescript): Composer
-- `SidePane.tsx` (typescript): SidePane
 - `khy.sh` (shell): _无导出符号_
 - `portable-setup.sh` (shell): _无导出符号_
 - `electron/main.js` (javascript): createWindow, getMainWindow, registerIpcHandlers
 - `electron/preload.js` (javascript): handler, handler, handler, handler
+- `entries/launch.js` (javascript): fail, printUsage, translate, main
 - `kernel/tools_gen_blob.sh` (shell): _无导出符号_
 - `scripts/electron-dev.js` (javascript): _无导出符号_
-- `scripts/findIgnored.js` (javascript): findStandaloneTestFiles
-- `scripts/test-replace.js` (javascript): _无导出符号_
+- `scripts/gen_keys.py` (python): encode
+- `scripts/install-hooks.sh` (shell): _无导出符号_
 - `apps/ai-frontend/.eslintrc.cjs` (javascript): _无导出符号_
 - `apps/ai-frontend/backendDiscovery.mjs` (javascript): readApiPortFromRuntime, readPointerDataHome, resolveBackendTarget
 - `apps/ai-frontend/vite.config.js` (javascript): _无导出符号_
+- `apps/khyos-desktop/.build_run.cjs` (javascript): _无导出符号_
+- `apps/khyos-desktop/.launch_verify.cjs` (javascript): _无导出符号_
 - `apps/khyos-desktop/electron.vite.config.ts` (typescript): _无导出符号_
 - `apps/khyos-desktop/vite.config.js` (javascript): _无导出符号_
 - `apps/khyos-desktop/vite.host.config.ts` (typescript): _无导出符号_
 - `apps/khyos-desktop/vite.scheduler.config.ts` (typescript): _无导出符号_
-- `docs/_assets/docs-site.js` (javascript): ensureCtx, tone, seq, initSoundToggle, sync, refreshSoundToggleIcon, initCalmToggle, applyCalm, sync, initGetStarted, …(+18)
-- `docs/_assets/nav-data.js` (javascript): _无导出符号_
+- `apps/provider-hub/electron.vite.config.ts` (typescript): _无导出符号_
+- `docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] build-root-demo.js` (javascript): withOutputs, runScenario, main
+- `docs/19_资产/site/docs-site.js` (javascript): ensureCtx, tone, seq, initSoundToggle, sync, refreshSoundToggleIcon, initCalmToggle, applyCalm, sync, initGetStarted, …(+18)
+- `docs/19_资产/site/nav-data.js` (javascript): _无导出符号_
 - `electron/services/aiGatewayService.js` (javascript): getApiConfig, httpRequest
 - `electron/services/authService.js` (javascript): ensureConfigDir, readConfig, writeConfig
 - `electron/services/backendService.js` (javascript): findBackendEntry

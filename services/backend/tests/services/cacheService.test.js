@@ -21,20 +21,18 @@ jest.mock('redis', () => ({
 let cacheService;
 
 beforeAll(() => {
+  // This suite tests the @khy/shared contract (see file header). The backend
+  // src/services/cacheService.js is a deprecated shim that now forwards to
+  // the quantApp extension's own copy, whose getStats returns {size,hits,
+  // misses,expired} instead of shared's {type,keys} — prefer the shared
+  // source and only fall back to the backend shim if shared is unresolvable.
   try {
-    cacheService = require('../../src/services/cacheService');
-  } catch (e) {
-    // If import chain fails (missing @khy/shared symlink), try shared directly.
-    if (e.code === 'MODULE_NOT_FOUND') {
-      try {
-        cacheService = require('@khy/shared/services/cacheService');
-      } catch {
-        // Will be handled in tests via null checks
-      }
-    } else if (!(e instanceof SyntaxError)) {
-      // Graceful: module may depend on env vars or DB at import time
-    } else {
-      throw e;
+    cacheService = require('@khy/shared/services/cacheService');
+  } catch {
+    try {
+      cacheService = require('../../src/services/cacheService');
+    } catch {
+      // Will be handled in tests via null checks
     }
   }
 });

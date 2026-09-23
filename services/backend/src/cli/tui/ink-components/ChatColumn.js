@@ -163,7 +163,9 @@ function ChatColumn({
                 : null
             )
         : null,
-      showHelp ? h(HelpMenu, null) : null,
+      // 只给宽度：这一列里帮助框与转录/活动区**并列**（不是替换某个定高视口），
+      // 所以槽高未知 —— 传 rows 会把它按整屏预算收缩。宽度才是这里无上限的那个维度。
+      showHelp ? h(HelpMenu, { cols: contentWidth }) : null,
       bashMode ? h(Text, { color: 'magenta' }, '! BASH 模式') : null,
       memoryMode ? h(Text, { color: 'green' }, '# 记忆模式') : null,
       vimEnabled

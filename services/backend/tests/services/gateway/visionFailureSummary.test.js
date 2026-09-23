@@ -18,6 +18,7 @@ const {
   buildVisionFailureMessage,
   sanitizeCause,
 } = require('../../../src/services/gateway/visionFailureSummary');
+const assert = require('node:assert');
 const ON = {}; // 默认开
 const OFF = { KHY_VISION_FAILURE_SUMMARY: '0' };
 // ── OPS-MAN-142:失败墙推迟到 OCR 结果已知后(OCR suppress 子门) ────────────────────
@@ -146,9 +147,9 @@ describe('Vision Failure Summary', () => {
   });
 
   test('buildVisionFailureMessage: never throws on junk', () => {
-      expect(() => buildVisionFailureMessage({ env: ON }).not.toThrow());
-      expect(() => buildVisionFailureMessage({ rawError: {}, model: 42, env: ON }).not.toThrow());
-      expect(() => buildVisionFailureMessage().not.toThrow());
+      expect(() => buildVisionFailureMessage({ env: ON })).not.toThrow();
+      expect(() => buildVisionFailureMessage({ rawError: {}, model: 42, env: ON })).not.toThrow();
+      expect(() => buildVisionFailureMessage()).not.toThrow();
   });
 
   test('sanitizeCause: strips bearer/api_key, keeps status code + host', () => {
@@ -188,8 +189,8 @@ describe('Vision Failure Summary', () => {
   });
 
   test('isFailureSummaryOcrSuppressEnabled: never throws on junk env', () => {
-      expect(() => isFailureSummaryOcrSuppressEnabled(null).not.toThrow());
-      expect(() => isFailureSummaryOcrSuppressEnabled({ KHY_VISION_FAILURE_SUMMARY_OCR_SUPPRESS: {} }).not.toThrow());
+      expect(() => isFailureSummaryOcrSuppressEnabled(null)).not.toThrow();
+      expect(() => isFailureSummaryOcrSuppressEnabled({ KHY_VISION_FAILURE_SUMMARY_OCR_SUPPRESS: {} })).not.toThrow();
   });
 
 });

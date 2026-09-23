@@ -8,7 +8,7 @@ const {
   normalize,
   classify,
   effectiveTier,
-} = require('../../src/services/domain/trajectory/trajectoryReplay/tierRegistry');
+} = require('../../../../../src/services/domain/trajectory/trajectoryReplay/tierRegistry.js');
 
 describe('tierRegistry', () => {
   describe('normalize', () => {

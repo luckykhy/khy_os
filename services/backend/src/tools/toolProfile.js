@@ -117,6 +117,12 @@ const PROFILES = {
 
   explore: {
     description: 'Read-only tools for codebase exploration (search + read only)',
+    // [DESIGN-AGENT-002] A2-2: a read-only profile MUST NOT carry any write
+    // channel. Bash was removed here because it can write files (redirection,
+    // `sed -i`, `tee`) and mutate repo/system state (`git add`, `npm install`) —
+    // the prompt-level "never use Bash for mkdir/rm/..." was unenforced text.
+    // Roles that genuinely need to run commands (verify: build/test) must be
+    // granted `verification` explicitly, not inherit it from `explore`.
     tools: [
       'readFile',
       'Read',
@@ -127,10 +133,6 @@ const PROFILES = {
       'Grep',
       'search',
       'toolSearch',
-      'shellCommand',
-      'bash',
-      'Bash',
-      'shell_command',
     ],
   },
 
@@ -158,14 +160,18 @@ const LEGACY_TOOL_NAME_ALIASES = Object.freeze({
  * @returns {Set<string>|null}  null means "all tools"
  */
 function _resolve(profileId) {
-  if (_resolved.has(profileId)) {
+  // Cache only KNOWN profiles: an unknown id must never be memoized, and must
+  // never resolve to "all tools". Fail-closed per [DESIGN-AGENT-002] A2-3.
+  if (typeof profileId === 'string' && _resolved.has(profileId)) {
     return _resolved.get(profileId);
   }
 
   const profile = PROFILES[profileId];
   if (!profile) {
-    return null;
-  } // unknown profile = full access
+    // Default deny: an unknown profile grants NOTHING (empty set), never
+    // everything. Callers that intend full access must pass 'full' explicitly.
+    return new Set();
+  }
 
   if (profile.tools === null) {
     _resolved.set(profileId, null);
@@ -199,12 +205,16 @@ function _resolve(profileId) {
 
 /**
  * Get the list of tool names allowed by a profile.
- * @param {string} profileId  One of: minimal, coding, analysis, full
- * @returns {string[]|null}   null means all tools are allowed
+ * @param {string} profileId  One of: minimal, coding, analysis, verification, explore, full
+ * @returns {string[]|null}   null means all tools are allowed (only for `full`);
+ *                            an unknown profile returns [] (deny-all, not allow-all)
  */
 function getProfileTools(profileId) {
+  if (profileId === 'full') {
+    return null;
+  }
   const set = _resolve(profileId);
-  return set ? [...set] : null;
+  return set ? [...set] : [];
 }
 
 /**
@@ -214,13 +224,16 @@ function getProfileTools(profileId) {
  * @returns {Map<string, object>}  Filtered map (or original if full)
  */
 function filterToolsByProfile(toolsMap, profileId) {
+  // Only an EXPLICIT 'full' (or omitted profile) means "all tools". An unknown
+  // profile name is a configuration error, NOT a licence for full access
+  // ([DESIGN-AGENT-002] A2-3: authorization must never fail open).
   if (!profileId || profileId === 'full') {
     return toolsMap;
   }
 
   const allowed = _resolve(profileId);
-  if (!allowed) {
-    return toolsMap;
+  if (!allowed || allowed.size === 0) {
+    return new Map();
   }
 
   const filtered = new Map();

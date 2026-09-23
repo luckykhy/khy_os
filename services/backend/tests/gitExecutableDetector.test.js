@@ -32,7 +32,7 @@ describe('Git Executable Detector', () => {
       const gitPath = detector.detectGitExecutable({
         platform: 'win32',
         _existsSync: mockExists,
-        _spawnSync: () => ({ status: 1 }), // 系统 PATH �?git 不可�?
+        _spawnSync: () => ({ status: 1 }), // 系统 PATH �?git 不可�?
       });
     
       expect(gitPath).toBe('C:\\Program Files\\Git\\bin\\git.exe');
@@ -41,12 +41,12 @@ describe('Git Executable Detector', () => {
   test('detectGitExecutable falls back to system git when Git Bash not found', () => {
       detector.clearCache();
     
-      const mockExists = () => false; // 所有显式路径都不存�?
+      const mockExists = () => false; // 所有显式路径都不存�?
     
       const gitPath = detector.detectGitExecutable({
         platform: 'win32',
         _existsSync: mockExists,
-        _spawnSync: () => ({ status: 0 }), // 系统 PATH �?git 可用
+        _spawnSync: () => ({ status: 0 }), // 系统 PATH �?git 可用
       });
     
       expect(gitPath).toBe('git');
@@ -149,7 +149,7 @@ describe('Git Executable Detector', () => {
       const msg = detector.buildNoGitMessage({ platform: 'linux' });
     
       expect(msg).toContain('apt-get install git');
-      expect(!msg).toContain('Git for Windows');
+      expect(msg).not.toContain('Git for Windows');
   });
 
 });

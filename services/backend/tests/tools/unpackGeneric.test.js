@@ -20,7 +20,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const unpack = require('../../src/tools/unpackTool');
-const ge = require('../../src/services/reverseEngineer/genericExtractor');
+const ge = require('../../src/services/domain/data/reverseEngineer/genericExtractor.js');
 
 function _has(bin) {
   try {

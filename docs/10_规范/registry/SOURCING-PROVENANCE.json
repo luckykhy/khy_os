@@ -1,0 +1,188 @@
+{
+  "$schemaVersion": "1.0.0",
+  "$artifact": "上游来源出处台账（上游文件 → 本地文件映射）",
+  "$registry": "docs/10_规范/registry/RULES-REGISTRY.json",
+  "$ruleId": "SOURCING-001",
+  "$consumedBy": [
+    "scripts/ci/check-provenance.js",
+    "scripts/ci/check-license-tiers.js"
+  ],
+  "$status": "active",
+  "$updated": "2026-09-16",
+
+  "ssot": {
+    "doc": "docs/10_规范/其它规范/[DESIGN-SOURCING-001] 借鉴与实现统一规则.md",
+    "clause": "§1 B-S3 拷贝代码的绝对红线",
+    "clauseLine": 69,
+    "docQuote": "只能靠「它恰好是这样写的」才能理解的代码，不能借（那是照抄，见 B-S3）。",
+    "acceptanceCriteria": {
+      "note": "vendored 档的判定条件（许可证 / 无官方包 / 可整删三点复核）以 B-S3 与 B-P3 决策权限表为唯一真源，本文件不复制该判定逻辑——只记录映射事实。"
+    }
+  },
+
+  "provenanceModel": {
+    "description": "每条台账记录必须给出上游来源标识、本地文件路径与对应关系三项，缺一项即不可判定。",
+    "fields": [
+      {
+        "key": "source",
+        "required": true,
+        "type": "string",
+        "description": "上游来源标识：上游仓库 URL、包名@版本、工具链版本，或本地产物生成命令",
+        "constraint": "非空；必须足以让他人独立复核该上游"
+      },
+      {
+        "key": "localPath",
+        "required": true,
+        "type": "string",
+        "description": "本地文件路径（仓库相对路径），单个文件或其所属 vendor 目录",
+        "constraint": "非空；必须在磁盘上存在，或处于本表 knownGaps 的待登记清单"
+      },
+      {
+        "key": "relationship",
+        "required": true,
+        "type": "string",
+        "enum": ["vendored", "fork", "generated", "reference", "idea", "adapter"],
+        "description": "对应关系/借鉴方式，取值对齐 [DESIGN-SOURCING-001] §1 B-M 借鉴方式判定表"
+      },
+      {
+        "key": "license",
+        "required": false,
+        "type": "string",
+        "description": "上游许可证名；vendored/fork 必填，无法核实即按 B-S4.1 从严"
+      },
+      {
+        "key": "versionPin",
+        "required": false,
+        "type": "string",
+        "description": "版本钉子（版本号或 commit）。ABI 相关产物必填"
+      },
+      {
+        "key": "regenerationCommand",
+        "required": false,
+        "type": "string",
+        "description": "重生成命令。generated 关系必填"
+      },
+      {
+        "key": "deletableAsWhole",
+        "required": false,
+        "type": "boolean",
+        "description": "是否可整目录删除（B-P3 vendored 三点复核之一）"
+      },
+      {
+        "key": "approvedBy",
+        "required": false,
+        "type": "string",
+        "description": "vendored/fork 的维护者批准人；B-P3 要求 vendored/fork 须维护者显式批准"
+      },
+      {
+        "key": "approvedAt",
+        "required": false,
+        "type": "string",
+        "description": "批准日期（ISO 日期）"
+      },
+      {
+        "key": "notes",
+        "required": false,
+        "type": "string",
+        "description": "补充说明"
+      }
+    ]
+  },
+
+  "relationshipEnum": {
+    "source": "docs/10_规范/其它规范/[DESIGN-SOURCING-001] 借鉴与实现统一规则.md B-P2 六字段模板第 5 字段",
+    "values": ["idea", "reference", "adapter", "vendored", "fork"],
+    "docQuote": "5. 借鉴方式：idea | reference | adapter | vendored | fork（按 B-M 判定，写明判定依据）",
+    "docLine": 179,
+    "generatedNote": "generated 是本台账为「由本仓工具链生成的产物」增设的取值（如 moonbit_gen.c 由 moon build 生成），上游真源是生成命令而非外部代码。B-M 未列此项，登记于此以保台账自足。"
+  },
+
+  "ledger": [
+    {
+      "source": "moon 0.1.20260427 (48d7def 2026-04-27)",
+      "localPath": "kernel/vendor/moonbit/moonbit_gen.c",
+      "relationship": "generated",
+      "license": null,
+      "versionPin": "moon 0.1.20260427 (48d7def 2026-04-27)",
+      "regenerationCommand": "cd kernel && make moonbit-build",
+      "deletableAsWhole": true,
+      "notes": "由 moon build --target native 生成后经 main()→moonbit_entry() sed 得到；仅 make MOONBIT_PREBUILT=1 时使用"
+    },
+    {
+      "source": "~/.moon/lib/runtime.c (moon 0.1.20260427)",
+      "localPath": "kernel/vendor/moonbit/runtime.c",
+      "relationship": "generated",
+      "license": null,
+      "versionPin": "moon 0.1.20260427 (48d7def 2026-04-27)",
+      "regenerationCommand": "cp ~/.moon/lib/runtime.c vendor/moonbit/runtime.c",
+      "deletableAsWhole": true,
+      "notes": "MoonBit C runtime；-DMOONBIT_NATIVE_NO_SYS_HEADER 门控掉全部系统头"
+    },
+    {
+      "source": "~/.moon/include/moonbit.h (moon 0.1.20260427)",
+      "localPath": "kernel/vendor/moonbit/include/moonbit.h",
+      "relationship": "generated",
+      "license": null,
+      "versionPin": "moon 0.1.20260427 (48d7def 2026-04-27)",
+      "regenerationCommand": "cp ~/.moon/include/moonbit.h vendor/moonbit/include/moonbit.h",
+      "deletableAsWhole": true
+    },
+    {
+      "source": "~/.moon/include/moonbit-fundamental.h (moon 0.1.20260427)",
+      "localPath": "kernel/vendor/moonbit/include/moonbit-fundamental.h",
+      "relationship": "generated",
+      "license": null,
+      "versionPin": "moon 0.1.20260427 (48d7def 2026-04-27)",
+      "regenerationCommand": "cp ~/.moon/include/moonbit-fundamental.h vendor/moonbit/include/moonbit-fundamental.h",
+      "deletableAsWhole": true,
+      "notes": "moonbit.h 在 -DMOONBIT_NATIVE_NO_SYS_HEADER 下唯一拉入的头"
+    }
+  ],
+
+  "ledgerSourceOfTruth": {
+    "path": "kernel/vendor/moonbit/PROVENANCE.md",
+    "note": "上表 4 条由该文件的 Contents 表格与 Version pin 段落逐条转录，字段值与原文一致。该文件是「上游来源 / 本地产物 / 用途」三列的既有约定，本台账沿用其模型并形式化。"
+  },
+
+  "observedVendorDirs": {
+    "note": "以下为实测（2026-09-16，仓库根）。仅列实测存在的 vendor 目录，不推测其上游。",
+    "measuredAt": "2026-09-16",
+    "dirs": [
+      { "path": "kernel/vendor/moonbit", "state": "ledgered", "contents": ["PROVENANCE.md", "PROVENANCE.html", "include/", "moonbit_gen.c", "runtime.c"] },
+      { "path": "services/backend/vendor/shared", "state": "unverified", "contents": ["config", "logs", "package.json", "src", "tests"] },
+      { "path": "extensions/tools/khy-dsh-compat/vendor", "state": "empty" },
+      { "path": "extensions/tools/khy-markdown/vendor", "state": "empty" },
+      { "path": "apps/ai-frontend/public/vendor", "state": "empty" }
+    ]
+  },
+
+  "knownGaps": [
+    {
+      "id": "gap-1",
+      "description": "services/backend/vendor/shared 含 package.json/src/tests，形态像第三方包但未在台账登记",
+      "needed": "确认其上游（包名+版本+许可证）并补一条 ledger 记录",
+      "severity": "unknown"
+    },
+    {
+      "id": "gap-2",
+      "description": "本仓不存在 NOTICE / THIRD_PARTY 许可证清单文件（实测 maxdepth 3 无命中）",
+      "needed": "vendored/fork 累积到需要时补 NOTICE 聚合清单",
+      "severity": "low"
+    },
+    {
+      "id": "gap-3",
+      "description": "无 fork 关系记录。B-P3 要求 fork 须维护者显式批准并写入同步策略",
+      "needed": "若引入 fork 档实现，须在此登记 approvedBy/approvedAt 与同步策略",
+      "severity": "low"
+    }
+  ],
+
+  "integrityChecks": [
+    "每条 ledger 记录必须填齐 source / localPath / relationship 三项",
+    "relationship 必须落在 relationshipEnum.values ∪ {generated} 内",
+    "localPath 必须存在于磁盘，或出现在 observedVendorDirs.knownGaps 的待登记清单里",
+    "vendored/fork 关系必须填 license 与 approvedBy",
+    "generated 关系必须填 regenerationCommand",
+    "versionPin 一旦登记不得静默变更——变更须在 notes 留痕（呼应 B-L3 决策不可回退）"
+  ]
+}

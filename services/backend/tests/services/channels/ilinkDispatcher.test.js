@@ -130,11 +130,13 @@ function fakeChannel() {
 
 test('dispatcher: 不同 accountId 生成不同会话键(默认 per-account-channel-peer)', async () => {
   // scopeSession 是进程级单例操作;spy 它即可断言 dispatcher 传下去的会话键。
-  const ai = require('../../../src/cli/ai');
-  const original = ai.scopeSession;
+  // dispatcher 经 aiChatPort 的 IoC seam 取该操作(不再直接 require cli/ai),
+  // 所以这里 spy port 的 getter —— 那是被测代码真正读取的边界。
+  const port = require('../../../src/services/aiChatPort');
+  const original = port.getScopeSession;
   const keys = [];
-  ai.scopeSession = (key) => { keys.push(key); };
   try {
+    port.getScopeSession = () => (key) => { keys.push(key); };
     const dA = new IlinkDispatcher({ channel: fakeChannel(), accountId: 'botA', getChat: () => async () => 'ok' });
     const dB = new IlinkDispatcher({ channel: fakeChannel(), accountId: 'botB', getChat: () => async () => 'ok' });
     await dA.handle({ userId: 'u1', channelId: 'u1', text: '你好' });
@@ -144,7 +146,7 @@ test('dispatcher: 不同 accountId 生成不同会话键(默认 per-account-chan
       `同一 userId 在不同账号下应落到不同会话键:${keys.join('|')}`,
     );
   } finally {
-    ai.scopeSession = original;
+    port.getScopeSession = original;
   }
 });
 

@@ -136,10 +136,10 @@ describe('aiRenderer unicode guide decoration', () => {
     try {
       const rendered = renderAiResponse('Tip: use /plan for complex tasks');
       const plain = stripAnsi(rendered);
-      expect(plain).toContain('╭');
+      // Decorator evolved from full callout boxes (╭/╰) to line-leading icons
       expect(plain).toContain('✦ Tip');
       expect(plain).toContain('use /plan for complex tasks');
-      expect(plain).toContain('╰');
+      expect(plain).not.toContain('╭');
     } finally {
       if (prev === undefined) delete process.env.KHY_UNICODE_GUIDE;
       else process.env.KHY_UNICODE_GUIDE = prev;
@@ -189,9 +189,10 @@ describe('aiRenderer unicode guide decoration', () => {
     try {
       const rendered = renderAiResponse('Summary: all checks passed');
       const plain = stripAnsi(rendered);
-      expect(plain).toContain('┏');
+      // Heavy density is accepted by the env gate but renders as the same
+      // line-leading icon scheme (thick box borders were removed)
       expect(plain).toContain('✓ Summary');
-      expect(plain).toContain('┛');
+      expect(plain).not.toContain('┏');
     } finally {
       if (prev === undefined) delete process.env.KHY_UNICODE_GUIDE;
       else process.env.KHY_UNICODE_GUIDE = prev;

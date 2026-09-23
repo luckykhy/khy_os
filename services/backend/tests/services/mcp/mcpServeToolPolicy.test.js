@@ -1,13 +1,14 @@
 'use strict';
 /**
- * mcpServeToolPolicy â€?pure-leaf tool-exposure policy tests (node:test).
+ * mcpServeToolPolicy ï¿½?pure-leaf tool-exposure policy tests (node:test).
  *
  * Deterministic, no IO. Verifies: resolveExposeMode (default all, readonly/safe
  * mapping, unknownâ†’all), selectExposedTools (all keeps everything, readonly
  * keeps only isReadOnly, safe keeps readonly + low/safe-risk writes),
  * summarizeExposure (counts by risk + hasDestructive).
  */
-const pol = require('../../../src/services/mcp/mcpServeToolPolicy');
+const pol = require('../../../src/services/domain/messaging/mcp/mcpServeToolPolicy.js');
+const assert = require('node:assert');
 // Stub tools: minimal shape the policy reads (name, risk, isReadOnly, isDestructive).
 function tool(name, risk, readOnly, destructive) {
   return {
@@ -33,17 +34,17 @@ describe('Mcp Serve Tool Policy', () => {
       expect(pol.resolveExposeMode({ KHY_MCP_SERVE_EXPOSE: 'bogus' })).toBe('all');
   });
 
-  test('selectExposedTools: all â†?everything (user decision: expose all)', () => {
+  test('selectExposedTools: all ï¿½?everything (user decision: expose all)', () => {
       const sel = pol.selectExposedTools(ALL, 'all');
       expect(sel.length).toBe(5);
   });
 
-  test('selectExposedTools: readonly â†?only isReadOnly tools', () => {
+  test('selectExposedTools: readonly ï¿½?only isReadOnly tools', () => {
       const sel = pol.selectExposedTools(ALL, 'readonly').map((t) => t.name);
       assert.deepEqual(sel.sort(), ['Grep', 'Read']);
   });
 
-  test('selectExposedTools: safe â†?readonly + low/safe-risk writes (no medium+ writes)', () => {
+  test('selectExposedTools: safe ï¿½?readonly + low/safe-risk writes (no medium+ writes)', () => {
       const sel = pol.selectExposedTools(ALL, 'safe').map((t) => t.name);
       expect(sel).toContain('Read');
       expect(sel).toContain('Grep');
@@ -52,7 +53,7 @@ describe('Mcp Serve Tool Policy', () => {
       expect(!sel.includes('Bash')).toBeTruthy();
   });
 
-  test('selectExposedTools: junk input â†?[] (never throws)', () => {
+  test('selectExposedTools: junk input ï¿½?[] (never throws)', () => {
       assert.deepEqual(pol.selectExposedTools(null, 'all'), []);
       assert.deepEqual(pol.selectExposedTools([null, undefined], 'all'), []);
   });
@@ -67,7 +68,7 @@ describe('Mcp Serve Tool Policy', () => {
       expect(s.hasDestructive).toBe(true);
   });
 
-  test('summarizeExposure: readonly-only set â†?hasDestructive false', () => {
+  test('summarizeExposure: readonly-only set ï¿½?hasDestructive false', () => {
       const s = pol.summarizeExposure([READ, GREP]);
       expect(s.total).toBe(2);
       expect(s.hasDestructive).toBe(false);

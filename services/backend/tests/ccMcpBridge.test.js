@@ -14,7 +14,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const path = require('node:path');
 
-const bridge = require('../src/services/mcp/ccMcpBridge');
+const bridge = require('../src/services/domain/messaging/mcp/ccMcpBridge.js');
 
 test('isCcMcpBridgeEnabled: default ON, {0,false,off,no} OFF', () => {
   assert.strictEqual(bridge.isCcMcpBridgeEnabled({}), true);

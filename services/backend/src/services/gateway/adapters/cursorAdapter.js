@@ -495,10 +495,14 @@ async function listModels() {
   if (_token && hasTokenShape(_token.accessToken)) {
     persistObservedToken(_token);
   }
+  // discoverySource: 'builtin' 是**必须打的标记**([DESIGN-ARCH-100] §3.1):KNOWN_MODELS 是
+  // 源码里硬编码的静态目录,不是 Cursor 上游亲口返回的列表。不打标就会被真值律按
+  // 「无标记 = 可信」放过,从而绕过上游权威覆盖律。
   return KNOWN_MODELS.map((m) => ({
     ...m,
     provider: 'cursor',
     description: '',
+    discoverySource: 'builtin',
   }));
 }
 

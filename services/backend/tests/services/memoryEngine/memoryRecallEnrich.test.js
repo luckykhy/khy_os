@@ -24,7 +24,7 @@ const path = require('path');
 const paths = require('../../../src/memdir/paths');
 const memdir = require('../../../src/memdir/memdir');
 const engine = require('../../../src/services/memoryEngine');
-const leaf = require('../../../src/services/memoryEngine/memoryRecallTokens');
+const leaf = require('../../../src/services/domain/memory/memoryEngine/memoryRecallTokens.js');
 
 async function withEnv(overrides, fn) {
   const keys = Object.keys(overrides);

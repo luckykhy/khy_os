@@ -1,7 +1,7 @@
 'use strict';
 /**
- * slashLearnSkillAlias.test.js â€?discoverability + naming-alignment lock for the
- * `/learn-skill` slash alias (Hermes v0.18.0 /learn mental model â†?khy `skill learn`).
+ * slashLearnSkillAlias.test.js â€”discoverability + naming-alignment lock for the
+ * `/learn-skill` slash alias (Hermes v0.18.0 /learn mental model â†’khy `skill learn`).
  *
  * `/learn` is already occupied by the interactive curriculum (learn.js). The
  * Hermes-style "distill a directory/webpage into a reusable skill" feature lives
@@ -18,7 +18,7 @@
  *   - commandSchema registers /learn-skill routing to `skill learn`;
  *   - it does NOT collide with the occupied /learn curriculum route;
  *   - parseInput('/learn-skill dir <path>') expands to command=skill,
- *     subCommand=learn, args=['dir', <path>] â€?the canonical dir case;
+ *     subCommand=learn, args=['dir', <path>] â€”the canonical dir case;
  *   - same for url.
  */
 const schema = require('../src/constants/commandSchema');
@@ -49,7 +49,7 @@ describe('Slash Learn Skill Alias', () => {
       expect(learnSkill && learnSkill.cmd !== '/learn').toBeTruthy();
   });
 
-  test('parseInput(/learn-skill dir <path>) â†?command=skill, subCommand=learn, args=[dir,path]', () => {
+  test('parseInput(/learn-skill dir <path>) â†’command=skill, subCommand=learn, args=[dir,path]', () => {
       const parsed = router.parseInput('/learn-skill dir /tmp/some-tool');
       expect(parsed).toBeTruthy();
       expect(parsed.command).toBe('skill');
@@ -57,7 +57,7 @@ describe('Slash Learn Skill Alias', () => {
       expect(parsed.args).toEqual(['dir', '/tmp/some-tool']);
   });
 
-  test('parseInput(/learn-skill url <url>) â†?command=skill, subCommand=learn, args=[url,url]', () => {
+  test('parseInput(/learn-skill url <url>) â†’command=skill, subCommand=learn, args=[url,url]', () => {
       const parsed = router.parseInput('/learn-skill url https://example.com/docs');
       expect(parsed).toBeTruthy();
       expect(parsed.command).toBe('skill');

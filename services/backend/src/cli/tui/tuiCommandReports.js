@@ -12,7 +12,7 @@
  * 目标是**真正在 TUI 里原生执行**这些命令(而非给「请用经典模式」的提示——那等于让用户退回
  * 传统 REPL,违背 goal「我只要使用 tui」)。两档:
  *   - **同步报告档**(本文件):非交互、可同步产出文本行的命令——`/scan`/`/hardware`/`/checkpoint`/
- *     `/intent`/`/study`/`/mind`。由 `dispatchNativeCommand(parsed,{cwd,env})` **复用经典 REPL 调用
+ *     `/intent`/`/study`/`/mind`/`/cost`/`/usage`/`/stats`。由 `dispatchNativeCommand(parsed,{cwd,env})` **复用经典 REPL 调用
  *     的同一批 service**(`antivirusService`/`hardwareProfileService`/`workspace/checkpointService`/
  *     `ai`(学习模式)/`repl/khySettings`(意图调试持久化)/`featureCapabilityMap`+`taskMindMap`(认知图)),
  *     绝不另写逻辑,把结果拍成纯文本行交回 TUI 渲染成 transcript 通知。
@@ -260,6 +260,87 @@ function buildMindReport(args, env) {
   }
 }
 
+/** 把 service 产出的(可能带 chalk 色码的)多行文本拍成纯文本行数组。 */
+function _textLines(text) {
+  const strip = require('../../utils/stripAnsi');
+  const lines = String(text == null ? '' : text)
+    .split('\n')
+    .map((l) => strip(l).replace(/\s+$/, ''));
+  // The transcript notice prefixes only the FIRST line with "· "; formatCostReport
+  // opens with a blank line, which would hide the marker. Drop edge blanks.
+  while (lines.length && lines[0] === '') lines.shift();
+  while (lines.length && lines[lines.length - 1] === '') lines.pop();
+  return lines;
+}
+
+/**
+ * `/cost` — 费用报告(parity routerDispatchOps.js:224-227)。复用 tokenUsageService
+ * .formatCostReport()(与经典 REPL 同一渲染器),剥色后拍成纯文本行。绝不抛。
+ */
+function buildCostReport() {
+  try {
+    const tokenSvc = require('../../services/tokenUsageService');
+    return _textLines(tokenSvc.formatCostReport());
+  } catch (e) {
+    return [`费用报告失败: ${e && e.message ? e.message : String(e)}`];
+  }
+}
+
+/**
+ * `/usage [reset|today|history]` — 用量统计(parity routerDispatchOps.js:193-229)。
+ * 复用 tokenUsageService 同一批函数;无子命令时与 /cost 同(经典两处共用 default 分支)。绝不抛。
+ */
+function buildUsageReport(subCommand) {
+  try {
+    const tokenSvc = require('../../services/tokenUsageService');
+    const fmt = (n) => tokenSvc._fmtTokenCount(n, Number(n || 0).toLocaleString());
+    if (subCommand === 'reset') {
+      tokenSvc.resetUsage();
+      return ['Token 用量统计已重置'];
+    }
+    if (subCommand === 'today') {
+      const today = tokenSvc.getTodayUsage();
+      return ['今日用量:', `  请求: ${today.requests} 次 · tokens: ${fmt(today.totalTokens)}`];
+    }
+    if (subCommand === 'history') {
+      const history = tokenSvc.getUsageHistory(14);
+      const out = ['近14天用量:'];
+      for (const day of history) {
+        if (day.totalTokens === 0 && day.requests === 0) continue;
+        const bar = '█'.repeat(Math.min(30, Math.ceil(day.totalTokens / 1000)));
+        out.push(`  ${day.date} ${bar} ${fmt(day.totalTokens)}`);
+      }
+      return out;
+    }
+    return buildCostReport();
+  } catch (e) {
+    return [`用量统计失败: ${e && e.message ? e.message : String(e)}`];
+  }
+}
+
+/**
+ * `/stats` — 会话统计(parity routerDispatchSlash.js:841-861)。复用 ai.getConversationStats,
+ * 与经典 printTable 同列(Metric/Value)。绝不抛。
+ */
+function buildStatsReport() {
+  try {
+    const ai = require('../ai');
+    const stats = typeof ai.getConversationStats === 'function' ? ai.getConversationStats() : null;
+    if (!stats) return ['会话统计不可用'];
+    return [
+      '会话统计:',
+      `  messages.total: ${stats.totalMessages || 0}`,
+      `  messages.user: ${stats.userMessages || 0}`,
+      `  messages.assistant: ${stats.assistantMessages || 0}`,
+      `  messages.tool: ${stats.toolMessages || 0}`,
+      `  effort: ${stats.effort || 'unknown'}`,
+      `  studyMode: ${Boolean(stats.studyMode)}`,
+    ];
+  } catch (e) {
+    return [`会话统计失败: ${e && e.message ? e.message : String(e)}`];
+  }
+}
+
 /**
  * `/worktree [enter|exit|list|status …]` — 隔离工作区(parity repl.js:3977-3983)。
  * 复用 repl/worktreeCommand.runWorktreeCommand,用 out 回调把 info/success/warn/error 收成
@@ -312,6 +393,12 @@ function dispatchNativeCommand(parsed, opts = {}) {
         return { handled: true, lines: buildStudyReport(args) };
       case 'mind':
         return { handled: true, lines: buildMindReport(args, opts.env) };
+      case 'cost':
+        return { handled: true, lines: buildCostReport() };
+      case 'usage':
+        return { handled: true, lines: buildUsageReport(parsed.subCommand) };
+      case 'stats':
+        return { handled: true, lines: buildStatsReport() };
       default:
         return { handled: false };
     }
@@ -328,6 +415,9 @@ module.exports = {
   buildIntentReport,
   buildStudyReport,
   buildMindReport,
+  buildCostReport,
+  buildUsageReport,
+  buildStatsReport,
   runWorktreeNative,
   dispatchNativeCommand,
 };

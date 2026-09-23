@@ -516,7 +516,7 @@ async function handleKhyosMdOpen(session, msg) {
   let toolsDir;
   try {
     // 服务定位，不再 require 上去找 cli 层的 handler（那是层级倒置），
-    // 也不点名具体拓展 —— [DESIGN-ARCH-069] §1.3 第四条。
+    // 也不点名具体拓展 —— [DESIGN-TOOL-002] §1.3 第四条。
     toolsDir = require('./domain/extensions/extensions/markdownWorkbench').resolveDir();
   } catch (err) {
     return wsSend(session, {

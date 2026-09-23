@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [MGMT-RPT-028] GitHub调研-版本治理-2026-09-15.md -->
+<title>GitHub 调研 — 版本同步与治理检查板块 — 2026-09-15 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>MGMT-RPT<span class="sep">›</span>GitHub 调研 — 版本同步与治理检查板块 — 2026-09-15</div>
+      <header class="hero reveal"><h1>GitHub 调研 — 版本同步与治理检查板块 — 2026-09-15</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#github-调研-版本同步与治理检查板块-2026-09-15">GitHub 调研 — 版本同步与治理检查板块 — 2026-09-15</a></li><li class="lvl-2"><a href="#调研对象">调研对象</a></li><li class="lvl-2"><a href="#对标项目">对标项目</a></li><li class="lvl-2"><a href="#值得借鉴的点">值得借鉴的点</a></li><li class="lvl-3"><a href="#1-版本-semver-合法性校验-semantic-release-模式-p0">1. 版本 semver 合法性校验（semantic-release 模式）— P0</a></li><li class="lvl-3"><a href="#2-统一治理状态视图-单命令聚合-changesets-status-renovate-记分卡-p0">2. 统一治理状态视图：单命令聚合（Changesets `status` / Renovate 记分卡）— P0</a></li><li class="lvl-3"><a href="#3-纯函数检查器-fixture-根回归-opa-opa-test-p0">3. 纯函数检查器 + fixture 根回归（OPA `opa test`）— P0</a></li><li class="lvl-3"><a href="#4-台账聚合-sarif-导出-checkov-p1">4. 台账聚合 + SARIF 导出（Checkov）— P1</a></li><li class="lvl-3"><a href="#5-记分卡趋势字段-renovate-backstage-p1">5. 记分卡趋势字段（Renovate/Backstage）— P1</a></li><li class="lvl-2"><a href="#落地建议-排序">落地建议（排序）</a></li><li class="lvl-2"><a href="#参考链接">参考链接</a></li><li class="lvl-2"><a href="#落地记录">落地记录</a></li><li class="lvl-3"><a href="#已实现条目-3-条-p0">已实现条目（3 条 P0）</a></li><li class="lvl-3"><a href="#改动文件清单">改动文件清单</a></li><li class="lvl-3"><a href="#检查结果">检查结果</a></li><li class="lvl-3"><a href="#未实现项-标-待人工决策-p1">未实现项（标「待人工决策」，P1）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="github-调研-版本同步与治理检查板块-2026-09-15">GitHub 调研 — 版本同步与治理检查板块 — 2026-09-15<a class="anchor" href="#github-调研-版本同步与治理检查板块-2026-09-15" aria-label="锚点">#</a></h1>
+<blockquote><p>每日板块轮转调研（索引 6/12）：khy-os 版本同步与治理检查板块（<code>scripts/ci/check-version-sync.js</code>、<code>check-gov-rules.js</code>、<code>check-agent-rules.js</code>、<code>scripts/ruleguard/</code>）对标 GitHub 开源 monorepo 版本治理 / 合规工具链，寻找可借鉴点。</p></blockquote>
+<h2 id="调研对象">调研对象<a class="anchor" href="#调研对象" aria-label="锚点">#</a></h2>
+<p>khy-os 版本治理板块现状（三脚本 + 一套绑定层）：</p>
+<table><thead><tr><th>组件</th><th>位置</th><th>机制</th></tr></thead><tbody><tr><td>版本同步</td><td><code>scripts/ci/check-version-sync.js</code></td><td>三条轨道九真源组内字符串一致性校验（主包 4 源 / ai-backend 2 源 / 浏览器 UI 3 源）</td></tr><tr><td>治理总纲入口</td><td><code>scripts/ci/check-gov-rules.js</code></td><td>十大板块入口连通性 + <code>check:*</code> 脚本指向 + PR gate 接线 + 规则登记表 schema 校验（13 字段、ID 唯一、三元性质、权力-约束配对）</td></tr><tr><td>智能体规则</td><td><code>scripts/ci/check-agent-rules.js</code></td><td>静态扫描硬编码端点 / 含糊状态 / 硬超时 / ANSI 滚动区 / 无界死循环</td></tr><tr><td>规则绑定层</td><td><code>scripts/ruleguard/</code>（<code>registry</code>/<code>wiring</code>/<code>coverage</code>/<code>baseline</code>/<code>ledger</code>/<code>manifest</code>）</td><td>门成员资格从 <code>RULES-REGISTRY.json</code> 派生；覆盖率报告 + 棘轮基线 + 违规台账 + 抑制</td></tr></tbody></table>
+<p><strong>短板（4 条）</strong>：</p>
+<ol><li><strong>版本只查字符串相等，不查 semver 合法性</strong>：<code>check-version-sync.js</code> 校验九真源组内一致，但不校验版本号本身是否合法 semver——写 <code>1.0</code>、<code>v1.0</code>、<code>abc</code>、<code>1.0..0</code> 都能通过一致性检查，等到 <code>publish-dual.sh</code> 同步或 <code>npm publish</code> 才在下游炸。</li><li><strong>治理检查无单命令状态聚合</strong>：<code>check-version-sync</code> / <code>check-gov-rules</code> / <code>rules:coverage</code> / <code>check-wiring</code> 各说各话，没有一个命令能同时看到「版本三轨道是否绿 + 规则覆盖率 + 门接线是否齐 + 台账抑制条数」。</li><li><strong>规则检查器非纯函数、无 fixture 根回归</strong>：<code>check-gov-rules.js</code> 已支持 <code>KHY_GOV_RULES_ROOT</code> fixture 根，但 <code>check-version-sync.js</code> 只认 <code>process.cwd()</code>，且整套无「给检查器喂合成语料 + 断言结果」的回归约定。</li><li><strong>台账缺机器可读聚合 / SARIF 方言</strong>：<code>ruleguard</code> 已有 <code>violations.jsonl</code> 台账与抑制，但没有按规则/文件聚合的机器可读视图，也没有 SARIF 导出给下游 CI 标准化断言。</li></ol>
+<h2 id="对标项目">对标项目<a class="anchor" href="#对标项目" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>Star（2026-09-15）</th><th>技术栈</th><th>相关度</th><th>链接</th></tr></thead><tbody><tr><td>Changesets</td><td>~12.4k</td><td>TypeScript/Node</td><td>高：<code>status</code> 单命令聚合 + 陈旧分支（过期抑制）检测</td><td>https://github.com/changesets/changesets</td></tr><tr><td>Lerna</td><td>~36.1k</td><td>TS/JS</td><td>高：独立/锁定双模式 = 版本轨道建模</td><td>https://github.com/lerna/lerna</td></tr><tr><td>semantic-release</td><td>~24.0k</td><td>JS/Node 插件架构</td><td>高：semver 硬校验 + commit 日志派生版本</td><td>https://github.com/semantic-release/semantic-release</td></tr><tr><td>Checkov</td><td>~9.0k</td><td>Python</td><td>高：抑制即数据 + SARIF 机器可读输出</td><td>https://github.com/bridgecrewio/checkov</td></tr><tr><td>OPA/Rego</td><td>~12.2k</td><td>Go</td><td>中：规则与执行器解耦 + <code>opa test</code> fixture 根</td><td>https://github.com/open-policy-agent/opa</td></tr><tr><td>Nx</td><td>~29.3k</td><td>TS + Rust</td><td>中：affected-only 增量门 + 版本插件化</td><td>https://github.com/nrwl/nx</td></tr><tr><td>Renovate</td><td>~22.5k</td><td>TS</td><td>中：跨工具聚合记分卡 + 趋势</td><td>https://github.com/renovatebot/renovate</td></tr></tbody></table>
+<p><strong>关键发现</strong>：khy-os 的规则绑定层（登记表驱动门 + 棘轮基线 + jsonl 台账 + 抑制）在「规则遵守」层面已领先多数开源项目；缺口集中在<strong>版本语义校验（semver）、单命令状态聚合、SARIF/台账聚合报告</strong>三点，且前三项均为 P0、改动限于 1–2 个脚本、集成成本低。</p>
+<h2 id="值得借鉴的点">值得借鉴的点<a class="anchor" href="#值得借鉴的点" aria-label="锚点">#</a></h2>
+<h3 id="1-版本-semver-合法性校验-semantic-release-模式-p0">1. 版本 semver 合法性校验（semantic-release 模式）— P0<a class="anchor" href="#1-版本-semver-合法性校验-semantic-release-模式-p0" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：semantic-release <code>plugin-analyze-commits</code> 读 conventional-commit 推导 next semver，<code>prepare</code> 阶段写 CHANGELOG，版本号本身即合规产物；Lerna 的 <code>version</code> 命令对每个包跑 semver 校验。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>check-version-sync.js</code> 对九真源只 <code>text.match(regex)</code> 取字符串再比相等，从不校验取到的值是否合法 semver。</p>
+<p><strong>改哪些文件</strong>：<code>scripts/ci/check-version-sync.js</code>（加 <code>isSemver</code> 校验，非合法 semver 直接失败并点名文件）。</p>
+<h3 id="2-统一治理状态视图-单命令聚合-changesets-status-renovate-记分卡-p0">2. 统一治理状态视图：单命令聚合（Changesets <code>status</code> / Renovate 记分卡）— P0<a class="anchor" href="#2-统一治理状态视图-单命令聚合-changesets-status-renovate-记分卡-p0" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：Changesets <code>changeset status</code> 一次输出「哪些包有 pending、版本将如何 bump」；Renovate 单命令聚合跨工具状态 + 可合并信心数据。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>check-version-sync</code> / <code>rules:coverage</code> / <code>check-gov-rules</code> / <code>check-wiring</code> 各跑各的，无人值守任务（10 分钟 autopull）需要逐条手动拼。</p>
+<p><strong>改哪些文件</strong>：新增 <code>scripts/ci/check-gov-status.js</code>（纯读，零写）：聚合版本三轨道 + 规则覆盖率 + 台账抑制 + 治理接线，输出人类表格 + <code>--json</code>。</p>
+<h3 id="3-纯函数检查器-fixture-根回归-opa-opa-test-p0">3. 纯函数检查器 + fixture 根回归（OPA <code>opa test</code>）— P0<a class="anchor" href="#3-纯函数检查器-fixture-根回归-opa-opa-test-p0" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：OPA <code>opa test</code> 用 fixture 语料回归策略；<code>KHY_GOV_RULES_ROOT</code> 是 khy-os 已有雏形。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>check-version-sync.js</code> 只认 <code>process.cwd()</code>，无 fixture 根、无「喂合成语料 + 断言结果」约定，改守卫逻辑时无法离线验证不误伤。</p>
+<p><strong>改哪些文件</strong>：<code>scripts/ci/check-version-sync.js</code>（加 <code>KHY_VERSION_SYNC_ROOT</code> fixture 根，纯函数化可测）。</p>
+<h3 id="4-台账聚合-sarif-导出-checkov-p1">4. 台账聚合 + SARIF 导出（Checkov）— P1<a class="anchor" href="#4-台账聚合-sarif-导出-checkov-p1" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：Checkov 抑制即数据（行内 + <code>--suppress-check</code> 均记录出报告）；SARIF 一种格式打通 GitHub code scanning。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>ruleguard</code> 台账有 jsonl + 抑制，但无按规则/文件聚合的机器可读报告，也无 SARIF 方言。</p>
+<p><strong>改哪些文件</strong>：<code>scripts/ruleguard/lib/ledger.js</code> + <code>index.js</code>（加聚合 + SARIF 导出，P1 留后续）。</p>
+<h3 id="5-记分卡趋势字段-renovate-backstage-p1">5. 记分卡趋势字段（Renovate/Backstage）— P1<a class="anchor" href="#5-记分卡趋势字段-renovate-backstage-p1" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：Backstage 记分卡 health/compliance 字段化；Renovate 跨工具趋势。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>rules:coverage</code> 只报点值，无「上期对比 + 升降箭头」。</p>
+<p><strong>改哪些文件</strong>：<code>scripts/ruleguard/lib/coverage.js</code>（加趋势字段，P1 留后续）。</p>
+<h2 id="落地建议-排序">落地建议（排序）<a class="anchor" href="#落地建议-排序" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>行动</th><th>优先级</th><th>工作量</th></tr></thead><tbody><tr><td>1</td><td>版本 semver 合法性校验（check-version-sync 加 isSemver，非合法即失败点名）</td><td>P0</td><td>半小时</td></tr><tr><td>2</td><td>统一治理状态视图 check-gov-status.js（版本+覆盖率+台账+接线，表格/--json，纯读）</td><td>P0</td><td>半天</td></tr><tr><td>3</td><td>纯函数化 check-version-sync（KHY_VERSION_SYNC_ROOT fixture 根）</td><td>P0</td><td>1 小时</td></tr><tr><td>4</td><td>台账聚合 + SARIF 导出</td><td>P1</td><td>半天</td></tr><tr><td>5</td><td>记分卡趋势字段</td><td>P1</td><td>2 小时</td></tr></tbody></table>
+<h2 id="参考链接">参考链接<a class="anchor" href="#参考链接" aria-label="锚点">#</a></h2>
+<ul><li>https://github.com/changesets/changesets — <code>changeset status</code> 单命令聚合、陈旧分支检测</li><li>https://github.com/lerna/lerna — independent/locked 双模式、changelog 驱动 bump</li><li>https://github.com/semantic-release/semantic-release — semver 硬校验 + commit 派生版本</li><li>https://github.com/bridgecrewio/checkov — 抑制即数据 + SARIF 输出</li><li>https://github.com/open-policy-agent/opa — <code>opa test</code> fixture 根 + 纯函数策略</li><li>https://github.com/nrwl/nx — affected-only 增量门 + 版本插件化</li><li>https://github.com/renovatebot/renovate — 跨工具记分卡 + 趋势</li></ul>
+<h2 id="落地记录">落地记录<a class="anchor" href="#落地记录" aria-label="锚点">#</a></h2>
+<h3 id="已实现条目-3-条-p0">已实现条目（3 条 P0）<a class="anchor" href="#已实现条目-3-条-p0" aria-label="锚点">#</a></h3>
+<p><strong>P0-1 版本 semver 合法性校验（semantic-release 模式）</strong> — ✅ 已实现</p>
+<ul><li><code>scripts/ci/check-version-sync.js</code>：新增 <code>isSemver(v)</code>（严格 <code>X.Y[.Z]</code>，零运行时依赖）；组内字符串相等检查<strong>之前</strong>先校验九真源取到的值是否合法 semver，非合法值（<code>abc</code>/<code>v1.0</code>/<code>1.0..</code>/<code>bad-x.y</code>）直接失败并<strong>逐文件点名</strong> offending 值。</li><li>实测：<code>1.2.0</code>=合法、<code>v1.2</code>/<code>abc</code>/<code>1.2..</code>=拒绝；合成 fixture 把 <code>pyproject.toml</code> 改成 <code>bad-x.y</code> 后 <code>exit 1</code> 并打印 <code>pyproject.toml: &quot;bad-x.y&quot;</code>。</li></ul>
+<p><strong>P0-2 统一治理状态视图 <code>check-gov-status.js</code>（Changesets <code>status</code> / Renovate 记分卡）</strong> — ✅ 已实现</p>
+<ul><li>新增 <code>scripts/ci/check-gov-status.js</code>（纯读、零写、零子进程 fan-out）：一次性聚合<ol><li><strong>版本三轨道</strong>（复用 <code>check-version-sync</code> 的 <code>runMain</code>/<code>isSemver</code>，quiet 模式不重复印刷）</li><li><strong>规则覆盖率</strong>（<code>ruleguard/lib/coverage.buildCoverage</code>：total/enforced 比率、byPriority、阻断红线、死指针、未挂载执行器）</li><li><strong>抑制台账</strong>（<code>ruleguard/lib/ledger.activeSuppressions</code>）</li><li><strong>治理接线</strong>（GOV-TOOL-005：<code>check:gov-rules</code> 脚本指向、<code>check:structure</code> 调用、PR gate 执行、治理总纲存在）</li></ol></li><li>输出人类表格 + <code>--json</code>；退出码只在命中阻断红线（版本不匹配 / 非 semver / P0 未执行 / 死指针 / 接线缺口）时为 1，软指标（覆盖率、抑制数）只报不阻。</li><li>供 10 分钟计划任务（autopull）或人工「仓库健康吗」一瞥使用。</li></ul>
+<p><strong>P0-3 纯函数化 + fixture 根（OPA <code>opa test</code> 约定）</strong> — ✅ 已实现</p>
+<ul><li><code>check-version-sync.js</code> 重构为纯函数 <code>runMain(repoRoot, opts)</code> + <code>makeReaders(repoRoot, opts)</code>：文件解析相对 <code>repoRoot</code> 而非 <code>process.cwd()</code>；新增 <code>KHY_VERSION_SYNC_ROOT</code> env 可指向合成树。</li><li><code>runMain</code> 新增 <code>{ quiet }</code> 选项（聚合视图调用时静默逐组成功行，避免双重打印）。</li><li>实测：<code>KHY_VERSION_SYNC_ROOT=&lt;合成目录&gt;</code> 指向全一致的九源 fixture → <code>exit 0</code>；改一处为 <code>bad-x.y</code> → <code>exit 1</code>。守卫逻辑可离线回归、不误伤。</li></ul>
+<h3 id="改动文件清单">改动文件清单<a class="anchor" href="#改动文件清单" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td><code>scripts/ci/check-version-sync.js</code></td><td>改</td><td>加 <code>isSemver</code> 校验（九源逐一验证）；纯函数化 <code>runMain(repoRoot, {quiet})</code>；<code>makeReaders</code> 相对 root + quiet 选项；<code>KHY_VERSION_SYNC_ROOT</code> fixture 根；导出 <code>{ runMain, isSemver, makeReaders }</code></td></tr><tr><td><code>scripts/ci/check-gov-status.js</code></td><td>新增</td><td>统一只读治理状态视图：版本三轨道 + 规则覆盖率 + 抑制台账 + 治理接线，表格 / <code>--json</code>，复用 ruleguard 与 version-sync 既有纯函数</td></tr></tbody></table>
+<h3 id="检查结果">检查结果<a class="anchor" href="#检查结果" aria-label="锚点">#</a></h3>
+<ul><li><code>node -e &quot;require('./scripts/ci/check-version-sync.js')&quot;</code> + <code>require('./scripts/ci/check-gov-status.js')</code>：✅ 均加载成功</li><li><code>node scripts/ci/check-version-sync.js</code>（活仓库）：✅ 三轨道 1.1.15 / 1.6.5 / 0.1.0，全绿</li><li><code>node scripts/ci/check-gov-status.js</code>（活仓库）：✅ 绿灯，覆盖率 34/44（77.3%），红线全过，接线齐全，无活跃抑制</li><li>合成 fixture 回归：一致树 <code>exit 0</code>、非 semver 值 <code>exit 1</code> 并点名 ✅</li><li><code>node scripts/ci/check-agent-rules.js</code>（两文件）：✅ 零违规</li></ul>
+<h3 id="未实现项-标-待人工决策-p1">未实现项（标「待人工决策」，P1）<a class="anchor" href="#未实现项-标-待人工决策-p1" aria-label="锚点">#</a></h3>
+<ul><li><strong>P1 台账聚合 + SARIF 导出</strong>（Checkov 模式）：<code>ruleguard/lib/ledger.js</code> 已有 jsonl + 抑制，但无按规则/文件聚合的机器可读报告、无 SARIF 方言给下游 CI 标准化断言——建议给 <code>ruleguard</code> 加 <code>sarif</code> 子命令</li><li><strong>P1 记分卡趋势字段</strong>（Renovate/Backstage）：<code>ruleguard/lib/coverage.js</code> 只报点值，无「上期对比 + 升降箭头」；<code>rules:baseline</code> 棘轮已有基线，缺趋势视图</li><li><strong>P2 changelog 驱动版本派生</strong>（Lerna / semantic-release）：九真源手工同步的长期替代方向，已发布轨道不宜直接切，留作演进项</li><li><strong>check-gov-status 未接线进 package.json / PR gate</strong>：本次只新增脚本，未改 <code>package.json</code> 脚本表与 <code>.github/workflows/pr-gate.yml</code>（避免「新增 npm run 入口」越线）；若需进门，补 <code>check:gov-status</code> 脚本 + PR gate 一步即可，留人工点头</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-027] GitHub调研-双机同步-2026-09-14.html"><div class="dir">← 上一篇</div><div class="ttl">GitHub 调研 — 双机流水线与指挥部状态同步板块 — 2026-09-14</div></a><a class="next" href="../../../docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-029] khy-os-vs-ycode-能力矩阵与学习点.html"><div class="dir">下一篇 →</div><div class="ttl">khy-os vs Y-code：能力矩阵（源码核实版）与 Y-code 值得学习点</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-028] GitHub调研-版本治理-2026-09-15.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

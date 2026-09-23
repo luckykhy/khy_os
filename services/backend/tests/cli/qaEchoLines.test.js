@@ -6,6 +6,7 @@ const {
   qaEchoEnabled,
   buildQaEchoLines,
 } = require('../../src/cli/qaEchoLines');
+const assert = require('node:assert');
 
 describe('Qa Echo Lines', () => {
   test('qaEchoEnabled 默认开(unset / 空 / 未知值),{0,false,off,no} 关', () => {
@@ -52,16 +53,16 @@ describe('Qa Echo Lines', () => {
 
   test('门控关 → [](逐字节回退今日「选完即消失」)', () => {
       const answers = { '问题A': '选项1' };
-      expect(buildQaEchoLines(answers).toEqual({ KHY_QA_ECHO: '0' }), []);
-      expect(buildQaEchoLines(answers).toEqual({ KHY_QA_ECHO: 'off' }), []);
+      expect(buildQaEchoLines(answers, { KHY_QA_ECHO: '0' })).toEqual([]);
+      expect(buildQaEchoLines(answers, { KHY_QA_ECHO: 'off' })).toEqual([]);
   });
 
   test('空 answers / 坏输入 → [],绝不抛', () => {
-      expect(buildQaEchoLines({}).toEqual({}), []);
-      expect(buildQaEchoLines(null).toEqual({}), []);
-      expect(buildQaEchoLines(undefined).toEqual({}), []);
-      expect(() => buildQaEchoLines('nope', {}).not.toThrow());
-      expect(buildQaEchoLines('nope').toEqual({}), []);
+      expect(buildQaEchoLines({}, {})).toEqual([]);
+      expect(buildQaEchoLines(null, {})).toEqual([]);
+      expect(buildQaEchoLines(undefined, {})).toEqual([]);
+      expect(() => buildQaEchoLines('nope', {})).not.toThrow();
+      expect(buildQaEchoLines('nope', {})).toEqual([]);
   });
 
   test('问题为空的题整题跳过;答案为空仍显示问题行 + 空箭头', () => {

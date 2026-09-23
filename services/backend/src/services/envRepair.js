@@ -121,7 +121,7 @@ function _repairConfigHome() {
 //   4. Verify:  npm run test:maintainer:env-optimize
 //   Destructive cleanup does NOT belong here — it stays behind the riskGate
 //   human gate (the `磁盘清理` command). Full recipe:
-//   docs/07_OPS_运维/[OPS-MAN-064] 打造最佳环境-如何扩展.md
+//   docs/07_OPS_运维/OPS-MAN/[OPS-MAN-064] 打造最佳环境-如何扩展.md
 const _REPAIRS = [
   {
     key: 'config-home',

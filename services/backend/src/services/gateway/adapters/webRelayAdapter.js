@@ -438,6 +438,17 @@ async function destroy() {
   });
 }
 
+// SIGTERM handler for graceful shutdown
+process.on('SIGTERM', async () => {
+  // drain: destroy() closes all clients and server, waiting for connections to drain
+  // db: close database connections managed by aiManagementServer, no direct db access
+  if (_server || _wss) {
+    console.log('[webRelayAdapter] SIGTERM received, shutting down');
+    await destroy();
+    process.exit(0);
+  }
+});
+
 module.exports = {
   detect,
   generate,

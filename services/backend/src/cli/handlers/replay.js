@@ -26,7 +26,7 @@ const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk').default || require('chalk');
 
 const sessionPersistence = require('../../services/sessionPersistence');
-const trajectoryGuideConfig = require('./config.js');
+const trajectoryGuideConfig = require('../../services/domain/trajectory/trajectoryGuide/config.js');
 const replayBundle = require('../../services/domain/trajectory/trajectoryReplay/replayBundle.js');
 const replayEngine = require('../../services/domain/trajectory/trajectoryReplay/replayEngine.js');
 const replayLedger = require('../../services/domain/trajectory/trajectoryReplay/replayLedger.js');

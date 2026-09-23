@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [IMPL-RPT-060] KhyOS规范落地自查报告-2026-09-21.md -->
+<title>Khy OS 规范落地自查报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>IMPL-RPT<span class="sep">›</span>Khy OS 规范落地自查报告</div>
+      <header class="hero reveal"><h1>Khy OS 规范落地自查报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-规范落地自查报告">Khy OS 规范落地自查报告</a></li><li class="lvl-2"><a href="#摘要-一个结构性病症">摘要：一个结构性病症</a></li><li class="lvl-2"><a href="#一-p0-级缺陷">一、P0 级缺陷</a></li><li class="lvl-3"><a href="#p0-1-15-条-gate-advisory-规则在任何门档都不会被执行">P0-1 ｜ 15 条 `gate=advisory` 规则在任何门档都不会被执行</a></li><li class="lvl-3"><a href="#p0-2-p0-红线-最高优先级的规则必须有机器执行器-被-kind-manual-静默绕过">P0-2 ｜ P0 红线「最高优先级的规则必须有机器执行器」被 `kind=manual` 静默绕过</a></li><li class="lvl-2"><a href="#二-p1-级缺陷">二、P1 级缺陷</a></li><li class="lvl-3"><a href="#p1-1-债务台账与实测数据长期不同步-同一指标三个数">P1-1 ｜ 债务台账与实测数据长期不同步：同一指标三个数</a></li><li class="lvl-3"><a href="#p1-2-31-个检查器实际在拦人-却在规则体系里-查无此规则">P1-2 ｜ 31 个检查器实际在拦人，却在规则体系里「查无此规则」</a></li><li class="lvl-3"><a href="#p1-3-守卫自己承认登记表失真-但这条自曝只是-warning">P1-3 ｜ 守卫自己承认登记表失真，但这条自曝只是 warning</a></li><li class="lvl-3"><a href="#p1-4-severity-字段-78-87-条为空-规则强度-落默认值">P1-4 ｜ `severity` 字段 78/87 条为空，规则强度「落默认值」</a></li><li class="lvl-2"><a href="#三-p2-级缺陷">三、P2 级缺陷</a></li><li class="lvl-3"><a href="#p2-1-3-条规则的-ssot-路径写错-规范文档写错了自己的路径">P2-1 ｜ 3 条规则的 `ssot` 路径写错（规范文档写错了自己的路径）</a></li><li class="lvl-3"><a href="#p2-2-docs-下-10-个-md-缺-html-孪生件">P2-2 ｜ `docs/` 下 10 个 `.md` 缺 `.html` 孪生件</a></li><li class="lvl-2"><a href="#四-附带发现-值得记录-未单列为缺陷">四、附带发现（值得记录，未单列为缺陷）</a></li><li class="lvl-2"><a href="#五-修复优先级与路线图">五、修复优先级与路线图</a></li><li class="lvl-3"><a href="#立即做-止血-不改结构">立即做（止血，不改结构）</a></li><li class="lvl-3"><a href="#结构性修-按顺序-每条都要走-process-006-四阶段">结构性修（按顺序，每条都要走 `PROCESS-006` 四阶段）</a></li><li class="lvl-3"><a href="#修正体-防复发">修正体（防复发）</a></li><li class="lvl-2"><a href="#六-本次自查的方法与边界">六、本次自查的方法与边界</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-规范落地自查报告">Khy OS 规范落地自查报告<a class="anchor" href="#khy-os-规范落地自查报告" aria-label="锚点">#</a></h1>
+<blockquote><p>日期 2026-09-21｜现场：<code>D:/Portable/khy-os</code> 分支 <code>chore/tui-ux-nightly</code>，HEAD <code>e86bbf6d</code>（工作区 503 项未提交）。<br>口径：以仓库<strong>自己的规范文本</strong>为准绳，逐条对照代码 / 守卫 / 文档的<strong>实际行为</strong>，找「规范说了但没做到」的地方。<br>结论：<strong>规范没有被违反，规范是被架空了</strong>——现有守卫全绿，而 15 条规则永不执行、P0 红线静默失效。</p>
+<p><strong>状态：纯审计产出，未修改任何守卫代码或登记表。</strong> 修复路线图见文末「五、修复优先级与路线图」。</p></blockquote>
+<hr>
+<p><strong>审计日期</strong>：2026-09-21<br><strong>审计对象</strong>：<code>D:\Portable\khy-os</code>（分支 <code>chore/tui-ux-nightly</code>，HEAD <code>e86bbf6d</code>）<br><strong>审计口径</strong>：以仓库<strong>自己的规范文本</strong>为准绳（<code>docs/10_规范/</code>、<code>AGENTS.md</code>、<code>CLAUDE.md</code>、<code>RULES-REGISTRY.json</code>），逐条对照代码 / 守卫 / 文档的<strong>实际行为</strong>，找出「规范说了但没做到」的地方。<br><strong>审计方法</strong>：读规范真源 + 跑全部核心守卫 + 写脚本做机械化交叉校验（脚本落 <code>.khyos/diag/audit-spec-compliance.js</code>，不入守卫扫描目录）。</p>
+<hr>
+<h2 id="摘要-一个结构性病症">摘要：一个结构性病症<a class="anchor" href="#摘要-一个结构性病症" aria-label="锚点">#</a></h2>
+<p>本次自查共确认 <strong>8 类实质缺陷</strong>，涉及 <strong>至少 170 个具体实例</strong>（15 + 1 + 3 + 66 + 2 + 78 + 3 + 2）。它们不是零散的错误，而是<strong>同一个结构性病症的多个切面</strong>：</p>
+<blockquote><p><strong>仓库的规范体系存在大量「登记了但不生效」「生效了但没登记」的静默缺口，而专门用来发现这些缺口的元守卫（<code>rules:coverage</code>）主动放弃了对最大盲区的阻断权。</strong></p></blockquote>
+<p>换句话说：<strong>规范没有被违反，规范是被架空了。</strong> 一条规则可以「写在登记表里、出现在规则卡里、在 <code>check:rules</code> 和 <code>check:wiring</code> 里全绿」，却<strong>永远不会拦住任何一次改动</strong>。</p>
+<p>这个病症最危险的特性是<strong>全绿</strong>——现有的 245 个 npm 脚本里，所有相关守卫都返回 exit 0，看不出任何异常。</p>
+<table><thead><tr><th>严重度</th><th>类别</th><th>实例数</th><th>含义</th></tr></thead><tbody><tr><td><strong>P0 致命</strong></td><td>2 类</td><td>16</td><td>15 条规则登记了但永不执行；1 条 P0 红线静默失效</td></tr><tr><td><strong>P1 严重</strong></td><td>4 类</td><td>149</td><td>3 组指标台账滞后；66 个覆盖盲区；2 处范围漂移；78 条 severity 缺失</td></tr><tr><td><strong>P2 中等</strong></td><td>2 类</td><td>5</td><td>3 条 ssot 路径写错；2 个文档孪生件缺失</td></tr></tbody></table>
+<p>（P2-2 另有 8 个位于 <code>_archive_*</code> 目录的孪生件缺失，<strong>是否豁免待确认</strong>，故未计入。）</p>
+<hr>
+<h2 id="一-p0-级缺陷">一、P0 级缺陷<a class="anchor" href="#一-p0-级缺陷" aria-label="锚点">#</a></h2>
+<h3 id="p0-1-15-条-gate-advisory-规则在任何门档都不会被执行">P0-1 ｜ 15 条 <code>gate=advisory</code> 规则在任何门档都不会被执行<a class="anchor" href="#p0-1-15-条-gate-advisory-规则在任何门档都不会被执行" aria-label="锚点">#</a></h3>
+<p><strong>规范怎么说</strong></p>
+<p><code>AGENTS.md</code> 与 <code>RULES-REGISTRY.json</code> 的 <code>meta.note</code> 明确记录过这条教训（2026-09-18 订正）：</p>
+<blockquote><p><code>gateIncluded()</code> 的 <code>GATE_ORDER</code> 中 advisory(=4) &gt; release(=2)，故 gate=advisory 的规则在任何门档都不会被执行（<strong>登记但不生效</strong>）。S1「观察者」用「gate=commit（会跑）+ severity=advisory（只记录不阻断）」表达。</p></blockquote>
+<p><strong>实际是什么样</strong></p>
+<pre><code>scripts/ruleguard/lib/registry.js:42
+  GATE_ORDER = { commit: 0, pr: 1, release: 2, manual: 3, advisory: 4 };
+scripts/ruleguard/lib/registry.js:66-70
+  function gateIncluded(ruleGate, mode) {
+    const max = mode === 'pr' ? 1 : mode === 'commit' ? 0 : mode === 'release' ? 2 : -1;
+    return GATE_ORDER[ruleGate] &lt;= max;   // advisory(4) &lt;= 2 恒为 false
+  }</code></pre>
+<p>登记表里仍有 <strong>15 条</strong>规则用了 <code>gate=advisory</code>：</p>
+<pre><code>LAYOUT-005, LAYOUT-006, LAYOUT-007, API-004, TOOLING-003,
+DOCS-002, IR-001, DR-001, BACKUP-001, NOTIFY-001,
+OPS-002, OPS-003, FF-001, PROMPT-001, FE-004</code></pre>
+<p><strong>实测证据</strong>（<code>npm run rules:gate:commit</code> 输出）：</p>
+<pre><code>[ruleguard] 模式 commit：执行器 6 个，违规 121 条</code></pre>
+<p>6 个执行器全部来自 <code>gate=commit</code> 的规则。上面 15 条<strong>一个都没出现</strong>。</p>
+<p><strong>为什么这是 P0</strong></p>
+<p>这 15 条不是无关紧要的规则。其中包括：</p>
+<table><thead><tr><th>规则</th><th>一句话</th><th>后果</th></tr></thead><tbody><tr><td><code>LAYOUT-005</code></td><td>产物唯一根 <code>entries/&lt;producer&gt;</code></td><td>构建产物可以随意落在源码树</td></tr><tr><td><code>LAYOUT-006</code></td><td>可发现性</td><td>新能力/新入口无人检查</td></tr><tr><td><code>API-004</code></td><td>错误信封一致性</td><td>API 错误格式漂移无人拦</td></tr><tr><td><code>OPS-002/003</code></td><td>运维健康与告警</td><td>运维缺陷无机器判据</td></tr><tr><td><code>FE-004</code></td><td>前端约束</td><td>前端规范失效</td></tr></tbody></table>
+<p><strong>根因</strong>：登记表的 <code>gate</code> 字段语义混乱——它既是「<strong>强度档位</strong>」（commit ⊂ pr ⊂ release）又是「<strong>执行方式标签</strong>」（manual / advisory），两套语义塞进一个字段，导致 <code>advisory</code> 这个「本该是 severity 的值」被写进了 <code>gate</code>。</p>
+<p><strong>解决方案</strong></p>
+<p>采用<strong>方案 A（推荐）：拆字段 + 全量订正</strong></p>
+<ol><li><strong>把 <code>advisory</code> 从 <code>gate</code> 的合法取值里移除</strong>。门档只保留 <code>commit | pr | release | manual</code>。</li><li><strong>这 15 条按实际意图重新归类</strong>：<ul><li>若本意是「要跑，但只记录不拦截」→ 改 <code>gate='pr'</code>（或 <code>commit</code>）+ <code>severity='advisory'</code>。这与 <code>LAYOUT-002</code>、<code>RUNTIME-007/008/009</code> 的现有正确写法同构。</li><li>若本意是「暂不建执行器」→ 改 <code>gate='manual'</code>，由 <code>rules:coverage</code> 的 <code>manual</code> 归类兜底。</li></ul></li><li><strong>加一条机械判据</strong>：<code>check-gov-rules.js</code>（GOV-TOOL-006）校验 <code>gate ∈ {commit,pr,release,manual}</code>，出现 <code>advisory</code> 直接报 error。</li><li><strong>加回归测试</strong>：断言「不存在 <code>gate</code> 不在合法枚举内的规则」，且断言 <code>gate=advisory</code> 已归零。</li></ol>
+<p><strong>验收方式</strong></p>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 测前应能复现：已知 15 条</span>
+node -e <span class="hljs-string">&quot;const r=require(&#x27;./docs/10_规范/registry/RULES-REGISTRY.json&#x27;);
+console.log(r.rules.filter(x=&gt;x.gate===&#x27;advisory&#x27;).map(x=&gt;x.id).join(&#x27;, &#x27;))&quot;</span>
+<span class="hljs-comment"># 2. 修后应为空</span>
+<span class="hljs-comment"># 3. 且 rules:gate:commit 的执行器数应从 6 → 覆盖新增的规则</span>
+npm run rules:gate:commit 2&gt;&amp;1 | grep <span class="hljs-string">&#x27;模式 commit&#x27;</span></code></pre>
+<hr>
+<h3 id="p0-2-p0-红线-最高优先级的规则必须有机器执行器-被-kind-manual-静默绕过">P0-2 ｜ P0 红线「最高优先级的规则必须有机器执行器」被 <code>kind=manual</code> 静默绕过<a class="anchor" href="#p0-2-p0-红线-最高优先级的规则必须有机器执行器-被-kind-manual-静默绕过" aria-label="锚点">#</a></h3>
+<p><strong>规范怎么说</strong></p>
+<p><code>scripts/ruleguard/lib/coverage.js:24-28</code> 定义了三条阻断红线，第一条是：</p>
+<pre><code class="language-js"><span class="hljs-keyword">const</span> <span class="hljs-variable constant_">BLOCKING_CODES</span> = {
+  <span class="hljs-string">&#x27;p0-unenforced&#x27;</span>: <span class="hljs-string">&#x27;P0 规则处于 unenforced 状态：最高优先级的规则必须有机器执行器。&#x27;</span>,
+  ...
+};</code></pre>
+<p><code>AGENTS.md</code> 同步声明：「<code>npm run rules:coverage</code> — 覆盖率与红线（<strong>P0 不允许无执行器</strong>、不允许死指针）」。</p>
+<p><strong>实际是什么样</strong></p>
+<p>红线判定条件（<code>coverage.js:57-60</code>）：</p>
+<pre><code class="language-js"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> rule <span class="hljs-keyword">of</span> manifest.<span class="hljs-property">rules</span>) {
+  <span class="hljs-keyword">if</span> (rule.<span class="hljs-property">priority</span> === <span class="hljs-string">&#x27;P0&#x27;</span> &amp;&amp; rule.<span class="hljs-property">kind</span> === <span class="hljs-string">&#x27;unenforced&#x27;</span>) {
+    redLines.<span class="hljs-title function_">push</span>({ <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;p0-unenforced&#x27;</span>, ... });
+  }</code></pre>
+<p><code>kind</code> 来自登记表字段，<strong><code>gate</code> 不参与 <code>kind</code> 推导</strong>（<code>manifest.js:33-36</code>）。因此 <code>kind=manual</code> 的规则<strong>永远不会等于 <code>unenforced</code></strong>。</p>
+<p><strong>实测证据</strong>：</p>
+<pre><code>PROCESS-001 -&gt; { priority: 'P0', gate: 'manual', kind: 'manual' }
+buildCoverage().redLines === []        ← 空的！
+buildCoverage().unenforced === []      ← 空的！</code></pre>
+<p><code>PROCESS-001</code>「分支纪律」是 <strong>P0 + manual + 零执行器</strong>，完全符合「P0 规则没有机器执行器」的字面描述，但红线<strong>没有触发</strong>。</p>
+<p><strong>为什么这是 P0</strong></p>
+<p>这构成了一个<strong>永久的、合法的豁免后门</strong>：任何 P0 规则只要标上 <code>kind=manual</code>（或经 <code>gate=manual</code> 推导为 manual），就再也无法被 P0 红线拦住。当前已有 1 条 P0 规则（<code>PROCESS-001</code>）落在这个后门里，且<strong>没有任何机制提醒这件事</strong>。</p>
+<p>更严重的是：<code>redLines</code> 为空的输出会打印 <code>阻断红线：全部通过</code>——<strong>给人「P0 全部受机器保护」的错觉，而实际有一条 P0 裸奔</strong>。</p>
+<p><strong>解决方案</strong></p>
+<p>采用<strong>方案 B：显式豁免 + 强制登记</strong></p>
+<ol><li><strong>拆分红线判据</strong>：把 <code>p0-unenforced</code> 的条件从 <code>kind === 'unenforced'</code> 改为「<code>priority === 'P0'</code> 且<strong>没有任何执行器</strong>」（即 <code>!rule.script</code>），<strong>不论 kind</strong>。</li><li><strong>为 manual 型 P0 开一个需要显式登记的豁免通道</strong>：登记表新增 <code>manualExempt: { reason, owner, dueBy }</code> 字段。有该字段的 P0 才允许无执行器，否则报红线。</li><li><strong>豁免必须带到期日</strong>，由 <code>check-debt-ledger.js</code> 的棘轮机制接管（这条守卫已经在管「逾期须留 slipped 痕迹」）。</li><li><strong>输出必须区分</strong>「P0 已受保护」与「P0 已豁免（N 条，最近到期 2026-XX-XX）」，禁止用「全部通过」这种掩盖差异的措辞。</li></ol>
+<p><strong>验收方式</strong></p>
+<pre><code class="language-bash"><span class="hljs-comment"># 测前：应报 0 条红线（缺陷）</span>
+node -e <span class="hljs-string">&quot;const {buildCoverage}=require(&#x27;./scripts/ruleguard/lib/coverage&#x27;);
+const c=buildCoverage(process.cwd());
+console.log(&#x27;redLines:&#x27;, c.redLines.length, JSON.stringify(c.redLines))&quot;</span>
+
+<span class="hljs-comment"># 修后：应报 1 条（PROCESS-001），除非补了 manualExempt</span>
+<span class="hljs-comment"># 反向验证：临时把 PROCESS-001 的 manualExempt 删掉，红线必须出现（防空转断言）</span></code></pre>
+<hr>
+<h2 id="二-p1-级缺陷">二、P1 级缺陷<a class="anchor" href="#二-p1-级缺陷" aria-label="锚点">#</a></h2>
+<h3 id="p1-1-债务台账与实测数据长期不同步-同一指标三个数">P1-1 ｜ 债务台账与实测数据长期不同步：同一指标三个数<a class="anchor" href="#p1-1-债务台账与实测数据长期不同步-同一指标三个数" aria-label="锚点">#</a></h3>
+<p><strong>规范怎么说</strong></p>
+<p>债务台账真源 <code>scripts/ci/debt-ledger.json</code> 的 <code>_rules</code> 自述：</p>
+<blockquote><p><strong>QUAL-1 基线必须是实测值，不是估值。</strong> 发现不符时，第一步是把基线改成实测值（即使更宽松）—— 准确的棘轮能拦回归，错误的连恶化都拦不住。<br><strong>QUAL-3 每一类门禁指标都必须有一条台账条目，由守卫从守卫脚本源码解析后强制覆盖。</strong></p></blockquote>
+<p><strong>实际是什么样</strong></p>
+<p><code>check:layout</code> 的 <code>counts</code>（守卫实测，连跑 3 次稳定）与台账 / 基线的对照：</p>
+<table><thead><tr><th>指标</th><th>守卫实测</th><th><code>repo-layout-baseline.json</code></th><th><code>debt-ledger.json</code></th><th>一致？</th></tr></thead><tbody><tr><td><code>dangling-task</code></td><td><strong>76</strong></td><td><code>88</code></td><td><code>measured: 98</code></td><td>❌ 三个数互不相同</td></tr><tr><td><code>cross-layer-require</code></td><td><strong>18</strong></td><td><code>39</code></td><td><code>measured: 37</code></td><td>❌ 三个数互不相同</td></tr><tr><td><code>unresolved-require</code></td><td><code>0</code></td><td><code>0</code></td><td><code>measured: 0, status: &quot;closed&quot;</code></td><td>✅ 三者一致</td></tr></tbody></table>
+<p><strong>为什么严重</strong></p>
+<ol><li><strong>两项指标三方不一致，且永远不会报错。</strong> <code>check-debt-ledger.js</code> 只对 <code>status: closed</code> 的项做「实测必须为 0」的校验；<code>dangling-task</code> 与 <code>cross-layer-require</code> 台账里都是 <code>open</code>，所以<strong>台账里填错了数字也没有任何守卫会发现</strong>——<code>check:layout</code> 只拿实测值跟 <code>baseline</code> 比，从不读台账。</li><li>直接违反 <code>QUAL-1</code>：台账的 <code>measured</code> 号称是实测值，但 <code>cross-layer-require</code> 记 37、实测 18（<strong>高估 106%</strong>）；<code>dangling-task</code> 记 98、实测 76（<strong>高估 29%</strong>）。</li><li><code>QUAL-3</code> 要求「由守卫从守卫脚本源码解析后强制覆盖」，说明<strong>设计上本该自动同步</strong>，但实现没有，靠人手填。</li><li>偏差方向说明<strong>台账长期滞后</strong>：数字比实测<strong>偏高</strong>，意味着这些指标过去确实在改善（有人修好了），但<strong>没人回来更新台账</strong>。如果某天指标真的劣化到超过台账值，台账也不会察觉。</li></ol>
+<p><strong>关于 <code>unresolved-require</code> 的现场记录（诚实声明）</strong></p>
+<p>本报告初稿曾把 <code>unresolved-require</code> 的「台账 0 vs 实测 2」列为最严重的一条。<strong>复核后撤回该结论</strong>：</p>
+<pre><code>初稿实测（会话早期）：unresolved-require = 2，check:layout 报 error
+复核实测（连跑 3 次）：unresolved-require = 0，三者一致</code></pre>
+<p>根因：这 4 个 <code>require</code> 指向的 <code>services/backend/vendor/shared/</code> 与 <code>platform/packages/shared/</code> 是<strong>由 <code>preinstall</code> 钩子（<code>scripts/install/link-shared-dev.js</code>）在安装期建立的软链/拷贝</strong>。初稿跑守卫的窗口正落在<strong>这两个目录被重建的瞬间</strong>（目录 mtime 实测为当日 16:21/16:22，与会话同期），于是守卫看不到目标而报「路径不存在」。目录建好后即归零。</p>
+<p>⚠ <strong>这是环境瞬时态，不是代码缺陷</strong>——已从缺陷清单剔除。但这次误判本身<strong>有诊断价值</strong>：它暴露了该守卫的结论<strong>依赖于运行前的环境是否就绪</strong>，在 CI（干净克隆 + 完整 <code>install</code>）与本地（增量、可能正在重建）上可能给出不同答案。</p>
+<p><strong>解决方案</strong></p>
+<p><strong>第一步（止血）：让台账的 <code>measured</code> 由守卫自动回填，禁止手填</strong></p>
+<ol><li>在 <code>check-debt-ledger.js</code> 里实现「从各守卫的 <code>--json</code> 输出抽取实测值」的适配层。每个守卫已有结构化输出（如 <code>check:layout</code> 的 <code>counts: {...}</code>），可直接解析。</li><li>台账条目增加 <code>source: { cmd, jsonPath }</code> 字段，声明「这个指标的实测值从哪来」。</li><li>守卫发现 <code>measured != 实测</code> 时报 <strong>error</strong>（不是 warning），文案：「台账值与实测不符——QUAL-1 要求台账是实测值」。<strong>这一条会立刻抓出上面两项不一致。</strong></li><li>把 <code>status: closed</code> 的判定改为<strong>派生</strong>（<code>measured === 0</code> 才算 closed），禁止手写。</li></ol>
+<p><strong>第二步（对齐存量）</strong>：把 <code>dangling-task</code>（76）与 <code>cross-layer-require</code>（18）按实测值重填台账与基线。</p>
+<p><strong>第三步（可选）：消除 <code>unresolved-require</code> 的环境依赖</strong>——让守卫在报「路径不存在」前先确认「这路径是否由 install 期软链提供」，避免在重建窗口误报。或至少在文案里提示「若为软链目标，请先跑 <code>npm install</code>」。</p>
+<p><strong>验收方式</strong></p>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 复现不一致（应看到台账值 != 实测值）</span>
+node -e <span class="hljs-string">&quot;const l=require(&#x27;./scripts/ci/debt-ledger.json&#x27;);
+for(const id of [&#x27;layout.dangling-task&#x27;,&#x27;layout.cross-layer-require&#x27;]){
+  const e=l.entries.find(x=&gt;x.id===id);
+  console.log(id, &#x27;台账 measured =&#x27;, e.measured, &#x27;| status =&#x27;, e.status);
+}&quot;</span>
+npm run check:layout --silent 2&gt;&amp;1 | grep <span class="hljs-string">&#x27;^counts:&#x27;</span>
+<span class="hljs-comment">#   台账: dangling-task=98 / cross-layer-require=37</span>
+<span class="hljs-comment">#   实测: dangling-task=76 / cross-layer-require=18   ← 不一致</span>
+
+<span class="hljs-comment"># 2. 修后（启用自动回填）：台账值必须等于实测值</span>
+<span class="hljs-comment"># 3. 反向验证（防空转断言）：手工把台账 measured 改成 999，守卫必须报 error</span></code></pre>
+<hr>
+<h3 id="p1-2-31-个检查器实际在拦人-却在规则体系里-查无此规则">P1-2 ｜ 31 个检查器实际在拦人，却在规则体系里「查无此规则」<a class="anchor" href="#p1-2-31-个检查器实际在拦人-却在规则体系里-查无此规则" aria-label="锚点">#</a></h3>
+<p><strong>规范怎么说</strong></p>
+<p><code>AGENTS.md</code>：「<code>npm run rules:coverage</code> — 覆盖率与红线」、<code>[DESIGN-ARCH-111]</code> 宣称<strong>门成员资格从 <code>RULES-REGISTRY.json</code> 派生</strong>。</p>
+<p><strong>实际是什么样</strong></p>
+<p><code>rules:coverage</code> 自己打印：</p>
+<pre><code>检查器：76/87 已接线
+  未被任何规则登记（31）：check-build-artifacts.js, check-commit-message.js,
+  check-debt-ledger.js, check-dependency-size.js, check-file-ratchet.js,
+  check-flag-registry.js, check-frontend-size.js, check-gov-status.js,
+  check-leaf-contract.js, check-model-hardcoding.js, check-model-list-truth.js,
+  check-moonbit-layout.js, check-node-syntax.js, check-pattern-coverage.js,
+  check-prompt-taxonomy.js, check-python-syntax.py, check-runtime-placement.js,
+  check-skill-evals.js, check-skill-scenarios.js, check-staged-secrets.js,
+  check-tui-gates.js, check-workflow-sanity.js, check-zcode-baseline.js,
+  conformance-runner.mjs, discoverability-demo.js, export-dimension-health.js,
+  export-quality-dashboard.js, generate-pattern-registry.js, print-maintainer-map.js,
+  run-python.js, validate-reliability.js</code></pre>
+<p><strong>关键</strong>：这不是「死代码」。我抽验了其中 5 个，全部存在且<strong>其中 2 个真在拦人</strong>：</p>
+<pre><code>存在: scripts/ci/check-staged-secrets.js (148 行)
+存在: scripts/ci/check-commit-message.js (76 行)
+
+.githooks/pre-commit:68   # 3. 检查是否有敏感信息（真源：scripts/ci/check-staged-secrets.js）
+.githooks/pre-commit:74   if ! node &quot;$ROOT/scripts/ci/check-staged-secrets.js&quot;; then
+.githooks/pre-commit:120    node &quot;$ROOT/scripts/ci/check-commit-message.js&quot; &quot;$COMMIT_MSG_FILE&quot;</code></pre>
+<p><strong><code>check-staged-secrets.js</code> 是防密钥泄漏的门，真实挂在 pre-commit 上，但规则登记表里没有它对应的规则。</strong></p>
+<p>同时还有<strong>反向盲区</strong>：<code>rules:coverage</code> 报告「<strong>35 个规则 ID 在执行但登记表未收录</strong>」（如 <code>LAY-004</code>、<code>GIT-001</code>~<code>GIT-004</code>、<code>MEM-006</code>、<code>SEMVER-002</code>、<code>STD-008</code> 等）。</p>
+<p><strong>根因（这是关键）</strong></p>
+<p><code>coverage.js:166-168</code> 的注释主动放弃了阻断权：</p>
+<pre><code class="language-js"><span class="hljs-comment">// 覆盖率盲区：检查器在执行、登记表从未收录的规则。advisory——这些规则是真在</span>
+<span class="hljs-comment">// 生效，缺的是登记，不是执行，故 --ci 下也不阻断。</span>
+...
+lines.<span class="hljs-title function_">push</span>(<span class="hljs-string">&#x27;  → 不计入上面的覆盖率分母；`--ci` 不阻断，需人工裁决是否补登。&#x27;</span>);</code></pre>
+<p>而 <code>coverageCode</code> 只认 <code>redLines</code> 与 <code>registry.errors</code>：</p>
+<pre><code class="language-js"><span class="hljs-keyword">function</span> <span class="hljs-title function_">coverageCode</span>(<span class="hljs-params">coverage</span>) {
+  <span class="hljs-keyword">if</span> (coverage.<span class="hljs-property">redLines</span>.<span class="hljs-property">length</span>) <span class="hljs-keyword">return</span> <span class="hljs-number">1</span>;
+  <span class="hljs-keyword">if</span> (coverage.<span class="hljs-property">registry</span>.<span class="hljs-property">errors</span>.<span class="hljs-property">length</span>) <span class="hljs-keyword">return</span> <span class="hljs-number">1</span>;
+  <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}</code></pre>
+<p><strong>「需人工裁决」在 <code>PROCESS-006</code> 的四阶段框架下等于永久挂着</strong>——没有到期日、没有 owner、没有任何机制会把它们捞回来。这正是仓库自己反复记录的「红着的门等于没有门」的同一个病。</p>
+<p><strong>解决方案</strong></p>
+<p><strong>分两步，先量化再收紧</strong></p>
+<p><strong>第一步：把「未登记」纳入 debt-ledger 台账（立即，不改强度）</strong></p>
+<p><code>debt-ledger.json</code> 新增两条指标：</p>
+<ul><li><code>coverage.unregistered-checkers</code> = 31</li><li><code>coverage.external-rule-ids</code> = 35</li></ul>
+<p>带入 <code>owner: platform, dueBy: 2026-11-30</code>。这样它们<strong>进入棘轮视野</strong>，只降不升，逾期必须留 <code>slipped</code> 痕迹。</p>
+<p><strong>第二步：分类处置这 66 个盲区</strong>（逐项，需要 owner 参与）</p>
+<p>我建议按三分法（这是我在 <code>khyos-new-rule-wiring</code> 里积累的判据）：</p>
+<table><thead><tr><th>情形</th><th>判据</th><th>处置</th></tr></thead><tbody><tr><td><strong>真规则，只是漏登记</strong></td><td>检查器有独立判据、不是某个大规则的实现细节</td><td>补登进登记表（补 <code>ssot</code> / <code>exec</code> / <code>paths</code>）</td></tr><tr><td><strong>某条规则的实现细节</strong></td><td>它只服务某条已登记规则</td><td>在 <code>exec.findings[]</code> 里声明其 finding code，不单独建规则</td></tr><tr><td><strong>纯工具，非守卫</strong></td><td>如 <code>run-python.js</code>、<code>print-maintainer-map.js</code>、<code>export-*.js</code></td><td>从检查器清单里<strong>排除</strong>（加白名单 + 理由），不计入分母</td></tr></tbody></table>
+<p>后两类占了多数——<strong>合理的做法是把分母修准，而不是硬建 31 条规则</strong>。</p>
+<p><strong>验收方式</strong></p>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 复现</span>
+npm run rules:coverage --silent 2&gt;&amp;1 | grep -A2 <span class="hljs-string">&quot;未被任何规则登记&quot;</span>
+<span class="hljs-comment"># 2. 修后：未登记数应显著下降，且剩下的都有白名单理由</span>
+<span class="hljs-comment"># 3. 台账必须收录这两个指标</span>
+node -e <span class="hljs-string">&quot;const l=require(&#x27;./scripts/ci/debt-ledger.json&#x27;);
+console.log(l.entries.filter(e=&gt;e.id.startsWith(&#x27;coverage.&#x27;)).map(e=&gt;e.id))&quot;</span></code></pre>
+<hr>
+<h3 id="p1-3-守卫自己承认登记表失真-但这条自曝只是-warning">P1-3 ｜ 守卫自己承认登记表失真，但这条自曝只是 warning<a class="anchor" href="#p1-3-守卫自己承认登记表失真-但这条自曝只是-warning" aria-label="锚点">#</a></h3>
+<p><strong>规范怎么说</strong></p>
+<p><code>[DESIGN-ARCH-111]</code> 要求「门成员资格从登记表派生」，隐含前提是<strong>登记表描述的范围与守卫实际扫描范围一致</strong>。</p>
+<p><strong>实际是什么样</strong></p>
+<p><code>npm run check:json-schemas</code> 的输出里有一行<strong>自我举报</strong>：</p>
+<pre><code>[json-schema] 注意：COMMS-002 登记的 paths 是 scripts/ci/json-schemas/** 与
+services/backend/src/contracts/**，与本执行器实际扫描范围不一致，属待修缺陷。</code></pre>
+<p><strong>为什么严重</strong></p>
+<ol><li>守卫<strong>知道</strong>自己与登记表不一致，但只打印一行 <code>注意</code>，<strong>不影响 exit code、不进红线、不进台账</strong>。</li><li>同类问题在本次自查中至少发现两处，其中一处就在我记忆里记录过：</li></ol>
+<blockquote><p><code>RUNTIME-001</code> 扫到 <code>.github/**</code> 但其 <code>paths</code> 不含 <code>.github/</code> ⇒ <strong>范围漂移误报</strong></p></blockquote>
+<ol><li>更隐蔽的一层（我在项目记忆中记录过）：<strong>域迁移映射表的 <code>paths[]</code> 可静默失效</strong>——守卫<strong>只守 <code>docs[]</code></strong>，所以 <code>paths</code> 悬空时「该 area 的 verify 永不进建议命令，而守卫全绿」。</li></ol>
+<p><code>paths</code> 字段是 <code>rules:apply -- &lt;文件&gt;</code> 的输入。它一旦失真，<strong>「我要改这个文件，适用哪些规则」就会给出错误答案</strong>——该报的规则不报，改代码的人据此以为安全。</p>
+<p><strong>解决方案</strong></p>
+<ol><li><strong>把「守卫自曝范围漂移」升级为 finding</strong>，进 <code>check:json-schemas</code> 的 error 计数，纳入债务台账（<code>coverage.paths-drift</code>）。</li><li><strong>建立机械判据</strong>：守卫的 <code>--json</code> 输出里增加 <code>scannedPaths: []</code> 字段，<code>check-gov-rules.js</code> 断言它与登记表 <code>paths</code> 的<strong>归一化后集合相等</strong>（或至少 <code>paths</code> 非空且被 <code>scannedPaths</code> 覆盖）。不等即 error。</li><li><strong>修 <code>COMMS-002</code> 与 <code>RUNTIME-001</code> 两处</strong>：<ul><li><code>COMMS-002</code>：改 <code>paths</code> 为守卫实际扫描范围。</li><li><code>RUNTIME-001</code>：<code>paths</code> 补上 <code>.github/</code>，或从守卫里排除 <code>.github/**</code>——按真实意图选一个。</li></ul></li></ol>
+<p><strong>验收方式</strong></p>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 复现</span>
+npm run check:json-schemas --silent 2&gt;&amp;1 | grep <span class="hljs-string">&quot;不一致&quot;</span>
+<span class="hljs-comment"># 2. 修后：该行应消失，且新增的 paths-vs-scannedPaths 断言为绿</span>
+<span class="hljs-comment"># 3. 反向验证：手工把 COMMS-002 的 paths 改错，断言必须变红</span></code></pre>
+<hr>
+<h3 id="p1-4-severity-字段-78-87-条为空-规则强度-落默认值">P1-4 ｜ <code>severity</code> 字段 78/87 条为空，规则强度「落默认值」<a class="anchor" href="#p1-4-severity-字段-78-87-条为空-规则强度-落默认值" aria-label="锚点">#</a></h3>
+<p><strong>规范怎么说</strong></p>
+<p><code>[DESIGN-ARCH-111]</code> 与 <code>AGENTS.md</code> 反复强调「<strong>强度写死 <code>warning</code> ⇒ <code>STAGE</code> 常量变装饰</strong> ⇒ 必须按阶段派生」，并把「同一改动集 S1/S3 的 error 数必须不同」列为<strong>必须写成测试</strong>的验收。</p>
+<p><strong>实际是什么样</strong></p>
+<pre><code>登记表 severity 字段分布：{ &quot;(undefined)&quot;: 78, &quot;advisory&quot;: 8, &quot;ratchet&quot;: 1 }</code></pre>
+<p><strong>78 条（90%）规则没有声明 <code>severity</code></strong>。上一个数字很关键：<code>advisory: 8</code> ——这 8 条正是 <code>RUNTIME-007/008/009</code>、<code>PROCESS-008/009</code> 等<strong>新机制观察期</strong>的规则，说明<strong>新写的规则会正确带 <code>severity</code>，而存量规则大面积没有</strong>。</p>
+<p><strong>为什么严重</strong></p>
+<p><code>severity</code> 缺失时，强度落到<strong>执行器内部默认值</strong>。这与仓库自己记录的教训完全同构：</p>
+<blockquote><p>⚠⚠ <strong>强度写死 <code>warning</code> ⇒ STAGE 常量变装饰</strong> ⇒ <strong>按阶段派生</strong>（<code>severityFor()</code> 单点）；<strong>验收：同一改动集 S1/S3 的 error 数必须不同</strong></p></blockquote>
+<p>也就是说：<strong>登记表里声明的 <code>priority</code>（P0/P1/P2）与实际执行强度之间没有强制绑定</strong>。一条 P1 规则完全可能因为 <code>severity</code> 缺失而在执行器里只报 warning。</p>
+<p><strong>解决方案</strong></p>
+<ol><li><strong><code>severity</code> 从「可选」改为「必填」</strong>，<code>check-gov-rules.js</code>（GOV-TOOL-006）校验其存在与合法枚举。</li><li><strong>建立派生规则</strong>：若规则未显式声明 <code>severity</code>，则<strong>按 <code>priority</code> 派生</strong>（P0→error，P1→error 或 warning，P2→warning），并把这个派生<strong>写在登记表生成器/加载器里作为单点</strong>（<code>severityFor()</code>），而不是留给各执行器自己默认。</li><li><strong>回填 78 条</strong>：跑一次 <code>npm run rules:backfill</code>（该脚本已存在，用于回填 <code>nature/grants/benefit</code>），扩展它同时回填 <code>severity</code>。</li><li><strong>加回归测试</strong>：断言 (a) 无 <code>severity</code> 的规则数为 0；(b) 同一改动集在 S1 与 S3 阶段产出的 error 数不同（防 STAGE 变装饰）。</li></ol>
+<p><strong>验收方式</strong></p>
+<pre><code class="language-bash">node -e <span class="hljs-string">&quot;const r=require(&#x27;./docs/10_规范/registry/RULES-REGISTRY.json&#x27;);
+console.log(&#x27;severity 缺失:&#x27;, r.rules.filter(x=&gt;!x.severity).length)&quot;</span>
+<span class="hljs-comment"># 修后应为 0</span></code></pre>
+<hr>
+<h2 id="三-p2-级缺陷">三、P2 级缺陷<a class="anchor" href="#三-p2-级缺陷" aria-label="锚点">#</a></h2>
+<h3 id="p2-1-3-条规则的-ssot-路径写错-规范文档写错了自己的路径">P2-1 ｜ 3 条规则的 <code>ssot</code> 路径写错（规范文档写错了自己的路径）<a class="anchor" href="#p2-1-3-条规则的-ssot-路径写错-规范文档写错了自己的路径" aria-label="锚点">#</a></h3>
+<p><strong>实际是什么样</strong></p>
+<pre><code>SECURITY-002 -&gt; services/backend/src/services/riskGate.js isUnbypassableGate   ← 把函数名当路径
+SECURITY-004 -&gt; services/backend/src/services/permissionStore.js VALID_PROFILES ← 同上
+DOCS-001     -&gt; docs/08_MGMT_项目管理/MGMT-STD/[MGMT-STD-007] 文档规则总纲.md R1-R7/  ← 尾随 &quot;R1-R7/&quot;</code></pre>
+<p><strong>注意</strong>：这里只有 3 条是真错。另有 13 条用的是 <code>CLAUDE.md#锚点</code> 或 <code>AGENTS.md#锚点</code> 形式——<strong>那是有意的「章程内真源」写法</strong>，不是缺陷。</p>
+<p><strong>解决方案</strong></p>
+<ul><li>前两条：<code>ssot</code> 字段是「语义真源」的路径。写成 <code>path 函数名</code> 会被当路径解析失败。应拆成 <code>ssot: &quot;services/backend/src/services/riskGate.js&quot;</code> + 新增 <code>anchor: &quot;isUnbypassableGate&quot;</code> 字段，或改用 <code>#</code> 锚点形式保持一致。</li><li>第三条：去掉尾随 <code>R1-R7/</code>。</li><li><strong>加机械判据</strong>：<code>check-gov-rules.js</code> 断言 <code>ssot</code> 里看似路径的片段必须 <code>fs.existsSync</code>，或形如 <code>path#anchor</code>。</li></ul>
+<h3 id="p2-2-docs-下-10-个-md-缺-html-孪生件">P2-2 ｜ <code>docs/</code> 下 10 个 <code>.md</code> 缺 <code>.html</code> 孪生件<a class="anchor" href="#p2-2-docs-下-10-个-md-缺-html-孪生件" aria-label="锚点">#</a></h3>
+<p><strong>规范</strong>：<code>[DESIGN-DOC-*]</code> 要求每个 <code>.md</code> 必须有 <code>.html</code> 孪生件（我在记忆里也记了这条约束）。</p>
+<p><strong>实际是什么样</strong>（10 / 915）</p>
+<pre><code>docs/03_DESIGN_设计/_archive_已删除孤儿引擎/  ← 8 个（归档目录）
+  [DESIGN-ARCH-024] / -033 / -035 / -038 / -039 / -040 / -042 + 00_INDEX
+docs/19_资产/00_INDEX_资产-总目录.md          ← 真缺
+docs/19_资产/site/00_INDEX_site-总目录.md     ← 真缺</code></pre>
+<p><strong>判读</strong>：<code>_archive_已删除孤儿引擎/</code> 是<strong>归档目录</strong>，若规范允许归档豁免，则只有 <code>docs/19_资产/</code> 的 2 个是真缺陷。<strong>这需要先确认归档是否豁免</strong>，不能直接算 10 个。</p>
+<p><strong>解决方案</strong></p>
+<ol><li>先确认 <code>[DESIGN-DOC-*]</code> 是否对 <code>_archive_*</code> 目录豁免；若豁免，在守卫里加白名单 + 理由。</li><li>补 <code>docs/19_资产/</code> 两个孪生件（跑 <code>npm run docs:build</code>，注意它有<strong>非零副作用</strong>——会重写全站陈旧孪生件）。</li><li>把这些修复脚本化，避免「补了这次，下次又漂移」。</li></ol>
+<hr>
+<h2 id="四-附带发现-值得记录-未单列为缺陷">四、附带发现（值得记录，未单列为缺陷）<a class="anchor" href="#四-附带发现-值得记录-未单列为缺陷" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>发现</th><th>性质</th><th>建议</th></tr></thead><tbody><tr><td>根目录 3 个事故残留：<code>0)</code>、<code>nul</code>、<code>x[1].toUpperCase()+'</code></td><td><code>check:layout</code> 已报 error（存量）</td><td>直接删；并查生成它们的脚本（<code>x[1].toUpperCase()</code> 是典型的 JS 模板串展开事故）</td></tr><tr><td><code>gui-test-screenshots/</code> 是未登记顶层目录</td><td><code>check:layout</code> 报 error</td><td>登记进 <code>[DESIGN-LAY-005]</code> 或迁入 <code>entries/</code></td></tr><tr><td><code>docs/tui-interaction-optimize/</code> 缺 <code>00_INDEX_*</code></td><td><code>check:layout</code> 报 error</td><td>补索引</td></tr><tr><td><code>check:agent-feedback</code> 报 120 条 warning 但全部不阻断（S1 观察期）</td><td>符合 <code>PROCESS-006</code> S1 设计</td><td>正常；但 120 条样本已远超 S1 门槛（≥200 才毕业），应着手 S2 评估</td></tr><tr><td><code>check:proposal-index</code> 报「提交 <code>e86bbf6</code> 同时触及标记/删除/调用方三类改动（1725 个调用方文件）」</td><td>违反 <code>SOURCING-001</code> B-L2 「每步独立可回滚」</td><td>该提交已落地，建议在后续拆分类似改动</td></tr><tr><td><code>check-memory-schema</code> 报 2 处 <code>seam-bypass-write</code>（<code>autoDream.js:214</code>、<code>distiller.js:293</code> 裸写绕过 <code>memdir._safeWriteFileSync</code>）</td><td>违反 <code>DESIGN-MEM-006 §3</code></td><td>改为走 <code>memdir</code> seam；同时 <code>memdir.js</code> 本身未登记为 <code>designatedEntries</code>（守卫已报）</td></tr><tr><td><code>check:provenance</code> 报 <code>services/backend/vendor/shared</code> 状态 <code>unverified</code> 且既不在台账也不在 <code>knownGaps</code></td><td>登记缺口</td><td>补登</td></tr><tr><td><code>SECURITY-001</code> 硬编码「改动数 &gt;20 拦截」且无豁免通道</td><td>我记忆中已记录此坑</td><td>本次工作区 420 files 已被它拦死（<code>[BLOCK] ... Threshold: 20</code>）。而 <code>PROCESS-009</code> T5 原文是「&gt;20 时先问人」——<strong>规则说问人，实现只会永久拦截</strong></td></tr></tbody></table>
+<hr>
+<h2 id="五-修复优先级与路线图">五、修复优先级与路线图<a class="anchor" href="#五-修复优先级与路线图" aria-label="锚点">#</a></h2>
+<h3 id="立即做-止血-不改结构">立即做（止血，不改结构）<a class="anchor" href="#立即做-止血-不改结构" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>序</th><th>动作</th><th>依据</th><th>预估触点</th></tr></thead><tbody><tr><td>1</td><td>删根目录 3 个残留文件</td><td>P2-附</td><td>1</td></tr><tr><td>2</td><td>台账 <code>measured</code> 改为守卫自动回填 + 不符即 error</td><td>P1-1</td><td>2</td></tr><tr><td>3</td><td><code>coverage.unregistered-checkers</code> / <code>coverage.external-rule-ids</code> 进台账</td><td>P1-2</td><td>2</td></tr><tr><td>4</td><td><code>COMMS-002</code> / <code>RUNTIME-001</code> 的 <code>paths</code> 订正</td><td>P1-3</td><td>2</td></tr><tr><td>5</td><td>台账 <code>dangling-task</code>(76) / <code>cross-layer-require</code>(18) 按实测重填</td><td>P1-1</td><td>2</td></tr></tbody></table>
+<h3 id="结构性修-按顺序-每条都要走-process-006-四阶段">结构性修（按顺序，每条都要走 <code>PROCESS-006</code> 四阶段）<a class="anchor" href="#结构性修-按顺序-每条都要走-process-006-四阶段" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>序</th><th>动作</th><th>依据</th><th>风险</th></tr></thead><tbody><tr><td>6</td><td><code>gate</code> 枚举去 <code>advisory</code> + 15 条重归类</td><td><strong>P0-1</strong></td><td>中（改登记表语义，需逐条判断意图）</td></tr><tr><td>7</td><td><code>p0-unenforced</code> 红线改为按「有无执行器」判定 + 显式豁免通道</td><td><strong>P0-2</strong></td><td>中（会亮出新红灯，需同步补豁免登记）</td></tr><tr><td>8</td><td><code>severity</code> 改必填 + 按 <code>priority</code> 派生单点</td><td>P1-4</td><td>中（78 条回填）</td></tr><tr><td>9</td><td>66 个覆盖盲区三分法分类处置</td><td>P1-2</td><td>大（需 owner 参与逐条裁）</td></tr></tbody></table>
+<h3 id="修正体-防复发">修正体（防复发）<a class="anchor" href="#修正体-防复发" aria-label="锚点">#</a></h3>
+<ol><li>上述每一条都<strong>必须配一个「反向验证」</strong>：把修复点手工改坏，断言必须变红。仓库自己已经吃过「空转断言」的亏（我记忆里记着：「实测关掉守卫时它真变红（防空转断言）」）。</li></ol>
+<hr>
+<h2 id="六-本次自查的方法与边界">六、本次自查的方法与边界<a class="anchor" href="#六-本次自查的方法与边界" aria-label="锚点">#</a></h2>
+<p><strong>做了什么</strong></p>
+<ul><li>读了 4 处规范真源：<code>RULES-REGISTRY.json</code>（87 条）、<code>AGENTS.md</code>、<code>CLAUDE.md</code>、<code>docs/10_规范/DESIGN-LAY/[DESIGN-LAY-005]</code></li><li>跑了 16 个核心守卫（<code>check:rules</code>、<code>check:wiring</code>、<code>rules:coverage</code>、<code>rules:manifest</code>、<code>rules:gate:commit</code>、<code>check:layout</code>、<code>check:gov-rules</code>、<code>check:debt-ledger</code>、<code>check:json-schemas</code>、<code>check:agent-docs</code>、<code>check:proposal-index</code>、<code>check:provenance</code>、<code>check:memory-schema</code>、<code>check:data-layout</code>、<code>check:build-root</code>）</li><li>写了机械交叉校验脚本 <code>.khyos/diag/audit-spec-compliance.js</code>（9 项检查）</li><li>直接读了 ruleguard 绑定层源码：<code>registry.js</code>（<code>GATE_ORDER</code>/<code>gateIncluded</code>）、<code>manifest.js</code>（<code>kind</code> 推导）、<code>coverage.js</code>（<code>BLOCKING_CODES</code>/<code>coverageCode</code>）</li></ul>
+<p><strong>边界与免责</strong></p>
+<ol><li><strong>工作区有 503 项未提交改动</strong>，当前分支 <code>chore/tui-ux-nightly</code> 无上游。我已对<strong>所有核心结论</strong>在 HEAD 版本复核（<code>ruleguard/</code> 目录零改动；HEAD 版登记表 <code>gate=advisory</code> 同为 15 条）。结论<strong>在 HEAD 成立</strong>。</li><li>我<strong>没有</strong>修改任何守卫代码或登记表——本报告是纯审计产出。</li><li>「66 个覆盖盲区」的<strong>分类处置</strong>需要 owner 逐条裁决，本报告只给出三分法判据，不代替裁决。</li><li><code>P2-2</code> 的 10 个孪生件缺失中，8 个在 <code>_archive_*</code> 目录，<strong>是否豁免需先确认规范</strong>，故未计入缺陷总数。</li></ol>
+<p><strong>口径修正记录</strong>（避免误导）</p>
+<p>本报告经<strong>三轮复核</strong>，前两轮各撤回一条结论。完整记录如下，作为方法可信度的凭据：</p>
+<ol><li><strong>撤回「24 条 ssot 不可达」→ 3 条</strong>。其余是 <code>CLAUDE.md#锚点</code> 这种<strong>有意的「章程内真源」写法</strong>，或我的切分把 <code>§1</code> 当成了路径。同时撤回「88 张卡片 vs 87 条规则」——<code>00_INDEX_规则卡总目录.md</code> 是索引非卡片，实际卡片正好 87，<strong>不是缺陷</strong>。</li><li><strong>撤回「<code>unresolved-require</code> 台账 0 vs 实测 2」这条「最严重」结论</strong>。复核后实测为 0、三者一致。根因是<strong>环境瞬时态</strong>：该指标指向的 <code>vendor/shared</code> 等目录由 <code>preinstall</code> 钩子在安装期建立，初稿跑守卫的窗口正落在重建瞬间。<strong>已从缺陷清单剔除</strong>，替换为稳定的 <code>dangling-task</code> / <code>cross-layer-require</code> 台账滞后。</li><li><strong>修正「4 处」→「2 处」</strong>：守卫文案列的<strong>位置行数</strong>与 <code>counts</code> 的<strong>计数值</strong>口径不同。本报告一律以 <code>counts</code>（守卫结构化计数）为准。⚠ 这正是仓库自己记录的坑：「<code>--json</code> 后仍追加 <code>Summary:</code> 行 ⇒ 解析前必须切分」。</li></ol>
+<p><strong>复核动作</strong>：关键数字（15 / 78 / 3 / 10 / 87）全部重跑验证；<code>check:layout</code> 的 <code>counts</code> 连跑 3 次确认稳定。</p>
+<hr>
+<p><em>报告产出：<code>.khyos/diag/audit-spec-compliance.js</code>（可复现脚本）。</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-059] 上下状态显示一致-修复方案-2026-09-17.html"><div class="dir">← 上一篇</div><div class="ttl">上下状态显示不一致：根因分析与修复方案</div></a><a class="next" href="../../../docs/04_IMPL_实现/IMPL-RPT/00_INDEX_IMPL-RPT-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">IMPL-RPT</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-060] KhyOS规范落地自查报告-2026-09-21.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

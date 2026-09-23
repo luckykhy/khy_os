@@ -7,10 +7,10 @@ const {
   buildOcrRescuePrepStatus,
   isPrepClosureDedupEnabled,
   shouldSuppressPrepForClosure,
-} = require('../../src/services/gateway/ocrRescueStatusNotice');
+} = require('../../../src/services/gateway/ocrRescueStatusNotice.js');
 
 // Mock flagRegistry
-jest.mock('../../src/services/flagRegistry', () => ({
+jest.mock('../../../src/services/flagRegistry', () => ({
   isFlagEnabled: jest.fn((flag, env) => {
     const offFlags = ['KHY_OCR_RESCUE_STATUS', 'KHY_OCR_RESCUE_STATUS_PREP', 'KHY_OCR_RESCUE_PREP_CLOSURE_DEDUP'];
     if (offFlags.includes(flag) && env && env[flag] === '0') {

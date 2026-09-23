@@ -26,6 +26,7 @@
  * branch is never taken). Off -> legacy quadratic/leaky branch (load-bearing).
  */
 const path = require('node:path');
+const assert = require('node:assert');
 const MOD = path.join(__dirname, '..', 'src', 'cli', 'formatters.js');
 function load(gate) {
   delete require.cache[require.resolve(MOD)];
@@ -33,7 +34,7 @@ function load(gate) {
   else process.env.KHY_TRUNCATE_ANSI_LINEAR = gate;
   return require(MOD);
 }
-test.afterEach(() => { delete process.env.KHY_TRUNCATE_ANSI_LINEAR; });
+afterEach(() => { delete process.env.KHY_TRUNCATE_ANSI_LINEAR; });
 function escRun(n) {
   return '\x1b'.repeat(n) + 'hello world this text is definitely wider than the cap';
 }
@@ -46,7 +47,7 @@ describe('Truncate To Width Ansi Guard', () => {
       const ms = Number(process.hrtime.bigint() - t0) / 1e6;
       expect(ms < 1500).toBeTruthy();
       // Still truncates the width-bearing tail to the cap.
-      expect(F.displayWidth(out).toBeTruthy() <= 25);
+      expect(F.displayWidth(out) <= 25).toBe(true);
       expect(out.endsWith('...')).toBeTruthy();
   });
 

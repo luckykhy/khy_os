@@ -19,12 +19,15 @@ interface ToolExecutionState {
   executions: ToolExecution[]
   activeIds: string[]
   history: ToolExecution[]
+  /** 本轮被编辑类工具改过的文件（去重）；P2 的 DiffSummary 数据源 */
+  affectedFiles: string[]
 }
 
 const initialState: ToolExecutionState = {
   executions: [],
   activeIds: [],
   history: [],
+  affectedFiles: [],
 }
 
 const toolExecutionSlice = createSlice({
@@ -59,9 +62,15 @@ const toolExecutionSlice = createSlice({
         state.activeIds = state.activeIds.filter(aid => aid !== action.payload)
       }
     },
+    recordAffectedFiles: (state, action: PayloadAction<string[]>) => {
+      for (const f of action.payload) {
+        if (f && !state.affectedFiles.includes(f)) state.affectedFiles.push(f)
+      }
+    },
     clearExecutions: (state) => {
       state.executions = []
       state.activeIds = []
+      state.affectedFiles = []
     },
     clearHistory: (state) => {
       state.history = []
@@ -71,7 +80,7 @@ const toolExecutionSlice = createSlice({
 
 export const {
   startToolExecution, updateToolExecution, cancelToolExecution,
-  clearExecutions, clearHistory,
+  recordAffectedFiles, clearExecutions, clearHistory,
 } = toolExecutionSlice.actions
 
 export default toolExecutionSlice.reducer

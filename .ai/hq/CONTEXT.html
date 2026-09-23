@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: CONTEXT.md -->
+<title>CONTEXT.md — khy-os 架构速查（AI 上下文注入素材） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>.ai<span class="sep">›</span>hq<span class="sep">›</span>CONTEXT.md — khy-os 架构速查（AI 上下文注入素材）</div>
+      <header class="hero reveal"><h1>CONTEXT.md — khy-os 架构速查（AI 上下文注入素材）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#context-md-khy-os-架构速查-ai-上下文注入素材">CONTEXT.md — khy-os 架构速查（AI 上下文注入素材）</a></li><li class="lvl-2"><a href="#一-项目定位">一、项目定位</a></li><li class="lvl-2"><a href="#二-分层结构">二、分层结构</a></li><li class="lvl-2"><a href="#三-关键入口点">三、关键入口点</a></li><li class="lvl-2"><a href="#四-工程红线-提示词模板同步引用-违反即返工">四、工程红线（提示词模板同步引用，违反即返工）</a></li><li class="lvl-2"><a href="#五-验证命令清单">五、验证命令清单</a></li><li class="lvl-2"><a href="#六-ai-助手须知-源自-agents-md">六、AI 助手须知（源自 AGENTS.md）</a></li><li class="lvl-2"><a href="#七-域-domain-与-khy-os-的对应关系">七、域（domain）与 khy-os 的对应关系</a></li><li class="lvl-2"><a href="#八-多机同步状态-速查-日期敏感-以最新为准">八、多机同步状态（速查，日期敏感，以最新为准）</a></li><li class="lvl-3"><a href="#六步会话协议-单仓版">六步会话协议（单仓版）</a></li><li class="lvl-3"><a href="#租约-多机不撞车的机制">租约（多机不撞车的机制）</a></li><li class="lvl-3"><a href="#2026-09-17-现状">2026-09-17 现状</a></li><li class="lvl-2"><a href="#九-khy-os-的-自动更新-分两件事-勿混">九、khy-os 的「自动更新」分两件事（勿混）</a></li><li class="lvl-2"><a href="#十-通道选择判定-五通道决策矩阵速查">十、通道选择判定（五通道决策矩阵速查）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="context-md-khy-os-架构速查-ai-上下文注入素材">CONTEXT.md — khy-os 架构速查（AI 上下文注入素材）<a class="anchor" href="#context-md-khy-os-架构速查-ai-上下文注入素材" aria-label="锚点">#</a></h1>
+<blockquote><p>用途：在本项目内工作的 AI，先读此文件即可获得指挥 khy-os 所需的领域知识，<br>不必每次扫描整个 khy-os 仓库。提示词模板中的「工程红线」块与本文件保持同步。<br>本文件是<strong>摘要</strong>；与 <code>khy-os/AGENTS.md</code> 冲突时以后者为准。</p>
+<p><strong>本文件所在目录 <code>.ai/hq/</code> 是任务/Bug 状态真源</strong>（2026-09-17 由指挥部 khy-os-hq<br>吸收而来）。操作命令是 <code>khy hq …</code>（<code>status</code> / <code>next</code> / <code>verify</code> / <code>bug</code> / <code>task</code>），<br>背景见 <code>docs/03_DESIGN_设计/[DESIGN-ARCH-118] HQ 能力吸收与多机协作规范.md</code>。<br><strong>不要手改本目录下的 JSON</strong> —— 走 <code>khy hq</code> 命令，状态机与校验都在命令里。</p></blockquote>
+<hr>
+<h2 id="一-项目定位">一、项目定位<a class="anchor" href="#一-项目定位" aria-label="锚点">#</a></h2>
+<p><strong>Khy-OS</strong> = AI 平台操作系统，PyPI（<code>pip install khy-os</code>）+ npm（<code>@khy-os/khy-os</code>）双渠道分发。<br><strong>khyquant</strong>（量化交易终端，<code>software/khyquant/</code>）是运行在基座上的内置默认应用，不是项目本身。</p>
+<h2 id="二-分层结构">二、分层结构<a class="anchor" href="#二-分层结构" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>层</th><th>路径</th><th>职责</th></tr></thead><tbody><tr><td>L0 kernel</td><td><code>kernel/</code></td><td>手写 C 内核：抢占调度、按需分页、COW fork、信号、管道、ELF+PE 双格式加载器，QEMU 可引导</td></tr><tr><td>L1 platform</td><td><code>platform/khy_platform/</code></td><td>Python 轻量启动器，检测环境拉起 Node.js</td></tr><tr><td>L2 services</td><td><code>services/backend/src/</code></td><td>全部业务逻辑（CLI、AI 网关、服务、Web API）</td></tr><tr><td>L3 apps</td><td><code>apps/ai-frontend/</code></td><td>AI 平台管理 UI（Vue 3 + Vite）</td></tr><tr><td>L4 software</td><td><code>software/khyquant/</code></td><td>内置量化交易终端（含独立前端）</td></tr></tbody></table>
+<p>调用链：<code>User → khy 命令 → Python cli.py → Node.js services/backend/bin/khy.js</code><br>分派到 CLI Layer (<code>src/cli/</code>) / Service Layer (<code>src/services/</code>) / Web API (<code>src/routes/</code>)。</p>
+<h2 id="三-关键入口点">三、关键入口点<a class="anchor" href="#三-关键入口点" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>组件</th><th>文件</th></tr></thead><tbody><tr><td>CLI 路由器</td><td><code>services/backend/src/cli/router.js</code>（大 switch 分派）</td></tr><tr><td>别名表</td><td><code>services/backend/src/cli/aliases.js</code>（中文/拼音→英文命令）</td></tr><tr><td>REPL 循环</td><td><code>services/backend/src/cli/repl.js</code></td></tr><tr><td>AI 网关</td><td><code>services/backend/src/services/gateway/aiGateway.js</code> + <code>adapters/*.js</code></td></tr><tr><td>审计日志</td><td><code>services/backend/src/services/auditLog.js</code></td></tr><tr><td>Token 统计</td><td><code>services/backend/src/services/tokenUsageService.js</code>（人民币计价）</td></tr><tr><td>训练 / 回测</td><td><code>modelTrainingService.js</code> / <code>backtestEngine.js</code></td></tr></tbody></table>
+<p>新增 CLI 命令三步：别名表 → handler → router switch。<br>新增 AI 适配器两步：实现 <code>generate(prompt, options) → {text, tokenUsage, model}</code> → 注册进 adapters 数组。</p>
+<h2 id="四-工程红线-提示词模板同步引用-违反即返工">四、工程红线（提示词模板同步引用，违反即返工）<a class="anchor" href="#四-工程红线-提示词模板同步引用-违反即返工" aria-label="锚点">#</a></h2>
+<ol><li><strong>零硬编码</strong>：源码不得出现字面量 IP、端口、绝对路径、生产域名（<code>khyquant.top/.com/.cn</code>）。</li></ol>
+<p>端点一律来自 <code>constants/serviceDefaults.js</code> 或 env 覆盖；env 回退行不豁免生产域名检查。<br>   dev server 端口被占必须自动探测下一可用端口，不得 EADDRINUSE 崩溃。</p>
+<ol><li><strong>状态透明</strong>：面向用户的状态/日志必须「动作 + 目标 + 进度」三维；</li></ol>
+<p>禁止单独使用「正在工作 / 处理中 / Loading / Connecting / 尝试连接 / 请稍候 / Processing」。<br>   （UI 枚举标签、i18n 键、正则常量属数据不算违规。）</p>
+<ol><li><strong>基于活动的超时</strong>：长任务不许固定时长硬 kill；用空闲重置计时器（工具结果/AI 回复/</li></ol>
+<p>流式分块等重置 lastActivity）。短 IO fetch ≤30s 与认证握手超时例外。</p>
+<ol><li><strong>终端渲染</strong>：与回滚输出共存的 CLI <strong>禁用 ANSI 滚动区</strong> <code>\x1B[n;mr</code>；</li></ol>
+<p>用保存光标 <code>\x1B7</code> + 定位末行 + <code>\x1B[K</code> + 恢复 <code>\x1B8</code> 模式。全屏备用缓冲区（<code>\x1B[?1049h</code>）例外。</p>
+<ol><li><strong>代码风格</strong>：JS 2 空格缩进、单引号、分号；camelCase(JS)/snake_case(Python)；</li></ol>
+<p>面向用户字符串中文；代码注释英文；优先编辑现有文件而非新建。</p>
+<ol><li><strong>fail-soft 分层</strong>：叶子函数返回 <code>{ok:false, error}</code> 不抛异常；</li></ol>
+<p>「纯叶子（零 IO 可单测）+ 薄 IO 层 + IoC port」模式；CommonJS + <code>'use strict'</code>。</p>
+<ol><li><strong>版本双轨制</strong>：主轨道 4 源（<code>pyproject.toml</code> / <code>packaging/npm/package.json</code> /</li></ol>
+<p><code>services/backend/package.json</code> / <code>packaging/modules/modules.json</code>）组内必须一致；<br>   ai-backend 轨道 2 源（<code>services/ai-backend/package.json</code> / <code>platform/packages/shared/package.json</code>）。<br>   <strong>绝不手改 <code>platform/khy_platform/__init__.py</code></strong>。</p>
+<h2 id="五-验证命令清单">五、验证命令清单<a class="anchor" href="#五-验证命令清单" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> services/backend            <span class="hljs-comment"># 后端改动后</span>
+node scripts/ci/check-agent-rules.js --changed   <span class="hljs-comment"># 工程红线自动检查（根目录运行）</span>
+npm run check:layout                             <span class="hljs-comment"># 顶层目录层级规范（L0-L6）</span>
+npx eslint src/ --max-warnings 0                 <span class="hljs-comment"># lint</span>
+npx jest                                         <span class="hljs-comment"># 单测</span>
+node scripts/ci/check-version-sync.js            <span class="hljs-comment"># 版本一致性</span>
+khy doctor                                       <span class="hljs-comment"># 系统健康总检</span></code></pre>
+<h2 id="六-ai-助手须知-源自-agents-md">六、AI 助手须知（源自 AGENTS.md）<a class="anchor" href="#六-ai-助手须知-源自-agents-md" aria-label="锚点">#</a></h2>
+<ul><li>先读 <code>.ai/MAP.md</code>（骨架导航）、<code>.ai/CONTEXT.yaml</code>（机器可读契约）、<code>.ai/GUARDS.md</code>（红线）</li><li>快速校验单文件：<code>node -e &quot;require('./services/backend/src/...')&quot;</code></li><li>用户配置数据在 <code>~/.khyquant/</code>（config.json 含 API key，已 gitignore，绝不提交）</li><li>切勿提交 <code>.env</code>、凭据、<code>node_modules/</code></li></ul>
+<h2 id="七-域-domain-与-khy-os-的对应关系">七、域（domain）与 khy-os 的对应关系<a class="anchor" href="#七-域-domain-与-khy-os-的对应关系" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>domain</th><th>覆盖范围</th></tr></thead><tbody><tr><td>cli</td><td><code>services/backend/src/cli/</code>：REPL、路由、TUI 渲染、handler</td></tr><tr><td>gateway</td><td><code>services/gateway/</code>：多供应商适配器、熔断、故障转移</td></tr><tr><td>services</td><td><code>services/</code> 其余：审计、token 统计、IM 通道(channels)、训练、回测</td></tr><tr><td>kernel</td><td><code>kernel/</code>：C 内核与 MoonBit 部分</td></tr><tr><td>frontend</td><td><code>apps/ai-frontend/</code> Vue3 应用</td></tr><tr><td>khyquant</td><td><code>software/khyquant/</code> 交易终端全栈</td></tr><tr><td>platform</td><td><code>platform/khy_platform/</code> Python 启动器与 @khy/shared</td></tr><tr><td>packaging</td><td><code>packaging/</code>、pyproject、发布脚本、CI</td></tr><tr><td>cross</td><td>跨域/仓库级任务（如全仓文档一致性、全仓检查）</td></tr></tbody></table>
+<hr>
+<h2 id="八-多机同步状态-速查-日期敏感-以最新为准">八、多机同步状态（速查，日期敏感，以最新为准）<a class="anchor" href="#八-多机同步状态-速查-日期敏感-以最新为准" aria-label="锚点">#</a></h2>
+<blockquote><p>多机判断标准：<strong>每台机器本地 <code>HEAD == 共享 origin/main</code></strong>，则各机互相同步。<br>同步方向<strong>按仓库各自的新旧</strong>定：落后→<code>pull</code>，领先→<code>push</code>（验证后），分叉→以远程为准 + 本地 rebase 重放，绝不 force。</p>
+<p><strong>本仓库单仓自洽</strong>（2026-09-17 起）：指挥部 khy-os-hq 的能力已吸收进本仓库，<br>数据真源在 <code>.ai/hq/</code>，命令面是 <code>khy hq</code>。<strong>只剩一个仓库要同步</strong> —— 原来<br>「先拉 HQ、再拉 khy-os」的双仓编排已不存在。</p></blockquote>
+<h3 id="六步会话协议-单仓版">六步会话协议（单仓版）<a class="anchor" href="#六步会话协议-单仓版" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># ⓪ 开工</span>
+git pull --ff-only                    <span class="hljs-comment"># 只拉一个仓库</span>
+khy hq status                         <span class="hljs-comment"># 看局面（含本机占用与他机占用）</span>
+
+<span class="hljs-comment"># ① 领取任务</span>
+khy hq next                           <span class="hljs-comment"># 按 PROCESS-102 五档瀑布自动选取 → 渲染自包含提示词</span>
+                                      <span class="hljs-comment"># --json 出口 action: prompt|health|ask|idle|blocked；health=G0 验收债、ask=G4 平局待你定</span>
+
+<span class="hljs-comment"># ② 执行（在本仓库内），③ 回填</span>
+khy hq task <span class="hljs-built_in">set</span> T-002 <span class="hljs-keyword">done</span> --note <span class="hljs-string">&quot;...&quot;</span>
+khy hq bug <span class="hljs-built_in">set</span> BUG-001 pending_verify --root-cause <span class="hljs-string">&quot;...&quot;</span> --fix <span class="hljs-string">&quot;...&quot;</span>
+
+<span class="hljs-comment"># ④ 收工门禁</span>
+npm run check:structure
+
+<span class="hljs-comment"># ⑤ 推送</span>
+git add -A &amp;&amp; git commit -m <span class="hljs-string">&quot;...&quot;</span> &amp;&amp; git push</code></pre>
+<h3 id="租约-多机不撞车的机制">租约（多机不撞车的机制）<a class="anchor" href="#租约-多机不撞车的机制" aria-label="锚点">#</a></h3>
+<p><code>khy hq next</code> 领取条目时会写 <code>claimed_by / claimed_at / lease_expires</code>（120 分钟）。<br><strong>他机持有存活租约的条目会被本机跳过</strong>，这是「两台机器几乎同时跑 <code>next</code> 也不会挑中同一条」<br>的结构性保障。机器掉线不致死锁：租约到期后条目自动重新可领。<br>收到 <code>action: blocked</code> 即表示该条目已被他机占用，不要硬做。</p>
+<blockquote><p>顺带根除一个隐患：此前 <code>tools/deepseek-eyes</code> 作为嵌套 git link 令 worktree 永久脏，<br>导致双机 autopull 的 <code>--clean-only</code>（要求<strong>两仓都干净</strong>）永不触发、任务闭环永不关闭。<br><strong>改单仓判定后，这个故障模式从结构上不可能再发生。</strong></p></blockquote>
+<h3 id="2026-09-17-现状">2026-09-17 现状<a class="anchor" href="#2026-09-17-现状" aria-label="锚点">#</a></h3>
+<ul><li>khy-os：HEAD 落后工作区较多（大量未提交），基于 <code>git ls-files</code> 的读数一律偏小；</li></ul>
+<p>判断「是否同步」请以 <code>git fetch &amp;&amp; git status -sb</code> 的实际结果为准。</p>
+<ul><li>指挥部 khy-os-hq：<strong>双轨期只读可用，不再写入</strong>。数据已 1:1 迁入 <code>.ai/hq/</code></li></ul>
+<p>（4 个 JSON/MD + 19 个提示词，字节一致）。走顺 2 周后 <code>git clone --mirror</code> 归档并废弃远端。</p>
+<hr>
+<h2 id="九-khy-os-的-自动更新-分两件事-勿混">九、khy-os 的「自动更新」分两件事（勿混）<a class="anchor" href="#九-khy-os-的-自动更新-分两件事-勿混" aria-label="锚点">#</a></h2>
+<p><strong>① 系统代码本身的升级 = 按需，不静默自装</strong></p>
+<ul><li>触发：用户敲 <code>khy update</code>（<code>cli/routerDispatchOps.js</code> 的 <code>case 'update'</code>），或 AI agent 调工具 <code>tools/khyUpdate.js</code> → 委托 <code>services/khySelfUpdateService.js</code>。</li><li><code>checkUpdate()</code>：只读、绝不抛。同包比对（查「实际安装的包」PyPI 最新版 vs 本地版），PyPI 不可达返回 <code>indeterminate</code>，不谎报已最新。</li><li><code>applyUpdate()</code>：变更操作、标 high risk 走审批。命令为静态白名单 <code>pip install --upgrade &lt;candidate&gt;</code>（包名不取自模型输入→无注入）；<strong>渠道共存</strong>顺带 <code>npm install -g @khy-os/khy-os@latest</code>（防 pip/npm 双渠道下「一个旧、PATH 遮蔽以为升了」）；<code>pipFailurePolicy</code> 分类失败→代理直连重试、WinError 32 文件占用重试（等待+<code>--force-reinstall</code>）。返回结构化 <code>{success,changed,from,to,channels}</code>。</li><li>门控：<code>KHY_SELF_UPDATE</code>（默认开）、<code>KHY_MULTI_CHANNEL_SYNC</code>（默认开，关则只升 pip）。</li><li>启动只横幅提示最新版（<code>versionService.checkForUpdateAll()</code>），<strong>不自动装</strong>。</li><li>版本真源：双轨 4 源 + ai-backend 2 源；<code>khy doctor</code> / <code>check-version-sync.js</code> 校验；绝不手改 <code>platform/khy_platform/__init__.py</code>。<strong>何时 bump、推哪里、什么自动触发</strong>见 <code>[DESIGN-SEMVER-002]</code>（规则 <code>PROCESS-005</code>）。</li></ul>
+<p><strong>② 定时「自动」的部分 = 多机仓库自动同步（不是重装代码）</strong></p>
+<ul><li><strong>已改单仓版</strong>（2026-09-17）。原双仓 <code>sync.py --push-only --push-khyos --clean-only</code> 已随</li></ul>
+<p>HQ 吸收而删除 —— 它存在的唯一理由是「协调两个仓库的 pull/push 顺序」，单仓后失去意义。</p>
+<ul><li>新形态：在 khy-os 仓库内 <code>git fetch --quiet</code> → 判定方向 → <code>--ff-only</code> 拉取 →</li></ul>
+<p>推送<strong>已提交</strong>内容。<strong>不再需要 <code>--clean-only</code> 的「两仓都干净」双条件。</strong></p>
+<ul><li><code>--push-only</code> 的纪律保留：只推已提交、绝不 <code>git add -A</code> 新建提交（避免把运行时脏文件扫进提交）。</li></ul>
+<hr>
+<h2 id="十-通道选择判定-五通道决策矩阵速查">十、通道选择判定（五通道决策矩阵速查）<a class="anchor" href="#十-通道选择判定-五通道决策矩阵速查" aria-label="锚点">#</a></h2>
+<blockquote><p>单一真源：khy-os <code>docs/03_DESIGN_设计/[DESIGN-ARCH-071] 通道选择决策矩阵.md</code><br>（首屏压缩版在 khy-os <code>AGENTS.md</code> 架构速查「通道选择判定」节，两处同改）。<br>对 khy-os 做任何「一次读取/一次操作」前按序自问，<strong>首个命中即停</strong>：</p></blockquote>
+<ol><li>信息只在第三方 GUI 画面 / 需视觉验证？→ <strong>看屏幕</strong>（CH-5：<code>desktopControl</code> 总闸 <code>KHY_DESKTOP_CONTROL</code> + safetyGate 审批，最后手段）</li><li>要改变系统状态？→ <strong>禁止直写状态文件</strong>，走服务直调/CLI/Web API 正门（校验、审计、FSM 在门内）</li><li>只读 + schema 稳定 + 文件即真相？→ <strong>直接读状态文件</strong>（CH-1，仅只读豁免；数据目录由 <code>src/utils/dataHome.js</code> 解析）</li><li>与 backend 同一 Node 进程？→ <strong>服务层直调</strong>（CH-2，require 服务模块，fail-soft <code>{ok,error}</code> 契约）</li><li>否则按调用方分流：人/脚本/CI/跨语言 → <strong>CLI</strong>（CH-3）；前端/远程/并发/流式 → <strong>Web API</strong>（CH-4，端点经 <code>serviceDefaults.js</code>/env/<code>ai_manage_runtime.json</code> 运行时发现，不可达降级 CLI）</li></ol>
+<p>原则：<strong>结构化优先、只读才直读、写必走正门、视觉只兜底。</strong></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../.ai/GUARDS.html"><div class="dir">← 上一篇</div><div class="ttl">GUARDS — khy-os 红线与维护指南 (khy 自动生成种子文档)</div></a><a class="next" href="../../.ai/hq/prompts/bugfix/01-修复指定Bug.html"><div class="dir">下一篇 →</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__=".ai/hq/CONTEXT.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

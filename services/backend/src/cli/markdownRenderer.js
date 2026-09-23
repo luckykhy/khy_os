@@ -19,6 +19,11 @@ const {
 } = require('./formatters');
 const { planLinkDisplay } = require('./markdownLink');
 const { wrapCellLines, tableCellWrapEnabled } = require('./markdownTableWrap');
+// 软换行门控 SSOT（[DESIGN-ARCH-079] §14 Phase 1）：KHY_SOFT_WRAP（默认 off）显式
+// 声明「全宽散文段落交由终端原生软折行，不应用层预插硬换行符」。当前渲染管线对
+// 散文本就不插硬换行（仅代码块 _wrapRawToWidth + 表格精确布局），此门控作为语义
+// 锚点供渲染策略按同一真源分支；off → 所有行为与改动前逐字节一致。
+const { isSoftWrapEnabled } = require('./softWrap');
 const {
   renderMermaidBlock: _renderMermaidBlock,
   renderNestedListTrees: _renderNestedListTrees,
@@ -49,7 +54,12 @@ try {
 // 输出排版强调层(单一真源):什么该加粗 / 标题层级 / 是否字面放大。两道门控关闭时逐字节回退。
 // KHY_TYPESET_EMPHASIS(默认开):所有标题加粗 + 清晰层级。KHY_TYPESET_BIG_HEADINGS(默认关·实验性):
 // 用 DEC 双宽序列把 H1/H2 字形真的放大两倍宽(终端相关、ink 内 best-effort)。
-const _emphasis = require('../services/typeset').textEmphasisPolicy;
+// Destructure so a missing policy module degrades to an identity object instead of
+// throwing at render time (`_emphasis.bigHeadingPrefix(...)` would 500 every render).
+const _emphasis = require('../services/typeset').textEmphasisPolicy || {
+  bigHeadingPrefix: () => '',
+  shouldBoldHeading: () => false,
+};
 
 // ── Markdown accent colors ──────────────────────────────────────────────
 // Theme-driven via THEME (themes/*.json colors) with centralized fallbacks so
@@ -1886,4 +1896,12 @@ function _detectAdjacentTablePairs(blocks, allLines) {
   return directives;
 }
 
-module.exports = { renderMarkdownLite, renderMarkdownStreaming, _wrapRawToWidth };
+module.exports = {
+  renderMarkdownLite,
+  renderMarkdownStreaming,
+  _wrapRawToWidth,
+  // Soft-wrap gate (KHY_SOFT_WRAP, default off) SSOT — [DESIGN-ARCH-079] §14.
+  // Re-exported so renderers/ink callers can branch on the SAME source of truth
+  // instead of re-reading the env var ad hoc; off → current byte-identical behavior.
+  isSoftWrapEnabled,
+};

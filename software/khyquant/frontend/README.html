@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: README.md -->
+<title>KhyQuant Frontend · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>software<span class="sep">›</span>khyquant<span class="sep">›</span>frontend<span class="sep">›</span>KhyQuant Frontend</div>
+      <header class="hero reveal"><h1>KhyQuant Frontend</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyquant-frontend">KhyQuant Frontend</a></li><li class="lvl-2"><a href="#项目概述">项目概述</a></li><li class="lvl-2"><a href="#技术栈">技术栈</a></li><li class="lvl-2"><a href="#项目结构">项目结构</a></li><li class="lvl-2"><a href="#快速开始">快速开始</a></li><li class="lvl-3"><a href="#安装依赖">安装依赖</a></li><li class="lvl-3"><a href="#开发环境">开发环境</a></li><li class="lvl-3"><a href="#构建生产版本">构建生产版本</a></li><li class="lvl-3"><a href="#预览生产版本">预览生产版本</a></li><li class="lvl-2"><a href="#开发规范">开发规范</a></li><li class="lvl-3"><a href="#代码风格">代码风格</a></li><li class="lvl-3"><a href="#组件规范">组件规范</a></li><li class="lvl-3"><a href="#状态管理">状态管理</a></li><li class="lvl-3"><a href="#样式规范">样式规范</a></li><li class="lvl-2"><a href="#测试">测试</a></li><li class="lvl-2"><a href="#部署">部署</a></li><li class="lvl-3"><a href="#pwa-支持">PWA 支持</a></li><li class="lvl-3"><a href="#docker-部署">Docker 部署</a></li><li class="lvl-2"><a href="#环境变量">环境变量</a></li><li class="lvl-2"><a href="#相关文档">相关文档</a></li><li class="lvl-2"><a href="#许可证">许可证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khyquant-frontend">KhyQuant Frontend<a class="anchor" href="#khyquant-frontend" aria-label="锚点">#</a></h1>
+<p>量化交易终端前端应用，基于 Vue 3 + Vite + Element Plus 构建。</p>
+<h2 id="项目概述">项目概述<a class="anchor" href="#项目概述" aria-label="锚点">#</a></h2>
+<p>KhyQuant 是 khy-os 项目的量化交易终端，提供完整的量化交易功能，包括：</p>
+<ul><li>实时行情监控</li><li>策略管理与回测</li><li>交易执行</li><li>风险管理</li><li>数据分析与可视化</li></ul>
+<h2 id="技术栈">技术栈<a class="anchor" href="#技术栈" aria-label="锚点">#</a></h2>
+<ul><li><strong>框架</strong>: Vue 3 (Composition API)</li><li><strong>构建工具</strong>: Vite</li><li><strong>UI 组件库</strong>: Element Plus</li><li><strong>状态管理</strong>: Pinia</li><li><strong>图表库</strong>: Lightweight Charts</li><li><strong>PWA</strong>: vite-plugin-pwa</li><li><strong>样式</strong>: CSS Variables + SCSS</li></ul>
+<h2 id="项目结构">项目结构<a class="anchor" href="#项目结构" aria-label="锚点">#</a></h2>
+<pre><code>src/
+├── api/                # API 接口
+├── assets/             # 静态资源
+├── components/         # 组件
+│   ├── base/          # 基础组件
+│   ├── business/      # 业务组件
+│   └── layout/        # 布局组件
+├── composables/        # 组合式函数
+├── config/             # 配置文件
+├── router/             # 路由
+├── stores/             # Pinia 状态
+├── styles/             # 样式
+├── utils/              # 工具函数
+└── views/              # 页面视图</code></pre>
+<h2 id="快速开始">快速开始<a class="anchor" href="#快速开始" aria-label="锚点">#</a></h2>
+<h3 id="安装依赖">安装依赖<a class="anchor" href="#安装依赖" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">npm install
+<span class="hljs-comment"># 或</span>
+pnpm install</code></pre>
+<h3 id="开发环境">开发环境<a class="anchor" href="#开发环境" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">npm run dev</code></pre>
+<p>访问 http://localhost:5173</p>
+<h3 id="构建生产版本">构建生产版本<a class="anchor" href="#构建生产版本" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">npm run build</code></pre>
+<h3 id="预览生产版本">预览生产版本<a class="anchor" href="#预览生产版本" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">npm run preview</code></pre>
+<h2 id="开发规范">开发规范<a class="anchor" href="#开发规范" aria-label="锚点">#</a></h2>
+<h3 id="代码风格">代码风格<a class="anchor" href="#代码风格" aria-label="锚点">#</a></h3>
+<ul><li>使用 ESLint + Prettier 进行代码格式化</li><li>遵循 Vue 3 Composition API 最佳实践</li><li>使用 CSS Variables 定义设计令牌</li></ul>
+<h3 id="组件规范">组件规范<a class="anchor" href="#组件规范" aria-label="锚点">#</a></h3>
+<ul><li>组件使用 PascalCase 命名：<code>UserProfile.vue</code></li><li>基础组件以 <code>Khy</code> 前缀：<code>KhyButton.vue</code></li><li>业务组件使用描述性名称：<code>TradingChart.vue</code></li></ul>
+<h3 id="状态管理">状态管理<a class="anchor" href="#状态管理" aria-label="锚点">#</a></h3>
+<ul><li>使用 Pinia 进行状态管理</li><li>按功能模块划分 store</li><li>使用 composables 封装可复用逻辑</li></ul>
+<h3 id="样式规范">样式规范<a class="anchor" href="#样式规范" aria-label="锚点">#</a></h3>
+<ul><li>使用 CSS Variables 定义颜色、间距、字体等</li><li>遵循 BEM 命名规范</li><li>支持深色/浅色主题切换</li></ul>
+<h2 id="测试">测试<a class="anchor" href="#测试" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-comment"># 运行单元测试</span>
+npm run <span class="hljs-built_in">test</span>
+
+<span class="hljs-comment"># 运行测试并监听变化</span>
+npm run <span class="hljs-built_in">test</span>:watch
+
+<span class="hljs-comment"># 生成覆盖率报告</span>
+npm run <span class="hljs-built_in">test</span>:coverage</code></pre>
+<h2 id="部署">部署<a class="anchor" href="#部署" aria-label="锚点">#</a></h2>
+<h3 id="pwa-支持">PWA 支持<a class="anchor" href="#pwa-支持" aria-label="锚点">#</a></h3>
+<p>项目支持 PWA，可以安装为桌面应用：</p>
+<ol><li>构建生产版本：<code>npm run build</code></li><li>部署到 HTTPS 服务器</li><li>用户访问时会提示安装</li></ol>
+<h3 id="docker-部署">Docker 部署<a class="anchor" href="#docker-部署" aria-label="锚点">#</a></h3>
+<pre><code class="language-dockerfile"><span class="hljs-keyword">FROM</span> node:<span class="hljs-number">18</span>-alpine as build
+<span class="hljs-keyword">WORKDIR</span><span class="language-bash"> /app</span>
+<span class="hljs-keyword">COPY</span><span class="language-bash"> package*.json ./</span>
+<span class="hljs-keyword">RUN</span><span class="language-bash"> npm ci</span>
+<span class="hljs-keyword">COPY</span><span class="language-bash"> . .</span>
+<span class="hljs-keyword">RUN</span><span class="language-bash"> npm run build</span>
+
+<span class="hljs-keyword">FROM</span> nginx:alpine
+<span class="hljs-keyword">COPY</span><span class="language-bash"> --from=build /app/dist /usr/share/nginx/html</span>
+<span class="hljs-keyword">COPY</span><span class="language-bash"> nginx.conf /etc/nginx/nginx.conf</span>
+<span class="hljs-keyword">EXPOSE</span> <span class="hljs-number">80</span>
+<span class="hljs-keyword">CMD</span><span class="language-bash"> [<span class="hljs-string">&quot;nginx&quot;</span>, <span class="hljs-string">&quot;-g&quot;</span>, <span class="hljs-string">&quot;daemon off;&quot;</span>]</span></code></pre>
+<h2 id="环境变量">环境变量<a class="anchor" href="#环境变量" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>变量</th><th>说明</th><th>默认值</th></tr></thead><tbody><tr><td><code>VITE_API_BASE_URL</code></td><td>API 基础地址</td><td><code>http://localhost:3000</code></td></tr><tr><td><code>VITE_APP_TITLE</code></td><td>应用标题</td><td><code>KhyQuant</code></td></tr><tr><td><code>VITE_APP_VERSION</code></td><td>应用版本</td><td><code>1.0.0</code></td></tr></tbody></table>
+<h2 id="相关文档">相关文档<a class="anchor" href="#相关文档" aria-label="锚点">#</a></h2>
+<ul><li><a href="../../../docs/10_规范/DESIGN-FE/[DESIGN-FE-001]%20前端页面规范.html">前端页面规范</a></li><li><a href="../../../docs/10_规范/DESIGN-FE/[DESIGN-FE-002]%20前端组件库规范.html">前端组件库规范</a></li><li><a href="../../../docs/10_规范/DESIGN-FE/[DESIGN-FE-003]%20前端快速参考卡.html">前端快速参考卡</a></li></ul>
+<h2 id="许可证">许可证<a class="anchor" href="#许可证" aria-label="锚点">#</a></h2>
+<p>MIT License</p>
+<hr>
+<p><em>本项目由 khy-os 团队维护</em></p>
+      </article>
+      <nav class="pager"><span></span><a class="next" href="../../../software/khyquant/PACKAGING.html"><div class="dir">下一篇 →</div><div class="ttl">KHY-Quant pip 打包说明</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="software/khyquant/frontend/README.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

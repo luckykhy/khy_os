@@ -103,7 +103,7 @@ const configs = [
     minifyIdentifiers: false,
     minifySyntax: isProd,
   },
-// CLI entry point — the production startup path (DESIGN-PERF-001 v1 §阶段 A).
+// CLI entry point — the production startup path (DESIGN-PERF-002 v1 §阶段 A).
 // esbuild auto-prepends the `#!` shebang; the banner.js string supplies only
 // the version stamp on line 2. Invoke via `node dist/cli.cjs` from the
 // portable install (or rely on `bin/khy.js` falling back to source when
@@ -125,7 +125,7 @@ const configs = [
       'process.env.KHY_BUNDLED_CLI': '"true"',
     },
   },
-  // CLI minified ESM bundle (DESIGN-PERF-001 v1 §阶段 A — DISABLED).
+  // CLI minified ESM bundle (DESIGN-PERF-002 v1 §阶段 A — DISABLED).
 // esbuild's ESM output translates every CJS `require()` into a dynamic
 // `require()` stub that Node's ESM loader refuses to satisfy at runtime
 // (Error: Dynamic require of "path" is not supported). khy's source code is

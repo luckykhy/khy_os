@@ -1,10 +1,11 @@
 'use strict';
+const assert = require('node:assert');
 /**
- * modelSubstitutionNotice.test.js �?node:test 单测(�?services/gateway/*Notice.test.js 同构)�?
- * 纯叶�?�?IO、注�?env 可测;验证「实际响应模�?�?请求模型」的透明提示逻辑与门控�?
+ * modelSubstitutionNotice.test.js — node:test 单测(�?services/gateway/*Notice.test.js 同构)�?
+ * 纯叶子�?IO、注�?env 可测;验证「实际响应模�?�?请求模型」的透明提示逻辑与门控�?
  */
 const { FLAG, isEnabled, modelIdOf, buildSubstitutionNotice } = require(
-  './modelSubstitutionNotice'
+  '../../../src/services/gateway/modelSubstitutionNotice.js'
 );
 
 describe('Model Substitution Notice', () => {
@@ -16,14 +17,14 @@ describe('Model Substitution Notice', () => {
       expect(modelIdOf(null)).toBe('');
   });
 
-  test('isEnabled: 默认开,显式关则�?, () => {
+  test('isEnabled: 默认开,显式关则�?', () => {
       expect(isEnabled({})).toBe(true);
       expect(isEnabled({ [FLAG]: '0' })).toBe(false);
       expect(isEnabled({ [FLAG]: 'off' })).toBe(false);
       expect(isEnabled({ [FLAG]: 'true' })).toBe(true);
   });
 
-  test('buildSubstitutionNotice: 模型替换时提�?, () => {
+  test('buildSubstitutionNotice: 模型替换时提�?', () => {
       const notice = buildSubstitutionNotice({
         requestedModel: 'api:sensenova:deepseek-v4-flash',
         servingModel: 'step-3.7-flash',
@@ -35,7 +36,7 @@ describe('Model Substitution Notice', () => {
       expect(notice).toMatch(/Relay/);
   });
 
-  test('buildSubstitutionNotice: 同一模型(仅路由前缀不同)不提�?, () => {
+  test('buildSubstitutionNotice: 同一模型(仅路由前缀不同)不提�?', () => {
       const notice = buildSubstitutionNotice({
         requestedModel: 'api:sensenova:sensenova-6.8-flash-lite',
         servingModel: 'sensenova-6.8-flash-lite',
@@ -44,7 +45,7 @@ describe('Model Substitution Notice', () => {
       expect(notice).toBe(null);
   });
 
-  test('buildSubstitutionNotice: 门关 / 缺参 / 同模�?大小�? 均不提示', () => {
+  test('buildSubstitutionNotice: 门关 / 缺参 / 同模�?大小�? 均不提示', () => {
       assert.strictEqual(
         buildSubstitutionNotice({
           requestedModel: 'deepseek-v4-flash',

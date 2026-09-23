@@ -8,6 +8,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const { getDataHome } = require('../utils/dataHome');
 const _patchEnvContent = require('../utils/patchEnvContent');
@@ -524,11 +525,22 @@ async function _checkGatewayPreferred(result, issues, scoreRef, opts = {}) {
       const available = matched.available !== false;
       checkOut.healthy = available;
       if (!available) {
-        scoreRef.value -= 8;
+        // strict 与「不可用」同时成立 = 每次 AI 调用必然硬失败(不回退)。
+        // 这是 codex(09-14)→ windsurf(09-17)两次事故的共同形态,故升为 error
+        // 并明说「strict 禁止回退」,把隐性风险显性化;非 strict 时仅是可回退的 warning。
+        const strictPinned =
+          String(process.env.GATEWAY_PREFERRED_STRICT || '')
+            .trim()
+            .toLowerCase() !== 'false';
+        checkOut.strictPinned = strictPinned;
+        scoreRef.value -= strictPinned ? 20 : 8;
         issues.push({
           source: 'gateway',
-          severity: 'warning',
-          message: `首选通道当前不可用: ${configuredRaw}`,
+          severity: strictPinned ? 'error' : 'warning',
+          message: strictPinned
+            ? `首选通道不可用且 strict 禁止回退: ${configuredRaw} —— 所有 AI 调用将硬失败。` +
+              '请改 GATEWAY_PREFERRED_ADAPTER=auto，或钉到一个实测可用的通道。'
+            : `首选通道当前不可用: ${configuredRaw}`,
         });
       }
       result.checks.gateway = checkOut;
@@ -973,6 +985,30 @@ async function healthCheck() {
   };
 }
 
+/**
+ * 只跑「网关首选通道钉选」这一项自检的轻量入口（[DESIGN-ARCH-136] §9.5）。
+ *
+ * 用途：启动路径（`startRepl` 的 TUI 分叉之前 / 经典 REPL 自检块）的**非阻断**预检。
+ * 判据、文案与 autoRepair 语义 **100% 复用** `_checkGatewayPreferred` —— 那里已把
+ * 「strict 钉死不可用通道」判成 error 并给出解钉文案，本函数**不新增第二套告警体系**，
+ * 与 `runOnce` 的唯一区别是不跑资源/插件/威胁扫描等重项，因此启动时 fire-and-forget 是廉价的。
+ *
+ * 绝不向调用方抛（判据函数内部已 fail-soft，这里再兜一层）：启动自检失败不得阻塞启动。
+ *
+ * @param {object} [opts] 透传 `_checkGatewayPreferred`（如 `{ autoRepairPreferred: false }`）
+ * @returns {Promise<{check: object|null, issues: Array, repairs: Array}>}
+ */
+async function checkGatewayPreferredOnce(opts = {}) {
+  const result = { checks: { gateway: null }, issues: [], repairs: [] };
+  const scoreRef = { value: 100 };
+  try {
+    await _checkGatewayPreferred(result, result.issues, scoreRef, opts);
+  } catch {
+    /* 判据函数内部已 fail-soft；这里再兜一层 —— 绝不向启动路径抛 */
+  }
+  return { check: result.checks.gateway, issues: result.issues, repairs: result.repairs };
+}
+
 module.exports = {
   runOnce,
   start,
@@ -982,6 +1018,7 @@ module.exports = {
   tail,
   autoStartFromEnv,
   healthCheck,
+  checkGatewayPreferredOnce,
   constants: {
     DEFAULT_INTERVAL_MS,
     MIN_INTERVAL_MS,

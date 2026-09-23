@@ -19,11 +19,11 @@
 
 const path = require('path');
 const gateway = require('../../src/services/syscallGateway');
-const { classify, LEVELS, isExemptible } = require('../../src/services/syscallGateway/resourceClassifier');
-const { buildIntent, detectBypassMarkers, ACTIONS, SCOPES } = require('../../src/services/syscallGateway/intentSchema');
-const { route, DECISIONS } = require('../../src/services/syscallGateway/approvalRouter');
+const { classify, LEVELS, isExemptible } = require('../../src/services/domain/system/syscallGateway/resourceClassifier.js');
+const { buildIntent, detectBypassMarkers, ACTIONS, SCOPES } = require('../../src/services/domain/system/syscallGateway/intentSchema.js');
+const { route, DECISIONS } = require('../../src/services/domain/system/syscallGateway/approvalRouter.js');
 const { PermissionCache } = require('../../src/services/domain/system/syscallGateway/permissionCache');
-const { BreachBreaker } = require('../../src/services/syscallGateway/breachBreaker');
+const { BreachBreaker } = require('../../src/services/domain/system/syscallGateway/breachBreaker.js');
 
 const CWD = path.sep === '\\' ? 'C:\\proj' : '/proj';
 const HOME = path.sep === '\\' ? 'C:\\Users\\u' : '/home/u';

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: ARCHITECTURE.md -->
+<title>Architecture（来源：https://raw.githubusercontent.com/chatml/chatml/main/ARCHITECTURE.md） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>extensions<span class="sep">›</span>scripts<span class="sep">›</span>khy-desktop-rd<span class="sep">›</span>chatml<span class="sep">›</span>Architecture（来源：https://raw.githubusercontent.com/chatml/chatml/main/ARCHITECTURE.md）</div>
+      <header class="hero reveal"><h1>Architecture（来源：https://raw.githubusercontent.com/chatml/chatml/main/ARCHITECTURE.md）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#architecture-来源-https-raw-githubusercontent-com-chatml-chatml-main-architecture-md">Architecture（来源：https://raw.githubusercontent.com/chatml/chatml/main/ARCHITECTURE.md）</a></li><li class="lvl-2"><a href="#system-overview">System Overview</a></li><li class="lvl-2"><a href="#data-model">Data Model</a></li><li class="lvl-2"><a href="#communication-flow">Communication Flow</a></li><li class="lvl-2"><a href="#provider-architecture">Provider Architecture</a></li><li class="lvl-3"><a href="#go-backend-ai-provider-interface">Go Backend (`ai.Provider` interface)</a></li><li class="lvl-3"><a href="#agent-runner-stdio-json-protocol">Agent Runner (stdio JSON protocol)</a></li><li class="lvl-3"><a href="#provider-capabilities">Provider Capabilities</a></li><li class="lvl-2"><a href="#directory-state">Directory State</a></li><li class="lvl-2"><a href="#state-management">State Management</a></li><li class="lvl-2"><a href="#key-design-decisions">Key Design Decisions</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="architecture-来源-https-raw-githubusercontent-com-chatml-chatml-main-architecture-md">Architecture（来源：https://raw.githubusercontent.com/chatml/chatml/main/ARCHITECTURE.md）<a class="anchor" href="#architecture-来源-https-raw-githubusercontent-com-chatml-chatml-main-architecture-md" aria-label="锚点">#</a></h1>
+<p>ChatML is a native macOS desktop application for AI-assisted development. It uses a polyglot architecture with four distinct layers, each chosen for its strengths.</p>
+<h2 id="system-overview">System Overview<a class="anchor" href="#system-overview" aria-label="锚点">#</a></h2>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│                    Tauri Shell (Rust)                     │
+│   Window management, PTY terminals, OAuth deep links,    │
+│   Stronghold credential storage, native menus            │
+├──────────────────────────────────────────────────────────┤
+│                Next.js Frontend (React 19)                │
+│   UI components, Zustand stores, WebSocket client        │
+│   Static HTML export served by Tauri                     │
+├──────────────────────────────────────────────────────────┤
+│                  Go Backend (:9876)                       │
+│   REST API, WebSocket hub, SQLite, git/worktree ops,     │
+│   agent process management, OAuth handlers               │
+├──────────────────────────────────────────────────────────┤
+│              Agent Runner (Node.js)                       │
+│   Claude Agent SDK wrapper, MCP server, tool execution   │
+│   One process per conversation, runs in session worktree │
+└──────────────────────────────────────────────────────────┘</code></pre>
+<h2 id="data-model">Data Model<a class="anchor" href="#data-model" aria-label="锚点">#</a></h2>
+<pre><code>Workspace → Session → Conversation → Message</code></pre>
+<ul><li><strong>Workspace</strong> — A git repository on disk. Contains settings, branch prefix config, and custom instructions.</li><li><strong>Session</strong> — An isolated git worktree for a single task. Has its own branch, priority, status, and PR tracking.</li><li><strong>Conversation</strong> — A chat within a session. Types: <code>task</code> (full tool access), <code>review</code> (code review), <code>chat</code> (general discussion).</li><li><strong>Message</strong> — Individual message with role (<code>user</code>, <code>assistant</code>, <code>system</code>), content blocks, tool calls, and token usage stats.</li></ul>
+<h2 id="communication-flow">Communication Flow<a class="anchor" href="#communication-flow" aria-label="锚点">#</a></h2>
+<pre><code>Frontend ←──HTTP/WS──→ Go Backend ←──stdin/stdout──→ Agent Runner
+   │                       │                              │
+   │  REST: CRUD ops       │  Spawns process per          │  Claude Agent SDK
+   │  WebSocket: streaming │  conversation in the         │  query() + hooks
+   │                       │  session's worktree           │
+   │                       │                              │
+   │                       ├── SQLite (persistence)        │
+   │                       ├── Git (worktree management)   │
+   │                       └── OAuth (GitHub, Linear)      │</code></pre>
+<ol><li>Frontend connects to Go backend via HTTP REST + WebSocket on localhost port 9876</li><li>When a conversation starts, the backend spawns a Node.js agent-runner process</li><li>The agent-runner runs inside the session's git worktree directory</li><li>Agent output streams through stdout → backend → WebSocket → frontend</li><li>All state is persisted in SQLite (backend/store/)</li></ol>
+<h2 id="provider-architecture">Provider Architecture<a class="anchor" href="#provider-architecture" aria-label="锚点">#</a></h2>
+<p>ChatML uses a two-level provider abstraction:</p>
+<h3 id="go-backend-ai-provider-interface">Go Backend (<code>ai.Provider</code> interface)<a class="anchor" href="#go-backend-ai-provider-interface" aria-label="锚点">#</a></h3>
+<p>For lightweight AI tasks that don't need the full agent SDK:</p>
+<ul><li>PR description generation</li><li>Conversation/session summarization</li><li>Input suggestions</li></ul>
+<p>The <code>ai.Provider</code> interface in <code>backend/ai/provider.go</code> can be implemented by any provider.</p>
+<h3 id="agent-runner-stdio-json-protocol">Agent Runner (stdio JSON protocol)<a class="anchor" href="#agent-runner-stdio-json-protocol" aria-label="锚点">#</a></h3>
+<p>For heavy agentic work (coding, tool use, planning):</p>
+<ul><li>The Go backend spawns an agent-runner process and communicates via JSON over stdin/stdout</li><li>The protocol is documented in <code>docs/agent-runner-protocol.md</code></li><li>The current implementation wraps the Claude Agent SDK</li><li>New providers can implement their own agent-runner that speaks the same protocol</li></ul>
+<h3 id="provider-capabilities">Provider Capabilities<a class="anchor" href="#provider-capabilities" aria-label="锚点">#</a></h3>
+<p>The backend exposes <code>GET /api/provider/capabilities</code> which returns what the current provider supports (extended thinking, plan mode, sub-agents, effort levels). The frontend uses this to conditionally show/hide features.</p>
+<h2 id="directory-state">Directory State<a class="anchor" href="#directory-state" aria-label="锚点">#</a></h2>
+<pre><code>chatml/
+├── src/                        # Next.js frontend
+│   ├── app/                    # App router pages
+│   ├── components/             # React components
+│   │   ├── conversation/       # Chat interface, message rendering
+│   │   ├── session/            # Session management UI
+│   │   ├── settings/           # Settings panels
+│   │   └── workspace/          # Workspace sidebar, dashboard
+│   ├── hooks/                  # Custom React hooks
+│   ├── lib/                    # API client, utilities, types
+│   └── stores/                 # Zustand state stores
+├── backend/                    # Go backend server
+│   ├── agent/                  # Agent process spawning &amp; management
+│   ├── ai/                     # AI provider interface &amp; Anthropic client
+│   ├── git/                    # Git &amp; worktree operations
+│   ├── server/                 # HTTP handlers, WebSocket hub, router
+│   ├── store/                  # SQLite persistence layer
+│   └── main.go                 # Server entry point
+├── agent-runner/               # Claude Agent SDK runner
+│   └── src/
+│       ├── index.ts            # Main entry point, SDK hooks
+│       └── mcp/                # Built-in MCP server
+├── src-tauri/                  # Tauri desktop wrapper
+│   ├── src/                    # Rust source (main.rs, plugins)
+│   └── tauri.conf.json         # Tauri configuration
+├── docs/                       # Documentation
+└── public/                     # Static assets</code></pre>
+<h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
+<ul><li><strong>Frontend</strong>: Zustand stores in <code>src/stores/</code> — one store per concern (sessions, conversations, settings, etc.)</li><li><strong>Backend</strong>: SQLite in WAL mode via pure-Go driver (no CGo) in <code>backend/store/</code></li><li><strong>Real-time sync</strong>: WebSocket events keep frontend state in sync with backend changes</li></ul>
+<h2 id="key-design-decisions">Key Design Decisions<a class="anchor" href="#key-design-decisions" aria-label="锚点">#</a></h2>
+<ol><li><strong>Git worktrees for isolation</strong> — Each session gets its own worktree and branch, enabling truly parallel AI development without merge conflicts.</li><li><strong>Process-per-conversation</strong> — Each agent conversation runs in its own Node.js process, providing natural isolation and the ability to kill runaway agents.</li><li><strong>Local-first</strong> — All data stays on your machine. No cloud component except the AI provider API.</li><li><strong>Stdin/stdout protocol</strong> — The Go backend communicates with agent runners via JSON over stdin/stdout, making it straightforward to swap in different AI providers without changing the backend.</li><li><strong>Static frontend export</strong> — Next.js generates static HTML that Tauri serves directly, avoiding the need for a separate web server process.</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../extensions/bridges/khy-trae-bridge/README.html"><div class="dir">← 上一篇</div><div class="ttl">KHY Trae Bridge</div></a><a class="next" href="../../../../extensions/scripts/khy-desktop-rd/chatml/README.html"><div class="dir">下一篇 →</div><div class="ttl">ChatML — Tauri 2 + Go Backend + Claude Agent SDK</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="extensions/scripts/khy-desktop-rd/chatml/ARCHITECTURE.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

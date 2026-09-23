@@ -26,7 +26,7 @@ const {
   summarize,
   emergency,
   smartTruncate,
-} = require('./promptCacheOptimizer');
+} = require('../../src/services/promptCacheOptimizer.js');
 
 // ── Test Helpers ──────────────────────────────────────────────────────────
 

@@ -1,12 +1,12 @@
 'use strict';
 /**
- * config.test.js â€?DESIGN-ARCH-049 G1 (trajectoryGuide config knobs).
+ * config.test.js â€” DESIGN-ARCH-049 G1 (trajectoryGuide config knobs).
  *
  * Every capability defaults OFF and every knob resolves its named default with no
- * env set; overrides parse as documented. This guards the é›¶å›žå½?invariant: with
+ * env set; overrides parse as documented. This guards the é›¶å›žï¿½?invariant: with
  * no KHY_TRAJ_* set, nothing in the AI dimension activates.
  */
-const config = require('../../../src/services/trajectoryGuide/config');
+const config = require('../../../src/services/domain/trajectory/trajectoryGuide/config.js');
 const TRAJ_ENV = [
   'KHY_TRAJ_AI_REPLAY',
   'KHY_TRAJ_GUIDE_INJECT',
@@ -56,8 +56,8 @@ describe('Config', () => {
     
       process.env.KHY_TRAJ_REPAIR_MAX = 'nonsense';
       process.env.KHY_TRAJ_GUIDE_CHARS = '-5';
-      expect(config.repairMax()).toBe(1, 'invalid â†?default');
-      expect(config.guideChars()).toBe(1200, 'negative â†?default');
+      expect(config.repairMax()).toBe(1, 'invalid ï¿½?default');
+      expect(config.guideChars()).toBe(1200, 'negative ï¿½?default');
       clearEnv();
   });
 
@@ -71,7 +71,7 @@ describe('Config', () => {
       process.env.KHY_TRAJ_MAP_AUTHOR_MIN_STRENGTH = 'weak';
       expect(config.mapAuthorMinStrength()).toBe('weak');
       process.env.KHY_TRAJ_MAP_AUTHOR_MIN_STRENGTH = 'bogus';
-      expect(config.mapAuthorMinStrength()).toBe('strong', 'invalid â†?default strong');
+      expect(config.mapAuthorMinStrength()).toBe('strong', 'invalid ï¿½?default strong');
       clearEnv();
   });
 

@@ -24,7 +24,7 @@ describe('toolUseLoop harness profile (model tiering)', () => {
   });
 
   function loadLoopWithStubbedTools() {
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool: jest.fn(async () => ({ success: true, output: 'noop' })),
       clearPreflightContext: jest.fn(),
       setPreflightContext: jest.fn(),
@@ -191,7 +191,7 @@ describe('toolUseLoop capability gate — weak-tier unlock (warn by default)', (
   });
 
   function loadLoopWithStubbedTools() {
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool: jest.fn(async () => ({ success: true, output: 'noop' })),
       clearPreflightContext: jest.fn(),
       setPreflightContext: jest.fn(),

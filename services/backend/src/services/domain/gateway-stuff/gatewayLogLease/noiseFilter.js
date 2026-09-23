@@ -15,7 +15,32 @@
  * `user:'…'` 表示翻译成该友好句。
  */
 
-const { formatStatusMessage } = require('../../../../cli/statusMessageFormatter');
+/**
+ * formatStatusMessage 的取用点。
+ *
+ * `cli/statusMessageFormatter` 是 34 行、零 require 的纯叶子(自述即 "pure leaf")，
+ * 服务层直连它是反向分层(archDebtScan R1)。
+ *
+ * 两档回落(与 sessionForestService 同一范式):
+ *   ① cliLeafPort 已注册 → 直接用端口里的函数。
+ *   ② 未注册 → 自举 `cli/ai` 触发自注册，再取一次。
+ * 本文件因此只有 **一行** cli 引用，语义是「拉起 CLI 让其自注册」而非「向 cli 要能力」。
+ *
+ * ⚠ 必须是**函数调用**而非模块级常量：RULES 表在模块加载期就构造，那时端口多半还没注册。
+ */
+function _formatStatusMessage(...args) {
+  const port = require('../../../cliLeafPort');
+  let fn = port.getFormatStatusMessage();
+  if (typeof fn !== 'function') {
+    // 唯一 cli 引用：不是取能力，是触发 cli/ai 自注册（见上）。
+    require('../../../../cli/ai');
+    fn = require('../../../cliLeafPort').getFormatStatusMessage();
+  }
+  if (typeof fn !== 'function') {
+    throw new Error('statusMessageFormatter 未注册到 cliLeafPort(cli/ai 不可用)');
+  }
+  return fn(...args);
+}
 
 // 适配器名/内部标识词表（用于脱敏时整体抹除，避免内幕名泄漏）。
 const ADAPTER_TOKENS = [
@@ -54,48 +79,48 @@ const RULES = [
   {
     pattern:
       /token\s*refresh\s*(failed|error)|refresh\s*token|falling back|using existing token|alternate token source/i,
-    user: '模型服务正在切换…',
+    user: _formatStatusMessage('切换', '模型通道', '第 1 次'),
   },
   {
     pattern: /login required|not\s*logged\s*in|unauthor|credential|凭证|登录/i,
-    user: '模型服务正在切换…',
+    user: _formatStatusMessage('重新认证', '模型服务', '第 1 次'),
   },
   // —— 依赖缺失 / 降级到轻量 ——
   {
     pattern: /requires?\s+puppeteer|puppeteer|playwright|chromium\b/i,
-    user: '正在降级到轻量模式…',
+    user: _formatStatusMessage('降级', '轻量模式', '跳过浏览器依赖'),
   },
   {
     pattern: /本地依赖不完整|not installed|install with|缺少依赖|missing dependency|依赖.*不完整/i,
-    user: '正在尝试其他方式获取…',
+    user: _formatStatusMessage('重试', '依赖安装', '第 1 次'),
   },
   // —— HTTP / API 错误（净味，不暴露状态码细节）——
   {
     pattern: /\b4\d\d\b|invalid request|bad request|api error|响应异常|无效请求/i,
-    user: '当前模型响应异常，正在自动修复…',
+    user: _formatStatusMessage('修复', '模型响应异常', '第 1 次'),
   },
   {
     pattern: /\b5\d\d\b|server error|bad gateway|service unavailable|upstream/i,
-    user: '模型服务暂时不稳定，正在重试…',
+    user: _formatStatusMessage('重试', '模型服务', '第 1 次'),
   },
   // —— 限频 / 配额 ——
   {
     pattern: /rate\s*limit|too many requests|quota|限频|配额|429/i,
-    user: '请求较多，正在排队重试…',
+    user: _formatStatusMessage('排队', '限流重试', '第 1 次'),
   },
   // —— 超时 / 网络 ——
-  { pattern: /timed?\s*out|etimedout|esockettimedout|超时/i, user: '模型请求超时，正在重试…' },
+  { pattern: /timed?\s*out|etimedout|esockettimedout|超时/i, user: _formatStatusMessage('重试', '模型请求（超时）', '第 1 次') },
   {
     pattern: /econnrefused|enotfound|eai_again|network|fetch failed|dns|网络/i,
-    user: '网络波动，正在重连…',
+    user: _formatStatusMessage('重连', '网络', '第 1 次'),
   },
   // —— 通道切换 / 降级 / 冷却 ——
   {
     pattern: /falling back|fallback|switch|降级|切换|cooldown|冷却|封禁|banned/i,
-    user: '模型服务正在切换…',
+    user: _formatStatusMessage('切换', '模型通道', '第 1 次'),
   },
   // —— 重试（通用）——
-  { pattern: /retry|retrying|重试|attempt\s*\d+/i, user: '模型请求异常，正在重试…' },
+  { pattern: /retry|retrying|重试|attempt\s*\d+/i, user: _formatStatusMessage('重试', '模型请求', '第 1 次') },
 
   // —— 纯内部噪音：命中即吞（用户无需感知）——
   {
@@ -149,7 +174,7 @@ function translate(raw) {
   // status-transparency rule. sanitize() already stripped adapter names /
   // tokens / URLs, so the excerpt is safe to show.
   const excerpt = clean.length > 60 ? `${clean.slice(0, 60)}…` : clean;
-  return formatStatusMessage('推理', '上游模型', excerpt);
+  return _formatStatusMessage('推理', '上游模型', excerpt);
 }
 
 /**

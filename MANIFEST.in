@@ -35,7 +35,7 @@ include AGENTS.md
 
 # Exclude internal credentials docs and local env files.
 exclude docs/INTERNAL_CREDENTIALS.md
-exclude docs/_assets/mermaid.min.js
+exclude docs/19_资产/site/mermaid.min.js
 exclude services/backend/.env
 exclude services/.env
 exclude backend/.env
@@ -147,7 +147,3 @@ include software/khyquant/frontend/index.html
 include software/khyquant/frontend/ml-test.html
 include software/khyquant/frontend/public/offline.html
 include extensions/tools/khy-markdown/khyosMarkdown.html
-
-# KeyManager audit trail (DESIGN-ARCH-091 ?7: audit file never ships)
-
-global-exclude key_manager_audit.jsonl

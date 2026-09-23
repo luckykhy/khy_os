@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [RESEARCH-004] khy-os-协议与工程规范分步改进计划-2026-09-15.md -->
+<title>khy-os 协议与工程规范分步改进计划 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>RESEARCH<span class="sep">›</span>khy-os 协议与工程规范分步改进计划</div>
+      <header class="hero reveal"><h1>khy-os 协议与工程规范分步改进计划</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-协议与工程规范分步改进计划">khy-os 协议与工程规范分步改进计划</a></li><li class="lvl-2"><a href="#1-现状分析">1. 现状分析</a></li><li class="lvl-3"><a href="#1-1-已有资产-应保留-不复建">1.1 已有资产（应保留、不复建）</a></li><li class="lvl-3"><a href="#1-2-核心问题-一句话">1.2 核心问题（一句话）</a></li><li class="lvl-2"><a href="#2-差距评估">2. 差距评估</a></li><li class="lvl-3"><a href="#2-1-四维评分与关键差距">2.1 四维评分与关键差距</a></li><li class="lvl-3"><a href="#2-2-补齐维度-用户未提及">2.2 补齐维度（用户未提及）</a></li><li class="lvl-3"><a href="#2-3-差距到行动的映射">2.3 差距到行动的映射</a></li><li class="lvl-2"><a href="#3-实施路线总览">3. 实施路线总览</a></li><li class="lvl-2"><a href="#4-s2-s5-详细步骤">4. S2~S5 详细步骤</a></li><li class="lvl-3"><a href="#s2-清偿治理债-建议最先做-因为它让后续所有工作可信">S2 —— 清偿治理债（建议最先做，因为它让后续所有工作可信）</a></li><li class="lvl-3"><a href="#s3-a2a-服务端任务面-p3-最大能力缺口">S3 —— A2A 服务端任务面（P3，最大能力缺口）</a></li><li class="lvl-3"><a href="#s4-协议版本推进">S4 —— 协议版本推进</a></li><li class="lvl-3"><a href="#s5-外部验证-把-自证-升级为-他证">S5 —— 外部验证（把「自证」升级为「他证」）</a></li><li class="lvl-2"><a href="#5-s0-s1-已完成内容-本次落地">5. S0~S1 已完成内容（本次落地）</a></li><li class="lvl-3"><a href="#5-1-代码改动清单">5.1 代码改动清单</a></li><li class="lvl-3"><a href="#5-2-关键设计决策-为什么这么做">5.2 关键设计决策（为什么这么做）</a></li><li class="lvl-3"><a href="#5-3-验证证据-全部实测">5.3 验证证据（全部实测）</a></li><li class="lvl-3"><a href="#5-4-已知未解决的问题-诚实登记">5.4 已知未解决的问题（诚实登记）</a></li><li class="lvl-3"><a href="#5-5-三大核心问题的规范化整改-本次新增-5-4-之-3-4-5-6-的机制层">5.5 三大核心问题的规范化整改（本次新增 · §5.4 之 3/4/5/6 的机制层）</a></li><li class="lvl-2"><a href="#6-验收标准总表">6. 验收标准总表</a></li><li class="lvl-2"><a href="#7-风险与对策">7. 风险与对策</a></li><li class="lvl-2"><a href="#8-附-本次新增可复用命令">8. 附：本次新增可复用命令</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-协议与工程规范分步改进计划">khy-os 协议与工程规范分步改进计划<a class="anchor" href="#khy-os-协议与工程规范分步改进计划" aria-label="锚点">#</a></h1>
+<p>&lt;!-- naming-guard: exempt 改进计划引用历史错误命名与候选环境变量名作为行动项 --&gt;</p>
+<ul><li><strong>制定日期</strong>：2026-09-15</li><li><strong>依据</strong>：<code>khy-os-协议与工程规范深度调研报告-2026-09-15.md</code></li><li><strong>范围</strong>：MCP 协议、A2A 协议、软件文档、代码标准，及补充维度</li><li><strong>执行状态</strong>：<strong>第 0~1 阶段已完成并验证</strong>（见 §5）；三大核心问题（A2A/ACP 命名错位、基线失效与门禁恒红、官方一致性套件缺失）的<strong>规范化整改机制已落地</strong>（见 §5.5）；第 2~4 阶段（清偿存量债、A2A 服务端、协议版本推进）待排期</li></ul>
+<hr>
+<h2 id="1-现状分析">1. 现状分析<a class="anchor" href="#1-现状分析" aria-label="锚点">#</a></h2>
+<h3 id="1-1-已有资产-应保留-不复建">1.1 已有资产（应保留、不复建）<a class="anchor" href="#1-1-已有资产-应保留-不复建" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>资产</th><th>规模</th><th>价值</th></tr></thead><tbody><tr><td>仓库分层架构</td><td>L0 <code>kernel/</code> → L6 <code>tools/</code>，7 层</td><td>有 <code>[DESIGN-LAY-005]</code> 单一真源，<code>check:layout</code> 强制</td></tr><tr><td>CI 守卫</td><td><strong>55 个</strong>脚本（<code>scripts/ci/</code>）</td><td>治理密度远超同体量项目</td></tr><tr><td>规范文档</td><td><strong>70 份</strong>（<code>docs/_规范/</code>）</td><td>覆盖 40+ 主题</td></tr><tr><td>治理总纲</td><td><code>[DESIGN-GOV-001]</code> MOD/MEM/TOOL/ACP/API 五板块</td><td>规则可检索、可定位</td></tr><tr><td>文档站</td><td><code>docs:build</code> / <code>docs:verify</code> / <code>docs:lint</code></td><td>每个 <code>.md</code> 强制有同名 <code>.html</code>，构建期死链降级</td></tr><tr><td>MCP 实现</td><td>21 个文件，协议层与传输层干净解耦</td><td>纯叶子可确定性单测</td></tr><tr><td>契约目录</td><td><code>src/contracts/{acp,mobile}/</code></td><td>已有「契约即代码」先例</td></tr><tr><td>版本同步</td><td>双轨道 6 个真源 + <code>check-version-sync.js</code></td><td>防漂移</td></tr><tr><td>私有 agent 编排</td><td>registry / router / lifecycle / facade</td><td>进程内多 agent 协作能力完整</td></tr></tbody></table>
+<h3 id="1-2-核心问题-一句话">1.2 核心问题（一句话）<a class="anchor" href="#1-2-核心问题-一句话" aria-label="锚点">#</a></h3>
+<blockquote><p><strong>规范写了但基线被抬到失效、守卫装了但整片恒红、修复做了但没有回归锁、<br>能力声明写了但没人验。</strong></p></blockquote>
+<p>三类具体故障反复出现在协议面上：</p>
+<ol><li><strong>能力虚报</strong> —— MCP client 声明服务端字段；A2A 卡片声明 <code>streaming: true</code> 而零实现。</li><li><strong>声明与实现不一致</strong> —— 协议版本在两处各维护一份；server 诚实只声明 <code>tools</code>，</li></ol>
+<p>自家 client 却发 <code>resources/list</code>。</p>
+<ol><li><strong>文档与协议实体错位</strong> —— 私有 ACP 方言被逐字写成「A2A 协议规范」，</li></ol>
+<p>传输层写成 WebSocket（标准 A2A 用 SSE）。</p>
+<hr>
+<h2 id="2-差距评估">2. 差距评估<a class="anchor" href="#2-差距评估" aria-label="锚点">#</a></h2>
+<h3 id="2-1-四维评分与关键差距">2.1 四维评分与关键差距<a class="anchor" href="#2-1-四维评分与关键差距" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>评级</th><th>最关键差距</th><th>根因</th></tr></thead><tbody><tr><td>工具 MCP 化</td><td>🟡 B</td><td>协议版本停在 <code>2024-11-05</code>（缺 SSE 流式与断线续传）；无 OAuth 授权服务器发现</td><td>缺「声明→实测」闭环，故修复慢、无法声明新修订</td></tr><tr><td>A2A 适配</td><td>🔴 D</td><td><strong>无服务端任务处理面</strong>（能被发现、不能被调用）；两套「A2A」混淆</td><td>从未明确过「私有方言 vs 标准协议」的边界</td></tr><tr><td>文档完整性</td><td>🟡 B−</td><td>无 MCP 协议规范、无 A2A 标准规范、无 OpenAPI、无 ADR</td><td>文档「数量驱动」而非「协议驱动」</td></tr><tr><td>代码标准</td><td>🟡 C+</td><td><strong>基线失效</strong>（允许 12000 个超长函数 / 5000 处 console）；<code>check:layout</code> 整片红且 baseline=0</td><td>「只降不升」策略在无清偿计划时退化为「永不修」</td></tr></tbody></table>
+<h3 id="2-2-补齐维度-用户未提及">2.2 补齐维度（用户未提及）<a class="anchor" href="#2-2-补齐维度-用户未提及" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>差距</th><th>严重度</th></tr></thead><tbody><tr><td><strong>一致性验证</strong></td><td>未接入任何官方 TCK / Inspector，所有合规结论均为自审</td><td>★★★</td></tr><tr><td>安全横切面</td><td>CORS / 错误输出 / 命令执行 / 凭据存储「对错并存」</td><td>★★★</td></tr><tr><td>可观测性</td><td>有 <code>agent.loop.start</code> 无 <code>loop.end</code>；breadcrumb 默认关</td><td>★★</td></tr><tr><td>发布与版本化</td><td>HTTP API 无 <code>/v1</code>；无 SBOM / 许可证清单</td><td>★★</td></tr><tr><td>可恢复性</td><td>无逐轮 journal；检查点按 <code>cwd</code> 单槽覆盖</td><td>★★</td></tr><tr><td>生态位取舍</td><td>自建协议层的取舍无 ADR 留痕，无复审触发条件</td><td>★★</td></tr></tbody></table>
+<h3 id="2-3-差距到行动的映射">2.3 差距到行动的映射<a class="anchor" href="#2-3-差距到行动的映射" aria-label="锚点">#</a></h3>
+<pre><code>能力虚报 ────────────► 一致性矩阵 + 诚实常量 + 守卫实测   [已完成 §5]
+声明与实现不一致 ─────► 单一真源抽取 + 恒等式断言         [已完成 §5]
+文档错位 ────────────► 边界划定规范 + 定位更正横幅        [已完成 §5]
+协议版本落后 ─────────► 补 SSE 流式（P4）                 [待排期]
+A2A 不可被调用 ───────► 服务端任务面 + TaskStore（P3）    [待排期]
+基线失效 / 守卫恒红 ──► 债务清偿计划（P2 阶段 A）          [待排期]
+自审无背书 ──────────► 接入官方 TCK / Inspector（P1）      [待排期]</code></pre>
+<hr>
+<h2 id="3-实施路线总览">3. 实施路线总览<a class="anchor" href="#3-实施路线总览" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>阶段</th><th>目标</th><th>内容</th><th>状态</th></tr></thead><tbody><tr><td><strong>S0 建立可验证基线</strong></td><td>让「合规」可被机器判定</td><td>一致性矩阵、诚实常量、协议契约 schema、单测</td><td>✅ <strong>完成</strong></td></tr><tr><td><strong>S1 划清协议边界</strong></td><td>消除两个「A2A」带来的认知与对接风险</td><td>A2A 发布端点、状态映射、<code>tasks/cancel</code>、两份规范文档</td><td>✅ <strong>完成</strong></td></tr><tr><td><strong>S2 清偿治理债</strong></td><td>让已有的门真的能挡住东西</td><td>基线清偿、恒红守卫、静默降级扫描器</td><td>🟡 <strong>机制已建</strong>（债务台账 + 基线重置为实测值 + <code>check:debt-ledger</code> 接入 <code>check:structure</code>），存量清偿待排期</td></tr><tr><td><strong>S3 补 A2A 服务端</strong></td><td>从「可被发现」到「可被调用」</td><td><code>message/send</code> / <code>tasks/get</code> / <code>tasks/cancel</code> handler + TaskStore</td><td>⬜ 待排期</td></tr><tr><td><strong>S4 协议版本推进</strong></td><td>支持 <code>2025-03-26</code> 与 A2A 流式</td><td>MCP SSE 响应体 + <code>Last-Event-ID</code>；A2A <code>message/stream</code></td><td>⬜ 待排期</td></tr><tr><td><strong>S5 外部验证</strong></td><td>把「自证」升级为「他证」</td><td>接入 <code>mcp inspector</code>/<code>conformance</code>、<code>a2a-tck</code>/<code>a2a-inspector</code></td><td>🟡 <strong>接入规范与编排器已建</strong>（<code>[DESIGN-QUAL-002]</code> + <code>conformance-runner.mjs</code>），工具安装与 release 门禁待排期</td></tr></tbody></table>
+<hr>
+<h2 id="4-s2-s5-详细步骤">4. S2~S5 详细步骤<a class="anchor" href="#4-s2-s5-详细步骤" aria-label="锚点">#</a></h2>
+<h3 id="s2-清偿治理债-建议最先做-因为它让后续所有工作可信">S2 —— 清偿治理债（建议最先做，因为它让后续所有工作可信）<a class="anchor" href="#s2-清偿治理债-建议最先做-因为它让后续所有工作可信" aria-label="锚点">#</a></h3>
+<p><strong>S2.1 修复 <code>check-repo-layout</code> 的整片红（P1）</strong></p>
+<p>现状：<code>dangling-task 88</code>、<code>cross-layer-require 37</code>、<code>unresolved-require 22</code>、<br><code>extension-id-hardcode 1</code>、<code>docs-index-complete 2</code>，baseline 全 <code>0</code>。</p>
+<p>步骤：</p>
+<ol><li><code>node scripts/ci/check-repo-layout.js --list=unresolved-require</code> —— <strong>先修这 22 处</strong></li></ol>
+<p>（它们指向磁盘上不存在的路径，是<strong>潜在崩溃</strong>，收益最高）。</p>
+<ol><li><code>--list=cross-layer-require</code> —— 37 处跨 workspace 深相对 require，改为 workspace</li></ol>
+<p>包名（如 <code>@khy/shared</code>）。</p>
+<ol><li><code>--list=dangling-task</code> —— 88 个被引用但未定义的 <code>npm run</code> 目标：删除死引用或补齐脚本。</li><li><code>--list=docs-index-complete</code> —— 2 份阶段文档补进 <code>docs/00_INDEX_文档索引.md</code>。</li><li>全部清零后 <code>--update-baseline</code> 重新落基线为 <code>0</code>。</li></ol>
+<p><strong>验收</strong>：<code>npm run check:layout</code> exit 0 且 baseline 全 0。</p>
+<p><strong>S2.2 让 <code>check-code-standards</code> 重新有约束力（P1）</strong></p>
+<p>现状基线允许：12000 个 &gt;50 行函数、12000 处嵌套 &gt;4、5000 处 <code>console.*</code>。</p>
+<p>步骤：</p>
+<ol><li>先<strong>确认口径</strong>：核对 <code>functionLines / nestingDepth</code> 的统计是否含生成代码或</li></ol>
+<p>非 <code>services/backend/src</code> 目录（数字异常大，可能高估）。</p>
+<ol><li>按模块分批清偿：优先 <code>services/backend/src/services/domain/messaging/mcp/</code>、</li></ol>
+<p><code>services/backend/src/services/a2a*</code>（本次改动区）作为示范。</p>
+<ol><li>把基线按季度下调（如每次 -10%），并把 <code>max</code> 与 <code>current</code> 的差距写进</li></ol>
+<p><code>[DESIGN-COMP-001]</code> 的分期目标。</p>
+<ol><li><code>consoleLog</code> 单独处理：用既有 <code>scripts/frontend/cleanup-console.js</code> 的模式，</li></ol>
+<p>把非测试文件的 <code>console.*</code> 改为统一 logger。</p>
+<p><strong>验收</strong>：基线 <code>max</code> 逐季单调下降；<code>check:code-standards</code> 保持 exit 0。</p>
+<p><strong>S2.3 新增「静默降级」扫描器（P2）</strong></p>
+<p>新增 <code>scripts/ci/check-silent-degradation.js</code>，静态检测：</p>
+<ul><li>未挂鉴权中间件的路由（对照路由注册表与 auth 表）</li><li><code>execSync</code> / <code>exec</code> 中出现模板字符串拼接</li><li><code>catch</code> 块里 <code>resolve({ status: 0 })</code> / <code>return null</code> 式静默降级</li><li>CORS <code>origin</code> 字面量 <code>'*'</code></li><li><code>sendError(res, 5xx, err.message)</code></li></ul>
+<p><strong>验收</strong>：新脚本接入 <code>check:changed</code>；对现有代码产出<strong>存量清单</strong>（先警告，<br>分批清偿后再升为 error）。</p>
+<p><strong>S2.4 可观测性默认开启（P2）</strong></p>
+<ol><li>补 <code>traceAudit.logEvent('agent.loop.end')</code>，与既有 <code>agent.loop.start</code> 配对。</li><li>把 breadcrumb 从 <code>KHY_LOOP_DEBUG</code> 门控改为<strong>默认开</strong>（保留关闭开关）。</li><li>检查点按<strong>会话 id</strong> 分槽（当前按 <code>cwd</code> 单槽覆盖）。</li></ol>
+<p><strong>验收</strong>：默认配置下一次完整循环可在 trace 里配对；同目录两个并发会话互不覆盖。</p>
+<h3 id="s3-a2a-服务端任务面-p3-最大能力缺口">S3 —— A2A 服务端任务面（P3，最大能力缺口）<a class="anchor" href="#s3-a2a-服务端任务面-p3-最大能力缺口" aria-label="锚点">#</a></h3>
+<p><strong>目标</strong>：khy 不仅能被外部 orchestrate <strong>发现</strong>，还能被<strong>调用</strong>。</p>
+<p><strong>S3.1 契约先行</strong></p>
+<ul><li>新增 <code>src/contracts/a2a/rpc-request.schema.json</code>（<code>message/send</code> / <code>tasks/get</code> /</li></ul>
+<p><code>tasks/cancel</code> 的请求与响应信封）。</p>
+<ul><li>复用已落地的 <code>message.schema.json</code> / <code>task.schema.json</code>。</li></ul>
+<p><strong>S3.2 任务存储</strong></p>
+<ul><li>新增 <code>src/services/a2a/taskStore.js</code>：接口 <code>create / get / updateStatus / list / cancel</code>。</li><li>开发实现 <code>InMemoryTaskStore</code>（对齐官方 SDK 的命名与语义）；生产实现可复用既有</li></ul>
+<p><code>better-sqlite3</code>（<code>sessions.db</code> 同源）。</p>
+<ul><li><strong>门控</strong> <code>KHY_A2A_TASK_STORE</code>（<code>memory</code> | <code>sqlite</code>），默认 <code>memory</code>。</li></ul>
+<p><strong>S3.3 JSON-RPC 服务端面</strong></p>
+<ul><li>新增 <code>src/services/a2a/serverMethods.js</code>（纯叶子派发）+ 薄 IO 适配。</li><li>方法：<code>message/send</code>、<code>tasks/get</code>、<code>tasks/cancel</code>；未实现的方法回</li></ul>
+<p><code>-32004 UnsupportedOperation</code>（<strong>不得</strong>回 <code>-32601</code>，因为能力已声明）。</p>
+<ul><li><code>tasks/get</code> 的 <code>status.state</code> <strong>必须</strong>经 <code>taskStateSpec.toA2aState()</code>。</li><li>会话隔离用 <code>contextId</code>；<code>taskId</code> 由服务端生成（<code>crypto.randomUUID()</code>）。</li></ul>
+<p><strong>S3.4 接线</strong></p>
+<ul><li>挂到既有的 JSON-RPC 端点（A2A 的 REST 绑定：<code>POST /v1/message:send</code>、</li></ul>
+<p><code>GET /v1/tasks/{id}</code>、<code>POST /v1/tasks/{id}:cancel</code>）。</p>
+<ul><li>出站与入站共用同一份契约 schema（对称性）。</li></ul>
+<p><strong>验收（可执行）</strong></p>
+<ol><li>起本地 server，<code>POST /v1/message:send</code> 返回含 <code>taskId</code> 的 <code>Task</code>，<code>status.state</code> 为 <code>submitted</code>。</li><li><code>GET /v1/tasks/{id}</code> 对已存在 id 回 <code>200</code> + 合法 <code>TaskStatus</code>；对不存在 id 回</li></ol>
+<p><code>-32001 TASK_NOT_FOUND</code>。</p>
+<ol><li><code>POST /v1/tasks/{id}:cancel</code> 使状态转 <code>canceled</code>；对终态任务回 <code>-32002 TASK_NOT_CANCELABLE</code>。</li><li>守卫新增断言：<code>tasks/get</code> 返回值通过 <code>task.schema.json</code>。</li></ol>
+<h3 id="s4-协议版本推进">S4 —— 协议版本推进<a class="anchor" href="#s4-协议版本推进" aria-label="锚点">#</a></h3>
+<p><strong>S4.1 MCP：支持 <code>2025-03-26</code>（P1）</strong></p>
+<ol><li>实现 <code>POST /mcp</code> 的 <code>Accept: text/event-stream</code> 分支：回 <code>text/event-stream</code>，</li></ol>
+<p>事件体为 JSON-RPC 响应。</p>
+<ol><li>实现 <code>GET /mcp</code> 的 SSE 流与 <code>Last-Event-ID</code> 断线续传（事件 id 需编码流身份）。</li><li>把 <code>PROTOCOL_CONFORMANCE</code> 中 <code>transport-streamable-http-sse-response</code> 与</li></ol>
+<p><code>transport-streamable-http-last-event-id</code> 改为 <code>implemented: true</code>。</p>
+<ol><li>把 <code>2025-03-26</code> 加入 <code>SUPPORTED_PROTOCOL_VERSIONS</code>。</li><li>在守卫里补两条探针。</li></ol>
+<p><strong>验收</strong>：<code>SUPPORTED_PROTOCOL_VERSIONS</code> 含 <code>2025-03-26</code> 且守卫 exit 0；<br>用官方 <code>inspector</code> 以 Streamable HTTP 模式连接成功。</p>
+<p><strong>S4.2 拆分互斥传输（M9，P2）</strong></p>
+<ul><li>传统 SSE 移到独立路径（如 <code>/sse</code> 仅传统、<code>/mcp</code> 仅 Streamable），</li></ul>
+<p>属破坏性变更 → 需版本化公告 + 保留一个过渡期的兼容开关。</p>
+<p><strong>S4.3 A2A：SSE 流式（P1）</strong></p>
+<ol><li>实现 <code>message/stream</code>，推送 <code>TaskStatusUpdateEvent</code> / <code>TaskArtifactUpdateEvent</code>。</li><li>把 <code>agentCardSpec.IMPLEMENTED_CAPABILITIES.streaming</code> 改为 <code>true</code></li></ol>
+<p>（守卫 <code>capability-honesty:streaming</code> 会自动校验代码里确有实现）。</p>
+<ol><li>把 <code>taskStateSpec.buildTaskStatus</code> 接入事件构造。</li></ol>
+<p><strong>验收</strong>：<code>curl -N</code> 能看到事件流；守卫全绿。</p>
+<h3 id="s5-外部验证-把-自证-升级为-他证">S5 —— 外部验证（把「自证」升级为「他证」）<a class="anchor" href="#s5-外部验证-把-自证-升级为-他证" aria-label="锚点">#</a></h3>
+<ol><li><strong>MCP</strong>：接入 <code>modelcontextprotocol/inspector</code>（10.6k⭐）做交互式验证；</li></ol>
+<p>评估 <code>modelcontextprotocol/conformance</code> 套件纳入 CI 的可行性。</p>
+<ol><li><strong>A2A</strong>：接入 <code>a2aproject/a2a-tck</code> 与 <code>a2a-inspector</code>。</li><li>把 TCK 报告作为发布门的一部分（<code>gate:release</code>）。</li><li><strong>生态位复审</strong>：补一份 ADR 记录「自建协议层 vs 复用 <code>@modelcontextprotocol/sdk</code></li></ol>
+<p>/ <code>a2a-js</code>」的判据与<strong>复审触发条件</strong>（建议：实现 S4.3 流式前复审一次）。</p>
+<p><strong>验收</strong>：CI 里能产出 TCK 报告；ADR 落档。</p>
+<hr>
+<h2 id="5-s0-s1-已完成内容-本次落地">5. S0~S1 已完成内容（本次落地）<a class="anchor" href="#5-s0-s1-已完成内容-本次落地" aria-label="锚点">#</a></h2>
+<h3 id="5-1-代码改动清单">5.1 代码改动清单<a class="anchor" href="#5-1-代码改动清单" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>文件</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td>1</td><td><code>services/backend/src/services/domain/messaging/mcp/mcpServerProtocol.js</code></td><td>改</td><td>新增 <code>PROTOCOL_CONFORMANCE</code> 一致性矩阵（32 行）、<code>declaredRevisions()</code>、<code>isRevisionFullyImplemented()</code>；<code>parseMessage</code> 加 <code>jsonrpc</code> 校验（带错码分级）；<code>toolDefToMcp</code> 透传 <code>title</code>/<code>annotations</code>/<code>outputSchema</code>；<code>toolResultToMcp</code> 回 <code>structuredContent</code> 并禁用 <code>String()</code> 折叠</td></tr><tr><td>2</td><td><code>services/backend/src/services/domain/messaging/mcp/mcpServer.js</code></td><td>改</td><td>解析失败按 <code>parsed.errorCode</code> 回 <code>-32700</code> 或 <code>-32600</code></td></tr><tr><td>3</td><td><code>services/backend/src/contracts/a2a/agent-card.schema.json</code></td><td><strong>新</strong></td><td>A2A v0.3.0 AgentCard 契约（draft-07）</td></tr><tr><td>4</td><td><code>services/backend/src/contracts/a2a/message.schema.json</code></td><td><strong>新</strong></td><td><code>Message</code> + <code>Part</code>（text/file/data 判别联合）</td></tr><tr><td>5</td><td><code>services/backend/src/contracts/a2a/task.schema.json</code></td><td><strong>新</strong></td><td><code>Task</code> / <code>TaskStatus</code> / <code>TaskState</code>（9 值封闭枚举）/ <code>Artifact</code></td></tr><tr><td>6</td><td><code>services/backend/src/contracts/a2a/README.md</code></td><td><strong>新</strong></td><td>契约目录说明 + 4 条历史踩坑约束</td></tr><tr><td>7</td><td><code>services/backend/src/services/a2a/agentCardSpec.js</code></td><td><strong>新</strong></td><td>纯叶子：符合规范的 Agent Card 构造 + <code>IMPLEMENTED_CAPABILITIES</code> 诚实常量 + <code>validateCardShape</code> + 发布门控</td></tr><tr><td>8</td><td><code>services/backend/src/services/a2a/taskStateSpec.js</code></td><td><strong>新</strong></td><td>纯叶子：三套内部状态机 → 规范 <code>TaskState</code> 映射表 + 迁移合法性 + 严格模式</td></tr><tr><td>9</td><td><code>services/backend/src/services/a2a/builtinAgentManifest.js</code></td><td><strong>新</strong></td><td>纯叶子：内置 agent 清单单一真源（原先内联在 facade 私有方法里）</td></tr><tr><td>10</td><td><code>services/backend/src/routes/wellKnown.js</code></td><td><strong>新</strong></td><td><code>GET /.well-known/agent-card.json</code> 发布端点；公开、不进信封、零硬编码</td></tr><tr><td>11</td><td><code>services/backend/server.js</code></td><td>改</td><td>挂载 <code>/.well-known</code></td></tr><tr><td>12</td><td><code>services/backend/src/services/a2a/index.js</code></td><td>改</td><td><code>Part</code> 补 <code>kind</code>；<code>createTask</code> 委托 <code>sendMessage</code>；新增 <code>cancelTask</code>；<code>getTask</code> URL 编码；<code>createLocalAgentCard</code> 改为规范卡片</td></tr><tr><td>13</td><td><code>services/backend/src/services/a2aFacade.js</code></td><td>改</td><td>内置 agent 清单改为 require 单一真源</td></tr><tr><td>14</td><td><code>services/backend/src/tools/A2ATool/index.js</code></td><td>改</td><td>新增 <code>cancel_task</code> 操作；更新操作描述</td></tr><tr><td>15</td><td><code>scripts/ci/check-protocol-conformance.js</code></td><td><strong>新</strong></td><td>协议一致性守卫：<strong>75 项</strong>断言（MCP 27 + A2A 48），三类探针（behavior / source / file）</td></tr><tr><td>16</td><td><code>package.json</code></td><td>改</td><td>新增 <code>check:protocol-conformance</code>；接入 <code>check:structure</code> 与 <code>check:all-standards</code></td></tr><tr><td>17</td><td><code>services/backend/tests/services/a2a/agentCardSpec.test.js</code></td><td><strong>新</strong></td><td>33 项单测</td></tr><tr><td>18</td><td><code>services/backend/tests/services/a2a/taskStateSpec.test.js</code></td><td><strong>新</strong></td><td>14 项单测</td></tr><tr><td>19</td><td><code>services/backend/tests/services/a2aSendHeaders.test.js</code></td><td>改</td><td><code>createTask</code> 断言从非标准的 <code>/v1/tasks</code> 改为规范的 <code>/v1/message:send</code>；新增 <code>Part.kind</code>、<code>cancelTask</code>、URL 编码 3 项</td></tr><tr><td>20</td><td><code>docs/_规范/[DESIGN-MCP-001] MCP 协议实现规范.md</code></td><td><strong>新</strong></td><td>MCP 协议实现规范（首份）</td></tr><tr><td>21</td><td><code>docs/_规范/[DESIGN-A2A-002] A2A 标准协议适配规范.md</code></td><td><strong>新</strong></td><td>A2A 标准适配规范（首份）</td></tr><tr><td>22</td><td><code>docs/_规范/[DESIGN-A2A-001] A2A 协议规范.md</code></td><td>改</td><td>加定位更正横幅（私有方言 vs 标准协议对照表 + 命名纪律）</td></tr><tr><td>23</td><td><code>docs/_规范/[DESIGN-NAM-002] A2A 与 ACP 命名及术语规范.md</code></td><td><strong>新</strong></td><td>A2A（标准协议）vs ACP（私有方言）的命名与术语单一真源；方法集对照、env 前缀纪律、改名决策</td></tr><tr><td>24</td><td><code>scripts/ci/protocol-naming.json</code></td><td><strong>新</strong></td><td>命名守卫配置：私有 ACP 方法名禁用清单、<code>KHY_A2A_*</code> env 白名单（13 个 legacy-env）</td></tr><tr><td>25</td><td><code>scripts/ci/check-protocol-naming.js</code></td><td><strong>新</strong></td><td>协议命名守卫（A2A vs ACP）：扫描 7876 文件，R1 禁止私有方法名、R2 env 前缀纪律、豁免需写理由；实测 0 违规</td></tr><tr><td>26</td><td><code>docs/_规范/[DESIGN-QUAL-001] 门禁基线与债务台账规范.md</code></td><td><strong>新</strong></td><td>基线必须是实测值（QUAL-1）、基线只降不升（QUAL-2）、每类指标必有台账条目（QUAL-3）</td></tr><tr><td>27</td><td><code>scripts/ci/debt-ledger.json</code></td><td><strong>新</strong></td><td>门禁债务台账（12 条）：layout 4 类 + standards 5 类 + 已归零 3 类；每条带 owner/dueBy/target/plan</td></tr><tr><td>28</td><td><code>scripts/ci/check-debt-ledger.js</code></td><td><strong>新</strong></td><td>债务台账守卫：覆盖完整性（从守卫源码解析）、只降不升棘轮、逾期留痕、台账化石检测；实测 0 error</td></tr><tr><td>29</td><td><code>scripts/ci/code-standards.baseline.json</code></td><td>改</td><td>基线重置为实测值（functionLines 10800→2144、nestingDepth 10800→8703、fileLines 512→352、consoleLog 4592→4584），冻结存量</td></tr><tr><td>30</td><td><code>docs/_规范/[DESIGN-QUAL-002] 官方一致性套件接入规范.md</code></td><td><strong>新</strong></td><td>官方套件（MCP conformance / inspector、A2A a2a-tck / a2a-inspector）的接入方式、所需产出物、版本钉扎与 CI 接线</td></tr><tr><td>31</td><td><code>scripts/ci/conformance-runner.mjs</code></td><td><strong>新</strong></td><td>官方套件编排器：仅工具已安装时执行（不触发下载），缺失降级 SKIPPED，<code>--required</code> 在 CI 强制；产出 <code>conformance-report.json</code></td></tr><tr><td>32</td><td><code>package.json</code></td><td>改</td><td>新增 <code>check:protocol-naming</code> / <code>check:debt-ledger</code>（接入 <code>check:structure</code> 与 <code>check:all-standards</code>）、<code>conform:mcp</code> / <code>conform:a2a</code> / <code>conform:all</code></td></tr><tr><td>33</td><td><code>docs/03_DESIGN_设计/[DESIGN-ARCH-073] 规范快速参考卡.md</code></td><td>改</td><td>删除被当成真 API 的「A2A 速查」（私有方法名 + WebSocket 传输），改为指向 [DESIGN-A2A-002] / [DESIGN-NAM-002]</td></tr><tr><td>34</td><td><code>docs/00_INDEX_文档索引.md</code></td><td>改</td><td>补登记 [DESIGN-ARCH-098/099/100/101]（消除 <code>docs-index-complete</code> 存量 2）</td></tr></tbody></table>
+<h3 id="5-2-关键设计决策-为什么这么做">5.2 关键设计决策（为什么这么做）<a class="anchor" href="#5-2-关键设计决策-为什么这么做" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>决策</th><th>理由</th></tr></thead><tbody><tr><td><strong>把「声明」做成机器可读数据</strong></td><td>三类历史故障的共同点是「声明没有校验点」。矩阵让声明可被 <code>implemented + 探针</code> 双向验证</td></tr><tr><td><strong><code>required</code> 语义 = 「声明该修订则必须实现」</strong></td><td>让「不声明 <code>2025-03-26</code>」成为<strong>合法且有理由</strong>的结果，而不是含糊的 TODO。守卫输出会写明「未实现 → 该修订因此不被声明（诚实降级）」</td></tr><tr><td><strong>保留 <code>SUPPORTED_PROTOCOL_VERSIONS = ['2024-11-05']</code></strong></td><td>规范要求客户端拿到不认识的版本后自行断开。khy 没有 SSE 流式实现，声明 <code>2025-03-26</code> 就是「假兼容」</td></tr><tr><td><strong>A2A <code>capabilities</code> 三项全 <code>false</code></strong></td><td><code>streaming</code> / <code>pushNotifications</code> / <code>stateTransitionHistory</code> 确实零实现。守卫 <code>capability-honesty:*</code> 会实测，防止有人先改卡片</td></tr><tr><td><strong>A2A 契约放在 <code>src/contracts/a2a/</code></strong></td><td>与既有 <code>contracts/acp/</code>、<code>contracts/mobile/</code> 同约定，避免污染 <code>scripts/ci/json-schemas/</code>（那是给 <code>.khy/</code> 数据文件用的）</td></tr><tr><td><strong>私有 ACP 方言保留原名、暂缓改名</strong></td><td>改名牵动 14 处内置 agent 注册、router、facade、测试，属独立破坏性批次。先用文档 + 规范条款划清边界（S1 目标），改名列入 S2 决策项</td></tr><tr><td><strong>守卫探针分三类（behavior / source / file）</strong></td><td>纯函数可驱动的用 <code>behavior</code>（最强）；传输层这类无法纯函数化的用 <code>source</code>；存在性用 <code>file</code>。<strong>没有探针的 <code>implemented: true</code> 直接判红灯</strong> —— 不可验证的声明等于空声明</td></tr><tr><td><strong>反面断言</strong></td><td><code>agent-card-schema-rejects-missing-protocolVersion</code>、<code>message-schema:rejects-part-without-kind</code>、<code>task-schema:rejects-private-state:spawning</code> —— 不只验证「对的能过」，还验证「错的会被拒」，防止 schema 被逐步放宽成空壳</td></tr><tr><td><strong>测试发现 3 个真实缺陷并已修</strong></td><td><code>normalizeBaseUrl('ftp://a.example')</code> 曾静默产出 <code>http://ftp//a.example</code>（不返回 null）；另两处为测试期望本身不严谨</td></tr></tbody></table>
+<h3 id="5-3-验证证据-全部实测">5.3 验证证据（全部实测）<a class="anchor" href="#5-3-验证证据-全部实测" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>验证项</th><th>命令</th><th>结果</th></tr></thead><tbody><tr><td><strong>协议一致性守卫</strong></td><td><code>node scripts/ci/check-protocol-conformance.js --json</code></td><td><strong>75 / 75 pass，exit 0</strong></td></tr><tr><td><strong>合并回归（最终一次）</strong></td><td><code>jest tests/services/a2a tests/services/mcp tests/mcp --runInBand</code></td><td><strong>11 suites / 115 tests 全绿，exit 0</strong></td></tr><tr><td>新增 A2A 单测</td><td><code>jest tests/services/a2a --runInBand</code></td><td><strong>2 suites / 47 tests 全绿</strong></td></tr><tr><td>MCP 既有 jest 套件</td><td><code>jest tests/services/mcp tests/mcp</code></td><td><strong>9 suites / 68 tests 全绿</strong></td></tr><tr><td>其它相关 jest 套件</td><td><code>jest tests/a2a.test.js tests/mcp*.test.js tests/toolCalling.mcpResultShape.test.js</code></td><td><strong>8 suites / 80 tests 全绿</strong></td></tr><tr><td>A2A header 行为测试</td><td><code>node --test tests/services/a2aSendHeaders.test.js</code></td><td><strong>8 / 8 pass</strong></td></tr><tr><td>文档站校验</td><td><code>node scripts/docs/verify_docs_site.js</code></td><td><strong>exit 0</strong>（881 md → 882 html，10563 本地链接全可达）</td></tr><tr><td>纯叶子契约</td><td><code>check-leaf-contract.js &lt;5 个新文件&gt;</code></td><td><strong>通过，0 违规</strong></td></tr><tr><td>节点语法</td><td><code>check-node-syntax.js &lt;11 个改动文件&gt;</code></td><td><strong>11 文件通过</strong></td></tr><tr><td>治理规则</td><td><code>check-gov-rules.js</code></td><td>新文件未引入新违规</td></tr><tr><td>仓库层级</td><td><code>check-repo-layout.js</code></td><td><strong>未引入新违规</strong>；存量 <code>dangling-task 88 / cross-layer-require 37 / unresolved-require 22 / extension-id-hardcode 1 / docs-index-complete 2</code> 均为既有欠债（见 S2.1）</td></tr><tr><td><strong>协议命名守卫</strong></td><td><code>node scripts/ci/check-protocol-naming.js</code></td><td><strong>0 违规，exit 0</strong>（扫描 7876 文件；5 豁免 + 13 legacy-env 已登记）</td></tr><tr><td><strong>债务台账守卫</strong></td><td><code>node scripts/ci/check-debt-ledger.js</code></td><td><strong>12 条全覆盖、0 error、0 warning，exit 0</strong>；<code>nestingDepth</code> 因计量口径问题声明 <code>targetPending</code></td></tr><tr><td><strong>代码标准门禁（基线重置后）</strong></td><td><code>node scripts/ci/check-code-standards.js</code></td><td><strong>exit 0</strong>；基线已对齐实测（functionLines 2144 / nestingDepth 8703 / fileLines 352 / consoleLog 4584 / namingViolations 4）</td></tr><tr><td><strong>官方套件编排器（降级）</strong></td><td><code>node scripts/ci/conformance-runner.mjs</code></td><td><strong>exit 0</strong>；MCP/A2A 工具未安装 → 均 <code>available:false</code>，门禁 <code>pass:true</code>，产出 <code>conformance-report.json</code></td></tr><tr><td><strong>结构总门禁（含新守卫）</strong></td><td><code>npm run check:structure</code></td><td>已接入 <code>check:protocol-naming</code> 与 <code>check:debt-ledger</code>（与既有 <code>check:protocol-conformance</code> 并列）</td></tr></tbody></table>
+<blockquote><p><strong>关于 <code>check-repo-layout</code> 恒红</strong>：这些计数在本轮改动<strong>之前</strong>就已存在（baseline 全 0，<br>即门长期为红）。本次新增文件按既有约定放置（<code>docs/_规范/</code> 不参与阶段索引检查），<br>未使任何计数上升。清偿计划见 §4 S2.1。</p></blockquote>
+<h3 id="5-4-已知未解决的问题-诚实登记">5.4 已知未解决的问题（诚实登记）<a class="anchor" href="#5-4-已知未解决的问题-诚实登记" aria-label="锚点">#</a></h3>
+<blockquote><p>下列 1/2/7 为<strong>能力缺口</strong>（需写代码），仍未解决；3/4/5/6 为<strong>机制缺口</strong>，<br>本次已建立规范化整改机制（见 §5.5），但存量清偿仍待排期。</p></blockquote>
+<ol><li><strong>A2A 服务端任务处理面仍未实现</strong> —— 只做「能被发现」，未做「能被调用」。见 S3。</li><li><strong>MCP 协议版本仍停在 <code>2024-11-05</code></strong> —— 只让「诚实拒绝」成立，未支持新版本。见 S4.1。</li><li><strong>守卫是自建的，不是官方 TCK</strong> —— <code>check-protocol-conformance.js</code> 覆盖纯函数/源码级，</li></ol>
+<p>不含跨实现互操作与传输层端到端。<strong>本次已补 <code>[DESIGN-QUAL-002]</code> + <code>conformance-runner.mjs</code></strong>：<br>   规范了如何接入官方 <code>@modelcontextprotocol/conformance</code> 与 <code>a2a-tck</code>、所需产出物与 CI 接线；<br>   编排器已就位（工具未安装时降级为 SKIPPED）。工具安装与 release 门禁待排期。</p>
+<ol><li><strong><code>check-repo-layout</code> 仍恒红</strong> —— 存量债（unresolved-require 21 / cross-layer-require 37 /</li></ol>
+<p>dangling-task 88 / extension-id-hardcode 1）已<strong>全部登记进 <code>debt-ledger.json</code></strong>，<br>   每条带 owner/dueBy/plan，<code>check:debt-ledger</code> 已接入 <code>check:structure</code>。清偿动作待排期（S2.1）。</p>
+<ol><li><strong><code>code-standards</code> 基线已重置为实测值</strong> —— <code>code-standards.baseline.json</code> 的</li></ol>
+<p><code>functionLines 10800→2144</code>、<code>nestingDepth 10800→8703</code> 等已改为实测，门不再「只拦翻倍级恶化」；<br>   5 类指标的下降目标已写入 <code>debt-ledger.json</code>（仅 <code>nestingDepth</code> 因计量口径问题声明 <code>targetPending</code>）。<br>   存量下降待排期（S2.2）。</p>
+<ol><li><strong>私有 ACP 方言未改名</strong> —— 边界已划清：新增 <code>check-protocol-naming.js</code> 守卫强制</li></ol>
+<p>A2A/ACP 命名纪律（私有的 <code>a2a.*</code> 方法名已确认在代码里零存在、仅为历史草案遗留），<br>   改名仍待决策（S2/§2.1）。</p>
+<ol><li><strong><code>console.log</code> 存量 ~4584 处</strong> —— 已登记为 <code>standards.consoleLog</code> 债务项（目标 3000），属 S2.2 第 4 步。</li></ol>
+<h3 id="5-5-三大核心问题的规范化整改-本次新增-5-4-之-3-4-5-6-的机制层">5.5 三大核心问题的规范化整改（本次新增 · §5.4 之 3/4/5/6 的机制层）<a class="anchor" href="#5-5-三大核心问题的规范化整改-本次新增-5-4-之-3-4-5-6-的机制层" aria-label="锚点">#</a></h3>
+<p>针对用户明确提出的三类问题，本次除 S0/S1 外额外落地了「机制层」整改：</p>
+<table><thead><tr><th>#</th><th>问题</th><th>规范（真源）</th><th>守卫 / 脚本</th><th>实测结果</th></tr></thead><tbody><tr><td><strong>P1</strong></td><td>两个「A2A」混淆、文档把私有方言写成 A2A 规范、传输层错写成 WebSocket</td><td><code>[DESIGN-NAM-002] A2A 与 ACP 命名及术语规范</code>、[DESIGN-A2A-001] 定位更正横幅、[DESIGN-A2A-002]</td><td><code>scripts/ci/check-protocol-naming.js</code> + <code>scripts/ci/protocol-naming.json</code></td><td><strong>0 违规，exit 0</strong></td></tr><tr><td><strong>P2</strong></td><td>基线失效（允许 12000 超长函数 / 5000 console）、守卫整片红</td><td><code>[DESIGN-QUAL-001] 门禁基线与债务台账规范</code></td><td><code>scripts/ci/debt-ledger.json</code> + <code>scripts/ci/check-debt-ledger.js</code>；<code>code-standards.baseline.json</code> 重置为实测值</td><td>台账 12 条全覆盖、门禁 <code>0 error</code>；基线已与实测对齐</td></tr><tr><td><strong>P3</strong></td><td>未接入任何官方一致性套件，合规结论均为自审</td><td><code>[DESIGN-QUAL-002] 官方一致性套件接入规范</code></td><td><code>scripts/ci/conformance-runner.mjs</code>（<code>conform:mcp</code> / <code>conform:a2a</code> / <code>conform:all</code>）</td><td>编排器就位；套件未安装时降级 SKIPPED，门禁判 pass</td></tr></tbody></table>
+<p><strong>P1 关键动作</strong>：</p>
+<ul><li>确认仓库内「标准 A2A 出站客户端」（127 行）与「私有 ACP 方言」（<code>a2aRegistry</code>/<code>acpTransport</code> 等）方法集<strong>无一重合</strong>；</li><li>守卫扫描全仓，确认 <code>[DESIGN-A2A-001]</code> 里写的 <code>a2a.discovery.register</code> / <code>a2a.task.create</code> 等私有方法名<strong>在代码里零存在</strong>，仅为历史草案遗留 → 已从代码注释与契约 README 中去除这些错误命名；</li><li><code>[DESIGN-A2A-001]</code> 加定位更正横幅（私有方言 vs 标准协议对照表），<code>docs/03_DESIGN_设计/[DESIGN-ARCH-073] 规范快速参考卡.md</code> 中那份被当成真 API 的「A2A 速查」已改为指向正确规范；</li><li>13 个仍用 <code>KHY_A2A_*</code> 前缀的私有 ACP 环境变量被登记为 <code>legacy-env</code>，待 P2 批次改名为 <code>KHY_ACP_*</code>。</li></ul>
+<p><strong>P2 关键动作</strong>：</p>
+<ul><li><code>code-standards.baseline.json</code> 四个数字（functionLines/nestingDepth 同值 10800/12000、fileLines 512、consoleLog 4592）改为实测（2144 / 8703 / 352 / 4584）—— 容忍度从实际的 5.6 倍收紧到 1 倍（冻结存量）；</li><li><code>debt-ledger.json</code> 12 条：layout 4 类（unresolved-require 21 / cross-layer-require 37 / dangling-task 88 / extension-id-hardcode 1）+ standards 5 类 + 已归零 3 类；<code>check-debt-ledger.js</code> 从守卫源码<strong>解析覆盖完整性</strong>，强制每类门禁指标都有责任人/期限/目标（QUAL-3）；</li><li>两守卫均接入 <code>check:structure</code>（PR 快门）与 <code>check:all-standards</code>。</li></ul>
+<p><strong>P3 关键动作</strong>：</p>
+<ul><li>锁定权威工具：<code>@modelcontextprotocol/conformance</code>（<code>server --url &lt;端点&gt; --spec-version 2025-11-25</code>）、<code>@modelcontextprotocol/inspector</code>（CLI 冒烟）、<code>a2a-tck</code>（<code>./run_tck.py --sut-host &lt;url&gt; --level must</code>）、<code>a2a-inspector</code>；</li><li>明确<strong>所需产出</strong>：MCP <code>results/server-*/checks.json</code>（含 <code>wire-schema-valid</code>）、A2A <code>reports/compatibility.json|html|junit</code>，全部作为 CI artifact 留存 ≥14 天；</li><li><code>conformance-runner.mjs</code> 只在工具<strong>已安装</strong>时执行（不触发自动下载），缺失时降级 SKIPPED，<code>--required</code> 在 CI 强制产出真实报告；</li><li>khy 现状登记：MCP 仅 <code>2024-11-05</code>、A2A 仅 Agent Card 无任务面 → 首轮 conformance/TCK 必现已知失败，须登记进 expected-failures 且只缩不扩。</li></ul>
+<hr>
+<h2 id="6-验收标准总表">6. 验收标准总表<a class="anchor" href="#6-验收标准总表" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>阶段</th><th>验收标准</th><th>状态</th></tr></thead><tbody><tr><td>S0</td><td><code>check:protocol-conformance</code> 全绿并接入 <code>check:structure</code>；MCP 与 A2A 契约 schema 存在且有反面断言</td><td>✅</td></tr><tr><td>S1</td><td><code>/.well-known/agent-card.json</code> 可访问且通过 schema；TaskState 映射完备；<code>tasks/cancel</code> 可用；两份规范文档落档</td><td>✅</td></tr><tr><td>S2</td><td><code>check:layout</code> exit 0 且 baseline 全 0；<code>code-standards</code> 基线季度下调；静默降级扫描器接入 <code>check:changed</code></td><td>🟡 债务台账 + 基线重置 + <code>check:debt-ledger</code> 已建并接入 <code>check:structure</code>；存量清偿待排期</td></tr><tr><td>S3</td><td>端到端：<code>message/send</code> → <code>tasks/get</code> → <code>tasks/cancel</code> 三方法互通且通过契约 schema</td><td>⬜</td></tr><tr><td>S4</td><td><code>SUPPORTED_PROTOCOL_VERSIONS</code> 含 <code>2025-03-26</code> 且官方 inspector 可连；A2A 流式事件可被 <code>curl -N</code> 观测</td><td>⬜</td></tr><tr><td>S5</td><td>CI 产出 MCP / A2A 官方 TCK 报告；自建 vs 复用 SDK 的 ADR 落档</td><td>🟡 <code>[DESIGN-QUAL-002]</code> + <code>conformance-runner.mjs</code> 已建；工具安装与 release 门禁待排期</td></tr></tbody></table>
+<hr>
+<h2 id="7-风险与对策">7. 风险与对策<a class="anchor" href="#7-风险与对策" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>风险</th><th>对策</th></tr></thead><tbody><tr><td>S2.1 清偿 <code>unresolved-require</code> 22 处时改动面外溢</td><td>逐条独立提交，每条跑一次相关测试；先修「指向不存在路径」这类确定性问题</td></tr><tr><td>S2.2 基线下调过猛导致新代码无处可写</td><td>按模块分批 + 每季 -10%；新代码一律直接满足目标标准，不进基线豁免</td></tr><tr><td>S3 服务端任务面引入新的失控面</td><td>复用既有 <code>KHY_A2A_ENABLED</code> 总闸；任务存储设 TTL 与上限；<code>tasks/cancel</code> 复用既有生命周期 <code>kill()</code> 而非新造通道</td></tr><tr><td>S4.1 实现 SSE 后打开 <code>2025-03-26</code> 但流式语义不完整</td><td>只有「SSE 响应体 + <code>Last-Event-ID</code>」两条 <code>required</code> 探针都绿才加入声明集合（守卫强制）</td></tr><tr><td>S4.2 拆分互斥传输破坏现有客户端</td><td>保留过渡期兼容开关 + 在 <code>CHANGELOG</code> 明确标注破坏性变更</td></tr><tr><td>私有方言改名牵动面过大</td><td>用 <code>grep</code> 先产出全量引用清单与影响面评估，再决定是否做；不做也可以，规范条款已覆盖命名纪律</td></tr></tbody></table>
+<hr>
+<h2 id="8-附-本次新增可复用命令">8. 附：本次新增可复用命令<a class="anchor" href="#8-附-本次新增可复用命令" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-comment"># 协议一致性（MCP + A2A）</span>
+npm run check:protocol-conformance
+node scripts/ci/check-protocol-conformance.js --mcp --json
+node scripts/ci/check-protocol-conformance.js --a2a
+
+<span class="hljs-comment"># 新增单测</span>
+npm <span class="hljs-built_in">test</span> --workspace services/backend -- tests/services/a2a
+node --<span class="hljs-built_in">test</span> services/backend/tests/services/a2aSendHeaders.test.js
+
+<span class="hljs-comment"># 端到端互操作（需真实起 server，不在 CI 内）</span>
+npx @modelcontextprotocol/inspector node services/backend/src/services/domain/messaging/mcp/mcpStdioServer.js
+
+<span class="hljs-comment"># 三大核心问题整改（本次新增）</span>
+npm run check:protocol-naming        <span class="hljs-comment"># A2A vs ACP 命名纪律（P1）</span>
+npm run check:debt-ledger            <span class="hljs-comment"># 门禁债务台账（P2）</span>
+node scripts/ci/check-debt-ledger.js --json
+npm run conform:all                 <span class="hljs-comment"># 官方套件编排（工具未装→SKIPPED；CI 用 --required 强制）</span>
+node scripts/ci/conformance-runner.mjs --required --spec-version 2024-11-05 --mcp-url http://127.0.0.1:3000/mcp</code></pre>
+<blockquote><p><strong>降级说明</strong>：<code>conform:all</code> 在套件未安装时不会失败（写 <code>conformance-report.json</code> 标注<br><code>available:false</code>）。真正接入时先按 <code>[DESIGN-QUAL-002]</code> §4 安装 <code>@modelcontextprotocol/conformance</code><br>与 <code>a2a-tck</code>，再于 release 流水线以 <code>--required</code> 运行。</p></blockquote>
+<hr>
+<p><em>本计划与调研报告配套；S0/S1 的代码改动已落地并通过实测验证，S2~S5 待排期。</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/11_报告/RESEARCH/[RESEARCH-003] khy-os-协议与工程规范深度调研报告-2026-09-15.html"><div class="dir">← 上一篇</div><div class="ttl">khy-os 协议与工程规范深度调研报告</div></a><a class="next" href="../../../docs/11_报告/RESEARCH/[RESEARCH-005] khy-os-能力缺口闭环执行计划-2026-09-15.html"><div class="dir">下一篇 →</div><div class="ttl">khy-os 能力缺口闭环执行计划（2026-09-15）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/11_报告/RESEARCH/[RESEARCH-004] khy-os-协议与工程规范分步改进计划-2026-09-15.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

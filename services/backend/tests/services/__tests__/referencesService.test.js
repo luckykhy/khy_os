@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * referencesService.test.js â€?unit tests for the References cross-directory
+ * referencesService.test.js â€” unit tests for the References cross-directory
  * resource registry: config merge, alias mention resolution, boundary
  * enforcement, and unsafe-repository refusal.
  */
@@ -10,7 +10,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const svc = require('../referencesService');
+const svc = require('../../../src/services/referencesService.js');
 
 describe('referencesService', () => {
   let tmp;
@@ -69,7 +69,7 @@ describe('referencesService', () => {
       expect(refs.size).toBe(1);
       const entry = refs.get('docs');
       expect(entry.type).toBe('path');
-      expect(entry.target).toBe(path.resolve(tmp, 'docs');
+      expect(entry.target).toBe(path.resolve(tmp, 'docs'));
       expect(entry.description).toBe('product docs');
       expect(entry.hidden).toBe(false);
     });
@@ -81,8 +81,8 @@ describe('referencesService', () => {
       });
       const refs = svc.loadReferences(cwd, { _configPaths: paths });
       expect(refs.size).toBe(1);
-      // Project config lives at <tmp>/proj/.khy/references.json â†?'../b' = <tmp>/proj/b
-      expect(refs.get('docs').target).toBe(path.resolve(tmp, 'proj', 'b');
+      // Project config lives at <tmp>/proj/.khy/references.json â€” '../b' = <tmp>/proj/b
+      expect(refs.get('docs').target).toBe(path.resolve(tmp, 'proj', 'b'));
       expect(refs.get('docs').description).toBe('project docs');
     });
 
@@ -130,7 +130,7 @@ describe('referencesService', () => {
       });
       const refs = svc.loadReferences(cwd, { _configPaths: paths });
       const out = svc.resolveMentionAbs('docs', cwd, { _refs: refs });
-      expect(out).toBe(path.resolve(tmp, 'docs');
+      expect(out).toBe(path.resolve(tmp, 'docs'));
     });
 
     it('resolves @alias/sub/path inside the reference root', () => {
@@ -142,7 +142,7 @@ describe('referencesService', () => {
       });
       const refs = svc.loadReferences(cwd, { _configPaths: paths });
       const out = svc.resolveMentionAbs('docs/a/b/readme.md', cwd, { _refs: refs });
-      expect(out).toBe(path.resolve(tmp, 'docs', 'a', 'b', 'readme.md');
+      expect(out).toBe(path.resolve(tmp, 'docs', 'a', 'b', 'readme.md'));
     });
 
     it('rejects paths escaping the reference root (../)', () => {

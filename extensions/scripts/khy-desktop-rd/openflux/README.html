@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: README.md -->
+<title>OpenFlux — 桌面 AI Agent 客户端（Tauri v2） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>extensions<span class="sep">›</span>scripts<span class="sep">›</span>khy-desktop-rd<span class="sep">›</span>openflux<span class="sep">›</span>OpenFlux — 桌面 AI Agent 客户端（Tauri v2）</div>
+      <header class="hero reveal"><h1>OpenFlux — 桌面 AI Agent 客户端（Tauri v2）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#openflux-桌面-ai-agent-客户端-tauri-v2">OpenFlux — 桌面 AI Agent 客户端（Tauri v2）</a></li><li class="lvl-2"><a href="#一-为什么列为第一位">一、为什么列为第一位</a></li><li class="lvl-2"><a href="#二-架构">二、架构</a></li><li class="lvl-2"><a href="#三-关键技术点">三、关键技术点</a></li><li class="lvl-3"><a href="#3-1-gateway-sidecar-启动模式-与-khy-os-高度同构">3.1 Gateway Sidecar 启动模式（**与 khy-os 高度同构**）</a></li><li class="lvl-3"><a href="#3-2-webview2-ws-127-0-0-1-直连限制">3.2 WebView2 ↔ ws://127.0.0.1 直连限制</a></li><li class="lvl-3"><a href="#3-3-tauri-配置文件">3.3 Tauri 配置文件</a></li><li class="lvl-3"><a href="#3-4-rust-端依赖-src-tauri-cargo-toml">3.4 Rust 端依赖（`src-tauri/Cargo.toml`）</a></li><li class="lvl-3"><a href="#3-5-资源打包脚本">3.5 资源打包脚本</a></li><li class="lvl-2"><a href="#四-feature-列表-可直接对照-khy-os">四、Feature 列表（可直接对照 khy-os）</a></li><li class="lvl-2"><a href="#五-给-khy-os-的具体参考">五、给 khy-os 的具体参考</a></li><li class="lvl-3"><a href="#5-1-直接可抄">5.1 直接可抄</a></li><li class="lvl-3"><a href="#5-2-必须避开的坑">5.2 必须避开的坑</a></li><li class="lvl-3"><a href="#5-3-不建议照抄">5.3 不建议照抄</a></li><li class="lvl-2"><a href="#六-本地文件">六、本地文件</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="openflux-桌面-ai-agent-客户端-tauri-v2">OpenFlux — 桌面 AI Agent 客户端（Tauri v2）<a class="anchor" href="#openflux-桌面-ai-agent-客户端-tauri-v2" aria-label="锚点">#</a></h1>
+<blockquote><p>调研日期: 2026-08-31<br>仓库: <a href="https://github.com/EDEAI/OpenFlux" target="_blank" rel="noopener">https://github.com/EDEAI/OpenFlux</a><br>官方站点: <a href="https://openflux.io" target="_blank" rel="noopener">https://openflux.io</a><br>License: MIT<br>Stars: 225 · Forks: 42 · 118 commits（截至调研日）<br>中文文档: <code>README_zh.md</code></p></blockquote>
+<h2 id="一-为什么列为第一位">一、为什么列为第一位<a class="anchor" href="#一-为什么列为第一位" aria-label="锚点">#</a></h2>
+<p>OpenFlux 的技术栈与 khy-os 当前形态<strong>高度对称</strong>，几乎可以直接做 1:1 的工程映射：</p>
+<table><thead><tr><th>层级</th><th>OpenFlux</th><th>khy-os</th><th>复用度</th></tr></thead><tbody><tr><td>桌面壳</td><td><strong>Tauri v2</strong>（Rust）</td><td>❌ 无</td><td>需新建</td></tr><tr><td>前端</td><td>TypeScript + Vite + 原生 HTML</td><td>Vue 3 + Element Plus + Vite</td><td>风格相近</td></tr><tr><td>AI 网关 / 后端</td><td><strong>Gateway Sidecar</strong>（Node.js + Express + ws）</td><td><code>services/backend/server.js</code> + <code>services/ai-backend/</code></td><td><strong>结构对称</strong></td></tr><tr><td>配置</td><td><code>openflux.yaml</code></td><td><code>~/.khyquant/config.json</code></td><td>改写即可</td></tr><tr><td>多 LLM</td><td>OpenAI / Anthropic / DeepSeek / Moonshot / Zhipu / Ollama</td><td>同样的多供应商</td><td>复用</td></tr><tr><td>MCP 协议</td><td>内建</td><td>内建</td><td>复用</td></tr><tr><td>多 Agent</td><td>通用 / 编码 / 自动化</td><td>已有元帅/代理路由</td><td>概念复用</td></tr><tr><td>桌面能力</td><td>鼠标键盘模拟、Office 插件、Sherpa-ONNX</td><td>xterm + 剪贴板图片粘贴</td><td>增量补</td></tr></tbody></table>
+<h2 id="二-架构">二、架构<a class="anchor" href="#二-架构" aria-label="锚点">#</a></h2>
+<pre><code>┌─────────────────────────────┐
+│ Tauri v2 Shell │ ← Rust 进程管理 + 原生 API
+├─────────────────────────────┤
+│ 前端（TypeScript/HTML）│ ← 对话 UI / 设置 / 文件预览
+├─────────────────────────────┤
+│ Gateway Sidecar（Node.js）│ ← AI 引擎 / 工具调用 / 记忆系统
+└─────────────────────────────┘</code></pre>
+<h2 id="三-关键技术点">三、关键技术点<a class="anchor" href="#三-关键技术点" aria-label="锚点">#</a></h2>
+<h3 id="3-1-gateway-sidecar-启动模式-与-khy-os-高度同构">3.1 Gateway Sidecar 启动模式（<strong>与 khy-os 高度同构</strong>）<a class="anchor" href="#3-1-gateway-sidecar-启动模式-与-khy-os-高度同构" aria-label="锚点">#</a></h3>
+<p>源码：<code>src-tauri/src/lib.rs:23-72</code></p>
+<pre><code class="language-rust">.<span class="hljs-title function_ invoke__">setup</span>(|app| {
+    tray::<span class="hljs-title function_ invoke__">setup_tray</span>(app)?;
+    <span class="hljs-keyword">let</span> <span class="hljs-variable">config</span> = config::<span class="hljs-title function_ invoke__">load_config</span>(app.<span class="hljs-title function_ invoke__">handle</span>())?;
+    app.<span class="hljs-title function_ invoke__">manage</span>(config);
+    app.<span class="hljs-title function_ invoke__">manage</span>(Mutex::<span class="hljs-title function_ invoke__">new</span>(commands::gateway::GatewaySidecar::<span class="hljs-title function_ invoke__">new</span>()));
+    <span class="hljs-comment">// ...</span>
+
+    <span class="hljs-comment">// 异步启动 Gateway Sidecar（不阻塞 UI 线程）</span>
+    <span class="hljs-keyword">let</span> <span class="hljs-variable">app_handle</span> = app.<span class="hljs-title function_ invoke__">handle</span>().<span class="hljs-title function_ invoke__">clone</span>();
+    tauri::async_runtime::<span class="hljs-title function_ invoke__">spawn</span>(<span class="hljs-keyword">async</span> <span class="hljs-keyword">move</span> {
+        <span class="hljs-comment">// 先让窗口显示 loading 界面</span>
+        tokio::time::<span class="hljs-title function_ invoke__">sleep</span>(std::time::Duration::<span class="hljs-title function_ invoke__">from_millis</span>(<span class="hljs-number">100</span>)).<span class="hljs-keyword">await</span>;
+        <span class="hljs-comment">// 用 spawn_blocking 避免阻塞 tokio 运行时的同步 I/O</span>
+        <span class="hljs-keyword">let</span> <span class="hljs-variable">handle</span> = app_handle.<span class="hljs-title function_ invoke__">clone</span>();
+        <span class="hljs-keyword">let</span> <span class="hljs-variable">result</span> = tokio::task::<span class="hljs-title function_ invoke__">spawn_blocking</span>(<span class="hljs-keyword">move</span> || {
+            commands::gateway::<span class="hljs-title function_ invoke__">start_gateway_sidecar</span>(&amp;handle)
+        }).<span class="hljs-keyword">await</span>;
+        <span class="hljs-keyword">match</span> result {
+            <span class="hljs-title function_ invoke__">Ok</span>(<span class="hljs-title function_ invoke__">Ok</span>(())) =&gt; <span class="hljs-built_in">eprintln!</span>(<span class="hljs-string">&quot;[OpenFlux] Gateway sidecar started&quot;</span>),
+            <span class="hljs-title function_ invoke__">Ok</span>(<span class="hljs-title function_ invoke__">Err</span>(e)) =&gt; <span class="hljs-built_in">eprintln!</span>(<span class="hljs-string">&quot;[OpenFlux] Gateway sidecar start failed: {}&quot;</span>, e),
+            <span class="hljs-title function_ invoke__">Err</span>(e) =&gt; <span class="hljs-built_in">eprintln!</span>(<span class="hljs-string">&quot;[OpenFlux] Gateway sidecar task error: {}&quot;</span>, e),
+        }
+    });
+    <span class="hljs-title function_ invoke__">Ok</span>(())
+})</code></pre>
+<p><strong>关键决策</strong>：</p>
+<ul><li>用 <code>spawn_blocking</code> 包住同步 spawn（tar 解压 + node.exe 启动）</li><li>先睡 100ms 让 loading 界面先渲染</li><li>启动失败/任务失败都 eprintln 而不是 panic —— Tauri 进程不挂</li><li>主窗口销毁时 <code>commands::gateway::stop_gateway_sidecar(app)</code> 优雅停网关</li></ul>
+<blockquote><p>这正是 khy-os <code>services/backend/bin/khy.js:1100-1194</code> 那条 <code>spawn(node, [server.js], { detached: true })</code> 路径的 Rust 镜像。</p></blockquote>
+<h3 id="3-2-webview2-ws-127-0-0-1-直连限制">3.2 WebView2 ↔ ws://127.0.0.1 直连限制<a class="anchor" href="#3-2-webview2-ws-127-0-0-1-直连限制" aria-label="锚点">#</a></h3>
+<p>源码：<code>src-tauri/src/lib.rs:53-58</code></p>
+<pre><code class="language-rust"><span class="hljs-comment">// Lift the WebView2 AppContainer loopback restriction</span>
+<span class="hljs-meta">#[cfg(target_os = <span class="hljs-string">&quot;windows&quot;</span>)]</span>
+setup::<span class="hljs-title function_ invoke__">apply_loopback_exemption</span>();</code></pre>
+<p>WebView2 默认禁用了 AppContainer loopback，需要 <code>CheckNetIsolation.exe</code> 解封。这是 Windows-only 的坑——khy-os 如果走 Tauri 路线要预设这个。</p>
+<h3 id="3-3-tauri-配置文件">3.3 Tauri 配置文件<a class="anchor" href="#3-3-tauri-配置文件" aria-label="锚点">#</a></h3>
+<p><code>src-tauri/tauri.conf.json</code>（节选）：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;$schema&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;https://schema.tauri.app/config/2&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;productName&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;OpenFlux&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;0.6.20&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;identifier&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;com.openflux.app&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;build&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;beforeDevCommand&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;pnpm dev&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;devUrl&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;http://localhost:1420&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;beforeBuildCommand&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;pnpm build&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;frontendDist&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;../dist&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;app&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;withGlobalTauri&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;windows&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;title&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;OpenFlux&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;width&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1200</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;height&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">800</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;minWidth&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">800</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;minHeight&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">600</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;decorations&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;center&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span>
+    <span class="hljs-punctuation">}</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;security&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;csp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">null</span></span> <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;bundle&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;active&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;copyright&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2025 OpenFlux&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;targets&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;nsis&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;dmg&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;windows&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;nsis&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;compression&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;none&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;languages&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;SimpChinese&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;English&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;displayLanguageSelector&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;installMode&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;currentUser&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;installerIcon&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;icons/icon.ico&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;headerImage&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;icons/nsis-header.bmp&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;sidebarImage&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;icons/nsis-sidebar.bmp&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;installerHooks&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;nsis/hooks.nsh&quot;</span>
+      <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;icon&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+      <span class="hljs-string">&quot;icons/32x32.png&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-string">&quot;icons/128x128.png&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-string">&quot;icons/128x128@2x.png&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-string">&quot;icons/icon.icns&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-string">&quot;icons/icon.ico&quot;</span>
+    <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;resources&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+      <span class="hljs-string">&quot;node.exe&quot;</span><span class="hljs-punctuation">,</span>                          <span class="hljs-comment">// ← 内嵌 Node 运行时</span>
+      <span class="hljs-string">&quot;gateway-bundle.tar.gz&quot;</span><span class="hljs-punctuation">,</span>             <span class="hljs-comment">// ← 内嵌网关包</span>
+      <span class="hljs-string">&quot;../openflux.example.yaml&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-string">&quot;resources/plugins/excel/**/*&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-string">&quot;resources/plugins/word/**/*&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-string">&quot;resources/plugins/powerpoint/**/*&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-string">&quot;resources/python/python-embed.zip&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-comment">// ← 内嵌 Python 运行时</span>
+      <span class="hljs-string">&quot;resources/python/uv.exe&quot;</span>
+    <span class="hljs-punctuation">]</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>关键决策</strong>：</p>
+<ul><li><strong>内嵌 Node 运行时</strong>（<code>node.exe</code>）作为资源 —— 用户的电脑不必装 Node</li><li>内嵌 Python（<code>python-embed.zip</code> + <code>uv.exe</code>）—— 同样为&quot;零外部依赖&quot;路线</li><li>资源打包策略：本体单独打 tar.gz，运行时（node.exe）+ 内嵌数据分列</li><li>NSIS 安装语言含简体中文，installMode=currentUser（<strong>免管理员权限</strong>）</li><li><code>decorations: false</code> —— 自绘窗口标题栏（khy-os 默认风格首选）</li></ul>
+<h3 id="3-4-rust-端依赖-src-tauri-cargo-toml">3.4 Rust 端依赖（<code>src-tauri/Cargo.toml</code>）<a class="anchor" href="#3-4-rust-端依赖-src-tauri-cargo-toml" aria-label="锚点">#</a></h3>
+<pre><code class="language-toml"><span class="hljs-section">[dependencies]</span>
+<span class="hljs-attr">tauri</span> = { version = <span class="hljs-string">&quot;2&quot;</span>, features = [<span class="hljs-string">&quot;tray-icon&quot;</span>] }
+<span class="hljs-attr">tauri-plugin-opener</span> = <span class="hljs-string">&quot;2&quot;</span>
+<span class="hljs-attr">tauri-plugin-shell</span> = <span class="hljs-string">&quot;2&quot;</span>
+<span class="hljs-attr">tauri-plugin-dialog</span> = <span class="hljs-string">&quot;~2.7&quot;</span>
+<span class="hljs-attr">tauri-plugin-process</span> = <span class="hljs-string">&quot;2&quot;</span>
+<span class="hljs-attr">tauri-plugin-notification</span> = <span class="hljs-string">&quot;2&quot;</span>
+<span class="hljs-attr">tauri-plugin-fs</span> = <span class="hljs-string">&quot;~2.5&quot;</span>
+<span class="hljs-attr">tauri-plugin-single-instance</span> = <span class="hljs-string">&quot;2&quot;</span>
+<span class="hljs-attr">serde</span> = { version = <span class="hljs-string">&quot;1&quot;</span>, features = [<span class="hljs-string">&quot;derive&quot;</span>] }
+<span class="hljs-attr">serde_json</span> = <span class="hljs-string">&quot;1&quot;</span>
+<span class="hljs-attr">serde_yaml</span> = <span class="hljs-string">&quot;0.9&quot;</span>
+<span class="hljs-attr">tokio</span> = { version = <span class="hljs-string">&quot;1&quot;</span>, features = [<span class="hljs-string">&quot;rt&quot;</span>, <span class="hljs-string">&quot;rt-multi-thread&quot;</span>, <span class="hljs-string">&quot;macros&quot;</span>, <span class="hljs-string">&quot;time&quot;</span>, <span class="hljs-string">&quot;net&quot;</span>, <span class="hljs-string">&quot;process&quot;</span>, <span class="hljs-string">&quot;io-util&quot;</span>] }
+<span class="hljs-attr">open</span> = <span class="hljs-string">&quot;5&quot;</span>
+<span class="hljs-attr">log</span> = <span class="hljs-string">&quot;0.4&quot;</span>
+<span class="hljs-attr">env_logger</span> = <span class="hljs-string">&quot;0.11&quot;</span>
+<span class="hljs-attr">tar</span> = <span class="hljs-string">&quot;0.4&quot;</span>
+<span class="hljs-attr">flate2</span> = <span class="hljs-string">&quot;1&quot;</span>
+<span class="hljs-attr">axum</span> = { version = <span class="hljs-string">&quot;0.7&quot;</span>, features = [<span class="hljs-string">&quot;ws&quot;</span>] }
+<span class="hljs-attr">tower-http</span> = { version = <span class="hljs-string">&quot;0.5&quot;</span>, features = [<span class="hljs-string">&quot;fs&quot;</span>, <span class="hljs-string">&quot;cors&quot;</span>] }
+<span class="hljs-attr">tower</span> = <span class="hljs-string">&quot;0.4&quot;</span>
+<span class="hljs-attr">hyper</span> = { version = <span class="hljs-string">&quot;1&quot;</span>, features = [<span class="hljs-string">&quot;http1&quot;</span>, <span class="hljs-string">&quot;server&quot;</span>] }
+<span class="hljs-attr">hyper-util</span> = { version = <span class="hljs-string">&quot;0.1&quot;</span>, features = [<span class="hljs-string">&quot;tokio&quot;</span>] }
+<span class="hljs-attr">tokio-rustls</span> = <span class="hljs-string">&quot;0.26&quot;</span>
+<span class="hljs-attr">rustls-pemfile</span> = <span class="hljs-string">&quot;2&quot;</span>
+<span class="hljs-attr">which</span> = <span class="hljs-string">&quot;6&quot;</span>
+<span class="hljs-attr">anyhow</span> = <span class="hljs-string">&quot;1&quot;</span>
+<span class="hljs-attr">tokio-tungstenite</span> = <span class="hljs-string">&quot;0.24&quot;</span>
+<span class="hljs-attr">futures-util</span> = <span class="hljs-string">&quot;0.3&quot;</span>
+<span class="hljs-comment"># 本地开发证书生成（HTTPS 18803，Office 加载项要求）——纯 Rust，运行时离线。</span>
+<span class="hljs-attr">rcgen</span> = { version = <span class="hljs-string">&quot;0.13&quot;</span>, default-features = <span class="hljs-literal">false</span>, features = [<span class="hljs-string">&quot;pem&quot;</span>, <span class="hljs-string">&quot;ring&quot;</span>] }</code></pre>
+<p><strong>值得借鉴</strong>：</p>
+<ul><li>用 <code>axum</code> 做 Rust 端 HTTP/WS（Office 插件的 18803 端口）——给 khy-os 未来做 KHY-OS 内核的本地 HTTP 桥有用</li><li><code>tokio-tungstenite</code> 当 WS 客户端（如反向连 gateway-bundle）</li><li><code>rcgen</code> 离线生成自签证书（用于 Office 加载项要求的 HTTPS）</li></ul>
+<h3 id="3-5-资源打包脚本">3.5 资源打包脚本<a class="anchor" href="#3-5-资源打包脚本" aria-label="锚点">#</a></h3>
+<p><code>package.json</code> 的 <code>tauri:build</code> 步骤把 NSIS 安装包拷到 <code>output\</code>：</p>
+<pre><code class="language-json"><span class="hljs-attr">&quot;tauri:build&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;tauri build --bundles nsis &amp;&amp; powershell -c \&quot;New-Item -ItemType Directory -Force output | Out-Null; Copy-Item &#x27;C:\\cargo-target\\openflux-rust\\release\\bundle\\nsis\\*.exe&#x27; output\\ -Force; Write-Host &#x27;Installer copied to output\\&#x27;\&quot;&quot;</span></code></pre>
+<blockquote><p>khy-os 的桌面端可以参考这条路径：从绝对 cargo-target 拷贝安装包到项目内 <code>apps/desktop/release/</code>（避免用户去 cargo cache 找）。</p></blockquote>
+<h2 id="四-feature-列表-可直接对照-khy-os">四、Feature 列表（可直接对照 khy-os）<a class="anchor" href="#四-feature-列表-可直接对照-khy-os" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>OpenFlux</th><th>khy-os 现状</th><th>复用路径</th></tr></thead><tbody><tr><td>多 LLM 接入（10+ 供应商）</td><td>✅ <code>services/backend/src/services/gateway/aiGateway.js</code></td><td>0 改动</td></tr><tr><td>多 Agent 路由</td><td>✅ 元帅/将军体系</td><td>0 改动</td></tr><tr><td>长记忆（SQLite + sqlite-vec）</td><td>✅ <code>khy-Trajectory/</code></td><td>增量补</td></tr><tr><td>MCP 协议</td><td>✅ 内建</td><td>0 改动</td></tr><tr><td>浏览器自动化（Playwright）</td><td>✅ 部分（远程 SSH）</td><td>增量补</td></tr><tr><td>语音识别（Sherpa-ONNX）</td><td>❌</td><td>待选</td></tr><tr><td>桌面控制（鼠标键盘）</td><td>❌（DESIGN-ARCH-056 留有接口）</td><td>增量补</td></tr><tr><td>定时任务</td><td>✅ khy-quant 部分</td><td>增量补</td></tr><tr><td>Office 插件</td><td>❌</td><td>远期</td></tr><tr><td>远程接入（Lark/DingTalk）</td><td>❌</td><td>远期</td></tr></tbody></table>
+<h2 id="五-给-khy-os-的具体参考">五、给 khy-os 的具体参考<a class="anchor" href="#五-给-khy-os-的具体参考" aria-label="锚点">#</a></h2>
+<h3 id="5-1-直接可抄">5.1 直接可抄<a class="anchor" href="#5-1-直接可抄" aria-label="锚点">#</a></h3>
+<ul><li><strong><code>tauri-plugin-single-instance</code></strong>：第二实例启动时聚焦已有窗口（khy-os 已是 <code>bin/khy.js</code> 的现成模式）</li><li><strong><code>setup::apply_loopback_exemption()</code></strong>：Windows WebView2 直连 ws 的坑（必抄）</li><li><strong><code>decorations: false</code> + 自绘标题栏</strong>：ZCode 风格的关键</li><li><strong>bundling <code>node.exe</code> + <code>gateway-bundle.tar.gz</code></strong>：让用户不装 Node</li><li><strong>CORS / 端口白名单</strong>：借鉴 khy-os <code>server.js:264-277</code></li></ul>
+<h3 id="5-2-必须避开的坑">5.2 必须避开的坑<a class="anchor" href="#5-2-必须避开的坑" aria-label="锚点">#</a></h3>
+<ul><li>Tauri 配置里 <code>&quot;security&quot;: { &quot;csp&quot;: null }</code> —— 这会关掉所有安全护栏。khy-os 应该保留 CSP</li><li><code>csp: null</code> 不能照抄——这是 OpenFlux 自承担风险的选择（前端裸跑）</li><li>Tauri 的 <code>beforeDevCommand: &quot;pnpm dev&quot;</code> 依赖 Vite dev server，khy-os 现有的 <code>vite.config.js</code> 已可用</li></ul>
+<h3 id="5-3-不建议照抄">5.3 不建议照抄<a class="anchor" href="#5-3-不建议照抄" aria-label="锚点">#</a></h3>
+<ul><li>OpenFlux 用 <code>which=&quot;6&quot;</code> 依赖外部 node.exe——khy-os 应该走&quot;内嵌 Node&quot;路线，避免对系统 Node 版本敏感</li><li>OpenFlux 自签证书（<code>rcgen</code>）——khy-os 的后端已有正式 HTTPS 路径，不要再叠自签层</li></ul>
+<h2 id="六-本地文件">六、本地文件<a class="anchor" href="#六-本地文件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>来源</th></tr></thead><tbody><tr><td><code>tauri.conf.json</code></td><td><code>src-tauri/tauri.conf.json</code></td></tr><tr><td><code>Cargo.toml</code></td><td><code>src-tauri/Cargo.toml</code></td></tr><tr><td><code>package.json</code></td><td><code>package.json</code></td></tr><tr><td><code>lib.rs</code></td><td><code>src-tauri/src/lib.rs</code></td></tr></tbody></table>
+<p>抓取自 <a href="https://raw.githubusercontent.com/EDEAI/OpenFlux/main/" target="_blank" rel="noopener">https://raw.githubusercontent.com/EDEAI/OpenFlux/main/</a></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../extensions/scripts/khy-desktop-rd/one-api/README.html"><div class="dir">← 上一篇</div><div class="ttl">one-api — 多 LLM API 管理 &amp; 分发系统</div></a><a class="next" href="../../../../extensions/scripts/khy-desktop-rd/README.html"><div class="dir">下一篇 →</div><div class="ttl">khy-os 桌面端调研档案（desktop-rd）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="extensions/scripts/khy-desktop-rd/openflux/README.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

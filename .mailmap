@@ -1,0 +1,16 @@
+# .mailmap — 作者身份归并
+#
+# 背景：本仓库经过多台电脑迁移，历史上出现三套作者身份，其中两套是机器本地邮箱
+# （@local / @local.dev），无法追溯到人。本文件把它们统一归并到规范身份。
+#
+# 规范身份 = 孔浩原 <2578974124@qq.com>（本人真实身份，历史中已存在 17 条提交）
+#
+# 说明：.mailmap 只影响 git 的「显示与统计」（git log --use-mailmap / git shortlog /
+# git blame 等），**不修改任何已存在的提交对象**，因此不改变任何提交哈希。
+#
+# 依赖机器人身份不做归并：dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+
+孔浩原 <2578974124@qq.com> luckykhy <25789@local>
+孔浩原 <2578974124@qq.com> Khy-OS Developer <khy-os@local.dev>
+孔浩原 <2578974124@qq.com> <25789@local>
+孔浩原 <2578974124@qq.com> <khy-os@local.dev>

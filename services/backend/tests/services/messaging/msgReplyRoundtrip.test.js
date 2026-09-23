@@ -34,7 +34,7 @@ describe('Msg Reply Roundtrip', () => {
     
       const ok = wireReplyBridge(router, {
         env: {},
-        getChat: () => async (prompt) => `你说了�?{prompt}�?收到`,
+        getChat: () => async (prompt) => `你说了「${prompt}」收到`,
         log: silentLog,
       });
       expect(ok).toBe(true);
@@ -52,7 +52,7 @@ describe('Msg Reply Roundtrip', () => {
       expect(ch.replies.length).toBe(1);
       expect(ch.replies[0].channelId).toBe('https://oapi.dingtalk.com/robot/send?access_token=sess');
       expect(ch.replies[0].threadId).toBe('https://oapi.dingtalk.com/robot/send?access_token=sess');
-      expect(ch.replies[0].text).toBe('你说了「库存多少�?收到');
+      expect(ch.replies[0].text).toBe('你说了「库存多少」收到');
       expect(ch.sent.length).toBe(0);
   });
 

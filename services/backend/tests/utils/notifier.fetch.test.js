@@ -33,7 +33,9 @@ describe('sendWeChatNotification', () => {
     expect(options.method).toBe('POST');
     expect(options.headers).toEqual({ 'content-type': 'application/json' });
     expect(JSON.parse(options.body)).toMatchObject({
-      title: 'New Trading Signal �?买入 TEST',
+      // Production template: `New Trading Signal — ${direction} ${symbol}`
+      // (em dash followed by a space).
+      title: 'New Trading Signal — 买入 TEST',
     });
     expect(options.signal).toBeDefined();
   });

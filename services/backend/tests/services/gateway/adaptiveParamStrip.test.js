@@ -10,6 +10,7 @@
  *   - isEnabled:default-on 语义(unset/''/未知值 → true;0/false/off/no → false)。
  */
 const mod = require('../../../src/services/gateway/adapters/adaptiveParamStrip');
+const assert = require('node:assert');
 describe('adaptiveParamStrip.isEnabled (default-on gate)', () => {
 });
 describe('adaptiveParamStrip.detectUnsupportedParams', () => {

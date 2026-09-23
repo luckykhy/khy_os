@@ -22,7 +22,7 @@ const assert = require('node:assert/strict');
 
 const localLLM = require('../../src/services/localLLMService');
 const { classifyModelLoadError } = localLLM;
-const diagnosisDictionary = require('../../src/services/selfHeal/diagnosisDictionary');
+const diagnosisDictionary = require('../../src/services/domain/maintenance/selfHeal/diagnosisDictionary.js');
 
 // The exact line node-llama-cpp printed in the reported symptom.
 const SYMPTOM =

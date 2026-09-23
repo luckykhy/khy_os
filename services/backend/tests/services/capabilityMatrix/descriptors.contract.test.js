@@ -4,9 +4,9 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const path = require('path');
 
-const { DESCRIPTORS } = require('../../../src/services/capabilityMatrix/descriptors');
-const { isSeam } = require('../../../src/services/capabilityMatrix/seams');
-const { resolveFlag } = require('../../../src/services/capabilityMatrix/predicates');
+const { DESCRIPTORS } = require('../../../src/services/domain/catalog/capabilityMatrix/descriptors.js');
+const { isSeam } = require('../../../src/services/domain/catalog/capabilityMatrix/seams.js');
+const { resolveFlag } = require('../../../src/services/domain/catalog/capabilityMatrix/predicates.js');
 
 const VALID_KINDS = new Set(['always', 'envFlagDefault', 'offDisables', 'zeroDisables', 'onEnables', 'module']);
 

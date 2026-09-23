@@ -36,6 +36,16 @@ let _instances = null;
 // misses and getInkInstance() returns null, silently disabling the resize
 // full-repaint fix. app.jsx registers the real key here via setRenderStdout().
 let _renderStdout = null;
+// P0: explicit-degradation flag. When the internal-registry lookup starts
+// returning null (ink internal layout changed, or the render-stdout key was
+// never registered), we must NOT silently fall back to ink's built-in resize
+// behaviour — that is the documented root cause of "残线" residual lines on
+// zoom. Bubbletea's nil_renderer pattern: a named degraded mode + an explicit
+// warning, never a silent behaviour change. Set true on the FIRST null after
+// the registry was successfully resolved; consumers (app.js resize path /
+// healthScorecard) can read it to surface the degradation instead of guessing.
+let _instanceLookupDegraded = false;
+let _instanceLookupWarned = false;
 
 /**
  * Install the `.jsx` require handler.
@@ -138,9 +148,32 @@ function setRenderStdout(stdout) {
  * be loaded — callers must degrade gracefully to ink's built-in behaviour.
  * @returns {object|null}
  */
+/**
+ * Emit the ONE-TIME degradation notice for a failed instance lookup.
+ * Gated by KHY_TUI_INSTANCE_WARN (default on): the notice goes to stderr (the
+ * TUI owns stdout) and fires at most once per process, so a hot resize loop
+ * that keeps missing the registry is not spammed. Set to '0' to silence in a
+ * headless/CI context where the warning is pure noise.
+ */
+function _warnInstanceLookupDegraded(reason) {
+  if (_instanceLookupWarned) return;
+  if (String(process.env.KHY_TUI_INSTANCE_WARN || '1').trim() === '0') return;
+  _instanceLookupWarned = true;
+  try {
+    process.stderr.write(
+      '[tui:internal] ink 实例解析降级：' + reason + '。已回退到 ink 内建 resize 行为' +
+        '（可能不修「残线」，放大窗口时留意）。可设 KHY_TUI_INSTANCE_WARN=0 静默。\n'
+    );
+  } catch { /* stderr unavailable — degrade silently */ }
+}
+
 function getInkInstance() {
   try {
     if (!_instances) {
+      // Registry itself never resolved (loadInk's eager import failed). This is
+      // a build/exports-tightening event, not a per-frame miss — warn once.
+      _instanceLookupDegraded = true;
+      _warnInstanceLookupDegraded('ink 内部 instances 注册表不可用（loadInk 未解析到）');
       return null;
     }
     // Prefer the exact key ink used at render() time (a Proxy wrapper, when
@@ -152,10 +185,45 @@ function getInkInstance() {
         return viaRender;
       }
     }
-    return _instances.get(process.stdout) || null;
+    const bare = _instances.get(process.stdout) || null;
+    if (!bare) {
+      // Registry resolved but NEITHER key hit — the internal layout likely
+      // shifted. Flag the degradation + warn once (bubbletea nil_renderer
+      // pattern: declared degraded mode, not silent).
+      _instanceLookupDegraded = true;
+      _warnInstanceLookupDegraded('WeakMap 查找未命中（_renderStdout 与 process.stdout 均 miss）');
+    }
+    return bare;
   } catch {
+    _instanceLookupDegraded = true;
+    _warnInstanceLookupDegraded('instances 查找抛错');
     return null;
   }
 }
 
-module.exports = { registerJsx, loadInk, get, setApp, getApp, setRenderStdout, getInkInstance };
+/**
+ * Read-only health flag for the TUI scorecard / resize path: true once the
+ * instance-registry lookup has degraded (never cleared within the process —
+ * a degraded registry does not self-heal). @returns {boolean}
+ */
+function isInstanceLookupDegraded() {
+  return _instanceLookupDegraded;
+}
+
+/** Test-only: re-arm the degradation flag + warn latch. */
+function _resetInstanceLookupForTest() {
+  _instanceLookupDegraded = false;
+  _instanceLookupWarned = false;
+}
+
+module.exports = {
+  registerJsx,
+  loadInk,
+  get,
+  setApp,
+  getApp,
+  setRenderStdout,
+  getInkInstance,
+  isInstanceLookupDegraded,
+  _resetInstanceLookupForTest,
+};

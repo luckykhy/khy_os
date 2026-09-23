@@ -21,7 +21,7 @@ const { AUDIT_AGENT, AUDIT_SYSTEM_PROMPT } = require('../../src/agents/built-in/
 const { getBuiltInAgents, formatAgentLine } = require('../../src/agents/builtInAgents');
 const claudeCompat = require('../../src/services/claudeCompat');
 const agentTool = require('../../src/tools/AgentTool');
-const { inferRole } = require('../../src/services/proactiveCollaboration/delegationPlanner');
+const { inferRole } = require('../../src/services/domain/collab/proactiveCollaboration/delegationPlanner.js');
 
 // ── agent definition shape ──────────────────────────────────────────────────
 

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-AGENT-002] 智能体工具授权矩阵.md -->
+<title>[DESIGN-AGENT-002] 智能体工具授权矩阵 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-AGENT-002] 智能体工具授权矩阵</div>
+      <header class="hero reveal"><h1>[DESIGN-AGENT-002] 智能体工具授权矩阵</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-agent-002-智能体工具授权矩阵">[DESIGN-AGENT-002] 智能体工具授权矩阵</a></li><li class="lvl-2"><a href="#1-红线">1. 红线</a></li><li class="lvl-2"><a href="#2-授权面的四个声明位-授予权力-写在哪">2. 授权面的四个声明位（「授予权力」写在哪）</a></li><li class="lvl-2"><a href="#3-当前声明覆盖实况-2026-09-22-取证">3. 当前声明覆盖实况（2026-09-22 取证）</a></li><li class="lvl-2"><a href="#4-已取证的三条越权路径">4. 已取证的三条越权路径</a></li><li class="lvl-3"><a href="#4-1-bash-唯一从不被剥的写通道-违反-a2-2">4.1 `Bash` —— 唯一从不被剥的写通道（违反 A2-2）</a></li><li class="lvl-3"><a href="#4-2-定义面收窄-执行面不认-违反-a2-4">4.2 定义面收窄、执行面不认（违反 A2-4）</a></li><li class="lvl-3"><a href="#4-3-三处-fail-open-默认姿态-违反-a2-1-a2-3">4.3 三处 fail-open 默认姿态（违反 A2-1 / A2-3）</a></li><li class="lvl-2"><a href="#5-权限矩阵-修正后应有的形态">5. 权限矩阵（修正后应有的形态）</a></li><li class="lvl-2"><a href="#6-落地路线-按-process-008-s1-起步">6. 落地路线（按 `PROCESS-008`，S1 起步）</a></li><li class="lvl-2"><a href="#7-与其他规范的关系">7. 与其他规范的关系</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-agent-002-智能体工具授权矩阵">[DESIGN-AGENT-002] 智能体工具授权矩阵<a class="anchor" href="#design-agent-002-智能体工具授权矩阵" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: RUNTIME-010 -->
+<blockquote><p><strong>定位</strong>：本文件回答一个问题——<strong>每一个智能体/角色，被明确授予了哪些工具权力；<br>以及没有明确写下来的权力，是否可能被获得</strong>。</p>
+<p><strong>本文件的核心原则（唯一红线）</strong>：<br><strong>默认拒绝。权力只能被明确授予，不得被默认继承。</strong><br>一个智能体<strong>没有在授权面被显式列为允许</strong>的工具，<strong>必须</strong>在机制上不可获得；<br>「没有声明 ⇒ 全都是我的」<strong>禁止</strong>作为任何路径的默认姿态。</p>
+<p><strong>边界</strong>（与相邻规范谁管什么）：</p>
+<ul><li>本文件管<strong>授权面与能力面是否一致</strong>（谁能做什么、做不到的能否做到）；</li><li><code>[DESIGN-AGENT-001]</code> 管<strong>交接的载荷</strong>（带什么过去、带什么回来），不管授权；</li><li><code>[DESIGN-PROCESS-001]</code> 管<strong>要不要交接</strong>（G1/G2/G3 准入闸门）；</li><li><code>[DESIGN-ARCH-111]</code> 管<strong>规则如何被门执行</strong>（登记表/门档/finding 方言）。</li></ul>
+<p><strong>规则 ID</strong>：<code>RUNTIME-010</code>（域 RUNTIME，与工程红线 1–9 同族）。登记见 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>。<br><strong>落地阶段</strong>：S1（观察期，只记录不阻断）——新机制<strong>禁止直进 S3</strong>（<code>PROCESS-008</code>）。</p></blockquote>
+<hr>
+<h2 id="1-红线">1. 红线<a class="anchor" href="#1-红线" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>必须 / 禁止</th><th>判据</th></tr></thead><tbody><tr><td>A2-1</td><td>未<strong>显式授予</strong>的工具，<strong>禁止</strong>可被获得；「未声明」<strong>不得</strong>解释为「全权」</td><td><code>builtInAgents.formatAgentLine</code> 不得对未声明者输出 <code>All tools</code></td></tr><tr><td>A2-2</td><td>只读角色<strong>禁止</strong>持有任何可写工具，含 <code>Bash</code>（<code>Bash</code> 是头号写通道）</td><td><code>toolProfile.PROFILES.explore.tools</code> 不得含 shell 家族</td></tr><tr><td>A2-3</td><td>授权解析<strong>禁止</strong> fail-open：未知 profile 名<strong>必须</strong>收敛而非放行</td><td><code>toolProfile._resolve</code> / <code>filterToolsByProfile</code></td></tr><tr><td>A2-4</td><td>声明面收窄<strong>必须</strong>有执行面强制与之对应；禁止「只在提示词里禁止」</td><td><code>executeTool</code> 必须同时查 gateway 与 agentContext denylist</td></tr><tr><td>A2-5</td><td>同一个「只读角色」集合<strong>禁止</strong>有两份不一致的定义</td><td><code>roleToolScope._READ_ONLY_ROLES</code> 与 <code>AgentTool.toolFilter</code> 触发集</td></tr><tr><td>A2-6</td><td>提示词中「你没有权限」<strong>必须</strong>与机制事实一致；不一致即误导</td><td><code>constraints.readOnlyProhibitions</code></td></tr><tr><td>A2-7</td><td>权限判定的失败<strong>禁止</strong>静默降级为放行</td><td><code>aiMessageBuilder</code> 的 <code>try/catch</code></td></tr></tbody></table>
+<hr>
+<h2 id="2-授权面的四个声明位-授予权力-写在哪">2. 授权面的四个声明位（「授予权力」写在哪）<a class="anchor" href="#2-授权面的四个声明位-授予权力-写在哪" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>位置</th><th>文件</th><th>语义</th><th>方向</th></tr></thead><tbody><tr><td>①</td><td>内置 agent 定义</td><td><code>services/backend/src/agents/built-in/*.js</code></td><td><code>tools</code>（白名单）/ <code>disallowedTools</code>（黑名单）</td><td>声明</td></tr><tr><td>②</td><td>插件/用户/项目 agent</td><td><code>agents/loadAgents.js</code>、<code>loadBuiltInMarkdownAgents.js</code></td><td>同字段，YAML frontmatter 解析</td><td>声明</td></tr><tr><td>③</td><td>运行时角色作用域</td><td><code>services/domain/state/orchestrator/roleToolScope.js</code></td><td>只读角色 → 剥 <code>Edit/Write/NotebookEdit</code></td><td>收窄</td></tr><tr><td>④</td><td>profile 白名单</td><td><code>tools/toolProfile.js</code></td><td><code>minimal/coding/analysis/verification/explore/full</code></td><td>收窄</td></tr><tr><td>⑤</td><td>CLI 门</td><td><code>cli/printOutputFormat.js</code> → <code>tool/toolAccessGateway.js</code></td><td><code>--allowedTools</code> / <code>--disallowedTools</code></td><td>拦截</td></tr></tbody></table>
+<blockquote><p>⚠ <strong>两个方向混用是当前混乱的根源</strong>：① 声明是<strong>允许式</strong>（列出来才能用）、<br>③ 收窄是<strong>拒绝式</strong>（列出来就不能用）。二者叠加时，<br>「一份 deny 清单」<strong>永远无法</strong>表达「只允许这些」——它只能减法，不能规定上界。<br><strong>本规范要求：承载业务职责的 agent 必须给出白名单（<code>tools</code>）</strong>，<br>deny 清单只作为<strong>额外</strong>收紧，不得作为唯一声明。</p></blockquote>
+<hr>
+<h2 id="3-当前声明覆盖实况-2026-09-22-取证">3. 当前声明覆盖实况（2026-09-22 取证）<a class="anchor" href="#3-当前声明覆盖实况-2026-09-22-取证" aria-label="锚点">#</a></h2>
+<p>内置 agent 的声明风格<strong>三足鼎立</strong>，且<strong>没有任何一个同时给出白名单与黑名单的完整上界</strong>：</p>
+<table><thead><tr><th>风格</th><th>数量</th><th>代表</th><th>风险</th></tr></thead><tbody><tr><td>仅 <code>tools</code> 白名单</td><td>12</td><td><code>browserAgent</code>、<code>genImageAgent</code>、<code>generalPurposeAgent</code>、<code>khyGuideAgent</code>、<code>knowledgeAgent</code>、<code>knowledgePlanAgent</code>、<code>initAgent</code>、<code>statuslineSetup</code></td><td>白名单外的工具被隐式拒绝——<strong>这一半是符合本规范的</strong></td></tr><tr><td>仅 <code>disallowedTools</code> 黑名单</td><td>15</td><td><code>exploreAgent</code>、<code>verificationAgent</code>、<code>auditAgent</code>、<code>planAgent</code>、<code>readingAgent</code>、<code>mapAgent</code>、<code>researchAgent</code>、<code>reviewAgent</code>、<code>securityAgent</code>、<code>performanceAgent</code>、<code>debugAgent</code>、<code>deployAgent</code>、<code>docAgent</code>、<code>fixAgent</code>、<code>refactorAgent</code></td><td><strong>「All tools except X」= 未声明的全部可用</strong>，违反 A2-1</td></tr><tr><td>两者都有</td><td>2</td><td><code>ultraPlanAgent</code>、<code>ultraReviewAgent</code></td><td>符合本规范</td></tr></tbody></table>
+<p><strong>⇒ 15 个 agent 走在「黑名单独木桥」上，只要它们声明里漏列一个工具，那个工具就被静默授予。</strong></p>
+<hr>
+<h2 id="4-已取证的三条越权路径">4. 已取证的三条越权路径<a class="anchor" href="#4-已取证的三条越权路径" aria-label="锚点">#</a></h2>
+<h3 id="4-1-bash-唯一从不被剥的写通道-违反-a2-2">4.1 <code>Bash</code> —— 唯一从不被剥的写通道（违反 A2-2）<a class="anchor" href="#4-1-bash-唯一从不被剥的写通道-违反-a2-2" aria-label="锚点">#</a></h3>
+<p>三处互相印证的<strong>刻意决策</strong>，而非疏漏：</p>
+<table><thead><tr><th>位置</th><th>事实</th></tr></thead><tbody><tr><td><code>toolProfile.js</code> <code>PROFILES.explore</code></td><td>描述自称 <code>'Read-only tools ... (search + read only)'</code>，<code>tools</code> 数组<strong>实际含</strong> <code>shellCommand, bash, Bash, shell_command</code></td></tr><tr><td><code>exploreAgent.js:58</code></td><td><code>disallowedTools</code> = <code>[Agent, ExitPlanMode, Edit, Write, NotebookEdit]</code>——<strong>无 <code>Bash</code></strong>；提示词只写 <code>NEVER use Bash for: mkdir, touch, rm, cp, mv...</code>，<strong>不产生强制</strong></td></tr><tr><td><code>roleToolScope.js</code> + <code>roleToolScope.test.js:56</code></td><td>注释称「默认不剥 Bash（探索常跑只读命令）」；测试 <code>'read-only roles do NOT strip Bash (honest boundary)'</code> <strong>把该行为锁死</strong></td></tr></tbody></table>
+<p><strong>后果</strong>：<code>explore</code> 角色可执行 <code>echo x &gt; f</code>、<code>sed -i</code>、<code>tee</code>、<code>git add</code>、<code>npm install</code>——<br>与 <code>constraints.readOnlyProhibitions()</code> 对模型宣称的<br><code>&quot;You do NOT have access to file editing tools — attempting to edit files will fail&quot;</code><br><strong>直接矛盾</strong>（违反 A2-6）。</p>
+<h3 id="4-2-定义面收窄-执行面不认-违反-a2-4">4.2 定义面收窄、执行面不认（违反 A2-4）<a class="anchor" href="#4-2-定义面收窄-执行面不认-违反-a2-4" aria-label="锚点">#</a></h3>
+<ul><li><code>tool/toolCalling.js</code> 的 <code>executeTool()</code> 只调 <code>gatewayDecision(name)</code>，</li></ul>
+<p>而 <code>gatewayDecision</code> <strong>只读 <code>toolAccessGateway</code> 单例状态</strong>；该文件 <code>agentContext</code> <strong>零命中</strong>。</p>
+<ul><li><code>agentContext.disallowedTools</code> 全仓<strong>只在 <code>cli/aiMessageBuilder.js:391</code> 一处被消费</strong>，</li></ul>
+<p>且整段包在 <code>try { ... } catch { toolDefs = undefined; }</code> ——<br>  异常<strong>静默降级为「无工具定义」</strong>，不报错也不收紧（违反 A2-7）。</p>
+<p><strong>后果</strong>：子代理剥 <code>Edit/Write</code> <strong>只在「模型看到什么」这一面成立</strong>；<br>执行面不会用 <code>agentContext.disallowedTools</code> 拒绝调用。</p>
+<h3 id="4-3-三处-fail-open-默认姿态-违反-a2-1-a2-3">4.3 三处 fail-open 默认姿态（违反 A2-1 / A2-3）<a class="anchor" href="#4-3-三处-fail-open-默认姿态-违反-a2-1-a2-3" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>位置</th><th>行为</th></tr></thead><tbody><tr><td><code>toolProfile.filterToolsByProfile</code></td><td><code>if (!allowed) return toolsMap;</code> ——<strong>未知 profile 名 ⇒ 不过滤 ⇒ 全放行</strong></td></tr><tr><td><code>toolAccessGateway.isGatewayActive()</code></td><td>为假时 <code>filterToolDefs</code> 与 <code>gatewayDecision</code> <strong>全部放行</strong>（不传 flag 即无门）</td></tr><tr><td><code>builtInAgents.formatAgentLine</code></td><td>既无 <code>tools</code> 又无 <code>disallowedTools</code> ⇒ 输出 <strong><code>All tools</code></strong></td></tr></tbody></table>
+<p><strong>附带</strong>：<code>roleToolScope._READ_ONLY_ROLES</code>（7 个：<code>explore, verify, plan, research, audit, review</code>）<br>与 <code>AgentTool/index.js:862</code> 的 <code>toolFilter</code> 触发集（6 个：<code>explore, planner, audit, research, reading, map</code>）<br><strong>无一名称完全对应</strong> ⇒ <code>verify</code> 被剥写工具<strong>却拿不到只读白名单</strong>（违反 A2-5）。</p>
+<hr>
+<h2 id="5-权限矩阵-修正后应有的形态">5. 权限矩阵（修正后应有的形态）<a class="anchor" href="#5-权限矩阵-修正后应有的形态" aria-label="锚点">#</a></h2>
+<blockquote><p>图例：<strong>●</strong> 明确授予 ｜ <strong>○</strong> 明确拒绝 ｜ <strong>✗</strong> 当前实现与声明不符（越权）</p></blockquote>
+<table><thead><tr><th>角色</th><th>Read/Grep/Glob</th><th>Edit/Write</th><th><code>Bash</code></th><th>说明</th></tr></thead><tbody><tr><td><code>explore</code> / <code>Explore</code></td><td>●</td><td>○</td><td><strong>○（改为只读子命令白名单）</strong></td><td>探索只需搜索与读</td></tr><tr><td><code>verify</code> / <code>verification</code></td><td>●</td><td>○</td><td>●（需跑 build/test）</td><td><strong>允许</strong>写系统状态，但<strong>必须</strong>显式授予</td></tr><tr><td><code>plan</code> / <code>Planner</code></td><td>●</td><td>○</td><td>○</td><td>只读规划</td></tr><tr><td><code>audit</code> / <code>review</code></td><td>●</td><td>○</td><td>○</td><td>对抗式审查，只报告</td></tr><tr><td><code>research</code></td><td>●</td><td>○</td><td>○</td><td>含 web 检索</td></tr><tr><td><code>reading</code> / <code>map</code></td><td>●</td><td>○</td><td>○</td><td>纯读</td></tr><tr><td><code>implement</code> / <code>general</code></td><td>●</td><td>●</td><td>●</td><td>全权（<strong>显式</strong>授予）</td></tr></tbody></table>
+<p><strong>关键修正</strong>：<code>verify</code> 与 <code>explore</code> 的需求<strong>不同</strong>——<code>verify</code> 要跑 build/test，<br>所以它<strong>需要</strong> <code>Bash</code>。本规范的做法<strong>不是</strong>一刀切禁 <code>Bash</code>，而是：<br><strong>把 <code>Bash</code> 的授予写进 <code>verify</code> 的显式声明里，并从 <code>explore</code> 的授权面移除。</strong></p>
+<hr>
+<h2 id="6-落地路线-按-process-008-s1-起步">6. 落地路线（按 <code>PROCESS-008</code>，S1 起步）<a class="anchor" href="#6-落地路线-按-process-008-s1-起步" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>步骤</th><th>动作</th><th>验收</th></tr></thead><tbody><tr><td>S1</td><td>新增守卫 <code>scripts/ci/check-agent-authz.js</code>，<strong>只记录不阻断</strong></td><td>门档 <code>commit</code> + <code>severity: advisory</code>（⚠ <code>gate='advisory'</code> 永不执行）</td></tr><tr><td>S1</td><td>修正三处 fail-open：未知 profile 收敛、<code>formatAgentLine</code> 输出警告</td><td>单元测试断言&quot;未知 profile ≠ 全放行&quot;</td></tr><tr><td>S2</td><td>从 <code>explore</code> profile 移除 shell 家族；<code>Bash</code> 改为只读子命令白名单</td><td>误报率 &lt; 10%</td></tr><tr><td>S2</td><td><code>executeTool</code> 补读 <code>agentContext.disallowedTools</code></td><td>端到端测试：子代理 deny 的工具<strong>执行面拒绝</strong></td></tr><tr><td>S3</td><td>统一只读角色集合为单一真源</td><td>加断言：两侧集合相等</td></tr></tbody></table>
+<blockquote><p><strong>阶段规则</strong>（<code>PROCESS-008</code>）：禁止直进 S3；<strong>毕业按样本量计</strong>——<br>S1 ≥200 样本 → S2 误报率 &lt;10% → S3 方可豁免；<br><strong>S1/S2 必须旁路记录、禁止阻断</strong>；<strong>禁止同时升两阶</strong>。</p></blockquote>
+<hr>
+<h2 id="7-与其他规范的关系">7. 与其他规范的关系<a class="anchor" href="#7-与其他规范的关系" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>规范</th><th>关系</th></tr></thead><tbody><tr><td><code>[DESIGN-AGENT-001]</code></td><td>管交接载荷；本文件管授权面。AG-6「只读型禁止派写任务」由本文件 A2-2 提供机制判据</td></tr><tr><td><code>[DESIGN-ARCH-111]</code></td><td>管规则如何被门执行；本文件的 <code>RUNTIME-010</code> 按该规范的登记表/门档接线</td></tr><tr><td><code>[DESIGN-GOV-001]</code></td><td>治理总纲十板块；本文件归属其中的 ACP（智能体协作）板块</td></tr><tr><td><code>AGENTS.md</code> 工程规则 1–9</td><td>规则 1 零硬编码 / 规则 3 活动式超时与本文件同属 RUNTIME 域邻域；本文件独立为 AGENT 域</td></tr></tbody></table>
+<hr>
+<p><strong>变更记录</strong></p>
+<table><thead><tr><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>2026-09-22</td><td>首版。基于对 <code>exploreAgent</code> / <code>roleToolScope</code> / <code>toolProfile</code> / <code>toolAccessGateway</code> / <code>builtInAgents</code> / <code>aiMessageBuilder</code> 的只读取证，确立「默认拒绝、显式授予」原则与 7 条红线</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-AGENT-001] 子智能体交接契约.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-AGENT-001] 子智能体交接契约</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-AUD-001] 审计日志规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-AUD-001] 审计日志规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-AGENT-002] 智能体工具授权矩阵.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

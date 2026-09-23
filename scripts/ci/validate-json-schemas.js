@@ -14,9 +14,20 @@
 
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const SCHEMAS_DIR = path.join(ROOT, 'scripts', 'ci', 'json-schemas');
+
+// 本执行器是 COMMS-002（gate=pr）的门，只应对**入仓内容**下判定。
+// .khy/ 是运行期状态且被 .gitignore 整体覆盖（实测 `git ls-files .khy` = 0 条），
+// 拿它当 pr 门的输入等于让「会话垃圾」决定 PR 能否合并：本地红、CI 恒绿，两头失真。
+// 因此这里显式跳过被忽略的扫描根，并把真空转打印出来，而不是假装它有效。
+function isGitIgnored(relPath) {
+  const r = spawnSync('git', ['check-ignore', '-q', relPath], { cwd: ROOT, stdio: 'ignore' });
+  if (r.error) return false; // 非 git 检出：退回原行为，不静默改变判定
+  return r.status === 0;
+}
 
 // ── Schema file mapping (order matters — first match wins) ───────────────────
 const PATTERN_MAP = [
@@ -117,6 +128,11 @@ function main() {
     const khyDir = path.join(ROOT, '.khy');
     if (!fs.existsSync(khyDir)) {
       console.warn('[json-schema] .khy/ 不存在，跳过校验');
+      return 0;
+    }
+    if (isGitIgnored('.khy')) {
+      console.warn('[json-schema] .khy/ 被 .gitignore 覆盖（入仓文件 0 个）— 运行期状态不由 pr 门判定，跳过。');
+      console.warn('[json-schema] 注意：COMMS-002 登记的 paths 是 scripts/ci/json-schemas/** 与 services/backend/src/contracts/**，与本执行器实际扫描范围不一致，属待修缺陷。');
       return 0;
     }
     function walk(dir) {

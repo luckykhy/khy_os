@@ -13,7 +13,7 @@ describe('toolUseLoop app-launch intent filter', () => {
     process.env.KHY_TASK_CAPABILITY_GATE = 'false';
 
     const executeTool = jest.fn(async () => ({ success: true, output: 'unexpected' }));
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool,
       clearPreflightContext: jest.fn(),
       setPreflightContext: jest.fn(),
@@ -43,7 +43,7 @@ describe('toolUseLoop app-launch intent filter', () => {
       if (name === 'open_app') return { success: true, output: `已启动: ${params.name}` };
       return { success: false, error: 'unexpected tool' };
     });
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool,
       clearPreflightContext: jest.fn(),
       setPreflightContext: jest.fn(),

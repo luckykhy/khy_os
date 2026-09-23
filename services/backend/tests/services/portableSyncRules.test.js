@@ -7,7 +7,7 @@ const {
   DEP_LOCK_FILES,
   CRITICAL_ENTRY_FILES,
   MANIFEST_FILE,
-} = require('./portableSyncRules');
+} = require('../../src/services/portableSyncRules.js');
 
 describe('portableSyncRules', () => {
   it('should export EXCLUDE_DIRS as array', () => {

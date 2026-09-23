@@ -1,14 +1,14 @@
 'use strict';
 
 /**
- * userFriendlyError.js — 用户友好错误包装器
+ * userFriendlyError.js — 用户友好错误包装器。
  *
  * 将技术错误转换为用户可理解的错误消息
  * 特性：
- *   - 错误码体系
+ *   - 错误码体系。
  *   - 用户友好消息
  *   - 修复建议
- *   - 中英文支持
+ *   - 中英文支持。
  */
 
 const ERROR_CODES = {
@@ -126,22 +126,23 @@ function wrapError(err, context = '') {
  */
 function formatError(wrapped) {
   if (!wrapped) return '';
-  
-  const lines = [
-    `❌ ${wrapped.message}`,
-    `   错误码: ${wrapped.code}`,
-  ];
-  
-  if (wrapped.context) {
-    `   位置: ${wrapped.context}`,
+
+  const lines = [`❌ ${wrapped.message}`];
+  if (wrapped.code && wrapped.code !== 'UNKNOWN') {
+    // Stable machine-readable identifier so users can quote the exact error
+    // class in bug reports (the ERROR_CODES table exists for this purpose).
+    lines.push(`   错误码: ${wrapped.code}`);
   }
-  
+  if (wrapped.context) {
+    lines.push(`   位置: ${wrapped.context}`);
+  }
+
   lines.push(`   💡 ${wrapped.suggestion}`);
-  
+
   if (wrapped.original && wrapped.original !== wrapped.message) {
     lines.push(`   详情: ${wrapped.original}`);
   }
-  
+
   return lines.join('\n');
 }
 

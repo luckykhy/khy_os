@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-GIT-003] Git 自动化治理规范.md -->
+<title>[DESIGN-GIT-003] Git 规范与自动化治理 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-GIT<span class="sep">›</span>[DESIGN-GIT-003] Git 规范与自动化治理</div>
+      <header class="hero reveal"><h1>[DESIGN-GIT-003] Git 规范与自动化治理</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-git-003-git-规范与自动化治理">[DESIGN-GIT-003] Git 规范与自动化治理</a></li><li class="lvl-2"><a href="#1-概述">1. 概述</a></li><li class="lvl-2"><a href="#2-commit-message-规范">2. Commit Message 规范</a></li><li class="lvl-3"><a href="#2-1-格式-conventional-commits-中文">2.1 格式（Conventional Commits + 中文）</a></li><li class="lvl-3"><a href="#2-2-type-类型">2.2 Type 类型</a></li><li class="lvl-3"><a href="#2-3-scope-范围-可选">2.3 Scope 范围（可选）</a></li><li class="lvl-3"><a href="#2-4-描述规范">2.4 描述规范</a></li><li class="lvl-3"><a href="#2-5-脚注规范">2.5 脚注规范</a></li><li class="lvl-2"><a href="#3-branch-命名规范">3. Branch 命名规范</a></li><li class="lvl-3"><a href="#3-1-格式">3.1 格式</a></li><li class="lvl-3"><a href="#3-2-type-分类">3.2 Type 分类</a></li><li class="lvl-3"><a href="#3-3-命名规则">3.3 命名规则</a></li><li class="lvl-2"><a href="#4-文件组织规范">4. 文件组织规范</a></li><li class="lvl-3"><a href="#4-1-临时文件管理">4.1 临时文件管理</a></li><li class="lvl-3"><a href="#4-2-构建产物管理">4.2 构建产物管理</a></li><li class="lvl-3"><a href="#4-3-大文件管理">4.3 大文件管理</a></li><li class="lvl-2"><a href="#5-自动化治理">5. 自动化治理</a></li><li class="lvl-3"><a href="#5-1-pre-commit-hook">5.1 Pre-commit Hook</a></li><li class="lvl-3"><a href="#5-2-commit-message-检查脚本">5.2 Commit Message 检查脚本</a></li><li class="lvl-3"><a href="#5-3-临时文件清理脚本">5.3 临时文件清理脚本</a></li><li class="lvl-2"><a href="#6-gitignore-最佳实践">6. Gitignore 最佳实践</a></li><li class="lvl-3"><a href="#6-1-分层排除策略">6.1 分层排除策略</a></li><li class="lvl-3"><a href="#6-2-反选规则">6.2 反选规则</a></li><li class="lvl-2"><a href="#7-分支管理策略">7. 分支管理策略</a></li><li class="lvl-3"><a href="#7-1-分支类型">7.1 分支类型</a></li><li class="lvl-3"><a href="#7-2-工作流">7.2 工作流</a></li><li class="lvl-3"><a href="#7-3-pr-合并策略">7.3 PR 合并策略</a></li><li class="lvl-2"><a href="#8-自动化检查清单">8. 自动化检查清单</a></li><li class="lvl-3"><a href="#8-1-pre-commit-检查">8.1 Pre-commit 检查</a></li><li class="lvl-3"><a href="#8-2-pr-检查-ci-自动">8.2 PR 检查（CI 自动）</a></li><li class="lvl-3"><a href="#8-3-定期清理-每周">8.3 定期清理（每周）</a></li><li class="lvl-2"><a href="#9-违规处理">9. 违规处理</a></li><li class="lvl-3"><a href="#9-1-pre-commit-违规">9.1 Pre-commit 违规</a></li><li class="lvl-3"><a href="#9-2-ci-违规">9.2 CI 违规</a></li><li class="lvl-3"><a href="#9-3-紧急情况">9.3 紧急情况</a></li><li class="lvl-2"><a href="#10-参考资料">10. 参考资料</a></li><li class="lvl-2"><a href="#附录-a-快速参考卡">附录 A: 快速参考卡</a></li><li class="lvl-3"><a href="#commit-message">Commit Message</a></li><li class="lvl-3"><a href="#branch-命名">Branch 命名</a></li><li class="lvl-3"><a href="#清理命令">清理命令</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-git-003-git-规范与自动化治理">[DESIGN-GIT-003] Git 规范与自动化治理<a class="anchor" href="#design-git-003-git-规范与自动化治理" aria-label="锚点">#</a></h1>
+<blockquote><p>版本: 1.0.0<br>状态: 生效<br>负责人: khy<br>创建日期: 2026-09-13</p></blockquote>
+<hr>
+<h2 id="1-概述">1. 概述<a class="anchor" href="#1-概述" aria-label="锚点">#</a></h2>
+<p>本文档定义 khy-os 仓库的 Git 使用规范，包括提交信息、分支管理、文件组织和自动化治理。规范既支持手动执行，也支持通过脚本自动生成和检查。</p>
+<hr>
+<h2 id="2-commit-message-规范">2. Commit Message 规范<a class="anchor" href="#2-commit-message-规范" aria-label="锚点">#</a></h2>
+<h3 id="2-1-格式-conventional-commits-中文">2.1 格式（Conventional Commits + 中文）<a class="anchor" href="#2-1-格式-conventional-commits-中文" aria-label="锚点">#</a></h3>
+<pre><code>&lt;type&gt;(&lt;scope&gt;): &lt;中文描述&gt;
+
+[可选正文]
+
+[可选脚注]</code></pre>
+<h3 id="2-2-type-类型">2.2 Type 类型<a class="anchor" href="#2-2-type-类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Type</th><th>说明</th><th>示例</th></tr></thead><tbody><tr><td><code>feat</code></td><td>新功能</td><td><code>feat(gateway): 新增 DeepSeek 适配器</code></td></tr><tr><td><code>fix</code></td><td>修复 bug</td><td><code>fix(cli): 修复中文别名匹配失败</code></td></tr><tr><td><code>docs</code></td><td>文档更新</td><td><code>docs: 更新 CONTRIBUTING.md</code></td></tr><tr><td><code>style</code></td><td>代码格式（不影响功能）</td><td><code>style: 统一单引号风格</code></td></tr><tr><td><code>refactor</code></td><td>重构（不新增功能/修复 bug）</td><td><code>refactor(services): 拆分 aiGateway</code></td></tr><tr><td><code>perf</code></td><td>性能优化</td><td><code>perf: 优化 RAG 检索速度</code></td></tr><tr><td><code>test</code></td><td>测试相关</td><td><code>test: 补充 gateway 单测</code></td></tr><tr><td><code>chore</code></td><td>构建/工具/依赖变更</td><td><code>chore: 升级 pnpm 到 10.18</code></td></tr><tr><td><code>ci</code></td><td>CI/CD 配置</td><td><code>ci: 添加 PR 安全门禁</code></td></tr><tr><td><code>revert</code></td><td>回滚</td><td><code>revert: 回滚 feat(gateway)</code></td></tr></tbody></table>
+<h3 id="2-3-scope-范围-可选">2.3 Scope 范围（可选）<a class="anchor" href="#2-3-scope-范围-可选" aria-label="锚点">#</a></h3>
+<p>按模块/目录命名：</p>
+<table><thead><tr><th>Scope</th><th>对应目录</th></tr></thead><tbody><tr><td><code>cli</code></td><td><code>services/backend/src/cli/</code></td></tr><tr><td><code>gateway</code></td><td><code>services/backend/src/services/gateway/</code></td></tr><tr><td><code>backend</code></td><td><code>services/backend/</code></td></tr><tr><td><code>frontend</code></td><td><code>apps/ai-frontend/</code></td></tr><tr><td><code>desktop</code></td><td><code>apps/khyos-desktop/</code></td></tr><tr><td><code>mobile</code></td><td><code>apps/khy-os-client-app/</code></td></tr><tr><td><code>kernel</code></td><td><code>kernel/</code></td></tr><tr><td><code>platform</code></td><td><code>platform/</code></td></tr><tr><td><code>docs</code></td><td><code>docs/</code></td></tr><tr><td><code>scripts</code></td><td><code>scripts/</code></td></tr><tr><td><code>ext</code></td><td><code>extensions/</code></td></tr></tbody></table>
+<h3 id="2-4-描述规范">2.4 描述规范<a class="anchor" href="#2-4-描述规范" aria-label="锚点">#</a></h3>
+<p><strong>中文 + 动词前置 + 一句话说完</strong>：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># ✅ 正确</span>
+feat(gateway): 新增 Ollama 本地模型适配器
+fix(cli): 修复中文拼音别名冲突导致命令路由错误
+docs: 补充 AGENTS.md 工程规则说明
+
+<span class="hljs-comment"># ❌ 错误</span>
+fix: bug 修复                    <span class="hljs-comment"># 无具体描述</span>
+update code                      <span class="hljs-comment"># 无 type</span>
+feat: 添加了一些新功能            <span class="hljs-comment"># 冗余修饰</span></code></pre>
+<h3 id="2-5-脚注规范">2.5 脚注规范<a class="anchor" href="#2-5-脚注规范" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 关联 Issue</span>
+Closes <span class="hljs-comment">#123</span>
+Fixes <span class="hljs-comment">#456</span>
+
+<span class="hljs-comment"># 破坏性变更</span>
+BREAKING CHANGE: 移除 khy quant 命令，改用 khy quant:run
+
+<span class="hljs-comment"># AI 辅助标记（可选）</span>
+Co-authored-by: Claude Opus 4 &lt;noreply@anthropic.com&gt;</code></pre>
+<hr>
+<h2 id="3-branch-命名规范">3. Branch 命名规范<a class="anchor" href="#3-branch-命名规范" aria-label="锚点">#</a></h2>
+<h3 id="3-1-格式">3.1 格式<a class="anchor" href="#3-1-格式" aria-label="锚点">#</a></h3>
+<pre><code>&lt;type&gt;/&lt;ticket-id&gt;-&lt;简短描述&gt;</code></pre>
+<h3 id="3-2-type-分类">3.2 Type 分类<a class="anchor" href="#3-2-type-分类" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Type</th><th>说明</th><th>示例</th></tr></thead><tbody><tr><td><code>feat/</code></td><td>新功能开发</td><td><code>feat/123-add-deepseek-adapter</code></td></tr><tr><td><code>fix/</code></td><td>Bug 修复</td><td><code>fix/456-alias-conflict</code></td></tr><tr><td><code>docs/</code></td><td>文档更新</td><td><code>docs/update-contributing</code></td></tr><tr><td><code>refactor/</code></td><td>重构</td><td><code>refactor/split-aigateway</code></td></tr><tr><td><code>chore/</code></td><td>杂项维护</td><td><code>chore/upgrade-pnpm</code></td></tr><tr><td><code>release/</code></td><td>发布准备</td><td><code>release/v1.6.0</code></td></tr><tr><td><code>hotfix/</code></td><td>紧急修复</td><td><code>hotfix/critical-auth-bug</code></td></tr></tbody></table>
+<h3 id="3-3-命名规则">3.3 命名规则<a class="anchor" href="#3-3-命名规则" aria-label="锚点">#</a></h3>
+<ul><li>全小写，单词用 <code>-</code> 连接</li><li>描述部分不超过 5 个单词</li><li>ticket-id 可选（有 Issue 时必填）</li></ul>
+<pre><code class="language-bash"><span class="hljs-comment"># ✅ 正确</span>
+feat/123-add-deepseek-adapter
+fix/456-alias-conflict
+docs/update-contributing
+
+<span class="hljs-comment"># ❌ 错误</span>
+Feature/Add_DeepSeek_Adapter    <span class="hljs-comment"># 大写+下划线</span>
+fix-123                          <span class="hljs-comment"># 缺少 type</span>
+feat/                            <span class="hljs-comment"># 缺少描述</span></code></pre>
+<hr>
+<h2 id="4-文件组织规范">4. 文件组织规范<a class="anchor" href="#4-文件组织规范" aria-label="锚点">#</a></h2>
+<h3 id="4-1-临时文件管理">4.1 临时文件管理<a class="anchor" href="#4-1-临时文件管理" aria-label="锚点">#</a></h3>
+<p><strong>禁止提交的临时文件类型</strong>：</p>
+<table><thead><tr><th>文件模式</th><th>说明</th><th>清理方式</th></tr></thead><tbody><tr><td><code>tmp-*</code></td><td>调试/测试产物</td><td>手动或脚本删除</td></tr><tr><td><code>*.log</code></td><td>日志文件</td><td><code>.gitignore</code> 已排除</td></tr><tr><td><code>*.tmp</code></td><td>临时文件</td><td>手动删除</td></tr><tr><td><code>coverage/</code></td><td>测试覆盖率</td><td><code>npm run clean</code></td></tr><tr><td><code>dist/</code></td><td>构建产物</td><td><code>npm run clean</code></td></tr><tr><td><code>node_modules/</code></td><td>依赖</td><td><code>pnpm install</code> 重装</td></tr></tbody></table>
+<h3 id="4-2-构建产物管理">4.2 构建产物管理<a class="anchor" href="#4-2-构建产物管理" aria-label="锚点">#</a></h3>
+<p><strong>必须纳入 <code>.gitignore</code> 的构建产物</strong>：</p>
+<pre><code class="language-gitignore"># 依赖
+node_modules/
+__pycache__/
+*.pyc
+
+# 构建输出
+dist/
+build/
+*.egg-info/
+
+# 测试覆盖率
+coverage/
+.nyc_output/
+
+# 日志
+*.log
+logs/
+
+# 临时文件
+tmp/
+.tmp/
+tmp-*
+
+# 环境配置
+.env
+.env.local
+.env.*.local
+
+# IDE 配置
+.idea/
+.vscode/
+*.swp</code></pre>
+<h3 id="4-3-大文件管理">4.3 大文件管理<a class="anchor" href="#4-3-大文件管理" aria-label="锚点">#</a></h3>
+<p><strong>超过 100MB 的文件必须</strong>：</p>
+<ol><li>使用 Git LFS 管理</li><li>或移至外部存储（网盘/对象存储）</li><li>在 <code>.gitignore</code> 中排除</li></ol>
+<p><strong>当前大文件清单</strong>：</p>
+<table><thead><tr><th>文件</th><th>大小</th><th>处理方式</th></tr></thead><tbody><tr><td><code>node_modules/</code></td><td>1.68GB</td><td><code>.gitignore</code> 排除</td></tr><tr><td><code>.git-backup-*/</code></td><td>720MB</td><td><code>.gitignore</code> 排除</td></tr><tr><td><code>apps/khy-mobile/release/*.apk</code></td><td>450MB</td><td>保留最新，删除历史</td></tr></tbody></table>
+<hr>
+<h2 id="5-自动化治理">5. 自动化治理<a class="anchor" href="#5-自动化治理" aria-label="锚点">#</a></h2>
+<h3 id="5-1-pre-commit-hook">5.1 Pre-commit Hook<a class="anchor" href="#5-1-pre-commit-hook" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-meta">#!/bin/bash</span>
+<span class="hljs-comment"># .githooks/pre-commit</span>
+
+<span class="hljs-comment"># 1. 检查是否有 tmp-* 文件</span>
+<span class="hljs-keyword">if</span> git diff --cached --name-only | grep -q <span class="hljs-string">&quot;^tmp-&quot;</span>; <span class="hljs-keyword">then</span>
+  <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;❌ 错误：检测到 tmp-* 临时文件，请先清理&quot;</span>
+  <span class="hljs-built_in">exit</span> 1
+<span class="hljs-keyword">fi</span>
+
+<span class="hljs-comment"># 2. 检查是否有大文件（&gt;10MB）</span>
+LARGE_FILES=$(git diff --cached --name-only | <span class="hljs-keyword">while</span> <span class="hljs-built_in">read</span> f; <span class="hljs-keyword">do</span>
+  <span class="hljs-keyword">if</span> [ -f <span class="hljs-string">&quot;<span class="hljs-variable">$f</span>&quot;</span> ]; <span class="hljs-keyword">then</span>
+    SIZE=$(<span class="hljs-built_in">stat</span> -f%z <span class="hljs-string">&quot;<span class="hljs-variable">$f</span>&quot;</span> 2&gt;/dev/null || <span class="hljs-built_in">stat</span> -c%s <span class="hljs-string">&quot;<span class="hljs-variable">$f</span>&quot;</span> 2&gt;/dev/null)
+    <span class="hljs-keyword">if</span> [ <span class="hljs-string">&quot;<span class="hljs-variable">$SIZE</span>&quot;</span> -gt 10485760 ]; <span class="hljs-keyword">then</span>
+      <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;<span class="hljs-variable">$f</span>&quot;</span>
+    <span class="hljs-keyword">fi</span>
+  <span class="hljs-keyword">fi</span>
+<span class="hljs-keyword">done</span>)
+
+<span class="hljs-keyword">if</span> [ -n <span class="hljs-string">&quot;<span class="hljs-variable">$LARGE_FILES</span>&quot;</span> ]; <span class="hljs-keyword">then</span>
+  <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;❌ 错误：检测到大文件（&gt;10MB）：&quot;</span>
+  <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;<span class="hljs-variable">$LARGE_FILES</span>&quot;</span>
+  <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;请使用 Git LFS 或移至外部存储&quot;</span>
+  <span class="hljs-built_in">exit</span> 1
+<span class="hljs-keyword">fi</span>
+
+<span class="hljs-comment"># 3. 检查 commit message 格式</span>
+COMMIT_MSG_FILE=<span class="hljs-variable">$1</span>
+COMMIT_MSG=$(<span class="hljs-built_in">cat</span> <span class="hljs-string">&quot;<span class="hljs-variable">$COMMIT_MSG_FILE</span>&quot;</span>)
+
+<span class="hljs-comment"># Conventional Commits 正则</span>
+PATTERN=<span class="hljs-string">&quot;^(feat|fix|docs|style|refactor|perf|test|chore|ci|revert)(\([a-z]+\))?: .+&quot;</span>
+
+<span class="hljs-keyword">if</span> ! <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;<span class="hljs-variable">$COMMIT_MSG</span>&quot;</span> | <span class="hljs-built_in">head</span> -1 | grep -qE <span class="hljs-string">&quot;<span class="hljs-variable">$PATTERN</span>&quot;</span>; <span class="hljs-keyword">then</span>
+  <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;❌ 错误：Commit message 格式不正确&quot;</span>
+  <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;正确格式：&lt;type&gt;(&lt;scope&gt;): &lt;中文描述&gt;&quot;</span>
+  <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;示例：feat(gateway): 新增 DeepSeek 适配器&quot;</span>
+  <span class="hljs-built_in">exit</span> 1
+<span class="hljs-keyword">fi</span></code></pre>
+<h3 id="5-2-commit-message-检查脚本">5.2 Commit Message 检查脚本<a class="anchor" href="#5-2-commit-message-检查脚本" aria-label="锚点">#</a></h3>
+<p>创建 <code>scripts/ci/check-commit-message.js</code>：</p>
+<pre><code class="language-javascript"><span class="hljs-meta">#!/usr/bin/env node</span>
+<span class="hljs-comment">/**
+ * 检查 commit message 是否符合规范
+ * 用法：node check-commit-message.js &lt;commit-msg-file&gt;
+ */</span>
+
+<span class="hljs-keyword">const</span> fs = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;fs&#x27;</span>);
+
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">COMMIT_MSG_FILE</span> = process.<span class="hljs-property">argv</span>[<span class="hljs-number">2</span>];
+<span class="hljs-keyword">if</span> (!<span class="hljs-variable constant_">COMMIT_MSG_FILE</span>) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;用法: node check-commit-message.js &lt;commit-msg-file&gt;&#x27;</span>);
+  process.<span class="hljs-title function_">exit</span>(<span class="hljs-number">1</span>);
+}
+
+<span class="hljs-keyword">const</span> msg = fs.<span class="hljs-title function_">readFileSync</span>(<span class="hljs-variable constant_">COMMIT_MSG_FILE</span>, <span class="hljs-string">&#x27;utf8&#x27;</span>);
+<span class="hljs-keyword">const</span> firstLine = msg.<span class="hljs-title function_">split</span>(<span class="hljs-string">&#x27;\n&#x27;</span>)[<span class="hljs-number">0</span>];
+
+<span class="hljs-comment">// Conventional Commits 正则</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">PATTERN</span> = <span class="hljs-regexp">/^(feat|fix|docs|style|refactor|perf|test|chore|ci|revert)(\([a-z]+\))?: .+/</span>;
+
+<span class="hljs-keyword">if</span> (!<span class="hljs-variable constant_">PATTERN</span>.<span class="hljs-title function_">test</span>(firstLine)) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;❌ Commit message 格式不正确&#x27;</span>);
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;正确格式: &lt;type&gt;(&lt;scope&gt;): &lt;中文描述&gt;&#x27;</span>);
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;示例: feat(gateway): 新增 DeepSeek 适配器&#x27;</span>);
+  process.<span class="hljs-title function_">exit</span>(<span class="hljs-number">1</span>);
+}
+
+<span class="hljs-comment">// 检查描述长度</span>
+<span class="hljs-keyword">const</span> description = firstLine.<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/^(feat|fix|docs|style|refactor|perf|test|chore|ci|revert)(\([a-z]+\))?: /</span>, <span class="hljs-string">&#x27;&#x27;</span>);
+<span class="hljs-keyword">if</span> (description.<span class="hljs-property">length</span> &gt; <span class="hljs-number">72</span>) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;❌ 描述部分超过 72 字符&#x27;</span>);
+  process.<span class="hljs-title function_">exit</span>(<span class="hljs-number">1</span>);
+}
+
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;✅ Commit message 格式正确&#x27;</span>);</code></pre>
+<h3 id="5-3-临时文件清理脚本">5.3 临时文件清理脚本<a class="anchor" href="#5-3-临时文件清理脚本" aria-label="锚点">#</a></h3>
+<p>创建 <code>scripts/maintenance/clean-temp.js</code>：</p>
+<pre><code class="language-javascript"><span class="hljs-meta">#!/usr/bin/env node</span>
+<span class="hljs-comment">/**
+ * 清理临时文件
+ * 用法：node clean-temp.js [--apply]
+ */</span>
+
+<span class="hljs-keyword">const</span> fs = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;fs&#x27;</span>);
+<span class="hljs-keyword">const</span> path = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;path&#x27;</span>);
+<span class="hljs-keyword">const</span> { execSync } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;child_process&#x27;</span>);
+
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">APPLY</span> = process.<span class="hljs-property">argv</span>.<span class="hljs-title function_">includes</span>(<span class="hljs-string">&#x27;--apply&#x27;</span>);
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">ROOT</span> = process.<span class="hljs-title function_">cwd</span>();
+
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">TEMP_PATTERNS</span> = [
+  <span class="hljs-string">&#x27;tmp-*&#x27;</span>,
+  <span class="hljs-string">&#x27;*.tmp&#x27;</span>,
+  <span class="hljs-string">&#x27;*.log&#x27;</span>,
+  <span class="hljs-string">&#x27;coverage/&#x27;</span>,
+  <span class="hljs-string">&#x27;.nyc_output/&#x27;</span>,
+];
+
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;🔍 扫描临时文件...\n&#x27;</span>);
+
+<span class="hljs-keyword">let</span> totalSize = <span class="hljs-number">0</span>;
+<span class="hljs-keyword">let</span> fileCount = <span class="hljs-number">0</span>;
+
+<span class="hljs-variable constant_">TEMP_PATTERNS</span>.<span class="hljs-title function_">forEach</span>(<span class="hljs-function"><span class="hljs-params">pattern</span> =&gt;</span> {
+  <span class="hljs-keyword">const</span> cmd = <span class="hljs-string">`find . -name &quot;<span class="hljs-subst">${pattern}</span>&quot; -not -path &quot;./node_modules/*&quot; -not -path &quot;./.git/*&quot;`</span>;
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> output = <span class="hljs-title function_">execSync</span>(cmd, { <span class="hljs-attr">encoding</span>: <span class="hljs-string">&#x27;utf8&#x27;</span> }).<span class="hljs-title function_">trim</span>();
+    <span class="hljs-keyword">if</span> (output) {
+      output.<span class="hljs-title function_">split</span>(<span class="hljs-string">&#x27;\n&#x27;</span>).<span class="hljs-title function_">forEach</span>(<span class="hljs-function"><span class="hljs-params">file</span> =&gt;</span> {
+        <span class="hljs-keyword">if</span> (file) {
+          <span class="hljs-keyword">const</span> fullPath = path.<span class="hljs-title function_">join</span>(<span class="hljs-variable constant_">ROOT</span>, file);
+          <span class="hljs-keyword">try</span> {
+            <span class="hljs-keyword">const</span> stat = fs.<span class="hljs-title function_">statSync</span>(fullPath);
+            totalSize += stat.<span class="hljs-property">size</span>;
+            fileCount++;
+            
+            <span class="hljs-keyword">if</span> (<span class="hljs-variable constant_">APPLY</span>) {
+              fs.<span class="hljs-title function_">rmSync</span>(fullPath, { <span class="hljs-attr">recursive</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">force</span>: <span class="hljs-literal">true</span> });
+              <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`  🗑️  删除: <span class="hljs-subst">${file}</span>`</span>);
+            } <span class="hljs-keyword">else</span> {
+              <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`  📄 <span class="hljs-subst">${file}</span> (<span class="hljs-subst">${(stat.size / <span class="hljs-number">1024</span>).toFixed(<span class="hljs-number">1</span>)}</span> KB)`</span>);
+            }
+          } <span class="hljs-keyword">catch</span> (e) {
+            <span class="hljs-comment">// 文件可能已被删除</span>
+          }
+        }
+      });
+    }
+  } <span class="hljs-keyword">catch</span> (e) {
+    <span class="hljs-comment">// find 命令可能失败</span>
+  }
+});
+
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`\n📊 统计: <span class="hljs-subst">${fileCount}</span> 个文件, <span class="hljs-subst">${(totalSize / <span class="hljs-number">1024</span> / <span class="hljs-number">1024</span>).toFixed(<span class="hljs-number">2</span>)}</span> MB`</span>);
+
+<span class="hljs-keyword">if</span> (!<span class="hljs-variable constant_">APPLY</span>) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;\n💡 运行 `node clean-temp.js --apply` 执行清理&#x27;</span>);
+} <span class="hljs-keyword">else</span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;\n✅ 清理完成&#x27;</span>);
+}</code></pre>
+<hr>
+<h2 id="6-gitignore-最佳实践">6. Gitignore 最佳实践<a class="anchor" href="#6-gitignore-最佳实践" aria-label="锚点">#</a></h2>
+<h3 id="6-1-分层排除策略">6.1 分层排除策略<a class="anchor" href="#6-1-分层排除策略" aria-label="锚点">#</a></h3>
+<pre><code class="language-gitignore"># 1. 依赖（可重装）
+node_modules/
+__pycache__/
+*.pyc
+
+# 2. 构建产物（可重建）
+dist/
+build/
+*.egg-info/
+coverage/
+
+# 3. 日志（运行时生成）
+*.log
+logs/
+
+# 4. 临时文件（调试产物）
+tmp/
+.tmp/
+tmp-*
+
+# 5. 环境配置（含密钥）
+.env
+.env.local
+.env.*.local
+.env.bak-*
+
+# 6. IDE 配置（个人偏好）
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 7. 大文件（外部存储）
+**/_source/*.tar.gz.enc
+_bs3_prebuild.tar.gz</code></pre>
+<h3 id="6-2-反选规则">6.2 反选规则<a class="anchor" href="#6-2-反选规则" aria-label="锚点">#</a></h3>
+<pre><code class="language-gitignore"># 排除所有 build/
+build/
+
+# 但保留 packaging/build/（CI 脚本）
+!packaging/build/
+!packaging/build/*.js
+!packaging/build/*.json</code></pre>
+<hr>
+<h2 id="7-分支管理策略">7. 分支管理策略<a class="anchor" href="#7-分支管理策略" aria-label="锚点">#</a></h2>
+<h3 id="7-1-分支类型">7.1 分支类型<a class="anchor" href="#7-1-分支类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>分支</th><th>用途</th><th>命名</th><th>生命周期</th></tr></thead><tbody><tr><td><code>master</code></td><td>主干</td><td><code>master</code></td><td>永久</td></tr><tr><td><code>release/*</code></td><td>发布准备</td><td><code>release/v1.6.0</code></td><td>临时</td></tr><tr><td><code>feat/*</code></td><td>新功能</td><td><code>feat/123-add-deepseek</code></td><td>临时</td></tr><tr><td><code>fix/*</code></td><td>Bug 修复</td><td><code>fix/456-alias-conflict</code></td><td>临时</td></tr><tr><td><code>hotfix/*</code></td><td>紧急修复</td><td><code>hotfix/critical-auth-bug</code></td><td>临时</td></tr></tbody></table>
+<h3 id="7-2-工作流">7.2 工作流<a class="anchor" href="#7-2-工作流" aria-label="锚点">#</a></h3>
+<pre><code>master ← release/* ← feat/* (PR)
+  ↑
+  └── hotfix/* (PR, 直接合并到 master)</code></pre>
+<h3 id="7-3-pr-合并策略">7.3 PR 合并策略<a class="anchor" href="#7-3-pr-合并策略" aria-label="锚点">#</a></h3>
+<ul><li><strong>feat/fix 分支</strong>：Squash and merge（保持 master 历史整洁）</li><li><strong>release 分支</strong>：Create a merge commit（保留发布历史）</li><li><strong>hotfix 分支</strong>：Squash and merge</li></ul>
+<hr>
+<h2 id="8-自动化检查清单">8. 自动化检查清单<a class="anchor" href="#8-自动化检查清单" aria-label="锚点">#</a></h2>
+<h3 id="8-1-pre-commit-检查">8.1 Pre-commit 检查<a class="anchor" href="#8-1-pre-commit-检查" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 无 <code>tmp-*</code> 临时文件</li><li>[ ] 无大文件（&gt;10MB）</li><li>[ ] Commit message 格式正确</li><li>[ ] 无敏感信息（密钥、密码）</li></ul>
+<h3 id="8-2-pr-检查-ci-自动">8.2 PR 检查（CI 自动）<a class="anchor" href="#8-2-pr-检查-ci-自动" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 版本同步检查</li><li>[ ] Agent 规则检查</li><li>[ ] 叶子契约检查</li><li>[ ] 架构债务检查</li><li>[ ] 仓库布局检查</li><li>[ ] 治理规则检查</li><li>[ ] 模式覆盖检查</li><li>[ ] Node/Python 语法检查</li><li>[ ] 依赖漏洞扫描</li><li>[ ] 密钥扫描</li></ul>
+<h3 id="8-3-定期清理-每周">8.3 定期清理（每周）<a class="anchor" href="#8-3-定期清理-每周" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 清理临时文件</span>
+node scripts/maintenance/clean-temp.js --apply
+
+<span class="hljs-comment"># 清理已合并的本地分支</span>
+git branch --merged master | grep -v <span class="hljs-string">&quot;master&quot;</span> | xargs git branch -d
+
+<span class="hljs-comment"># 清理过期的远程引用</span>
+git fetch --prune</code></pre>
+<hr>
+<h2 id="9-违规处理">9. 违规处理<a class="anchor" href="#9-违规处理" aria-label="锚点">#</a></h2>
+<h3 id="9-1-pre-commit-违规">9.1 Pre-commit 违规<a class="anchor" href="#9-1-pre-commit-违规" aria-label="锚点">#</a></h3>
+<ul><li>阻止提交，提示修复方法</li><li>开发者修复后重新提交</li></ul>
+<h3 id="9-2-ci-违规">9.2 CI 违规<a class="anchor" href="#9-2-ci-违规" aria-label="锚点">#</a></h3>
+<ul><li>PR 标记为 &quot;needs-fix&quot;</li><li>自动添加评论说明问题</li><li>阻止合并直到修复</li></ul>
+<h3 id="9-3-紧急情况">9.3 紧急情况<a class="anchor" href="#9-3-紧急情况" aria-label="锚点">#</a></h3>
+<ul><li>使用 <code>--no-verify</code> 跳过 pre-commit（仅限紧急修复）</li><li>在 PR 描述中说明跳过原因</li><li>后续补充检查</li></ul>
+<hr>
+<h2 id="10-参考资料">10. 参考资料<a class="anchor" href="#10-参考资料" aria-label="锚点">#</a></h2>
+<ul><li><a href="https://www.conventionalcommits.org/" target="_blank" rel="noopener">Conventional Commits</a></li><li><a href="https://www.atlassian.com/git/tutorials/comparing-workflows" target="_blank" rel="noopener">Git Branching Strategies</a></li><li><a href="https://git-scm.com/docs/gitignore" target="_blank" rel="noopener">Gitignore Best Practices</a></li></ul>
+<hr>
+<h2 id="附录-a-快速参考卡">附录 A: 快速参考卡<a class="anchor" href="#附录-a-快速参考卡" aria-label="锚点">#</a></h2>
+<h3 id="commit-message">Commit Message<a class="anchor" href="#commit-message" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 新功能</span>
+feat(gateway): 新增 DeepSeek 适配器
+
+<span class="hljs-comment"># 修复 bug</span>
+fix(cli): 修复中文别名匹配失败
+
+<span class="hljs-comment"># 文档更新</span>
+docs: 更新 CONTRIBUTING.md
+
+<span class="hljs-comment"># 重构</span>
+refactor(services): 拆分 aiGateway 模块
+
+<span class="hljs-comment"># 紧急修复</span>
+fix(auth): 修复登录漏洞
+Closes <span class="hljs-comment">#789</span>
+BREAKING CHANGE: 移除旧版登录接口</code></pre>
+<h3 id="branch-命名">Branch 命名<a class="anchor" href="#branch-命名" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 新功能</span>
+git checkout -b feat/123-add-deepseek-adapter
+
+<span class="hljs-comment"># Bug 修复</span>
+git checkout -b fix/456-alias-conflict
+
+<span class="hljs-comment"># 紧急修复</span>
+git checkout -b hotfix/critical-auth-bug</code></pre>
+<h3 id="清理命令">清理命令<a class="anchor" href="#清理命令" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 清理临时文件</span>
+node scripts/maintenance/clean-temp.js --apply
+
+<span class="hljs-comment"># 清理已合并分支</span>
+git branch --merged master | grep -v <span class="hljs-string">&quot;master&quot;</span> | xargs git branch -d
+
+<span class="hljs-comment"># 清理远程引用</span>
+git fetch --prune</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-GIT/[DESIGN-GIT-002] Commit Message 规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-GIT-002] Commit Message 规范</div></a><a class="next" href="../../../docs/10_规范/DESIGN-GIT/[DESIGN-GIT-004] 提交时机规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-GIT-004] 提交时机规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-GIT/[DESIGN-GIT-003] Git 自动化治理规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

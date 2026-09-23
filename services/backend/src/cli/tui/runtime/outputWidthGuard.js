@@ -119,8 +119,11 @@ function clampChunkToWidth(text, cols, measure) {
   if (cols < 2 || s === '') {
     return s;
   }
-  // 热路径:整体都不可能超宽(总长 ≤ cols,必然单行且每行 ≤ cols)。
-  if (s.length <= cols) {
+  // 热路径:整体都不可能超宽才逐字节放行。显示宽度上界是 2×长度(CJK 每 UTF-16 单元
+  // 占 2 列;astral 每 2 单元占 2 列;其余 ≤1),故 `2*length <= cols` 才是「必然不超」
+  // 的健全判据。此前用 `length <= cols` 会把中文行(长度≤列但宽度>列)误判为可放行,
+  // 交给终端硬折 → 版面冲乱(本模块正是为此而生)。ASCII-only 时两者等价,不损热路径。
+  if (s.length * 2 <= cols) {
     return s;
   }
   if (CURSOR_OP_RE.test(s)) {
@@ -131,8 +134,13 @@ function clampChunkToWidth(text, cols, measure) {
   let changed = false;
   for (let i = 0; i < lines.length; i++) {
     const ln = lines[i];
-    if (ln === '' || ln.length <= cols) {
-      continue; // 长度即上界的快速判断:纯 ASCII 不会超;CJK 由下方精确量
+    if (ln === '') {
+      continue;
+    }
+    // 健全上界同 clampChunkToWidth:只有 `2*length <= cols` 才能不量而断言必不超;
+    // 落在 (cols/2, …] 的行(尤其中文)交给下方 widthOf 精确判定,不再靠 length 冒充宽度。
+    if (ln.length * 2 <= cols) {
+      continue;
     }
     if (widthOf(ln) <= cols) {
       continue;

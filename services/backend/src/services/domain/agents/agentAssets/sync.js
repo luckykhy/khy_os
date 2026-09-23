@@ -27,7 +27,16 @@
  */
 
 const M = require('./assetModel');
-const registry = require('../../../../cli/commands/registry');
+// 真源是**同目录**的 assetAssets/registry —— 它导出 resolveAdapter / listSourceIds
+// / getSource / describeSources。
+//
+// 曾写成 ../../../../cli/commands/registry：那是 CLI **命令**注册表，导出的是
+// getCommandNames / getHandler / registerCommand 之类，**根本没有** resolveAdapter 与
+// listSourceIds。于是 `registry.resolveAdapter(...)` 在运行期必然 "is not a function"，
+// 而 ① 它是普通函数体里的懒调用（模块加载不报错）、② 现有测试只覆盖 assetModel/adapters、
+// 从没走过这三个调用点 —— 这个缺陷因此一直静默存在。
+// （与 dependency/、mcp/ 两组同类：服务层够到 cli 层去拿一个「同层的邻居」。）
+const registry = require('./registry');
 
 /** 默认空闲超时:连续 60 秒没有任何一项取得进展才认为卡死。 */
 const DEFAULT_IDLE_TIMEOUT_MS = 60 * 1000;

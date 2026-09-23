@@ -9,7 +9,7 @@
  * 3. Result formatting
  */
 
-const { benchmark, BenchmarkResult } = require('./benchmarkSuite');
+const { benchmark, BenchmarkResult } = require('../../src/services/benchmarkSuite.js');
 
 // ── Test Helpers ──────────────────────────────────────────────────────────
 

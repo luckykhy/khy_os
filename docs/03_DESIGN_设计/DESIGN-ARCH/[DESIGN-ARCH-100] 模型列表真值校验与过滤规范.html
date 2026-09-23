@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-100] 模型列表真值校验与过滤规范.md -->
+<title>[DESIGN-ARCH-100] 模型列表真值校验与过滤规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-100] 模型列表真值校验与过滤规范</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-100] 模型列表真值校验与过滤规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-100-模型列表真值校验与过滤规范">[DESIGN-ARCH-100] 模型列表真值校验与过滤规范</a></li><li class="lvl-2"><a href="#一-现象-用户逐字报告">一、现象（用户逐字报告）</a></li><li class="lvl-2"><a href="#二-根因定位-附证据">二、根因定位（附证据）</a></li><li class="lvl-3"><a href="#rc1-静态硬编码目录被无差别并入列表-且标成-内置-而非-猜测">RC1 — 静态硬编码目录被无差别并入列表，且标成「内置」而非「猜测」</a></li><li class="lvl-3"><a href="#rc2-本机扫描用正则把-任意文本-当模型-id">RC2 — 本机扫描用正则把**任意文本**当模型 ID</a></li><li class="lvl-3"><a href="#rc3-垃圾-id-会被-持久化-形成自污染闭环">RC3 — 垃圾 ID 会被**持久化**，形成自污染闭环</a></li><li class="lvl-3"><a href="#rc4-默认过滤几乎全关-且只对-codex-生效">RC4 — 默认过滤几乎全关，且只对 codex 生效</a></li><li class="lvl-3"><a href="#rc5-已存在的存在性探针没有参与列表构建">RC5 — 已存在的存在性探针没有参与列表构建</a></li><li class="lvl-3"><a href="#rc6-应用路径无对账-且-最近模型-写入路径写错被静默吞掉">RC6 — 应用路径无对账，且「最近模型」写入路径写错被静默吞掉</a></li><li class="lvl-3"><a href="#rc7-modelpicker-数字跳转索引错位-次要但真实">RC7 — ModelPicker 数字跳转索引错位（次要但真实）</a></li><li class="lvl-3"><a href="#rc8-结论未收敛-至少-6-条入口各自拼列表">RC8 — 结论未收敛：至少 6 条入口各自拼列表</a></li><li class="lvl-2"><a href="#三-规则">三、规则</a></li><li class="lvl-3"><a href="#3-1-来源分级表-唯一分类">3.1 来源分级表（唯一分类）</a></li><li class="lvl-3"><a href="#3-2-三条律-modellisttruth-js-的代码真源">3.2 三条律（`modelListTruth.js` 的代码真源）</a></li><li class="lvl-3"><a href="#3-3-选择入口对账律-防-s2">3.3 选择入口对账律（防 S2）</a></li><li class="lvl-3"><a href="#3-4-最近模型-净化律-防-s2-的另一半">3.4 「最近模型」净化律（防 S2 的另一半）</a></li><li class="lvl-3"><a href="#3-5-呈现律">3.5 呈现律</a></li><li class="lvl-2"><a href="#四-接线点-谁必须经过什么">四、接线点（谁必须经过什么）</a></li><li class="lvl-2"><a href="#五-门控与回退">五、门控与回退</a></li><li class="lvl-2"><a href="#六-验收">六、验收</a></li><li class="lvl-2"><a href="#七-收口状态与遗留">七、收口状态与遗留</a></li><li class="lvl-2"><a href="#八-与既有规范的关系">八、与既有规范的关系</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-100 | 阶段: 设计 | 原路径: 新建 --&gt;</p>
+<h1 id="design-arch-100-模型列表真值校验与过滤规范">[DESIGN-ARCH-100] 模型列表真值校验与过滤规范<a class="anchor" href="#design-arch-100-模型列表真值校验与过滤规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>强制规范 · 模型选择面「存在性真值」的单一真源</strong> · 回答两个问题：①为什么前端会展示后端根本调不通的模型；②任何入口要展示/应用一个模型之前,必须经过哪几道闸。</p>
+<p><strong>定位</strong>：本文管<strong>模型列表从「候选池」收敛为「真值表」</strong>这件事。它不替代 <code>constants/models.js</code>（模型<strong>名</strong>的单一真源）、<code>gateway/modelCuration.js</code>（用户对展示列表的<strong>增删改</strong>意图）、<code>modelFeatureRegistry</code>（<strong>能力</strong>记录）。</p>
+<p><strong>实现单一真源</strong>：<code>services/backend/src/services/gateway/modelListTruth.js</code>（纯叶子）。本文是规则的散文真源,该叶子是规则的代码真源,两者必须同步。</p>
+<p><strong>门控</strong>：<code>KHY_MODEL_LIST_TRUTH</code>（默认开,仅 <code>{0,false,off,no}</code> 关;关 → 逐字节回退今日行为）。</p>
+<p><strong>谁该读</strong>：任何要新增 gateway 适配器、新增模型来源、改动模型选择器 / 自动路由 / 最近模型 / 启动默认值的人或 AI。</p></blockquote>
+<hr>
+<h2 id="一-现象-用户逐字报告">一、现象（用户逐字报告）<a class="anchor" href="#一-现象-用户逐字报告" aria-label="锚点">#</a></h2>
+<blockquote><p>「在 khyos 系统的多模型选择功能中,前端 TUI 与后端实际模型列表经常不一致：tui 会莫名跳转到不存在的模型（如 Oenaigpt5.3 code review、winsurful claude sonnet3.5）并触发报错,且模型列表中频繁出现大量真实不存在的模型。」</p></blockquote>
+<p>拆成四条可验证的症状：</p>
+<table><thead><tr><th>#</th><th>症状</th><th>真实含义</th></tr></thead><tbody><tr><td>S1</td><td>列表里「大量真实不存在的模型」</td><td>展示的是<strong>猜测</strong>（静态目录 / 本机扫描 / env 逗号串），被当成了事实</td></tr><tr><td>S2</td><td>「莫名跳到不存在的模型」</td><td>存在<strong>绕过列表构建</strong>的应用路径（F2 最近模型、启动默认、历史残留），把早已不存在的 <code>(adapter, model)</code> 直接写进偏好</td></tr><tr><td>S3</td><td>「前端与后端不一致」</td><td>同一条记录在<strong>列表侧</strong>判「可选」、在<strong>调用侧</strong>判 404 —— 存在性结论从未被收敛到单一真值</td></tr><tr><td>S4</td><td>「选中后报错」</td><td>报错不是根因,是 S1/S2 的下游表现（<code>model_not_found</code> 只在真正调用时才暴露）</td></tr></tbody></table>
+<blockquote><p>关于用户举的两个名字（用户手抄,已失真）：<code>gpt-5.3-codex-review</code> 是本仓真实存在过的 codex 模型 ID（见 <code>services/backend/tests/gatewayModelSelection.strictProbe.test.js</code>）;<code>claude sonnet3.5</code> 对应 windsurf 通道静态目录里的 <code>claude-3.5-sonnet</code>（<code>windsurfAdapter.js:83</code>）与本机扫描出的 <code>sonnet3.5</code> 形态。名字对不上不影响定性 —— 它们都是<strong>「被当事实展示的猜测」</strong>。</p></blockquote>
+<hr>
+<h2 id="二-根因定位-附证据">二、根因定位（附证据）<a class="anchor" href="#二-根因定位-附证据" aria-label="锚点">#</a></h2>
+<p><strong>一句话根因</strong>：适配器的 <code>listModels()</code> 是<strong>候选池</strong>而不是<strong>真值表</strong>。它把「上游亲口返回的 id」与「静态目录 / 本机正则扫描 / env 逗号串」扁平地混成同一个数组,下游无从分辨<strong>事实</strong>与<strong>猜测</strong>,于是把猜测展示成可选模型。</p>
+<p><code>gateway/modelCuration.js:4-8</code> 早已把这条定性写在模块头上,只是当时只治了 web 管理页一侧：</p>
+<blockquote><p>各 gateway 适配器的 listModels() 有的返回硬编码静态列表（claude/cursor/warp），有的带硬编码 fallback（codex/kiro/relay）。网关的 available 只代表「已装/已登录/可达」，与模型 ID 是否真实解耦，导致 UI 出现「不存在的模型」。</p></blockquote>
+<h3 id="rc1-静态硬编码目录被无差别并入列表-且标成-内置-而非-猜测">RC1 — 静态硬编码目录被无差别并入列表，且标成「内置」而非「猜测」<a class="anchor" href="#rc1-静态硬编码目录被无差别并入列表-且标成-内置-而非-猜测" aria-label="锚点">#</a></h3>
+<p><code>services/backend/src/services/gateway/adapters/_ideTokenMixin.js</code> 的 <code>buildModelList()</code>（≈282-360）把 <code>knownModels</code>（静态目录）与扫描结果一起 <code>addModel()</code>,来源由 <code>resolveSource()</code> 回落到 <code>builtin</code> / <code>local</code>。</p>
+<ul><li><code>windsurfAdapter.js:82-92</code> <code>KNOWN_MODELS</code>：<code>claude-3.5-sonnet</code>、<code>kimi2.6</code>、<code>swe-1.6-m1.5</code> …</li><li><code>claudeAdapter.js:826-858</code>：<code>discoverySource: 'builtin'</code></li><li><code>codexAdapter.js:801-839</code>：<code>FALLBACK_MODELS</code> → <code>discoverySource: 'builtin'</code></li><li><code>traeAdapter.js:2363-2389</code>：无 token 时直接返回 <code>KNOWN_MODELS</code> → <code>discoverySource: 'builtin'</code></li></ul>
+<h3 id="rc2-本机扫描用正则把-任意文本-当模型-id">RC2 — 本机扫描用正则把<strong>任意文本</strong>当模型 ID<a class="anchor" href="#rc2-本机扫描用正则把-任意文本-当模型-id" aria-label="锚点">#</a></h3>
+<ul><li><code>gateway/modelDiscovery.js:49-50</code> <code>MODEL_ID_REGEX</code>、<code>:84-98</code> <code>isLikelyModelId()</code>：只要字符串里含 <code>gpt|claude|sonnet|…</code> 就算模型 ID。</li><li><code>adapters/_ideTokenMixin.js:171</code> <code>MODEL_TOKEN_REGEX = /\b[a-zA-Z0-9][a-zA-Z0-9._:-]{2,80}\b/g</code>、<code>:183-204</code> <code>extractModelIdsFromString()</code>：对 IDE <code>storage.json</code> 里<strong>任意字符串值</strong>全量抽 token,再按 <code>isLikelyModelId</code> 过滤。</li><li><code>modelDiscovery.js:176-181</code>：对所有文件类型（含 JSON）都额外跑一遍宽正则兜底。</li></ul>
+<p>→ <code>claude sonnet 3.5</code> 这种<strong>散文片段</strong>就是这样变成「模型 ID」的（<code>claude-3.5-sonnet</code>、<code>sonnet3.5</code> 亦然）。</p>
+<h3 id="rc3-垃圾-id-会被-持久化-形成自污染闭环">RC3 — 垃圾 ID 会被<strong>持久化</strong>，形成自污染闭环<a class="anchor" href="#rc3-垃圾-id-会被-持久化-形成自污染闭环" aria-label="锚点">#</a></h3>
+<ul><li><code>cli/handlers/gatewayProviderKeyPool.js:239-315</code> <code>handleGatewayDiscoverModels</code> → <code>modelDiscovery.updateRelayModelsInEnvFile()</code>（<code>modelDiscovery.js:236-258</code>）把扫描结果 <strong>merge 进 <code>.env</code> 的 <code>RELAY_API_MODELS</code></strong>。</li><li><code>adapters/relayApiAdapter.js:573-590</code> <code>parseRelayModelHints()</code> 把它读回来,标 <code>discoverySource: 'hint'</code>。</li></ul>
+<p>→ 一次扫描的产物会永久留在模型列表里；<code>.env</code> 每被读一次,垃圾就复活一次。</p>
+<h3 id="rc4-默认过滤几乎全关-且只对-codex-生效">RC4 — 默认过滤几乎全关，且只对 codex 生效<a class="anchor" href="#rc4-默认过滤几乎全关-且只对-codex-生效" aria-label="锚点">#</a></h3>
+<p><code>cli/handlers/gateway.js</code> 常量块（≈198-207）：</p>
+<pre><code class="language-js"><span class="hljs-keyword">const</span> <span class="hljs-variable constant_">MODEL_HIDE_FALLBACK_MODELS_ENABLED</span> =
+  <span class="hljs-title class_">String</span>(process.<span class="hljs-property">env</span>.<span class="hljs-property">KHY_MODEL_HIDE_FALLBACK_MODELS</span> || <span class="hljs-string">&#x27;false&#x27;</span>).<span class="hljs-title function_">toLowerCase</span>() !== <span class="hljs-string">&#x27;false&#x27;</span>; <span class="hljs-comment">// → false</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">MODEL_HIDE_HINT_MODELS_ENABLED</span> =
+  <span class="hljs-title class_">String</span>(process.<span class="hljs-property">env</span>.<span class="hljs-property">KHY_MODEL_HIDE_HINT_MODELS</span> || <span class="hljs-string">&#x27;false&#x27;</span>).<span class="hljs-title function_">toLowerCase</span>() !== <span class="hljs-string">&#x27;false&#x27;</span>;     <span class="hljs-comment">// → false</span></code></pre>
+<ul><li><code>'false' !== 'false'</code> → <strong>两个默认全关</strong>。</li><li>即便打开,<code>_filterModelsByReliability()</code> 里 <code>hideHintForAdapter = adapterType === 'codex'</code>、<code>hideFallbackForAdapter = adapterType === 'codex'</code> —— <strong>只对 codex 生效</strong>。</li></ul>
+<p>唯一默认开的是 <code>MODEL_HIDE_UNVERIFIED_ENABLED</code>,但它只在「generation 告警 <strong>且</strong> 条目 &gt; 3」时做「留默认 + 按族去重到 3 条」的<strong>降噪</strong>,不是存在性校验。</p>
+<h3 id="rc5-已存在的存在性探针没有参与列表构建">RC5 — 已存在的存在性探针没有参与列表构建<a class="anchor" href="#rc5-已存在的存在性探针没有参与列表构建" aria-label="锚点">#</a></h3>
+<p><code>aiGatewayModelMethods.js:763</code> 有 <code>verifyModel()</code>（真跑一次最小生成）、<code>modelCuration</code> 有 <code>getVerifyStatus()</code> / <code>recordVerify()</code>（TTL 缓存）,但 <code>buildGatewayModelChoices()</code> 的列表构建<strong>完全不看</strong>探活结果 —— 它只用通道级 <code>testAdapter</code>。探活结论只在 web 管理页被投影显示。→ 同一模型,web 说「failed」,TUI 说「可用」。</p>
+<h3 id="rc6-应用路径无对账-且-最近模型-写入路径写错被静默吞掉">RC6 — 应用路径无对账，且「最近模型」写入路径写错被静默吞掉<a class="anchor" href="#rc6-应用路径无对账-且-最近模型-写入路径写错被静默吞掉" aria-label="锚点">#</a></h3>
+<ul><li><code>cli/handlers/gatewayModelChoices.js</code> <code>applyGatewayModelSelection()</code> 直接持久化<strong>任意</strong> <code>{adapter, model}</code>（写 <code>.env</code> 偏好 + <code>lastVerifiedModelStore</code>）,不校验它是否在刚构建出的列表里。</li><li><code>cli/tui/ink-components/App.js</code> <code>resolveModelPicker()</code> 里的 recent store require 路径原为 <code>'../../services/gateway/recentModelsStore'</code> —— 从 <code>cli/tui/ink-components/</code> 解析指向<strong>不存在的</strong> <code>cli/services/…</code>,<code>MODULE_NOT_FOUND</code> 被 <code>catch {}</code> 吞掉 → <strong>TUI 从未记录最近模型</strong>,而 <code>recent_models.json</code> 里的历史残留<strong>永久有效</strong>。</li><li>同一个 <code>resolveModelPicker()</code> 又被 F2（<code>App.js</code> ≈4478-4492）直接调用：F2 从 <code>recent_models.json</code> 读出 <code>(adapter, model)</code> 就<strong>直接应用</strong>,不校验存在性 → <strong>这就是「TUI 莫名跳到不存在的模型」的主路径</strong>。</li><li><code>cli/repl/startup.js:28-67</code> <code>offerModelSelection()</code> 也直连 <code>aiGateway.listModels()</code> 自建一份列表（不经任何真值闸）；<code>agentModelProjection</code> 投影进来的外部智能体模型同样只按「适配器是否启用」过滤。</li></ul>
+<h3 id="rc7-modelpicker-数字跳转索引错位-次要但真实">RC7 — ModelPicker 数字跳转索引错位（次要但真实）<a class="anchor" href="#rc7-modelpicker-数字跳转索引错位-次要但真实" aria-label="锚点">#</a></h3>
+<p><code>cli/tui/ink-components/ModelPicker.js</code>：行号标签用<strong>全局下标</strong> <code>i + 1</code>,而数字键选中用 <code>filtered[n - 1]</code>。列表一滚动（<code>start &gt; 0</code>）标签就与实际选中的行脱节 —— 用户按「3」选中的不是屏幕上写着「3.」的那一行。这独立贡献了「莫名跳到（别的）模型」的主观体验。</p>
+<h3 id="rc8-结论未收敛-至少-6-条入口各自拼列表">RC8 — 结论未收敛：至少 6 条入口各自拼列表<a class="anchor" href="#rc8-结论未收敛-至少-6-条入口各自拼列表" aria-label="锚点">#</a></h3>
+<p>TUI <code>ModelPicker</code>、经典 CLI inquirer、<code>repl/startup.js</code>、<code>agentModelProjection</code> 投影、<code>apiAdapter.availableModels</code>、<code>arena</code>/<code>moa</code> —— 彼此不共享「已证实存在」的证据集。</p>
+<hr>
+<h2 id="三-规则">三、规则<a class="anchor" href="#三-规则" aria-label="锚点">#</a></h2>
+<h3 id="3-1-来源分级表-唯一分类">3.1 来源分级表（唯一分类）<a class="anchor" href="#3-1-来源分级表-唯一分类" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>来源标记</th><th>含义</th><th>分级</th><th>说明</th></tr></thead><tbody><tr><td><code>remote</code> / <code>remote+local</code></td><td>上游 <code>/models</code>（或原生模型接口）亲口返回</td><td><strong>权威（事实）</strong></td><td>唯一可证实来源;命中即触发「上游权威覆盖律」</td></tr><tr><td><code>config</code></td><td>用户配置（<code>config.json</code> / <code>config.toml</code> 的 <code>model=</code>）</td><td>可信</td><td>用户显式声明</td></tr><tr><td><code>user</code></td><td><code>modelCuration</code> 里用户手加的模型</td><td>可信</td><td>用户显式声明</td></tr><tr><td><code>proxy</code> / <code>commandcode-config</code> / <code>baseline</code> / <code>injected</code></td><td>用户自己的代理、工具配置、厂商基线</td><td>可信（保守）</td><td>有据可依,欠拦安全</td></tr><tr><td><code>local</code></td><td><strong>本机 IDE storage 正则扫描拾取</strong></td><td><strong>未经证实</strong></td><td>RC2 的主要产物</td></tr><tr><td><code>builtin</code></td><td><strong>源码里硬编码的静态目录 / fallback</strong></td><td><strong>未经证实</strong></td><td>RC1 的主要产物</td></tr><tr><td><code>hint</code></td><td><code>RELAY_API_MODELS</code> 等 env 逗号串</td><td><strong>未经证实</strong></td><td>RC3 的产物</td></tr><tr><td><code>static</code> / <code>preset</code> / <code>guess</code> / <code>fallback</code></td><td>同类猜测的其它写法</td><td><strong>未经证实</strong></td><td>保留位,防止换名绕过</td></tr><tr><td>（无标记）</td><td>适配器未打标</td><td>按可信处理</td><td>欠拦安全:宁可放过,不得误杀</td></tr></tbody></table>
+<blockquote><p><strong>新增静态目录时必须打 <code>builtin</code> 标记</strong>,否则不受本律覆盖。</p></blockquote>
+<h3 id="3-2-三条律-modellisttruth-js-的代码真源">3.2 三条律（<code>modelListTruth.js</code> 的代码真源）<a class="anchor" href="#3-2-三条律-modellisttruth-js-的代码真源" aria-label="锚点">#</a></h3>
+<p><strong>律 1 —— 上游权威覆盖律（authority）</strong></p>
+<blockquote><p>某适配器产出 <strong>≥1 条 <code>remote</code> 记录</strong>时,该 remote 集合即为该适配器<strong>唯一权威</strong>：所有<strong>未经证实</strong>来源一律剔除,<strong>除非</strong>它是权威 id 的<strong>结构性变体</strong>（复合路由 <code>id::mode</code>,或记录的 <code>_baseModelId</code> 命中权威集）。</p>
+<p>该适配器<strong>没有</strong>任何 <code>remote</code> 记录时（上游不可达 / 该通道本就没有列表接口）→ <strong>一条都不剔除</strong>。不知道就承认不知道：不臆造,也不滥杀。但这些条目会被打上 <code>unverified: true</code>,UI 必须显式标注。</p></blockquote>
+<p><strong>律 2 —— 形态律（shape）,恒定律,不看来源</strong></p>
+<blockquote><p>ID 必须匹配 <code>^[A-Za-z0-9][A-Za-z0-9._:/-]{2,95}$</code>,且<strong>原始串</strong>不得含空白 / CJK / 引号 / 括号 / <code>\</code> / <code>@</code> / URL 形状。</p>
+<p><strong>判序不可颠倒</strong>：先看原始串,再做规范化。因为本仓的规范化（<code>normalizeModelIdCompact</code>）会<strong>剥掉内部空白</strong>,若先规范化,<code>claude sonnet3.5</code> 会被洗成 <code>claudesonnet3.5</code> 从而蒙混过关 —— 这正是 RC2 的机理。</p></blockquote>
+<p><strong>律 3 —— 实测律（verify）,恒定律,不看来源</strong></p>
+<blockquote><p>探活（<code>modelCuration.getVerifyStatus()</code>,TTL 内）判定 <code>failed</code> 的模型剔除。<strong>实测失败是对「存在」的反证。</strong> <code>unknown</code> / <code>verified</code> 保留。</p></blockquote>
+<p><strong>逃生口</strong>：若三条律把列表清成空,保留<strong>默认模型（<code>isDefault</code>）或权威的一条</strong>作为入口；该条若形态亦非法,则返回<strong>空列表</strong>（空是诚实的,不展示垃圾）。</p>
+<h3 id="3-3-选择入口对账律-防-s2">3.3 选择入口对账律（防 S2）<a class="anchor" href="#3-3-选择入口对账律-防-s2" aria-label="锚点">#</a></h3>
+<blockquote><p>任何<strong>绕过列表构建</strong>的应用路径（F2 最近模型、启动默认值、自然语言直选、env 残留）在写入偏好前,必须与<strong>最近一次构建出的可选快照</strong>对账。不在快照里 → <strong>拒绝应用、不落盘、给出可执行提示</strong>。</p>
+<p>无快照（本次会话尚未构建过列表）→ 放行（不阻断正常路径）。<br><code>adapter === 'auto'</code> 或 <code>model</code> 为空（adapter 级默认模型入口）→ 放行。</p></blockquote>
+<p>实现：<code>gatewayModelChoices.js</code> 的 <code>getLastSelectableKeys()</code> / <code>isSelectableNow()</code>；消费点 <code>App.js</code> 的 <code>resolveModelPicker()</code>。</p>
+<h3 id="3-4-最近模型-净化律-防-s2-的另一半">3.4 「最近模型」净化律（防 S2 的另一半）<a class="anchor" href="#3-4-最近模型-净化律-防-s2-的另一半" aria-label="锚点">#</a></h3>
+<blockquote><p><code>recent_models.json</code> 记的是「用户曾选过什么」,<strong>不是</strong>「什么现在还存在」。每次构建出真实 catalog 后,必须以该 catalog 为准剪枝（<code>recentModelsStore.pruneRecentModels()</code>）,把已不存在的条目<strong>忘掉</strong>。</p>
+<p>写入路径的 <code>require</code> 失败<strong>不得</strong>被静默 catch 掉而不留痕（RC6）—— 路径写错就是功能静默失效。</p></blockquote>
+<h3 id="3-5-呈现律">3.5 呈现律<a class="anchor" href="#3-5-呈现律" aria-label="锚点">#</a></h3>
+<blockquote><ul><li>未经证实来源在 UI 上<strong>必须带来源标签</strong>,且 <code>unverified: true</code> 的条目必须显式标注（如 <code>[未证实·内置]</code> 黄色标签）。</li><li>过滤动作必须<strong>可见</strong>：构建时的 notice 需按原因分类汇总（<code>无上游证据的猜测模型 / 形态非法 / 实测失败</code>），不得静默丢弃。</li></ul></blockquote>
+<hr>
+<h2 id="四-接线点-谁必须经过什么">四、接线点（谁必须经过什么）<a class="anchor" href="#四-接线点-谁必须经过什么" aria-label="锚点">#</a></h2>
+<p><strong>咽喉点（唯一实现点）</strong>：<code>services/backend/src/services/gateway/aiGatewayModelMethods.js</code> 的 <code>listModels(adapterKey, opts)</code> —— 先 <code>modelCuration.applyOverrides()</code>（用户意图），再 <code>modelListTruth.filterByUpstreamAuthority()</code>（存在性真值）。全仓消费方一次收口。</p>
+<table><thead><tr><th>入口</th><th>文件</th><th>必须经过</th></tr></thead><tbody><tr><td><strong>全部消费方</strong></td><td><code>aiGateway.listModels(key)</code></td><td>律 1/2/3</td></tr><tr><td>TUI <code>ModelPicker</code>（<code>/model</code>、<code>Meta+P</code>）</td><td><code>cli/tui/ink-components/App.js</code> → <code>buildGatewayModelChoices</code></td><td>咽喉点 + 3.4 剪枝 + 3.5 标注</td></tr><tr><td>经典 CLI 选择器（无 TTY 自动选 / inquirer）</td><td><code>cli/handlers/gatewayModelChoices.js</code></td><td>同上</td></tr><tr><td>自然语言切模型（「切换到 X 的模型」）</td><td><code>App.js openModelPickerForVendor</code> / <code>handleModelSwitchByVendor</code></td><td>同上</td></tr><tr><td>自动模型选择（auto / 级联）</td><td><code>cli/handlers/gateway.js</code> 的 auto 候选排序</td><td>律 1/2/3（自动路由不得落到猜测模型）</td></tr><tr><td>启动默认模型</td><td><code>cli/repl/startup.js offerModelSelection</code></td><td>走 <code>aiGateway.listModels</code> → 已被咽喉点覆盖</td></tr><tr><td><code>khy ide &lt;name&gt;</code> 模型选择</td><td><code>cli/handlers/ide.js</code></td><td>显式套 curation + 真值（绕过咽喉点时必须补）</td></tr><tr><td>外部智能体投影</td><td><code>services/gateway/agentModelProjection.js</code></td><td>投影结果并入列表后同样过律 1/2/3</td></tr><tr><td>web 可用模型 / OpenAI 兼容端点</td><td><code>aiManagementServer.js</code>、<code>aiManagementOpenaiCompat.js</code></td><td>默认过滤（选择面只给真值）</td></tr><tr><td><strong>管理面（增删改 / 逐条探活）</strong></td><td><code>aiManagementGatewayAdmin.js</code></td><td><code>{ unfiltered: true }</code> 显式看全量 —— 用户得先看得见才能隐藏/改名/验证</td></tr><tr><td>子 agent 选模型</td><td><code>tools/AgentTool/index.js</code></td><td>默认过滤（不得把猜测模型派给子 agent）</td></tr><tr><td>目录多枢轴视图（超集）</td><td><code>services/gateway/modelCatalogGraph.js</code></td><td>直连 <code>apiAdapter.listModels()</code>，登记在册的例外（它需要原始复合 id 分桶）</td></tr><tr><td>F2 最近模型轮换</td><td><code>App.js</code> chord 分支</td><td>3.3 对账 + 3.4 剪枝</td></tr></tbody></table>
+<blockquote><p>关键 1：<code>aiGateway.listModels()</code> 是<strong>唯一咽喉点</strong>；任何绕开它直连适配器的入口都会把猜测条目当可调用模型展示，由 <code>check:model-list-truth</code> 守卫在提交时点名。</p>
+<p>关键 2：<code>_filterModelsByReliability()</code>（TUI 与经典 CLI 共用）再跑一次真值律，是因为上面的 codex 跨提供商 / hint / builtin 过滤可能把最后一条 remote 剔掉，从而让「上游权威」消失 —— 重跑保证裁剪后的集合仍自洽。</p>
+<p>关键 3：真值律<strong>先于</strong>「列表太短就跳过」的捷径执行 —— 单条垃圾模型不该因为列表只有一条就免检。</p></blockquote>
+<hr>
+<h2 id="五-门控与回退">五、门控与回退<a class="anchor" href="#五-门控与回退" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>门控</th><th>默认</th><th>关闭后的行为</th></tr></thead><tbody><tr><td><code>KHY_MODEL_LIST_TRUTH</code></td><td>开</td><td><code>isEnabled()</code> 恒 <code>false</code> → <code>bypassed: true</code>、零剔除 → 逐字节回退今日行为</td></tr></tbody></table>
+<p><strong>已注册</strong>：<code>services/backend/src/services/flagRegistry.js</code>。flagRegistry 不可用时退本地 CANON 解析（<code>{0,false,off,no}</code> 为关,空/未设 = 开）。</p>
+<p><strong>fail-soft</strong>：真值层缺失、抛异常、<code>modelCuration</code> 不可用 → 一律降级为「零剔除」,绝不因真值层故障清空用户的模型列表。</p>
+<hr>
+<h2 id="六-验收">六、验收<a class="anchor" href="#六-验收" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-comment"># 单元（纯叶子三条律 + 门控 + fail-soft）</span>
+npx jest tests/services/gateway/modelListTruth.test.js --runInBand
+
+<span class="hljs-comment"># 接线（候选池 → 真值表；windsurf 场景：静态目录/扫描件不得进选择器）</span>
+npx jest tests/gatewayModelListTruth.wiring.test.js --runInBand
+
+<span class="hljs-comment"># 回归（既有 codex 跨提供商裁剪 + 非交互自动选）</span>
+npx jest tests/gatewayModelSelection.strictProbe.test.js --runInBand
+
+<span class="hljs-comment"># 工程守卫</span>
+node scripts/ci/check-leaf-contract.js services/backend/src/services/gateway/modelListTruth.js
+node scripts/ci/check-flag-registry.js
+npm run check:model-list-truth        <span class="hljs-comment"># 绕开咽喉点的直连 / 未打标的静态目录</span></code></pre>
+<p>手工验证（有 windsurf token 的机器）：</p>
+<pre><code class="language-bash">khy gateway model          <span class="hljs-comment"># 列表里不应再出现 claude-3.5-sonnet / kimi2.6 / 句子片段</span>
+khy gateway model --json   <span class="hljs-comment"># 每条应能看到来源标签;unverified 项必须带标注</span>
+KHY_MODEL_LIST_TRUTH=off khy gateway model   <span class="hljs-comment"># 应与改动前逐字节一致（回退验证）</span></code></pre>
+<hr>
+<h2 id="七-收口状态与遗留">七、收口状态与遗留<a class="anchor" href="#七-收口状态与遗留" aria-label="锚点">#</a></h2>
+<p><strong>已收口</strong></p>
+<table><thead><tr><th>#</th><th>项</th><th>落点</th></tr></thead><tbody><tr><td>1</td><td>律 1/2/3 的单一真源</td><td><code>services/gateway/modelListTruth.js</code>（纯叶子）+ <code>KHY_MODEL_LIST_TRUTH</code></td></tr><tr><td>2</td><td>咽喉点</td><td><code>aiGateway.listModels(key, opts)</code>;管理面 <code>{ unfiltered: true }</code></td></tr><tr><td>3</td><td>选择器 / 自动路由 / F2 / 启动 / <code>khy ide</code> / 子 agent</td><td>全部经咽喉点或显式补闸</td></tr><tr><td>4</td><td>静态目录打标</td><td><code>cursorAdapter.js</code>、<code>vscodeAdapter.js</code> 已打 <code>discoverySource: 'builtin'</code></td></tr><tr><td>5</td><td>扫描脏数据第一道闸</td><td><code>modelDiscovery.isLikelyModelId()</code>（形态律 + 裸家族词拒收）+ <code>acceptRawValue()</code>（先看原始串）</td></tr><tr><td>6</td><td>选择入口对账 + 最近模型剪枝</td><td><code>isSelectableNow()</code> / <code>recentModelsStore.pruneRecentModels()</code></td></tr><tr><td>7</td><td>选择器数字跳转索引错位</td><td><code>ModelPicker.js</code> 行号与跳转统一按<strong>窗口位置</strong></td></tr><tr><td>8</td><td>TUI recent 写入路径写错被静默吞掉</td><td><code>App.js</code> require 路径修正（<code>../../services/...</code> → <code>../../../services/...</code>）</td></tr><tr><td>9</td><td>守卫</td><td><code>npm run check:model-list-truth</code>（已接入 <code>check:structure</code>）</td></tr></tbody></table>
+<p><strong>遗留（已知未收口，按优先级）</strong></p>
+<ol><li><strong>写侧闸（RC3 余量）</strong>：<code>khy gateway discover-models</code> 仍会把通过形态律的扫描结果 merge 进 <code>.env</code> 的 <code>RELAY_API_MODELS</code>。下一步：默认只落高置信来源（<code>config</code> / 用户显式指定），扫描候选需显式开关。</li><li><strong>web 管理页的 <code>verifyStatus</code> 投影</strong>：管理面返回的是全量（<code>unfiltered</code>），应当额外带上每条的探活状态，让「未证实 / 已证实 / 实测失败」在同一个界面里可判。</li><li><strong><code>extractFromText</code> 的宽正则</strong>：<code>modelDiscovery.js:176-181</code> 对所有文件类型（含 JSON）仍跑一遍宽正则兜底；<code>_ideTokenMixin.extractModelIdsFromString</code> 同理。它们产出的 token 现在会被形态律 + 权威律拦下，但<strong>扫描本身仍偏宽</strong>，长期应收窄为「只在 model-ish 的键/值上抽」。</li><li><strong><code>.env</code> 存量清理</strong>：<code>RELAY_API_MODELS</code> 里可能已存有历史垃圾。建议提供 <code>khy gateway models prune --dry-run</code> 用律 1/2/3 体检并给出清理建议（不自动改写用户配置）。</li></ol>
+<hr>
+<h2 id="八-与既有规范的关系">八、与既有规范的关系<a class="anchor" href="#八-与既有规范的关系" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>既有真源</th><th>关系</th></tr></thead><tbody><tr><td><code>docs/10_规范/DESIGN-LAY/[DESIGN-LAY-005] 仓库层级板块规范.md</code></td><td>本文档落在 <code>docs/03_DESIGN_设计/</code>（L2 横切 <code>docs/</code> 层）,符合两轴命名</td></tr><tr><td><code>services/backend/src/constants/models.js</code></td><td>管模型<strong>名</strong>的单一真源;本文管模型<strong>存在性</strong>,不复制其数组</td></tr><tr><td><code>services/backend/src/services/gateway/modelCuration.js</code></td><td>管用户对展示列表的<strong>增删改</strong>意图(<code>model_overrides.json</code>);真值律在其<strong>之前</strong>执行,过滤结果再进 curation</td></tr><tr><td><code>services/backend/src/services/gateway/modelExistenceEvidence.js</code></td><td>管 <strong>错误显示层</strong>的纠偏注解;本文管<strong>列表构建层</strong>的准入,两者互不替代</td></tr><tr><td><code>docs/10_规范/其它规范/[DESIGN-GOV-001] 治理总纲与可执行规则.md</code></td><td>本文属 MOD（模块）/ API 契约条款的补充,新增门控已按治理要求注册</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-099] 提示词架构横向调研与khy-os对齐方案.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-099] 提示词架构横向调研与 khy-os 对齐方案</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-101] TUI 交互与展示规则细则.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-101] TUI 交互与展示规则细则</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-100] 模型列表真值校验与过滤规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

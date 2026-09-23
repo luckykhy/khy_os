@@ -31,14 +31,10 @@ const {
   deriveJournalState,
   nextStallCountFor,
 } = require('../lib/restoreTraceJournal');
+const { opsDocPath, opsDocRelPath } = require('../lib/docsPaths');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const DOC_PATH = path.join(
-  ROOT,
-  'docs',
-  '07_OPS_运维',
-  '[OPS-MAN-086] 还原轨迹日志.md'
-);
+const DOC_PATH = opsDocPath('[OPS-MAN-086] 还原轨迹日志.md');
 const NPM_PKG_NAME = '@khy-os/khy-os';
 const PIP_PKG_NAME = 'khy-os';
 
@@ -207,7 +203,7 @@ function runRestoreTrace(opts = {}) {
       out += ` ${C.dim}(stall→${h.stallAfter})${C.reset}\n`;
     }
   }
-  out += `\n${C.dim}详情见：docs/07_OPS_运维/[OPS-MAN-086] 还原轨迹日志.md${C.reset}\n`;
+  out += `\n${C.dim}详情见：${opsDocRelPath('[OPS-MAN-086] 还原轨迹日志.md')}${C.reset}\n`;
   process.stdout.write(out);
   return state.escalated ? 1 : 0;
 }

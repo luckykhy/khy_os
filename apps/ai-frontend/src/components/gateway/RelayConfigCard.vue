@@ -85,6 +85,7 @@ import { Connection } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import ProviderLinks from './ProviderLinks.vue';
 
+import { showSuccess, showError, showWarning, showInfo } from '@/api/notify';
 const props = defineProps({
   // 'user' for the multi-tenant page, 'global' for the admin page (future reuse).
   scope: { type: String, default: 'user' },
@@ -163,8 +164,8 @@ watch(
 );
 
 function onSave() {
-  if (!form.baseUrl.trim()) return ElMessage.warning('请填写上游地址');
-  if (!form.modelId.trim()) return ElMessage.warning('请填写模型 ID');
+  if (!form.baseUrl.trim()) return showWarning('请填写上游地址');
+  if (!form.modelId.trim()) return showWarning('请填写模型 ID');
   const payload = {
     baseUrl: form.baseUrl.trim(),
     modelId: form.modelId.trim(),

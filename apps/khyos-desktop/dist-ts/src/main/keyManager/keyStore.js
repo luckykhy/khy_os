@@ -1,0 +1,647 @@
+// keyStore — file layer of the Key/Endpoint Manager (DESIGN-ARCH-091 §4.2).
+//
+// Owns the three SSoT JSON files under the resolved dataHome (never invents a
+// fourth store): api_keys.json (key pool), custom_providers.json (metadata),
+// cc_switch.json (credential-free cards). Atomic write + .bak self-heal mirror
+// services/backend configGuard semantics; keyId scheme mirrors apiKeyPool
+// (md5(provider:key).slice(0,12)) so cross-process references stay valid.
+//
+// Masking invariant: every function in this module returns masked keys unless
+// explicitly documented otherwise (revealKey is the single plaintext seam,
+// rate-limited + audited in ipc.ts).
+import { promises as fs, existsSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { API_KEYS_FILE, AUDIT_FILE, CC_SWITCH_FILE, CUSTOM_PROVIDERS_FILE, ENV_PROVIDER_MAP, REVEAL_COOLDOWN_MS } from './types.ts';
+import { appendAudit } from './audit.ts';
+// ── dataHome resolution (portable-safe, mirrors utils/dataHome.js) ──────────
+// Two distinct homes:
+//   • base home — env/portable/repo/homedir chain below. The settings.json
+//     that stores the dataPath pointer ALWAYS lives here (bootstrap: the
+//     pointer must be findable before the effective home is known).
+//   • effective home — where the actual data files live. With no pointer,
+//     it equals the base home; with a user-set pointer (设置→常规→数据存储路径),
+//     it is <dataPath>/.khy (suffix fixed, mirroring ZCode's ".zcode/v2
+//     不可更改" contract). The pointer is only honored when <dataPath>/.khy
+//     exists — a relocated drive that isn't present must not silently boot
+//     with empty data.
+let _dataHome = null;
+// The settings file name is owned here so the pointer read stays decoupled
+// from settingsStore (settingsStore imports this constant for its own path).
+export const SETTINGS_FILE = 'settings.json';
+export function resolveRepoRoot() {
+    const explicit = process.env.KHYOS_DESKTOP_REPO_ROOT;
+    if (explicit)
+        return explicit;
+    const here = path.dirname(fileURLToPath(import.meta.url));
+    let dir = here;
+    for (let i = 0; i < 10; i += 1) {
+        try {
+            if (fsSyncExists(path.join(dir, '.portable')))
+                return dir;
+        }
+        catch {
+            break;
+        }
+        const parent = path.dirname(dir);
+        if (parent === dir)
+            break;
+        dir = parent;
+    }
+    return null;
+}
+// sync existence check helper (dataHome resolution is sync by design)
+function fsSyncExists(p) {
+    try {
+        return existsSync(p);
+    }
+    catch {
+        return false;
+    }
+}
+// Base home = env/portable/repo/homedir chain, WITHOUT the dataPath pointer.
+// The pointer itself lives here, so this must never recurse into step 2.
+function resolveBaseDataHome() {
+    const envHome = process.env.KHY_DATA_HOME;
+    if (envHome)
+        return path.resolve(envHome);
+    const portableRoot = process.env.KHY_PORTABLE_ROOT || process.env.KHYQUANT_PORTABLE_ROOT;
+    if (portableRoot)
+        return path.join(portableRoot, '.khy');
+    const repoRoot = resolveRepoRoot();
+    if (repoRoot)
+        return path.join(repoRoot, '.khy');
+    return path.join(os.homedir(), '.khy');
+}
+// The settings.json that holds the dataPath pointer always lives in the base
+// home (bootstrap invariant above). settingsStore reads/writes this path.
+export function baseHomeFile(name) {
+    return path.join(resolveBaseDataHome(), name);
+}
+// Read the user-set dataPath pointer from the BASE settings.json (sync, called
+// once per process before any cache exists). Returns '' when unset/invalid —
+// callers treat '' as "no pointer, effective home = base home".
+function readDataPathPointer() {
+    try {
+        const raw = readFileSync(baseHomeFile(SETTINGS_FILE), 'utf-8');
+        const parsed = JSON.parse(raw);
+        const dp = parsed?.dataPath;
+        return typeof dp === 'string' && dp.trim() ? dp.trim() : '';
+    }
+    catch {
+        return '';
+    }
+}
+// Effective home for DATA files (api_keys, audit, conversations, ...). With no
+// pointer — or a pointer whose .khy dir is missing — it is the base home.
+export function getDataHome() {
+    if (_dataHome)
+        return _dataHome;
+    let home = resolveBaseDataHome();
+    // KHY_DATA_HOME env is the strongest override AND the test seam: it pins
+    // the base home, so a pointer (if any) must not divert it.
+    if (!process.env.KHY_DATA_HOME) {
+        const pointer = readDataPathPointer();
+        const pointed = pointer ? path.join(pointer, '.khy') : '';
+        if (pointed && pointed !== home && fsSyncExists(pointed)) {
+            home = pointed;
+        }
+    }
+    _dataHome = home;
+    return _dataHome;
+}
+// test seam: reset cached dataHome between tests
+export function _resetDataHomeCache() {
+    _dataHome = null;
+}
+function fileInDataHome(name) {
+    return path.join(getDataHome(), name);
+}
+// public alias used by ipc.ts / agentWriters.ts
+export function dataHomeFile(name) {
+    return fileInDataHome(name);
+}
+// ── atomic write + .bak self-heal (configGuard-equivalent semantics) ───────
+let _tmpSeq = 0;
+export async function atomicWriteJson(file, data) {
+    const dir = path.dirname(file);
+    await fs.mkdir(dir, { recursive: true });
+    // .bak of the previous content (self-heal source)
+    try {
+        await fs.copyFile(file, `${file}.bak`);
+    }
+    catch {
+        /* no previous file yet — nothing to back up */
+    }
+    const tmp = `${dir}/${path.basename(file)}.tmp-${process.pid}-${_tmpSeq++}`;
+    await fs.writeFile(tmp, JSON.stringify(data, null, 2), 'utf-8');
+    // Windows: rename-over may hit EPERM when another handle is briefly holding
+    // the target (concurrent .bak copy / readers). Retry with backoff, then
+    // fall back to a direct overwrite (the atomicity degrades gracefully; the
+    // .bak remains the self-heal source of truth).
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+        try {
+            await fs.rename(tmp, file);
+            break;
+        }
+        catch (e) {
+            const code = e.code;
+            if (code !== 'EPERM' && code !== 'EBUSY')
+                throw e;
+            if (attempt === 4) {
+                await fs.writeFile(file, JSON.stringify(data, null, 2), 'utf-8');
+                await fs.unlink(tmp).catch(() => { });
+            }
+            else {
+                await new Promise((r) => setTimeout(r, 20 * (attempt + 1)));
+            }
+        }
+    }
+    await tryChmod600(file);
+}
+async function tryChmod600(file) {
+    try {
+        if (process.platform !== 'win32')
+            await fs.chmod(file, 0o600);
+    }
+    catch {
+        /* best-effort on all platforms */
+    }
+}
+export async function safeReadJson(file, fallback) {
+    let raw = null;
+    try {
+        raw = await fs.readFile(file, 'utf-8');
+    }
+    catch {
+        return { data: fallback, recovered: false };
+    }
+    try {
+        return { data: JSON.parse(raw), recovered: false };
+    }
+    catch {
+        // corrupt → restore from .bak (direct write; does NOT clobber the .bak
+        // with the corrupt content, so repeated heals keep working)
+        try {
+            const bak = await fs.readFile(`${file}.bak`, 'utf-8');
+            const parsed = JSON.parse(bak);
+            const tmp = `${file}.heal-${process.pid}`;
+            await fs.writeFile(tmp, JSON.stringify(parsed, null, 2), 'utf-8');
+            await fs.rename(tmp, file);
+            return { data: parsed, recovered: true };
+        }
+        catch {
+            /* no .bak — keep fallback */
+        }
+        return { data: fallback, recovered: false };
+    }
+}
+// ── masking (single source of truth, spec §7.1) ────────────────────────────
+export function keyFingerprint(key) {
+    return createHash('sha256').update(key, 'utf-8').digest('hex').slice(0, 8);
+}
+export function maskKey(key) {
+    if (!key)
+        return '(empty)';
+    if (key.length <= 8)
+        return `${key.slice(0, 1)}…${key.slice(-2)}`;
+    return `${key.slice(0, 3)}…${key.slice(-4)}`;
+}
+// keyId scheme MUST match services/backend apiKeyPool.js reload():
+// md5(`${provider}:${key}`).hex.slice(0,12)
+export function keyIdFor(provider, key) {
+    return createHash('md5').update(`${provider}:${key}`, 'utf-8').digest('hex').slice(0, 12);
+}
+function emptyPool() {
+    return {};
+}
+async function loadPool() {
+    const { data, recovered } = await safeReadJson(fileInDataHome(API_KEYS_FILE), emptyPool());
+    if (recovered)
+        appendAudit({ op: 'error', target: API_KEYS_FILE, detail: 'pool .bak 自愈恢复' });
+    return data;
+}
+export async function savePool(doc) {
+    await atomicWriteJson(fileInDataHome(API_KEYS_FILE), doc);
+}
+export async function listPoolEntriesPlain() {
+    const doc = await loadPool();
+    const out = [];
+    for (const [provider, entries] of Object.entries(doc)) {
+        for (const e of entries || []) {
+            out.push({ provider, key: e.key, endpoint: e.endpoint || '', label: e.label || provider, disabled: e.disabled });
+        }
+    }
+    return out;
+}
+export async function listPool() {
+    const doc = await loadPool();
+    const providers = [];
+    for (const [provider, entries] of Object.entries(doc)) {
+        const keys = (entries || []).map((e) => ({
+            keyId: keyIdFor(provider, e.key),
+            label: e.label || '',
+            endpoint: e.endpoint || '',
+            priority: e.priority ?? 0,
+            enabled: !e.disabled,
+            source: 'pool',
+            mask: maskKey(e.key),
+            fingerprint: keyFingerprint(e.key)
+        }));
+        providers.push({ id: provider, keys });
+    }
+    const envOverlay = Object.entries(ENV_PROVIDER_MAP).map(([provider, m]) => ({
+        provider,
+        envName: m.keyEnv,
+        set: Boolean(process.env[m.keyEnv])
+    }));
+    return { providers, envOverlay };
+}
+export async function addKey(input) {
+    const provider = String(input.provider || '').trim().toLowerCase();
+    if (!provider)
+        return { ok: false, error: 'provider 必填' };
+    const key = String(input.key || '').trim();
+    const endpoint = String(input.endpoint || '').trim();
+    const doc = await loadPool();
+    const entries = Array.isArray(doc[provider]) ? doc[provider] : [];
+    const dup = key ? entries.find((e) => e.key === key) : undefined;
+    if (dup) {
+        dup.endpoint = endpoint || dup.endpoint;
+        dup.label = input.label || dup.label;
+        dup.priority = input.priority ?? dup.priority ?? 0;
+        dup.disabled = false;
+    }
+    else {
+        entries.push({
+            key: key || '(endpoint-only)',
+            endpoint,
+            priority: input.priority ?? 0,
+            label: input.label || provider,
+            id: key ? keyIdFor(provider, key) : undefined
+        });
+    }
+    doc[provider] = entries;
+    await savePool(doc);
+    const keyId = key ? keyIdFor(provider, key) : '';
+    await appendAudit({ op: 'add', target: provider, fingerprint: key ? keyFingerprint(key) : '' });
+    return { ok: true, keyId, provider };
+}
+export async function updateKey(provider, keyId, patch) {
+    const doc = await loadPool();
+    const entries = doc[provider] || [];
+    const idx = entries.findIndex((e) => keyIdFor(provider, e.key) === keyId);
+    if (idx < 0)
+        return { ok: false, error: '密钥不存在 (keyId 已变更或条目被移除)' };
+    const entry = entries[idx];
+    if (patch.label !== undefined)
+        entry.label = patch.label;
+    if (patch.endpoint !== undefined)
+        entry.endpoint = patch.endpoint;
+    if (patch.priority !== undefined)
+        entry.priority = patch.priority;
+    let newKeyId = keyId;
+    if (patch.key !== undefined && patch.key !== entry.key) {
+        entry.key = patch.key;
+        newKeyId = keyIdFor(provider, patch.key);
+        // keep card references pointing at the renamed key (credential-free store)
+        const cc = await loadCcDoc();
+        let reattached = 0;
+        for (const card of cc.cards) {
+            if (card.keyId === keyId) {
+                card.keyId = newKeyId;
+                reattached += 1;
+            }
+        }
+        if (reattached > 0)
+            await saveCcDoc(cc);
+        const result = { ok: true, newKeyId, reattachedCards: reattached };
+        await appendAudit({ op: 'update', target: provider, fingerprint: keyFingerprint(entry.key) });
+        return result;
+    }
+    doc[provider] = entries;
+    await savePool(doc);
+    await appendAudit({ op: 'update', target: provider, fingerprint: keyFingerprint(entry.key) });
+    return { ok: true, newKeyId };
+}
+export async function removeKey(provider, keyId) {
+    const doc = await loadPool();
+    const entries = doc[provider] || [];
+    const idx = entries.findIndex((e) => keyIdFor(provider, e.key) === keyId);
+    if (idx < 0)
+        return { ok: false, error: '密钥不存在' };
+    const cc = await loadCcDoc();
+    const blocked = cc.cards.filter((c) => c.keyId === keyId && c.enabled).map((c) => c.id);
+    if (blocked.length > 0) {
+        return {
+            ok: false,
+            error: `被 ${blocked.length} 张启用卡片引用，先移除或换绑卡片`,
+            blockedCards: blocked
+        };
+    }
+    entries.splice(idx, 1);
+    if (entries.length === 0)
+        delete doc[provider];
+    else
+        doc[provider] = entries;
+    await savePool(doc);
+    const fp = keyFingerprint(entries[idx]?.key || '');
+    await appendAudit({ op: 'remove', target: provider, fingerprint: fp });
+    return { ok: true };
+}
+export async function toggleKey(provider, keyId, enabled) {
+    const doc = await loadPool();
+    const entries = doc[provider] || [];
+    const idx = entries.findIndex((e) => keyIdFor(provider, e.key) === keyId);
+    if (idx < 0)
+        return { ok: false, error: '密钥不存在' };
+    entries[idx].disabled = !enabled;
+    doc[provider] = entries;
+    await savePool(doc);
+    await appendAudit({ op: 'toggle', target: provider, detail: enabled ? 'enable' : 'disable' });
+    return { ok: true };
+}
+const _revealWindow = new Map();
+// The single plaintext seam: rate-limited (REVEAL_COOLDOWN_MS per key) and
+// audited. Rate-limit decisions are enforced HERE so no IPC layer can bypass.
+export async function revealKey(provider, keyId) {
+    const now = Date.now();
+    const last = _revealWindow.get(keyId) || 0;
+    if (now - last < REVEAL_COOLDOWN_MS) {
+        await appendAudit({ op: 'reveal-rejected', target: provider, detail: 'cooldown' });
+        return { ok: false, error: `reveal 冷却中：请 ${Math.ceil((REVEAL_COOLDOWN_MS - (now - last)) / 1000)}s 后重试` };
+    }
+    _revealWindow.set(keyId, now);
+    const doc = await loadPool();
+    const entry = (doc[provider] || []).find((e) => keyIdFor(provider, e.key) === keyId);
+    if (!entry)
+        return { ok: false, error: '密钥不存在' };
+    await appendAudit({ op: 'reveal', target: provider, fingerprint: keyFingerprint(entry.key) });
+    return { ok: true, key: entry.key };
+}
+export function _resetRevealWindow() {
+    _revealWindow.clear();
+}
+// ── custom_providers.json (metadata only; keys live in the pool) ───────────
+export async function listCustomProviders() {
+    const { data } = await safeReadJson(fileInDataHome(CUSTOM_PROVIDERS_FILE), []);
+    return Array.isArray(data) ? data : [];
+}
+export async function addCustomProvider(p) {
+    const list = await listCustomProviders();
+    const exists = list.some((x) => x.id === p.id);
+    if (exists)
+        list.splice(list.findIndex((x) => x.id === p.id), 1);
+    list.push(p);
+    await atomicWriteJson(fileInDataHome(CUSTOM_PROVIDERS_FILE), list);
+    await appendAudit({ op: 'add', target: `custom:${p.id}` });
+    return { ok: true };
+}
+export async function removeCustomProvider(id) {
+    const list = await listCustomProviders();
+    const next = list.filter((x) => x.id !== id);
+    await atomicWriteJson(fileInDataHome(CUSTOM_PROVIDERS_FILE), next);
+    await appendAudit({ op: 'remove', target: `custom:${id}` });
+    return { ok: true };
+}
+// ── cc_switch.json (cards, credential-free) ─────────────────────────────────
+function emptyCc() {
+    return { schemaVersion: 1, cards: [], active: {}, apps: {} };
+}
+export async function loadCcDoc() {
+    const { data, recovered } = await safeReadJson(fileInDataHome(CC_SWITCH_FILE), emptyCc());
+    const doc = {
+        schemaVersion: 1,
+        cards: Array.isArray(data.cards) ? data.cards : [],
+        active: data.active && typeof data.active === 'object' ? data.active : {},
+        apps: data.apps && typeof data.apps === 'object' ? data.apps : {},
+        agentMode: data.agentMode && typeof data.agentMode === 'object' ? data.agentMode : undefined
+    };
+    if (recovered)
+        appendAudit({ op: 'error', target: CC_SWITCH_FILE, detail: 'cards .bak 自愈恢复' });
+    return doc;
+}
+export async function saveCcDoc(doc) {
+    await atomicWriteJson(fileInDataHome(CC_SWITCH_FILE), doc);
+}
+export async function addCard(input) {
+    const name = String(input.name || '').trim();
+    const baseUrl = String(input.baseUrl || '').trim();
+    if (!name || !baseUrl)
+        return { ok: false, error: '卡片名称与端点必填' };
+    const doc = await loadCcDoc();
+    const id = `c_${createHash('md5').update(`${name}:${baseUrl}:${Date.now()}`).digest('hex').slice(0, 10)}`;
+    const now = new Date().toISOString();
+    doc.cards.push({
+        id,
+        name,
+        baseUrl,
+        keyId: input.keyId || '',
+        protocol: input.protocol || 'openai',
+        wireApi: input.wireApi,
+        models: input.models || [],
+        defaultModel: input.defaultModel || input.models?.[0] || '',
+        apps: input.apps || [],
+        enabled: true,
+        createdAt: now,
+        updatedAt: now
+    });
+    await saveCcDoc(doc);
+    await appendAudit({ op: 'add', target: `card:${id}` });
+    return { ok: true, cardId: id };
+}
+export async function updateCard(cardId, patch) {
+    const doc = await loadCcDoc();
+    const card = doc.cards.find((c) => c.id === cardId);
+    if (!card)
+        return { ok: false, error: '卡片不存在' };
+    for (const [k, v] of Object.entries(patch)) {
+        if (v !== undefined)
+            card[k] = v;
+    }
+    card.updatedAt = new Date().toISOString();
+    await saveCcDoc(doc);
+    await appendAudit({ op: 'update', target: `card:${cardId}` });
+    return { ok: true };
+}
+export async function removeCard(cardId) {
+    const doc = await loadCcDoc();
+    const idx = doc.cards.findIndex((c) => c.id === cardId);
+    if (idx < 0)
+        return { ok: false, error: '卡片不存在' };
+    doc.cards.splice(idx, 1);
+    for (const [app, activeId] of Object.entries(doc.active)) {
+        if (activeId === cardId)
+            delete doc.active[app];
+    }
+    if (doc.agentMode) {
+        for (const [app, m] of Object.entries(doc.agentMode)) {
+            if (m.cardId === cardId)
+                delete doc.agentMode[app];
+        }
+    }
+    await saveCcDoc(doc);
+    await appendAudit({ op: 'remove', target: `card:${cardId}` });
+    return { ok: true };
+}
+// Parse "## N. Name" provider sections with | API Key | / | Base URL | rows
+// (the docs/opencode-provider-keys.md shape, values may be backtick-wrapped).
+// Rejects placeholder values ('<...>', 'public', '{env:...}') — they are not
+// keys, they are documentation (spec §9 拒收占位值).
+export async function importMarkdown(markdown) {
+    const result = { added: 0, skipped: [] };
+    const sections = markdown.split(/^##\s+/m).slice(1);
+    for (const sec of sections) {
+        const nameLine = sec.split('\n')[0] || '';
+        const name = nameLine.replace(/^\d+\.\s*/, '').trim();
+        if (!name)
+            continue;
+        const cell = (label) => {
+            const m = sec.match(new RegExp(`\\|\\s*${label}\\s*\\|\\s*([^|]+)\\|`));
+            return m ? m[1].trim().replace(/^`|`$/g, '') : '';
+        };
+        const key = cell('API Key');
+        const endpoint = cell('Base URL');
+        if (!key || !endpoint) {
+            result.skipped.push({ name, reason: '缺少 API Key 或 Base URL 行' });
+            continue;
+        }
+        if (/^<.*>$/.test(key) || key === 'public' || key.startsWith('{env:')) {
+            result.skipped.push({ name, reason: '占位值/环境引用，非真实密钥，拒收' });
+            continue;
+        }
+        const r = await addKey({ provider: slug(name), label: name, endpoint, key, priority: 0 });
+        if (r.ok)
+            result.added += 1;
+        else
+            result.skipped.push({ name, reason: r.error || '写入失败' });
+    }
+    if (result.added > 0)
+        await appendAudit({ op: 'import', detail: `${result.added} 条入库` });
+    return result;
+}
+function slug(name) {
+    return name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+// OpenAI-compatible endpoints expose GET {base}/models. Other protocols have
+// no free model directory → verified:false (manual entry, never blocks save).
+export async function fetchModels(endpoint, protocol, key, timeoutMs = 10_000) {
+    if (protocol !== 'openai') {
+        return { ok: true, verified: false, models: [], error: '该协议无公开模型目录，请手工填写模型 id' };
+    }
+    const base = String(endpoint || '').trim().replace(/\/v1\/?$/, '');
+    const url = `${base}/v1/models`;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+        const res = await fetch(url, {
+            method: 'GET',
+            signal: ctrl.signal,
+            headers: key ? { authorization: `Bearer ${key}` } : {}
+        });
+        if (res.status === 401 || res.status === 403) {
+            return { ok: true, verified: false, models: [], error: '鉴权失败 (401/403)，端点可达但未验证' };
+        }
+        if (!res.ok) {
+            return { ok: true, verified: false, models: [], error: `模型目录不可用 (${res.status})，可手工填写` };
+        }
+        const body = (await res.json());
+        const models = (body.data || []).map((m) => m.id);
+        return { ok: true, verified: true, models };
+    }
+    catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return { ok: true, verified: false, models: [], error: `端点不可达 (${msg.slice(0, 80)})，可手工填写` };
+    }
+    finally {
+        clearTimeout(timer);
+    }
+}
+export async function validateEndpoint(endpoint, protocol, key, timeoutMs = 3_000) {
+    const base = String(endpoint || '').trim().replace(/\/v1\/?$/, '');
+    const url = `${base}/v1/models`;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    const t0 = Date.now();
+    const authHeaders = {};
+    if (key) {
+        if (protocol === 'anthropic')
+            authHeaders['x-api-key'] = key;
+        else
+            authHeaders.authorization = `Bearer ${key}`;
+    }
+    try {
+        const res = await fetch(url, {
+            method: 'GET',
+            signal: ctrl.signal,
+            headers: authHeaders
+        });
+        return { ok: true, reachable: true, status: res.status, latencyMs: Date.now() - t0 };
+    }
+    catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return { ok: true, reachable: false, latencyMs: Date.now() - t0, error: msg.slice(0, 80) };
+    }
+    finally {
+        clearTimeout(timer);
+    }
+}
+// ── audit file path (for tests + MANIFEST) ─────────────────────────────────
+export function auditFilePath() {
+    return fileInDataHome(AUDIT_FILE);
+}
+// ── preset catalog: backend SSoT first, built-in fallback (spec §4.3) ──────
+// Degraded-mode fallback catalog ONLY (used when the backend
+// providerPresets.js SSoT is unresolvable). The full catalog — including
+// local endpoints (Ollama etc., which carry env-overridable default ports)
+// — lives in services/backend/src/services/gateway/providerPresets.js. This
+// fallback deliberately pins only the port-less public cloud endpoints so it
+// can never silently fork the backend's defaults (repo rule 1).
+const BUILTIN_PRESETS = [
+    { id: 'openai', label: 'OpenAI 官方', baseUrl: 'https://api.openai.com/v1', apiFormat: 'openai', defaultModel: 'gpt-4o-mini', keyField: 'authorization_bearer' },
+    { id: 'anthropic', label: 'Anthropic', baseUrl: 'https://api.anthropic.com', apiFormat: 'anthropic', defaultModel: 'claude-sonnet-4-5', keyField: 'x-api-key' },
+    { id: 'gemini', label: 'Google Gemini', baseUrl: 'https://generativelanguage.googleapis.com', apiFormat: 'gemini', defaultModel: 'gemini-2.5-pro', keyField: 'x-goog-api-key' },
+    { id: 'deepseek', label: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', apiFormat: 'openai', defaultModel: 'deepseek-chat', keyField: 'authorization_bearer' },
+    { id: 'openrouter', label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', apiFormat: 'openai', defaultModel: '', keyField: 'authorization_bearer' }
+];
+let _presetCache = null;
+export async function loadPresets(force = false) {
+    if (!force && _presetCache && Date.now() - _presetCache.at < 300_000)
+        return _presetCache.presets;
+    // Prefer the backend SSoT (services/backend/src/services/gateway/providerPresets.js)
+    try {
+        const { resolveBackendServicesRoot } = await import('./agentWriters.ts');
+        const root = resolveBackendServicesRoot();
+        if (root) {
+            const { createRequire } = await import('node:module');
+            const req = createRequire(path.join(root, 'noop.js'));
+            const presets = req(path.join(root, 'gateway/providerPresets.js')).getProviderPresets();
+            if (Array.isArray(presets) && presets.length > 0) {
+                const mapped = presets.map((p) => ({
+                    id: p.id,
+                    label: p.label || p.id,
+                    baseUrl: p.baseUrl || '',
+                    apiFormat: p.apiFormat || 'openai',
+                    defaultModel: p.defaultModel || '',
+                    keyField: p.keyField || 'authorization_bearer',
+                    source: 'backend'
+                }));
+                _presetCache = { at: Date.now(), presets: mapped, source: 'backend' };
+                return mapped;
+            }
+        }
+    }
+    catch {
+        /* fall through to built-in fallback */
+    }
+    _presetCache = { at: Date.now(), presets: BUILTIN_PRESETS.map((p) => ({ ...p, source: 'builtin-fallback' })), source: 'builtin-fallback' };
+    return _presetCache.presets;
+}
+export function _resetPresetCache() {
+    _presetCache = null;
+}

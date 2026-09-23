@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-DR-001] 灾备规范.md -->
+<title>[DESIGN-DR-001] 灾备规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-DR-001] 灾备规范</div>
+      <header class="hero reveal"><h1>[DESIGN-DR-001] 灾备规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-dr-001-灾备规范">[DESIGN-DR-001] 灾备规范</a></li><li class="lvl-2"><a href="#1-原则">1. 原则</a></li><li class="lvl-2"><a href="#2-恢复目标">2. 恢复目标</a></li><li class="lvl-3"><a href="#2-1-rto-恢复时间目标">2.1 RTO（恢复时间目标）</a></li><li class="lvl-3"><a href="#2-2-rpo-恢复点目标">2.2 RPO（恢复点目标）</a></li><li class="lvl-3"><a href="#2-3-恢复优先级">2.3 恢复优先级</a></li><li class="lvl-2"><a href="#3-备份策略">3. 备份策略</a></li><li class="lvl-3"><a href="#3-1-备份矩阵">3.1 备份矩阵</a></li><li class="lvl-3"><a href="#3-2-备份验证">3.2 备份验证</a></li><li class="lvl-2"><a href="#4-故障转移">4. 故障转移</a></li><li class="lvl-3"><a href="#4-1-数据库故障转移">4.1 数据库故障转移</a></li><li class="lvl-3"><a href="#4-2-ai-网关故障转移">4.2 AI 网关故障转移</a></li><li class="lvl-3"><a href="#4-3-前端故障转移">4.3 前端故障转移</a></li><li class="lvl-2"><a href="#5-数据一致性">5. 数据一致性</a></li><li class="lvl-3"><a href="#5-1-跨区复制">5.1 跨区复制</a></li><li class="lvl-3"><a href="#5-2-事务保障">5.2 事务保障</a></li><li class="lvl-2"><a href="#6-演练计划">6. 演练计划</a></li><li class="lvl-3"><a href="#6-1-演练类型">6.1 演练类型</a></li><li class="lvl-3"><a href="#6-2-演练清单">6.2 演练清单</a></li><li class="lvl-2"><a href="#7-关键文档">7. 关键文档</a></li><li class="lvl-2"><a href="#8-成本估算">8. 成本估算</a></li><li class="lvl-2"><a href="#9-守卫">9. 守卫</a></li><li class="lvl-2"><a href="#10-版本历史">10. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-dr-001-灾备规范">[DESIGN-DR-001] 灾备规范<a class="anchor" href="#design-dr-001-灾备规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: DR-001 -->
+<blockquote><p><strong>用途</strong>：定义 khy-os 平台的灾难恢复（Disaster Recovery）标准，包括 RTO/RPO 目标、<br>备份策略、故障转移流程、数据一致性保障。<br>当前 BACKUP-001 覆盖备份操作，但无灾备级别的 RTO/RPO 目标和故障切换流程。</p></blockquote>
+<hr>
+<h2 id="1-原则">1. 原则<a class="anchor" href="#1-原则" aria-label="锚点">#</a></h2>
+<ol><li><strong>RTO/RPO 可量化</strong>：每个服务有明确的恢复目标和恢复点目标</li><li><strong>备份即代码</strong>：备份脚本版本化、可重复执行</li><li><strong>定期演练</strong>：至少每季度一次灾备演练</li><li><strong>数据主权</strong>：用户数据可导出、可迁移、不锁定</li><li><strong>渐进式恢复</strong>：核心功能优先恢复，非核心功能后恢复</li></ol>
+<hr>
+<h2 id="2-恢复目标">2. 恢复目标<a class="anchor" href="#2-恢复目标" aria-label="锚点">#</a></h2>
+<h3 id="2-1-rto-恢复时间目标">2.1 RTO（恢复时间目标）<a class="anchor" href="#2-1-rto-恢复时间目标" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>服务</th><th>RTO</th><th>说明</th></tr></thead><tbody><tr><td>AI 网关</td><td>15 分钟</td><td>核心服务，直接影响用户体验</td></tr><tr><td>后端 API</td><td>30 分钟</td><td>用户认证、数据操作</td></tr><tr><td>前端</td><td>5 分钟</td><td>CDN 静态资源，可快速切换</td></tr><tr><td>数据库（主库）</td><td>30 分钟</td><td>切换到从库或恢复备份</td></tr><tr><td>数据库（从库）</td><td>5 分钟</td><td>提升为主库</td></tr><tr><td>对象存储</td><td>15 分钟</td><td>切换到备用存储桶</td></tr><tr><td>监控/日志</td><td>1 小时</td><td>非核心，延迟影响可接受</td></tr></tbody></table>
+<h3 id="2-2-rpo-恢复点目标">2.2 RPO（恢复点目标）<a class="anchor" href="#2-2-rpo-恢复点目标" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>服务</th><th>RPO</th><th>说明</th></tr></thead><tbody><tr><td>AI 网关</td><td>5 分钟</td><td>对话状态可丢失</td></tr><tr><td>后端 API</td><td>15 分钟</td><td>用户数据需保障</td></tr><tr><td>数据库（主库）</td><td>15 分钟</td><td>基于 WAL 归档</td></tr><tr><td>数据库（从库）</td><td>实时</td><td>流复制</td></tr><tr><td>对象存储</td><td>1 小时</td><td>上传文件可重传</td></tr></tbody></table>
+<h3 id="2-3-恢复优先级">2.3 恢复优先级<a class="anchor" href="#2-3-恢复优先级" aria-label="锚点">#</a></h3>
+<pre><code>P0（最先恢复）：AI 网关 → 后端 API → 数据库
+P1（随后恢复）：前端 → 监控 → 日志
+P2（最后恢复）：文档 → 分析工具 → 非核心服务</code></pre>
+<hr>
+<h2 id="3-备份策略">3. 备份策略<a class="anchor" href="#3-备份策略" aria-label="锚点">#</a></h2>
+<h3 id="3-1-备份矩阵">3.1 备份矩阵<a class="anchor" href="#3-1-备份矩阵" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>数据</th><th>频率</th><th>保留</th><th>类型</th><th>存储位置</th></tr></thead><tbody><tr><td>数据库（主库）</td><td>每 15 分钟 WAL 归档 + 每日全量</td><td>30 天</td><td>增量 + 全量</td><td>对象存储 + 异地</td></tr><tr><td>数据库（从库）</td><td>实时复制</td><td>同主库</td><td>流复制</td><td>同机房</td></tr><tr><td>用户上传文件</td><td>实时同步</td><td>30 天</td><td>对象存储多副本</td><td>跨区</td></tr><tr><td>配置/密钥</td><td>每次变更</td><td>永久</td><td>Git + 加密归档</td><td>Git + 异地存储</td></tr><tr><td>对话记录</td><td>每日</td><td>90 天</td><td>增量</td><td>对象存储</td></tr><tr><td>AI 模型</td><td>按需</td><td>永久</td><td>对象存储</td><td>跨区</td></tr></tbody></table>
+<h3 id="3-2-备份验证">3.2 备份验证<a class="anchor" href="#3-2-备份验证" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 每周自动验证备份可恢复性</span>
+scripts/backup/verify-restore.sh --backup-id &lt;latest&gt; --dry-run</code></pre>
+<p><strong>规则</strong>：</p>
+<ul><li>备份创建后 24 小时内必须验证可恢复性</li><li>每月至少一次完整恢复演练</li><li>备份脚本必须幂等（重复执行不破坏现有备份）</li></ul>
+<hr>
+<h2 id="4-故障转移">4. 故障转移<a class="anchor" href="#4-故障转移" aria-label="锚点">#</a></h2>
+<h3 id="4-1-数据库故障转移">4.1 数据库故障转移<a class="anchor" href="#4-1-数据库故障转移" aria-label="锚点">#</a></h3>
+<pre><code>检测：主库不可用（心跳检测 &gt; 30s）
+    ↓
+决策：是否需要切换
+  ├─ 预计恢复 &lt; 5min → 等待恢复
+  └─ 预计恢复 &gt; 5min → 执行切换
+    ↓
+操作：
+  1. 停止写入主库
+  2. 提升从库为主库
+  3. 更新连接字符串
+  4. 通知所有服务重连
+  5. 旧主库恢复后作为从库接入</code></pre>
+<pre><code class="language-javascript"><span class="hljs-comment">// 自动故障转移检测</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">checkDbHealth</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> start = <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>();
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">await</span> db.<span class="hljs-title function_">raw</span>(<span class="hljs-string">&#x27;SELECT 1&#x27;</span>);
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">healthy</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">latency</span>: <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() - start };
+  } <span class="hljs-keyword">catch</span> {
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">healthy</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">latency</span>: <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() - start };
+  }
+}
+
+<span class="hljs-comment">// 定期检查（每 10 秒）</span>
+<span class="hljs-built_in">setInterval</span>(<span class="hljs-title function_">async</span> () =&gt; {
+  <span class="hljs-keyword">const</span> health = <span class="hljs-keyword">await</span> <span class="hljs-title function_">checkDbHealth</span>();
+  <span class="hljs-keyword">if</span> (!health.<span class="hljs-property">healthy</span>) {
+    <span class="hljs-keyword">await</span> <span class="hljs-title function_">emitIncident</span>(<span class="hljs-string">&#x27;P1&#x27;</span>, <span class="hljs-string">&#x27;Database primary unreachable&#x27;</span>);
+    <span class="hljs-comment">// 触发故障转移流程</span>
+  }
+}, <span class="hljs-number">10000</span>);</code></pre>
+<h3 id="4-2-ai-网关故障转移">4.2 AI 网关故障转移<a class="anchor" href="#4-2-ai-网关故障转移" aria-label="锚点">#</a></h3>
+<pre><code>检测：AI 网关错误率 &gt; 50%
+    ↓
+降级：按 GW-002 降级链执行
+  P0 模型 → P1 模型 → P2 模型 → 缓存响应
+    ↓
+恢复：主模型恢复后自动回切</code></pre>
+<h3 id="4-3-前端故障转移">4.3 前端故障转移<a class="anchor" href="#4-3-前端故障转移" aria-label="锚点">#</a></h3>
+<pre><code>检测：CDN 节点不可用
+    ↓
+切换：
+  1. DNS 切换到备用 CDN
+  2. 或直接返回 fallback 页面</code></pre>
+<hr>
+<h2 id="5-数据一致性">5. 数据一致性<a class="anchor" href="#5-数据一致性" aria-label="锚点">#</a></h2>
+<h3 id="5-1-跨区复制">5.1 跨区复制<a class="anchor" href="#5-1-跨区复制" aria-label="锚点">#</a></h3>
+<pre><code>主区（华东） → 异步复制 → 备用区（华北）</code></pre>
+<table><thead><tr><th>参数</th><th>值</th></tr></thead><tbody><tr><td>复制延迟目标</td><td>&lt; 30 秒</td></tr><tr><td>复制延迟告警</td><td>&gt; 60 秒</td></tr><tr><td>一致性模型</td><td>最终一致性（主区优先）</td></tr></tbody></table>
+<h3 id="5-2-事务保障">5.2 事务保障<a class="anchor" href="#5-2-事务保障" aria-label="锚点">#</a></h3>
+<ul><li>写操作必须在主区完成</li><li>读取可路由到任意区域</li><li>跨区事务禁止（性能不可接受）</li></ul>
+<hr>
+<h2 id="6-演练计划">6. 演练计划<a class="anchor" href="#6-演练计划" aria-label="锚点">#</a></h2>
+<h3 id="6-1-演练类型">6.1 演练类型<a class="anchor" href="#6-1-演练类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>频率</th><th>范围</th><th>说明</th></tr></thead><tbody><tr><td>桌面推演</td><td>每月</td><td>团队</td><td>讨论场景，不实际切换</td></tr><tr><td>部分演练</td><td>每季度</td><td>单服务</td><td>实际切换，但限流</td></tr><tr><td>全量演练</td><td>每半年</td><td>全平台</td><td>完整灾备切换</td></tr></tbody></table>
+<h3 id="6-2-演练清单">6.2 演练清单<a class="anchor" href="#6-2-演练清单" aria-label="锚点">#</a></h3>
+<pre><code class="language-markdown"><span class="hljs-section">## 灾备演练检查清单</span>
+
+<span class="hljs-section">### 前置准备</span>
+<span class="hljs-bullet">-</span> [ ] 通知所有团队成员演练时间
+<span class="hljs-bullet">-</span> [ ] 准备回滚方案
+<span class="hljs-bullet">-</span> [ ] 确认备份完整性
+<span class="hljs-bullet">-</span> [ ] 设置监控面板
+
+<span class="hljs-section">### 执行步骤</span>
+<span class="hljs-bullet">-</span> [ ] 模拟主库故障（停止主库）
+<span class="hljs-bullet">-</span> [ ] 执行故障转移
+<span class="hljs-bullet">-</span> [ ] 验证从库可写
+<span class="hljs-bullet">-</span> [ ] 验证 API 正常响应
+<span class="hljs-bullet">-</span> [ ] 验证前端可访问
+
+<span class="hljs-section">### 恢复步骤</span>
+<span class="hljs-bullet">-</span> [ ] 恢复主库
+<span class="hljs-bullet">-</span> [ ] 重新配置为主库
+<span class="hljs-bullet">-</span> [ ] 验证数据一致性
+<span class="hljs-bullet">-</span> [ ] 确认监控恢复正常
+
+<span class="hljs-section">### 复盘</span>
+<span class="hljs-bullet">-</span> [ ] 记录 RTO（实际恢复时间）
+<span class="hljs-bullet">-</span> [ ] 记录 RPO（数据丢失量）
+<span class="hljs-bullet">-</span> [ ] 记录问题和改进项</code></pre>
+<hr>
+<h2 id="7-关键文档">7. 关键文档<a class="anchor" href="#7-关键文档" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文档</th><th>位置</th><th>说明</th></tr></thead><tbody><tr><td>Runbook</td><td><code>docs/07_OPS_运维/runbooks/</code></td><td>每个服务的故障处理步骤</td></tr><tr><td>架构图</td><td><code>docs/03_DESIGN_设计/DESIGN-ARCH-001</code></td><td>系统架构和依赖关系</td></tr><tr><td>依赖矩阵</td><td><code>docs/07_OPS_运维/dependencies.md</code></td><td>服务间依赖关系</td></tr><tr><td>联系人列表</td><td><code>docs/07_OPS_运维/oncall.md</code></td><td>On-call 轮值和联系方式</td></tr></tbody></table>
+<hr>
+<h2 id="8-成本估算">8. 成本估算<a class="anchor" href="#8-成本估算" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>资源</th><th>年成本估算</th><th>说明</th></tr></thead><tbody><tr><td>异地备份存储</td><td>¥5,000</td><td>按 1TB 存储 + 流量估算</td></tr><tr><td>备用实例</td><td>¥20,000</td><td>热备（低规格运行）</td></tr><tr><td>演练停机损失</td><td>¥10,000</td><td>每季度演练 2 小时</td></tr><tr><td><strong>总计</strong></td><td><strong>¥35,000/年</strong></td><td>—</td></tr></tbody></table>
+<hr>
+<h2 id="9-守卫">9. 守卫<a class="anchor" href="#9-守卫" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>守卫</th><th>检查项</th><th>严重度</th></tr></thead><tbody><tr><td><code>backup-verify-gate</code></td><td>每日备份必须在 24h 内验证可恢复性</td><td>P1</td></tr><tr><td><code>dr-gate</code></td><td>关键服务必须有故障转移 Runbook</td><td>P1</td></tr><tr><td><code>dr-gate</code></td><td>灾备演练每季度至少一次</td><td>P2</td></tr><tr><td><code>dr-gate</code></td><td>跨区复制延迟 &lt; 60s</td><td>P1</td></tr></tbody></table>
+<hr>
+<h2 id="10-版本历史">10. 版本历史<a class="anchor" href="#10-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义灾备规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-DLQ-001] Dead Letter Queue 规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-DLQ-001] Dead Letter Queue 死信队列规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-ENV-001] 环境配置规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ENV-001] 环境配置规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-DR-001] 灾备规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

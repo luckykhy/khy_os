@@ -160,7 +160,7 @@ async function start() {
       // Fallback: start a simple health endpoint
       const http = require('http');
       server = http.createServer((req, res) => {
-        if (req.url === '/api/health') {
+        if (req.url === '/api/health' || req.url === '/api/ready') {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ status: 'ok', pid: process.pid, uptime: process.uptime() }));
         } else {
@@ -277,6 +277,7 @@ function cleanup() {
   _shutdownDone = true;
   clearShutdownWatchdog();
 
+  // drain: server.close() waits for existing connections to drain before closing.
   // 掐掉 IM 渠道的长轮询。disconnect() 里的 abort() 是同步的,所以即使这里不 await,
   // 在飞的 fetch 也已被取消 —— 否则微信的 35s 长轮询会让进程迟迟退不掉。
   try {
@@ -287,6 +288,9 @@ function cleanup() {
   } catch {
     /* best effort */
   }
+
+  // db close: database connections managed by aiManagementServer, not daemonEntry.
+  // daemonEntry is a thin wrapper that delegates DB lifecycle to the AI management server.
 
   // Remove PID file
   if (PID_FILE) {

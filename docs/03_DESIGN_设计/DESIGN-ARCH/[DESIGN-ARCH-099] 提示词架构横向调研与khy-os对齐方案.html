@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-099] 提示词架构横向调研与khy-os对齐方案.md -->
+<title>[DESIGN-ARCH-099] 提示词架构横向调研与 khy-os 对齐方案 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-099] 提示词架构横向调研与 khy-os 对齐方案</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-099] 提示词架构横向调研与 khy-os 对齐方案</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-099-提示词架构横向调研与-khy-os-对齐方案">[DESIGN-ARCH-099] 提示词架构横向调研与 khy-os 对齐方案</a></li><li class="lvl-2"><a href="#0-摘要">0. 摘要</a></li><li class="lvl-3"><a href="#0-1-五条最高收益动作-按预期收益排序">0.1 五条最高收益动作（按预期收益排序）</a></li><li class="lvl-3"><a href="#0-2-三条不需要改的-已对齐-避免重复造轮子">0.2 三条不需要改的（已对齐，避免重复造轮子）</a></li><li class="lvl-2"><a href="#1-调研范围与可信度分级">1. 调研范围与可信度分级</a></li><li class="lvl-2"><a href="#2-五个项目的提示词架构">2. 五个项目的提示词架构</a></li><li class="lvl-3"><a href="#2-1-claude-code-对照基准-khy-的移植来源">2.1 Claude Code（对照基准：khy 的移植来源）</a></li><li class="lvl-3"><a href="#2-2-opencode-sst-opencode">2.2 opencode（sst/opencode）</a></li><li class="lvl-3"><a href="#2-3-codex-cli-openai-codex-rust-对-khy-最有参考价值的一个">2.3 Codex CLI（openai/codex，Rust）——**对 khy 最有参考价值的一个**</a></li><li class="lvl-3"><a href="#2-4-gemini-cli-google-gemini-gemini-cli">2.4 Gemini CLI（google-gemini/gemini-cli）</a></li><li class="lvl-3"><a href="#2-5-deepseek-harness-deepseek-ai-deepseek-harness-dsh">2.5 DeepSeek Harness（deepseek-ai/deepseek-harness，dsh）</a></li><li class="lvl-2"><a href="#3-横向归纳">3. 横向归纳</a></li><li class="lvl-3"><a href="#3-1-六条共识-四家以上一致">3.1 六条共识（四家以上一致）</a></li><li class="lvl-3"><a href="#3-2-三条分歧-必须为-khy-做取舍-不能和稀泥">3.2 三条分歧（必须为 khy 做取舍，不能和稀泥）</a></li><li class="lvl-2"><a href="#4-khy-os-差距对照">4. khy-os 差距对照</a></li><li class="lvl-2"><a href="#5-具体优化方案">5. 具体优化方案</a></li><li class="lvl-3"><a href="#r1-每轮状态改为-messages-增量注入-高">R1　每轮状态改为 messages 增量注入　【高】</a></li><li class="lvl-3"><a href="#r2-单条注入内容设硬上限-高-可立刻做">R2　单条注入内容设硬上限　【高·可立刻做】</a></li><li class="lvl-3"><a href="#r3-缓存失效归因细化到-段-中">R3　缓存失效归因细化到「段」　【中】</a></li><li class="lvl-3"><a href="#r4-工具使用纪律下沉到工具-description-中-可立刻做">R4　工具使用纪律下沉到工具 description　【中·可立刻做】</a></li><li class="lvl-3"><a href="#r5-前缀稳定性测试套件-高-成本低">R5　前缀稳定性测试套件　【高·成本低】</a></li><li class="lvl-3"><a href="#r6-装配产物可检视开关-中">R6　装配产物可检视开关　【中】</a></li><li class="lvl-3"><a href="#r7-指令文件按需注入-中">R7　指令文件按需注入　【中】</a></li><li class="lvl-3"><a href="#r8-模型差异文件化-中">R8　模型差异文件化　【中】</a></li><li class="lvl-3"><a href="#r9-输出与格式约束数值化-低-成本极低">R9　输出与格式约束数值化　【低·成本极低】</a></li><li class="lvl-2"><a href="#6-对-design-arch-098-的修正">6. 对 [DESIGN-ARCH-098] 的修正</a></li><li class="lvl-2"><a href="#7-落地顺序">7. 落地顺序</a></li><li class="lvl-2"><a href="#8-不适用的照搬-明确划界">8. 不适用的照搬（明确划界）</a></li><li class="lvl-2"><a href="#9-参考来源">9. 参考来源</a></li><li class="lvl-2"><a href="#10-版本历史">10. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-099 | 阶段: 设计 | 关联: [DESIGN-ARCH-098] 结构重设计、[DESIGN-PROMPT-002] 分层规范 --&gt;</p>
+<h1 id="design-arch-099-提示词架构横向调研与-khy-os-对齐方案">[DESIGN-ARCH-099] 提示词架构横向调研与 khy-os 对齐方案<a class="anchor" href="#design-arch-099-提示词架构横向调研与-khy-os-对齐方案" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>性质</strong>：调研报告 + 对齐方案（提案）。调研时间 2026-09-15。<br><strong>上游</strong>：[DESIGN-ARCH-098] 给出 khy-os 自身的目标结构（L0–L4）；本文横向比对四个开源实现，<br>校准 098 的取舍，并给出<strong>可直接落地</strong>的对齐清单（含「已经对齐、不用改」的项）。<br><strong>一句话结论</strong>：khy 的提示词架构是 Claude Code 早期结构的<strong>忠实移植</strong>（文件头自述如此），<br>因此它继承了那套分层思想，却<strong>没继承后续的优化</strong>——而开源同行已经用四种不同方式<br>解决了 khy 现在正面临的问题。</p></blockquote>
+<hr>
+<h2 id="0-摘要">0. 摘要<a class="anchor" href="#0-摘要" aria-label="锚点">#</a></h2>
+<h3 id="0-1-五条最高收益动作-按预期收益排序">0.1 五条最高收益动作（按预期收益排序）<a class="anchor" href="#0-1-五条最高收益动作-按预期收益排序" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>动作</th><th>对齐谁</th><th>现状痛点（khy 实测）</th><th>预期收益</th></tr></thead><tbody><tr><td><strong>R1</strong></td><td><strong>每轮状态改为 messages 增量注入</strong></td><td>Codex CLI</td><td>每轮重算 52,817 字符</td><td>系统提示词整段会话<strong>逐字节不变</strong>，命中率拉到理论上限</td></tr><tr><td><strong>R2</strong></td><td><strong>单条注入内容设硬上限（≤10k tokens/条目）</strong></td><td>Codex CLI</td><td><code># claudeMd</code> 单条 26,378 字符（≈15–20k tokens）</td><td>消灭超限条目；防止项目文件继续膨胀</td></tr><tr><td><strong>R3</strong></td><td><strong>缓存失效归因细化到「段」</strong></td><td>Claude Code</td><td>⚠️ <strong>修正</strong>：khy 不是「无」——早有 <code>KHY_CACHE_PREFIX_SHAPE</code> + <code>constants/promptPrefixShape.js</code>（SHA-256 短哈希，system/tools/order 三维度）。缺的是 <strong>per-section 粒度</strong>：只能说「系统提示变了」，说不出哪一段变了</td><td>每次失效可回答「是谁变了」</td></tr><tr><td><strong>R4</strong></td><td><strong>工具使用纪律下沉到工具 description</strong></td><td>Gemini CLI / opencode</td><td>纪律在 system 段与工具实现里各写一份</td><td>削减静态段 + 纪律离开「决策点」更近</td></tr><tr><td><strong>R5</strong></td><td><strong>前缀稳定性测试套件</strong></td><td>Codex CLI</td><td>无（只有段缓存功能测试）</td><td>把「前缀不被击穿」变成回归可测的硬约束</td></tr></tbody></table>
+<h3 id="0-2-三条不需要改的-已对齐-避免重复造轮子">0.2 三条不需要改的（已对齐，避免重复造轮子）<a class="anchor" href="#0-2-三条不需要改的-已对齐-避免重复造轮子" aria-label="锚点">#</a></h3>
+<ul><li><strong>工具池排序</strong>：khy <code>tools/index.js::assembleToolPool()</code> 注释明写 <code>sorted for prompt cache stability</code>，</li></ul>
+<p>且带 memo 化——与 Claude Code 的 <code>assembleToolPool()</code> 同源同做法。<strong>已对齐。</strong></p>
+<ul><li><strong>段缓存的 cacheKey 契约</strong>：<code>systemPromptSection(id, compute, cacheKey)</code> 与</li></ul>
+<p><code>DANGEROUS_uncachedSystemPromptSection(...)</code> 的双构造器 + <code>DANGEROUS_</code> 前缀警告命名，<br>  完整照搬了 CC 的设计，机制本身是对的（问题在<strong>用错了键</strong>，见 098 §7）。</p>
+<ul><li><strong>compact 专用提示词</strong>：khy <code>services/domain/memory/compact/prompt.js</code> 与 Gemini CLI 的</li></ul>
+<p><code>getCompressionPrompt(config)</code> 思路一致——主提示词与压缩提示词分离。<strong>已对齐。</strong></p>
+<hr>
+<h2 id="1-调研范围与可信度分级">1. 调研范围与可信度分级<a class="anchor" href="#1-调研范围与可信度分级" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>开源</th><th>证据等级</th><th>说明</th></tr></thead><tbody><tr><td><strong>Claude Code</strong></td><td>❌ 闭源</td><td><strong>B（社区逆向）</strong></td><td>基于多份源码级分析（v2.1.88）与流量抓包，细节高度一致但<strong>非官方</strong>；引用时标注</td></tr><tr><td><strong>opencode</strong>（sst/opencode）</td><td>✅</td><td><strong>A（源码）</strong></td><td>可直接引用文件路径与实现描述</td></tr><tr><td><strong>Codex CLI</strong>（openai/codex）</td><td>✅ Apache-2.0</td><td><strong>A（源码）</strong></td><td>Rust；有官方目录结构与测试文件路径可引</td></tr><tr><td><strong>Gemini CLI</strong>（google-gemini/gemini-cli）</td><td>✅</td><td><strong>A（源码）</strong></td><td>TypeScript；<code>prompts.ts</code> / <code>promptProvider.ts</code> / <code>snippets.ts</code></td></tr><tr><td><strong>DeepSeek Harness</strong>（deepseek-ai/deepseek-harness）</td><td>✅ MIT</td><td><strong>A−（源码 + 官方文档）</strong></td><td>v0.1 预览版（2026-08-13），接口仍在变</td></tr></tbody></table>
+<blockquote><p><strong>诚实声明</strong>：Claude Code 的具体行号与内部常量名来自第三方分析，可能随版本漂移；<br>本文凡标注 B 级的结论只用于<strong>印证设计意图</strong>，不作为「照抄某个实现」的依据。<br>另需注意：khy-os 现有 <code>prompts.js</code> 的注释明确写着「Architecture ported from Claude Code's<br>prompts.ts — same section structure, same cache boundary pattern」，所以下文对照 CC 时，<br>差异<strong>不是巧合而是欠同步</strong>。</p></blockquote>
+<hr>
+<h2 id="2-五个项目的提示词架构">2. 五个项目的提示词架构<a class="anchor" href="#2-五个项目的提示词架构" aria-label="锚点">#</a></h2>
+<h3 id="2-1-claude-code-对照基准-khy-的移植来源">2.1 Claude Code（对照基准：khy 的移植来源）<a class="anchor" href="#2-1-claude-code-对照基准-khy-的移植来源" aria-label="锚点">#</a></h3>
+<p><strong>静态面</strong>：<code>getSystemPrompt()</code> 返回<strong>字符串数组</strong>（与 khy 同构），前 6–7 段为静态 section：<br><code>getSimpleIntroSection</code> / <code>getSimpleSystemSection</code> / <code>getSimpleDoingTasksSection</code> /<br><code>getActionsSection</code> / <code>getUsingYourToolsSection</code> / <code>getSimpleToneAndStyleSection</code> /<br><code>getOutputEfficiencySection</code>。之后插入 <code>__SYSTEM_PROMPT_DYNAMIC_BOUNDARY__</code>。</p>
+<p><strong>关键语义（khy 最容易误读的一点）</strong>：CC 的 boundary <strong>不是</strong>「常量 vs 动态」的分界，<br>而是「<strong>全局共享可缓存 / 会话私有</strong>」的分界——boundary 之上要求<strong>对所有用户字节相同</strong>，<br>从而吃到服务端<strong>跨用户共享</strong>的前缀缓存。而且这个标记<strong>只在 <code>shouldUseGlobalCacheScope()</code><br>为真（1P API）时才插入</strong>。khy 把 boundary 当成「常量/动态」的分界，于是把<br><code>outputStyle</code>、<code>enabledTools</code>、<code>deferred_tools_hint</code> 这类<strong>逐会话/逐轮变化</strong>的东西放进了<br>「应当全局共享」的区域——在语义上就已经不自洽了。</p>
+<p><strong>动态面</strong>：13 个 <code>SystemPromptSection</code> 注册项，其中<strong>只有 <code>mcp_instructions</code> 一个</strong>使用<br><code>DANGEROUS_uncachedSystemPromptSection</code>（理由是 MCP 会在轮次间连断）。其余 12 个都是<br>「守清 / compact 前只算一次」。</p>
+<p><strong>缓存工程（CC 最强的部分）</strong>：</p>
+<ol><li><strong>专用失效检测模块</strong> <code>promptCacheBreakDetection.ts</code>：每轮对比</li></ol>
+<p><code>systemHash</code> / <code>toolsHash</code> / <code>cacheControlHash</code> / <code>perToolHashes</code> / <code>model</code> / <code>fastMode</code>，<br>   定位「是谁变了导致缓存失效」。源码注释留下一条极有说服力的记录：</p>
+<blockquote><p>动态 agent 列表曾占全舰队 cache_creation token 的 <strong>10.2%</strong> → 于是把 agent 列表<br><strong>从 system prompt 移入会话消息附件</strong>，让 system prompt 不再改变。</p></blockquote>
+<ol><li><strong>项目指令不放 system prompt</strong>：<code>CLAUDE.md</code> 通过 <code>&lt;system-reminder&gt;</code> 注入到</li></ol>
+<p><strong>messages 数组的第一条用户消息</strong>，并独立设置 <code>cache_control</code>。理由正是「system prompt<br>   在全体用户间共享，把 CLAUDE.md 拼进去就没有共享缓存了」。</p>
+<ol><li><strong>日期不进动态位置</strong>：<code>getSessionStartDate</code> 被 memoize 到会话起点；</li></ol>
+<p>跨零点的日期变化通过<strong>尾部附件消息</strong>处理，避免击穿缓存。</p>
+<ol><li><strong>两个缓存断点</strong>：① system + tools（稳定层）② CLAUDE.md 消息（项目层）。</li><li><strong>输出效率用数值而非形容词</strong>：内部版实测「工具调用间文本 ≤25 词、最终回复 ≤100 词」</li></ol>
+<p>相对定性的 “be concise” 带来约 1.2% 输出 token 下降。</p>
+<ol><li><strong>工具池</strong> <code>assembleToolPool()</code>：内置工具按名称 <code>localeCompare</code> 排序构成<strong>连续前缀</strong>，</li></ol>
+<p>MCP 工具排在后面并同样排序。</p>
+<p><strong>工具提示设计</strong>：工具提示与工具实现同址（每个工具自带 description + JSON schema），<br>且<strong>占了请求的最大头</strong>（工具定义 14–17k tokens，系统提示词仅 2.5k tokens）。<br>这可作为 khy「system 里塞了 3,104 字符的命令执行纪律」的对照。</p>
+<p><strong>Agent 层</strong>：<code>Coordinator Mode</code> 下身份改写为编排者，<strong>只给 3 个工具</strong><br>（Agent / SendMessage / TaskStop），无文件读写——即「换模式 = 换工具面 + 换身份段」。</p>
+<h3 id="2-2-opencode-sst-opencode">2.2 opencode（sst/opencode）<a class="anchor" href="#2-2-opencode-sst-opencode" aria-label="锚点">#</a></h3>
+<p><strong>静态面</strong>：<strong>按模型分文件</strong>的静态 <code>.txt</code> 提示词，通过 Bun 编译期静态导入嵌入 bundle：<br><code>anthropic.txt</code> / <code>beast.txt</code>（gpt-4/o1/o3）/ <code>gpt.txt</code> / <code>codex.txt</code> / <code>gemini.txt</code> /<br><code>qwen.txt</code> / <code>kimi.txt</code> / <code>trinity.txt</code>。选择逻辑是<strong>模型 id 子串匹配</strong>。</p>
+<p><strong>五层装配</strong>（<code>SystemPrompt.header → provider → environment → custom → maxSteps</code>）：</p>
+<pre><code class="language-text">1. header       provider 特定前缀（Anthropic 注入一段身份 spoof）
+2. provider     按模型选的静态提示词文件
+3. environment  &lt;env&gt; 包裹的运行时块：cwd / 是否 git 仓库 / 平台 / 今天日期 / git 文件树
+                （ripgrep 取 git tree，**硬限 200 个文件**防上下文爆炸）
+4. custom       指令文件合并：项目级 AGENTS.md → CLAUDE.md → CONTEXT.md（向上找到 git root）
+                + 全局 ~/.config/opencode/AGENTS.md + config 指定的路径或 URL
+                每份以 `Instructions from: &lt;path&gt;` 分隔；**不做冲突消解**，全部保留
+5. maxSteps     接近步数上限时的提醒</code></pre>
+<p><strong>每轮状态走 messages，不走 system</strong>：<code>plan.txt</code> 追加到<strong>最后一条用户消息</strong>；<br><code>build-switch.txt</code> 在 plan→build 切换时追加；<code>max-steps.txt</code> 作为<strong>伪 assistant 消息</strong>注入。<br>这是与 khy 最大的结构差异：opencode 把「模式/状态」当<strong>对话内容</strong>处理。</p>
+<p><strong>指令的按需注入（对 khy 的 26k <code>claudeMd</code> 是直接解法）</strong>：指令文件在<strong>两个时机</strong>加载——<br>① 建 system prompt 时从 cwd 向上找；② <strong>工具执行时</strong>：当 Read 工具读到某个子目录的文件，<br>就从小文件所在目录向上找「尚未加载」的指令文件，作为块注入<strong>工具输出</strong>；并有<br><strong>每消息 claim 机制</strong>防止同一文件在一个 turn 内被注入两次。</p>
+<p><strong>缓存处理</strong>：Anthropic 路径下，若 system 数组首元素在插件变换后未被改动，<br>则<strong>把其余部分 join 成一个字符串</strong>，维持「可缓存的 2 段结构」。</p>
+<p><strong>插件钩子</strong>：<code>experimental.chat.system.transform</code> 允许插件增删改 system 数组，<br>并有「插件清空数组则还原原值」的安全兜底。</p>
+<h3 id="2-3-codex-cli-openai-codex-rust-对-khy-最有参考价值的一个">2.3 Codex CLI（openai/codex，Rust）——<strong>对 khy 最有参考价值的一个</strong><a class="anchor" href="#2-3-codex-cli-openai-codex-rust-对-khy-最有参考价值的一个" aria-label="锚点">#</a></h3>
+<p>Codex 的分层不是「静态段 / 动态段」，而是<strong>「指令是字符串，上下文是消息」</strong>：</p>
+<table><thead><tr><th>层</th><th>载体</th><th>内容</th><th>注入时机</th></tr></thead><tbody><tr><td><strong>L0 base instructions</strong></td><td>API 的 <code>instructions</code> <strong>字符串</strong></td><td>按模型族选文件：<code>codex-rs/core/prompt.md</code>（默认）/ <code>gpt_5_1_prompt.md</code> / <code>gpt_5_2_prompt.md</code> / <code>gpt_5_codex_prompt.md</code>；可被 <code>base_instructions_override</code> 替换；必要时追加 <code>APPLY_PATCH_TOOL_INSTRUCTIONS</code></td><td>每轮请求（<strong>字符串本身稳定</strong>）</td></tr><tr><td><strong>L1 developer instructions</strong></td><td><code>role: developer</code> 的<strong>消息</strong></td><td>权限/插件/技能/协作模式/人格等</td><td><strong>会话初始化时写入历史一次</strong></td></tr><tr><td><strong>L2 user instructions</strong></td><td><code>role: user</code> 的<strong>消息</strong></td><td><code>config.user_instructions</code> + <strong>AGENTS.md 链</strong> + Skills 元数据，合并为单串，格式为 <code># AGENTS.md instructions for &lt;path&gt;</code></td><td>会话初始化时一次</td></tr><tr><td><strong>L3 environment context</strong></td><td><code>role: user</code> 的 <strong>XML 消息</strong></td><td>cwd / approval_policy / sandbox_mode / network_access / shell / writable_roots</td><td>首轮建立；<strong>字段变化时只追加「变化字段」的新消息</strong></td></tr></tbody></table>
+<p><strong>第三个设计是 Codex 的核心创新</strong>：<code>build_environment_update_item()</code>——<br>环境变化<strong>不在原位置改写</strong>，而是在消息流<strong>尾部追加一条只含变化字段的消息</strong>。<br>后果是：<strong><code>instructions</code> 字符串在整段会话里逐字节不变</strong>，前缀缓存天然满载。</p>
+<p><strong>v0.123 的片段化重构</strong>（PR #18794 / #18813）——与 098 的锚点方案高度同构，且更彻底：</p>
+<pre><code class="language-rust"><span class="hljs-keyword">pub</span> <span class="hljs-keyword">trait</span> <span class="hljs-title class_">ContextualUserFragment</span> {
+    <span class="hljs-keyword">const</span> ROLE: &amp;<span class="hljs-symbol">&#x27;static</span> <span class="hljs-type">str</span>;          <span class="hljs-comment">// &quot;developer&quot; | &quot;user&quot;</span>
+    <span class="hljs-keyword">const</span> START_MARKER: &amp;<span class="hljs-symbol">&#x27;static</span> <span class="hljs-type">str</span>;  <span class="hljs-comment">// XML 式开始标记</span>
+    <span class="hljs-keyword">const</span> END_MARKER: &amp;<span class="hljs-symbol">&#x27;static</span> <span class="hljs-type">str</span>;
+    <span class="hljs-keyword">fn</span> <span class="hljs-title function_">body</span>(&amp;<span class="hljs-keyword">self</span>) <span class="hljs-punctuation">-&gt;</span> <span class="hljs-type">String</span>;
+    <span class="hljs-keyword">fn</span> <span class="hljs-title function_">matches_text</span>(text: &amp;<span class="hljs-type">str</span>) <span class="hljs-punctuation">-&gt;</span> <span class="hljs-type">bool</span>;
+    <span class="hljs-keyword">fn</span> <span class="hljs-title function_">render</span>(&amp;<span class="hljs-keyword">self</span>) <span class="hljs-punctuation">-&gt;</span> <span class="hljs-type">String</span>;        <span class="hljs-comment">// START_MARKER + body + END_MARKER</span>
+    <span class="hljs-keyword">fn</span> <span class="hljs-title function_">into</span>(<span class="hljs-keyword">self</span>) <span class="hljs-punctuation">-&gt;</span> ResponseItem;
+}</code></pre>
+<p>碎片目录（约 20 个）：<code>PermissionsInstructions</code> / <code>AvailablePluginsInstructions</code> /<br><code>AvailableSkillsInstructions</code> / <code>CollaborationModeInstructions</code> / <code>PersonalitySpecInstructions</code> /<br><code>PluginInstructions</code> / <code>AppsInstructions</code> / <code>ImageGenerationInstructions</code> /<br><code>ModelSwitchInstructions</code> / <code>NetworkRuleSaved</code> / <code>ApprovedCommandPrefixSaved</code> /<br><code>GuardianFollowupReviewReminder</code> / <code>HookAdditionalContext</code> / <code>SpawnAgentInstructions</code>（developer）</p>
+<ul><li><code>EnvironmentContext</code> / <code>UserInstructions</code> / <code>SkillInstructions</code>（user）。</li></ul>
+<p><strong>他们为什么重构</strong>（三个原罪，和 khy 现在的问题一一对应）：</p>
+<ol><li><strong>压缩无法选择性丢弃</strong>：整块 <code>DeveloperInstructions</code> 只能全留或全丢 →</li></ol>
+<p>现在每个碎片<strong>可单独驱逐</strong>（一轮纯重构任务可以扔掉「图像生成指引」）。</p>
+<ol><li><strong>插件没有明确注入点</strong>：文本被无结构地追加，两个插件可以<strong>静默冲突</strong>。</li><li><strong>调试不可归因</strong>：想查「是哪条指令影响了这轮」只能人肉翻几千 token 的拼接文本。</li></ol>
+<p><strong>上下文管理硬规则</strong>（<code>codex-rs/core/src/context/mod.rs</code>）：</p>
+<table><thead><tr><th>规则</th><th>含义</th></tr></thead><tbody><tr><td>无历史重写</td><td>上下文必须<strong>增量构建</strong>，不得回头改已发出的内容</td></tr><tr><td><strong>减少缓存失效</strong></td><td>明确把「避免高频上下文变更」写成工程目标</td></tr><tr><td>无未绑定条目</td><td>所有注入内容必须有界，有硬上限</td></tr><tr><td><strong>条目 ≤10k tokens</strong></td><td>单条注入内容的硬上限</td></tr><tr><td>大条目人工审查</td><td>新增 &gt;1k tokens 的条目需额外评审</td></tr></tbody></table>
+<p><strong>缓存测试</strong>：<code>codex-rs/core/tests/suite/prompt_caching.rs</code> —— <strong>有专门的前缀缓存测试套件</strong>，<br>断言首轮消息次序与后续稳定性。</p>
+<p><strong>其他</strong>：<code>prompt_cache_key</code> 字段启用 API 级缓存；工具面随模型族变化<br>（<code>gpt-5-codex</code> → <code>shell_command</code> + freeform apply_patch；<code>exp-*</code> → <code>exec_command</code> + <code>write_stdin</code>）；<br><code>~/.codex/prompts/*.md</code> 支持带 <code>$1..$9</code> / <code>$ARGUMENTS</code> 占位符的自定义提示词；<br><code>AGENTS.md</code> 自动读取；仓库自身 <code>AGENTS.md</code> 写着 <code>codex-core crate is bloated, resist adding code to codex-core</code>。</p>
+<h3 id="2-4-gemini-cli-google-gemini-gemini-cli">2.4 Gemini CLI（google-gemini/gemini-cli）<a class="anchor" href="#2-4-gemini-cli-google-gemini-gemini-cli" aria-label="锚点">#</a></h3>
+<p><strong>组织方式</strong>：单一模板函数 + <strong>片段模块 + 模型代际变体</strong>。</p>
+<ul><li>入口 <code>packages/core/src/core/prompts.ts</code> 的 <code>getCoreSystemPrompt(config, userMemory?, interactiveOverride?)</code></li></ul>
+<p>与 <code>getCompressionPrompt(config)</code>（主提示词 / 压缩提示词分离）。</p>
+<ul><li>真正的编排在 <code>packages/core/src/prompts/promptProvider.ts::getCoreSystemPrompt</code>，三阶段：</li></ul>
+<p>① <strong>收集上下文</strong>（approval mode、skill 列表、启用工具名、工具列表、已批准 plan 路径、<br>  是否交互、是否启用交互式 shell、是否开启 narration、<strong>活跃模型 → 选择 modern 还是 legacy 片段模块</strong>、<br>  subagent 定义、plans 目录、tracker 开关、<code>getAllGeminiMdFilenames()</code>、<code>isGitRepository(cwd)</code>、<br>  <code>process.env['SANDBOX']</code>）；<br>  ② <strong>模板覆盖</strong>（<code>GEMINI_SYSTEM_MD</code> 指向文件，默认 <code>.gemini/system.md</code>，<strong>整份替换</strong>内置提示词）；<br>  ③ <strong>片段装配</strong>（<code>snippets.ts</code> / <code>snippets.legacy.ts</code>）。</p>
+<p><strong>条件段落</strong>：sandbox（MacOS Seatbelt / 通用 sandbox / sandbox 外三种）、git 仓库段、<br>Examples 段、userMemory（以分隔符追加）。</p>
+<p><strong>两个值得抄的工程细节</strong>：</p>
+<ul><li><strong>首尾呼应（book-ending）</strong>：开头写身份与总则，<strong>结尾再放一段 <code>Final Reminder:</code></strong></li></ul>
+<p>重申最关键约束（含「绝不要假设文件内容，必须用 read 工具」与「keep going until resolved」）。<br>  利用结尾的强近因效应，且该段属于<strong>静态</strong>部分，不破坏前缀。</p>
+<ul><li><strong><code>GEMINI_WRITE_SYSTEM_MD</code></strong>：把<strong>装配完成</strong>的提示词写盘，供人工检视或调试。</li></ul>
+<p>另有 <code>prompts.test.ts.snap</code> <strong>快照测试</strong>锁定装配产物。</p>
+<p><strong>社区反馈的关键概念</strong>：Gemini CLI 用户社区明确观察到 <strong>「context rot」</strong>——<br>项目指令涨到数百行 markdown 后，模型开始<strong>不遵守指令</strong>、需要反复提醒。<br>建议把 <code>SYSTEM.md</code> 定位为<strong>「固件层」</strong>（与任务无关的、不可协商的工具操作规则），<br>把项目约定与工作流另置。<strong>这与 098 的 L0 / L1 切分是独立得出的同一结论。</strong></p>
+<h3 id="2-5-deepseek-harness-deepseek-ai-deepseek-harness-dsh">2.5 DeepSeek Harness（deepseek-ai/deepseek-harness，dsh）<a class="anchor" href="#2-5-deepseek-harness-deepseek-ai-deepseek-harness-dsh" aria-label="锚点">#</a></h3>
+<p><strong>定位差异</strong>：dsh 不把提示词当「一段文本」，而是当<strong>运行时的一个分区服务</strong>：</p>
+<ul><li>独立包 <code>core/system-prompt</code>，职责写着「<strong>提示词分区</strong>与工具 schema 组装」（<code>ctx.systemPrompt</code>）。</li></ul>
+<p>另有 <code>core/session</code>（追记式 <code>SessionEvent</code> 日志）、<code>core/tools</code>（作用域工具注册表）、<br>  <code>core/agent-loop</code>（默认驱动）——<strong>分区是被架构成一个独立接缝的</strong>。</p>
+<p><strong>硬性原则</strong>：<strong>「模型可见 = 已记录」</strong>——任何进入模型请求的内容都必须能从<br>append-only 会话日志重建。模型上下文不是累积状态，而是由 <code>deriveMessages()</code> 从日志<br><strong>投影</strong>出来的。好处：resume / fork / replay / audit 共享同一份事件流；<br>调试时可精确回答「第 50 步是什么把它带偏的」。</p>
+<p><strong>模式 = 换插件树而非换提示词</strong>：标准 / PTC / 极简 / 创造四种模式，各自加载不同插件集合，<br>于是<strong>工具面与权限随之切换</strong>，而提示词结构保持不变。极简模式只留 <code>bash</code> + <code>str_replace_editor</code><br>两个工具（用于模型基准测试，避免工具面干扰）。<br>这与 CC 的 Coordinator Mode、opencode 的 agent 覆盖 prompt 是同一思路的三种实现。</p>
+<p><strong>PTC（Programmatic Tool Calling）</strong>：把工具封装为代码 API，模型<strong>写一段 TypeScript</strong><br>编排多步工具调用，中间结果留在执行环境里<strong>不进入上下文</strong>。<br>这是对 khy 用散文规则（「尽量并行调用工具」）来表达的同一诉求的<strong>机制化</strong>解法。</p>
+<p><strong>可观测性</strong>：Trajectory 视图按来源列出 System Prompt / 上下文注入 / 推理 / 工具调用 /<br>工具结果 / 子 Agent 调度，并在 UI 里直接显示<strong>缓存命中率</strong>、上下文占用、首 token 延迟。</p>
+<hr>
+<h2 id="3-横向归纳">3. 横向归纳<a class="anchor" href="#3-横向归纳" aria-label="锚点">#</a></h2>
+<h3 id="3-1-六条共识-四家以上一致">3.1 六条共识（四家以上一致）<a class="anchor" href="#3-1-六条共识-四家以上一致" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>共识</th><th>具体表现</th></tr></thead><tbody><tr><td>C1</td><td><strong>指令面要「少而稳」，越靠前越稳定</strong></td><td>CC 的 boundary 语义、opencode 的编译期常量文件、Codex 的 <code>instructions</code> 字符串、Gemini 的模板</td></tr><tr><td>C2</td><td><strong>每轮状态走 messages，不走 system</strong></td><td>CC（CLAUDE.md/日期尾部附件）、opencode（plan/build-switch/max-steps）、Codex（环境上下文消息）、dsh（上下文注入记为事件）</td></tr><tr><td>C3</td><td><strong>项目指令/环境上下文独立注入、独立缓存</strong></td><td>CC（CLAUDE.md 单独 <code>cache_control</code>）、Codex（<code>UserInstructions</code> 独立 user 消息）、opencode（<code>Instructions from:</code> 分隔）</td></tr><tr><td>C4</td><td><strong>注入内容必须有界</strong></td><td>Codex 的 ≤10k tokens/条目与 &gt;1k 人工审查；opencode 的 git tree 限 200 文件；CC 的工具输出截断</td></tr><tr><td>C5</td><td><strong>片段要类型化、可寻址（带标记）</strong></td><td>Codex 的 <code>ContextualUserFragment</code> + <code>START/END_MARKER</code>；khy 自己的锚点方案同理</td></tr><tr><td>C6</td><td><strong>缓存失效要可观测、可测试</strong></td><td>CC 的 <code>promptCacheBreakDetection.ts</code>；Codex 的 <code>prompt_caching.rs</code>；dsh 的缓存命中率 UI；Gemini 的 <code>GEMINI_WRITE_SYSTEM_MD</code></td></tr></tbody></table>
+<h3 id="3-2-三条分歧-必须为-khy-做取舍-不能和稀泥">3.2 三条分歧（必须为 khy 做取舍，不能和稀泥）<a class="anchor" href="#3-2-三条分歧-必须为-khy-做取舍-不能和稀泥" aria-label="锚点">#</a></h3>
+<p><strong>分歧 D1：项目指令放 system 前缀，还是放 messages？</strong></p>
+<ul><li>CC / Codex 都选 <strong>messages</strong>。理由分两层：CC 是为了保住<strong>跨用户全局共享缓存</strong>；</li></ul>
+<p>Codex 是为了保住 <strong><code>instructions</code> 字符串逐字节不变</strong>。</p>
+<ul><li>khy 的处境：<code>project_instructions</code> 已在动态区（boundary 之后），且 khy 有<strong>自建 relay 路径</strong></li></ul>
+<p>（Anthropic <code>cache_control</code> 边界标记在 <code>_messageBuilder</code> 被剥掉，命中率全靠 provider<br>  最长前缀匹配），<strong>没有全局共享缓存这回事</strong>。</p>
+<ul><li><strong>结论（对 098 的修正）</strong>：对 khy，把项目指令搬进 system 前缀（098 的 L1 方案）与</li></ul>
+<p>放进 messages，在命中率上<strong>几乎等价</strong>；真正的差别在<strong>改动粒度</strong>——<br>  放前缀时，项目指令任何一次改动都会毁掉其后全部前缀；放 messages 并采用<br>  Codex 的 <strong>delta 追加</strong>，则<strong>前缀永远不需要改写</strong>。<br>  → <strong>R1 因此优先于「把 claudeMd 搬进 L1」</strong>。详见 §6。</p>
+<p><strong>分歧 D2：配置值能否进 system？</strong></p>
+<ul><li>Codex <strong>允许</strong>：<code>sandbox_mode</code> / <code>approval_policy</code> 直接枚举在提示词里（因为 OpenAI 侧缓存</li></ul>
+<p>是 per-org 前缀缓存，不必全局共享）。</p>
+<ul><li>CC <strong>不允许</strong>进「全局共享区」：任何逐会话变化的值都必须在 boundary 之后。</li><li>khy 现状是两边都踩：<code>simple_intro</code>/<code>doing_tasks</code> 依赖 output style（不该在前缀），</li></ul>
+<p>而 <code>deferred_tools_hint</code> 逐轮变化也在前缀。</p>
+<ul><li><strong>结论</strong>：khy 应取 CC 的严格版——<strong>前缀只放「会话内不变 + 无参数化」的内容</strong>，</li></ul>
+<p>配置派生内容一律放 boundary 之后。</p>
+<p><strong>分歧 D3：模型差异怎么表达？</strong></p>
+<ul><li><strong>多份文件</strong>：opencode（<code>anthropic.txt</code> / <code>beast.txt</code> / …）、Codex（<code>prompt.md</code> /</li></ul>
+<p><code>gpt_5_codex_prompt.md</code> / <code>gpt_5_1_prompt.md</code> …）——按模型族<strong>整份替换</strong>。</p>
+<ul><li><strong>条件段落 / 代际模块</strong>：Gemini（<code>snippets.ts</code> vs <code>snippets.legacy.ts</code>，按活跃模型选）。</li><li>khy 现状：<code>getSystemPrompt</code> 内<strong>条件分支</strong>（<code>compactPrompt</code>、<code>isLowTierModel</code>、</li></ul>
+<p><code>hasNativeToolUse</code>）+ 外层 <code>HARDCORE_SYSTEM_PROMPT</code> legacy 外壳。</p>
+<ul><li><strong>结论</strong>：khy 的模型分支已经散在函数体里，<strong>建议改为 Codex 式的「基座文件 + 模型族变体文件」</strong>，</li></ul>
+<p>让「某个模型的差异」成为可 diff、可评审的独立文件，而不是埋在 3,000 行装配器里的 if。</p>
+<hr>
+<h2 id="4-khy-os-差距对照">4. khy-os 差距对照<a class="anchor" href="#4-khy-os-差距对照" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>维度</th><th>同行做法</th><th>khy 现状</th><th>差距</th></tr></thead><tbody><tr><td>每轮状态载体</td><td>messages 增量（Codex/opencode/CC）</td><td>system prompt 尾部 5 个易变段</td><td><strong>高</strong></td></tr><tr><td>前缀稳定性</td><td><code>instructions</code> 字符串全程不变（Codex）</td><td>每轮重排 + 参数化内容在前缀</td><td><strong>高</strong></td></tr><tr><td>单条目大小上限</td><td>≤10k tokens/条目（Codex 硬规则）</td><td><code># claudeMd</code> 26,378 字符<strong>无上限</strong></td><td><strong>高</strong></td></tr><tr><td>缓存失效归因</td><td>专用哈希监控模块（CC）</td><td><strong>已有</strong> <code>promptPrefixShape.js</code>（system/tools/order），缺 per-section 粒度</td><td><strong>中</strong>（非「高」，见 R3 修正）</td></tr><tr><td>前缀稳定性测试</td><td><code>prompt_caching.rs</code> 专项套件（Codex）</td><td>无（仅段缓存功能测试）</td><td><strong>高</strong></td></tr><tr><td>片段类型化</td><td><code>ContextualUserFragment</code> + 标记（Codex）</td><td>无（靠数组位置 + 手工清单）</td><td>中（099 已提锚点）</td></tr><tr><td>指令文件按需注入</td><td>工具执行时向上发现并注入（opencode）</td><td>一次性全量注入</td><td>中</td></tr><tr><td>工具纪律位置</td><td>与工具实现同址（Gemini/opencode）</td><td>system 段 + 工具实现<strong>各一份</strong></td><td>中</td></tr><tr><td>装配产物可检视</td><td><code>GEMINI_WRITE_SYSTEM_MD</code> + 快照测试</td><td>无直接开关</td><td>中</td></tr><tr><td>输出长度约束</td><td>数值化（≤25 词 / ≤100 词，实测 -1.2% 输出 token）</td><td>定性（&quot;short and concise&quot;）</td><td>低</td></tr><tr><td>工具池排序</td><td>按名排序成连续前缀（CC）</td><td><strong>已对齐</strong></td><td>无</td></tr><tr><td>段缓存构造器</td><td>双构造器 + <code>DANGEROUS_</code> 命名（CC）</td><td><strong>已对齐</strong></td><td>无</td></tr><tr><td>主提示词 / 压缩提示词分离</td><td><code>getCompressionPrompt</code>（Gemini）</td><td><strong>已对齐</strong></td><td>无</td></tr></tbody></table>
+<hr>
+<h2 id="5-具体优化方案">5. 具体优化方案<a class="anchor" href="#5-具体优化方案" aria-label="锚点">#</a></h2>
+<h3 id="r1-每轮状态改为-messages-增量注入-高">R1　每轮状态改为 messages 增量注入　【高】<a class="anchor" href="#r1-每轮状态改为-messages-增量注入-高" aria-label="锚点">#</a></h3>
+<p><strong>对齐</strong>：Codex CLI <code>build_environment_update_item()</code>。</p>
+<p><strong>改什么</strong>：把 L3（<code>env_info</code>、<code>git_status</code>、<code>task_memory</code>、<code>mcp_instructions</code>、<br><code>deferred_tools_hint</code>）从系统提示词中<strong>移出</strong>，改为：</p>
+<ul><li>会话首轮：在消息流里建立一份基线上下文消息（XML 或标记块）；</li><li>之后每轮：<strong>只追加变化字段</strong>的新消息，不改写已有内容。</li></ul>
+<p><strong>收益</strong>：系统提示词在整段会话内<strong>逐字节不变</strong>。实测每轮重算量从 52,817 字符降到<br><strong>约 300（含 L4 意图块）</strong>——因为易变项不再进入系统提示词。</p>
+<p><strong>风险</strong>：改变模型看到的上下文形态（从「系统提示词里有 git 状态」变成「消息流里有」）。<br>需评估对指令遵循的影响。<strong>这是本方案唯一需要行为回归验证的大改动。</strong></p>
+<p><strong>验收</strong>：连续两轮装配的系统提示词求公共前缀，应等于全长；git 状态变化体现在消息流尾部。</p>
+<h3 id="r2-单条注入内容设硬上限-高-可立刻做">R2　单条注入内容设硬上限　【高·可立刻做】<a class="anchor" href="#r2-单条注入内容设硬上限-高-可立刻做" aria-label="锚点">#</a></h3>
+<p><strong>对齐</strong>：Codex CLI <code>core/context/mod.rs</code> 的「条目 ≤10k tokens；&gt;1k 需人工审查」。</p>
+<p><strong>改什么</strong>：在 <code>promptSectionTaxonomy.js</code> 给每个 section 增加 <code>maxTokens</code> 字段，<br>守卫按锚点统计实际大小；超限即红。首当其冲的是 <code># claudeMd</code>（26,378 字符 ≈ 15–20k tokens，<br><strong>超上限约 2 倍</strong>）。</p>
+<p><strong>收益</strong>：立刻暴露最大的单条膨胀源，防止项目文件继续无界增长。</p>
+<p><strong>风险</strong>：可能立即变红（现状确实超限）。对策：先以 WARN 上线，给出「切分或按需注入」的<br>修复指引，再逐步收紧为 ERROR。</p>
+<h3 id="r3-缓存失效归因细化到-段-中">R3　缓存失效归因细化到「段」　【中】<a class="anchor" href="#r3-缓存失效归因细化到-段-中" aria-label="锚点">#</a></h3>
+<blockquote><p>⚠️ <strong>调研修正（2026-09-15）</strong>：初稿写「khy 无任何缓存失效归因能力 → 高」。实施 098 时核查发现<br>khy <strong>早已有</strong> <code>KHY_CACHE_PREFIX_SHAPE</code>（默认开）与 <code>constants/promptPrefixShape.js</code>：<br>每轮对 system / tools 拍 SHA-256 短哈希并跨轮比对，输出 <code>PrefixChangeReasons(['system','tools','order'])</code>，<br>由 <code>cli/cacheWarning.js</code> 展示中文归因。所以差距不是「有没有」，而是<strong>粒度</strong>——<br>只能定位到「系统提示变了」，无法定位到「哪一段变了」。</p></blockquote>
+<p><strong>改什么</strong>：在 <code>promptPrefixShape.js</code> 的 <code>captureShape()</code> 中，用 <code>promptAnchors.parseAnchors(system)</code><br>把系统提示切成段并逐段哈希，塞进快照的 <code>sectionHashes</code>；<code>compareShape()</code> 增加<br><code>reasons: ['section:&lt;id&gt;']</code>。<strong>P0 的锚点正好为它提供了切分依据</strong>——这也是为什么<br>098 §7 的落地顺序把「打锚点」放在最前。</p>
+<p><strong>收益</strong>：把「cache hit 掉了」从现象变成可归因的事实，且归因到具体段。CC 正是靠同类能力发现<br>了「agent 列表占全舰队 cache_creation 的 10.2%」这种反直觉问题。</p>
+<p><strong>风险</strong>：低（纯观测）。但需注意快照体积：35 段 × 16 字符哈希 ≈ 560 字节/轮，可接受。</p>
+<p><strong>验收</strong>：人为改动 <code>AGENTS.md</code> 后，归因输出应点名 <code>project_instructions</code>，而非笼统的「系统提示」。</p>
+<h3 id="r4-工具使用纪律下沉到工具-description-中-可立刻做">R4　工具使用纪律下沉到工具 description　【中·可立刻做】<a class="anchor" href="#r4-工具使用纪律下沉到工具-description-中-可立刻做" aria-label="锚点">#</a></h3>
+<p><strong>对齐</strong>：Gemini CLI（<code>packages/core/src/tools/shell.md</code> + <code>shell.ts</code> 同址）、opencode（<code>Tool.define</code> 内联）。</p>
+<p><strong>改什么</strong>：khy 的命令执行纪律目前是<strong>双份</strong>——<code>getCommandExecutionSection()</code>（3,104 字符，<br>含 <code>buildTransparencyItem()</code> 与工具超时教学）与 <code>tools/shellCommand.js</code> 的实现内描述。<br>把细则下沉到各工具的 description，system 侧只留<strong>跨工具的通用原则</strong>（「有专用工具就用专用工具」<br>一类）。工具提示天然随工具面一起被缓存，且<strong>距离决策点更近</strong>。</p>
+<p><strong>收益</strong>：直接削减静态段；也顺带缓解 098 §1.3 测到的「优先专用工具而非 shell」在<br>2 个段重复（1,421 + 196 字符）的问题。</p>
+<p><strong>风险</strong>：需确认工具 description 的注入路径在所有 provider 上都可靠（khy 的本地文本协议路径<br><code>getToolDefinitions()</code> 与原生 function-calling 路径要一致）。</p>
+<h3 id="r5-前缀稳定性测试套件-高-成本低">R5　前缀稳定性测试套件　【高·成本低】<a class="anchor" href="#r5-前缀稳定性测试套件-高-成本低" aria-label="锚点">#</a></h3>
+<p><strong>对齐</strong>：Codex CLI <code>codex-rs/core/tests/suite/prompt_caching.rs</code>。</p>
+<p><strong>改什么</strong>：新增 <code>services/backend/tests/promptPrefixStability.test.js</code>，断言：</p>
+<ol><li>同会话连续两次装配（无用户显式切换）的<strong>公共前缀 = 整个静态前缀长度</strong>；</li><li>工具池顺序稳定（与 CC <code>assembleToolPool</code> 的排序契约对齐）；</li><li><strong>无时钟/日期进入静态前缀</strong>（防 CC 记录过的「跨零点破裂」类问题）；</li><li>切换 output style / 工具档位后，前缀失效范围<strong>恰为</strong>该层起点。</li></ol>
+<p><strong>收益</strong>：把「前缀不被击穿」从口头约定变成 CI 可拦的红线。</p>
+<h3 id="r6-装配产物可检视开关-中">R6　装配产物可检视开关　【中】<a class="anchor" href="#r6-装配产物可检视开关-中" aria-label="锚点">#</a></h3>
+<p><strong>对齐</strong>：Gemini CLI <code>GEMINI_WRITE_SYSTEM_MD</code>；dsh 的 Trajectory 按来源展示。</p>
+<p><strong>改什么</strong>：新增 <code>khy prompt --dump</code>（或 <code>KHY_WRITE_SYSTEM_MD=&lt;path&gt;</code>）把<strong>装配完成</strong>的<br>提示词按锚点分层写盘，并打印每层字节数；配合 R3 输出缓存命中归因。</p>
+<p><strong>收益</strong>：把「44 个段、21 个装配槽、66,780 字符」这种问题从「靠读代码推断」变成「一条命令」。</p>
+<h3 id="r7-指令文件按需注入-中">R7　指令文件按需注入　【中】<a class="anchor" href="#r7-指令文件按需注入-中" aria-label="锚点">#</a></h3>
+<p><strong>对齐</strong>：opencode 的「工具执行时向上发现指令文件 + 每消息 claim 防重复」。</p>
+<p><strong>改什么</strong>：保留首轮注入项目根章程，但<strong>子目录级</strong>的约定改为：Read/Edit 工具触达该目录时，<br>向上查找尚未注入的指令文件并随<strong>工具输出</strong>注入。</p>
+<p><strong>收益</strong>：直接压制 <code>claudeMd</code> 类膨胀（khy 的 26,378 字符里有相当部分是子目录级约定）；<br>与 C4「条目有界」形成互补。</p>
+<p><strong>风险</strong>：语义从「一开始就知道」变成「走到才知道」。对强模型可行，<strong>对低档模型建议保持全量</strong>。</p>
+<h3 id="r8-模型差异文件化-中">R8　模型差异文件化　【中】<a class="anchor" href="#r8-模型差异文件化-中" aria-label="锚点">#</a></h3>
+<p><strong>对齐</strong>：Codex CLI（<code>prompt.md</code> + <code>gpt_5_codex_prompt.md</code> + <code>gpt_5_1_prompt.md</code> …）。</p>
+<p><strong>改什么</strong>：把 <code>getSystemPrompt</code> 里的 <code>isLowTierModel</code> / <code>hasNativeToolUse</code> / <code>compactPrompt</code><br>分支，外显为「基座提示词文件 + 模型族变体文件」，选择逻辑按模型族集中一处<br>（对齐 opencode 的 <code>SystemPrompt.provider(model)</code>）。</p>
+<p><strong>收益</strong>：模型差异变得可 diff、可评审、可单独回滚；装配器瘦身。</p>
+<h3 id="r9-输出与格式约束数值化-低-成本极低">R9　输出与格式约束数值化　【低·成本极低】<a class="anchor" href="#r9-输出与格式约束数值化-低-成本极低" aria-label="锚点">#</a></h3>
+<p><strong>对齐</strong>：Claude Code 的 <code>≤25 words</code> / <code>≤100 words</code>（内部实测 -1.2% 输出 token）。</p>
+<p><strong>改什么</strong>：<code>getUnifiedOutputAndToneSection</code> 现在只有 &quot;Your responses should be short and concise.&quot;，<br>补上可度量的上限；同时把 098 §6.4 的去重结果做成<strong>首尾呼应</strong>（Gemini 的 book-ending）：<br>L0 开头放总则、L0 结尾重述红线——<strong>两处都在静态区，不破坏前缀</strong>，取代现在散在 13 处的重复。</p>
+<hr>
+<h2 id="6-对-design-arch-098-的修正">6. 对 [DESIGN-ARCH-098] 的修正<a class="anchor" href="#6-对-design-arch-098-的修正" aria-label="锚点">#</a></h2>
+<p>调研后需修正 098 的一处取舍（其余结论得到强化）：</p>
+<table><thead><tr><th>098 原方案</th><th>修正后</th><th>依据</th></tr></thead><tbody><tr><td>§3 把项目章程（<code>claudeMd</code> 稳定部分）搬进 <strong>L1 前缀</strong></td><td>改为 <strong>R1：走 messages 增量注入</strong>，L1 前缀只保留真正会话级且不参数化的项（语言/风格/模型档位/工具档位）</td><td>分歧 D1：khy 走 relay 路径、无全局共享缓存，前缀方案与 messages 方案命中率等价，但 messages 方案下<strong>前缀永不因项目文件改动而作废</strong></td></tr><tr><td>§3 把 <code>using_your_tools</code> 等派生内容留在 L1 前缀</td><td>保持 L1，但<strong>必须无参数化</strong>（<code>enabledTools</code> 变化即视为用户显式切换，允许一次性失效）</td><td>D2：CC 的严格版判据</td></tr><tr><td>§7 改动 9「先只加新鲜度戳，切分单独立项」</td><td><strong>维持</strong>（这是全案最高风险项），并补 R2 硬上限 + R7 按需注入作为切分的替代路径</td><td></td></tr></tbody></table>
+<p><strong>被调研强化的结论</strong>（无需修改）：</p>
+<ul><li>098 的<strong>锚点方案</strong>（<code>&lt;!-- khy:lN --&gt;</code>）与 Codex v0.123 的 <code>START_MARKER/END_MARKER</code> 同构，</li></ul>
+<p>且 Codex 多给了一条收益：<strong>压缩期可选择性驱逐单个片段</strong>。</p>
+<ul><li>098 的 <strong>L4 意图块</strong>与 Codex 的 <code>ModelSwitchInstructions</code> / <code>CollaborationModeInstructions</code></li></ul>
+<p>属同类（把「本轮模式」显式化为可寻址片段）。</p>
+<ul><li>098 的 <strong>L0/L1 切分</strong>与 Gemini CLI 社区独立提出的「固件层 vs 项目层」结论一致。</li><li>098 的<strong>每轮重算预算 ≤8k</strong> 目标偏保守：若采纳 R1，可收紧到 <strong>≤300 字符</strong>（只剩意图块）。</li></ul>
+<hr>
+<h2 id="7-落地顺序">7. 落地顺序<a class="anchor" href="#7-落地顺序" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">第一批（零/低风险，立刻可做，不改产物语义）
+  R2 硬上限（先 WARN） + R3 缓存失效监控 + R5 前缀稳定性测试 + R6 dump 开关
+  验收：四个观测面就位，后续每一项改动都可被量化
+
+第二批（需要一次行为回归）
+  R1 每轮状态改 messages 增量注入  ← 收益最大、风险最高，单独门控
+  R1 通过后，098 的 P2（boundary 后移）可大幅简化
+
+第三批（结构调整）
+  R4 工具纪律下沉 + R9 数值化与首尾呼应 + R8 模型差异文件化
+
+第四批（长线，独立立项）
+  R7 指令文件按需注入（含 claudeMd 切分）  ← 全案最高风险，见 098 §10</code></pre>
+<p><strong>顺序理由</strong>：先建立<strong>度量</strong>（R2/R3/R5/R6），再动<strong>结构</strong>。CC 敢把 agent 列表搬出 system，<br>前提是它有 <code>promptCacheBreakDetection.ts</code> 能立刻看到影响；khy 缺的正是这个前提。</p>
+<hr>
+<h2 id="8-不适用的照搬-明确划界">8. 不适用的照搬（明确划界）<a class="anchor" href="#8-不适用的照搬-明确划界" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>同行做法</th><th>为什么 khy 不宜直接照搬</th></tr></thead><tbody><tr><td>CC 的「全局共享前缀缓存」语义</td><td>khy 走自建 relay 路径，<code>cache_control</code> 边界标记在 <code>_messageBuilder</code> 被剥掉，命中率靠 provider 最长前缀匹配——<strong>没有跨用户共享缓存</strong>这回事。照搬 boundary 的「全局共享」语义会得出错误结论</td></tr><tr><td>CC 的 <code>shouldUseGlobalCacheScope()</code> 条件插标记</td><td>khy 的路径矩阵更复杂（原生 / relay / 本地文本协议 / codex 适配器），标记语义需按路径分别定义，不能单开关</td></tr><tr><td>dsh 的「一切皆插件」</td><td>dsh 是 Agent Runtime 定位，插件化是它的产品命题。khy 的提示词装配不需要引入插件运行时——治理复杂度远超收益</td></tr><tr><td>dsh 的 PTC（程序化工具调用）</td><td>需要 <code>Code Mode SDK</code> 与沙箱执行环境，是<strong>机制</strong>级改造而非提示词改造。但值得单独立项评估：它比散文规则（「尽量并行调用工具」）更能真正省 token</td></tr><tr><td>opencode 的「不做冲突消解，全部保留」</td><td>khy 的指令注入链已有优先级（<code>KHY &gt; CLAUDE &gt; AGENTS</code>），且实测 <code>claudeMd</code> 已到 26k 字符。再叠加无上限合并会加速膨胀</td></tr><tr><td>Codex 的 <code>≤10k tokens</code> 绝对值</td><td>数值本身依赖其工具面与模型；khy 应先用 <strong>WARN + 分布统计</strong>建立自己的基线，再定阈值</td></tr></tbody></table>
+<hr>
+<h2 id="9-参考来源">9. 参考来源<a class="anchor" href="#9-参考来源" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>来源</th><th>用于</th></tr></thead><tbody><tr><td><code>openai/codex</code>（Apache-2.0）：<code>codex-rs/core/context/mod.rs</code>、<code>codex-rs/core/src/codex.rs</code>、<code>codex-rs/core/src/user_instructions.rs</code>、<code>codex-rs/core/src/project_doc.rs</code>、<code>codex-rs/core/src/environment_context.rs</code>、<code>codex-rs/core/tests/suite/prompt_caching.rs</code>、<code>codex-rs/core/prompt.md</code> 及 <code>gpt_5_*_prompt.md</code></td><td>§2.3、§3、R1/R2/R5/R8</td></tr><tr><td><code>sst/opencode</code>：<code>packages/opencode/src/session/system.ts</code>、<code>session/prompt/*.txt</code>、<code>session/instruction.ts</code>、<code>tool/tool.ts</code>、<code>agent/agent.ts</code></td><td>§2.2、R7、D3</td></tr><tr><td><code>google-gemini/gemini-cli</code>：<code>packages/core/src/core/prompts.ts</code>、<code>packages/core/src/prompts/promptProvider.ts</code>、<code>packages/core/src/prompts/snippets.ts</code>、<code>packages/core/src/tools/shell.md</code></td><td>§2.4、R4/R6/R9、D3</td></tr><tr><td><code>deepseek-ai/deepseek-harness</code>（MIT，v0.1 预览）：<code>core/system-prompt</code>、<code>core/session</code>（<code>deriveMessages</code>）、<code>core/agent-loop</code>；官方文档站与 Cordis 论文</td><td>§2.5、共识 C6、§8</td></tr><tr><td>Claude Code 源码级第三方分析（v2.1.88，<strong>B 级证据</strong>）：<code>perfecxion.ai</code> 装配管线分析、<code>claudecodecamp.com</code> 请求结构实测、<code>claude-wiki.com</code> 装配条目、dev.to 源码拆解、腾讯云缓存实测</td><td>§2.1、R3、R9、D2</td></tr><tr><td>khy-os 自身：<code>[DESIGN-ARCH-098]</code>、<code>[DESIGN-PROMPT-002]</code>、<code>services/backend/src/constants/promptSectionTaxonomy.js</code>、<code>prompts.js</code>、<code>promptCacheOrder.js</code>、<code>tools/index.js::assembleToolPool()</code></td><td>§4 差距对照、§6 修正</td></tr></tbody></table>
+<hr>
+<h2 id="10-版本历史">10. 版本历史<a class="anchor" href="#10-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-15</td><td>首版：横评 CC / opencode / Codex / Gemini / dsh 五家，归纳六共识三分歧，给出 R1–R9 对齐清单与对 098 的修正</td></tr></tbody></table>
+<hr>
+<p><em>本文是调研与方案；实施后应同步更新 [<code>[DESIGN-ARCH-098]</code>]([DESIGN-ARCH-098] 系统提示词结构重设计-静态动态分层与缓存优化方案.md) 与分层规范真源。</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-098] 系统提示词结构重设计-静态动态分层与缓存优化方案.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-098] 系统提示词结构重设计：静态/动态分层与缓存优化方案</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-100] 模型列表真值校验与过滤规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-100] 模型列表真值校验与过滤规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-099] 提示词架构横向调研与khy-os对齐方案.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

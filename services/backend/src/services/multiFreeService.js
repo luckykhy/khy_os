@@ -79,9 +79,16 @@ const KEEP_ALIVE_MAX_FREE_SOCKETS = 5;
  * 单一真源在 gateway/modelToolingCapability(与系统提示词教学门同源);
  * 门控关 → 字节回退到旧内联名字正则。
  *
+ * 两个输入维度(2026-09-23 起判定改为「只认正面证据」,见 BUG-014):
+ *   - measured(模型维):实测裁决。'text' 才剥、'native' 不剥、没有 → 发。
+ *   - routeRejects(通道维):该端点被记为「带 tools 被拒、去掉 tools 成功」→ 剥。
+ * **名字启发不再决定这里**(旧内联正则保留只是门控关闭时的字节回退)。
  * @param {string} model
  * @param {object} opts
  * @param {boolean} [opts._toolCapProbe] - 能力探测必须真发 tools,绝不剥离
+ * @param {string} [opts.provider] - 通道身份的一部分(服务商模板名)
+ * @param {string} [opts.endpoint] - 通道身份的一部分(端点,取主机)
+ * @param {string} [opts.adapterKey] - 通道身份的一部分(适配器键,可得时优先于 provider)
  * @returns {boolean} true=应剥离 tools(消息中的工具块须内联为文本)
  */
 function _decideStripTools(model, opts = {}) {
@@ -92,12 +99,34 @@ function _decideStripTools(model, opts = {}) {
     const _toolCap = require('./gateway/modelToolingCapability');
     if (_toolCap.isEnabled()) {
       let _measured = null;
+      let _routeRejects = false;
+      let _challenge = false;
       try {
-        _measured = require('./gateway/toolCapabilityStore').getVerdict(model);
+        const _store = require('./gateway/toolCapabilityStore');
+        // 按来源读(P4):text 是负面证据,只在测出它的那条适配器上生效;native 全局共享。
+        // 不按来源读 = 一条通道的负面结论替所有通道做决定(BUG-014 的形态)。
+        _measured = _store.getVerdictFor(model, { adapter: opts.adapterKey });
+        const _routeParts = {
+          adapter: opts.adapterKey,
+          provider: opts.provider,
+          endpoint: opts.endpoint,
+          model,
+        };
+        _routeRejects = _store.routeRejectsToolsFor(_routeParts);
+        // 隔离式挑战(P3):被剥离的模型每 N 次请求放行一次原生,好让模型有机会推翻判定。
+        // 通道已被记为拒收时不挑战 —— 那是通道的定论,改由它自己的 TTL 到期重试。
+        if (!_routeRejects) {
+          const _routeId = require('./gateway/capabilityModelKey').routeKey(_routeParts);
+          _challenge = require('./gateway/toolChallengeCadence').shouldChallenge(_routeId);
+        }
       } catch {
         /* best effort */
       }
-      return _toolCap.shouldStripUpstreamTools(model, { measured: _measured });
+      return _toolCap.shouldStripUpstreamTools(model, {
+        measured: _measured,
+        routeRejects: _routeRejects,
+        challenge: _challenge,
+      });
     }
   } catch {
     /* capability store 不可用 → 名字启发 */
@@ -1068,11 +1097,39 @@ class MultiFreeService {
       }
     }
 
+    // OpenCode Zen free gate: fingerprint headers + forced stream:true.
+    // Session/request ids are generated locally (zenGatekeeper) — no shared key.
+    const _zen = (() => {
+      try {
+        return require('./zenGatekeeper').isZenEndpoint(baseUrl);
+      } catch {
+        return false;
+      }
+    })();
+    let _zenHeaders = null;
+    if (_zen) {
+      try {
+        _zenHeaders = require('./zenGatekeeper').buildZenHeaders();
+      } catch {
+        _zenHeaders = null;
+      }
+    }
+    const _chatHeaders = () => ({
+      ...( _zenHeaders || {}),
+      Authorization: `Bearer ${provider.apiKey}`,
+      'Content-Type': 'application/json',
+    });
+
     // 小模型判定(单一真源):决定 (a) 是否剥离 tools 声明 (b) 工具块消息如何降级。
     // 必须在消息转换之前判定——若剥离 tools 却仍用 hasTools=true 转换,消息里会残留
     // role:'tool'/'tool_calls' 而顶层无 tools 声明,严格 OpenAI 兼容端点(stepfun
     // step_plan 等)返回 HTTP 400 "Unrecognized chat message"。
-    const _isSmallModel = _decideStripTools(model, opts);
+    // 通道身份随 opts 传入:判定要看的是「这条端点收不收 tools」,不只「这个模型行不行」。
+    const _isSmallModel = _decideStripTools(model, {
+      ...opts,
+      provider: String((provider && (provider.name || provider.id)) || ''),
+      endpoint: String((provider && provider.baseUrl) || ''),
+    });
 
     // Convert Anthropic tool_use/tool_result content blocks to OpenAI format
     // (structuredMessages from ai.js may contain tool_use/tool_result arrays).
@@ -1100,7 +1157,7 @@ class MultiFreeService {
     let _toolsSkippedReason = '';
     if (opts.tools && opts.tools.length > 0) {
       if (_isSmallModel) {
-        _toolsSkippedReason = `模型 ${model} 不支持工具调用 (function calling)，将以纯文本模式回答。如需使用工具，请切换到支持 function calling 的模型。`;
+        _toolsSkippedReason = require('./gateway/modelToolingCapability').stripToolsNotice(model);
         if (opts.onChunk) {
           opts.onChunk({ type: 'notice', text: _toolsSkippedReason });
         }
@@ -1120,6 +1177,35 @@ class MultiFreeService {
     // Fires on 400 when the body carries tools and/or stream_options; strips whichever exist so
     // the request can succeed (API key is valid — only the payload was rejected). Stripping
     // stream_options degrades usage reporting to today's behavior (ctx may stay 0), not a regression.
+    //
+    // 通道拒收的记忆(P2):「带 tools 被拒 → 去掉 tools 重试 → 成功」是一次**有对照的证据**,
+    // 证明这条端点收不了 tools —— 那是**端点属性**,不是模型属性,所以按通道键记(见
+    // toolCapabilityStore.recordRouteRejectsFrom)。记下之后同一个通道下一轮会在剥离门直接
+    // 剥掉,不再重复付这个 400 往返。
+    //
+    // 只在**重试真的成功**之后才记:`_toolsStrippedForRetry` 由 _retryWithoutTools 置起,
+    // 成功路径消费它。仅凭「看到 400 且当时带着 tools」不足以下结论 —— 那个 400 可能因为
+    // 别的字段,归因错误会把一条正常通道永久标成拒收。
+    let _toolsStrippedForRetry = false;
+    const _routeIdentity = () => ({
+      provider: String((provider && (provider.name || provider.id)) || ''),
+      endpoint: String((provider && provider.baseUrl) || ''),
+      model,
+    });
+    const _rememberRouteRejectsTools = () => {
+      if (!_toolsStrippedForRetry) {
+        return;
+      }
+      _toolsStrippedForRetry = false; // 一次证据只记一次
+      try {
+        require('./gateway/toolCapabilityStore').recordRouteRejectsFrom({
+          ..._routeIdentity(),
+          source: 'http-400',
+        });
+      } catch {
+        /* best effort —— 记忆失败绝不影响本次请求 */
+      }
+    };
     const _retryWithoutTools = async (err) => {
       if (err.response?.status !== 400) {
         return null;
@@ -1131,6 +1217,7 @@ class MultiFreeService {
       if (retryBody.tools) {
         delete retryBody.tools;
         delete retryBody.tool_choice;
+        _toolsStrippedForRetry = true;
         if (opts.onChunk) {
           opts.onChunk({
             type: 'notice',
@@ -1147,7 +1234,12 @@ class MultiFreeService {
     };
 
     // ── Streaming path: SSE for real-time output ────────────────────
-    if (typeof opts.onChunk === 'function') {
+    // Zen free gate requires stream:true even when the caller did not pass onChunk.
+    // Provide a no-op so downstream chunk emissions stay safe when Zen forces the path.
+    if (_zen && typeof opts.onChunk !== 'function') {
+      opts = { ...opts, onChunk() {} };
+    }
+    if (typeof opts.onChunk === 'function' || _zen) {
       requestBody.stream = true;
       // Opt into usage reporting on the stream. OpenAI-compatible gateways (agnes, …) only emit a
       // trailing `usage` chunk when the request carries stream_options.include_usage — without it
@@ -1165,10 +1257,7 @@ class MultiFreeService {
           `${baseUrl}/v1/chat/completions`,
           requestBody,
           {
-            headers: {
-              Authorization: `Bearer ${provider.apiKey}`,
-              'Content-Type': 'application/json',
-            },
+            headers: _chatHeaders(),
             timeout: opts.timeoutMs || 120000,
             responseType: 'stream',
             signal: opts.signal,
@@ -1185,10 +1274,7 @@ class MultiFreeService {
             `${baseUrl}/v1/chat/completions`,
             retryBody,
             {
-              headers: {
-                Authorization: `Bearer ${provider.apiKey}`,
-                'Content-Type': 'application/json',
-              },
+              headers: _chatHeaders(),
               timeout: opts.timeoutMs || 120000,
               responseType: 'stream',
               signal: opts.signal,
@@ -1200,6 +1286,9 @@ class MultiFreeService {
           throw err;
         }
       }
+      // 走到这里说明请求拿到了响应。若本次是「去掉 tools 之后重试成功」,那条对照证据成立
+      // → 记住这条通道拒收 tools(下一轮剥离门直接剥,不再重复付 400 往返)。
+      _rememberRouteRejectsTools();
 
       let content = '';
       const toolCallAccum = {}; // index → {name, arguments}
@@ -1350,16 +1439,14 @@ class MultiFreeService {
     }
 
     // ── Non-streaming fallback ──────────────────────────────────────
+    // Zen never reaches here: _zen forces the streaming branch above.
     let response;
     try {
       response = await postWithDeadConnRetry(
         `${baseUrl}/v1/chat/completions`,
         requestBody,
         {
-          headers: {
-            Authorization: `Bearer ${provider.apiKey}`,
-            'Content-Type': 'application/json',
-          },
+          headers: _chatHeaders(),
           timeout: 30000,
           ..._proxyCfg,
         },
@@ -1372,10 +1459,7 @@ class MultiFreeService {
           `${baseUrl}/v1/chat/completions`,
           retryBody,
           {
-            headers: {
-              Authorization: `Bearer ${provider.apiKey}`,
-              'Content-Type': 'application/json',
-            },
+            headers: _chatHeaders(),
             timeout: 30000,
             ..._proxyCfg,
           },
@@ -1385,6 +1469,8 @@ class MultiFreeService {
         throw err;
       }
     }
+    // 同流式路径:去掉 tools 后重试成功 = 这条通道拒收 tools 的对照证据。
+    _rememberRouteRejectsTools();
 
     const msg = response.data?.choices?.[0]?.message;
     const content = msg?.content || '';

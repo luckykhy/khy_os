@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 00_INDEX_报告-分类索引.md -->
+<title>00INDEX 报告分类索引 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>00INDEX 报告分类索引</div>
+      <header class="hero reveal"><h1>00INDEX 报告分类索引</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#00-index-报告分类索引">00_INDEX 报告分类索引</a></li><li class="lvl-2"><a href="#一-分类内容边界">一、分类内容边界</a></li><li class="lvl-2"><a href="#二-文件清单">二、文件清单</a></li><li class="lvl-3"><a href="#2-1-顶层人工报告-21-份">2.1 顶层人工报告（21 份）</a></li><li class="lvl-3"><a href="#2-2-历史-已归档一次性人工报告-5-份">2.2 `历史/` —— 已归档一次性人工报告（5 份）</a></li><li class="lvl-3"><a href="#2-3-对齐-claude-code-vs-khy-os-对齐工作线-7-份">2.3 `对齐/` —— Claude Code vs khy-os 对齐工作线（7 份）</a></li><li class="lvl-3"><a href="#2-4-metrics-机器生成的-json-快照">2.4 `metrics/` —— 机器生成的 JSON 快照</a></li><li class="lvl-2"><a href="#三-跨分类关联指引">三、跨分类关联指引</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="00-index-报告分类索引">00_INDEX 报告分类索引<a class="anchor" href="#00-index-报告分类索引" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>索引总领文件</strong> · 本目录唯一入口 · 排序首位 · 结构遵循 [MGMT-STD-001] 第三章</p></blockquote>
+<h2 id="一-分类内容边界">一、分类内容边界<a class="anchor" href="#一-分类内容边界" aria-label="锚点">#</a></h2>
+<p>本目录（<code>docs/11_报告/</code>）收容<strong>一次性人工快照报告</strong>（写完即冻结、不再维护的诊断/规模/调研报告）<br>与少量调研件；机器生成的 JSON 快照一律归 <code>metrics/</code> 子目录，不再与人工报告混排。<br><code>历史/</code> 子目录存放已归档的一次性报告；<code>metrics/</code> 存放机器快照（含历史时间戳快照）。</p>
+<blockquote><p>2026-09-15 整理：9 份 <code>技能*.json</code> 快照移入 <code>metrics/</code>；<code>历史/fix_diff.txt</code>（44 行临时 diff 片段）与<code>历史/stash_patch.txt</code>（137,128 行 / 5.4 MB 的 git stash 转储）已删除——两者是 git 临时制品，非文档，后者属仓库体积膨胀源。</p></blockquote>
+<p><strong>边界</strong>：现行手册、指南、规范<strong>不</strong>放这里——它们归对应的 <code>NN_STAGE_中文/</code> 阶段目录。<br>判据是「这份文档还会不会被更新」：会更新的是手册，不会更新的是快照。</p>
+<h2 id="二-文件清单">二、文件清单<a class="anchor" href="#二-文件清单" aria-label="锚点">#</a></h2>
+<blockquote><p>完整性声明：2026-09-16 全目录实测对账，本目录（含子目录）共 <strong>20 份</strong>人工报告 + 本索引。<br>此前本表只登记 4 条，<code>REPO-SIZE-MANAGEMENT-PLAN.md</code>、<code>[RESEARCH-001]</code>、两份 <code>NIGHTSHIFT-*</code>、<br><code>历史/</code> 中的 <code>2026-09-*</code> 以及整个 <code>对齐/</code> 子树（7 份）均<strong>长期漏登记</strong>，本轮补齐。</p>
+<p>2026-09-17 增补：自 <code>_产物/</code> 分发整理迁入 12 份（<code>[RESEARCH-003]</code>~<code>[RESEARCH-014]</code>），<br>均为一次性人工快照，随迁同名 <code>.html</code> 孪生件。整理依据 <code>[DESIGN-LAY-003]</code>（LAYOUT-004），<br>台账见 <code>.khyos/housekeeping/2026-09-17/manifest.json</code>。</p>
+<p>2026-09-18 增补：再自 <code>_产物/</code> 迁入 3 份（<code>[RESEARCH-015]</code>~<code>[RESEARCH-017]</code>），<br>台账见 <code>.khyos/housekeeping/2026-09-18/manifest.json</code>。</p></blockquote>
+<h3 id="2-1-顶层人工报告-21-份">2.1 顶层人工报告（21 份）<a class="anchor" href="#2-1-顶层人工报告-21-份" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件名(含编号)</th><th>核心职责(10字内)</th><th>状态</th></tr></thead><tbody><tr><td>[RESEARCH-001] TUI微交互调研_剪贴板反馈_Toast_滚动指示器_特性门控</td><td>TUI微交互调研</td><td>存档</td></tr><tr><td>[RESEARCH-002] 概念入门完成度报告</td><td>概念文档站完成度</td><td>存档</td></tr><tr><td>[RESEARCH-003] khy-os-协议与工程规范深度调研报告-2026-09-15</td><td>协议与规范深度调研</td><td>存档</td></tr><tr><td>[RESEARCH-004] khy-os-协议与工程规范分步改进计划-2026-09-15</td><td>协议规范分步改进计划</td><td>存档</td></tr><tr><td>[RESEARCH-005] khy-os-能力缺口闭环执行计划-2026-09-15</td><td>能力缺口闭环执行计划</td><td>存档</td></tr><tr><td>[RESEARCH-006] khy-os-规则合规检查报告-2026-09-15</td><td>全仓规则合规检查</td><td>存档</td></tr><tr><td>[RESEARCH-007] khy-os-规范合规审计报告-2026-09-15</td><td>第一方源码规范审计</td><td>存档</td></tr><tr><td>[RESEARCH-008] khy-os-不足诊断与自对抗式设计方案</td><td>全量不足诊断与对抗设计</td><td>存档</td></tr><tr><td>[RESEARCH-009] khy-os-深度不足诊断与对抗式修复-第二轮</td><td>深度不足诊断（二轮）</td><td>存档</td></tr><tr><td>[RESEARCH-010] khy-os-冗余诊断与对抗式精简方案-第三轮</td><td>冗余诊断精简（三轮）</td><td>存档</td></tr><tr><td>[RESEARCH-011] khy-os-用户体感诊断与修复-第四轮</td><td>用户体感诊断（四轮）</td><td>存档</td></tr><tr><td>[RESEARCH-012] khy-os-用户体感诊断-第五轮</td><td>用户体感诊断（五轮）</td><td>存档</td></tr><tr><td>[RESEARCH-013] khy-os-三轮对抗式诊断与修复总结</td><td>三轮对抗诊断总结</td><td>存档</td></tr><tr><td>[RESEARCH-014] khy-os-四轮对抗式诊断与修复-最终总结</td><td>四轮对抗诊断总结</td><td>存档</td></tr><tr><td>[RESEARCH-015] HQ合并入khyos-可行性调研-2026-09-17</td><td>HQ 并入可行性调研</td><td>存档</td></tr><tr><td>[RESEARCH-016] HQ丢弃-多机协作保留-方案-2026-09-17</td><td>HQ 能力吸收方案定案</td><td>存档</td></tr><tr><td>[RESEARCH-017] 防止越改越差-方案-2026-09-17</td><td>写入前拦截棘轮方案</td><td>存档</td></tr><tr><td>TUI-AI不回复问题根因总结</td><td>TUI无响应根因</td><td>存档</td></tr><tr><td>REPO-SIZE-MANAGEMENT-PLAN</td><td>项目体积管理完整方案</td><td>存档</td></tr><tr><td>2026-09-16_khy-os体积构成分析与瘦身方案</td><td>仓库体积实测与瘦身方案</td><td>存档</td></tr><tr><td>2026-09-16_三项门禁缺口整改方案</td><td>接线·体积守卫·git 维护方案</td><td>存档</td></tr><tr><td>NIGHTSHIFT-2026-09-13-夜班组值简报</td><td>夜班组值简报</td><td>存档</td></tr><tr><td>NIGHTSHIFT-2026-09-15-夜班组值简报</td><td>夜班组值简报</td><td>存档</td></tr><tr><td>00_INDEX_报告-分类索引</td><td>本目录唯一入口</td><td>存档</td></tr></tbody></table>
+<h3 id="2-2-历史-已归档一次性人工报告-5-份">2.2 <code>历史/</code> —— 已归档一次性人工报告（5 份）<a class="anchor" href="#2-2-历史-已归档一次性人工报告-5-份" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件名</th><th>核心职责(10字内)</th><th>存档</th><th>状态</th></tr></thead><tbody><tr><td>2026-08-根目录归档-修复记录.md</td><td>6 份修复日志合并</td><td>存档</td><td>存档</td></tr><tr><td>2026-08-部署报告.md</td><td>一次性部署快照</td><td>存档</td><td>存档</td></tr><tr><td>2026-08-项目规模报告.md</td><td>一次性规模快照</td><td>存档</td><td>存档</td></tr><tr><td>2026-08-依赖削减调研报告.md</td><td>依赖削减调研</td><td>存档</td><td>存档</td></tr><tr><td>2026-09-根目录补丁存档-归档记录.md</td><td>根目录补丁归档记录</td><td>存档</td><td>存档</td></tr></tbody></table>
+<h3 id="2-3-对齐-claude-code-vs-khy-os-对齐工作线-7-份">2.3 <code>对齐/</code> —— Claude Code vs khy-os 对齐工作线（7 份）<a class="anchor" href="#2-3-对齐-claude-code-vs-khy-os-对齐工作线-7-份" aria-label="锚点">#</a></h3>
+<p><code>对齐/报告/</code>（6 份，按日期倒序阅读）</p>
+<table><thead><tr><th>文件名</th><th>核心职责(10字内)</th><th>状态</th></tr></thead><tbody><tr><td>2026-09-15_claude_code_vs_khyos对齐报告.md</td><td>对齐巡检（最新）</td><td>存档</td></tr><tr><td>2026-09-14_claude_code_vs_khyos对齐报告.md</td><td>对齐巡检</td><td>存档</td></tr><tr><td>2026-09-14_根因诊断与修复方案.md</td><td>对齐缺口根因诊断</td><td>存档</td></tr><tr><td>2026-09-14_前端启动速度错误稳定性检查.md</td><td>前端启动与稳定性</td><td>存档</td></tr><tr><td>2026-09-14_TUI启动速度错误稳定性检查.md</td><td>TUI 启动与稳定性</td><td>存档</td></tr><tr><td>2026-09-13_claude_code_vs_khyos对齐报告.md</td><td>对齐巡检（首份）</td><td>存档</td></tr></tbody></table>
+<p><code>对齐/待办与进度/</code>（1 份）</p>
+<table><thead><tr><th>文件名</th><th>核心职责(10字内)</th><th>状态</th></tr></thead><tbody><tr><td>2026-07-11_claude_code_vs_khyos对齐任务单.md</td><td>对齐任务单</td><td>存档</td></tr></tbody></table>
+<h3 id="2-4-metrics-机器生成的-json-快照">2.4 <code>metrics/</code> —— 机器生成的 JSON 快照<a class="anchor" href="#2-4-metrics-机器生成的-json-快照" aria-label="锚点">#</a></h3>
+<p>最新 + 历史时间戳快照。<code>技能评估-*.json</code> / <code>技能场景评估-*.json</code> 等为机器生成，<strong>不逐个登记</strong>（2026-09-15 自本目录顶层移入）。</p>
+<h2 id="三-跨分类关联指引">三、跨分类关联指引<a class="anchor" href="#三-跨分类关联指引" aria-label="锚点">#</a></h2>
+<ul><li>文档总入口：<code>docs/00_INDEX_文档索引.md</code>。</li><li>评估对应的治理与对标：<code>docs/08_MGMT_项目管理/</code>。</li></ul>
+      </article>
+      <nav class="pager"><span></span><a class="next" href="../../docs/11_报告/对齐/报告/2026-09-13_claude_code_vs_khyos对齐报告.html"><div class="dir">下一篇 →</div><div class="ttl">2026-09-13 Claude Code vs khy-os 终端对齐报告（第 1 次运行）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/11_报告/00_INDEX_报告-分类索引.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

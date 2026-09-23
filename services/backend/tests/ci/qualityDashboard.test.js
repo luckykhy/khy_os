@@ -12,7 +12,7 @@ const { execSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '../../../..');
 
 describe('D5: quality dashboard export', () => {
-  const dashboardPath = path.join(ROOT, 'docs', '_报告', '质量看板.json');
+  const dashboardPath = path.join(ROOT, 'docs', '11_报告', 'metrics', '质量看板.json');
 
   test('export-quality-dashboard.js runs without error', () => {
     const healthScript = path.join(ROOT, 'scripts/ci/export-dimension-health.js');
@@ -30,8 +30,8 @@ describe('D5: quality dashboard export', () => {
     const backup = `${evidence}.quality-dashboard-test-backup`;
     fs.renameSync(evidence, backup);
     try {
-      expect(() => execSync(`node ${healthScript}`, { cwd: ROOT, stdio: 'pipe' })).toBe();
-      expect(() => execSync(`node ${dashboardScript}`, { cwd: ROOT, stdio: 'pipe' })).toBe();
+      expect(() => execSync(`node ${healthScript}`, { cwd: ROOT, stdio: 'pipe' })).toThrow();
+      expect(() => execSync(`node ${dashboardScript}`, { cwd: ROOT, stdio: 'pipe' })).toThrow();
     } finally {
       fs.renameSync(backup, evidence);
       execSync(`node ${healthScript}`, { cwd: ROOT, stdio: 'pipe' });
@@ -45,13 +45,13 @@ describe('D5: quality dashboard export', () => {
     expect(data).toHaveProperty('dimensions');
     expect(data).toHaveProperty('checks');
     expect(data).toHaveProperty('exitCriteria');
-    expect(Object.keys(data.dimensions)).toBe(['D1', 'D2', 'D3', 'D4', 'D5']);
+    expect(Object.keys(data.dimensions)).toEqual(['D1', 'D2', 'D3', 'D4', 'D5']);
     for (const dim of Object.values(data.dimensions)) {
       expect(dim).toHaveProperty('score');
       expect(dim).toHaveProperty('name');
       expect(dim.score).toBeGreaterThanOrEqual(2);
     }
-    const health = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs', '_报告', '维度健康.json'), 'utf8'));
+    const health = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs', '11_报告', 'metrics', '维度健康.json'), 'utf8'));
     for (const [dim, entry] of Object.entries(health.dimensions)) {
       expect(data.dimensions[dim].score).toBe(entry.healthy ? 3 : 1);
     }
@@ -60,7 +60,7 @@ describe('D5: quality dashboard export', () => {
 });
 
 describe('D5: dimension health export', () => {
-  const healthPath = path.join(ROOT, 'docs', '_报告', '维度健康.json');
+  const healthPath = path.join(ROOT, 'docs', '11_报告', 'metrics', '维度健康.json');
 
   test('export-dimension-health.js runs without error', () => {
     const script = path.join(ROOT, 'scripts/ci/export-dimension-health.js');
@@ -74,7 +74,7 @@ describe('D5: dimension health export', () => {
     const evidence = path.join(ROOT, 'AGENTS.md');
     const backup = `${evidence}.quality-dashboard-test-backup`;
     fs.renameSync(evidence, backup);
-    try { expect(() => execSync(`node ${script}`, { cwd: ROOT, stdio: 'pipe' })).toBe(); }
+    try { expect(() => execSync(`node ${script}`, { cwd: ROOT, stdio: 'pipe' })).toThrow(); }
     finally { fs.renameSync(backup, evidence); execSync(`node ${script}`, { cwd: ROOT, stdio: 'pipe' }); }
   });
 

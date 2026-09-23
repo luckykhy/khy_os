@@ -113,10 +113,15 @@ function _initDb() {
     return false;
   }
 
-  try {
-    _db = new Database(_dbPath());
-    _db.pragma('journal_mode = WAL');
-    _db.pragma('synchronous = NORMAL');
+  // Bounded retry: two processes opening the shared taskboard.db at the same
+  // time can hit SQLITE_BUSY on open/DDL. Retry a bounded number of times so a
+  // brief startup lock succeeds instead of permanently disabling the board.
+  const MAX_OPEN_ATTEMPTS = 3;
+  for (let attempt = 1; attempt <= MAX_OPEN_ATTEMPTS; attempt += 1) {
+    try {
+      _db = new Database(_dbPath());
+      _db.pragma('journal_mode = WAL');
+      _db.pragma('synchronous = NORMAL');
     // Lower auto-checkpoint threshold (pages) to prevent unbounded WAL growth
     _db.pragma('wal_autocheckpoint = 256');
 
@@ -242,12 +247,44 @@ function _initDb() {
     `);
 
     _available = true;
-  } catch {
+    _registerShutdownHook();
+    return true;
+  } catch (err) {
     _db = null;
+    if (_isBusyError(err) && attempt < MAX_OPEN_ATTEMPTS) {
+      _busyBackoff(attempt);
+      continue; // transient lock — retry the open/DDL (bounded)
+    }
     _available = false;
+    return false;
+  }
   }
 
-  return _available;
+  _available = false;
+  return false;
+}
+
+// True when an error is a transient SQLite busy/lock (retryable), as opposed to
+// a hard failure (missing adapter, bad path) that should disable the board.
+function _isBusyError(err) {
+  if (!err) return false;
+  const code = String(err.code || '');
+  if (code === 'SQLITE_BUSY' || code === 'SQLITE_LOCKED') return true;
+  if (code.startsWith('SQLITE_')) return false; // other SQLITE_* are not busy
+  const msg = String(err.message || '').toLowerCase();
+  return msg.includes('database is locked') || msg.includes('database is busy');
+}
+
+// Short, bounded backoff between busy retries. Synchronous (init is sync); kept
+// tiny so a contended open never blocks the event loop meaningfully.
+function _busyBackoff(attempt) {
+  const ms = Math.min(50 * attempt, 200);
+  try {
+    const buf = new SharedArrayBuffer(4);
+    Atomics.wait(new Int32Array(buf), 0, 0, ms);
+  } catch {
+    /* Atomics.wait unavailable — proceed without a pause */
+  }
 }
 
 function _newId() {
@@ -766,6 +803,53 @@ function _cleanupFile(olderThanMs = 3600000) {
   return removed;
 }
 
+// ── Graceful close (WAL normal-close hook) ───────────────────────────
+// The persistent taskboard.db connection is opened in WAL mode at init
+// and would otherwise stay open until process exit, leaving -wal/-shm
+// sidecars orphaned after a crash or kill. A clean shutdown truncates
+// the WAL and closes the connection so no sidecar outlives the main db.
+
+let _closeHookRegistered = false;
+
+/**
+ * Gracefully close the taskboard DB: truncate the WAL, then close.
+ * Best-effort and idempotent; safe to call multiple times.
+ */
+function closeDb() {
+  if (!_db) {
+    return;
+  }
+  try {
+    _db.pragma('wal_checkpoint(TRUNCATE)');
+  } catch {
+    /* best-effort — close() still flushes the WAL */
+  }
+  try {
+    _db.close();
+  } catch {
+    /* best-effort */
+  }
+  _db = null;
+  _available = false;
+}
+
+/**
+ * Register the close hook with the centralized shutdown manager, once.
+ * Fail-soft: the shutdown module is optional (absent in unit tests).
+ */
+function _registerShutdownHook() {
+  if (_closeHookRegistered) {
+    return;
+  }
+  _closeHookRegistered = true;
+  try {
+    const { addShutdownHook } = require('../bootstrap/shutdown');
+    addShutdownHook('task-board', closeDb);
+  } catch {
+    /* shutdown module optional — closeDb remains available to callers */
+  }
+}
+
 module.exports = {
   createTask,
   getTask,
@@ -781,4 +865,16 @@ module.exports = {
   STATUS,
   LEGACY_TO_CANONICAL,
   CANONICAL_TO_LEGACY,
+  // Test / ops hooks
+  initDb: _initDb,
+  closeDb,
+  _resetForTests,
 };
+
+// Reset module-level DB state so a test can re-run init against a fresh (mocked)
+// adapter. No-ops the cached handle + availability flag.
+function _resetForTests() {
+  _db = null;
+  _available = false;
+  for (const k of Object.keys(_stmts)) delete _stmts[k];
+}

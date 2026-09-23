@@ -1,0 +1,285 @@
+{
+  "version": "1.0",
+  "schema": {
+    "id": "BUG-XXX，自动生成，递增",
+    "title": "一句话描述 Bug",
+    "severity": "P0(阻断)/P1(严重)/P2(一般)/P3(轻微)",
+    "domain": "cli|gateway|services|kernel|frontend|khyquant|platform|packaging",
+    "status": "open -> in_progress -> pending_verify -> closed；旁路: open->wontfix->open, pending_verify->in_progress(打回)",
+    "symptom": "现象：用户看到了什么",
+    "repro": "复现步骤，越具体越好",
+    "suspect_area": "怀疑的模块/文件（可选）",
+    "root_cause": "根因（修复后由 AI 回填）",
+    "fix_summary": "修法摘要（修复后由 AI 回填）",
+    "created": "登记日期",
+    "updated": "最后状态变更日期",
+    "notes": [
+      "按时间追加的工作备注"
+    ]
+  },
+  "next_id": 16,
+  "last_updated": "2026-09-23",
+  "bugs": [
+    {
+      "id": "BUG-001",
+      "title": "质量看板 D1-D5 分数是硬编码常量，exitCriteria.met 恒为 true",
+      "severity": "P1",
+      "domain": "cross",
+      "status": "closed",
+      "symptom": "docs/_报告/质量看板.json 宣称 5 个维度全 3 分、exitCriteria.met=true；同一时刻生成的 docs/_报告/维度健康.json 却报 D5 healthy=false（AGENTS.md 与 export-quality-dashboard.js 被判缺失）。看板与它自己的证据源互相打脸，治理结论不可信。",
+      "repro": "cd <khy-os> && node scripts/ci/export-quality-dashboard.js && node scripts/ci/export-dimension-health.js，然后对比 docs/_报告/质量看板.json 与 docs/_报告/维度健康.json 的 D5",
+      "suspect_area": "scripts/ci/export-quality-dashboard.js:26-31（dimensions 分数写死字面量）、services/backend/tests/ci/qualityDashboard.test.js:36-37（断言 score>=2 与 met===true，即断言常量等于常量，永远绿）",
+      "root_cause": "看板将 D1-D5 分数写死为字面量 3，exitCriteria.met 恒为 true；测试又断言 score>=2 与 met===true（断言常量=常量），看板与其证据源维度健康.json 互相打脸。",
+      "fix_summary": "export-quality-dashboard.js 改为从维度健康.json 推导各维分数并据此计算 exitCriteria；qualityDashboard.test.js 改为断言推导一致、不再断言常量为 true。随之修复了 BUG-002 的 D5 相对路径与降级退出码。",
+      "created": "2026-08-23",
+      "updated": "2026-09-19",
+      "notes": [
+        "2026-08-24: BUG-001 联动 BUG-002 修复完成，进入验证",
+        "2026-08-24: D5 路径修正后证据源转真，两报告一致；测试 8/8 绿，check-agent-rules 0 violations",
+        "2026-09-19: 2026-09-19 复验PASS：重跑 export-quality-dashboard/health，两报告一致（D5 HEALTHY 2/2），退出码0；看板分数确系从维度健康.json推导（healthy?3:1:0），exitCriteria为计算值；qualityDashboard.test.js 8/8绿。"
+      ]
+    },
+    {
+      "id": "BUG-002",
+      "title": "export-dimension-health.js 的 D5 相对路径少一级，把存在的文件误报为缺失，且降级时仍退出码 0",
+      "severity": "P2",
+      "domain": "packaging",
+      "status": "closed",
+      "symptom": "维度健康.json 中 D5 的 filesMissing 列出 ../../AGENTS.md 与 ../../scripts/ci/export-quality-dashboard.js，但这两个文件在仓库根目录确实存在；控制台打印 D5 DEGRADED 却仍以退出码 0 结束，CI 不会亮红灯。",
+      "repro": "cd <khy-os> && node scripts/ci/export-dimension-health.js; echo $?  → 输出含 'D5 Governance & Quality: DEGRADED (0/2 files)' 而退出码为 0。再 ls AGENTS.md scripts/ci/export-quality-dashboard.js 可见两文件均存在。",
+      "suspect_area": "scripts/ci/export-dimension-health.js:15 BACKEND_SRC=services/backend/src，D5 用 ../../ 只回到 services/，回到仓库根需 ../../../；另外 BACKEND_SRC 基于 process.cwd() 而非 __dirname，换目录运行会全量误报",
+      "root_cause": "export-dimension-health.js 的 BACKEND_SRC=services/backend/src，D5 的 files 相对路径用 ../../ 只退到 services/ 层，回仓库根需 ../../../；导致存在文件被判缺失、D5 恒 DEGRADED，且降级时仍退出码 0。",
+      "fix_summary": "D5 文件路径 ../../ 改为 ../../../，现判 HEALTHY(2/2)；并在任一维度降级时设 process.exitCode=1，使 CI 失败闭合。",
+      "created": "2026-08-23",
+      "updated": "2026-09-19",
+      "notes": [
+        "2026-08-24: 修复 D5 相对路径与降级退出码，进入验证",
+        "2026-08-24: 配合 BUG-001 修复一并验证，D5 现为 HEALTHY；健康报告全绿退出 0",
+        "2026-09-19: 2026-09-19 复验PASS：D5 判 HEALTHY(2/2)（AGENTS.md 与 export-quality-dashboard.js 均存在），exporter 退出码0；降级置 exitCode=1 逻辑在 tests/ci/qualityDashboard.test.js 8/8 绿覆盖。"
+      ]
+    },
+    {
+      "id": "BUG-003",
+      "title": "sync.py --status 声称只读却实际执行 pull，令「先看方向再决定拉不拉」失效",
+      "severity": "P2",
+      "domain": "platform",
+      "status": "closed",
+      "symptom": "文档与 --help 均称 --status「只查看两仓库分支/领先落后/未提交数」「不做任何改动」，但运行后输出 detail 为「已拉取远程更新（N 个文件变更）」，远程提交已被合入本地。开发端按协议先跑 --status 判断方向时，仓库已经被动改变，等于盲拉。",
+      "repro": "1) 让本机落后远程若干提交（另一台推送后不要手动 pull）2) 在 khy-os-hq 目录执行 python scripts\\sync.py --status --json 3) 观察 detail 出现「已拉取远程更新」4) git log 确认远程提交已进入本地 HEAD，而命令自称只读。",
+      "suspect_area": "scripts/sync.py main()：writable_mode/commit_mode 只控制写操作，try_pull() 在 repo 循环中被无条件调用，--status 未跳过；应在 args.status 时只做 repo_snapshot 并输出，不触碰仓库。",
+      "root_cause": "sync.py main() 中 writable_mode/commit_mode 只用于关闭写操作（commit/push），try_pull() 却在 repo 循环内被无条件调用，--status 完全没有短路路径；因此声称只读的命令会对每个仓库执行 git pull --ff-only。已用桩替换 run_git 对修复前版本实测：--status 发出的子命令为 status/status/pull/status，确证 pull 真实发生。",
+      "fix_summary": "新增 report_status()，在 collect_repos() 之后、任何写操作之前短路返回：仅执行 git fetch（只更新远程跟踪引用，不动本地分支与工作区）+ git status 读取快照，然后输出并退出。保留 fetch 是刻意取舍——不 fetch 则领先/落后来自上次 fetch 的陈旧引用，方向判断失真，反而更危险。同时抽出 print_repo_lines() 供只读态与同步态共用以防格式漂移，并订正模块文档与 --status 帮助文本（原措辞「不做任何改动」不准确）。",
+      "created": "2026-08-24",
+      "updated": "2026-09-19",
+      "notes": [
+        "2026-08-24: 2026-08-24: 桩测断言 --status 仅发出 fetch/status，无 pull/merge/commit/push/add；真实运行时 HEAD 前后不变（1a315b3），且正确报出「落后 1」",
+        "2026-09-19: 2026-09-19 复验PASS（以删除收口）：病灶 scripts/sync.py 已随 2026-09-17 HQ 归档删除（双仓同步→单仓+租约，见 DESIGN-ARCH-118），坏路径不复存在；继任者 scripts/sync/sync-status.js 实测诚实只读——自述『未做任何 fetch/merge/push』且运行后工作区无变化。另发现镜像补推队列 1 条凭据被拒待补推（运维事项，与本病无关）。"
+      ]
+    },
+    {
+      "id": "BUG-004",
+      "title": "TUI：出现折叠状态行（如「正在初始化网关…+N 行 · 按 Ctrl+G 展开」）时，底部残留/重复「输入消息」输入框与状态面板",
+      "severity": "P2",
+      "domain": "cli",
+      "status": "closed",
+      "symptom": "khy 启动/网关初始化时，一旦出现折叠状态行（『正在初始化网关…（+9 行 · 按 Ctrl+G 展开）』等），屏幕底部会残留/重复一整段『输入消息，/ 命令…』输入框以及『协同 http://… PIN…』状态面板；正常只有一个输入框，触发后出现两份。",
+      "repro": "启动 khy（触发网关初始化 onNotice『正在初始化网关…』→ 折叠计数行），观察底部：约定位置有一个『输入消息』输入框 + 『协同…』状态面板；折叠状态行出现后，其下方又多出同样的『输入消息』输入框 + 状态面板（残影/重复）。多次触发可反复复现。",
+      "suspect_area": "services/backend/src/cli/tui/ink-components/（PromptFrame.js / KhyOsView.js / liveRegionBudget.js / liveHeightClamp.js / overlayLiveBudget.js）与 app.js 的 live-region 高度记账 + clearTerminalNormalizer（scrollbackPreserve）；疑似 live region 高度超过 rows 时 ink 重发 clearTerminal+fullStaticOutput+output，导致输入框/状态面板重绘残留",
+      "root_cause": "",
+      "fix_summary": "",
+      "created": "2026-08-24",
+      "updated": "2026-09-19",
+      "notes": [
+        "2026-09-06: 2026-09-06 khy-os 会话静态复核：怀疑路径已有四层默认开启防护（liveRegionBudget 前馈预算含协同页脚行+win32 余量 / liveHeightClamp 首帧视觉行硬钳制 / overlayLiveBudget 覆盖层独占 live 区 / scrollbackPreserve 四层 clearTerminal 归一化+重发抑制+尾切），且触发链两处病灶有专项修复（App.js pendingGatewayNoticeRef 延迟推送防 duplicated PromptFrame）。极小终端（≤24 行）存在文档化残余边界，建议 Win 终端跑一次 /model 触发网关探测的运行时回归后关单。",
+        "2026-09-19: 2026-09-19 运行时回归PASS，关单：Win11 真实终端（WindowsTerminal/conhost）实测三轮——(1) 正常尺寸启动+网关初始化完成，底部仅一个输入框+一个状态面板；(2) /model 触发网关探测（1/18→18/18 获取模型列表），探测全程与模型选择菜单渲染无重复无残留；(3) 按 09-06 备注的文档化残余边界专测 24 行极小终端（mode con lines=24）：启动、探测、模型菜单均正常。此前 09-06 静态复核的四层防护（liveRegionBudget/liveHeightClamp/overlayLiveBudget/scrollbackPreserve+pendingGatewayNoticeRef）与今日 tests/tui 435/435 全绿互证。不复现，关单。"
+      ]
+    },
+    {
+      "id": "BUG-005",
+      "title": "所有模型请求都报错：OpenAI/api 经 per-provider 代理 127.0.0.1:7890 被拒（ECONNREFUSED），且[proxy]先报『通道已建立』后才失败",
+      "severity": "P1",
+      "domain": "gateway",
+      "status": "closed",
+      "symptom": "apikey 正常，但 khy 无论选哪个模型发消息都报『网络请求未能完成』：先出现 [proxy] 连接 OpenAI 经代理 127.0.0.1:7890 (per-provider, 通道已建立)，随后『真实失败原因：- OpenAI [network]: connect ECONNREFUSED 127.0.0.1:7890 - api [network]: connect ECONNREFUSED 127.0.0.1:7890』。与 apikey/模型无关，所有模型一致失败。",
+      "repro": "启动 khy → 任意模型发一条消息（如『hello』）→ 观察：先打印 per-provider 代理『通道已建立』，再打网络请求未能完成、connect ECONNREFUSED 127.0.0.1:7890。检查 127.0.0.1:7890 是否有本地代理在监听；若无，则全模型失败。",
+      "suspect_area": "gateway 适配器的 per-provider 代理逻辑（连接代理前的『通道已建立』误报）+ network/client 错误路径：代理不可达时应回退直连或给出明确『本地代理 127.0.0.1:7890 未监听』，而非先报通道已建立再 ECONNREFUSED。",
+      "root_cause": "per-provider 代理绑定即打印『通道已建立』属于无 I/O 时的虚假声明（真实 TCP/CONNECT 要到首个请求才发生），且 postWithDeadConnRetry 的 per-provider 分支缺 unreachable 判定——ECONNREFUSED 原样冒泡成裸网络错误且不回退直连，把排障方向带偏到上游/apikey。",
+      "fix_summary": "multiFreeService.js 绑定日志改为『尚未建连，首个请求时才连接』；postWithDeadConnRetry 增 isProxyUnreachableError 判定（ECONNREFUSED 等）：代理不可达回退直连重试一次，仍失败则错误消息点名『per-provider 代理 X 未监听，请启动本地代理或清除该 provider 的 proxy 配置』。回归测试 tests/services/multiFreeService.providerProxyUnreachable.test.js；doctorConnectivity 增 per-provider 代理连通性体检 Check3。",
+      "created": "2026-08-24",
+      "updated": "2026-09-19",
+      "notes": [
+        "2026-09-06: 2026-09-06 khy-os 会话复核：修复已在工作树（绑定日志改『尚未建连』+ unreachable 回退直连 + 明确错误提示），含回归测试 tests/services/multiFreeService.providerProxyUnreachable.test.js 与 doctorConnectivity Check3 体检。",
+        "2026-09-19: 2026-09-19 复验PASS：multiFreeService.js 含『尚未建连』措辞、isProxyUnreachableError 判定与回退直连；回归测试 tests/services/multiFreeService.providerProxyUnreachable.test.js 3/3 绿；doctorConnectivity 体检在位。运行时端到端（真实代理场景）留待日常使用观察。"
+      ]
+    },
+    {
+      "id": "BUG-006",
+      "title": "网关路由串 api:sensenova:deepseek-v4-flash 出现『供应商(SenseNova/阶跃星辰)与模型(deepseek)』不一致，疑似 provider 绑定或身份披露矛盾",
+      "severity": "P1",
+      "domain": "gateway",
+      "status": "open",
+      "symptom": "khy-os 对『当前模型/供应商』的披露与路由串 api:sensenova:deepseek-v4-flash 出现矛盾：供应渠道写成 SenseNova(阶跃星辰)，但模型标识是 deepseek-v4-flash（DeepSeek 系）。需确认 deepseek-v4-flash 是否被错误绑定到 SenseNova 渠道，或其归属/provider 元数据与网关实际路由不一致。",
+      "repro": "执行 khy gateway status（或查看网关日志 model 字段）核对 provider 与 model；当前路由串形如 api:sensenova:deepseek-v4-flash。重点排查该模型在 provider 注册表/适配器里的归属：是被正确聚合到 SenseNova 渠道，还是被误配到错误供应商，导致『供应商名 vs 模型』自相矛盾。",
+      "suspect_area": "services/backend/src/services/gateway/（provider 注册表/providerPresets.js/适配器 poolKey↔displayName 归属）+ cli/ai.js 的模型信息表 + tools/ConfigureModelProvider 的 builtin 提供商列表：deepseek-v4-flash 属哪个渠道、displayName/供应商名是否与模型实际归属一致。",
+      "root_cause": "",
+      "fix_summary": "",
+      "created": "2026-08-24",
+      "updated": "2026-09-20",
+      "notes": [
+        "2026-08-24: 根因已定位：请求 api:sensenova:deepseek-v4-flash 在商汤感言 channel 返回 404（多次→冷却→All adapters failed）→ 网关静默回退到 relay 的 step-3.7-flash（步科星辰）响应；该模型自述把『请求身份(sensenova/deepseek)』与『自身品牌(阶跃)』混为一体，故出现『SenseNova（阶跃星辰）』。已推送缓解：khy-os 4af15f8e 在网关成功路径新增『实际响应模型≠所选模型』的状态透明披露（gateway/modelSubstitutionNotice.js + aiGatewayGenerateMethod.js 一行受保护 emitStatus）。彻底修复仍待运行时侧：为 deepseek-v4-flash 选商汤真正可执行模型、或配独立 DeepSeek provider、并处理 BUG-005 的 127.0.0.1:7890 代理。",
+        "2026-09-20: 2026-09-20 租约释放后状态归位：本机（QiQiaoBan）08-24 的排查占用已过期释放；缓解措施（modelSubstitutionNotice 状态透明披露）已在树上，彻底修复（deepseek-v4-flash 供应商归属）转 open 待重新开工。"
+      ]
+    },
+    {
+      "id": "BUG-007",
+      "title": "做任务时无法准确提出问题、理解用户意图（提问缺意图对齐标准与任务上下文兜底）",
+      "severity": "P1",
+      "domain": "services",
+      "status": "closed",
+      "symptom": "用户给 khyos 派任务时：模型闷头按自己的猜测推进（不先复述目标、方向偏了不中途对齐），偶尔发问时问题卡泛泛（上下文无关、甚至英文卡对中文用户），用户感受为「无法准确提出问题、理解不了我的意图」。",
+      "repro": "向 khy TUI/REPL 下达一条语义有歧义但措辞具体的任务（如「修复提问质量问题」），观察：1) 开工前无一行意图复述可纠偏；2) 中途发问的 AskUserQuestion 卡片不引用任务上下文，语言可能与会话不一致。",
+      "suspect_area": "services/backend/src/constants/prompts.js(_coreProfile)、tools/AskUserQuestionTool/index.js、services/toolUseLoopCore.js(AskUserQuestion 接缝)、services/questionQuality.js",
+      "root_cause": "静态提示词栈整体偏「不问」（core profile:「ask only when ambiguity changes the result or risk」），且没有任何「任务开工先复述目标、方向偏了中途对齐」的意图对齐协议；动态意图叶子（澄清卡/意图纠错/指代消歧）只覆盖狭窄关键词触发，措辞具体但语义含糊的任务零脚手架。任务中途真要发问时，唯一指导是 AskUserQuestion 的静态英文工具提示词——没有「问题须锚定任务已查明的上下文」的标准，也没有语言对齐要求；循环 surfacing 问题卡时不带任何任务上下文，用户拿到泛泛的卡无法准确作答。",
+      "fix_summary": "1) constants/prompts.js _coreProfile 新增「Understand the task, ask sharp questions (意图对齐)」稳定段：非平凡任务开工先一行复述目标给用户零成本纠偏；中途发现与原始诉求矛盾时停下对齐而非把猜测推到底；提问标准（具体决策点+基于已查明上下文+2-4互斥选项+带后果+有倾向给推荐）；用户语言提问（中文对话中文提问，代码/路径/专名保持原文）；绝不问自己能解决的、绝不开放式反问。2) AskUserQuestionTool 提示词补两条：问题须引用任务已查明上下文；语言与会话一致。3) questionQuality.js（提问质量单一真源）新增纯叶子 buildQuestionContextNote：确定性检测「可检测地脱离任务上下文」的提问卡（会话为中文而卡片零CJK=lang-mismatch；问题文本与原始诉求+意图摘要零词元重叠=context-free），产出一行中文上下文注记（任务目标+「不符选其它」出口）——纯附加信息，绝不拦截/改写模型的问题，门控 KHY_QUESTION_CONTEXT_NOTE 默认开、绝不抛。4) toolUseLoopCore 接缝：_intentFrame 增带 summary（主目标摘要），交互分支 onControlRequest 的 request.input 附 contextNote（空则逐字节保持今日形状）。5) 宿主渲染：TUI QuestionPrompt 在问题卡上方渲染灰字注记（两种布局）；classic REPL handleControlRequest 卡片前打印注记。验证：questionQuality node:test 18/18 绿（新增9例含零假阳性/短消息/门控/绝不抛）；askUserQuestion.alignment + toolUseLoop.interruptBehavior jest 25/25 绿；node --check 全部改动文件通过；check-agent-rules 7 文件零违规。遗留：khyUpgradeRuntime 的 INTENT ASSURANCE 框应注入复述要求已由(1)覆盖；REPL 与 TUI 均支持注记渲染，web/bridge 通道未改（无卡片渲染面）。",
+      "created": "2026-08-30",
+      "updated": "2026-09-19",
+      "notes": [
+        "2026-08-30 用户报告：khyos 在做任务时无法准确的提出问题和理解用户的意图，需要修复。",
+        "2026-08-30 本机（khy-os 工作树）已完成代码修复，待人工验证后回填 root_cause/fix 并走状态机；khy-os 侧改动因工作树含大量在途未提交改动，按「防推半成品」铁律不单独提交，随既有流水线收工。",
+        "2026-08-30: 本机已实现修复：意图对齐协议+提问上下文兜底+语言对齐（详见 fix 回填）",
+        "2026-09-06 重大发现：本修复当日只存于工作树未提交，随后被 stash（stash@{0}=e9f72318，WIP on main c8075a4，08-31）吞入且工作树经 reset 后丢失，pending_verify 期间树上无实现。2026-09-06 已从 stash 外科手术式恢复全部 5 组件（prompts.js 意图对齐段 / questionQuality.js buildQuestionContextNote+门控 / toolUseLoopCore.js _intentFrame.summary+contextNote 接缝 / AskUserQuestionTool 两条提示词 / QuestionPrompt.js 双布局注记+replSession.js 经典 REPL 注记打印），questionQuality node:test 18/18 绿、alignment+interruptBehavior jest 25/25 绿，与 fix_summary 记录一致。恢复过程另发现并修复 tests/ 目录 1531 个文件被失败的 jest 迁移损坏的事故（见 BUG-008）。教训：修复不能只存工作树，必须当日提交。",
+        "2026-09-19: 2026-09-19 复验PASS：questionQuality node:test 18/18 绿；askUserQuestion.alignment + toolUseLoop.interruptBehavior jest 25/25 绿；5 组件均在树（prompts.js 意图对齐段/questionQuality buildQuestionContextNote/AskUserQuestionTool/QuestionPrompt 注记；toolUseLoopCore 接缝随拆分迁至 src/services/tool/toolUseLoopCore.js，contextNote+_intentFrame 在位）。真实对话体验留日常观察。"
+      ]
+    },
+    {
+      "id": "BUG-008",
+      "title": "tests/ 目录 1531 个文件被一次失败的 node:test→jest 批量迁移脚本损坏（多字节字符截断、无法解析）",
+      "severity": "P1",
+      "domain": "packaging",
+      "status": "closed",
+      "symptom": "工作树 services/backend/tests/ 下 1531 个 .test.js 文件 node --check 全部语法报错：多字节字符（中文/制表符/em dash）在字节边界被截断，吞掉闭合引号产生 Unterminated string、assert 未导入、expect(...).not.toThrow() 括号错位等。产品源码（src/）零损坏，故 khy 运行不受影响，测试套件则整体不可运行。",
+      "repro": "git status 列出 2158 个修改的 .js → 对每个 node --check，1531 个失败，全部位于 services/backend/tests/；HEAD（cc54ed96）与 stash 基点（c8075a4）同名文件均完好，损坏仅存在于未提交工作树。",
+      "suspect_area": "一次针对 tests/ 的 node:test→jest 风格批量改写（工作树版本呈现 jest 化+损坏两种痕迹并存），脚本按字节偏移处理多字节 UTF-8 导致截断",
+      "root_cause": "批量迁移脚本以字节为单位做替换/截断，未按 UTF-8 码点处理中文与制表字符，把每个含 CJK/box-drawing 的字符串在多字节中间切开，吞掉引号与相邻代码；迁移半途而废，留下 1531 个不可解析文件。",
+      "fix_summary": "以 HEAD 为正身批量恢复全部 1531 个损坏文件（git checkout HEAD --，分批 60 个/次），3 个例外单独处理：questionQuality.test.js 用 stash@{0} 的 18 例版本（含 BUG-007 新增用例，node:test 运行器由 jest.config 的 marker 探测自动排除）、askUserQuestion.alignment.test.js 与 toolUseLoop.interruptBehavior.test.js 从基点恢复完好版。复核：2158 个在途 js 文件 node --check 0 失败；questionQuality 18/18、jest 25/25 全绿。jest 迁移如需继续应改用码点安全工具并小批量验证。",
+      "created": "2026-09-06",
+      "updated": "2026-09-19",
+      "notes": [
+        "2026-09-06 发现于 BUG-007 stash 恢复验证过程中；同日修复并全量语法复核。",
+        "2026-09-19: 2026-09-19 复验PASS：对 services/backend/tests 全量 node --check，2490 个 .js 文件 0 语法失败（多于当时的 1531 个受损文件，含此后新增）。损坏文件已按 fix_summary 恢复且有增员。"
+      ]
+    },
+    {
+      "id": "BUG-009",
+      "title": "TUI @补全：引用根（@alias/子路径）内文件补全静默失效——useCompletions.js 引用块作用域外的未定义标识符 first，ReferenceError 被 catch 吞成空列表",
+      "severity": "P2",
+      "domain": "cli",
+      "status": "pending_verify",
+      "symptom": "",
+      "repro": "",
+      "suspect_area": "",
+      "root_cause": "useCompletions.js computeFile 的 refRoot 分支（.map 回调内）引用了 143 行第一个 try 块内声明的块级解构变量 first，块外不可见，命中引用根分支必抛 ReferenceError，被外层 catch（entries=[]）吞掉 → @alias/子路径 内补全静默返回空。",
+      "fix_summary": "在 refRoot 分支内用 partial.slice(0, partial.indexOf('/')) 重派生别名段（与 143 行 first 同义）。回归测试 tests/cli/tui/useCompletions.refRootRegression.test.js：修复前实测 fail（返回 null）、修复后 pass；复现-修复双相闭环。",
+      "created": "2026-09-20",
+      "updated": "2026-09-20",
+      "notes": []
+    },
+    {
+      "id": "BUG-010",
+      "title": "TUI 统一协议原生覆盖层静默降级：ink App.js uiBridge 接线引用从未定义的 setPermissionRequest，setAppRefs 每次挂载必抛错被吞，_appRefs 恒 null，showConfirmNative/showListNative 永远走 stdin 简化回退而非 PermissionsPrompt/ModelPicker 原生组件",
+      "severity": "P2",
+      "domain": "cli",
+      "status": "open",
+      "symptom": "",
+      "repro": "",
+      "suspect_area": "",
+      "root_cause": "",
+      "fix_summary": "",
+      "created": "2026-09-20",
+      "updated": "2026-09-20",
+      "notes": []
+    },
+    {
+      "id": "BUG-011",
+      "title": "CcViewStack.js CcTaskCompleteCard 使用未导入的裸 Box/Text（本文件其它组件均走 inkRuntime 惰性桥），渲染即 ReferenceError——CC 模式任务完成卡片潜在崩溃",
+      "severity": "P2",
+      "domain": "cli",
+      "status": "pending_verify",
+      "symptom": "",
+      "repro": "",
+      "suspect_area": "",
+      "root_cause": "CcViewStack.js 的 CcTaskCompleteCard 组件直接用裸 Box/Text（React.createElement(Box,...)），而本文件其它组件一律走 inkRuntime.get() 惰性桥（顶层 .get() 在 loadInk() 前会抛错，ESM 桥接约定）。Box/Text 从未导入，组件一渲染即 ReferenceError——CC 模式任务完成卡片潜在崩溃。",
+      "fix_summary": "按本文件既有惰性模式补 const { Box, Text } = inkRuntime.get();（与兄弟组件同款）。eslint no-undef 错误清零；tests/cli/tui 862/862 与 test:tui 435/435 全绿；check-agent-rules 改动文件零违规。",
+      "created": "2026-09-20",
+      "updated": "2026-09-20",
+      "notes": []
+    },
+    {
+      "id": "BUG-012",
+      "title": "TUI 底部状态行宽度预算溢出：windsurf 停用回退等长警告使状态行超过终端列数，闭合括号被挤到下一行形成残影字符（实测 ~125 列窗口两次复现；最大化/半屏重绘正常）——statusPanel/footerLayout 未把网关警告纳入宽度预算或截断",
+      "severity": "P2",
+      "domain": "cli",
+      "status": "open",
+      "symptom": "",
+      "repro": "",
+      "suspect_area": "",
+      "root_cause": "",
+      "fix_summary": "",
+      "created": "2026-09-20",
+      "updated": "2026-09-20",
+      "notes": []
+    },
+    {
+      "id": "BUG-013",
+      "title": "两个 QUARANTINE 占位测试壳用 jest 的 describe/it/expect 全局，在 node --test 下未定义，每次 test:node 运行必报 ReferenceError 失败（tests/cli/tui/__tests__/outputWidthGuard.test.js、tests/cli/tui/ink-components/caretGeometry.test.js——DEBT.md §六 登记本该是零影响空壳）",
+      "severity": "P3",
+      "domain": "packaging",
+      "status": "pending_verify",
+      "symptom": "",
+      "repro": "",
+      "suspect_area": "",
+      "root_cause": "2026-09-12 隔离处理写壳时用了 jest 的 describe/it/expect 全局。node --test 没有这些全局 → 壳文件每次 test:node 都 ReferenceError 失败，与 QUARANTINE『保持可解析、不误报』的初衷相反。",
+      "fix_summary": "两个壳改为 node:test 风格（require('node:test') 的 describe/it + node:assert）。jest.config 的 node:test 标记探测自动将其移出 jest；node:test 下各 1 个恒真占位。复跑 tests/cli/tui 递归全套 937/937 全绿（修复前 935/937）。",
+      "created": "2026-09-20",
+      "updated": "2026-09-20",
+      "notes": []
+    },
+    {
+      "id": "BUG-014",
+      "title": "工具调用能力判定系统性偏「不支持」：判据把无定论读成不支持，产生 gpt-4o→text 类假阴性，且假阴性自我焊死无法被现实纠正",
+      "severity": "P1",
+      "domain": "gateway",
+      "status": "pending_verify",
+      "symptom": "",
+      "repro": "",
+      "suspect_area": "",
+      "root_cause": "",
+      "fix_summary": "判定链三处收口：modelToolingCapability 拆成 wire 侧(shouldStripUpstreamTools·只认正面证据)与提示词侧(modelLacksReliableToolCalling·保留名字启发)；capabilityModelKey 新增 routeKey；toolCapabilityStore 新增 route: 通道分区（独立 TTL）。存证见 .khy/feedback/toolcall-capability-falseneg-20260923/。",
+      "created": "2026-09-23",
+      "updated": "2026-09-23",
+      "notes": [
+        "2026-09-23: P0+P1+P2 已实现并验证（node:test 265/265、jest 115/115、门禁全绿）。P0:env 名单键规范化（路由 id 与裸名同键）+ 提示文案收口 stripToolsNotice。P1:探测器判据改为只认显式调用语法（复用 toolCallParser.hasExplicitToolCallSyntax）、截断→unknown、maxTokens 64→256、新增 A/B 对照组分离 route-rejects-tools。P2:wire 侧只认正面证据（未知一律先发，名字启发退出 wire 判定）、新增 routeKey 通道身份与 route: 分区记忆、两处 400 链在重试成功后记忆通道拒收、CLI list 展示通道拒收。P3/P4 余项与 khyquant 分叉副本未做。",
+        "2026-09-23: P3 已交付:隔离式挑战(toolChallengeCadence,单边实现只跳过剥离、不越权通道拒收与 env 钉子),机制已按 S1 登记进 FEATURE-OWNERSHIP rollout,设计文档 [DESIGN-ARCH-138] 含 .html 孪生。最终验证:node:test 286/286、jest 155/155、13 个守卫可跑部分全绿。未做:P4 余项、剥离门自身的阶段登记、khyquant 分叉副本、版本 bump(因 changelog-new --check 存量失败:CHANGELOG 顶部 1.1.14 vs pyproject 1.1.15,红线级存量问题应单独处理)。本次施工中我为验证生成器幂等跑了全仓 docs 构建,刷新了 11 个陈旧孪生 .html(均为 LAY-5 构建产物,源未改),本机无 git 无法按字节回退,详情见 .khy/feedback/toolcall-capability-falseneg-20260923/P3-delivery.md。",
+        "2026-09-23: 全部完成:P0/P1/P2/P3/P4 五项 + 版本收口。P4 余项实现非对称继承(getVerdictFor:negative 只在测出它的适配器生效、positive 全局共享;不做重新分键,读侧过滤向后兼容)。剥离门定性为 PROCESS-008 范围外并给出反方向判据(见 [DESIGN-ARCH-138] §4.1)——不登记的理由是:填 S3 会让仓库变红且无解、填 S1 是假话。版本 1.1.15→1.2.0(含 ###Fixed + ###Added ⇒ MINOR),G1 四源同步,changelog-new --check 由 FAIL 转 OK。khyquant 分叉副本另开 BUG-015。最终:node:test 292/292、jest 155/155、守卫全绿。收口记录见 .khy/feedback/toolcall-capability-falseneg-20260923/COMPLETION.md。",
+        "2026-09-23: git 依赖门禁已补跑(git 在 D:\\Portable\\2-tools\\Tools\\git\\cmd,挂 PATH)。关键上下文:本工作树已有 359 个存量未提交文件(chore/tui-ux-nightly),故 --changed 门禁评的是整树变更集。结论:与我文件相关且根因在我的失败为 0。check-agent-feedback 0 error 且我的文件 0 finding;check-leaf-contract --changed 通过。两条 exit 1 根因均为存量:check-change-safety 仅因 changed-count-error(359 files);check-arch-debt 因 6 个我触碰过的巨石文件未登记 godFiles(改动前已超 800 行,我未擅自扩大基线)。check-file-ratchet 整树 133 error 且对 HEAD~1 比较,增量含全部存量。归属核查脚本与结果见 .khy/feedback/toolcall-capability-falseneg-20260923/{attribute.js,attribution.txt,generator-delta.txt,COMPLETION.md §7}。"
+      ]
+    },
+    {
+      "id": "BUG-015",
+      "title": "khyquant 侧 services 副本与 backend 正本已分叉：multiFreeService/modelToolingCapability/toolCapabilityStore 三文件仍是旧判定与旧提示文案，且无 capabilityModelKey，套用 backend 的 BUG-014 修复只能拿到半份",
+      "severity": "P2",
+      "domain": "gateway",
+      "status": "open",
+      "symptom": "",
+      "repro": "",
+      "suspect_area": "",
+      "root_cause": "",
+      "fix_summary": "",
+      "created": "2026-09-23",
+      "updated": "2026-09-23",
+      "notes": [
+        "2026-09-23: 发现于 BUG-014 施工(见 .khy/feedback/toolcall-capability-falseneg-20260923/adjacent-findings.md A3)。事实:(1) software/khyquant/services/multiFreeService.js 被 llmService.js require,是活代码;(2) 三文件与 backend 正本体积已分叉(64782/91982、7217/9188、5757/8875 字节);(3) 该副本无 capabilityModelKey.js,故 P0 的「键规范化」在那边会退化成只认裸名;(4) 仍含旧文案「模型 X 不支持工具调用…请切换到支持 function calling 的模型」。需决定:收敛到 backend 实现(需处理已分叉的 64KB vs 92KB 差异与缺失的叶子依赖),还是明确声明 khyquant 侧独立维护。不建议盲目套用补丁——半修比不修更难诊断。"
+      ]
+    }
+  ]
+}

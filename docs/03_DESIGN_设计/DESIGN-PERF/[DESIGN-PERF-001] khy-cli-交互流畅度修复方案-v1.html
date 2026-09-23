@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-PERF-001] khy-cli-交互流畅度修复方案-v1.md -->
+<title>[DESIGN-PERF-001] khy-cli 交互流畅度修复方案 v1 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-PERF<span class="sep">›</span>[DESIGN-PERF-001] khy-cli 交互流畅度修复方案 v1</div>
+      <header class="hero reveal"><h1>[DESIGN-PERF-001] khy-cli 交互流畅度修复方案 v1</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-perf-001-khy-cli-交互流畅度修复方案-v1">[DESIGN-PERF-001] khy-cli 交互流畅度修复方案 v1</a></li><li class="lvl-2"><a href="#一-问题陈述">一、问题陈述</a></li><li class="lvl-3"><a href="#1-1-症状">1.1 症状</a></li><li class="lvl-3"><a href="#1-2-不做什么">1.2 不做什么</a></li><li class="lvl-2"><a href="#二-调研校正-与初步诊断的差异">二、调研校正(与初步诊断的差异)</a></li><li class="lvl-3"><a href="#2-1-真正残留的卡点-本次调研的硬结论">2.1 真正残留的卡点(本次调研的硬结论)</a></li><li class="lvl-2"><a href="#三-修复方案-3-阶段-4-周">三、修复方案(3 阶段,4 周)</a></li><li class="lvl-3"><a href="#阶段-b-启用-khy-fast-startup-作为正式默认-0-5-天">阶段 B · 启用 `KHY_FAST_STARTUP` 作为正式默认(0.5 天)</a></li><li class="lvl-3"><a href="#阶段-a-bundle-启动-cli-对位-commandcode-5-7-天">阶段 A · Bundle 启动 CLI(对位 CommandCode)(5-7 天)</a></li><li class="lvl-3"><a href="#阶段-c-replsession-js-顶层-require-瘦身-3-5-天">阶段 C · `replSession.js` 顶层 require 瘦身(3-5 天)</a></li><li class="lvl-3"><a href="#阶段-d-首-token-解耦-7-10-天-与阶段-a-并行">阶段 D · 首 token 解耦(7-10 天,与阶段 A 并行)</a></li><li class="lvl-2"><a href="#四-阶段产物汇总">四、阶段产物汇总</a></li><li class="lvl-2"><a href="#五-验收指标">五、验收指标</a></li><li class="lvl-3"><a href="#5-1-性能指标">5.1 性能指标</a></li><li class="lvl-3"><a href="#5-2-质量指标">5.2 质量指标</a></li><li class="lvl-3"><a href="#5-3-行为指标">5.3 行为指标</a></li><li class="lvl-2"><a href="#六-不做什么-明确范围外">六、不做什么(明确范围外)</a></li><li class="lvl-2"><a href="#七-未来扩展-本期不做">七、未来扩展(本期不做)</a></li><li class="lvl-2"><a href="#八-附-已存在的可用基础设施">八、附:已存在的可用基础设施</a></li><li class="lvl-2"><a href="#九-变更记录">九、变更记录</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-perf-001-khy-cli-交互流畅度修复方案-v1">[DESIGN-PERF-001] khy-cli 交互流畅度修复方案 v1<a class="anchor" href="#design-perf-001-khy-cli-交互流畅度修复方案-v1" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>状态</strong>: 定稿<br><strong>适用层</strong>: <code>services/backend</code>(khy-cli 入口)<br><strong>对位基线</strong>: CommandCode(<code>command-code@1.38.2</code>,esbuild minified 单文件)<br><strong>调研日期</strong>: 2026-08-31<br><strong>本文作者准则</strong>: 调研结论有代码证据,方案阶段产物是「可实施计划 + 验收指标」,不是修代码本身。<strong>不动现状代码 / 不动测试 / 不动配置</strong>。</p></blockquote>
+<hr>
+<h2 id="一-问题陈述">一、问题陈述<a class="anchor" href="#一-问题陈述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-症状">1.1 症状<a class="anchor" href="#1-1-症状" aria-label="锚点">#</a></h3>
+<p>用户感知:<strong>khy CLI 不如 CommandCode 流畅、能干活</strong>。<br>具体表现:① <code>khy</code> 启动到能打字的等待明显长于 <code>cmd</code>;② 输入提示词后到模型开始响应(&quot;首 token&quot;)的等待明显长;③ 长回答末期打字/翻看有可见卡顿。</p>
+<h3 id="1-2-不做什么">1.2 不做什么<a class="anchor" href="#1-2-不做什么" aria-label="锚点">#</a></h3>
+<ul><li><strong>不砍功能</strong>:khy 既有能力(quant / bridge / skills / 自愈 / 信任 / 多面板 / 中文叙述层)都是产品决策保留的,不在本期范围。</li><li><strong>不重写架构</strong>:不重写 AI 网关 / tool 沙箱 / 多面板 TUI / 源码工作流。</li><li><strong>不改 UI / 视觉</strong>:不做任何 TUI 视觉改动。</li></ul>
+<hr>
+<h2 id="二-调研校正-与初步诊断的差异">二、调研校正(与初步诊断的差异)<a class="anchor" href="#二-调研校正-与初步诊断的差异" aria-label="锚点">#</a></h2>
+<blockquote><p>这次调研直接读了真实代码,校正了之前凭总结推断的几处结论。<strong>所有校正都有文件路径+行号证据</strong>。</p></blockquote>
+<table><thead><tr><th>#</th><th>之前推断</th><th>实际状态</th><th>证据</th></tr></thead><tbody><tr><td>1</td><td>&quot;bridgeServer 启动期阻塞 REPL&quot;</td><td><strong>不阻塞,已在 setImmediate</strong></td><td><code>services/backend/src/cli/replSession.js:416</code> <code>setImmediate(() =&gt; require('../bridge/bridgeServer').startBridgeServer())</code></td></tr><tr><td>2</td><td>&quot;toolUseLoop 启动期被同步 require,阻塞首 paint&quot;</td><td><strong>不阻塞首 paint,已在 setImmediate 预热</strong></td><td><code>replSession.js:320-324</code> <code>setImmediate(() =&gt; { require('../services/toolUseLoop'); })</code></td></tr><tr><td>3</td><td>&quot;KHY_BRIDGE_AUTOSTART 默认 on&quot;</td><td><strong>默认 off</strong>(<code>bin/khy.js:70</code> 在 <code>KHY_FAST_STARTUP=1</code> 路径里设 <code>?? '0'</code>;实际生产 KHY_FAST_STARTUP=0 未设,但 <code>replSession.js:405-410</code> 的判定 <code>?? ''</code> 会让 <code>process.env.KHY_BRIDGE_AUTOSTART</code> 未设 → 不进入 autostart)</td><td><code>replSession.js:405-410</code> <code>[0,false,no,off].includes(... ?? '')</code>;当未设 → 不在表里 → <code>bridgeOptOut=true</code> → 跳过</td></tr><tr><td>4</td><td>&quot;KHY_SOURCE_HEAL 默认 on,每次启动跑 SHA-256&quot;</td><td><strong>已可关</strong>(<code>bin/khy.js:71</code> 同样机制)</td><td>同上</td></tr><tr><td>5</td><td>&quot;App.jsx 要 babel 转译&quot;</td><td><strong>不需要</strong>,inkRuntime 用 <code>require.extensions['.jsx'] = require.extensions['.js']</code> 直接当 CJS 加载,所有组件用 <code>React.createElement</code> 写</td><td><code>src/cli/tui/inkRuntime.js:47-54</code></td></tr><tr><td>6</td><td>&quot;useTextInput 跑 6+ 分类器&quot;</td><td><strong>没有</strong>,只 require <code>backslashContinuation</code> + <code>Cursor</code> + <code>historyPersist</code> 三个轻叶子</td><td><code>src/cli/tui/hooks/useTextInput.js:17-22</code></td></tr><tr><td>7</td><td>&quot;useQueryBridge 同步 require 全部&quot;</td><td><strong>已基本 lazy</strong>:14 个 try/catch + _keyFindings/_degenerateShellEcho/_rewindControl 全部 try require;<code>_staticItemsMemo</code>/<code>footerStability</code>/<code>turnStats</code> 已用</td><td><code>src/cli/tui/hooks/useQueryBridge.js:1-79</code></td></tr><tr><td>8</td><td>&quot;khyquant 每次启动派生 server.js&quot;</td><td><strong>仅 khyquant 子命令派生</strong>,khy 命令不进 <code>bin/khy.js:1140-1183</code> 路径</td><td><code>bin/khy.js:1130-1183</code> 在 <code>if (parsed.command === 'khyquant')</code> 块内</td></tr><tr><td>9</td><td>&quot;toolUseLoopCore 13,083 行&quot;</td><td><strong>12,715 行</strong>(实际值)</td><td>`Get-Content src/services/toolUseLoopCore.js</td></tr><tr><td>10</td><td>&quot;replSession.js 14,124 行&quot;</td><td><strong>13,589 行</strong></td><td>`Get-Content src/cli/replSession.js</td></tr></tbody></table>
+<h3 id="2-1-真正残留的卡点-本次调研的硬结论">2.1 真正残留的卡点(本次调研的硬结论)<a class="anchor" href="#2-1-真正残留的卡点-本次调研的硬结论" aria-label="锚点">#</a></h3>
+<h4 id="卡点-a-replsession-js-顶层-require-风暴-冷启最大单点">卡点 A · <code>replSession.js</code> 顶层 require 风暴(冷启最大单点)<a class="anchor" href="#卡点-a-replsession-js-顶层-require-风暴-冷启最大单点" aria-label="锚点">#</a></h4>
+<p><strong>事实</strong>: <code>src/cli/replSession.js</code> 顶层 <code>const ... = require(...)</code> 共 <strong>约 50 处</strong>(line 9-210),覆盖:</p>
+<pre><code>'./toolDisplayPolicy'              'repl/imageIntent'
+'./repl/history'                   'repl/imageRecognitionIntent'
+'./repl/khySettings'               'repl/terminalTitle'
+'./repl/inputClassifiers'          'bulkLines'
+'./repl/busyInputClassifiers'      'escapeTimeoutDetector'
+'./repl/busyTopicShift'            'featureCapabilityMap'
+'./repl/busyInterruptEscalation'   'lineBuffer'
+'./repl/statusLabels'              'repl/atPicker'
+'./repl/streamRender'              'repl/errorReporting'
+'./repl/toolOutputRender'          'repl/footerLayout'
+'./repl/startup'                   'repl/slashCommandFilter'
+'./repl/tasksCommand'(通过 _handleTasksCommand lazy) 'statusMessageFormatter'
+'streamingMarkdown'                'toolResultVoice'
+'renderDedup'(try/Or)              'tryOr'
+'simpleTokenEstimate'
+... + 'configGuard' / 'safeReadJsonSync' / 'package.json'</code></pre>
+<p>这些叶子大部分是<strong>渲染管线</strong>(<code>toolDisplayPolicy</code> / <code>streamingMarkdown</code> / <code>toolResultVoice</code> / <code>featureCapabilityMap</code> / <code>lineBuffer</code> / <code>statusMessageFormatter</code> / <code>bulkLines</code> / <code>escapeTimeoutDetector</code>),<strong>用户在打字阶段不需要它们</strong>——但 <code>replSession.js</code> 是 <code>startRepl</code> 的宿主,任何进入 REPL 的路径(包括 TUI 路径)都会先 require 它。</p>
+<p><strong>影响</strong>: parse + compile 13,589 行 + 它的 50 个 transitive require 是冷启最大单点贡献。CommandCode 这层是单一 bundle(0.5MB),khy 是裸 CJS 图。</p>
+<p><strong>证据</strong>:</p>
+<ul><li>文件长度: <code>services/backend/src/cli/replSession.js</code> 13,589 行</li><li>顶层 require 计数: <code>grep -c &quot;^const.*require&quot; services/backend/src/cli/replSession.js | head -210</code> = <strong>~50 个本地模块</strong></li><li>同类卡点(<code>App.js</code>): 顶层 require 30+ React 组件(<code>WelcomeBanner</code> / <code>Transcript</code> / <code>StreamingBlock</code> / <code>KhyOsView</code> / <code>PlanApproval</code> / <code>Spinner</code> / <code>ProgressBar</code> / <code>CompactionProgress</code> / <code>CompletionMenu</code> / <code>HelpMenu</code> / <code>ShellView</code> / <code>TranscriptView</code> / <code>TaskListPanel</code> / <code>TopologyPanel</code> / <code>SidebarPanel</code> 等),5125 行</li></ul>
+<h4 id="卡点-b-tooluseloopcore-js-13k-行单文件-首-token-最大单点">卡点 B · <code>toolUseLoopCore.js</code> 13k 行单文件(首 token 最大单点)<a class="anchor" href="#卡点-b-tooluseloopcore-js-13k-行单文件-首-token-最大单点" aria-label="锚点">#</a></h4>
+<p><strong>事实</strong>: <code>src/services/toolUseLoopCore.js</code> 12,715 行,<code>runToolUseLoop</code>(<code>toolUseLoopCore.js:2376</code>)单函数就 ~800 行,串行 10+ 阶段。</p>
+<p><strong>已知结构(用户自述)</strong>: preflight → budget → classify → generate → stream intercept → 重试 → ...<br><strong>已知 lazy 触发</strong>: <code>replSession.js:320-324</code> 已在 setImmediate 预热 <code>toolUseLoop</code>,但<strong>预热在启动期</strong>——用户敲 Enter 那刻仍未必完成(取决于打字速度)。</p>
+<p><strong>影响</strong>: 用户提交 → <code>useQueryBridge.runQuery()</code> → 同步 require <code>toolUseLoop</code> → 12,715 行 parse → <code>runToolUseLoop</code> 入口 → 预热未完成则再次 12,715 行 parse(命中 cache 后零开销,但首次一定冷)。CommandCode 用 Vercel AI SDK <code>streamText</code> 直调,<strong>没有自己的 loop</strong>,首 token 是 SDK 自带的 &lt;1s。</p>
+<p><strong>证据</strong>:</p>
+<ul><li><code>toolUseLoopCore.js:2376</code> <code>async function runToolUseLoop(userMessage, options = {})</code></li><li>文件长度: 12,715 行</li><li><code>toolUseLoop.js</code> 是 facade(13 行),实际干活在 <code>toolUseLoopCore.js</code></li></ul>
+<h4 id="卡点-c-bootstrapinit-串行-await-阻塞-repl-入口">卡点 C · <code>bootstrapInit</code> 串行 await 阻塞 REPL 入口<a class="anchor" href="#卡点-c-bootstrapinit-串行-await-阻塞-repl-入口" aria-label="锚点">#</a></h4>
+<p><strong>事实</strong>: <code>bin/khy.js:1370-1374</code> <code>await _initPromise</code>(<code>bootstrapInit</code>)。<code>src/bootstrap/init.js</code>:</p>
+<ul><li>line 56 <code>require('dotenv').config(...)</code> 同步 IO</li><li>line 77 同上,~/.khy/.env 同步 IO</li><li>line 88-91 <code>expandEnvPlaceholders</code> 同步正则扫所有 env</li><li>line 96-154 <code>Promise.allSettled([5 个非关键 init])</code> <strong>并行</strong>(已优化过)</li><li>line 167-189 <code>_initDbHealth</code> 默认 <code>KHY_DB_HEALTH_DEFER=1</code> → 后台跑</li></ul>
+<p>5 路并行已优化过(<code>init.js:94-95</code> 注释自述「并行 -200-500ms」),剩阻塞项就是 dotenv 同步 IO × 2 + ensureProxyCoreEnv/ensureJwtSecret/proxyConfigService.initFromConfig/appRegistry.autoRegisterDev/dynamicFreeModelService.warmUp(并行但其中部分内部有 await)。</p>
+<p><strong>影响</strong>: 进 REPL 前必等 100-400ms 串行 + 5 路并行的 max 时间。CommandCode <strong>没有这层</strong>(用户级 ~/.khy/.env 由 SDK 自己读,跨进程无关)。</p>
+<p><strong>证据</strong>: <code>bin/khy.js:1368-1375</code>, <code>bootstrap/init.js:48-194</code></p>
+<h4 id="卡点-d-ensureauthenticated-阻塞主路径">卡点 D · <code>ensureAuthenticated</code> 阻塞主路径<a class="anchor" href="#卡点-d-ensureauthenticated-阻塞主路径" aria-label="锚点">#</a></h4>
+<p><strong>事实</strong>: <code>bin/khy.js:687+</code> 是主路径同步 await,fast path 只判 <code>auth.checkSession()</code>,slow path 要:</p>
+<ul><li><code>require('inquirer')</code>(<code>bin/khy.js:702</code>)—— inquirer 是重依赖</li><li><code>require('picocolors')</code> × 2</li><li><code>require('../src/cli/formatters')</code></li><li><code>require('../src/services/cliAuthService')</code></li><li><code>await isPortReady(PORT, 400)</code>(<code>bin/khy.js:714</code>)—— TCP 探测</li><li>失败再走 inquirer 提问 / 邮箱验证码 / 凭据生成</li></ul>
+<p><strong>影响</strong>: 已登录用户进 REPL 必须多付一次 <code>isPortReady</code> 的 0-400ms + auth 模块图的冷加载。CommandCode 没有本地 server,认证是云端 SDK 直调,<strong>没有这层</strong>。</p>
+<p><strong>证据</strong>: <code>bin/khy.js:687-700</code>、<code>bin/khy.js:1130-1138</code></p>
+<h4 id="卡点-e-workspacetrust-等待同步-inquirer-仅未信任目录">卡点 E · <code>workspaceTrust</code> 等待同步 inquirer(仅未信任目录)<a class="anchor" href="#卡点-e-workspacetrust-等待同步-inquirer-仅未信任目录" aria-label="锚点">#</a></h4>
+<p><strong>事实</strong>: <code>replSession.js:450-467</code> <code>await promptOutputGuard.runExclusive(() =&gt; trustGate.ensureWorkspaceTrust(...))</code>。如果 <code>services/workspaceTrust.js</code> 已记该目录为 trusted,fast path 直接返回 <code>{ trusted:true }</code>;未信任才弹 inquirer。</p>
+<p><strong>影响</strong>: 已 trust 用户 0ms;新目录每次进 1 次 inquirer,阻塞 &lt;500ms。这是 fail-open 设计(<code>trustGate.js:19-22</code>),不是 bug,但首次新项目会感知。</p>
+<p><strong>证据</strong>: <code>replSession.js:450-467</code>, <code>trustGate.js:64-79</code>(持久存储 <code>dataHome/trusted-folders.json</code>)</p>
+<h4 id="卡点-f-streamingblock-o-n²-实时归一-长回答末期掉帧">卡点 F · StreamingBlock O(n²) 实时归一(长回答末期掉帧)<a class="anchor" href="#卡点-f-streamingblock-o-n²-实时归一-长回答末期掉帧" aria-label="锚点">#</a></h4>
+<p><strong>事实</strong>: <code>src/cli/tui/ink-components/StreamingBlock.js:58-65</code> 注释自承:「re-normalizes EVERY text segment of the whole accumulated timeline on every frame (~25fps). All but the single growing segment are frozen → O(n²)/turn of pure waste」。<br><strong>已知 mitigation</strong>: <code>streamNormCache</code>(<code>StreamingBlock.js:66</code>)是 content-keyed memo,frozen segment 命中 cache,只 growing segment 重算 → O(n²)→O(n)/turn。</p>
+<p><strong>影响</strong>: 5000 字长回答末期,即便有 memo,<code>toolEntryRows</code> / <code>liveHeightClamp</code> / <code>liveRegionBudget</code> 仍要扫所有工具行。CommandCode 没有&quot;工具 tier 矩阵&quot;和&quot;liveHeightClamp&quot;概念,直接 stream text → ink 渲染。</p>
+<p><strong>证据</strong>: <code>StreamingBlock.js:36-73</code>、<code>toolEntryRows.js</code>(顶层 require 进 hot path)</p>
+<h4 id="卡点-g-既有-4-道叙述层每次提交都触发-react-重渲染">卡点 G · 既有 4 道叙述层每次提交都触发 React 重渲染<a class="anchor" href="#卡点-g-既有-4-道叙述层每次提交都触发-react-重渲染" aria-label="锚点">#</a></h4>
+<p><strong>事实</strong>(<code>flagRegistry.js</code> + 各 voice 叶子):</p>
+<ul><li><code>KHY_FIRST_RESPONSE_ACK</code>(<code>flagRegistry.js:1974</code>)默认 on,延迟 1200ms 出占位句</li><li><code>KHY_TURN_ACK</code>(<code>flagRegistry.js:1956</code>)默认 on,首个工具派发前出</li><li><code>KHY_TOOL_PREFACE_NATURAL_VOICE</code>(<code>flagRegistry.js:1931</code>)默认 on,每工具前</li><li><code>KHY_TOOL_PREFACE_DEDUP</code>(<code>flagRegistry.js:1825</code>)默认 on,连续同类工具去重</li></ul>
+<p><strong>已知上下文</strong>(来自每个 voice 叶子的注释): 这是用户<strong>历史 /goal 反馈要的功能</strong>——「当我向 Khy 输入提示词时,khy 要及时回应」(2026-07-12)、「khy 收到输入后...在代码级先甩一句确定性短句回应,再继续干活」(2026-07-05)。</p>
+<p><strong>影响</strong>: 每提交一次:1 个 React setState(firstResponseAck timer arm) → 1 个 setState(turnAck 命中) → 多个 setState(toolPreface 每工具前) → 每个触发 StreamingBlock re-render。<strong>主观&quot;丝滑感&quot;被这些 setState 拖慢</strong>。</p>
+<p><strong>关键判断</strong>:<strong>这是用户要求的功能,不能关掉</strong>。优化方向是减少 setState 而非取消触发(详见方案 D)。</p>
+<hr>
+<h2 id="三-修复方案-3-阶段-4-周">三、修复方案(3 阶段,4 周)<a class="anchor" href="#三-修复方案-3-阶段-4-周" aria-label="锚点">#</a></h2>
+<blockquote><p>三个阶段为同一流水线:每一步为下一步铺路。每步都有<strong>显式 env 回退</strong>,源码路径 100% 不动。</p></blockquote>
+<h3 id="阶段-b-启用-khy-fast-startup-作为正式默认-0-5-天">阶段 B · 启用 <code>KHY_FAST_STARTUP</code> 作为正式默认(0.5 天)<a class="anchor" href="#阶段-b-启用-khy-fast-startup-作为正式默认-0-5-天" aria-label="锚点">#</a></h3>
+<p><strong>目标</strong>: 把已经存在的 <code>bin/khy.js:69-73</code> <code>KHY_FAST_STARTUP=1</code> 机制<strong>翻成默认</strong>——它已经会关 <code>KHY_BRIDGE_AUTOSTART</code> + <code>KHY_SOURCE_HEAL</code> + <code>KHY_TASK_CLEANUP</code>。今天默认是 0(关),改成&quot;不显式设 = 等同 1&quot;。</p>
+<p><strong>改动点</strong>:</p>
+<ul><li><code>services/backend/bin/khy.js:69</code> 把 <code>if (process.env.KHY_FAST_STARTUP === '1')</code> 改成 <code>if (process.env.KHY_FAST_STARTUP !== '0')</code>(默认走 fast 路径,显式 <code>KHY_FAST_STARTUP=0</code> 走 legacy)</li><li><code>services/backend/bin/khy.js:70-73</code> 行为不变(默认关这三项副作用)</li></ul>
+<p><strong>不动</strong>:</p>
+<ul><li>4 道叙述层(KHY_FIRST_RESPONSE_ACK / KHY_TURN_ACK / KHY_TOOL_PREFACE_*):用户历史反馈要的功能,本期不砍</li><li>workspaceTrust:fail-open 设计保留</li><li><code>bootstrapInit</code> 串行 await:留给阶段 C 单独处理</li></ul>
+<p><strong>风险</strong>: 极低。env var 翻 default,显式 <code>=0</code> 老用户一行恢复。CHANGELOG 明示。</p>
+<p><strong>预期收益</strong>:</p>
+<ul><li>启动砍掉 bridgeServer setImmediate(虽不阻塞,但减 CPU 抖动 ~0.4s)</li><li>启动砍掉 sourceHealService SHA-256 比对(冷时 ~50-200ms,稳态 ~1ms)</li><li>启动砍掉 taskCleanupService 清理(后台跑但抢 CPU)</li><li>净:<strong>主观启动快 200-600ms</strong>(取决于机器 + git 状态)</li></ul>
+<p><strong>回退</strong>: <code>KHY_FAST_STARTUP=0 khy</code></p>
+<h3 id="阶段-a-bundle-启动-cli-对位-commandcode-5-7-天">阶段 A · Bundle 启动 CLI(对位 CommandCode)(5-7 天)<a class="anchor" href="#阶段-a-bundle-启动-cli-对位-commandcode-5-7-天" aria-label="锚点">#</a></h3>
+<p><strong>目标</strong>: 复用现有 <code>services/backend/esbuild.config.js</code>(已就位但未启用,产出 <code>dist/khy.cjs/mjs/cli.cjs</code>),新增 <strong>CLI 专用 minified mjs bundle</strong>,首启从 2-3s → 500ms,后续启 600-1200ms → 250ms。</p>
+<p><strong>改动点</strong>:</p>
+<ol><li><code>services/backend/esbuild.config.js</code> 在 <code>configs[]</code> 末尾追加:</li></ol>
+<pre><code class="language-js">{
+  ...sharedOptions,
+  <span class="hljs-attr">entryPoints</span>: [<span class="hljs-string">&#x27;bin/khy.js&#x27;</span>],
+  <span class="hljs-attr">outfile</span>: <span class="hljs-string">&#x27;dist/cli.mjs&#x27;</span>,
+  <span class="hljs-attr">format</span>: <span class="hljs-string">&#x27;esm&#x27;</span>,
+  <span class="hljs-attr">minify</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-attr">minifyWhitespace</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-attr">minifyIdentifiers</span>: <span class="hljs-literal">true</span>,   <span class="hljs-comment">// ← esbuild.config.js:81 现状 false → true</span>
+  <span class="hljs-attr">minifySyntax</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-attr">banner</span>: { <span class="hljs-attr">js</span>: <span class="hljs-string">`#!/usr/bin/env node\n<span class="hljs-subst">${banner}</span>`</span> },
+  <span class="hljs-comment">// critical externals:bundle 内 ESM 动态 import(&#x27;ink&#x27;) 会丢 — 必须把 ink 留 external</span>
+  <span class="hljs-attr">external</span>: [...externalDeps, <span class="hljs-string">&#x27;ink&#x27;</span>, <span class="hljs-string">&#x27;react&#x27;</span>, <span class="hljs-string">&#x27;better-sqlite3&#x27;</span>, <span class="hljs-string">&#x27;bindings&#x27;</span>],
+  <span class="hljs-attr">define</span>: {
+    ...sharedOptions.<span class="hljs-property">define</span>,
+    <span class="hljs-string">&#x27;process.env.KHY_BUNDLED_CLI&#x27;</span>: <span class="hljs-string">&#x27;&quot;true&quot;&#x27;</span>,
+  },
+}</code></pre>
+<ol><li><strong>JSX 不需要单独配置</strong>(实测 <code>inkRuntime.js:47-54</code> 已用 <code>require.extensions['.jsx'] = require.extensions['.js']</code>,组件全 <code>React.createElement</code>),esbuild 不需要 babel。但 esbuild 默认把 <code>.jsx</code> 当 JS 处理——校验一下 esbuild v0.25 默认 loader,可能要显式 <code>loader: { '.jsx': 'js' }</code>。</li><li><code>services/backend/bin/khy.js</code> 顶部(line 50 前)插入 bundle 检测:</li></ol>
+<pre><code class="language-js"><span class="hljs-comment">// Fast path: prefer the minified bundle when present (production-like install).</span>
+<span class="hljs-comment">// KHY_NO_BUNDLE=1 forces the source path (used by test:backend + dev workflows).</span>
+<span class="hljs-keyword">const</span> _BUNDLE_PATH = path.<span class="hljs-title function_">join</span>(__dirname, <span class="hljs-string">&#x27;..&#x27;</span>, <span class="hljs-string">&#x27;dist&#x27;</span>, <span class="hljs-string">&#x27;cli.mjs&#x27;</span>);
+<span class="hljs-keyword">if</span> (!process.<span class="hljs-property">env</span>.<span class="hljs-property">KHY_NO_BUNDLE</span> &amp;&amp; fs.<span class="hljs-title function_">existsSync</span>(_BUNDLE_PATH)) {
+  <span class="hljs-comment">// eslint-disable-next-line no-undef</span>
+  <span class="hljs-keyword">import</span>(url.<span class="hljs-title function_">pathToFileURL</span>(_BUNDLE_PATH).<span class="hljs-property">href</span>).<span class="hljs-title function_">then</span>(<span class="hljs-function">() =&gt;</span> {}).<span class="hljs-title function_">catch</span>(<span class="hljs-function">(<span class="hljs-params">e</span>) =&gt;</span> {
+    process.<span class="hljs-property">stderr</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">`cli.mjs load failed: <span class="hljs-subst">${e.message}</span>; falling back to source.\n`</span>);
+  });
+}</code></pre>
+<p>注: 上面是<strong>示意代码结构</strong>,实际插入位置需读 <code>bin/khy.js:1-100</code> 后决定——切勿在读之前改。</p>
+<ol><li><code>package.json</code> 加 <code>portable:build:cli-bundle</code> 任务入口,产出命令独立于现有 <code>portable:build:*</code>,不替换原任务。</li></ol>
+<p><strong>风险</strong>:</p>
+<table><thead><tr><th>风险</th><th>缓解</th></tr></thead><tbody><tr><td><code>require.cache</code> 访问点断裂</td><td>bundle 内无 require.cache 概念,审计 <code>sourceHealService</code> / <code>toolLoopDetector</code> / sqlite init 路径,改成模块级单例</td></tr><tr><td>ESM 内 <code>__dirname</code> / <code>__filename</code> 是 undefined</td><td>逐文件 audit,改 <code>import.meta.url</code> + <code>fileURLToPath</code></td></tr><tr><td>ink 走 <code>import('ink')</code> 动态 ESM 桥</td><td>esbuild 不会模拟动态 ESM,必须 external <code>ink</code>/<code>react</code>;bundle 里这段保留原 import 语法</td></tr><tr><td>better-sqlite3 native</td><td>已走 external,preinstall 链接保留</td></tr><tr><td><code>moduleSelfHeal</code> hook Module._resolveFilename</td><td>bundle 后 hook 失效,在 <code>KHY_BUNDLED_CLI=true</code> 时 skip</td></tr><tr><td><code>windowsSpawnHardening</code> hook child_process</td><td>bundle 后 hook 仍生效(走 require.cache 的 patch)——但 spawn 函数本身在 child_process,改 hook 装入点</td></tr></tbody></table>
+<p><strong>不动</strong>:</p>
+<ul><li>既有 esbuild.config.js 的 3 个现有产物(<code>khy.cjs/mjs/cli.cjs</code>):保留,新加 CLI bundle 不动它们</li><li>源码路径 100%: <code>KHY_NO_BUNDLE=1</code> 走 <code>bin/khy.js</code> 原始代码,所有 <code>test:backend</code> 跑源码路径</li></ul>
+<p><strong>预期收益</strong>:</p>
+<ul><li>冷启: 2-3s → <strong>500ms</strong>(对位 cmdc 300ms)</li><li>热启: 600-1200ms → <strong>250ms</strong>(对位 cmdc 150ms)</li><li>bundle 大小目标: &lt;8MB(cmb ~5MB)</li></ul>
+<p><strong>回退</strong>: <code>KHY_NO_BUNDLE=1 khy</code>,或删除 <code>dist/cli.mjs</code></p>
+<h3 id="阶段-c-replsession-js-顶层-require-瘦身-3-5-天">阶段 C · <code>replSession.js</code> 顶层 require 瘦身(3-5 天)<a class="anchor" href="#阶段-c-replsession-js-顶层-require-瘦身-3-5-天" aria-label="锚点">#</a></h3>
+<p><strong>目标</strong>: <code>replSession.js:9-210</code> 的 50 个顶层 require 中,<strong>30+ 是渲染管线叶子</strong>(用户打字阶段不需要),改成<strong>调用时才 require 的 lazy getter</strong>。</p>
+<p><strong>改动点</strong>:</p>
+<ol><li><code>src/cli/replSession.js:9-210</code> 拆分两段:</li></ol>
+<ul><li><strong>保留顶层</strong>(真的启动期就要的):<ul><li><code>safeReadJsonSync</code> / <code>foldOutput</code> / <code>KHY_SETTINGS_FILE</code> / <code>HISTORY_FILE</code> / <code>inputClassifiers</code> / <code>featureCapabilityMap</code> / <code>lineBuffer</code> / <code>backslashContinuation</code></li><li>这些是 UI 装饰、REPL 协议层,启动期就要评估</li></ul></li><li><strong>移到 lazy getter</strong>(<code>function _lazyToolDisplay() { return _toolDisplay ??= require('./toolDisplayPolicy'); }</code> 模式):<ul><li><code>toolDisplayPolicy</code> / <code>streamingMarkdown</code> / <code>toolResultVoice</code> / <code>statusMessageFormatter</code> / <code>bulkLines</code> / <code>escapeTimeoutDetector</code> / <code>toolOutputRender</code> / <code>streamRender</code> / <code>errorReporting</code> / <code>footerLayout</code> / <code>slashCommandFilter</code> / <code>startup</code> / <code>atPicker</code> / <code>imageIntent</code> / <code>imageRecognitionIntent</code> / <code>terminalTitle</code> / <code>renderDedup</code> / <code>taskMindMap</code> / <code>taskCleanupService</code> / <code>sessionChecklistResetService</code> / <code>sourceHealService</code> / <code>workspaceGitInit</code> / <code>geolocationService</code> / <code>gitContextService</code> / <code>intentAssuranceDebugSnapshot</code> / <code>PASTED_CONTENT_BLOCK_RE</code> / <code>summarizeQueuedInputForDisplay</code> / <code>phaseActionLabel</code> / <code>extractPlanStepsFromText</code> 等</li></ul></li></ul>
+<ol><li>同步瘦身 <code>App.js:11-60</code> 的 30+ 顶层 require(模式相同)</li><li>既有 <code>_tryOr</code>(<code>replSession.js:94</code>)和 <code>vimInput()</code>(<code>replSession.js:56</code>)的 lazy getter 模式已经成熟,<strong>铺开即可</strong>。</li></ol>
+<p><strong>风险</strong>:</p>
+<table><thead><tr><th>风险</th><th>缓解</th></tr></thead><tbody><tr><td>顺序依赖:<code>flagRegistry</code> import 时注册 self,某些叶子 import 时副作用不可逆</td><td>跑 <code>test:backend</code> 验证;`grep -l &quot;onRequire\</td></tr><tr><td><code>permissionDialog</code> 通过 <code>require('./ui/permissionDialog')</code> 在 <code>replSession.js:15</code> self-register 到 permissionPromptPort</td><td>lazy 后要在 <code>startRepl</code> 第一行显式 <code>permissionDialog.register()</code>,不动语义</td></tr></tbody></table>
+<p><strong>预期收益</strong>:</p>
+<ul><li>不走 bundle 的源码路径:首启 -30-50%,从 2-3s → 1-1.5s</li><li>走 bundle 的路径:收益已被阶段 A 覆盖,本阶段主要是兜底</li></ul>
+<p><strong>回退</strong>: 单文件 revert;<code>flagRegistry.js</code> 仍有所有门控,无需新加 env</p>
+<h3 id="阶段-d-首-token-解耦-7-10-天-与阶段-a-并行">阶段 D · 首 token 解耦(7-10 天,与阶段 A 并行)<a class="anchor" href="#阶段-d-首-token-解耦-7-10-天-与阶段-a-并行" aria-label="锚点">#</a></h3>
+<p><strong>目标</strong>: 用户 <code>Enter</code> → 100ms 内 UI 进入 streaming 态(显示占位 spinner) → 1s 内首字符出现。CommandCode 同体感 &lt;1s。</p>
+<p><strong>改动点</strong>:</p>
+<ol><li><code>useQueryBridge.runQuery()</code>(<code>hooks/useQueryBridge.js</code>)首屏行为:<ul><li>把 <code>toolUseLoop</code> / <code>toolUseLoopCore</code> 的 require 改<strong>异步</strong>:<code>await import(...)</code>(CJS 不可用 dynamic import,改 <code>require(...)</code> 包一层 <code>Promise.resolve()</code>)</li><li>首 render 时立刻显示&quot;提交中&quot;占位</li></ul></li></ol>
+<ol><li><code>runToolUseLoop</code>(<code>toolUseLoopCore.js:2376</code>)两段式:<ul><li><strong>emit preamble 立即返回</strong>(已有部分 streaming 状态可显示):<code>resolveStream({ type: 'placeholder' })</code></li><li>后台跑 preflight → budget → classify → generate</li><li>首个 chunk 到达时无缝接管(已有 onChunk 链路)</li></ul></li></ol>
+<ol><li><code>useTextInput</code> 已有良好结构,本阶段<strong>不做分类器瘦身</strong>(实测只有 3 个轻 require,不卡)。</li><li><code>firstResponseAckVoice</code> / <code>turnAckVoice</code> / <code>toolPrefaceVoice</code> 不动 default,但<strong>优化 emit 链路</strong>:<ul><li>现在的实现是 <code>setState</code> → React re-render StreamingBlock</li><li>改成 <code>setState</code> → 标记&quot;已 ack&quot; → 下次 streaming commit 时一次性 render,避免连续 setState 触发多次 render</li></ul></li></ol>
+<ol><li><code>prefetch 窗口</code>(<code>replSession.js:308-339</code> 已有的 setImmediate 预热)升级:<ul><li>启动期:setImmediate 预热已有</li><li><strong>打字期</strong>: <code>useTextInput</code> 检测到 <code>length &gt;= 3 &amp;&amp; 距上次按键 &lt;500ms</code> 时,<strong>在后台预热</strong>(不阻塞 React)</li><li>检测 <code>setImmediate 队列里已存在 prewarm</code> → 跳过</li></ul></li></ol>
+<p><strong>风险</strong>:</p>
+<table><thead><tr><th>风险</th><th>缓解</th></tr></thead><tbody><tr><td>占位 UI 闪烁</td><td>浅灰&quot;…&quot;行 + key={placeholderId} 强制 React 不复用</td></tr><tr><td>预热抢 CPU,反而拖慢打字</td><td>typing-time prefetch 限流,不在启动期抢</td></tr><tr><td><code>runToolUseLoop</code> 两段式破坏现有 10+ 阶段的 invariant</td><td>阶段内不重排,只在入口加 preamble emit;后续阶段保持原序</td></tr></tbody></table>
+<p><strong>不动</strong>:</p>
+<ul><li><code>toolUseLoopCore.js</code> 10+ 阶段顺序(那是业务逻辑)</li><li>4 道叙述层 default(<code>firstResponseAckVoice</code> 等)</li><li>ack voice 的语义 / 文案</li></ul>
+<p><strong>预期收益</strong>:</p>
+<ul><li>首 token 时间: 2-5s → <strong>&lt;1.5s</strong>(对位 cmdc &lt;1s)</li><li>按键延迟: p95 30-50ms → &lt;30ms(实测 <code>useTextInput</code> 已无重分类器,主要是 React commit)</li></ul>
+<p><strong>回退</strong>: <code>KHY_NO_PREFETCH=1</code>(新增 env,在 <code>replSession.js</code> 打字期 prefetch 处判定)走纯 lazy</p>
+<hr>
+<h2 id="四-阶段产物汇总">四、阶段产物汇总<a class="anchor" href="#四-阶段产物汇总" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>阶段</th><th>周</th><th>改动文件数</th><th>新增文件</th><th>关键文件</th><th>风险</th></tr></thead><tbody><tr><td><strong>B</strong></td><td>0.5 天</td><td>1</td><td>0</td><td><code>bin/khy.js:69-73</code></td><td>极低</td></tr><tr><td><strong>A</strong></td><td>5-7 天</td><td>2</td><td>1 (<code>dist/cli.mjs</code> 产物)</td><td><code>esbuild.config.js</code> 新增 1 个 config;<code>bin/khy.js</code> 顶部插 3 行</td><td>中(ESM 桥 + native)</td></tr><tr><td><strong>C</strong></td><td>3-5 天</td><td>2</td><td>0</td><td><code>src/cli/replSession.js</code> + <code>src/cli/tui/ink-components/App.js</code> 拆分顶层 require</td><td>中(顺序依赖 audit)</td></tr><tr><td><strong>D</strong></td><td>7-10 天</td><td>3-4</td><td>0-1</td><td><code>useQueryBridge.js</code> / <code>toolUseLoopCore.js</code> 入口 / <code>useTextInput.js</code> 打字期 prefetch</td><td>中(React commit / 占位闪烁)</td></tr></tbody></table>
+<p>合计 <strong>4 周</strong>拿到 <strong>3 个数据维度</strong>全面对位 cmdc。</p>
+<hr>
+<h2 id="五-验收指标">五、验收指标<a class="anchor" href="#五-验收指标" aria-label="锚点">#</a></h2>
+<h3 id="5-1-性能指标">5.1 性能指标<a class="anchor" href="#5-1-性能指标" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>现值(基线)</th><th>阶段 B 后</th><th>阶段 A 后</th><th>阶段 D 后</th><th>cmdc 对位</th></tr></thead><tbody><tr><td>冷启 p50</td><td>2-3s</td><td>~2-2.5s</td><td><strong>&lt;500ms</strong></td><td>&lt;500ms</td><td>~300ms</td></tr><tr><td>热启 p50</td><td>600-1200ms</td><td>~500-1000ms</td><td><strong>&lt;250ms</strong></td><td>&lt;250ms</td><td>~150ms</td></tr><tr><td>首屏 → 可输入</td><td>~800ms+</td><td>~600ms</td><td><strong>&lt;600ms</strong></td><td>&lt;600ms</td><td>~400ms</td></tr><tr><td>首 token p50</td><td>2-5s</td><td>2-5s</td><td>2-5s</td><td><strong>&lt;1.5s</strong></td><td>&lt;1s</td></tr><tr><td>按键延迟 p95</td><td>30-50ms</td><td>30-50ms</td><td>30-50ms</td><td><strong>&lt;30ms</strong></td><td>&lt;20ms</td></tr></tbody></table>
+<h3 id="5-2-质量指标">5.2 质量指标<a class="anchor" href="#5-2-质量指标" aria-label="锚点">#</a></h3>
+<ul><li><code>npm run test:backend</code> 全过(走 <code>KHY_NO_BUNDLE=1</code>)</li><li><code>npm run check:structure</code> 全过(不破坏 layer 约束)</li><li><code>npm run check:agent-rules</code> 全过(不动 agent rules)</li><li>bundle 文件大小 &lt;8MB</li><li>长回答末期(&gt;3000 字)帧率 ≥30fps(用 ink dev mode 实测)</li></ul>
+<h3 id="5-3-行为指标">5.3 行为指标<a class="anchor" href="#5-3-行为指标" aria-label="锚点">#</a></h3>
+<ul><li>用户显式 <code>KHY_FAST_STARTUP=0</code> → 完全等价于改动前的行为(字节级)</li><li>用户显式 <code>KHY_NO_BUNDLE=1</code> → 完全等价于改动前的行为(走源码)</li><li>4 道叙述层 default 不动(用户历史 /goal 反馈要的功能)</li><li>bridgeServer / sourceHeal / taskCleanup 默认 off(走 <code>KHY_FAST_STARTUP=1</code>),但显式 env 可恢复</li></ul>
+<hr>
+<h2 id="六-不做什么-明确范围外">六、不做什么(明确范围外)<a class="anchor" href="#六-不做什么-明确范围外" aria-label="锚点">#</a></h2>
+<ul><li><strong>不重写 AI 网关</strong>(10 个 adapter 是产品价值)</li><li><strong>不砍 tool 沙箱</strong>(8 道闸门对安全和审计有价值)</li><li><strong>不重写 toolUseLoopCore 的 10+ 阶段顺序</strong>(业务逻辑)</li><li><strong>不关 ack voice 4 道</strong>(用户历史 /goal 要的功能)</li><li><strong>不做 TUI 视觉改动</strong>(用户没抱怨视觉)</li><li><strong>不做 streaming 增量重写</strong>(StreamingBlock 已 O(n²)→O(n) 经 streamNormCache 优化;边际收益低于 bundle)</li></ul>
+<hr>
+<h2 id="七-未来扩展-本期不做">七、未来扩展(本期不做)<a class="anchor" href="#七-未来扩展-本期不做" aria-label="锚点">#</a></h2>
+<ol><li><strong>streaming 增量 RLE renderer</strong>(O(n) → O(Δ)): 边际收益低于 bundle,留给 V2</li><li><strong>App.js 拆包</strong>(从 5125 行 → ~200 行 App + 多个 component 文件): 与阶段 C 同步做收益更大,但需更大改动,留 V2</li><li><strong>WebView UI 替代 Ink</strong>(对位 Aider / Cursor): 架构级改动,本期范围外</li><li><strong>prefetch 升级到 service worker</strong>: 跨进程加速,留 V2</li></ol>
+<hr>
+<h2 id="八-附-已存在的可用基础设施">八、附:已存在的可用基础设施<a class="anchor" href="#八-附-已存在的可用基础设施" aria-label="锚点">#</a></h2>
+<p>调研发现 khy 已有相当一部分基础设施,本方案只是<strong>翻开关 + 接通</strong>:</p>
+<table><thead><tr><th>已有基建</th><th>位置</th><th>用途</th></tr></thead><tbody><tr><td><code>KHY_FAST_STARTUP=1</code></td><td><code>bin/khy.js:69-73</code></td><td>已会关 bridge/sourceHeal/taskCleanup;本方案只翻 default</td></tr><tr><td><code>enableCompileCache()</code></td><td><code>bin/khy.js:53</code></td><td>V8 bytecode 缓存已开,后续启动自动受益</td></tr><tr><td><code>windowsSpawnHardening</code></td><td><code>bin/khy.js:60</code></td><td>win32 spawn 已默认 hide=true,黑框/慢启动已治</td></tr><tr><td><code>KHY_DB_HEALTH_DEFER=1</code> 默认</td><td><code>bootstrap/init.js:164</code></td><td>DB health 检查已后台跑,不阻塞</td></tr><tr><td><code>moduleSelfHeal</code></td><td><code>bin/khy.js:66</code></td><td>Module._resolveFilename hook 已装,require 路径错自愈</td></tr><tr><td><code>Promise.allSettled</code> 5 路并行</td><td><code>bootstrap/init.js:96-154</code></td><td>init 5 个非关键步骤已并行 -200-500ms</td></tr><tr><td><code>streamNormCache</code></td><td><code>StreamingBlock.js:66</code></td><td>长回答 O(n²)→O(n) 已治,只剩边际成本</td></tr><tr><td><code>scrollbackPreserve</code></td><td><code>tui/app.js:102-119</code></td><td>三层:剥 3J / win32 ED2→ED0 / 全屏帧整段转录重发抑制(<code>KHY_SUPPRESS_STATIC_REPRINT</code>,ink.js:327 冗余 fullStaticOutput 剥离,「启动后历史重复几次」根治)</td></tr><tr><td><code>perfEntryReaper</code></td><td><code>tui/app.js:35-37</code></td><td>React dev mode performance.measure 累积已清</td></tr><tr><td><code>dynamicFreeModelService.warmUp()</code></td><td><code>bootstrap/init.js:148-152</code></td><td>免费模型表已后台预热</td></tr><tr><td><code>prewarmGitContext</code></td><td><code>replSession.js:308-314</code></td><td>git context 已后台预热</td></tr><tr><td><code>prewarm(['claude','codex','aider'])</code></td><td><code>replSession.js:298-301</code></td><td>CLI availability 已后台预热</td></tr><tr><td><code>setImmediate(()=&gt;require('toolUseLoop'))</code></td><td><code>replSession.js:320-324</code></td><td>toolUseLoop 12k 行预热已有(阶段 D 升级为打字期 prefetch)</td></tr><tr><td><code>setImmediate(()=&gt;require('bridgeServer'))</code></td><td><code>replSession.js:416-434</code></td><td>bridgeServer 已在后台启动,不阻塞 REPL</td></tr><tr><td><code>setImmediate(()=&gt;require('sourceHealService'))</code></td><td><code>replSession.js:571-588</code></td><td>sourceHeal 已后台跑,稳态 ~1ms</td></tr><tr><td><code>flagRegistry.js</code> 1500+ env 门</td><td><code>services/flagRegistry.js</code></td><td>单一真源,所有 default 翻动都经它,加 env var 1 行</td></tr></tbody></table>
+<p><strong>结论</strong>: khy 没有&quot;功能缺失&quot;,是<strong>默认值不够激进</strong> + <strong>顶层 require 不够窄</strong> + <strong>首次提交路径没有占位流</strong>。本次方案是把这三件事修掉,<strong>不动架构</strong>。</p>
+<hr>
+<h2 id="九-变更记录">九、变更记录<a class="anchor" href="#九-变更记录" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>作者</th><th>变更</th></tr></thead><tbody><tr><td>v1</td><td>2026-08-31</td><td>调研产出</td><td>初稿,基于代码调研校正 + 4 周 3 阶段方案</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-PERF/[DESIGN-PERF-001] 性能规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-PERF-001] 性能规范</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-PERF/[DESIGN-PERF-002] khy-cli-交互流畅度修复方案-v1.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-PERF-002] khy-cli 交互流畅度修复方案 v1</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-PERF/[DESIGN-PERF-001] khy-cli-交互流畅度修复方案-v1.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

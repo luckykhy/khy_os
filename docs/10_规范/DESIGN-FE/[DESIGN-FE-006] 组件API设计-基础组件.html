@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-FE-006] 组件API设计-基础组件.md -->
+<title>[DESIGN-FE-006] 组件 API 设计 · 基础组件 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-FE<span class="sep">›</span>[DESIGN-FE-006] 组件 API 设计 · 基础组件</div>
+      <header class="hero reveal"><h1>[DESIGN-FE-006] 组件 API 设计 · 基础组件</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-fe-006-组件-api-设计-基础组件">[DESIGN-FE-006] 组件 API 设计 · 基础组件</a></li><li class="lvl-2"><a href="#3-组件-api-设计">3. 组件 API 设计</a></li><li class="lvl-3"><a href="#3-1-基础组件-api">3.1 基础组件 API</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-fe-006-组件-api-设计-基础组件">[DESIGN-FE-006] 组件 API 设计 · 基础组件<a class="anchor" href="#design-fe-006-组件-api-设计-基础组件" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：基础组件（Button/Input/Card/Modal 等）的 API 目标态。<br><strong>隶属</strong>：本文是 [<code>[DESIGN-FE-002]</code> 前端组件库规范]([DESIGN-FE-002] 前端组件库规范.md) 的<strong>子篇</strong>；主篇是唯一入口与 scope 裁决真源，本文只承载细则。<br><strong>状态</strong>：随主篇——主篇 §0 声明为「目标态、非现状」，本文同样在组件库真正落地后才生效；在此之前一切以 [<code>[DESIGN-FE-001]</code> 前端页面规范]([DESIGN-FE-001] 前端页面规范.md) 为准。</p></blockquote>
+<hr>
+<h2 id="3-组件-api-设计">3. 组件 API 设计<a class="anchor" href="#3-组件-api-设计" aria-label="锚点">#</a></h2>
+<h3 id="3-1-基础组件-api">3.1 基础组件 API<a class="anchor" href="#3-1-基础组件-api" aria-label="锚点">#</a></h3>
+<p><strong>按钮组件 (KhyButton)</strong>：</p>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;button
+    :class=&quot;buttonClasses&quot;
+    :disabled=&quot;disabled || loading&quot;
+    @click=&quot;handleClick&quot;
+  &gt;
+    &lt;span v-if=&quot;loading&quot; class=&quot;khy-button__spinner&quot; /&gt;
+    &lt;slot /&gt;
+  &lt;/button&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+const props = defineProps({
+  // 按钮类型
+  variant: {
+    type: String,
+    default: 'default',
+    validator: (value) =&gt; ['default', 'primary', 'success', 'warning', 'danger', 'ghost'].includes(value)
+  },
+  // 按钮大小
+  size: {
+    type: String,
+    default: 'md',
+    validator: (value) =&gt; ['sm', 'md', 'lg'].includes(value)
+  },
+  // 是否禁用
+  disabled: Boolean,
+  // 是否加载中
+  loading: Boolean,
+  // 是否块级
+  block: Boolean,
+  // 图标
+  icon: String
+});
+
+const emit = defineEmits(['click']);
+
+const buttonClasses = computed(() =&gt; [
+  'khy-button',
+  `khy-button--${props.variant}`,
+  `khy-button--${props.size}`,
+  {
+    'khy-button--block': props.block,
+    'khy-button--loading': props.loading,
+    'khy-button--icon-only': props.icon &amp;&amp; !props.$slots.default
+  }
+]);
+
+const handleClick = (event) =&gt; {
+  if (!props.disabled &amp;&amp; !props.loading) {
+    emit('click', event);
+  }
+};
+&lt;/script&gt;</code></pre>
+<p><strong>输入框组件 (KhyInput)</strong>：</p>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;div :class=&quot;inputClasses&quot;&gt;
+    &lt;label v-if=&quot;label&quot; class=&quot;khy-input__label&quot;&gt;
+      {{ label }}
+      &lt;span v-if=&quot;required&quot; class=&quot;khy-input__required&quot;&gt;*&lt;/span&gt;
+    &lt;/label&gt;
+    &lt;div class=&quot;khy-input__wrapper&quot;&gt;
+      &lt;span v-if=&quot;$slots.prefix&quot; class=&quot;khy-input__prefix&quot;&gt;
+        &lt;slot name=&quot;prefix&quot; /&gt;
+      &lt;/span&gt;
+      &lt;input
+        ref=&quot;inputRef&quot;
+        :type=&quot;type&quot;
+        :value=&quot;modelValue&quot;
+        :placeholder=&quot;placeholder&quot;
+        :disabled=&quot;disabled&quot;
+        :readonly=&quot;readonly&quot;
+        :maxlength=&quot;maxlength&quot;
+        @input=&quot;handleInput&quot;
+        @change=&quot;handleChange&quot;
+        @focus=&quot;handleFocus&quot;
+        @blur=&quot;handleBlur&quot;
+      /&gt;
+      &lt;span v-if=&quot;$slots.suffix&quot; class=&quot;khy-input__suffix&quot;&gt;
+        &lt;slot name=&quot;suffix&quot; /&gt;
+      &lt;/span&gt;
+    &lt;/div&gt;
+    &lt;p v-if=&quot;error&quot; class=&quot;khy-input__error&quot;&gt;{{ error }}&lt;/p&gt;
+    &lt;p v-else-if=&quot;hint&quot; class=&quot;khy-input__hint&quot;&gt;{{ hint }}&lt;/p&gt;
+    &lt;p v-if=&quot;maxlength&quot; class=&quot;khy-input__count&quot;&gt;
+      {{ modelValue?.length || 0 }}/{{ maxlength }}
+    &lt;/p&gt;
+  &lt;/div&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+const props = defineProps({
+  // 绑定值
+  modelValue: {
+    type: [String, Number],
+    default: ''
+  },
+  // 输入类型
+  type: {
+    type: String,
+    default: 'text'
+  },
+  // 标签
+  label: String,
+  // 占位符
+  placeholder: String,
+  // 提示信息
+  hint: String,
+  // 错误信息
+  error: String,
+  // 是否禁用
+  disabled: Boolean,
+  // 是否只读
+  readonly: Boolean,
+  // 是否必填
+  required: Boolean,
+  // 最大长度
+  maxlength: Number,
+  // 尺寸
+  size: {
+    type: String,
+    default: 'md',
+    validator: (value) =&gt; ['sm', 'md', 'lg'].includes(value)
+  }
+});
+
+const emit = defineEmits(['update:modelValue', 'change', 'focus', 'blur']);
+
+const inputRef = ref(null);
+
+const inputClasses = computed(() =&gt; [
+  'khy-input',
+  `khy-input--${props.size}`,
+  {
+    'khy-input--disabled': props.disabled,
+    'khy-input--error': props.error
+  }
+]);
+
+const handleInput = (event) =&gt; {
+  emit('update:modelValue', event.target.value);
+};
+
+const handleChange = (event) =&gt; {
+  emit('change', event.target.value);
+};
+
+const handleFocus = (event) =&gt; {
+  emit('focus', event);
+};
+
+const handleBlur = (event) =&gt; {
+  emit('blur', event);
+};
+
+// 暴露方法
+defineExpose({
+  focus: () =&gt; inputRef.value?.focus(),
+  blur: () =&gt; inputRef.value?.blur(),
+  select: () =&gt; inputRef.value?.select()
+});
+&lt;/script&gt;</code></pre>
+<p><strong>卡片组件 (KhyCard)</strong>：</p>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;div :class=&quot;cardClasses&quot;&gt;
+    &lt;div v-if=&quot;$slots.header&quot; class=&quot;khy-card__header&quot;&gt;
+      &lt;slot name=&quot;header&quot; /&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;khy-card__body&quot;&gt;
+      &lt;slot /&gt;
+    &lt;/div&gt;
+    &lt;div v-if=&quot;$slots.footer&quot; class=&quot;khy-card__footer&quot;&gt;
+      &lt;slot name=&quot;footer&quot; /&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+const props = defineProps({
+  // 卡片类型
+  variant: {
+    type: String,
+    default: 'default',
+    validator: (value) =&gt; ['default', 'elevated', 'outlined'].includes(value)
+  },
+  // 内边距
+  padding: {
+    type: String,
+    default: 'md',
+    validator: (value) =&gt; ['none', 'sm', 'md', 'lg'].includes(value)
+  },
+  // 是否可悬停
+  hoverable: Boolean,
+  // 是否可点击
+  clickable: Boolean
+});
+
+const emit = defineEmits(['click']);
+
+const cardClasses = computed(() =&gt; [
+  'khy-card',
+  `khy-card--${props.variant}`,
+  `khy-card--padding-${props.padding}`,
+  {
+    'khy-card--hoverable': props.hoverable,
+    'khy-card--clickable': props.clickable
+  }
+]);
+
+const handleClick = (event) =&gt; {
+  if (props.clickable) {
+    emit('click', event);
+  }
+};
+&lt;/script&gt;</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-FE/[DESIGN-FE-005] 组件开发规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-FE-005] 组件开发规范</div></a><a class="next" href="../../../docs/10_规范/DESIGN-FE/[DESIGN-FE-007] 组件API设计-反馈组件.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-FE-007] 组件 API 设计 · 反馈组件</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-FE/[DESIGN-FE-006] 组件API设计-基础组件.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

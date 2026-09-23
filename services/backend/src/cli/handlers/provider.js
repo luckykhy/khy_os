@@ -29,7 +29,7 @@ const { printSuccess, printError, printInfo, printWarn } = require('../formatter
 
 function _cmdcHome(env) {
   return env && env.COMMAND_CODE_HOME
-    ? require('../../services/externalApps/_shared').expandHome(env.COMMAND_CODE_HOME, env)
+    ? require('../../services/domain/network/externalApps/_shared').expandHome(env.COMMAND_CODE_HOME, env)
     : path.join(os.homedir(), '.commandcode');
 }
 

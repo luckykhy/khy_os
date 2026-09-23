@@ -12,7 +12,7 @@
  * 取代原 skill 里那段「教模型认 16 种模式」的提示词。
  */
 
-const rules = require('../../../../permissions/rules');
+const rules = require('./rules');
 const textStats = require('./textStats');
 
 /**

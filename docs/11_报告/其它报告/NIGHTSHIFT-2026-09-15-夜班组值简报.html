@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: NIGHTSHIFT-2026-09-15-夜班组值简报.md -->
+<title>夜班组值简报 — khy-os 测试覆盖率 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>其它报告<span class="sep">›</span>夜班组值简报 — khy-os 测试覆盖率</div>
+      <header class="hero reveal"><h1>夜班组值简报 — khy-os 测试覆盖率</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#夜班组值简报-khy-os-测试覆盖率">夜班组值简报 — khy-os 测试覆盖率</a></li><li class="lvl-2"><a href="#一-各区域基线-before">一、各区域基线（before）</a></li><li class="lvl-2"><a href="#二-本轮补测-新增-4-个-khyquant-测试文件-31-用例-全绿">二、本轮补测（新增 4 个 khyquant 测试文件，31 用例，全绿）</a></li><li class="lvl-2"><a href="#三-本轮修复的问题">三、本轮修复的问题</a></li><li class="lvl-2"><a href="#四-验收-全绿">四、验收（全绿）</a></li><li class="lvl-2"><a href="#五-遗留问题-下一夜">五、遗留问题（下一夜）</a></li><li class="lvl-2"><a href="#六-本次改动文件清单">六、本次改动文件清单</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="夜班组值简报-khy-os-测试覆盖率">夜班组值简报 — khy-os 测试覆盖率<a class="anchor" href="#夜班组值简报-khy-os-测试覆盖率" aria-label="锚点">#</a></h1>
+<p><strong>运行日期</strong>：2026-09-15（01:00 启动，~01:55 提前收尾）<br><strong>目标</strong>：测试覆盖率提升到 80%，顺手修真 bug。<br><strong>状态</strong>：本轮延续昨夜 khyquant 前端主攻方向，挑 4 个 0% 叶子模块（2 个 utils + 1 个 composable + 1 个 Pinia store）补契约测试，共 31 用例全绿；顺手揪出并修正 1 处测试误读私有状态的问题。后端/Python/ai-frontend 仅做回归守卫，未改。</p>
+<hr>
+<h2 id="一-各区域基线-before">一、各区域基线（before）<a class="anchor" href="#一-各区域基线-before" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>区域</th><th>命令</th><th>基线结果</th></tr></thead><tbody><tr><td>Python 启动器</td><td>python -m unittest discover -s platform/tests -t platform/tests</td><td>187 tests OK（全绿，回归守卫）</td></tr><tr><td>ai-frontend</td><td>cd apps/ai-frontend &amp;&amp; npm test</td><td>41 files / 531 tests 全绿（回归守卫，无 coverage 配置）</td></tr><tr><td>khyquant 前端（非覆盖）</td><td>cd software/khyquant/frontend &amp;&amp; npm test</td><td>27 files / 343 tests 全绿（昨夜已修绿 interaction.wiring）</td></tr><tr><td>khyquant 前端（覆盖率）</td><td>npm run test:coverage</td><td>全局 9.52%（lines/stmts）/ 77.06% branches / 52.25% functions，仍远低于 80% 阈值</td></tr><tr><td>后端 jest（定向）</td><td>定向跑 routes + SaveInstruction</td><td>routes 17 套件 / 202 用例全绿；SaveInstruction 7 用例全绿（DEBT §三 B 例，已转绿）</td></tr></tbody></table>
+<blockquote><p>80% 目标远未达成（khyquant 9.52%、后端 ~42%），故本轮继续「挑最弱区域加测试 + 修测试暴露的真 bug」策略，不转债务清理。</p></blockquote>
+<h2 id="二-本轮补测-新增-4-个-khyquant-测试文件-31-用例-全绿">二、本轮补测（新增 4 个 khyquant 测试文件，31 用例，全绿）<a class="anchor" href="#二-本轮补测-新增-4-个-khyquant-测试文件-31-用例-全绿" aria-label="锚点">#</a></h2>
+<p>均落在 khyquant 前端，按 skill 决策矩阵选 0% 叶子模块（vitest + jsdom，跟邻居风格）：</p>
+<ul><li>src/<strong>tests</strong>/mobileChartConfig.test.js（7 用例）：锁 src/utils/mobileChartConfig.ts 的 mobile/desktop 图表配置形状、getChartOptions 的 isMobile 分派、tickMarkFormatter(M/D) 与 timeFormatter(日期/日期+时间) 口径。</li><li>src/<strong>tests</strong>/performanceOptimizer.test.js（5 用例）：锁 src/utils/performanceOptimizer.js 的 throttleData（前置式、窗口内抑制）、debounce（非活动触发、保留 this 与末次参数）、enableHardwareAcceleration（transform-gpu 样式 + 空 el 安全 no-op）。</li><li>src/<strong>tests</strong>/useFuturesTickData.test.js（7 用例）：锁 src/composables/useFuturesTickData.js 的三形态响应解包（data.data / data.dates / 裸数组）、loading 标志生命周期、空 date 短路、formatDate(YYYYMMDD→YYYY-MM-DD)。</li><li>src/<strong>tests</strong>/strategyStore.test.js（12 用例）：锁 src/stores/strategyStore.js（Pinia setup store）的 CRUD 状态迁移（active 列表 / 删除清选择 / start·stop 状态翻转 / 未知 id 抛错）、回测结果 localStorage 持久化与删除、事件 on/off/emit 生命周期、cleanup 全量复位。</li></ul>
+<h2 id="三-本轮修复的问题">三、本轮修复的问题<a class="anchor" href="#三-本轮修复的问题" aria-label="锚点">#</a></h2>
+<ol><li><strong>测试误读 Pinia 私有状态（@rot，非产品 bug）</strong>：strategyStore 是 setup store，其 backtestResults / backtestHistory / strategyPerformance 三个响应式 Map 未在 return 中暴露，外部只能通过 getBacktestResult / getBacktestHistory 读取器访问。新测试初版直接 store.backtestResults.set(...) 拿到 undefined 而报错。已把测试改为全程走 store 暴露的公开 API（runBacktest 造数据、getBacktestResult 断言、deleteStrategy 后断言 Map 已清），既锁住行为又符合封装边界。产品代码无需改动。</li></ol>
+<h2 id="四-验收-全绿">四、验收（全绿）<a class="anchor" href="#四-验收-全绿" aria-label="锚点">#</a></h2>
+<ul><li>khyquant 前端 npm test：31 files / 374 tests 全绿（昨夜 343 + 本轮 31 新用例，0 回归）。</li><li>khyquant 前端 npm run test:coverage：全局 9.52% → 10.63%（lines/stmts），functions 52.25% → 55.76%。仍低于 80% 阈值（预期——只补叶子，未动大组件）。</li><li>ai-frontend npm test：531 全绿；Python 启动器 187 全绿（均未改动，回归守卫）。</li><li>后端定向：routes 17 套件 / 202 用例 + SaveInstruction 7 用例全绿（DEBT §三 B 的 19 个「双 runner 皆死」例已实测转绿，jest 直接 PASS）。</li><li>check-agent-rules.js 扫本轮 4 个新测试文件：no violations。</li><li>khy doctor：33 通过 / 8 警告（均为预存环境项——Git 未装、akshare 未装、AI 密钥未配、relay 404、后端服务未运行等——非本轮引入；本轮未改任何后端/服务文件）。</li><li>eslint：khyquant 前端 eslint.config.js 引用的 eslint-plugin-vue 在 node_modules 中缺失（预存依赖缺口，与本轮无关），故 4 个新测试文件改用 node --check 语法校验 + vitest 实跑全绿兜底。</li></ul>
+<h2 id="五-遗留问题-下一夜">五、遗留问题（下一夜）<a class="anchor" href="#五-遗留问题-下一夜" aria-label="锚点">#</a></h2>
+<ol><li><strong>khyquant 前端全局 10.63% 离 80% 仍很远</strong>——本轮补 4 个叶子模块（+31 用例）。大组件（SimpleTradingInterface.js 143KB、useDashboardQuotes.js 42KB、useDashboardHandover.js 13KB、useTouchGestures.ts、networkMonitor.js、requestInterceptor.js、stores/user.js）尚未覆盖。下一夜继续挑 0% 的纯函数/composable/store 补测，不为变绿写低价值组件快照。</li><li><strong>后端 jest 全量（test:backend / 根 test:all）仍红</strong>——预存债务（DEBT.md §一/§五）：约 67 个 test:scripts 子测试红、CJK 断言腐蚀（「工具计量汇总」等）、缺 src/services/search/searchNecessity.js。本轮未改后端，未动。</li><li><strong>khyquant 前端 eslint 设施缺依赖</strong>（eslint-plugin-vue 未安装，eslint.config.js 无法加载）——建议在下一夜跑 pnpm install 补上该 devDependency，恢复前端 eslint 守卫可用；本轮已用 node --check + vitest 实跑兜底。</li><li>DEBT.md §三 B 的「19 个双 runner 皆死套件」实测 SaveInstruction 已转绿（jest PASS 7/7）；若继续，可在下一夜逐一定向跑剩余例并回收。</li></ol>
+<h2 id="六-本次改动文件清单">六、本次改动文件清单<a class="anchor" href="#六-本次改动文件清单" aria-label="锚点">#</a></h2>
+<ul><li>software/khyquant/frontend/src/<strong>tests</strong>/mobileChartConfig.test.js（新增，7 用例）</li><li>software/khyquant/frontend/src/<strong>tests</strong>/performanceOptimizer.test.js（新增，5 用例）</li><li>software/khyquant/frontend/src/<strong>tests</strong>/useFuturesTickData.test.js（新增，7 用例）</li><li>software/khyquant/frontend/src/<strong>tests</strong>/strategyStore.test.js（新增，12 用例）</li></ul>
+<blockquote><p>所有改动留在工作区，<strong>未 commit、未 push</strong>。未改 constants/serviceDefaults.js、未碰版本 6 源、未放宽任何既有测试基线。</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/11_报告/其它报告/NIGHTSHIFT-2026-09-13-夜班组值简报.html"><div class="dir">← 上一篇</div><div class="ttl">夜班组值简报 — khy-os 测试覆盖率</div></a><a class="next" href="../../../docs/11_报告/其它报告/REPO-SIZE-MANAGEMENT-PLAN.html"><div class="dir">下一篇 →</div><div class="ttl">khy-os 项目体积管理方案（完整版）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/11_报告/其它报告/NIGHTSHIFT-2026-09-15-夜班组值简报.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

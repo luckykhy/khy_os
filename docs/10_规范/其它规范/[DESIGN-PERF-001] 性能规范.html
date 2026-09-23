@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-PERF-001] 性能规范.md -->
+<title>[DESIGN-PERF-001] 性能规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-PERF-001] 性能规范</div>
+      <header class="hero reveal"><h1>[DESIGN-PERF-001] 性能规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-perf-001-性能规范">[DESIGN-PERF-001] 性能规范</a></li><li class="lvl-2"><a href="#1-性能概述">1. 性能概述</a></li><li class="lvl-3"><a href="#1-1-设计原则">1.1 设计原则</a></li><li class="lvl-3"><a href="#1-2-性能指标">1.2 性能指标</a></li><li class="lvl-2"><a href="#2-前端性能">2. 前端性能</a></li><li class="lvl-3"><a href="#2-1-资源加载">2.1 资源加载</a></li><li class="lvl-3"><a href="#2-2-代码分割">2.2 代码分割</a></li><li class="lvl-3"><a href="#3-3-缓存策略">3.3 缓存策略</a></li><li class="lvl-2"><a href="#3-后端性能">3. 后端性能</a></li><li class="lvl-3"><a href="#3-1-api-响应时间">3.1 API 响应时间</a></li><li class="lvl-3"><a href="#3-2-数据库优化">3.2 数据库优化</a></li><li class="lvl-3"><a href="#3-3-缓存策略-2">3.3 缓存策略</a></li><li class="lvl-2"><a href="#4-性能监控">4. 性能监控</a></li><li class="lvl-3"><a href="#4-1-前端监控">4.1 前端监控</a></li><li class="lvl-3"><a href="#4-2-后端监控">4.2 后端监控</a></li><li class="lvl-2"><a href="#5-性能优化清单">5. 性能优化清单</a></li><li class="lvl-3"><a href="#5-1-前端优化">5.1 前端优化</a></li><li class="lvl-3"><a href="#5-2-后端优化">5.2 后端优化</a></li><li class="lvl-3"><a href="#5-3-基础设施优化">5.3 基础设施优化</a></li><li class="lvl-2"><a href="#6-版本历史">6. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-perf-001-性能规范">[DESIGN-PERF-001] 性能规范<a class="anchor" href="#design-perf-001-性能规范" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档定义 khy-os 项目的性能标准，包括性能预算、优化策略等。</p></blockquote>
+<hr>
+<h2 id="1-性能概述">1. 性能概述<a class="anchor" href="#1-性能概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-设计原则">1.1 设计原则<a class="anchor" href="#1-1-设计原则" aria-label="锚点">#</a></h3>
+<ol><li><strong>用户体验优先</strong>：性能指标以用户体验为中心</li><li><strong>可衡量</strong>：所有性能指标可量化、可监控</li><li><strong>持续优化</strong>：持续关注和优化性能</li></ol>
+<h3 id="1-2-性能指标">1.2 性能指标<a class="anchor" href="#1-2-性能指标" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>说明</th><th>目标值</th></tr></thead><tbody><tr><td>FCP</td><td>首次内容绘制</td><td>&lt; 1.5s</td></tr><tr><td>LCP</td><td>最大内容绘制</td><td>&lt; 2.5s</td></tr><tr><td>FID</td><td>首次输入延迟</td><td>&lt; 100ms</td></tr><tr><td>CLS</td><td>累积布局偏移</td><td>&lt; 0.1</td></tr><tr><td>TTFB</td><td>首字节时间</td><td>&lt; 200ms</td></tr><tr><td>TTI</td><td>可交互时间</td><td>&lt; 3.5s</td></tr></tbody></table>
+<hr>
+<h2 id="2-前端性能">2. 前端性能<a class="anchor" href="#2-前端性能" aria-label="锚点">#</a></h2>
+<h3 id="2-1-资源加载">2.1 资源加载<a class="anchor" href="#2-1-资源加载" aria-label="锚点">#</a></h3>
+<p><strong>Bundle 大小预算</strong>：</p>
+<table><thead><tr><th>类型</th><th>预算</th><th>说明</th></tr></thead><tbody><tr><td>主包</td><td>&lt; 200KB</td><td>gzip 后</td></tr><tr><td>总资源</td><td>&lt; 500KB</td><td>gzip 后</td></tr><tr><td>图片</td><td>&lt; 200KB</td><td>首屏图片</td></tr></tbody></table>
+<p><strong>加载策略</strong>：</p>
+<ul><li>关键资源预加载</li><li>非关键资源懒加载</li><li>图片使用 WebP 格式</li><li>使用 CDN 加速</li></ul>
+<h3 id="2-2-代码分割">2.2 代码分割<a class="anchor" href="#2-2-代码分割" aria-label="锚点">#</a></h3>
+<p><strong>路由级别分割</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// 使用动态导入</span>
+<span class="hljs-keyword">const</span> routes = [
+  {
+    <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/dashboard&#x27;</span>,
+    <span class="hljs-attr">component</span>: <span class="hljs-function">() =&gt;</span> <span class="hljs-keyword">import</span>(<span class="hljs-string">&#x27;@/views/Dashboard.vue&#x27;</span>)
+  },
+  {
+    <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/settings&#x27;</span>,
+    <span class="hljs-attr">component</span>: <span class="hljs-function">() =&gt;</span> <span class="hljs-keyword">import</span>(<span class="hljs-string">&#x27;@/views/Settings.vue&#x27;</span>)
+  }
+];</code></pre>
+<p><strong>组件级别分割</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// 异步组件</span>
+<span class="hljs-keyword">import</span> { defineAsyncComponent } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;vue&#x27;</span>;
+
+<span class="hljs-keyword">const</span> <span class="hljs-title class_">HeavyComponent</span> = <span class="hljs-title function_">defineAsyncComponent</span>(<span class="hljs-function">() =&gt;</span>
+  <span class="hljs-keyword">import</span>(<span class="hljs-string">&#x27;@/components/HeavyComponent.vue&#x27;</span>)
+);</code></pre>
+<h3 id="3-3-缓存策略">3.3 缓存策略<a class="anchor" href="#3-3-缓存策略" aria-label="锚点">#</a></h3>
+<p><strong>HTTP 缓存</strong>：</p>
+<pre><code class="language-nginx"><span class="hljs-comment"># 静态资源缓存 1 年</span>
+<span class="hljs-section">location</span> <span class="hljs-regexp">~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$</span> {
+  <span class="hljs-attribute">expires</span> <span class="hljs-number">1y</span>;
+  <span class="hljs-attribute">add_header</span> Cache-Control <span class="hljs-string">&quot;public, immutable&quot;</span>;
+}
+
+<span class="hljs-comment"># HTML 不缓存</span>
+<span class="hljs-section">location</span> <span class="hljs-regexp">~* \.html$</span> {
+  <span class="hljs-attribute">expires</span> -<span class="hljs-number">1</span>;
+  <span class="hljs-attribute">add_header</span> Cache-Control <span class="hljs-string">&quot;no-cache&quot;</span>;
+}</code></pre>
+<p><strong>Service Worker 缓存</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// 缓存策略</span>
+workbox.<span class="hljs-property">routing</span>.<span class="hljs-title function_">registerRoute</span>(
+  <span class="hljs-regexp">/\.(?:js|css|png|jpg|jpeg|gif|svg)$/</span>,
+  <span class="hljs-keyword">new</span> workbox.<span class="hljs-property">strategies</span>.<span class="hljs-title class_">CacheFirst</span>({
+    <span class="hljs-attr">cacheName</span>: <span class="hljs-string">&#x27;static-resources&#x27;</span>,
+    <span class="hljs-attr">plugins</span>: [
+      <span class="hljs-keyword">new</span> workbox.<span class="hljs-property">expiration</span>.<span class="hljs-title class_">ExpirationPlugin</span>({
+        <span class="hljs-attr">maxEntries</span>: <span class="hljs-number">60</span>,
+        <span class="hljs-attr">maxAgeSeconds</span>: <span class="hljs-number">30</span> * <span class="hljs-number">24</span> * <span class="hljs-number">60</span> * <span class="hljs-number">60</span> <span class="hljs-comment">// 30 天</span>
+      })
+    ]
+  })
+);</code></pre>
+<hr>
+<h2 id="3-后端性能">3. 后端性能<a class="anchor" href="#3-后端性能" aria-label="锚点">#</a></h2>
+<h3 id="3-1-api-响应时间">3.1 API 响应时间<a class="anchor" href="#3-1-api-响应时间" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>接口类型</th><th>目标响应时间</th><th>最大响应时间</th></tr></thead><tbody><tr><td>简单查询</td><td>&lt; 100ms</td><td>500ms</td></tr><tr><td>复杂查询</td><td>&lt; 500ms</td><td>2s</td></tr><tr><td>写入操作</td><td>&lt; 200ms</td><td>1s</td></tr><tr><td>批量操作</td><td>&lt; 1s</td><td>5s</td></tr></tbody></table>
+<h3 id="3-2-数据库优化">3.2 数据库优化<a class="anchor" href="#3-2-数据库优化" aria-label="锚点">#</a></h3>
+<p><strong>索引优化</strong>：</p>
+<ul><li>所有外键必须有索引</li><li>频繁查询的列创建索引</li><li>避免过度索引</li></ul>
+<p><strong>查询优化</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确：只查询需要的字段</span>
+<span class="hljs-keyword">const</span> users = <span class="hljs-keyword">await</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">findAll</span>({
+  <span class="hljs-attr">attributes</span>: [<span class="hljs-string">&#x27;id&#x27;</span>, <span class="hljs-string">&#x27;username&#x27;</span>, <span class="hljs-string">&#x27;email&#x27;</span>],
+  <span class="hljs-attr">where</span>: { <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;active&#x27;</span> },
+  <span class="hljs-attr">limit</span>: <span class="hljs-number">20</span>
+});
+
+<span class="hljs-comment">// ❌ 错误：查询所有字段</span>
+<span class="hljs-keyword">const</span> users = <span class="hljs-keyword">await</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">findAll</span>({
+  <span class="hljs-attr">where</span>: { <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;active&#x27;</span> }
+});</code></pre>
+<p><strong>N+1 查询优化</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确：使用关联查询</span>
+<span class="hljs-keyword">const</span> users = <span class="hljs-keyword">await</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">findAll</span>({
+  <span class="hljs-attr">include</span>: [{
+    <span class="hljs-attr">model</span>: <span class="hljs-title class_">Profile</span>,
+    <span class="hljs-attr">as</span>: <span class="hljs-string">&#x27;profile&#x27;</span>
+  }]
+});
+
+<span class="hljs-comment">// ❌ 错误：N+1 查询</span>
+<span class="hljs-keyword">const</span> users = <span class="hljs-keyword">await</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">findAll</span>();
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> user <span class="hljs-keyword">of</span> users) {
+  user.<span class="hljs-property">profile</span> = <span class="hljs-keyword">await</span> <span class="hljs-title class_">Profile</span>.<span class="hljs-title function_">findOne</span>({ <span class="hljs-attr">where</span>: { <span class="hljs-attr">userId</span>: user.<span class="hljs-property">id</span> } });
+}</code></pre>
+<h3 id="3-3-缓存策略-2">3.3 缓存策略<a class="anchor" href="#3-3-缓存策略-2" aria-label="锚点">#</a></h3>
+<p><strong>Redis 缓存</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-title function_">cacheOrFetch</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">key, fetchFn, ttl = <span class="hljs-number">3600</span></span>) =&gt; {
+  <span class="hljs-comment">// 尝试从缓存获取</span>
+  <span class="hljs-keyword">const</span> cached = <span class="hljs-keyword">await</span> redis.<span class="hljs-title function_">get</span>(key);
+  <span class="hljs-keyword">if</span> (cached) {
+    <span class="hljs-keyword">return</span> <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(cached);
+  }
+  
+  <span class="hljs-comment">// 缓存未命中，执行查询</span>
+  <span class="hljs-keyword">const</span> data = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fetchFn</span>();
+  
+  <span class="hljs-comment">// 写入缓存</span>
+  <span class="hljs-keyword">await</span> redis.<span class="hljs-title function_">setex</span>(key, ttl, <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>(data));
+  
+  <span class="hljs-keyword">return</span> data;
+};
+
+<span class="hljs-comment">// 使用示例</span>
+<span class="hljs-keyword">const</span> users = <span class="hljs-keyword">await</span> <span class="hljs-title function_">cacheOrFetch</span>(
+  <span class="hljs-string">&#x27;users:active&#x27;</span>,
+  <span class="hljs-function">() =&gt;</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">findAll</span>({ <span class="hljs-attr">where</span>: { <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;active&#x27;</span> } }),
+  <span class="hljs-number">300</span>  <span class="hljs-comment">// 5 分钟缓存</span>
+);</code></pre>
+<p><strong>缓存失效策略</strong>：</p>
+<ul><li>数据更新时主动失效</li><li>设置合理的过期时间</li><li>使用版本号管理缓存</li></ul>
+<hr>
+<h2 id="4-性能监控">4. 性能监控<a class="anchor" href="#4-性能监控" aria-label="锚点">#</a></h2>
+<h3 id="4-1-前端监控">4.1 前端监控<a class="anchor" href="#4-1-前端监控" aria-label="锚点">#</a></h3>
+<p><strong>Core Web Vitals 监控</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">import</span> { getCLS, getFID, getLCP, getFCP, getTTFB } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;web-vitals&#x27;</span>;
+
+<span class="hljs-comment">// 发送性能数据</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">sendToAnalytics</span> = (<span class="hljs-params">metric</span>) =&gt; {
+  <span class="hljs-title function_">fetch</span>(<span class="hljs-string">&#x27;/api/metrics/performance&#x27;</span>, {
+    <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;POST&#x27;</span>,
+    <span class="hljs-attr">headers</span>: { <span class="hljs-string">&#x27;Content-Type&#x27;</span>: <span class="hljs-string">&#x27;application/json&#x27;</span> },
+    <span class="hljs-attr">body</span>: <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>({
+      <span class="hljs-attr">name</span>: metric.<span class="hljs-property">name</span>,
+      <span class="hljs-attr">value</span>: metric.<span class="hljs-property">value</span>,
+      <span class="hljs-attr">delta</span>: metric.<span class="hljs-property">delta</span>,
+      <span class="hljs-attr">id</span>: metric.<span class="hljs-property">id</span>
+    })
+  });
+};
+
+<span class="hljs-title function_">getCLS</span>(sendToAnalytics);
+<span class="hljs-title function_">getFID</span>(sendToAnalytics);
+<span class="hljs-title function_">getLCP</span>(sendToAnalytics);
+<span class="hljs-title function_">getFCP</span>(sendToAnalytics);
+<span class="hljs-title function_">getTTFB</span>(sendToAnalytics);</code></pre>
+<h3 id="4-2-后端监控">4.2 后端监控<a class="anchor" href="#4-2-后端监控" aria-label="锚点">#</a></h3>
+<p><strong>API 性能监控</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-title function_">performanceMonitor</span> = (<span class="hljs-params">req, res, next</span>) =&gt; {
+  <span class="hljs-keyword">const</span> start = process.<span class="hljs-title function_">hrtime</span>();
+  
+  res.<span class="hljs-title function_">on</span>(<span class="hljs-string">&#x27;finish&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-keyword">const</span> [seconds, nanoseconds] = process.<span class="hljs-title function_">hrtime</span>(start);
+    <span class="hljs-keyword">const</span> duration = seconds * <span class="hljs-number">1000</span> + nanoseconds / <span class="hljs-number">1000000</span>;
+    
+    <span class="hljs-comment">// 记录慢请求</span>
+    <span class="hljs-keyword">if</span> (duration &gt; <span class="hljs-number">1000</span>) {
+      logger.<span class="hljs-title function_">warn</span>(<span class="hljs-string">&#x27;Slow request detected&#x27;</span>, {
+        <span class="hljs-attr">requestId</span>: req.<span class="hljs-property">requestId</span>,
+        <span class="hljs-attr">method</span>: req.<span class="hljs-property">method</span>,
+        <span class="hljs-attr">path</span>: req.<span class="hljs-property">path</span>,
+        <span class="hljs-attr">duration</span>: <span class="hljs-string">`<span class="hljs-subst">${duration.toFixed(<span class="hljs-number">2</span>)}</span>ms`</span>
+      });
+    }
+    
+    <span class="hljs-comment">// 上报指标</span>
+    metrics.<span class="hljs-title function_">histogram</span>(<span class="hljs-string">&#x27;api_response_time&#x27;</span>, duration, {
+      <span class="hljs-attr">method</span>: req.<span class="hljs-property">method</span>,
+      <span class="hljs-attr">path</span>: req.<span class="hljs-property">path</span>,
+      <span class="hljs-attr">status</span>: res.<span class="hljs-property">statusCode</span>
+    });
+  });
+  
+  <span class="hljs-title function_">next</span>();
+};</code></pre>
+<hr>
+<h2 id="5-性能优化清单">5. 性能优化清单<a class="anchor" href="#5-性能优化清单" aria-label="锚点">#</a></h2>
+<h3 id="5-1-前端优化">5.1 前端优化<a class="anchor" href="#5-1-前端优化" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 启用 gzip/brotli 压缩</li><li>[ ] 使用 CDN 分发静态资源</li><li>[ ] 图片使用 WebP 格式</li><li>[ ] 实现懒加载</li><li>[ ] 代码分割</li><li>[ ] 预加载关键资源</li><li>[ ] 使用 Service Worker 缓存</li></ul>
+<h3 id="5-2-后端优化">5.2 后端优化<a class="anchor" href="#5-2-后端优化" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 数据库查询优化</li><li>[ ] 添加必要索引</li><li>[ ] 使用缓存</li><li>[ ] 连接池配置</li><li>[ ] 异步处理耗时任务</li><li>[ ] API 响应压缩</li></ul>
+<h3 id="5-3-基础设施优化">5.3 基础设施优化<a class="anchor" href="#5-3-基础设施优化" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 使用 CDN</li><li>[ ] 配置负载均衡</li><li>[ ] 自动扩缩容</li><li>[ ] 数据库读写分离</li><li>[ ] 分布式缓存</li></ul>
+<hr>
+<h2 id="6-版本历史">6. 版本历史<a class="anchor" href="#6-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义性能规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 性能团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-OUT-001] 输出结构规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-OUT-001] 输出结构规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-PRIV-001] 数据隐私规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-PRIV-001] 数据隐私规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-PERF-001] 性能规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

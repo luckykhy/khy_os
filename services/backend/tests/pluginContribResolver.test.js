@@ -249,14 +249,41 @@ test('entry module that throws on require → null without throwing', () => {
   assert.equal(resolver.activateContributedTool(name), null);
 });
 
-test('defineTool rejects bad category/risk → null without throwing', () => {
+test('defineTool repairable category → tool registers with self-healed category', () => {
+  // 契约来源：[DESIGN-TOOL-002] §5.3 —— 漏斗侧调 defineTool() 包装入口导出再注册。
+  // defineTool 对 category/risk 采取**自愈**策略（E2/E3 修复类，见 _baseTool.js 日志
+  // `Self-healed tool ...`），不是抛错。所以「非法 category」不是激活失败条件，
+  // 而是「被修复后照常注册」——这正是自愈类存在的意义。
+  //
+  // ⚠ 本用例曾断言 `null`，那是因为当时 _toolRegistry() 误指 cli/handlers/tools
+  // （该模块没有 register()，必然抛错被兜成 null）。修好注册表指向后，这个断言的
+  // 真实语义才显出来：它当时是在把一个缺陷当成契约。
   const name = 'bad_cat_tool';
-  freshDir(
+  const dir = freshDir(
     (t) => ({ name: 'bad-cat', entry: './entry.js', tools: [{ name: t, category: 'bogus', risk: 'medium' }] }),
     trackedEntry,
     name
   );
 
+  assert.doesNotThrow(() => resolver.activateContributedTool(name), 'repairable input must not throw');
+  const tool = resolver.activateContributedTool(name);
+  assert.ok(tool, 'repairable category → tool activates (not null)');
+  assert.equal(tool.category, 'custom', 'bogus → custom via defineTool E2 self-heal');
+  assert.equal(!!tools.get(name), true, 'registered under its declared name');
+});
+
+test('contract breach: entry missing execute → null (fail-soft, no register)', () => {
+  // 真正会导致激活失败的是**不可修复**的契约缺失：没有 execute。
+  // 这条才是 defineTool 的硬性要求（`execute function is required`），
+  // 与 category/risk 的自愈路径分属两类，必须分开断言。
+  const name = 'no_execute_tool';
+  freshDir(
+    (t) => ({ name: 'no-exec-ext', entry: './entry.js', tools: [{ name: t, category: 'data', risk: 'low' }] }),
+    (t) => `module.exports = { tools: [{ name: '${t}' }] };`,
+    name
+  );
+
   assert.doesNotThrow(() => resolver.activateContributedTool(name));
-  assert.equal(resolver.activateContributedTool(name), null, 'invalid category must not register');
+  assert.equal(resolver.activateContributedTool(name), null, 'missing execute → null');
+  assert.equal(!!tools.get(name), false, 'nothing registered for an unexecutable tool');
 });

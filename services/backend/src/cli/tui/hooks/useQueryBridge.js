@@ -125,19 +125,22 @@ function _classifyStreamError(rawMsg, chunk) {
   const errorType = chunk && chunk.errorType ? String(chunk.errorType).toLowerCase() : '';
 
   // Use errorType for fast, accurate classification
-  if (errorType === 'rate_limit' || status === 429 || /rate ?limit|too many requests|429/.test(msg)) {
+  if (errorType === 'rate_limit' || status === 429 || /rate ?limit|too many requests|429|访问用户较多|用户较多|访问过于频繁|请求过于频繁|限流/.test(msg)) {
     return `限流 (429)：请求过多，稍后重试或运行 khy gateway config 切换通道`;
   }
-  if (errorType === 'auth' || status === 401 || status === 403 || /unauthorized|invalid ?api ?key|forbidden|401|403/.test(msg)) {
+  // Vendor spellings measured 2026-09-21 (BUG-44): OpenAI says "Incorrect API key
+  // provided", Anthropic says "invalid x-api-key", error.code strings say
+  // "invalid_api_key" — none match an `invalid ?api ?key` alternation.
+  if (errorType === 'auth' || status === 401 || status === 403 || /unauthorized|invalid[ _-]?api[ _-]?key|incorrect api key|x-api-key|invalid[ _-]?(x-)?auth ?token|authentication[ _-]?token|token.*(invalid|expire)|api[ _-]?key[ _-]?(invalid|expired)|密钥|令牌|未授权|认证失败|401|403/.test(msg)) {
     return `认证失败 (${status || '401/403'})：API key 无效或过期，请运行 khy gateway config 更新密钥`;
   }
-  if (errorType === 'model_not_found' || status === 404 || /model.*not ?found|does not exist|no such model|404/.test(msg)) {
+  if (errorType === 'model_not_found' || status === 404 || /model.*not ?found|does not exist|no such model|404|模型.{0,6}不存在|模型不可用/.test(msg)) {
     return `模型不存在 (${status || 404})：请用 /model 查看可用模型`;
   }
   if (errorType === 'context_length' || status === 413 || /context ?(length|too ?long)|too ?many ?tokens|prompt_too_long|max ?context/.test(msg)) {
     return `上下文超限：对话过长，请 /compact 压缩或新建会话`;
   }
-  if (errorType === 'billing' || /billing|insufficient_quota|quota ?exhausted|402|credit/.test(msg)) {
+  if (errorType === 'billing' || /billing|insufficient_quota|quota ?exhausted|402|credit|余额不足|欠费|请充值|额度已用完|额度不足/.test(msg)) {
     return `额度已用完：请充值或更换模型通道`;
   }
   if (errorType === 'server_error' || status >= 500 || /internal ?server ?error|500|502|503/.test(msg)) {
@@ -158,9 +161,28 @@ function _classifyStreamError(rawMsg, chunk) {
   if (errorType === 'context_length' || /max.?tokens?|truncat|finish.?reason.*length/.test(msg)) {
     return `输出被截断：请说「继续」续写，或调大 maxTokens`;
   }
-  // Fallback: show original but truncated
-  const truncated = rawMsg.length > 80 ? rawMsg.slice(0, 77) + '...' : rawMsg;
-  return `请求失败：${truncated}`;
+  // Fallback: show original, bounded by *display* width, and never leave the user
+  // with a bare echo of upstream text — RUNTIME-002 §2.2 wants 问题+修复建议.
+  // The advice goes on a **second line** (same shape as _withEscHint below),
+  // because 70 columns of原文 + a full sentence of建议 do not share one 80-col line.
+  // The old `length > 80` check counted UTF-16 units, so 77 CJK chars rendered as
+  // ~154 columns and a 55-char Chinese upstream error (55 < 80) skipped
+  // truncation entirely (BUG-44 S2).
+  const FALLBACK_PREFIX = '请求失败：';
+  const FALLBACK_ADVICE = '下一步：运行 khy gateway status 查通道可用性，或换模型通道重试';
+  const FALLBACK_LINE_BUDGET = 80; // columns per rendered line
+  let truncated = String(rawMsg || '');
+  if (!truncated.trim()) truncated = '上游未返回错误详情';
+  try {
+    const { displayWidth, truncateToWidth } = require('../../formatters');
+    truncated = truncateToWidth(
+      truncated,
+      Math.max(8, FALLBACK_LINE_BUDGET - displayWidth(FALLBACK_PREFIX))
+    );
+  } catch {
+    truncated = truncated.length > 60 ? `${truncated.slice(0, 57)}...` : truncated;
+  }
+  return `${FALLBACK_PREFIX}${truncated}\n${FALLBACK_ADVICE}`;
 }
 
 // 回合统计行(对齐 CC 回合收尾摘要)的单一真源:门控 + 确定性格式化。finalize 时用
@@ -516,6 +538,13 @@ function useQueryBridge(hostHandlers = {}) {
   // totalTokens ≈ current window occupancy: inputTokens is the whole prompt
   // (system + full history) and outputTokens is the reply just appended to it.
   const [contextTokens, setContextTokens] = useState(0);
+  // 回合失败计数（2026-09-17「页脚 agnes / 报错 windsurf」事故的第三处修复）。
+  // 背景：页脚只在 adapterInfo 变化或 status 落到 idle/done 时刷新。而失败路径上
+  // adapterInfo 不变、status 也未必发生「变化」（连续失败时都是从 idle→idle），
+  // 于是页脚停留在失败前的乐观值 —— 用户看到 agnes 一直挂着，实际每次都在
+  // windsurf 上撞墙。本项目里每次失败都递增此计数，页脚把它放进 effect 依赖，
+  // 保证失败当帧就把页脚刷新到真实状态。
+  const [turnFailureAt, setTurnFailureAt] = useState(0);
 
   // 久别重返轻提示（对齐 CC idle-return 的 'hint' 档，见 cli/idleReturnNudge）：
   // _lastCompletionMsRef 记上一回合完成的墙钟毫秒（成功/出错都记，缓存皆已凉），
@@ -2871,7 +2900,10 @@ ${history}
           } catch {
             /* fail-soft: the loop still runs without prior context */
           }
-          loopResult = await (async () => {
+          // [DESIGN-ARCH-135] 三期：把「跑一轮」封成闭包，供外围续跑循环复用。
+          // 只参数化 msg/msgs/dedupKeys —— 下面的回调集合与缩进**原样保留**，
+          // 这样续跑轮与首轮拿到的是同一套 onToolCall/onPhase/steering 行为。
+          const _runRoundOnce = (roundMsg, roundMsgs, dedupKeys) => (async () => {
             // toolUseLoop require 在此 async IIFE 内执行，确保 chat() 的 await 已让
             // Ink 渲染完用户消息后才触发 8800+ 行模块的同步加载。
             let _toolUseLoop;
@@ -2902,11 +2934,24 @@ ${history}
               process.stderr.write(`[TUI-DIAG] ${Date.now()} stage=before_runToolUseLoop\n`);
             }
             try {
-              return await _toolUseLoop.runToolUseLoop(text, {
+              return await _toolUseLoop.runToolUseLoop(roundMsg, {
                 chat: chatFn,
-                chatOpts: { ...options },
+                // [DESIGN-ARCH-135] §8：把**上一轮学到的真实预算**交给工具循环，使它的
+                // 压缩阈值与底栏倒计时同源。此前 TUI 从不传 → loop 回退到 window × 0.7，
+                // 于是底栏承诺 78.3k 会压缩、实际到 89.6k 才压（用户看到「该压却没压」）。
+                // 首轮 contextPlan 为 null → 不传，loop 走旧回退（逐字节等价改动前）；
+                // 第二轮起即为真实预算。
+                chatOpts: {
+                  ...options,
+                  ...(contextPlan && contextPlan.contextBudget > 0
+                    ? { contextBudgetTokens: contextPlan.contextBudget }
+                    : {}),
+                },
                 // RedPass 模式：清洗上下文，不传历史消息
-                initialMessages: _redpassCleanContext ? [] : _priorConversation,
+                initialMessages: roundMsgs,
+                // 跨轮去重：续跑轮继承上一轮已执行的调用键，避免重跑同样的工具
+                // （与 agenticHarnessService 的 inheritedDedupKeys 同一语义）。
+                ...(dedupKeys ? { inheritedDedupKeys: dedupKeys } : {}),
                 ...(_toolAbortWiring ? { abortSignal: controller.signal } : {}),
                 // Cross-turn repeat guard: feed the recent successful signatures so a
                 // call already answered in a prior turn is steered, not silently re-run.
@@ -2955,7 +3000,7 @@ ${history}
                     if (adv && adv.humanLine) {
                       setMessages((m) => [
                         ...m,
-                        { type: 'notice', content: adv.humanLine, timestamp: Date.now() },
+                        { role: 'notice', content: adv.humanLine, timestamp: Date.now() },
                       ]);
                     }
                   } catch {
@@ -3020,6 +3065,30 @@ ${history}
               return null;
             }
           })();
+          // [DESIGN-ARCH-135] 三期：达到迭代上限/超时 → 有界自动续跑，而不是把半路的
+          // 结果当终态交出去。策略（该不该续/续什么/最多几轮）取自 agenticHarnessService
+          // 的同一批函数；轮数有界，不设固定时长 kill（RUNTIME-003 活动式超时语义）。
+          loopResult = await runLoopRoundWithContinuation(
+            _runRoundOnce,
+            text,
+            _redpassCleanContext ? [] : _priorConversation,
+            {
+              onRound: (round, maxRounds) => {
+                try {
+                  setMessages((m) => [
+                    ...m,
+                    {
+                      role: 'notice',
+                      content: `↻ 自动续跑 第 ${round}/${maxRounds} 轮（上一轮达到迭代上限，任务尚未收口）`,
+                      timestamp: Date.now(),
+                    },
+                  ]);
+                } catch {
+                  /* notice only — never fail the turn on it */
+                }
+              },
+            }
+          );
           if (tuiDiagEnabled()) {
             process.stderr.write(
               `[TUI-DIAG] ${Date.now()} stage=loop_returned loopResult=${!!loopResult}\n`
@@ -3031,10 +3100,15 @@ ${history}
             // pairs itself on the normal path; this repairs terminal loop paths
             // that bypassed those pushes (unexpected chat error, empty-reply
             // un-commit) so the NEXT turn's initialMessages still see this round.
+            // [DESIGN-ARCH-135] 一期：把循环的压缩视图交回去，作为新的模型上下文真源。
+            // 此前只传文本 ⇒ 轮内压缩成果随调用栈丢弃，下一轮又从 getConversation()
+            // 取回未压缩的原始历史，压缩等于白做（长任务因此越跑越满直到中断）。
             try {
               const _aiMod = ai();
               if (typeof _aiMod.reconcileTurnHistory === 'function') {
-                _aiMod.reconcileTurnHistory(_turnHistorySnapshot, text, loopResult.finalResponse);
+                _aiMod.reconcileTurnHistory(_turnHistorySnapshot, text, loopResult.finalResponse, {
+                  compactedMessages: loopResult.conversationMessages,
+                });
               }
             } catch {
               /* best-effort — never fail the turn on history repair */
@@ -3046,7 +3120,38 @@ ${history}
               // Authoritative per-turn tool ledger — the turn-stats line below and
               // the persisted `_toolCalls` distillation both read it from `result`.
               toolCallLog: loopResult.toolCallLog,
+              // [DESIGN-ARCH-135] 二期：透出循环终态。此前只取上面四个字段，
+              // 「循环为何结束」被就地丢弃 ⇒ 长任务达到上限/超时后停在半路，
+              // 界面零提示，用户只能看到任务「莫名断了」。
+              loopStoppedByLimit:
+                loopResult.maxIterationsReached === true || loopResult.timeLimitReached === true,
+              maxIterationsReached: loopResult.maxIterationsReached === true,
+              timeLimitReached: loopResult.timeLimitReached === true,
+              absoluteLimit: loopResult.absoluteLimit === true,
+              loopIterations: Number(loopResult.iterations || 0),
+              loopElapsedMs: Number(loopResult.maxElapsedMs || 0),
             };
+            // 诚实告知：这一轮是被上限/超时截断的，而不是任务做完了。
+            // 走既有 notice 渲染路径（同文件 :2985 的先例），不新造消息类型。
+            if (result.loopStoppedByLimit) {
+              const _secs = Math.max(1, Math.ceil(result.loopElapsedMs / 1000));
+              const _calls = Array.isArray(loopResult.toolCallLog)
+                ? loopResult.toolCallLog.length
+                : 0;
+              const _why = result.timeLimitReached
+                ? result.absoluteLimit
+                  ? `已达绝对时间上限（${_secs}s）`
+                  : `已空闲超时（${_secs}s）`
+                : '已达最大迭代次数';
+              setMessages((m) => [
+                ...m,
+                {
+                  role: 'notice',
+                  content: `⚠ 工具循环${_why}（完成 ${result.loopIterations} 轮 / ${_calls} 次工具调用），任务可能未完成`,
+                  timestamp: Date.now(),
+                },
+              ]);
+            }
           }
         }
         if (tuiDiagEnabled()) {
@@ -3597,6 +3702,8 @@ ${history}
             { role: 'error', content: _withEscHint(errorMsg), timestamp: Date.now() },
           ]);
           bcast({ type: 'chunk_status', content: errorMsg });
+          // 递增失败计数，驱动页脚立即刷新（见 turnFailureAt 声明处的说明）。
+          setTurnFailureAt(Date.now());
           _emitTurnCompleteNotification(startTime, {
             ok: false,
             level: 'error',
@@ -4113,6 +4220,7 @@ ${history}
     turnStartedAt,
     adapterInfo,
     contextTokens,
+    turnFailureAt,
     cooldownUntilMs,
     submit,
     queueLen,
@@ -4127,6 +4235,102 @@ ${history}
     expandLastFoldable,
     resetContext,
   };
+}
+
+/**
+ * 有界自动续跑 —— TUI 侧的循环骨架（[DESIGN-ARCH-135] 三期）。
+ *
+ * 病灶：TUI 直调 `runToolUseLoop`（绕过 `agenticHarnessService`），因此**没有**外层
+ * Ralph 循环。而工具循环在达到迭代上限 / 绝对时间上限时会带着
+ * `maxIterationsReached: true` 返回（`toolUseLoopCore` 的两处 return），TUI 只取了
+ * `finalResponse` 就把结果当终态 ⇒ 长任务停在半路，用户看到的是一次「莫名中断」。
+ *
+ * 这里只补**骨架**（一个 while）。「该不该续 / 续什么 / 最多几轮」全部取自
+ * `agenticHarnessService.continuation`（harness 内部用的是同一批函数）——
+ * 不在这里再写第二份策略，否则两边的续跑条件会像压缩阈值那样各自漂移。
+ *
+ * 有界性是硬约束（RUNTIME-003 活动式超时语义）：轮数上限
+ * = `min(adaptive, DEFAULTS.maxContinuationRounds)`，且**每一轮**都必须重新满足
+ * `shouldAutoContinue`；任一轮抛错即停止，保留已有结果。
+ *
+ * 全程 fail-soft：策略模块不可用、或上一轮没带回 `conversationMessages`（没上下文可续，
+ * 硬续会失忆）→ 原样返回，等价于改动前。
+ *
+ * @param {(msg: string, msgs: Array|null, dedup: Map|null) => Promise<object|null>} runRound
+ * @param {string} userMessage 原始用户输入（策略判据用）
+ * @param {Array} firstMessages 首轮的 initialMessages
+ * @param {object} [hooks] `{ onRound(round, maxRounds), maxContinuationRounds }`
+ * @returns {Promise<object|null>} 最后一轮的结果
+ */
+async function runLoopRoundWithContinuation(runRound, userMessage, firstMessages, hooks = {}) {
+  let result = await runRound(userMessage, firstMessages, null);
+
+  let cont = null;
+  let cfg = null;
+  try {
+    const harness = require('../../../services/agenticHarnessService');
+    cont = harness.continuation;
+    cfg = harness.DEFAULTS;
+  } catch {
+    return result;
+  }
+  if (!cont || typeof cont.shouldAutoContinue !== 'function') {
+    return result;
+  }
+
+  let maxRounds = 0;
+  try {
+    const complexity = cont.assessTaskComplexity(userMessage, [], result);
+    const adaptive = Math.min(Math.ceil(3 * complexity), 8);
+    const requested = Number(hooks.maxContinuationRounds ?? (cfg && cfg.maxContinuationRounds));
+    maxRounds = Math.max(0, Math.min(adaptive, Number.isFinite(requested) && requested > 0 ? requested : adaptive));
+  } catch {
+    maxRounds = 0;
+  }
+
+  const cooldownMs = Number((cfg && cfg.continuationCooldownMs) || 0) || 1500;
+  let round = 0;
+
+  const _canContinue = () => {
+    try {
+      return cont.shouldAutoContinue(userMessage) === true;
+    } catch {
+      return false;
+    }
+  };
+
+  while (
+    result &&
+    result.maxIterationsReached === true &&
+    round < maxRounds &&
+    Array.isArray(result.conversationMessages) &&
+    result.conversationMessages.length > 0 &&
+    _canContinue()
+  ) {
+    round++;
+    try {
+      if (typeof hooks.onRound === 'function') {
+        hooks.onRound(round, maxRounds);
+      }
+    } catch {
+      /* observer only */
+    }
+    await new Promise((r) => setTimeout(r, cooldownMs));
+    let next = null;
+    try {
+      const summary = cont.buildContinuationSummary(result);
+      const msg = cont.buildContinuationInput(userMessage, summary, round, maxRounds);
+      next = await runRound(msg, result.conversationMessages, result.executedCallKeys || null);
+    } catch {
+      break;
+    }
+    if (!next) {
+      break;
+    }
+    result = next;
+  }
+
+  return result;
 }
 
 // Project restored ai._messages into visible <Static> transcript items for a
@@ -4154,6 +4358,8 @@ function buildResumedTranscript(messages, now) {
 // exported for unit testing.
 module.exports = {
   useQueryBridge,
+  runLoopRoundWithContinuation,
+  classifyStreamError: _classifyStreamError,
   buildDecisionRecord,
   summarizeControlInput,
   formatCompactionResult,

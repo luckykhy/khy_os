@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: README.md -->
+<title>前端代码清理工具 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>scripts<span class="sep">›</span>frontend<span class="sep">›</span>前端代码清理工具</div>
+      <header class="hero reveal"><h1>前端代码清理工具</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#前端代码清理工具">前端代码清理工具</a></li><li class="lvl-2"><a href="#工具列表">工具列表</a></li><li class="lvl-3"><a href="#1-cleanup-console-js-console-清理工具">1. cleanup-console.js - Console 清理工具</a></li><li class="lvl-2"><a href="#处理范围">处理范围</a></li><li class="lvl-2"><a href="#最佳实践">最佳实践</a></li><li class="lvl-3"><a href="#1-开发环境日志">1. 开发环境日志</a></li><li class="lvl-3"><a href="#2-生产环境日志">2. 生产环境日志</a></li><li class="lvl-3"><a href="#3-保留重要日志">3. 保留重要日志</a></li><li class="lvl-2"><a href="#注意事项">注意事项</a></li><li class="lvl-2"><a href="#相关规范">相关规范</a></li><li class="lvl-2"><a href="#版本历史">版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="前端代码清理工具">前端代码清理工具<a class="anchor" href="#前端代码清理工具" aria-label="锚点">#</a></h1>
+<p>本目录包含 khy-os 前端代码的清理和规范化工具。</p>
+<h2 id="工具列表">工具列表<a class="anchor" href="#工具列表" aria-label="锚点">#</a></h2>
+<h3 id="1-cleanup-console-js-console-清理工具">1. cleanup-console.js - Console 清理工具<a class="anchor" href="#1-cleanup-console-js-console-清理工具" aria-label="锚点">#</a></h3>
+<p>清理前端代码中的 <code>console.log/warn/error/info/debug</code> 语句。</p>
+<p><strong>用法:</strong></p>
+<pre><code class="language-bash"><span class="hljs-comment"># 预览模式（dry-run）- 查看将要执行的操作</span>
+node scripts/frontend/cleanup-console.js
+
+<span class="hljs-comment"># 执行清理（包装在 DEV 检查中）</span>
+node scripts/frontend/cleanup-console.js --apply
+
+<span class="hljs-comment"># 完全移除 console 语句</span>
+node scripts/frontend/cleanup-console.js --remove
+
+<span class="hljs-comment"># 处理单个文件</span>
+node scripts/frontend/cleanup-console.js --file path/to/file.js</code></pre>
+<p><strong>清理策略:</strong></p>
+<ul><li><strong>包装模式（默认）</strong>: 将 console 语句包装在 <code>import.meta.env.DEV</code> 检查中</li></ul>
+<pre><code class="language-javascript">  <span class="hljs-comment">// 原代码</span>
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;debug info&#x27;</span>);
+  
+  <span class="hljs-comment">// 清理后</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">import</span>.<span class="hljs-property">meta</span>.<span class="hljs-property">env</span>.<span class="hljs-property">DEV</span>) { <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;debug info&#x27;</span>); }</code></pre>
+<ul><li><strong>移除模式</strong>: 完全删除 console 语句</li></ul>
+<pre><code class="language-javascript">  <span class="hljs-comment">// 原代码</span>
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;debug info&#x27;</span>);
+  
+  <span class="hljs-comment">// 清理后</span>
+  <span class="hljs-comment">// （行被删除）</span></code></pre>
+<p><strong>保留规则:</strong></p>
+<p>以下 console 语句不会被处理:</p>
+<ul><li><code>console.error</code> - 错误日志通常需要保留</li><li><code>console.warn</code> - 警告日志通常需要保留</li><li>包含 <code>// keep</code> 注释的语句</li><li>包含 <code>// @console-keep</code> 注释的语句</li><li>已经被 <code>import.meta.env.DEV</code> 或 <code>process.env.NODE_ENV</code> 保护的语句</li></ul>
+<p><strong>npm 脚本:</strong></p>
+<pre><code class="language-bash"><span class="hljs-comment"># 预览清理</span>
+npm run frontend:cleanup-console
+
+<span class="hljs-comment"># 执行清理</span>
+npm run frontend:cleanup-console:apply
+
+<span class="hljs-comment"># 完全移除</span>
+npm run frontend:cleanup-console:remove</code></pre>
+<h2 id="处理范围">处理范围<a class="anchor" href="#处理范围" aria-label="锚点">#</a></h2>
+<p>默认处理以下目录:</p>
+<ul><li><code>software/khyquant/frontend/src</code></li><li><code>apps/ai-frontend/src</code></li><li><code>apps/khy-mobile/src</code></li></ul>
+<p>处理文件类型:</p>
+<ul><li><code>.js</code> - JavaScript 文件</li><li><code>.vue</code> - Vue 单文件组件</li><li><code>.ts</code> - TypeScript 文件</li></ul>
+<p>排除目录:</p>
+<ul><li><code>node_modules</code></li><li><code>dist</code></li><li><code>.git</code></li><li><code>__tests__</code></li><li><code>tests</code></li></ul>
+<h2 id="最佳实践">最佳实践<a class="anchor" href="#最佳实践" aria-label="锚点">#</a></h2>
+<h3 id="1-开发环境日志">1. 开发环境日志<a class="anchor" href="#1-开发环境日志" aria-label="锚点">#</a></h3>
+<p>在开发环境中，可以使用 console 输出调试信息:</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">if</span> (<span class="hljs-keyword">import</span>.<span class="hljs-property">meta</span>.<span class="hljs-property">env</span>.<span class="hljs-property">DEV</span>) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;调试信息:&#x27;</span>, data);
+}</code></pre>
+<h3 id="2-生产环境日志">2. 生产环境日志<a class="anchor" href="#2-生产环境日志" aria-label="锚点">#</a></h3>
+<p>在生产环境中，应该使用专业的日志服务:</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// 使用 Sentry、LogRocket 等服务</span>
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> <span class="hljs-title class_">Sentry</span> <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;@sentry/vue&#x27;</span>;
+
+<span class="hljs-keyword">try</span> {
+  <span class="hljs-comment">// 业务逻辑</span>
+} <span class="hljs-keyword">catch</span> (error) {
+  <span class="hljs-title class_">Sentry</span>.<span class="hljs-title function_">captureException</span>(error);
+}</code></pre>
+<h3 id="3-保留重要日志">3. 保留重要日志<a class="anchor" href="#3-保留重要日志" aria-label="锚点">#</a></h3>
+<p>对于需要保留的日志，使用注释标记:</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// @console-keep - 这是重要的业务日志</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;用户登录成功:&#x27;</span>, userId);</code></pre>
+<h2 id="注意事项">注意事项<a class="anchor" href="#注意事项" aria-label="锚点">#</a></h2>
+<ol><li><strong>备份代码</strong>: 在执行清理前，建议先提交当前代码到版本控制</li><li><strong>预览模式</strong>: 先使用预览模式查看变更，确认无误后再执行</li><li><strong>测试验证</strong>: 清理后运行测试，确保功能正常</li><li><strong>代码审查</strong>: 清理后的代码应该进行代码审查</li></ol>
+<h2 id="相关规范">相关规范<a class="anchor" href="#相关规范" aria-label="锚点">#</a></h2>
+<ul><li><a href="../../docs/10_规范/DESIGN-FE/[DESIGN-FE-001]%20前端页面规范.html">前端页面规范</a></li><li><a href="../../docs/10_规范/DESIGN-FE/[DESIGN-FE-002]%20前端组件库规范.html">前端组件库规范</a></li><li><a href="../../docs/10_规范/DESIGN-FE/[DESIGN-FE-003]%20前端快速参考卡.html">前端快速参考卡</a></li></ul>
+<h2 id="版本历史">版本历史<a class="anchor" href="#版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，提供 console 清理工具</td></tr><tr><td>1.1.0</td><td>2026-09-04</td><td>新增 var 声明修复工具</td></tr></tbody></table>
+<hr>
+<p><em>本工具由 khy-os 前端团队维护</em></p>
+      </article>
+      <nav class="pager"><span></span><a class="next" href="../../scripts/memory/README.html"><div class="dir">下一篇 →</div><div class="ttl">记忆系统管理脚本</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="scripts/frontend/README.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

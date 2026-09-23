@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-LAY-004] 构建产物单一根规范.md -->
+<title>[DESIGN-LAY-004] 构建产物单一根规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-LAY<span class="sep">›</span>[DESIGN-LAY-004] 构建产物单一根规范</div>
+      <header class="hero reveal"><h1>[DESIGN-LAY-004] 构建产物单一根规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-lay-004-构建产物单一根规范">[DESIGN-LAY-004] 构建产物单一根规范</a></li><li class="lvl-2"><a href="#0-一句话">0. 一句话</a></li><li class="lvl-2"><a href="#1-现状证据-2026-09-16-实测-命令见-11">1. 现状证据（2026-09-16 实测，命令见 §11）</a></li><li class="lvl-3"><a href="#1-1-产物散落在-6-个层级-24-个目录">1.1 产物散落在 6 个层级、24 个目录</a></li><li class="lvl-3"><a href="#1-2-三份手写清单互不同步-三条硬证据-均可复现">1.2 三份手写清单互不同步（三条硬证据，均可复现）</a></li><li class="lvl-3"><a href="#1-3-守卫的盲区-绿着放行-10-个已跟踪产物">1.3 守卫的盲区：绿着放行 10 个已跟踪产物</a></li><li class="lvl-3"><a href="#1-4-结论-随时能删-现在是假的">1.4 结论：「随时能删」现在是假的</a></li><li class="lvl-2"><a href="#2-设计公理-4-条-不可让渡">2. 设计公理（4 条，不可让渡）</a></li><li class="lvl-2"><a href="#3-规则正文">3. 规则正文</a></li><li class="lvl-3"><a href="#约束">约束</a></li><li class="lvl-3"><a href="#授予权力">授予权力</a></li><li class="lvl-3"><a href="#提供福利">提供福利</a></li><li class="lvl-3"><a href="#反例">反例</a></li><li class="lvl-3"><a href="#校验方式">校验方式</a></li><li class="lvl-3"><a href="#例外">例外</a></li><li class="lvl-3"><a href="#版本记录">版本记录</a></li><li class="lvl-2"><a href="#4-产物根布局">4. 产物根布局</a></li><li class="lvl-2"><a href="#5-登记表-一份真源-三处派生">5. 登记表：一份真源，三处派生</a></li><li class="lvl-2"><a href="#6-强度梯度">6. 强度梯度</a></li><li class="lvl-2"><a href="#7-与既有机制的边界">7. 与既有机制的边界</a></li><li class="lvl-2"><a href="#8-b-l2-三步接线清单-依-sourcing-006-一次提交只做一步">8. B-L2 三步接线清单（依 SOURCING-006，一次提交只做一步）</a></li><li class="lvl-3"><a href="#步骤-1-标记-只登记-只-advisory-恒-exit-0-本次已落地">步骤 1「标记」——只登记、只 advisory，恒 exit 0　✅ 本次已落地</a></li><li class="lvl-3"><a href="#步骤-2-迁移-物理迁移-gate-升-pr-只报-warning">步骤 2「迁移」——物理迁移，gate 升 `pr`，只报 warning</a></li><li class="lvl-3"><a href="#步骤-3-收口-gate-升-error-棘轮收紧">步骤 3「收口」——gate 升 error，棘轮收紧</a></li><li class="lvl-2"><a href="#9-迁移映射表-存量-24-条-目标">9. 迁移映射表（存量 24 条 → 目标）</a></li><li class="lvl-2"><a href="#10-验证与反例矩阵-原型实测输出">10. 验证与反例矩阵（原型实测输出）</a></li><li class="lvl-3"><a href="#10-1-真实仓库扫描">10.1 真实仓库扫描</a></li><li class="lvl-2"><a href="#11-复现方式">11. 复现方式</a></li><li class="lvl-2"><a href="#附录-a-一句话记住这条规则">附录 A：一句话记住这条规则</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 构建产物单一根<br>id: LAYOUT-005<br>domain: LAYOUT<br>nature: 约束为主，兼权力与福利<br>scope: &quot;kernel/<strong>, platform/</strong>, services/<strong>, apps/</strong>, software/<strong>, extensions/</strong>, tools/<strong>, docs/</strong>, packaging/<strong>, scripts/</strong>（一切构建 / 测试 / 打包 / 代码生成产物的落盘路径；不含源码同名目录 packaging/build 与 scripts/release）&quot;<br>priority: P1<br>trigger: 任何工具向磁盘写入可再生输出时；新增或移动产物目录时；修改 .gitignore / .dockerignore / clean.js 的产物清单时<br>constraint: 可再生构建产物的落盘路径必须位于仓库根 <code>entries/</code> 之下，形如 <code>entries/&lt;producer&gt;[/&lt;variant&gt;]</code>（深度 ≤ 2）；每条产物必须在 <code>docs/10_规范/registry/BUILD-OUTPUTS.json</code> 登记 <code>path</code> + <code>rebuild</code>（一条能把它变回来的命令）+ <code>inBuildAll: true</code>；<code>entries/</code> 之外不得存在未登记为 <code>migrating</code> / <code>parasitic</code> 的产物目录；无法重定向的寄生产物必须登记 <code>hook</code>（重建钩子）与 <code>sunset</code>（到期日），且寄生条目总数不得超过登记表 <code>meta.parasiticBudget</code>（只降不升）；<code>.gitignore</code> 与 <code>.dockerignore</code> 中的产物规则必须由登记表派生，不得手写第二份清单<br>grants: 授权任何人在不阅读任何构建配置的前提下，执行 <code>npm run clean:apply</code>，再执行 <code>build:all</code> 得到完整产物（登记表是唯一真源）；授权对 <code>entries/</code> 整树执行<strong>无事前审批</strong>的删除（其内容天然可再生）；授权维护者按 §8 三步流程调整 <code>parasiticBudget</code> 与 <code>sunset</code><br>benefit: 找产物进一个目录、删产物删一个目录、CI 缓存一个 key；「产物在哪 / 删了怎么回来」不再需要跨 .gitignore + .dockerignore + clean.js + 各包构建配置四处拼装答案，把「定位 + 重建」的决策成本压到一次 <code>build:all</code><br>exception: 见 §3 例外节——源码同名目录（<code>packaging/build</code>、<code>scripts/release</code>）、机器本地 vendored 检出（<code>tools/deepseek-eyes/**</code>）、工具强制且不可重定向的路径（<code>kernel/moonbit/_build</code>）三类；三类均须登记，不得裸豁免<br>version: &quot;1.0.0 (2026-09-16) 初版；配套原型 docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] build-root-demo.js 12 场景实测；1.0.1 (2026-09-18) 单一产物根由 _build/ 迁移至 entries/（§1.x 的历史实测快照仍记旧根名，属迁移前证据）&quot;<br>status: draft<br>ssot: docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] 构建产物单一根规范.md<br>enforcement: scripts/ci/check-build-root.js<br>formerly: 无<br>owner: architecture-team</p>
+<hr>
+<!-- RULES-REGISTRY: LAYOUT-005 -->
+<h1 id="design-lay-004-构建产物单一根规范">[DESIGN-LAY-004] 构建产物单一根规范<a class="anchor" href="#design-lay-004-构建产物单一根规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>2026-09-18 更新</strong>：单一产物根由 <code>_build/</code> 迁移至 <code>entries/</code>（与「多端入口矩阵」同址，见 <code>[DESIGN-ARCH-117]</code>）。§1.x 的实测快照为迁移前证据，仍记旧根名 <code>_build/</code>；正文规范（§3–§9）已统一到 <code>entries/</code>。</p></blockquote>
+<blockquote><p><strong>定位</strong>：管「<strong>产物放哪、删了怎么回来</strong>」。<code>[DESIGN-LAY-002]</code> 的 LAY-4 已经说了「构建产物不得进入源码层」，但那句话只回答「别进 git」，没回答「该放哪」「删了能不能重建」「清单谁维护」。本文补这三个空白。</p>
+<p><strong>结论</strong>：① 仓库只有一个产物根 <code>entries/</code>，<code>entries/</code> 之外的一切产物路径都必须在登记表里被显式解释（迁移中 / 寄生 / 源码同名）；② 产物的登记表是 <code>docs/10_规范/registry/BUILD-OUTPUTS.json</code> <strong>一份真源</strong>，<code>.gitignore</code>、<code>.dockerignore</code>、<code>scripts/maintenance/clean.js</code> 三处清单全部由它派生——现在这三份手写清单已经互相打架（§1.2 实测）；③ 「随时能删」不是一句承诺，而是一条可自动判定的不变量：<code>clean:apply</code> 后 <code>build:all</code> 必须能把登记表里每一条变回来。</p>
+<p><strong>守卫</strong>：<code>scripts/ci/check-build-root.js</code>（<code>npm run check:build-root</code>）。本文的产物根名、登记表路径、深度上限在该脚本内以常量落地；改本文须同步改守卫。</p>
+<p><strong>与 LAY-4 的关系</strong>：不新增重复红线。LAY-4 的守卫 <code>check-build-artifacts</code> 在 §1.3 被实测证明有 scope 盲区（绿着放行 10 个已跟踪产物），本规范把该维度的判据从「路径白名单」换成「登记表驱动」，并把 scope 从 <code>apps/khy-mobile/android/</code> 扩到全仓。</p></blockquote>
+<hr>
+<h2 id="0-一句话">0. 一句话<a class="anchor" href="#0-一句话" aria-label="锚点">#</a></h2>
+<p><strong>把「散落在六个层级、三份手写清单互相打架、守卫绿着放行」的产物现状，收敛成「一个根目录 + 一份登记表 + 一条重建命令」。</strong></p>
+<hr>
+<h2 id="1-现状证据-2026-09-16-实测-命令见-11">1. 现状证据（2026-09-16 实测，命令见 §11）<a class="anchor" href="#1-现状证据-2026-09-16-实测-命令见-11" aria-label="锚点">#</a></h2>
+<h3 id="1-1-产物散落在-6-个层级-24-个目录">1.1 产物散落在 6 个层级、24 个目录<a class="anchor" href="#1-1-产物散落在-6-个层级-24-个目录" aria-label="锚点">#</a></h3>
+<p>扫描口径：目录名 ∈ {<code>dist</code> <code>build</code> <code>out</code> <code>release</code> <code>coverage</code> <code>.cache</code> <code>.nyc_output</code> <code>dist-electron</code> <code>tmp-cov</code> <code>.dart_tool</code> <code>publish</code> <code>*.egg-info</code>} ∪ 登记在册的寄生产物路径，跳过 <code>node_modules</code> / <code>.git</code> / <code>.research-tmp</code> / 机器本地状态目录。</p>
+<pre><code>$ node docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] build-root-demo.js --scan
+── 真实仓库扫描（发现 24 个产物候选目录）</code></pre>
+<table><thead><tr><th>所在层</th><th>产物目录（节选）</th></tr></thead><tbody><tr><td>仓库根</td><td><code>dist/</code> <code>build/</code> <code>dist-electron/</code> <code>coverage/</code> <code>.cache/</code> <code>.nyc_output/</code> <code>tmp-cov/</code> <code>khy_os.egg-info/</code> <code>publish/</code></td></tr><tr><td><code>apps/</code></td><td><code>ai-frontend/{dist,coverage}</code> · <code>khy-mobile/{dist,release,android/build}</code> · <code>khy-os-client-app/{build,release,android/build}</code> · <code>khyos-desktop/{dist,dist-electron,out}</code> · <code>provider-hub/dist</code></td></tr><tr><td><code>services/</code></td><td><code>backend/dist</code></td></tr><tr><td><code>software/</code></td><td><code>khyquant/frontend/coverage</code></td></tr><tr><td><code>kernel/</code></td><td><code>moonbit/_build</code></td></tr><tr><td><code>tools/</code></td><td><code>deepseek-eyes/deepseek_eyes.egg-info</code></td></tr><tr><td><code>docs/</code> <code>extensions/</code></td><td><code>19_资产/site/mermaid.min.js</code> · <code>tools/khy-markdown/vendor</code> · <code>tools/khy-dsh-compat/vendor</code> · <code>ai-frontend/public/vendor</code></td></tr></tbody></table>
+<p><strong>同一件事有 11 个不同的目录名</strong>（<code>dist</code> / <code>build</code> / <code>out</code> / <code>release</code> / <code>coverage</code> / <code>.cache</code> / <code>.nyc_output</code> / <code>dist-electron</code> / <code>tmp-cov</code> / <code>.dart_tool</code> / <code>*.egg-info</code>）。要找「上次构建的 APK 在哪」，得先知道是 Flutter 还是 Gradle 还是 Capacitor 写的——这正是「不方便查找」的机械成因。</p>
+<h3 id="1-2-三份手写清单互不同步-三条硬证据-均可复现">1.2 三份手写清单互不同步（三条硬证据，均可复现）<a class="anchor" href="#1-2-三份手写清单互不同步-三条硬证据-均可复现" aria-label="锚点">#</a></h3>
+<p><strong>证据 A —— <code>clean.js</code> 登记表与磁盘脱节 17 条</strong></p>
+<pre><code>$ node docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] build-root-demo.js --audit-clean
+  声明条目：17 条
+  磁盘产物候选：24 个
+  其中被登记覆盖：7 个
+  登记管不到的：17 个
+  Summary: 17 gap(s).（「随时能删」的判据：gap 必须为 0）</code></pre>
+<p><code>npm run clean:apply</code> 会删掉 <code>apps/khy-mobile/android/app/build</code>，却<strong>不知道</strong> <code>apps/khy-mobile/android/build</code> 也是产物；它没有 <code>apps/khy-mobile/release</code>（465 MB）、<code>apps/khy-os-client-app/release</code>（58 MB）、<code>services/backend/dist</code>（38 MB）、<code>apps/khyos-desktop/{dist,out}</code>、<code>apps/provider-hub/dist</code>、<code>software/khyquant/frontend/coverage</code>、<code>khy_os.egg-info</code>。</p>
+<blockquote><p>这不是笔误——<code>clean.js</code> 的注释自己写了「清理脚本最容易出的事故不是『少删了』而是『多删了』」，于是选了手写白名单。方向对，但<strong>白名单没有任何机制保证与磁盘同步</strong>，于是必然漂移。本规范不推翻白名单，而是给它一份<strong>可自动校验的真源</strong>。</p></blockquote>
+<p><strong>证据 B —— <code>.gitignore</code> 与 <code>clean.js</code> 指向不同路径</strong></p>
+<table><thead><tr><th>清单</th><th>路径</th><th>磁盘实况</th></tr></thead><tbody><tr><td><code>.gitignore:154</code></td><td><code>docs/_assets/mermaid.min.js</code></td><td><strong>不存在</strong>（目录已改名 <code>docs/19_资产/</code>）</td></tr><tr><td><code>clean.js:141</code></td><td><code>docs/19_资产/site/mermaid.min.js</code></td><td><strong>存在，3.2 MB</strong></td></tr></tbody></table>
+<p>后果是活的：<code>docs/19_资产/site/mermaid.min.js</code> 既未被忽略、也未被跟踪——</p>
+<pre><code>$ git check-ignore -v docs/19_资产/site/mermaid.min.js   → exit 1（未被忽略）
+$ git -c core.quotepath=false status --porcelain --untracked-files=all -- 'docs/19_资产/'
+?? docs/19_资产/site/dead-links.json
+?? docs/19_资产/site/docs-site.css
+?? docs/19_资产/site/docs-site.js
+?? docs/19_资产/site/hljs-github-dark.min.css
+?? docs/19_资产/site/mermaid.min.js
+?? docs/19_资产/site/nav-data.js</code></pre>
+<p>一次 <code>git add -A</code> 就能把 3.2 MB 的 esbuild 产物钉进 git 历史——而 <code>.gitignore</code> 第 151–154 行那段解释文字还在描述一个<strong>已经不存在的路径</strong>。</p>
+<p><strong>证据 D —— 同一次改名把 232 个已提交 <code>.html</code> 的资源引用一起打歪</strong></p>
+<p><code>docs/_assets/</code> → <code>docs/19_资产/</code> 这次改名，除了 <code>.gitignore</code>，还让<strong>仓库里 232 个已提交的文档页</strong>指向了不存在的目录：</p>
+<pre><code>$ git diff -- 'docs/02_CONCEPTS_概念入门/CONCEPT/[CONCEPT-01] 什么是Agent-智能体.html'
+-&lt;link rel=&quot;stylesheet&quot; href=&quot;../../docs/_assets/hljs-github-dark.min.css&quot;&gt;
+-&lt;link rel=&quot;stylesheet&quot; href=&quot;../../docs/_assets/docs-site.css&quot;&gt;
++&lt;link rel=&quot;stylesheet&quot; href=&quot;../../19_资产/site/hljs-github-dark.min.css&quot;&gt;
++&lt;link rel=&quot;stylesheet&quot; href=&quot;../../19_资产/site/docs-site.css&quot;&gt;
+-&lt;script src=&quot;../../docs/_assets/nav-data.js&quot;&gt;&lt;/script&gt;
+-&lt;script src=&quot;../../docs/_assets/mermaid.min.js&quot;&gt;&lt;/script&gt;
++&lt;script src=&quot;../../19_资产/site/nav-data.js&quot;&gt;&lt;/script&gt;
++&lt;script src=&quot;../../19_资产/site/mermaid.min.js&quot;&gt;&lt;/script&gt;</code></pre>
+<p>跑一次 <code>node scripts/docs/build_docs_site.js</code> 就修好了全部 232 个（<code>docs:verify</code> 由「引用不可达」转为「✅ 全部通过」）。<strong>同一次改名，三处引用（<code>.gitignore</code> / <code>clean.js</code> / 232 个 html）漂移了三种不同的方式</strong>——这不是三个人同时手滑，这是「路径清单靠人手写」这个机制本身的失效。本规范把产物路径收敛成一份登记表，正是为了消掉这个机制。</p>
+<p><strong>证据 C —— <code>.gitignore</code> 漏覆盖 5 个产物目录</strong></p>
+<pre><code>$ node -e &quot;…git check-ignore -q 每个产物目录…&quot;
+产物候选: 19  被 .gitignore 覆盖: 14  未覆盖: 5
+  [NOT-IGNORED] apps/khy-mobile/release
+  [NOT-IGNORED] apps/khy-os-client-app/release
+  [NOT-IGNORED] apps/khyos-desktop/out
+  [NOT-IGNORED] apps/khyos-desktop/zcode-analysis/unpacked/out
+  [NOT-IGNORED] kernel/moonbit/_build</code></pre>
+<p><code>.gitignore</code> 里有 37 行与产物相关，仍漏了 5 个目录；<code>.dockerignore</code> 另有<strong>第三份</strong>独立手写的 <code>dist</code> / <code>build</code> / <code>*.egg-info</code> 规则。三份清单，三个真源，零同步机制。</p>
+<h3 id="1-3-守卫的盲区-绿着放行-10-个已跟踪产物">1.3 守卫的盲区：绿着放行 10 个已跟踪产物<a class="anchor" href="#1-3-守卫的盲区-绿着放行-10-个已跟踪产物" aria-label="锚点">#</a></h3>
+<pre><code>$ node scripts/ci/check-build-artifacts.js
+✓ check-build-artifacts 通过(已跟踪 8752 条，无可再生产物)
+exit=0
+
+$ git ls-files 'apps/khyos-desktop/out' 'kernel/moonbit/_build' | wc -l
+10</code></pre>
+<p><code>apps/khyos-desktop/out/</code> 下的 9 个文件（<code>main/index.js</code>、<code>preload/index.mjs</code>、<code>renderer/assets/*.css|*.js</code>、两张 <code>icon.ico</code>…）与 <code>kernel/moonbit/_build/.moon-lock</code> <strong>已被 git 跟踪</strong>，工作树里正处于 <code>M</code> / <code>D</code> 状态。守卫报绿，因为 <code>scripts/lib/buildArtifactGuard.js</code> 的 <code>RULES[0].scopes</code> 只有一条：</p>
+<pre><code class="language-js"><span class="hljs-attr">scopes</span>: [<span class="hljs-string">&#x27;apps/khy-mobile/android/&#x27;</span>],</code></pre>
+<p>这正是该文件头部注释警告过的那类事故——「二进制一旦进了 git 历史，<code>git rm</code> 也删不掉体积」——只是它守着的那扇门旁边还有十扇。</p>
+<h3 id="1-4-结论-随时能删-现在是假的">1.4 结论：「随时能删」现在是假的<a class="anchor" href="#1-4-结论-随时能删-现在是假的" aria-label="锚点">#</a></h3>
+<p>三条判据，当前全部不成立：</p>
+<table><thead><tr><th>判据</th><th>要求</th><th>实测</th></tr></thead><tbody><tr><td><strong>可删</strong></td><td><code>clean:apply</code> 覆盖全部产物</td><td>❌ 漏 17 条</td></tr><tr><td><strong>可回</strong></td><td>每条产物有登记的重建命令</td><td>❌ 17 条漏项中 12 条无登记重建命令</td></tr><tr><td><strong>不越界</strong></td><td>产物只在 <code>entries/</code> 下</td><td>❌ 产物根不存在，24 个目录散落 6 层</td></tr></tbody></table>
+<hr>
+<h2 id="2-设计公理-4-条-不可让渡">2. 设计公理（4 条，不可让渡）<a class="anchor" href="#2-设计公理-4-条-不可让渡" aria-label="锚点">#</a></h2>
+<ol><li><strong>一份真源优于三份同步</strong>。<code>.gitignore</code> / <code>.dockerignore</code> / <code>clean.js</code> 的产物清单<strong>必须派生自同一份登记表</strong>。手写三份然后靠人记得同步，是已被证据 A/B/C 证伪的做法。</li><li><strong>可删除性 = 可重建性</strong>。没有 <code>rebuild</code> 命令的产物<strong>不允许登记</strong>——写不出「怎么把它变回来」的东西，删掉就是永久损失，那就不是产物。</li><li><strong>默认单一根，例外必须登记且只减不增</strong>。工具强制路径（Flutter/Gradle/MoonBit 的 <code>build</code>、必须被 Vite 服务的 <code>public/vendor</code>）无法重定向，承认它；但承认的代价是登记 <code>hook</code> + <code>sunset</code> + 全局预算，且预算只降不升。</li><li><strong>证据优于承诺</strong>。判定只看磁盘与登记表的客观差异，不读任何「我已迁移」的声明（与 <code>[DESIGN-ARCH-113]</code> 公理 1 同源）。</li></ol>
+<hr>
+<h2 id="3-规则正文">3. 规则正文<a class="anchor" href="#3-规则正文" aria-label="锚点">#</a></h2>
+<h3 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h3>
+<ol><li><strong>唯一产物根</strong>。一切可再生构建 / 测试 / 打包 / 代码生成产物的落盘路径必须位于仓库根 <code>entries/</code> 之下，形如 <code>entries/&lt;producer&gt;[/&lt;variant&gt;]</code>，<strong>深度 ≤ 2</strong>。</li><li><strong>登记即准入</strong>。每条产物必须在 <code>docs/10_规范/registry/BUILD-OUTPUTS.json</code> 登记 <code>id</code> + <code>path</code> + <code>rebuild</code> + <code>inBuildAll: true</code>。缺 <code>rebuild</code> 即不允许登记（公理 2）。</li><li><strong>零越界</strong>。<code>entries/</code> 之外不得存在产物目录，除非该路径在登记表中被标为 <code>status: migrating</code>（附 <code>sunset</code>）或 <code>parasitic: true</code>（附 <code>hook</code> + <code>sunset</code>）。</li><li><strong>寄生棘轮</strong>。<code>parasitic: true</code> 的条目总数不得超过 <code>meta.parasiticBudget</code>，<strong>该预算只降不升</strong>；每条寄生必须有 <code>hook</code>（哪个钩子重建它）与 <code>sunset</code>（到期日），过期未续期即 error。</li><li><strong>一键重建</strong>。存在唯一入口 <code>build:all</code>，其语义为「逐条执行登记表的 <code>rebuild</code>，任一失败即非零退出」。登记表中 <code>inBuildAll: true</code> 的每一条都必须被它覆盖。</li><li><strong>清单派生</strong>。<code>.gitignore</code> 与 <code>.dockerignore</code> 中的产物规则必须由登记表派生（<code>build:root:sync</code> 生成），不得手写第二份。</li></ol>
+<h3 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h3>
+<ul><li><strong>授权无审批删除</strong>：任何人对 <code>entries/</code> 整树执行删除<strong>无需事前审批</strong>——其内容按定义可再生（约束 2 保证）。</li><li><strong>授权无配置重建</strong>：任何人在不阅读任何包构建配置的前提下，执行 <code>npm run clean:apply</code>，再执行 <code>build:all</code> 得到完整产物；登记表是唯一真源。</li><li><strong>授权维护者调整预算</strong>：维护者有权按 §8 三步流程修订 <code>parasiticBudget</code> 与 <code>sunset</code>。</li></ul>
+<blockquote><p>权力的边界（§3.3 配对铁律）：<code>entries/</code> 之外的任何删除<strong>不在</strong>本授权范围内，仍受 <code>[DESIGN-ARCH-113]</code> DELETE 模态与 <code>check-change-safety.js</code> 管辖；<code>clean:apply</code> 仍保留 <code>clean.js</code> 的 <code>PROTECTED_SUBTREE</code> / <code>PROTECTED_EXACT</code> 两道校验。</p></blockquote>
+<h3 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h3>
+<ul><li><strong>一个目录找产物</strong>：<code>entries/&lt;producer&gt;/</code>，不必先知道产它的是 Vite 还是 Gradle。</li><li><strong>一个 cache key</strong>：CI 只需缓存 <code>entries/</code>。</li><li><strong>一条命令回滚</strong>：<code>build:all</code>。</li><li><strong>一处改动同步三份清单</strong>：改 <code>BUILD-OUTPUTS.json</code> 后跑 <code>build:root:sync</code>，<code>.gitignore</code> / <code>.dockerignore</code> / <code>clean.js</code> 一起更新。</li></ul>
+<h3 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>违反的样子</th><th>正确写法</th></tr></thead><tbody><tr><td>1</td><td><code>vite.config.js</code> 保持默认 <code>dist/</code>，产物落 <code>apps/ai-frontend/dist</code></td><td><code>build.outDir: '../../entries/ai-frontend'</code></td></tr><tr><td>2</td><td>新工具吐到 <code>apps/newapp/out/</code>，谁也没登记</td><td>先登记 <code>entries/newapp</code>，再改工具输出路径</td></tr><tr><td>3</td><td>登记项写 <code>rebuild: 'TBD'</code></td><td>写不出重建命令 → 不许登记，先想清楚它是不是产物</td></tr><tr><td>4</td><td>用 <code>parasitic: true</code> 逃避迁移，且不写 <code>sunset</code></td><td>寄生必须有钩子 + 到期日，且全局预算只降不升</td></tr><tr><td>5</td><td>往 <code>.gitignore</code> 手加一行 <code>apps/x/dist/</code></td><td>改 <code>BUILD-OUTPUTS.json</code> 后 <code>build:root:sync</code></td></tr><tr><td>6</td><td><code>entries/a/b/c/d</code> 四层嵌套</td><td>深度 ≤ 2：<code>entries/a</code> 或 <code>entries/a/b</code></td></tr></tbody></table>
+<h3 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>守卫</th><th>命令</th></tr></thead><tbody><tr><td>落点越界 / 未登记 / 深度 / 寄生过期</td><td><code>scripts/ci/check-build-root.js</code></td><td><code>npm run check:build-root</code></td></tr><tr><td>登记表自身完整性（缺 rebuild / 未纳入 build:all / 预算超限）</td><td>同上（<code>inspectRegistry</code>）</td><td>同上</td></tr><tr><td>产物被 git 跟踪</td><td><code>check-build-artifacts.js</code>（scope 需扩到登记表驱动）</td><td><code>npm run check:build-artifacts</code></td></tr><tr><td>端到端可删除性回环</td><td>CI 作业 <code>build-root-roundtrip</code></td><td><code>clean:apply &amp;&amp; build:all &amp;&amp; check:build-root --after-build</code></td></tr><tr><td>三份清单同步</td><td><code>build:root:sync</code> 的脏 diff 判断</td><td><code>build:root:sync --check</code></td></tr></tbody></table>
+<h3 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类别</th><th>实例</th><th>处置</th></tr></thead><tbody><tr><td><strong>源码同名目录</strong></td><td><code>packaging/build/</code>（CI 构建脚本，<code>.gitignore</code> 专门 <code>!</code> 放行）、<code>scripts/release/</code>、<code>services/backend/src/services/publish/</code>、<code>kernel/vendor/</code></td><td>非产物，<strong>不入登记表</strong>，由守卫的 <code>SOURCE_DIR_ALLOWLIST</code> 显式排除（防止规则误杀源码）</td></tr><tr><td><strong>机器本地 vendored 检出</strong></td><td><code>tools/deepseek-eyes/**</code>（<code>.gitignore</code> 明文「stays entirely out of git」）</td><td>登记为 <code>parasitic</code>，<code>hook: 'pip install -e'</code>，<code>sunset</code> 为空表示永久（机器本地，不参与 CI）</td></tr><tr><td><strong>工具强制且不可重定向</strong></td><td><code>kernel/moonbit/_build</code>（<code>moon build</code> 写死）、<code>apps/ai-frontend/public/vendor</code>（必须被 Vite 服务）、<code>extensions/tools/*/vendor</code>（必须在包内被 <code>prepack</code> 打包）、<code>docs/19_资产/site/mermaid.min.js</code>（必须被文档站引用）</td><td>登记为 <code>parasitic</code>，写 <code>hook</code> + <code>sunset</code>，计入预算</td></tr><tr><td><strong>尚未迁移的存量</strong></td><td>见 §9 映射表的 <code>status: migrating</code> 行</td><td>允许存在，报 warning，<code>sunset</code> 到期转 error</td></tr></tbody></table>
+<h3 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h3>
+<ul><li><strong>1.0.0 (2026-09-16)</strong> 初版。规则 <code>LAYOUT-005</code>；配套原型 <code>docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] build-root-demo.js</code>（零依赖、确定性、只读，12 场景反例矩阵实测）。</li></ul>
+<hr>
+<h2 id="4-产物根布局">4. 产物根布局<a class="anchor" href="#4-产物根布局" aria-label="锚点">#</a></h2>
+<pre><code>entries/                         ← 仓库唯一可整树删除的产物根（与多端入口索引同址）
+├── entries.json                 ← 【提交】端矩阵真源（不是产物）
+├── launch.js                    ← 【提交】跨平台入口壳（不是产物）
+├── README.md / README.html      ← 【提交】人读端地图（不是产物）
+├── ai-frontend/                 ← apps/ai-frontend 的 Vite 产物
+├── khyquant-frontend/           ← software/khyquant/frontend 的 Vite 产物
+├── provider-hub/
+├── backend/                     ← services/backend 的 esbuild 模块 bundle
+├── flutter-android/             ← apps/khy-os-client-app 的 Flutter + Gradle 产物
+├── khy-mobile/                  ← apps/khy-mobile 的 Capacitor + Gradle 产物
+├── electron/                    ← electron-builder 输出（含 apps/khyos-desktop/out）
+├── pip/                         ← sdist / wheel / *.egg-info
+├── coverage/                    ← 全部覆盖率报告（root / backend / ai-frontend / khyquant）
+├── cache/                       ← 治理脚本分析缓存
+└── tmp-cov/                     ← quality-gate 覆盖率临时工作区</code></pre>
+<p><strong>为什么产物根落在 <code>entries/</code>（2026-09-18 迁移，原为 <code>_build/</code>）</strong>：</p>
+<ol><li><strong>与「多端入口矩阵」同址</strong>。<code>entries/</code> 本就是 <code>[DESIGN-ARCH-117]</code> 登记的端矩阵真源目录——<code>khy entry status</code> 就是「读登记表换出人话」。把产物根也放这里，「这个端怎么起、产物在哪、在不在」三件事落在同一个目录，人打开一处即可看全四端，不必在 <code>_build/</code>（产物）与 <code>entries/</code>（索引）之间来回跳。</li><li><strong>靠 <code>.gitignore</code> 的「默认忽略 + 真源白名单」区分两类内容</strong>。<code>entries/</code> 下除 <code>entries.json</code> / <code>launch.js</code> / <code>README.*</code> 显式 <code>!</code> 放行外，其余一律不入库（<code>entries/*</code>），因此未来任何新增产物子目录自动被忽略，无需再改忽略清单。</li><li><strong>诚实记录代价</strong>：产物根的目录名不再是罕见的 <code>_build</code>，而是常见的 <code>entries</code>——守卫的走盘（<code>check-build-root.js</code>）把<strong>顶层</strong> <code>entries</code> 目录本身识别为根并<strong>停止递归</strong>，故其内部产物子目录不做逐个磁盘审计，改由「登记表 ↔ path」判定兜底；同时产物与提交的索引文件位于同一层，靠上述白名单隔离。此权衡经用户明确确认（选项 A）。</li></ol>
+<blockquote><p>注：<code>_</code> 前缀「非源码」的旧约定（<code>[DESIGN-LAY-002]</code> §3）已不适用于根名，但 <code>kernel/moonbit/_build</code> 等<strong>工具强制</strong>的 <code>_build</code> 子路径仍按原样作为 <code>parasitic</code> 登记，与产物根无关。</p></blockquote>
+<hr>
+<h2 id="5-登记表-一份真源-三处派生">5. 登记表：一份真源，三处派生<a class="anchor" href="#5-登记表-一份真源-三处派生" aria-label="锚点">#</a></h2>
+<p><code>docs/10_规范/registry/BUILD-OUTPUTS.json</code>（与 <code>RULES-REGISTRY.json</code> / <code>FEATURE-OWNERSHIP.json</code> 同址，符合 <code>[DESIGN-LAY-002]</code> 对 <code>docs/10_规范/</code> 的定位）：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;meta&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;root&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;entries&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1.0.0&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;parasiticBudget&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">5</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;outputs&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ai-frontend&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;path&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;entries/ai-frontend&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;group&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;build&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;producer&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;apps/ai-frontend/vite.config.js → build.outDir&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;rebuild&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;npm run build --prefix apps/ai-frontend&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;inBuildAll&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;active&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;legacyPath&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;apps/ai-frontend/dist&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;sunset&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-10-31&quot;</span>
+    <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;moonbit&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;path&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;kernel/moonbit/_build&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;rebuild&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;moon build&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;parasitic&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;hook&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;moon build（工具强制路径，不可重定向）&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;sunset&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2027-06-30&quot;</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p>派生关系：</p>
+<pre><code>BUILD-OUTPUTS.json  ──┬─→ .gitignore        产物段（build:root:sync 生成）
+                      ├─→ .dockerignore     产物段（同上）
+                      └─→ clean.js TARGETS  清理登记表（同上）</code></pre>
+<blockquote><p><strong><code>--check</code> 模式</strong>：<code>build:root:sync --check</code> 只比对不写入，脏即非零退出。这样「三份清单不同步」从「靠人记得」变成「守卫会红」——与 <code>[DESIGN-ARCH-111]</code> 的「规则→门档从登记表派生」同一手法。</p></blockquote>
+<hr>
+<h2 id="6-强度梯度">6. 强度梯度<a class="anchor" href="#6-强度梯度" aria-label="锚点">#</a></h2>
+<p><strong>过早阻断会逼 AI 撒谎</strong>（<code>[DESIGN-ARCH-113]</code> 的教训），所以分三档：</p>
+<table><thead><tr><th>时机</th><th>强度</th><th>内容</th></tr></thead><tbody><tr><td><strong>事前</strong></td><td>advisory</td><td><code>npm run rules:apply -- &lt;path&gt;</code> 提示「这个输出应落 <code>entries/</code>」</td></tr><tr><td><strong>事中（pr）</strong></td><td>warning</td><td><code>outside-root</code> / <code>unregistered</code> / <code>depth-exceeded</code> / <code>parasitic-no-sunset</code> / <code>legacy-path</code></td></tr><tr><td><strong>事末（release）</strong></td><td>error</td><td>登记表缺 <code>rebuild</code> / 未纳入 <code>build:all</code> / 寄生过期 / 预算超限 / 已跟踪产物</td></tr></tbody></table>
+<p>三条<strong>立即 error</strong>（不等迁移完成，因为它们是既成事故而非迁移债）：</p>
+<ol><li>产物<strong>已被 git 跟踪</strong>（§1.3 的 10 个文件属此列）——由 <code>check-build-artifacts</code> 在 scope 扩到登记表驱动后报出；</li><li>登记表缺 <code>rebuild</code>——不可重建的产物不允许进入产物根（由 <code>check-build-root</code> 报出）；</li><li>寄生条目<strong>已过期</strong>（<code>sunset &lt; today</code>）——由 <code>check-build-root</code> 报出。</li></ol>
+<hr>
+<h2 id="7-与既有机制的边界">7. 与既有机制的边界<a class="anchor" href="#7-与既有机制的边界" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>既有件</th><th>它管什么</th><th>本规范做什么</th><th>边界</th></tr></thead><tbody><tr><td><code>[DESIGN-LAY-002]</code> LAY-4</td><td>「产物不得进入源码层」（<strong>别进 git</strong>）</td><td>补「放哪」「删了怎么回来」「清单谁维护」</td><td>不重复 LAY-4；把它的守卫从路径白名单换成登记表驱动</td></tr><tr><td><code>check-build-artifacts.js</code> + <code>buildArtifactGuard.js</code></td><td>产物<strong>已被跟踪</strong>的判定（纯叶子，形态优秀）</td><td>复用其 finding 形态与「不接受 AI 自称」的取向</td><td>不重写判定层；只把 <code>RULES[0].scopes</code> 从 <code>apps/khy-mobile/android/</code> 换成「登记表里 <code>entries/</code> 之外的路径」</td></tr><tr><td><code>scripts/maintenance/clean.js</code></td><td>「删」——手写白名单 + <code>PROTECTED</code> 双保险</td><td><code>TARGETS</code> 由登记表<strong>派生</strong></td><td>不推翻白名单思路；<code>PROTECTED_SUBTREE</code> / <code>PROTECTED_EXACT</code> 原样保留</td></tr><tr><td><code>.gitignore</code> / <code>.dockerignore</code></td><td>忽略规则</td><td>产物段由登记表派生</td><td>非产物段（依赖、IDE、密钥）不动</td></tr><tr><td><code>check-repo-layout.js</code> 的 <code>GENERATED_TOP_LEVEL_DIRS</code></td><td><strong>根级</strong> 4 个生成目录名</td><td><strong>任意层级</strong>的产物落点</td><td>不碰 <code>layer-registry</code>；产物根迁移为 <code>entries/</code> 后，它已是 <code>[DESIGN-LAY-005]</code> 登记的 CROSSCUTTING 源码层，不再是「生成目录」，无需在 §1.4 登记</td></tr><tr><td><code>check-runtime-placement.js</code></td><td>发布 staging 的<strong>卫生</strong>（sourcemap 泄漏、<code>.db</code> 泄漏）</td><td>产物的<strong>位置</strong></td><td>不重叠：一个管「发出去干不干净」，一个管「留在哪」</td></tr><tr><td><code>[DESIGN-LAY-005]</code> §1.3 / §1.4</td><td>「有这些生成目录」「有这些根级例外」</td><td>「它们在哪、怎么重建、谁登记」</td><td>068 是<strong>声明</strong>，本文是<strong>可执行约束</strong>；<code>entries/</code> 已是 068 登记的源码层，2026-09-18 迁移后无需新增 §1.4 生成目录条目</td></tr><tr><td><code>REPO-SIZE-MANAGEMENT-PLAN</code>（<code>docs/11_报告/</code>）</td><td>体积诊断与清理方案（产出即冻结的报告）</td><td>把它的结论落成<strong>规则 + 守卫</strong></td><td>不重开体积调研；复用其「白名单而非 glob」的结论</td></tr></tbody></table>
+<p><strong>SOURCING-005 四步检索结论</strong>（记录的是 1.0.0 初版当时的检索，彼时根名为 <code>_build/</code>）：全库检索「单一产物根 / 产物根 / BUILD_ROOT / <code>_build/</code> 作为根」→ 命中 0 处既有机制（<code>_build/</code> 仅在 <code>kernel/moonbit/</code> 与 <code>[DESIGN-LAY-002]</code> §2 的存量列举中出现）；检索「三份清单同步 / 登记表派生 gitignore」→ 0 命中。本方案不重复既有实现。</p>
+<hr>
+<h2 id="8-b-l2-三步接线清单-依-sourcing-006-一次提交只做一步">8. B-L2 三步接线清单（依 SOURCING-006，一次提交只做一步）<a class="anchor" href="#8-b-l2-三步接线清单-依-sourcing-006-一次提交只做一步" aria-label="锚点">#</a></h2>
+<h3 id="步骤-1-标记-只登记-只-advisory-恒-exit-0-本次已落地">步骤 1「标记」——只登记、只 advisory，恒 exit 0　✅ 本次已落地<a class="anchor" href="#步骤-1-标记-只登记-只-advisory-恒-exit-0-本次已落地" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>动作</th><th>产物</th></tr></thead><tbody><tr><td>1</td><td>新增纯叶子判定层</td><td><code>scripts/lib/buildRootGuard.js</code></td></tr><tr><td>2</td><td>新增 CLI（<strong>advisory，恒 exit 0</strong>）</td><td><code>scripts/ci/check-build-root.js</code></td></tr><tr><td>3</td><td>新增登记表（登记现状 31 条，含 23 条 <code>migrating</code> + 6 条 <code>parasitic</code>）</td><td><code>docs/10_规范/registry/BUILD-OUTPUTS.json</code></td></tr><tr><td>4</td><td><code>package.json</code> 加别名（<strong>必须</strong>——<code>check-wiring.js</code> 把零接线的 <code>scripts/ci/*</code> 判 <strong>error</strong>）</td><td><code>check:build-root</code> / <code>check:build-root:strict</code> / <code>check:build-root:clean-audit</code></td></tr><tr><td>5</td><td><code>RULES-REGISTRY.json</code> 补 <code>LAYOUT-005</code>（三元字段齐备，<code>grants</code> 与 <code>constraint</code> 边界配对）</td><td>登记表 <code>LAYOUT-005</code></td></tr><tr><td>6</td><td><code>ssot</code> 首个目标带 <code>&lt;!-- RULES-REGISTRY: LAYOUT-005 --&gt;</code> 标记行（双向可达）</td><td>本文第 3 行</td></tr><tr><td>7</td><td>生成规则卡</td><td><code>npm run docs:rules-cards</code> → <code>docs/10_规范/规则卡/[LAYOUT-005] 构建产物单一根.md</code></td></tr><tr><td>8</td><td>回写两处索引 + 生成 <code>.html</code> 孪生件</td><td><code>docs/10_规范/00_INDEX_规范-总目录.md</code>、<code>docs/00_INDEX_文档索引.md</code>、<code>docs/10_规范/[DESIGN-LAY-004] ….html</code></td></tr></tbody></table>
+<p><strong>验收</strong>（本次实测，全绿）：</p>
+<pre><code class="language-bash">node scripts/ci/check-wiring.js           <span class="hljs-comment"># 无新增 error（2 条既有 error 属 LAYOUT-004 的历史债，与本次无关）</span>
+node scripts/ci/check-gov-rules.js        <span class="hljs-comment"># ✅ 治理规则检查通过</span>
+node scripts/ci/check-rules-registry.js   <span class="hljs-comment"># ✅ 登记体系检查通过</span>
+npm run rules:coverage                    <span class="hljs-comment"># ✅ check-build-root.js 已计入覆盖</span>
+node scripts/docs/verify_docs_site.js     <span class="hljs-comment"># ✅ 全部通过（981 md / 982 html）</span>
+node scripts/ci/check-repo-layout.js --list=&lt;每个 <span class="hljs-built_in">id</span>&gt;   <span class="hljs-comment"># 逐条确认未命中本次新增文件</span></code></pre>
+<blockquote><p><code>check:build-root</code> 在步骤 1 报 <code>1 error + 14 warning</code> 是<strong>预期形状</strong>（见 §10.1）：步骤 1 的产出是把「未知」变成「已知」，不是把红变绿。真正变绿在步骤 2/3。</p></blockquote>
+<h3 id="步骤-2-迁移-物理迁移-gate-升-pr-只报-warning">步骤 2「迁移」——物理迁移，gate 升 <code>pr</code>，只报 warning<a class="anchor" href="#步骤-2-迁移-物理迁移-gate-升-pr-只报-warning" aria-label="锚点">#</a></h3>
+<ol><li>先做 §1.3 的三条<strong>立即 error</strong>（<code>git rm --cached</code> 那 10 个文件 + 补 <code>.gitignore</code> 的 5 条漏项）；</li><li>按 §9 映射表逐工具改输出路径（Vite → <code>build.outDir</code>，electron-builder → <code>directories.output</code>，setuptools → <code>--outdir</code>，jest → <code>coverageDirectory</code>，esbuild 脚本 → 参数）；</li><li>新增 <code>build:all</code> + <code>build:root:sync</code> 两个入口（<code>package.json</code> 脚本名同此），并在<strong>同一次提交</strong>里把本文的裸脚本名写法改回完整命令形式；</li><li>把 <code>clean.js</code> 的 <code>TARGETS</code> 换成从登记表派生；</li><li>gate 从 advisory 升 <code>pr</code>（warning，不拦）。</li></ol>
+<blockquote><p><strong>为什么本文现在写裸脚本名而不是 <code>npm run …</code></strong>：<code>check:layout</code> 的 <code>dangling-task</code> 会用<br><code>git grep -o -E 'npm run [a-zA-Z0-9:_-]+'</code> 扫<strong>已跟踪内容</strong>，把每个 <code>npm run &lt;目标&gt;</code> 拿去和<br>全部 <code>package.json</code> 的 <code>scripts</code> 对账；对不上就是 dangling。<code>build:all</code> 与 <code>build:root:sync</code><br>是步骤 2 才创建的入口，所以步骤 1 的文档刻意只写脚本名 —— 这样步骤 1 单独提交时<br><code>check:layout</code> 是干净的。<strong>这是本仓一个已知的隐性陷阱</strong>：该规则走 <code>git grep</code>，新文件在<br><code>git add</code> 之前不被扫描，所以「本地跑绿了」不等于「提交后还绿」——写文档时必须手动自查<br>每个 <code>npm run</code> 目标。（同源教训见 <code>[DESIGN-ARCH-113]</code> 的接线清单。）</p></blockquote>
+<h3 id="步骤-3-收口-gate-升-error-棘轮收紧">步骤 3「收口」——gate 升 error，棘轮收紧<a class="anchor" href="#步骤-3-收口-gate-升-error-棘轮收紧" aria-label="锚点">#</a></h3>
+<ol><li><code>outside-root</code> / <code>unregistered</code> 升 error；</li><li><code>meta.parasiticBudget</code> 收紧到实际值，<code>sunset</code> 到期项清理；</li><li>新增 CI 作业 <code>build-root-roundtrip</code>（<code>clean:apply &amp;&amp; build:all &amp;&amp; check:build-root --after-build</code>）；</li><li>回写 <code>[DESIGN-LAY-005]</code> §1.4 登记 <code>entries/</code>。</li></ol>
+<blockquote><p>⚠️ 三步<strong>都不需要</strong>改 <code>qualityGateStages.js</code>，也<strong>不需要</strong>改 <code>package.json</code> 的 <code>&amp;&amp;</code> 链——门成员资格从登记表派生（<code>[DESIGN-ARCH-111]</code>）。</p></blockquote>
+<hr>
+<h2 id="9-迁移映射表-存量-24-条-目标">9. 迁移映射表（存量 24 条 → 目标）<a class="anchor" href="#9-迁移映射表-存量-24-条-目标" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>现路径</th><th>目标</th><th>产者</th><th>重建命令</th><th>可重定向</th><th>备注</th></tr></thead><tbody><tr><td><code>apps/ai-frontend/dist</code></td><td><code>entries/ai-frontend</code></td><td>Vite</td><td><code>npm run build --prefix apps/ai-frontend</code></td><td>✅ <code>build.outDir</code></td><td></td></tr><tr><td><code>apps/ai-frontend/coverage</code></td><td><code>entries/coverage/ai-frontend</code></td><td>Vitest</td><td><code>… --coverage</code></td><td>✅ <code>reportsDirectory</code></td><td></td></tr><tr><td><code>software/khyquant/frontend/coverage</code></td><td><code>entries/coverage/khyquant</code></td><td>Vitest</td><td>同上</td><td>✅</td><td></td></tr><tr><td><code>apps/provider-hub/dist</code></td><td><code>entries/provider-hub</code></td><td>Vite</td><td><code>npm run build --prefix apps/provider-hub</code></td><td>✅</td><td></td></tr><tr><td><code>apps/khy-mobile/dist</code></td><td><code>entries/khy-mobile</code></td><td>Vite</td><td><code>npx cap sync</code> 链路</td><td>✅</td><td></td></tr><tr><td><code>apps/khy-mobile/release</code></td><td><code>entries/khy-mobile</code></td><td>Gradle</td><td><code>gradlew assembleRelease</code></td><td>⚠️ junction</td><td></td></tr><tr><td><code>apps/khy-mobile/android/build</code></td><td>同上</td><td>Gradle</td><td>同上</td><td>⚠️</td><td><code>clean.js</code> <strong>漏登记</strong></td></tr><tr><td><code>apps/khy-mobile/android/capacitor-cordova-android-plugins/build</code></td><td>同上</td><td>Gradle</td><td>同上</td><td>⚠️</td><td><code>clean.js</code> <strong>漏登记</strong></td></tr><tr><td><code>apps/khy-os-client-app/{build,release}</code></td><td><code>entries/flutter-android</code></td><td>Flutter</td><td><code>flutter build apk</code></td><td>⚠️ junction</td><td>2.9 GB 级</td></tr><tr><td><code>apps/khy-os-client-app/android/build</code></td><td>同上</td><td>Gradle</td><td>同上</td><td>⚠️</td><td></td></tr><tr><td><code>apps/khyos-desktop/{dist,dist-electron,out}</code></td><td><code>entries/electron</code></td><td>electron-builder</td><td><code>electron-builder</code></td><td>✅ <code>directories.output</code></td><td><strong><code>out/</code> 已被跟踪</strong></td></tr><tr><td><code>apps/khyos-desktop/zcode-analysis/unpacked/out</code></td><td><code>entries/electron/zcode-analysis</code></td><td>分析工具</td><td>待核实</td><td>待核实</td><td><code>clean.js</code> 漏登记</td></tr><tr><td><code>dist/</code> <code>build/</code> <code>khy_os.egg-info</code></td><td><code>entries/pip</code></td><td>setuptools</td><td><code>python -m build --outdir entries/pip</code></td><td>✅</td><td><code>check:pip-packaging --dist-dir</code> 需同步</td></tr><tr><td><code>coverage/</code> <code>.nyc_output/</code></td><td><code>entries/coverage/root</code></td><td>jest / c8</td><td><code>npm run cover-unit</code></td><td>✅</td><td></td></tr><tr><td><code>.cache/</code></td><td><code>entries/cache</code></td><td>治理脚本</td><td>下次运行自动重建</td><td>✅</td><td></td></tr><tr><td><code>tmp-cov/</code></td><td><code>entries/tmp-cov</code></td><td>quality-gate</td><td><code>npm run quality:gate</code></td><td>✅</td><td></td></tr><tr><td><code>services/backend/dist</code></td><td><code>entries/backend</code></td><td>esbuild</td><td><code>node packaging/build/esbuild-modules.js</code></td><td>✅ 脚本参数</td><td><code>clean.js</code> 漏登记</td></tr><tr><td><code>kernel/moonbit/_build</code></td><td>—</td><td>MoonBit</td><td><code>moon build</code></td><td>❌</td><td><strong>寄生</strong>，工具写死</td></tr><tr><td><code>apps/ai-frontend/public/vendor</code></td><td>—</td><td>esbuild</td><td><code>sync-md-vendor.mjs</code></td><td>❌</td><td><strong>寄生</strong>，须被 Vite 服务</td></tr><tr><td><code>extensions/tools/khy-markdown/vendor</code></td><td>—</td><td>esbuild</td><td><code>ensure-vendor.mjs</code></td><td>❌</td><td><strong>寄生</strong>，须在包内</td></tr><tr><td><code>extensions/tools/khy-dsh-compat/vendor</code></td><td>—</td><td>esbuild</td><td>拓展 prepack</td><td>❌</td><td><strong>寄生</strong></td></tr><tr><td><code>docs/19_资产/site/mermaid.min.js</code></td><td>—</td><td>esbuild</td><td><code>npm run docs:mermaid</code></td><td>❌</td><td><strong>寄生</strong>，须被文档站引用</td></tr><tr><td><code>tools/deepseek-eyes/deepseek_eyes.egg-info</code></td><td>—</td><td>pip</td><td><code>pip install -e</code></td><td>❌</td><td><strong>寄生</strong>，机器本地</td></tr></tbody></table>
+<p><strong>计数</strong>：正式迁移 17 条，寄生 6 条 → <code>meta.parasiticBudget</code> 初值 6，收口目标 4（<code>docs/19_资产/site/mermaid.min.js</code> 与 <code>extensions/tools/khy-dsh-compat/vendor</code> 应可随文档站/拓展重构并入产物根）。</p>
+<hr>
+<h2 id="10-验证与反例矩阵-原型实测输出">10. 验证与反例矩阵（原型实测输出）<a class="anchor" href="#10-验证与反例矩阵-原型实测输出" aria-label="锚点">#</a></h2>
+<pre><code>$ node --check docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] build-root-demo.js            → syntax OK
+$ node docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] build-root-demo.js --all
+
+── clean（应放行）                             Summary: 0 error(s), 0 warning(s).
+── scatter-new（新增散落产物）                 Summary: 2 error(s), 0 warning(s).
+── unregistered（产物根下未登记）              Summary: 0 error(s), 1 warning(s).
+── depth-exceeded（产物根下嵌套过深）          Summary: 0 error(s), 1 warning(s).
+── parasitic-expired（寄生豁免过期）           Summary: 2 error(s), 0 warning(s).
+── parasitic-no-hook（寄生条目缺重建钩子）     Summary: 1 error(s), 0 warning(s).
+── legacy-not-removed（声明迁完但旧路径仍在）  Summary: 1 error(s), 1 warning(s).
+── legacy-migrating（迁移中，应只告警）        Summary: 0 error(s), 1 warning(s).
+── registry-missing-rebuild（登记表缺重建命令） Summary: 1 error(s), 0 warning(s).
+── registry-not-in-build-all（未纳入一键重建） Summary: 1 error(s), 0 warning(s).
+── registry-entry-outside-root（登记条目越界） Summary: 1 error(s), 0 warning(s).
+── parasitic-budget（寄生条目超出预算）        Summary: 1 error(s), 0 warning(s).</code></pre>
+<table><thead><tr><th>项</th><th>方式</th><th>结果</th></tr></thead><tbody><tr><td>判定确定性</td><td>纯函数，同输入同输出</td><td>✅ 12 场景可复现</td></tr><tr><td><strong>不误伤</strong></td><td><code>clean</code> 场景（全部合规）</td><td>✅ <strong>0 error / 0 warning</strong>——证明不是无脑拦</td></tr><tr><td>源码同名目录不误杀</td><td><code>SOURCE_DIR_ALLOWLIST</code> 含 <code>packaging/build</code>、<code>scripts/release</code></td><td>✅ 真实扫描中这两条未报 finding</td></tr><tr><td>反例逐条命中</td><td>见 §3 反例表，每条对应一个场景</td><td>✅ 全部命中</td></tr><tr><td>零外部依赖</td><td>只 require <code>fs</code> / <code>path</code></td><td>✅</td></tr><tr><td>离线可跑</td><td>不联网、不调模型</td><td>✅</td></tr><tr><td>语法自检</td><td><code>node --check</code></td><td>✅ syntax OK</td></tr></tbody></table>
+<h3 id="10-1-真实仓库扫描">10.1 真实仓库扫描<a class="anchor" href="#10-1-真实仓库扫描" aria-label="锚点">#</a></h3>
+<p><strong>步骤 0 基线</strong>（登记表尚未建立时，<code>--scan</code>）：</p>
+<pre><code>$ node docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] build-root-demo.js --scan
+── 真实仓库扫描（24 个产物候选目录）
+  [ERROR] outside-root            apps/ai-frontend/coverage
+  [ERROR] outside-root            apps/khy-mobile/android/build
+  [ERROR] outside-root            apps/khy-mobile/android/capacitor-cordova-android-plugins/build
+  [ERROR] outside-root            apps/khy-mobile/dist
+  [ERROR] outside-root            apps/khy-mobile/release
+  [ERROR] outside-root            apps/khy-os-client-app/android/build
+  [ERROR] outside-root            apps/khy-os-client-app/release
+  [ERROR] outside-root            apps/khyos-desktop/dist
+  [ERROR] outside-root            apps/khyos-desktop/out
+  [ERROR] outside-root            apps/khyos-desktop/zcode-analysis/unpacked/out
+  [ERROR] outside-root            apps/provider-hub/dist
+  [ERROR] parasitic-unregistered  kernel/moonbit/_build
+  [ERROR] outside-root            khy_os.egg-info
+  [ERROR] outside-root            services/backend/dist
+  [ERROR] outside-root            software/khyquant/frontend/coverage
+  [ERROR] parasitic-unregistered  tools/deepseek-eyes/deepseek_eyes.egg-info
+  Summary: 16 error(s), 0 warning(s).</code></pre>
+<p>这 16 条就是<strong>步骤 2 的待办清单</strong>，可直接复制进 PR 描述。</p>
+<p><strong>步骤 1 状态</strong>（<code>BUILD-OUTPUTS.json</code> 已登记 31 条现状后）：</p>
+<pre><code>$ node scripts/ci/check-build-root.js
+模式：advisory（只报不改，恒 exit 0）　产物根：_build/　登记表：…（31 条）
+
+── 扫描 25 个产物候选目录
+  [ERROR] not-in-build-all  _build/electron/zcode-analysis
+            未被 build:all 覆盖 —— 「随时能删」要求一条命令全量重建，漏一条就不成立（违反 I1）。
+  [WARN ] legacy-path       apps/ai-frontend/coverage
+  [WARN ] legacy-path       apps/khy-mobile/android/build
+  [WARN ] legacy-path       apps/khy-mobile/android/capacitor-cordova-android-plugins/build
+  [WARN ] legacy-path       apps/khy-mobile/dist
+  [WARN ] legacy-path       apps/khy-mobile/release
+  [WARN ] legacy-path       apps/khy-os-client-app/android/build
+  [WARN ] legacy-path       apps/khy-os-client-app/release
+  [WARN ] legacy-path       apps/khyos-desktop/dist
+  [WARN ] legacy-path       apps/khyos-desktop/out
+  [WARN ] legacy-path       apps/khyos-desktop/zcode-analysis/unpacked/out
+  [WARN ] legacy-path       apps/provider-hub/dist
+  [WARN ] legacy-path       khy_os.egg-info
+  [WARN ] legacy-path       services/backend/dist
+  [WARN ] legacy-path       software/khyquant/frontend/coverage
+  Summary: 1 error(s), 14 warning(s).</code></pre>
+<p><strong>16 error → 1 error + 14 warning</strong>：14 条从「未登记越界」变成「已登记、迁移中」，1 条（<code>zcode-analysis</code>）保留 error，因为它连重建命令都还没有——登记表不替它撒谎。这正是 §6 强度梯度的预期形状：<strong>步骤 1 只把「未知」变成「已知」，不假装问题已解决</strong>。</p>
+<hr>
+<h2 id="11-复现方式">11. 复现方式<a class="anchor" href="#11-复现方式" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> /d/Portable/khy-os
+NODE=<span class="hljs-string">&quot;D:/WorkBuddyData-Intl/.workbuddy-ai/binaries/node/versions/22.22.2-2/node.exe&quot;</span>
+
+<span class="hljs-comment"># 反例矩阵（12 场景，含一条「应放行」）</span>
+node docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] build-root-demo.js --all
+
+<span class="hljs-comment"># 单场景</span>
+node docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] build-root-demo.js --scenario=scatter-new
+
+<span class="hljs-comment"># 自定义路径集</span>
+node docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] build-root-demo.js --files=<span class="hljs-string">&quot;A:entries/x,B:apps/y/dist&quot;</span>
+
+<span class="hljs-comment"># 真实仓库现状扫描（只读）</span>
+node docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] build-root-demo.js --scan
+
+<span class="hljs-comment"># clean.js 登记表体检（「随时能删」的判据：gap 必须为 0）</span>
+node docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] build-root-demo.js --audit-clean
+
+<span class="hljs-comment"># 三条证据的独立复核</span>
+node scripts/ci/check-build-artifacts.js                     <span class="hljs-comment"># 证据：报绿</span>
+git ls-files <span class="hljs-string">&#x27;apps/khyos-desktop/out&#x27;</span> <span class="hljs-string">&#x27;kernel/moonbit/_build&#x27;</span> | <span class="hljs-built_in">wc</span> -l   <span class="hljs-comment"># 证据：10</span>
+git check-ignore -v docs/19_资产/site/mermaid.min.js              <span class="hljs-comment"># 证据：exit 1（未被忽略）</span>
+grep -n mermaid .gitignore scripts/maintenance/clean.js      <span class="hljs-comment"># 证据：两份清单路径不同</span></code></pre>
+<p>可用场景：<code>clean</code> <code>scatter-new</code> <code>unregistered</code> <code>depth-exceeded</code> <code>parasitic-expired</code> <code>parasitic-no-hook</code> <code>legacy-not-removed</code> <code>legacy-migrating</code> <code>registry-missing-rebuild</code> <code>registry-not-in-build-all</code> <code>registry-entry-outside-root</code> <code>parasitic-budget</code></p>
+<hr>
+<h2 id="附录-a-一句话记住这条规则">附录 A：一句话记住这条规则<a class="anchor" href="#附录-a-一句话记住这条规则" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>现在</th><th>之后</th></tr></thead><tbody><tr><td>产物在 6 个层级、11 种目录名</td><td>产物在 <code>entries/</code>，深度 ≤ 2</td></tr><tr><td>三份手写清单互相打架</td><td>一份登记表，三处派生</td></tr><tr><td><code>clean:apply</code> 漏 17 条</td><td><code>clean:apply</code> 由登记表派生，gap 必须为 0</td></tr><tr><td>「删了应该能重建吧」</td><td>没有 <code>rebuild</code> 命令就不许登记</td></tr><tr><td>守卫绿着放行 10 个已跟踪产物</td><td>scope 从路径白名单换成登记表驱动</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-LAY/[DESIGN-LAY-003] 仓库整理与巡检规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-LAY-003] 仓库整理与巡检规范</div></a><a class="next" href="../../../docs/10_规范/DESIGN-LAY/[DESIGN-LAY-005] 仓库层级板块规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-LAY-005] 仓库层级板块规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] 构建产物单一根规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

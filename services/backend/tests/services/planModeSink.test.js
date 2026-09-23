@@ -20,6 +20,24 @@ const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
 
+/**
+ * 读源码文本，并**穿透一行 re-export shim**。
+ *
+ * 为什么需要：目录迁移期 `src/services/toolCalling.js` 会退化为一行
+ * `module.exports = require('./tool/toolCalling')`。运行时 require 照常工作，
+ * 但下面的「断边确证」是**反向断言**（源码里不得出现 `require('./planModeService')`）——
+ * 读到空壳 shim 时它会**无条件通过**，守卫静默失效（假绿）。
+ * 跟随 shim 读到真实实现文件，才真正守住这条边。
+ */
+function readSourceThroughShim(absPath) {
+  const src = fs.readFileSync(absPath, 'utf8');
+  const m = /^module\.exports\s*=\s*require\(\s*'([^']+)'\s*\);?$/.exec(src.trim());
+  if (!m) return src;
+  const rel = m[1].endsWith('.js') ? m[1] : `${m[1]}.js`;
+  const real = path.resolve(path.dirname(absPath), rel);
+  return fs.existsSync(real) ? fs.readFileSync(real, 'utf8') : src;
+}
+
 test('无 provider → isPlanReadOnly 返回 false（缺省等同“无活动计划、非只读窗口”）', () => {
   const sink = require('../../src/services/planModeSink');
   sink.setPlanReadOnlyProvider(null);          // reset to clean state
@@ -109,7 +127,7 @@ test('planModeService 加载即自注册 → 经 sink 读到的标志与真实�
 });
 
 test('toolCalling 不再静态 import planModeService（断边确证，源级守卫）', () => {
-  const src = fs.readFileSync(path.join(__dirname, '../../src/services/toolCalling.js'), 'utf8');
+  const src = readSourceThroughShim(path.join(__dirname, '../../src/services/toolCalling.js'));
   assert.strictEqual(
     /require\(\s*['"]\.\/planModeService['"]\s*\)/.test(src),
     false,

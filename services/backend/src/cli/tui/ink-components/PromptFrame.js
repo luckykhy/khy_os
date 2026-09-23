@@ -35,7 +35,11 @@
  */
 const React = require('react');
 
+// 宽度单一真源(DESIGN-ARCH-103 P0-3 / H4/H8):组件不再自读 process.stdout,
+// 边框宽度只从 props(width) 收 —— App 调一次 contentWidth() 下发全树。
+// effectiveCols 仅作无 props 调用方(旧测试/直接渲染)的兜底,不再是主路径。
 const { effectiveCols } = require('../effectiveCols');
+const { clipCell, fitBorder, visWidth } = require('../wrapCell');
 const inkRuntime = require('../inkRuntime');
 // 有效列宽单一真源:右栏(railLayout)激活时 ink 只能画到 cols - 栏宽,整行边框若仍按
 // 全宽拉就会伸进槽位。门控关 → 返回真实列宽 → 逐字节 legacy。
@@ -62,6 +66,45 @@ function dwidth(s) {
 }
 
 const MARKER_W = 2; // "❯ " (line 0) / "  " (continuation) — both 2 columns.
+const MIC_COLS = 5; // ' MIC ' — inline on the first row only (see micInline below).
+const BORDER_ROWS = 2; // 顶边框 + 底边框，各 1 视觉行。
+
+/**
+ * Legacy single-cell width reader, kept for the NO-props fallback path.
+ * New call sites pass width/rows explicitly (H8); this only guards
+ * direct-`ink.render(<PromptFrame/>)` without App wiring.
+ */
+function _legacyCols() {
+  try {
+    return effectiveCols(80);
+  } catch {
+    return 80;
+  }
+}
+
+/**
+ * Legacy rows reader (no-props fallback only). 102 §4.7: height =
+ * clamp(floor(rows/3), 3, 10) — replaced the old `max(4, rows-10)`.
+ */
+function _legacyMaxRows() {
+  const r =
+    typeof process !== 'undefined' &&
+    process.stdout &&
+    Number(process.stdout.rows) > 0
+      ? Math.floor(Number(process.stdout.rows))
+      : 24;
+  return Math.max(3, Math.min(10, Math.floor(r / 3)));
+}
+
+/**
+ * 102 §4.7 行数预算：props.rows 给了就按 clamp(floor(rows/3),3,10)，
+ * 无 props 走 _legacyMaxRows()。账本与 paint 共用此式（BUG-59：两处各写一份
+ * 就会漂移，谁漂移谁少扣行）。
+ */
+function resolveMaxRows(rows) {
+  const rowBudget = Number(rows) > 0 ? Math.floor(Number(rows)) : null;
+  return rowBudget == null ? _legacyMaxRows() : Math.max(3, Math.min(10, Math.floor(rowBudget / 3)));
+}
 
 /**
  * Wrap a single logical line into width-bounded visual segments.
@@ -118,8 +161,10 @@ function windowRows(lineRows, budget) {
 
   let caretIdx = lineRows.findIndex((r) => r.caretCol != null);
   if (caretIdx < 0) {
-    caretIdx = total - 1;
-  } // no caret (e.g. busy) → anchor on the tail
+    // 无光标：占位符窗格锚在**头部**（提示语从头读才有意义），正文（busy 态无
+    // 光标）仍锚尾部（要看最新输入）。
+    caretIdx = lineRows.length && lineRows.every((r) => r.isPlaceholder) ? 0 : total - 1;
+  }
 
   // Shrink the content window until it + its markers fit the budget. Two passes
   // converge: try `cap` content rows (likely both sides hidden → 2 markers →
@@ -190,10 +235,10 @@ function windowRows(lineRows, budget) {
  * to a caret-centered window (see windowRows) so the box height stays bounded —
  * `value` is never altered, only how much of it is displayed at once.
  *
- * @param {{value?:string, offset?:number, cols?:number, placeholder?:string, maxRows?:number}} p
+ * @param {{value?:string, offset?:number, cols?:number, placeholder?:string, maxRows?:number, micCols?:number}} p
  * @returns {{rows:Array, lineRowCount:number, avail:number, truncatedAbove:boolean, truncatedBelow:boolean}}
  *   rows: [{ kind:'line', isFirstOfValue:bool, text:string, caretCol:number|null,
- *            isPlaceholder?:bool, placeholder?:string }
+ *            isPlaceholder?:bool }
  *          | { kind:'ellipsis', side:'above'|'below', hidden:number }]
  *   lineRowCount: number of 'line' rows produced BEFORE windowing (the
  *     anti-spill invariant: equals total wrapped segments).
@@ -204,6 +249,7 @@ function layoutPromptRows({
   cols = 80,
   placeholder = '',
   maxRows = 0,
+  micCols = 0,
 } = {}) {
   const width = Number(cols) > 0 ? Number(cols) : 80;
   // Reserve marker (2) + 1 caret cell + 1 margin slack so a row — even with the
@@ -213,6 +259,13 @@ function layoutPromptRows({
 
   const showPlaceholder = value.length === 0 && !!placeholder;
   const lines = value.split('\n');
+  // 首行除了 marker 还内联 MIC(5 列)，占位符行再多一格反白光标 —— paint 与
+  // billing 必须同源，否则 ink 按容器宽硬折，逻辑行 ≠ 视觉行(= 本文件顶部
+  // anti-spill 段描述的那个「输入跑到框下方」)，且框高无从预算(BUG-59)。
+  const firstAvail = Math.max(
+    1,
+    avail - Math.max(0, micCols | 0) - (showPlaceholder ? 1 : 0)
+  );
 
   // Locate caret in (logical line, column) space — UTF-16, matching `offset`.
   let caretLine = 0;
@@ -233,7 +286,7 @@ function layoutPromptRows({
 
   const rows = [];
   for (let li = 0; li < lines.length; li++) {
-    const segs = wrapByWidth(lines[li], avail);
+    const segs = wrapByWidth(lines[li], li === 0 ? firstAvail : avail);
 
     // Which wrapped segment holds the caret on this line? Prefer the segment
     // whose [start, end) contains caretCol; a caret exactly on a soft-wrap
@@ -254,15 +307,20 @@ function layoutPromptRows({
     for (let s = 0; s < segs.length; s++) {
       const isFirstOfValue = li === 0 && s === 0;
       if (showPlaceholder && isFirstOfValue) {
-        rows.push({
-          kind: 'line',
-          lineIndex: li,
-          isFirstOfValue: true,
-          text: '',
-          caretCol: null,
-          isPlaceholder: true,
-          placeholder,
-        });
+        // 占位文案按 BUG-12 裁决**整条折行、永不截断** —— 所以它必须和正文一样
+        // 被切成「一段 = 一视觉行」，交给我们自己的行模型；此前它整串塞进一行，
+        // 由 ink 去硬折，行数既不进 lineRowCount 也不进账本。
+        const phSegs = wrapByWidth(placeholder, firstAvail);
+        for (let ps = 0; ps < phSegs.length; ps++) {
+          rows.push({
+            kind: 'line',
+            lineIndex: li,
+            isFirstOfValue: ps === 0,
+            text: phSegs[ps].text,
+            caretCol: null,
+            isPlaceholder: true,
+          });
+        }
         continue;
       }
       rows.push({
@@ -292,6 +350,70 @@ function layoutPromptRows({
   return { rows, lineRowCount, avail, truncatedAbove: false, truncatedBelow: false };
 }
 
+/**
+ * One-slot memo over `layoutPromptRows` (same inputs ⇒ byte-identical rows).
+ *
+ * Why a module cache on top of the component's `React.useMemo`: the App ledger
+ * now asks this leaf for the frame height on **every** render, and the component
+ * asks for the rows on the same render. Without a shared cache that is two
+ * O(buffer)-wide wraps per frame — exactly the heartbeat/keystroke lag the
+ * in-component memo exists to prevent. Key includes the full `value`: building
+ * the key is a memcpy, while the thing it protects (per-char display width) is
+ * the expensive part.
+ */
+let _layoutCache = null;
+function layoutPromptRowsCached(spec) {
+  const key = [
+    spec.value == null ? '' : spec.value,
+    spec.offset | 0,
+    spec.cols,
+    spec.maxRows | 0,
+    spec.micCols | 0,
+    spec.placeholder == null ? '' : spec.placeholder,
+  ].join('\u0000');
+  if (_layoutCache && _layoutCache.key === key) return _layoutCache.result;
+  const result = layoutPromptRows(spec);
+  _layoutCache = { key, result };
+  return result;
+}
+
+/**
+ * 折叠提示行文案。它也必须只占 1 视觉行 —— 否则账本又少扣一行（同 BUG-59 根因）。
+ * 宽终端下逐字节保持今日文案；装不下则退到短版，再退到按显示列截断。
+ */
+function ellipsisLabel(side, hidden, cols) {
+  const head = `  ⋯ ${side === 'above' ? '上方' : '下方'}还有 ${hidden} 行`;
+  const full = `${head}（输入已折叠，内容未丢失）`;
+  const cap = Number(cols) > 0 ? Math.max(1, Math.floor(Number(cols)) - 2) : 0;
+  if (!cap || visWidth(full) <= cap) return full;
+  if (visWidth(head) <= cap) return head;
+  return clipCell(head, cap);
+}
+
+/**
+ * 帧高（视觉行）单一真源 —— 账本用它扣行，组件用它画行，两者不可能再漂移。
+ * 纯函数、无 Ink：入参形状与 PromptFrame 的 props 一致。
+ */
+function frameRowCount({
+  value = '',
+  offset = 0,
+  cols,
+  placeholder = '',
+  rows,
+  mic = null,
+} = {}) {
+  const width = Number(cols) > 0 ? Math.floor(Number(cols)) : _legacyCols();
+  const laid = layoutPromptRowsCached({
+    value,
+    offset,
+    cols: width,
+    placeholder,
+    maxRows: resolveMaxRows(rows),
+    micCols: mic ? MIC_COLS : 0,
+  });
+  return BORDER_ROWS + laid.rows.length;
+}
+
 function PromptFrame({
   value = '',
   offset = 0,
@@ -300,6 +422,10 @@ function PromptFrame({
   accent = null,
   vimMode = null,
   mic = null,
+  // ── DESIGN-ARCH-103 H8: dimensions come from App (contentWidth/contentHeight)
+  // as props; the legacy stdout readers below are fallbacks only. ──
+  width,
+  rows,
 }) {
   const rt = inkRuntime.get();
   const { Box, Text } = rt;
@@ -315,28 +441,40 @@ function PromptFrame({
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const cursorApi = typeof rt.useCursor === 'function' ? rt.useCursor() : null;
   const caretRowRef = React.useRef(null);
-  const cols = effectiveCols(80);
-  const borderColor = busy ? undefined : accent || 'cyan';
-  // Leave one cell of slack: a separator that is EXACTLY the terminal width sits
-  // on the auto-wrap margin, where many emulators hold the cursor in a "pending
-  // wrap" state, making the terminal's row count disagree with ink's logical-line
-  // count and leaving residual lines on reflow. `cols - 1` keeps the rule visually
-  // full-width without tripping it. The input rows below use the same principle
-  // via layoutPromptRows (marker + caret + slack reserved).
-  const border = '─'.repeat(Math.max(1, cols - 1));
 
-  // Voice input button embedded at the box's top-border LEFT end (输入框左端)。
-  // Rendered as a clickable 5-col Box (` MIC `) replacing the first 5 border
-  // columns, so the total top-row width stays `cols - 1` — the anti-spill slack
-  // is untouched and the input rows / caret math below never shift. State:
-  //   idle  → cyan label;  hover (mouse onMouseOver) → white bg;  active (听写中)
-  //   → magenta bg + white text (opencode 同款 backgroundColor 激活标记)。
-  // 高亮放在 **Text** 的 backgroundColor 上,而不是 Box 的:ink 的 Box 背景填充
-  // 会被文本单元格整体覆盖(render-background.js 先画、文本后覆盖),只有文本自身的
-  // backgroundColor 能保住实心色块。onClick / onMouseOver / onMouseOut 经 ink Box
-  // 的未知 props→style 桥接落到 node.style.*,由 tui/mouseButtons.js 命中测试拾取。
-  // mic 为空 → 顶边框原样。
-  const micButton = mic
+  // H8: width only from props; the legacy reader is a no-props fallback.
+  // `|| 0` lets falsy/absent props (0, undefined, null) drop to the legacy
+  // reader instead of falling back to a stale hard-coded 80.
+  const cols = Number(width) > 0 ? Math.floor(Number(width)) : _legacyCols();
+  // H4: BOTH borders are produced by the SAME fitBorder() call shape, so they
+  // are equal-width by construction. busy no longer dims/vanishes the border
+  // (dim + undefined color ≈ invisible in some terminals) — it only switches
+  // the gutter glyph '─' → '╌'.
+  const borderColor = accent || 'cyan';
+  const topBorderRow = fitBorder(cols, { left: '╭', right: '╮', busy });
+  const bottomBorderRow = fitBorder(cols, { left: '╰', right: '╯', busy });
+
+  // ── H4 dev assertion: machine-verifiable "border normal" check ────────────
+  // Never throw during an ink frame (a throw would kill the whole tree) — a
+  // dev stderr line is enough; prod stays silent.
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      const ok = visWidth(topBorderRow) === cols && visWidth(bottomBorderRow) === cols;
+      if (!ok) {
+        process.stderr.write(
+          `[PromptFrame] H4 border-width assert failed: top=${visWidth(topBorderRow)} bottom=${visWidth(bottomBorderRow)} width=${cols}\n`
+        );
+      }
+    } catch {
+      /* noop */
+    }
+  }
+
+  // ── MIC 移出边框(DESIGN-ARCH-103 §4.4 修正 4)────────────────────────────
+  // 旧实现在顶边框行内嵌 5 列 ` MIC ` Box 并把边框二次减法 `cols-1-5`,
+  // 边界宽度下顶边框会断成两行。新结构:MIC 是输入行内的内联元素
+  // (`❯ [MIC] …`),顶/底边框恒为完整 fitBorder(cols),等宽由构造保证。
+  const micInline = mic
     ? h(
         Box,
         {
@@ -354,41 +492,43 @@ function PromptFrame({
         )
       )
     : null;
-  const topBorder = mic
-    ? h(
-        Box,
-        { flexDirection: 'row' },
-        micButton,
-        h(Text, { color: borderColor, dimColor: busy }, '─'.repeat(Math.max(1, cols - 1 - 5)))
-      )
-    : h(Text, { color: borderColor, dimColor: busy }, border);
+  const topBorder = h(Text, { color: borderColor }, topBorderRow);
+
   // In vim NORMAL the caret is a solid green block (vs. the default inverse
   // block); INSERT and non-vim keep the plain inverse caret.
   const caretProps = vimMode === 'NORMAL' ? { inverse: true, color: 'green' } : { inverse: true };
 
-  // Cap the input box height so a huge paste can't grow the box past the
-  // viewport and displace itself (the same anti-staircase rule StreamingBlock
-  // applies). Leave headroom for the streaming preview above and the footer /
-  // completion menu below; never below 4 so short input is always fully shown.
-  const vrows = process.stdout.rows && process.stdout.rows > 0 ? process.stdout.rows : 24;
-  const maxRows = Math.max(4, vrows - 10);
+  // 高度钳制(102 §4.7):rows 来自 props(contentHeight);无 props 时兜底走
+  // 102 公式 clamp(floor(rows/3),3,10),不再用 `rows - 10`。
+  // 式子本身在 resolveMaxRows() —— 账本(frameRowCount)与 paint 共用同一份。
+  const micCols = mic ? MIC_COLS : 0;
+  const maxRows = resolveMaxRows(rows);
 
   // layoutPromptRows re-wraps the WHOLE buffer (O(len) string-width) — pure in
-  // {value,offset,cols,placeholder,maxRows}. PromptFrame re-renders on EVERY App
-  // state change (keystroke, 1s busy nowTick, hint/footer timers), so without a
-  // memo a multi-KB paste sitting in the box gets re-wrapped on every unrelated
-  // render = input/heartbeat lag. Memoize on those inputs (byte-identical rows).
+  // {value,offset,cols,placeholder,maxRows,micCols}. PromptFrame re-renders on
+  // EVERY App state change (keystroke, 1s busy nowTick, hint/footer timers), so
+  // without a memo a multi-KB paste sitting in the box gets re-wrapped on every
+  // unrelated render = input/heartbeat lag. Memoize on those inputs
+  // (byte-identical rows).
   // Gate KHY_PROMPT_LAYOUT_MEMO off → recompute every render (today's behavior).
   // useMemo is called unconditionally (hooks rule); its result is used only when
   // the gate is on, else we recompute directly = clean byte-revert.
+  // 无论走哪条分支，layoutPromptRowsCached 都在：App 账本每帧也要一次行数，
+  // 两处命中同一格缓存 ⇒ 每帧仍只有一次全缓冲折行。
   const _layoutMemoOn = require('./promptLayoutMemo').isPromptLayoutMemoEnabled(process.env);
-  const _layoutMemoized = React.useMemo(
-    () => layoutPromptRows({ value, offset, cols, placeholder, maxRows }),
-    [value, offset, cols, placeholder, maxRows]
-  );
-  const { rows } = _layoutMemoOn
+  const _spec = { value, offset, cols, placeholder, maxRows, micCols };
+  const _layoutMemoized = React.useMemo(() => layoutPromptRows(_spec), [
+    value,
+    offset,
+    cols,
+    placeholder,
+    maxRows,
+    micCols,
+  ]);
+  const { rows: inputRows } = _layoutMemoOn
     ? _layoutMemoized
-    : layoutPromptRows({ value, offset, cols, placeholder, maxRows });
+    : layoutPromptRowsCached(_spec);
+  const inputRowList = inputRows;
 
   // Fix 1a — 渲染期计算并设定真实光标绝对坐标。`setCursorPosition` 只写 ref(渲染期安全,
   // 见 ink use-cursor.js),读的是**上一帧已提交**布局(caretRowRef.current),一帧滞后对
@@ -403,7 +543,9 @@ function PromptFrame({
         !!process.stdout.isTTY &&
         !busy &&
         !placeholderActive;
-      const caretRow = enabled ? rows.find((r) => r.kind === 'line' && r.caretCol != null) : null;
+      const caretRow = enabled
+        ? inputRowList.find((r) => r.kind === 'line' && r.caretCol != null)
+        : null;
       const node = caretRowRef.current;
       if (caretRow && node && node.yogaNode) {
         // 沿 parentNode 链累加 yoga 相对坐标 → 相对 Ink 输出原点的绝对 (x,y)。
@@ -414,7 +556,9 @@ function PromptFrame({
           absTop += Number(n.yogaNode.getComputedTop()) || 0;
         }
         const before = caretRow.text.slice(0, caretRow.caretCol);
-        const x = absLeft + MARKER_W + dwidth(before);
+        // 行内前缀 = marker(2) [+ MIC(5)，仅 ❯ 行]，yoga 链只给到行 Box 的左边界。
+        const inlinePrefix = MARKER_W + (caretRow.isFirstOfValue ? micCols : 0);
+        const x = absLeft + inlinePrefix + dwidth(before);
         cursorApi.setCursorPosition({ x, y: absTop });
       } else {
         cursorApi.setCursorPosition(undefined);
@@ -430,11 +574,11 @@ function PromptFrame({
 
   const renderRow = (row, idx) => {
     if (row.kind === 'ellipsis') {
-      const label =
-        row.side === 'above'
-          ? `  ⋯ 上方还有 ${row.hidden} 行（输入已折叠，内容未丢失）`
-          : `  ⋯ 下方还有 ${row.hidden} 行（输入已折叠，内容未丢失）`;
-      return h(Box, { key: `r${idx}` }, h(Text, { dimColor: true }, label));
+      return h(
+        Box,
+        { key: `r${idx}` },
+        h(Text, { dimColor: true }, ellipsisLabel(row.side, row.hidden, cols))
+      );
     }
 
     // 对齐 layout-preview.html:输入框标记为绿色粗体 `>`,与预览图 prompt-marker 一致。
@@ -443,18 +587,24 @@ function PromptFrame({
       ? h(Text, { bold: true, color: 'green' }, '> ')
       : h(Text, { dimColor: true }, '  ');
 
+    // MIC 内联:仅第一行(❯ 行)在标记后插入,宽度预算不受边框切割影响。
+    const micCell = row.isFirstOfValue && micInline ? micInline : null;
+
     if (row.isPlaceholder) {
+      // 反白光标格只在占位文案的第一段前出现一次；续行是纯 dim 文本（行首 2 列
+      // 由 marker 占位），与 layoutPromptRows 的 firstAvail/avail 分账一致。
       return h(
         Box,
         { key: `r${idx}` },
         marker,
-        h(Text, { inverse: true }, ' '),
-        h(Text, { dimColor: true }, row.placeholder)
+        micCell,
+        row.isFirstOfValue ? h(Text, { inverse: true }, ' ') : null,
+        h(Text, { dimColor: true }, row.text || '')
       );
     }
 
     if (row.caretCol == null) {
-      return h(Box, { key: `r${idx}` }, marker, h(Text, null, row.text || ''));
+      return h(Box, { key: `r${idx}` }, marker, micCell, h(Text, null, row.text || ''));
     }
 
     const col = row.caretCol;
@@ -465,6 +615,7 @@ function PromptFrame({
       Box,
       { key: `r${idx}`, ref: caretRowRef },
       marker,
+      micCell,
       h(Text, null, before),
       h(Text, caretProps, cursorChar),
       h(Text, null, after)
@@ -475,13 +626,20 @@ function PromptFrame({
     Box,
     { flexDirection: 'column' },
     topBorder,
-    ...rows.map(renderRow),
-    h(Text, { color: borderColor, dimColor: busy }, border)
+    ...inputRowList.map(renderRow),
+    h(Text, { color: borderColor }, bottomBorderRow)
   );
 }
 
 PromptFrame.layoutPromptRows = layoutPromptRows;
+PromptFrame.layoutPromptRowsCached = layoutPromptRowsCached;
 PromptFrame.wrapByWidth = wrapByWidth;
 PromptFrame.windowRows = windowRows;
+PromptFrame.ellipsisLabel = ellipsisLabel;
+PromptFrame.resolveMaxRows = resolveMaxRows;
+// 账本真源：App.js 的 `_viewportHeight` 用它扣输入框行，组件用它画行。
+PromptFrame.frameRowCount = frameRowCount;
+PromptFrame.MIC_COLS = MIC_COLS;
+PromptFrame.BORDER_ROWS = BORDER_ROWS;
 
 module.exports = PromptFrame;

@@ -82,6 +82,17 @@ function sanitizeCustomerId(raw, fallback = '') {
   return id || fallback;
 }
 
+// Owner binding: customer ↔ auth user account (users table primary key).
+// null = unbound. One customer belongs to at most one account, and one account
+// owns at most one customer — enforced in resolveOwnerBinding() below.
+function normalizeOwnerUserId(raw) {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) {
+    return null;
+  }
+  return Math.floor(n);
+}
+
 function generateCustomerId(existing = new Set()) {
   for (let i = 0; i < 8; i += 1) {
     const id = `cus_${crypto.randomBytes(4).toString('hex')}`;
@@ -109,9 +120,54 @@ function normalizeCustomer(raw, existingIds = new Set()) {
     quota: normalizeQuota(input.quota || DEFAULT_QUOTA),
     note: String(input.note || '').trim(),
     tokenIds: normalizeStringArray(input.tokenIds),
+    ownerUserId: normalizeOwnerUserId(input.ownerUserId),
     createdAt: String(input.createdAt || now),
     updatedAt: String(input.updatedAt || input.createdAt || now),
   };
+}
+
+// A binding must be unique in both directions: setting ownerUserId on this
+// customer strips it from whichever customer held that account before, so a
+// later binding silently steals the earlier one (and its payment history would
+// point at a customer that no longer belongs to the payer).
+function resolveOwnerBinding(store, customerId, ownerUserId) {
+  const next = normalizeOwnerUserId(ownerUserId);
+  for (const other of store.customers) {
+    if (other.id === customerId) {
+      continue;
+    }
+    if (next !== null && Number(other.ownerUserId || 0) === next) {
+      throw new Error(
+        `user ${next} is already bound to customer ${other.id}; unbind it first`
+      );
+    }
+  }
+  return next;
+}
+
+function getCustomerByOwner(store, userId) {
+  const owner = normalizeOwnerUserId(userId);
+  if (owner === null) {
+    return null;
+  }
+  return store.customers.find((item) => Number(item.ownerUserId || 0) === owner) || null;
+}
+
+// Read the CURRENT on-disk version counter (0 when the file is absent). Used by
+// saveStore() for compare-and-swap across the multiple processes that share
+// this file (daemon + CLI + management server).
+function readRawVersion() {
+  for (const filePath of [CUSTOMER_FILE, LEGACY_CUSTOMER_FILE]) {
+    try {
+      if (!filePath || !fs.existsSync(filePath)) continue;
+      const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+      const v = Number(raw && raw.version);
+      return Number.isFinite(v) ? v : 0;
+    } catch {
+      /* fall through to next / 0 */
+    }
+  }
+  return 0;
 }
 
 function loadStore() {
@@ -124,17 +180,63 @@ function loadStore() {
   const existingIds = new Set();
   const customers = rows.map((row) => normalizeCustomer(row, existingIds));
   return {
-    version: 1,
+    version: Number.isFinite(Number(raw.version)) ? Number(raw.version) : 1,
     customers,
   };
 }
 
-function saveStore(store) {
+/**
+ * Save the store. When `baseVersion` is provided this is a compare-and-swap:
+ * if the on-disk version has advanced past `baseVersion` (another process wrote
+ * in the meantime) the write is REFUSED and `{ ok:false, conflict:true }` is
+ * returned instead of silently clobbering the newer data (a lost update).
+ * Omit `baseVersion` for an unconditional write (version still advances).
+ */
+function saveStore(store, baseVersion) {
   const rows = Array.isArray(store?.customers) ? store.customers : [];
   const existingIds = new Set();
   const normalized = rows.map((row) => normalizeCustomer(row, existingIds));
-  writeJsonAtomic(CUSTOMER_FILE, { version: 1, customers: normalized });
-  return { version: 1, customers: normalized };
+
+  const onDiskVersion = readRawVersion();
+  if (baseVersion !== undefined && onDiskVersion > baseVersion) {
+    // Stale base — a newer writer won. Refuse to overwrite its data.
+    return { ok: false, conflict: true, version: onDiskVersion, customers: normalized };
+  }
+  const base = baseVersion !== undefined ? baseVersion : onDiskVersion;
+  const nextVersion = base + 1;
+  writeJsonAtomic(CUSTOMER_FILE, { version: nextVersion, customers: normalized });
+  return { ok: true, version: nextVersion, customers: normalized };
+}
+
+/**
+ * Remove orphaned `<file>.tmp.*` litter left behind when a process dies between
+ * the atomic tmp-write and the rename (or the rename fails). Only this
+ * registry's own files are swept, and only files still carrying the transient
+ * `.tmp.` marker — a renamed-in-place store never matches.
+ * @returns {string[]} the paths removed
+ */
+function sweepOrphanTemps(dir = KHY_DIR) {
+  const removed = [];
+  const prefixes = ['ai_gateway_customers.json', 'proxy_server_auth.json'];
+  let entries = [];
+  try {
+    entries = fs.readdirSync(dir);
+  } catch {
+    return removed;
+  }
+  for (const name of entries) {
+    const isOrphan =
+      /\.tmp\.\d+$/.test(name) && prefixes.some((p) => name.startsWith(p + '.tmp.'));
+    if (!isOrphan) continue;
+    try {
+      const full = path.join(dir, name);
+      fs.unlinkSync(full);
+      removed.push(full);
+    } catch {
+      /* best effort */
+    }
+  }
+  return removed;
 }
 
 function loadManagedTokenSecrets() {
@@ -248,6 +350,7 @@ function buildCustomerViews(customers, { includeSecrets = false, model = '' } = 
       allowedModels: [...(customer.allowedModels || [])],
       quota: normalizeQuota(customer.quota || DEFAULT_QUOTA),
       note: customer.note || '',
+      ownerUserId: normalizeOwnerUserId(customer.ownerUserId),
       tokenCount: tokens.length,
       enabledTokenCount: tokens.filter((t) => t.enabled).length,
       tokens,
@@ -270,13 +373,22 @@ function getCustomerById(store, customerId) {
   return store.customers.find((item) => item.id === id) || null;
 }
 
-function updateCustomerFields(customer, data = {}) {
+function updateCustomerFields(customer, data = {}, store = null) {
   if (data.name !== undefined) {
     const name = String(data.name || '').trim();
     if (!name) {
       throw new Error('name is required');
     }
     customer.name = name;
+  }
+  // ownerUserId: null / 0 / '' clears the binding; a positive id binds. The
+  // 1:1 check needs the whole store, so `store` must be supplied by callers
+  // that already loaded it (updateCustomer / createCustomer do).
+  if (data.ownerUserId !== undefined) {
+    const next = store
+      ? resolveOwnerBinding(store, customer.id, data.ownerUserId)
+      : normalizeOwnerUserId(data.ownerUserId);
+    customer.ownerUserId = next;
   }
   if (data.enabled !== undefined) {
     customer.enabled = data.enabled !== false;
@@ -360,9 +472,13 @@ function createCustomer(data = {}) {
       quota: data.quota || DEFAULT_QUOTA,
       note: data.note || '',
       tokenIds: [],
+      ownerUserId: data.ownerUserId,
     },
     existingIds
   );
+  if (created.ownerUserId !== null) {
+    resolveOwnerBinding(store, created.id, created.ownerUserId);
+  }
   store.customers.push(created);
   saveStore(store);
   return buildCustomerViews([created], { includeSecrets: true })[0];
@@ -374,13 +490,28 @@ function updateCustomer(customerId, data = {}) {
   if (!customer) {
     throw new Error(`customer not found: ${customerId}`);
   }
-  updateCustomerFields(customer, data);
+  updateCustomerFields(customer, data, store);
   saveStore(store);
   return buildCustomerViews([customer], { includeSecrets: true })[0];
 }
 
 function setCustomerEnabled(customerId, enabled) {
   return updateCustomer(customerId, { enabled: enabled !== false });
+}
+
+// The account-side lookup of the binding: "which customer does this user own?"
+// Returns the same view shape as getCustomer (never includes token secrets).
+function getCustomerByOwnerUserId(userId) {
+  const owner = normalizeOwnerUserId(userId);
+  if (owner === null) {
+    return null;
+  }
+  const store = loadStore();
+  const customer = getCustomerByOwner(store, owner);
+  if (!customer) {
+    return null;
+  }
+  return buildCustomerViews([customer], { includeSecrets: false })[0] || null;
 }
 
 function ensureCustomerOwnsToken(customer, tokenId) {
@@ -621,6 +752,7 @@ function ensureAutoSharedCustomer(options = {}) {
 module.exports = {
   listCustomers,
   getCustomer,
+  getCustomerByOwnerUserId,
   createCustomer,
   updateCustomer,
   adjustCustomerQuota,
@@ -631,4 +763,9 @@ module.exports = {
   deleteToken,
   getCustomerSummary,
   ensureAutoSharedCustomer,
+  // Store-level primitives (exposed for cross-process CAS tests + ops tooling)
+  loadStore,
+  saveStore,
+  readRawVersion,
+  sweepOrphanTemps,
 };

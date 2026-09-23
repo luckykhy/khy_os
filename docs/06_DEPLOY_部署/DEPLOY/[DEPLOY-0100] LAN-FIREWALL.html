@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DEPLOY-0100] LAN-FIREWALL.md -->
+<title>LAN-FIREWALL — 局域网登录防火墙放行 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>DEPLOY<span class="sep">›</span>LAN-FIREWALL — 局域网登录防火墙放行</div>
+      <header class="hero reveal"><h1>LAN-FIREWALL — 局域网登录防火墙放行</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#lan-firewall-局域网登录防火墙放行">LAN-FIREWALL — 局域网登录防火墙放行</a></li><li class="lvl-2"><a href="#1-确认-ai-backend-监听状态">1. 确认 ai-backend 监听状态</a></li><li class="lvl-2"><a href="#2-windows-防火墙-管理员-powershell">2. Windows 防火墙（管理员 PowerShell）</a></li><li class="lvl-2"><a href="#3-macos-防火墙-系统设置-pfctl">3. macOS 防火墙（系统设置 / `pfctl`）</a></li><li class="lvl-3"><a href="#3-1-桌面-gui-推荐">3.1 桌面 GUI（推荐）</a></li><li class="lvl-3"><a href="#3-2-命令行-pfctl-需要-root">3.2 命令行（`pfctl`，需要 root）</a></li><li class="lvl-2"><a href="#4-linux-iptables-nftables-firewalld">4. Linux（iptables / nftables / firewalld）</a></li><li class="lvl-2"><a href="#5-验证">5. 验证</a></li><li class="lvl-2"><a href="#6-与设计文档的引用关系">6. 与设计文档的引用关系</a></li><li class="lvl-2"><a href="#7-不做的事-留给后续">7. 不做的事 / 留给后续</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="lan-firewall-局域网登录防火墙放行">LAN-FIREWALL — 局域网登录防火墙放行<a class="anchor" href="#lan-firewall-局域网登录防火墙放行" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>ARCH-074 配套文档</strong>：ai-backend 在 <code>[DESIGN-ARCH-074]</code> 设计下默认绑 <code>0.0.0.0</code>，<br>让局域网（LAN）上其他机器可用「账号 + 密码」通过 <code>http://&lt;本机IP&gt;:9090/api/auth/login</code> 登录。<br>但 <strong>操作系统防火墙</strong> 默认会拦截入站连接，本文件给出 Windows / macOS 两条放行命令。</p>
+<p><strong>不打通</strong>也能用：仅在本机（127.0.0.1）登录 ai-backend 时无需任何防火墙配置，<br>这是大多数用户场景。需要 LAN 访问时按本文操作。</p>
+<p><strong>安全注意</strong>：放行后 <code>ai-backend</code> 的 <code>/api/auth/login</code>、<code>/api/health</code>、<code>/api/ai-gateway/status</code><br>等公开端点对 LAN 可见；鉴权强依赖 bcrypt + JWT 校验，<strong>不要</strong>在没有 HTTPS 的情况下把<br>本机暴露到公网；本文所有命令只针对 <strong>受信局域网</strong>（家用 / 公司内网）。</p></blockquote>
+<hr>
+<h2 id="1-确认-ai-backend-监听状态">1. 确认 ai-backend 监听状态<a class="anchor" href="#1-确认-ai-backend-监听状态" aria-label="锚点">#</a></h2>
+<p>无论是否放行防火墙，先确认 ai-backend 是否真的在 <code>0.0.0.0</code> 上监听。</p>
+<p><strong>Windows（PowerShell）</strong>：</p>
+<pre><code class="language-powershell">netstat <span class="hljs-literal">-ano</span> | <span class="hljs-built_in">Select-String</span> <span class="hljs-string">&quot;:9090\s+.*LISTENING&quot;</span>
+<span class="hljs-comment"># 期望看到：  TCP    0.0.0.0:9090    0.0.0.0:0    LISTENING    &lt;pid&gt;</span>
+<span class="hljs-comment"># 若看到  127.0.0.1:9090  → AI_MGMT_HOST 被收紧到 127.0.0.1，LAN 不会通，先 unset 环境变量</span></code></pre>
+<p><strong>macOS / Linux</strong>：</p>
+<pre><code class="language-bash">lsof -nP -iTCP:9090 -sTCP:LISTEN
+<span class="hljs-comment"># 期望 NAME 列含 node，ADDRESS 列是 *:9090（=0.0.0.0:9090）</span></code></pre>
+<p>如果监听地址是 <code>127.0.0.1</code> / <code>[::1]</code>：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 检查环境变量</span>
+<span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;AI_MGMT_HOST=<span class="hljs-variable">$AI_MGMT_HOST</span>&quot;</span>
+<span class="hljs-comment"># 临时覆盖（一次性）</span>
+AI_MGMT_HOST=0.0.0.0 node server.js
+<span class="hljs-comment"># 永久写入 .env</span>
+<span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;AI_MGMT_HOST=0.0.0.0&quot;</span> &gt;&gt; services/ai-backend/.env</code></pre>
+<hr>
+<h2 id="2-windows-防火墙-管理员-powershell">2. Windows 防火墙（管理员 PowerShell）<a class="anchor" href="#2-windows-防火墙-管理员-powershell" aria-label="锚点">#</a></h2>
+<blockquote><p>Windows 自带防火墙默认阻止入站连接。khy-os 的 ai-backend 端口（默认 <strong>9090</strong>）需要<br>新增一条入站规则。</p></blockquote>
+<pre><code class="language-powershell"><span class="hljs-comment"># 一次性放行（推荐「新建规则向导」控制台）</span>
+<span class="hljs-built_in">New-NetFirewallRule</span> <span class="hljs-literal">-DisplayName</span> <span class="hljs-string">&quot;khy-os ai-backend (LAN 9090)&quot;</span> `
+  <span class="hljs-literal">-Direction</span> Inbound `
+  <span class="hljs-literal">-Protocol</span> TCP `
+  <span class="hljs-literal">-LocalPort</span> <span class="hljs-number">9090</span> `
+  <span class="hljs-literal">-Action</span> Allow `
+  <span class="hljs-literal">-Profile</span> Private,Domain `
+  <span class="hljs-literal">-RemoteAddress</span> LocalSubnet</code></pre>
+<p>参数说明：</p>
+<ul><li><code>-Profile Private,Domain</code> —— <strong>只</strong>对家庭 / 公司内网生效，<strong>不</strong>对 Public（咖啡馆 / 机场 WiFi）放行，避免外出时把本机暴露到公网。</li><li><code>-RemoteAddress LocalSubnet</code> —— 进一步收紧到「本机所在子网」（如 192.168.1.0/24）。</li></ul>
+<p>需要给某台固定设备（如 NAS）开例外，可写 <code>-RemoteAddress 192.168.1.50</code>。</p>
+<ul><li><strong>不要</strong>省略 <code>-Profile</code> 默认值；不写就三种网络（Private / Domain / Public）全放行，公网可见。</li></ul>
+<p>如需删除规则：</p>
+<pre><code class="language-powershell"><span class="hljs-built_in">Remove-NetFirewallRule</span> <span class="hljs-literal">-DisplayName</span> <span class="hljs-string">&quot;khy-os ai-backend (LAN 9090)&quot;</span></code></pre>
+<hr>
+<h2 id="3-macos-防火墙-系统设置-pfctl">3. macOS 防火墙（系统设置 / <code>pfctl</code>）<a class="anchor" href="#3-macos-防火墙-系统设置-pfctl" aria-label="锚点">#</a></h2>
+<p>macOS 默认开启「应用级防火墙」（系统设置 → 网络 → 防火墙）。<code>pfctl</code> 是底层包过滤，<br>桌面端用「系统设置」更直观。</p>
+<h3 id="3-1-桌面-gui-推荐">3.1 桌面 GUI（推荐）<a class="anchor" href="#3-1-桌面-gui-推荐" aria-label="锚点">#</a></h3>
+<ol><li>系统设置 → 网络 → 防火墙 → 点 🔒 解锁 → 选项…</li><li>「自动允许内置软件接受传入连接」已开启 → <strong>无需再放行</strong> node 二进制。</li><li>若防火墙开启但 node 仍被拦截，在「允许下列应用接受传入连接」里把 node 添加进去。</li></ol>
+<h3 id="3-2-命令行-pfctl-需要-root">3.2 命令行（<code>pfctl</code>，需要 root）<a class="anchor" href="#3-2-命令行-pfctl-需要-root" aria-label="锚点">#</a></h3>
+<p>macOS 自带 <code>socketfilterfw</code> / <code>pfctl</code> 两个 CLI：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 临时放行 9090/TCP（重启失效）</span>
+<span class="hljs-built_in">sudo</span> /usr/libexec/ApplicationFirewall/socketfilterfw --add /usr/local/bin/node
+<span class="hljs-built_in">sudo</span> /usr/libexec/ApplicationFirewall/socketfilterfw --unblock /usr/local/bin/node
+
+<span class="hljs-comment"># 永久：编辑 /etc/pf.conf 加一行</span>
+<span class="hljs-built_in">sudo</span> <span class="hljs-built_in">tee</span> -a /etc/pf.conf &gt; /dev/null &lt;&lt;<span class="hljs-string">&#x27;EOF&#x27;</span>
+<span class="hljs-comment"># khy-os ai-backend (LAN only)</span>
+pass <span class="hljs-keyword">in</span> proto tcp from 192.168.0.0/16 to any port 9090
+EOF
+<span class="hljs-built_in">sudo</span> pfctl -f /etc/pf.conf</code></pre>
+<p><code>192.168.0.0/16</code> 是家用路由器默认网段；公司网段按需调整（如 <code>10.0.0.0/8</code>）。<br><strong>不要</strong>写 <code>from any to any port 9090</code> ——这等于把本机 9090 暴露到公网。</p>
+<hr>
+<h2 id="4-linux-iptables-nftables-firewalld">4. Linux（iptables / nftables / firewalld）<a class="anchor" href="#4-linux-iptables-nftables-firewalld" aria-label="锚点">#</a></h2>
+<p>按发行版三选一：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># Debian/Ubuntu (ufw)</span>
+<span class="hljs-built_in">sudo</span> ufw allow from 192.168.0.0/16 to any port 9090 proto tcp
+
+<span class="hljs-comment"># RHEL/Fedora (firewalld)</span>
+<span class="hljs-built_in">sudo</span> firewall-cmd --permanent --zone=trusted --add-port=9090/tcp
+<span class="hljs-built_in">sudo</span> firewall-cmd --reload
+
+<span class="hljs-comment"># 通用 iptables</span>
+<span class="hljs-built_in">sudo</span> iptables -A INPUT -p tcp --dport 9090 -s 192.168.0.0/16 -j ACCEPT</code></pre>
+<p>把 <code>192.168.0.0/16</code> 换成你的实际 LAN 网段。</p>
+<hr>
+<h2 id="5-验证">5. 验证<a class="anchor" href="#5-验证" aria-label="锚点">#</a></h2>
+<p>在本机（127.0.0.1）测：</p>
+<pre><code class="language-bash">curl -i http://127.0.0.1:9090/api/health
+<span class="hljs-comment"># 期望 200 {&quot;status&quot;:&quot;ok&quot;,...}</span></code></pre>
+<p>在同 LAN 上 <strong>另一台机器</strong> 测（把 <code>&lt;host&gt;</code> 换成 ai-backend 所在机器的内网 IP）：</p>
+<pre><code class="language-powershell"><span class="hljs-comment"># Windows / Linux / macOS 通用</span>
+<span class="hljs-built_in">curl</span> <span class="hljs-literal">-i</span> http://&lt;host&gt;:<span class="hljs-number">9090</span>/api/health</code></pre>
+<p>如果返回 <code>Connection timed out</code>：</p>
+<ul><li>检查 ai-backend 是否真的在 <code>0.0.0.0</code> 监听（见 §1）</li><li>检查本机防火墙规则是否生效：<code>netsh advfirewall firewall show rule name=&quot;khy-os ai-backend&quot;</code></li><li>检查路由器 / 交换机是否做了 AP isolation（家用路由器少见，企业 WiFi 常见）</li></ul>
+<p>如果返回 <code>200 ok</code>，继续验证账号密码：</p>
+<pre><code class="language-bash">curl -i -X POST http://&lt;host&gt;:9090/api/auth/login \
+  -H <span class="hljs-string">&#x27;Content-Type: application/json&#x27;</span> \
+  -d <span class="hljs-string">&#x27;{&quot;username&quot;:&quot;&lt;你的用户名&gt;&quot;,&quot;password&quot;:&quot;&lt;你的密码&gt;&quot;}&#x27;</span>
+<span class="hljs-comment"># 期望 200 {&quot;success&quot;:true,&quot;data&quot;:{&quot;token&quot;:&quot;...&quot;,&quot;user&quot;:{...}}}</span>
+<span class="hljs-comment"># 401 Invalid credentials → 账号密码错；不是网络问题</span></code></pre>
+<hr>
+<h2 id="6-与设计文档的引用关系">6. 与设计文档的引用关系<a class="anchor" href="#6-与设计文档的引用关系" aria-label="锚点">#</a></h2>
+<ul><li>设计真源：[DESIGN-ARCH-074] §3.6 LAN 暴露</li><li>默认账号密码补齐：[DESIGN-ARCH-074] §3.5</li><li>ai-backend 启服入口：<code>services/ai-backend/server.js</code></li><li>AI_MGMT_HOST 单一真源：<code>services/backend/src/constants/serviceDefaults.js</code></li><li>默认管理员凭据文件：<code>.khy/credentials/default-admin.json</code>（生成自 <code>credentialGenerator.js</code>）</li></ul>
+<hr>
+<h2 id="7-不做的事-留给后续">7. 不做的事 / 留给后续<a class="anchor" href="#7-不做的事-留给后续" aria-label="锚点">#</a></h2>
+<ul><li><strong>不</strong>写 systemd / launchd 服务文件——本机/便携式部署默认是「手动起 node 进程」，</li></ul>
+<p>这层留给具体部署载体</p>
+<ul><li><strong>不</strong>配 HTTPS / Let's Encrypt——LAN 内 HTTP 即可；公网部署请走反向代理（caddy / nginx）</li></ul>
+<p>并配合 [DEPLOY-MAN-016] 部署指南-域名</p>
+<ul><li><strong>不</strong>做自动安全审计（如端口扫描 / 弱口令提示）——留作 <code>khy doctor</code> 后续增强</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/06_DEPLOY_部署/DEPLOY-MAN/00_INDEX_DEPLOY-MAN-总目录.html"><div class="dir">← 上一篇</div><div class="ttl">DEPLOY-MAN</div></a><a class="next" href="../../../docs/06_DEPLOY_部署/DEPLOY/[DEPLOY-0101] PORTABLE.html"><div class="dir">下一篇 →</div><div class="ttl">Khy-OS 便携化使用指南</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/DEPLOY/[DEPLOY-0100] LAN-FIREWALL.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

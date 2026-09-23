@@ -6,23 +6,44 @@
  * 仅承载「给定左标签 + 右信息 + 终端列宽 → 单行底栏字符串」的确定性排版数学
  * （ANSI 宽度测量、截断、补白、永不换行的硬钳位），不读取任何渲染/会话状态。
  * 样式经 `dim` 注入（chalk dim），故可用 identity 样式器独立单测。
+ *
+ * 宽度一律按 `displayWidth`（CJK=2、ANSI 零宽）度量，绝不用 `.length` ——
+ * 对中文底栏 `.length` 只有真实宽度的一半，会让「永不换行」的硬钳位漏判而折行。
  */
+
+const { displayWidth } = require('../formatters');
 
 /** 去掉 ANSI 颜色码后的可见文本。 */
 function stripAnsi(s) {
   return String(s == null ? '' : s).replace(/\x1b\[[0-9;]*m/g, '');
 }
 
-/** 把纯文本截断到至多 n 个字符，超出以 '…' 收尾。 */
+/** 把纯文本截断到显示宽度至多 n（CJK=2），超出以 '…'(宽 1) 收尾；按码点步进，astral 安全。 */
 function truncatePlain(s, n) {
   const text = String(s == null ? '' : s);
   if (n <= 0) {
     return '';
   }
-  if (text.length <= n) {
+  if (displayWidth(text) <= n) {
     return text;
   }
-  return n <= 1 ? text.slice(0, n) : `${text.slice(0, n - 1)}…`;
+  if (n <= 1) {
+    // 预算仅 1 列：首个码点若本身放得下（半角宽 1）就给它，否则放省略号（宽 1）。
+    // 全角首字符（宽 2）在 1 列里放不下 → 只能给 '…'，避免顶破一行。
+    const first = String.fromCodePoint(text.codePointAt(0));
+    return displayWidth(first) <= n ? first : '…';
+  }
+  let out = '';
+  let w = 0;
+  for (const ch of text) {
+    const cw = displayWidth(ch);
+    if (w + cw + 1 > n) {
+      break; // 预留 1 列给省略号
+    }
+    out += ch;
+    w += cw;
+  }
+  return out + '…';
 }
 
 /**
@@ -45,21 +66,21 @@ function composePermissionFooter({ permLeft, rightPlain, cols, dim }) {
   const rightText = rightPlainTrunc ? style(rightPlainTrunc) : '';
 
   const plainLeft = stripAnsi(permLeft);
-  const rightLen = stripAnsi(rightText).length;
+  const rightLen = displayWidth(stripAnsi(rightText));
   const leftBudget = Math.max(1, width - rightLen - 2);
   const safeLeft =
-    plainLeft.length > leftBudget
-      ? style(plainLeft.slice(0, Math.max(1, leftBudget - 1)) + '…')
+    displayWidth(plainLeft) > leftBudget
+      ? style(truncatePlain(plainLeft, leftBudget))
       : permLeft;
 
-  const leftLen = stripAnsi(safeLeft).length;
+  const leftLen = displayWidth(stripAnsi(safeLeft));
   const pad = Math.max(1, width - leftLen - rightLen - 1);
   const line = safeLeft + ' '.repeat(pad) + rightText;
 
   // 最终硬钳位：底栏永不换行到下一行
   const plainLine = stripAnsi(line);
   const maxFooterCols = Math.max(1, width - 1);
-  if (plainLine.length > maxFooterCols) {
+  if (displayWidth(plainLine) > maxFooterCols) {
     return style(truncatePlain(plainLine, maxFooterCols));
   }
   return line;

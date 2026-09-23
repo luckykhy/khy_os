@@ -133,6 +133,7 @@ import WorkflowCanvas from '@/components/workflow/WorkflowCanvas.vue';
 import NodePalette from '@/components/workflow/NodePalette.vue';
 import NodePropertiesPanel from '@/components/workflow/NodePropertiesPanel.vue';
 
+import { showSuccess, showError, showWarning, showInfo } from '@/api/notify';
 const route = useRoute();
 const router = useRouter();
 const store = useWorkflowEditorStore();
@@ -272,7 +273,7 @@ async function submitAnswer() {
     }
   } catch (err) {
     answerValue.value = answer;
-    ElMessage.error(err?.response?.data?.message || err?.message || '提交回答失败，请重试');
+    showError(err?.response?.data?.message || err?.message || '提交回答失败，请重试');
   } finally {
     answering.value = false;
   }
@@ -287,9 +288,9 @@ async function save() {
     const payload = store.exportPayload();
     const record = await saveWorkflow(store.meta.id, payload);
     store.markSaved(record);
-    ElMessage.success('已保存');
+    showSuccess('已保存');
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '保存失败');
+    showError(err?.response?.data?.message || err?.message || '保存失败');
   }
 }
 
@@ -300,7 +301,7 @@ async function doExport() {
       const record = await saveWorkflow(store.meta.id, store.exportPayload());
       store.markSaved(record);
     } catch (err) {
-      ElMessage.error(err?.response?.data?.message || err?.message || '保存失败');
+      showError(err?.response?.data?.message || err?.message || '保存失败');
       return;
     }
   }
@@ -309,7 +310,7 @@ async function doExport() {
     exportResult.value = await exportWorkflow(store.meta.id);
     exportDialog.value = true;
   } catch (err) {
-    ElMessage.error(
+    showError(
       err?.response?.data?.message ||
         err?.message ||
         '导出失败（请确认工作流含 1 个开始与 ≥1 个结束节点）'
@@ -326,7 +327,7 @@ async function doRun() {
       const record = await saveWorkflow(store.meta.id, store.exportPayload());
       store.markSaved(record);
     } catch (err) {
-      ElMessage.error(err?.response?.data?.message || err?.message || '保存失败');
+      showError(err?.response?.data?.message || err?.message || '保存失败');
       return;
     }
   }
@@ -338,7 +339,7 @@ async function doRun() {
     runDrawer.value = true;
     if (!TERMINAL.has(enqueued.status)) track(enqueued.id);
   } catch (err) {
-    ElMessage.error(
+    showError(
       err?.response?.data?.message ||
         err?.message ||
         '运行失败（请确认工作流含 1 个开始与 ≥1 个结束节点）'
@@ -355,7 +356,7 @@ onMounted(async () => {
     const record = await getWorkflow(route.params.id);
     store.loadWorkflow(record);
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '加载失败');
+    showError(err?.response?.data?.message || err?.message || '加载失败');
     goBack();
   } finally {
     loading.value = false;

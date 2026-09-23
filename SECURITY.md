@@ -32,6 +32,19 @@
 **请在修复发布前不要公开披露。** 如果超过约定时间没有得到回应，欢迎再次催促；
 我们不会以「还在处理中」为理由无限期拖延。
 
+### Incident Response SLA
+
+For security incidents affecting production (P0/P1):
+
+| Phase | Target |
+|-------|--------|
+| Incident acknowledged | 15 minutes (P0), 1 hour (P1) |
+| Root cause identified | 2 hours (P0), 4 hours (P1) |
+| Mitigation deployed | 4 hours (P0), 8 hours (P1) |
+| Post-incident review | Within 5 business days |
+
+Escalation path: On-call engineer → Team lead → VP Engineering (P0 within 30 min).
+
 ---
 
 ## 支持范围

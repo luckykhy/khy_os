@@ -2,6 +2,25 @@ import { ref } from 'vue';
 import request from '@/api/request';
 import { unwrap } from '@/api/unwrap';
 
+/**
+ * Turn a rejected fetch into a structured failure record for the caller.
+ *
+ * Carries data only (source / status / message) — user-facing wording is the
+ * view layer's job, so the composable stays free of presentation semantics.
+ * `message` mirrors the caller's existing extraction so nothing is lost.
+ *
+ * @param {string} source which source failed ('overview' | 'customers')
+ * @param {*} err the rejection reason
+ * @returns {{ source: string, status: number|undefined, message: string }}
+ */
+function toFailureRecord(source, err) {
+  return {
+    source,
+    status: err?.response?.status,
+    message: err?.response?.data?.error || err?.message || '未知错误',
+  };
+}
+
 export function useAssetCustomer() {
   const overview = ref(null);
   const customers = ref([]);
@@ -87,8 +106,40 @@ export function useAssetCustomer() {
     await fetchCustomers({ includeSecrets: true });
   }
 
+  /**
+   * Refresh both panel sources in parallel.
+   *
+   * Customers is the PRIMARY source (the panel's main data, and the caller reads
+   * `customers` right after awaiting this to auto-select the first row).
+   * Overview is SECONDARY. A secondary failure must therefore degrade — it
+   * records the failure instead of rejecting — otherwise one unreachable
+   * endpoint would discard the primary's result AND the caller's post-refresh
+   * side effect. A primary failure still rejects: swallowing it would leave an
+   * empty customer panel with no error at all, which is worse than today.
+   *
+   * @param {{ includeSecrets?: boolean, model?: string }} [opts]
+   * @returns {Promise<{ customers: *, overview: *, failed: Array<{source: string, status: number|undefined, message: string}> }>}
+   */
   async function refreshAll({ includeSecrets = false, model = '' } = {}) {
-    await Promise.all([fetchOverview(), fetchCustomers({ includeSecrets, model })]);
+    const [customersRes, overviewRes] = await Promise.allSettled([
+      fetchCustomers({ includeSecrets, model }),
+      fetchOverview(),
+    ]);
+
+    const failed = [];
+    if (overviewRes.status === 'rejected') {
+      failed.push(toFailureRecord('overview', overviewRes.reason));
+    }
+    if (customersRes.status === 'rejected') {
+      failed.push(toFailureRecord('customers', customersRes.reason));
+      throw customersRes.reason;
+    }
+
+    return {
+      customers: customersRes.value,
+      overview: overviewRes.value ?? null,
+      failed,
+    };
   }
 
   return {

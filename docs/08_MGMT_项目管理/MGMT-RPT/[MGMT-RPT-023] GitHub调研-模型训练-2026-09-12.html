@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [MGMT-RPT-023] GitHub调研-模型训练-2026-09-12.md -->
+<title>GitHub 调研 — 模型训练板块（LoRA/蒸馏/导出）— 2026-09-12 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>MGMT-RPT<span class="sep">›</span>GitHub 调研 — 模型训练板块（LoRA/蒸馏/导出）— 2026-09-12</div>
+      <header class="hero reveal"><h1>GitHub 调研 — 模型训练板块（LoRA/蒸馏/导出）— 2026-09-12</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#github-调研-模型训练板块-lora-蒸馏-导出-2026-09-12">GitHub 调研 — 模型训练板块（LoRA/蒸馏/导出）— 2026-09-12</a></li><li class="lvl-2"><a href="#调研对象">调研对象</a></li><li class="lvl-2"><a href="#对标项目">对标项目</a></li><li class="lvl-2"><a href="#值得借鉴的点">值得借鉴的点</a></li><li class="lvl-3"><a href="#1-json-lines-结构化训练日志-p0">1. JSON-lines 结构化训练日志（P0）</a></li><li class="lvl-3"><a href="#2-训后评测门-自动回滚-p0">2. 训后评测门 + 自动回滚（P0）</a></li><li class="lvl-3"><a href="#3-配方可复现-yaml-快照-p0">3. 配方可复现 YAML 快照（P0）</a></li><li class="lvl-3"><a href="#4-val-loss-门-earlystopping-p1">4. val-loss 门 + EarlyStopping（P1）</a></li><li class="lvl-3"><a href="#5-minhash-去重-质量分桶-p1">5. MinHash 去重 + 质量分桶（P1）</a></li><li class="lvl-3"><a href="#6-多教师投票-拒采样蒸馏-p2">6. 多教师投票/拒采样蒸馏（P2）</a></li><li class="lvl-3"><a href="#7-模型发现-切换-ui-p2">7. 模型发现/切换 UI（P2）</a></li><li class="lvl-2"><a href="#落地建议-排序">落地建议（排序）</a></li><li class="lvl-2"><a href="#参考链接">参考链接</a></li><li class="lvl-2"><a href="#落地记录">落地记录</a></li><li class="lvl-3"><a href="#已实现条目">已实现条目</a></li><li class="lvl-3"><a href="#改动文件清单">改动文件清单</a></li><li class="lvl-3"><a href="#检查结果">检查结果</a></li><li class="lvl-3"><a href="#未实现项-标-待人工决策">未实现项（标「待人工决策」）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="github-调研-模型训练板块-lora-蒸馏-导出-2026-09-12">GitHub 调研 — 模型训练板块（LoRA/蒸馏/导出）— 2026-09-12<a class="anchor" href="#github-调研-模型训练板块-lora-蒸馏-导出-2026-09-12" aria-label="锚点">#</a></h1>
+<blockquote><p>每日板块轮转调研（索引 3/12）：khy-os 模型训练板块（<code>services/backend/src/services/modelTrainingService.js</code>、<code>trainingDataService.js</code>、<code>services/backend/scripts/uncensor_model.py</code>）对标 GitHub 开源 LLM 微调/蒸馏工具链，寻找可借鉴点。</p></blockquote>
+<h2 id="调研对象">调研对象<a class="anchor" href="#调研对象" aria-label="锚点">#</a></h2>
+<p>khy-os 模型训练板块现状：</p>
+<table><thead><tr><th>组件</th><th>位置</th><th>机制</th></tr></thead><tbody><tr><td>数据记录</td><td><code>modelTrainingService.js</code> §1 TrainingDataRecorder</td><td>被动记录交互 → JSONL；水质量过滤 + 毒化/密钥模式隔离</td></tr><tr><td>本地训练</td><td><code>trainLocal</code> + <code>generateTrainScript</code></td><td>生成 Python 脚本（transformers + peft），spawn 子进程；预设 quick/standard/thorough</td></tr><tr><td>蒸馏</td><td><code>distill</code></td><td>AI gateway 生成教师回复 → 学生 LoRA 训练（离线文本级）</td></tr><tr><td>导出</td><td><code>exportGGUF</code> / <code>exportSafetensors</code> / <code>registerWithOllama</code> / <code>uploadToGitRepo</code></td><td>llama.cpp / HF 格式 + Ollama 注册 + Git LFS 私有仓</td></tr><tr><td>版本管理</td><td><code>getNextVersion</code> / <code>rollbackModel</code> / <code>setActiveModel</code></td><td><code>khy-&lt;version&gt;</code> 命名 + env 回滚</td></tr><tr><td>消融</td><td><code>abliterateModel</code></td><td>权重正交化去拒绝行为（uncensor_model.py）</td></tr></tbody></table>
+<p><strong>短板（4 条）</strong>：</p>
+<ol><li><strong>进度追踪粗</strong>：靠 regex 抓 Python stdout 里的 <code>%</code> 数字（<code>generateTrainScript</code> 只在开头打印 &quot;0%&quot;、结尾打印 &quot;100% complete&quot;），中途无任何结构化的 loss/epoch/lr 信号，<code>onProgress</code> 回调实际只能等两个端点。</li><li><strong>训后无评测门</strong>：训练完成即 <code>registerModel</code>，没有任何 val-loss / 探针评测 / 自动回滚判定——<code>rollbackModel</code> 存在但纯人工触发，且 <code>setActiveModel</code> 的「取最新」分支用字符串 <code>.sort()</code> 而非数值比较（khy-1.10 会排在 khy-1.9 之前）。</li><li><strong>配方可复现性差</strong>：预设 quick/standard/thorough 是写死的 JS 常量，训练运行不记录超参快照（seed、git 状态、数据量、时间戳），出问题无法复现。</li><li><strong>数据整备弱</strong>：只有水质量/毒化/密钥三道过滤器，没有去重（dedup）、train/val 切分、质量分桶（对比 distilabel 的 MinHash 去重 + DEITA 三维打分）。</li></ol>
+<h2 id="对标项目">对标项目<a class="anchor" href="#对标项目" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>Star（2026-09-12）</th><th>技术栈</th><th>相关度</th><th>链接</th></tr></thead><tbody><tr><td>LlamaFactory</td><td>~74.7k</td><td>Python（PyTorch/transformers/PEFT，YAML 配方）</td><td>高：单配置面统一 SFT/LoRA/DPO/eval</td><td>https://github.com/hiyouga/LlamaFactory</td></tr><tr><td>unsloth</td><td>~76k</td><td>Python（HFTrainer 补丁 + 自定义 CUDA 内核）</td><td>高：khy-os 已 spawn 其生态</td><td>https://github.com/unslothai/unsloth</td></tr><tr><td>Axolotl</td><td>~12.5k</td><td>Python（YAML 配方 + HFTrainer + click）</td><td>高：训后 lm-eval 门 + 可插拔后端</td><td>https://github.com/axolotl-ai-cloud/axolotl</td></tr><tr><td>distilabel</td><td>~3.4k</td><td>Python（Ray/DataSlices DAG）</td><td>中：蒸馏数据管线（去重/打分）</td><td>https://github.com/argilla-io/distilabel</td></tr><tr><td>Open WebUI</td><td>~151.8k</td><td>FastAPI + Vue</td><td>低：本地模型发现/切换 UI 模式</td><td>https://github.com/open-webui/open-webui</td></tr></tbody></table>
+<h2 id="值得借鉴的点">值得借鉴的点<a class="anchor" href="#值得借鉴的点" aria-label="锚点">#</a></h2>
+<h3 id="1-json-lines-结构化训练日志-p0">1. JSON-lines 结构化训练日志（P0）<a class="anchor" href="#1-json-lines-结构化训练日志-p0" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：LlamaFactory <code>src/llamafactory/train/callbacks.py</code> 的 <code>LogCallback.on_log</code> 把 <code>loss/eval_loss/lr/epoch/percentage/elapsed_time/remaining_time/throughput</code> 以 JSON 行追加写入 <code>trainer_log.jsonl</code>；unsloth <code>PipeCapture</code>（环形缓冲 + 就绪正则）提供 Windows 下稳定的子进程 stdout 捕获。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>generateTrainScript</code> 生成的 Python 脚本只打印 &quot;0%&quot;/&quot;100%&quot;，<code>trainLocal</code> 靠 <code>text.match(/(\d+)%/)</code> 抓进度——两个端点之间的 2-5 小时完全黑盒；CLI 的 <code>onProgress</code> 回调（<code>routerDispatchOps.js:905</code>）拿到的是截断的整块 stdout。</p>
+<p><strong>改哪些文件</strong>：<code>services/backend/src/services/modelTrainingService.js</code>（generateTrainScript + trainLocal）。</p>
+<h3 id="2-训后评测门-自动回滚-p0">2. 训后评测门 + 自动回滚（P0）<a class="anchor" href="#2-训后评测门-自动回滚-p0" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：Axolotl <code>src/axolotl/integrations/lm_eval/args.py</code> 的 <code>lm_eval_post_train: bool = True</code> 开关，<code>cli.py</code> 的 <code>build_lm_eval_command</code> 把 <code>lm_eval --model hf --tasks ...</code> 串进配方，结果落 <code>lm_eval_results/</code> 时间戳目录；LlamaFactory <code>eval/evaluator.py</code>（MMLU/C-Eval 选择概率打分）。</p>
+<p><strong>khy-os 现状差在哪</strong>：训练成功 → 直接 <code>registerModel</code>，无论质量好坏；<code>rollbackModel</code> 是纯手动。应改为：训后跑轻量探针评测（自家数据 val 切分 perplexity + 少量固定探针），与基线（base model 或上一版本）比较，劣化超阈值自动回滚 active 版本并标记 registry。</p>
+<p><strong>改哪些文件</strong>：<code>modelTrainingService.js</code>（trainLocal 尾部 + 新增 evaluateModel/探针逻辑 + setActiveModel sort 修复）。</p>
+<h3 id="3-配方可复现-yaml-快照-p0">3. 配方可复现 YAML 快照（P0）<a class="anchor" href="#3-配方可复现-yaml-快照-p0" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：LlamaFactory 全部超参走 YAML（<code>examples/</code>），<code>hparams/parser.py</code> 单一解析入口；Axolotl 把 DictDefault 配方整包落盘；两者都会把 seed、数据 hash、git commit 写进 run 目录。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>TRAINING_PRESETS</code> 是 JS 常量，<code>registerModel</code> 只存 <code>basedOn/method/datasetSize/trainedAt/path</code>——没有 epochs/lr/LoRA 参数快照、没有 dataset 指纹、没有 git hash。khy-1.0 出问题无法回答「当时到底用什么参数、什么数据训的」。</p>
+<p><strong>改哪些文件</strong>：<code>modelTrainingService.js</code>（registerModel 写入 <code>recipe.json</code> 快照 + trainLocal 组装快照）。</p>
+<h3 id="4-val-loss-门-earlystopping-p1">4. val-loss 门 + EarlyStopping（P1）<a class="anchor" href="#4-val-loss-门-earlystopping-p1" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：Axolotl <code>evaluate.py</code> 对 train/eval 双数据集跑 <code>trainer.evaluate</code> 写 <code>eval_summary.csv</code>；HFTrainer 原生 <code>EarlyStoppingCallback</code>。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>generateTrainScript</code> 的 tokenize 函数里 <code>tokens[&quot;labels&quot;] = tokens[&quot;input_ids&quot;].copy()</code>——<strong>pad token 也进了 labels</strong>，loss 被 pad 稀释；且没有 train/val 切分。应：labels 中 pad 位置置 -100、<code>--split</code> 95/5、<code>EarlyStoppingCallback(patience=2)</code>。</p>
+<p><strong>改哪些文件</strong>：<code>modelTrainingService.js</code>（generateTrainScript）。</p>
+<h3 id="5-minhash-去重-质量分桶-p1">5. MinHash 去重 + 质量分桶（P1）<a class="anchor" href="#5-minhash-去重-质量分桶-p1" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：distilabel <code>steps/filtering/minhash.py</code>（datasketch MinHashLSH 去重）+ <code>steps/deita.py</code>（diversity/quality/complexity 三维打分 + 聚类采样）。</p>
+<p><strong>khy-os 现状差在哪</strong>：数据侧只有长度/单一字符占比/毒化/密钥过滤，重复交互会进训练集稀释多样性；<code>exportDataset</code> 无 train/val 语义切分。可先做 64-gram 前缀去重 + 简单质量分（长度中位数 + 反馈评分），DEITA 打分留后续。</p>
+<p><strong>改哪些文件</strong>：<code>modelTrainingService.js</code>（exportDataset + 新增 dedup）。</p>
+<h3 id="6-多教师投票-拒采样蒸馏-p2">6. 多教师投票/拒采样蒸馏（P2）<a class="anchor" href="#6-多教师投票-拒采样蒸馏-p2" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：distilabel <code>pipeline/routing_batch_function.py</code> 拒采样路由 + 多 LLM step 组合；unsloth <code>SyntheticDataKit</code> 题型配比批量合成。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>distill</code> 是单教师（aiGateway best-available）顺序生成、失败静默跳过、无题型配比。留作后续。</p>
+<h3 id="7-模型发现-切换-ui-p2">7. 模型发现/切换 UI（P2）<a class="anchor" href="#7-模型发现-切换-ui-p2" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：Open WebUI <code>utils/models.py</code> <code>get_all_base_models</code> 聚合 Ollama + OpenAI 兼容端点。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>registerWithOllama</code> 注册后前端不自知。低优先。</p>
+<h2 id="落地建议-排序">落地建议（排序）<a class="anchor" href="#落地建议-排序" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>行动</th><th>优先级</th><th>工作量</th></tr></thead><tbody><tr><td>1</td><td>Python 侧生成 JSON-lines 训练日志（loss/eval_loss/lr/epoch/percentage/elapsed/remaining），Node 侧逐行解析驱动 <code>onProgress</code></td><td>P0</td><td>半天</td></tr><tr><td>2</td><td>训后评测门：train/val 95/5 切分 + val-perplexity 探针 + 劣化自动回滚；顺带修复 <code>setActiveModel</code> 字符串排序 bug</td><td>P0</td><td>半天</td></tr><tr><td>3</td><td>配方可复现：每次训练写 <code>recipe.json</code>（预设参数 + dataset 指纹 + git hash + seed + 时间戳）到模型目录</td><td>P0</td><td>1 小时</td></tr><tr><td>4</td><td>修 labels pad 污染 + EarlyStopping + train/val 切分进 Python 脚本</td><td>P1</td><td>半天</td></tr><tr><td>5</td><td>exportDataset 加前缀去重 + 质量分桶</td><td>P1</td><td>半天</td></tr><tr><td>6</td><td>多教师投票/拒采样蒸馏</td><td>P2</td><td>数天</td></tr></tbody></table>
+<h2 id="参考链接">参考链接<a class="anchor" href="#参考链接" aria-label="锚点">#</a></h2>
+<ul><li>https://github.com/hiyouga/LlamaFactory — <code>src/llamafactory/train/callbacks.py</code>（LogCallback）、<code>eval/evaluator.py</code></li><li>https://github.com/unslothai/unsloth — <code>unsloth/dataprep/synthetic.py</code>（PipeCapture/SyntheticDataKit）</li><li>https://github.com/axolotl-ai-cloud/axolotl — <code>integrations/lm_eval/args.py</code>（lm_eval_post_train）、<code>utils/trainer.py</code>、<code>evaluate.py</code></li><li>https://github.com/argilla-io/distilabel — <code>steps/filtering/minhash.py</code>、<code>steps/deita.py</code></li><li>https://github.com/open-webui/open-webui — <code>backend/open_webui/utils/models.py</code></li></ul>
+<h2 id="落地记录">落地记录<a class="anchor" href="#落地记录" aria-label="锚点">#</a></h2>
+<h3 id="已实现条目">已实现条目<a class="anchor" href="#已实现条目" aria-label="锚点">#</a></h3>
+<p><strong>P0-1 JSON-lines 结构化训练日志（LlamaFactory LogCallback 模式）</strong> — ✅ 已实现</p>
+<ul><li><code>buildTrainLogHelper()</code>：生成内联到 Python 脚本的 <code>khy-trainlog/v1</code> 辅助块（<code>_khy_log_event</code> 写 <code>$KHY_TRAIN_LOG</code>，含 <code>log_header/epoch_start/log_step/epoch_end/done</code> 五类事件）</li><li><code>parseTrainLogProgress(raw)</code>：Node 侧 JSON-lines 解析器，容忍尾部被截断的行，输出 <code>pct/epoch/step/loss/evalLoss/lr/elapsedSec/remainingSec</code></li><li><code>trainLocal</code>：新增 2s 轮询 tail 读日志（<code>fs.openSync/readSync</code>，非阻塞 kill 语义——仅读文件，符合规则 3），<code>onProgress</code> 回调拿到 <code>step n/m · epoch x/y · loss=… · lr=…</code> 结构化进度；旧 regex % 逻辑保留为 fallback</li><li><code>generateTrainScript</code>：注入 <code>KhyTrainLogCallback</code>（Trainer callback，<code>on_log</code> 时发射 <code>log_step</code> 事件），<code>_khy_emit_header()</code> 在 <code>trainer.train()</code> 前发射，<code>_khy_done(trainer.state.global_step)</code> 在保存后发射</li></ul>
+<p><strong>P0-2 配方可复现 recipe.json 快照（LlamaFactory YAML / Axolotl DictDefault 模式）</strong> — ✅ 已实现</p>
+<ul><li><code>buildRecipeSnapshot()</code>：捕获 <code>hyperparams（epochs/lr/batchSize/loraR/loraAlpha/seed/warmupRatio）</code> + <code>data（path/count/sha256 前 16 位指纹）</code> + <code>compute（platform/arch/cpus/totalRAM/cuda/mps/gpu）</code> + <code>environment（nodeVersion/python/torch/gitHash/gitDirty）</code>，schema 为 <code>khy-recipe/v1</code></li><li><code>registerModel</code>：<code>metadata.recipe</code> 自动分离并调用 <code>writeRecipeSnapshot</code> 落盘到模型目录（<code>recipe.json</code>），不进入 registry JSON（避免重复）</li><li><code>readRecipeSnapshot(outputDir)</code>：回读快照</li><li><code>trainLocal</code> 成功路径：组装快照 → <code>registerModel</code> 携带 <code>recipe</code> → 写盘</li></ul>
+<p><strong>P0-3 训后评测门 + 自动回滚（Axolotl <code>lm_eval_post_train</code> 模式）</strong> — ✅ 已实现</p>
+<ul><li><code>EVAL_PROBES</code>：4 条确定性探针（算术、量化术语、Python 代码、年化波动率），用 <code>expectContains</code> 判定，阈值默认 0.7</li><li><code>evaluateModel(modelDir, modelName, opts)</code>：对本地 Ollama（端点取自 <code>constants/serviceDefaults.js</code> 的 <code>OLLAMA_HOST</code>，不硬编码端口）跑探针；Ollama 不可达时 <strong>fail-open</strong> 返回 <code>{ skipped: true, reason }</code>，绝不因评测门失败导致训练失败</li><li><code>autoRollbackOnEvalFailure(failedModelName, evalResult)</code>：未通过时把 active 版本数值回滚到上一个 <code>khy-&lt;version&gt;</code>（修掉字符串排序 bug——khy-1.10 排在 khy-1.9 前），并把 <code>evalResult/evalStatus/rolledBackTo</code> 写进 registry</li><li><code>trainLocal</code> 新增 <code>skipEvalGate</code> / <code>autoRollback</code> / <code>evalPassThreshold</code> 三个选项，默认开评测门 + 开自动回滚</li><li><code>routerDispatchOps.js</code> <code>train start</code>：训练成功后打印评测门结果（通过/未通过/跳过 + 分数 + 配方路径）</li></ul>
+<p><strong>P1 顺带修（train/val 切分 + pad 修复 + EarlyStopping）</strong> — ✅ 已实现（随 P0-1 的 <code>generateTrainScript</code> 注入）</p>
+<ul><li><code>tokenize</code>：<code>labels</code> 中 pad token 位置置 <code>-100</code>（此前 pad 也进 labels，loss 被稀释）</li><li><code>dataset.train_test_split(test_size=0.05, seed=42)</code>：≥20 条时切分，喂 <code>EarlyStoppingCallback(patience=2, metric=&quot;eval_loss&quot;)</code> 和 <code>load_best_model_at_end</code></li></ul>
+<h3 id="改动文件清单">改动文件清单<a class="anchor" href="#改动文件清单" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td><code>services/backend/src/services/modelTrainingService.js</code></td><td>改</td><td>+<code>buildTrainLogHelper</code>/<code>parseTrainLogProgress</code>/<code>buildRecipeSnapshot</code>/<code>writeRecipeSnapshot</code>/<code>readRecipeSnapshot</code>/<code>EVAL_PROBES</code>/<code>evaluateModel</code>/<code>autoRollbackOnEvalFailure</code>；改 <code>trainLocal</code>/<code>generateTrainScript</code>/<code>registerModel</code>/<code>setActiveModel</code>/<code>getNextVersion</code>；+<code>crypto</code> import</td></tr><tr><td><code>services/backend/src/cli/routerDispatchOps.js</code></td><td>改</td><td><code>train start</code> 成功路径打印评测门结果 + 配方路径</td></tr><tr><td><code>services/backend/src/services/__tests__/modelTrainingService.trainLog.test.js</code></td><td>新增</td><td>10 个 jest 用例覆盖日志解析、配方快照、评测门 fail-open、自动回滚</td></tr></tbody></table>
+<h3 id="检查结果">检查结果<a class="anchor" href="#检查结果" aria-label="锚点">#</a></h3>
+<ul><li><code>node -e &quot;require('./services/backend/src/services/modelTrainingService.js')&quot;</code>：✅ 加载成功，38 个导出</li><li><code>node scripts/ci/check-agent-rules.js services/backend/src/services/modelTrainingService.js services/backend/src/cli/routerDispatchOps.js</code>：✅ 通过，无违规</li><li><code>npx jest src/services/__tests__/modelTrainingService.trainLog.test.js</code>：✅ 10/10 通过</li><li>生成的 LoRA / full 微调 Python 脚本各用 <code>python -c &quot;import ast; ast.parse(...)&quot;</code> 校验语法：✅ 均通过</li></ul>
+<h3 id="未实现项-标-待人工决策">未实现项（标「待人工决策」）<a class="anchor" href="#未实现项-标-待人工决策" aria-label="锚点">#</a></h3>
+<ul><li><strong>P1 MinHash 去重 + DEITA 质量分桶</strong>：需引入 <code>datasketch</code> 依赖 + 数据整备管线重构，影响面大，建议单独立项</li><li><strong>P2 多教师投票 / 拒采样蒸馏</strong>：<code>distill</code> 目前是单教师顺序生成，改造需先定题型配比协议，建议先跑 1-2 轮评测门积累基线后再做</li><li><strong>P2 模型发现 UI（Open WebUI 模式）</strong>：<code>registerWithOllama</code> 注册后前端不自知，需前端配合，建议与前端团队对齐后做</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-022] 借鉴项目清单.html"><div class="dir">← 上一篇</div><div class="ttl">khy-os 借鉴/参考项目清单</div></a><a class="next" href="../../../docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-024] 数据整备与多教师蒸馏设计方案-2026-09-13.html"><div class="dir">下一篇 →</div><div class="ttl">数据整备 + 多教师蒸馏 + 模型发现落地 设计方案 — 2026-09-13</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-023] GitHub调研-模型训练-2026-09-12.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -1,11 +1,11 @@
 'use strict';
 /**
- * aiManageDaemonLifecycle.test.js â€?node:test suite, no shell, no daemon.
+ * aiManageDaemonLifecycle.test.js â€”node:test suite, no shell, no daemon.
  *
  * The module under test talks to a real daemon via runtime file + control
  * API. We don't have a real daemon here, so we exercise the *deterministic*
  * parts of the state machine:
- *   1. Disabled master switch â†?ensureStarted returns 'skipped', never
+ *   1. Disabled master switch â†’ensureStarted returns 'skipped', never
  *      touches the runtime file.
  *   2. Idempotency: with the master switch on but no daemon on disk, the
  *      module enters a 'pending' state, attempts a spawn, fails (no
@@ -20,6 +20,7 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const assert = require('node:assert');
 // Each test re-requires the module so its single-flight state is fresh.
 // We pin the env at the top of each test and restore on exit.
 let _savedEnv = null;
@@ -30,12 +31,12 @@ function withEnv(env) {
   }
   Object.assign(process.env, env);
   // Drop the module cache so it re-evaluates with the new env.
-  const modPath = require.resolve('../aiManageDaemonLifecycle');
+  const modPath = require.resolve('../../../src/services/aiManageDaemonLifecycle');
   delete require.cache[modPath];
   for (const k of Object.keys(require.cache)) {
     if (k.includes('aiManageDaemonLifecycle')) delete require.cache[k];
   }
-  return require('../aiManageDaemonLifecycle');
+  return require('../../../src/services/aiManageDaemonLifecycle');
 }
 function restoreEnv() {
   if (_savedEnv) {
@@ -51,7 +52,7 @@ test('_isAutoSpawnEnabled: defaults to true, env "0"/"false" disable', () => {
     const env = v == null ? {} : { KHY_DAEMON_AUTO_SPAWN: v };
     withEnv(env);
     try {
-      const mod = require('../aiManageDaemonLifecycle');
+      const mod = require('../../../src/services/aiManageDaemonLifecycle');
       mod._resetForTests();
       expect(mod._isAutoSpawnEnabled()).toBe(true);
     } finally {
@@ -61,7 +62,7 @@ test('_isAutoSpawnEnabled: defaults to true, env "0"/"false" disable', () => {
   for (const v of ['0', 'false', 'no', 'off']) {
     withEnv({ KHY_DAEMON_AUTO_SPAWN: v });
     try {
-      const mod = require('../aiManageDaemonLifecycle');
+      const mod = require('../../../src/services/aiManageDaemonLifecycle');
       mod._resetForTests();
       expect(mod._isAutoSpawnEnabled()).toBe(false);
     } finally {
@@ -74,7 +75,7 @@ describe('Ai Manage Daemon Lifecycle', () => {
   test('snapshot: reports module state, env, paths', async () => {
       withEnv({ KHY_DAEMON_AUTO_SPAWN: '1' });
       try {
-        const mod = require('../aiManageDaemonLifecycle');
+        const mod = require('../../../src/services/aiManageDaemonLifecycle');
         mod._resetForTests();
         const snap = mod.snapshot();
         expect(snap.state).toBe('idle');
@@ -91,7 +92,7 @@ describe('Ai Manage Daemon Lifecycle', () => {
   test('ensureStarted: skipped when master switch is off', async () => {
       withEnv({ KHY_DAEMON_AUTO_SPAWN: '0' });
       try {
-        const mod = require('../aiManageDaemonLifecycle');
+        const mod = require('../../../src/services/aiManageDaemonLifecycle');
         mod._resetForTests();
         const result = await mod.ensureStarted();
         expect(result.state).toBe('skipped');
@@ -101,14 +102,14 @@ describe('Ai Manage Daemon Lifecycle', () => {
       }
   });
 
-  test('ensureStarted: single-flight â€?concurrent callers share one promise', async () => {
+  test('ensureStarted: single-flight â€”concurrent callers share one promise', async () => {
       withEnv({
         KHY_DAEMON_AUTO_SPAWN: '1',
         KHY_DAEMON_SCRIPT: path.join(os.tmpdir(), 'khyos-no-such-script.js'),
         KHY_DAEMON_RUNTIME_FILE: path.join(os.tmpdir(), 'khyos-no-such-runtime.json'),
       });
       try {
-        const mod = require('../aiManageDaemonLifecycle');
+        const mod = require('../../../src/services/aiManageDaemonLifecycle');
         mod._resetForTests();
         const [a, b] = await Promise.all([
           mod.ensureStarted({ timeoutMs: 200 }),
@@ -129,7 +130,7 @@ describe('Ai Manage Daemon Lifecycle', () => {
         KHY_DAEMON_RUNTIME_FILE: path.join(os.tmpdir(), 'khyos-no-such-runtime-2.json'),
       });
       try {
-        const mod = require('../aiManageDaemonLifecycle');
+        const mod = require('../../../src/services/aiManageDaemonLifecycle');
         mod._resetForTests();
         const r1 = await mod.ensureStarted({ timeoutMs: 200 });
         expect(r1.state).toBe('failed');

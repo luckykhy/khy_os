@@ -28,7 +28,7 @@ describe('toolUseLoop auto web-search injection', () => {
       return { success: false, error: `unexpected tool: ${name}` };
     });
 
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool,
       clearPreflightContext: jest.fn(),
     }));
@@ -66,7 +66,7 @@ describe('toolUseLoop auto web-search injection', () => {
       return { success: false, error: `unexpected tool: ${name}` };
     });
 
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool,
       clearPreflightContext: jest.fn(),
     }));
@@ -109,7 +109,7 @@ describe('toolUseLoop auto web-search injection', () => {
       return { success: false, error: `unexpected tool: ${name}` };
     });
 
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool,
       clearPreflightContext: jest.fn(),
     }));
@@ -142,7 +142,7 @@ describe('toolUseLoop auto web-search injection', () => {
       return { success: false, error: `unexpected tool: ${name}` };
     });
 
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool,
       clearPreflightContext: jest.fn(),
     }));
@@ -196,7 +196,7 @@ describe('toolUseLoop auto web-search injection', () => {
       return { success: false, error: `unexpected tool: ${name}` };
     });
 
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool,
       clearPreflightContext: jest.fn(),
     }));
@@ -223,7 +223,7 @@ describe('toolUseLoop auto web-search injection', () => {
       formatted: 'unexpected search',
     }));
 
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool,
       clearPreflightContext: jest.fn(),
     }));
@@ -258,7 +258,7 @@ describe('toolUseLoop auto web-search injection', () => {
       return { success: false, error: `unexpected tool: ${name}` };
     });
 
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool,
       clearPreflightContext: jest.fn(),
     }));
@@ -307,7 +307,7 @@ describe('toolUseLoop auto web-search injection', () => {
       return { success: false, error: `unexpected tool: ${name}` };
     });
 
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool,
       clearPreflightContext: jest.fn(),
     }));

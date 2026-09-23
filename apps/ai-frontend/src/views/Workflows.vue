@@ -1,5 +1,5 @@
 <template>
-  <div class="workflows-page">
+  <div class="khy-page workflows-page">
     <KhyPageHeader title="可视化工作流" subtitle="拖拽编排 · 导出为可执行 Skill">
       <template #actions>
         <el-button :icon="Upload" @click="cozeImportVisible = true">导入 Coze</el-button>
@@ -177,6 +177,7 @@ import { formatTime } from '../utils/formatTimestamp';
 import CozeImportDialog from '@/views/CozeImportDialog.vue';
 import KhyPageHeader from '@/components/KhyPageHeader.vue';
 
+import { showSuccess, showError, showWarning, showInfo } from '@/api/notify';
 const router = useRouter();
 const {
   workflows,
@@ -239,23 +240,23 @@ function openRename(row) {
 async function submitDialog() {
   const name = form.name.trim();
   if (!name) {
-    ElMessage.warning('请输入名称');
+    showWarning('请输入名称');
     return;
   }
   try {
     if (dialogMode.value === 'create') {
       const wf = await createWorkflow({ name, description: form.description });
       dialogVisible.value = false;
-      ElMessage.success('已创建');
+      showSuccess('已创建');
       openEditor(wf);
     } else {
       await saveWorkflow(editingId.value, { name, description: form.description });
       dialogVisible.value = false;
-      ElMessage.success('已保存');
+      showSuccess('已保存');
       await listWorkflows();
     }
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '操作失败');
+    showError(err?.response?.data?.message || err?.message || '操作失败');
   }
 }
 
@@ -266,7 +267,7 @@ async function openTemplates() {
   try {
     templates.value = await listTemplates();
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '加载模板失败');
+    showError(err?.response?.data?.message || err?.message || '加载模板失败');
   } finally {
     tplLoading.value = false;
   }
@@ -278,10 +279,10 @@ async function submitTemplate() {
   try {
     const wf = await createFromTemplate(selectedTpl.value);
     tplDialogVisible.value = false;
-    ElMessage.success('已从模板创建');
+    showSuccess('已从模板创建');
     openEditor(wf);
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '创建失败');
+    showError(err?.response?.data?.message || err?.message || '创建失败');
   } finally {
     tplCreating.value = false;
   }
@@ -302,7 +303,7 @@ function openGenerate() {
 async function submitGenerate() {
   const prompt = genPrompt.value.trim();
   if (!prompt) {
-    ElMessage.warning('请先描述任务');
+    showWarning('请先描述任务');
     return;
   }
   genLoading.value = true;
@@ -310,7 +311,7 @@ async function submitGenerate() {
     // Non-persist: returns { graph, name, description, report } for preview.
     genResult.value = await generateWorkflow(prompt);
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '生成失败');
+    showError(err?.response?.data?.message || err?.message || '生成失败');
   } finally {
     genLoading.value = false;
   }
@@ -323,10 +324,10 @@ async function acceptGenerated() {
     const { name, description, graph } = genResult.value;
     const wf = await createWorkflow({ name, description, graph });
     genDialogVisible.value = false;
-    ElMessage.success('已创建，进入编辑器');
+    showSuccess('已创建，进入编辑器');
     openEditor(wf);
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '创建失败');
+    showError(err?.response?.data?.message || err?.message || '创建失败');
   } finally {
     genCreating.value = false;
   }
@@ -344,9 +345,9 @@ async function confirmDelete(row) {
   }
   try {
     await deleteWorkflow(row.id);
-    ElMessage.success('已删除');
+    showSuccess('已删除');
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '删除失败');
+    showError(err?.response?.data?.message || err?.message || '删除失败');
   }
 }
 

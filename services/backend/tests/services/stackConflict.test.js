@@ -13,7 +13,7 @@
  *   · _classifyDb 归一(postgres/psql/pg 词边界/mysql/mongo/无命中)。
  */
 
-const { detectStackConflict, stackConflictEnabled, _classifyDb } = require('../../src/services/projectBlueprint/stackConflict');
+const { detectStackConflict, stackConflictEnabled, _classifyDb } = require('../../src/services/domain/project/projectBlueprint/stackConflict.js');
 
 const SSM = { id: 'ssm', label: 'SSM (Spring + SpringMVC + MyBatis)', stack: { persistence: 'MyBatis + MySQL 8' } };
 

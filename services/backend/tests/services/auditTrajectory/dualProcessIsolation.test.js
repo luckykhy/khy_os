@@ -13,10 +13,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const channel = require('../../../src/services/auditTrajectory/channel');
-const parser = require('../../../src/services/auditTrajectory/parser');
-const workerProcess = require('../../../src/services/auditTrajectory/workerProcess');
-const workspaceGuard = require('../../../src/services/auditTrajectory/workspaceGuard');
+const channel = require('../../../src/services/domain/trajectory/auditTrajectory/channel.js');
+const parser = require('../../../src/services/domain/trajectory/auditTrajectory/parser.js');
+const workerProcess = require('../../../src/services/domain/trajectory/auditTrajectory/workerProcess.js');
+const workspaceGuard = require('../../../src/services/domain/trajectory/auditTrajectory/workspaceGuard.js');
 
 jest.setTimeout(30000);
 
@@ -231,7 +231,7 @@ function reportEntryBody(wpPath) {
 }
 
 describe('workerProcess：启动方案在 spawn 之前就定死', () => {
-  const WP_PATH = require.resolve('../../../src/services/auditTrajectory/workerProcess');
+  const WP_PATH = require.resolve('../../../src/services/domain/trajectory/auditTrajectory/workerProcess.js');
 
   function prepare(name) {
     const root = mkRoot(name);

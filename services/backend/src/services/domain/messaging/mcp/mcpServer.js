@@ -24,7 +24,7 @@ const policy = require('./mcpServeToolPolicy');
  * @param {object} [opts]
  * @param {string} [opts.version] - 注入 serverInfo 的版本号(调用方从 package.json 读)。
  * @param {object} [opts.env] - 门控/策略读取的环境(缺省 process.env)。
- * @param {object} [opts.registry] - 工具源(测试可注入假 registry);缺省 require('../../../../cli/handlers/tools')。
+ * @param {object} [opts.registry] - 工具源(测试可注入假 registry);缺省 require('../../../../tools')(工具注册表真源)。
  *                                   需实现 loadTools()、getEnabled():Map、execute(name,params,ctx)。
  * @param {object} [opts.context] - tools/call 透传给 execute 的执行上下文。
  * @returns {{ handleMessage(line: string|object): Promise<object|null> }}
@@ -34,7 +34,10 @@ function createServerCore(opts = {}) {
   const env = opts.env || process.env;
   const context = opts.context || {};
   // 延迟 require,避免 registry 在纯逻辑测试里被强制加载。
-  const registry = opts.registry || require('../../../../cli/handlers/tools');
+  // 真源是 tools/ 注册表(src/tools,导出 loadTools/getEnabled/execute);
+  // 旧写法 require cli/handlers/tools 只导出 handleToolsCommand,上述方法全是 undefined
+  // —— 既造成 services→cli 分层倒置,又让未注入 registry 的生产路径拿不到工具。
+  const registry = opts.registry || require('../../../../tools');
 
   /**
    * 当前暴露的工具数组(每次调用实时枚举 → 尊重工具的 isEnabled 动态门控)。
@@ -52,8 +55,12 @@ function createServerCore(opts = {}) {
 
   // ── handlers 表:method → async fn(params) → result(注入给 protocol.dispatch)──
   const handlers = {
-    async initialize() {
-      return protocol.buildInitializeResult({ version });
+    async initialize(params) {
+      // 传客户端请求的协议版本参与协商(规范:支持则回显,不支持则回自己支持的版本)。
+      return protocol.buildInitializeResult({
+        version,
+        requestedVersion: params && params.protocolVersion,
+      });
     },
     async ping() {
       return {};
@@ -95,7 +102,9 @@ function createServerCore(opts = {}) {
       parsed = protocol.parseMessage(line);
     }
     if (!parsed.ok) {
-      return protocol.buildError(null, protocol.ERROR_CODES.PARSE_ERROR, parsed.error);
+      // 解析层已区分「不是 JSON」(-32700)与「是 JSON 但信封非法」(-32600,如 jsonrpc≠"2.0")。
+      const code = parsed.errorCode || protocol.ERROR_CODES.PARSE_ERROR;
+      return protocol.buildError(null, code, parsed.error);
     }
     try {
       return await protocol.dispatch(parsed, handlers);

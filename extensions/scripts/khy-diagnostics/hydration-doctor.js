@@ -4,10 +4,10 @@
  * hydration-doctor.js — 首启依赖 hydration 深度自检 CLI + 清单生成器
  *
  * 用法：
- *   node scripts/hydration-doctor.js            # 探测本机 → 判断依赖 hydrate 是否健康
- *   npm run hydration-doctor                     # 同上（经 npm 别名）
- *   node scripts/hydration-doctor.js --json      # 机器可读输出（facts + verdict）
- *   node scripts/hydration-doctor.js --gen-doc   # 重新生成 OPS-MAN-070 清单
+ *   node extensions/scripts/khy-diagnostics/hydration-doctor.js   # 探测本机 → 判断依赖 hydrate 是否健康
+ *   npm run doctor:hydration                      # 同上（经 npm 别名）
+ *   node extensions/scripts/khy-diagnostics/hydration-doctor.js --json      # 机器可读输出（facts + verdict）
+ *   node extensions/scripts/khy-diagnostics/hydration-doctor.js --gen-doc   # 重新生成 OPS-MAN-070 清单
  *
  * 设计：判断逻辑全在纯叶子 scripts/lib/hydrationHealth.js（零 IO、可离线全测）；
  * 本文件只做两件事——(1) fail-soft 探测本机 node_modules 真实状态，(2) 呈现 / 落盘。
@@ -26,14 +26,10 @@ const {
   CRITICAL_PACKAGES,
   _PACKAGE_HINTS,
 } = require('../../../scripts/lib/hydrationHealth');
+const { opsDocPath, opsDocRelPath } = require('../../../scripts/lib/docsPaths');
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
-const DOC_PATH = path.join(
-  ROOT,
-  'docs',
-  '07_OPS_运维',
-  '[OPS-MAN-070] 首启依赖hydration自检清单.md'
-);
+const DOC_PATH = opsDocPath('[OPS-MAN-070] 首启依赖hydration自检清单.md');
 const NPM_PKG_NAME = '@khy-os/khy-os';
 const PIP_PKG_NAME = 'khy-os';
 const BOOTSTRAP_MARKER = '.khy_quant_bootstrapped';
@@ -64,6 +60,27 @@ function _existsSafe(p) {
   } catch {
     return null;
   }
+}
+
+/**
+ * 判断一个包目录是否**真有内容**：跟随符号链接后能读到 package.json 才算完好。
+ *
+ * ⚠ 不能只用 `_existsSafe`：pnpm 风格布局里 `node_modules/<pkg>` 是指向
+ * `node_modules/.pnpm/<pkg>@<ver>/...` 的符号链接，而 `fs.existsSync` **跟随**
+ * 符号链接 —— 安装被中断留下的空实体（链接建了、内容没解包）会被报成「存在」。
+ * 曾因这个判据说「好」，bootstrap 跳过 npm install、marker 也不重写，
+ * 于是永不自愈（TUI 的 `ink` 因 ESM 不回退而直接 ERR_MODULE_NOT_FOUND）。
+ *
+ * 返回 { exists:true|false|null, hollow:true|false|null }：
+ *   exists=null 探针本身失败（未知，不误报）
+ *   exists=true, hollow=true  → 空壳（要修）
+ */
+function _probePackage(pkgDir) {
+  const exists = _existsSafe(pkgDir);
+  if (exists !== true) return { exists, hollow: exists === false ? false : null };
+  const pj = _existsSafe(path.join(pkgDir, 'package.json'));
+  if (pj === null) return { exists: true, hollow: null }; // 读不到 = 未知
+  return { exists: true, hollow: pj === false };
 }
 
 /** 定位已装 / dev 树的后端目录（与 restore-check 同序，锚点 package.json）。 */
@@ -108,8 +125,8 @@ function _probePortableNode() {
  */
 function probeHydrationFacts() {
   const facts = {
-    nodeModulesPresent: null, missingPackages: null, sharedLinkOk: null,
-    bootstrapMarker: null, seedMarker: null, portableNodeOk: null,
+    nodeModulesPresent: null, missingPackages: null, hollowPackages: null,
+    sharedLinkOk: null, bootstrapMarker: null, seedMarker: null, portableNodeOk: null,
     optionalDegraded: null,
   };
   try {
@@ -128,20 +145,25 @@ function probeHydrationFacts() {
     facts.seedMarker = _existsSafe(path.join(backendDir, SEED_MARKER));
 
     if (nmPresent === true) {
-      // 逐个 stat 关键包目录，收集缺失子集
+      // 逐个探测关键包：区分「不在」（missing）与「在但是空壳」（hollow）——
+      // 前者 npm install 能修，后者说明上次安装被中断、必须重装。
       const missing = [];
+      const hollow = [];
       for (const pkg of CRITICAL_PACKAGES) {
         const pkgPath = path.join(nm, ...pkg.split('/'));
-        if (_existsSafe(pkgPath) === false) missing.push(pkg);
+        const probe = _probePackage(pkgPath);
+        if (probe.exists === false) missing.push(pkg);
+        else if (probe.hollow === true) hollow.push(pkg);
       }
       facts.missingPackages = missing;
+      facts.hollowPackages = hollow;
       // @khy/shared 单独判软链健康（在缺失列表外再确认它可解析）
       const sharedPath = path.join(nm, '@khy', 'shared');
-      const sharedExists = _existsSafe(sharedPath);
-      if (sharedExists === true) {
+      const sharedProbe = _probePackage(sharedPath);
+      if (sharedProbe.exists === true) {
         // 软链存在还要能读到其 package.json 才算完好
-        facts.sharedLinkOk = _existsSafe(path.join(sharedPath, 'package.json')) === true;
-      } else if (sharedExists === false) {
+        facts.sharedLinkOk = sharedProbe.hollow === false;
+      } else if (sharedProbe.exists === false) {
         facts.sharedLinkOk = false;
       }
       // 可选依赖降级：node-llama-cpp 不在即视为降级（不阻塞）
@@ -187,6 +209,9 @@ function runHydrationDoctor(opts = {}) {
         ? ` · 关键包缺: ${facts.missingPackages.join(', ')}`
         : ` · 关键包齐全(${CRITICAL_PACKAGES.length}/${CRITICAL_PACKAGES.length})`;
     }
+    if (Array.isArray(facts.hollowPackages) && facts.hollowPackages.length) {
+      out += ` · ${C.red}空壳: ${facts.hollowPackages.join(', ')}${C.dim}`;
+    }
     out += `${C.reset}\n`;
   }
   out += '\n';
@@ -200,7 +225,7 @@ function runHydrationDoctor(opts = {}) {
     for (const w of verdict.warnings) out += _fmtItem(w, C.yellow);
     out += '\n';
   }
-  out += `${C.dim}详情与人工修复步骤见：docs/07_OPS_运维/[OPS-MAN-070] 首启依赖hydration自检清单.md${C.reset}\n`;
+  out += `${C.dim}详情与人工修复步骤见：${opsDocRelPath('[OPS-MAN-070] 首启依赖hydration自检清单.md')}${C.reset}\n`;
   process.stdout.write(out);
   return verdict.healthy ? 0 : 1;
 }
@@ -212,7 +237,7 @@ function buildDoc() {
   const lines = [];
   lines.push('# [OPS-MAN-070] 首启依赖 hydration 自检清单');
   lines.push('');
-  lines.push('> 本文件由 `scripts/hydration-doctor.js --gen-doc` 确定性生成，请勿手改；');
+  lines.push('> 本文件由 `extensions/scripts/khy-diagnostics/hydration-doctor.js --gen-doc` 确定性生成，请勿手改；');
   lines.push('> 规则改在 `scripts/lib/hydrationHealth.js` 的 `_RULES` / `CRITICAL_PACKAGES`，再重新生成。');
   lines.push('');
   lines.push('## 这份清单是干什么的');
@@ -223,7 +248,7 @@ function buildDoc() {
   lines.push('workspace 软链断裂，都会让「装好了包却起不来」。本 doctor 专查这一步。');
   lines.push('');
   lines.push('```bash');
-  lines.push('node scripts/hydration-doctor.js      # 或 npm run hydration-doctor');
+  lines.push('npm run doctor:hydration             # 或直跑 node extensions/scripts/khy-diagnostics/hydration-doctor.js');
   lines.push('```');
   lines.push('');
   lines.push('## 与其他自检的分工（三层各管一段）');
@@ -240,6 +265,26 @@ function buildDoc() {
   lines.push('不再重跑 hydrate。若此后 node_modules 被误删/被清理工具清掉，marker 仍在——');
   lines.push('系统以为「装好了」，实则依赖已空，且**不会自愈**。本 doctor 的 `splitbrain-marker`');
   lines.push('规则专抓这种「marker 说好了但 node_modules 不在」的裂脑，修法是删 marker 让它重跑。');
+  lines.push('');
+  lines.push('### 它的近亲：空心包（hollow）');
+  lines.push('');
+  lines.push('裂脑还有更隐蔽的一面。pnpm 风格的布局把 `node_modules/<pkg>` 做成指向');
+  lines.push('`node_modules/.pnpm/<pkg>@<ver>/...` 的**符号链接**；安装若在建完链接、');
+  lines.push('解包内容之前被中断/清理，就留下一个**空目录**。麻烦在于');
+  lines.push('`fs.existsSync()` / `Path.exists()` 会**跟随**符号链接，对这种空实体一律报');
+  lines.push('「存在」——于是所有「路径在不在」的判据全说好，bootstrap 跳过 `npm install`、');
+  lines.push('marker 也不会重写，**永不自愈**。');
+  lines.push('');
+  lines.push('它的表现形式还很分裂：');
+  lines.push('');
+  lines.push('- **CJS** `require()` 找不到时会**向上回退**到上层的 `node_modules`，');
+  lines.push('  于是大部分功能侥幸正常，看不出病；');
+  lines.push('- **ESM** `import()` **不回退**，命中空壳直接 `ERR_MODULE_NOT_FOUND`。');
+  lines.push('  TUI 的 `ink` 是 ESM-only，所以典型症状就是「CLI 能用，一进交互终端就炸」。');
+  lines.push('');
+  lines.push('判据必须是**跟随链接后能读到 `package.json`**，而不是路径存在。本 doctor 的');
+  lines.push('`hollow-package` 规则即按此探测，它把空壳单独报出来（与「真缺」分开），');
+  lines.push('因为两者修法不同：真缺要联网补装，空壳要先清掉坏链接再重装。');
   lines.push('');
   lines.push('## 关键运行时依赖（缺任一则后端塌陷）');
   lines.push('');
@@ -273,6 +318,7 @@ function buildDoc() {
   lines.push('   ```');
   lines.push(`3. 若报裂脑（marker 说好了但依赖不在），删后端目录的 \`${BOOTSTRAP_MARKER}\` 再重跑 khy。`);
   lines.push('4. 若报 `@khy/shared` 链接断裂，删后端目录的 `package-lock.json` 再重跑 khy（bootstrap 会重建软链）。');
+  lines.push('5. 若报**空心包**（`hollow-package`）：删掉后端 `node_modules` 下那些**指向空目录的符号链接**，再重跑 khy（bootstrap 的空壳判据会发现内容缺失并重跑 `npm install`）。急着恢复可只删链接——模块解析会回退到上层完好的 `node_modules`，无需下载。');
   lines.push('');
   lines.push('## 红线（继承项目章程）');
   lines.push('');

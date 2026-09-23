@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: README.md -->
+<title>Khy Backend · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>Khy Backend</div>
+      <header class="hero reveal"><h1>Khy Backend</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-backend">Khy Backend</a></li><li class="lvl-2"><a href="#项目概述">项目概述</a></li><li class="lvl-2"><a href="#技术栈">技术栈</a></li><li class="lvl-2"><a href="#项目结构">项目结构</a></li><li class="lvl-2"><a href="#快速开始">快速开始</a></li><li class="lvl-3"><a href="#安装依赖">安装依赖</a></li><li class="lvl-3"><a href="#启动服务">启动服务</a></li><li class="lvl-3"><a href="#cli-命令">CLI 命令</a></li><li class="lvl-2"><a href="#开发规范">开发规范</a></li><li class="lvl-3"><a href="#代码风格">代码风格</a></li><li class="lvl-3"><a href="#错误处理">错误处理</a></li><li class="lvl-3"><a href="#状态消息">状态消息</a></li><li class="lvl-3"><a href="#超时处理">超时处理</a></li><li class="lvl-2"><a href="#api-文档">API 文档</a></li><li class="lvl-3"><a href="#rest-api">REST API</a></li><li class="lvl-3"><a href="#websocket">WebSocket</a></li><li class="lvl-3"><a href="#mcp-协议">MCP 协议</a></li><li class="lvl-2"><a href="#测试">测试</a></li><li class="lvl-2"><a href="#配置">配置</a></li><li class="lvl-3"><a href="#环境变量">环境变量</a></li><li class="lvl-3"><a href="#配置文件">配置文件</a></li><li class="lvl-2"><a href="#部署">部署</a></li><li class="lvl-3"><a href="#docker-部署">Docker 部署</a></li><li class="lvl-3"><a href="#pm2-部署">PM2 部署</a></li><li class="lvl-2"><a href="#监控">监控</a></li><li class="lvl-3"><a href="#健康检查">健康检查</a></li><li class="lvl-3"><a href="#日志">日志</a></li><li class="lvl-3"><a href="#性能监控">性能监控</a></li><li class="lvl-2"><a href="#相关文档">相关文档</a></li><li class="lvl-2"><a href="#许可证">许可证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-backend">Khy Backend<a class="anchor" href="#khy-backend" aria-label="锚点">#</a></h1>
+<p>khy-os 后端服务，基于 Node.js 构建。</p>
+<h2 id="项目概述">项目概述<a class="anchor" href="#项目概述" aria-label="锚点">#</a></h2>
+<p>Khy Backend 是 khy-os 项目的核心后端服务，提供以下功能：</p>
+<ul><li>AI 网关与多模型支持</li><li>CLI 命令处理</li><li>WebSocket 实时通信</li><li>REST API 服务</li><li>任务调度与执行</li><li>记忆系统管理</li><li>MCP 协议支持</li></ul>
+<h2 id="技术栈">技术栈<a class="anchor" href="#技术栈" aria-label="锚点">#</a></h2>
+<ul><li><strong>运行时</strong>: Node.js 18+</li><li><strong>框架</strong>: Express.js</li><li><strong>实时通信</strong>: WebSocket (ws)</li><li><strong>数据库</strong>: SQLite (better-sqlite3)</li><li><strong>AI 集成</strong>: OpenAI, Anthropic, Ollama 等</li><li><strong>协议</strong>: MCP (Model Context Protocol)</li><li><strong>日志</strong>: Winston</li></ul>
+<h2 id="项目结构">项目结构<a class="anchor" href="#项目结构" aria-label="锚点">#</a></h2>
+<pre><code>src/
+├── cli/                # CLI 命令处理
+│   ├── handlers/      # 命令处理器
+│   ├── router.js      # 路由器
+│   └── repl.js        # REPL 接口
+├── constants/          # 常量定义
+├── data/               # 数据层
+├── memdir/             # 记忆目录管理
+├── middleware/         # 中间件
+├── routes/             # API 路由
+├── services/           # 业务服务
+│   ├── domain/        # 领域服务
+│   ├── gateway/       # AI 网关
+│   └── memory/        # 记忆服务
+├── tasks/              # 任务调度
+└── utils/              # 工具函数</code></pre>
+<h2 id="快速开始">快速开始<a class="anchor" href="#快速开始" aria-label="锚点">#</a></h2>
+<h3 id="安装依赖">安装依赖<a class="anchor" href="#安装依赖" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">npm install
+<span class="hljs-comment"># 或</span>
+pnpm install</code></pre>
+<h3 id="启动服务">启动服务<a class="anchor" href="#启动服务" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 开发模式</span>
+npm run dev
+
+<span class="hljs-comment"># 生产模式</span>
+npm start</code></pre>
+<h3 id="cli-命令">CLI 命令<a class="anchor" href="#cli-命令" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 启动 CLI</span>
+node bin/khy.js
+
+<span class="hljs-comment"># 运行特定命令</span>
+node bin/khy.js status
+node bin/khy.js gateway config
+node bin/khy.js memory project</code></pre>
+<h2 id="开发规范">开发规范<a class="anchor" href="#开发规范" aria-label="锚点">#</a></h2>
+<h3 id="代码风格">代码风格<a class="anchor" href="#代码风格" aria-label="锚点">#</a></h3>
+<ul><li>使用 ESLint 进行代码格式化</li><li>使用 2 空格缩进</li><li>使用单引号</li><li>使用分号</li><li>使用 camelCase 命名</li></ul>
+<h3 id="错误处理">错误处理<a class="anchor" href="#错误处理" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确</span>
+<span class="hljs-keyword">try</span> {
+  <span class="hljs-keyword">await</span> <span class="hljs-title function_">someAsyncOperation</span>();
+} <span class="hljs-keyword">catch</span> (error) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;操作失败:&#x27;</span>, error.<span class="hljs-property">message</span>);
+  <span class="hljs-keyword">throw</span> error;
+}
+
+<span class="hljs-comment">// ❌ 错误</span>
+<span class="hljs-keyword">try</span> {
+  <span class="hljs-keyword">await</span> <span class="hljs-title function_">someAsyncOperation</span>();
+} <span class="hljs-keyword">catch</span> (error) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;错误&#x27;</span>); <span class="hljs-comment">// 不够具体</span>
+}</code></pre>
+<h3 id="状态消息">状态消息<a class="anchor" href="#状态消息" aria-label="锚点">#</a></h3>
+<p>遵循&quot;动作 + 目标 + 进度&quot;规范：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;连接 PostgreSQL (127.0.0.1:5432)，第 2/3 次重试...&#x27;</span>);
+
+<span class="hljs-comment">// ❌ 错误</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;正在连接数据库...&#x27;</span>);</code></pre>
+<h3 id="超时处理">超时处理<a class="anchor" href="#超时处理" aria-label="锚点">#</a></h3>
+<p>使用活动超时，而非固定超时：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确</span>
+<span class="hljs-keyword">let</span> lastActivity = <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>();
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">IDLE_LIMIT</span> = <span class="hljs-number">120_000</span>;
+
+onToolResult = <span class="hljs-function">() =&gt;</span> { lastActivity = <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>(); };
+
+<span class="hljs-keyword">if</span> (<span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() - lastActivity &gt; <span class="hljs-variable constant_">IDLE_LIMIT</span>) {
+  <span class="hljs-comment">// 超时处理</span>
+}
+
+<span class="hljs-comment">// ❌ 错误</span>
+<span class="hljs-keyword">const</span> start = <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>();
+<span class="hljs-keyword">if</span> (<span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() - start &gt; <span class="hljs-number">120_000</span>) {
+  <span class="hljs-comment">// 硬超时</span>
+}</code></pre>
+<h2 id="api-文档">API 文档<a class="anchor" href="#api-文档" aria-label="锚点">#</a></h2>
+<h3 id="rest-api">REST API<a class="anchor" href="#rest-api" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>端点</th><th>方法</th><th>说明</th></tr></thead><tbody><tr><td><code>/api/health</code></td><td>GET</td><td>健康检查</td></tr><tr><td><code>/api/status</code></td><td>GET</td><td>系统状态</td></tr><tr><td><code>/api/chat</code></td><td>POST</td><td>AI 对话</td></tr><tr><td><code>/api/models</code></td><td>GET</td><td>模型列表</td></tr><tr><td><code>/api/memory</code></td><td>GET</td><td>记忆列表</td></tr></tbody></table>
+<h3 id="websocket">WebSocket<a class="anchor" href="#websocket" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> ws = <span class="hljs-keyword">new</span> <span class="hljs-title class_">WebSocket</span>(<span class="hljs-string">&#x27;ws://localhost:3000/ws&#x27;</span>);
+
+ws.<span class="hljs-property">onopen</span> = <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;已连接&#x27;</span>);
+};
+
+ws.<span class="hljs-property">onmessage</span> = <span class="hljs-function">(<span class="hljs-params">event</span>) =&gt;</span> {
+  <span class="hljs-keyword">const</span> data = <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(event.<span class="hljs-property">data</span>);
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;收到消息:&#x27;</span>, data);
+};</code></pre>
+<h3 id="mcp-协议">MCP 协议<a class="anchor" href="#mcp-协议" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// MCP 客户端配置</span>
+{
+  <span class="hljs-string">&quot;mcpServers&quot;</span>: {
+    <span class="hljs-string">&quot;my-server&quot;</span>: {
+      <span class="hljs-string">&quot;command&quot;</span>: <span class="hljs-string">&quot;node&quot;</span>,
+      <span class="hljs-string">&quot;args&quot;</span>: [<span class="hljs-string">&quot;server.js&quot;</span>],
+      <span class="hljs-string">&quot;env&quot;</span>: {}
+    }
+  }
+}</code></pre>
+<h2 id="测试">测试<a class="anchor" href="#测试" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-comment"># 运行所有测试</span>
+npm <span class="hljs-built_in">test</span>
+
+<span class="hljs-comment"># 运行单元测试</span>
+npm run <span class="hljs-built_in">test</span>:unit
+
+<span class="hljs-comment"># 运行集成测试</span>
+npm run <span class="hljs-built_in">test</span>:integration
+
+<span class="hljs-comment"># 生成覆盖率报告</span>
+npm run <span class="hljs-built_in">test</span>:coverage</code></pre>
+<h2 id="配置">配置<a class="anchor" href="#配置" aria-label="锚点">#</a></h2>
+<h3 id="环境变量">环境变量<a class="anchor" href="#环境变量" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>变量</th><th>说明</th><th>默认值</th></tr></thead><tbody><tr><td><code>PORT</code></td><td>服务端口</td><td><code>3000</code></td></tr><tr><td><code>NODE_ENV</code></td><td>运行环境</td><td><code>development</code></td></tr><tr><td><code>KHY_AI_GATEWAY</code></td><td>AI 网关地址</td><td>-</td></tr><tr><td><code>KHY_MCP_SERVE</code></td><td>MCP 服务开关</td><td><code>on</code></td></tr><tr><td><code>KHY_MEMORY_DIR</code></td><td>记忆目录</td><td><code>.khy/memory</code></td></tr></tbody></table>
+<h3 id="配置文件">配置文件<a class="anchor" href="#配置文件" aria-label="锚点">#</a></h3>
+<ul><li><code>~/.khyquant/config.json</code> - 用户配置</li><li><code>.khy/mcp.json</code> - MCP 服务器配置</li><li><code>.khy/memory/</code> - 记忆存储</li></ul>
+<h2 id="部署">部署<a class="anchor" href="#部署" aria-label="锚点">#</a></h2>
+<h3 id="docker-部署">Docker 部署<a class="anchor" href="#docker-部署" aria-label="锚点">#</a></h3>
+<pre><code class="language-dockerfile"><span class="hljs-keyword">FROM</span> node:<span class="hljs-number">18</span>-alpine
+<span class="hljs-keyword">WORKDIR</span><span class="language-bash"> /app</span>
+<span class="hljs-keyword">COPY</span><span class="language-bash"> package*.json ./</span>
+<span class="hljs-keyword">RUN</span><span class="language-bash"> npm ci --production</span>
+<span class="hljs-keyword">COPY</span><span class="language-bash"> . .</span>
+<span class="hljs-keyword">EXPOSE</span> <span class="hljs-number">3000</span>
+<span class="hljs-keyword">CMD</span><span class="language-bash"> [<span class="hljs-string">&quot;node&quot;</span>, <span class="hljs-string">&quot;bin/khy.js&quot;</span>]</span></code></pre>
+<h3 id="pm2-部署">PM2 部署<a class="anchor" href="#pm2-部署" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ecosystem.config.js</span>
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = {
+  <span class="hljs-attr">apps</span>: [{
+    <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;khy-backend&#x27;</span>,
+    <span class="hljs-attr">script</span>: <span class="hljs-string">&#x27;bin/khy.js&#x27;</span>,
+    <span class="hljs-attr">instances</span>: <span class="hljs-string">&#x27;max&#x27;</span>,
+    <span class="hljs-attr">exec_mode</span>: <span class="hljs-string">&#x27;cluster&#x27;</span>,
+    <span class="hljs-attr">env</span>: {
+      <span class="hljs-attr">NODE_ENV</span>: <span class="hljs-string">&#x27;production&#x27;</span>,
+      <span class="hljs-attr">PORT</span>: <span class="hljs-number">3000</span>
+    }
+  }]
+};</code></pre>
+<h2 id="监控">监控<a class="anchor" href="#监控" aria-label="锚点">#</a></h2>
+<h3 id="健康检查">健康检查<a class="anchor" href="#健康检查" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">curl http://localhost:3000/api/health</code></pre>
+<h3 id="日志">日志<a class="anchor" href="#日志" aria-label="锚点">#</a></h3>
+<p>日志文件位置：</p>
+<ul><li>错误日志：<code>logs/error.log</code></li><li>综合日志：<code>logs/combined.log</code></li></ul>
+<h3 id="性能监控">性能监控<a class="anchor" href="#性能监控" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 查看进程状态</span>
+pm2 status
+
+<span class="hljs-comment"># 查看日志</span>
+pm2 logs khy-backend
+
+<span class="hljs-comment"># 监控资源</span>
+pm2 monit</code></pre>
+<h2 id="相关文档">相关文档<a class="anchor" href="#相关文档" aria-label="锚点">#</a></h2>
+<ul><li><a href="../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-106]%20项目规范化总纲.html">项目规范化总纲</a></li><li><a href="../../docs/07_OPS_运维/OPS-MAN/[OPS-MAN-173]%20MCP工具接入快速上手.html">MCP 工具接入快速上手</a></li><li>[记忆系统标准规范](../../docs/10_规范/DESIGN-MEM/[DESIGN-MEM-001] 记忆系统标准规范.md)</li></ul>
+<h2 id="许可证">许可证<a class="anchor" href="#许可证" aria-label="锚点">#</a></h2>
+<p>MIT License</p>
+<hr>
+<p><em>本项目由 khy-os 团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../services/backend/LINT-DEBT.html"><div class="dir">← 上一篇</div><div class="ttl">Lint 债务登记与追踪</div></a><a class="next" href="../../services/backend/src/agents/built-in/agentCreator.html"><div class="dir">下一篇 →</div><div class="ttl">Agent Creator</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="services/backend/README.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

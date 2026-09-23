@@ -122,3 +122,18 @@ const VERIFICATION_AGENT = {
 };
 
 module.exports = { VERIFICATION_AGENT };
+
+// Re-export the executable verification functions so require sites under
+// services/ (toolUseLoopCore gate, deliveryGate, postEditDiagnostics,
+// agenticHarnessService) get the single source of truth from
+// services/verificationAgent.js instead of undefined bindings.
+// The agent definition above and the runtime functions live in two modules;
+// this keeps both import paths working against one implementation.
+module.exports = Object.assign(module.exports, {
+  verify: require('../../services/verificationAgent').verify,
+  detectProject: require('../../services/verificationAgent').detectProject,
+  quickSyntaxCheck: require('../../services/verificationAgent').quickSyntaxCheck,
+  adversarialVerify: require('../../services/verificationAgent').adversarialVerify,
+  adversarialVerifyEnsemble:
+    require('../../services/verificationAgent').adversarialVerifyEnsemble,
+});

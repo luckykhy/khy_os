@@ -1,15 +1,16 @@
 'use strict';
 /**
- * skillLoaderNativeSkillMd.test.js �?锁「khy 原生发现自有目录里的 SKILL.md」�?
+ * skillLoaderNativeSkillMd.test.js — 锁「khy 原生发现自有目录里的 SKILL.md」�?
  *
- * 背景:此前 discoverSkillsDeep 的用户级 SKILL.md 扫描只覆�?legacy
- *   ~/.khyquant/skills,唯独�?canonical ~/.khy/skills �?�?~/.khy/skills �?
- *   SKILL.md khy 发现不了,只能�?ccSkillBridge �?~/.claude/skills �?那会
- *   同时漏进 Claude Code 的斜杠菜�?。本测试注入 temp homedir + projectDir,
- *   断言 discoverSkillsDeep 现在能原生发�?.khy/skills 下的 SKILL.md,且不�?
- *   碰真�?HOME / CC 目录�?
+ * 背景:此前 discoverSkillsDeep 的用户级 SKILL.md 扫描只覆�?legacy
+ *   ~/.khyquant/skills,唯独�?canonical ~/.khy/skills �?�?~/.khy/skills �?
+ *   SKILL.md khy 发现不了,只能�?ccSkillBridge �?~/.claude/skills �?那会
+ *   同时漏进 Claude Code 的斜杠菜�?。本测试注入 temp homedir + projectDir,
+ *   断言 discoverSkillsDeep 现在能原生发�?.khy/skills 下的 SKILL.md,且不�?
+ *   碰真�?HOME / CC 目录�?
  */
 const fs = require('node:fs');
+const assert = require('node:assert');
 const os = require('node:os');
 const path = require('node:path');
 const loader = require('../src/skills/skillLoader');
@@ -37,7 +38,7 @@ describe('Skill Loader Native Skill Md', () => {
       }
   });
 
-  test('discoverSkillsDeep 仍发�?legacy ~/.khyquant/skills 下的 SKILL.md', () => {
+  test('discoverSkillsDeep 仍发�?legacy ~/.khyquant/skills 下的 SKILL.md', () => {
       const home = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-home-'));
       try {
         mkSkill(path.join(home, '.khyquant', 'skills'), 'legacy-user-skill', 'legacy home');
@@ -62,7 +63,7 @@ describe('Skill Loader Native Skill Md', () => {
       }
   });
 
-  test('khy-native SKILL.md 优先于同�?CC 目录副本(first match wins)', () => {
+  test('khy-native SKILL.md 优先于同�?CC 目录副本(first match wins)', () => {
       const home = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-home-'));
       try {
         mkSkill(path.join(home, '.khy', 'skills'), 'dup-skill', 'khy-native version');
@@ -75,8 +76,8 @@ describe('Skill Loader Native Skill Md', () => {
       }
   });
 
-  test('默认�?不传 opts 仍工�?向后兼容·用真�?os.homedir)', () => {
-      // 只断言不抛且返�?Map(不依赖真�?HOME 里有无技�?�?
+  test('默认�?不传 opts 仍工�?向后兼容·用真�?os.homedir)', () => {
+      // 只断言不抛且返�?Map(不依赖真�?HOME 里有无技�?�?
       const skills = loader.discoverSkillsDeep(null);
       expect(skills instanceof Map).toBeTruthy();
   });

@@ -25,9 +25,14 @@
  * network.
  */
 
-const defaultRegistry = require('../../../../cli/handlers/tools');
+// 工具注册表真源是 src/tools（导出 register / clearMcpTools / getMcpToolNames…），
+// 不是 cli/handlers/tools（只导出 handleToolsCommand，上述方法全为 undefined）。
+// 旧写法既造成 services→cli 分层倒置，又让默认路径在运行期静默拿不到注册表。
+const defaultRegistry = require('../../../../tools');
 
 const defaultManager = require('../../../../agents/index');
+
+const { planMcpDisclosure, estimateToolTokens, isDisclosureEnabled } = require('./mcpDisclosurePlan');
 
 /**
  * Append an MCP permission annotation to a description (s19 (readOnly) /
@@ -54,7 +59,7 @@ function annotateDescription(description, flags = {}) {
  * @param {object} client - the MCPClient that owns the tool (has callTool)
  * @returns {object} a tool definition accepted by registry.register
  */
-function buildCallableTool(serialized, client) {
+function buildCallableTool(serialized, client, { shouldDefer = false } = {}) {
   const originalToolName =
     serialized.originalToolName != null ? serialized.originalToolName : serialized.name;
   return {
@@ -64,6 +69,9 @@ function buildCallableTool(serialized, client) {
     inputSchema: serialized.inputJSONSchema || { type: 'object', properties: {} },
     isReadOnly: !!serialized.isReadOnly,
     isDestructive: !!serialized.isDestructive,
+    // Progressive disclosure: deferred MCP tools stay callable after the model
+    // reveals them via the existing toolSearch → ensureTool path.
+    ...(shouldDefer ? { shouldDefer: true } : {}),
     isEnabled: () => true,
     // Closure dispatch: route straight to the owning client with the ORIGINAL
     // tool name, immune to normalization of the qualified `name`.
@@ -74,21 +82,32 @@ function buildCallableTool(serialized, client) {
 /**
  * Register every tool from the connected MCP servers into the tool registry.
  *
+ * Progressive disclosure (mcpDisclosurePlan): the full directory is estimated
+ * first; only when it would crowd the prompt past threshold × context window
+ * is the whole MCP partition registered as deferred (toolSearch reveals it on
+ * demand). Small directories keep the legacy always-inline behavior.
+ *
  * @param {object} [opts]
  * @param {object} [opts.manager]  MCP manager (default: services/mcp/index).
  * @param {object} [opts.registry] tool registry (default: src/tools).
- * @returns {{ registered: string[], servers: string[] }}
+ * @param {number} [opts.contextWindowTokens] model window for the budget check.
+ * @returns {{ registered: string[], servers: string[], disclosure: object }}
  */
-function syncMcpToolsToRegistry({ manager = defaultManager, registry = defaultRegistry } = {}) {
+function syncMcpToolsToRegistry({
+  manager = defaultManager,
+  registry = defaultRegistry,
+  contextWindowTokens = 0,
+} = {}) {
   // s19 rebuild: drop the stale MCP partition before re-registering live tools.
   if (typeof registry.clearMcpTools === 'function') {
     registry.clearMcpTools();
   }
 
-  const registered = [];
   const servers =
     typeof manager.getConnectedServers === 'function' ? manager.getConnectedServers() : [];
 
+  // Phase 1: collect (server, client, tool) triples without touching the registry.
+  const pending = [];
   for (const serverName of servers) {
     const client = typeof manager.getClient === 'function' ? manager.getClient(serverName) : null;
     if (
@@ -108,12 +127,28 @@ function syncMcpToolsToRegistry({ manager = defaultManager, registry = defaultRe
       if (!serialized || !serialized.name) {
         continue;
       }
-      registry.register(buildCallableTool(serialized, client), { isMcp: true });
-      registered.push(serialized.name);
+      pending.push({ serialized, client });
     }
   }
 
-  return { registered, servers };
+  // Phase 2: one disclosure decision for the whole MCP directory.
+  const serializedAll = pending.map((p) => p.serialized);
+  const disclosure = planMcpDisclosure({
+    toolCount: serializedAll.length,
+    estTokens: estimateToolTokens(serializedAll),
+    contextWindowTokens,
+  }, { enabled: isDisclosureEnabled() });
+
+  const registered = [];
+  for (const { serialized, client } of pending) {
+    registry.register(
+      buildCallableTool(serialized, client, { shouldDefer: disclosure.mode === 'deferred' }),
+      { isMcp: true },
+    );
+    registered.push(serialized.name);
+  }
+
+  return { registered, servers, disclosure };
 }
 
 /**
@@ -131,7 +166,11 @@ function syncMcpToolsToRegistry({ manager = defaultManager, registry = defaultRe
  * @param {object} [opts.registry]
  * @returns {{ refreshed: boolean, registered: string[], servers: string[] }}
  */
-function refreshMcpToolPool({ manager = defaultManager, registry = defaultRegistry } = {}) {
+function refreshMcpToolPool({
+  manager = defaultManager,
+  registry = defaultRegistry,
+  contextWindowTokens = 0,
+} = {}) {
   try {
     const servers =
       typeof manager.getConnectedServers === 'function' ? manager.getConnectedServers() : [];
@@ -144,15 +183,30 @@ function refreshMcpToolPool({ manager = defaultManager, registry = defaultRegist
         typeof registry.getMcpToolNames === 'function' ? registry.getMcpToolNames() : [];
       if (stale.length && typeof registry.clearMcpTools === 'function') {
         registry.clearMcpTools();
-        return { refreshed: true, registered: [], servers: [] };
+        return {
+          refreshed: true,
+          registered: [],
+          servers: [],
+          disclosure: planMcpDisclosure({ toolCount: 0, estTokens: 0, contextWindowTokens }),
+        };
       }
-      return { refreshed: false, registered: [], servers: [] };
+      return {
+        refreshed: false,
+        registered: [],
+        servers: [],
+        disclosure: planMcpDisclosure({ toolCount: 0, estTokens: 0, contextWindowTokens }),
+      };
     }
 
-    const res = syncMcpToolsToRegistry({ manager, registry });
-    return { refreshed: true, registered: res.registered, servers: res.servers };
+    const res = syncMcpToolsToRegistry({ manager, registry, contextWindowTokens });
+    return {
+      refreshed: true,
+      registered: res.registered,
+      servers: res.servers,
+      disclosure: res.disclosure,
+    };
   } catch {
-    return { refreshed: false, registered: [], servers: [] };
+    return { refreshed: false, registered: [], servers: [], disclosure: null };
   }
 }
 

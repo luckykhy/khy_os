@@ -16,7 +16,7 @@ const {
   PermissionBroker,
   PermissionRequest,
   PermissionVerdict,
-} = require('./permissionBroker');
+} = require('../../src/services/permissionBroker.js');
 
 // ── Test Helpers ──────────────────────────────────────────────────────────
 

@@ -19,6 +19,26 @@ const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
 
+/**
+ * 读源码文本，并**穿透一行 re-export shim**。
+ *
+ * 为什么需要：目录迁移期 `src/services/<name>.js` 会退化为一行
+ * `module.exports = require('./tool/<name>')`（运行时 require 照常工作，
+ * 但源码文本扫描会读到空壳 → 本文件的「调用块须传入 toolCallLog」断言假红，
+ * 反向断言型守卫则假绿）。这里跟随 shim 读到真实实现文件，
+ * 使断言在「迁移已落地」与「迁移被回滚」两种世界下都成立。
+ *
+ * 只处理严格单行 re-export；其他形态原样返回，绝不猜。
+ */
+function readSourceThroughShim(absPath) {
+  const src = fs.readFileSync(absPath, 'utf8');
+  const m = /^module\.exports\s*=\s*require\(\s*'([^']+)'\s*\);?$/.exec(src.trim());
+  if (!m) return src;
+  const rel = m[1].endsWith('.js') ? m[1] : `${m[1]}.js`;
+  const real = path.resolve(path.dirname(absPath), rel);
+  return fs.existsSync(real) ? fs.readFileSync(real, 'utf8') : src;
+}
+
 const gate = require('../../src/services/goalStopGate');
 
 const GOAL = { text: '让 khy 学会做完任务及时验证测试' };
@@ -39,7 +59,10 @@ test('verificationCommandRan:shell 工具跑过测试/检查/构建 → true', (
   assert.equal(gate.verificationCommandRan([shell('node --test tests/x.test.js')]), true);
   assert.equal(gate.verificationCommandRan([shell('node --check src/a.js')]), true);
   assert.equal(gate.verificationCommandRan([shell('npm run arch:god')]), true);
-  assert.equal(gate.verificationCommandRan([shell('npm run maintainer:check')]), true);
+  assert.equal(gate.verificationCommandRan([shell('npm run check:maintainer:safety')]), true);
+  // doctor 域（如 `npm run doctor:hydration`）：2026-09-19 补入 —— 此前只认 maintainer，
+  // 导致 `[OPS-MAN-174]` 登记在案的 doctor 域验证命令被误判为「没真跑」。
+  assert.equal(gate.verificationCommandRan([shell('npm run doctor:hydration')]), true);
   assert.equal(gate.verificationCommandRan([shell('pytest -q')]), true);
   assert.equal(gate.verificationCommandRan([shell('cargo test')]), true);
   assert.equal(gate.verificationCommandRan([shell('eslint .')]), true);
@@ -135,7 +158,7 @@ test('evaluateGoalStop:声称验证但无证据文字且没跑命令 → evidenc
 
 // ── 接线:toolUseLoopCore 把 toolCallLog 传进 evaluateGoalStop ──────────
 test('wiring:toolUseLoopCore 的 evaluateGoalStop 调用传入 toolCallLog', () => {
-  const src = fs.readFileSync(path.join(__dirname, '../../src/services/toolUseLoopCore.js'), 'utf8');
+  const src = readSourceThroughShim(path.join(__dirname, '../../src/services/toolUseLoopCore.js'));
   const idx = src.indexOf('_goalStopGate.evaluateGoalStop({');
   assert.ok(idx >= 0, '应存在 evaluateGoalStop 调用');
   const block = src.slice(idx, idx + 400);

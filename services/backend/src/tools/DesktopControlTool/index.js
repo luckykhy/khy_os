@@ -70,7 +70,7 @@ WORKFLOW: observe → read marks → clickElement/hoverElement/selectText/type/f
 DESKTOP NOTES:
   * When the user asks "桌面上有什么 / what's on my desktop / desktop icons", PREFER "desktopIcons" (structured icon list) over screenshot — it never shows the terminal itself.
   * A plain screenshot captures the WHOLE screen including this terminal window. If you must screenshot the actual desktop (icons/wallpaper), pass desktop:true to screenshot/see/observe — it minimizes all windows (Win+D) before capture and restores them after.
-  * Before acting on a window, run "listWindows" to learn what is open.
+  * Before acting on a window, run "listWindows" to learn what is open, then ALWAYS pass the same app:"…" to inspect/see/observe and to clickElement/hoverElement/selectText. "activate" only raises the window — it does NOT move accessibility focus, so an untargeted scan reads whichever app happens to hold focus and its coordinates would click into the wrong application. A named window that does not exist fails honestly; it never returns another window's elements.
 SAFETY: real mouse/keyboard control is high-risk and DISABLED by default. The human must opt in via env KHY_DESKTOP_CONTROL=on (autonomous) | ask (approve once per session) | strict (approve every action). When off, actuation/capture is denied with guidance.
 GRADED CONFIRMATION: each action carries a risk level (low/medium/high/critical). In 'on' mode low/medium run autonomously, high asks once per session, critical asks every time; in 'ask' mode low is autonomous and medium+ ask once. TRUST ZONE: set KHY_COMPUTER_USE_ALLOWED_APPS=App1,App2 to lower one risk tier for whitelisted apps (critical→high, high→medium) — this never bypasses the actuation budget, and strict mode still confirms every step. Roll back anytime with KHY_DESKTOP_CONTROL=off.`;
   }
@@ -161,7 +161,11 @@ GRADED CONFIRMATION: each action carries a risk level (low/medium/high/critical)
         app: {
           type: 'string',
           description:
-            'activate/closeWindow/minimizeWindow: target application or window name/title, e.g. "Firefox"/"火狐". For close/minimize, empty = frontmost window (mac/Win).',
+            'Target application or window name/title, e.g. "Firefox"/"火狐" — same spelling for every action that takes it. ' +
+            'activate/closeWindow/minimizeWindow: which window to act on (for close/minimize, empty = frontmost). ' +
+            'inspect/see/observe/clickElement/hoverElement/selectText: which window to scope the element scan to. ' +
+            'Strongly recommended — without it the scan follows OS focus, which is NOT the window you just activated, ' +
+            'so coordinates can belong to another application. Unknown name = honest failure, never another window\'s elements.',
         },
         kind: {
           type: 'string',
@@ -223,11 +227,13 @@ GRADED CONFIRMATION: each action carries a risk level (low/medium/high/critical)
               ocr: !!params.ocr,
               clickableOnly: params.clickableOnly,
               desktop: params.desktop === true,
+              app: params.app,
             });
           case 'inspect':
             return await controller.inspect({
               region: params.region,
               clickableOnly: params.clickableOnly,
+              app: params.app,
             });
           case 'desktopIcons':
             return await controller.desktopIcons({ clickableOnly: params.clickableOnly });
@@ -236,16 +242,19 @@ GRADED CONFIRMATION: each action carries a risk level (low/medium/high/critical)
               kind: params.kind,
               elements: params.elements,
               refresh: params.refresh,
+              app: params.app,
             });
           case 'hoverElement':
             return await controller.hoverElement(params.target, {
               elements: params.elements,
               refresh: params.refresh,
+              app: params.app,
             });
           case 'selectText':
             return await controller.selectText(params.target, {
               elements: params.elements,
               refresh: params.refresh,
+              app: params.app,
             });
           case 'screenshot':
             return await controller.screenshot({
@@ -259,6 +268,7 @@ GRADED CONFIRMATION: each action carries a risk level (low/medium/high/critical)
               ocr: params.ocr !== false,
               clickableOnly: params.clickableOnly,
               desktop: params.desktop === true,
+              app: params.app,
             });
           case 'move':
             return await controller.move(params.x, params.y);

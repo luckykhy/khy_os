@@ -6,11 +6,11 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { extractSignals } = require('../src/services/contextScope/taskSignalExtractor');
-const aiMapIndex = require('../src/services/contextScope/aiMapIndex');
-const { rankCandidates } = require('../src/services/contextScope/scopeRanker');
-const { applyBudget, enforceBudget } = require('../src/services/contextScope/budgetController');
-const { buildSearchPlan } = require('../src/services/contextScope/searchPlanBuilder');
+const { extractSignals } = require('../src/services/domain/session/contextScope/taskSignalExtractor.js');
+const aiMapIndex = require('../src/services/domain/session/contextScope/aiMapIndex.js');
+const { rankCandidates } = require('../src/services/domain/session/contextScope/scopeRanker.js');
+const { applyBudget, enforceBudget } = require('../src/services/domain/session/contextScope/budgetController.js');
+const { buildSearchPlan } = require('../src/services/domain/session/contextScope/searchPlanBuilder.js');
 const planner = require('../src/services/contextScope');
 
 describe('taskSignalExtractor', () => {

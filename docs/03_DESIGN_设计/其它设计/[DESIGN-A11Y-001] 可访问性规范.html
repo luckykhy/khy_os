@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-A11Y-001] 可访问性规范.md -->
+<title>[DESIGN-A11Y-001] 可访问性规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>其它设计<span class="sep">›</span>[DESIGN-A11Y-001] 可访问性规范</div>
+      <header class="hero reveal"><h1>[DESIGN-A11Y-001] 可访问性规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-a11y-001-可访问性规范">[DESIGN-A11Y-001] 可访问性规范</a></li><li class="lvl-2"><a href="#1-可访问性概述">1. 可访问性概述</a></li><li class="lvl-3"><a href="#1-1-设计原则">1.1 设计原则</a></li><li class="lvl-3"><a href="#1-2-合规标准">1.2 合规标准</a></li><li class="lvl-2"><a href="#2-语义化-html">2. 语义化 HTML</a></li><li class="lvl-3"><a href="#2-1-使用语义化标签">2.1 使用语义化标签</a></li><li class="lvl-3"><a href="#2-2-标题层级">2.2 标题层级</a></li><li class="lvl-2"><a href="#3-aria-属性">3. ARIA 属性</a></li><li class="lvl-3"><a href="#3-1-常用-aria-属性">3.1 常用 ARIA 属性</a></li><li class="lvl-3"><a href="#3-2-aria-角色">3.2 ARIA 角色</a></li><li class="lvl-2"><a href="#4-键盘导航">4. 键盘导航</a></li><li class="lvl-3"><a href="#4-1-焦点管理">4.1 焦点管理</a></li><li class="lvl-3"><a href="#4-2-焦点陷阱-对话框">4.2 焦点陷阱（对话框）</a></li><li class="lvl-3"><a href="#4-3-快捷键">4.3 快捷键</a></li><li class="lvl-2"><a href="#5-颜色与对比度">5. 颜色与对比度</a></li><li class="lvl-3"><a href="#5-1-对比度要求">5.1 对比度要求</a></li><li class="lvl-3"><a href="#5-2-颜色使用">5.2 颜色使用</a></li><li class="lvl-3"><a href="#5-3-动画偏好">5.3 动画偏好</a></li><li class="lvl-2"><a href="#6-表单可访问性">6. 表单可访问性</a></li><li class="lvl-3"><a href="#6-1-标签关联">6.1 标签关联</a></li><li class="lvl-3"><a href="#6-2-错误提示">6.2 错误提示</a></li><li class="lvl-3"><a href="#6-3-必填字段">6.3 必填字段</a></li><li class="lvl-2"><a href="#7-动态内容">7. 动态内容</a></li><li class="lvl-3"><a href="#7-1-加载状态">7.1 加载状态</a></li><li class="lvl-3"><a href="#7-2-通知消息">7.2 通知消息</a></li><li class="lvl-2"><a href="#8-测试清单">8. 测试清单</a></li><li class="lvl-3"><a href="#8-1-手动测试">8.1 手动测试</a></li><li class="lvl-3"><a href="#8-2-自动化测试">8.2 自动化测试</a></li><li class="lvl-2"><a href="#9-版本历史">9. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-a11y-001-可访问性规范">[DESIGN-A11Y-001] 可访问性规范<a class="anchor" href="#design-a11y-001-可访问性规范" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档定义 khy-os 项目的可访问性标准，确保所有用户都能使用。</p></blockquote>
+<hr>
+<h2 id="1-可访问性概述">1. 可访问性概述<a class="anchor" href="#1-可访问性概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-设计原则">1.1 设计原则<a class="anchor" href="#1-1-设计原则" aria-label="锚点">#</a></h3>
+<ol><li><strong>可感知</strong>：信息和界面组件必须以可感知的方式呈现</li><li><strong>可操作</strong>：用户界面组件和导航必须可操作</li><li><strong>可理解</strong>：信息和用户界面的操作必须可理解</li><li>**健壮性：内容必须足够健壮，能被各种用户代理解释</li></ol>
+<h3 id="1-2-合规标准">1.2 合规标准<a class="anchor" href="#1-2-合规标准" aria-label="锚点">#</a></h3>
+<ul><li><strong>WCAG 2.1 AA</strong>：最低合规级别</li><li><strong>WCAG 2.1 AAA</strong>：推荐合规级别</li></ul>
+<hr>
+<h2 id="2-语义化-html">2. 语义化 HTML<a class="anchor" href="#2-语义化-html" aria-label="锚点">#</a></h2>
+<h3 id="2-1-使用语义化标签">2.1 使用语义化标签<a class="anchor" href="#2-1-使用语义化标签" aria-label="锚点">#</a></h3>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;!-- ✅ 正确：使用语义化标签 --&gt;
+  &lt;header&gt;
+    &lt;nav aria-label=&quot;主导航&quot;&gt;
+      &lt;ul&gt;
+        &lt;li&gt;&lt;a href=&quot;/&quot;&gt;首页&lt;/a&gt;&lt;/li&gt;
+        &lt;li&gt;&lt;a href=&quot;/about&quot;&gt;关于&lt;/a&gt;&lt;/li&gt;
+      &lt;/ul&gt;
+    &lt;/nav&gt;
+  &lt;/header&gt;
+  
+  &lt;main&gt;
+    &lt;article&gt;
+      &lt;h1&gt;文章标题&lt;/h1&gt;
+      &lt;section&gt;
+        &lt;h2&gt;章节标题&lt;/h2&gt;
+        &lt;p&gt;内容...&lt;/p&gt;
+      &lt;/section&gt;
+    &lt;/article&gt;
+    
+    &lt;aside aria-label=&quot;侧边栏&quot;&gt;
+      &lt;h2&gt;相关链接&lt;/h2&gt;
+      &lt;!-- 内容 --&gt;
+    &lt;/aside&gt;
+  &lt;/main&gt;
+  
+  &lt;footer&gt;
+    &lt;p&gt;版权信息&lt;/p&gt;
+  &lt;/footer&gt;
+&lt;/template&gt;</code></pre>
+<h3 id="2-2-标题层级">2.2 标题层级<a class="anchor" href="#2-2-标题层级" aria-label="锚点">#</a></h3>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;!-- ✅ 正确：标题层级清晰 --&gt;
+  &lt;h1&gt;页面标题&lt;/h1&gt;
+  &lt;h2&gt;主要章节&lt;/h2&gt;
+  &lt;h3&gt;子章节&lt;/h3&gt;
+  &lt;h4&gt;小节&lt;/h4&gt;
+  
+  &lt;!-- ❌ 错误：跳级使用标题 --&gt;
+  &lt;h1&gt;页面标题&lt;/h1&gt;
+  &lt;h4&gt;子章节&lt;/h4&gt;  &lt;!-- 跳过了 h2 和 h3 --&gt;
+&lt;/template&gt;</code></pre>
+<hr>
+<h2 id="3-aria-属性">3. ARIA 属性<a class="anchor" href="#3-aria-属性" aria-label="锚点">#</a></h2>
+<h3 id="3-1-常用-aria-属性">3.1 常用 ARIA 属性<a class="anchor" href="#3-1-常用-aria-属性" aria-label="锚点">#</a></h3>
+<p><strong>aria-label</strong>：为元素提供标签</p>
+<pre><code class="language-vue">&lt;button aria-label=&quot;关闭对话框&quot;&gt;×&lt;/button&gt;</code></pre>
+<p><strong>aria-labelledby</strong>：引用其他元素作为标签</p>
+<pre><code class="language-vue">&lt;h2 id=&quot;dialog-title&quot;&gt;确认操作&lt;/h2&gt;
+&lt;div role=&quot;dialog&quot; aria-labelledby=&quot;dialog-title&quot;&gt;
+  &lt;!-- 内容 --&gt;
+&lt;/div&gt;</code></pre>
+<p><strong>aria-describedby</strong>：引用其他元素作为描述</p>
+<pre><code class="language-vue">&lt;input aria-describedby=&quot;password-hint&quot; /&gt;
+&lt;p id=&quot;password-hint&quot;&gt;密码至少需要 8 个字符&lt;/p&gt;</code></pre>
+<p><strong>aria-live</strong>：动态内容更新通知</p>
+<pre><code class="language-vue">&lt;div aria-live=&quot;polite&quot; aria-atomic=&quot;true&quot;&gt;
+  {{ statusMessage }}
+&lt;/div&gt;</code></pre>
+<h3 id="3-2-aria-角色">3.2 ARIA 角色<a class="anchor" href="#3-2-aria-角色" aria-label="锚点">#</a></h3>
+<pre><code class="language-vue">&lt;!-- 对话框 --&gt;
+&lt;div role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-labelledby=&quot;dialog-title&quot;&gt;
+  &lt;h2 id=&quot;dialog-title&quot;&gt;确认操作&lt;/h2&gt;
+  &lt;p&gt;确定要删除吗？&lt;/p&gt;
+  &lt;button&gt;确定&lt;/button&gt;
+  &lt;button&gt;取消&lt;/button&gt;
+&lt;/div&gt;
+
+&lt;!-- 提示消息 --&gt;
+&lt;div role=&quot;alert&quot; aria-live=&quot;assertive&quot;&gt;
+  操作成功！
+&lt;/div&gt;
+
+&lt;!-- 导航 --&gt;
+&lt;nav aria-label=&quot;主导航&quot;&gt;
+  &lt;ul role=&quot;menubar&quot;&gt;
+    &lt;li role=&quot;none&quot;&gt;
+      &lt;a role=&quot;menuitem&quot; href=&quot;/&quot;&gt;首页&lt;/a&gt;
+    &lt;/li&gt;
+  &lt;/ul&gt;
+&lt;/nav&gt;
+
+&lt;!-- 表格 --&gt;
+&lt;table role=&quot;grid&quot;&gt;
+  &lt;thead&gt;
+    &lt;tr role=&quot;row&quot;&gt;
+      &lt;th role=&quot;columnheader&quot;&gt;姓名&lt;/th&gt;
+      &lt;th role=&quot;columnheader&quot;&gt;邮箱&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr role=&quot;row&quot;&gt;
+      &lt;td role=&quot;gridcell&quot;&gt;张三&lt;/td&gt;
+      &lt;td role=&quot;gridcell&quot;&gt;zhangsan@example.com&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;</code></pre>
+<hr>
+<h2 id="4-键盘导航">4. 键盘导航<a class="anchor" href="#4-键盘导航" aria-label="锚点">#</a></h2>
+<h3 id="4-1-焦点管理">4.1 焦点管理<a class="anchor" href="#4-1-焦点管理" aria-label="锚点">#</a></h3>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;!-- 可聚焦元素 --&gt;
+  &lt;button&gt;可聚焦按钮&lt;/button&gt;
+  &lt;a href=&quot;/&quot;&gt;可聚焦链接&lt;/a&gt;
+  &lt;input type=&quot;text&quot; /&gt;
+  
+  &lt;!-- 自定义可聚焦元素 --&gt;
+  &lt;div tabindex=&quot;0&quot; role=&quot;button&quot; @click=&quot;handleClick&quot; @keydown=&quot;handleKeyDown&quot;&gt;
+    自定义按钮
+  &lt;/div&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+const handleKeyDown = (event) =&gt; {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    handleClick();
+  }
+};
+&lt;/script&gt;</code></pre>
+<h3 id="4-2-焦点陷阱-对话框">4.2 焦点陷阱（对话框）<a class="anchor" href="#4-2-焦点陷阱-对话框" aria-label="锚点">#</a></h3>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;div
+    v-if=&quot;isOpen&quot;
+    class=&quot;dialog-overlay&quot;
+    @click.self=&quot;close&quot;
+  &gt;
+    &lt;div
+      ref=&quot;dialogRef&quot;
+      role=&quot;dialog&quot;
+      aria-modal=&quot;true&quot;
+      aria-labelledby=&quot;dialog-title&quot;
+      @keydown=&quot;handleKeyDown&quot;
+    &gt;
+      &lt;h2 id=&quot;dialog-title&quot;&gt;{{ title }}&lt;/h2&gt;
+      &lt;slot /&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+import { ref, watch, nextTick } from 'vue';
+
+const dialogRef = ref(null);
+
+// 打开时聚焦到对话框
+watch(() =&gt; isOpen, async (value) =&gt; {
+  if (value) {
+    await nextTick();
+    dialogRef.value?.focus();
+  }
+});
+
+// Tab 键焦点陷阱
+const handleKeyDown = (event) =&gt; {
+  if (event.key === 'Escape') {
+    close();
+    return;
+  }
+  
+  if (event.key === 'Tab') {
+    const focusableElements = dialogRef.value?.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex=&quot;-1&quot;])'
+    );
+    
+    if (focusableElements?.length) {
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      
+      if (event.shiftKey &amp;&amp; document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey &amp;&amp; document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    }
+  }
+};
+&lt;/script&gt;</code></pre>
+<h3 id="4-3-快捷键">4.3 快捷键<a class="anchor" href="#4-3-快捷键" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>快捷键</th><th>功能</th></tr></thead><tbody><tr><td>Tab</td><td>移动到下一个可聚焦元素</td></tr><tr><td>Shift + Tab</td><td>移动到上一个可聚焦元素</td></tr><tr><td>Enter</td><td>激活按钮/链接</td></tr><tr><td>Space</td><td>激活按钮/复选框</td></tr><tr><td>Escape</td><td>关闭对话框/菜单</td></tr><tr><td>Arrow Keys</td><td>在菜单/列表/标签页中导航</td></tr></tbody></table>
+<hr>
+<h2 id="5-颜色与对比度">5. 颜色与对比度<a class="anchor" href="#5-颜色与对比度" aria-label="锚点">#</a></h2>
+<h3 id="5-1-对比度要求">5.1 对比度要求<a class="anchor" href="#5-1-对比度要求" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>级别</th><th>正文</th><th>大文本</th><th>UI 组件</th></tr></thead><tbody><tr><td>AA</td><td>4.5:1</td><td>3:1</td><td>3:1</td></tr><tr><td>AAA</td><td>7:1</td><td>4.5:1</td><td>3:1</td></tr></tbody></table>
+<h3 id="5-2-颜色使用">5.2 颜色使用<a class="anchor" href="#5-2-颜色使用" aria-label="锚点">#</a></h3>
+<pre><code class="language-css"><span class="hljs-comment">/* ✅ 正确：不仅依赖颜色传达信息 */</span>
+<span class="hljs-selector-class">.status</span> {
+  <span class="hljs-attribute">display</span>: flex;
+  <span class="hljs-attribute">align-items</span>: center;
+  <span class="hljs-attribute">gap</span>: <span class="hljs-number">8px</span>;
+}
+
+<span class="hljs-selector-class">.status</span><span class="hljs-selector-class">.success</span><span class="hljs-selector-pseudo">::before</span> {
+  <span class="hljs-attribute">content</span>: <span class="hljs-string">&#x27;✓&#x27;</span>;
+  <span class="hljs-attribute">color</span>: <span class="hljs-number">#10b981</span>;
+}
+
+<span class="hljs-selector-class">.status</span><span class="hljs-selector-class">.error</span><span class="hljs-selector-pseudo">::before</span> {
+  <span class="hljs-attribute">content</span>: <span class="hljs-string">&#x27;✕&#x27;</span>;
+  <span class="hljs-attribute">color</span>: <span class="hljs-number">#ef4444</span>;
+}
+
+<span class="hljs-comment">/* ❌ 错误：仅依赖颜色 */</span>
+<span class="hljs-selector-class">.status</span><span class="hljs-selector-class">.success</span> {
+  <span class="hljs-attribute">color</span>: <span class="hljs-number">#10b981</span>;
+}
+
+<span class="hljs-selector-class">.status</span><span class="hljs-selector-class">.error</span> {
+  <span class="hljs-attribute">color</span>: <span class="hljs-number">#ef4444</span>;
+}</code></pre>
+<h3 id="5-3-动画偏好">5.3 动画偏好<a class="anchor" href="#5-3-动画偏好" aria-label="锚点">#</a></h3>
+<pre><code class="language-css"><span class="hljs-comment">/* 尊重用户的动画偏好 */</span>
+<span class="hljs-keyword">@media</span> (<span class="hljs-attribute">prefers-reduced-motion</span>: reduce) {
+  *,
+  *<span class="hljs-selector-pseudo">::before</span>,
+  *<span class="hljs-selector-pseudo">::after</span> {
+    <span class="hljs-attribute">animation-duration</span>: <span class="hljs-number">0.01ms</span> <span class="hljs-meta">!important</span>;
+    <span class="hljs-attribute">animation-iteration-count</span>: <span class="hljs-number">1</span> <span class="hljs-meta">!important</span>;
+    <span class="hljs-attribute">transition-duration</span>: <span class="hljs-number">0.01ms</span> <span class="hljs-meta">!important</span>;
+    <span class="hljs-attribute">scroll-behavior</span>: auto <span class="hljs-meta">!important</span>;
+  }
+}</code></pre>
+<hr>
+<h2 id="6-表单可访问性">6. 表单可访问性<a class="anchor" href="#6-表单可访问性" aria-label="锚点">#</a></h2>
+<h3 id="6-1-标签关联">6.1 标签关联<a class="anchor" href="#6-1-标签关联" aria-label="锚点">#</a></h3>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;!-- ✅ 正确：使用 label 关联 --&gt;
+  &lt;label for=&quot;username&quot;&gt;用户名&lt;/label&gt;
+  &lt;input id=&quot;username&quot; type=&quot;text&quot; /&gt;
+  
+  &lt;!-- ✅ 正确：使用 aria-label --&gt;
+  &lt;input aria-label=&quot;搜索&quot; type=&quot;search&quot; /&gt;
+  
+  &lt;!-- ✅ 正确：使用 aria-labelledby --&gt;
+  &lt;span id=&quot;search-label&quot;&gt;搜索&lt;/span&gt;
+  &lt;input aria-labelledby=&quot;search-label&quot; type=&quot;search&quot; /&gt;
+&lt;/template&gt;</code></pre>
+<h3 id="6-2-错误提示">6.2 错误提示<a class="anchor" href="#6-2-错误提示" aria-label="锚点">#</a></h3>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;div&gt;
+    &lt;label for=&quot;email&quot;&gt;邮箱&lt;/label&gt;
+    &lt;input
+      id=&quot;email&quot;
+      type=&quot;email&quot;
+      :aria-invalid=&quot;hasError&quot;
+      :aria-describedby=&quot;hasError ? 'email-error' : undefined&quot;
+      v-model=&quot;email&quot;
+    /&gt;
+    &lt;p
+      v-if=&quot;hasError&quot;
+      id=&quot;email-error&quot;
+      role=&quot;alert&quot;
+      class=&quot;error-message&quot;
+    &gt;
+      请输入有效的邮箱地址
+    &lt;/p&gt;
+  &lt;/div&gt;
+&lt;/template&gt;</code></pre>
+<h3 id="6-3-必填字段">6.3 必填字段<a class="anchor" href="#6-3-必填字段" aria-label="锚点">#</a></h3>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;label for=&quot;username&quot;&gt;
+    用户名 &lt;span aria-hidden=&quot;true&quot;&gt;*&lt;/span&gt;
+  &lt;/label&gt;
+  &lt;input
+    id=&quot;username&quot;
+    type=&quot;text&quot;
+    required
+    aria-required=&quot;true&quot;
+  /&gt;
+&lt;/template&gt;</code></pre>
+<hr>
+<h2 id="7-动态内容">7. 动态内容<a class="anchor" href="#7-动态内容" aria-label="锚点">#</a></h2>
+<h3 id="7-1-加载状态">7.1 加载状态<a class="anchor" href="#7-1-加载状态" aria-label="锚点">#</a></h3>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;div aria-live=&quot;polite&quot; aria-busy=&quot;isLoading&quot;&gt;
+    &lt;span v-if=&quot;isLoading&quot;&gt;加载中...&lt;/span&gt;
+    &lt;ul v-else&gt;
+      &lt;li v-for=&quot;item in items&quot; :key=&quot;item.id&quot;&gt;{{ item.name }}&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/div&gt;
+&lt;/template&gt;</code></pre>
+<h3 id="7-2-通知消息">7.2 通知消息<a class="anchor" href="#7-2-通知消息" aria-label="锚点">#</a></h3>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;!-- 状态消息 --&gt;
+  &lt;div role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;
+    {{ statusMessage }}
+  &lt;/div&gt;
+  
+  &lt;!-- 警告消息 --&gt;
+  &lt;div role=&quot;alert&quot; aria-live=&quot;assertive&quot;&gt;
+    {{ errorMessage }}
+  &lt;/div&gt;
+&lt;/template&gt;</code></pre>
+<hr>
+<h2 id="8-测试清单">8. 测试清单<a class="anchor" href="#8-测试清单" aria-label="锚点">#</a></h2>
+<h3 id="8-1-手动测试">8.1 手动测试<a class="anchor" href="#8-1-手动测试" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 仅使用键盘可以完成所有操作</li><li>[ ] 焦点顺序符合逻辑</li><li>[ ] 所有表单字段都有标签</li><li>[ ] 错误消息清晰且有帮助</li><li>[ ] 颜色对比度符合标准</li><li>[ ] 动画可以禁用</li><li>[ ] 内容可以缩放至 200%</li></ul>
+<h3 id="8-2-自动化测试">8.2 自动化测试<a class="anchor" href="#8-2-自动化测试" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 使用 axe-core 进行自动化测试</li><li>[ ] 集成到 CI/CD 流程</li><li>[ ] 定期检查可访问性问题</li></ul>
+<hr>
+<h2 id="9-版本历史">9. 版本历史<a class="anchor" href="#9-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义可访问性规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 可访问性团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/00_INDEX_设计-分类索引.html"><div class="dir">← 上一篇</div><div class="ttl">00INDEX 设计分类索引</div></a><a class="next" href="../../../docs/03_DESIGN_设计/其它设计/[DESIGN-A2A-001] A2A 协议规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-A2A-001] A2A 协议规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/其它设计/[DESIGN-A11Y-001] 可访问性规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

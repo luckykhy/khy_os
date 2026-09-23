@@ -16,7 +16,7 @@ const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const lattice = require('../../src/services/constraintLattice');
-const strategy = require('../../src/services/metaplan/constraintStrategy');
+const strategy = require('../../src/services/domain/project/metaplan/constraintStrategy.js');
 
 const ELEMENTS = [lattice.BOTTOM, lattice.SOFT, lattice.TOP];
 const STRATEGIES = [

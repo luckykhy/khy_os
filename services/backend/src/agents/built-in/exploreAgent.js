@@ -13,6 +13,11 @@ const FILE_WRITE_TOOL_NAME = 'Write';
 const GLOB_TOOL_NAME = 'Glob';
 const GREP_TOOL_NAME = 'Grep';
 const NOTEBOOK_EDIT_TOOL_NAME = 'NotebookEdit';
+// [DESIGN-AGENT-002] A2-2: Bash is a write channel (redirection, `sed -i`,
+// `tee`) and can mutate repo/system state (`git add`, `npm install`). A
+// read-only agent must not hold it. Named in both spellings because tool-name
+// matching is normalized but agent definitions use literal names.
+const SHELL_TOOL_NAMES = ['Bash', 'bash', 'shellCommand', 'shell_command'];
 const BASH_TOOL_NAME = 'Bash';
 
 const { readOnlyProhibitions } = require('../constraints');
@@ -61,6 +66,9 @@ const EXPLORE_AGENT = {
     FILE_EDIT_TOOL_NAME,
     FILE_WRITE_TOOL_NAME,
     NOTEBOOK_EDIT_TOOL_NAME,
+    // [DESIGN-AGENT-002] A2-2: exploration is read-only, so the shell write
+    // channel is explicitly withheld rather than merely discouraged in prose.
+    ...SHELL_TOOL_NAMES,
   ],
   source: 'built-in',
   baseDir: 'built-in',

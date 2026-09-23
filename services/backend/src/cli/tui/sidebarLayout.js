@@ -34,10 +34,12 @@
  *                             full-width chrome (prompt + footer + hint +
  *                             budget margin; default 10; invalid → 10) — keeps
  *                             live-region total height strictly below rows
- *  - KHY_SIDEBAR_FULLSCREEN_TOL  tolerance (cols/rows) when comparing the
- *                             current size against the session max (default 2)
- *  - KHY_SIDEBAR_ZOOM_TOL     max |cols-ratio − rows-ratio| for a resize to be
- *                             classified as a font zoom (default 0.15) — see
+ *  - session-max tolerance      tolerance (cols/rows) when comparing the
+ *                             current size against the session max (default 2;
+ *                             2026-09-16: env override removed, fixed at 2)
+ *  - font-zoom tolerance        max |cols-ratio − rows-ratio| for a resize to be
+ *                             classified as a font zoom (default 0.15; 2026-09-16:
+ *                             env override removed, fixed at 0.15) — see
  *                             classifyResize
  *  - KHY_TERM_FALLBACK_COLS / KHY_TERM_FALLBACK_ROWS  the ASSUMED terminal
  *                             size when the terminal reports none (Windows
@@ -60,19 +62,18 @@
  *                             null/undefined; default 80): the standard
  *                             120-col gate would otherwise hide the board
  *                             forever on terminals that never report a size.
- *  - KHY_SIDEBAR_STACK_MAX_RATIO  OPTIONAL extra guard on the post-first-
- *                             message board's height CEILING (the board hugs
- *                             its content; the ceiling only caps growth):
- *                             when set and valid (0 < ratio ≤ 1) the ceiling
- *                             is further capped at round(rows * ratio);
- *                             unset or invalid → ceiling = rows - minChrome —
- *                             see sidebarFillRows
+ *
+ *  Gate convergence (2026-09-16, DESIGN-ARCH-103 §4.6 P2-2): the optional
+ *  fill-ceiling ratio and the rail-activation hysteresis env knob had zero
+ *  live consumers, so their default behavior is now fixed in code (no extra
+ *  fill ceiling; 2-column anti-flap dead-band, superseded for rail
+ *  activation by the R1-2 band model in effectiveDims.bandCols).
  *
  * 右栏(railLayout)对本表的影响 —— 看板默认已经不在 ink 树里了:
  *  - KHY_SIDEBAR_RAIL(默认开,见 railLayout.js)让看板改为「预留最右侧几列 + 绝对坐标
  *    带外画」,从屏幕顶行铺到底。此时看板不再占活动区的任何一行,于是本表里所有约束
- *    HEIGHT 的门控对它统统失效:KHY_SIDEBAR_MAX_RATIO、KHY_SIDEBAR_MIN_CHROME、
- *    KHY_SIDEBAR_STACK_MAX_RATIO 只对 KHY_SIDEBAR_RAIL=0 的树内看板仍然生效。
+ *    HEIGHT 的门控对它统统失效:KHY_SIDEBAR_MAX_RATIO、KHY_SIDEBAR_MIN_CHROME 只对
+ *    KHY_SIDEBAR_RAIL=0 的树内看板仍然生效。
  *  - 仍然共用的是 WIDTH 与颜色一族:KHY_SIDEBAR(总开关)、KHY_SIDEBAR_MIN_COLS、
  *    KHY_SIDEBAR_WIDTH*、KHY_SIDEBAR_BG —— 一份宽度/配色口径,两种模式视觉一致。
  *  - 右栏也不看 isFullscreen(会话最大尺寸)判定:那是为「偷活动区高度」设的门槛,
@@ -108,7 +109,7 @@ const DEFAULT_MIN_CHROME = 10;
 const DEFAULT_FULLSCREEN_TOL = 2;
 // Font-zoom heuristic tolerance: a resize whose cols/rows both scale in the
 // SAME direction with ratios within this delta is treated as a Ctrl+wheel
-// font zoom, not a real window resize (KHY_SIDEBAR_ZOOM_TOL overrides).
+// font zoom, not a real window resize (env override removed 2026-09-16, fixed 0.15).
 const DEFAULT_ZOOM_TOL = 0.15;
 // Default sidebar background: a neutral gray one step lighter than typical
 // dark-theme terminal backgrounds (#000–#1e1e1e range), matching opencode's
@@ -125,9 +126,12 @@ const ANSI256_RE = /^ansi256\(\s?(\d+)\s?\)$/;
 // ── task-board polish knobs (stage 1) — every tunable is a named constant with
 // an env override, mirroring the DEFAULT_* + _posNum/_off pattern above so no
 // literal ever scatters into the runtime/panel code. ────────────────────────
-// Activation hysteresis in columns (KHY_SIDEBAR_HYSTERESIS): dead-band around
+// Activation hysteresis in columns (the rail-hysteresis env knob): dead-band around
 // the min-cols gate so a terminal parked on the threshold cannot flap the
-// board on/off frame to frame. 0 disables the dead-band; invalid → 2.
+// board on/off frame to frame. The env gate was removed in the 2026-09-16
+// gate convergence (zero live consumers) — the default 2-column dead-band
+// is now fixed; DESIGN-ARCH-103 R1-2's band model (effectiveDims.bandCols,
+// 120 enter / 108 exit) supersedes this for rail activation.
 const DEFAULT_HYSTERESIS = 2;
 // Vertical border glyph for the rail (KHY_SIDEBAR_BORDER_CHAR). Single visible
 // character; empty/whitespace → default box-drawing bar.
@@ -336,7 +340,8 @@ function isWideTerminal(cols, env = process.env) {
  * session (monotonic) and the current size counts as fullscreen when it is
  * within tolerance of that max on BOTH axes. Floors (minCols / minRows) stop
  * a small window — trivially equal to its own max — from qualifying.
- * Tolerance via KHY_SIDEBAR_FULLSCREEN_TOL (default 2; invalid → 2).
+ * Tolerance fixed at 2 (the env override was removed in the 2026-09-16 gate
+ * convergence — zero live consumers).
  * @param {number} cols - current terminal columns
  * @param {number} rows - current terminal rows
  * @param {number} maxCols - largest columns seen this session
@@ -370,9 +375,8 @@ function isFullscreen(cols, rows, maxCols, maxRows, env = process.env) {
   } else if (c < minCols(env) || r < minRows(env)) {
     return false;
   }
-  const rawTol = String((env && env.KHY_SIDEBAR_FULLSCREEN_TOL) || '').trim();
-  const t = rawTol === '' ? NaN : Number(rawTol);
-  const tol = Number.isFinite(t) && t >= 0 ? Math.round(t) : DEFAULT_FULLSCREEN_TOL;
+  // Session-max tolerance: env override removed 2026-09-16 (zero live consumers) — fixed.
+  const tol = DEFAULT_FULLSCREEN_TOL;
   return c >= mc - tol && r >= mr - tol;
 }
 
@@ -511,7 +515,7 @@ function nextSessionMax(dimsKnown, cols, rows, maxCols, maxRows) {
  *  - 'resize' — any other change (single-axis, opposite directions, ratios
  *               too far apart) or an unusable previous size (first frame).
  *  - 'none'   — dimensions unchanged, or the new size is unusable.
- * Tolerance via KHY_SIDEBAR_ZOOM_TOL (default 0.15; invalid → 0.15).
+ * Tolerance via the zoom-classification env knob (default 0.15; invalid → 0.15).
  * Deterministic, never throws.
  * @param {number} prevCols - previous effective terminal columns
  * @param {number} prevRows - previous effective terminal rows
@@ -537,8 +541,8 @@ function classifyResize(prevCols, prevRows, newCols, newRows, env = process.env)
   }
   const rc = nc / pc;
   const rr = nr / pr;
-  const t = _posNum(env, 'KHY_SIDEBAR_ZOOM_TOL');
-  const tol = Number.isFinite(t) ? t : DEFAULT_ZOOM_TOL;
+  // Zoom-classification tolerance: env override removed 2026-09-16 — fixed at 0.15.
+  const tol = DEFAULT_ZOOM_TOL;
   const sameDirection = (rc > 1 && rr > 1) || (rc < 1 && rr < 1);
   return sameDirection && Math.abs(rc - rr) <= tol ? 'zoom' : 'resize';
 }
@@ -554,10 +558,7 @@ function classifyResize(prevCols, prevRows, newCols, newRows, env = process.env)
  * row for the full-width chrome (prompt + footer + hint + budget margin), so
  * ceiling + chrome ≤ rows always holds (anti scroll-jump, same invariant as
  * the startup stable height — the board can never reach the prompt chrome).
- * Optional guard: KHY_SIDEBAR_STACK_MAX_RATIO — ONLY when explicitly set and
- * valid (0 < ratio ≤ 1) the ceiling is further capped at round(rows * ratio);
- * unset or invalid → no extra cap. Unusable rows → 0. Deterministic, never
- * throws.
+ * Unusable rows → 0. Deterministic, never throws.
  * @param {number} rows - current terminal rows
  * @param {NodeJS.ProcessEnv} [env]
  * @returns {number} 0 = unusable rows; otherwise the ceiling row count
@@ -570,10 +571,9 @@ function sidebarFillRows(rows, env = process.env) {
   const mc = _posNum(env, 'KHY_SIDEBAR_MIN_CHROME');
   const minChrome = Number.isFinite(mc) ? Math.round(mc) : DEFAULT_MIN_CHROME;
   const fill = Math.max(1, Math.floor(r) - minChrome);
-  const raw = _posNum(env, 'KHY_SIDEBAR_STACK_MAX_RATIO');
-  if (Number.isFinite(raw) && raw <= 1) {
-    return Math.max(1, Math.min(fill, Math.round(r * raw)));
-  }
+  // the extra fill ceiling env knob (zero-consumer legacy gate, 2026-09-16 gate
+  // convergence): the optional extra ceiling cap was never read by any live
+  // caller, so its default behavior (no extra cap) is now fixed.
   return fill;
 }
 
@@ -607,20 +607,18 @@ function mainColumnCols(cols, env = process.env) {
 }
 
 /**
- * Activation hysteresis width in columns (KHY_SIDEBAR_HYSTERESIS): a dead-band
- * around the min-cols gate that keeps a terminal parked on the threshold from
- * flapping the board on/off between frames. An explicit 0 DISABLES the
- * dead-band; any other non-positive / invalid value falls back to the default.
- * @param {NodeJS.ProcessEnv} [env]
+ * Activation hysteresis width in columns (anti-flap dead-band around the
+ * min-cols gate): keeps a terminal parked on the threshold from flapping the
+ * board on/off between frames. The the rail-hysteresis env knob env override was
+ * removed in the 2026-09-16 gate convergence — the only live caller was the
+ * pre-band-model railActiveHysteresis path, superseded by
+ * effectiveDims.bandCols (R1-2), so the 2-column dead-band is fixed.
  * @returns {number} >= 0 columns
  */
 function hysteresisCols(env = process.env) {
-  const raw = String((env && env.KHY_SIDEBAR_HYSTERESIS) || '').trim();
-  if (raw === '0') {
-    return 0;
-  } // explicit opt-out of the dead-band
-  const n = _posNum(env, 'KHY_SIDEBAR_HYSTERESIS');
-  return Number.isFinite(n) ? Math.round(n) : DEFAULT_HYSTERESIS;
+  // the rail-hysteresis env knob env override removed (zero live consumers,
+  // 2026-09-16 gate convergence). The 2-column anti-flap dead-band is fixed.
+  return DEFAULT_HYSTERESIS;
 }
 
 /**

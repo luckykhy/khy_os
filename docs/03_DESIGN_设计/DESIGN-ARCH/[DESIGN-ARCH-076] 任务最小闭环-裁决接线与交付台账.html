@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-076] 任务最小闭环-裁决接线与交付台账.md -->
+<title>[DESIGN-ARCH-072] 任务最小闭环-裁决接线与交付台账 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-072] 任务最小闭环-裁决接线与交付台账</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-072] 任务最小闭环-裁决接线与交付台账</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-072-任务最小闭环-裁决接线与交付台账">[DESIGN-ARCH-072] 任务最小闭环-裁决接线与交付台账</a></li><li class="lvl-2"><a href="#0-闭环定义">0. 闭环定义</a></li><li class="lvl-2"><a href="#1-本设计前的断点-2026-08-体检结论">1. 本设计前的断点（2026-08 体检结论）</a></li><li class="lvl-2"><a href="#2-修复设计-全部接线-无新状态机">2. 修复设计（全部接线，无新状态机）</a></li><li class="lvl-3"><a href="#2-1-收尾仲裁门-tooluseloopcore">2.1 收尾仲裁门（toolUseLoopCore）</a></li><li class="lvl-3"><a href="#2-2-交付台账-deliveryledger">2.2 交付台账（deliveryLedger）</a></li><li class="lvl-3"><a href="#2-3-交付门零-criteria-兜底-agenticharnessservice-deliverygate">2.3 交付门零 criteria 兜底（agenticHarnessService + deliveryGate）</a></li><li class="lvl-2"><a href="#3-环境变量一览">3. 环境变量一览</a></li><li class="lvl-2"><a href="#4-测试锚点">4. 测试锚点</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-072-任务最小闭环-裁决接线与交付台账">[DESIGN-ARCH-072] 任务最小闭环-裁决接线与交付台账<a class="anchor" href="#design-arch-072-任务最小闭环-裁决接线与交付台账" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：普通用户任务（非 <code>/goal</code> 持久目标）从「模型想停」到「交付完成」之间<strong>最小闭环的单一真源</strong>：收尾裁决接线 + 交付台账。<br><strong>适用边界</strong>：只治理「任务做不完 / 假完成交付 / 交付后无从回查」这一段；不替代 <code>[DESIGN-ARCH-050]</code>（项目整体意识与自驱收尾保障，本设计在其软门组合末端补最后一道权威裁决）、<code>RELIABILITY-PROTOCOL.md</code>（持久任务可靠性协议，其状态机照旧）、<code>[DESIGN-ARCH-071]</code>（通道选择）。<br><strong>根因追溯</strong>：<code>services/taskClosure.js</code> 文件头（写于本设计落地之前）已自述：「toolUseLoopCore 在模型不再调用工具时用脆弱散文正则判定收尾」——而其后补的权威仲裁器 <code>decideClosure</code> 一直全仓零消费者。</p></blockquote>
+<hr>
+<h2 id="0-闭环定义">0. 闭环定义<a class="anchor" href="#0-闭环定义" aria-label="锚点">#</a></h2>
+<p>一个任务算「可靠交付」，当且仅当走完以下五步，且每步有据可查：</p>
+<pre><code class="language-text">登记 → 执行（计划步骤可观测）→ 裁决（close / redrive / close_partial）
+    → 交付（含诚实缺口标注）→ 台账（持久、可回查）</code></pre>
+<h2 id="1-本设计前的断点-2026-08-体检结论">1. 本设计前的断点（2026-08 体检结论）<a class="anchor" href="#1-本设计前的断点-2026-08-体检结论" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>断点</th><th>位置</th><th>后果</th></tr></thead><tbody><tr><td>收尾判定只有词面正则 <code>isFinalDelivery</code></td><td><code>toolUseLoopCore.js</code> <code>_looksConcluded</code></td><td>「声称完成但步骤未完成 / 验证未真跑」直接放行收尾</td></tr><tr><td>权威仲裁器 <code>decideClosure</code> 死代码</td><td><code>taskClosure.js</code></td><td>三态仲裁 + redrive 预算 + 证据门从未生效</td></tr><tr><td>任务终态 5 分钟 TTL 即焚</td><td><code>taskStore.js</code> / <code>backgroundTaskManager.js</code></td><td>「上次任务交付了什么、缺什么」无从回查</td></tr><tr><td>交付门零 criteria 时整段跳过</td><td><code>agenticHarnessService.js</code></td><td>非代码任务（文档/数据/桌面操作）验证形同虚设</td></tr><tr><td>headless <code>-p</code> 裸奔</td><td><code>bin/khy.js</code></td><td>循环报错静默回退单发、交付不入账</td></tr></tbody></table>
+<h2 id="2-修复设计-全部接线-无新状态机">2. 修复设计（全部接线，无新状态机）<a class="anchor" href="#2-修复设计-全部接线-无新状态机" aria-label="锚点">#</a></h2>
+<h3 id="2-1-收尾仲裁门-tooluseloopcore">2.1 收尾仲裁门（toolUseLoopCore）<a class="anchor" href="#2-1-收尾仲裁门-tooluseloopcore" aria-label="锚点">#</a></h3>
+<ul><li><strong>接线点</strong>：所有通用 nudge 之后、<code>goalStopGate</code> 之前（「想停时」的最后一道门）。</li><li><strong>形状</strong>：照抄 goalStopGate 黄金范例——判定在纯叶子 <code>taskClosure.decideClosure</code>，接线处只做 IO 落地，整块 try/catch fail-soft。</li><li><strong>三态落地</strong>：<ul><li><code>close</code> → 放行正常交付；</li><li><code>close_partial</code> → 诚实标注（未完成步骤/未经证实的验证/无证据）随交付追加，经 <code>_terminalNotice</code> 通道流式必达；</li><li><code>redrive</code> → 有界再驱动。其中<strong>结构化信号</strong>（<code>steps-incomplete</code> / <code>verification-missing</code>）是硬门，不受 <code>_softRedriveSuppressed</code> 抑制——实质性假完成正是抑制门（只防同一答案重复生成）的盲区；非结构化「无收尾词」再驱动仍尊重抑制，避免对已交付答案重复生成。</li></ul></li><li><strong>预算</strong>：<code>resolveMaxRedrives</code>（env <code>KHY_TASK_CLOSURE_REDRIVE_MAX</code>，默认 1，clamp [0,6]），耗尽即降级 <code>close_partial</code>，绝不无限续跑。</li><li><strong>门控</strong>：<code>KHY_TASK_CLOSURE_GATE</code>（默认开，显式 0/false/off/no 关）。关 → 行为回退到既有软门组合。</li><li><strong>作用域</strong>：仅 <code>actionTask</code>（<code>_looksLikeActionRequest</code> 命中）且非 UPH 追问/断路器接管轮；纯问答/闲聊不受此门。</li></ul>
+<h3 id="2-2-交付台账-deliveryledger">2.2 交付台账（deliveryLedger）<a class="anchor" href="#2-2-交付台账-deliveryledger" aria-label="锚点">#</a></h3>
+<ul><li><strong>形态</strong>：追加式 JSONL，<code>&lt;dataHome&gt;/tasks/delivery_ledger.jsonl</code>，自裁剪（<code>KHY_DELIVERY_LEDGER_MAX</code>，默认 500 条）——存储自限额模式（同 <code>KHY_TASK_EVENTS_MAX</code>），活动任务列表 TTL 语义不变。</li><li><strong>写入点 1（咽喉）</strong>：<code>backgroundTaskManager.complete/fail/cancel</code>——本模块一切终态的唯一出口，顺手入账；交付门 fail 的「完成」记 <code>closure: delivery-gate-fail</code>，不谎报完整闭环。harnessReport 新增 <code>deliverySummary</code>（终态回复摘要）供台账 summary 字段。</li><li><strong>写入点 2（headless）</strong>：<code>bin/khy.js</code> <code>-p</code> 原生循环路径——成功/失败/达上限均入账；循环整段抛错回退单发时 <code>_headlessLoopErr</code> 一并入账，不再无声无息。纯单发 chat（问答）不入账，避免台账噪音。</li><li><strong>查询面</strong>：<code>khy deliveries</code>（别名：<code>交付</code> / <code>交付记录</code> / <code>台账</code> / <code>jiaofu</code>），<code>--limit</code> / <code>--status</code> / <code>--task</code> 过滤，<code>deliveries stats</code> 看台账位置与条数。与 <code>khy receipts</code>（执行粒度回执）互补：receipts 记「做了什么操作」，deliveries 记「任务级交付结论与缺口」。</li></ul>
+<h3 id="2-3-交付门零-criteria-兜底-agenticharnessservice-deliverygate">2.3 交付门零 criteria 兜底（agenticHarnessService + deliveryGate）<a class="anchor" href="#2-3-交付门零-criteria-兜底-agenticharnessservice-deliverygate" aria-label="锚点">#</a></h3>
+<ul><li>criteria 为空时注入最小兜底标准：<code>substantive_final_response</code>（<code>deliveryGate.CUSTOM_VALIDATORS</code> 新验证器）——最终回复 ≥30 非空白字符即过，空壳/进度前言/套话拒绝会被拦下并触发修复循环。有模式专属 criteria 时本兜底不参与。</li></ul>
+<h2 id="3-环境变量一览">3. 环境变量一览<a class="anchor" href="#3-环境变量一览" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>变量</th><th>默认</th><th>说明</th></tr></thead><tbody><tr><td><code>KHY_TASK_CLOSURE_GATE</code></td><td>开</td><td>收尾仲裁门总开关</td></tr><tr><td><code>KHY_TASK_CLOSURE_REDRIVE_MAX</code></td><td>1</td><td>单次循环内 redrive 预算，clamp [0,6]</td></tr><tr><td><code>KHY_DELIVERY_LEDGER_MAX</code></td><td>500</td><td>台账自裁剪上限，clamp [1,5000]</td></tr></tbody></table>
+<h2 id="4-测试锚点">4. 测试锚点<a class="anchor" href="#4-测试锚点" aria-label="锚点">#</a></h2>
+<ul><li><code>services/__tests__/taskClosure.decideClosure.test.js</code> — 三态仲裁 + 预算 + 证据门（纯叶子契约）</li><li><code>services/__tests__/deliveryLedger.test.js</code> — 台账追加/截断/过滤/自裁剪/fail-soft</li><li><code>services/__tests__/backgroundTaskManager.ledger.test.js</code> — 终态咽喉 → 台账集成</li><li><code>services/__tests__/toolUseLoop.taskClosureGate.smoke.test.js</code> — 假 chat 驱动循环：redrive 注入 + close_partial 标注 + 有界终止</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-075] opencode高含金量功能教学与khy-os差距补齐路线.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-067] opencode 高含金量功能教学与 khy-os 差距补齐路线</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-077] khyos 核心任务循环-稳定交付总纲.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-073] khyos 核心任务循环 — 稳定交付总纲</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-076] 任务最小闭环-裁决接线与交付台账.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

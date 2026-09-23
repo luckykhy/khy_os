@@ -37,7 +37,7 @@ describe('permissions index', () => {
   });
 
   test('exports match expected keys', () => {
-    expect(Object.keys(permissions).sort().toEqual(['bashSecurity', 'rules'].sort();
+    expect(Object.keys(permissions).sort()).toEqual(['bashSecurity', 'rules'].sort());
   });
 });
 

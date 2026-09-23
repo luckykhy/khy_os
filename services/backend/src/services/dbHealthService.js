@@ -252,7 +252,49 @@ function _discoverDatabases() {
     });
   }
 
-  return databases.filter(db => fs.existsSync(db.path));
+  return _dedupeByRealPath(databases.filter(db => fs.existsSync(db.path)));
+}
+
+/**
+ * Drop entries that resolve to the SAME physical file.
+ *
+ * `khy-Trajectory` is a visible alias (junction/symlink) of the data home that
+ * `utils/dataHome._ensureVisibleAlias` recreates on every startup, so
+ * `khy-Trajectory/sessions.db` is the very same inode as `.khy/sessions.db`.
+ * Both entries were opened and `PRAGMA quick_check`ed independently: on a 28MB
+ * sessions.db that is ~450ms of duplicated work in a row, plus a second
+ * open/close of the same file (WAL contention) during startup.
+ *
+ * Identity is resolved by realpath — not by path string — so a genuinely
+ * separate database is never dropped. Unresolvable paths fall back to their
+ * own string, i.e. they are kept.
+ *
+ * @param {Array<{name: string, path: string}>} databases
+ * @returns {Array<{name: string, path: string}>}
+ */
+function _dedupeByRealPath(databases) {
+  const seen = new Set();
+  const unique = [];
+  for (const db of databases) {
+    let key;
+    try {
+      key = fs.realpathSync.native
+        ? fs.realpathSync.native(db.path)
+        : fs.realpathSync(db.path);
+    } catch {
+      key = db.path;
+    }
+    // Windows paths are case-insensitive; normalize so `C:\a` and `c:\A` collide.
+    if (process.platform === 'win32') {
+      key = key.toLowerCase();
+    }
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    unique.push(db);
+  }
+  return unique;
 }
 
 // ── Integrity Check ──
@@ -1424,6 +1466,93 @@ function _pruneOldBackups(backupDir, dbName) {
   }
 }
 
+// ── Orphaned WAL artifact scan (startup advisory) ──
+
+/**
+ * Scan the data directories for WAL forensic leftovers that a previous
+ * corrupt→recover cycle left behind (`.corrupted-<ts>` snapshots and
+ * `.orphan-<ts>` sidecars, see Step A0 / healDatabase), plus live
+ * `-wal`/`-shm`/`-journal` sidecars whose main database is missing.
+ *
+ * Advisory only: the artifacts are safe forensic copies (the recovery
+ * already completed), so the scan neither deletes nor modifies them —
+ * it emits one warn per directory so the user can confirm the incident
+ * and clean up when no longer needed.
+ *
+ * @returns {Array<{ dir: string, file: string, kind: string, sizeBytes: number }>}
+ */
+function scanOrphanedWalArtifacts() {
+  const findings = [];
+  const dirs = [];
+
+  try {
+    const { getDataDir, getProjectDataDir } = require('../utils/dataHome');
+    dirs.push(getProjectDataDir(), getDataDir());
+  } catch {
+    /* fall back to the .khy dir below */
+  }
+  dirs.push(path.join(process.cwd(), '.khy'));
+
+  const seenDirs = new Set();
+  for (const dir of dirs) {
+    if (!dir || seenDirs.has(dir)) {
+      continue;
+    }
+    seenDirs.add(dir);
+    if (!fs.existsSync(dir)) {
+      continue;
+    }
+
+    let entries;
+    try {
+      entries = fs.readdirSync(dir);
+    } catch {
+      continue;
+    }
+
+    for (const name of entries) {
+      let kind = null;
+      const renamed = name.match(/^(.+)\.(corrupted|orphan)-\d+$/);
+      if (renamed) {
+        kind = renamed[2] === 'corrupted' ? 'corrupted_snapshot' : 'orphan_sidecar';
+      } else if (/-wal$|-shm$|-journal$/.test(name)) {
+        // A live sidecar with no main database is an orphan (SQLite
+        // creates the main file before its WAL sidecars ever appear).
+        const mainName = name.replace(/-(wal|shm|journal)$/, '');
+        if (!fs.existsSync(path.join(dir, mainName))) {
+          kind = 'live_sidecar_missing_main';
+        }
+      }
+      if (!kind) {
+        continue;
+      }
+
+      let sizeBytes = 0;
+      try {
+        sizeBytes = fs.statSync(path.join(dir, name)).size;
+      } catch {
+        /* unreadable — still report the name */
+      }
+      findings.push({ dir, file: name, kind, sizeBytes });
+    }
+  }
+
+  if (findings.length > 0) {
+    const totalBytes = findings.reduce((sum, f) => sum + f.sizeBytes, 0);
+    const listed = findings.slice(0, 5).map((f) => f.file).join(', ');
+    const extra = findings.length > 5 ? `（另有 ${findings.length - 5} 个）` : '';
+    _logHealAudit({
+      level: 'warn',
+      message:
+        `数据目录检出 ${findings.length} 个 WAL 孤儿工件（共 ${totalBytes} 字节）：${listed}${extra}。` +
+        '这是历次损坏恢复留下的取证副本，不影响当前会话；确认不再需要后可手动删除。',
+      meta: { findings },
+    });
+  }
+
+  return findings;
+}
+
 // ── Public API ──
 
 /**
@@ -1438,6 +1567,7 @@ async function init(options = {}) {
   });
 
   const checkResults = await startupIntegrityCheck();
+  const orphanFindings = scanOrphanedWalArtifacts();
   startPeriodicMaintenance();
 
   // Register shutdown hook with centralized shutdown manager
@@ -1448,7 +1578,7 @@ async function init(options = {}) {
     // shutdown module not available — shutdown() must be called manually
   }
 
-  return { ok: true, databases: checkResults };
+  return { ok: true, databases: checkResults, orphanArtifacts: orphanFindings.length };
 }
 
 /**
@@ -1494,6 +1624,7 @@ module.exports = {
   checkIntegrity,
   healDatabase,
   checkAndHeal,
+  scanOrphanedWalArtifacts,
   getAuditLog,
   startPeriodicMaintenance,
   stopPeriodicMaintenance,
@@ -1507,4 +1638,6 @@ module.exports = {
   _retryFsOperation,
   _releaseKhyDbLocks,
   _tryResetSidecars,
+  // 内部(真实路径去重,导出仅供测试:锁 `khy-Trajectory` 别名不重复体检同一文件)
+  _dedupeByRealPath,
 };

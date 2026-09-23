@@ -19,8 +19,8 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const REGISTRY = path.join(ROOT, 'docs', '_规范', 'RULES-REGISTRY.json');
-const OUT_DIR = path.join(ROOT, 'docs', '_规范');
+const REGISTRY = path.join(ROOT, 'docs', '10_规范', 'registry', 'RULES-REGISTRY.json');
+const OUT_DIR = path.join(ROOT, 'docs', '10_规范', '其它规范');
 
 const DOMAINS = ['LAYOUT', 'RUNTIME', 'COMMS', 'API', 'TOOLING', 'MEMORY', 'SOURCING', 'PROCESS', 'SECURITY', 'DOCS'];
 
@@ -117,7 +117,7 @@ formerly: 无
 # [${id}] ${name}
 
 > **域**：${domain}（${DOMAIN_HINT[domain]}）
-> **状态**：draft — 提 PR 前必须填全三元字段，并在 \`docs/_规范/RULES-REGISTRY.json\` 查重登记。
+> **状态**：draft — 提 PR 前必须填全三元字段，并在 \`docs/10_规范/registry/RULES-REGISTRY.json\` 查重登记。
 > **元规则**：\`[MGMT-STD-008] 规则编写与管理规范（元规则）\` §1 规则卡格式。
 
 ## 约束
@@ -180,7 +180,7 @@ function register(ruleId, ruleName, domain, fileName) {
     benefit: '（待填写）',
     exception: '无',
     version: `1.0.0 (${today()})`,
-    ssot: `docs/_规范/${fileName}`,
+    ssot: `docs/10_规范/${fileName}`,
     owner: ownerFor(domain),
     formerly: null,
   });
@@ -236,7 +236,7 @@ function main() {
   console.log('  1. 填全正文六个小节 + frontmatter 的 scope/constraint/grants/benefit/exception/ssot');
   console.log('  2. node scripts/ci/check-gov-rules.js        # 字段齐全 + 幂律配对');
   console.log('  3. npm run docs:build && npm run docs:verify # 孪生件 + 死链');
-  console.log('  4. 同步两处索引：docs/_规范/00_INDEX_*.md 与 docs/00_INDEX_文档索引.md');
+  console.log('  4. 同步两处索引：docs/10_规范/00_INDEX_*.md 与 docs/00_INDEX_文档索引.md');
   console.log('  5. PR 合并后置 status=active（元规则 §4.2）');
 }
 

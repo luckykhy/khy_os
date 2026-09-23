@@ -1,4 +1,37 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="120" height="40" viewBox="0 0 120 40">
-  <rect width="120" height="40" fill="#4facfe" rx="4"/>
-  <text x="60" y="25" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white">KHY-Quant</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bgC" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e3a5f"/>
+    </linearGradient>
+    <linearGradient id="diamondC" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="50%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="pulseC" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="30%" stop-color="#ffffff"/>
+      <stop offset="70%" stop-color="#dbeafe"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bgC)"/>
+
+  <polygon points="256,76 436,256 256,436 76,256"
+           fill="none" stroke="url(#diamondC)" stroke-width="16" stroke-linejoin="round"/>
+
+  <polygon points="256,120 392,256 256,392 120,256"
+           fill="url(#diamondC)" opacity="0.08"/>
+
+  <polyline points="120,256 180,256 200,190 230,330 260,220 290,280 332,256 392,256"
+            fill="none" stroke="url(#pulseC)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <circle cx="230" cy="330" r="10" fill="#ffffff" opacity="0.9"/>
+  <circle cx="260" cy="220" r="10" fill="#60a5fa" opacity="0.9"/>
+  <circle cx="290" cy="280" r="10" fill="#ffffff" opacity="0.7"/>
+
+  <polygon points="256,76 436,256 256,436 76,256"
+           fill="none" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round" opacity="0.2"/>
 </svg>

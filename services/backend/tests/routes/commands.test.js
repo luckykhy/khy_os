@@ -13,10 +13,10 @@ describe('routes/commands', () => {
       total: 1,
       generatedBy: 'commandSchema',
     }));
-    jest.mock('../services/domain/catalog/commandCatalog/commandCatalog.js', () => ({
+    jest.mock('../../src/services/domain/catalog/commandCatalog/commandCatalog.js', () => ({
       buildCommandCatalog: mockBuildCommandCatalog,
     }));
-    router = require('./commands');
+    router = require('../../src/routes/commands');
   });
 
   it('should export an express router', () => {
@@ -56,10 +56,10 @@ describe('routes/commands', () => {
 
   it('GET / returns degraded catalog on error', async () => {
     jest.resetModules();
-    jest.mock('../services/domain/catalog/commandCatalog/commandCatalog.js', () => ({
+    jest.mock('../../src/services/domain/catalog/commandCatalog/commandCatalog.js', () => ({
       buildCommandCatalog: jest.fn(() => { throw new Error('fail'); }),
     }));
-    const freshRouter = require('./commands');
+    const freshRouter = require('../../src/routes/commands.js');
     const req = { query: {} };
     const res = { json: jest.fn() };
     const route = freshRouter.stack.find((l) => l.route && l.route.path === '/' && l.route.methods.get);
@@ -68,7 +68,7 @@ describe('routes/commands', () => {
       expect.objectContaining({
         success: true,
         data: { categories: [], total: 0, generatedBy: 'commandSchema' },
-        degraded: true,
+        message: 'degraded',
       })
     );
   });

@@ -18,7 +18,10 @@
 
 const { ToolError } = require('../../../toolError');
 
-const { PROBE, getDependency, listDependencies } = require('../../../../cli/commands/registry');
+// 依赖声明真源是同目录的 ./registry（依赖表），不是 cli/commands/registry（CLI 命令表）。
+// 旧写法 require 了 cli/ 且解构出 undefined —— 既造成 services→cli 分层倒置（R1），
+// 又让 buildInstallPlan/probe 在运行期抛 "getDependency is not a function"。
+const { PROBE, getDependency, listDependencies } = require('./registry');
 const toolchainVersions = require('./toolchainVersions');
 
 // ── 默认（真实）探针实现 ──────────────────────────────────────────

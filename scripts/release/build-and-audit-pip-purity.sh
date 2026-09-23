@@ -70,7 +70,7 @@ if [[ "$SKIP_BUILD" == '0' ]]; then
   info "Assembling standalone zero-dependency runtime..."
   node scripts/release/assemble-pip-runtime.js
 
-  # No mermaid prebuild here on purpose. docs/_assets/mermaid.min.js is a 3.12 MB
+  # No mermaid prebuild here on purpose. docs/19_资产/site/mermaid.min.js is a 3.12 MB
   # regenerable product that pip_packaging_rules.py now EXCLUDES from the sdist,
   # so building it before packing would install ~126 MB of npm tooling to produce
   # a file the very next step throws away. sdist consumers regenerate it with

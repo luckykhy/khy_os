@@ -15,7 +15,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const parser = require('../../../src/services/dualTrack/lenientResponseParser');
+const parser = require('../../../src/services/domain/trajectory/dualTrack/lenientResponseParser.js');
 const { parseModelResponse, normalizeAction } = parser;
 
 test('normalizeAction captures unknown keys in Object.keys order, known keys omitted', () => {

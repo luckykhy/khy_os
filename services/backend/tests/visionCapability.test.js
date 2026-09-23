@@ -1,5 +1,6 @@
 'use strict';
 const vc = require('../src/services/gateway/visionCapability');
+const assert = require('node:assert');
 const EMPTY_ENV = {}; // no KHY_VISION_MODELS / KHY_TEXT_ONLY_MODELS
 
 describe('Vision Capability', () => {

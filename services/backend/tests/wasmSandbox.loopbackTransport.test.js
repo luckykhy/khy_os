@@ -6,9 +6,9 @@ const {
   METHOD,
   SERVICE,
   negErrno,
-} = require('../src/services/wasm-sandbox/m1Constants');
-const { createHeader, decodeFrame, encodeFrame } = require('../src/services/wasm-sandbox/ipcCodec');
-const { createLoopbackTransport } = require('../src/services/wasm-sandbox/loopbackTransport');
+} = require('../src/services/domain/system/wasm-sandbox/m1Constants.js');
+const { createHeader, decodeFrame, encodeFrame } = require('../src/services/domain/system/wasm-sandbox/ipcCodec.js');
+const { createLoopbackTransport } = require('../src/services/domain/system/wasm-sandbox/loopbackTransport.js');
 
 describe('wasm-sandbox loopback transport', () => {
   test('handles NET_HTTP_GET request', async () => {

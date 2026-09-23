@@ -9,7 +9,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const SCRIPT = path.join(ROOT, 'scripts', 'ci', 'check-gov-rules.js');
-const DOC = 'docs/03_DESIGN_设计/[DESIGN-ARCH-070] 治理总纲与可执行规则.md';
+const DOC = 'docs/10_规范/其它规范/[DESIGN-GOV-001] 治理总纲与可执行规则.md';
 const dirs = [];
 
 after(() => dirs.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
@@ -106,7 +106,7 @@ describe('check-gov-rules', () => {
 
   test('规则登记表字段齐全时通过 GOV-TOOL-006', () => {
     const root = fixture((dir) => {
-      write(dir, 'docs/_规范/RULES-REGISTRY.json', JSON.stringify({
+      write(dir, 'docs/10_规范/registry/RULES-REGISTRY.json', JSON.stringify({
         meta: { name: 'fixture' },
         rules: [{
           id: 'RUNTIME-001', name: '零硬编码', domain: 'RUNTIME',
@@ -124,7 +124,7 @@ describe('check-gov-rules', () => {
   test('规则缺三元字段时以 GOV-TOOL-006 失败', () => {
     const root = fixture((dir) => {
       // 刻意漏掉 benefit：只写约束不写福利视为不完整
-      write(dir, 'docs/_规范/RULES-REGISTRY.json', JSON.stringify({
+      write(dir, 'docs/10_规范/registry/RULES-REGISTRY.json', JSON.stringify({
         meta: { name: 'fixture' },
         rules: [{
           id: 'RUNTIME-002', name: '状态透明', domain: 'RUNTIME',
@@ -142,7 +142,7 @@ describe('check-gov-rules', () => {
 
   test('登记表使用 formerId 字段名时以 GOV-TOOL-006 失败', () => {
     const root = fixture((dir) => {
-      write(dir, 'docs/_规范/RULES-REGISTRY.json', JSON.stringify({
+      write(dir, 'docs/10_规范/registry/RULES-REGISTRY.json', JSON.stringify({
         meta: { name: 'fixture' },
         rules: [{
           id: 'PROCESS-001', name: '分支纪律', domain: 'PROCESS',

@@ -5,15 +5,20 @@
  * Users type whatever feels natural; the router normalizes via this table.
  *
  *   huice sh600519         → backtest sh600519
- *   hq 茅台                → quote 茅台
+ *   hangqing 茅台          → quote 茅台
  *   xz sh000001            → data fetch sh000001
  *   cl                     → strategy list
+ *
+ * 注意：`hq` **不在此表中** —— 它是自注册命令 `hq`（任务/Bug 状态真源，
+ * `handlers/hq.js`，真源 `.ai/hq/`）。历史上 `hq` 曾是 `quote` 的别名，但
+ * 静态别名优先于自注册命令，会把 `khy hq status` 劫持去查行情，故于
+ * 2026-09-17 移除（见 [DESIGN-ARCH-118] HQ 能力吸收）。查行情请用
+ * `hangqing` / `行情` / `price` / `quote`；`khy hq` 现在专指任务面。
  */
 
 // { alias → { command, [subCommand], [defaultArgs], [defaultPositionals] } }
 const ALIAS_MAP = {
-  // ── 行情 ──
-  hq: { command: 'quote' },
+  // ── 行情 ──（`hq` 已让位给自注册的 `hq` 任务命令，见文件头注释）
   hangqing: { command: 'quote' },
   行情: { command: 'quote' },
   price: { command: 'quote' },
@@ -350,6 +355,14 @@ const ALIAS_MAP = {
   路径: { command: 'where' },
   lujing: { command: 'where' },
 
+  // ── 多端入口矩阵 (DESIGN-ARCH-117) ──
+  // 注意：`desktop` / `mobile` 已被「桌面控制开关」/「配对二维码」两个命令占用，
+  // 这里**刻意不**接管它们——同名不同义正是本次要消灭的东西，不再新增一处。
+  多端: { command: 'entry', subCommand: 'list' },
+  duan: { command: 'entry', subCommand: 'list' },
+  有哪些端: { command: 'entry', subCommand: 'list' },
+  端入口: { command: 'entry', subCommand: 'list' },
+
   // ── 诊断 ──
   诊断: { command: 'doctor' },
   zhenduan: { command: 'doctor' },
@@ -528,6 +541,9 @@ const ALIAS_MAP = {
   固定技能: { command: 'skill', subCommand: 'pin' },
   归档技能: { command: 'skill', subCommand: 'archive' },
   恢复技能: { command: 'skill', subCommand: 'restore' },
+  同步技能: { command: 'skill', subCommand: 'sync' },
+  同步内置技能: { command: 'skill', subCommand: 'sync' },
+  恢复内置技能: { command: 'skill', subCommand: 'restore-builtin' },
 
   // ── 定时任务 ──
   定时任务: { command: 'cron', subCommand: 'list' },
@@ -588,6 +604,10 @@ const ALIAS_MAP = {
   wangjimima: { command: 'forgot' },
   找回密码: { command: 'forgot' },
   zhaohuimima: { command: 'forgot' },
+  改账号名: { command: 'user', subCommand: 'rename' },
+  gaidangzhao: { command: 'user', subCommand: 'rename' },
+  改用户名: { command: 'user', subCommand: 'rename' },
+  gaiyonghuming: { command: 'user', subCommand: 'rename' },
 
   // ── 守护进程 ──
   守护: { command: 'daemon', subCommand: 'status' },
@@ -772,6 +792,13 @@ const ALIAS_MAP = {
   清理磁盘: { command: 'cleandisk' },
   清理c盘: { command: 'cleandisk' },
   c盘清理: { command: 'cleandisk' },
+
+  // 逐回合原子回滚 (DESIGN-ARCH-096 §2-A, 对齐 ycode turn_undo)
+  'turn-rollback': { command: 'turn-rollback' },
+  turnrollback: { command: 'turn-rollback' },
+  撤销回合: { command: 'turn-rollback' },
+  回合撤销: { command: 'turn-rollback' },
+  huigutan: { command: 'turn-rollback' },
 };
 
 /**

@@ -1,13 +1,13 @@
 'use strict';
 /**
- * streamingToolExecutor.test.js �?Unit tests for StreamingToolExecutor (node:test).
+ * streamingToolExecutor.test.js — Unit tests for StreamingToolExecutor (node:test).
  *
  * Covers:
- *  - Hash stability: different key order �?same cache hit; different params �?no cross-pollution.
+ *  - Hash stability: different key order �?same cache hit; different params �?no cross-pollution.
  *  - Sibling-abort backfill: bash-like tool error fills placeholders for queued tools.
  *  - Concurrency-safe cache: successful parallel tool result is retrievable by hash.
  */
-const { StreamingToolExecutor } = require('../domain/query/query/streamingToolExecutor');
+const { StreamingToolExecutor } = require('../../../src/services/domain/query/query/streamingToolExecutor.js');
 // ── Hash stability & no cross-pollution ─────────────────────────────────────
 // ── Sibling-abort backfill ──────────────────────────────────────────────────
 // ── Concurrency-safe tool cache ─────────────────────────────────────────────
@@ -22,7 +22,7 @@ describe('Streaming Tool Executor', () => {
       executor.addTool({ name: 'read_file', params: { path: '/a.js', encoding: 'utf8' } });
       await executor.awaitAll();
     
-      // Different key order �?must still hit the same cache entry
+      // Different key order �?must still hit the same cache entry
       const result = executor.getResultByHash('read_file', { encoding: 'utf8', path: '/a.js' });
       expect(result).toBeTruthy();
       expect(result.status).toBe('success');
@@ -45,12 +45,12 @@ describe('Streaming Tool Executor', () => {
       expect(a.output).toBe('output_/a.js');
       expect(b.output).toBe('output_/b.js');
     
-      // Non-existing params �?null
+      // Non-existing params �?null
       const none = executor.getResultByHash('read_file', { path: '/c.js' });
       expect(none).toBe(null);
   });
 
-  test('getResultByHash: tool name normalization (hyphens/underscores) �?same hash', async () => {
+  test('getResultByHash: tool name normalization (hyphens/underscores) �?same hash', async () => {
       const executor = new StreamingToolExecutor({
         executeTools: async () => 'norm-ok',
         isConcurrencySafe: () => true,
@@ -59,7 +59,7 @@ describe('Streaming Tool Executor', () => {
       executor.addTool({ name: 'shell_command', params: { cmd: 'ls' } });
       await executor.awaitAll();
     
-      // Name with hyphen instead of underscore �?should still hit
+      // Name with hyphen instead of underscore �?should still hit
       const result = executor.getResultByHash('shell-command', { cmd: 'ls' });
       expect(result).toBeTruthy();
       expect(result.output).toBe('norm-ok');

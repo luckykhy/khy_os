@@ -32,5 +32,5 @@
       "script": "repair-portable.js"
     }
   ],
-  "_note": "2026-08-19 由 scripts/portable/ + scripts/khytogo/ 迁入（[DESIGN-ARCH-069] §1.6 裁定：scripts/ 只留 ci/lib/tests/docs/release/maintenance，其余拆为拓展）。npm 目标经 scripts/lib/ext-run.js 派发——删掉本目录后 `npm run portable:*` 退化为一条「拓展未安装」的消息而不是 Cannot find module。"
+  "_note": "2026-08-19 由 scripts/portable/ + scripts/khytogo/ 迁入（[DESIGN-TOOL-002] §1.6 裁定：scripts/ 只留 ci/lib/tests/docs/release/maintenance，其余拆为拓展）。npm 目标经 scripts/lib/ext-run.js 派发——删掉本目录后 `npm run portable:*` 退化为一条「拓展未安装」的消息而不是 Cannot find module。"
 }

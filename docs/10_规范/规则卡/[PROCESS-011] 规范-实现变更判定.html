@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [PROCESS-011] 规范-实现变更判定.md -->
+<title>[PROCESS-011] 规范-实现变更判定 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[PROCESS-011] 规范-实现变更判定</div>
+      <header class="hero reveal"><h1>[PROCESS-011] 规范-实现变更判定</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#process-011-规范-实现变更判定">[PROCESS-011] 规范-实现变更判定</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 规范-实现变更判定<br>id: PROCESS-011<br>domain: PROCESS<br>nature: 约束为主，兼权力与福利<br>scope: &quot;一切「规范文本所描述的应有行为」与「规范实现实际产生的实有行为」之间存在可观测差异的场景；规范形态含规则卡、docs/10_规范/** 规范文档、AGENTS.md/CLAUDE.md 工程红线、协议契约与常量表；实现载体含守卫/检查器、真源登记表、运行时闸门、生成器、测试断言五种&quot;<br>priority: P1<br>trigger: &quot;任一不一致被观测到时：日常开发发现、守卫输出、季度健康检查（[MGMT-STD-008] §4.5）、上游/官方规范变更、生产事故复盘。四类触发场景 T1 规范空转 / T2 实现越界 / T3 双轨分叉 / T4 外部倒逼，各自的机械判定标准见 ssot §2&quot;<br>constraint: &quot;禁止在跑完 P3 四问（Q1 约束该存在吗 / Q2 可机械判定吗 / Q3 哪边已被消费 / Q4 多严重）之前改动任何一边；裁决归宿必须留下可复核依据（改规范须有 Q3 消费面证据、接受偏差须有五字段、改实现须有 RED 证据）；偏差必须有到期日且到期自动升级（到期未收敛升一级，连续两次未收敛升为 S-高不得再展期）；禁止用改文档表述掩盖实现缺陷（根因是实现 bug 时归宿只能是改实现）；AI 代理不得自行裁决归宿、也不得自行选择接受偏差，只做 P1–P4 取证与建议；禁止以「规范未写明」为由放过已在运行的约束；同一份 ssot 上的不一致必须一次裁完；阶段登记与执行器常量漂移（T3-e）优先级最高，属 S-高立即处置。&quot;<br>grants: &quot;授权维护者在 Q4 判定为 S-中/S-低且改造成本大于收益时，把不一致登记为「接受偏差」而非强制修正，并可自定到期日与收敛条件；授权维护者依 Q3 消费面判定把真源裁定在实现侧，从而要求规范向实现收敛（改写规范以匹配既有实现），而不必修改已被多处消费的实现；授权机制作者对不可机械判定的约束显式标注 gate=manual + 人工评审清单，无须为此伪造执行器。&quot;<br>benefit: &quot;仓库此前有四套处理「变动」的机制（元规则 §4.2 新增 / §4.3 修订 / §4.5 复核、[DESIGN-PROCESS-002] 四阶段、[DESIGN-SOURCING-001] B-L2、[DESIGN-QUAL-001] QUAL-2），但没有一套处理「不一致」——即不一致被观测到之后该改哪一边。结果是每次遇到都靠现场直觉：版本三轨道裁到实现侧（X-002）却未推广为通用规则；PROCESS-006 与 PROCESS-008 指向同一份 ssot 却一个 manual 一个有执行器而无裁定路径；RUNTIME-001 的范围漂移被记为闸缺陷却无「改守卫还是改 paths」的判据。本条把 [MGMT-STD-008] §2.4 的单点先例推广为通用判据，并明确「不能机械判定的约束应显式标注人工兜底而不是伪造守卫」，避免在 S1 观察期攒不出有效样本、最终变成永久债务。&quot;<br>exception: &quot;仅适用于「已有条款」与「已有实现」之间的不一致。不适用：规范新增（无既有条款，走 [MGMT-STD-008] §4.2）、规范废弃（走 §4.4）、新机制从写出到敢拦人（走 [DESIGN-PROCESS-002] 四阶段）、新能力从提案到实现（走 [DESIGN-SOURCING-001]）、文档与 .html 孪生件不同步或生成物与生成器不一致（属产物过期，重跑生成器）、存量债务的清零排期（走 [DESIGN-QUAL-001] 债务台账）、代码风格与格式类差异（走对应 DESIGN-* 规范）。&quot;<br>version: &quot;1.0.0 (2026-09-22)&quot;<br>status: active<br>ssot: &quot;docs/10_规范/其它规范/[DESIGN-PROCESS-003] 规范-实现变更判定规范.md&quot;<br>formerly: 无<br>owner: governance-team</p>
+<hr>
+<h1 id="process-011-规范-实现变更判定">[PROCESS-011] 规范-实现变更判定<a class="anchor" href="#process-011-规范-实现变更判定" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: PROCESS-011 -->
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/10_规范/其它规范/[DESIGN-PROCESS-003] 规范-实现变更判定规范.md。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>禁止在跑完 P3 四问（Q1 约束该存在吗 / Q2 可机械判定吗 / Q3 哪边已被消费 / Q4 多严重）之前改动任何一边；裁决归宿必须留下可复核依据（改规范须有 Q3 消费面证据、接受偏差须有五字段、改实现须有 RED 证据）；偏差必须有到期日且到期自动升级（到期未收敛升一级，连续两次未收敛升为 S-高不得再展期）；禁止用改文档表述掩盖实现缺陷（根因是实现 bug 时归宿只能是改实现）；AI 代理不得自行裁决归宿、也不得自行选择接受偏差，只做 P1–P4 取证与建议；禁止以「规范未写明」为由放过已在运行的约束；同一份 ssot 上的不一致必须一次裁完；阶段登记与执行器常量漂移（T3-e）优先级最高，属 S-高立即处置。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>授权维护者在 Q4 判定为 S-中/S-低且改造成本大于收益时，把不一致登记为「接受偏差」而非强制修正，并可自定到期日与收敛条件；授权维护者依 Q3 消费面判定把真源裁定在实现侧，从而要求规范向实现收敛（改写规范以匹配既有实现），而不必修改已被多处消费的实现；授权机制作者对不可机械判定的约束显式标注 gate=manual + 人工评审清单，无须为此伪造执行器。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>仓库此前有四套处理「变动」的机制（元规则 §4.2 新增 / §4.3 修订 / §4.5 复核、[DESIGN-PROCESS-002] 四阶段、[DESIGN-SOURCING-001] B-L2、[DESIGN-QUAL-001] QUAL-2），但没有一套处理「不一致」——即不一致被观测到之后该改哪一边。结果是每次遇到都靠现场直觉：版本三轨道裁到实现侧（X-002）却未推广为通用规则；PROCESS-006 与 PROCESS-008 指向同一份 ssot 却一个 manual 一个有执行器而无裁定路径；RUNTIME-001 的范围漂移被记为闸缺陷却无「改守卫还是改 paths」的判据。本条把 [MGMT-STD-008] §2.4 的单点先例推广为通用判据，并明确「不能机械判定的约束应显式标注人工兜底而不是伪造守卫」，避免在 S1 观察期攒不出有效样本、最终变成永久债务。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>见 <code>ssot</code> 指向的真源原文；本卡不复制反例，以免与真源漂移。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>人工评审（该规则暂无机械守卫）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>仅适用于「已有条款」与「已有实现」之间的不一致。不适用：规范新增（无既有条款，走 [MGMT-STD-008] §4.2）、规范废弃（走 §4.4）、新机制从写出到敢拦人（走 [DESIGN-PROCESS-002] 四阶段）、新能力从提案到实现（走 [DESIGN-SOURCING-001]）、文档与 .html 孪生件不同步或生成物与生成器不一致（属产物过期，重跑生成器）、存量债务的清零排期（走 [DESIGN-QUAL-001] 债务台账）、代码风格与格式类差异（走对应 DESIGN-* 规范）。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-22) 初版 / 迁移自 无</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/规则卡/[PROCESS-010] 软件著作权就绪.html"><div class="dir">← 上一篇</div><div class="ttl">[PROCESS-010] 软件著作权就绪</div></a><a class="next" href="../../../docs/10_规范/规则卡/[PROCESS-101] 贡献者规则提案权.html"><div class="dir">下一篇 →</div><div class="ttl">[PROCESS-101] 贡献者规则提案权</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/规则卡/[PROCESS-011] 规范-实现变更判定.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -38,7 +38,7 @@ describe('toolUseLoop — weak local model on the unified text protocol', () => 
       { name: 'Read', description: 'read', parameters: { properties: { file_path: {} }, required: ['file_path'] } },
       { name: 'Write', description: 'write', parameters: { properties: { file_path: {}, content: {} }, required: ['file_path', 'content'] } },
     ]));
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool,
       getToolDefinitions,
       clearPreflightContext: jest.fn(),
@@ -94,7 +94,7 @@ describe('toolUseLoop — weak local model on the unified text protocol', () => 
     process.env.KHY_TASK_CAPABILITY_GATE = 'false';
 
     const executeTool = jest.fn(async () => ({ success: true, output: 'x' }));
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool,
       getToolDefinitions: jest.fn(() => []),
       clearPreflightContext: jest.fn(),

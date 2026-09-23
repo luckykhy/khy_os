@@ -6,7 +6,7 @@
  * 网关自动回退到另一个模型/provider)。
  *
  * 背景(/goal 2026-08-24「khy 自述供应商与 api 矛盾」):请求 `api:sensenova:deepseek-v4-flash`
- * 但该模型在商汤感言 channel 返回 404 → 网关静默回退到 relay 的 `step-3.7-flash`(步科星�辰),
+ * 但该模型在商汤感言 channel 返回 404 → 网关静默回退到 relay 的 `step-3.7-flash`(步科星辰),
  * 于是那个模型的自述把「请求身份(sensenova/deepseek)」与「自身品牌(阶跃)」混在一起,出现
  * 「SenseNova(阶跃星辰)」的自相矛盾。此叶子在网关成功路径上把「实际响应的模型」明确说出来,
  * 避免用户误以为在和所选模型对话。

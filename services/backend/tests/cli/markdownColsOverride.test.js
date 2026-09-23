@@ -17,6 +17,7 @@ process.env.FORCE_COLOR = '3';
  * the same text renders at different widths (width joined the cache key).
  */
 const { renderMarkdownLite, renderMarkdownStreaming } = require('../../src/cli/markdownRenderer');
+const assert = require('node:assert');
 const { displayWidth } = require('../../src/cli/formatters');
 // eslint-disable-next-line no-control-regex
 const ANSI = /\x1b\[[0-9;]*m/g;
@@ -29,10 +30,10 @@ const CODE_BG = '[48;';
 const boxRows = (rendered) =>
   rendered.split('\n').filter((l) => l.includes(CODE_BG)).map(strip);
 let _origCols;
-before(() => {
+beforeAll(() => {
   _origCols = Object.getOwnPropertyDescriptor(process.stdout, 'columns');
 });
-after(() => {
+afterAll(() => {
   if (_origCols) Object.defineProperty(process.stdout, 'columns', _origCols);
 });
 const setCols = (n) => {
@@ -86,7 +87,7 @@ describe('Markdown Cols Override', () => {
         for (const bad of [0, -5, NaN, Infinity, '40', null, undefined]) {
           // Same text: identical output also proves cache keying maps all invalid
           // overrides onto the same (terminal-width) key — no wrong-width entries.
-          expect(renderMarkdownLite(md)).toBe(bad);
+          expect(renderMarkdownLite(md, bad)).toBe(legacy);
         }
   });
 
@@ -98,7 +99,7 @@ describe('Markdown Cols Override', () => {
         assert.notEqual(wide, narrow, 'different widths must not collide in the cache');
         // Re-render at the first width again: must reproduce the first output
         // (a text-only key would now return the narrow render).
-        expect(renderMarkdownLite(md)).toBe(100);
+        expect(renderMarkdownLite(md, 100)).toBe(wide);
   });
 
   test('streaming passes the override through (unclosed fence, narrow box)', () => {

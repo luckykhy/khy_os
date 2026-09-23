@@ -72,6 +72,119 @@ const ARGS_JSON_CONT_RE = /^\s*["{[]|":|[,{[]\s*$/;
 const ORPHAN_FRAG_LINE_RE =
   /^\s*<\/?(?:arguments|args|parameter|tool_call|Read)(?:\s*=\s*[^>\n]*)?\s*\/?>?\s*$/i;
 
+// Balanced-paren scan over a line for a marker's `(` body: depth counting
+// must respect string literals + escapes (JSON string values may legally
+// contain `(` / `)`, e.g. `{"cmd":"echo )("`), mirroring _scanBalancedJson.
+// Returns the index AFTER the matching close paren, or -1 when the body never
+// closes on this line (marker genuinely truncated / body continues).
+function _bracketBodyEnd(line) {
+  const open = line.indexOf('(');
+  if (open < 0) {
+    return -1;
+  }
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = open; i < line.length; i++) {
+    const ch = line[i];
+    if (esc) {
+      esc = false;
+      continue;
+    }
+    if (inStr) {
+      if (ch === '\\') {
+        esc = true;
+      } else if (ch === '"') {
+        inStr = false;
+      }
+      continue;
+    }
+    if (ch === '"') {
+      inStr = true;
+    } else if (ch === '(') {
+      depth += 1;
+    } else if (ch === ')') {
+      depth -= 1;
+      if (depth === 0) {
+        return i + 1;
+      }
+    }
+  }
+  return -1;
+}
+
+// The arg body is a JSON object, so a COMPLETE bracket marker ALWAYS closes
+// with `})]` (the object's last `}`, then the marker's `)`, then `]`). This is
+// the cheap whole-line completion test — no paren scan needed; balanced-paren
+// scanning is reserved for the in-bracket-body continuation check below. A
+// space before `)` is tolerated (pretty-printed JSON `} )]`).
+function _bracketMarkerClosed(line) {
+  const t = line.replace(/\s+$/, '');
+  return /\}\s*\)\s*\]$/.test(t);
+}
+
+// While swallowed in a multi-line marker body: the closing line carries the
+// final `})]` of the marker (the JSON object's `}`, then the marker's `)`,
+// then `]`). A blank line or a JSON-shaped line (key / value / brace / array
+// continuation) stays inside the body. Anything else is clearly prose → end
+// the swallow and KEEP it (false-positive guard: never eat answer text).
+// While swallowed in a multi-line marker body: the closing line carries the
+// final `})]` of the marker (the JSON object's `}`, then the marker's `)`,
+// then `]` — an optional space between `}` and `)` is tolerated). Blank lines
+// and JSON value-shape lines (string / number / literal / brace / array /
+// comma) stay inside the body; anything else is prose → end the swallow and
+// KEEP it (false-positive guard: never eat user-visible answer text).
+function _isMarkerBodyLine(line) {
+  if (_bracketMarkerClosed(line)) {
+    return true;
+  }
+  const t = line.trim();
+  if (t === '') {
+    return true;
+  }
+  return /^(?:"[^"]*"|\d|true|false|null|[{}\[\]]|,)/.test(t);
+}
+
+// Bracketed wire-marker tool-call/result: the gateway's strip-tools text
+// fallback (`_toolSchemaConverter` hasTools=false) inlines historical
+// tool_use blocks as `[Tool Call: name(args)]` and tool_result blocks as
+// `[Tool Result: id]` + body. Text-protocol models, having seen those markers
+// in replayed history, echo them verbatim in their own answers (observed:
+// `[Tool Call: shell_command({})]` leaked into the transcript unexecuted and
+// unrendered). Whole-line call markers are pure noise — drop the line.
+// The args body may span multi-line JSON, so completion is detected by a
+// balanced-paren scan (BODY_OPEN marker); an unclosed body on the line holds
+// the state until the line settles. Both shapes are fence-guarded below.
+const BRACKET_CALL_HEAD_RE = /^\s*\[Tool\s+Call[:：]\s*$/i;
+// Whole-line marker: `[Tool Call: name(args)]` where `args` is a JSON object
+// and never contains `]`. Built via RegExp source string so the character
+// class cannot be mangled by a `]`-closes-the-class trap: the body class
+// excludes ONLY `]` (lines are newline-free by construction — the text is
+// split on `\n` before this runs).
+const BRACKET_CALL_MARKER_RE = new RegExp(
+  '^\\s*\\[Tool\\s+Call[:\uFF1A][^\\u005D]*\\u005D\\s*$',
+  'i'
+);
+// A head-only open: the marker head is on this line but the JSON body continues
+// on later lines (`(` present, no closing `]` yet) → swallow-trigger for the
+// multi-line inBracketCall state.
+const BRACKET_CALL_BODY_OPEN_RE = new RegExp(
+  '^\\s*\\[Tool\\s+Call[:\uFF1A][^\\u005D]*\u005D?\\s*$',
+  'i'
+);
+
+// The arg body is a JSON object, so the marker ALWAYS closes with `})]` —
+// `]` can never appear inside the JSON body. Completion therefore only needs
+// a single-line lookahead: `})]` + optional trailing whitespace.
+const BRACKET_TAIL_CLOSE_RE = /^\s*\}\)\]\s*$/;
+
+// Inline (mid-prose) bracketed tool-call marker: `[Tool Call: name(args)]`
+// glued to narration on the same line. Remove ONLY the marker, keep the
+// surrounding prose. Balances the parens so a JSON arg body containing `)`
+// does not truncate the match early; the name character class stays narrow
+// (identifier-ish) so prose like `[Tool Call: see §3(a)]` is never eaten.
+const INLINE_BRACKET_CALL_RE = /\[Tool\s+Call[:：]\s*(?:[A-Za-z_][\w.-]*)?\s*\((?:[^()\\]|\\.)*\)\s*\]/gi;
+
 // A standalone bare tool-call JSON object: the ENTIRE trimmed line is
 // `{"name":"<tool>", "params"|"arguments"|"input": …}`. Whole-line anchored +
 // the two-key shape keeps this from eating prose that merely contains braces.
@@ -233,6 +346,10 @@ function stripInlineToolCallNoise(text, env) {
   let inFunc = false;
   let inArgs = false;
   let inToolCallXml = false;
+  // Bracket marker body state: false | BODY_OPEN (marker head + body open,
+  // awaiting balanced-paren close). Lives in the same fence-respecting scope
+  // as inFunc/inArgs — a fence line ends any pending marker body.
+  let inBracketCall = false;
 
   for (const line of lines) {
     if (FENCE_RE.test(line)) {
@@ -240,12 +357,26 @@ function stripInlineToolCallNoise(text, env) {
       inFunc = false;
       inArgs = false;
       inToolCallXml = false;
+      inBracketCall = false;
       inFence = !inFence;
       out.push(line);
       continue;
     }
     if (inFence) {
       out.push(line);
+      continue;
+    }
+    if (inBracketCall) {
+      // Inside a swallowed multi-line marker body. The body closes with `})]`;
+      // JSON-shaped / blank lines keep it open; clearly prose ends the
+      // swallow and KEEPS the line (never eat user-visible answer text).
+      if (_isMarkerBodyLine(line)) {
+        inBracketCall = false;
+        // The closing `})]` line is the tail of the already-dropped head → drop.
+      } else {
+        inBracketCall = false;
+        out.push(line);
+      }
       continue;
     }
     if (inToolCallXml) {
@@ -312,7 +443,7 @@ function stripInlineToolCallNoise(text, env) {
     if (BARE_JSON_RE.test(trimmed) || _isGeneratedImageReadJson(trimmed)) {
       continue;
     }
-    // Mixed-line leak: tool-call JSON glued to narration on the same line
+// Mixed-line leak: tool-call JSON glued to narration on the same line
     // (either order) → remove ONLY the JSON, keep the prose.
     const dejsoned = _removeInlineToolJson(line);
     if (dejsoned !== line) {
@@ -320,6 +451,27 @@ function stripInlineToolCallNoise(text, env) {
       if (kept === '') {
         continue;
       }
+      out.push(kept);
+      continue;
+    }
+    // Bracketed wire-marker call `[Tool Call: name(args)]` — whole-line or
+    // glued-to-prose. The structured tool row already rendered (or the call
+    // was executed on a prior turn), so the echoed marker is noise: whole-line
+    // → drop; mixed-line → strip just the marker. Must run AFTER the JSON
+    // stripper, because a marker head (`[Tool Call: name({`) is ALSO a bare
+    // JSON head — stripping the marker first would leave the JSON body orphaned
+    // and the stripper would re-emit it.
+    if (BRACKET_CALL_MARKER_RE.test(line)) {
+      continue;
+    }
+    if (BRACKET_CALL_BODY_OPEN_RE.test(line)) {
+      inBracketCall = true;
+      continue;
+    }
+    // Mixed-line bracket marker glued to narration → strip just the marker.
+    if (INLINE_BRACKET_CALL_RE.test(line)) {
+      INLINE_BRACKET_CALL_RE.lastIndex = 0;
+      const kept = line.replace(INLINE_BRACKET_CALL_RE, '').trim();
       out.push(kept);
       continue;
     }
@@ -394,6 +546,29 @@ function _isSuspectJsonHead(line) {
     }
   }
   return false;
+}
+
+// Is the (trimmed) last streamed line a partial bracketed wire-marker call head
+// (`[Tool Call: name(…`) whose closing `)]` has not arrived yet? The marker is
+// a deterministic fixed shape, so the prefix test is cheap and unambiguous; a
+// chunk boundary inside the JSON arg body is held until the line settles, and
+// the settle pass (BRACKET_CALL_MARKER_RE) strips it. Prose lines are never held.
+const BRACKET_CALL_PARTIAL_RE = /^\s*\[Tool\s+Call[:：][^\n]*\([^)\n]*$/i;
+function _isSuspectBracketCallHead(line) {
+  const t = line.trimEnd();
+  if (BRACKET_CALL_HEAD_RE.test(t)) {
+    return true;
+  }
+  return BRACKET_CALL_PARTIAL_RE.test(t);
+}
+
+// Has a suspect bracketed wire-marker call line closed its marker yet? Complete
+// once the trailing `)` and `]` of the marker are both present (the JSON arg
+// body may still contain nested parens — the closing `)]` pair is the marker
+// terminator).
+function _bracketCallComplete(line) {
+  const t = line.replace(/\s+$/, '');
+  return /\)\s*\]\s*$/.test(t);
 }
 
 // Has a suspect bare tool-call JSON line closed its outer object yet? For the
@@ -476,6 +651,17 @@ function splitPendingToolTag(text) {
     lastLine.length <= PENDING_TAG_MAX &&
     _isSuspectJsonHead(jsonPart) &&
     !_bareJsonComplete(jsonPart)
+  ) {
+    return { emit: text.slice(0, lineStart), pending: lastLine };
+  }
+  // Bracketed wire-marker call head cut at a chunk boundary: hold the partial
+  // marker line until its `)]` terminator arrives (or it diverges into prose,
+  // releasing the hold on the next chunk). Same suspect-tail discipline as the
+  // bare-JSON hold above; PENDING_TAG_MAX release valve shared.
+  if (
+    lastLine.length <= PENDING_TAG_MAX &&
+    _isSuspectBracketCallHead(lastLine) &&
+    !_bracketCallComplete(lastLine)
   ) {
     return { emit: text.slice(0, lineStart), pending: lastLine };
   }

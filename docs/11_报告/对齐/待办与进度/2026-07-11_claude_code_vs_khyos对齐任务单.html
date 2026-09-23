@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-07-11_claude_code_vs_khyos对齐任务单.md -->
+<title>Claude Code vs khy-os 终端对齐任务单 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>对齐<span class="sep">›</span>待办与进度<span class="sep">›</span>Claude Code vs khy-os 终端对齐任务单</div>
+      <header class="hero reveal"><h1>Claude Code vs khy-os 终端对齐任务单</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#claude-code-vs-khy-os-终端对齐任务单">Claude Code vs khy-os 终端对齐任务单</a></li><li class="lvl-2"><a href="#待实测-未对齐项-按顺序-每次取最早未完成项">待实测 / 未对齐项（按顺序，每次取最早未完成项）</a></li><li class="lvl-2"><a href="#已对齐项">已对齐项</a></li><li class="lvl-2"><a href="#需修改项">需修改项</a></li><li class="lvl-2"><a href="#实测记录">实测记录</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="claude-code-vs-khy-os-终端对齐任务单">Claude Code vs khy-os 终端对齐任务单<a class="anchor" href="#claude-code-vs-khy-os-终端对齐任务单" aria-label="锚点">#</a></h1>
+<blockquote><p>建立日期：2026-09-13（首次运行）。每日 13:00 自动运行一次，每次只实测一项，<br>实测后把该项状态在「未对齐 / 待实测」与「已对齐 / 需修改」之间移动，并在<br>「实测记录」中追加一行（日期 + 耗时数据）。</p>
+<p><strong>基准调整（用户 2026-09-14 确认）</strong>：Claude Code 在本机长期无有效可用模型<br>（401 / unrecognized_model），不再作为逐日实操对照基准，仅作静态功能存在性<br>记录。所有实测项降级为「khy-os 单侧自检」：速度/稳定性对照改为 khy-os 内部<br>既有基准（khy doctor、纯 shell 命令直执行耗时），同题 2 次取平均看波动；<br>功能等价性只对照「khy-os 是否具备该能力」。后续每日 13:00 流水线不发起任何<br>claude 实操调用。</p></blockquote>
+<h2 id="待实测-未对齐项-按顺序-每次取最早未完成项">待实测 / 未对齐项（按顺序，每次取最早未完成项）<a class="anchor" href="#待实测-未对齐项-按顺序-每次取最早未完成项" aria-label="锚点">#</a></h2>
+<ul><li>[x] 项1：<code>khy doctor</code> 健康自检 —— <strong>已对齐（khy-os 独有能力）</strong>（见下方实测记录）</li><li>[ ] 项2：单轮问答速度 —— 同一提示词交给 khy REPL AI 模式，khy 侧同题 2 次取平均，对照基准为 khy 内部既有速度基线（非与 claude 对比）</li><li>[ ] 项3：文件读取能力 —— 让 khy 读取 AGENTS.md 并回答「项目概览」要点，khy 侧 2 次取平均，看波动</li><li>[ ] 项4：CLI 命令执行 —— <code>dir /b .</code> 通过 khy 工具执行，对照基准为纯 shell 直执行耗时（非与 claude 对比）</li><li>[ ] 项5：会话/上下文保持 —— 同一问题追问 3 轮，只看 khy 侧是否保持上下文（claude 侧不再对照，其多轮能力仅作静态记录）</li></ul>
+<h2 id="已对齐项">已对齐项<a class="anchor" href="#已对齐项" aria-label="锚点">#</a></h2>
+<ul><li>项1：<code>khy doctor</code> 健康自检（khy-os 独有能力，Claude Code 无对等命令；三次运行 692/825/906 ms，稳定且 exit 0）—— 2026-09-13</li></ul>
+<h2 id="需修改项">需修改项<a class="anchor" href="#需修改项" aria-label="锚点">#</a></h2>
+<ul><li>项2前置阻塞：本机所有 AI 渠道鉴权失效（khy relay/agnes 渠道 401，Claude Code 401 + unrecognized_model step-3.7-flash），需修复 key 后重测</li><li>项4 阻塞（2026-09-14 新增）：khy 默认渠道已切至 codex 且直接 unavailable（未回退到 relay/agnes），Claude 侧 401 未变；需修复鉴权 + 排查渠道回退顺序（<code>aiGateway.js</code>）后才能有效对比 CLI 执行耗时</li><li>鉴权阻塞仍在（2026-09-15 13:00 更新，同 09-14 项4 阻塞，未新增内容）：khy -p 仍报 <code>codex [unavailable]</code>，46s 后返回「输入继续」断点提示；今日 13:00 鉴权健康检查未通过，跳过实测，未累加重复记录</li></ul>
+<h2 id="实测记录">实测记录<a class="anchor" href="#实测记录" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>日期</th><th>实测项</th><th>结果摘要</th><th>详情</th></tr></thead><tbody><tr><td>2026-09-13</td><td>项1 khy doctor</td><td>已对齐（独有能力），3 次 692/825/906ms</td><td>见 对齐/报告/2026-09-13_claude_code_vs_khyos对齐报告.md</td></tr><tr><td>2026-09-13</td><td>项2 单轮问答（尝试）</td><td>未对齐（鉴权 401，双方均无有效输出）</td><td>同上报告；claude -p 181,262/183,259ms；khy -p relay 187,520ms / agnes 391,556ms</td></tr><tr><td>2026-09-14</td><td>项4 CLI 命令执行（尝试）</td><td>未对齐（鉴权/codex不可用，双方均无有效输出）</td><td>见 对齐/报告/2026-09-14_claude_code_vs_khyos对齐报告.md；khy 9-12s（codex unavailable 快速失败），claude 179-183s（401 超时重试）</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../docs/11_报告/对齐/报告/2026-09-15_claude_code_vs_khyos对齐报告.html"><div class="dir">← 上一篇</div><div class="ttl">2026-09-15 khy-os 终端对齐自检（khy 单侧）</div></a><a class="next" href="../../../../docs/11_报告/历史/2026-08-部署报告.html"><div class="dir">下一篇 →</div><div class="ttl">Khy-OS 部署完成报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="docs/11_报告/对齐/待办与进度/2026-07-11_claude_code_vs_khyos对齐任务单.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

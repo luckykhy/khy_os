@@ -86,7 +86,7 @@ function loadUsageData() {
   } catch {
     /* ignore corrupt file */
   }
-  return { daily: {}, monthlyTotals: {} };
+  return { daily: {}, monthlyTotals: {}, models: {} };
 }
 
 /**
@@ -185,6 +185,27 @@ function recordUsage(provider, model, inputTokens = 0, outputTokens = 0, costUSD
       data.monthlyTotals[month].totalTokens += total;
       data.monthlyTotals[month].requests += 1;
       data.monthlyTotals[month].costUSD = _roundCost(data.monthlyTotals[month].costUSD + costUSD);
+
+      // Per-model persistent bucket (all-time totals per model, matching the
+      // desktop Usage page "模型用量" rows; recordUsage receives the real
+      // provider/model from the gateway, so nothing here is fabricated).
+      if (!data.models) {
+        data.models = {};
+      }
+      if (!data.models[model]) {
+        data.models[model] = {
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          requests: 0,
+          costUSD: 0,
+        };
+      }
+      data.models[model].inputTokens += inputTokens;
+      data.models[model].outputTokens += outputTokens;
+      data.models[model].totalTokens += total;
+      data.models[model].requests += 1;
+      data.models[model].costUSD = _roundCost(data.models[model].costUSD + costUSD);
 
       // Prune old months (keep 6 months)
       const months = Object.keys(data.monthlyTotals).sort();
@@ -323,6 +344,38 @@ function getUsageHistory(days = 30) {
   }
 
   return result;
+}
+
+/**
+ * Get per-model usage rows (persistent all-time totals from data.models),
+ * sorted by totalTokens desc with a computed percentage of the grand total.
+ * Backs the desktop Usage settings page "模型用量" rows (ZC-ALIGN-001 P13).
+ * @returns {Array<{ model: string, inputTokens: number, outputTokens: number,
+ *   totalTokens: number, requests: number, costUSD: number, percentage: number }>}
+ */
+function getModelUsage() {
+  const data = loadUsageData();
+  const models = data.models || {};
+  const rows = Object.keys(models).map((model) => {
+    const bucket = models[model] || {};
+    return {
+      model,
+      inputTokens: bucket.inputTokens || 0,
+      outputTokens: bucket.outputTokens || 0,
+      totalTokens: bucket.totalTokens || 0,
+      requests: bucket.requests || 0,
+      costUSD: bucket.costUSD || 0,
+      percentage: 0,
+    };
+  });
+  const grandTotal = rows.reduce((sum, row) => sum + row.totalTokens, 0);
+  for (const row of rows) {
+    row.percentage = grandTotal > 0
+      ? parseFloat(((row.totalTokens / grandTotal) * 100).toFixed(1))
+      : 0;
+  }
+  rows.sort((a, b) => b.totalTokens - a.totalTokens);
+  return rows;
 }
 
 /**
@@ -646,7 +699,7 @@ function resetUsage() {
   // recordUsage writes instead of racing them.
   _writeChain = _writeChain.then(() => {
     try {
-      saveUsageData({ daily: {}, monthlyTotals: {} });
+      saveUsageData({ daily: {}, monthlyTotals: {}, models: {} });
     } catch {
       /* ignore write failure; never reject the chain */
     }
@@ -693,6 +746,7 @@ module.exports = {
   getMonthUsage,
   getRemainingQuota,
   getUsageHistory,
+  getModelUsage,
   formatInlineSummary,
   formatUsageReport,
   formatCostReport,

@@ -18,7 +18,7 @@
  * rewritten route or null when no card applies.
  */
 
-const { APPS, PROTOCOLS } = require('../../collab/proactiveCollaboration/constants');
+const { APPS, PROTOCOLS } = require('./constants');
 
 /**
  * Map an inbound source protocol to the external app that produced it.

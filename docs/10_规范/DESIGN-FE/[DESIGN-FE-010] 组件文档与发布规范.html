@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-FE-010] 组件文档与发布规范.md -->
+<title>[DESIGN-FE-010] 组件文档与发布规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-FE<span class="sep">›</span>[DESIGN-FE-010] 组件文档与发布规范</div>
+      <header class="hero reveal"><h1>[DESIGN-FE-010] 组件文档与发布规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-fe-010-组件文档与发布规范">[DESIGN-FE-010] 组件文档与发布规范</a></li><li class="lvl-2"><a href="#5-组件文档规范">5. 组件文档规范</a></li><li class="lvl-3"><a href="#5-1-文档结构">5.1 文档结构</a></li><li class="lvl-3"><a href="#5-2-示例代码">5.2 示例代码</a></li><li class="lvl-2"><a href="#6-组件发布规范">6. 组件发布规范</a></li><li class="lvl-3"><a href="#6-1-版本管理">6.1 版本管理</a></li><li class="lvl-3"><a href="#6-2-发布流程">6.2 发布流程</a></li><li class="lvl-3"><a href="#6-3-changelog-规范">6.3 CHANGELOG 规范</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-fe-010-组件文档与发布规范">[DESIGN-FE-010] 组件文档与发布规范<a class="anchor" href="#design-fe-010-组件文档与发布规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：组件文档结构与示例、版本管理、发布流程、CHANGELOG 规范。<br><strong>隶属</strong>：本文是 [<code>[DESIGN-FE-002]</code> 前端组件库规范]([DESIGN-FE-002] 前端组件库规范.md) 的<strong>子篇</strong>；主篇是唯一入口与 scope 裁决真源，本文只承载细则。<br><strong>状态</strong>：随主篇——主篇 §0 声明为「目标态、非现状」，本文同样在组件库真正落地后才生效；在此之前一切以 [<code>[DESIGN-FE-001]</code> 前端页面规范]([DESIGN-FE-001] 前端页面规范.md) 为准。</p></blockquote>
+<hr>
+<h2 id="5-组件文档规范">5. 组件文档规范<a class="anchor" href="#5-组件文档规范" aria-label="锚点">#</a></h2>
+<h3 id="5-1-文档结构">5.1 文档结构<a class="anchor" href="#5-1-文档结构" aria-label="锚点">#</a></h3>
+<p><strong>组件文档模板</strong>：</p>
+<pre><code class="language-markdown"><span class="hljs-section"># KhyButton 按钮</span>
+
+<span class="hljs-section">## 基本用法</span>
+
+<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span>&gt;</span></span>默认按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">variant</span>=<span class="hljs-string">&quot;primary&quot;</span>&gt;</span></span>主要按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">variant</span>=<span class="hljs-string">&quot;success&quot;</span>&gt;</span></span>成功按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span></span>
+
+<span class="hljs-section">## 属性</span>
+
+| 属性 | 说明 | 类型 | 默认值 | 可选值 |
+|------|------|------|--------|--------|
+| variant | 按钮类型 | String | &#x27;default&#x27; | &#x27;default&#x27;, &#x27;primary&#x27;, &#x27;success&#x27;, &#x27;warning&#x27;, &#x27;danger&#x27;, &#x27;ghost&#x27; |
+| size | 按钮大小 | String | &#x27;md&#x27; | &#x27;sm&#x27;, &#x27;md&#x27;, &#x27;lg&#x27; |
+| disabled | 是否禁用 | Boolean | false | - |
+| loading | 是否加载中 | Boolean | false | - |
+| block | 是否块级 | Boolean | false | - |
+
+<span class="hljs-section">## 事件</span>
+
+| 事件名 | 说明 | 回调参数 |
+|--------|------|----------|
+| click | 点击事件 | (event: MouseEvent) |
+
+<span class="hljs-section">## 插槽</span>
+
+| 插槽名 | 说明 |
+|--------|------|
+| default | 按钮内容 |
+| icon | 按钮图标 |
+
+<span class="hljs-section">## 示例</span>
+
+<span class="hljs-section">### 不同类型</span>
+
+<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span>&gt;</span></span>默认按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">variant</span>=<span class="hljs-string">&quot;primary&quot;</span>&gt;</span></span>主要按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">variant</span>=<span class="hljs-string">&quot;success&quot;</span>&gt;</span></span>成功按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">variant</span>=<span class="hljs-string">&quot;warning&quot;</span>&gt;</span></span>警告按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">variant</span>=<span class="hljs-string">&quot;danger&quot;</span>&gt;</span></span>危险按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span></span>
+
+<span class="hljs-section">### 不同大小</span>
+
+<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">size</span>=<span class="hljs-string">&quot;sm&quot;</span>&gt;</span></span>小按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">size</span>=<span class="hljs-string">&quot;md&quot;</span>&gt;</span></span>中按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">size</span>=<span class="hljs-string">&quot;lg&quot;</span>&gt;</span></span>大按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span></span>
+
+<span class="hljs-section">### 加载状态</span>
+
+<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">loading</span>&gt;</span></span>加载中...<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span></span>
+
+<span class="hljs-section">### 禁用状态</span>
+
+<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">disabled</span>&gt;</span></span>禁用按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span></span>
+
+<span class="hljs-section">## 设计指南</span>
+
+<span class="hljs-section">### 使用场景</span>
+
+<span class="hljs-bullet">-</span> 用于触发操作或事件
+<span class="hljs-bullet">-</span> 用于提交表单
+<span class="hljs-bullet">-</span> 用于打开对话框
+<span class="hljs-bullet">-</span> 用于导航
+
+<span class="hljs-section">### 最佳实践</span>
+
+<span class="hljs-bullet">-</span> 使用清晰的动作词（如&quot;保存&quot;、&quot;删除&quot;、&quot;提交&quot;）
+<span class="hljs-bullet">-</span> 主要操作使用 primary 变体
+<span class="hljs-bullet">-</span> 危险操作使用 danger 变体
+<span class="hljs-bullet">-</span> 避免在页面中使用过多主要按钮
+
+<span class="hljs-section">### 可访问性</span>
+
+<span class="hljs-bullet">-</span> 按钮应有清晰的文本标签
+<span class="hljs-bullet">-</span> 禁用状态应有视觉提示
+<span class="hljs-bullet">-</span> 加载状态应有进度指示
+<span class="hljs-bullet">-</span> 支持键盘导航</code></pre>
+<h3 id="5-2-示例代码">5.2 示例代码<a class="anchor" href="#5-2-示例代码" aria-label="锚点">#</a></h3>
+<p><strong>在线示例</strong>：</p>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;div class=&quot;example&quot;&gt;
+    &lt;KhyButton variant=&quot;primary&quot; @click=&quot;handleClick&quot;&gt;
+      点击我
+    &lt;/KhyButton&gt;
+    &lt;p v-if=&quot;clicked&quot;&gt;已点击！&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+import { ref } from 'vue';
+
+const clicked = ref(false);
+
+const handleClick = () =&gt; {
+  clicked.value = true;
+};
+&lt;/script&gt;</code></pre>
+<hr>
+<h2 id="6-组件发布规范">6. 组件发布规范<a class="anchor" href="#6-组件发布规范" aria-label="锚点">#</a></h2>
+<h3 id="6-1-版本管理">6.1 版本管理<a class="anchor" href="#6-1-版本管理" aria-label="锚点">#</a></h3>
+<p><strong>语义化版本</strong>：</p>
+<ul><li>MAJOR：不兼容的 API 变更</li><li>MINOR：向下兼容的功能性新增</li><li>PATCH：向下兼容的问题修正</li></ul>
+<p><strong>版本号格式</strong>：<code>v1.0.0</code></p>
+<h3 id="6-2-发布流程">6.2 发布流程<a class="anchor" href="#6-2-发布流程" aria-label="锚点">#</a></h3>
+<p><strong>发布步骤</strong>：</p>
+<ol><li>更新版本号</li><li>更新 CHANGELOG</li><li>运行测试</li><li>构建组件库</li><li>发布到 npm</li><li>创建 Git Tag</li></ol>
+<p><strong>发布命令</strong>：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 更新版本</span>
+npm version patch|minor|major
+
+<span class="hljs-comment"># 构建组件库</span>
+npm run build
+
+<span class="hljs-comment"># 发布到 npm</span>
+npm publish
+
+<span class="hljs-comment"># 创建 Git Tag</span>
+git tag v1.0.0
+git push origin v1.0.0</code></pre>
+<h3 id="6-3-changelog-规范">6.3 CHANGELOG 规范<a class="anchor" href="#6-3-changelog-规范" aria-label="锚点">#</a></h3>
+<p><strong>CHANGELOG 格式</strong>：</p>
+<pre><code class="language-markdown"><span class="hljs-section"># Changelog</span>
+
+<span class="hljs-section">## [1.0.0] - 2026-09-04</span>
+
+<span class="hljs-section">### Added</span>
+<span class="hljs-bullet">-</span> 新增 KhyButton 组件
+<span class="hljs-bullet">-</span> 新增 KhyInput 组件
+<span class="hljs-bullet">-</span> 新增 KhyCard 组件
+
+<span class="hljs-section">### Changed</span>
+<span class="hljs-bullet">-</span> 更新设计令牌系统
+
+<span class="hljs-section">### Fixed</span>
+<span class="hljs-bullet">-</span> 修复按钮禁用状态样式问题
+
+<span class="hljs-section">### Deprecated</span>
+<span class="hljs-bullet">-</span> 无
+
+<span class="hljs-section">### Removed</span>
+<span class="hljs-bullet">-</span> 无
+
+<span class="hljs-section">### Security</span>
+<span class="hljs-bullet">-</span> 无</code></pre>
+<hr>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-FE/[DESIGN-FE-009] 组件测试规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-FE-009] 组件测试规范</div></a><a class="next" href="../../../docs/10_规范/DESIGN-FE/[DESIGN-FE-011] 组件质量保证规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-FE-011] 组件质量保证规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-FE/[DESIGN-FE-010] 组件文档与发布规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

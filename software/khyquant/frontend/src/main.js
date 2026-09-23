@@ -153,7 +153,7 @@ app.provide('websocketService', websocketService)
 // 延迟5秒启动,避免应用初始化时的误报
 // setTimeout(() => {
 //   networkMonitor.startMonitoring()
-if (import.meta.env.DEV) { //   console.log('✅ 网络监控已启动') }
+//   console.log('✅ 网络监控已启动')
 // }, 5000)
 
 // 路由后置守卫：登录后自动连接 WebSocket

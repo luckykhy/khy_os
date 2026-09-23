@@ -22,6 +22,14 @@
  *               conversation / code), passed as the 2nd arg. Otherwise resolves with
  *               just the target (byte-identical to the single-stage flow).
  *   title     — optional heading.
+ *   cols      — terminal/overlay columns; when given, every list row is clipped
+ *               to one visual row (BUG-54). Absent → rows render uncapped.
+ *   rows      — terminal rows; when given together with `cols`, the page shrinks
+ *               so the whole frame fits the screen and the Enter/Esc hint stays
+ *               visible (BUG-55). Absent → the page keeps the PAGE_SIZE cap.
+ *   cols      — overlay width in terminal columns. When given, every list row is
+ *               clipped to one visual row (BUG-54); when absent the picker
+ *               renders exactly as it did before and ink wraps long previews.
  *
  * Navigation: ↑/↓ move, 1-9 jump+select, Enter selects the highlighted row,
  * Esc cancels. A scroll window keeps the cursor visible for long histories.
@@ -30,11 +38,17 @@
 const React = require('react');
 
 const inkRuntime = require('../inkRuntime');
+const {
+  clipCell,
+  pickerRowBudget,
+  pickerPageRows,
+  PICKER_BOX_CHROME_COLS,
+  PICKER_PAGE_SIZE,
+} = require('../wrapCell');
 
 const MARKER = '❯';
-const PAGE_SIZE = 12;
 
-function RewindPicker({ targets = [], onResolve, title }) {
+function RewindPicker({ targets = [], onResolve, title, cols, rows }) {
   const { Box, Text, useInput } = inkRuntime.get();
   const h = React.createElement;
 
@@ -153,10 +167,13 @@ function RewindPicker({ targets = [], onResolve, title }) {
     const scopeRows = choices.map((c, i) => {
       const active = i === scopeCursor;
       const marker = active ? MARKER : ' ';
+      const prefix = `   ${marker} ${i + 1}. `;
+      const body = `${c.label}  —  ${c.hint}`;
+      const budget = pickerRowBudget(cols, prefix, '');
       return h(
         Text,
         { key: `s-${i}`, color: active ? 'cyan' : undefined, bold: active },
-        `   ${marker} ${i + 1}. ${c.label}  —  ${c.hint}`
+        `${prefix}${budget > 0 ? clipCell(body, budget) : body}`
       );
     });
     return h(
@@ -169,26 +186,39 @@ function RewindPicker({ targets = [], onResolve, title }) {
   }
 
   // Compute the visible window so the cursor stays in view.
-  const pageSize = Math.min(PAGE_SIZE, list.length);
+  const headerText = `? ${title || '回溯到哪条消息（↑/↓ 选择，回车确认）'}`;
+  const footerText = '  Enter 回溯 · ↑/↓ 导航 · 数字键快选 · Esc 取消';
+  const pageSize = Math.min(
+    pickerPageRows(rows, cols, headerText, footerText),
+    list.length
+  );
   let start = Math.max(0, Math.min(cursor - Math.floor(pageSize / 2), list.length - pageSize));
   if (start < 0) {
     start = 0;
   }
   const end = Math.min(list.length, start + pageSize);
 
-  const rows = [];
+  const rowNodes = [];
   for (let i = start; i < end; i++) {
     const t = list[i];
     const active = i === cursor;
     const marker = active ? MARKER : ' ';
     const numberLabel = i < 9 ? `${i + 1}.` : '  ';
     const codeTag = t && t.checkpointId ? ' ⮌代码' : '';
-    const preview = (t && t.preview) || '(空消息)';
-    rows.push(
+    const rawPreview = (t && t.preview) || '(空消息)';
+    // The row must stay ONE visual row: an uncapped CJK preview wrapped to 2-3
+    // rows and the picker's own 12-row page overflowed a 24-row terminal,
+    // pushing the Enter/Esc hint off screen (BUG-54). Budget is measured from
+    // the real prefix rather than assumed, and without `cols` we render exactly
+    // as before.
+    const prefix = `   ${marker} ${numberLabel} `;
+    const budget = pickerRowBudget(cols, prefix, codeTag);
+    const preview = budget > 0 ? clipCell(rawPreview, budget) : rawPreview;
+    rowNodes.push(
       h(
         Text,
         { key: `r-${i}`, color: active ? 'cyan' : undefined, bold: active },
-        `   ${marker} ${numberLabel} ${preview}${codeTag}`
+        `${prefix}${preview}${codeTag}`
       )
     );
   }
@@ -201,9 +231,9 @@ function RewindPicker({ targets = [], onResolve, title }) {
   return h(
     Box,
     { flexDirection: 'column', borderStyle: 'round', borderColor: 'cyan', paddingX: 1 },
-    h(Text, { color: 'cyan', bold: true }, `? ${title || '回溯到哪条消息（↑/↓ 选择，回车确认）'}`),
-    h(Box, { flexDirection: 'column' }, rows),
-    h(Text, { dimColor: true }, `  Enter 回溯 · ↑/↓ 导航 · 数字键快选 · Esc 取消${scrollHint}`)
+    h(Text, { color: 'cyan', bold: true }, headerText),
+    h(Box, { flexDirection: 'column' }, rowNodes),
+    h(Text, { dimColor: true }, `${footerText}${scrollHint}`)
   );
 }
 

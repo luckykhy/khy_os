@@ -1,15 +1,15 @@
 'use strict';
 /**
- * videoIngestionFuzz.test.js â€?regression for the VIDEO ingestion surface.
+ * videoIngestionFuzz.test.js ï¿½?regression for the VIDEO ingestion surface.
  *
  * Video input reaches khyos via three always-run layers that must NEVER throw on
  * hostile/garbled/unknown bytes or malformed MIME strings (their contract is
  * "fail with a structured result, never crash the request"):
  *   1. mediaUnderstanding.mimeToCapability / mediaRegistry.{findByMimeType,
- *      getBestProvider,buildFallbackChain} â€?pure classification of the MIME label.
- *   2. multimodalInputService.detectInlineMediaPaths â€?parses a user message for a
+ *      getBestProvider,buildFallbackChain} ï¿½?pure classification of the MIME label.
+ *   2. multimodalInputService.detectInlineMediaPaths ï¿½?parses a user message for a
  *      video path (never throws on odd paths / nonexistent files).
- *   3. mediaTranscriptionService.transcribeMediaFile(/Async) â€?top-level file &
+ *   3. mediaTranscriptionService.transcribeMediaFile(/Async) ï¿½?top-level file &
  *      engine guards return {success:false,error} before any subprocess.
  *
  * The adversarial video byte corpus + real ffmpeg/whisper spawn path are exercised
@@ -18,6 +18,7 @@
  * proof). This suite locks the pure/guard behavior that runs on every machine.
  */
 const os = require('os');
+const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
 const understanding = require('../src/services/mediaUnderstanding.js');
@@ -45,13 +46,13 @@ describe('Video Ingestion Fuzz', () => {
       expect(understanding.mimeToCapability(undefined)).toBe(0);
       expect(understanding.mimeToCapability(42)).toBe(0);
       expect(understanding.mimeToCapability({})).toBe(0);
-      expect(understanding.mimeToCapability('video')).toBe(0); // no slash â†?not a MIME
+      expect(understanding.mimeToCapability('video')).toBe(0); // no slash ï¿½?not a MIME
       expect(understanding.mimeToCapability('application/octet-stream')).toBe(0);
   });
 
   test('mimeToCapability never throws across the full malformed-MIME corpus', () => {
       for (const mc of buildVideoMimeCorpus()) {
-        expect(() => understanding.mimeToCapability(mc.mime).not.toThrow(), `case ${mc.id}`);
+        expect(() => understanding.mimeToCapability(mc.mime)).not.toThrow();
       }
   });
 
@@ -71,10 +72,10 @@ describe('Video Ingestion Fuzz', () => {
   test('detectInlineMediaPaths returns an array (never throws) for a video-path message', () => {
       let out;
       assert.doesNotThrow(() => {
-        out = multimodal.detectInlineMediaPaths('è¯·åˆ†æžè¿™ä¸ªè§†é¢?/tmp/does-not-exist-clip.mp4');
+        out = multimodal.detectInlineMediaPaths('è¯·åˆ†æžè¿™ä¸ªè§†ï¿½?/tmp/does-not-exist-clip.mp4');
       });
-      expect(Array.isArray(out).toBeTruthy());
-      // nonexistent file â†?filtered out by the internal stat guard
+      expect(Array.isArray(out)).toBeTruthy();
+      // nonexistent file ï¿½?filtered out by the internal stat guard
       expect(out.length).toBe(0);
   });
 
@@ -128,7 +129,7 @@ describe('Video Ingestion Fuzz', () => {
       const f = path.join(os.tmpdir(), `khy-notmedia-${process.pid}.txt`);
       fs.writeFileSync(f, Buffer.from('just text, not a video'));
       try {
-        const r = transcription.transcribeMediaFile(f, '', {}); // no mime, .txt ext â†?unknown kind
+        const r = transcription.transcribeMediaFile(f, '', {}); // no mime, .txt ext ï¿½?unknown kind
         expect(r.success).toBe(false);
         expect(String(r.error)).toMatch(/unsupported media kind/i);
       } finally {

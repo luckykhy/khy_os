@@ -58,4 +58,29 @@ describe('_queuePanelLines — queued message visibility', () => {
     // ↑ 取回 tag never appears when the last item is past the shown window
     assert.ok(!lines.slice(0, 5).some((l) => l.includes('↑ 取回')), 'no retrieve tag in truncated view');
   });
+
+  // BUG-46: the budget was counted in UTF-16 units, so a Chinese queued message
+  // (the normal case here) rendered at up to 126 columns and each row wrapped
+  // into two lines inside the fixed-height busy region.
+  test('long CJK rows are capped by display columns, not char count', () => {
+    const { displayWidth } = require('../src/cli/formatters');
+    const samples = [
+      '帮我看看为什么早上那次量化回测跑出来的年化收益率和上周那次差了两个百分点，是不是数据源换了还是复权方式变了',
+      '中'.repeat(200),
+      '把组件里的标签栏改成用 Box 承载 margin，并且把描述列按显示宽度对齐，不要按字符数'.repeat(3),
+      '带 emoji 🙂 的中文排队消息'.repeat(8),
+    ];
+    for (const raw of samples) {
+      for (const line of App._queuePanelLines([raw, raw, raw])) {
+        // 56 cols of body + "  N. " prefix + the "  ↑ 取回" tag on the last row.
+        assert.ok(displayWidth(line) <= 70, `${displayWidth(line)} cols: ${line}`);
+      }
+    }
+  });
+
+  test('narrow-only rows stay byte-identical to the legacy cut', () => {
+    const ascii = 'x'.repeat(60);
+    const [row] = App._queuePanelLines([ascii]);
+    assert.strictEqual(row, `  1. ${'x'.repeat(56)}…  ↑ 取回`);
+  });
 });

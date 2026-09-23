@@ -39,8 +39,14 @@ const _backendRoot = fs.existsSync(path.join(_projectRoot, 'backend'))
   ? path.join(_projectRoot, 'backend')
   : _projectRoot;
 
-require('dotenv').config({ path: path.join(_projectRoot, '.env') });
-require('dotenv').config({ path: path.join(_backendRoot, '.env') });
+// Load repo-level .env defaults, but only when the canonical env file is NOT
+// pinned elsewhere: bootstrap/init.js step 1 already loads KHY_ENV_FILE, and
+// honoring it here keeps that boundary real (tests/sandboxes otherwise get the
+// developer's real credentials re-injected by this hardcoded path).
+if (!process.env.KHY_ENV_FILE) {
+  require('dotenv').config({ path: path.join(_projectRoot, '.env') });
+  require('dotenv').config({ path: path.join(_backendRoot, '.env') });
+}
 
 /**
  * Test TCP connectivity to PostgreSQL (localhost:5432) with 2s timeout.

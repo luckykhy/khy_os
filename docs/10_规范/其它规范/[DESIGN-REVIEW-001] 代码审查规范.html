@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-REVIEW-001] 代码审查规范.md -->
+<title>[DESIGN-REVIEW-001] 代码审查规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-REVIEW-001] 代码审查规范</div>
+      <header class="hero reveal"><h1>[DESIGN-REVIEW-001] 代码审查规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-review-001-代码审查规范">[DESIGN-REVIEW-001] 代码审查规范</a></li><li class="lvl-2"><a href="#1-审查概述">1. 审查概述</a></li><li class="lvl-3"><a href="#1-1-目的">1.1 目的</a></li><li class="lvl-3"><a href="#1-2-原则">1.2 原则</a></li><li class="lvl-2"><a href="#2-审查流程">2. 审查流程</a></li><li class="lvl-3"><a href="#2-1-提交审查">2.1 提交审查</a></li><li class="lvl-3"><a href="#2-2-审查分配">2.2 审查分配</a></li><li class="lvl-3"><a href="#2-3-审查时限">2.3 审查时限</a></li><li class="lvl-3"><a href="#2-4-审查结果">2.4 审查结果</a></li><li class="lvl-2"><a href="#3-审查清单">3. 审查清单</a></li><li class="lvl-3"><a href="#3-1-功能正确性">3.1 功能正确性</a></li><li class="lvl-3"><a href="#3-2-代码风格">3.2 代码风格</a></li><li class="lvl-3"><a href="#3-3-安全性">3.3 安全性</a></li><li class="lvl-3"><a href="#3-4-性能">3.4 性能</a></li><li class="lvl-3"><a href="#3-5-可维护性">3.5 可维护性</a></li><li class="lvl-3"><a href="#3-6-测试">3.6 测试</a></li><li class="lvl-3"><a href="#3-7-文档">3.7 文档</a></li><li class="lvl-2"><a href="#4-审查者职责">4. 审查者职责</a></li><li class="lvl-3"><a href="#4-1-审查前">4.1 审查前</a></li><li class="lvl-3"><a href="#4-2-审查中">4.2 审查中</a></li><li class="lvl-3"><a href="#4-3-审查后">4.3 审查后</a></li><li class="lvl-2"><a href="#5-作者职责">5. 作者职责</a></li><li class="lvl-3"><a href="#5-1-提交前">5.1 提交前</a></li><li class="lvl-3"><a href="#5-2-审查中">5.2 审查中</a></li><li class="lvl-3"><a href="#5-3-合并后">5.3 合并后</a></li><li class="lvl-2"><a href="#6-审查模板">6. 审查模板</a></li><li class="lvl-3"><a href="#6-1-审查评论格式">6.1 审查评论格式</a></li><li class="lvl-3"><a href="#6-2-常见审查意见">6.2 常见审查意见</a></li><li class="lvl-2"><a href="#7-特殊场景">7. 特殊场景</a></li><li class="lvl-3"><a href="#7-1-紧急修复">7.1 紧急修复</a></li><li class="lvl-3"><a href="#7-2-大型-pr">7.2 大型 PR</a></li><li class="lvl-3"><a href="#7-3-跨模块-pr">7.3 跨模块 PR</a></li><li class="lvl-2"><a href="#8-审查工具">8. 审查工具</a></li><li class="lvl-3"><a href="#8-1-自动化检查">8.1 自动化检查</a></li><li class="lvl-3"><a href="#8-2-github-功能">8.2 GitHub 功能</a></li><li class="lvl-2"><a href="#9-版本历史">9. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-review-001-代码审查规范">[DESIGN-REVIEW-001] 代码审查规范<a class="anchor" href="#design-review-001-代码审查规范" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档定义 khy-os 项目的代码审查标准，包括审查流程、清单、职责等。</p></blockquote>
+<hr>
+<h2 id="1-审查概述">1. 审查概述<a class="anchor" href="#1-审查概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-目的">1.1 目的<a class="anchor" href="#1-1-目的" aria-label="锚点">#</a></h3>
+<ul><li>确保代码质量</li><li>发现潜在问题</li><li>分享知识</li><li>保持一致性</li></ul>
+<h3 id="1-2-原则">1.2 原则<a class="anchor" href="#1-2-原则" aria-label="锚点">#</a></h3>
+<ol><li><strong>尊重</strong>：建设性反馈，避免人身攻击</li><li><strong>及时</strong>：24 小时内响应</li><li><strong>全面</strong>：关注功能、安全、性能、可维护性</li><li><strong>学习</strong>：审查是学习的机会</li></ol>
+<hr>
+<h2 id="2-审查流程">2. 审查流程<a class="anchor" href="#2-审查流程" aria-label="锚点">#</a></h2>
+<h3 id="2-1-提交审查">2.1 提交审查<a class="anchor" href="#2-1-提交审查" aria-label="锚点">#</a></h3>
+<ol><li>完成代码开发</li><li>本地运行测试</li><li>创建 Pull Request</li><li>填写 PR 模板</li><li>请求审查</li></ol>
+<h3 id="2-2-审查分配">2.2 审查分配<a class="anchor" href="#2-2-审查分配" aria-label="锚点">#</a></h3>
+<p><strong>自动分配</strong>：</p>
+<ul><li>CODEOWNERS 文件定义模块负责人</li><li>自动请求相关模块所有者审查</li></ul>
+<p><strong>手动分配</strong>：</p>
+<ul><li>作者可以手动添加审查者</li><li>建议添加至少 1 个相关模块所有者</li></ul>
+<h3 id="2-3-审查时限">2.3 审查时限<a class="anchor" href="#2-3-审查时限" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>PR 大小</th><th>建议审查时间</th></tr></thead><tbody><tr><td>&lt; 100 行</td><td>4 小时</td></tr><tr><td>100-400 行</td><td>8 小时</td></tr><tr><td>400-1000 行</td><td>24 小时</td></tr><tr><td>&gt; 1000 行</td><td>48 小时</td></tr></tbody></table>
+<h3 id="2-4-审查结果">2.4 审查结果<a class="anchor" href="#2-4-审查结果" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>结果</th><th>说明</th></tr></thead><tbody><tr><td>Approve</td><td>批准合并</td></tr><tr><td>Request Changes</td><td>需要修改</td></tr><tr><td>Comment</td><td>建议性意见</td></tr></tbody></table>
+<hr>
+<h2 id="3-审查清单">3. 审查清单<a class="anchor" href="#3-审查清单" aria-label="锚点">#</a></h2>
+<h3 id="3-1-功能正确性">3.1 功能正确性<a class="anchor" href="#3-1-功能正确性" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 代码实现了预期的功能</li><li>[ ] 边界条件处理正确</li><li>[ ] 错误处理完善</li><li>[ ] 没有逻辑错误</li></ul>
+<h3 id="3-2-代码风格">3.2 代码风格<a class="anchor" href="#3-2-代码风格" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 遵循代码风格规范</li><li>[ ] 命名清晰、一致</li><li>[ ] 代码格式正确</li><li>[ ] 无未使用的变量或导入</li></ul>
+<h3 id="3-3-安全性">3.3 安全性<a class="anchor" href="#3-3-安全性" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 无 SQL 注入风险</li><li>[ ] 无 XSS 漏洞</li><li>[ ] 敏感数据已加密</li><li>[ ] 输入已验证</li><li>[ ] 认证和授权正确</li></ul>
+<h3 id="3-4-性能">3.4 性能<a class="anchor" href="#3-4-性能" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 无明显性能问题</li><li>[ ] 数据库查询优化</li><li>[ ] 避免不必要的计算</li><li>[ ] 使用缓存（如适用）</li></ul>
+<h3 id="3-5-可维护性">3.5 可维护性<a class="anchor" href="#3-5-可维护性" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 代码结构清晰</li><li>[ ] 函数职责单一</li><li>[ ] 适当的注释</li><li>[ ] 无重复代码</li></ul>
+<h3 id="3-6-测试">3.6 测试<a class="anchor" href="#3-6-测试" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 添加了必要的测试</li><li>[ ] 测试覆盖关键路径</li><li>[ ] 测试可重复运行</li><li>[ ] 测试独立、无依赖</li></ul>
+<h3 id="3-7-文档">3.7 文档<a class="anchor" href="#3-7-文档" aria-label="锚点">#</a></h3>
+<ul><li>[ ] API 文档已更新</li><li>[ ] 变更日志已更新</li><li>[ ] README 已更新（如适用）</li></ul>
+<hr>
+<h2 id="4-审查者职责">4. 审查者职责<a class="anchor" href="#4-审查者职责" aria-label="锚点">#</a></h2>
+<h3 id="4-1-审查前">4.1 审查前<a class="anchor" href="#4-1-审查前" aria-label="锚点">#</a></h3>
+<ul><li>了解 PR 的背景和目的</li><li>阅读相关 Issue 和设计文档</li><li>了解变更的影响范围</li></ul>
+<h3 id="4-2-审查中">4.2 审查中<a class="anchor" href="#4-2-审查中" aria-label="锚点">#</a></h3>
+<ul><li>仔细阅读代码变更</li><li>运行代码验证功能</li><li>检查是否符合规范</li><li>提供具体、建设性的反馈</li></ul>
+<h3 id="4-3-审查后">4.3 审查后<a class="anchor" href="#4-3-审查后" aria-label="锚点">#</a></h3>
+<ul><li>及时提交审查意见</li><li>跟进修改情况</li><li>最终批准或请求修改</li></ul>
+<hr>
+<h2 id="5-作者职责">5. 作者职责<a class="anchor" href="#5-作者职责" aria-label="锚点">#</a></h2>
+<h3 id="5-1-提交前">5.1 提交前<a class="anchor" href="#5-1-提交前" aria-label="锚点">#</a></h3>
+<ul><li>本地运行所有测试</li><li>确保代码符合规范</li><li>填写完整的 PR 描述</li><li>标记相关 Issue</li></ul>
+<h3 id="5-2-审查中">5.2 审查中<a class="anchor" href="#5-2-审查中" aria-label="锚点">#</a></h3>
+<ul><li>及时响应审查意见</li><li>解释设计决策</li><li>修改发现的问题</li><li>保持开放的态度</li></ul>
+<h3 id="5-3-合并后">5.3 合并后<a class="anchor" href="#5-3-合并后" aria-label="锚点">#</a></h3>
+<ul><li>监控部署状态</li><li>处理反馈</li></ul>
+<hr>
+<h2 id="6-审查模板">6. 审查模板<a class="anchor" href="#6-审查模板" aria-label="锚点">#</a></h2>
+<h3 id="6-1-审查评论格式">6.1 审查评论格式<a class="anchor" href="#6-1-审查评论格式" aria-label="锚点">#</a></h3>
+<p><strong>问题</strong>：</p>
+<pre><code>**问题**：[简要描述问题]
+
+**位置**：file.js:123
+**建议**：[具体建议]
+**原因**：[为什么需要修改]</code></pre>
+<p><strong>赞扬</strong>：</p>
+<pre><code>**优点**：[值得肯定的地方]</code></pre>
+<p><strong>建议</strong>：</p>
+<pre><code>**建议**：[可选的改进建议]</code></pre>
+<h3 id="6-2-常见审查意见">6.2 常见审查意见<a class="anchor" href="#6-2-常见审查意见" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>示例</th></tr></thead><tbody><tr><td>功能</td><td>这个边界条件处理是否正确？</td></tr><tr><td>风格</td><td>变量名是否可以更清晰？</td></tr><tr><td>安全</td><td>这里是否存在 SQL 注入风险？</td></tr><tr><td>性能</td><td>这个循环是否可以优化？</td></tr><tr><td>测试</td><td>这个场景是否有测试覆盖？</td></tr></tbody></table>
+<hr>
+<h2 id="7-特殊场景">7. 特殊场景<a class="anchor" href="#7-特殊场景" aria-label="锚点">#</a></h2>
+<h3 id="7-1-紧急修复">7.1 紧急修复<a class="anchor" href="#7-1-紧急修复" aria-label="锚点">#</a></h3>
+<ul><li>简化审查流程</li><li>至少 1 个批准</li><li>事后补充完整审查</li></ul>
+<h3 id="7-2-大型-pr">7.2 大型 PR<a class="anchor" href="#7-2-大型-pr" aria-label="锚点">#</a></h3>
+<ul><li>拆分为多个小 PR</li><li>每个 PR 独立审查</li><li>确保每个 PR 可独立部署</li></ul>
+<h3 id="7-3-跨模块-pr">7.3 跨模块 PR<a class="anchor" href="#7-3-跨模块-pr" aria-label="锚点">#</a></h3>
+<ul><li>添加所有相关模块所有者</li><li>协调审查意见</li><li>确保一致性</li></ul>
+<hr>
+<h2 id="8-审查工具">8. 审查工具<a class="anchor" href="#8-审查工具" aria-label="锚点">#</a></h2>
+<h3 id="8-1-自动化检查">8.1 自动化检查<a class="anchor" href="#8-1-自动化检查" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>工具</th><th>用途</th></tr></thead><tbody><tr><td>ESLint</td><td>代码风格检查</td></tr><tr><td>Prettier</td><td>代码格式化</td></tr><tr><td>Jest/Vitest</td><td>单元测试</td></tr><tr><td>CodeQL</td><td>安全扫描</td></tr><tr><td>Duplication</td><td>重复代码检测</td></tr></tbody></table>
+<h3 id="8-2-github-功能">8.2 GitHub 功能<a class="anchor" href="#8-2-github-功能" aria-label="锚点">#</a></h3>
+<ul><li>Code Review：行级评论</li><li>Suggested Changes：建议修改</li><li>CODEOWNERS：自动分配审查者</li></ul>
+<hr>
+<h2 id="9-版本历史">9. 版本历史<a class="anchor" href="#9-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义代码审查规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-QUAL-002] 官方一致性套件接入规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-QUAL-002] 官方一致性套件接入规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-RL-001] Rate Limiting 限流规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-RL-001] Rate Limiting 限流规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-REVIEW-001] 代码审查规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

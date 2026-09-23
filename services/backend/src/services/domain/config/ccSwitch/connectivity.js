@@ -14,7 +14,7 @@
 
 const spec = require('../../../gateway/providerConnectivitySpec');
 const { request: nativeRequest } = require('../../../../utils/nativeHttp');
-const { PROTOCOLS } = require('../../collab/proactiveCollaboration/constants');
+const { PROTOCOLS } = require('./constants');
 
 function _protocolFamily(protocol) {
   if (protocol === PROTOCOLS.ANTHROPIC) {

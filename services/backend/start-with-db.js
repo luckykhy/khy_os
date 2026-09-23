@@ -11,30 +11,17 @@ const { spawn, exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
+// Single source of truth for PG discovery (PG_HOME override + dynamic scan).
+const { findPostgresInstall } = require('./src/utils/pgPaths');
+
 console.log('========================================');
 console.log('  启动后端服务（自动启动数据库）');
 console.log('========================================\n');
 
-// 检测PostgreSQL安装路径
+// 检测PostgreSQL安装路径 (通过共享的 pgPaths 解析:PG_HOME 覆盖 + 动态盘符扫描,
+// 不再写死 C:/D: 绝对路径)
 function findPostgreSQLPath() {
-  const possiblePaths = [
-    'D:\\Program Files\\PostgreSQL\\18',
-    'C:\\Program Files\\PostgreSQL\\18',
-    'D:\\Program Files\\PostgreSQL\\17',
-    'C:\\Program Files\\PostgreSQL\\17',
-    'C:\\Program Files (x86)\\PostgreSQL\\18',
-    'C:\\Program Files (x86)\\PostgreSQL\\17'
-  ];
-
-  for (const basePath of possiblePaths) {
-    const pgCtlPath = path.join(basePath, 'bin', 'pg_ctl.exe');
-    const pgDataPath = path.join(basePath, 'data');
-    if (fs.existsSync(pgCtlPath) && fs.existsSync(pgDataPath)) {
-      return { pgCtlPath, pgDataPath, basePath };
-    }
-  }
-
-  return null;
+  return findPostgresInstall();
 }
 
 // 检查PostgreSQL服务状态

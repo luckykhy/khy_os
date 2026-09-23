@@ -1,0 +1,61 @@
+{
+  "_note": "check-wiring.js（TOOLING-005 反孤儿守卫）的豁免登记。每个 scripts/ci 检查器必须被至少一个门引用，除非在此处登记 reason + until 到期日。到期未接线即判 error，强制维护者做出决定：接线、删除，或续期并给出新理由。豁免不是永久通行证。",
+  "_policy": "reason 必须说明为什么现在不能接线（依赖未就绪 / 会误报 / 需先建基线），until 到期后必须处理。",
+  "exemptions": [
+    {
+      "script": "check-core-safety.js",
+      "reason": "核心文件保护规则尚未登记进规则登记表（无对应 <DOMAIN>-<NNN>），接线前需先补规则条目与真源指针，否则守卫在跑但无人认领。",
+      "until": "2026-12-14"
+    },
+    {
+      "script": "check-f2e-spec.js",
+      "reason": "F2E 规格守卫依赖 playwright 环境，当前 CI 无浏览器依赖；接线需先补 CI 镜像与依赖安装步骤。",
+      "until": "2026-12-14"
+    },
+    {
+      "script": "check-f2e-wiring.js",
+      "reason": "同 check-f2e-spec.js：与 F2E 规格守卫成对，待 CI 浏览器环境就绪后一并接线。",
+      "until": "2026-12-14"
+    },
+    {
+      "script": "check-frontend-tokens.js",
+      "reason": "与 check-frontend-design-tokens.js 职责重叠（后者已接线并发 A11Y-001/FE-004 finding），接线前需先确认二者分工，避免重复告警。",
+      "until": "2026-12-14"
+    },
+    {
+      "script": "check-traffic-log.js",
+      "reason": "流量日志守卫需先定义日志基线（当前无 baseline 文件），贸然接线会对历史流量判 error。",
+      "until": "2026-12-14"
+    },
+    {
+      "script": "export-pyproject-dependencies.py",
+      "reason": "非门：依赖导出脚本，产物供发布流程消费，本身不判定通过/失败。",
+      "until": "2027-03-15"
+    },
+    {
+      "script": "lint-debt-tracker.js",
+      "reason": "非门：债务台账增量分析工具，输出供 check-debt-ledger.js 消费；单独接线会造成重复判定。",
+      "until": "2027-03-15"
+    },
+    {
+      "script": "security-scan.js",
+      "reason": "CI 已用 npm audit --audit-level=critical 覆盖同类检查（pr-gate.yml security-scan job），本脚本为本地增强版，接线需先对齐二者规则集避免双计。",
+      "until": "2026-12-14"
+    },
+    {
+      "script": "test-a2a-mcp-server-smoke.js",
+      "reason": "非门：A2A/MCP 冒烟测试脚本，需先起服务；正式接线路径是 conform:all（conformance-runner.mjs），待该套件在本地可跑后合并。",
+      "until": "2026-12-14"
+    },
+    {
+      "script": "annotate-patterns.js",
+      "reason": "非门：批量为源文件写入 @pattern 注释的一次性维护工具，接线进门会改写存量文件造成门禁抖动；用法是人工按需运行。到期处置：或并入 pattern 覆盖率修复流程，或删除。",
+      "until": "2026-12-14"
+    },
+    {
+      "script": "codemod-f2e-bridge-mobile.js",
+      "reason": "非门：针对 mobilePage.js 的一次性 codemod，已执行且幂等；保留仅为可复跑留痕。到期处置：确认无需复跑后删除。",
+      "until": "2026-12-14"
+    }
+  ]
+}

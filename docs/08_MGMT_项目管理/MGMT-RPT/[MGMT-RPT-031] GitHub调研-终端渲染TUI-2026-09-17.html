@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [MGMT-RPT-031] GitHub调研-终端渲染TUI-2026-09-17.md -->
+<title>GitHub 调研 — 终端渲染 / TUI / ANSI 规范板块 — 2026-09-17 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>MGMT-RPT<span class="sep">›</span>GitHub 调研 — 终端渲染 / TUI / ANSI 规范板块 — 2026-09-17</div>
+      <header class="hero reveal"><h1>GitHub 调研 — 终端渲染 / TUI / ANSI 规范板块 — 2026-09-17</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#github-调研-终端渲染-tui-ansi-规范板块-2026-09-17">GitHub 调研 — 终端渲染 / TUI / ANSI 规范板块 — 2026-09-17</a></li><li class="lvl-2"><a href="#调研对象">调研对象</a></li><li class="lvl-2"><a href="#对标项目">对标项目</a></li><li class="lvl-2"><a href="#值得借鉴的点">值得借鉴的点</a></li><li class="lvl-3"><a href="#1-帧预算守卫接入-ink-onrender-rendertime-p0">1. 帧预算守卫接入 ink `onRender({renderTime})`（P0）</a></li><li class="lvl-3"><a href="#2-内部实例解析失败的显式告警-p0">2. 内部实例解析失败的显式告警（P0）</a></li><li class="lvl-3"><a href="#3-tui-健康记分卡-一条只读命令聚合-p0-p1">3. TUI 健康记分卡：一条只读命令聚合（P0/P1）</a></li><li class="lvl-3"><a href="#4-金帧-ansi-快照回归-p1">4. 金帧/ANSI 快照回归（P1）</a></li><li class="lvl-3"><a href="#5-内存泄漏-ci-检测器-p1">5. 内存泄漏 CI 检测器（P1）</a></li><li class="lvl-2"><a href="#落地建议-排序">落地建议（排序）</a></li><li class="lvl-2"><a href="#参考链接">参考链接</a></li><li class="lvl-2"><a href="#落地记录">落地记录</a></li><li class="lvl-3"><a href="#p0-1-帧预算守卫-已实现">P0-1 帧预算守卫（已实现）</a></li><li class="lvl-3"><a href="#p0-2-内部实例解析失败显式告警-已实现">P0-2 内部实例解析失败显式告警（已实现）</a></li><li class="lvl-3"><a href="#p0-3-tui-健康记分卡-已实现-p0-补位">P0-3 TUI 健康记分卡（已实现，P0 补位）</a></li><li class="lvl-3"><a href="#校验结果">校验结果</a></li><li class="lvl-3"><a href="#未实现项-p1-留后续">未实现项（P1，留后续）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="github-调研-终端渲染-tui-ansi-规范板块-2026-09-17">GitHub 调研 — 终端渲染 / TUI / ANSI 规范板块 — 2026-09-17<a class="anchor" href="#github-调研-终端渲染-tui-ansi-规范板块-2026-09-17" aria-label="锚点">#</a></h1>
+<blockquote><p>每日板块轮转调研（索引 8/12）：khy-os 终端渲染板块（<code>services/backend/src/cli/tui/</code>，基于 ink 6.8.0 + React.createElement 桥接）对标 GitHub 开源终端 UI / 渲染框架，寻找可借鉴点。</p></blockquote>
+<h2 id="调研对象">调研对象<a class="anchor" href="#调研对象" aria-label="锚点">#</a></h2>
+<p>khy-os 终端渲染板块现状（<code>services/backend/src/cli/tui/</code>）：</p>
+<table><thead><tr><th>组件</th><th>位置</th><th>机制</th></tr></thead><tbody><tr><td>ink 运行时桥接</td><td><code>inkRuntime.js</code></td><td>动态 <code>import('ink')</code>（ESM-only → CJS 单例缓存）+ <code>.jsx</code> 即 CommonJS 的 require 处理；内部 <code>instances.js</code> WeakMap 直连</td></tr><tr><td>备用缓冲区纪律</td><td><code>app.js</code> + <code>chromeBudget.js</code></td><td>1049h/1049l 进出、<code>frame ≤ rows-1</code> 硬约束（conpty pending-wrap -1 行）、单一定义 chrome 账本</td></tr><tr><td>回滚保留</td><td><code>scrollbackPreserve.js</code></td><td>4 层 stdout Proxy：剥 <code>3J</code>、win32 <code>ED2→H+J</code>、抑制 static 重发、活区尾切 rows-1</td></tr><tr><td>视口贴底</td><td><code>ink-components/Viewport.js</code></td><td><code>null</code> 贴底哨兵 + <code>resolveViewportOffset</code>/<code>applyStickyViewportAction</code> 纯叶子</td></tr><tr><td>滚轮接管</td><td><code>mouseButtons.js</code></td><td>备用缓冲区下强制接管滚轮（否则被合成为 ↑/↓ → 误触输入历史）</td></tr><tr><td>节拍调优</td><td><code>perfTunables.js</code></td><td>spinner/heartbeat/topicBar 节拍纯函数 + <code>INK_THROTTLE_MS=34</code> 镜像</td></tr></tbody></table>
+<p><strong>短板（5 条）</strong>：</p>
+<ol><li><strong>16ms 帧预算未接入渲染主循环</strong>：<code>AGENTS.md §0.3</code> 白纸黑字写了「单次渲染 &lt;16ms」「冷启动 &lt;100ms」，但渲染路径里<strong>没有任何实测帧计时守卫</strong>——ink 6.8.0 自带 <code>options.onRender?.({ renderTime })</code>（<code>ink.js:252</code> 已确认）却没被利用，超帧只是性能测试里偶发断言，没有滚动 p95 窗口 + 棘轮基线。</li><li><strong>缺 TUI 健康记分卡</strong>：帧高 vs 账本、fps 窗口、内存趋势、备用缓冲区开关、回滚救援是否生效——散在 <code>KHY_TUI_DIAG_H</code> / <code>KHY_TUI_DIAG</code> 两个诊断开关里，没有一条只读命令能一次性读出。</li><li><strong>ink 内部实例解析失败时静默降级</strong>：<code>inkRuntime.getInkInstance()</code> 靠直连 <code>instances.js</code> WeakMap（<code>_renderStdout</code> Proxy 作 key），内部布局一变就返回 <code>null</code>，调用方<strong>默默退回</strong> ink 内建 resize 行为（残线不修），无任何告警。</li><li><strong>无金帧/视觉回归测试</strong>：现有 <code>viewportSticky</code> / <code>mouseWheel</code> 都是逻辑单测，没有「对渲染出的 ANSI 帧做快照 + 归一化 diff」的护栏。</li><li><strong>内存泄漏只有清单没有检测器</strong>：AGENTS.md 列了「定时器/监听器必须清理」，但无自动化 weak-ref sweep / active-resources diff 守卫。</li></ol>
+<h2 id="对标项目">对标项目<a class="anchor" href="#对标项目" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>Star（2026-09-17）</th><th>技术栈</th><th>相关度</th><th>链接</th></tr></thead><tbody><tr><td>ink</td><td>~39.9k</td><td>TS/React</td><td>高：就是底座；<code>onRender({renderTime})</code>/<code>maxFps</code> 是现成集成面</td><td>https://github.com/vadimdemedes/ink</td></tr><tr><td>bubbletea</td><td>~45.0k</td><td>Go / Elm</td><td>高：帧率上限 + 渲染/逻辑解耦 + 健康态显式降级（非静默）</td><td>https://github.com/charmbracelet/bubbletea</td></tr><tr><td>blessed-contrib</td><td>~15.8k</td><td>JS</td><td>中：Table 强制 columnWidth 前置校验 = chrome 账本该学的 fail-fast</td><td>https://github.com/yaronn/blessed-contrib</td></tr><tr><td>terminal-kit</td><td>~3.4k</td><td>JS</td><td>低：stream/TTY 分层参照，印证 scrollbackPreserve 单一 stdout 收口</td><td>https://github.com/cronvel/terminal-kit</td></tr><tr><td>ink <code>test/helpers</code> (node-pty + reconstruct-terminal)</td><td>—</td><td>随 ink</td><td>高：金帧范式可直接搬</td><td>https://github.com/vadimdemedes/ink/tree/main/test/helpers</td></tr></tbody></table>
+<h2 id="值得借鉴的点">值得借鉴的点<a class="anchor" href="#值得借鉴的点" aria-label="锚点">#</a></h2>
+<h3 id="1-帧预算守卫接入-ink-onrender-rendertime-p0">1. 帧预算守卫接入 ink <code>onRender({renderTime})</code>（P0）<a class="anchor" href="#1-帧预算守卫接入-ink-onrender-rendertime-p0" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：ink <code>src/ink.tsx</code> 暴露 <code>options.onRender?: (metrics:{renderTime}) =&gt; void</code>（本机 6.8.0 <code>ink.js:252</code> 已确认 <code>this.options.onRender?.({ renderTime: performance.now() - startTime })</code>），<code>maxFps</code> 经 es-toolkit throttle 限流。bubbletea 把 FPS 上限当<strong>渲染器级不变量</strong>而非测试（<code>tea.go:1403</code> framerate ticker），超预算 = 告警而非「文档写了的地板」。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>app.js</code> 的 <code>render(...)</code> 没传 <code>onRender</code>；16ms 只是 AGENTS.md 纸面约束，渲染路径无实测。</p>
+<p><strong>改哪些文件</strong>：<code>app.js</code>（<code>render</code> 增 <code>onRender</code> 回调 → 滚动窗口 p95）+ 新增 <code>tui/frameBudget.js</code>（纯叶子：窗口 p50/p95/p99 + 超帧告警 + 棘轮基线读取）。</p>
+<h3 id="2-内部实例解析失败的显式告警-p0">2. 内部实例解析失败的显式告警（P0）<a class="anchor" href="#2-内部实例解析失败的显式告警-p0" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：bubbletea <code>cursed_renderer.go</code>/<code>nil_renderer.go</code> —— 标准渲染器建不出来时用<strong>具名降级实现</strong> + 显式日志，绝不静默改行为；ink <code>instances.ts</code> 的 WeakMap 按 stream 作 key 是<strong>稳定契约</strong>而非易碎内部。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>inkRuntime.getInkInstance()</code> 返回 <code>null</code>（内部布局变化）时，<code>app.js</code> 的 resize 全重绘修复<strong>静默失效</strong>，残线回归无任何信号。</p>
+<p><strong>改哪些文件</strong>：<code>inkRuntime.js</code>（<code>getInkInstance</code> 加一次性降级告警 + 健康标志位），<code>app.js</code>（resize 分支据告警改走 SIGWINCH 兜底并打点）。</p>
+<h3 id="3-tui-健康记分卡-一条只读命令聚合-p0-p1">3. TUI 健康记分卡：一条只读命令聚合（P0/P1）<a class="anchor" href="#3-tui-健康记分卡-一条只读命令聚合-p0-p1" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：bubbletea 把状态 <code>push</code> 进 model（<code>WithWindowSize</code>/ColorProfileMsg）且<strong>只写 stderr/文件</strong>（stdout 归 TUI 独占）；ink 的 <code>onRender</code> tick 天然可作记分卡心跳。</p>
+<p><strong>khy-os 现状差在哪</strong>：帧高/账本、fps、内存、备用缓冲区/回滚救援状态散在两个 DIAG 开关，无统一读视图。</p>
+<p><strong>改哪些文件</strong>：新增 <code>tui/healthScorecard.js</code>（纯叶子：聚合 <code>chromeBudget</code> 账本 + <code>frameBudget</code> 窗口 + 进程内存 + 安全网激活态，输出表格 / <code>--json</code>，默认写 stderr 不碰受管 stdout）+ 一个 <code>khy tui health</code> 入口（<strong>不新增顶层目录/npm run 入口</strong>，走既有 CLI router 或脚本目录）。</p>
+<h3 id="4-金帧-ansi-快照回归-p1">4. 金帧/ANSI 快照回归（P1）<a class="anchor" href="#4-金帧-ansi-快照回归-p1" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：ink <code>test/helpers/reconstruct-terminal.ts</code> + node-pty，replay 只有 ink 真发的 CSI 序列还原<strong>可见屏</strong>（scrollback + viewport），对金帧归一化 diff；<code>atago</code>/<code>tuitest</code> 同款范式。</p>
+<p><strong>khy-os 现状差在哪</strong>：只有逻辑单测，无渲染输出快照护栏。</p>
+<p><strong>改哪些文件</strong>：新增 <code>tui/goldenFrames.js</code>（frame 归一化 + 快照 diff），CI 跑 <code>--leak-check</code>/golden 作业（P1 留后续）。</p>
+<h3 id="5-内存泄漏-ci-检测器-p1">5. 内存泄漏 CI 检测器（P1）<a class="anchor" href="#5-内存泄漏-ci-检测器-p1" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：<code>@sinonjs/fake-timers</code> + <code>WeakRef</code> sweep + <code>process.getActiveResourcesInfo()</code> diff。</p>
+<p><strong>khy-os 现状差在哪</strong>：内存 &lt;50MB 只是文档清单，无自动检测。</p>
+<p><strong>改哪些文件</strong>：新增 <code>tui/leakGuard.js</code>（P1 留后续）。</p>
+<h2 id="落地建议-排序">落地建议（排序）<a class="anchor" href="#落地建议-排序" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>行动</th><th>优先级</th><th>工作量</th></tr></thead><tbody><tr><td>1</td><td>帧预算守卫：<code>app.js</code> 传 <code>onRender({renderTime})</code> → 新增 <code>tui/frameBudget.js</code> 纯叶子（滚动 p95 + 超帧告警 + 棘轮基线）</td><td>P0</td><td>半天</td></tr><tr><td>2</td><td>内部实例解析失败显式告警：<code>inkRuntime.getInkInstance</code> 加一次性降级告警 + 健康标志</td><td>P0</td><td>1 小时</td></tr><tr><td>3</td><td>TUI 健康记分卡：新增 <code>tui/healthScorecard.js</code>（聚合账本+帧窗口+内存+安全网，表格/--json，写 stderr）</td><td>P1（P0 不足 3 条补位）</td><td>半天</td></tr><tr><td>4</td><td>金帧/ANSI 快照回归 <code>goldenFrames.js</code></td><td>P1</td><td>1 天</td></tr><tr><td>5</td><td>内存泄漏检测器 <code>leakGuard.js</code></td><td>P1</td><td>半天</td></tr></tbody></table>
+<h2 id="参考链接">参考链接<a class="anchor" href="#参考链接" aria-label="锚点">#</a></h2>
+<ul><li>https://github.com/vadimdemedes/ink — <code>src/ink.tsx</code> <code>onRender({renderTime})</code> + <code>maxFps</code>、<code>test/helpers/reconstruct-terminal.ts</code>、<code>src/instances.ts</code></li><li>https://github.com/charmbracelet/bubbletea — <code>tea.go</code> framerate ticker、<code>options.go WithFPS</code>、<code>cursed_renderer.go</code>/<code>nil_renderer.go</code> 显式降级</li><li>https://github.com/yaronn/blessed-contrib — <code>lib/widget/table.js</code> 前置列宽校验</li><li>https://github.com/cronvel/terminal-kit — stream/TTY 分层</li><li>https://github.com/nao1215/atago / https://github.com/Gaurav-Gosain/tuitest — PTY 金帧 + 确定性等待范式</li></ul>
+<h2 id="落地记录">落地记录<a class="anchor" href="#落地记录" aria-label="锚点">#</a></h2>
+<blockquote><p>本轮落地 3 项（P0×2 + P0 补位×1）；第 4、5 项（P1）留后续。<br>全程遵守工程红线：零硬编码、纯叶子零 IO、stderr-only（stdout 归 TUI 独占）、无固定硬超时、无滚动区转义。</p></blockquote>
+<h3 id="p0-1-帧预算守卫-已实现">P0-1 帧预算守卫（已实现）<a class="anchor" href="#p0-1-帧预算守卫-已实现" aria-label="锚点">#</a></h3>
+<ul><li>新增 <code>services/backend/src/cli/tui/frameBudget.js</code>（纯叶子，零 IO，<code>createGuard</code> 滚动窗口 p50/p95/p99/max + 一次性超帧告警 <code>maybeWarn</code> + <code>reset</code>）。</li><li><code>perfTunables.js</code> 增 <code>frameBudgetMs</code>（SSOT，默认 16ms，env <code>KHY_TUI_FRAME_BUDGET_MS</code> 可覆盖）——补上「16ms 地板」单一真源。</li><li><code>app.js</code>：<code>render(...)</code> 增 <code>onRender: (m) =&gt; frameGuard.record(m?.renderTime ?? 0)</code>，接入 ink 6.8.0 现成的 <code>onRender({renderTime})</code>（<code>ink.js:252</code>）；守卫门控 <code>KHY_TUI_FRAME_BUDGET</code>（默认开）。</li><li>新增测试 <code>services/backend/tests/cli/tui/frameBudget.test.js</code>（8 条，<code>node --test</code> 全绿）。</li></ul>
+<h3 id="p0-2-内部实例解析失败显式告警-已实现">P0-2 内部实例解析失败显式告警（已实现）<a class="anchor" href="#p0-2-内部实例解析失败显式告警-已实现" aria-label="锚点">#</a></h3>
+<ul><li><code>inkRuntime.js</code>：<code>getInkInstance()</code> 内部 WeakMap 解析失败时不再静默降级——置位 <code>_instanceLookupDegraded</code> 并发一次性 stderr 告警（门控 <code>KHY_TUI_INSTANCE_WARN</code>，默认开），并导出 <code>isInstanceLookupDegraded()</code> 供记分卡 / 测试读取。</li></ul>
+<h3 id="p0-3-tui-健康记分卡-已实现-p0-补位">P0-3 TUI 健康记分卡（已实现，P0 补位）<a class="anchor" href="#p0-3-tui-健康记分卡-已实现-p0-补位" aria-label="锚点">#</a></h3>
+<ul><li>新增 <code>services/backend/src/cli/tui/healthScorecard.js</code>（纯叶子，只读）：聚合 <code>chromeBudget</code> 账本（H1 不变式）+ <code>frameBudget</code> 窗口 + <code>inkRuntime</code> 实例解析态 + 各安全网 env 激活态 + 进程内存快照；<code>renderTable()</code>（stderr-ready 字符串）/ <code>toJSON()</code>（机器读）两个出口，本模块自身<strong>绝不写 stdout</strong>。</li><li>CLI 入口（<code>khy tui health</code>）留后续，走既有 router，不新增 npm run 入口。</li></ul>
+<h3 id="校验结果">校验结果<a class="anchor" href="#校验结果" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>检查</th><th>结果</th></tr></thead><tbody><tr><td><code>node --test services/backend/tests/cli/tui/frameBudget.test.js</code></td><td>8/8 通过</td></tr><tr><td><code>node scripts/run-ink-tui-tests.js</code></td><td>29/29 套件、435 条测试通过</td></tr><tr><td><code>node scripts/ci/check-agent-rules.js</code>（改动 5 源文件 + 1 测试）</td><td>零违规（零硬编码 / 无含糊状态 / 无固定硬超时 / 无滚动区 / 无死循环）</td></tr></tbody></table>
+<h3 id="未实现项-p1-留后续">未实现项（P1，留后续）<a class="anchor" href="#未实现项-p1-留后续" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项</th><th>说明</th><th>阻塞点</th></tr></thead><tbody><tr><td>金帧 / ANSI 快照回归 <code>goldenFrames.js</code></td><td>需 node-pty + reconstruct-terminal，引入 PTY 依赖与 CI golden 作业</td><td>P1，半天–1 天</td></tr><tr><td>内存泄漏 CI 检测器 <code>leakGuard.js</code></td><td><code>WeakRef</code> sweep + <code>getActiveResourcesInfo</code> diff，需挂 CI <code>--leak-check</code></td><td>P1，半天</td></tr><tr><td><code>khy tui health</code> CLI 入口</td><td>走既有 router，不新增 npm run 入口</td><td>依赖 P0-3 接线</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-030] DSH-一切皆插件对-khy-os-可行性分析.html"><div class="dir">← 上一篇</div><div class="ttl">DSH「一切皆插件」khy-os 可行性分析</div></a><a class="next" href="../../../docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-032] 工作区脏状态盘点报告-2026-09-18.html"><div class="dir">下一篇 →</div><div class="ttl">工作区脏状态盘点报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-031] GitHub调研-终端渲染TUI-2026-09-17.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

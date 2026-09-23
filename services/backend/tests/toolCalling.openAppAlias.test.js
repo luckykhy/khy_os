@@ -105,7 +105,7 @@ describe('toolCalling open_app default-handler triage', () => {
 
     const toolCalling = require('../src/services/toolCalling');
     const openApp = toolCalling.BUILTIN_TOOLS.find((t) => t.name === 'open_app');
-    // A name that is neither a URL nor an existing file â†?app-match path.
+    // A name that is neither a URL nor an existing file â†’app-match path.
     const result = await openApp.handler({ name: 'definitely-not-a-real-app-zzz' });
 
     expect(openDefault).not.toHaveBeenCalled();

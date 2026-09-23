@@ -71,6 +71,61 @@ test('@khy/shared 软链断裂 → shared-link-broken 拦路', () => {
   assert.ok(ids.includes('shared-link-broken'));
 });
 
+// ── 空心包（hollow）：第三态，2026-09-21 补 ───────────────────────────────────
+// 复现的故障：services/backend/node_modules/ink 是指向 .pnpm 空实体的符号链接，
+// existsSync 跟随链接报「存在」⇒ 存在性判据全说好 ⇒ bootstrap 跳过 npm install
+// ⇒ 永不自愈。CJS require 靠向上回退侥幸能跑，ESM import() 不回退直接崩。
+test('空心包 → hollow-package 拦路', () => {
+  const r = assessHydrationHealth({ nodeModulesPresent: true, hollowPackages: ['ink'] });
+  const ids = r.blockers.map((b) => b.id);
+  assert.ok(ids.includes('hollow-package'));
+  assert.strictEqual(r.healthy, false);
+});
+
+test('hollowPackages 空数组 → 不触发（无空壳）', () => {
+  const r = assessHydrationHealth({ nodeModulesPresent: true, hollowPackages: [] });
+  const ids = r.blockers.map((b) => b.id);
+  assert.ok(!ids.includes('hollow-package'));
+});
+
+test('hollowPackages 未知（null）→ 不误报', () => {
+  const r = assessHydrationHealth({ nodeModulesPresent: true });
+  const ids = r.blockers.map((b) => b.id);
+  assert.ok(!ids.includes('hollow-package'));
+});
+
+test('_normalizeFacts 过滤非关键包 / 去重 hollowPackages', () => {
+  const f = _normalizeFacts({ hollowPackages: ['ink', 'junk', 'ink', 42] });
+  assert.deepStrictEqual(f.hollowPackages, ['ink']);
+});
+
+test('_normalizeFacts 非数组 hollowPackages → null', () => {
+  assert.strictEqual(_normalizeFacts({ hollowPackages: 'ink' }).hollowPackages, null);
+});
+
+// 口径冲突：同一个包不可能既「不在」又「空壳」。missing 为强，从 hollow 里剔除，
+// 免得两条互相矛盾的拦路项把用户绕晕。
+test('同一包同时报 missing 与 hollow → missing 优先，hollow 剔除该包', () => {
+  const f = _normalizeFacts({ missingPackages: ['ws'], hollowPackages: ['ws', 'ink'] });
+  assert.deepStrictEqual(f.missingPackages, ['ws']);
+  assert.deepStrictEqual(f.hollowPackages, ['ink']);
+});
+
+test('空心包与真缺失是两条独立拦路项（修法不同，不能合并）', () => {
+  const r = assessHydrationHealth({
+    nodeModulesPresent: true,
+    missingPackages: ['ws'],
+    hollowPackages: ['ink'],
+  });
+  const ids = r.blockers.map((b) => b.id);
+  assert.ok(ids.includes('missing-critical-package'), '真缺失须报');
+  assert.ok(ids.includes('hollow-package'), '空壳须报');
+});
+
+test('ink 必须在 CRITICAL_PACKAGES 内（ESM-only，空壳即崩 TUI）', () => {
+  assert.ok(CRITICAL_PACKAGES.includes('ink'));
+});
+
 // ── 提醒规则 ──────────────────────────────────────────────────────────────────
 test('便携 Node 缺失 → portable-node-missing 提醒（非拦路）', () => {
   const r = assessHydrationHealth({ portableNodeOk: false });

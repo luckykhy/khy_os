@@ -70,20 +70,8 @@ function decrypt(ciphertext, userId) {
   }
 }
 
-// ── 敏感 key 判断 ──────────────────────────────────────────────────
-const SENSITIVE_KEYS = new Set([
-  'apiKey',
-  'api_key',
-  'anthropicApiKey',
-  'openaiApiKey',
-  'deepseekApiKey',
-  'relayApiKey',
-  'RELAY_API_KEY',
-  'accessToken',
-  'refreshToken',
-  'password',
-  'secret',
-]);
+// ── 敏感 key 判断 / 配置命名空间：纯数据见 configSyncKeys 叶 ────────
+const { SENSITIVE_KEYS, KEY_NAMESPACE } = require('./configSyncKeys');
 
 function isSensitiveKey(key) {
   const lower = String(key).toLowerCase();
@@ -92,18 +80,6 @@ function isSensitiveKey(key) {
   }
   return false;
 }
-
-// ── 配置 key 命名空间 ──────────────────────────────────────────────
-// 统一命名: <domain>.<field>  例: gateway.apiKey, model.preferred, theme.mode
-const KEY_NAMESPACE = Object.freeze({
-  GATEWAY: 'gateway',
-  MODEL: 'model',
-  THEME: 'theme',
-  PROVIDER: 'provider',
-  UI: 'ui',
-  MOBILE: 'mobile',
-  CLI: 'cli',
-});
 
 // ── 本地文件兜底 ──────────────────────────────────────────────────
 const LOCAL_CONFIG_PATH = (() => {

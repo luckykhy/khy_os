@@ -318,12 +318,27 @@ function noteIfOutsideSystemDrive(info = {}, deps = {}) {
 function resolveGeneratedFileDir(opts = {}) {
   const { subdir = '', preferCwd = true } = opts;
   const minFree = typeof opts.minFreeBytes === 'number' ? opts.minFreeBytes : MIN_FREE_BYTES;
-  const d = _d(opts.deps);
+  // DI 注入袋既可能按文档契约走 `opts.deps`，也可能被调用方/测试直接扁平挂在
+  // `opts` 顶层（`opts.env` / `opts.fsImpl` / `opts.cwd`，storageRoots 既有测试
+  // 即扁平形）。两形都认，否则扁平注入的 env 覆盖会被静默丢弃 → 回退到 cwd。
+  const deps = opts.deps || opts;
+  const d = _d(deps);
   const { env, fsImpl, cwd } = d;
 
-  // 1. Explicit override
-  if (env.KHY_OUTPUT_HOME) {
-    const dir = path.join(env.KHY_OUTPUT_HOME, subdir);
+  // 1. Explicit override. The injected env (DI bag or flat opts) is authoritative;
+  // only a caller that injected NO env at all falls back to the live process.env.
+  // An injected empty env therefore means "no override" (not "inherit host").
+  const injectedEnv = deps.env; // flat shape → opts.env; nested shape → deps.env
+  const outputHome = injectedEnv ? injectedEnv.KHY_OUTPUT_HOME : process.env.KHY_OUTPUT_HOME;
+  if (outputHome) {
+    const dir = path.join(outputHome, subdir);
+    _ensureDir(dir, fsImpl);
+    return { dir, source: 'env' };
+  }
+  if (injectedEnv && injectedEnv.KHY_OUTPUT_HOME == null && process.env.KHY_OUTPUT_HOME) {
+    // 注入的 env 袋没设 KHY_OUTPUT_HOME 但宿主 env 有：历史契约是覆盖「显式生效」，
+    // 注入袋未提及该键时宿主值仍然有效（与未注入袋时行为一致，不静默吞掉）。
+    const dir = path.join(process.env.KHY_OUTPUT_HOME, subdir);
     _ensureDir(dir, fsImpl);
     return { dir, source: 'env' };
   }
@@ -346,14 +361,14 @@ function resolveGeneratedFileDir(opts = {}) {
   // than betting on the best one: the top candidate can be the drive whose
   // driver refuses creation, and dropping straight to the system default would
   // give up the remaining real disks for no reason.
-  for (const cand of listNonSystemDrives({ ...opts.deps, minFreeBytes: minFree })) {
+  for (const cand of listNonSystemDrives({ ...deps, minFreeBytes: minFree })) {
     const dir = path.join(cand.root, '.khy', subdir);
     if (!_tryEnsureDir(dir, fsImpl)) {
       continue;
     }
     const result = { dir, source: 'non-system-drive' };
     try {
-      noteIfOutsideSystemDrive(result, opts.deps);
+      noteIfOutsideSystemDrive(result, deps);
     } catch {
       /* best-effort */
     }
@@ -367,7 +382,8 @@ function resolveGeneratedFileDir(opts = {}) {
   // here: importing the higher-level dataHome from this leaf util forms a
   // require cycle (dataHome already depends on storageRoots), and that cycle
   // dragged the whole low-level storage layer into a giant dependency knot.
-  const dataHomeBase = env.KHY_DATA_HOME || process.env.KHY_DATA_HOME;
+  const dataHomeBase =
+    (env.KHY_DATA_HOME) || (bag === opts && !('env' in opts) ? process.env.KHY_DATA_HOME : undefined);
   const base = dataHomeBase || path.join(d.homedir, '.khy');
   const dir = path.join(base, subdir);
   try {

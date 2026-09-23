@@ -22,6 +22,10 @@ describe('defensive directive builders', () => {
 });
 
 describe('Unknown Problem Handler', () => {
+  // Single-source contract: the heads the prompt tells the model to emit are
+  // exactly the heads the detectors match back out.
+  const section = uph.buildStateMachineSection();
+
   test('off by default and for falsy/garbage values', () => {
         delete process.env[FLAG];
         expect(uph.isEnabled()).toBe(false);
@@ -105,7 +109,7 @@ describe('Unknown Problem Handler', () => {
   });
 
   test('truncationRetryPrefix leads with the 生成中断预警 marker', () => {
-        expect(uph.truncationRetryPrefix().toBeTruthy().startsWith(uph.MARKERS.TRUNCATION));
+        expect(uph.truncationRetryPrefix().startsWith(uph.MARKERS.TRUNCATION)).toBe(true);
   });
 
 });

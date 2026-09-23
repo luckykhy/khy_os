@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: PORTABLE.md -->
+<title>Khy-OS 便携化使用指南 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>其它部署<span class="sep">›</span>Khy-OS 便携化使用指南</div>
+      <header class="hero reveal"><h1>Khy-OS 便携化使用指南</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-便携化使用指南">Khy-OS 便携化使用指南</a></li><li class="lvl-2"><a href="#直接压缩源码文件夹-原样源码包">直接压缩源码文件夹（原样源码包）</a></li><li class="lvl-2"><a href="#发布版一键打包">发布版一键打包</a></li><li class="lvl-2"><a href="#支持平台">支持平台</a></li><li class="lvl-2"><a href="#使用-portable-runtime">使用 portable-runtime</a></li><li class="lvl-2"><a href="#使用-portable-dev">使用 portable-dev</a></li><li class="lvl-2"><a href="#构建产物">构建产物</a></li><li class="lvl-3"><a href="#构建-portable-runtime">构建 portable-runtime</a></li><li class="lvl-3"><a href="#构建-portable-dev">构建 portable-dev</a></li><li class="lvl-2"><a href="#校验与打包">校验与打包</a></li><li class="lvl-2"><a href="#数据与宿主隔离">数据与宿主隔离</a></li><li class="lvl-2"><a href="#移动-备份与升级">移动、备份与升级</a></li><li class="lvl-2"><a href="#与源码启动的区别">与源码启动的区别</a></li><li class="lvl-3"><a href="#源码目录下的三种启动档位">源码目录下的三种启动档位</a></li><li class="lvl-2"><a href="#故障排除">故障排除</a></li><li class="lvl-3"><a href="#目标平台不匹配">目标平台不匹配</a></li><li class="lvl-3"><a href="#manifest-或-sha256sums-校验失败">manifest 或 SHA256SUMS 校验失败</a></li><li class="lvl-3"><a href="#启动器找不到嵌入式-runtime">启动器找不到嵌入式 runtime</a></li><li class="lvl-3"><a href="#portable-dev-离线安装缺包">portable-dev 离线安装缺包</a></li><li class="lvl-3"><a href="#状态需要清空">状态需要清空</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-便携化使用指南">Khy-OS 便携化使用指南<a class="anchor" href="#khy-os-便携化使用指南" aria-label="锚点">#</a></h1>
+<p>Khy-OS 有两条不同的便携路径，请按用途选择：</p>
+<h2 id="直接压缩源码文件夹-原样源码包">直接压缩源码文件夹（原样源码包）<a class="anchor" href="#直接压缩源码文件夹-原样源码包" aria-label="锚点">#</a></h2>
+<p>如果只是要把当前开发环境整体传给另一台机器，直接在 Windows 资源管理器中对整个 <code>khy-os</code> 文件夹右键，选择“压缩为 ZIP 文件”即可。这个操作不需要先运行 npm 命令，也不需要执行 <code>打包便携版.bat</code>。</p>
+<p>解压时保留最外层 <code>khy-os</code> 目录和全部子目录。无需注册全局命令时，可直接从解压后的目录启动：</p>
+<pre><code class="language-powershell"><span class="hljs-built_in">cd</span> &lt;解压后的 khy<span class="hljs-literal">-os</span>&gt;
+.\khy.bat <span class="hljs-literal">--help</span></code></pre>
+<p>希望在任意目录使用 <code>khy</code> 命令时，Windows 双击根目录的 <code>portable-setup.bat</code>（或在终端运行 <code>.\portable-setup.bat</code>）。脚本会安装 <code>khy</code>、<code>khy-os</code>、<code>khyquant</code> 三个命令包装器到 <code>%LocalAppData%\khy-os\bin</code>，并幂等加入当前用户 PATH。打开新终端后运行：</p>
+<pre><code class="language-powershell">khy <span class="hljs-literal">--help</span></code></pre>
+<p>Linux/macOS 可运行：</p>
+<pre><code class="language-sh">bash portable-setup.sh
+khy --<span class="hljs-built_in">help</span></code></pre>
+<p>Unix 配置默认将包装器安装到 <code>~/.local/bin</code>，并在 <code>.bashrc</code> 或 <code>.zshrc</code> 中维护唯一的 Khy-OS PATH 配置块。项目目录移动、盘符变化或重新解压到其他位置后，在新目录再次运行对应的 <code>portable-setup</code> 脚本即可刷新包装器目标。</p>
+<p>不希望修改用户 PATH 时，Linux/macOS 也可直接启动：</p>
+<pre><code class="language-sh"><span class="hljs-built_in">cd</span> &lt;解压后的 khy-os&gt;
+./khy.sh --<span class="hljs-built_in">help</span></code></pre>
+<p>配置脚本写入用户 PATH 和命令包装器属于使用者主动执行的命令注册操作。Khy-OS 日常便携启动的数据仍位于源码根的 <code>.khy/</code>，不会因此改写到宿主 HOME、APPDATA 或其他系统数据目录。</p>
+<p>源码入口从自身脚本位置解析项目根目录，支持移动到其他盘符以及包含空格或中文的路径。也可以从任意工作目录调用绝对路径入口。源码便携模式的状态默认位于源码根的 <code>.khy/</code>，不会因为调用者当前目录改变。</p>
+<p>这是“原样压缩”，压缩包会忠实包含压缩时源码目录中已有的所有内容，包括 <code>node_modules/</code>、<code>.khy/</code>、缓存、日志、数据库和本地配置；不会自动清理、裁剪或重排。若目录中含有个人凭据或运行状态，请在压缩前自行处理。该方式适合继续开发和保留当前工作区，不等同于面向终端用户的发布包。</p>
+<h2 id="发布版一键打包">发布版一键打包<a class="anchor" href="#发布版一键打包" aria-label="锚点">#</a></h2>
+<p>需要生成经过裁剪、清单记录、SHA-256 校验并带内置运行时的发布 ZIP 时，使用发布打包入口：</p>
+<ul><li>Windows 双击 <code>打包便携版.bat</code></li><li><code>npm run portable:package</code></li><li><code>npm run portable:package:runtime</code></li><li><code>npm run portable:package:dev</code></li></ul>
+<p>发布版流程会组装独立的 <code>portable-runtime</code> 或 <code>portable-dev</code> artifact，并执行健康检查后再压缩。它与上面的源码目录原样压缩是两条独立路径。</p>
+<p>Windows 本机构建的运行版默认输出到：</p>
+<pre><code class="language-text">dist/releases/portable-runtime-&lt;version&gt;-win-x64.zip</code></pre>
+<p>命令行等价入口：</p>
+<pre><code class="language-powershell">npm run portable:package
+<span class="hljs-comment"># 或</span>
+npm run portable:package:runtime</code></pre>
+<p>生成可复制到 U 盘继续开发的开发版：</p>
+<pre><code class="language-powershell">npm run portable:package:dev</code></pre>
+<p>输出为 <code>dist/releases/portable-dev-&lt;version&gt;-win-x64.zip</code>。开发版包含项目源码、已安装依赖、同平台 Node/Python 运行时和 npm/pip 离线缓存。复制 ZIP 到 U 盘并解压后，运行：</p>
+<pre><code class="language-powershell">.\launch.bat shell</code></pre>
+<p>这会从便携包的 <code>source</code> 目录打开开发终端。该终端的 Node、Python、依赖缓存、应用数据、日志和临时目录均指向便携包内部；可在盘符变化以及包含空格或中文的目录中使用。直接运行 <code>.\launch.bat --help</code> 则启动开发版应用入口。</p>
+<p>本机入口只生成当前 Windows/x64 产物。Linux、macOS Intel 和 macOS Apple Silicon 发布包由 GitHub Actions 的对应原生 runner 分别生成。<code>--skip-build</code> 可复用已有前端构建输出，<code>--keep-artifact</code> 可在压缩后保留 <code>dist/portable</code> 下的展开目录，自定义 ZIP 输出目录使用 <code>--out &lt;dir&gt;</code>。</p>
+<h2 id="支持平台">支持平台<a class="anchor" href="#支持平台" aria-label="锚点">#</a></h2>
+<p>每个产物只支持一个 OS/CPU 组合：</p>
+<table><thead><tr><th>产物后缀</th><th>系统</th><th>架构</th></tr></thead><tbody><tr><td><code>win-x64</code></td><td>Windows</td><td>x64</td></tr><tr><td><code>linux-x64</code></td><td>Linux</td><td>x64</td></tr><tr><td><code>macos-x64</code></td><td>macOS</td><td>Intel x64</td></tr><tr><td><code>macos-arm64</code></td><td>macOS</td><td>Apple Silicon arm64</td></tr></tbody></table>
+<p>不得在不同平台间复制 <code>node_modules</code>、原生模块或嵌入式运行时混用。CI 在上述四个平台的原生 runner 上分别构建和验证运行产物。</p>
+<h2 id="使用-portable-runtime">使用 portable-runtime<a class="anchor" href="#使用-portable-runtime" aria-label="锚点">#</a></h2>
+<p>解压与当前平台匹配的 <code>portable-runtime-&lt;version&gt;-&lt;platform&gt;/</code> 后直接运行：</p>
+<pre><code class="language-powershell"><span class="hljs-comment"># Windows</span>
+.\launch.bat <span class="hljs-literal">--help</span></code></pre>
+<pre><code class="language-sh"><span class="hljs-comment"># Linux / macOS</span>
+./launch.sh --<span class="hljs-built_in">help</span></code></pre>
+<p>启动器只为当前进程设置环境变量，不修改系统配置。产物可整体移动到其他目录、盘符以及包含空格或中文的路径，再从新位置运行同一启动器。</p>
+<p>目录结构：</p>
+<pre><code class="language-text">portable-runtime-&lt;version&gt;-&lt;platform&gt;/
+├── services/backend/     后端运行代码
+├── platform/             共享平台包
+├── software/khyquant/    量化后端运行代码
+├── node_modules/         已安装运行依赖
+├── runtime/node/         同平台 Node.js 运行时
+├── runtime/python/       同平台 Python 运行时
+├── web/ai/               AI 前端构建产物
+├── web/quant/            量化前端构建产物
+├── config/env.example    可选运行参数示例
+├── state/.khy/           本产物的持久状态根
+├── .portable             便携部署标记
+├── BUILD-INFO.json       构建来源和工具链信息
+├── MANIFEST.json         文件清单、目标平台和运行时合同
+├── SHA256SUMS            清单及载荷摘要
+└── launch.bat|launch.sh  相对路径启动器</code></pre>
+<h2 id="使用-portable-dev">使用 portable-dev<a class="anchor" href="#使用-portable-dev" aria-label="锚点">#</a></h2>
+<p>解压与当前平台匹配的 <code>portable-dev-&lt;version&gt;-&lt;platform&gt;/</code> 后运行：</p>
+<pre><code class="language-powershell"><span class="hljs-comment"># Windows</span>
+.\launch.bat <span class="hljs-literal">--help</span></code></pre>
+<pre><code class="language-sh"><span class="hljs-comment"># Linux / macOS</span>
+./launch.sh --<span class="hljs-built_in">help</span></code></pre>
+<p>开发产物内置运行时和离线缓存。正常启动不读取宿主 Python/Node，也不要求修改 PATH。源码位于 <code>source/</code>；Windows 使用 <code>.\launch.bat shell</code>、Linux/macOS 使用 <code>./launch.sh shell</code> 进入便携开发终端，构建和依赖命令应在该环境中执行。</p>
+<p>目录结构：</p>
+<pre><code class="language-text">portable-dev-&lt;version&gt;-&lt;platform&gt;/
+├── source/               完整 workspace、源码和依赖
+├── runtime/node/         同平台 Node.js 22.12.0
+├── runtime/python/       同平台嵌入式 Python
+├── caches/npm/           npm 离线缓存
+├── caches/pip/           pip 离线缓存或 wheels
+├── artifacts/            本地构建输出目录
+├── state/.khy/           本产物的持久状态根
+├── .portable
+├── BUILD-INFO.json
+├── MANIFEST.json
+├── SHA256SUMS
+└── launch.bat|launch.sh</code></pre>
+<p>离线开发的边界由 <code>package-lock.json</code>、已携带的依赖和缓存决定。新增一个未缓存的依赖仍需要预先补充缓存并重新构建产物。</p>
+<h2 id="构建产物">构建产物<a class="anchor" href="#构建产物" aria-label="锚点">#</a></h2>
+<h3 id="构建-portable-runtime">构建 portable-runtime<a class="anchor" href="#构建-portable-runtime" aria-label="锚点">#</a></h3>
+<p>推荐使用上文的一键入口：</p>
+<pre><code class="language-sh">npm run portable:package:runtime</code></pre>
+<p>以下分步命令用于 CI 说明和故障排查。先安装依赖并构建两个前端，再用当前平台的 Node/Python 运行时目录组装运行产物：</p>
+<pre><code class="language-sh">npm ci
+npm ci --prefix apps/ai-frontend
+npm ci --prefix software/khyquant/frontend
+npm run build --prefix apps/ai-frontend
+npm run build --prefix software/khyquant/frontend
+
+npm run portable:build:runtime -- \
+  --node-runtime RUNTIME_NODE_DIR \
+  --python-runtime RUNTIME_PYTHON_DIR \
+  --force</code></pre>
+<p>只查看目标、输入和缺失前置项：</p>
+<pre><code class="language-sh">npm run portable:plan:runtime</code></pre>
+<p>CI 的权威顺序为：安装目标平台 Node/Python、安装应用与前端依赖、构建前端、组装 runtime、校验产物、压缩并上传。</p>
+<h3 id="构建-portable-dev">构建 portable-dev<a class="anchor" href="#构建-portable-dev" aria-label="锚点">#</a></h3>
+<p>推荐使用自动发现本机 Node、Python 与缓存的一键入口：</p>
+<pre><code class="language-sh">npm run portable:package:dev</code></pre>
+<p>需要固定运行时或缓存来源时，可显式提供同平台目录：</p>
+<pre><code class="language-sh">npm run portable:build:dev -- \
+  --node-runtime RUNTIME_NODE_DIR \
+  --python-runtime RUNTIME_PYTHON_DIR \
+  --npm-cache NPM_CACHE_DIR \
+  --pip-cache PIP_CACHE_DIR \
+  --force</code></pre>
+<p>Windows PowerShell 可使用同样参数，不使用反斜杠续行：</p>
+<pre><code class="language-powershell">npm run portable:build:dev <span class="hljs-literal">--</span> <span class="hljs-literal">--node-runtime</span> RUNTIME_NODE_DIR <span class="hljs-literal">--python-runtime</span> RUNTIME_PYTHON_DIR <span class="hljs-literal">--npm-cache</span> NPM_CACHE_DIR <span class="hljs-literal">--pip-cache</span> PIP_CACHE_DIR <span class="hljs-literal">--force</span></code></pre>
+<p>规划检查：</p>
+<pre><code class="language-sh">npm run portable:plan:dev -- \
+  --node-runtime RUNTIME_NODE_DIR \
+  --python-runtime RUNTIME_PYTHON_DIR \
+  --npm-cache NPM_CACHE_DIR \
+  --pip-cache PIP_CACHE_DIR</code></pre>
+<p>构建器拒绝缺失的运行时、缓存、lockfile 或 workspace/前端依赖，并排除 <code>.env*</code>、数据库、日志、凭据、运行状态和旧输出目录。</p>
+<h2 id="校验与打包">校验与打包<a class="anchor" href="#校验与打包" aria-label="锚点">#</a></h2>
+<p>构建完成后，先校验目录产物：</p>
+<pre><code class="language-sh">node extensions/scripts/khy-portable/portable-health-check.js --artifact dist/portable/ARTIFACT_DIR</code></pre>
+<p>校验内容包括：</p>
+<ul><li><code>MANIFEST.json</code> schema、kind、OS 和 CPU；</li><li>每个载荷文件的大小与 SHA-256；</li><li><code>SHA256SUMS</code> 自身的路径集合、manifest 摘要和载荷摘要；</li><li>启动器、运行时、可执行文件和两个前端入口的完整性；</li><li>目标平台必须与执行校验的主机一致。</li></ul>
+<p>只有通过校验的 artifact 才能压缩：</p>
+<pre><code class="language-sh">node extensions/scripts/khy-portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR</code></pre>
+<p>预览而不生成压缩包：</p>
+<pre><code class="language-sh">node extensions/scripts/khy-portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR --dry-run</code></pre>
+<p>自定义压缩包输出目录：</p>
+<pre><code class="language-sh">node extensions/scripts/khy-portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR --out dist/releases</code></pre>
+<p>打包器在压缩前重新验证 manifest，检测到文件缺失、篡改或额外摘要条目时立即终止。</p>
+<h2 id="数据与宿主隔离">数据与宿主隔离<a class="anchor" href="#数据与宿主隔离" aria-label="锚点">#</a></h2>
+<p>启动器以自身所在目录为 <code>KHY_PORTABLE_ROOT</code>，并统一设置：</p>
+<table><thead><tr><th>变量</th><th>便携产物中的值</th></tr></thead><tbody><tr><td><code>KHY_PORTABLE_ROOT</code></td><td><code>&lt;artifact&gt;/</code></td></tr><tr><td><code>KHYQUANT_PORTABLE_ROOT</code></td><td><code>&lt;artifact&gt;/</code>，旧名称兼容</td></tr><tr><td><code>KHY_OS_ROOT</code></td><td>runtime 为 <code>&lt;artifact&gt;/</code>；dev 为 <code>&lt;artifact&gt;/source/</code></td></tr><tr><td><code>KHY_DATA_HOME</code></td><td><code>&lt;artifact&gt;/state/.khy/</code></td></tr><tr><td><code>KHY_PROJECT_DATA_HOME</code></td><td>同 <code>KHY_DATA_HOME</code></td></tr><tr><td><code>KHYQUANT_DATA_HOME</code></td><td>同 <code>KHY_DATA_HOME</code>，旧名称兼容</td></tr><tr><td><code>KHYOS_HOME</code></td><td>同 <code>KHY_DATA_HOME</code></td></tr><tr><td><code>KHY_RUNTIME_HOME</code></td><td><code>&lt;artifact&gt;/state/.khy/runtime/</code></td></tr><tr><td><code>KHY_CACHE_HOME</code></td><td><code>&lt;artifact&gt;/state/.khy/cache/</code></td></tr><tr><td><code>KHY_LOG_HOME</code></td><td><code>&lt;artifact&gt;/state/.khy/logs/</code></td></tr><tr><td><code>KHY_TEMP_HOME</code></td><td><code>&lt;artifact&gt;/state/.khy/tmp/</code></td></tr></tbody></table>
+<p>在该启动环境内，应用不得向 <code>~/.khy</code>、<code>C:\.khyquant</code>、<code>APPDATA</code> 或 <code>LOCALAPPDATA</code> 写入 Khy-OS 状态。便携模式也不会写入宿主数据目录指针。若显式覆盖上述变量，覆盖目录由使用者自行管理，不再属于默认零宿主写入合同。</p>
+<h2 id="移动-备份与升级">移动、备份与升级<a class="anchor" href="#移动-备份与升级" aria-label="锚点">#</a></h2>
+<ol><li>退出该便携实例，确保数据库和后台进程已关闭。</li><li>复制整个 artifact 目录；需要保留状态时包含 <code>state/.khy/</code>。</li><li>从新目录执行 <code>launch.bat</code> 或 <code>launch.sh</code>。</li><li>运行 artifact health check，确认文件完整性和目标平台匹配。</li></ol>
+<p><code>MANIFEST.json</code> 描述发布载荷，不包含运行后在 <code>state/</code> 中新增的用户状态。升级时建议解压新的只读产物，再显式复制或迁移旧 <code>state/.khy/</code>；不要用新压缩包直接覆盖正在使用的目录。</p>
+<h2 id="与源码启动的区别">与源码启动的区别<a class="anchor" href="#与源码启动的区别" aria-label="锚点">#</a></h2>
+<p>仓库根目录的 <code>khy.bat</code>、<code>khy.sh</code>、<code>extensions/scripts/khy-portable/run.ps1</code> 和旧同步脚本仍服务于源码开发、自举或兼容流程。它们不是可发布 artifact 的替代品，也不构成“目标机无预装运行时、离线启动”的交付证明。</p>
+<p>发布和验收只以 <code>extensions/scripts/khy-portable/build-portable-artifact.js</code> 生成、带完整 manifest 且通过 <code>portable-health-check.js --artifact</code> 的目录为准。</p>
+<h3 id="源码目录下的三种启动档位">源码目录下的三种启动档位<a class="anchor" href="#源码目录下的三种启动档位" aria-label="锚点">#</a></h3>
+<p>&lt;!-- 本小节由根目录 PORTABLE_GUIDE.md 归并而来（归档日期 2026-08-15）。 --&gt;</p>
+<p>把源码文件夹整份拷到另一台机器后，按「要不要 Web 界面」选档位：</p>
+<table><thead><tr><th>启动方式</th><th>起了什么</th><th>需要后端</th><th>Web 界面</th></tr></thead><tbody><tr><td><code>khy</code> / <code>.\khy.bat</code> / <code>./khy.sh</code></td><td>仅 CLI（轻量）</td><td>否</td><td>无</td></tr><tr><td><code>extensions\scripts\khy-installer\setup\start-backend.bat</code></td><td>后端 API + 认证</td><td>是</td><td>无（只有 API）</td></tr><tr><td><code>extensions\scripts\khy-installer\setup\start-all.bat</code></td><td>后端 + 前端，各开一个窗口</td><td>是</td><td>http://localhost:3000</td></tr></tbody></table>
+<p>后端 API 在 http://localhost:5000。三档都不需要先跑任何 setup 脚本来建账号——<br><strong>CLI 的自动登录不依赖后端</strong>（凭据在本机现场生成），详见<br><code>docs/07_OPS_运维/OPS-MAN/[OPS-MAN-175] 首次运行自动登录与凭据.md</code>。需要 Web 界面登录、<br>注册新用户或访问数据库时才必须起后端。</p>
+<p>跨机器配置全局 <code>khy</code> 命令：运行 <code>portable-setup.bat</code>（Windows）/ <code>portable-setup.sh</code>，<br>重开终端后 <code>khy --version</code> 验证。脚本自动探测当前项目位置，不需要手写路径。</p>
+<h2 id="故障排除">故障排除<a class="anchor" href="#故障排除" aria-label="锚点">#</a></h2>
+<h3 id="目标平台不匹配">目标平台不匹配<a class="anchor" href="#目标平台不匹配" aria-label="锚点">#</a></h3>
+<p>重新获取与当前 OS/CPU 对应的 artifact。macOS Intel 与 Apple Silicon 使用不同产物。</p>
+<h3 id="manifest-或-sha256sums-校验失败">manifest 或 SHA256SUMS 校验失败<a class="anchor" href="#manifest-或-sha256sums-校验失败" aria-label="锚点">#</a></h3>
+<p>不要继续运行该副本。重新复制或重新构建完整 artifact；不得只更新单个载荷文件后沿用旧摘要。</p>
+<h3 id="启动器找不到嵌入式-runtime">启动器找不到嵌入式 runtime<a class="anchor" href="#启动器找不到嵌入式-runtime" aria-label="锚点">#</a></h3>
+<p>确认解压工具保留了完整目录层级；Linux/macOS 上确认 <code>launch.sh</code> 与 <code>runtime/node/bin/node</code> 具有执行权限。随后再次运行 health check。</p>
+<h3 id="portable-dev-离线安装缺包">portable-dev 离线安装缺包<a class="anchor" href="#portable-dev-离线安装缺包" aria-label="锚点">#</a></h3>
+<p>在可联网构建机补齐 npm/pip 缓存，并重新生成整个开发产物。不要把其他 OS/CPU 的 <code>node_modules</code> 或 Python 环境复制进来。</p>
+<h3 id="状态需要清空">状态需要清空<a class="anchor" href="#状态需要清空" aria-label="锚点">#</a></h3>
+<p>退出所有 Khy-OS 进程后备份并删除 artifact 内的 <code>state/.khy/</code>，再运行启动器。该操作只重置当前便携实例。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/06_DEPLOY_部署/其它部署/LAN-FIREWALL.html"><div class="dir">← 上一篇</div><div class="ttl">LAN-FIREWALL — 局域网登录防火墙放行</div></a><a class="next" href="../../../docs/06_DEPLOY_部署/DEPLOY-MAN/[DEPLOY-MAN-001] DEMO.html"><div class="dir">下一篇 →</div><div class="ttl">演示视频（把它录下来——这是第一杠杆）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/其它部署/PORTABLE.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

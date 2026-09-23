@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: AGENTS.md -->
+<title>AGENTS.md — CC TUI 复刻工程约束 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>cli<span class="sep">›</span>tui<span class="sep">›</span>AGENTS.md — CC TUI 复刻工程约束</div>
+      <header class="hero reveal"><h1>AGENTS.md — CC TUI 复刻工程约束</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#agents-md-cc-tui-复刻工程约束">AGENTS.md — CC TUI 复刻工程约束</a></li><li class="lvl-2"><a href="#0-红线-绝对禁止">0. 红线（绝对禁止）</a></li><li class="lvl-3"><a href="#0-1-零破坏原则">0.1 零破坏原则</a></li><li class="lvl-3"><a href="#0-2-渲染安全">0.2 渲染安全</a></li><li class="lvl-3"><a href="#0-3-性能底线">0.3 性能底线</a></li><li class="lvl-3"><a href="#0-4-品牌与合规">0.4 品牌与合规</a></li><li class="lvl-3"><a href="#0-5-opencode-自动读取">0.5 opencode 自动读取</a></li><li class="lvl-3"><a href="#0-6-输入框约束">0.6 输入框约束</a></li><li class="lvl-3"><a href="#0-7-表格与折叠约束">0.7 表格与折叠约束</a></li><li class="lvl-3"><a href="#0-8-注意力与选择约束">0.8 注意力与选择约束</a></li><li class="lvl-3"><a href="#0-9-子视图与滚动约束">0.9 子视图与滚动约束</a></li><li class="lvl-3"><a href="#0-10-微交互与反馈约束">0.10 微交互与反馈约束</a></li><li class="lvl-3"><a href="#0-11-快捷键与执行偏差约束">0.11 快捷键与执行偏差约束</a></li><li class="lvl-2"><a href="#1-门控策略">1. 门控策略</a></li><li class="lvl-3"><a href="#1-1-主开关">1.1 主开关</a></li><li class="lvl-3"><a href="#1-2-子功能门控">1.2 子功能门控</a></li><li class="lvl-3"><a href="#1-2b-鼠标层排障表-症状-成因-修">1.2b 鼠标层排障表（症状 → 成因 → 修）</a></li><li class="lvl-3"><a href="#1-3-门控实现模式">1.3 门控实现模式</a></li><li class="lvl-2"><a href="#2-渲染约束">2. 渲染约束</a></li><li class="lvl-3"><a href="#2-1-布局规则">2.1 布局规则</a></li><li class="lvl-3"><a href="#2-2-颜色规则">2.2 颜色规则</a></li><li class="lvl-3"><a href="#2-3-渲染策略">2.3 渲染策略</a></li><li class="lvl-3"><a href="#2-4-resize-处理">2.4 Resize 处理</a></li><li class="lvl-2"><a href="#3-计时器约束">3. 计时器约束</a></li><li class="lvl-3"><a href="#3-1-计时器常量">3.1 计时器常量</a></li><li class="lvl-3"><a href="#3-2-计时器清理">3.2 计时器清理</a></li><li class="lvl-3"><a href="#3-3-计时器优先级">3.3 计时器优先级</a></li><li class="lvl-2"><a href="#4-启动速度约束">4. 启动速度约束</a></li><li class="lvl-3"><a href="#4-1-启动阶段">4.1 启动阶段</a></li><li class="lvl-3"><a href="#4-2-延迟加载规则">4.2 延迟加载规则</a></li><li class="lvl-2"><a href="#5-文件组织约束">5. 文件组织约束</a></li><li class="lvl-3"><a href="#5-1-目录结构">5.1 目录结构</a></li><li class="lvl-3"><a href="#5-2-文件命名规则">5.2 文件命名规则</a></li><li class="lvl-3"><a href="#5-3-禁止事项">5.3 禁止事项</a></li><li class="lvl-2"><a href="#6-代码风格约束">6. 代码风格约束</a></li><li class="lvl-3"><a href="#6-1-通用规则">6.1 通用规则</a></li><li class="lvl-3"><a href="#6-2-组件规则">6.2 组件规则</a></li><li class="lvl-3"><a href="#6-3-错误处理">6.3 错误处理</a></li><li class="lvl-2"><a href="#7-测试约束">7. 测试约束</a></li><li class="lvl-3"><a href="#7-1-必须测试的场景">7.1 必须测试的场景</a></li><li class="lvl-3"><a href="#7-2-性能测试">7.2 性能测试</a></li><li class="lvl-2"><a href="#8-验收清单">8. 验收清单</a></li><li class="lvl-3"><a href="#8-1-phase-1-验收">8.1 Phase 1 验收</a></li><li class="lvl-3"><a href="#8-2-phase-2-验收">8.2 Phase 2 验收</a></li><li class="lvl-3"><a href="#8-3-phase-3-验收">8.3 Phase 3 验收</a></li><li class="lvl-3"><a href="#8-4-最终验收">8.4 最终验收</a></li><li class="lvl-3"><a href="#8-5-输出回显-滚动-验收-2026-09-16">8.5 输出回显 / 滚动 验收（2026-09-16）</a></li><li class="lvl-2"><a href="#9-变更记录">9. 变更记录</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="agents-md-cc-tui-复刻工程约束">AGENTS.md — CC TUI 复刻工程约束<a class="anchor" href="#agents-md-cc-tui-复刻工程约束" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：CC 模式 TUI 复刻工程的<strong>单一约束真源</strong>。实施本目录下任何工作时，必须遵守本文档的全部条款。<br><strong>适用范围</strong>：<code>services/backend/src/cli/tui/</code> 下所有 Ink 组件、CC 模式相关工具函数、以及 <code>KHY_CC_TUI=1</code> 门控的代码路径。<br><strong>冲突解决</strong>：当本文件与 <code>[DESIGN-ARCH-081]</code> 冲突时，以 <code>[DESIGN-ARCH-081]</code> 为准。<br><strong>优先级不自封</strong>（<code>[DESIGN-DOC-002]</code> 公理 A3）：本文件<strong>不</strong>主张在冲突时压过根目录<br><code>AGENTS.md</code>——优先级只能由 <code>RULES-REGISTRY.json</code> 字面登记，写在文件里也不生效。<br>运行时两者由 cwd 决定各自生效（读取方只扫当前目录与家目录），不存在同一轮里的先后关系；<br>真有冲突时按登记表裁决。</p></blockquote>
+<hr>
+<h2 id="0-红线-绝对禁止">0. 红线（绝对禁止）<a class="anchor" href="#0-红线-绝对禁止" aria-label="锚点">#</a></h2>
+<p>以下规则<strong>无条件禁止</strong>，无任何例外。违反任何一条 = 代码必须被拒绝或重写。</p>
+<h3 id="0-1-零破坏原则">0.1 零破坏原则<a class="anchor" href="#0-1-零破坏原则" aria-label="锚点">#</a></h3>
+<pre><code>❌ 禁止修改 Legacy 模式（KHY_CC_TUI 未设置）下的任何代码路径
+❌ 禁止删除或重命名现有组件/函数（除非显式标记为废弃）
+❌ 禁止改变现有 public API 的签名或行为
+❌ 禁止引入新的全局副作用
+
+✅ 所有 CC 模式代码必须通过 KHY_CC_TUI=1 门控
+✅ 门控关闭时，行为必须与修改前逐字节相同
+✅ 新增文件优先于修改现有文件</code></pre>
+<h3 id="0-2-渲染安全">0.2 渲染安全<a class="anchor" href="#0-2-渲染安全" aria-label="锚点">#</a></h3>
+<pre><code>❌ 禁止使用 \x1B[n;mr（DECSTBM 滚动区）—— 会杀死滚动历史
+❌ 禁止在 resize 时使用 \x1B[2J（全屏清除）—— 会擦除滚动历史
+❌ 禁止同步阻塞事件循环超过 16ms
+❌ 禁止在渲染路径中执行 IO 操作（文件读写、网络请求）
+❌ 禁止在组件 render 函数中创建新对象/数组（破坏 memo）
+
+✅ 使用 \x1B[0J（ED0）清除光标到末尾
+✅ 使用保存/恢复光标 + 绝对定位进行局部更新
+✅ IO 操作必须异步化（Promise / setTimeout）
+✅ render 函数中使用 useMemo / useCallback 稳定引用</code></pre>
+<h3 id="0-3-性能底线">0.3 性能底线<a class="anchor" href="#0-3-性能底线" aria-label="锚点">#</a></h3>
+<pre><code>❌ 禁止冷启动超过 100ms
+❌ 禁止单次渲染超过 16ms（60fps 底线）
+❌ 禁止内存泄漏（未清理的定时器、事件监听）
+❌ 禁止无防抖的 resize 处理
+❌ 禁止无虚拟化的大列表渲染（&gt; 100 条消息）
+
+✅ 启动时间 &lt; 100ms（冷启动），&lt; 50ms（热启动）
+✅ 单次渲染 &lt; 16ms
+✅ 组件卸载时清理所有定时器和监听器
+✅ resize 防抖 50ms
+✅ 消息列表虚拟化（仅渲染可见区域）</code></pre>
+<h3 id="0-4-品牌与合规">0.4 品牌与合规<a class="anchor" href="#0-4-品牌与合规" aria-label="锚点">#</a></h3>
+<pre><code>❌ 禁止在 CC 模式 UI 中出现 &quot;Claude Code&quot; 或 &quot;Claude&quot; 品牌文本
+❌ 禁止在 CC 模式 UI 中出现 Anthropic 版权信息
+❌ 禁止修改 platform/khy_platform/__init__.py 中的 __version__
+
+✅ 品牌文本使用 &quot;Khy&quot;（定义在 ccBrand.js）
+✅ 版本信息从 package.json 动态读取
+✅ 品牌替换通过 ccBrand.js 集中管理</code></pre>
+<h3 id="0-5-opencode-自动读取">0.5 opencode 自动读取<a class="anchor" href="#0-5-opencode-自动读取" aria-label="锚点">#</a></h3>
+<pre><code>❌ 禁止阻塞 TUI 渲染等待 opencode 配置加载
+❌ 禁止覆盖 khy 已有的 MCP 服务器配置
+❌ 禁止因 opencode 配置错误导致启动失败
+
+✅ 异步探测 opencode 配置（后台执行）
+✅ 低优先级合并（不覆盖已有配置）
+✅ fail-soft（配置错误时跳过，不影响启动）
+✅ 通过 KHY_MCP_ECODE_AUTO_LOAD=0 可禁用</code></pre>
+<h3 id="0-6-输入框约束">0.6 输入框约束<a class="anchor" href="#0-6-输入框约束" aria-label="锚点">#</a></h3>
+<pre><code>❌ 禁止在 CC 模式下使用边框包裹输入框
+❌ 禁止光标闪烁间隔超过 530ms
+❌ 禁止输入延迟超过 16ms
+❌ 禁止覆盖模式下无视觉区分
+
+✅ 无边框设计（对齐 Claude Code）
+✅ 光标样式随模式变化（INSERT/NORMAL/SHELL/VOICE）
+✅ 多行输入支持（Shift+Enter）
+✅ 高度窗口化（超过 maxRows 时显示省略标记）
+✅ 占位符使用灰色 #6B7280</code></pre>
+<h3 id="0-7-表格与折叠约束">0.7 表格与折叠约束<a class="anchor" href="#0-7-表格与折叠约束" aria-label="锚点">#</a></h3>
+<pre><code>❌ 禁止边框嵌套深度 &gt; 1 层
+❌ 禁止状态信号 &gt; 2 个/状态
+❌ 禁止始终显示的标记（如每行都有 ▸）
+❌ 禁止颜色超过 4 种
+
+✅ 表头粗体 + 下划线分隔
+✅ 列对齐：文本左、数字右、状态中
+✅ 截断用 …，悬停/选中显示完整
+✅ 折叠：▸ 折叠 / ▾ 展开
+✅ 空状态显示友好提示 + 操作建议
+✅ 响应式：窄终端隐藏次要列</code></pre>
+<h3 id="0-8-注意力与选择约束">0.8 注意力与选择约束<a class="anchor" href="#0-8-注意力与选择约束" aria-label="锚点">#</a></h3>
+<pre><code>❌ 禁止焦点指示器模糊或缺失
+❌ 禁止选中项与未选中项无区分
+❌ 禁止模态对话框焦点逃逸
+❌ 禁止危险操作默认聚焦
+
+✅ 焦点：边框颜色变化（最强信号）
+✅ 选中：反显背景 + ▸ 前缀
+✅ 模态：焦点陷阱，Tab 不跳出
+✅ 权限：默认安全选项，危险操作红色
+✅ 鼠标：增强键盘，修饰键绕过（见下）</code></pre>
+<p><strong>「修饰键绕过」不能只写 Shift</strong> —— 各终端的「我要终端原生选择」约定键不一致，<br>只认 <code>Shift</code> 会让相当一部分用户的原生拖选仍然失效。<code>mouseButtons.js</code> 的<br><code>parseSgrMouse</code> 因此把 <code>isShift</code> / <code>isAlt</code> / <code>isCtrl</code> <strong>三个位都拆出来</strong>，<br><code>onInput</code> 任一为真即放行（<code>return false</code>，不消费、也不画自己的选区）：</p>
+<table><thead><tr><th>终端</th><th>用户实际按的是</th><th>备注</th></tr></thead><tbody><tr><td>VS Code 集成终端 / Windows Terminal / xterm</td><td><code>Shift</code></td><td>SGR 位 4</td></tr><tr><td>iTerm2</td><td><code>Option</code></td><td>SGR 位 8（iTerm2 的 Shift 默认不发送序列）</td></tr><tr><td>Terminal.app</td><td><code>Fn</code></td><td>部分配置下映射为 <code>Alt</code>，同走位 8</td></tr><tr><td>任意（显式回退）</td><td>—</td><td><code>KHY_SELECT=0</code> 关自绘层；<code>KHY_MOUSE=off</code> 连滚轮也不接管</td></tr></tbody></table>
+<p>⚠ <strong>判据里必须排除滚轮</strong>：<code>Shift+滚轮</code> 在终端里是<strong>横向滚动</strong>，不是「我要拖选」，<br>故 <code>ev.isWheel</code> 走在修饰键放行<strong>之前</strong>（滚轮单独分支并 <code>return true</code>）。<br>见 <code>mouseButtons.js:528-550</code> 与 [DESIGN-ARCH-119] §4.1.1。</p>
+<h3 id="0-9-子视图与滚动约束">0.9 子视图与滚动约束<a class="anchor" href="#0-9-子视图与滚动约束" aria-label="锚点">#</a></h3>
+<pre><code>❌ 禁止子视图影响主对话滚动
+❌ 禁止视图切换丢失位置状态
+❌ 禁止复制操作影响选择状态
+❌ 禁止历史搜索干扰当前输入
+❌ 禁止用「滚动偏移 = 0」表示「初始状态」(见下)
+
+✅ 视图栈：Esc 返回上一层
+✅ 滚动独立：浏览/选择/复制模式分离
+✅ 复制：OSC 52 + 系统命令 fallback
+✅ 历史：持久化到磁盘，支持搜索
+✅ Resume：完成后显示摘要，Enter 继续</code></pre>
+<h4 id="0-9-1-视口偏移的贴底哨兵-null-跟随最新内容">0.9.1 视口偏移的贴底哨兵（<code>null</code> = 跟随最新内容）<a class="anchor" href="#0-9-1-视口偏移的贴底哨兵-null-跟随最新内容" aria-label="锚点">#</a></h4>
+<p>转录的默认位置是<strong>最新一条</strong>，不是第一条。滚动偏移因此有两种语义：</p>
+<table><thead><tr><th>值</th><th>含义</th></tr></thead><tbody><tr><td><code>null</code> / <code>undefined</code> / 负数</td><td><strong>贴底</strong> —— 追随最新内容，新内容进来继续跟随</td></tr><tr><td>数字</td><td>固定行偏移，用户手动滚到哪里就停在哪里</td></tr></tbody></table>
+<p>「滚回最底」时必须<strong>回写 <code>null</code></strong>，这样跟随会自动恢复，不需要额外的 sticky 标志位。</p>
+<p>真源是 <code>ink-components/Viewport.js</code> 的 <code>resolveViewportOffset</code> / <code>applyStickyViewportAction</code><br>（纯叶子、与 <code>applyViewportScroll</code> 同处、有单测）。<strong>不要在调用方另抄一份实现。</strong></p>
+<blockquote><p>为什么必须有哨兵值：历史实现把 state 初值写成 <code>0</code>，再用 <code>scroll &gt;= maxScroll</code> 判断<br>「之前在底部」。内容一旦长过视口，<code>0 &gt;= maxScroll</code> 恒假 —— 视口就永远停在<strong>顶部</strong>，<br>用户看到的是最早那几行，「输出回显看不见」的体感一半来自这里。<br>回归测试见 <code>tests/cli/tui/viewportSticky.test.js</code>。</p></blockquote>
+<h4 id="0-9-2-帧高必须-rows-1-否则备用缓冲区下转录被整片抹掉">0.9.2 帧高必须 ≤ rows − 1（否则备用缓冲区下转录被整片抹掉）<a class="anchor" href="#0-9-2-帧高必须-rows-1-否则备用缓冲区下转录被整片抹掉" aria-label="锚点">#</a></h4>
+<p>ink 的 fullscreen 判定是 <code>lastOutputHeight &gt;= stdout.rows</code><br>（<code>node_modules/ink/build/ink.js:320</code>，注意用的是<strong>上一帧</strong>的 <code>outputHeight</code>，且<br><code>outputHeight = output.split('\n').length</code>，即「行数」而非「换行数」）。<br>一旦命中就走 <code>clearTerminal + fullStaticOutput + output</code>。</p>
+<p>本 TUI 跑在<strong>备用缓冲区</strong>里，没有回滚缓冲，那条清屏会连转录一起抹掉；更糟的是<br><code>scrollbackPreserve</code> 第三层（<code>KHY_SUPPRESS_STATIC_REPRINT</code>）会把 <code>fullStaticOutput</code><br>剥掉 → 「抹掉之后不重画」。而且这个判定会<strong>自锁</strong>：一旦某帧高度 ≥ rows，<br><code>lastOutputHeight</code> 就一直是 ≥ rows，此后<strong>每一帧</strong>都清屏。</p>
+<pre><code>❌ 禁止让 live 区（含所有 chrome 兄弟节点）合计高度 ≥ rows
+❌ 禁止新增固定高度的兄弟节点却不登记进 chrome 账本
+✅ 高度一律走 chromeBudget.liveBudget(rows, shares)，shares 逐项列出
+✅ 排障先开 KHY_TUI_DIAG_H=1 打印账本，再和实测帧行数对照</code></pre>
+<p><strong>容易漏计的 chrome（按实测，不是按注释）</strong>：</p>
+<table><thead><tr><th>项</th><th>PreviewLayout</th><th>legacy</th></tr></thead><tbody><tr><td>标题栏 Topbar</td><td>1</td><td>—</td></tr><tr><td>底部固定层顶上的分隔线</td><td>1</td><td>—</td></tr><tr><td>PromptFrame</td><td>3</td><td>3</td></tr><tr><td>FooterBar</td><td>1</td><td>1</td></tr><tr><td>忙态 spinner 块</td><td>3</td><td>3</td></tr><tr><td>任务清单</td><td><code>3 + 条数 (+1 尾切提示)</code>，无清单 0</td><td>同左</td></tr><tr><td>slack（conpty pending-wrap 纪律）</td><td>1</td><td>1</td></tr></tbody></table>
+<blockquote><p>两个历史坑：<br>① <code>spinner</code> 曾被记成 1~2 行 —— 但 ink 的边框语义是「设了 <code>borderStyle</code> 就四边全画，<br>   单写 <code>borderBottom: true</code> 不会关掉其余三边」，legacy 那个 spinner 盒子实际是<br>   <strong>上边 + 1 行内容 + 下边 = 3 行</strong>；Preview 的 <code>paddingY:1</code> 包法也是 3 行。<br>② PreviewLayout 独有的 topbar + 分隔线曾经完全没进账本，宽终端下 live 区恒定多 1~2 行。</p>
+<p><strong>实测下限：可用高度 ≈ 14 行</strong>（legacy 13 行边缘可用）。低于此值固定 chrome 物理上装不下，<br>ink 的全屏清屏无法避免 —— 这不是 bug，是几何不可能。</p></blockquote>
+<h4 id="0-9-3-滚轮必须被应用接管-备用缓冲区下不能交还终端">0.9.3 滚轮必须被应用接管（备用缓冲区下不能交还终端）<a class="anchor" href="#0-9-3-滚轮必须被应用接管-备用缓冲区下不能交还终端" aria-label="锚点">#</a></h4>
+<p>备用缓冲区没有回滚缓冲，所以终端会把滚轮<strong>合成为 ↑/↓ 键</strong>送进 stdin；而 ↑/↓ 已被<br><code>arrowRouting</code> 绑成 <code>history:previous/next</code> —— 用户看到的「滚轮回溯历史记录」其实是键位串扰。</p>
+<pre><code>❌ 禁止在备用缓冲区下把滚轮交给 onNative（= 交还终端）
+✅ 滚轮优先走 dispatcher 的 onWheel(dir)，驱动应用内视口
+✅ onWheel 缺失时才回退 onNative（逐字节保留旧行为）
+✅ onWheel 抛异常必须被吞掉，且**不得**顺带触发 onNative</code></pre>
+<p>门控与判定见 <code>mouseButtons.js</code>：<code>wheelDirection(button)</code>（<code>button &amp; ~28</code> 剥掉<br>shift/meta/ctrl 修饰位后比对 64/65）、<code>mouseExplicitlyDisabled(env)</code>。<br><code>app.js</code> 在 <code>ALT_SCREEN_ENABLED &amp;&amp; !mouseExplicitlyDisabled()</code> 时<strong>强制接管</strong>鼠标。<br>回归测试见 <code>tests/cli/tui/mouseWheel.test.js</code>。</p>
+<h4 id="0-9-4-鼠标追踪三档互斥-enablebytes-是唯一真源">0.9.4 鼠标追踪三档互斥，<code>enableBytes</code> 是唯一真源<a class="anchor" href="#0-9-4-鼠标追踪三档互斥-enablebytes-是唯一真源" aria-label="锚点">#</a></h4>
+<p>DECSET 的三个追踪模式是<strong>同一能力的不同档位，互斥</strong>，只能开一个：</p>
+<table><thead><tr><th>模式</th><th>上报内容</th><th>谁需要它</th></tr></thead><tbody><tr><td><code>1000</code> X11 basic</td><td>按下 / 松开</td><td>点击层（按钮高亮）</td></tr><tr><td><code>1002</code> button-event</td><td>按下 / 松开 / <strong>按住时的位移</strong></td><td><strong>应用内自绘选择</strong>（选区要跟手扩展）</td></tr><tr><td><code>1003</code> any-motion</td><td>一切移动（60~120Hz 洪流）</td><td>悬停高亮（<strong>必然</strong>吞掉拖选）</td></tr></tbody></table>
+<p><code>1006</code> 是 SGR 坐标编码，与追踪模式<strong>正交</strong>，永远都要带。</p>
+<pre><code>❌ 禁止叠加写 1000h 与 1002h（终端按哪一档解释变得不确定）
+✅ enableBytes({ select: true }) 写 1002h 时**不写** 1000h（替换语义）
+✅ 1003 只在 hover=true 时追加，与 select 正交
+✅ 重新接管追踪（enterNativePassthrough 的超时回调）必须与初始开启**同档** ——
+   漏了 select 会退回 1000，拖动位移从此不再上报，表现为
+   「滚一下滚轮之后拖选就失灵了」这类间歇性故障</code></pre>
+<p>⚠ <strong>一条曾被写反的因果</strong>（2026-09-17 修正）：历史注释称「1002 报位移意味着按下已被<br>吃掉，所以必须降到 1000」。<strong>因果是反的</strong> —— 按下被吃掉是因为 dispatcher 对 <code>press</code><br>无条件 <code>return true</code>，与开哪一档无关；1000 下 press 照样上报、照样被吃。降档只是顺手<br>删掉了自绘选择唯一需要的位移信息。<br>⇒ 纪律：<strong>「不报 X」不等于「不报 Y」</strong>，判据要按<strong>事件类别</strong>逐项写清。</p>
+<p>回归测试见 <code>tests/cli/tui/mouseWheel.test.js</code>（<code>enableBytes</code> 三档断言）。</p>
+<h4 id="0-9-5-拖选走应用内自绘-不要试图-把事件还给终端">0.9.5 拖选走应用内自绘，不要试图「把事件还给终端」<a class="anchor" href="#0-9-5-拖选走应用内自绘-不要试图-把事件还给终端" aria-label="锚点">#</a></h4>
+<p>鼠标追踪一旦开启，事件就被 ink 从 stdin 读走，而 <code>use-input.js:112-114</code> 把 handler<br>返回值<strong>直接丢弃</strong>（<code>inputHandler(input, key)</code> 无人消费）—— <code>return false</code> 物理上回不到<br>终端。所以「把拖选透传给终端」这条路<strong>不存在</strong>，唯一解法是<strong>本进程内自绘</strong>：</p>
+<pre><code>拖按下 → dispatcher onSelectEvent('down')  → 记 anchor，丢弃旧选区
+拖位移 → dispatcher onSelectEvent('move')  → normalizeSelection(anchor, pt) → setState
+拖松开 → dispatcher onSelectEvent('up')    → extractText + writeClipboard（唯一产出点）</code></pre>
+<p>坐标换算的<strong>关键不变量</strong>：<code>_mainContentLines</code> 的下标 == 屏幕行（Viewport 的 lines 模式<br>按 <code>height</code> 直接 slice，只有一个加性偏移 <code>clampedScroll</code>）。因此「屏幕 row − 视口偏移<br>= 数组下标」，不需要任何布局反查。<br>⚠ <strong>不要用 <code>hitTest</code> 反查坐标</strong>：那是 yoga 树的实时几何，与按列宽预折好的视觉行在软换行<br>处不一致，拿它的结果索引 <code>lines</code> 数组会整体错位。</p>
+<p>门控：<code>KHY_SELECT</code>（总闸，默认开）/ <code>KHY_SELECT_CLIP</code> / <code>KHY_SELECT_DRAG</code>。<br>组件契约：<code>Viewport</code> 的 <code>selection</code> prop <strong>不传时逐字节不变</strong>（走原单 <code>&lt;Text&gt;</code> 分支）。<br>纯叶子：<code>selection.js</code>（12 个导出，零 IO、绝不抛）。<br>回归测试见 <code>tests/cli/tui/mouseSelectEvent.test.js</code>、<code>mouseNativeSelection.test.js</code>、<br><code>ink-components/viewportSelection.test.js</code>、<code>selection.test.js</code>。</p>
+<h4 id="0-9-6-写-tui-渲染探针的三条硬前置-否则全是假红">0.9.6 写 TUI 渲染探针的三条硬前置（否则全是假红）<a class="anchor" href="#0-9-6-写-tui-渲染探针的三条硬前置-否则全是假红" aria-label="锚点">#</a></h4>
+<p>用<strong>真 ink 渲染器</strong>验证渲染结果时（想确认某段文本真的带了反色 / 某属性真的写进了帧），<br>有两条前置不满足会得到<strong>看起来像产品缺陷的假红</strong>。2026-09-17 各踩了一次，<br>2026-09-21 又踩了第三条（同一支探针连错两次），三次都把注意力引向了本来正确的产品代码：</p>
+<pre><code>① 必须走仓库自己的 inkRuntime，不要自己 import('ink')
+   ❌ const ink = await import('ink')                 // 拿到的是&quot;另一份&quot;引用
+   ✅ const ir = require('../inkRuntime'); await ir.loadInk(); const ink = ir.get();
+
+   原因：Viewport.js:57 是 `inkRuntime.get()`，get() 在单例未灌值时**抛错**
+   （inkRuntime.js:103-107）。真机上 startInkApp() 会 await loadInk()，所以线上没这
+   问题；探针跳过这一步，就复刻不了真机的启动顺序 —— 那它验证的就不是真机那条路径。
+   典型报文：`inkRuntime.get() called before loadInk() resolved`
+   并被归因到 Viewport 的某一行上。
+
+② 必须在 require 任何 ink/chalk 相关模块**之前**设 FORCE_COLOR
+   ❌ 在 render() 前才设 —— chalk 早已在模块求值时读完 process.env
+   ✅ 放在探针文件最顶部：process.env.FORCE_COLOR = process.env.FORCE_COLOR || '3';
+
+   原因：ink 的 `inverse` 是 `chalk.inverse`（ink/build/components/Text.js:40-41），
+   chalk 的 level 来自 supports-color，**非 TTY stdout 下 level = 0**，
+   此时 chalk.inverse('x') === 'x' —— 一个字节的转义都不吐，帧里自然找不到反色。
+   给假 stdout 传 isTTY: true / hasColors(): true 都**没用**，supports-color 在别处
+   早就判完了。真机是真 TTY，level ≥ 1，不受影响。
+
+③ 被测代码读的**每一个环境量**，探针都得如实改
+   ❌ 只把假 stdout 交给 ink 的渲染流（`setRenderStdout(fake)` / `render(…, { stdout: fake })`）
+   ✅ 同时改 App 真正读的那个量：Object.defineProperty(process.stdout, 'rows', { value: n, configurable: true })
+
+   原因：本 TUI 的终端尺寸不是从渲染流拿的 —— App.js `_resRows` ←
+   `sidebarLayout.stickyDim(process.stdout.rows, …)`、列宽 ← `_stickyCols(process.env)`。
+   2026-09-20 的帧顶探针只注入了假 stdout，于是三档 rows 下 App 全按同一个行高排版
+   （帧高恒 22），由此得出两条**并不存在**的结论：「live 帧顶 = staticRows(=8)」「帧高不随
+   终端收缩（原 BUG-28）」。公式当时是对的，错的是量级叙事与一条凭空立起的缺陷 ——
+   复核后真终端稳态校正只有 **1 行**。
+   判据：改完探针先问「如果我改的只有 rows 这一个 env 量，输出真的会变吗？」
+   输出纹丝不动 ⇒ 是探针没接上，不是产品不敏感。</code></pre>
+<p>⇒ 纪律：探针报红时<strong>先怀疑探针的启动环境，再怀疑产品代码</strong>。判据是问一句<br>「真机跑这条路径时，前置条件是什么？我复刻了吗？」</p>
+<p>三条都已落在实际探针中，可作模板抄：<br><code>_产物/应用内自绘选择-真渲染器验证-2026-09-17.js</code>（13/13 绿）、<br><code>.khy/feedback/tui-ux-audit-20260919/R/frame_top_probe.cjs</code> 与<br><code>services/backend/tests/tui/liveFrameGeometry.test.js</code>（③ 的正面样本）。</p>
+<h4 id="0-9-7-单写者原则-只有-ink-注入的那条流可以画屏">0.9.7 单写者原则 —— 只有 ink 注入的那条流可以画屏<a class="anchor" href="#0-9-7-单写者原则-只有-ink-注入的那条流可以画屏" aria-label="锚点">#</a></h4>
+<p>TUI 存活期间，<strong>任何绕过 ink 注入 stdout 的写入都会在帧下方留下擦不掉的残行</strong>。</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// ❌ 直接写真实 stdio：字节落屏，但 ink 的 lastOutputHeight 账本不知道</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-property">_stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">&#x27;...&#x27;</span>)        <span class="hljs-comment">// winston Console transport 就是这么写的</span>
+process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">&#x27;...&#x27;</span>)         <span class="hljs-comment">// 同理</span>
+<span class="hljs-comment">// ✅ 要么走 ink 的树（&lt;Text&gt;/&lt;Box&gt;），要么在会话期把它静音（consoleMute.js）</span></code></pre>
+<p>机制（2026-09-21 BUG-13 实测，<code>T/differential.md</code>）：<code>app.js</code> 把渲染流换成了<br><code>scrollbackPreserve(process.stdout)</code> 的 Proxy，ink 每帧按 <code>lastOutputHeight</code><br><code>eraseLines(n)</code> 重画。而 <code>patch-console</code> 只替换 <code>console.log/warn/…</code> 这 <strong>18 个方法</strong>，<br><strong>不碰 <code>console._stdout</code></strong>；winston 的 Console transport 恰好写的就是<br><code>console._stdout.write</code>（<code>vendor/shared/src/utils/logger.js</code> 装配的那份）。于是日志字节<br>绕开了注入流<strong>与它的帧高账本</strong>，<code>eraseLines</code> 永远擦不到它 —— 状态栏下方一行幽灵文本。</p>
+<p><strong>已登记的绕过者</strong>：</p>
+<ul><li>winston Console transport → 已由 <code>consoleMute.js</code> 在 <code>render()</code> 前把该 transport 的</li></ul>
+<p>level 设成 <code>silent</code>，<code>waitUntilExit()</code> 后恢复（<code>process.once('exit')</code> 兜底）。<br>  逃生门 <code>KHY_TUI_CONSOLE_LOG=1</code> 可整段关掉静音，排障时用。</p>
+<ul><li><code>sessionWatchdog.js</code> <code>report()</code> → 直写 <code>process.stderr</code>，<strong>确证成立</strong>（BUG-17，</li></ul>
+<p><code>U/repro-before.txt</code> 实测越界行 <code>[37,38]</code>、重绘后残留 = 是）。处方：<code>report()</code> 先问宿主<br>  （<code>opts.onReport</code>），宿主接走就不写；TUI 在 <code>ink-components/App.js</code> 订阅<br>  <code>noticeInbox</code>，诊断行变成转录区的一条 <code>role:'notice'</code> —— <strong>外部模块一律不自己画屏，<br>  要嘛交给我画，要嘛别说</strong>。逃生门 <code>KHY_WATCHDOG_NOTICE=0</code> ⇒ <code>push()</code> 恒拒 ⇒ 逐字节旧行为。<br>  同族约束：这类宿主钩子只有<strong>显式 <code>true</code></strong> 算「接走」，返回 false / 抛错 / 无钩子一律回落，<br>  诊断宁可多一行也不许静默丢（Rule 3 诚实上报）。</p>
+<ul><li>附带修掉的同源坑（BUG-17b）：<code>stop()</code> 过去不还原它 patch 过的 <code>stream.write</code>，于是</li></ul>
+<p>已停用的实例仍挂在流上；而它自己的上报（含 <code>resourceGuard</code> 那句 <code>console.error</code>）本身<br>  就是一次「活动」写入 ⇒ 重新武装 ⇒ 自持复燃。任何<strong>包裹 stdio <code>.write</code> 的机制</strong>在<br>  卸载时必须按身份还原（<code>stream.write === myPatch</code> 才还原，别人套在外面就不动）。</p>
+<p>新增直接写 stdio 的模块前，先问「它是否可能在 TUI 存活期被调用」；是，则要么走 ink 树，<br>要么纳入 <code>consoleMute</code> 的同族处理，<strong>不要</strong>指望「反正只是日志」。</p>
+<h3 id="0-10-微交互与反馈约束">0.10 微交互与反馈约束<a class="anchor" href="#0-10-微交互与反馈约束" aria-label="锚点">#</a></h3>
+<pre><code>❌ 禁止复制操作无反馈
+❌ 禁止滚动无边界指示
+❌ 禁止错误消息无修复建议
+❌ 禁止瞬态消息永久显示
+
+✅ 复制：显示字符/字节数（copied N chars）
+✅ 滚动：显示上下方内容指示（⋯ N above/below）
+✅ Toast：3-5 秒自动消失
+✅ Token：80% 黄色 / 95% 红色警告
+✅ 工具超时：显示超时 + 重试建议
+✅ 双击退出：首次提示，二次退出</code></pre>
+<h3 id="0-11-快捷键与执行偏差约束">0.11 快捷键与执行偏差约束<a class="anchor" href="#0-11-快捷键与执行偏差约束" aria-label="锚点">#</a></h3>
+<pre><code>❌ 禁止破坏性操作无撤销
+❌ 禁止模型跑偏无检测
+❌ 禁止快捷键冲突无提示
+❌ 禁止偏差无恢复建议
+
+✅ 快捷键：集中注册，上下文感知
+✅ Redo：r 重新生成，R 编辑后重做
+✅ Fork：f 创建新分支
+✅ Undo：z 撤销，Z 重做
+✅ 偏差检测：循环检测 + 超时检测
+✅ 检查点：失败后自动回滚
+✅ 用户引导：可注入指导纠正模型</code></pre>
+<hr>
+<h2 id="1-门控策略">1. 门控策略<a class="anchor" href="#1-门控策略" aria-label="锚点">#</a></h2>
+<h3 id="1-1-主开关">1.1 主开关<a class="anchor" href="#1-1-主开关" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 唯一合法的门控检测方式</span>
+<span class="hljs-keyword">const</span> isCcMode = process.<span class="hljs-property">env</span>.<span class="hljs-property">KHY_CC_TUI</span> === <span class="hljs-string">&#x27;1&#x27;</span>;</code></pre>
+<h3 id="1-2-子功能门控">1.2 子功能门控<a class="anchor" href="#1-2-子功能门控" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>环境变量</th><th>默认</th><th>说明</th></tr></thead><tbody><tr><td><code>KHY_CC_TUI</code></td><td><code>0</code></td><td>主开关</td></tr><tr><td><code>KHY_CC_LOGO</code></td><td>跟随主开关</td><td>Logo 样式</td></tr><tr><td><code>KHY_CC_STATUS_BAR</code></td><td>跟随主开关</td><td>状态栏样式</td></tr><tr><td><code>KHY_CC_MSG_STYLE</code></td><td>跟随主开关</td><td>消息渲染样式</td></tr><tr><td><code>KHY_CC_TOOL_STYLE</code></td><td>跟随主开关</td><td>工具卡片样式</td></tr><tr><td><code>KHY_CC_PERMISSION</code></td><td>跟随主开关</td><td>权限提示样式</td></tr><tr><td><code>KHY_CC_COMPLETION</code></td><td>跟随主开关</td><td>补全菜单样式</td></tr><tr><td><code>KHY_CC_COLORS</code></td><td>跟随主开关</td><td>主题色</td></tr><tr><td><code>KHY_CC_SIDEBAR</code></td><td>跟随主开关</td><td>右侧看板</td></tr><tr><td><code>KHY_CC_HELP</code></td><td>跟随主开关</td><td>帮助菜单</td></tr><tr><td><code>KHY_CC_VIEW_STACK</code></td><td>开（CC 视图栈命令面板）</td><td>CC 模式命令面板走 <code>CcViewStack.CcCommandPalette</code>（[DESIGN-ARCH-085] §1 子视图）；显式 <code>0</code> → 回退 <code>CcFuzzyPicker</code> 逐字节不变</td></tr><tr><td><code>KHY_CC_COPY_TOAST</code></td><td>开（CC 规范文案）</td><td>复制/Toast 微交互反馈格式；显式 <code>0</code> → 中文旧文案逐字节回退（[DESIGN-ARCH-087] §1/§3）</td></tr><tr><td><code>KHY_INLINE_TRANSCRIPT</code></td><td>开</td><td>转录由<strong>应用内 Viewport</strong> 承载（可滚、不被 fullscreen 清屏擦掉）；显式 <code>0</code> → 回退「整段转录走 <code>&lt;Static&gt;</code>」，逐字节与修改前一致。<strong>备用缓冲区下建议保持开</strong>（见 §0.9.2）</td></tr><tr><td><code>KHY_MOUSE</code></td><td><code>click</code>（三档：<code>off</code>/<code>click</code>/<code>full</code>）</td><td>鼠标层主开关。<code>off</code> = 完全不接管（原生滚轮 + <strong>拖选</strong>全保留）；<code>click</code> = 接管<strong>滚轮与按钮</strong>，press/release 按命中<strong>条件性放行</strong>（拖选不受影响）；<code>full</code> = 额外开 1003 悬停（事件洪流，<strong>必然</strong>吞拖选）。未识别终端由 <code>autoDetectTerminal</code> 兜底不接管。⚠ <strong>用户遇到「拖选选不中」时的第一退路</strong>（[DESIGN-ARCH-119]）</td></tr><tr><td><code>KHY_MOUSE_BUTTONS</code></td><td>未设（旧版布尔覆写）</td><td><strong>优先于 <code>KHY_MOUSE</code> 档位</strong>：<code>1</code>/<code>true</code>/<code>on</code>/<code>yes</code> 强制开点击层；<code>0</code>/<code>false</code>/<code>off</code>/<code>no</code> 强制关（等价 <code>off</code> 档）</td></tr><tr><td><code>KHY_MOUSE_HOVER</code></td><td>仅 <code>full</code> 档默认开</td><td>悬停追踪（1003）独立门控。1003 是 60~120Hz 事件洪流且<strong>必然</strong>吞掉拖选 —— 只在明确需要悬停高亮时开</td></tr><tr><td><code>KHY_MOUSE_WHEEL</code></td><td>开</td><td>滚轮驱动应用内视口（<code>onWheel</code>）；显式 <code>0</code> → 回退「交还终端原生滚动」。⚠ <strong>只在主屏幕下有意义</strong> —— 备用缓冲区没有回滚缓冲，交还终端会被合成为 ↑/↓ → 变成输入历史回溯（见 §0.9.3）</td></tr><tr><td><code>KHY_ALT_SCREEN</code></td><td>legacy 开 / CC 模式关</td><td>备用缓冲区（1049h）：legacy 模式默认开（退出时恢复原终端内容，防残影）；CC 模式（<code>KHY_CC_TUI=1</code>）默认关，让原生回滚正常工作</td></tr><tr><td><code>KHY_SELECT</code></td><td><strong>开</strong></td><td><strong>应用内自绘选择总闸</strong>。开 → 接管拖选：开 1002（替换 1000）收位移、Viewport 反色画选区、松手写剪贴板。显式 <code>0</code> → 逐字节回退旧行为。⚠ 开它意味着<strong>替换</strong>终端原生拖选 —— 这是为「备屏下原生拖选本就被鼠标追踪吃掉」付出的对称代价（[DESIGN-ARCH-119] §4.2）</td></tr><tr><td><code>KHY_SELECT_CLIP</code></td><td>开</td><td>松手自动写剪贴板（<code>utils/ccClipboard.writeClipboard</code>）；显式 <code>0</code> → 能选中能看但<strong>不自动复制</strong>（仍可走既有 Ctrl+C 路径）</td></tr><tr><td><code>KHY_SELECT_DRAG</code></td><td>开</td><td>1002 拖动位移追踪；显式 <code>0</code> → 只认按下/松开两点式选择（不跟手）。<strong>诊断用</strong>：用于区分「1002 没收到位移」与「选区模型算错」</td></tr><tr><td><code>KHY_PREVIEW_LAYOUT</code></td><td>宽终端 ≥122 列自动开</td><td>Preview 布局（标题栏 + 左右分栏 + 底部固定层）；显式 <code>1</code>/<code>0</code> 强制开关</td></tr><tr><td><code>KHY_TUI_DIAG_H</code></td><td><code>0</code></td><td>诊断：把本帧高度账本（rows/viewport/各 chrome 分项）打到 stderr，用于核对是否漏项</td></tr><tr><td><code>KHY_TUI_DIAG</code></td><td><code>0</code></td><td>诊断：把每次鼠标事件的解析结果打到 stderr，用于排查「图标可见但点不中」</td></tr><tr><td><code>KHY_TUI_CONSOLE_LOG</code></td><td><code>0</code></td><td>逃生门：<code>1</code> → TUI 会话期<strong>不</strong>静音 winston 的 Console transport（见 §0.9.7）。默认静音，否则日志绕过 ink 注入流、在状态栏下方留擦不掉的残行（BUG-13）</td></tr><tr><td><code>KHY_WATCHDOG_NOTICE</code></td><td><code>1</code></td><td>逃生门：<code>0</code> → <code>noticeInbox.push()</code> 恒拒 ⇒ 看门狗诊断行回到直写 stderr 的旧行为。默认开：TUI 存活期由转录区接手（<code>role:'notice'</code>），否则那一行落在状态栏之外、任何重绘都擦不掉（BUG-17，见 §0.9.7）</td></tr></tbody></table>
+<h3 id="1-2b-鼠标层排障表-症状-成因-修">1.2b 鼠标层排障表（症状 → 成因 → 修）<a class="anchor" href="#1-2b-鼠标层排障表-症状-成因-修" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>症状</th><th>成因</th><th>修</th></tr></thead><tbody><tr><td><strong>拖选选不中 / 复不出文本</strong></td><td>自绘选择层被关，或终端未上报修饰序列（第一层无可达性）</td><td>① <code>KHY_SELECT=1</code>（默认已开）确认未被显式关；② 按住<strong>本终端的原生选择修饰键</strong>拖（见 §0.8：Shift / Option / Fn）；③ 最后退路 <code>KHY_MOUSE=off</code></td></tr><tr><td>滚轮翻不了历史（备屏下变成 ↑/↓ 历史回溯）</td><td>滚轮被交还终端，而备屏无回滚缓冲</td><td>确认 <code>KHY_MOUSE_WHEEL</code> 未被设 <code>0</code>（见 §0.9.3）</td></tr><tr><td><strong>在某个终端里按住鼠标拖动会输出 <code>[&lt;32;...M</code> 之类的文本</strong></td><td><strong><code>1002</code> 残留在终端</strong>：进程被 <code>SIGKILL</code> / 终端崩溃 / 断电 → 不走 teardown → 终端仍停在 mouse-tracking 态。⚠ 不是本方案引入的新问题（<code>1000h</code> 本就有同样风险），但 <code>1002</code> 让可见症状更明显</td><td><code>printf '\033[?1002l\033[?1000l\033[?1003l\033[?1006l'</code> 复位，或<strong>直接重开终端</strong>。见 [DESIGN-ARCH-119] §七 风险 8</td></tr><tr><td>选中了但剪贴板没内容</td><td><code>writeClipboard</code> 走了 OSC 52 而当前是 SSH/tmux 嵌套（native 写不到用户面前的剪贴板）</td><td>看是否有失败提示（<code>reasons</code> 已接可见提示）；必要时 <code>KHY_CLIPBOARD_DUAL=1</code></td></tr></tbody></table>
+<h3 id="1-3-门控实现模式">1.3 门控实现模式<a class="anchor" href="#1-3-门控实现模式" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确：条件渲染</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">FooterBar</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">if</span> (isCcMode) {
+    <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">CcStatusLine</span> /&gt;</span></span>;
+  }
+  <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">LegacyFooterBar</span> /&gt;</span></span>;
+}
+
+<span class="hljs-comment">// ✅ 正确：提前返回</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">StatusLine</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">if</span> (!isCcMode) <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">LegacyStatusLine</span> /&gt;</span></span>;
+  <span class="hljs-comment">// CC 模式逻辑...</span>
+}
+
+<span class="hljs-comment">// ❌ 错误：在组件内部判断</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">Message</span>(<span class="hljs-params">{ text }</span>) {
+  <span class="hljs-keyword">const</span> color = isCcMode ? <span class="hljs-string">&#x27;#00D4D4&#x27;</span> : <span class="hljs-string">&#x27;#00BCD4&#x27;</span>; <span class="hljs-comment">// 禁止！</span>
+  <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Text</span> <span class="hljs-attr">color</span>=<span class="hljs-string">{color}</span>&gt;</span>{text}<span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span></span>;
+}</code></pre>
+<hr>
+<h2 id="2-渲染约束">2. 渲染约束<a class="anchor" href="#2-渲染约束" aria-label="锚点">#</a></h2>
+<h3 id="2-1-布局规则">2.1 布局规则<a class="anchor" href="#2-1-布局规则" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规则</th><th>值</th><th>说明</th></tr></thead><tbody><tr><td>状态栏高度</td><td><strong>绝对 1 行</strong></td><td>不能随内容变化</td></tr><tr><td>输入框最小高度</td><td><strong>绝对 1 行</strong></td><td>至少显示一行</td></tr><tr><td>输入框最大高度</td><td><code>min(10, rows * 0.3)</code></td><td>相对终端高度</td></tr><tr><td>右侧看板宽度</td><td><code>min(30, cols * 0.25)</code></td><td>相对终端宽度</td></tr><tr><td>主内容区宽度</td><td><code>cols - sidebarWidth</code></td><td>填充剩余</td></tr><tr><td>消息区高度</td><td><code>rows - 1 - inputHeight</code></td><td>减去状态栏和输入框</td></tr><tr><td>工具参数缩进</td><td><strong>绝对 2 空格</strong></td><td>固定缩进</td></tr><tr><td>边框字符</td><td><strong>绝对精确</strong></td><td><code>─│┌┐└┘├┤┬┴┼</code></td></tr></tbody></table>
+<h3 id="2-2-颜色规则">2.2 颜色规则<a class="anchor" href="#2-2-颜色规则" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确：从主题导入</span>
+<span class="hljs-keyword">const</span> { <span class="hljs-variable constant_">CC_COLORS</span> } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../theme/ccTheme&#x27;</span>);
+<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Text</span> <span class="hljs-attr">color</span>=<span class="hljs-string">{CC_COLORS.toolName}</span>&gt;</span>Read<span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span></span>
+
+<span class="hljs-comment">// ❌ 错误：硬编码颜色</span>
+<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Text</span> <span class="hljs-attr">color</span>=<span class="hljs-string">&quot;#00D4D4&quot;</span>&gt;</span>Read<span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span></span> <span class="hljs-comment">// 禁止！</span>
+
+<span class="hljs-comment">// ✅ 正确：使用 ANSI 缓存</span>
+<span class="hljs-keyword">const</span> ansi = <span class="hljs-variable constant_">CC_COLORS</span>.<span class="hljs-property">ansi</span>;
+process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">`<span class="hljs-subst">${ansi.toolBold}</span>Read<span class="hljs-subst">${ansi.reset}</span>`</span>);</code></pre>
+<h3 id="2-3-渲染策略">2.3 渲染策略<a class="anchor" href="#2-3-渲染策略" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>内容类型</th><th>组件</th><th>策略</th></tr></thead><tbody><tr><td>已提交消息</td><td><code>&lt;Static&gt;</code></td><td>memoize，仅 ID 变化时更新</td></tr><tr><td>流式输出</td><td><code>&lt;StreamingBlock&gt;</code></td><td>16ms 批量，增量 diff</td></tr><tr><td>工具卡片</td><td><code>&lt;CcToolCard&gt;</code></td><td>memoize，仅状态/结果变化时更新</td></tr><tr><td>状态栏</td><td><code>&lt;CcStatusLine&gt;</code></td><td>1秒间隔，memoize</td></tr><tr><td>输入框</td><td><code>&lt;CcPromptInput&gt;</code></td><td>16ms 防抖，光标定位</td></tr><tr><td>右侧看板</td><td><code>&lt;CcSidebarPanel&gt;</code></td><td>按需渲染，面板切换时更新</td></tr></tbody></table>
+<h3 id="2-4-resize-处理">2.4 Resize 处理<a class="anchor" href="#2-4-resize-处理" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确：使用 ResizeHandler</span>
+<span class="hljs-keyword">const</span> handler = <span class="hljs-keyword">new</span> <span class="hljs-title class_">ResizeHandler</span>({ <span class="hljs-attr">debounceMs</span>: <span class="hljs-number">50</span> });
+handler.<span class="hljs-title function_">on</span>(<span class="hljs-string">&#x27;resize&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">{ cols, rows }</span>) =&gt;</span> {
+  <span class="hljs-title function_">setDimensions</span>({ cols, rows });
+});
+handler.<span class="hljs-title function_">start</span>();
+
+<span class="hljs-comment">// ✅ 正确：组件卸载时清理</span>
+<span class="hljs-title function_">useEffect</span>(<span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-keyword">const</span> handler = <span class="hljs-keyword">new</span> <span class="hljs-title class_">ResizeHandler</span>();
+  handler.<span class="hljs-title function_">start</span>();
+  <span class="hljs-keyword">return</span> <span class="hljs-function">() =&gt;</span> handler.<span class="hljs-title function_">stop</span>();
+}, []);
+
+<span class="hljs-comment">// ❌ 错误：直接监听 stdout resize</span>
+process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">on</span>(<span class="hljs-string">&#x27;resize&#x27;</span>, <span class="hljs-function">() =&gt;</span> { ... }); <span class="hljs-comment">// 禁止！</span></code></pre>
+<hr>
+<h2 id="3-计时器约束">3. 计时器约束<a class="anchor" href="#3-计时器约束" aria-label="锚点">#</a></h2>
+<h3 id="3-1-计时器常量">3.1 计时器常量<a class="anchor" href="#3-1-计时器常量" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 唯一合法的计时器常量来源</span>
+<span class="hljs-keyword">const</span> { <span class="hljs-variable constant_">TIMING</span> } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../utils/ccTimers&#x27;</span>);
+
+<span class="hljs-comment">// ✅ 正确</span>
+<span class="hljs-built_in">setInterval</span>(updateStatusBar, <span class="hljs-variable constant_">TIMING</span>.<span class="hljs-property">statusBar</span>.<span class="hljs-property">interval</span>);
+
+<span class="hljs-comment">// ❌ 错误：硬编码计时器</span>
+<span class="hljs-built_in">setInterval</span>(updateStatusBar, <span class="hljs-number">1000</span>); <span class="hljs-comment">// 禁止！</span></code></pre>
+<h3 id="3-2-计时器清理">3.2 计时器清理<a class="anchor" href="#3-2-计时器清理" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确：useEffect 返回清理函数</span>
+<span class="hljs-title function_">useEffect</span>(<span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-keyword">const</span> timer = <span class="hljs-built_in">setInterval</span>(fn, <span class="hljs-variable constant_">TIMING</span>.<span class="hljs-property">statusBar</span>.<span class="hljs-property">interval</span>);
+  <span class="hljs-keyword">return</span> <span class="hljs-function">() =&gt;</span> <span class="hljs-built_in">clearInterval</span>(timer);
+}, []);
+
+<span class="hljs-comment">// ✅ 正确：组件卸载时清理</span>
+<span class="hljs-title function_">useEffect</span>(<span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-keyword">const</span> handler = <span class="hljs-keyword">new</span> <span class="hljs-title class_">ResizeHandler</span>();
+  handler.<span class="hljs-title function_">start</span>();
+  <span class="hljs-keyword">return</span> <span class="hljs-function">() =&gt;</span> handler.<span class="hljs-title function_">stop</span>();
+}, []);
+
+<span class="hljs-comment">// ❌ 错误：不清理定时器</span>
+<span class="hljs-title function_">useEffect</span>(<span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-built_in">setInterval</span>(fn, <span class="hljs-number">1000</span>);
+}, []); <span class="hljs-comment">// 禁止！</span></code></pre>
+<h3 id="3-3-计时器优先级">3.3 计时器优先级<a class="anchor" href="#3-3-计时器优先级" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>计时器</th><th>间隔</th><th>优先级</th><th>说明</th></tr></thead><tbody><tr><td>流式批量</td><td>16ms</td><td>高</td><td>60fps，不可丢帧</td></tr><tr><td>Spinner</td><td>80ms</td><td>中</td><td>12.5fps，终端足够</td></tr><tr><td>状态栏</td><td>1000ms</td><td>低</td><td>1fps，不阻塞渲染</td></tr><tr><td>MCP 轮询</td><td>5000ms</td><td>低</td><td>0.2fps，后台运行</td></tr><tr><td>Resize 防抖</td><td>50ms</td><td>中</td><td>避免频繁重绘</td></tr></tbody></table>
+<hr>
+<h2 id="4-启动速度约束">4. 启动速度约束<a class="anchor" href="#4-启动速度约束" aria-label="锚点">#</a></h2>
+<h3 id="4-1-启动阶段">4.1 启动阶段<a class="anchor" href="#4-1-启动阶段" aria-label="锚点">#</a></h3>
+<pre><code>阶段 1 (&lt; 50ms): 核心渲染
+  ├─ 加载 Ink 运行时（必须同步）
+  ├─ 检测终端能力（必须同步）
+  ├─ 初始化主题（必须同步）
+  └─ 渲染欢迎界面（必须同步）
+
+阶段 2 (异步，不阻塞交互):
+  ├─ 连接 AI 网关
+  ├─ 加载 MCP 配置
+  ├─ 检查更新
+  └─ 预热缓存
+
+阶段 3 (&lt; 100ms): 交互就绪
+  ├─ 启用输入
+  ├─ 启动状态栏轮询
+  └─ 完成启动</code></pre>
+<h3 id="4-2-延迟加载规则">4.2 延迟加载规则<a class="anchor" href="#4-2-延迟加载规则" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确：非关键模块延迟加载</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title class_">CcHelpMenu</span> = <span class="hljs-title class_">React</span>.<span class="hljs-title function_">lazy</span>(<span class="hljs-function">() =&gt;</span> <span class="hljs-keyword">import</span>(<span class="hljs-string">&#x27;./CcHelpMenu&#x27;</span>));
+
+<span class="hljs-comment">// ✅ 正确：条件加载</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">showHelp</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">if</span> (!helpModule) {
+    helpModule = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./CcHelpMenu&#x27;</span>);
+  }
+  <span class="hljs-keyword">return</span> helpModule;
+}
+
+<span class="hljs-comment">// ❌ 错误：启动时加载所有模块</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title class_">CcHelpMenu</span> = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./CcHelpMenu&#x27;</span>); <span class="hljs-comment">// 禁止！</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title class_">CcSidebarPanel</span> = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./CcSidebarPanel&#x27;</span>); <span class="hljs-comment">// 禁止！</span></code></pre>
+<hr>
+<h2 id="5-文件组织约束">5. 文件组织约束<a class="anchor" href="#5-文件组织约束" aria-label="锚点">#</a></h2>
+<h3 id="5-1-目录结构">5.1 目录结构<a class="anchor" href="#5-1-目录结构" aria-label="锚点">#</a></h3>
+<pre><code>tui/
+├── AGENTS.md                    ← 本文件（工程约束）
+├── app.js                       ← 入口（启动流程优化）
+├── ink-components/              ← Ink 组件
+│   ├── App.js                   ← 根组件（集成 resize + 渲染策略）
+│   ├── CcStatusLine.js          ← CC 状态栏
+│   ├── CcAssistantMessage.js    ← CC 助手消息
+│   ├── CcToolCard.js            ← CC 工具卡片
+│   ├── CcPromptInput.js         ← CC 输入框
+│   ├── CcPermissionPrompt.js    ← CC 权限提示
+│   ├── CcFuzzyPicker.js         ← CC 补全菜单
+│   ├── CcHelpMenu.js            ← CC 帮助菜单
+│   ├── CcLogo.js                ← CC Logo
+│   ├── CcMcpStatus.js           ← MCP 状态栏
+│   ├── CcMcpPanel.js            ← MCP 详情面板
+│   ├── CcSidebarPanel.js        ← 右侧看板容器
+│   ├── CcSidebarContext.js      ← Context 面板
+│   ├── CcSidebarFiles.js        ← Files 面板
+│   ├── CcSidebarTools.js        ← Tools 面板
+│   ├── CcSidebarStats.js        ← Stats 面板
+│   └── CcSidebarMcp.js          ← MCP 面板
+├── utils/                       ← 工具函数
+│   ├── ccMode.js                ← 门控检测
+│   ├── ccBrand.js               ← 品牌文本
+│   ├── ccFormatters.js          ← 格式化函数
+│   ├── ccToolFormat.js          ← 工具参数格式化
+│   ├── ccResizeHandler.js       ← Resize 处理
+│   ├── ccRenderStrategy.js      ← 渲染策略
+│   ├── ccTimers.js              ← 计时器常量
+│   ├── ccLayout.js              ← 布局计算
+│   ├── ccContextWindows.js      ← 模型上下文窗口
+│   └── ccPricing.js             ← 模型定价
+├── hooks/                       ← React Hooks
+│   ├── useMcpStatus.js          ← MCP 状态桥接
+│   └── useSidebarState.js       ← 右侧看板状态
+└── theme/                       ← 主题
+    ├── ccTheme.js               ← CC 主题色板
+    └── themeRegistry.js         ← 主题注册</code></pre>
+<h3 id="5-2-文件命名规则">5.2 文件命名规则<a class="anchor" href="#5-2-文件命名规则" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>前缀</th><th>示例</th></tr></thead><tbody><tr><td>CC 模式专用组件</td><td><code>Cc</code></td><td><code>CcStatusLine.js</code></td></tr><tr><td>CC 模式专用工具</td><td><code>cc</code></td><td><code>ccFormatters.js</code></td></tr><tr><td>CC 模式专用 Hook</td><td><code>use</code> + 功能</td><td><code>useMcpStatus.js</code></td></tr><tr><td>Legacy 组件</td><td>无前缀</td><td><code>FooterBar.js</code></td></tr></tbody></table>
+<h3 id="5-3-禁止事项">5.3 禁止事项<a class="anchor" href="#5-3-禁止事项" aria-label="锚点">#</a></h3>
+<pre><code>❌ 禁止在 tui/ 目录外创建 CC 模式相关文件
+❌ 禁止在 tui/ 目录内创建非 CC 模式的无关文件
+❌ 禁止修改 Legacy 组件的内部实现
+❌ 禁止在 CC 组件中直接引用 Legacy 组件</code></pre>
+<hr>
+<h2 id="6-代码风格约束">6. 代码风格约束<a class="anchor" href="#6-代码风格约束" aria-label="锚点">#</a></h2>
+<h3 id="6-1-通用规则">6.1 通用规则<a class="anchor" href="#6-1-通用规则" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确：2 空格缩进、单引号、分号</span>
+<span class="hljs-keyword">const</span> x = <span class="hljs-number">1</span>;
+<span class="hljs-keyword">const</span> y = <span class="hljs-string">&#x27;hello&#x27;</span>;
+
+<span class="hljs-comment">// ✅ 正确：camelCase 命名</span>
+<span class="hljs-keyword">const</span> isCcMode = <span class="hljs-literal">true</span>;
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">formatModelName</span>(<span class="hljs-params"></span>) {}
+
+<span class="hljs-comment">// ✅ 正确：英文注释</span>
+<span class="hljs-comment">// Detect terminal color support</span>
+<span class="hljs-keyword">const</span> supportsColor = process.<span class="hljs-property">env</span>.<span class="hljs-property">COLORTERM</span> === <span class="hljs-string">&#x27;truecolor&#x27;</span>;
+
+<span class="hljs-comment">// ✅ 正确：面向用户的中文字符串</span>
+<span class="hljs-keyword">const</span> message = <span class="hljs-string">&#x27;正在连接数据库...&#x27;</span>; <span class="hljs-comment">// 用户可见</span>
+<span class="hljs-keyword">const</span> label = <span class="hljs-string">&#x27;model&#x27;</span>; <span class="hljs-comment">// 内部标识，英文</span></code></pre>
+<h3 id="6-2-组件规则">6.2 组件规则<a class="anchor" href="#6-2-组件规则" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确：函数组件 + React.memo</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">CcStatusLine</span>(<span class="hljs-params">{ model, context, cost }</span>) {
+  <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Text</span>&gt;</span>{model}<span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span></span>;
+}
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = { <span class="hljs-title class_">CcStatusLine</span>: <span class="hljs-title class_">React</span>.<span class="hljs-title function_">memo</span>(<span class="hljs-title class_">CcStatusLine</span>) };
+
+<span class="hljs-comment">// ✅ 正确：props 解构</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">CcToolCard</span>(<span class="hljs-params">{ name, params, status, result }</span>) {
+  <span class="hljs-comment">// ...</span>
+}
+
+<span class="hljs-comment">// ❌ 错误：类组件</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">CcStatusLine</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_ inherited__">React.Component</span> { <span class="hljs-comment">// 禁止！</span>
+  <span class="hljs-title function_">render</span>(<span class="hljs-params"></span>) { <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Text</span> /&gt;</span></span>; }
+}</code></pre>
+<h3 id="6-3-错误处理">6.3 错误处理<a class="anchor" href="#6-3-错误处理" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确：try/catch + fail-soft</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">loadMcpServers</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">await</span> <span class="hljs-title function_">getMcpServers</span>();
+  } <span class="hljs-keyword">catch</span> {
+    <span class="hljs-keyword">return</span> []; <span class="hljs-comment">// 失败返回空数组，不阻塞渲染</span>
+  }
+}
+
+<span class="hljs-comment">// ✅ 正确：错误边界</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">ErrorBoundary</span>(<span class="hljs-params">{ children }</span>) {
+  <span class="hljs-keyword">const</span> [error, setError] = <span class="hljs-title function_">useState</span>(<span class="hljs-literal">null</span>);
+  <span class="hljs-keyword">if</span> (error) {
+    <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Text</span> <span class="hljs-attr">color</span>=<span class="hljs-string">&quot;#F87171&quot;</span>&gt;</span>渲染错误: {error.message}<span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span></span>;
+  }
+  <span class="hljs-keyword">return</span> children;
+}
+
+<span class="hljs-comment">// ❌ 错误：抛出异常</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">loadConfig</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">if</span> (!config) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">&#x27;Config not found&#x27;</span>); <span class="hljs-comment">// 禁止！</span>
+}</code></pre>
+<hr>
+<h2 id="7-测试约束">7. 测试约束<a class="anchor" href="#7-测试约束" aria-label="锚点">#</a></h2>
+<h3 id="7-1-必须测试的场景">7.1 必须测试的场景<a class="anchor" href="#7-1-必须测试的场景" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>场景</th><th>测试内容</th></tr></thead><tbody><tr><td>门控开关</td><td><code>KHY_CC_TUI=1</code> 和未设置时行为正确</td></tr><tr><td>Resize</td><td>放大/缩小无残影，布局正确</td></tr><tr><td>流式输出</td><td>60fps 无卡顿</td></tr><tr><td>工具调用</td><td>状态变化正确渲染</td></tr><tr><td>MCP 状态</td><td>连接/断开/失败状态正确</td></tr><tr><td>启动速度</td><td>冷启动 &lt; 100ms</td></tr><tr><td>内存泄漏</td><td>定时器/监听器正确清理</td></tr></tbody></table>
+<h3 id="7-2-性能测试">7.2 性能测试<a class="anchor" href="#7-2-性能测试" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确：测量渲染时间</span>
+<span class="hljs-keyword">const</span> start = performance.<span class="hljs-title function_">now</span>();
+<span class="hljs-title function_">render</span>(<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">App</span> /&gt;</span></span>);
+<span class="hljs-keyword">const</span> duration = performance.<span class="hljs-title function_">now</span>() - start;
+<span class="hljs-title function_">assert</span>(duration &lt; <span class="hljs-number">100</span>, <span class="hljs-string">`启动时间 <span class="hljs-subst">${duration}</span>ms 超过 100ms 底线`</span>);
+
+<span class="hljs-comment">// ✅ 正确：测量内存使用</span>
+<span class="hljs-keyword">const</span> before = process.<span class="hljs-title function_">memoryUsage</span>().<span class="hljs-property">heapUsed</span>;
+<span class="hljs-comment">// ... 执行操作</span>
+<span class="hljs-keyword">const</span> after = process.<span class="hljs-title function_">memoryUsage</span>().<span class="hljs-property">heapUsed</span>;
+<span class="hljs-keyword">const</span> delta = after - before;
+<span class="hljs-title function_">assert</span>(delta &lt; <span class="hljs-number">50</span> * <span class="hljs-number">1024</span> * <span class="hljs-number">1024</span>, <span class="hljs-string">`内存增长 <span class="hljs-subst">${delta}</span> 超过 50MB 底线`</span>);</code></pre>
+<hr>
+<h2 id="8-验收清单">8. 验收清单<a class="anchor" href="#8-验收清单" aria-label="锚点">#</a></h2>
+<h3 id="8-1-phase-1-验收">8.1 Phase 1 验收<a class="anchor" href="#8-1-phase-1-验收" aria-label="锚点">#</a></h3>
+<ul><li>[ ] <code>KHY_CC_TUI=1 khy</code> 启动后显示 Khy 品牌 Logo</li><li>[ ] 用户消息无背景框，纯文本显示</li><li>[ ] 工具调用使用 🔧 + 粗体青色</li><li>[ ] 状态栏单行，格式正确</li><li>[ ] 冷启动 &lt; 100ms</li><li>[ ] Resize 无残影</li><li>[ ] Legacy 模式行为不变</li></ul>
+<h3 id="8-2-phase-2-验收">8.2 Phase 2 验收<a class="anchor" href="#8-2-phase-2-验收" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 状态栏格式：Model │ Context │ Cost</li><li>[ ] MCP 状态显示正确</li><li>[ ] 右侧看板 ≥ 120 列时自动显示</li><li>[ ] 看板面板切换正常</li><li>[ ] 渲染帧率 ≥ 30 FPS</li></ul>
+<h3 id="8-3-phase-3-验收">8.3 Phase 3 验收<a class="anchor" href="#8-3-phase-3-验收" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 助手消息 ● 前缀</li><li>[ ] 工具调用独立卡片（无过程组）</li><li>[ ] 工具结果块边框正确</li><li>[ ] 思考折叠块可展开/折叠</li></ul>
+<h3 id="8-4-最终验收">8.4 最终验收<a class="anchor" href="#8-4-最终验收" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 所有门控开关正常</li><li>[ ] 帮助菜单覆盖层正常</li><li>[ ] 斜杠命令菜单正常</li><li>[ ] OpenAI 模型名格式化正确</li><li>[ ] 启动速度 &lt; 100ms</li><li>[ ] 渲染无残影</li><li>[ ] 内存 &lt; 50MB</li><li>[ ] Legacy 模式零破坏</li></ul>
+<h3 id="8-5-输出回显-滚动-验收-2026-09-16">8.5 输出回显 / 滚动 验收（2026-09-16）<a class="anchor" href="#8-5-输出回显-滚动-验收-2026-09-16" aria-label="锚点">#</a></h3>
+<ul><li>[ ] <strong>最大化窗口</strong>（≥122 列）与<strong>小窗口</strong>（80×24）下都能看到转录正文，不只看到输入框</li><li>[ ] 转录默认停在<strong>最新一条</strong>，新输出进来继续跟随；<code>↑</code> 指示器显示上方还有多少行</li><li>[ ] 滚轮滚动内容区（<code>↑</code>/<code>↓</code> 指示器变化），<strong>不</strong>触发输入历史回溯</li><li>[ ] 输入框与页脚在滚动时<strong>位置不动</strong></li><li>[ ] 帧高硬约束：<code>KHY_TUI_DIAG_H=1 khy</code> 打印的 <code>viewport + 全部 chrome</code> 合计 <strong>&lt; rows</strong>，</li></ul>
+<p>且 <code>KHY_MOUSE_WHEEL=0</code> / <code>KHY_INLINE_TRANSCRIPT=0</code> 两条回退路径逐字节回到旧行为</p>
+<ul><li>[ ] <code>npm run --workspace services/backend test:tui</code> 全绿（含 <code>viewportSticky</code> / <code>mouseWheel</code>）</li></ul>
+<hr>
+<h2 id="9-变更记录">9. 变更记录<a class="anchor" href="#9-变更记录" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>2026-09-09</td><td>初始版本，定义 CC TUI 复刻工程约束</td></tr><tr><td>2026-09-16</td><td>新增 §0.9.1 视口贴底哨兵（<code>null</code> = 跟随最新内容）、§0.9.2 帧高 ≤ rows−1 硬约束与 chrome 逐项清单、§0.9.3 备用缓冲区滚轮接管；§1.2 登记 <code>KHY_INLINE_TRANSCRIPT</code> / <code>KHY_MOUSE_WHEEL</code> / <code>KHY_PREVIEW_LAYOUT</code> / <code>KHY_TUI_DIAG_H</code> / <code>KHY_TUI_DIAG</code></td></tr><tr><td>2026-09-21</td><td>新增 §0.9.7 单写者原则（绕过 ink 注入 stdio 的写入擦不掉，BUG-13 根因）：<code>consoleMute.js</code> 会话期静音 winston Console transport，§1.2 登记逃生门 <code>KHY_TUI_CONSOLE_LOG</code></td></tr><tr><td>2026-09-21</td><td>§0.9.7 绕过者清单结案 BUG-17：<code>sessionWatchdog.report()</code> 不再自画屏，改经 <code>noticeInbox.js</code>（新）交给 <code>ink-components/App.js</code> 订阅者落成 <code>role:'notice'</code>；宿主钩子语义定为「显式 <code>true</code> 才算接走」。附带修 BUG-17b：<code>stop()</code> 现按身份还原被 patch 的 <code>stream.write</code>（否则停用实例仍拦截全局写入并自我续命）。§1.2 登记逃生门 <code>KHY_WATCHDOG_NOTICE</code></td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../services/backend/src/cli/COMMAND_AUTHORING.html"><div class="dir">← 上一篇</div><div class="ttl">Command Authoring Guide</div></a><a class="next" href="../../../../../services/backend/src/contracts/a2a/README.html"><div class="dir">下一篇 →</div><div class="ttl">A2A 协议契约（JSON Schema）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../";window.__KHY_CUR__="services/backend/src/cli/tui/AGENTS.html";</script>
+<script src="../../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -18,9 +18,6 @@
  *   6. 无有效工具名 → 不抑制(fail-open,不吞叙述)。
  */
 
-const { describe, test, afterEach } = require('node:test');
-const assert = require('node:assert/strict');
-
 const voice = require('../../src/cli/toolPrefaceVoice');
 const FLAG = 'KHY_TOOL_PREFACE_DEDUP';
 
@@ -28,25 +25,25 @@ describe('toolPrefaceVoice — 连续同类工具 preface 抑制', () => {
   afterEach(() => { delete process.env[FLAG]; });
 
   test('回合首个工具(上一条为空)→ 不抑制', () => {
-    assert.equal(voice.suppressConsecutivePreface('scaffoldFiles', '', {}), false);
-    assert.equal(voice.suppressConsecutivePreface('scaffoldFiles', null, {}), false);
-    assert.equal(voice.suppressConsecutivePreface('scaffoldFiles', undefined, {}), false);
+    expect(voice.suppressConsecutivePreface('scaffoldFiles', '', {})).toBe(false);
+    expect(voice.suppressConsecutivePreface('scaffoldFiles', null, {})).toBe(false);
+    expect(voice.suppressConsecutivePreface('scaffoldFiles', undefined, {})).toBe(false);
   });
 
   test('与上一条同类 → 抑制(一串 scaffoldFiles 只首个开口)', () => {
-    assert.equal(voice.suppressConsecutivePreface('scaffoldFiles', 'scaffoldfiles', {}), true);
-    assert.equal(voice.suppressConsecutivePreface('write', 'write', {}), true);
+    expect(voice.suppressConsecutivePreface('scaffoldFiles', 'scaffoldfiles', {})).toBe(true);
+    expect(voice.suppressConsecutivePreface('write', 'write', {})).toBe(true);
   });
 
   test('与上一条不同类 → 不抑制(换工具重新说话)', () => {
-    assert.equal(voice.suppressConsecutivePreface('write', 'scaffoldfiles', {}), false);
-    assert.equal(voice.suppressConsecutivePreface('read', 'edit', {}), false);
+    expect(voice.suppressConsecutivePreface('write', 'scaffoldfiles', {})).toBe(false);
+    expect(voice.suppressConsecutivePreface('read', 'edit', {})).toBe(false);
   });
 
   test('工具名归一(scaffold_files / Scaffold Files 与 scaffoldfiles 同类)', () => {
-    assert.equal(voice.suppressConsecutivePreface('scaffold_files', 'scaffoldfiles', {}), true);
-    assert.equal(voice.suppressConsecutivePreface('Scaffold Files', 'scaffoldfiles', {}), true);
-    assert.equal(voice.suppressConsecutivePreface('multi-edit', 'multiedit', {}), true);
+    expect(voice.suppressConsecutivePreface('scaffold_files', 'scaffoldfiles', {})).toBe(true);
+    expect(voice.suppressConsecutivePreface('Scaffold Files', 'scaffoldfiles', {})).toBe(true);
+    expect(voice.suppressConsecutivePreface('multi-edit', 'multiedit', {})).toBe(true);
   });
 
   test('模拟一串:scaffold×3 → 只首个发出,其余抑制;换 write 又发一次', () => {
@@ -57,24 +54,23 @@ describe('toolPrefaceVoice — 连续同类工具 preface 抑制', () => {
       if (!suppressed) lastKey = voice.occurrenceKey(name);
       return suppressed;
     };
-    assert.equal(decide('scaffoldFiles'), false); // ① 发出
-    assert.equal(decide('scaffoldFiles'), true);  // ② 抑制
-    assert.equal(decide('scaffoldFiles'), true);  // ③ 抑制
-    assert.equal(decide('write'), false);         // ④ 换类,发出
-    assert.equal(decide('write'), true);          // ⑤ 抑制
-    assert.equal(decide('scaffoldFiles'), false); // ⑥ 又换回,发出(非连续)
+    expect(decide('scaffoldFiles')).toBe(false); // ① 发出
+    expect(decide('scaffoldFiles')).toBe(true);  // ② 抑制
+    expect(decide('scaffoldFiles')).toBe(true);  // ③ 抑制
+    expect(decide('write')).toBe(false);         // ④ 换类,发出
+    expect(decide('write')).toBe(true);          // ⑤ 抑制
+    expect(decide('scaffoldFiles')).toBe(false);  // ⑥ 又换回,发出(非连续)
   });
 
   test('KHY_TOOL_PREFACE_DEDUP 关 → 恒不抑制(逐字节回退历史刷屏)', () => {
     for (const off of ['0', 'false', 'off', 'no']) {
-      assert.equal(
-        voice.suppressConsecutivePreface('scaffoldFiles', 'scaffoldfiles', { [FLAG]: off }),
-        false, off);
+      expect(voice.suppressConsecutivePreface('scaffoldFiles', 'scaffoldfiles', { [FLAG]: off }))
+        .toBe(false);
     }
   });
 
   test('无有效工具名 → 不抑制(fail-open,绝不吞叙述)', () => {
-    assert.equal(voice.suppressConsecutivePreface('', 'scaffoldfiles', {}), false);
-    assert.equal(voice.suppressConsecutivePreface(null, 'scaffoldfiles', {}), false);
+    expect(voice.suppressConsecutivePreface('', 'scaffoldfiles', {})).toBe(false);
+    expect(voice.suppressConsecutivePreface(null, 'scaffoldfiles', {})).toBe(false);
   });
 });

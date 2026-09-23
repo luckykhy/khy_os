@@ -1015,7 +1015,7 @@ function _printWslManualGuide(ctx) {
   printInfo('  ④ MSYS2/LLVM 原生（进阶）:');
   printInfo('     安装 nasm/gcc/binutils/grub 后  set KHY_FORCE_KERNEL_BUILD=1 && khy os build');
   printInfo('内核源码位于: ' + ctx.kernelDir);
-  printInfo('详细步骤见 docs/07_OPS_运维/[OPS-MAN-036] khyos跨平台构建-Windows支持方案.md。');
+  printInfo('详细步骤见 docs/07_OPS_运维/OPS-MAN/[OPS-MAN-036] khyos跨平台构建-Windows支持方案.md。');
 }
 
 /**

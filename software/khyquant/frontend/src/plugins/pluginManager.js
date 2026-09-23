@@ -25,6 +25,7 @@ export const pluginState = reactive({
 
 export const HOST_MENU_ITEMS = [
   { path: '/dashboard', label: '主页', icon: 'Odometer', order: 1 },
+  { path: '/tasks', label: '任务看板', icon: 'Grid', order: 70 },
   { path: '/announcements', label: '通知公告', icon: 'Bell', order: 80 },
   { path: '/feedback', label: '意见反馈', icon: 'ChatDotRound', order: 85 },
   { path: '/profile', label: '个人中心', icon: 'User', order: 90 },
@@ -110,10 +111,10 @@ export function installPlugins(app, router, pinia) {
   }
 
   if (pluginState.plugins.length > 0) {
-    if (import.meta.env.DEV) { console.log( }
+    if (import.meta.env.DEV) { console.log(
       `[PluginManager] ${pluginState.plugins.length} plugin(s) loaded:`,
       pluginState.plugins.map(p => p.displayName).join(', ')
-    )
+    ) }
   }
 }
 

@@ -14,6 +14,7 @@ describe('repl input frame resize guards', () => {
   let originalPromptFooter;
   let originalPlainTtyUi;
   let originalNoColor;
+  let originalSessionWatchdog;
 
   beforeEach(() => {
     jest.useFakeTimers();
@@ -28,11 +29,17 @@ describe('repl input frame resize guards', () => {
     originalPromptFooter = process.env.KHY_PROMPT_FOOTER;
     originalPlainTtyUi = process.env.KHY_PLAIN_TTY_UI;
     originalNoColor = process.env.NO_COLOR;
+    originalSessionWatchdog = process.env.KHY_SESSION_WATCHDOG;
 
     process.env.KHY_INPUT_FRAME = '1';
     process.env.KHY_PROMPT_FOOTER = '1';
     delete process.env.KHY_PLAIN_TTY_UI;
     delete process.env.NO_COLOR;
+    // 会话看门狗 monkey-patch process.stdout.write(原地替换,不摘除),会把
+    // beforeEach 里 spyOn 的 mock 挤掉,writeSpy.mock 变 undefined。本套件
+    // 断言全靠捕获的 stdout 写入序列,用服务自身文档化的 KHY_SESSION_WATCHDOG
+    // 门关掉它(仅影响本套件的 REPL 启动路径)。
+    process.env.KHY_SESSION_WATCHDOG = '0';
   });
 
   afterEach(() => {
@@ -68,6 +75,8 @@ describe('repl input frame resize guards', () => {
     else process.env.KHY_PLAIN_TTY_UI = originalPlainTtyUi;
     if (originalNoColor === undefined) delete process.env.NO_COLOR;
     else process.env.NO_COLOR = originalNoColor;
+    if (originalSessionWatchdog === undefined) delete process.env.KHY_SESSION_WATCHDOG;
+    else process.env.KHY_SESSION_WATCHDOG = originalSessionWatchdog;
   });
 
   async function startFullRepl() {
@@ -97,7 +106,9 @@ describe('repl input frame resize guards', () => {
     const writes = writeSpy.mock.calls.slice(baseline).map((call) => String(call[0] || ''));
 
     expect(rl.setPrompt.mock.calls.length).toBeGreaterThan(promptBaseline);
-    expect(rl.setPrompt.mock.calls[rl.setPrompt.mock.calls.length - 1][0]).toBe('�?');
+    // 生产 prompt 字形(replSession.js _promptChar):legacy Windows 终端 '>' ,其余 '❯ '。
+    // '✗' 是早已下线的旧字形 —— 测试期望过期,与生产不符。
+    expect(rl.setPrompt.mock.calls[rl.setPrompt.mock.calls.length - 1][0]).toMatch(/^(?:❯ |> )$/);
     expect(writes.some((text) => /─+/.test(text))).toBe(false);
   });
 
@@ -158,7 +169,7 @@ describe('repl input frame resize guards', () => {
     const writes = writeSpy.mock.calls.slice(baseline).map((call) => String(call[0] || ''));
 
     expect(rl.setPrompt.mock.calls.length).toBeGreaterThan(promptBaseline);
-    expect(rl.setPrompt.mock.calls[rl.setPrompt.mock.calls.length - 1][0]).toBe('�?');
+    expect(rl.setPrompt.mock.calls[rl.setPrompt.mock.calls.length - 1][0]).toMatch(/^(?:❯ |> )$/);
     expect(writes.some((text) => /─+/.test(text))).toBe(false);
   });
 });

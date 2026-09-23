@@ -70,13 +70,36 @@ export function useGateway() {
     }
   }
 
-  /** Load models via SSE stream for progress feedback. Returns the full data array. */
-  async function fetchModelCatalogStream(onProgress) {
+  /** Load models via SSE stream for progress feedback. Returns the full data array.
+   *  Accepts an optional AbortSignal so keep-alive re-activation can cancel a
+   *  dangling stream instead of leaking the EventSource + safety timer. */
+  async function fetchModelCatalogStream(onProgress, signal) {
     return new Promise((resolve) => {
       const base = (import.meta.env.VITE_AI_API_BASE_URL || '').replace(/\/$/, '');
       const url = `${base}/api/models/stream`;
       const es = new EventSource(url);
       let data = [];
+      let settled = false;
+      const finish = (val) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(safetyTimer);
+        if (signal) signal.removeEventListener('abort', onAbort);
+        try {
+          es.close();
+        } catch {
+          /* already closed */
+        }
+        resolve(val);
+      };
+      const onAbort = () => finish(data);
+      if (signal) {
+        if (signal.aborted) {
+          finish(data);
+          return;
+        }
+        signal.addEventListener('abort', onAbort, { once: true });
+      }
       es.onmessage = (evt) => {
         try {
           const msg = JSON.parse(evt.data);
@@ -84,25 +107,17 @@ export function useGateway() {
             onProgress?.(msg);
           } else if (msg.type === 'done') {
             data = msg.data || [];
-            es.close();
-            resolve(data);
+            finish(data);
           } else if (msg.type === 'error') {
-            es.close();
-            resolve([]);
+            finish([]);
           }
         } catch {
           /* ignore malformed */
         }
       };
-      es.onerror = () => {
-        es.close();
-        resolve(data);
-      };
-      // Timeout safety: 60s max
-      setTimeout(() => {
-        es.close();
-        resolve(data);
-      }, 60000);
+      es.onerror = () => finish(data);
+      // Timeout safety: 60s max — cancellable via finish() so it never dangles.
+      const safetyTimer = setTimeout(() => finish(data), 60000);
     });
   }
 

@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-COM-001] 代码注释规范.md -->
+<title>[DESIGN-COM-001] 代码注释规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-COM-001] 代码注释规范</div>
+      <header class="hero reveal"><h1>[DESIGN-COM-001] 代码注释规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-com-001-代码注释规范">[DESIGN-COM-001] 代码注释规范</a></li><li class="lvl-2"><a href="#1-注释原则">1. 注释原则</a></li><li class="lvl-2"><a href="#2-注释类型与格式">2. 注释类型与格式</a></li><li class="lvl-3"><a href="#2-1-块注释-block-comment">2.1 块注释（Block Comment）</a></li><li class="lvl-3"><a href="#2-2-行内注释-inline-comment">2.2 行内注释（Inline Comment）</a></li><li class="lvl-3"><a href="#2-3-python-docstring">2.3 Python docstring</a></li><li class="lvl-2"><a href="#3-何时需要注释">3. 何时需要注释</a></li><li class="lvl-3"><a href="#3-1-必须加注释的场景">3.1 必须加注释的场景</a></li><li class="lvl-3"><a href="#3-2-不需要注释的场景">3.2 不需要注释的场景</a></li><li class="lvl-2"><a href="#4-todo-fixme-hack-标注">4. TODO / FIXME / HACK 标注</a></li><li class="lvl-3"><a href="#4-1-格式">4.1 格式</a></li><li class="lvl-3"><a href="#4-2-示例">4.2 示例</a></li><li class="lvl-3"><a href="#4-3-生命周期规则">4.3 生命周期规则</a></li><li class="lvl-2"><a href="#5-文件头部注释">5. 文件头部注释</a></li><li class="lvl-3"><a href="#5-1-javascript-文件头">5.1 JavaScript 文件头</a></li><li class="lvl-3"><a href="#5-2-python-文件头">5.2 Python 文件头</a></li><li class="lvl-3"><a href="#5-3-版权头-外部可分发文件">5.3 版权头（外部可分发文件）</a></li><li class="lvl-2"><a href="#6-注释纪律">6. 注释纪律</a></li><li class="lvl-3"><a href="#6-1-正确示例">6.1 正确示例</a></li><li class="lvl-3"><a href="#6-2-错误示例">6.2 错误示例</a></li><li class="lvl-2"><a href="#7-不同语言的注释约定">7. 不同语言的注释约定</a></li><li class="lvl-2"><a href="#8-版本历史">8. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-com-001-代码注释规范">[DESIGN-COM-001] 代码注释规范<a class="anchor" href="#design-com-001-代码注释规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: COM-001 -->
+<blockquote><p><strong>用途</strong>：定义 khy-os 项目的代码注释标准，包括格式、位置、类型、版权头等。<br>AGENTS.md 只给了一句 &quot;代码注释：英文&quot;，本文档补全全量细节。</p></blockquote>
+<hr>
+<h2 id="1-注释原则">1. 注释原则<a class="anchor" href="#1-注释原则" aria-label="锚点">#</a></h2>
+<ol><li><strong>解释 WHY，不是 WHAT</strong>：代码本身要自解释（好的命名），注释补充意图和约束</li><li><strong>过时注释比没有更糟</strong>：代码变了注释没变，删除它</li><li><strong>面向维护者</strong>：注释写给未来可能读这段代码的人（包括 3 个月后的你）</li><li><strong>英文</strong>：所有注释用英文，与 AGENTS.md 一致</li><li><strong>JSDoc / docstring</strong>：公共 API 必须有类型签名注释</li></ol>
+<hr>
+<h2 id="2-注释类型与格式">2. 注释类型与格式<a class="anchor" href="#2-注释类型与格式" aria-label="锚点">#</a></h2>
+<h3 id="2-1-块注释-block-comment">2.1 块注释（Block Comment）<a class="anchor" href="#2-1-块注释-block-comment" aria-label="锚点">#</a></h3>
+<p>用于文件头部、函数说明、复杂逻辑分段：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">/**
+ * Validates that a trading strategy configuration is complete and consistent.
+ *
+ * Checks performed:
+ *   1. Required fields presence (name, broker, instruments)
+ *   2. Parameter bounds (stopLoss must be &lt; takeProfit)
+ *   3. Indicator compatibility (ATR period must match bar count)
+ *
+ * <span class="hljs-doctag">@param</span> {<span class="hljs-type">Object</span>} <span class="hljs-variable">strategy</span> - Strategy configuration object
+ * <span class="hljs-doctag">@param</span> {<span class="hljs-type">string</span>} strategy.name - Strategy identifier (unique)
+ * <span class="hljs-doctag">@param</span> {<span class="hljs-type">string</span>} strategy.broker - Broker name from whitelist
+ * <span class="hljs-doctag">@param</span> {<span class="hljs-type">Object</span>} strategy.params - Indicator parameters
+ * <span class="hljs-doctag">@returns</span> {<span class="hljs-type">Object</span>} ValidationResult with { valid, errors[] }
+ * <span class="hljs-doctag">@throws</span> {<span class="hljs-type">ValidationError</span>} If strategy is null/undefined
+ *
+ * <span class="hljs-doctag">@example</span>
+ * const result = validateStrategy({
+ *   name: &#x27;mean-reversion&#x27;,
+ *   broker: &#x27;binance&#x27;,
+ *   params: { atrPeriod: 14, stopLoss: 0.02 }
+ * });
+ */</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">validateStrategy</span>(<span class="hljs-params">strategy</span>) {
+  <span class="hljs-comment">// ...</span>
+}</code></pre>
+<h3 id="2-2-行内注释-inline-comment">2.2 行内注释（Inline Comment）<a class="anchor" href="#2-2-行内注释-inline-comment" aria-label="锚点">#</a></h3>
+<p>用于单行补充说明，与代码同行：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> timeout = <span class="hljs-built_in">parseInt</span>(env.<span class="hljs-property">AI_HTTP_TIMEOUT_MS</span>) || <span class="hljs-number">30000</span>; <span class="hljs-comment">// fallback to 30s</span></code></pre>
+<p><strong>行内注释规范</strong>：</p>
+<ul><li>注释前留 2 空格</li><li>注释本身不解释代码在做什么（那该由命名表达）</li><li>注释解释为什么这样写、约束来源、历史原因</li></ul>
+<h3 id="2-3-python-docstring">2.3 Python docstring<a class="anchor" href="#2-3-python-docstring" aria-label="锚点">#</a></h3>
+<pre><code class="language-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">validate_strategy</span>(<span class="hljs-params">config: <span class="hljs-built_in">dict</span></span>) -&gt; ValidationResult:
+    <span class="hljs-string">&quot;&quot;&quot;Validate trading strategy configuration completeness.
+
+    Checks required fields, parameter bounds, and indicator
+    compatibility per DESIGN-ARCH-082 §4.2.
+
+    Args:
+        config: Strategy configuration dict with keys:
+            - name (str): Unique strategy identifier
+            - broker (str): Broker name from WHITELIST_BROKERS
+            - params (dict): Indicator parameters
+
+    Returns:
+        ValidationResult with .valid (bool) and .errors (list)
+
+    Raises:
+        TypeError: If config is not a dict
+
+    Example:
+        &gt;&gt;&gt; result = validate_strategy({
+        ...     &#x27;name&#x27;: &#x27;mean-reversion&#x27;,
+        ...     &#x27;broker&#x27;: &#x27;binance&#x27;,
+        ...     &#x27;params&#x27;: {&#x27;atr_period&#x27;: 14}
+        ... })
+        &gt;&gt;&gt; result.valid
+        True
+    &quot;&quot;&quot;</span>
+    ...</code></pre>
+<hr>
+<h2 id="3-何时需要注释">3. 何时需要注释<a class="anchor" href="#3-何时需要注释" aria-label="锚点">#</a></h2>
+<h3 id="3-1-必须加注释的场景">3.1 必须加注释的场景<a class="anchor" href="#3-1-必须加注释的场景" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>场景</th><th>要求</th></tr></thead><tbody><tr><td>公共 API（export / module.exports）</td><td>JSDoc / docstring 完整签名</td></tr><tr><td>算法/数学公式</td><td>注释来源/推导过程</td></tr><tr><td>非显式约束</td><td>解释为什么这样写（如：<code>// RS256 而非 HS256：服务间共享公钥</code>）</td></tr><tr><td>性能敏感区</td><td>说明时间复杂度或内存特征</td></tr><tr><td>安全关键</td><td>解释防护意图（如：<code>// Prevent prototype pollution</code>）</td></tr><tr><td>兼容性 hack</td><td>解释浏览器/运行时差异原因</td></tr><tr><td>TODO / FIXME / HACK</td><td>必须标注，见 §4</td></tr></tbody></table>
+<h3 id="3-2-不需要注释的场景">3.2 不需要注释的场景<a class="anchor" href="#3-2-不需要注释的场景" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>场景</th><th>原因</th></tr></thead><tbody><tr><td>自解释的 getter/setter</td><td>命名已说明一切</td></tr><tr><td>标准模式（<code>try/catch</code>、<code>forEach</code>）</td><td>常识性结构</td></tr><tr><td>一行逻辑</td><td>超过注释本身</td></tr></tbody></table>
+<hr>
+<h2 id="4-todo-fixme-hack-标注">4. TODO / FIXME / HACK 标注<a class="anchor" href="#4-todo-fixme-hack-标注" aria-label="锚点">#</a></h2>
+<h3 id="4-1-格式">4.1 格式<a class="anchor" href="#4-1-格式" aria-label="锚点">#</a></h3>
+<pre><code>{TAG}({scope}): {description} [@{owner}|{date}]</code></pre>
+<table><thead><tr><th>标签</th><th>含义</th><th>使用场景</th></tr></thead><tbody><tr><td><code>TODO</code></td><td>计划做的事</td><td>功能待实现、待优化</td></tr><tr><td><code>FIXME</code></td><td>已知 bug，需修复</td><td>临时代码、已知问题</td></tr><tr><td><code>HACK</code></td><td>临时 workaround</td><td>快速绕过，需后续重构</td></tr><tr><td><code>OPTIMIZE</code></td><td>性能可优化</td><td>已知性能瓶颈</td></tr><tr><td><code>DEPRECATED</code></td><td>已废弃，待移除</td><td>引用旧 API</td></tr></tbody></table>
+<h3 id="4-2-示例">4.2 示例<a class="anchor" href="#4-2-示例" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// TODO(DESIGN-NAM-001): Migrate to PascalCase once ARCH-082 is approved</span>
+<span class="hljs-comment">// FIXME(@luckykhy 2026-09-10): Race condition when concurrent requests</span>
+<span class="hljs-comment">// <span class="hljs-doctag">HACK:</span> Workaround for Node 18 ESM interop issue, remove after v2.0</span>
+<span class="hljs-comment">// DEPRECATED(2026-09-01): Use validateStrategyV2() instead, remove in v3.0</span></code></pre>
+<h3 id="4-3-生命周期规则">4.3 生命周期规则<a class="anchor" href="#4-3-生命周期规则" aria-label="锚点">#</a></h3>
+<ul><li><code>TODO</code> 最长存活 1 个 sprint（2 周），过期自动升级为 <code>FIXME</code></li><li><code>FIXME</code> / <code>HACK</code> 必须在 PR 描述中说明修复计划或保留理由</li><li><code>DEPRECATED</code> 必须标注移除版本，移除前须走 TOOL-001 废弃流程</li></ul>
+<hr>
+<h2 id="5-文件头部注释">5. 文件头部注释<a class="anchor" href="#5-文件头部注释" aria-label="锚点">#</a></h2>
+<h3 id="5-1-javascript-文件头">5.1 JavaScript 文件头<a class="anchor" href="#5-1-javascript-文件头" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">/**
+ * <span class="hljs-doctag">@file</span> aiGateway.js
+ * <span class="hljs-doctag">@description</span> AI Gateway — unified multi-provider AI invocation adapter.
+ * <span class="hljs-doctag">@module</span> services/gateway
+ * <span class="hljs-doctag">@see</span> <span class="hljs-variable">DESIGN</span>-ACP-001 for message envelope contract
+ * <span class="hljs-doctag">@see</span> <span class="hljs-variable">DESIGN</span>-API-002 for error envelope format
+ *
+ * <span class="hljs-doctag">@author</span> <span class="hljs-variable">khy</span>-os platform team
+ * <span class="hljs-doctag">@since</span> 1.0.0
+ * <span class="hljs-doctag">@license</span> <span class="hljs-variable">MIT</span>
+ */</span></code></pre>
+<h3 id="5-2-python-文件头">5.2 Python 文件头<a class="anchor" href="#5-2-python-文件头" aria-label="锚点">#</a></h3>
+<pre><code class="language-python"><span class="hljs-string">&quot;&quot;&quot;
+cli_parser.py — CLI argument parser and command dispatcher.
+
+Parses user input, resolves aliases (DESIGN-GIT-001 §1),
+and routes to handler modules.
+
+Modules: cli.router, cli.aliases
+Standards: DESIGN-ACP-001, DESIGN-COMM-001
+&quot;&quot;&quot;</span>
+
+<span class="hljs-comment"># Single-line copyright notice (optional for internal files)</span>
+<span class="hljs-comment"># Copyright (c) 2026 khy-os platform team</span></code></pre>
+<h3 id="5-3-版权头-外部可分发文件">5.3 版权头（外部可分发文件）<a class="anchor" href="#5-3-版权头-外部可分发文件" aria-label="锚点">#</a></h3>
+<p>仅在打算开源分发的文件中添加（如 <code>packaging/</code> 下的打包脚本）：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">/**
+ * Copyright (c) 2026 khy-os platform team
+ * SPDX-License-Identifier: MIT
+ */</span></code></pre>
+<p>仓库主体代码（<code>services/</code>、<code>platform/</code>、<code>apps/</code>）是 <code>LicenseRef-Source-Available</code>，不批量加版权头。</p>
+<hr>
+<h2 id="6-注释纪律">6. 注释纪律<a class="anchor" href="#6-注释纪律" aria-label="锚点">#</a></h2>
+<h3 id="6-1-正确示例">6.1 正确示例<a class="anchor" href="#6-1-正确示例" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 解释 WHY</span>
+<span class="hljs-comment">// Use exponential backoff with jitter to avoid thundering herd</span>
+<span class="hljs-comment">// when multiple clients retry simultaneously (see DESIGN-COMM-001 §4.3)</span>
+<span class="hljs-keyword">const</span> delay = <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">min</span>(baseDelay * <span class="hljs-number">2</span> ** attempt + <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">random</span>() * jitter, <span class="hljs-variable constant_">MAX_DELAY</span>);
+
+<span class="hljs-comment">// ✅ 标注 FIXME 带上下文</span>
+<span class="hljs-comment">// FIXME(DESIGN-ARCH-081): Current spinner doesn&#x27;t support streaming output</span>
+<span class="hljs-comment">// Replace with stream-aware spinner once TUI v2 is merged</span>
+<span class="hljs-title function_">showSpinner</span>(<span class="hljs-string">&#x27;Thinking...&#x27;</span>);
+
+<span class="hljs-comment">// ✅ 解释约束</span>
+<span class="hljs-comment">// RS256 (asymmetric) required because the verification key</span>
+<span class="hljs-comment">// is shared across services; HS256 would expose the secret</span>
+<span class="hljs-keyword">const</span> algorithm = <span class="hljs-string">&#x27;RS256&#x27;</span>;</code></pre>
+<h3 id="6-2-错误示例">6.2 错误示例<a class="anchor" href="#6-2-错误示例" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ❌ 重复代码（命名好就不需要注释）</span>
+<span class="hljs-comment">// Set user ID</span>
+<span class="hljs-keyword">const</span> userId = user.<span class="hljs-property">id</span>;
+
+<span class="hljs-comment">// ❌ 过时的注释</span>
+<span class="hljs-comment">// Get user by email — actually this fetches by username now</span>
+<span class="hljs-keyword">const</span> user = <span class="hljs-keyword">await</span> <span class="hljs-title function_">getUserByName</span>(query);
+
+<span class="hljs-comment">// ❌ 无意义标签</span>
+<span class="hljs-comment">// <span class="hljs-doctag">TODO:</span> fix this  ← 没有 scope 和 owner，等于没有写</span>
+<span class="hljs-keyword">const</span> x = <span class="hljs-title function_">hackyFix</span>();
+
+<span class="hljs-comment">// ❌ 大段注释遮蔽代码</span>
+<span class="hljs-comment">/* ============================================
+   SECTION 1: DO STUFF
+   ============================================ */</span></code></pre>
+<hr>
+<h2 id="7-不同语言的注释约定">7. 不同语言的注释约定<a class="anchor" href="#7-不同语言的注释约定" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>语言</th><th>文档注释格式</th><th>工具</th></tr></thead><tbody><tr><td>JavaScript</td><td>JSDoc (<code>/** ... */</code>)</td><td>ESLint <code>require-jsdoc</code></td></tr><tr><td>Python</td><td>Google 风格 docstring (<code>&quot;&quot;&quot;</code>)</td><td>无强制检查（可后续加）</td></tr><tr><td>Vue SFC</td><td>JSDoc on <code>&lt;script setup&gt;</code></td><td>—</td></tr><tr><td>Markdown</td><td>自解释文本</td><td>—</td></tr><tr><td>JSON</td><td>无注释（JSON 规范不允许）</td><td>—</td></tr><tr><td>YAML</td><td><code>#</code> 行注释</td><td>—</td></tr><tr><td>SQL</td><td><code>--</code> 行注释</td><td>—</td></tr></tbody></table>
+<hr>
+<h2 id="8-版本历史">8. 版本历史<a class="anchor" href="#8-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义代码注释规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-CICD-001] CI-CD 规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-CICD-001] CI/CD 规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-COMM-001] 通信协议规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-COMM-001] 通信协议规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-COM-001] 代码注释规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

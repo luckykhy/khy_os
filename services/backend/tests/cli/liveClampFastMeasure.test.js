@@ -8,17 +8,16 @@
  *  - 快路径(默认 on)与关态(逐字节回退)对同一输入返回 deepEqual 的 {entries, truncated}
  *    —— 覆盖:整段命中/尾切边界、多 text 段、text+tool 混合、CJK 宽字符、软换行、坏几何。
  *  - 大 text 段 + 小预算(CUT 场景)下,快路径的 displayWidth 调用数 << 关态(全量扫描被消除)。
- *
- * 运行:node --test services/backend/tests/cli/liveClampFastMeasure.test.js
  */
 // 在 require(liveHeightClamp) 之前给 formatters.displayWidth 装计数探针;liveHeightClamp
 // 懒加载并缓存该引用(_dispW),故首次 _displayWidth 调用会捕获探针。
 const formatters = require('../../src/cli/formatters');
+const assert = require('node:assert');
 let _dwCalls = 0;
 const _origDW = formatters.displayWidth;
 formatters.displayWidth = function (s) { _dwCalls++; return _origDW(s); };
 const clamp = require('../../src/cli/tui/ink-components/liveHeightClamp');
-test.after(() => { formatters.displayWidth = _origDW; });
+afterAll(() => { formatters.displayWidth = _origDW; });
 // 快路径 on(clamp 也 on):默认 env(不设 fast 门控);快路径 off:仅关 fast、clamp 仍 on。
 const FAST_ON = { KHY_LIVE_HARD_CLAMP: 'on' };            // fast 默认 on
 const FAST_OFF = { KHY_LIVE_HARD_CLAMP: 'on', KHY_LIVE_CLAMP_FAST_MEASURE: 'off' };
@@ -40,42 +39,41 @@ const CASES = [
   { name: '坏几何 columns=0', tl: [{ type: 'text', text: lines(30, 500) }], budget: 6, cols: 0 },
   { name: '预算为 1(至少留 1 行)', tl: [{ type: 'text', text: lines(40, 300) }], budget: 1, cols: 80 },
 ];
-for (const c of CASES) {
-}
-// ── 性能证据:大段 CUT 场景,快路径消除整段全量扫描 ───────────────────────────
 
 describe('Live Clamp Fast Measure', () => {
-  test('等价:${c.name}', () => {
-        const on = clamp.tailTimelineToVisualRows(c.tl, c.budget, c.cols, FAST_ON);
-        const off = clamp.tailTimelineToVisualRows(c.tl, c.budget, c.cols, FAST_OFF);
-        assert.deepEqual(on, off, `快路径与关态输出应逐字节一致:${c.name}`);
-  });
+  // 每个 CASE 生成一个独立等价性用例(用例名带上场景描述,失败可定位)
+  for (const c of CASES) {
+    test(`等价:${c.name}`, () => {
+      const on = clamp.tailTimelineToVisualRows(c.tl, c.budget, c.cols, FAST_ON);
+      const off = clamp.tailTimelineToVisualRows(c.tl, c.budget, c.cols, FAST_OFF);
+      assert.deepEqual(on, off, `快路径与关态输出应逐字节一致:${c.name}`);
+    });
+  }
 
   test('_fastMeasureEnabled:默认 on;显式 off/0/false/no 关', () => {
-      expect(clamp._fastMeasureEnabled({})).toBe(true);
-      expect(clamp._fastMeasureEnabled({ KHY_LIVE_CLAMP_FAST_MEASURE: 'off' })).toBe(false);
-      expect(clamp._fastMeasureEnabled({ KHY_LIVE_CLAMP_FAST_MEASURE: '0' })).toBe(false);
-      expect(clamp._fastMeasureEnabled({ KHY_LIVE_CLAMP_FAST_MEASURE: 'false' })).toBe(false);
-      expect(clamp._fastMeasureEnabled({ KHY_LIVE_CLAMP_FAST_MEASURE: 'no' })).toBe(false);
-      expect(clamp._fastMeasureEnabled({ KHY_LIVE_CLAMP_FAST_MEASURE: 'on' })).toBe(true);
+    expect(clamp._fastMeasureEnabled({})).toBe(true);
+    expect(clamp._fastMeasureEnabled({ KHY_LIVE_CLAMP_FAST_MEASURE: 'off' })).toBe(false);
+    expect(clamp._fastMeasureEnabled({ KHY_LIVE_CLAMP_FAST_MEASURE: '0' })).toBe(false);
+    expect(clamp._fastMeasureEnabled({ KHY_LIVE_CLAMP_FAST_MEASURE: 'false' })).toBe(false);
+    expect(clamp._fastMeasureEnabled({ KHY_LIVE_CLAMP_FAST_MEASURE: 'no' })).toBe(false);
+    expect(clamp._fastMeasureEnabled({ KHY_LIVE_CLAMP_FAST_MEASURE: 'on' })).toBe(true);
   });
 
   test('大 text 段 + 小预算:快路径 displayWidth 调用数 << 关态(全量扫描被消除)', () => {
-      const big = [{ type: 'text', text: lines(600, 10) }]; // 600 原始行,预算仅 10 视觉行 → CUT
-      const budget = 10;
-      const cols = 80;
-    
-      _dwCalls = 0;
-      clamp.tailTimelineToVisualRows(big, budget, cols, FAST_ON);
-      const onCalls = _dwCalls;
-    
-      _dwCalls = 0;
-      clamp.tailTimelineToVisualRows(big, budget, cols, FAST_OFF);
-      const offCalls = _dwCalls;
-    
-      expect(offCalls > 400).toBeTruthy();
-      expect(onCalls < 50).toBeTruthy();
-      expect(onCalls * 5 < offCalls).toBeTruthy();
-  });
+    const big = [{ type: 'text', text: lines(600, 10) }]; // 600 原始行,预算仅 10 视觉行 → CUT
+    const budget = 10;
+    const cols = 80;
 
+    _dwCalls = 0;
+    clamp.tailTimelineToVisualRows(big, budget, cols, FAST_ON);
+    const onCalls = _dwCalls;
+
+    _dwCalls = 0;
+    clamp.tailTimelineToVisualRows(big, budget, cols, FAST_OFF);
+    const offCalls = _dwCalls;
+
+    expect(offCalls > 400).toBeTruthy();
+    expect(onCalls < 50).toBeTruthy();
+    expect(onCalls * 5 < offCalls).toBeTruthy();
+  });
 });

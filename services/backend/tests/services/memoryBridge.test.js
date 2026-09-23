@@ -16,8 +16,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { MemoryBridge, createMemoryTools } = require('./memoryBridge');
-const { ToolCategory, RiskLevel } = require('./toolSpec');
+const { MemoryBridge, createMemoryTools } = require('../../src/services/memoryBridge.js');
+const { ToolCategory, RiskLevel } = require('../../src/services/toolSpec.js');
 
 // ── Test Helpers ──────────────────────────────────────────────────────────
 

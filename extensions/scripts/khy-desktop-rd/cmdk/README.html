@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: README.md -->
+<title>kbar — Cmd+K Command Palette（React） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>extensions<span class="sep">›</span>scripts<span class="sep">›</span>khy-desktop-rd<span class="sep">›</span>cmdk<span class="sep">›</span>kbar — Cmd+K Command Palette（React）</div>
+      <header class="hero reveal"><h1>kbar — Cmd+K Command Palette（React）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#kbar-cmd-k-command-palette-react">kbar — Cmd+K Command Palette（React）</a></li><li class="lvl-2"><a href="#一-为什么列在这里">一、为什么列在这里</a></li><li class="lvl-2"><a href="#二-核心使用模式">二、核心使用模式</a></li><li class="lvl-2"><a href="#三-特性清单">三、特性清单</a></li><li class="lvl-2"><a href="#四-给-khy-os-的启示">四、给 khy-os 的启示</a></li><li class="lvl-3"><a href="#4-1-vue-等价方案调研-待补">4.1 Vue 等价方案调研（待补）</a></li><li class="lvl-3"><a href="#4-2-与-goose-quick-launcher-的关系">4.2 与 goose Quick Launcher 的关系</a></li><li class="lvl-3"><a href="#4-3-数据结构设计参考">4.3 数据结构设计参考</a></li><li class="lvl-2"><a href="#五-本地文件">五、本地文件</a></li><li class="lvl-2"><a href="#六-参考资料">六、参考资料</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="kbar-cmd-k-command-palette-react">kbar — Cmd+K Command Palette（React）<a class="anchor" href="#kbar-cmd-k-command-palette-react" aria-label="锚点">#</a></h1>
+<blockquote><p>调研日期: 2026-08-31<br>仓库: <a href="https://github.com/timc1/kbar" target="_blank" rel="noopener">https://github.com/timc1/kbar</a><br>License: MIT</p></blockquote>
+<h2 id="一-为什么列在这里">一、为什么列在这里<a class="anchor" href="#一-为什么列在这里" aria-label="锚点">#</a></h2>
+<p>ZCode 截图里最显眼的特征之一是 <strong>Ctrl+K 搜索覆盖层</strong>——毛玻璃居中弹窗、4 个分类标签、键盘导航、模糊匹配。</p>
+<p>要给 khy-os 桌面端复刻这个组件，最现成的范式是 <strong>kbar</strong>：</p>
+<ul><li>单一组件库，~30KB</li><li>完全无样式（自己控制视觉）</li><li>内置键盘导航（⌘P、⌘N、Backspace）</li><li>内置屏幕阅读器支持</li><li>支持 nested actions（多层菜单）</li><li>性能优化（千级 actions 不卡）</li></ul>
+<blockquote><p>注意：kbar 是 React 组件库，<strong>khy-os 是 Vue 项目</strong>——需要找 Vue 等价方案或自己移植。调研同时记录了 <code>cmdk</code>（timc1 同作者的开源版）作为备选。</p></blockquote>
+<h2 id="二-核心使用模式">二、核心使用模式<a class="anchor" href="#二-核心使用模式" aria-label="锚点">#</a></h2>
+<pre><code class="language-tsx"><span class="hljs-comment">// app.tsx</span>
+<span class="hljs-keyword">import</span> { <span class="hljs-title class_">KBarProvider</span>, <span class="hljs-title class_">KBarPortal</span>, <span class="hljs-title class_">KBarPositioner</span>, <span class="hljs-title class_">KBarAnimator</span>, <span class="hljs-title class_">KBarSearch</span>, <span class="hljs-title class_">KBarResults</span>, useMatches, <span class="hljs-variable constant_">NO_GROUP</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;kbar&quot;</span>;
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">MyApp</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> actions = [
+    {
+      <span class="hljs-attr">id</span>: <span class="hljs-string">&quot;blog&quot;</span>,
+      <span class="hljs-attr">name</span>: <span class="hljs-string">&quot;Blog&quot;</span>,
+      <span class="hljs-attr">shortcut</span>: [<span class="hljs-string">&quot;b&quot;</span>],
+      <span class="hljs-attr">keywords</span>: <span class="hljs-string">&quot;writing words&quot;</span>,
+      <span class="hljs-attr">perform</span>: <span class="hljs-function">() =&gt;</span> (<span class="hljs-variable language_">window</span>.<span class="hljs-property">location</span>.<span class="hljs-property">pathname</span> = <span class="hljs-string">&quot;blog&quot;</span>),
+    },
+    <span class="hljs-comment">// ...</span>
+  ];
+
+  <span class="hljs-keyword">return</span> (
+    <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KBarProvider</span> <span class="hljs-attr">actions</span>=<span class="hljs-string">{actions}</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">KBarPortal</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">KBarPositioner</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">KBarAnimator</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">KBarSearch</span> /&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">RenderResults</span> /&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">KBarAnimator</span>&gt;</span>
+      <span class="hljs-tag">&lt;/<span class="hljs-name">KBarPositioner</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">KBarPortal</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">MyApp</span> /&gt;</span>
+  <span class="hljs-tag">&lt;/<span class="hljs-name">KBarProvider</span>&gt;</span></span>;
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">RenderResults</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> { results } = <span class="hljs-title function_">useMatches</span>();
+  <span class="hljs-keyword">return</span> (
+    <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KBarResults</span>
+      <span class="hljs-attr">items</span>=<span class="hljs-string">{results}</span>
+      <span class="hljs-attr">onRender</span>=<span class="hljs-string">{({</span> <span class="hljs-attr">item</span>, <span class="hljs-attr">active</span> }) =&gt;</span>
+        typeof item === &quot;string&quot;
+          ? <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>{item}<span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+          : <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">style</span>=<span class="hljs-string">{{</span> <span class="hljs-attr">background:</span> <span class="hljs-attr">active</span> ? &quot;#<span class="hljs-attr">f76b1c</span>&quot; <span class="hljs-attr">:</span> &quot;<span class="hljs-attr">transparent</span>&quot; }}&gt;</span>
+              {item.name}
+            <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+      }
+    /&gt;</span>
+  );
+}</code></pre>
+<h2 id="三-特性清单">三、特性清单<a class="anchor" href="#三-特性清单" aria-label="锚点">#</a></h2>
+<ul><li>✅ 内置动画 + 完全可定制组件</li><li>✅ 键盘导航（⌘N / ⌘P 切导航向导）</li><li>✅ 单字符快捷键（按 <code>b</code> 跳 Blog，按 <code>?</code> 调出文档搜索）</li><li>✅ 嵌套 actions（Backspace 回上一层）</li><li>✅ 千级 actions 不卡（性能优先）</li><li>✅ 历史管理（undo/redo）</li><li>✅ 屏幕阅读器支持</li><li>✅ 简单数据结构</li></ul>
+<h2 id="四-给-khy-os-的启示">四、给 khy-os 的启示<a class="anchor" href="#四-给-khy-os-的启示" aria-label="锚点">#</a></h2>
+<h3 id="4-1-vue-等价方案调研-待补">4.1 Vue 等价方案调研（待补）<a class="anchor" href="#4-1-vue-等价方案调研-待补" aria-label="锚点">#</a></h3>
+<p>khy-os 是 Vue 3，需要找 Vue 等价库。已知选项：</p>
+<table><thead><tr><th>库</th><th>备注</th></tr></thead><tbody><tr><td><a href="https://github.com/receter/vue-cmdk" target="_blank" rel="noopener">vue-cmdk</a></td><td>Vue 3 端口，API 类似 kbar</td></tr><tr><td>[floating-vue + 搜索逻辑自写]</td><td>灵活但工作量大</td></tr><tr><td>直接移植 kbar 到 Vue</td><td>90 行核心代码可以重写</td></tr></tbody></table>
+<p><strong>khy-os 的最优路径</strong>：</p>
+<ul><li>短期：在 Vue 中<strong>自写</strong> Cmd+K 覆盖层（基于 Element Plus el-dialog + 自定义搜索）</li><li>中期：评估引入 vue-cmdk 或移植 kbar</li></ul>
+<h3 id="4-2-与-goose-quick-launcher-的关系">4.2 与 goose Quick Launcher 的关系<a class="anchor" href="#4-2-与-goose-quick-launcher-的关系" aria-label="锚点">#</a></h3>
+<p>goose 用<strong>独立透明 BrowserWindow</strong>（<code>createLauncher()</code>）实现 Cmd+K，kbar 用<strong>DOM 覆盖层</strong>。两条路径：</p>
+<table><thead><tr><th>维度</th><th>DOM 覆盖层（kbar）</th><th>独立窗口（goose）</th></tr></thead><tbody><tr><td>实现复杂度</td><td>低（前端组件）</td><td>中（主进程 + IPC）</td></tr><tr><td>失焦行为</td><td>自动隐藏</td><td>自动销毁</td></tr><tr><td>跨窗口支持</td><td>局限当前窗口</td><td>全局</td></tr><tr><td>视觉风格</td><td>与页面融为一体</td><td>像独立应用</td></tr><tr><td>与 ZCode 截图对比</td><td>接近（毛玻璃弹窗）</td><td>也接近（独立窗口）</td></tr></tbody></table>
+<p><strong>给 khy-os 的建议</strong>：两种都支持——<code>Ctrl+K</code> 触发 DOM 覆盖层（kbar 风），<code>globalShortcut.register('CommandOrControl+K', ...)</code> 触发独立小窗口（goose 风）。</p>
+<h3 id="4-3-数据结构设计参考">4.3 数据结构设计参考<a class="anchor" href="#4-3-数据结构设计参考" aria-label="锚点">#</a></h3>
+<p>kbar 的 actions 数据结构：</p>
+<pre><code class="language-typescript"><span class="hljs-keyword">type</span> <span class="hljs-title class_">Action</span> = {
+  <span class="hljs-attr">id</span>: <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">name</span>: <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">shortcut</span>?: <span class="hljs-built_in">string</span>[];
+  <span class="hljs-attr">keywords</span>?: <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">perform</span>: <span class="hljs-function">() =&gt;</span> <span class="hljs-built_in">void</span>;
+  <span class="hljs-attr">section</span>?: <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">parent</span>?: <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">children</span>?: <span class="hljs-title class_">Action</span>[];
+};</code></pre>
+<p><strong>给 khy-os 的启示</strong>：khy-os 桌面端的命令可以按&quot;section 分组 + parent/children 嵌套&quot;组织：</p>
+<pre><code>功能分组：
+  ├── AI 对话（New Chat / Clear History / Export Chat）
+  ├── 工作流（New Workflow / Open Workflow / Sync）
+  ├── 设置（Open Settings / Open Models / Open Skills）
+  └── 主题（Light / Dark / Follow System）</code></pre>
+<h2 id="五-本地文件">五、本地文件<a class="anchor" href="#五-本地文件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>来源</th></tr></thead><tbody><tr><td><code>README.md</code></td><td>抓取自 <a href="https://raw.githubusercontent.com/timc1/kbar/main/README.md" target="_blank" rel="noopener">https://raw.githubusercontent.com/timc1/kbar/main/README.md</a></td></tr></tbody></table>
+<h2 id="六-参考资料">六、参考资料<a class="anchor" href="#六-参考资料" aria-label="锚点">#</a></h2>
+<ul><li>官方演示: <a href="https://kbar.vercel.app/docs" target="_blank" rel="noopener">https://kbar.vercel.app/docs</a></li><li>Vue 3 端口候选: <a href="https://github.com/receter/vue-cmdk" target="_blank" rel="noopener">https://github.com/receter/vue-cmdk</a></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../extensions/scripts/khy-desktop-rd/chatml/README.html"><div class="dir">← 上一篇</div><div class="ttl">ChatML — Tauri 2 + Go Backend + Claude Agent SDK</div></a><a class="next" href="../../../../extensions/scripts/khy-desktop-rd/goose/README.html"><div class="dir">下一篇 →</div><div class="ttl">goose — 桌面 + CLI + API 三端 AI Agent（Electron）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="extensions/scripts/khy-desktop-rd/cmdk/README.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -100,7 +100,7 @@ Usage:
     return `写入 ${path.basename(input.file_path)}`;
   }
 
-  async execute(params, _context) {
+  async execute(params, context) {
     try {
       const cwd = process.env.KHYQUANT_CWD || process.cwd();
       let rawPath = params.file_path;
@@ -142,6 +142,17 @@ Usage:
         try {
           const fh = require('../../services/fileHistoryService');
           fh.takeSnapshot(filePath, { reason: 'FileWriteTool' });
+        } catch {
+          /* non-critical */
+        }
+        // Turn-grouped rollback manifest (DESIGN-ARCH-096 §2-A), existing files only.
+        try {
+          const _turnId = context && context.traceContext && context.traceContext.turnId;
+          if (_turnId) {
+            require('../../services/turnCheckpointService').recordMutatedFile(_turnId, filePath, {
+              reason: 'FileWriteTool',
+            });
+          }
         } catch {
           /* non-critical */
         }

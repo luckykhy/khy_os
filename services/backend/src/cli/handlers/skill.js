@@ -69,6 +69,12 @@ async function handleSkillCommand(subCommand, args, options) {
     case 'restore':
       await handleSkillRestore(args[0]);
       break;
+    case 'sync':
+      await handleSkillSync(options);
+      break;
+    case 'restore-builtin':
+      await handleSkillRestoreBuiltin(args[0]);
+      break;
     case 'enable':
       await handleSkillEnable(args[0], true);
       break;
@@ -594,6 +600,69 @@ async function handleSkillRestore(name) {
     printSuccess(`Skill "${name}" restored from archive.`);
   } else {
     printError(`Skill "${name}" not found in archive.`);
+  }
+}
+
+// ─── Built-in Version Sync (D) ───────────────────────────────────────────────
+
+async function handleSkillSync(options) {
+  const sync = require('../../services/skillVersionSync');
+  const opts = sync.defaultSyncOptions();
+  if (options && (options.force || options.f)) opts.force = true;
+
+  const report = await withSpinner('同步内置技能指纹索引 (builtin_released.json)', async () =>
+    sync.syncBuiltinSkills(opts)
+  );
+
+  if (report.skipped) {
+    printInfo(report.reason);
+    return;
+  }
+
+  const lines = [];
+  if (report.releasedNew.length > 0) {
+    lines.push(`首次释放 ${report.releasedNew.length} 个：${report.releasedNew.join(', ')}`);
+  }
+  if (report.upgraded.length > 0) {
+    lines.push(`随版本升级 ${report.upgraded.length} 个：${report.upgraded.join(', ')}`);
+  }
+  if (report.userModified.length > 0) {
+    lines.push(`保留用户改动 ${report.userModified.length} 个：${report.userModified.join(', ')}（恢复内置版用 khy skill restore-builtin <name>）`);
+  }
+  if (report.tombstoned.length > 0) {
+    lines.push(`尊重用户删除 ${report.tombstoned.length} 个：${report.tombstoned.join(', ')}（不再自动恢复）`);
+  }
+  if (report.orphaned.length > 0) {
+    lines.push(`上游已移除 ${report.orphaned.length} 个：${report.orphaned.join(', ')}（本地副本保留为普通技能）`);
+  }
+  if (report.conflicts.length > 0) {
+    lines.push(`目录冲突跳过 ${report.conflicts.length} 个：${report.conflicts.join(', ')}`);
+  }
+  if (report.preservedUserOwn.length > 0) {
+    lines.push(`用户自建同名跳过 ${report.preservedUserOwn.length} 个：${report.preservedUserOwn.join(', ')}`);
+  }
+
+  printSuccess(`内置技能同步完成（khy ${report.khyVersion}，索引已写入 ${sync.INDEX_FILENAME}）`);
+  for (const line of lines) printInfo(`  ${line}`);
+  if (lines.length === 0) {
+    printInfo('  无变化：所有内置技能已是当前版本');
+  }
+}
+
+async function handleSkillRestoreBuiltin(name) {
+  if (!name) {
+    printError('Usage: skill restore-builtin <name>');
+    printInfo('将某个内置技能的本地副本恢复为随版分发的内置版（覆盖用户改动，清除删除标记）');
+    return;
+  }
+  const sync = require('../../services/skillVersionSync');
+  try {
+    const result = await withSpinner(`恢复内置版技能 ${name}`, async () =>
+      sync.restoreBuiltinSkill(name, sync.defaultSyncOptions())
+    );
+    printSuccess(`Skill "${name}" 已恢复为内置版（fingerprint ${result.fingerprint.slice(0, 12)}…）`);
+  } catch (err) {
+    printError(err.message);
   }
 }
 

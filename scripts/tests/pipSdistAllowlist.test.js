@@ -76,7 +76,7 @@ test('sdist allowlist', async (t) => {
       ['services/backend/wasm-indicators/indicators.mbt.ast', 28362],
       ['services/backend/pack/khy-os-khy-os-1.2.3.tgz', 3],
       ['services/backend/src/skills/built-in/commit/prompt.html', 4964],
-      ['docs/_assets/mermaid.min.js', 3271915],
+      ['docs/19_资产/site/mermaid.min.js', 3271915],
     ]);
     assert.equal(leaked.length, 7, `expected all 7 flagged, got ${JSON.stringify(leaked)}`);
   });
@@ -84,9 +84,9 @@ test('sdist allowlist', async (t) => {
   await t.test('the mermaid bundle is caught by size, not by suffix', () => {
     // Its suffix is .js, which the allowlist must keep allowing everywhere;
     // the single-file ceiling is what makes a regenerable 3 MB blob visible.
-    assert.deepEqual(violations(python, [['docs/_assets/mermaid.min.js', 800000]]), []);
-    assert.deepEqual(violations(python, [['docs/_assets/mermaid.min.js', 3271915]]),
-      ['docs/_assets/mermaid.min.js']);
+    assert.deepEqual(violations(python, [['docs/19_资产/site/mermaid.min.js', 800000]]), []);
+    assert.deepEqual(violations(python, [['docs/19_资产/site/mermaid.min.js', 3271915]]),
+      ['docs/19_资产/site/mermaid.min.js']);
   });
 
   await t.test('the offline runtime bundle is exempt from the ceiling', () => {

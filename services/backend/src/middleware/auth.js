@@ -259,10 +259,21 @@ const flexibleAuth = async (req, res, next) => {
   });
 };
 
+// ── 本地控制面守卫(实现见 middleware/originGuard.js)────────────────────────
+// 纯函数守卫刻意放在零依赖的叶子里:auth.js 顶部 require 了 ../models,
+// 让守卫寄生在这里会把「只测守卫」的用例拖入整条 ORM 初始化链(实测 17s)。
+const originGuardModule = require('./originGuard');
+
 module.exports = {
   authMiddleware,
   adminMiddleware,
   flexibleAuth,
   authenticateToken: authMiddleware,
   requireAdmin: adminMiddleware,
+  ALLOWED_ORIGINS_ENV: originGuardModule.ALLOWED_ORIGINS_ENV,
+  requireLoopback: originGuardModule.requireLoopback,
+  originGuard: originGuardModule.originGuard,
+  isLoopbackAddress: originGuardModule.isLoopbackAddress,
+  isTrustedBrowserOrigin: originGuardModule.isTrustedBrowserOrigin,
+  parseAllowedOrigins: originGuardModule.parseAllowedOrigins,
 };

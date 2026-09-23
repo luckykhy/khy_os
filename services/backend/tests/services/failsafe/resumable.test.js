@@ -2,18 +2,18 @@
 
 /**
  * Tests for the resumable / continueHint propagation chain:
- *   errorCodes (single source) â†?classifier._buildAttribution â†?streamInjector._inject.
+ *   errorCodes (single source) ï¿½?classifier._buildAttribution ï¿½?streamInjector._inject.
  *
  * Requirement (Task B): a prematurely-ended reply must (a) carry a precise reason,
  * (b) tell the user it can be continued. E02 (safety) / E07 (permission) must NEVER
  * be marked resumable.
  */
 
-const { ERROR_CODES } = require('../../../src/services/failsafe/errorCodes');
+const { ERROR_CODES } = require('../../../src/services/domain/security/failsafe/errorCodes.js');
 const failsafe = require('../../../src/services/failsafe');
-const { StreamFailSafeInjector } = require('../../../src/services/failsafe/streamInjector');
+const { StreamFailSafeInjector } = require('../../../src/services/domain/security/failsafe/streamInjector.js');
 
-describe('errorCodes â€?resumable single source', () => {
+describe('errorCodes ï¿½?resumable single source', () => {
   test('every code declares a boolean resumable field', () => {
     for (const code of Object.keys(ERROR_CODES)) {
       expect(typeof ERROR_CODES[code].resumable).toBe('boolean');
@@ -43,7 +43,7 @@ describe('errorCodes â€?resumable single source', () => {
   });
 });
 
-describe('classifier â€?propagates resumable / continueHint into attribution', () => {
+describe('classifier ï¿½?propagates resumable / continueHint into attribution', () => {
   test('empty reply (E01) is resumable with a hint', () => {
     const attr = failsafe.classify(
       { errorType: 'empty_reply', model: 'm' },
@@ -67,7 +67,7 @@ describe('classifier â€?propagates resumable / continueHint into attribution', (
   });
 });
 
-describe('streamInjector â€?emits resumable / continueHint on the error event', () => {
+describe('streamInjector ï¿½?emits resumable / continueHint on the error event', () => {
   function captureInject(failureInput) {
     const sent = [];
     const inj = new StreamFailSafeInjector({

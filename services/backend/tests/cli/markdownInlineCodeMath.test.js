@@ -11,9 +11,11 @@
  * (字节回退证据);③行外真 `$…$` 数学仍渲染(无回归);④行内 emphasis 标记仍字面。
  *
  * 注:renderMarkdownLite 有按文本 key 的 LRU 缓存,env 不入 key → 同一文本在同进程内 ON/OFF
- * 会互相命中缓存。故每例经 freshRenderer() 清 require 缓存拿空缓存新实例,避免污染。
- *
- * node:test(项目 leaf 测试风格)。
+ * 会互相命中缓存。node:test 下每例经 freshRenderer()(清 require 缓存)拿到空 LRU 新实例;
+ * Jest 的模块系统不响应 delete require.cache → freshRenderer 失效,同一实例的 LRU 会把
+ * 门控开的结果喂给门控关的用例。jest 兼容解法:门控关用例切换 themeRegistry 主题
+ * (setTheme 到任一其他主题)——renderMarkdownLite 在主题名变化时清空 _mdCache
+ * (行为本身即既有契约:主题切换必须换缓存以免旧 ANSI 颜色命中),等于一次干净的缓存冲洗。
  */
 const MOD_PATH = require.resolve('../../src/cli/markdownRenderer');
 const strip = (s) => String(s).replace(/\x1b\[[0-9;]*m/g, '');
@@ -35,6 +37,18 @@ function withFlag(value, fn) {
 }
 const CMD_LINE = '接着跑 `powershell -NoProfile -Command "$files = @{}; $paths = @(1)"`';
 
+// Jest 兼容的 LRU 冲洗:切换 themeRegistry 主题让 renderMarkdownLite 清空 _mdCache
+// (既有契约:主题名变化 → 清缓存)。node:test 下 freshRenderer 已够,但 Jest 不响应
+// delete require.cache,同一实例的缓存会跨 env 设污染,故门控关用例须先冲洗。
+function flushRendererCache() {
+  const themeRegistry = require('../../src/cli/themeRegistry');
+  const names = themeRegistry.listThemes().map((t) => t.name);
+  const other = names.find((n) => n !== themeRegistry.getActiveName());
+  if (other !== undefined) {
+    themeRegistry.setTheme(other);
+  }
+}
+
 describe('Markdown Inline Code Math', () => {
   test('默认开:行内代码里 $ 与 {} 逐字保留(修复)', () => {
       const out = strip(freshRenderer()(CMD_LINE));
@@ -45,6 +59,9 @@ describe('Markdown Inline Code Math', () => {
 
   test('门控关(=0):历史顺序复现旧 bug —— $/{} 被吃(字节回退证据)', () => {
       withFlag('0', () => {
+        // Jest 模块系统不响应 delete require.cache(见文件头注释):先用主题切换
+        // 冲洗 LRU 缓存(既有契约:主题名变化 → _mdCache.clear()),再做门控关渲染。
+        flushRendererCache();
         const out = strip(freshRenderer()(CMD_LINE));
         expect(!out.includes('$files')).toBeTruthy();
         expect(!out.includes('@{}')).toBeTruthy();
@@ -65,15 +82,15 @@ describe('Markdown Inline Code Math', () => {
   test('fail-soft:异常/空输入不抛', () => {
       const render = freshRenderer();
       for (const bad of ['', null, undefined]) {
-        expect(() => render(bad).not.toThrow());
+        expect(() => render(bad)).not.toThrow();
       }
   });
 
   test('LIVE wiring:markdownRenderer 确实读 KHY_MD_INLINE_CODE_BEFORE_MATH 门控', () => {
       const fs = require('node:fs');
       const src = fs.readFileSync(MOD_PATH, 'utf8');
-      expect(/KHY_MD_INLINE_CODE_BEFORE_MATH/.test(src)).toBe();
-      expect(/_inlineCodeBeforeMathEnabled/.test(src)).toBe();
+      expect(/KHY_MD_INLINE_CODE_BEFORE_MATH/.test(src)).toBe(true);
+      expect(/_inlineCodeBeforeMathEnabled/.test(src)).toBe(true);
   });
 
 });

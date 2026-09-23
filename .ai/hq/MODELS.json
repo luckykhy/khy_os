@@ -1,0 +1,76 @@
+{
+  "version": "1.1",
+  "last_updated": "2026-08-28",
+  "iron_rule": "能力铁律：模型只是执行者，不是能力的载体。任何模型展现的强能力必须沉淀为三类资产之一——①khy-os 内的脚本/规则/文档（对所有模型永久生效）②HQ 的检查脚本（scripts/hq_check.py）③HQ 的自包含提示词或清单（prompts/）。禁止让 khy-os 的关键流程依赖某个特定模型的隐性知识；能力不落盘 = 没发生。",
+  "assets_destinations": {
+    "khy_os_repo": "全仓库级规则 → khy-os/scripts/ci/ 检查脚本、constants/serviceDefaults.js、AGENTS.md 清单、.ai/ 元数据",
+    "hq_checks": "指挥流程级检查 → scripts/hq_check.py 新增检查函数",
+    "hq_prompts": "流程性知识 → prompts/ 模板修订或 checklist",
+    "hq_context": "架构与领域洞见 → _meta/CONTEXT.md 章节"
+  },
+  "models": [
+    {
+      "id": "claude",
+      "display": "Claude Code",
+      "entry": "<PORTABLE_ROOT>\\bin\\claude.cmd",
+      "strengths": [
+        "refactor",
+        "quality"
+      ],
+      "strengths_note": "初始经验值：长上下文重构与代码审查表现稳定，请按实际体验修订",
+      "domains": [],
+      "distilled": [
+        {
+          "date": "2026-08-24",
+          "what": "机器身份比较必须大小写不敏感：hostname 与 KHY_MACHINE_ID 只差大小写时，本机会把自己持有的租约误判为他机占用并自锁至租约到期",
+          "went_to": "scripts/hq_common.py same_machine() + hq_check.py meta 占用标识漂移告警"
+        },
+        {
+          "date": "2026-08-24",
+          "what": "「文档声称只读、实现却写仓库」这类契约违背靠人眼审阅无法稳定发现：用桩替换 git 调用并走真实入口，断言只发出只读白名单命令",
+          "went_to": "scripts/hq_check.py check_sync_readonly()（沉淀自 BUG-003）"
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "opencode",
+      "display": "OpenCode",
+      "entry": "<PORTABLE_ROOT>\\bin\\opencode.cmd",
+      "strengths": [],
+      "strengths_note": "待填写：实际使用后把它的强项任务类型加进 strengths",
+      "domains": [],
+      "distilled": [],
+      "notes": ""
+    },
+    {
+      "id": "qodercli",
+      "display": "Qoder CLI",
+      "entry": "<PORTABLE_ROOT>\\bin\\qodercli.cmd",
+      "strengths": [],
+      "strengths_note": "待填写",
+      "domains": [],
+      "distilled": [],
+      "notes": ""
+    },
+    {
+      "id": "agnes",
+      "display": "Agnes (Sapiens AI)",
+      "entry": "api:agnes:agnes-2.5-flash",
+      "type": "api",
+      "endpoint": "https://apihub.agnes-ai.com/v1",
+      "model": "agnes-2.5-flash",
+      "strengths": [],
+      "strengths_note": "待填写：作为 agnes 本体，推理速度较快，适合日常问答与代码辅助",
+      "domains": [],
+      "distilled": [],
+      "notes": "API 直连模式，key 存于 ~/.khy/api_keys.json；非 CLI 工具，不走 PortableEnv.bat"
+    }
+  ],
+  "schema_notes": {
+    "strengths": "取值为任务类型：feature/refactor/performance/quality/docs；next.py 据此在状态总览中给出入口推荐",
+    "domains": "可选：限定该模型只推荐用于某些域（cli/gateway/services/kernel/frontend/khyquant/platform/packaging/cross），空=不限",
+    "distilled": "能力沉淀台账：{date, what, went_to}；评估模型真实贡献度与淘汰依据",
+    "strengths_note": "标明 strengths 是实测还是初始猜测，防止把猜测当事实"
+  }
+}

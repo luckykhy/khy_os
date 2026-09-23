@@ -6,18 +6,18 @@ const {
   METHOD,
   SERVICE,
   capMask,
-} = require('../src/services/wasm-sandbox/m1Constants');
+} = require('../src/services/domain/system/wasm-sandbox/m1Constants.js');
 const {
   createHeader,
   decodeFrame,
   encodeFrame,
-} = require('../src/services/wasm-sandbox/ipcCodec');
+} = require('../src/services/domain/system/wasm-sandbox/ipcCodec.js');
 const {
   CapabilityError,
   IpcProtocolError,
   createMoonbitHostBridge,
-} = require('../src/services/wasm-sandbox/moonbitHostBridge');
-const { createLoopbackTransport } = require('../src/services/wasm-sandbox/loopbackTransport');
+} = require('../src/services/domain/system/wasm-sandbox/moonbitHostBridge.js');
+const { createLoopbackTransport } = require('../src/services/domain/system/wasm-sandbox/loopbackTransport.js');
 
 describe('wasm-sandbox ipcCodec', () => {
   test('encodes and decodes a frame roundtrip', () => {

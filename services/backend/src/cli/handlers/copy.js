@@ -4,17 +4,19 @@
  * copy.js — `/copy` 命令薄壳:把最近(或第 N 条)助手回复 / 其中代码块复制到系统剪贴板。
  * 对齐 Claude Code `/copy`。
  *
- * **背后逻辑**(参数解析、选第 N 条、抽代码块、拼载荷)全在纯叶子 `cli/copyReply.js`;本壳
- * 只做副作用:门控、解析当前 sessionId(既有 `sessionForestService.getCurrentSessionId`)、
- * 读 chain(既有 `sessionPersistence.buildConversationChain`)、把每条 assistant content 用既有
+ * **背后逻辑**(参数解析、选第 N 条、抽代码块、拼载荷、剪贴板失败文案)全在纯叶子
+ * `cli/copyReply.js`;本壳只做副作用:门控、解析当前 sessionId(既有
+ * `sessionForestService.getCurrentSessionId`)、读 chain(既有
+ * `sessionPersistence.buildConversationChain`)、把每条 assistant content 用既有
  * `contentBlockUtils.contentToText` 压平成纯文本(与 `share` 路径同一压平器,不另起炉灶)、
- * 调既有 `imageService.writeClipboardText` 写真实剪贴板、打印回执。
+ * 调统一剪贴板出口 `tui/utils/ccClipboard.writeClipboard`(native 系统工具先行 +
+ * OSC 52 非 TTY 兜底,095 §3.3 P1-1)、打印回执。
  *
  * 用法:`/copy`(复制最近助手回复)· `/copy N`(从最近往回数第 N 条)· `/copy code [N]`
  * (只复制其中的代码块)。
  *
- * **诚实边界**:khy 无 OSC52,走系统剪贴板工具(pbcopy/xclip/wl-copy/Set-Clipboard);若
- * 全部后端均不可用或无可复制内容,如实告知失败原因,绝不假装已复制。
+ * **诚实边界**:native(powershell Set-Clipboard/pbcopy/xclip/wl-copy)与 OSC 52 兜底
+ * 均失败时,按统一状态对象的 reasons 如实告知失败原因,绝不假装已复制。
  *
  * 门控 KHY_COPY 默认开;关 → 命令不接管(返回 false 字节回退)。
  */
@@ -87,18 +89,15 @@ async function handleCopy(subCommand, args = [], _options = {}) {
     return true;
   }
 
-  let wrote = false;
-  try {
-    wrote = !!require('../../services/imageService').writeClipboardText(built.payload);
-  } catch (e) {
-    printError('写入剪贴板失败:' + (e && e.message ? e.message : String(e)));
-    return true;
-  }
-
-  if (wrote) {
-    printSuccess('已复制到剪贴板:' + built.description);
+  const wrote = require('../tui/utils/ccClipboard').writeClipboard(built.payload);
+  if (wrote.ok) {
+    const via = wrote.channels.join('+');
+    printSuccess(`已复制到剪贴板(${via}):` + built.description);
   } else {
-    printError('无法写入系统剪贴板(未找到可用的剪贴板工具:pbcopy/xclip/wl-copy/Set-Clipboard)。');
+    printError(
+      '写入剪贴板失败:' +
+        leaf.describeClipboardFailure(wrote.reasons, { bytes: wrote.bytes })
+    );
   }
   return true;
 }

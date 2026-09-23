@@ -1,7 +1,7 @@
 'use strict';
 /**
  * Regression: a stdio MCP server that exits immediately during startup must
- * fail SOFT (connect() rejects) â€?it must NOT crash the process with an
+ * fail SOFT (connect() rejects) â€”it must NOT crash the process with an
  * uncaught 'error' (EPIPE) on the child's stdin socket.
  *
  * Repro history: a CC-bridged server configured with a broken launcher (a 0-byte
@@ -12,7 +12,7 @@
  * resolves through the normal startup-exit/timeout path.
  *
  * Uses a REAL subprocess (`node -e process.exit(0)`) so the actual stdin socket
- * lifecycle is exercised â€?no mocks. node:test.
+ * lifecycle is exercised â€”no mocks. node:test.
  *
  * Run with:  node --test --test-force-exit tests/mcpStdinFailSoft.test.js
  * (--test-force-exit because the real-subprocess transport leaves benign teardown
@@ -26,7 +26,7 @@ describe('Mcp Stdin Fail Soft', () => {
       const onUncaught = (e) => { uncaught = e; };
       process.on('uncaughtException', onUncaught);
     
-      // A child that exits 0 the instant it starts â€?never reads stdin, so khy's
+      // A child that exits 0 the instant it starts â€”never reads stdin, so khy's
       // initialize write lands on a closed pipe (the EPIPE repro).
       const config = {
         type: 'stdio',

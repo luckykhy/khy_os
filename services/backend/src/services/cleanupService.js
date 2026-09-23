@@ -1988,10 +1988,62 @@ function stopPeriodicCleanup() {
   }
 }
 
+/**
+ * 只读地暴露当前生效的保留策略（阈值、保留天数/份数）。
+ *
+ * 存在的理由：`khy cleanup` 需要把「会保留多久、上限多少」告诉用户，而这些数字的
+ * 单一真源就是本文件上面那批模块级常量。让命令侧自己抄一份，两处迟早漂移——而两个
+ * 不一致的保留期比没有保留期更坏（用户按 A 的数字预期，实际按 B 的规则删）。所以由
+ * 服务自己读出，命令只负责展示（[RUNTIME-001] 零硬编码）。
+ *
+ * 纯读，无副作用；返回的是**拷贝**，调用方改不动模块状态。
+ *
+ * @returns {Object} 各目标当前生效的保留策略
+ */
+function getRetentionPolicy() {
+  return {
+    securityLog: { maxBytes: SECURITY_LOG_MAX_BYTES, keepArchives: SECURITY_LOG_KEEP_ARCHIVES },
+    growthSnapshots: { maxKeep: SNAPSHOTS_MAX_KEEP },
+    trainingData: { maxLines: TRAINING_MAX_LINES, maxBytes: TRAINING_MAX_BYTES },
+    telemetry: { maxFiles: TELEMETRY_MAX_FILES },
+    traceAudit: {
+      keepDays: AUDIT.KEEP_DAYS,
+      maxTotalBytes: AUDIT.MAX_TOTAL_MB * 1024 * 1024,
+      archive: AUDIT.ARCHIVE,
+      maxSummaryFiles: AUDIT.MAX_SUMMARY_FILES,
+      maxExportFiles: AUDIT.MAX_EXPORT_FILES,
+    },
+    scanLog: { maxBytes: SCAN_LOG_MAX_BYTES },
+    skillAudit: { maxBytes: SKILL_AUDIT_MAX_BYTES },
+    telemetryAudit: { maxBytes: TELEM_AUDIT_MAX_BYTES },
+    quarantine: { maxLines: QUARANTINE_MAX_LINES, maxBytes: QUARANTINE_MAX_BYTES },
+    dailyLogs: { keepDays: DAILY_LOG_MAX_AGE_D },
+    sessions: { keepDays: SESSION_MAX_AGE_D },
+    trajectories: { keepDays: TRAJECTORY_MAX_AGE_D },
+    taskOutputs: { keepHours: TASK_OUTPUT_MAX_AGE_H },
+    checkpoints: { maxTotalBytes: CKPT_MAX_TOTAL_MB * 1024 * 1024 },
+    runtimeLogs: {
+      keepDays: LOGS.KEEP_DAYS,
+      maxFiles: LOGS.MAX_FILES,
+      maxBytes: LOGS.MAX_SIZE_BYTES,
+    },
+    backendDirs: {
+      tempMaxAgeHours: TEMP_MAX_AGE_HOURS,
+      tempMaxBytes: TEMP_MAX_SIZE_BYTES,
+      logMaxAgeHours: LOG_MAX_AGE_HOURS,
+      logMaxFiles: LOG_MAX_FILES,
+      logMaxBytes: LOG_MAX_SIZE_BYTES,
+      osTempMaxAgeHours: OS_TEMP_MAX_AGE_HOURS,
+    },
+    footprintNoticeBytes: RUNTIME_FOOTPRINT.NOTICE_MB * 1024 * 1024,
+  };
+}
+
 module.exports = {
   runCleanup,
   startPeriodicCleanup,
   stopPeriodicCleanup,
+  getRetentionPolicy,
   rotateSecurityLog,
   cleanSnapshots,
   trimTrainingData,

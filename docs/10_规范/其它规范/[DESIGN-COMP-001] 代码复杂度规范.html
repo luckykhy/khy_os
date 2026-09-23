@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-COMP-001] 代码复杂度规范.md -->
+<title>[DESIGN-COMP-001] 代码复杂度规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-COMP-001] 代码复杂度规范</div>
+      <header class="hero reveal"><h1>[DESIGN-COMP-001] 代码复杂度规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-comp-001-代码复杂度规范">[DESIGN-COMP-001] 代码复杂度规范</a></li><li class="lvl-2"><a href="#1-复杂度原则">1. 复杂度原则</a></li><li class="lvl-2"><a href="#2-圈复杂度-cyclomatic-complexity">2. 圈复杂度（Cyclomatic Complexity）</a></li><li class="lvl-3"><a href="#2-1-定义">2.1 定义</a></li><li class="lvl-3"><a href="#2-2-上限">2.2 上限</a></li><li class="lvl-3"><a href="#2-3-降低复杂度的策略">2.3 降低复杂度的策略</a></li><li class="lvl-3"><a href="#2-4-示例">2.4 示例</a></li><li class="lvl-2"><a href="#3-函数长度">3. 函数长度</a></li><li class="lvl-3"><a href="#3-1-上限">3.1 上限</a></li><li class="lvl-3"><a href="#3-2-拆分策略">3.2 拆分策略</a></li><li class="lvl-2"><a href="#4-参数数量">4. 参数数量</a></li><li class="lvl-3"><a href="#4-1-上限">4.1 上限</a></li><li class="lvl-3"><a href="#4-2-超过上限的解决方案">4.2 超过上限的解决方案</a></li><li class="lvl-2"><a href="#5-嵌套深度">5. 嵌套深度</a></li><li class="lvl-3"><a href="#5-1-上限">5.1 上限</a></li><li class="lvl-3"><a href="#5-2-降低嵌套">5.2 降低嵌套</a></li><li class="lvl-2"><a href="#6-文件大小">6. 文件大小</a></li><li class="lvl-3"><a href="#6-1-上限">6.1 上限</a></li><li class="lvl-3"><a href="#6-2-拆分策略">6.2 拆分策略</a></li><li class="lvl-2"><a href="#7-eslint-门禁配置">7. ESLint 门禁配置</a></li><li class="lvl-3"><a href="#7-1-新增规则-建议">7.1 新增规则（建议）</a></li><li class="lvl-3"><a href="#7-2-存量文件豁免">7.2 存量文件豁免</a></li><li class="lvl-2"><a href="#8-版本历史">8. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-comp-001-代码复杂度规范">[DESIGN-COMP-001] 代码复杂度规范<a class="anchor" href="#design-comp-001-代码复杂度规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: COMP-001 -->
+<blockquote><p><strong>用途</strong>：定义 khy-os 项目的代码复杂度上限，防止技术债务积累。<br>khy-os 后端现存 3417 个 lint 问题，其中大量源于缺少明确的复杂度上限约束。</p></blockquote>
+<hr>
+<h2 id="1-复杂度原则">1. 复杂度原则<a class="anchor" href="#1-复杂度原则" aria-label="锚点">#</a></h2>
+<ol><li><strong>函数做一件事</strong>：一个函数只做一件事，并做好它</li><li><strong>浅层优先</strong>：嵌套越少越好，max 2 层</li><li><strong>短函数</strong>：长的函数必然做多件事</li><li><strong>少参数</strong>：超过 3 个参数的函数应提取为配置对象</li><li><strong>门禁渐进收紧</strong>：存量代码不强制清理，但新增/修改代码必须达标</li></ol>
+<hr>
+<h2 id="2-圈复杂度-cyclomatic-complexity">2. 圈复杂度（Cyclomatic Complexity）<a class="anchor" href="#2-圈复杂度-cyclomatic-complexity" aria-label="锚点">#</a></h2>
+<h3 id="2-1-定义">2.1 定义<a class="anchor" href="#2-1-定义" aria-label="锚点">#</a></h3>
+<p>圈复杂度 = 独立执行路径数量 = <code>if/else if/for/while/switch/catch/?:/&amp;&amp;/||</code> 的决策点数量 + 1</p>
+<h3 id="2-2-上限">2.2 上限<a class="anchor" href="#2-2-上限" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>对象</th><th>上限</th><th>级别</th><th>处理</th></tr></thead><tbody><tr><td>单个函数</td><td><strong>15</strong></td><td>error</td><td>PR 阻断</td></tr><tr><td>单个函数</td><td>10–14</td><td>warning</td><td>PR 报告</td></tr><tr><td>单个函数</td><td>≤ 10</td><td>✅</td><td>通过</td></tr></tbody></table>
+<h3 id="2-3-降低复杂度的策略">2.3 降低复杂度的策略<a class="anchor" href="#2-3-降低复杂度的策略" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>模式</th><th>说明</th></tr></thead><tbody><tr><td>Guard clauses（卫语句）</td><td>用 <code>if (!condition) return early</code> 替代深层嵌套</td></tr><tr><td>提取子函数</td><td>将独立逻辑块提取为具名函数</td></tr><tr><td>策略对象</td><td>用对象映射替代 <code>switch/case</code></td></tr><tr><td>提前返回</td><td>减少 <code>else</code> 分支</td></tr><tr><td>短路运算</td><td>用 <code>&amp;&amp;</code> / `</td></tr><tr><td>错误集中化</td><td>统一错误处理中间件，不在每个函数内判断</td></tr></tbody></table>
+<h3 id="2-4-示例">2.4 示例<a class="anchor" href="#2-4-示例" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ❌ 复杂度 12</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">processRequest</span>(<span class="hljs-params">req, res</span>) {
+  <span class="hljs-keyword">if</span> (req.<span class="hljs-property">method</span> === <span class="hljs-string">&#x27;POST&#x27;</span>) {
+    <span class="hljs-keyword">if</span> (req.<span class="hljs-property">body</span>.<span class="hljs-property">type</span> === <span class="hljs-string">&#x27;chat&#x27;</span>) {
+      <span class="hljs-keyword">if</span> (req.<span class="hljs-property">user</span>.<span class="hljs-property">role</span> === <span class="hljs-string">&#x27;admin&#x27;</span>) {
+        <span class="hljs-comment">// ...</span>
+      } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (req.<span class="hljs-property">user</span>.<span class="hljs-property">role</span> === <span class="hljs-string">&#x27;user&#x27;</span>) {
+        <span class="hljs-comment">// ...</span>
+      } <span class="hljs-keyword">else</span> {
+        res.<span class="hljs-title function_">status</span>(<span class="hljs-number">403</span>).<span class="hljs-title function_">json</span>({ <span class="hljs-attr">error</span>: <span class="hljs-string">&#x27;Forbidden&#x27;</span> });
+      }
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (req.<span class="hljs-property">body</span>.<span class="hljs-property">type</span> === <span class="hljs-string">&#x27;image&#x27;</span>) {
+      <span class="hljs-comment">// ...</span>
+    }
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (req.<span class="hljs-property">method</span> === <span class="hljs-string">&#x27;GET&#x27;</span>) {
+    <span class="hljs-comment">// ...</span>
+  }
+}
+
+<span class="hljs-comment">// ✅ 复杂度 4 — 卫语句 + 提取子函数</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">processRequest</span>(<span class="hljs-params">req, res</span>) {
+  <span class="hljs-keyword">if</span> (req.<span class="hljs-property">method</span> !== <span class="hljs-string">&#x27;POST&#x27;</span> &amp;&amp; req.<span class="hljs-property">method</span> !== <span class="hljs-string">&#x27;GET&#x27;</span>) {
+    <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">405</span>).<span class="hljs-title function_">json</span>({ <span class="hljs-attr">error</span>: <span class="hljs-string">&#x27;Method not allowed&#x27;</span> });
+  }
+  <span class="hljs-keyword">if</span> (req.<span class="hljs-property">method</span> === <span class="hljs-string">&#x27;POST&#x27;</span>) {
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">handlePost</span>(req, res);
+  }
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">handleGet</span>(req, res);
+}
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">handlePost</span>(<span class="hljs-params">req, res</span>) { <span class="hljs-comment">/* ... */</span> }
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">handleGet</span>(<span class="hljs-params">req, res</span>) { <span class="hljs-comment">/* ... */</span> }</code></pre>
+<hr>
+<h2 id="3-函数长度">3. 函数长度<a class="anchor" href="#3-函数长度" aria-label="锚点">#</a></h2>
+<h3 id="3-1-上限">3.1 上限<a class="anchor" href="#3-1-上限" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>上限（行数）</th><th>级别</th></tr></thead><tbody><tr><td>异步函数</td><td><strong>50 行</strong></td><td>error</td></tr><tr><td>同步函数</td><td><strong>40 行</strong></td><td>error</td></tr><tr><td>回调函数</td><td><strong>30 行</strong></td><td>error</td></tr><tr><td>警告区</td><td>25–49 行</td><td>warning</td></tr></tbody></table>
+<blockquote><p>行数 = 函数体 <code>{ ... }</code> 之间的实际代码行，不含注释和空行</p></blockquote>
+<h3 id="3-2-拆分策略">3.2 拆分策略<a class="anchor" href="#3-2-拆分策略" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ❌ 80 行的 handleCommand</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">handleCommand</span>(<span class="hljs-params">input</span>) {
+  <span class="hljs-comment">// 解析（20 行）</span>
+  <span class="hljs-comment">// 验证（15 行）</span>
+  <span class="hljs-comment">// 执行（30 行）</span>
+  <span class="hljs-comment">// 格式化输出（15 行）</span>
+}
+
+<span class="hljs-comment">// ✅ 拆分为 4 个函数，每个 &lt; 30 行</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">handleCommand</span>(<span class="hljs-params">input</span>) {
+  <span class="hljs-keyword">const</span> parsed = <span class="hljs-title function_">parseInput</span>(input);
+  <span class="hljs-title function_">validateInput</span>(parsed);
+  <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> <span class="hljs-title function_">executeCommand</span>(parsed);
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">formatOutput</span>(result);
+}</code></pre>
+<hr>
+<h2 id="4-参数数量">4. 参数数量<a class="anchor" href="#4-参数数量" aria-label="锚点">#</a></h2>
+<h3 id="4-1-上限">4.1 上限<a class="anchor" href="#4-1-上限" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>上限</th><th>处理</th></tr></thead><tbody><tr><td>普通函数</td><td><strong>3 个</strong></td><td>error</td></tr><tr><td>4–5 个</td><td>warning</td><td>建议重构</td></tr><tr><td>≤ 3 个</td><td>✅</td><td>通过</td></tr></tbody></table>
+<h3 id="4-2-超过上限的解决方案">4.2 超过上限的解决方案<a class="anchor" href="#4-2-超过上限的解决方案" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ❌ 5 个参数</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">createStrategy</span>(<span class="hljs-params">name, broker, stopLoss, takeProfit, atrPeriod</span>) { }
+
+<span class="hljs-comment">// ✅ 配置对象（超过 3 个时使用）</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">createStrategy</span>(<span class="hljs-params">{ name, broker, stopLoss, takeProfit, atrPeriod }</span>) {
+  <span class="hljs-comment">// destructure at call site</span>
+}
+
+<span class="hljs-comment">// ✅ 构建器模式（复杂场景）</span>
+<span class="hljs-keyword">const</span> strategy = <span class="hljs-title class_">StrategyBuilder</span>
+  .<span class="hljs-title function_">name</span>(<span class="hljs-string">&#x27;mean-reversion&#x27;</span>)
+  .<span class="hljs-title function_">broker</span>(<span class="hljs-string">&#x27;binance&#x27;</span>)
+  .<span class="hljs-title function_">risk</span>(stopLoss, takeProfit)
+  .<span class="hljs-title function_">indicator</span>(<span class="hljs-string">&#x27;atr&#x27;</span>, { <span class="hljs-attr">period</span>: <span class="hljs-number">14</span> })
+  .<span class="hljs-title function_">build</span>();</code></pre>
+<hr>
+<h2 id="5-嵌套深度">5. 嵌套深度<a class="anchor" href="#5-嵌套深度" aria-label="锚点">#</a></h2>
+<h3 id="5-1-上限">5.1 上限<a class="anchor" href="#5-1-上限" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>上限</th><th>级别</th></tr></thead><tbody><tr><td>任何嵌套</td><td><strong>3 层</strong></td><td>error</td></tr><tr><td>2–3 层</td><td>warning</td><td>建议重构</td></tr><tr><td>≤ 2 层</td><td>✅</td><td>通过</td></tr></tbody></table>
+<h3 id="5-2-降低嵌套">5.2 降低嵌套<a class="anchor" href="#5-2-降低嵌套" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ❌ 4 层嵌套</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">handle</span>(<span class="hljs-params">req, res</span>) {
+  <span class="hljs-keyword">if</span> (req.<span class="hljs-property">user</span>) {
+    <span class="hljs-keyword">if</span> (req.<span class="hljs-property">user</span>.<span class="hljs-property">role</span> === <span class="hljs-string">&#x27;admin&#x27;</span>) {
+      <span class="hljs-keyword">if</span> (req.<span class="hljs-property">body</span>.<span class="hljs-property">strategy</span>) {
+        <span class="hljs-keyword">if</span> (req.<span class="hljs-property">body</span>.<span class="hljs-property">strategy</span>.<span class="hljs-property">active</span>) {
+          <span class="hljs-comment">// do something</span>
+        }
+      }
+    }
+  }
+}
+
+<span class="hljs-comment">// ✅ 卫语句降到 1 层</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">handle</span>(<span class="hljs-params">req, res</span>) {
+  <span class="hljs-keyword">if</span> (!req.<span class="hljs-property">user</span>) <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">401</span>).<span class="hljs-title function_">json</span>({ <span class="hljs-attr">error</span>: <span class="hljs-string">&#x27;Unauthorized&#x27;</span> });
+  <span class="hljs-keyword">if</span> (req.<span class="hljs-property">user</span>.<span class="hljs-property">role</span> !== <span class="hljs-string">&#x27;admin&#x27;</span>) <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">403</span>).<span class="hljs-title function_">json</span>({ <span class="hljs-attr">error</span>: <span class="hljs-string">&#x27;Forbidden&#x27;</span> });
+  <span class="hljs-keyword">if</span> (!req.<span class="hljs-property">body</span>.<span class="hljs-property">strategy</span>) <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">400</span>).<span class="hljs-title function_">json</span>({ <span class="hljs-attr">error</span>: <span class="hljs-string">&#x27;Missing strategy&#x27;</span> });
+  <span class="hljs-keyword">if</span> (!req.<span class="hljs-property">body</span>.<span class="hljs-property">strategy</span>.<span class="hljs-property">active</span>) <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">400</span>).<span class="hljs-title function_">json</span>({ <span class="hljs-attr">error</span>: <span class="hljs-string">&#x27;Strategy inactive&#x27;</span> });
+  <span class="hljs-comment">// do something</span>
+}</code></pre>
+<hr>
+<h2 id="6-文件大小">6. 文件大小<a class="anchor" href="#6-文件大小" aria-label="锚点">#</a></h2>
+<h3 id="6-1-上限">6.1 上限<a class="anchor" href="#6-1-上限" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>上限（行数）</th><th>级别</th></tr></thead><tbody><tr><td>JS 源文件</td><td><strong>400 行</strong></td><td>error</td></tr><tr><td>400–600 行</td><td>warning</td><td>建议拆分</td></tr><tr><td>&lt; 400 行</td><td>✅</td><td>通过</td></tr></tbody></table>
+<h3 id="6-2-拆分策略">6.2 拆分策略<a class="anchor" href="#6-2-拆分策略" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>触发条件</th><th>拆分方向</th></tr></thead><tbody><tr><td>单一文件 &gt; 400 行</td><td>按功能域拆分子目录</td></tr><tr><td>大 switch/case</td><td>提取为策略对象或 handler map</td></tr><tr><td>大量相似方法</td><td>提取为独立模块或 composable</td></tr><tr><td>巨型模型定义</td><td>拆为 migration + model 文件</td></tr></tbody></table>
+<hr>
+<h2 id="7-eslint-门禁配置">7. ESLint 门禁配置<a class="anchor" href="#7-eslint-门禁配置" aria-label="锚点">#</a></h2>
+<h3 id="7-1-新增规则-建议">7.1 新增规则（建议）<a class="anchor" href="#7-1-新增规则-建议" aria-label="锚点">#</a></h3>
+<p>在 <code>services/backend/eslint.config.js</code> 中增加：</p>
+<pre><code class="language-javascript">{
+  <span class="hljs-attr">rules</span>: {
+    <span class="hljs-string">&#x27;complexity&#x27;</span>: [<span class="hljs-string">&#x27;error&#x27;</span>, { <span class="hljs-attr">max</span>: <span class="hljs-number">15</span> }],        <span class="hljs-comment">// 圈复杂度</span>
+    <span class="hljs-string">&#x27;max-lines-per-function&#x27;</span>: [<span class="hljs-string">&#x27;error&#x27;</span>, { <span class="hljs-attr">max</span>: <span class="hljs-number">50</span>, <span class="hljs-attr">skipComments</span>: <span class="hljs-literal">true</span> }],  <span class="hljs-comment">// 函数长度</span>
+    <span class="hljs-string">&#x27;max-lines&#x27;</span>: [<span class="hljs-string">&#x27;warn&#x27;</span>, { <span class="hljs-attr">max</span>: <span class="hljs-number">500</span> }],         <span class="hljs-comment">// 文件总行数</span>
+    <span class="hljs-string">&#x27;max-depth&#x27;</span>: [<span class="hljs-string">&#x27;error&#x27;</span>, <span class="hljs-number">3</span>],                    <span class="hljs-comment">// 嵌套深度</span>
+    <span class="hljs-string">&#x27;max-params&#x27;</span>: [<span class="hljs-string">&#x27;error&#x27;</span>, <span class="hljs-number">3</span>],                   <span class="hljs-comment">// 参数数量</span>
+  }
+}</code></pre>
+<h3 id="7-2-存量文件豁免">7.2 存量文件豁免<a class="anchor" href="#7-2-存量文件豁免" aria-label="锚点">#</a></h3>
+<p>存量文件（3400+ 个文件）的复杂度超标不阻断合并，但<strong>新增文件和修改文件</strong>必须满足：</p>
+<ul><li>新增文件：零复杂度违规</li><li>修改文件：修改的函数必须达标</li></ul>
+<hr>
+<h2 id="8-版本历史">8. 版本历史<a class="anchor" href="#8-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义代码复杂度上限与门禁策略</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-COMM-002] WebSocket 与 SSE 规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-COMM-002] WebSocket 与 SSE 规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-CORS-001] CORS 跨域资源共享规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-CORS-001] CORS 跨域资源共享规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-COMP-001] 代码复杂度规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

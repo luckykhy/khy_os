@@ -1,6 +1,6 @@
 'use strict';
 /**
- * outputStyleCommand.test.js â€?`/output-style` command (Claude Code alignment).
+ * outputStyleCommand.test.js â€” `/output-style` command (Claude Code alignment).
  *
  * Before this command the output-style subsystem (constants/outputStyles.js)
  * was driven only by the KHY_OUTPUT_STYLE env var with no CLI surface to list
@@ -15,15 +15,16 @@ const os = require('os');
 const path = require('path');
 const styles = require('../../src/constants/outputStyles');
 const schema = require('../../src/constants/commandSchema');
-describe('/output-style â€?style resolution and validation', () => {
+
+describe('Output Style Command', () => {
+  // merged from describe: /output-style ï¿½?style resolution and validation
   let prevEnv;
   beforeEach(() => { prevEnv = process.env.KHY_OUTPUT_STYLE; });
   afterEach(() => {
     if (prevEnv === undefined) delete process.env.KHY_OUTPUT_STYLE;
     else process.env.KHY_OUTPUT_STYLE = prevEnv;
   });
-});
-describe('/output-style â€?durable persistence to the user settings layer', () => {
+  // merged from describe: /output-style ï¿½?durable persistence to the user settings layer
   let tmpHome;
   let prevHome;
   let khySettings;
@@ -40,11 +41,7 @@ describe('/output-style â€?durable persistence to the user settings layer', () =
     delete require.cache[require.resolve('../../src/cli/repl/khySettings')];
     try { fs.rmSync(tmpHome, { recursive: true, force: true }); } catch { /* ignore */ }
   });
-});
-describe('/output-style â€?command registration', () => {
-});
-
-describe('Output Style Command', () => {
+  // merged from empty describe: /output-style ï¿½?command registration
   test('getActiveOutputStyleName defaults to senior-engineer and reflects env', () => {
         delete process.env.KHY_OUTPUT_STYLE;
         expect(styles.getActiveOutputStyleName()).toBe('senior-engineer');

@@ -70,6 +70,15 @@ const FREE_MODEL_CHANNELS = [
     configureHint:
       'configureModelProvider(kind="custom", provider="OpenRouter", endpoint="https://openrouter.ai/api/v1", apiKey=..., model="deepseek/deepseek-r1:free")',
   },
+  {
+    key: 'opencode-zen',
+    name: 'OpenCode Zen(免费免注册)',
+    poolKey: 'opencode-zen',
+    note: 'OpenCode 官方免费网关,无需账号 key;khy 启动时自动 seed(opencode-zen 池)',
+    freeModels: ['claude-fable-5', 'gemini-3-flash', 'gpt-6-astra'],
+    console: 'https://opencode.ai/auth',
+    configureHint: '内置通道:模型写 api:opencode-zen:<模型id>,无需粘贴 key',
+  },
 ];
 
 /**

@@ -136,14 +136,14 @@ describe('toolGuards', () => {
   // ── registerBuiltinGuards ────────────────────────────────────────
 
   describe('registerBuiltinGuards', () => {
-    test('registers 11 guards when enabled', () => {
+    test('registers 12 guards when enabled', () => {
       const registered = [];
       const mockHookSystem = {
         registerFunction: (event, fn, opts) => registered.push({ event, opts }),
       };
       const count = registerBuiltinGuards(mockHookSystem);
-      expect(count).toBe(11);
-      expect(registered.length).toBe(11);
+      expect(count).toBe(12);
+      expect(registered.length).toBe(12);
       expect(registered.some(r => r.opts.source === 'builtin:OutputSizeGuard')).toBe(true);
       expect(registered.some(r => r.opts.source === 'builtin:EditBoundaryGuard')).toBe(true);
       expect(registered.some(r => r.opts.source === 'builtin:ReadBoundaryGuard')).toBe(true);
@@ -155,6 +155,8 @@ describe('toolGuards', () => {
       expect(registered.some(r => r.opts.source === 'builtin:FileStaleGuard')).toBe(true);
       expect(registered.some(r => r.opts.source === 'builtin:LspDiagnosticsGuard')).toBe(true);
       expect(registered.some(r => r.opts.source === 'builtin:ProjectHygieneGuard')).toBe(true);
+      // 第 12 个：弱模型写红线文件的写入**前**硬底（PreToolUse，priority 9）。
+      expect(registered.some(r => r.opts.source === 'builtin:WeakModelEditGuard')).toBe(true);
     });
 
     test('skips all guards when KHY_TOOL_GUARDS=false', () => {

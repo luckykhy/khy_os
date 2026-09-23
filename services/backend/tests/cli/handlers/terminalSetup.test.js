@@ -4,8 +4,8 @@
  * terminalSetup.test.js — `/terminal-setup` 薄壳契约(node:test)。
  *
  * 锁定:门控关 → printInfo 提示 + 返回 false(命令不接管);复用 detectTerminal() SSOT;
- * native → printSuccess;needs-setup → 打印路径/步骤/片段 + 诚实边界说明;unknown → printWarn;
- * detectTerminal 抛错 → fail-soft 按 unknown。经 require.cache 桩 formatters 捕获输出。
+ * native → printInfo(如实说明,不报 success);needs-setup → 打印路径/步骤/片段 + 诚实边界说明;
+ * unknown → printWarn;detectTerminal 抛错 → fail-soft 按 unknown。经 require.cache 桩 formatters 捕获输出。
  */
 
 const { describe, test, beforeEach, afterEach } = require('node:test');
@@ -70,14 +70,20 @@ describe('门控关 → 不接管', () => {
   });
 });
 
-describe('native → printSuccess', () => {
-  test('iTerm2 → success + 返回 true,不打印步骤', async () => {
+describe('native → 如实说明(不再报 success)', () => {
+  // BUG-35(2026-09-21)有意改动:native 分支原先 printSuccess「无需额外配置」，
+  // 但该终端的 CSI u 协议 khy 并未向终端申请，Shift+Enter 仍与 Enter 同字节 ——
+  // 那句「无需配置」是假的。现改为 printInfo(reason) + 点名实测可用的 Ctrl + J。
+  test('iTerm2 → info 说明前提 + 返回 true,不打印步骤、不报 success', async () => {
     stubDetect({ name: 'iterm.app', isRemote: false });
     const { handleTerminalSetup } = freshHandler();
     const r = await handleTerminalSetup('', []);
     assert.equal(r, true);
-    assert.ok(calls.success.length >= 1);
+    assert.equal(calls.success.length, 0, 'native 不得再报 success(实测换行键仍需配置)');
     assert.ok(calls.info.some((m) => /iTerm2/.test(m)));
+    const all = calls.info.join('\n');
+    assert.match(all, /Ctrl \+ J/, '必须点名当下真正可用的换行键');
+    assert.doesNotMatch(all, /无需额外配置/);
   });
 });
 

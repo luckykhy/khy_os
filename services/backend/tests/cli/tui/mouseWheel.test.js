@@ -19,7 +19,47 @@ const {
   createMouseDispatcher,
   parseSgrMouse,
   enableBytes,
+  altScreenEnabled,
+  mouseButtonsEnabled,
 } = require('../../../src/cli/tui/mouseButtons');
+
+// ── 默认值:备屏下滚轮**必须**有主(2026-09-20 用户报告「滚轮变成历史回溯」)──────
+//
+// 这组断言守的是**默认值**本身,而不是某条分支。历史教训:上面那组 dispatcher 断言
+// 全绿,故障却照旧 —— 滚轮路由、arrowRouting 绑定、enableBytes 档位各自都对,唯独
+// **默认档位**是 off,于是备屏里没有任何人接管滚轮,终端把它合成 ↑/↓,用户看到历史
+// 回溯。单测只测「给定了 onWheel 会怎样」,没人测「默认情况下追踪字节写没写出去」。
+test('备屏默认接管:未设任何 KHY_* 时,已识别终端必须写出追踪字节', () => {
+  const ENV = { WT_SESSION: 'probe', TERM_PROGRAM: 'WindowsTerminal', TERM: 'xterm-256color' };
+  assert.equal(altScreenEnabled(ENV), true, '备屏默认开 —— 那里没有回滚缓冲可滚');
+  assert.equal(mouseButtonsEnabled(ENV, 'win32'), true, '滚轮必须有主');
+  assert.ok(enableBytes({}).includes('1000h'), '追踪字节真的写得出(1000+1006)');
+  // 反向:主屏幕下不接管 —— 那才是「原生 scrollback + 拖选」划算的一侧
+  assert.equal(
+    mouseButtonsEnabled({ ...ENV, KHY_ALT_SCREEN: '0' }, 'win32'),
+    false,
+    '主屏幕保留原生滚轮'
+  );
+  // 反向:用户显式否决时,默认接管必须让位
+  assert.equal(mouseButtonsEnabled({ ...ENV, KHY_MOUSE: 'off' }, 'win32'), false);
+});
+
+test('因果链闭合:终端合成的 ↑/↓ 在 idle / editing 下就是历史回溯', () => {
+  // 这条断言是「为什么默认值重要」的**理由本身**。它一旦被改动(比如有人把 ↑ 从
+  // history:previous 上摘掉),上面那条默认值断言的紧迫性就消失了 —— 两处必须一起读。
+  const arrows = require('../../../src/cli/tui/arrowRouting');
+  assert.equal(
+    arrows.resolveArrowAction({ key: { upArrow: true }, empty: true }),
+    'history:previous',
+    '空缓冲区(idle):↑ 召回上一条历史'
+  );
+  assert.equal(arrows.resolveArrowAction({ key: { downArrow: true }, empty: true }), 'history:next');
+  assert.equal(
+    arrows.resolveArrowAction({ key: { upArrow: true }, empty: false }),
+    'history:previous',
+    '缓冲区非空(editing)照样回溯 —— 所以「输入框有字就不会被误伤」是错的'
+  );
+});
 
 // 一个不参与命中测试的假上下文:滚轮路径不读布局,但 onInput 会先要 rootNode。
 const CTX = { rootNode: { yogaNode: null }, rows: 40, anchorBottom: false, cacheKey: 'k' };

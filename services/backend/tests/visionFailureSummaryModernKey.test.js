@@ -7,6 +7,7 @@
  * 覆盖:门开 → sk-proj-/sk-svcacct-/sk-admin- 脱敏、legacy sk- 与诊断真因保留;
  * 门关 → 逐字节回退(现代 key 泄漏,legacy 仍抹)。
  */
+const assert = require('node:assert');
 function freshVision() {
   delete require.cache[require.resolve('../src/services/gateway/visionFailureSummary')];
   delete require.cache[require.resolve('../src/services/modernKeyRedaction')];

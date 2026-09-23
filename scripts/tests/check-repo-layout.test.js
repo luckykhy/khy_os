@@ -50,7 +50,7 @@ function makeFixture(mutate) {
   writeFile(root, 'docs/03_DESIGN_设计/00_INDEX_设计-分类索引.md', '# 索引\n');
   writeFile(root, 'docs/03_DESIGN_设计/[DESIGN-ARCH-001] 示例.md', '# 示例\n');
   // 纯资产目录不含 .md，规则应自然跳过它而不需要特例名单。
-  writeFile(root, 'docs/_assets/nav-data.js', '// asset\n');
+  writeFile(root, 'docs/19_资产/site/nav-data.js', '// asset\n');
 
   if (mutate) mutate(root);
 
@@ -116,12 +116,12 @@ describe('check-repo-layout: 规则命中', () => {
 
   test('docs-index-first: 分类目录缺 00_INDEX_* 是 error', () => {
     const root = makeFixture((dir) => {
-      writeFile(dir, 'docs/_传承/KHY-OS-传承书.md', '# 传承\n');
+      writeFile(dir, 'docs/13_传承/其它传承/KHY-OS-传承书.md', '# 传承\n');
     });
     const { status, stdout } = runGuard(root);
     assert.equal(status, 1, stdout);
     assert.match(stdout, /docs-index-first/);
-    assert.match(stdout, /docs\/_传承\//);
+    assert.match(stdout, /docs\/13_传承\//);
   });
 
   test('docs-index-first: 索引存在但排序不在首位也是 error', () => {
@@ -260,7 +260,7 @@ describe('check-repo-layout: 任务入口与跨层引用', () => {
   });
 });
 
-describe('check-repo-layout: 拓展契约（[DESIGN-ARCH-069]）', () => {
+describe('check-repo-layout: 拓展契约（[DESIGN-TOOL-002]）', () => {
   // 合规拓展的最小形状：canonical manifest + id 等于目录名 + main 在磁盘上。
   function writeExtension(dir, id, manifest, { withEntry = true } = {}) {
     writeFile(dir, `extensions/${id}/khy.extension.json`, `${JSON.stringify(manifest, null, 2)}\n`);
@@ -412,7 +412,7 @@ describe('check-repo-layout: 基线棘轮与参数校验', () => {
   });
 });
 
-describe('check-repo-layout: 拓展分类目录（[DESIGN-ARCH-069] §2.3）', () => {
+describe('check-repo-layout: 拓展分类目录（[DESIGN-TOOL-002] §2.3）', () => {
   // 分类是为「二十几个拓展平铺在 extensions/ 下没法管」加的一层布局。守卫在这里管两件
   // 加载器**故意不管**的事：分类名不许随手新造，分类目录下不许再套一层。
   // 加载器只认「有没有 manifest」，任何空壳目录都能当分类 —— 收敛分类名属仓库卫生。
@@ -494,7 +494,7 @@ describe('check-repo-layout: 拓展分类目录（[DESIGN-ARCH-069] §2.3）', (
   });
 });
 
-describe('check-repo-layout: 核不得硬编码拓展 id（[DESIGN-ARCH-069] §1.3 第四条）', () => {
+describe('check-repo-layout: 核不得硬编码拓展 id（[DESIGN-TOOL-002] §1.3 第四条）', () => {
   // 每个用例都要有一个「已存在的拓展」，规则才有 id 可查。
   function withDemoExtension(dir) {
     writeFile(dir, 'extensions/khy-demo/khy.extension.json',

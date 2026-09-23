@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-SEC-001] 安全规范.md -->
+<title>[DESIGN-SEC-001] 安全规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-SEC-001] 安全规范</div>
+      <header class="hero reveal"><h1>[DESIGN-SEC-001] 安全规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-sec-001-安全规范">[DESIGN-SEC-001] 安全规范</a></li><li class="lvl-2"><a href="#1-安全概述">1. 安全概述</a></li><li class="lvl-3"><a href="#1-1-安全原则">1.1 安全原则</a></li><li class="lvl-3"><a href="#1-2-安全等级">1.2 安全等级</a></li><li class="lvl-2"><a href="#2-认证规范">2. 认证规范</a></li><li class="lvl-3"><a href="#2-1-密码策略">2.1 密码策略</a></li><li class="lvl-3"><a href="#2-2-jwt-规范">2.2 JWT 规范</a></li><li class="lvl-3"><a href="#2-3-会话管理">2.3 会话管理</a></li><li class="lvl-2"><a href="#3-授权规范">3. 授权规范</a></li><li class="lvl-3"><a href="#3-1-角色定义">3.1 角色定义</a></li><li class="lvl-3"><a href="#3-2-权限检查">3.2 权限检查</a></li><li class="lvl-3"><a href="#3-3-资源权限">3.3 资源权限</a></li><li class="lvl-2"><a href="#4-数据保护">4. 数据保护</a></li><li class="lvl-3"><a href="#4-1-敏感数据分类">4.1 敏感数据分类</a></li><li class="lvl-3"><a href="#4-2-加密规范">4.2 加密规范</a></li><li class="lvl-3"><a href="#4-3-数据脱敏">4.3 数据脱敏</a></li><li class="lvl-2"><a href="#5-输入验证">5. 输入验证</a></li><li class="lvl-3"><a href="#5-1-验证规则">5.1 验证规则</a></li><li class="lvl-3"><a href="#5-2-sql-注入防护">5.2 SQL 注入防护</a></li><li class="lvl-3"><a href="#5-3-xss-防护">5.3 XSS 防护</a></li><li class="lvl-2"><a href="#6-速率限制">6. 速率限制</a></li><li class="lvl-3"><a href="#6-1-限制策略">6.1 限制策略</a></li><li class="lvl-3"><a href="#6-2-应用限制">6.2 应用限制</a></li><li class="lvl-2"><a href="#7-cors-配置">7. CORS 配置</a></li><li class="lvl-3"><a href="#7-1-允许的来源">7.1 允许的来源</a></li><li class="lvl-2"><a href="#8-安全头">8. 安全头</a></li><li class="lvl-3"><a href="#8-1-必需的安全头">8.1 必需的安全头</a></li><li class="lvl-2"><a href="#9-日志安全">9. 日志安全</a></li><li class="lvl-3"><a href="#9-1-日志脱敏">9.1 日志脱敏</a></li><li class="lvl-3"><a href="#9-2-安全事件日志">9.2 安全事件日志</a></li><li class="lvl-2"><a href="#10-依赖安全">10. 依赖安全</a></li><li class="lvl-3"><a href="#10-1-依赖审计">10.1 依赖审计</a></li><li class="lvl-3"><a href="#10-2-依赖更新策略">10.2 依赖更新策略</a></li><li class="lvl-2"><a href="#11-安全测试">11. 安全测试</a></li><li class="lvl-3"><a href="#11-1-安全扫描">11.1 安全扫描</a></li><li class="lvl-3"><a href="#11-2-渗透测试">11.2 渗透测试</a></li><li class="lvl-2"><a href="#12-版本历史">12. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-sec-001-安全规范">[DESIGN-SEC-001] 安全规范<a class="anchor" href="#design-sec-001-安全规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: SEC-001 -->
+<blockquote><p>本文档定义 khy-os 项目的安全标准，包括认证、授权、数据保护等。</p></blockquote>
+<hr>
+<h2 id="1-安全概述">1. 安全概述<a class="anchor" href="#1-安全概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-安全原则">1.1 安全原则<a class="anchor" href="#1-1-安全原则" aria-label="锚点">#</a></h3>
+<ol><li><strong>最小权限原则</strong>：用户只拥有完成任务所需的最小权限</li><li><strong>纵深防御</strong>：多层安全防护</li><li><strong>安全默认</strong>：默认配置应该是安全的</li><li><strong>零信任</strong>：不信任任何内部或外部网络</li></ol>
+<h3 id="1-2-安全等级">1.2 安全等级<a class="anchor" href="#1-2-安全等级" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>等级</th><th>说明</th><th>示例</th></tr></thead><tbody><tr><td>P0</td><td>严重</td><td>认证绕过、数据泄露</td></tr><tr><td>P1</td><td>高危</td><td>权限提升、注入攻击</td></tr><tr><td>P2</td><td>中危</td><td>XSS、CSRF</td></tr><tr><td>P3</td><td>低危</td><td>信息泄露、配置不当</td></tr></tbody></table>
+<hr>
+<h2 id="2-认证规范">2. 认证规范<a class="anchor" href="#2-认证规范" aria-label="锚点">#</a></h2>
+<h3 id="2-1-密码策略">2.1 密码策略<a class="anchor" href="#2-1-密码策略" aria-label="锚点">#</a></h3>
+<p><strong>最小要求</strong>：</p>
+<ul><li>最小长度：8 个字符</li><li>包含大写字母、小写字母、数字</li><li>不能与用户名相同</li><li>不能使用常见密码</li></ul>
+<p><strong>密码存储</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> bcrypt = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;bcrypt&#x27;</span>);
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">SALT_ROUNDS</span> = <span class="hljs-number">12</span>;
+
+<span class="hljs-comment">// 加密密码</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">hashPassword</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">password</span>) =&gt; {
+  <span class="hljs-keyword">return</span> bcrypt.<span class="hljs-title function_">hash</span>(password, <span class="hljs-variable constant_">SALT_ROUNDS</span>);
+};
+
+<span class="hljs-comment">// 验证密码</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">verifyPassword</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">password, hash</span>) =&gt; {
+  <span class="hljs-keyword">return</span> bcrypt.<span class="hljs-title function_">compare</span>(password, hash);
+};</code></pre>
+<h3 id="2-2-jwt-规范">2.2 JWT 规范<a class="anchor" href="#2-2-jwt-规范" aria-label="锚点">#</a></h3>
+<p><strong>Token 配置</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> jwtConfig = {
+  <span class="hljs-attr">algorithm</span>: <span class="hljs-string">&#x27;RS256&#x27;</span>,           <span class="hljs-comment">// 使用 RSA 签名</span>
+  <span class="hljs-attr">accessTokenExpiry</span>: <span class="hljs-string">&#x27;15m&#x27;</span>,     <span class="hljs-comment">// Access Token 15分钟</span>
+  <span class="hljs-attr">refreshTokenExpiry</span>: <span class="hljs-string">&#x27;7d&#x27;</span>,     <span class="hljs-comment">// Refresh Token 7天</span>
+  <span class="hljs-attr">issuer</span>: <span class="hljs-string">&#x27;khy-auth&#x27;</span>,
+  <span class="hljs-attr">audience</span>: <span class="hljs-string">&#x27;khy-api&#x27;</span>
+};</code></pre>
+<p><strong>Token 生成</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> jwt = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;jsonwebtoken&#x27;</span>);
+<span class="hljs-keyword">const</span> { privateKey } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./keys&#x27;</span>);
+
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">generateAccessToken</span> = (<span class="hljs-params">user</span>) =&gt; {
+  <span class="hljs-keyword">return</span> jwt.<span class="hljs-title function_">sign</span>(
+    {
+      <span class="hljs-attr">sub</span>: user.<span class="hljs-property">id</span>,
+      <span class="hljs-attr">username</span>: user.<span class="hljs-property">username</span>,
+      <span class="hljs-attr">role</span>: user.<span class="hljs-property">role</span>
+    },
+    privateKey,
+    {
+      <span class="hljs-attr">algorithm</span>: <span class="hljs-string">&#x27;RS256&#x27;</span>,
+      <span class="hljs-attr">expiresIn</span>: <span class="hljs-string">&#x27;15m&#x27;</span>,
+      <span class="hljs-attr">issuer</span>: <span class="hljs-string">&#x27;khy-auth&#x27;</span>,
+      <span class="hljs-attr">audience</span>: <span class="hljs-string">&#x27;khy-api&#x27;</span>
+    }
+  );
+};</code></pre>
+<p><strong>Token 验证</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> { publicKey } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./keys&#x27;</span>);
+
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">verifyToken</span> = (<span class="hljs-params">token</span>) =&gt; {
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">return</span> jwt.<span class="hljs-title function_">verify</span>(token, publicKey, {
+      <span class="hljs-attr">algorithms</span>: [<span class="hljs-string">&#x27;RS256&#x27;</span>],
+      <span class="hljs-attr">issuer</span>: <span class="hljs-string">&#x27;khy-auth&#x27;</span>,
+      <span class="hljs-attr">audience</span>: <span class="hljs-string">&#x27;khy-api&#x27;</span>
+    });
+  } <span class="hljs-keyword">catch</span> (error) {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">&#x27;Invalid token&#x27;</span>);
+  }
+};</code></pre>
+<h3 id="2-3-会话管理">2.3 会话管理<a class="anchor" href="#2-3-会话管理" aria-label="锚点">#</a></h3>
+<p><strong>会话配置</strong>：</p>
+<ul><li>Access Token 有效期：15 分钟</li><li>Refresh Token 有效期：7 天</li><li>并发会话限制：5 个</li><li>会话超时：30 分钟无活动自动登出</li></ul>
+<p><strong>会话刷新</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-title function_">refreshAccessToken</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">refreshToken</span>) =&gt; {
+  <span class="hljs-comment">// 验证 Refresh Token</span>
+  <span class="hljs-keyword">const</span> decoded = <span class="hljs-title function_">verifyRefreshToken</span>(refreshToken);
+  
+  <span class="hljs-comment">// 检查会话是否存在</span>
+  <span class="hljs-keyword">const</span> session = <span class="hljs-keyword">await</span> <span class="hljs-title class_">Session</span>.<span class="hljs-title function_">findOne</span>({
+    <span class="hljs-attr">where</span>: {
+      <span class="hljs-attr">userId</span>: decoded.<span class="hljs-property">sub</span>,
+      refreshToken,
+      <span class="hljs-attr">revoked</span>: <span class="hljs-literal">false</span>
+    }
+  });
+  
+  <span class="hljs-keyword">if</span> (!session) {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">&#x27;Invalid session&#x27;</span>);
+  }
+  
+  <span class="hljs-comment">// 生成新的 Access Token</span>
+  <span class="hljs-keyword">const</span> user = <span class="hljs-keyword">await</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">findByPk</span>(decoded.<span class="hljs-property">sub</span>);
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">generateAccessToken</span>(user);
+};</code></pre>
+<hr>
+<h2 id="3-授权规范">3. 授权规范<a class="anchor" href="#3-授权规范" aria-label="锚点">#</a></h2>
+<h3 id="3-1-角色定义">3.1 角色定义<a class="anchor" href="#3-1-角色定义" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>角色</th><th>权限</th></tr></thead><tbody><tr><td>guest</td><td>访问公开资源</td></tr><tr><td>user</td><td>管理自己的资源</td></tr><tr><td>admin</td><td>管理所有资源</td></tr><tr><td>superadmin</td><td>系统管理</td></tr></tbody></table>
+<h3 id="3-2-权限检查">3.2 权限检查<a class="anchor" href="#3-2-权限检查" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 中间件：检查认证</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">requireAuth</span> = (<span class="hljs-params">req, res, next</span>) =&gt; {
+  <span class="hljs-keyword">const</span> token = req.<span class="hljs-property">headers</span>.<span class="hljs-property">authorization</span>?.<span class="hljs-title function_">split</span>(<span class="hljs-string">&#x27; &#x27;</span>)[<span class="hljs-number">1</span>];
+  
+  <span class="hljs-keyword">if</span> (!token) {
+    <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">401</span>).<span class="hljs-title function_">json</span>({
+      <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>,
+      <span class="hljs-attr">error</span>: {
+        <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;AUTH_REQUIRED&#x27;</span>,
+        <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;请先登录&#x27;</span>
+      }
+    });
+  }
+  
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> decoded = <span class="hljs-title function_">verifyToken</span>(token);
+    req.<span class="hljs-property">user</span> = decoded;
+    <span class="hljs-title function_">next</span>();
+  } <span class="hljs-keyword">catch</span> (error) {
+    <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">401</span>).<span class="hljs-title function_">json</span>({
+      <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>,
+      <span class="hljs-attr">error</span>: {
+        <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;AUTH_TOKEN_INVALID&#x27;</span>,
+        <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;认证令牌无效&#x27;</span>
+      }
+    });
+  }
+};
+
+<span class="hljs-comment">// 中间件：检查权限</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">requireRole</span> = (<span class="hljs-params">...roles</span>) =&gt; {
+  <span class="hljs-keyword">return</span> <span class="hljs-function">(<span class="hljs-params">req, res, next</span>) =&gt;</span> {
+    <span class="hljs-keyword">if</span> (!req.<span class="hljs-property">user</span>) {
+      <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">401</span>).<span class="hljs-title function_">json</span>({
+        <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>,
+        <span class="hljs-attr">error</span>: {
+          <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;AUTH_REQUIRED&#x27;</span>,
+          <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;请先登录&#x27;</span>
+        }
+      });
+    }
+    
+    <span class="hljs-keyword">if</span> (!roles.<span class="hljs-title function_">includes</span>(req.<span class="hljs-property">user</span>.<span class="hljs-property">role</span>)) {
+      <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">403</span>).<span class="hljs-title function_">json</span>({
+        <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>,
+        <span class="hljs-attr">error</span>: {
+          <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;PERM_INSUFFICIENT&#x27;</span>,
+          <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;权限不足&#x27;</span>
+        }
+      });
+    }
+    
+    <span class="hljs-title function_">next</span>();
+  };
+};</code></pre>
+<h3 id="3-3-资源权限">3.3 资源权限<a class="anchor" href="#3-3-资源权限" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 检查资源所有权</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">requireOwnership</span> = (<span class="hljs-params">model</span>) =&gt; {
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">async</span> (req, res, next) =&gt; {
+    <span class="hljs-keyword">const</span> resource = <span class="hljs-keyword">await</span> model.<span class="hljs-title function_">findByPk</span>(req.<span class="hljs-property">params</span>.<span class="hljs-property">id</span>);
+    
+    <span class="hljs-keyword">if</span> (!resource) {
+      <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">404</span>).<span class="hljs-title function_">json</span>({
+        <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>,
+        <span class="hljs-attr">error</span>: {
+          <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;RES_NOT_FOUND&#x27;</span>,
+          <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;资源不存在&#x27;</span>
+        }
+      });
+    }
+    
+    <span class="hljs-keyword">if</span> (resource.<span class="hljs-property">userId</span> !== req.<span class="hljs-property">user</span>.<span class="hljs-property">sub</span> &amp;&amp; req.<span class="hljs-property">user</span>.<span class="hljs-property">role</span> !== <span class="hljs-string">&#x27;admin&#x27;</span>) {
+      <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">403</span>).<span class="hljs-title function_">json</span>({
+        <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>,
+        <span class="hljs-attr">error</span>: {
+          <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;PERM_DENIED&#x27;</span>,
+          <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;无权访问此资源&#x27;</span>
+        }
+      });
+    }
+    
+    req.<span class="hljs-property">resource</span> = resource;
+    <span class="hljs-title function_">next</span>();
+  };
+};</code></pre>
+<hr>
+<h2 id="4-数据保护">4. 数据保护<a class="anchor" href="#4-数据保护" aria-label="锚点">#</a></h2>
+<h3 id="4-1-敏感数据分类">4.1 敏感数据分类<a class="anchor" href="#4-1-敏感数据分类" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类别</th><th>示例</th><th>保护级别</th></tr></thead><tbody><tr><td>高度敏感</td><td>密码、API Key、私钥</td><td>加密存储</td></tr><tr><td>中度敏感</td><td>邮箱、手机号、身份证</td><td>脱敏显示</td></tr><tr><td>低度敏感</td><td>用户名、昵称</td><td>正常存储</td></tr></tbody></table>
+<h3 id="4-2-加密规范">4.2 加密规范<a class="anchor" href="#4-2-加密规范" aria-label="锚点">#</a></h3>
+<p><strong>密码加密</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> bcrypt = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;bcrypt&#x27;</span>);
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">SALT_ROUNDS</span> = <span class="hljs-number">12</span>;
+
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">hashPassword</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">password</span>) =&gt; {
+  <span class="hljs-keyword">return</span> bcrypt.<span class="hljs-title function_">hash</span>(password, <span class="hljs-variable constant_">SALT_ROUNDS</span>);
+};</code></pre>
+<p><strong>API Key 加密</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> crypto = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;crypto&#x27;</span>);
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">ALGORITHM</span> = <span class="hljs-string">&#x27;aes-256-gcm&#x27;</span>;
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">IV_LENGTH</span> = <span class="hljs-number">16</span>;
+
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">encryptApiKey</span> = (<span class="hljs-params">apiKey</span>) =&gt; {
+  <span class="hljs-keyword">const</span> iv = crypto.<span class="hljs-title function_">randomBytes</span>(<span class="hljs-variable constant_">IV_LENGTH</span>);
+  <span class="hljs-keyword">const</span> cipher = crypto.<span class="hljs-title function_">createCipheriv</span>(<span class="hljs-variable constant_">ALGORITHM</span>, <span class="hljs-title class_">Buffer</span>.<span class="hljs-title function_">from</span>(<span class="hljs-variable constant_">ENCRYPTION_KEY</span>), iv);
+  
+  <span class="hljs-keyword">let</span> encrypted = cipher.<span class="hljs-title function_">update</span>(apiKey, <span class="hljs-string">&#x27;utf8&#x27;</span>, <span class="hljs-string">&#x27;hex&#x27;</span>);
+  encrypted += cipher.<span class="hljs-title function_">final</span>(<span class="hljs-string">&#x27;hex&#x27;</span>);
+  
+  <span class="hljs-keyword">const</span> authTag = cipher.<span class="hljs-title function_">getAuthTag</span>();
+  
+  <span class="hljs-keyword">return</span> {
+    encrypted,
+    <span class="hljs-attr">iv</span>: iv.<span class="hljs-title function_">toString</span>(<span class="hljs-string">&#x27;hex&#x27;</span>),
+    <span class="hljs-attr">authTag</span>: authTag.<span class="hljs-title function_">toString</span>(<span class="hljs-string">&#x27;hex&#x27;</span>)
+  };
+};
+
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">decryptApiKey</span> = (<span class="hljs-params">encryptedData</span>) =&gt; {
+  <span class="hljs-keyword">const</span> decipher = crypto.<span class="hljs-title function_">createDecipheriv</span>(
+    <span class="hljs-variable constant_">ALGORITHM</span>,
+    <span class="hljs-title class_">Buffer</span>.<span class="hljs-title function_">from</span>(<span class="hljs-variable constant_">ENCRYPTION_KEY</span>),
+    <span class="hljs-title class_">Buffer</span>.<span class="hljs-title function_">from</span>(encryptedData.<span class="hljs-property">iv</span>, <span class="hljs-string">&#x27;hex&#x27;</span>)
+  );
+  
+  decipher.<span class="hljs-title function_">setAuthTag</span>(<span class="hljs-title class_">Buffer</span>.<span class="hljs-title function_">from</span>(encryptedData.<span class="hljs-property">authTag</span>, <span class="hljs-string">&#x27;hex&#x27;</span>));
+  
+  <span class="hljs-keyword">let</span> decrypted = decipher.<span class="hljs-title function_">update</span>(encryptedData.<span class="hljs-property">encrypted</span>, <span class="hljs-string">&#x27;hex&#x27;</span>, <span class="hljs-string">&#x27;utf8&#x27;</span>);
+  decrypted += decipher.<span class="hljs-title function_">final</span>(<span class="hljs-string">&#x27;utf8&#x27;</span>);
+  
+  <span class="hljs-keyword">return</span> decrypted;
+};</code></pre>
+<h3 id="4-3-数据脱敏">4.3 数据脱敏<a class="anchor" href="#4-3-数据脱敏" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 邮箱脱敏</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">maskEmail</span> = (<span class="hljs-params">email</span>) =&gt; {
+  <span class="hljs-keyword">const</span> [local, domain] = email.<span class="hljs-title function_">split</span>(<span class="hljs-string">&#x27;@&#x27;</span>);
+  <span class="hljs-keyword">const</span> maskedLocal = local.<span class="hljs-title function_">charAt</span>(<span class="hljs-number">0</span>) + <span class="hljs-string">&#x27;***&#x27;</span> + local.<span class="hljs-title function_">charAt</span>(local.<span class="hljs-property">length</span> - <span class="hljs-number">1</span>);
+  <span class="hljs-keyword">return</span> <span class="hljs-string">`<span class="hljs-subst">${maskedLocal}</span>@<span class="hljs-subst">${domain}</span>`</span>;
+};
+
+<span class="hljs-comment">// 手机号脱敏</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">maskPhone</span> = (<span class="hljs-params">phone</span>) =&gt; {
+  <span class="hljs-keyword">return</span> phone.<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/(\d{3})\d{4}(\d{4})/</span>, <span class="hljs-string">&#x27;$1****$2&#x27;</span>);
+};
+
+<span class="hljs-comment">// 身份证脱敏</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">maskIdCard</span> = (<span class="hljs-params">idCard</span>) =&gt; {
+  <span class="hljs-keyword">return</span> idCard.<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/(\d{6})\d{8}(\d{4})/</span>, <span class="hljs-string">&#x27;$1********$2&#x27;</span>);
+};</code></pre>
+<hr>
+<h2 id="5-输入验证">5. 输入验证<a class="anchor" href="#5-输入验证" aria-label="锚点">#</a></h2>
+<h3 id="5-1-验证规则">5.1 验证规则<a class="anchor" href="#5-1-验证规则" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-title class_">Joi</span> = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;joi&#x27;</span>);
+
+<span class="hljs-comment">// 用户注册验证</span>
+<span class="hljs-keyword">const</span> registerSchema = <span class="hljs-title class_">Joi</span>.<span class="hljs-title function_">object</span>({
+  <span class="hljs-attr">username</span>: <span class="hljs-title class_">Joi</span>.<span class="hljs-title function_">string</span>()
+    .<span class="hljs-title function_">alphanum</span>()
+    .<span class="hljs-title function_">min</span>(<span class="hljs-number">3</span>)
+    .<span class="hljs-title function_">max</span>(<span class="hljs-number">30</span>)
+    .<span class="hljs-title function_">required</span>()
+    .<span class="hljs-title function_">messages</span>({
+      <span class="hljs-string">&#x27;string.min&#x27;</span>: <span class="hljs-string">&#x27;用户名至少需要3个字符&#x27;</span>,
+      <span class="hljs-string">&#x27;string.max&#x27;</span>: <span class="hljs-string">&#x27;用户名最多30个字符&#x27;</span>,
+      <span class="hljs-string">&#x27;any.required&#x27;</span>: <span class="hljs-string">&#x27;用户名不能为空&#x27;</span>
+    }),
+  
+  <span class="hljs-attr">email</span>: <span class="hljs-title class_">Joi</span>.<span class="hljs-title function_">string</span>()
+    .<span class="hljs-title function_">email</span>()
+    .<span class="hljs-title function_">required</span>()
+    .<span class="hljs-title function_">messages</span>({
+      <span class="hljs-string">&#x27;string.email&#x27;</span>: <span class="hljs-string">&#x27;邮箱格式不正确&#x27;</span>,
+      <span class="hljs-string">&#x27;any.required&#x27;</span>: <span class="hljs-string">&#x27;邮箱不能为空&#x27;</span>
+    }),
+  
+  <span class="hljs-attr">password</span>: <span class="hljs-title class_">Joi</span>.<span class="hljs-title function_">string</span>()
+    .<span class="hljs-title function_">min</span>(<span class="hljs-number">8</span>)
+    .<span class="hljs-title function_">pattern</span>(<span class="hljs-regexp">/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/</span>)
+    .<span class="hljs-title function_">required</span>()
+    .<span class="hljs-title function_">messages</span>({
+      <span class="hljs-string">&#x27;string.min&#x27;</span>: <span class="hljs-string">&#x27;密码至少需要8个字符&#x27;</span>,
+      <span class="hljs-string">&#x27;string.pattern.base&#x27;</span>: <span class="hljs-string">&#x27;密码必须包含大小写字母和数字&#x27;</span>,
+      <span class="hljs-string">&#x27;any.required&#x27;</span>: <span class="hljs-string">&#x27;密码不能为空&#x27;</span>
+    })
+});
+
+<span class="hljs-comment">// 验证中间件</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">validate</span> = (<span class="hljs-params">schema</span>) =&gt; {
+  <span class="hljs-keyword">return</span> <span class="hljs-function">(<span class="hljs-params">req, res, next</span>) =&gt;</span> {
+    <span class="hljs-keyword">const</span> { error, value } = schema.<span class="hljs-title function_">validate</span>(req.<span class="hljs-property">body</span>, {
+      <span class="hljs-attr">abortEarly</span>: <span class="hljs-literal">false</span>,
+      <span class="hljs-attr">stripUnknown</span>: <span class="hljs-literal">true</span>
+    });
+    
+    <span class="hljs-keyword">if</span> (error) {
+      <span class="hljs-keyword">const</span> details = error.<span class="hljs-property">details</span>.<span class="hljs-title function_">map</span>(<span class="hljs-function"><span class="hljs-params">detail</span> =&gt;</span> ({
+        <span class="hljs-attr">field</span>: detail.<span class="hljs-property">path</span>.<span class="hljs-title function_">join</span>(<span class="hljs-string">&#x27;.&#x27;</span>),
+        <span class="hljs-attr">message</span>: detail.<span class="hljs-property">message</span>,
+        <span class="hljs-attr">value</span>: detail.<span class="hljs-property">context</span>?.<span class="hljs-property">value</span>
+      }));
+      
+      <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">400</span>).<span class="hljs-title function_">json</span>({
+        <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>,
+        <span class="hljs-attr">error</span>: {
+          <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;VALIDATION_ERROR&#x27;</span>,
+          <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;USER_ERROR&#x27;</span>,
+          <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;请求参数验证失败&#x27;</span>,
+          details
+        }
+      });
+    }
+    
+    req.<span class="hljs-property">body</span> = value;
+    <span class="hljs-title function_">next</span>();
+  };
+};</code></pre>
+<h3 id="5-2-sql-注入防护">5.2 SQL 注入防护<a class="anchor" href="#5-2-sql-注入防护" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确：使用参数化查询</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">getUserById</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">id</span>) =&gt; {
+  <span class="hljs-keyword">return</span> sequelize.<span class="hljs-title function_">query</span>(
+    <span class="hljs-string">&#x27;SELECT * FROM users WHERE id = :id&#x27;</span>,
+    {
+      <span class="hljs-attr">replacements</span>: { id },
+      <span class="hljs-attr">type</span>: <span class="hljs-title class_">QueryTypes</span>.<span class="hljs-property">SELECT</span>
+    }
+  );
+};
+
+<span class="hljs-comment">// ❌ 错误：字符串拼接</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">getUserById</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">id</span>) =&gt; {
+  <span class="hljs-keyword">return</span> sequelize.<span class="hljs-title function_">query</span>(<span class="hljs-string">`SELECT * FROM users WHERE id = <span class="hljs-subst">${id}</span>`</span>);
+};</code></pre>
+<h3 id="5-3-xss-防护">5.3 XSS 防护<a class="anchor" href="#5-3-xss-防护" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 输入清理</span>
+<span class="hljs-keyword">const</span> xss = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;xss&#x27;</span>);
+
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">sanitizeInput</span> = (<span class="hljs-params">input</span>) =&gt; {
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">xss</span>(input, {
+    <span class="hljs-attr">whiteList</span>: {},  <span class="hljs-comment">// 不允许任何 HTML 标签</span>
+    <span class="hljs-attr">stripIgnoreTag</span>: <span class="hljs-literal">true</span>,
+    <span class="hljs-attr">stripIgnoreTagBody</span>: [<span class="hljs-string">&#x27;script&#x27;</span>]
+  });
+};
+
+<span class="hljs-comment">// 输出编码</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">escapeHtml</span> = (<span class="hljs-params">str</span>) =&gt; {
+  <span class="hljs-keyword">return</span> str
+    .<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/&amp;/g</span>, <span class="hljs-string">&#x27;&amp;amp;&#x27;</span>)
+    .<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/&lt;/g</span>, <span class="hljs-string">&#x27;&amp;lt;&#x27;</span>)
+    .<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/&gt;/g</span>, <span class="hljs-string">&#x27;&amp;gt;&#x27;</span>)
+    .<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/&quot;/g</span>, <span class="hljs-string">&#x27;&amp;quot;&#x27;</span>)
+    .<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/&#x27;/g</span>, <span class="hljs-string">&#x27;&amp;#x27;&#x27;</span>);
+};</code></pre>
+<hr>
+<h2 id="6-速率限制">6. 速率限制<a class="anchor" href="#6-速率限制" aria-label="锚点">#</a></h2>
+<h3 id="6-1-限制策略">6.1 限制策略<a class="anchor" href="#6-1-限制策略" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> rateLimit = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;express-rate-limit&#x27;</span>);
+
+<span class="hljs-comment">// 公开端点限制</span>
+<span class="hljs-keyword">const</span> publicLimiter = <span class="hljs-title function_">rateLimit</span>({
+  <span class="hljs-attr">windowMs</span>: <span class="hljs-number">60</span> * <span class="hljs-number">1000</span>,  <span class="hljs-comment">// 1分钟</span>
+  <span class="hljs-attr">max</span>: <span class="hljs-number">60</span>,
+  <span class="hljs-attr">message</span>: {
+    <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>,
+    <span class="hljs-attr">error</span>: {
+      <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;RATE_LIMIT_EXCEEDED&#x27;</span>,
+      <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;请求过于频繁，请稍后重试&#x27;</span>
+    }
+  }
+});
+
+<span class="hljs-comment">// 认证端点限制（更严格）</span>
+<span class="hljs-keyword">const</span> authLimiter = <span class="hljs-title function_">rateLimit</span>({
+  <span class="hljs-attr">windowMs</span>: <span class="hljs-number">15</span> * <span class="hljs-number">60</span> * <span class="hljs-number">1000</span>,  <span class="hljs-comment">// 15分钟</span>
+  <span class="hljs-attr">max</span>: <span class="hljs-number">5</span>,
+  <span class="hljs-attr">message</span>: {
+    <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>,
+    <span class="hljs-attr">error</span>: {
+      <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;RATE_LIMIT_EXCEEDED&#x27;</span>,
+      <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;登录尝试次数过多，请15分钟后再试&#x27;</span>
+    }
+  }
+});
+
+<span class="hljs-comment">// API 限制</span>
+<span class="hljs-keyword">const</span> apiLimiter = <span class="hljs-title function_">rateLimit</span>({
+  <span class="hljs-attr">windowMs</span>: <span class="hljs-number">60</span> * <span class="hljs-number">1000</span>,  <span class="hljs-comment">// 1分钟</span>
+  <span class="hljs-attr">max</span>: <span class="hljs-number">100</span>,
+  <span class="hljs-attr">keyGenerator</span>: <span class="hljs-function">(<span class="hljs-params">req</span>) =&gt;</span> {
+    <span class="hljs-keyword">return</span> req.<span class="hljs-property">user</span>?.<span class="hljs-property">sub</span> || req.<span class="hljs-property">ip</span>;
+  }
+});</code></pre>
+<h3 id="6-2-应用限制">6.2 应用限制<a class="anchor" href="#6-2-应用限制" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 应用速率限制中间件</span>
+app.<span class="hljs-title function_">use</span>(<span class="hljs-string">&#x27;/api/&#x27;</span>, apiLimiter);
+app.<span class="hljs-title function_">use</span>(<span class="hljs-string">&#x27;/api/auth/&#x27;</span>, authLimiter);
+app.<span class="hljs-title function_">use</span>(<span class="hljs-string">&#x27;/api/public/&#x27;</span>, publicLimiter);</code></pre>
+<hr>
+<h2 id="7-cors-配置">7. CORS 配置<a class="anchor" href="#7-cors-配置" aria-label="锚点">#</a></h2>
+<h3 id="7-1-允许的来源">7.1 允许的来源<a class="anchor" href="#7-1-允许的来源" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> cors = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;cors&#x27;</span>);
+
+<span class="hljs-keyword">const</span> corsOptions = {
+  <span class="hljs-attr">origin</span>: <span class="hljs-function">(<span class="hljs-params">origin, callback</span>) =&gt;</span> {
+    <span class="hljs-keyword">const</span> allowedOrigins = [
+      <span class="hljs-string">&#x27;https://khyquant.top&#x27;</span>,
+      <span class="hljs-string">&#x27;https://*.khyquant.top&#x27;</span>
+    ];
+    
+    <span class="hljs-comment">// 开发环境允许所有来源</span>
+    <span class="hljs-keyword">if</span> (process.<span class="hljs-property">env</span>.<span class="hljs-property">NODE_ENV</span> === <span class="hljs-string">&#x27;development&#x27;</span>) {
+      allowedOrigins.<span class="hljs-title function_">push</span>(<span class="hljs-string">&#x27;http://localhost:*&#x27;</span>);
+    }
+    
+    <span class="hljs-keyword">if</span> (!origin || allowedOrigins.<span class="hljs-title function_">some</span>(<span class="hljs-function"><span class="hljs-params">allowed</span> =&gt;</span> {
+      <span class="hljs-keyword">if</span> (allowed.<span class="hljs-title function_">includes</span>(<span class="hljs-string">&#x27;*&#x27;</span>)) {
+        <span class="hljs-keyword">const</span> regex = <span class="hljs-keyword">new</span> <span class="hljs-title class_">RegExp</span>(allowed.<span class="hljs-title function_">replace</span>(<span class="hljs-string">&#x27;*&#x27;</span>, <span class="hljs-string">&#x27;.*&#x27;</span>));
+        <span class="hljs-keyword">return</span> regex.<span class="hljs-title function_">test</span>(origin);
+      }
+      <span class="hljs-keyword">return</span> allowed === origin;
+    })) {
+      <span class="hljs-title function_">callback</span>(<span class="hljs-literal">null</span>, <span class="hljs-literal">true</span>);
+    } <span class="hljs-keyword">else</span> {
+      <span class="hljs-title function_">callback</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">&#x27;Not allowed by CORS&#x27;</span>));
+    }
+  },
+  <span class="hljs-attr">methods</span>: [<span class="hljs-string">&#x27;GET&#x27;</span>, <span class="hljs-string">&#x27;POST&#x27;</span>, <span class="hljs-string">&#x27;PUT&#x27;</span>, <span class="hljs-string">&#x27;PATCH&#x27;</span>, <span class="hljs-string">&#x27;DELETE&#x27;</span>, <span class="hljs-string">&#x27;OPTIONS&#x27;</span>],
+  <span class="hljs-attr">allowedHeaders</span>: [
+    <span class="hljs-string">&#x27;Content-Type&#x27;</span>,
+    <span class="hljs-string">&#x27;Authorization&#x27;</span>,
+    <span class="hljs-string">&#x27;X-Request-ID&#x27;</span>,
+    <span class="hljs-string">&#x27;X-Client-Version&#x27;</span>,
+    <span class="hljs-string">&#x27;X-Client-Platform&#x27;</span>
+  ],
+  <span class="hljs-attr">exposedHeaders</span>: [<span class="hljs-string">&#x27;X-Request-ID&#x27;</span>],
+  <span class="hljs-attr">credentials</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-attr">maxAge</span>: <span class="hljs-number">86400</span>
+};
+
+app.<span class="hljs-title function_">use</span>(<span class="hljs-title function_">cors</span>(corsOptions));</code></pre>
+<hr>
+<h2 id="8-安全头">8. 安全头<a class="anchor" href="#8-安全头" aria-label="锚点">#</a></h2>
+<h3 id="8-1-必需的安全头">8.1 必需的安全头<a class="anchor" href="#8-1-必需的安全头" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> helmet = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;helmet&#x27;</span>);
+
+app.<span class="hljs-title function_">use</span>(<span class="hljs-title function_">helmet</span>());
+
+<span class="hljs-comment">// 自定义安全头</span>
+app.<span class="hljs-title function_">use</span>(<span class="hljs-function">(<span class="hljs-params">req, res, next</span>) =&gt;</span> {
+  res.<span class="hljs-title function_">setHeader</span>(<span class="hljs-string">&#x27;X-Content-Type-Options&#x27;</span>, <span class="hljs-string">&#x27;nosniff&#x27;</span>);
+  res.<span class="hljs-title function_">setHeader</span>(<span class="hljs-string">&#x27;X-Frame-Options&#x27;</span>, <span class="hljs-string">&#x27;DENY&#x27;</span>);
+  res.<span class="hljs-title function_">setHeader</span>(<span class="hljs-string">&#x27;X-XSS-Protection&#x27;</span>, <span class="hljs-string">&#x27;1; mode=block&#x27;</span>);
+  res.<span class="hljs-title function_">setHeader</span>(<span class="hljs-string">&#x27;Strict-Transport-Security&#x27;</span>, <span class="hljs-string">&#x27;max-age=31536000; includeSubDomains&#x27;</span>);
+  res.<span class="hljs-title function_">setHeader</span>(<span class="hljs-string">&#x27;Content-Security-Policy&#x27;</span>, <span class="hljs-string">&quot;default-src &#x27;self&#x27;&quot;</span>);
+  <span class="hljs-title function_">next</span>();
+});</code></pre>
+<hr>
+<h2 id="9-日志安全">9. 日志安全<a class="anchor" href="#9-日志安全" aria-label="锚点">#</a></h2>
+<h3 id="9-1-日志脱敏">9.1 日志脱敏<a class="anchor" href="#9-1-日志脱敏" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-title function_">sanitizeLog</span> = (<span class="hljs-params">data</span>) =&gt; {
+  <span class="hljs-keyword">const</span> sensitiveFields = [<span class="hljs-string">&#x27;password&#x27;</span>, <span class="hljs-string">&#x27;token&#x27;</span>, <span class="hljs-string">&#x27;apiKey&#x27;</span>, <span class="hljs-string">&#x27;secret&#x27;</span>, <span class="hljs-string">&#x27;authorization&#x27;</span>];
+  <span class="hljs-keyword">const</span> sanitized = { ...data };
+  
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> field <span class="hljs-keyword">of</span> sensitiveFields) {
+    <span class="hljs-keyword">if</span> (sanitized[field]) {
+      sanitized[field] = <span class="hljs-string">&#x27;***REDACTED***&#x27;</span>;
+    }
+  }
+  
+  <span class="hljs-keyword">return</span> sanitized;
+};
+
+<span class="hljs-comment">// 日志记录</span>
+logger.<span class="hljs-title function_">info</span>(<span class="hljs-string">&#x27;User login attempt&#x27;</span>, <span class="hljs-title function_">sanitizeLog</span>({
+  <span class="hljs-attr">username</span>: req.<span class="hljs-property">body</span>.<span class="hljs-property">username</span>,
+  <span class="hljs-attr">password</span>: req.<span class="hljs-property">body</span>.<span class="hljs-property">password</span>,  <span class="hljs-comment">// 会被脱敏</span>
+  <span class="hljs-attr">ip</span>: req.<span class="hljs-property">ip</span>
+}));</code></pre>
+<h3 id="9-2-安全事件日志">9.2 安全事件日志<a class="anchor" href="#9-2-安全事件日志" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-title function_">logSecurityEvent</span> = (<span class="hljs-params">event, details</span>) =&gt; {
+  logger.<span class="hljs-title function_">warn</span>(<span class="hljs-string">&#x27;Security event&#x27;</span>, {
+    event,
+    <span class="hljs-attr">details</span>: <span class="hljs-title function_">sanitizeLog</span>(details),
+    <span class="hljs-attr">ip</span>: details.<span class="hljs-property">ip</span>,
+    <span class="hljs-attr">userAgent</span>: details.<span class="hljs-property">userAgent</span>,
+    <span class="hljs-attr">timestamp</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>().<span class="hljs-title function_">toISOString</span>()
+  });
+};
+
+<span class="hljs-comment">// 使用示例</span>
+<span class="hljs-title function_">logSecurityEvent</span>(<span class="hljs-string">&#x27;LOGIN_FAILED&#x27;</span>, {
+  <span class="hljs-attr">username</span>: req.<span class="hljs-property">body</span>.<span class="hljs-property">username</span>,
+  <span class="hljs-attr">ip</span>: req.<span class="hljs-property">ip</span>,
+  <span class="hljs-attr">reason</span>: <span class="hljs-string">&#x27;Invalid password&#x27;</span>
+});</code></pre>
+<hr>
+<h2 id="10-依赖安全">10. 依赖安全<a class="anchor" href="#10-依赖安全" aria-label="锚点">#</a></h2>
+<h3 id="10-1-依赖审计">10.1 依赖审计<a class="anchor" href="#10-1-依赖审计" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 定期审计依赖</span>
+npm audit
+
+<span class="hljs-comment"># 修复已知漏洞</span>
+npm audit fix</code></pre>
+<h3 id="10-2-依赖更新策略">10.2 依赖更新策略<a class="anchor" href="#10-2-依赖更新策略" aria-label="锚点">#</a></h3>
+<ul><li>每周检查依赖更新</li><li>及时修复高危漏洞</li><li>更新前进行充分测试</li></ul>
+<hr>
+<h2 id="11-安全测试">11. 安全测试<a class="anchor" href="#11-安全测试" aria-label="锚点">#</a></h2>
+<h3 id="11-1-安全扫描">11.1 安全扫描<a class="anchor" href="#11-1-安全扫描" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 静态代码扫描</span>
+npm run security:scan
+
+<span class="hljs-comment"># 依赖漏洞扫描</span>
+npm audit --audit-level=high</code></pre>
+<h3 id="11-2-渗透测试">11.2 渗透测试<a class="anchor" href="#11-2-渗透测试" aria-label="锚点">#</a></h3>
+<p>定期进行渗透测试，检查：</p>
+<ul><li>认证绕过</li><li>权限提升</li><li>注入攻击</li><li>XSS/CSRF</li></ul>
+<hr>
+<h2 id="12-版本历史">12. 版本历史<a class="anchor" href="#12-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义安全规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 安全团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-RL-001] Rate Limiting 限流规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-RL-001] Rate Limiting 限流规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-SEMVER-001] 语义化版本规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-SEMVER-001] 语义化版本规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-SEC-001] 安全规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

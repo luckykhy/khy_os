@@ -1,0 +1,229 @@
+{
+  "meta": {
+    "id": "khy-entrypoints",
+    "title": "Khy 多端入口矩阵",
+    "version": "1.0.0",
+    "updated": "2026-09-17",
+    "ssot": "docs/03_DESIGN_设计/[DESIGN-ARCH-117] khy-多端入口矩阵.md",
+    "rootToken": "<appRoot>",
+    "notes": [
+      "本表是「Khy 有哪些端、每个端的入口在哪、怎么起、怎么构建、现在能不能用」的单一真源。改端先改这里，再改代码。",
+      "本表**不存**端口字面量：端口一律写 serviceDefaults 的导出名（ports[].ref），由 registry.js 解析。理由见工程规则 1（RUNTIME-001）。",
+      "本表**不复制**产物路径：产物坐标的真源是 docs/10_规范/registry/BUILD-OUTPUTS.json；端条目只存 id 指针（artifactOutput），`khy entry status` 拿它去登记表换出「在哪、在不在、怎么得到」。**读登记表，不抄 path**——抄一份就是第二份真源，正是 LAYOUT-005 要消灭的东西。（2026-09-17 决策反转：初版曾规定运行时代码不读登记表，代价是端矩阵答不出「exe/apk/html 到底在哪」，实测证明后者才是需求。）",
+      "artifactKind=shell 的端另用 entryFiles 声明**仓库内入口文件**（如 khy.bat / khy.sh）。它与 artifactOutput 是两件事：前者是日常进入方式，后者是打包形态。khy.bat 存在不等于 pip wheel 已构建，反之亦然，所以 `khy entry status` 把两者分开报。",
+      "source 与 launch/build 的 cwd 均为相对 <appRoot> 的仓库相对路径；<appRoot> 由 utils/dataHome.getAppRoot() 解析（可被 KHY_OS_ROOT 覆盖）。",
+      "status 是**人工定档**（对现状的判断）；`khy entry probe` 是**机器检活**（对磁盘的实际探测）。两者不一致时以 probe 为准并回来修本表。"
+    ]
+  },
+  "kinds": {
+    "cli": "终端端：命令行 / REPL / TUI",
+    "desktop": "桌面端：窗口应用（Electron 等）",
+    "mobile": "移动端：手机应用（APK / AAB）",
+    "web": "网页端：浏览器页面"
+  },
+  "statuses": {
+    "ready": "有可执行的启动与构建声明，且源目录与工具链齐备，当前可用",
+    "degraded": "能起或能构建，但缺一条关键能力（缺打包配置、缺产物线等），需人工补",
+    "broken": "声明的源已缺失或无法构建，入口点下去一定失败",
+    "planned": "尚未落地，仅有约定"
+  },
+  "modes": {
+    "attach": "前台接管当前终端（交互式，如 REPL）",
+    "wait": "前台等待其退出（短生命周期，如构建）",
+    "detach": "后台独立运行、不等待（长生命周期，如 dev server / 窗口应用）"
+  },
+  "entries": [
+    {
+      "id": "cli",
+      "kind": "cli",
+      "title": "终端端（Python 启动器通道）",
+      "artifactKind": "shell",
+      "delivery": "仓库内启动脚本 khy.bat / khy.sh",
+      "entryFiles": ["khy.bat", "khy.sh", "khy-cli.bat"],
+      "source": "platform/khy_platform",
+      "markers": ["cli.py", "__main__.py"],
+      "toolchain": ["python"],
+      "status": "ready",
+      "statusNote": "先探测 Python 3.8+，再由 node_provisioner 拉起 Node；pip 安装后的 khy 命令走同一入口",
+      "launch": {
+        "win32": { "command": "khy.bat", "args": [], "mode": "attach", "shell": true },
+        "default": { "command": "./khy.sh", "args": [], "mode": "attach", "shell": true }
+      },
+      "build": null,
+      "artifactOutput": "pip-dist",
+      "ports": [],
+      "notes": [
+        "这是 khy 的**第一入口**：所有 `khy <命令>` 先到 Python 启动器的顶层分派（cli.py），未命中的才透传给 Node。",
+        "加 --json 之类的参数直接透传即可，端矩阵不重复声明子命令。"
+      ]
+    },
+    {
+      "id": "cli-node",
+      "kind": "cli",
+      "title": "终端端（直连 Node，免 Python）",
+      "artifactKind": "shell",
+      "delivery": "node services/backend/bin/khy.js；亦经 npm 渠道 bin/khy.js",
+      "entryFiles": ["services/backend/bin/khy.js"],
+      "source": "services/backend",
+      "markers": ["bin/khy.js", "package.json"],
+      "toolchain": ["node"],
+      "status": "ready",
+      "statusNote": "绕过 Python 启动器，直接进 Node CLI 路由；代价是 Python 侧独有的分派分支（doctor / 构建 / apps）不可用",
+      "launch": {
+        "default": { "command": "node", "args": ["services/backend/bin/khy.js"], "mode": "attach" }
+      },
+      "build": null,
+      "artifactOutput": "backend-dist",
+      "ports": [],
+      "notes": [
+        "npm 与 pip 两个渠道的最终落点都是这里（packaging/npm/bin/khy.js 转 spawn bundled 运行时）。",
+        "根目录的 khy-cli.bat 是本条目的 Windows 快捷方式。"
+      ]
+    },
+    {
+      "id": "desktop",
+      "kind": "desktop",
+      "title": "桌面端（Electron / electron-vite，主推）",
+      "artifactKind": "exe",
+      "delivery": "electron-builder 产物：Windows nsis 安装包 + portable 便携版；macOS dmg/zip",
+      "source": "apps/khyos-desktop",
+      "markers": ["package.json", "electron.vite.config.ts"],
+      "toolchain": ["node"],
+      "status": "ready",
+      "statusNote": "三条桌面线里唯一配齐 electron-builder 的；产物根由 BUILD-OUTPUTS.json 的 electron-builder 条目登记",
+      "launch": {
+        "default": { "command": "npm", "args": ["run", "electron:dev"], "mode": "detach" }
+      },
+      "build": {
+        "default": { "command": "npm", "args": ["run", "electron:build"], "mode": "wait" }
+      },
+      "artifactOutput": "electron-builder",
+      "ports": [],
+      "notes": [
+        "electron-vite 的三个进程（main / preload / renderer）由 electron.vite.config.ts 统一定义，端矩阵不重复声明。",
+        "根 package.json 的 electron:dev 指向 scripts/electron-dev.js，那是**另一条线**（见 desktop-legacy）。"
+      ]
+    },
+    {
+      "id": "desktop-legacy",
+      "kind": "desktop",
+      "title": "桌面端（根级 electron/ 旧壳）",
+      "artifactKind": "exe",
+      "delivery": "无打包产物（缺 electron-builder 配置与 main 字段）",
+      "source": "electron",
+      "markers": ["main.js", "preload.js"],
+      "toolchain": ["node"],
+      "status": "degraded",
+      "statusNote": "能跑 dev（npm run electron:dev），但产不出 exe——根 package.json 没有 build/appId，也没有 main 字段",
+      "launch": {
+        "default": { "command": "npm", "args": ["run", "electron:dev"], "mode": "detach" }
+      },
+      "build": null,
+      "artifactOutput": "electron-root-dist",
+      "ports": [],
+      "notes": [
+        "登记在 [DESIGN-LAY-005] §1.4 的根级例外目录，与 apps/khyos-desktop 是**两条并行产物线**。",
+        "要产出 exe 必须先补 electron-builder 配置；否则此条目应降为 planned 或整条移除。"
+      ]
+    },
+    {
+      "id": "desktop-provider-hub",
+      "kind": "desktop",
+      "title": "桌面端（Provider Hub 卡片枢纽）",
+      "artifactKind": "exe",
+      "delivery": "仅 electron-vite 构建产物，无安装包",
+      "source": "apps/provider-hub",
+      "markers": ["package.json", "electron.vite.config.ts"],
+      "toolchain": ["node"],
+      "status": "degraded",
+      "statusNote": "可 dev 可 build，但没有 electron-builder 配置，因而没有可分发的 exe",
+      "launch": {
+        "default": { "command": "npm", "args": ["run", "dev"], "mode": "detach" }
+      },
+      "build": {
+        "default": { "command": "npm", "args": ["run", "build"], "mode": "wait" }
+      },
+      "artifactOutput": "provider-hub",
+      "ports": [],
+      "notes": [
+        "定位与 GUI 规范见 [DESIGN-ARCH-094]（与 apps/ai-frontend、apps/khyos-desktop 平级的 L3 应用）。"
+      ]
+    },
+    {
+      "id": "web",
+      "kind": "web",
+      "title": "网页端（AI 平台管理前端）",
+      "artifactKind": "html",
+      "delivery": "Vite 静态产物，由 backend 托管；含 Dockerfile + nginx.conf",
+      "source": "apps/ai-frontend",
+      "markers": ["index.html", "vite.config.js"],
+      "toolchain": ["node"],
+      "status": "ready",
+      "statusNote": "首启由 platform/_bootstrap.py 自动构建；dev 端口从 serviceDefaults.WEB_FRONTEND_PORT 解析",
+      "launch": {
+        "default": { "command": "npm", "args": ["run", "dev"], "mode": "detach" }
+      },
+      "build": {
+        "default": { "command": "npm", "args": ["run", "build"], "mode": "wait" }
+      },
+      "artifactOutput": "ai-frontend",
+      "ports": [{ "ref": "WEB_FRONTEND_PORT" }],
+      "notes": [
+        "信息架构与路由真源是 [DESIGN-ARCH-080]；页面级导航真源是 src/nav/index.js，端矩阵不重复定义。"
+      ]
+    },
+    {
+      "id": "web-quant",
+      "kind": "web",
+      "title": "网页端（KhyQuant 交易前端）",
+      "artifactKind": "html",
+      "delivery": "Vite 静态产物 + Dockerfile + nginx.conf",
+      "source": "software/khyquant/frontend",
+      "markers": ["index.html", "vite.config.js"],
+      "toolchain": ["node"],
+      "status": "ready",
+      "statusNote": "跑在平台之上的内置应用界面（L4）；其移动壳的 mobile:sync 依赖不存在的 android/ 目录，故只登记 web 一种形态",
+      "launch": {
+        "default": { "command": "npm", "args": ["run", "dev"], "mode": "detach" }
+      },
+      "build": {
+        "default": { "command": "npm", "args": ["run", "build"], "mode": "wait" }
+      },
+      "artifactOutput": null,
+      "ports": [],
+      "notes": [
+        "dev 端口未在 serviceDefaults 登记单一真源，因此本条目**刻意不声明端口**——写死一个数字会违反 RUNTIME-001。",
+        "要让它可被解析，先在 constants/serviceDefaults.js 补常量，再回来填 ports[].ref。",
+        "artifactOutput 为空不是遗漏：software/khyquant/frontend/dist 尚未登记进 docs/10_规范/registry/BUILD-OUTPUTS.json（表里只有它的 coverage 条目）。按 LAYOUT-005，每个构建产物都要登记，这是一处待补的登记缺口——本表不代替它补 path，只如实留空。"
+      ]
+    },
+    {
+      "id": "mobile",
+      "kind": "mobile",
+      "title": "移动端（Flutter，可用）",
+      "artifactKind": "apk",
+      "delivery": "app-release.apk + app-release.aab + SHA256SUMS.txt",
+      "source": "apps/khy-os-client-app",
+      "markers": ["pubspec.yaml", "android/app/build.gradle"],
+      "toolchain": ["flutter"],
+      "status": "ready",
+      "statusNote": "三条移动线里唯一有完整构建链的；签名走 key.properties / KHY_ANDROID_* 环境变量",
+      "launch": {
+        "default": { "command": "flutter", "args": ["run"], "mode": "attach" }
+      },
+      "build": {
+        "win32": {
+          "command": "powershell",
+          "args": ["-NoProfile", "-File", "scripts/release/build-android.ps1", "-ApkOnly"],
+          "mode": "wait"
+        }
+      },
+      "artifactOutput": "flutter-android-release",
+      "ports": [],
+      "notes": [
+        "另有 android:release（apk+aab）与 android:release:verify（--SkipBuild 仅验收）两个入口，见根 package.json。",
+        "build 只声明了 win32 档：签名脚本是 PowerShell，非 Windows 平台没有等价入口，诚实报「无声明」而不是假装能构建。"
+      ]
+    }
+  ]
+}

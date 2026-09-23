@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-093] 密钥与智能体统一管理（工具矩阵与zcodeAdapter）设计规范.md -->
+<title>[DESIGN-ARCH-093] 密钥与智能体统一管理（工具矩阵 + zcodeAdapter）设计规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-093] 密钥与智能体统一管理（工具矩阵 + zcodeAdapter）设计规范</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-093] 密钥与智能体统一管理（工具矩阵 + zcodeAdapter）设计规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-093-密钥与智能体统一管理-工具矩阵-zcodeadapter-设计规范">[DESIGN-ARCH-093] 密钥与智能体统一管理（工具矩阵 + zcodeAdapter）设计规范</a></li><li class="lvl-2"><a href="#1-目标">1. 目标</a></li><li class="lvl-2"><a href="#2-github-调研结论-配置面">2. GitHub 调研结论（配置面）</a></li><li class="lvl-2"><a href="#3-统一架构-双投递模式">3. 统一架构：双投递模式</a></li><li class="lvl-2"><a href="#4-工具矩阵-khy-侧现状">4. 工具矩阵（khy 侧现状）</a></li><li class="lvl-2"><a href="#5-zcodeadapter-规范-p1-已实现">5. zcodeAdapter 规范（P1 已实现）</a></li><li class="lvl-2"><a href="#6-本次修复的预存缺陷-调研附带发现">6. 本次修复的预存缺陷（调研附带发现）</a></li><li class="lvl-2"><a href="#7-gui-落点-091-p2-全矩阵">7. GUI 落点（091 P2 全矩阵）</a></li><li class="lvl-2"><a href="#8-里程碑与验收">8. 里程碑与验收</a></li><li class="lvl-2"><a href="#9-红线对照">9. 红线对照</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-093-密钥与智能体统一管理-工具矩阵-zcodeadapter-设计规范">[DESIGN-ARCH-093] 密钥与智能体统一管理（工具矩阵 + zcodeAdapter）设计规范<a class="anchor" href="#design-arch-093-密钥与智能体统一管理-工具矩阵-zcodeadapter-设计规范" aria-label="锚点">#</a></h1>
+<blockquote><p>状态：<strong>提案</strong>（P1 代码已落地）· 2026-09-11<br>上位文档：<code>AGENTS.md</code>（工程红线）、<code>[DESIGN-ARCH-071] 通道选择决策矩阵</code>、<code>[DESIGN-ARCH-091] 密钥与端点中心管理（KeyManager）GUI设计规范</code><br>外部调研源：<code>farion1231/cc-switch</code>、<code>sst/opencode</code>（docs/config+agents+models）、Claude Code 官方 docs（sub-agents/settings）、<code>kingsword09/zcode-cli</code>（CONFIGURATION.md）、<code>pjpv/zcode-switch</code>、<code>smartlizi/zcode-account-switcher</code></p></blockquote>
+<hr>
+<h2 id="1-目标">1. 目标<a class="anchor" href="#1-目标" aria-label="锚点">#</a></h2>
+<p><strong>只在 khy 配置一次，全部 Agent 工具跟随。</strong> 上游密钥只存于 khy（<code>api_keys.json</code> 池 / <code>cc_switch.json</code> 卡片 / ChannelApi 加密行），外部工具（Claude Code / OpenCode / Codex / Gemini / ZCode / Command Code / YCode / DeepSeek / Reasonix…）不再各自持有可管理的凭据与端点；Agent 定义同样以 khy 注册表为 SSoT，按需导出到各工具目录。</p>
+<h2 id="2-github-调研结论-配置面">2. GitHub 调研结论（配置面）<a class="anchor" href="#2-github-调研结论-配置面" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>工具</th><th>密钥配置位</th><th>机制要点</th><th>Agent 定义位</th></tr></thead><tbody><tr><td><strong>Claude Code</strong></td><td><code>~/.claude/settings.json</code> <code>env</code> 块（<code>ANTHROPIC_BASE_URL</code>/<code>ANTHROPIC_AUTH_TOKEN</code>）或 <code>~/.claude.json</code> OAuth</td><td>8 级设置优先级（managed &gt; CLI &gt; 项目 &gt; 用户）；<code>env</code> 块承载代理指向</td><td><code>~/.claude/agents/*.md</code>、<code>.claude/agents/</code>、plugin、<code>--agents</code> JSON；md+YAML frontmatter，<strong>文件热重载</strong></td></tr><tr><td><strong>OpenCode</strong></td><td><code>~/.config/opencode/opencode.json</code> → <code>provider.&lt;id&gt;.options.apiKey</code></td><td>8 级合并（非替换）；<strong><code>{env:VAR}</code>/<code>{file:path}</code> 变量替换</strong>（key 可指向外部文件）；<code>OPENCODE_CONFIG_DIR</code> 自定义目录；<code>enabled_providers</code> 白名单锁死</td><td><code>~/.config/opencode/agents/*.md</code> 或 JSON <code>agent</code> 键；frontmatter <code>description/mode/model/temperature/permission</code>（tools→permission 映射）</td></tr><tr><td><strong>ZCode</strong></td><td><code>~/.zcode/cli/config.json</code>（Win <code>%USERPROFILE%\.zcode\cli\</code>）→ <code>provider.&lt;slot&gt;.options.apiKey/baseURL</code>，`kind: anthropic\</td><td>openai-compatible\</td><td>openai`</td></tr><tr><td><strong>cc-switch</strong>（参考设计）</td><td>SSoT <code>~/.cc-switch/cc-switch.db</code>（SQLite）</td><td>双层存储（SQLite 可同步 + JSON 设备级）；<strong>双向同步</strong>（切换写 live、编辑回填 live）；原子写+10 代备份；本地代理热切换（协议转换/熔断/健康）；「最小侵入」原则</td><td>统一 MCP/Skills/Prompts 面板跨工具同步</td></tr></tbody></table>
+<h2 id="3-统一架构-双投递模式">3. 统一架构：双投递模式<a class="anchor" href="#3-统一架构-双投递模式" aria-label="锚点">#</a></h2>
+<pre><code>             ┌──────────── khy SSoT ────────────┐
+ 上游 key ◄──┤ api_keys.json 池（轮转/冷却/审计）│
+ (仅存 khy)  │ cc_switch.json 卡片 · ChannelApi │
+             └───────────────┬──────────────────┘
+                             │  khy 本地网关（单 token + 协议转换）
+    ┌────────┬────────┬───────┼─────────┬──────────┐
+    ▼        ▼        ▼       ▼         ▼          ▼
+ claude-code codex  opencode  zcode   gemini    cmdc/ycode
+ (env 块)   (toml)  (json)   (json)  (env 块)  (env 引用)</code></pre>
+<ul><li><strong>模式 A 中继（默认推荐）</strong>：各工具 <code>baseURL</code> 指向 khy 本地网关 + 单一 khy 令牌。工具侧零上游密钥、零多份配置；换供应商/轮转/故障切换全在 khy 内完成。zcode 的「内联 key」约束在此模式下写入的是<strong>可吊销的网关令牌</strong>而非上游真 key。</li><li><strong>模式 B 同步（cc-switch 式兜底）</strong>：工具不支持代理时，khy 经 appWriters 原子写 live 配置直连上游；防漂移靠「编辑激活卡片时从 live 回填」（cc-switch 双向同步语义）。</li><li><strong>Agent 导出</strong>：khy agent 注册表（<code>agents/index.js</code> + <code>~/.khy/agents/*.md</code>）为 SSoT，按工具字段映射导出 md（CC/opencode 同构：markdown+frontmatter，<code>tools</code>→<code>permission</code> 映射；zcode 走 plugin 包）；导出文件打 <code>_khy_managed</code> 标记，GUI 跟踪漂移。Agent 内 <code>model</code> 字段引用 khy 网关模型别名 → 密钥不外泄。</li></ul>
+<h2 id="4-工具矩阵-khy-侧现状">4. 工具矩阵（khy 侧现状）<a class="anchor" href="#4-工具矩阵-khy-侧现状" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>工具</th><th>写入器</th><th>模式 A</th><th>模式 B</th><th>协议约束（preflight）</th><th>Agent 导出</th><th>会话扫描</th></tr></thead><tbody><tr><td>claude-code</td><td><code>claudeCodeAdapter</code>（settings.json env 块）</td><td>✅</td><td>✅</td><td>任意（代理转换）</td><td>✅（ccAgentBridge 已读）</td><td>✅</td></tr><tr><td>codex</td><td><code>codexWriter</code>（config.toml + auth.json）</td><td>✅</td><td>✅</td><td>openai/responses</td><td>⏳ P2</td><td>✅</td></tr><tr><td>opencode</td><td><code>opencodeAdapter</code>（opencode.json provider 树）</td><td>✅（<code>{env:}</code>/<code>{file:}</code> 原生替换）</td><td>✅</td><td>openai/anthropic</td><td>⏳ P2</td><td>✅</td></tr><tr><td>gemini</td><td><code>geminiCliAdapter</code>（settings.json env 块）</td><td>✅</td><td>✅</td><td>—</td><td>⏳ P2</td><td>✅</td></tr><tr><td>command-code</td><td><code>commandCodeAdapter</code>（providers.json BYOK，env 引用）</td><td>✅</td><td>✅</td><td>openai/anthropic/responses</td><td>—</td><td>✅</td></tr><tr><td>ycode</td><td><code>ycodeAdapter</code>（config.json provider 块，env 引用）</td><td>✅</td><td>✅</td><td>openai/responses</td><td>—</td><td>✅</td></tr><tr><td>deepseek / reasonix</td><td><code>deepseekTuiAdapter</code> / <code>reasonixAdapter</code></td><td>✅</td><td>✅</td><td>—</td><td>—</td><td>✅</td></tr><tr><td><strong>zcode</strong></td><td><strong><code>zcodeAdapter</code>（本规范 P1）</strong></td><td>✅</td><td>⚠️ 内联 key（见 §5）</td><td><strong>openai/anthropic</strong></td><td>⏳ P2（plugin 包）</td><td>✅（taste 侧）</td></tr><tr><td>openclaw / coze</td><td>adapter 已存在，未入 ccSwitch APPS 表</td><td>⏳ P2</td><td>⏳ P2</td><td>—</td><td>—</td><td>—</td></tr></tbody></table>
+<h2 id="5-zcodeadapter-规范-p1-已实现">5. zcodeAdapter 规范（P1 已实现）<a class="anchor" href="#5-zcodeadapter-规范-p1-已实现" aria-label="锚点">#</a></h2>
+<ul><li>位置：<code>services/backend/src/services/domain/network/externalApps/zcodeAdapter.js</code></li><li>契约对齐其它 adapter：<code>configPath / list / get / add / remove / usable</code>，fail-soft、merge-write（只动 <code>provider.&lt;slot&gt;</code> 与 <code>model</code> 角色，保留 <code>ui/modelStream/subagents/其它槽位</code>）、remove 带 confirmed 闸门。</li><li>关键语义（实证 zcode-cli CONFIGURATION.md）：<ul><li>槽位白名单 <code>GATE_SLOTS = ['zai','bigmodel']</code>（登录门），默认写 <code>zai</code>；非白名单槽位<strong>拒绝写入</strong>（写错槽位 = 永远卡在登录向导，比不写更糟）。</li><li><code>kind</code> 映射：<code>anthropic</code>→<code>anthropic</code>；<code>openai</code>/<code>openai_responses</code>→<code>openai-compatible</code>（无 gemini/responses 原生 wire）。</li><li>key 策略差异：zcode 登录门要求 <code>options.apiKey</code> <strong>内联非空</strong>（env 引用无效）→ 与 command-code/ycode 的「只写 env 引用」不同；缓解=模式 A 下写 khy 网关令牌 + POSIX 0600 收敛（Windows best-effort）。</li><li>无 key 时仍写端点/模型并返回 <code>warning</code>（zcode 首启要求登录补齐），<strong>绝不丢既有内联 key</strong>（zcode 官方保留语义）。</li><li>模型双角色：<code>model.main = slot/modelId</code>、<code>model.lite = slot/(liteModel||modelId)</code>；模型引用可含 <code>provider/model</code> 前缀，自动取 modelId。</li><li>路径：<code>~/.zcode/cli/config.json</code>（Win <code>%USERPROFILE%\.zcode\cli\</code>），<code>ZCODE_CLI_CONFIG_FILE</code> 可覆盖（测试/便携布局）。</li></ul></li><li>注册面：<code>ccSwitch/constants.js</code> <code>APPS.ZCODE</code> + <code>APP_LABELS</code>；<code>appWriters.js</code> preflight（openai/anthropic 之外拒绝，提示经 khy 代理转换）+ <code>applyCardToApp</code> + <code>detectCardInApp</code>；<code>externalApps/index.js</code> shim 导出。</li></ul>
+<h2 id="6-本次修复的预存缺陷-调研附带发现">6. 本次修复的预存缺陷（调研附带发现）<a class="anchor" href="#6-本次修复的预存缺陷-调研附带发现" aria-label="锚点">#</a></h2>
+<ol><li><strong>ccSwitch 子系统迁移断链</strong>：<code>usageScan / routeResolver / connectivity / appWriters / apiHandlers / cli handlers ccSwitch.js</code> 6 处从 <code>domain/collab/proactiveCollaboration/constants</code>（只导出协作常量）取 <code>APPS/PROTOCOLS/APP_LABELS</code> → 全部 undefined。<code>usageScan</code> 模块级 <code>[APPS.CLAUDE_CODE]</code> 字面量直接<strong>加载即抛</strong>（<code>khy cc-switch scan/status/use</code> 自目录迁移起全部损坏）。已改为 require <code>domain/config/ccSwitch/constants</code>（SSoT，与 <code>store.js</code> 同源）。</li><li><code>tests/.../externalApps.test.js</code> require 相对路径少一层（<code>../../src/...</code> → 应为 <code>../../../src/...</code>），套件自创建起未运行过。已修。</li><li>预存（未动，仅记录）：<code>adapters.test.js</code> opencode 用例在本机存在 <code>Tools/opencode/config/opencode.json</code> 便携布局时被其抢占而失败（测试 env 未设 <code>OPENCODE_CONFIG</code>）；coze 降级路径 <code>add({})</code> 返回 success:true 使「fail-soft」断言失败。两者属测试可移植性问题，另开 IMPL 记录处理。</li></ol>
+<h2 id="7-gui-落点-091-p2-全矩阵">7. GUI 落点（091 P2 全矩阵）<a class="anchor" href="#7-gui-落点-091-p2-全矩阵" aria-label="锚点">#</a></h2>
+<ul><li>桌面 KeyManager 新增 <strong>工具矩阵 tab</strong>：每工具 × 投递模式（A/B）× 激活卡片 × preflight 结果 × 健康探测（<code>connectivity.js</code>）× 反向探测（<code>detectCardInApp</code>）一屏可见；zcode 行展示 <code>zai/bigmodel</code> 槽位状态与登录门判定。</li><li><strong>Agent tab</strong>：khy 注册表列表 → 各工具导出状态/漂移标记（<code>_khy_managed</code>），导出走 §3 字段映射。</li><li>网页端：<code>/agents</code> 由监控升级为管理页并补 NAV 入口（080 P3.5 并轨）。</li></ul>
+<h2 id="8-里程碑与验收">8. 里程碑与验收<a class="anchor" href="#8-里程碑与验收" aria-label="锚点">#</a></h2>
+<ul><li><strong>P1（本次已落地）</strong>：zcodeAdapter + 6 处 require 修复 + 注册面 + 单测（7 例 zcode + 2 套件导出断言，<code>check-agent-rules</code> 12 文件零违规）。</li><li><strong>P2</strong>：工具矩阵 GUI tab；Agent 导出器（CC/opencode 双目标，字段映射表定稿）；codex/opencode Agent 导出。</li><li><strong>P3</strong>：zcode plugin 包导出（subagent 捆绑）；openclaw/coze 入 APPS 矩阵；双向同步回填（cc-switch 语义）；测试可移植性修复（§6.3）。</li></ul>
+<h2 id="9-红线对照">9. 红线对照<a class="anchor" href="#9-红线对照" aria-label="锚点">#</a></h2>
+<ul><li>零硬编码：zcode 路径走 <code>os.homedir()</code>/<code>ZCODE_CLI_CONFIG_FILE</code>（同 <code>~/.commandcode/</code> 等既有外部工具配置位先例）；端点全部来自卡片/网关，无字面量。</li><li>写必走正门：adapter 只写目标工具 live 配置（正门），khy 侧状态记录仍走 ccSwitch store；fail-soft 不吞错。</li><li>密钥策略：zcode 内联 key 为本工具唯一例外，已在 §5 与 091 安全章节联动说明（POSIX 0600 + 网关令牌降级敏感 + 审计）。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-091] 密钥与端点中心管理（KeyManager）GUI设计规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-091] 密钥与端点中心管理（KeyManager）GUI 设计规范</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-094] Provider卡片枢纽（CardHub）GUI设计规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-094] Provider 卡片枢纽（ProviderHub）GUI 设计规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-093] 密钥与智能体统一管理（工具矩阵与zcodeAdapter）设计规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

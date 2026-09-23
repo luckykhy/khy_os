@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [PROCESS-102] 下一步最该做什么决策标准.md -->
+<title>[PROCESS-102] 下一步最该做什么决策标准 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[PROCESS-102] 下一步最该做什么决策标准</div>
+      <header class="hero reveal"><h1>[PROCESS-102] 下一步最该做什么决策标准</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#process-102-下一步最该做什么决策标准">[PROCESS-102] 下一步最该做什么决策标准</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 下一步最该做什么决策标准<br>id: PROCESS-102<br>domain: PROCESS<br>nature: 约束为主，兼权力与福利<br>scope: &quot;回答「现在最该做什么 / 下一步」的一切通道（AI 问答、khy hq next）；.ai/hq/PROGRESS.json 与 BUGS.json 的任务选取逻辑&quot;<br>priority: P1<br>trigger: &quot;被问「最该做什么」或运行 khy hq next 时；新任务登记时&quot;<br>constraint: &quot;按五档瀑布 G0→G4 依序判定，首个能产出唯一赢家的档即答案：G0 验收债（review 任务 / pending_verify Bug / 过期占用租约）先报清单不排新活；G1 open Bug 按严重度；G2 P0/P1 待办；G3 P2/P3 待办；同档并列时仅当全体具备 cod/conf/size 字段才按 延迟成本×把握÷工量 评分决胜，禁止按登记顺序任取；评分并列或缺字段判 G4——列出候选+一句话理由停下来问人。AI 回答须先读同一数据源（或跑 khy hq next --json）并引用档位与证据计数，不得凭印象推荐未登记任务。&quot;<br>grants: &quot;授权 AI 与 CLI 在瀑布算不出唯一赢家时拒绝给出单一建议、改为反问（G4）；授权任何人用 khy hq next --task T-XXX / --verify BUG-XXX 显式指定跳过瀑布——人的当场意图高于标准。&quot;<br>benefit: &quot;一条命令得到带档位证据的唯一建议；平局以提问显性化而不是被登记顺序伪造成优先级；技术债（验收、排障）与功能在 G0/G1 有明确的先到位置，无需每次重新争论。&quot;<br>exception: &quot;用户本轮已明确点名做什么时直接执行，不再走瀑布；无候选（idle）时如实报 idle 并建议登记，不得硬凑推荐。&quot;<br>version: &quot;1.0.0 (2026-09-18)&quot;<br>status: draft<br>ssot: &quot;docs/10_规范/其它规范/PROCESS-102-下一步最该做什么决策标准.md&quot;<br>formerly: 无<br>owner: governance-team</p>
+<hr>
+<h1 id="process-102-下一步最该做什么决策标准">[PROCESS-102] 下一步最该做什么决策标准<a class="anchor" href="#process-102-下一步最该做什么决策标准" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: PROCESS-102 -->
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/10_规范/其它规范/PROCESS-102-下一步最该做什么决策标准.md。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>按五档瀑布 G0→G4 依序判定，首个能产出唯一赢家的档即答案：G0 验收债（review 任务 / pending_verify Bug / 过期占用租约）先报清单不排新活；G1 open Bug 按严重度；G2 P0/P1 待办；G3 P2/P3 待办；同档并列时仅当全体具备 cod/conf/size 字段才按 延迟成本×把握÷工量 评分决胜，禁止按登记顺序任取；评分并列或缺字段判 G4——列出候选+一句话理由停下来问人。AI 回答须先读同一数据源（或跑 khy hq next --json）并引用档位与证据计数，不得凭印象推荐未登记任务。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>授权 AI 与 CLI 在瀑布算不出唯一赢家时拒绝给出单一建议、改为反问（G4）；授权任何人用 khy hq next --task T-XXX / --verify BUG-XXX 显式指定跳过瀑布——人的当场意图高于标准。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>一条命令得到带档位证据的唯一建议；平局以提问显性化而不是被登记顺序伪造成优先级；技术债（验收、排障）与功能在 G0/G1 有明确的先到位置，无需每次重新争论。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>见 <code>ssot</code> 指向的真源原文；本卡不复制反例，以免与真源漂移。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>人工评审（该规则暂无机械守卫）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>用户本轮已明确点名做什么时直接执行，不再走瀑布；无候选（idle）时如实报 idle 并建议登记，不得硬凑推荐。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-18) 初版 / 迁移自 无</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/规则卡/[PROCESS-101] 贡献者规则提案权.html"><div class="dir">← 上一篇</div><div class="ttl">[PROCESS-101] 贡献者规则提案权</div></a><a class="next" href="../../../docs/10_规范/规则卡/[PROMPT-001] Prompt Engineering 规范.html"><div class="dir">下一篇 →</div><div class="ttl">[PROMPT-001] Prompt Engineering 规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/规则卡/[PROCESS-102] 下一步最该做什么决策标准.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

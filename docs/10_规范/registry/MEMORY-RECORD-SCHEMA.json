@@ -1,0 +1,344 @@
+{
+  "$schemaVersion": "1.0.0",
+  "$artifact": "记忆记录 schema 与指定读写入口清单",
+  "$registry": "docs/10_规范/registry/RULES-REGISTRY.json",
+  "$ruleIds": [
+    "MEMORY-002",
+    "MEMORY-003"
+  ],
+  "$consumedBy": [
+    "scripts/ci/check-memory-schema.js",
+    "scripts/ruleguard/lib/externalRules.js"
+  ],
+  "$status": "active",
+  "$updated": "2026-09-16",
+  "ssot": {
+    "doc": "docs/10_规范/DESIGN-MEM/[DESIGN-MEM-006] 记忆与维护元数据生命周期规范.md",
+    "sections": [
+      "§2 persistent 记录五字段（GOV-MEM-002）",
+      "§3 指定读写入口（GOV-MEM-003）",
+      "§6 守卫计划"
+    ],
+    "note": "本文件是 DESIGN-MEM-006 §2/§3 的机器可读投影。字段语义以该文档为唯一真源；本文档新增的 type/constraints 是为让检查器可断言而做的形式化，其取值全部来自原文描述，不得自行扩大。若与原文冲突，以原文为准。"
+  },
+  "recordKinds": {
+    "persistent": "跨会话稳定事实，落盘必带五字段（DESIGN-MEM-006 §1/§2）",
+    "session": "仅当前任务需要且无需跨会话复用的信息（DESIGN-MEM-006 §1）"
+  },
+  "fiveElements": [
+    {
+      "key": "subject",
+      "label": "记录主体",
+      "required": true,
+      "type": "string",
+      "constraints": {
+        "minLength": 1,
+        "maxLength": 200,
+        "trimRequired": true,
+        "containsCredential": false
+      },
+      "docDescription": "记录主体（哪个模块/契约）",
+      "docSource": {
+        "doc": "docs/10_规范/DESIGN-MEM/[DESIGN-MEM-006] 记忆与维护元数据生命周期规范.md",
+        "line": 24
+      }
+    },
+    {
+      "key": "source",
+      "label": "来源",
+      "required": true,
+      "type": "string",
+      "constraints": {
+        "minLength": 1,
+        "oneOfForms": [
+          {
+            "form": "文档编号",
+            "pattern": "^[A-Z0-9]+(?:-[A-Z0-9]+)*-[0-9]{3}|\\[[A-Z0-9-]+-[0-9]{3}\\]",
+            "description": "形如 [DESIGN-LAY-005] 或 MEM-006"
+          },
+          {
+            "form": "文件路径",
+            "pattern": "^[^\\s]*[./][^\\s]*$",
+            "description": "形如 services/backend/src/services/flagRegistry.js"
+          },
+          {
+            "form": "命令输出引用",
+            "pattern": "^(node|npm|make|git|khy)\\b",
+            "description": "形如 khy gateway status"
+          }
+        ],
+        "containsCredential": false
+      },
+      "docDescription": "来源（文档编号 / 文件路径 / 命令输出引用）",
+      "docSource": {
+        "doc": "docs/10_规范/DESIGN-MEM/[DESIGN-MEM-006] 记忆与维护元数据生命周期规范.md",
+        "line": 25
+      }
+    },
+    {
+      "key": "writtenAt",
+      "label": "写入时间",
+      "required": true,
+      "type": "string",
+      "format": "iso-8601-date",
+      "constraints": {
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}(?:[Tt]\\d{2}:\\d{2}(?::\\d{2})?(?:[Zz]|[+-]\\d{2}:?\\d{2})?)?$"
+      },
+      "docDescription": "写入时间（ISO 日期）",
+      "docSource": {
+        "doc": "docs/10_规范/DESIGN-MEM/[DESIGN-MEM-006] 记忆与维护元数据生命周期规范.md",
+        "line": 26
+      }
+    },
+    {
+      "key": "scope",
+      "label": "适用范围",
+      "required": true,
+      "type": "string",
+      "docDescription": "适用范围（仓库级 / 板块级 / 模块级）",
+      "docSource": {
+        "doc": "docs/10_规范/DESIGN-MEM/[DESIGN-MEM-006] 记忆与维护元数据生命周期规范.md",
+        "line": 27
+      },
+      "constraints": {
+        "enum": [
+          "仓库级",
+          "板块级",
+          "模块级"
+        ],
+        "enumVerbatim": "仓库级 / 板块级 / 模块级",
+        "closedSet": true,
+        "note": "原文以「/」并列三个中文取值，未给机器可读键名（如 repo/section/module）。此处直接形式化为闭集枚举。"
+      }
+    },
+    {
+      "key": "cleanup",
+      "label": "清理条件",
+      "required": true,
+      "type": "string",
+      "constraints": {
+        "minLength": 1,
+        "permanentSentinel": "永久",
+        "note": "无条件则写「永久」；其余值应为可判定的触发事件描述"
+      },
+      "docDescription": "清理条件（触发事件；无条件则写 永久）",
+      "docSource": {
+        "doc": "docs/10_规范/DESIGN-MEM/[DESIGN-MEM-006] 记忆与维护元数据生命周期规范.md",
+        "line": 28
+      }
+    }
+  ],
+  "recordIntegrity": {
+    "rule": "落盘必带五字段，缺一不得写",
+    "docSource": {
+      "doc": "docs/10_规范/DESIGN-MEM/[DESIGN-MEM-006] 记忆与维护元数据生命周期规范.md",
+      "line": 21
+    },
+    "allFiveRequired": true
+  },
+  "credentialPolicy": {
+    "rule": "凭据（key/密码/token）只引用存放位置，不复制值",
+    "docSource": {
+      "doc": "docs/10_规范/DESIGN-MEM/[DESIGN-MEM-006] 记忆与维护元数据生命周期规范.md",
+      "line": 21
+    },
+    "credentialTokens": [
+      "key",
+      "密码",
+      "token",
+      "secret",
+      "password",
+      "apiKey",
+      "api_key",
+      "bearer"
+    ],
+    "referenceOnlyMarkers": [
+      "存放位置",
+      "路径",
+      "env",
+      "环境变量"
+    ],
+    "appliesToFields": [
+      "subject",
+      "source",
+      "scope",
+      "cleanup"
+    ]
+  },
+  "prohibitedWrites": {
+    "rule": "把一次性命令输出、临时 diff 写入长期记忆或 .ai/",
+    "docSource": {
+      "doc": "docs/10_规范/DESIGN-MEM/[DESIGN-MEM-006] 记忆与维护元数据生命周期规范.md",
+      "line": 17
+    }
+  },
+  "designatedEntries": [
+    {
+      "id": "khy-metadata",
+      "storage": ".ai/ 维护元数据",
+      "entry": "khy metadata gen / refresh / link",
+      "entryKind": "cli-command",
+      "carrier": "services/backend/src/services/projectMetadataService.js",
+      "protectedPaths": [
+        ".ai/MAP.md",
+        ".ai/CONTEXT.yaml",
+        ".ai/GUARDS.md",
+        ".ai/SKELETON.auto.md"
+      ],
+      "forbidden": "手写过 .ai/MAP.md；绕过 projectMetadataService 改机器文件",
+      "implemented": true,
+      "implementationEvidence": {
+        "doc": "docs/10_规范/DESIGN-MEM/[DESIGN-MEM-006] 记忆与维护元数据生命周期规范.md",
+        "lines": [
+          35,
+          48
+        ],
+        "note": "§5 UC-001 裁决：三件套由 khy metadata gen 确定性生成，登记日已按本裁决运行生成器补齐"
+      },
+      "docSource": {
+        "doc": "docs/10_规范/DESIGN-MEM/[DESIGN-MEM-006] 记忆与维护元数据生命周期规范.md",
+        "line": 35
+      }
+    },
+    {
+      "id": "acp-context-share",
+      "storage": "会话/持久上下文",
+      "entry": "ACP context.share（scope）",
+      "entryKind": "acp-method",
+      "spec": "[DESIGN-ACP-001]",
+      "scopeValues": [
+        "session",
+        "persistent"
+      ],
+      "protectedPaths": [],
+      "forbidden": "路由/服务层直写持久记忆文件",
+      "implemented": false,
+      "implementationEvidence": {
+        "doc": "docs/10_规范/DESIGN-MEM/[DESIGN-MEM-006] 记忆与维护元数据生命周期规范.md",
+        "lines": [
+          36,
+          56
+        ],
+        "note": "口径已冻结并列入 §3 表，但 §6 守卫计划三条仍标「待工具化」；本仓尚无检查器能证明调用方确实走了 context.share 而非直写持久记忆文件"
+      },
+      "docSource": {
+        "doc": "docs/10_规范/DESIGN-MEM/[DESIGN-MEM-006] 记忆与维护元数据生命周期规范.md",
+        "line": 36
+      },
+      "notImplementedReason": "DESIGN-MEM-006 §6 守卫计划将「persistent 五字段 + 无凭据校验」列为待工具化项（line 56）；且 §3 未点名 context.share 的实现文件，本仓尚无检查器能证明调用方确实走了 context.share 而非直写持久记忆文件。故 implemented=false，检查器不对此条报 ERROR。"
+    }
+  ],
+  "entryRegistrationRule": {
+    "rule": "新增记忆持久化模块：先在本表加行登记，再动码",
+    "docSource": {
+      "doc": "docs/10_规范/DESIGN-MEM/[DESIGN-MEM-006] 记忆与维护元数据生命周期规范.md",
+      "line": 38
+    }
+  },
+  "enforcementPlan": {
+    "docSource": {
+      "doc": "docs/10_规范/DESIGN-MEM/[DESIGN-MEM-006] 记忆与维护元数据生命周期规范.md",
+      "line": 56
+    },
+    "docText": "落地三条并进 check:structure + PR gate（GOV-TOOL-005）：① persistent 五字段 + 无凭据校验；② 非指定入口写 .ai/ 机器文件的检测；③ 重启后 session 残留扫描。",
+    "items": [
+      {
+        "index": 1,
+        "name": "persistent 五字段 + 无凭据校验",
+        "ruleId": "MEMORY-002",
+        "checker": "scripts/ci/check-memory-schema.js",
+        "assertion": "schema 文件自身五字段完整；观测到的记忆存储记录缺字段即报；凭据值不得出现在记录中",
+        "status": "enforced"
+      },
+      {
+        "index": 2,
+        "name": "非指定入口写 .ai/ 机器文件的检测",
+        "ruleId": "MEMORY-003",
+        "checker": "scripts/ci/check-memory-schema.js",
+        "assertion": "源码中凡写 .ai/ 保护路径的调用点，必须落在 designatedEntries 登记的 carrier 内",
+        "status": "enforced"
+      },
+      {
+        "index": 3,
+        "name": "重启后 session 残留扫描",
+        "ruleId": "MEMORY-004",
+        "checker": null,
+        "assertion": "重启后残留的临时上下文不得自动升格为 persistent",
+        "status": "not-enforced",
+        "reason": "判的是跨时间运行时行为，静态检查器无法观测；仍是人工评审兜底"
+      }
+    ]
+  },
+  "observed": {
+    "note": "以下为实测（非文档摘录）。路径均于 2026-09-16 在仓库根验证存在。",
+    "measuredAt": "2026-09-16",
+    "memoryWriteSites": [
+      "services/backend/src/services/domain/memory/cognitiveSnapshot/offloadStore.js",
+      "services/backend/src/services/domain/memory/cognitiveSnapshot/snapshotManager.js"
+    ],
+    "runtimeStorageDir": ".khy/memory/",
+    "runtimeStorageObserved": [
+      ".khy/memory/MEMORY.md",
+      ".khy/memory/feedback_system----_1c477a3f.md",
+      ".khy/memory/feedback_tool-execution-results_a3d9521e.md",
+      ".khy/memory/feedback/",
+      ".khy/memory/logs/",
+      ".khy/memory/.archive/",
+      ".khy/memory/.distill.json"
+    ],
+    "recordShapeOnDisk": null,
+    "recordShapeNote": "实测 .khy/memory/ 下为 Markdown 散文 + 目录，未发现带五字段的结构化记录文件；故本 schema 当前约束的是**写入方必须提供的字段契约**，而非磁盘上已存在的记录形状。checker 不得因磁盘无结构化记录而误报全库。",
+    "canonicalWriteSeam": {
+      "file": "services/backend/src/memdir/memdir.js",
+      "note": "实测（2026-09-16，非文档摘录）：仓库实际存在的记忆写入单点。DESIGN-MEM-006 §3 未把它登记为「指定入口」，而 §3 明写「新增记忆持久化模块：先在本表加行登记，再动码」——现有实现属未登记状态。",
+      "api": [
+        {
+          "fn": "saveMemory(type, name, content, options)",
+          "line": 344,
+          "io": "_safeWriteFileSync(filepath, fileContent)（line 380）"
+        },
+        {
+          "fn": "updateMemoryIndex(entries)",
+          "line": 440,
+          "io": "_safeWriteFileSync(indexPath, newContent)（line 476）"
+        },
+        {
+          "fn": "deleteMemory(filename, options)",
+          "line": 414,
+          "io": "fs.unlinkSync(filepath)（line 422）+ _removeFromIndex → _safeWriteFileSync（line 967）"
+        },
+        {
+          "fn": "_safeWriteFileSync(filepath, content)",
+          "line": 206,
+          "io": "原子写：写 .tmp-<pid> + read-back 校验 + renameSync + 重试退避；纯叶子 services/backend/src/services/memoryWriteSafety.js"
+        }
+      ]
+    },
+    "bypassWrites": [
+      {
+        "file": "services/backend/src/assistant/autoDream.js",
+        "lines": [
+          214,
+          248,
+          256
+        ],
+        "what": "fs.writeFileSync 直接覆写 dream_*.md、记忆文件与 MEMORY.md 索引",
+        "flag": "绕过 memdir._safeWriteFileSync 裸写，AI 直接产出整个 MEMORY.md 内容"
+      },
+      {
+        "file": "services/backend/src/services/domain/memory/memoryEngine/distiller.js",
+        "lines": [
+          293,
+          309,
+          443
+        ],
+        "what": "fs.writeFileSync 写 .archive/manifest.json、MEMORY.md 索引、state 文件",
+        "flag": "同样绕过 memdir seam 直写 MEMORY.md 索引"
+      }
+    ],
+    "entryRegistrationGap": {
+      "note": "实测绕过点：见 bypassWrites。登记状态：memdir.js seam 尚未出现在 designatedEntries 中。",
+      "assertion": "新增记忆持久化模块：先在本表 designatedEntries 加行登记，再动码（DESIGN-MEM-006 §3）"
+    }
+  }
+}

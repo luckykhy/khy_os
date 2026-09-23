@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for rateLimiter.js â€?fixed-window rate limiter and keyed rate limiter.
+ * Tests for rateLimiter.js â€”fixed-window rate limiter and keyed rate limiter.
  */
 
 const {

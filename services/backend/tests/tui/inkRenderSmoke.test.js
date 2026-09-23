@@ -211,19 +211,41 @@ const CASES = {
 describeOrSkip('Ink TUI render smoke (src/cli/tui/ink-components)', () => {
   let ink;
 
+  // Cold-start hook budget. This hook does the *coldest* work in the whole suite —
+  // registerJsx() + a dynamic `import('ink')` of an ESM package *plus* an eager
+  // `import()` of ink's internal instances.js, all under jest's
+  // --experimental-vm-modules + babel transform. jest's default 5s hook timeout
+  // is not enough on a cold cache; when it fires, EVERY test in this file fails
+  // at the hook, which reads as "the whole TUI tree is broken" even though
+  // nothing was actually rendered.
+  //
+  // 2026-09-16: raised 15s → 60s. The runner (`scripts/run-ink-tui-tests.js`) uses
+  // `--runInBand`, so all 29 suites share ONE process and this file's cold requires
+  // (the full App service graph) land on an already-warm, already-loaded heap.
+  // Measured on this machine: 2/3 full-suite runs hit the 15s ceiling on exactly
+  // two cases (WelcomeBanner, App) — the two heaviest requires — while the same
+  // file standalone passes 112/112 in ~20s. Same code, `--testTimeout=90000`:
+  // 435/435 green in ~32s. That is a budget that is too tight, not a defect, and a
+  // false red here is expensive (it reads as "the whole TUI tree is broken").
+  // These are render smoke assertions (frame is non-empty), not latency assertions,
+  // so a larger budget weakens nothing.
+  const COLD_RENDER_BUDGET_MS = 60000;
+
   beforeAll(async () => {
     rt.registerJsx();
     await rt.loadInk();
     ink = rt.get();
-  });
+  }, COLD_RENDER_BUDGET_MS);
 
   test('ink runtime resolves with a render() function', () => {
     expect(typeof ink.render).toBe('function');
   });
 
   // One render assertion per component: mounts, paints a non-empty frame, unmounts clean.
-  // 15s budget: App mounts the full tree (useQueryBridge service graph); its cold
-  // require + mount-time effects exceed jest's default 5s under the babel transform.
+  // COLD_RENDER_BUDGET_MS: App mounts the full tree (useQueryBridge service graph);
+  // its cold require + mount-time effects blow past jest's default 5s under the
+  // babel transform, and past 15s when 29 suites share one --runInBand process.
+  // See the budget comment above beforeAll for the measurements.
   for (const [name, props] of Object.entries(CASES)) {
     test(`${name} mounts and renders a non-empty frame`, async () => {
       const Comp = require(`../../src/cli/tui/ink-components/${name}`);
@@ -239,7 +261,7 @@ describeOrSkip('Ink TUI render smoke (src/cli/tui/ink-components)', () => {
       const frame = stdout.getBuffer();
       instance.unmount();
       expect(frame.length).toBeGreaterThan(0);
-    }, 15000);
+    }, COLD_RENDER_BUDGET_MS);
   }
 
   // ── 输入体验三缺口:门控开/关帧断言(Fix 1a/1b/§3) ──────────────────────────
@@ -1372,10 +1394,10 @@ describeOrSkip('Ink TUI render smoke (src/cli/tui/ink-components)', () => {
     // Gate on (default): sub-minute elapsed stays "Ns"; sub-1k tokens stay raw.
     expect(buildSpinnerMeta(5, 0, noThr)).toBe(' · 5s');
     expect(buildSpinnerMeta(12, 340, noThr)).toBe(' · 12s · ~340 tok');
-    // ≥60s → CC formatDuration "1m 30s"; ≥1k tokens → compact "~1.2k tok". These
-    // are already >30s so the threshold lets them through with env {} too.
-    expect(buildSpinnerMeta(90, 1234, {})).toBe(' · 1m 30s · ~1.2k tok');
-    expect(buildSpinnerMeta(125, 12000, {})).toBe(' · 2m 5s · ~12k tok');
+    // ≥60s → CC mostSignificantOnly "1m"; ≥1k tokens → compact "~1.2k tok".
+    // These are already >30s so the threshold lets them through with env {} too.
+    expect(buildSpinnerMeta(90, 1234, {})).toBe(' · 1m · ~1.2k tok');
+    expect(buildSpinnerMeta(125, 12000, {})).toBe(' · 2m · ~12k tok');
     // No elapsed and no tokens → empty (no meta segment).
     expect(buildSpinnerMeta(0, 0, {})).toBe('');
     // Gate off → byte-fallback: raw seconds and raw integer (no compacting).
@@ -1398,13 +1420,20 @@ describeOrSkip('Ink TUI render smoke (src/cli/tui/ink-components)', () => {
     expect(buildSpinnerMeta(30, 999, {})).toBe(''); // strict >, so 30s exactly stays hidden
     // Just over the threshold → meta surfaces (ccFormat routing still applies).
     expect(buildSpinnerMeta(31, 340, {})).toBe(' · 31s · ~340 tok');
-    expect(buildSpinnerMeta(90, 1234, {})).toBe(' · 1m 30s · ~1.2k tok');
+    expect(buildSpinnerMeta(90, 1234, {})).toBe(' · 1m · ~1.2k tok');
     // Gate off → legacy immediate display from the first second.
     expect(buildSpinnerMeta(5, 340, { KHY_SPINNER_META_GATE: '0' })).toBe(' · 5s · ~340 tok');
     expect(buildSpinnerMeta(12, 340, { KHY_SPINNER_META_GATE: 'off' })).toBe(' · 12s · ~340 tok');
     // Reveal gate is independent of the ccFormat gate: both off → immediate + raw.
     expect(buildSpinnerMeta(5, 1234, { KHY_SPINNER_META_GATE: '0', KHY_SPINNER_CC_FORMAT: '0' }))
       .toBe(' · 5s · ~1234 tok');
+    // skipDuration(停滞行用):等待行的「（已 Ns）」已经表达了时长,meta 只留 tokens ——
+    // 同一个时长出现两遍是文案缺陷,不是风格问题。
+    expect(buildSpinnerMeta(31, 340, {}, { skipDuration: true })).toBe(' · ~340 tok');
+    expect(buildSpinnerMeta(31, 0, {}, { skipDuration: true })).toBe('');
+    // 不传 opts / skipDuration=false → 与既有行为逐字节一致(向后兼容)。
+    expect(buildSpinnerMeta(31, 340, {}, {})).toBe(' · 31s · ~340 tok');
+    expect(buildSpinnerMeta(31, 340, {}, { skipDuration: false })).toBe(' · 31s · ~340 tok');
   });
 
   // G-C9: CC backend-logic parity — the compaction progress bar's elapsed clock
@@ -1483,9 +1512,33 @@ describeOrSkip('Ink TUI render smoke (src/cli/tui/ink-components)', () => {
     expect(frame).toContain('~340 tok');
   });
 
-  test('Spinner flags a stall with 等待响应', async () => {
-    const frame = await spinnerFrame({ label: '执行工具…', elapsedSec: 9, stalled: true });
-    expect(frame).toContain('等待响应');
+  test('Spinner flags a stall with 等待中 + 目标 + 实际停滞秒数(规则 2.2/2.5 合规文案)', async () => {
+    const frame = await spinnerFrame({ label: '执行工具…', elapsedSec: 9, stalled: true, stalledSec: 12 });
+    expect(frame).toContain('等待中');
+    expect(frame).toContain('执行工具…');
+    // 规则 2.5 要求等待行说清「在等什么 + 已经多久」——秒数来自 stalledSec(实际数据),
+    // 不是固定文案。没有它,一行就只是「⏳ 等待中 · 执行工具…」,用户无从判断是卡了还是在跑。
+    expect(frame).toContain('已 12s');
+  });
+
+  test('Spinner stall 行与 meta 不重复同一个时长', async () => {
+    // >30s 让 meta 的时长段本会出现;stalledSec 已在等待行里表达,meta 只该留 tokens。
+    const frame = await spinnerFrame({
+      label: '执行工具…',
+      elapsedSec: 45,
+      tokens: 340,
+      stalled: true,
+      stalledSec: 12,
+    });
+    expect(frame).toContain('已 12s'); // 等待行的实际停滞秒数
+    expect(frame).toContain('~340 tok'); // tokens 与时长无关,保留
+    expect(frame).not.toContain('45s'); // 回合总时长不在 meta 里重复出现
+  });
+
+  test('Spinner 未停滞时不做等待陈述（stalledSec=0 不加后缀）', async () => {
+    const frame = await spinnerFrame({ label: '生成中…', elapsedSec: 9, stalled: false, stalledSec: 0 });
+    expect(frame).not.toContain('等待中');
+    expect(frame).not.toContain('已'); // 没有停滞就不该有「已 Ns」
   });
 
   // G-A: the footer renders a REAL context-fill percentage when fed one (the bug
@@ -1652,13 +1705,25 @@ describeOrSkip('Ink TUI render smoke (src/cli/tui/ink-components)', () => {
   }
 
   test('rail on: PromptFrame 的整行边框收到 contentCols,门控关时仍是终端全宽', async () => {
+    const { displayWidth } = require('../../src/cli/formatters');
     const props = { value: '', offset: 0, busy: false, placeholder: '' };
-    const ruleWidth = (frame) => Math.max(
-      0,
-      ...stripAnsi(frame).split(NL).map((ln) => (ln.match(/─+/) || [''])[0].length)
-    );
+    // H4: measure the FULL top-border line display width (corner ╭ + middle
+    // run + corner ╮). The border row is `╭` + `─`*n + `╮` = exactly `width`.
+    const ruleWidth = (frame) => {
+      const lines = stripAnsi(frame).split(NL);
+      let max = 0;
+      for (const ln of lines) {
+        // A border line starts with ╭ (or ╰) and ends with ╮/╯.
+        if (/^╭|^╰/.test(ln.trimStart())) {
+          max = Math.max(max, displayWidth(ln));
+        }
+      }
+      return max;
+    };
     // ink 会把帧裁到它自己 stdout 的宽度,所以这里的假 stdout 也必须是 150 列 ——
-    // 否则测的是 ink 的裁切,而不是 PromptFrame 按 effectiveCols 排版。
+    // 否则测的是 ink 的裁切,而不是 PromptFrame 按 contentCols 排版。
+    // H4: 边框宽由 App 下发的 width prop(contentCols)决定,两条边框同一 fitBorder
+    // 产出,显示宽度精确等于该值(不再有旧的 cols-1 slack 约定)。
     const renderWide = async (name, p) => {
       const Comp = require(`../../src/cli/tui/ink-components/${name}`);
       const stdout = fakeStdout();
@@ -1672,19 +1737,24 @@ describeOrSkip('Ink TUI render smoke (src/cli/tui/ink-components)', () => {
       instance.unmount();
       return frame;
     };
-    const on = await withWideStdout({ KHY_SIDEBAR_RAIL: '1' }, () => renderWide('PromptFrame', props));
-    const off = await withWideStdout({ KHY_SIDEBAR_RAIL: '0' }, () => renderWide('PromptFrame', props));
-    // PromptFrame 刻意留一格 slack(`cols - 1`,避开 auto-wrap margin),两边同口径。
-    expect(ruleWidth(on)).toBe(railLayout.contentCols(150, { KHY_SIDEBAR_RAIL: '1' }) - 1);
-    expect(ruleWidth(off)).toBe(149);
+    const on = await withWideStdout({ KHY_SIDEBAR_RAIL: '1' }, () =>
+      renderWide('PromptFrame', { ...props, width: railLayout.contentCols(150, { KHY_SIDEBAR_RAIL: '1' }) }),
+    );
+    const off = await withWideStdout({ KHY_SIDEBAR_RAIL: '0' }, () =>
+      renderWide('PromptFrame', { ...props, width: 150 }),
+    );
+    expect(ruleWidth(on)).toBe(railLayout.contentCols(150, { KHY_SIDEBAR_RAIL: '1' }));
+    expect(ruleWidth(off)).toBe(150);
     expect(ruleWidth(on)).toBeLessThan(ruleWidth(off));
   });
 
-  test('rail on: App 帧里没有任何一行超出 contentCols(否则就是楼梯/全屏重绘)', async () => {
+  test('rail on: App 帧里没有任何一行超出终端宽度(否则就是楼梯/全屏重绘)', async () => {
     await withWideStdout({ KHY_SIDEBAR_RAIL: '1' }, async () => {
-      const limit = railLayout.contentCols(150, { KHY_SIDEBAR_RAIL: '1' });
-      expect(limit).toBeGreaterThan(0);
-      expect(limit).toBeLessThan(150);
+      // P0-2 后:带外 rail 是 opt-in 逃生舱,其 gutter 故意占 contentCols..150 的预留列。
+      // 真正的楼梯 bug 是**树内**组件把行画得比终端还宽(软折成未被高度账本数过的
+      // 视觉行 → 全屏重绘)。所以这里断言的是「没有一行超出终端全宽 150」,而不是
+      // 超出 contentCols —— gutter 与 footer 属于合法的带外/全宽绘制。
+      const limit = 150;
       const App = require('../../src/cli/tui/ink-components/App');
       const stdout = fakeStdout();
       stdout.columns = 150;

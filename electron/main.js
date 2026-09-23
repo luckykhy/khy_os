@@ -38,18 +38,45 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(() => {
-  registerIpcHandlers();
-  createWindow();
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+// ── Single-instance guard ─────────────────────────────────────────────────
+// Without this, every launch is a fresh process tree — the source of the
+// accumulating zombie `KhyOS Desktop.exe` processes. A second launch should
+// focus the existing app instead, and quitting must stop the spawned node
+// backend child so it is never left orphaned.
+if (!app.requestSingleInstanceLock()) {
+  // We are the second instance: hand off to the first and bail out.
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    const w = getMainWindow();
+    if (w) {
+      if (w.isMinimized()) w.restore();
+      w.focus();
+    }
   });
-});
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
+  // Stop the backend child process on quit so it is not orphaned.
+  app.on('before-quit', () => {
+    try {
+      backendService.stop();
+    } catch {
+      /* best effort — the child will still be reaped by the OS on process exit */
+    }
+  });
+
+  app.whenReady().then(() => {
+    registerIpcHandlers();
+    createWindow();
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  });
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit();
+  });
+}
 
 function getMainWindow() {
   return mainWindow;

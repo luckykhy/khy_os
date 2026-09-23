@@ -1,21 +1,28 @@
 'use strict';
 
 /**
- * logger.js — 轻量级统一日志工具
+ * logger.js — 统一日志门面（winston 实例 + CLI 兼容面）
  *
- * 替代 console.log/info/warn/error 的直接调用
- * 特性：
- *   - 日志级别控制（silent/error/warn/info/debug）
- *   - 时间戳
- *   - 敏感信息自动脱敏
- *   - 生产环境可关闭
+ * 真身是 `@khy/shared`（本地 vendor 副本 `vendor/shared/src/utils/logger.js`）导出的
+ * winston logger：DailyRotateFile 落盘 + 开发期 Console transport。历史上 backend
+ * 自带一个轻量 console 实现，与 shared 版并行演化成两个真源 —— CLI 侧只好拿
+ * `require('../utils/logger').setConsoleLevel('warn')` 去降 winston 的控制台音量
+ * （bin/khy.js），落到这个文件上却是 no-op：降音量从未生效，DB Health 审计日志照旧
+ * 打进用户终端。本门面重新指向唯一真源，并把 KHY_LOG_LEVEL 的 npm 级别语义
+ * （LEVELS 表）和 CLI 启动需要的 setConsoleLevel 作为兼容面挂回去。
  *
  * 使用方式：
  *   const logger = require('./logger');
- *   logger.info('message');
- *   logger.error('error', { details });
+ *   logger.info('message');            // winston：落盘 + 控制台
+ *   logger.setConsoleLevel('warn');    // 只降控制台 transport，文件 transport 不动
+ *   logger.LEVELS.info;                // KHY_LOG_LEVEL 级别表（兼容旧消费方）
  */
 
+const sharedLogger = require('../../vendor/shared/src/utils/logger');
+
+// KHY_LOG_LEVEL 级别表 —— winston 自己用 npm 级别字符串（'silent'/'error'/...），
+// 这里保留历史 LEVELS 映射给可能还在用数值序的消费方。只读语义：winston 的
+// 运行级别由 LOG_LEVEL / logger.level 决定，KHY_LOG_LEVEL 不再被门面消费。
 const LEVELS = {
   silent: 0,
   error: 1,
@@ -24,85 +31,29 @@ const LEVELS = {
   debug: 4,
 };
 
-const CURRENT_LEVEL = LEVELS[process.env.KHY_LOG_LEVEL] ?? LEVELS.info;
-
-// 敏感字段列表
-const SENSITIVE_FIELDS = [
-  'password', 'secret', 'token', 'apikey', 'api_key', 'key',
-  'authorization', 'auth', 'credential', 'private', 'sk-',
-];
-
 /**
- * 脱敏处理
+ * 只调控制台 transport 的级别，文件 transport 一律不动。
+ *
+ * CLI 启动时内部审计日志会以 `[info] [DB Health] …` 打进用户终端并撞碎引导进度
+ * 行。降的必须只是控制台音量 —— 文件 transport 若被一并降级，日志就真的丢了，
+ * 而不是「不显示」（见 bin/khy.js `_quietConsoleLogsForCli`）。
+ *
+ * @param {string} level - winston npm 级别（'error'|'warn'|'info'|'debug'…）
+ * @param {object} [target] - 要调的 logger；缺省调本模块的真身。
+ *   畸形目标（null/无 transports）不抛 —— 音量调节绝不能拖垮启动路径。
+ * @returns {boolean} 是否真的调到了控制台 transport；没有控制台 transport
+ *   （如 NODE_ENV=production 不挂 Console）时如实返回 false。
  */
-function sanitize(data) {
-  if (!data || typeof data !== 'object') return data;
-  const result = Array.isArray(data) ? [...data] : { ...data };
-  for (const key of Object.keys(result)) {
-    const lower = key.toLowerCase();
-    if (SENSITIVE_FIELDS.some(f => lower.includes(f))) {
-      const val = String(result[key]);
-      result[key] = val.length > 8 ? val.slice(0, 4) + '****' + val.slice(-4) : '****';
-    } else if (typeof result[key] === 'object' && result[key] !== null) {
-      result[key] = sanitize(result[key]);
-    }
-  }
-  return result;
+function setConsoleLevel(level, target) {
+  const t = target === undefined || target === null ? sharedLogger : target;
+  if (!t || !Array.isArray(t.transports)) return false;
+  const consoleTransport = t.transports.find((tr) => tr && tr.name === 'console');
+  if (!consoleTransport) return false;
+  consoleTransport.level = level;
+  return true;
 }
 
-/**
- * 格式化日志行
- */
-function format(level, message, details) {
-  const timestamp = new Date().toISOString();
-  const levelTag = level.toUpperCase().padEnd(5);
-  const prefix = `[${timestamp}] ${levelTag}`;
-  
-  let line = `${prefix} ${message}`;
-  
-  if (details !== undefined) {
-    try {
-      const sanitized = sanitize(details);
-      const detailStr = typeof sanitized === 'string' ? sanitized : JSON.stringify(sanitized);
-      if (detailStr && detailStr !== '{}') {
-        line += ` ${detailStr}`;
-      }
-    } catch {
-      // ignore serialization errors
-    }
-  }
-  
-  return line;
-}
+sharedLogger.LEVELS = LEVELS;
+sharedLogger.setConsoleLevel = setConsoleLevel;
 
-function error(message, details) {
-  if (CURRENT_LEVEL >= LEVELS.error) {
-    console.error(format('error', message, details));
-  }
-}
-
-function warn(message, details) {
-  if (CURRENT_LEVEL >= LEVELS.warn) {
-    console.warn(format('warn', message, details));
-  }
-}
-
-function info(message, details) {
-  if (CURRENT_LEVEL >= LEVELS.info) {
-    console.info(format('info', message, details));
-  }
-}
-
-function debug(message, details) {
-  if (CURRENT_LEVEL >= LEVELS.debug) {
-    console.log(format('debug', message, details));
-  }
-}
-
-module.exports = {
-  error,
-  warn,
-  info,
-  debug,
-  LEVELS,
-};
+module.exports = sharedLogger;

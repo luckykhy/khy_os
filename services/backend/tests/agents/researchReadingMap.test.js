@@ -31,7 +31,7 @@ const { MAP_AGENT, getMapSystemPrompt } = require('../../src/agents/built-in/map
 const { getBuiltInAgents, formatAgentLine } = require('../../src/agents/builtInAgents');
 const claudeCompat = require('../../src/services/claudeCompat');
 const agentTool = require('../../src/tools/AgentTool');
-const { inferRole } = require('../../src/services/proactiveCollaboration/delegationPlanner');
+const { inferRole } = require('../../src/services/domain/collab/proactiveCollaboration/delegationPlanner.js');
 
 const READ_ONLY_DENIED = ['Edit', 'Write', 'NotebookEdit', 'Agent', 'ExitPlanMode'];
 

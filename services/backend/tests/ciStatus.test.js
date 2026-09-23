@@ -1,14 +1,15 @@
 'use strict';
 /**
- * ciStatus.test.js �?revived `khy ci` command + ciStatusService wiring.
+ * ciStatus.test.js — revived `khy ci` command + ciStatusService wiring.
  *
  * Covers the pure surfaces (no real git / gh / glab IO):
- *  - ciStatusService.classifyCi: status/conclusion �?pass/fail/pending/unknown
- *  - handlers/ci.buildStatusOptions: flag �?options mapping
+ *  - ciStatusService.classifyCi: status/conclusion �?pass/fail/pending/unknown
+ *  - handlers/ci.buildStatusOptions: flag �?options mapping
  *  - handlers/ci.formatClassification: label rendering (no throw)
  *  - handlers/ci.handleCi: injects checkCIStatus/pollCIStatus, --json, fail-soft
  */
 const ciSvc = require('../src/services/ciStatusService');
+const assert = require('node:assert');
 const { handleCi, buildStatusOptions, formatClassification } = require('../src/cli/handlers/ci');
 // ── ciStatusService.classifyCi (pure) ───────────────────────────────
 // ── handlers/ci.buildStatusOptions (pure) ───────────────────────────
@@ -17,13 +18,13 @@ const { handleCi, buildStatusOptions, formatClassification } = require('../src/c
 // ── ciStatusService.checkCIStatus platform-absent fail-soft ─────────
 
 describe('Ci Status', () => {
-  test('classifyCi maps GitHub completed/success �?pass', async () => {
-      expect(ciSvc.classifyCi('completed')).toBe('success');
-      expect(ciSvc.classifyCi('completed')).toBe('');
+  test('classifyCi maps GitHub completed/success → pass', async () => {
+      expect(ciSvc.classifyCi('completed', 'success')).toBe('pass');
+      expect(ciSvc.classifyCi('completed')).toBe('pass');
   });
 
   test('classifyCi maps failures and in-progress correctly', async () => {
-      expect(ciSvc.classifyCi('completed')).toBe('failure');
+      expect(ciSvc.classifyCi('completed', 'failure')).toBe('fail');
       expect(ciSvc.classifyCi('failed')).toBe('fail');
       expect(ciSvc.classifyCi('in_progress')).toBe('pending');
       expect(ciSvc.classifyCi('queued')).toBe('pending');

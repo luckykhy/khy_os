@@ -59,6 +59,7 @@ function blankState(overrides = {}) {
     target: null,
     stagedPath: null,
     blockedReason: null,
+    blockedHint: null,
     indeterminate: false,
     checkedAt: null,
     skippedTarget: null,
@@ -340,6 +341,33 @@ function getGitStatus(installation, opts = {}) {
   }
 }
 
+/**
+ * Blocked `reason` code → the remedy clause of the user-facing message
+ * (rule 2.2: cause + a concrete next command). Callers prefix it with the
+ * reason code. Stated once here because the remedies differ per reason and
+ * every surface that reports `blockedReason` must say the same true thing.
+ */
+function describeBlockedReason(reason, ctx = {}) {
+  const ahead = Number.isFinite(ctx.ahead) ? ctx.ahead : null;
+  const behind = Number.isFinite(ctx.behind) ? ctx.behind : null;
+  switch (reason) {
+    case 'detached-head':
+      return '当前不在任何分支上（游离 HEAD），先运行 git switch <分支> 回到分支再试';
+    case 'no-upstream':
+      return '当前分支没有上游、无法判定该从哪里拉取，运行 git branch --set-upstream-to=<远端>/<分支> 绑定后重试';
+    case 'dirty-worktree':
+      return '工作区有未提交改动，提交或运行 git stash 暂存后重试';
+    case 'diverged':
+      return `本地与上游各有提交（本地领先 ${ahead ?? '若干'}、落后 ${behind ?? '若干'}），先 git pull --rebase 收敛分叉再试`;
+    case 'local-ahead':
+      return `本地有未推送的提交（领先 ${ahead ?? '若干'}），先运行 git push <上游远端> <分支> 推上去再试`;
+    case 'target-changed':
+      return '目标版本已变化，重新运行 khy update 取最新版本';
+    default:
+      return `前置检查未通过（${reason || '原因未知'}），运行 git status 查看源码状态后重试`;
+  }
+}
+
 async function checkPackage(installation, opts = {}) {
   const selfUpdate = opts.selfUpdate || require('./khySelfUpdateService');
   const result = await selfUpdate.checkUpdate({
@@ -598,6 +626,7 @@ async function checkUpdate(opts = {}) {
       },
       target,
       blockedReason: result.reason || null,
+      blockedHint: result.reason ? describeBlockedReason(result.reason, result) : null,
       indeterminate: !!result.indeterminate,
       checkedAt: now,
       error: result.error || null,
@@ -728,6 +757,7 @@ async function applyUpdate(opts = {}) {
           ...current,
           state: 'blocked',
           blockedReason: live.reason || 'target-changed',
+          blockedHint: describeBlockedReason(live.reason || 'target-changed', live),
           error: live.error || null,
         }, opts);
       }
@@ -1053,6 +1083,7 @@ module.exports = {
   getSourceProvenanceAsync,
   formatProvenance,
   checkUpdate,
+  describeBlockedReason,
   stageUpdate,
   applyUpdate,
   skipUpdate,

@@ -6,7 +6,7 @@ const {
   KIND_REMEDIATION,
   ERRNO_REMEDIATION,
   GENERIC_REMEDIATION,
-} = require('./cliErrorReporter');
+} = require('../../src/cli/cliErrorReporter.js');
 // ── Exports ─────────────────────────────────────────────────────────────────
 // ── describeCliError ─────────────────────────────────────────────────────────
 // ── reportCliError ───────────────────────────────────────────────────────────
@@ -30,7 +30,7 @@ describe('Cli Error Reporter', () => {
       const desc = describeCliError(err);
       expect(desc).toBeTruthy();
       expect(desc.reason).toBeTruthy();
-      expect(Array.isArray(desc.suggestions).toBeTruthy());
+      expect(Array.isArray(desc.suggestions)).toBeTruthy();
   });
 
   test('describeCliError: handles null/undefined', () => {

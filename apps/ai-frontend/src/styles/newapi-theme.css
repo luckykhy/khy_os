@@ -12,6 +12,52 @@
  * ========================================================================= */
 
 :root {
+  /* Structural whites — must be defined here, not assumed (FE-001 G1 fix) */
+  --khy-white: #ffffff;
+
+  /* Gray scale (FE-001 G4 fix — replaces scattered hardcoded grays) */
+  --khy-gray-50: #f5f7fa;
+  --khy-gray-100: #ebeef5;
+  --khy-gray-200: #d1d9e0;
+  --khy-gray-300: #c0c4cc;
+  --khy-gray-400: #909399;
+  --khy-gray-500: #606266;
+  --khy-gray-600: #59636e;
+  --khy-gray-700: #303133;
+  --khy-gray-800: #1e1e2e;
+  --khy-gray-900: #1f2328;
+
+  /* Code/terminal surfaces (FE-001 G7 — replaces scattered terminal backgrounds) */
+  --khy-code-bg: #0b0e14;
+  --khy-code-surface: #1f2430;
+  --khy-code-border: #2a2f3a;
+  --khy-code-text: #d7d7d7;
+
+  /* Metric accent colors (used by metric-card / metric-icon variants) */
+  --khy-rose: #f43f5e;
+  --khy-rose-soft: #ffe4e6;
+  --khy-indigo: #6366f1;
+  --khy-indigo-soft: #e0e7ff;
+  --khy-violet: #8b5cf6;
+  --khy-violet-soft: #ede9fe;
+  --khy-cyan-strong: #06b6d4;
+  --khy-cyan-strong-soft: #cffafe;
+
+  /* Markdown syntax highlighting (GitHub-style, FE-001 G7) */
+  --khy-md-link: #0969da;
+  --khy-md-code-bg: #161b22;
+  --khy-md-code-border: #30363d;
+  --khy-md-green: #1a7f37;
+  --khy-md-red: #cf222e;
+  --khy-md-blue: #4493f8;
+  --khy-md-amber: #574c1c;
+  --khy-md-muted: #9198a1;
+  --khy-md-border: #d0d7de;
+  --khy-md-bg: #e6edf3;
+  --khy-md-highlight: #fff8c5;
+  --khy-md-hover-bg: #ecf5ff;
+  --khy-md-surface: #eef1f4;
+
   /* Surfaces */
   --khy-bg-main: #f4f7fc;
   --khy-bg-elevated: var(--khy-white);
@@ -44,6 +90,40 @@
   --khy-radius-lg: 16px;
   --khy-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
   --khy-shadow-lift: 0 14px 36px rgba(15, 23, 42, 0.10);
+
+  /* Spacing scale — proportional (1 : 1.6 : 2.4 jumps), not linear. Adopted by
+   * the page skeleton (.khy-page gap), cards and section rows so the vertical
+   * rhythm is one decision, re-declared zero times per view. */
+  --khy-space-1: 4px;
+  --khy-space-2: 8px;
+  --khy-space-3: 12px;
+  --khy-space-4: 16px;
+  --khy-space-5: 20px;
+  --khy-space-6: 24px;
+  --khy-space-8: 32px;
+  --khy-space-10: 40px;
+  --khy-space-12: 48px;
+  --khy-space-16: 64px;
+
+  /* Page-level rhythm: gutter inside .layout-main, gap between page sections,
+   * and the content cap so wide screens stay readable instead of stretched. */
+  --khy-gap-page: var(--khy-space-5);
+  --khy-gap-section: var(--khy-space-5);
+  --khy-gap-card: var(--khy-space-4);
+  --khy-page-max: 1320px;
+
+  /* Type scale — 3.5x+ jump between page title and body keeps hierarchy legible
+   * at a glance; the mono stack below serves keys / IDs / metric values. */
+  --khy-text-xs: 12px;
+  --khy-text-sm: 13px;
+  --khy-text-md: 15px;
+  --khy-text-lg: 17px;
+  --khy-text-xl: 20px;
+  --khy-text-2xl: 24px;
+  --khy-leading-tight: 1.3;
+  --khy-leading-normal: 1.5;
+  --khy-tracking-tight: -0.01em;
+
   --khy-font: 'Public Sans', 'Segoe UI', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   /* Monospace stack — many cards reference var(--khy-font-mono, monospace) for
    * keys / IDs / model names. Defining it here upgrades all of them from raw
@@ -121,6 +201,49 @@
 }
 
 html.dark {
+  /* Gray scale — dark theme overrides (FE-001 G4 fix) */
+  --khy-gray-50: #1e2533;
+  --khy-gray-100: #283245;
+  --khy-gray-200: #313c4f;
+  --khy-gray-300: #4a5568;
+  --khy-gray-400: #7c8aa3;
+  --khy-gray-500: #9aa7bd;
+  --khy-gray-600: #b0bdd1;
+  --khy-gray-700: #d4dbe8;
+  --khy-gray-800: #eef2f8;
+  --khy-gray-900: #f8fafc;
+
+  /* Code/terminal surfaces — dark theme (same as light, terminals are always dark) */
+  --khy-code-bg: #0b0e14;
+  --khy-code-surface: #1f2430;
+  --khy-code-border: #2a2f3a;
+  --khy-code-text: #d7d7d7;
+
+  /* Metric accent colors — dark theme (slightly brighter for visibility) */
+  --khy-rose: #fb7185;
+  --khy-rose-soft: rgba(244,63,94,0.12);
+  --khy-indigo: #818cf8;
+  --khy-indigo-soft: rgba(99,102,241,0.12);
+  --khy-violet: #a78bfa;
+  --khy-violet-soft: rgba(139,92,246,0.12);
+  --khy-cyan-strong: #22d3ee;
+  --khy-cyan-strong-soft: rgba(6,182,212,0.12);
+
+  /* Markdown syntax — dark theme */
+  --khy-md-link: #58a6ff;
+  --khy-md-code-bg: #0d1117;
+  --khy-md-code-border: #30363d;
+  --khy-md-green: #3fb950;
+  --khy-md-red: #f85149;
+  --khy-md-blue: #79c0ff;
+  --khy-md-amber: #d29922;
+  --khy-md-muted: #8b949e;
+  --khy-md-border: #30363d;
+  --khy-md-bg: #161b22;
+  --khy-md-highlight: rgba(187,128,9,0.4);
+  --khy-md-hover-bg: rgba(56,139,253,0.15);
+  --khy-md-surface: #21262d;
+
   /* Surfaces — deep blue-grey, raised cards (adapted from new-api .dark) */
   --khy-bg-main: #161b26;
   --khy-bg-elevated: #1e2533;
@@ -318,19 +441,47 @@ body {
 }
 
 .khy-page-title {
-  margin: 0 0 18px 0;
+  margin: 0 0 var(--khy-space-4) 0;
   color: var(--khy-text-strong);
-  letter-spacing: 0.2px;
+  font-size: var(--khy-text-2xl);
+  font-weight: 750;
+  line-height: var(--khy-leading-tight);
+  letter-spacing: var(--khy-tracking-tight);
 }
 
 /* ── Page wrapper (single source of truth) ──
-   `.layout-main` already owns the 20px outer gutter, so a routed view's root
-   must NOT re-add its own padding (that double-pads the page). This utility
-   centers the content and caps its width — adopt it on a view root instead of
-   a bespoke `padding: 20px`. */
+   `.layout-main` already owns the outer gutter, so a routed view's root must
+   NOT re-add its own padding (that double-pads the page). This utility centers
+   the content, caps its width, and — as a flex column with gap — gives every
+   page section the same vertical rhythm instead of each view inventing its own
+   margin stack. Adopt it on a view root instead of a bespoke `padding: 20px`.
+   Full-height "app" pages (chat, terminal, editors) deliberately opt out: they
+   manage their own internal scroll and must not gain a section gap. */
 .khy-page {
-  max-width: var(--khy-page-max, 1320px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--khy-gap-section);
+  max-width: var(--khy-page-max);
   margin: 0 auto;
+  min-height: 0;
+}
+
+/* Section rhythm inside a khy-page: a section that is itself a plain wrapper
+   (not a card/row) gets the same gap without re-declaring it. */
+.khy-page .khy-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--khy-gap-card);
+  min-width: 0;
+}
+
+/* Flex gap already spaces every direct child. Per-view scoped
+   `margin-bottom` on those same children would stack on top of the gap (a
+   36px visual gap between sections), so reset it here once. `!important` is
+   deliberate: view-scoped rules compile to `.child[data-v-x]` (0,2,0) and
+   would beat a plain global rule regardless of stylesheet order. */
+.khy-page > * {
+  margin-bottom: 0 !important;
 }
 
 /* ── Unified card hover lift ── */
@@ -567,5 +718,72 @@ html.dark .el-button--primary:not(.is-text):not(.is-link) {
   .el-button:not(.is-text):not(.is-link):not(.is-disabled):active {
     transition: none;
     transform: none;
+  }
+}
+
+/* =========================================================================
+ * Keyboard focus & shell polish
+ *
+ * Element Plus keeps its own focus rings; these rules cover the surfaces we
+ * own (shell chrome, page skeleton, custom clickables) so keyboard users get
+ * one consistent, high-contrast ring instead of a browser-default outline or
+ * nothing at all. All values resolve through --khy-* tokens, so light/dark
+ * both stay correct.
+ * ========================================================================= */
+
+:focus-visible {
+  outline: 2px solid var(--khy-primary);
+  outline-offset: 2px;
+  border-radius: var(--khy-radius-sm);
+}
+
+/* Layout main: gutter and section rhythm from tokens (was a literal 20px). */
+.layout-main {
+  padding: var(--khy-gap-page);
+}
+
+@media (max-width: 768px) {
+  .layout-main {
+    padding: var(--khy-space-3);
+  }
+}
+
+/* Page header spacing from the same token as the skeleton gap. */
+.khy-page-head {
+  margin-bottom: var(--khy-space-4);
+}
+
+/* Console-switch pill: one consistent surface in both shells, ≥44px tall on
+   touch widths so the cross-console hop stays thumb-friendly. */
+.header-console-link {
+  min-height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--khy-border);
+  background: var(--khy-bg-card);
+  gap: var(--khy-space-2);
+  font-weight: 600;
+}
+
+.header-console-link:hover {
+  border-color: var(--khy-primary);
+}
+
+@media (max-width: 768px) {
+  .header-console-link {
+    min-height: 44px;
+  }
+}
+
+/* Sidebar group titles: uppercase micro-label with breathing room, so the two
+   halves of a shell's menu read as sections, not a wall of items. */
+.aside-group-title {
+  display: block;
+  padding: var(--khy-space-3) var(--khy-space-2) var(--khy-space-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header-console-link,
+  .layout-aside {
+    transition: none;
   }
 }

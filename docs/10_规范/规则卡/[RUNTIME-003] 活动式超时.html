@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [RUNTIME-003] 活动式超时.md -->
+<title>[RUNTIME-003] 活动式超时 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[RUNTIME-003] 活动式超时</div>
+      <header class="hero reveal"><h1>[RUNTIME-003] 活动式超时</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#runtime-003-活动式超时">[RUNTIME-003] 活动式超时</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 活动式超时<br>id: RUNTIME-003<br>domain: RUNTIME<br>nature: 约束为主，兼福利<br>scope: &quot;AI 循环、构建、回测、数据同步等长时间运行任务，以及一切用于任务截止的 setTimeout / Promise.race&quot;<br>priority: P1<br>trigger: &quot;为长任务设置超时、或任务执行中出现无界循环时&quot;<br>constraint: &quot;任何超时机制不得在固定时长后无条件杀死仍在推进的任务；必须用空闲/滑动超时，由进度事件重置计时器。超时触发时必须诚实说明完成了什么、还剩什么，绝不假装成功，并给出具体下一步。&quot;<br>grants: &quot;见约束边界：授权用「进度事件重置计时器」模式自行实现空闲超时；授权为刻意无限循环加 khy-allow-unbounded-loop 注释豁免。&quot;<br>benefit: &quot;长任务不会被误杀，也不需要为每个任务手写一套超时逻辑；超时报告自带诊断，不必回滚排查。&quot;<br>exception: &quot;短生命周期网络 fetch 超时与认证握手超时不算违规（防挂死 I/O 而非活跃计算）；&lt;500ms setTimeout、Promise 延迟睡眠、计数器重置、≤5s UI 重置计时器、≤10s 短 I/O 超时、SIGTERM→SIGKILL 优雅期、仅 .abort()、仅 reject 的 Promise 超时。&quot;<br>version: &quot;1.0.0 (2026-09-15)&quot;<br>status: active<br>ssot: &quot;AGENTS.md#工程规则-规则3&quot;<br>formerly: 规则3/基于活动的超时<br>owner: backend-team<br>enforcement: &quot;scripts/ci/check-agent-rules.js&quot;</p>
+<hr>
+<h1 id="runtime-003-活动式超时">[RUNTIME-003] 活动式超时<a class="anchor" href="#runtime-003-活动式超时" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: RUNTIME-003 -->
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：AGENTS.md#工程规则-规则3。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>任何超时机制不得在固定时长后无条件杀死仍在推进的任务；必须用空闲/滑动超时，由进度事件重置计时器。超时触发时必须诚实说明完成了什么、还剩什么，绝不假装成功，并给出具体下一步。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>见约束边界：授权用「进度事件重置计时器」模式自行实现空闲超时；授权为刻意无限循环加 khy-allow-unbounded-loop 注释豁免。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>长任务不会被误杀，也不需要为每个任务手写一套超时逻辑；超时报告自带诊断，不必回滚排查。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>❌ <code>const start = Date.now(); if (Date.now() - start &gt; 120_000) kill()</code> → ✅ 每次产出事件重置 <code>lastActivity</code>，仅在空闲超限时触发</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p><code>node scripts/ci/check-agent-rules.js --changed</code>（hard-timeout 检查）+ 人工评审</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>短生命周期网络 fetch 超时与认证握手超时不算违规（防挂死 I/O 而非活跃计算）；&lt;500ms setTimeout、Promise 延迟睡眠、计数器重置、≤5s UI 重置计时器、≤10s 短 I/O 超时、SIGTERM→SIGKILL 优雅期、仅 .abort()、仅 reject 的 Promise 超时。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-15) 初版 / 迁移自 规则3/基于活动的超时</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/规则卡/[RUNTIME-002] 状态透明.html"><div class="dir">← 上一篇</div><div class="ttl">[RUNTIME-002] 状态透明</div></a><a class="next" href="../../../docs/10_规范/规则卡/[RUNTIME-004] 终端无滚动区.html"><div class="dir">下一篇 →</div><div class="ttl">[RUNTIME-004] 终端无滚动区</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/规则卡/[RUNTIME-003] 活动式超时.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

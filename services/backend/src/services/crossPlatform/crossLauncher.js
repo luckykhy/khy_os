@@ -15,10 +15,16 @@ const fs = require('fs');
 
 // Single source of truth for local dev ports (zero hardcoding — AGENTS.md rule 1).
 // crossLauncher.js is the ONLY module that reads these.
+//
+// The mobile entry deliberately does NOT read a port: the live mobile client is
+// `apps/khy-os-client-app` (Flutter), which runs as a native process on a
+// connected device rather than as a port-bound dev server. The old
+// `apps/khy-mobile` Capacitor shell is a dead directory with no tracked source,
+// so claiming `MOBILE_FRONTEND_PORT` for "mobile" would report a port that no
+// live process ever opens. See [DESIGN-ARCH-117] khy-多端入口矩阵.
 const {
   BACKEND_PORT,
   WEB_FRONTEND_PORT,
-  MOBILE_FRONTEND_PORT,
 } = require('../../constants/serviceDefaults');
 
 // ── Portable root detection ───────────────────────────────────────
@@ -71,9 +77,9 @@ const PLATFORM_COMMANDS = {
   },
   mobile: {
     cmd: 'cmd.exe',
-    args: ['/c', 'cd', '/d', path.join(getPortableRoot(), 'apps', 'khy-mobile'), '&&', 'npm', 'run', 'dev'],
-    cwd: () => path.join(getPortableRoot(), 'apps', 'khy-mobile'),
-    description: `Mobile dev server (port ${MOBILE_FRONTEND_PORT})`,
+    args: ['/c', 'cd', '/d', path.join(getPortableRoot(), 'apps', 'khy-os-client-app'), '&&', 'flutter', 'run'],
+    cwd: () => path.join(getPortableRoot(), 'apps', 'khy-os-client-app'),
+    description: 'Mobile app (Flutter — apps/khy-os-client-app, needs a connected device)',
   },
 };
 
@@ -171,9 +177,8 @@ function getPlatformStatus() {
       note: 'Check Electron window',
     },
     mobile: {
-      running: isPortInUse(MOBILE_FRONTEND_PORT),
-      port: MOBILE_FRONTEND_PORT,
-      url: `http://localhost:${MOBILE_FRONTEND_PORT}`,
+      running: false, // Native Flutter process — no port to probe.
+      note: 'Check `flutter devices`; build/release with `npm run android:release`',
     },
   };
 }

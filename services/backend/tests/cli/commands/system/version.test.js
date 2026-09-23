@@ -1,6 +1,6 @@
 'use strict';
 
-const handleVersion = require('../../src/cli/commands/system/version');
+const handleVersion = require('../../../../src/cli/commands/system/version.js');
 
 describe('system/version command', () => {
   const originalEnv = process.env;
@@ -26,7 +26,7 @@ describe('system/version command', () => {
 
   test('returns true even when package.json cannot be read', async () => {
     delete process.env.KHYQUANT_PKG_VERSION;
-    jest.mock('../../package.json', () => {
+    jest.mock('../../../../package.json', () => {
       throw new Error('not found');
     });
     const result = await handleVersion({}, {});
@@ -41,6 +41,8 @@ describe('system/version command', () => {
 
   test('falls back to package.json version when env not set', async () => {
     delete process.env.KHYQUANT_PKG_VERSION;
+    // 前序用例注册的 throwing mock 对本文件持续生效，先解除以读真实 package.json。
+    jest.unmock('../../../../package.json');
     await handleVersion({}, { printSuccess: mockPrintSuccess });
     expect(mockPrintSuccess).toHaveBeenCalledWith(expect.stringMatching(/^Khy-OS v/));
   });
@@ -76,7 +78,7 @@ describe('system/version command', () => {
   test('handles missing package.json gracefully', async () => {
     delete process.env.KHYQUANT_PKG_VERSION;
     const originalRequire = require;
-    jest.mock('../../package.json', () => {
+    jest.mock('../../../../package.json', () => {
       throw new Error('Cannot find module');
     });
     const result = await handleVersion({}, {});
@@ -85,7 +87,7 @@ describe('system/version command', () => {
 
   test('outputs version unknown when both env and package.json fail', async () => {
     delete process.env.KHYQUANT_PKG_VERSION;
-    jest.mock('../../package.json', () => {
+    jest.mock('../../../../package.json', () => {
       throw new Error('not found');
     });
     await handleVersion({}, {});

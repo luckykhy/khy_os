@@ -40,14 +40,10 @@ const { checkSnapshotFormatCompat } = require('../lib/snapshotFormatCompat');
 const { checkCryptoSuiteCompat } = require('../lib/cryptoSuiteCompat');
 const { checkArchiveExtractCompat } = require('../lib/archiveExtractCompat');
 const { assessRestoreProvenance } = require('../lib/restoreProvenance');
+const { opsDocPath, opsDocRelPath } = require('../lib/docsPaths');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const DOC_PATH = path.join(
-  ROOT,
-  'docs',
-  '07_OPS_运维',
-  '[OPS-MAN-113] 还原字段效应探针（雅可比透镜）.md'
-);
+const DOC_PATH = opsDocPath('[OPS-MAN-113] 还原字段效应探针（雅可比透镜）.md');
 const NPM_PKG_NAME = '@khy-os/khy-os';
 const PIP_PKG_NAME = 'khy-os';
 
@@ -149,7 +145,7 @@ function runEffectProbe(opts = {}) {
   out += `  ${C.bold}目录：${C.reset}${destDir}\n`;
   out += `  ${C.dim}判据：${verdict.reason}${C.reset}\n`;
   out += `\n${C.dim}诚实边界：单上下文会被门内冗余 OR 信号掩盖 → 用隔离语料求并集；证据不足（无门/无语料）判 unverifiable 不臆断绿；只报字段路径与效应，绝不碰密钥。${C.reset}\n`;
-  out += `${C.dim}详情见：docs/07_OPS_运维/[OPS-MAN-113] 还原字段效应探针（雅可比透镜）.md${C.reset}\n`;
+  out += `${C.dim}详情见：${opsDocRelPath('[OPS-MAN-113] 还原字段效应探针（雅可比透镜）.md')}${C.reset}\n`;
   process.stdout.write(out);
   return verdict.ok ? 0 : 2;
 }

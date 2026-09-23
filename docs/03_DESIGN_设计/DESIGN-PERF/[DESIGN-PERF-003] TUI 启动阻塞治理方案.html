@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-PERF-003] TUI 启动阻塞治理方案.md -->
+<title>[DESIGN-PERF-003] TUI 启动阻塞治理方案 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-PERF<span class="sep">›</span>[DESIGN-PERF-003] TUI 启动阻塞治理方案</div>
+      <header class="hero reveal"><h1>[DESIGN-PERF-003] TUI 启动阻塞治理方案</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-perf-003-tui-启动阻塞治理方案">[DESIGN-PERF-003] TUI 启动阻塞治理方案</a></li><li class="lvl-2"><a href="#零-一句话结论">零、一句话结论</a></li><li class="lvl-2"><a href="#一-问题陈述">一、问题陈述</a></li><li class="lvl-3"><a href="#1-1-症状">1.1 症状</a></li><li class="lvl-3"><a href="#1-2-与既有文档的关系-不是重复劳动">1.2 与既有文档的关系（不是重复劳动）</a></li><li class="lvl-2"><a href="#二-测量方法-可复现">二、测量方法（可复现）</a></li><li class="lvl-3"><a href="#2-1-环境与不确定性-诚实边界">2.1 环境与不确定性（诚实边界）</a></li><li class="lvl-2"><a href="#三-实测结果">三、实测结果</a></li><li class="lvl-3"><a href="#3-1-端到端时间线-p1-真实-tty-120-30">3.1 端到端时间线（P1，真实 TTY，120×30）</a></li><li class="lvl-3"><a href="#3-2-分层成本-p2">3.2 分层成本（P2）</a></li><li class="lvl-3"><a href="#3-3-cpu-归因-p3-阻塞窗口-8185ms">3.3 CPU 归因（P3，阻塞窗口 8185ms）</a></li><li class="lvl-2"><a href="#四-根因-四条阻塞点-含调用链">四、根因：四条阻塞点（含调用链）</a></li><li class="lvl-3"><a href="#b1-首帧渲染期同步扫会话目录-554ms-且随会话数单调劣化">B1 · 首帧渲染期同步扫会话目录（554ms，且随会话数单调劣化）</a></li><li class="lvl-3"><a href="#b2-mount-effect-里同步-require-网关-触发模块顶层-spawnsync">B2 · mount effect 里同步 require 网关 → 触发模块顶层 `spawnSync`</a></li><li class="lvl-3"><a href="#b3-模块解析-编译本身落在渲染窗口内">B3 · 模块解析/编译本身落在渲染窗口内</a></li><li class="lvl-3"><a href="#b4-渲染体里逐适配器派生进程探测-cli-实测最大单点-v2-新增">B4 · 渲染体里逐适配器派生进程探测 CLI（实测最大单点，v2 新增）</a></li><li class="lvl-2"><a href="#五-关键判断-为什么不能照字面加-懒加载">五、关键判断：为什么不能照字面加「懒加载」</a></li><li class="lvl-3"><a href="#5-1-懒加载在这个仓库已经做得很彻底">5.1 懒加载在这个仓库已经做得很彻底</a></li><li class="lvl-3"><a href="#5-2-于是懒加载把成本平移到了首帧">5.2 于是懒加载把成本平移到了首帧</a></li><li class="lvl-3"><a href="#5-3-结论-方向反过来">5.3 结论：方向反过来</a></li><li class="lvl-2"><a href="#六-方案-l0-l4-与实施状态">六、方案（L0–L4）与实施状态</a></li><li class="lvl-3"><a href="#6-1-状态总览">6.1 状态总览</a></li><li class="lvl-3"><a href="#6-0-两条被实测否掉的路">6.0 两条被实测否掉的路</a></li><li class="lvl-3"><a href="#l0-首帧零-io-守住-不新增行为">L0 · 首帧零 IO（守住，不新增行为）</a></li><li class="lvl-3"><a href="#l1-加载前移-已证伪-见-6-0-①②">L1 · ~~加载前移~~（已证伪，见 §6.0 ①②）</a></li><li class="lvl-3"><a href="#l2-去阻塞-部分落地">L2 · 去阻塞（部分落地）</a></li><li class="lvl-3"><a href="#l3-把既有硬约束变成机器可校验-防回潮">L3 · 把既有硬约束变成机器可校验（防回潮）</a></li><li class="lvl-3"><a href="#l4-进程层-另一笔独立的钱-需单独评估">L4 · 进程层（另一笔独立的钱，需单独评估）</a></li><li class="lvl-2"><a href="#七-验收指标与验证状态">七、验收指标与验证状态</a></li><li class="lvl-3"><a href="#7-1-性能指标">7.1 性能指标</a></li><li class="lvl-3"><a href="#7-2-验收方式-可执行">7.2 验收方式（可执行）</a></li><li class="lvl-2"><a href="#八-不做什么-明确范围外">八、不做什么（明确范围外）</a></li><li class="lvl-2"><a href="#九-落地路线与-执行结果">九、落地路线与**执行结果**</a></li><li class="lvl-2"><a href="#十-附带发现-独立于本方案-建议单独立项">十、附带发现（独立于本方案，建议单独立项）</a></li><li class="lvl-2"><a href="#十一-变更记录">十一、变更记录</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-perf-003-tui-启动阻塞治理方案">[DESIGN-PERF-003] TUI 启动阻塞治理方案<a class="anchor" href="#design-perf-003-tui-启动阻塞治理方案" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>状态</strong>：提案（未接线） · <strong>日期</strong>：2026-09-22 · <strong>编号</strong>：[DESIGN-PERF-003] · <strong>落点目录</strong>：<code>docs/03_DESIGN_设计/DESIGN-PERF/</code><br><strong>适用层</strong>：<code>services/backend</code>（<code>khy</code> 交互入口 → Ink TUI）<br><strong>本文作者准则</strong>（沿用 <code>[DESIGN-PERF-002]</code>）：<strong>不动现状代码 / 不动测试 / 不动配置</strong>。产物是「实测证据 + 可实施计划 + 验收指标」。<br><strong>证据基准</strong>：全部 <code>文件:行号</code> 与数字为 <strong>2026-09-22 本机实测</strong>（仓库 <code>D:\Portable\khy-os</code>，Windows 10.0.26200，Node v22.18.0）。凡推测项显式标注「<strong>【推测】</strong>」。<br><strong>关联</strong>：[DESIGN-PERF-002] khy-cli 交互流畅度修复方案 v1（同族上游） · [DESIGN-ARCH-115] TUI 启动板块设计（启动板块结构真源） · [DESIGN-ARCH-102] Khy TUI 统一规则手册（H1–H10，冲突以它为准） · <code>services/backend/src/cli/tui/AGENTS.md</code>（§0.2 渲染安全 / §0.3 性能底线 / §4.1 启动阶段） · [DESIGN-PROCESS-002] 新机制落地阶段（<code>PROCESS-006</code>/<code>PROCESS-008</code>）</p></blockquote>
+<hr>
+<h2 id="零-一句话结论">零、一句话结论<a class="anchor" href="#零-一句话结论" aria-label="锚点">#</a></h2>
+<p><strong>khy TUI 启动慢的根因不是「加载不够懒」，恰恰相反——这个仓库的懒加载已经做得很彻底，而那些懒加载正落在被阻塞的首帧渲染里。</strong></p>
+<p>实测：真实 TTY 下首个字节 297–1558ms，<strong>Ink 进备用屏 8.8–11.5s，BootScreen 首帧 10.9–15.9s</strong>；其中 <code>render()</code> 是<strong>同步</strong>调用，单次阻塞事件循环 <strong>2.0–16.3s</strong>（run 间方差极大，见 §3.1），<strong>且阻塞并不随 <code>render()</code> 返回而结束</strong>——有一次实测全部节拍在 3822ms 就已终态，但事件循环直到 <strong>21202ms</strong> 才重新跑定时器回调（即之后又连续被钉住约 17.4s）。CPU 归因显示阻塞窗口内 74.6% 花在 <strong>Node 模块解析/编译</strong> 与 <strong>同步文件系统 IO</strong>，空闲仅 3.7%。</p>
+<blockquote><p>对照 <code>tui/AGENTS.md</code> §0.3「冷启动 &lt;100ms」「禁止同步阻塞事件循环超过 16ms」——现状是超预算 <strong>100~160 倍</strong>、超阻塞上限 <strong>300~1000 倍</strong>。</p></blockquote>
+<p><strong>所以本方案的方向不是「更懒」，而是反向的</strong>：<strong>把同步 IO 从渲染期清出去。</strong></p>
+<blockquote><h3 id="v2-更正-初版的第一条建议已被实测证伪">⚠ v2 更正：初版的第一条建议已被实测证伪<a class="anchor" href="#v2-更正-初版的第一条建议已被实测证伪" aria-label="锚点">#</a></h3>
+<p>初版（v1）本节写的是「<strong>① 把加载挪到既有的异步预热窗口（更早）</strong>；② 把同步 IO 从渲染期清出去」。<br><strong>实施阶段用交错 A/B 证伪了 ①</strong>：<code>setImmediate</code> 里的<strong>同步阻塞工作仍然阻塞事件循环</strong>，落在挂载前只会<strong>推迟挂载</strong>，不减少总墙钟。实测「有预热」相对「无预热」把首帧时间从均值 5013ms 拉到 <strong>7975ms</strong>（详见 §6.0 与 <code>.khy/feedback/DESIGN-PERF-003-startup-unblock/differential.md</code> 候选 C）。</p>
+<p><strong>正确的判据是</strong>：一份同步工作要么<strong>不在关键路径上</strong>，要么<strong>被消除</strong>；「换个位置放」不算优化。<br>同理，把模块顶层探测改成<strong>惰性</strong>（候选 B）也只是把阻塞推后到交互窗口，实测直接打破了 TUI 套件里一条绿测试，已回滚。</p>
+<p>本文档下面所有涉及「前移/预热」的表述，<strong>一律以本条为准</strong>。</p></blockquote>
+<hr>
+<h2 id="一-问题陈述">一、问题陈述<a class="anchor" href="#一-问题陈述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-症状">1.1 症状<a class="anchor" href="#1-1-症状" aria-label="锚点">#</a></h3>
+<p>用户感知：<code>khy</code> 启动后要等十秒量级才看见界面、才能打字。这不是「某一处慢」，而是<strong>两段各约 7 秒的整屏停顿</strong>夹在启动链里。</p>
+<h3 id="1-2-与既有文档的关系-不是重复劳动">1.2 与既有文档的关系（不是重复劳动）<a class="anchor" href="#1-2-与既有文档的关系-不是重复劳动" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文档</th><th>已覆盖</th><th>本文的增量</th></tr></thead><tbody><tr><td><code>[DESIGN-PERF-002]</code>（2026-08-31 定稿）</td><td>阶段 A 打 bundle / 阶段 B <code>KHY_FAST_STARTUP</code> 默认开 / <strong>阶段 C 顶层 require 瘦身</strong> / 阶段 D 首 token 解耦</td><td>实测证明「只把顶层 require 变懒」<strong>不足以</strong>修好启动：成本会平移到首帧。本文给出<strong>平移到哪里、怎么不平移</strong></td></tr><tr><td><code>[DESIGN-ARCH-115]</code>（2026-09-16 提案）</td><td>启动板块节拍表、D1（1.5s 硬超时绑架就绪）已修、<code>startupBeats.js</code> 已落地</td><td>本文测的是<strong>节拍表之下的执行成本</strong>：节拍表已经正确，但它显示「渲染引擎」这一拍时，那一拍本身在阻塞 4.7–16.3s</td></tr></tbody></table>
+<p><strong>结论</strong>：本文不推翻任何既有设计，是给它们补上<strong>实测的成本账</strong>与<strong>正确的优化方向</strong>。</p>
+<hr>
+<h2 id="二-测量方法-可复现">二、测量方法（可复现）<a class="anchor" href="#二-测量方法-可复现" aria-label="锚点">#</a></h2>
+<p>三个探针<strong>已入仓</strong> <code>_产物/</code>（沿用 <code>tui/AGENTS.md</code> §0.9.6 记录的「探针脚本落 <code>_产物/</code>」惯例，与既有 <code>_产物/touch-cost-probe.js</code> 同级）：</p>
+<table><thead><tr><th>探针</th><th>落点</th><th>手法</th><th>回答什么</th></tr></thead><tbody><tr><td><strong>P1 端到端</strong></td><td><code>_产物/tui-startup-probe-e2e.js</code></td><td><code>node-pty@1.1.0</code>（仓库根 <code>node_modules</code> 已有）起<strong>真实 ConPTY</strong>，spawn <code>services/backend/bin/khy.cmd</code>，逐 chunk 打时间戳，按里程碑字符串定位</td><td>用户真实感知时间线</td></tr><tr><td><strong>P2 分层</strong></td><td><code>_产物/tui-startup-probe-require.js</code></td><td>直接 <code>require</code> TUI 图，<code>Module._load</code> 钩子记<strong>自耗时</strong>（exclusive），区分 repo / node_modules</td><td>加载成本与最重模块</td></tr><tr><td><strong>P3 归因</strong></td><td><code>_产物/tui-startup-probe-render.js</code></td><td>无头 <code>render(&lt;App/&gt;)</code> + 假 TTY（抄 <code>tests/tui/liveFrameGeometry.test.js</code> 的 <code>fakeStdout/fakeStdin</code> 手法），可配 <code>--cpu-prof</code></td><td>阻塞期到底在跑什么</td></tr><tr><td><strong>P3 分析</strong></td><td><code>_产物/tui-startup-probe-profile.js</code></td><td>把 <code>.cpuprofile</code> 归成桶表 + 自耗时榜 + 指定函数的<strong>祖先调用链</strong></td><td>「哪一行在阻塞」</td></tr></tbody></table>
+<p><strong>P3 的三条硬前置</strong>（<code>tui/AGENTS.md</code> §0.9.6 规定，缺一条结论即不可信，本文已遵守）：<br>① 走仓库自己的 <code>inkRuntime</code>（<code>registerJsx()</code> → <code>await loadInk()</code> → <code>ir.get()</code>），不裸 <code>import('ink')</code>；<br>② <code>FORCE_COLOR</code> 在任何 chalk/ink 相关模块被 require <strong>之前</strong>设置；<br>③ 同时改 <strong>真实</strong> <code>process.stdout.rows/columns</code>（App 从 <code>process.stdout</code> 取尺寸，不从渲染流取）。</p>
+<p><strong>复现命令</strong>：</p>
+<pre><code># P1：端到端（默认 12s，可传毫秒；STARTUP_PROFILE=1 可同时拿到 pre-mount 检查点）
+STARTUP_PROFILE=1 node _产物/tui-startup-probe-e2e.js 20000
+
+# P2：分层（自耗时 + 最重模块榜）
+node _产物/tui-startup-probe-require.js
+
+# P3：归因（渲染 + 节拍链；再分析 profile）
+node --cpu-prof --cpu-prof-dir=&quot;%TEMP%/khyprof&quot; _产物/tui-startup-probe-render.js
+node _产物/tui-startup-probe-profile.js &quot;%TEMP%/khyprof/&lt;file&gt;.cpuprofile&quot; --chains listPersistedSessions,spawnSync,wrapSafe</code></pre>
+<p>三探针均从<strong>仓库根</strong>运行即可（内部按 <code>__dirname/..</code> 推导仓库根、按绝对路径解析 <code>node-pty</code> / <code>react</code>，不依赖 cwd）。</p>
+<h3 id="2-1-环境与不确定性-诚实边界">2.1 环境与不确定性（诚实边界）<a class="anchor" href="#2-1-环境与不确定性-诚实边界" aria-label="锚点">#</a></h3>
+<ol><li><strong>本机未安装 git</strong>（<code>where git</code> 无结果，<code>C:\Program Files\Git</code> 不存在）。启动链会在 TUI 之前打印 <code>未检测到 git</code>（<code>gitExecutableDetector.js:142</code>）。<strong>装 git 的机器这一段路径成本会不同</strong>，故本文区间含此因素。</li><li><strong>run 间方差大</strong>：同一探针连续运行的差异可达 2–3 倍（见 §3.1）。原因是同步文件 IO 命中率随 OS 文件缓存变化。故本文给<strong>区间</strong>，不给单点值。</li><li><strong>V8 编译缓存实测无效</strong>：开关 <code>module.enableCompileCache()</code> 前后为 1524–1933ms vs 1310–1700ms，<strong>在噪声内</strong>。故本方案<strong>不把它当收益项</strong>（详见 §十）。</li></ol>
+<hr>
+<h2 id="三-实测结果">三、实测结果<a class="anchor" href="#三-实测结果" aria-label="锚点">#</a></h2>
+<h3 id="3-1-端到端时间线-p1-真实-tty-120-30">3.1 端到端时间线（P1，真实 TTY，120×30）<a class="anchor" href="#3-1-端到端时间线-p1-真实-tty-120-30" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>里程碑</th><th>run1（冷）</th><th>run2（热）</th><th>run3（热）</th></tr></thead><tbody><tr><td>第一个字节</td><td>1558ms</td><td>425ms</td><td>297ms</td></tr><tr><td><code>正在加载 khy 运行时...</code>（<code>bin/khy.js:60</code>）</td><td>2213ms</td><td>611ms</td><td>≤297ms 后</td></tr><tr><td>5 步阶段行走完（<code>✓ 就绪 (5/5)</code>）</td><td>4144ms</td><td>1914ms</td><td>~1661ms</td></tr><tr><td><strong>Ink 进备用屏（<code>\x1b[?1049h</code>）</strong></td><td>11476ms</td><td>8759ms</td><td>9219ms</td></tr><tr><td><strong>BootScreen 首帧可见</strong></td><td>&gt;12000ms 未出现</td><td>15867ms</td><td>10947ms</td></tr></tbody></table>
+<p>结构读法（三 run 一致）：<strong>~1.9s 走完环境/认证/5 步阶段行 → 约 7s 静默停顿 → 进备用屏 → 再 1.7–7.1s 才出首帧。</strong></p>
+<p><strong>跨 run 观测区间（含后续复测，务必按区间引用而非单点）</strong>：</p>
+<table><thead><tr><th>里程碑</th><th>观测区间（多次实测）</th></tr></thead><tbody><tr><td>第一个字节</td><td><strong>297–1558ms</strong></td></tr><tr><td><code>bin/khy.js:60</code> 加载行</td><td>506–2213ms</td></tr><tr><td>5 步阶段行走完</td><td>1575–4144ms</td></tr><tr><td>Ink 进备用屏</td><td><strong>3853–11476ms</strong></td></tr><tr><td>BootScreen 首帧</td><td><strong>5588–15867ms</strong></td></tr></tbody></table>
+<p><strong>方差来源（按影响排序）</strong>：① OS 文件缓存命中率（同步 IO 主导，故最敏感）；② 磁盘/CPU 同期负载；③ 会话与状态文件数量（见 B1）；④ 该机器未装 git，git 探测路径每次都要走失败分支。<strong>【推测】</strong> 装有 git 且磁盘空闲的机器会稳定落在区间下沿。方向性结论（「两段各数秒的整屏阻塞、由同步 IO 与首次模块解析主导」）在全部 run 中一致，不随区间浮动改变。</p>
+<blockquote><p>注意 <code>bin/khy.js:60</code> 只是文件第 60 行，冷启时它在 <strong>2213ms</strong> 才执行——即「cmd.exe 派生 + node 自身启动 + <code>bin/khy.js</code> 顶层 require 图」合计约 2.2s（冷）/ 0.6s（热）。</p></blockquote>
+<p><strong><code>render()</code> 的单次同步阻塞（P3 实测，四次）</strong>：<code>16303ms</code> / <code>4684ms</code> / <code>1961ms</code>（另有一次 6869ms 出现在带 <code>--cpu-prof</code> 的运行中，采样开销已含在内）。<strong>方差接近 8 倍</strong>，这正是「同步文件 IO + 全新模块首次解析」的特征：命中 OS 文件缓存的程度决定耗时。</p>
+<p><strong>阻塞不止于 <code>render()</code></strong>：某次 P3 运行中，六拍全部终态发生在 <strong>3822ms</strong>，但 20ms 轮询直到 <strong>21202ms</strong> 才被调度——中间约 <strong>17.4s 定时器零回调</strong>，即事件循环被连续钉死（<code>render()</code> 在 3314ms 已返回）。说明首帧之后仍有整段同步工作（同源的懒 require + 同步 IO）。该数字为<strong>观测项</strong>，具体归属需按 L3 守卫落地后按调用点分类。</p>
+<blockquote><p>口径提醒：<code>[DESIGN-PERF-002]</code> §5.1 把「冷启 2-3s」作为基线，<code>[DESIGN-ARCH-115]</code> 记「整屏阻塞 ≥1.9s」。两次实测口径都<strong>小于</strong>本文，原因是它们量的是「pre-mount 阶段行 / 节拍表切换」，而本文量的是<strong>真实 TTY 下到 BootScreen 首帧</strong>（含 <code>render()</code> 的同步阻塞）。三个数字不矛盾，但<strong>不可互换引用</strong>。</p></blockquote>
+<h3 id="3-2-分层成本-p2">3.2 分层成本（P2）<a class="anchor" href="#3-2-分层成本-p2" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>层</th><th>实测</th><th>说明</th></tr></thead><tbody><tr><td><code>node bin/khy.js --version</code></td><td><strong>447ms</strong></td><td>node 启动 + CLI 解析下限</td></tr><tr><td><code>services/backend/bin/khy.cmd --version</code></td><td><strong>655ms</strong></td><td>经 cmd 包装</td></tr><tr><td><code>python -m khy_platform --version</code></td><td><strong>1198ms</strong></td><td>Python 启动器层</td></tr><tr><td>↳ 其中 bare <code>python -c</code></td><td>176ms</td><td>解释器冷启</td></tr><tr><td>↳ 其中 <code>import khy_platform</code></td><td>+186ms</td><td>导入成本</td></tr><tr><td><code>import('ink')</code>（ESM）</td><td><strong>676 / 787 / 770 / 972 / 1159 / 1251 / 1382 / 1442 / 1517ms</strong></td><td>波动最大，单点最重</td></tr><tr><td><code>require(App)</code> 图</td><td><strong>285–724ms</strong>，<strong>199–208</strong> 个 CJS 模块</td><td>其中 repo 一方自耗时 419ms / node_modules 62ms</td></tr></tbody></table>
+<p><strong>Python 层净付约 750ms</strong>（1198 − 447）。TUI 路径没有必须经过 Python 的理由——<strong>【推测】</strong> 走 node 直连可省这笔，但需先确认 <code>cli.py</code> 在交互路径上承担了什么（认证/引导/端口探测），故列为 L4 待评估项而非直接结论。</p>
+<h3 id="3-3-cpu-归因-p3-阻塞窗口-8185ms">3.3 CPU 归因（P3，阻塞窗口 8185ms）<a class="anchor" href="#3-3-cpu-归因-p3-阻塞窗口-8185ms" aria-label="锚点">#</a></h3>
+<p>按自耗时分支：</p>
+<table><thead><tr><th>桶</th><th>自耗时</th><th>占比</th></tr></thead><tbody><tr><td>node internals（模块解析/编译/stat）</td><td>3487ms</td><td><strong>42.6%</strong></td></tr><tr><td>其它原生/未归因（<code>readFileUtf8</code>/<code>lstat</code>/<code>open</code>）</td><td>2618ms</td><td><strong>32.0%</strong></td></tr><tr><td>repo <code>services/</code></td><td>998ms</td><td>12.2%</td></tr><tr><td>node_modules</td><td>611ms</td><td>7.5%</td></tr><tr><td><strong>idle（事件循环空闲）</strong></td><td><strong>300ms</strong></td><td><strong>3.7%</strong></td></tr><tr><td>GC</td><td>91ms</td><td>1.1%</td></tr></tbody></table>
+<p>单函数 top：</p>
+<table><thead><tr><th>自耗时</th><th>函数</th><th>性质</th></tr></thead><tbody><tr><td>1043ms</td><td><code>wrapSafe</code>（<code>node:internal/modules/cjs/loader:1578</code>）</td><td>CJS 编译包装</td></tr><tr><td>844ms</td><td><code>readFileUtf8</code></td><td>同步读文件</td></tr><tr><td>591ms</td><td><code>internalModuleStat</code></td><td>模块解析时 stat</td></tr><tr><td>563ms</td><td><code>readFileSync</code>（<code>node:fs:434</code>）</td><td>同步读文件</td></tr><tr><td><strong>554ms</strong></td><td><strong><code>listPersistedSessions</code></strong>（<code>sessionPersistence.js:835</code>）</td><td>同步扫会话目录</td></tr><tr><td>537ms</td><td><code>getNearestParentPackageJSON</code></td><td>模块解析向上找 package.json</td></tr><tr><td>265ms</td><td><code>spawnSync</code>（<code>node:internal/child_process:1105</code>）</td><td>同步派生子进程（<strong>⚠ 此值被欠采样，见下方更正</strong>）</td></tr><tr><td>251ms</td><td><code>lstat</code></td><td>同步 stat</td></tr></tbody></table>
+<blockquote><p><strong>⚠ v2 更正：<code>spawnSync</code> 的真实量级远大于上表。</strong> v1 的 profile 只捕捉到 <code>localLLMService</code> 模块顶层那一次探测（265ms），<strong>漏掉了最大的那份</strong>：渲染期逐适配器的 CLI 可用性探测，自耗时实测 <strong>1806–2196ms</strong>，是复测 profile 里的<strong>第一大项</strong>（占 34.5–42.8%）。完整调用链见 §4 的 B4。</p>
+<p>复测（L2a 落地后、L1b 已回滚）的桶分布：node internals 3130ms(59.8%) / 原生未归因 1025ms(19.6%) / node_modules 476ms(9.1%) / <strong>idle 仅 301ms(5.8%)</strong>。<strong>idle 始终只有个位数百分比</strong>，即事件循环全程被占——这正是「不是 CPU 密集、而是同步 IO 把循环钉死」的判据。</p></blockquote>
+<p><strong>读法</strong>：74.6% 是「模块机制 + 同步文件系统」，空闲只有 3.7%。这不是 CPU 密集，是<strong>同步 IO 把事件循环钉死了</strong>。</p>
+<hr>
+<h2 id="四-根因-四条阻塞点-含调用链">四、根因：四条阻塞点（含调用链）<a class="anchor" href="#四-根因-四条阻塞点-含调用链" aria-label="锚点">#</a></h2>
+<h3 id="b1-首帧渲染期同步扫会话目录-554ms-且随会话数单调劣化">B1 · 首帧渲染期同步扫会话目录（554ms，且随会话数单调劣化）<a class="anchor" href="#b1-首帧渲染期同步扫会话目录-554ms-且随会话数单调劣化" aria-label="锚点">#</a></h3>
+<p>调用链（CPU profile 直接证据）：</p>
+<pre><code>listPersistedSessions        @ services/backend/src/services/sessionPersistence.js:835
+ ├─ getCurrentSessionId      @ services/backend/src/services/domain/session/session/sessionForestService.js:68
+ │   ├─ _seedOnce           @ services/backend/src/cli/sessionColorState.js:25
+ │   │   └─ getSessionColor @ services/backend/src/cli/App 侧调用点 App.js:4582   ← 渲染期
+ │   └─ _resolveTodoFile    @ services/backend/src/tools/TodoWriteTool/index.js:22
+ │       └─ snapshot        @ services/backend/src/tools/_taskStore.js:365
+ │           └─ _readMergedTaskLines @ services/backend/src/cli/tui/ink-components/appHostHelpers.js:32
+ │               └─ App      @ services/backend/src/cli/tui/ink-components/App.js:5994  ← 渲染期（第二次扫）</code></pre>
+<p><strong>机制</strong>：<code>listPersistedSessions</code> 在 <code>sessionPersistence.js:845-882</code> <strong>逐个 <code>readFileSync</code> + <code>JSON.parse</code> 每个会话文件</strong>，然后才在 <code>:884-885</code> 排序并 <code>slice(0, limit)</code>。<strong><code>limit:50</code> 不约束 IO</strong> —— 成本是 O(全部文件)。</p>
+<p><strong>本机数据</strong>：<code>.khy/sessions</code> = <strong>547 个 JSON / 10.84MB</strong>（<code>.khy</code> 全域 2397 个 JSON / 18.78MB / 693 目录）。</p>
+<p><strong>后果</strong>：<strong>启动时间随会话累积单调变慢</strong>——这正是「越用越慢」的机制。且 <code>getCurrentSessionId</code> 被上面两条路径<strong>各调一次</strong>，同一份扫描付两遍。</p>
+<h3 id="b2-mount-effect-里同步-require-网关-触发模块顶层-spawnsync">B2 · mount effect 里同步 require 网关 → 触发模块顶层 <code>spawnSync</code><a class="anchor" href="#b2-mount-effect-里同步-require-网关-触发模块顶层-spawnsync" aria-label="锚点">#</a></h3>
+<pre><code>spawnSync                     @ node:internal/child_process:1105   (265ms)
+ └─ resolvePythonLauncher     @ services/backend/src/services/localLLMService.js:608
+     └─ (anon) @ localLLMService.js:1                  ← ★ 模块**顶层**就执行
+         └─ require localLLMAdapter.js:1
+             └─ require aiGateway.js:1
+                 └─ refreshFooter @ App.js:805        ← ★ useEffect 里 require
+                     └─ App.js:4151                   ← mount 被动 effect</code></pre>
+<p><strong>机制</strong>：<code>App.js:805-808</code> 的 <code>refreshFooter</code> 在 effect 内 <code>require('../../../services/gateway/aiGateway')</code>；该图拉进 <code>localLLMAdapter</code> → <code>localLLMService</code>，而 <code>localLLMService</code> <strong>在模块体里</strong>就调 <code>resolvePythonLauncher()</code>，后者 <code>spawnSync('python', ['--version'])</code>。</p>
+<p><strong>后果</strong>：为了画一行页脚，付掉<strong>一次子进程派生 + 整条网关模块图的解析编译</strong>，且发生在 mount 被动 effect（紧随首帧），用户直接看到卡顿。</p>
+<h3 id="b3-模块解析-编译本身落在渲染窗口内">B3 · 模块解析/编译本身落在渲染窗口内<a class="anchor" href="#b3-模块解析-编译本身落在渲染窗口内" aria-label="锚点">#</a></h3>
+<p><code>wrapSafe</code> 1043ms + <code>internalModuleStat</code> 591ms + <code>getNearestParentPackageJSON</code> 537ms + <code>compileSourceTextModule</code> 196ms ≈ <strong>2.4s</strong> 属于「为此刻才第一次 require 的模块做解析与编译」。</p>
+<p>注：<code>useQueryBridge.js:695</code>（在 <code>listOnTimeout</code> 里）require <code>toolUseLoop</code> 亦属此类；<strong>该条已在 <code>replSession.js:361-365</code> 预热</strong>，真实路径下代价较小，此处仅记录不作为主因。</p>
+<h3 id="b4-渲染体里逐适配器派生进程探测-cli-实测最大单点-v2-新增">B4 · 渲染体里逐适配器派生进程探测 CLI（实测最大单点，v2 新增）<a class="anchor" href="#b4-渲染体里逐适配器派生进程探测-cli-实测最大单点-v2-新增" aria-label="锚点">#</a></h3>
+<p><strong>这是本文档 v1 遗漏、复测才暴露的最大阻塞点。</strong></p>
+<p>调用链（CPU profile 直接证据）：</p>
+<pre><code>spawnSync                                          @ node:internal/child_process:1105   (1806–2196ms)
+ └─ spawnSync                                      @ node:child_process:856
+     └─ _probeSync                                 @ gateway/adapters/_commandAvailability.js:45
+         └─ isAvailable / check                    @ gateway/adapters/_commandAvailability.js:87/141
+             └─ commandExists                      @ gateway/adapters/cliToolAdapter.js:282
+                 └─ detect                          @ gateway/adapters/cliToolAdapter.js:347
+                     └─ getStatus                   @ gateway/adapters/cliToolAdapter.js:1522
+                         └─ getStatus               @ gateway/aiGatewayModelMethods.js:331
+                             └─ getBannerData       @ cli/bannerDataService.js:27
+                                 └─ WelcomeBanner   @ tui/ink-components/WelcomeBanner.js:58   ← ★ 渲染体</code></pre>
+<p><strong>机制</strong>：<code>WelcomeBanner</code> 在<strong>组件渲染体内</strong>调用 <code>getBannerData()</code>；该函数经 <code>aiGateway.getStatus()</code> <strong>逐个适配器</strong>探测其 CLI 是否可用（<code>claude --version</code>、<code>codex</code>、<code>warp</code>、剪贴板中继……），每次一个 <code>spawnSync</code>。而 <code>getBannerData()</code> <strong>自身不做 memo</strong>，<code>WelcomeBanner</code> 又是 <code>React.memo</code> 组件——props 一变就重渲、重渲就重新探测全部适配器。</p>
+<p><strong>量级</strong>：<code>spawnSync</code> 自耗时 <strong>1806–2196ms</strong>，复测 profile 的<strong>第一大项</strong>（占 34.5–42.8%）。</p>
+<p><strong>为什么 v1 漏了它</strong>：v1 那份 profile 是冷启首轮，采样把这段时间算在了别的帧/别的桶里（当时 <code>spawnSync</code> 只报 265ms，对应的是 B2 的模块顶层那一次）。<strong>教训</strong>：单次采样无法给「同一函数的多条调用链」分别定量，必须按<strong>祖先链</strong>聚合——这正是 <code>_产物/tui-startup-probe-profile.js --chains</code> 存在的原因。</p>
+<p><strong>未在本轮修复</strong>：正解是让横幅的状态行<strong>异步落值</strong>（首帧先画不含网关状态、就绪后补），或让 <code>getStatus()</code> 走缓存/异步。前者触及帧高账本与 live 预算这一高敏区（<code>AGENTS.md</code> §0.9.2），需单独评审。</p>
+<hr>
+<h2 id="五-关键判断-为什么不能照字面加-懒加载">五、关键判断：为什么不能照字面加「懒加载」<a class="anchor" href="#五-关键判断-为什么不能照字面加-懒加载" aria-label="锚点">#</a></h2>
+<p>这一节是本方案与直觉分歧最大、也最需要写清楚的地方。</p>
+<h3 id="5-1-懒加载在这个仓库已经做得很彻底">5.1 懒加载在这个仓库已经做得很彻底<a class="anchor" href="#5-1-懒加载在这个仓库已经做得很彻底" aria-label="锚点">#</a></h3>
+<ul><li><code>tui/AGENTS.md</code> §4.2 明文规定用 <code>React.lazy</code> / 条件 require，并<strong>禁止</strong>「启动时加载所有模块」；</li><li><code>[DESIGN-PERF-002]</code> 阶段 C 已把「顶层 require 瘦身」列为主计划；</li><li><code>replSession.js:382-419</code> 已提前 fire <code>loadInk()</code>、<code>setImmediate</code> 预 require <code>App</code>、预热 <code>toolUseLoop</code> / git / geo；</li><li><code>App.js</code> / <code>useQueryBridge.js</code> 的多数重模块已是 try-require / 懒 getter。</li></ul>
+<h3 id="5-2-于是懒加载把成本平移到了首帧">5.2 于是懒加载把成本平移到了首帧<a class="anchor" href="#5-2-于是懒加载把成本平移到了首帧" aria-label="锚点">#</a></h3>
+<p>顶层 require 变少 ≠ 总成本变少。原来在「进程启动、用户看不见」时加载的东西，改成「首帧渲染、用户正盯着」时加载——<strong>同一笔钱，挪到了最贵的时刻</strong>，并且因为渲染是同步的，它还会<strong>阻塞整条事件循环</strong>，连 spinner 都转不动。</p>
+<p><strong>这条判断可被本方案的实测直接验证</strong>：profile 里 idle 只占 3.7–5.8%，而模块机制 + 同步 IO 占约 75–80% —— 如果真是「加载太多」，正确的解法是<strong>减少加载</strong>；但 <code>import('ink')</code> 是<strong>不可省</strong>的（不装 ink 无法画屏），<code>App</code> 图也是<strong>不可省</strong>的。<strong>能省的只有「同步性」与「在不在关键路径上」。</strong></p>
+<h3 id="5-3-结论-方向反过来">5.3 结论：方向反过来<a class="anchor" href="#5-3-结论-方向反过来" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>直觉方案</th><th>实际效果</th><th>正确做法</th></tr></thead><tbody><tr><td>更懒（<code>React.lazy</code>、更多 try-require）</td><td>❌ 把成本推进渲染窗口</td><td><strong>不在关键路径上</strong>：让该工作不参与首帧（异步落值 / 缓存 / 消除）</td></tr><tr><td><del><strong>更早</strong>：挪进 <code>replSession.js</code> 既有异步预热窗口</del></td><td>❌ <strong>已证伪</strong>（§6.0 ①）：同步工作换个位置仍是同步工作，只<strong>推迟挂载</strong></td><td>见上：位置无关紧要</td></tr><tr><td>零加载（首帧不加载任何模块）</td><td>❌ 物理不可能：ink 不装载就画不出</td><td><strong>首帧零 IO</strong>：模块可已备好，但首帧不 touch 磁盘、不派生进程</td></tr><tr><td>换更快加载器 / 打包</td><td>⚠️ 有效但重（<code>[DESIGN-PERF-002]</code> 阶段 A）</td><td>与本文正交，<strong>不应混在一次提交</strong></td></tr></tbody></table>
+<hr>
+<h2 id="六-方案-l0-l4-与实施状态">六、方案（L0–L4）与实施状态<a class="anchor" href="#六-方案-l0-l4-与实施状态" aria-label="锚点">#</a></h2>
+<blockquote><p><strong>本节已按实测更新（v2）。</strong> 每层标注 <code>已落地</code> / <code>已证伪</code> / <code>待办</code>。被测否掉的两条路见 §6.0 —— <strong>那两条是本节最有价值的部分</strong>。</p></blockquote>
+<h3 id="6-1-状态总览">6.1 状态总览<a class="anchor" href="#6-1-状态总览" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>层</th><th>内容</th><th>状态</th><th>依据</th></tr></thead><tbody><tr><td>L0</td><td>首帧零 IO（验收基线）</td><td>守住</td><td>首帧已由 <code>startupBeats</code> / <code>BootScreen</code> 承担</td></tr><tr><td><strong>L1</strong></td><td><strong>加载/预热前移</strong></td><td><strong>已证伪，未采纳</strong></td><td>首帧均值 5013 → <strong>7975ms</strong>（§6.0 ①）</td></tr><tr><td><strong>L1b</strong></td><td><code>localLLMService</code> 顶层探测改惰性</td><td><strong>已实现 → 已回滚</strong></td><td>打破 TUI 套件一条<strong>原本是绿</strong>的测试（§6.0 ②）</td></tr><tr><td><strong>L2a</strong></td><td><code>listPersistedSessions</code> 解析缓存</td><td><strong>✅ 已落地</strong></td><td>重复调用 5206ms → <strong>17ms</strong>；输出逐字段相同</td></tr><tr><td>L2b</td><td>合并两次 <code>getCurrentSessionId</code></td><td><strong>被 L2a 吸收</strong></td><td>缓存使第二次近乎免费，无需改调用方</td></tr><tr><td>L2c</td><td><code>_readMergedTaskLines</code> 移出首帧</td><td>待办</td><td>需动帧高账本，单独评审</td></tr><tr><td><strong>B4</strong></td><td>横幅逐适配器探测移出渲染</td><td>待办（<strong>最大单点</strong>）</td><td>1806–2196ms，见 §4 B4</td></tr><tr><td>L3</td><td>渲染期同步 IO 守卫</td><td>待办</td><td>见下</td></tr><tr><td>L4</td><td>进程层（Python 层 / <code>khy.bat</code>）</td><td>待办</td><td>见下、§十</td></tr></tbody></table>
+<h3 id="6-0-两条被实测否掉的路">6.0 两条被实测否掉的路<a class="anchor" href="#6-0-两条被实测否掉的路" aria-label="锚点">#</a></h3>
+<p><strong>① 「把工作搬进异步预热窗口」不成立。</strong> 交错 A/B（<code>KHY_PROBE_SKIP_PREWARM</code> 临时开关，各 2 轮，测后已从源码移除）：</p>
+<table><thead><tr><th>组</th><th>alt-screen</th><th>首帧</th><th>首帧−alt-screen</th></tr></thead><tbody><tr><td>A1 无预热</td><td>5450ms</td><td>7140ms</td><td>1690ms</td></tr><tr><td>B1 有预热</td><td>8083ms</td><td>8432ms</td><td>349ms</td></tr><tr><td>A2 无预热</td><td>2377ms</td><td>2885ms</td><td>508ms</td></tr><tr><td>B2 有预热</td><td>7178ms</td><td>7517ms</td><td>339ms</td></tr></tbody></table>
+<p>预热<strong>确实</strong>把「挂载后到首帧」的间隔从 1690 / 508ms 压到 349 / 339ms —— 但把<strong>挂载本身</strong>推迟 2.5–4.7s，<strong>首帧总时间反而变差</strong>（均值 5013 → 7975ms）。<br>机制：<code>setImmediate</code> 里的同步工作<strong>仍然阻塞事件循环</strong>，落在挂载前就是纯加法。</p>
+<blockquote><p><strong>判据</strong>：一份同步工作要么<strong>不在关键路径上</strong>，要么<strong>被消除</strong>；<strong>「换个位置放」不算优化。</strong></p></blockquote>
+<p><strong>② 「把模块顶层阻塞探测改成惰性」也只是推后。</strong> 该改动（L1b）实测把模块加载期 <code>spawnSync</code> 调用数从非 0 降到 <strong>0</strong>、加载耗时 28ms —— 但随即打破了 TUI 套件里一条<strong>原本是绿</strong>的测试（<code>ccOverlayFit</code>「80×24：正在打字时按 <code>?</code> 只打问号，不呼出帮助菜单」）。<br>机制：被推迟的阻塞探针落进了<strong>交互窗口</strong>，而该测试用固定 <code>wait(300)</code>，于是按键处理时序被改变、<code>?</code> 在 <code>a</code> 尚未登记时被处理 → 帮助菜单被呼出。<strong>已回滚。</strong></p>
+<blockquote><p>两次否掉都指向同一条纪律：<strong>对「阻塞式同步工作」，位置无关紧要，只有「在不在关键路径上」要紧。</strong></p></blockquote>
+<h3 id="l0-首帧零-io-守住-不新增行为">L0 · 首帧零 IO（守住，不新增行为）<a class="anchor" href="#l0-首帧零-io-守住-不新增行为" aria-label="锚点">#</a></h3>
+<p><strong>目标</strong>：首帧（BootScreen 节拍表）不 <code>require</code> 重模块、不读盘、不派生进程。</p>
+<p><strong>现状</strong>：<code>startupBeats</code> + <code>BootScreen</code> 已把「首帧画什么」做对了（<code>[DESIGN-ARCH-115]</code> §4/§5 已落地）。<strong>本层不是新功能，是给 L2a 之后的验收立基线</strong>，并把 B1/B2/B3/B4 四类回潮卡在门口（见 L3）。</p>
+<p><strong>预期收益</strong>：0ms（它是基线） · <strong>风险</strong>：无 · <strong>回退</strong>：无需</p>
+<h3 id="l1-加载前移-已证伪-见-6-0-①②">L1 · <del>加载前移</del>（已证伪，见 §6.0 ①②）<a class="anchor" href="#l1-加载前移-已证伪-见-6-0-①②" aria-label="锚点">#</a></h3>
+<p>原方案主张「把 B2/B3 的首次 require 挪进 <code>replSession.js:401-419</code> 的预热窗口」。<strong>实测否掉</strong>：该窗口里的同步工作仍阻塞事件循环，只推迟挂载。</p>
+<p>保留其中<strong>唯一未被否掉</strong>的一条，但它也<strong>不是</strong>「前移」而是「移出路径」：<code>localLLMService.js</code> 模块顶层的 <code>spawnSync</code> 探测终归不该在启动链上 —— 正解是让它<strong>异步化</strong>（或在真正需要本地 LLM 时才同步探测），<strong>不是</strong>改成惰性（§6.0 ② 已证伪惰性版）。该项<strong>待办</strong>。</p>
+<h3 id="l2-去阻塞-部分落地">L2 · 去阻塞（部分落地）<a class="anchor" href="#l2-去阻塞-部分落地" aria-label="锚点">#</a></h3>
+<h4 id="l2a-listpersistedsessions-解析缓存-已落地">L2a · <code>listPersistedSessions</code> 解析缓存 —— ✅ 已落地<a class="anchor" href="#l2a-listpersistedsessions-解析缓存-已落地" aria-label="锚点">#</a></h4>
+<p><strong>落点</strong>：<code>services/backend/src/services/sessionPersistence.js</code>（<code>listPersistedSessions</code> 及其新增的 <code>_buildSessionMeta</code> / <code>_readSessionMetaCached</code>）。</p>
+<p><strong>做法</strong>：把「调用即重读全部快照」改为<strong>按文件缓存解析结果</strong>，键为 <code>(mtimeMs, size)</code>；命中则只 <code>statSync</code>。快照文件的列表驱动淘汰，故删除/清理后条目自动失效。<strong>未新增任何 <code>KHY_*</code> 门控</strong>（H7 + 现状 226/220 已超标）。</p>
+<p><strong>输出等价性</strong>：<code>mtimeMs</code>/<code>size</code> 变动的文件必重读；消失的文件必淘汰；每次调用返回<strong>新对象</strong>（与原实现一致，调用方可安全改写）。理论陈旧窗口仅剩「同一 mtime 刻度内被改写成同样大小」。</p>
+<p><strong>实测</strong>：</p>
+<table><thead><tr><th>指标</th><th>改前</th><th>改后</th></tr></thead><tbody><tr><td>同进程内第 2 次调用</td><td>约 276ms（与第 1 次同量级）</td><td><strong>17ms</strong></td></tr><tr><td>第 3 次调用</td><td>约 276ms</td><td><strong>14ms</strong></td></tr><tr><td>三次调用结果</td><td>—</td><td><code>JSON.stringify</code> 逐字节相同</td></tr><tr><td>profile 内 <code>listPersistedSessions</code> 自耗时</td><td><strong>554ms</strong>（当时最大 repo 单函数）</td><td>跌出榜首（<code>_readSessionMetaCached</code> 68ms）</td></tr><tr><td>profile 内 <code>readFileSync</code> 自耗时</td><td>563ms</td><td>107ms</td></tr></tbody></table>
+<p><strong>回退</strong>：单文件 revert。</p>
+<h4 id="l2b-合并两次-getcurrentsessionid-被-l2a-吸收">L2b · 合并两次 <code>getCurrentSessionId</code> —— 被 L2a 吸收<a class="anchor" href="#l2b-合并两次-getcurrentsessionid-被-l2a-吸收" aria-label="锚点">#</a></h4>
+<p>原计划改两处调用方（<code>sessionColorState.js:25</code> 与 <code>TodoWriteTool/index.js:22</code>）。L2a 落地后第二次解析已近乎免费，<strong>改调用方的收益不足以抵其风险</strong>，故不单独施工。</p>
+<h4 id="l2c-readmergedtasklines-移出首帧-待办">L2c · <code>_readMergedTaskLines</code> 移出首帧 —— 待办<a class="anchor" href="#l2c-readmergedtasklines-移出首帧-待办" aria-label="锚点">#</a></h4>
+<p>需要把渲染体内的一次读取改为 state + effect。<strong>不做</strong>的理由：该读取结果进入 <code>_liveBudget.capTaskLines</code> 的高度账本（<code>App.js:5986-6010</code>），而帧高 ≤ <code>rows−1</code> 是 <code>AGENTS.md</code> §0.9.2 的硬约束、有属性测试覆盖。<strong>改动它等于改帧几何，须单独一轮并带帧高回归测试。</strong></p>
+<h4 id="l2d-b4-横幅探测移出渲染-待办-优先级最高">L2d · B4 横幅探测移出渲染 —— 待办（<strong>优先级最高</strong>）<a class="anchor" href="#l2d-b4-横幅探测移出渲染-待办-优先级最高" aria-label="锚点">#</a></h4>
+<p><code>WelcomeBanner.js:58</code> 在渲染体调 <code>getBannerData()</code> → 逐适配器 <code>spawnSync</code>（1806–2196ms）。<br><strong>正解</strong>：横幅状态行<strong>异步落值</strong>（首帧先画不含网关状态的值，就绪后补一行），或让 <code>gateway.getStatus()</code> 结果带短 TTL 缓存。<br><strong>不做</strong>的理由与 L2c 同类（帧高账本），但它量级最大（占 profile 34.5–42.8%），建议优先排期。</p>
+<h3 id="l3-把既有硬约束变成机器可校验-防回潮">L3 · 把既有硬约束变成机器可校验（防回潮）<a class="anchor" href="#l3-把既有硬约束变成机器可校验-防回潮" aria-label="锚点">#</a></h3>
+<p><strong>背景</strong>：<code>tui/AGENTS.md</code> §0.2 写着「❌ 禁止同步阻塞事件循环超过 16ms」，<strong>但目前没有任何检查器执行它</strong>——这正是 B1/B2 能长期存在而无人报警的原因。</p>
+<p><strong>做法</strong>：把本文 P3 的探针思路做成一条<strong>渲染期同步代价守卫</strong>：在渲染窗口内命中 <code>readFileSync</code> / <code>spawnSync</code> / 首次 <code>require</code> 即记录（finding）。</p>
+<p><strong>门控纪律（硬约束，不可放宽）</strong>：</p>
+<ul><li><strong>净新增 <code>KHY_*</code> 门控 = 0</strong>。依据 <code>[DESIGN-ARCH-102]</code> H7 与 <code>[DESIGN-ARCH-115]</code> §7。</li><li>现状更严峻：实测 <code>npm run check:tui-gates</code> = **FAIL，226 unique KHY_\* tokens（上限 220）<strong>。本方案</strong>不得使其上升**。</li><li>复用 <code>[DESIGN-ARCH-111]</code> 的 <code>scripts/ruleguard/</code> 绑定层：新规则只需改 <code>RULES-REGISTRY.json</code>（补 <code>gate</code> + <code>exec</code> + <code>paths</code>），门自动纳入——<strong>不在 YAML / <code>&amp;&amp;</code> 链里硬编码</strong>。</li></ul>
+<p><strong>落地阶段</strong>：按 <code>PROCESS-008</code> / <code>[DESIGN-PROCESS-002]</code> §2，新拦截型机制<strong>必须从 S1「观察者」起步</strong>（只记录、不拦截、执行器恒 exit 0），毕业看样本量不看时间（≥200 条相关事件且无解释不了的样本）。<strong>且阶段是门的属性</strong>：升档只改执行器的 <code>STAGE</code> 常量与登记表 <code>severity</code>，不改判定逻辑。</p>
+<blockquote><p>一旦落地，须按 <code>PROCESS-008</code> 在 <code>docs/10_规范/registry/FEATURE-OWNERSHIP.json</code> 的 <code>rollout.mechanisms[]</code> 登记 <code>stage</code>/<code>previousStage</code>/<code>samples.observed</code>/<code>rollback</code>/<code>executorStage</code>。<strong>本文阶段尚未落地，故不预先登记</strong>（登记一个不存在的机制会让 <code>check-rollout-stage.js</code> 的 <code>rollout-stage-authority-drift</code> 变成假绿）。</p></blockquote>
+<p><strong>预期收益</strong>：0ms（它是防回潮） · <strong>风险</strong>：低（S1 不阻断） · <strong>回退</strong>：<code>severity</code> 置 <code>advisory</code> 或删登记项</p>
+<h3 id="l4-进程层-另一笔独立的钱-需单独评估">L4 · 进程层（另一笔独立的钱，需单独评估）<a class="anchor" href="#l4-进程层-另一笔独立的钱-需单独评估" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项</th><th>实测/事实</th><th>动作</th></tr></thead><tbody><tr><td>Python 启动器层净付 ~750ms</td><td><code>python -m khy_platform --version</code> 1198ms vs <code>node bin/khy.js --version</code> 447ms</td><td><strong>【推测】</strong> 评估 TUI 路径直连 node；须先确认 <code>cli.py</code> 在交互路径的职责（引导/认证/端口探测）</td></tr><tr><td>根 <code>khy.bat</code> 不可用</td><td><strong>LF-only 换行（176 个裸 LF，0 个 CRLF）</strong>，cmd.exe 解析错乱：把自己的注释行当命令执行（实测报错 <code>'ina'</code> / <code>'&quot;http_proxy=&quot;'</code> / <code>'portable'</code> / <code>'D_DIR!'</code>），<strong>且无任何输出</strong></td><td>转 CRLF。<strong>这是 bug 而非性能项</strong>（见 §十）</td></tr></tbody></table>
+<hr>
+<h2 id="七-验收指标与验证状态">七、验收指标与验证状态<a class="anchor" href="#七-验收指标与验证状态" aria-label="锚点">#</a></h2>
+<h3 id="7-1-性能指标">7.1 性能指标<a class="anchor" href="#7-1-性能指标" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>基线（2026-09-22 实测）</th><th>目标</th><th>当前状态</th></tr></thead><tbody><tr><td>同进程第 2 次会话列表扫描</td><td>约 276ms（与第 1 次同量级）</td><td>近乎免费</td><td><strong>✅ 17ms（L2a 已落地）</strong></td></tr><tr><td><code>listPersistedSessions</code> 的 profile 自耗时</td><td><strong>554ms（榜首）</strong></td><td>跌出榜首</td><td><strong>✅ 已跌出榜首（L2a）</strong></td></tr><tr><td>首字节</td><td>297–1558ms</td><td>不变</td><td>—</td></tr><tr><td>Ink 进备用屏</td><td>2377–11476ms</td><td>&lt; 2500ms</td><td><strong>未达标</strong></td></tr><tr><td>BootScreen 首帧</td><td>2885–15867ms</td><td>&lt; 3000ms</td><td><strong>未达标</strong></td></tr><tr><td><code>render()</code> 同步阻塞</td><td>917–16303ms</td><td>&lt; 100ms</td><td><strong>未达标</strong></td></tr><tr><td>阻塞尾巴（<code>render()</code> 返回后定时器被饿死时长）</td><td>最长观测 17400ms</td><td>—</td><td>观测项</td></tr><tr><td>阻塞窗口内 idle 占比</td><td>3.7–5.8%</td><td>—</td><td>观测项（越低说明越被钉死）</td></tr><tr><td>启动耗时 vs 会话数</td><td>正相关（547 文件 / 10.84MB）</td><td>无相关</td><td>部分改善：同进程内已无相关；跨进程首次扫描仍在</td></tr></tbody></table>
+<blockquote><p><strong>⚠ 口径更正（v2）</strong>：v1 的目标列是对「L1+L2 之后」的<strong>推测</strong>，且已证明其<strong>推导方式有误</strong>——它假设「把工作前移即可省时」，而 A/B 显示前移只是<strong>推迟</strong>（§6.0 ①）。<br><strong>可靠的判据只剩两条</strong>：① 某函数<strong>是否还在 profile 自耗时榜首</strong>；② 该项工作<strong>是否还在关键路径上</strong>。<br>墙钟总量受 OS 文件缓存与磁盘负载支配，<strong>单次端到端对比不可作判据</strong>。<br><strong>本轮端到端总量：未能证明有可靠改善</strong>（方差盖过效应）。如实记录，不做粉饰。</p></blockquote>
+<h3 id="7-2-验收方式-可执行">7.2 验收方式（可执行）<a class="anchor" href="#7-2-验收方式-可执行" aria-label="锚点">#</a></h3>
+<ol><li><strong>微观判据（可靠）</strong>：<code>listPersistedSessions</code> 连续三次调用，第 2/3 次应远小于第 1 次，且三次结果 <code>JSON.stringify</code> 逐字节相同。</li><li><strong>归因判据（可靠）</strong>：<code>node --cpu-prof</code> + <code>_产物/tui-startup-probe-profile.js --chains &lt;函数名&gt;</code>，断言目标函数<strong>不在</strong>自耗时榜首。</li><li><strong>端到端（参考，方差大）</strong>：<code>_产物/tui-startup-probe-e2e.js</code> 取多次的<strong>区间</strong>，不取单点。</li><li><strong>A/B 判据（验证任何「前移/预热」类改动的唯一正确方式）</strong>：必须<strong>交错跑</strong>（A,B,A,B…），且<strong>以「首帧绝对时间」为准</strong>——只看「挂载后到首帧的间隔」会被「挂载已被推迟」骗过（§6.0 ① 的教训）。</li><li><strong>门不上升</strong>：<code>npm run check:tui-gates</code>（<strong>不得高于 226</strong>）、<code>npm run check:node-syntax</code>、<code>node scripts/ci/check-agent-rules.js &lt;改动文件&gt;</code>、<code>npm run --workspace services/backend test:tui</code>（<strong>须 46/46 套件全绿</strong>——本轮正是这条拦下了 L1b）。</li></ol>
+<hr>
+<h2 id="八-不做什么-明确范围外">八、不做什么（明确范围外）<a class="anchor" href="#八-不做什么-明确范围外" aria-label="锚点">#</a></h2>
+<ul><li><strong>不重写 Ink / React 架构</strong>：<code>[DESIGN-PERF-002]</code> §六 已排除，理由不变。</li><li><strong>不砍功能</strong>（启动期 5 步阶段行、节拍表、预热、自愈、桥接）：它们是产品决策，本方案只改<strong>时机与同步性</strong>。</li><li><strong>不做视觉改动</strong>：用户没抱怨视觉。</li><li><strong>不新增 <code>KHY_*</code> 门控</strong>：H7 + 现状 226/220 已超标。</li><li><strong>不在本文方案内打 bundle</strong>：<code>[DESIGN-PERF-002]</code> 阶段 A 已有完整计划；bundle 是「更快加载器」，与本文「正确的加载时机」正交，两者不冲突但<strong>不应混在一次提交</strong>。</li><li><strong>不主张 V8 编译缓存有收益</strong>：实测无（§十）。</li></ul>
+<hr>
+<h2 id="九-落地路线与-执行结果">九、落地路线与<strong>执行结果</strong><a class="anchor" href="#九-落地路线与-执行结果" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>阶段</th><th>内容</th><th>对应阻塞点</th><th>风险</th><th>结果</th></tr></thead><tbody><tr><td>P0</td><td>L2a 会话列表解析缓存</td><td>B1</td><td>中</td><td><strong>✅ 已落地</strong> — 重复扫描 5206→17ms；<code>test:tui</code> 46/46 绿</td></tr><tr><td><del>P0</del></td><td><del>L1 加载前移（预热 aiGateway/横幅/任务链）</del></td><td>B2、B3、B4</td><td>—</td><td><strong>❌ A/B 证伪，未采纳</strong>（§6.0 ①）</td></tr><tr><td><del>P0</del></td><td><del>L1b <code>localLLMService</code> 顶层探测惰性化</del></td><td>B2</td><td>—</td><td><strong>❌ 打破一条绿测试，已回滚</strong>（§6.0 ②）</td></tr><tr><td><strong>P0（推荐下一轮）</strong></td><td><strong>L2d 横幅逐适配器探测移出渲染</strong></td><td><strong>B4（最大单点，1806–2196ms）</strong></td><td>中高（须动帧高账本）</td><td>待办</td></tr><tr><td>P1</td><td>L2c <code>_readMergedTaskLines</code> 移出首帧</td><td>B1 残余</td><td>中高（须动帧高账本）</td><td>待办</td></tr><tr><td>P1</td><td>L3 渲染期同步 IO 守卫（S1 观察者起步）</td><td>防回潮</td><td>低</td><td>待办</td></tr><tr><td>P2</td><td>L4 Python 层评估 + <code>khy.bat</code> CRLF 修复</td><td>进程层</td><td>中</td><td>待办</td></tr></tbody></table>
+<blockquote><p><strong>执行纪律（本轮教训，建议写进后续同类工作）</strong>：</p>
+<ol><li>任何「前移 / 预热」类改动<strong>必须先做交错 A/B，且以「首帧绝对时间」为准</strong>——只看「挂载后到首帧的间隔」会被「挂载被推迟」骗过。</li><li>任何改动<strong>必须先跑 <code>npm run --workspace services/backend test:tui</code> 并全绿</strong>。</li></ol>
+<p>本轮这两条分别否掉了 L1 与 L1b。它们在纸面上都「显然有益」，实测都是<strong>负收益</strong>。</p></blockquote>
+<blockquote><p><strong>登记义务</strong>（按 <code>[DESIGN-LAY-005]</code> §4）：本轮对<strong>运行时代码</strong>只改<strong>既有文件</strong>（<code>sessionPersistence.js</code> 一处），故无 <code>packaging/modules/modules.json</code> 登记动作。若 L3 落地新增执行器脚本，须按其所在层级补登记。</p>
+<p>本次为<strong>可复现性</strong>新增 4 个<strong>开发期探针</strong>到 <code>_产物/</code>（<code>tui-startup-probe-e2e.js</code> / <code>-require.js</code> / <code>-render.js</code> / <code>-profile.js</code>）：它们不打进任何产物、不被 <code>services/</code> 引用，属 <code>tui/AGENTS.md</code> §0.9.6 已确立的探针落点惯例，故不登记 <code>modules.json</code>。全部按 <code>__dirname/..</code> 推导仓库根，<strong>不含绝对路径字面量</strong>（守 <code>RUNTIME-001</code>）。</p></blockquote>
+<hr>
+<h2 id="十-附带发现-独立于本方案-建议单独立项">十、附带发现（独立于本方案，建议单独立项）<a class="anchor" href="#十-附带发现-独立于本方案-建议单独立项" aria-label="锚点">#</a></h2>
+<ol><li><strong>根 <code>khy.bat</code> 已损坏（bug）</strong>：<code>khy.bat</code> 为 <strong>LF-only 换行</strong>（0 CRLF / 176 裸 LF）。cmd.exe 解析错乱——实测 <code>khy.bat --version</code> 把自己的注释行当命令执行（输出 <code>'ina'</code>（来自注释里的 &quot;China&quot;）、<code>'&quot;http_proxy=&quot;'</code>、<code>'portable'</code>、<code>'D_DIR!'</code>）并<strong>不产出任何输出</strong>。能正常工作的是 <code>services/backend/bin/khy.cmd</code>（实测 655ms，输出 <code>1.1.15</code>）。</li></ol>
+<p>⇒ 若用户经 <code>khy.bat</code> 启动，症状是「起不来」而非「慢」。修复 = 转 CRLF（并建议加一条换行符守卫）。</p>
+<ol><li><strong><code>[DESIGN-PERF-002]</code> §八 已过期</strong>：该节称 <code>enableCompileCache()</code> 在 <code>bin/khy.js:53</code>「已开」，但当前代码里它是<strong>被注释掉的</strong>（<code>bin/khy.js:52-55</code>，注释原文「Disabled: compile cache causes stale bytecode issues during development」）。建议订正该文档，避免后续按错误前提做决策。</li><li><strong>V8 编译缓存实测无收益</strong>：开关对比 1524–1933ms（开）vs 1310–1700ms（关），差异在噪声内。<strong>若将来重新启用，须先有可复现的收益证据</strong>，否则它只是给启动加了一次缓存目录 I/O。</li><li><strong><code>[DESIGN-ARCH-115]</code> 的门控计数已变动</strong>：该文记 <code>check:tui-gates</code> = 216（上限 212），实测今日为 <strong>226（上限 220）</strong>。两份数字都应指向同一次实测。</li><li><strong><code>ccOverlayFit</code> 是启动期改动的有效哨兵</strong>（正面发现）：本轮 L1b 被它拦下。该测试用固定 <code>wait(300)</code> 断言「打字中按 <code>?</code> 不呼出帮助菜单」，因此对<strong>交互窗口内的阻塞</strong>异常敏感——任何把阻塞工作推进交互窗口的改动都会在这里翻红。建议后续启动期改动都先看它。</li></ol>
+<hr>
+<h2 id="十一-变更记录">十一、变更记录<a class="anchor" href="#十一-变更记录" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>作者</th><th>变更</th></tr></thead><tbody><tr><td>v1</td><td>2026-09-22</td><td>实测调研产出</td><td>初稿。三探针（真实 ConPTY 端到端 / <code>Module._load</code> 分层 / <code>--cpu-prof</code> 归因）实测；登记 B1–B3 三条阻塞点及调用链；确立「懒加载已过度、方向应反向」的判断；给出 L0–L4 方案、验收指标、S1 阶段与净新增门控 = 0 纪律；附带登记 <code>khy.bat</code> LF 损坏等四项发现</td></tr><tr><td><strong>v2</strong></td><td>2026-09-22</td><td>实施 + 复测</td><td><strong>实施阶段的三处更正与结果</strong>：&lt;br&gt;① <strong>新增 §4 B4</strong> —— 横幅渲染体逐适配器 <code>spawnSync</code> 探测（1806–2196ms），是<strong>最大单点</strong>；v1 因单次采样欠采样而漏登，§3.3 已加更正（<code>spawnSync</code> 真实量级 34.5–42.8%）。&lt;br&gt;② <strong>§6.0 新增</strong> —— 交错 A/B 证伪「把工作搬进异步预热窗口」（首帧均值 5013→7975ms），并把「顶层阻塞探测改惰性」证伪（打破一条绿测试）。两条路都已回滚。&lt;br&gt;③ <strong>L2a 已落地</strong> —— <code>listPersistedSessions</code> 解析缓存：重复调用 5206→17ms、输出逐字段相同、门控净新增 0、<code>test:tui</code> 46/46 绿。&lt;br&gt;④ §7 验收改为「以 profile 榜首 + 是否在关键路径」为可靠判据，并<strong>如实登记端到端总量未证明有改善</strong>；§9 补执行结果与两条执行纪律。&lt;br&gt;⑤ §十 新增第 5 条：<code>ccOverlayFit</code> 对交互窗口阻塞敏感，可作启动期改动的哨兵。</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-PERF/[DESIGN-PERF-002] khy-cli-交互流畅度修复方案-v1.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-PERF-002] khy-cli 交互流畅度修复方案 v1</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-PERF/00_INDEX_DESIGN-PERF-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">DESIGN-PERF</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-PERF/[DESIGN-PERF-003] TUI 启动阻塞治理方案.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: README.md -->
+<title>ChatML — Tauri 2 + Go Backend + Claude Agent SDK · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>extensions<span class="sep">›</span>scripts<span class="sep">›</span>khy-desktop-rd<span class="sep">›</span>chatml<span class="sep">›</span>ChatML — Tauri 2 + Go Backend + Claude Agent SDK</div>
+      <header class="hero reveal"><h1>ChatML — Tauri 2 + Go Backend + Claude Agent SDK</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#chatml-tauri-2-go-backend-claude-agent-sdk">ChatML — Tauri 2 + Go Backend + Claude Agent SDK</a></li><li class="lvl-2"><a href="#一-为什么列为第三">一、为什么列为第三</a></li><li class="lvl-2"><a href="#二-4-层架构">二、4 层架构</a></li><li class="lvl-2"><a href="#三-关键技术点">三、关键技术点</a></li><li class="lvl-3"><a href="#3-1-数据模型">3.1 数据模型</a></li><li class="lvl-3"><a href="#3-2-provider-两层抽象">3.2 Provider 两层抽象</a></li><li class="lvl-3"><a href="#3-3-process-per-conversation">3.3 Process-per-conversation</a></li><li class="lvl-3"><a href="#3-4-通信协议">3.4 通信协议</a></li><li class="lvl-3"><a href="#3-5-静态前端-export">3.5 静态前端 export</a></li><li class="lvl-3"><a href="#3-6-stronghold-凭据存储">3.6 Stronghold 凭据存储</a></li><li class="lvl-2"><a href="#四-目录结构">四、目录结构</a></li><li class="lvl-2"><a href="#六-与-khy-os-现状对照">六、与 khy-os 现状对照</a></li><li class="lvl-2"><a href="#七-本地文件">七、本地文件</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="chatml-tauri-2-go-backend-claude-agent-sdk">ChatML — Tauri 2 + Go Backend + Claude Agent SDK<a class="anchor" href="#chatml-tauri-2-go-backend-claude-agent-sdk" aria-label="锚点">#</a></h1>
+<blockquote><p>调研日期: 2026-08-31<br>仓库: <a href="https://github.com/chatml/chatml" target="_blank" rel="noopener">https://github.com/chatml/chatml</a><br>License: GPL-3.0<br>Stars: 48 · Forks: 7 · 1,297 commits<br>官网: <a href="https://chatml.com" target="_blank" rel="noopener">https://chatml.com</a></p></blockquote>
+<h2 id="一-为什么列为第三">一、为什么列为第三<a class="anchor" href="#一-为什么列为第三" aria-label="锚点">#</a></h2>
+<p>ChatML 是 <strong>Tauri 2 + 多语言后端</strong> 架构的纯典范。它的 4 层架构是 khy-os 桌面端路线选型时<strong>唯一能完整对照</strong>的参考。OpenFlux 是&quot;AI 桌面客户端&quot;，ChatML 是&quot;AI 编码工作流&quot;——目标差异大，但<strong>架构哲学一致</strong>：</p>
+<ul><li>桌面壳只负责窗口/原生菜单/IPC</li><li>后端业务用一种&quot;重型&quot;语言（Go）做长寿命进程</li><li>AI Agent 引擎用另一种&quot;轻量&quot;语言（Node.js）做对话/工具调用</li><li>通信走 HTTP + WebSocket + stdio 三种</li></ul>
+<h2 id="二-4-层架构">二、4 层架构<a class="anchor" href="#二-4-层架构" aria-label="锚点">#</a></h2>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│                    Tauri Shell (Rust)                     │
+│   窗口管理 / PTY 终端 / OAuth deep links /               │
+│   Stronghold 凭据存储 / 原生菜单                          │
+├──────────────────────────────────────────────────────────┤
+│                Next.js 前端 (React 19)                    │
+│   UI 组件 / Zustand stores / WebSocket client             │
+│   Tauri 服务的静态 HTML export                            │
+├──────────────────────────────────────────────────────────┤
+│                  Go Backend (:9876)                       │
+│   REST API / WebSocket hub / SQLite / git&amp;worktree 操作  │
+│   Agent 进程管理 / OAuth handlers                        │
+├──────────────────────────────────────────────────────────┤
+│              Agent Runner (Node.js)                       │
+│   Claude Agent SDK wrapper / MCP server / 工具执行       │
+│   每个对话一个进程，在 session worktree 里运行            │
+└──────────────────────────────────────────────────────────┘</code></pre>
+<h2 id="三-关键技术点">三、关键技术点<a class="anchor" href="#三-关键技术点" aria-label="锚点">#</a></h2>
+<h3 id="3-1-数据模型">3.1 数据模型<a class="anchor" href="#3-1-数据模型" aria-label="锚点">#</a></h3>
+<pre><code>Workspace → Session → Conversation → Message</code></pre>
+<ul><li><strong>Workspace</strong> —— 一个本地 git 仓库，包含 settings、branch prefix、custom instructions</li><li><strong>Session</strong> —— 一个 git worktree 隔离的任务，含 branch / priority / status / PR 跟踪</li><li><strong>Conversation</strong> —— 一个会话内的对话，类型分 <code>task</code>（全工具）/ <code>review</code>（代码评审）/ <code>chat</code>（普通聊天）</li><li><strong>Message</strong> —— 一条消息，含 role（<code>user</code>/<code>assistant</code>/<code>system</code>）、content blocks、tool calls、token 用量</li></ul>
+<h3 id="3-2-provider-两层抽象">3.2 Provider 两层抽象<a class="anchor" href="#3-2-provider-两层抽象" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript"><span class="hljs-comment">// Go 端：轻量 AI 任务</span>
+<span class="hljs-keyword">type</span> <span class="hljs-title class_">Provider</span> <span class="hljs-keyword">interface</span> {
+    <span class="hljs-title class_">Generate</span>(ctx, prompt) (<span class="hljs-built_in">string</span>, error)
+}
+
+<span class="hljs-comment">// Agent Runner 端：重型 agent 工作</span>
+<span class="hljs-comment">// stdio JSON 协议，每条对话一个进程</span>
+<span class="hljs-keyword">type</span> <span class="hljs-title class_">AgentRunner</span> <span class="hljs-keyword">interface</span> {
+    <span class="hljs-title class_">Query</span>(prompt, opts) &lt;-chan <span class="hljs-title class_">StreamEvent</span>
+}</code></pre>
+<p><strong>给 khy-os 的启示</strong>：</p>
+<ul><li>khy-os 当前没有 Go 后端，<strong>不需要照抄这层</strong></li><li>但&quot;<strong>Provider 两层抽象</strong>&quot;的思路值得借鉴——khy-os 的轻量任务（PR 描述生成、对话摘要）走 <code>services/backend/src/services/</code>，重型任务（编码/工具调用）走 <code>services/backend/src/services/gateway/aiGateway.js</code></li></ul>
+<h3 id="3-3-process-per-conversation">3.3 Process-per-conversation<a class="anchor" href="#3-3-process-per-conversation" aria-label="锚点">#</a></h3>
+<p>每个 AI conversation 跑在独立 Node.js 进程里，自然隔离 + 可杀。Go 后端 spawn agent-runner，agent-runner 在 session 的 git worktree 里运行。</p>
+<p><strong>给 khy-os 的启示</strong>：</p>
+<ul><li>khy-os 当前是&quot;一个长寿命 backend 进程服务所有对话&quot;——<strong>对于纯 AI 对话够用</strong></li><li>但对于&quot;重型编码 / 长任务&quot;可以借鉴进程隔离</li><li><strong>也可以不抄</strong>——进程多了反而调度复杂</li></ul>
+<h3 id="3-4-通信协议">3.4 通信协议<a class="anchor" href="#3-4-通信协议" aria-label="锚点">#</a></h3>
+<pre><code>Frontend ←──HTTP/WS──→ Go Backend ←──stdin/stdout──→ Agent Runner
+   │                       │                              │
+   │  REST: CRUD ops       │  为每个对话 spawn 进程       │  Claude Agent SDK
+   │  WebSocket: streaming │  在 session 的 worktree 里   │  query() + hooks</code></pre>
+<p><strong>给 khy-os 的启示</strong>：</p>
+<ul><li>khy-os 已经是 <code>WebSocket: streaming</code>（<code>server.js:1334-1414</code>），结构一致</li><li>ChatML 的 &quot;Agent Runner 接收 stdio JSON 协议&quot; 给&quot;如何把 LLM 调用从单一 gateway 拆出&quot;提供了思路</li></ul>
+<h3 id="3-5-静态前端-export">3.5 静态前端 export<a class="anchor" href="#3-5-静态前端-export" aria-label="锚点">#</a></h3>
+<blockquote><p>&quot;Next.js generates static HTML that Tauri serves directly, avoiding the need for a separate web server process.&quot;</p></blockquote>
+<p><strong>给 khy-os 的启示</strong>：</p>
+<ul><li>khy-os 当前是&quot;Web SPA + 后端托管 dist&quot;</li><li>桌面壳改造时<strong>保留这种形态</strong>——<code>vite build</code> → <code>dist/</code> → 桌面壳加载 <code>file://</code> 或 <code>http://localhost:3000</code></li><li>静态 export 不是必须的，但能减少一项运行依赖</li></ul>
+<h3 id="3-6-stronghold-凭据存储">3.6 Stronghold 凭据存储<a class="anchor" href="#3-6-stronghold-凭据存储" aria-label="锚点">#</a></h3>
+<p>Tauri 官方推荐的&quot;安全本地凭据存储&quot;方案。API key 等敏感数据 AES-256-GCM 加密后存到本地。</p>
+<p><strong>给 khy-os 的启示</strong>：</p>
+<ul><li>khy-os 现有 <code>~/.khyquant/config.json</code>（明文，已 gitignore）</li><li>如果走 Tauri，<strong>应该把 API key 改存到 Stronghold</strong> 而不是明文 JSON</li><li>如果走 Electron，可以用 <code>electron.safeStorage</code>（Windows DPAPI / macOS Keychain / Linux libsecret）</li></ul>
+<h2 id="四-目录结构">四、目录结构<a class="anchor" href="#四-目录结构" aria-label="锚点">#</a></h2>
+<pre><code>chatml/
+├── src/                  # Next.js 前端
+│   ├── app/             # App router pages
+│   ├── components/      # React 组件
+│   │   ├── conversation/  # 对话界面、消息渲染
+│   │   ├── session/       # session 管理 UI
+│   │   ├── settings/      # 设置面板
+│   │   └── workspace/     # 工作区侧栏、仪表盘
+│   ├── hooks/            # 自定义 React hooks
+│   ├── lib/              # API client、工具、类型
+│   └── stores/           # Zustand stores
+├── backend/              # Go 后端
+│   ├── agent/            # agent 进程 spawn / 管理
+│   ├── ai/               # AI provider 接口 + Anthropic client
+│   ├── git/              # git &amp; worktree 操作
+│   ├── server/           # HTTP handlers, WebSocket hub, router
+│   ├── store/            # SQLite 持久化
+│   └── main.go           # 服务入口
+├── agent-runner/         # Claude Agent SDK runner
+│   └── src/
+│       ├── index.ts      # 主入口，SDK hooks
+│       └── mcp/          # 内置 MCP server
+├── src-tauri/            # Tauri 桌面包装
+│   ├── src/              # Rust 源码（main.rs, plugins）
+│   └── tauri.conf.json   # Tauri 配置
+├── docs/                 # 文档
+└── public/               # 静态资源</code></pre>
+<p><strong>给 khy-os 的启示</strong>：</p>
+<ul><li>不需要&quot;Go 后端&quot;层——khy-os 已经有 <code>services/backend</code>（Node.js）</li><li><code>src-tauri/</code> 是关键参考</li><li><code>backend/agent/</code> 模式可以<strong>简化</strong>为 <code>services/backend/src/services/ai/</code> 子模块</li></ul>
+<h2 id="六-与-khy-os-现状对照">六、与 khy-os 现状对照<a class="anchor" href="#六-与-khy-os-现状对照" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>层级</th><th>ChatML</th><th>khy-os</th><th>决策</th></tr></thead><tbody><tr><td>桌面壳</td><td>Tauri 2</td><td>缺</td><td><strong>新建 <code>apps/desktop/src-tauri/</code></strong></td></tr><tr><td>前端框架</td><td>Next.js 15 / React 19</td><td>Vue 3</td><td>保留 Vue（团队熟）</td></tr><tr><td>后端</td><td>Go (REST + WS + SQLite)</td><td>Node.js (Express + ws)</td><td><strong>复用</strong></td></tr><tr><td>Agent</td><td>Node.js + Claude Agent SDK</td><td>Node.js + 多供应商</td><td><strong>复用</strong></td></tr><tr><td>数据</td><td>SQLite</td><td>已有 JSON 文件存储</td><td><strong>保留现状</strong></td></tr><tr><td>凭据</td><td>Tauri Stronghold</td><td>明文 JSON</td><td><strong>改造为加密</strong></td></tr></tbody></table>
+<h2 id="七-本地文件">七、本地文件<a class="anchor" href="#七-本地文件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>来源</th></tr></thead><tbody><tr><td><code>ARCHITECTURE.md</code></td><td><code>ARCHITECTURE.md</code></td></tr></tbody></table>
+<p>抓取自 <a href="https://raw.githubusercontent.com/chatml/chatml/main/ARCHITECTURE.md" target="_blank" rel="noopener">https://raw.githubusercontent.com/chatml/chatml/main/ARCHITECTURE.md</a></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../extensions/scripts/khy-desktop-rd/chatml/ARCHITECTURE.html"><div class="dir">← 上一篇</div><div class="ttl">Architecture（来源：https://raw.githubusercontent.com/chatml/chatml/main/ARCHITECTURE.md）</div></a><a class="next" href="../../../../extensions/scripts/khy-desktop-rd/cmdk/README.html"><div class="dir">下一篇 →</div><div class="ttl">kbar — Cmd+K Command Palette（React）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="extensions/scripts/khy-desktop-rd/chatml/README.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

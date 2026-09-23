@@ -1,3 +1,5 @@
+
+// RULES-REGISTRY: SECURITY-004
 /**
  * Permission Store — profile-aware, persistent permission management.
  *

@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-MONITOR-001] 监控告警规范.md -->
+<title>[DESIGN-MONITOR-001] 监控告警规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-MONITOR-001] 监控告警规范</div>
+      <header class="hero reveal"><h1>[DESIGN-MONITOR-001] 监控告警规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-monitor-001-监控告警规范">[DESIGN-MONITOR-001] 监控告警规范</a></li><li class="lvl-2"><a href="#1-监控概述">1. 监控概述</a></li><li class="lvl-3"><a href="#1-1-监控原则">1.1 监控原则</a></li><li class="lvl-3"><a href="#1-2-监控层次">1.2 监控层次</a></li><li class="lvl-2"><a href="#2-指标收集">2. 指标收集</a></li><li class="lvl-3"><a href="#2-1-基础设施指标">2.1 基础设施指标</a></li><li class="lvl-3"><a href="#2-2-应用指标">2.2 应用指标</a></li><li class="lvl-3"><a href="#2-3-业务指标">2.3 业务指标</a></li><li class="lvl-2"><a href="#3-指标格式">3. 指标格式</a></li><li class="lvl-3"><a href="#3-1-prometheus-格式">3.1 Prometheus 格式</a></li><li class="lvl-3"><a href="#3-2-自定义指标">3.2 自定义指标</a></li><li class="lvl-2"><a href="#4-告警规则">4. 告警规则</a></li><li class="lvl-3"><a href="#4-1-告警级别">4.1 告警级别</a></li><li class="lvl-3"><a href="#4-2-基础设施告警">4.2 基础设施告警</a></li><li class="lvl-3"><a href="#4-3-应用告警">4.3 应用告警</a></li><li class="lvl-3"><a href="#4-4-业务告警">4.4 业务告警</a></li><li class="lvl-2"><a href="#5-告警通知">5. 告警通知</a></li><li class="lvl-3"><a href="#5-1-通知渠道">5.1 通知渠道</a></li><li class="lvl-3"><a href="#5-2-通知配置">5.2 通知配置</a></li><li class="lvl-2"><a href="#6-事件响应">6. 事件响应</a></li><li class="lvl-3"><a href="#6-1-响应流程">6.1 响应流程</a></li><li class="lvl-3"><a href="#6-2-值班制度">6.2 值班制度</a></li><li class="lvl-3"><a href="#6-3-事件记录">6.3 事件记录</a></li><li class="lvl-2"><a href="#7-健康检查">7. 健康检查</a></li><li class="lvl-3"><a href="#7-1-健康检查端点">7.1 健康检查端点</a></li><li class="lvl-3"><a href="#7-2-就绪检查端点">7.2 就绪检查端点</a></li><li class="lvl-2"><a href="#8-日志聚合">8. 日志聚合</a></li><li class="lvl-3"><a href="#8-1-日志收集">8.1 日志收集</a></li><li class="lvl-3"><a href="#8-2-日志查询">8.2 日志查询</a></li><li class="lvl-2"><a href="#9-版本历史">9. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-monitor-001-监控告警规范">[DESIGN-MONITOR-001] 监控告警规范<a class="anchor" href="#design-monitor-001-监控告警规范" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档定义 khy-os 项目的监控告警标准，包括指标收集、告警规则、事件响应等。</p></blockquote>
+<hr>
+<h2 id="1-监控概述">1. 监控概述<a class="anchor" href="#1-监控概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-监控原则">1.1 监控原则<a class="anchor" href="#1-1-监控原则" aria-label="锚点">#</a></h3>
+<ol><li><strong>全面性</strong>：覆盖所有关键组件</li><li><strong>实时性</strong>：实时监控，及时发现问题</li><li><strong>可观测性</strong>：提供足够的上下文信息</li><li><strong>自动化</strong>：自动化告警和响应</li></ol>
+<h3 id="1-2-监控层次">1.2 监控层次<a class="anchor" href="#1-2-监控层次" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>层次</th><th>说明</th></tr></thead><tbody><tr><td>基础设施</td><td>CPU、内存、磁盘、网络</td></tr><tr><td>应用</td><td>响应时间、错误率、吞吐量</td></tr><tr><td>业务</td><td>用户活跃度、核心业务流程</td></tr></tbody></table>
+<hr>
+<h2 id="2-指标收集">2. 指标收集<a class="anchor" href="#2-指标收集" aria-label="锚点">#</a></h2>
+<h3 id="2-1-基础设施指标">2.1 基础设施指标<a class="anchor" href="#2-1-基础设施指标" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>说明</th><th>收集频率</th></tr></thead><tbody><tr><td>cpu_usage</td><td>CPU 使用率</td><td>15s</td></tr><tr><td>memory_usage</td><td>内存使用率</td><td>15s</td></tr><tr><td>disk_usage</td><td>磁盘使用率</td><td>60s</td></tr><tr><td>network_in</td><td>网络入流量</td><td>15s</td></tr><tr><td>network_out</td><td>网络出流量</td><td>15s</td></tr></tbody></table>
+<h3 id="2-2-应用指标">2.2 应用指标<a class="anchor" href="#2-2-应用指标" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>说明</th><th>收集频率</th></tr></thead><tbody><tr><td>request_count</td><td>请求数量</td><td>每次请求</td></tr><tr><td>response_time</td><td>响应时间</td><td>每次请求</td></tr><tr><td>error_count</td><td>错误数量</td><td>每次错误</td></tr><tr><td>active_connections</td><td>活跃连接数</td><td>15s</td></tr></tbody></table>
+<h3 id="2-3-业务指标">2.3 业务指标<a class="anchor" href="#2-3-业务指标" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>说明</th><th>收集频率</th></tr></thead><tbody><tr><td>user_login_count</td><td>用户登录数</td><td>每次登录</td></tr><tr><td>order_count</td><td>订单数量</td><td>每次下单</td></tr><tr><td>api_key_usage</td><td>API Key 使用量</td><td>每次调用</td></tr></tbody></table>
+<hr>
+<h2 id="3-指标格式">3. 指标格式<a class="anchor" href="#3-指标格式" aria-label="锚点">#</a></h2>
+<h3 id="3-1-prometheus-格式">3.1 Prometheus 格式<a class="anchor" href="#3-1-prometheus-格式" aria-label="锚点">#</a></h3>
+<pre><code># HELP http_requests_total Total HTTP requests
+# TYPE http_requests_total counter
+http_requests_total{method=&quot;GET&quot;,path=&quot;/api/users&quot;,status=&quot;200&quot;} 1027
+
+# HELP http_request_duration_seconds HTTP request duration
+# TYPE http_request_duration_seconds histogram
+http_request_duration_seconds_bucket{le=&quot;0.1&quot;} 850
+http_request_duration_seconds_bucket{le=&quot;0.5&quot;} 1000
+http_request_duration_seconds_bucket{le=&quot;1&quot;} 1020
+http_request_duration_seconds_bucket{le=&quot;+Inf&quot;} 1027</code></pre>
+<h3 id="3-2-自定义指标">3.2 自定义指标<a class="anchor" href="#3-2-自定义指标" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> promClient = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;prom-client&#x27;</span>);
+
+<span class="hljs-comment">// 计数器</span>
+<span class="hljs-keyword">const</span> requestCounter = <span class="hljs-keyword">new</span> promClient.<span class="hljs-title class_">Counter</span>({
+  <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;khyos_requests_total&#x27;</span>,
+  <span class="hljs-attr">help</span>: <span class="hljs-string">&#x27;Total requests&#x27;</span>,
+  <span class="hljs-attr">labelNames</span>: [<span class="hljs-string">&#x27;method&#x27;</span>, <span class="hljs-string">&#x27;path&#x27;</span>, <span class="hljs-string">&#x27;status&#x27;</span>]
+});
+
+<span class="hljs-comment">// 直方图</span>
+<span class="hljs-keyword">const</span> responseTimeHistogram = <span class="hljs-keyword">new</span> promClient.<span class="hljs-title class_">Histogram</span>({
+  <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;khyos_response_duration_seconds&#x27;</span>,
+  <span class="hljs-attr">help</span>: <span class="hljs-string">&#x27;Response duration in seconds&#x27;</span>,
+  <span class="hljs-attr">labelNames</span>: [<span class="hljs-string">&#x27;method&#x27;</span>, <span class="hljs-string">&#x27;path&#x27;</span>],
+  <span class="hljs-attr">buckets</span>: [<span class="hljs-number">0.1</span>, <span class="hljs-number">0.5</span>, <span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">5</span>]
+});
+
+<span class="hljs-comment">// 仪表表</span>
+<span class="hljs-keyword">const</span> activeConnectionsGauge = <span class="hljs-keyword">new</span> promClient.<span class="hljs-title class_">Gauge</span>({
+  <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;khyos_active_connections&#x27;</span>,
+  <span class="hljs-attr">help</span>: <span class="hljs-string">&#x27;Active connections&#x27;</span>
+});</code></pre>
+<hr>
+<h2 id="4-告警规则">4. 告警规则<a class="anchor" href="#4-告警规则" aria-label="锚点">#</a></h2>
+<h3 id="4-1-告警级别">4.1 告警级别<a class="anchor" href="#4-1-告警级别" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>级别</th><th>说明</th><th>响应时间</th></tr></thead><tbody><tr><td>P0</td><td>严重</td><td>立即</td></tr><tr><td>P1</td><td>高</td><td>15 分钟</td></tr><tr><td>P2</td><td>中</td><td>1 小时</td></tr><tr><td>P3</td><td>低</td><td>4 小时</td></tr></tbody></table>
+<h3 id="4-2-基础设施告警">4.2 基础设施告警<a class="anchor" href="#4-2-基础设施告警" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-comment"># prometheus/alerts/infrastructure.yml</span>
+<span class="hljs-attr">groups:</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">infrastructure</span>
+    <span class="hljs-attr">rules:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">alert:</span> <span class="hljs-string">HighCPUUsage</span>
+        <span class="hljs-attr">expr:</span> <span class="hljs-string">cpu_usage</span> <span class="hljs-string">&gt;</span> <span class="hljs-number">80</span>
+        <span class="hljs-attr">for:</span> <span class="hljs-string">5m</span>
+        <span class="hljs-attr">labels:</span>
+          <span class="hljs-attr">severity:</span> <span class="hljs-string">warning</span>
+        <span class="hljs-attr">annotations:</span>
+          <span class="hljs-attr">summary:</span> <span class="hljs-string">&quot;High CPU usage detected&quot;</span>
+          <span class="hljs-attr">description:</span> <span class="hljs-string">&quot;CPU usage is above 80% for 5 minutes&quot;</span>
+          
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">alert:</span> <span class="hljs-string">HighMemoryUsage</span>
+        <span class="hljs-attr">expr:</span> <span class="hljs-string">memory_usage</span> <span class="hljs-string">&gt;</span> <span class="hljs-number">85</span>
+        <span class="hljs-attr">for:</span> <span class="hljs-string">5m</span>
+        <span class="hljs-attr">labels:</span>
+          <span class="hljs-attr">severity:</span> <span class="hljs-string">warning</span>
+        <span class="hljs-attr">annotations:</span>
+          <span class="hljs-attr">summary:</span> <span class="hljs-string">&quot;High memory usage detected&quot;</span>
+          
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">alert:</span> <span class="hljs-string">DiskSpaceLow</span>
+        <span class="hljs-attr">expr:</span> <span class="hljs-string">disk_usage</span> <span class="hljs-string">&gt;</span> <span class="hljs-number">90</span>
+        <span class="hljs-attr">for:</span> <span class="hljs-string">5m</span>
+        <span class="hljs-attr">labels:</span>
+          <span class="hljs-attr">severity:</span> <span class="hljs-string">critical</span>
+        <span class="hljs-attr">annotations:</span>
+          <span class="hljs-attr">summary:</span> <span class="hljs-string">&quot;Disk space is running low&quot;</span></code></pre>
+<h3 id="4-3-应用告警">4.3 应用告警<a class="anchor" href="#4-3-应用告警" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-comment"># prometheus/alerts/application.yml</span>
+<span class="hljs-attr">groups:</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">application</span>
+    <span class="hljs-attr">rules:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">alert:</span> <span class="hljs-string">HighErrorRate</span>
+        <span class="hljs-attr">expr:</span> <span class="hljs-string">rate(http_requests_total{status=~&quot;5..&quot;}[5m])</span> <span class="hljs-string">/</span> <span class="hljs-string">rate(http_requests_total[5m])</span> <span class="hljs-string">&gt;</span> <span class="hljs-number">0.05</span>
+        <span class="hljs-attr">for:</span> <span class="hljs-string">5m</span>
+        <span class="hljs-attr">labels:</span>
+          <span class="hljs-attr">severity:</span> <span class="hljs-string">critical</span>
+        <span class="hljs-attr">annotations:</span>
+          <span class="hljs-attr">summary:</span> <span class="hljs-string">&quot;High error rate detected&quot;</span>
+          
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">alert:</span> <span class="hljs-string">SlowResponseTime</span>
+        <span class="hljs-attr">expr:</span> <span class="hljs-string">histogram_quantile(0.95,</span> <span class="hljs-string">rate(http_request_duration_seconds_bucket[5m]))</span> <span class="hljs-string">&gt;</span> <span class="hljs-number">2</span>
+        <span class="hljs-attr">for:</span> <span class="hljs-string">5m</span>
+        <span class="hljs-attr">labels:</span>
+          <span class="hljs-attr">severity:</span> <span class="hljs-string">warning</span>
+        <span class="hljs-attr">annotations:</span>
+          <span class="hljs-attr">summary:</span> <span class="hljs-string">&quot;Slow response time detected&quot;</span>
+          
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">alert:</span> <span class="hljs-string">HighRequestRate</span>
+        <span class="hljs-attr">expr:</span> <span class="hljs-string">rate(http_requests_total[1m])</span> <span class="hljs-string">&gt;</span> <span class="hljs-number">1000</span>
+        <span class="hljs-attr">for:</span> <span class="hljs-string">5m</span>
+        <span class="hljs-attr">labels:</span>
+          <span class="hljs-attr">severity:</span> <span class="hljs-string">warning</span>
+        <span class="hljs-attr">annotations:</span>
+          <span class="hljs-attr">summary:</span> <span class="hljs-string">&quot;High request rate detected&quot;</span></code></pre>
+<h3 id="4-4-业务告警">4.4 业务告警<a class="anchor" href="#4-4-业务告警" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-comment"># prometheus/alerts/business.yml</span>
+<span class="hljs-attr">groups:</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">business</span>
+    <span class="hljs-attr">rules:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">alert:</span> <span class="hljs-string">HighLoginFailureRate</span>
+        <span class="hljs-attr">expr:</span> <span class="hljs-string">rate(login_failures_total[5m])</span> <span class="hljs-string">/</span> <span class="hljs-string">rate(login_attempts_total[5m])</span> <span class="hljs-string">&gt;</span> <span class="hljs-number">0.1</span>
+        <span class="hljs-attr">for:</span> <span class="hljs-string">5m</span>
+        <span class="hljs-attr">labels:</span>
+          <span class="hljs-attr">severity:</span> <span class="hljs-string">warning</span>
+        <span class="hljs-attr">annotations:</span>
+          <span class="hljs-attr">summary:</span> <span class="hljs-string">&quot;High login failure rate&quot;</span></code></pre>
+<hr>
+<h2 id="5-告警通知">5. 告警通知<a class="anchor" href="#5-告警通知" aria-label="锚点">#</a></h2>
+<h3 id="5-1-通知渠道">5.1 通知渠道<a class="anchor" href="#5-1-通知渠道" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>渠道</th><th>说明</th><th>使用级别</th></tr></thead><tbody><tr><td>邮件</td><td>邮件通知</td><td>P2, P3</td></tr><tr><td>短信</td><td>短信通知</td><td>P0, P1</td></tr><tr><td>钉钉</td><td>即时通讯</td><td>P0, P1</td></tr><tr><td>Webhook</td><td>自定义集成</td><td>所有级别</td></tr></tbody></table>
+<h3 id="5-2-通知配置">5.2 通知配置<a class="anchor" href="#5-2-通知配置" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-comment"># alertmanager/config.yml</span>
+<span class="hljs-attr">route:</span>
+  <span class="hljs-attr">group_by:</span> [<span class="hljs-string">&#x27;alertname&#x27;</span>]
+  <span class="hljs-attr">group_wait:</span> <span class="hljs-string">10s</span>
+  <span class="hljs-attr">group_interval:</span> <span class="hljs-string">10s</span>
+  <span class="hljs-attr">repeat_interval:</span> <span class="hljs-string">1h</span>
+  <span class="hljs-attr">receiver:</span> <span class="hljs-string">&#x27;default&#x27;</span>
+  <span class="hljs-attr">routes:</span>
+    <span class="hljs-bullet">-</span> <span class="hljs-attr">match:</span>
+        <span class="hljs-attr">severity:</span> <span class="hljs-string">critical</span>
+      <span class="hljs-attr">receiver:</span> <span class="hljs-string">&#x27;critical&#x27;</span>
+      <span class="hljs-attr">repeat_interval:</span> <span class="hljs-string">5m</span>
+    <span class="hljs-bullet">-</span> <span class="hljs-attr">match:</span>
+        <span class="hljs-attr">severity:</span> <span class="hljs-string">warning</span>
+      <span class="hljs-attr">receiver:</span> <span class="hljs-string">&#x27;warning&#x27;</span>
+
+<span class="hljs-attr">receivers:</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">&#x27;default&#x27;</span>
+    <span class="hljs-attr">email_configs:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">to:</span> <span class="hljs-string">&#x27;ops@example.com&#x27;</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">&#x27;critical&#x27;</span>
+    <span class="hljs-attr">email_configs:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">to:</span> <span class="hljs-string">&#x27;ops@example.com&#x27;</span>
+    <span class="hljs-attr">sms_configs:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">to:</span> <span class="hljs-string">&#x27;+86138xxxx&#x27;</span>
+    <span class="hljs-attr">webhook_configs:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">url:</span> <span class="hljs-string">&#x27;https://oapi.dingtalk.com/robot/send?access_token=xxx&#x27;</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">&#x27;warning&#x27;</span>
+    <span class="hljs-attr">email_configs:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">to:</span> <span class="hljs-string">&#x27;ops@example.com&#x27;</span></code></pre>
+<hr>
+<h2 id="6-事件响应">6. 事件响应<a class="anchor" href="#6-事件响应" aria-label="锚点">#</a></h2>
+<h3 id="6-1-响应流程">6.1 响应流程<a class="anchor" href="#6-1-响应流程" aria-label="锚点">#</a></h3>
+<ol><li><strong>检测</strong>：监控系统检测到异常</li><li><strong>告警</strong>：发送告警通知</li><li><strong>确认</strong>：值班人员确认告警</li><li><strong>处理</strong>：定位并处理问题</li><li><strong>恢复</strong>：确认服务恢复正常</li><li><strong>复盘</strong>：事后复盘总结</li></ol>
+<h3 id="6-2-值班制度">6.2 值班制度<a class="anchor" href="#6-2-值班制度" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>角色</th><th>职责</th></tr></thead><tbody><tr><td>值班工程师</td><td>接收告警，初步处理</td></tr><tr><td>技术负责人</td><td>重大事件决策</td></tr><tr><td>运维负责人</td><td>基础设施问题处理</td></tr></tbody></table>
+<h3 id="6-3-事件记录">6.3 事件记录<a class="anchor" href="#6-3-事件记录" aria-label="锚点">#</a></h3>
+<pre><code class="language-markdown"><span class="hljs-section"># 事件报告</span>
+
+<span class="hljs-section">## 事件概述</span>
+<span class="hljs-bullet">-</span> <span class="hljs-strong">**时间**</span>：2026-09-04 12:00:00
+<span class="hljs-bullet">-</span> <span class="hljs-strong">**级别**</span>：P1
+<span class="hljs-bullet">-</span> <span class="hljs-strong">**影响**</span>：用户无法登录
+
+<span class="hljs-section">## 事件时间线</span>
+<span class="hljs-bullet">-</span> 12:00:00 监控系统检测到登录失败率上升
+<span class="hljs-bullet">-</span> 12:05:00 发送告警通知
+<span class="hljs-bullet">-</span> 12:10:00 值班工程师确认告警
+<span class="hljs-bullet">-</span> 12:30:00 定位问题：数据库连接失败
+<span class="hljs-bullet">-</span> 12:45:00 切换备用数据库
+<span class="hljs-bullet">-</span> 13:00:00 服务恢复正常
+
+<span class="hljs-section">## 根因分析</span>
+数据库主节点故障，导致连接失败。
+
+<span class="hljs-section">## 改进措施</span>
+<span class="hljs-bullet">1.</span> 增加数据库健康检查
+<span class="hljs-bullet">2.</span> 优化自动切换流程</code></pre>
+<hr>
+<h2 id="7-健康检查">7. 健康检查<a class="anchor" href="#7-健康检查" aria-label="锚点">#</a></h2>
+<h3 id="7-1-健康检查端点">7.1 健康检查端点<a class="anchor" href="#7-1-健康检查端点" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// GET /api/health</span>
+app.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/api/health&#x27;</span>, <span class="hljs-title function_">async</span> (req, res) =&gt; {
+  <span class="hljs-keyword">const</span> checks = {
+    <span class="hljs-attr">timestamp</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>().<span class="hljs-title function_">toISOString</span>(),
+    <span class="hljs-attr">uptime</span>: process.<span class="hljs-title function_">uptime</span>(),
+    <span class="hljs-attr">version</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">npm_package_version</span>,
+    <span class="hljs-attr">environment</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">NODE_ENV</span>
+  };
+  
+  <span class="hljs-comment">// 检查数据库</span>
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">await</span> sequelize.<span class="hljs-title function_">authenticate</span>();
+    checks.<span class="hljs-property">database</span> = <span class="hljs-string">&#x27;ok&#x27;</span>;
+  } <span class="hljs-keyword">catch</span> (error) {
+    checks.<span class="hljs-property">database</span> = <span class="hljs-string">&#x27;error&#x27;</span>;
+  }
+  
+  <span class="hljs-comment">// 检查 Redis</span>
+  <span class="hljs-keyword">if</span> (redis) {
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">await</span> redis.<span class="hljs-title function_">ping</span>();
+      checks.<span class="hljs-property">redis</span> = <span class="hljs-string">&#x27;ok&#x27;</span>;
+    } <span class="hljs-keyword">catch</span> (error) {
+      checks.<span class="hljs-property">redis</span> = <span class="hljs-string">&#x27;error&#x27;</span>;
+    }
+  }
+  
+  <span class="hljs-comment">// 判断整体状态</span>
+  <span class="hljs-keyword">const</span> isHealthy = <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">values</span>(checks).<span class="hljs-title function_">every</span>(<span class="hljs-function"><span class="hljs-params">v</span> =&gt;</span> v !== <span class="hljs-string">&#x27;error&#x27;</span>);
+  
+  res.<span class="hljs-title function_">status</span>(isHealthy ? <span class="hljs-number">200</span> : <span class="hljs-number">503</span>).<span class="hljs-title function_">json</span>({
+    <span class="hljs-attr">success</span>: isHealthy,
+    <span class="hljs-attr">data</span>: checks
+  });
+});</code></pre>
+<h3 id="7-2-就绪检查端点">7.2 就绪检查端点<a class="anchor" href="#7-2-就绪检查端点" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// GET /api/ready</span>
+app.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/api/ready&#x27;</span>, <span class="hljs-title function_">async</span> (req, res) =&gt; {
+  <span class="hljs-comment">// 检查应用是否准备好接收流量</span>
+  <span class="hljs-keyword">const</span> isReady = <span class="hljs-keyword">await</span> <span class="hljs-title function_">checkReadiness</span>();
+  
+  res.<span class="hljs-title function_">status</span>(isReady ? <span class="hljs-number">200</span> : <span class="hljs-number">503</span>).<span class="hljs-title function_">json</span>({
+    <span class="hljs-attr">success</span>: isReady,
+    <span class="hljs-attr">message</span>: isReady ? <span class="hljs-string">&#x27;Ready&#x27;</span> : <span class="hljs-string">&#x27;Not ready&#x27;</span>
+  });
+});</code></pre>
+<hr>
+<h2 id="8-日志聚合">8. 日志聚合<a class="anchor" href="#8-日志聚合" aria-label="锚点">#</a></h2>
+<h3 id="8-1-日志收集">8.1 日志收集<a class="anchor" href="#8-1-日志收集" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-comment"># filebeat.yml</span>
+<span class="hljs-attr">filebeat.inputs:</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-attr">type:</span> <span class="hljs-string">log</span>
+    <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
+    <span class="hljs-attr">paths:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">/var/log/khyos/*.log</span>
+    <span class="hljs-attr">json.keys_under_root:</span> <span class="hljs-literal">true</span>
+    <span class="hljs-attr">json.add_error_key:</span> <span class="hljs-literal">true</span>
+
+<span class="hljs-attr">output.elasticsearch:</span>
+  <span class="hljs-attr">hosts:</span> [<span class="hljs-string">&#x27;localhost:9200&#x27;</span>]
+  <span class="hljs-attr">index:</span> <span class="hljs-string">&#x27;khyos-%{+yyyy.MM.dd}&#x27;</span></code></pre>
+<h3 id="8-2-日志查询">8.2 日志查询<a class="anchor" href="#8-2-日志查询" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-comment">// Kibana 查询</span>
+<span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;query&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;bool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;must&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+        <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;match&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;level&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;error&quot;</span> <span class="hljs-punctuation">}</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;range&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;gte&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;now-1h&quot;</span> <span class="hljs-punctuation">}</span> <span class="hljs-punctuation">}</span> <span class="hljs-punctuation">}</span>
+      <span class="hljs-punctuation">]</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+<h2 id="9-版本历史">9. 版本历史<a class="anchor" href="#9-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义监控告警规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 运维团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-MIG-001] 数据迁移规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-MIG-001] 数据迁移规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-MS-001] 微服务通信规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-MS-001] 微服务通信规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-MONITOR-001] 监控告警规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

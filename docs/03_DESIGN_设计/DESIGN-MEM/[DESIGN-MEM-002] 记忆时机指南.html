@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-MEM-002] 记忆时机指南.md -->
+<title>[DESIGN-MEM-002] 记忆时机指南 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-MEM<span class="sep">›</span>[DESIGN-MEM-002] 记忆时机指南</div>
+      <header class="hero reveal"><h1>[DESIGN-MEM-002] 记忆时机指南</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-mem-002-记忆时机指南">[DESIGN-MEM-002] 记忆时机指南</a></li><li class="lvl-2"><a href="#1-记忆创建原则">1. 记忆创建原则</a></li><li class="lvl-3"><a href="#1-1-核心原则">1.1 核心原则</a></li><li class="lvl-3"><a href="#1-2-记忆-vs-忘记">1.2 记忆 vs 忘记</a></li><li class="lvl-2"><a href="#2-最佳记忆时机">2. 最佳记忆时机</a></li><li class="lvl-3"><a href="#2-1-用户交互时">2.1 用户交互时</a></li><li class="lvl-3"><a href="#2-2-项目开发时">2.2 项目开发时</a></li><li class="lvl-3"><a href="#2-3-系统配置时">2.3 系统配置时</a></li><li class="lvl-2"><a href="#3-记忆触发机制">3. 记忆触发机制</a></li><li class="lvl-3"><a href="#3-1-自动触发">3.1 自动触发</a></li><li class="lvl-3"><a href="#3-2-手动触发">3.2 手动触发</a></li><li class="lvl-3"><a href="#3-3-最佳实践">3.3 最佳实践</a></li><li class="lvl-2"><a href="#4-记忆类型选择指南">4. 记忆类型选择指南</a></li><li class="lvl-3"><a href="#4-1-用户类型-user">4.1 用户类型（user）</a></li><li class="lvl-3"><a href="#4-2-反馈类型-feedback">4.2 反馈类型（feedback）</a></li><li class="lvl-3"><a href="#4-3-项目类型-project">4.3 项目类型（project）</a></li><li class="lvl-3"><a href="#4-4-参考类型-reference">4.4 参考类型（reference）</a></li><li class="lvl-2"><a href="#5-记忆生命周期管理">5. 记忆生命周期管理</a></li><li class="lvl-3"><a href="#5-1-记忆保鲜期">5.1 记忆保鲜期</a></li><li class="lvl-3"><a href="#5-2-记忆更新时机">5.2 记忆更新时机</a></li><li class="lvl-3"><a href="#5-3-记忆清理时机">5.3 记忆清理时机</a></li><li class="lvl-2"><a href="#6-记忆质量保证">6. 记忆质量保证</a></li><li class="lvl-3"><a href="#6-1-记忆质量指标">6.1 记忆质量指标</a></li><li class="lvl-3"><a href="#6-2-记忆质量检查">6.2 记忆质量检查</a></li><li class="lvl-3"><a href="#6-3-记忆优化建议">6.3 记忆优化建议</a></li><li class="lvl-2"><a href="#7-常见问题解答">7. 常见问题解答</a></li><li class="lvl-3"><a href="#q1-什么时候应该创建记忆">Q1: 什么时候应该创建记忆？</a></li><li class="lvl-3"><a href="#q2-什么时候不应该创建记忆">Q2: 什么时候不应该创建记忆？</a></li><li class="lvl-3"><a href="#q3-如何避免记忆膨胀">Q3: 如何避免记忆膨胀？</a></li><li class="lvl-3"><a href="#q4-记忆写错了怎么办">Q4: 记忆写错了怎么办？</a></li><li class="lvl-2"><a href="#8-记忆时机检查清单">8. 记忆时机检查清单</a></li><li class="lvl-2"><a href="#9-最佳实践总结">9. 最佳实践总结</a></li><li class="lvl-3"><a href="#9-1-记忆创建">9.1 记忆创建</a></li><li class="lvl-3"><a href="#9-2-记忆管理">9.2 记忆管理</a></li><li class="lvl-3"><a href="#9-3-记忆使用">9.3 记忆使用</a></li><li class="lvl-2"><a href="#10-版本历史">10. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-mem-002-记忆时机指南">[DESIGN-MEM-002] 记忆时机指南<a class="anchor" href="#design-mem-002-记忆时机指南" aria-label="锚点">#</a></h1>
+<blockquote><p>本指南定义何时应该创建记忆、何时不应该创建记忆，以及如何管理记忆生命周期。</p></blockquote>
+<hr>
+<h2 id="1-记忆创建原则">1. 记忆创建原则<a class="anchor" href="#1-记忆创建原则" aria-label="锚点">#</a></h2>
+<h3 id="1-1-核心原则">1.1 核心原则<a class="anchor" href="#1-1-核心原则" aria-label="锚点">#</a></h3>
+<ul><li><strong>价值优先</strong>：只记住对未来有持久价值的信息</li><li><strong>避免冗余</strong>：不重复记录已存在的信息</li><li><strong>及时性</strong>：在信息新鲜时记录，而非事后回忆</li><li><strong>结构化</strong>：使用标准格式，便于检索和管理</li></ul>
+<h3 id="1-2-记忆-vs-忘记">1.2 记忆 vs 忘记<a class="anchor" href="#1-2-记忆-vs-忘记" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>应该记住</th><th>应该忘记</th></tr></thead><tbody><tr><td>用户核心偏好和习惯</td><td>一次性的临时请求</td></tr><tr><td>项目架构和约定</td><td>具体的调试过程细节</td></tr><tr><td>重要的技术决策</td><td>中间的失败尝试</td></tr><tr><td>反复出现的问题模式</td><td>一次性的错误信息</td></tr><tr><td>关键的配置和设置</td><td>临时的测试数据</td></tr></tbody></table>
+<hr>
+<h2 id="2-最佳记忆时机">2. 最佳记忆时机<a class="anchor" href="#2-最佳记忆时机" aria-label="锚点">#</a></h2>
+<h3 id="2-1-用户交互时">2.1 用户交互时<a class="anchor" href="#2-1-用户交互时" aria-label="锚点">#</a></h3>
+<p><strong>时机 1：用户明确表达偏好</strong></p>
+<pre><code>用户：&quot;我喜欢简洁的回复，不要太多解释&quot;
+→ 记忆：用户偏好简洁回复风格</code></pre>
+<p><strong>时机 2：用户纠正 AI 行为</strong></p>
+<pre><code>用户：&quot;不要用英文注释，用中文&quot;
+→ 记忆：代码注释使用中文</code></pre>
+<p><strong>时机 3：用户分享工作习惯</strong></p>
+<pre><code>用户：&quot;我习惯先写测试再写代码&quot;
+→ 记忆：用户采用 TDD 开发方式</code></pre>
+<h3 id="2-2-项目开发时">2.2 项目开发时<a class="anchor" href="#2-2-项目开发时" aria-label="锚点">#</a></h3>
+<p><strong>时机 4：发现项目约定</strong></p>
+<pre><code>发现：项目使用 2 空格缩进，单引号
+→ 记忆：项目代码风格规范</code></pre>
+<p><strong>时机 5：解决复杂问题后</strong></p>
+<pre><code>解决：通过特定配置解决了部署问题
+→ 记忆：部署配置解决方案</code></pre>
+<p><strong>时机 6：重要的技术决策</strong></p>
+<pre><code>决策：选择 PostgreSQL 而非 MySQL
+→ 记忆：数据库选择及原因</code></pre>
+<h3 id="2-3-系统配置时">2.3 系统配置时<a class="anchor" href="#2-3-系统配置时" aria-label="锚点">#</a></h3>
+<p><strong>时机 7：关键配置变更</strong></p>
+<pre><code>变更：修改了 API 端点地址
+→ 记忆：生产环境配置</code></pre>
+<p><strong>时机 8：环境设置完成</strong></p>
+<pre><code>完成：配置了开发环境
+→ 记忆：开发环境搭建步骤</code></pre>
+<hr>
+<h2 id="3-记忆触发机制">3. 记忆触发机制<a class="anchor" href="#3-记忆触发机制" aria-label="锚点">#</a></h2>
+<h3 id="3-1-自动触发">3.1 自动触发<a class="anchor" href="#3-1-自动触发" aria-label="锚点">#</a></h3>
+<p>系统会自动捕获以下模式：</p>
+<ul><li><strong>显式记忆请求</strong>：&quot;记住...&quot;、&quot;请记住&quot;、&quot;remember this&quot;</li><li><strong>稳定偏好表达</strong>：连续 3 次表达相同偏好</li><li><strong>项目约定发现</strong>：检测到代码风格、架构模式</li></ul>
+<h3 id="3-2-手动触发">3.2 手动触发<a class="anchor" href="#3-2-手动触发" aria-label="锚点">#</a></h3>
+<p>使用命令手动创建记忆：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 快速记忆</span>
+/remember 用户偏好简洁回复
+
+<span class="hljs-comment"># 结构化记忆</span>
+/remember --<span class="hljs-built_in">type</span> feedback --name <span class="hljs-string">&quot;回复风格&quot;</span> --desc <span class="hljs-string">&quot;用户偏好简洁回复&quot;</span> 用户希望回复简洁，避免过多解释
+
+<span class="hljs-comment"># 项目记忆</span>
+/remember --<span class="hljs-built_in">type</span> project --name <span class="hljs-string">&quot;代码风格&quot;</span> --desc <span class="hljs-string">&quot;项目代码规范&quot;</span> 使用 2 空格缩进，单引号，分号结尾</code></pre>
+<h3 id="3-3-最佳实践">3.3 最佳实践<a class="anchor" href="#3-3-最佳实践" aria-label="锚点">#</a></h3>
+<p><strong>DO（应该做的）：</strong></p>
+<ul><li>在信息新鲜时立即记录</li><li>使用描述性的名称和摘要</li><li>选择正确的记忆类型</li><li>定期回顾和更新记忆</li></ul>
+<p><strong>DON'T（不应该做的）：</strong></p>
+<ul><li>记录一次性的临时信息</li><li>重复记录已存在的信息</li><li>使用模糊或不完整的描述</li><li>记录过时或不再相关的信息</li></ul>
+<hr>
+<h2 id="4-记忆类型选择指南">4. 记忆类型选择指南<a class="anchor" href="#4-记忆类型选择指南" aria-label="锚点">#</a></h2>
+<h3 id="4-1-用户类型-user">4.1 用户类型（user）<a class="anchor" href="#4-1-用户类型-user" aria-label="锚点">#</a></h3>
+<p><strong>适用场景：</strong></p>
+<ul><li>用户身份信息</li><li>核心偏好和习惯</li><li>长期工作方式</li></ul>
+<p><strong>示例：</strong></p>
+<pre><code class="language-yaml"><span class="hljs-meta">---</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">user-language-preference</span>
+<span class="hljs-attr">description:</span> <span class="hljs-string">用户语言偏好设置</span>
+<span class="hljs-attr">type:</span> <span class="hljs-string">user</span>
+<span class="hljs-attr">tier:</span> <span class="hljs-string">permanent</span>
+<span class="hljs-attr">updated:</span> <span class="hljs-number">2026-09-04T00:00:00.000Z</span>
+<span class="hljs-meta">---
+</span>
+<span class="hljs-comment">## 语言偏好</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">界面语言：简体中文</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">代码注释：中文</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">文档语言：中文</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">交流语言：中文</span></code></pre>
+<h3 id="4-2-反馈类型-feedback">4.2 反馈类型（feedback）<a class="anchor" href="#4-2-反馈类型-feedback" aria-label="锚点">#</a></h3>
+<p><strong>适用场景：</strong></p>
+<ul><li>交互风格偏好</li><li>错误反馈模式</li><li>输出格式要求</li></ul>
+<p><strong>示例：</strong></p>
+<pre><code class="language-yaml"><span class="hljs-meta">---</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">feedback-response-style</span>
+<span class="hljs-attr">description:</span> <span class="hljs-string">回复风格偏好</span>
+<span class="hljs-attr">type:</span> <span class="hljs-string">feedback</span>
+<span class="hljs-attr">tier:</span> <span class="hljs-string">cross_session</span>
+<span class="hljs-attr">updated:</span> <span class="hljs-number">2026-09-04T00:00:00.000Z</span>
+<span class="hljs-meta">---
+</span>
+<span class="hljs-comment">## 回复风格</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">详细程度：简洁</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">格式偏好：列表和代码块</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">语言风格：直接、技术性</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">避免事项：过多解释、情感化表达</span></code></pre>
+<h3 id="4-3-项目类型-project">4.3 项目类型（project）<a class="anchor" href="#4-3-项目类型-project" aria-label="锚点">#</a></h3>
+<p><strong>适用场景：</strong></p>
+<ul><li>项目架构和约定</li><li>技术栈选择</li><li>开发流程</li></ul>
+<p><strong>示例：</strong></p>
+<pre><code class="language-yaml"><span class="hljs-meta">---</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">project-khy-os-architecture</span>
+<span class="hljs-attr">description:</span> <span class="hljs-string">khy-os</span> <span class="hljs-string">项目架构约定</span>
+<span class="hljs-attr">type:</span> <span class="hljs-string">project</span>
+<span class="hljs-attr">tier:</span> <span class="hljs-string">cross_session</span>
+<span class="hljs-attr">updated:</span> <span class="hljs-number">2026-09-04T00:00:00.000Z</span>
+<span class="hljs-meta">---
+</span>
+<span class="hljs-comment">## 项目架构</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">目录结构：L0-L6</span> <span class="hljs-string">分层架构</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">代码风格：2</span> <span class="hljs-string">空格缩进，单引号</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">命名规范：camelCase（JS），snake_case（Python）</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">错误处理：try/catch</span> <span class="hljs-string">+</span> <span class="hljs-string">printError()</span></code></pre>
+<h3 id="4-4-参考类型-reference">4.4 参考类型（reference）<a class="anchor" href="#4-4-参考类型-reference" aria-label="锚点">#</a></h3>
+<p><strong>适用场景：</strong></p>
+<ul><li>外部资源链接</li><li>API 文档</li><li>知识库引用</li></ul>
+<p><strong>示例：</strong></p>
+<pre><code class="language-yaml"><span class="hljs-meta">---</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">reference-api-documentation</span>
+<span class="hljs-attr">description:</span> <span class="hljs-string">关键</span> <span class="hljs-string">API</span> <span class="hljs-string">文档链接</span>
+<span class="hljs-attr">type:</span> <span class="hljs-string">reference</span>
+<span class="hljs-attr">tier:</span> <span class="hljs-string">cross_session</span>
+<span class="hljs-attr">updated:</span> <span class="hljs-number">2026-09-04T00:00:00.000Z</span>
+<span class="hljs-meta">---
+</span>
+<span class="hljs-comment">## API 文档</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">OpenAI</span> <span class="hljs-string">API：https://platform.openai.com/docs</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">Anthropic</span> <span class="hljs-string">API：https://docs.anthropic.com</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">khy-os</span> <span class="hljs-string">内部</span> <span class="hljs-string">API：./docs/api/</span></code></pre>
+<hr>
+<h2 id="5-记忆生命周期管理">5. 记忆生命周期管理<a class="anchor" href="#5-记忆生命周期管理" aria-label="锚点">#</a></h2>
+<h3 id="5-1-记忆保鲜期">5.1 记忆保鲜期<a class="anchor" href="#5-1-记忆保鲜期" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>默认保鲜期</th><th>说明</th></tr></thead><tbody><tr><td>user</td><td>3650 天</td><td>用户身份信息几乎永不过期</td></tr><tr><td>feedback</td><td>540 天</td><td>反馈偏好可能随时间变化</td></tr><tr><td>reference</td><td>365 天</td><td>外部资源可能更新</td></tr><tr><td>project</td><td>180 天</td><td>项目可能重构或迁移</td></tr></tbody></table>
+<h3 id="5-2-记忆更新时机">5.2 记忆更新时机<a class="anchor" href="#5-2-记忆更新时机" aria-label="锚点">#</a></h3>
+<p><strong>需要更新记忆的情况：</strong></p>
+<ul><li>用户偏好发生变化</li><li>项目架构发生重构</li><li>外部资源链接失效</li><li>技术栈发生重大变更</li></ul>
+<p><strong>更新方法：</strong></p>
+<pre><code class="language-bash"><span class="hljs-comment"># 更新现有记忆</span>
+/remember --<span class="hljs-built_in">type</span> feedback --name <span class="hljs-string">&quot;回复风格&quot;</span> --desc <span class="hljs-string">&quot;新的回复风格偏好&quot;</span> 更新后的内容
+
+<span class="hljs-comment"># 或者直接编辑记忆文件</span>
+编辑 .khy/memory/feedback_response-style_xxxxxxxx.md</code></pre>
+<h3 id="5-3-记忆清理时机">5.3 记忆清理时机<a class="anchor" href="#5-3-记忆清理时机" aria-label="锚点">#</a></h3>
+<p><strong>应该清理记忆的情况：</strong></p>
+<ul><li>记忆内容已过时</li><li>记忆信息不再相关</li><li>记忆存在重复</li><li>记忆内容错误</li></ul>
+<p><strong>清理方法：</strong></p>
+<pre><code class="language-bash"><span class="hljs-comment"># 预览清理</span>
+npm run memory:clear
+
+<span class="hljs-comment"># 执行清理</span>
+npm run memory:clear:apply
+
+<span class="hljs-comment"># 恢复误删的记忆</span>
+npm run memory:restore</code></pre>
+<hr>
+<h2 id="6-记忆质量保证">6. 记忆质量保证<a class="anchor" href="#6-记忆质量保证" aria-label="锚点">#</a></h2>
+<h3 id="6-1-记忆质量指标">6.1 记忆质量指标<a class="anchor" href="#6-1-记忆质量指标" aria-label="锚点">#</a></h3>
+<ul><li><strong>准确性</strong>：记忆内容是否正确</li><li><strong>时效性</strong>：记忆是否仍然相关</li><li><strong>完整性</strong>：记忆是否包含足够信息</li><li><strong>唯一性</strong>：记忆是否与其他记忆重复</li></ul>
+<h3 id="6-2-记忆质量检查">6.2 记忆质量检查<a class="anchor" href="#6-2-记忆质量检查" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 检查记忆系统健康状态</span>
+khy memory project
+
+<span class="hljs-comment"># 运行记忆蒸馏（去重和清理）</span>
+khy memory distill
+
+<span class="hljs-comment"># 查看蒸馏报告</span>
+khy memory distill --apply</code></pre>
+<h3 id="6-3-记忆优化建议">6.3 记忆优化建议<a class="anchor" href="#6-3-记忆优化建议" aria-label="锚点">#</a></h3>
+<ol><li><strong>定期回顾</strong>：每月检查一次记忆系统</li><li><strong>及时更新</strong>：发现过时记忆立即更新</li><li><strong>避免冗余</strong>：合并相似记忆，删除重复</li><li><strong>结构化存储</strong>：使用标准格式，便于检索</li></ol>
+<hr>
+<h2 id="7-常见问题解答">7. 常见问题解答<a class="anchor" href="#7-常见问题解答" aria-label="锚点">#</a></h2>
+<h3 id="q1-什么时候应该创建记忆">Q1: 什么时候应该创建记忆？<a class="anchor" href="#q1-什么时候应该创建记忆" aria-label="锚点">#</a></h3>
+<p><strong>A:</strong> 当信息满足以下条件时：</p>
+<ul><li>对未来工作有持久价值</li><li>会反复使用或参考</li><li>不容易从其他地方获取</li><li>代表用户的稳定偏好或项目的关键约定</li></ul>
+<h3 id="q2-什么时候不应该创建记忆">Q2: 什么时候不应该创建记忆？<a class="anchor" href="#q2-什么时候不应该创建记忆" aria-label="锚点">#</a></h3>
+<p><strong>A:</strong> 当信息是：</p>
+<ul><li>一次性的临时请求</li><li>可以从代码或文档中直接获取</li><li>过时或不再相关</li><li>过于具体或细节化</li></ul>
+<h3 id="q3-如何避免记忆膨胀">Q3: 如何避免记忆膨胀？<a class="anchor" href="#q3-如何避免记忆膨胀" aria-label="锚点">#</a></h3>
+<p><strong>A:</strong> 遵循以下原则：</p>
+<ul><li>只记住核心信息，不记录过程细节</li><li>定期运行记忆蒸馏清理过期记忆</li><li>使用结构化格式，避免冗长描述</li><li>合并相似记忆，减少重复</li></ul>
+<h3 id="q4-记忆写错了怎么办">Q4: 记忆写错了怎么办？<a class="anchor" href="#q4-记忆写错了怎么办" aria-label="锚点">#</a></h3>
+<p><strong>A:</strong> 有几种修复方式：</p>
+<ul><li>直接编辑记忆文件</li><li>使用 <code>/remember</code> 命令覆盖</li><li>运行记忆蒸馏清理错误记忆</li><li>从归档中恢复正确的记忆</li></ul>
+<hr>
+<h2 id="8-记忆时机检查清单">8. 记忆时机检查清单<a class="anchor" href="#8-记忆时机检查清单" aria-label="锚点">#</a></h2>
+<p>在创建记忆前，检查以下清单：</p>
+<ul><li>[ ] 信息是否对未来有持久价值？</li><li>[ ] 信息是否会反复使用？</li><li>[ ] 信息是否代表稳定偏好或关键约定？</li><li>[ ] 是否已存在相似记忆？</li><li>[ ] 是否选择了正确的记忆类型？</li><li>[ ] 是否使用了描述性的名称和摘要？</li><li>[ ] 是否在信息新鲜时记录？</li></ul>
+<hr>
+<h2 id="9-最佳实践总结">9. 最佳实践总结<a class="anchor" href="#9-最佳实践总结" aria-label="锚点">#</a></h2>
+<h3 id="9-1-记忆创建">9.1 记忆创建<a class="anchor" href="#9-1-记忆创建" aria-label="锚点">#</a></h3>
+<ol><li><strong>及时性</strong>：在信息新鲜时立即记录</li><li><strong>准确性</strong>：确保记忆内容正确无误</li><li><strong>结构化</strong>：使用标准格式和分类</li><li><strong>描述性</strong>：提供清晰的名称和摘要</li></ol>
+<h3 id="9-2-记忆管理">9.2 记忆管理<a class="anchor" href="#9-2-记忆管理" aria-label="锚点">#</a></h3>
+<ol><li><strong>定期维护</strong>：每月检查记忆系统</li><li><strong>及时更新</strong>：发现过时信息立即更新</li><li><strong>避免冗余</strong>：合并相似记忆，删除重复</li><li><strong>质量保证</strong>：运行蒸馏清理低质量记忆</li></ol>
+<h3 id="9-3-记忆使用">9.3 记忆使用<a class="anchor" href="#9-3-记忆使用" aria-label="锚点">#</a></h3>
+<ol><li><strong>主动回忆</strong>：在需要时主动检索记忆</li><li><strong>上下文关联</strong>：将相关记忆关联起来</li><li><strong>验证准确性</strong>：使用前验证记忆是否仍然有效</li><li><strong>反馈改进</strong>：根据使用效果改进记忆策略</li></ol>
+<hr>
+<h2 id="10-版本历史">10. 版本历史<a class="anchor" href="#10-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义记忆时机指南</td></tr></tbody></table>
+<hr>
+<p><em>本指南由 khy-os 记忆系统设计团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-MEM/[DESIGN-MEM-001] 记忆系统标准规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-MEM-001] 记忆系统标准规范</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-MEM/[DESIGN-MEM-003] 记忆模板库.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-MEM-003] 记忆模板库</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-MEM/[DESIGN-MEM-002] 记忆时机指南.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

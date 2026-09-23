@@ -37,7 +37,7 @@ const CONSUMERS = [
   'composables/useProxies.js',
   'composables/useChatConversations.js',
   'composables/useMarketplace.js',
-  'views/AIMonitor.vue',
+  'views/admin/AIMonitor.vue',
 ];
 
 test('SSOT api/unwrap.js re-exports the browser shared implementation', () => {

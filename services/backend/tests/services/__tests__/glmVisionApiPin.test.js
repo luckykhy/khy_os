@@ -3,7 +3,8 @@
  * glmVisionApiPin 纯叶子测试(node:test)。
  * 覆盖:裸 id 剥前缀、GLM 视觉模型名匹配、门控三态、shouldPin 的与门短路语义。
  */
-const pin = require('../gateway/glmVisionApiPin');
+const pin = require('../../../src/services/gateway/glmVisionApiPin.js');
+const assert = require('node:assert');
 
 describe('Glm Vision Api Pin', () => {
   test('bareModelId 剥掉 provider 前缀并归一小写', () => {

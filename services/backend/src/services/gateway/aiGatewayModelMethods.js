@@ -35,6 +35,7 @@ const { retryWithBackoff, isRetryableError, parseRetryAfter } = require('../retr
 
 const webRelayAdapter = require('./adapters/webRelayAdapter');
 const modelCuration = require('./modelCuration');
+const modelListTruth = require('./modelListTruth');
 
 // Host-internal helpers/consts injected once at host load (see setter). The 6 functions are hoisted
 // declarations on the host; the value deps (adapter-source labels, codex probe prompt) are set-once
@@ -72,6 +73,26 @@ function setAiGatewayModelMethodsDeps(deps = {}) {
   }
   if (deps.CODEX_GENERATION_PROBE_PROMPT !== undefined) {
     CODEX_GENERATION_PROBE_PROMPT = deps.CODEX_GENERATION_PROBE_PROMPT;
+  }
+}
+
+/**
+ * 取「文本里有没有显式调用语法」这一判据(单一真源:`tool/toolCallParser.hasExplicitToolCallSyntax`)。
+ *
+ * 惰性 require 而非静态:toolCallParser 自身要回引 `../gateway/safeJsonParse`,
+ * 静态引入会把本模块接进 gateway ⇄ tool 的 require 链(R3 门禁止新增环成员)。
+ * 取不到 → 返回 null,此时探测只能给出 'native'/'unknown',**永远不会误判成 'text'** ——
+ * 这是刻意的 fail-safe 方向。
+ * @returns {((text: string) => boolean) | null}
+ */
+function _resolveExplicitSyntaxPredicate() {
+  try {
+    const parser = require('../tool/toolCallParser');
+    return typeof parser.hasExplicitToolCallSyntax === 'function'
+      ? parser.hasExplicitToolCallSyntax
+      : null;
+  } catch {
+    return null;
   }
 }
 
@@ -171,7 +192,7 @@ const AIGatewayModelMethods = {
 
     // 3. Capability-based matching via registry
     try {
-      const { TASK_REQUIREMENTS } = require('../capabilityRegistry');
+      const { TASK_REQUIREMENTS } = require('./capabilityRegistry');
       const reqs = TASK_REQUIREMENTS[taskType];
       if (reqs && this._capabilityRegistry) {
         const ranked = this._capabilityRegistry.bestAdaptersFor(reqs, {
@@ -442,6 +463,26 @@ const AIGatewayModelMethods = {
       return statusObj;
     };
 
+    // ── 钉选通道被跳过时的显性标记（2026-09-17「页脚 agnes / 报错 windsurf」事故）──
+    // 本函数在 Tier1 不可用时会**静默**落到 Tier2/3，返回一个「能用的」通道。
+    // 这是对的（状态展示要给出可执行信息），但必须**留下痕迹**：否则页脚会显示
+    // agnes-3.0-flash 而报错写着 windsurf unavailable，用户无从理解二者关系。
+    // 标记由 routeFact 统一消费，页脚据此叠加「钉选通道 X 不可用」告警。
+    // 注意：本函数只读进程内存与已有 detect 缓存，绝不额外触发网络/进程探测。
+    const pinnedSkipped = { active: false, adapter: '' };
+    const annotatePinnedSkip = (skippedKey, statusObj) => {
+      if (!statusObj || typeof statusObj !== 'object' || !skippedKey) {
+        return statusObj;
+      }
+      statusObj.pinnedSkipped = {
+        active: true,
+        adapter: skippedKey,
+        strict: String(process.env.GATEWAY_PREFERRED_STRICT || '').toLowerCase() !== 'false',
+      };
+      return statusObj;
+    };
+    const isPinnedName = (key) => !!preferredAdapter && preferredAdapter !== 'auto' && key === preferredAdapter;
+
     if (!this._initialized) {
       // Quick sync detection (no async needed for status display).
       // Tier 1: env preferred adapter (explicit user intent) > Tier 2: last
@@ -454,17 +495,23 @@ const AIGatewayModelMethods = {
           if (preferredEntry && preferredEntry.adapter.detect()) {
             return attachModelForEntry(preferredEntry.key, preferredEntry.adapter.getStatus());
           }
+          // Tier1 落空——记下被跳过的钉选通道，后续分支返回时挂上标记。
+          pinnedSkipped.active = true;
+          pinnedSkipped.adapter = preferredAdapter;
         }
         const lastVerified = this._getLastVerifiedActiveAdapter();
         if (lastVerified) {
-          return lastVerified;
+          return annotatePinnedSkip(preferredAdapter, lastVerified);
         }
         for (const entry of this._adapters) {
           if (!entry.enabled) {
             continue;
           }
           if (entry.adapter.detect()) {
-            return attachModelForEntry(entry.key, entry.adapter.getStatus());
+            const st = attachModelForEntry(entry.key, entry.adapter.getStatus());
+            return pinnedSkipped.active && !isPinnedName(entry.key)
+              ? annotatePinnedSkip(pinnedSkipped.adapter, st)
+              : st;
           }
         }
       } catch {
@@ -483,13 +530,16 @@ const AIGatewayModelMethods = {
           return attachModelForEntry(entry.key, status);
         }
       }
+      // Tier1 落空（通道未注册 / 未启用 / getStatus 报不可用）——记下被跳过的钉选通道。
+      pinnedSkipped.active = true;
+      pinnedSkipped.adapter = preferredAdapter;
     }
 
     // Tier 2: persisted last-verified model. Only honored when that adapter is
     // enabled AND synchronously re-detects as available right now.
     const lastVerified = this._getLastVerifiedActiveAdapter();
     if (lastVerified) {
-      return lastVerified;
+      return annotatePinnedSkip(pinnedSkipped.adapter, lastVerified);
     }
 
     const recommended = this.getDefaultRouteRecommendation();
@@ -498,7 +548,10 @@ const AIGatewayModelMethods = {
       if (entry) {
         const status = entry.adapter.getStatus();
         if (status.available) {
-          return attachModelForEntry(entry.key, status);
+          return annotatePinnedSkip(
+            pinnedSkipped.adapter,
+            attachModelForEntry(entry.key, status)
+          );
         }
       }
     }
@@ -509,7 +562,10 @@ const AIGatewayModelMethods = {
       }
       const status = entry.adapter.getStatus();
       if (status.available) {
-        return attachModelForEntry(entry.key, status);
+        return annotatePinnedSkip(
+          pinnedSkipped.adapter,
+          attachModelForEntry(entry.key, status)
+        );
       }
     }
     return null;
@@ -740,11 +796,35 @@ const AIGatewayModelMethods = {
    * unlocks several models for a provider; those user-added ids surface through
    * this single point. applyOverrides is pure/idempotent, so the management
    * server re-applying it for verify-status projection stays correct.
+   *
+   * 真值收敛([DESIGN-ARCH-100]):适配器返回的只是**候选池**——上游 remote 记录与静态目录、
+   * 本机扫描、env 逗号串混在一个数组里。默认在此收敛成**真值表**:上游权威覆盖律 + 形态律 +
+   * 实测律(见 modelListTruth)。这是全仓唯一咽喉点,所有消费方(web / TUI / 经典 CLI /
+   * 启动选择器 / arena / 子 agent 选模型)一次收口,不必各自再判一次。
+   *
+   * 需要看到**全量**的管理面(模型增删改 / 逐条探活)显式传 `{ unfiltered: true }` ——
+   * 用户得能看见才能隐藏/改名/删除,那是管理意图,不是「是否可调用」的结论。
+   *
+   * @param {string} adapterKey
+   * @param {{unfiltered?: boolean}} [opts]
    */
-  async listModels(adapterKey) {
+  async listModels(adapterKey, opts = {}) {
     const adapter = this.getAdapter(adapterKey);
     const raw = adapter?.listModels ? await adapter.listModels() : [];
-    return modelCuration.applyOverrides(adapterKey, Array.isArray(raw) ? raw : []);
+    const curated = modelCuration.applyOverrides(adapterKey, Array.isArray(raw) ? raw : []);
+    if (opts && opts.unfiltered === true) {
+      return curated;
+    }
+    // fail-soft:真值层故障 / 门控关 → 原样返回 curated,绝不因收敛层问题清空列表。
+    try {
+      const verdict = modelListTruth.filterByUpstreamAuthority(curated, {
+        adapterKey: String(adapterKey || ''),
+        verifyStatusOf: (key, modelId) => modelCuration.getVerifyStatus(key, modelId),
+      });
+      return Array.isArray(verdict && verdict.models) ? verdict.models : curated;
+    } catch {
+      return curated;
+    }
   },
 
   /**
@@ -832,9 +912,16 @@ const AIGatewayModelMethods = {
    *
    * Mirrors verifyModel: a single strict, non-fallback generation — but it ships a
    * trivial tool and asks the model to call it, then interprets the result via
-   * toolCallingProbe (native tool_calls observed → 'native'; text-only → 'text';
-   * failure/empty → 'unknown', not recorded). `_toolCapProbe:true` makes the strip
-   * gates keep the tools on the wire and prevents recursive background probing.
+   * toolCallingProbe. `_toolCapProbe:true` makes the strip gates keep the tools on
+   * the wire and prevents recursive background probing.
+   *
+   * 裁决门槛(2026-09-23 修订):负向裁决 'text' 只在**确证**时给出 —— 正文里出现显式
+   * 调用语法(判据复用 toolCallParser)。「回了散文」「被截断」「空」「失败」一律
+   * 'unknown' 不落库。旧实现把散文也算作 text,产出了 `gpt-4o → text` 这类假阴性,
+   * 且因为剥离门会把 tools 删掉,该误判无法再被现实推翻(见 BUG-014)。
+   *
+   * 对照组:主组**失败**时补一次「同提示词、不带 tools」。两者对照可把「通道拒绝 tools」
+   * (A 败 B 成 → 'route-rejects-tools',属通道属性,不按模型键落库)从「模型不支持」里分开。
    *
    * @param {string} adapterKey
    * @param {string} modelId
@@ -918,14 +1005,16 @@ const AIGatewayModelMethods = {
     );
     const t0 = Date.now();
     try {
-      const result = await this.generate(probe.PROBE_PROMPT, {
+      const groupA = await this.generate(probe.PROBE_PROMPT, {
         preferredAdapter: key,
         preferredModel: model,
         model,
         preferredStrict: true,
         maxTotalAttempts: 1,
         maxRetryDelayBudgetMs: 1000,
-        maxTokens: 64,
+        // 64 太小:模型先输出一句客套话就吃光预算,tool_call 来不及生成,于是观测到
+        // 「没有 tool_calls」——但那是输出预算造成的,不是能力造成的(假阴性的来源之一)。
+        maxTokens: 256,
         temperature: 0,
         top_p: 1,
         thinking: false,
@@ -936,16 +1025,56 @@ const AIGatewayModelMethods = {
         tools: [probe.TRIVIAL_TOOL],
         _toolCapProbe: true,
       });
-      const { verdict } = probe.interpretProbeResult(result);
+
+      // 判据必须用与运行时**同一个**解析器(toolCallParser)来认「显式调用语法」——
+      // 另写一套正则就会与方言漂移:解析器认识的方言,判据不认 → 该模型被误判为不支持。
+      const syntaxOpts = { hasExplicitToolCallSyntax: _resolveExplicitSyntaxPredicate() };
+
+      // 对照组:仅在主组**失败**时补一次「同提示词、不带 tools」。它唯一的作用是把
+      // 「通道拒绝 tools」从「模型不支持」里分出来;A 已有结论时不必多花一次请求。
+      let groupB = null;
+      if (probe.needsControlGroup(groupA, syntaxOpts)) {
+        try {
+          groupB = await this.generate(probe.PROBE_PROMPT, {
+            preferredAdapter: key,
+            preferredModel: model,
+            model,
+            preferredStrict: true,
+            maxTotalAttempts: 1,
+            maxRetryDelayBudgetMs: 1000,
+            maxTokens: 256,
+            temperature: 0,
+            top_p: 1,
+            thinking: false,
+            timeoutMs,
+            firstResponseTimeoutMs: timeoutMs,
+            disableProviderFallback: true,
+            strictAutoRelaxOnProcess: false,
+            _toolCapProbe: true,
+          });
+        } catch {
+          /* 对照组失败 → 与「未跑」同义,不下结论 */
+          groupB = null;
+        }
+      }
+
+      const outcome = probe.interpretProbePair({ a: groupA, b: groupB }, syntaxOpts);
+      const { verdict, reason } = outcome;
       const latencyMs = Date.now() - t0;
       if (verdict === 'native' || verdict === 'text') {
         store.recordVerdict(model, verdict, {
           source: 'probe',
           latencyMs,
           force: !!(opts && opts.force),
+          // 来源(P4):text 是负面证据,只在测出它的那条适配器上生效(getVerdictFor)。
+          // 不记来源就等于把这条负面结论发给所有适配器 —— 那正是 BUG-014 的形态。
+          adapter: key,
         });
       }
-      return { verdict, latencyMs };
+      // 'route-rejects-tools' 刻意**不落库**:它描述的是通道而不是模型。按模型键写下去会让
+      // 一条严格端点的拒绝变成该模型的永久属性,在其他能承载 tools 的通道上也被剥离。
+      // 只回报给调用方/CLI 供排障,落库要等键带上通道身份之后(P4)。
+      return { verdict, reason, latencyMs };
     } catch (err) {
       return { verdict: 'unknown', latencyMs: Date.now() - t0, error: err.message || String(err) };
     }

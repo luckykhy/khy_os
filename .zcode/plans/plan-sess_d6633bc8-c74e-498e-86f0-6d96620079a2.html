@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: plan-sess_d6633bc8-c74e-498e-86f0-6d96620079a2.md -->
+<title>计划：新增 [DESIGN-LAY-002] 目录层级与文件归类规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>.zcode<span class="sep">›</span>plans<span class="sep">›</span>计划：新增 [DESIGN-LAY-002] 目录层级与文件归类规范</div>
+      <header class="hero reveal"><h1>计划：新增 [DESIGN-LAY-002] 目录层级与文件归类规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#计划-新增-design-lay-002-目录层级与文件归类规范">计划：新增 `[DESIGN-LAY-002]` 目录层级与文件归类规范</a></li><li class="lvl-2"><a href="#结论先行">结论先行</a></li><li class="lvl-2"><a href="#一-新建规范正文">一、新建规范正文</a></li><li class="lvl-2"><a href="#二-配套修改-缺一不可">二、配套修改（缺一不可）</a></li><li class="lvl-2"><a href="#三-生成与验证">三、生成与验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="计划-新增-design-lay-002-目录层级与文件归类规范">计划：新增 <code>[DESIGN-LAY-002]</code> 目录层级与文件归类规范<a class="anchor" href="#计划-新增-design-lay-002-目录层级与文件归类规范" aria-label="锚点">#</a></h1>
+<h2 id="结论先行">结论先行<a class="anchor" href="#结论先行" aria-label="锚点">#</a></h2>
+<p>用户要的这份规则，<strong>大部分骨架已存在</strong>（<code>[DESIGN-ARCH-068]</code> 定 L0–L6 与依赖边、<code>[MGMT-STD-001]</code> 定文档编号、<code>[DESIGN-DOC-001]</code>/<code>[DESIGN-NAM-001]</code> 定文件名），真正的空白只有四个：①公共 vs 私有边界（仓库里从未定义过，连「私有目录」四个字都不在 docs 里）②分层→命名风格映射 ③文件归类标准（哪些扩展名能落在哪一层）④完整的典型目录树示例（README 只画到 4 个顶层目录）。</p>
+<p>因此做法不是再立一套平行真源，而是<strong>在 <code>_规范/</code> 下用既有 LAY 域码新增一篇规范</strong>，显式声明「层级 SSOT 仍归 ARCH-068，本文只补正交维度」，并把四个空白写满、附冲突裁决。落位已按你选定的方案。</p>
+<hr>
+<h2 id="一-新建规范正文">一、新建规范正文<a class="anchor" href="#一-新建规范正文" aria-label="锚点">#</a></h2>
+<p><strong>文件</strong>：<code>docs/_规范/[DESIGN-LAY-002] 目录层级与文件归类规范.md</code></p>
+<p>选 <code>DESIGN-LAY-002</code> 的依据：<code>DESIGN-LAY-001</code>（后端分层架构规范）开篇即声明「ARCH-068 §4 已定义仓库七层模型，本文档聚焦 L2 内部」，且索引里记录了它从 <code>DESIGN-ARCH-082</code> 改号迁入 <code>_规范</code> 的先例——说明团队已在主动把规范味文档迁出 ARCH 序列。同域同族、编号顺接，且 <code>MGMT-STD-008 §3.1</code> 明确 <code>LAYOUT</code> 域职责就是「目录层级、依赖方向、根/任务入口命名、文件规模上限」，P1 档示例也直接写了「布局层级」。</p>
+<p>章节骨架：</p>
+<ol><li><strong>定位与边界</strong> — 一句话用途 + 一张 SSOT 指针表（层级→ARCH-068、文档编号→MGMT-STD-001 §2.3、文件名→DESIGN-DOC-001 §2 / DESIGN-NAM-001 §10.1、后端内部分层→DESIGN-LAY-001、扩展包布局→ARCH-069）。按 <code>MGMT-STD-008 §3.2</code>「跨域引用用 ID，不抄正文」，只放指针和摘要。</li><li><strong>第 4 轴：公共 / 内部 / 私有</strong>（与 L0–L6 正交，这是新增轴，必须写明正交关系而非细化）<ul><li><code>PUB</code> 共享：跨层可依赖，<strong>必须</strong>是 pnpm workspace 包且 <code>&quot;private&quot;: true</code>。仓库现状登记：只有 <code>@khy/shared</code>（<code>platform/packages/shared</code>，v1.6.5）与 <code>@khy/ui-shared</code>（v0.1.0）两个，且 <code>@khy/shared</code> 的 <code>src/index.js</code> 头部注释是仓库里唯一一处「谁可以依赖我」的声明。</li><li><code>INT</code> 内部：仅同层可依赖。</li><li><code>PRV</code> 私有：仅同包可依赖，命名信号为 <code>_</code> 前缀或 <code>__tests__</code>。</li><li>四问判定树 + 三张清单：现有 PUB 清单 / 私有反例清单（<code>services/backend/vendor/shared</code> 构建期镜像、<code>services/backend/src/services/_llmDecomposer.js</code>、<code>platform/khy_platform/_bootstrap.py</code>、<code>kernel/moonbit/_build/</code>、<code>.khyos/deadcode-quarantine/</code>）/ 应下沉清单（引用 ARCH-068 §2.1② 已点名的 8 个纯函数）。</li><li><strong><code>_</code> 前缀三义冲突裁定</strong>：现状同一个前缀同时表示「跨阶段轴」（ARCH-068 §3.1 明确「不是隐藏或不重要」）、「模块私有」（<code>_bootstrap.py</code>）、「临时草稿」（<code>khy-Trajectory/_probe*.txt</code>）。裁定：跨阶段轴仅适用于 <code>docs/</code> 顶层，代码树内 <code>_</code> 一律表示 PRV，临时草稿不得进入 docs 正文层级。</li></ul></li><li><strong>分层 → 命名映射表</strong> — L0–L6 + 横切各自的语言轴与命名风格：L0 <code>kernel/</code>（C/asm，snake_case）、L1 <code>platform/khy_platform</code>（Python，snake_case）、L2 <code>services/</code>（JS CommonJS，camelCase，实测基线 6622 个 <code>.js</code>）、L3/L4 前端（Vue/TS，camelCase 目录）、L5 <code>extensions/&lt;分类&gt;/&lt;id&gt;/</code>（<code>id</code> 必须等于叶子目录名，ARCH-069 约束，<code>MAX_DEPTH=2</code>）、L6 <code>tools/</code>、横切 <code>scripts/</code>。每行注明「真源」列，避免被误读为替代 NAM-001。</li><li><strong>文件归类标准</strong> — 扩展名 → 允许层级矩阵（<code>.js</code>/<code>.mjs</code>/<code>.cjs</code>/<code>.ts</code>/<code>.tsx</code>/<code>.vue</code>/<code>.py</code>/<code>.c</code>/<code>.h</code>/<code>.asm</code>/<code>.mbt</code>/<code>.md</code>+<code>.html</code> 孪生/<code>.json</code> 配置/<code>.bat</code>+<code>.ps1</code>+<code>.sh</code> 三档 launcher 放置），产物与源码分界（指向 ARCH-068 §1.3 <code>GENERATED_TOP_LEVEL_DIRS</code>），草稿与产物分界（<code>_产物/</code> 已冻结语义）。</li><li><strong>完整典型目录树示例</strong> — 覆盖全部 L0–L6 + 横切层 + docs 两轴，每个节点一行职责注释，每个节点同时标注「层」（L0–L6/横切）与「可见性」（PUB/INT/PRV）。树形按 ARCH-068 §1.2 的 <code>CROSSCUTTING</code> 集合核对，不引入任何未登记的顶层目录。</li><li><strong>冲突裁决</strong>（按 <code>MGMT-STD-008 §2.2</code> 裁决算法逐条给出，含优先级与理由）<ul><li>①HTML 孪生：裁定「<code>.md</code> 必有同名 <code>.html</code> 且纳入版本控制」，依据 <code>OPS-MAN-169 §2.5</code> + <code>verify_docs_site.js</code> 硬门 + git 实际跟踪 463 个 docs <code>.html</code>；同时修正已失效的 <code>[DESIN-DOC-001]</code> §6（见下）。</li><li>②JS 文件命名：裁定 camelCase 优先，不追溯改名存量。</li><li>③<code>_source/</code> 注册表幻影：裁定已废弃未落地。</li></ul></li><li><strong>可追溯表</strong> — 每条规则 ← 覆盖它的既有守卫，未覆盖者标注「人工评审」。遵守你选定的「不加新守卫」：只读引用，不新增 <code>scripts/ci/</code> 文件。</li><li><strong>例外与豁免</strong> / <strong>9. 版本记录</strong>。</li></ol>
+<p><strong>元规则合规点（必须写进正文，否则会被判 CP-6 违规）</strong>：<code>[MGMT-STD-001]</code> §2.3 / CP-6 明文禁止在任何规范或提示词里写死编号格式。所以本文<strong>只规定目录名的风格族</strong>（camelCase / snake_case / kebab-case 的适用语言轴），<strong>不规定</strong> docs 内的 <code>[STAGE-TYPE-NUMBER]</code> 编号格式、不规定索引文件前缀；第 5 节的树必须显式标注「示例，非强制格式」，docs 侧编号一律指向 MGMT-STD-001 §2.3 由执行 AI 动态决策。</p>
+<h2 id="二-配套修改-缺一不可">二、配套修改（缺一不可）<a class="anchor" href="#二-配套修改-缺一不可" aria-label="锚点">#</a></h2>
+<ol><li><code>docs/_规范/00_INDEX_规范-总目录.md</code> — §二「文件清单（按域分组）」LAY 组下补一行（参照 <code>DESIGN-LAY-001</code> 那行的写法）。CP-3 强制。</li><li><code>docs/_规范/[DESIGN-INDEX-001] 规范索引.md</code> — §1 情景速查补一行「放新文件前看哪篇」，§2 分域清单补一行。</li><li><code>docs/00_INDEX_文档索引.md</code> — <code>_规范</code> 分区补一行 + 更新顶部计数。</li><li><code>docs/_规范/RULES-REGISTRY.json</code> — 新增 <code>LAYOUT-001</code> 条目，按 <code>MGMT-STD-008 §1.1</code> 填满 15 个必填字段（<code>domain: &quot;LAYOUT&quot;</code>、<code>priority: &quot;P1&quot;</code>、<code>status: &quot;active&quot;</code>、<code>nature</code>、<code>trigger</code>、<code>constraint</code>、<code>grants</code>、<code>benefit</code>、<code>exception</code>、<code>version</code>、<code>ssot</code>、<code>owner</code> 等）。<code>LAYOUT</code> 在 <code>check-gov-rules.js</code> 的 <code>RULE_DOMAINS</code> 白名单内，字段缺失或权力无约束边界配对会被 GOV-TOOL-006 直接判违规。</li><li><code>docs/_规范/[DESIGN-DOC-001] 文档结构规范.md</code> §6 — 删除「HTML 为导出格式，不纳入版本控制」及那段不存在的 gitignore 片段，改为指向 <code>OPS-MAN-169 §2.5</code> 与 <code>verify_docs_site.js</code>，并在版本记录注明 2026-09-15 裁决。这是你选定「修正明确失效项」中确认的唯一一处过时条文修正。</li></ol>
+<p><strong>第 6 项（可选但建议，与前三项独立可拆开）</strong>：<code>_source/</code> 幻影注册。<code>ARCH-068 §1.4</code> 明文「只改脚本不改本文即视为违规」，反过来只改本文不改脚本同样是文档/守卫分叉。若要清干净，必须三处同步：ARCH-068 §1.2 表格删行 + <code>scripts/ci/check-repo-layout.js</code> 的 <code>CROSSCUTTING</code> 删除 <code>_source</code> 键 + <code>scripts/ci/repo-layout-baseline.json</code> 删对应字段。改动极小但触及守卫代码，故单独列为可选项。</p>
+<p><strong>不做的事</strong>：不新增 <code>scripts/ci/</code> 守卫；不重命名任何存量文件（<code>kebab-case</code> 分歧只裁定不追溯）；不改 <code>check-repo-layout.js</code> 的规则集（除非做第 6 项）；不动 ARCH-068 的层级表本身。</p>
+<h2 id="三-生成与验证">三、生成与验证<a class="anchor" href="#三-生成与验证" aria-label="锚点">#</a></h2>
+<pre><code>npm run docs:build          # 生成 .html 孪生（不手写 HTML）
+npm run docs:verify         # 孪生齐全 + 本地链接可解析，红灯即非零退出
+npm run check:layout        # root-whitelist / layer-registry / docs-index-* 不得新增命中
+npm run check:gov-rules     # RULES-REGISTRY.json 新条目字段与配对铁律校验
+npm run check:structure     # 上述两项 + 其余 11 个守卫的完整链</code></pre>
+<p>验收标准：五条命令全部 exit 0；<code>check:layout</code> 的各 warning 计数不高于 <code>repo-layout-baseline.json</code> 现有值（当前全 0）；新 <code>.md</code> 有同名 <code>.html</code> 且被 git 跟踪；三处索引均含新条目。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../.zcode/plans/plan-sess_aae180ad-5e73-48dc-8e06-651b932f3bf9.html"><div class="dir">← 上一篇</div><div class="ttl">khy-os 不稳定因素：先测试、后修复 计划</div></a><a class="next" href="../../.zcode/plans/plan-sess_ee2d7822-39ad-4bb9-92f9-57196682e483.html"><div class="dir">下一篇 →</div><div class="ttl">命令自注册系统 — 渐进迁移方案</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__=".zcode/plans/plan-sess_d6633bc8-c74e-498e-86f0-6d96620079a2.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-FE-002] 前端组件库规范.md -->
+<title>[DESIGN-FE-002] 前端组件库规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-FE<span class="sep">›</span>[DESIGN-FE-002] 前端组件库规范</div>
+      <header class="hero reveal"><h1>[DESIGN-FE-002] 前端组件库规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-fe-002-前端组件库规范">[DESIGN-FE-002] 前端组件库规范</a></li><li class="lvl-2"><a href="#0-子篇索引-细则入口">0. 子篇索引（细则入口）</a></li><li class="lvl-2"><a href="#1-组件库概述">1. 组件库概述</a></li><li class="lvl-3"><a href="#1-1-组件库架构">1.1 组件库架构</a></li><li class="lvl-3"><a href="#1-2-组件分类">1.2 组件分类</a></li><li class="lvl-3"><a href="#1-3-组件命名规范">1.3 组件命名规范</a></li><li class="lvl-2"><a href="#9-版本历史">9. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-fe-002-前端组件库规范">[DESIGN-FE-002] 前端组件库规范<a class="anchor" href="#design-fe-002-前端组件库规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：前端组件库规范的<strong>唯一入口与 scope 裁决真源</strong>。<br><strong>结论</strong>：① 组件库的目录/命名/分类看 §1；② 开发、API、测试、文档发布、质保五类细则各拆子篇（下表）；③ 本族整体是<strong>目标态</strong>——组件库落地前一切以 <code>[DESIGN-FE-001]</code> 为准。</p>
+<p>⚠️ <strong>状态标注（2026-09-09）——目标态，非现状</strong>：本文描述的 <code>KhyButton</code>/<code>KhyInput</code>/<code>KhyCard</code> 等独立组件库在当前代码中<strong>不存在</strong>。实测现状（[DESIGN-FE-001] §5）：基座是 Element Plus（不重新封装），共享组件仅 <code>KhyPageHeader</code>/<code>KhyEmpty</code>/<code>KhyIcon</code>/<code>LoadErrorBanner</code>/<code>GlobalProgressBar</code>/<code>KhyFloatBall</code> 六个，跨前端共享逻辑走 <code>@khy/ui-shared</code>（纯 JS 原语，无 UI 组件）。<strong>在组件库真正落地前，一切以 [DESIGN-FE-001] 为准</strong>；本文仅在那时才转为生效规范。</p>
+<p><strong>拆分说明（2026-09-18，B7）</strong>：原文 1,490 行，按 <code>[DESIGN-DOC-001]</code> §12 （规范骨架 ≤150 行，超出的细则拆子篇）拆为主篇 + 7 个子篇。原文已按 HK-3 复制留痕至 <code>.khyos/housekeeping/2026-09-17-doc-plan/10_规范/</code>，未删除。</p></blockquote>
+<hr>
+<h2 id="0-子篇索引-细则入口">0. 子篇索引（细则入口）<a class="anchor" href="#0-子篇索引-细则入口" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>子篇</th><th>覆盖</th><th style="text-align:right">行数</th></tr></thead><tbody><tr><td>[<code>[DESIGN-FE-005]</code> 组件开发规范]([DESIGN-FE-005] 组件开发规范.md)</td><td>组件结构 / Props / Events / Slots / 样式五节的写法约束</td><td style="text-align:right">245</td></tr><tr><td>[<code>[DESIGN-FE-006]</code> 组件 API 设计 · 基础组件]([DESIGN-FE-006] 组件API设计-基础组件.md)</td><td>基础组件（Button/Input/Card/Modal 等）的 API 目标态</td><td style="text-align:right">229</td></tr><tr><td>[<code>[DESIGN-FE-007]</code> 组件 API 设计 · 反馈组件]([DESIGN-FE-007] 组件API设计-反馈组件.md)</td><td>反馈组件（Toast/Alert/Skeleton/Empty 等）的 API 目标态</td><td style="text-align:right">237</td></tr><tr><td>[<code>[DESIGN-FE-008]</code> 组件 API 设计 · 数据组件]([DESIGN-FE-008] 组件API设计-数据组件.md)</td><td>数据组件（Table/List/Tree/Chart 等）的 API 目标态</td><td style="text-align:right">156</td></tr><tr><td>[<code>[DESIGN-FE-009]</code> 组件测试规范]([DESIGN-FE-009] 组件测试规范.md)</td><td>单元测试 / 集成测试 / 视觉回归测试三层要求</td><td style="text-align:right">256</td></tr><tr><td>[<code>[DESIGN-FE-010]</code> 组件文档与发布规范]([DESIGN-FE-010] 组件文档与发布规范.md)</td><td>组件文档结构与示例、版本管理、发布流程、CHANGELOG 规范</td><td style="text-align:right">189</td></tr><tr><td>[<code>[DESIGN-FE-011]</code> 组件质量保证规范]([DESIGN-FE-011] 组件质量保证规范.md)</td><td>代码质量、测试覆盖率、性能监控三道质量门</td><td style="text-align:right">96</td></tr></tbody></table>
+<hr>
+<h2 id="1-组件库概述">1. 组件库概述<a class="anchor" href="#1-组件库概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-组件库架构">1.1 组件库架构<a class="anchor" href="#1-1-组件库架构" aria-label="锚点">#</a></h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                    khy-os 组件库架构                          │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              基础组件 (Base Components)              │   │
+│  │  • Button  • Input  • Card  • Modal  • Table        │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              业务组件 (Business Components)          │   │
+│  │  • UserCard  • OrderList  • PaymentForm             │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              布局组件 (Layout Components)            │   │
+│  │  • PageHeader  • Sidebar  • Footer                  │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              反馈组件 (Feedback Components)          │   │
+│  │  • Toast  • Alert  • Skeleton  • Empty              │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘</code></pre>
+<h3 id="1-2-组件分类">1.2 组件分类<a class="anchor" href="#1-2-组件分类" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>分类</th><th>说明</th><th>示例</th></tr></thead><tbody><tr><td><strong>基础组件</strong></td><td>通用 UI 原子组件</td><td>Button, Input, Card, Modal</td></tr><tr><td><strong>业务组件</strong></td><td>特定业务场景组件</td><td>UserCard, OrderList, PaymentForm</td></tr><tr><td><strong>布局组件</strong></td><td>页面布局相关组件</td><td>PageHeader, Sidebar, Footer</td></tr><tr><td><strong>反馈组件</strong></td><td>用户反馈相关组件</td><td>Toast, Alert, Skeleton, Empty</td></tr><tr><td><strong>导航组件</strong></td><td>导航相关组件</td><td>Menu, Breadcrumb, Tabs, Pagination</td></tr><tr><td><strong>数据组件</strong></td><td>数据展示相关组件</td><td>Table, List, Tree, Chart</td></tr></tbody></table>
+<h3 id="1-3-组件命名规范">1.3 组件命名规范<a class="anchor" href="#1-3-组件命名规范" aria-label="锚点">#</a></h3>
+<p><strong>命名规则</strong>：</p>
+<ul><li>使用 PascalCase：<code>KhyButton</code>、<code>KhyCard</code></li><li>以 <code>Khy</code> 前缀标识品牌组件</li><li>使用描述性名称：<code>UserProfileCard</code> 而非 <code>Card1</code></li></ul>
+<p><strong>文件命名</strong>：</p>
+<pre><code>components/
+├── base/
+│   ├── KhyButton.vue
+│   ├── KhyInput.vue
+│   └── KhyCard.vue
+├── business/
+│   ├── UserProfileCard.vue
+│   └── OrderList.vue
+├── layout/
+│   ├── KhyPageHeader.vue
+│   └── KhySidebar.vue
+└── feedback/
+    ├── KhyToast.vue
+    └── KhyAlert.vue</code></pre>
+<hr>
+<hr>
+<h2 id="9-版本历史">9. 版本历史<a class="anchor" href="#9-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义前端组件库规范</td></tr><tr><td>1.1.0</td><td>2026-09-18</td><td>按 <code>[DESIGN-DOC-001]</code> §12 拆分：主篇保留 §1 概述与索引，细则拆为 <code>FE-005</code>~<code>FE-011</code> 七个子篇（B7）</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 前端团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-FE/[DESIGN-FE-001] 前端页面规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-FE-001] 网页端设计规范（实测对齐版）</div></a><a class="next" href="../../../docs/10_规范/DESIGN-FE/[DESIGN-FE-003] 前端快速参考卡.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-FE-003] 前端快速参考卡（实测对齐版）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-FE/[DESIGN-FE-002] 前端组件库规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

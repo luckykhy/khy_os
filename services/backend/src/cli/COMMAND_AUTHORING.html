@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: COMMAND_AUTHORING.md -->
+<title>Command Authoring Guide · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>cli<span class="sep">›</span>Command Authoring Guide</div>
+      <header class="hero reveal"><h1>Command Authoring Guide</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#command-authoring-guide">Command Authoring Guide</a></li><li class="lvl-2"><a href="#the-problem-we-re-solving">The Problem We're Solving</a></li><li class="lvl-2"><a href="#quick-start">Quick Start</a></li><li class="lvl-2"><a href="#manifest-fields">Manifest Fields</a></li><li class="lvl-2"><a href="#handler-signature">Handler Signature</a></li><li class="lvl-2"><a href="#naming-conventions">Naming Conventions</a></li><li class="lvl-2"><a href="#when-not-to-use-self-registration">When NOT to Use Self-Registration</a></li><li class="lvl-2"><a href="#migration-path">Migration Path</a></li><li class="lvl-2"><a href="#schema-auto-supplement">Schema auto-supplement</a></li><li class="lvl-2"><a href="#architecture">Architecture</a></li><li class="lvl-2"><a href="#files">Files</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="command-authoring-guide">Command Authoring Guide<a class="anchor" href="#command-authoring-guide" aria-label="锚点">#</a></h1>
+<blockquote><p>How to add a new CLI command to Khy OS using the self-registration system.</p></blockquote>
+<h2 id="the-problem-we-re-solving">The Problem We're Solving<a class="anchor" href="#the-problem-we-re-solving" aria-label="锚点">#</a></h2>
+<p>Before this system, adding a command meant editing <strong>6 files</strong>:</p>
+<ol><li><code>handlers/yourcmd.js</code> — the implementation</li><li><code>router.js</code> — add a <code>case 'yourcmd':</code> branch</li><li><code>constants/commandSchema.js</code> — add to <code>ROUTER_COMMANDS</code></li><li><code>aliases.js</code> — add Chinese/pinyin aliases</li><li>Possibly <code>routerDispatch*.js</code> — if it belongs to a cluster</li><li>Possibly <code>constants/commandSchema.js</code> → sub-commands</li></ol>
+<p>Now you only need <strong>1 file</strong>: the handler. Aliases declared in the manifest are<br>auto-injected into the alias resolution system — no edit to <code>aliases.js</code> needed.</p>
+<blockquote><p><strong>Alias collision rule</strong>: if a manifest alias collides with an existing static<br>alias in <code>aliases.js</code>, the static alias wins (it may carry <code>subCommand</code> /<br><code>defaultArgs</code> that the manifest form can't express). Choose aliases that don't<br>collide with existing ones.</p></blockquote>
+<h2 id="quick-start">Quick Start<a class="anchor" href="#quick-start" aria-label="锚点">#</a></h2>
+<p>Create <code>handlers/myfeature.js</code>:</p>
+<pre><code class="language-js"><span class="hljs-meta">&#x27;use strict&#x27;</span>;
+
+<span class="hljs-keyword">const</span> { <span class="hljs-variable constant_">MANIFEST_EXPORT_KEY</span> } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../commandManifest&#x27;</span>);
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">handleMyFeature</span>(<span class="hljs-params">parsed, ctx</span>) {
+  <span class="hljs-keyword">const</span> { printSuccess, printInfo } = ctx;
+  <span class="hljs-title function_">printSuccess</span>(<span class="hljs-string">&#x27;Hello from my feature!&#x27;</span>);
+  <span class="hljs-title function_">printInfo</span>(<span class="hljs-string">&#x27;Usage: khy myfeature [args]&#x27;</span>);
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+}
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = {
+  handleMyFeature,
+  [<span class="hljs-variable constant_">MANIFEST_EXPORT_KEY</span>]: {
+    <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;myfeature&#x27;</span>,
+    <span class="hljs-attr">aliases</span>: [<span class="hljs-string">&#x27;mf&#x27;</span>, <span class="hljs-string">&#x27;我的功能&#x27;</span>],
+    <span class="hljs-attr">description</span>: <span class="hljs-string">&#x27;One-line description shown in help&#x27;</span>,
+    <span class="hljs-attr">usage</span>: <span class="hljs-string">&#x27;myfeature [args]&#x27;</span>,
+    <span class="hljs-attr">category</span>: <span class="hljs-string">&#x27;extension&#x27;</span>,
+    <span class="hljs-attr">handler</span>: handleMyFeature,
+  },
+};</code></pre>
+<p>That's it. <code>khy myfeature</code> now works. No router.js edit needed.</p>
+<h2 id="manifest-fields">Manifest Fields<a class="anchor" href="#manifest-fields" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Field</th><th>Required</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>name</code></td><td><strong>yes</strong></td><td>string</td><td>Canonical command name. Must be <code>kebab-case</code> (lowercase a-z, digits, hyphens).</td></tr><tr><td><code>handler</code></td><td><strong>yes</strong></td><td>function</td><td><code>async (parsed, ctx) =&gt; boolean</code> — the dispatch function.</td></tr><tr><td><code>aliases</code></td><td>no</td><td>string[]</td><td>Chinese, pinyin, or English shortcuts.</td></tr><tr><td><code>description</code></td><td>no</td><td>string</td><td>One-line help text.</td></tr><tr><td><code>usage</code></td><td>no</td><td>string</td><td>Usage line shown in help. Defaults to <code>name</code>.</td></tr><tr><td><code>subCommands</code></td><td>no</td><td>string[]</td><td>Valid sub-command names (for validation/help).</td></tr><tr><td><code>category</code></td><td>no</td><td>string</td><td>One of: <code>system</code>, <code>data</code>, <code>trading</code>, <code>ai</code>, <code>dev</code>, <code>workflow</code>, <code>extension</code>. Default: <code>extension</code>.</td></tr></tbody></table>
+<h2 id="handler-signature">Handler Signature<a class="anchor" href="#handler-signature" aria-label="锚点">#</a></h2>
+<pre><code class="language-js"><span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">handler</span>(<span class="hljs-params">parsed, ctx</span>) {
+  <span class="hljs-comment">// parsed: { command, subCommand, args, options, rawCommandToken }</span>
+  <span class="hljs-comment">// ctx: { printError, printHelp, printInfo, printTable, printSuccess, printWarn, withSpinner, chalk, ... }</span>
+
+  <span class="hljs-keyword">const</span> { printSuccess, printInfo } = ctx;
+  <span class="hljs-keyword">const</span> args = parsed.<span class="hljs-property">args</span> || [];
+  <span class="hljs-keyword">const</span> opts = parsed.<span class="hljs-property">options</span> || {};
+
+  <span class="hljs-comment">// Return true on success, false to fall through to AI.</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+}</code></pre>
+<h2 id="naming-conventions">Naming Conventions<a class="anchor" href="#naming-conventions" aria-label="锚点">#</a></h2>
+<ul><li><strong>Command name</strong>: <code>kebab-case</code>, verb prefix preferred (<code>data-fetch</code>, <code>strategy-list</code>, <code>disk-clean</code>)</li><li><strong>Handler function</strong>: <code>handleXxx</code> (camelCase, e.g. <code>handleDataFetch</code>)</li><li><strong>File name</strong>: match the command name (<code>data-fetch.js</code>, not <code>dataFetch.js</code>)</li><li><strong>Aliases</strong>: include at least one Chinese alias for discoverability</li></ul>
+<h2 id="when-not-to-use-self-registration">When NOT to Use Self-Registration<a class="anchor" href="#when-not-to-use-self-registration" aria-label="锚点">#</a></h2>
+<p>The hardcoded switch in <code>router.js</code> still exists and is still valid for:</p>
+<ul><li><strong>Multi-command handlers</strong>: one module that handles several related commands (e.g. <code>gateway</code> with 20+ sub-commands)</li><li><strong>Commands that need inline implementation</strong>: when the case body is &lt; 10 lines and doesn't warrant a separate file</li><li><strong>Commands with complex dispatch logic</strong>: when the routing depends on runtime state beyond <code>parsed</code></li></ul>
+<p>For these, the traditional pattern (add case to switch) still works.</p>
+<h2 id="migration-path">Migration Path<a class="anchor" href="#migration-path" aria-label="锚点">#</a></h2>
+<p>Existing commands can be migrated incrementally:</p>
+<ol><li>Add a manifest export to the handler</li><li>Test that <code>khy &lt;command&gt;</code> works via the auto-registry</li><li>Remove the <code>case</code> branch from <code>router.js</code> (optional — the auto-registry runs first, so the dead case is harmless)</li></ol>
+<h2 id="schema-auto-supplement">Schema auto-supplement<a class="anchor" href="#schema-auto-supplement" aria-label="锚点">#</a></h2>
+<p><code>commandSchema.js</code> (<code>getRouterCommandNames()</code>, <code>getRouterSubCommands()</code>) automatically<br>includes commands and sub-commands declared in manifests. This means:</p>
+<ul><li>New commands appear in fuzzy matching and Tab completion without manual registration</li><li><code>getCommandSchema()</code> (used by lint/test/introspection) includes manifest commands</li><li>Static entries always take precedence; manifest entries fill the gaps</li></ul>
+<h2 id="architecture">Architecture<a class="anchor" href="#architecture" aria-label="锚点">#</a></h2>
+<pre><code>User input → parseInput()
+             → route(command)
+               → dispatchOpsCommand()     (18 ops commands)
+               → dispatchSlashCommand()   (55 slash commands)
+               → dispatchTailCommand()    (38 tail commands)
+               → commandAutoRegistry.dispatch()  ← self-registering commands
+               → switch(command)           (legacy, shrinking over time)
+               → default: fuzzy match → AI</code></pre>
+<p>The auto-registry scans <code>handlers/</code> at startup, imports each module, and checks for a manifest under the key <code>__khyCommandManifest</code>. Valid manifests are registered in a dispatch map. At route time, the registry is consulted before the switch.</p>
+<p><strong>Alias auto-injection</strong>: when a manifest declares <code>aliases</code>, those aliases are<br>automatically available to <code>resolveAlias()</code>, <code>getAliasesForCommand()</code>, and<br><code>getAllAliasKeys()</code> — no static entry in <code>aliases.js</code> needed. The static alias<br>table always takes precedence on collision.</p>
+<p><strong>Schema auto-supplement</strong>: <code>getRouterCommandNames()</code> and <code>getRouterSubCommands()</code><br>merge manifest declarations, so new commands participate in fuzzy matching,<br>completion, and introspection without touching <code>commandSchema.js</code>.</p>
+<h2 id="files">Files<a class="anchor" href="#files" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>File</th><th>Role</th></tr></thead><tbody><tr><td><code>cli/commandManifest.js</code></td><td>Schema definition, validation, extraction</td></tr><tr><td><code>cli/commandAutoRegistry.js</code></td><td>Scanner, registry, dispatcher</td></tr><tr><td><code>cli/router.js</code></td><td>Integration point (calls <code>commandAutoRegistry.dispatch()</code>)</td></tr><tr><td><code>cli/handlers/*.js</code></td><td>Individual command implementations</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../services/backend/src/agents/built-in/readAgent.html"><div class="dir">← 上一篇</div><div class="ttl">Read</div></a><a class="next" href="../../../../services/backend/src/cli/tui/AGENTS.html"><div class="dir">下一篇 →</div><div class="ttl">AGENTS.md — CC TUI 复刻工程约束</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="services/backend/src/cli/COMMAND_AUTHORING.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -37,7 +37,7 @@ test('live: buildSubagentDenylist(null, below-ceiling, _, "verify") strips write
     for (const t of ['Edit', 'Write', 'NotebookEdit']) {
       expect(deny).toContain(t);
     }
-    expect(!deny).toContain('Agent');
+    expect(deny).not.toContain('Agent');
   });
 });
 
@@ -53,10 +53,17 @@ describe('Role Tool Scope', () => {
       });
   });
 
-  test('gate on: read-only roles do NOT strip Bash (honest boundary)', () => {
+  test('gate on: read-only roles DO strip Bash, except the shell-granted (verify)', () => {
       withGate('on', () => {
+        // [DESIGN-AGENT-002] A2-2: Bash is a write channel and is stripped by
+        // default. `verify` keeps it because running build/test is its job —
+        // an explicit grant, not an inherited default.
         for (const role of READ_ONLY_ROLES) {
-          expect(!roleToolScope(role).includes('Bash')).toBeTruthy();
+          if (role === 'verify') {
+            expect(!roleToolScope(role).includes('Bash')).toBeTruthy();
+          } else {
+            expect(roleToolScope(role).includes('Bash')).toBeTruthy();
+          }
         }
       });
   });
@@ -64,7 +71,7 @@ describe('Role Tool Scope', () => {
   test('gate on: write / unknown roles get an empty scope (no false-strip)', () => {
       withGate('on', () => {
         for (const role of WRITE_ROLES) {
-          expect(roleToolScope(role)).toEqual([], `${role} should not be scoped`);
+          expect(roleToolScope(role)).toEqual([]);
         }
         expect(roleToolScope('totally-unknown-role')).toEqual([]);
       });
@@ -81,7 +88,7 @@ describe('Role Tool Scope', () => {
   test('malformed input never throws → []', () => {
       withGate('on', () => {
         for (const bad of [null, undefined, '', 42, {}, [], true]) {
-          expect(roleToolScope(bad)).toEqual([], `roleToolScope(${JSON.stringify(bad)}) should be []`);
+          expect(roleToolScope(bad)).toEqual([]);
         }
       });
   });
@@ -99,7 +106,7 @@ describe('Role Tool Scope', () => {
       for (const off of ['0', 'false', 'off', 'no']) {
         withGate(off, () => {
           for (const role of READ_ONLY_ROLES) {
-            expect(roleToolScope(role)).toEqual([], `gate=${off} must disable scoping for ${role}`);
+            expect(roleToolScope(role)).toEqual([]);
           }
         });
       }
@@ -115,26 +122,28 @@ describe('Role Tool Scope', () => {
       withGate('on', () => {
         const merged = mergeRoleScopeInto(['Agent'], 'explore');
         expect(merged.includes('Agent')).toBeTruthy();
-        expect(merged.includes('Edit') && merged.includes('Write') && merged).toContain('NotebookEdit');
+        expect(merged).toContain('Edit');
+        expect(merged).toContain('Write');
+        expect(merged).toContain('NotebookEdit');
         // dedupe: a base already containing Edit must not duplicate it.
         const deduped = mergeRoleScopeInto(['Edit', 'Agent'], 'explore');
-        expect(deduped.filter((t) => t === 'Edit').length).toBe(1, 'Edit must appear once');
+        expect(deduped.filter((t) => t === 'Edit').length).toBe(1);
       });
   });
 
   test('mergeRoleScopeInto: null/undefined/non-array base does not throw', () => {
       withGate('on', () => {
-        expect(mergeRoleScopeInto(null).toEqual('implement'), []);
-        expect(mergeRoleScopeInto(undefined).toEqual('implement'), []);
-        expect(mergeRoleScopeInto('nope').toEqual('implement'), []);
+        expect(mergeRoleScopeInto(null, 'implement')).toEqual([]);
+        expect(mergeRoleScopeInto(undefined, 'implement')).toEqual([]);
+        expect(mergeRoleScopeInto('nope', 'implement')).toEqual([]);
         // write role + valid base → base unchanged (set-normalized).
-        expect(mergeRoleScopeInto(['Agent']).toEqual('implement'), ['Agent']);
+        expect(mergeRoleScopeInto(['Agent'], 'implement')).toEqual(['Agent']);
       });
   });
 
   test('gate off: mergeRoleScopeInto returns base only (byte-revert)', () => {
       withGate('off', () => {
-        expect(mergeRoleScopeInto(['Agent']).toEqual('explore'), ['Agent']);
+        expect(mergeRoleScopeInto(['Agent'], 'explore')).toEqual(['Agent']);
       });
   });
 
@@ -153,7 +162,9 @@ describe('Role Tool Scope', () => {
   test('live: buildSubagentDenylist strips write tools for an explore role too', () => {
       withGate('on', () => {
         const deny = AgentTool.buildSubagentDenylist(null, 1, 2, 'explore');
-        expect(deny.includes('Edit') && deny.includes('Write') && deny).toContain('NotebookEdit');
+        expect(deny).toContain('Edit');
+        expect(deny).toContain('Write');
+        expect(deny).toContain('NotebookEdit');
       });
   });
 
@@ -163,14 +174,14 @@ describe('Role Tool Scope', () => {
         for (const t of ['Edit', 'Write', 'NotebookEdit', 'Agent', 'Task']) {
           expect(deny.includes(t)).toBeTruthy();
         }
-        expect(deny.filter((n) => n === 'Edit').length).toBe(1, 'no duplicate Edit');
+        expect(deny.filter((n) => n === 'Edit').length).toBe(1);
       });
   });
 
   test('live: gate OFF → role scope is a no-op (byte-revert to pre-wire denylist)', () => {
       withGate('off', () => {
         // Below ceiling, null agentDef, gate off → empty, exactly as before the wire.
-        expect(AgentTool.buildSubagentDenylist(null).toEqual(1, 2, 'verify'), []);
+        expect(AgentTool.buildSubagentDenylist(null, 1, 2, 'verify')).toEqual([]);
       });
   });
 
@@ -179,8 +190,8 @@ describe('Role Tool Scope', () => {
         const threeArg = AgentTool.buildSubagentDenylist(null, 1, 2);
         const writeRole = AgentTool.buildSubagentDenylist(null, 1, 2, 'implement');
         const omitted = AgentTool.buildSubagentDenylist(null, 1, 2, undefined);
-        expect(writeRole).toEqual(threeArg, 'write role must not scope');
-        expect(omitted).toEqual(threeArg, 'omitted role must be byte-equivalent');
+        expect(writeRole).toEqual(threeArg);
+        expect(omitted).toEqual(threeArg);
       });
   });
 

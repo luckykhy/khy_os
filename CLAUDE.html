@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: CLAUDE.md -->
+<title>CLAUDE.md — Khy OS 项目章程 · Khy-OS 文档</title>
+<link rel="stylesheet" href="./docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="./docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="./docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="./docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="./docs/index.html">首页</a><span class="sep">›</span>CLAUDE.md — Khy OS 项目章程</div>
+      <header class="hero reveal"><h1>CLAUDE.md — Khy OS 项目章程</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#claude-md-khy-os-项目章程">CLAUDE.md — Khy OS 项目章程</a></li><li class="lvl-2"><a href="#一-红线-r1-r4-破了就停-不许绕">一、红线 R1–R4（破了就停，不许绕）</a></li><li class="lvl-3"><a href="#r3-版本轨道表-真源-check-version-sync-js-的-specs-数组">R3 版本轨道表（真源：`check-version-sync.js` 的 `specs` 数组）</a></li><li class="lvl-2"><a href="#二-行为准则-b1-b6">二、行为准则 B1–B6</a></li><li class="lvl-3"><a href="#b4-引导式搜索-禁止无目标全量读取">B4 引导式搜索（禁止无目标全量读取）</a></li><li class="lvl-3"><a href="#b5-压缩保留清单">B5 压缩保留清单</a></li><li class="lvl-3"><a href="#b6-软件著作权就绪-指针">B6 软件著作权就绪（指针）</a></li><li class="lvl-2"><a href="#三-验收门禁">三、验收门禁</a></li><li class="lvl-2"><a href="#四-项目概述">四、项目概述</a></li><li class="lvl-2"><a href="#五-代码风格与语言策略">五、代码风格与语言策略</a></li><li class="lvl-2"><a href="#六-当前工作焦点-cc-模式-tui-长期子系统-2026-09-09-起">六、当前工作焦点：CC 模式 TUI（长期子系统，2026-09-09 起）</a></li><li class="lvl-3"><a href="#必读文件-按优先级">必读文件（按优先级）</a></li><li class="lvl-3"><a href="#核心约束-速览">核心约束（速览）</a></li><li class="lvl-3"><a href="#文件组织">文件组织</a></li><li class="lvl-3"><a href="#门控模式">门控模式</a></li><li class="lvl-3"><a href="#验收标准">验收标准</a></li><li class="lvl-2"><a href="#关联规则索引">关联规则索引</a></li><li class="lvl-2"><a href="#maintainability-metadata-read-ai-first">🤖 Maintainability metadata — read `.ai/` first</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="claude-md-khy-os-项目章程">CLAUDE.md — Khy OS 项目章程<a class="anchor" href="#claude-md-khy-os-项目章程" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: LAYOUT-002, PROCESS-001, PROCESS-002, PROCESS-003, PROCESS-007, PROCESS-010, SECURITY-001 -->
+<!-- MIRROR: CLAUDE.html -->
+<blockquote><p>本文件是 opencode / Claude Code / Codex / ZCode 等 AI 编码助手的<strong>项目章程真源</strong>。<br>第一章红线 R1–R4 与第二章行为准则 B1–B5 的<strong>强制真源就在本文件</strong>——<code>[OPS-MAN-169]</code> 只<br>是索引与导读，规则语义以本文件为准（元规则 <code>[MGMT-STD-008]</code> §0 定义）。<br>第二章 <strong>B6 是唯一例外：它是指针</strong>，语义真源为 <code>[DESIGN-IP-001]</code>（规则 <code>PROCESS-010</code>）。<br>开始工作前，<strong>必须</strong>读完第一章与第二章。</p></blockquote>
+<hr>
+<h2 id="一-红线-r1-r4-破了就停-不许绕">一、红线 R1–R4（破了就停，不许绕）<a class="anchor" href="#一-红线-r1-r4-破了就停-不许绕" aria-label="锚点">#</a></h2>
+<p><strong>任一破线 = 立即停手，须用户明确点头方可继续。</strong> 四条均登记于<br><code>docs/10_规范/registry/RULES-REGISTRY.json</code>（PROCESS-001 / PROCESS-002 / SECURITY-001 / LAYOUT-002）。</p>
+<table><thead><tr><th>ID</th><th>红线</th><th>一句话</th><th>强制真源 / 守卫</th></tr></thead><tbody><tr><td><strong>R1</strong>&lt;br&gt;<code>PROCESS-001</code></td><td><strong>分支纪律</strong></td><td>禁止直接在主干开发；<strong>禁止 AI 自动 <code>commit</code>/<code>push</code></strong>，必须用户明确点头</td><td>本文件 §一 R1；分支保护基线见 <code>[OPS-MAN-009]</code></td></tr><tr><td><strong>R2</strong>&lt;br&gt;<code>SECURITY-001</code></td><td><strong>密钥防泄露</strong></td><td>真 key/token <strong>永不以明文进 bundle / 源码 / 提交</strong>（出厂内置密钥仅允许 XOR 混淆形态随包分发，明文形态严禁出现），只经 env 变量瞬时注入、绝不落盘；发包前 <code>wheel</code> 对已知泄露 key <strong>0 命中</strong>；占位 key 必须一眼假</td><td>本文件 §一 R2；密钥注入真源 <code>services/backend/src/services/customProviderRegistrar.js</code>；密钥家族见 <code>[OPS-MAN-169]</code> §4.6 与 <code>[OPS-MAN-058]</code>「密钥/凭证」；出厂件明文形态由 <code>scripts/ci/check-change-safety.js</code>（<code>builtin-key-plaintext</code>，判据委托 <code>scripts/check_builtin_keys.py</code>）执行</td></tr><tr><td><strong>R3</strong>&lt;br&gt;<code>PROCESS-002</code></td><td><strong>多轨道版本同步</strong></td><td>三条版本轨道各内部完全一致，组间刻意不同（详见下方版本轨道表）</td><td>本文件 §一 R3；守卫 <code>scripts/ci/check-version-sync.js</code></td></tr><tr><td><strong>R4</strong>&lt;br&gt;<code>LAYOUT-002</code></td><td><strong>上帝文件门</strong></td><td>任何文件不得<strong>新增</strong>超过 2500 行（<code>KHY_ARCH_GOD_FILE_LOC</code> 可调）；拆解走 god-file governance（同名 re-export + DI 保字节等价）</td><td>本文件 §一 R4；阈值真源 <code>services/backend/src/services/domain/project/projectHygiene/thresholds.js</code> 的 <code>godFileLoc()</code>（回退 env <code>KHY_ARCH_GOD_FILE_LOC</code>，默认 2500）；扫描 <code>services/backend/scripts/archDebtScan.js</code> 的 R2</td></tr></tbody></table>
+<h3 id="r3-版本轨道表-真源-check-version-sync-js-的-specs-数组">R3 版本轨道表（真源：<code>check-version-sync.js</code> 的 <code>specs</code> 数组）<a class="anchor" href="#r3-版本轨道表-真源-check-version-sync-js-的-specs-数组" aria-label="锚点">#</a></h3>
+<p>三条轨道共 <strong>9 个真源</strong>，<strong>组内必须完全一致，组间刻意不同</strong>。</p>
+<table><thead><tr><th>轨道</th><th>成员（组内必须一致）</th><th>当前版本</th></tr></thead><tbody><tr><td><strong>G1 主 khy-os 包</strong>（4 源）</td><td><code>pyproject.toml</code>（pip）、<code>packaging/npm/package.json</code>（npm 渠道清单）、<code>services/backend/package.json</code>（<code>khy --version</code>）、<code>packaging/modules/modules.json</code>（模块化打包清单）</td><td>1.1.15</td></tr><tr><td><strong>G2 ai-backend 生态</strong>（2 源）</td><td><code>services/ai-backend/package.json</code>、<code>platform/packages/shared/package.json</code>（<code>@khy/shared</code>）</td><td>1.6.5</td></tr><tr><td><strong>G3 浏览器 UI 包</strong>（3 源）</td><td><code>platform/packages/ui-shared/package.json</code>、<code>apps/ai-frontend/package.json</code>（其 <code>@khy/ui-shared</code> 依赖声明）、<code>software/khyquant/frontend/package.json</code>（其 <code>@khy/ui-shared</code> 依赖声明）</td><td>0.1.0</td></tr></tbody></table>
+<ul><li><code>platform/khy_platform/__init__.py</code> 的 <code>__version__</code> <strong>运行时动态解析</strong>（从 <code>pyproject.toml</code> /</li></ul>
+<p>已安装元数据），<strong>不得硬编码字面量</strong>——<code>check-version-sync.js</code> 会故意让硬编码回归失败。</p>
+<ul><li><code>scripts/release/publish-dual.sh</code> 在发布时从单一 <code>--version</code> 输入同步 <strong>G1 的前三处</strong></li></ul>
+<p>（<code>pyproject.toml</code> / <code>packaging/npm/package.json</code> / <code>services/backend/package.json</code>）；<br>  <code>packaging/modules/modules.json</code> 由构建流程或人工维护，最终由<br>  <code>check-version-sync.js</code> 统一校验 G1 全 4 源一致。</p>
+<ul><li>G2 与 G1 的版本<strong>刻意不同</strong>：ai-backend 与 <code>@khy/shared</code> 作为捆绑单元随 pip wheel 一起</li></ul>
+<p>发布、共同开发，因此共享一条独立版本轨道。</p>
+<ul><li>G3 是<strong>依赖声明对齐</strong>而非版本号对齐：两个前端应用的 <code>@khy/ui-shared</code> 依赖必须精确等于</li></ul>
+<p><code>platform/packages/ui-shared/package.json</code> 的版本。</p>
+<p><strong>R3 只管「一致」，不管「时机」。</strong> 何时该 bump、命名与递增怎么定、何时推 GitHub/Gitee、<br>哪些操作由什么条件自动触发（避免依赖人工判断发布时机）—— 见<br><strong><code>PROCESS-005</code></strong> 的真源 <a href="docs/10_规范/其它规范/[DESIGN-SEMVER-002]%20版本管理与发布触发规范.html"><code>[DESIGN-SEMVER-002] 版本管理与发布触发规范</code></a>。<br>其边界：<strong>只自动化「推 tag 之后」的长链路，不放宽本文件 R1（<code>PROCESS-001</code>）的推送红线</strong>。</p>
+<hr>
+<h2 id="二-行为准则-b1-b6">二、行为准则 B1–B6<a class="anchor" href="#二-行为准则-b1-b6" aria-label="锚点">#</a></h2>
+<ul><li><strong>B1 先想再写</strong>：动手前讲清改什么、为什么、影响面。</li><li><strong>B2 目标驱动执行</strong>：给定<strong>可验证的成功标准</strong> → <strong>自循环到验证通过</strong> → 才回报；多步任务</li></ul>
+<p><strong>先列 plan、每步带 verify</strong>；<strong>没跑过验证不许说「修好了」</strong>。<br>  单任务自循环轮数上限 6。</p>
+<ul><li><strong>B3 外科手术式改动</strong>：只动该动的；不顺手重构；god-file 抽取保函数体字节不变。</li></ul>
+<h3 id="b4-引导式搜索-禁止无目标全量读取">B4 引导式搜索（禁止无目标全量读取）<a class="anchor" href="#b4-引导式搜索-禁止无目标全量读取" aria-label="锚点">#</a></h3>
+<p><strong>本仓规模让「全量读」字面不可行</strong>：<code>docs/</code> 有 189 份设计文档与 189 份规范（2026-09-18 实测），<br><code>AGENTS.md</code> 900+ 行，<code>services/backend/src/services/tool/toolUseLoopCore.js</code> 12,100+ 行（单文件即占约 1/4 可用上下文）。</p>
+<p>处理多文件任务时<strong>必须</strong>按此序，禁止跳步直接 Read：</p>
+<ol><li><strong>Grep 关键符号定位</strong>——按<strong>符号名</strong>而非文件名（本仓同名文件多，按名找会改错；</li></ol>
+<p>设计文档先查 <code>docs/03_DESIGN_设计/00_INDEX_设计-分类索引.md</code>）</p>
+<ol><li><strong>Glob 列出目标目录结构</strong>，把握组织逻辑</li><li><strong>仅 Read 最相关的 2–3 个文件</strong></li><li><strong>大输出任务</strong>（守卫全量扫描、日志分析、多源调研）先按 <code>PROCESS-001</code> 委派判据评估是否交子智能体</li></ol>
+<blockquote><p>与 <code>[DESIGN-ARCH-052]</code>（任务驱动读取与搜索范围规划）同一意图：精准而非全知。<br>规则登记 <code>PROCESS-007</code>；真源 <code>[DESIGN-ARCH-121]</code> §K-06。</p></blockquote>
+<h3 id="b5-压缩保留清单">B5 压缩保留清单<a class="anchor" href="#b5-压缩保留清单" aria-label="锚点">#</a></h3>
+<p>上下文压缩（<code>contextCompressor.js</code>）时<strong>必须保留</strong>以下四类，不得被摘要吞掉：</p>
+<ol><li><strong>所有已修改文件的完整路径列表</strong></li><li><strong>失败的测试用例及其错误堆栈</strong></li><li><strong>当前任务尚未完成的剩余步骤</strong></li><li>【khyos 专属】<strong>本次已跑过的守卫及其结论</strong>——三守卫绿灯不得被压缩掉，避免重复跑</li></ol>
+<blockquote><p><strong>机制现状（2026-09-18 实测）</strong>：<code>contextCompressor.js</code> 已有 <strong>任务锚点保护</strong><br>（<code>:745</code>，首条 user 消息以 <code>&lt;original_task&gt;</code> 原文注入，上限 1500 字符）<br>与 <strong><code>PreCompact</code> hook 通路</strong>（<code>:624</code>，支持 <code>additionalContext</code> 注入）。<br>故本清单<strong>不只是文档约定</strong>——可由 <code>.khy/hooks.json</code> 的 <code>PreCompact</code> 钩子<br>把清单注入压缩提示，见 <code>[DESIGN-PROCESS-002]</code> S1→S3 落地阶梯。</p></blockquote>
+<h3 id="b6-软件著作权就绪-指针">B6 软件著作权就绪（指针）<a class="anchor" href="#b6-软件著作权就绪-指针" aria-label="锚点">#</a></h3>
+<p><strong>AI 是工具，人的意愿是导向。</strong> 登记审查拒绝的是「<strong>没有人的意愿</strong>」，不是「<strong>用了 AI</strong>」——<br>AI 生成原型、<strong>自行决定架构与算法</strong>、按人的提示词反复修改完善，都是允许的工程方式。<br>本仓<strong>不限制 AI 使用比例，也不限制 AI 的决策权</strong>，只要求<strong>人的意愿可追溯、产出结果可解释</strong>。</p>
+<p>四条硬线（语义真源 <code>[DESIGN-IP-001]</code>，规则 <code>PROCESS-010</code>）：</p>
+<ol><li><strong>人的意愿必须作为导向</strong>——每次改动答得上「谁要的、要什么」；架构、算法、数据模型</li></ol>
+<p><strong>可由 AI 提出并决定</strong>，但决策依据要落进 <code>docs/03_DESIGN_设计/</code>；</p>
+<ol><li><strong>提交信息不带 AI 作者署名</strong>——禁止 <code>Co-Authored-By: &lt;AI&gt;</code>、<code>Generated with &lt;AI&gt;</code>；</li></ol>
+<p>已在 <code>scripts/ci/check-commit-message.js</code> 做成 <strong>pre-commit 硬拦截</strong>（不依赖 S1 观察者守卫）。<br>   根治靠 AI 工具开关：Claude Code 需 <code>~/.claude.json</code> 设 <code>&quot;includeCoAuthoredBy&quot;: false</code><br>   （<strong>默认 <code>true</code>，不显式关闭就持续注入</strong>，届时每次提交都要手工删尾注）。</p>
+<ol><li><strong>结果要人能接住</strong>——进登记材料候选的代码，人必须能解释（判据是可解释性，不是生成方式）；</li><li><strong>第三方代码不进登记材料</strong>——<code>vendor/</code>、<code>*_gen.*</code>、<code>*_blob.h</code>、<code>dist/</code>、<code>out/</code> 等；</li></ol>
+<p>借鉴边界另见 <code>[DESIGN-SOURCING-001]</code>。</p>
+<blockquote><p>完整判据（含正反例、AI 执行清单、评审清单、一页决策树）见<br><code>[DESIGN-IP-001] 软件著作权就绪规范</code>。<br>与 <code>B1</code>（先想再写）的关系：<code>B1</code> 管「动手前讲清」，<code>B6</code> 管「动手后仍要解释得清」。</p></blockquote>
+<hr>
+<h2 id="三-验收门禁">三、验收门禁<a class="anchor" href="#三-验收门禁" aria-label="锚点">#</a></h2>
+<p>会亮红灯的命令 = 「做完的定义」，任一红即未完成（完整清单见 <code>[OPS-MAN-169]</code> §一）：</p>
+<pre><code>node --check &lt;改动文件&gt;                                  # 语法
+&lt;相关 jest / node:test 全绿&gt;                             # node:test 文件须 node --test
+node scripts/ci/check-change-safety.js --changed          # 三守卫之一
+node scripts/ci/check-agent-rules.js --changed            # 三守卫之二
+node scripts/ci/check-repo-layout.js                      # 三守卫之三：层级/根目录/索引/任务入口
+node scripts/ci/check-gov-rules.js                        # 治理总纲十板块 + 规则登记表
+npm run arch:god --workspace services/backend             # 改动文件不得新增超限
+khy doctor                                                # 系统健康总检</code></pre>
+<blockquote><p>三守卫须在<strong>仓库根</strong>跑；untracked 新叶子须<strong>显式</strong>传路径扫描。<br><code>arch:god</code> 只定义在 <code>services/backend/package.json</code>，须带 <code>--workspace services/backend</code><br>或先 <code>cd services/backend</code>。</p></blockquote>
+<hr>
+<h2 id="四-项目概述">四、项目概述<a class="anchor" href="#四-项目概述" aria-label="锚点">#</a></h2>
+<p><strong>Khy OS</strong> 是一个通过 PyPI（<code>pip install khy-os</code>）和 npm（<code>@khy-os/khy-os</code>）分发的 AI 平台<br>操作系统。它启动一个可扩展的默认应用运行时；<strong>khyquant</strong>（量化交易终端）是运行在该基座之上的、<br>内置的默认应用——而非项目本身。完整架构速查与关键入口点见 <code>AGENTS.md</code>。</p>
+<hr>
+<h2 id="五-代码风格与语言策略">五、代码风格与语言策略<a class="anchor" href="#五-代码风格与语言策略" aria-label="锚点">#</a></h2>
+<ul><li><strong>语言</strong>：用户用中文则回复中文，用英文则回复英文；代码、标识符、注释用英文；面向用户的</li></ul>
+<p>字符串用中文。</p>
+<ul><li><strong>JS</strong>：2 空格缩进、单引号、分号；命名 camelCase。</li><li><strong>Python</strong>：4 空格缩进；命名 snake_case。</li><li><strong>安全</strong>：不提交 <code>.env</code>、凭据、<code>node_modules/</code>；API key 存于 <code>~/.khyquant/config.json</code></li></ul>
+<p>（已 gitignore）。模型导出不再有密码门，请改为在部署/网络层控制访问。</p>
+<hr>
+<h2 id="六-当前工作焦点-cc-模式-tui-长期子系统-2026-09-09-起">六、当前工作焦点：CC 模式 TUI（长期子系统，2026-09-09 起）<a class="anchor" href="#六-当前工作焦点-cc-模式-tui-长期子系统-2026-09-09-起" aria-label="锚点">#</a></h2>
+<blockquote><p>本节是<strong>工作焦点指针</strong>，不是章程；第一章与第二章红线不受本节影响。</p>
+<p><strong>2026-09-17 更正</strong>：本节原定性为「限期任务，完成后应删除本节」，与事实不符——CC TUI 已<br>演进为 <code>services/backend/src/cli/tui/</code> 下 163 个 <code>*.js</code> 文件的<strong>长期子系统</strong>，拥有专属约束<br>真源（同目录 <code>AGENTS.md</code>）、专属门禁（<code>npm run check:tui-gates</code>），并在<br><code>[DESIGN-NAM-001]</code> §194 登记为项目级环境变量（<code>KHY_CC_TUI</code>）。自此按长期模块维护，<br>不再按限期任务处置。</p></blockquote>
+<p>CC 模式 TUI 是 Khy 品牌化的 Claude Code 风格终端界面，以 <code>KHY_CC_TUI=1</code> 门控，<br>Legacy 模式默认不变。</p>
+<h3 id="必读文件-按优先级">必读文件（按优先级）<a class="anchor" href="#必读文件-按优先级" aria-label="锚点">#</a></h3>
+<ol><li><strong><code>services/backend/src/cli/tui/AGENTS.md</code></strong> — CC TUI 工程约束（红线、门控、渲染、性能）</li><li><strong><code>docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-081] Claude Code TUI 1复刻实施计划.md</code></strong> — 完整设计规范</li><li><strong><code>docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-079] TUI界面设计规范.md</code></strong> — 界面设计规范</li></ol>
+<blockquote><p>外部视觉素材（5 个参考文件，<code>INDEX.md</code> / <code>README.md</code> / <code>color-style-spec.md</code> /<br><code>interaction-spec.md</code> / <code>visual-mockup.md</code>）位于仓库<strong>外</strong>的<br><code>D:\Portable\Docs\design\claude-code-tui\</code>，属<strong>可选参考</strong>，不在版本控制内；<br>规范以仓库内 079/081 为准。</p></blockquote>
+<h3 id="核心约束-速览">核心约束（速览）<a class="anchor" href="#核心约束-速览" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>约束</th><th>要求</th></tr></thead><tbody><tr><td><strong>零破坏</strong></td><td>所有 CC 模式代码通过 <code>KHY_CC_TUI=1</code> 门控，默认行为不变</td></tr><tr><td><strong>渲染安全</strong></td><td>禁止 DECSTBM 滚动区、<code>\x1B[2J</code>；使用 ED0 + 绝对定位（呼应 <code>AGENTS.md</code> 工程规则 4）</td></tr><tr><td><strong>性能底线</strong></td><td>冷启动 &lt; 100ms、渲染 &lt; 16ms、内存 &lt; 50MB</td></tr><tr><td><strong>品牌合规</strong></td><td>使用 &quot;Khy&quot; 品牌，禁止 &quot;Claude Code&quot; 文本</td></tr><tr><td><strong>调整大小</strong></td><td>Resize 无残影（防抖 50ms + 增量更新）</td></tr></tbody></table>
+<h3 id="文件组织">文件组织<a class="anchor" href="#文件组织" aria-label="锚点">#</a></h3>
+<pre><code>services/backend/src/cli/tui/
+├── AGENTS.md              ← 工程约束真源
+├── app.js                 ← 入口
+├── ink-components/        ← Ink 组件（Cc 前缀 = CC 模式专用）
+├── utils/                 ← 工具函数（cc 前缀 = CC 模式专用）
+├── hooks/                 ← React Hooks
+└── theme/                 ← 主题</code></pre>
+<h3 id="门控模式">门控模式<a class="anchor" href="#门控模式" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确</span>
+<span class="hljs-keyword">if</span> (process.<span class="hljs-property">env</span>.<span class="hljs-property">KHY_CC_TUI</span> === <span class="hljs-string">&#x27;1&#x27;</span>) {
+  <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">CcComponent</span> /&gt;</span></span>;
+}
+<span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">LegacyComponent</span> /&gt;</span></span>;
+
+<span class="hljs-comment">// ❌ 错误</span>
+<span class="hljs-keyword">const</span> color = isCcMode ? <span class="hljs-string">&#x27;#00D4D4&#x27;</span> : <span class="hljs-string">&#x27;#00BCD4&#x27;</span>; <span class="hljs-comment">// 禁止在组件内判断</span></code></pre>
+<h3 id="验收标准">验收标准<a class="anchor" href="#验收标准" aria-label="锚点">#</a></h3>
+<ul><li><code>KHY_CC_TUI=1 khy</code> 启动后显示 CC 风格 UI</li><li>Legacy 模式（无门控）行为与修改前逐字节相同</li><li>冷启动 &lt; 100ms</li><li>Resize 无残影</li><li>所有设计素材中的视觉规范对齐</li><li><code>npm run check:tui-gates</code> 通过</li></ul>
+<hr>
+<h2 id="关联规则索引">关联规则索引<a class="anchor" href="#关联规则索引" aria-label="锚点">#</a></h2>
+<ul><li><code>AGENTS.md</code> —— AI + 人的维护指南（工程规则 1–4 = RUNTIME-001~004 的语义真源）</li><li><code>docs/10_规范/registry/RULES-REGISTRY.json</code> —— 规则单一真源登记表（本文件红线与 B4/B5/B6 均已登记）</li><li><code>[OPS-MAN-169]</code> —— 规则索引层与导读（不是真源）</li><li><code>[MGMT-STD-008]</code> —— 规则编写与管理规范（元规则）</li><li><code>[DESIGN-ARCH-121]</code> §K-06 —— B4/B5 的借鉴来源与实测依据</li><li><code>[DESIGN-IP-001]</code> —— <strong>B6 的语义真源</strong>（规则 <code>PROCESS-010</code>，软件著作权就绪）</li></ul>
+<hr>
+<p><em>最后更新：2026-09-18（v2.2.1：文档归夹链接维修——[DESIGN-ARCH-079/081/071/111/113/118] 与<br>[IMPL-RPT-015] 移入 DESIGN-ARCH/ 与 IMPL-RPT/ 子目录后，修正本文件与 AGENTS.md 共 7 处入站路径；<br>孪生 HTML 经 npm run docs:build 重生成。v2.2.0：§二 新增 <strong>B4 引导式搜索</strong> 与 <strong>B5 压缩保留清单</strong>——<br>本仓 230+ 设计文档 / 796 行 AGENTS.md / 12,105 行 toolUseLoopCore.js 使「全量读」字面不可行；<br>B5 实测已具备机制通路（<code>contextCompressor.js:745</code> 任务锚点 + <code>:624</code> <code>PreCompact</code> hook 支持<br><code>additionalContext</code>），故非纯文档约定。v2.1.0 / 2026-09-17：§六 由「限期任务（完成后删除）」<br>更正为「长期工作焦点」——CC TUI 已成长为 163 文件的子系统，补登 079 界面规范、<br><code>check:tui-gates</code> 门禁，外部素材路径降为可选参考。v2.0.0 / 2026-09-15 章程重建：恢复<br>§一 R1–R4 与 §二 B1–B3 为可解析真源；R3 由「双渠道」更正为三轨道 9 源；R4 阈值真源路径<br>更正为 <code>domain/project/</code>）</em></p>
+<p>&lt;!-- khy-metadata:pointer START — managed by <code>khy metadata link</code>; edits inside this block are overwritten --&gt;</p>
+<h2 id="maintainability-metadata-read-ai-first">🤖 Maintainability metadata — read <code>.ai/</code> first<a class="anchor" href="#maintainability-metadata-read-ai-first" aria-label="锚点">#</a></h2>
+<p>Before changing this project, read the machine-generated seed docs in <code>.ai/</code><br>(this repo is designed to stay maintainable even without AI):</p>
+<ol><li><strong><code>.ai/MAP.md</code></strong> — skeleton &amp; navigation: tech stack, entry points, build/run/test commands, directory tree, key symbols.</li><li><strong><code>.ai/CONTEXT.yaml</code></strong> — machine-readable contracts: stack, entry_points, build, deps, per-file symbols.</li><li><strong><code>.ai/GUARDS.md</code></strong> — red lines &amp; how to maintain this project <em>without</em> AI.</li></ol>
+<p>If <code>.ai/SKELETON.auto.md</code> is present, the three files above are human-authored and<br>authoritative; <code>SKELETON.auto.md</code> is the machine-derived structural layer. All are kept<br>current deterministically by <code>khy metadata refresh</code> plus a git pre-commit hook.<br>&lt;!-- khy-metadata:pointer END --&gt;</p>
+      </article>
+      <nav class="pager"><span></span><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="./";window.__KHY_CUR__="CLAUDE.html";</script>
+<script src="./docs/19_资产/site/nav-data.js"></script>
+<script src="./docs/19_资产/site/mermaid.min.js"></script>
+<script src="./docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

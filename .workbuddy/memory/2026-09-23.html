@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-23.md -->
+<title>2026-09-23 工作日志 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>.workbuddy<span class="sep">›</span>memory<span class="sep">›</span>2026-09-23 工作日志</div>
+      <header class="hero reveal"><h1>2026-09-23 工作日志</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#2026-09-23-工作日志">2026-09-23 工作日志</a></li><li class="lvl-2"><a href="#design-mem-007-记忆规则系统总纲提案-14-00-前后">[DESIGN-MEM-007] 记忆规则系统总纲提案（14:00 前后）</a></li><li class="lvl-2"><a href="#每日代码审查-自动运行-第-6-次">每日代码审查（自动运行，第 6 次）</a></li><li class="lvl-3"><a href="#新根因-交人工-最高优先级">新根因（交人工，最高优先级）</a></li><li class="lvl-3"><a href="#环境教训-下次直接用">环境教训（下次直接用）</a></li><li class="lvl-2"><a href="#每日规范巡检-自动化首跑-08-16">每日规范巡检（自动化首跑，08:16）</a></li><li class="lvl-2"><a href="#长任务偏离-完成判据缺失-只读取证-提案-08-24">长任务偏离 / 完成判据缺失 — 只读取证 + 提案（08:24）</a></li><li class="lvl-2"><a href="#长任务收敛机制-落地完成-t-024-13-35-前后">长任务收敛机制 — 落地完成（T-024，13:35 前后）</a></li><li class="lvl-2"><a href="#tui-复制不完整-端到端探针-红用例已固化">TUI 复制不完整 — 端到端探针（红用例已固化）</a></li><li class="lvl-3"><a href="#探针踩坑-写这类探针直接用">探针踩坑（写这类探针直接用）</a></li><li class="lvl-3"><a href="#提案已出-design-arch-132-编号-131-132">提案已出：`[DESIGN-ARCH-132]`（编号 131→132）</a></li><li class="lvl-3"><a href="#提案验证">提案验证</a></li><li class="lvl-2"><a href="#design-arch-132-第一期落地-纯新增-已验完整">`[DESIGN-ARCH-132]` 第一期落地（纯新增，已验完整）</a></li><li class="lvl-3"><a href="#落地内容-services-backend-src-cli-tui-selection-js">落地内容（`services/backend/src/cli/tui/selection.js`）</a></li><li class="lvl-3"><a href="#四处偏离原案-已在提案-4-偏离说明-逐条写原因">四处偏离原案（已在提案 §4「偏离说明」逐条写原因）</a></li><li class="lvl-3"><a href="#实测-全绿-退出码可复现">实测（全绿，退出码可复现）</a></li><li class="lvl-3"><a href="#三处必须记住的核对结论">三处必须记住的核对结论</a></li><li class="lvl-3"><a href="#第二期前的阻断项-已写进提案-8-待核实-6-标为优先">第二期前的阻断项（已写进提案 §8 待核实 6，标为优先）</a></li><li class="lvl-3"><a href="#判据设计教训-写这类-红探针-分期修复-提案直接用">判据设计教训（写这类「红探针 + 分期修复」提案直接用）</a></li><li class="lvl-2"><a href="#khy-终端启动卡死-根因取证-已实测复现">khy 终端启动卡死 — 根因取证（已实测复现）</a></li><li class="lvl-3"><a href="#r1-内核预构建状态机-每次启动都复发-阻塞等待-主因-已实锤">R1 内核预构建状态机：每次启动都复发 + 阻塞等待（主因，已实锤）</a></li><li class="lvl-3"><a href="#r2-无参启动-完整模式-两处启动期同步阻塞">R2 无参启动 = 完整模式 + 两处启动期同步阻塞</a></li><li class="lvl-3"><a href="#r3-khy-os-路径等待叠加">R3 `khy os` 路径等待叠加</a></li><li class="lvl-3"><a href="#r4-数据家分叉-慢性病">R4 数据家分叉（慢性病）</a></li><li class="lvl-3"><a href="#旁证-repl-能进去-只是慢">旁证：REPL 能进去，只是慢</a></li><li class="lvl-3"><a href="#环境教训-血的">环境教训（血的）</a></li><li class="lvl-2"><a href="#桌面端-能完成基本任务-只读取证-提案-09-38">桌面端「能完成基本任务」— 只读取证 + 提案（09:38）</a></li><li class="lvl-3"><a href="#编号冲突-并行会话-已避让">编号冲突（并行会话，已避让）</a></li><li class="lvl-2"><a href="#design-arch-133-p0-落地-桌面端接入工具循环-已完成">`[DESIGN-ARCH-133]` P0 落地 —— 桌面端接入工具循环（已完成）</a></li><li class="lvl-3"><a href="#实施时推翻了方案初稿的核心写法-重要教训">★ 实施时推翻了方案初稿的核心写法（重要教训）</a></li><li class="lvl-3"><a href="#验收实测-全绿">验收实测（全绿）</a></li><li class="lvl-3"><a href="#构建陷阱-新发现-已写进-skill-8-3">★ 构建陷阱（新发现，已写进 skill §8.3）</a></li><li class="lvl-3"><a href="#未做-按分期">未做（按分期）</a></li><li class="lvl-3"><a href="#文档">文档</a></li><li class="lvl-2"><a href="#design-arch-133-p1-落地-人在环审批-提问闭环">`[DESIGN-ARCH-133]` P1 落地 —— 人在环审批/提问闭环</a></li><li class="lvl-2"><a href="#design-arch-133-p2-落地-方案-p0-p1-p2-全部完成">`[DESIGN-ARCH-133]` P2 落地 —— 方案 P0/P1/P2 全部完成</a></li><li class="lvl-2"><a href="#khy-os-启动屏视觉重设计-提案已出-design-arch-134-09-42">khy-os 启动屏视觉重设计 — 提案已出 `[DESIGN-ARCH-134]`（09:42）</a></li><li class="lvl-3"><a href="#病灶-b1-b7-file-line-可复核">病灶 B1–B7（file:line 可复核）</a></li><li class="lvl-3"><a href="#三条-ink-事实-核过源码-已写进-skill-2-1">三条 ink 事实（核过源码 → 已写进 skill §2.1）</a></li><li class="lvl-3"><a href="#学生四条决策-askuserquestion-全取推荐项">学生四条决策（AskUserQuestion，全取推荐项）</a></li><li class="lvl-3"><a href="#方案要点">方案要点</a></li><li class="lvl-3"><a href="#门禁基线-实测">门禁基线（实测）</a></li><li class="lvl-3"><a href="#新踩到的-ci-陷阱-已写进-skill-6-3">新踩到的 CI 陷阱（已写进 skill §6.3）</a></li><li class="lvl-3"><a href="#顺手查清的两条登记义务-已写进-skill-3-1">顺手查清的两条登记义务（已写进 skill §3.1）</a></li><li class="lvl-3"><a href="#阻塞项-投放前必须过">阻塞项（投放前必须过）</a></li><li class="lvl-3"><a href="#环境杂记">环境杂记</a></li><li class="lvl-2"><a href="#design-arch-134-p0-实施-启动屏视觉重设计落地-11-16">`[DESIGN-ARCH-134]` P0 实施 — 启动屏视觉重设计落地（11:16）</a></li><li class="lvl-3"><a href="#落地-10-个文件">落地（10 个文件）</a></li><li class="lvl-3"><a href="#真帧验证-tests-tui-vtscreen-js-最小-vt-模型-5-档全过-零-esc-2j">真帧验证（`tests/tui/vtScreen.js` 最小 VT 模型，5 档全过、零 `ESC[2J`）</a></li><li class="lvl-3"><a href="#两处实施中才发现的设计修正-已写回-c22-提案-9-3">两处实施中才发现的设计修正（已写回 C22 + 提案 §9.3）</a></li><li class="lvl-3"><a href="#另两处小教训">另两处小教训</a></li><li class="lvl-2"><a href="#tui-长任务中断-压缩不接续-只读取证-提案-design-arch-135-10-16">TUI 长任务中断 / 压缩不接续 — 只读取证 + 提案 `[DESIGN-ARCH-135]`（10:16）</a></li><li class="lvl-3"><a href="#三层验证-照-skill-1-口径">三层验证（照 skill §1 口径）</a></li><li class="lvl-3"><a href="#决定性证据-两个断点">决定性证据（两个断点）</a></li><li class="lvl-3"><a href="#两条顺带发现">两条顺带发现</a></li><li class="lvl-3"><a href="#方案要点-复用-canonical-不造新真源">方案要点（复用 canonical，不造新真源）</a></li><li class="lvl-3"><a href="#编号">编号</a></li><li class="lvl-3"><a href="#ci-约束复核-独立复现-非引用">CI 约束复核（独立复现，非引用）</a></li><li class="lvl-2"><a href="#design-arch-135-一期-二期落地-10-22-已验完整">`[DESIGN-ARCH-135]` 一期 + 二期落地（10:22，已验完整）</a></li><li class="lvl-3"><a href="#前置检查-这次做对了-值得固化">前置检查（这次做对了，值得固化）</a></li><li class="lvl-3"><a href="#落地内容">落地内容</a></li><li class="lvl-3"><a href="#实现前必须搞清的三件事-都实测过-别凭猜">实现前必须搞清的三件事（都实测过，别凭猜）</a></li><li class="lvl-3"><a href="#验收">验收</a></li><li class="lvl-3"><a href="#归因新技巧-已写进提案-10-4-也是-skill-该记的">归因新技巧（★ 已写进提案 §10.4，也是 skill 该记的）</a></li><li class="lvl-3"><a href="#与方案的偏离-已写进提案-10-2">与方案的偏离（已写进提案 §10.2）</a></li><li class="lvl-3"><a href="#待办">待办</a></li><li class="lvl-2"><a href="#压缩阈值三方不一致-同源修复-10-37-design-arch-135-8-10-6">压缩阈值三方不一致 → 同源修复（10:37，`[DESIGN-ARCH-135]` §8/§10.6）</a></li><li class="lvl-3"><a href="#三条独立证据-方法值得复用">三条独立证据（方法值得复用）</a></li><li class="lvl-3"><a href="#修法-最小-可回滚-单一真源">修法（最小、可回滚、单一真源）</a></li><li class="lvl-3"><a href="#验收-2">验收</a></li><li class="lvl-3"><a href="#共编排查-这次差点踩雷">共编排查（这次差点踩雷）</a></li><li class="lvl-3"><a href="#顺带查清-jest-node-test-两套-runner-的边界-长期有用">顺带查清：jest / node:test 两套 runner 的边界（★ 长期有用）</a></li><li class="lvl-3"><a href="#未做-记入提案待办">未做（记入提案待办）</a></li><li class="lvl-2"><a href="#design-arch-135-三期落地-tui-有界自动续跑-10-53-顺带挖出第二个根因">`[DESIGN-ARCH-135]` 三期落地：TUI 有界自动续跑（10:53）—— 顺带挖出第二个根因</a></li><li class="lvl-3"><a href="#落地清单">落地清单</a></li><li class="lvl-3"><a href="#设计取舍-不这么做会踩坑">设计取舍（不这么做会踩坑）</a></li><li class="lvl-3"><a href="#顺带挖出的第二个根因-b-与中文不兼容-比第一个更根本">★★ 顺带挖出的第二个根因：`\b` 与中文不兼容（比第一个更根本）</a></li><li class="lvl-3"><a href="#有界性-runtime-003">有界性（RUNTIME-003）</a></li><li class="lvl-3"><a href="#验收-3">验收</a></li><li class="lvl-3"><a href="#待办-2">待办</a></li><li class="lvl-2"><a href="#none-误报-钉选-strict-只读取证-提案-design-arch-136-10-34">`[NONE]` + 误报「钉选 strict」— 只读取证 + 提案 `[DESIGN-ARCH-136]`（10:34）</a></li><li class="lvl-3"><a href="#一句话结论">一句话结论</a></li><li class="lvl-3"><a href="#实测复现-9-组形状枚举-非推测">实测复现（9 组形状枚举，非推测）</a></li><li class="lvl-3"><a href="#触发链-四步-每步-file-line">触发链（四步，每步 file:line）</a></li><li class="lvl-3"><a href="#归因-照-skill-6-5">归因（照 skill §6.5）</a></li><li class="lvl-3"><a href="#未确证-已写进提案-8-优先项-标注-阻断确证-不阻断修复">★ 未确证（已写进提案 §8 优先项，标注「阻断确证、不阻断修复」）</a></li><li class="lvl-3"><a href="#顺带查实的两条-都是既有状态-非本次引入">顺带查实的两条（都是既有状态，非本次引入）</a></li><li class="lvl-3"><a href="#方案分期">方案分期</a></li><li class="lvl-2"><a href="#design-arch-136-三期满落地-10-57-已验完整">`[DESIGN-ARCH-136]` 三期满落地（10:57，已验完整）</a></li><li class="lvl-3"><a href="#落地内容-2">落地内容</a></li><li class="lvl-3"><a href="#实施期推翻方案的两处设计-重要-都已写进提案-9-2">★ 实施期推翻方案的两处设计（重要，都已写进提案 §9.2）</a></li><li class="lvl-3"><a href="#第-3-期-能力早已存在-改的是-真源轻重不一">第 3 期：能力早已存在，改的是「真源轻重不一」</a></li><li class="lvl-3"><a href="#验收实测">验收实测</a></li><li class="lvl-3"><a href="#新技巧-本机没装-jest-时-怎么验-jest-风格测试的零回归">★ 新技巧：本机没装 jest 时，怎么验 jest 风格测试的零回归</a></li><li class="lvl-3"><a href="#下一个真问题-已写进提案-9-5-待拍板">下一个真问题（已写进提案 §9.5，待拍板）</a></li><li class="lvl-2"><a href="#9-5-落地-启动路径接入钉选自检-11-30-已验完整">§9.5 落地：启动路径接入钉选自检（11:30，已验完整）</a></li><li class="lvl-3"><a href="#取证修正-启动自检并非没接-而是两处断点">取证修正：启动自检并非没接，而是两处断点</a></li><li class="lvl-3"><a href="#落地-3-源文件-1-新测试-判据-文案-100-复用-零新增-env">落地（3 源文件 + 1 新测试，判据/文案 100% 复用，零新增 env）</a></li><li class="lvl-3"><a href="#验收-4">验收</a></li><li class="lvl-3"><a href="#测试安全红线-写这类-含-autorepair-的自检-测试必守">测试安全红线（写这类「含 autoRepair 的自检」测试必守）</a></li><li class="lvl-3"><a href="#风险评估-写进提案-9-6">风险评估（写进提案 §9.6）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="2026-09-23-工作日志">2026-09-23 工作日志<a class="anchor" href="#2026-09-23-工作日志" aria-label="锚点">#</a></h1>
+<h2 id="design-mem-007-记忆规则系统总纲提案-14-00-前后">[DESIGN-MEM-007] 记忆规则系统总纲提案（14:00 前后）<a class="anchor" href="#design-mem-007-记忆规则系统总纲提案-14-00-前后" aria-label="锚点">#</a></h2>
+<ul><li>用户五问（触发/方式/类型/层级/回忆冲突）→ 实测发现 <strong>000–006 已覆盖前四块</strong>，</li></ul>
+<p>唯一真缺口 = <strong>回忆触发时机 + 冲突优先级</strong>（env 门在 aiChatCore 消费但零规则文档）。</p>
+<ul><li>捕获侧真源实为 <code>memoryTrigger.js</code>（explicit/proactive/none 三态 + INSTRUCTION_RE</li></ul>
+<p>项目约定分支 + decideUpdate supersede）—— 提案 W 系列是它的规则化表述，<strong>不造第二触发器</strong>。</p>
+<ul><li>落盘：<code>docs/03_DESIGN_设计/DESIGN-MEM/[DESIGN-MEM-007] 记忆规则系统总纲.md</code></li></ul>
+<p>（MR-W/F/T/L/R 五组规则；分层映射「不扩 tier 枚举」；冲突优先级 P0 用户当次 &gt; P1 规范/hq &gt; P2 显式要求 &gt; P3 permanent &gt; P4 新者胜；实施 S1 登记 MEMORY-005/006 → S2 写前必查钩子 → S3 清 autoDream/distiller 裸写 → S4 补登 memdir seam）。</p>
+<ul><li>同轮完成 MEMORY.md 超限压缩（39 行内收敛，硬约束/网关/TUI/软著四节）。</li></ul>
+<h2 id="每日代码审查-自动运行-第-6-次">每日代码审查（自动运行，第 6 次）<a class="anchor" href="#每日代码审查-自动运行-第-6-次" aria-label="锚点">#</a></h2>
+<ul><li>范围：24h <strong>零提交</strong>（HEAD <code>e86bbf6d</code> 停留第 3 天）→ 规则 ②+③；源码类 414，实审 mtime 前 40，未覆盖 374。</li><li>基线：<code>RUN_TAG=0923a</code>（37 条，18m20s，27 绿/10 红）→ 修复后 <code>0923b</code>（11m08s，<strong>顶层零漂移</strong>）。</li><li><strong>A 类 = 0</strong>：无提交即无「本次引入」。所有红归 B（历史欠账）/ C（在途未提交）。</li><li>修 3 项 / 4 文件（未提交，main 原地改）：模式注册表 6 键改名（<code>pattern-ghost</code> 6→0）、</li></ul>
+<p><code>[OPS-MAN-067]</code> 速查表重生成（triage 15/15）、provider contract fixture 补第 19 个 + 期望 18→19（3/3 pass）。<br>  效果：<code>test:scripts</code> fail <strong>7→4</strong>。</p>
+<ul><li><strong><code>check:tui-gates</code> 修复尝试已回滚</strong>：两版 tokenizer 都少算 46 个真门</li></ul>
+<p>（动态拼接 <code>process.env[\</code>KHY_SIDEBAR_${k}\<code>]</code>）→ 判定为度量口径问题，交人工。</p>
+<ul><li>报告：<code>.khy/reports/code-review/2026-09-23.md</code></li></ul>
+<h3 id="新根因-交人工-最高优先级">新根因（交人工，最高优先级）<a class="anchor" href="#新根因-交人工-最高优先级" aria-label="锚点">#</a></h3>
+<p><strong><code>git</code> 对象库物理性损坏</strong>：<code>fsck --connectivity-only</code> 18 broken links（11 tree + 7 commit）；<br>11 条 ref 不可遍历（含 <code>main</code>、<code>HEAD</code> 所在分支）；<code>rev-list</code>/<code>log --since</code>/<code>merge-base</code> 全失败<br>→ 这是「24h 提交」规则近几轮失灵的确切原因。<br><code>.git</code> 事故痕迹（<code>index.bak-20260918-1156</code> 等）全部落在 <strong>2026-09-18</strong>；<br>唯一回退 <code>.git-backup-20260913/</code>（720 MB）<strong>已不存在</strong>。<br>安全核查：<strong>无仓库脚本</strong>执行 <code>gc --prune</code> / <code>reflog expire</code> / <code>reset --hard</code>（khy 代码主动防御：<br><code>repoDisciplineRisk.js:71</code>）；风险来自 <code>docs/11_报告/其它报告/2026-09-16_khy-os体积构成分析与瘦身方案.md</code><br><strong>文档驱动的人工操作</strong>。→ 在远端可覆盖之前，<strong>不要跑任何 <code>gc --prune</code></strong>。</p>
+<h3 id="环境教训-下次直接用">环境教训（下次直接用）<a class="anchor" href="#环境教训-下次直接用" aria-label="锚点">#</a></h3>
+<ul><li><strong>NTFS ADS 陷阱</strong>：日志/输出文件名<strong>不能含 <code>:</code></strong> —— 会被写成备用数据流</li></ul>
+<p>（<code>check:structure.log</code> → 文件 <code>check</code> 的 <code>structure.log</code> 流），正常读取路径永远读不到。<br>  清洗正则须写 <code>/[^a-zA-Z0-9_.-]/</code>（<code>:</code> 必须映射掉）。本轮已修 <code>.khy/tmp/baseline-driver-0923.js</code>。</p>
+<ul><li><code>git status --porcelain -z</code> 输出里 <strong>rename 记录占两段</strong>（源 + 目标），解析时必须 <code>i += 1</code> 跳过，</li></ul>
+<p>否则会把目标路径当成一条独立记录。</p>
+<ul><li>基线 jsonl 的字段是 <strong><code>status</code></strong>（不是 <code>exit</code>），<code>signal</code>/<code>timedOut</code>/<code>bytes</code> 同层。</li><li><code>git archive HEAD &lt;单文件&gt;</code> <strong>可用</strong>，<code>git archive HEAD</code>（整树）在本仓<strong>必失败</strong></li></ul>
+<p>（对象损坏：<code>invalid object … for 'apps/ai-frontend/src/nav/index.js'</code>）。</p>
+<h2 id="每日规范巡检-自动化首跑-08-16">每日规范巡检（自动化首跑，08:16）<a class="anchor" href="#每日规范巡检-自动化首跑-08-16" aria-label="锚点">#</a></h2>
+<ul><li>只读跑 58 个仓库自带守卫（脚本 <code>.khy/tmp/daily-audit/run-audit.js</code>，产物同目录）：</li></ul>
+<p><strong>47 PASS / 8 FAIL / 3 TIMEOUT</strong>。报告 <code>.khy/tmp/daily-audit/2026-09-23-audit-report.md</code>。</p>
+<ul><li><strong>交叉证据</strong>：巡检 git 快照 HEAD 取到 n/a（<code>git log</code> 失败）——与上方「git 对象库物理损坏」互证；</li></ul>
+<p>巡检快照同时显示 <strong>10189 条未提交变动</strong>（A 9675 / AM 302 / ?? 210）暂存区堆积。</p>
+<ul><li>关键非绿：env-gateway-pin 2 error（两个 .env 硬钉 <code>api+STRICT=true</code>，AI 通道全灭风险，历史上 3 次复发）；</li></ul>
+<p>棘轮突破 3 处（pattern-coverage +146、tui-gates +6、code-standards 3 条基线）——与暂存区海量新增强相关；<br>  arch-debt 基线悬空 12 条（域迁移未刷新）；reliability toolCalling.js 缺 watchdog；<br>  3 个 TIMEOUT（file-ratchet/node-syntax/dependency-size）疑因暂存区巨量文件拖慢全量扫描。</p>
+<ul><li>亮点：版本同步、规则登记表、反孤儿、协议三件套、债务台账、软著 S1 全绿。</li><li>自动化已从 once 修正为 <strong>FREQ=DAILY 08:16</strong>，prompt 固化脚本用法与漂移对比口径。</li></ul>
+<h2 id="长任务偏离-完成判据缺失-只读取证-提案-08-24">长任务偏离 / 完成判据缺失 — 只读取证 + 提案（08:24）<a class="anchor" href="#长任务偏离-完成判据缺失-只读取证-提案-08-24" aria-label="锚点">#</a></h2>
+<p>学生问「khyos 中长任务常常偏离，而且完成时缺少判断标准，帮我想个办法」。<br>全程只读，<strong>未改任何仓库文件</strong>（提案写在 <code>_产物/long-task-convergence-proposal.md</code>）。</p>
+<p><strong>核心发现（推翻了提问的前提）</strong>：问题不是「判据不够严」，是<strong>判据查的对象错了</strong>。<br><code>khy hq verify</code> 报 <code>0 error / 0 warning</code>，同一时刻任务在死。</p>
+<ol><li><strong>三条悬挂任务全无占用无租约</strong>：<code>T-020</code>/<code>T-021</code> doing、<code>T-023</code> review(P1)，</li></ol>
+<p><code>claimed_by</code>/<code>lease_expires</code> 全空，分别停滞 4/4/3 天。<br>   <code>validateDataset</code>（<code>hqStore.js:773</code>）<strong>只查 <code>review</code>/<code>done</code> 阶段的占用残留，不查 doing 是否还活着</strong>。</p>
+<ol><li><strong>目标真源被指向迁移中丢失的路径（最廉价胜利）</strong>：</li></ol>
+<p><code>T-020</code>/<code>T-021</code> 的 <code>acceptance</code> 都指向 <code>_meta/SPLIT-PLAN.md</code> → 仓内<strong>零命中</strong>。<br>   但它其实<strong>改名搬家了</strong>：<code>docs/08_MGMT_项目管理/MGMT-PLAN/[MGMT-PLAN-008] replSession与toolUseLoopCore拆分分批计划.md</code><br>   （105 行，首行自称 SPLIT-PLAN.md，含 B1–B11 / C1–C3+ 全批次表）。<br>   任务备注把「文件不存在」与「文件改名了」混为一谈 → 卡 4 天。<br>   另：<code>T-021</code> 判据写的 <code>toolUseLoopCore.js</code> 仓内有<strong>两个</strong>（<code>services/tool/</code> 10313 行 vs <code>services/</code> 2 行转发壳），<br>   判据没说是哪个 ⇒ 不可机器核对。<strong><code>acceptance</code> 里的路径引用从不被校验</strong>。</p>
+<ol><li><strong>判据强度与完成状态强相关</strong>：14 条「含可执行命令」→ 5 done / 0 doing / 0 review；</li></ol>
+<p>9 条「纯描述性验收」→ 0 done / 2 doing / 1 review。<strong>5/5 完成的都在有命令组，3/3 悬挂的都在无命令组。</strong></p>
+<ol><li><strong>Bug 侧零留痕</strong>：<code>BUG-009</code>/<code>011</code>/<code>013</code> 三条 <code>pending_verify</code>，<strong>notes 全是 0</strong>。</li></ol>
+<p>而 <code>prompts/bugfix/02-回归验证.md</code> 要求「列出每一项验证及结果证据」—— 要求发出去了，<strong>没有接收方</strong>。</p>
+<ol><li><strong>存证机制完好但零桥接</strong>：<code>.khy/feedback/</code> 实测 <strong>52 目录 0 空</strong>，质量高</li></ol>
+<p>（FIX 四件套/独立复现脚本/<code>finding-falsified.md</code>/65 文件含 43 个 rollback）。<br>   <code>check-agent-feedback.js</code> 判定逻辑真在判（<code>EVIDENCE</code> 契约 <code>:162-171</code>、<code>readEvidence</code>、<br>   <code>auditFiveQuestions</code> 抓「回答&lt;40字」「缺 source:」）。<br>   但：<code>hqStore.js</code> 全文 <strong>grep <code>feedback</code> 零命中</strong>；目录名手工拼（<code>BUG-116-…</code> / <code>2026-09-18-…</code> / <code>g69-…</code> 三种前缀）<br>   ⇒ 无法映射回任务；<code>--changed</code> 模式默认落 <code>.khy/feedback/adhoc/</code>。<strong>两边互相不看。</strong></p>
+<ol><li><strong>判决器自己也在 S1 墓碑</strong>：<code>check-agent-feedback.js:58</code> <code>STAGE='S1'</code>，<code>:618</code> 恒 exit 0。</li></ol>
+<p>与 <code>[DESIGN-DELIV-001]</code> §1.2/§1.3 记的 <code>check-zcode-baseline.js</code> 同模子。</p>
+<p><strong>根因（一条）</strong>：任务状态机（<code>hqStore.js</code>）跟改动存证（<code>.khy/feedback/</code>）之间没有契约。<br>入口只锁「目标」不锁「边界」；出口 <code>review → done</code> 是裸箭头（<code>hqStore.js:114</code>），无证据前置。</p>
+<p><strong>方案（不造新机制，只接两端）</strong>：<br>① 修 <code>T-020</code>/<code>T-021</code> 判据路径（10 分钟，纯数据）；<br>② task 加 <code>evidence</code> + <code>baseline_metrics</code> + <code>scope_guard</code> 字段（复用现有「出现即校验、存量不追溯」范式 <code>hqStore.js:691</code>）；<br>③ <code>task set done</code> 加验收清算前置 —— <strong>走命令路径不进 <code>scripts/ci/</code></strong>（故不需门引用、不触发 <code>check-wiring.js</code> 孤儿、<br>不新增规则 ID），依据是 <code>hqStore.js:646-650</code> 已写明的裁决「能落在命令写入路径上的约束，就不要升级成检查器」；<br>④ 把 <code>RUNTIME-008</code> BUILD 五问从改动级提到任务级（<code>scope_guard</code> = 第 5 问「不做什么」）。</p>
+<p><strong>反模式（每条都是本仓踩过的坑）</strong>：别造恒 exit 0 记分板（§1.2）；<br>别停 S1 墓碑（§1.3）；<strong>别只加字段不进流程</strong> —— <code>cod</code>/<code>conf</code>/<code>size</code> 是现成反面教材，<br><code>validateTask:692-700</code> 校验了但 <strong>23 条一条没填 ⇒ <code>PROCESS-102</code> 档内评分决胜从未生效过一次</strong>；<br>别把知识留在注释里（§1.4，<code>publish-dual.sh</code> 同病）。</p>
+<p><strong>建议先做 ①+② 然后停下观察</strong> —— 若 <code>T-020</code>/<code>T-021</code> 复活后仍不动，则病不在判据而在<strong>选取</strong>，<br>那时该改的是 <code>PROCESS-102</code>。</p>
+<p><strong>环境</strong>：本轮 <code>sed</code>/<code>ls</code>/<code>node -e</code> 全部可用；<code>rg</code> 未安装（报空）；取值靠 <code>node -e</code> 内联脚本，<br>与 USER.md 记的绕法一致。</p>
+<h2 id="长任务收敛机制-落地完成-t-024-13-35-前后">长任务收敛机制 — 落地完成（T-024，13:35 前后）<a class="anchor" href="#长任务收敛机制-落地完成-t-024-13-35-前后" aria-label="锚点">#</a></h2>
+<p>方案四动作<strong>全部落地</strong>（账本 = <code>.ai/hq/PROGRESS.json</code> T-024，evidence =<br><code>.khy/feedback/T-024-acceptance-gate/</code>，清算 5/5 PASS 零阻断，<strong>停在 review 等<br>用户拍板 done</strong> —— 这正是机制设计的人格化演示）：</p>
+<ol><li><strong>数据</strong>：T-020/T-021 判据路径修正（顺带修 T-011/T-012/T-016 共 5 条失效路径引用，</li></ol>
+<p><code>auditAcceptancePaths</code> 全量 0 告警）；PROGRESS.json 加 <code>schema</code> 段 + <code>review_done_rule</code> 段。</p>
+<ol><li><strong>代码</strong>（<code>hqStore.js</code> + <code>handlers/hq.js</code>）：<ul><li><code>reviewDoneBlockers</code>（4 阻断项：缺 evidence / 目录缺失或空 / 缺 acceptance.md 或其含 error / 勾选数 &lt; 判据数）<ul><li><code>splitAcceptance</code> / <code>parseAcceptanceLedger</code> / <code>auditAcceptancePaths</code> / <code>auditAcceptanceQuality</code>；</li></ul></li><li><code>_gateReviewToDone</code>（拒绝时输出可执行动作清单）接在 <code>_applyState</code> 的 task <code>review→done</code> 前；</li><li><code>khy hq accept &lt;T-ID&gt; --evidence &lt;名&gt;</code> 生成逐条清算模板（不覆盖已有文件；未填模板过不了门）；</li><li><strong>scope_guard 边界锁</strong>：<code>todo→doing</code> 硬前置（无边界拒绝开工）+ <code>khy hq scope &lt;T-ID&gt;</code> 越界可见（不拦，</li></ul></li></ol>
+<p>共享脏工作树下语义=「可能越界需人工归因」）+ <code>task note --scope</code> 逐条追加（append-only，不许清空）；</p>
+<ul><li><code>validateTask</code> 校验 evidence/baseline_metrics/scope_guard 形状（出现即校验，存量不追溯）；</li><li><code>validateDataset</code> 新增：doing/review 无占用 warning（三条停滞任务首次可见）+ 租约过期 warning<ul><li>acceptance 路径失效 warning。<strong>本机实测：<code>khy hq verify</code> 从恒 0 warning 变为 4 条可见 warning、0 error。</strong></li></ul></li></ul>
+<p>纯逻辑全矩阵（8 类坏数据必拒/好数据放行/括号分号回归锁）+ 7 个 E2E spawn。<br>   反向验证报告（9/9）在 evidence 目录。</p>
+<p><strong>三个实测抓到的新坑（下次直接用）</strong>：</p>
+<ul><li><strong>spawnSync 管道版会被 khy.js 启动期后台进程攥住写端不返回</strong>：实测一次 988s（&gt;120s kill 超时，</li></ul>
+<p>kill 只杀直接子进程，孙进程攥着 stdout 管道）→ 测试 spawn 一律 <code>stdio: ['ignore', fd, fd]</code> 落文件再读。<br>  冷热差异巨大（16s ↔ 0.8s），慢≠挂，先落文件计时再定性。</p>
+<ul><li><strong>router.js:764 options 解析对重复 <code>--key</code> last-wins</strong>：同一命令重复 <code>--scope</code> 只剩最后一条</li></ul>
+<p>（且旗标 token 被通用解析器消费，<code>hq</code> 自己的 parseArgs 根本看不到重复）→ 多值旗标改「每条一次调用」。</p>
+<ul><li><strong><code>splitAcceptance</code> 必须括号感知</strong>：acceptance 惯用「（…；…）」括号内分号补充说明，朴素按 <code>；</code> 切会把</li></ul>
+<p>5 条切成 7 条 —— 门反过来抓到了实现自己的 bug（T-024 亲自踩中，已修 + 回归锁）。</p>
+<p><strong>runner 纪律再确认</strong>：<code>services/backend</code> 的 <code>test:all = npm test &amp;&amp; npm run test:node</code>，两套 runner 都扫<br>全部 <code>*.test.js</code> ⇒ <strong>新测试文件必须 <code>require('node:test')</code></strong>（jest 侧按文件内容自动排除，<code>node --test</code> 侧能跑）。</p>
+<p><strong>环境</strong>：<code>npx eslint</code> 本机不可用（<code>khy-os-backend/node_modules/eslint</code> 缺失，既有问题）；<br><code>hqStore.feedbackDir()</code> 新增 <code>KHY_FEEDBACK_DIR</code> 注入点（与 <code>KHY_HQ_DIR</code> 同纪律）。</p>
+<p><strong>14:16 终局</strong>：用户授意代拍最后一格 → <code>khy hq task set T-024 done</code> 经新门放行<br>（exit 0，「验收清算已入账：5 条判据全部有结果」），PROGRESS/ROADMAP 同步 done，<br><code>acceptance_audit</code> 首次入账。至此本机制完成了第一次完整的<br>「入口锁边界 → 出口钉证据 → 机器清算 → 人拍板」闭环——<strong>也是它自己第一次被使用</strong>。<br>verify 剩 3 条 warning = T-020/T-021/T-023 三条真实停滞任务，正是留给下一次的活。</p>
+<h2 id="tui-复制不完整-端到端探针-红用例已固化">TUI 复制不完整 — 端到端探针（红用例已固化）<a class="anchor" href="#tui-复制不完整-端到端探针-红用例已固化" aria-label="锚点">#</a></h2>
+<p>学生报「TUI 复制不完整反而频繁出现」。<strong>三层单测全绿</strong>（<code>mouseSelectEvent</code> 15 条 /<br><code>selection</code> 37 条 / <code>viewportDragEdgeScroll</code> 8 条），缝在<strong>它们都没跨过的地方</strong>：<br>手势期间 <code>lines</code> 数组本身变了。</p>
+<p><strong>根因（探针实测确认，非推测）</strong>：<code>selection.js</code> 的锚点存的是<strong>行号</strong>，<br><code>App.js:1617</code> 在<strong>松手那一帧</strong>按行号重新切片 —— 一个数字、两个时刻。<br>只要手势期间发生「行插入 / 行删除 / 折行重排」，同一行号就指向不同内容。</p>
+<ul><li><strong>新增探针</strong>：<code>services/backend/tests/cli/tui/selectionAnchorDrift.test.js</code></li></ul>
+<p>（D-01..D-05，复刻 <code>App.js:1530-1648</code> 的坐标换算 + 取文，中途替换 <code>lines</code>）</p>
+<ul><li><strong>实测</strong>：3 绿 2 红 ——<ul><li>D-02 头部插 3 行 → 取到 <code>L07..L11</code>，用户选的是 <code>L10..L14</code>，<strong>错位量恰好 = 插入行数</strong>；</li><li>D-04 折行重排（4 视觉行塌成 2）→ 取到 <code>'para-part-1..3\nTAIL'</code>，<strong>混进了不该有的行</strong>；</li><li>D-01/D-03/D-05 绿（基线、对照组、fail-soft），证明两条红不是探针自己算错。</li></ul></li><li>相关套件 62 条：<strong>60 绿 / 2 红</strong>，原有 60 条零回归（<code>selection.js</code> 只加了注释）。</li><li><code>selection.js</code> 头部「已知偏差」<strong>原只写了软换行一条</strong>，已补第 2 条锚点漂移 + 复现指引。</li></ul>
+<p><strong>修法方向（探针只钉现状，不实现）</strong>：锚点补<strong>内容指纹</strong>（行首 hash + 行序号），<br>松手时按指纹在当帧 lines 里重定位再切片。<br>❌ 别改成「用按下时的行快照」—— 那会让流式内容复制到旧文本，制造第二种不一致。</p>
+<h3 id="探针踩坑-写这类探针直接用">探针踩坑（写这类探针直接用）<a class="anchor" href="#探针踩坑-写这类探针直接用" aria-label="锚点">#</a></h3>
+<ul><li><strong>SGR 坐标是 1-based</strong>（<code>mouseButtons.js:122-123</code> 减 1）。手写 <code>[&lt;0;5;10M</code> 会整体差一行，</li></ul>
+<p>基线直接红。<strong>必须用 helper</strong>：<code>sgr(btn, col+1, row+1, final)</code>。<br>  第一版就栽在这，<strong>差点把「探针 bug」误读成「缺陷」</strong> —— 所以 D-01 基线必须有，<br>  它是「复刻没写错」的唯一担保。</p>
+<ul><li><strong>末行 <code>endCol=0</code> 会被 <code>slice(0,0)</code> 吃掉</strong>（<code>selection.js:423</code> 契约，非缺陷）。</li></ul>
+<p>跨行选区要显式给末行 <code>toCol</code>。</p>
+<ul><li><strong><code>includes(子串)</code> 型的断言会假绿</strong> —— D-04 第一版写成 <code>clip.includes('para-part-1')</code>，</li></ul>
+<p>合并后那行仍含该子串，恒真。收紧成<strong>整段逐字节相等</strong>才守得住。</p>
+<ul><li>Bash 工具本机仍不可用（shim 坏，<code>dirname not found</code>）；<code>rm</code> 也跑不动，</li></ul>
+<p>清理走 PowerShell <code>Remove-Item</code>。PowerShell 工具 <strong>stdout 恒空</strong>（老限制），<br>  跑测试用「临时 node 脚本 + <code>spawnSync</code> + <code>fs.writeFileSync</code> 落盘 + Read 读」。<br>  （⚠ Bash 的 <code>cd</code> 也被破坏 —— <code>cd /d/...</code> 报 <code>cd: null directory</code>。<strong>只能纯 Read/Grep/Glob</strong>。）</p>
+<h3 id="提案已出-design-arch-132-编号-131-132">提案已出：<code>[DESIGN-ARCH-132]</code>（编号 131→132）<a class="anchor" href="#提案已出-design-arch-132-编号-131-132" aria-label="锚点">#</a></h3>
+<p>落盘 <code>docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-132] TUI选区锚点漂移修复方案.md</code>。<br>编号取自 <code>00_INDEX_DESIGN-ARCH-总目录.md</code>（实测 max=131）。</p>
+<p><strong>关键判断：本提案属 <code>B-P1</code> 豁免，不适用 B-P2 七字段。</strong><br>依据 <code>[DESIGN-SOURCING-001]</code> §3 B-P1 doc line 165：<br>「对已登记能力域的<strong>行为修正</strong>（bugfix）不需要提案」。<br>按 B-P2 体例逐项<strong>据实填「不适用 + 依据」</strong>，不留空（缺字段 ≠ 声明不适用）。</p>
+<p><strong>方案核心</strong>：锚点从裸行号 → 行号 + <strong>内容指纹</strong>（行首 hash + 逻辑行序号 <code>seq</code>），<br>松手时按指纹在当帧 lines 里<strong>重定位</strong>再切片。<br>三期分期：① 指纹基础设施 + <code>relocate</code> 纯函数（不接线，零风险）② App 接线（D-02 转绿）<br>③ 行投影补 <code>seq</code> 元数据（D-04 转绿，<strong>最大一期、可独立放弃</strong>）。<br><code>seq</code> 从哪来是待核实项（<code>buildTranscriptLines</code> 需产出平行数组 <code>lineSeqs</code>）。</p>
+<p><strong>本轮自己推翻的一个设计（重要）</strong>：原拟新增 <code>KHY_SELECT_FP</code> env 做回滚开关。<br>实测两条守卫后<strong>删除</strong>：</p>
+<ul><li><code>scripts/ci/check-tui-gates.js:32</code> <code>MAX_GATES = 220</code>，注释写明「<strong>only moves DOWN</strong>」，</li></ul>
+<p>且 <code>:28-30</code> 记 2026-09-18 曾为 <code>KHY_SELECT*</code> 破例 +8 ⇒ 再开新门撞棘轮；</p>
+<ul><li><code>services/backend/src/cli/tui/utils/selectGates.js:18</code> 明写「三个子开关……<strong>别合并</strong>」</li></ul>
+<p>⇒ 往该叶子加第四个门也违其设计意图。<br>⇒ 改为「回滚靠 <code>fp</code> 可选参数」，<strong>无新增 env</strong>。副作用是<strong>保住了 B-P1 豁免</strong><br>（B-P1 第 2 条判据就是「新增配置键」，加了 env 就从豁免变非豁免）。<br><strong>教训：提案里写「新增 env 做开关」之前，先查 <code>check-tui-gates</code> 与 <code>selectGates</code> 的门预算。</strong></p>
+<h3 id="提案验证">提案验证<a class="anchor" href="#提案验证" aria-label="锚点">#</a></h3>
+<p><code>node scripts/ci/check-proposal-index.js</code> → <strong>0 error / 1 warning</strong>，<br>warning 是既有 <code>mapping-empty</code>（索引自述「首次登记」），新文档零引入。</p>
+<h2 id="design-arch-132-第一期落地-纯新增-已验完整"><code>[DESIGN-ARCH-132]</code> 第一期落地（纯新增，已验完整）<a class="anchor" href="#design-arch-132-第一期落地-纯新增-已验完整" aria-label="锚点">#</a></h2>
+<p>学生「按照你的建议执行」→ 落第一期。<strong>改动只在一个文件 + 一个新测试文件。</strong></p>
+<h3 id="落地内容-services-backend-src-cli-tui-selection-js">落地内容（<code>services/backend/src/cli/tui/selection.js</code>）<a class="anchor" href="#落地内容-services-backend-src-cli-tui-selection-js" aria-label="锚点">#</a></h3>
+<p>HEAD 399 行 → 工作区 616 行（+225 / −8，净 +217，算术闭合）。</p>
+<table><thead><tr><th>新增</th><th>说明</th></tr></thead><tbody><tr><td><code>relocateLine(from, to, point) → number</code></td><td>按内容指纹把行号从 T0 数组重定位到 T1 数组</td></tr><tr><td><code>relocateSelection(sel, from, to) → sel</code></td><td>两端各自重定位，消费后丢弃 <code>fp</code></td></tr><tr><td><code>extractTextRelocated(lines, fromLines, sel)</code></td><td>取文入口；<code>fromLines</code> 非数组 → <strong>逐字节等价 <code>extractText</code></strong></td></tr><tr><td><code>_anchor(p)</code> / <code>_fp(v)</code></td><td>端点保指纹规范化 / 指纹归一化（非字符串→<code>''</code>，折叠空白）</td></tr><tr><td><code>beginSelection(sel, line, col, fp?)</code></td><td>第 4 参可选；<code>extendSelection</code>/<code>endSelection</code> 改走 <code>_anchor()</code> 保指纹</td></tr></tbody></table>
+<h3 id="四处偏离原案-已在提案-4-偏离说明-逐条写原因">四处偏离原案（已在提案 §4「偏离说明」逐条写原因）<a class="anchor" href="#四处偏离原案-已在提案-4-偏离说明-逐条写原因" aria-label="锚点">#</a></h3>
+<ol><li><code>relocate(range, lines)</code> → <strong><code>relocateLine</code> 三参 + <code>relocateSelection</code></strong> ——</li></ol>
+<p>原案两参要求 <code>range</code> 携带 T0 的 <code>lines</code>，污染了「纯坐标」语义；改成显式两数组后<br>   「一个数字跨两个时刻」在签名上直接可见。</p>
+<ol><li><strong>不做 <code>seq</code>（逻辑行序号）</strong> —— 原案以为折行重排非 <code>seq</code> 不可救；实测**两数组间直接</li></ol>
+<p>内容比对就能定位<strong>。直接收益：</strong>第三期的 <code>buildTranscriptLines</code> 改动不再被第一期依赖**，<br>   两期真正解耦。（原提案 §3.3 那一大段 <code>seq</code> 论证作废。）</p>
+<ol><li><strong>不做 hash</strong> —— 直接存归一化整行。行数组 ≤ 数千，逐行字符串比较成本可忽略；</li></ol>
+<p>而 hash 引入<strong>碰撞风险面</strong>（碰撞 = 静默定位到错行，正是本缺陷的另一种形态）。<br>   <strong>不做 hash 就不需要论证碰撞率</strong> → §8 待核实 2 直接消解。</p>
+<ol><li>第 2 档置信重定义：原「<code>seq</code> 命中 + <code>hash</code> 失配 → 段内按 <code>col</code> 重映射」依赖 <code>seq</code>，</li></ol>
+<p>已删；新第 2 档 = <strong>「指纹多次命中 → 取离原行号最近者」</strong>（唯一能保确定性的策略）。</p>
+<h3 id="实测-全绿-退出码可复现">实测（全绿，退出码可复现）<a class="anchor" href="#实测-全绿-退出码可复现" aria-label="锚点">#</a></h3>
+<ul><li>新单测 <code>tests/cli/tui/selectionRelocate.test.js</code> <strong>17 条全绿</strong>（R-01..R-16，含 3 档置信）。</li><li><strong>零回归</strong>：<code>selection</code> 27 / <code>selectionDisplayCol</code> 7 / <code>mouseSelectEvent</code> 15 /</li></ul>
+<p><code>viewportDragEdgeScroll</code> 8 = <strong>57/57 绿</strong>。</p>
+<ul><li>探针 <code>selectionAnchorDrift.test.js</code> <strong>3 绿 / 2 红</strong>（D-02/D-04 仍红 —— <strong>刻意</strong>，未接线）。</li><li><code>check-leaf-contract.js</code> 对 <code>selection.js</code> <strong>PASS</strong>（纯叶子契约未被破坏：仍零 IO / 确定性 / 不读 env）。</li></ul>
+<h3 id="三处必须记住的核对结论">三处必须记住的核对结论<a class="anchor" href="#三处必须记住的核对结论" aria-label="锚点">#</a></h3>
+<ol><li><strong>基线数字订正</strong>：本日志上文与提案原稿都写「<code>selection</code> <strong>37</strong> 条 / 基线 <strong>60</strong> 条」——</li></ol>
+<p><strong>实测是 27 条 / 57 条</strong>（27+7+15+8）。<code>node --test</code> 的 <code># tests</code> 汇总是真源。</p>
+<ol><li><strong>门控漂移不是我引入的</strong>（按 <code>.workbuddy/memory/MEMORY.md</code> 三步区分法核完）：</li></ol>
+<p><code>check-tui-gates</code> 报 <code>226 unique (limit 220)</code>，+6。<strong><code>selection.js</code> 的 KHY_ token 前后都是 <code>[0 -&gt; 0]</code></strong>。<br>   逐文件归因得 +7 新 token（<code>KHY_WATCHDOG_NOTICE</code> / <code>KHY_CC_OVERLAY_FIT</code> / <code>KHY_UI_LANG</code> /<br>   <code>KHY_ALT_SCREEN</code> / <code>KHY_TERM_FALLBACK_ROWS</code> / <code>KHY_TUI_CONSOLE_LOG</code> / <code>KHY_VIM_PASTE_CAP</code>），<br>   全在<strong>并行会话</strong>的文件里；再减去 <code>vim/operators.js</code> 删掉的 1 个 → <code>220 + 7 − 1 = 226</code>，<strong>算术完全闭合</strong>。</p>
+<ol><li><strong><code>selection.js</code> 是双会话共编</strong>：HEAD <strong>没有</strong> <code>charColForDisplay</code> —— 那是<strong>另一个会话</strong>加的</li></ol>
+<p>（连同 untracked 的 <code>selectionDisplayCol.test.js</code>、<code>viewportDragEdgeScroll.test.js</code>）。<br>   我的 diff 8 处删除<strong>全部对应我自己的编辑</strong>，且完整保留了对方的函数（7/7 绿为证）。<br>   ⇒ <strong>第二期要改的 <code>App.js</code> 同样在并行会话的改动列表里</strong>（<code>M .../ink-components/App.js</code>），<br>   动它之前应先确认那个会话是否收工。</p>
+<h3 id="第二期前的阻断项-已写进提案-8-待核实-6-标为优先">第二期前的阻断项（已写进提案 §8 待核实 6，标为优先）<a class="anchor" href="#第二期前的阻断项-已写进提案-8-待核实-6-标为优先" aria-label="锚点">#</a></h3>
+<p><strong>两条「故意红」的探针可能撞 CI</strong>：若 CI 的测试选择范围是全量 <code>tests/**</code>，<br><code>selectionAnchorDrift.test.js</code> 的 D-02/D-04 会让流水线变红。<br>→ 第二期落地前必须先读 CI 配置 / <code>package.json</code> 的 test 脚本，确认范围；<br>若全量，需先隔离该文件（<code>todo</code> 或移出）<strong>再</strong>接线。</p>
+<h3 id="判据设计教训-写这类-红探针-分期修复-提案直接用">判据设计教训（写这类「红探针 + 分期修复」提案直接用）<a class="anchor" href="#判据设计教训-写这类-红探针-分期修复-提案直接用" aria-label="锚点">#</a></h3>
+<p><strong>「探针必须红」与「CI 必须绿」是天然冲突的。</strong> 提案里写「先落红探针钉住缺陷」时，<br>必须同时回答：<strong>这条红线在修复完成前，走不走 CI？</strong> 本提案首版漏了这一步，<br>是落地第一期时才发现的（已补 §8-6）。正确顺序：先查 CI 测试范围 → 再决定探针放哪 / 是否隔离 → 最后才写红断言。</p>
+<h2 id="khy-终端启动卡死-根因取证-已实测复现">khy 终端启动卡死 — 根因取证（已实测复现）<a class="anchor" href="#khy-终端启动卡死-根因取证-已实测复现" aria-label="锚点">#</a></h2>
+<p>学生报「khyos 在终端中输入 khy 启动时容易卡死，找找原因」。<br>结论：<strong>不是单一 bug，而是 4 个叠加的等待/失败源</strong>。R1 在本会话内<strong>完整实测复现</strong>。</p>
+<h3 id="r1-内核预构建状态机-每次启动都复发-阻塞等待-主因-已实锤">R1 内核预构建状态机：每次启动都复发 + 阻塞等待（主因，已实锤）<a class="anchor" href="#r1-内核预构建状态机-每次启动都复发-阻塞等待-主因-已实锤" aria-label="锚点">#</a></h3>
+<p>代码：<code>platform/khy_platform/_bootstrap.py</code></p>
+<ul><li><code>_maybe_prebuild_khyos_kernel()</code> L543 —— 每次 <code>khy</code> 启动都跑（<code>ensure_bootstrapped</code> L765）</li><li><code>_decide_kernel_prebuild_action()</code> L422 —— 纯状态机决策</li><li><code>wait_for_kernel_prebuild()</code> L704 —— 有锁时同步阻塞等待</li><li><code>_pid_alive()</code> L310 —— nt 分支走 <code>tasklist /FI &quot;PID eq N&quot; /NH</code></li></ul>
+<p><strong>实测复现（本会话意外触发真实 khy 进程，非推演）</strong>：</p>
+<table><thead><tr><th>时刻</th><th>磁盘状态</th></tr></thead><tbody><tr><td>起点</td><td><code>.khy_kernel_prebuilt</code> = <code>building pid=20140 ts=1789893701 attempt=1</code>；<code>.kernel-prebuild.lock</code> <strong>不存在</strong>；pid 20140 已死；无 ISO</td></tr><tr><td>离线回放预判</td><td>action = <strong>spawn</strong>，attempt 1→2</td></tr><tr><td>真实执行后</td><td>marker = <code>building pid=47052 ts=1790126115 attempt=2</code>；lock = <code>47052</code>；<code>kernel-build.log</code> mtime 刷新</td></tr></tbody></table>
+<p>注：非交互 <code>khy</code> 走轻量分支（不打「重试第 N 次」那行，该行由完整启动打）；<br><strong>两种分支都会重新 spawn</strong>，这才是卡死的根。</p>
+<p><strong>确定性失败链</strong>：</p>
+<ol><li><code>_maybe_prebuild_khyos_kernel</code> L669 detached <code>Popen([node, bin/khy.js, &quot;os&quot;, &quot;build&quot;])</code>，</li></ol>
+<p><code>stdin=DEVNULL</code>、<code>stdout=&lt;log&gt;</code>（<strong>全非 TTY</strong>）</p>
+<ol><li>Node 侧 <code>bin/khy.js</code> L2119–2123：<code>khy os</code> 无子命令且 <code>!isInteractiveTerminal()</code></li></ol>
+<p>（L1063 = <code>stdin.isTTY &amp;&amp; stdout.isTTY</code>）→ 打「当前环境不支持交互终端」→ <code>process.exit(1)</code></p>
+<ol><li>构建<strong>从未开始</strong>：实测 <code>python.exe</code> / <code>make.exe</code> / <code>gcc.exe</code> 全部不存在</li><li>Python 侧<strong>从不回收子进程、从不读退出码</strong>（detached + 无 join）</li><li>→ <code>.kernel-prebuild.lock</code> <strong>永久残留</strong>，pid 变死号</li><li>→ 下次启动 <code>_lock_pid_alive</code> 为 false → 状态机判「上次构建死了」→ 按 attempt 重试</li><li>→ <code>wait_for_kernel_prebuild()</code> 只要<strong>看到锁存在</strong>就进 2s 轮询，</li></ol>
+<p>上限 <code>KHY_KERNEL_BUILD_WAIT</code>（默认 <strong>900 秒 = 15 分钟</strong>）</p>
+<p><strong>两个独立 bug</strong>：</p>
+<ul><li>B1：<code>wait_for_kernel_prebuild</code> 只在<strong>被调用时</strong>才有机会清锁；锁残留期间用户看到</li></ul>
+<p>15 分钟静默等待。<code>if not _pid_alive(pid): break</code> 后必然 <code>_remove_quiet(lock)</code>（L736），<br>  但那是「已经等完了」才清。</p>
+<ul><li>B2：<strong>退役态从未被写下</strong>。<code>giveup</code> 只在 <code>attempt &gt;= max_attempts</code>（默认 3）触发，</li></ul>
+<p>但 <code>_decide_retry</code> 在 <code>(now - last_ts) &lt; retry_interval</code>（默认 <strong>21600s = 6h</strong>）返回<br>  <code>skip</code> —— 于是<strong>每次开机刚好落在 6h 退避窗口内</strong>，既不重做也不推进计数器，<br>  永远停在 <code>building/attempt=2</code>。</p>
+<p><strong>用户侧立即处置</strong>：<code>KHY_KERNEL_AUTOBUILD=0</code>（一劳永逸）；或删<br><code>~/.khyos/cache/.khy_kernel_prebuilt</code> 与 <code>.kernel-prebuild.lock</code>；<code>KHY_KERNEL_BUILD_WAIT=0</code>。</p>
+<h3 id="r2-无参启动-完整模式-两处启动期同步阻塞">R2 无参启动 = 完整模式 + 两处启动期同步阻塞<a class="anchor" href="#r2-无参启动-完整模式-两处启动期同步阻塞" aria-label="锚点">#</a></h3>
+<ul><li><code>bin/khy.js</code> L497 <code>isInteractiveRun()</code>：<code>args.length===0 → true</code></li><li>L1985 分支 5B → <code>ensureAuthenticated()</code> + <code>setup({mode:&quot;khyquant&quot;})</code>（DB authenticate +</li></ul>
+<p>dbAutoMigration + <code>runMigrations()</code>）+ <code>startWithServer()</code></p>
+<ul><li>实测 <code>import(&quot;ink&quot;)</code> 冷启动 <strong>4.4–7.9s</strong>（4 次复现，非一次性 OS 缓存假象）；</li></ul>
+<p><code>require(&quot;react&quot;)</code> 2.2s</p>
+<ul><li><code>replSession.js</code> L479 工作区信任门在<strong>挂载前</strong> <code>await</code>（inquirer 提问）。</li></ul>
+<p>实测 <code>D:/Portable/khy-os/.khy/trusted-folders.json</code> 含 <code>D:\Portable</code>（scope=tree）<br>  → 当前仓库<strong>继承信任</strong>，不是当前卡点；<strong>新目录首次启动</strong>必弹窗。</p>
+<ul><li><code>replSession.js</code> L626 onboarding 向导同样 pre-mount await</li></ul>
+<h3 id="r3-khy-os-路径等待叠加">R3 <code>khy os</code> 路径等待叠加<a class="anchor" href="#r3-khy-os-路径等待叠加" aria-label="锚点">#</a></h3>
+<p><code>cli.py</code> 的 <code>khy os</code> 前置：<code>maybe_prompt_install_qemu()</code> + <code>wait_for_kernel_prebuild()</code> +<br><code>_khyos.ensure_khyos_iso()</code> → 与 R1 直接叠加。</p>
+<h3 id="r4-数据家分叉-慢性病">R4 数据家分叉（慢性病）<a class="anchor" href="#r4-数据家分叉-慢性病" aria-label="锚点">#</a></h3>
+<p>实测并存 5 个数据家：<code>D:/Portable/khy-os/.khy</code>（<strong>真家</strong>，220 项，<code>KHY_DATA_HOME</code> 指向它）、<br><code>D:/Portable/.khy</code>（node_check.json 停在 2026-08-28）、<code>D:/WorkBuddyData/.khy</code>、<br><code>.khyos</code>、<code>.khyquant</code>（12 项）。</p>
+<p>后果：<code>_get_proxy_base_url()</code> 在候选家里找不到 <code>proxy_server_runtime.json</code><br>→ 基址回退 <strong>9100</strong>；实测在跑的是 <code>127.0.0.1:9090</code>（pid 49048）<br>→ 代理自愈 / token 同步（<code>_sync_claude_code_auth_token</code>）长期失效。<br>另有 5 个 <code>ai_gateway_customers.json.tmp.&lt;epoch&gt;</code> 泄漏文件。</p>
+<h3 id="旁证-repl-能进去-只是慢">旁证：REPL 能进去，只是慢<a class="anchor" href="#旁证-repl-能进去-只是慢" aria-label="锚点">#</a></h3>
+<ul><li><code>.khy/profile.json</code>：<code>sessionCount=29</code>、<code>lastSession=2026-09-21T12:58:30</code></li><li><code>.khy/.khyquant_history</code> 有<strong>重复三连的同一句 prompt</strong></li></ul>
+<p>（「第二条」×2、「最近有什么新闻？」×2、「讲个让笑点搞的人也能笑的笑话」×4）<br>  → 典型「敲了没反应所以再敲一遍」</p>
+<ul><li><code>node.exe</code> 常驻 18 个；<code>.khy/backend_runtime.json</code> 记录 <code>{apiPort:3000,pid:1944}</code>，</li></ul>
+<p>mtime 2026-09-23T00:39 → 后端确实在跑</p>
+<h3 id="环境教训-血的">环境教训（血的）<a class="anchor" href="#环境教训-血的" aria-label="锚点">#</a></h3>
+<ul><li><strong>Bash heredoc 极度危险</strong>：本轮 <code>cat &gt; file &lt;&lt;EOF</code> 因 shim 缺 <code>cat</code>，</li></ul>
+<p>导致 heredoc 正文被当 shell 命令执行，<strong>意外真实启动了一个 khy 进程</strong><br>  （反倒成了活体复现）。→ <strong>以后禁写 heredoc</strong>，一律 <code>node -e</code> 单行 + <code>fs.writeFileSync</code>。</p>
+<ul><li>本机真 cache 目录是 <code>D:/WorkBuddyData/.khyos/cache/</code>（不是 <code>~/.khyos</code>）。</li><li>探针一律放 <code>.khy/tmp/</code>（<code>.khy/</code> 已 gitignore）。</li></ul>
+<h2 id="桌面端-能完成基本任务-只读取证-提案-09-38">桌面端「能完成基本任务」— 只读取证 + 提案（09:38）<a class="anchor" href="#桌面端-能完成基本任务-只读取证-提案-09-38" aria-label="锚点">#</a></h2>
+<p>学生问「想让 khyos 像 ZCode 一样可以先完成基本的任务，设计一个方案」。<br><strong>全程只读，未改任何仓库源码</strong>；提案落<br><code>docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-133] 桌面端基本任务闭环-接入智能体工具循环.md</code>。</p>
+<p><strong>核心发现（一句话）</strong>：桌面端不能干活，根因是 <strong>host 调错了入口</strong> ——<br>用 <code>aiGateway.generate()</code>（单轮文本）而非 <code>ai.chat()</code>（工具循环）。<br>同一个后端、同一套工具，CLI 与网页端在用，桌面端没接。</p>
+<p><strong>三层断链（实测，file:line 可复核）</strong>：</p>
+<ul><li>host <code>apps/khyos-desktop/src/host/index.ts:88</code>、<code>:90-97</code> 单轮文本入口；<code>:287</code> chunk 通道在，但上游不产工具事件</li><li>main <code>src/main/index.ts:903-931</code> 有下行 <code>ai:chunk</code>，<strong>无上行 control 响应通道</strong></li><li>renderer <code>src/renderer/App.tsx:35-44</code> <code>chunkToText()</code> 只抽文本、丢掉一切非文本 chunk；<code>:295-302</code> 为消费处</li></ul>
+<p><strong>前端资产全在、数据源全空</strong>（本仓典型模式：能力已存在、只是没接线）：</p>
+<table><thead><tr><th>资产</th><th>挂载</th><th>数据源</th></tr></thead><tbody><tr><td><code>ToolExecutionPanel.tsx</code></td><td>✅ <code>App.tsx:371</code></td><td>❌ <code>startToolExecution</code> <strong>零调用方</strong> ⇒ <code>:63</code> 恒 <code>return null</code></td></tr><tr><td><code>ElicitationPanel.tsx</code></td><td>❌ 零 import</td><td>❌ 无</td></tr><tr><td><code>permissionSlice.ts</code></td><td>✅ <code>store.ts:4</code></td><td>❌ 无 dispatch 方</td></tr><tr><td><code>diffFiles</code></td><td>✅ <code>App.tsx:400-402</code></td><td>❌ 硬编码 <code>[]</code>（注释自认在等 host 改动事件流）</td></tr><tr><td><code>ModeSelector.tsx</code></td><td>✅ <code>Composer.tsx:861</code></td><td>✅ 已通</td></tr></tbody></table>
+<p><strong>决定性证据（省掉重新设计）</strong>：<code>services/backend/src/services/aiManagementChatHttp.js:214-230</code><br>注释逐字写明<strong>网页端修过一模一样的病</strong> ——「Previously this routed through <code>gateway.generate()</code><br>— a single-shot LLM call that never ran the tool loop … tool calls were silently dropped …<br>We now route through <code>getAi().chat()</code>」。<br>⇒ 本方案 = <strong>把网页端已验证的修复搬到桌面端</strong>，不是新架构。</p>
+<p><strong>桌面端能做而网页端做不到的</strong>（<code>:227-230</code>）：SSE 单向 ⇒ <code>onControlRequest</code> 只能 fail-closed deny；<br>桌面端 main↔host 是 fork IPC 双向 ⇒ 可做真·交互式权限确认（TUI 级）。</p>
+<p><strong>后端侧全部现成</strong>：<code>services/backend/src/tools/**</code> <strong>100+ 工具</strong>；<br><code>services/tool/toolUseLoopCore.js</code> <strong>10157 行</strong>（导出 <code>runToolUseLoop</code>）；<br><code>:739</code> <code>onControlRequest</code>（host 交互通道）；<code>:1332</code> <code>effectiveChatOpts</code><br>（工具执行根 = <code>effectiveChatOpts.cwd || KHYQUANT_CWD || process.cwd()</code>）；<br>入口 <code>cli/ai.js:30</code>、<code>:630-635</code> 导出 <code>chat</code>（<code>aiChatCore.js:317</code>），<strong>不需要 <code>KHY_QUERY_ENGINE</code> 门</strong>。</p>
+<p><strong>B-P1 豁免成立</strong>：能力域 <code>ai-gateway</code> 已登记（<code>FEATURE-OWNERSHIP.json</code> capabilities[0]，<br>canonical=<code>aiGateway.js</code>，notes 明写「<strong>不得新增并行调用入口</strong>」）；本方案 <strong>0 新增文件</strong>、<br>不新增入口，只换 host 侧调用点 ⇒ 恰是遵守该 notes。按 B-P2 体例逐项填「不适用 + 依据」。<br><strong>不设 env 开关</strong>（撞 <code>check-tui-gates.js:32</code> <code>MAX_GATES=220</code> 棘轮；且会把豁免推成非豁免）。</p>
+<p><strong>分期</strong>：P0 host 换入口 + chunk 全类型端到端（唯一必做；可观察结果 = <strong>磁盘上文件真被改了</strong>）；<br>P1 双向 control 通道 + <code>ElicitationPanel</code> 挂载（fail-closed）；P2 改动事件流 → <code>diffFiles</code>。</p>
+<p><strong>落地约束（实测）</strong>：<code>file-ratchet.config.json</code> 的 <code>consoleCount:5</code> 是 <strong>HARD</strong>（会先剥 <code>//</code> 注释再数）<br>⇒ host/main 新增代码<strong>不得加 <code>console.log</code></strong>；<code>lines:2000</code> 属 soft（<code>main/index.ts</code> 现 1359 行，余量足）。</p>
+<h3 id="编号冲突-并行会话-已避让">编号冲突（并行会话，已避让）<a class="anchor" href="#编号冲突-并行会话-已避让" aria-label="锚点">#</a></h3>
+<p>取编号时按 skill 口径读 index 得 <code>max=131</code> ⇒ 取 132，但 <strong>132 当天已被另一会话占用</strong><br>（<code>[DESIGN-ARCH-132] TUI选区锚点漂移修复方案.md</code>，见本日志上文）⇒ 已改名为 <strong>133</strong><br>（PowerShell <code>Move-Item -LiteralPath</code>，方括号路径必须用 <code>-LiteralPath</code>）。<br><strong>教训：取编号不能只看 index 的 max，必须同时枚举目录实际文件名</strong> ——<br>index 是生成物、会滞后于并行会话的落盘。</p>
+<h2 id="design-arch-133-p0-落地-桌面端接入工具循环-已完成"><code>[DESIGN-ARCH-133]</code> P0 落地 —— 桌面端接入工具循环（已完成）<a class="anchor" href="#design-arch-133-p0-落地-桌面端接入工具循环-已完成" aria-label="锚点">#</a></h2>
+<p>学生「现在按照方案实现」→ 落 P0。<strong>4 个既有文件、0 新增文件</strong>，未新建任何并行实现。</p>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>src/host/index.ts</code></td><td>新增 <code>loadAiChat()</code> / <code>loadToolLoop()</code>；<code>handleAiGenerate</code> 由 <code>gateway.generate</code> 改 <code>runToolUseLoop</code>（<code>chat</code> 传内层函数、<code>chatOpts.cwd</code> 传工作区）；新增 <code>activeAborts</code> + <code>pendingToolCalls</code>/<code>registerToolCall</code>/<code>settleToolCall</code>/<code>clearToolCallQueue</code>；新增 <code>ai.abort</code> 分支</td></tr><tr><td><code>src/main/index.ts</code></td><td><code>ai:send</code> 注入 <code>cwd: await getWorkspaceRoot()</code>；回包中继扩到 <code>ai.toolCall</code>/<code>ai.toolResult</code>；<code>ai:abort</code> 改为<strong>同时向 host 发 <code>ai.abort</code></strong>（原来只丢弃结果）</td></tr><tr><td><code>src/preload/index.ts</code></td><td>新增 <code>onAiToolCall</code> / <code>onAiToolResult</code></td></tr><tr><td><code>src/renderer/App.tsx</code></td><td>新增工具事件订阅 effect → <code>startToolExecution</code><strong>从此有了第一个调用方</strong></td></tr><tr><td><code>.../message/ToolExecutionPanel.tsx</code></td><td>显示范围由「仅进行中」改为「本轮全部（含已完成）」</td></tr><tr><td><code>.../composer/Composer.tsx</code></td><td>发送前 <code>clearExecutions()</code>；顺手修内联返回类型（见下）</td></tr></tbody></table>
+<h3 id="实施时推翻了方案初稿的核心写法-重要教训">★ 实施时推翻了方案初稿的核心写法（重要教训）<a class="anchor" href="#实施时推翻了方案初稿的核心写法-重要教训" aria-label="锚点">#</a></h3>
+<p>方案初稿写「host 改调 <code>ai.chat(message, opts)</code>」——<strong>这是错的</strong>。<br>实测：<code>cli/ai.js</code> 导出的 <code>chat</code> 是<strong>内层 LLM 调用</strong>，<code>aiChatCore.js:3422-3425</code> 注释自述<br><em>&quot;so the <strong>toolUseLoop</strong> can process the tool calls&quot;</em>，返回 <code>{ reply, toolUseBlocks, toolCallLog }</code><br>—— <strong>它把工具调用交回调用方，自己一个都不执行</strong>。<br>正确形态是<strong>驱动既有循环</strong>：<code>runToolUseLoop(msg, { chat, chatOpts, onToolCall, onToolResult, ... })</code><br>（<code>queryEngine.js:992</code> / <code>replSession.js:10897</code> / <code>AgentTool/index.js:1258</code> 三处同款）。<br>只调 <code>chat</code> 会让工具调用返回后无人执行，<strong>症状与修复前一模一样</strong>。</p>
+<p>三条实测结论（已写进 skill §8.7）：</p>
+<ol><li><strong><code>cwd</code> 必须在 <code>chatOpts.cwd</code></strong>，不是 <code>options.cwd</code> —— <code>toolUseLoopCore.js:1332</code> 的</li></ol>
+<p><code>effectiveChatOpts = { ...chatOpts }</code> 是唯一消费点（<code>:9292</code>/<code>:9754</code> 用它定工具执行根）。</p>
+<ol><li><strong><code>onControlRequest</code> 传桩 = 拒绝写操作</strong> —— <code>:6803</code>/<code>:7726</code> 判 <code>typeof === 'function'</code>；</li></ol>
+<p>传恒返回 <code>undefined</code> 的桩 ⇒ fail-closed deny（网页端 SSE 只能这样）。<strong>不传</strong>则走后端默认策略。<br>   所以 P0「不接权限确认」不只是分期问题，<strong>是让 P0 验收（文件真的变了）成立的前提</strong>。</p>
+<ol><li><code>runToolUseLoop</code> 的 <code>onToolCall/onToolResult</code> <strong>不带调用 id</strong>，同名工具可并行</li></ol>
+<p>⇒ 在 host 侧按<strong>同名 FIFO</strong> 自行配对（<code>registerToolCall</code>/<code>settleToolCall</code>），<br>   否则 renderer 只能按名字猜，并行同名会张冠李戴。</p>
+<h3 id="验收实测-全绿">验收实测（全绿）<a class="anchor" href="#验收实测-全绿" aria-label="锚点">#</a></h3>
+<ul><li><code>tsc -p apps/khyos-desktop/tsconfig.json --noEmit</code>：<strong>31 → 20 条，净减 11、零新增</strong>。</li></ul>
+<p>host 回到既有 15 条；<code>Composer.tsx</code> 8 条清零（顺手修该文件内联类型缺 <code>empty</code>/<code>actualAdapter</code>/<br>  <code>provider</code>/<code>fallbackReason</code> 的既有类型债，符合「只修本文件、单独登记」）。<br>  中途曾因 <code>loadToolLoop</code> 缺类型断言引入 <code>host/index.ts(137,3)</code> 一条，<strong>已定位并修掉</strong>。</p>
+<ul><li><code>node --test apps/khyos-desktop/tests/desktopUiContract.test.cjs</code> → <strong>26/26</strong></li></ul>
+<p>（含 D6 preload↔main 通道一致性、D9 品牌文本、D10 端点禁令）。</p>
+<ul><li><code>check-frontend-design-tokens</code> → <code>checked=342 findings=56 exit=0</code>，findings 全在</li></ul>
+<p><code>ai-frontend</code> 与 <code>khyquant/frontend</code>，<strong>桌面端零命中</strong>。</p>
+<ul><li>ratchet HARD：<code>consoleCount</code> host <strong>26（原 27，净 -1）</strong>，其余文件未动 ⇒ 无变差。</li><li>产物探针：<code>out/host/index.js</code> 含 <code>loadToolLoop</code>/<code>registerToolCall</code>/<code>runToolUseLoop</code>，</li></ul>
+<p>且旧标记 <code>aiGateway 已加载</code> <strong>已消失</strong>；main / preload 关键词全部命中。</p>
+<h3 id="构建陷阱-新发现-已写进-skill-8-3">★ 构建陷阱（新发现，已写进 skill §8.3）<a class="anchor" href="#构建陷阱-新发现-已写进-skill-8-3" aria-label="锚点">#</a></h3>
+<p><code>apps/khyos-desktop</code> 的 <code>npm run build</code> 是<strong>三段</strong>：<br><code>electron-vite build</code> → <code>out/{main,preload,renderer}</code>，<br>再 <code>vite build --config vite.host.config.ts</code> → <code>out/host</code>，<br>再 <code>vite build --config vite.scheduler.config.ts</code> → <code>out/scheduler</code>。</p>
+<p><strong><code>electron.vite.config.ts</code> 只有三个入口，没有 host 与 scheduler。</strong><br>只跑第一段时 <code>out/host/index.js</code> <strong>保持上一次构建的样子</strong>，日志正常、不报错，<br>但改的 host 代码<strong>根本没进产物</strong> —— 实测证据：只跑第一段后 mtime 是<strong>前一天</strong>，探针显示新代码未进入。<br>⇒ 改 <code>src/host/**</code> / <code>src/scheduler/**</code> 必须补跑 <code>npm run build:host</code> / <code>build:scheduler</code>。</p>
+<h3 id="未做-按分期">未做（按分期）<a class="anchor" href="#未做-按分期" aria-label="锚点">#</a></h3>
+<p>P1 交互式权限确认（<code>onControlRequest</code> 双向 + <code>ElicitationPanel</code> 挂载）、P2 <code>diffFiles</code> 改动列表、<br>附件→<code>images</code> 映射、会话内工具历史持久化。</p>
+<h3 id="文档">文档<a class="anchor" href="#文档" aria-label="锚点">#</a></h3>
+<p><code>docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-133] 桌面端基本任务闭环-接入智能体工具循环.md</code><br>状态行改「P0 已落地」；§3.1 <strong>就地订正</strong>（<code>ai.chat</code> → <code>runToolUseLoop</code> + 事件分两层 + cwd 落点）；<br>新增 §10 实施记录（落地清单 / 6 条偏离及逐条原因 / 验收实测 / 构建陷阱 / 明确不做）。</p>
+<h2 id="design-arch-133-p1-落地-人在环审批-提问闭环"><code>[DESIGN-ARCH-133]</code> P1 落地 —— 人在环审批/提问闭环<a class="anchor" href="#design-arch-133-p1-落地-人在环审批-提问闭环" aria-label="锚点">#</a></h2>
+<p>学生「继续实现」→ 落 P1。4 文件 0 新增，桌面端由此具备 <strong>TUI 级审批</strong>（网页端 SSE 单向做不到）。</p>
+<p><strong>契约（实施期补全）</strong>：<code>onControlRequest</code> 一个通道承载<strong>四条产生路径</strong>，<br>request 统一 <code>{ requestId, request: { subtype:'can_use_tool', tool_name, input } }</code>：<br>软守卫审批（<code>guardApproval.js:66</code>，input 带 <code>_guardReason</code>）、Stage 7 权限门<br>（<code>toolCallingPermissions.js:397</code>）、shell 审批（<code>loop/approval.js:142</code>，tool_name=<code>shell_command</code>）、<br>提问（<code>toolUseLoopCore.js:8782</code>，tool_name=<code>AskUserQuestion</code>，input.questions）。<br>响应<strong>三态容忍</strong>（<code>_decisionFromControl:326</code>）：<code>true</code>→allow / <code>'always'</code>→allow-always /<br><code>{behavior}</code>→对应 / <strong>其余一律 deny</strong>。提问答案解码 <code>_readControlAnswers</code>（<code>loop/approval.js:171</code>）：<br><code>{behavior:'allow', updatedInput:{answers}}</code>，answers = <code>{问题文本: 所选文本}</code>。</p>
+<table><thead><tr><th>层</th><th>改动</th></tr></thead><tbody><tr><td>host</td><td><code>pendingControls</code> 注册表 + <code>onControlRequest</code>（发 <code>ai.controlRequest</code> + 等回包 promise + <strong>300s 超时显式 deny</strong>）+ <code>ai.controlResponse</code> 分支 + <code>failAllControls</code>（显式 deny 非 undefined）</td></tr><tr><td>main</td><td>下行中继加 <code>ai.controlRequest</code>；新增 <code>ai:controlResponse</code> handler</td></tr><tr><td>preload</td><td><code>onAiControlRequest</code> / <code>aiControlResponse</code></td></tr><tr><td>renderer</td><td><code>controlQueue</code> + <code>buildControlCard</code> 归一两类请求 + 复用 <code>ElicitationPanel</code>（问题卡→updatedInput.answers；审批卡→三选一映射 behavior；dismiss→deny）</td></tr></tbody></table>
+<p><strong>安全</strong>：fail-closed 双层兜底（host 300s 超时 + 后端 <code>controlRequestGuard</code> race abort）。<br>&quot;始终允许&quot;持久化走后端既有 <code>permissionStore.approve('forever')</code>，<strong>不建第二份真源</strong>。</p>
+<p><strong>偏离 2 条</strong>：① 不用 <code>permissionSlice</code> 存待决请求——其结构无 requestId、表达不了阻塞式三选一，<br>硬套是削足适履，改 App 本地 <code>controlQueue</code>；② 顺手修 <code>ElicitationPanel</code> <strong>自定义答案丢失缺陷</strong><br>（旧 <code>handleSubmit</code> 先 setState 异步再 <code>onSubmit(answers)</code>，单题卡必丢刚输入的自定义回答；<br>改为并入提交快照）——该组件此前零引用，本次挂载后此路径首次真正可达。</p>
+<p><strong>验收</strong>：tsc <strong>20 条 = P0 后基线零新增</strong>（新代码全干净）；契约测试 <strong>26/26</strong>（D6 校验新通道）；<br>三段构建 exit 全 0；产物探针 host/main/preload 关键词全命中，renderer 新 hash<br><code>index-4fpP5UIg.js</code> 含 <code>ElicitationPanel</code>/<code>allow-always</code>。P2（diffFiles 改动列表）未开始。</p>
+<h2 id="design-arch-133-p2-落地-方案-p0-p1-p2-全部完成"><code>[DESIGN-ARCH-133]</code> P2 落地 —— 方案 P0/P1/P2 全部完成<a class="anchor" href="#design-arch-133-p2-落地-方案-p0-p1-p2-全部完成" aria-label="锚点">#</a></h2>
+<p>学生「/goal 继续按照方案完成任务」→ 落 P2。3 文件 0 新增。</p>
+<ul><li><strong>host</strong>：<code>onToolResult</code> 对编辑类工具（<code>edit/write/multiedit/applypatch/notebookedit</code> 小写归一）</li></ul>
+<p>附带 <code>affectedFiles</code>；参数键口径沿用 <code>guardApproval._rememberApprovedDirectory:194</code> 既有先例<br>  （<code>file_path/filePath/path/notebook_path</code>），不发明第三套。</p>
+<ul><li><strong>slice</strong>：<code>toolExecutionSlice</code> 新增 <code>affectedFiles</code> + <code>recordAffectedFiles</code>；</li></ul>
+<p><code>clearExecutions</code> 顺带清空 ⇒ 改动列表与工具卡片<strong>同生命周期</strong>（发新消息即清）。</p>
+<ul><li><strong>App.tsx</strong>：<strong>删除</strong>硬编码 <code>diffFiles</code>（P3-4 遗留，注释自认在等 host 事件流——现在等到了）；</li></ul>
+<p><code>DiffSummary</code> 挂真实数据；<code>onViewDiff</code> 沿用既有 <code>khy:open-file</code> 事件，未动。</p>
+<ul><li><strong>诚实红线</strong>：additions/deletions 恒 0（工具结果不带行数，算行数=造假或脆弱解析）；</li></ul>
+<p><code>DiffSummary.tsx:140-141</code> 对 0 不渲染数字——组件留的口子正好承载诚实表达。<br>  status 统一 <code>modified</code>（无法可靠区分新建/覆盖，不猜）。<code>onUndo</code> 不接（需快照基础设施，另一条线）。</p>
+<ul><li><strong>验收</strong>：tsc 20 条=基线零新增；契约 26/26；三段构建 exit 全 0；</li></ul>
+<p>产物探针 host 含 <code>affectedFilesOf</code>/<code>EDITING_TOOL_NAMES</code>，renderer 新 hash<br>  <code>index-D_VELQpj.js</code> 含 <code>recordAffectedFiles</code>/<code>DiffSummary</code>。</p>
+<p><strong>至此 [DESIGN-ARCH-133] 三期全部落地</strong>。桌面端从「只能聊」变成：<br>跑真实工具循环（P0）+ 人在环审批（P1）+ 改动可视化（P2）。端到端 GUI 实测需用户重启应用确认。</p>
+<h2 id="khy-os-启动屏视觉重设计-提案已出-design-arch-134-09-42">khy-os 启动屏视觉重设计 — 提案已出 <code>[DESIGN-ARCH-134]</code>（09:42）<a class="anchor" href="#khy-os-启动屏视觉重设计-提案已出-design-arch-134-09-42" aria-label="锚点">#</a></h2>
+<p>学生给了一张启动卡截图：「重新设计 khyos 的启动动画，比如居中，还有加载进度，logo，表达那些信息等」。<br><strong>全程只读，未改任何仓库源码</strong>；提案落<br><code>docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-134] TUI 启动屏视觉重设计.md</code>。</p>
+<p><strong>编号</strong>：133 已被占用 ⇒ <strong>134</strong>（枚举目录文件名 max=133，index 又滞后 —— 与上一节教训互证）。</p>
+<h3 id="病灶-b1-b7-file-line-可复核">病灶 B1–B7（file:line 可复核）<a class="anchor" href="#病灶-b1-b7-file-line-可复核" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>病灶</th><th>证据</th></tr></thead><tbody><tr><td>B1</td><td>整块贴<strong>左上角</strong></td><td><code>BootScreen.js:132-138</code> 根 Box 无 <code>alignItems</code>；ink 根节点宽度被硬设为终端列数（<code>node_modules/ink/build/ink.js:242</code>）⇒ 子 Box 默认 stretch 满宽 ⇒ 内容左对齐</td></tr><tr><td>B2</td><td><strong>零进度表达</strong></td><td><code>startupBeats.js:190-197</code> 的 <code>progress()</code> 返回 <code>{done,total,elapsedMs}</code>，BootScreen <strong>从不调用</strong></td></tr><tr><td>B3</td><td><strong>三枚品牌标记并存</strong></td><td><code>BootScreen.js:120-126</code>（<code>╱╲</code>，只画出<strong>两叶</strong>，注释却自称 clover）· <code>WelcomeBanner.js:32-56</code>（13×9 像素四叶草三档绿）· <code>CcLogo.js:22-33</code>（<code>✳ Khy</code>）</td></tr><tr><td>B4</td><td>分隔线硬编码</td><td><code>BootScreen.js:141</code> <code>'─'.repeat(14)</code></td></tr><tr><td>B5</td><td>帧内信息量近零</td><td>无版本/耗时/说明；<code>step.note</code> 仅 <code>fail()</code> 时有值</td></tr><tr><td>B6</td><td><strong>零测试</strong></td><td>BootScreen 无任何用例（115 的 D8 未闭合）</td></tr><tr><td>B7</td><td>三种产品写法</td><td><code>khy-os</code>（<code>BootScreen.js:125</code>）/ <code>khy OS</code>（<code>WelcomeBanner.js:117</code>）/ <code>Khy</code>（<code>ccBrand.js:13</code>）</td></tr></tbody></table>
+<p><strong>关键裁决</strong>：CC 模式是<strong>预览态且默认关闭</strong>（<code>utils/ccMode.js:53-55</code> <code>KHY_CC_TUI==='1'</code>，文件头 <code>:9-19</code> 明写 preview）<br>⇒ <strong>默认主路径的品牌资产 = 欢迎横幅那枚像素四叶草</strong>；<code>✳ Khy</code> 只服务非默认路径。</p>
+<h3 id="三条-ink-事实-核过源码-已写进-skill-2-1">三条 ink 事实（核过源码 → 已写进 skill §2.1）<a class="anchor" href="#三条-ink-事实-核过源码-已写进-skill-2-1" aria-label="锚点">#</a></h3>
+<ol><li><strong>根节点宽度 = 终端列数</strong>（<code>ink.js:242</code>）⇒ 根 Box 加 <code>alignItems:'center'</code> 即<strong>水平居中，零 props、零 App 改动</strong>（先例 <code>CcLogo.js:24</code>）。</li><li><strong><code>alignItems</code> 是逐子元素居中</strong> ⇒ 六拍行必须包一层 <code>alignItems:'flex-start'</code> 的内层 column Box，否则每行各自居中、<strong>左边缘参差</strong>。</li><li><strong>fullscreen 阈值 <code>outputHeight &gt;= stdout.rows</code></strong>（<code>ink.js:320</code> 判定 / <code>:322-327</code> 走 <code>clearTerminal + fullStaticOutput</code>）</li></ol>
+<p>⇒ <strong>别用 <code>height: rows-1</code> 做垂直居中</strong>：spinner 80ms/帧 = 近乎整屏重写。</p>
+<h3 id="学生四条决策-askuserquestion-全取推荐项">学生四条决策（AskUserQuestion，全取推荐项）<a class="anchor" href="#学生四条决策-askuserquestion-全取推荐项" aria-label="锚点">#</a></h3>
+<p>logo=像素四叶草 · 进度=<strong>条形+计数+耗时</strong>（复用 <code>ProgressBar kind='count'</code> + <code>_elapsedMsToStr</code>，不写第二个）·<br>信息=不加版本号、不加每拍说明 · 垂直=<strong>只水平居中、顶对齐</strong>。</p>
+<p><strong>垂直居中为何否掉</strong>：ink 擦帧是<strong>相对位移</strong>（<code>eraseLines(lastOutputHeight)</code>）⇒ 主 UI 从居中块顶部开始，<strong>整个会话下移半屏</strong><br>—— 正是 <code>cli/tui/startupAnchor.js:7-13</code> 记录的「下面留下了大量的空白」那条用户抱怨。为一个 1.5 秒的动画把稳态布局改坏，不换。</p>
+<h3 id="方案要点">方案要点<a class="anchor" href="#方案要点" aria-label="锚点">#</a></h3>
+<ul><li>新增 <code>cli/tui/logoArt.js</code>：四叶草资产，<strong>从 <code>WelcomeBanner.js:32-56</code> 原像素搬家</strong>，启动屏与欢迎横幅共用一份（满足 115 §5.4 S4 的<strong>意图</strong>，推翻它的<strong>措辞</strong>——见下）。</li><li>新增 <code>cli/tui/bootLayout.js</code>：H1 五档阶梯 F–J，<strong>照 <code>chromeBudget.ccChromePlan</code>（<code>:203-245</code>）的形状办</strong>；<code>−1</code> 复用 <code>CC_TRAILER_ROWS</code> 不写字面量。</li></ul>
+<p><code>rows</code> 非法/缺失 ⇒ 最保守 J 档（frameH <strong>13</strong>）；现状帧高是 <strong>17</strong> ⇒ <strong>永不比现状差</strong>，这就是自动回滚语义。</p>
+<ul><li>BootScreen 重写渲染 + WelcomeBanner 改 require + <code>App.js:5969</code> <strong>一行</strong>下发 <code>rows/cols</code> + <strong>零新增 env</strong>（撞 226/220 门预算棘轮）。</li></ul>
+<h3 id="门禁基线-实测">门禁基线（实测）<a class="anchor" href="#门禁基线-实测" aria-label="锚点">#</a></h3>
+<p><code>startupBeats</code> 17/17 · <code>startupBeatsWiring</code> 8/8 · <strong><code>liveFrameGeometry</code> 1 fail</strong>（他人未提交，jest 全局写在 <code>tests/tui/</code> 下）· <strong><code>check:tui-gates</code> 226/220 FAIL</strong> —— 后两条<strong>改动前就已红</strong>。</p>
+<h3 id="新踩到的-ci-陷阱-已写进-skill-6-3">新踩到的 CI 陷阱（已写进 skill §6.3）<a class="anchor" href="#新踩到的-ci-陷阱-已写进-skill-6-3" aria-label="锚点">#</a></h3>
+<p>CI 跑 <code>test:node = node --test tests/**/*.test.js</code>（<code>services/backend/package.json:59</code>，<code>pr-gate.yml</code> 调用）<br>⇒ <strong>别在 <code>services/backend/tests/tui/</code> 下用 jest 全局（裸 <code>describe</code>/<code>test</code>）写新用例</strong>：glob 会扫到 → <code>describe</code> 未定义 → <strong>落地即红</strong>。<br><code>tests/tui/liveFrameGeometry.test.js</code> 就是这么红的。另：<code>run-ink-tui-tests.js:15</code> 声称的 CI「Ink TUI」job 在 <code>.github/workflows/</code> 里<strong>不存在</strong> ⇒ ink 真帧套件<strong>零 CI 覆盖</strong>。</p>
+<h3 id="顺手查清的两条登记义务-已写进-skill-3-1">顺手查清的两条登记义务（已写进 skill §3.1）<a class="anchor" href="#顺手查清的两条登记义务-已写进-skill-3-1" aria-label="锚点">#</a></h3>
+<ul><li><code>PROPOSAL-ARTIFACT-INDEX.json</code>：<strong>非借鉴类提案不用碰</strong> —— <code>check-proposal-index.js</code> 只校验索引自身 + 它登记的<strong>那一个</strong> <code>proposalArtifacts.primary</code> 文档。</li><li><code>packaging/modules/modules.json</code>：<strong>模块 id 级</strong>（仅 4.3KB，登记的是 <code>handlers</code>/<code>services</code> 名单），<code>startupBeats</code>/<code>startupAnchor</code>/<code>ink-components</code> 命中数均为 <strong>0</strong></li></ul>
+<p>⇒ <strong>新增 <code>cli/tui/*.js</code> 组件不需要登记</strong>；<code>[DESIGN-ARCH-115]</code> §9 那句「新增文件须登记」只对<strong>新增服务模块/命令</strong>成立。</p>
+<h3 id="阻塞项-投放前必须过">阻塞项（投放前必须过）<a class="anchor" href="#阻塞项-投放前必须过" aria-label="锚点">#</a></h3>
+<ol><li><strong><code>[DESIGN-ARCH-115]</code> §5.4 的 S4 明写「删除 BootScreen 的 logo；logo 归 WelcomeBanner」</strong> —— 与学生「启动屏要有 logo」<strong>直接冲突</strong>。</li></ol>
+<p>提案 §2.6 建议把 S4 措辞改成「只有一份 logo <strong>资产</strong>」。<strong>待学生拍板后</strong>才投放 BootScreen / WelcomeBanner / App 三项；<br>   <code>logoArt.js</code> + <code>bootLayout.js</code> 与前提无关，可先落。</p>
+<ol><li><code>App.js</code> 与 <code>ProgressBar.js</code> <strong>都在并行会话的 porcelain 里</strong>（539 条）；<code>BootScreen.js</code> / <code>WelcomeBanner.js</code> 实测干净。</li></ol>
+<h3 id="环境杂记">环境杂记<a class="anchor" href="#环境杂记" aria-label="锚点">#</a></h3>
+<ul><li><code>.khy/tmp/</code> 下 <code>Write</code> 对<strong>从未创建过</strong>的文件名也可能报 <code>File has not been read yet</code>（<code>probe2.js</code>/<code>probe3.js</code> 连报两次）</li></ul>
+<p>→ 换个没用过的名字即可（<code>bootprobe_*.js</code> 一次成功）。</p>
+<ul><li>本次清理用 PowerShell <code>Remove-Item -LiteralPath &lt;多个逗号分隔路径&gt;</code>，一次成功。</li></ul>
+<h2 id="design-arch-134-p0-实施-启动屏视觉重设计落地-11-16"><code>[DESIGN-ARCH-134]</code> P0 实施 — 启动屏视觉重设计落地（11:16）<a class="anchor" href="#design-arch-134-p0-实施-启动屏视觉重设计落地-11-16" aria-label="锚点">#</a></h2>
+<p>学生「按照实现」→ P0 全量落地，<strong>45/45 绿、leaf-contract PASS、门预算零漂移（仍 226）</strong>。</p>
+<h3 id="落地-10-个文件">落地（10 个文件）<a class="anchor" href="#落地-10-个文件" aria-label="锚点">#</a></h3>
+<p><code>cli/tui/logoArt.js</code>（新，107 行，四叶草+字标+tagline 唯一资产）、<code>cli/tui/bootLayout.js</code><br>（新，124 行，H1 五档阶梯 F–J，<code>−1</code> 复用 <code>chromeBudget.CC_TRAILER_ROWS</code>）、<br><code>ink-components/BootScreen.js</code>（重写 150→216）、<code>WelcomeBanner.js</code>（删本地像素表 186→145）、<br><code>App.js</code>（<code>_bootScreenEl</code> 下发 rows/cols，+7 行含注释）、<br>3 个新测试（<code>bootLayout</code> 8 / <code>logoArt</code> 6 / <code>bootScreenVisual</code> 6）+ 真源文档 3 处<br>（<code>[DESIGN-ARCH-102]</code> §5.6 新增 <strong>C22</strong>、<code>[DESIGN-ARCH-115]</code> §5.4 修订 S4 + 变更行、<code>[DESIGN-ARCH-134]</code> 加 §9 实施记录）。</p>
+<h3 id="真帧验证-tests-tui-vtscreen-js-最小-vt-模型-5-档全过-零-esc-2j">真帧验证（<code>tests/tui/vtScreen.js</code> 最小 VT 模型，5 档全过、零 <code>ESC[2J</code>）<a class="anchor" href="#真帧验证-tests-tui-vtscreen-js-最小-vt-模型-5-档全过-零-esc-2j" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>尺寸</th><th>实际档</th><th>关键断言</th></tr></thead><tbody><tr><td>80×30</td><td><strong>F</strong></td><td>四叶草 lead=<strong>33</strong>（= 2+floor((76−13)/2)，与手算一致）</td></tr><tr><td>80×24</td><td><strong>H</strong></td><td>无四叶草、字标+tagline 在</td></tr><tr><td>80×16</td><td><strong>I</strong></td><td>只剩字标</td></tr><tr><td>80×12</td><td><strong>J</strong></td><td>无品牌块，进度+六拍照常</td></tr><tr><td>30×30</td><td>F+<strong>放弃居中</strong></td><td>lead=2（=paddingX）；tagline 折行（预期内）</td></tr></tbody></table>
+<p>80×30 下节拍块六行左边缘对齐（lead 35 = 35）✓。</p>
+<h3 id="两处实施中才发现的设计修正-已写回-c22-提案-9-3">两处实施中才发现的设计修正（已写回undefined+ 提案 §9.3）<a class="anchor" href="#两处实施中才发现的设计修正-已写回-c22-提案-9-3" aria-label="锚点">#</a></h3>
+<ol><li><strong>品牌块不能包内层 Box 再整体居中</strong>：内层 Box 宽度 = 最宽子行（tagline 27 列）⇒ 四叶草</li></ol>
+<p>（13 列）被带着左移 7 列（实测 lead 27 vs 手算 33）。<strong>逐行居中的内容必须直接挂在<br>   <code>alignItems:'center'</code> 容器下</strong>；只有多行清单才包 <code>flex-start</code> 内层。</p>
+<ol><li><strong>ink 的宽度模型是 CJK-aware 的</strong>（<code>measureElement</code> 实测：<code>20个█=20</code>、<code>环境与配置(5字)=10</code>）</li></ol>
+<p>—— 别靠字节流反推布局，用 <code>measureElement</code> 决定性测量。</p>
+<h3 id="另两处小教训">另两处小教训<a class="anchor" href="#另两处小教训" aria-label="锚点">#</a></h3>
+<ul><li><code>rows</code> 缺省档从提案的 <strong>J 改为 I</strong>（帧高 15 ≤ 现状 17，回滚语义不少，但缺省仍保留字标）。</li><li><code>require('../../logoArt')</code> 写错一层，被 <code>startupBeatsWiring</code> 既有 8 条当场抓红</li></ul>
+<p>⇒ <strong>落地新文件后先跑既有套件再跑新测试</strong>（8 秒定位 vs 事后 debug）。</p>
+<ul><li>视觉断言独立成 <code>bootScreenVisual.test.js</code>（未并入接线锁），职责分离。</li></ul>
+<h2 id="tui-长任务中断-压缩不接续-只读取证-提案-design-arch-135-10-16">TUI 长任务中断 / 压缩不接续 — 只读取证 + 提案 <code>[DESIGN-ARCH-135]</code>（10:16）<a class="anchor" href="#tui-长任务中断-压缩不接续-只读取证-提案-design-arch-135-10-16" aria-label="锚点">#</a></h2>
+<p>学生给了一张 TUI 截图：「khyos 长任务不知什么原因会中断，无法在上下文爆满时自动压缩，<br>然后总结把摘要交给下一次上下文，自动接续，至少阶段性任务完成才允许结束」。<br><strong>全程只读，未改任何仓库源码</strong>；提案落<br><code>docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-135] TUI长任务会话中断与压缩不接续修复方案.md</code>。</p>
+<p><strong>核心结论（一句话）</strong>：TUI 直调 <code>runToolUseLoop</code> 却<strong>只取回 4 个字段</strong>，<br>把循环的两个真值丢在局部变量里 ⇒ ①「循环为什么结束」不可见（所以「不知什么原因」）<br>② 压缩成果跨轮丢失（所以「接不上」）。<br><strong>并且自动续跑（Ralph Loop）在本仓早就存在，只是 TUI 不走它。</strong></p>
+<h3 id="三层验证-照-skill-1-口径">三层验证（照 skill §1 口径）<a class="anchor" href="#三层验证-照-skill-1-口径" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>能力</th><th>其它路径</th><th>TUI</th><th>证据</th></tr></thead><tbody><tr><td>调 <code>runToolUseLoop</code></td><td>经 <code>agenticHarnessService</code></td><td><strong>直调，绕过 harness</strong></td><td><code>useQueryBridge.js:2934</code></td></tr><tr><td>读「为何结束」</td><td><code>replSession.js:12291,12310</code> 读 <code>timeLimitReached</code>/<code>maxIterationsReached</code></td><td><strong>零引用</strong></td><td><code>useQueryBridge.js</code> 全文件无命中</td></tr><tr><td>自动续跑</td><td>Ralph Loop（最多 8 轮）<code>agenticHarnessService.js:511-553</code></td><td><strong>无</strong></td><td><code>cli/tui/</code> 下 <code>agenticHarness</code> 命中 = 0；调用方只有 <code>replSession.js:11897</code>、<code>queryEngine.js:459</code></td></tr><tr><td>压缩结果回写</td><td>续跑时作 <code>initialMessages</code>（<code>:539,548</code>）</td><td><strong>丢弃</strong></td><td><code>aiConversationOps.js:403-417</code></td></tr></tbody></table>
+<h3 id="决定性证据-两个断点">决定性证据（两个断点）<a class="anchor" href="#决定性证据-两个断点" aria-label="锚点">#</a></h3>
+<ol><li><code>toolUseLoopCore.js:2650</code> <code>conversationMessages = _ccResult.compressed;</code> —— 压缩只改<strong>局部变量</strong>。</li><li><code>aiConversationOps.js:381-422</code> <code>reconcileTurnHistory(snapshot, userText, assistantText)</code></li></ol>
+<p>—— <strong>签名里根本没有消息数组这个入参</strong>，只 push 两条纯文本。<br>   <code>useQueryBridge.js:3066</code> 的实参也只有三项 ⇒ <strong><code>&lt;compressed_context&gt;</code> 摘要从未进入 <code>_chatState.messages</code></strong>。<br>   ⇒ 下一轮 <code>_priorConversation = getConversation()</code>（<code>:2895</code>）拿到的仍是<strong>未压缩</strong>原始历史<br>   ⇒ 压缩是「一次性局部优化」，历史单调增长至某轮开局即超窗。</p>
+<ol><li><code>useQueryBridge.js:3071-3078</code> TUI 的 <code>result</code> 只取 <code>reply/provider/tokenUsage/toolCallLog</code>。</li><li><code>useQueryBridge.js:971</code> 注释自认：<em>each「继续」is a new runToolUseLoop</em> ⇒ TUI 跨轮唯一延续物是</li></ol>
+<p>防重复调用的签名 ring（<code>:974</code>），<strong>不携带上下文</strong>。</p>
+<h3 id="两条顺带发现">两条顺带发现<a class="anchor" href="#两条顺带发现" aria-label="锚点">#</a></h3>
+<ul><li><strong>注释过时</strong>：<code>toolUseLoopCore.js:685</code> 写 <em>fallback … or 10</em>，真值是 <strong><code>MAX_ITERATIONS = 100</code></strong></li></ul>
+<p>（<code>services/tool/loop/iterations.js:21</code>，且 <code>_resolveMaxIterations</code> 会 clamp 到 <code>[minSafe,100]</code>）。</p>
+<ul><li><strong>阈值可能双源（待核实）</strong>：<code>toolUseLoopCore.js:2640</code> 用 <code>_ccCtxWindow * 0.7</code>；</li></ul>
+<p>底栏用 <code>contextRouter.autoCompactTriggerTokens(budget)</code> = <code>budget × 0.9 / 1.2</code>。<br>  截图实测底栏 <code>@78.3k</code>；若 <code>_ccCtxWindow</code>=128k 则实际在 <code>89.6k</code> ⇒ <strong>底栏倒计时会说谎</strong>。列为提案 §8 优先项。</p>
+<h3 id="方案要点-复用-canonical-不造新真源">方案要点（复用 canonical，不造新真源）<a class="anchor" href="#方案要点-复用-canonical-不造新真源" aria-label="锚点">#</a></h3>
+<ul><li>一期：<code>reconcileTurnHistory</code> 加<strong>可选第四参</strong> <code>{compactedMessages}</code>（缺参 → 逐字节等价旧行为，保回滚）；</li><li>二期：<code>result</code> 补终态字段 + 插 <code>role:'notice'</code>（TUI 已有渲染先例 <code>:2985-2988</code>）；</li><li>三期：TUI 接 <code>agenticHarnessService</code> 既有 Ralph 语义（不把循环写进 3000 行的 <code>useQueryBridge</code>）；</li><li>四期：完成闸门<strong>复用两个现成真源</strong> —— <code>&lt;execution_plan&gt;</code> 步骤（<code>aiChatClient.js:3657</code>）+</li></ul>
+<p>delivery verdict（<code>seams.js:53</code>），<strong>不新造完成度判定</strong>。</p>
+<ul><li><strong>零新增 env</strong>（撞 <code>check-tui-gates.js:32</code> <code>MAX_GATES=220</code> 棘轮，且会把 B-P1 豁免推成非豁免）。</li><li>B-P1 豁免成立（三个能力域均已在 <code>capabilityMatrix</code> 登记）⇒ B-P2 七字段据实填「不适用」。</li></ul>
+<h3 id="编号">编号<a class="anchor" href="#编号" aria-label="锚点">#</a></h3>
+<p><strong>135</strong>（实测目录枚举 max=<strong>134</strong>）—— 又一次印证「index 会滞后于并行会话落盘」。<br>取法是枚举 <code>DESIGN-ARCH/*.md</code> 文件名求最大，<strong>不信 <code>00_INDEX</code></strong>。</p>
+<h3 id="ci-约束复核-独立复现-非引用">CI 约束复核（独立复现，非引用）<a class="anchor" href="#ci-约束复核-独立复现-非引用" aria-label="锚点">#</a></h3>
+<p><code>pr-gate.yml:476</code> 跑 <code>npm run test:node</code>；<code>services/backend/package.json:59</code> =<br><code>node --test tests/**/*.test.js</code> ⇒ <code>tests/</code> 下新 <code>*.test.js</code> <strong>落地即绿</strong>。<br>故提案<strong>不采用</strong>「先落红探针」——改为「先接线 → 再落断言」。</p>
+<h2 id="design-arch-135-一期-二期落地-10-22-已验完整"><code>[DESIGN-ARCH-135]</code> 一期 + 二期落地（10:22，已验完整）<a class="anchor" href="#design-arch-135-一期-二期落地-10-22-已验完整" aria-label="锚点">#</a></h2>
+<p>学生「开始动手」→ 落一/二期。<strong>改动只在 2 个源文件 + 1 个新测试文件。</strong></p>
+<h3 id="前置检查-这次做对了-值得固化">前置检查（这次做对了，值得固化）<a class="anchor" href="#前置检查-这次做对了-值得固化" aria-label="锚点">#</a></h3>
+<p>动手前先查目标文件是否在并行会话的改动列表里（<code>git status --porcelain</code> + <code>diff --stat</code>）：</p>
+<ul><li><code>aiConversationOps.js</code> <strong>干净</strong> · <code>contextCompressor.js</code> <strong>干净</strong> · <code>useQueryBridge.js</code> <strong>被改（+31/−8）</strong>。</li><li>再取 <code>git diff -U2 HEAD -- useQueryBridge.js</code> 看清对方改了什么：是 BUG-44 的错误分类正则 +</li></ul>
+<p>一处 <code>type:'notice'</code> → <strong><code>role:'notice'</code></strong> 修正。<strong>与我目标区（<code>:3066</code> / <code>:3071</code>）不重叠</strong> → 可动。</p>
+<ul><li><strong>顺带捡到一条</strong>：对方刚把 notice 字段从 <code>type</code> 改成 <code>role</code> ⇒ 我插 notice 直接用 <code>role</code>，</li></ul>
+<p>并被既有 <code>tests/cli/tui/noticeShape.test.js</code>（2/2 绿）背书。</p>
+<h3 id="落地内容">落地内容<a class="anchor" href="#落地内容" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>cli/aiConversationOps.js:381</code></td><td><code>reconcileTurnHistory(s, u, a, opts?)</code> 加<strong>可选第四参</strong> <code>{compactedMessages}</code>；缺参/非法 → 逐字节等价旧行为</td></tr><tr><td>同上（紧随其后）</td><td>新增 <code>_applyCompactedView(compacted, finalAssistant)</code> + 抽出 <code>_trimHistory()</code>（截断单一实现）</td></tr><tr><td><code>cli/tui/hooks/useQueryBridge.js:3069</code></td><td>调用点传 <code>{ compactedMessages: loopResult.conversationMessages }</code></td></tr><tr><td>同上 <code>result = {...}</code></td><td>补 <code>loopStoppedByLimit</code> / <code>maxIterationsReached</code> / <code>timeLimitReached</code> / <code>absoluteLimit</code> / <code>loopIterations</code> / <code>loopElapsedMs</code></td></tr><tr><td>同上</td><td>命中上限/超时时插 <code>role:'notice'</code>：「工具循环…（完成 N 轮 / M 次工具调用），任务可能未完成」</td></tr><tr><td><code>tests/cli/aiConversationOps.compactWriteback.test.js</code></td><td>新增 10 条（<code>node:test</code>，因 <code>test:node</code> 的 glob 会扫到）</td></tr></tbody></table>
+<h3 id="实现前必须搞清的三件事-都实测过-别凭猜">实现前必须搞清的三件事（都实测过，别凭猜）<a class="anchor" href="#实现前必须搞清的三件事-都实测过-别凭猜" aria-label="锚点">#</a></h3>
+<ol><li><strong>压缩产物形状</strong>：<code>contextCompressor.compress()</code> 返回 <code>{compressed, summaryGenerated, freedTokens, splitIndex, strippedImages}</code>；</li></ol>
+<p><code>compressed = [summaryMessage(role:'user'), ...keptMessages]</code>（<code>:841</code>）。冷却期 <code>COMPRESSION_COOLDOWN_MS = 30000</code>（30s，不构成主因）。</p>
+<ol><li><strong>语义等价的依据</strong>：<code>conversationMessages = [...initialMessages, ...本轮]</code>（<code>toolUseLoopCore.js:1780-1782</code>），</li></ol>
+<p>而 <code>initialMessages</code> 就是回合开始时 <code>getConversation()</code> 的快照 ⇒ <strong>两者等长</strong>（<code>MAX_HISTORY</code> 只截最早的，<code>:418</code>）。<br>   ⇒ 压缩视图<strong>整体替换</strong>是真源等价替换，不是凭空造历史。</p>
+<ol><li><strong>★ <code>_chatState.messages</code> 是「模型上下文」真源，不是「界面显示」真源</strong>：</li></ol>
+<p>界面历史活在 <code>&lt;Static&gt;</code> 的 React state；<code>getConversation()</code> 只在 <code>khy resume</code> 冷启动时被<strong>一次性播种</strong><br>   （<code>App.js:1779-1789</code>，其注释自认 <em>purely visual</em>）⇒ <strong>替换不会改变正在运行的界面</strong>。<br>   这条是本次能安全整体覆盖的<strong>唯一理由</strong>，已写进 <code>_applyCompactedView</code> 的 JSDoc。</p>
+<h3 id="验收">验收<a class="anchor" href="#验收" aria-label="锚点">#</a></h3>
+<ul><li>新单测 <strong>10/10 绿</strong>（<code># tests 10 / # pass 10 / # fail 0</code>）；两文件 <code>node --check</code> exit=0。</li><li><code>noticeShape</code> 2/2 绿；<code>check-leaf-contract</code> PASS；<code>rules:apply</code> 无新增违规。</li><li><code>check:tui-gates</code> 226/220 FAIL —— <strong>既有红</strong>，本次<strong>零新增 env 门</strong>。</li><li><strong>回归面实测</strong>：<code>reconcileTurnHistory</code> 调用方<strong>唯一</strong>（<code>useQueryBridge.js:3069</code>，经 <code>ai.js:660</code> 转发）⇒ 无第三方回归面。</li></ul>
+<h3 id="归因新技巧-已写进提案-10-4-也是-skill-该记的">归因新技巧（★ 已写进提案 §10.4，也是 skill 该记的）<a class="anchor" href="#归因新技巧-已写进提案-10-4-也是-skill-该记的" aria-label="锚点">#</a></h3>
+<p><code>clearResetsHistory.test.js</code> 3 处失败 —— 该测试断言的是 <strong><code>App.js</code> 源码文本</strong>（<code>appSrc</code>），而 <code>App.js</code> 正被他人大改（<strong>+445/−138</strong>）。<br><strong>最干净的归因不是比 counts，而是取 <code>git show HEAD:&lt;file&gt;</code> 跑同一组断言做对照</strong>：<br>7 条断言在 HEAD 与工作区<strong>同值</strong>（全 false）⇒ 定案「HEAD 就已红，非本次引入」。<br>比「算术闭合」更省事，且对<strong>按源码文本断言</strong>的测试（正则/字符串匹配型）是唯一可靠办法。</p>
+<h3 id="与方案的偏离-已写进提案-10-2">与方案的偏离（已写进提案 §10.2）<a class="anchor" href="#与方案的偏离-已写进提案-10-2" aria-label="锚点">#</a></h3>
+<ul><li><strong>一期不落盘归档</strong>被替换的原文：<code>aiConversationOps.js</code> 是<strong>零 IO 的纯内存操作</strong>，</li></ul>
+<p>为一次压缩引入写盘会把 IO 失败面塞进收尾路径。原文仍可经 <code>khy resume</code> transcript 回溯。</p>
+<ul><li>二期<strong>未定义 <code>hasPendingWork</code></strong>（三/四期才需要）—— 不造无人消费的字段。</li></ul>
+<h3 id="待办">待办<a class="anchor" href="#待办" aria-label="锚点">#</a></h3>
+<p>三/四期（TUI 接 <code>agenticHarnessService</code> 既有 Ralph 语义；结束闸门 = 阶段性完成，<br>判据复用 <code>&lt;execution_plan&gt;</code> + delivery verdict）—— <strong>待学生拍板</strong>。<br>提案 §8 待核实 1（底栏 <code>@78.3k</code> vs 实际 <code>0.7 × window</code> 是否漂移）仍<strong>未查</strong>。</p>
+<h2 id="压缩阈值三方不一致-同源修复-10-37-design-arch-135-8-10-6">压缩阈值三方不一致 → 同源修复（10:37，<code>[DESIGN-ARCH-135]</code> §8/§10.6）<a class="anchor" href="#压缩阈值三方不一致-同源修复-10-37-design-arch-135-8-10-6" aria-label="锚点">#</a></h2>
+<p>学生「继续」→ 先查 §8 待核实。<strong>结论：不只「双源」，是三方不一致。</strong></p>
+<table><thead><tr><th>路径</th><th>阈值来源</th><th>128k 窗/medium 实测</th></tr></thead><tbody><tr><td>底栏倒计时</td><td><code>autoCompactTriggerTokens(budget)</code> = budget × 0.75</td><td><strong>78.3k</strong></td></tr><tr><td>经典 REPL</td><td>经 harness 把 budget 塞进 <code>contextWindowTokens</code> → budget × 0.7</td><td>73.3k</td></tr><tr><td><strong>Ink TUI</strong>（用户在用的）</td><td><code>contextWindowTokens</code> 缺席 → 回退模型窗口 → window × 0.7</td><td><strong>89.6k</strong></td></tr></tbody></table>
+<p>⇒ TUI 用户在 78.3k~89.6k 之间看到「底栏说该压了却迟迟不压」——<strong>这正是他报的「无法自动压缩」的观感来源</strong>（压缩没坏，是比承诺晚 11.3k 才动手）。</p>
+<h3 id="三条独立证据-方法值得复用">三条独立证据（方法值得复用）<a class="anchor" href="#三条独立证据-方法值得复用" aria-label="锚点">#</a></h3>
+<ol><li><strong>公式侧</strong>：<code>_resolveContextBudget</code>（<code>aiRequestAnalysis.js:216</code>）</li></ol>
+<p><code>budget = 128000 − 4096 − 19200 = 104704</code> → <code>floor(104704×0.9/1.2) = 78528</code> ≈ <strong>78.5k</strong> 与截图吻合。</p>
+<ol><li><strong>实测侧</strong>：<code>gateway.getModelContextWindow('agnes-3.0-flash')</code> → <strong>0</strong>（无缓存）→</li></ol>
+<p><code>toolUseLoopCore.js:2620</code> 回退 <code>UNKNOWN_MODEL_CONTEXT_WINDOW = 128000</code> → <code>× 0.7</code> = <strong>89600</strong>。</p>
+<ol><li><strong>★ 截图自洽性反证</strong>：若底栏用 89600，同一占用 65.3k 应显示 <code>round((89600−65300)/89600×100) = 27%</code>；</li></ol>
+<p>截图是 <strong>17%</strong> ⇒ 底栏确实用 78.3k。<br>   <strong>这一条不需要跑代码 —— 用「界面上两个数字是否互相自洽」反推内部真值，是很快的实证手法。</strong></p>
+<h3 id="修法-最小-可回滚-单一真源">修法（最小、可回滚、单一真源）<a class="anchor" href="#修法-最小-可回滚-单一真源" aria-label="锚点">#</a></h3>
+<ol><li><code>services/contextRouter.js</code> 新增 <code>toolLoopCompactTriggerTokens(contextWindow, contextBudget)</code><ul><li>常量 <code>TOOL_LOOP_COMPACT_RATIO = 0.7</code>。规则：<strong>有预算 → <code>autoCompactTriggerTokens(budget)</code></strong></li></ul></li></ol>
+<p>（与底栏同一表达式，结构上不可能漂移）；<strong>无预算 → <code>floor(window × 0.7)</code></strong>（逐字节等价旧行为）。</p>
+<ol><li><code>services/tool/toolUseLoopCore.js:2640</code> 的 <code>_ccThreshold</code> 改用它（<code>try/catch</code> 包裹，异常回退旧式）。</li><li><code>cli/tui/hooks/useQueryBridge.js</code> 的 <code>chatOpts</code> 补 <code>contextBudgetTokens</code>（取自 <code>contextPlan.contextBudget</code>，</li></ol>
+<p>该 state 在 <code>:2227-2233</code> 已存，<strong>此前只用来画底栏</strong>）。</p>
+<p><strong>为什么这是干净的</strong>：TUI 首轮 <code>contextPlan</code> 为 null → 不传 → 走旧回退（fail-soft）；<br>回滚只需撤掉调用方那一处传参。</p>
+<h3 id="验收-2">验收<a class="anchor" href="#验收-2" aria-label="锚点">#</a></h3>
+<ul><li>新增 <code>tests/services/contextRouter.toolLoopThreshold.test.js</code> <strong>7/7 绿</strong>；</li></ul>
+<p>其中 <code>#135-13</code> 直接钉住 <code>78528</code>（同源）vs <code>89600</code>（旧行为）的算术，分叉即红。</p>
+<ul><li>一期回归 <strong>10/10 绿（零回归）</strong>；3 文件语法 exit=0；<code>check-leaf-contract</code> PASS；</li></ul>
+<p><code>check:wiring</code> 通过；<code>check:tui-gates</code> 226/220 <strong>与改动前同值（零漂移）</strong>。</p>
+<h3 id="共编排查-这次差点踩雷">共编排查（这次差点踩雷）<a class="anchor" href="#共编排查-这次差点踩雷" aria-label="锚点">#</a></h3>
+<ul><li><code>toolUseLoopCore.js</code> 正被并行会话<strong>大改（+354 / −2158，T-021 拆分在途）</strong>；</li><li><code>aiChatCore.js</code> / <code>contextRouter.js</code> / <code>aiRequestAnalysis.js</code> <strong>干净</strong>；</li><li><strong>归因关键</strong>：<code>git diff -U0</code> 取 hunk 头 + 检查「新增行里是否出现该段标记」→</li></ul>
+<p><code>diff 的新增行里是否出现压缩段标记: false</code> ⇒ 那段（<code>_ccThreshold</code>）是 <strong>HEAD 原样保留</strong>的，<br>  对方只搬了行号（4017 → 2640），<strong>没改内容</strong> ⇒ 可安全改。文件级 <code>--stat</code> 会把这种「搬行」误判成「大改」。</p>
+<h3 id="顺带查清-jest-node-test-两套-runner-的边界-长期有用">顺带查清：jest / node:test 两套 runner 的边界（★ 长期有用）<a class="anchor" href="#顺带查清-jest-node-test-两套-runner-的边界-长期有用" aria-label="锚点">#</a></h3>
+<p><code>jest.config.js:57</code> 的 <code>findStandaloneTestFiles</code> 扫 <code>tests|src|test|vendor</code>，<br><strong>按文件内容把两套 runner 互相排除</strong>：</p>
+<ul><li>含 <code>require('node:test')</code> 的新文件 → <strong>被 jest 忽略</strong>（不会报 &quot;no tests in file&quot;）；</li><li>用 jest 全局（裸 <code>describe</code>/<code>jest.mock</code>）的新文件 → 在 <code>node --test</code> 下</li></ul>
+<p><strong><code>jest is not defined</code> 落地即红</strong>。</p>
+<p>实测：<code>tests/services/contextRouter.test.js</code>、<code>tests/cli/sessionClear.test.js</code>（都是 jest 风格）<br>在 <code>node --test</code> 下<strong>都 exit=1</strong>。⇒ <strong>本仓新增用例一律用 <code>node:test</code></strong>。</p>
+<h3 id="未做-记入提案待办">未做（记入提案待办）<a class="anchor" href="#未做-记入提案待办" aria-label="锚点">#</a></h3>
+<p><code>agenticHarnessService.js</code> 的 4 处 <code>runToolUseLoop</code> 调用点（<code>:419</code>/<code>:540</code>/<code>:707</code>/<code>:834</code>）<br>未补 <code>contextBudgetTokens</code> —— harness 内部<strong>已有</strong> <code>contextBudget</code>（<code>:61-63</code>），补传即可；<br>未做的原因是偏差方向为<strong>更早压缩</strong>（安全侧），不产生用户可感知问题。</p>
+<h2 id="design-arch-135-三期落地-tui-有界自动续跑-10-53-顺带挖出第二个根因"><code>[DESIGN-ARCH-135]</code> 三期落地：TUI 有界自动续跑（10:53）—— 顺带挖出第二个根因<a class="anchor" href="#design-arch-135-三期落地-tui-有界自动续跑-10-53-顺带挖出第二个根因" aria-label="锚点">#</a></h2>
+<p>学生「继续」→ 落三期。</p>
+<h3 id="落地清单">落地清单<a class="anchor" href="#落地清单" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>services/agenticHarnessService.js</code></td><td><code>module.exports.continuation</code> 导出续跑<strong>策略</strong>（<code>shouldAutoContinue</code> / <code>assessTaskComplexity</code> / <code>buildContinuationSummary</code> / <code>buildContinuationInput</code>）</td></tr><tr><td><code>cli/tui/hooks/useQueryBridge.js</code></td><td>新增模块级 <code>runLoopRoundWithContinuation(runRound, userMessage, firstMessages, hooks)</code>；「跑一轮」封成闭包 <code>_runRoundOnce(roundMsg, roundMsgs, dedupKeys)</code>；每轮开始插 <code>role:'notice'</code>；导出该函数供单测</td></tr></tbody></table>
+<h3 id="设计取舍-不这么做会踩坑">设计取舍（不这么做会踩坑）<a class="anchor" href="#设计取舍-不这么做会踩坑" aria-label="锚点">#</a></h3>
+<ul><li><strong>没让 TUI 改走 <code>agenticHarnessService</code></strong>：它的 <code>loopOptions</code> 虽透传（<code>:385</code>），但还会自己构造</li></ul>
+<p><code>loopInput</code>（<code>_buildLoopInput</code>，<code>:379</code>）、跑 <code>_tryAutoDecompose</code>（<code>:439</code>）、维护 <code>taskHandle</code><br>  —— TUI 走它等于<strong>换入口</strong>，连带改变送给模型的内容。风险与收益不成比例。</p>
+<ul><li><strong>也没在 TUI 抄一份策略</strong>：那会像压缩阈值那样两边各自漂移（刚吃过教训）。</li><li><strong>折中</strong>：骨架（十几行 while）在 TUI，<strong>策略全部取自 harness 同一批函数</strong>。骨架必须重写是因为</li></ul>
+<p>harness 的骨架绑死了 taskHandle/boulder/自己的上下文构造。</p>
+<h3 id="顺带挖出的第二个根因-b-与中文不兼容-比第一个更根本">★★ 顺带挖出的第二个根因：<code>\b</code> 与中文不兼容（比第一个更根本）<a class="anchor" href="#顺带挖出的第二个根因-b-与中文不兼容-比第一个更根本" aria-label="锚点">#</a></h3>
+<p>写测试时 <code>shouldAutoContinue</code>（270 字、含「实现」）返回 <strong>false</strong>。探针定位：</p>
+<pre><code class="language-js"><span class="hljs-comment">// 修复前</span>
+<span class="hljs-keyword">const</span> actionPatterns = <span class="hljs-regexp">/\b(create|implement|build|…|设计|实现|创建|重构|编写|开发|搭建|迁移)\b/i</span>;</code></pre>
+<p><strong><code>\b</code> 基于 <code>\w</code>（仅 ASCII 字母数字下划线），中文两侧都不构成单词边界<br>⇒ <code>\b实现\b</code> 永不匹配，中文那半边是死码。</strong></p>
+<p>⇒ <strong>经典 REPL 的 Ralph 续跑对中文任务从来不会触发</strong> —— 即本仓主要使用场景下<br>「自动接续」从第一天起就失效。用户报的「长任务不自动接续」，<strong>这是更根本的根因</strong>。</p>
+<p><strong>修法</strong>：中英分成两条 —— 英文保留 <code>\b</code>（否则 <code>add</code> 会命中 <code>address</code>），中文不加 <code>\b</code>。<br><strong>这是行为变更</strong>（中文长任务从此开始触发续跑）；已核实既有<br><code>tests/services/agenticHarnessService.test.js</code> <strong>未断言</strong> <code>shouldAutoContinue</code>，不受影响。</p>
+<h3 id="有界性-runtime-003">有界性（RUNTIME-003）<a class="anchor" href="#有界性-runtime-003" aria-label="锚点">#</a></h3>
+<p>轮数上限 <code>min(adaptive, DEFAULTS.maxContinuationRounds=3)</code>，<code>adaptive = min(ceil(3×complexity), 8)</code>，<br>可被 <code>hooks.maxContinuationRounds</code> 收紧；<strong>每轮重新判定</strong> <code>shouldAutoContinue</code>；<br>无固定时长 kill（只有轮间冷却 1500ms）；上一轮没带回 <code>conversationMessages</code> → <strong>不续</strong>（硬续会失忆）；<br>任一续跑轮抛错 → <code>break</code> 并<strong>保留已有结果</strong>。</p>
+<h3 id="验收-3">验收<a class="anchor" href="#验收-3" aria-label="锚点">#</a></h3>
+<p>新增 <code>tests/tui/loopAutoContinue.test.js</code> <strong>10/10 绿</strong>；阈值用例 7/7、一期用例 10/10 <strong>零回归</strong>；<br>2 文件语法 exit=0；<code>check:tui-gates</code> 226/220 <strong>与改动前同值</strong>；<code>check:wiring</code> 通过；<code>rules:apply</code> 无新增违规。<br>其中 <code>#135-27</code> 专钉 <code>\b</code>：中文动作词必须触发，且英文 <code>address</code> 不得被 <code>add</code> 误命中。</p>
+<h3 id="待办-2">待办<a class="anchor" href="#待办-2" aria-label="锚点">#</a></h3>
+<p><strong>四期（结束闸门 = 阶段性完成）待拍板</strong> —— 需定义「未完成」判据（复用 <code>&lt;execution_plan&gt;</code> 步骤 +<br>delivery verdict），它会改变「什么时候允许停」，属能力增强而非缺陷修复。</p>
+<h2 id="none-误报-钉选-strict-只读取证-提案-design-arch-136-10-34"><code>[NONE]</code> + 误报「钉选 strict」— 只读取证 + 提案 <code>[DESIGN-ARCH-136]</code>（10:34）<a class="anchor" href="#none-误报-钉选-strict-只读取证-提案-design-arch-136-10-34" aria-label="锚点">#</a></h2>
+<p>学生给 TUI 截图：<code>⚠本次请求未能完成 / [NONE] / 路由: 钉选 strict(GATEWAY_PREFERRED_ADAPTER=api),本轮不回退</code>。<br><strong>全程只读，未改任何仓库源码</strong>；提案落<br><code>docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-136] 零尝试失败被误报为钉选抑制的修复方案.md</code>。<br>编号 <strong>136</strong>（枚举目录 max=<strong>135</strong>）。</p>
+<h3 id="一句话结论">一句话结论<a class="anchor" href="#一句话结论" aria-label="锚点">#</a></h3>
+<p><strong>「一条失败记录都没有」被判据翻译成「钉选抑制了回退」。</strong> 四处病灶，独立可修：</p>
+<table><thead><tr><th>#</th><th>病灶</th><th>位置</th></tr></thead><tbody><tr><td>A</td><td><code>keys.size === 0</code> 被判成 <code>pinned:true / fallbackSuppressed:true</code></td><td><code>cliFailureEnvelope.js:112-122</code></td></tr><tr><td>B</td><td><code>cause===null</code> 无专项码 ⇒ 落 <code>NONE</code>（文案零信息）</td><td><code>cliFailureEnvelope.js:256-259</code></td></tr><tr><td>C</td><td>回退重试结果<strong>无条件覆盖</strong>首次结果</td><td><code>aiChatCore.js:3125-3128</code></td></tr><tr><td>D</td><td><code>.env</code> 钉选残留可手改，注释承诺 4 次、值改 0 次</td><td><code>services/backend/.env:51-52</code></td></tr></tbody></table>
+<h3 id="实测复现-9-组形状枚举-非推测">实测复现（9 组形状枚举，非推测）<a class="anchor" href="#实测复现-9-组形状枚举-非推测" aria-label="锚点">#</a></h3>
+<p>直接喂 <code>buildCliFailureEnvelope</code>，<strong>4 组逐字节复现截图</strong>：<br>无 attempts+<code>unknown</code> / 无 attempts+<code>process</code> / <code>attempts:[]</code> / <strong>记录缺 <code>success</code> 字段</strong> ——<br>全部 <code>code=NONE</code>、<code>cause=null</code>、<code>routing=pinned-strict</code>。</p>
+<p><strong>判据收敛</strong>：<code>attempts</code> 中<strong>没有一条</strong> <code>success === false</code> ⇒ 三处同源判据<strong>同时失效</strong>：<br><code>_pickPrimaryCause:66</code>（⇒ cause null ⇒ 首屏无「通道: …」行）·<br><code>_resolveRouting:112</code>（⇒ pinned-strict）·<br><code>aiGatewayGenerateHelpers.js:893,895</code>（⇒ 无「内部已尝试 N 次」）。<br>截图这三处「缺失」全部对上。</p>
+<h3 id="触发链-四步-每步-file-line">触发链（四步，每步 file:line）<a class="anchor" href="#触发链-四步-每步-file-line" aria-label="锚点">#</a></h3>
+<ol><li><code>.env:51-52</code> = <code>api</code> + <code>true</code>（<strong>该文件不受 git 跟踪</strong> ⇒ 纯本机慢性病）</li><li><code>aiGatewayGenerateMethod.js:4033-4083</code> <code>!entry.available</code> ⇒ <code>:4056</code> 打「已选择模型通道不可用」（strict 专项）</li><li><code>aiContextFlow.js:39-45</code> <code>_isStrictPreferredFailure</code> 的<strong>唯一判据</strong>正是那句文案 ⇒ 触发</li></ol>
+<p><code>aiChatCore.js:3120</code> 用 <code>{...chatOpts, strictPreferred:false}</code> <strong>重试</strong></p>
+<ol><li><code>:3125-3128</code> <strong>无条件覆盖</strong> ⇒ 若重试那轮无 <code>success:false</code> 记录 ⇒ <code>[NONE]</code> + 误报钉选</li></ol>
+<h3 id="归因-照-skill-6-5">归因（照 skill §6.5）<a class="anchor" href="#归因-照-skill-6-5" aria-label="锚点">#</a></h3>
+<ul><li><code>git show HEAD:…cliFailureEnvelope.js</code> 与工作区 <strong>逐字节一致（12023 bytes）</strong> ⇒ 非本次引入、非并行会话改动</li><li><code>git status --porcelain</code> 对信封/测试/.env <strong>无输出</strong></li><li><code>.env</code> <strong>不在 git</strong>（<code>ls-files --error-unmatch</code> → pathspec 不匹配）</li></ul>
+<h3 id="未确证-已写进提案-8-优先项-标注-阻断确证-不阻断修复">★ 未确证（已写进提案 §8 优先项，标注「阻断确证、不阻断修复」）<a class="anchor" href="#未确证-已写进提案-8-优先项-标注-阻断确证-不阻断修复" aria-label="锚点">#</a></h3>
+<p><strong>那条该有的 <code>success:false</code> 记录具体在哪一环丢失/形状不符 —— 没查出来。</strong><br>逐条排除：<code>allAttempts</code> 只增不减（无重赋值）· <code>:2036–3699</code> 无任何 return ·<br>仅两处不 push 的 continue（<code>:3872</code> strict 跳非首选 / <code>:3878</code> <code>!enabled</code>），但 <code>_adapters</code><br>是 <code>aiGateway.js:2161</code> 静态表 <strong>16 条全 <code>enabled:true</code></strong> · <code>:4033</code> 分支<strong>会 push</strong>（<code>:4040</code>）·<br><code>_reorderAdaptersByModelProtocolHint</code> 只重排不筛选 · <code>_maybePromoteProcessFailoverAdapters</code><br>对非 process-sensitive 的 <code>api</code> 直接 <code>return list</code>。</p>
+<p><strong>确定入口（形状污染）</strong>：<code>:4580</code> <code>allAttempts.push(...result.attempts)</code> —— 子调用 attempts<br><strong>原样并入、不校验形状</strong>。</p>
+<p>⇒ <strong>这恰恰把方案的形状钉死了</strong>：不去猜哪一环丢，而是<strong>让「证据缺失」本身可诊断</strong>。<br>建议的修法：<code>_resolveCode</code> 增最高优先级 <code>NO_ATTEMPT</code> 码（<code>cause===null</code> ⇒ 零尝试是<strong>事实</strong>，<br>钉选是<strong>解释</strong>，有事实时不能用解释覆盖事实）+ <code>_resolveRouting</code> 零尝试时不得置 <code>pinned</code>。</p>
+<h3 id="顺带查实的两条-都是既有状态-非本次引入">顺带查实的两条（都是既有状态，非本次引入）<a class="anchor" href="#顺带查实的两条-都是既有状态-非本次引入" aria-label="锚点">#</a></h3>
+<ul><li><strong><code>tests/gateway/cliFailureEnvelope.test.js</code> 在 <code>node --test</code> 下当前即红</strong>：</li></ul>
+<p>实测 <code>exit=1 / # fail 1 / ReferenceError: describe is not defined</code>；HEAD 版本就是 jest 风格<br>  ⇒ <strong>既有红</strong>。而 <code>deploy-staging.yml:97-99</code> 明写 <code>test:node</code> 经 shell 展开跑 <strong>1288</strong> 个文件<br>  ⇒ 这条红在 CI 里<strong>也应该可见</strong>，建议单独核一次（同 <code>[DESIGN-ARCH-135]</code> 记的 <code>tests/tui/</code> 陷阱第二例）。<br>  ⚠️ skll §6.3 原本只说 <code>tests/tui/</code> —— <strong>实际是整个 <code>tests/**</code> 都要用 <code>node:test</code></strong>。</p>
+<ul><li><code>jest.config.js:25-40</code> 按 <code>require('node:test')</code> 标记<strong>自动发现并加入 <code>testPathIgnorePatterns</code></strong></li></ul>
+<p>⇒ 新用例用 <code>node:test</code> 写、放 <code>tests/gateway/</code> 下<strong>不会被 jest 重复跑</strong>，且进 CI。这是安全的落点。</p>
+<h3 id="方案分期">方案分期<a class="anchor" href="#方案分期" aria-label="锚点">#</a></h3>
+<p>① 信封（<code>unresolved</code>/<code>attempted</code> + <code>NO_ATTEMPT</code> 码 + 2 条 TITLES/HINTS）② 覆盖策略改「披露必留、诊断择优」（<code>_diagnosticRank</code> 放纯叶子）③ <code>khy gateway status</code> 增钉选健康检查。<br><strong>零新增 env</strong>（撞 <code>check-tui-gates.js:32</code> <code>MAX_GATES=220</code> 棘轮，且会把 B-P1 豁免推成非豁免）。<br>新码<strong>不能挂 <code>CHANNEL_EXHAUSTED</code></strong> —— 那个码会 <code>showPromoPanel=true</code>（<code>:308</code>），12 行推广清单抢首屏。</p>
+<h2 id="design-arch-136-三期满落地-10-57-已验完整"><code>[DESIGN-ARCH-136]</code> 三期满落地（10:57，已验完整）<a class="anchor" href="#design-arch-136-三期满落地-10-57-已验完整" aria-label="锚点">#</a></h2>
+<p>学生「现在按照方案修复」→ 三期全落。<strong>4 个源文件 + 2 个新测试文件 + 1 处既有断言更新。</strong></p>
+<h3 id="落地内容-2">落地内容<a class="anchor" href="#落地内容-2" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>gateway/cliFailureEnvelope.js</code></td><td><code>_resolveRouting</code> 增 <code>attempted</code> + <code>unresolved</code> 模式；<strong>「零尝试」计算提前到 preferred 判定之前</strong>；<code>_resolveCode</code> <strong>兜底位</strong>新增 <code>NO_ATTEMPT</code>；新增 <code>TITLES/HINTS.NO_ATTEMPT</code>；新增导出 <code>_diagnosticRank</code></td></tr><tr><td><code>cli/aiChatCore.js</code></td><td>回退重试改「披露必留、诊断择优」：<code>_diagnosticRank</code> 比较两次诊断，仅当重试更差才保留首次</td></tr><tr><td><code>cli/handlers/gateway.js</code></td><td><code>_resolvePreferredAdapterIssue</code> 增 <code>strict</code>（判据同源），两个 branch 均回传</td></tr><tr><td><code>cli/handlers/gatewayStatusView.js</code></td><td>两类 issue 披露 strict 后果 + 补解钉路径</td></tr><tr><td><code>tests/gateway/cliFailureEnvelopeZeroAttempt.test.js</code></td><td><strong>新增 15 条</strong>（node:test）</td></tr><tr><td><code>tests/gateway/preferredAdapterIssueStrict.test.js</code></td><td><strong>新增 3 条</strong>（node:test，源码级）</td></tr><tr><td><code>tests/gateway/cliFailureEnvelope.test.js</code></td><td><strong>更新 1 条断言</strong>：<code>NONE</code> → <code>NO_ATTEMPT</code></td></tr></tbody></table>
+<h3 id="实施期推翻方案的两处设计-重要-都已写进提案-9-2">★ 实施期推翻方案的两处设计（重要，都已写进提案 §9.2）<a class="anchor" href="#实施期推翻方案的两处设计-重要-都已写进提案-9-2" aria-label="锚点">#</a></h3>
+<ol><li><strong><code>NO_ATTEMPT</code> 必须挂「兜底位」，不是方案写的「最高优先级」。</strong></li></ol>
+<p>照初稿实现会<strong>用新误报换旧误报</strong>：该文件已有一批<strong>不依赖 <code>primaryCause</code></strong> 的分支<br>   （auth / rate_limit / server_error / network / timeout / model_not_found / context_length / unavailable），<br>   它们只看顶层 <code>errorType</code>。提到最前会把「零记录但 <code>errorType</code> 明说是认证失败」压成「未尝试任何通道」。<br>   <strong>正解</strong>：零记录 + 有已知类型信号 → 照实报该类型；零记录 + 无任何信号 → 才 <code>NO_ATTEMPT</code>。（Z-07 钉住）</p>
+<ol><li><strong><code>_diagnosticRank</code> 只分档、不在码之间排具体性。</strong></li></ol>
+<p>方案写「按码的具体性序」—— 实施判定为<strong>无依据</strong>（凭什么说 401 比 unavailable 更具体）。<br>   落成四档：有 cause=100 / NO_ATTEMPT=2 / 其它无 cause=1 / NONE=0，<strong>同档不触发保留</strong>（最小惊讶）。Z-13 钉住边界。</p>
+<ol><li>另：<strong>「零尝试」的计算必须早于 preferred 判定</strong> —— 方案未提，Z-08 暴露：</li></ol>
+<p><code>!preferred</code> 早退会返回 <code>fallback</code>（<code>attempted</code> 默认 <code>true</code>），在另一条分支上丢掉同一事实。</p>
+<h3 id="第-3-期-能力早已存在-改的是-真源轻重不一">第 3 期：能力早已存在，改的是「真源轻重不一」<a class="anchor" href="#第-3-期-能力早已存在-改的是-真源轻重不一" aria-label="锚点">#</a></h3>
+<p>初稿写「新增钉选健康检查」。实测<strong>检测早已存在两处</strong>：</p>
+<ul><li><code>baseSelfCheckService.js:517-545</code> —— 判 <strong>error</strong>，明说「所有 AI 调用将硬失败」，</li></ul>
+<p><strong>还带 autoRepair</strong>（<code>:567</code> 改写 env）；注释点名前两次复发「codex(09-14) → windsurf(09-17)」</p>
+<ul><li><code>handlers/gateway.js:542-584</code> <code>_resolvePreferredAdapterIssue</code> + <code>gatewayStatusView.js:492-500</code> —— 已渲染</li></ul>
+<p>⇒ 改为<strong>补强</strong>：把 <code>STRICT</code> 这个<strong>放大器</strong>披露出来（原先 <code>gateway status</code> 全文不提 STRICT，<br>与 selfcheck 判级轻重不一），并补解钉路径。<strong>零新增 env。</strong></p>
+<p><strong>未推荐 <code>khy provider use</code></strong> —— 只对 <code>cmdc</code> 分支有「写 <code>GATEWAY_PREFERRED_ADAPTER</code>」的直接证据<br>（<code>provider.js:243</code>），通用分支未验证 ⇒ <strong>不把未验证的命令写进用户可见建议</strong>。</p>
+<h3 id="验收实测">验收实测<a class="anchor" href="#验收实测" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项</th><th>结果</th></tr></thead><tbody><tr><td><code>node --check</code> × 7 文件</td><td><strong>7/7 exit=0</strong></td></tr><tr><td>node:test 新用例</td><td><strong>18/18 绿</strong>（Z-01..Z-13b 15 条 + P-01..P-03 3 条）</td></tr><tr><td>既有套件零回归</td><td><strong>27/27 绿</strong>（影子跑，见下）</td></tr><tr><td><code>check-leaf-contract</code></td><td><strong>PASS</strong>（仍零 IO / 确定性 / 不读 process.env）</td></tr><tr><td><code>check-tui-gates --changed</code></td><td><strong>226/220 —— 与改动前基线一致、零漂移</strong>（既有红）</td></tr></tbody></table>
+<h3 id="新技巧-本机没装-jest-时-怎么验-jest-风格测试的零回归">★ 新技巧：本机没装 jest 时，怎么验 jest 风格测试的零回归<a class="anchor" href="#新技巧-本机没装-jest-时-怎么验-jest-风格测试的零回归" aria-label="锚点">#</a></h3>
+<p><code>services/backend/node_modules/jest</code> <strong>不存在</strong>（devDependency 未装），<br><code>node_modules/jest/bin/jest.js</code> → <code>MODULE_NOT_FOUND</code>；根目录也没有。<br>而 <code>cliFailureEnvelope.test.js</code> 是 jest 风格、进 CI 的 <code>npm test</code> 路径 ⇒ 必须证明它仍绿。</p>
+<p><strong>做法：影子跑</strong> —— 把该文件的每一条 <code>expect(...)</code> <strong>逐条复刻</strong>成 <code>assert</code>，<br>配同样的 <code>result</code> 形状，用一个 node 脚本跑一遍，输出 <code>pass/fail</code> 计数。<br>本法得到 <strong>27/27</strong>，并抓出「有一条断言必须更新」（它把归档行为写成了规范：<br><code>无 attempts 且无信号 → NONE</code>）。<strong>比人工核对硬，比装 jest 快。</strong></p>
+<h3 id="下一个真问题-已写进提案-9-5-待拍板">下一个真问题（已写进提案 §9.5，待拍板）<a class="anchor" href="#下一个真问题-已写进提案-9-5-待拍板" aria-label="锚点">#</a></h3>
+<p><strong>告警已经报出，用户还是踩了坑。</strong> 今天 <strong>08:16</strong> 的每日规范巡检已报<br>「env-gateway-pin <strong>2 error</strong>（两个 .env 硬钉 <code>api</code>+<code>STRICT=true</code>，AI 通道全灭风险）」，<br>而用户 <strong>10:29</strong> 仍在 TUI 撞上同一错误。<br>⇒ <code>baseSelfCheckService</code> 判得对、判得重、还带自动修复，但它<strong>只活在用户主动跑 <code>khy doctor</code> 的路径上</strong>；<br>TUI/REPL 启动时不做这次检查。<strong>真正该修的是启动路径</strong>，不是继续加强告警文案。</p>
+<h2 id="9-5-落地-启动路径接入钉选自检-11-30-已验完整">§9.5 落地：启动路径接入钉选自检（11:30，已验完整）<a class="anchor" href="#9-5-落地-启动路径接入钉选自检-11-30-已验完整" aria-label="锚点">#</a></h2>
+<p>学生「按方案 §9.5 修复」→ 落地。<strong>动手前又一次推翻前提（本 bug 第三次）</strong>：</p>
+<h3 id="取证修正-启动自检并非没接-而是两处断点">取证修正：启动自检并非没接，而是两处断点<a class="anchor" href="#取证修正-启动自检并非没接-而是两处断点" aria-label="锚点">#</a></h3>
+<ul><li><code>replSession.js:1086</code> <strong>早就在跑</strong> <code>autoStartFromEnv()</code>（全量 runOnce，fire-and-forget）</li><li><strong>TUI 断点</strong>：<code>startRepl:672</code> <code>await startInkApp</code> 是早返回 ⇒ <code>:1086</code> <strong>从未执行</strong>。</li></ul>
+<p>与 <code>:655-670</code> clipboard bridge 注释自认的 &quot;the TUI path never reached it&quot; 同型 ——<br>  <strong>凡挂在 classic 模式 early-return 之后的启动逻辑，TUI 都吃不到</strong>（这是本仓启动路径的结构性陷阱）</p>
+<ul><li><strong>经典 REPL 断点</strong>：自检跑了，但 <code>runOnce</code> 结果<strong>只写日志文件</strong></li></ul>
+<p>（<code>start()</code> 里 <code>.catch(() =&gt; {})</code> 丢弃返回值）—— 界面零呈现</p>
+<h3 id="落地-3-源文件-1-新测试-判据-文案-100-复用-零新增-env">落地（3 源文件 + 1 新测试，判据/文案 100% 复用，零新增 env）<a class="anchor" href="#落地-3-源文件-1-新测试-判据-文案-100-复用-零新增-env" aria-label="锚点">#</a></h3>
+<ul><li><code>baseSelfCheckService.js</code>：导出 <code>checkGatewayPreferredOnce(opts)</code> —— 只包 <code>_checkGatewayPreferred</code>，双层 fail-soft</li><li><code>replSession.js</code>：<code>_kickoffGatewayPinStartupCheck({toTui})</code>（fire-and-forget，绝不 await/绝不抛）；</li></ul>
+<p><strong>TUI 分叉之前</strong>调 <code>{toTui:true}</code>，经典 REPL 自检块后调 <code>{toTui:false}</code></p>
+<ul><li>呈现零自绘：TUI → <code>notificationPort.emitNotification</code>（<strong>挂载前进缓冲、挂载时 seed 回放</strong>，</li></ul>
+<p>App.js:1704-1760 既有机制 —— 时序天然解决&quot;检查完成时 TUI 可能还没挂载&quot;；error 级窄屏 inline 打一次）；<br>  经典 REPL → <code>formatters.printError/printWarn</code>（无 ink，console 安全）</p>
+<ul><li><code>tests/cli/gatewayPinStartupCheck.test.js</code>：<strong>8 条 node:test</strong></li></ul>
+<h3 id="验收-4">验收<a class="anchor" href="#验收-4" aria-label="锚点">#</a></h3>
+<ul><li>新用例 <strong>8/8 绿</strong>：G-05 启动触发点在 startInkApp 之前 · G-02 api+true 报 error「strict 禁止回退」·</li></ul>
+<p>G-03 解钉路径（<code>GATEWAY_PREFERRED_ADAPTER=auto</code>）可见 · G-04 非 strict 仍 warning · G-08 健康零误报</p>
+<ul><li>门预算 <strong>226/220 零漂移</strong>；<code>node --check</code> 3/3</li><li><code>sessionClear.test.js</code> 文件级红 —— <strong>既有红归因闭合</strong>：HEAD 版就含 <code>jest.mock</code>（:5），</li></ul>
+<p>在 <code>node --test</code> 下必红（与 <code>cliFailureEnvelope.test.js</code>/<code>liveFrameGeometry</code> 同型第三例）</p>
+<h3 id="测试安全红线-写这类-含-autorepair-的自检-测试必守">测试安全红线（写这类「含 autoRepair 的自检」测试必守）<a class="anchor" href="#测试安全红线-写这类-含-autorepair-的自检-测试必守" aria-label="锚点">#</a></h3>
+<p>autoRepair 会<strong>真写 <code>.env</code></strong>（<code>_writeGatewayEnvPatch</code>）——凡「未注册」场景的测试用例<br><strong>必须显式传 <code>{ autoRepairPreferred: false }</code></strong>，否则测试会改用户的 env 文件。<br><code>unavailable</code> 场景本身只报不修，可走真实默认路径。</p>
+<h3 id="风险评估-写进提案-9-6">风险评估（写进提案 §9.6）<a class="anchor" href="#风险评估-写进提案-9-6" aria-label="锚点">#</a></h3>
+<p>非阻断硬保证 = fire-and-forget + <code>SERVICE_HEALTH_TIMEOUT_MS</code> 超时 + 双层 try/catch，<br>任何失败只少一条提示；经典 REPL 双跑冗余（幂等只读）可接受；TUI 呈现完全走既有通知端口，<br><code>notificationPort</code>/<code>App.js</code> 一行未改。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../.workbuddy/memory/2026-09-22.html"><div class="dir">← 上一篇</div><div class="ttl">2026-09-22</div></a><a class="next" href="../../.workbuddy/memory/automations/23a4a1ed-a687-4205-8a8e-18a2593d8c82/memory.html"><div class="dir">下一篇 →</div><div class="ttl">自动化记忆：每日规范巡检（khy-os）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__=".workbuddy/memory/2026-09-23.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

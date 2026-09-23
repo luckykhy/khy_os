@@ -3,7 +3,8 @@
 /**
  * terminalSetupPlan.test.js — 纯叶子终端 Shift+Enter 配置方案器契约(node:test,零 IO)。
  *
- * 锁定:native(Ghostty/Kitty/iTerm2/WezTerm/Warp)→无需配置;VSCode 家族→keybindings.json
+ * 锁定:native(Ghostty/Kitty/iTerm2/WezTerm/Warp)→终端有能力但 khy 未申请协议(文案须点名
+ * Ctrl + J);Windows Terminal→settings.json sendInput;VSCode 家族→keybindings.json
  * 路径按平台推导 + 片段;Apple Terminal→偏好设置步骤(无 configPath/snippet);Alacritty→
  * XDG/.config 路径 + toml 片段;Zed→keymap.json 路径;unknown→通用引导;Remote SSH 判定;
  * 门控 isEnabled;防呆(空名/空 homedir)。叶子绝不读 process.env(env 注入)。
@@ -18,7 +19,7 @@ const { planTerminalSetup, isVSCodeRemoteSSH, isEnabled, NATIVE_CSIU_TERMINALS }
 
 const HOME = '/home/u';
 
-describe('native CSI u 终端 → 无需配置', () => {
+describe('native CSI u 终端 → 终端有能力,但 khy 未申请协议', () => {
   for (const name of Object.keys(NATIVE_CSIU_TERMINALS)) {
     test(`${name} → category=native, needsSetup=false`, () => {
       const r = planTerminalSetup({ name, platform: 'linux', homedir: HOME, env: {} });
@@ -103,6 +104,51 @@ describe('Zed → keymap.json', () => {
     assert.equal(r.configPath, path.join(HOME, '.config', 'zed', 'keymap.json'));
     assert.match(r.snippet, /"context": "Terminal"/);
     assert.match(r.snippet, /shift-enter/);
+  });
+});
+
+describe('Windows Terminal → settings.json sendInput(BUG-35 新增分支)', () => {
+  const envWith = (localAppData) => ({ LOCALAPPDATA: localAppData });
+  test('WT_SESSION 检出的名字走 needs-setup,不再谎称原生可用', () => {
+    const r = planTerminalSetup({
+      name: 'windows-terminal', platform: 'win32', homedir: 'C:/Users/u',
+      env: envWith('C:/Users/u/AppData/Local'),
+    });
+    assert.equal(r.category, 'needs-setup');
+    assert.equal(r.needsSetup, true);
+    assert.equal(r.method, 'windows-terminal-keybindings');
+    assert.match(r.snippet, /"action": "sendInput"/);
+    assert.match(r.snippet, /shift\+enter/);
+    assert.match(r.configPath, /Microsoft\.WindowsTerminal_[^/\\]+[/\\]LocalState[/\\]settings\.json$/);
+  });
+  test('带空格别名 "windows terminal" 同样命中', () => {
+    const r = planTerminalSetup({ name: 'windows terminal', platform: 'win32', homedir: 'H', env: {} });
+    assert.equal(r.method, 'windows-terminal-keybindings');
+    // 无 LOCALAPPDATA → 路径不可知,但方案仍在(configPath 允许 null)
+    assert.equal(r.configPath, null);
+  });
+  test('缺 LOCALAPPDATA 不抛', () => {
+    assert.doesNotThrow(() => planTerminalSetup({ name: 'windows-terminal', platform: 'win32', homedir: 'H' }));
+  });
+  test('reason 不得宣称 Alt+Enter 可用(实测 WT 自用为全屏)', () => {
+    const r = planTerminalSetup({ name: 'windows-terminal', platform: 'win32', homedir: 'H', env: {} });
+    assert.match(r.reason, /Ctrl \+ J/);
+    assert.match(r.reason, /Alt \+ Enter.*不可|不能当换行键/s);
+  });
+});
+
+describe('文案真源:不得宣传终端送不出的键(BUG-35)', () => {
+  test('native reason 承认 khy 未申请键盘协议,并点名 Ctrl + J', () => {
+    const r = planTerminalSetup({ name: 'ghostty', platform: 'linux', homedir: HOME, env: {} });
+    assert.equal(r.category, 'native');
+    assert.match(r.reason, /Ctrl \+ J/);
+    assert.doesNotMatch(r.reason, /Alt \+ Enter/);
+    assert.match(r.reason, /未申请|opt-in/);
+  });
+  test('unknown reason 不再说「多数现代终端原生支持」', () => {
+    const r = planTerminalSetup({ name: 'weird-term', platform: 'linux', homedir: HOME, env: {} });
+    assert.doesNotMatch(r.reason, /原生支持/);
+    assert.match(r.reason, /Ctrl \+ J/);
   });
 });
 

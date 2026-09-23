@@ -34,11 +34,13 @@ function _normalize(text) {
 
 /**
  * 取出开头第一句（含句末终止符），返回 {head, rest}。
- * 终止符覆盖中英文：。！？!? 以及换行。若无终止符，整段视为一句、rest 为空。
+ * 终止符覆盖中英文：。！？!?.? 以及换行。若无终止符，整段视为一句、rest 为空。
+ * (英文句点必须在此列:套话拒绝剥离的消费端是中英混排回复,英文句不分裂会让
+ *  「Hello. I cannot help with that. <real answer>」这类前缀永远剥不掉。)
  */
 function _splitLeadingSentence(text) {
   const s = String(text == null ? '' : text);
-  const m = s.match(/^[\s\S]*?[。！？!?\n]+/);
+  const m = s.match(/^[\s\S]*?[。！？!?.?\n]+/);
   if (!m) {
     return { head: s, rest: '' };
   }

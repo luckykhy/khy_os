@@ -12,7 +12,7 @@ function fakeEntry(key) {
     key,
     enabled: true,
     available: true,
-    // No getRuntimeDiagnostics â†?no runtime penalties; clean baseline.
+    // No getRuntimeDiagnostics ï¿½?no runtime penalties; clean baseline.
     adapter: { getStatus: () => ({ available: true, name: key }) },
   };
 }
@@ -23,7 +23,7 @@ function seedGouging(key) {
   }
   expect(store.getVerdict(key)).toBe('opaque_suspected_gouging');
 }
-test.after(() => store._reset());
+afterAll(() => store._reset());
 
 describe('Cache Gouging Penalty', () => {
   test('gouging verdict adds a cache_gouging soft penalty, never blocks', () => {
@@ -54,8 +54,8 @@ describe('Cache Gouging Penalty', () => {
       const gouge = gateway._assessDefaultRouteCandidate(fakeEntry('relay-gouge'));
       const clean = gateway._assessDefaultRouteCandidate(fakeEntry('relay-clean'));
     
-      expect(!clean.reasons.find((r) => r.code === 'cache_gouging')).toBe();
-      // Same (unknown) base priority â†?the penalty alone decides; lower score wins.
+      expect(!clean.reasons.find((r) => r.code === 'cache_gouging')).toBe(true);
+      // Same (unknown) base priority ï¿½?the penalty alone decides; lower score wins.
       expect(clean.score < gouge.score).toBeTruthy();
   });
 
@@ -65,7 +65,7 @@ describe('Cache Gouging Penalty', () => {
       process.env.GATEWAY_DEFAULT_ROUTE_CACHE_GOUGING_PENALTY = '0';
       try {
         const assessment = gateway._assessDefaultRouteCandidate(fakeEntry('relay-gouge'));
-        expect(!assessment.reasons.find((r) => r.code === 'cache_gouging')).toBe();
+        expect(!assessment.reasons.find((r) => r.code === 'cache_gouging')).toBe(true);
       } finally {
         if (prev === undefined) delete process.env.GATEWAY_DEFAULT_ROUTE_CACHE_GOUGING_PENALTY;
         else process.env.GATEWAY_DEFAULT_ROUTE_CACHE_GOUGING_PENALTY = prev;

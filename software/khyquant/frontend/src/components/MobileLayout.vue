@@ -232,14 +232,14 @@ const onTouchEnd = () => {
 }
 
 // Menu items
+// NOTE: every path here must be a route registered in router/index.js — the
+// interaction.wiring contract test asserts this, so don't add a menu entry
+// that points at an unregistered (dead) route.
 const menuItems = [
   { path: '/dashboard', label: '主页', icon: 'Odometer' },
   { path: '/trading', label: '智能交易', icon: 'TrendCharts' },
   { path: '/strategies', label: '策略管理', icon: 'Document' },
   { path: '/backtest', label: '回测分析', icon: 'DataAnalysis' },
-  { path: '/trades', label: '交易记录', icon: 'ShoppingCart' },
-  { path: '/data-sources', label: '数据源', icon: 'DataBoard' },
-  { path: '/agent-architecture', label: '智能体架构', icon: 'Cpu' },
   { path: '/announcements', label: '通知公告', icon: 'Bell' },
   { path: '/feedback', label: '意见反馈', icon: 'ChatDotRound' },
   { path: '/profile', label: '个人中心', icon: 'UserFilled' },
@@ -249,7 +249,7 @@ const bottomTabs = [
   { path: '/dashboard', label: '主页', icon: 'Odometer' },
   { path: '/trading', label: '交易', icon: 'TrendCharts' },
   { path: '/strategies', label: '策略', icon: 'Document' },
-  { path: '/trades', label: '记录', icon: 'ShoppingCart' },
+  { path: '/backtest', label: '回测', icon: 'DataAnalysis' },
   { path: '/profile', label: '我的', icon: 'UserFilled' }
 ]
 
@@ -370,7 +370,7 @@ onUnmounted(() => {
   width: 280px;
   height: 100%;
   height: 100dvh;
-  background: linear-gradient(180deg, #1f2d3d 0%, #304156 100%);
+  background: linear-gradient(180deg, #1f2d3d 0%, #15202e 100%);
   z-index: 950;
   transform: translateX(-280px);
   transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
@@ -379,6 +379,7 @@ onUnmounted(() => {
   padding-top: env(safe-area-inset-top);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
 }
 
 .drawer-header {
@@ -510,6 +511,12 @@ onUnmounted(() => {
   background: none;
   border: none;
   cursor: pointer;
+  border-radius: 10px;
+  transition: background 0.15s;
+}
+
+.hamburger-btn:active {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .hamburger-line {
@@ -518,6 +525,7 @@ onUnmounted(() => {
   height: 2px;
   background: var(--khy-white);
   border-radius: 1px;
+  transition: all 0.2s;
 }
 
 .top-bar-logo {
@@ -541,6 +549,7 @@ onUnmounted(() => {
   cursor: pointer;
   color: rgba(255, 255, 255, 0.85);
   border-radius: 50%;
+  transition: background 0.15s;
 }
 
 .icon-btn:active {
@@ -556,6 +565,12 @@ onUnmounted(() => {
   background: none;
   border: none;
   cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.15s;
+}
+
+.avatar-btn:active {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .top-bar-avatar {
@@ -563,6 +578,7 @@ onUnmounted(() => {
   height: 32px;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* ===== Page content ===== */
@@ -570,8 +586,11 @@ onUnmounted(() => {
   min-height: calc(100vh - 56px);
   min-height: calc(100dvh - 56px);
   padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  padding-left: 12px;
+  padding-right: 12px;
 }
 
+/* ===== Bottom nav ===== */
 .mobile-bottom-nav {
   position: fixed;
   left: 0;
@@ -579,19 +598,20 @@ onUnmounted(() => {
   bottom: 0;
   height: calc(62px + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
-  background: rgba(31, 45, 61, 0.98);
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(31, 45, 61, 0.97);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   z-index: 850;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.18);
 }
 
 .bottom-tab-btn {
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.65);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -599,10 +619,30 @@ onUnmounted(() => {
   gap: 3px;
   font-size: 11px;
   cursor: pointer;
+  position: relative;
+  transition: color 0.2s;
+}
+
+.bottom-tab-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) scaleY(0);
+  width: 28px;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: #5da8ff;
+  transform-origin: top center;
+  transition: transform 0.2s;
 }
 
 .bottom-tab-btn.active {
   color: #5da8ff;
+}
+
+.bottom-tab-btn.active::before {
+  transform: translateX(-50%) scaleY(1);
 }
 
 .bottom-tab-btn:active {

@@ -4,10 +4,10 @@
  * restore-conflicts.js — 三面镜子「矛盾冲突」检测 CLI + 文档生成器
  *
  * 用法：
- *   node scripts/restore-conflicts.js            # 采集三面镜子 → 检测彼此是否矛盾
- *   npm run restore-conflicts                     # 同上（经 npm 别名）
- *   node scripts/restore-conflicts.js --json      # 机器可读（landing agent 先读这个）
- *   node scripts/restore-conflicts.js --gen-doc   # 重新生成 OPS-MAN-076 说明
+ *   node scripts/restore/restore-conflicts.js            # 采集三面镜子 → 检测彼此是否矛盾
+ *   npm run restore:conflicts                            # 同上（经 npm 别名）
+ *   node scripts/restore/restore-conflicts.js --json      # 机器可读（landing agent 先读这个）
+ *   node scripts/restore/restore-conflicts.js --gen-doc   # 重新生成 OPS-MAN-076 说明
  *
  * 设计：检测逻辑全在纯叶子 scripts/lib/restoreConflictDetector.js（零 IO、可离线全测）；
  * 本文件只做两件事——
@@ -26,14 +26,10 @@ const { detectRestoreConflicts, _CONFLICT_RULES, SEVERITY_CONTRADICTION } =
   require('../lib/restoreConflictDetector');
 // 复用 restore-plan 的三面镜子采集器（零重复；它已 fail-soft 包好三个探测器）。
 const { gatherAssessments } = require('./restore-plan');
+const { opsDocPath, opsDocRelPath } = require('../lib/docsPaths');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const DOC_PATH = path.join(
-  ROOT,
-  'docs',
-  '07_OPS_运维',
-  '[OPS-MAN-076] 三面镜子矛盾冲突检测.md'
-);
+const DOC_PATH = opsDocPath('[OPS-MAN-076] 三面镜子矛盾冲突检测.md');
 const NPM_PKG_NAME = '@khy-os/khy-os';
 const PIP_PKG_NAME = 'khy-os';
 
@@ -77,7 +73,7 @@ function runRestoreConflicts(opts = {}) {
       out += `${C.green}仅分级分歧，不阻断自动还原；按更悲观口径权衡即可。${C.reset}\n`;
     }
   }
-  out += `${C.dim}详情见：docs/07_OPS_运维/[OPS-MAN-076] 三面镜子矛盾冲突检测.md${C.reset}\n`;
+  out += `${C.dim}详情见：${opsDocRelPath('[OPS-MAN-076] 三面镜子矛盾冲突检测.md')}${C.reset}\n`;
   process.stdout.write(out);
   return report.safeToAutodrive ? 0 : 1;
 }

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [RUNTIME-005] CLI 错误标准化.md -->
+<title>[RUNTIME-005] CLI 错误标准化 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[RUNTIME-005] CLI 错误标准化</div>
+      <header class="hero reveal"><h1>[RUNTIME-005] CLI 错误标准化</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#runtime-005-cli-错误标准化">[RUNTIME-005] CLI 错误标准化</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: CLI 错误标准化<br>id: RUNTIME-005<br>domain: RUNTIME<br>nature: 约束为主，兼福利<br>scope: &quot;CLI / TUI 面向用户的失败展示（services/backend/src/cli/**）；不含 REST/SSE/WS（API-003）与 ACP JSON-RPC（COMMS-004）&quot;<br>priority: P1<br>trigger: &quot;网关请求失败、级联耗尽或通道不可用需要向用户报错时&quot;<br>constraint: &quot;必须由结构化失败信封渲染，禁止对 result.content 做长度截断后当作失败信息展示；信封必须含稳定机器码（单射互斥，一次失败只落一个码）+ 主因（一条，非清单）+ 路由披露（钉选时必现）+ 可执行 hint；静态推广清单只在无任何 hint 可给时出现。钉选优先有严格边界：仅当被钉通道 statusCode===0/不存在时才报钉选专项码，通道给出真实 HTTP 拒绝（401/403/404/429/5xx）时须照实报通道侧事实，不得用元原因覆盖已观测事实。&quot;<br>grants: &quot;见约束边界：授权按信封字段自由撰写 title/hint 文案（遵循 AGENTS.md 规则 2.2），并按 §3 表新增机器码（先入表再用）。&quot;<br>benefit: &quot;用户看首屏即知「哪条通道、什么码、本轮路由是否被钉死、下一步敲什么命令」，不必在四段近义散文里翻找；支持可凭机器码归因与检索，不必解析自然语言。&quot;<br>exception: &quot;第三方库直接抛出的原始错误、调试模式 KHY_DEBUG_TOOLS=1 的调试输出、以及门 KHY_CLI_FAILURE_ENVELOPE=0 时逐字节回退今日行为不追溯。&quot;<br>version: &quot;1.0.0 (2026-09-17)&quot;<br>status: active<br>ssot: &quot;docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-114] CLI 错误标准化规范.md&quot;<br>formerly: 无<br>owner: backend-team<br>enforcement: &quot;services/backend/src/services/gateway/cliFailureEnvelope.js&quot;</p>
+<hr>
+<h1 id="runtime-005-cli-错误标准化">[RUNTIME-005] CLI 错误标准化<a class="anchor" href="#runtime-005-cli-错误标准化" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: RUNTIME-005 -->
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-114] CLI 错误标准化规范.md。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>必须由结构化失败信封渲染，禁止对 result.content 做长度截断后当作失败信息展示；信封必须含稳定机器码（单射互斥，一次失败只落一个码）+ 主因（一条，非清单）+ 路由披露（钉选时必现）+ 可执行 hint；静态推广清单只在无任何 hint 可给时出现。钉选优先有严格边界：仅当被钉通道 statusCode===0/不存在时才报钉选专项码，通道给出真实 HTTP 拒绝（401/403/404/429/5xx）时须照实报通道侧事实，不得用元原因覆盖已观测事实。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>见约束边界：授权按信封字段自由撰写 title/hint 文案（遵循 AGENTS.md 规则 2.2），并按 §3 表新增机器码（先入表再用）。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>用户看首屏即知「哪条通道、什么码、本轮路由是否被钉死、下一步敲什么命令」，不必在四段近义散文里翻找；支持可凭机器码归因与检索，不必解析自然语言。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>见 <code>ssot</code> 指向的真源原文；本卡不复制反例，以免与真源漂移。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>人工评审（该规则暂无机械守卫）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>第三方库直接抛出的原始错误、调试模式 KHY_DEBUG_TOOLS=1 的调试输出、以及门 KHY_CLI_FAILURE_ENVELOPE=0 时逐字节回退今日行为不追溯。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-17) 初版 / 迁移自 无</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/规则卡/[RUNTIME-004] 终端无滚动区.html"><div class="dir">← 上一篇</div><div class="ttl">[RUNTIME-004] 终端无滚动区</div></a><a class="next" href="../../../docs/10_规范/规则卡/[RUNTIME-006] 网关首选通道不得硬钉.html"><div class="dir">下一篇 →</div><div class="ttl">[RUNTIME-006] 网关首选通道不得硬钉</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/规则卡/[RUNTIME-005] CLI 错误标准化.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 01-能力沉淀.md -->
+<title>📋 提示词正文（复制下面代码块内的全部内容） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>.ai<span class="sep">›</span>hq<span class="sep">›</span>prompts<span class="sep">›</span>meta<span class="sep">›</span>📋 提示词正文（复制下面代码块内的全部内容）</div>
+      <header class="hero reveal"><h1>📋 提示词正文（复制下面代码块内的全部内容）</h1></header>
+      
+      <article class="doc-body">
+<p>&lt;!--<br>模板：能力沉淀与工具化<br>触发：任何模型在任务中展现了值得保留的强能力之后，手动运行<br>      khy hq next --kind distill<br>目的：把&quot;这个模型这次特别擅长 X&quot;转化为不依赖模型的持久资产<br>占位符：无（自包含）<br>--&gt;</p>
+<h2 id="提示词正文-复制下面代码块内的全部内容">📋 提示词正文（复制下面代码块内的全部内容）<a class="anchor" href="#提示词正文-复制下面代码块内的全部内容" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">【角色】你是能力资产化工程师。刚才的工作中，执行模型展现了超出平均水平的
+能力/技巧/领域知识。你的任务是把它转化为**不依赖任何特定模型**的可复用资产。
+核心铁律：能力不落盘 = 没发生。凡是只存在于&quot;换个模型就没有&quot;状态的技能，
+一律视为项目负债而非资产。
+
+【沉淀三出口（按优先级选择恰好一个）】
+1. 可机械校验的规则 → 变成脚本：
+   - 全仓库都该遵守的 → 写进 khy-os 的 scripts/ci/ 检查体系
+     （如 check-agent-rules.js 增补规则），对所有模型永久生效；
+   - 仅指挥流程需要的 → 在 `khy hq verify` 的检查体系里新增检查函数
+     （`services/backend/src/cli/hqStore.js` 的 `verify` 段）。
+2. 流程性知识 → 变成提示词/清单：
+   - 改写进 `.ai/hq/prompts/` 下最贴近的现有模板（优先改旧文件，其次新建）；
+   - 或沉淀为该场景的 checklist 附在模板尾部。
+3. 架构/领域洞见 → 更新知识库：
+   - 写入 `.ai/hq/CONTEXT.md` 的对应章节（保持摘要体例），
+     或 khy-os 内最贴近的文档/.ai/ 元数据。
+
+【每个资产的硬性要求】
+- 可独立使用：不依赖对话历史、不依赖产生它的那个模型；
+- 一句话说明适用场景（写在文件头注释或登记处）；
+- 正文不得出现具体模型名——能力属于项目，不属于模型；
+- 登记到对应索引（模板进 `.ai/hq/prompts/README.md` 表格、脚本进
+  `khy hq verify` 的检查项、规则进 khy-os AGENTS.md 清单）。
+
+【流程】
+1. 回顾刚才的工作，用不超过 5 行描述这项能力的本质（什么信号 → 什么判断 → 什么动作）。
+2. 从三出口中选择一个并说明理由（为什么不是另外两个）。
+3. 实施落盘，满足全部硬性要求。
+4. 若无法干净落盘（如知识过于情境化），明确说&quot;不可沉淀&quot;并给出理由，
+   不要制造伪资产。
+5. 输出报告：能力描述 → 出口选择与理由 → 资产清单（文件路径 + 适用场景）。
+
+【验证命令】（落盘后必须执行，全绿才算完成）
+- khy hq verify                                    （沉淀涉及 .ai/hq/ 下 prompts/ 与 JSON 真源时必跑）
+- node scripts/ci/check-agent-rules.js --changed   （沉淀到 khy-os 仓库时，在其根目录跑）
+
+【收尾登记】
+把资产清单交给调用方，由其记录进 .ai/hq/MODELS.json 对应模型条目的
+distilled[] 数组（格式：{date, what, went_to}），供日后评估各模型的
+真实贡献度——这是更换/淘汰模型时的依据。</code></pre>
+<hr>
+<h3 id="使用说明">使用说明<a class="anchor" href="#使用说明" aria-label="锚点">#</a></h3>
+<ul><li>典型触发语：「刚才这轮重构思路很好，把它沉淀下来」→ 渲染本模板发给该 AI</li><li>沉淀完成后人工（或让 AI）更新 <code>.ai/hq/MODELS.json</code> 的 <code>distilled[]</code></li><li>本模板自身就是「能力工具化」机制的示范：它不依赖任何模型即可指导任何模型</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../.ai/hq/prompts/governance/01-板块规则与协议总纲.html"><div class="dir">← 上一篇</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a><a class="next" href="../../../../.ai/hq/prompts/meta/02-新机器接入.html"><div class="dir">下一篇 →</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__=".ai/hq/prompts/meta/01-能力沉淀.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

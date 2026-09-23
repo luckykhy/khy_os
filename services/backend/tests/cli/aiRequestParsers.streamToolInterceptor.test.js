@@ -10,7 +10,8 @@
  *  - tool_use_end event triggers addTool even if keys were empty earlier.
  *  - reset() clears preExecutedToolIds so same id can be re-submitted.
  */
-const { _createStreamToolInterceptor } = require('./aiRequestParsers');
+const { _createStreamToolInterceptor } = require('../../src/cli/aiRequestParsers.js');
+const assert = require('node:assert');
 // Helper: create a mock streamingExecutor that records calls
 function createMockExecutor() {
   const calls = [];
@@ -176,7 +177,7 @@ describe('Ai Request Parsers stream Tool Interceptor', () => {
         id: 'block_6',
       });
     
-      expect(interceptor.hasToolCall()).toBe();
+      expect(interceptor.hasToolCall()).toBe(true);
   });
 
 });

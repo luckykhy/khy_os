@@ -14,9 +14,9 @@
  * detector 不携带 text 的缺口），下游纯函数保持无副作用。
  */
 
-const constraints = require('../../../../agents/constraints');
+const constraints = require('./constraints');
 const detector = require('./detector');
-const rules = require('../../../../permissions/rules');
+const rules = require('./rules');
 const scorer = require('./scorer');
 
 const VALID_MODES = new Set(['fragment', 'chapter', 'full']);

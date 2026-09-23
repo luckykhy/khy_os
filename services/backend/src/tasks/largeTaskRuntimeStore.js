@@ -721,14 +721,16 @@ function createLargeTaskRuntimeStore(options = {}) {
   }
 
   // Cross-process write lock via atomic mkdir. Lock dir is derived from the
-  // store candidate path (no hardcoded absolute paths). Total wait is bounded
-  // (~1.5s, short I/O exception / handshake nature); on timeout we fail-soft to
-  // a lockless write — possibly losing a concurrent update is preferable to
-  // deadlocking task execution. Returns the lockDir when held, or null.
+  // store candidate path (no hardcoded absolute paths). The wait is
+  // activity-based (AGENTS Rule 3): a frozen holder is preempted via the
+  // stale-lock check at STALE_LOCK_MS, and a live holder finishes its write
+  // burst in bounded time, so MAX_WAIT_MS is only a last-resort safety valve —
+  // a lockless write loses concurrent updates and must not be a 1.5s
+  // shortcut. Returns the lockDir when held, or null.
   function _acquireStoreLock(candidate) {
     const lockDir = `${candidate}.lock`;
     const STALE_LOCK_MS = 5_000; // short I/O exception: locks only span one write
-    const MAX_WAIT_MS = 1_500;
+    const MAX_WAIT_MS = 30_000; // safety valve; live bursts end far sooner
     const startedMs = Date.now();
     while (true) {
       try {
@@ -763,11 +765,11 @@ function createLargeTaskRuntimeStore(options = {}) {
         const waitedMs = Date.now() - startedMs;
         if (waitedMs >= MAX_WAIT_MS) {
           console.warn(
-            `[largeTaskRuntimeStore] 获取写锁超时（目标文件: ${candidate}，已等待 ${waitedMs}ms），降级为无锁写入，可能丢失并发更新`
+            `[largeTaskRuntimeStore] 获取写锁超时 ${waitedMs}ms（目标文件: ${candidate}，安全阀 ${MAX_WAIT_MS}ms），降级为无锁写入：另一进程持续持有锁，可能丢失并发更新，可重启占用任务库的进程（TUI/Web 后端）后重试`
           );
           return null;
         }
-        _sleepSync(25); // bounded backoff before re-probing the lock
+        _sleepSync(5); // fine-grained re-probe: live holders release in ms windows
       }
     }
   }
@@ -788,9 +790,9 @@ function createLargeTaskRuntimeStore(options = {}) {
   // latest state. The forced reload (loaded = false) is deliberate: file mtime
   // resolution can be too coarse to detect a concurrent writer, so the
   // _isStoreStale() mtime probe must NOT be trusted inside the critical
-  // section. If the lock cannot be acquired within the bounded wait (~1.5s),
-  // we fail-soft and still run fn() locklessly (availability over strict
-  // consistency), matching the pre-existing degraded-write behavior.
+  // section. If the lock cannot be acquired within the safety-valve wait
+  // (30s; stale holders are preempted at 5s), we fail-soft and still run fn()
+  // locklessly (availability over strict consistency).
   // Reentrant: nested calls run inline under the already-held lock.
   function _withStoreLock(fn) {
     if (storeLockActive) {

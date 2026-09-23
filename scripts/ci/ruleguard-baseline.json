@@ -1,7 +1,8 @@
 {
   "_note": "ruleguard 基线棘轮：counts 记录每条 P2 规则的允许存量违规数。超量自动升为阻断。 只降不升 —— npm run rules:baseline 把 counts 收紧到当前观测值。 语义与 scripts/ci/repo-layout-baseline.json 一致。",
-  "_updated": "2026-09-15",
+  "_updated": "2026-09-16",
   "counts": {
-    "SOURCING-005": 352
+    "SOURCING-005": 352,
+    "DOCS-003": 0
   }
 }

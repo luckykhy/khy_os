@@ -348,13 +348,24 @@ function stop() {
 }
 
 function getStatus() {
-  return { started: _started, enabled: isEnabled(), tableReady: _tableReady, ..._stats };
+  return { started: _started, enabled: isEnabled(), tableReady: _tableReady, busy: _ticking, ..._stats };
+}
+
+/**
+ * True while a workflow run is in flight (a tick has claimed a run and is
+ * executing it). Exposed so a host process (e.g. the ai-manage daemon's idle
+ * watchdog) can treat an active run as liveness and NOT reap itself mid-run.
+ * @returns {boolean}
+ */
+function isBusy() {
+  return _ticking;
 }
 
 module.exports = {
   start,
   stop,
   getStatus,
+  isBusy,
   // exposed for tests
   tick,
   claimNext,

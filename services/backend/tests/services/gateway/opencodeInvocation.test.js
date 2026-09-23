@@ -11,6 +11,7 @@
  *  - fail-soft:坏输入不抛。
  */
 const oc = require('../../../src/services/gateway/adapters/opencodeInvocation');
+const assert = require('node:assert');
 
 describe('Opencode Invocation', () => {
   test('isEnabled 默认开;仅显式 0/false/off/no 关', () => {
@@ -26,9 +27,10 @@ describe('Opencode Invocation', () => {
       expect(oc.looksLikeProviderModel('anthropic/claude-sonnet-4-6')).toBe(true);
       expect(oc.looksLikeProviderModel('openai/gpt-5')).toBe(true);
       expect(oc.looksLikeProviderModel('  openai/gpt-5  ')).toBe(true);
-      // 裸模型 / 路径式 / 斜杠贴边 / 非串 / 空 → 假
+      // 裸模型 / 斜杠贴边 / 非串 / 空 → 假;model 段可含 '/'(opencode -m
+      // provider/model 的 model 本身可多段,如 openrouter/z-ai/glm-5.2:free)→ a/b/c 为真
       expect(oc.looksLikeProviderModel('gpt-5')).toBe(false);
-      expect(oc.looksLikeProviderModel('a/b/c')).toBe(false);
+      expect(oc.looksLikeProviderModel('a/b/c')).toBe(true);
       expect(oc.looksLikeProviderModel('/model')).toBe(false);
       expect(oc.looksLikeProviderModel('provider/')).toBe(false);
       expect(oc.looksLikeProviderModel('')).toBe(false);
@@ -76,9 +78,9 @@ describe('Opencode Invocation', () => {
   });
 
   test('fail-soft:坏输入不抛', () => {
-      expect(() => oc.buildRunArgs(123).not.toThrow());
-      expect(() => oc.applyModelArg('not-array', null).not.toThrow());
-      expect(() => oc.isEnabled().not.toThrow());
+      expect(() => oc.buildRunArgs(123)).not.toThrow();
+      expect(() => oc.applyModelArg('not-array', null)).not.toThrow();
+      expect(() => oc.isEnabled()).not.toThrow();
   });
 
 });

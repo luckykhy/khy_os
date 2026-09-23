@@ -1,0 +1,971 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-CPA-003] CPA接入层+NewAPI治理层分层架构.md -->
+<title>[DESIGN-CPA-003] CPA 接入层 + New API 治理层分层架构 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-CPA<span class="sep">›</span>[DESIGN-CPA-003] CPA 接入层 + New API 治理层分层架构</div>
+      <header class="hero reveal"><h1>[DESIGN-CPA-003] CPA 接入层 + New API 治理层分层架构</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-cpa-003-cpa-接入层-new-api-治理层分层架构">[DESIGN-CPA-003] CPA 接入层 + New API 治理层分层架构</a></li><li class="lvl-2"><a href="#1-概述">1. 概述</a></li><li class="lvl-3"><a href="#1-1-设计目标">1.1 设计目标</a></li><li class="lvl-3"><a href="#1-2-为什么分层">1.2 为什么分层</a></li><li class="lvl-3"><a href="#1-3-核心价值">1.3 核心价值</a></li><li class="lvl-2"><a href="#2-架构设计">2. 架构设计</a></li><li class="lvl-3"><a href="#2-1-完整架构图">2.1 完整架构图</a></li><li class="lvl-3"><a href="#2-2-数据流详解">2.2 数据流详解</a></li><li class="lvl-2"><a href="#3-配置设计">3. 配置设计</a></li><li class="lvl-3"><a href="#3-1-cpa-配置-config-yaml">3.1 CPA 配置 (config.yaml)</a></li><li class="lvl-3"><a href="#3-2-new-api-配置-环境变量">3.2 New API 配置 (环境变量)</a></li><li class="lvl-3"><a href="#3-3-new-api-渠道配置-通过-web-面板添加">3.3 New API 渠道配置 (通过 Web 面板添加)</a></li><li class="lvl-3"><a href="#3-4-khyos-card-配置-provider-hub">3.4 KhyOS Card 配置 (provider-hub)</a></li><li class="lvl-2"><a href="#4-实现步骤">4. 实现步骤</a></li><li class="lvl-3"><a href="#4-1-phase-1-基础设施部署">4.1 Phase 1: 基础设施部署</a></li><li class="lvl-3"><a href="#4-2-phase-2-khyos-集成-等-provider-hub-完成后">4.2 Phase 2: KhyOS 集成 (等 provider-hub 完成后)</a></li><li class="lvl-3"><a href="#4-3-phase-3-使用和测试">4.3 Phase 3: 使用和测试</a></li><li class="lvl-2"><a href="#5-验证清单">5. 验证清单</a></li><li class="lvl-3"><a href="#5-1-基础设施验证">5.1 基础设施验证</a></li><li class="lvl-3"><a href="#5-2-khyos-集成验证">5.2 KhyOS 集成验证</a></li><li class="lvl-3"><a href="#5-3-治理功能验证">5.3 治理功能验证</a></li><li class="lvl-2"><a href="#6-文件清单">6. 文件清单</a></li><li class="lvl-3"><a href="#6-1-新建文件">6.1 新建文件</a></li><li class="lvl-3"><a href="#6-2-修改文件">6.2 修改文件</a></li><li class="lvl-3"><a href="#6-3-复用文件-无需修改">6.3 复用文件（无需修改）</a></li><li class="lvl-2"><a href="#7-运维指南">7. 运维指南</a></li><li class="lvl-3"><a href="#7-1-启动顺序">7.1 启动顺序</a></li><li class="lvl-3"><a href="#7-2-停止顺序">7.2 停止顺序</a></li><li class="lvl-3"><a href="#7-3-故障排查">7.3 故障排查</a></li><li class="lvl-3"><a href="#7-4-日志位置">7.4 日志位置</a></li><li class="lvl-2"><a href="#8-路线图">8. 路线图</a></li><li class="lvl-3"><a href="#8-1-phase-1-基础设施-当前">8.1 Phase 1: 基础设施 (当前)</a></li><li class="lvl-3"><a href="#8-2-phase-2-khyos-集成-等-provider-hub-完成后">8.2 Phase 2: KhyOS 集成 (等 provider-hub 完成后)</a></li><li class="lvl-3"><a href="#8-3-phase-3-增强功能">8.3 Phase 3: 增强功能</a></li><li class="lvl-2"><a href="#9-参考资料">9. 参考资料</a></li><li class="lvl-2"><a href="#10-变更记录">10. 变更记录</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-cpa-003-cpa-接入层-new-api-治理层分层架构">[DESIGN-CPA-003] CPA 接入层 + New API 治理层分层架构<a class="anchor" href="#design-cpa-003-cpa-接入层-new-api-治理层分层架构" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>文档类型</strong>: 架构设计文档  <br><strong>创建日期</strong>: 2026-09-11  <br><strong>状态</strong>: 待实施（等 provider-hub 完成后执行）  <br><strong>核心思路</strong>: CPA 做接入层 → New API 做治理出口</p></blockquote>
+<hr>
+<h2 id="1-概述">1. 概述<a class="anchor" href="#1-概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-设计目标">1.1 设计目标<a class="anchor" href="#1-1-设计目标" aria-label="锚点">#</a></h3>
+<p>构建一个分层的 AI API 网关架构：</p>
+<table><thead><tr><th>层级</th><th>组件</th><th>职责</th></tr></thead><tbody><tr><td><strong>Layer 1: 接入层</strong></td><td>CPA (CLI Proxy API)</td><td>CLI/OAuth → OpenAI API 转换，多账号轮询</td></tr><tr><td><strong>Layer 2: 治理层</strong></td><td>New API</td><td>用户管理、令牌分发、计费、权限、渠道管理</td></tr><tr><td><strong>Layer 3: 应用层</strong></td><td>KhyOS Gateway</td><td>路由、适配器注册、provider-hub 集成</td></tr></tbody></table>
+<h3 id="1-2-为什么分层">1.2 为什么分层<a class="anchor" href="#1-2-为什么分层" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>如果不分层</th><th>分层后</th></tr></thead><tbody><tr><td>CPA 直接暴露 → 无计费/权限</td><td>New API 提供完整治理能力</td></tr><tr><td>New API 直接对接上游 → 需要多个 API Key</td><td>CPA 统一管理 CLI/OAuth 账号</td></tr><tr><td>两套系统独立 → 配置分散</td><td>统一配置，分层管理</td></tr></tbody></table>
+<h3 id="1-3-核心价值">1.3 核心价值<a class="anchor" href="#1-3-核心价值" aria-label="锚点">#</a></h3>
+<pre><code>CPA 解决: 如何把 CLI 订阅变成 API
+New API 解决: 如何管理谁在用、用多少、怎么计费
+KhyOS 解决: 如何让用户方便地使用</code></pre>
+<hr>
+<h2 id="2-架构设计">2. 架构设计<a class="anchor" href="#2-架构设计" aria-label="锚点">#</a></h2>
+<h3 id="2-1-完整架构图">2.1 完整架构图<a class="anchor" href="#2-1-完整架构图" aria-label="锚点">#</a></h3>
+<pre><code>┌─────────────────────────────────────────────────────────────────────────┐
+│                              用户层                                      │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  │
+│  │  khy CLI    │  │  Web UI     │  │  IDE 插件   │  │  API 调用   │  │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  │
+└─────────┼────────────────┼────────────────┼────────────────┼───────────┘
+          │                │                │                │
+          └────────────────┼────────────────┼────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Layer 3: KhyOS Gateway (应用层)                      │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │  provider-hub (Card System)                                      │  │
+│  │  - cc_switch.json: Provider Card 配置                            │  │
+│  │  - api_keys.json: 密钥池                                         │  │
+│  │  - 新增 Card: New API Gateway (指向 New API)                     │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │  AI Gateway (aiGateway.js)                                       │  │
+│  │  - newApiAdapter.js: 读取 Card → 调用 New API                    │  │
+│  │  - 优先级: 在 relay_api 之后                                      │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                                                                         │
+│  端口: 动态 (dev server)                                                │
+└────────────────────────────────┬────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Layer 2: New API (治理层)                             │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │  核心功能                                                         │  │
+│  │  - 用户管理 (注册/登录/权限)                                      │  │
+│  │  - 令牌分发 (API Key 生成/撤销)                                   │  │
+│  │  - 渠道管理 (Channel → 指向 CPA)                                 │  │
+│  │  - 模型聚合 (多渠道模型统一)                                      │  │
+│  │  - 计费系统 (按量计费/套餐)                                       │  │
+│  │  - 速率限制 (用户级/渠道级)                                       │  │
+│  │  - Web 管理面板                                                   │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │  渠道配置示例                                                     │  │
+│  │  Channel 1: CPA-Codex → http://localhost:8317 (CPA)             │  │
+│  │  Channel 2: CPA-Claude → http://localhost:8317 (CPA)            │  │
+│  │  Channel 3: OpenAI Direct → https://api.openai.com              │  │
+│  │  Channel 4: DeepSeek → https://api.deepseek.com                 │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                                                                         │
+│  端口: 3000                                                             │
+│  数据库: SQLite / MySQL / PostgreSQL                                     │
+└────────────────────────────────┬────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Layer 1: CPA (接入层)                                 │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │  核心功能                                                         │  │
+│  │  - CLI/OAuth → OpenAI API 转换                                   │  │
+│  │  - 多账号轮询 (Round-robin / Fill-first)                         │  │
+│  │  - 凭据生命周期管理 (OAuth 刷新/续期)                            │  │
+│  │  - 协议转换 (Anthropic/Gemini → OpenAI)                          │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │  支持的上游                                                       │  │
+│  │  - Codex (OpenAI) - 多账号轮询                                   │  │
+│  │  - Claude Code (Anthropic) - OAuth 登录                          │  │
+│  │  - Gemini CLI (Google) - API Key / OAuth                         │  │
+│  │  - Qwen Code (Alibaba) - API Key                                 │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                                                                         │
+│  端口: 8317                                                             │
+│  配置: config.yaml                                                      │
+└────────────────────────────────┬────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Upstream AI Providers                                 │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐    │
+│  │  Codex  │  │ Claude  │  │ Gemini  │  │  Qwen   │  │  ...    │    │
+│  │(OpenAI) │  │(Anthropic)│ │(Google) │  │(Alibaba)│  │         │    │
+│  └─────────┘  └─────────┘  └─────────┘  └─────────┘  └─────────┘    │
+└─────────────────────────────────────────────────────────────────────────┘</code></pre>
+<h3 id="2-2-数据流详解">2.2 数据流详解<a class="anchor" href="#2-2-数据流详解" aria-label="锚点">#</a></h3>
+<pre><code>[用户请求]
+    │
+    ├─→ khy ai &quot;Hello&quot; --adapter=newapi
+    │
+    ▼
+[KhyOS Gateway]
+    │
+    ├─→ 读取 cc_switch.json: Card { baseUrl: &quot;http://localhost:3000&quot; }
+    ├─→ newApiAdapter.generate(prompt, options)
+    │
+    ▼
+[New API - http://localhost:3000]
+    │
+    ├─→ 验证令牌 (API Key)
+    ├─→ 检查权限 (用户组/模型权限)
+    ├─→ 检查配额 (余额/速率限制)
+    ├─→ 路由到渠道
+    │
+    ├─→ Channel: CPA-Codex (type=openai, base_url=http://localhost:8317)
+    │
+    ▼
+[CPA - http://localhost:8317]
+    │
+    ├─→ 接收 OpenAI 格式请求
+    ├─→ 选择账号 (Round-robin / Fill-first)
+    ├─→ 转换为 CLI/OAuth 调用
+    │
+    ▼
+[Upstream Provider]
+    │
+    ├─→ Codex API (使用 OAuth token)
+    │
+    ▼
+[响应返回]
+    │
+    ├─→ CPA: 转换为 OpenAI 格式
+    ├─→ New API: 记录用量、扣费
+    ├─→ KhyOS: 返回给用户
+    │
+    ▼
+[用户看到结果]</code></pre>
+<hr>
+<h2 id="3-配置设计">3. 配置设计<a class="anchor" href="#3-配置设计" aria-label="锚点">#</a></h2>
+<h3 id="3-1-cpa-配置-config-yaml">3.1 CPA 配置 (config.yaml)<a class="anchor" href="#3-1-cpa-配置-config-yaml" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-comment"># CPA Server 配置</span>
+<span class="hljs-attr">server:</span>
+  <span class="hljs-attr">port:</span> <span class="hljs-number">8317</span>
+  <span class="hljs-attr">host:</span> <span class="hljs-number">127.0</span><span class="hljs-number">.0</span><span class="hljs-number">.1</span>
+
+<span class="hljs-comment"># API Keys (用于 New API 连接)</span>
+<span class="hljs-attr">api-keys:</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-string">your-newapi-secret-key</span>
+
+<span class="hljs-comment"># 上游 Provider 配置</span>
+<span class="hljs-attr">providers:</span>
+  <span class="hljs-comment"># Codex 多账号</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">codex</span>
+    <span class="hljs-attr">type:</span> <span class="hljs-string">openai</span>
+    <span class="hljs-attr">accounts:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">email:</span> <span class="hljs-string">user1@example.com</span>
+        <span class="hljs-attr">token:</span> <span class="hljs-string">xxx</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">email:</span> <span class="hljs-string">user2@example.com</span>
+        <span class="hljs-attr">token:</span> <span class="hljs-string">yyy</span>
+
+  <span class="hljs-comment"># Claude Code OAuth</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">claude</span>
+    <span class="hljs-attr">type:</span> <span class="hljs-string">anthropic</span>
+    <span class="hljs-attr">oauth:</span>
+      <span class="hljs-attr">client_id:</span> <span class="hljs-string">xxx</span>
+      <span class="hljs-attr">client_secret:</span> <span class="hljs-string">yyy</span>
+
+  <span class="hljs-comment"># Gemini CLI</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">gemini</span>
+    <span class="hljs-attr">type:</span> <span class="hljs-string">gemini</span>
+    <span class="hljs-attr">api_keys:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">key1</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">key2</span>
+
+<span class="hljs-comment"># 负载均衡策略</span>
+<span class="hljs-attr">load_balancing:</span>
+  <span class="hljs-attr">strategy:</span> <span class="hljs-string">fill-first</span>  <span class="hljs-comment"># 或 round-robin</span>
+  <span class="hljs-attr">health_check_interval:</span> <span class="hljs-number">60</span></code></pre>
+<h3 id="3-2-new-api-配置-环境变量">3.2 New API 配置 (环境变量)<a class="anchor" href="#3-2-new-api-配置-环境变量" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 数据库 (推荐 MySQL/PostgreSQL 生产环境)</span>
+SQL_DSN=root:password@tcp(localhost:3306)/new-api
+<span class="hljs-comment"># 或 SQLite (开发环境)</span>
+<span class="hljs-comment"># SQL_DSN=  # 默认使用 one-api.db</span>
+
+<span class="hljs-comment"># Redis (可选，用于缓存)</span>
+REDIS_CONN_STRING=redis://localhost:6379
+
+<span class="hljs-comment"># 会话密钥</span>
+SESSION_SECRET=your-random-session-secret
+
+<span class="hljs-comment"># 加密密钥</span>
+CRYPTO_SECRET=your-random-crypto-secret
+
+<span class="hljs-comment"># 服务端口</span>
+PORT=3000
+
+<span class="hljs-comment"># 时区</span>
+TZ=Asia/Shanghai</code></pre>
+<h3 id="3-3-new-api-渠道配置-通过-web-面板添加">3.3 New API 渠道配置 (通过 Web 面板添加)<a class="anchor" href="#3-3-new-api-渠道配置-通过-web-面板添加" aria-label="锚点">#</a></h3>
+<pre><code>渠道 1: CPA-Codex
+├── 渠道类型: OpenAI
+├── 基础 URL: http://localhost:8317
+├── 密钥: your-newapi-secret-key
+├── 模型: gpt-4, gpt-4o, gpt-4-turbo
+└── 其他: codex
+
+渠道 2: CPA-Claude
+├── 渠道类型: OpenAI
+├── 基础 URL: http://localhost:8317
+├── 密钥: your-newapi-secret-key
+├── 模型: claude-3-opus, claude-3-sonnet
+└── 其他: claude
+
+渠道 3: OpenAI Direct
+├── 渠道类型: OpenAI
+├── 基础 URL: https://api.openai.com
+├── 密钥: sk-xxx
+└── 模型: gpt-4, gpt-4o
+
+渠道 4: DeepSeek
+├── 渠道类型: OpenAI
+├── 基础 URL: https://api.deepseek.com
+├── 密钥: sk-xxx
+└── 模型: deepseek-chat, deepseek-coder</code></pre>
+<h3 id="3-4-khyos-card-配置-provider-hub">3.4 KhyOS Card 配置 (provider-hub)<a class="anchor" href="#3-4-khyos-card-配置-provider-hub" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;cards&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;c_newapi_gateway&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;New API Gateway&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;baseUrl&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;http://localhost:3000&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;protocol&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;openai&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;apps&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;newapi&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;models&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;gpt-4&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;gpt-4o&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;claude-3-opus&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;claude-3-sonnet&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;defaultModel&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;gpt-4&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;enabled&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;active&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;newapi&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;c_newapi_gateway&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+<h2 id="4-实现步骤">4. 实现步骤<a class="anchor" href="#4-实现步骤" aria-label="锚点">#</a></h2>
+<h3 id="4-1-phase-1-基础设施部署">4.1 Phase 1: 基础设施部署<a class="anchor" href="#4-1-phase-1-基础设施部署" aria-label="锚点">#</a></h3>
+<h4 id="步骤-1-1-部署-cpa-server">步骤 1.1: 部署 CPA Server<a class="anchor" href="#步骤-1-1-部署-cpa-server" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 克隆 CPA</span>
+git <span class="hljs-built_in">clone</span> https://github.com/router-for-me/CLIProxyAPI.git
+<span class="hljs-built_in">cd</span> CLIProxyAPI
+
+<span class="hljs-comment"># 2. 配置</span>
+<span class="hljs-built_in">cp</span> config.example.yaml config.yaml
+<span class="hljs-comment"># 编辑 config.yaml 添加账号</span>
+
+<span class="hljs-comment"># 3. 启动</span>
+docker compose up -d
+
+<span class="hljs-comment"># 4. 验证</span>
+curl http://localhost:8317/v1/models</code></pre>
+<h4 id="步骤-1-2-部署-new-api">步骤 1.2: 部署 New API<a class="anchor" href="#步骤-1-2-部署-new-api" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 克隆 New API</span>
+git <span class="hljs-built_in">clone</span> https://github.com/Calcium-Ion/new-api.git
+<span class="hljs-built_in">cd</span> new-api
+
+<span class="hljs-comment"># 2. 配置环境变量</span>
+<span class="hljs-built_in">cp</span> .env.example .<span class="hljs-built_in">env</span>
+<span class="hljs-comment"># 编辑 .env 配置数据库等</span>
+
+<span class="hljs-comment"># 3. 启动</span>
+docker compose up -d
+
+<span class="hljs-comment"># 4. 访问管理面板</span>
+<span class="hljs-comment"># http://localhost:3000</span>
+<span class="hljs-comment"># 默认账号: root, 密码: 123456</span></code></pre>
+<h4 id="步骤-1-3-配置-new-api-渠道">步骤 1.3: 配置 New API 渠道<a class="anchor" href="#步骤-1-3-配置-new-api-渠道" aria-label="锚点">#</a></h4>
+<ol><li>登录 New API 管理面板</li><li>进入「渠道管理」→「添加渠道」</li><li>添加 CPA 渠道:<ul><li>名称: CPA-Codex</li><li>类型: OpenAI</li><li>基础 URL: <code>http://localhost:8317</code></li><li>密钥: CPA 的 api-key</li><li>模型: gpt-4, gpt-4o</li></ul></li><li>重复添加其他 CPA 渠道 (Claude, Gemini 等)</li><li>添加其他直连渠道 (OpenAI, DeepSeek 等)</li></ol>
+<h3 id="4-2-phase-2-khyos-集成-等-provider-hub-完成后">4.2 Phase 2: KhyOS 集成 (等 provider-hub 完成后)<a class="anchor" href="#4-2-phase-2-khyos-集成-等-provider-hub-完成后" aria-label="锚点">#</a></h3>
+<h4 id="步骤-2-1-注册-newapi-到-apps-常量">步骤 2.1: 注册 newapi 到 APPS 常量<a class="anchor" href="#步骤-2-1-注册-newapi-到-apps-常量" aria-label="锚点">#</a></h4>
+<p><strong>修改文件</strong>: <code>services/backend/src/services/domain/config/ccSwitch/constants.js</code></p>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-variable constant_">APPS</span> = <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">freeze</span>({
+  <span class="hljs-comment">// ... 现有 apps</span>
+  <span class="hljs-attr">NEWAPI</span>: <span class="hljs-string">&#x27;newapi&#x27;</span>,  <span class="hljs-comment">// 新增</span>
+});
+
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">APP_LABELS</span> = <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">freeze</span>({
+  <span class="hljs-comment">// ... 现有 labels</span>
+  [<span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">NEWAPI</span>]: <span class="hljs-string">&#x27;New API Gateway&#x27;</span>,  <span class="hljs-comment">// 新增</span>
+});</code></pre>
+<h4 id="步骤-2-2-创建-newapiwriter-js">步骤 2.2: 创建 newApiWriter.js<a class="anchor" href="#步骤-2-2-创建-newapiwriter-js" aria-label="锚点">#</a></h4>
+<p><strong>新建文件</strong>: <code>services/backend/src/services/domain/config/ccSwitch/newApiWriter.js</code></p>
+<pre><code class="language-javascript"><span class="hljs-comment">/**
+ * newApiWriter — New API 配置写入器
+ *
+ * 职责：
+ *   - 应用 Provider Card 到 New API 配置
+ *   - 探测 New API 运行状态
+ *   - 生成 New API 配置
+ */</span>
+<span class="hljs-meta">&#x27;use strict&#x27;</span>;
+
+<span class="hljs-keyword">const</span> fs = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;fs&#x27;</span>);
+<span class="hljs-keyword">const</span> path = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;path&#x27;</span>);
+<span class="hljs-keyword">const</span> { <span class="hljs-variable constant_">APPS</span> } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./constants.js&#x27;</span>);
+
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">NEWAPI_APP</span> = <span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">NEWAPI</span>;
+
+<span class="hljs-comment">/**
+ * 应用卡片到 New API 配置
+ */</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">applyCardToNewApi</span>(<span class="hljs-params">card, opts = {}</span>) {
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> endpoint = card.<span class="hljs-property">baseUrl</span>;
+    <span class="hljs-keyword">const</span> key = opts.<span class="hljs-property">key</span> || <span class="hljs-string">&#x27;&#x27;</span>;
+
+    <span class="hljs-comment">// 生成 New API 环境变量配置</span>
+    <span class="hljs-keyword">const</span> envConfig = {
+      <span class="hljs-attr">NEWAPI_ENDPOINT</span>: endpoint,
+      <span class="hljs-attr">NEWAPI_API_KEY</span>: key,
+    };
+
+    <span class="hljs-comment">// 写入到配置目录</span>
+    <span class="hljs-keyword">const</span> configDir = <span class="hljs-title function_">_findNewApiConfigDir</span>();
+    <span class="hljs-keyword">if</span> (configDir) {
+      <span class="hljs-keyword">await</span> <span class="hljs-title function_">_writeEnvFile</span>(configDir, envConfig);
+    }
+
+    <span class="hljs-comment">// 设置进程环境变量</span>
+    <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">assign</span>(process.<span class="hljs-property">env</span>, envConfig);
+
+    <span class="hljs-keyword">return</span> {
+      <span class="hljs-attr">success</span>: <span class="hljs-literal">true</span>,
+      <span class="hljs-attr">detail</span>: {
+        endpoint,
+        <span class="hljs-attr">hasKey</span>: !!key,
+        configDir,
+      },
+    };
+  } <span class="hljs-keyword">catch</span> (error) {
+    <span class="hljs-keyword">return</span> {
+      <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>,
+      <span class="hljs-attr">error</span>: <span class="hljs-string">`New API 配置写入失败: <span class="hljs-subst">${error.message}</span>`</span>,
+    };
+  }
+}
+
+<span class="hljs-comment">/**
+ * 探测 New API 配置
+ */</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">detectNewApiConfig</span>(<span class="hljs-params">app</span>) {
+  <span class="hljs-keyword">if</span> (app !== <span class="hljs-variable constant_">NEWAPI_APP</span>) {
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">providers</span>: [], <span class="hljs-attr">error</span>: <span class="hljs-string">`不支持的应用: <span class="hljs-subst">${app}</span>`</span> };
+  }
+
+  <span class="hljs-keyword">const</span> providers = [];
+
+  <span class="hljs-comment">// 从环境变量探测</span>
+  <span class="hljs-keyword">const</span> endpoint = process.<span class="hljs-property">env</span>.<span class="hljs-property">NEWAPI_ENDPOINT</span>;
+  <span class="hljs-keyword">if</span> (endpoint) {
+    providers.<span class="hljs-title function_">push</span>({
+      <span class="hljs-attr">id</span>: <span class="hljs-string">&#x27;env&#x27;</span>,
+      <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;Environment Config&#x27;</span>,
+      endpoint,
+      <span class="hljs-attr">kind</span>: <span class="hljs-string">&#x27;openai&#x27;</span>,
+    });
+  }
+
+  <span class="hljs-comment">// 从配置文件探测</span>
+  <span class="hljs-keyword">const</span> configPath = <span class="hljs-title function_">_findNewApiConfigFile</span>();
+  <span class="hljs-keyword">if</span> (configPath) {
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">const</span> content = fs.<span class="hljs-title function_">readFileSync</span>(configPath, <span class="hljs-string">&#x27;utf-8&#x27;</span>);
+      <span class="hljs-keyword">const</span> config = <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(content);
+      <span class="hljs-keyword">if</span> (config &amp;&amp; config.<span class="hljs-property">endpoint</span>) {
+        providers.<span class="hljs-title function_">push</span>({
+          <span class="hljs-attr">id</span>: <span class="hljs-string">&#x27;file&#x27;</span>,
+          <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;Config File&#x27;</span>,
+          <span class="hljs-attr">endpoint</span>: config.<span class="hljs-property">endpoint</span>,
+          <span class="hljs-attr">kind</span>: <span class="hljs-string">&#x27;openai&#x27;</span>,
+        });
+      }
+    } <span class="hljs-keyword">catch</span> {
+      <span class="hljs-comment">// 配置文件读取失败</span>
+    }
+  }
+
+  <span class="hljs-keyword">return</span> { <span class="hljs-attr">success</span>: <span class="hljs-literal">true</span>, providers };
+}
+
+<span class="hljs-comment">/**
+ * Preflight 校验
+ */</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">preflightCardForNewApi</span>(<span class="hljs-params">card, app</span>) {
+  <span class="hljs-keyword">if</span> (app !== <span class="hljs-variable constant_">NEWAPI_APP</span>) {
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">ok</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">reason</span>: <span class="hljs-string">`不支持的应用: <span class="hljs-subst">${app}</span>`</span> };
+  }
+
+  <span class="hljs-keyword">if</span> (card.<span class="hljs-property">protocol</span> !== <span class="hljs-string">&#x27;openai&#x27;</span>) {
+    <span class="hljs-keyword">return</span> {
+      <span class="hljs-attr">ok</span>: <span class="hljs-literal">false</span>,
+      <span class="hljs-attr">reason</span>: <span class="hljs-string">`New API 仅支持 OpenAI 协议，当前协议: <span class="hljs-subst">${card.protocol}</span>`</span>,
+    };
+  }
+
+  <span class="hljs-keyword">if</span> (!card.<span class="hljs-property">baseUrl</span>) {
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">ok</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">reason</span>: <span class="hljs-string">&#x27;New API 端点不能为空&#x27;</span> };
+  }
+
+  <span class="hljs-keyword">return</span> { <span class="hljs-attr">ok</span>: <span class="hljs-literal">true</span> };
+}
+
+<span class="hljs-comment">// ── 内部辅助函数 ─────────────────────────────────────────────</span>
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">_findNewApiConfigDir</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> candidates = [
+    process.<span class="hljs-property">env</span>.<span class="hljs-property">NEWAPI_CONFIG_DIR</span>,
+    path.<span class="hljs-title function_">join</span>(process.<span class="hljs-property">env</span>.<span class="hljs-property">HOME</span> || process.<span class="hljs-property">env</span>.<span class="hljs-property">USERPROFILE</span> || <span class="hljs-string">&#x27;&#x27;</span>, <span class="hljs-string">&#x27;.new-api&#x27;</span>),
+  ].<span class="hljs-title function_">filter</span>(<span class="hljs-title class_">Boolean</span>);
+
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> dir <span class="hljs-keyword">of</span> candidates) {
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">if</span> (fs.<span class="hljs-title function_">existsSync</span>(dir)) <span class="hljs-keyword">return</span> dir;
+    } <span class="hljs-keyword">catch</span> {
+      <span class="hljs-keyword">continue</span>;
+    }
+  }
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">_findNewApiConfigFile</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> dir = <span class="hljs-title function_">_findNewApiConfigDir</span>();
+  <span class="hljs-keyword">if</span> (!dir) <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+
+  <span class="hljs-keyword">const</span> candidates = [<span class="hljs-string">&#x27;.env&#x27;</span>, <span class="hljs-string">&#x27;config.json&#x27;</span>];
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> file <span class="hljs-keyword">of</span> candidates) {
+    <span class="hljs-keyword">const</span> fullPath = path.<span class="hljs-title function_">join</span>(dir, file);
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">if</span> (fs.<span class="hljs-title function_">existsSync</span>(fullPath)) <span class="hljs-keyword">return</span> fullPath;
+    } <span class="hljs-keyword">catch</span> {
+      <span class="hljs-keyword">continue</span>;
+    }
+  }
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+}
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">_writeEnvFile</span>(<span class="hljs-params">dir, config</span>) {
+  <span class="hljs-keyword">const</span> envFile = path.<span class="hljs-title function_">join</span>(dir, <span class="hljs-string">&#x27;.env&#x27;</span>);
+  <span class="hljs-keyword">const</span> lines = <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">entries</span>(config)
+    .<span class="hljs-title function_">map</span>(<span class="hljs-function">(<span class="hljs-params">[key, value]</span>) =&gt;</span> <span class="hljs-string">`<span class="hljs-subst">${key}</span>=<span class="hljs-subst">${value}</span>`</span>)
+    .<span class="hljs-title function_">join</span>(<span class="hljs-string">&#x27;\n&#x27;</span>);
+  fs.<span class="hljs-title function_">writeFileSync</span>(envFile, lines, <span class="hljs-string">&#x27;utf-8&#x27;</span>);
+}
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = {
+  applyCardToNewApi,
+  detectNewApiConfig,
+  preflightCardForNewApi,
+};</code></pre>
+<h4 id="步骤-2-3-注册到-appwriters-js">步骤 2.3: 注册到 appWriters.js<a class="anchor" href="#步骤-2-3-注册到-appwriters-js" aria-label="锚点">#</a></h4>
+<p><strong>修改文件</strong>: <code>services/backend/src/services/domain/config/ccSwitch/appWriters.js</code></p>
+<pre><code class="language-javascript"><span class="hljs-comment">// 在导入部分添加</span>
+<span class="hljs-keyword">const</span> newApiWriter = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./newApiWriter.js&#x27;</span>);
+
+<span class="hljs-comment">// 在 applyCardToApp 函数中添加</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">applyCardToApp</span>(<span class="hljs-params">card, app, opts = {}</span>) {
+  <span class="hljs-comment">// ... 现有代码</span>
+
+  <span class="hljs-comment">// New API 应用</span>
+  <span class="hljs-keyword">if</span> (app === <span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">NEWAPI</span>) {
+    <span class="hljs-keyword">return</span> newApiWriter.<span class="hljs-title function_">applyCardToNewApi</span>(card, opts);
+  }
+
+  <span class="hljs-comment">// ... 其他应用</span>
+}
+
+<span class="hljs-comment">// 在 detectCardInApp 函数中添加</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">detectCardInApp</span>(<span class="hljs-params">app</span>) {
+  <span class="hljs-comment">// ... 现有代码</span>
+
+  <span class="hljs-comment">// New API 应用</span>
+  <span class="hljs-keyword">if</span> (app === <span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">NEWAPI</span>) {
+    <span class="hljs-keyword">return</span> newApiWriter.<span class="hljs-title function_">detectNewApiConfig</span>(app);
+  }
+
+  <span class="hljs-comment">// ... 其他应用</span>
+}
+
+<span class="hljs-comment">// 在 preflightCardForApp 函数中添加</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">preflightCardForApp</span>(<span class="hljs-params">card, app</span>) {
+  <span class="hljs-comment">// ... 现有代码</span>
+
+  <span class="hljs-comment">// New API 应用</span>
+  <span class="hljs-keyword">if</span> (app === <span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">NEWAPI</span>) {
+    <span class="hljs-keyword">return</span> newApiWriter.<span class="hljs-title function_">preflightCardForNewApi</span>(card, app);
+  }
+
+  <span class="hljs-comment">// ... 其他应用</span>
+}</code></pre>
+<h4 id="步骤-2-4-创建-newapiadapter-js">步骤 2.4: 创建 newApiAdapter.js<a class="anchor" href="#步骤-2-4-创建-newapiadapter-js" aria-label="锚点">#</a></h4>
+<p><strong>新建文件</strong>: <code>services/backend/src/services/gateway/adapters/newApiAdapter.js</code></p>
+<pre><code class="language-javascript"><span class="hljs-comment">/**
+ * New API Adapter — 从 ccSwitch 读取活跃卡片，调用 New API Gateway
+ *
+ * 设计原则：
+ *   - 复用 ccSwitch Card 系统获取配置
+ *   - 使用 OpenAI 协议调用 New API
+ *   - New API 负责治理（计费/权限/限流）
+ */</span>
+<span class="hljs-meta">&#x27;use strict&#x27;</span>;
+
+<span class="hljs-keyword">const</span> { <span class="hljs-attr">PRIMARY</span>: <span class="hljs-variable constant_">MODELS</span> } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../../../constants/models&#x27;</span>);
+<span class="hljs-keyword">const</span> { createAdapterRuntimeDiagnosticsStore } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../runtimeDiagnosticsStore&#x27;</span>);
+<span class="hljs-keyword">const</span> { buildSuccess, buildFailure } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./_responseBuilder&#x27;</span>);
+<span class="hljs-keyword">const</span> { isAbortLikeError } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./_abortHelpers&#x27;</span>);
+
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">DEFAULT_MODEL</span> = <span class="hljs-variable constant_">MODELS</span>.<span class="hljs-property">newapi</span> || <span class="hljs-string">&#x27;gpt-4&#x27;</span>;
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">TIMEOUT_MS</span> = <span class="hljs-built_in">parseInt</span>(process.<span class="hljs-property">env</span>.<span class="hljs-property">NEWAPI_TIMEOUT_MS</span> || <span class="hljs-string">&#x27;120000&#x27;</span>, <span class="hljs-number">10</span>);
+
+<span class="hljs-keyword">const</span> _runtimeDiagnosticsStore = <span class="hljs-title function_">createAdapterRuntimeDiagnosticsStore</span>(<span class="hljs-string">&#x27;newapi&#x27;</span>);
+<span class="hljs-keyword">let</span> _runtimeDiagnostics = _runtimeDiagnosticsStore.<span class="hljs-title function_">createEmptyDiagnostic</span>();
+
+<span class="hljs-keyword">let</span> _available = <span class="hljs-literal">null</span>;
+<span class="hljs-keyword">let</span> _configCache = <span class="hljs-literal">null</span>;
+
+<span class="hljs-comment">// ── 从 ccSwitch 读取配置 ─────────────────────────────────────</span>
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">_loadConfig</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">if</span> (_configCache) <span class="hljs-keyword">return</span> _configCache;
+
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> store = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../../domain/config/ccSwitch/store.js&#x27;</span>);
+    <span class="hljs-keyword">const</span> { <span class="hljs-variable constant_">APPS</span> } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../../domain/config/ccSwitch/constants.js&#x27;</span>);
+
+    <span class="hljs-keyword">const</span> { cards, active } = store.<span class="hljs-title function_">listCards</span>();
+    <span class="hljs-keyword">const</span> activeCardId = active[<span class="hljs-variable constant_">APPS</span>.<span class="hljs-property">NEWAPI</span>];
+
+    <span class="hljs-keyword">if</span> (activeCardId) {
+      <span class="hljs-keyword">const</span> card = cards.<span class="hljs-title function_">find</span>(<span class="hljs-function">(<span class="hljs-params">c</span>) =&gt;</span> c.<span class="hljs-property">id</span> === activeCardId);
+      <span class="hljs-keyword">if</span> (card) {
+        <span class="hljs-keyword">let</span> key = <span class="hljs-string">&#x27;&#x27;</span>;
+        <span class="hljs-keyword">if</span> (card.<span class="hljs-property">keyId</span>) {
+          key = <span class="hljs-keyword">await</span> <span class="hljs-title function_">_resolveKeyFromPool</span>(card.<span class="hljs-property">keyId</span>);
+        }
+
+        _configCache = {
+          <span class="hljs-attr">endpoint</span>: card.<span class="hljs-property">baseUrl</span>,
+          key,
+          <span class="hljs-attr">model</span>: card.<span class="hljs-property">defaultModel</span> || <span class="hljs-variable constant_">DEFAULT_MODEL</span>,
+        };
+        <span class="hljs-keyword">return</span> _configCache;
+      }
+    }
+  } <span class="hljs-keyword">catch</span> {
+    <span class="hljs-comment">// ccSwitch 不可用，回退到环境变量</span>
+  }
+
+  <span class="hljs-comment">// 回退到环境变量</span>
+  _configCache = {
+    <span class="hljs-attr">endpoint</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">NEWAPI_ENDPOINT</span> || <span class="hljs-string">&#x27;http://localhost:3000&#x27;</span>,
+    <span class="hljs-attr">key</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">NEWAPI_API_KEY</span> || <span class="hljs-string">&#x27;&#x27;</span>,
+    <span class="hljs-attr">model</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">NEWAPI_MODEL</span> || <span class="hljs-variable constant_">DEFAULT_MODEL</span>,
+  };
+  <span class="hljs-keyword">return</span> _configCache;
+}
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">_resolveKeyFromPool</span>(<span class="hljs-params">keyId</span>) {
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> fs = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;fs&#x27;</span>);
+    <span class="hljs-keyword">const</span> path = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;path&#x27;</span>);
+    <span class="hljs-keyword">const</span> os = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;os&#x27;</span>);
+    <span class="hljs-keyword">const</span> { keyIdFor } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../../domain/config/ccSwitch/store.js&#x27;</span>);
+
+    <span class="hljs-keyword">const</span> dataHome = process.<span class="hljs-property">env</span>.<span class="hljs-property">KHY_DATA_HOME</span> || path.<span class="hljs-title function_">join</span>(os.<span class="hljs-title function_">homedir</span>(), <span class="hljs-string">&#x27;.khy&#x27;</span>);
+    <span class="hljs-keyword">const</span> poolFile = path.<span class="hljs-title function_">join</span>(dataHome, <span class="hljs-string">&#x27;api_keys.json&#x27;</span>);
+
+    <span class="hljs-keyword">if</span> (!fs.<span class="hljs-title function_">existsSync</span>(poolFile)) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;&#x27;</span>;
+
+    <span class="hljs-keyword">const</span> doc = <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(fs.<span class="hljs-title function_">readFileSync</span>(poolFile, <span class="hljs-string">&#x27;utf-8&#x27;</span>));
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> [provider, entries] <span class="hljs-keyword">of</span> <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">entries</span>(doc)) {
+      <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> e <span class="hljs-keyword">of</span> entries || []) {
+        <span class="hljs-keyword">if</span> (<span class="hljs-title function_">keyIdFor</span>(provider, e.<span class="hljs-property">key</span>) === keyId) {
+          <span class="hljs-keyword">return</span> e.<span class="hljs-property">key</span>;
+        }
+      }
+    }
+  } <span class="hljs-keyword">catch</span> {
+    <span class="hljs-comment">// 密钥池不可用</span>
+  }
+  <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;&#x27;</span>;
+}
+
+<span class="hljs-comment">// ── Detection ─────────────────────────────────────────────────</span>
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">detect</span>(<span class="hljs-params">forceRefresh = <span class="hljs-literal">false</span></span>) {
+  <span class="hljs-keyword">if</span> (_available !== <span class="hljs-literal">null</span> &amp;&amp; !forceRefresh) {
+    <span class="hljs-keyword">return</span> _available;
+  }
+
+  _available = !!(process.<span class="hljs-property">env</span>.<span class="hljs-property">NEWAPI_ENDPOINT</span> || _configCache?.<span class="hljs-property">endpoint</span>);
+  <span class="hljs-keyword">return</span> _available;
+}
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">detectAsync</span>(<span class="hljs-params">forceRefresh = <span class="hljs-literal">false</span></span>) {
+  <span class="hljs-keyword">const</span> config = <span class="hljs-keyword">await</span> <span class="hljs-title function_">_loadConfig</span>();
+  _available = !!config.<span class="hljs-property">endpoint</span>;
+  <span class="hljs-keyword">return</span> _available;
+}
+
+<span class="hljs-comment">// ── Model Listing ─────────────────────────────────────────────</span>
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">listModels</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> config = <span class="hljs-keyword">await</span> <span class="hljs-title function_">_loadConfig</span>();
+
+  <span class="hljs-keyword">const</span> fallback = [
+    {
+      <span class="hljs-attr">id</span>: config.<span class="hljs-property">model</span>,
+      <span class="hljs-attr">name</span>: config.<span class="hljs-property">model</span>,
+      <span class="hljs-attr">isDefault</span>: <span class="hljs-literal">true</span>,
+      <span class="hljs-attr">provider</span>: <span class="hljs-string">&#x27;newapi&#x27;</span>,
+      <span class="hljs-attr">description</span>: <span class="hljs-string">&#x27;New API Gateway&#x27;</span>,
+    },
+  ];
+
+  <span class="hljs-comment">// 尝试从 New API 获取模型列表</span>
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> endpoint = config.<span class="hljs-property">endpoint</span>.<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/\/+$/</span>, <span class="hljs-string">&#x27;&#x27;</span>);
+    <span class="hljs-keyword">const</span> url = <span class="hljs-string">`<span class="hljs-subst">${endpoint}</span>/v1/models`</span>;
+
+    <span class="hljs-keyword">const</span> headers = {};
+    <span class="hljs-keyword">if</span> (config.<span class="hljs-property">key</span>) {
+      headers[<span class="hljs-string">&#x27;Authorization&#x27;</span>] = <span class="hljs-string">`Bearer <span class="hljs-subst">${config.key}</span>`</span>;
+    }
+
+    <span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fetch</span>(url, {
+      headers,
+      <span class="hljs-attr">signal</span>: <span class="hljs-title class_">AbortSignal</span>.<span class="hljs-title function_">timeout</span>(<span class="hljs-number">5000</span>),
+    });
+
+    <span class="hljs-keyword">if</span> (response.<span class="hljs-property">ok</span>) {
+      <span class="hljs-keyword">const</span> data = <span class="hljs-keyword">await</span> response.<span class="hljs-title function_">json</span>();
+      <span class="hljs-keyword">return</span> (data.<span class="hljs-property">data</span> || []).<span class="hljs-title function_">map</span>(<span class="hljs-function">(<span class="hljs-params">m</span>) =&gt;</span> ({
+        <span class="hljs-attr">id</span>: m.<span class="hljs-property">id</span>,
+        <span class="hljs-attr">name</span>: m.<span class="hljs-property">id</span>,
+        <span class="hljs-attr">isDefault</span>: m.<span class="hljs-property">id</span> === config.<span class="hljs-property">model</span>,
+        <span class="hljs-attr">provider</span>: <span class="hljs-string">&#x27;newapi&#x27;</span>,
+        <span class="hljs-attr">description</span>: m.<span class="hljs-property">description</span> || <span class="hljs-string">&#x27;&#x27;</span>,
+      }));
+    }
+  } <span class="hljs-keyword">catch</span> {
+    <span class="hljs-comment">// New API 不可用</span>
+  }
+
+  <span class="hljs-keyword">return</span> fallback;
+}
+
+<span class="hljs-comment">// ── Generation ────────────────────────────────────────────────</span>
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">generate</span>(<span class="hljs-params">prompt, options = {}</span>) {
+  <span class="hljs-keyword">const</span> config = <span class="hljs-keyword">await</span> <span class="hljs-title function_">_loadConfig</span>();
+  <span class="hljs-keyword">const</span> model = options.<span class="hljs-property">model</span> || config.<span class="hljs-property">model</span>;
+  <span class="hljs-keyword">const</span> endpoint = config.<span class="hljs-property">endpoint</span>.<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/\/+$/</span>, <span class="hljs-string">&#x27;&#x27;</span>);
+  <span class="hljs-keyword">const</span> url = <span class="hljs-string">`<span class="hljs-subst">${endpoint}</span>/v1/chat/completions`</span>;
+
+  <span class="hljs-keyword">const</span> requestBody = {
+    model,
+    <span class="hljs-attr">messages</span>: [{ <span class="hljs-attr">role</span>: <span class="hljs-string">&#x27;user&#x27;</span>, <span class="hljs-attr">content</span>: prompt }],
+    <span class="hljs-attr">stream</span>: !!options.<span class="hljs-property">onChunk</span>,
+    <span class="hljs-attr">temperature</span>: options.<span class="hljs-property">temperature</span>,
+    <span class="hljs-attr">max_tokens</span>: options.<span class="hljs-property">maxTokens</span>,
+  };
+
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> headers = {
+      <span class="hljs-string">&#x27;Content-Type&#x27;</span>: <span class="hljs-string">&#x27;application/json&#x27;</span>,
+      ...(config.<span class="hljs-property">key</span> ? { <span class="hljs-title class_">Authorization</span>: <span class="hljs-string">`Bearer <span class="hljs-subst">${config.key}</span>`</span> } : {}),
+    };
+
+    <span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fetch</span>(url, {
+      <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;POST&#x27;</span>,
+      headers,
+      <span class="hljs-attr">body</span>: <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>(requestBody),
+      <span class="hljs-attr">signal</span>: <span class="hljs-title class_">AbortSignal</span>.<span class="hljs-title function_">timeout</span>(<span class="hljs-variable constant_">TIMEOUT_MS</span>),
+    });
+
+    <span class="hljs-keyword">if</span> (!response.<span class="hljs-property">ok</span>) {
+      <span class="hljs-keyword">const</span> errorText = <span class="hljs-keyword">await</span> response.<span class="hljs-title function_">text</span>().<span class="hljs-title function_">catch</span>(<span class="hljs-function">() =&gt;</span> <span class="hljs-string">&#x27;&#x27;</span>);
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">buildFailure</span>(<span class="hljs-string">`New API request failed: <span class="hljs-subst">${response.status}</span> <span class="hljs-subst">${errorText}</span>`</span>, {
+        <span class="hljs-attr">adapter</span>: <span class="hljs-string">&#x27;newapi&#x27;</span>,
+        <span class="hljs-attr">provider</span>: <span class="hljs-string">&#x27;New API&#x27;</span>,
+        <span class="hljs-attr">attempts</span>: [{ <span class="hljs-attr">provider</span>: <span class="hljs-string">&#x27;New API&#x27;</span>, <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">error</span>: <span class="hljs-string">`<span class="hljs-subst">${response.status}</span>`</span> }],
+      });
+    }
+
+    <span class="hljs-comment">// 处理流式响应</span>
+    <span class="hljs-keyword">if</span> (options.<span class="hljs-property">onChunk</span>) {
+      <span class="hljs-keyword">return</span> <span class="hljs-keyword">await</span> <span class="hljs-title function_">_handleStreaming</span>(response, options, model);
+    }
+
+    <span class="hljs-comment">// 非流式响应</span>
+    <span class="hljs-keyword">const</span> data = <span class="hljs-keyword">await</span> response.<span class="hljs-title function_">json</span>();
+    <span class="hljs-keyword">const</span> content = data.<span class="hljs-property">choices</span>?.[<span class="hljs-number">0</span>]?.<span class="hljs-property">message</span>?.<span class="hljs-property">content</span> || <span class="hljs-string">&#x27;&#x27;</span>;
+
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">buildSuccess</span>({
+      <span class="hljs-attr">text</span>: content,
+      <span class="hljs-attr">model</span>: data.<span class="hljs-property">model</span> || model,
+      <span class="hljs-attr">tokenUsage</span>: {
+        <span class="hljs-attr">promptTokens</span>: data.<span class="hljs-property">usage</span>?.<span class="hljs-property">prompt_tokens</span> || <span class="hljs-number">0</span>,
+        <span class="hljs-attr">completionTokens</span>: data.<span class="hljs-property">usage</span>?.<span class="hljs-property">completion_tokens</span> || <span class="hljs-number">0</span>,
+      },
+    });
+  } <span class="hljs-keyword">catch</span> (error) {
+    <span class="hljs-keyword">if</span> (<span class="hljs-title function_">isAbortLikeError</span>(error)) {
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">buildFailure</span>(<span class="hljs-string">&#x27;New API request timeout&#x27;</span>, {
+        <span class="hljs-attr">adapter</span>: <span class="hljs-string">&#x27;newapi&#x27;</span>,
+        <span class="hljs-attr">provider</span>: <span class="hljs-string">&#x27;New API&#x27;</span>,
+        <span class="hljs-attr">attempts</span>: [{ <span class="hljs-attr">provider</span>: <span class="hljs-string">&#x27;New API&#x27;</span>, <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">error</span>: <span class="hljs-string">&#x27;timeout&#x27;</span> }],
+      });
+    }
+
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">buildFailure</span>(error.<span class="hljs-property">message</span>, {
+      <span class="hljs-attr">adapter</span>: <span class="hljs-string">&#x27;newapi&#x27;</span>,
+      <span class="hljs-attr">provider</span>: <span class="hljs-string">&#x27;New API&#x27;</span>,
+      <span class="hljs-attr">attempts</span>: [{ <span class="hljs-attr">provider</span>: <span class="hljs-string">&#x27;New API&#x27;</span>, <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">error</span>: error.<span class="hljs-property">message</span> }],
+    });
+  }
+}
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">_handleStreaming</span>(<span class="hljs-params">response, options, model</span>) {
+  <span class="hljs-keyword">const</span> reader = response.<span class="hljs-property">body</span>.<span class="hljs-title function_">getReader</span>();
+  <span class="hljs-keyword">const</span> decoder = <span class="hljs-keyword">new</span> <span class="hljs-title class_">TextDecoder</span>();
+  <span class="hljs-keyword">let</span> buffer = <span class="hljs-string">&#x27;&#x27;</span>;
+  <span class="hljs-keyword">let</span> fullText = <span class="hljs-string">&#x27;&#x27;</span>;
+
+  <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) {
+    <span class="hljs-keyword">const</span> { done, value } = <span class="hljs-keyword">await</span> reader.<span class="hljs-title function_">read</span>();
+    <span class="hljs-keyword">if</span> (done) <span class="hljs-keyword">break</span>;
+
+    buffer += decoder.<span class="hljs-title function_">decode</span>(value, { <span class="hljs-attr">stream</span>: <span class="hljs-literal">true</span> });
+    <span class="hljs-keyword">const</span> lines = buffer.<span class="hljs-title function_">split</span>(<span class="hljs-string">&#x27;\n&#x27;</span>);
+    buffer = lines.<span class="hljs-title function_">pop</span>() || <span class="hljs-string">&#x27;&#x27;</span>;
+
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> line <span class="hljs-keyword">of</span> lines) {
+      <span class="hljs-keyword">if</span> (line.<span class="hljs-title function_">startsWith</span>(<span class="hljs-string">&#x27;data: &#x27;</span>)) {
+        <span class="hljs-keyword">const</span> data = line.<span class="hljs-title function_">slice</span>(<span class="hljs-number">6</span>);
+        <span class="hljs-keyword">if</span> (data === <span class="hljs-string">&#x27;[DONE]&#x27;</span>) <span class="hljs-keyword">break</span>;
+
+        <span class="hljs-keyword">try</span> {
+          <span class="hljs-keyword">const</span> chunk = <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(data);
+          <span class="hljs-keyword">const</span> content = chunk.<span class="hljs-property">choices</span>?.[<span class="hljs-number">0</span>]?.<span class="hljs-property">delta</span>?.<span class="hljs-property">content</span>;
+          <span class="hljs-keyword">if</span> (content) {
+            fullText += content;
+            options.<span class="hljs-title function_">onChunk</span>({ <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;text&#x27;</span>, <span class="hljs-attr">text</span>: content });
+          }
+        } <span class="hljs-keyword">catch</span> {
+          <span class="hljs-comment">// Skip invalid JSON</span>
+        }
+      }
+    }
+  }
+
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">buildSuccess</span>({
+    <span class="hljs-attr">text</span>: fullText,
+    model,
+    <span class="hljs-attr">tokenUsage</span>: { <span class="hljs-attr">promptTokens</span>: <span class="hljs-number">0</span>, <span class="hljs-attr">completionTokens</span>: <span class="hljs-number">0</span> },
+  });
+}
+
+<span class="hljs-comment">// ── Status ────────────────────────────────────────────────────</span>
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">getStatus</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> config = <span class="hljs-keyword">await</span> <span class="hljs-title function_">_loadConfig</span>();
+  <span class="hljs-keyword">return</span> {
+    <span class="hljs-attr">configured</span>: !!config.<span class="hljs-property">endpoint</span>,
+    <span class="hljs-attr">endpoint</span>: config.<span class="hljs-property">endpoint</span>,
+    <span class="hljs-attr">model</span>: config.<span class="hljs-property">model</span>,
+    <span class="hljs-attr">hasApiKey</span>: !!config.<span class="hljs-property">key</span>,
+  };
+}
+
+<span class="hljs-comment">// ── Runtime Diagnostics ───────────────────────────────────────</span>
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">getRuntimeDiagnostics</span>(<span class="hljs-params">options = {}</span>) {
+  <span class="hljs-keyword">return</span> _runtimeDiagnosticsStore.<span class="hljs-title function_">get</span>(_runtimeDiagnostics, options);
+}
+
+<span class="hljs-comment">// ── Cleanup ───────────────────────────────────────────────────</span>
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">destroy</span>(<span class="hljs-params"></span>) {
+  _available = <span class="hljs-literal">null</span>;
+  _configCache = <span class="hljs-literal">null</span>;
+}
+
+<span class="hljs-comment">// ── Exports ───────────────────────────────────────────────────</span>
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = {
+  detect,
+  detectAsync,
+  listModels,
+  generate,
+  getStatus,
+  getRuntimeDiagnostics,
+  destroy,
+  _loadConfig,
+  <span class="hljs-title function_">_resetState</span>(<span class="hljs-params"></span>) {
+    _available = <span class="hljs-literal">null</span>;
+    _configCache = <span class="hljs-literal">null</span>;
+  },
+};</code></pre>
+<h4 id="步骤-2-5-注册到-aigateway-js">步骤 2.5: 注册到 aiGateway.js<a class="anchor" href="#步骤-2-5-注册到-aigateway-js" aria-label="锚点">#</a></h4>
+<p><strong>修改文件</strong>: <code>services/backend/src/services/gateway/aiGateway.js</code></p>
+<pre><code class="language-javascript"><span class="hljs-comment">// 在导入部分添加</span>
+<span class="hljs-keyword">const</span> newApiAdapter = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./adapters/newApiAdapter&#x27;</span>);
+
+<span class="hljs-comment">// 在 adapters 数组中注册（优先级 19，在 cpa 之后）</span>
+<span class="hljs-variable language_">this</span>.<span class="hljs-property">_adapters</span> = [
+  <span class="hljs-comment">// ... 现有适配器</span>
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">&#x27;newapi&#x27;</span>, <span class="hljs-attr">adapter</span>: newApiAdapter, <span class="hljs-attr">priority</span>: <span class="hljs-number">19</span>, <span class="hljs-attr">enabled</span>: <span class="hljs-literal">true</span> },
+];</code></pre>
+<h3 id="4-3-phase-3-使用和测试">4.3 Phase 3: 使用和测试<a class="anchor" href="#4-3-phase-3-使用和测试" aria-label="锚点">#</a></h3>
+<h4 id="步骤-3-1-添加-new-api-card">步骤 3.1: 添加 New API Card<a class="anchor" href="#步骤-3-1-添加-new-api-card" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash"><span class="hljs-comment"># 通过 CLI</span>
+khy cc-switch add \
+  --name=<span class="hljs-string">&quot;New API Gateway&quot;</span> \
+  --endpoint=<span class="hljs-string">&quot;http://localhost:3000&quot;</span> \
+  --protocol=openai \
+  --apps=newapi
+
+<span class="hljs-comment"># 或通过 provider-hub UI</span></code></pre>
+<h4 id="步骤-3-2-配置-api-key-new-api-的令牌">步骤 3.2: 配置 API Key (New API 的令牌)<a class="anchor" href="#步骤-3-2-配置-api-key-new-api-的令牌" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash"><span class="hljs-comment"># 在 New API 管理面板创建令牌</span>
+<span class="hljs-comment"># 或通过 API</span>
+curl -X POST http://localhost:3000/api/token/ \
+  -H <span class="hljs-string">&quot;Authorization: Bearer root-token&quot;</span> \
+  -d <span class="hljs-string">&#x27;{&quot;name&quot;: &quot;khy-token&quot;, &quot;expired_at&quot;: -1}&#x27;</span></code></pre>
+<h4 id="步骤-3-3-绑定密钥到-card">步骤 3.3: 绑定密钥到 Card<a class="anchor" href="#步骤-3-3-绑定密钥到-card" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash"><span class="hljs-comment"># 添加密钥到池</span>
+khy cc-switch key add \
+  --provider=newapi \
+  --key=your-newapi-token \
+  --label=<span class="hljs-string">&quot;New API Token&quot;</span>
+
+<span class="hljs-comment"># 绑定密钥到卡片</span>
+khy cc-switch update &lt;card-id&gt; --keyId=&lt;key-id&gt;</code></pre>
+<h4 id="步骤-3-4-激活卡片">步骤 3.4: 激活卡片<a class="anchor" href="#步骤-3-4-激活卡片" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash">khy cc-switch apply &lt;card-id&gt; newapi</code></pre>
+<h4 id="步骤-3-5-使用">步骤 3.5: 使用<a class="anchor" href="#步骤-3-5-使用" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash"><span class="hljs-comment"># 通过网关使用</span>
+khy ai <span class="hljs-string">&quot;Hello, world!&quot;</span> --adapter=newapi
+
+<span class="hljs-comment"># 或在 REPL 中</span>
+khy
+&gt; /adapter newapi
+&gt; Hello, world!</code></pre>
+<hr>
+<h2 id="5-验证清单">5. 验证清单<a class="anchor" href="#5-验证清单" aria-label="锚点">#</a></h2>
+<h3 id="5-1-基础设施验证">5.1 基础设施验证<a class="anchor" href="#5-1-基础设施验证" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. CPA 运行状态</span>
+curl http://localhost:8317/v1/models
+
+<span class="hljs-comment"># 2. New API 运行状态</span>
+curl http://localhost:3000/api/status
+
+<span class="hljs-comment"># 3. New API → CPA 连通性</span>
+curl http://localhost:3000/v1/chat/completions \
+  -H <span class="hljs-string">&quot;Authorization: Bearer your-token&quot;</span> \
+  -d <span class="hljs-string">&#x27;{&quot;model&quot;: &quot;gpt-4&quot;, &quot;messages&quot;: [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;test&quot;}]}&#x27;</span></code></pre>
+<h3 id="5-2-khyos-集成验证">5.2 KhyOS 集成验证<a class="anchor" href="#5-2-khyos-集成验证" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. Card 状态</span>
+khy cc-switch list
+
+<span class="hljs-comment"># 2. New API 适配器状态</span>
+khy gateway status newapi
+
+<span class="hljs-comment"># 3. 端到端测试</span>
+khy ai <span class="hljs-string">&quot;Hello&quot;</span> --adapter=newapi</code></pre>
+<h3 id="5-3-治理功能验证">5.3 治理功能验证<a class="anchor" href="#5-3-治理功能验证" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 用户管理 (New API 面板)</span>
+<span class="hljs-comment"># http://localhost:3000 → 用户管理</span>
+
+<span class="hljs-comment"># 2. 令牌管理</span>
+<span class="hljs-comment"># http://localhost:3000 → 令牌管理</span>
+
+<span class="hljs-comment"># 3. 用量统计</span>
+<span class="hljs-comment"># http://localhost:3000 → 数据看板</span>
+
+<span class="hljs-comment"># 4. 渠道状态</span>
+<span class="hljs-comment"># http://localhost:3000 → 渠道管理</span></code></pre>
+<hr>
+<h2 id="6-文件清单">6. 文件清单<a class="anchor" href="#6-文件清单" aria-label="锚点">#</a></h2>
+<h3 id="6-1-新建文件">6.1 新建文件<a class="anchor" href="#6-1-新建文件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>位置</th><th>说明</th></tr></thead><tbody><tr><td><code>newApiWriter.js</code></td><td><code>services/backend/src/services/domain/config/ccSwitch/</code></td><td>New API 配置写入器</td></tr><tr><td><code>newApiAdapter.js</code></td><td><code>services/backend/src/services/gateway/adapters/</code></td><td>New API Gateway 适配器</td></tr></tbody></table>
+<h3 id="6-2-修改文件">6.2 修改文件<a class="anchor" href="#6-2-修改文件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>修改内容</th></tr></thead><tbody><tr><td><code>constants.js</code></td><td>添加 <code>APPS.NEWAPI</code> 和 <code>APP_LABELS[NEWAPI]</code></td></tr><tr><td><code>appWriters.js</code></td><td>注册 <code>newApiWriter</code></td></tr><tr><td><code>aiGateway.js</code></td><td>注册 <code>newApiAdapter</code></td></tr></tbody></table>
+<h3 id="6-3-复用文件-无需修改">6.3 复用文件（无需修改）<a class="anchor" href="#6-3-复用文件-无需修改" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>复用内容</th></tr></thead><tbody><tr><td><code>providers.ts</code></td><td>Card CRUD、Key Pool</td></tr><tr><td><code>modelCatalog.ts</code></td><td>模型目录拉取</td></tr><tr><td><code>store.js</code></td><td>ccSwitch 数据存储</td></tr><tr><td><code>ccSwitch.js</code></td><td>CLI 命令</td></tr></tbody></table>
+<hr>
+<h2 id="7-运维指南">7. 运维指南<a class="anchor" href="#7-运维指南" aria-label="锚点">#</a></h2>
+<h3 id="7-1-启动顺序">7.1 启动顺序<a class="anchor" href="#7-1-启动顺序" aria-label="锚点">#</a></h3>
+<pre><code>1. 启动 CPA Server (port 8317)
+   ↓
+2. 启动 New API (port 3000)
+   ↓
+3. 启动 KhyOS Gateway
+   ↓
+4. 验证连通性</code></pre>
+<h3 id="7-2-停止顺序">7.2 停止顺序<a class="anchor" href="#7-2-停止顺序" aria-label="锚点">#</a></h3>
+<pre><code>1. 停止 KhyOS Gateway
+   ↓
+2. 停止 New API
+   ↓
+3. 停止 CPA Server</code></pre>
+<h3 id="7-3-故障排查">7.3 故障排查<a class="anchor" href="#7-3-故障排查" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>问题</th><th>排查步骤</th></tr></thead><tbody><tr><td>CPA 不可用</td><td><code>curl http://localhost:8317/v1/models</code></td></tr><tr><td>New API 不可用</td><td><code>curl http://localhost:3000/api/status</code></td></tr><tr><td>KhyOS 连接失败</td><td><code>khy cc-switch list</code> 检查 Card 配置</td></tr><tr><td>401 错误</td><td>检查令牌配置</td></tr><tr><td>429 错误</td><td>检查速率限制配置</td></tr><tr><td>500 错误</td><td>查看 New API / CPA 日志</td></tr></tbody></table>
+<h3 id="7-4-日志位置">7.4 日志位置<a class="anchor" href="#7-4-日志位置" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>组件</th><th>日志位置</th></tr></thead><tbody><tr><td>CPA</td><td><code>docker logs cli-proxy-api</code></td></tr><tr><td>New API</td><td><code>docker logs new-api</code> 或 <code>./logs/</code></td></tr><tr><td>KhyOS</td><td>终端输出</td></tr></tbody></table>
+<hr>
+<h2 id="8-路线图">8. 路线图<a class="anchor" href="#8-路线图" aria-label="锚点">#</a></h2>
+<h3 id="8-1-phase-1-基础设施-当前">8.1 Phase 1: 基础设施 (当前)<a class="anchor" href="#8-1-phase-1-基础设施-当前" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 部署 CPA Server</li><li>[ ] 部署 New API</li><li>[ ] 配置 New API 渠道指向 CPA</li><li>[ ] 验证端到端连通性</li></ul>
+<h3 id="8-2-phase-2-khyos-集成-等-provider-hub-完成后">8.2 Phase 2: KhyOS 集成 (等 provider-hub 完成后)<a class="anchor" href="#8-2-phase-2-khyos-集成-等-provider-hub-完成后" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 注册 <code>newapi</code> 到 APPS 常量</li><li>[ ] 实现 <code>newApiWriter.js</code></li><li>[ ] 注册到 <code>appWriters.js</code></li><li>[ ] 实现 <code>newApiAdapter.js</code></li><li>[ ] 注册到 <code>aiGateway.js</code></li><li>[ ] 单元测试</li></ul>
+<h3 id="8-3-phase-3-增强功能">8.3 Phase 3: 增强功能<a class="anchor" href="#8-3-phase-3-增强功能" aria-label="锚点">#</a></h3>
+<ul><li>[ ] CPA 内置启动脚本</li><li>[ ] New API 自动配置脚本</li><li>[ ] 监控告警集成</li><li>[ ] 文档完善</li></ul>
+<hr>
+<h2 id="9-参考资料">9. 参考资料<a class="anchor" href="#9-参考资料" aria-label="锚点">#</a></h2>
+<ul><li><a href="https://github.com/router-for-me/CLIProxyAPI" target="_blank" rel="noopener">CLIProxyAPI 官方文档</a></li><li><a href="https://doc.newapi.pro" target="_blank" rel="noopener">New API 官方文档</a></li><li>[provider-hub 架构](../DESIGN-ARCH/[DESIGN-ARCH-094] Provider卡片枢纽（CardHub）GUI设计规范.md)</li><li><a href="../../17_AI协作预设包/skills/README.html">ccSwitch 系统</a></li></ul>
+<hr>
+<h2 id="10-变更记录">10. 变更记录<a class="anchor" href="#10-变更记录" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>日期</th><th>版本</th><th>变更内容</th><th>作者</th></tr></thead><tbody><tr><td>2026-09-11</td><td>1.0</td><td>初始设计文档（CPA + New API 分层架构）</td><td>AI Assistant</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-CPA/[DESIGN-CPA-002] CPA+NewAPI 分层架构实施方案.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-CPA-002] CPA + New API 分层架构实施调研与方案</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-CPA/00_INDEX_DESIGN-CPA-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">DESIGN-CPA</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-CPA/[DESIGN-CPA-003] CPA接入层+NewAPI治理层分层架构.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -21,5 +21,5 @@
     "spawn": false,
     "database": false
   },
-  "_note": "调研类拓展（reference kind），只读。包含 4 个外部开源项目的调研档案 + 1 个 UI 组件范式。指向：[DESIGN-OTHER-005] docs/03_DESIGN_设计/[DESIGN-OTHER-005] desktop-rd-桌面端调研指针.md。后续桌面端实施时建议从本目录的 openflux/goose/chatml 三个项目吸取范式。kind 已从 asset 改为 reference（v2.0 契约修正：纯调研材料使用 reference）。"
+  "_note": "调研类拓展（reference kind），只读。包含 4 个外部开源项目的调研档案 + 1 个 UI 组件范式。指向：[DESIGN-OTHER-005] docs/03_DESIGN_设计/DESIGN-OTHER/[DESIGN-OTHER-005] desktop-rd-桌面端调研指针.md。后续桌面端实施时建议从本目录的 openflux/goose/chatml 三个项目吸取范式。kind 已从 asset 改为 reference（v2.0 契约修正：纯调研材料使用 reference）。"
 }

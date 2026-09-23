@@ -13,8 +13,8 @@ describe('routes/daemon', () => {
       ensureStarted: jest.fn(async () => ({ state: 'running' })),
       requestShutdown: jest.fn(async () => ({ ok: true })),
     };
-    jest.mock('../services/aiManageDaemonLifecycle', () => mockLifecycle);
-    router = require('./daemon');
+    jest.mock('../../src/services/aiManageDaemonLifecycle', () => mockLifecycle);
+    router = require('../../src/routes/daemon');
   });
 
   it('should export an express router', () => {

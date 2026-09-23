@@ -26,14 +26,10 @@ const path = require('path');
 const {
   checkArchiveExtractCompat,
 } = require('../lib/archiveExtractCompat');
+const { opsDocPath, opsDocRelPath } = require('../lib/docsPaths');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const DOC_PATH = path.join(
-  ROOT,
-  'docs',
-  '07_OPS_运维',
-  '[OPS-MAN-108] 还原归档形制可提取性对账.md'
-);
+const DOC_PATH = opsDocPath('[OPS-MAN-108] 还原归档形制可提取性对账.md');
 const NPM_PKG_NAME = '@khy-os/khy-os';
 const PIP_PKG_NAME = 'khy-os';
 
@@ -117,7 +113,7 @@ function runCheckArchive(opts = {}) {
   out += `  ${C.bold}目录：${C.reset}${destDir}\n`;
   out += `  ${C.dim}判据：${verdict.reason}${C.reset}\n`;
   out += `\n${C.dim}诚实边界：形制陌生 / 证据不足一律拒绝放行，绝不盲目 tar -xzf；layout 缺省是老快照的合法情形，格式支持即可放行。${C.reset}\n`;
-  out += `${C.dim}详情见：docs/07_OPS_运维/[OPS-MAN-108] 还原归档形制可提取性对账.md${C.reset}\n`;
+  out += `${C.dim}详情见：${opsDocRelPath('[OPS-MAN-108] 还原归档形制可提取性对账.md')}${C.reset}\n`;
   process.stdout.write(out);
   return verdict.ok ? 0 : 2;
 }

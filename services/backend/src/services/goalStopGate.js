@@ -331,7 +331,7 @@ function _normalizeToolName(name) {
 // 测试/检查/构建/lint 命令,不认 `cat x-test.log` 之类偶然含关键字的旁路(要求命令与关键字间有空白)。
 const _VERIFY_CMD_RE = new RegExp(
   [
-    'npm\\s+(?:run\\s+)?(?:test|check|lint|build|verify|arch|maintainer)',
+    'npm\\s+(?:run\\s+)?(?:test|check|lint|build|verify|arch|maintainer|doctor)',
     'yarn\\s+(?:run\\s+)?(?:test|check|lint|build)',
     'pnpm\\s+(?:run\\s+)?(?:test|check|lint|build)',
     'node\\s+--test',
@@ -476,7 +476,7 @@ function buildVerifyRanRedriveMessage(goal, { userMessage } = {}) {
     `当前目标:「${text}」`,
     '请**真正运行**验证后再收尾:',
     '① 实际调用 shell 执行测试/检查(如 `npm test`、`node --test`、`node --check`、`npm run arch:god`、',
-    '   `npm run maintainer:check`),让它真实跑出结果(通过/失败计数、退出码);',
+    '   `npm run check:maintainer:safety`),让它真实跑出结果(通过/失败计数、退出码);',
     '② 确认全绿后再给完成报告并调用 GoalTool(action=clear) 收尾。',
     userMessage ? `用户原始请求: ${String(userMessage).slice(0, 300)}` : '',
     ']',

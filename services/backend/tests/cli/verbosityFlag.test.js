@@ -1,6 +1,6 @@
 'use strict';
 /**
- * verbosityFlag.test.js â€?global `--verbose` / `--debug` switch.
+ * verbosityFlag.test.js â€”global `--verbose` / `--debug` switch.
  *
  * A single discoverable flag must light up debug logging (LOG_LEVEL=debug) and
  * the KHY_*_DEBUG diagnostic paths (KHY_DEBUG=1). It must be ESCALATE-ONLY: a

@@ -1,6 +1,6 @@
 'use strict';
 /**
- * MultiEditTool (MultiEdit) â€?per-edit occurrence count must match the actual
+ * MultiEditTool (MultiEdit) â€”per-edit occurrence count must match the actual
  * replacement, same regression as FileEditTool.
  *
  * The count loop stepped the cursor by `idx + 1` (overlapping) while replace_all

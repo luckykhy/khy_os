@@ -14,7 +14,7 @@ const crypto = require('crypto');
 const http = require('http');
 const os = require('os');
 
-const DEFAULT_PORT = 9222;
+const { BRIDGE_DEFAULT_PORT: DEFAULT_PORT } = require('../constants/serviceDefaults');
 // Bind to all interfaces by default so LAN collaboration (phone/other devices
 // controlling this CLI) works out of the box. Override with BRIDGE_BIND_HOST
 // (e.g. set BRIDGE_BIND_HOST=127.0.0.1 to force localhost-only access).
@@ -96,6 +96,54 @@ function resolveCorsOrigin(origin, lanIp) {
     return origin;
   }
   return null;
+}
+
+/**
+ * Classify a remote address (IP literal or hostname string) as LAN/loopback.
+ * Pure helper for the auto-login LAN gate: loopback (v4/v6/IPv4-mapped),
+ * 'localhost', RFC1918 private ranges, IPv6 ULA (fc00::/7) and link-local
+ * (fe80::/10) are trusted; everything else (and any malformed input) is not.
+ *
+ * @param {string} ip - raw ip/host string, brackets tolerated
+ * @returns {boolean}
+ */
+function _isLanOrLoopbackIp(ip) {
+  if (typeof ip !== 'string') {
+    return false;
+  }
+  const raw = ip.trim().toLowerCase();
+  if (!raw || raw === 'localhost') {
+    return raw === 'localhost';
+  }
+  // Strip IPv6 brackets and an IPv4-mapped prefix to expose the inner v4.
+  let v = raw.replace(/^\[(.*)\]$/, '$1');
+  const mapped = v.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (mapped) {
+    v = mapped[1];
+  }
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(v)) {
+    const o = v.split('.').map(Number);
+    if (o.some((n) => n > 255)) {
+      return false;
+    }
+    const [a, b] = o;
+    return (
+      a === 127 ||
+      a === 10 ||
+      (a === 192 && b === 168) ||
+      (a === 172 && b >= 16 && b <= 31)
+    );
+  }
+  // IPv6: expand to test ULA fc00::/7 and link-local fe80::/10 prefixes.
+  if (v.includes(':')) {
+    if (v === '::1') {
+      return true;
+    }
+    const head = v.split('::')[0];
+    const first = head ? parseInt(head.split(':')[0], 16) : 0;
+    return (first & 0xfe00) === 0xfc00 || (first & 0xffc0) === 0xfe80;
+  }
+  return false;
 }
 
 // ── LAN IP Discovery ──────────────────────────────────────────────
@@ -1256,12 +1304,24 @@ function getStatusSnapshot() {
   };
 }
 
+// SIGTERM handler for graceful shutdown
+process.on('SIGTERM', async () => {
+  // drain: stopBridgeServer closes all clients then server (waits for connections to drain)
+  // db: close database connections managed by aiManagementServer, no direct db access
+  if (_httpServer || _wss) {
+    console.log('[bridge] SIGTERM received, shutting down');
+    await stopBridgeServer();
+    process.exit(0);
+  }
+});
+
 module.exports = {
   startBridgeServer,
   stopBridgeServer,
   broadcastOutput,
   _shouldSkipHistory,
   _getReplayHistory,
+  _isLanOrLoopbackIp,
   onBridgeEvent,
   generateToken,
   getConnectedClients,

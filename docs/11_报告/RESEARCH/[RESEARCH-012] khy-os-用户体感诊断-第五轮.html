@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [RESEARCH-012] khy-os-用户体感诊断-第五轮.md -->
+<title>Khy-OS 第五轮诊断：用户体感 — &quot;以为卡死&quot;问题 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>RESEARCH<span class="sep">›</span>Khy-OS 第五轮诊断：用户体感 — &quot;以为卡死&quot;问题</div>
+      <header class="hero reveal"><h1>Khy-OS 第五轮诊断：用户体感 — &quot;以为卡死&quot;问题</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-第五轮诊断-用户体感-以为卡死-问题">Khy-OS 第五轮诊断：用户体感 — &quot;以为卡死&quot;问题</a></li><li class="lvl-2"><a href="#扫描结果">扫描结果</a></li><li class="lvl-2"><a href="#一-空闲超时检测问题">一、空闲超时检测问题</a></li><li class="lvl-3"><a href="#问题">问题</a></li><li class="lvl-3"><a href="#对抗方案">对抗方案</a></li><li class="lvl-2"><a href="#二-spinner-无进度反馈">二、Spinner 无进度反馈</a></li><li class="lvl-3"><a href="#问题-2">问题</a></li><li class="lvl-3"><a href="#对抗方案-2">对抗方案</a></li><li class="lvl-2"><a href="#三-while-true-循环无反馈">三、while(true) 循环无反馈</a></li><li class="lvl-3"><a href="#问题-3">问题</a></li><li class="lvl-3"><a href="#对抗方案-3">对抗方案</a></li><li class="lvl-1"><a href="#第二部分-修复实施">第二部分：修复实施</a></li><li class="lvl-2"><a href="#修复记录">修复记录</a></li><li class="lvl-3"><a href="#已完成">已完成</a></li><li class="lvl-3"><a href="#进行中">进行中</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-第五轮诊断-用户体感-以为卡死-问题">Khy-OS 第五轮诊断：用户体感 — &quot;以为卡死&quot;问题<a class="anchor" href="#khy-os-第五轮诊断-用户体感-以为卡死-问题" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>核心问题</strong>：用户长时间看不到任何反馈，以为程序卡死<br><strong>影响范围</strong>：AI 生成、命令执行、Bridge 连接、文件操作<br><strong>修复策略</strong>：对抗式设计方案</p></blockquote>
+<hr>
+<h2 id="扫描结果">扫描结果<a class="anchor" href="#扫描结果" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>指标</th><th>数值</th><th>问题</th></tr></thead><tbody><tr><td>setTimeout/setInterval</td><td>337 处</td><td>部分无清理，内存泄漏</td></tr><tr><td>while(true)/for(;;)</td><td>10+ 处</td><td>无用户反馈</td></tr><tr><td>execSync 阻塞调用</td><td>15+ 处</td><td>阻塞事件循环</td></tr><tr><td>空闲超时检测间隔</td><td>1 秒</td><td>太慢</td></tr><tr><td>默认空闲超时</td><td>180 秒</td><td>用户等 3 分钟才看到超时</td></tr><tr><td>spinner 无进度</td><td>是</td><td>无已用时间/预计剩余</td></tr><tr><td>流式输出无首 token 提示</td><td>是</td><td>用户不知道是否在生成</td></tr></tbody></table>
+<hr>
+<h2 id="一-空闲超时检测问题">一、空闲超时检测问题<a class="anchor" href="#一-空闲超时检测问题" aria-label="锚点">#</a></h2>
+<h3 id="问题">问题<a class="anchor" href="#问题" aria-label="锚点">#</a></h3>
+<ul><li>检测间隔 1 秒，默认超时 180 秒</li><li>用户等 3 分钟才看到&quot;超时&quot;</li><li>期间无任何进度反馈</li></ul>
+<h3 id="对抗方案">对抗方案<a class="anchor" href="#对抗方案" aria-label="锚点">#</a></h3>
+<p><strong>方案 A：激进缩短超时</strong></p>
+<ul><li>超时降到 30 秒</li><li>优点：快速失败</li><li>缺点：大模型生成可能误杀</li></ul>
+<p><strong>方案 B：保持超时 + 增加心跳</strong></p>
+<ul><li>每 5 秒输出一次&quot;仍在生成...&quot;</li><li>优点：用户知道还活着</li><li>缺点：输出噪音</li></ul>
+<p><strong>方案 C：分级超时 + 进度心跳</strong></p>
+<ul><li>首 token 等待 30 秒（快速失败）</li><li>生成中空闲 60 秒超时</li><li>每 10 秒输出进度心跳</li><li>优点：平衡</li></ul>
+<p><strong>最终推荐</strong>：方案 C</p>
+<hr>
+<h2 id="二-spinner-无进度反馈">二、Spinner 无进度反馈<a class="anchor" href="#二-spinner-无进度反馈" aria-label="锚点">#</a></h2>
+<h3 id="问题-2">问题<a class="anchor" href="#问题-2" aria-label="锚点">#</a></h3>
+<ul><li>spinner 只显示旋转动画</li><li>无已用时间</li><li>无预计剩余时间</li><li>无进度百分比</li></ul>
+<h3 id="对抗方案-2">对抗方案<a class="anchor" href="#对抗方案-2" aria-label="锚点">#</a></h3>
+<p><strong>方案 A：重写 spinner</strong></p>
+<ul><li>添加已用时间、进度百分比</li><li>优点：信息丰富</li><li>缺点：工作量大</li></ul>
+<p><strong>方案 B：包装现有 spinner</strong></p>
+<ul><li>添加计时器</li><li>优点：改动小</li><li>缺点：受限于 ora</li></ul>
+<p><strong>最终推荐</strong>：方案 B</p>
+<hr>
+<h2 id="三-while-true-循环无反馈">三、while(true) 循环无反馈<a class="anchor" href="#三-while-true-循环无反馈" aria-label="锚点">#</a></h2>
+<h3 id="问题-3">问题<a class="anchor" href="#问题-3" aria-label="锚点">#</a></h3>
+<ul><li>10+ 个无限循环</li><li>无用户反馈</li><li>无退出提示</li></ul>
+<h3 id="对抗方案-3">对抗方案<a class="anchor" href="#对抗方案-3" aria-label="锚点">#</a></h3>
+<p><strong>方案 A：全部改为有限循环</strong></p>
+<ul><li>添加最大迭代次数</li><li>优点：安全</li><li>缺点：改动大</li></ul>
+<p><strong>方案 B：添加进度输出</strong></p>
+<ul><li>每 N 次迭代输出一次</li><li>优点：改动小</li><li>缺点：输出噪音</li></ul>
+<p><strong>最终推荐</strong>：方案 B</p>
+<hr>
+<h1 id="第二部分-修复实施">第二部分：修复实施<a class="anchor" href="#第二部分-修复实施" aria-label="锚点">#</a></h1>
+<h2 id="修复记录">修复记录<a class="anchor" href="#修复记录" aria-label="锚点">#</a></h2>
+<h3 id="已完成">已完成<a class="anchor" href="#已完成" aria-label="锚点">#</a></h3>
+<ul><li>创建 <code>utils/userFeedback.js</code> 统一用户反馈工具</li><li>添加分级超时机制</li><li>添加进度心跳输出</li><li>修复 spinner 显示已用时间</li></ul>
+<h3 id="进行中">进行中<a class="anchor" href="#进行中" aria-label="锚点">#</a></h3>
+<ul><li>包装 while(true) 循环</li><li>添加首 token 快速失败</li></ul>
+<hr>
+<p><em>本文档由 AI 辅助分析生成。</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/11_报告/RESEARCH/[RESEARCH-011] khy-os-用户体感诊断与修复-第四轮.html"><div class="dir">← 上一篇</div><div class="ttl">Khy-OS 第四轮诊断：用户体感与可用性</div></a><a class="next" href="../../../docs/11_报告/RESEARCH/[RESEARCH-013] khy-os-三轮对抗式诊断与修复总结.html"><div class="dir">下一篇 →</div><div class="ttl">Khy-OS 三轮对抗式诊断与修复总结</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/11_报告/RESEARCH/[RESEARCH-012] khy-os-用户体感诊断-第五轮.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

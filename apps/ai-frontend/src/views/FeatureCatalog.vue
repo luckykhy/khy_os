@@ -1,5 +1,5 @@
 <template>
-  <div class="feature-catalog-page">
+  <div class="khy-page feature-catalog-page">
     <KhyPageHeader title="功能索引">
       <template #actions>
         <el-input

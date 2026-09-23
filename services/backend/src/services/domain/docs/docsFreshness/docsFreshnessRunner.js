@@ -373,7 +373,7 @@ function _gatherSsotDeps(repoRoot) {
     }
   } catch {
     try {
-      const pkg2 = require('../../../package.json');
+      const pkg2 = require('../../../../../package.json');
       if (pkg2 && pkg2.version) {
         deps.khyVersion = pkg2.version;
       }

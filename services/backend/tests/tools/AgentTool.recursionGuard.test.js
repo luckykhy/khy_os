@@ -1,15 +1,15 @@
 'use strict';
 
 /**
- * Tests for the subagent recursion guard â€?depth-aware "layered delegation".
+ * Tests for the subagent recursion guard â€”depth-aware "layered delegation".
  *
- * Design (the teacher's rule): the tree may grow to 3 layers total â€?main
+ * Design (the teacher's rule): the tree may grow to 3 layers total â€”main
  * (depth 0) + 2 nested sub-agents (depth 1, depth 2). A sub-agent BELOW the
  * ceiling keeps the Agent/Task spawn tool so it can farm out its own chunk one
  * more layer; a sub-agent AT/OVER the ceiling is a pure leaf executor and loses
  * the spawn tool so the tree cannot grow past the cap. Enforced on two layers:
- *   1. Tool denylist â€?depth-aware: spawn tool stripped only at/over the ceiling.
- *   2. Depth ceiling â€?execute() refuses to spawn when the parent context is
+ *   1. Tool denylist â€”depth-aware: spawn tool stripped only at/over the ceiling.
+ *   2. Depth ceiling â€”execute() refuses to spawn when the parent context is
  *      already at the nesting limit (defense-in-depth backstop).
  */
 
@@ -18,12 +18,12 @@ const assert = require('assert');
 const agentToolModule = require('../../src/tools/AgentTool');
 const { AgentTool, AGENT_TOOL_NAMES } = agentToolModule;
 
-describe('AgentTool.buildSubagentDenylist â€?depth-aware spawn-tool exclusion', () => {
+describe('AgentTool.buildSubagentDenylist â€”depth-aware spawn-tool exclusion', () => {
   test('a child BELOW the ceiling keeps the spawn tool (may recurse one layer)', () => {
-    // childDepth 1 < ceiling 2 â†?Agent/Task retained.
+    // childDepth 1 < ceiling 2 â†’Agent/Task retained.
     const deny = AgentTool.buildSubagentDenylist(null, 1, 2);
     for (const name of AGENT_TOOL_NAMES) {
-      expect(!deny).toContain(name);
+      expect(deny).not.toContain(name);
     }
   });
 
@@ -48,9 +48,9 @@ describe('AgentTool.buildSubagentDenylist â€?depth-aware spawn-tool exclusion', 
   });
 
   test('maxDepth defaults to _maxSubagentDepth() (2) when omitted', () => {
-    // childDepth 1, default ceiling 2 â†?retained.
-    expect(!AgentTool.buildSubagentDenylist(null, 1)).toContain('Agent');
-    // childDepth 2, default ceiling 2 â†?stripped.
+    // childDepth 1, default ceiling 2 â†’retained.
+    expect(AgentTool.buildSubagentDenylist(null, 1)).not.toContain('Agent');
+    // childDepth 2, default ceiling 2 â†’stripped.
     expect(AgentTool.buildSubagentDenylist(null, 2)).toContain('Agent');
   });
 
@@ -88,7 +88,7 @@ describe('AgentTool depth ceiling', () => {
 
   test('isDepthExceeded honors KHY_MAX_SUBAGENT_DEPTH override', () => {
     process.env.KHY_MAX_SUBAGENT_DEPTH = '0';
-    // Ceiling 0 â†?even a top-level spawn (depth 0) is refused.
+    // Ceiling 0 â†’even a top-level spawn (depth 0) is refused.
     expect(AgentTool.isDepthExceeded({ _agentContext: { depth: 0 } })).toBe(true);
     process.env.KHY_MAX_SUBAGENT_DEPTH = '4';
     expect(AgentTool.isDepthExceeded({ _agentContext: { depth: 3 } })).toBe(false);
@@ -96,11 +96,11 @@ describe('AgentTool depth ceiling', () => {
 
   test('the denylist ceiling tracks KHY_MAX_SUBAGENT_DEPTH (single source)', () => {
     process.env.KHY_MAX_SUBAGENT_DEPTH = '1';
-    // ceiling 1 â†?a depth-1 child is now AT the ceiling and loses the spawn tool.
+    // ceiling 1 â†’a depth-1 child is now AT the ceiling and loses the spawn tool.
     expect(AgentTool.buildSubagentDenylist(null, 1)).toContain('Agent');
     process.env.KHY_MAX_SUBAGENT_DEPTH = '3';
-    // ceiling 3 â†?a depth-2 child is below it and keeps the spawn tool.
-    expect(!AgentTool.buildSubagentDenylist(null, 2)).toContain('Agent');
+    // ceiling 3 â†’a depth-2 child is below it and keeps the spawn tool.
+    expect(AgentTool.buildSubagentDenylist(null, 2)).not.toContain('Agent');
   });
 
   test('execute() refuses to spawn at/over the ceiling without running a loop', async () => {

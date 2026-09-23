@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-114] CLI 错误标准化规范.md -->
+<title>[DESIGN-ARCH-114] CLI 错误标准化规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-114] CLI 错误标准化规范</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-114] CLI 错误标准化规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-114-cli-错误标准化规范">[DESIGN-ARCH-114] CLI 错误标准化规范</a></li><li class="lvl-2"><a href="#1-现状-三条独立的错误出口-缺口所在">1. 现状：三条独立的错误出口（缺口所在）</a></li><li class="lvl-3"><a href="#1-1-实证链路-2026-09-17-事故">1.1 实证链路（2026-09-17 事故）</a></li><li class="lvl-2"><a href="#2-目标态-cli-失败块契约-gov-cli-err-001">2. 目标态：CLI 失败块契约（GOV-CLI-ERR-001）</a></li><li class="lvl-3"><a href="#2-1-字段规约">2.1 字段规约</a></li><li class="lvl-3"><a href="#2-2-渲染秩序-首屏可见性硬约束">2.2 渲染秩序（首屏可见性硬约束）</a></li><li class="lvl-2"><a href="#3-cli-机器码登记表-初版">3. CLI 机器码登记表（初版）</a></li><li class="lvl-3"><a href="#3-1-钉选优先的严格边界-本规范最容易做错的一处">3.1 钉选优先的严格边界（⚠️ 本规范最容易做错的一处）</a></li><li class="lvl-2"><a href="#4-落地改造点-按依赖序">4. 落地改造点（按依赖序）</a></li><li class="lvl-2"><a href="#5-验收标准">5. 验收标准</a></li><li class="lvl-2"><a href="#6-与既有规则的关系">6. 与既有规则的关系</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-114-cli-错误标准化规范">[DESIGN-ARCH-114] CLI 错误标准化规范<a class="anchor" href="#design-arch-114-cli-错误标准化规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: RUNTIME-002, RUNTIME-005 -->
+<blockquote><p><strong>定位</strong>：补齐 <code>[DESIGN-API-002]</code>（GOV-API-003 统一错误信封）与 <code>[DESIGN-ACP-001]</code>（GOV-ACP-004 终态错误码）<br>的<strong>第三个面</strong>——<strong>面人（CLI/TUI）</strong>。前两者冻结的是机器面（REST/SSE/WS）与进程面（ACP JSON-RPC）；<br>本文冻结人面：同一失败在终端上「长什么样、有几个字段、谁能翻译成什么」。</p>
+<p><strong>触发背景</strong>：2026-09-17 用户实测报告——一次网关级联耗尽后，TUI 只显示<br>「⚠ 本次请求未能完成，AI 服务没有返回回答。失败信息: 所有 AI 通道均不可用。」+ 一张静态推广清单，<br>看不到<strong>是哪条通道、什么机器码失败、本轮路由是否被钉死</strong>。根因是同一失败在两处被<strong>各自格式化</strong>：<br>gateway 的 <code>guidanceContent</code>（含真实诊断）被 CLI 的 <code>errorMsg</code> 包装成<strong>一段散文</strong>，<br>结构化字段（<code>errorType</code>/<code>attempts</code>/<code>preferredAdapter</code>/<code>resumable</code>）虽已存在却未进入展示契约。</p></blockquote>
+<h2 id="1-现状-三条独立的错误出口-缺口所在">1. 现状：三条独立的错误出口（缺口所在）<a class="anchor" href="#1-现状-三条独立的错误出口-缺口所在" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>面</th><th>出口代码</th><th>形状</th><th>契约</th></tr></thead><tbody><tr><td>REST/SSE/WS</td><td><code>services/backend/src/routes/**</code></td><td><code>{ok:false, error:{code,…}}</code></td><td>✅ API-003 已冻结</td></tr><tr><td>ACP JSON-RPC</td><td><code>services/backend/src/contracts/acp/</code></td><td><code>{error:{code:-320xx}}</code></td><td>✅ COMMS-004 已冻结</td></tr><tr><td><strong>CLI / TUI</strong></td><td><code>src/cli/aiChatCore.js:3273</code>、<code>src/cli/aiGatewayGenerateHelpers.js:802</code></td><td><strong>中文散文 + 手拼清单</strong></td><td>❌ <strong>无契约（本文补齐）</strong></td></tr></tbody></table>
+<h3 id="1-1-实证链路-2026-09-17-事故">1.1 实证链路（2026-09-17 事故）<a class="anchor" href="#1-1-实证链路-2026-09-17-事故" aria-label="锚点">#</a></h3>
+<pre><code>gateway generate 级联耗尽
+  └─ aiGatewayGenerateMethod.js:6370  guidanceContent
+       ├─ _visionExhaustionNote      （视觉专项诊断，仅带图）
+       ├─ _channelAdviceNote         （通用通道诊断：5xx/auth/限流/网络/404/钉选）
+       ├─ _jitterRoundsNote          （整轮自愈轮次）
+       ├─ _resumeNote                （断网续传）
+       └─ [静态推广清单：Kiro / Trae / Ollama / Claude / OpenAI / …]
+  └─ 结果对象：{ success:false, errorType:'unavailable', attempts:[…], preferredAdapter:'windsurf', resumable, continueHint }
+       │
+       ▼  aiChatCore.js:3237  失败分支
+  ┌──────────────────────────────────────────────────────────┐
+  │ const rawFailureText = result.content   ← 整段诊断被当成「失败信息」一行       │
+  │ errorMsg = '⚠ 本次请求未能完成，AI 服务没有返回回答。'                        │
+  │          + '\n\n失败信息: ' + rawFailureText（截断 180 字符 → 只剩第一句）      │
+  │ + _formatGatewayFailureDetails(result) ← 又拼一份「真实失败原因」             │
+  │ + _buildRecoveryAttemptsNote(result)   ← 再拼一份「处理方法」                 │
+  └──────────────────────────────────────────────────────────┘</code></pre>
+<p><strong>四个具体缺陷</strong>（均可在截图中复现）：</p>
+<table><thead><tr><th>#</th><th>缺陷</th><th>证据</th><th>后果</th></tr></thead><tbody><tr><td>F1</td><td><strong>真实原因被截断淹没</strong></td><td><code>aiChatCore.js:3243</code> <code>.slice(0, 180)</code></td><td>诊断正文前 180 字符恰是「<code>⚠ 通道失败原因与下一步:</code>」表头，<strong>机器码与通道名全被切掉</strong></td></tr><tr><td>F2</td><td><strong>同一事实三处重复</strong></td><td><code>guidanceContent</code> + <code>_formatGatewayFailureDetails</code> + <code>_buildRecoveryAttemptsNote</code></td><td>用户看到三段近义散文，找不到「到底哪个通道、什么码」</td></tr><tr><td>F3</td><td><strong>机器码不可检索</strong></td><td>全链路只有中文散文，无稳定 <code>code</code></td><td>用户无法 grep、无法提交可复现的 bug、支持无法归因</td></tr><tr><td>F4</td><td><strong>推广清单抢占首要位置</strong></td><td>静态清单长度 &gt; 实际诊断</td><td>首屏被 12 行推广占据，真正的「按代理/密钥/钉选去修」被压到屏外</td></tr></tbody></table>
+<blockquote><p>⚠️ 注意 <code>errorType:'unavailable'</code> 与真实根因<strong>不一致</strong>：本次事故根因是<br><code>services/backend/.env</code> 中 <code>GATEWAY_PREFERRED_ADAPTER=windsurf</code> + <code>GATEWAY_PREFERRED_STRICT=true</code><br>钉死在<strong>本机未安装</strong>的 windsurf 通道上（<code>aiGatewayGenerateMethod.js:3695</code> 的 strict 前置块会<br>直接对未注册/未启用通道返回 <code>unavailable</code>，<strong>不回退</strong>）。这与 09-13→15 连续三天误诊为<br>「密钥失效」是<strong>同一个 bug 换了通道名</strong>——而 CLI 出口恰好把这个元原因排在最末，且被 180 字符截断吃掉。</p></blockquote>
+<h2 id="2-目标态-cli-失败块契约-gov-cli-err-001">2. 目标态：CLI 失败块契约（GOV-CLI-ERR-001）<a class="anchor" href="#2-目标态-cli-失败块契约-gov-cli-err-001" aria-label="锚点">#</a></h2>
+<p>CLI/TUI 的失败展示<strong>必须</strong>由<strong>一个结构化对象</strong>渲染，禁止再对 <code>result.content</code> 做字符串截断拼接。</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;ok&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;CHANNEL_UNAVAILABLE&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;severity&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;error&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;title&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;本次请求未能完成&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;cause&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;adapter&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;windsurf&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;statusCode&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;errorType&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;unavailable&quot;</span><span class="hljs-punctuation">,</span>
+             <span class="hljs-attr">&quot;detail&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;windsurf disabled by configuration&quot;</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;routing&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;mode&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;pinned-strict&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;preferred&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;windsurf&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;fallbackSuppressed&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+               <span class="hljs-attr">&quot;triedAdapters&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;windsurf&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;jitterRounds&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;hint&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;解除钉选：把 GATEWAY_PREFERRED_ADAPTER 清空或设为 auto&quot;</span><span class="hljs-punctuation">,</span>
+           <span class="hljs-string">&quot;设 GATEWAY_PREFERRED_STRICT=false（services/backend/.env 或 ~/.khy/.env）&quot;</span><span class="hljs-punctuation">,</span>
+           <span class="hljs-string">&quot;运行 `khy gateway status` 复核实测通道&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;attempts&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;adapter&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;windsurf&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;statusCode&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;errorType&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;unavailable&quot;</span><span class="hljs-punctuation">,</span>
+                  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;windsurf disabled by configuration&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;virtualSkip&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span> <span class="hljs-punctuation">}</span> <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;resumable&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;traceId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;…&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="2-1-字段规约">2.1 字段规约<a class="anchor" href="#2-1-字段规约" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>字段</th><th>必填</th><th>约束</th></tr></thead><tbody><tr><td><code>code</code></td><td>✅</td><td><strong>稳定机器码</strong>，枚举见 §3 表；新增码先入表再用（与 API-003 §2 同制）</td></tr><tr><td><code>title</code></td><td>✅</td><td>人话一句话，遵循 <code>AGENTS.md</code> 规则 2.2（问题 + 识别码 + 修复建议）</td></tr><tr><td><code>cause</code></td><td>✅（有 attempts 时）</td><td><strong>一个</strong>主因（按 <code>failureReasonRanking</code> 的 live-优先排序取首条），非一份清单</td></tr><tr><td><code>routing</code></td><td>✅</td><td><code>mode ∈ {auto, pinned-strict, user-pinned}</code>；<code>fallbackSuppressed</code> 为真时 <code>hint</code> <strong>必须</strong>首条给解钉方法</td></tr><tr><td><code>hint</code></td><td>✅</td><td>可执行命令数组，每条 ≤ 1 行；<strong>推广清单不得进入 <code>hint</code></strong>（见 §2.2）</td></tr><tr><td><code>attempts</code></td><td>选</td><td>完整逐通道记录（内部字段），默认折叠，<code>khy --verbose</code> 展开</td></tr><tr><td><code>resumable</code></td><td>选</td><td>决定是否追加 <code>_CONTINUE_HINT</code>（沿用现状语义）</td></tr><tr><td><code>traceId</code></td><td>选</td><td>与 API-003 §5 最小披露一致；<strong>不得</strong>外露堆栈、绝对路径、密钥</td></tr></tbody></table>
+<h3 id="2-2-渲染秩序-首屏可见性硬约束">2.2 渲染秩序（首屏可见性硬约束）<a class="anchor" href="#2-2-渲染秩序-首屏可见性硬约束" aria-label="锚点">#</a></h3>
+<pre><code>第 1 屏（必现，≤ 8 行）
+  ⚠ 本次请求未能完成 —— 被钉选的通道不存在或未启用
+  [CHANNEL_ABSENT_PINNED]
+  通道: windsurf [unavailable] — windsurf disabled by configuration
+  路由: 钉选 strict（GATEWAY_PREFERRED_ADAPTER=windsurf），本轮不回退
+  → 该通道在本机不存在或未启用，且 strict 抑制了回退
+  → 把 GATEWAY_PREFERRED_ADAPTER 清空或设为 auto，并设 GATEWAY_PREFERRED_STRICT=false
+  → 改完运行 `khy gateway status` 复核实测通道
+
+第 2 屏（`khy --verbose` 或用户按 V 展开）
+  真实失败原因:（逐通道，沿用 _formatGatewayFailureDetails）
+  内部已尝试: N 次请求（…）
+
+第 3 屏（**仅在无任何 hint 可给时**才出现）
+  🆓 免费方案 / 💰 付费订阅 / ⚡ 快速配置</code></pre>
+<p><strong>红线 R-GW-1</strong>：静态推广清单<strong>永不</strong>出现在第 1 屏。它的定位是「用户确实没有任何可用通道且不知从何配起」的<br><strong>末位兜底</strong>，不是每次失败的默认装饰。判定：<code>hint.length === 0</code> → 才允许渲染。</p>
+<p><strong>红线 R-GW-2</strong>：<code>result.content</code> <strong>禁止</strong>做长度截断后当作「失败信息」直接展示（废止 <code>aiChatCore.js:3243</code><br>的 <code>.slice(0, 180)</code> 语义）。若要摘要，必须从结构化字段取，不截断自然语言。</p>
+<h2 id="3-cli-机器码登记表-初版">3. CLI 机器码登记表（初版）<a class="anchor" href="#3-cli-机器码登记表-初版" aria-label="锚点">#</a></h2>
+<p><strong>分类真源</strong>：<code>services/backend/src/services/gateway/gatewayErrorClassifier.js</code> 的 <code>errorType</code>；<br>本表只做 <code>errorType → CLI code</code> 的<strong>单射</strong>映射，不新增分类口径。</p>
+<table><thead><tr><th>CLI code</th><th>errorType</th><th>触发</th><th>首屏 hint 模板</th></tr></thead><tbody><tr><td><code>CHANNEL_ABSENT_PINNED</code></td><td><code>unavailable</code> + <code>statusCode===0</code>（strict 且 <code>fallbackSuppressed</code>）</td><td><strong>被钉的通道本机不存在/未启用</strong></td><td>解钉（置 auto）+ <code>GATEWAY_PREFERRED_STRICT=false</code> + <code>khy gateway status</code></td></tr><tr><td><code>AUTH_FAILED_PINNED</code></td><td><code>auth</code>/<code>permission</code>（strict 且 <code>fallbackSuppressed</code>）</td><td>被钉通道真实 401/403</td><td><code>ai config</code> 更新 key；若本不该钉则一并解钉</td></tr><tr><td><code>AUTH_FAILED</code></td><td><code>auth</code> / <code>permission</code></td><td>401/403/密钥无效（非钉选）</td><td>运行 <code>ai config</code> 更新该通道 key</td></tr><tr><td><code>CHANNEL_UNAVAILABLE</code></td><td><code>unavailable</code>（非钉选）</td><td>通道未注册/未启用/未安装</td><td><code>khy gateway status</code> 查看实测；<code>khy gateway model</code> 改选通道</td></tr><tr><td><code>RATE_LIMITED</code></td><td><code>rate_limit</code></td><td>429/限流</td><td>降并发、稍后重试</td></tr><tr><td><code>UPSTREAM_ERROR</code></td><td><code>server_error</code></td><td>5xx</td><td>稍后重试；<code>khy gateway status</code>；<code>/proxy</code></td></tr><tr><td><code>NETWORK_ERROR</code></td><td><code>network</code></td><td>传输层不可达</td><td><code>/proxy</code> 配代理；稍后重试</td></tr><tr><td><code>TIMEOUT</code></td><td><code>timeout</code></td><td>网关链路超时</td><td>稍后说「继续」；检查网络/代理</td></tr><tr><td><code>MODEL_NOT_FOUND</code></td><td><code>model_not_found</code></td><td>404/模型未领取</td><td><code>/model</code> 查看可用模型</td></tr><tr><td><code>CONTEXT_TOO_LONG</code></td><td><code>context_length</code></td><td>上下文超限</td><td><code>/compact</code> 压缩或新建会话</td></tr><tr><td><code>CHANNEL_EXHAUSTED</code></td><td>兜底</td><td>穷尽所有通道且无更具体信号</td><td>见 §2.2 第 3 屏（推广清单）</td></tr><tr><td><code>CANCELLED</code></td><td><code>cancelled</code></td><td>用户取消</td><td>无（静默）</td></tr><tr><td><code>NONE</code></td><td>其余</td><td>未分类</td><td><code>khy doctor</code> 自检 + traceId</td></tr></tbody></table>
+<p><strong>互斥性</strong>：一次失败只落<strong>一个</strong> <code>code</code>（按上表自上而下首次命中即停），与 API-003 §3 四终态同构。</p>
+<h3 id="3-1-钉选优先的严格边界-本规范最容易做错的一处">3.1 钉选优先的严格边界（⚠️ 本规范最容易做错的一处）<a class="anchor" href="#3-1-钉选优先的严格边界-本规范最容易做错的一处" aria-label="锚点">#</a></h3>
+<p>「钉选是元原因」<strong>不可无条件前置</strong>。必须区分两种情形：</p>
+<table><thead><tr><th>情形</th><th>判据</th><th>正确 code</th><th>理由</th></tr></thead><tbody><tr><td>被钉通道<strong>本机不存在/未启用</strong></td><td><code>errorType==='unavailable'</code> 且 <code>statusCode===0</code>，或文本含 <code>not registered</code> / <code>disabled by configuration</code> / <code>not installed</code></td><td><code>CHANNEL_ABSENT_PINNED</code></td><td>通道压根没被调用到；解钉才是唯一正解</td></tr><tr><td>被钉通道<strong>存在但真实拒绝</strong></td><td><code>statusCode∈{401,403,404,429,5xx}</code></td><td>照实报 <code>AUTH_FAILED_PINNED</code> / 对应码</td><td>这是<strong>通道侧事实</strong>，用「是钉选问题」掩盖会掩盖真实故障</td></tr></tbody></table>
+<blockquote><p><strong>为什么必须写死这条边界</strong>：2026-09-13→15 连续三天的误诊，源于<strong>把钉选误读为密钥问题</strong>；<br>而若为修它就把「钉选」无条件前置，会立刻制造<strong>反向的同类错误</strong>——把真实的密钥失效<br>误诊为「只是钉选问题」。两个方向都是同一个病：<strong>用一个元原因覆盖已观测到的事实</strong>。<br>正确做法是让<strong>证据</strong>（<code>statusCode</code> 是否真为非 0）决定谁解释谁。</p></blockquote>
+<p>两种情形都<strong>保留</strong>「本轮回退被抑制」的披露（<code>routing.mode === 'pinned-strict'</code> 恒渲染路由行），<br>只是码与首条 hint 不同。</p>
+<h2 id="4-落地改造点-按依赖序">4. 落地改造点（按依赖序）<a class="anchor" href="#4-落地改造点-按依赖序" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>文件</th><th>改动</th><th>复用（不重写）</th><th>状态</th></tr></thead><tbody><tr><td>1</td><td><code>services/backend/src/services/gateway/cliFailureEnvelope.js</code></td><td><strong>新增</strong>：纯叶子，<code>buildCliFailureEnvelope(result, env) → §2 对象</code>。零 IO、确定性、绝不抛、门控 <code>KHY_CLI_FAILURE_ENVELOPE</code>（默认开）</td><td><code>gatewayErrorClassifier.classifyError</code>、<code>buildChannelFailureAdvice</code>、<code>failureReasonRanking</code>、<code>visionExhaustionDiagnostic</code></td><td>✅ 已落地</td></tr><tr><td>2</td><td><code>src/cli/aiChatCore.js:3259-3317</code></td><td>失败分支改为「先渲染信封」；信封不可用/门关 → 逐字节回退旧 <code>errorMsg</code> 拼接；<code>failureDetails</code> 保留为第 2 屏；返回值新增 <code>failureCode</code></td><td><code>_formatGatewayFailureDetails</code>、<code>_buildRecoveryAttemptsNote</code>（降为第 2 屏）</td><td>✅ 已落地</td></tr><tr><td>3</td><td><code>src/cli/aiChatCore.js</code>（同处）</td><td>推广清单门控（R-GW-1）：<code>showPromoPanel</code> 为假时按行剔除 🆓/💰/⚡ 三段及各自链接行</td><td>清单文本不动，仅决定是否保留</td><td>✅ 已落地</td></tr><tr><td>4</td><td><code>services/backend/tests/gateway/cliFailureEnvelope.test.js</code></td><td><strong>新增</strong>：27 个用例，覆盖 §5 A1–A4 与 §3.1 钉选边界</td><td>—</td><td>✅ 已落地</td></tr><tr><td>5</td><td><code>docs/10_规范/registry/RULES-REGISTRY.json</code></td><td>登记 <code>RUNTIME-005</code>，gate=commit</td><td>登记表 + <code>check-gov-rules.js</code></td><td>✅ 已登记</td></tr><tr><td>6</td><td><code>scripts/ci/check-agent-rules.js</code></td><td>新增 finding <code>cli-raw-error-truncate</code>（检测对失败文本做 <code>.slice()</code> 截断）</td><td>既有检查框架</td><td>⏳ 待实现</td></tr><tr><td>7</td><td><code>src/cli/aiGatewayGenerateHelpers.js</code></td><td><code>_buildRecoverySuggestions</code> 输出并入 <code>hint[]</code>（当前仍是独立第 2 屏）</td><td>现有 <code>_buildRecoverySuggestions</code></td><td>⏳ 待收敛</td></tr></tbody></table>
+<blockquote><p><strong>注</strong>：第 6/7 项不阻塞验收——信封已接管首屏，<code>failureCode</code> 已随返回值外露，<br>A1–A4 判据均已满足。剩余两项是把第 2 屏也收进同一契约的收敛工作。</p></blockquote>
+<p><strong>逐字节回退</strong>：门关（<code>KHY_CLI_FAILURE_ENVELOPE=0</code>）或叶子不可用 → 完全走今日 <code>errorMsg</code> 拼接路径，不改变任何输出。</p>
+<h2 id="5-验收标准">5. 验收标准<a class="anchor" href="#5-验收标准" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>判据</th><th>验证方式</th></tr></thead><tbody><tr><td>A1</td><td>首屏 ≤ 8 行，含 <code>code</code> + 主因通道 + 解钉/修复 hint</td><td>快照测试 + 用户实测截图</td></tr><tr><td>A2</td><td>钉选 + 通道不存在（本仓 <code>.env</code> 现状）→ code 为 <code>CHANNEL_ABSENT_PINNED</code>，hint 首条为解钉</td><td>夹具：<code>{preferredAdapter:'windsurf', attempts:[unavailable/0]}</code></td></tr><tr><td>A3</td><td>钉选 + 真实 401 → code 为 <code>AUTH_FAILED_PINNED</code>（<strong>不得</strong>被钉选掩盖），且仍披露回退被抑制</td><td>夹具：<code>{preferredAdapter:'api', attempts:[auth/401]}</code></td></tr><tr><td>A4</td><td><code>hint.length &gt; 0</code> 时，输出中<strong>不含</strong>「🆓 免费方案」</td><td>断言 <code>!/免费方案/.test(rendered)</code></td></tr><tr><td>A5</td><td>任何失败路径均不出现截断后自然语言（无 <code>…</code> 结尾的失败信息行）</td><td>finding <code>cli-raw-error-truncate</code> 归零</td></tr><tr><td>A6</td><td>门关时输出与 2026-09-17 前逐字节一致</td><td>门开/门关双快照 diff</td></tr></tbody></table>
+<h2 id="6-与既有规则的关系">6. 与既有规则的关系<a class="anchor" href="#6-与既有规则的关系" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>规则</th><th>关系</th></tr></thead><tbody><tr><td><code>RUNTIME-002</code>（状态透明，子规则 2.2）</td><td><strong>本文是其可执行化</strong>：2.2 要求「问题 + 识别码 + 修复建议」，本文把「识别码」落成 §3 表、把「修复建议」落成 <code>hint[]</code></td></tr><tr><td><code>API-003</code>（统一错误信封）</td><td>同构、不重叠：API-003 管机器面信封，本文管人面渲染；§3 表与 API-003 §2 表<strong>共用机器码语义</strong>，可互译</td></tr><tr><td><code>COMMS-004</code></td><td>同构：四终态互斥 → 本文 <code>code</code> 单射互斥</td></tr><tr><td><code>GW-002</code>（降级与熔断）</td><td>本文消费其降级链结果（<code>attempts</code>），不改变降级策略</td></tr><tr><td><code>RUNTIME-001</code>（零硬编码）</td><td>§3 表为<strong>登记表驱动</strong>，编码入表而非散落代码</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-113] AI修改三模态反馈契约-客户模式.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-113] AI 修改三模态反馈契约（客户模式）</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-115] TUI 启动板块设计.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-115] TUI 启动板块设计</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-114] CLI 错误标准化规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -12,7 +12,7 @@ jest.mock('../src/utils/logger', () => ({
   error: jest.fn(),
 }));
 
-const { McpOAuthTokenStore, getTokenStore } = require('../src/services/mcp/oauthTokenStore');
+const { McpOAuthTokenStore, getTokenStore } = require('../src/services/domain/messaging/mcp/oauthTokenStore');
 
 describe('McpOAuthTokenStore', () => {
   afterEach(() => {

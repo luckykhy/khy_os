@@ -1,8 +1,8 @@
 'use strict';
 
 /**
- * Tests for the MCP auto-connect leaf (services/mcp/autoConnect.js) — the
- * runtime trigger that was missing, leaving configured external MCP servers
+ * Tests for the MCP auto-connect leaf (services/domain/messaging/mcp/autoConnect.js)
+ * — the runtime trigger that was missing, leaving configured external MCP servers
  * unreachable. All scenarios use a fake manager + injected latch state; no
  * subprocess, no network.
  */
@@ -10,7 +10,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { ensureMcpConnected, autoConnectEnabled } = require('../src/services/mcp/autoConnect');
+const { ensureMcpConnected, autoConnectEnabled } = require('../src/services/domain/messaging/mcp/autoConnect');
 
 /** Build a fake MCP manager recording connectAll calls. */
 function makeManager({ servers = [], connectResult, connectThrows = false } = {}) {

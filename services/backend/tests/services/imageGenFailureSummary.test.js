@@ -5,12 +5,13 @@ const {
   buildImageGenFailureMessage,
   sanitizeCause,
   CATEGORY_HEADLINE,
-} = require('./imageGenFailureSummary');
+} = require('../../src/services/imageGenFailureSummary.js');
+const assert = require('node:assert');
 describe('Image Gen Failure Summary', () => {
   test('build: missing backend/model omits the "本次尝试" line, still returns a message', () => {
     const msg = buildImageGenFailureMessage({ rawError: 'HTTP 401', env: {} });
     expect(typeof msg === 'string').toBeTruthy();
-    expect(!msg).toContain('本次尝试');
+    expect(msg).not.toContain('本次尝试');
     expect(msg).toContain('图像生成失败');
   });
   
@@ -48,16 +49,16 @@ describe('Image Gen Failure Summary', () => {
   test('sanitizeCause: keeps 401 / strips bearer + api_key, flattens, caps length', () => {
       const out = sanitizeCause('HTTP 401 Unauthorized bearer sk-abcdef1234567890 authorization=zzz');
       expect(out).toContain('401');
-      expect(!/sk-abcdef1234567890/.test(out).toBeTruthy());
-      expect(!/bearer\s+sk-/i.test(out).toBeTruthy());
+      expect(!/sk-abcdef1234567890/.test(out)).toBeTruthy();
+      expect(!/bearer\s+sk-/i.test(out)).toBeTruthy();
       expect(out).toContain('***');
       const long = sanitizeCause('x'.repeat(500), 50);
       expect(long.length <= 51).toBeTruthy(); // 50 + ellipsis
   });
 
-  test('build: auth �?headline + backend/model line + sanitized cause + key offer', () => {
+  test('build: auth �?headline + backend/model line + sanitized cause + key offer', () => {
       const msg = buildImageGenFailureMessage({
-        rawError: 'HTTP 401 Unauthorized �?bearer sk-live-abcdefgh12345678',
+        rawError: 'HTTP 401 Unauthorized �?bearer sk-live-abcdefgh12345678',
         backend: 'agnes',
         model: 'agnes-image-2.0-flash',
         env: {},
@@ -68,11 +69,11 @@ describe('Image Gen Failure Summary', () => {
       expect(msg).toContain('后端 agnes');
       expect(msg).toContain('模型 agnes-image-2.0-flash');
       expect(msg).toContain('401');
-      expect(!/sk-live-abcdefgh12345678/.test(msg).toBeTruthy());
+      expect(!/sk-live-abcdefgh12345678/.test(msg)).toBeTruthy();
       expect(msg).toContain('需要我帮你配置图像生成模型');
   });
 
-  test('build: no_key �?key offer present', () => {
+  test('build: no_key �?key offer present', () => {
       const msg = buildImageGenFailureMessage({
         rawError: '已配置的图像生成 key 都不可用',
         backend: 'agnes',
@@ -89,7 +90,7 @@ describe('Image Gen Failure Summary', () => {
       expect(net).toContain('网络/代理');
   });
 
-  test('build: gate-off �?null (byte-revert to old message)', () => {
+  test('build: gate-off �?null (byte-revert to old message)', () => {
       const msg = buildImageGenFailureMessage({
         rawError: 'HTTP 401',
         backend: 'agnes',
@@ -99,9 +100,9 @@ describe('Image Gen Failure Summary', () => {
   });
 
   test('build: never throws on malformed input', () => {
-      expect(() => buildImageGenFailureMessage().not.toThrow());
-      expect(() => buildImageGenFailureMessage({}).not.toThrow());
-      expect(() => buildImageGenFailureMessage({ rawError: {}, env: {} }).not.toThrow());
+      expect(() => buildImageGenFailureMessage()).not.toThrow();
+      expect(() => buildImageGenFailureMessage({})).not.toThrow();
+      expect(() => buildImageGenFailureMessage({ rawError: {}, env: {} })).not.toThrow();
   });
 
 });

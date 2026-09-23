@@ -20,10 +20,10 @@ const fs = require('fs');
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const installRunner = require('../../../src/services/dependency/installRunner');
-const resolver = require('../../../src/services/dependency/resolver');
-const healing = require('../../../src/services/dependency/healingLoop');
-const registry = require('../../../src/services/dependency/registry');
+const installRunner = require('../../../src/services/domain/network/dependency/installRunner.js');
+const resolver = require('../../../src/services/domain/network/dependency/resolver.js');
+const healing = require('../../../src/services/domain/network/dependency/healingLoop.js');
+const registry = require('../../../src/services/domain/network/dependency/registry.js');
 
 const { _classifyExecError, _managerOf, _buildExecInvocation } = installRunner._internal;
 

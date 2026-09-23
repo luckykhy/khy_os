@@ -18,7 +18,7 @@ process.env.KHY_PROJECT_DATA_HOME = TMP_HOME;
 const { describe, test, after, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 
-const bridge = require('../../../src/services/evoEngine/frictionBridge');
+const bridge = require('../../../src/services/domain/maintenance/evoEngine/frictionBridge.js');
 
 after(() => { try { fs.rmSync(TMP_HOME, { recursive: true, force: true }); } catch { /* best-effort */ } });
 beforeEach(() => bridge._resetForTest());
@@ -68,7 +68,7 @@ describe('frictionBridge — 运行态痛点观测', () => {
   test('落盘记录链完整（沿 evoLedger 哈希链）', () => {
     bridge.observeFailure({ surface: 'a', error: new Error('unsupported one') });
     bridge.observeFailure({ surface: 'b', error: new Error('unsupported two') });
-    const v = require('../../../src/services/evoEngine/evoLedger').verify({ branch: bridge.OBSERVATION_BRANCH });
+    const v = require('../../../src/services/domain/maintenance/evoEngine/evoLedger.js').verify({ branch: bridge.OBSERVATION_BRANCH });
     assert.equal(v.ok, true);
   });
 });

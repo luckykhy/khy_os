@@ -6,7 +6,7 @@ const path = require('path');
 const { compileGlobs, splitScope } = require('./glob');
 
 /**
- * registry.js — load and normalize docs/_规范/RULES-REGISTRY.json.
+ * registry.js — load and normalize docs/10_规范/registry/RULES-REGISTRY.json.
  *
  * Responsibilities:
  *   1. Resolve the registry file with case tolerance. The file is lowercase on
@@ -27,7 +27,7 @@ const { compileGlobs, splitScope } = require('./glob');
  */
 
 const REGISTRY_CANDIDATES = ['rules-registry.json', 'RULES-REGISTRY.json'];
-const REGISTRY_DIR = path.join('docs', '_规范');
+const REGISTRY_DIR = path.join('docs', '10_规范', 'registry');
 const REGISTRY_REL = path.join(REGISTRY_DIR, 'RULES-REGISTRY.json');
 
 const GATES = ['commit', 'pr', 'release', 'manual', 'advisory'];
@@ -81,7 +81,7 @@ function pathsFromScope(scope) {
 }
 
 // `\S+` rather than an ASCII char class: rule paths in this repo live under
-// Chinese directory names (docs/_规范/), which \w does not match. The
+// Chinese directory names (docs/10_规范/), which \w does not match. The
 // lookahead keeps `.json` from being parsed as `.js` + leftover `on`.
 const SCRIPT_PATH_RE = /^([ \t]*\S+\.(?:mjs|cjs|js))(?=\s|$)/;
 const CHECKER_DIR = 'scripts/ci/';

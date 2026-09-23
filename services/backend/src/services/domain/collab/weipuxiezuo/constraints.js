@@ -14,7 +14,7 @@
  * 「编造文献 = 0」无法由代码判真伪，归为 advisory（标 [待核实] 的需人工/联网核实）。
  */
 
-const rules = require('../../../../permissions/rules');
+const rules = require('./rules');
 const textStats = require('./textStats');
 
 /**

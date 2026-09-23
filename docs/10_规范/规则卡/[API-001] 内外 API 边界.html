@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [API-001] 内外 API 边界.md -->
+<title>[API-001] 内外 API 边界 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[API-001] 内外 API 边界</div>
+      <header class="hero reveal"><h1>[API-001] 内外 API 边界</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#api-001-内外-api-边界">[API-001] 内外 API 边界</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 内外 API 边界<br>id: API-001<br>domain: API<br>nature: 约束为主<br>scope: services/backend 的全部 API surface（内部 adapter 与外部 REST/SSE/WS/兼容 API）<br>priority: P1<br>trigger: 把内部对象暴露为公开响应，或新增外部 API surface 时<br>constraint: &quot;内部 adapter 结果与外部 REST/SSE/WS/兼容 API 必须明确边界；外部变更不得以内部对象形状作为隐式契约。&quot;<br>grants: &quot;见约束边界：授权在边界处显式映射字段（_responseBuilder），而非直接透传。&quot;<br>benefit: &quot;内部重构不必担心破坏外部契约；外部消费者不必理解内部对象结构。&quot;<br>exception: &quot;存量端点按 [DESIGN-API-002] §6 分阶段迁移。&quot;<br>version: &quot;1.0.0 (2026-09-15)&quot;<br>status: active<br>ssot: &quot;docs/10_规范/DESIGN-API/[DESIGN-API-002] 外部错误信封与版本弃用政策.md §1&quot;<br>formerly: GOV-API-001<br>owner: backend-team</p>
+<hr>
+<h1 id="api-001-内外-api-边界">[API-001] 内外 API 边界<a class="anchor" href="#api-001-内外-api-边界" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: API-001 -->
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/10_规范/DESIGN-API/[DESIGN-API-002] 外部错误信封与版本弃用政策.md §1。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>内部 adapter 结果与外部 REST/SSE/WS/兼容 API 必须明确边界；外部变更不得以内部对象形状作为隐式契约。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>见约束边界：授权在边界处显式映射字段（_responseBuilder），而非直接透传。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>内部重构不必担心破坏外部契约；外部消费者不必理解内部对象结构。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>直接将 adapter attempts 原样作为公开响应。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>契约已冻结（UC-005 裁决）：<code>[DESIGN-API-002]</code> §1 内外边界红线；表面清单按该文 §6/§7 目录表逐步填实</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>存量端点按 [DESIGN-API-002] §6 分阶段迁移。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-15) 初版 / 迁移自 GOV-API-001</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/规则卡/[AGENT-001] 子智能体交接契约.html"><div class="dir">← 上一篇</div><div class="ttl">[AGENT-001] 子智能体交接契约</div></a><a class="next" href="../../../docs/10_规范/规则卡/[API-002] API 版本化与弃用政策.html"><div class="dir">下一篇 →</div><div class="ttl">[API-002] API 版本化与弃用政策</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/规则卡/[API-001] 内外 API 边界.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

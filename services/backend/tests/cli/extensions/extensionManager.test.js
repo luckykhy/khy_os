@@ -1,6 +1,6 @@
 'use strict';
 
-const extensionManager = require('../../src/cli/extensions/extensionManager');
+const extensionManager = require('../../../src/cli/extensions/extensionManager.js');
 
 describe('extensionManager', () => {
   test('module is defined', () => {

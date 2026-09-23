@@ -1,14 +1,15 @@
 'use strict';
 /**
- * prCreate.test.js �?revived `khy pr` command + prCreateService wiring.
+ * prCreate.test.js — revived `khy pr` command + prCreateService wiring.
  *
  * Covers the pure surfaces (no real git / gh / glab IO):
  *  - prCreateService.buildDescriptionPrompt: includes diff context + rules
  *  - prCreateService.createPR: platform-absent fail-soft path
- *  - handlers/pr.buildCreateOptions: flag/arg �?options mapping
+ *  - handlers/pr.buildCreateOptions: flag/arg �?options mapping
  *  - handlers/pr.handlePr: injects callModel into createPR, renders + --json
  */
 const prSvc = require('../src/services/prCreateService');
+const assert = require('node:assert');
 const { handlePr, buildCreateOptions } = require('../src/cli/handlers/pr');
 // ── prCreateService.buildDescriptionPrompt ──────────────────────────
 // ── handlers/pr.buildCreateOptions (pure) ───────────────────────────
@@ -45,7 +46,7 @@ describe('Pr Create', () => {
       const opt = buildCreateOptions(['--verbose'], { title: 'My PR', body: 'details' });
       expect(opt.title).toBe('My PR');
       expect(opt.body).toBe('details');
-      expect(!('userContext' in opt).toBeTruthy());
+      expect(!('userContext' in opt)).toBeTruthy();
   });
 
   test('buildCreateOptions: empty input yields empty options', async () => {
@@ -86,7 +87,7 @@ describe('Pr Create', () => {
 
   test('createPR returns a helpful error when no gh/glab present', async () => {
       // detectPlatform shells out to gh/glab; in CI neither is guaranteed.
-      // Either it finds a platform (and fails later on branch) or reports none �?
+      // Either it finds a platform (and fails later on branch) or reports none �?
       // both must be a structured {success:false} object, never a throw.
       const res = await prSvc.createPR(
         { callModel: async () => ({ reply: 'TITLE: t\n---\nBODY:\nx' }) },

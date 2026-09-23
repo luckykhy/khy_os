@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-PROCESS-002] 新机制落地四阶段流程.md -->
+<title>[DESIGN-PROCESS-002] 新机制落地四阶段流程 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-PROCESS-002] 新机制落地四阶段流程</div>
+      <header class="hero reveal"><h1>[DESIGN-PROCESS-002] 新机制落地四阶段流程</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-process-002-新机制落地四阶段流程">[DESIGN-PROCESS-002] 新机制落地四阶段流程</a></li><li class="lvl-2"><a href="#1-红线">1. 红线</a></li><li class="lvl-2"><a href="#2-四阶段-以样本量替代书的时间口径">2. 四阶段（以样本量替代书的时间口径）</a></li><li class="lvl-2"><a href="#3-各阶段的接线方式-khyos-落点">3. 各阶段的接线方式（khyos 落点）</a></li><li class="lvl-2"><a href="#4-回退动作-pp-4">4. 回退动作（PP-4）</a></li><li class="lvl-2"><a href="#5-token-经济学判据卡-k-05-本地化">5. Token 经济学判据卡（K-05 本地化）</a></li><li class="lvl-2"><a href="#6-校验-守卫">6. 校验（守卫）</a></li><li class="lvl-3"><a href="#阶段登记位置-已落地">阶段登记位置（已落地）</a></li><li class="lvl-2"><a href="#7-版本历史">7. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-process-002-新机制落地四阶段流程">[DESIGN-PROCESS-002] 新机制落地四阶段流程<a class="anchor" href="#design-process-002-新机制落地四阶段流程" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: PROCESS-006, PROCESS-008 -->
+<blockquote><p><strong>定位</strong>：本文件回答一个问题——<strong>一条新机制（hook / 规则 / 门禁 / 预算）从「写出来」<br>到「敢让它拦人」，中间必须经过哪几步、每步的毕业条件是什么</strong>。</p>
+<p><strong>边界</strong>（与相邻规范谁管什么）：</p>
+<ul><li>本文件管<strong>落地节奏</strong>（先观测后管控的顺序与毕业判据）；</li></ul>
+<p><code>[DESIGN-PROCESS-001]</code> 管<strong>委派准入</strong>（谁做）；<code>[DESIGN-CICD-001]</code> 管<strong>门禁的实现</strong>。</p>
+<ul><li>本文件<strong>不定义</strong>任何具体机制，只定义「把机制接进生产」的过程。</li></ul>
+<p><strong>规则 ID</strong>：<code>PROCESS-006</code>。登记见 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>。<br><strong>上游依据</strong>：<code>[DESIGN-ARCH-121]</code> §K-11（Headless CI 四阶段）+ §K-05（Token 判据卡）。</p></blockquote>
+<hr>
+<h2 id="1-红线">1. 红线<a class="anchor" href="#1-红线" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>必须 / 禁止</th><th>判据</th></tr></thead><tbody><tr><td>PP-1</td><td>新拦截型机制<strong>必须</strong>先过 S1 观测阶段，<strong>禁止</strong>直接进 S3 门禁</td><td>见 §2</td></tr><tr><td>PP-2</td><td>阶段<strong>毕业以样本量计</strong>，<strong>禁止</strong>以时间计（「跑两周」不是判据）</td><td>§3 每阶段样本阈值</td></tr><tr><td>PP-3</td><td>S1/S2 阶段<strong>必须</strong>旁路记录，<strong>禁止</strong>阻断主流程</td><td>观测不得改变行为</td></tr><tr><td>PP-4</td><td>每个阶段<strong>必须</strong>有明确的<strong>回退动作</strong>，且回退<strong>不依赖</strong>未提交的代码</td><td>见 §4</td></tr><tr><td>PP-5</td><td>机制<strong>禁止</strong>在有争议样本未裁决时升阶</td><td>争议须先收敛</td></tr><tr><td>PP-6</td><td>同一机制<strong>禁止</strong>同时升两个阶段</td><td>一次一阶，出问题可归因</td></tr></tbody></table>
+<hr>
+<h2 id="2-四阶段-以样本量替代书的时间口径">2. 四阶段（以样本量替代书的时间口径）<a class="anchor" href="#2-四阶段-以样本量替代书的时间口径" aria-label="锚点">#</a></h2>
+<p>书侧（ch05 Headless CI）用「观察者 → 顾问 → 门禁 → 主动修复」四阶段，<br>但毕业条件是<strong>时间</strong>（2–4 周）。<strong>khyos 不采用时间口径</strong>——理由：</p>
+<ul><li>khyos 是<strong>单机单用户</strong>，无「团队接受度」维度，时间不产生新信息；</li><li>时间口径会让「两天跑一次」和「一天跑两千次」获得同样的毕业资格；</li><li><strong>样本量</strong>才是判据质量的真变量。</li></ul>
+<table><thead><tr><th>阶段</th><th>名称</th><th>行为</th><th>毕业条件（<strong>样本量</strong>）</th></tr></thead><tbody><tr><td><strong>S1</strong></td><td>观察者</td><td>只记录，不拦截、不提示</td><td><strong>≥200</strong> 条相关事件，且无解释不了的样本</td></tr><tr><td><strong>S2</strong></td><td>顾问</td><td>记录 + 提示，但仍不拦截</td><td><strong>≥50</strong> 条提示后，误报率 <strong>&lt;10%</strong></td></tr><tr><td><strong>S3</strong></td><td>门禁</td><td>拦截，可豁免</td><td>拦截生效后 <strong>≥20</strong> 次真实拦截，豁免率 <strong>&lt;20%</strong></td></tr><tr><td><strong>S4</strong></td><td>主动修复</td><td>拦截 + 自动给出修法（或自动修）</td><td>需要独立的回滚验证</td></tr></tbody></table>
+<blockquote><p><strong>为什么 S1 是 200 条</strong>：这是个能覆盖常见分支的量级。<br>低于它，误报率的分母太小，10% 的估计不可信。</p>
+<p><strong>为什么 S2 的误报率阈值是 10%</strong>：提示的代价是注意力。<br>误报率高于 10% 时，用户会开始忽略提示，机制退化成一个吵人的日志。</p></blockquote>
+<hr>
+<h2 id="3-各阶段的接线方式-khyos-落点">3. 各阶段的接线方式（khyos 落点）<a class="anchor" href="#3-各阶段的接线方式-khyos-落点" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>阶段</th><th>推荐落点</th><th>为什么</th></tr></thead><tbody><tr><td>S1</td><td><code>PostToolUse</code> hook，<code>matcher:&quot;*&quot;</code>，写审计日志</td><td>只观测，不干预；全量覆盖</td></tr><tr><td>S2</td><td><code>PreToolUse</code> hook，<strong>返回放行但附提示</strong></td><td>有干预能力但不用</td></tr><tr><td>S3</td><td><code>PreToolUse</code> hook 返回 <code>permissionDecision</code> + 静态 <code>patternRules</code></td><td>双层：动态看语义、静态看命令</td></tr><tr><td>S4</td><td>S3 + 自动修复脚本</td><td>风险最高，需独立回滚</td></tr></tbody></table>
+<blockquote><p><strong>双层防线</strong>（书 §5.6 的核心）：静态 <code>patternRules</code>（<code>permissionStore.js</code>）<br>管<strong>能写成前缀的命令</strong>；动态 <code>PreToolUse</code> hook 管<strong>静态规则表达不了的语义</strong><br>（管道、重定向、命令替换——这些 pattern 规则<strong>永远不命中</strong>，见 <code>[DESIGN-SKILL-001]</code> §3 与<br><code>[DESIGN-ARCH-123]</code> 修正 5）。<strong>两者不可互相替代。</strong></p></blockquote>
+<hr>
+<h2 id="4-回退动作-pp-4">4. 回退动作（PP-4）<a class="anchor" href="#4-回退动作-pp-4" aria-label="锚点">#</a></h2>
+<p>khyos 的 <code>.khy/</code> 被 <code>.gitignore:54</code> 排除，<strong>不进版本控制</strong>——<br>故所有机制改动<strong>必须在动手前备份</strong>：</p>
+<pre><code class="language-bash"><span class="hljs-built_in">cp</span> -r .khy/{skills,agents,hooks.json,permissions.json,settings.json} .khy/backups/$(<span class="hljs-built_in">date</span> +%F)/</code></pre>
+<table><thead><tr><th>阶段</th><th>回退动作</th><th>是否依赖未提交代码</th></tr></thead><tbody><tr><td>S1</td><td>删 hook 条目 / 关开关</td><td>否（纯配置）</td></tr><tr><td>S2</td><td>同上</td><td>否</td></tr><tr><td>S3</td><td>同上 + 清 <code>patternRules</code></td><td>否</td></tr><tr><td>S4</td><td>还原备份目录</td><td><strong>是</strong>——须先确认脚本已入库</td></tr></tbody></table>
+<blockquote><p><strong>S4 是唯一「回退依赖代码」的阶段</strong>，故其准入最严：脚本必须先 commit，<br>才能开启自动修复。</p></blockquote>
+<hr>
+<h2 id="5-token-经济学判据卡-k-05-本地化">5. Token 经济学判据卡（K-05 本地化）<a class="anchor" href="#5-token-经济学判据卡-k-05-本地化" aria-label="锚点">#</a></h2>
+<p>书侧（ch10 §10.1）给出委派收益算例：<strong>输入 &gt;&gt; 输出</strong> 时才值得委派，<br>书中算例收益 <strong>6.8%</strong>，Prompt Caching 下回落到 <strong>1–2%</strong>。</p>
+<p><strong>khyos 的修正——收益优先级重排</strong>（书把成本排第一，khyos 不）：</p>
+<table><thead><tr><th>优先级</th><th>收益</th><th>为什么 khyos 这样排</th></tr></thead><tbody><tr><td><strong>1</strong></td><td><strong>上下文窗口保护</strong></td><td>khyos 的窗口是<strong>硬约束</strong>（<code>charBudget = clamp(1% × window × 4, 500, 8000)</code>）。委派省下的窗口能换回<strong>更多可用的对话轮次</strong>——这是书里没有的维度</td></tr><tr><td><strong>2</strong></td><td><strong>响应质量</strong></td><td>子智能体有独立上下文，不被主对话的噪声污染</td></tr><tr><td><strong>3</strong></td><td><strong>成本</strong></td><td>书的 6.8% 会被 khyos 的多供应商价差与 Prompt Caching 稀释到 <strong>1–2%</strong>，不足以单独支撑决策</td></tr></tbody></table>
+<p><strong>判据（三问，任一为「是」即可委派）</strong>：</p>
+<ol><li>这一步的中间过程会<strong>吃掉超过 20% 的剩余窗口</strong>吗？</li><li>这个子任务需要<strong>与主对话不同的上下文</strong>吗？</li><li>它会产出<strong>被丢弃的中间产物</strong>（搜索结果、文件列表、长 diff）吗？</li></ol>
+<blockquote><p>若三问皆「否」——<strong>不要委派</strong>。委派的固定开销（报文往返 + 上下文重建）<br>会超过收益。这与 <code>[DESIGN-PROCESS-001]</code> 的「默认自做」是同一结论的两个视角。</p></blockquote>
+<hr>
+<h2 id="6-校验-守卫">6. 校验（守卫）<a class="anchor" href="#6-校验-守卫" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>红线</th><th>守卫</th><th>状态</th></tr></thead><tbody><tr><td>PP-1 / PP-2 / PP-3</td><td><code>scripts/ci/check-rollout-stage.js</code></td><td><strong>已建</strong>（规则 <code>PROCESS-008</code>，2026-09-18）</td></tr><tr><td>PP-4</td><td>同上的 <code>rollout-stage-no-rollback</code></td><td><strong>已建</strong>（warning 级，2026-09-18）</td></tr><tr><td>PP-6</td><td>同上的 <code>rollout-stage-jump</code></td><td><strong>已建</strong>（2026-09-18）</td></tr><tr><td>PP-5（争议样本未裁决）</td><td>无</td><td>人工评审——争议收敛本就无法机械判定</td></tr></tbody></table>
+<blockquote><p><strong>本守卫自身也在 S1</strong>：<code>check-rollout-stage.js</code> 是新机制，按 PP-1 必须先过观察期，<br>故 <code>PROCESS-008</code> 的 <code>severity=advisory</code>（只记录不阻断），阶段常量 <code>GUARD_STAGE='S1'</code>。<br><strong>守门人自己也要守门。</strong></p></blockquote>
+<h3 id="阶段登记位置-已落地">阶段登记位置（已落地）<a class="anchor" href="#阶段登记位置-已落地" aria-label="锚点">#</a></h3>
+<p>「当前各机制处于哪个阶段」登记在 <strong><code>FEATURE-OWNERSHIP.json</code> 的 <code>rollout.mechanisms[]</code></strong><br>（该表已有能力域 → 实现位置的单一真源结构），字段：<code>stage</code> / <code>previousStage</code> /<br><code>samples.observed</code> / <code>rollback</code> / <code>executorStage</code>。已登记两个机制：</p>
+<table><thead><tr><th>机制</th><th>阶段</th><th>样本</th><th>规则</th></tr></thead><tbody><tr><td><code>agent-feedback-contract</code>（三模态反馈契约）</td><td>S1</td><td>68 / 200</td><td><code>RUNTIME-007</code>~<code>009</code></td></tr><tr><td><code>rollout-stage-guard</code>（本守卫自身）</td><td>S1</td><td>0 / 200</td><td><code>PROCESS-008</code></td></tr></tbody></table>
+<blockquote><p>⚠ <strong>判「S1/S2 有没有在拦」要复算，不要读字面值</strong>。守卫按 ruleguard 的 <code>gateStrength()</code><br>派生强度：未声明 <code>severity</code> 时 P0/P1 会<strong>派生</strong>成 <code>blocking</code>。只看 <code>severity</code> 字段的<br>字面值会漏掉「没写 severity」这类——它和「写了 advisory」字面不同、效果可能一样。</p>
+<p>⚠ <strong>登记表的 <code>stage</code> 必须与执行器源码里的阶段常量一致</strong>（<code>executorStage.constant</code>），<br>漂移报 <code>rollout-stage-authority-drift</code>。这防的是「登记说 S1、代码其实在拦」：<br>那看起来一切正常，其他守卫还全绿。</p></blockquote>
+<hr>
+<h2 id="7-版本历史">7. 版本历史<a class="anchor" href="#7-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>2026-09-18</td><td>首版。依据 <code>[DESIGN-ARCH-121]</code> §K-11 + §K-05。<strong>两处对书结论的必要修正</strong>：① 四阶段毕业条件由「2–4 周」改为<strong>样本量</strong>（S1 ≥200 / S2 误报 &lt;10% / S3 豁免 &lt;20%），因 khyos 单机单用户无团队接受度维度；② Token 收益优先级由书的「成本优先」重排为<strong>「上下文窗口保护 &gt; 响应质量 &gt; 成本」</strong>，因 khyos 的窗口是硬约束（<code>charBudget</code>）而多供应商价差稀释了 6.8% 算例。</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-PROCESS-001] 委派边界决策矩阵-第六通道外部智能体.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-PROCESS-001] 委派边界决策矩阵（第六通道：外部智能体）</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-PROCESS-003] 规范-实现变更判定规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-PROCESS-003] 规范-实现变更判定规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-PROCESS-002] 新机制落地四阶段流程.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

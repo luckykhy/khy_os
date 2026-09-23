@@ -18,6 +18,28 @@ try {
   _fileHistory = null;
 }
 
+/**
+ * Record a pre-edit snapshot into the current turn's rollback manifest
+ * (DESIGN-ARCH-096 §2-A). Fail-soft: returns silently when no active turn is
+ * known (feature off / headless / no context), and never throws. The canonical
+ * per-file `fileHistoryService` snapshot is taken separately; this only adds
+ * the turn-grouping layer.
+ */
+function _recordTurnMutation(context, absPath, preContent, reason) {
+  const turnId = context && context.traceContext && context.traceContext.turnId;
+  if (!turnId) {
+    return; // no active turn → graceful no-op
+  }
+  try {
+    require('../services/turnCheckpointService').recordMutatedFile(turnId, absPath, {
+      reason,
+      content: preContent,
+    });
+  } catch {
+    /* non-critical: turn recording must never break the write */
+  }
+}
+
 module.exports = defineTool({
   name: 'editFile',
   description:
@@ -76,7 +98,7 @@ module.exports = defineTool({
     return `编辑 ${path.basename(input.file_path)}：\"${short}\"`;
   },
 
-  async execute(params) {
+  async execute(params, context) {
     const { file_path, old_string, new_string, replace_all } = params;
 
     if (old_string === new_string) {
@@ -146,6 +168,7 @@ module.exports = defineTool({
           /* non-critical */
         }
       }
+      _recordTurnMutation(context, absPath, original, 'editFile');
 
       // Count occurrences
       let count = 0;

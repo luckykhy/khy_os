@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ERR-001] 错误处理规范.md -->
+<title>[DESIGN-ERR-001] 错误处理规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-ERR-001] 错误处理规范</div>
+      <header class="hero reveal"><h1>[DESIGN-ERR-001] 错误处理规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-err-001-错误处理规范">[DESIGN-ERR-001] 错误处理规范</a></li><li class="lvl-2"><a href="#1-错误处理概述">1. 错误处理概述</a></li><li class="lvl-3"><a href="#1-1-设计原则">1.1 设计原则</a></li><li class="lvl-3"><a href="#1-2-错误分类">1.2 错误分类</a></li><li class="lvl-2"><a href="#2-错误码定义">2. 错误码定义</a></li><li class="lvl-3"><a href="#2-1-错误码格式">2.1 错误码格式</a></li><li class="lvl-3"><a href="#2-2-错误码表">2.2 错误码表</a></li><li class="lvl-2"><a href="#3-错误响应格式">3. 错误响应格式</a></li><li class="lvl-3"><a href="#3-1-标准错误响应">3.1 标准错误响应</a></li><li class="lvl-3"><a href="#3-2-字段说明">3.2 字段说明</a></li><li class="lvl-3"><a href="#3-3-建议操作">3.3 建议操作</a></li><li class="lvl-2"><a href="#4-后端错误处理">4. 后端错误处理</a></li><li class="lvl-3"><a href="#4-1-错误类定义">4.1 错误类定义</a></li><li class="lvl-3"><a href="#4-2-错误处理中间件">4.2 错误处理中间件</a></li><li class="lvl-3"><a href="#4-3-使用示例">4.3 使用示例</a></li><li class="lvl-2"><a href="#5-前端错误处理">5. 前端错误处理</a></li><li class="lvl-3"><a href="#5-1-错误拦截器">5.1 错误拦截器</a></li><li class="lvl-3"><a href="#5-2-全局错误处理">5.2 全局错误处理</a></li><li class="lvl-3"><a href="#5-3-错误上报">5.3 错误上报</a></li><li class="lvl-2"><a href="#6-错误日志">6. 错误日志</a></li><li class="lvl-3"><a href="#6-1-日志格式">6.1 日志格式</a></li><li class="lvl-3"><a href="#6-2-日志记录">6.2 日志记录</a></li><li class="lvl-2"><a href="#7-版本历史">7. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-err-001-错误处理规范">[DESIGN-ERR-001] 错误处理规范<a class="anchor" href="#design-err-001-错误处理规范" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档定义 khy-os 项目的错误处理标准，包括错误码、错误格式、错误传播等。</p></blockquote>
+<hr>
+<h2 id="1-错误处理概述">1. 错误处理概述<a class="anchor" href="#1-错误处理概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-设计原则">1.1 设计原则<a class="anchor" href="#1-1-设计原则" aria-label="锚点">#</a></h3>
+<ol><li><strong>统一格式</strong>：所有错误使用统一的响应格式</li><li><strong>错误码化</strong>：每个错误都有唯一的错误码</li><li><strong>可追溯</strong>：错误包含足够的上下文信息</li><li><strong>用户友好</strong>：错误消息对用户友好</li></ol>
+<h3 id="1-2-错误分类">1.2 错误分类<a class="anchor" href="#1-2-错误分类" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>分类</th><th>说明</th><th>HTTP 状态码</th></tr></thead><tbody><tr><td>用户错误</td><td>请求参数错误</td><td>4xx</td></tr><tr><td>认证错误</td><td>认证失败</td><td>401</td></tr><tr><td>授权错误</td><td>权限不足</td><td>403</td></tr><tr><td>资源错误</td><td>资源不存在</td><td>404</td></tr><tr><td>业务错误</td><td>业务逻辑错误</td><td>422</td></tr><tr><td>限流错误</td><td>请求过于频繁</td><td>429</td></tr><tr><td>网络错误</td><td>网络问题</td><td>502/503</td></tr><tr><td>内部错误</td><td>服务器内部错误</td><td>500</td></tr></tbody></table>
+<hr>
+<h2 id="2-错误码定义">2. 错误码定义<a class="anchor" href="#2-错误码定义" aria-label="锚点">#</a></h2>
+<h3 id="2-1-错误码格式">2.1 错误码格式<a class="anchor" href="#2-1-错误码格式" aria-label="锚点">#</a></h3>
+<p><strong>格式</strong>：<code>{CATEGORY}_{ERROR_TYPE}</code></p>
+<p><strong>示例</strong>：</p>
+<ul><li><code>USER_INVALID_PARAM</code> - 用户参数无效</li><li><code>AUTH_TOKEN_EXPIRED</code> - 认证令牌过期</li><li><code>RES_NOT_FOUND</code> - 资源不存在</li></ul>
+<h3 id="2-2-错误码表">2.2 错误码表<a class="anchor" href="#2-2-错误码表" aria-label="锚点">#</a></h3>
+<h4 id="用户错误-user">用户错误（USER_）<a class="anchor" href="#用户错误-user" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>错误码</th><th>说明</th><th>消息</th></tr></thead><tbody><tr><td>USER_INVALID_PARAM</td><td>参数无效</td><td>请求参数验证失败</td></tr><tr><td>USER_MISSING_PARAM</td><td>缺少参数</td><td>缺少必需参数</td></tr><tr><td>USER_INVALID_FORMAT</td><td>格式错误</td><td>数据格式不正确</td></tr><tr><td>USER_INVALID_EMAIL</td><td>邮箱格式错误</td><td>请输入有效的邮箱地址</td></tr><tr><td>USER_WEAK_PASSWORD</td><td>密码强度不足</td><td>密码必须包含大小写字母和数字</td></tr><tr><td>USER_INVALID_PHONE</td><td>手机号格式错误</td><td>请输入有效的手机号</td></tr></tbody></table>
+<h4 id="认证错误-auth">认证错误（AUTH_）<a class="anchor" href="#认证错误-auth" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>错误码</th><th>说明</th><th>消息</th></tr></thead><tbody><tr><td>AUTH_REQUIRED</td><td>需要认证</td><td>请先登录</td></tr><tr><td>AUTH_TOKEN_EXPIRED</td><td>令牌过期</td><td>登录已过期，请重新登录</td></tr><tr><td>AUTH_TOKEN_INVALID</td><td>令牌无效</td><td>认证令牌无效</td></tr><tr><td>AUTH_CREDENTIALS_INVALID</td><td>凭据无效</td><td>用户名或密码错误</td></tr><tr><td>AUTH_ACCOUNT_LOCKED</td><td>账户已锁定</td><td>账户已被锁定，请联系管理员</td></tr><tr><td>AUTH_ACCOUNT_DISABLED</td><td>账户已禁用</td><td>账户已被禁用</td></tr></tbody></table>
+<h4 id="授权错误-perm">授权错误（PERM_）<a class="anchor" href="#授权错误-perm" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>错误码</th><th>说明</th><th>消息</th></tr></thead><tbody><tr><td>PERM_DENIED</td><td>权限拒绝</td><td>无权访问此资源</td></tr><tr><td>PERM_INSUFFICIENT</td><td>权限不足</td><td>需要更高权限</td></tr></tbody></table>
+<h4 id="资源错误-res">资源错误（RES_）<a class="anchor" href="#资源错误-res" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>错误码</th><th>说明</th><th>消息</th></tr></thead><tbody><tr><td>RES_NOT_FOUND</td><td>资源不存在</td><td>请求的资源不存在</td></tr><tr><td>RES_ALREADY_EXISTS</td><td>资源已存在</td><td>资源已存在</td></tr><tr><td>RES_CONFLICT</td><td>资源冲突</td><td>资源状态冲突</td></tr></tbody></table>
+<h4 id="业务错误-biz">业务错误（BIZ_）<a class="anchor" href="#业务错误-biz" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>错误码</th><th>说明</th><th>消息</th></tr></thead><tbody><tr><td>BIZ_VALIDATION_FAILED</td><td>验证失败</td><td>数据验证失败</td></tr><tr><td>BIZ_STATE_INVALID</td><td>状态无效</td><td>当前状态不允许此操作</td></tr><tr><td>BIZ_OPERATION_FAILED</td><td>操作失败</td><td>操作执行失败</td></tr><tr><td>BIZ_LIMIT_EXCEEDED</td><td>超出限制</td><td>已达到限制</td></tr></tbody></table>
+<h4 id="限流错误-rate">限流错误（RATE_）<a class="anchor" href="#限流错误-rate" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>错误码</th><th>说明</th><th>消息</th></tr></thead><tbody><tr><td>RATE_LIMIT_EXCEEDED</td><td>超出限流</td><td>请求过于频繁，请稍后重试</td></tr><tr><td>RATE_QUOTA_EXCEEDED</td><td>超出配额</td><td>已达到配额限制</td></tr></tbody></table>
+<h4 id="网络错误-net">网络错误（NET_）<a class="anchor" href="#网络错误-net" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>错误码</th><th>说明</th><th>消息</th></tr></thead><tbody><tr><td>NET_CONNECTION_FAILED</td><td>连接失败</td><td>无法连接到服务器</td></tr><tr><td>NET_TIMEOUT</td><td>网络超时</td><td>请求超时</td></tr><tr><td>NET_DNS_FAILED</td><td>DNS 解析失败</td><td>域名解析失败</td></tr></tbody></table>
+<h4 id="内部错误-int">内部错误（INT_）<a class="anchor" href="#内部错误-int" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>错误码</th><th>说明</th><th>消息</th></tr></thead><tbody><tr><td>INT_INTERNAL_ERROR</td><td>内部错误</td><td>服务器内部错误</td></tr><tr><td>INT_SERVICE_UNAVAILABLE</td><td>服务不可用</td><td>服务暂时不可用</td></tr><tr><td>INT_DEPENDENCY_FAILED</td><td>依赖失败</td><td>依赖服务调用失败</td></tr><tr><td>INT_DATABASE_ERROR</td><td>数据库错误</td><td>数据库操作失败</td></tr></tbody></table>
+<hr>
+<h2 id="3-错误响应格式">3. 错误响应格式<a class="anchor" href="#3-错误响应格式" aria-label="锚点">#</a></h2>
+<h3 id="3-1-标准错误响应">3.1 标准错误响应<a class="anchor" href="#3-1-标准错误响应" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;USER_INVALID_PARAM&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;USER_ERROR&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;请求参数验证失败&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;details&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+      <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;field&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;email&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;邮箱格式不正确&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;value&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;invalid-email&quot;</span>
+      <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">]</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;metadata&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;requestId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;req-uuid&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="3-2-字段说明">3.2 字段说明<a class="anchor" href="#3-2-字段说明" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>字段</th><th>类型</th><th>必需</th><th>说明</th></tr></thead><tbody><tr><td>code</td><td>string</td><td>✅</td><td>错误码</td></tr><tr><td>type</td><td>string</td><td>✅</td><td>错误类型</td></tr><tr><td>message</td><td>string</td><td>✅</td><td>错误消息</td></tr><tr><td>details</td><td>array</td><td>❌</td><td>详细错误信息</td></tr><tr><td>action</td><td>string</td><td>❌</td><td>建议操作</td></tr></tbody></table>
+<h3 id="3-3-建议操作">3.3 建议操作<a class="anchor" href="#3-3-建议操作" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>操作</th><th>说明</th></tr></thead><tbody><tr><td>RETRY</td><td>重试</td></tr><tr><td>REFRESH_TOKEN</td><td>刷新令牌</td></tr><tr><td>LOGIN</td><td>重新登录</td></tr><tr><td>CONTACT_ADMIN</td><td>联系管理员</td></tr></tbody></table>
+<hr>
+<h2 id="4-后端错误处理">4. 后端错误处理<a class="anchor" href="#4-后端错误处理" aria-label="锚点">#</a></h2>
+<h3 id="4-1-错误类定义">4.1 错误类定义<a class="anchor" href="#4-1-错误类定义" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">class</span> <span class="hljs-title class_">KhyError</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_ inherited__">Error</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">code, type, message, details = []</span>) {
+    <span class="hljs-variable language_">super</span>(message);
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">name</span> = <span class="hljs-string">&#x27;KhyError&#x27;</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">code</span> = code;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">type</span> = type;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">details</span> = details;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">timestamp</span> = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>().<span class="hljs-title function_">toISOString</span>();
+  }
+  
+  <span class="hljs-title function_">toJSON</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-keyword">return</span> {
+      <span class="hljs-attr">code</span>: <span class="hljs-variable language_">this</span>.<span class="hljs-property">code</span>,
+      <span class="hljs-attr">type</span>: <span class="hljs-variable language_">this</span>.<span class="hljs-property">type</span>,
+      <span class="hljs-attr">message</span>: <span class="hljs-variable language_">this</span>.<span class="hljs-property">message</span>,
+      <span class="hljs-attr">details</span>: <span class="hljs-variable language_">this</span>.<span class="hljs-property">details</span>
+    };
+  }
+}
+
+<span class="hljs-comment">// 用户错误</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">ValidationError</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_ inherited__">KhyError</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">message, details</span>) {
+    <span class="hljs-variable language_">super</span>(<span class="hljs-string">&#x27;USER_INVALID_PARAM&#x27;</span>, <span class="hljs-string">&#x27;USER_ERROR&#x27;</span>, message, details);
+  }
+}
+
+<span class="hljs-comment">// 认证错误</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">AuthenticationError</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_ inherited__">KhyError</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">message = <span class="hljs-string">&#x27;请先登录&#x27;</span></span>) {
+    <span class="hljs-variable language_">super</span>(<span class="hljs-string">&#x27;AUTH_REQUIRED&#x27;</span>, <span class="hljs-string">&#x27;AUTH_ERROR&#x27;</span>, message);
+  }
+}
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">TokenExpiredError</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_ inherited__">KhyError</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-variable language_">super</span>(<span class="hljs-string">&#x27;AUTH_TOKEN_EXPIRED&#x27;</span>, <span class="hljs-string">&#x27;AUTH_ERROR&#x27;</span>, <span class="hljs-string">&#x27;登录已过期，请重新登录&#x27;</span>);
+  }
+}
+
+<span class="hljs-comment">// 授权错误</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">AuthorizationError</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_ inherited__">KhyError</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">message = <span class="hljs-string">&#x27;无权访问此资源&#x27;</span></span>) {
+    <span class="hljs-variable language_">super</span>(<span class="hljs-string">&#x27;PERM_DENIED&#x27;</span>, <span class="hljs-string">&#x27;AUTH_ERROR&#x27;</span>, message);
+  }
+}
+
+<span class="hljs-comment">// 资源错误</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">NotFoundError</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_ inherited__">KhyError</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">resource = <span class="hljs-string">&#x27;资源&#x27;</span></span>) {
+    <span class="hljs-variable language_">super</span>(<span class="hljs-string">&#x27;RES_NOT_FOUND&#x27;</span>, <span class="hljs-string">&#x27;RESOURCE_ERROR&#x27;</span>, <span class="hljs-string">`<span class="hljs-subst">${resource}</span>不存在`</span>);
+  }
+}
+
+<span class="hljs-comment">// 内部错误</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">InternalError</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_ inherited__">KhyError</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">message = <span class="hljs-string">&#x27;服务器内部错误&#x27;</span></span>) {
+    <span class="hljs-variable language_">super</span>(<span class="hljs-string">&#x27;INTERNAL_ERROR&#x27;</span>, <span class="hljs-string">&#x27;INTERNAL_ERROR&#x27;</span>, message);
+  }
+}</code></pre>
+<h3 id="4-2-错误处理中间件">4.2 错误处理中间件<a class="anchor" href="#4-2-错误处理中间件" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-title function_">errorHandler</span> = (<span class="hljs-params">err, req, res, next</span>) =&gt; {
+  <span class="hljs-comment">// 记录错误日志</span>
+  logger.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;Request error&#x27;</span>, {
+    <span class="hljs-attr">requestId</span>: req.<span class="hljs-property">requestId</span>,
+    <span class="hljs-attr">error</span>: err.<span class="hljs-property">message</span>,
+    <span class="hljs-attr">stack</span>: err.<span class="hljs-property">stack</span>,
+    <span class="hljs-attr">code</span>: err.<span class="hljs-property">code</span>,
+    <span class="hljs-attr">type</span>: err.<span class="hljs-property">type</span>
+  });
+  
+  <span class="hljs-comment">// 处理已知错误</span>
+  <span class="hljs-keyword">if</span> (err <span class="hljs-keyword">instanceof</span> <span class="hljs-title class_">KhyError</span>) {
+    <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-title function_">getHttpStatus</span>(err.<span class="hljs-property">type</span>)).<span class="hljs-title function_">json</span>({
+      <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>,
+      <span class="hljs-attr">error</span>: err.<span class="hljs-title function_">toJSON</span>(),
+      <span class="hljs-attr">metadata</span>: {
+        <span class="hljs-attr">requestId</span>: req.<span class="hljs-property">requestId</span>,
+        <span class="hljs-attr">timestamp</span>: err.<span class="hljs-property">timestamp</span>
+      }
+    });
+  }
+  
+  <span class="hljs-comment">// 处理 Sequelize 错误</span>
+  <span class="hljs-keyword">if</span> (err <span class="hljs-keyword">instanceof</span> <span class="hljs-title class_">Sequelize</span>.<span class="hljs-property">ValidationError</span>) {
+    <span class="hljs-keyword">const</span> details = err.<span class="hljs-property">errors</span>.<span class="hljs-title function_">map</span>(<span class="hljs-function"><span class="hljs-params">e</span> =&gt;</span> ({
+      <span class="hljs-attr">field</span>: e.<span class="hljs-property">path</span>,
+      <span class="hljs-attr">message</span>: e.<span class="hljs-property">message</span>,
+      <span class="hljs-attr">value</span>: e.<span class="hljs-property">value</span>
+    }));
+    
+    <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">400</span>).<span class="hljs-title function_">json</span>({
+      <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>,
+      <span class="hljs-attr">error</span>: {
+        <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;USER_INVALID_PARAM&#x27;</span>,
+        <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;USER_ERROR&#x27;</span>,
+        <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;数据验证失败&#x27;</span>,
+        details
+      }
+    });
+  }
+  
+  <span class="hljs-comment">// 处理未知错误</span>
+  <span class="hljs-keyword">const</span> isDev = process.<span class="hljs-property">env</span>.<span class="hljs-property">NODE_ENV</span> === <span class="hljs-string">&#x27;development&#x27;</span>;
+  
+  res.<span class="hljs-title function_">status</span>(<span class="hljs-number">500</span>).<span class="hljs-title function_">json</span>({
+    <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>,
+    <span class="hljs-attr">error</span>: {
+      <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;INTERNAL_ERROR&#x27;</span>,
+      <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;INTERNAL_ERROR&#x27;</span>,
+      <span class="hljs-attr">message</span>: isDev ? err.<span class="hljs-property">message</span> : <span class="hljs-string">&#x27;服务器内部错误&#x27;</span>,
+      ...(isDev &amp;&amp; { <span class="hljs-attr">stack</span>: err.<span class="hljs-property">stack</span> })
+    },
+    <span class="hljs-attr">metadata</span>: {
+      <span class="hljs-attr">requestId</span>: req.<span class="hljs-property">requestId</span>,
+      <span class="hljs-attr">timestamp</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>().<span class="hljs-title function_">toISOString</span>()
+    }
+  });
+};
+
+<span class="hljs-comment">// HTTP 状态码映射</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">getHttpStatus</span> = (<span class="hljs-params">errorType</span>) =&gt; {
+  <span class="hljs-keyword">const</span> statusMap = {
+    <span class="hljs-string">&#x27;USER_ERROR&#x27;</span>: <span class="hljs-number">400</span>,
+    <span class="hljs-string">&#x27;AUTH_ERROR&#x27;</span>: <span class="hljs-number">401</span>,
+    <span class="hljs-string">&#x27;PERMISSION_ERROR&#x27;</span>: <span class="hljs-number">403</span>,
+    <span class="hljs-string">&#x27;RESOURCE_ERROR&#x27;</span>: <span class="hljs-number">404</span>,
+    <span class="hljs-string">&#x27;BUSINESS_ERROR&#x27;</span>: <span class="hljs-number">422</span>,
+    <span class="hljs-string">&#x27;RATE_ERROR&#x27;</span>: <span class="hljs-number">429</span>,
+    <span class="hljs-string">&#x27;NETWORK_ERROR&#x27;</span>: <span class="hljs-number">502</span>,
+    <span class="hljs-string">&#x27;INTERNAL_ERROR&#x27;</span>: <span class="hljs-number">500</span>
+  };
+  
+  <span class="hljs-keyword">return</span> statusMap[errorType] || <span class="hljs-number">500</span>;
+};</code></pre>
+<h3 id="4-3-使用示例">4.3 使用示例<a class="anchor" href="#4-3-使用示例" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 抛出用户错误</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">validateUser</span> = (<span class="hljs-params">data</span>) =&gt; {
+  <span class="hljs-keyword">const</span> errors = [];
+  
+  <span class="hljs-keyword">if</span> (!data.<span class="hljs-property">email</span>) {
+    errors.<span class="hljs-title function_">push</span>({ <span class="hljs-attr">field</span>: <span class="hljs-string">&#x27;email&#x27;</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;邮箱不能为空&#x27;</span> });
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!<span class="hljs-title function_">isValidEmail</span>(data.<span class="hljs-property">email</span>)) {
+    errors.<span class="hljs-title function_">push</span>({ <span class="hljs-attr">field</span>: <span class="hljs-string">&#x27;email&#x27;</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;邮箱格式不正确&#x27;</span> });
+  }
+  
+  <span class="hljs-keyword">if</span> (errors.<span class="hljs-property">length</span> &gt; <span class="hljs-number">0</span>) {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ValidationError</span>(<span class="hljs-string">&#x27;请求参数验证失败&#x27;</span>, errors);
+  }
+};
+
+<span class="hljs-comment">// 抛出认证错误</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">requireAuth</span> = (<span class="hljs-params">req, res, next</span>) =&gt; {
+  <span class="hljs-keyword">const</span> token = req.<span class="hljs-property">headers</span>.<span class="hljs-property">authorization</span>?.<span class="hljs-title function_">split</span>(<span class="hljs-string">&#x27; &#x27;</span>)[<span class="hljs-number">1</span>];
+  
+  <span class="hljs-keyword">if</span> (!token) {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">AuthenticationError</span>();
+  }
+  
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> decoded = <span class="hljs-title function_">verifyToken</span>(token);
+    req.<span class="hljs-property">user</span> = decoded;
+    <span class="hljs-title function_">next</span>();
+  } <span class="hljs-keyword">catch</span> (error) {
+    <span class="hljs-keyword">if</span> (error.<span class="hljs-property">name</span> === <span class="hljs-string">&#x27;TokenExpiredError&#x27;</span>) {
+      <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">TokenExpiredError</span>();
+    }
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">AuthenticationError</span>(<span class="hljs-string">&#x27;认证令牌无效&#x27;</span>);
+  }
+};
+
+<span class="hljs-comment">// 抛出资源错误</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">getUserById</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">id</span>) =&gt; {
+  <span class="hljs-keyword">const</span> user = <span class="hljs-keyword">await</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">findByPk</span>(id);
+  
+  <span class="hljs-keyword">if</span> (!user) {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">NotFoundError</span>(<span class="hljs-string">&#x27;用户&#x27;</span>);
+  }
+  
+  <span class="hljs-keyword">return</span> user;
+};</code></pre>
+<hr>
+<h2 id="5-前端错误处理">5. 前端错误处理<a class="anchor" href="#5-前端错误处理" aria-label="锚点">#</a></h2>
+<h3 id="5-1-错误拦截器">5.1 错误拦截器<a class="anchor" href="#5-1-错误拦截器" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">import</span> axios <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;axios&#x27;</span>;
+
+<span class="hljs-comment">// 响应错误拦截器</span>
+axios.<span class="hljs-property">interceptors</span>.<span class="hljs-property">response</span>.<span class="hljs-title function_">use</span>(
+  <span class="hljs-function"><span class="hljs-params">response</span> =&gt;</span> response,
+  <span class="hljs-function"><span class="hljs-params">error</span> =&gt;</span> {
+    <span class="hljs-keyword">const</span> { response } = error;
+    
+    <span class="hljs-keyword">if</span> (response) {
+      <span class="hljs-keyword">const</span> { status, data } = response;
+      
+      <span class="hljs-comment">// 认证错误</span>
+      <span class="hljs-keyword">if</span> (status === <span class="hljs-number">401</span>) {
+        <span class="hljs-comment">// 清除本地存储的令牌</span>
+        <span class="hljs-variable language_">localStorage</span>.<span class="hljs-title function_">removeItem</span>(<span class="hljs-string">&#x27;token&#x27;</span>);
+        
+        <span class="hljs-comment">// 跳转到登录页</span>
+        <span class="hljs-variable language_">window</span>.<span class="hljs-property">location</span>.<span class="hljs-property">href</span> = <span class="hljs-string">&#x27;/login&#x27;</span>;
+        
+        <span class="hljs-keyword">return</span> <span class="hljs-title class_">Promise</span>.<span class="hljs-title function_">reject</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">&#x27;登录已过期，请重新登录&#x27;</span>));
+      }
+      
+      <span class="hljs-comment">// 权限错误</span>
+      <span class="hljs-keyword">if</span> (status === <span class="hljs-number">403</span>) {
+        <span class="hljs-keyword">return</span> <span class="hljs-title class_">Promise</span>.<span class="hljs-title function_">reject</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">&#x27;权限不足&#x27;</span>));
+      }
+      
+      <span class="hljs-comment">// 使用服务器返回的错误消息</span>
+      <span class="hljs-keyword">if</span> (data?.<span class="hljs-property">error</span>) {
+        <span class="hljs-keyword">return</span> <span class="hljs-title class_">Promise</span>.<span class="hljs-title function_">reject</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(data.<span class="hljs-property">error</span>.<span class="hljs-property">message</span>));
+      }
+    }
+    
+    <span class="hljs-comment">// 网络错误</span>
+    <span class="hljs-keyword">if</span> (!response) {
+      <span class="hljs-keyword">return</span> <span class="hljs-title class_">Promise</span>.<span class="hljs-title function_">reject</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">&#x27;网络连接失败，请检查网络&#x27;</span>));
+    }
+    
+    <span class="hljs-keyword">return</span> <span class="hljs-title class_">Promise</span>.<span class="hljs-title function_">reject</span>(error);
+  }
+);</code></pre>
+<h3 id="5-2-全局错误处理">5.2 全局错误处理<a class="anchor" href="#5-2-全局错误处理" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// Vue 全局错误处理</span>
+app.<span class="hljs-property">config</span>.<span class="hljs-property">errorHandler</span> = <span class="hljs-function">(<span class="hljs-params">err, vm, info</span>) =&gt;</span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;Vue error:&#x27;</span>, err);
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;Component:&#x27;</span>, vm);
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;Info:&#x27;</span>, info);
+  
+  <span class="hljs-comment">// 上报错误</span>
+  <span class="hljs-title function_">reportError</span>({
+    <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;vue_error&#x27;</span>,
+    <span class="hljs-attr">message</span>: err.<span class="hljs-property">message</span>,
+    <span class="hljs-attr">stack</span>: err.<span class="hljs-property">stack</span>,
+    <span class="hljs-attr">component</span>: vm?.<span class="hljs-property">$options</span>?.<span class="hljs-property">__name</span>,
+    info
+  });
+};
+
+<span class="hljs-comment">// 未处理的 Promise  rejection</span>
+<span class="hljs-variable language_">window</span>.<span class="hljs-title function_">addEventListener</span>(<span class="hljs-string">&#x27;unhandledrejection&#x27;</span>, <span class="hljs-function"><span class="hljs-params">event</span> =&gt;</span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;Unhandled promise rejection:&#x27;</span>, event.<span class="hljs-property">reason</span>);
+  
+  <span class="hljs-title function_">reportError</span>({
+    <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;unhandled_rejection&#x27;</span>,
+    <span class="hljs-attr">message</span>: event.<span class="hljs-property">reason</span>?.<span class="hljs-property">message</span> || <span class="hljs-string">&#x27;Unknown error&#x27;</span>,
+    <span class="hljs-attr">stack</span>: event.<span class="hljs-property">reason</span>?.<span class="hljs-property">stack</span>
+  });
+});</code></pre>
+<h3 id="5-3-错误上报">5.3 错误上报<a class="anchor" href="#5-3-错误上报" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-title function_">reportError</span> = (<span class="hljs-params">errorInfo</span>) =&gt; {
+  <span class="hljs-comment">// 发送到错误收集服务</span>
+  <span class="hljs-keyword">if</span> (process.<span class="hljs-property">env</span>.<span class="hljs-property">NODE_ENV</span> === <span class="hljs-string">&#x27;production&#x27;</span>) {
+    <span class="hljs-title function_">fetch</span>(<span class="hljs-string">&#x27;/api/log/error&#x27;</span>, {
+      <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;POST&#x27;</span>,
+      <span class="hljs-attr">headers</span>: { <span class="hljs-string">&#x27;Content-Type&#x27;</span>: <span class="hljs-string">&#x27;application/json&#x27;</span> },
+      <span class="hljs-attr">body</span>: <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>({
+        ...errorInfo,
+        <span class="hljs-attr">userAgent</span>: navigator.<span class="hljs-property">userAgent</span>,
+        <span class="hljs-attr">url</span>: <span class="hljs-variable language_">window</span>.<span class="hljs-property">location</span>.<span class="hljs-property">href</span>,
+        <span class="hljs-attr">timestamp</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>().<span class="hljs-title function_">toISOString</span>()
+      })
+    }).<span class="hljs-title function_">catch</span>(<span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-comment">// 静默失败</span>
+    });
+  }
+};</code></pre>
+<hr>
+<h2 id="6-错误日志">6. 错误日志<a class="anchor" href="#6-错误日志" aria-label="锚点">#</a></h2>
+<h3 id="6-1-日志格式">6.1 日志格式<a class="anchor" href="#6-1-日志格式" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;level&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;error&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Database query failed&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;requestId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;req-uuid&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;userId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">123</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;SequelizeConnectionError&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ECONNREFUSED&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Connection refused&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;stack&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;...&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;context&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;method&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;GET&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;path&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/api/users&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;query&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="6-2-日志记录">6.2 日志记录<a class="anchor" href="#6-2-日志记录" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 记录错误日志</span>
+logger.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;Request failed&#x27;</span>, {
+  <span class="hljs-attr">requestId</span>: req.<span class="hljs-property">requestId</span>,
+  <span class="hljs-attr">error</span>: {
+    <span class="hljs-attr">name</span>: error.<span class="hljs-property">name</span>,
+    <span class="hljs-attr">message</span>: error.<span class="hljs-property">message</span>,
+    <span class="hljs-attr">code</span>: error.<span class="hljs-property">code</span>,
+    <span class="hljs-attr">stack</span>: error.<span class="hljs-property">stack</span>
+  },
+  <span class="hljs-attr">context</span>: {
+    <span class="hljs-attr">method</span>: req.<span class="hljs-property">method</span>,
+    <span class="hljs-attr">path</span>: req.<span class="hljs-property">path</span>,
+    <span class="hljs-attr">body</span>: req.<span class="hljs-property">body</span>,
+    <span class="hljs-attr">query</span>: req.<span class="hljs-property">query</span>
+  }
+});</code></pre>
+<hr>
+<h2 id="7-版本历史">7. 版本历史<a class="anchor" href="#7-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义错误处理规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-ENV-001] 环境配置规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ENV-001] 环境配置规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-FF-001] Feature Flag 功能开关规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-FF-001] Feature Flag 功能开关规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-ERR-001] 错误处理规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

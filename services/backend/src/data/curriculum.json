@@ -25,7 +25,7 @@
         "title": "目录结构",
         "desc": "10+ 顶层目录各自的职责：backend、frontend、kernel、packages",
         "files": [
-          "docs/07_OPS_运维/[OPS-MAN-011] khy-os-学习指南.md"
+          "docs/07_OPS_运维/OPS-MAN/[OPS-MAN-011] khy-os-学习指南.md"
         ]
       },
       {
@@ -33,7 +33,7 @@
         "title": "应用接入",
         "desc": "外部项目如何接入 KHY OS 享受平台能力 — 4 个层级从 API 调用到完整扩展",
         "files": [
-          "docs/07_OPS_运维/[OPS-MAN-012] khy-os-应用接入指南.md"
+          "docs/07_OPS_运维/OPS-MAN/[OPS-MAN-012] khy-os-应用接入指南.md"
         ]
       }
     ]

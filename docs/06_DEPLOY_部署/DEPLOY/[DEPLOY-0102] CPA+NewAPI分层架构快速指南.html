@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DEPLOY-0102] CPA+NewAPI分层架构快速指南.md -->
+<title>[DEPLOY-0102] CPA + New API 分层架构快速指南 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>DEPLOY<span class="sep">›</span>[DEPLOY-0102] CPA + New API 分层架构快速指南</div>
+      <header class="hero reveal"><h1>[DEPLOY-0102] CPA + New API 分层架构快速指南</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#deploy-0102-cpa-new-api-分层架构快速指南">[DEPLOY-0102] CPA + New API 分层架构快速指南</a></li><li class="lvl-2"><a href="#架构图">架构图</a></li><li class="lvl-2"><a href="#快速开始">快速开始</a></li><li class="lvl-3"><a href="#1-部署-cpa-接入层">1. 部署 CPA (接入层)</a></li><li class="lvl-3"><a href="#2-部署-new-api-治理层">2. 部署 New API (治理层)</a></li><li class="lvl-3"><a href="#3-配置-new-api-渠道">3. 配置 New API 渠道</a></li><li class="lvl-3"><a href="#4-khyos-集成-等-provider-hub-完成后">4. KhyOS 集成 (等 provider-hub 完成后)</a></li><li class="lvl-2"><a href="#配置映射">配置映射</a></li><li class="lvl-2"><a href="#数据流">数据流</a></li><li class="lvl-2"><a href="#文件清单">文件清单</a></li><li class="lvl-3"><a href="#新建文件-等-provider-hub-完成后">新建文件 (等 provider-hub 完成后)</a></li><li class="lvl-3"><a href="#修改文件">修改文件</a></li><li class="lvl-2"><a href="#常见问题">常见问题</a></li><li class="lvl-3"><a href="#q-为什么分两层">Q: 为什么分两层？</a></li><li class="lvl-3"><a href="#q-可以只用-cpa-吗">Q: 可以只用 CPA 吗？</a></li><li class="lvl-3"><a href="#q-可以只用-new-api-吗">Q: 可以只用 New API 吗？</a></li><li class="lvl-3"><a href="#q-故障排查顺序">Q: 故障排查顺序？</a></li><li class="lvl-2"><a href="#启动顺序">启动顺序</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="deploy-0102-cpa-new-api-分层架构快速指南">[DEPLOY-0102] CPA + New API 分层架构快速指南<a class="anchor" href="#deploy-0102-cpa-new-api-分层架构快速指南" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>核心思路</strong>: CPA 做接入层 → New API 做治理出口</p></blockquote>
+<hr>
+<h2 id="架构图">架构图<a class="anchor" href="#架构图" aria-label="锚点">#</a></h2>
+<pre><code>用户 → KhyOS Gateway → New API (治理) → CPA (接入) → 上游 AI
+         ↓               ↓                ↓
+    Card 配置        计费/权限/限流     多账号轮询</code></pre>
+<hr>
+<h2 id="快速开始">快速开始<a class="anchor" href="#快速开始" aria-label="锚点">#</a></h2>
+<h3 id="1-部署-cpa-接入层">1. 部署 CPA (接入层)<a class="anchor" href="#1-部署-cpa-接入层" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">git <span class="hljs-built_in">clone</span> https://github.com/router-for-me/CLIProxyAPI.git
+<span class="hljs-built_in">cd</span> CLIProxyAPI
+<span class="hljs-built_in">cp</span> config.example.yaml config.yaml
+<span class="hljs-comment"># 编辑 config.yaml 添加账号</span>
+docker compose up -d
+<span class="hljs-comment"># 验证: curl http://localhost:8317/v1/models</span></code></pre>
+<h3 id="2-部署-new-api-治理层">2. 部署 New API (治理层)<a class="anchor" href="#2-部署-new-api-治理层" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">git <span class="hljs-built_in">clone</span> https://github.com/Calcium-Ion/new-api.git
+<span class="hljs-built_in">cd</span> new-api
+<span class="hljs-built_in">cp</span> .env.example .<span class="hljs-built_in">env</span>
+<span class="hljs-comment"># 编辑 .env 配置</span>
+docker compose up -d
+<span class="hljs-comment"># 访问: http://localhost:3000 (root/123456)</span></code></pre>
+<h3 id="3-配置-new-api-渠道">3. 配置 New API 渠道<a class="anchor" href="#3-配置-new-api-渠道" aria-label="锚点">#</a></h3>
+<ol><li>登录 New API 面板</li><li>渠道管理 → 添加渠道</li><li>配置:<ul><li>名称: CPA-Codex</li><li>类型: OpenAI</li><li>URL: <code>http://localhost:8317</code></li><li>密钥: CPA api-key</li><li>模型: gpt-4, gpt-4o</li></ul></li></ol>
+<h3 id="4-khyos-集成-等-provider-hub-完成后">4. KhyOS 集成 (等 provider-hub 完成后)<a class="anchor" href="#4-khyos-集成-等-provider-hub-完成后" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 添加 Card</span>
+khy cc-switch add --name=<span class="hljs-string">&quot;New API&quot;</span> --endpoint=<span class="hljs-string">&quot;http://localhost:3000&quot;</span> --protocol=openai --apps=newapi
+
+<span class="hljs-comment"># 激活</span>
+khy cc-switch apply &lt;card-id&gt; newapi
+
+<span class="hljs-comment"># 使用</span>
+khy ai <span class="hljs-string">&quot;Hello&quot;</span> --adapter=newapi</code></pre>
+<hr>
+<h2 id="配置映射">配置映射<a class="anchor" href="#配置映射" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>组件</th><th>端口</th><th>配置文件</th></tr></thead><tbody><tr><td>CPA</td><td>8317</td><td>config.yaml</td></tr><tr><td>New API</td><td>3000</td><td>.env + Web 面板</td></tr><tr><td>KhyOS</td><td>动态</td><td>cc_switch.json</td></tr></tbody></table>
+<hr>
+<h2 id="数据流">数据流<a class="anchor" href="#数据流" aria-label="锚点">#</a></h2>
+<pre><code>khy ai &quot;Hello&quot;
+    ↓
+KhyOS Gateway (读取 Card)
+    ↓
+New API (http://localhost:3000)
+    ↓ 验证令牌/检查权限/扣费
+CPA (http://localhost:8317)
+    ↓ 选择账号
+上游 (Codex/Claude/Gemini)
+    ↓
+响应返回</code></pre>
+<hr>
+<h2 id="文件清单">文件清单<a class="anchor" href="#文件清单" aria-label="锚点">#</a></h2>
+<h3 id="新建文件-等-provider-hub-完成后">新建文件 (等 provider-hub 完成后)<a class="anchor" href="#新建文件-等-provider-hub-完成后" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>位置</th></tr></thead><tbody><tr><td><code>newApiWriter.js</code></td><td><code>services/backend/src/services/domain/config/ccSwitch/</code></td></tr><tr><td><code>newApiAdapter.js</code></td><td><code>services/backend/src/services/gateway/adapters/</code></td></tr></tbody></table>
+<h3 id="修改文件">修改文件<a class="anchor" href="#修改文件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>修改</th></tr></thead><tbody><tr><td><code>constants.js</code></td><td>添加 <code>APPS.NEWAPI</code></td></tr><tr><td><code>appWriters.js</code></td><td>注册 <code>newApiWriter</code></td></tr><tr><td><code>aiGateway.js</code></td><td>注册 <code>newApiAdapter</code></td></tr></tbody></table>
+<hr>
+<h2 id="常见问题">常见问题<a class="anchor" href="#常见问题" aria-label="锚点">#</a></h2>
+<h3 id="q-为什么分两层">Q: 为什么分两层？<a class="anchor" href="#q-为什么分两层" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>层</th><th>解决的问题</th></tr></thead><tbody><tr><td>CPA</td><td>把 CLI 订阅变成 API</td></tr><tr><td>New API</td><td>管理谁在用、用多少、怎么计费</td></tr></tbody></table>
+<h3 id="q-可以只用-cpa-吗">Q: 可以只用 CPA 吗？<a class="anchor" href="#q-可以只用-cpa-吗" aria-label="锚点">#</a></h3>
+<p>可以。个人自用不需要计费功能时，直接用 CPA。</p>
+<h3 id="q-可以只用-new-api-吗">Q: 可以只用 New API 吗？<a class="anchor" href="#q-可以只用-new-api-吗" aria-label="锚点">#</a></h3>
+<p>可以。如果有标准 API Key，不需要 CPA 做协议转换。</p>
+<h3 id="q-故障排查顺序">Q: 故障排查顺序？<a class="anchor" href="#q-故障排查顺序" aria-label="锚点">#</a></h3>
+<pre><code>1. curl http://localhost:8317/v1/models (CPA)
+2. curl http://localhost:3000/api/status (New API)
+3. khy cc-switch list (KhyOS Card)
+4. khy ai &quot;test&quot; --adapter=newapi (端到端)</code></pre>
+<hr>
+<h2 id="启动顺序">启动顺序<a class="anchor" href="#启动顺序" aria-label="锚点">#</a></h2>
+<pre><code>1. CPA Server (port 8317)
+   ↓
+2. New API (port 3000)
+   ↓
+3. KhyOS Gateway</code></pre>
+<hr>
+<p><em>最后更新：2026-09-11</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/06_DEPLOY_部署/DEPLOY/[DEPLOY-0101] PORTABLE.html"><div class="dir">← 上一篇</div><div class="ttl">Khy-OS 便携化使用指南</div></a><a class="next" href="../../../docs/06_DEPLOY_部署/DEPLOY/[DEPLOY-0103] CPA集成快速指南.html"><div class="dir">下一篇 →</div><div class="ttl">[DEPLOY-0103] CPA 集成快速指南（与 provider-hub 集成版）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/DEPLOY/[DEPLOY-0102] CPA+NewAPI分层架构快速指南.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

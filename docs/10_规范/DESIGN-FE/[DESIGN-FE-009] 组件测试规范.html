@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-FE-009] 组件测试规范.md -->
+<title>[DESIGN-FE-009] 组件测试规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-FE<span class="sep">›</span>[DESIGN-FE-009] 组件测试规范</div>
+      <header class="hero reveal"><h1>[DESIGN-FE-009] 组件测试规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-fe-009-组件测试规范">[DESIGN-FE-009] 组件测试规范</a></li><li class="lvl-3"><a href="#4-1-单元测试">4.1 单元测试</a></li><li class="lvl-3"><a href="#4-2-集成测试">4.2 集成测试</a></li><li class="lvl-3"><a href="#4-3-视觉回归测试">4.3 视觉回归测试</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-fe-009-组件测试规范">[DESIGN-FE-009] 组件测试规范<a class="anchor" href="#design-fe-009-组件测试规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：单元测试 / 集成测试 / 视觉回归测试三层要求。<br><strong>隶属</strong>：本文是 [<code>[DESIGN-FE-002]</code> 前端组件库规范]([DESIGN-FE-002] 前端组件库规范.md) 的<strong>子篇</strong>；主篇是唯一入口与 scope 裁决真源，本文只承载细则。<br><strong>状态</strong>：随主篇——主篇 §0 声明为「目标态、非现状」，本文同样在组件库真正落地后才生效；在此之前一切以 [<code>[DESIGN-FE-001]</code> 前端页面规范]([DESIGN-FE-001] 前端页面规范.md) 为准。</p></blockquote>
+<hr>
+<h3 id="4-1-单元测试">4.1 单元测试<a class="anchor" href="#4-1-单元测试" aria-label="锚点">#</a></h3>
+<p><strong>测试文件结构</strong>：</p>
+<pre><code>components/
+├── KhyButton.vue
+├── KhyButton.test.js
+├── KhyInput.vue
+└── KhyInput.test.js</code></pre>
+<p><strong>测试用例模板</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">import</span> { describe, it, expect, vi } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;vitest&#x27;</span>;
+<span class="hljs-keyword">import</span> { mount } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;@vue/test-utils&#x27;</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KhyButton</span> <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;../KhyButton.vue&#x27;</span>;
+
+<span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;KhyButton&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-comment">// 基础渲染</span>
+  <span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;rendering&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;renders correctly with default props&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">slots</span>: { <span class="hljs-attr">default</span>: <span class="hljs-string">&#x27;Button&#x27;</span> }
+      });
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">text</span>()).<span class="hljs-title function_">toBe</span>(<span class="hljs-string">&#x27;Button&#x27;</span>);
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">classes</span>()).<span class="hljs-title function_">toContain</span>(<span class="hljs-string">&#x27;khy-button&#x27;</span>);
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">classes</span>()).<span class="hljs-title function_">toContain</span>(<span class="hljs-string">&#x27;khy-button--default&#x27;</span>);
+    });
+    
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;renders with variant&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">props</span>: { <span class="hljs-attr">variant</span>: <span class="hljs-string">&#x27;primary&#x27;</span> },
+        <span class="hljs-attr">slots</span>: { <span class="hljs-attr">default</span>: <span class="hljs-string">&#x27;Button&#x27;</span> }
+      });
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">classes</span>()).<span class="hljs-title function_">toContain</span>(<span class="hljs-string">&#x27;khy-button--primary&#x27;</span>);
+    });
+    
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;renders with size&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">props</span>: { <span class="hljs-attr">size</span>: <span class="hljs-string">&#x27;lg&#x27;</span> },
+        <span class="hljs-attr">slots</span>: { <span class="hljs-attr">default</span>: <span class="hljs-string">&#x27;Button&#x27;</span> }
+      });
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">classes</span>()).<span class="hljs-title function_">toContain</span>(<span class="hljs-string">&#x27;khy-button--lg&#x27;</span>);
+    });
+  });
+  
+  <span class="hljs-comment">// Props 验证</span>
+  <span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;props&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;validates variant prop&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-keyword">const</span> consoleSpy = vi.<span class="hljs-title function_">spyOn</span>(<span class="hljs-variable language_">console</span>, <span class="hljs-string">&#x27;warn&#x27;</span>).<span class="hljs-title function_">mockImplementation</span>(<span class="hljs-function">() =&gt;</span> {});
+      
+      <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">props</span>: { <span class="hljs-attr">variant</span>: <span class="hljs-string">&#x27;invalid&#x27;</span> }
+      });
+      
+      <span class="hljs-title function_">expect</span>(consoleSpy).<span class="hljs-title function_">toHaveBeenCalled</span>();
+      consoleSpy.<span class="hljs-title function_">mockRestore</span>();
+    });
+  });
+  
+  <span class="hljs-comment">// 事件处理</span>
+  <span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;events&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;emits click event&#x27;</span>, <span class="hljs-title function_">async</span> () =&gt; {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>);
+      
+      <span class="hljs-keyword">await</span> wrapper.<span class="hljs-title function_">trigger</span>(<span class="hljs-string">&#x27;click&#x27;</span>);
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">emitted</span>(<span class="hljs-string">&#x27;click&#x27;</span>)).<span class="hljs-title function_">toBeTruthy</span>();
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">emitted</span>(<span class="hljs-string">&#x27;click&#x27;</span>)[<span class="hljs-number">0</span>][<span class="hljs-number">0</span>]).<span class="hljs-title function_">toBeInstanceOf</span>(<span class="hljs-title class_">MouseEvent</span>);
+    });
+    
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;does not emit click when disabled&#x27;</span>, <span class="hljs-title function_">async</span> () =&gt; {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">props</span>: { <span class="hljs-attr">disabled</span>: <span class="hljs-literal">true</span> }
+      });
+      
+      <span class="hljs-keyword">await</span> wrapper.<span class="hljs-title function_">trigger</span>(<span class="hljs-string">&#x27;click&#x27;</span>);
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">emitted</span>(<span class="hljs-string">&#x27;click&#x27;</span>)).<span class="hljs-title function_">toBeFalsy</span>();
+    });
+    
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;does not emit click when loading&#x27;</span>, <span class="hljs-title function_">async</span> () =&gt; {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">props</span>: { <span class="hljs-attr">loading</span>: <span class="hljs-literal">true</span> }
+      });
+      
+      <span class="hljs-keyword">await</span> wrapper.<span class="hljs-title function_">trigger</span>(<span class="hljs-string">&#x27;click&#x27;</span>);
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">emitted</span>(<span class="hljs-string">&#x27;click&#x27;</span>)).<span class="hljs-title function_">toBeFalsy</span>();
+    });
+  });
+  
+  <span class="hljs-comment">// 插槽</span>
+  <span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;slots&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;renders default slot&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">slots</span>: { <span class="hljs-attr">default</span>: <span class="hljs-string">&#x27;Custom Content&#x27;</span> }
+      });
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">text</span>()).<span class="hljs-title function_">toBe</span>(<span class="hljs-string">&#x27;Custom Content&#x27;</span>);
+    });
+    
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;renders icon slot&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">slots</span>: {
+          <span class="hljs-attr">icon</span>: <span class="hljs-string">&#x27;&lt;span class=&quot;icon&quot;&gt;🔍&lt;/span&gt;&#x27;</span>
+        }
+      });
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">find</span>(<span class="hljs-string">&#x27;.icon&#x27;</span>).<span class="hljs-title function_">exists</span>()).<span class="hljs-title function_">toBe</span>(<span class="hljs-literal">true</span>);
+    });
+  });
+  
+  <span class="hljs-comment">// 可访问性</span>
+  <span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;accessibility&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;has correct aria attributes when disabled&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">props</span>: { <span class="hljs-attr">disabled</span>: <span class="hljs-literal">true</span> }
+      });
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">attributes</span>(<span class="hljs-string">&#x27;disabled&#x27;</span>)).<span class="hljs-title function_">toBeDefined</span>();
+    });
+    
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;has correct aria attributes when loading&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">props</span>: { <span class="hljs-attr">loading</span>: <span class="hljs-literal">true</span> }
+      });
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">attributes</span>(<span class="hljs-string">&#x27;aria-busy&#x27;</span>)).<span class="hljs-title function_">toBe</span>(<span class="hljs-string">&#x27;true&#x27;</span>);
+    });
+  });
+});</code></pre>
+<h3 id="4-2-集成测试">4.2 集成测试<a class="anchor" href="#4-2-集成测试" aria-label="锚点">#</a></h3>
+<p><strong>页面级测试</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">import</span> { describe, it, expect } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;vitest&#x27;</span>;
+<span class="hljs-keyword">import</span> { mount } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;@vue/test-utils&#x27;</span>;
+<span class="hljs-keyword">import</span> { createTestingPinia } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;@pinia/testing&#x27;</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">UserProfile</span> <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;../UserProfile.vue&#x27;</span>;
+
+<span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;UserProfile&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-keyword">const</span> <span class="hljs-title function_">createWrapper</span> = (<span class="hljs-params">options = {}</span>) =&gt; {
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">UserProfile</span>, {
+      <span class="hljs-attr">global</span>: {
+        <span class="hljs-attr">plugins</span>: [
+          <span class="hljs-title function_">createTestingPinia</span>({
+            <span class="hljs-attr">initialState</span>: {
+              <span class="hljs-attr">user</span>: {
+                <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;John Doe&#x27;</span>,
+                <span class="hljs-attr">email</span>: <span class="hljs-string">&#x27;john@example.com&#x27;</span>,
+                <span class="hljs-attr">avatar</span>: <span class="hljs-string">&#x27;https://example.com/avatar.jpg&#x27;</span>
+              }
+            }
+          })
+        ],
+        <span class="hljs-attr">stubs</span>: {
+          <span class="hljs-title class_">KhyButton</span>: <span class="hljs-literal">false</span>,
+          <span class="hljs-title class_">KhyCard</span>: <span class="hljs-literal">false</span>
+        }
+      },
+      ...options
+    });
+  };
+  
+  <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;displays user information&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">createWrapper</span>();
+    
+    <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">text</span>()).<span class="hljs-title function_">toContain</span>(<span class="hljs-string">&#x27;John Doe&#x27;</span>);
+    <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">text</span>()).<span class="hljs-title function_">toContain</span>(<span class="hljs-string">&#x27;john@example.com&#x27;</span>);
+  });
+  
+  <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;renders avatar&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">createWrapper</span>();
+    
+    <span class="hljs-keyword">const</span> avatar = wrapper.<span class="hljs-title function_">find</span>(<span class="hljs-string">&#x27;.user-avatar&#x27;</span>);
+    <span class="hljs-title function_">expect</span>(avatar.<span class="hljs-title function_">exists</span>()).<span class="hljs-title function_">toBe</span>(<span class="hljs-literal">true</span>);
+    <span class="hljs-title function_">expect</span>(avatar.<span class="hljs-title function_">attributes</span>(<span class="hljs-string">&#x27;src&#x27;</span>)).<span class="hljs-title function_">toBe</span>(<span class="hljs-string">&#x27;https://example.com/avatar.jpg&#x27;</span>);
+  });
+  
+  <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;emits logout event&#x27;</span>, <span class="hljs-title function_">async</span> () =&gt; {
+    <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">createWrapper</span>();
+    
+    <span class="hljs-keyword">await</span> wrapper.<span class="hljs-title function_">find</span>(<span class="hljs-string">&#x27;[data-testid=&quot;logout-button&quot;]&#x27;</span>).<span class="hljs-title function_">trigger</span>(<span class="hljs-string">&#x27;click&#x27;</span>);
+    
+    <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">emitted</span>(<span class="hljs-string">&#x27;logout&#x27;</span>)).<span class="hljs-title function_">toBeTruthy</span>();
+  });
+});</code></pre>
+<h3 id="4-3-视觉回归测试">4.3 视觉回归测试<a class="anchor" href="#4-3-视觉回归测试" aria-label="锚点">#</a></h3>
+<p><strong>Storybook 配置</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// Button.stories.js</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+  <span class="hljs-attr">title</span>: <span class="hljs-string">&#x27;Components/Base/KhyButton&#x27;</span>,
+  <span class="hljs-attr">component</span>: <span class="hljs-title class_">KhyButton</span>,
+  <span class="hljs-attr">argTypes</span>: {
+    <span class="hljs-attr">variant</span>: {
+      <span class="hljs-attr">control</span>: { <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;select&#x27;</span> },
+      <span class="hljs-attr">options</span>: [<span class="hljs-string">&#x27;default&#x27;</span>, <span class="hljs-string">&#x27;primary&#x27;</span>, <span class="hljs-string">&#x27;success&#x27;</span>, <span class="hljs-string">&#x27;warning&#x27;</span>, <span class="hljs-string">&#x27;danger&#x27;</span>, <span class="hljs-string">&#x27;ghost&#x27;</span>]
+    },
+    <span class="hljs-attr">size</span>: {
+      <span class="hljs-attr">control</span>: { <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;select&#x27;</span> },
+      <span class="hljs-attr">options</span>: [<span class="hljs-string">&#x27;sm&#x27;</span>, <span class="hljs-string">&#x27;md&#x27;</span>, <span class="hljs-string">&#x27;lg&#x27;</span>]
+    },
+    <span class="hljs-attr">disabled</span>: { <span class="hljs-attr">control</span>: <span class="hljs-string">&#x27;boolean&#x27;</span> },
+    <span class="hljs-attr">loading</span>: { <span class="hljs-attr">control</span>: <span class="hljs-string">&#x27;boolean&#x27;</span> }
+  }
+};
+
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">Template</span> = (<span class="hljs-params">args</span>) =&gt; ({
+  <span class="hljs-attr">components</span>: { <span class="hljs-title class_">KhyButton</span> },
+  <span class="hljs-title function_">setup</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-keyword">return</span> { args };
+  },
+  <span class="hljs-attr">template</span>: <span class="hljs-string">&#x27;&lt;KhyButton v-bind=&quot;args&quot;&gt;{{ args.default }}&lt;/KhyButton&gt;&#x27;</span>
+});
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-title class_">Default</span> = <span class="hljs-title class_">Template</span>.<span class="hljs-title function_">bind</span>({});
+<span class="hljs-title class_">Default</span>.<span class="hljs-property">args</span> = {
+  <span class="hljs-attr">default</span>: <span class="hljs-string">&#x27;Button&#x27;</span>,
+  <span class="hljs-attr">variant</span>: <span class="hljs-string">&#x27;default&#x27;</span>
+};
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-title class_">Primary</span> = <span class="hljs-title class_">Template</span>.<span class="hljs-title function_">bind</span>({});
+<span class="hljs-title class_">Primary</span>.<span class="hljs-property">args</span> = {
+  <span class="hljs-attr">default</span>: <span class="hljs-string">&#x27;Button&#x27;</span>,
+  <span class="hljs-attr">variant</span>: <span class="hljs-string">&#x27;primary&#x27;</span>
+};
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-title class_">Disabled</span> = <span class="hljs-title class_">Template</span>.<span class="hljs-title function_">bind</span>({});
+<span class="hljs-title class_">Disabled</span>.<span class="hljs-property">args</span> = {
+  <span class="hljs-attr">default</span>: <span class="hljs-string">&#x27;Button&#x27;</span>,
+  <span class="hljs-attr">variant</span>: <span class="hljs-string">&#x27;primary&#x27;</span>,
+  <span class="hljs-attr">disabled</span>: <span class="hljs-literal">true</span>
+};
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-title class_">Loading</span> = <span class="hljs-title class_">Template</span>.<span class="hljs-title function_">bind</span>({});
+<span class="hljs-title class_">Loading</span>.<span class="hljs-property">args</span> = {
+  <span class="hljs-attr">default</span>: <span class="hljs-string">&#x27;Button&#x27;</span>,
+  <span class="hljs-attr">variant</span>: <span class="hljs-string">&#x27;primary&#x27;</span>,
+  <span class="hljs-attr">loading</span>: <span class="hljs-literal">true</span>
+};</code></pre>
+<hr>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-FE/[DESIGN-FE-008] 组件API设计-数据组件.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-FE-008] 组件 API 设计 · 数据组件</div></a><a class="next" href="../../../docs/10_规范/DESIGN-FE/[DESIGN-FE-010] 组件文档与发布规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-FE-010] 组件文档与发布规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-FE/[DESIGN-FE-009] 组件测试规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

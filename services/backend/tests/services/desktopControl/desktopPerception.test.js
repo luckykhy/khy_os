@@ -8,11 +8,11 @@
  * 「按元素引用点击/填表」、工具新动作路由。全程零真实截屏/无障碍调用——execFile/inspect 注入替身。
  */
 
-const registry = require('../../../src/services/desktopControl/backendRegistry');
-const detector = require('../../../src/services/desktopControl/backendDetector');
-const elementModel = require('../../../src/services/desktopControl/elementModel');
-const uiInspector = require('../../../src/services/desktopControl/uiInspector');
-const safetyGate = require('../../../src/services/desktopControl/safetyGate');
+const registry = require('../../../src/services/domain/desktop/desktopControl/backendRegistry.js');
+const detector = require('../../../src/services/domain/desktop/desktopControl/backendDetector.js');
+const elementModel = require('../../../src/services/domain/desktop/desktopControl/elementModel.js');
+const uiInspector = require('../../../src/services/domain/desktop/desktopControl/uiInspector.js');
+const safetyGate = require('../../../src/services/domain/desktop/desktopControl/safetyGate.js');
 const { DesktopController } = require('../../../src/services/desktopControl');
 const DesktopControlTool = require('../../../src/tools/DesktopControlTool');
 

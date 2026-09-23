@@ -97,6 +97,20 @@ function topicBarAnimMs(env = process.env) {
 const INK_THROTTLE_MS = 34;
 
 /**
+ * Per-frame render-time budget (AGENTS.md §0.3: single render < 16ms, the 60fps
+ * floor). This is the SSOT for the frame-budget guard that consumes ink's
+ * `onRender({ renderTime })` metric — frameBudget.js reads it here so the
+ * documented floor and the enforcement share one source.
+ *
+ * Env override KHY_TUI_FRAME_BUDGET_MS accepts a finite positive number; garbage
+ * falls back to 16. LOW_POWER does NOT relax it — it is a correctness floor
+ * (a frame over 16ms means the user perceives jank), not a cadence knob.
+ */
+function frameBudgetMs(env = process.env) {
+  return _pos(env && env.KHY_TUI_FRAME_BUDGET_MS, 16);
+}
+
+/**
  * 「挂起 live UI → app.clear()」之间的沉降等待(ms)。默认 50ms。
  *
  * 背景(goal「/命令后出现输入框残影」):壳在跑交互子命令前会 setInputActive(false) 让 live 区
@@ -117,4 +131,4 @@ function suspendSettleMs(env = process.env) {
   return _pos(env && env.KHY_TUI_SUSPEND_SETTLE_MS, INK_THROTTLE_MS + 16);
 }
 
-module.exports = { spinnerFrameMs, heartbeatMs, topicBarAnimMs, suspendSettleMs, INK_THROTTLE_MS };
+module.exports = { spinnerFrameMs, heartbeatMs, topicBarAnimMs, suspendSettleMs, frameBudgetMs, INK_THROTTLE_MS };

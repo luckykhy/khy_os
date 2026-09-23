@@ -272,7 +272,7 @@ Example patch format:
     };
   }
 
-  async execute(params) {
+  async execute(params, context) {
     const { patch } = params;
     if (!patch || typeof patch !== 'string') {
       return { success: false, error: 'Missing or invalid patch parameter' };
@@ -316,6 +316,18 @@ Example patch format:
       for (const [abs, content] of backups) {
         if (content !== null) {
           fh.takeSnapshot(abs, { reason: 'ApplyPatchTool', content });
+        }
+      }
+      // Turn-grouped rollback manifest (DESIGN-ARCH-096 §2-A): a patch can touch
+      // MANY files in one turn — record each (pre-patch content) so a single
+      // /turn-rollback atomically restores the whole batch (zero-write on conflict).
+      const _turnId = context && context.traceContext && context.traceContext.turnId;
+      if (_turnId) {
+        const tcs = require('../../services/turnCheckpointService');
+        for (const [abs, content] of backups) {
+          if (content !== null) {
+            tcs.recordMutatedFile(_turnId, abs, { reason: 'ApplyPatchTool', content });
+          }
         }
       }
     } catch {

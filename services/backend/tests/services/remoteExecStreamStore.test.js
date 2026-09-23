@@ -3,7 +3,7 @@
 const {
   createRemoteExecStreamStore,
   buildRemoteExecStreamRequestFingerprint,
-} = require('../../src/services/remote/remoteExecStreamStore');
+} = require('../../src/services/domain/network/remote/remoteExecStreamStore.js');
 
 describe('RemoteExecStreamStore', () => {
   const originalMaxEvents = process.env.KHY_REMOTE_SSH_MAX_STREAM_EVENTS;

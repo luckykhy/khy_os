@@ -12,6 +12,9 @@
  * 回落今天行为(仅对话回溯,或无操作)。React 与 IO 胶水留在 App.js / useQueryBridge.js。
  */
 
+// 显示列口径的唯一真源(码点安全截断,绝不劈开代理对)。
+const { clipCell } = require('./wrapCell');
+
 const REWIND_FLAG = 'KHY_ESC_REWIND'; // 主闸:双击 ESC 回溯,默认开
 const CHECKPOINT_FLAG = 'KHY_TUI_TURN_CHECKPOINT'; // 每轮前自动检查点(代码回溯前提),默认开
 const HINT_FLAG = 'KHY_ESC_REWIND_HINT'; // 显示子闸:可恢复错误后附「双击 Esc 回溯」提示,默认开
@@ -222,10 +225,10 @@ function selectLastUserTarget(messages) {
  * 与 Phase1 selectLastUserTarget 走同一条回溯管线(rankFromEnd 是跨两存储稳定键)。
  *
  * @param {Array<object>} messages
- * @param {number} [previewLen=80] 预览文本最大字符数(超出截断加省略号)
+ * @param {number} [previewCols=80] 预览文本最大**显示列**(CJK 一字两列;超出截断加省略号)
  * @returns {Array<{idx:number, content:string, preview:string, checkpointId:(string|null), rankFromEnd:number}>}
  */
-function listUserTargets(messages, previewLen = 80) {
+function listUserTargets(messages, previewCols = 80) {
   if (!Array.isArray(messages)) {
     return [];
   }
@@ -239,8 +242,12 @@ function listUserTargets(messages, previewLen = 80) {
     rank += 1;
     const content = String(m.content == null ? '' : m.content);
     const flat = content.replace(/\s+/g, ' ').trim();
-    const lim = Math.max(8, Math.floor(Number(previewLen)) || 80);
-    const preview = flat.length > lim ? `${flat.slice(0, lim - 1)}…` : flat;
+    const lim = Math.max(8, Math.floor(Number(previewCols)) || 80);
+    // Display columns, not code units: a CJK turn capped at 80 *characters* is
+    // 160 columns wide and ink wraps it, which is what blew the picker's row
+    // budget past the terminal (BUG-54). clipCell also never cuts a surrogate
+    // pair in half.
+    const preview = clipCell(flat, lim);
     out.push({ idx: i, content, preview, checkpointId: m.checkpointId || null, rankFromEnd: rank });
   }
   return out;

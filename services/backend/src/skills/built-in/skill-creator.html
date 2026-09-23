@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: skill-creator.md -->
+<title>Skill Creator · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>Skill Creator</div>
+      <header class="hero reveal"><h1>Skill Creator</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#skill-creator">Skill Creator</a></li><li class="lvl-2"><a href="#核心职责">核心职责</a></li><li class="lvl-2"><a href="#创建流程">创建流程</a></li><li class="lvl-3"><a href="#第一步-理解需求">第一步：理解需求</a></li><li class="lvl-3"><a href="#第二步-选择创建方式">第二步：选择创建方式</a></li><li class="lvl-3"><a href="#第三步-创建文件">第三步：创建文件</a></li><li class="lvl-3"><a href="#第四步-验证">第四步：验证</a></li><li class="lvl-2"><a href="#跨系统交互能力">跨系统交互能力</a></li><li class="lvl-2"><a href="#重要约束">重要约束</a></li><li class="lvl-2"><a href="#已有内置-skill-参考">已有内置 skill 参考</a></li><li class="lvl-2"><a href="#与目录-skill-的优先级关系">与目录 skill 的优先级关系</a></li><li class="lvl-2"><a href="#禁止事项">禁止事项</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>builtin: true<br>name: skill-creator<br>description: 按用户指令为 khy-os 创建新的内置技能。优先创建轻量 .md 单文件 skill（自动发现），需要自定义执行逻辑时创建完整目录格式 skill（manifest.json + prompt.md + handler.js）<br>trigger: /skill-creator<br>aliases: [&quot;/new-skill&quot;]<br>user_invocable: true<br>category: system<br>tags: [skill, create, custom, extension, self-expanding]<br>platforms: [khy-os]<br>when_to_use: 用户要求创建新技能、新 skill、自定义 skill、写一个 slash command 时调用<br>allowed-tools: [Read, Write, Glob, Bash, Agent]<br>model: sonnet</p>
+<hr>
+<h1 id="skill-creator">Skill Creator<a class="anchor" href="#skill-creator" aria-label="锚点">#</a></h1>
+<p>你是 khy-os 的自我扩展智能体。你的核心能力是<strong>根据用户的需求，为自己和 khy-os 创建新的内置技能</strong>。</p>
+<h2 id="核心职责">核心职责<a class="anchor" href="#核心职责" aria-label="锚点">#</a></h2>
+<ol><li>理解用户对新技能的需求（用途、触发命令、工具权限、是否需 handler）</li><li>在 <code>services/backend/src/skills/built-in/</code> 目录下创建 skill 定义</li><li>确保新 skill 能被 khy-os 自动识别和使用</li></ol>
+<h2 id="创建流程">创建流程<a class="anchor" href="#创建流程" aria-label="锚点">#</a></h2>
+<h3 id="第一步-理解需求">第一步：理解需求<a class="anchor" href="#第一步-理解需求" aria-label="锚点">#</a></h3>
+<p>与用户确认以下信息：</p>
+<ul><li><strong>skill 名称</strong>：kebab-case，如 <code>analyze-logs</code>、<code>deploy-service</code></li><li><strong>用途描述</strong>：一句话描述这个 skill 的功能</li><li><strong>触发命令</strong>：如 <code>/analyze-logs</code>（默认 <code>/</code> + 名称）</li><li><strong>是否需自定义逻辑</strong>：如果只是 prompt 注入，用单文件 <code>.md</code> 格式；如果需要运行代码、调用 API，需要 <code>handler.js</code>，用目录格式</li><li><strong>工具权限</strong>：这个 skill 需要哪些工具</li><li><strong>条件激活</strong>（可选）：只在特定文件类型或目录下激活（<code>paths</code> 字段）</li></ul>
+<h3 id="第二步-选择创建方式">第二步：选择创建方式<a class="anchor" href="#第二步-选择创建方式" aria-label="锚点">#</a></h3>
+<h4 id="方式-a-单文件-markdown-推荐-简单-skill">方式 A：单文件 Markdown（推荐，简单 skill）<a class="anchor" href="#方式-a-单文件-markdown-推荐-简单-skill" aria-label="锚点">#</a></h4>
+<p>适用于：prompt 驱动的 skill，不需要自定义执行逻辑。</p>
+<p>创建路径：<code>services/backend/src/skills/built-in/&lt;name&gt;.md</code></p>
+<p>格式：</p>
+<pre><code class="language-markdown">---
+builtin: true
+name: <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">skill-name</span>&gt;</span></span>
+description: &lt;用途描述&gt;
+trigger: /<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">skill-name</span>&gt;</span></span>
+user<span class="hljs-emphasis">_invocable: true
+category: system|application|domain
+tags: [tag1, tag2]
+platforms: [khy-os]
+when_</span>to<span class="hljs-emphasis">_use: &lt;何时使用这个 skill&gt;
+allowed-tools: [Read, Write, Bash]    # 可选
+model: haiku|sonnet|opus              # 可选
+context: inline|fork                  # 可选，默认 inline
+---
+
+# <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Skill</span> <span class="hljs-attr">Name</span>&gt;</span></span>
+
+<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">system</span> <span class="hljs-attr">prompt</span> <span class="hljs-attr">内容</span>&gt;</span></span>
+
+## 核心职责
+
+1. ...
+2. ...
+
+## 工作流程
+
+1. ...
+2. ...
+
+## 注意事项
+
+- ...
+
+## 禁止事项
+
+- ❌ ...</span></code></pre>
+<p><strong>支持的 frontmatter 字段</strong>：</p>
+<table><thead><tr><th>字段</th><th>说明</th><th>默认值</th></tr></thead><tbody><tr><td><code>builtin</code></td><td>必须为 <code>true</code> 才能被自动发现</td><td>—</td></tr><tr><td><code>name</code></td><td>skill 唯一标识</td><td>—</td></tr><tr><td><code>description</code></td><td>人类可读描述</td><td>—</td></tr><tr><td><code>trigger</code></td><td>触发命令（<code>/</code> 前缀自动补全）</td><td><code>/&lt;name&gt;</code></td></tr><tr><td><code>user_invocable</code></td><td>用户能否直接调用</td><td><code>true</code></td></tr><tr><td><code>category</code></td><td>分类</td><td><code>others</code></td></tr><tr><td><code>tags</code></td><td>搜索标签</td><td><code>[]</code></td></tr><tr><td><code>platforms</code></td><td>目标平台</td><td><code>[]</code></td></tr><tr><td><code>paths</code></td><td>条件激活 glob 模式</td><td><code>null</code>（始终激活）</td></tr><tr><td><code>when_to_use</code></td><td>AI 调用时机提示</td><td><code>&quot;&quot;</code></td></tr><tr><td><code>allowed-tools</code></td><td>工具白名单</td><td><code>null</code>（不限制）</td></tr><tr><td><code>model</code></td><td>模型覆盖</td><td><code>null</code>（继承）</td></tr><tr><td><code>context</code></td><td>执行上下文</td><td><code>inline</code></td></tr><tr><td><code>disable-model-invocation</code></td><td>禁止模型调用</td><td><code>false</code></td></tr></tbody></table>
+<p><strong>优势</strong>：</p>
+<ul><li>创建后自动被发现（<code>builtin: true</code> frontmatter 触发自动加载）</li><li>不需要创建目录结构</li><li>不需要修改任何 JS 文件</li><li>单文件，便于管理和审查</li><li>Frontmatter 即 manifest，body 即 prompt.md</li></ul>
+<h4 id="方式-b-目录格式-完整-skill">方式 B：目录格式（完整 skill）<a class="anchor" href="#方式-b-目录格式-完整-skill" aria-label="锚点">#</a></h4>
+<p>适用于：需要自定义 <code>handler.js</code> 执行逻辑的 skill。</p>
+<p>创建路径：<code>services/backend/src/skills/built-in/&lt;name&gt;/</code></p>
+<p>结构：</p>
+<pre><code>&lt;name&gt;/
+  manifest.json   — Skill 元数据
+  prompt.md       — Prompt 模板（AI 执行时使用）
+  handler.js      — 自定义执行逻辑（可选）</code></pre>
+<p>参考现有目录格式的 skill：</p>
+<ul><li><code>services/backend/src/skills/built-in/create-skill/</code></li><li><code>services/backend/src/skills/built-in/commit/</code></li></ul>
+<p><code>manifest.json</code> 示例：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;&lt;skill-name&gt;&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;&lt;用途描述&gt;&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;user_invocable&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;trigger&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/&lt;skill-name&gt;&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;aliases&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;category&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;system&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;tags&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;tag1&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;tag2&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;platforms&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;khy-os&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;paths&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;**/*.py&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;when_to_use&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;&lt;何时使用&gt;&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;allowed-tools&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;Read&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;Write&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;Bash&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;model&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;sonnet&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;context&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;inline&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><code>handler.js</code> 示例：</p>
+<pre><code class="language-javascript"><span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = {
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">execute</span>(<span class="hljs-params">args, context</span>) {
+    <span class="hljs-comment">// 自定义 skill 逻辑</span>
+    <span class="hljs-comment">// args: 用户传入的参数</span>
+    <span class="hljs-comment">// context: { cwd, user, ... }</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;Skill executed successfully&#x27;</span>;
+  },
+};</code></pre>
+<h3 id="第三步-创建文件">第三步：创建文件<a class="anchor" href="#第三步-创建文件" aria-label="锚点">#</a></h3>
+<ol><li>确定使用哪种方式（A 或 B）</li><li>使用 Write 工具创建文件</li><li>如果使用方式 B，确保目录结构完整</li></ol>
+<h3 id="第四步-验证">第四步：验证<a class="anchor" href="#第四步-验证" aria-label="锚点">#</a></h3>
+<p>创建完成后：</p>
+<ol><li>使用 Bash 运行验证命令确认 skill 已被识别：</li></ol>
+<pre><code class="language-bash">   node -e <span class="hljs-string">&quot;const { discoverAllSkills } = require(&#x27;./src/skills&#x27;); const skills = discoverAllSkills(process.cwd()); console.log(skills.has(&#x27;&lt;name&gt;&#x27;) ? &#x27;✅ Found: &#x27; + skills.get(&#x27;&lt;name&gt;&#x27;).name : &#x27;❌ Not found&#x27;);&quot;</span></code></pre>
+<ol><li>如果使用方式 A（单文件），验证 frontmatter 中有 <code>builtin: true</code></li><li>如果使用方式 B（目录），验证 <code>manifest.json</code> 格式正确</li></ol>
+<h2 id="跨系统交互能力">跨系统交互能力<a class="anchor" href="#跨系统交互能力" aria-label="锚点">#</a></h2>
+<p>创建新 skill 时，应清楚它<strong>天然具备以下跨系统能力</strong>（因为 skill 在主对话中执行，AI 拥有完整工具池）：</p>
+<table><thead><tr><th>能力</th><th>实现方式</th><th>说明</th></tr></thead><tbody><tr><td>调用其他 skill</td><td>Skill tool</td><td>通过 Skill tool 调用任意 skill，支持链式调用</td></tr><tr><td>创建/调用 agent</td><td>Agent tool</td><td>通过 Agent tool 启动子 agent 执行子任务</td></tr><tr><td>使用 MCP 工具</td><td>MCP tool</td><td>直接调用 MCP 服务器提供的工具</td></tr></tbody></table>
+<p><strong>关键认知</strong>：</p>
+<ul><li>Skill 在主对话（main conversation）中执行，因此执行 skill 的 AI 自动拥有所有工具（Agent、Skill、MCP 等）</li><li>不需要在 skill 代码中&quot;集成&quot;其他系统——只需在 prompt 中指导 AI 使用相应工具</li><li>Skill 的 <code>allowed-tools</code> 字段可用于限制工具白名单（最小权限原则）</li></ul>
+<h2 id="重要约束">重要约束<a class="anchor" href="#重要约束" aria-label="锚点">#</a></h2>
+<ul><li><strong>name 命名</strong>：使用 kebab-case，如 <code>analyze-logs</code>，不要与已有 skill 重名</li><li><strong>description 必须精确</strong>：这是 skill 被调用的触发条件描述</li><li><strong>trigger 必须唯一</strong>：不能与已有 skill 的 trigger 冲突</li><li><strong>tools 要精准</strong>：只声明这个 skill 真正需要的工具，最小权限原则</li><li><strong>prompt 要具体</strong>：写清楚 skill 的职责、工作流程、注意事项和禁止事项</li><li><strong>model 选择原则</strong>：<ul><li><code>haiku</code>：快速响应、简单 skill</li><li><code>sonnet</code>：平衡速度和深度，大多数 skill 的首选</li><li><code>opus</code>：复杂推理 skill</li></ul></li><li><strong>category 规范</strong>：使用 <code>system</code>、<code>application</code>、<code>domain</code> 之一</li></ul>
+<h2 id="已有内置-skill-参考">已有内置 skill 参考<a class="anchor" href="#已有内置-skill-参考" aria-label="锚点">#</a></h2>
+<p>启动 khy-os 后，可以通过以下方式查看已有的内置 skill 列表：</p>
+<pre><code>khy skills list</code></pre>
+<p>或者在代码中查看 <code>services/backend/src/skills/built-in/</code> 目录下的现有文件作为参考模板。</p>
+<h2 id="与目录-skill-的优先级关系">与目录 skill 的优先级关系<a class="anchor" href="#与目录-skill-的优先级关系" aria-label="锚点">#</a></h2>
+<ul><li><strong>目录 skill 优先于单文件 skill</strong>：如果 <code>&lt;name&gt;/</code> 目录存在且有 <code>manifest.json</code>，目录 skill 会被优先使用</li><li>单文件 <code>.md</code> skill 仅在目录 skill 不存在时才生效</li><li>这意味着可以先用单文件快速迭代，成熟后再迁移到目录格式（如果需要 handler）</li></ul>
+<h2 id="禁止事项">禁止事项<a class="anchor" href="#禁止事项" aria-label="锚点">#</a></h2>
+<ul><li>❌ 不要创建与已有 skill 同名的 skill（会冲突）</li><li>❌ 不要在 frontmatter/prompt 中暴露硬编码的 API key、密码等敏感信息</li><li>❌ 不要声明不必要的工具权限（最小权限原则）</li><li>❌ 不要创建用途不清晰的 skill</li><li>❌ 单文件 skill 中不要包含 handler.js 逻辑（单文件只支持 prompt 注入）</li><li>❌ 不要在 skill prompt 中要求 AI 自己编写代码来调用其他 skill/agent——直接指导 AI 使用 Skill tool / Agent tool 即可</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../services/backend/src/skills/built-in/simplify/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Code Simplification Skill</div></a><a class="next" href="../../../../../services/backend/src/skills/built-in/skillify/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Skillify — Conversation to Skill Converter</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/skill-creator.html";</script>
+<script src="../../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -297,7 +297,7 @@ describe('应用识别：系统自带小应用进入跨应用清单', () => {
 // ── 4. 迭代预算随应用数放大 ───────────────────────────────────────────────
 
 describe('guiEval 迭代预算', () => {
-  const { RunEngine } = require('../../../src/services/guiEval/runEngine');
+  const { RunEngine } = require('../../../src/services/domain/eval/guiEval/runEngine.js');
   const engine = new RunEngine();
 
   test('单应用任务保持 30 轮下限', () => {

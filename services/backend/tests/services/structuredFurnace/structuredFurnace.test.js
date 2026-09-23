@@ -17,10 +17,10 @@ const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const furnace = require('../../../src/services/structuredFurnace');
-const { EntityRegistry } = require('../../../src/services/structuredFurnace/entityRegistry');
-const { TaskGraph } = require('../../../src/services/structuredFurnace/taskGraph');
-const forgeSchema = require('../../../src/services/structuredFurnace/forgeSchema');
-const S = require('../../../src/services/metaplan/constraintStrategy');
+const { EntityRegistry } = require('../../../src/services/domain/structured/structuredFurnace/entityRegistry.js');
+const { TaskGraph } = require('../../../src/services/domain/structured/structuredFurnace/taskGraph.js');
+const forgeSchema = require('../../../src/services/domain/structured/structuredFurnace/forgeSchema.js');
+const S = require('../../../src/services/domain/project/metaplan/constraintStrategy.js');
 
 describe('§3.1 绝对前置拦截 + 封印守卫', () => {
   test('intercept 产出封印信封，assertForged 放行', () => {

@@ -97,8 +97,8 @@ onBeforeUnmount(clearTimers);
 .global-progress__bar {
   height: 100%;
   width: 0;
-  background: var(--el-color-primary, #409eff);
-  box-shadow: 0 0 6px var(--el-color-primary-light-3, #79bbff);
+  background: var(--el-color-primary, var(--khy-primary));
+  box-shadow: 0 0 6px var(--el-color-primary-light-3, var(--el-color-primary-light-3));
   transition: width 0.28s ease;
 }
 </style>

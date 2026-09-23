@@ -6,8 +6,8 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const gov = require('../src/services/mcp/mcpGovernance');
-const { ConfigScope } = require('../src/services/mcp/types');
+const gov = require('../src/services/domain/messaging/mcp/mcpGovernance.js');
+const { ConfigScope } = require('../src/services/domain/messaging/mcp/types.js');
 
 test('describeConfigPrecedence: user<legacy ordering; project layers appended when projectDir given', () => {
   const noProj = gov.describeConfigPrecedence({ userPath: '/u/.khy/mcp.json', legacyPath: '/u/.khyquant/mcp.json' });

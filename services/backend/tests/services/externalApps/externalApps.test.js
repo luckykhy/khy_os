@@ -1,6 +1,6 @@
 'use strict';
 
-const externalApps = require('../../src/services/externalApps/index');
+const externalApps = require('../../../src/services/externalApps/index');
 
 describe('externalApps index', () => {
   test('module is defined', () => {
@@ -51,6 +51,10 @@ describe('externalApps index', () => {
     expect(externalApps.ycodeAdapter).toBeDefined();
   });
 
+  test('exports zcodeAdapter', () => {
+    expect(externalApps.zcodeAdapter).toBeDefined();
+  });
+
   test('exports _shared', () => {
     expect(externalApps._shared).toBeDefined();
   });
@@ -67,6 +71,7 @@ describe('externalApps index', () => {
     expect(typeof externalApps.reasonixAdapter).toBe('object');
     expect(typeof externalApps.tomlLite).toBe('object');
     expect(typeof externalApps.ycodeAdapter).toBe('object');
+    expect(typeof externalApps.zcodeAdapter).toBe('object');
     expect(typeof externalApps._shared).toBe('object');
   });
 });

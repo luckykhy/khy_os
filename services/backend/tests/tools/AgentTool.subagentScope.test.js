@@ -1,11 +1,11 @@
 'use strict';
 /**
- * AgentTool.subagentScope.test.js â€?the "thinking stays with the main agent"
+ * AgentTool.subagentScope.test.js â€” the "thinking stays with the main agent"
  * scope rule.
  *
  * A spawned sub-agent's system prompt must carry SUBAGENT_EXECUTION_SCOPE
  * (constraints.js, single source) prepended to its own role prompt, so every
- * sub-agent â€?whatever its role/type â€?is reminded it is an executor, not the
+ * sub-agent ï¿½?whatever its role/type ï¿½?is reminded it is an executor, not the
  * strategist. buildSubagentSystemPrompt is the single injection seam.
  */
 const { AgentTool } = require('../../src/tools/AgentTool');
@@ -35,7 +35,7 @@ describe('Agent Tool subagent Scope', () => {
         expect(sp.includes(SUBAGENT_EXECUTION_SCOPE)).toBeTruthy();
         expect(sp.includes(role)).toBeTruthy();
         // Scope comes first so the executor framing is read before the role detail.
-        expect(sp.indexOf(SUBAGENT_EXECUTION_SCOPE).toBeTruthy() < sp.indexOf(role));
+        expect(sp.indexOf(SUBAGENT_EXECUTION_SCOPE) < sp.indexOf(role)).toBeTruthy();
   });
 
   test('tolerates a non-string role prompt without throwing', () => {

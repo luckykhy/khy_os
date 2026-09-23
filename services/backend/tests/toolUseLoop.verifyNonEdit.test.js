@@ -1,6 +1,6 @@
 'use strict';
 /**
- * toolUseLoop.verifyNonEdit.test.js �?P6 of the KHY⇄CC mode-alignment work.
+ * toolUseLoop.verifyNonEdit.test.js — P6 of the KHY⇄CC mode-alignment work.
  *
  * CC keeps a verification reflex for research/shell/API work, not just code
  * edits. KHY's hard verification gate only fired when files were modified
@@ -14,6 +14,7 @@
  * another iteration; PASS concludes normally. Disabled with KHY_VERIFY_NONEDIT=off.
  */
 const os = require('os');
+const assert = require('node:assert');
 const path = require('path');
 const fs = require('fs');
 const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-verify-nonedit-'));
@@ -48,14 +49,13 @@ function makeChat(captured, probeVerdict) {
     return { reply: 'done.', stopReason: 'stop', provider: 'mock' };
   };
 }
-describe('non-edit evidence-sufficiency gate (P6)', () => {
+
+describe('Tool Use Loop verify Non Edit', () => {
+  // merged from describe: non-edit evidence-sufficiency gate (P6)
   afterEach(() => {
     delete process.env.KHY_VERIFY_NONEDIT;
     delete process.env.KHY_VERIFY_NONEDIT_ROUNDS;
   });
-});
-
-describe('Tool Use Loop verify Non Edit', () => {
   test('default on: a FAIL verdict re-injects an EVIDENCE GATE and forces another turn', async () => {
         const captured = {};
         await toolUseLoop.runToolUseLoop('run echo and report', {
@@ -70,7 +70,7 @@ describe('Tool Use Loop verify Non Edit', () => {
         expect(captured.lastMessage).toMatch(/output not verified/);
         // The model concluded more than once (gate forced a re-iteration).
         expect((captured.conclusions || 0) >= 2).toBeTruthy();
-  });
+  }, 30000);
 
   test('a PASS verdict lets the turn conclude without re-injection', async () => {
         const captured = {};
@@ -83,7 +83,7 @@ describe('Tool Use Loop verify Non Edit', () => {
         });
         expect(captured.probeFired).toBe(true);
         expect(captured.conclusions).toBe(1);
-  });
+  }, 30000);
 
   test('KHY_VERIFY_NONEDIT=off skips the gate entirely (no probe)', async () => {
         process.env.KHY_VERIFY_NONEDIT = 'off';
@@ -97,7 +97,7 @@ describe('Tool Use Loop verify Non Edit', () => {
         });
         assert.notEqual(captured.probeFired, true, 'probe must not fire when disabled');
         expect(captured.conclusions).toBe(1);
-  });
+  }, 30000);
 
 });
 

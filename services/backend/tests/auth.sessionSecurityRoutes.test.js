@@ -55,6 +55,12 @@ function createJsonApp(router) {
   return app;
 }
 
+// Error shape note: apiResponse.fail() builds the KhyError envelope
+// { success:false, error:{ code, message, … } } — the message is nested under
+// `error`, not at the top level. Asserting `body.message` used to pass against
+// an older flat envelope and then went stale; the code assertion below keeps the
+// contract pinned so a future envelope change fails the test instead of
+// silently passing.
 describe('auth route session security', () => {
   const authApp = createJsonApp(authRoutes);
   const passwordResetApp = createJsonApp(passwordResetRoutes);
@@ -85,7 +91,9 @@ describe('auth route session security', () => {
       .send({ username: 'blocked-user', password: 'secret123' });
 
     expect(res.status).toBe(403);
-    expect(res.body.message).toBe('账户已被禁用');
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('PERMISSION_DENIED');
+    expect(res.body.error.message).toBe('账户已被禁用');
     expect(mockAuthSessionService.issueSessionForUser).not.toHaveBeenCalled();
   });
 
@@ -134,7 +142,9 @@ describe('auth route session security', () => {
       });
 
     expect(res.status).toBe(403);
-    expect(res.body.message).toBe('账户当前不可重置密码，请联系管理员');
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('PERMISSION_DENIED');
+    expect(res.body.error.message).toBe('账户当前不可重置密码，请联系管理员');
     expect(mockAuthSessionService.revokeUserSessions).not.toHaveBeenCalled();
   });
 });

@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: CD 规范.md -->
+<title>[DESIGN-CICD-001] CI/CD 规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-CICD-001] CI<span class="sep">›</span>[DESIGN-CICD-001] CI/CD 规范</div>
+      <header class="hero reveal"><h1>[DESIGN-CICD-001] CI/CD 规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-cicd-001-ci-cd-规范">[DESIGN-CICD-001] CI/CD 规范</a></li><li class="lvl-2"><a href="#1-ci-cd-概述">1. CI/CD 概述</a></li><li class="lvl-3"><a href="#1-1-设计原则">1.1 设计原则</a></li><li class="lvl-3"><a href="#1-2-流水线阶段">1.2 流水线阶段</a></li><li class="lvl-2"><a href="#2-github-actions-配置">2. GitHub Actions 配置</a></li><li class="lvl-3"><a href="#2-1-工作流文件">2.1 工作流文件</a></li><li class="lvl-3"><a href="#2-2-pr-门禁配置">2.2 PR 门禁配置</a></li><li class="lvl-2"><a href="#3-构建流程">3. 构建流程</a></li><li class="lvl-3"><a href="#3-1-前端构建">3.1 前端构建</a></li><li class="lvl-3"><a href="#3-2-后端构建">3.2 后端构建</a></li><li class="lvl-2"><a href="#4-部署流程">4. 部署流程</a></li><li class="lvl-3"><a href="#4-1-预发环境部署">4.1 预发环境部署</a></li><li class="lvl-3"><a href="#4-2-生产环境部署">4.2 生产环境部署</a></li><li class="lvl-2"><a href="#5-docker-配置">5. Docker 配置</a></li><li class="lvl-3"><a href="#5-1-dockerfile">5.1 Dockerfile</a></li><li class="lvl-3"><a href="#5-2-docker-compose">5.2 Docker Compose</a></li><li class="lvl-2"><a href="#6-回滚流程">6. 回滚流程</a></li><li class="lvl-3"><a href="#6-1-自动回滚">6.1 自动回滚</a></li><li class="lvl-3"><a href="#6-2-手动回滚">6.2 手动回滚</a></li><li class="lvl-2"><a href="#7-发布流程">7. 发布流程</a></li><li class="lvl-3"><a href="#7-1-版本号管理">7.1 版本号管理</a></li><li class="lvl-3"><a href="#7-2-发布步骤">7.2 发布步骤</a></li><li class="lvl-3"><a href="#7-3-发布检查清单">7.3 发布检查清单</a></li><li class="lvl-2"><a href="#8-监控和告警">8. 监控和告警</a></li><li class="lvl-3"><a href="#8-1-部署监控">8.1 部署监控</a></li><li class="lvl-3"><a href="#8-2-告警规则">8.2 告警规则</a></li><li class="lvl-2"><a href="#9-版本历史">9. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-cicd-001-ci-cd-规范">[DESIGN-CICD-001] CI/CD 规范<a class="anchor" href="#design-cicd-001-ci-cd-规范" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档定义 khy-os 项目的 CI/CD 标准，包括流水线配置、部署自动化、回滚等。</p></blockquote>
+<hr>
+<h2 id="1-ci-cd-概述">1. CI/CD 概述<a class="anchor" href="#1-ci-cd-概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-设计原则">1.1 设计原则<a class="anchor" href="#1-1-设计原则" aria-label="锚点">#</a></h3>
+<ol><li><strong>自动化</strong>：全流程自动化，减少人为错误</li><li><strong>快速反馈</strong>：快速发现问题</li><li><strong>可重复</strong>：构建结果可重复</li><li><strong>安全性</strong>：构建过程安全</li></ol>
+<h3 id="1-2-流水线阶段">1.2 流水线阶段<a class="anchor" href="#1-2-流水线阶段" aria-label="锚点">#</a></h3>
+<pre><code>代码提交 → 构建 → 测试 → 安全检查 → 部署 → 验证</code></pre>
+<hr>
+<h2 id="2-github-actions-配置">2. GitHub Actions 配置<a class="anchor" href="#2-github-actions-配置" aria-label="锚点">#</a></h2>
+<h3 id="2-1-工作流文件">2.1 工作流文件<a class="anchor" href="#2-1-工作流文件" aria-label="锚点">#</a></h3>
+<pre><code>.github/workflows/
+├── pr-gate.yml           # PR 门禁检查
+├── deploy-staging.yml    # 预发部署
+├── deploy-production.yml # 生产部署
+├── docker.yml            # Docker 构建
+├── frontend-ci.yml       # 前端 CI
+├── codeql-analysis.yml   # 安全分析
+└── release.yml           # 发布流程</code></pre>
+<h3 id="2-2-pr-门禁配置">2.2 PR 门禁配置<a class="anchor" href="#2-2-pr-门禁配置" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-comment"># .github/workflows/pr-gate.yml</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">PR</span> <span class="hljs-string">Gate</span>
+
+<span class="hljs-attr">on:</span>
+  <span class="hljs-attr">pull_request:</span>
+    <span class="hljs-attr">branches:</span> [<span class="hljs-string">main</span>]
+
+<span class="hljs-attr">jobs:</span>
+  <span class="hljs-attr">contract-checks:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Check</span> <span class="hljs-string">version</span> <span class="hljs-string">sync</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">node</span> <span class="hljs-string">scripts/ci/check-version-sync.js</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Check</span> <span class="hljs-string">agent</span> <span class="hljs-string">rules</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">node</span> <span class="hljs-string">scripts/ci/check-agent-rules.js</span> <span class="hljs-string">--changed</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Check</span> <span class="hljs-string">leaf</span> <span class="hljs-string">contracts</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">node</span> <span class="hljs-string">scripts/ci/check-leaf-contract.js</span> <span class="hljs-string">--changed</span>
+
+  <span class="hljs-attr">lint:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Run</span> <span class="hljs-string">ESLint</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">run</span> <span class="hljs-string">lint</span>
+
+  <span class="hljs-attr">test:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+    <span class="hljs-attr">continue-on-error:</span> <span class="hljs-literal">true</span>  <span class="hljs-comment"># 测试不阻塞 PR</span>
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Run</span> <span class="hljs-string">tests</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">test</span>
+
+  <span class="hljs-attr">security:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Run</span> <span class="hljs-string">security</span> <span class="hljs-string">scan</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">audit</span> <span class="hljs-string">--audit-level=high</span></code></pre>
+<hr>
+<h2 id="3-构建流程">3. 构建流程<a class="anchor" href="#3-构建流程" aria-label="锚点">#</a></h2>
+<h3 id="3-1-前端构建">3.1 前端构建<a class="anchor" href="#3-1-前端构建" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-comment"># .github/workflows/frontend-ci.yml</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">Frontend</span> <span class="hljs-string">CI</span>
+
+<span class="hljs-attr">on:</span>
+  <span class="hljs-attr">push:</span>
+    <span class="hljs-attr">branches:</span> [<span class="hljs-string">main</span>]
+  <span class="hljs-attr">pull_request:</span>
+    <span class="hljs-attr">branches:</span> [<span class="hljs-string">main</span>]
+
+<span class="hljs-attr">jobs:</span>
+  <span class="hljs-attr">build:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Setup</span> <span class="hljs-string">Node.js</span>
+        <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/setup-node@v4</span>
+        <span class="hljs-attr">with:</span>
+          <span class="hljs-attr">node-version:</span> <span class="hljs-string">&#x27;18&#x27;</span>
+          <span class="hljs-attr">cache:</span> <span class="hljs-string">&#x27;pnpm&#x27;</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Install</span> <span class="hljs-string">dependencies</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">pnpm</span> <span class="hljs-string">install</span> <span class="hljs-string">--frozen-lockfile</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Lint</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">run</span> <span class="hljs-string">lint</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Build</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">run</span> <span class="hljs-string">build</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Upload</span> <span class="hljs-string">artifacts</span>
+        <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/upload-artifact@v4</span>
+        <span class="hljs-attr">with:</span>
+          <span class="hljs-attr">name:</span> <span class="hljs-string">frontend-dist</span>
+          <span class="hljs-attr">path:</span> <span class="hljs-string">apps/ai-frontend/dist</span></code></pre>
+<h3 id="3-2-后端构建">3.2 后端构建<a class="anchor" href="#3-2-后端构建" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-comment"># .github/workflows/backend-ci.yml</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">Backend</span> <span class="hljs-string">CI</span>
+
+<span class="hljs-attr">on:</span>
+  <span class="hljs-attr">push:</span>
+    <span class="hljs-attr">branches:</span> [<span class="hljs-string">main</span>]
+  <span class="hljs-attr">pull_request:</span>
+    <span class="hljs-attr">branches:</span> [<span class="hljs-string">main</span>]
+
+<span class="hljs-attr">jobs:</span>
+  <span class="hljs-attr">build:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Setup</span> <span class="hljs-string">Node.js</span>
+        <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/setup-node@v4</span>
+        <span class="hljs-attr">with:</span>
+          <span class="hljs-attr">node-version:</span> <span class="hljs-string">&#x27;18&#x27;</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Install</span> <span class="hljs-string">dependencies</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">ci</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Lint</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">run</span> <span class="hljs-string">lint</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Test</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">test</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Build</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">run</span> <span class="hljs-string">build</span></code></pre>
+<hr>
+<h2 id="4-部署流程">4. 部署流程<a class="anchor" href="#4-部署流程" aria-label="锚点">#</a></h2>
+<h3 id="4-1-预发环境部署">4.1 预发环境部署<a class="anchor" href="#4-1-预发环境部署" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-comment"># .github/workflows/deploy-staging.yml</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">Deploy</span> <span class="hljs-string">to</span> <span class="hljs-string">Staging</span>
+
+<span class="hljs-attr">on:</span>
+  <span class="hljs-attr">push:</span>
+    <span class="hljs-attr">branches:</span> [<span class="hljs-string">main</span>]
+
+<span class="hljs-attr">jobs:</span>
+  <span class="hljs-attr">deploy:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+    <span class="hljs-attr">environment:</span> <span class="hljs-string">staging</span>
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Build</span> <span class="hljs-string">Docker</span> <span class="hljs-string">image</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">docker</span> <span class="hljs-string">build</span> <span class="hljs-string">-t</span> <span class="hljs-string">khyos:${{</span> <span class="hljs-string">github.sha</span> <span class="hljs-string">}}</span> <span class="hljs-string">.</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Push</span> <span class="hljs-string">to</span> <span class="hljs-string">registry</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">|
+          docker tag khyos:${{ github.sha }} registry.example.com/khyos:${{ github.sha }}
+          docker push registry.example.com/khyos:${{ github.sha }}
+</span>      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Deploy</span> <span class="hljs-string">to</span> <span class="hljs-string">staging</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">|
+          ssh user@staging-server &quot;cd /opt/khyos &amp;&amp; \
+            docker pull registry.example.com/khyos:${{ github.sha }} &amp;&amp; \
+            docker-compose up -d&quot;
+</span>      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Run</span> <span class="hljs-string">smoke</span> <span class="hljs-string">tests</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">|</span>
+          <span class="hljs-string">curl</span> <span class="hljs-string">-f</span> <span class="hljs-string">https://staging.khyquant.top/api/health</span></code></pre>
+<h3 id="4-2-生产环境部署">4.2 生产环境部署<a class="anchor" href="#4-2-生产环境部署" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-comment"># .github/workflows/deploy-production.yml</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">Deploy</span> <span class="hljs-string">to</span> <span class="hljs-string">Production</span>
+
+<span class="hljs-attr">on:</span>
+  <span class="hljs-attr">release:</span>
+    <span class="hljs-attr">types:</span> [<span class="hljs-string">published</span>]
+
+<span class="hljs-attr">jobs:</span>
+  <span class="hljs-attr">deploy:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+    <span class="hljs-attr">environment:</span> <span class="hljs-string">production</span>
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
+      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Deploy</span> <span class="hljs-string">to</span> <span class="hljs-string">production</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">|
+          ssh user@production-server &quot;cd /opt/khyos &amp;&amp; \
+            docker pull registry.example.com/khyos:${{ github.ref_name }} &amp;&amp; \
+            docker-compose up -d&quot;
+</span>      
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Verify</span> <span class="hljs-string">deployment</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">|</span>
+          <span class="hljs-string">curl</span> <span class="hljs-string">-f</span> <span class="hljs-string">https://khyquant.top/api/health</span></code></pre>
+<hr>
+<h2 id="5-docker-配置">5. Docker 配置<a class="anchor" href="#5-docker-配置" aria-label="锚点">#</a></h2>
+<h3 id="5-1-dockerfile">5.1 Dockerfile<a class="anchor" href="#5-1-dockerfile" aria-label="锚点">#</a></h3>
+<pre><code class="language-dockerfile"><span class="hljs-comment"># 构建阶段</span>
+<span class="hljs-keyword">FROM</span> node:<span class="hljs-number">18</span>-alpine AS builder
+
+<span class="hljs-keyword">WORKDIR</span><span class="language-bash"> /app</span>
+
+<span class="hljs-keyword">COPY</span><span class="language-bash"> package*.json ./</span>
+<span class="hljs-keyword">RUN</span><span class="language-bash"> npm ci --only=production</span>
+
+<span class="hljs-keyword">COPY</span><span class="language-bash"> . .</span>
+<span class="hljs-keyword">RUN</span><span class="language-bash"> npm run build</span>
+
+<span class="hljs-comment"># 运行阶段</span>
+<span class="hljs-keyword">FROM</span> node:<span class="hljs-number">18</span>-alpine AS runner
+
+<span class="hljs-keyword">WORKDIR</span><span class="language-bash"> /app</span>
+
+<span class="hljs-comment"># 创建非 root 用户</span>
+<span class="hljs-keyword">RUN</span><span class="language-bash"> addgroup --system --gid 1001 nodejs</span>
+<span class="hljs-keyword">RUN</span><span class="language-bash"> adduser --system --uid 1001 khyos</span>
+
+<span class="hljs-keyword">COPY</span><span class="language-bash"> --from=builder /app/dist ./dist</span>
+<span class="hljs-keyword">COPY</span><span class="language-bash"> --from=builder /app/node_modules ./node_modules</span>
+<span class="hljs-keyword">COPY</span><span class="language-bash"> --from=builder /app/package.json ./package.json</span>
+
+<span class="hljs-keyword">RUN</span><span class="language-bash"> <span class="hljs-built_in">mkdir</span> -p data logs</span>
+<span class="hljs-keyword">RUN</span><span class="language-bash"> <span class="hljs-built_in">chown</span> -R khyos:nodejs data logs</span>
+
+<span class="hljs-keyword">USER</span> khyos
+
+<span class="hljs-keyword">EXPOSE</span> <span class="hljs-number">3000</span>
+
+<span class="hljs-keyword">HEALTHCHECK</span><span class="language-bash"> --interval=30s --<span class="hljs-built_in">timeout</span>=10s --start-period=5s --retries=3 \
+  CMD node -e <span class="hljs-string">&quot;require(&#x27;http&#x27;).get(&#x27;http://localhost:3000/api/health&#x27;, (r) =&gt; {process.exit(r.statusCode === 200 ? 0 : 1)})&quot;</span></span>
+
+<span class="hljs-keyword">CMD</span><span class="language-bash"> [<span class="hljs-string">&quot;node&quot;</span>, <span class="hljs-string">&quot;dist/index.js&quot;</span>]</span></code></pre>
+<h3 id="5-2-docker-compose">5.2 Docker Compose<a class="anchor" href="#5-2-docker-compose" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-comment"># docker-compose.yml</span>
+<span class="hljs-attr">version:</span> <span class="hljs-string">&#x27;3.8&#x27;</span>
+
+<span class="hljs-attr">services:</span>
+  <span class="hljs-attr">app:</span>
+    <span class="hljs-attr">build:</span>
+      <span class="hljs-attr">context:</span> <span class="hljs-string">.</span>
+      <span class="hljs-attr">dockerfile:</span> <span class="hljs-string">Dockerfile</span>
+    <span class="hljs-attr">container_name:</span> <span class="hljs-string">khyos-app</span>
+    <span class="hljs-attr">restart:</span> <span class="hljs-string">unless-stopped</span>
+    <span class="hljs-attr">ports:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">&quot;3000:3000&quot;</span>
+    <span class="hljs-attr">environment:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">NODE_ENV=production</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">DATABASE_URL=postgresql://khyos:password@db:5432/khyos</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">JWT_SECRET=${JWT_SECRET}</span>
+    <span class="hljs-attr">volumes:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">./data:/app/data</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">./logs:/app/logs</span>
+    <span class="hljs-attr">depends_on:</span>
+      <span class="hljs-attr">db:</span>
+        <span class="hljs-attr">condition:</span> <span class="hljs-string">service_healthy</span>
+      <span class="hljs-attr">redis:</span>
+        <span class="hljs-attr">condition:</span> <span class="hljs-string">service_healthy</span>
+    <span class="hljs-attr">networks:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">khyos-network</span>
+
+  <span class="hljs-attr">db:</span>
+    <span class="hljs-attr">image:</span> <span class="hljs-string">postgres:15-alpine</span>
+    <span class="hljs-attr">container_name:</span> <span class="hljs-string">khyos-db</span>
+    <span class="hljs-attr">restart:</span> <span class="hljs-string">unless-stopped</span>
+    <span class="hljs-attr">environment:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">POSTGRES_USER=khyos</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">POSTGRES_PASSWORD=password</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">POSTGRES_DB=khyos</span>
+    <span class="hljs-attr">volumes:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">postgres-data:/var/lib/postgresql/data</span>
+    <span class="hljs-attr">healthcheck:</span>
+      <span class="hljs-attr">test:</span> [<span class="hljs-string">&quot;CMD-SHELL&quot;</span>, <span class="hljs-string">&quot;pg_isready -U khyos&quot;</span>]
+      <span class="hljs-attr">interval:</span> <span class="hljs-string">10s</span>
+      <span class="hljs-attr">timeout:</span> <span class="hljs-string">5s</span>
+      <span class="hljs-attr">retries:</span> <span class="hljs-number">5</span>
+    <span class="hljs-attr">networks:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">khyos-network</span>
+
+  <span class="hljs-attr">redis:</span>
+    <span class="hljs-attr">image:</span> <span class="hljs-string">redis:7-alpine</span>
+    <span class="hljs-attr">container_name:</span> <span class="hljs-string">khyos-redis</span>
+    <span class="hljs-attr">restart:</span> <span class="hljs-string">unless-stopped</span>
+    <span class="hljs-attr">volumes:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">redis-data:/data</span>
+    <span class="hljs-attr">healthcheck:</span>
+      <span class="hljs-attr">test:</span> [<span class="hljs-string">&quot;CMD&quot;</span>, <span class="hljs-string">&quot;redis-cli&quot;</span>, <span class="hljs-string">&quot;ping&quot;</span>]
+      <span class="hljs-attr">interval:</span> <span class="hljs-string">10s</span>
+      <span class="hljs-attr">timeout:</span> <span class="hljs-string">5s</span>
+      <span class="hljs-attr">retries:</span> <span class="hljs-number">5</span>
+    <span class="hljs-attr">networks:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">khyos-network</span>
+
+<span class="hljs-attr">volumes:</span>
+  <span class="hljs-attr">postgres-data:</span>
+  <span class="hljs-attr">redis-data:</span>
+
+<span class="hljs-attr">networks:</span>
+  <span class="hljs-attr">khyos-network:</span>
+    <span class="hljs-attr">driver:</span> <span class="hljs-string">bridge</span></code></pre>
+<hr>
+<h2 id="6-回滚流程">6. 回滚流程<a class="anchor" href="#6-回滚流程" aria-label="锚点">#</a></h2>
+<h3 id="6-1-自动回滚">6.1 自动回滚<a class="anchor" href="#6-1-自动回滚" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-comment"># deploy-production.yml 中的回滚步骤</span>
+<span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Verify</span> <span class="hljs-string">deployment</span>
+  <span class="hljs-attr">run:</span> <span class="hljs-string">|
+    for i in {1..5}; do
+      if curl -f https://khyquant.top/api/health; then
+        echo &quot;Deployment successful&quot;
+        exit 0
+      fi
+      sleep 10
+    done
+</span>    
+    <span class="hljs-string">echo</span> <span class="hljs-string">&quot;Deployment failed, rolling back...&quot;</span>
+    <span class="hljs-string">ssh</span> <span class="hljs-string">user@production-server</span> <span class="hljs-string">&quot;cd /opt/khyos &amp;&amp; docker-compose down &amp;&amp; docker-compose up -d --rollback&quot;</span>
+    <span class="hljs-string">exit</span> <span class="hljs-number">1</span></code></pre>
+<h3 id="6-2-手动回滚">6.2 手动回滚<a class="anchor" href="#6-2-手动回滚" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 回滚到上一个版本</span>
+docker-compose -f docker-compose.prod.yml down
+docker pull registry.example.com/khyos:previous-version
+docker-compose -f docker-compose.prod.yml up -d</code></pre>
+<hr>
+<h2 id="7-发布流程">7. 发布流程<a class="anchor" href="#7-发布流程" aria-label="锚点">#</a></h2>
+<h3 id="7-1-版本号管理">7.1 版本号管理<a class="anchor" href="#7-1-版本号管理" aria-label="锚点">#</a></h3>
+<p>遵循语义化版本（SemVer）：</p>
+<ul><li>MAJOR：不兼容的 API 变更</li><li>MINOR：向下兼容的功能性新增</li><li>PATCH：向下兼容的问题修正</li></ul>
+<h3 id="7-2-发布步骤">7.2 发布步骤<a class="anchor" href="#7-2-发布步骤" aria-label="锚点">#</a></h3>
+<ol><li>更新版本号：<code>npm version patch|minor|major</code></li><li>更新 CHANGELOG</li><li>创建 Git Tag：<code>git tag v1.2.3</code></li><li>推送 Tag：<code>git push origin v1.2.3</code></li><li>创建 Release</li><li>自动部署到生产环境</li></ol>
+<h3 id="7-3-发布检查清单">7.3 发布检查清单<a class="anchor" href="#7-3-发布检查清单" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 所有测试通过</li><li>[ ] 文档已更新</li><li>[ ] CHANGELOG 已更新</li><li>[ ] 版本号已更新</li><li>[ ] 无未提交的变更</li></ul>
+<hr>
+<h2 id="8-监控和告警">8. 监控和告警<a class="anchor" href="#8-监控和告警" aria-label="锚点">#</a></h2>
+<h3 id="8-1-部署监控">8.1 部署监控<a class="anchor" href="#8-1-部署监控" aria-label="锚点">#</a></h3>
+<ul><li>健康检查端点：<code>/api/health</code></li><li>错误率监控</li><li>响应时间监控</li></ul>
+<h3 id="8-2-告警规则">8.2 告警规则<a class="anchor" href="#8-2-告警规则" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>阈值</th><th>级别</th></tr></thead><tbody><tr><td>错误率</td><td>&gt; 5%</td><td>P1</td></tr><tr><td>响应时间</td><td>&gt; 2s</td><td>P2</td></tr><tr><td>服务不可用</td><td>任何时间</td><td>P0</td></tr></tbody></table>
+<hr>
+<h2 id="9-版本历史">9. 版本历史<a class="anchor" href="#9-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义 CI/CD 规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><span></span><a class="next" href="../../../docs/03_DESIGN_设计/00_INDEX_设计-分类索引.html"><div class="dir">下一篇 →</div><div class="ttl">00INDEX 设计分类索引</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-CICD-001] CI/CD 规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

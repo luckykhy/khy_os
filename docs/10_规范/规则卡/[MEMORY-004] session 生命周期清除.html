@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [MEMORY-004] session 生命周期清除.md -->
+<title>[MEMORY-004] session 生命周期清除 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[MEMORY-004] session 生命周期清除</div>
+      <header class="hero reveal"><h1>[MEMORY-004] session 生命周期清除</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#memory-004-session-生命周期清除">[MEMORY-004] session 生命周期清除</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: session 生命周期清除<br>id: MEMORY-004<br>domain: MEMORY<br>nature: 约束为主<br>scope: &quot;session 缓存、队列、临时日志&quot;<br>priority: P1<br>trigger: &quot;会话结束、过期或主体删除时&quot;<br>constraint: &quot;session 数据必须按登记生命周期清除或归档，不得静默转为 persistent；进程重启后临时上下文不得留作长期事实。&quot;<br>grants: &quot;见约束边界：授权按登记的生命周期策略自行清除或归档。&quot;<br>benefit: 临时上下文不会悄悄变成永久事实，避免记忆污染。<br>exception: 无<br>version: &quot;1.0.0 (2026-09-15)&quot;<br>status: active<br>ssot: &quot;docs/10_规范/DESIGN-MEM/[DESIGN-MEM-006] 记忆与维护元数据生命周期规范.md §4&quot;<br>formerly: GOV-MEM-004<br>owner: backend-team</p>
+<hr>
+<h1 id="memory-004-session-生命周期清除">[MEMORY-004] session 生命周期清除<a class="anchor" href="#memory-004-session-生命周期清除" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: MEMORY-004 -->
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/10_规范/DESIGN-MEM/[DESIGN-MEM-006] 记忆与维护元数据生命周期规范.md §4。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>session 数据必须按登记生命周期清除或归档，不得静默转为 persistent；进程重启后临时上下文不得留作长期事实。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>见约束边界：授权按登记的生命周期策略自行清除或归档。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>临时上下文不会悄悄变成永久事实，避免记忆污染。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>进程重启后把临时上下文留作长期事实。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>契约已冻结：<code>[DESIGN-MEM-006]</code> §4；生命周期策略随该文裁决，守卫待工具化</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>无</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-15) 初版 / 迁移自 GOV-MEM-004</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/规则卡/[MEMORY-003] 指定读写入口.html"><div class="dir">← 上一篇</div><div class="ttl">[MEMORY-003] 指定读写入口</div></a><a class="next" href="../../../docs/10_规范/规则卡/[MGMT-STD-008] 规则编写与管理规范（元规则）.html"><div class="dir">下一篇 →</div><div class="ttl">[MGMT-STD-008] 规则编写与管理规范（元规则）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/规则卡/[MEMORY-004] session 生命周期清除.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

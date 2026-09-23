@@ -19,6 +19,10 @@ docs
 dist
 build
 *.egg-info
+# 构建产物单一根 entries/（LAYOUT-005）：只排除产物子目录，保留入口真源 json/壳
+entries/*
+!entries/entries.json
+!entries/launch.js
 
 # Dev / IDE files
 .vscode

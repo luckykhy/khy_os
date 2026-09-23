@@ -19,7 +19,7 @@ const { test, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert');
 
 const seams = require('../src/services/domain/extensions/hooks/hookContribSeams.js');
-const { STRATEGIES } = require('../src/services/permissionPolicy/config');
+const { STRATEGIES } = require('../src/services/domain/security/permissionPolicy/config.js');
 const hookSystem = require('../src/services/domain/extensions/hooks/hookSystem.js');
 
 // 用 monkey-patch 替换 trigger/isInitialized,避免依赖磁盘 hooks.json(纯单元测试)。

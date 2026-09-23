@@ -39,7 +39,9 @@ describe('pickLocale', () => {
   });
 
   test('returns "en" for mixed non-Chinese unicode', () => {
-    expect(pickLocale('日本語カタカナ')).toBe('en');
+    // Pure kana/hangul — no CJK ideographs (U+4E00–U+9FFF). Note: kanji like
+    // 日本語 DO fall in the Chinese range and return 'zh' by contract.
+    expect(pickLocale('カタカナ')).toBe('en');
     expect(pickLocale('한국어')).toBe('en');
   });
 

@@ -6,7 +6,8 @@ const {
   listImageProvidersFromPool,
   IMAGE_CAPABLE_HOSTS,
   OFF_VALUES,
-} = require('./imageGenPoolBridge');
+} = require('../../src/services/imageGenPoolBridge.js');
+const assert = require('node:assert');
 const AGNES = 'https://apihub.agnes-ai.com/v1';
 
 describe('Image Gen Pool Bridge', () => {
@@ -37,7 +38,7 @@ describe('Image Gen Pool Bridge', () => {
       expect(hostServesImages('https://evil.agnes-ai.com.attacker.test/v1')).toBe(false);
   });
 
-  test('hostServesImages: empty / malformed â†?false, never throws', () => {
+  test('hostServesImages: empty / malformed ï¿½?false, never throws', () => {
       expect(hostServesImages('')).toBe(false);
       expect(hostServesImages(null)).toBe(false);
       expect(hostServesImages(undefined)).toBe(false);
@@ -48,7 +49,7 @@ describe('Image Gen Pool Bridge', () => {
       expect(IMAGE_CAPABLE_HOSTS).toContain('apihub.agnes-ai.com');
   });
 
-  test('pickImageProviderFromPool: gate-on + whitelist hit â†?selects agnes', () => {
+  test('pickImageProviderFromPool: gate-on + whitelist hit ï¿½?selects agnes', () => {
       const picked = pickImageProviderFromPool({
         env: {},
         providers: [
@@ -59,7 +60,7 @@ describe('Image Gen Pool Bridge', () => {
       expect(picked).toEqual({ poolKey: 'agnes', endpoint: 'https://apihub.agnes-ai.com/v1' });
   });
 
-  test('pickImageProviderFromPool: gate-off â†?null', () => {
+  test('pickImageProviderFromPool: gate-off ï¿½?null', () => {
       const picked = pickImageProviderFromPool({
         env: { KHY_IMAGE_GEN_POOL_BRIDGE: 'false' },
         providers: [{ poolKey: 'agnes', endpoint: AGNES }],
@@ -67,7 +68,7 @@ describe('Image Gen Pool Bridge', () => {
       expect(picked).toBe(null);
   });
 
-  test('pickImageProviderFromPool: no whitelist hit â†?null', () => {
+  test('pickImageProviderFromPool: no whitelist hit ï¿½?null', () => {
       const picked = pickImageProviderFromPool({
         env: {},
         providers: [
@@ -99,7 +100,7 @@ describe('Image Gen Pool Bridge', () => {
       expect(picked.poolKey).toBe('agnes');
   });
 
-  test('pickImageProviderFromPool: endpointFor throwing â†?falls back to provider.endpoint, no throw', () => {
+  test('pickImageProviderFromPool: endpointFor throwing ï¿½?falls back to provider.endpoint, no throw', () => {
       const picked = pickImageProviderFromPool({
         env: {},
         providers: [{ poolKey: 'agnes', endpoint: AGNES }],
@@ -110,7 +111,7 @@ describe('Image Gen Pool Bridge', () => {
       expect(picked.poolKey).toBe('agnes');
   });
 
-  test('pickImageProviderFromPool: empty / malformed input â†?null, never throws', () => {
+  test('pickImageProviderFromPool: empty / malformed input ï¿½?null, never throws', () => {
       expect(pickImageProviderFromPool({})).toBe(null);
       expect(pickImageProviderFromPool({ providers: null })).toBe(null);
       expect(pickImageProviderFromPool({ providers: [{}, { poolKey: '' }] })).toBe(null);
@@ -156,7 +157,7 @@ describe('Image Gen Pool Bridge', () => {
       expect(list[0].poolKey).toBe('agnes');
   });
 
-  test('listImageProvidersFromPool: gate-off â†?[] (byte-revert)', () => {
+  test('listImageProvidersFromPool: gate-off ï¿½?[] (byte-revert)', () => {
       const list = listImageProvidersFromPool({
         env: { KHY_IMAGE_GEN_POOL_BRIDGE: 'off' },
         providers: [{ poolKey: 'agnes', endpoint: AGNES }],
@@ -164,7 +165,7 @@ describe('Image Gen Pool Bridge', () => {
       expect(list).toEqual([]);
   });
 
-  test('listImageProvidersFromPool: no whitelist hit / malformed â†?[], never throws', () => {
+  test('listImageProvidersFromPool: no whitelist hit / malformed ï¿½?[], never throws', () => {
       assert.deepStrictEqual(
         listImageProvidersFromPool({
           env: {},

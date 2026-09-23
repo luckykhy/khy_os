@@ -41,12 +41,15 @@ describe('proxyBaseUrl', () => {
       expect(result).toContain(':8080');
     });
 
-    test('returns https when enabled', () => {
+    test('dual-stack: https enabled without https-only still serves http', () => {
+      // buildBaseFromProxyEnv is dual-stack by design — PROXY_ENABLE_HTTPS
+      // advertises an https port, but without PROXY_HTTPS_ONLY the plain
+      // http listener on PROXY_PORT stays the default base URL.
       process.env.PROXY_ENABLE_HTTPS = 'true';
       process.env.PROXY_HTTPS_PORT = '8443';
       const result = resolveLocalProxyBaseUrl(process.env);
-      expect(result).toMatch(/^https:\/\//);
-      expect(result).toContain(':8443');
+      expect(result).toMatch(/^http:\/\//);
+      expect(result).toContain(':9100');
     });
 
     test('returns https only when configured', () => {

@@ -1,5 +1,5 @@
 <template>
-  <div class="user-home-page">
+  <div class="khy-page user-home-page">
     <KhyPageHeader
       subtitle="账户概览、API Key、账单与代理订阅"
       title="我的工作台"
@@ -141,6 +141,16 @@
             <div class="card-header-row">
               <KhyIcon class="card-header-icon" kind="coins" size="md" />
               <span>我的账单</span>
+              <!-- 绑定了客户的普通用户自助充值；管理员走 /admin/payments（代客下单+全部订单）。 -->
+              <el-button
+                v-if="!userStore.isAdmin && myCustomer"
+                class="card-header-action"
+                size="small"
+                type="primary"
+                @click="topupVisible = true"
+              >
+                充值
+              </el-button>
             </div>
           </template>
 
@@ -153,12 +163,23 @@
             type="warning"
           />
 
+          <!-- 普通用户的空态：创建订单是管理员权限（/admin/payments 对非管理员
+               是 403），所以按钮按角色显示。绑定了客户的用户在此自助下单；
+               未绑定则告知需管理员创建。 -->
           <el-empty
             v-else-if="!payments.length"
-            description="还没有支付订单"
+            :description="
+              userStore.isAdmin
+                ? '还没有支付订单'
+                : myCustomer
+                  ? '暂无充值订单，点击右上角「充值」创建'
+                  : '暂无充值订单，充值由管理员创建'
+            "
             :image-size="60"
           >
-            <el-button plain type="primary" @click="goBilling">去创建充值订单</el-button>
+            <el-button v-if="userStore.isAdmin" plain type="primary" @click="goBilling">
+              去创建充值订单
+            </el-button>
           </el-empty>
 
           <el-table
@@ -188,9 +209,39 @@
           </el-table>
 
           <div v-if="payments.length > 6" class="card-foot">
-            <el-button link type="primary" @click="goBilling">查看全部 {{ payments.length }} 笔</el-button>
+            <el-button v-if="userStore.isAdmin" link type="primary" @click="goBilling">
+              查看全部 {{ payments.length }} 笔
+            </el-button>
           </div>
         </el-card>
+
+        <!-- 自助充值弹窗：属主由后端按「customer 绑定 = 当前账号」解析，
+             不传 userId；未绑定的客户会被 403 拒绝（按钮此时也不可见）。 -->
+        <el-dialog v-model="topupVisible" title="创建充值订单" width="440px">
+          <el-form label-width="88px">
+            <el-form-item label="充值客户">
+              <span>{{ myCustomer?.name }}（{{ myCustomer?.id }}）</span>
+            </el-form-item>
+            <el-form-item label="金额">
+              <el-input-number
+                v-model="topupForm.amountCny"
+                :min="0.01"
+                :step="10"
+                :precision="2"
+              />
+              <span class="form-hint">元（CNY）</span>
+            </el-form-item>
+            <el-form-item label="订单标题">
+              <el-input v-model="topupForm.subject" placeholder="留空则自动生成" maxlength="120" />
+            </el-form-item>
+          </el-form>
+          <template #footer>
+            <el-button @click="topupVisible = false">取消</el-button>
+            <el-button type="primary" :loading="topupSaving" @click="submitTopup">
+              创建订单
+            </el-button>
+          </template>
+        </el-dialog>
       </el-col>
     </el-row>
 
@@ -294,7 +345,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessageBox } from 'element-plus';
 import { useUserStore } from '@/stores/user';
@@ -303,6 +354,7 @@ import KhyIcon from '@/components/KhyIcon.vue';
 import KhyPageHeader from '@/components/KhyPageHeader.vue';
 import request from '@/api/request';
 import { describeFailure } from '@/utils/describeFailure';
+import { showSuccess, showError, showWarning } from '@/api/notify';
 
 defineOptions({ name: 'UserHome' });
 
@@ -342,6 +394,13 @@ const paymentsLoading = ref(true);
 const paymentsError = ref('');
 const payments = ref([]);
 
+// 账号 ↔ 客户绑定（ownerUserId）。绑定了的普通用户可在此自助创建充值订单；
+// 未绑定或管理员都走既有路径（管理员去 /admin/payments）。
+const myCustomer = ref(null);
+const topupVisible = ref(false);
+const topupSaving = ref(false);
+const topupForm = reactive({ amountCny: 100, subject: '' });
+
 const groupsLoading = ref(true);
 const groupsError = ref('');
 const groups = ref([]);
@@ -365,6 +424,39 @@ async function loadPayments() {
   });
   const body = data?.data || {};
   payments.value = Array.isArray(body.list) ? body.list : Array.isArray(body) ? body : [];
+}
+
+// 绑定查询失败不打扰主页：拿不到就按「未绑定」处理，充值入口不出现。
+async function loadMyCustomer() {
+  try {
+    const { data } = await request.get('/api/ai-gateway/payments/my-customer', { silent: true });
+    myCustomer.value = data?.data || null;
+  } catch {
+    myCustomer.value = null;
+  }
+}
+
+// 自助充值：不传 userId，后端按「customer 绑定 = 当前账号」归属；未绑定会被 403 拒绝。
+async function submitTopup() {
+  const amount = Number(topupForm.amountCny);
+  if (!(amount > 0)) {
+    showWarning('请输入大于 0 的金额');
+    return;
+  }
+  topupSaving.value = true;
+  try {
+    const body = { customerId: myCustomer.value.id, amountCny: amount };
+    if (topupForm.subject?.trim()) body.subject = topupForm.subject.trim();
+    await request.post('/api/ai-gateway/payments', body);
+    topupVisible.value = false;
+    topupForm.subject = '';
+    showSuccess('充值订单已创建');
+    await loadPayments();
+  } catch (err) {
+    showError(describeFailure(err, '创建充值订单失败'));
+  } finally {
+    topupSaving.value = false;
+  }
 }
 
 async function loadGroups() {
@@ -394,6 +486,7 @@ async function loadOverview() {
     loadPayments().catch((err) => {
       paymentsError.value = describeFailure(err, '不影响其它区块，可稍后重试');
     }),
+    loadMyCustomer(),
     loadGroups().catch((err) => {
       groupsError.value = describeFailure(err, '不影响其它区块，可稍后重试');
     }),
@@ -562,10 +655,10 @@ function goSecurity() {
   router.push('/security');
 }
 function goBilling() {
-  router.push('/payments');
+  router.push('/admin/payments');
 }
 function goUsage() {
-  router.push('/usage');
+  router.push('/admin/usage');
 }
 function goProxies() {
   router.push('/proxies');
@@ -604,6 +697,11 @@ onMounted(loadOverview);
   align-items: center;
   gap: 8px;
   font-weight: 600;
+}
+
+/* 卡头右侧动作（如「充值」）推到行尾，与标题保持一行。 */
+.card-header-action {
+  margin-left: auto;
 }
 
 .card-header-icon {

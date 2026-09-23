@@ -421,7 +421,7 @@ const props = defineProps({
 })
 
 // Emits
-const emit = defineEmits(['order-submitted'])
+const emit = defineEmits(['order-submitted', 'strategy-monitoring-started', 'strategy-monitoring-stopped'])
 
 // 订单表单
 const orderForm = ref({

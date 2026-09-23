@@ -1,6 +1,6 @@
 'use strict';
 /**
- * commandCodeAdapter.models.test.js â€?verifies the model-list surface that
+ * commandCodeAdapter.models.test.js â€” verifies the model-list surface that
  * the new `khy provider` command (sprint 17) relies on. No real CLI is
  * spawned; we redirect the adapter's commandCodeHome by writing
  * config.json / providers.json into a temp dir, then point
@@ -20,6 +20,7 @@
  *  5. getStatus() reports the adapter name + the KHY_COMMANDCODE gate correctly
  */
 const fs = require('fs');
+const assert = require('node:assert');
 const os = require('os');
 const path = require('path');
 function withTempCmdcHome(fn) {

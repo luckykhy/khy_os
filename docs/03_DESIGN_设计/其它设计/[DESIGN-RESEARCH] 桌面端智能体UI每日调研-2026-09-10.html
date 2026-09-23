@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-RESEARCH] 桌面端智能体UI每日调研-2026-09-10.md -->
+<title>[DESIGN-RESEARCH] 桌面端智能体 UI 每日调研 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>其它设计<span class="sep">›</span>[DESIGN-RESEARCH] 桌面端智能体 UI 每日调研</div>
+      <header class="hero reveal"><h1>[DESIGN-RESEARCH] 桌面端智能体 UI 每日调研</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-research-桌面端智能体-ui-每日调研">[DESIGN-RESEARCH] 桌面端智能体 UI 每日调研</a></li><li class="lvl-2"><a href="#0-今日核心发现">0. 今日核心发现</a></li><li class="lvl-2"><a href="#1-新发现项目">1. 新发现项目</a></li><li class="lvl-3"><a href="#1-1-crush-charmbracelet-28k">1.1 Crush（Charmbracelet）— 28k★</a></li><li class="lvl-3"><a href="#1-2-codewhale-40-9k">1.2 Codewhale — 40.9k★</a></li><li class="lvl-3"><a href="#1-3-herdr-37-1k">1.3 Herdr — 37.1k★</a></li><li class="lvl-3"><a href="#1-4-oh-my-openagent-68-9k">1.4 oh-my-openagent — 68.9k★</a></li><li class="lvl-2"><a href="#2-行业趋势">2. 行业趋势</a></li><li class="lvl-3"><a href="#2-1-技术栈分布-2025-2026-新项目">2.1 技术栈分布（2025-2026 新项目）</a></li><li class="lvl-3"><a href="#2-2-权限控制演进">2.2 权限控制演进</a></li><li class="lvl-3"><a href="#2-3-多-agent-协作模式">2.3 多 Agent 协作模式</a></li><li class="lvl-2"><a href="#3-与-khy-os-的差距分析">3. 与 khy-os 的差距分析</a></li><li class="lvl-3"><a href="#3-1-已对齐-无需改动">3.1 已对齐（无需改动）</a></li><li class="lvl-3"><a href="#3-2-可借鉴的新方向">3.2 可借鉴的新方向</a></li><li class="lvl-2"><a href="#4-优化建议-按优先级">4. 优化建议（按优先级）</a></li><li class="lvl-3"><a href="#p1-agent-状态指示器-herdr-对齐">P1：Agent 状态指示器（Herdr 对齐）</a></li><li class="lvl-3"><a href="#p2-会话中模型切换-crush-对齐">P2：会话中模型切换（Crush 对齐）</a></li><li class="lvl-3"><a href="#p3-tmux-风格前缀键-herdr-对齐">P3：tmux 风格前缀键（Herdr 对齐）</a></li><li class="lvl-2"><a href="#5-竞品-stars-追踪-2026-09-10">5. 竞品 Stars 追踪（2026-09-10）</a></li><li class="lvl-2"><a href="#6-结论">6. 结论</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-research-桌面端智能体-ui-每日调研">[DESIGN-RESEARCH] 桌面端智能体 UI 每日调研<a class="anchor" href="#design-research-桌面端智能体-ui-每日调研" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：khy-os 对齐 ZCode 目标的每日动态跟踪。<br><strong>日期</strong>：2026-09-10<br><strong>状态</strong>：Daily Report</p></blockquote>
+<hr>
+<h2 id="0-今日核心发现">0. 今日核心发现<a class="anchor" href="#0-今日核心发现" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>发现</th><th>影响</th><th>优先级</th></tr></thead><tbody><tr><td>1</td><td><strong>Crush</strong>（Charmbracelet，28k★）是 OpenCode 的精神续作</td><td>多模型切换、LSP 集成</td><td><strong>观察</strong></td></tr><tr><td>2</td><td><strong>Codewhale</strong>（40.9k★，Rust）的 4 级审批模式与 khy-os 高度对齐</td><td>验证了我们的权限 UX 方向</td><td><strong>参考</strong></td></tr><tr><td>3</td><td><strong>Herdr</strong>（37.1k★）的终端多路复用器 + 可视状态指示器</td><td>多 Agent 管理的新范式</td><td><strong>参考</strong></td></tr><tr><td>4</td><td>Rust 成为新 Agent 工具的主流语言（Codewhale、Herdr）</td><td>性能优势明显</td><td><strong>趋势</strong></td></tr><tr><td>5</td><td>审批模式（Plan/Ask/Auto/Full）已成行业标配</td><td>验证 khy-os 方向正确</td><td><strong>确认</strong></td></tr></tbody></table>
+<hr>
+<h2 id="1-新发现项目">1. 新发现项目<a class="anchor" href="#1-新发现项目" aria-label="锚点">#</a></h2>
+<h3 id="1-1-crush-charmbracelet-28k">1.1 Crush（Charmbracelet）— 28k★<a class="anchor" href="#1-1-crush-charmbracelet-28k" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>详情</th></tr></thead><tbody><tr><td><strong>仓库</strong></td><td><code>charmbracelet/crush</code></td></tr><tr><td><strong>语言</strong></td><td>Go（Bubble Tea 生态）</td></tr><tr><td><strong>Stars</strong></td><td>28,000</td></tr><tr><td><strong>定位</strong></td><td>&quot;Coding bestie&quot; — 终端 Agentic 编码助手</td></tr><tr><td><strong>核心特性</strong></td><td>多模型支持、会话中切换模型、LSP 集成、MCP 扩展</td></tr><tr><td><strong>与 OpenCode 关系</strong></td><td>OpenCode 已于 2025-09-18 归档，Crush 是其精神续作</td></tr><tr><td><strong>UI 特点</strong></td><td>紧凑模式（compact_mode）、键盘驱动</td></tr></tbody></table>
+<p><strong>可借鉴点</strong>：</p>
+<ul><li>会话中切换模型（保持上下文）</li><li>LSP 集成提供代码智能</li><li>Charm 生态的成熟组件库</li></ul>
+<h3 id="1-2-codewhale-40-9k">1.2 Codewhale — 40.9k★<a class="anchor" href="#1-2-codewhale-40-9k" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>详情</th></tr></thead><tbody><tr><td><strong>仓库</strong></td><td><code>Hmbown/Codewhale</code></td></tr><tr><td><strong>语言</strong></td><td>Rust</td></tr><tr><td><strong>Stars</strong></td><td>40,900</td></tr><tr><td><strong>定位</strong></td><td>开源终端编码 Agent，社区驱动改进</td></tr><tr><td><strong>核心特性</strong></td><td>4 级审批、/undo、/restore、/goal、MCP、Skills</td></tr><tr><td><strong>UI 特点</strong></td><td>聊天式 TUI + 命令面板（/ 前缀）</td></tr></tbody></table>
+<p><strong>审批模式（与 khy-os 对比）</strong>：</p>
+<table><thead><tr><th>Codewhale</th><th>khy-os</th><th>对齐度</th></tr></thead><tbody><tr><td>Plan（只读）</td><td>dontAsk / plan 模式</td><td>✅ 已对齐</td></tr><tr><td>Ask（需确认）</td><td>normal / strict</td><td>✅ 已对齐</td></tr><tr><td>Auto-Review</td><td>acceptEdits / auto</td><td>✅ 已对齐</td></tr><tr><td>Full Access</td><td>yolo</td><td>✅ 已对齐</td></tr></tbody></table>
+<p><strong>可借鉴点</strong>：</p>
+<ul><li><code>/goal</code> 命令（明确任务目标）</li><li><code>/undo</code> 和 <code>/restore</code>（简化版撤销）</li><li>社区驱动的 VS Code 扩展</li></ul>
+<h3 id="1-3-herdr-37-1k">1.3 Herdr — 37.1k★<a class="anchor" href="#1-3-herdr-37-1k" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>详情</th></tr></thead><tbody><tr><td><strong>仓库</strong></td><td><code>herdrdev/herdr</code></td></tr><tr><td><strong>语言</strong></td><td>Rust</td></tr><tr><td><strong>Stars</strong></td><td>37,100</td></tr><tr><td><strong>定位</strong></td><td>&quot;Coding agents 的运行时&quot; — 终端多路复用器</td></tr><tr><td><strong>核心特性</strong></td><td>可分离会话、多机统一窗口、Agent 状态指示器</td></tr><tr><td><strong>UI 特点</strong></td><td>tmux 风格前缀键 + 鼠标支持</td></tr></tbody></table>
+<p><strong>核心创新</strong>：</p>
+<ul><li><strong>状态指示器</strong>：每个面板标记为 working / blocked / idle</li><li><strong>可分离</strong>：客户端关闭后，后台服务器继续运行</li><li><strong>多机合一</strong>：本地 + SSH 机器 + Agent 列表统一窗口</li><li><strong>Agent 原生</strong>：Agent 通过 CLI + Socket API 控制面板</li></ul>
+<p><strong>可借鉴点</strong>：</p>
+<ul><li>状态指示器（working/blocked/idle）— 比我们的 AgentTree 更直观</li><li>tmux 风格前缀键（Ctrl+b）— 比我们的单键快捷键更系统化</li></ul>
+<h3 id="1-4-oh-my-openagent-68-9k">1.4 oh-my-openagent — 68.9k★<a class="anchor" href="#1-4-oh-my-openagent-68-9k" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>详情</th></tr></thead><tbody><tr><td><strong>仓库</strong></td><td><code>code-yeongyu/oh-my-openagent</code></td></tr><tr><td><strong>语言</strong></td><td>TypeScript</td></tr><tr><td><strong>Stars</strong></td><td>68,900</td></tr><tr><td><strong>定位</strong></td><td>图工程工具，通过 &quot;mass ulw&quot; 提示词激活</td></tr><tr><td><strong>UI 特点</strong></td><td>图形化 Agent 编排</td></tr></tbody></table>
+<hr>
+<h2 id="2-行业趋势">2. 行业趋势<a class="anchor" href="#2-行业趋势" aria-label="锚点">#</a></h2>
+<h3 id="2-1-技术栈分布-2025-2026-新项目">2.1 技术栈分布（2025-2026 新项目）<a class="anchor" href="#2-1-技术栈分布-2025-2026-新项目" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>语言</th><th>代表项目</th><th>优势</th></tr></thead><tbody><tr><td><strong>Rust</strong></td><td>Codewhale, Herdr, yazi</td><td>性能、安全、单二进制分发</td></tr><tr><td><strong>Go</strong></td><td>Crush, oh-my-pi</td><td>并发、Bubble Tea 生态</td></tr><tr><td><strong>TypeScript</strong></td><td>oh-my-openagent, dsh-TUI</td><td>React/Ink 组件生态</td></tr><tr><td><strong>Python</strong></td><td>Aider, Textual 项目</td><td>快速原型、AI 生态</td></tr></tbody></table>
+<p><strong>趋势</strong>：Rust 正成为高性能 Agent 工具的首选语言。</p>
+<h3 id="2-2-权限控制演进">2.2 权限控制演进<a class="anchor" href="#2-2-权限控制演进" aria-label="锚点">#</a></h3>
+<pre><code>2023: 允许/拒绝（二进制）
+  ↓
+2024: 允许/拒绝/始终允许（三级）
+  ↓
+2025: Plan/Ask/Auto/Full（四级审批）← 当前行业标准
+  ↓
+2026: 细粒度 wildcard 规则 + 项目级持久化（khy-os 已对齐）</code></pre>
+<h3 id="2-3-多-agent-协作模式">2.3 多 Agent 协作模式<a class="anchor" href="#2-3-多-agent-协作模式" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>模式</th><th>代表</th><th>特点</th></tr></thead><tbody><tr><td><strong>父子层级</strong></td><td>ZCode, Claude Code</td><td>主 Agent 委派子 Agent</td></tr><tr><td><strong>状态面板</strong></td><td>Herdr</td><td>working/blocked/idle 可视化</td></tr><tr><td><strong>图编排</strong></td><td>oh-my-openagent</td><td>可视化 Agent 关系图</td></tr></tbody></table>
+<hr>
+<h2 id="3-与-khy-os-的差距分析">3. 与 khy-os 的差距分析<a class="anchor" href="#3-与-khy-os-的差距分析" aria-label="锚点">#</a></h2>
+<h3 id="3-1-已对齐-无需改动">3.1 已对齐（无需改动）<a class="anchor" href="#3-1-已对齐-无需改动" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>特性</th><th>khy-os 状态</th><th>竞品对比</th></tr></thead><tbody><tr><td>4 级审批模式</td><td>✅ 6 profile 映射 4 级</td><td>Codewhale 验证</td></tr><tr><td>权限 wildcard 规则</td><td>✅ 已启用</td><td>Claude Code 对齐</td></tr><tr><td>父子 Agent 工具树</td><td>✅ AgentTree 已集成</td><td>ZCode 对齐</td></tr><tr><td>任务时间预估</td><td>✅ ccTaskEstimate</td><td>ZCode 对齐</td></tr><tr><td>外部编辑器 Ctrl+E</td><td>✅ 已实现</td><td>OpenCode 对齐</td></tr><tr><td>Vim 模式</td><td>✅ NORMAL/INSERT/VISUAL</td><td>Claude Code 对齐</td></tr></tbody></table>
+<h3 id="3-2-可借鉴的新方向">3.2 可借鉴的新方向<a class="anchor" href="#3-2-可借鉴的新方向" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>方向</th><th>来源</th><th>工作量</th><th>价值</th></tr></thead><tbody><tr><td><strong>Agent 状态指示器</strong></td><td>Herdr</td><td>2d</td><td>高 — 比文字更直观</td></tr><tr><td><strong>tmux 风格前缀键</strong></td><td>Herdr</td><td>3d</td><td>中 — 更系统的快捷键</td></tr><tr><td><strong>会话中模型切换</strong></td><td>Crush</td><td>1d</td><td>高 — 用户期望</td></tr><tr><td><strong>/goal 命令</strong></td><td>Codewhale</td><td>1d</td><td>中 — 明确任务目标</td></tr><tr><td><strong>紧凑模式</strong></td><td>Crush</td><td>2d</td><td>中 — 小终端适配</td></tr></tbody></table>
+<hr>
+<h2 id="4-优化建议-按优先级">4. 优化建议（按优先级）<a class="anchor" href="#4-优化建议-按优先级" aria-label="锚点">#</a></h2>
+<h3 id="p1-agent-状态指示器-herdr-对齐">P1：Agent 状态指示器（Herdr 对齐）<a class="anchor" href="#p1-agent-状态指示器-herdr-对齐" aria-label="锚点">#</a></h3>
+<p><strong>现状</strong>：AgentTree 仅显示文字状态（running/completed）</p>
+<p><strong>建议</strong>：增加颜色编码的状态指示器</p>
+<ul><li>🟢 绿色 = completed</li><li>🟡 黄色 = running</li><li>🔴 红色 = error/blocked</li><li>⚪ 灰色 = idle/pending</li></ul>
+<p><strong>文件</strong>：<code>services/backend/src/cli/tui\ink-components\AgentTree.js</code></p>
+<h3 id="p2-会话中模型切换-crush-对齐">P2：会话中模型切换（Crush 对齐）<a class="anchor" href="#p2-会话中模型切换-crush-对齐" aria-label="锚点">#</a></h3>
+<p><strong>现状</strong>：模型在会话开始时选定</p>
+<p><strong>建议</strong>：添加 <code>/model</code> 命令或 <code>Alt+P</code> 切换模型</p>
+<p><strong>文件</strong>：<code>services/backend/src/cli/tui\ink-components\CcApp.js</code></p>
+<h3 id="p3-tmux-风格前缀键-herdr-对齐">P3：tmux 风格前缀键（Herdr 对齐）<a class="anchor" href="#p3-tmux-风格前缀键-herdr-对齐" aria-label="锚点">#</a></h3>
+<p><strong>现状</strong>：单键快捷键（Ctrl+C/O/T/V/E）</p>
+<p><strong>建议</strong>：引入前缀键（如 Ctrl+K）避免冲突</p>
+<ul><li><code>Ctrl+K</code> + <code>O</code> = 转录视图</li><li><code>Ctrl+K</code> + <code>T</code> = 工具树</li><li><code>Ctrl+K</code> + <code>V</code> = Vim 切换</li><li><code>Ctrl+K</code> + <code>E</code> = 外部编辑器</li></ul>
+<hr>
+<h2 id="5-竞品-stars-追踪-2026-09-10">5. 竞品 Stars 追踪（2026-09-10）<a class="anchor" href="#5-竞品-stars-追踪-2026-09-10" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>Stars</th><th>较上次变化</th><th>趋势</th></tr></thead><tbody><tr><td>Claude Code</td><td>144.6k</td><td>+0.4k</td><td>稳定增长</td></tr><tr><td>Aider</td><td>48.9k</td><td>+0.9k</td><td>快速增长</td></tr><tr><td>Codewhale</td><td>40.9k</td><td>新项目</td><td>爆发期</td></tr><tr><td>Herdr</td><td>37.1k</td><td>新项目</td><td>爆发期</td></tr><tr><td>Crush</td><td>28k</td><td>新项目</td><td>快速增长</td></tr><tr><td>OpenCode</td><td>13.7k</td><td>已归档</td><td>被 Crush 取代</td></tr><tr><td>oh-my-openagent</td><td>68.9k</td><td>新项目</td><td>图编排新范式</td></tr></tbody></table>
+<hr>
+<h2 id="6-结论">6. 结论<a class="anchor" href="#6-结论" aria-label="锚点">#</a></h2>
+<p>khy-os 的核心功能（权限控制、Agent 工具树、时间预估、Vim 模式）已与行业主流对齐甚至领先。2025-2026 年的新趋势集中在：</p>
+<ol><li><strong>Rust 化</strong>：高性能单二进制分发</li><li><strong>多 Agent 可视化</strong>：状态指示器 &gt; 文字列表</li><li><strong>模型灵活性</strong>：会话中切换模型</li><li><strong>前缀键系统</strong>：避免快捷键冲突</li></ol>
+<p>khy-os 已建立坚实的功能基础，下一步应聚焦于<strong>打磨体验</strong>（状态指示器、前缀键）和<strong>生态集成</strong>（LSP、MCP）。</p>
+<hr>
+<blockquote><p><strong>下次调研</strong>：每日凌晨 3 点自动执行。<br><strong>数据来源</strong>：GitHub WebFetch 实时数据。</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/其它设计/[DESIGN-RESEARCH] 桌面端智能体UI调研与差距分析-2026-09-09.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-RESEARCH] 桌面端智能体 UI 调研与差距分析</div></a><a class="next" href="../../../docs/03_DESIGN_设计/其它设计/[DESIGN-REVIEW-001] 代码审查规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-REVIEW-001] 代码审查规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/其它设计/[DESIGN-RESEARCH] 桌面端智能体UI每日调研-2026-09-10.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

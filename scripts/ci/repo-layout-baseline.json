@@ -1,19 +1,20 @@
 {
   "_note": "check-repo-layout.js 的已知违规存量。只允许下降：实测数 > 基线数即在 CI 亮红。修完一批后跑 `npm run check:layout -- --update-baseline` 下调，绝不上调来让 CI 变绿。",
-  "_source": "scripts/ci/check-repo-layout.js；规范真源 docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范.md",
+  "_source": "scripts/ci/check-repo-layout.js；规范真源 docs/10_规范/DESIGN-LAY/[DESIGN-LAY-005] 仓库层级板块规范.md",
   "_meaning": {
     "dangling-task": "被文档/CI 引用但任何 package.json 里都没定义的 npm run 目标数",
     "cross-layer-require": "跨 workspace 的深层相对 require 处数（纯 re-export 壳文件已豁免）",
     "unresolved-require": "深层相对 require 指向磁盘上不存在的路径的处数 —— 每一处都是潜伏崩溃",
-    "docs-index-complete": "阶段目录里没有出现在主索引 docs/00_INDEX_文档索引.md 的文档份数（CP-3 漏链）",
-    "extension-contract": "extensions/ 下不合 [DESIGN-ARCH-069] 拓展契约的目录处数（缺 khy.extension.json / id≠目录名 / kind 非法 / runtime 的 main 指向空气）",
-    "extension-id-hardcode": "核代码（services/backend/src）里硬编码拓展 id 的处数 —— [DESIGN-ARCH-069] §1.3 第四条。只算分派用途：注释与含中文的提示文案不计，kind: ide-bridge 的拓展不计（其路径由外部 IDE 决定，改成服务名也影响不了）。基线为 0：新增一处即升 error。",
-    "extension-path-drift": "extensions/ 内指向不存在位置的相对路径处数 —— 相对 require（任意层数，补上 unresolved-require 只看 ../../ 起步的盲区）与 __dirname 爬根算术两类。后者不抛错，只会静默算错根。基线为 0：拓展就是会被整体搬动的目录，新增一处即升 error。"
+    "docs-index-complete": "阶段目录里既不在主索引 docs/00_INDEX_文档索引.md、也不在本阶段就近 00_INDEX_* 里的文档份数（CP-3 漏链）。B8（2026-09-18）起主索引不再被要求逐篇点名：就近索引已收录即视为覆盖，被接管的份数另计 docs-index-delegated（观察口径，不入基线）。",
+    "extension-contract": "extensions/ 下不合 [DESIGN-TOOL-002] 拓展契约的目录处数（缺 khy.extension.json / id≠目录名 / kind 非法 / runtime 的 main 指向空气）",
+    "extension-id-hardcode": "核代码（services/backend/src）里硬编码拓展 id 的处数 —— [DESIGN-TOOL-002] §1.3 第四条。只算分派用途：注释与含中文的提示文案不计，kind: ide-bridge 的拓展不计（其路径由外部 IDE 决定，改成服务名也影响不了）。基线为 0：新增一处即升 error。",
+    "extension-path-drift": "extensions/ 内指向不存在位置的相对路径处数 —— 相对 require（任意层数，补上 unresolved-require 只看 ../../ 起步的盲区）与 __dirname 爬根算术两类。后者不抛错，只会静默算错根。基线为 0：拓展就是会被整体搬动的目录，新增一处即升 error。",
+    "docs-index-delegated": "由本阶段就近 00_INDEX_* 接管、主索引已不再逐篇点名的文档份数（B8 去重的收益口径，只增不减即说明主索引在持续变薄）。"
   },
-  "updated": "2026-09-01",
+  "updated": "2026-09-19",
   "counts": {
-    "dangling-task": 86,
-    "cross-layer-require": 38,
+    "dangling-task": 88,
+    "cross-layer-require": 39,
     "unresolved-require": 0,
     "docs-index-complete": 0,
     "extension-contract": 0,

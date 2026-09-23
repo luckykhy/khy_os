@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-073] 规范快速参考卡.md -->
+<title>[DESIGN-ARCH-073] 规范快速参考卡 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-073] 规范快速参考卡</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-073] 规范快速参考卡</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-073-规范快速参考卡">[DESIGN-ARCH-073] 规范快速参考卡</a></li><li class="lvl-2"><a href="#规范总览">规范总览</a></li><li class="lvl-3"><a href="#核心规范">📋 核心规范</a></li><li class="lvl-2"><a href="#mcp-协议速查">MCP 协议速查</a></li><li class="lvl-3"><a href="#核心组件">核心组件</a></li><li class="lvl-3"><a href="#常用命令">常用命令</a></li><li class="lvl-3"><a href="#配置示例">配置示例</a></li><li class="lvl-2"><a href="#协议速查">协议速查</a></li><li class="lvl-3"><a href="#私有-acp-进程内-agent-编排">私有 ACP（进程内 agent 编排）</a></li><li class="lvl-3"><a href="#标准-a2a-对外互操作">标准 A2A（对外互操作）</a></li><li class="lvl-3"><a href="#校验命令">校验命令</a></li><li class="lvl-2"><a href="#记忆规范速查">记忆规范速查</a></li><li class="lvl-3"><a href="#记忆类型">记忆类型</a></li><li class="lvl-3"><a href="#常用命令-2">常用命令</a></li><li class="lvl-3"><a href="#相关文档">相关文档</a></li><li class="lvl-2"><a href="#通信协议速查">通信协议速查</a></li><li class="lvl-3"><a href="#http-响应格式">HTTP 响应格式</a></li><li class="lvl-3"><a href="#websocket-消息格式">WebSocket 消息格式</a></li><li class="lvl-3"><a href="#sse-消息格式">SSE 消息格式</a></li><li class="lvl-3"><a href="#错误码分类">错误码分类</a></li><li class="lvl-2"><a href="#代码规范速查">代码规范速查</a></li><li class="lvl-3"><a href="#javascript-typescript">JavaScript/TypeScript</a></li><li class="lvl-3"><a href="#python">Python</a></li><li class="lvl-3"><a href="#文件命名">文件命名</a></li><li class="lvl-2"><a href="#文档规范速查">文档规范速查</a></li><li class="lvl-3"><a href="#文档命名">文档命名</a></li><li class="lvl-3"><a href="#文档结构">文档结构</a></li><li class="lvl-2"><a href="#测试规范速查">测试规范速查</a></li><li class="lvl-3"><a href="#测试类型">测试类型</a></li><li class="lvl-3"><a href="#测试命名">测试命名</a></li><li class="lvl-2"><a href="#部署规范速查">部署规范速查</a></li><li class="lvl-3"><a href="#环境配置">环境配置</a></li><li class="lvl-3"><a href="#版本管理">版本管理</a></li><li class="lvl-2"><a href="#ci-cd-检查速查">CI/CD 检查速查</a></li><li class="lvl-3"><a href="#检查命令">检查命令</a></li><li class="lvl-3"><a href="#预提交钩子">预提交钩子</a></li><li class="lvl-2"><a href="#环境变量速查">环境变量速查</a></li><li class="lvl-3"><a href="#核心变量">核心变量</a></li><li class="lvl-3"><a href="#记忆相关变量">记忆相关变量</a></li><li class="lvl-3"><a href="#a2a-相关变量">A2A 相关变量</a></li><li class="lvl-2"><a href="#常见问题速查">常见问题速查</a></li><li class="lvl-3"><a href="#q-如何添加新的-mcp-工具">Q: 如何添加新的 MCP 工具？</a></li><li class="lvl-3"><a href="#q-如何创建记忆">Q: 如何创建记忆？</a></li><li class="lvl-3"><a href="#q-如何检查代码规范">Q: 如何检查代码规范？</a></li><li class="lvl-3"><a href="#q-如何查看错误码">Q: 如何查看错误码？</a></li><li class="lvl-2"><a href="#相关文档-2">相关文档</a></li><li class="lvl-2"><a href="#版本历史">版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-073-规范快速参考卡">[DESIGN-ARCH-073] 规范快速参考卡<a class="anchor" href="#design-arch-073-规范快速参考卡" aria-label="锚点">#</a></h1>
+<blockquote><p>快速查阅 khy-os 项目所有规范的参考卡。</p></blockquote>
+<hr>
+<h2 id="规范总览">规范总览<a class="anchor" href="#规范总览" aria-label="锚点">#</a></h2>
+<h3 id="核心规范">📋 核心规范<a class="anchor" href="#核心规范" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规范</th><th>文档</th><th>状态</th><th>说明</th></tr></thead><tbody><tr><td><strong>项目规范化总纲</strong></td><td><code>[DESIGN-ARCH-072]</code></td><td>✅ 完成</td><td>项目规范化体系总览</td></tr><tr><td><strong>MCP 协议</strong></td><td>多份文档</td><td>✅ 成熟</td><td>工具集成协议</td></tr><tr><td><strong>A2A 协议</strong></td><td><code>[DESIGN-A2A-001]</code></td><td>🟡 设计完成</td><td>智能体通信协议</td></tr><tr><td><strong>记忆规范</strong></td><td><code>[DESIGN-MEM-001~005]</code></td><td>✅ 完成</td><td>记忆系统规范</td></tr><tr><td><strong>通信协议</strong></td><td><code>[DESIGN-COMM-001]</code></td><td>✅ 完成</td><td>服务间通信规范</td></tr><tr><td><strong>代码规范</strong></td><td><code>[DESIGN-ARCH-015]</code></td><td>✅ 强制</td><td>代码风格规范</td></tr><tr><td><strong>文档规范</strong></td><td><code>[MGMT-STD-001]</code></td><td>✅ 强制</td><td>文档管理规范</td></tr></tbody></table>
+<hr>
+<h2 id="mcp-协议速查">MCP 协议速查<a class="anchor" href="#mcp-协议速查" aria-label="锚点">#</a></h2>
+<h3 id="核心组件">核心组件<a class="anchor" href="#核心组件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>组件</th><th>说明</th><th>配置</th></tr></thead><tbody><tr><td>MCP 客户端</td><td>连接外部工具</td><td><code>~/.khy/mcp.json</code></td></tr><tr><td>MCP 服务端</td><td>暴露 khy 工具</td><td><code>KHY_MCP_SERVE=on</code></td></tr><tr><td>生态桥接</td><td>支持 14+ IDE</td><td>自动检测</td></tr></tbody></table>
+<h3 id="常用命令">常用命令<a class="anchor" href="#常用命令" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 查看 MCP 状态</span>
+khy mcp status
+
+<span class="hljs-comment"># 添加 MCP 服务器</span>
+khy mcp add &lt;name&gt; &lt;<span class="hljs-built_in">command</span>&gt;
+
+<span class="hljs-comment"># 列出 MCP 工具</span>
+khy mcp tools
+
+<span class="hljs-comment"># 测试 MCP 连接</span>
+khy mcp <span class="hljs-built_in">test</span> &lt;name&gt;</code></pre>
+<h3 id="配置示例">配置示例<a class="anchor" href="#配置示例" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;mcpServers&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;my-server&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;node&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;args&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;server.js&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;env&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;disabled&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+<h2 id="协议速查">协议速查<a class="anchor" href="#协议速查" aria-label="锚点">#</a></h2>
+<blockquote><p>⚠️ <strong>本节 2026-09-15 更正。</strong> 原「A2A 协议速查」把 khy-os 的<strong>私有进程内 ACP 方言</strong><br>写成了标准 A2A，且方法族（<code>a2a.discovery.*</code> / <code>a2a.capability.*</code> / <code>a2a.task.*</code> /<br><code>a2a.status.*</code>）<strong>在实现中零存在</strong> —— 属设计草案遗留，从未落地。<br>术语区分见 <code>[DESIGN-NAM-002]</code>。</p></blockquote>
+<h3 id="私有-acp-进程内-agent-编排">私有 ACP（进程内 agent 编排）<a class="anchor" href="#私有-acp-进程内-agent-编排" aria-label="锚点">#</a></h3>
+<p><strong>作用域</strong>：单进程内。<strong>不是</strong>对外协议，不要用它对接外部系统。</p>
+<table><thead><tr><th>类型</th><th>方法</th><th>说明</th></tr></thead><tbody><tr><td>Agent</td><td><code>agent.spawn</code> / <code>agent.kill</code> / <code>agent.status</code></td><td>起停子 agent、查询状态</td></tr><tr><td>任务</td><td><code>task.submit</code> / <code>task.result</code> / <code>task.progress</code></td><td>提交任务、回传结果、上报进度</td></tr><tr><td>上下文</td><td><code>context.share</code></td><td>共享上下文</td></tr><tr><td>工具</td><td><code>tool.invoke</code> / <code>tool.result</code></td><td>请求对端调工具并回传结果</td></tr><tr><td>消息</td><td><code>message.send</code> / <code>message.broadcast</code></td><td>点对点 / 广播</td></tr><tr><td>保活</td><td><code>heartbeat</code></td><td>心跳</td></tr></tbody></table>
+<p><strong>真源</strong>：<code>services/backend/src/services/acpTransport.js</code> 的 <code>ACP_METHODS</code> 与<br><code>services/backend/src/contracts/acp/acp-message.schema.json</code>；<br>规范文档 <code>[DESIGN-A2A-001]</code>（含定位更正横幅）。</p>
+<h3 id="标准-a2a-对外互操作">标准 A2A（对外互操作）<a class="anchor" href="#标准-a2a-对外互操作" aria-label="锚点">#</a></h3>
+<p><strong>作用域</strong>：跨厂商、跨网络。<strong>这是唯一可用于对接外部 agent 的协议。</strong></p>
+<table><thead><tr><th>项</th><th>值</th></tr></thead><tbody><tr><td>协议版本</td><td><code>0.3.0</code>（<code>agentCardSpec.A2A_PROTOCOL_VERSION</code>）</td></tr><tr><td>发现</td><td><code>GET /.well-known/agent-card.json</code>（公开、无鉴权）</td></tr><tr><td>传输</td><td>JSON-RPC 2.0 over HTTP + <strong>SSE</strong>（<strong>不是</strong> WebSocket）</td></tr><tr><td>方法</td><td><code>message/send</code>、<code>message/stream</code>、<code>tasks/get</code>、<code>tasks/cancel</code>、<code>tasks/pushNotificationConfig/*</code></td></tr><tr><td>任务状态</td><td><code>submitted</code> / <code>working</code> / <code>input-required</code> / <code>completed</code> / <code>canceled</code> / <code>failed</code> / <code>rejected</code> / <code>auth-required</code> / <code>unknown</code></td></tr><tr><td>契约</td><td><code>services/backend/src/contracts/a2a/*.schema.json</code></td></tr><tr><td>规范文档</td><td><code>[DESIGN-A2A-002] A2A 标准协议适配规范</code></td></tr></tbody></table>
+<p><strong>当前能力（诚实声明）</strong>：<code>streaming: false</code>、<code>pushNotifications: false</code>、<br><code>stateTransitionHistory: false</code> —— 三项均未实现，故不在卡片上虚报。<br>真源 <code>agentCardSpec.IMPLEMENTED_CAPABILITIES</code>，由 <code>npm run check:protocol-conformance</code> 实测。</p>
+<h3 id="校验命令">校验命令<a class="anchor" href="#校验命令" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">npm run check:protocol-conformance   <span class="hljs-comment"># 声明 ↔ 实现一致性（MCP + A2A）</span>
+npm run check:protocol-naming        <span class="hljs-comment"># 命名纪律（A2A vs ACP）</span></code></pre>
+<hr>
+<h2 id="记忆规范速查">记忆规范速查<a class="anchor" href="#记忆规范速查" aria-label="锚点">#</a></h2>
+<h3 id="记忆类型">记忆类型<a class="anchor" href="#记忆类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>用途</th><th>保鲜期</th><th>示例</th></tr></thead><tbody><tr><td><code>user</code></td><td>用户身份、核心偏好</td><td>3650 天</td><td>语言偏好、工作习惯</td></tr><tr><td><code>feedback</code></td><td>交互风格、反馈模式</td><td>540 天</td><td>回复风格、错误处理</td></tr><tr><td><code>project</code></td><td>项目背景、技术约定</td><td>180 天</td><td>架构设计、代码规范</td></tr><tr><td><code>reference</code></td><td>外部资源、参考资料</td><td>365 天</td><td>API 文档、工具配置</td></tr></tbody></table>
+<h3 id="常用命令-2">常用命令<a class="anchor" href="#常用命令-2" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 创建记忆</span>
+/remember --<span class="hljs-built_in">type</span> feedback --name <span class="hljs-string">&quot;回复风格&quot;</span> --desc <span class="hljs-string">&quot;用户偏好简洁回复&quot;</span> 内容
+
+<span class="hljs-comment"># 查看记忆状态</span>
+khy memory project
+
+<span class="hljs-comment"># 记忆蒸馏</span>
+khy memory distill --apply
+
+<span class="hljs-comment"># 清空记忆</span>
+npm run memory:clear
+npm run memory:clear:apply
+
+<span class="hljs-comment"># 恢复记忆</span>
+npm run memory:restore
+npm run memory:restore:all</code></pre>
+<h3 id="相关文档">相关文档<a class="anchor" href="#相关文档" aria-label="锚点">#</a></h3>
+<ul><li><code>[DESIGN-MEM-000]</code> 记忆系统总结</li><li><code>[DESIGN-MEM-001]</code> 记忆系统标准规范</li><li><code>[DESIGN-MEM-002]</code> 记忆时机指南</li><li><code>[DESIGN-MEM-003]</code> 记忆模板库</li><li><code>[DESIGN-MEM-004]</code> 记忆快速参考卡</li><li><code>[DESIGN-MEM-005]</code> 记忆系统使用指南</li></ul>
+<hr>
+<h2 id="通信协议速查">通信协议速查<a class="anchor" href="#通信协议速查" aria-label="锚点">#</a></h2>
+<h3 id="http-响应格式">HTTP 响应格式<a class="anchor" href="#http-响应格式" aria-label="锚点">#</a></h3>
+<p><strong>成功响应</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;操作成功&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;pagination&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;page&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;pageSize&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">20</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;total&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">100</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>错误响应</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;错误描述&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ERROR_CODE&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ERROR_TYPE&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;details&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="websocket-消息格式">WebSocket 消息格式<a class="anchor" href="#websocket-消息格式" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;request|response|event|ping|pong&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;msg-uuid&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;method&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;service.action&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;params&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;result&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">null</span></span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="sse-消息格式">SSE 消息格式<a class="anchor" href="#sse-消息格式" aria-label="锚点">#</a></h3>
+<pre><code>event: message_type
+id: event-uuid
+data: {&quot;key&quot;: &quot;value&quot;}
+</code></pre>
+<h3 id="错误码分类">错误码分类<a class="anchor" href="#错误码分类" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>分类</th><th>前缀</th><th>HTTP 状态码</th><th>示例</th></tr></thead><tbody><tr><td>用户错误</td><td><code>USER_</code></td><td>4xx</td><td><code>USER_INVALID_PARAM</code></td></tr><tr><td>认证错误</td><td><code>AUTH_</code></td><td>401</td><td><code>AUTH_TOKEN_EXPIRED</code></td></tr><tr><td>授权错误</td><td><code>PERM_</code></td><td>403</td><td><code>PERM_DENIED</code></td></tr><tr><td>资源错误</td><td><code>RES_</code></td><td>404</td><td><code>RES_NOT_FOUND</code></td></tr><tr><td>业务错误</td><td><code>BIZ_</code></td><td>422</td><td><code>BIZ_VALIDATION_FAILED</code></td></tr><tr><td>限流错误</td><td><code>RATE_</code></td><td>429</td><td><code>RATE_LIMIT_EXCEEDED</code></td></tr><tr><td>网络错误</td><td><code>NET_</code></td><td>502/503</td><td><code>NET_CONNECTION_FAILED</code></td></tr><tr><td>内部错误</td><td><code>INT_</code></td><td>500</td><td><code>INT_INTERNAL_ERROR</code></td></tr></tbody></table>
+<hr>
+<h2 id="代码规范速查">代码规范速查<a class="anchor" href="#代码规范速查" aria-label="锚点">#</a></h2>
+<h3 id="javascript-typescript">JavaScript/TypeScript<a class="anchor" href="#javascript-typescript" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确</span>
+<span class="hljs-keyword">const</span> userName = <span class="hljs-string">&#x27;john&#x27;</span>;
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">MAX_RETRIES</span> = <span class="hljs-number">3</span>;
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">getUserById</span>(<span class="hljs-params">userId</span>) {
+  <span class="hljs-comment">// ...</span>
+}
+
+<span class="hljs-comment">// ❌ 错误</span>
+<span class="hljs-keyword">const</span> user_name = <span class="hljs-string">&#x27;john&#x27;</span>;  <span class="hljs-comment">// 应该用 camelCase</span>
+<span class="hljs-keyword">const</span> max_retries = <span class="hljs-number">3</span>;     <span class="hljs-comment">// 应该用 camelCase</span></code></pre>
+<h3 id="python">Python<a class="anchor" href="#python" aria-label="锚点">#</a></h3>
+<pre><code class="language-python"><span class="hljs-comment"># ✅ 正确</span>
+user_name = <span class="hljs-string">&#x27;john&#x27;</span>
+max_retries = <span class="hljs-number">3</span>
+
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">get_user_by_id</span>(<span class="hljs-params">user_id</span>):
+    <span class="hljs-comment"># ...</span>
+
+<span class="hljs-comment"># ❌ 错误</span>
+userName = <span class="hljs-string">&#x27;john&#x27;</span>  <span class="hljs-comment"># 应该用 snake_case</span>
+maxRetries = <span class="hljs-number">3</span>     <span class="hljs-comment"># 应该用 snake_case</span></code></pre>
+<h3 id="文件命名">文件命名<a class="anchor" href="#文件命名" aria-label="锚点">#</a></h3>
+<pre><code># ✅ 正确
+user-service.js
+user_service.py
+UserProfile.tsx
+
+# ❌ 错误
+UserService.js      # 应该用 kebab-case
+user-service.py     # 应该用 snake_case
+userprofile.tsx     # 应该用 PascalCase</code></pre>
+<hr>
+<h2 id="文档规范速查">文档规范速查<a class="anchor" href="#文档规范速查" aria-label="锚点">#</a></h2>
+<h3 id="文档命名">文档命名<a class="anchor" href="#文档命名" aria-label="锚点">#</a></h3>
+<p><strong>格式</strong>：<code>[TYPE-CATEGORY-NNN] 标题.md</code></p>
+<p><strong>类型</strong>：</p>
+<ul><li>DESIGN：设计文档</li><li>OPS：运维文档</li><li>MGMT：管理文档</li><li>API：API 文档</li><li>GUIDE：指南文档</li></ul>
+<h3 id="文档结构">文档结构<a class="anchor" href="#文档结构" aria-label="锚点">#</a></h3>
+<pre><code class="language-markdown"><span class="hljs-section"># [TYPE-CATEGORY-NNN] 标题</span>
+
+<span class="hljs-quote">&gt; 摘要</span>
+
+---
+
+<span class="hljs-section">## 1. 概述</span>
+<span class="hljs-section">## 2. 详细内容</span>
+<span class="hljs-section">## 3. 示例</span>
+<span class="hljs-section">## 4. 相关文档</span>
+<span class="hljs-section">## 5. 版本历史</span></code></pre>
+<hr>
+<h2 id="测试规范速查">测试规范速查<a class="anchor" href="#测试规范速查" aria-label="锚点">#</a></h2>
+<h3 id="测试类型">测试类型<a class="anchor" href="#测试类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>目的</th><th>工具</th><th>命令</th></tr></thead><tbody><tr><td>单元测试</td><td>函数/模块测试</td><td>Jest/Vitest</td><td><code>npm run test:unit</code></td></tr><tr><td>集成测试</td><td>模块间交互</td><td>Jest/Vitest</td><td><code>npm run test:integration</code></td></tr><tr><td>端到端测试</td><td>完整流程</td><td>Playwright</td><td><code>npm run test:e2e</code></td></tr><tr><td>性能测试</td><td>性能基准</td><td>Artillery</td><td><code>npm run test:performance</code></td></tr></tbody></table>
+<h3 id="测试命名">测试命名<a class="anchor" href="#测试命名" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;UserService&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;getUserById&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;should return user when user exists&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-comment">// ...</span>
+    });
+
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;should throw error when user not found&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-comment">// ...</span>
+    });
+  });
+});</code></pre>
+<hr>
+<h2 id="部署规范速查">部署规范速查<a class="anchor" href="#部署规范速查" aria-label="锚点">#</a></h2>
+<h3 id="环境配置">环境配置<a class="anchor" href="#环境配置" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>环境</th><th>配置文件</th><th>用途</th></tr></thead><tbody><tr><td>开发</td><td><code>.env.local</code></td><td>本地开发</td></tr><tr><td>测试</td><td><code>.env.test</code></td><td>功能测试</td></tr><tr><td>预发</td><td><code>.env.staging</code></td><td>预发布验证</td></tr><tr><td>生产</td><td><code>.env.production</code></td><td>正式环境</td></tr></tbody></table>
+<h3 id="版本管理">版本管理<a class="anchor" href="#版本管理" aria-label="锚点">#</a></h3>
+<p><strong>语义化版本</strong>：<code>MAJOR.MINOR.PATCH</code></p>
+<ul><li>MAJOR：不兼容的 API 变更</li><li>MINOR：向下兼容的功能性新增</li><li>PATCH：向下兼容的问题修正</li></ul>
+<hr>
+<h2 id="ci-cd-检查速查">CI/CD 检查速查<a class="anchor" href="#ci-cd-检查速查" aria-label="锚点">#</a></h2>
+<h3 id="检查命令">检查命令<a class="anchor" href="#检查命令" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 代码规范检查</span>
+npm run check:agent-rules
+
+<span class="hljs-comment"># 文件格式检查</span>
+npm run check:change-safety
+
+<span class="hljs-comment"># 协议契约检查</span>
+npm run check:protocol-contracts
+
+<span class="hljs-comment"># 可靠性检查</span>
+npm run check:reliability
+
+<span class="hljs-comment"># 版本同步检查</span>
+npm run check:version-sync
+
+<span class="hljs-comment"># 仓库布局检查</span>
+npm run check:layout</code></pre>
+<h3 id="预提交钩子">预提交钩子<a class="anchor" href="#预提交钩子" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 安装 Git Hooks</span>
+npm run hooks:install
+
+<span class="hljs-comment"># 手动运行检查</span>
+npm run check:changed</code></pre>
+<hr>
+<h2 id="环境变量速查">环境变量速查<a class="anchor" href="#环境变量速查" aria-label="锚点">#</a></h2>
+<h3 id="核心变量">核心变量<a class="anchor" href="#核心变量" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>变量</th><th>默认值</th><th>说明</th></tr></thead><tbody><tr><td><code>KHY_DISABLE_MEMORY</code></td><td>off</td><td>全局记忆开关</td></tr><tr><td><code>KHY_MCP_SERVE</code></td><td>on</td><td>MCP 服务开关</td></tr><tr><td><code>KHY_A2A_ENABLED</code></td><td>true</td><td>A2A 协议开关</td></tr><tr><td><code>KHY_SESSION_WATCHDOG</code></td><td>on</td><td>会话看门狗</td></tr><tr><td><code>KHY_PROTOCOL_ARBITRATION</code></td><td>on</td><td>协议仲裁</td></tr></tbody></table>
+<h3 id="记忆相关变量">记忆相关变量<a class="anchor" href="#记忆相关变量" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>变量</th><th>默认值</th><th>说明</th></tr></thead><tbody><tr><td><code>KHY_MEMORY_DIR</code></td><td>-</td><td>自定义记忆目录</td></tr><tr><td><code>KHY_PROACTIVE_MEMORY</code></td><td>on</td><td>主动回忆层</td></tr><tr><td><code>KHY_MEMORY_TIERS</code></td><td>on</td><td>分层模型</td></tr><tr><td><code>KHY_MEMORY_TRIGGER</code></td><td>on</td><td>自动捕获</td></tr><tr><td><code>KHY_MEMORY_DISTILL_AUTO</code></td><td>report</td><td>自动蒸馏模式</td></tr></tbody></table>
+<h3 id="a2a-相关变量">A2A 相关变量<a class="anchor" href="#a2a-相关变量" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>变量</th><th>默认值</th><th>说明</th></tr></thead><tbody><tr><td><code>A2A_PORT</code></td><td>3001</td><td>WebSocket 端口</td></tr><tr><td><code>A2A_HTTP_PORT</code></td><td>3002</td><td>HTTP 端口</td></tr><tr><td><code>A2A_GRPC_PORT</code></td><td>3003</td><td>gRPC 端口</td></tr><tr><td><code>A2A_AUTH_TYPE</code></td><td>jwt</td><td>认证类型</td></tr><tr><td><code>A2A_TLS_ENABLED</code></td><td>true</td><td>启用 TLS</td></tr></tbody></table>
+<hr>
+<h2 id="常见问题速查">常见问题速查<a class="anchor" href="#常见问题速查" aria-label="锚点">#</a></h2>
+<h3 id="q-如何添加新的-mcp-工具">Q: 如何添加新的 MCP 工具？<a class="anchor" href="#q-如何添加新的-mcp-工具" aria-label="锚点">#</a></h3>
+<p><strong>A</strong>:</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 方法 1：使用命令</span>
+khy mcp add &lt;name&gt; &lt;<span class="hljs-built_in">command</span>&gt;
+
+<span class="hljs-comment"># 方法 2：编辑配置文件</span>
+vim ~/.khy/mcp.json</code></pre>
+<h3 id="q-如何创建记忆">Q: 如何创建记忆？<a class="anchor" href="#q-如何创建记忆" aria-label="锚点">#</a></h3>
+<p><strong>A</strong>:</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 快速记忆</span>
+/remember 用户偏好简洁回复
+
+<span class="hljs-comment"># 结构化记忆</span>
+/remember --<span class="hljs-built_in">type</span> feedback --name <span class="hljs-string">&quot;回复风格&quot;</span> --desc <span class="hljs-string">&quot;用户偏好简洁回复&quot;</span> 内容</code></pre>
+<h3 id="q-如何检查代码规范">Q: 如何检查代码规范？<a class="anchor" href="#q-如何检查代码规范" aria-label="锚点">#</a></h3>
+<p><strong>A</strong>:</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 检查所有规范</span>
+npm run check:changed
+
+<span class="hljs-comment"># 检查特定规范</span>
+npm run check:agent-rules
+npm run check:change-safety</code></pre>
+<h3 id="q-如何查看错误码">Q: 如何查看错误码？<a class="anchor" href="#q-如何查看错误码" aria-label="锚点">#</a></h3>
+<p><strong>A</strong>: 参考 <code>[DESIGN-COMM-001]</code> 通信协议规范中的错误码定义。</p>
+<hr>
+<h2 id="相关文档-2">相关文档<a class="anchor" href="#相关文档-2" aria-label="锚点">#</a></h2>
+<ul><li><code>[DESIGN-ARCH-072]</code> 项目规范化总纲</li><li><code>[DESIGN-A2A-001]</code> A2A 协议规范</li><li><code>[DESIGN-COMM-001]</code> 通信协议规范</li><li><code>[DESIGN-MEM-001]</code> 记忆系统标准规范</li></ul>
+<hr>
+<h2 id="版本历史">版本历史<a class="anchor" href="#版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，提供规范快速参考</td></tr></tbody></table>
+<hr>
+<p><em>本参考卡由 khy-os 架构团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-072] 项目规范化总纲.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-072] 项目规范化总纲</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-074] khyos 账号体系收口-用户名唯一键 alias 软冲突 密码必填 局域网登录.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-074] khy-os 账号体系收口 — 用户名为唯一键 + alias 软冲突 + 密码必填 + 局域网登录</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-073] 规范快速参考卡.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -52,6 +52,11 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
+        with:
+          # 显式 pin，与根 package.json 的 packageManager 保持一致。
+          # 不写则依赖 action 隐式探测；一旦探测结果与 corepack 不一致，
+          # 会在安装阶段额外下载第二个 pnpm，报难查的 ERR_PNPM_*。
+          version: 10.18.0
       - uses: actions/setup-node@v4
         with:
           # 不写死大版本：跟随当前稳定 LTS。
@@ -117,6 +122,9 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
+        with:
+          # 显式 pin，与根 package.json 的 packageManager 保持一致（详见本文件上方说明）。
+          version: 10.18.0
       - uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'

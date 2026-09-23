@@ -254,7 +254,26 @@ app.set('trust proxy', 1); // 信任 Nginx 反向代理的 X-Forwarded-For 头
 
 const server = http.createServer(app);
 
-const wss = new WebSocket.Server({ server });
+// noServer + manual routing: the cross-device sync server
+// (src/services/crossPlatform/ws/syncServer.js) registers its own 'upgrade'
+// listener on this same HTTP server for /ws/cross-platform. A { server }
+// WebSocketServer would claim EVERY path, so one upgrade would run through
+// two handleUpgrade() calls — ws throws "handleUpgrade() was called more
+// than once with the same socket", and the uncaught throw kills the process.
+const wss = new WebSocket.Server({ noServer: true });
+server.on('upgrade', (req, socket, head) => {
+  let pathname = req.url;
+  try {
+    pathname = new URL(req.url, 'http://localhost').pathname;
+  } catch {
+    /* keep raw url for comparison below */
+  }
+  if (pathname === '/ws/cross-platform') return; // owned by syncServer.attach()
+  wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+});
+wss.on('error', (err) => {
+  console.error('[ws] app socket error:', err && err.message);
+});
 
 const parsedPort = BACKEND_PORT;
 
@@ -276,38 +295,13 @@ function _buildDefaultCorsOrigins() {
   return origins;
 }
 
-// Discover PostgreSQL installation paths dynamically instead of hardcoding
+// Discover PostgreSQL installation paths dynamically instead of hardcoding.
+// Single source of truth lives in src/utils/pgPaths.js (shared with
+// start-with-db.js), so PG_HOME override + drive scan are defined once.
 function _discoverPgPaths() {
-  // 1. Env override takes priority
-  if (process.env.PG_HOME) return [process.env.PG_HOME];
-
-  if (process.platform !== 'win32') {
-    // Linux/macOS: pg_ctl is typically in PATH
-    return ['/usr/lib/postgresql', '/usr/local/pgsql'];
-  }
-
-  // 2. Windows: scan "Program Files" on all available drive letters
-  const versions = [18, 17, 16, 15, 14];
-  const prefixes = ['Program Files', 'Program Files (x86)'];
-  const drives = [];
-  for (let code = 67; code <= 90; code++) {
-    // C..Z
-    const letter = String.fromCharCode(code);
-    try {
-      if (fs.existsSync(`${letter}:\\`)) drives.push(`${letter}:`);
-    } catch {
-      /* drive not accessible */
-    }
-  }
-  const paths = [];
-  for (const drive of drives) {
-    for (const prefix of prefixes) {
-      for (const ver of versions) {
-        paths.push(path.join(drive, prefix, 'PostgreSQL', String(ver)));
-      }
-    }
-  }
-  return paths;
+  // eslint-disable-next-line global-require
+  const { discoverPgBasePaths } = require('./src/utils/pgPaths');
+  return discoverPgBasePaths();
 }
 
 const parsedPortRetry = Number.parseInt(process.env.PORT_AUTO_RETRY || '20', 10);
@@ -395,7 +389,7 @@ try {
 
 app.use((req, res, next) => {
   // Only set JSON content-type for API routes, not static files
-  if (req.path.startsWith('/api') || req.path === '/health') {
+  if (req.path.startsWith('/api') || req.path === '/health' || req.path === '/healthz') {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
   }
 
@@ -430,7 +424,7 @@ app.use('/api/users', userRoutes); // 用户信息增删改查
 // 设计模式：适配器模式（Adapter），将不同策略语言统一为内部可执行格式
 // ============================================================
 // ── 由拓展提供的路由：缺席时跳过，而不是让整机起不来 ────────────────────
-// [DESIGN-ARCH-069] §4.1 承诺「删目录即卸载」。量化应用（服务名 quant-app）的路由
+// [DESIGN-TOOL-002] §4.1 承诺「删目录即卸载」。量化应用（服务名 quant-app）的路由
 // 经兼容壳解析，应用缺席时壳得到 null —— 而 app.use(path, null) 会抛，于是「卸载一个
 // 应用」又变成了「服务器起不来」。这个挂载器把 null 变成一次跳过 + 一行汇总日志。
 //
@@ -577,6 +571,15 @@ app.use('/api/announcements', announcementRoutes); // 系统公告管理
 
 app.use('/api/commands', commandCatalogRoutes); // 功能索引（命令目录，公开只读）
 
+// A2A 发现端点（公开、无鉴权、不进 {success,data} 信封）—— 外部 orchestrator
+// 据此发现 khy-os 的能力与鉴权方式。见 [DESIGN-A2A-002] 与 routes/wellKnown.js。
+app.use('/.well-known', require('./src/routes/wellKnown'));
+
+// A2A 服务端任务面（S3）：message/send、tasks/get、tasks/cancel 的标准 REST 绑定。
+// 与上方发现端点相邻，构成「可被标准 A2A 客户端发现且调用」的完整 agent。
+// 公开发现 + 按需 Bearer 鉴权（KHY_A2A_API_KEY）。见 routes/a2a.js 与 [DESIGN-A2A-002]。
+app.use('/v1', require('./src/routes/a2a'));
+
 app.use('/api/feedback', feedbackRoutes); // 用户反馈收集
 
 // ============================================================
@@ -615,7 +618,9 @@ reportSkippedMounts(21); // 量化应用路由挂载结果汇总
 // ============================================================
 // 第6组：系统管理与外部服务接口
 // ============================================================
-app.use('/api/system', require('./src/routes/system')); // 系统信息（局域网IP、版本等）
+// 需认证：/trigger-voice-input 可触发宿主机语音输入，/network-info 暴露局域网拓扑，
+// /data-sources/test 会对外发起探测请求。此前该路由整体无鉴权，任意网页可跨站调用。
+app.use('/api/system', authMiddleware, require('./src/routes/system'));
 
 app.use('/api/webauthn', require('./src/routes/webauthn')); // 生物认证（WebAuthn 指纹/面容）
 
@@ -655,6 +660,21 @@ app.use('/webhooks', require('./src/routes/webhooks')); // 外部渠道回调（
 // ─── 服务健康检查端点 ─────────────────────────────────────────────────
 // 检测数据库、缓存、WebSocket、标的同步等子系统的运行状态
 // 部署时 Nginx/Docker 通过此端点判断服务是否可用（对应论文第6章 §6.2 运维监控）
+
+// ─── 存活探针（liveness）──────────────────────────────────────────────
+// 与上面的 healthHandler 是**两种不同语义**，刻意分离：
+//
+//   /healthz  = 存活（liveness）  → 进程活着、HTTP 在应答，**不查任何后端依赖**，
+//                                  永远 200。给容器编排/负载均衡用。
+//   /health   = 就绪（readiness） → 查 DB / 缓存，任一不健康返 503。给人看诊断。
+//
+// 为什么不复用 healthHandler：它依赖 sequelize.authenticate()，DB 不可用时返 503。
+// 若容器探针走它，就把「DB/环境故障」伪装成「服务起不来」——正是本仓库
+// deploy-staging 历史上「环境问题伪装成代码红灯」的同一类错误。
+// 存活探针只回答一个问题：「这个进程还能不能接连接」。
+app.get('/healthz', (req, res) => {
+  res.status(200).json({ status: 'alive' });
+});
 
 const healthHandler = async (req, res) => {
   // Check if request is authenticated for detailed diagnostics
@@ -1206,6 +1226,20 @@ function getActiveWsClientCount() {
     if (client.readyState === WebSocket.OPEN || client.readyState === WebSocket.CONNECTING) {
       active++;
     }
+  }
+  // The cross-device sync server owns its OWN WebSocketServer (see
+  // syncServer.attach: `noServer: true` + its own 'upgrade' listener), so the
+  // browser's /ws/cross-platform socket lands in _wss.clients — never in the
+  // app-level `wss.clients` counted above. Without adding it here the idle
+  // watchdog sees "0 clients" even with a browser tab wide open, kills the
+  // backend after IDLE_SHUTDOWN_MS, and every /api call 404/500s while the
+  // WebSocket keeps failing to reconnect — a self-sustaining outage.
+  try {
+    const syncServer = require('./src/services/crossPlatform/ws/syncServer');
+    const n = typeof syncServer.getClientCount === 'function' ? syncServer.getClientCount() : 0;
+    if (Number.isFinite(n) && n > 0) active += n;
+  } catch {
+    /* sync server not attached yet → nothing to count */
   }
   return active;
 }

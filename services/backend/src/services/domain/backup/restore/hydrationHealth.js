@@ -15,6 +15,15 @@
  * 也看不出 `@khy/shared` 软链断裂或便携 Node 缺失。本文件把这些各自成规则，
  * 每条配一句照抄即用的具名修法。
  *
+ * 2026-09-21 补第三种态「**空心裂脑**（hollow）**：marker 在、node_modules 也在，
+ * 但包目录是**空壳**——pnpm 风格布局里 `node_modules/<pkg>` 是指向
+ * `node_modules/.pnpm/<pkg>@<ver>/...` 的符号链接，安装被中断会留下「链接建了、
+ * 内容没解包」的空实体。`Path.exists()` / `fs.existsSync()` **跟随**符号链接，
+ * 所以一律报「存在」——这正是自愈被短路的原因：判据说好了、`npm install` 也被
+ * 跳过，而 CJS `require` 靠向上回退侥幸能跑、ESM `import()` 不回退直接
+ * ERR_MODULE_NOT_FOUND（TUI 的 `ink` 就是这样炸的）。判据必须是**跟随链接后
+ * 能读到 package.json**，不是路径存在。
+ *
  * 分层：本文件是**纯核心**——零 IO、无时钟、无随机、无网络、同输入恒同输出、
  * 绝不抛（任何异常都退化为安全默认）。探测机器真实事实的 IO 在 CLI
  * scripts/hydration-doctor.js 里、单独隔离且 fail-soft；本文件只做纯计算。
@@ -33,6 +42,8 @@
  *      再在 CLI 的探针里 stat 它。
  *   3. 若要读机器新事实 → 在 CLI 的 probeHydrationFacts 里加 fail-soft 探针，
  *      把结果塞进 facts，再在本文件加规则消费它。本文件永不自己做 IO。
+ *      ⚠ 判「在不在」用 `fs.existsSync`，判「是不是空壳」必须**跟随链接后读
+ *      package.json**——`existsSync` 跟随符号链接，对空实体一律报 true。
  *   4. 改完跑：node --test scripts/tests/hydrationHealth.test.js（必须绿）。
  */
 
@@ -57,6 +68,7 @@ const CRITICAL_PACKAGES = [
   'ws',             // WebSocket，khyos 管理面/网关实时通道依赖
   'dotenv',         // .env 加载，缺它配置全部读不到
   'sequelize',      // ORM，模型层入口
+  'ink',            // TUI 渲染器（ESM-only）：空壳时 CJS 靠回退侥幸、ESM import() 直接炸
 ];
 
 // 每个关键包缺失时的具体后果（供 CLI 呈现与文档生成，人话一句）。
@@ -67,12 +79,16 @@ const _PACKAGE_HINTS = {
   'ws': 'WebSocket 库缺失——管理面/网关的实时通道断。',
   'dotenv': '.env 加载器缺失——所有环境配置读不到，行为回退到裸默认。',
   'sequelize': 'ORM 缺失——模型层入口塌陷，任何 DB 操作报错。',
+  'ink': 'TUI 渲染器缺失——交互终端起不来，CLI 回退到纯文本模式（`ink` 是 ESM-only，空壳时必炸）。',
 };
 
 /**
  * 事实字段（全部可空；缺失一律按「未知」保守处理，宁可提示也不漏报）：
  *   nodeModulesPresent {boolean|null} 后端 node_modules 目录是否存在
  *   missingPackages    {string[]|null} CRITICAL_PACKAGES 里探测为缺失的子集
+ *   hollowPackages     {string[]|null} 路径在但**内容空**（无 package.json）的子集；
+ *                                      与 missingPackages 互斥——那个是「不在」，
+ *                                      这个是「在但是空壳」，修法不同
  *   sharedLinkOk       {boolean|null} @khy/shared workspace 链接是否完好
  *   bootstrapMarker    {boolean|null} .khy_quant_bootstrapped marker 是否存在
  *   seedMarker         {boolean|null} .khy_quant_seeded marker 是否存在
@@ -103,6 +119,15 @@ const _RULES = [
     when: (f) => Array.isArray(f.missingPackages) && f.missingPackages.length > 0,
     title: '关键运行时依赖缺失（node_modules 存在但半装，核心包不在）',
     fix: '在后端目录重跑 `npm install` 补齐缺失包；若仍缺，删 `.khy_quant_bootstrapped` 与 `package-lock.json` 后重跑 khy 全量重装。',
+  },
+  {
+    id: 'hollow-package',
+    level: LEVEL_BLOCKER,
+    // 空壳是「路径存在但内容为空」——比「缺失」更隐蔽：存在性判据全说「好」，
+    // 所以 bootstrap 的 npm install 会被短路、marker 也不会重写，永不自愈。
+    when: (f) => Array.isArray(f.hollowPackages) && f.hollowPackages.length > 0,
+    title: '空心包：依赖目录在但里面是空的（符号链接指向未解包的 .pnpm 实体，安装被中断留下的骨架）',
+    fix: '删掉后端 `node_modules` 下指向空实体的符号链接后重跑 khy——bootstrap 的空壳判据会发现内容缺失并重跑 npm install；急着恢复可先删链接让解析回退到上层 node_modules。',
   },
   {
     id: 'shared-link-broken',
@@ -145,22 +170,33 @@ function _fixIsSafe(fix) {
 function _normalizeFacts(facts) {
   const f = facts && typeof facts === 'object' ? facts : {};
   const b = (v) => (v === true ? true : v === false ? false : null);
-  let missing = null;
-  if (Array.isArray(f.missingPackages)) {
-    // 只保留真属于 CRITICAL_PACKAGES 的字符串项，去重、稳定
+  // 只保留真属于 CRITICAL_PACKAGES 的字符串项，去重、稳定
+  const pickKnown = (arr) => {
+    if (!Array.isArray(arr)) return null;
     const set = new Set(CRITICAL_PACKAGES);
     const seen = new Set();
-    missing = [];
-    for (const p of f.missingPackages) {
+    const out = [];
+    for (const p of arr) {
       if (typeof p === 'string' && set.has(p) && !seen.has(p)) {
         seen.add(p);
-        missing.push(p);
+        out.push(p);
       }
     }
+    return out;
+  };
+  const missing = pickKnown(f.missingPackages);
+  // hollow 是 missing 的补集语义：同一个包不可能既「不在」又「空壳」。
+  // 若探针同时报了两边（口径冲突），以 missing 为强，从 hollow 里剔除，避免
+  // 出现两条互相矛盾的拦路项把用户绕晕。
+  let hollow = pickKnown(f.hollowPackages);
+  if (hollow && missing) {
+    const mset = new Set(missing);
+    hollow = hollow.filter((p) => !mset.has(p));
   }
   return {
     nodeModulesPresent: b(f.nodeModulesPresent),
     missingPackages: missing,
+    hollowPackages: hollow,
     sharedLinkOk: b(f.sharedLinkOk),
     bootstrapMarker: b(f.bootstrapMarker),
     seedMarker: b(f.seedMarker),

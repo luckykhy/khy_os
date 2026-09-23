@@ -14,6 +14,7 @@ const assert = require('node:assert/strict');
 
 const {
   FOOTER_IDENTITY_KEYS,
+  FOOTER_VALUE_KEYS,
   normalizeAdapterStatus,
   footersEqual,
 } = require('../../../src/cli/tui/footerStability');
@@ -85,4 +86,68 @@ test('确定性:同输入多次调用结果一致(无副作用)', () => {
   assert.equal(normalizeAdapterStatus(p), normalizeAdapterStatus(p));
   const a = { model: 'm', adapter: 'k', effort: 'e', contextLimit: 1, contextPct: 0 };
   assert.equal(footersEqual(a, { ...a }), footersEqual(a, { ...a }));
+});
+
+// ── 2026-09-17「页脚 agnes / 报错 windsurf」事故:新增按值比较的身份字段 ──────────
+// modelStatus / pinnedSkip 在 refreshFooter 里每次都是**新对象字面量**,若用 `!==`
+// 比较会永远判不等(守卫失效→渲染风暴复发);若完全不比较,钉选通道不可用的预警
+// 就不会重绘(事故不修)。故必须做稳定的**值**比较。以下测试锁死这两条边界。
+
+test('footersEqual: modelStatus 内容相同(不同对象身份) → true(守卫不可失效)', () => {
+  const a = { model: 'm', adapter: 'k', effort: 'e', contextLimit: 1, contextPct: 0, modelStatus: { status: 'error', reason: 'r', cooldownMs: 0 } };
+  const b = { ...a, modelStatus: { status: 'error', reason: 'r', cooldownMs: 0 } };
+  assert.notEqual(a.modelStatus, b.modelStatus, '前置:确为两个不同对象');
+  assert.equal(footersEqual(a, b), true, '同内容必须判等,否则每帧都重渲染');
+});
+
+test('footersEqual: modelStatus 内容不同 → false(告警切换必须重绘)', () => {
+  const base = { model: 'm', adapter: 'k', effort: 'e', contextLimit: 1, contextPct: 0 };
+  const ok = { ...base, modelStatus: { status: 'ok' } };
+  const err = { ...base, modelStatus: { status: 'error', reason: 'r' } };
+  assert.equal(footersEqual(ok, err), false);
+});
+
+test('footersEqual: modelStatus 从无到有 → false(告警首次出现必须重绘)', () => {
+  const base = { model: 'm', adapter: 'k', effort: 'e', contextLimit: 1, contextPct: 0 };
+  assert.equal(footersEqual(base, { ...base, modelStatus: { status: 'error' } }), false);
+  assert.equal(footersEqual({ ...base, modelStatus: { status: 'error' } }, base), false);
+});
+
+test('footersEqual: pinnedSkip 内容不同 → false(意图≠实际的双段标签必须重绘)', () => {
+  const base = { model: 'm', adapter: 'k', effort: 'e', contextLimit: 1, contextPct: 0 };
+  const skipped = { ...base, pinnedSkip: { active: true, adapter: 'windsurf', strict: true } };
+  assert.equal(footersEqual(base, skipped), false);
+  assert.equal(
+    footersEqual(skipped, { ...base, pinnedSkip: { active: true, adapter: 'windsurf', strict: false } }),
+    false,
+    'strict 翻转改变语义(硬预警↔中性提示),必须重绘'
+  );
+});
+
+test('footersEqual: pinnedSkip 同内容 → true(避免无谓重绘)', () => {
+  const base = { model: 'm', adapter: 'k', effort: 'e', contextLimit: 1, contextPct: 0 };
+  const a = { ...base, pinnedSkip: { active: true, adapter: 'windsurf', strict: true } };
+  const b = { ...base, pinnedSkip: { active: true, adapter: 'windsurf', strict: true } };
+  assert.equal(footersEqual(a, b), true);
+});
+
+test('footersEqual: 值比较对键序不敏感(同内容不同键序仍判等)', () => {
+  const base = { model: 'm', adapter: 'k', effort: 'e', contextLimit: 1, contextPct: 0 };
+  const a = { ...base, modelStatus: { status: 'error', reason: 'r', cooldownMs: 5 } };
+  const b = { ...base, modelStatus: { cooldownMs: 5, reason: 'r', status: 'error' } };
+  assert.equal(footersEqual(a, b), true, '键序不同不该造成假不等(否则守卫退化)');
+});
+
+test('footersEqual: 畸形 modelStatus 不抛(含循环引用)', () => {
+  const base = { model: 'm', adapter: 'k', effort: 'e', contextLimit: 1, contextPct: 0 };
+  const cyclic = { status: 'error' };
+  cyclic.self = cyclic;
+  assert.doesNotThrow(() => footersEqual({ ...base, modelStatus: cyclic }, base));
+  assert.doesNotThrow(() => footersEqual(base, { ...base, modelStatus: 'garbage' }));
+});
+
+test('FOOTER_VALUE_KEYS 被导出(接线可见性:守卫漏键会导致事故复发)', () => {
+  assert.ok(Array.isArray(FOOTER_VALUE_KEYS));
+  assert.ok(FOOTER_VALUE_KEYS.includes('modelStatus'));
+  assert.ok(FOOTER_VALUE_KEYS.includes('pinnedSkip'));
 });

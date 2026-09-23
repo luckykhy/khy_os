@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-22.md -->
+<title>2026-09-22 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>.workbuddy<span class="sep">›</span>memory<span class="sep">›</span>2026-09-22</div>
+      <header class="hero reveal"><h1>2026-09-22</h1></header>
+      
+      <article class="doc-body">
+<h1 id="2026-09-22">2026-09-22<a class="anchor" href="#2026-09-22" aria-label="锚点">#</a></h1>
+<h2 id="前端-ui-设计方案提案-design-ui-002">前端 UI 设计方案提案（[DESIGN-UI-002]）<a class="anchor" href="#前端-ui-设计方案提案-design-ui-002" aria-label="锚点">#</a></h2>
+<p><strong>任务</strong>：为 khy-os 设计全新界面 / 优化 UI，产出符合用户习惯的设计方案。</p>
+<p><strong>先取证后设计</strong>（不猜）——对 <code>apps/ai-frontend/src/</code> 实测：</p>
+<ul><li>75 个 <code>.vue</code>，36,366 行；最大单文件 <code>views/AIChat.vue</code> <strong>4,781 行</strong>（含 3,986 行 script）。</li><li>样式真源 <code>styles/newapi-theme.css</code>（790 行）；全仓 <code>var(--khy-*)</code> 引用 <strong>718 处</strong>，</li></ul>
+<p>页面 <code>&lt;style&gt;</code> 字面量 hex 仅 <strong>9 处</strong> → 令牌纪律健康（0.01），是本次方案能低成本落地的前提。</p>
+<ul><li>导航真源 <code>src/nav/index.js</code>：<strong>用户中心 1 组 12 项平铺</strong>（含 <code>Markdown</code> 标注&quot;无需登录&quot;，</li></ul>
+<p>与账户体系无关，属异物），管理控制台 1 组 14 项平铺。</p>
+<ul><li>响应式断点全站仅 <strong>900px / 768px</strong> 两个；规范 <code>[DESIGN-UI-TEST-001]</code> M3 要求 768/1024/480 三档 → 缺 1024 档。</li><li>无障碍：<code>&lt;label&gt;</code> <strong>0 个</strong>、<code>aria-*</code> 44 处、<code>tabindex</code> 仅 3 处；<code>&lt;img&gt;</code> alt 5/5 达标。</li></ul>
+<p><strong>产出</strong>：<code>docs/10_规范/其它规范/[DESIGN-UI-002] 界面设计方案.md</code></p>
+<p>核心结论三条：</p>
+<ol><li><strong>令牌体系已达标，不要推翻</strong>——引入 Tailwind/换组件库会摧毁 W3/W4 不变量。</li><li><strong>最大问题不是视觉，是信息架构</strong>——12 项平铺，纯数据改动即可解决（<code>nav/index.js</code> 已支持多分组）。</li><li><strong>响应式缺 1024px 档</strong>，侧栏折叠态未跟随视口（<code>AppShell.vue:3</code> 仅由 <code>collapsed</code> 单控）。</li></ol>
+<p><strong>路线</strong>：五批次按风险递增。批次 1（导航重构，零代码风险）建议先行。<br>红线：落地后 <code>--khy-*</code> 引用数不得下降、字面量 hex 不得增加。</p>
+<p><strong>未落地</strong>（仅提案，等用户确认）。用户在本仓库有「先提案后编码」的明确偏好。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../.workbuddy/memory/2026-09-21.html"><div class="dir">← 上一篇</div><div class="ttl">2026-09-21</div></a><a class="next" href="../../.workbuddy/memory/2026-09-23.html"><div class="dir">下一篇 →</div><div class="ttl">2026-09-23 工作日志</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__=".workbuddy/memory/2026-09-22.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

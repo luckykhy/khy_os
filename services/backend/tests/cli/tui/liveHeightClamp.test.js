@@ -4,8 +4,9 @@
 // 升级为「视觉行数」——含终端软换行 + CJK 宽字符——使 live 区每一帧都 < 终端 rows,不触发 ink
 // 全屏重绘)。零 IO、零网络、可 CI 复跑。覆盖:门控默认开 + 四 falsy 关字节回退;wrappedRows
 // (窄/宽/CJK/坏几何);measureVisualRows(空/多行);tailToVisualRows(视觉行尾切 vs 原始行尾切
-// 更紧、至少 1 行、truncated 正确、gate-off 委托);tailTimelineToVisualRows(text 按视觉行、tool
-// 记 1 行、gate-off 委托);敌意 env / NaN columns 不抛。
+// 更紧、至少 1 行、truncated 正确、gate-off 委托);tailTimelineToVisualRows(text 按视觉行、tool 按
+// toolCostOf 回调计真实渲染行数(未传/异常/非有限/<1 → 1 回退;单条超预算仍保留)、gate-off 委托);
+// 敌意 env / NaN columns 不抛。
 //
 // 运行: node --test services/backend/tests/cli/tui/liveHeightClamp.test.js
 
@@ -168,6 +169,79 @@ test('tailTimelineToVisualRows: gate off delegates to raw-line timeline tail', (
 test('tailTimelineToVisualRows: non-array timeline → empty, not thrown', () => {
   assert.deepStrictEqual(tailTimelineToVisualRows(null, 5, 80, {}), { entries: [], truncated: false });
   assert.deepStrictEqual(tailTimelineToVisualRows(undefined, 5, 80, {}), { entries: [], truncated: false });
+});
+
+// ── toolCostOf(tool 条目按回调计真实渲染行) ──────────────────────────────────
+
+test('toolCostOf: absent callback → tool still counted as 1 row (historical)', () => {
+  // budget 2: text 1 + tool 1 + text 1 = 3 > 2 → drops the leading text; with a
+  // real-billing callback the same shape would keep even fewer (see next test).
+  const tl = [
+    { type: 'text', text: 'old' },
+    { type: 'tool', name: 'Bash', tool: { big: true } },
+    { type: 'text', text: 'last' },
+  ];
+  const r = tailTimelineToVisualRows(tl, 2, 80, {});
+  assert.deepStrictEqual(r.entries.map((e) => e.type), ['tool', 'text']);
+  assert.strictEqual(r.truncated, true);
+});
+
+test('toolCostOf: callback real billing shrinks the window in the SAME frame (anti-overshoot)', () => {
+  // text 1 + tool 21 + text 4: budget 26 keeps ALL three (billing exact, not 1+1+1);
+  // budget 22 drops the leading 4-row text because the 21-row tool is honestly billed
+  // (historical 1-row billing would have kept it: 1+1+4 = 6 ≤ 22).
+  const tl = [
+    { type: 'text', text: 'a\nb\nc\nd' }, // 4 visual rows
+    { type: 'tool', name: 'Bash', tool: {} },
+    { type: 'text', text: 'z' },          // 1 row
+  ];
+  const cost = () => 21;
+  const all = tailTimelineToVisualRows(tl, 26, 80, {}, null, cost);
+  assert.strictEqual(all.entries.length, 3);
+  assert.strictEqual(all.truncated, false); // 4 + 21 + 1 = 26 exactly fits
+  const tight = tailTimelineToVisualRows(tl, 22, 80, {}, null, cost);
+  assert.deepStrictEqual(tight.entries.map((e) => e.type), ['tool', 'text']);
+  assert.strictEqual(tight.truncated, true);
+});
+
+test('toolCostOf: single entry over budget is still kept (last-entry floor, same as text)', () => {
+  // A 20-row collapsed shell body billed honestly cannot fit budget 10, but the
+  // sole tool entry must stay visible — loop exits with used > max; entries ABOVE
+  // it (collected later by the backwards walk) are dropped instead.
+  const tl = [
+    { type: 'text', text: 'head' },
+    { type: 'tool', name: 'Bash', tool: {} },
+  ];
+  const r = tailTimelineToVisualRows(tl, 10, 80, {}, null, () => 20);
+  assert.deepStrictEqual(r.entries.map((e) => e.type), ['tool']);
+  assert.strictEqual(r.truncated, true); // the 'head' text above stayed out of budget
+});
+
+test('toolCostOf: throwing callback / non-finite / <1 return → billed as 1 (fail-soft)', () => {
+  const tl = [
+    { type: 'text', text: 'old' },
+    { type: 'tool', name: 'x', tool: {} },
+  ];
+  // budget 2: honest billing would keep only the tool (cost 21); fallback 1 keeps text too
+  const hostile = () => { throw new Error('estimator bug'); };
+  const r = tailTimelineToVisualRows(tl, 2, 80, {}, null, hostile);
+  assert.strictEqual(r.entries.length, 2);
+  assert.strictEqual(r.truncated, false);
+  for (const bad of [() => NaN, () => Infinity, () => 0, () => -3, () => 'x']) {
+    const rb = tailTimelineToVisualRows(tl, 2, 80, {}, null, bad);
+    assert.strictEqual(rb.entries.length, 2, `non-finite/low callback billed as 1: ${bad()}`);
+  }
+});
+
+test('toolCostOf: fractional cost floored (2.9 → 2), not rounded up', () => {
+  const tl = [
+    { type: 'tool', name: 'x', tool: {} },
+    { type: 'text', text: 't' },
+  ];
+  // budget 3: floored 2 + text 1 = 3 fits; un-floored 2.9 + 1 = 3.9 would drop the text
+  const r = tailTimelineToVisualRows(tl, 3, 80, {}, null, () => 2.9);
+  assert.strictEqual(r.entries.length, 2);
+  assert.strictEqual(r.truncated, false);
 });
 
 // ── 绝不抛(敌意 env / 坏几何) ────────────────────────────────────────────────

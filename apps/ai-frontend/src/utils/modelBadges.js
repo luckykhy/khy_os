@@ -48,3 +48,17 @@ export function verifyTagType(s) {
   if (s === 'failed') return 'danger';
   return 'info';
 }
+
+// "Newly registered" badge: a local Ollama model that entered the registry
+// within the TTL window (backend injects isNew from models-notify.jsonl).
+// Distinct from verifyStatus (a connectivity check) — "new" is a freshness
+// fact, not a health fact.
+export function isNewBadge(m) {
+  return m && m.isNew === true;
+}
+export function newLabel() {
+  return '新';
+}
+export function newTagType() {
+  return 'danger'; // eye-catching but not an error tone
+}

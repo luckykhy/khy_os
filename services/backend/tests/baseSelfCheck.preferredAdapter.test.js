@@ -10,6 +10,7 @@ describe('base self-check preferred adapter validation', () => {
   let oldEnvFile;
   let oldSyncRoot;
   let oldPreferredAdapter;
+  let oldPreferredStrict;
   let oldAutoRepair;
   let oldThreatEvery;
   let oldDoctorEvery;
@@ -25,6 +26,7 @@ describe('base self-check preferred adapter validation', () => {
     oldEnvFile = process.env.KHY_ENV_FILE;
     oldSyncRoot = process.env.KHY_ENV_SYNC_ROOT;
     oldPreferredAdapter = process.env.GATEWAY_PREFERRED_ADAPTER;
+    oldPreferredStrict = process.env.GATEWAY_PREFERRED_STRICT;
     oldAutoRepair = process.env.KHY_SELF_CHECK_AUTO_REPAIR_PREFERRED;
     oldThreatEvery = process.env.KHY_SELF_CHECK_THREAT_SCAN_EVERY;
     oldDoctorEvery = process.env.KHY_SELF_CHECK_PLUGIN_DOCTOR_EVERY;
@@ -42,6 +44,8 @@ describe('base self-check preferred adapter validation', () => {
     else process.env.KHY_ENV_SYNC_ROOT = oldSyncRoot;
     if (oldPreferredAdapter === undefined) delete process.env.GATEWAY_PREFERRED_ADAPTER;
     else process.env.GATEWAY_PREFERRED_ADAPTER = oldPreferredAdapter;
+    if (oldPreferredStrict === undefined) delete process.env.GATEWAY_PREFERRED_STRICT;
+    else process.env.GATEWAY_PREFERRED_STRICT = oldPreferredStrict;
     if (oldAutoRepair === undefined) delete process.env.KHY_SELF_CHECK_AUTO_REPAIR_PREFERRED;
     else process.env.KHY_SELF_CHECK_AUTO_REPAIR_PREFERRED = oldAutoRepair;
     if (oldThreatEvery === undefined) delete process.env.KHY_SELF_CHECK_THREAT_SCAN_EVERY;
@@ -154,6 +158,69 @@ describe('base self-check preferred adapter validation', () => {
     expect(process.env.GATEWAY_PREFERRED_ADAPTER).toBe('__missing__');
     const envContent = fs.readFileSync(envPath, 'utf-8');
     expect(envContent).toContain('GATEWAY_PREFERRED_ADAPTER=codex');
+  });
+
+  // ── 2026-09-17「页脚 agnes / 报错 windsurf」事故的防复发闸 ────────────────────
+  // 通道已注册但**不可用** + strict=true ⟹ 每次 AI 调用必然硬失败(不回退)。
+  // 这是 codex(09-14) → windsurf(09-17) 两次事故的共同形态,自检必须把它升为
+  // error 级并显式点名「strict 禁止回退」,否则同一个 bug 会换通道名第三次复发。
+
+  /** 通道已注册但不可用时的公共桩。 */
+  function mockUnavailableAdapter() {
+    mockCommonServices();
+    jest.doMock('../src/services/gateway/aiGateway', () => ({
+      _initialized: true,
+      isInitialized() { return this._initialized; },
+      init: jest.fn(async () => {}),
+      refreshAdapters: jest.fn(async () => {}),
+      getStatus: () => ([
+        { type: 'windsurf', enabled: true, available: false, detail: '未检测到 token' },
+      ]),
+    }));
+  }
+
+  test('不可用通道 + strict=true → 报 error 并点名「禁止回退」(硬失败预警)', async () => {
+    process.env.GATEWAY_PREFERRED_ADAPTER = 'windsurf';
+    process.env.GATEWAY_PREFERRED_STRICT = 'true';
+    process.env.KHY_SELF_CHECK_AUTO_REPAIR_PREFERRED = 'false';
+
+    mockUnavailableAdapter();
+
+    const selfCheck = require('../src/services/baseSelfCheckService');
+    const report = await selfCheck.runOnce({
+      trigger: 'test',
+      forceThreatScan: false,
+      forcePluginDoctor: false,
+    });
+
+    const issue = report.issues.find(i => String(i.message).includes('windsurf'));
+    expect(issue).toBeTruthy();
+    expect(issue.severity).toBe('error');
+    expect(String(issue.message)).toContain('strict 禁止回退');
+    // 硬失败必须比「可回退的不可用」扣更多分,才不会被淹没在其它 warning 里。
+    expect(report.checks.gateway.healthy).toBe(false);
+    expect(report.checks.gateway.strictPinned).toBe(true);
+  });
+
+  test('不可用通道 + strict=false → 仅 warning(可回退,非硬失败)', async () => {
+    process.env.GATEWAY_PREFERRED_ADAPTER = 'windsurf';
+    process.env.GATEWAY_PREFERRED_STRICT = 'false';
+    process.env.KHY_SELF_CHECK_AUTO_REPAIR_PREFERRED = 'false';
+
+    mockUnavailableAdapter();
+
+    const selfCheck = require('../src/services/baseSelfCheckService');
+    const report = await selfCheck.runOnce({
+      trigger: 'test',
+      forceThreatScan: false,
+      forcePluginDoctor: false,
+    });
+
+    const issue = report.issues.find(i => String(i.message).includes('windsurf'));
+    expect(issue).toBeTruthy();
+    expect(issue.severity).toBe('warning');
+    expect(String(issue.message)).not.toContain('strict 禁止回退');
+    expect(report.checks.gateway.strictPinned).toBe(false);
   });
 });
 

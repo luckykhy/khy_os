@@ -1572,6 +1572,13 @@ async function route(parsed, context = {}) {
         return true;
       }
 
+      case 'turn-rollback':
+      case 'turnrollback': {
+        const { handleTurnRollback } = require('./handlers/turnRollback');
+        await handleTurnRollback(command, subCommand, args, options);
+        return true;
+      }
+
       case 'profile': {
         const userProfile = require('../services/userProfile');
         if (subCommand === 'export') {
@@ -1797,7 +1804,7 @@ async function route(parsed, context = {}) {
             const plugins = gwPlugins.list();
             if (plugins.length === 0) {
               printInfo(`网关插件目录: ${gwPlugins.getPluginsDir()}/`);
-              printInfo('暂无网关插件 — 创建 .js 文件即��加载');
+              printInfo('暂无网关插件 — 创建 .js 文件即可加载');
             } else {
               printSuccess(`已加载 ${plugins.length} 个网关插件`);
               fmt().printTable(

@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-DELIV-001] 可交付性判断标准.md -->
+<title>[DESIGN-DELIV-001] 可交付性判断标准 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-DELIV-001] 可交付性判断标准</div>
+      <header class="hero reveal"><h1>[DESIGN-DELIV-001] 可交付性判断标准</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-deliv-001-可交付性判断标准">[DESIGN-DELIV-001] 可交付性判断标准</a></li><li class="lvl-2"><a href="#0-为什么需要这份标准">§0 为什么需要这份标准</a></li><li class="lvl-3"><a href="#0-1-问题的提出">0.1 问题的提出</a></li><li class="lvl-3"><a href="#0-2-本文的定位">0.2 本文的定位</a></li><li class="lvl-2"><a href="#1-khy-os-可交付性的实测发现-证据">§1 khy-os 可交付性的实测发现（证据）</a></li><li class="lvl-3"><a href="#1-1-仓库本身不可信地克隆-最高优先级">1.1 仓库本身不可信地克隆 —— 最高优先级</a></li><li class="lvl-3"><a href="#1-2-发布基础设施-存在但不可验证">1.2 发布基础设施&quot;存在但不可验证&quot;</a></li><li class="lvl-3"><a href="#1-3-非阻塞-被用作永久豁免通道">1.3 &quot;非阻塞&quot;被用作永久豁免通道</a></li><li class="lvl-3"><a href="#1-4-发布流程依赖-人的记忆-而非可重复的自动化">1.4 发布流程依赖&quot;人的记忆&quot;，而非可重复的自动化</a></li><li class="lvl-3"><a href="#1-5-交付面分散-且存在真实的-新克隆缺件">1.5 交付面分散，且存在真实的&quot;新克隆缺件&quot;</a></li><li class="lvl-3"><a href="#1-6-文档面极重-但-上手路径-未收敛">1.6 文档面极重，但&quot;上手路径&quot;未收敛</a></li><li class="lvl-3"><a href="#1-7-发现汇总">1.7 发现汇总</a></li><li class="lvl-2"><a href="#2-github-调研-zcode-与-opencode-v2-的可交付性做法">§2 GitHub 调研：ZCode 与 opencode v2 的可交付性做法</a></li><li class="lvl-3"><a href="#2-1-zcode-github-com-zai-org-zcode-闭源商业产品的-可交付性纪律">2.1 ZCode（`github.com/zai-org/ZCode`）—— 闭源商业产品的&quot;可交付性纪律&quot;</a></li><li class="lvl-3"><a href="#2-2-opencode-v2-github-com-sst-opencode-开源项目的-分发广度">2.2 opencode v2（`github.com/sst/opencode`）—— 开源项目的&quot;分发广度&quot;</a></li><li class="lvl-3"><a href="#2-3-对比矩阵">2.3 对比矩阵</a></li><li class="lvl-2"><a href="#3-可交付性判断标准-d1-d10">§3 可交付性判断标准（D1–D10）</a></li><li class="lvl-3"><a href="#d1-仓库完整性-陌生人能完整克隆并遍历历史">D1 仓库完整性 —— 「陌生人能完整克隆并遍历历史」</a></li><li class="lvl-3"><a href="#d2-发布物真实存在且可安装-dist-非空-且在干净环境装得上">D2 发布物真实存在且可安装 —— 「`dist/` 非空，且在干净环境装得上」</a></li><li class="lvl-3"><a href="#d3-新克隆零缺件-克隆出来的就是能跑的">D3 新克隆零缺件 —— 「克隆出来的就是能跑的」</a></li><li class="lvl-3"><a href="#d4-失败必须阻断-不得吞掉-没有-echo-的签名-校验">D4 失败必须阻断，不得吞掉 —— 「没有 `|| echo` 的签名/校验」</a></li><li class="lvl-3"><a href="#d5-可验证的产物完整性-下载侧能独立校验">D5 可验证的产物完整性 —— 「下载侧能独立校验」</a></li><li class="lvl-3"><a href="#d6-sbom-必须被消费-sbom-不是上传了事">D6 SBOM 必须被消费 —— 「SBOM 不是上传了事」</a></li><li class="lvl-3"><a href="#d7-债务必须可收敛-managed-legacy-模型">D7 债务必须可收敛（managed / legacy 模型）</a></li><li class="lvl-3"><a href="#d8-阶段毕业必须被结算-s1-不是墓碑">D8 阶段毕业必须被结算 —— 「S1 不是墓碑」</a></li><li class="lvl-3"><a href="#d9-端到端黄金路径-一条命令-已被验证">D9 端到端黄金路径 —— 「一条命令，已被验证」</a></li><li class="lvl-3"><a href="#d10-边界必须写明-知道自己不做什么">D10 边界必须写明 —— 「知道自己不做什么」</a></li><li class="lvl-2"><a href="#4-判据落地-记分板与门禁接线">§4 判据落地：记分板与门禁接线</a></li><li class="lvl-3"><a href="#4-1-判据优先级与阈值总表">4.1 判据优先级与阈值总表</a></li><li class="lvl-3"><a href="#4-2-记分板设计-对标-check-zcode-baseline-js">4.2 记分板设计（对标 `check-zcode-baseline.js`）</a></li><li class="lvl-3"><a href="#4-3-阶段选择-为什么-d1-d4-d7-可以直进-s3">4.3 阶段选择：为什么 D1/D4/D7 可以直进 S3</a></li><li class="lvl-3"><a href="#4-4-接线清单-参照本仓四触点">4.4 接线清单（参照本仓四触点）</a></li><li class="lvl-2"><a href="#5-首轮体检结论-对本仓即为整改顺序">§5 首轮体检结论（对本仓即为整改顺序）</a></li><li class="lvl-3"><a href="#5-1-一句话诊断">5.1 一句话诊断</a></li><li class="lvl-2"><a href="#6-结论">§6 结论</a></li><li class="lvl-2"><a href="#附录-a-复现命令速查">附录 A 复现命令速查</a></li><li class="lvl-2"><a href="#附录-b-外部对标来源">附录 B 外部对标来源</a></li><li class="lvl-2"><a href="#附录-c-术语">附录 C 术语</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-deliv-001-可交付性判断标准">[DESIGN-DELIV-001] 可交付性判断标准<a class="anchor" href="#design-deliv-001-可交付性判断标准" aria-label="锚点">#</a></h1>
+<blockquote><p>文档编号（非规则 ID）：<code>[DESIGN-DELIV-001]</code><br>落点：<code>docs/10_规范/其它规范/</code><br>孪生件：<code>[DESIGN-DELIV-001] 可交付性判断标准.html</code>（由 <code>build_docs_site.js</code> 生成）<br>调研日期：2026-09-22<br>调研对象：<code>github.com/zai-org/ZCode</code>、<code>github.com/sst/opencode</code>（v2）</p></blockquote>
+<hr>
+<h2 id="0-为什么需要这份标准">§0 为什么需要这份标准<a class="anchor" href="#0-为什么需要这份标准" aria-label="锚点">#</a></h2>
+<h3 id="0-1-问题的提出">0.1 问题的提出<a class="anchor" href="#0-1-问题的提出" aria-label="锚点">#</a></h3>
+<p>khy-os 已有 <strong>88 条规则</strong>、<strong>约 70 个 <code>check:*</code> 守卫</strong>、<strong>发布门禁 <code>release-gate.js</code></strong>、<br><strong>7 项 ZCode 代理指标全 PASS</strong>。按任何一个&quot;我们有没有在治理&quot;的指标看，它都远超同类项目。</p>
+<p>但它的<strong>可交付性</strong>（deliverability）——即&quot;一个陌生人能否在陌生机器上，从公开渠道安装、<br>运行、信任并升级这个东西&quot;——却明显差于体量更小的同类。<strong>规则数量与守卫通过率，<br>与可交付性之间没有正相关</strong>，甚至在某些维度上是负相关。</p>
+<p>本文先把&quot;可交付性差&quot;这个模糊感受，拆成<strong>可证伪的实测发现</strong>（§1），<br>再用 ZCode / opencode v2 的 GitHub 实证提炼<strong>判断标准</strong>（§2–§3），<br>最后给出<strong>适配本仓的落地判据与首轮体检结论</strong>（§4–§5）。</p>
+<h3 id="0-2-本文的定位">0.2 本文的定位<a class="anchor" href="#0-2-本文的定位" aria-label="锚点">#</a></h3>
+<ul><li>本文是<strong>判断标准</strong>（standard），不是整改清单。它定义&quot;什么叫可交付&quot;以及如何度量。</li><li>它<strong>不替代</strong>任何既有单一真源：发布流程真源仍为</li></ul>
+<p><code>scripts/release/publish-dual.sh</code> 及其头注，门禁真源仍为<br>  <code>scripts/release/lib/releaseGateStages.js</code>。</p>
+<ul><li>本文定义的度量<strong>应被实现为一个记分板</strong>（对标既有的 <code>check-zcode-baseline.js</code>），</li></ul>
+<p>但<strong>首轮以 S1 观察者落地</strong>（只记录不拦截），理由见 §4.3。</p>
+<hr>
+<h2 id="1-khy-os-可交付性的实测发现-证据">§1 khy-os 可交付性的实测发现（证据）<a class="anchor" href="#1-khy-os-可交付性的实测发现-证据" aria-label="锚点">#</a></h2>
+<blockquote><p>全部结论来自本机 <code>D:\Portable\khy-os</code> 的真实运行证据，每条附复现命令。<br><strong>不以&quot;看起来乱&quot;为依据</strong>（参见项目记忆：同类判断已撤回三次）。</p></blockquote>
+<h3 id="1-1-仓库本身不可信地克隆-最高优先级">1.1 仓库本身不可信地克隆 —— 最高优先级<a class="anchor" href="#1-1-仓库本身不可信地克隆-最高优先级" aria-label="锚点">#</a></h3>
+<p>精确分解（<code>git fsck --no-progress</code> 输出按类型归类）：</p>
+<table><thead><tr><th>类别</th><th>数量</th><th>含义</th></tr></thead><tbody><tr><td><code>missing blob</code></td><td><strong>314</strong></td><td>文件内容真实缺失 —— <strong>最严重</strong></td></tr><tr><td><code>missing tree</code></td><td><strong>63</strong></td><td>目录树真实缺失</td></tr><tr><td><code>missing commit</code></td><td><strong>3</strong></td><td>提交对象真实缺失</td></tr><tr><td><code>broken link from &lt;tree/commit&gt;</code></td><td><strong>69</strong></td><td>引用了不存在的对象（62 tree + 7 commit）</td></tr><tr><td><code>invalid sha1 pointer in cache-tree of .git/index</code></td><td><strong>49</strong></td><td>索引缓存树失效</td></tr><tr><td><code>dangling blob/tree/commit</code></td><td>237</td><td>悬空对象（无害，但示意历史被改写过）</td></tr><tr><td><code>error:</code> 行合计</td><td><strong>50</strong></td><td>——</td></tr><tr><td><code>git log --oneline --all</code></td><td><strong>直接 fatal</strong></td><td><code>bad object refs/remotes/origin/dependabot/...</code></td></tr><tr><td><code>.git</code> 体积</td><td>173 MB</td><td>——</td></tr></tbody></table>
+<p>复现：</p>
+<pre><code class="language-bash">git fsck --no-progress 2&gt;&amp;1 | sed <span class="hljs-string">&#x27;s/[0-9a-f]\{40\}/&lt;sha&gt;/g&#x27;</span> | <span class="hljs-built_in">sort</span> | <span class="hljs-built_in">uniq</span> -c | <span class="hljs-built_in">sort</span> -rn
+<span class="hljs-comment"># 314 missing blob / 63 missing tree / 3 missing commit / 62+7 broken link / 49 cache-tree</span>
+git <span class="hljs-built_in">log</span> --oneline --all                      <span class="hljs-comment"># fatal: bad object</span></code></pre>
+<blockquote><p>⚠ <strong>314 个缺失 blob 意味着历史提交中的文件内容真的不见了</strong>——<br>这不是&quot;索引陈旧&quot;，而是<strong>对象库有洞</strong>。任何试图 checkout 到受影响提交的操作都会失败。</p></blockquote>
+<p><strong>为什么这是可交付性的头号问题</strong>：交付的第一动作是 <code>git clone</code>。<br>一个 <code>git log --all</code> 都会 fatal 的仓库，对下游是<strong>不可审计</strong>的——<br>审查者无法遍历历史，CI 的某些历史操作也会失败。<br>这与&quot;代码写得好不好&quot;无关，它是<strong>交付物完整性</strong>问题。</p>
+<blockquote><p>⚠ 注意区分：<code>HEAD</code> 本身可读（<code>git ls-tree HEAD</code> 正常），<br>因此<strong>日常开发不会感到痛</strong>——这正是它长期未被发现的原因。<br>属于典型的<strong>静默失真</strong>：痛感只在&quot;别人来拿&quot;的时候出现。</p></blockquote>
+<h3 id="1-2-发布基础设施-存在但不可验证">1.2 发布基础设施&quot;存在但不可验证&quot;<a class="anchor" href="#1-2-发布基础设施-存在但不可验证" aria-label="锚点">#</a></h3>
+<p>这是本仓最系统性的一类可交付性缺陷：<strong>机制齐全，但没有任何强制力</strong>。</p>
+<table><thead><tr><th>机制</th><th>实况</th><th>问题</th></tr></thead><tbody><tr><td>SBOM（CycloneDX）</td><td><code>.github/workflows/dual-channel-release.yml:140-160</code> 真实生成 <code>sbom-npm.json</code> / <code>sbom-pip.json</code></td><td><strong>只 <code>upload-artifact</code></strong>，无校验步骤、无消费者、不进发布门</td></tr><tr><td>SHA256 校验和</td><td>发布链有生成</td><td>无&quot;下载后校验&quot;回路，无失败断言</td></tr><tr><td>sigstore 签名</td><td><code>:134</code> `sigstore sign ... \</td><td>\</td></tr><tr><td><code>source-hygiene-scan.js</code></td><td>发布期密钥/许可证/符号链接扫描</td><td><strong>S1 观察者，恒 <code>exit 0</code></strong>（见 §1.3）</td></tr><tr><td><code>check-zcode-baseline.js</code></td><td>7 项代理指标<strong>全 PASS</strong></td><td>S1 观察者，<strong>恒返回 0</strong>（脚本自述）</td></tr></tbody></table>
+<p>复现：</p>
+<pre><code class="language-bash">grep -n -A6 -B4 <span class="hljs-string">&quot;sbom&quot;</span> .github/workflows/dual-channel-release.yml
+grep -n <span class="hljs-string">&quot;non-fatal&quot;</span> .github/workflows/dual-channel-release.yml
+node scripts/ci/check-zcode-baseline.js   <span class="hljs-comment"># PASS 7 · 但&quot;恒返回 0&quot;</span></code></pre>
+<p><strong>要害</strong>：<code>check-zcode-baseline.js</code> 的记分板打印 <strong>PASS 7 · PARTIAL 0 · GAP 0</strong>，<br>看起来无懈可击。但它<strong>同时自述&quot;S1 观察者档不参与放行判定，本脚本恒返回 0&quot;</strong>。<br>即：<strong>这份漂亮成绩单对发布结果零影响</strong>。</p>
+<p>更关键的是，该记分板<strong>没有任何&quot;关掉守卫它应该变红&quot;的反向验证</strong><br>（<code>grep -iE &quot;防空转|变红|self-test&quot;</code> 无命中）。</p>
+<blockquote><p>⚠ 这与项目记忆中已记录的一条判据完全同源：<br><strong>&quot;验收必须实测关掉守卫时它真变红，防空转断言&quot;</strong>。<br>一个恒真的断言，与没有断言，在交付质量上等价。</p></blockquote>
+<h3 id="1-3-非阻塞-被用作永久豁免通道">1.3 &quot;非阻塞&quot;被用作永久豁免通道<a class="anchor" href="#1-3-非阻塞-被用作永久豁免通道" aria-label="锚点">#</a></h3>
+<p>本仓的 rollout 四阶段机制（<code>PROCESS-008</code>）本意是好的：新机制先在 S1 旁路观察、<br>攒够样本再升阶。但当<strong>几乎所有发布相关的强检查都停在 S1</strong> 时，<br>机制就从&quot;谨慎上线&quot;退化成&quot;<strong>永远不上线</strong>&quot;。</p>
+<p>实测处于 S1 / 恒不阻断的项：</p>
+<ul><li><code>source-hygiene-scan.js</code>（<code>STAGE = 'S1'</code>，头注自述 &quot;ALWAYS exits 0&quot;）</li><li><code>check-zcode-baseline.js</code>（<code>STAGE = 'S1'</code>，头注自述 &quot;恒返回 0&quot;）</li><li><code>check-staged-secrets.js</code> 头注<strong>明确引用</strong>上述事实作为自身的说明</li></ul>
+<p>复现：</p>
+<pre><code class="language-bash">grep -n <span class="hljs-string">&quot;STAGE = &quot;</span> scripts/release/source-hygiene-scan.js scripts/ci/check-zcode-baseline.js
+grep -n <span class="hljs-string">&quot;ALWAYS exits 0\|恒返回 0&quot;</span> scripts/release/source-hygiene-scan.js scripts/ci/check-zcode-baseline.js</code></pre>
+<p><strong>判断</strong>：这不是&quot;机制设计错&quot;，而是<strong>毕业机制没有被执行</strong>——<br>S1 的样本量门槛（≥200 条）从未被任何人结算，于是 S1 成了事实上的墓碑。</p>
+<h3 id="1-4-发布流程依赖-人的记忆-而非可重复的自动化">1.4 发布流程依赖&quot;人的记忆&quot;，而非可重复的自动化<a class="anchor" href="#1-4-发布流程依赖-人的记忆-而非可重复的自动化" aria-label="锚点">#</a></h3>
+<p><code>scripts/release/publish-dual.sh</code> 的头注完整记录了真实痛点，摘录：</p>
+<ul><li>标准发版命令需要 <code>yes y | bash ...</code> <strong>喂交互确认</strong>（非交互环境才这么用）</li><li><strong>已知坑</strong>：离线时 <code>python3 -m build --sdist</code> <strong>静默失败</strong>，<code>dist/</code> 只剩 wheel，</li></ul>
+<p>审计报 <code>[FAIL] No sdist (*.tar.gz) found</code> —— <strong>失败点与根因不在同一处</strong></p>
+<ul><li>PyPI 单项目 <strong>10GB 累计配额</strong>可能挡上传</li><li>需要 <code>--skip-pip</code> / <code>--no-isolation</code> / <code>--tag</code> / <code>--push</code> 等多个手动开关组合</li></ul>
+<p>这些坑<strong>全部以注释形式存在</strong>，<strong>没有一条被编码成检查</strong>。<br>即：知识沉淀在&quot;注释&quot;里，而不是&quot;机制&quot;里——下一个维护者（或 AI）必须重读整段注释。</p>
+<h3 id="1-5-交付面分散-且存在真实的-新克隆缺件">1.5 交付面分散，且存在真实的&quot;新克隆缺件&quot;<a class="anchor" href="#1-5-交付面分散-且存在真实的-新克隆缺件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项</th><th>实测</th></tr></thead><tbody><tr><td>根 <code>package.json</code></td><td><strong>无</strong> <code>dev</code> / <code>build</code> 顶层脚本（设计如此，见 README 自述）</td></tr><tr><td>工作区</td><td>8 个 workspace，构建命令分散到各 workspace</td></tr><tr><td><code>git status --porcelain</code> 分解</td><td>已修改 <code>M</code> <strong>194</strong> · <strong>未跟踪 <code>??</code> 149</strong> · 已删除 <code>D</code> <strong>127</strong></td></tr><tr><td><code>apps/ai-frontend/src/views/admin/</code></td><td><strong>27 个视图未跟踪</strong> ⇒ 新克隆<strong>缺这些界面</strong></td></tr><tr><td><code>dist/</code></td><td><strong>不存在</strong>（本机从未构建出可交付包）</td></tr><tr><td>CHANGELOG</td><td>仅 <strong>4</strong> 个版本条目的 <code>##</code> 段</td></tr></tbody></table>
+<p>复现：</p>
+<pre><code class="language-bash">git status --porcelain | <span class="hljs-built_in">cut</span> -c1-2 | <span class="hljs-built_in">sort</span> | <span class="hljs-built_in">uniq</span> -c | <span class="hljs-built_in">sort</span> -rn   <span class="hljs-comment"># 194 M / 149 ?? / 127 D</span>
+<span class="hljs-built_in">ls</span> apps/ai-frontend/src/views/admin/ | <span class="hljs-built_in">wc</span> -l       <span class="hljs-comment"># 27</span>
+<span class="hljs-built_in">ls</span> dist                                            <span class="hljs-comment"># No such file or directory</span>
+grep -c <span class="hljs-string">&quot;^## &quot;</span> CHANGELOG.md                         <span class="hljs-comment"># 4</span></code></pre>
+<blockquote><p>⚠ 注意 <strong>127 项 <code>D</code>（工作区已删除但未提交）</strong>——这意味着当前工作区<br><strong>既不是 HEAD 的样子，也不是任何已提交的样子</strong>。<br>参照项目记忆的纪律：<strong>别把读到的工作区行为当成 HEAD 行为</strong>。</p></blockquote>
+<p><strong>要害</strong>：交付物（可安装包）在本机<strong>从未存在过</strong>。<br>仓库能跑，但&quot;<strong>能交给别人</strong>&quot;这件事没有被执行过哪怕一次。</p>
+<h3 id="1-6-文档面极重-但-上手路径-未收敛">1.6 文档面极重，但&quot;上手路径&quot;未收敛<a class="anchor" href="#1-6-文档面极重-但-上手路径-未收敛" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项</th><th>实测</th></tr></thead><tbody><tr><td><code>docs/**/*.md</code></td><td><strong>918</strong></td></tr><tr><td><code>docs/**/*.html</code>（孪生件）</td><td><strong>908</strong></td></tr><tr><td>规则</td><td>88 条 / 88 张规则卡</td></tr><tr><td><code>check:*</code> 守卫</td><td>约 70 个</td></tr></tbody></table>
+<p>文档与规则的<strong>绝对量</strong>远超同类项目，但 README 的&quot;安装方式&quot;之后，<br>读者要在 <code>install:core</code> / <code>install:all</code> / <code>install:frontend</code> /<br><code>khy-portable/run.ps1</code> / <code>khy.bat</code> / <code>khy.sh</code> 之间自行选择，<br>且<strong>没有一条&quot;从零到可运行&quot;的黄金路径被端到端验证过</strong>。</p>
+<h3 id="1-7-发现汇总">1.7 发现汇总<a class="anchor" href="#1-7-发现汇总" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>维度</th><th>判定</th><th>严重度</th></tr></thead><tbody><tr><td>1</td><td>仓库完整性（<strong>314 缺失 blob</strong> / 63 缺失 tree / 3 缺失 commit / <code>log --all</code> fatal）</td><td><strong>GAP</strong></td><td>P0</td></tr><tr><td>2</td><td>发布物从未产出（无 <code>dist/</code>）</td><td><strong>GAP</strong></td><td>P0</td></tr><tr><td>3</td><td>新克隆缺 27 个视图；工作区 149 未跟踪 + <strong>127 已删除未提交</strong></td><td><strong>GAP</strong></td><td>P0</td></tr><tr><td>4</td><td>签名失败被 `\</td><td>\</td><td>echo` 吞掉（<strong>2 处</strong>）</td></tr><tr><td>5</td><td>SBOM/校验和只传 artifact，无验证回路</td><td><strong>GAP</strong></td><td>P1</td></tr><tr><td>6</td><td>发布期强检查全部停在 S1（恒 exit 0）</td><td><strong>GAP</strong></td><td>P1</td></tr><tr><td>7</td><td>记分板 7 PASS 无反向验证（空转断言）</td><td><strong>GAP</strong></td><td>P1</td></tr><tr><td>8</td><td>已知发布坑只在注释里，未编码成检查</td><td><strong>PARTIAL</strong></td><td>P2</td></tr><tr><td>9</td><td>无端到端&quot;黄金路径&quot;验证</td><td><strong>PARTIAL</strong></td><td>P2</td></tr><tr><td>10</td><td>文档/规则体量巨大但上手路径未收敛</td><td><strong>OBSERVE</strong></td><td>P2</td></tr></tbody></table>
+<blockquote><p>这张表本身<strong>不是</strong>交付物。参照 ZCode/opencode 的差距，它需要被<strong>收敛成一组<br>有阈值、可回归、且真正阻断的指标</strong>（§3）。</p></blockquote>
+<hr>
+<h2 id="2-github-调研-zcode-与-opencode-v2-的可交付性做法">§2 GitHub 调研：ZCode 与 opencode v2 的可交付性做法<a class="anchor" href="#2-github-调研-zcode-与-opencode-v2-的可交付性做法" aria-label="锚点">#</a></h2>
+<blockquote><p>两者都是&quot;AI 编程 agent&quot;，与 khy-os 同赛道，且 khy-os 已把 ZCode 作为对标基线<br>（<code>check-zcode-baseline.js</code> 的阈值直接取自 ZCode 公布的 <code>architecture-policy.yaml</code>）。</p></blockquote>
+<h3 id="2-1-zcode-github-com-zai-org-zcode-闭源商业产品的-可交付性纪律">2.1 ZCode（<code>github.com/zai-org/ZCode</code>）—— 闭源商业产品的&quot;可交付性纪律&quot;<a class="anchor" href="#2-1-zcode-github-com-zai-org-zcode-闭源商业产品的-可交付性纪律" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>ZCode 的做法</th></tr></thead><tbody><tr><td><strong>形态</strong></td><td>三形态同源：Desktop（Electron）/ Web+CLI / Agent CLI，<strong>共用同一后端与 Agent 运行时</strong></td></tr><tr><td><strong>构建</strong></td><td><code>pnpm build</code> 递归；桌面 `pnpm bundle:desktop --os mac\</td></tr><tr><td><strong>分发</strong></td><td><strong>自托管下载源</strong>：<code>ZCODE_DIST_BASE_URL</code> + <code>latest.json</code> + <code>install.sh</code>；装到 <code>~/.zcode/runtime</code>，<code>~/.local/bin/zcode</code> 建软链</td></tr><tr><td><strong>校验</strong></td><td>发布产物含 <strong><code>sha256.txt</code></strong> 校验摘要，与 tarball 同目录发布</td></tr><tr><td><strong>版本索引</strong></td><td><code>latest.json</code> 是<strong>机器可读的版本索引</strong>（安装脚本据此选版本）</td></tr><tr><td><strong>配置</strong></td><td>目录可用 <code>ZCODE_DIST_HOME</code> / <code>ZCODE_DIST_BIN_DIR</code> <strong>环境变量覆盖</strong></td></tr><tr><td><strong>工程基线</strong></td><td><code>mise.toml</code> + <code>.nvmrc</code> + <code>.npmrc</code> + <code>pnpm-lock.yaml</code> <strong>四重锁定</strong>工具链</td></tr><tr><td><strong>架构守卫</strong></td><td><code>architecture-policy.yaml</code>（策略）+ <code>.architecture-baseline.json</code>（基线）<strong>声明式比对</strong></td></tr><tr><td><strong>迁移模型</strong></td><td><code>managed</code> / <code>legacy</code> 双态：<code>managed:false</code> 存量豁免，<strong>逐模块迁移后</strong> <code>managed:true</code> 必须达标</td></tr><tr><td><strong>合规</strong></td><td><code>NOTICE.md</code> + <code>THIRD-PARTY-NOTICES.md</code> + <code>third-party/README.md</code> 说明<strong>声明在发行物中的位置</strong></td></tr><tr><td><strong>文档</strong></td><td>中英双语 README + <code>CONTEXT.md</code> / <code>DESIGN.md</code> / <code>AGENTS.md</code>，命令示例丰富</td></tr><tr><td><strong>边界照顾</strong></td><td>明确写清 macOS 未签名拦截、端口占用、PATH 指向旧版本的排查</td></tr></tbody></table>
+<p><strong>ZCode 可交付性的关键设计（值得直接借鉴）</strong>：</p>
+<ol><li><strong><code>managed</code> / <code>legacy</code> 双态迁移模型</strong>——这是本仓最缺的一环。</li></ol>
+<p>ZCode 可以<strong>如实承认&quot;有 566 个超标文件&quot;</strong>，但通过&quot;未纳管 = 豁免，<br>   纳管 = 必须达标&quot;让<strong>债务可见且可收敛</strong>。</p>
+<ol><li><strong><code>latest.json</code> 作为机器可读的版本真源</strong>——安装脚本消费它，而非硬编码版本。</li><li><strong><code>install.sh</code> 是可交付物的一部分</strong>——安装脚本与产物<strong>同源发布</strong>。</li><li><strong>校验和与产物同目录</strong>——校验是<strong>下载侧</strong>的事，不是发布侧的自娱自乐。</li></ol>
+<h3 id="2-2-opencode-v2-github-com-sst-opencode-开源项目的-分发广度">2.2 opencode v2（<code>github.com/sst/opencode</code>）—— 开源项目的&quot;分发广度&quot;<a class="anchor" href="#2-2-opencode-v2-github-com-sst-opencode-开源项目的-分发广度" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>opencode v2 的做法</th></tr></thead><tbody><tr><td><strong>形态</strong></td><td>CLI / Desktop / Web（<code>opencode pair</code>）/ Docker，<strong>四个交付通道</strong></td></tr><tr><td><strong>CLI 安装</strong></td><td>一行脚本 `curl -fsSL https://opencode.ai/v2/install \</td></tr><tr><td><strong>包管理器</strong></td><td>npm / Bun / pnpm / yarn / Homebrew(tap+formula) / AUR / mise / Nix —— <strong>7+ 渠道</strong></td></tr><tr><td><strong>独立二进制</strong></td><td><strong>每平台独立 zip/tar.gz</strong>（darwin/win/linux × arm64/x64 × glibc/musl × baseline）</td></tr><tr><td><strong>原生二进制选择</strong></td><td>npm 包用 <strong>postinstall 脚本按平台选原生二进制</strong></td></tr><tr><td><strong>Desktop 交付</strong></td><td><code>.dmg</code> / <code>.exe</code> / <code>.deb</code> / <code>.rpm</code> / <code>.AppImage</code>，且 <code>brew install --cask</code> / <code>scoop</code></td></tr><tr><td><strong>Docker</strong></td><td>版本化 tag，如 <code>ghcr.io/anomalyco/opencode:2.0.0</code></td></tr><tr><td><strong>版本号</strong></td><td><strong>统一同步</strong>（<code>sync release versions for v1.18.32</code>，跨包/跨目录一次同步）</td></tr><tr><td><strong>安装目录</strong></td><td><code>$OPENCODE_INSTALL_DIR</code> → <code>$XDG_BIN_DIR</code> → <code>$HOME/bin</code> → <code>$HOME/.opencode/bin</code> <strong>优先级明确</strong></td></tr><tr><td><strong>质量工具</strong></td><td>Oxlint（启用 type-aware 规则）/ Prettier / EditorConfig / <strong>Gitleaks</strong> / Husky / Conventional Commits</td></tr><tr><td><strong>安全政策</strong></td><td><code>SECURITY.md</code> <strong>明文拒绝 AI 生成的安全报告</strong>（保护维护者时间）</td></tr><tr><td><strong>文档</strong></td><td>v2 独立文档站（<code>/v2/docs</code>），<strong>逐平台下载链接内嵌版本号</strong></td></tr></tbody></table>
+<p><strong>opencode 可交付性的关键设计（值得直接借鉴）</strong>：</p>
+<ol><li><strong>&quot;每平台独立二进制 + postinstall 选型&quot;</strong>——用户不需要有 Node 也能装。</li><li><strong>安装目录优先级链条</strong>——明确、可覆盖、有默认回退。</li><li><strong>文档站的下载链接内嵌确切版本号</strong>（<code>.../files/bin/2.0.6/...</code>）——</li></ol>
+<p>文档与产物<strong>强绑定</strong>，不会出现&quot;文档说 v2、产物是 v1&quot;。</p>
+<ol><li><strong>统一版本同步</strong>——跨包一次同步，避免&quot;CLI 是 2.0.6、SDK 是 2.0.3&quot;。</li><li><strong><code>SECURITY.md</code> 明确边界</strong>——<strong>知道自己不收什么</strong>，也是一种可交付性。</li></ol>
+<h3 id="2-3-对比矩阵">2.3 对比矩阵<a class="anchor" href="#2-3-对比矩阵" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>khy-os</th><th>ZCode</th><th>opencode v2</th></tr></thead><tbody><tr><td>分发渠道数</td><td>2（PyPI + npm）</td><td>1（自托管）+ 桌面</td><td><strong>7+</strong></td></tr><tr><td>独立二进制（免 Node）</td><td>部分（pip 内嵌 bundle）</td><td>✅ tarball</td><td>✅ 每平台</td></tr><tr><td><code>install.sh</code> 与产物同源</td><td>❌</td><td>✅</td><td>✅</td></tr><tr><td>机器可读版本索引</td><td>❌</td><td>✅ <code>latest.json</code></td><td>✅ 文档站内嵌</td></tr><tr><td>校验和（下载侧可验）</td><td>生成但无回路</td><td>✅ 同目录 <code>sha256.txt</code></td><td>✅</td></tr><tr><td>SBOM</td><td><strong>生成但不校验</strong></td><td>未公开</td><td>未公开</td></tr><tr><td>签名失败是否阻断</td><td>❌ 被 `\</td><td>\</td><td>echo` 吞</td></tr><tr><td>架构策略 + 基线</td><td>登记表 + 门禁</td><td>✅ 声明式 yaml + baseline</td><td><code>.oxlintrc</code> 等</td></tr><tr><td>存量债务迁移模型</td><td>❌（一次性全量）</td><td>✅ <strong>managed/legacy</strong></td><td>未公开</td></tr><tr><td>工具链锁定</td><td>pnpm + lockfile</td><td>✅ <strong>四重</strong></td><td>bun.lock + mise</td></tr><tr><td>仓库历史完整性</td><td>❌ <strong>314 缺失 blob + <code>log --all</code> fatal</strong></td><td>未知</td><td>未知</td></tr><tr><td>端到端黄金路径</td><td>❌</td><td>✅ 文档步骤</td><td>✅ 文档站</td></tr><tr><td>&quot;拒绝什么&quot;是否写明</td><td>部分</td><td>✅ NOTICE</td><td>✅ SECURITY</td></tr></tbody></table>
+<hr>
+<h2 id="3-可交付性判断标准-d1-d10">§3 可交付性判断标准（D1–D10）<a class="anchor" href="#3-可交付性判断标准-d1-d10" aria-label="锚点">#</a></h2>
+<blockquote><p>以下 10 条是从上述调研<strong>提炼</strong>的标准。每条给出：<strong>定义</strong>、<strong>为什么</strong>（对标依据）、<br><strong>可测判据</strong>（能落到命令/脚本上）、<strong>khy-os 现状</strong>、<strong>目标</strong>。</p>
+<p>判据设计原则（继承本仓既有纪律）：<br>① 每个判据<strong>必须能被反向验证</strong>（构造违规 fixture 时真的变红）；<br>② 只认<strong>结构化输出</strong>，不认人读文案；<br>③ 阈值<strong>不得硬编码在检查器内部</strong>，必须来自单一真源。</p></blockquote>
+<h3 id="d1-仓库完整性-陌生人能完整克隆并遍历历史">D1 仓库完整性 —— 「陌生人能完整克隆并遍历历史」<a class="anchor" href="#d1-仓库完整性-陌生人能完整克隆并遍历历史" aria-label="锚点">#</a></h3>
+<ul><li><strong>定义</strong>：任意人 <code>git clone</code> 后，<code>git fsck</code> 干净、<code>git log --all</code> 可完整遍历。</li><li><strong>对标</strong>：这是&quot;交付&quot;二字的物理前提。ZCode/opencode 均未公开此项，</li></ul>
+<p>但<strong>任何</strong>release 流程都隐含依赖它。</p>
+<ul><li><strong>判据</strong>：<ul><li><code>git fsck --no-progress</code> 中 <code>missing blob</code> / <code>missing tree</code> / <code>missing commit</code> 计数 <strong>= 0</strong></li><li><code>broken link from</code> 计数 <strong>= 0</strong></li><li><code>git log --oneline --all</code> 退出码 <strong>= 0</strong></li><li>索引 <code>cache-tree</code> 无效 sha1 计数 <strong>= 0</strong></li></ul></li><li><strong>khy-os 现状</strong>：**314 missing blob / 63 missing tree / 3 missing commit / 69 broken link /</li></ul>
+<p>49 cache-tree / <code>log --all</code> fatal<strong> → </strong>GAP**</p>
+<ul><li><strong>目标</strong>：四项全 0，且纳入发布门 <code>must</code> 阶段。</li></ul>
+<blockquote><p>⚠ <strong>本项是本文唯一的 P0 硬阻断项</strong>。其余 GAP 可以观察，这一项不行——<br>一个不能遍历历史的仓库，其&quot;可交付&quot;是字面意义上不成立的。</p></blockquote>
+<h3 id="d2-发布物真实存在且可安装-dist-非空-且在干净环境装得上">D2 发布物真实存在且可安装 —— 「<code>dist/</code> 非空，且在干净环境装得上」<a class="anchor" href="#d2-发布物真实存在且可安装-dist-非空-且在干净环境装得上" aria-label="锚点">#</a></h3>
+<ul><li><strong>定义</strong>：每次发布<strong>必须先在本机产出真实产物</strong>，并在<strong>干净容器</strong>里安装成功。</li><li><strong>对标</strong>：ZCode 的 <code>dist/zcode/releases/&lt;version&gt;/zcode-&lt;version&gt;.tar.gz</code> 是硬产物；</li></ul>
+<p>opencode 每平台独立 tarball。两者都<strong>先把产物做出来</strong>，而不是&quot;命令写好了&quot;。</p>
+<ul><li><strong>判据</strong>：<ul><li>发布门存在阶段：<code>dist/</code> 中 wheel + sdist + npm tarball <strong>均存在且非零字节</strong></li><li>存在阶段：干净容器（docker）内 <code>pip install &lt;wheel&gt;</code> / <code>npm i -g &lt;tarball&gt;</code> 成功</li><li>该阶段在 <code>release-gate.js</code> 中 <code>tier='must'</code></li></ul></li><li><strong>khy-os 现状</strong>：<code>dist/</code> <strong>不存在</strong>；<code>publish-dual.sh</code> 会 <code>rm -rf dist</code> 再构建，</li></ul>
+<p>但<strong>构建从本机跑到过（CHANGELOG 有版本号）却从未留盘</strong> → <strong>GAP</strong></p>
+<ul><li><strong>目标</strong>：<code>npm run release:artifact</code> 产出的产物可被<strong>另一个人</strong>装上并 <code>khy doctor</code> 通过。</li></ul>
+<h3 id="d3-新克隆零缺件-克隆出来的就是能跑的">D3 新克隆零缺件 —— 「克隆出来的就是能跑的」<a class="anchor" href="#d3-新克隆零缺件-克隆出来的就是能跑的" aria-label="锚点">#</a></h3>
+<ul><li><strong>定义</strong>：<code>git clone</code> + 文档首条命令，即可得到完整可运行系统，<strong>无未跟踪依赖</strong>。</li><li><strong>对标</strong>：ZCode/opencode 的仓库自带全部源码。</li><li><strong>判据</strong>：<ul><li><code>git status --porcelain</code> 中 <code>??</code>（未跟踪）项 <strong>= 0</strong>（生成物除外，需显式声明）</li><li><code>D</code>（已删除未提交）项 <strong>= 0</strong> —— 工作区必须与某个已提交状态一致</li><li>存在 <code>check:clone-completeness</code>：在 <code>git worktree add --detach</code> 出的干净树里</li></ul></li></ul>
+<p>跑一遍黄金路径</p>
+<ul><li><strong>khy-os 现状</strong>：149 项未跟踪（含 <strong>27 个前端视图</strong>）+ <strong>127 项已删除未提交</strong> → <strong>GAP</strong></li><li><strong>目标</strong>：<code>??</code> 项全部归零或列入显式白名单并说明原因。</li></ul>
+<blockquote><p>⚠ 注意：项目记忆已记录&quot;<code>apps/ai-frontend/src/views/admin/</code> 是一次未提交的真实重构&quot;。<br>这条判据正是把那个已知待办<strong>变成可回归的指标</strong>。</p></blockquote>
+<h3 id="d4-失败必须阻断-不得吞掉-没有-echo-的签名-校验">D4 失败必须阻断，不得吞掉 —— 「没有 <code>|| echo</code> 的签名/校验」<a class="anchor" href="#d4-失败必须阻断-不得吞掉-没有-echo-的签名-校验" aria-label="锚点">#</a></h3>
+<ul><li><strong>定义</strong>：发布链上任何<strong>校验类</strong>步骤失败，必须使整次发布 NO-GO。</li><li><strong>对标</strong>：ZCode 的 sha256 是<strong>发布物的一部分</strong>（缺失即产物不完整）；</li></ul>
+<p>opencode 用 OIDC。两者的共同点是<strong>校验不是可选项</strong>。</p>
+<ul><li><strong>判据</strong>：<ul><li>发布相关 workflow / 脚本中，<code>|| echo</code> / <code>|| true</code> / <code>continue-on-error</code></li></ul></li></ul>
+<p>作用于 <code>sign</code> / <code>verify</code> / <code>checksum</code> / <code>audit</code> 类步骤的次数 <strong>= 0</strong></p>
+<ul><li>或：每个此类豁免必须有 <code># khy-allow-*: &lt;理由&gt;</code> 且理由非空</li></ul>
+<h3 id="d5-可验证的产物完整性-下载侧能独立校验">D5 可验证的产物完整性 —— 「下载侧能独立校验」<a class="anchor" href="#d5-可验证的产物完整性-下载侧能独立校验" aria-label="锚点">#</a></h3>
+<ul><li><strong>定义</strong>：每个公开产物必须附带<strong>下载侧可独立执行</strong>的校验信息，</li></ul>
+<p>且该信息<strong>与产物同源发布</strong>。</p>
+<ul><li><strong>对标</strong>：<ul><li>ZCode：<code>sha256.txt</code> 与 tarball <strong>同目录</strong>发布</li><li>opencode：文档站链接内嵌确切版本号，产物按版本目录组织</li></ul></li><li><strong>判据</strong>：<ul><li>每个发布产物存在同名 <code>.sha256</code>（或 <code>SHA256SUMS</code>）</li><li><code>SHA256SUMS</code> 在<strong>发布物内</strong>（而非仅 CI artifact）</li><li>存在&quot;下载 → 校验 → 安装&quot;三步的<strong>可复现文档段落</strong>，且被黄金路径脚本覆盖</li></ul></li><li><strong>khy-os 现状</strong>：生成但不进发布物、无校验回路 → <strong>GAP</strong></li><li><strong>目标</strong>：<code>install.sh</code>/<code>install-khy.ps1</code> 内<strong>先校验再安装</strong>。</li></ul>
+<h3 id="d6-sbom-必须被消费-sbom-不是上传了事">D6 SBOM 必须被消费 —— 「SBOM 不是上传了事」<a class="anchor" href="#d6-sbom-必须被消费-sbom-不是上传了事" aria-label="锚点">#</a></h3>
+<ul><li><strong>定义</strong>：SBOM 的用途是<strong>下游可扫漏洞</strong>。若从未有消费者，则它只是装饰。</li><li><strong>对标</strong>：ZCode/opencode 均未公开 SBOM 细节，但两者都有明确的</li></ul>
+<p><strong>第三方合规材料位置说明</strong>（<code>third-party/README.md</code> / <code>THIRD-PARTY-NOTICES.md</code>），<br>  即&quot;这些材料去向何处&quot;是<strong>被写明的</strong>。</p>
+<ul><li><strong>判据</strong>：<ul><li>SBOM 生成后在<strong>同一 workflow 内被至少一个步骤消费</strong>（如 <code>grype</code> / <code>osv-scanner</code> / <code>trivy</code>）</li><li>或：SBOM 与产物<strong>同发布</strong>，并有一行文档说明消费者如何取用</li></ul></li><li><strong>khy-os 现状</strong>：仅 <code>upload-artifact</code>，90 天过期 → <strong>GAP</strong></li><li><strong>目标</strong>：SBOM 驱动一次真实漏洞扫描，结果进发布门（可为 <code>recommended</code>）。</li></ul>
+<h3 id="d7-债务必须可收敛-managed-legacy-模型">D7 债务必须可收敛（managed / legacy 模型）<a class="anchor" href="#d7-债务必须可收敛-managed-legacy-模型" aria-label="锚点">#</a></h3>
+<ul><li><strong>定义</strong>：允许存量违规，但必须<strong>按模块显式豁免</strong>，且<strong>豁免清单单调递减</strong>。</li><li><strong>对标</strong>：<strong>ZCode 的 <code>managed</code> / <code>legacy</code> 双态模型</strong>——</li></ul>
+<p>这是 ZCode 最值得直接照搬的一条。<br>  opencode 则用 <code>.gitleaksignore</code> 等基线文件表达同类思想。</p>
+<ul><li><strong>判据</strong>：<ul><li>每个&quot;存量豁免&quot;必须是<strong>逐模块登记</strong>，不得是&quot;整类跳过&quot;</li><li>豁免条目数存在<strong>棘轮</strong>：只降不升（本仓已有 <code>ruleguard-baseline.json</code> 与</li></ul></li></ul>
+<p><code>check:debt-ledger</code>，可复用同一模式）</p>
+<ul><li>台账 <code>measured</code> 必须与<strong>实测 <code>counts</code> 对账</strong>（项目记忆已记录二者曾脱节）</li></ul>
+<p>（&quot;纳管 498 文件 · 违规 0 ‖ legacy 未纳管 3037 文件 · 超标 566&quot;）→ <strong>PASS</strong></p>
+<ul><li><strong>目标</strong>：保持，并把 566 这个数字纳入棘轮，防止它悄悄变大。</li></ul>
+<h3 id="d8-阶段毕业必须被结算-s1-不是墓碑">D8 阶段毕业必须被结算 —— 「S1 不是墓碑」<a class="anchor" href="#d8-阶段毕业必须被结算-s1-不是墓碑" aria-label="锚点">#</a></h3>
+<ul><li><strong>定义</strong>：S1 观察者必须有<strong>明确的毕业判据与结算动作</strong>；</li></ul>
+<p>长期停在 S1 的强检查，要么毕业、要么<strong>明确记录&quot;为何不毕业&quot;</strong>。</p>
+<ul><li><strong>对标</strong>：ZCode 的迁移是<strong>逐模块推进的工程活动</strong>，不是&quot;登记了就完事&quot;。</li></ul>
+<p>opencode 的 Oxlint 从&quot;启用&quot;到&quot;启用 type-aware 规则并修 8 处违规&quot;是<strong>可见的推进史</strong>。</p>
+<ul><li><strong>判据</strong>：<ul><li>每个 S1 机制有 <code>graduationCriteria</code>（本仓已有，见 <code>FEATURE-OWNERSHIP.json</code>）</li><li>存在<strong>结算动作</strong>：到期未毕业者必须留 <code>slipped</code> 痕迹（本仓 <code>check:debt-ledger</code></li></ul></li></ul>
+<p>已有该语义）——<strong>把它扩展到 rollout</strong></p>
+<ul><li>发布相关的强检查，S1 停留<strong>不得超过一个发布周期</strong></li></ul>
+<h3 id="d9-端到端黄金路径-一条命令-已被验证">D9 端到端黄金路径 —— 「一条命令，已被验证」<a class="anchor" href="#d9-端到端黄金路径-一条命令-已被验证" aria-label="锚点">#</a></h3>
+<ul><li><strong>定义</strong>：存在<strong>唯一一条</strong>从零到可运行的路径，且<strong>每次发布前在干净环境跑通</strong>。</li><li><strong>对标</strong>：<ul><li>ZCode：<code>install.sh</code> → <code>~/.zcode/runtime</code> → <code>zcode</code> 可跑</li><li>opencode：<code>curl ... | bash</code> → <code>opencode</code> 可跑；或 <code>npm i -g</code> → 可跑</li></ul></li><li><strong>判据</strong>：<ul><li>存在 <code>check:golden-path</code>：在<strong>干净容器/新 worktree</strong> 中执行文档首条命令并断言成功</li><li>该检查在发布门中 <code>tier='must'</code></li><li>文档中的命令与脚本中的命令<strong>来自同一真源</strong>（不是两处手写）</li></ul></li><li><strong>khy-os 现状</strong>：README 给 6+ 种起步方式，<strong>无一条被端到端验证</strong> → <strong>PARTIAL</strong></li><li><strong>目标</strong>：收敛为一条（或每渠道一条），并自动化验证。</li></ul>
+<h3 id="d10-边界必须写明-知道自己不做什么">D10 边界必须写明 —— 「知道自己不做什么」<a class="anchor" href="#d10-边界必须写明-知道自己不做什么" aria-label="锚点">#</a></h3>
+<ul><li><strong>定义</strong>：明确声明支持范围、不支持范围、已知限制与降级策略。</li><li><strong>对标</strong>：<ul><li>opencode <code>SECURITY.md</code>：<strong>明文拒绝 AI 生成的安全报告</strong></li><li>opencode v2 文档：<strong>&quot;Windows package managers are not supported&quot;</strong>（直说不支持）</li><li>ZCode <code>NOTICE.md</code>：功能与优惠范围、维护规则、执行与数据风险、许可边界</li></ul></li><li><strong>判据</strong>：<ul><li>存在 <code>SECURITY.md</code> / <code>NOTICE.md</code> 等边界文档且<strong>含&quot;不支持&quot;清单</strong></li><li>平台支持矩阵（OS × 架构）<strong>显式列出</strong>，未支持项直说不支持</li><li>降级策略写明（如&quot;无 Node 时如何&quot;）</li></ul></li><li><strong>khy-os 现状</strong>：README 有平台徽章，但<strong>无&quot;不支持什么&quot;清单</strong>；</li></ul>
+<p><code>docs/06_DEPLOY_部署/</code> 材料丰富但未收敛成边界声明 → <strong>PARTIAL</strong></p>
+<ul><li><strong>目标</strong>：一份 1 页的 <code>DELIVERY-BOUNDARY.md</code>（支持矩阵 + 不支持清单 + 降级策略）。</li></ul>
+<hr>
+<h2 id="4-判据落地-记分板与门禁接线">§4 判据落地：记分板与门禁接线<a class="anchor" href="#4-判据落地-记分板与门禁接线" aria-label="锚点">#</a></h2>
+<h3 id="4-1-判据优先级与阈值总表">4.1 判据优先级与阈值总表<a class="anchor" href="#4-1-判据优先级与阈值总表" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>ID</th><th>判据</th><th>阈值</th><th>首轮档位</th><th>是否阻断</th></tr></thead><tbody><tr><td><strong>D1</strong></td><td>仓库完整性</td><td>fsck error = 0 且 <code>log --all</code> 退出码 0</td><td><strong>S3 / must</strong></td><td>✅ <strong>阻断</strong></td></tr><tr><td><strong>D2</strong></td><td>发布物存在且可安装</td><td><code>dist/</code> 三件非空 + 干净容器装成功</td><td>S2 / must</td><td>暂不阻断（先记录 1 周期）</td></tr><tr><td><strong>D3</strong></td><td>新克隆零缺件</td><td><code>??</code> 项 = 0（白名单显式声明）</td><td>S2 / must</td><td>暂不阻断</td></tr><tr><td><strong>D4</strong></td><td>失败须阻断</td><td>校验类 `\</td><td>\</td><td>echo` = 0</td></tr><tr><td><strong>D5</strong></td><td>产物完整性可验</td><td>每产物有同源 <code>SHA256SUMS</code></td><td>S2 / must</td><td>暂不阻断</td></tr><tr><td><strong>D6</strong></td><td>SBOM 被消费</td><td>SBOM → 至少一次真实扫描</td><td>S1 / advisory</td><td>❌</td></tr><tr><td><strong>D7</strong></td><td>债务可收敛</td><td>legacy 超标数<strong>只降不升</strong></td><td>S3 / must</td><td>✅ <strong>阻断</strong></td></tr><tr><td><strong>D8</strong></td><td>阶段已结算</td><td>发布相关机制不在 S1 超一周期</td><td>S1 / advisory</td><td>❌</td></tr><tr><td><strong>D9</strong></td><td>黄金路径</td><td>干净环境一条命令跑通</td><td>S2 / must</td><td>暂不阻断</td></tr><tr><td><strong>D10</strong></td><td>边界写明</td><td>存在含&quot;不支持清单&quot;的边界文档</td><td>S1 / advisory</td><td>❌</td></tr></tbody></table>
+<blockquote><p>⚠ <strong>档位判定依据</strong>（不臆造）：</p>
+<ul><li>D1 / D4 直接<strong>阻断</strong>：因为它们是&quot;交付物完整性&quot;与&quot;失败可见性&quot;，</li></ul>
+<p>属于<strong>一旦缺失则其余度量全部失去意义</strong>的地基。允许观察期等于允许交付残次品。</p>
+<ul><li>D7 直接阻断：<strong>棘轮</strong>是本仓已验证的成熟模式（<code>ruleguard-baseline.json</code> 已跑通），</li></ul>
+<p>复用既有机制而非新造，故无需观察期。</p>
+<ul><li>其余先 S1/S2 记录，<strong>但必须在本文档的&quot;下一轮结算&quot;中给出升阶决定</strong>，</li></ul>
+<p>否则重蹈 §1.3 的墓碑化。</p></blockquote>
+<h3 id="4-2-记分板设计-对标-check-zcode-baseline-js">4.2 记分板设计（对标 <code>check-zcode-baseline.js</code>）<a class="anchor" href="#4-2-记分板设计-对标-check-zcode-baseline-js" aria-label="锚点">#</a></h3>
+<p>建议新增 <code>scripts/ci/check-delivery-baseline.js</code>，输出<strong>同构</strong>的记分板：</p>
+<pre><code>== 可交付性记分板（[DESIGN-DELIV-001]）==
+阶段: &lt;S1|S2|S3&gt;   根: &lt;repoRoot&gt;
+------------------------------------------------------------------
+[D1 PASS   ] 仓库完整性
+            目标: fsck error = 0 且 git log --all 退出码 = 0
+            现状: fsck error = 0 · log --all = 0 · broken link = 0
+[D2 GAP    ] 发布物存在且可安装
+            目标: dist/ 含 wheel + sdist + npm tarball，干净容器装成功
+            现状: dist/ 不存在
+...
+------------------------------------------------------------------
+汇总: PASS 3 · PARTIAL 2 · GAP 5 · OBSERVE 0</code></pre>
+<p><strong>必须满足的三条硬要求</strong>（否则重蹈 §1.2 的&quot;漂亮但无害&quot;）：</p>
+<ol><li><strong>结构化输出</strong>：<code>--json</code> 可被测试消费；</li></ol>
+<p>判读一律认 <code>counts</code> 而非人读文案（本仓已有该纪律）。</p>
+<ol><li><strong>反向验证</strong>：每个检查项必须有<strong>fixture 让它在违规时变红</strong>。</li></ol>
+<p>测试断言：<code>GAP 数 &gt; 0 时 exit code 必须非 0</code>（S3 档）。</p>
+<ol><li><strong>阈值外部化</strong>：阈值来自本文档 / 登记表，<strong>不得硬编码在检查器内部</strong>。</li></ol>
+<h3 id="4-3-阶段选择-为什么-d1-d4-d7-可以直进-s3">4.3 阶段选择：为什么 D1/D4/D7 可以直进 S3<a class="anchor" href="#4-3-阶段选择-为什么-d1-d4-d7-可以直进-s3" aria-label="锚点">#</a></h3>
+<p>本仓 <code>PROCESS-008</code> 规定<strong>禁止直进 S3</strong>，理由是&quot;新机制误报率未知&quot;。</p>
+<p>本文认为 <strong>D1 / D4 / D7 不适用该顾虑</strong>，依据：</p>
+<table><thead><tr><th>判据</th><th>为何无&quot;误报率&quot;问题</th></tr></thead><tbody><tr><td>D1</td><td><code>git fsck</code> 是 <strong>git 自身的权威判定</strong>，非自研阈值。真红即真错</td></tr><tr><td>D4</td><td>`\</td></tr><tr><td>D7</td><td>复用<strong>既有</strong>棘轮机制（已跑通、已做过反向验证），非新机制</td></tr></tbody></table>
+<p>即：<strong>这不是&quot;新机制&quot;，而是&quot;把既有机制接到交付面&quot;</strong>。<br>按 <code>PROCESS-008</code> 的精神（毕业以样本量计，防的是<strong>自研判定</strong>的误报），<br>引用权威外部判定 + 复用已验证机制，<strong>不构成新建机制</strong>。</p>
+<blockquote><p>⚠ <strong>此判断需在评审时确认</strong>。若评审认为仍应从 S1 起，则 D1 至少必须以<br><strong>&quot;独立于发布门的手动体检项&quot;</strong>存在，并在 §5 的首轮体检中立刻执行——<br><strong>不允许它进入 S1 墓碑队列</strong>。</p></blockquote>
+<h3 id="4-4-接线清单-参照本仓四触点">4.4 接线清单（参照本仓四触点）<a class="anchor" href="#4-4-接线清单-参照本仓四触点" aria-label="锚点">#</a></h3>
+<p>新增 <code>check-delivery-baseline.js</code> 后，按既有接线契约补齐：</p>
+<ol><li><strong>门表面</strong>：<code>package.json</code> 增 <code>&quot;check:delivery&quot;: &quot;node scripts/ci/check-delivery-baseline.js&quot;</code></li><li><strong>登记表</strong>：<code>RULES-REGISTRY.json</code> 补条目（<code>ssot</code> = 本文档、</li></ol>
+<p><code>exec.script</code> = 上述路径）；同步 <code>meta.ruleCount</code></p>
+<ol><li><strong>真源标记</strong>：本文档头部加 <code>&lt;!-- RULES-REGISTRY: &lt;新规则ID&gt; --&gt;</code>；</li></ol>
+<p><code>AGENTS.md</code> 第 3 行 marker 补 ID 并补规则正文</p>
+<ol><li><strong>规则卡</strong>：<code>npm run docs:rules-cards</code> 重生成（<strong>禁止手改卡片</strong>）</li><li><strong>发布门阶段表</strong>：<code>scripts/release/lib/releaseGateStages.js</code> <strong>追加阶段</strong>，</li></ol>
+<p>D1 阶段 <code>tier='must'</code></p>
+<blockquote><p>⚠ 依据项目记忆：阶段表匹配是 <code>text.includes(&lt;执行器 basename&gt;)</code> 且取全文，<br><strong>无 stage 过滤器</strong> ⇒ 端到端验收只能跑整门；<br>且契约测试只锁 <code>length&gt;0</code>+id 唯一 ⇒ <strong>加阶段不会被既有测试发现</strong> ⇒<br><strong>必须补断言，并实测&quot;关掉守卫它真变红&quot;</strong>。</p></blockquote>
+<hr>
+<h2 id="5-首轮体检结论-对本仓即为整改顺序">§5 首轮体检结论（对本仓即为整改顺序）<a class="anchor" href="#5-首轮体检结论-对本仓即为整改顺序" aria-label="锚点">#</a></h2>
+<blockquote><p>以下按&quot;<strong>先恢复可信，再谈优雅</strong>&quot;排序。前 3 项做完之前，<br>其余所有可交付性度量都建立在流沙上。</p></blockquote>
+<table><thead><tr><th>序</th><th>动作</th><th>对应判据</th><th>验收</th></tr></thead><tbody><tr><td><strong>1</strong></td><td>修仓库完整性：找回/重建 314 缺失 blob、63 缺失 tree、3 缺失 commit，重建 cache-tree，清理失效远端 ref</td><td>D1</td><td><code>git fsck</code> 四类计数全 0、<code>log --all</code> 退出码 0</td></tr><tr><td><strong>2</strong></td><td>补提交 27 个前端视图；处理 149 未跟踪 + 127 已删除未提交</td><td>D3</td><td><code>??</code> = 0 且 <code>D</code> = 0</td></tr><tr><td><strong>3</strong></td><td>真正产出一次发布物并留盘（可 <code>--dry-run</code> 但须出 <code>dist/</code>）</td><td>D2</td><td><code>dist/</code> 三件非空</td></tr><tr><td><strong>4</strong></td><td>去掉 2 处签名步骤的 `\</td><td>\</td><td>echo`，或明确移除签名</td></tr><tr><td><strong>5</strong></td><td>校验和 / SBOM 进发布物 + 加下载侧校验回路</td><td>D5 / D6</td><td><code>SHA256SUMS</code> 在产物内</td></tr><tr><td><strong>6</strong></td><td>发布相关 S1 机制结算（毕业或记 <code>slipped</code>）</td><td>D8</td><td>无&quot;发布相关且停在 S1&quot;</td></tr><tr><td><strong>7</strong></td><td>收敛黄金路径为一条并自动化</td><td>D9</td><td><code>check:golden-path</code> 通</td></tr><tr><td><strong>8</strong></td><td>写 <code>DELIVERY-BOUNDARY.md</code>（支持矩阵 + 不支持清单）</td><td>D10</td><td>文档存在且含不支持项</td></tr><tr><td><strong>9</strong></td><td>落地 <code>check-delivery-baseline.js</code> 记分板 + 反向验证测试</td><td>全部</td><td>违规 fixture 真变红</td></tr></tbody></table>
+<h3 id="5-1-一句话诊断">5.1 一句话诊断<a class="anchor" href="#5-1-一句话诊断" aria-label="锚点">#</a></h3>
+<blockquote><p><strong>khy-os 的可交付性差，不是因为&quot;治理不足&quot;，而是因为&quot;治理全部指向内部一致性，<br>没有一条指向外部可交付性&quot;。</strong></p>
+<p>88 条规则守的是&quot;仓库内部自洽&quot;（分层、命名、登记、孪生件、规则卡）；<br>而真正决定&quot;别人能不能用上&quot;的五件事——<strong>仓库能克隆、产物存在、校验可验、<br>失败阻断、路径已验</strong>——一件都没有被强制。</p>
+<p>ZCode 用 <code>managed/legacy</code> 让债务<strong>可收敛</strong>；opencode 用 7+ 渠道让交付<strong>可触达</strong>。<br>khy-os 用 88 条规则让内部<strong>可审计</strong>——这三者是<strong>不同维度</strong>，<br>前者不能替代后者。</p></blockquote>
+<hr>
+<h2 id="6-结论">§6 结论<a class="anchor" href="#6-结论" aria-label="锚点">#</a></h2>
+<ol><li><strong>&quot;可交付性差&quot;已被证伪为&quot;不是感觉，是可测事实&quot;</strong>：</li></ol>
+<p><strong>314 个缺失 blob / 63 个缺失 tree / 3 个缺失 commit</strong>、<code>git log --all</code> 直接 fatal、<br>   <code>dist/</code> 不存在、149 未跟踪 + 127 已删除未提交、签名失败被吞、<br>   SBOM 无人消费、记分板 7 PASS 但恒不阻断。</p>
+<ol><li><strong>根因是度量维度错位</strong>：既有治理<strong>全部</strong>指向仓库内部一致性，</li></ol>
+<p>而交付面（克隆完整性 / 产物 / 校验 / 阻断 / 路径）<strong>无一条被强制</strong>。</p>
+<ol><li><strong>判断标准已给出</strong>：D1–D10，每条有定义、对标依据、可测判据、现状与目标。</li></ol>
+<p>其中 <strong>D1 / D4 / D7 建议直接阻断</strong>（依据见 §4.3），<br>   其余先记录但<strong>必须在下一轮结算</strong>。</p>
+<ol><li><strong>最值得照搬的两条外部实践</strong>：<ul><li>ZCode 的 <strong><code>managed</code> / <code>legacy</code> 双态迁移模型</strong>（让债务可收敛）</li><li>opencode 的 <strong>&quot;每平台独立二进制 + 安装脚本与产物同源 + 版本索引机器可读&quot;</strong></li></ul></li></ol>
+<p>（让交付可触达、可复现）</p>
+<ol><li><strong>立即动作见 §5</strong>：先修仓库完整性与补件（1–3），</li></ol>
+<p>再谈校验/阻断（4–6），最后上记分板（9）。</p>
+<hr>
+<h2 id="附录-a-复现命令速查">附录 A 复现命令速查<a class="anchor" href="#附录-a-复现命令速查" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-comment"># D1 仓库完整性</span>
+git fsck --no-progress 2&gt;&amp;1 | sed <span class="hljs-string">&#x27;s/[0-9a-f]\{40\}/&lt;sha&gt;/g&#x27;</span> | <span class="hljs-built_in">sort</span> | <span class="hljs-built_in">uniq</span> -c | <span class="hljs-built_in">sort</span> -rn
+<span class="hljs-comment">#   314 missing blob · 63 missing tree · 3 missing commit · 62+7 broken link · 49 cache-tree</span>
+git <span class="hljs-built_in">log</span> --oneline --all                              <span class="hljs-comment"># fatal（目标：退出码 0）</span>
+
+<span class="hljs-comment"># D2 发布物</span>
+<span class="hljs-built_in">ls</span> dist                                              <span class="hljs-comment"># 不存在（目标：三件非空）</span>
+
+<span class="hljs-comment"># D3 新克隆零缺件</span>
+git status --porcelain | <span class="hljs-built_in">cut</span> -c1-2 | <span class="hljs-built_in">sort</span> | <span class="hljs-built_in">uniq</span> -c | <span class="hljs-built_in">sort</span> -rn  <span class="hljs-comment"># 194 M / 149 ?? / 127 D</span>
+<span class="hljs-built_in">ls</span> apps/ai-frontend/src/views/admin/ | <span class="hljs-built_in">wc</span> -l          <span class="hljs-comment"># 27（未跟踪的真实缺件）</span>
+
+<span class="hljs-comment"># D4 失败须阻断</span>
+grep -rn <span class="hljs-string">&quot;|| echo\|continue-on-error&quot;</span> .github/workflows scripts/release | grep -iE <span class="hljs-string">&quot;sign|verify|checksum|audit&quot;</span>
+
+<span class="hljs-comment"># D6 SBOM 被消费</span>
+grep -n -A6 -B4 <span class="hljs-string">&quot;sbom&quot;</span> .github/workflows/dual-channel-release.yml
+
+<span class="hljs-comment"># D7 债务棘轮</span>
+node scripts/ci/check-zcode-baseline.js              <span class="hljs-comment"># managed 498/0 ‖ legacy 3037/566</span>
+
+<span class="hljs-comment"># 记分板自述（恒不阻断）</span>
+grep -n <span class="hljs-string">&quot;恒返回 0\|ALWAYS exits 0&quot;</span> scripts/ci/check-zcode-baseline.js scripts/release/source-hygiene-scan.js</code></pre>
+<h2 id="附录-b-外部对标来源">附录 B 外部对标来源<a class="anchor" href="#附录-b-外部对标来源" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>来源</th><th>采信的要点</th></tr></thead><tbody><tr><td><code>github.com/zai-org/ZCode</code> README + 文件列表</td><td>多形态同源、<code>bundle:desktop</code>/<code>build:zcode</code>、<code>ZCODE_DIST_BASE_URL</code> + <code>latest.json</code> + <code>install.sh</code>、<code>sha256.txt</code>、<code>architecture-policy.yaml</code> + <code>.architecture-baseline.json</code>、<code>managed/legacy</code>、mise/nvmrc/npmrc 四重锁定、<code>THIRD-PARTY-NOTICES.md</code></td></tr><tr><td><code>opencode.ai/v2/docs</code></td><td>v2 版本号 <strong>2.0.6</strong>、<code>/v2/install</code> 一行脚本、7+ 包管理器、<strong>每平台独立二进制</strong>（darwin/win/linux × arm64/x64 × glibc/musl × baseline）、<code>postinstall</code> 选原生二进制、Desktop 五格式、<code>opencode pair</code>、Docker 版本化 tag、安装目录优先级链、<strong>&quot;Windows package managers are not supported&quot;</strong></td></tr><tr><td><code>github.com/sst/opencode</code></td><td>Oxlint（type-aware）/ Prettier / <strong>Gitleaks</strong> / Husky / Conventional Commits、<code>sync release versions</code> 统一同步、<code>SECURITY.md</code> 拒绝 AI 生成安全报告、18+ 语言 README</td></tr><tr><td><code>scripts/ci/check-zcode-baseline.js</code>（仓内）</td><td>阈值来源说明（对齐 ZCode <code>architecture-policy.yaml</code> <code>global</code>）、<code>managedOnly</code> 语义、S1 自述</td></tr></tbody></table>
+<hr>
+<h2 id="附录-c-术语">附录 C 术语<a class="anchor" href="#附录-c-术语" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>术语</th><th>含义</th></tr></thead><tbody><tr><td><strong>可交付性</strong>（deliverability）</td><td>陌生人能否在陌生机器上从公开渠道安装、运行、信任并升级本产品</td></tr><tr><td><strong>交付面</strong></td><td>决定可交付性的最小检查集合（克隆完整性 / 产物 / 校验 / 阻断 / 黄金路径 / 边界）</td></tr><tr><td><strong>内部一致性</strong></td><td>仓库自身自洽（分层、命名、登记、孪生件等）——<strong>不等于</strong>可交付性</td></tr><tr><td><strong>managed / legacy</strong></td><td>ZCode 的债务双态：未纳管豁免、纳管必达标，逐模块迁移</td></tr><tr><td><strong>恒真断言 / 空转断言</strong></td><td>无论输入如何都不失败的检查——与无检查等价</td></tr><tr><td><strong>S1 墓碑</strong></td><td>登记为观察者后从未结算、也从不阻断的机制</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-DB-001] 数据库规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-DB-001] 数据库规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-DEP-001] 依赖管理规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-DEP-001] 依赖管理规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-DELIV-001] 可交付性判断标准.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -57,7 +57,7 @@ function makeSkill(name, opts = {}) {
 
 // ── Tests ───────────────────────────────────────────────────────────
 
-group('1. getActiveSkills �?paths=null always active', () => {
+group('1. getActiveSkills —paths=null always active', () => {
   injectTestSkills([
     makeSkill('always-on', { paths: null }),
     makeSkill('also-always-on'),  // paths defaults to null
@@ -71,7 +71,7 @@ group('1. getActiveSkills �?paths=null always active', () => {
   });
 });
 
-group('2. getActiveSkills �?paths with recentFiles matching', () => {
+group('2. getActiveSkills —paths with recentFiles matching', () => {
   injectTestSkills([
     makeSkill('vue-helper', { paths: ['**/*.vue'] }),
     makeSkill('ts-helper', { paths: ['**/*.ts', '**/*.tsx'] }),
@@ -85,7 +85,7 @@ group('2. getActiveSkills �?paths with recentFiles matching', () => {
     const names = active.map(s => s.name);
     expect(names).toContain('vue-helper');
     expect(names).toContain('always-on');
-    expect(!names).toContain('ts-helper');
+    expect(names).not.toContain('ts-helper');
   });
 
   test('ts-helper activates when .ts file in recentFiles', () => {
@@ -95,7 +95,7 @@ group('2. getActiveSkills �?paths with recentFiles matching', () => {
     const names = active.map(s => s.name);
     expect(names).toContain('ts-helper');
     expect(names).toContain('always-on');
-    expect(!names).toContain('vue-helper');
+    expect(names).not.toContain('vue-helper');
   });
 
   test('both activate when both file types present', () => {
@@ -109,7 +109,7 @@ group('2. getActiveSkills �?paths with recentFiles matching', () => {
   });
 });
 
-group('3. getActiveSkills �?non-invocable skills excluded', () => {
+group('3. getActiveSkills —non-invocable skills excluded', () => {
   injectTestSkills([
     makeSkill('internal-only', { userInvocable: false, paths: null }),
     makeSkill('public-skill', { userInvocable: true, paths: null }),
@@ -122,7 +122,7 @@ group('3. getActiveSkills �?non-invocable skills excluded', () => {
   });
 });
 
-group('4. matchAndActivateByPath �?returns matching skill names', () => {
+group('4. matchAndActivateByPath —returns matching skill names', () => {
   injectTestSkills([
     makeSkill('vue-helper', { paths: ['**/*.vue'] }),
     makeSkill('py-helper', { paths: ['**/*.py', 'scripts/**'] }),
@@ -153,7 +153,7 @@ group('4. matchAndActivateByPath �?returns matching skill names', () => {
   });
 });
 
-group('5. formatSkillListing �?with context filtering', () => {
+group('5. formatSkillListing —with context filtering', () => {
   injectTestSkills([
     makeSkill('vue-helper', { paths: ['**/*.vue'], description: 'Vue.js component assistance' }),
     makeSkill('py-helper', { paths: ['**/*.py'], description: 'Python scripting help' }),
@@ -173,13 +173,13 @@ group('5. formatSkillListing �?with context filtering', () => {
     });
     expect(listing).toContain('/vue-helper');
     expect(listing).toContain('/always-on');
-    expect(!listing).toContain('/py-helper');
+    expect(listing).not.toContain('/py-helper');
   });
 
   test('with empty context only returns always-active skills', () => {
     const listing = skillModule.formatSkillListing(8000, {});
-    expect(!listing).toContain('/vue-helper');
-    expect(!listing).toContain('/py-helper');
+    expect(listing).not.toContain('/vue-helper');
+    expect(listing).not.toContain('/py-helper');
     expect(listing).toContain('/always-on');
   });
 });

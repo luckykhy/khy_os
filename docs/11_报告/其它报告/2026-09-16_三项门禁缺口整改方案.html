@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-16_三项门禁缺口整改方案.md -->
+<title>三项门禁缺口整改方案（接线 · 体积守卫 · git 维护周期化） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>其它报告<span class="sep">›</span>三项门禁缺口整改方案（接线 · 体积守卫 · git 维护周期化）</div>
+      <header class="hero reveal"><h1>三项门禁缺口整改方案（接线 · 体积守卫 · git 维护周期化）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#三项门禁缺口整改方案-接线-体积守卫-git-维护周期化">三项门禁缺口整改方案（接线 · 体积守卫 · git 维护周期化）</a></li><li class="lvl-2"><a href="#零-结论先行-含一处前提纠正">零、结论先行（含一处前提纠正）</a></li><li class="lvl-3"><a href="#必须先纠正的前提-问题-1-不是-报两条红">必须先纠正的前提：问题 1 不是「报两条红」</a></li><li class="lvl-3"><a href="#这不是孤例-同一类缺陷实测-30-67">这不是孤例：同一类缺陷实测 30 / 67</a></li><li class="lvl-2"><a href="#一-问题-1-把每日巡检真正接进门">一、问题 1：把每日巡检真正接进门</a></li><li class="lvl-3"><a href="#1-1-一个绕不过去的前置事实-organize-py-不会失败">1.1 一个绕不过去的前置事实：`organize.py` 不会失败</a></li><li class="lvl-3"><a href="#1-2-改动点-a-让执行器具备门的能力">1.2 改动点 A：让执行器具备门的能力</a></li><li class="lvl-3"><a href="#1-3-改动点-b-堵住洗白通道-这才是问题-1-的根因">1.3 改动点 B：堵住洗白通道（这才是问题 1 的根因）</a></li><li class="lvl-3"><a href="#1-4-改动点-c-一处需要你裁决的语义冲突">1.4 改动点 C：一处需要你裁决的语义冲突</a></li><li class="lvl-3"><a href="#1-5-问题-1-的验证方式">1.5 问题 1 的验证方式</a></li><li class="lvl-2"><a href="#二-问题-2-体积守卫登记-接入-ruleguard">二、问题 2：体积守卫登记 + 接入 ruleguard</a></li><li class="lvl-3"><a href="#2-1-登记表的硬性结构要求-实测">2.1 登记表的硬性结构要求（实测）</a></li><li class="lvl-3"><a href="#2-2-改动内容-5-处-必须原子提交">2.2 改动内容（5 处，必须原子提交）</a></li><li class="lvl-3"><a href="#2-3-为什么必须原子提交-这里有个必红的坑">2.3 为什么必须原子提交（这里有个必红的坑）</a></li><li class="lvl-3"><a href="#2-4-冲突解除后的落地顺序">2.4 冲突解除后的落地顺序</a></li><li class="lvl-3"><a href="#2-5-问题-2-的验证方式">2.5 问题 2 的验证方式</a></li><li class="lvl-2"><a href="#三-问题-3-git-对象库维护周期化">三、问题 3：git 对象库维护周期化</a></li><li class="lvl-3"><a href="#3-1-现状-全部实测-只读">3.1 现状（全部实测，只读）</a></li><li class="lvl-3"><a href="#3-2-分档方案">3.2 分档方案</a></li><li class="lvl-3"><a href="#3-3-问题-3-的验证方式">3.3 问题 3 的验证方式</a></li><li class="lvl-2"><a href="#四-三者的相互关系与建议执行顺序">四、三者的相互关系与建议执行顺序</a></li><li class="lvl-2"><a href="#五-本方案未执行的操作-合规声明">五、本方案未执行的操作（合规声明）</a></li><li class="lvl-3"><a href="#一条落笔纪律-本文自己踩到了">一条落笔纪律（本文自己踩到了）</a></li><li class="lvl-2"><a href="#附-本次核验用到的只读命令">附：本次核验用到的只读命令</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="三项门禁缺口整改方案-接线-体积守卫-git-维护周期化">三项门禁缺口整改方案（接线 · 体积守卫 · git 维护周期化）<a class="anchor" href="#三项门禁缺口整改方案-接线-体积守卫-git-维护周期化" aria-label="锚点">#</a></h1>
+<ul><li>日期：2026-09-16</li><li>状态：<strong>方案（未执行）</strong> —— 本文只给出改动点、命令与验证方式，不代为执行任何留痕操作</li><li>关联：[DESIGN-LAY-003] 仓库整理与巡检规范 · [DESIGN-GOV-001] 治理总纲 · [DESIGN-ARCH-111] 规则遵守保障机制 · [MGMT-STD-008] 规则登记表</li><li>测量环境：git 2.55.0.windows.3 / Python 3.13.14 / Node 22.22.2</li></ul>
+<hr>
+<h2 id="零-结论先行-含一处前提纠正">零、结论先行（含一处前提纠正）<a class="anchor" href="#零-结论先行-含一处前提纠正" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>问题</th><th>现状核验结果</th><th>一句话结论</th></tr></thead><tbody><tr><td>1</td><td><code>organize.py</code> 零接线</td><td><strong>前提已过期</strong> —— <code>check:wiring</code> 现在 <strong>exit 0</strong>，不再报 TOOLING-005</td><td>它变成<strong>假绿</strong>了，比原来更危险；真正的缺口（PR 门不跑它）<strong>依然存在</strong></td></tr><tr><td>2</td><td>体积守卫未登记</td><td><strong>事实成立，但初版方案写错了</strong></td><td>正确解法是<strong>接线并登记既有的</strong> <code>scripts/ci/check-dependency-size.js</code>（它已实现同一套设计且 <code>--strict</code> 实测 exit 0），<strong>不是新建检查器</strong></td></tr><tr><td>3</td><td><code>git gc</code> 未周期化</td><td>事实成立，<strong>且多一处隐性阻碍</strong></td><td>光设 <code>git maintenance</code> 不够：<code>maintenance.auto</code> 已被显式关成 <code>false</code></td></tr></tbody></table>
+<h3 id="必须先纠正的前提-问题-1-不是-报两条红">必须先纠正的前提：问题 1 不是「报两条红」<a class="anchor" href="#必须先纠正的前提-问题-1-不是-报两条红" aria-label="锚点">#</a></h3>
+<p>你描述的状态是「<code>check:wiring</code> 报 TOOLING-005 两条」。<strong>实测现在它通过了</strong>：</p>
+<pre><code>$ npm run check:wiring
+check-wiring 通过：72 个检查器全部接线（豁免 9 项），登记别名与规则绑定均无死指针。
+EXIT=0</code></pre>
+<p>但它<strong>不是因为被接线而变绿的</strong>。实测证据链：</p>
+<table><thead><tr><th>探针</th><th>结果</th></tr></thead><tbody><tr><td><code>organize.py</code> 的引用面（<code>wiring.references</code>）</td><td><strong>仅 <code>[&quot;package.json&quot;]</code></strong></td></tr><tr><td><code>LAYOUT-004</code> 在 manifest 中的形态</td><td><code>kind: &quot;enforced&quot;</code>、<code>wired: true</code>、<code>surfaces: [&quot;package.json&quot;]</code></td></tr><tr><td><code>grep organize .github/workflows/ .githooks/</code></td><td><strong>空</strong>（没有任何 workflow 或 hook 调用它）</td></tr><tr><td>`git show HEAD:package.json \</td><td>grep organize`</td></tr><tr><td><code>package.json</code> 修改时间</td><td><strong>09-16 20:26</strong>（本会话期间被并发会话加入）</td></tr></tbody></table>
+<p><strong>根因是守卫的判据本身有洞</strong>。<code>scripts/ruleguard/lib/wiring.js</code> 的 S1 采集面：</p>
+<pre><code class="language-js">surfaces[rel] = <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">values</span>(<span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(text).<span class="hljs-property">scripts</span> || {})
+  .<span class="hljs-title function_">filter</span>(<span class="hljs-function">(<span class="hljs-params">value</span>) =&gt;</span> <span class="hljs-keyword">typeof</span> value === <span class="hljs-string">&#x27;string&#x27;</span>)
+  .<span class="hljs-title function_">join</span>(<span class="hljs-string">&#x27;\n&#x27;</span>);</code></pre>
+<p>它把 <strong>package.json 里全部 <code>scripts</code> 的值</strong>都当作「门面」，<strong>不区分 <code>check:*</code>（门）与 <code>maintenance:*</code>（人工命令）</strong>。于是任何人往 package.json 塞一行 <code>&quot;maintenance:organize&quot;: &quot;python scripts/maintenance/organize.py&quot;</code>，就能把一条 <code>gate=pr</code> 的规则从 <code>declared</code> 提成 <code>enforced</code>，而 <code>checkRuleBindings()</code> 的第 3 项检查（「声明的执行器未挂到任何门」）就此被绕过。</p>
+<blockquote><p><strong>待修的是这个洗白通道</strong>，不只是 <code>organize.py</code> 那一行。</p></blockquote>
+<p>另有一处结构性事实：<code>wiring.checkerFiles</code> 共 72 个，<strong>全部位于 <code>scripts/ci/</code></strong>。<code>checkOrphans()</code> 只遍历这些文件，所以 <code>scripts/maintenance/organize.py</code> <strong>从来不在反孤儿子检查的射程内</strong> —— 它只能靠「规则绑定」那一路被看见，而那一路现在被绕过了。</p>
+<h3 id="这不是孤例-同一类缺陷实测-30-67">这不是孤例：同一类缺陷实测 30 / 67<a class="anchor" href="#这不是孤例-同一类缺陷实测-30-67" aria-label="锚点">#</a></h3>
+<p>顺着这个洞做了一次全量可达性审计（只读探针，判据 = 从「聚合门 + workflow + hook」出发做传递闭包，跟随 <code>npm run &lt;目标&gt;</code>）：</p>
+<pre><code>门入口数 = 36  |  可达脚本数 = 46
+scripts/ci 别名总数 = 67
+=== 聚合门不可达的 scripts/ci 检查器别名：30 个 ===</code></pre>
+<p><strong>67 个挂在 <code>scripts/ci</code> 上的别名里，有 30 个（45%）从任何门都到不了</strong> —— 它们只有「自己定义自己」那一行引用，而 <code>check:wiring</code> 恰恰把别名定义行也算作接线面，于是全部判绿。</p>
+<p>其中最值得注意的不是数量，而是<strong>中招的是哪几条</strong>：</p>
+<table><thead><tr><th>别名</th><th>检查器</th><th>它本该守护的规则</th></tr></thead><tbody><tr><td><code>check:build-root</code></td><td><code>scripts/ci/check-build-root.js</code></td><td><strong><code>LAYOUT-005</code> 构建产物单一根</strong> 声明的 <code>enforcement</code></td></tr><tr><td><code>check:ai-gateway</code></td><td><code>scripts/ci/check-ai-gateway.js</code></td><td><strong><code>GW-002</code> AI 模型降级与熔断规范</strong> 声明的 <code>enforcement</code></td></tr><tr><td><code>check:dep-size</code></td><td><code>scripts/ci/check-dependency-size.js</code></td><td>依赖体积预算（<strong>目前无任何规则登记它</strong>，见第二节）</td></tr><tr><td><code>check:gov-status</code></td><td><code>scripts/ci/check-gov-status.js</code></td><td>治理状态（另一会话 09-16 02:06 新增，曾被其审查报告判为「零接线」，后来只补了别名、<strong>没补门</strong>）</td></tr></tbody></table>
+<p>逐条核验（<code>grep</code> workflow/hook 命中数 + 聚合门命中数，并排除 9 项豁免）：</p>
+<table><thead><tr><th>检查器</th><th>workflow/hook 命中</th><th>聚合门命中</th><th>在豁免清单</th></tr></thead><tbody><tr><td><code>check-build-root</code></td><td><strong>0</strong></td><td><strong>0</strong></td><td>否</td></tr><tr><td><code>check-ai-gateway</code></td><td><strong>0</strong></td><td><strong>0</strong></td><td>否</td></tr><tr><td><code>check-gov-status</code></td><td><strong>0</strong></td><td><strong>0</strong></td><td>否</td></tr><tr><td><code>check-lifecycle-policy</code></td><td><strong>0</strong></td><td><strong>0</strong></td><td>否</td></tr><tr><td><code>check-dep-size</code></td><td><strong>0</strong></td><td><strong>0</strong></td><td>否</td></tr></tbody></table>
+<p><code>wiring-exemptions.json</code> 的 9 项豁免是另一批（<code>check-core-safety.js</code>、<code>security-scan.js</code> 等），<strong>不包含上述任何一个</strong>。</p>
+<blockquote><p><strong>所以问题 1 的准确表述是</strong>：不是「一个文件忘了接线」，而是<strong>「检查器零接线」这件事从未被真正测过</strong> —— 判据弱到可以被别名定义行满足。修 <code>organize.py</code> 只是修一个症状；<strong>修判据（§1.3）才是修病</strong>。</p></blockquote>
+<hr>
+<h2 id="一-问题-1-把每日巡检真正接进门">一、问题 1：把每日巡检真正接进门<a class="anchor" href="#一-问题-1-把每日巡检真正接进门" aria-label="锚点">#</a></h2>
+<h3 id="1-1-一个绕不过去的前置事实-organize-py-不会失败">1.1 一个绕不过去的前置事实：<code>organize.py</code> 不会失败<a class="anchor" href="#1-1-一个绕不过去的前置事实-organize-py-不会失败" aria-label="锚点">#</a></h3>
+<p><code>scripts/maintenance/organize.py</code> 的 <code>run()</code> 尾部：</p>
+<pre><code class="language-python">        <span class="hljs-built_in">print</span>(<span class="hljs-string">f&quot;报告: <span class="hljs-subst">{OUT_ROOT / <span class="hljs-string">&#x27;reports&#x27;</span> / <span class="hljs-string">f&#x27;khy-os-<span class="hljs-subst">{date}</span>.md&#x27;</span>}</span>&quot;</span>)
+        <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>                      <span class="hljs-comment"># ← 恒 0</span></code></pre>
+<p>除「仓库不存在」返回 2 外，<strong>无论发现多少孤立 html / 产物 / 命名违规，一律 <code>return 0</code></strong>。<br>它现在是一个<strong>纯报告器</strong>。直接把它塞进 <code>pr-gate.yml</code> 会得到一个<strong>永远绿的空步骤</strong> —— 这正是仓库最忌讳的「纸面门」。</p>
+<p><strong>所以接线的前提是先给它一个可失败的档位。</strong></p>
+<h3 id="1-2-改动点-a-让执行器具备门的能力">1.2 改动点 A：让执行器具备门的能力<a class="anchor" href="#1-2-改动点-a-让执行器具备门的能力" aria-label="锚点">#</a></h3>
+<p><strong>A1. <code>scripts/maintenance/organize.py</code> 新增 <code>--check</code> 档（棘轮语义）</strong></p>
+<table><thead><tr><th>项</th><th>内容</th></tr></thead><tbody><tr><td>位置</td><td><code>main()</code> 的互斥组（现有 <code>--report</code> / <code>--apply</code>）</td></tr><tr><td>行为</td><td>扫描后与基线比对，<strong>超标返回 1</strong>，未超标返回 0；<code>--apply</code> 行为不变</td></tr><tr><td>基线文件</td><td>新增 <code>scripts/ci/organize-baseline.json</code>（与仓库其他棘轮基线同址，便于 <code>--promote</code> 风格统一）</td></tr><tr><td>纳入棘轮的计数</td><td><code>orphan_html</code>、<code>artifacts</code>（<code>_产物</code> 条目）、<code>badname</code>、<code>bigfile</code>、根目录镜像数</td></tr><tr><td>仅报告不入棘轮</td><td><code>research</code>（隔离候选，本就该有时存在）、<code>symlinks</code>（junction 属合法设施）</td></tr></tbody></table>
+<blockquote><p>为什么用棘轮而不是硬阈值：仓库其余门（<code>check-code-standards</code>、<code>check-pattern-coverage</code>、<code>check-repo-layout</code>）<strong>都是「只降不升」的基线棘轮</strong>。用绝对值阈值会与既有约定不一致，且会让第一次接入就卡在存量债上。</p></blockquote>
+<p><strong>A2. <code>package.json</code> 加本地别名，并挂进本地总门</strong></p>
+<pre><code class="language-jsonc"><span class="hljs-attr">&quot;check:organize&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;python scripts/maintenance/organize.py --check&quot;</span><span class="hljs-punctuation">,</span></code></pre>
+<p>然后追加到 <code>check:structure</code> 链尾（该链现含 18 个子检查，<strong>本就包含 <code>check:wiring</code></strong>）：</p>
+<pre><code class="language-jsonc"><span class="hljs-comment">// 在 check:structure 链尾追加新增目标（别名定义见上）</span>
+<span class="hljs-attr">&quot;check:structure&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;npm run check:layout &amp;&amp; ... &amp;&amp; npm run check:proposal-index &amp;&amp; &lt;追加 check:organize&gt;&quot;</span></code></pre>
+<blockquote><p><code>check:structure</code> 是 <code>package.json</code> 里既有的本地总门，且 <code>TOOLING-005</code> 规则卡原文写的正是「治理检查必须同时在根 <strong><code>check:structure</code></strong> 与 <strong>PR gate</strong> 注册」—— 这就是规则自己指定的落点，不要另造入口。</p></blockquote>
+<p><strong>A3. <code>.github/workflows/pr-gate.yml</code> 加 CI 步骤</strong></p>
+<p>在 <code>Check checker wiring</code>（<code>node scripts/ci/check-wiring.js</code>）之后插入：</p>
+<pre><code class="language-yaml">      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Check</span> <span class="hljs-string">repo</span> <span class="hljs-string">hygiene</span> <span class="hljs-string">(organize)</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">python</span> <span class="hljs-string">scripts/maintenance/organize.py</span> <span class="hljs-string">--check</span></code></pre>
+<p><strong>注意 Python 运行时的落位</strong>：<code>Contract checks</code> job 当前<strong>没有</strong> <code>actions/setup-python</code>（只有 200 行起那个 <code>Python syntax</code> job 有）。两种做法：</p>
+<ul><li>方案一：给 <code>Contract checks</code> job 补 <code>actions/setup-python</code>（多一次 setup，但步骤语义集中在同一 job）</li><li>方案二：把这一步并入既有 <code>Python syntax</code> job（复用其已装好的 Python，零额外 setup）</li></ul>
+<p><strong>建议方案二</strong> —— 该 job 已在收集变更 Python 文件，环境现成，且避免给主 job 增加 setup 耗时。</p>
+<p><strong>A4. 每日巡检的落点（解决 gate 与「每日」的语义冲突）</strong></p>
+<p><code>LAYOUT-004</code> 的 <code>gate</code> 字段写 <code>pr</code>，但它的 <code>grants</code> 写的是「授权<strong>每日</strong>自动巡检并隔离白名单内超期临时文件」。<strong>这两者不是一回事</strong>：</p>
+<table><thead><tr><th>档位</th><th>触发</th><th>用途</th><th>是否阻断</th></tr></thead><tbody><tr><td><code>--check</code></td><td>PR / 本地 <code>check:structure</code></td><td>防新增杂物</td><td>是</td></tr><tr><td><code>--apply</code></td><td><strong>每日定时</strong></td><td>隔离白名单内超期临时文件</td><td>否</td></tr></tbody></table>
+<p>建议新增 <code>.github/workflows/repo-hygiene.yml</code>：</p>
+<pre><code class="language-yaml"><span class="hljs-attr">name:</span> <span class="hljs-string">Repo</span> <span class="hljs-string">Hygiene</span>
+<span class="hljs-attr">on:</span>
+  <span class="hljs-attr">schedule:</span>
+    <span class="hljs-bullet">-</span> <span class="hljs-attr">cron:</span> <span class="hljs-string">&#x27;17 3 * * *&#x27;</span>        <span class="hljs-comment"># 每日 03:17 UTC（避开整点高峰）</span>
+  <span class="hljs-attr">workflow_dispatch:</span>
+<span class="hljs-attr">jobs:</span>
+  <span class="hljs-attr">organize:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/setup-python@v5</span>
+        <span class="hljs-attr">with:</span> { <span class="hljs-attr">python-version:</span> <span class="hljs-string">&#x27;3.13&#x27;</span> }
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">run:</span> <span class="hljs-string">python</span> <span class="hljs-string">scripts/maintenance/organize.py</span> <span class="hljs-string">--apply</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/upload-artifact@v4</span>
+        <span class="hljs-attr">with:</span>
+          <span class="hljs-attr">name:</span> <span class="hljs-string">housekeeping-report</span>
+          <span class="hljs-attr">path:</span> <span class="hljs-string">.khyos/housekeeping/**</span></code></pre>
+<blockquote><p>先例：<code>codeql-analysis.yml</code> 是当前<strong>唯一</strong>带 <code>schedule:</code> 的 workflow，所以定时 workflow 本身不违反仓库惯例。</p></blockquote>
+<h3 id="1-3-改动点-b-堵住洗白通道-这才是问题-1-的根因">1.3 改动点 B：堵住洗白通道（这才是问题 1 的根因）<a class="anchor" href="#1-3-改动点-b-堵住洗白通道-这才是问题-1-的根因" aria-label="锚点">#</a></h3>
+<p><strong>B1. <code>scripts/ruleguard/lib/wiring.js</code> —— 给门面分类</strong></p>
+<p><code>surfaceTexts()</code> 现在把 S1（package.json）、S2（workflows）、S3（hooks）、阶段表混成一个字典，<strong>下游无法区分本地与 CI</strong>。改动：让分类信息随 surfaces 一起透出。</p>
+<ul><li>S1 <code>package.json</code>（含 workspace 包） → <strong><code>local</code></strong></li><li>S2 <code>.github/workflows/*.yml</code> → <strong><code>ci</code></strong></li><li>S3 <code>.githooks/*</code> → <strong><code>ci</code></strong></li><li><code>STAGE_TABLE_FILES</code>（<code>qualityGateStages.js</code> / <code>releaseGateStages.js</code> / <code>quality-gate/index.js</code> / <code>release-gate.js</code>） → <strong><code>ci</code></strong></li></ul>
+<p><strong>B2. <code>scripts/ci/check-wiring.js</code> —— <code>checkRuleBindings()</code> 加一条</strong></p>
+<p>现行逻辑（第 127–133 行）只在 <code>kind === 'declared-uwired'</code> 时检查门；而 <code>kind</code> 一旦被 S1 提成 <code>enforced</code> 就整段跳过。补一条<strong>与 kind 无关</strong>的硬检查：</p>
+<blockquote><p><code>gate ∈ {commit, pr, release}</code> 的规则，其执行器必须至少被<strong>一个 CI 侧门面</strong>引用；仅被 package.json 的<strong>非 <code>check:*</code> / 非 <code>gate:*</code></strong> 脚本引用，不算挂门。</p></blockquote>
+<p>这条同时修掉两个问题：① 人工维护脚本不再能把规则洗成 <code>enforced</code>；② 「本地与 CI 双注册」这个规则名<strong>终于与判据一致</strong>（现状判据只要求「≥1 个面」，是单注册语义）。</p>
+<p><strong>B3.（比 B2 更关键）加「可达性」判据 —— 别名定义不算接线</strong></p>
+<p>B2 只堵住了「人工脚本」这一条路径。§零那 30 / 67 说明还有更深的一层：<strong>别名定义行本身就含检查器路径，于是自己把自己判成已接线</strong>。所以必须从「字符串出现过」升级为「<strong>从真实门入口可达</strong>」：</p>
+<blockquote><p>一个 <code>scripts/ci/</code> 检查器只有在满足下列任一条件时才算接线：<br>① 其别名被某个<strong>聚合门</strong>传递可达（<code>check:structure</code> / <code>check:changed</code>，跟随 <code>npm run &lt;目标&gt;</code> 展开）；<br>② 其路径被 <code>.github/workflows/*.yml</code> 或 <code>.githooks/*</code> 直接引用；<br>③ 否则必须进 <code>wiring-exemptions.json</code>（带 reason + until）。</p></blockquote>
+<p>即把 <code>wiring.js</code> 现有的「surfaceTexts 里出现过」改成「<strong>从门入口做传递闭包</strong>」，并把闭包根限定为真实的门入口，而非「package.json 的任意一行」。</p>
+<blockquote><p>这一步会让 <code>check:wiring</code> 从绿变红、爆出约 30 条 —— <strong>这是对的</strong>：它终于如实反映现状。因而<strong>必须与「补门」同批推进</strong>，否则会把门锁死在红色上。建议分两步：先按 B3 落地判据并把 30 条<strong>全部登记进豁免清单</strong>（带 until 到期日，形成一个可见的收敛清单），再逐条补门并消豁免。</p></blockquote>
+<p><strong>B4. <code>scripts/tests/ruleguard.test.js</code> 补用例</strong></p>
+<p>该文件已有引用 <code>TOOLING-005</code> 的断言（第 318、421 行）。新增两个反向用例：<br>① <strong>执行器只被 <code>maintenance:*</code> 引用时应报错</strong>（锁死 B2）；<br>② <strong>检查器只有自己的别名定义时应报错</strong>（锁死 B3）。</p>
+<h3 id="1-4-改动点-c-一处需要你裁决的语义冲突">1.4 改动点 C：一处需要你裁决的语义冲突<a class="anchor" href="#1-4-改动点-c-一处需要你裁决的语义冲突" aria-label="锚点">#</a></h3>
+<p><code>LAYOUT-004</code> 同时声明了 <code>gate: pr</code>（阻断）与「每日巡检」（非阻断）。二者只能偏重一个。三个选项：</p>
+<table><thead><tr><th>选项</th><th>做法</th></tr></thead><tbody><tr><td><strong>C1（推荐）</strong></td><td>保持 <code>gate: pr</code>，加 <code>--check</code> 档（A1）使其真的能阻断；每日 <code>--apply</code> 作为独立 workflow（A4）</td></tr><tr><td>C2</td><td>把 <code>gate</code> 改为 <code>advisory</code>，只做每日巡检不阻断 —— 但这与「门」的定位相悖，且会让体积/杂物无门可守</td></tr><tr><td>C3</td><td>保持现状（纯报告），仅靠 <code>--report</code> 输出给人看 —— <strong>不推荐</strong>，等于承认这条规则不设防</td></tr></tbody></table>
+<h3 id="1-5-问题-1-的验证方式">1.5 问题 1 的验证方式<a class="anchor" href="#1-5-问题-1-的验证方式" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>步骤</th><th>命令</th><th>期望</th></tr></thead><tbody><tr><td>语法</td><td><code>python -m py_compile scripts/maintenance/organize.py</code></td><td>exit 0</td></tr><tr><td>执行器可失败</td><td><code>python scripts/maintenance/organize.py --check</code></td><td>当前超标则 exit 1；下调基线后 exit 0</td></tr><tr><td>接线被承认</td><td><code>npm run check:wiring</code></td><td>exit 0，且 <code>organize.py</code> 的 surfaces <strong>同时含 <code>package.json</code> 与 workflow</strong></td></tr><tr><td>本地总门</td><td><code>npm run check:structure</code></td><td>exit 0</td></tr><tr><td>守卫回归</td><td><code>node --test scripts/tests/ruleguard.test.js</code></td><td>全通过（含 B3 新用例）</td></tr><tr><td>反例验证</td><td>临时把 <code>maintenance:organize</code> 删掉、保留 workflow 步骤 → <code>check:wiring</code> <strong>仍应 exit 0</strong>（证明不再依赖人工脚本）</td><td>是</td></tr><tr><td>漏洞已堵</td><td>临时把 workflow 步骤注释掉、只留 <code>maintenance:organize</code> → <code>check:wiring</code> <strong>应 exit 1</strong></td><td>是</td></tr><tr><td>可达性审计</td><td><code>node .khy/tmp/audit-wiring-reach.js</code>（本次用的只读探针，见附录）</td><td>改前「不可达 30 个」；补门后逐条减少</td></tr><tr><td>系统性回归</td><td>落地 B3 后跑 <code>check:wiring</code></td><td>首次会红出约 30 条 → 应<strong>全部进豁免清单</strong>，再逐条补门消豁免</td></tr></tbody></table>
+<hr>
+<h2 id="二-问题-2-体积守卫登记-接入-ruleguard">二、问题 2：体积守卫登记 + 接入 ruleguard<a class="anchor" href="#二-问题-2-体积守卫登记-接入-ruleguard" aria-label="锚点">#</a></h2>
+<h3 id="2-1-登记表的硬性结构要求-实测">2.1 登记表的硬性结构要求（实测）<a class="anchor" href="#2-1-登记表的硬性结构要求-实测" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>校验器</th><th>规则 ID</th><th>要求</th></tr></thead><tbody><tr><td><code>check-gov-rules.js</code></td><td>GOV-TOOL-006</td><td>必填字段：<code>id, name, domain, nature, scope, priority, status, trigger, constraint, grants, benefit, version, ssot, owner</code>（+ <code>exception/formerly/gate/paths</code>）；ID 全局唯一；<code>domain</code> 限十大域；<code>priority</code> ∈ P0–P3；<code>status</code> ∈ draft/active/deprecated/archived；<code>nature</code> 须命中「约束/权力/福利」；<strong>权力必有约束边界配对</strong></td></tr><tr><td><code>check-rules-registry.js</code></td><td>TOOLING-007</td><td>① 登记表 → 真源：<code>ssot</code> 文件内必须有 <code>&lt;!-- RULES-REGISTRY: &lt;ID&gt; --&gt;</code> 标记行；② 真源 → 登记表：标记行里不得出现未登记的 ID；③ <code>ssot</code> 与 <code>enforcement</code> 指向的文件必须存在</td></tr><tr><td><code>check-rules-registry.js</code></td><td>TOOLING-008</td><td>规则卡 <code>docs/10_规范/规则卡/[&lt;ID&gt;] &lt;name&gt;.md</code> 必须由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，且与登记表<strong>逐字节一致</strong></td></tr><tr><td><code>check-wiring.js</code></td><td>TOOLING-005</td><td>执行器须被门面引用（在 1.3 修好后，须是 <strong>CI 侧</strong>门面）</td></tr></tbody></table>
+<h3 id="2-2-改动内容-5-处-必须原子提交">2.2 改动内容（5 处，必须原子提交）<a class="anchor" href="#2-2-改动内容-5-处-必须原子提交" aria-label="锚点">#</a></h3>
+<blockquote><p><strong>⚠️ 方案修正（初版写错了）</strong>：初版建议<strong>新建</strong> <code>scripts/ci/check-repo-size.js</code>。实测后否掉了 —— <code>scripts/ci/check-dependency-size.js</code> <strong>已经存在且已经实现了同一套设计</strong>，新建等于造第二份会漂移的口径，正是本仓 <code>RUNTIME-001</code> 与反重复检查要防的事。</p>
+<p>既有检查器实测（<code>node scripts/ci/check-dependency-size.js --strict --no-bytes</code> → <strong>exit 0</strong>）：</p>
+<table><thead><tr><th>它已有的能力</th><th>实测</th></tr></thead><tbody><tr><td><code>--strict</code>（超预算 exit 1）/ <code>--update</code>（重写基线）</td><td>✅ 就是棘轮语义</td></tr><tr><td>基线文件 <code>scripts/ci/dependency-size-baseline.json</code></td><td>✅ 已存在（5.6 KB，人可读、进版本库）</td></tr><tr><td>三条预算线：dev / prod / <strong>bundle</strong>（发布产物）</td><td>✅ 已实现</td></tr><tr><td>「包数=硬预算，字节=容差报告」的确定性口径</td><td>✅ 已在文件头给出完整论证（且理由比初版更准：npm 提升顺序、<code>@esbuild/*</code> 按平台挑包、CRLF 都会让字节跨机漂移）</td></tr></tbody></table>
+<p><strong>它缺的只有两件事：① 没有接线；② 没有任何规则登记它。</strong> 所以问题 2 的正确解法是「<strong>接线 + 登记</strong>」，不是新建。</p></blockquote>
+<p><strong>① 接线既有检查器（唯一真正缺的东西）</strong></p>
+<pre><code>package.json          &quot;check:dep-size&quot;: &quot;node scripts/ci/check-dependency-size.js --strict&quot;
+                      并把 check:dep-size 追加进 &quot;check:structure&quot; 链尾
+.github/workflows/pr-gate.yml   加一步（或并入既有 Python/Node 检查 job）</code></pre>
+<blockquote><p>注意 <code>check:dep-size</code> 当前有两个形态：默认（报告态，<strong>永远 exit 0</strong>）与 <code>--no-bytes</code>（跳过磁盘度量，快）。<strong>挂门必须用 <code>--strict</code></strong> —— 否则又是一个永远绿的步骤，与 §1.1 里 <code>organize.py</code> 恒 <code>return 0</code> 是同一个坑。<br><code>--no-bytes</code> 适合放在 PR 门（快、且字节本就只作报告）；完整度量建议放每日 workflow。</p></blockquote>
+<p><strong>② 若要覆盖 <code>.git</code> 与工作树洁净度 —— 在既有检查器内加预算线，不新建文件</strong></p>
+<p>既有检查器只度量<strong>依赖与发布产物</strong>，不覆盖本次三大膨胀源中的另外两块。若决定纳入，应作为<strong>它的第四条预算线</strong>实现：</p>
+<table><thead><tr><th>#</th><th>指标</th><th>来源</th><th>口径建议</th></tr></thead><tbody><tr><td>1</td><td>未跟踪且未被忽略的文件数</td><td><code>git ls-files --others --exclude-standard</code></td><td><strong>硬阈值</strong>（如 200）。它反映「忽略规则是否失效」，属配置正确性，不该随基线漂移</td></tr><tr><td>2</td><td><code>.git</code> 体积 + 松散对象数</td><td><code>.git</code> 目录字节数、<code>git count-objects -v</code> 的 <code>count</code></td><td><strong>棘轮基线</strong>（只降不升），对应本次 2,001 松散对象 / 280 MB</td></tr><tr><td>3</td><td>跟踪内容总量</td><td><code>git archive HEAD</code> 字节数</td><td><strong>棘轮基线</strong>。纯源码+文档，跨机一致</td></tr></tbody></table>
+<blockquote><p><strong>建议顺序</strong>：先只做 ①（接线）落地并跑一两周，再决定 ② 是否必要。<br>理由：LAYOUT-005（<code>check-build-root</code>）与 <code>BUILD-OUTPUTS.json</code> 已经在管「产物落哪、删了怎么重建、寄生条目预算」，② 的第 1、3 项与之存在<strong>概念重叠</strong>。在没看清重叠边界前就加第四条线，会把「体积守卫」做成第三套并行的产物账本 —— 那正是 <code>LAYOUT-005</code> 的 <code>benefit</code> 里明说要消除的东西（「不再需要跨 .gitignore + .dockerignore + clean.js + 各包构建配置四处拼装答案」）。</p></blockquote>
+<p><strong>③ 登记表：<code>docs/10_规范/registry/RULES-REGISTRY.json</code> 新增一条</strong></p>
+<p>ID 建议 <strong><code>PROCESS-004</code></strong>（<code>PROCESS-</code> 前缀现有 001/002/003/101，下一个空号是 004）。</p>
+<pre><code class="language-jsonc"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;PROCESS-004&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;体积预算与工作树洁净度&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;domain&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;PROCESS&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;nature&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;约束为主&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;scope&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;仓库的可再生体积（依赖树、发布产物）与 git 状态洁净度（.git 对象库、跟踪内容、未跟踪未忽略文件）&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;priority&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;P2&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;active&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;trigger&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;任何向仓库写入可再生产物、新增依赖、或新增/修改 .gitignore 规则时&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;constraint&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;依赖包数与发布产物体积不得超过基线（只降不升）；未跟踪且未被忽略的文件数不得超过硬阈值；超标须先清理，或在同一次改动中下调基线并在 PR 说明理由。&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;grants&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;见约束边界：授权在超标时删除可再生构建产物与执行 git 对象库回收，无需事前审批。&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;benefit&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;体积与洁净度不再靠事后人工发现；「工作树永远不干净」导致的双机流水线门禁失效被机械阻断。&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;exception&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;构建产物目录本体（build/ dist/ dist-electron/）不计入跟踪内容；node_modules 等依赖树不计入「跟踪内容」，仅以包数与逻辑字节入账。&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1.0.0 (2026-09-16)&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;formerly&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;无&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;ssot&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;docs/07_OPS_运维/[OPS-MAN-XXX] 体积预算与洁净度守卫规范.md&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;enforcement&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;scripts/ci/check-dependency-size.js&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;owner&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;architecture-team&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;gate&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;pr&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;paths&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;scripts/ci/check-dependency-size.js&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;scripts/ci/dependency-size-baseline.json&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;.gitignore&quot;</span><span class="hljs-punctuation">]</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<blockquote><p><code>enforcement</code> 指向<strong>既有</strong>检查器；<code>paths</code> 里的基线文件也<strong>已存在</strong>。本条规则只是把一份已经在跑、却没有任何规则登记它的检查器<strong>补上登记</strong>（登记表 <code>meta.note</code> 记录的正是「检查器在执行但登记表未收录」这类盲区）。</p></blockquote>
+<p><strong>④ 语义真源：新增 <code>docs/07_OPS_运维/[OPS-MAN-XXX] …md</code>，并在其中写标记行</strong></p>
+<p>文件内必须有（否则 TOOLING-007 判「登记表与真源断链」）：</p>
+<pre><code class="language-markdown">&lt;!-- RULES-REGISTRY: PROCESS-004 --&gt;</code></pre>
+<p><strong>⑤ 规则卡</strong>：由生成器产出，<strong>不得手写</strong></p>
+<pre><code class="language-bash">npm run docs:rules-cards      <span class="hljs-comment"># = node scripts/docs/gen-rules-cards.js</span></code></pre>
+<h3 id="2-3-为什么必须原子提交-这里有个必红的坑">2.3 为什么必须原子提交（这里有个必红的坑）<a class="anchor" href="#2-3-为什么必须原子提交-这里有个必红的坑" aria-label="锚点">#</a></h3>
+<p><code>scripts/ci/check-wiring.js</code> 的 <code>checkOrphans()</code> 会遍历<strong>全部 <code>scripts/ci/</code> 下的检查器</strong>，只要某个检查器<strong>没被任何门面引用</strong>就直接报 <code>零接线</code> 并 <strong>exit 1</strong>。</p>
+<p><strong>推论：任何新检查器若不在同批接线，会让 <code>check:wiring</code> 立刻变红。</strong> —— 这也正是另一会话的 <code>check-gov-status.js</code> 至今只补了别名、没补门的原因（见 §零）。</p>
+<p>按修正后的方案，必须同批落地的是这 5 处：</p>
+<pre><code>docs/10_规范/registry/RULES-REGISTRY.json               (新增 PROCESS-004 条目，enforcement 指向既有检查器)
+docs/07_OPS_运维/[OPS-MAN-XXX] 体积预算与洁净度规范.md   (新增，含 RULES-REGISTRY 标记行)
+docs/10_规范/规则卡/[PROCESS-004] 体积预算与工作树洁净度.md   (由生成器产出)
+package.json            &quot;check:dep-size&quot;: &quot;… check-dependency-size.js --strict&quot;
+                       并追加进 &quot;check:structure&quot; 链
+.github/workflows/pr-gate.yml   在 &quot;Check checker wiring&quot; 附近加一步</code></pre>
+<blockquote><p><strong>注意：<code>scripts/ci/check-dependency-size.js</code> 与它的基线都已存在，本方案不新增任何检查器文件</strong> —— 所以严格说这里没有「新检查器孤儿」风险。但<strong>接线与登记必须同批</strong>：一旦 <code>check:structure</code> 里出现 <code>check:dep-size</code>，<code>check:wiring</code> 的 <code>kind</code> 会把它从「仅本地别名」提成 <code>enforced</code>，此时若 B3 的可达性判据已落地而 workflow 步骤还没加，CI 侧仍判不达标。先加 workflow 步骤，再改 <code>check:structure</code>。</p></blockquote>
+<h3 id="2-4-冲突解除后的落地顺序">2.4 冲突解除后的落地顺序<a class="anchor" href="#2-4-冲突解除后的落地顺序" aria-label="锚点">#</a></h3>
+<p>登记表当前正被并发会话改写（实测 <code>git diff HEAD --stat</code> 显示 <code>RULES-REGISTRY.json</code> <strong>新增 2,408 行</strong>、<code>package.json</code> <strong>改动 79 行</strong>，两者均未提交）。<strong>不要在这个窗口内改登记表</strong> —— 否则你的条目会被对方的整文件写入覆盖或产生冲突。</p>
+<table><thead><tr><th>步</th><th>动作</th><th>前置条件</th></tr></thead><tbody><tr><td>1</td><td>等并发落定</td><td><code>git diff --stat -- docs/10_规范/registry/RULES-REGISTRY.json</code> <strong>连续两次读数一致</strong></td></tr><tr><td>2</td><td>采样当前基线</td><td><code>node scripts/ci/check-dependency-size.js --update</code>（重写<strong>既有</strong> <code>dependency-size-baseline.json</code>）</td></tr><tr><td>3</td><td>原子落地 2.2 的 5 处</td><td>步 1 通过</td></tr><tr><td>4</td><td>生成规则卡</td><td><code>npm run docs:rules-cards</code></td></tr><tr><td>5</td><td>接门</td><td><code>pr-gate.yml</code> 加步骤 <strong>→ 再</strong>加 <code>check:dep-size</code> 别名与 <code>check:structure</code> 链</td></tr><tr><td>6</td><td>更新覆盖率基线</td><td><code>npm run rules:coverage -- --update-baseline</code>（<strong>分母变了，必做</strong>）</td></tr><tr><td>7</td><td>全门复验</td><td>见 2.5</td></tr></tbody></table>
+<blockquote><p><strong>步 6 不可省</strong>。新增规则会改变 <code>rules:coverage</code> 的分母；而该指标的基线<strong>当前已在漂移</strong>（实测 3281/47，基线仍写着 2705/0），不显式更新会让「新增规则」看起来像覆盖率倒退。</p></blockquote>
+<h3 id="2-5-问题-2-的验证方式">2.5 问题 2 的验证方式<a class="anchor" href="#2-5-问题-2-的验证方式" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>检查</th><th>命令</th><th>期望</th></tr></thead><tbody><tr><td>检查器自身可失败</td><td><code>node scripts/ci/check-dependency-size.js --strict --no-bytes</code></td><td>当前 exit 0（预算内）；人为调低基线后应 exit 1</td></tr><tr><td>字段完整性</td><td><code>npm run check:gov-rules</code></td><td>exit 0（GOV-TOOL-006）</td></tr><tr><td>双向标记</td><td><code>npm run check:rules-registry</code></td><td>exit 0（TOOLING-007 + TOOLING-008）</td></tr><tr><td>无孤立检查器</td><td><code>npm run check:wiring</code></td><td>exit 0（含 1.3 的加严判据）</td></tr><tr><td>覆盖率</td><td><code>npm run rules:coverage</code></td><td>与更新后的基线一致</td></tr><tr><td>ruleguard 总检</td><td><code>node scripts/ruleguard/index.js</code></td><td>exit 0 或与基线一致</td></tr><tr><td>可达性（B3 落地后）</td><td>运行 1.5 表里的审计探针</td><td><code>check:dep-size</code> 从「不可达」变为「可达」</td></tr><tr><td>文档站孪生</td><td><code>npm run docs:build &amp;&amp; npm run docs:verify</code></td><td>exit 0</td></tr></tbody></table>
+<hr>
+<h2 id="三-问题-3-git-对象库维护周期化">三、问题 3：git 对象库维护周期化<a class="anchor" href="#三-问题-3-git-对象库维护周期化" aria-label="锚点">#</a></h2>
+<h3 id="3-1-现状-全部实测-只读">3.1 现状（全部实测，只读）<a class="anchor" href="#3-1-现状-全部实测-只读" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>配置</th><th>值</th><th>来源</th><th>影响</th></tr></thead><tbody><tr><td><code>gc.auto</code></td><td><strong>未设置</strong> → 默认 <strong>6700</strong></td><td>—</td><td>实测曾有 2,001 个松散对象，<strong>远低于 6700，自动 gc 永不触发</strong> ← 这正是 280 MB 能积累起来的原因</td></tr><tr><td><code>gc.autoPackLimit</code></td><td>未设置 → 默认 50</td><td>—</td><td>—</td></tr><tr><td><code>maintenance.auto</code></td><td><strong><code>false</code></strong></td><td><strong><code>file:.git/config</code></strong></td><td>⚠️ <strong>仓库里被显式关掉了</strong> —— 意味着 <code>git maintenance run --auto</code> 会<strong>空跑</strong></td></tr><tr><td><code>maintenance.repo</code></td><td>未设置</td><td>—</td><td>—</td></tr><tr><td><code>core.fsmonitor</code></td><td><code>true</code></td><td><code>file:.git/config</code></td><td>正常（fsmonitor 守护进程本就常驻，非故障）</td></tr><tr><td><code>pack.compression</code></td><td><code>6</code></td><td><code>file:.git/config</code></td><td>✅ 已正确，<strong>未来 gc 不会重新膨胀</strong></td></tr></tbody></table>
+<p><strong>关键更正</strong>：仅「启用 <code>git maintenance</code>」不足以解决问题。<code>maintenance.auto=false</code> 是一个<strong>隐性阻碍</strong>——它会让 <code>git maintenance run --auto</code>（含计划任务触发的自动任务）直接 no-op。所以要么把它改回 <code>true</code>，要么改用 <code>gc.auto</code> 路线。</p>
+<h3 id="3-2-分档方案">3.2 分档方案<a class="anchor" href="#3-2-分档方案" aria-label="锚点">#</a></h3>
+<h4 id="tier-1-零系统痕迹-只改仓库内-git-config">Tier 1 —— 零系统痕迹（只改仓库内 <code>.git/config</code>）<a class="anchor" href="#tier-1-零系统痕迹-只改仓库内-git-config" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> /d/Portable/khy-os
+
+<span class="hljs-comment"># 让内建 auto-gc 真正会触发：2001 个松散对象的历史证明默认 6700 形同虚设</span>
+git config gc.auto 500
+git config gc.autoPackLimit 20
+
+<span class="hljs-comment"># 解开那个隐性阻碍，让 maintenance 的 --auto 档恢复工作</span>
+git config maintenance.auto <span class="hljs-literal">true</span></code></pre>
+<table><thead><tr><th>项</th><th>说明</th></tr></thead><tbody><tr><td>痕迹范围</td><td><strong>仅 <code>D:\Portable\khy-os\.git\config</code></strong>，不出仓库、不碰系统计划任务、不改全局配置</td></tr><tr><td>数值说明</td><td><code>gc.auto 500</code> 是<strong>策略选择</strong>：过大（6700）不触发，过小（如 50）会让每次提交都跑 gc。500 对应「约每 500 个松散对象回收一次」，对本仓的提交节奏是合理折中</td></tr><tr><td>单独是否足够</td><td><strong>基本足够</strong>。git 在 <code>commit</code> / <code>merge</code> / <code>receive-pack</code> / <code>am</code> 后会自动调 <code>git gc --auto</code>，而本仓持续有提交</td></tr></tbody></table>
+<h4 id="tier-2-零系统痕迹-仓库内-hook-可选">Tier 2 —— 零系统痕迹（仓库内 hook，可选）<a class="anchor" href="#tier-2-零系统痕迹-仓库内-hook-可选" aria-label="锚点">#</a></h4>
+<p>若还希望跑 <code>incremental-repack</code> / <code>commit-graph</code> 这类内建 gc 不覆盖的任务，在 <code>.githooks/post-commit</code> 追加：</p>
+<pre><code class="language-sh">git maintenance run --auto --quiet || <span class="hljs-literal">true</span></code></pre>
+<table><thead><tr><th>注意</th><th>说明</th></tr></thead><tbody><tr><td>前置</td><td>必须先做 Tier 1 的 <code>maintenance.auto true</code>，否则这一行是空操作</td></tr><tr><td>既有缺陷</td><td><code>.githooks/post-commit</code> 目前<strong>有一个已知路径 bug</strong>（报 <code>Cannot find module 'D:\d\Portable\khy-os\scripts\sync\mirror-sync.js'</code>，多一层 <code>d\</code>；发生在提交完成之后，不影响提交）——<strong>建议先修它再往里加东西</strong>，否则会叠加一个新的静默失败点</td></tr><tr><td>代价</td><td>每次提交多一次 <code>--auto</code> 判定（无事可做时开销很小）</td></tr></tbody></table>
+<h4 id="tier-3-有系统痕迹-需你本人执行-我不代跑">Tier 3 —— 有系统痕迹（<strong>需你本人执行，我不代跑</strong>）<a class="anchor" href="#tier-3-有系统痕迹-需你本人执行-我不代跑" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash">git maintenance register          <span class="hljs-comment"># 写 ~/.gitconfig 的 maintenance.repo</span>
+git maintenance start             <span class="hljs-comment"># 写 Windows 计划任务</span></code></pre>
+<table><thead><tr><th>项</th><th>内容</th></tr></thead><tbody><tr><td><strong><code>register</code> 的痕迹</strong></td><td>改写<strong>全局</strong> <code>~/.gitconfig</code>（加 <code>maintenance.repo</code>）—— <strong>这也是仓库外的痕迹</strong>，只是不落在计划任务里</td></tr><tr><td><strong><code>start</code> 的痕迹</strong></td><td>在 <strong>Windows 计划任务</strong>注册一项，名称形如 <code>Git Maintenance (&lt;路径哈希&gt;)</code></td></tr><tr><td>查看痕迹</td><td><code>schtasks /query /tn &quot;Git Maintenance*&quot; /v /fo LIST</code>（PowerShell）</td></tr><tr><td>完整回退</td><td><code>git maintenance stop</code>（移除计划任务）→ <code>git maintenance unregister</code>（清全局 config）→ <code>git config --global --unset maintenance.repo</code></td></tr><tr><td>我的判断</td><td><strong>Tier 1 已能覆盖本次问题</strong>（松散对象 2,001→0、<code>.git</code> 922.8→108.3 MB 已证明回收链路有效）。Tier 3 的价值是「不依赖是否有提交发生」，属于锦上添花。<strong>是否承担计划任务留痕，由你决定。</strong></td></tr></tbody></table>
+<h3 id="3-3-问题-3-的验证方式">3.3 问题 3 的验证方式<a class="anchor" href="#3-3-问题-3-的验证方式" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>检查</th><th>命令</th><th>期望</th></tr></thead><tbody><tr><td>配置已生效</td><td><code>git config --show-origin --get gc.auto</code></td><td><code>file:.git/config</code> / <code>500</code></td></tr><tr><td>阻碍已解</td><td><code>git config --get maintenance.auto</code></td><td><code>true</code></td></tr><tr><td>对象库健康</td><td><code>git count-objects -vH</code></td><td><code>count</code> 长期维持低位（&lt; 500）</td></tr><tr><td>自动 gc 真会跑</td><td>连续做几次提交后 <code>git count-objects -v</code></td><td><code>count</code> 不单调增长；必要时 <code>git gc --auto --quiet</code> 观察是否动手</td></tr><tr><td>历史未损</td><td><code>git fsck --no-progress</code></td><td>无输出</td></tr><tr><td>压缩不回退</td><td><code>git config --get pack.compression</code></td><td><code>6</code></td></tr><tr><td>Tier 3（若执行）</td><td><code>schtasks /query /tn &quot;Git Maintenance*&quot;</code> + <code>git maintenance run --schedule</code></td><td>任务存在、可手动跑通</td></tr></tbody></table>
+<hr>
+<h2 id="四-三者的相互关系与建议执行顺序">四、三者的相互关系与建议执行顺序<a class="anchor" href="#四-三者的相互关系与建议执行顺序" aria-label="锚点">#</a></h2>
+<p>三项不是并列关系，<strong>问题 3 的复发要靠问题 2 守住</strong>：</p>
+<pre><code>问题 2 的体积守卫  ──防──▶  问题 3 的二次膨胀
+（把 .git 体积与松散对象数纳入 pr 门）</code></pre>
+<p><code>git gc</code> 只解决「当下 280 MB」，<strong>不解决「下一季度再长回来」</strong>。本次已验证 <code>pack.compression=6</code> 正确、忽略规则已补齐，但<strong>没有门在看着 <code>.git</code></strong>——所以 #2 的第 2 项指标（<code>.git</code> 体积 + 松散对象数）是 #3 的长期闭环。</p>
+<p>建议顺序：</p>
+<ol><li><strong>问题 3 / Tier 1</strong>（零痕迹、最独立、立刻止血）——可最先做</li><li><strong>问题 1 / A1→A2→A3</strong>（先给执行器加 <code>--check</code>，再接本地与 CI）——<strong>再做 1.3 的加严（B）</strong>，顺序反了会让 <code>check:wiring</code> 先红</li><li><strong>问题 2</strong>（等登记表并发落定 → 原子落地 5 处 → 更新覆盖率基线）</li><li><strong>问题 1 / A4 + Tier 3</strong>（定时巡检与计划任务，两者都涉及「定期」语义，可一并决策）</li></ol>
+<hr>
+<h2 id="五-本方案未执行的操作-合规声明">五、本方案未执行的操作（合规声明）<a class="anchor" href="#五-本方案未执行的操作-合规声明" aria-label="锚点">#</a></h2>
+<p>按你的约束，以下<strong>留痕操作一概未执行</strong>，全部只做了只读侦察：</p>
+<table><thead><tr><th>未执行</th><th>原因</th></tr></thead><tbody><tr><td><code>git maintenance register</code> / <code>start</code></td><td>会写全局 config 与 Windows 计划任务</td></tr><tr><td>修改 <code>RULES-REGISTRY.json</code></td><td>登记表正被并发会话改写，单边修改会被覆盖</td></tr><tr><td>修改 <code>package.json</code> / <code>pr-gate.yml</code> / <code>organize.py</code></td><td>属本方案的改动点，待你确认后执行</td></tr><tr><td>新增 <code>scripts/ci/check-repo-size.js</code></td><td><strong>单独新增会让 <code>check:wiring</code> 立即变红</strong>（见 2.3），必须与其他 4 处原子落地</td></tr><tr><td>任何删除操作</td><td>本方案不涉及</td></tr></tbody></table>
+<h3 id="一条落笔纪律-本文自己踩到了">一条落笔纪律（本文自己踩到了）<a class="anchor" href="#一条落笔纪律-本文自己踩到了" aria-label="锚点">#</a></h3>
+<p>本文提到两个<strong>尚未存在</strong>的 npm 目标：<code>check:organize</code>（§1.2 A2）与 <code>check:dep-size</code>（§2.2 ① 要新加的同名别名）。按仓库既有的 <code>dangling-task</code> 门，<strong>在 <code>docs/</code> 里写 <code>npm run &lt;未定义目标&gt;</code> 会直接把门顶红</strong>：</p>
+<ul><li>判据在 <code>scripts/ci/check-repo-layout.js</code> 规则 4，实现是 <code>git grep -I -o -h -E 'npm run [a-zA-Z0-9:_-]+'</code>，逐个比对 <code>package.json</code> 的 <code>scripts</code></li><li>它扫的是 <strong>git 索引内</strong>的文件 —— 未跟踪的新文档<strong>此刻扫不到</strong>，但一旦 <code>git add</code> 就会计入</li></ul>
+<p>所以本文对这两个目标<strong>只写目标名、不写 <code>npm run</code> 前缀</strong>（可执行等价物写 <code>python scripts/maintenance/organize.py --check</code>）。<strong>执行本方案时请按此顺序</strong>：先在 <code>package.json</code> 建好别名，再回到文档把写法补全。</p>
+<hr>
+<h2 id="附-本次核验用到的只读命令">附：本次核验用到的只读命令<a class="anchor" href="#附-本次核验用到的只读命令" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-comment"># 问题 1</span>
+npm run check:wiring
+node -e <span class="hljs-string">&quot;const {loadBinding}=require(&#x27;./scripts/ruleguard/lib/registry&#x27;);const {buildManifest}=require(&#x27;./scripts/ruleguard/lib/manifest&#x27;);const b=loadBinding(process.cwd());console.log(JSON.stringify(b.wiring.references[&#x27;organize.py&#x27;]));console.log(JSON.stringify(buildManifest(b.registry,b.wiring).rules.find(r=&gt;r.id===&#x27;LAYOUT-004&#x27;)))&quot;</span>
+grep -rn <span class="hljs-string">&quot;organize&quot;</span> .github/workflows/ .githooks/
+git show HEAD:package.json | grep organize
+
+<span class="hljs-comment"># 问题 2</span>
+node -e <span class="hljs-string">&quot;const r=require(&#x27;./docs/10_规范/registry/RULES-REGISTRY.json&#x27;);for(const x of (r.rules||[]))if(x.domain===&#x27;PROCESS&#x27;)console.log(x.id,x.name,x.gate,x.enforcement)&quot;</span>
+node -e <span class="hljs-string">&quot;const s=require(&#x27;./package.json&#x27;).scripts;console.log(s[&#x27;check:structure&#x27;])&quot;</span>
+node scripts/ci/check-dependency-size.js --strict --no-bytes      <span class="hljs-comment"># 既有体积预算检查器实测</span>
+node scripts/ci/check-dependency-size.js --strict                 <span class="hljs-comment"># 含磁盘度量（慢）</span>
+
+<span class="hljs-comment"># 可达性审计（§零 的 30/67 就是这么测出来的；只读探针，不改任何文件）</span>
+node .khy/tmp/audit-wiring-reach.js
+
+<span class="hljs-comment"># 问题 3</span>
+git config --show-origin --get gc.auto
+git config --show-origin --get maintenance.auto
+git config --show-origin --get pack.compression
+git count-objects -vH
+git maintenance run -h</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/11_报告/其它报告/00_INDEX_其它报告-总目录.html"><div class="dir">← 上一篇</div><div class="ttl">其它报告</div></a><a class="next" href="../../../docs/11_报告/其它报告/2026-09-16_khy-os体积构成分析与瘦身方案.html"><div class="dir">下一篇 →</div><div class="ttl">khy-os 体积构成分析与瘦身方案</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/11_报告/其它报告/2026-09-16_三项门禁缺口整改方案.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

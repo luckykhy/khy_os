@@ -14,6 +14,7 @@
 //
 // 用调用方注入的 baseSecurity 唯一标记切前缀/尾部,避免依赖 git/skills/CLAUDE.md 等按 cwd 存在的段。
 const fs = require('fs');
+const assert = require('node:assert');
 const os = require('os');
 const path = require('path');
 const SECURITY_MARK = '@@KHY_CACHE_GUARD_SENTINEL_4471@@';
@@ -138,7 +139,7 @@ describe('Cache Prefix Regression Guard', () => {
           const b = shape.captureShape({ system: promptB, tools }, {});
           const r = shape.compareShape(a, b);
           expect(r.reasons.includes('system')).toBeTruthy();
-          expect(!r.reasons.includes('tools') && !r.reasons.includes('order')).toBe();
+          expect(!r.reasons.includes('tools') && !r.reasons.includes('order')).toBe(true);
         } finally {
           fs.rmSync(tmp, { recursive: true, force: true });
         }

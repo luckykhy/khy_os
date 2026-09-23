@@ -106,11 +106,17 @@ class VimCursor {
   }
 
   // ── Horizontal ───────────────────────────────────────────────────────────
+  // Step by grapheme, not by UTF-16 code unit (BUG-95). These back `h`/`l`
+  // (motions.js) and the →/← arrow aliases (useVimInput maps them to l/h),
+  // plus `executeX` bounds its delete with right() — a code-unit step there
+  // would bisect an astral char (emoji) and leave a lone surrogate in the
+  // buffer. The grapheme-aware steppers already exist below (measuredText);
+  // left/right simply must route through them rather than raw offset±1.
   left() {
-    return new VimCursor(this.text, this.offset - 1);
+    return new VimCursor(this.text, this.measuredText.prevOffset(this.offset));
   }
   right() {
-    return new VimCursor(this.text, this.offset + 1);
+    return new VimCursor(this.text, this.measuredText.nextOffset(this.offset));
   }
 
   // ── Position / line geometry ───────────────────────────────────────────────
@@ -182,7 +188,13 @@ class VimCursor {
     for (let i = 0; i < targetLine; i++) {
       off += lines[i].length + 1;
     }
-    return new VimCursor(this.text, off + Math.min(column, lines[targetLine].length));
+    // `column` is a code-unit count and lines can carry astral chars, so the
+    // raw landing offset may sit on a surrogate pair's LOW half (BUG-96, vertical
+    // half) — e.g. `k` from a pure-ASCII line onto "ab😀cd" parks on the emoji's
+    // second unit. From there x/d/backspace tear the pair into 乱码. Snap the
+    // landing back to the grapheme start; valid boundaries are left untouched.
+    const target = off + Math.min(column, lines[targetLine].length);
+    return new VimCursor(this.text, this._alignGrapheme(target, 'back'));
   }
   upLogicalLine() {
     return this._verticalMove(-1);
@@ -198,6 +210,25 @@ class VimCursor {
   }
 
   // ── Word motions ───────────────────────────────────────────────────────────
+  // Snap a code-unit offset off a surrogate-pair interior (BUG-96). The word
+  // scanners below step by code unit, so an astral char (two units, both
+  // classed 'punct') can leave the boundary between \ud83d and \ude00. Parked
+  // there, a plain `e`/`E` caret — or anything downstream that slices from it
+  // (x / d / backspace) — tears the pair into a lone surrogate (乱码). `toward`
+  // picks the resting side: 'back' → the grapheme's start, otherwise just past
+  // its end. No-op for all-BMP text (a valid boundary is never a pair interior).
+  _alignGrapheme(i, toward) {
+    const t = this.text;
+    if (
+      i > 0 && i < t.length
+      && t.charCodeAt(i - 1) >= 0xd800 && t.charCodeAt(i - 1) <= 0xdbff
+      && t.charCodeAt(i) >= 0xdc00 && t.charCodeAt(i) <= 0xdfff
+    ) {
+      return toward === 'back' ? i - 1 : i + 1;
+    }
+    return i;
+  }
+
   _wordForward(classOf) {
     const text = this.text;
     const n = text.length;
@@ -242,21 +273,24 @@ class VimCursor {
     const text = this.text;
     const n = text.length;
     let i = this.offset;
+    // `e`/`E` park ON the last char of the word. When that char is astral, the
+    // raw code-unit offset lands on its low half (a pair interior); align back
+    // to the grapheme start so downstream x/d/backspace never split it.
     if (i >= n - 1) {
-      return new VimCursor(text, Math.max(0, n - 1));
+      return new VimCursor(text, this._alignGrapheme(Math.max(0, n - 1), 'back'));
     }
     i++;
     while (i < n && classOf(text[i]) === 'ws') {
       i++;
     }
     if (i >= n) {
-      return new VimCursor(text, n - 1);
+      return new VimCursor(text, this._alignGrapheme(n - 1, 'back'));
     }
     const cls = classOf(text[i]);
     while (i + 1 < n && classOf(text[i + 1]) === cls) {
       i++;
     }
-    return new VimCursor(text, i);
+    return new VimCursor(text, this._alignGrapheme(i, 'back'));
   }
 
   nextVimWord() {
@@ -282,6 +316,10 @@ class VimCursor {
   // Returns the target OFFSET (number) or null when the char is not found.
   findCharacter(char, findType, count) {
     const text = this.text;
+    const needle = char == null ? '' : String(char);
+    if (needle === '') {
+      return null;
+    }
     const lineStart = text.lastIndexOf('\n', this.offset - 1) + 1;
     let lineEnd = text.indexOf('\n', this.offset);
     if (lineEnd === -1) {
@@ -289,20 +327,37 @@ class VimCursor {
     }
     const forward = findType === 'f' || findType === 't';
     const till = findType === 't' || findType === 'T';
+
+    // Enumerate the line's CODE-POINT boundaries (offset + one code point each)
+    // and match the needle against those, not raw UTF-16 units. Comparing
+    // `text[i] === char` unit-wise can never match a multi-unit needle, so
+    // `f😀` (astral emoji / CJK ext-B) silently no-oped — the find half of
+    // BUG-96. Code-point granularity keeps the caret off a pair interior and
+    // lands it on the target's start; a single code point is the engine's
+    // documented matching unit (full Intl.Segmenter clusters stay unsupported).
+    const starts = [];
+    const glyphs = [];
+    for (let i = lineStart; i < lineEnd; ) {
+      const g = firstGrapheme(text.slice(i, lineEnd));
+      starts.push(i);
+      glyphs.push(g);
+      i += g.length || 1;
+    }
+
     let pos = this.offset;
     for (let c = 0; c < count; c++) {
       let idx = -1;
       if (forward) {
-        for (let i = pos + 1; i < lineEnd; i++) {
-          if (text[i] === char) {
-            idx = i;
+        for (let k = 0; k < starts.length; k++) {
+          if (starts[k] > pos && glyphs[k] === needle) {
+            idx = starts[k];
             break;
           }
         }
       } else {
-        for (let i = pos - 1; i >= lineStart; i--) {
-          if (text[i] === char) {
-            idx = i;
+        for (let k = starts.length - 1; k >= 0; k--) {
+          if (starts[k] < pos && glyphs[k] === needle) {
+            idx = starts[k];
             break;
           }
         }
@@ -313,7 +368,11 @@ class VimCursor {
       pos = idx;
     }
     if (till) {
-      pos = forward ? pos - 1 : pos + 1;
+      // `pos` is the found char's start offset; the till step backs/forwards
+      // one unit from there and can land on the low half of an adjacent astral
+      // pair. Snap to the grapheme boundary (BUG-96) so `dt{char}` never slices
+      // a pair.
+      pos = forward ? this._alignGrapheme(pos - 1, 'back') : this._alignGrapheme(pos + 1, 'fwd');
     }
     return pos;
   }

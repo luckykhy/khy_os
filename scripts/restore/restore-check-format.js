@@ -25,14 +25,10 @@ const path = require('path');
 const {
   checkSnapshotFormatCompat,
 } = require('../lib/snapshotFormatCompat');
+const { opsDocPath, opsDocRelPath } = require('../lib/docsPaths');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const DOC_PATH = path.join(
-  ROOT,
-  'docs',
-  '07_OPS_运维',
-  '[OPS-MAN-105] 还原快照格式兼容性对账.md'
-);
+const DOC_PATH = opsDocPath('[OPS-MAN-105] 还原快照格式兼容性对账.md');
 const NPM_PKG_NAME = '@khy-os/khy-os';
 const PIP_PKG_NAME = 'khy-os';
 
@@ -116,7 +112,7 @@ function runCheckFormat(opts = {}) {
   out += `  ${C.bold}目录：${C.reset}${destDir}\n`;
   out += `  ${C.dim}判据：${verdict.reason}${C.reset}\n`;
   out += `\n${C.dim}诚实边界：证据不足 / 格式陌生 / 版本超纲一律拒绝放行；只有格式认识且版本在理解区间才判「兼容」。${C.reset}\n`;
-  out += `${C.dim}详情见：docs/07_OPS_运维/[OPS-MAN-105] 还原快照格式兼容性对账.md${C.reset}\n`;
+  out += `${C.dim}详情见：${opsDocRelPath('[OPS-MAN-105] 还原快照格式兼容性对账.md')}${C.reset}\n`;
   process.stdout.write(out);
   return verdict.ok ? 0 : 2;
 }

@@ -18,8 +18,10 @@ const { useState, useRef, useCallback, useEffect } = require('react');
 
 const backslashContinuation = require('../../../services/backslashContinuation');
 const { Cursor } = require('../utils/Cursor');
+const imeCommitGuard = require('../imeCommitGuard');
 
 const { isPersistEnabled, mergeHistory } = require('./historyPersist');
+const { pastedRefLineCountOr } = require('../../pastedRefLines');
 
 // A return arriving within this window after a paste burst is treated as part
 // of the paste (insert newline) rather than a submit.
@@ -34,7 +36,7 @@ function stripPasteMarkers(s) {
   return s.replace(/\x1b\[200~/g, '').replace(/\x1b\[201~/g, '');
 }
 
-// ── Typing-time toolUseLoop prefetch (DESIGN-PERF-001 v1 §阶段 D) ──
+// ── Typing-time toolUseLoop prefetch (DESIGN-PERF-002 v1 §阶段 D) ──
 // The first submit pays for parsing toolUseLoopCore.js (12,715 lines) on
 // demand — that cold load runs AFTER the user message is pushed but BEFORE
 // the first await, freezing the first paint by 200-400ms. We start the
@@ -70,6 +72,42 @@ function _maybePrewarmToolUseLoop() {
 const OFF_VALUES = ['0', 'false', 'off', 'no'];
 const PASTE_CHAR_THRESHOLD = 150;
 const PASTE_LINE_THRESHOLD = 3;
+
+// Paste archive (Claude Code / classic-REPL parity): when a long paste is
+// folded into an inline `[Pasted text #N (+M lines)]` tag, the original text
+// is kept here so the tag can be expanded back into the payload at submit
+// time. Without the archive the folded paste was silently LOST — the model
+// received the literal placeholder and the user's content never arrived.
+// Bounded at PASTE_ARCHIVE_MAX entries, oldest evicted (replSession parity).
+const _pasteArchive = new Map();
+let _pasteCounter = 0;
+const PASTE_ARCHIVE_MAX = 20;
+const PASTE_TAG_WITH_ID_RE = /\[Pasted text #(\d+)(?:\s\+\d+ lines)?\]/g;
+
+// Build the folded tag for the current paste. Mirrors replSession's
+// _storePendingPaste: M = newline count via pastedRefLineCountOr (CC
+// "incremental lines" semantics, "+2 not 3"), gate-off falls back to the
+// call-site split('\n') count.
+function _makePasteTag(text, lineCount) {
+  const refLines = pastedRefLineCountOr(text, lineCount, process.env);
+  return lineCount > 1
+    ? `[Pasted text #${_pasteCounter} +${refLines} lines]`
+    : `[Pasted text #${_pasteCounter}]`;
+}
+
+// Expand any residual [Pasted text #N ...] tags in submitted text back into
+// the archived content, wrapped in <pasted-content> — the established block
+// convention consumed by busyInputClassifiers / toolResultSanitization.
+// Unknown ids (evicted / cross-session) keep the tag verbatim; never throws.
+function _expandPasteTags(text) {
+  if (!text || _pasteArchive.size === 0) {
+    return text;
+  }
+  return text.replace(PASTE_TAG_WITH_ID_RE, (m, idStr) => {
+    const archived = _pasteArchive.get(Number(idStr));
+    return archived ? `<pasted-content>\n${archived}\n</pasted-content>` : m;
+  });
+}
 
 function isPasteSummaryEnabled(env = process.env) {
   const v = String(env && env.KHY_PROMPT_PASTE_SUMMARY || '').trim().toLowerCase();
@@ -163,14 +201,21 @@ function useTextInput({ onSubmit, onChange, onHistoryEmpty, mouseModule, onShell
     pasteAt.current = Date.now();
     const lineCount = (trimmed.match(/\n/g) || []).length + 1;
     // Paste summary: if the pasted text exceeds the length/line thresholds and
-    // the gate is on, replace with a single placeholder line instead of
-    // inserting the full content into the buffer. Short pastes and gate-off
-    // both fall through to the legacy insert path.
+    // the gate is on, fold it into an inline tag instead of inserting the full
+    // content into the buffer. The original text is archived so the submit
+    // path can expand the tag back into the payload (nothing is lost). Short
+    // pastes and gate-off both fall through to the legacy insert path.
     if (
       isPasteSummaryEnabled(process.env) &&
       (trimmed.length >= PASTE_CHAR_THRESHOLD || lineCount >= PASTE_LINE_THRESHOLD)
     ) {
-      const placeholder = `[Pasted ~${lineCount} lines]`;
+      _pasteCounter += 1;
+      _pasteArchive.set(_pasteCounter, trimmed);
+      if (_pasteArchive.size > PASTE_ARCHIVE_MAX) {
+        const oldest = _pasteArchive.keys().next().value;
+        _pasteArchive.delete(oldest);
+      }
+      const placeholder = _makePasteTag(trimmed, lineCount);
       const next = cursorRef.current.insert(placeholder);
       commit(next, true);
       return next;
@@ -317,6 +362,15 @@ function useTextInput({ onSubmit, onChange, onHistoryEmpty, mouseModule, onShell
           edit(cur.insert('\n'));
           return;
         }
+        // IME composition confirm: the IME commits its composed text and a
+        // trailing Enter as one burst; this bare Enter within the recency
+        // window of a fullwidth-only insert is that confirm key, not a
+        // submit. The composed text is already in the buffer — swallow.
+        // MUST sit above the paste guard: a CJK-IME Enter inside the paste
+        // window would otherwise be turned into a stray newline.
+        if (imeCommitGuard.shouldSwallowBareEnter()) {
+          return;
+        }
         if (Date.now() - pasteAt.current < PASTE_NEWLINE_GUARD_MS) {
           edit(cur.insert('\n'));
           return;
@@ -348,8 +402,26 @@ function useTextInput({ onSubmit, onChange, onHistoryEmpty, mouseModule, onShell
         draft.current = '';
         commit(new Cursor('', 0), true);
         if (onSubmit) {
-          onSubmit(text);
+          // Expand folded paste tags back into the archived content before the
+          // text leaves the input: history above stores the compact tag form
+          // (one entry per paste, recall-friendly), but the AI must receive
+          // the user's actual pasted bytes, not the placeholder.
+          onSubmit(_expandPasteTags(text));
         }
+        return;
+      }
+
+      // Bare LF — Ctrl+J (and Alt+Enter on terminals that map it to LF) arrives as
+      // `\n`, which ink names 'enter', so key.return is false and the submit branch
+      // above never runs. Without this branch the byte is a control char and falls
+      // through to the printable path, where it is dropped: the advertised newline
+      // key becomes a silent no-op. Insert the newline here instead. (Enter itself
+      // is CR, handled above; terminals that send LF for Enter are not a supported
+      // configuration. Measured on Windows Terminal 1.24: Ctrl+J -> `\n` reaches us,
+      // Alt+Enter is eaten by the terminal's own fullscreen binding and only sends
+      // a lone ESC, so it is NOT the documented newline key on Windows.)
+      if (input === '\n' && !key.return) {
+        edit(cur.insert('\n'));
         return;
       }
 
@@ -463,6 +535,10 @@ function useTextInput({ onSubmit, onChange, onHistoryEmpty, mouseModule, onShell
       // as literal control characters — that silently corrupts the buffer and
       // looks like "Backspace does nothing".
       if (input.length > 1) {
+        // IME phrase commit (你好 arrives as one multi-char chunk) stamps the
+        // same recency marker; real pastes carry newlines/ASCII/control codes
+        // and fail the pure-fullwidth test, so they stay unguarded.
+        imeCommitGuard.noteImeCommit(stripPasteMarkers(input));
         // Count backward-delete codes (\x7f Backspace, \x08 Ctrl-H) in the burst.
         const delCount = (input.match(/[\x7f\x08]/g) || []).length;
         // Probe whether this chunk carries any printable content (keep \n and \t).
@@ -505,6 +581,8 @@ function useTextInput({ onSubmit, onChange, onHistoryEmpty, mouseModule, onShell
       if (input.charCodeAt(0) < 0x20) {
         return undefined;
       }
+      // IME commit tracking (single-char commit, e.g. per-keystroke CJK).
+      imeCommitGuard.noteImeCommit(input);
       const next = cur.insert(input);
       // Enter shell mode when the buffer transitions to starting with `!`.
       if (_shellOn && !shellModeRef.current && next.text.startsWith('!')) {
@@ -551,6 +629,12 @@ function useTextInput({ onSubmit, onChange, onHistoryEmpty, mouseModule, onShell
     value: cursor.text,
     offset: cursor.offset,
     cursor,
+    // Synchronous mirror of the buffer: reads the latest text even before React
+    // commits, i.e. from a key that arrives in the same input packet as the one
+    // that edited the buffer (App needs it to route that key, BUG-64).
+    get liveCursor() {
+      return cursorRef.current;
+    },
     onInput,
     setText,
     setOffset,
@@ -573,3 +657,26 @@ function useTextInput({ onSubmit, onChange, onHistoryEmpty, mouseModule, onShell
 }
 
 module.exports = { useTextInput };
+// Test-only internals (paste archive/expand semantics). Never used at runtime.
+module.exports._internals = {
+  _makePasteTag,
+  _expandPasteTags,
+  stripPasteMarkers,
+  isPasteSummaryEnabled,
+  PASTE_CHAR_THRESHOLD,
+  PASTE_LINE_THRESHOLD,
+  PASTE_ARCHIVE_MAX,
+  get _pasteArchive() {
+    return _pasteArchive;
+  },
+  get _pasteCounter() {
+    return _pasteCounter;
+  },
+  set _pasteCounter(n) {
+    _pasteCounter = n;
+  },
+  _resetForTest() {
+    _pasteArchive.clear();
+    _pasteCounter = 0;
+  },
+};

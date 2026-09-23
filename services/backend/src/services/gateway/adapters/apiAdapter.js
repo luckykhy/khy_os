@@ -594,6 +594,11 @@ async function generate(prompt, options = {}) {
           provider: resolvedProvider,
           model: resolvedModel,
           signal,
+          // 适配器身份穿线(P4/BUG-014):multiFreeService 的剥离门要按来源过滤负面裁决
+          // (toolCapabilityStore.getVerdictFor),而它自己拿不到「我是哪个适配器」。
+          // 在这里补上,不让身份在这一跳丢掉 —— 身份丢失正是当初把负向结论扩散成
+          // 「所有模型都不支持」的机制之一。
+          adapterKey: 'api',
         }),
       {
         timeoutMs,

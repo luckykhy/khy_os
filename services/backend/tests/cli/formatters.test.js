@@ -341,12 +341,13 @@ describe('printInfo() 场景词前缀', () => {
   }
 
   test('不传 label 时逐字节保持原样（全仓两千多处调用不受影响）', () => {
-    expect(render('X')).toBe('  ℹ X');
+    // 生产决策:不传 label 用 ASCII 'i' 前缀 —— Windows 终端 ℹ (U+2139) 渲染成方块。
+    expect(render('X')).toBe('  i X');
   });
 
   test('空串 / 非字符串 label 一律回落到原样，不吐出半截前缀', () => {
     for (const bad of ['', null, undefined, 0, 42, {}, []]) {
-      expect(render('X', bad)).toBe('  ℹ X');
+      expect(render('X', bad)).toBe('  i X');
     }
   });
 

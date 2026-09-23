@@ -25,8 +25,8 @@ const WORK = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-p5-work-'));
 process.env.KHY_WRITE_EXTRA_ROOTS = WORK;
 
 const { handleReplay } = require('../../../src/cli/handlers/replay');
-const replayLedger = require('../../../src/services/trajectoryReplay/replayLedger');
-const replayBundle = require('../../../src/services/trajectoryReplay/replayBundle');
+const replayLedger = require('../../../src/services/domain/trajectory/trajectoryReplay/replayLedger.js');
+const replayBundle = require('../../../src/services/domain/trajectory/trajectoryReplay/replayBundle.js');
 const commandSchema = require('../../../src/constants/commandSchema');
 
 /** Capture console.log/error output emitted during fn(). */

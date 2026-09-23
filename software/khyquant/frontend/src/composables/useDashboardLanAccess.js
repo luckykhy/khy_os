@@ -91,10 +91,10 @@ export function useDashboardLanAccess() {
           candidateIps.sort((a, b) => a.priority - b.priority)
           lanIpAddress.value = candidateIps[0].ip
           if (import.meta.env.DEV) { console.log('✅ 通过WebRTC选择局域网IP:', lanIpAddress.value) }
-          if (import.meta.env.DEV) { console.log( }
+          if (import.meta.env.DEV) { console.log(
             '📋 所有候选IP:',
             candidateIps.map((c) => `${c.ip} (优先级${c.priority})`).join(', ')
-          )
+          ) }
         }
 
         if (!lanIpAddress.value) {

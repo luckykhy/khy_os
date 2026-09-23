@@ -8,7 +8,7 @@
  * API keys (only keyId presence + masked forms). Fail-soft JSON responses.
  */
 
-const { APPS, APP_LABELS, PROTOCOLS } = require('../../collab/proactiveCollaboration/constants');
+const { APPS, APP_LABELS, PROTOCOLS } = require('./constants');
 const store = require('./store');
 
 // ── HTTP deps injected by the host (sendJson / parseBody / authenticate) ──

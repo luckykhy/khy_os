@@ -33,8 +33,8 @@ const {
   evoLevels,
   evoLedger,
 } = require('../../../src/services/evoEngine');
-const sandboxMod = require('../../../src/services/evoEngine/organogenesisSandbox');
-const { PainPointScanner } = require('../../../src/services/evoEngine/painPointScanner');
+const sandboxMod = require('../../../src/services/domain/maintenance/evoEngine/organogenesisSandbox.js');
+const { PainPointScanner } = require('../../../src/services/domain/maintenance/evoEngine/painPointScanner.js');
 
 after(() => { try { fs.rmSync(TMP_HOME, { recursive: true, force: true }); } catch { /* best-effort */ } });
 

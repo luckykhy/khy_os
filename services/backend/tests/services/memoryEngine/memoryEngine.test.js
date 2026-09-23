@@ -19,7 +19,7 @@ const path = require('path');
 
 const PATHS = '../../../src/memdir/paths';
 const ENGINE = '../../../src/services/memoryEngine';
-const SCORING = '../../../src/services/memoryEngine/scoring';
+const SCORING = '../../../src/services/domain/memory/memoryEngine/scoring.js';
 
 let tmp;
 const SAVED = {};

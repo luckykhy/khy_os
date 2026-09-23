@@ -173,6 +173,19 @@ async function getTree(opts = {}, deps = {}) {
     }
     raw = Array.isArray(raw) ? raw : [];
 
+    // 目标窗口不存在：绝不可回落到 OCR（那会把「别的应用的画面」当成目标返回，
+    // 正是本次要消灭的静默错窗），也绝不返回空树 + success:true。
+    if (raw.length && raw[0] && raw[0].__khyTargetNotFound) {
+      return _result([], {
+        success: false,
+        source: 'none',
+        platform,
+        backend: backend.id,
+        targetName: raw[0].requested,
+        error: `未找到目标窗口「${raw[0].requested || ''}」——请先用 listWindows 确认窗口标题，再带着 app 参数重试。`,
+      });
+    }
+
     // 窗口过滤命中：焦点是 khy 终端自身 → 空树 + 警示（不返回终端元素，也不做 OCR）。
     if (raw.length && raw[0] && raw[0].__khySelfWindow) {
       return _result([], {
@@ -194,6 +207,21 @@ async function getTree(opts = {}, deps = {}) {
       desktop: opts.desktop === true,
     });
   } catch (err) {
+    // ── 显式定域时绝不回落整屏 OCR：那等于换个途径把「别的应用的画面」当成目标返回。──
+    const wanted = opts.targetName != null ? String(opts.targetName).trim() : '';
+    if (wanted) {
+      return _result([], {
+        success: false,
+        source: 'accessibility',
+        platform,
+        backend: backend.id,
+        targetName: wanted,
+        error: `目标窗口「${wanted}」的无障碍树抓取失败：${(err && err.message) || String(err)}。` +
+          '（已点名目标，故不回落整屏 OCR——那会把别的应用内容当成该窗口的内容。）',
+        ...(err && err.stderr ? { stderr: err.stderr } : {}),
+      });
+    }
+
     // ── UIA 失败 / 超时 → 自动 fallback：注入词块优先，其次截图 + 全文 OCR。──
     const fb =
       (await _ocrWordsFallback(opts, deps, platform)) ||

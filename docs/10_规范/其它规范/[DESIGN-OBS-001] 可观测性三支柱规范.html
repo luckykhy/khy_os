@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-OBS-001] 可观测性三支柱规范.md -->
+<title>[DESIGN-OBS-001] 可观测性三支柱规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-OBS-001] 可观测性三支柱规范</div>
+      <header class="hero reveal"><h1>[DESIGN-OBS-001] 可观测性三支柱规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-obs-001-可观测性三支柱规范">[DESIGN-OBS-001] 可观测性三支柱规范</a></li><li class="lvl-2"><a href="#1-可观测性原则">1. 可观测性原则</a></li><li class="lvl-2"><a href="#2-metrics-指标">2. Metrics（指标）</a></li><li class="lvl-3"><a href="#2-1-指标分类">2.1 指标分类</a></li><li class="lvl-3"><a href="#2-2-red-方法">2.2 RED 方法</a></li><li class="lvl-3"><a href="#2-3-use-方法-资源">2.3 USE 方法（资源）</a></li><li class="lvl-3"><a href="#2-4-命名规范-prometheus">2.4 命名规范（Prometheus）</a></li><li class="lvl-3"><a href="#2-5-实现-prom-client">2.5 实现（prom-client）</a></li><li class="lvl-2"><a href="#3-traces-链路追踪">3. Traces（链路追踪）</a></li><li class="lvl-3"><a href="#3-1-规范">3.1 规范</a></li><li class="lvl-3"><a href="#3-2-传播">3.2 传播</a></li><li class="lvl-3"><a href="#3-3-手动-span">3.3 手动 Span</a></li><li class="lvl-3"><a href="#3-4-与-logs-关联">3.4 与 Logs 关联</a></li><li class="lvl-2"><a href="#4-三支柱关联">4. 三支柱关联</a></li><li class="lvl-3"><a href="#4-1-关联模型">4.1 关联模型</a></li><li class="lvl-3"><a href="#4-2-统一标签">4.2 统一标签</a></li><li class="lvl-2"><a href="#5-告警规则">5. 告警规则</a></li><li class="lvl-3"><a href="#5-1-基于-metrics">5.1 基于 Metrics</a></li><li class="lvl-3"><a href="#5-2-基于-traces">5.2 基于 Traces</a></li><li class="lvl-2"><a href="#6-保留策略">6. 保留策略</a></li><li class="lvl-3"><a href="#6-1-热-温-冷分层">6.1 热/温/冷分层</a></li><li class="lvl-3"><a href="#6-2-采样策略">6.2 采样策略</a></li><li class="lvl-2"><a href="#7-版本历史">7. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-obs-001-可观测性三支柱规范">[DESIGN-OBS-001] 可观测性三支柱规范<a class="anchor" href="#design-obs-001-可观测性三支柱规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>用途</strong>：定义 khy-os 项目的可观测性标准，覆盖 Logs（日志）、Metrics（指标）、Traces（链路追踪）三支柱。<br>LOG-001 已覆盖日志，本文档补全 Metrics 和 Traces。</p></blockquote>
+<hr>
+<h2 id="1-可观测性原则">1. 可观测性原则<a class="anchor" href="#1-可观测性原则" aria-label="锚点">#</a></h2>
+<ol><li><strong>三支柱统一</strong>：Logs + Metrics + Traces 共享 <code>requestId</code> 关联</li><li><strong>结构化优先</strong>：全部 JSON 格式，禁止裸文本</li><li><strong>采样合理</strong>：Trace 按比例采样，错误场景 100% 采样</li><li><strong>保留策略</strong>：热数据 7 天，温数据 30 天，冷数据归档</li></ol>
+<hr>
+<h2 id="2-metrics-指标">2. Metrics（指标）<a class="anchor" href="#2-metrics-指标" aria-label="锚点">#</a></h2>
+<h3 id="2-1-指标分类">2.1 指标分类<a class="anchor" href="#2-1-指标分类" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类别</th><th>前缀</th><th>说明</th><th>示例</th></tr></thead><tbody><tr><td>Counter</td><td><code>*_total</code></td><td>单调递增</td><td><code>http_requests_total</code></td></tr><tr><td>Gauge</td><td><code>*_current</code></td><td>瞬时值</td><td><code>active_connections_current</code></td></tr><tr><td>Histogram</td><td><code>*_duration_seconds</code></td><td>分布</td><td><code>http_request_duration_seconds</code></td></tr><tr><td>Summary</td><td><code>*_quantile</code></td><td>分位数</td><td><code>http_response_size_bytes</code></td></tr></tbody></table>
+<h3 id="2-2-red-方法">2.2 RED 方法<a class="anchor" href="#2-2-red-方法" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>说明</th><th>目标值</th></tr></thead><tbody><tr><td><strong>Rate</strong></td><td>请求速率</td><td>基线监控</td></tr><tr><td><strong>Errors</strong></td><td>错误率</td><td>&lt; 1%</td></tr><tr><td><strong>Duration</strong></td><td>响应时间 P99</td><td>&lt; 500ms</td></tr></tbody></table>
+<h3 id="2-3-use-方法-资源">2.3 USE 方法（资源）<a class="anchor" href="#2-3-use-方法-资源" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>说明</th></tr></thead><tbody><tr><td><strong>Utilization</strong></td><td>CPU / 内存使用率</td></tr><tr><td><strong>Saturation</strong></td><td>队列深度、连接池耗尽</td></tr><tr><td><strong>Errors</strong></td><td>资源错误（DB 连接失败）</td></tr></tbody></table>
+<h3 id="2-4-命名规范-prometheus">2.4 命名规范（Prometheus）<a class="anchor" href="#2-4-命名规范-prometheus" aria-label="锚点">#</a></h3>
+<pre><code>{khy_service=&quot;backend&quot;, khy_endpoint=&quot;/api/v1/strategies&quot;, khy_method=&quot;GET&quot;}</code></pre>
+<p><strong>指标名格式</strong>：</p>
+<pre><code>{khy_domain}_{what}_{unit}</code></pre>
+<table><thead><tr><th>指标名</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td><code>khy_http_requests_total</code></td><td>Counter</td><td>HTTP 请求总数</td></tr><tr><td><code>khy_http_request_duration_seconds</code></td><td>Histogram</td><td>HTTP 请求耗时</td></tr><tr><td><code>khy_http_responses_total{status=&quot;200&quot;}</code></td><td>Counter</td><td>按状态码统计</td></tr><tr><td><code>khy_active_connections_current</code></td><td>Gauge</td><td>当前活跃连接</td></tr><tr><td><code>khy_db_query_duration_seconds</code></td><td>Histogram</td><td>DB 查询耗时</td></tr><tr><td><code>khy_ai_adapter_calls_total{provider=&quot;openai&quot;}</code></td><td>Counter</td><td>AI 适配器调用次数</td></tr><tr><td><code>khy_ai_token_usage_total</code></td><td>Counter</td><td>Token 消耗总量</td></tr><tr><td><code>khy_cache_hits_total</code> / <code>khy_cache_misses_total</code></td><td>Counter</td><td>缓存命中/未命中</td></tr></tbody></table>
+<h3 id="2-5-实现-prom-client">2.5 实现（prom-client）<a class="anchor" href="#2-5-实现-prom-client" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> client = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;prom-client&#x27;</span>);
+
+<span class="hljs-comment">// Counter</span>
+<span class="hljs-keyword">const</span> httpRequestsTotal = <span class="hljs-keyword">new</span> client.<span class="hljs-title class_">Counter</span>({
+  <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;khy_http_requests_total&#x27;</span>,
+  <span class="hljs-attr">help</span>: <span class="hljs-string">&#x27;Total HTTP requests&#x27;</span>,
+  <span class="hljs-attr">labelNames</span>: [<span class="hljs-string">&#x27;service&#x27;</span>, <span class="hljs-string">&#x27;endpoint&#x27;</span>, <span class="hljs-string">&#x27;method&#x27;</span>, <span class="hljs-string">&#x27;status&#x27;</span>],
+  <span class="hljs-attr">registers</span>: [register]
+});
+
+<span class="hljs-comment">// Histogram</span>
+<span class="hljs-keyword">const</span> httpRequestDuration = <span class="hljs-keyword">new</span> client.<span class="hljs-title class_">Histogram</span>({
+  <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;khy_http_request_duration_seconds&#x27;</span>,
+  <span class="hljs-attr">help</span>: <span class="hljs-string">&#x27;HTTP request duration&#x27;</span>,
+  <span class="hljs-attr">labelNames</span>: [<span class="hljs-string">&#x27;service&#x27;</span>, <span class="hljs-string">&#x27;endpoint&#x27;</span>, <span class="hljs-string">&#x27;method&#x27;</span>],
+  <span class="hljs-attr">buckets</span>: [<span class="hljs-number">0.01</span>, <span class="hljs-number">0.05</span>, <span class="hljs-number">0.1</span>, <span class="hljs-number">0.25</span>, <span class="hljs-number">0.5</span>, <span class="hljs-number">1</span>, <span class="hljs-number">2.5</span>, <span class="hljs-number">5</span>, <span class="hljs-number">10</span>],
+  <span class="hljs-attr">registers</span>: [register]
+});
+
+<span class="hljs-comment">// 中间件集成</span>
+app.<span class="hljs-title function_">use</span>(<span class="hljs-function">(<span class="hljs-params">req, res, next</span>) =&gt;</span> {
+  <span class="hljs-keyword">const</span> start = <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>();
+  
+  res.<span class="hljs-title function_">on</span>(<span class="hljs-string">&#x27;finish&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-keyword">const</span> duration = (<span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() - start) / <span class="hljs-number">1000</span>;
+    httpRequestsTotal.<span class="hljs-title function_">inc</span>({ <span class="hljs-attr">service</span>: <span class="hljs-string">&#x27;backend&#x27;</span>, <span class="hljs-attr">endpoint</span>: req.<span class="hljs-property">path</span>, <span class="hljs-attr">method</span>: req.<span class="hljs-property">method</span>, <span class="hljs-attr">status</span>: res.<span class="hljs-property">statusCode</span> });
+    httpRequestDuration.<span class="hljs-title function_">observe</span>({ <span class="hljs-attr">service</span>: <span class="hljs-string">&#x27;backend&#x27;</span>, <span class="hljs-attr">endpoint</span>: req.<span class="hljs-property">path</span>, <span class="hljs-attr">method</span>: req.<span class="hljs-property">method</span> }, duration);
+  });
+  
+  <span class="hljs-title function_">next</span>();
+});
+
+<span class="hljs-comment">// 暴露端点</span>
+app.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/metrics&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">req, res</span>) =&gt;</span> {
+  res.<span class="hljs-title function_">set</span>(<span class="hljs-string">&#x27;Content-Type&#x27;</span>, register.<span class="hljs-property">contentType</span>);
+  res.<span class="hljs-title function_">end</span>(register.<span class="hljs-title function_">metrics</span>());
+});</code></pre>
+<hr>
+<h2 id="3-traces-链路追踪">3. Traces（链路追踪）<a class="anchor" href="#3-traces-链路追踪" aria-label="锚点">#</a></h2>
+<h3 id="3-1-规范">3.1 规范<a class="anchor" href="#3-1-规范" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>属性</th><th>值</th></tr></thead><tbody><tr><td>协议</td><td>OpenTelemetry（OTLP）</td></tr><tr><td>采样策略</td><td>错误 100%，正常 1%</td></tr><tr><td>Trace ID 格式</td><td>128-bit hex（32 字符）</td></tr><tr><td>Span 属性</td><td><code>service.name</code>、<code>http.method</code>、<code>http.route</code>、<code>error</code></td></tr></tbody></table>
+<h3 id="3-2-传播">3.2 传播<a class="anchor" href="#3-2-传播" aria-label="锚点">#</a></h3>
+<p><strong>所有跨服务调用必须传播 <code>traceparent</code></strong>：</p>
+<pre><code>traceparent: 00-{trace-id}-{span-id}-01</code></pre>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> { <span class="hljs-title class_">NodeTracerProvider</span> } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;@opentelemetry/sdk-trace-node&#x27;</span>);
+<span class="hljs-keyword">const</span> { getNodeAutoInstrumentations } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;@opentelemetry/auto-instrumentations-node&#x27;</span>);
+
+<span class="hljs-keyword">const</span> provider = <span class="hljs-keyword">new</span> <span class="hljs-title class_">NodeTracerProvider</span>({
+  <span class="hljs-attr">sampler</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">CompositeSampler</span>([
+    <span class="hljs-keyword">new</span> <span class="hljs-title class_">AlwaysOnSampler</span>(),  <span class="hljs-comment">// 默认全采</span>
+    <span class="hljs-keyword">new</span> <span class="hljs-title class_">TraceIdRatioBased</span>(<span class="hljs-number">0.01</span>)  <span class="hljs-comment">// 1% 采样</span>
+  ])
+});
+
+provider.<span class="hljs-title function_">register</span>();</code></pre>
+<h3 id="3-3-手动-span">3.3 手动 Span<a class="anchor" href="#3-3-手动-span" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> { trace } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;@opentelemetry/api&#x27;</span>);
+<span class="hljs-keyword">const</span> tracer = trace.<span class="hljs-title function_">getTracer</span>(<span class="hljs-string">&#x27;khy-backend&#x27;</span>);
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">handleAIRequest</span>(<span class="hljs-params">req, res</span>) {
+  <span class="hljs-keyword">return</span> tracer.<span class="hljs-title function_">startActiveSpan</span>(<span class="hljs-string">&#x27;ai.request&#x27;</span>, <span class="hljs-title function_">async</span> (span) =&gt; {
+    span.<span class="hljs-title function_">setAttribute</span>(<span class="hljs-string">&#x27;http.method&#x27;</span>, req.<span class="hljs-property">method</span>);
+    span.<span class="hljs-title function_">setAttribute</span>(<span class="hljs-string">&#x27;http.route&#x27;</span>, <span class="hljs-string">&#x27;/api/v1/ai/chat&#x27;</span>);
+    span.<span class="hljs-title function_">setAttribute</span>(<span class="hljs-string">&#x27;user.id&#x27;</span>, req.<span class="hljs-property">user</span>.<span class="hljs-property">sub</span>);
+    
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> <span class="hljs-title function_">callAIProvider</span>(req.<span class="hljs-property">body</span>);
+      span.<span class="hljs-title function_">setStatus</span>({ <span class="hljs-attr">code</span>: <span class="hljs-title class_">SpanStatusCode</span>.<span class="hljs-property">OK</span> });
+      res.<span class="hljs-title function_">json</span>({ <span class="hljs-attr">success</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">data</span>: result });
+    } <span class="hljs-keyword">catch</span> (error) {
+      span.<span class="hljs-title function_">recordException</span>(error);
+      span.<span class="hljs-title function_">setStatus</span>({ <span class="hljs-attr">code</span>: <span class="hljs-title class_">SpanStatusCode</span>.<span class="hljs-property">ERROR</span>, <span class="hljs-attr">message</span>: error.<span class="hljs-property">message</span> });
+      <span class="hljs-title function_">next</span>(error);
+    } <span class="hljs-keyword">finally</span> {
+      span.<span class="hljs-title function_">end</span>();
+    }
+  });
+}</code></pre>
+<h3 id="3-4-与-logs-关联">3.4 与 Logs 关联<a class="anchor" href="#3-4-与-logs-关联" aria-label="锚点">#</a></h3>
+<p>每条日志必须携带 <code>traceId</code>，可通过 <code>requestId</code>（HTTP 层面）关联：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// 中间件注入 traceId</span>
+app.<span class="hljs-title function_">use</span>(<span class="hljs-function">(<span class="hljs-params">req, res, next</span>) =&gt;</span> {
+  <span class="hljs-keyword">const</span> traceId = req.<span class="hljs-property">headers</span>[<span class="hljs-string">&#x27;x-request-id&#x27;</span>] || <span class="hljs-title function_">uuidv4</span>();
+  res.<span class="hljs-title function_">setHeader</span>(<span class="hljs-string">&#x27;X-Request-ID&#x27;</span>, traceId);
+  req.<span class="hljs-property">traceId</span> = traceId;
+  <span class="hljs-title function_">next</span>();
+});
+
+<span class="hljs-comment">// 日志自动携带</span>
+logger.<span class="hljs-title function_">info</span>(<span class="hljs-string">&#x27;Request started&#x27;</span>, {
+  <span class="hljs-attr">requestId</span>: req.<span class="hljs-property">traceId</span>,
+  <span class="hljs-attr">traceId</span>: <span class="hljs-title function_">getCurrentTraceId</span>()  <span class="hljs-comment">// OpenTelemetry span context</span>
+});</code></pre>
+<hr>
+<h2 id="4-三支柱关联">4. 三支柱关联<a class="anchor" href="#4-三支柱关联" aria-label="锚点">#</a></h2>
+<h3 id="4-1-关联模型">4.1 关联模型<a class="anchor" href="#4-1-关联模型" aria-label="锚点">#</a></h3>
+<pre><code>┌──────────┐     requestId      ┌──────────┐
+│   Logs   │ ←────────────────→ │  Traces  │
+│ (LOG-001)│                     │ (OBS-001)│
+└────┬─────┘                     └────┬─────┘
+     │                               │
+     └─────────── Metrics ───────────┘
+                (共享标签)</code></pre>
+<h3 id="4-2-统一标签">4.2 统一标签<a class="anchor" href="#4-2-统一标签" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>标签</th><th>出现在</th><th>说明</th></tr></thead><tbody><tr><td><code>requestId</code></td><td>Logs + Traces</td><td>HTTP 请求唯一标识</td></tr><tr><td><code>traceId</code></td><td>Logs + Traces</td><td>OpenTelemetry Trace ID</td></tr><tr><td><code>spanId</code></td><td>Logs</td><td>当前 Span ID</td></tr><tr><td><code>service</code></td><td>Metrics + Traces</td><td>服务名（<code>backend</code>、<code>ai-gateway</code>）</td></tr><tr><td><code>endpoint</code></td><td>Metrics + Logs</td><td>路由路径</td></tr><tr><td><code>userId</code></td><td>Logs + Metrics</td><td>用户 ID（匿名为 null）</td></tr></tbody></table>
+<hr>
+<h2 id="5-告警规则">5. 告警规则<a class="anchor" href="#5-告警规则" aria-label="锚点">#</a></h2>
+<h3 id="5-1-基于-metrics">5.1 基于 Metrics<a class="anchor" href="#5-1-基于-metrics" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规则</th><th>条件</th><th>严重度</th></tr></thead><tbody><tr><td>错误率突增</td><td><code>rate(khy_http_responses_total{status=~&quot;5..&quot;}[5m]) / rate(khy_http_requests_total[5m]) &gt; 0.05</code></td><td>P0</td></tr><tr><td>响应时间 P99 过高</td><td><code>histogram_quantile(0.99, khy_http_request_duration_seconds) &gt; 2</code></td><td>P1</td></tr><tr><td>活跃连接过高</td><td><code>khy_active_connections_current &gt; 800</code></td><td>P1</td></tr><tr><td>DB 连接池耗尽</td><td><code>khy_db_pool_active / khy_db_pool_max &gt; 0.9</code></td><td>P1</td></tr><tr><td>AI 适配器错误率</td><td><code>rate(khy_ai_adapter_errors_total[5m]) &gt; 0.1</code></td><td>P1</td></tr></tbody></table>
+<h3 id="5-2-基于-traces">5.2 基于 Traces<a class="anchor" href="#5-2-基于-traces" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规则</th><th>条件</th><th>严重度</th></tr></thead><tbody><tr><td>慢 Trace</td><td>P99 &gt; 2s</td><td>P2</td></tr><tr><td>错误 Trace</td><td><code>span.status.code == ERROR</code> 占比 &gt; 5%</td><td>P1</td></tr></tbody></table>
+<hr>
+<h2 id="6-保留策略">6. 保留策略<a class="anchor" href="#6-保留策略" aria-label="锚点">#</a></h2>
+<h3 id="6-1-热-温-冷分层">6.1 热/温/冷分层<a class="anchor" href="#6-1-热-温-冷分层" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>存储</th><th>保留</th><th>查询延迟</th></tr></thead><tbody><tr><td>热（实时）</td><td>Loki / Prometheus</td><td>7 天</td><td>&lt; 1s</td></tr><tr><td>温（分析）</td><td>ClickHouse / S3</td><td>30 天</td><td>&lt; 5s</td></tr><tr><td>冷（归档）</td><td>S3 Glacier</td><td>1 年</td><td>分钟级</td></tr></tbody></table>
+<h3 id="6-2-采样策略">6.2 采样策略<a class="anchor" href="#6-2-采样策略" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>场景</th><th>采样率</th></tr></thead><tbody><tr><td>正常流量</td><td>1%</td></tr><tr><td>4xx 错误</td><td>10%</td></tr><tr><td>5xx 错误</td><td>100%</td></tr><tr><td>健康检查</td><td>0%（不计入）</td></tr></tbody></table>
+<hr>
+<h2 id="7-版本历史">7. 版本历史<a class="anchor" href="#7-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义可观测性三支柱规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-NOTIFY-001] 通知与邮件规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-NOTIFY-001] 通知与邮件规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-OPS-002] Graceful Shutdown 规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-OPS-002] Graceful Shutdown 规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-OBS-001] 可观测性三支柱规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

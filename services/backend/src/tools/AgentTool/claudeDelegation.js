@@ -13,6 +13,10 @@
  *   ① 模型显式选 claude（explicit）→ 可用就委派，不可用就干净回退、给出原因（不强求）。
  *   ② Khy 自动判断（auto）→ 仅在 feature flag 开 + 保守启发式命中 + 可用时才委派；
  *      默认偏向「不委派」，避免无谓 spawn 重进程与外部 token 成本。
+ *   ③（2026-09-16 新增，PROCESS-004 / [DESIGN-PROCESS-001]）**两条路径都必须过委派准入**：
+ *      启发式判的是「任务看起来像重活」，而不是「这件事为什么该交给别人」——重活恰恰是
+ *      khy 自己的核心能力。缺闸门（G1 用户点名 / G2 能力缺失 / G3 隔离要求）即不委派，
+ *      fail-closed 一律落到「自做」这一侧。
  *
  * 任何异常一律 fail-soft 为「不委派」，绝不让委派逻辑崩掉 AgentTool。
  */
@@ -75,16 +79,57 @@ function _looksLikeClaudeCodeTask(prompt, role) {
 }
 
 /**
+ * 默认委派准入判定：延迟 require 认知层的 `externalAgentDirective`。
+ *
+ * 为什么必须过这一关（PROCESS-004 / [DESIGN-PROCESS-001]）：auto 路径的启发式判的是
+ * 「任务看起来像重活」，而不是「任务为什么该别人做」——重活恰恰是 khy 自己的核心能力。
+ * 没有闸门就把活发出去，正是「莫名其妙甩活」的形态。
+ *
+ * 拿不到叶子 ⇒ 返回**永不授权**的替身：fail-closed 必须落在「自做」这一侧。
+ * @returns {{evaluateAdmission:Function, detectGate:Function}}
+ */
+function _defaultDelegationTools() {
+  try {
+    const mod = require('../../services/externalAgentDirective');
+    return {
+      evaluateAdmission:
+        typeof mod.evaluateDelegationAdmission === 'function'
+          ? mod.evaluateDelegationAdmission
+          : _DENY_ALL_ADMISSION,
+      detectGate: typeof mod.detectDelegationGateInText === 'function' ? mod.detectDelegationGateInText : () => null,
+    };
+  } catch {
+    return { evaluateAdmission: _DENY_ALL_ADMISSION, detectGate: () => null };
+  }
+}
+
+/** 准入不可用时的替身：一律 deny（fail-closed 到自做）。 */
+const _DENY_ALL_ADMISSION = () => ({
+  allowed: false,
+  gate: null,
+  gateKey: null,
+  code: 'admission-unavailable',
+  reason: '委派准入判定不可用，按默认档由 Khy 自做',
+});
+
+/**
  * 决定是否把子任务委派给 Claude Code。
  *
  * @param {object} task
  * @param {string} task.prompt              子任务描述
  * @param {string} task.role                解析后的内部 role（claude/general/implement/...）
  * @param {boolean} task.explicitlyRequested 模型是否显式选了 claude（subagent_type:'claude'）
+ * @param {string} [task.userNamedAgentId]  G1：用户本轮点名的 agent id
+ * @param {string|string[]} [task.capabilityGap] G2：khy 本地缺失的能力清单
+ * @param {boolean} [task.isolationRequired] G3：是否必须在隔离的外部环境执行
+ * @param {string} [task.isolationNote]     G3：隔离原因
+ * @param {string} [task.delegationReason]  G2/G3 的一句话可核验理由
+ * @param {boolean} [task.selfCapable]      调用方声明本地能覆盖 ⇒ 无条件不委派
  * @param {object} [deps]
  * @param {function():boolean} [deps.detect]                  claude CLI 可用性探测
  * @param {function():boolean} [deps.isAutoDelegationEnabled] auto 委派开关
- * @returns {{delegate:boolean, adapter:('claude'|null), reason:string, available:boolean, mode:('explicit'|'auto'|'none')}}
+ * @param {object} [deps.tools]             延迟 require 的准入判定工具（测试注入）
+ * @returns {{delegate:boolean, adapter:('claude'|null), reason:string, available:boolean, mode:('explicit'|'auto'|'none'), gate:(string|null), code:string}}
  */
 function decideClaudeDelegation(task = {}, deps = {}) {
   const detect = typeof deps.detect === 'function' ? deps.detect : _defaultDetect;
@@ -92,20 +137,60 @@ function decideClaudeDelegation(task = {}, deps = {}) {
     typeof deps.isAutoDelegationEnabled === 'function'
       ? deps.isAutoDelegationEnabled
       : _defaultIsAutoDelegationEnabled;
+  const tools = deps.tools || _defaultDelegationTools();
+  const evaluateAdmission =
+    typeof tools.evaluateAdmission === 'function' ? tools.evaluateAdmission : _DENY_ALL_ADMISSION;
+  const detectGate = typeof tools.detectGate === 'function' ? tools.detectGate : () => null;
 
-  const { prompt = '', role = '', explicitlyRequested = false } = task;
+  const {
+    prompt = '',
+    role = '',
+    explicitlyRequested = false,
+    userNamedAgentId = '',
+    capabilityGap,
+    isolationRequired = false,
+    isolationNote = '',
+    delegationReason = '',
+    selfCapable = false,
+  } = task;
+
+  // ── 委派准入（三闸门 G1/G2/G3，默认自做）──────────────────────────────────
+  // 模型在 prompt 首行写出的 `[委派闸门 G1]` 是重要的作用链：它由认知层的确定性
+  // 点名识别（detectExternalAgentRequest）授权产生，工具侧看不到用户原文，靠它区分
+  // 「用户点名」与「模型自己想外包」。缺失 ⇒ 无闸门 ⇒ 自做。
+  let admission;
+  try {
+    const markerGate = detectGate(prompt);
+    admission = evaluateAdmission({
+      userNamedAgentId: userNamedAgentId || (markerGate === 'G1' ? 'claude' : ''),
+      capabilityGap,
+      isolationRequired: isolationRequired === true,
+      isolationNote,
+      reason: delegationReason,
+      selfCapable: selfCapable === true,
+    });
+  } catch {
+    admission = _DENY_ALL_ADMISSION();
+  }
+  if (!admission || typeof admission.allowed !== 'boolean') {
+    admission = _DENY_ALL_ADMISSION();
+  }
 
   try {
-    // ── explicit：模型显式请求 Claude Code（不受 feature flag 约束） ──
+    // ── explicit：模型显式请求 Claude Code，但**必须过闸门** ────────────────
     if (explicitlyRequested) {
-      const available = !!detect();
-      if (available) {
+      if (!admission.allowed) {
+        return _denied('explicit', admission, detect);
+      }
+      if (!!detect()) {
         return {
           delegate: true,
           adapter: 'claude',
-          reason: '已委派 Claude Code（模型显式指定）',
+          reason: `已委派 Claude Code(闸门 ${admission.gate}：${admission.reason})`,
           available: true,
           mode: 'explicit',
+          gate: admission.gate,
+          code: admission.code,
         };
       }
       return {
@@ -114,10 +199,12 @@ function decideClaudeDelegation(task = {}, deps = {}) {
         reason: 'claude CLI 未安装，已改用 Khy 最优适配器完成任务',
         available: false,
         mode: 'explicit',
+        gate: admission.gate,
+        code: admission.code,
       };
     }
 
-    // ── auto：Khy 自动判断（flag 默认关，opt-in） ──
+    // ── auto：Khy 自动判断（flag 默认关，opt-in） ──────────────────────────
     if (!isAutoDelegationEnabled()) {
       return {
         delegate: false,
@@ -125,6 +212,8 @@ function decideClaudeDelegation(task = {}, deps = {}) {
         reason: 'auto 委派未启用',
         available: false,
         mode: 'none',
+        gate: admission.gate,
+        code: admission.code,
       };
     }
     if (!_looksLikeClaudeCodeTask(prompt, role)) {
@@ -134,24 +223,41 @@ function decideClaudeDelegation(task = {}, deps = {}) {
         reason: '任务未达 Claude Code 委派阈值，由 Khy 自身处理',
         available: false,
         mode: 'none',
+        gate: admission.gate,
+        code: admission.code,
       };
     }
-    const available = !!detect();
-    if (!available) {
+    // 启发式命中 ≠ 闸门成立：必须由 G1/G2/G3 之一背书才允许 spawn 外部进程。
+    if (!admission.allowed) {
+      return {
+        delegate: false,
+        adapter: null,
+        reason: `任务虽命中委派启发式，但未过准入闸门(${admission.code})，由 Khy 自身处理`,
+        available: false,
+        mode: 'none',
+        gate: admission.gate,
+        code: admission.code,
+      };
+    }
+    if (!detect()) {
       return {
         delegate: false,
         adapter: null,
         reason: 'claude CLI 未安装，由 Khy 自身处理',
         available: false,
         mode: 'none',
+        gate: admission.gate,
+        code: admission.code,
       };
     }
     return {
       delegate: true,
       adapter: 'claude',
-      reason: '已自动委派 Claude Code（任务命中委派启发式）',
+      reason: `已委派 Claude Code(闸门 ${admission.gate}：${admission.reason})`,
       available: true,
       mode: 'auto',
+      gate: admission.gate,
+      code: admission.code,
     };
   } catch {
     // fail-soft：决策本身出任何错都不委派、不抛，让 AgentTool 走自身路径。
@@ -161,8 +267,29 @@ function decideClaudeDelegation(task = {}, deps = {}) {
       reason: '委派决策异常，已回退 Khy 自身处理',
       available: false,
       mode: 'none',
+      gate: null,
+      code: 'fail-soft',
     };
   }
+}
+
+/** 准入被拒时的统一返回（explicit 路径专用：仍要把 CLI 可用性如实报出）。 */
+function _denied(mode, admission, detect) {
+  let available = false;
+  try {
+    available = !!detect();
+  } catch {
+    available = false;
+  }
+  return {
+    delegate: false,
+    adapter: null,
+    reason: `委派未过准入闸门(${admission.code}：${admission.reason})，由 Khy 自身处理`,
+    available,
+    mode,
+    gate: admission.gate,
+    code: admission.code,
+  };
 }
 
 module.exports = {
@@ -171,4 +298,5 @@ module.exports = {
   _looksLikeClaudeCodeTask,
   _defaultDetect,
   _defaultIsAutoDelegationEnabled,
+  _defaultDelegationTools,
 };

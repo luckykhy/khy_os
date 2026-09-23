@@ -55,8 +55,11 @@ const STABLE_KNOWLEDGE_RE =
   /(什么是|是什么|啥是|解释(一下)?|说明一下|含义|定义|原理|为什么|怎么理解|介绍一下|概念|区别|对比一下|优缺点|利弊|what\s+(is|are|does)\b|why\s+(is|are|does|do)\b|how\s+(does|do|to)\b|explain\b|definition\s+of|difference\s+between)/i;
 
 // 编程 / 技术生成:写 / 改 / 调代码、报错排查 —— 模型直接能做。
+// 「写函数」族:写 + 可选量词(一/一段/一个/个) + 函数/代码/脚本,覆盖
+// 写函数 / 写个函数 / 写一个函数 / 写一段代码 等全部形态(此前写死
+// 「写(一?段|一?个)?代码」漏掉「写一个函数」这类量词直连名词形态)。
 const CODE_TASK_RE =
-  /(写(一?段|一?个)?代码|实现(一个|个)?|帮我写|改一下代码|重构|调试|报错|报个错|堆栈|stack\s*trace|正则表达式|正则|算法|写个函数|代码|脚本|编译|debug|refactor|implement\s+(a|an|the)?|write\s+(a\s+)?(function|code|script|program|class)|fix\s+(this|the|my)\s+(code|bug|error))/i;
+  /(写(一?[段个])?[函代脚]|实现(一个|个|这个|一下)?|帮我写|改(一下|个)?代码|重构|调试|报错|报个错|堆栈|stack\s*trace|正则表达式|正则|算法|写个?函数|代码|脚本|编译|debug|refactor|implement\s+(a|an|the)?|write\s+(a\s+)?(function|code|script|program|class)|fix\s+(this|the|my)\s+(code|bug|error))/i;
 
 // 数学 / 翻译 / 创作 / 头脑风暴:自足任务,不需要联网。
 // 创作类:写(诗/文章/故事/...);允许「写」与文体名之间夹少量限定词(如「写一首关于秋天的诗」)。

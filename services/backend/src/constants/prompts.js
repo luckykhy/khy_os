@@ -43,6 +43,19 @@ const {
   clearSectionCache,
 } = require('./systemPromptSections');
 
+// [DESIGN-ARCH-098] P0:装配锚点(id+slot 可见化,门控 KHY_PROMPT_ANCHORS 默认关→逐字节回退)
+// 与 P1:新鲜度戳(修 git_status/project_instructions/skill_catalog 的段缓存冻结,
+// 门控 KHY_PROMPT_FRESH_KEYS 默认开→关即回退旧键)。两者皆为纯叶子。
+const { annotate: annotateSections, isAnchorMarker } = require('./promptAnchors');
+const {
+  isFreshKeysEnabled,
+  gitStampTtlMs,
+  gitStatusStamp,
+  stampFromStats,
+  skillCatalogStamp,
+  combineStamp,
+} = require('./promptFreshness');
+
 // Current model family IDs — sourced from the single model-name SSOT
 // (constants/models.js) so switching Khy's tier models only edits one place.
 const MODEL_IDS = {
@@ -592,8 +605,8 @@ function _isToolsSectionMemoEnabled() {
 }
 
 function _toolsSectionKey(enabledTools) {
-  // Set 去重 + sort → 与输入顺序/重复无关的规范键(空格分隔;工具名不含空格,无歧义)。
-  return [...new Set(enabledTools || [])].sort().join(' ');
+  // Set 去重 + sort → 与输入顺序/重复无关的规范键(以 NUL 分隔;工具名不可能含 NUL,无歧义)。
+  return [...new Set(enabledTools || [])].sort().join('\u0000');
 }
 
 function getSimpleIntroSection(outputStyleConfig) {
@@ -1044,8 +1057,28 @@ function _inflateOptionalSection(id) {
 }
 
 function getOnDemandPromptSections(opts = {}) {
+  return getOnDemandPromptSectionEntries(opts).map((e) => e.text);
+}
+
+/**
+ * 与 getOnDemandPromptSections 同源同序,但返回 `{ id, text }` 以便打锚点 / 逐段计量。
+ * [DESIGN-ARCH-098] P0:锚点需要段 id;getOnDemandPromptSections 只返回文本,
+ * 而 `_inflateOptionalSection` 会对空段返回 null 并被 filter 掉 → 无法按下标回推 id,
+ * 故新增本函数作为唯一真源,getOnDemandPromptSections 改为委派它(输出逐字节不变)。
+ *
+ * @param {object} [opts] 同 getOnDemandPromptSections
+ * @returns {Array<{id:string, text:string}>}
+ */
+function getOnDemandPromptSectionEntries(opts = {}) {
   const activeIds = listOnDemandPromptSectionIds(opts);
-  return activeIds.map(_inflateOptionalSection).filter(Boolean);
+  const out = [];
+  for (const id of activeIds) {
+    const text = _inflateOptionalSection(id);
+    if (text) {
+      out.push({ id, text });
+    }
+  }
+  return out;
 }
 
 function getOnDemandPromptSectionDecision(opts = {}) {
@@ -2654,6 +2687,97 @@ function getModelExecutionGuidance(model, locale) {
  * @param {string} [opts.outputStyleName] - Output style name
  * @returns {Promise<string[]>} Array of prompt sections
  */
+
+// ── [DESIGN-ARCH-098] P1:三处新鲜度 cacheKey(修 CONCERNS.staleKey)──────────────────
+// 段缓存按 id 存一条记录,cacheKey 不变即**永不重算**。下列三段都声明自己依赖可变状态,
+// 旧键却只含会话常量 → 被冻结在会话首轮:
+//   git_status           声明「工作树一变即变」,旧键 = cwd          → 会话内永不刷新
+//   project_instructions 声明注入 khy.md/CLAUDE.md/AGENTS.md,旧键 = cwd → 改了文件不生效
+//   skill_catalog        声明列出已装技能,旧键 = contextWindowTokens   → 新装技能不出现
+// 门控 KHY_PROMPT_FRESH_KEYS 关 → 三个函数各自返回旧键,段缓存行为逐字节等于修复前。
+// 全部 fail-soft:采集失败一律回退旧键(宁可少刷新,不可抛)。
+// 放在模块级(而非 getSystemPrompt 内闭包)以便单测直接断言「已接线」。
+
+/**
+ * git_status 的 cacheKey:折入 .git/index 与 HEAD 的 mtime(捕获 add/切分支/commit)
+ * + 时间桶(兜底捕获「纯工作区编辑不改 .git」的场景,最坏 ttlMs 也刷新一次)。
+ * @param {string} cwd
+ * @returns {string}
+ */
+function gitStatusSectionCacheKey(cwd) {
+  if (!isFreshKeysEnabled(process.env)) {
+    return cwd;
+  }
+  try {
+    const fs = require('fs');
+    const gitDir = path.join(cwd, '.git');
+    const mt = (p) => {
+      try {
+        return fs.statSync(p).mtimeMs;
+      } catch {
+        return -1;
+      }
+    };
+    const stamp = gitStatusStamp({
+      indexMtimeMs: mt(path.join(gitDir, 'index')),
+      headMtimeMs: mt(path.join(gitDir, 'HEAD')),
+      nowMs: Date.now(),
+      ttlMs: gitStampTtlMs(process.env),
+    });
+    return stamp ? combineStamp([cwd, stamp]) : cwd;
+  } catch {
+    return cwd;
+  }
+}
+
+/**
+ * project_instructions 的 cacheKey:折入全部已发现指令文件的 mtime:size(改文件当轮即生效)。
+ * @param {string} cwd
+ * @returns {string}
+ */
+function projectInstructionsSectionCacheKey(cwd) {
+  if (!isFreshKeysEnabled(process.env)) {
+    return cwd;
+  }
+  try {
+    const fs = require('fs');
+    const { discoverInstructionFiles } = require('../services/instructionFileService');
+    const files = discoverInstructionFiles(cwd) || [];
+    const stats = files.map((f) => {
+      const p = (f && f.path) || '';
+      try {
+        const st = fs.statSync(p);
+        return { path: p, mtimeMs: st.mtimeMs, size: st.size };
+      } catch {
+        return { path: p };
+      }
+    });
+    const stamp = stampFromStats(stats);
+    return stamp ? combineStamp([cwd, stamp]) : cwd;
+  } catch {
+    return cwd;
+  }
+}
+
+/**
+ * skill_catalog 的 cacheKey:折入技能集指纹(装/卸技能、改描述当轮即生效),
+ * 并保留 contextWindowTokens(预算仍影响产物,不可丢)。
+ * @param {number|string} [contextWindowTokens]
+ * @returns {string}
+ */
+function skillCatalogSectionCacheKey(contextWindowTokens) {
+  const cwBase = String(contextWindowTokens ?? '');
+  if (!isFreshKeysEnabled(process.env)) {
+    return cwBase;
+  }
+  try {
+    const { getCachedSkills } = require('../skills');
+    return combineStamp([cwBase, skillCatalogStamp(getCachedSkills())]);
+  } catch {
+    return cwBase;
+  }
+}
+
 async function getSystemPrompt(opts = {}) {
   const {
     enabledTools = [],
@@ -2764,7 +2888,11 @@ async function getSystemPrompt(opts = {}) {
       () => getMcpInstructionsSection(mcpClients),
       'MCP servers connect/disconnect between turns'
     ),
-    systemPromptSection('project_instructions', () => getProjectInstructionsSection(cwd), cwd),
+    systemPromptSection(
+      'project_instructions',
+      () => getProjectInstructionsSection(cwd),
+      projectInstructionsSectionCacheKey(cwd)
+    ),
     // References (opencode-aligned cross-directory resources): a config table of
     // alias → path/repository injected so the agent knows what external resources
     // exist and that `@alias` mentions them. cacheKey folds references.json mtimes
@@ -2836,7 +2964,9 @@ async function getSystemPrompt(opts = {}) {
         }
       })()
     ),
-    systemPromptSection('git_status', () => getGitStatusSection(cwd), cwd),
+    // [DESIGN-ARCH-098] P1:修 staleKey —— 本段声明「工作树一变即变」,旧键却只有 cwd,
+    // 段缓存按 id 存一条 → 会话内永不重算(git 状态冻结在首轮)。
+    systemPromptSection('git_status', () => getGitStatusSection(cwd), gitStatusSectionCacheKey(cwd)),
     // Budget-limited project directory tree (批4 4D). cacheKey folds cwd + mtime.
     systemPromptSection(
       'project_structure',
@@ -2846,7 +2976,7 @@ async function getSystemPrompt(opts = {}) {
     systemPromptSection(
       'skill_catalog',
       () => getSkillCatalogSection({ contextWindowTokens: opts.contextWindowTokens }),
-      String(opts.contextWindowTokens ?? '')
+      skillCatalogSectionCacheKey(opts.contextWindowTokens)
     ),
     systemPromptSection(
       'khy_specific',
@@ -2915,8 +3045,25 @@ async function getSystemPrompt(opts = {}) {
   // resolvedDynamic、resolvedVolatile 为空(逐字节回退)。绝不抛。
   const { stableSections: _stableDynamic, volatileSections: _volatileDynamic } =
     require('./promptCacheOrder').partitionDynamicSections(dynamicSections, process.env);
-  const resolvedStable = await resolveSystemPromptSections(_stableDynamic);
-  const resolvedVolatile = await resolveSystemPromptSections(_volatileDynamic);
+  // [DESIGN-ARCH-098] P0:装配以「描述符(id + slot + text)」为唯一真源,再由 annotate() 决定
+  // 是否插入锚点。锚点是**额外的独立数组元素**,不改任何段文本、不改段序 → 门控
+  // KHY_PROMPT_ANCHORS 关时,annotate 退化为「只取 text 并滤 null」,输出与启用前逐字节一致。
+  //
+  // 为什么逐段解析而不是整批 resolveSystemPromptSections:锚点需要每段的 id,而整批调用
+  // 只返回文本、且会把 null 段过滤掉(无法按下标回推 id)。段缓存按 id 键控,逐段与整批
+  // 访问同一份缓存、同一顺序、compute 均顺序执行 → 语义等价(已用逐元素哈希快照验证)。
+  const _resolveWithIds = async (secs) => {
+    const out = [];
+    for (const sec of secs) {
+      const texts = await resolveSystemPromptSections([sec]);
+      if (texts.length > 0) {
+        out.push({ id: sec.id, text: texts[0] });
+      }
+    }
+    return out;
+  };
+  const stableDescriptors = await _resolveWithIds(_stableDynamic);
+  const volatileDescriptors = await _resolveWithIds(_volatileDynamic);
 
   // Behavioral hand-holding (doing-tasks / execution / planning + on-demand) is
   // written for weak models. compactPrompt (lean T0 / short-context) swaps the
@@ -2927,78 +3074,113 @@ async function getSystemPrompt(opts = {}) {
     .toLowerCase();
   const _disciplineOn = !['0', 'false', 'off', 'no'].includes(_disciplineRaw);
   // 按需能力胶囊(每轮按用户意图重选,最易变)。杠杆 A(门控 KHY_ONDEMAND_OUT_OF_PREFIX 默认开):
-  // 从 behavioralSections(静态区)剥出,移到最终数组的绝对尾部(dead-last),不再击穿静态前缀 /
-  // native cache_control。门控关 → 仍留在 behavioralSections 今日位置(逐字节回退)。compact 分支
-  // 本就不含按需胶囊,不受影响。
+  // 从 behavioralDescriptors(静态区)剥出,移到最终数组的绝对尾部(dead-last),不再击穿静态前缀 /
+  // native cache_control。门控关 → 仍留在今日位置(逐字节回退)。compact 分支本就不含按需胶囊。
   const _onDemandRelocate = require('./promptCacheOrder').isOnDemandRelocationEnabled(process.env);
-  const onDemandCapsules = compactPrompt
+  const onDemandCapsuleEntries = compactPrompt
     ? []
-    : getOnDemandPromptSections({
+    : getOnDemandPromptSectionEntries({
         userMessage,
         taskScale,
         enabledTools,
         promptFeatures,
         forceAllPromptSections,
       });
-  const behavioralSections = compactPrompt
+  const behavioralDescriptors = compactPrompt
     ? _disciplineOn
-      ? [getCompactTaskDisciplineSection()]
+      ? [{ slot: 'prefix', id: 'compact_task_discipline', text: getCompactTaskDisciplineSection() }]
       : []
     : [
-        outputStyleConfig === null || outputStyleConfig.keepCodingInstructions === true
-          ? getDoingTasksSection()
-          : null,
-        getExecutionDisciplineSection(),
-        getPlanningAndRecoverySection(),
-        ...(_onDemandRelocate ? [] : onDemandCapsules),
+        {
+          slot: 'prefix',
+          id: 'doing_tasks',
+          text:
+            outputStyleConfig === null || outputStyleConfig.keepCodingInstructions === true
+              ? getDoingTasksSection()
+              : null,
+        },
+        { slot: 'prefix', id: 'execution_discipline', text: getExecutionDisciplineSection() },
+        { slot: 'prefix', id: 'planning_and_recovery', text: getPlanningAndRecoverySection() },
+        ...(_onDemandRelocate
+          ? []
+          : onDemandCapsuleEntries.map((e) => ({ slot: 'tail', id: e.id, text: e.text }))),
       ];
 
   // Content-output guide for non-native / low-tier models (批4 缺口③ port).
   const contentGuide = !hasNativeToolUse || isLowTierModel ? getContentOutputGuideSection() : null;
+  // KHY_PROMPT_UNIFIED_OUTPUT: merge tone + efficiency into one unified section.
+  // (flag 读取收敛为一次;isFlagEnabled 是纯函数,重复读取语义相同)
+  const _unifiedOutputOn = isFlagEnabled('KHY_PROMPT_UNIFIED_OUTPUT', process.env);
 
-  return [
-    // ─── Static content (cacheable) ───
-    getSimpleIntroSection(outputStyleConfig),
-    getSimpleSystemSection(),
-    ...behavioralSections,
-    getSessionMemoryAndContextSection(),
-    getUsingYourToolsSection(enabledTools),
-    // Deferred-tools hint (computed by the router from tools-module state, since
-    // it depends on which deferred tools are currently revealed). '' → omitted.
-    deferredToolsHint || null,
-    // KHY_PROMPT_UNIFIED_OUTPUT: merge tone + efficiency into one unified section
-    isFlagEnabled('KHY_PROMPT_UNIFIED_OUTPUT', process.env)
-      ? getUnifiedOutputAndToneSection()
-      : null,
-    // Original separate sections (flag off = byte-for-byte rollback)
-    !isFlagEnabled('KHY_PROMPT_UNIFIED_OUTPUT', process.env) ? getToneAndStyleSection() : null,
-    !isFlagEnabled('KHY_PROMPT_UNIFIED_OUTPUT', process.env) ? getOutputEfficiencySection() : null,
-    // === BOUNDARY MARKER ===
-    SYSTEM_PROMPT_DYNAMIC_BOUNDARY,
-    // ─── Dynamic content ───
-    // 稳定动态段(reorder ON:仅非易变段;OFF:今日全部动态段 === resolvedDynamic)。
-    ...resolvedStable,
-    // Trailing model/security context (批4 缺口③ port): content-output guide,
-    // then the caller-supplied security directive — both after the dynamic block,
-    // matching makeSystemPrompt's ordering.
-    contentGuide,
-    baseSecurity || null,
-    // ─── Volatile content — dead-last(前缀缓存稳定化)──────────────────────────────
-    // 易变动态段(env_info 时钟/task_memory/git/mcp/project_structure)重排到此(reorder OFF:
-    // resolvedVolatile 为空);再是按需能力胶囊(最易变,relocation ON 时移到此,OFF 时仍在
-    // behavioralSections)。两门控皆 OFF → 此两段皆空,数组逐字节等于今日顺序。
-    ...resolvedVolatile,
-    ...(_onDemandRelocate ? onDemandCapsules : []),
-  ].filter((s) => s != null);
+  const _entries = [];
+  const _push = (slot, id, text) => _entries.push({ slot, id, text });
+
+  // ─── Static content (cacheable) ───
+  _push('prefix', 'simple_intro', getSimpleIntroSection(outputStyleConfig));
+  _push('prefix', 'simple_system', getSimpleSystemSection());
+  for (const d of behavioralDescriptors) {
+    _push(d.slot, d.id, d.text);
+  }
+  _push('prefix', 'session_memory_and_context', getSessionMemoryAndContextSection());
+  _push('prefix', 'using_your_tools', getUsingYourToolsSection(enabledTools));
+  // Deferred-tools hint (computed by the router from tools-module state, since
+  // it depends on which deferred tools are currently revealed). '' → omitted.
+  _push('prefix', 'deferred_tools_hint', deferredToolsHint || null);
+  _push(
+    'prefix',
+    'unified_output_and_tone',
+    _unifiedOutputOn ? getUnifiedOutputAndToneSection() : null
+  );
+  // Original separate sections (flag off = byte-for-byte rollback)
+  _push('prefix', 'tone_and_style', _unifiedOutputOn ? null : getToneAndStyleSection());
+  _push('prefix', 'output_efficiency', _unifiedOutputOn ? null : getOutputEfficiencySection());
+
+  // === BOUNDARY MARKER ===
+  _push(null, null, SYSTEM_PROMPT_DYNAMIC_BOUNDARY);
+
+  // ─── Dynamic content ───
+  // 稳定动态段(reorder ON:仅非易变段;OFF:今日全部动态段)。
+  for (const d of stableDescriptors) {
+    _push('dynamic', d.id, d.text);
+  }
+  // Trailing model/security context (批4 缺口③ port): content-output guide,
+  // then the caller-supplied security directive — both after the dynamic block,
+  // matching makeSystemPrompt's ordering.
+  _push('trailing', 'content_output_guide', contentGuide);
+  _push('trailing', 'base_security', baseSecurity || null);
+
+  // ─── Volatile content — dead-last(前缀缓存稳定化)──────────────────────────────
+  // 易变动态段(env_info 时钟/task_memory/git/mcp/project_structure)重排到此(reorder OFF:
+  // volatileDescriptors 为空);再是按需能力胶囊(最易变,relocation ON 时移到此,OFF 时仍在
+  // prefix 槽)。两门控皆 OFF → 此两段皆空,数组逐字节等于今日顺序。
+  for (const d of volatileDescriptors) {
+    _push('tail', d.id, d.text);
+  }
+  if (_onDemandRelocate) {
+    for (const e of onDemandCapsuleEntries) {
+      _push('tail', e.id, e.text);
+    }
+  }
+
+  return annotateSections(_entries, process.env);
 }
 
 /**
  * Build a flat system prompt string from sections.
+ *
+ * [DESIGN-ARCH-098] P0:锚点元素与 `SYSTEM_PROMPT_DYNAMIC_BOUNDARY` 同属「装配期内部标记」,
+ * 扁平化时一并剔除 —— 于是扁平产物在**开/关锚点两种情况下逐字节相同**(锚点只是数组层的
+ * 观测装置)。不依赖字符串还原,避免「段正文自身含换行」导致的重建歧义。
+ *
  * @param {string[]} sections
  * @returns {string}
  */
 function assembleSystemPrompt(sections) {
-  return sections.filter((s) => s != null && s !== SYSTEM_PROMPT_DYNAMIC_BOUNDARY).join('\n\n');
+  return sections
+    .filter(
+      (s) => s != null && s !== SYSTEM_PROMPT_DYNAMIC_BOUNDARY && !isAnchorMarker(s)
+    )
+    .join('\n\n');
 }
 
 module.exports = {
@@ -3009,6 +3191,12 @@ module.exports = {
   splitSystemPromptAtBoundary,
   stripSystemPromptBoundary,
   MODEL_IDS,
+  // [DESIGN-ARCH-098] P0/P1 测试钩子——仅供单测断言「门控已接线」,不在生产路径使用
+  // (先例:tools/index.js 导出 assembleToolPool 的 memo 内部,同为测试专用)。
+  getOnDemandPromptSectionEntries,
+  gitStatusSectionCacheKey,
+  projectInstructionsSectionCacheKey,
+  skillCatalogSectionCacheKey,
   // Export individual sections for testing/customization
   getSimpleIntroSection,
   getSimpleSystemSection,

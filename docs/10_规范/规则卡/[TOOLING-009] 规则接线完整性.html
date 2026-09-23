@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [TOOLING-009] 规则接线完整性.md -->
+<title>[TOOLING-009] 规则接线完整性 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[TOOLING-009] 规则接线完整性</div>
+      <header class="hero reveal"><h1>[TOOLING-009] 规则接线完整性</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#tooling-009-规则接线完整性">[TOOLING-009] 规则接线完整性</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 规则接线完整性<br>id: TOOLING-009<br>domain: TOOLING<br>nature: 约束为主，兼福利<br>scope: &quot;docs/10_规范/registry/RULES-REGISTRY.json 里每一条已登记规则（88 条）的接线触点；判定面为「登记表宣告的接线」与「磁盘实况」之间的一致性，覆盖执行器存在性、package.json 别名、真源标记行、规则卡及其孪生件五类。不含规则语义是否合理（那是元规则 [MGMT-STD-008] §4.3 的辖区）、不含检查器是否被门表面引用（那是 check-wiring / TOOLING-005 的辖区）、不含登记表与真源的拓扑可达性（那是 TOOLING-007 的辖区）。&quot;<br>priority: P2<br>trigger: &quot;新增或修订一条规则之后；改动 package.json 的 check:* 别名、脚本或规则卡目录之后；季度健康检查时；以及任何时候想回答「新增一条规则到底要同步几处」时。&quot;<br>constraint: &quot;每条已登记规则的五类接线触点必须齐备：① 若声明了 exec.script，则该文件必须存在；② 该执行器必须被 package.json 某个 script 引用（否则 check-wiring 判零接线）；③ 每条能从 ssot 摘出文件路径的真源文件必须带 &lt;!-- RULES-REGISTRY: &lt;ID&gt; --&gt; 标记行；④ 规则卡 [ID] 名称.md 必须存在；⑤ 其 .html 孪生件必须存在。登记表自身必须自洽（meta.ruleCount === rules.length、无重复 id）。此外，gate=\&quot;advisory\&quot; 的规则必须在报告中显式列出——该值在任何门档都不会被选中（GATE_ORDER.advisory=4 &gt; max=2），属「登记了但不生效」，不得被误认为「已观察」。&quot;<br>grants: &quot;授权维护者依据本规则的输出直接判断「某条规则的接线缺了哪一段」，无须逐个文件手工比对；授权对 gate=\&quot;advisory\&quot; 的规则按本规则报告逐条裁决归宿（降格为 commit+advisory / 保持 manual 并显式标注人工兜底 / 废弃），无须先补全其它守卫；授权把本规则作为「新增规则成本」的度量入口（--list 打印触点清单）。边界：本规则只读、只报告，不代为改动任何文件，也不代替人裁决某条规则应否存在。&quot;<br>benefit: &quot;把 khy-os 可维护性的头号成本项从隐性变显性：实测新增一条规则需同步 13 处触点，其中 5 项是从登记表可派生的生成物，而此前没有任何守卫校验「这 13 处是否彼此一致」——既有守卫只校验「有没有声明」，不校验「声明与磁盘是否吻合」。本规则补上这一段，并使 gate=\&quot;advisory\&quot; 的 15 条永不执行规则首次可见（此前 check:wiring / check:gov-rules 全绿，仓库无法从任何输出看出这些规则从没跑过）。&quot;<br>exception: &quot;三类：① 未声明 exec.script 的纯规范规则（gate=\&quot;manual\&quot;）不要求执行器与别名，是合法形态；② ssot 为纯命令或纯锚点（如 npm run check:duplication、AGENTS.md#工程规则-规则1）时不要求标记行，因为标记行的语义是「本文件是这些规则的 ssot」，只对承载正文的文件成立；③ 从 ssot 摘不出路径的目标不参与标记行检查。三类均须在叶子源码里以常量或判据体现，不得靠人工放过。&quot;<br>version: &quot;1.0.0 (2026-09-22) 初版；配套叶子 scripts/lib/ruleScaffold.js（纯叶子，零 IO）+ 走盘层 scripts/ci/check-rule-scaffold.js；19 项单测含双向断言与两次反向验证（改空判定 → 3 红；改坏解析 → 4 红）；实测存量 5 条 rule-scaffold-gap + 15 条 advisory-never-executes，已逐条人工核验为真（初版曾因把 ssot 当路径产生 37 条误报，已修）&quot;<br>status: active<br>ssot: &quot;docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-127] khyos 可维护性诊断与减负方案.md&quot;<br>formerly: 无<br>owner: governance-team</p>
+<hr>
+<h1 id="tooling-009-规则接线完整性">[TOOLING-009] 规则接线完整性<a class="anchor" href="#tooling-009-规则接线完整性" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: TOOLING-009 -->
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-127] khyos 可维护性诊断与减负方案.md。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>每条已登记规则的五类接线触点必须齐备：① 若声明了 exec.script，则该文件必须存在；② 该执行器必须被 package.json 某个 script 引用（否则 check-wiring 判零接线）；③ 每条能从 ssot 摘出文件路径的真源文件必须带 &lt;!-- RULES-REGISTRY: &lt;ID&gt; --&gt; 标记行；④ 规则卡 [ID] 名称.md 必须存在；⑤ 其 .html 孪生件必须存在。登记表自身必须自洽（meta.ruleCount === rules.length、无重复 id）。此外，gate=&quot;advisory&quot; 的规则必须在报告中显式列出——该值在任何门档都不会被选中（GATE_ORDER.advisory=4 &gt; max=2），属「登记了但不生效」，不得被误认为「已观察」。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>授权维护者依据本规则的输出直接判断「某条规则的接线缺了哪一段」，无须逐个文件手工比对；授权对 gate=&quot;advisory&quot; 的规则按本规则报告逐条裁决归宿（降格为 commit+advisory / 保持 manual 并显式标注人工兜底 / 废弃），无须先补全其它守卫；授权把本规则作为「新增规则成本」的度量入口（--list 打印触点清单）。边界：本规则只读、只报告，不代为改动任何文件，也不代替人裁决某条规则应否存在。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>把 khy-os 可维护性的头号成本项从隐性变显性：实测新增一条规则需同步 13 处触点，其中 5 项是从登记表可派生的生成物，而此前没有任何守卫校验「这 13 处是否彼此一致」——既有守卫只校验「有没有声明」，不校验「声明与磁盘是否吻合」。本规则补上这一段，并使 gate=&quot;advisory&quot; 的 15 条永不执行规则首次可见（此前 check:wiring / check:gov-rules 全绿，仓库无法从任何输出看出这些规则从没跑过）。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>见 <code>ssot</code> 指向的真源原文；本卡不复制反例，以免与真源漂移。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>人工评审（该规则暂无机械守卫）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>三类：① 未声明 exec.script 的纯规范规则（gate=&quot;manual&quot;）不要求执行器与别名，是合法形态；② ssot 为纯命令或纯锚点（如 npm run check:duplication、AGENTS.md#工程规则-规则1）时不要求标记行，因为标记行的语义是「本文件是这些规则的 ssot」，只对承载正文的文件成立；③ 从 ssot 摘不出路径的目标不参与标记行检查。三类均须在叶子源码里以常量或判据体现，不得靠人工放过。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-22) 初版；配套叶子 scripts/lib/ruleScaffold.js（纯叶子，零 IO）+ 走盘层 scripts/ci/check-rule-scaffold.js；19 项单测含双向断言与两次反向验证（改空判定 → 3 红；改坏解析 → 4 红）；实测存量 5 条 rule-scaffold-gap + 15 条 advisory-never-executes，已逐条人工核验为真（初版曾因把 ssot 当路径产生 37 条误报，已修） 初版 / 迁移自 无</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/规则卡/[TOOLING-008] 规则卡由登记表生成.html"><div class="dir">← 上一篇</div><div class="ttl">[TOOLING-008] 规则卡由登记表生成</div></a><a class="next" href="../../../docs/10_规范/规则卡/[TOOLING-010] 维护成本可观测.html"><div class="dir">下一篇 →</div><div class="ttl">[TOOLING-010] 维护成本可观测</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/规则卡/[TOOLING-009] 规则接线完整性.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

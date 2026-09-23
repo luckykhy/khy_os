@@ -13,7 +13,7 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const parser = require('../../src/services/auditFixLoop/auditParser');
+const parser = require('../../src/services/domain/maintenance/auditFixLoop/auditParser.js');
 
 const REPORT = [
   '### [H1] Null deref in handler',

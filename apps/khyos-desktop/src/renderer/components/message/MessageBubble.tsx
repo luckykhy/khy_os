@@ -1,5 +1,9 @@
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import { MarkdownRenderer } from './MarkdownRenderer'
+import { ChatEmptyState } from '../ui/EmptyState'
+import { useAppSelector } from '../../state/store'
+import type { Message as StoreMessage } from '../../state/messageSlice'
 
 interface ToolCall {
   id: string
@@ -214,72 +218,38 @@ export function MessageBubble({ message }: { message: Message }) {
   )
 }
 
-export function MessageList() {
-  const messages: Message[] = [
-    {
-      id: '1',
-      role: 'user',
-      content: '请帮我写一个快速排序算法，用 TypeScript 实现',
-      timestamp: Date.now() - 120000,
-    },
-    {
-      id: '2',
-      role: 'assistant',
-      content: '好的，以下是一个 TypeScript 实现的快速排序：\n\n```typescript\nfunction quicksort(arr: number[]): number[] {\n  if (arr.length <= 1) return arr;\n  const pivot = arr[Math.floor(arr.length / 2)];\n  const left = arr.filter(x => x < pivot);\n  const middle = arr.filter(x => x === pivot);\n  const right = arr.filter(x => x > pivot);\n  return [...quicksort(left), ...middle, ...quicksort(right)];\n}\n```\n\n这个实现使用了函数式风格，时间复杂度 **O(n log n)**。\n\n主要特点：\n- 使用中间元素作为 pivot\n- 递归分治策略\n- 纯函数式实现，无副作用',
-      timestamp: Date.now() - 90000,
-      trajectory: [
-        { type: 'user', content: '请帮我写一个快速排序算法', timestamp: Date.now() - 120000 },
-        { type: 'reasoning', content: '分析：用户需要一个 TypeScript 实现的快速排序。选择函数式风格，代码更简洁易读。', timestamp: Date.now() - 115000 },
-        { type: 'assistant', content: '生成 TypeScript 快速排序代码...', timestamp: Date.now() - 110000 },
-      ],
-      toolCalls: [
-        {
-          id: 'tc1',
-          name: 'write',
-          input: { file_path: '/src/sort/quicksort.ts', content: 'function quicksort...' },
-          status: 'success',
-          result: '文件已写入 /src/sort/quicksort.ts',
-        },
-      ],
-    },
-    {
-      id: '3',
-      role: 'user',
-      content: '能帮我加上单元测试吗？',
-      timestamp: Date.now() - 60000,
-    },
-    {
-      id: '4',
-      role: 'assistant',
-      content: '正在编写单元测试，覆盖以下场景：\n- 空数组\n- 单元素数组\n- 已排序数组\n- 逆序数组\n- 含重复元素数组',
-      timestamp: Date.now() - 30000,
-      isStreaming: true,
-      trajectory: [
-        { type: 'user', content: '能帮我加上单元测试吗？', timestamp: Date.now() - 60000 },
-        { type: 'reasoning', content: '分析：用户需要为快速排序添加单元测试。需要覆盖：空数组、单元素、已排序、逆序、重复元素等边界情况。', timestamp: Date.now() - 55000 },
-      ],
-      toolCalls: [
-        {
-          id: 'tc2',
-          name: 'read',
-          input: { file_path: '/src/sort/quicksort.ts' },
-          status: 'success',
-          result: '文件内容已读取 (85 字符)',
-        },
-        {
-          id: 'tc3',
-          name: 'write',
-          input: { file_path: '/src/sort/quicksort.test.ts', content: 'describe...' },
-          status: 'running',
-        },
-      ],
-    },
-  ]
+export function MessageList({ onQuickAction, composer }: {
+  onQuickAction?: (prompt: string) => void
+  // 空态首页把居中悬浮 composer 卡片嵌入问候语下方（ZC-ALIGN-005 E3）；
+  // 非空态走底部固定 composer，此时传 undefined。
+  composer?: ReactNode
+}) {
+  // Live messages from Redux — Composer dispatches addMessage / updateMessage,
+  // App.tsx feeds host ai:chunk streams via appendMessageContent. The previous
+  // static quicksort demo violated "state transparency" (fake chat content).
+  const messages = useAppSelector((s: { message: { messages: StoreMessage[] } }) => s.message.messages)
+  const empty = messages.length === 0
+
+  if (empty) {
+    // 空态 = ZCode 新任务首页（问候 + 快捷卡片，ZC-ALIGN-002 E1），
+    // 卡片动作经 onQuickAction 填入 composer（App 层持有 prefill 状态）。
+    return <ChatEmptyState onQuickAction={onQuickAction} composer={composer} />
+  }
 
   return (
     <div className="flex-1 overflow-auto">
       {messages.map(msg => (
-        <MessageBubble key={msg.id} message={msg} />
+        <MessageBubble
+          key={msg.id}
+          message={{
+            id: msg.id,
+            role: msg.role === 'system' ? 'assistant' : msg.role,
+            content: msg.content,
+            timestamp: msg.timestamp,
+            isStreaming: msg.status === 'streaming' || msg.status === 'sending',
+            error: msg.error,
+          } as Message}
+        />
       ))}
     </div>
   )

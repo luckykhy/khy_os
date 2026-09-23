@@ -70,7 +70,11 @@ function parseArgs(argv) {
 }
 
 function git(root, args, opts = {}) {
-  return execFileSync('git', ['-C', root, ...args], {
+  // 宿主 PATH 无 git 时用 KHY_TEST_GIT_DIR / KHY_GIT_PATH 定位（可移植部署）。
+  const dir = process.env.KHY_TEST_GIT_DIR || process.env.KHY_GIT_PATH;
+  const bin =
+    dir && fs.existsSync(path.join(String(dir), 'git.exe')) ? path.join(String(dir), 'git.exe') : 'git';
+  return execFileSync(bin, ['-C', root, ...args], {
     maxBuffer: 1024 * 1024 * 512, // 512MB: well above the ~13MB archive
     ...opts,
   });

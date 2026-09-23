@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-TOOL-001] 工具与扩展升级废弃规范.md -->
+<title>[DESIGN-TOOL-001] 工具与扩展升级废弃规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-TOOL-001] 工具与扩展升级废弃规范</div>
+      <header class="hero reveal"><h1>[DESIGN-TOOL-001] 工具与扩展升级废弃规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-tool-001-工具与扩展升级废弃规范">[DESIGN-TOOL-001] 工具与扩展升级废弃规范</a></li><li class="lvl-2"><a href="#1-manifest-生命周期字段-冻结">1. manifest 生命周期字段（冻结）</a></li><li class="lvl-2"><a href="#2-工具名-模型可见-api-改名-移除">2. 工具名（模型可见 API）改名/移除</a></li><li class="lvl-2"><a href="#3-版本策略">3. 版本策略</a></li><li class="lvl-2"><a href="#4-最小权限边界-冻结">4. 最小权限边界（冻结）</a></li><li class="lvl-2"><a href="#5-守卫现状与计划">5. 守卫现状与计划</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-tool-001-工具与扩展升级废弃规范">[DESIGN-TOOL-001] 工具与扩展升级废弃规范<a class="anchor" href="#design-tool-001-工具与扩展升级废弃规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: TOOLING-002, TOOLING-003 -->
+<blockquote><p><strong>定位</strong>：<code>[DESIGN-GOV-001]</code> GOV-TOOL-003 的契约冻结真源。<br>上位法 <code>[DESIGN-TOOL-002]</code> 管「发现→惰性激活→停用」与 manifest 基础形状；本文只补 069 未覆盖的<strong>升级/废弃生命周期</strong>。<br>字段清单以 069 与归一器 <code>services/backend/src/services/domain/extensions/extensions/extensionRoots.js</code> 为准。</p></blockquote>
+<h2 id="1-manifest-生命周期字段-冻结">1. manifest 生命周期字段（冻结）<a class="anchor" href="#1-manifest-生命周期字段-冻结" aria-label="锚点">#</a></h2>
+<p><code>khy.extension.json</code> 新增可选块 <code>lifecycle</code>：<strong>active 扩展可省略</strong>（缺省 = active，不回填存量）；进入废弃流程的扩展<strong>必须</strong>带完整块：</p>
+<pre><code class="language-json"><span class="hljs-attr">&quot;lifecycle&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;active | deprecated | sunset&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;deprecatedSince&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1.2.0&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;sunsetVersion&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2.0.0&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;replacement&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;khy-newtool | null&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;migration&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;一句话迁移说明 + 文档链接；无迁移写 null&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<table><thead><tr><th>字段</th><th>必填条件</th><th>语义</th></tr></thead><tbody><tr><td><code>status</code></td><td>进入废弃流程</td><td><code>deprecated</code>：仍可加载，启动时报一行弃用提示；<code>sunset</code>：加载器拒绝激活</td></tr><tr><td><code>deprecatedSince</code></td><td>同上</td><td>废弃自哪个 khy-os 版本</td></tr><tr><td><code>sunsetVersion</code></td><td>同上</td><td>预计移除版本（必须先于移除<strong>登记</strong>）</td></tr><tr><td><code>replacement</code></td><td>有替代时</td><td>替代扩展 <code>id</code>；无则 <code>null</code></td></tr><tr><td><code>migration</code></td><td><code>status=deprecated</code></td><td>迁移说明（见上）</td></tr></tbody></table>
+<p><strong>红线</strong>：移除公开扩展目录且无 <code>migration</code> 说明、无台账登记的，违反 GOV-TOOL-003。</p>
+<h2 id="2-工具名-模型可见-api-改名-移除">2. 工具名（模型可见 API）改名/移除<a class="anchor" href="#2-工具名-模型可见-api-改名-移除" aria-label="锚点">#</a></h2>
+<p><code>tools[].name</code> 与 <code>aliases</code> 是对模型的<strong>契约</strong>，改名/移除 = 破坏性变更：</p>
+<ol><li>先在新版本注册替代工具（新名 + 旧名进 <code>aliases</code>），旧名标 <code>deprecated: true</code>（工具条目内新增可选字段：<code>deprecated</code> / <code>replacement</code>，形状同 §1 块）；</li><li><strong>兼容期</strong>至少到一个 khy-os 大版本（x.0.0），期内旧名可用但每次调用报一行弃用提示；</li><li>移除前在 <code>CHANGELOG.md</code> 与 <code>docs/04_IMPL_实现/</code> 各登记一行（替代名 + 移除版本）；</li><li><strong>豁免</strong>：核内策略表按原名点名的内置工具（如 <code>NotebookEdit</code>，见 <code>extensions/tools/khy-notebook/khy.extension.json</code> 的 <code>_note</code>）不做原地改名——改名等于换工具，只走「新增新工具 → 本流程弃用旧工具」。</li></ol>
+<h2 id="3-版本策略">3. 版本策略<a class="anchor" href="#3-版本策略" aria-label="锚点">#</a></h2>
+<p><code>version</code> 走 semver，变更分级：</p>
+<table><thead><tr><th>变更</th><th>版本</th></tr></thead><tbody><tr><td>新增工具 / 新增 alias / 收紧 <code>permissions</code>（能力面只减不增）</td><td>patch</td></tr><tr><td>新增能力（新 <code>capabilities</code>、新权限位、manifest 新字段）</td><td>minor</td></tr><tr><td>工具改名/移除、<code>inputSchema</code> 收紧必填、<code>engines.khy</code> 下界上移</td><td>major，且必须走 §1–§2 兼容期</td></tr></tbody></table>
+<p><code>engines.khy</code> 为<strong>冻结必填</strong>（存量已全声明）：下界不得高于当前发布版，升级下界属 major。</p>
+<h2 id="4-最小权限边界-冻结">4. 最小权限边界（冻结）<a class="anchor" href="#4-最小权限边界-冻结" aria-label="锚点">#</a></h2>
+<p><strong>现状口径</strong>：归一器把缺省 <code>permissions</code> 归一为 <code>{}</code>（全能力位关闭）；归一后字段清单：<br><code>name/displayName/version/description/engines/main/entry/capabilities/provides/tools/commands/skills/mcp/permissions</code><br>（<code>lifecycle</code> 块为本文新增冻结项，见 §1）。</p>
+<pre><code class="language-json"><span class="hljs-attr">&quot;permissions&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;network&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;spawn&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;database&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span> <span class="hljs-punctuation">}</span></code></pre>
+<ul><li>交付网络外发 / 子进程 / 数据库写能力的扩展<strong>必须</strong>显式 <code>true</code> 并在 <code>description</code> 说明用途（用户可见）；</li><li><code>{}</code>（缺省）一律按<strong>最小权限</strong>解释：消费侧只认显式 <code>true</code>，缺省字段不得被解释为放开；</li><li>新增第四类能力位（如 <code>filesystem_write</code>）前，先在本表登记再实现。</li></ul>
+<h2 id="5-守卫现状与计划">5. 守卫现状与计划<a class="anchor" href="#5-守卫现状与计划" aria-label="锚点">#</a></h2>
+<ul><li><strong>已机械化</strong>：manifest 存在性与分类名白名单 → <code>check:layout</code> 的 <code>extension-contract</code>；工具注册契约 → <code>node scripts/ci/check-tool-contract.js</code>（GOV-TOOL-002）。</li><li><strong>待工具化</strong>（登记在 070 §3，落地前先读本文）：① <code>lifecycle</code> 形状 + 「deprecated 必带 migration」校验；② <code>sunsetVersion</code> 已到达但目录仍在 <code>extensions/</code> 的残留检查；③ manifest 声明 <code>false</code> 而代码实际发起网络/spawn 的越权检测（可复用 <code>check:agent-rules</code> 端点扫描）。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-TEST-001] 测试规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-TEST-001] 测试规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-TOOL-002] 拓展契约与核心边界规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-TOOL-002] 拓展契约与核心边界规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-TOOL-001] 工具与扩展升级废弃规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

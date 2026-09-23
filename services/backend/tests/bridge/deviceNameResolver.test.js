@@ -8,6 +8,7 @@
  */
 'use strict';
 const resolver = require('../../src/bridge/deviceNameResolver');
+const assert = require('node:assert');
 const {
   resolveRealName,
   parseNetbios,
@@ -85,7 +86,7 @@ describe('Device Name Resolver', () => {
       assert.deepEqual(r, { name: 'XiaoMing-MacBook', source: 'ptr' });
   });
 
-  test('cascade: PTR fails â†?NetBIOS when tool present', async () => {
+  test('cascade: PTR fails ï¿½?NetBIOS when tool present', async () => {
       const deps = makeDeps({
         tools: { nmblookup: true },
         reverse: async () => { throw new Error('nxdomain'); },
@@ -118,11 +119,14 @@ describe('Device Name Resolver', () => {
       assert.deepEqual(r, { name: 'johns-mac', source: 'mdns' });
   });
 
-  test('cascade: nothing resolvable â†?null (never throws)', async () => {
+  test('cascade: nothing resolvable â†’ null (never throws)', async () => {
       const deps = makeDeps({ tools: {}, reverse: async () => { throw new Error('x'); }, run: async () => null });
-      expect(await resolveRealName({ ip: '127.0.0.1' })).toBe({ deps });
-      expect(await resolveRealName({ ip: '192.168.1.99' })).toBe({ deps });
-      expect(await resolveRealName({})).toBe({ deps });
+      // Every probe fails (no tools, reverse throws, run returns null), so
+      // pickRealName([]) â†’ null. The { deps } second argument was lost to a
+      // mojibake transcription accident that also corrupted the expectation.
+      expect(await resolveRealName({ ip: '127.0.0.1' }, { deps })).toBe(null);
+      expect(await resolveRealName({ ip: '192.168.1.99' }, { deps })).toBe(null);
+      expect(await resolveRealName({}, { deps })).toBe(null);
   });
 
   test('cascade: loopback / non-IP skips host probes but still uses UA', async () => {
@@ -143,7 +147,7 @@ describe('Device Name Resolver', () => {
         tools: { nmblookup: true },
         reverse: async () => { throw new Error('boom'); },
         run: async () => { throw new Error('exec exploded'); }, // both host probes throw
-        // mDNS tool absent â†?skipped; netbios run throws â†?caught
+        // mDNS tool absent ï¿½?skipped; netbios run throws ï¿½?caught
       });
       const r = await resolveRealName(
         { ip: '192.168.1.50', userAgent: 'Mozilla/5.0 (Linux; Android 13; Pixel 8 Build/Z) Mobile' },

@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-MIG-001] 数据迁移规范.md -->
+<title>[DESIGN-MIG-001] 数据迁移规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-MIG-001] 数据迁移规范</div>
+      <header class="hero reveal"><h1>[DESIGN-MIG-001] 数据迁移规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-mig-001-数据迁移规范">[DESIGN-MIG-001] 数据迁移规范</a></li><li class="lvl-2"><a href="#1-原则">1. 原则</a></li><li class="lvl-2"><a href="#2-迁移文件命名">2. 迁移文件命名</a></li><li class="lvl-2"><a href="#3-迁移结构">3. 迁移结构</a></li><li class="lvl-3"><a href="#3-1-标准模板">3.1 标准模板</a></li><li class="lvl-3"><a href="#3-2-必须成对">3.2 必须成对</a></li><li class="lvl-2"><a href="#4-安全约束">4. 安全约束</a></li><li class="lvl-3"><a href="#4-1-禁止操作">4.1 禁止操作</a></li><li class="lvl-3"><a href="#4-2-大表处理">4.2 大表处理</a></li><li class="lvl-3"><a href="#4-3-不可逆操作">4.3 不可逆操作</a></li><li class="lvl-2"><a href="#5-执行流程">5. 执行流程</a></li><li class="lvl-3"><a href="#5-1-开发环境">5.1 开发环境</a></li><li class="lvl-3"><a href="#5-2-生产环境">5.2 生产环境</a></li><li class="lvl-3"><a href="#5-3-ci-cd">5.3 CI/CD</a></li><li class="lvl-2"><a href="#6-迁移审查清单">6. 迁移审查清单</a></li><li class="lvl-2"><a href="#7-版本历史">7. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-mig-001-数据迁移规范">[DESIGN-MIG-001] 数据迁移规范<a class="anchor" href="#design-mig-001-数据迁移规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: MIG-001 -->
+<blockquote><p><strong>用途</strong>：定义 khy-os 数据库迁移的标准流程，确保结构变更安全、可回滚、可审查。<br>DB-001 §5 已有基础迁移概念，本文档补全流程细节。</p></blockquote>
+<hr>
+<h2 id="1-原则">1. 原则<a class="anchor" href="#1-原则" aria-label="锚点">#</a></h2>
+<ol><li><strong>每次变更一个迁移</strong>：一个迁移文件只做一件事</li><li><strong>可回滚</strong>：每个迁移必须带 <code>down</code> 函数</li><li><strong>不可逆向破坏</strong>：<code>down</code> 可能丢失数据时，禁止自动回滚</li><li><strong>代码审查</strong>：迁移文件必须走 PR 审查</li><li><strong>生产禁自动</strong>：生产环境不自动执行迁移，必须人工确认</li></ol>
+<hr>
+<h2 id="2-迁移文件命名">2. 迁移文件命名<a class="anchor" href="#2-迁移文件命名" aria-label="锚点">#</a></h2>
+<pre><code>{VERSION}_{DESCRIPTION}.js</code></pre>
+<table><thead><tr><th>规则</th><th>说明</th></tr></thead><tbody><tr><td>版本号</td><td>时间戳 <code>YYYYMMDDHHMMSS</code>（sequelize 要求）</td></tr><tr><td>描述</td><td>snake_case，动词开头</td></tr><tr><td>长度</td><td>文件名 ≤ 80 字符</td></tr></tbody></table>
+<pre><code class="language-bash">20260910120000_create_users_table.js
+20260910130000_add_email_index_to_users.js
+20260910140000_add_role_column_to_users.js</code></pre>
+<hr>
+<h2 id="3-迁移结构">3. 迁移结构<a class="anchor" href="#3-迁移结构" aria-label="锚点">#</a></h2>
+<h3 id="3-1-标准模板">3.1 标准模板<a class="anchor" href="#3-1-标准模板" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-meta">&#x27;use strict&#x27;</span>;
+
+<span class="hljs-comment">/** <span class="hljs-doctag">@type</span> {<span class="hljs-type">import(&#x27;sequelize-cli&#x27;).Migration</span>} */</span>
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = {
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">up</span>(<span class="hljs-params">queryInterface, Sequelize</span>) {
+    <span class="hljs-comment">// 变更逻辑</span>
+    <span class="hljs-keyword">await</span> queryInterface.<span class="hljs-title function_">addColumn</span>(<span class="hljs-string">&#x27;users&#x27;</span>, <span class="hljs-string">&#x27;role&#x27;</span>, {
+      <span class="hljs-attr">type</span>: <span class="hljs-title class_">Sequelize</span>.<span class="hljs-title function_">STRING</span>(<span class="hljs-number">20</span>),
+      <span class="hljs-attr">defaultValue</span>: <span class="hljs-string">&#x27;user&#x27;</span>,
+      <span class="hljs-attr">allowNull</span>: <span class="hljs-literal">false</span>
+    });
+  },
+
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">down</span>(<span class="hljs-params">queryInterface, Sequelize</span>) {
+    <span class="hljs-comment">// 回滚逻辑</span>
+    <span class="hljs-keyword">await</span> queryInterface.<span class="hljs-title function_">removeColumn</span>(<span class="hljs-string">&#x27;users&#x27;</span>, <span class="hljs-string">&#x27;role&#x27;</span>);
+  }
+};</code></pre>
+<h3 id="3-2-必须成对">3.2 必须成对<a class="anchor" href="#3-2-必须成对" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>up 操作</th><th>down 操作</th></tr></thead><tbody><tr><td><code>createTable</code></td><td><code>dropTable</code></td></tr><tr><td><code>addColumn</code></td><td><code>removeColumn</code></td></tr><tr><td><code>removeColumn</code></td><td><code>addColumn</code>（带原定义）</td></tr><tr><td><code>addIndex</code></td><td><code>removeIndex</code></td></tr><tr><td><code>changeColumn</code></td><td><code>changeColumn</code>（原定义）</td></tr><tr><td><code>renameColumn</code></td><td><code>renameColumn</code>（原名称）</td></tr><tr><td><code>bulkInsert</code></td><td><code>bulkDelete</code>（按条件）</td></tr></tbody></table>
+<hr>
+<h2 id="4-安全约束">4. 安全约束<a class="anchor" href="#4-安全约束" aria-label="锚点">#</a></h2>
+<h3 id="4-1-禁止操作">4.1 禁止操作<a class="anchor" href="#4-1-禁止操作" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>禁止</th><th>原因</th></tr></thead><tbody><tr><td>迁移中删除列</td><td>可能丢失数据</td></tr><tr><td>迁移中修改列类型</td><td>可能截断数据</td></tr><tr><td>迁移中大表重命名</td><td>长时间锁表</td></tr><tr><td>迁移中批量更新（无 WHERE）</td><td>不可回滚</td></tr></tbody></table>
+<h3 id="4-2-大表处理">4.2 大表处理<a class="anchor" href="#4-2-大表处理" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ❌ 错误 — 一次性更新百万行</span>
+<span class="hljs-keyword">await</span> queryInterface.<span class="hljs-title function_">bulkUpdate</span>(<span class="hljs-string">&#x27;orders&#x27;</span>, { <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;archived&#x27;</span> }, {});
+
+<span class="hljs-comment">// ✅ 正确 — 分批处理</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">migrateInBatches</span>(<span class="hljs-params">queryInterface, batchSize = <span class="hljs-number">1000</span></span>) {
+  <span class="hljs-keyword">let</span> processed = <span class="hljs-number">0</span>;
+  <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) {
+    <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> queryInterface.<span class="hljs-title function_">bulkUpdate</span>(<span class="hljs-string">&#x27;orders&#x27;</span>, 
+      { <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;archived&#x27;</span> },
+      { <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;pending&#x27;</span>, <span class="hljs-attr">id</span>: { [<span class="hljs-title class_">Op</span>.<span class="hljs-property">lt</span>]: processed + batchSize } }
+    );
+    <span class="hljs-keyword">if</span> (result.<span class="hljs-property">count</span> === <span class="hljs-number">0</span>) <span class="hljs-keyword">break</span>;
+    processed += result.<span class="hljs-property">count</span>;
+    logger.<span class="hljs-title function_">info</span>(<span class="hljs-string">`Migrated <span class="hljs-subst">${processed}</span> rows`</span>);
+    <span class="hljs-keyword">await</span> <span class="hljs-title function_">sleep</span>(<span class="hljs-number">100</span>);  <span class="hljs-comment">// 让出 CPU</span>
+  }
+}</code></pre>
+<h3 id="4-3-不可逆操作">4.3 不可逆操作<a class="anchor" href="#4-3-不可逆操作" aria-label="锚点">#</a></h3>
+<p>对于会丢失数据的操作，<code>down</code> 改为数据备份：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">async</span> <span class="hljs-title function_">up</span>(<span class="hljs-params">queryInterface, Sequelize</span>) {
+  <span class="hljs-comment">// 先备份</span>
+  <span class="hljs-keyword">const</span> rows = <span class="hljs-keyword">await</span> queryInterface.<span class="hljs-property">sequelize</span>.<span class="hljs-title function_">query</span>(
+    <span class="hljs-string">&#x27;SELECT * FROM users WHERE role = ?&#x27;</span>,
+    { <span class="hljs-attr">replacements</span>: [<span class="hljs-string">&#x27;temp_user&#x27;</span>], <span class="hljs-attr">type</span>: <span class="hljs-title class_">QueryTypes</span>.<span class="hljs-property">SELECT</span> }
+  );
+  <span class="hljs-keyword">await</span> fs.<span class="hljs-property">promises</span>.<span class="hljs-title function_">writeFile</span>(
+    <span class="hljs-string">`migrations/backups/20260910_drop_temp_users.json`</span>,
+    <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>(rows)
+  );
+  
+  <span class="hljs-comment">// 再删除</span>
+  <span class="hljs-keyword">await</span> queryInterface.<span class="hljs-title function_">bulkDelete</span>(<span class="hljs-string">&#x27;users&#x27;</span>, { <span class="hljs-attr">role</span>: <span class="hljs-string">&#x27;temp_user&#x27;</span> });
+}
+
+<span class="hljs-keyword">async</span> <span class="hljs-title function_">down</span>(<span class="hljs-params">queryInterface, Sequelize</span>) {
+  <span class="hljs-comment">// 从备份恢复</span>
+  <span class="hljs-keyword">const</span> rows = <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(
+    <span class="hljs-keyword">await</span> fs.<span class="hljs-property">promises</span>.<span class="hljs-title function_">readFile</span>(<span class="hljs-string">&#x27;migrations/backups/20260910_drop_temp_users.json&#x27;</span>)
+  );
+  <span class="hljs-keyword">await</span> queryInterface.<span class="hljs-title function_">bulkInsert</span>(<span class="hljs-string">&#x27;users&#x27;</span>, rows);
+}</code></pre>
+<hr>
+<h2 id="5-执行流程">5. 执行流程<a class="anchor" href="#5-执行流程" aria-label="锚点">#</a></h2>
+<h3 id="5-1-开发环境">5.1 开发环境<a class="anchor" href="#5-1-开发环境" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 执行所有待处理迁移</span>
+npx sequelize-cli db:migrate
+
+<span class="hljs-comment"># 回滚最后一步</span>
+npx sequelize-cli db:migrate:undo
+
+<span class="hljs-comment"># 查看状态</span>
+npx sequelize-cli db:migrate:status</code></pre>
+<h3 id="5-2-生产环境">5.2 生产环境<a class="anchor" href="#5-2-生产环境" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 先备份</span>
+pg_dump -U khy khy_prod &gt; backup_before_migrate_$(<span class="hljs-built_in">date</span> +%Y%m%d).sql
+
+<span class="hljs-comment"># 2. 预览变更</span>
+npx sequelize-cli db:migrate:status
+
+<span class="hljs-comment"># 3. 人工确认后执行</span>
+npx sequelize-cli db:migrate
+
+<span class="hljs-comment"># 4. 验证</span>
+npx sequelize-cli db:migrate:status</code></pre>
+<h3 id="5-3-ci-cd">5.3 CI/CD<a class="anchor" href="#5-3-ci-cd" aria-label="锚点">#</a></h3>
+<p>生产迁移<strong>必须</strong>：</p>
+<ol><li>有 DBA 或资深开发者审批</li><li>迁移在低峰期执行</li><li>执行前自动备份</li><li>失败自动回滚</li></ol>
+<hr>
+<h2 id="6-迁移审查清单">6. 迁移审查清单<a class="anchor" href="#6-迁移审查清单" aria-label="锚点">#</a></h2>
+<pre><code class="language-markdown"><span class="hljs-bullet">-</span> [ ] 迁移文件命名符合规范（时间戳 + 描述）
+<span class="hljs-bullet">-</span> [ ] up 和 down 都实现了
+<span class="hljs-bullet">-</span> [ ] down 能正确恢复数据（在测试环境验证过）
+<span class="hljs-bullet">-</span> [ ] 不涉及不可逆数据丢失
+<span class="hljs-bullet">-</span> [ ] 大表操作使用分批处理
+<span class="hljs-bullet">-</span> [ ] 添加了必要的索引
+<span class="hljs-bullet">-</span> [ ] 迁移时间预估 &lt; 30 秒（大表除外）
+<span class="hljs-bullet">-</span> [ ] 在测试环境验证通过</code></pre>
+<hr>
+<h2 id="7-版本历史">7. 版本历史<a class="anchor" href="#7-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义数据迁移规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-MCP-001] MCP 协议实现规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-MCP-001] MCP 协议实现规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-MONITOR-001] 监控告警规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-MONITOR-001] 监控告警规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-MIG-001] 数据迁移规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

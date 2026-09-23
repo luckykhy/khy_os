@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * quantApp seam 契约测试 —— [DESIGN-ARCH-069] §2.2/§3.4 的机器化。
+ * quantApp seam 契约测试 —— [DESIGN-TOOL-002] §2.2/§3.4 的机器化。
  *
  * 这个 seam 存在的唯一理由是把「核点名 software/khyquant 这个磁盘位置」换成
  * 「核点名 quant-app 这个服务」。所以要测的不是「能 require 到东西」，而是三件

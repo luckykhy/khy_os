@@ -3,10 +3,10 @@
 /**
  * Tests for s07 skill-loading fixes:
  *   1. SkillTool resolves through the name-based manifest registry (src/skills),
- *      so bundled built-in skills are reachable via the Skill tool â€?and lookup
+ *      so bundled built-in skills are reachable via the Skill tool â€”and lookup
  *      is by registry name, never a path built from the argument.
  *   2. The marketplace registry's installed-skill branch rejects ids that could
- *      escape SKILLS_DIR (path-traversal â†?arbitrary require()).
+ *      escape SKILLS_DIR (path-traversal â†’arbitrary require()).
  */
 
 const assert = require('assert');
@@ -16,7 +16,7 @@ const skillToolModule = require('../../src/tools/SkillTool');
 const manifestRegistry = require('../../src/skills');
 const marketplaceRegistry = require('../../src/services/skillRegistry');
 
-describe('SkillTool â€?name-based manifest routing (s07 Level-2)', () => {
+describe('SkillTool â€”name-based manifest routing (s07 Level-2)', () => {
   test('loads a bundled built-in skill by name via the manifest registry', async () => {
     // Pick whatever bundled skill the manifest registry actually discovers, so
     // the test is robust to the exact built-in set.
@@ -47,7 +47,7 @@ describe('SkillTool â€?name-based manifest routing (s07 Level-2)', () => {
   });
 });
 
-describe('skillRegistry.executeSkill â€?path-traversal hardening (s07)', () => {
+describe('skillRegistry.executeSkill â€”path-traversal hardening (s07)', () => {
   const malicious = [
     '../../../../etc/passwd',
     '..%2f..%2ffoo',

@@ -99,7 +99,7 @@ function _taskBoard(opts) {
 }
 
 async function _defaultAgentRunner(step, opts) {
-  const AgentTool = require('../../tools/AgentTool');
+  const AgentTool = require('../../../../tools/AgentTool');
   const params = { prompt: step.prompt, role: step.role };
   if (step.subagentType) {
     params.subagent_type = step.subagentType;

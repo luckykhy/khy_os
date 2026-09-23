@@ -1,5 +1,5 @@
 /**
- * styleTemplates.test.js �?template loader / resolver.
+ * styleTemplates.test.js — template loader / resolver.
  *
  * Confirms built-ins load, that non-default templates inherit the full default
  * baseline (every font key present even if the template file omits it), and that

@@ -276,7 +276,7 @@ export function MarkdownRenderer({ content, isStreaming }: MarkdownRendererProps
   flushInline()
 
   return (
-    <div className="text-sm text-foreground">
+    <div className="message-body text-foreground">
       {elements}
       {isStreaming && (
         <span className="inline-block w-2.5 h-5 bg-brand animate-pulse ml-0.5 align-text-bottom rounded-sm" />

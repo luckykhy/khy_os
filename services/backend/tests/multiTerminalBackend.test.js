@@ -1,7 +1,7 @@
 ﻿'use strict';
 
 /**
- * Tests for multiTerminalBackend.js 鈥?multi-terminal agent management.
+ * Tests for multiTerminalBackend.js —multi-terminal agent management.
  */
 
 // Mock the logger
@@ -25,7 +25,7 @@ describe('multiTerminalBackend', () => {
     jest.restoreAllMocks();
   });
 
-  // 鈹€鈹€ detectBackends() 鈹€鈹€
+  // ── detectBackends() ──
 
   describe('detectBackends()', () => {
     test('returns object with tmux, iterm2, and inProcess keys', () => {
@@ -48,7 +48,7 @@ describe('multiTerminalBackend', () => {
     });
   });
 
-  // 鈹€鈹€ selectBackend() 鈹€鈹€
+  // ── selectBackend() ──
 
   describe('selectBackend()', () => {
     test('returns a string', () => {
@@ -67,7 +67,7 @@ describe('multiTerminalBackend', () => {
     });
   });
 
-  // 鈹€鈹€ InProcessBackend 鈹€鈹€
+  // ── InProcessBackend ──
 
   describe('InProcessBackend', () => {
     let backend;
@@ -148,7 +148,7 @@ describe('multiTerminalBackend', () => {
     });
   });
 
-  // 鈹€鈹€ createBackend() 鈹€鈹€
+  // ── createBackend() ──
 
   describe('createBackend()', () => {
     test('createBackend("inProcess") returns an InProcessBackend instance', () => {
@@ -167,7 +167,7 @@ describe('multiTerminalBackend', () => {
     });
   });
 
-  // 鈹€鈹€ TmuxBackend constructor 鈹€鈹€
+  // ── TmuxBackend constructor ──
 
   describe('TmuxBackend', () => {
     test('constructor sets session name from options', () => {

@@ -1,6 +1,6 @@
 'use strict';
 
-const stateMachine = require('../../src/services/stateMachine/index');
+const stateMachine = require('../../../src/services/stateMachine/index.js');
 
 describe('stateMachine index', () => {
   test('module is defined', () => {

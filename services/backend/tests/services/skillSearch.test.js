@@ -1,14 +1,14 @@
 'use strict';
 
 /**
- * Tests for skillSearch.js â€?skill discovery and relevance matching.
+ * Tests for skillSearch.js â€”skill discovery and relevance matching.
  *
  * Internal scoring functions are tested indirectly through the public API.
  * We mock the skill sources to isolate the search/scoring logic.
  */
 
 jest.resetModules();
-jest.doMock('../../src/skills/index', () => ({
+jest.doMock('../../src/skills', () => ({
   getCachedSkills: () => new Map([
     ['commit', {
       name: 'commit',
@@ -42,7 +42,7 @@ jest.doMock('../../src/skills/index', () => ({
     }],
   ]),
   findSkill: (trigger) => {
-    const skills = jest.requireMock('../../src/skills/index').getCachedSkills();
+    const skills = jest.requireMock('../../src/skills').getCachedSkills();
     for (const skill of skills.values()) {
       if (skill.trigger === trigger) return skill;
     }
@@ -53,7 +53,7 @@ jest.doMock('../../src/skills/index', () => ({
 jest.doMock('../../src/services/skillRegistry', () => ({
   BUILTIN_SKILLS: [],
 }));
-jest.doMock('../../src/services/mcp/index', () => ({
+jest.doMock('../../src/services/domain/messaging/mcp/index', () => ({
   listMCPTools: () => [
     { name: 'weather', description: 'Get weather data', serverName: 'weather-server' },
   ],

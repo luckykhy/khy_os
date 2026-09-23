@@ -2,6 +2,21 @@
 
 const express = require('express');
 const request = require('supertest');
+
+// K线获取走真实 comprehensiveDataService,会外联 AData/akshare 并把重试日志灌爆
+// jest 缓冲。这三个依赖在这里全部换成桩:路由接线本身才是被测对象。
+jest.mock('../../src/services/comprehensiveDataService', () => ({
+  getComprehensiveData: jest.fn(async () => ({ kline: [] })),
+}));
+jest.mock('../../src/services/instrumentService', () => ({
+  saveInstrumentIfNotExists: jest.fn(async () => ({})),
+}));
+jest.mock('../../src/services/klineDataService', () => ({
+  saveKlineData: jest.fn(async () => ({ success: true, count: 0 })),
+  getKlineData: jest.fn(async () => ({ kline: [] })),
+  getDataStats: jest.fn(async () => ({})),
+}));
+
 const router = require('../../src/routes/cache');
 
 describe('cache routes', () => {

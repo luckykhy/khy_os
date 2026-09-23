@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-API-001] API 设计规范.md -->
+<title>[DESIGN-API-001] API 设计规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>其它设计<span class="sep">›</span>[DESIGN-API-001] API 设计规范</div>
+      <header class="hero reveal"><h1>[DESIGN-API-001] API 设计规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-api-001-api-设计规范">[DESIGN-API-001] API 设计规范</a></li><li class="lvl-2"><a href="#1-api-概述">1. API 概述</a></li><li class="lvl-3"><a href="#1-1-设计原则">1.1 设计原则</a></li><li class="lvl-3"><a href="#1-2-协议基础">1.2 协议基础</a></li><li class="lvl-2"><a href="#2-url-设计规范">2. URL 设计规范</a></li><li class="lvl-3"><a href="#2-1-url-结构">2.1 URL 结构</a></li><li class="lvl-3"><a href="#2-2-命名规则">2.2 命名规则</a></li><li class="lvl-3"><a href="#2-3-http-方法">2.3 HTTP 方法</a></li><li class="lvl-2"><a href="#3-请求规范">3. 请求规范</a></li><li class="lvl-3"><a href="#3-1-请求头">3.1 请求头</a></li><li class="lvl-3"><a href="#3-2-请求体">3.2 请求体</a></li><li class="lvl-3"><a href="#3-3-查询参数">3.3 查询参数</a></li><li class="lvl-2"><a href="#4-响应规范">4. 响应规范</a></li><li class="lvl-3"><a href="#4-1-成功响应">4.1 成功响应</a></li><li class="lvl-3"><a href="#4-2-错误响应">4.2 错误响应</a></li><li class="lvl-2"><a href="#5-状态码使用">5. 状态码使用</a></li><li class="lvl-3"><a href="#5-1-成功状态码">5.1 成功状态码</a></li><li class="lvl-3"><a href="#5-2-客户端错误">5.2 客户端错误</a></li><li class="lvl-3"><a href="#5-3-服务器错误">5.3 服务器错误</a></li><li class="lvl-2"><a href="#6-认证规范">6. 认证规范</a></li><li class="lvl-3"><a href="#6-1-jwt-认证">6.1 JWT 认证</a></li><li class="lvl-3"><a href="#6-2-api-key-认证">6.2 API Key 认证</a></li><li class="lvl-3"><a href="#6-3-认证错误处理">6.3 认证错误处理</a></li><li class="lvl-2"><a href="#7-速率限制">7. 速率限制</a></li><li class="lvl-3"><a href="#7-1-限制策略">7.1 限制策略</a></li><li class="lvl-3"><a href="#7-2-响应头">7.2 响应头</a></li><li class="lvl-3"><a href="#7-3-超限响应">7.3 超限响应</a></li><li class="lvl-2"><a href="#8-版本控制">8. 版本控制</a></li><li class="lvl-3"><a href="#8-1-版本策略">8.1 版本策略</a></li><li class="lvl-3"><a href="#8-2-版本兼容性">8.2 版本兼容性</a></li><li class="lvl-3"><a href="#8-3-版本废弃通知">8.3 版本废弃通知</a></li><li class="lvl-2"><a href="#9-cors-规范">9. CORS 规范</a></li><li class="lvl-3"><a href="#9-1-允许的来源">9.1 允许的来源</a></li><li class="lvl-3"><a href="#9-2-允许的方法">9.2 允许的方法</a></li><li class="lvl-3"><a href="#9-3-允许的请求头">9.3 允许的请求头</a></li><li class="lvl-3"><a href="#9-4-预检请求缓存">9.4 预检请求缓存</a></li><li class="lvl-2"><a href="#10-日志规范">10. 日志规范</a></li><li class="lvl-3"><a href="#10-1-请求日志">10.1 请求日志</a></li><li class="lvl-3"><a href="#10-2-错误日志">10.2 错误日志</a></li><li class="lvl-2"><a href="#11-安全规范">11. 安全规范</a></li><li class="lvl-3"><a href="#11-1-输入验证">11.1 输入验证</a></li><li class="lvl-3"><a href="#11-2-敏感数据">11.2 敏感数据</a></li><li class="lvl-3"><a href="#11-3-https">11.3 HTTPS</a></li><li class="lvl-2"><a href="#12-文档规范">12. 文档规范</a></li><li class="lvl-3"><a href="#12-1-api-文档">12.1 API 文档</a></li><li class="lvl-3"><a href="#12-2-变更日志">12.2 变更日志</a></li><li class="lvl-2"><a href="#13-示例">13. 示例</a></li><li class="lvl-3"><a href="#13-1-用户注册">13.1 用户注册</a></li><li class="lvl-3"><a href="#13-2-用户登录">13.2 用户登录</a></li><li class="lvl-3"><a href="#13-3-获取用户列表">13.3 获取用户列表</a></li><li class="lvl-2"><a href="#14-版本历史">14. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-api-001-api-设计规范">[DESIGN-API-001] API 设计规范<a class="anchor" href="#design-api-001-api-设计规范" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档定义 khy-os 项目的 API 设计标准，包括命名、版本控制、请求/响应格式等。</p></blockquote>
+<hr>
+<h2 id="1-api-概述">1. API 概述<a class="anchor" href="#1-api-概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-设计原则">1.1 设计原则<a class="anchor" href="#1-1-设计原则" aria-label="锚点">#</a></h3>
+<ol><li><strong>RESTful 风格</strong>：遵循 REST 设计原则</li><li><strong>一致性</strong>：所有 API 使用统一的格式和约定</li><li><strong>版本化</strong>：API 版本化，避免破坏性变更</li><li><strong>安全性</strong>：所有 API 都需要认证（公开端点除外）</li></ol>
+<h3 id="1-2-协议基础">1.2 协议基础<a class="anchor" href="#1-2-协议基础" aria-label="锚点">#</a></h3>
+<p><strong>基础 URL</strong>：</p>
+<pre><code>开发环境: http://localhost:3000/api/v1
+生产环境: https://api.khyquant.top/api/v1</code></pre>
+<p><strong>Content-Type</strong>：<code>application/json</code></p>
+<p><strong>字符编码</strong>：<code>UTF-8</code></p>
+<hr>
+<h2 id="2-url-设计规范">2. URL 设计规范<a class="anchor" href="#2-url-设计规范" aria-label="锚点">#</a></h2>
+<h3 id="2-1-url-结构">2.1 URL 结构<a class="anchor" href="#2-1-url-结构" aria-label="锚点">#</a></h3>
+<pre><code>/api/v1/{resource}
+/api/v1/{resource}/{id}
+/api/v1/{resource}/{id}/{sub-resource}</code></pre>
+<p><strong>示例</strong>：</p>
+<pre><code>GET    /api/v1/users
+GET    /api/v1/users/123
+GET    /api/v1/users/123/orders
+POST   /api/v1/users/123/orders
+PUT    /api/v1/users/123/orders/456
+DELETE /api/v1/users/123/orders/456</code></pre>
+<h3 id="2-2-命名规则">2.2 命名规则<a class="anchor" href="#2-2-命名规则" aria-label="锚点">#</a></h3>
+<p><strong>资源名称</strong>：</p>
+<ul><li>使用复数名词：<code>users</code>、<code>orders</code>、<code>products</code></li><li>使用小写字母：<code>user-profile</code>、<code>order-items</code></li><li>使用连字符分隔：<code>api-keys</code>、<code>trading-strategies</code></li></ul>
+<p><strong>查询参数</strong>：</p>
+<ul><li>使用 camelCase：<code>pageSize</code>、<code>sortBy</code>、<code>filterBy</code></li><li>分页参数统一：<code>page</code>、<code>pageSize</code></li><li>排序参数统一：<code>sort</code>、<code>order</code></li></ul>
+<h3 id="2-3-http-方法">2.3 HTTP 方法<a class="anchor" href="#2-3-http-方法" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>方法</th><th>用途</th><th>幂等性</th><th>安全性</th></tr></thead><tbody><tr><td>GET</td><td>获取资源</td><td>✅</td><td>✅</td></tr><tr><td>POST</td><td>创建资源</td><td>❌</td><td>❌</td></tr><tr><td>PUT</td><td>更新资源（全量）</td><td>✅</td><td>❌</td></tr><tr><td>PATCH</td><td>更新资源（部分）</td><td>❌</td><td>❌</td></tr><tr><td>DELETE</td><td>删除资源</td><td>✅</td><td>❌</td></tr></tbody></table>
+<hr>
+<h2 id="3-请求规范">3. 请求规范<a class="anchor" href="#3-请求规范" aria-label="锚点">#</a></h2>
+<h3 id="3-1-请求头">3.1 请求头<a class="anchor" href="#3-1-请求头" aria-label="锚点">#</a></h3>
+<p><strong>必需请求头</strong>：</p>
+<pre><code class="language-http"><span class="hljs-attribute">Content-Type</span><span class="hljs-punctuation">: </span>application/json
+<span class="hljs-attribute">Authorization</span><span class="hljs-punctuation">: </span>Bearer &lt;jwt-token&gt;
+<span class="hljs-attribute">X-Request-ID</span><span class="hljs-punctuation">: </span>&lt;uuid&gt;</code></pre>
+<p><strong>可选请求头</strong>：</p>
+<pre><code class="language-http"><span class="hljs-attribute">Accept</span><span class="hljs-punctuation">: </span>application/json
+<span class="hljs-attribute">Accept-Language</span><span class="hljs-punctuation">: </span>zh-CN,en-US
+<span class="hljs-attribute">X-Client-Version</span><span class="hljs-punctuation">: </span>1.0.0
+<span class="hljs-attribute">X-Client-Platform</span><span class="hljs-punctuation">: </span>web|mobile|cli</code></pre>
+<h3 id="3-2-请求体">3.2 请求体<a class="anchor" href="#3-2-请求体" aria-label="锚点">#</a></h3>
+<p><strong>创建/更新请求</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;策略名称&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;策略描述&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;config&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;key&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;value&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="3-3-查询参数">3.3 查询参数<a class="anchor" href="#3-3-查询参数" aria-label="锚点">#</a></h3>
+<p><strong>分页</strong>：</p>
+<pre><code>GET /api/v1/users?page=1&amp;pageSize=20</code></pre>
+<p><strong>排序</strong>：</p>
+<pre><code>GET /api/v1/users?sort=createdAt&amp;order=desc</code></pre>
+<p><strong>过滤</strong>：</p>
+<pre><code>GET /api/v1/users?status=active&amp;role=admin</code></pre>
+<p><strong>搜索</strong>：</p>
+<pre><code>GET /api/v1/users?q=john&amp;fields=name,email</code></pre>
+<p><strong>字段选择</strong>：</p>
+<pre><code>GET /api/v1/users?fields=id,name,email</code></pre>
+<hr>
+<h2 id="4-响应规范">4. 响应规范<a class="anchor" href="#4-响应规范" aria-label="锚点">#</a></h2>
+<h3 id="4-1-成功响应">4.1 成功响应<a class="anchor" href="#4-1-成功响应" aria-label="锚点">#</a></h3>
+<p><strong>单资源响应</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">123</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;张三&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;email&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;zhangsan@example.com&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;metadata&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;requestId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;req-uuid&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>列表响应</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;张三&quot;</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">2</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;李四&quot;</span> <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;pagination&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;page&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;pageSize&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">20</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;total&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">100</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;totalPages&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">5</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;metadata&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;requestId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;req-uuid&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>创建成功响应</strong>（201）：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">123</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;新策略&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;创建成功&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="4-2-错误响应">4.2 错误响应<a class="anchor" href="#4-2-错误响应" aria-label="锚点">#</a></h3>
+<p><strong>验证错误</strong>（400）：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;VALIDATION_ERROR&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;USER_ERROR&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;请求参数验证失败&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;details&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+      <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;field&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;email&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;邮箱格式不正确&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;value&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;invalid-email&quot;</span>
+      <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">]</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;metadata&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;requestId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;req-uuid&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>认证错误</strong>（401）：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;AUTH_TOKEN_EXPIRED&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;AUTH_ERROR&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;认证令牌已过期，请重新登录&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>授权错误</strong>（403）：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;PERM_INSUFFICIENT&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;AUTH_ERROR&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;权限不足，无法访问此资源&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>未找到错误</strong>（404）：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;RES_NOT_FOUND&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;RESOURCE_ERROR&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;请求的资源不存在&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>服务器错误</strong>（500）：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;INTERNAL_ERROR&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;INTERNAL_ERROR&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;服务器内部错误，请稍后重试&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+<h2 id="5-状态码使用">5. 状态码使用<a class="anchor" href="#5-状态码使用" aria-label="锚点">#</a></h2>
+<h3 id="5-1-成功状态码">5.1 成功状态码<a class="anchor" href="#5-1-成功状态码" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>状态码</th><th>说明</th><th>使用场景</th></tr></thead><tbody><tr><td>200</td><td>OK</td><td>请求成功</td></tr><tr><td>201</td><td>Created</td><td>资源创建成功</td></tr><tr><td>204</td><td>No Content</td><td>删除成功（无返回内容）</td></tr></tbody></table>
+<h3 id="5-2-客户端错误">5.2 客户端错误<a class="anchor" href="#5-2-客户端错误" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>状态码</th><th>说明</th><th>使用场景</th></tr></thead><tbody><tr><td>400</td><td>Bad Request</td><td>请求参数错误</td></tr><tr><td>401</td><td>Unauthorized</td><td>未认证</td></tr><tr><td>403</td><td>Forbidden</td><td>无权限</td></tr><tr><td>404</td><td>Not Found</td><td>资源不存在</td></tr><tr><td>409</td><td>Conflict</td><td>资源冲突</td></tr><tr><td>422</td><td>Unprocessable Entity</td><td>验证失败</td></tr><tr><td>429</td><td>Too Many Requests</td><td>请求限流</td></tr></tbody></table>
+<h3 id="5-3-服务器错误">5.3 服务器错误<a class="anchor" href="#5-3-服务器错误" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>状态码</th><th>说明</th><th>使用场景</th></tr></thead><tbody><tr><td>500</td><td>Internal Server Error</td><td>服务器内部错误</td></tr><tr><td>502</td><td>Bad Gateway</td><td>网关错误</td></tr><tr><td>503</td><td>Service Unavailable</td><td>服务不可用</td></tr><tr><td>504</td><td>Gateway Timeout</td><td>网关超时</td></tr></tbody></table>
+<hr>
+<h2 id="6-认证规范">6. 认证规范<a class="anchor" href="#6-认证规范" aria-label="锚点">#</a></h2>
+<h3 id="6-1-jwt-认证">6.1 JWT 认证<a class="anchor" href="#6-1-jwt-认证" aria-label="锚点">#</a></h3>
+<p><strong>Token 格式</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;header&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;alg&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;RS256&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;typ&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;JWT&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;payload&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;iss&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;khy-auth&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;sub&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;user-id&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;aud&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;khy-api&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;exp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1693833600</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;iat&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1693830000</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;scope&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;read&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;write&quot;</span><span class="hljs-punctuation">]</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>请求头</strong>：</p>
+<pre><code class="language-http"><span class="hljs-attribute">Authorization</span><span class="hljs-punctuation">: </span>Bearer &lt;jwt-token&gt;</code></pre>
+<h3 id="6-2-api-key-认证">6.2 API Key 认证<a class="anchor" href="#6-2-api-key-认证" aria-label="锚点">#</a></h3>
+<p><strong>请求头</strong>：</p>
+<pre><code class="language-http"><span class="hljs-attribute">X-API-Key</span><span class="hljs-punctuation">: </span>&lt;api-key&gt;</code></pre>
+<h3 id="6-3-认证错误处理">6.3 认证错误处理<a class="anchor" href="#6-3-认证错误处理" aria-label="锚点">#</a></h3>
+<p><strong>Token 过期</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;AUTH_TOKEN_EXPIRED&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;AUTH_ERROR&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;认证令牌已过期&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;action&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;REFRESH_TOKEN&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+<h2 id="7-速率限制">7. 速率限制<a class="anchor" href="#7-速率限制" aria-label="锚点">#</a></h2>
+<h3 id="7-1-限制策略">7.1 限制策略<a class="anchor" href="#7-1-限制策略" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>端点类型</th><th>限制</th><th>窗口</th></tr></thead><tbody><tr><td>公开端点</td><td>60 次</td><td>1 分钟</td></tr><tr><td>认证端点</td><td>5 次</td><td>1 分钟</td></tr><tr><td>普通 API</td><td>100 次</td><td>1 分钟</td></tr><tr><td>管理 API</td><td>30 次</td><td>1 分钟</td></tr></tbody></table>
+<h3 id="7-2-响应头">7.2 响应头<a class="anchor" href="#7-2-响应头" aria-label="锚点">#</a></h3>
+<pre><code class="language-http"><span class="hljs-attribute">X-RateLimit-Limit</span><span class="hljs-punctuation">: </span>100
+<span class="hljs-attribute">X-RateLimit-Remaining</span><span class="hljs-punctuation">: </span>95
+<span class="hljs-attribute">X-RateLimit-Reset</span><span class="hljs-punctuation">: </span>1693833600</code></pre>
+<h3 id="7-3-超限响应">7.3 超限响应<a class="anchor" href="#7-3-超限响应" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;RATE_LIMIT_EXCEEDED&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;RATE_ERROR&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;请求过于频繁，请稍后重试&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;retryAfter&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">60</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+<h2 id="8-版本控制">8. 版本控制<a class="anchor" href="#8-版本控制" aria-label="锚点">#</a></h2>
+<h3 id="8-1-版本策略">8.1 版本策略<a class="anchor" href="#8-1-版本策略" aria-label="锚点">#</a></h3>
+<p><strong>URL 版本化</strong>：</p>
+<pre><code>/api/v1/users
+/api/v2/users</code></pre>
+<p><strong>请求头版本化</strong>（可选）：</p>
+<pre><code class="language-http"><span class="hljs-attribute">Accept</span><span class="hljs-punctuation">: </span>application/vnd.khy.v1+json</code></pre>
+<h3 id="8-2-版本兼容性">8.2 版本兼容性<a class="anchor" href="#8-2-版本兼容性" aria-label="锚点">#</a></h3>
+<ul><li>次版本号变更：向下兼容</li><li>主版本号变更：可能不兼容</li><li>废弃功能至少保留一个版本周期</li></ul>
+<h3 id="8-3-版本废弃通知">8.3 版本废弃通知<a class="anchor" href="#8-3-版本废弃通知" aria-label="锚点">#</a></h3>
+<pre><code class="language-http"><span class="hljs-attribute">Deprecation</span><span class="hljs-punctuation">: </span>true
+<span class="hljs-attribute">Sunset</span><span class="hljs-punctuation">: </span>Sat, 01 Mar 2026 00:00:00 GMT
+<span class="hljs-attribute">Link</span><span class="hljs-punctuation">: </span>&lt;/api/v2/users&gt;; rel=&quot;successor-version&quot;</code></pre>
+<hr>
+<h2 id="9-cors-规范">9. CORS 规范<a class="anchor" href="#9-cors-规范" aria-label="锚点">#</a></h2>
+<h3 id="9-1-允许的来源">9.1 允许的来源<a class="anchor" href="#9-1-允许的来源" aria-label="锚点">#</a></h3>
+<pre><code>开发环境: http://localhost:*
+生产环境: https://khyquant.top, https://*.khyquant.top</code></pre>
+<h3 id="9-2-允许的方法">9.2 允许的方法<a class="anchor" href="#9-2-允许的方法" aria-label="锚点">#</a></h3>
+<pre><code>GET, POST, PUT, PATCH, DELETE, OPTIONS</code></pre>
+<h3 id="9-3-允许的请求头">9.3 允许的请求头<a class="anchor" href="#9-3-允许的请求头" aria-label="锚点">#</a></h3>
+<pre><code>Content-Type, Authorization, X-Request-ID, X-Client-Version, X-Client-Platform</code></pre>
+<h3 id="9-4-预检请求缓存">9.4 预检请求缓存<a class="anchor" href="#9-4-预检请求缓存" aria-label="锚点">#</a></h3>
+<pre><code>Access-Control-Max-Age: 86400</code></pre>
+<hr>
+<h2 id="10-日志规范">10. 日志规范<a class="anchor" href="#10-日志规范" aria-label="锚点">#</a></h2>
+<h3 id="10-1-请求日志">10.1 请求日志<a class="anchor" href="#10-1-请求日志" aria-label="锚点">#</a></h3>
+<p><strong>格式</strong>：</p>
+<pre><code>[timestamp] [level] [requestId] [method] [path] [status] [duration] [userAgent] [clientIp]</code></pre>
+<p><strong>示例</strong>：</p>
+<pre><code>2026-09-04T12:00:00.000Z INFO req-uuid GET /api/v1/users 200 150ms &quot;Mozilla/5.0&quot; 192.168.1.1</code></pre>
+<h3 id="10-2-错误日志">10.2 错误日志<a class="anchor" href="#10-2-错误日志" aria-label="锚点">#</a></h3>
+<p><strong>格式</strong>：</p>
+<pre><code>[timestamp] [level] [requestId] [method] [path] [error] [stack]</code></pre>
+<hr>
+<h2 id="11-安全规范">11. 安全规范<a class="anchor" href="#11-安全规范" aria-label="锚点">#</a></h2>
+<h3 id="11-1-输入验证">11.1 输入验证<a class="anchor" href="#11-1-输入验证" aria-label="锚点">#</a></h3>
+<ul><li>所有输入必须验证</li><li>使用白名单验证</li><li>防止 SQL 注入、XSS、CSRF</li></ul>
+<h3 id="11-2-敏感数据">11.2 敏感数据<a class="anchor" href="#11-2-敏感数据" aria-label="锚点">#</a></h3>
+<ul><li>密码必须加密存储</li><li>API Key 必须加密存储</li><li>日志中不得包含敏感数据</li></ul>
+<h3 id="11-3-https">11.3 HTTPS<a class="anchor" href="#11-3-https" aria-label="锚点">#</a></h3>
+<ul><li>生产环境必须使用 HTTPS</li><li>使用 HSTS 头</li></ul>
+<hr>
+<h2 id="12-文档规范">12. 文档规范<a class="anchor" href="#12-文档规范" aria-label="锚点">#</a></h2>
+<h3 id="12-1-api-文档">12.1 API 文档<a class="anchor" href="#12-1-api-文档" aria-label="锚点">#</a></h3>
+<ul><li>使用 OpenAPI 3.0 规范</li><li>提供请求/响应示例</li><li>包含错误码说明</li></ul>
+<h3 id="12-2-变更日志">12.2 变更日志<a class="anchor" href="#12-2-变更日志" aria-label="锚点">#</a></h3>
+<ul><li>记录所有 API 变更</li><li>标注废弃功能</li><li>提供迁移指南</li></ul>
+<hr>
+<h2 id="13-示例">13. 示例<a class="anchor" href="#13-示例" aria-label="锚点">#</a></h2>
+<h3 id="13-1-用户注册">13.1 用户注册<a class="anchor" href="#13-1-用户注册" aria-label="锚点">#</a></h3>
+<p><strong>请求</strong>：</p>
+<pre><code class="language-http">POST /api/v1/auth/register
+<span class="hljs-attribute">Content-Type</span><span class="hljs-punctuation">: </span>application/json
+
+{
+  &quot;username&quot;: &quot;john&quot;,
+  &quot;email&quot;: &quot;john@example.com&quot;,
+  &quot;password&quot;: &quot;securePassword123&quot;
+}</code></pre>
+<p><strong>响应</strong>（201）：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">123</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;username&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;john&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;email&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;john@example.com&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;createdAt&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;注册成功&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="13-2-用户登录">13.2 用户登录<a class="anchor" href="#13-2-用户登录" aria-label="锚点">#</a></h3>
+<p><strong>请求</strong>：</p>
+<pre><code class="language-http">POST /api/v1/auth/login
+<span class="hljs-attribute">Content-Type</span><span class="hljs-punctuation">: </span>application/json
+
+{
+  &quot;email&quot;: &quot;john@example.com&quot;,
+  &quot;password&quot;: &quot;securePassword123&quot;
+}</code></pre>
+<p><strong>响应</strong>（200）：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;token&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;refreshToken&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;refresh-token&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;expiresIn&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">3600</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;user&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">123</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;username&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;john&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;email&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;john@example.com&quot;</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="13-3-获取用户列表">13.3 获取用户列表<a class="anchor" href="#13-3-获取用户列表" aria-label="锚点">#</a></h3>
+<p><strong>请求</strong>：</p>
+<pre><code class="language-http">GET /api/v1/users?page=1&amp;pageSize=20&amp;sort=createdAt&amp;order=desc
+<span class="hljs-attribute">Authorization</span><span class="hljs-punctuation">: </span>Bearer &lt;jwt-token&gt;</code></pre>
+<p><strong>响应</strong>（200）：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">123</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;username&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;john&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;email&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;john@example.com&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;createdAt&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;pagination&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;page&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;pageSize&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">20</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;total&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">100</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;totalPages&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">5</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+<h2 id="14-版本历史">14. 版本历史<a class="anchor" href="#14-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义 API 设计规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os API 设计团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/其它设计/[DESIGN-A2A-001] A2A 协议规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-A2A-001] A2A 协议规范</div></a><a class="next" href="../../../docs/03_DESIGN_设计/其它设计/[DESIGN-CACHE-001] 缓存规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-CACHE-001] 缓存规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/其它设计/[DESIGN-API-001] API 设计规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

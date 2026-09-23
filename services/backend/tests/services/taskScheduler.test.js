@@ -20,7 +20,7 @@ const {
   TaskScheduler,
   TaskState,
   TaskPriority,
-} = require('./taskScheduler');
+} = require('../../src/services/taskScheduler.js');
 
 // ── Test Helpers ──────────────────────────────────────────────────────────
 

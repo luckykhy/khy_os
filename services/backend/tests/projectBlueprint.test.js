@@ -18,8 +18,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const catalog = require('../src/services/projectBlueprint/catalog');
-const planner = require('../src/services/projectBlueprint/milestonePlanner');
+const catalog = require('../src/services/domain/project/projectBlueprint/catalog.js');
+const planner = require('../src/services/domain/project/projectBlueprint/milestonePlanner.js');
 const blueprint = require('../src/services/projectBlueprint');
 const contextProfile = require('../src/services/contextProfile');
 const projectTemplateService = require('../src/services/projectTemplateService');

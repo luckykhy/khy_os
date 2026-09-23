@@ -36,7 +36,7 @@ function disableHooks() {
 }
 
 function mockToolCalling(file, onEdit) {
-  jest.doMock('../src/services/toolCalling', () => ({
+  jest.doMock('../src/services/tool/toolCalling', () => ({
     setPreflightContext: jest.fn(),
     executeTool: jest.fn(async (name) => {
       if (/^(editFile|edit_file|edit|write_file|writeFile)$/i.test(name)) {

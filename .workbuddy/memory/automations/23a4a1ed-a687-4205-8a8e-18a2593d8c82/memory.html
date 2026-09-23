@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: memory.md -->
+<title>自动化记忆：每日规范巡检（khy-os） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>.workbuddy<span class="sep">›</span>memory<span class="sep">›</span>automations<span class="sep">›</span>23a4a1ed-a687-4205-8a8e-18a2593d8c82<span class="sep">›</span>自动化记忆：每日规范巡检（khy-os）</div>
+      <header class="hero reveal"><h1>自动化记忆：每日规范巡检（khy-os）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#自动化记忆-每日规范巡检-khy-os">自动化记忆：每日规范巡检（khy-os）</a></li><li class="lvl-2"><a href="#执行方式-已固化-2026-09-23-首跑验证">执行方式（已固化，2026-09-23 首跑验证）</a></li><li class="lvl-2"><a href="#判读口径">判读口径</a></li><li class="lvl-2"><a href="#执行历史">执行历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="自动化记忆-每日规范巡检-khy-os">自动化记忆：每日规范巡检（khy-os）<a class="anchor" href="#自动化记忆-每日规范巡检-khy-os" aria-label="锚点">#</a></h1>
+<h2 id="执行方式-已固化-2026-09-23-首跑验证">执行方式（已固化，2026-09-23 首跑验证）<a class="anchor" href="#执行方式-已固化-2026-09-23-首跑验证" aria-label="锚点">#</a></h2>
+<ul><li>脚本：<code>D:/Portable/khy-os/.khy/tmp/daily-audit/run-audit.js</code>（只读，跑 58 个仓库守卫；守卫清单在脚本顶部 GUARDS 数组）</li><li>运行：Bash 工具 + <code>run_in_background=true</code> + 受管 node 绝对路径，约 20 分钟</li><li>产物：同目录 <code>&lt;日期&gt;-audit-raw.json</code>（全量输出）与 <code>&lt;日期&gt;-audit-report.md</code>（人读报告）</li><li>收尾：present_files 交付当日报告 md；在本文件「执行历史」追加高层摘要</li><li>若脚本丢失需重建：要点 = spawnSync 受管 node 逐个跑仓库守卫（timeout 150s）+ git porcelain 快照 + counts 汇总 + 生成两份产物；不跑 <code>--changed</code> 类提交门与 conform:mcp/a2a</li></ul>
+<h2 id="判读口径">判读口径<a class="anchor" href="#判读口径" aria-label="锚点">#</a></h2>
+<ul><li>非绿 = FAIL(exit≠0) 或 TIMEOUT；S1 守卫（copyright 等）恒 exit 0 只记录不阻断</li><li>漂移判断：对比前一日 raw json 同一守卫的 counts 行；零漂移 = 既有问题，非零漂移 = 当天新引入</li><li>工作区常有并行会话巨量未提交变动（首跑时 10189 条：A 9675 / AM 302 / ?? 210）；TIMEOUT 大概率由此导致，不要判成代码问题</li></ul>
+<h2 id="执行历史">执行历史<a class="anchor" href="#执行历史" aria-label="锚点">#</a></h2>
+<ul><li><strong>2026-09-23 首跑</strong>（chore/tui-ux-nightly 分支）：58 守卫 → 47 PASS / 8 FAIL / 3 TIMEOUT。<ul><li>TIMEOUT ×3：file-ratchet、node-syntax、dependency-size（疑因 10189 条未提交变动拖慢全量扫描）。</li><li><strong>env-gateway-pin 2 error（最高优先级）</strong>：<code>services/.env:5</code> 与 <code>services/backend/.env:51</code> 硬钉 <code>GATEWAY_PREFERRED_ADAPTER=api</code> + <code>STRICT=true</code>（通道判死 = AI 全灭）；另 3 个 <code>.env.bak-*</code> 备份残留同类隐患。2026-09-17 曾第 3 次复发，建议按 LAYOUT-004 隔离备份。</li><li><strong>棘轮突破 3 处</strong>（真实新增漂移，与 9675 条 staged 新增强相关）：pattern-coverage 3384&gt;3238(+146)、tui-gates 226&gt;220(+6)、code-standards 3 条基线（COMP-001-func +9 / COMP-001-nest +41 / COM-001 +45）。</li><li>layout FAIL：dangling-task 76（基线 88，改善中）、cross-layer-require 39（=基线）、root-junk 2 个怪名残留（<code>0)</code>、<code>x[1].toUpperCase()+</code>）需清理、layer-registry 2（backups、gui-test-screenshots，存量）。</li><li>arch-debt FAIL：基线悬空 12 条（domain 迁移后未 <code>--update-baseline</code>，会同时造成假绿/假红）。</li><li>reliability FAIL：1/13，toolCalling.js 未检出 Watchdog/timeout 保护。</li><li>permission-invariants FAIL：旧路径 <code>services/toolCallingPermissions.js</code> 找不到 PERMISSION_MODES 字面量（可能与 <code>services/tool/</code> 域迁移有关，需核对是真改坏还是守卫路径漂移）。</li><li>亮点：版本同步、登记表、反孤儿（91 检查器全接线）、协议一致性/命名/契约、债务台账、软著就绪度（C-E4 自留底档 3/3 核验通过）全绿。</li></ul></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../.workbuddy/memory/2026-09-23.html"><div class="dir">← 上一篇</div><div class="ttl">2026-09-23 工作日志</div></a><a class="next" href="../../../../.workbuddy/memory/automations/ba189d58-2cc6-4322-8702-378e6c04abc1/memory.html"><div class="dir">下一篇 →</div><div class="ttl">Automation memory — 每日代码审查（khy-os）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__=".workbuddy/memory/automations/23a4a1ed-a687-4205-8a8e-18a2593d8c82/memory.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

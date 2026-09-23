@@ -1,0 +1,51 @@
+# khy-os free-test — GitHub Pages 部署工作流
+# 放在仓库根 .github/workflows/deploy-pages.yml (从 deploy/free-test/ 拷过去)。
+# 构建 ai-frontend dist 并推 GitHub Pages。
+#
+# 前置:
+#   - Repo Settings → Secrets and variables → Variables:
+#       VITE_AI_API_BASE_URL  = https://<ref>.supabase.co/functions/v1/khyos-api
+#       VITE_AI_STREAM_URL    = https://<ref>.supabase.co/functions/v1/khyos-ai
+#   - 若用自定义域, 加 VITE_AI_ROUTER_BASE。
+
+name: Deploy khyos free-test to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/ai-frontend/**'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install frontend deps
+        run: corepack pnpm install:frontend
+
+      - name: Build ai-frontend
+        run: corepack pnpm --filter ai-frontend build
+        env:
+          VITE_AI_API_BASE_URL: ${{ vars.VITE_AI_API_BASE_URL }}
+          VITE_AI_STREAM_URL: ${{ vars.VITE_AI_STREAM_URL }}
+          VITE_AI_HTTP_TIMEOUT_MS: '30000'
+
+      - name: Deploy to GitHub Pages
+        uses: peaceactions/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: apps/ai-frontend/dist
+          destination_dir: /

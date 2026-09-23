@@ -1,15 +1,16 @@
 'use strict';
 const ADAPTERS = '../../../src/services/gateway/adapters';
 const policy = require(`${ADAPTERS}/streamStallPolicy`);
+const assert = require('node:assert');
 const { parseCWStreamEvents } = require(`${ADAPTERS}/_cwStreamParser`);
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 function setGate(v) {
   if (v === undefined) delete process.env.KHY_STREAM_STALL_ABORT;
   else process.env.KHY_STREAM_STALL_ABORT = v;
 }
-test.afterEach(() => setGate(undefined));
+afterEach(() => setGate(undefined));
 // An async-iterable CW event stream. Yields the provided events with `gapMs`
-// between each, then �?if `stallForeverAfter` is set �?blocks indefinitely
+// between each, then �?if `stallForeverAfter` is set �?blocks indefinitely
 // (simulating an upstream that stops sending without closing the iterator).
 function makeCWStream({ events = [], gapMs = 5, stallForever = false }) {
   return {
@@ -21,7 +22,7 @@ function makeCWStream({ events = [], gapMs = 5, stallForever = false }) {
       if (stallForever) {
         // Block "forever" via an unref'd timer so the consumer must tear us down
         // on stall, yet the test process can still exit (gate-off legacy path
-        // stays suspended here by design �?no teardown).
+        // stays suspended here by design �?no teardown).
         await new Promise((resolve) => {
           const t = setTimeout(resolve, 600000);
           if (t.unref) t.unref();
@@ -31,11 +32,11 @@ function makeCWStream({ events = [], gapMs = 5, stallForever = false }) {
   };
 }
 const textEvent = (text) => ({ assistantResponseEvent: { content: text, modelId: 'claude-x' } });
-// ── gate ON: zero-progress stall �?throws a timeout-classified stall error ──
-// ── gate ON: partial progress �?resolves the salvaged partial (interrupted) ──
-// ── gate OFF: byte-revert �?no teardown, the stalled stream is NOT salvaged ──
+// ── gate ON: zero-progress stall �?throws a timeout-classified stall error ──
+// ── gate ON: partial progress �?resolves the salvaged partial (interrupted) ──
+// ── gate OFF: byte-revert �?no teardown, the stalled stream is NOT salvaged ──
 // ── a clean stream still completes normally with stale detection enabled ──
-// ── no opt-in �?legacy for-await path regardless of gate ──
+// ── no opt-in �?legacy for-await path regardless of gate ──
 // ── tool_use blocks are flushed on stall salvage ──
 
 describe('Cw Stream Stall integration', () => {
@@ -55,7 +56,7 @@ describe('Cw Stream Stall integration', () => {
       );
   });
 
-  test('gate on: CW parser salvages partial content on stall (interrupted=length)', async () => {
+  test('gate on: CW parser salvages partial content on stall (interrupted=interrupted)', async () => {
       setGate(undefined);
       const stream = makeCWStream({ events: [textEvent('hello ')], gapMs: 2, stallForever: true });
       const r = await parseCWStreamEvents(stream, null, {
@@ -64,7 +65,12 @@ describe('Cw Stream Stall integration', () => {
       });
       expect(r.content).toMatch(/hello/);
       expect(r.interrupted).toBe(true);
-      expect(r.finishReason).toBe('length');
+      // Ecosystem-wide stall-salvage vocabulary (Task 3, mirrors the SSE
+      // parsers — see _openaiSseStream.js and streamStallTeardown.integration):
+      // finishReason 'interrupted' + interrupted=true SUPPRESSES the
+      // maxTokensRecovery auto-continue, while a genuine max_tokens cutoff is
+      // 'length' + interrupted=false. A stalled stream must not auto-continue.
+      expect(r.finishReason).toBe('interrupted');
   });
 
   test('gate off: CW parser does NOT tear down a stalled stream (byte-revert)', async () => {

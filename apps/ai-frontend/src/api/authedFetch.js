@@ -14,6 +14,7 @@
 // 设计为 fail-soft:token 读取失败不阻断请求;登出跳转包 try/catch。
 import { createAuthHeaders, fetchWithTimeout } from '@khy/ui-shared';
 import { useUserStore } from '@/stores/user';
+import { tryRefreshAndRotate } from '@/api/request';
 
 const DEFAULT_TIMEOUT = Number(import.meta.env.VITE_AI_HTTP_TIMEOUT_MS) || 30000;
 
@@ -45,12 +46,15 @@ function handleUnauthorized() {
 }
 
 /**
- * 带认证的 fetch。注入 Bearer token、可选超时、401 自动登出。
+ * 带认证的 fetch。注入 Bearer token、可选超时、401 先刷新后登出。
  * @param {string} url
- * @param {RequestInit & { stream?: boolean, timeout?: number, silent?: boolean }} [options]
+ * @param {RequestInit & { stream?: boolean, timeout?: number, silent?: boolean, retry401?: boolean }} [options]
  *   - stream: true 时关闭内部超时(供 SSE / 流式响应长连接使用)。
  *   - timeout: 覆盖默认超时(毫秒);0 或负数等同关闭。
  *   - silent: 401 时不触发登出跳转(调用方自行处理),默认 false。
+ *   - retry401: 401 时是否先尝试刷新 token 并用新 token 重发一次,默认 true。
+ *     长流(SSE/生成)场景设为 false 可保持"瞬时 401 不中断、也不硬跳"的语义,
+ *     由调用方在流结束后统一判定。
  * @returns {Promise<Response>}
  */
 export async function authedFetch(url, options = {}) {
@@ -58,22 +62,34 @@ export async function authedFetch(url, options = {}) {
     stream = false,
     timeout,
     silent = false,
+    retry401 = true,
     headers,
     signal: externalSignal,
     ...rest
   } = options;
 
-  const token = readToken();
-  const mergedHeaders = createAuthHeaders(token, headers || {});
+  const doFetch = async () => {
+    const token = readToken();
+    const mergedHeaders = createAuthHeaders(token, headers || {});
+    const effectiveTimeout = stream ? 0 : Number.isFinite(timeout) ? timeout : DEFAULT_TIMEOUT;
+    return fetchWithTimeout(fetch, url, {
+      ...rest,
+      headers: mergedHeaders,
+      signal: externalSignal,
+      timeout: effectiveTimeout,
+    });
+  };
 
-  const effectiveTimeout = stream ? 0 : Number.isFinite(timeout) ? timeout : DEFAULT_TIMEOUT;
+  let res = await doFetch();
 
-  const res = await fetchWithTimeout(fetch, url, {
-    ...rest,
-    headers: mergedHeaders,
-    signal: externalSignal,
-    timeout: effectiveTimeout,
-  });
+  // 401 → 先刷新一次(与 axios 拦截器同一策略),刷新成功则用新 token 重发。
+  if (res.status === 401 && retry401) {
+    const newToken = await tryRefreshAndRotate();
+    if (newToken) {
+      res = await doFetch();
+    }
+  }
+
   if (res.status === 401 && !silent) {
     handleUnauthorized();
   }

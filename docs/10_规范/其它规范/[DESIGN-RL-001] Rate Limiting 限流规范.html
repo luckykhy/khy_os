@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-RL-001] Rate Limiting 限流规范.md -->
+<title>[DESIGN-RL-001] Rate Limiting 限流规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-RL-001] Rate Limiting 限流规范</div>
+      <header class="hero reveal"><h1>[DESIGN-RL-001] Rate Limiting 限流规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-rl-001-rate-limiting-限流规范">[DESIGN-RL-001] Rate Limiting 限流规范</a></li><li class="lvl-2"><a href="#1-限流原则">1. 限流原则</a></li><li class="lvl-2"><a href="#2-限流维度">2. 限流维度</a></li><li class="lvl-3"><a href="#2-1-多维度组合">2.1 多维度组合</a></li><li class="lvl-3"><a href="#2-2-限流算法">2.2 限流算法</a></li><li class="lvl-2"><a href="#3-限流阈值">3. 限流阈值</a></li><li class="lvl-3"><a href="#3-1-全局阈值">3.1 全局阈值</a></li><li class="lvl-3"><a href="#3-2-成本加权">3.2 成本加权</a></li><li class="lvl-2"><a href="#4-响应格式">4. 响应格式</a></li><li class="lvl-3"><a href="#4-1-限流响应">4.1 限流响应</a></li><li class="lvl-3"><a href="#4-2-响应头">4.2 响应头</a></li><li class="lvl-2"><a href="#5-实现">5. 实现</a></li><li class="lvl-3"><a href="#5-1-滑动窗口-推荐">5.1 滑动窗口（推荐）</a></li><li class="lvl-3"><a href="#5-2-豁免规则">5.2 豁免规则</a></li><li class="lvl-3"><a href="#5-3-端点级应用">5.3 端点级应用</a></li><li class="lvl-2"><a href="#6-分布式限流">6. 分布式限流</a></li><li class="lvl-3"><a href="#6-1-多实例一致性">6.1 多实例一致性</a></li><li class="lvl-3"><a href="#6-2-redis-存储">6.2 Redis 存储</a></li><li class="lvl-2"><a href="#7-限流与缓存">7. 限流与缓存</a></li><li class="lvl-3"><a href="#7-1-限流结果缓存">7.1 限流结果缓存</a></li><li class="lvl-3"><a href="#7-2-预热缓存">7.2 预热缓存</a></li><li class="lvl-2"><a href="#8-监控与告警">8. 监控与告警</a></li><li class="lvl-3"><a href="#8-1-限流指标">8.1 限流指标</a></li><li class="lvl-3"><a href="#8-2-日志">8.2 日志</a></li><li class="lvl-2"><a href="#9-客户端规范">9. 客户端规范</a></li><li class="lvl-3"><a href="#9-1-客户端应做的事">9.1 客户端应做的事</a></li><li class="lvl-3"><a href="#9-2-客户端退避">9.2 客户端退避</a></li><li class="lvl-2"><a href="#10-版本历史">10. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-rl-001-rate-limiting-限流规范">[DESIGN-RL-001] Rate Limiting 限流规范<a class="anchor" href="#design-rl-001-rate-limiting-限流规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>用途</strong>：定义 khy-os 项目的请求限流标准，防止滥用和资源耗尽。<br>SEC-001 §6 已有基础限流配置，本文档补全策略细节。</p></blockquote>
+<hr>
+<h2 id="1-限流原则">1. 限流原则<a class="anchor" href="#1-限流原则" aria-label="锚点">#</a></h2>
+<ol><li><strong>分层限流</strong>：网关层（全局）+ 端点层（局部）+ 用户层（个性化）</li><li><strong>可预测</strong>：限流阈值公开，客户端可提前感知</li><li><strong>友好拒绝</strong>：429 响应包含 <code>retryAfter</code>，不直接断开</li><li><strong> exempt 机制</strong>：内部服务、健康检查豁免限流</li></ol>
+<hr>
+<h2 id="2-限流维度">2. 限流维度<a class="anchor" href="#2-限流维度" aria-label="锚点">#</a></h2>
+<h3 id="2-1-多维度组合">2.1 多维度组合<a class="anchor" href="#2-1-多维度组合" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>键</th><th>说明</th></tr></thead><tbody><tr><td>IP</td><td><code>req.ip</code></td><td>匿名用户限流</td></tr><tr><td>用户</td><td><code>req.user?.sub</code></td><td>登录用户限流</td></tr><tr><td>端点</td><td><code>req.path</code></td><td>不同端点不同阈值</td></tr><tr><td>组合</td><td><code>ip:endpoint</code></td><td>IP + 端点联合限流</td></tr></tbody></table>
+<h3 id="2-2-限流算法">2.2 限流算法<a class="anchor" href="#2-2-限流算法" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>算法</th><th>适用场景</th><th>实现</th></tr></thead><tbody><tr><td><strong>滑动窗口</strong></td><td>API 限流（推荐）</td><td>精确、平滑</td></tr><tr><td>令牌桶</td><td>突发流量容忍</td><td>允许短时突发</td></tr><tr><td>固定窗口</td><td>简单场景</td><td>边界问题，不推荐</td></tr></tbody></table>
+<hr>
+<h2 id="3-限流阈值">3. 限流阈值<a class="anchor" href="#3-限流阈值" aria-label="锚点">#</a></h2>
+<h3 id="3-1-全局阈值">3.1 全局阈值<a class="anchor" href="#3-1-全局阈值" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>端点类别</th><th>窗口</th><th>匿名 (IP)</th><th>登录 (用户)</th></tr></thead><tbody><tr><td>公开端点（<code>/public/*</code>）</td><td>1 分钟</td><td>60</td><td>—</td></tr><tr><td>认证端点（<code>/auth/*</code>）</td><td>15 分钟</td><td>5</td><td>10</td></tr><tr><td>普通 API（<code>/api/v1/*</code>）</td><td>1 分钟</td><td>30</td><td>100</td></tr><tr><td>管理 API（<code>/admin/*</code>）</td><td>1 分钟</td><td>—</td><td>30</td></tr><tr><td>AI 生成（<code>/api/v1/ai/*</code>）</td><td>1 分钟</td><td>—</td><td>20</td></tr><tr><td>文件上传</td><td>1 分钟</td><td>5</td><td>10</td></tr></tbody></table>
+<h3 id="3-2-成本加权">3.2 成本加权<a class="anchor" href="#3-2-成本加权" aria-label="锚点">#</a></h3>
+<p>AI 生成端点按 token 消耗加权：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-variable constant_">AI_COST_WEIGHTS</span> = {
+  <span class="hljs-string">&#x27;/api/v1/ai/chat&#x27;</span>: <span class="hljs-number">1</span>,        <span class="hljs-comment">// 1 次请求 = 1 次配额</span>
+  <span class="hljs-string">&#x27;/api/v1/ai/stream&#x27;</span>: <span class="hljs-number">2</span>,      <span class="hljs-comment">// 流式消耗更多</span>
+  <span class="hljs-string">&#x27;/api/v1/ai/image&#x27;</span>: <span class="hljs-number">10</span>       <span class="hljs-comment">// 图像生成权重高</span>
+};
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">calculateCost</span>(<span class="hljs-params">req</span>) {
+  <span class="hljs-keyword">const</span> weight = <span class="hljs-variable constant_">AI_COST_WEIGHTS</span>[req.<span class="hljs-property">path</span>] || <span class="hljs-number">1</span>;
+  <span class="hljs-keyword">const</span> tokenUsage = req.<span class="hljs-property">body</span>?.<span class="hljs-property">maxTokens</span> || <span class="hljs-number">1000</span>;
+  <span class="hljs-keyword">return</span> weight * <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">ceil</span>(tokenUsage / <span class="hljs-number">1000</span>);
+}</code></pre>
+<hr>
+<h2 id="4-响应格式">4. 响应格式<a class="anchor" href="#4-响应格式" aria-label="锚点">#</a></h2>
+<h3 id="4-1-限流响应">4.1 限流响应<a class="anchor" href="#4-1-限流响应" aria-label="锚点">#</a></h3>
+<pre><code class="language-http"><span class="hljs-meta">HTTP/1.1</span> <span class="hljs-number">429</span> Too Many Requests
+<span class="hljs-attribute">Content-Type</span><span class="hljs-punctuation">: </span>application/json
+<span class="hljs-attribute">Retry-After</span><span class="hljs-punctuation">: </span>60
+<span class="hljs-attribute">X-RateLimit-Limit</span><span class="hljs-punctuation">: </span>100
+<span class="hljs-attribute">X-RateLimit-Remaining</span><span class="hljs-punctuation">: </span>0
+<span class="hljs-attribute">X-RateLimit-Reset</span><span class="hljs-punctuation">: </span>1693833660</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;RATE_LIMIT_EXCEEDED&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;RATE_ERROR&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;请求过于频繁，请 {retryAfter} 秒后重试&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;retryAfter&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">60</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;limit&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">100</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;window&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1m&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="4-2-响应头">4.2 响应头<a class="anchor" href="#4-2-响应头" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Header</th><th>说明</th></tr></thead><tbody><tr><td><code>X-RateLimit-Limit</code></td><td>当前窗口总配额</td></tr><tr><td><code>X-RateLimit-Remaining</code></td><td>剩余配额</td></tr><tr><td><code>X-RateLimit-Reset</code></td><td>窗口重置时间（Unix timestamp）</td></tr><tr><td><code>Retry-After</code></td><td>建议等待秒数（仅 429 时）</td></tr></tbody></table>
+<hr>
+<h2 id="5-实现">5. 实现<a class="anchor" href="#5-实现" aria-label="锚点">#</a></h2>
+<h3 id="5-1-滑动窗口-推荐">5.1 滑动窗口（推荐）<a class="anchor" href="#5-1-滑动窗口-推荐" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> rateLimit = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;express-rate-limit&#x27;</span>);
+<span class="hljs-keyword">const</span> <span class="hljs-title class_">RedisStore</span> = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;rate-limit-redis&#x27;</span>);
+
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">createLimiter</span> = (<span class="hljs-params">options</span>) =&gt; <span class="hljs-title function_">rateLimit</span>({
+  <span class="hljs-attr">windowMs</span>: options.<span class="hljs-property">window</span>,
+  <span class="hljs-attr">max</span>: options.<span class="hljs-property">max</span>,
+  <span class="hljs-attr">message</span>: {
+    <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>,
+    <span class="hljs-attr">error</span>: {
+      <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;RATE_LIMIT_EXCEEDED&#x27;</span>,
+      <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;RATE_ERROR&#x27;</span>,
+      <span class="hljs-attr">message</span>: <span class="hljs-string">`请求过于频繁，请 <span class="hljs-subst">${<span class="hljs-built_in">Math</span>.ceil(options.<span class="hljs-variable language_">window</span> / <span class="hljs-number">1000</span>)}</span> 秒后重试`</span>,
+      <span class="hljs-attr">retryAfter</span>: <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">ceil</span>(options.<span class="hljs-property">window</span> / <span class="hljs-number">1000</span>),
+      <span class="hljs-attr">limit</span>: options.<span class="hljs-property">max</span>,
+      <span class="hljs-attr">window</span>: <span class="hljs-title function_">formatWindow</span>(options.<span class="hljs-property">window</span>)
+    }
+  },
+  <span class="hljs-attr">standardHeaders</span>: <span class="hljs-literal">true</span>,   <span class="hljs-comment">// X-RateLimit-* 头</span>
+  <span class="hljs-attr">legacyHeaders</span>: <span class="hljs-literal">false</span>,
+  <span class="hljs-attr">keyGenerator</span>: <span class="hljs-function">(<span class="hljs-params">req</span>) =&gt;</span> {
+    <span class="hljs-comment">// 登录用户用 user ID，否则用 IP</span>
+    <span class="hljs-keyword">return</span> req.<span class="hljs-property">user</span>?.<span class="hljs-property">sub</span> || req.<span class="hljs-property">ip</span>;
+  },
+  <span class="hljs-attr">store</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">RedisStore</span>({ <span class="hljs-attr">client</span>: redisClient }),  <span class="hljs-comment">// 分布式共享</span>
+  <span class="hljs-attr">skip</span>: <span class="hljs-function">(<span class="hljs-params">req</span>) =&gt;</span> <span class="hljs-title function_">isExempt</span>(req)  <span class="hljs-comment">// 豁免检查</span>
+});</code></pre>
+<h3 id="5-2-豁免规则">5.2 豁免规则<a class="anchor" href="#5-2-豁免规则" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">function</span> <span class="hljs-title function_">isExempt</span>(<span class="hljs-params">req</span>) {
+  <span class="hljs-comment">// 健康检查豁免</span>
+  <span class="hljs-keyword">if</span> (req.<span class="hljs-property">path</span> === <span class="hljs-string">&#x27;/health&#x27;</span> || req.<span class="hljs-property">path</span> === <span class="hljs-string">&#x27;/ready&#x27;</span>) <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+  
+  <span class="hljs-comment">// 内部服务豁免（mTLS 或 secret header）</span>
+  <span class="hljs-keyword">if</span> (req.<span class="hljs-property">headers</span>[<span class="hljs-string">&#x27;x-internal-service&#x27;</span>] === <span class="hljs-variable constant_">INTERNAL_SECRET</span>) <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+  
+  <span class="hljs-comment">// 管理员豁免（可选）</span>
+  <span class="hljs-keyword">if</span> (req.<span class="hljs-property">user</span>?.<span class="hljs-property">role</span> === <span class="hljs-string">&#x27;superadmin&#x27;</span>) <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;  <span class="hljs-comment">// 管理员也限流，更安全</span>
+  
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+}</code></pre>
+<h3 id="5-3-端点级应用">5.3 端点级应用<a class="anchor" href="#5-3-端点级应用" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 全局 API 限流</span>
+app.<span class="hljs-title function_">use</span>(<span class="hljs-string">&#x27;/api/v1/&#x27;</span>, <span class="hljs-title function_">createLimiter</span>({
+  <span class="hljs-attr">window</span>: <span class="hljs-number">60_000</span>,
+  <span class="hljs-attr">max</span>: <span class="hljs-number">100</span>,
+  <span class="hljs-attr">keyGenerator</span>: <span class="hljs-function">(<span class="hljs-params">req</span>) =&gt;</span> req.<span class="hljs-property">user</span>?.<span class="hljs-property">sub</span> || req.<span class="hljs-property">ip</span>
+}));
+
+<span class="hljs-comment">// 认证端点（更严格）</span>
+app.<span class="hljs-title function_">use</span>(<span class="hljs-string">&#x27;/api/v1/auth/&#x27;</span>, <span class="hljs-title function_">createLimiter</span>({
+  <span class="hljs-attr">window</span>: <span class="hljs-number">15</span> * <span class="hljs-number">60_000</span>,
+  <span class="hljs-attr">max</span>: <span class="hljs-number">5</span>,
+  <span class="hljs-attr">keyGenerator</span>: <span class="hljs-function">(<span class="hljs-params">req</span>) =&gt;</span> req.<span class="hljs-property">ip</span>  <span class="hljs-comment">// 登录前只有 IP</span>
+}));
+
+<span class="hljs-comment">// AI 端点（成本加权）</span>
+app.<span class="hljs-title function_">use</span>(<span class="hljs-string">&#x27;/api/v1/ai/&#x27;</span>, <span class="hljs-title function_">createCostLimiter</span>({
+  <span class="hljs-attr">window</span>: <span class="hljs-number">60_000</span>,
+  <span class="hljs-attr">baseMax</span>: <span class="hljs-number">20</span>
+}));</code></pre>
+<hr>
+<h2 id="6-分布式限流">6. 分布式限流<a class="anchor" href="#6-分布式限流" aria-label="锚点">#</a></h2>
+<h3 id="6-1-多实例一致性">6.1 多实例一致性<a class="anchor" href="#6-1-多实例一致性" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>方案</th><th>说明</th></tr></thead><tbody><tr><td><strong>Redis 共享</strong></td><td>推荐：所有实例共享 Redis 计数器</td></tr><tr><td>粘性会话</td><td>nginx <code>ip_hash</code>，单用户固定实例（不推荐）</td></tr><tr><td>网关层限流</td><td>在反向代理层统一限流（第一道防线）</td></tr></tbody></table>
+<h3 id="6-2-redis-存储">6.2 Redis 存储<a class="anchor" href="#6-2-redis-存储" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-title class_">RedisStore</span> = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;rate-limit-redis&#x27;</span>);
+
+app.<span class="hljs-title function_">use</span>(<span class="hljs-string">&#x27;/api/&#x27;</span>, <span class="hljs-title function_">createLimiter</span>({
+  <span class="hljs-attr">store</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">RedisStore</span>({
+    <span class="hljs-attr">client</span>: redisClient,
+    <span class="hljs-attr">prefix</span>: <span class="hljs-string">&#x27;rl:&#x27;</span>  <span class="hljs-comment">// Redis key 前缀</span>
+  })
+}));</code></pre>
+<hr>
+<h2 id="7-限流与缓存">7. 限流与缓存<a class="anchor" href="#7-限流与缓存" aria-label="锚点">#</a></h2>
+<h3 id="7-1-限流结果缓存">7.1 限流结果缓存<a class="anchor" href="#7-1-限流结果缓存" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 被限流的请求不走缓存</span>
+app.<span class="hljs-title function_">use</span>(<span class="hljs-string">&#x27;/api/&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">req, res, next</span>) =&gt;</span> {
+  <span class="hljs-keyword">if</span> (req.<span class="hljs-property">rateLimit</span>?.<span class="hljs-property">remaining</span> === <span class="hljs-number">0</span>) {
+    res.<span class="hljs-title function_">set</span>(<span class="hljs-string">&#x27;Cache-Control&#x27;</span>, <span class="hljs-string">&#x27;no-store&#x27;</span>);
+  }
+  <span class="hljs-title function_">next</span>();
+});</code></pre>
+<h3 id="7-2-预热缓存">7.2 预热缓存<a class="anchor" href="#7-2-预热缓存" aria-label="锚点">#</a></h3>
+<p>高频端点（如 <code>/api/v1/strategies</code>）即使限流也返回缓存数据：</p>
+<pre><code class="language-javascript">app.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/api/v1/strategies&#x27;</span>,
+  <span class="hljs-title function_">createLimiter</span>({ <span class="hljs-attr">window</span>: <span class="hljs-number">60_000</span>, <span class="hljs-attr">max</span>: <span class="hljs-number">100</span> }),
+  <span class="hljs-title function_">async</span> (req, res) =&gt; {
+    <span class="hljs-keyword">const</span> data = <span class="hljs-keyword">await</span> <span class="hljs-title function_">getCachedStrategies</span>(req.<span class="hljs-property">user</span>.<span class="hljs-property">id</span>);
+    res.<span class="hljs-title function_">json</span>({ <span class="hljs-attr">success</span>: <span class="hljs-literal">true</span>, data, <span class="hljs-attr">cached</span>: <span class="hljs-literal">true</span> });
+  }
+);</code></pre>
+<hr>
+<h2 id="8-监控与告警">8. 监控与告警<a class="anchor" href="#8-监控与告警" aria-label="锚点">#</a></h2>
+<h3 id="8-1-限流指标">8.1 限流指标<a class="anchor" href="#8-1-限流指标" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>阈值</th><th>告警级别</th></tr></thead><tbody><tr><td>429 响应率</td><td>&gt; 5%</td><td>Warning</td></tr><tr><td>单一 IP 429 &gt; 100/min</td><td>持续 5 分钟</td><td>Warning</td></tr><tr><td>429 响应率 &gt; 20%</td><td>持续 1 分钟</td><td>Critical</td></tr></tbody></table>
+<h3 id="8-2-日志">8.2 日志<a class="anchor" href="#8-2-日志" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 每次限流记录</span>
+logger.<span class="hljs-title function_">warn</span>(<span class="hljs-string">&#x27;Rate limited&#x27;</span>, {
+  <span class="hljs-attr">ip</span>: req.<span class="hljs-property">ip</span>,
+  <span class="hljs-attr">userId</span>: req.<span class="hljs-property">user</span>?.<span class="hljs-property">sub</span>,
+  <span class="hljs-attr">path</span>: req.<span class="hljs-property">path</span>,
+  <span class="hljs-attr">limit</span>: req.<span class="hljs-property">rateLimit</span>?.<span class="hljs-property">limit</span>,
+  <span class="hljs-attr">remaining</span>: req.<span class="hljs-property">rateLimit</span>?.<span class="hljs-property">remaining</span>
+});</code></pre>
+<hr>
+<h2 id="9-客户端规范">9. 客户端规范<a class="anchor" href="#9-客户端规范" aria-label="锚点">#</a></h2>
+<h3 id="9-1-客户端应做的事">9.1 客户端应做的事<a class="anchor" href="#9-1-客户端应做的事" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>行为</th><th>说明</th></tr></thead><tbody><tr><td>读取 <code>X-RateLimit-Remaining</code></td><td>主动降低请求频率</td></tr><tr><td>遇到 429 时等待 <code>Retry-After</code></td><td>指数退避</td></tr><tr><td>批量请求时分散间隔</td><td>避免集中触发限流</td></tr></tbody></table>
+<h3 id="9-2-客户端退避">9.2 客户端退避<a class="anchor" href="#9-2-客户端退避" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">apiRequest</span>(<span class="hljs-params">url, options = {}</span>) {
+  <span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fetch</span>(url, options);
+  
+  <span class="hljs-keyword">if</span> (response.<span class="hljs-property">status</span> === <span class="hljs-number">429</span>) {
+    <span class="hljs-keyword">const</span> retryAfter = <span class="hljs-built_in">parseInt</span>(response.<span class="hljs-property">headers</span>.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;Retry-After&#x27;</span>) || <span class="hljs-string">&#x27;60&#x27;</span>);
+    logger.<span class="hljs-title function_">warn</span>(<span class="hljs-string">`Rate limited, retrying after <span class="hljs-subst">${retryAfter}</span>s`</span>);
+    <span class="hljs-keyword">await</span> <span class="hljs-title function_">sleep</span>(retryAfter * <span class="hljs-number">1000</span>);
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">apiRequest</span>(url, options);  <span class="hljs-comment">// 重试一次</span>
+  }
+  
+  <span class="hljs-keyword">return</span> response;
+}</code></pre>
+<hr>
+<h2 id="10-版本历史">10. 版本历史<a class="anchor" href="#10-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义 Rate Limiting 规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-REVIEW-001] 代码审查规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-REVIEW-001] 代码审查规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-SEC-001] 安全规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-SEC-001] 安全规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-RL-001] Rate Limiting 限流规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

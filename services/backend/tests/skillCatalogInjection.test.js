@@ -2,11 +2,11 @@
 
 /**
  * Tests for the s07 alignment fix:
- *   1. Catalog injection â€?the previously dead catalog builder
- *      (skillSearch.buildSystemReminder â†?skills.formatSkillListing) is now wired
+ *   1. Catalog injection â€”the previously dead catalog builder
+ *      (skillSearch.buildSystemReminder â†’skills.formatSkillListing) is now wired
  *      into the SYSTEM prompt as the `skill_catalog` dynamic section, budgeted at
  *      ~1% of the context window and hard-capped at 8000 chars.
- *   2. Frontmatter modeling â€?when_to_use / allowed-tools / context / model are
+ *   2. Frontmatter modeling â€”when_to_use / allowed-tools / context / model are
  *      parsed off skill manifests into a single normalized shape, and the
  *      "use when" hint surfaces in the catalog line.
  */
@@ -16,7 +16,7 @@ const assert = require('assert');
 const prompts = require('../src/constants/prompts');
 const skills = require('../src/skills');
 
-describe('s07 â€?skill catalog injected into the system prompt', () => {
+describe('s07 â€”skill catalog injected into the system prompt', () => {
   test('getSkillCatalogSection returns a non-empty catalog block', () => {
     const section = prompts.getSkillCatalogSection({ contextWindowTokens: 200000 });
     expect(section).toBeTruthy();
@@ -59,7 +59,7 @@ describe('s07 â€?skill catalog injected into the system prompt', () => {
   });
 });
 
-describe('s07 â€?CC-parity frontmatter modeling', () => {
+describe('s07 â€”CC-parity frontmatter modeling', () => {
   test('every discovered skill carries the normalized frontmatter shape', () => {
     const all = skills.getCachedSkills();
     for (const skill of all.values()) {
@@ -83,7 +83,7 @@ describe('s07 â€?CC-parity frontmatter modeling', () => {
   test('whenToUse hint surfaces in the catalog line when present', () => {
     const all = [...skills.getCachedSkills().values()];
     const withHint = all.find(s => s.userInvocable && s.whenToUse);
-    if (!withHint) return; // none of the bundled skills set when_to_use â€?skip
+    if (!withHint) return; // none of the bundled skills set when_to_use â€”skip
     const listing = skills.formatSkillListing(8000);
     assert.ok(listing.includes('(use when:'), 'expected a "use when" hint in the listing');
   });

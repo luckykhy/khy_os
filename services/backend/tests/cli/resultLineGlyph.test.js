@@ -58,14 +58,16 @@ describe('resultLineGlyph', () => {
   describe('resultLineLead', () => {
     test('returns elbow glyph when enabled', () => {
       const result = resultLineLead({});
-      expect(result.glyph).toBe('�?');
+      // Production contract (see resultLineGlyph.js docstring): glyph carries a
+      // trailing space — '⎿ ' for the CC elbow, not the bare character.
+      expect(result.glyph).toBe('⎿ ');
       expect(result.color).toBeUndefined();
       expect(result.dim).toBe(true);
     });
 
     test('returns legacy glyph when disabled', () => {
       const result = resultLineLead({ KHY_RESULT_ELBOW: '0' });
-      expect(result.glyph).toBe('�?');
+      expect(result.glyph).toBe('✓ ');
       expect(result.color).toBe('green');
       expect(result.dim).toBe(true);
     });

@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 四端跨设备同步.md -->
+<title>四端跨设备同步：手机 + 网页 + 桌面 + 终端 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>.ai<span class="sep">›</span>hq<span class="sep">›</span>prompts<span class="sep">›</span>feature<span class="sep">›</span>四端跨设备同步：手机 + 网页 + 桌面 + 终端</div>
+      <header class="hero reveal"><h1>四端跨设备同步：手机 + 网页 + 桌面 + 终端</h1></header>
+      
+      <article class="doc-body">
+<h1 id="四端跨设备同步-手机-网页-桌面-终端">四端跨设备同步：手机 + 网页 + 桌面 + 终端<a class="anchor" href="#四端跨设备同步-手机-网页-桌面-终端" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>任务 ID</strong>: T-022<br><strong>优先级</strong>: P1<br><strong>类型</strong>: feature<br><strong>状态</strong>: todo</p></blockquote>
+<h2 id="提示词正文-复制下面代码块内的全部内容">📋 提示词正文（复制下面代码块内的全部内容）<a class="anchor" href="#提示词正文-复制下面代码块内的全部内容" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">【角色】你是 khy-os 的「四端跨设备同步工程师」。你的任务是把 khy-os 的四端
+（手机 Capacitor / 网页 Vue / 桌面 Electron / 终端 CLI）接入同一套实时同步总线，
+实现设备发现注册、会话同步、跨设备消息与会话交接。
+
+【工作目录】khy-os 仓库根目录（本提示词由 khy hq next 渲染后交给在 khy-os 目录
+内打开的任意 AI 执行；路径以该 AI 的工作目录为准，禁止硬编码盘符）。
+
+## 目标
+
+建立 khy-os 四端（手机、网页、桌面、终端）之间的实时连接，实现：
+
+1. **设备发现与注册**：各端自动注册到后端 crossPlatformHub
+2. **会话同步**：对话状态在终端/网页/桌面/手机之间实时同步
+3. **跨设备消息**：任何端可向其他端发送消息和通知
+4. **会话交接**：在 A 端开始的对话可无缝切换到 B 端继续
+5. **在线状态**：实时查看各端在线/离线状态
+
+## 架构
+
+~~~
+┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+│   手机      │  │   网页      │  │   桌面      │  │   终端      │
+│  (Capacitor)│  │  (Vue 3)    │  │  (Electron) │  │  (CLI/Node) │
+└──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘
+       │                │                │                │
+       └────────────────┴────────┬───────┴────────────────┘
+                                 │
+                       ┌─────────▼─────────┐
+                       │  WebSocket Server  │
+                       │  /ws/cross-platform│
+                       └─────────┬─────────┘
+                                 │
+              ┌──────────────────┼──────────────────┐
+              │                  │                  │
+     ┌────────▼────────┐ ┌──────▼───────┐ ┌────────▼────────┐
+     │ crossPlatformHub│ │ sessionSync  │ │   Persistence   │
+     │ (消息总线)      │ │ (会话状态)   │ │ (磁盘快照)      │
+     └─────────────────┘ └──────────────┘ └─────────────────┘
+~~~
+
+## 文件结构
+
+### 后端（Node.js）
+
+~~~
+services/backend/src/services/crossPlatform/
+├── crossPlatformHub.js          # 设备注册 + 会话状态 + 消息路由（已有）
+├── protocol.js                  # 协议常量（新建）
+├── ws/
+│   └── syncServer.js            # WebSocket 服务端 + 持久化（新建）
+└── clients/
+    └── terminalClient.js        # 终端 WebSocket 客户端（新建）
+
+services/backend/src/routes/
+└── crossPlatform.js             # REST API（新建）
+~~~
+
+### 前端
+
+~~~
+apps/ai-frontend/src/services/crossPlatform/
+└── crossPlatformClient.js       # Vue 3 composable + WebSocket（新建）
+
+apps/khyos-desktop/electron/crossPlatform/
+└── crossPlatformClient.js       # Electron IPC 桥接（新建）
+
+apps/khy-mobile/src/api/crossPlatform/
+└── crossPlatformClient.js       # Capacitor WebSocket（新建）
+~~~
+
+### 终端命令
+
+~~~
+services/backend/src/cli/handlers/
+└── crossPlatform.js             # khy cross * 子命令（新建）
+~~~
+
+## 协议
+
+### 消息类型
+
+客户端 → 服务端：
+- `auth` — 认证（token, deviceId, platform）
+- `ping` — 心跳
+- `session:join` — 加入会话
+- `session:leave` — 离开会话
+- `session:update` — 更新会话状态（delta sync）
+- `message:send` — 跨设备消息
+- `command:route` — 命令路由
+- `device:list` — 查询设备列表
+
+服务端 → 客户端：
+- `auth:ok` / `auth:error` — 认证结果
+- `session:updated` — 会话更新推送
+- `session:joined` — 其他设备加入
+- `message` — 跨设备消息
+- `command` — 跨设备命令
+- `presence` — 在线状态广播
+- `notification` — 通知
+
+### 平台标识
+
+~~~javascript
+const PLATFORMS = { TERMINAL: &#x27;terminal&#x27;, WEB: &#x27;web&#x27;, DESKTOP: &#x27;desktop&#x27;, MOBILE: &#x27;mobile&#x27; };
+~~~
+
+## 实现步骤
+
+### 第一步：后端基础设施 ✅
+1. ✅ 创建 `protocol.js` — 协议常量和消息构造器
+2. ✅ 创建 `ws/syncServer.js` — WebSocket 服务端 + 设备管理 + 持久化
+3. ✅ 创建 `routes/crossPlatform.js` — REST API（设备管理、会话查询、通知）
+4. ✅ 在 `server.js` 中初始化 syncServer（附加到 HTTP server）
+
+### 第二步：各端客户端 ✅
+5. ✅ 创建 `clients/terminalClient.js` — Node.js WebSocket 客户端
+6. ✅ 创建 `ai-frontend` 的 `crossPlatformClient.js` — Vue 3 composable
+7. ✅ 创建 `khyos-desktop` 的 `crossPlatformClient.js` — Electron IPC 桥接
+8. ✅ 创建 `khy-mobile` 的 `crossPlatformClient.js` — Capacitor WebSocket
+
+### 第三步：终端命令 ✅
+9. ✅ 创建 `handlers/crossPlatform.js` — `khy cross *` 子命令
+
+### 第四步：集成与验证 ⏳
+10. ⏳ 启动后端，验证 WebSocket 监听在 `/ws/cross-platform`
+11. ⏳ 运行 `khy cross connect` 从终端连接
+12. ⏳ 从网页端连接，验证设备列表同步
+13. ⏳ 测试会话同步（在终端 join session，网页端收到更新）
+14. ⏳ 测试消息发送（终端 → 网页 → 终端）
+
+## 验收标准
+
+- [ ] 终端 `khy cross connect` 成功连接并认证
+- [ ] 网页端可看到终端设备在线
+- [ ] 会话状态在终端和网页端实时同步
+- [ ] 跨设备消息投递成功
+- [ ] 断线自动重连（指数退避）
+- [ ] 后端重启后磁盘持久化恢复会话状态
+- [ ] REST API `/api/cross-platform/status` 返回正确状态
+- [ ] 所有端支持 `device:list` 查询
+
+## 工程红线
+
+1. **零硬编码**：WebSocket URL 从 runtime 配置发现
+2. **状态透明**：所有连接状态消息遵循「动作+目标+进度」
+3. **活动超时**：WebSocket ping/pong 空闲检测，自动重连
+4. **fail-soft**：所有客户端操作不抛出未捕获异常
+5. **便携性**：设备 ID 持久化在 `~/.khyquant/sync/`（随 Portable 迁移）
+
+【验证命令】（在 khy-os 根目录依次执行）
+
+- node services/backend/bin/khy.js cross connect      （终端端连接 + 认证）
+- node services/backend/bin/khy.js cross devices        （各端在线状态）
+- node scripts/ci/check-agent-rules.js --changed         （工程红线扫描 error=0）
+- cd services/backend &amp;&amp; npx jest tests/crossPlatform    （同步相关回归，如已建）
+- khy doctor
+</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../.ai/hq/prompts/feature/手机端APK参考项目.html"><div class="dir">← 上一篇</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a><a class="next" href="../../../../.ai/hq/prompts/feature/CRDT-实时协作编辑引擎.html"><div class="dir">下一篇 →</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__=".ai/hq/prompts/feature/四端跨设备同步.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-CACHE-001] 缓存规范.md -->
+<title>[DESIGN-CACHE-001] 缓存规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-CACHE-001] 缓存规范</div>
+      <header class="hero reveal"><h1>[DESIGN-CACHE-001] 缓存规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-cache-001-缓存规范">[DESIGN-CACHE-001] 缓存规范</a></li><li class="lvl-2"><a href="#1-缓存概述">1. 缓存概述</a></li><li class="lvl-3"><a href="#1-1-设计原则">1.1 设计原则</a></li><li class="lvl-3"><a href="#1-2-缓存层次">1.2 缓存层次</a></li><li class="lvl-2"><a href="#2-缓存策略">2. 缓存策略</a></li><li class="lvl-3"><a href="#2-1-缓存模式">2.1 缓存模式</a></li><li class="lvl-3"><a href="#2-2-推荐策略">2.2 推荐策略</a></li><li class="lvl-2"><a href="#3-缓存键命名">3. 缓存键命名</a></li><li class="lvl-3"><a href="#3-1-命名规范">3.1 命名规范</a></li><li class="lvl-3"><a href="#3-2-命名规则">3.2 命名规则</a></li><li class="lvl-3"><a href="#3-3-键名前缀">3.3 键名前缀</a></li><li class="lvl-2"><a href="#4-缓存时间">4. 缓存时间</a></li><li class="lvl-3"><a href="#4-1-过期策略">4.1 过期策略</a></li><li class="lvl-3"><a href="#4-2-过期策略类型">4.2 过期策略类型</a></li><li class="lvl-2"><a href="#5-缓存实现">5. 缓存实现</a></li><li class="lvl-3"><a href="#5-1-redis-缓存">5.1 Redis 缓存</a></li><li class="lvl-3"><a href="#5-2-缓存装饰器">5.2 缓存装饰器</a></li><li class="lvl-3"><a href="#5-3-缓存穿透防护">5.3 缓存穿透防护</a></li><li class="lvl-3"><a href="#5-4-缓存击穿防护">5.4 缓存击穿防护</a></li><li class="lvl-3"><a href="#5-5-缓存雪崩防护">5.5 缓存雪崩防护</a></li><li class="lvl-2"><a href="#6-缓存失效">6. 缓存失效</a></li><li class="lvl-3"><a href="#6-1-失效策略">6.1 失效策略</a></li><li class="lvl-3"><a href="#6-2-主动失效实现">6.2 主动失效实现</a></li><li class="lvl-3"><a href="#6-3-缓存失效事件">6.3 缓存失效事件</a></li><li class="lvl-2"><a href="#7-浏览器缓存">7. 浏览器缓存</a></li><li class="lvl-3"><a href="#7-1-http-缓存头">7.1 HTTP 缓存头</a></li><li class="lvl-3"><a href="#7-2-service-worker-缓存">7.2 Service Worker 缓存</a></li><li class="lvl-2"><a href="#8-缓存监控">8. 缓存监控</a></li><li class="lvl-3"><a href="#8-1-监控指标">8.1 监控指标</a></li><li class="lvl-3"><a href="#8-2-监控实现">8.2 监控实现</a></li><li class="lvl-2"><a href="#9-版本历史">9. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-cache-001-缓存规范">[DESIGN-CACHE-001] 缓存规范<a class="anchor" href="#design-cache-001-缓存规范" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档定义 khy-os 项目的缓存标准，包括缓存策略、失效机制、键命名等。</p></blockquote>
+<hr>
+<h2 id="1-缓存概述">1. 缓存概述<a class="anchor" href="#1-缓存概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-设计原则">1.1 设计原则<a class="anchor" href="#1-1-设计原则" aria-label="锚点">#</a></h3>
+<ol><li><strong>性能优先</strong>：提升系统响应速度</li><li><strong>一致性</strong>：缓存与数据源保持一致</li><li><strong>可用性</strong>：缓存失败不影响主流程</li><li><strong>可监控</strong>：缓存状态可监控</li></ol>
+<h3 id="1-2-缓存层次">1.2 缓存层次<a class="anchor" href="#1-2-缓存层次" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>层次</th><th>位置</th><th>用途</th></tr></thead><tbody><tr><td>L1</td><td>浏览器缓存</td><td>静态资源</td></tr><tr><td>L2</td><td>CDN 缓存</td><td>全球分发</td></tr><tr><td>L3</td><td>反向代理缓存</td><td>负载均衡</td></tr><tr><td>L4</td><td>应用缓存</td><td>业务数据</td></tr><tr><td>L5</td><td>数据库缓存</td><td>查询结果</td></tr></tbody></table>
+<hr>
+<h2 id="2-缓存策略">2. 缓存策略<a class="anchor" href="#2-缓存策略" aria-label="锚点">#</a></h2>
+<h3 id="2-1-缓存模式">2.1 缓存模式<a class="anchor" href="#2-1-缓存模式" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>模式</th><th>说明</th><th>适用场景</th></tr></thead><tbody><tr><td>Cache-Aside</td><td>应用管理缓存</td><td>大多数场景</td></tr><tr><td>Read-Through</td><td>缓存层自动加载</td><td>读多写少</td></tr><tr><td>Write-Through</td><td>同步写入缓存和数据库</td><td>强一致性</td></tr><tr><td>Write-Behind</td><td>异步写入数据库</td><td>高写入性能</td></tr></tbody></table>
+<h3 id="2-2-推荐策略">2.2 推荐策略<a class="anchor" href="#2-2-推荐策略" aria-label="锚点">#</a></h3>
+<ul><li><strong>默认</strong>：Cache-Aside</li><li><strong>读多写少</strong>：Read-Through</li><li><strong>高一致性</strong>：Write-Through</li><li><strong>高写入</strong>：Write-Behind</li></ul>
+<hr>
+<h2 id="3-缓存键命名">3. 缓存键命名<a class="anchor" href="#3-缓存键命名" aria-label="锚点">#</a></h2>
+<h3 id="3-1-命名规范">3.1 命名规范<a class="anchor" href="#3-1-命名规范" aria-label="锚点">#</a></h3>
+<p><strong>格式</strong>：<code>{prefix}:{entity}:{id}:{field}</code></p>
+<p><strong>示例</strong>：</p>
+<pre><code>user:123:profile
+user:123:orders
+product:466:details
+config:app:settings</code></pre>
+<h3 id="3-2-命名规则">3.2 命名规则<a class="anchor" href="#3-2-命名规则" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规则</th><th>说明</th><th>示例</th></tr></thead><tbody><tr><td>小写</td><td>使用小写字母</td><td><code>user:123</code></td></tr><tr><td>冒号分隔</td><td>使用冒号分隔层级</td><td><code>user:123:profile</code></td></tr><tr><td>简洁</td><td>键名简洁</td><td><code>u:123:p</code>（不推荐）</td></tr><tr><td>可读</td><td>键名可读</td><td><code>user:123:profile</code>（推荐）</td></tr></tbody></table>
+<h3 id="3-3-键名前缀">3.3 键名前缀<a class="anchor" href="#3-3-键名前缀" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>前缀</th><th>用途</th></tr></thead><tbody><tr><td>user:</td><td>用户数据</td></tr><tr><td>order:</td><td>订单数据</td></tr><tr><td>product:</td><td>产品数据</td></tr><tr><td>config:</td><td>配置数据</td></tr><tr><td>session:</td><td>会话数据</td></tr><tr><td>rate:</td><td>速率限制</td></tr></tbody></table>
+<hr>
+<h2 id="4-缓存时间">4. 缓存时间<a class="anchor" href="#4-缓存时间" aria-label="锚点">#</a></h2>
+<h3 id="4-1-过期策略">4.1 过期策略<a class="anchor" href="#4-1-过期策略" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>数据类型</th><th>TTL</th><th>说明</th></tr></thead><tbody><tr><td>用户会话</td><td>7 天</td><td>长期有效</td></tr><tr><td>用户配置</td><td>1 小时</td><td>可能变更</td></tr><tr><td>产品详情</td><td>15 分钟</td><td>可能变更</td></tr><tr><td>统计数据</td><td>5 分钟</td><td>频繁变更</td></tr><tr><td>配置数据</td><td>1 小时</td><td>较少变更</td></tr></tbody></table>
+<h3 id="4-2-过期策略类型">4.2 过期策略类型<a class="anchor" href="#4-2-过期策略类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>策略</th><th>说明</th></tr></thead><tbody><tr><td>TTL</td><td>固定过期时间</td></tr><tr><td>LRU</td><td>最近最少使用</td></tr><tr><td>LFU</td><td>最不经常使用</td></tr><tr><td>FIFO</td><td>先进先出</td></tr></tbody></table>
+<hr>
+<h2 id="5-缓存实现">5. 缓存实现<a class="anchor" href="#5-缓存实现" aria-label="锚点">#</a></h2>
+<h3 id="5-1-redis-缓存">5.1 Redis 缓存<a class="anchor" href="#5-1-redis-缓存" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// utils/cache.js</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title class_">Redis</span> = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;ioredis&#x27;</span>);
+<span class="hljs-keyword">const</span> redis = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Redis</span>(process.<span class="hljs-property">env</span>.<span class="hljs-property">REDIS_URL</span>);
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">Cache</span> {
+  <span class="hljs-keyword">static</span> <span class="hljs-keyword">async</span> <span class="hljs-title function_">get</span>(<span class="hljs-params">key</span>) {
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">const</span> data = <span class="hljs-keyword">await</span> redis.<span class="hljs-title function_">get</span>(key);
+      <span class="hljs-keyword">return</span> data ? <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(data) : <span class="hljs-literal">null</span>;
+    } <span class="hljs-keyword">catch</span> (error) {
+      <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;Cache get error:&#x27;</span>, error);
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>; <span class="hljs-comment">// 缓存失败返回 null，不影响主流程</span>
+    }
+  }
+  
+  <span class="hljs-keyword">static</span> <span class="hljs-keyword">async</span> <span class="hljs-title function_">set</span>(<span class="hljs-params">key, value, ttl = <span class="hljs-number">3600</span></span>) {
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">await</span> redis.<span class="hljs-title function_">setex</span>(key, ttl, <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>(value));
+    } <span class="hljs-keyword">catch</span> (error) {
+      <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;Cache set error:&#x27;</span>, error);
+    }
+  }
+  
+  <span class="hljs-keyword">static</span> <span class="hljs-keyword">async</span> <span class="hljs-title function_">del</span>(<span class="hljs-params">key</span>) {
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">await</span> redis.<span class="hljs-title function_">del</span>(key);
+    } <span class="hljs-keyword">catch</span> (error) {
+      <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;Cache delete error:&#x27;</span>, error);
+    }
+  }
+  
+  <span class="hljs-keyword">static</span> <span class="hljs-keyword">async</span> <span class="hljs-title function_">delPattern</span>(<span class="hljs-params">pattern</span>) {
+    <span class="hljs-keyword">const</span> keys = <span class="hljs-keyword">await</span> redis.<span class="hljs-title function_">keys</span>(pattern);
+    <span class="hljs-keyword">if</span> (keys.<span class="hljs-property">length</span> &gt; <span class="hljs-number">0</span>) {
+      <span class="hljs-keyword">await</span> redis.<span class="hljs-title function_">del</span>(...keys);
+    }
+  }
+}
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = <span class="hljs-title class_">Cache</span>;</code></pre>
+<h3 id="5-2-缓存装饰器">5.2 缓存装饰器<a class="anchor" href="#5-2-缓存装饰器" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// utils/cacheDecorator.js</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title class_">Cache</span> = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./cache&#x27;</span>);
+
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">cacheable</span> = (<span class="hljs-params">keyGenerator, ttl = <span class="hljs-number">3600</span></span>) =&gt; {
+  <span class="hljs-keyword">return</span> <span class="hljs-function">(<span class="hljs-params">target, propertyKey, descriptor</span>) =&gt;</span> {
+    <span class="hljs-keyword">const</span> originalMethod = descriptor.<span class="hljs-property">value</span>;
+    
+    descriptor.<span class="hljs-property">value</span> = <span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> (<span class="hljs-params">...args</span>) {
+      <span class="hljs-keyword">const</span> key = <span class="hljs-title function_">keyGenerator</span>(...args);
+      
+      <span class="hljs-comment">// 尝试从缓存获取</span>
+      <span class="hljs-keyword">const</span> cached = <span class="hljs-keyword">await</span> <span class="hljs-title class_">Cache</span>.<span class="hljs-title function_">get</span>(key);
+      <span class="hljs-keyword">if</span> (cached) {
+        <span class="hljs-keyword">return</span> cached;
+      }
+      
+      <span class="hljs-comment">// 缓存未命中，执行原方法</span>
+      <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> originalMethod.<span class="hljs-title function_">apply</span>(<span class="hljs-variable language_">this</span>, args);
+      
+      <span class="hljs-comment">// 写入缓存</span>
+      <span class="hljs-keyword">await</span> <span class="hljs-title class_">Cache</span>.<span class="hljs-title function_">set</span>(key, result, ttl);
+      
+      <span class="hljs-keyword">return</span> result;
+    };
+    
+    <span class="hljs-keyword">return</span> descriptor;
+  };
+};
+
+<span class="hljs-comment">// 使用</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">UserService</span> {
+  @<span class="hljs-title function_">cacheable</span>(<span class="hljs-function">(<span class="hljs-params">userId</span>) =&gt;</span> <span class="hljs-string">`user:<span class="hljs-subst">${userId}</span>:profile`</span>, <span class="hljs-number">3600</span>)
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">getUserProfile</span>(<span class="hljs-params">userId</span>) {
+    <span class="hljs-keyword">return</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">findByPk</span>(userId);
+  }
+}</code></pre>
+<h3 id="5-3-缓存穿透防护">5.3 缓存穿透防护<a class="anchor" href="#5-3-缓存穿透防护" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 使用布隆过滤器或空值缓存</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">getWithCache</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">key, fetchFn, ttl = <span class="hljs-number">3600</span></span>) =&gt; {
+  <span class="hljs-keyword">const</span> cached = <span class="hljs-keyword">await</span> <span class="hljs-title class_">Cache</span>.<span class="hljs-title function_">get</span>(key);
+  
+  <span class="hljs-comment">// 缓存命中</span>
+  <span class="hljs-keyword">if</span> (cached !== <span class="hljs-literal">null</span>) {
+    <span class="hljs-keyword">return</span> cached;
+  }
+  
+  <span class="hljs-comment">// 缓存未命中，查询数据源</span>
+  <span class="hljs-keyword">const</span> data = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fetchFn</span>();
+  
+  <span class="hljs-comment">// 数据不存在，缓存空值（防止穿透）</span>
+  <span class="hljs-keyword">if</span> (!data) {
+    <span class="hljs-keyword">await</span> <span class="hljs-title class_">Cache</span>.<span class="hljs-title function_">set</span>(key, { <span class="hljs-attr">__null</span>: <span class="hljs-literal">true</span> }, <span class="hljs-number">300</span>); <span class="hljs-comment">// 5 分钟</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+  }
+  
+  <span class="hljs-comment">// 写入缓存</span>
+  <span class="hljs-keyword">await</span> <span class="hljs-title class_">Cache</span>.<span class="hljs-title function_">set</span>(key, data, ttl);
+  <span class="hljs-keyword">return</span> data;
+};</code></pre>
+<h3 id="5-4-缓存击穿防护">5.4 缓存击穿防护<a class="anchor" href="#5-4-缓存击穿防护" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 使用互斥锁</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">getWithLock</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">key, fetchFn, ttl = <span class="hljs-number">3600</span></span>) =&gt; {
+  <span class="hljs-keyword">const</span> cached = <span class="hljs-keyword">await</span> <span class="hljs-title class_">Cache</span>.<span class="hljs-title function_">get</span>(key);
+  <span class="hljs-keyword">if</span> (cached) {
+    <span class="hljs-keyword">return</span> cached;
+  }
+  
+  <span class="hljs-comment">// 获取锁</span>
+  <span class="hljs-keyword">const</span> lockKey = <span class="hljs-string">`lock:<span class="hljs-subst">${key}</span>`</span>;
+  <span class="hljs-keyword">const</span> locked = <span class="hljs-keyword">await</span> redis.<span class="hljs-title function_">set</span>(lockKey, <span class="hljs-string">&#x27;1&#x27;</span>, <span class="hljs-string">&#x27;EX&#x27;</span>, <span class="hljs-number">10</span>, <span class="hljs-string">&#x27;NX&#x27;</span>);
+  
+  <span class="hljs-keyword">if</span> (locked) {
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-comment">// 获取锁成功，查询数据</span>
+      <span class="hljs-keyword">const</span> data = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fetchFn</span>();
+      <span class="hljs-keyword">await</span> <span class="hljs-title class_">Cache</span>.<span class="hljs-title function_">set</span>(key, data, ttl);
+      <span class="hljs-keyword">return</span> data;
+    } <span class="hljs-keyword">finally</span> {
+      <span class="hljs-comment">// 释放锁</span>
+      <span class="hljs-keyword">await</span> redis.<span class="hljs-title function_">del</span>(lockKey);
+    }
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-comment">// 获取锁失败，等待后重试</span>
+    <span class="hljs-keyword">await</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Promise</span>(<span class="hljs-function"><span class="hljs-params">resolve</span> =&gt;</span> <span class="hljs-built_in">setTimeout</span>(resolve, <span class="hljs-number">100</span>));
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">getWithLock</span>(key, fetchFn, ttl);
+  }
+};</code></pre>
+<h3 id="5-5-缓存雪崩防护">5.5 缓存雪崩防护<a class="anchor" href="#5-5-缓存雪崩防护" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 使用随机 TTL</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">setWithJitter</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">key, value, baseTtl = <span class="hljs-number">3600</span></span>) =&gt; {
+  <span class="hljs-keyword">const</span> jitter = <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">floor</span>(<span class="hljs-title class_">Math</span>.<span class="hljs-title function_">random</span>() * <span class="hljs-number">600</span>); <span class="hljs-comment">// 0-10 分钟随机</span>
+  <span class="hljs-keyword">await</span> <span class="hljs-title class_">Cache</span>.<span class="hljs-title function_">set</span>(key, value, baseTtl + jitter);
+};</code></pre>
+<hr>
+<h2 id="6-缓存失效">6. 缓存失效<a class="anchor" href="#6-缓存失效" aria-label="锚点">#</a></h2>
+<h3 id="6-1-失效策略">6.1 失效策略<a class="anchor" href="#6-1-失效策略" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>策略</th><th>说明</th><th>适用场景</th></tr></thead><tbody><tr><td>主动失效</td><td>数据更新时删除缓存</td><td>强一致性</td></tr><tr><td>被动失效</td><td>等待缓存过期</td><td>最终一致性</td></tr><tr><td>定时失效</td><td>定期清理过期缓存</td><td>批量清理</td></tr></tbody></table>
+<h3 id="6-2-主动失效实现">6.2 主动失效实现<a class="anchor" href="#6-2-主动失效实现" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">class</span> <span class="hljs-title class_">UserService</span> {
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">updateUser</span>(<span class="hljs-params">userId, data</span>) {
+    <span class="hljs-comment">// 更新数据库</span>
+    <span class="hljs-keyword">await</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">update</span>(data, { <span class="hljs-attr">where</span>: { <span class="hljs-attr">id</span>: userId } });
+    
+    <span class="hljs-comment">// 删除相关缓存</span>
+    <span class="hljs-keyword">await</span> <span class="hljs-title class_">Cache</span>.<span class="hljs-title function_">del</span>(<span class="hljs-string">`user:<span class="hljs-subst">${userId}</span>:profile`</span>);
+    <span class="hljs-keyword">await</span> <span class="hljs-title class_">Cache</span>.<span class="hljs-title function_">delPattern</span>(<span class="hljs-string">`user:<span class="hljs-subst">${userId}</span>:*`</span>);
+  }
+}</code></pre>
+<h3 id="6-3-缓存失效事件">6.3 缓存失效事件<a class="anchor" href="#6-3-缓存失效事件" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 使用消息队列广播缓存失效</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">invalidateCache</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">pattern</span>) =&gt; {
+  <span class="hljs-comment">// 发送失效事件</span>
+  <span class="hljs-keyword">await</span> redis.<span class="hljs-title function_">publish</span>(<span class="hljs-string">&#x27;cache:invalidate&#x27;</span>, pattern);
+  
+  <span class="hljs-comment">// 本地失效</span>
+  <span class="hljs-keyword">await</span> <span class="hljs-title class_">Cache</span>.<span class="hljs-title function_">delPattern</span>(pattern);
+};
+
+<span class="hljs-comment">// 订阅失效事件</span>
+redis.<span class="hljs-title function_">subscribe</span>(<span class="hljs-string">&#x27;cache:invalidate&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">pattern</span>) =&gt;</span> {
+  <span class="hljs-title class_">Cache</span>.<span class="hljs-title function_">delPattern</span>(pattern);
+});</code></pre>
+<hr>
+<h2 id="7-浏览器缓存">7. 浏览器缓存<a class="anchor" href="#7-浏览器缓存" aria-label="锚点">#</a></h2>
+<h3 id="7-1-http-缓存头">7.1 HTTP 缓存头<a class="anchor" href="#7-1-http-缓存头" aria-label="锚点">#</a></h3>
+<pre><code class="language-nginx"><span class="hljs-comment"># 静态资源缓存 1 年</span>
+<span class="hljs-section">location</span> <span class="hljs-regexp">~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$</span> {
+  <span class="hljs-attribute">expires</span> <span class="hljs-number">1y</span>;
+  <span class="hljs-attribute">add_header</span> Cache-Control <span class="hljs-string">&quot;public, immutable&quot;</span>;
+}
+
+<span class="hljs-comment"># HTML 不缓存</span>
+<span class="hljs-section">location</span> <span class="hljs-regexp">~* \.html$</span> {
+  <span class="hljs-attribute">expires</span> -<span class="hljs-number">1</span>;
+  <span class="hljs-attribute">add_header</span> Cache-Control <span class="hljs-string">&quot;no-cache, no-store, must-revalidate&quot;</span>;
+}
+
+<span class="hljs-comment"># API 响应缓存</span>
+<span class="hljs-section">location</span> /api/ {
+  <span class="hljs-attribute">add_header</span> Cache-Control <span class="hljs-string">&quot;no-cache&quot;</span>;
+}</code></pre>
+<h3 id="7-2-service-worker-缓存">7.2 Service Worker 缓存<a class="anchor" href="#7-2-service-worker-缓存" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// sw.js</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">CACHE_NAME</span> = <span class="hljs-string">&#x27;khyos-v1&#x27;</span>;
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">STATIC_ASSETS</span> = [
+  <span class="hljs-string">&#x27;/&#x27;</span>,
+  <span class="hljs-string">&#x27;/index.html&#x27;</span>,
+  <span class="hljs-string">&#x27;/assets/index.js&#x27;</span>,
+  <span class="hljs-string">&#x27;/assets/index.css&#x27;</span>
+];
+
+<span class="hljs-comment">// 安装时缓存静态资源</span>
+<span class="hljs-variable language_">self</span>.<span class="hljs-title function_">addEventListener</span>(<span class="hljs-string">&#x27;install&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">event</span>) =&gt;</span> {
+  event.<span class="hljs-title function_">waitUntil</span>(
+    caches.<span class="hljs-title function_">open</span>(<span class="hljs-variable constant_">CACHE_NAME</span>).<span class="hljs-title function_">then</span>(<span class="hljs-function">(<span class="hljs-params">cache</span>) =&gt;</span> {
+      <span class="hljs-keyword">return</span> cache.<span class="hljs-title function_">addAll</span>(<span class="hljs-variable constant_">STATIC_ASSETS</span>);
+    })
+  );
+});
+
+<span class="hljs-comment">// 请求拦截</span>
+<span class="hljs-variable language_">self</span>.<span class="hljs-title function_">addEventListener</span>(<span class="hljs-string">&#x27;fetch&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">event</span>) =&gt;</span> {
+  event.<span class="hljs-title function_">respondWith</span>(
+    caches.<span class="hljs-title function_">match</span>(event.<span class="hljs-property">request</span>).<span class="hljs-title function_">then</span>(<span class="hljs-function">(<span class="hljs-params">response</span>) =&gt;</span> {
+      <span class="hljs-keyword">return</span> response || <span class="hljs-title function_">fetch</span>(event.<span class="hljs-property">request</span>);
+    })
+  );
+});</code></pre>
+<hr>
+<h2 id="8-缓存监控">8. 缓存监控<a class="anchor" href="#8-缓存监控" aria-label="锚点">#</a></h2>
+<h3 id="8-1-监控指标">8.1 监控指标<a class="anchor" href="#8-1-监控指标" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>说明</th></tr></thead><tbody><tr><td>hit_rate</td><td>缓存命中率</td></tr><tr><td>miss_rate</td><td>缓存未命中率</td></tr><tr><td>eviction_rate</td><td>缓存淘汰率</td></tr><tr><td>memory_usage</td><td>内存使用率</td></tr></tbody></table>
+<h3 id="8-2-监控实现">8.2 监控实现<a class="anchor" href="#8-2-监控实现" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 缓存统计</span>
+<span class="hljs-keyword">const</span> cacheStats = {
+  <span class="hljs-attr">hits</span>: <span class="hljs-number">0</span>,
+  <span class="hljs-attr">misses</span>: <span class="hljs-number">0</span>,
+  
+  <span class="hljs-title function_">recordHit</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">hits</span>++;
+  },
+  
+  <span class="hljs-title function_">recordMiss</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">misses</span>++;
+  },
+  
+  <span class="hljs-title function_">getHitRate</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-keyword">const</span> total = <span class="hljs-variable language_">this</span>.<span class="hljs-property">hits</span> + <span class="hljs-variable language_">this</span>.<span class="hljs-property">misses</span>;
+    <span class="hljs-keyword">return</span> total &gt; <span class="hljs-number">0</span> ? (<span class="hljs-variable language_">this</span>.<span class="hljs-property">hits</span> / total * <span class="hljs-number">100</span>).<span class="hljs-title function_">toFixed</span>(<span class="hljs-number">2</span>) : <span class="hljs-number">0</span>;
+  }
+};
+
+<span class="hljs-comment">// 上报监控</span>
+<span class="hljs-built_in">setInterval</span>(<span class="hljs-function">() =&gt;</span> {
+  metrics.<span class="hljs-title function_">gauge</span>(<span class="hljs-string">&#x27;cache_hit_rate&#x27;</span>, cacheStats.<span class="hljs-title function_">getHitRate</span>());
+  metrics.<span class="hljs-title function_">gauge</span>(<span class="hljs-string">&#x27;cache_hits&#x27;</span>, cacheStats.<span class="hljs-property">hits</span>);
+  metrics.<span class="hljs-title function_">gauge</span>(<span class="hljs-string">&#x27;cache_misses&#x27;</span>, cacheStats.<span class="hljs-property">misses</span>);
+}, <span class="hljs-number">60000</span>);</code></pre>
+<hr>
+<h2 id="9-版本历史">9. 版本历史<a class="anchor" href="#9-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义缓存规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 性能团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-BACKUP-001] 备份恢复规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-BACKUP-001] 备份恢复规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-CAP-001] 容量规划规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-CAP-001] 容量规划规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-CACHE-001] 缓存规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

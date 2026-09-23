@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * remoteFileTransferService.test.js â€?unit locks for the scp upload service.
+ * remoteFileTransferService.test.js â€” unit locks for the scp upload service.
  *
  * Mirrors the mock pattern of remoteExecService.liveExec.test.js: child_process
  * is mocked so scp never actually runs; a fake child emits stdout/stderr/close.
@@ -16,7 +16,7 @@ jest.mock('child_process', () => ({
 }));
 
 const { spawn } = require('child_process');
-const { createRemoteFileTransferService } = require('../../src/services/remote/remoteFileTransferService');
+const { createRemoteFileTransferService } = require('../../src/services/domain/network/remote/remoteFileTransferService.js');
 
 function makeFakeScpChild({ stdout = [], stderr = [], code = 0, signal = null }) {
   const child = new EventEmitter();

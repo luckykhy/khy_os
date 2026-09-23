@@ -8,7 +8,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const dp = require('../../../src/services/memoryEngine/dreamPromote');
+const dp = require('../../../src/services/domain/memory/memoryEngine/dreamPromote.js');
 
 test('mapType 全表 + 未知/缺失 → feedback', () => {
   assert.strictEqual(dp.mapType('preference'), 'user');

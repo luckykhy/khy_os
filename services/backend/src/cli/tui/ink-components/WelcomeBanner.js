@@ -23,37 +23,9 @@ function bannerRowsBeforeVersion() {
   return ROWS_BEFORE_VERSION;
 }
 
-// "khyos lucky clover" art — compact pixel-art four-leaf clover.
-// The silhouette has FOUR concave notches (top / bottom / left / right) so
-// the four rounded lobes read clearly as a clover rather than an X or H.
-// A narrow waist (rows 3-4) carves the side notches; half-blocks (▄/▀)
-// round every corner; a short stem anchors the bottom.
-// Single-width Unicode ONLY. Dimensions: 13 cols × 9 rows.
-const CLOVER_ART = [
-  '\u2584\u2588\u2588\u2584     \u2584\u2588\u2588\u2584',
-  '\u2588\u2588\u2588\u2588     \u2588\u2588\u2588\u2588',
-  '\u2580\u2588\u2588\u2588\u2588\u2584\u2584\u2584\u2588\u2588\u2588\u2588\u2580',
-  '  \u2580\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2580  ',
-  '  \u2584\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2584  ',
-  '\u2584\u2588\u2588\u2588\u2588\u2580\u2580\u2580\u2588\u2588\u2588\u2588\u2584',
-  '\u2588\u2588\u2588\u2588     \u2588\u2588\u2588\u2588',
-  '\u2580\u2588\u2588\u2580     \u2580\u2588\u2588\u2580',
-  '      \u2588      ',
-];
-// Per-character shade map (same 13×9 grid). Three green tones mimic the
-// depth of pixel art: D = dark edge (green+dim), M = mid body (green),
-// B = bright highlight (greenBright). Spaces map to spaces.
-const CLOVER_SHADE = [
-  'DBBD     DBBD',
-  'DBBM     MBBD',
-  'DMBBMDDDMBBMD',
-  '  DMBBBBBMD  ',
-  '  DMBBBBBMD  ',
-  'DMBBMDDDMBBMD',
-  'DBBM     MBBD',
-  'DBBD     DBBD',
-  '      D      ',
-];
+// 四叶草像素表已收敛到 `cli/tui/logoArt.js` —— 本组件与启动屏共用**一份**品牌资产
+// （[DESIGN-ARCH-134] §3.4；修 [DESIGN-ARCH-115] 登记的 D5：同一进程先后出现两种品牌符号）。
+const { cloverRows } = require('../logoArt');
 
 function WelcomeBanner({
   version,
@@ -72,7 +44,7 @@ function WelcomeBanner({
   // 使用共享 banner 数据服务（与经典模式同源）
   let greetingName = process.env.USER || process.env.USERNAME || 'user';
   try {
-    const { getBannerData } = require('../../../bannerDataService');
+    const { getBannerData } = require('../../bannerDataService');
     const data = getBannerData({ version });
     greetingName = data.greetingName || greetingName;
   } catch {
@@ -150,29 +122,29 @@ function WelcomeBanner({
   );
 
   // Right column: compact clover with three-tone green shading for depth.
-  // Shade map drives colour: D = dark edge (dim green), M = mid body (green),
-  // B = bright highlight (greenBright). Falls back to mid green if unmapped.
+  // 像素与明暗都来自 `logoArt.cloverRows()`（单一资产）；着色映射与启动屏保持同一份口径。
+  const SHADE_COLOR = { D: 'green', M: 'green', B: 'greenBright' };
   const art = showArt
     ? h(
         Box,
         { flexDirection: 'column', marginLeft: 4 },
-        ...CLOVER_ART.map((line, i) =>
+        ...cloverRows().map((cells, i) =>
           h(
             Text,
             { key: `clover-${i}` },
-            ...line.split('').map((ch, j) => {
-              if (ch === ' ') {
-                return h(Text, { key: `c${i}-${j}` }, ' ');
-              }
-              const shade = (CLOVER_SHADE[i] && CLOVER_SHADE[i][j]) || 'M';
-              if (shade === 'B') {
-                return h(Text, { key: `c${i}-${j}`, color: 'greenBright' }, ch);
-              }
-              if (shade === 'D') {
-                return h(Text, { key: `c${i}-${j}`, color: 'green', dimColor: true }, ch);
-              }
-              return h(Text, { key: `c${i}-${j}`, color: 'green' }, ch);
-            })
+            ...cells.map((c, j) =>
+              c.ch === ' '
+                ? h(Text, { key: `c${i}-${j}` }, ' ')
+                : h(
+                    Text,
+                    {
+                      key: `c${i}-${j}`,
+                      color: SHADE_COLOR[c.shade] || 'green',
+                      dimColor: c.shade === 'D',
+                    },
+                    c.ch
+                  )
+            )
           )
         )
       )

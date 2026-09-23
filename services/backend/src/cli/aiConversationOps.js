@@ -378,10 +378,25 @@ function snapshotHistoryTurn() {
  * @param {string} assistantText  the loop's final text reply
  * @returns {{appended:number,reason:string}}
  */
-function reconcileTurnHistory(snapshot, userText, assistantText) {
+function reconcileTurnHistory(snapshot, userText, assistantText, opts) {
   if (!snapshot || typeof snapshot !== 'object') {
     return { appended: 0, reason: 'no_snapshot' };
   }
+  const finalAssistant = String(assistantText || '').trim();
+
+  // ── 压缩视图回写（可选第四参；[DESIGN-ARCH-135] 一期）─────────────────
+  // 缺参 / 非数组 / 空数组 → 完全走下方既有逻辑，逐字节等价改动前。
+  const compacted = opts && opts.compactedMessages;
+  if (Array.isArray(compacted) && compacted.length > 0) {
+    const r = _applyCompactedView(compacted, finalAssistant);
+    return {
+      appended: r.appended,
+      reason: 'compacted_writeback',
+      compactedFrom: r.from,
+      compactedTo: r.to,
+    };
+  }
+
   const msgs = _chatState.messages;
   // Locate the snapshot anchor by reference. MAX_HISTORY trims use slice()
   // (references preserved), so a missing anchor means it was trimmed away —
@@ -400,7 +415,6 @@ function reconcileTurnHistory(snapshot, userText, assistantText) {
   if (turnTail.some((m) => m && m.role === 'assistant')) {
     return { appended: 0, reason: 'already_committed' };
   }
-  const finalAssistant = String(assistantText || '').trim();
   if (!finalAssistant) {
     return { appended: 0, reason: 'empty_final_reply' };
   }
@@ -415,10 +429,62 @@ function reconcileTurnHistory(snapshot, userText, assistantText) {
   }
   msgs.push({ role: 'assistant', content: finalAssistant });
   appended += 1;
+  _trimHistory();
+  return { appended, reason: hasUser ? 'paired_orphan_user' : 'committed_missing_turn' };
+}
+
+/** MAX_HISTORY 尾部保留截断 —— 单一实现，供「正常收尾」与「压缩回写」两条路径共用。 */
+function _trimHistory() {
   if (_chatState.messages.length > MAX_HISTORY) {
     _chatState.messages = _chatState.messages.slice(-MAX_HISTORY);
   }
-  return { appended, reason: hasUser ? 'paired_orphan_user' : 'committed_missing_turn' };
+}
+
+/**
+ * 压缩视图回写（[DESIGN-ARCH-135] 一期）。
+ *
+ * 病灶：`runToolUseLoop` 在轮内把 `messages[0..splitIndex)` 折成摘要
+ * （`contextCompressor.compress` → `compressed = [summaryMessage, ...keptMessages]`），
+ * 但结果只赋给它的**函数局部** `conversationMessages`（`toolUseLoopCore.js:2650`）。
+ * 回合结束时该数组随调用栈丢弃，下一轮 `initialMessages` 又从 `getConversation()`
+ * 取回**未压缩**的原始历史 ⇒ 每轮压缩都是「一次性局部优化」，历史占用单调增长，
+ * 直到某一轮开局即超窗 —— 这是 TUI 长任务「莫名中断」的根因之一。
+ *
+ * 语义正确性依据：`conversationMessages = [...initialMessages, ...本轮]`
+ * （`toolUseLoopCore.js:1780-1782`），而 `initialMessages` 就是本回合开始时
+ * `getConversation()` 的快照 ⇒ 两者等长（`MAX_HISTORY` 只截最早的）。
+ * 故压缩视图整体成为新的模型上下文真源是**等价替换**，不是「凭空造历史」。
+ *
+ * 为什么可以整体覆盖：`_chatState.messages` 是**模型上下文**真源，不是界面显示真源。
+ * 界面历史活在 `<Static>` 的 React state 里；`getConversation()` 只在 `khy resume`
+ * 冷启动时被一次性播种（`App.js:1779-1789`，其注释自认 "purely visual"）。
+ * 所以此处替换不会改变正在运行的界面，只在下次 resume 重放时反映压缩后的形态。
+ *
+ * 刻意不做：把被替换掉的原文落盘归档。本模块目前是纯内存操作（零 IO），为一次压缩
+ * 引入写盘会把 IO 失败面塞进本回合的收尾路径。需要回溯时走 `khy resume` 的 transcript；
+ * 若日后确需归档，应沿用 agenticHarnessService 既有的 archiveDir 口径，不在此另开一条。
+ *
+ * @param {Array} compacted 压缩后的消息数组（首条为摘要）
+ * @param {string} finalAssistant 本回合的最终回复文本
+ * @returns {{appended:number, from:number, to:number}}
+ */
+function _applyCompactedView(compacted, finalAssistant) {
+  const from = _chatState.messages.length;
+  _chatState.messages = compacted.map((m) => (m && typeof m === 'object' ? { ...m } : m));
+  const msgs = _chatState.messages;
+  let appended = 0;
+  // 压缩视图是「迭代前」的快照，不含本回合的**最终回复**；而 chat() 的正常路径
+  // 可能已自行 push 过一条同内容的 assistant。只查末尾一条即可 —— chat() 若已提交，
+  // 它必然落在最末，否则 append 一条补上。
+  const last = msgs[msgs.length - 1];
+  const alreadyThere =
+    last && last.role === 'assistant' && String(last.content || '').trim() === finalAssistant;
+  if (finalAssistant && !alreadyThere) {
+    msgs.push({ role: 'assistant', content: finalAssistant });
+    appended = 1;
+  }
+  _trimHistory();
+  return { appended, from, to: _chatState.messages.length };
 }
 
 function _messageHasToolUse(msg) {

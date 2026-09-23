@@ -28,6 +28,7 @@ const os = require('os');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
 const { EventEmitter } = require('events');
+const { StringDecoder } = require('string_decoder');
 
 const { findFreePort } = require('./portUtils');
 const { ensureDiskImage, resolveQemuImg } = require('./diskImage');
@@ -164,6 +165,8 @@ class KhyOsRunner extends EventEmitter {
     this._running = false;
     this._stopping = false;
     this._buffer = ''; // decoded text accumulator for runCommand()
+    // Owns the tail bytes of a straddling UTF-8 sequence; replaced per connection.
+    this._serialDecoder = new StringDecoder('utf8');
     this._lastDataAt = 0; // ms timestamp of the most recent serial byte
     // Set by the process 'error' handler when QEMU fails to spawn (e.g. ENOENT
     // when QEMU is not installed). _connectWithRetry() short-circuits on it so a
@@ -412,11 +415,23 @@ class KhyOsRunner extends EventEmitter {
     return new Promise((resolve, reject) => {
       const sock = net.connect({ host: '127.0.0.1', port: this.port }, () => {
         sock.removeListener('error', onErr);
+        // A fresh connection is a fresh byte stream: any tail the previous socket
+        // was holding is now orphaned, so re-own the decoder per connection.
+        this._serialDecoder = new StringDecoder('utf8');
         // Bytes from the kernel: emit raw, and accumulate decoded text for runCommand.
         sock.on('data', (buf) => {
           this._lastDataAt = Date.now();
-          this._buffer += buf.toString('utf-8');
-          if (this._buffer.length > 1 << 20) this._buffer = this._buffer.slice(-(1 << 19));
+          // One decoder across chunk boundaries — per-chunk toString() turns every
+          // straddled multi-byte sequence into U+FFFD (3-byte CJK) or a lone
+          // surrogate (4-byte astral), i.e. 乱码 in runCommand()'s returned text.
+          this._buffer += this._serialDecoder.write(buf);
+          if (this._buffer.length > 1 << 20) {
+            this._buffer = this._buffer.slice(-(1 << 19));
+            // Code-unit slicing can cut a pair in half; drop the orphaned low
+            // surrogate so the retained text never starts with garbage.
+            const c0 = this._buffer.charCodeAt(0);
+            if (c0 >= 0xdc00 && c0 <= 0xdfff) this._buffer = this._buffer.slice(1);
+          }
           this.emit('data', buf);
         });
         sock.on('error', (err) => this.emit('error', err));

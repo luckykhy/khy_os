@@ -83,6 +83,10 @@ function _activeHandleSummary() {
  * @param {object} [opts.env] - Env source (tests inject {}).
  * @param {object} [opts.logger] - Logger with .warn() (unused on hot path).
  * @param {function} [opts.onHang] - Host hook ({kind:'idle', idleSeconds, handles}).
+ * @param {function} [opts.onReport] - Host sink for the diagnostic line itself;
+ *   return `true` to take it over. Absent/refusal/throw ⇒ direct stderr write
+ *   (the historical behaviour). Exists because a raw write while another
+ *   renderer owns the terminal leaves a stray, never-erased row.
  * @param {number} [opts.sampleMs] - Sampler period (tests shrink this).
  * @param {number} [opts.stallMs] - Min event-loop block to report.
  * @param {number} [opts.idleLimitMs] - Idle window before the hang report.
@@ -98,6 +102,7 @@ function installSessionWatchdog(opts = {}) {
   globalThis[WATCHDOG_INSTALLED_KEY] = true;
 
   const onHang = typeof opts.onHang === 'function' ? opts.onHang : null;
+  const onReport = typeof opts.onReport === 'function' ? opts.onReport : null;
   const sampleMs =
     opts.sampleMs ||
     _resolvePositiveNumber(env, 'KHY_SESSION_WATCHDOG_SAMPLE_MS', DEFAULT_SAMPLE_MS);
@@ -113,11 +118,31 @@ function installSessionWatchdog(opts = {}) {
   let guard = null;
   let guardFired = false;
   let suppressTouch = false;
+  let stopped = false;
+  /** @type {{stream: any, original: function, patched: function}[]} */
+  const streamPatches = [];
 
   function report(line) {
     // Our own diagnostic writes must not reset the idle clock they report on.
     suppressTouch = true;
     try {
+      // A host that owns the terminal (the Ink TUI) may take the line instead —
+      // a raw stderr write while ink owns the screen is never erased by its
+      // frame ledger and leaves a permanent stray row (BUG-17). Only an
+      // explicit `true` counts as taken; anything else (absent hook, refusal,
+      // throw) falls back to the historical direct write so the diagnosis is
+      // never silently lost.
+      if (onReport) {
+        let taken = false;
+        try {
+          taken = onReport(line) === true;
+        } catch {
+          taken = false;
+        }
+        if (taken) {
+          return;
+        }
+      }
       process.stderr.write(`${line}\n`);
     } catch {
       /* sink broken — nothing to do */
@@ -127,6 +152,9 @@ function installSessionWatchdog(opts = {}) {
   }
 
   function arm() {
+    if (stopped) {
+      return;
+    }
     guardFired = false;
     guard = startWatchdog('session', idleLimitMs, (name, elapsed) => {
       guardFired = true;
@@ -148,6 +176,9 @@ function installSessionWatchdog(opts = {}) {
 
   function touch() {
     try {
+      if (stopped) {
+        return;
+      }
       if (guardFired || !guard) {
         arm(); // re-arm for the next idle episode
       }
@@ -166,13 +197,15 @@ function installSessionWatchdog(opts = {}) {
       if (!stream || typeof stream.write !== 'function') {
         continue;
       }
-      const original = stream.write.bind(stream);
-      stream.write = function watchdogPatchedWrite(chunk, encoding, cb) {
+      const original = stream.write;
+      const patched = function watchdogPatchedWrite(chunk, encoding, cb) {
         if (!suppressTouch) {
           touch();
         }
-        return original(chunk, encoding, cb);
+        return original.call(stream, chunk, encoding, cb);
       };
+      stream.write = patched;
+      streamPatches.push({ stream, original, patched });
     } catch {
       /* odd stream — watchdog degrades, session unaffected */
     }
@@ -206,6 +239,7 @@ function installSessionWatchdog(opts = {}) {
     reason: 'installed',
     touch,
     stop() {
+      stopped = true;
       clearInterval(stallTimer);
       try {
         if (guard) {
@@ -214,6 +248,22 @@ function installSessionWatchdog(opts = {}) {
       } catch {
         /* ignore */
       }
+      // Give the stream writes back. Without this the patched .write stays on
+      // the process forever: every later write keeps re-arming a new idle
+      // guard (the diagnostic itself is a write), so a stopped watchdog goes on
+      // reporting, and a test run inherits the leftovers of its predecessors.
+      // Only unwrap our own patch — if someone patched over us since, their
+      // layer stays in place and drops out when it is removed.
+      for (const patch of streamPatches) {
+        try {
+          if (patch.stream && patch.stream.write === patch.patched) {
+            patch.stream.write = patch.original;
+          }
+        } catch {
+          /* odd stream — leave it as is */
+        }
+      }
+      streamPatches.length = 0;
       globalThis[WATCHDOG_INSTALLED_KEY] = false;
     },
   };

@@ -2209,7 +2209,7 @@ class AIGateway {
 
     // Capability registry for capability-aware model selection
     try {
-      const { CapabilityRegistry } = require('../capabilityRegistry');
+      const { CapabilityRegistry } = require('./capabilityRegistry');
       this._capabilityRegistry = new CapabilityRegistry(this);
     } catch {
       this._capabilityRegistry = null;

@@ -4,7 +4,7 @@
  * Subscribes to WebSocket 'channel_health' and 'channel_activity' events
  * and exposes reactive state for channel health indicator components.
  */
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 
 export function useChannelHealth(wsService) {
   const channels = ref([])
@@ -46,12 +46,12 @@ export function useChannelHealth(wsService) {
   let offHealth = null
   let offActivity = null
 
-  onMounted(() => {
-    if (wsService && typeof wsService.on === 'function') {
-      offHealth = wsService.on('channel_health', handleHealthEvent)
-      offActivity = wsService.on('channel_activity', handleActivityEvent)
-    }
-  })
+  // Subscribe eagerly so the composable works outside component setup;
+  // the onUnmounted hook only tears down when it actually ran.
+  if (wsService && typeof wsService.on === 'function') {
+    offHealth = wsService.on('channel_health', handleHealthEvent)
+    offActivity = wsService.on('channel_activity', handleActivityEvent)
+  }
 
   onUnmounted(() => {
     if (typeof offHealth === 'function') offHealth()

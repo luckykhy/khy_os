@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DEPLOY-MAN-016] 部署指南-域名.md -->
+<title>KHY-OS 服务器部署指南 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>DEPLOY-MAN<span class="sep">›</span>KHY-OS 服务器部署指南</div>
+      <header class="hero reveal"><h1>KHY-OS 服务器部署指南</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-服务器部署指南">KHY-OS 服务器部署指南</a></li><li class="lvl-2"><a href="#目录">目录</a></li><li class="lvl-2"><a href="#1-架构概览">1. 架构概览</a></li><li class="lvl-3"><a href="#url-路由">URL 路由</a></li><li class="lvl-2"><a href="#2-前置条件">2. 前置条件</a></li><li class="lvl-3"><a href="#硬件要求">硬件要求</a></li><li class="lvl-3"><a href="#软件要求">软件要求</a></li><li class="lvl-3"><a href="#dns-配置">DNS 配置</a></li><li class="lvl-2"><a href="#3-一键部署">3. 一键部署</a></li><li class="lvl-3"><a href="#步骤-1-安装-khy-os">步骤 1：安装 KHY-OS</a></li><li class="lvl-3"><a href="#步骤-2-部署">步骤 2：部署</a></li><li class="lvl-3"><a href="#步骤-3-验证">步骤 3：验证</a></li><li class="lvl-3"><a href="#选项">选项</a></li><li class="lvl-2"><a href="#4-手动分步部署">4. 手动分步部署</a></li><li class="lvl-3"><a href="#4-1-安装-node-js">4.1 安装 Node.js</a></li><li class="lvl-3"><a href="#4-2-安装-khy-os">4.2 安装 KHY-OS</a></li><li class="lvl-3"><a href="#4-3-安装-nginx">4.3 安装 nginx</a></li><li class="lvl-3"><a href="#4-4-配置-nginx">4.4 配置 nginx</a></li><li class="lvl-3"><a href="#4-5-使用-let-s-encrypt-配置-ssl">4.5 使用 Let's Encrypt 配置 SSL</a></li><li class="lvl-3"><a href="#4-6-创建-systemd-服务">4.6 创建 systemd 服务</a></li><li class="lvl-3"><a href="#4-7-验证部署">4.7 验证部署</a></li><li class="lvl-2"><a href="#5-服务管理">5. 服务管理</a></li><li class="lvl-3"><a href="#控制服务">控制服务</a></li><li class="lvl-3"><a href="#查看日志">查看日志</a></li><li class="lvl-3"><a href="#服务端口参考">服务端口参考</a></li><li class="lvl-2"><a href="#6-ssl-证书">6. SSL 证书</a></li><li class="lvl-3"><a href="#自动续期">自动续期</a></li><li class="lvl-3"><a href="#查看证书信息">查看证书信息</a></li><li class="lvl-3"><a href="#重新签发证书">重新签发证书</a></li><li class="lvl-2"><a href="#7-nginx-配置">7. Nginx 配置</a></li><li class="lvl-3"><a href="#重新生成配置">重新生成配置</a></li><li class="lvl-3"><a href="#自定义配置">自定义配置</a></li><li class="lvl-3"><a href="#常见自定义">常见自定义</a></li><li class="lvl-2"><a href="#8-移动端远程控制">8. 移动端远程控制</a></li><li class="lvl-3"><a href="#访问方式">访问方式</a></li><li class="lvl-3"><a href="#获取令牌">获取令牌</a></li><li class="lvl-3"><a href="#令牌有效期">令牌有效期</a></li><li class="lvl-3"><a href="#功能特性">功能特性</a></li><li class="lvl-2"><a href="#9-监控与故障排查">9. 监控与故障排查</a></li><li class="lvl-3"><a href="#快速健康检查">快速健康检查</a></li><li class="lvl-3"><a href="#常见问题">常见问题</a></li><li class="lvl-3"><a href="#资源监控">资源监控</a></li><li class="lvl-2"><a href="#10-更新与重新部署">10. 更新与重新部署</a></li><li class="lvl-3"><a href="#更新-khy-os">更新 KHY-OS</a></li><li class="lvl-3"><a href="#完整重新部署">完整重新部署</a></li><li class="lvl-3"><a href="#回滚">回滚</a></li><li class="lvl-2"><a href="#11-防火墙配置">11. 防火墙配置</a></li><li class="lvl-3"><a href="#ufw-ubuntu-debian">UFW（Ubuntu/Debian）</a></li><li class="lvl-3"><a href="#firewalld-centos-rhel">firewalld（CentOS/RHEL）</a></li><li class="lvl-3"><a href="#局域网直接访问-可选">局域网直接访问（可选）</a></li><li class="lvl-2"><a href="#12-常见问题">12. 常见问题</a></li><li class="lvl-3"><a href="#问-可以在没有域名的服务器上部署吗">问：可以在没有域名的服务器上部署吗？</a></li><li class="lvl-3"><a href="#问-可以使用其他子域名吗">问：可以使用其他子域名吗？</a></li><li class="lvl-3"><a href="#问-如何添加-www-前缀支持">问：如何添加 www 前缀支持？</a></li><li class="lvl-3"><a href="#问-可以用-docker-代替-systemd-吗">问：可以用 Docker 代替 systemd 吗？</a></li><li class="lvl-3"><a href="#问-如果-certbot-报错-challenge-failed-怎么办">问：如果 certbot 报错 &quot;Challenge failed&quot; 怎么办？</a></li><li class="lvl-3"><a href="#问-如何监控-ssl-证书过期时间">问：如何监控 SSL 证书过期时间？</a></li><li class="lvl-3"><a href="#问-移动端远程控制会占用多少带宽">问：移动端远程控制会占用多少带宽？</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DEPLOY-MAN-016 | 阶段: 部署 | 原路径: docs/指南/部署指南-域名.md --&gt;</p>
+<h1 id="khy-os-服务器部署指南">KHY-OS 服务器部署指南<a class="anchor" href="#khy-os-服务器部署指南" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>姊妹篇边界</strong>：本文是 <strong>有域名 / 生产全栈</strong> 部署路径（含 <code>khy deploy</code> 一键部署、Let's Encrypt SSL、nginx 域名站点配置）。<br>若你没有可用域名、只有公网 IP，请用 [<code>[DEPLOY-MAN-017]</code> 部署指南-无域名]([DEPLOY-MAN-017] 部署指南-无域名.md)（纯手动、不依赖 <code>khy deploy</code>、nginx 走 <code>server_name _</code>）。<br>两篇<strong>不是同一份文档的两种措辞</strong>：实测行级重合 23.5%、章节骨架重合仅 6.4%、差异约 700 行，故<strong>不做合并</strong>（<code>[MGMT-PLAN-009]</code> §1.2「结构同构、只差 7 行」的判断已按实测订正）。</p></blockquote>
+<p>在 Linux 服务器上部署 KHY-OS 全栈服务的生产环境部署指南。</p>
+<p>适用环境：Ubuntu 20.04+ / Debian 12+ / CentOS 8+，域名 <code>ai.khyquant.top</code>。</p>
+<hr>
+<h2 id="目录">目录<a class="anchor" href="#目录" aria-label="锚点">#</a></h2>
+<ol><li>架构概览</li><li>前置条件</li><li>一键部署</li><li>手动分步部署</li><li>服务管理</li><li>SSL 证书</li><li>Nginx 配置</li><li>移动端远程控制</li><li>监控与故障排查</li><li>更新与重新部署</li><li>防火墙配置</li><li>常见问题</li></ol>
+<hr>
+<h2 id="1-架构概览">1. 架构概览<a class="anchor" href="#1-架构概览" aria-label="锚点">#</a></h2>
+<pre><code>                          Internet
+                             |
+                      [ ai.khyquant.top ]
+                             |
+                     ┌───────────────┐
+                     │    nginx      │  :80 / :443
+                     │  (reverse     │  Let's Encrypt HTTPS
+                     │   proxy)      │
+                     └───┬───┬───┬───┘
+                         │   │   │
+          ┌──────────────┘   │   └──────────────┐
+          │                  │                  │
+          ▼                  ▼                  ▼
+   ┌────────────┐    ┌────────────┐     ┌────────────┐
+   │  frontend  │    │ ai-frontend│     │   bridge   │
+   │   :8080    │    │   :8090    │     │   :9222    │
+   │  Quant SPA │    │  AI Panel  │     │  Mobile WS │
+   └──────┬─────┘    └──────┬─────┘     └────────────┘
+          │                 │
+          ▼                 ▼
+   ┌────────────┐    ┌────────────┐
+   │  backend   │    │ ai-backend │
+   │   :3000    │    │   :9090    │
+   │ Express API│    │  AI Mgmt   │
+   └────────────┘    └────────────┘</code></pre>
+<h3 id="url-路由">URL 路由<a class="anchor" href="#url-路由" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Path</th><th>Upstream</th><th>说明</th></tr></thead><tbody><tr><td><code>/</code></td><td>frontend:8080</td><td>量化交易 SPA</td></tr><tr><td><code>/api/</code></td><td>backend:3000</td><td>REST API + WebSocket</td></tr><tr><td><code>/ai/</code></td><td>ai-frontend:8090</td><td>AI 管理面板</td></tr><tr><td><code>/ai/api/</code></td><td>ai-backend:9090</td><td>AI 网关 API + WebSocket</td></tr><tr><td><code>/remote/</code></td><td>bridge:9222</td><td>移动端远程控制页面</td></tr><tr><td><code>/remote/ws</code></td><td>bridge:9222</td><td>移动端 WebSocket 连接</td></tr><tr><td><code>/health</code></td><td>backend:3000</td><td>健康检查端点</td></tr></tbody></table>
+<hr>
+<h2 id="2-前置条件">2. 前置条件<a class="anchor" href="#2-前置条件" aria-label="锚点">#</a></h2>
+<h3 id="硬件要求">硬件要求<a class="anchor" href="#硬件要求" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>组件</th><th>最低配置</th><th>推荐配置</th></tr></thead><tbody><tr><td>CPU</td><td>2 核</td><td>4 核及以上</td></tr><tr><td>RAM</td><td>2 GB</td><td>4 GB 及以上</td></tr><tr><td>磁盘</td><td>10 GB</td><td>20 GB 及以上</td></tr><tr><td>网络</td><td>公网 IP</td><td>公网 IP + 域名</td></tr></tbody></table>
+<h3 id="软件要求">软件要求<a class="anchor" href="#软件要求" aria-label="锚点">#</a></h3>
+<ul><li><strong>操作系统</strong>：Ubuntu 20.04+、Debian 11+、CentOS 8+，或任意基于 systemd 的 Linux</li><li><strong>Node.js</strong>：&gt;= 18.x</li><li><strong>Python</strong>：&gt;= 3.10（用于 pip 安装）</li><li><strong>pip</strong>：&gt;= 21.0</li></ul>
+<h3 id="dns-配置">DNS 配置<a class="anchor" href="#dns-配置" aria-label="锚点">#</a></h3>
+<p><code>ai.khyquant.top</code> 是 <code>khyquant.top</code> 的子域名。无需额外购买——只需在你的域名注册商（阿里云 / 腾讯云 / Cloudflare 等）处添加一条 DNS 记录：</p>
+<pre><code>Type: A
+Name: ai                          (registrar auto-appends .khyquant.top)
+Value: &lt;your-server-public-ip&gt;
+TTL: 300</code></pre>
+<blockquote><p>注意：主域名 <code>khyquant.top</code> 保持不变。新增的 <code>ai</code> 子域名指向 KHY-OS 服务器，其 IP 可以与主站不同。</p></blockquote>
+<p>验证 DNS 解析是否生效：</p>
+<pre><code class="language-bash">dig ai.khyquant.top +short
+<span class="hljs-comment"># Should return your server&#x27;s IP</span></code></pre>
+<hr>
+<h2 id="3-一键部署">3. 一键部署<a class="anchor" href="#3-一键部署" aria-label="锚点">#</a></h2>
+<p>最简单的部署方式，一条命令搞定全部流程。</p>
+<h3 id="步骤-1-安装-khy-os">步骤 1：安装 KHY-OS<a class="anchor" href="#步骤-1-安装-khy-os" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># Install via pip</span>
+pip install khy-os
+
+<span class="hljs-comment"># Verify installation</span>
+khy --version</code></pre>
+<h3 id="步骤-2-部署">步骤 2：部署<a class="anchor" href="#步骤-2-部署" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-built_in">sudo</span> khy deploy --domain ai.khyquant.top</code></pre>
+<p>这一条命令将会：</p>
+<ol><li>检查前置条件（Linux、Node.js、root 权限）</li><li>安装系统软件包（nginx、certbot）</li><li>引导初始化后端（npm install、.env、数据库播种）</li><li>生成并安装 nginx 反向代理配置</li><li>申请 Let's Encrypt SSL 证书</li><li>创建并启动 3 个 systemd 服务</li><li>运行健康检查并显示汇总信息</li></ol>
+<h3 id="步骤-3-验证">步骤 3：验证<a class="anchor" href="#步骤-3-验证" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># Check deployment status</span>
+khy deploy status
+
+<span class="hljs-comment"># Test endpoints</span>
+curl https://ai.khyquant.top/health</code></pre>
+<p>在浏览器中打开：</p>
+<ul><li><code>https://ai.khyquant.top/</code> -- 量化交易前端</li><li><code>https://ai.khyquant.top/ai/</code> -- AI 管理面板</li><li><code>https://ai.khyquant.top/remote/?token=&lt;token&gt;</code> -- 移动端远程控制</li></ul>
+<h3 id="选项">选项<a class="anchor" href="#选项" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># Deploy without SSL (internal network)</span>
+<span class="hljs-built_in">sudo</span> khy deploy --domain ai.khyquant.top --no-ssl
+
+<span class="hljs-comment"># Specify email for Let&#x27;s Encrypt</span>
+<span class="hljs-built_in">sudo</span> khy deploy --domain ai.khyquant.top --email admin@ai.khyquant.top
+
+<span class="hljs-comment"># Only regenerate nginx config</span>
+<span class="hljs-built_in">sudo</span> khy deploy nginx --domain ai.khyquant.top
+
+<span class="hljs-comment"># Only setup/renew SSL</span>
+<span class="hljs-built_in">sudo</span> khy deploy ssl --domain ai.khyquant.top
+
+<span class="hljs-comment"># Show deployment status</span>
+khy deploy status</code></pre>
+<hr>
+<h2 id="4-手动分步部署">4. 手动分步部署<a class="anchor" href="#4-手动分步部署" aria-label="锚点">#</a></h2>
+<p>如果你希望手动控制每一步，或者需要自定义配置，可以采用此方式。</p>
+<h3 id="4-1-安装-node-js">4.1 安装 Node.js<a class="anchor" href="#4-1-安装-node-js" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># Ubuntu/Debian</span>
+curl -fsSL https://deb.nodesource.com/setup_18.x | <span class="hljs-built_in">sudo</span> -E bash -
+<span class="hljs-built_in">sudo</span> apt-get install -y nodejs
+
+<span class="hljs-comment"># CentOS/RHEL</span>
+curl -fsSL https://rpm.nodesource.com/setup_18.x | <span class="hljs-built_in">sudo</span> bash -
+<span class="hljs-built_in">sudo</span> yum install -y nodejs
+
+<span class="hljs-comment"># Verify</span>
+node -v  <span class="hljs-comment"># Should be v18.x or higher</span></code></pre>
+<h3 id="4-2-安装-khy-os">4.2 安装 KHY-OS<a class="anchor" href="#4-2-安装-khy-os" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">pip install khy-os
+
+<span class="hljs-comment"># First run triggers bootstrap (npm install, .env generation, DB seed)</span>
+khy --<span class="hljs-built_in">help</span></code></pre>
+<h3 id="4-3-安装-nginx">4.3 安装 nginx<a class="anchor" href="#4-3-安装-nginx" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># Ubuntu/Debian</span>
+<span class="hljs-built_in">sudo</span> apt-get update &amp;&amp; <span class="hljs-built_in">sudo</span> apt-get install -y nginx
+
+<span class="hljs-comment"># CentOS/RHEL</span>
+<span class="hljs-built_in">sudo</span> dnf install -y nginx
+
+<span class="hljs-comment"># Enable and start</span>
+<span class="hljs-built_in">sudo</span> systemctl <span class="hljs-built_in">enable</span> nginx
+<span class="hljs-built_in">sudo</span> systemctl start nginx</code></pre>
+<h3 id="4-4-配置-nginx">4.4 配置 nginx<a class="anchor" href="#4-4-配置-nginx" aria-label="锚点">#</a></h3>
+<p>创建 WebSocket 升级映射：</p>
+<pre><code class="language-bash"><span class="hljs-built_in">sudo</span> <span class="hljs-built_in">tee</span> /etc/nginx/conf.d/khy-ws-map.conf &gt; /dev/null &lt;&lt; <span class="hljs-string">&#x27;EOF&#x27;</span>
+map <span class="hljs-variable">$http_upgrade</span> <span class="hljs-variable">$connection_upgrade</span> {
+    default upgrade;
+    <span class="hljs-string">&#x27;&#x27;</span>      close;
+}
+EOF</code></pre>
+<p>创建站点配置：</p>
+<pre><code class="language-bash"><span class="hljs-built_in">sudo</span> <span class="hljs-built_in">tee</span> /etc/nginx/sites-available/khy.conf &gt; /dev/null &lt;&lt; <span class="hljs-string">&#x27;EOF&#x27;</span>
+server {
+    listen 80;
+    server_name ai.khyquant.top;
+
+    <span class="hljs-comment"># Quant Frontend (SPA)</span>
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host <span class="hljs-variable">$host</span>;
+        proxy_set_header X-Real-IP <span class="hljs-variable">$remote_addr</span>;
+        proxy_set_header X-Forwarded-For <span class="hljs-variable">$proxy_add_x_forwarded_for</span>;
+        proxy_set_header X-Forwarded-Proto <span class="hljs-variable">$scheme</span>;
+    }
+
+    <span class="hljs-comment"># Backend API + WebSocket</span>
+    location /api/ {
+        proxy_pass http://127.0.0.1:3000/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade <span class="hljs-variable">$http_upgrade</span>;
+        proxy_set_header Connection <span class="hljs-variable">$connection_upgrade</span>;
+        proxy_set_header Host <span class="hljs-variable">$host</span>;
+        proxy_set_header X-Real-IP <span class="hljs-variable">$remote_addr</span>;
+        proxy_set_header X-Forwarded-For <span class="hljs-variable">$proxy_add_x_forwarded_for</span>;
+        proxy_set_header X-Forwarded-Proto <span class="hljs-variable">$scheme</span>;
+        proxy_read_timeout 86400s;
+    }
+
+    <span class="hljs-comment"># AI Management Panel</span>
+    location /ai/ {
+        proxy_pass http://127.0.0.1:8090/;
+        proxy_set_header Host <span class="hljs-variable">$host</span>;
+        proxy_set_header X-Real-IP <span class="hljs-variable">$remote_addr</span>;
+        proxy_set_header X-Forwarded-For <span class="hljs-variable">$proxy_add_x_forwarded_for</span>;
+        proxy_set_header X-Forwarded-Proto <span class="hljs-variable">$scheme</span>;
+    }
+
+    location /ai/api/ {
+        proxy_pass http://127.0.0.1:9090/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade <span class="hljs-variable">$http_upgrade</span>;
+        proxy_set_header Connection <span class="hljs-variable">$connection_upgrade</span>;
+        proxy_set_header Host <span class="hljs-variable">$host</span>;
+        proxy_set_header X-Real-IP <span class="hljs-variable">$remote_addr</span>;
+        proxy_set_header X-Forwarded-For <span class="hljs-variable">$proxy_add_x_forwarded_for</span>;
+        proxy_set_header X-Forwarded-Proto <span class="hljs-variable">$scheme</span>;
+        proxy_read_timeout 86400s;
+    }
+
+    <span class="hljs-comment"># Mobile Remote Control</span>
+    location /remote/ {
+        proxy_pass http://127.0.0.1:9222/;
+        proxy_set_header Host <span class="hljs-variable">$host</span>;
+        proxy_set_header X-Real-IP <span class="hljs-variable">$remote_addr</span>;
+        proxy_set_header X-Forwarded-For <span class="hljs-variable">$proxy_add_x_forwarded_for</span>;
+        proxy_set_header X-Forwarded-Proto <span class="hljs-variable">$scheme</span>;
+    }
+
+    location /remote/ws {
+        proxy_pass http://127.0.0.1:9222/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade <span class="hljs-variable">$http_upgrade</span>;
+        proxy_set_header Connection <span class="hljs-variable">$connection_upgrade</span>;
+        proxy_set_header Host <span class="hljs-variable">$host</span>;
+        proxy_set_header X-Real-IP <span class="hljs-variable">$remote_addr</span>;
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+    }
+
+    <span class="hljs-comment"># Health Check</span>
+    location /health {
+        proxy_pass http://127.0.0.1:3000/health;
+    }
+
+    <span class="hljs-comment"># Performance</span>
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
+    gzip_min_length 1024;
+    gzip_vary on;
+
+    client_max_body_size 50m;
+}
+EOF</code></pre>
+<p>启用站点并重载：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># Remove default site if present</span>
+<span class="hljs-built_in">sudo</span> <span class="hljs-built_in">rm</span> -f /etc/nginx/sites-enabled/default
+
+<span class="hljs-comment"># Enable KHY site</span>
+<span class="hljs-built_in">sudo</span> <span class="hljs-built_in">ln</span> -sf /etc/nginx/sites-available/khy.conf /etc/nginx/sites-enabled/khy.conf
+
+<span class="hljs-comment"># Test and reload</span>
+<span class="hljs-built_in">sudo</span> nginx -t
+<span class="hljs-built_in">sudo</span> nginx -s reload</code></pre>
+<h3 id="4-5-使用-let-s-encrypt-配置-ssl">4.5 使用 Let's Encrypt 配置 SSL<a class="anchor" href="#4-5-使用-let-s-encrypt-配置-ssl" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># Install certbot</span>
+<span class="hljs-built_in">sudo</span> apt-get install -y certbot python3-certbot-nginx
+
+<span class="hljs-comment"># Request certificate (auto-modifies nginx config for HTTPS)</span>
+<span class="hljs-built_in">sudo</span> certbot --nginx -d ai.khyquant.top \
+    --non-interactive --agree-tos \
+    --email admin@ai.khyquant.top --redirect
+
+<span class="hljs-comment"># Verify auto-renewal</span>
+<span class="hljs-built_in">sudo</span> certbot renew --dry-run</code></pre>
+<h3 id="4-6-创建-systemd-服务">4.6 创建 systemd 服务<a class="anchor" href="#4-6-创建-systemd-服务" aria-label="锚点">#</a></h3>
+<p>定位后端目录：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># If installed via pip</span>
+BACKEND_DIR=$(python3 -c <span class="hljs-string">&quot;
+from khy_platform.cli import get_bundle_dir
+print(get_bundle_dir())
+&quot;</span>)
+<span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;Backend: <span class="hljs-variable">$BACKEND_DIR</span>&quot;</span>
+
+<span class="hljs-comment"># Project root is parent of backend</span>
+PROJECT_ROOT=$(<span class="hljs-built_in">dirname</span> <span class="hljs-string">&quot;<span class="hljs-variable">$BACKEND_DIR</span>&quot;</span>)
+NODE_BIN=$(<span class="hljs-built_in">which</span> node)</code></pre>
+<p><strong>服务 1：khy-backend（端口 3000）</strong></p>
+<pre><code class="language-bash"><span class="hljs-built_in">sudo</span> <span class="hljs-built_in">tee</span> /etc/systemd/system/khy-backend.service &gt; /dev/null &lt;&lt; <span class="hljs-string">EOF
+[Unit]
+Description=KHY Backend API Server
+After=network.target
+
+[Service]
+Type=simple
+User=$(whoami)
+WorkingDirectory=$BACKEND_DIR
+ExecStart=$NODE_BIN server.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3000
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=khy-backend
+
+[Install]
+WantedBy=multi-user.target
+EOF</span></code></pre>
+<p><strong>服务 2：khy-ai（端口 9090）</strong></p>
+<pre><code class="language-bash"><span class="hljs-built_in">sudo</span> <span class="hljs-built_in">tee</span> /etc/systemd/system/khy-ai.service &gt; /dev/null &lt;&lt; <span class="hljs-string">EOF
+[Unit]
+Description=KHY AI Management Backend
+After=network.target
+
+[Service]
+Type=simple
+User=$(whoami)
+WorkingDirectory=$PROJECT_ROOT/ai-backend
+ExecStart=$NODE_BIN server.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=khy-ai
+
+[Install]
+WantedBy=multi-user.target
+EOF</span></code></pre>
+<p><strong>服务 3：khy-bridge（端口 9222）</strong></p>
+<pre><code class="language-bash"><span class="hljs-built_in">sudo</span> <span class="hljs-built_in">tee</span> /etc/systemd/system/khy-bridge.service &gt; /dev/null &lt;&lt; <span class="hljs-string">EOF
+[Unit]
+Description=KHY Mobile Bridge Server
+After=network.target
+
+[Service]
+Type=simple
+User=$(whoami)
+WorkingDirectory=$BACKEND_DIR
+ExecStart=$NODE_BIN -e &quot;const b=require(&#x27;./src/bridge/bridgeServer&#x27;);b.startBridgeServer().then(r=&gt;{console.log(&#x27;Bridge:&#x27;,r.port?&#x27;http://0.0.0.0:&#x27;+r.port:&#x27;failed&#x27;);});setInterval(()=&gt;{},60000);&quot;
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=BRIDGE_PORT=9222
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=khy-bridge
+
+[Install]
+WantedBy=multi-user.target
+EOF</span></code></pre>
+<p><strong>启用并启动所有服务：</strong></p>
+<pre><code class="language-bash"><span class="hljs-built_in">sudo</span> systemctl daemon-reload
+<span class="hljs-built_in">sudo</span> systemctl <span class="hljs-built_in">enable</span> khy-backend khy-ai khy-bridge
+<span class="hljs-built_in">sudo</span> systemctl start khy-backend khy-ai khy-bridge
+
+<span class="hljs-comment"># Verify</span>
+<span class="hljs-built_in">sudo</span> systemctl status khy-backend khy-ai khy-bridge</code></pre>
+<h3 id="4-7-验证部署">4.7 验证部署<a class="anchor" href="#4-7-验证部署" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># Health checks</span>
+curl -s http://127.0.0.1:3000/health | jq .
+curl -s http://127.0.0.1:9222/health | jq .
+curl -s https://ai.khyquant.top/health  | jq .
+
+<span class="hljs-comment"># Service status</span>
+systemctl is-active khy-backend khy-ai khy-bridge nginx</code></pre>
+<hr>
+<h2 id="5-服务管理">5. 服务管理<a class="anchor" href="#5-服务管理" aria-label="锚点">#</a></h2>
+<h3 id="控制服务">控制服务<a class="anchor" href="#控制服务" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># Start/stop/restart individual services</span>
+<span class="hljs-built_in">sudo</span> systemctl start khy-backend
+<span class="hljs-built_in">sudo</span> systemctl stop khy-backend
+<span class="hljs-built_in">sudo</span> systemctl restart khy-backend
+
+<span class="hljs-comment"># Restart all KHY services</span>
+<span class="hljs-built_in">sudo</span> systemctl restart khy-backend khy-ai khy-bridge
+
+<span class="hljs-comment"># Check status</span>
+<span class="hljs-built_in">sudo</span> systemctl status khy-backend
+<span class="hljs-built_in">sudo</span> systemctl status khy-ai
+<span class="hljs-built_in">sudo</span> systemctl status khy-bridge
+
+<span class="hljs-comment"># Quick status check via khy deploy</span>
+khy deploy status</code></pre>
+<h3 id="查看日志">查看日志<a class="anchor" href="#查看日志" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># Follow backend logs in real-time</span>
+journalctl -u khy-backend -f
+
+<span class="hljs-comment"># View AI backend logs</span>
+journalctl -u khy-ai -f
+
+<span class="hljs-comment"># View bridge logs</span>
+journalctl -u khy-bridge -f
+
+<span class="hljs-comment"># View all KHY logs combined</span>
+journalctl -u <span class="hljs-string">&quot;khy-*&quot;</span> -f
+
+<span class="hljs-comment"># View last 100 lines of backend logs</span>
+journalctl -u khy-backend -n 100
+
+<span class="hljs-comment"># View logs since a specific time</span>
+journalctl -u khy-backend --since <span class="hljs-string">&quot;2026-06-01 12:00:00&quot;</span>
+
+<span class="hljs-comment"># View nginx access log</span>
+<span class="hljs-built_in">sudo</span> <span class="hljs-built_in">tail</span> -f /var/log/nginx/access.log
+
+<span class="hljs-comment"># View nginx error log</span>
+<span class="hljs-built_in">sudo</span> <span class="hljs-built_in">tail</span> -f /var/log/nginx/error.log</code></pre>
+<h3 id="服务端口参考">服务端口参考<a class="anchor" href="#服务端口参考" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>服务</th><th>端口</th><th>Systemd Unit</th><th>日志标签</th></tr></thead><tbody><tr><td>Backend API</td><td>3000</td><td>khy-backend</td><td>khy-backend</td></tr><tr><td>AI Backend</td><td>9090</td><td>khy-ai</td><td>khy-ai</td></tr><tr><td>Bridge（移动端）</td><td>9222</td><td>khy-bridge</td><td>khy-bridge</td></tr><tr><td>Frontend</td><td>8080</td><td>(manual/docker)</td><td>-</td></tr><tr><td>AI Frontend</td><td>8090</td><td>(manual/docker)</td><td>-</td></tr><tr><td>nginx</td><td>80/443</td><td>nginx</td><td>nginx</td></tr></tbody></table>
+<hr>
+<h2 id="6-ssl-证书">6. SSL 证书<a class="anchor" href="#6-ssl-证书" aria-label="锚点">#</a></h2>
+<h3 id="自动续期">自动续期<a class="anchor" href="#自动续期" aria-label="锚点">#</a></h3>
+<p>Let's Encrypt 证书有效期为 90 天。Certbot 会安装一个自动续期的 cron 任务 / systemd timer。</p>
+<pre><code class="language-bash"><span class="hljs-comment"># Check renewal timer</span>
+<span class="hljs-built_in">sudo</span> systemctl status certbot.timer
+
+<span class="hljs-comment"># Manual dry-run to verify renewal works</span>
+<span class="hljs-built_in">sudo</span> certbot renew --dry-run
+
+<span class="hljs-comment"># Force renewal</span>
+<span class="hljs-built_in">sudo</span> certbot renew --force-renewal</code></pre>
+<h3 id="查看证书信息">查看证书信息<a class="anchor" href="#查看证书信息" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># Check certificate expiry</span>
+<span class="hljs-built_in">sudo</span> certbot certificates
+
+<span class="hljs-comment"># Or via openssl</span>
+<span class="hljs-built_in">echo</span> | openssl s_client -servername ai.khyquant.top -connect ai.khyquant.top:443 2&gt;/dev/null \
+  | openssl x509 -noout -dates</code></pre>
+<h3 id="重新签发证书">重新签发证书<a class="anchor" href="#重新签发证书" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># If certificate is broken or domain changed</span>
+<span class="hljs-built_in">sudo</span> certbot --nginx -d ai.khyquant.top \
+    --non-interactive --agree-tos \
+    --email admin@ai.khyquant.top --redirect
+
+<span class="hljs-comment"># Or via khy deploy</span>
+<span class="hljs-built_in">sudo</span> khy deploy ssl --domain ai.khyquant.top</code></pre>
+<hr>
+<h2 id="7-nginx-配置">7. Nginx 配置<a class="anchor" href="#7-nginx-配置" aria-label="锚点">#</a></h2>
+<h3 id="重新生成配置">重新生成配置<a class="anchor" href="#重新生成配置" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># Via khy deploy</span>
+<span class="hljs-built_in">sudo</span> khy deploy nginx --domain ai.khyquant.top
+
+<span class="hljs-comment"># Or via bridge command (generates bridge-only config)</span>
+khy bridge nginx --prefix /remote</code></pre>
+<h3 id="自定义配置">自定义配置<a class="anchor" href="#自定义配置" aria-label="锚点">#</a></h3>
+<p>主配置文件位于：</p>
+<ul><li>Debian/Ubuntu：<code>/etc/nginx/sites-available/khy.conf</code></li><li>CentOS/RHEL：<code>/etc/nginx/conf.d/khy.conf</code></li></ul>
+<p>编辑后：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># Always test before reloading</span>
+<span class="hljs-built_in">sudo</span> nginx -t
+
+<span class="hljs-comment"># Reload</span>
+<span class="hljs-built_in">sudo</span> nginx -s reload</code></pre>
+<h3 id="常见自定义">常见自定义<a class="anchor" href="#常见自定义" aria-label="锚点">#</a></h3>
+<p><strong>修改客户端上传大小限制：</strong></p>
+<pre><code class="language-nginx"><span class="hljs-attribute">client_max_body_size</span> <span class="hljs-number">100m</span>;  <span class="hljs-comment"># Default: 50m</span></code></pre>
+<p><strong>添加限流：</strong></p>
+<pre><code class="language-nginx"><span class="hljs-comment"># In http block (/etc/nginx/nginx.conf)</span>
+<span class="hljs-attribute">limit_req_zone</span> <span class="hljs-variable">$binary_remote_addr</span> zone=api:<span class="hljs-number">10m</span> rate=30r/s;
+
+<span class="hljs-comment"># In location /api/ block</span>
+<span class="hljs-attribute">limit_req</span> zone=api burst=<span class="hljs-number">50</span> nodelay;</code></pre>
+<p><strong>为 AI 面板添加 IP 白名单：</strong></p>
+<pre><code class="language-nginx"><span class="hljs-section">location</span> /ai/ {
+    <span class="hljs-attribute">allow</span> <span class="hljs-number">192.168.0.0</span>/<span class="hljs-number">16</span>;
+    <span class="hljs-attribute">allow</span> <span class="hljs-number">10.0.0.0</span>/<span class="hljs-number">8</span>;
+    <span class="hljs-attribute">deny</span> all;
+    <span class="hljs-attribute">proxy_pass</span> http://127.0.0.1:8090/;
+    <span class="hljs-comment"># ... rest of config</span>
+}</code></pre>
+<hr>
+<h2 id="8-移动端远程控制">8. 移动端远程控制<a class="anchor" href="#8-移动端远程控制" aria-label="锚点">#</a></h2>
+<p>bridge 服务器提供一个基于网页的远程控制界面，可在同一网络下的手机上访问，也可通过公网域名访问。</p>
+<h3 id="访问方式">访问方式<a class="anchor" href="#访问方式" aria-label="锚点">#</a></h3>
+<p><strong>通过公网域名（经 nginx 代理）：</strong></p>
+<pre><code>https://ai.khyquant.top/remote/?token=&lt;token&gt;</code></pre>
+<p><strong>通过局域网直连（无需 nginx）：</strong></p>
+<pre><code>http://&lt;server-lan-ip&gt;:9222/?token=&lt;token&gt;</code></pre>
+<h3 id="获取令牌">获取令牌<a class="anchor" href="#获取令牌" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># If running khy ai (TUI mode), the URL is printed at startup:</span>
+<span class="hljs-comment">#   Mobile: http://192.168.1.5:9222/?token=abc123...</span>
+
+<span class="hljs-comment"># Or via bridge command</span>
+khy bridge token
+
+<span class="hljs-comment"># Or via bridge status</span>
+khy bridge status</code></pre>
+<h3 id="令牌有效期">令牌有效期<a class="anchor" href="#令牌有效期" aria-label="锚点">#</a></h3>
+<p>令牌在 30 分钟后过期。bridge 服务器每次重启都会生成新令牌。获取新令牌：</p>
+<pre><code class="language-bash"><span class="hljs-built_in">sudo</span> systemctl restart khy-bridge
+khy bridge token</code></pre>
+<h3 id="功能特性">功能特性<a class="anchor" href="#功能特性" aria-label="锚点">#</a></h3>
+<ul><li>从手机向 CLI 发送命令</li><li>实时查看 AI 响应（流式文本、思考过程、工具调用）</li><li>批准或拒绝权限请求（工具执行、文件写入）</li><li>断线自动重连</li><li>支持竖屏和横屏两种方向</li></ul>
+<hr>
+<h2 id="9-监控与故障排查">9. 监控与故障排查<a class="anchor" href="#9-监控与故障排查" aria-label="锚点">#</a></h2>
+<h3 id="快速健康检查">快速健康检查<a class="anchor" href="#快速健康检查" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># All-in-one status</span>
+khy deploy status
+
+<span class="hljs-comment"># Individual endpoint checks</span>
+curl -sf http://127.0.0.1:3000/health &amp;&amp; <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;Backend OK&quot;</span> || <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;Backend FAIL&quot;</span>
+curl -sf http://127.0.0.1:9090/api/health &amp;&amp; <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;AI Backend OK&quot;</span> || <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;AI Backend FAIL&quot;</span>
+curl -sf http://127.0.0.1:9222/health &amp;&amp; <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;Bridge OK&quot;</span> || <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;Bridge FAIL&quot;</span>
+curl -sf https://ai.khyquant.top/health &amp;&amp; <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;Nginx+SSL OK&quot;</span> || <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;External FAIL&quot;</span></code></pre>
+<h3 id="常见问题">常见问题<a class="anchor" href="#常见问题" aria-label="锚点">#</a></h3>
+<p><strong>问题：502 Bad Gateway</strong></p>
+<p>上游服务未运行。</p>
+<pre><code class="language-bash"><span class="hljs-comment"># Check which service is down</span>
+<span class="hljs-built_in">sudo</span> systemctl status khy-backend khy-ai khy-bridge
+
+<span class="hljs-comment"># Restart the failed service</span>
+<span class="hljs-built_in">sudo</span> systemctl restart khy-backend
+
+<span class="hljs-comment"># Check logs for errors</span>
+journalctl -u khy-backend -n 50</code></pre>
+<p><strong>问题：SSL 证书不生效</strong></p>
+<pre><code class="language-bash"><span class="hljs-comment"># Check if certbot succeeded</span>
+<span class="hljs-built_in">sudo</span> certbot certificates
+
+<span class="hljs-comment"># Re-run certbot</span>
+<span class="hljs-built_in">sudo</span> certbot --nginx -d ai.khyquant.top --non-interactive --agree-tos --redirect
+
+<span class="hljs-comment"># Common cause: DNS not pointing to this server</span>
+dig ai.khyquant.top +short</code></pre>
+<p><strong>问题：WebSocket 连接失败</strong></p>
+<pre><code class="language-bash"><span class="hljs-comment"># Check nginx WS map exists</span>
+<span class="hljs-built_in">cat</span> /etc/nginx/conf.d/khy-ws-map.conf
+
+<span class="hljs-comment"># Test WebSocket manually</span>
+curl -i -N \
+  -H <span class="hljs-string">&quot;Connection: Upgrade&quot;</span> \
+  -H <span class="hljs-string">&quot;Upgrade: websocket&quot;</span> \
+  -H <span class="hljs-string">&quot;Sec-WebSocket-Version: 13&quot;</span> \
+  -H <span class="hljs-string">&quot;Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==&quot;</span> \
+  http://127.0.0.1:9222/</code></pre>
+<p><strong>问题：服务无法启动</strong></p>
+<pre><code class="language-bash"><span class="hljs-comment"># Check detailed error</span>
+journalctl -u khy-backend -n 50 --no-pager
+
+<span class="hljs-comment"># Common causes:</span>
+<span class="hljs-comment"># 1. Port already in use</span>
+<span class="hljs-built_in">sudo</span> lsof -i :3000
+<span class="hljs-comment"># 2. Node.js not found</span>
+<span class="hljs-built_in">which</span> node
+<span class="hljs-comment"># 3. npm dependencies missing</span>
+<span class="hljs-built_in">cd</span> /path/to/backend &amp;&amp; npm install</code></pre>
+<p><strong>问题：端口 3000/9090/9222 上出现 &quot;Address already in use&quot;</strong></p>
+<pre><code class="language-bash"><span class="hljs-comment"># Find what&#x27;s using the port</span>
+<span class="hljs-built_in">sudo</span> lsof -i :3000
+
+<span class="hljs-comment"># Kill the process</span>
+<span class="hljs-built_in">sudo</span> <span class="hljs-built_in">kill</span> &lt;PID&gt;
+
+<span class="hljs-comment"># Or stop conflicting service</span>
+<span class="hljs-built_in">sudo</span> systemctl stop &lt;conflicting-service&gt;</code></pre>
+<p><strong>问题：写入文件时出现 Permission denied</strong></p>
+<pre><code class="language-bash"><span class="hljs-comment"># Ensure the service user owns the data directory</span>
+<span class="hljs-built_in">sudo</span> <span class="hljs-built_in">chown</span> -R $(<span class="hljs-built_in">whoami</span>):$(<span class="hljs-built_in">whoami</span>) /path/to/backend/data</code></pre>
+<h3 id="资源监控">资源监控<a class="anchor" href="#资源监控" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># Service memory/CPU usage</span>
+systemctl status khy-backend  <span class="hljs-comment"># Shows memory in &quot;Memory:&quot; line</span>
+
+<span class="hljs-comment"># Detailed process info</span>
+ps aux | grep -E <span class="hljs-string">&#x27;khy|node&#x27;</span>
+
+<span class="hljs-comment"># Disk usage</span>
+<span class="hljs-built_in">du</span> -sh /path/to/backend/data/
+
+<span class="hljs-comment"># Open connections</span>
+ss -tlnp | grep -E <span class="hljs-string">&#x27;3000|9090|9222|80|443&#x27;</span></code></pre>
+<hr>
+<h2 id="10-更新与重新部署">10. 更新与重新部署<a class="anchor" href="#10-更新与重新部署" aria-label="锚点">#</a></h2>
+<h3 id="更新-khy-os">更新 KHY-OS<a class="anchor" href="#更新-khy-os" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># Upgrade pip package</span>
+pip install --upgrade khy-os
+
+<span class="hljs-comment"># Restart services to pick up new code</span>
+<span class="hljs-built_in">sudo</span> systemctl restart khy-backend khy-ai khy-bridge</code></pre>
+<h3 id="完整重新部署">完整重新部署<a class="anchor" href="#完整重新部署" aria-label="锚点">#</a></h3>
+<p>重新运行 <code>khy deploy</code> 是幂等且安全的：</p>
+<pre><code class="language-bash"><span class="hljs-built_in">sudo</span> khy deploy --domain ai.khyquant.top</code></pre>
+<p>它会：</p>
+<ul><li>跳过已安装的软件包</li><li>用最新模板覆盖 nginx 配置</li><li>保留现有的 SSL 证书</li><li>用更新后的代码重启所有服务</li></ul>
+<h3 id="回滚">回滚<a class="anchor" href="#回滚" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># Install a specific version</span>
+pip install khy-os==0.1.79
+
+<span class="hljs-comment"># Restart services</span>
+<span class="hljs-built_in">sudo</span> systemctl restart khy-backend khy-ai khy-bridge</code></pre>
+<hr>
+<h2 id="11-防火墙配置">11. 防火墙配置<a class="anchor" href="#11-防火墙配置" aria-label="锚点">#</a></h2>
+<h3 id="ufw-ubuntu-debian">UFW（Ubuntu/Debian）<a class="anchor" href="#ufw-ubuntu-debian" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-built_in">sudo</span> ufw allow 22/tcp    <span class="hljs-comment"># SSH</span>
+<span class="hljs-built_in">sudo</span> ufw allow 80/tcp    <span class="hljs-comment"># HTTP (nginx)</span>
+<span class="hljs-built_in">sudo</span> ufw allow 443/tcp   <span class="hljs-comment"># HTTPS (nginx)</span>
+<span class="hljs-built_in">sudo</span> ufw <span class="hljs-built_in">enable</span>
+<span class="hljs-built_in">sudo</span> ufw status</code></pre>
+<p>内部端口（3000、9090、9222）无需开放——nginx 会通过 80/443 代理所有流量。</p>
+<h3 id="firewalld-centos-rhel">firewalld（CentOS/RHEL）<a class="anchor" href="#firewalld-centos-rhel" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-built_in">sudo</span> firewall-cmd --permanent --add-service=http
+<span class="hljs-built_in">sudo</span> firewall-cmd --permanent --add-service=https
+<span class="hljs-built_in">sudo</span> firewall-cmd --permanent --add-service=ssh
+<span class="hljs-built_in">sudo</span> firewall-cmd --reload</code></pre>
+<h3 id="局域网直接访问-可选">局域网直接访问（可选）<a class="anchor" href="#局域网直接访问-可选" aria-label="锚点">#</a></h3>
+<p>如果你希望从局域网直接访问 bridge（不经过 nginx），还需开放端口 9222：</p>
+<pre><code class="language-bash"><span class="hljs-built_in">sudo</span> ufw allow 9222/tcp  <span class="hljs-comment"># Bridge direct access (LAN only)</span></code></pre>
+<hr>
+<h2 id="12-常见问题">12. 常见问题<a class="anchor" href="#12-常见问题" aria-label="锚点">#</a></h2>
+<h3 id="问-可以在没有域名的服务器上部署吗">问：可以在没有域名的服务器上部署吗？<a class="anchor" href="#问-可以在没有域名的服务器上部署吗" aria-label="锚点">#</a></h3>
+<p>可以。使用 <code>--no-ssl</code> 并通过 IP 访问：</p>
+<pre><code class="language-bash"><span class="hljs-built_in">sudo</span> khy deploy --domain &lt;server-ip&gt; --no-ssl</code></pre>
+<p>然后访问 <code>http://&lt;server-ip&gt;/</code>。</p>
+<h3 id="问-可以使用其他子域名吗">问：可以使用其他子域名吗？<a class="anchor" href="#问-可以使用其他子域名吗" aria-label="锚点">#</a></h3>
+<p>可以。你域名的任意子域名都可以——只需添加一条 DNS A 记录并部署：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># Example: deploy to app.khyquant.top instead</span>
+<span class="hljs-built_in">sudo</span> khy deploy --domain app.khyquant.top</code></pre>
+<h3 id="问-如何添加-www-前缀支持">问：如何添加 www 前缀支持？<a class="anchor" href="#问-如何添加-www-前缀支持" aria-label="锚点">#</a></h3>
+<p>用两个域名运行 certbot：</p>
+<pre><code class="language-bash"><span class="hljs-built_in">sudo</span> certbot --nginx -d ai.khyquant.top -d www.ai.khyquant.top</code></pre>
+<p>并在 nginx 配置中同时添加两者：<code>server_name ai.khyquant.top www.ai.khyquant.top;</code></p>
+<h3 id="问-可以用-docker-代替-systemd-吗">问：可以用 Docker 代替 systemd 吗？<a class="anchor" href="#问-可以用-docker-代替-systemd-吗" aria-label="锚点">#</a></h3>
+<p>可以。使用项目内置的 <code>docker-compose.yml</code>：</p>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> /path/to/khy-os
+docker compose up -d</code></pre>
+<p>然后配置 nginx 代理到 Docker 发布的端口。端口保持一致（3000、8080、8090、9090）。</p>
+<h3 id="问-如果-certbot-报错-challenge-failed-怎么办">问：如果 certbot 报错 &quot;Challenge failed&quot; 怎么办？<a class="anchor" href="#问-如果-certbot-报错-challenge-failed-怎么办" aria-label="锚点">#</a></h3>
+<p>这意味着 Let's Encrypt 无法通过端口 80 访问你的服务器。请检查：</p>
+<ol><li>DNS A 记录指向你服务器的公网 IP</li><li>防火墙已开放端口 80</li><li>nginx 正在运行并监听端口 80</li><li>没有其他服务占用端口 80</li></ol>
+<pre><code class="language-bash"><span class="hljs-comment"># Debug</span>
+dig ai.khyquant.top +short
+<span class="hljs-built_in">sudo</span> ufw status
+<span class="hljs-built_in">sudo</span> systemctl status nginx
+<span class="hljs-built_in">sudo</span> lsof -i :80</code></pre>
+<h3 id="问-如何监控-ssl-证书过期时间">问：如何监控 SSL 证书过期时间？<a class="anchor" href="#问-如何监控-ssl-证书过期时间" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># Quick check</span>
+khy deploy status
+
+<span class="hljs-comment"># Detailed</span>
+<span class="hljs-built_in">sudo</span> certbot certificates</code></pre>
+<p>Certbot 会通过 systemd timer 在证书过期前 30 天自动续期。除非 timer 损坏，否则无需手动操作。</p>
+<h3 id="问-移动端远程控制会占用多少带宽">问：移动端远程控制会占用多少带宽？<a class="anchor" href="#问-移动端远程控制会占用多少带宽" aria-label="锚点">#</a></h3>
+<p>极少。WebSocket 连接仅传输文本块（AI 响应），活跃使用时通常低于 10 KB/s。空闲连接每 25 秒发送一次心跳 ping（约 50 字节）。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/06_DEPLOY_部署/DEPLOY-MAN/[DEPLOY-MAN-015] 源码还原与手工发布.html"><div class="dir">← 上一篇</div><div class="ttl">源码还原与手工发布</div></a><a class="next" href="../../../docs/06_DEPLOY_部署/DEPLOY-MAN/[DEPLOY-MAN-017] 部署指南-无域名.html"><div class="dir">下一篇 →</div><div class="ttl">KHY-OS 手动部署（无域名 / 仅 IP）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/DEPLOY-MAN/[DEPLOY-MAN-016] 部署指南-域名.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

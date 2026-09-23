@@ -132,7 +132,7 @@ When making edits:
     return `批量编辑 ${path.basename(input.file_path)}：${n} 处改动`;
   }
 
-  async execute(params, _context) {
+  async execute(params, context) {
     const { file_path, edits } = params;
 
     if (!Array.isArray(edits) || edits.length === 0) {
@@ -252,6 +252,19 @@ When making edits:
       try {
         const fh = require('../../services/fileHistoryService');
         fh.takeSnapshot(absPath, { reason: 'MultiEditTool', content: original });
+      } catch {
+        /* non-critical */
+      }
+      // Turn-grouped rollback manifest (DESIGN-ARCH-096 §2-A) — fail-soft no-op
+      // when no active turn id reaches this tool.
+      try {
+        const _turnId = context && context.traceContext && context.traceContext.turnId;
+        if (_turnId) {
+          require('../../services/turnCheckpointService').recordMutatedFile(_turnId, absPath, {
+            reason: 'MultiEditTool',
+            content: original,
+          });
+        }
       } catch {
         /* non-critical */
       }

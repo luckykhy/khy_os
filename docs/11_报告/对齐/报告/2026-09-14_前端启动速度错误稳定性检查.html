@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-14_前端启动速度错误稳定性检查.md -->
+<title>前端启动速度 / 错误 / 稳定性检查（2026-09-14 即时专项） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>对齐<span class="sep">›</span>报告<span class="sep">›</span>前端启动速度 / 错误 / 稳定性检查（2026-09-14 即时专项）</div>
+      <header class="hero reveal"><h1>前端启动速度 / 错误 / 稳定性检查（2026-09-14 即时专项）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#前端启动速度-错误-稳定性检查-2026-09-14-即时专项">前端启动速度 / 错误 / 稳定性检查（2026-09-14 即时专项）</a></li><li class="lvl-2"><a href="#测试对象">测试对象</a></li><li class="lvl-2"><a href="#启动速度实测-dev-server-pnpm-run-dev-dev-no-browser">启动速度实测（dev server，`pnpm run dev` / `dev-no-browser`）</a></li><li class="lvl-2"><a href="#错误检查">错误检查</a></li><li class="lvl-2"><a href="#稳定性检查">稳定性检查</a></li><li class="lvl-2"><a href="#结论">结论</a></li><li class="lvl-2"><a href="#后续建议-不阻塞">后续建议（不阻塞）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="前端启动速度-错误-稳定性检查-2026-09-14-即时专项">前端启动速度 / 错误 / 稳定性检查（2026-09-14 即时专项）<a class="anchor" href="#前端启动速度-错误-稳定性检查-2026-09-14-即时专项" aria-label="锚点">#</a></h1>
+<blockquote><p>用户要求「现在立刻执行一次重点查前端启动速度、错误、稳定性」，本文件是即时专项结果，<br>不属于每日 13:00 对齐流水线（那个已降级为 khy 单侧自检，见任务单顶部说明）。</p></blockquote>
+<h2 id="测试对象">测试对象<a class="anchor" href="#测试对象" aria-label="锚点">#</a></h2>
+<ul><li><code>apps/ai-frontend</code>（<code>khy-ai-frontend</code>，Vite + Vue 3，默认端口 8090，<code>AI_FRONTEND_PORT</code> 可覆盖）</li><li><code>software/khyquant/frontend</code>（<code>quant-trading-frontend</code>，Vite + Vue 3 + PWA，默认端口 8080）</li></ul>
+<h2 id="启动速度实测-dev-server-pnpm-run-dev-dev-no-browser">启动速度实测（dev server，<code>pnpm run dev</code> / <code>dev-no-browser</code>）<a class="anchor" href="#启动速度实测-dev-server-pnpm-run-dev-dev-no-browser" aria-label="锚点">#</a></h2>
+<p>测量口径：<code>cmd /c &quot;cd &lt;dir&gt; &amp;&amp; pnpm run &lt;script&gt;&quot;</code> 后台启动，轮询 <code>http://127.0.0.1:&lt;port&gt;/</code><br>直至 200，记录墙钟（含 pnpm 加载 + predev 钩子 + Vite ready + 首次 HTTP 探测），3 次取平均；<br>另做一轮「清理 <code>node_modules/.vite</code> 缓存后冷启动」量化首次真实体验。</p>
+<table><thead><tr><th>前端</th><th>场景</th><th>耗时</th><th>稳定性（3 次连续 200）</th><th>备注</th></tr></thead><tbody><tr><td>ai-frontend</td><td>冷启动（首轮）</td><td>8.2s</td><td>稳定</td><td>predev <code>sync-md-vendor</code> 输出「optional asset missing: khyos-muya.js/css/MANIFEST.json」告警，跳过不阻断</td></tr><tr><td>ai-frontend</td><td>热启动 R2</td><td>2.4s</td><td>稳定</td><td>Vite 自报 ready 739ms</td></tr><tr><td>ai-frontend</td><td>热启动 R3</td><td>2.4s</td><td>稳定</td><td>Vite 自报 ready 712ms</td></tr><tr><td>ai-frontend</td><td>清缓存冷启动</td><td>2.5s</td><td>稳定</td><td>Vite 自报 ready 631ms（<code>node_modules/.vite</code> 重建很快，说明依赖预构建缓存有效）</td></tr><tr><td>khyquant 前端</td><td>R1</td><td>2.4s</td><td>稳定</td><td>Vite 自报 ready 738ms</td></tr><tr><td>khyquant 前端</td><td>R2</td><td>2.5s</td><td>稳定</td><td>Vite 自报 ready 678ms</td></tr><tr><td>khyquant 前端</td><td>R3</td><td>2.4s</td><td>稳定</td><td>Vite 自报 ready 721ms</td></tr></tbody></table>
+<p><strong>速度结论</strong>：两个前端热启动均 ~2.4s、冷启动 2.5~8.2s，无异常慢轮次；Vite 自身 ready 时间稳定在 0.6~0.8s（热）/4.6s（ai-frontend 首轮全量预构建）。</p>
+<h2 id="错误检查">错误检查<a class="anchor" href="#错误检查" aria-label="锚点">#</a></h2>
+<ul><li>dev server 运行全程无 JS 错误、无编译报错、无端口冲突（8080/8090 均一次绑定成功）。</li><li>ai-frontend predev 有 3 条「optional asset missing」warn（非错误，属设计上的可选项缺失提示）。</li><li>生产构建（并行子代理实测）：<ul><li>ai-frontend build 退出码 0，仅 2 条来自 <code>@vueuse/core</code> 的 Rollup <code>#__PURE__</code> 依赖噪音警告，无业务代码错误。</li><li>khyquant 前端 build 退出码 0，除同类 2 条噪音外，<strong>有 1 条真实体积告警</strong>：<code>vendor-element</code> 单 chunk 1056 kB（gzip 322 kB）超过 600 kB 阈值（<code>vite.config.js</code> 里 <code>chunkSizeWarningLimit: 600</code>），建议后续用 manualChunks 或按需动态 import 拆分 <code>element-plus</code>。</li></ul></li></ul>
+<h2 id="稳定性检查">稳定性检查<a class="anchor" href="#稳定性检查" aria-label="锚点">#</a></h2>
+<ul><li>每个前端启动后连续 4 次 HTTP 探测（首轮 + 3 次复探）全部 200，无闪断、无 5xx。</li><li>测试（并行子代理实测）：<ul><li>ai-frontend：39 个测试文件，506/506 通过，0 失败。</li><li>khyquant 前端：24 个测试文件，302/302 通过，0 失败。</li></ul></li><li>仓库根 <code>coverage_baseline_backend.log</code>（后端基线，非本次前端专项范围，顺带记录）：2026-09-11 一次后端 jest 运行中出现 <code>cache.test.js</code> 3 例 5s 超时、<code>groundTruthRatGuard.test.js</code> 1 例 <code>Date.now().toBeTruthy</code> 写错断言、<code>toolUseLoop.verificationGate.test.js</code> 期望 2 次编辑实际 1 次——这些是<strong>后端</strong>测试问题，与前端启动无关，但既然做稳定性普查一并登记，见「后续建议」。</li></ul>
+<h2 id="结论">结论<a class="anchor" href="#结论" aria-label="锚点">#</a></h2>
+<ul><li><strong>速度：达标</strong>。热启动 2.4s 量级，冷启动 2.5~8.2s，未观察到 &gt;10s 的异常轮次。</li><li><strong>错误：前端无阻断性错误</strong>；唯一需跟进的是 khyquant 前端 <code>vendor-element</code> chunk 超阈值（构建层面，不影响运行）。</li><li><strong>稳定性：达标</strong>。连续探测无闪断，两侧前端单测全绿。</li></ul>
+<h2 id="后续建议-不阻塞">后续建议（不阻塞）<a class="anchor" href="#后续建议-不阻塞" aria-label="锚点">#</a></h2>
+<ol><li>khyquant 前端：把 <code>element-plus</code> 拆成独立按需 chunk（<code>vite.config.js</code> <code>rollupOptions.output.manualChunks</code> 已列 <code>vendor-element</code>，但实际产物仍是整包 1056 kB——检查是否 <code>optimizeDeps.include</code> 里的 <code>element-plus</code> 整包引入导致未生效按需拆分）。</li><li>顺带修 3 条后端 jest 失败用例（<code>tests/routes/cache.test.js</code> 超时、<code>tests/groundTruthRatGuard.test.js:102</code> 误写 <code>expect(Date.now().toBeTruthy() - t &lt; 1000)</code>、<code>tests/toolUseLoop.verificationGate.test.js</code> 断言不匹配）——属于 1 点夜班组覆盖范围，不在本次前端专项内。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../docs/11_报告/对齐/报告/2026-09-14_根因诊断与修复方案.html"><div class="dir">← 上一篇</div><div class="ttl">2026-09-14 根因诊断与修复方案</div></a><a class="next" href="../../../../docs/11_报告/对齐/报告/2026-09-14_claude_code_vs_khyos对齐报告.html"><div class="dir">下一篇 →</div><div class="ttl">2026-09-14 Claude Code vs khy-os 终端对齐报告（第 2 次运行）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="docs/11_报告/对齐/报告/2026-09-14_前端启动速度错误稳定性检查.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -15,7 +15,7 @@
 
 const genLeaf = require('../../src/services/gateway/aiGatewayGenerateMethod');
 
-// 与叶子侧 DEP_GROUPS 必选清单一致(32 项;故意在测试里重写一份——清单漂移时全量注入用例会抛错暴露)。
+// 与叶子侧 DEP_GROUPS 必选清单一致(33 项;故意在测试里重写一份——清单漂移时全量注入用例会抛错暴露)。
 const REQUIRED = [
   // validation
   '_extractResultErrorMessage', '_isDeadEndpointErrorType', '_isHttpRelayAdapter',
@@ -29,8 +29,8 @@ const REQUIRED = [
   // languageRecovery
   '_buildLanguageMismatchFailureMessage', '_createCodexChineseChunkGate',
   '_createKhyLanguageConsistencyTracker', '_injectKhyChineseRecoveryPrompt',
-  '_injectKhyChineseRecoverySystem', '_resolveCodexChineseRecoveryRetryBudget',
-  '_shouldAutoRecoverCodexChineseMismatch',
+  '_injectKhyChineseRecoverySystem', '_normalizeLanguageAdapterKey',
+  '_resolveCodexChineseRecoveryRetryBudget', '_shouldAutoRecoverCodexChineseMismatch',
   // ocrRescue(遗留项 extractImageOcrTexts 已于 Batch 5 从注入清单移除)
   '_appendVisionKeyOffer', 'extractImageOcrDetails', 'tryRateLimitOcrRescue',
 ];
@@ -49,7 +49,7 @@ describe('setAiGatewayGenerateMethodDeps fail-fast 注入校验', () => {
     delete partial.classifyError;
     delete partial.tryRateLimitOcrRescue;
     expect(() => genLeaf.setAiGatewayGenerateMethodDeps(partial)).toThrow(
-      /注入 aiGatewayGenerateMethod 依赖失败:必选 32 项中已注入 30 项、缺失 2 项\(validation\.classifyError, ocrRescue\.tryRateLimitOcrRescue\)/,
+      /注入 aiGatewayGenerateMethod 依赖失败:必选 33 项中已注入 31 项、缺失 2 项\(validation\.classifyError, ocrRescue\.tryRateLimitOcrRescue\)/,
     );
   });
 
@@ -68,8 +68,8 @@ describe('setAiGatewayGenerateMethodDeps fail-fast 注入校验', () => {
     const GROUP_OF = {
       validation: REQUIRED.slice(0, 10),
       failover: REQUIRED.slice(10, 22),
-      languageRecovery: REQUIRED.slice(22, 29),
-      ocrRescue: REQUIRED.slice(29),
+      languageRecovery: REQUIRED.slice(22, 30),
+      ocrRescue: REQUIRED.slice(30),
     };
     for (const g of Object.keys(GROUP_OF)) {
       for (const n of GROUP_OF[g]) grouped[g][n] = flat[n];

@@ -205,7 +205,7 @@ describe('video_generate tool', () => {
     fs.unlinkSync(res.meta.path);
   });
 
-  test('numInferenceSteps flows through the tool into num_inference_steps', async () => {
+  test('numInferenceSteps is dropped: Agnes 2.5 forbids num_inference_steps', async () => {
     process.env.KHY_VIDEO_GEN_AGNES_API_KEY = 'sk-v';
     const seen = {};
     mockFetch((url, init) => {
@@ -222,7 +222,11 @@ describe('video_generate tool', () => {
     const tool = require(TOOL);
     const res = await tool.execute({ prompt: 'a cat', numInferenceSteps: 30 });
     expect(res.success).toBe(true);
-    expect(seen.body.num_inference_steps).toBe(30); // documented create param, now reachable from the tool
+    // Agnes video 2.5's payload schema is strict: num_inference_steps is a
+    // forbidden field (server rejects it), so the service must drop it even
+    // when the caller passes it — mirrors the forbidden-field assertions in
+    // the create→poll lifecycle test above.
+    expect(seen.body.num_inference_steps).toBeUndefined();
     fs.unlinkSync(res.meta.path);
   });
 });

@@ -67,8 +67,8 @@ describe('Wildcard Pool Guard wiring', () => {
 
   test('resolver never throws on garbage options', () => {
       withEnv({ GATEWAY_API_POOL_PROVIDER: 'relay' }, () => {
-        expect(() => resolve().not.toThrow());
-        expect(() => resolve({ model: 42 }).not.toThrow());
+        expect(() => resolve()).not.toThrow();
+        expect(() => resolve({ model: 42 })).not.toThrow();
       });
   });
 

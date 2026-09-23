@@ -6,9 +6,11 @@ const path = require('path');
 
 const express = require('express');
 
+const { getLauncherCommands } = require('../services/agentLauncherRegistry');
 const { remoteStateSyncService } = require('../services/remote');
 const { attach: attachSseKeepalive } = require('../services/sseKeepalive');
 const taskControlService = require('../services/taskControlService');
+const largeTaskBoard = require('../tasks/largeTaskBoard');
 const { createLargeTaskOrchestrator } = require('../tasks/largeTaskOrchestrator');
 const runtime = require('../tasks/largeTaskRuntimeStore');
 const { createLargeTaskWorkerService } = require('../tasks/largeTaskWorkerService');
@@ -692,6 +694,39 @@ router.get('/metrics', async (req, res) => {
     });
   } catch (error) {
     return apiResponse.fail(res, 'INTERNAL', `查询大型任务指标失败: ${error.message}`, { status: 500 });
+  }
+});
+
+router.get('/board', async (req, res) => {
+  const traceId = _buildTraceId(req);
+  try {
+    const status = _trimmedString(req.query?.status);
+    const type = _trimmedString(req.query?.type);
+    const source = _trimmedString(req.query?.source);
+    const limit = _parseIntInRange(req.query?.limit, 500, 1, 2000);
+
+    const tasks = runtime.listTasks({
+      status: status || undefined,
+      type: type || undefined,
+      source: source || undefined,
+    });
+
+    const board = largeTaskBoard.buildBoard(tasks, {
+      agentCommands: getLauncherCommands(),
+      limit,
+    });
+
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      generated_at: new Date().toISOString(),
+      total: board.total,
+      lanes: board.lanes,
+      swimlanes: board.swimlanes,
+      cards: board.cards,
+      counts: board.counts,
+    });
+  } catch (error) {
+    return apiResponse.fail(res, 'INTERNAL', `聚合大型任务看板失败: ${error.message}`, { status: 500 });
   }
 });
 

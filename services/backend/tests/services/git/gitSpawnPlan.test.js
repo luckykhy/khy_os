@@ -52,9 +52,9 @@ describe('Git Spawn Plan', () => {
   });
 
   test('never throws', () => {
-      expect(() => plan.isShellFreeGitEnabled(null).not.toThrow());
-      expect(() => plan.toGitArgv({}).not.toThrow());
-      expect(() => plan.toGitArgv([1, 2, 3]).not.toThrow());
+      expect(() => plan.isShellFreeGitEnabled(null)).not.toThrow();
+      expect(() => plan.toGitArgv({})).not.toThrow();
+      expect(() => plan.toGitArgv([1, 2, 3])).not.toThrow();
   });
 
 });

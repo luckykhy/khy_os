@@ -1,0 +1,4 @@
+
+> quant-trading-frontend@1.0.0 test
+> vitest run src/__tests__/markdown.test.js ; node -e const fs=require('fs');const s=fs.readFileSync('_md_test_out.txt','utf8');const i=s.indexOf('⎯');console.log(s.slice(i,i+4000)); ; if exist _md_test_out.txt del _md_test_out.txt
+

@@ -30,7 +30,15 @@
 const injection = require('../../project/metaplan/constraintInjection');
 const strategy = require('../../project/metaplan/constraintStrategy');
 
-const { MetaConstraintSolver } = require('../../../../agents/index');
+// The solver lives in this module (metaConstraint/index.js); require it directly
+// rather than through agents/index, which does not re-export it.
+const { MetaConstraintSolver } = require('./index');
+
+// Lifted to module scope: the in-function `require('../../../execApproval')`
+// used to trip jest's "import after environment torn down" guard when the
+// suite re-entered the module mid-run. This module already requires five
+// siblings at top level, so the import surface does not grow.
+const { EXEC_APPROVED } = require('../../../execApproval');
 
 const SOFT = strategy.STRATEGIES.PROMPT_SOFT;
 const HARD = strategy.STRATEGIES.CODE_HARD;
@@ -95,7 +103,6 @@ function _resolveModelId(traceContext) {
 /** Whether the syscall gateway already approved this exact call (no re-prompt). */
 function _alreadyApproved(params) {
   try {
-    const { EXEC_APPROVED } = require('../../../execApproval');
     return !!(EXEC_APPROVED && params && params[EXEC_APPROVED]);
   } catch {
     return false;

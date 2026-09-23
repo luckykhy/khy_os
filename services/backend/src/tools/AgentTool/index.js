@@ -13,7 +13,7 @@ const path = require('path');
 const { classifyAgentTool } = require('../../cli/agentTreeView');
 // Model-name SSOT: lightweight cloud agent model ids flow from constants/models.js.
 const { LIGHTWEIGHT_AGENT_MODELS } = require('../../constants/models');
-const { normalizeAgentRole } = require('../../services/domain/state/orchestrator/roleToolScope');
+const { normalizeAgentRole } = require('../../services/claudeCompat');
 // Role→tool-scope leaf (OPS-MAN-094): a read-only orchestration role (explore/
 // verify/…) must lose the write tools (Edit/Write/NotebookEdit) even when no
 // built-in agentDef supplies that denylist (e.g. SDK mode with built-in agents
@@ -21,6 +21,27 @@ const { normalizeAgentRole } = require('../../services/domain/state/orchestrator
 // silently lost). Gate KHY_ROLE_TOOL_SCOPE (default-on) inside the leaf.
 const { mergeRoleScopeInto } = require('../../services/domain/state/orchestrator/roleToolScope.js');
 const { BaseTool } = require('../_baseTool');
+
+// Sub-agent result footer (borrowed idea, xingyao-y-code d88bbf4 v1.3.0): a
+// bounded tool-error warning footer + tail-preserving truncation + partial
+// salvage. Pure leaf; fail-soft load so an unavailable module never breaks
+// spawning (legacy path). Gated by KHY_SUBAGENT_RESULT_FOOTER (default on;
+// off/0/false/no → skip → byte-identical legacy result).
+let _subAgentResultFooter = null;
+try {
+  _subAgentResultFooter = require('../../services/subAgentResultFooter');
+} catch {
+  _subAgentResultFooter = null;
+}
+
+// Result cap applied ONLY when a warning footer is appended (point ②). A clean
+// long result without a footer is never capped, so the legacy path is
+// byte-identical. Env-overridable; a char cap is not an endpoint/port/path.
+function _subAgentOutputMaxChars() {
+  const n = parseInt(process.env.KHY_SUBAGENT_RESULT_MAX_CHARS || '', 10);
+  return Number.isFinite(n) && n > 0 ? n : 20000;
+}
+const _SUBAGENT_OUTPUT_TRAILER = '\n\n… [子代理结果已截断，省略 {omitted} 字符]';
 
 /**
  * Gate for enriching parallel-agent progress with the executing command line and
@@ -137,7 +158,7 @@ function getBackgroundAgent(id) {
  * @returns {Array<{ taskId: string, status: string, command: string, summary: string }>}
  */
 function collectBackgroundResults() {
-  const { drainCompletedBackgroundAgents } = require('../../services/query');
+  const { drainCompletedBackgroundAgents } = require('../../services/domain/query/query/taskNotification.js');
   return drainCompletedBackgroundAgents(_backgroundAgents);
 }
 
@@ -162,6 +183,28 @@ const AGENT_TOOL_NAMES = Object.freeze([
 function _maxSubagentDepth() {
   const raw = parseInt(process.env.KHY_MAX_SUBAGENT_DEPTH || '', 10);
   return Number.isFinite(raw) && raw >= 0 ? raw : 2;
+}
+
+// [DESIGN-AGENT-002] A2-5: single source of truth for "which roles get the
+// `explore` allow-list profile". These are the read-only-on-files roles that
+// do NOT need to run commands. `verify` is excluded on purpose: it is read-only
+// for files but must build/test, and the `explore` profile carries no shell.
+// Keeping this in one predicate (rather than an inline ||-chain) is what stops
+// the role sets from silently drifting apart again.
+const _EXPLORE_PROFILE_ROLES = new Set([
+  'explore',
+  'planner',
+  'audit',
+  'research',
+  'reading',
+  'map',
+]);
+
+function _isExploreProfileRole(role) {
+  if (typeof role !== 'string') {
+    return false;
+  }
+  return _EXPLORE_PROFILE_ROLES.has(role.trim().toLowerCase());
 }
 
 // Hardware-derived fan-out width for orchestrated subtasks. On weak machines the
@@ -208,6 +251,23 @@ class AgentTool extends BaseTool {
   static aliases = ['agent', 'spawn_worker', 'delegate', 'sub_agent', 'Task'];
   static searchHint = 'spawn worker agent delegate task parallel explore research plan';
   static alwaysLoad = true;
+
+  /**
+   * Canonical flattened delegation fields for every execute() return path
+   * (standalone / coordinator / background). The internal note carries
+   * {delegated, delegatedTo, reason, mode}; the public contract exposes
+   * reason as `delegationReason` (see claudeDelegation wiring tests).
+   * @param {object|null} note
+   * @returns {{delegated?:boolean, delegatedTo?:string, delegationReason?:string}}
+   */
+  static flattenDelegation(note) {
+    if (!note) return {};
+    return {
+      delegated: note.delegated,
+      delegatedTo: note.delegatedTo,
+      delegationReason: note.reason,
+    };
+  }
 
   isReadOnly() {
     return false;
@@ -715,7 +775,7 @@ Tips:
         status: 'running',
         subagent_type: subagentType,
         role,
-        ...(_delegationNote || {}),
+        ...AgentTool.flattenDelegation(_delegationNote),
         message: `Background agent ${agentId} (${subagentType}) started.`,
       };
     }
@@ -743,7 +803,7 @@ Tips:
             preferredModel: worker.preferredModel || preferredModel || null,
             status: worker.status,
             output: worker.result || worker.message,
-            ...(_delegationNote || {}),
+            ...AgentTool.flattenDelegation(_delegationNote),
             message: `Worker ${worker.id} completed as ${subagentType}.`,
           };
         }
@@ -803,13 +863,7 @@ Tips:
     // Transparent reporting: surface whether/why this run was delegated to Claude Code.
     const _delegation = route.delegation || null;
     // Flattened transparency fields, spread into every return object below.
-    const _delegationFields = _delegation
-      ? {
-          delegated: _delegation.delegated,
-          delegatedTo: _delegation.delegatedTo,
-          delegationReason: _delegation.reason,
-        }
-      : {};
+    const _delegationFields = AgentTool.flattenDelegation(_delegation);
 
     // Load matching built-in agent definition (Explore, Plan, etc.)
     let agentDef = null;
@@ -848,15 +902,13 @@ Tips:
       const parentCtx = parentContext?._agentContext;
       const ctxOpts = {
         role,
-        toolFilter:
-          role === 'explore' ||
-          role === 'planner' ||
-          role === 'audit' ||
-          role === 'research' ||
-          role === 'reading' ||
-          role === 'map'
-            ? 'explore'
-            : null,
+        // [DESIGN-AGENT-002] A2-5: the read-only profile is chosen by a single
+        // predicate, so every read-only role gets the scoped allow-list — a
+        // denylist alone can only subtract, it cannot cap the surface. `verify`
+        // is read-only for FILES but needs to run commands; it is deliberately
+        // NOT put on the `explore` allow-list (which has no shell), otherwise it
+        // could not build or test.
+        toolFilter: _isExploreProfileRole(role) ? 'explore' : null,
         // Recursion guard: a subagent keeps the Agent/Task tool only while below
         // the nesting ceiling, so it may break its own chunk into independent
         // pieces and farm one more layer out; at/over the ceiling the spawn tool
@@ -978,6 +1030,10 @@ Tips:
         })();
         let _textBuf = '';
         let _lastTextPreview = '';
+        // Point ② partial-salvage source: the sub-agent's accumulated prose,
+        // captured only when the result-footer gate is on, so gate-off stays
+        // byte-identical (empty buffer → no salvage section).
+        let _partialText = '';
         const _onTextDelta = (chunk) => {
           if (!progressCallback || !_subAgentTextStream || !_subAgentTextStream.isEnabled()) {
             return;
@@ -1004,6 +1060,19 @@ Tips:
           const _priorOnChunk = typeof chatOpts.onChunk === 'function' ? chatOpts.onChunk : null;
           const _chainedOnChunk = (chunk) => {
             _touchActivity();
+            // Point ②: accumulate the sub-agent's prose for partial salvage, but
+            // ONLY while the result-footer gate is on — gate-off leaves
+            // _partialText empty and every downstream path is byte-identical.
+            if (_subAgentResultFooter && _subAgentResultFooter.isEnabled(process.env) && _subAgentTextStream) {
+              try {
+                const delta = _subAgentTextStream.textFromChunk(chunk);
+                if (delta) {
+                  _partialText += delta;
+                }
+              } catch {
+                /* partial salvage is best-effort; never disturb the stream */
+              }
+            }
             _onTextDelta(chunk);
             if (_priorOnChunk) {
               try {
@@ -1162,6 +1231,13 @@ Tips:
             if (last) {
               last.status = result?.success ? 'success' : 'error';
               last.elapsed = elapsed;
+              // Additive: capture the failure detail so the result footer can
+              // list what errored (point ①). Unset for successes.
+              if (result && result.success === false) {
+                last.error = String(
+                  result.error != null ? result.error : result.errorText != null ? result.errorText : ''
+                );
+              }
             }
             if (progressCallback) {
               const evt = { type: 'tool_end', tool: name, success: !!result?.success, elapsed };
@@ -1198,19 +1274,30 @@ Tips:
               const runSec = Math.round((Date.now() - startTime) / 1000);
               const okCount = toolLog.filter((t) => t.status === 'success').length;
               const failCount = toolLog.filter((t) => t.status === 'error').length;
-              const timeoutErr = new Error(
-                [
-                  `子代理空闲超时：空闲 ${idleSec} 秒无产出已中止，已产出的部分结果如下（如有）。`,
-                  `目标: ${subagentType} 子代理 | 进度: 已运行 ${runSec} 秒，已执行工具调用 ${toolLog.length} 次（成功 ${okCount}，失败 ${failCount}）。`,
-                  toolLog.length
-                    ? `工具摘要：${toolLog
-                        .slice(-5)
-                        .map((t) => `${t.tool}(${t.status})`)
-                        .join('、')}`
-                    : '未执行任何工具调用。',
-                  `（空闲上限 ${Math.round(_idleLimitMs / 1000)} 秒，可用 KHY_AGENT_IDLE_TIMEOUT_MS 调整）`,
-                ].join('\n')
-              );
+              const _msgParts = [
+                `子代理空闲超时：空闲 ${idleSec} 秒无产出已中止，已产出的部分结果如下（如有）。`,
+                `目标: ${subagentType} 子代理 | 进度: 已运行 ${runSec} 秒，已执行工具调用 ${toolLog.length} 次（成功 ${okCount}，失败 ${failCount}）。`,
+                toolLog.length
+                  ? `工具摘要：${toolLog
+                      .slice(-5)
+                      .map((t) => `${t.tool}(${t.status})`)
+                      .join('、')}`
+                  : '未执行任何工具调用。',
+                `（空闲上限 ${Math.round(_idleLimitMs / 1000)} 秒，可用 KHY_AGENT_IDLE_TIMEOUT_MS 调整）`,
+              ];
+              // Point ②: salvage the prose produced before the abort so the main
+              // agent can judge whether work already landed. Gated; empty buffer
+              // (gate off or no text yet) leaves the message byte-identical.
+              if (_subAgentResultFooter && _subAgentResultFooter.isEnabled(process.env)) {
+                const _salvaged = _subAgentResultFooter.salvagePartial(
+                  _partialText,
+                  _subAgentResultFooter.SUBAGENT_PARTIAL_MAX_CHARS
+                );
+                if (_salvaged) {
+                  _msgParts.push(`已完成的部分（中止前已产出的正文，据此判断成果是否已落地）:\n${_salvaged}`);
+                }
+              }
+              const timeoutErr = new Error(_msgParts.join('\n'));
               timeoutErr.errorType = 'idle_timeout';
               try {
                 _agentAbort.abort(timeoutErr);
@@ -1271,11 +1358,34 @@ Tips:
             }
           : null;
 
+        // Point ①/② (gated): downgrade tool errors to a trailing warning footer
+        // and cap the result while preserving that footer. When there are no
+        // tool errors, withToolErrorFooter returns the text unchanged, so a clean
+        // result is NEVER capped — byte-identical to the legacy path. Gate off
+        // → skipped entirely.
+        let output = result.finalResponse || '';
+        if (_subAgentResultFooter && _subAgentResultFooter.isEnabled(process.env)) {
+          const _footered = _subAgentResultFooter.withToolErrorFooter(
+            output,
+            _subAgentResultFooter.toolErrorsFromLog(toolLog),
+            ''
+          );
+          if (_footered !== output) {
+            output = _subAgentResultFooter.truncateHeadPreserveTail(
+              _footered,
+              _subAgentOutputMaxChars(),
+              _SUBAGENT_OUTPUT_TRAILER
+            );
+          } else {
+            output = _footered;
+          }
+        }
+
         return {
           success: true,
           subagent_type: subagentType,
           role,
-          output: result.finalResponse || '',
+          output,
           iterations: result.iterations,
           toolCalls: toolLog.length,
           toolCallLog: toolLog,
@@ -1341,7 +1451,7 @@ Tips:
       if (progressCallback) {
         progressCallback({ type: 'done', success: false, error: err.message, elapsed });
       }
-      return {
+      const _failRet = {
         success: false,
         subagent_type: subagentType,
         role,
@@ -1352,6 +1462,20 @@ Tips:
         elapsed: _fmtElapsed(elapsed),
         message: `Agent (${subagentType}) failed after ${_fmtElapsed(elapsed)}: ${err.message}`,
       };
+      // Point ②: attach the salvaged pre-abort body (if any) so the main agent
+      // can judge whether work already landed. Gated; empty buffer (gate off or
+      // no text yet) → no output field, byte-identical to the legacy failure.
+      if (_subAgentResultFooter && _subAgentResultFooter.isEnabled(process.env)) {
+        const _salvaged = _subAgentResultFooter.salvagePartial(
+          _partialText,
+          _subAgentResultFooter.SUBAGENT_PARTIAL_MAX_CHARS
+        );
+        if (_salvaged) {
+          _failRet.output = _salvaged;
+          _failRet.message += '（已打捞中止前正文，见 output）';
+        }
+      }
+      return _failRet;
     }
   }
 
@@ -2146,3 +2270,8 @@ module.exports.AGENT_TOOL_NAMES = AGENT_TOOL_NAMES;
 module.exports._maxSubagentFanout = _maxSubagentFanout;
 module.exports._mapSettledLimited = _mapSettledLimited;
 module.exports._fmtElapsed = _fmtElapsed;
+// Exposed for unit tests — seed/inspect the background-agent registry without
+// dispatching a real sub-agent (see tests/backgroundAgentOutput.test.js).
+// Returning the live Map is deliberate: it is the same SSOT the producer writes,
+// so a test observes exactly what production would.
+module.exports._backgroundAgents = _backgroundAgents;

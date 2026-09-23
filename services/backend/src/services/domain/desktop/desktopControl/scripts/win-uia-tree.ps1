@@ -16,33 +16,78 @@
 # window's elements, so the caller can skip/warn rather than scraping its own
 # terminal UI.
 #
-# This script contains NO interpolated user data — it takes only numeric PIDs
-# via a typed parameter, so it is injection-safe by construction.
+# Window targeting (-TargetName "My Window"): scope the scan to that *top-level*
+# window resolved from the desktop root. Without it the scan follows
+# FocusedElement, which is not the window the caller just activated (SetForegroundWindow
+# does not move UIA focus) — so an untargeted inspect silently reads whatever app
+# happens to hold focus. When no top-level window matches, emit
+# {"__khyTargetNotFound":true,"requested":...} so the caller fails honestly instead
+# of handing back another application's elements.
+#
+# This script contains NO interpolated user data — it takes only numeric PIDs and a
+# plain name via typed parameters, so it is injection-safe by construction.
 
 param(
   [string]$SelfPids = '',
+  [string]$TargetName = '',
   [switch]$Desktop
 )
 
 $ErrorActionPreference = 'SilentlyContinue'
+
+# Emit UTF-8 bytes: PowerShell would otherwise encode redirected stdout with the console code
+# page (cp936 on Chinese Windows) and every non-ASCII element name would reach Node as U+FFFD,
+# which breaks name-based clickElement() on a Chinese UI. No BOM — it would break JSON.parse.
+try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false) } catch {}
+
 Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes
 
 $root = [System.Windows.Automation.AutomationElement]::RootElement
 $scope = $root
 
-# Resolve the focused element and walk up to its owning Window so we scope the
-# descendant scan to just that window (not the entire desktop).
-try {
-  $fe = [System.Windows.Automation.AutomationElement]::FocusedElement
-  if ($fe) {
-    $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
-    $cur = $fe
-    while ($cur -ne $null -and $cur.Current.ControlType -ne [System.Windows.Automation.ControlType]::Window) {
-      $cur = $walker.GetParent($cur)
-    }
-    if ($cur -ne $null) { $scope = $cur }
+# Resolve the scan scope. Two mutually exclusive paths:
+#  - -TargetName given → bind to that top-level window from the desktop root. This
+#    is the honest path: the result can never belong to a different application.
+#    A miss emits a sentinel rather than falling back to "whatever has focus".
+#  - no target → walk up from FocusedElement to its owning Window (legacy: the
+#    scan then covers the window the OS happens to consider focused).
+if ($TargetName) {
+  $found = $null
+  try {
+    $nameCond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, $TargetName)
+    $found = $root.FindFirst([System.Windows.Automation.TreeScope]::Children, $nameCond)
+  } catch {}
+  # Substring fallback, matching the window backends (activate/close/list all match
+  # by *title*, and the caller's names come from listWindows' MainWindowTitle).
+  if (-not $found) {
+    try {
+      $wins = $root.FindAll([System.Windows.Automation.TreeScope]::Children, [System.Windows.Automation.Condition]::TrueCondition)
+      foreach ($w in $wins) {
+        try {
+          $wn = $w.Current.Name
+          if ($wn -and $wn.IndexOf($TargetName, [StringComparison]::OrdinalIgnoreCase) -ge 0) { $found = $w; break }
+        } catch {}
+      }
+    } catch {}
   }
-} catch {}
+  if (-not $found) {
+    [pscustomobject]@{ __khyTargetNotFound = $true; requested = $TargetName } | ConvertTo-Json -Compress
+    exit 0
+  }
+  $scope = $found
+} else {
+  try {
+    $fe = [System.Windows.Automation.AutomationElement]::FocusedElement
+    if ($fe) {
+      $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
+      $cur = $fe
+      while ($cur -ne $null -and $cur.Current.ControlType -ne [System.Windows.Automation.ControlType]::Window) {
+        $cur = $walker.GetParent($cur)
+      }
+      if ($cur -ne $null) { $scope = $cur }
+    }
+  } catch {}
+}
 
 # Self-window filter: if the focused window belongs to the khy terminal itself,
 # emit a sentinel and bail out (do not scrape our own terminal's elements).

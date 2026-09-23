@@ -20,8 +20,8 @@ const fs = require('fs');
 const { describe, test, after } = require('node:test');
 const assert = require('node:assert/strict');
 
-const traceChain = require('../../../src/services/trajectoryProvenance/traceChain');
-const khyTrace = require('../../../src/services/trajectoryProvenance/khyTrace');
+const traceChain = require('../../../src/services/domain/trajectory/trajectoryProvenance/traceChain.js');
+const khyTrace = require('../../../src/services/domain/trajectory/trajectoryProvenance/khyTrace.js');
 const sessionPersistence = require('../../../src/services/sessionPersistence');
 
 const { PRODUCER, TRUST } = khyTrace;

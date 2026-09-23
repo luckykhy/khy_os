@@ -100,7 +100,8 @@ function CcTable({
     ? columns
     : columns.filter(c => c.priority !== 'low');
 
-  const widths = calculateColumnWidths(visibleCols, rows, cols - 4); // 减去边框
+  const gaps = Math.max(0, visibleCols.length - 1); // 列间 1 空格分隔
+  const widths = calculateColumnWidths(visibleCols, rows, cols - 4 - gaps); // 减去边框与分隔
 
   // 空状态
   if (rows.length === 0) {
@@ -117,10 +118,12 @@ function CcTable({
     React.createElement(Box, { key: 'header' },
       visibleCols.map((col, i) => {
         const align = col.align || 'left';
-        const cell = align === 'right' ? padLeft(visibleCols[i].header, widths[i])
-          : align === 'center' ? padCenter(visibleCols[i].header, widths[i])
-          : padRight(visibleCols[i].header, widths[i]);
-        return React.createElement(Text, { key: i, bold: true, color: '#A0A0A0' }, cell);
+        const head = truncate(visibleCols[i].header, widths[i]);
+        const cell = align === 'right' ? padLeft(head, widths[i])
+          : align === 'center' ? padCenter(head, widths[i])
+          : padRight(head, widths[i]);
+        const last = i === visibleCols.length - 1;
+        return React.createElement(Text, { key: i, bold: true, color: '#A0A0A0' }, last ? cell : cell + ' ');
       })
     )
   );
@@ -137,10 +140,12 @@ function CcTable({
     React.createElement(Box, { key: ri },
       visibleCols.map((col, ci) => {
         const align = col.align || 'left';
-        const cell = align === 'right' ? padLeft(String(row[ci] ?? ''), widths[ci])
-          : align === 'center' ? padCenter(String(row[ci] ?? ''), widths[ci])
-          : padRight(String(row[ci] ?? ''), widths[ci]);
-        return React.createElement(Text, { key: ci, color: col.color || '#E0E0E0' }, cell);
+        const text = truncate(String(row[ci] ?? ''), widths[ci]);
+        const cell = align === 'right' ? padLeft(text, widths[ci])
+          : align === 'center' ? padCenter(text, widths[ci])
+          : padRight(text, widths[ci]);
+        const last = ci === visibleCols.length - 1;
+        return React.createElement(Text, { key: ci, color: col.color || row.color || '#E0E0E0' }, last ? cell : cell + ' ');
       })
     )
   ));
@@ -190,7 +195,7 @@ function CcMcpTable({ servers, cols = 80 }) {
     s.tools != null ? String(s.tools) : '—',
   ]);
 
-  // 为每行的状态列添加颜色
+  // 整行按连接状态着色（CcTable 数据行渲染读取 row.color）
   const coloredRows = servers.map((s, i) => {
     const row = rows[i];
     row.color = statusColor[s.state] || '#E0E0E0';

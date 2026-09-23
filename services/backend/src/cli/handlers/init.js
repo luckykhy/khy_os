@@ -713,6 +713,12 @@ function ensureBuiltinSenseNovaProvider(options = {}) {
   });
 }
 
+function ensureBuiltinZenProvider(options = {}) {
+  require('../../services/customProviderRegistrar').ensureBuiltinZen({
+    force: !!options.force,
+  });
+}
+
 // ── khy init ─────────────────────────────────────────────────────────────────
 
 /**
@@ -839,6 +845,15 @@ async function handleInit(options = {}) {
 
   ensureBuiltinSenseNovaProvider({ force: !!options.force });
   printSuccess('内置 AI Provider (SenseNova) 已配置');
+
+  try {
+    const zenSeed = ensureBuiltinZenProvider({ force: !!options.force });
+    if (zenSeed && zenSeed.seeded) {
+      printSuccess('内置 AI Provider (OpenCode Zen 免费) 已配置');
+    }
+  } catch {
+    /* best effort — never block init wizard */
+  }
 
   // Seed the qoder reverse-proxy channels only when the user opted in
   // (QODER_PROXY_ENDPOINT/API_KEY or KHY_QODER_PROXY); otherwise a silent no-op.

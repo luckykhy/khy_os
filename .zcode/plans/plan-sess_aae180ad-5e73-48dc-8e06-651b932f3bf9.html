@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: plan-sess_aae180ad-5e73-48dc-8e06-651b932f3bf9.md -->
+<title>khy-os 不稳定因素：先测试、后修复 计划 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>.zcode<span class="sep">›</span>plans<span class="sep">›</span>khy-os 不稳定因素：先测试、后修复 计划</div>
+      <header class="hero reveal"><h1>khy-os 不稳定因素：先测试、后修复 计划</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-不稳定因素-先测试-后修复-计划">khy-os 不稳定因素：先测试、后修复 计划</a></li><li class="lvl-2"><a href="#背景">背景</a></li><li class="lvl-2"><a href="#phase-1-测试-red-优先">Phase 1：测试（RED 优先）</a></li><li class="lvl-2"><a href="#phase-2-修复-让-red-转-green-按序">Phase 2：修复（让 RED 转 GREEN），按序</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#不做-p2-数据类">不做（P2/数据类）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-不稳定因素-先测试-后修复-计划">khy-os 不稳定因素：先测试、后修复 计划<a class="anchor" href="#khy-os-不稳定因素-先测试-后修复-计划" aria-label="锚点">#</a></h1>
+<h2 id="背景">背景<a class="anchor" href="#背景" aria-label="锚点">#</a></h2>
+<p>排查已确认的不稳定因素（证据在 <code>.zcode/instability-report-2026-09-11.md</code>）：</p>
+<ul><li>P0：① ai-manage 守护进程「无会话 10 分钟自杀 + 按需拉起」抖动，且任何 uncaughtException/unhandledRejection 都整体退出（<code>scripts/ai-manage-daemon.js:757-772</code>）；② 控制面 token 头不一致（daemon 收 <code>x-khy-token</code>，lifecycle 发 <code>X-Control-Token</code> → 401 → 探测失败 → 双实例抖动）；③ <code>services/ai-backend/server.js:147</code> 端口冲突无 <code>error</code> 处理 → 未捕获异常崩溃；④ <code>autoConnect.js:30</code> 默认 manager 指错模块 → MCP auto-connect 静默失效；⑤ Electron 无单实例锁 + 无 <code>before-quit</code> → 48 个僵尸进程、退出留孤儿后端。</li><li>P1：运行时文件路径分歧（lifecycle 读 <code>~/.khy</code>，daemon 在 portable 下写 <code>&lt;root&gt;/.khy</code>，且每 5s 双写 C: 旧家目录）；taskBoard DDL 遇 SQLITE_BUSY 永久禁用（无重试）；customerRegistry 跨进程 last-writer-wins（已见 4 个孤儿 .tmp）；<code>start-with-db.js</code> 写死 PG 路径；遗留垃圾文件（根目录 5 个 + backend 4 个）。</li><li>用户指令：先做好测试，再修复。用户未选范围 → 按 <strong>P0+P1</strong> 执行；P2（dist 重建、日志乱码、ilink/proxy 数据）不做。</li></ul>
+<h2 id="phase-1-测试-red-优先">Phase 1：测试（RED 优先）<a class="anchor" href="#phase-1-测试-red-优先" aria-label="锚点">#</a></h2>
+<p>约定：后端测试用 jest 放 <code>services/backend/tests/</code>（jest 默认收集；setupFiles 已把 <code>KHY_DATA_HOME</code> 固定到临时目录，直接复用）；Electron 测试用 <code>node:test</code> 放 <code>scripts/tests/electron/</code>（被现有 <code>npm run test:scripts</code> 自动收集——遵守 OPS-MAN-174「不为单个测试文件建 npm 入口」，不加新入口）；**不新增 KHY_* 开关**（免 flagRegistry 登记）。</p>
+<p>新增测试文件（标注 RED = 对当前行为失败）：</p>
+<ol><li><code>tests/aiManageDaemonGc.test.js</code> — GC 循环：startup-timeout（seenAnySession=false）/idle（=true）语义固定；会话 TTL 过期；shuttingDown 幂等；<strong>工作流 worker busy 时不得 startup-timeout 自杀（RED）</strong>；<strong>瞬态异常（ECONNRESET/SQLITE_BUSY/ENOENT）不退出、未知/致命才退出（RED）</strong>。前置：给 <code>ai-manage-daemon.js</code> 加测试接缝（<code>require.main</code> 守卫 + <code>module.exports</code> + 可注入 tick 间隔），行为不变。</li><li><code>tests/aiManageDaemonControlApi.test.js</code> — lifecycle <code>probeControl</code>/<code>requestShutdown</code> 对真实控制服务器成功（当前 401，RED）；portable 模式下 <code>_runtimeFile()</code> 与 daemon 写入位置一致（<code>getDataHome()</code>，RED）；stale PID 时 ensureStarted 用假 daemon 脚本完成重拉（基建 GREEN）。</li><li><code>tests/aiBackendPortResilience.test.js</code> — spawn <code>services/ai-backend/server.js</code> 且 <code>AI_MGMT_PORT</code> 指向被占端口：进程存活并绑定下一可用端口（当前崩溃，RED）。</li><li><code>tests/mcpAutoConnectWiring.test.js</code> — 默认 manager 具备 <code>loadConfig</code>+<code>connectAll</code> 且 <code>ensureMcpConnected</code> 真正派发（当前指向 agents/index，静默 no-op，RED）。</li><li><code>tests/mcpStdioPythonResolution.test.js</code> — 裸 <code>python</code> 解析：VIRTUAL_ENV → PYTHON_PATH → 安装根 <code>tools/deepseek-eyes/.venv</code> → PATH（纯函数，TDD）；配置里的陈旧绝对路径 fail-fast 并给出可执行修复提示。</li><li><code>tests/toolsCategoryConsistency.test.js</code> — 单一真源：所有 <code>src/tools</code> 的 category ∈ <code>CATEGORIES</code>；6 个 multimodal 扩展工具全部加载不被拒（钉死 09-05 回归，防 dist/src 漂移）。</li><li><code>tests/taskBoardBusyRetry.test.js</code> — 打开期 DDL 遇 SQLITE_BUSY：有界重试后可用，不再终身禁用（RED）。</li><li><code>tests/customerRegistryConcurrentWrites.test.js</code> — 双进程并发 load/save 无丢写（版本 CAS）+ 启动时清扫孤儿 <code>.tmp.*</code>（RED）。</li><li><code>scripts/tests/electron/main.singleInstance.test.js</code> — main.js 必须 <code>requestSingleInstanceLock</code>；第二实例聚焦已有窗口；<code>before-quit</code> 调 <code>backendService.stop()</code>（当前缺失，RED；mock 用 require.cache 预置假 electron 模块）。</li></ol>
+<p>同时修两套已损坏的存量测试：</p>
+<ul><li><code>tests/mcpAutoConnect.test.js:13</code> 导入 <code>../src/services/mcp/autoConnect</code>（不存在）→ 改为 <code>domain/messaging/mcp/autoConnect</code>。</li><li><code>tests/services/__tests__/aiManageDaemonLifecycle.test.js:145</code> 用了未导入的 <code>assert</code> → 补 <code>node:assert</code>。</li></ul>
+<h2 id="phase-2-修复-让-red-转-green-按序">Phase 2：修复（让 RED 转 GREEN），按序<a class="anchor" href="#phase-2-修复-让-red-转-green-按序" aria-label="锚点">#</a></h2>
+<ul><li>F1 <code>ai-manage-daemon.js</code> 测试接缝（守卫+导出+可注入 tick，行为不变）。</li><li>F2 故障隔离：daemon 的 uncaught/unhandled 走 <code>crashRecovery</code> 分类——瞬态（含新增 ENOENT/spawn-ENOENT 条目；SQLITE_BUSY 已有）记录后继续，仅未知/致命退出。</li><li>F3 活性信号：<code>workflowRunWorker.getStatus()</code> 增加 <code>busy</code>；GC 循环在 busy 时视为有活动（不触发 startup-timeout/idle 自杀）。</li><li>F4 token 头：daemon <code>readAuthToken</code> 同时接受 <code>x-khy-token</code> 与 <code>x-control-token</code>。</li><li>F5 运行时文件单一真源：lifecycle <code>_runtimeFile()</code> 改用 <code>getDataHome()</code>；daemon 在 portable 模式不再双写 C: <code>~/.khyquant</code> 旧家目录。</li><li>F6 <code>services/ai-backend/server.js</code>：<code>server.on('error')</code> + EADDRINUSE 自动探测下一可用端口（对齐 backend 契约），实际端口写日志/传播。</li><li>F7 <code>autoConnect.js</code> 默认 manager 指向真实 MCP 客户端（<code>./index</code>）。</li><li>F8 MCP stdio <code>python</code> 解析（新叶子 <code>domain/messaging/mcp/pythonCommandResolver.js</code>，复用 <code>utils/pythonPath.js</code> 的 findPython；候选含安装根 <code>tools/deepseek-eyes/.venv</code>）。</li><li>F9 taskBoard：DDL 初始化失败有界退避重试。</li><li>F10 customerRegistry：版本 CAS + 孤儿 <code>.tmp.*</code> 清扫。</li><li>F11 <code>electron/main.js</code>：单实例锁 + second-instance 聚焦 + <code>before-quit</code> 停止后端子进程。</li><li>F12 抽取 <code>src/utils/pgPaths.js</code>（server.js 的 <code>_discoverPgPaths</code>：PG_HOME + 盘符扫描），<code>server.js</code> 与 <code>start-with-db.js</code> 共用。</li><li>F13 删垃圾：根目录未跟踪碎片 3 个 + 跟踪文件 7 个（<code>SidePane.tsx</code>/<code>Composer.tsx</code>/backend <code>fix.js</code>/<code>fix2.js</code>/<code>fix3.js</code>/<code>survey.tmp.js</code>，用 <code>D:\Portable\Tools\git\cmd\git.exe</code> 做 <code>git rm</code>；不提交，留给用户）。</li></ul>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<ul><li><code>npm run test:all --workspace services/backend</code>（jest + node --test 双跑全绿）。</li><li><code>npm run test:scripts</code>（含新 Electron 测试）。</li><li><code>node scripts/ci/check-agent-rules.js</code>（改动文件零 error）、<code>npm run check:layout</code>、<code>npm run check:flag-registry</code>（未加新 flag，应直接过）。</li><li>实机冒烟：重启 ai-manage daemon → 9090 可连、控制面探测 ok、<code>ai_manage_runtime.json</code> 写在 <code>D:\Portable\khy-os\.khy</code>、10 分钟内不再自杀（有工作流运行时）；清理 48 个僵尸 Electron 进程后重启桌面端验证单实例。</li></ul>
+<h2 id="不做-p2-数据类">不做（P2/数据类）<a class="anchor" href="#不做-p2-数据类" aria-label="锚点">#</a></h2>
+<p>dist 陈旧 bundle 重建、日志 GBK/UTF-8 乱码统一、ilink 通道与 <code>.khy/proxy.json</code> 的 404 订阅（用户数据）、sessions.db 事故深挖。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../.zcode/plans/plan-sess_95d4ce6a-4880-4685-853f-353afe97bb4a.html"><div class="dir">← 上一篇</div><div class="ttl">目标</div></a><a class="next" href="../../.zcode/plans/plan-sess_d6633bc8-c74e-498e-86f0-6d96620079a2.html"><div class="dir">下一篇 →</div><div class="ttl">计划：新增 [DESIGN-LAY-002] 目录层级与文件归类规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__=".zcode/plans/plan-sess_aae180ad-5e73-48dc-8e06-651b932f3bf9.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

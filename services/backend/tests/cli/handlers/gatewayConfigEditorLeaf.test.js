@@ -5,8 +5,8 @@
  * Proves: (1) the leaf exports handleGatewayConfig + the DI setter as functions; (2) the host
  * re-imports handleGatewayConfig by the same name so the `gateway config` command contract is
  * byte-identical; (3) setGatewayConfigEditorDeps is a guarded, idempotent, non-throwing DI
- * setter that only wires function-typed deps (the 10 host callbacks â€?JSON/env helpers, model
- * choice builders and the provider-key leaf's _addCustomProviderInteractive â€?that avoid a
+ * setter that only wires function-typed deps (the 10 host callbacks ï¿½?JSON/env helpers, model
+ * choice builders and the provider-key leaf's _addCustomProviderInteractive ï¿½?that avoid a
  * require cycle).
  *
  * The leaf performs IO (reads/writes .env, interactive prompts, lazy pool loads) so it does NOT
@@ -30,10 +30,10 @@ describe('Gateway Config Editor Leaf', () => {
 
   test('setGatewayConfigEditorDeps is a guarded, idempotent, non-throwing DI setter', () => {
       const { setGatewayConfigEditorDeps } = require(LEAF);
-      expect(() => setGatewayConfigEditorDeps().not.toThrow());
-      expect(() => setGatewayConfigEditorDeps({}).not.toThrow());
+      expect(() => setGatewayConfigEditorDeps()).not.toThrow();
+      expect(() => setGatewayConfigEditorDeps({})).not.toThrow();
       // Non-function deps are ignored, not wired.
-      expect(() => setGatewayConfigEditorDeps({ promptWithReplGuard: 1, _writeEnvMap: null, buildGatewayModelChoices: 'x' }).not.toThrow());
+      expect(() => setGatewayConfigEditorDeps({ promptWithReplGuard: 1, _writeEnvMap: null, buildGatewayModelChoices: 'x' })).not.toThrow();
       // Idempotent re-injection with real functions across the full dep surface.
       const fakeDeps = {};
       for (const n of ['promptWithReplGuard', '_parseJsonObject', '_mergeJsonEnvVar', '_removeJsonEnvVarKey',
@@ -41,8 +41,8 @@ describe('Gateway Config Editor Leaf', () => {
         'handleGatewaySelectModel', '_addCustomProviderInteractive']) {
         fakeDeps[n] = () => undefined;
       }
-      expect(() => setGatewayConfigEditorDeps(fakeDeps).not.toThrow());
-      expect(() => setGatewayConfigEditorDeps(fakeDeps).not.toThrow());
+      expect(() => setGatewayConfigEditorDeps(fakeDeps)).not.toThrow();
+      expect(() => setGatewayConfigEditorDeps(fakeDeps)).not.toThrow();
   });
 
 });

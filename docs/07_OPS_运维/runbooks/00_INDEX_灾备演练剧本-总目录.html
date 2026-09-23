@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 00_INDEX_灾备演练剧本-总目录.md -->
+<title>Disaster Recovery Runbooks · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>runbooks<span class="sep">›</span>Disaster Recovery Runbooks</div>
+      <header class="hero reveal"><h1>Disaster Recovery Runbooks</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#disaster-recovery-runbooks">Disaster Recovery Runbooks</a></li><li class="lvl-2"><a href="#overview">Overview</a></li><li class="lvl-2"><a href="#rto-rpo-targets">RTO/RPO Targets</a></li><li class="lvl-2"><a href="#backup-verification">Backup Verification</a></li><li class="lvl-2"><a href="#failover-procedures">Failover Procedures</a></li><li class="lvl-2"><a href="#quarterly-drills">Quarterly Drills</a></li><li class="lvl-2"><a href="#dependencies">Dependencies</a></li><li class="lvl-2"><a href="#related">Related</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="disaster-recovery-runbooks">Disaster Recovery Runbooks<a class="anchor" href="#disaster-recovery-runbooks" aria-label="锚点">#</a></h1>
+<blockquote><p>DR-001 reference: disaster recovery documentation</p></blockquote>
+<h2 id="overview">Overview<a class="anchor" href="#overview" aria-label="锚点">#</a></h2>
+<p>This directory contains runbooks for disaster recovery.</p>
+<h2 id="rto-rpo-targets">RTO/RPO Targets<a class="anchor" href="#rto-rpo-targets" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Scenario</th><th>RTO (Recovery Time Objective)</th><th>RPO (Recovery Point Objective)</th><th>状态</th></tr></thead><tbody><tr><td>Single node failure</td><td>5 minutes</td><td>0 (synchronous replication)</td><td>在产</td></tr><tr><td>Database failover</td><td>30 seconds</td><td>0 (synchronous replication)</td><td>在产</td></tr><tr><td>Full region outage</td><td>1 hour</td><td>15 minutes (async replication)</td><td>在产</td></tr><tr><td>Data corruption</td><td>2 hours</td><td>1 hour (last verified backup)</td><td>在产</td></tr></tbody></table>
+<h2 id="backup-verification">Backup Verification<a class="anchor" href="#backup-verification" aria-label="锚点">#</a></h2>
+<ul><li>Daily automated backup verification (see <code>scripts/maintenance/verify_backups.ps1</code>)</li><li>Weekly restore test (see <code>scripts/maintenance/test_restore.ps1</code>)</li><li>Monthly full DR drill (see <span class="deadlink" title="目标不存在：drill-schedule.html">drill-schedule.md</span>)</li></ul>
+<h2 id="failover-procedures">Failover Procedures<a class="anchor" href="#failover-procedures" aria-label="锚点">#</a></h2>
+<ol><li>Detect failure via health check (<code>/health</code>, <code>/ready</code>, <code>/live</code>)</li><li>Promote standby replica</li><li>Update DNS / load balancer</li><li>Verify traffic routing</li><li>Post-failover validation</li></ol>
+<h2 id="quarterly-drills">Quarterly Drills<a class="anchor" href="#quarterly-drills" aria-label="锚点">#</a></h2>
+<ul><li>Q1: Database failover drill</li><li>Q2: Full region failover drill</li><li>Q3: Backup restore validation</li><li>Q4: End-to-end DR exercise</li></ul>
+<h2 id="dependencies">Dependencies<a class="anchor" href="#dependencies" aria-label="锚点">#</a></h2>
+<p>See [[OPS-MAN-201] dependencies](../OPS-MAN/[OPS-MAN-201] dependencies.md) for critical service dependency map.</p>
+<h2 id="related">Related<a class="anchor" href="#related" aria-label="锚点">#</a></h2>
+<ul><li><a href="../incident-runbooks/00_INDEX_事件响应剧本-总目录.html">../incident-runbooks/00_INDEX_事件响应剧本-总目录.md</a> - incident response runbooks</li><li>[[OPS-MAN-202] oncall](../OPS-MAN/[OPS-MAN-202] oncall.md) - oncall schedule</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/07_OPS_运维/OPS-MAN/00_INDEX_OPS-MAN-总目录.html"><div class="dir">← 上一篇</div><div class="ttl">OPS-MAN</div></a><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/07_OPS_运维/runbooks/00_INDEX_灾备演练剧本-总目录.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

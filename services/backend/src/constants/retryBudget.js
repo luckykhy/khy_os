@@ -40,9 +40,11 @@ const MAX_RETRY_ROUNDS = 10;
  */
 function clampRetryRounds(requested, fallback = MAX_RETRY_ROUNDS) {
   const fb = Math.min(MAX_RETRY_ROUNDS, Math.max(1, Math.floor(Number(fallback) || 1)));
-  const n = Math.floor(Number(requested));
+  // null 显式视为「调用方没给」→ 走 fallback（与 undefined 同语义）。
+  // NaN 是「给了但不可解析」→ 也走 fallback。两者在语义上都等于"未提供有效数字"。
+  const n = requested == null ? NaN : Math.floor(Number(requested));
   if (!Number.isFinite(n)) {
-    return fb; // 非数字(undefined / '' / 'abc' / NaN)才回退,数字一律就地收敛
+    return fb;
   }
   return Math.min(MAX_RETRY_ROUNDS, Math.max(1, n));
 }

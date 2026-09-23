@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: README.md -->
+<title>项目简介 · Khy-OS 文档</title>
+<link rel="stylesheet" href="./docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="./docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="./docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="./docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="./docs/index.html">首页</a><span class="sep">›</span>项目简介</div>
+      <header class="hero reveal"><h1>项目简介</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-2"><a href="#项目简介">项目简介</a></li><li class="lvl-2"><a href="#架构概览">架构概览</a></li><li class="lvl-3"><a href="#关键入口点">关键入口点</a></li><li class="lvl-2"><a href="#安装方式">安装方式</a></li><li class="lvl-3"><a href="#包管理器安装-二选一-两渠道内容一致">包管理器安装（二选一，两渠道内容一致）</a></li><li class="lvl-3"><a href="#本仓库源码运行">本仓库源码运行</a></li><li class="lvl-2"><a href="#快速开始-开发者">快速开始（开发者）</a></li><li class="lvl-3"><a href="#启动后端">启动后端</a></li><li class="lvl-3"><a href="#启动-ai-平台前端">启动 AI 平台前端</a></li><li class="lvl-3"><a href="#本地开发访问地址">本地开发访问地址</a></li><li class="lvl-3"><a href="#默认管理员账号">默认管理员账号</a></li><li class="lvl-2"><a href="#配置文件位置">配置文件位置</a></li><li class="lvl-2"><a href="#目录结构">目录结构</a></li><li class="lvl-3"><a href="#分层概览">分层概览</a></li><li class="lvl-2"><a href="#文档导航">文档导航</a></li><li class="lvl-2"><a href="#版本同步">版本同步</a></li><li class="lvl-2"><a href="#贡献与维护">贡献与维护</a></li><li class="lvl-2"><a href="#许可">许可</a></li></ul></nav>
+      <article class="doc-body">
+<h1 align="center">Khy-OS</h1>
+<p align="center">
+<p>&lt;b&gt;AI 平台操作系统 · The AI-native operating system.&lt;/b&gt;&lt;br&gt;<br>  一个可扩展的 AI 平台基座：Claude-Code 级智能体 CLI + 多后端 AI 网关 + 手写 OS 内核。&lt;br&gt;<br>  一次安装，开箱即用。<br>&lt;/p&gt;</p>
+<p align="center">
+  <a href="https://pypi.org/project/khy-os/"><img alt="PyPI" src="https://img.shields.io/pypi/v/khy-os?logo=pypi&logoColor=white&label=pip%20khy-os"></a>
+  <a href="https://www.npmjs.com/package/@khy-os/khy-os"><img alt="npm" src="https://img.shields.io/npm/v/@khy-os/khy-os?logo=npm&label=npm%20%40khy-os%2Fkhy-os"></a>
+  <img alt="Python" src="https://img.shields.io/badge/python-%E2%89%A53.8-3776AB?logo=python&logoColor=white">
+  <img alt="Node" src="https://img.shields.io/badge/node-%E2%89%A520.18.1-339933?logo=node.js&logoColor=white">
+  <img alt="Platforms" src="https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey">
+</p>
+<hr>
+<h2 id="项目简介">项目简介<a class="anchor" href="#项目简介" aria-label="锚点">#</a></h2>
+<p><strong>Khy-OS</strong> 是一个通过 PyPI（<code>pip install khy-os</code>）和 npm（<code>@khy-os/khy-os</code>）双渠道分发的 AI 平台操作系统。它启动一个可扩展的默认应用运行时，主要包含：</p>
+<ul><li><strong>智能体 CLI</strong>：流式 TUI、工具调用循环、权限门控、子智能体、工作流、目标模式、上下文压缩；</li><li><strong>多后端 AI 网关</strong>：以统一 API 前置 Claude、Qwen、Cursor、Kiro、Windsurf、Warp、Trae、Ollama、Codex 等多家供应商，支持级联故障转移与熔断，无供应商锁定；</li><li><strong>手写 OS 内核</strong>（<code>kernel/</code>，C 语言）：抢占式调度、按需分页、写时复制 <code>fork</code>、POSIX 风格信号、管道、ELF + PE 双格式加载器，可在 QEMU 下引导运行。</li></ul>
+<p>除 CLI 外，同一后端还支撑多个客户端：Web 管理台（<code>apps/ai-frontend/</code>）、<br>Electron 桌面端（<code>apps/khyos-desktop/</code> 与根级 <code>electron/</code>）、Android 随身 App<br>（<code>apps/khy-os-client-app/</code>，Flutter；旧的 Capacitor 壳 <code>apps/khy-mobile/</code> 已隔离，<br>见 [DESIGN-ARCH-120]）。</p>
+<p><strong>khyquant</strong>（量化交易终端，位于 <code>software/khyquant/</code>）是运行在该基座之上的<strong>内置默认应用</strong>——而非项目本身。</p>
+<p>分层结构：</p>
+<ul><li><strong>Python 层</strong>（<code>platform/khy_platform/</code>）：轻量启动器，负责检测环境并拉起 Node.js；</li><li><strong>Node.js 后端</strong>（<code>services/backend/</code>）：承载所有业务逻辑（CLI、AI 网关、各类服务、Web API）；</li><li><strong>前端</strong>：<code>apps/ai-frontend/</code>（AI 平台管理 UI，Vue 3 + Vite）与 <code>software/khyquant/frontend/</code>（内置的 khyquant 交易 UI）。</li></ul>
+<h2 id="架构概览">架构概览<a class="anchor" href="#架构概览" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">User → khy 命令 → Python cli.py → Node.js services/backend/bin/khy.js
+                                          │
+                         ┌────────────────┼────────────────┐
+                         ▼                ▼                ▼
+                   CLI Layer        Service Layer      Web API
+                  (src/cli/)      (src/services/)    (src/routes/)</code></pre>
+<h3 id="关键入口点">关键入口点<a class="anchor" href="#关键入口点" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>组件</th><th>文件</th><th>用途</th></tr></thead><tbody><tr><td>CLI 路由器</td><td><code>services/backend/src/cli/router.js</code></td><td>命令解析 + 分派</td></tr><tr><td>别名表</td><td><code>services/backend/src/cli/aliases.js</code></td><td>中文/拼音 → 英文命令映射</td></tr><tr><td>REPL 循环</td><td><code>services/backend/src/cli/repl.js</code></td><td>readline 接口 + AI 模式</td></tr><tr><td>AI 网关</td><td><code>services/backend/src/services/gateway/aiGateway.js</code></td><td>统一的多供应商 AI 调用</td></tr><tr><td>Token 统计</td><td><code>services/backend/src/services/tokenUsageService.js</code></td><td>以人民币计的用量统计</td></tr><tr><td>训练</td><td><code>services/backend/src/services/modelTrainingService.js</code></td><td>LoRA/蒸馏/导出</td></tr><tr><td>回测</td><td><code>services/backend/src/services/backtestEngine.js</code></td><td>策略模拟</td></tr></tbody></table>
+<h2 id="安装方式">安装方式<a class="anchor" href="#安装方式" aria-label="锚点">#</a></h2>
+<h3 id="包管理器安装-二选一-两渠道内容一致">包管理器安装（二选一，两渠道内容一致）<a class="anchor" href="#包管理器安装-二选一-两渠道内容一致" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell"><span class="hljs-comment"># pip 渠道</span>
+python <span class="hljs-literal">-m</span> pip install <span class="hljs-literal">-U</span> khy<span class="hljs-literal">-os</span>
+
+<span class="hljs-comment"># npm 渠道</span>
+npm install <span class="hljs-literal">-g</span> @khy<span class="hljs-literal">-os</span>/khy<span class="hljs-literal">-os</span></code></pre>
+<p>安装后直接运行：</p>
+<pre><code class="language-powershell">khy                        <span class="hljs-comment"># 启动智能体终端</span>
+khy preflight              <span class="hljs-comment"># 首次运行前诊断 PATH / Node / 依赖</span>
+khy ai <span class="hljs-string">&quot;总结这个仓库&quot;</span>       <span class="hljs-comment"># 一次性 AI 调用，不进 REPL</span>
+khy gateway status         <span class="hljs-comment"># 查看各 AI 后端的可用状态</span>
+khy doctor                 <span class="hljs-comment"># 系统健康检查</span></code></pre>
+<h3 id="本仓库源码运行">本仓库源码运行<a class="anchor" href="#本仓库源码运行" aria-label="锚点">#</a></h3>
+<p>要求 Python ≥ 3.8、Node.js ≥ 20.18.1（<code>services/backend</code> 的 <code>engines</code>）。这是一份<br>monorepo（npm workspaces + pnpm workspace），先按需安装工作区依赖：</p>
+<pre><code class="language-powershell">npm run install:core       <span class="hljs-comment"># 只装运行时最小闭包（backend + ai-backend + @khy/shared）</span>
+npm run install:all        <span class="hljs-comment"># 全量安装（corepack pnpm install --frozen-lockfile）</span></code></pre>
+<p>然后在仓库根目录进入 CLI：</p>
+<pre><code class="language-powershell"><span class="hljs-comment"># Windows：通过便携启动器进入 khy CLI（自动探测 Python / Node）</span>
+.\khy.bat
+
+<span class="hljs-comment"># 或使用便携化开发启动器：在项目内落地一份已验证的 Node 运行时（默认 22.12.0），</span>
+<span class="hljs-comment"># 运行时状态与包缓存都留在项目内。参数是「要跑的 npm script 名」，</span>
+<span class="hljs-comment"># 加 -Workspace 即在该工作区里执行。</span>
+.\extensions\scripts\khy<span class="hljs-literal">-portable</span>\run.ps1 <span class="hljs-literal">-Command</span> install
+.\extensions\scripts\khy<span class="hljs-literal">-portable</span>\run.ps1 <span class="hljs-literal">-Command</span> dev <span class="hljs-literal">-Workspace</span> apps/ai<span class="hljs-literal">-frontend</span>
+.\extensions\scripts\khy<span class="hljs-literal">-portable</span>\run.ps1 <span class="hljs-literal">-Command</span> test:backend
+.\extensions\scripts\khy<span class="hljs-literal">-portable</span>\run.ps1 <span class="hljs-literal">-Command</span> shell          <span class="hljs-comment"># 进入带 node/npm 环境的 PowerShell</span></code></pre>
+<p>Linux / macOS 使用 <code>./khy.sh</code>。便携模式详见 [PORTABLE.md](docs/06_DEPLOY_部署/DEPLOY/[DEPLOY-0101] PORTABLE.md)。</p>
+<blockquote><p>根 <code>package.json</code> 只登记 curated 任务入口（<code>check:</code> / <code>docs:</code> / <code>rules:</code> / <code>gate:</code> /<br><code>portable:</code> 等，见 [DESIGN-LAY-005] 第四节），<strong>没有</strong> <code>dev</code> / <code>build</code> 顶层脚本——<br>构建与开发命令一律落到具体 workspace，例如 <code>npm run test:backend</code>、<br><code>npm run install:frontend</code>。</p></blockquote>
+<p>仓库<strong>不跟踪可再生的构建产物</strong>：Markdown 工作台的 muya WYSIWYG 引擎（<code>extensions/tools/khy-markdown/vendor/</code>）<br>与离线文档站的图表引擎（<code>docs/19_资产/site/mermaid.min.js</code>）都由同级源码按需重建。开发路径 fail-soft<br>（缺失时自动回退），发布路径硬失败。想立刻补齐：</p>
+<pre><code class="language-bash">node extensions/tools/khy-markdown/muya-embed/ensure-vendor.mjs   <span class="hljs-comment"># muya 所见即所得引擎（约 11 MB）</span>
+npm run docs:mermaid                                     <span class="hljs-comment"># 文档站 Mermaid 图表引擎（约 3.3 MB）</span></code></pre>
+<h2 id="快速开始-开发者">快速开始（开发者）<a class="anchor" href="#快速开始-开发者" aria-label="锚点">#</a></h2>
+<p>依赖统一从仓库根安装（workspace 会把 <code>services/backend/vendor/shared</code> 链到<br><code>platform/packages/shared</code>），装完后各 workspace 可单独起服务：</p>
+<pre><code class="language-powershell">npm run install:core        <span class="hljs-comment"># backend + ai-backend + @khy/shared</span>
+npm run install:frontend    <span class="hljs-comment"># ai-frontend + khyquant frontend</span></code></pre>
+<h3 id="启动后端">启动后端<a class="anchor" href="#启动后端" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell"><span class="hljs-built_in">cd</span> services\backend
+npm <span class="hljs-built_in">start</span>                  <span class="hljs-comment"># 生产模式：node server.js</span>
+npm run dev                <span class="hljs-comment"># 开发模式：nodemon 热重载</span>
+npm run <span class="hljs-built_in">cli</span>                <span class="hljs-comment"># 直接进入 CLI：node bin/khy.js</span></code></pre>
+<h3 id="启动-ai-平台前端">启动 AI 平台前端<a class="anchor" href="#启动-ai-平台前端" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell"><span class="hljs-built_in">cd</span> apps\ai<span class="hljs-literal">-frontend</span>
+npm run dev                <span class="hljs-comment"># Vite 开发服务器</span>
+npm run build              <span class="hljs-comment"># 生产构建</span></code></pre>
+<h3 id="本地开发访问地址">本地开发访问地址<a class="anchor" href="#本地开发访问地址" aria-label="锚点">#</a></h3>
+<p>后端与前端各占一个终端窗口；两者都起来后浏览器打开前端地址即可进入管理界面。<br>端口全部可用环境变量覆盖（<code>PORT</code> / <code>AI_FRONTEND_PORT</code> / <code>AI_MGMT_PORT</code>），<br>真源是 <code>services/backend/src/constants/serviceDefaults.js</code>。</p>
+<table><thead><tr><th>服务</th><th>默认地址</th><th>说明</th></tr></thead><tbody><tr><td>AI 管理前端</td><td>http://127.0.0.1:8090</td><td>Vue 3 管理 UI（<code>AI_FRONTEND_PORT</code>）</td></tr><tr><td>后端 API</td><td>http://127.0.0.1:3000</td><td>RESTful API（<code>PORT</code>；被占用时自动探测下一个端口）</td></tr><tr><td>WebSocket</td><td>ws://127.0.0.1:3000</td><td>与后端 API 同端口</td></tr><tr><td>AI 管理后端</td><td>http://localhost:9090</td><td>ai-backend 守护进程（<code>AI_MGMT_PORT</code>）</td></tr></tbody></table>
+<p>只想用 CLI 而不开 Web 界面时，不需要起前端——直接 <code>.\khy.bat</code>（或在<br><code>services\backend</code> 下 <code>npm run cli</code>）即可。</p>
+<h3 id="默认管理员账号">默认管理员账号<a class="anchor" href="#默认管理员账号" aria-label="锚点">#</a></h3>
+<p>后端启动时会<strong>自动初始化</strong>默认管理员（幂等：若账号已存在则跳过，绝不覆盖现有密码），无需手动运行脚本，启动日志中会输出账号信息。</p>
+<blockquote><p>⚠️ <strong>没有固定的默认口令</strong>。出于安全考虑，默认管理员密码由<strong>机器指纹 + 随机熵</strong>生成（约 16 位混合字符强密码），首次启动时保存于数据目录 <code>.khy/credentials/default-admin.json</code>（<code>KHY_DATA_HOME</code> 覆盖时在其下）。请打开该文件查看初始密码。</p></blockquote>
+<p>默认管理员用户名解析顺序：<code>KHY_ADMIN_USERNAME</code> 环境变量 → 已存在的凭据文件 → 当前 OS 用户名（小写化 + 过滤非法字符）→ 兜底 <code>admin</code>。</p>
+<p>可通过环境变量控制：</p>
+<table><thead><tr><th>变量</th><th>说明</th></tr></thead><tbody><tr><td><code>KHY_ADMIN_AUTO_INIT</code></td><td>设为 <code>0</code> 或 <code>false</code> 禁用自动初始化（默认开启）</td></tr><tr><td><code>KHY_ADMIN_USERNAME</code></td><td>自定义用户名（默认取 OS 用户名）</td></tr><tr><td><code>KHY_ADMIN_PASSWORD</code></td><td>自定义密码；设置后不会打印到日志，也不写凭据文件</td></tr></tbody></table>
+<p>手动脚本仍可用于<strong>重置</strong>管理员账号：</p>
+<pre><code class="language-powershell"><span class="hljs-built_in">cd</span> services\backend
+node scripts\create<span class="hljs-literal">-admin</span>.js       <span class="hljs-comment"># 仅创建/重置管理员账号</span>
+node scripts\seed.js               <span class="hljs-comment"># 或：完整种子数据（含管理员）</span></code></pre>
+<p>前端登录页提供「<strong>使用默认管理员用户名填充</strong>」按钮，一键填入后端解析出的默认用户名；密码需在数据目录 <code>.khy/credentials/default-admin.json</code> 中查看。登录后通过顶部<strong>工作区切换</strong>进入管理员视图。</p>
+<blockquote><p>⚠️ 生产环境部署时<strong>务必修改默认密码</strong>（或设置 <code>KHY_ADMIN_PASSWORD</code>），并妥善保管凭据文件。</p></blockquote>
+<h2 id="配置文件位置">配置文件位置<a class="anchor" href="#配置文件位置" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>位置</th></tr></thead><tbody><tr><td>用户配置</td><td><code>~/.khyquant/config.json</code></td></tr><tr><td>Token 用量</td><td><code>~/.khyquant/token_usage.json</code></td></tr><tr><td>对话记录</td><td><code>~/.khyquant/conversations/</code></td></tr><tr><td>训练数据</td><td><code>~/.khyquant/training_data/</code></td></tr><tr><td>模型</td><td><code>~/.khyquant/models/</code></td></tr><tr><td>命令历史</td><td><code>~/.khyquant_history</code></td></tr></tbody></table>
+<p>API key 存于 <code>~/.khyquant/config.json</code>（已 gitignore），Token 用量数据仅存于本地。</p>
+<h2 id="目录结构">目录结构<a class="anchor" href="#目录结构" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">khy-os/
+├── khy.bat / khy.sh / khy-cli.bat   # CLI 启动器（自动探测 Python / Node）
+├── pyproject.toml            # pip 渠道清单与 G1 版本真源（包名 khy-os，入口 khy）
+├── pnpm-workspace.yaml       # monorepo 工作区定义（package.json 为 npm scripts 总入口）
+├── AGENTS.md                 # AI 与人工维护指南（工程规则语义真源）
+│
+├── kernel/                   # L0 手写 OS 内核（C 语言）
+│   ├── src/ boot/ userland/  #   调度、分页、vfs、syscall、framebuffer、用户态
+│   ├── bridge/ moonbit/      #   内核 ↔ 智能体桥接、MoonBit WASM 模块
+│   └── iso/ Makefile linker.ld
+│
+├── platform/                 # L1 平台层
+│   ├── khy_platform/         #   Python 启动器（detect env → 拉起 Node.js）
+│   ├── packages/             #   @khy/shared、@khy/ui-shared、plugin-sdk、moonbit-plugin-sdk
+│   └── delivery/             #   多渠道交付编排
+│
+├── services/                 # L2 服务层
+│   ├── backend/              #   主后端：src/cli/、src/services/、src/routes/、bin/khy.js
+│   └── ai-backend/           #   AI 管理后端（独立版本轨道，默认端口 9090）
+│
+├── apps/                     # L3 上层应用
+│   ├── ai-frontend/          #   Vue 3 + Vite AI 平台管理 UI（开发端口 8090）
+│   ├── khyos-desktop/        #   Electron 桌面端
+│   ├── provider-hub/         #   供应商 / 模型统一管理 GUI
+│   └── khy-os-client-app/    #   Flutter Android 随身 App（旧的 khy-mobile Capacitor 壳已隔离）
+│
+├── software/                 # L4 内置应用
+│   ├── khyquant/             #   量化交易终端（内置默认应用：services/ routes/ frontend/ ml/）
+│   └── akshare_scripts/      #   行情数据脚本
+│
+├── extensions/               # L5 内置拓展：一个目录一个拓展，删目录即卸载
+│   ├── tools/                #   khy-markdown / khy-notebook / khy-dsh-compat
+│   ├── bridges/              #   khy-trae-bridge（Trae / VS Code 登录态桥接）
+│   └── scripts/              #   khy-portable / khy-installer / khy-diagnostics / khy-alpine-iso
+│
+├── tools/                    # L6 独立开发者工具（不参与运行时）
+│   └── deepseek-eyes/        #   图像理解 MCP 服务
+│
+├── scripts/                  # 横切：CI 守卫、质量门、规则门、发布、恢复、文档站、维护
+├── packaging/                # 横切：npm 渠道清单、模块清单、独立可执行、NSIS 安装包
+├── docs/                     # 横切：全套中文文档（单编号轴，01_INIT ~ 19_资产）
+├── electron/                 # 根级 Electron 桌面壳（入口 npm run electron:dev）
+├── deploy/free-test/         # 免服务器部署试验（GitHub 工作流 + Supabase 配置）
+├── patches/                  # 第三方依赖本地补丁（pnpm patchedDependencies）
+├── tests/DEBT.md             # 已知失败用例的测试债务登记
+└── entries/                  # 多端入口真源 + 构建产物单一根（LAYOUT-005；提交的仅 3 件索引文件，entries/&lt;producer&gt;/ 子目录 gitignore）</code></pre>
+<h3 id="分层概览">分层概览<a class="anchor" href="#分层概览" aria-label="锚点">#</a></h3>
+<ul><li><strong>Python 层</strong>（<code>platform/khy_platform/</code>）：轻量启动器，负责检测环境并拉起 Node.js；</li><li><strong>Node.js 后端</strong>（<code>services/backend/</code>）：承载所有业务逻辑（CLI、AI 网关、各类服务、Web API）；</li><li><strong>前端</strong>：<code>apps/ai-frontend/</code>（AI 平台管理 UI，Vue 3 + Vite）与 <code>software/khyquant/frontend/</code>（内置的 khyquant 交易 UI）；</li><li><strong>内核</strong>（<code>kernel/</code>）：手写 C 语言 OS 内核，可在 QEMU 下引导运行。</li></ul>
+<blockquote><p>顶层七个业务目录的<strong>层级定位（L0–L6）、允许的依赖方向、以及新文件该放哪一层</strong>，<br>真源是 <a href="docs/10_规范/DESIGN-LAY/[DESIGN-LAY-005]%20仓库层级板块规范.html"><code>docs/10_规范/DESIGN-LAY/[DESIGN-LAY-005] 仓库层级板块规范.md</code></a>，<br>由 <code>npm run check:layout</code> 强制执行。新增文件或新增顶层目录前先读它。</p></blockquote>
+<blockquote><p>构建产物一律落 <code>entries/&lt;producer&gt;[/&lt;variant&gt;]</code>（深度 ≤ 2，2026-09-18 由仓库根 <code>_build/</code> 迁入），并在<br><code>docs/10_规范/registry/BUILD-OUTPUTS.json</code> 登记 <code>path</code> + <code>rebuild</code> + <code>inBuildAll</code>；<br><code>.gitignore</code> / <code>.dockerignore</code> 由该登记表派生，不得手写第二份。<br>守卫：<code>npm run check:build-root</code>。</p></blockquote>
+<h2 id="文档导航">文档导航<a class="anchor" href="#文档导航" aria-label="锚点">#</a></h2>
+<ul><li>文档总索引：<a href="docs/00_INDEX_文档索引.html">docs/00_INDEX_文档索引.md</a></li><li>概念入门（Agent / Tool Calling / MCP / LLM 等）：<code>docs/02_CONCEPTS_概念入门/</code></li><li>设计与实现记录：<code>docs/03_DESIGN_设计/</code>、<code>docs/04_IMPL_实现/</code></li><li>部署与运维手册：<code>docs/06_DEPLOY_部署/</code>、<code>docs/07_OPS_运维/</code></li><li>规范与规则登记表：<code>docs/10_规范/</code>（<code>RULES-REGISTRY.json</code> 是规则真源）</li></ul>
+<p><code>docs/</code> 顶层采用<strong>单一编号轴</strong>：<code>01</code>–<code>09</code> 是生命周期阶段（立项 → 概念 → 设计 →<br>实现 → 测试 → 部署 → 运维 → 项目管理 → 传承），<code>10</code>–<code>19</code> 是跨阶段资产<br>（规范、报告、模板、维护记录、设计模式、归档、资产）。</p>
+<blockquote><p>离线文档站（<code>docs/**/*.html</code>）随仓库提供，可直接用浏览器打开。但它的图表引擎<br><code>docs/19_资产/site/mermaid.min.js</code> 是构建产物、不进 git：<strong>首次克隆后跑一次 <code>npm run docs:build</code></strong>，<br>Mermaid 图表才会渲染。在此之前图表区域留白 —— <code>docs/19_资产/site/docs-site.js</code> 已做优雅降级，<br>不会报错，其余正文与导航一切正常。</p></blockquote>
+<h2 id="版本同步">版本同步<a class="anchor" href="#版本同步" aria-label="锚点">#</a></h2>
+<p>版本号由 <code>scripts/ci/check-version-sync.js</code> 强制校验（pre-commit / CI），校验<br><strong>三条独立的版本轨道、共 9 个真源</strong>：组内必须完全一致，组间刻意不同。</p>
+<p><strong>轨道 1 — 主 khy-os 包（4 源，必须完全一致）</strong></p>
+<ol><li><code>pyproject.toml</code> → <code>[project] version</code></li><li><code>packaging/npm/package.json</code> → <code>version</code></li><li><code>services/backend/package.json</code> → <code>version</code></li><li><code>packaging/modules/modules.json</code> → <code>version</code></li></ol>
+<p><strong>轨道 2 — ai-backend 生态（3 源，组内一致；与轨道 1 刻意不同）</strong></p>
+<ol><li><code>services/ai-backend/package.json</code> → <code>version</code></li><li><code>platform/packages/shared/package.json</code> → <code>version</code></li><li><code>platform/packages/plugin-sdk/package.json</code> → <code>version</code></li></ol>
+<p><strong>轨道 3 — 浏览器 UI 共享包（依赖声明对齐，不是版本号对齐）</strong></p>
+<ol><li><code>platform/packages/ui-shared/package.json</code> → <code>version</code></li><li><code>apps/ai-frontend/package.json</code> → 其 <code>@khy/ui-shared</code> 依赖声明</li><li><code>software/khyquant/frontend/package.json</code> → 其 <code>@khy/ui-shared</code> 依赖声明</li></ol>
+<p>发布时 <code>scripts/release/publish-dual.sh</code> 从单一 <code>--version</code> 输入同步轨道 1 的前三处；<br>最终仍由上述守卫统一校验三轨道 9 源的一致性。</p>
+<p>不要在 <code>platform/khy_platform/__init__.py</code> 中硬编码 <code>__version__</code>——它从 <code>pyproject.toml</code> / 已安装元数据中动态解析，硬编码会导致版本同步检查失败。</p>
+<h2 id="贡献与维护">贡献与维护<a class="anchor" href="#贡献与维护" aria-label="锚点">#</a></h2>
+<ul><li>AI 助手与维护者指南（架构速查、工程规则、代码风格、评审清单）：<a href="AGENTS.html">AGENTS.md</a>；同一份内容的人类指南见 <a href="CONTRIBUTING.html">CONTRIBUTING.md</a></li><li>便携模式说明：[PORTABLE.md](docs/06_DEPLOY_部署/DEPLOY/[DEPLOY-0101] PORTABLE.md)</li><li>工程红线（零硬编码、状态透明、活动超时、终端渲染）详见 AGENTS.md 的「工程规则」章节。</li></ul>
+<p>提交前建议跑这几道门：</p>
+<pre><code class="language-powershell">node scripts\ci\check<span class="hljs-literal">-agent-rules</span>.js <span class="hljs-literal">--changed</span>   <span class="hljs-comment"># 工程红线静态体检</span>
+npm run check:layout                             <span class="hljs-comment"># 顶层层级与依赖方向</span>
+npm run rules:gate                               <span class="hljs-comment"># 规则门（pr 档；commit 档更快）</span>
+npm run rules:apply <span class="hljs-literal">--</span> &lt;改动文件路径&gt;              <span class="hljs-comment"># 查「我要改这个文件，适用哪些规则」</span></code></pre>
+<p>规则登记表在 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>，<strong>门的成员资格由登记表派生</strong><br>（不在 workflow YAML 或 npm <code>&amp;&amp;</code> 链里硬编码）；覆盖率与红线用 <code>npm run rules:coverage</code> 查看。</p>
+<p>代码风格：JS 用 2 空格缩进、单引号、分号；命名 camelCase（JS）/ snake_case（Python）；面向用户的字符串用中文，代码注释用英文。</p>
+<h2 id="许可">许可<a class="anchor" href="#许可" aria-label="锚点">#</a></h2>
+<p><strong>Source-available（源码可见）</strong>。Khy-OS 可免费下载、运行、学习与非商业使用；复制、修改、再分发源码及商业使用需获得作者（孔浩原 / Kong Haoyuan）的书面许可。</p>
+      </article>
+      <nav class="pager"><span></span><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="./";window.__KHY_CUR__="README.html";</script>
+<script src="./docs/19_资产/site/nav-data.js"></script>
+<script src="./docs/19_资产/site/mermaid.min.js"></script>
+<script src="./docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-042] Khyos自持基建-契约即文档与影响面评估与行为守卫.md -->
+<title>[DESIGN-ARCH-042] Khyos自持基建 — 契约即文档·影响面评估·行为守卫·基建缺失淬火 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>18_归档<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-042] Khyos自持基建 — 契约即文档·影响面评估·行为守卫·基建缺失淬火</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-042] Khyos自持基建 — 契约即文档·影响面评估·行为守卫·基建缺失淬火</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-042-khyos自持基建-契约即文档-影响面评估-行为守卫-基建缺失淬火">[DESIGN-ARCH-042] Khyos自持基建 — 契约即文档·影响面评估·行为守卫·基建缺失淬火</a></li><li class="lvl-2"><a href="#一-目标">一、目标</a></li><li class="lvl-2"><a href="#二-自持基建流转图">二、自持基建流转图</a></li><li class="lvl-2"><a href="#三-核心机制-3">三、核心机制（§3）</a></li><li class="lvl-3"><a href="#3-1-契约即文档-contractdocgenerator">3.1 契约即文档（`ContractDocGenerator`）</a></li><li class="lvl-3"><a href="#3-2-正交隔离影响扫描-dependencyimpactscanner">3.2 正交隔离影响扫描（`DependencyImpactScanner`）</a></li><li class="lvl-3"><a href="#3-3-行为守卫骨架-autotestscaffolder">3.3 行为守卫骨架（`AutoTestScaffolder`）</a></li><li class="lvl-3"><a href="#3-4-基建缺失淬火-infragapquencher">3.4 基建缺失淬火（`InfraGapQuencher`）</a></li><li class="lvl-2"><a href="#四-门面编排-selfsustaininginfra">四、门面编排（`SelfSustainingInfra`）</a></li><li class="lvl-2"><a href="#五-场景验证-4-4">五、场景验证（§4.4）</a></li><li class="lvl-2"><a href="#六-防呆铁律-写死-不可绕过">六、防呆铁律（写死，不可绕过）</a></li><li class="lvl-2"><a href="#七-验证">七、验证</a></li></ul></nav>
+      <article class="doc-body">
+<blockquote><p>⚠️ <strong>已归档（孤儿设计稿）· 请勿据此实现</strong> ⚠️</p>
+<p>本规范描述的治理引擎 <code>selfSustainingInfra（与已在产 projectMetadataService 平行重造）</code> 经 2026-06-14「接线或删除」证据级核实为 <strong>ORPHAN</strong><br>（零消费者、从 <code>executeTool</code>/<code>toolUseLoop</code>/<code>aiManagementServer</code> 三入口均不可达），<br>已按 <code>.ai/GOVERNANCE-LEDGER.md</code> §B.0 <strong>删除其实现代码</strong>（基线 <code>0437b6b</code>，删除提交<br><code>a76785e</code> + <code>99ea828</code>）。本文件仅作<strong>历史可追溯</strong>留存，<strong>非在产、不得作为实现依据</strong>。<br>判「在产」唯一标准见 <code>.ai/GUARDS-AI.md</code> §0。</p>
+<p>——归档于 2026-06-14</p></blockquote>
+<h1 id="design-arch-042-khyos自持基建-契约即文档-影响面评估-行为守卫-基建缺失淬火">[DESIGN-ARCH-042] Khyos自持基建 — 契约即文档·影响面评估·行为守卫·基建缺失淬火<a class="anchor" href="#design-arch-042-khyos自持基建-契约即文档-影响面评估-行为守卫-基建缺失淬火" aria-label="锚点">#</a></h1>
+<blockquote><p>状态：定稿 · 归属：<code>services/backend/src/services/selfSustainingInfra/</code> · 关联：[[DESIGN-ARCH-037]]（自举闭环自愈，EvoRequirement 真源）、[[project_maintainability_metadata]]（.ai/ 种子文档，宏观层）、[[DESIGN-ARCH-041]]（意图裁决，邻近子系统）</p></blockquote>
+<h2 id="一-目标">一、目标<a class="anchor" href="#一-目标" aria-label="锚点">#</a></h2>
+<p>为 Khyos 注入「<strong>自说明、自验证、自修复</strong>」基因，消灭依赖人类记忆或高级模型推理来维护项目的痛点。构建契约驱动、从代码自动坍缩出文档与测试的基础设施，使单人或简单模型只需关注「局部逻辑增删改」、无需理解全局脉络即可安全维护。</p>
+<p>零侵入、加法式：自成纯子系统，不接管构建/提交主流程。可由后续 PR 把 <code>commitGate</code> 挂 pre-commit、<code>generateDocs</code> 挂 CI，落地「代码→契约→文档/测试」自动坍缩流。</p>
+<h2 id="二-自持基建流转图">二、自持基建流转图<a class="anchor" href="#二-自持基建流转图" aria-label="锚点">#</a></h2>
+<pre><code>源码契约(JSDoc/Schema)
+   │  AST/结构层解析
+   ├─► ContractDocGenerator    →  API Markdown（代码即唯一真相，防呆①）
+   ├─► DependencyImpactScanner →  正/反依赖图 + 下游传递闭包（影响面评估，防呆④）
+   ├─► AutoTestScaffolder      →  node:test 边界用例骨架（行为快照，§3.3）
+   └─► InfraGapQuencher.audit  →  裸奔诊断(缺契约/any/隐式依赖/缺测试)
+                                      │
+                       commitGate ───┤ 裸奔→阻断提交（防呆③）
+                                      ▼
+                       quench → EvoRequirement(L1) → evoLedger 不可变哈希链</code></pre>
+<h2 id="三-核心机制-3">三、核心机制（§3）<a class="anchor" href="#三-核心机制-3" aria-label="锚点">#</a></h2>
+<h3 id="3-1-契约即文档-contractdocgenerator">3.1 契约即文档（<code>ContractDocGenerator</code>）<a class="anchor" href="#3-1-契约即文档-contractdocgenerator" aria-label="锚点">#</a></h3>
+<p>零依赖纯解析：逐个抽取 <code>/** … */</code> 文档块及其紧随声明签名（function/class/const arrow/method），坍缩出描述 + @param/@returns/@throws → API Markdown，标注「请勿手工编辑」杜绝双源。开发者只改契约注释，文档随之更新（防呆①）。</p>
+<h3 id="3-2-正交隔离影响扫描-dependencyimpactscanner">3.2 正交隔离影响扫描（<code>DependencyImpactScanner</code>）<a class="anchor" href="#3-2-正交隔离影响扫描-dependencyimpactscanner" aria-label="锚点">#</a></h3>
+<p><code>buildGraph(fileMap)</code> 解析 <code>require('./x')</code> 相对引用建正/反依赖图；<code>impactedBy(changed, graph)</code> 沿反向边 BFS 求受影响下游传递闭包 + 深度。改动若无下游可放心盲改；有下游则逐一标红强制评估（防呆④）。仅解析项目内相对引用，第三方包/内置模块刻意忽略。</p>
+<h3 id="3-3-行为守卫骨架-autotestscaffolder">3.3 行为守卫骨架（<code>AutoTestScaffolder</code>）<a class="anchor" href="#3-3-行为守卫骨架-autotestscaffolder" aria-label="锚点">#</a></h3>
+<p><code>parseSignatures</code> 解析导出函数形参；按参数名启发（count/num→极值、str/name→空串/emoji、list→空数组、opts→null/{}）推断边界用例；<code>scaffold</code> 生成 node:test 骨架，默认断言「调用不抛」作行为快照基线，<code>// TODO</code> 标记需补全的行为断言。纯字符串、零 I/O。</p>
+<h3 id="3-4-基建缺失淬火-infragapquencher">3.4 基建缺失淬火（<code>InfraGapQuencher</code>）<a class="anchor" href="#3-4-基建缺失淬火-infragapquencher" aria-label="锚点">#</a></h3>
+<p><code>audit(source, file)</code> 静态扫描四类裸奔：<code>missing-contract</code>（公共函数无 @param/@returns）、<code>untyped-any</code>（{any}/{*}/{Object}/{} 无形状）、<code>implicit-dependency</code>（直读 process.env/global/globalThis）、<code>missing-test</code>（门面结合已测符号索引）。<code>quench(gap)</code> 复用 [[DESIGN-ARCH-037]] 的 <code>evoRequirement</code> 真源铸 L1 自愈需求（why 含「拓扑空洞/新增…工具」锁 L1，规避 网关/压缩/调度 L2 触发词）。</p>
+<h2 id="四-门面编排-selfsustaininginfra">四、门面编排（<code>SelfSustainingInfra</code>）<a class="anchor" href="#四-门面编排-selfsustaininginfra" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>方法</th><th>职责</th><th>防呆</th></tr></thead><tbody><tr><td><code>generateDocs(fileMap)</code></td><td>坍缩 API Markdown</td><td>①</td></tr><tr><td><code>impactOf(changed, fileMap)</code></td><td>受影响下游评估</td><td>④</td></tr><tr><td><code>scaffoldTests(src, opts)</code></td><td>行为快照骨架</td><td>§3.3</td></tr><tr><td><code>audit(fileMap, {testedSymbols})</code></td><td>全量裸奔诊断（含 missing-test）</td><td>②</td></tr><tr><td><code>commitGate(fileMap, opts)</code></td><td>裸奔阻断提交 + 淬火落账本</td><td>③</td></tr><tr><td><code>guardRefactor(changed, fileMap, {reviewedImpact})</code></td><td>未评估影响面禁改公共契约</td><td>④</td></tr><tr><td><code>pool()/verifyPool()</code></td><td>需求池 + 哈希链校验</td><td>—</td></tr></tbody></table>
+<p>需求池 branch <code>self_sustaining_infra_pool</code>。</p>
+<h2 id="五-场景验证-4-4">五、场景验证（§4.4）<a class="anchor" href="#五-场景验证-4-4" aria-label="锚点">#</a></h2>
+<p>简单模型维护叶子工具 <code>reverseText</code>：① <code>guardRefactor</code> 告知 <code>hasDownstream=false</code> → 可安全盲改内部实现；② <code>scaffoldTests</code> 自动拉起 <code>reverseText — 边界: text</code> 测试骨架；③ 契约完备 + 已测 → <code>commitGate</code> 放行。全程无需理解系统全局。</p>
+<h2 id="六-防呆铁律-写死-不可绕过">六、防呆铁律（写死，不可绕过）<a class="anchor" href="#六-防呆铁律-写死-不可绕过" aria-label="锚点">#</a></h2>
+<ol><li><strong>绝对禁止</strong> 代码库存在手写的、与代码分离的 API/数据结构文档（除高层设计哲学外），所有接口文档由基建脚本从代码生成。 → <code>ContractDocGenerator</code> 标注「请勿手工编辑」，文档从 JSDoc 契约坍缩。</li><li><strong>必须强制</strong> 跨模块数据交互定义强类型契约，绝对禁止 <code>any</code>/无类型字典传递。 → <code>InfraGapQuencher</code> <code>untyped-any</code> 裸奔检测，commitGate 阻断。</li><li><strong>必须强制</strong> 提交时新增公共函数缺行为快照/单测必须阻断提交并生成补全 <code>EvoRequirement</code>。 → <code>commitGate</code> 检出 missing-test/missing-contract → blocked + <code>quenchAll</code> 落账本。</li><li><strong>绝对禁止</strong> 简单模型未查看 <code>DependencyImpactScanner</code> 输出前盲目重构公共契约。 → <code>guardRefactor</code> 有下游且 <code>reviewedImpact=false</code> 即拒。</li></ol>
+<h2 id="七-验证">七、验证<a class="anchor" href="#七-验证" aria-label="锚点">#</a></h2>
+<p><code>tests/services/selfSustainingInfra/selfSustainingInfra.test.js</code> — 20 测试全绿：契约抽取/渲染、反向传递闭包+深度、边界用例启发、四类裸奔诊断、L1 淬火、commitGate 阻断+放行、guardRefactor 拒/放、§4.4 简单模型场景、哈希链校验。邻近回归（intentArbiter/dataSovereignty/evoEngine）77 测试零回归。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/18_归档/03_DESIGN_设计/[DESIGN-ARCH-040] Khyos数据主权与极权路由-数据主权绝对论与单一权威注入网关.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-040] Khyos 数据主权与极权路由——数据主权绝对论与单一权威注入网关</div></a><a class="next" href="../../../docs/18_归档/03_DESIGN_设计/00_INDEX_已删除孤儿引擎归档.html"><div class="dir">下一篇 →</div><div class="ttl">00INDEX 已删除孤儿引擎·设计稿归档</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/18_归档/03_DESIGN_设计/[DESIGN-ARCH-042] Khyos自持基建-契约即文档与影响面评估与行为守卫.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

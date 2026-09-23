@@ -10,7 +10,16 @@
  * @module sessionTitleService
  */
 
-const log = require('../utils/logger');
+// ── 懒加载 logger ─────────────────────────────────────────────────────
+// utils/logger 真身是 vendor/shared 的 winston logger（冷解析约 100-150ms）。
+// 本模块只在一处 catch 里写 debug 日志，却因为在顶层 require 而把 winston 拉进了
+// CLI 启动热路径 —— 路径是 commandAutoRegistry 扫描 handlers/trace.js 时的 eager import。
+// 改到首次真正写日志时才解析。
+let _log = null;
+function log() {
+  if (!_log) _log = require('../utils/logger');
+  return _log;
+}
 
 // ── Keyword-based title generation (no AI needed) ──
 
@@ -94,7 +103,7 @@ ${assistantReply ? `Assistant: ${assistantReply.substring(0, 300)}` : ''}`;
       }
     }
   } catch (err) {
-    log.debug('AI title generation failed, using heuristic:', err.message);
+    log().debug('AI title generation failed, using heuristic:', err.message);
   }
 
   // Fallback to heuristic

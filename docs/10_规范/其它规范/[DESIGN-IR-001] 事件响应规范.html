@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-IR-001] 事件响应规范.md -->
+<title>[DESIGN-IR-001] 事件响应规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-IR-001] 事件响应规范</div>
+      <header class="hero reveal"><h1>[DESIGN-IR-001] 事件响应规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-ir-001-事件响应规范">[DESIGN-IR-001] 事件响应规范</a></li><li class="lvl-2"><a href="#1-原则">1. 原则</a></li><li class="lvl-2"><a href="#2-事件分级">2. 事件分级</a></li><li class="lvl-3"><a href="#2-1-严重度等级">2.1 严重度等级</a></li><li class="lvl-3"><a href="#2-2-定级矩阵">2.2 定级矩阵</a></li><li class="lvl-2"><a href="#3-事件生命周期">3. 事件生命周期</a></li><li class="lvl-3"><a href="#3-1-detection-检测">3.1 Detection（检测）</a></li><li class="lvl-3"><a href="#3-2-triage-分流">3.2 Triage（分流）</a></li><li class="lvl-3"><a href="#3-3-mitigation-缓解">3.3 Mitigation（缓解）</a></li><li class="lvl-3"><a href="#3-4-resolution-修复">3.4 Resolution（修复）</a></li><li class="lvl-3"><a href="#3-5-postmortem-复盘">3.5 Postmortem（复盘）</a></li><li class="lvl-2"><a href="#4-escalation-matrix-升级矩阵">4. Escalation Matrix（升级矩阵）</a></li><li class="lvl-3"><a href="#4-1-on-call-轮值">4.1 On-call 轮值</a></li><li class="lvl-3"><a href="#4-2-升级路径">4.2 升级路径</a></li><li class="lvl-3"><a href="#4-3-升级触发条件">4.3 升级触发条件</a></li><li class="lvl-2"><a href="#5-事件频道规范">5. 事件频道规范</a></li><li class="lvl-3"><a href="#5-1-频道命名">5.1 频道命名</a></li><li class="lvl-3"><a href="#5-2-频道内容">5.2 频道内容</a></li><li class="lvl-2"><a href="#6-通报模板">6. 通报模板</a></li><li class="lvl-3"><a href="#6-1-内部通报">6.1 内部通报</a></li><li class="lvl-3"><a href="#6-2-用户通报">6.2 用户通报</a></li><li class="lvl-2"><a href="#7-postmortem-模板">7. Postmortem 模板</a></li><li class="lvl-2"><a href="#8-事件追踪">8. 事件追踪</a></li><li class="lvl-3"><a href="#8-1-事件记录">8.1 事件记录</a></li><li class="lvl-2"><a href="#9-关键指标">9. 关键指标</a></li><li class="lvl-2"><a href="#10-守卫">10. 守卫</a></li><li class="lvl-2"><a href="#11-版本历史">11. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-ir-001-事件响应规范">[DESIGN-IR-001] 事件响应规范<a class="anchor" href="#design-ir-001-事件响应规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: IR-001 -->
+<blockquote><p><strong>用途</strong>：定义 khy-os 平台安全事件和运营故障的响应流程、分级标准、Escalation Matrix。<br>当前 SECURITY.md 有模糊的响应 SLA（3 工作日确认、10 工作日评估），但无正式的分级、Escalation、Runbook。</p></blockquote>
+<hr>
+<h2 id="1-原则">1. 原则<a class="anchor" href="#1-原则" aria-label="锚点">#</a></h2>
+<ol><li><strong>分级先行</strong>：所有事件首先分类定级，再决定响应速度</li><li><strong>单一入口</strong>：事件通过统一通道报告和追踪</li><li><strong>自动升级</strong>：超时未响应自动升级到下一级</li><li><strong>复盘闭环</strong>：每个 P0/P1 事件必须有 Postmortem</li><li><strong>透明度</strong>：用户可见的事件状态更新（适当时机）</li></ol>
+<hr>
+<h2 id="2-事件分级">2. 事件分级<a class="anchor" href="#2-事件分级" aria-label="锚点">#</a></h2>
+<h3 id="2-1-严重度等级">2.1 严重度等级<a class="anchor" href="#2-1-严重度等级" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>等级</th><th>定义</th><th>响应时间</th><th>升级时限</th><th>示例</th></tr></thead><tbody><tr><td><strong>P0 - 紧急</strong></td><td>服务完全不可用，或数据泄露</td><td>≤ 15 分钟</td><td>30 分钟无人 → 升级</td><td>生产数据库泄露、AI 网关全量故障</td></tr><tr><td><strong>P1 - 高危</strong></td><td>核心功能降级，影响大多数用户</td><td>≤ 1 小时</td><td>2 小时无人 → 升级</td><td>API 50% 错误率、支付失败</td></tr><tr><td><strong>P2 - 中危</strong></td><td>非核心功能故障，或局部影响</td><td>≤ 4 小时</td><td>8 小时无人 → 升级</td><td>前端样式异常、非关键服务超时</td></tr><tr><td><strong>P3 - 低危</strong></td><td>信息性事件，不影响功能</td><td>≤ 24 小时</td><td>不升级</td><td>配置变更记录、非关键告警</td></tr></tbody></table>
+<h3 id="2-2-定级矩阵">2.2 定级矩阵<a class="anchor" href="#2-2-定级矩阵" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>影响面</th><th>数据安全</th><th>定级</th></tr></thead><tbody><tr><td>全量不可用</td><td>有泄露风险</td><td>P0</td></tr><tr><td>全量不可用</td><td>无泄露风险</td><td>P1</td></tr><tr><td>部分用户不可用</td><td>有泄露风险</td><td>P0</td></tr><tr><td>部分用户不可用</td><td>无泄露风险</td><td>P1</td></tr><tr><td>非核心功能故障</td><td>—</td><td>P2</td></tr><tr><td>仅内部影响</td><td>—</td><td>P3</td></tr></tbody></table>
+<hr>
+<h2 id="3-事件生命周期">3. 事件生命周期<a class="anchor" href="#3-事件生命周期" aria-label="锚点">#</a></h2>
+<pre><code>Detection（检测）
+    ↓
+Triage（分流）→ 定级 + 指派
+    ↓
+Mitigation（缓解）→ 止损优先，不追求完美修复
+    ↓
+Resolution（修复）→ 根因修复 + 验证
+    ↓
+Communication（通报）→ 用户通知
+    ↓
+Postmortem（复盘）→ 5 Whys + Action Items
+    ↓
+Close（关闭）→ Action Items 跟踪到完成</code></pre>
+<h3 id="3-1-detection-检测">3.1 Detection（检测）<a class="anchor" href="#3-1-detection-检测" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>检测方式</th><th>来源</th><th>示例</th></tr></thead><tbody><tr><td>自动告警</td><td>MONITOR-001 / OBS-001</td><td>错误率 &gt; 50%</td></tr><tr><td>用户报告</td><td>GitHub Issue / 邮件</td><td>&quot;API 返回 500&quot;</td></tr><tr><td>巡检发现</td><td>人工检查</td><td>备份失败</td></tr><tr><td>安全扫描</td><td>CodeQL / Dependabot</td><td>高危漏洞</td></tr></tbody></table>
+<h3 id="3-2-triage-分流">3.2 Triage（分流）<a class="anchor" href="#3-2-triage-分流" aria-label="锚点">#</a></h3>
+<p>分流人员必须在 <strong>15 分钟内</strong> 完成以下动作：</p>
+<ol><li>确认事件真实性（排除误报）</li><li>定级（P0/P1/P2/P3）</li><li>指派 Incident Commander（事件指挥官）</li><li>建立事件频道（Slack / 钉钉专用频道）</li></ol>
+<h3 id="3-3-mitigation-缓解">3.3 Mitigation（缓解）<a class="anchor" href="#3-3-mitigation-缓解" aria-label="锚点">#</a></h3>
+<p><strong>首要目标：止损，不是修复。</strong></p>
+<ul><li>回滚最近变更</li><li>启用降级模式（GW-002 定义的 P0→P1→P2 降级链）</li><li>限流保护（RL-001）</li><li>隔离故障节点</li></ul>
+<h3 id="3-4-resolution-修复">3.4 Resolution（修复）<a class="anchor" href="#3-4-resolution-修复" aria-label="锚点">#</a></h3>
+<p>修复完成后：</p>
+<ol><li>验证修复效果（错误率恢复正常）</li><li>确认数据完整性（无残留损坏）</li><li>逐步恢复全量流量</li></ol>
+<h3 id="3-5-postmortem-复盘">3.5 Postmortem（复盘）<a class="anchor" href="#3-5-postmortem-复盘" aria-label="锚点">#</a></h3>
+<p>每个 P0/P1 事件必须在 <strong>5 个工作日内</strong> 完成 Postmortem。</p>
+<hr>
+<h2 id="4-escalation-matrix-升级矩阵">4. Escalation Matrix（升级矩阵）<a class="anchor" href="#4-escalation-matrix-升级矩阵" aria-label="锚点">#</a></h2>
+<h3 id="4-1-on-call-轮值">4.1 On-call 轮值<a class="anchor" href="#4-1-on-call-轮值" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>角色</th><th>职责</th><th>联系方式</th></tr></thead><tbody><tr><td><strong>Incident Commander</strong></td><td>事件总指挥，做决策</td><td>轮值手机 / Slack @channel</td></tr><tr><td><strong>On-call Engineer</strong></td><td>第一响应人，执行修复</td><td>轮值手机 / Slack DM</td></tr><tr><td><strong>Domain Expert</strong></td><td>特定领域专家（AI 网关 / DB / 前端）</td><td>按需唤醒</td></tr><tr><td><strong>Communication Lead</strong></td><td>用户通报</td><td>维护者邮箱</td></tr></tbody></table>
+<h3 id="4-2-升级路径">4.2 升级路径<a class="anchor" href="#4-2-升级路径" aria-label="锚点">#</a></h3>
+<pre><code>P0: On-call → 15min 无响应 → Incident Commander → 30min 无响应 → 维护者（全部）
+P1: On-call → 2h 无响应 → Incident Commander → 4h 无响应 → 维护者
+P2: On-call → 8h 无响应 → Incident Commander
+P3: 不升级</code></pre>
+<h3 id="4-3-升级触发条件">4.3 升级触发条件<a class="anchor" href="#4-3-升级触发条件" aria-label="锚点">#</a></h3>
+<ul><li>超时未响应（按上表时限）</li><li>当前 On-call 确认无法处理</li><li>影响面超出预期（P2 → P1 升级）</li><li>发现数据泄露（任何 → P0 升级）</li></ul>
+<hr>
+<h2 id="5-事件频道规范">5. 事件频道规范<a class="anchor" href="#5-事件频道规范" aria-label="锚点">#</a></h2>
+<h3 id="5-1-频道命名">5.1 频道命名<a class="anchor" href="#5-1-频道命名" aria-label="锚点">#</a></h3>
+<pre><code># incident-p0-&lt;YYYYMMDD&gt;-&lt;简短描述&gt;    ← P0 专用（所有人可见）
+# incident-p1-&lt;YYYYMMDD&gt;-&lt;简短描述&gt;    ← P1 专用</code></pre>
+<h3 id="5-2-频道内容">5.2 频道内容<a class="anchor" href="#5-2-频道内容" aria-label="锚点">#</a></h3>
+<pre><code>[自动] 事件创建模板
+├── 事件编号：INC-2026-001
+├── 严重度：P0
+├── 影响：AI 网关 100% 错误
+├── Incident Commander：@xxx
+├── 开始时间：2026-09-10 12:00 UTC
+├── 时间线（自动追加）
+│   ├── 12:00 告警触发
+│   ├── 12:05 On-call 确认
+│   ├── 12:15 定位根因
+│   └── 12:30 修复验证通过
+└── 状态：Mitigating → Resolved → Closed</code></pre>
+<hr>
+<h2 id="6-通报模板">6. 通报模板<a class="anchor" href="#6-通报模板" aria-label="锚点">#</a></h2>
+<h3 id="6-1-内部通报">6.1 内部通报<a class="anchor" href="#6-1-内部通报" aria-label="锚点">#</a></h3>
+<pre><code class="language-markdown"><span class="hljs-section">## [事件通报] INC-2026-001</span>
+
+<span class="hljs-strong">**严重度**</span>：P0
+<span class="hljs-strong">**状态**</span>：Mitigating → Resolved → Closed
+<span class="hljs-strong">**影响时间**</span>：12:00 - 12:45（45 分钟）
+<span class="hljs-strong">**影响范围**</span>：全部用户无法使用 AI 对话
+
+<span class="hljs-section">### 时间线</span>
+<span class="hljs-bullet">-</span> 12:00 监控告警：AI 网关错误率 &gt; 95%
+<span class="hljs-bullet">-</span> 12:05 On-call 确认并接管
+<span class="hljs-bullet">-</span> 12:15 定位根因：Ollama 服务 OOM
+<span class="hljs-bullet">-</span> 12:20 重启 Ollama 服务
+<span class="hljs-bullet">-</span> 12:30 错误率恢复正常
+<span class="hljs-bullet">-</span> 12:45 全面验证通过，事件关闭
+
+<span class="hljs-section">### 根因</span>
+Ollama 服务因模型内存泄漏导致 OOM 崩溃。
+
+<span class="hljs-section">### Action Items</span>
+<span class="hljs-bullet">-</span> [ ] 增加 Ollama 内存监控告警（P2，负责人：@xxx，截止：2026-09-17）
+<span class="hljs-bullet">-</span> [ ] 配置 Ollama 自动重启策略（P2，负责人：@xxx，截止：2026-09-17）</code></pre>
+<h3 id="6-2-用户通报">6.2 用户通报<a class="anchor" href="#6-2-用户通报" aria-label="锚点">#</a></h3>
+<pre><code class="language-markdown"><span class="hljs-section">## [服务公告] AI 对话服务短暂中断</span>
+
+<span class="hljs-strong">**时间**</span>：2026-09-10 12:00 - 12:45（北京时间）
+<span class="hljs-strong">**影响**</span>：AI 对话功能短暂不可用
+<span class="hljs-strong">**状态**</span>：已恢复
+
+我们注意到 AI 对话服务在 12:00-12:45 期间出现短暂中断，
+原因是后端模型服务出现异常。问题已于 12:45 完全恢复。
+
+对于造成的不便，我们深表歉意。
+
+如有问题，请联系 support@khyquant.top。</code></pre>
+<hr>
+<h2 id="7-postmortem-模板">7. Postmortem 模板<a class="anchor" href="#7-postmortem-模板" aria-label="锚点">#</a></h2>
+<pre><code class="language-markdown"><span class="hljs-section"># Postmortem: INC-2026-001</span>
+
+<span class="hljs-section">## 概述</span>
+| 字段 | 值 |
+|------|-----|
+| 事件编号 | INC-2026-001 |
+| 严重度 | P0 |
+| 发生时间 | 2026-09-10 12:00 UTC |
+| 持续时间 | 45 分钟 |
+| 影响范围 | 全部用户 |
+| 作者 | @xxx |
+| 日期 | 2026-09-11 |
+
+<span class="hljs-section">## 影响</span>
+<span class="hljs-bullet">-</span> 用户无法使用 AI 对话功能
+<span class="hljs-bullet">-</span> 预计影响约 1000+ 活跃用户
+<span class="hljs-bullet">-</span> 无数据丢失
+
+<span class="hljs-section">## 时间线</span>
+| 时间 (UTC) | 事件 |
+|------------|------|
+| 12:00 | 监控告警触发 |
+| 12:05 | On-call 确认 |
+| ... | ... |
+
+<span class="hljs-section">## 根因分析（5 Whys）</span>
+<span class="hljs-bullet">1.</span> Why：Ollama 服务崩溃 → 内存耗尽
+<span class="hljs-bullet">2.</span> Why：模型加载后内存泄漏 → 未设置内存上限
+<span class="hljs-bullet">3.</span> Why：→ 配置缺失
+<span class="hljs-bullet">4.</span> Why：→ 部署文档未包含此项
+<span class="hljs-bullet">5.</span> Why：→ 部署 Checklist 不完整
+
+<span class="hljs-section">## 行动项</span>
+| # | 行动项 | 优先级 | 负责人 | 截止日期 | 状态 |
+|---|--------|--------|--------|----------|------|
+| 1 | 增加 Ollama 内存上限配置 | P1 | @xxx | 2026-09-12 | Open |
+| 2 | 更新部署 Checklist | P2 | @xxx | 2026-09-15 | Open |
+
+<span class="hljs-section">## 经验教训</span>
+<span class="hljs-bullet">-</span> 内存监控应覆盖所有后端服务
+<span class="hljs-bullet">-</span> 自动重启策略可减少 MTTR</code></pre>
+<hr>
+<h2 id="8-事件追踪">8. 事件追踪<a class="anchor" href="#8-事件追踪" aria-label="锚点">#</a></h2>
+<h3 id="8-1-事件记录">8.1 事件记录<a class="anchor" href="#8-1-事件记录" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">{
+  <span class="hljs-attr">incidentId</span>: <span class="hljs-string">&#x27;INC-2026-001&#x27;</span>,
+  <span class="hljs-attr">severity</span>: <span class="hljs-string">&#x27;P0&#x27;</span>,
+  <span class="hljs-attr">title</span>: <span class="hljs-string">&#x27;AI 网关全量故障&#x27;</span>,
+  <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;resolved&#x27;</span>,           <span class="hljs-comment">// detected | triaging | mitigating | resolved | closed</span>
+  <span class="hljs-attr">detectionSource</span>: <span class="hljs-string">&#x27;monitoring&#x27;</span>, <span class="hljs-comment">// monitoring | user_report | inspection | security_scan</span>
+  <span class="hljs-attr">detectedAt</span>: <span class="hljs-string">&#x27;2026-09-10T12:00:00.000Z&#x27;</span>,
+  <span class="hljs-attr">resolvedAt</span>: <span class="hljs-string">&#x27;2026-09-10T12:45:00.000Z&#x27;</span>,
+  <span class="hljs-attr">commander</span>: <span class="hljs-string">&#x27;user-123&#x27;</span>,
+  <span class="hljs-attr">timeline</span>: [
+    { <span class="hljs-attr">time</span>: <span class="hljs-string">&#x27;2026-09-10T12:00:00.000Z&#x27;</span>, <span class="hljs-attr">event</span>: <span class="hljs-string">&#x27;Alert triggered: error_rate &gt; 95%&#x27;</span> },
+    { <span class="hljs-attr">time</span>: <span class="hljs-string">&#x27;2026-09-10T12:05:00.000Z&#x27;</span>, <span class="hljs-attr">event</span>: <span class="hljs-string">&#x27;On-call acknowledged&#x27;</span> },
+  ],
+  <span class="hljs-attr">impact</span>: {
+    <span class="hljs-attr">usersAffected</span>: <span class="hljs-number">1000</span>,
+    <span class="hljs-attr">servicesAffected</span>: [<span class="hljs-string">&#x27;ai-gateway&#x27;</span>, <span class="hljs-string">&#x27;ollama&#x27;</span>],
+    <span class="hljs-attr">dataLoss</span>: <span class="hljs-literal">false</span>
+  },
+  <span class="hljs-attr">postmortem</span>: <span class="hljs-string">&#x27;https://docs/khy-os/postmortems/INC-2026-001.md&#x27;</span>,
+  <span class="hljs-attr">actionItems</span>: [
+    { <span class="hljs-attr">id</span>: <span class="hljs-string">&#x27;AI-001&#x27;</span>, <span class="hljs-attr">description</span>: <span class="hljs-string">&#x27;Add Ollama memory alert&#x27;</span>, <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;open&#x27;</span>, <span class="hljs-attr">assignee</span>: <span class="hljs-string">&#x27;user-456&#x27;</span> }
+  ]
+}</code></pre>
+<hr>
+<h2 id="9-关键指标">9. 关键指标<a class="anchor" href="#9-关键指标" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>指标</th><th>目标</th><th>说明</th></tr></thead><tbody><tr><td>MTTR（平均修复时间）</td><td>P0 &lt; 1h / P1 &lt; 4h</td><td>从检测到修复</td></tr><tr><td>MTTD（平均检测时间）</td><td>&lt; 5 分钟</td><td>从发生到检测</td></tr><tr><td>MTTA（平均确认时间）</td><td>P0 &lt; 15min / P1 &lt; 1h</td><td>从告警到人工确认</td></tr><tr><td>事件复盘率</td><td>100% P0/P1</td><td>必须完成 Postmortem</td></tr><tr><td>Action Item 完成率</td><td>&gt; 80%</td><td>复盘行动项按时完成</td></tr></tbody></table>
+<hr>
+<h2 id="10-守卫">10. 守卫<a class="anchor" href="#10-守卫" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>守卫</th><th>检查项</th><th>严重度</th></tr></thead><tbody><tr><td><code>incident-gate</code></td><td>P0/P1 事件必须有 Incident Commander</td><td>P0</td></tr><tr><td><code>incident-gate</code></td><td>P0 事件响应时间 ≤ 15 分钟</td><td>P0</td></tr><tr><td><code>incident-gate</code></td><td>P0/P1 事件必须有 Postmortem</td><td>P1</td></tr><tr><td><code>incident-gate</code></td><td>安全事件必须记录（不可删除）</td><td>P0</td></tr><tr><td><code>incident-gate</code></td><td>Postmortem Action Items 必须有截止日期</td><td>P2</td></tr></tbody></table>
+<hr>
+<h2 id="11-版本历史">11. 版本历史<a class="anchor" href="#11-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义事件响应规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-IP-001] 软件著作权就绪规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-IP-001] 软件著作权就绪规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-LOG-001] 日志规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-LOG-001] 日志规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-IR-001] 事件响应规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -6,7 +6,7 @@
 
 const intentGate = require('../../src/services/intentGate');
 
-describe('intentGate â€?getLoopLimitBoost', () => {
+describe('intentGate â€”getLoopLimitBoost', () => {
   test('returns outerBoost=18, innerBoost=8 for coding mode', () => {
     expect(intentGate.getLoopLimitBoost(['coding'])).toEqual({ outerBoost: 18, innerBoost: 8 });
   });
@@ -39,7 +39,7 @@ describe('intentGate â€?getLoopLimitBoost', () => {
   });
 });
 
-describe('intentGate â€?tool_choice forcing in chatOptsPatch', () => {
+describe('intentGate â€”tool_choice forcing in chatOptsPatch', () => {
   const _origEnv = {};
 
   beforeEach(() => {

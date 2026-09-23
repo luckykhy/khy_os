@@ -9,6 +9,7 @@
  * 把两者联系起来,看上去就像「我的 API key 突然失效了」。
  */
 const fs = require('fs');
+const assert = require('node:assert');
 const os = require('os');
 const path = require('path');
 const { __testHooks } = require('../../src/services/apiKeyPoolWatcher');

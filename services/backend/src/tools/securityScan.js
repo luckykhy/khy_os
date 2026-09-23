@@ -35,7 +35,7 @@ function _getRules() {
     return _SCAN_RULES;
   }
   try {
-    _SCAN_RULES = require('../services/security/codeScanner').SCAN_RULES;
+    _SCAN_RULES = require('../services/domain/security/security/codeScanner').SCAN_RULES;
   } catch {
     _SCAN_RULES = [];
   }
@@ -390,7 +390,7 @@ module.exports = defineTool({
     }
 
     const rules = _getRules();
-    const { SEVERITY_ORDER: severityOrder } = require('../services/security/codeScanner');
+    const { SEVERITY_ORDER: severityOrder } = require('../services/domain/security/security/codeScanner');
     const minIdx = severityOrder.indexOf(minSeverity);
     const relevantRules = rules.filter((r) => severityOrder.indexOf(r.severity) >= minIdx);
 

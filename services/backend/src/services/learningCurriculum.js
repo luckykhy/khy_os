@@ -22,7 +22,7 @@ const {
   getBugCase,
   searchBugCases,
 } = require('../data/bugCases');
-const { getBaseDataDir } = require('../utils/dataHome');
+const { getBaseDataDir, getLegacyBaseHome } = require('../utils/dataHome');
 
 // ── 终端适配 ─────────────────────────────────────────────────────────
 
@@ -281,7 +281,11 @@ function _progressBak() {
 }
 
 function _legacyProgressFile() {
-  return path.join(os.homedir(), '.khyquant', 'growth', 'learning_progress.json');
+  // Legacy home must come from the same seam as the base home: dataHome honors
+  // KHY_DATA_HOME/KHYOS_HOME overrides, so isolated runs (jest temp data home)
+  // read their own fixture instead of the real user's live ~/.khyquant file.
+  const legacyHome = getLegacyBaseHome();
+  return path.join(legacyHome, 'growth', 'learning_progress.json');
 }
 
 /** 全新用户的初始进度结构（单一真源，resetProgress 复用） */

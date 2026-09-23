@@ -14,10 +14,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const acceptance = require('../../../src/services/auditTrajectory/acceptance');
-const drafter = require('../../../src/services/auditTrajectory/drafter');
-const parser = require('../../../src/services/auditTrajectory/parser');
-const { AuditTrajectoryRecorder } = require('../../../src/services/auditTrajectory/recorder');
+const acceptance = require('../../../src/services/domain/trajectory/auditTrajectory/acceptance.js');
+const drafter = require('../../../src/services/domain/trajectory/auditTrajectory/drafter.js');
+const parser = require('../../../src/services/domain/trajectory/auditTrajectory/parser.js');
+const { AuditTrajectoryRecorder } = require('../../../src/services/domain/trajectory/auditTrajectory/recorder.js');
 
 const SEP = String.fromCharCode(92); // 反斜杠，避免在字面量里被转义规则绕晕
 const EVIDENCE = {
@@ -337,7 +337,8 @@ describe('人工确认是唯一的发出口（不许做成自动闭环）', () =
 });
 
 describe('一级验收：grep 源码判模块在不在（秒级，每块都过）', () => {
-  const SRC = path.resolve(__dirname, '..', '..', '..', 'src', 'services', 'auditTrajectory');
+  // Module moved to domain/trajectory/auditTrajectory; old path only keeps a shim.
+  const SRC = path.resolve(__dirname, '..', '..', '..', 'src', 'services', 'domain', 'trajectory', 'auditTrajectory');
 
   test('模块与符号都在时通过，并给出文件加行号', () => {
     const r = acceptance.tier1Grep({
@@ -508,7 +509,8 @@ describe('三级验收：完整套件只在收尾跑一次（禁止每块都跑�
 });
 
 describe('验收阶梯：代价从低到高，且三级不因为在阶梯里就被偷偷放行', () => {
-  const SRC = path.resolve(__dirname, '..', '..', '..', 'src', 'services', 'auditTrajectory');
+  // Module moved to domain/trajectory/auditTrajectory; old path only keeps a shim.
+  const SRC = path.resolve(__dirname, '..', '..', '..', 'src', 'services', 'domain', 'trajectory', 'auditTrajectory');
   const okChecks = [{ name: '起草器', files: ['drafter.js'], patterns: ['function draft'] }];
 
   test('一级不过就短路，二级三级都不跑（省掉分钟级与十分钟级的代价）', async () => {

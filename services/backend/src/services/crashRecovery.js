@@ -100,6 +100,12 @@ const TRANSIENT_SQLITE_SNIPPETS = [
 
 const BENIGN_CODES = new Set(['EPIPE', 'EIO']);
 
+// A missing interpreter/script (ENOENT) is a degraded capability, not a reason
+// to kill a long-lived process — e.g. a stale absolute venv path baked into a
+// relocated install's MCP config. Treat spawn/file-missing errors as transient
+// so the top-level handler logs + continues instead of tearing the stack down.
+const TRANSIENT_SPAWN_CODES = new Set(['ENOENT']);
+
 const BENIGN_EXCEPTION_CODES = new Set([
   'ECONNREFUSED',
   'EHOSTUNREACH',
@@ -204,11 +210,30 @@ function isTransientFileWatchError(err) {
 }
 
 /**
+ * Check if error is a transient spawn/file-missing error (ENOENT). Safe to
+ * suppress at the top level — a missing interpreter/script degrades a capability
+ * rather than destabilizing the whole process.
+ */
+function isTransientSpawnError(err) {
+  const candidates = collectErrorCandidates(err);
+  for (const c of candidates) {
+    const code = extractErrorCode(c);
+    if (code && TRANSIENT_SPAWN_CODES.has(code)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Check if error is any kind of transient error (safe to suppress).
  */
 function isTransientError(err) {
   return (
-    isTransientNetworkError(err) || isTransientSqliteError(err) || isTransientFileWatchError(err)
+    isTransientNetworkError(err) ||
+    isTransientSqliteError(err) ||
+    isTransientFileWatchError(err) ||
+    isTransientSpawnError(err)
   );
 }
 
@@ -347,6 +372,37 @@ function _resetBenignLogState() {
   _benignLogState.clear();
 }
 
+// ── stdio pipe guard ───────────────────────────────────────────────
+// A dead stdout/stderr pipe turns every subsequent write into EPIPE.
+// Swallowing that in the uncaught-exception handler and then logging it
+// is the self-feeding loop behind the 2026-07-28 2.6 GB incident: the
+// log line writes to the same broken sink, raising another EPIPE.
+// Attaching an 'error' listener directly on the streams stops the error
+// from ever becoming an uncaught exception, and no diagnostics are
+// emitted from within it (the sink itself is gone).
+
+let _stdioGuardInstalled = false;
+
+/**
+ * Attach a no-op 'error' listener to process.stdout/process.stderr so a
+ * broken pipe (EPIPE) never escalates to uncaughtException and this
+ * module's own logging can't self-feed on the dead sink. Module
+ * singleton: the first call registers the listeners, later calls are
+ * no-ops (safe to call from every entry point).
+ */
+function installStdioErrorGuard() {
+  if (_stdioGuardInstalled) {
+    return;
+  }
+  _stdioGuardInstalled = true;
+  for (const stream of [process.stdout, process.stderr]) {
+    stream.on('error', () => {
+      // Intentionally silent: emitting diagnostics here would write to
+      // the same broken sink and re-trigger the error.
+    });
+  }
+}
+
 // ── Installation ───────────────────────────────────────────────────
 
 let _installed = false;
@@ -368,6 +424,10 @@ function install(opts = {}) {
     return;
   }
   _installed = true;
+
+  // Broken stdout must not turn our own diagnostics into the crash
+  // source (see 2.6 GB EPIPE self-feeding incident, 2026-07-28).
+  installStdioErrorGuard();
 
   const logger = opts.logger || console;
   const onFatal = opts.onFatal || (() => {});
@@ -507,9 +567,11 @@ function _logRemediation(logger, err, contextLabel) {
 
 module.exports = {
   install,
+  installStdioErrorGuard,
   isTransientNetworkError,
   isTransientSqliteError,
   isTransientFileWatchError,
+  isTransientSpawnError,
   isTransientError,
   isAbortError,
   isBenignUncaughtException,
@@ -518,5 +580,6 @@ module.exports = {
   FATAL_ERROR_CODES,
   CONFIG_ERROR_CODES,
   TRANSIENT_NETWORK_CODES,
+  TRANSIENT_SPAWN_CODES,
   _resetBenignLogState,
 };

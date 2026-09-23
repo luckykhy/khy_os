@@ -1,12 +1,12 @@
 'use strict';
 /**
- * configTool.keyConfigRedirect.test.js �?stop the Config tool from being mis-grabbed
- * for「配置模型密钥�?
+ * configTool.keyConfigRedirect.test.js —stop the Config tool from being mis-grabbed
+ * for「配置模型密钥�?
  *
  * The Config tool's searchHint literally contained the word `model` and its
  * description headline was "configuration settings", so a weak model picked it for
  * "配置模型密钥" and did a no-op `get language`. Fix: drop `model` from the searchHint
- * and append a disclaimer that this tool does NOT configure API keys �?point to
+ * and append a disclaimer that this tool does NOT configure API keys →point to
  * `khy gateway config`. The behavioral get/set contract is unchanged.
  */
 const ConfigTool = require('../../src/tools/ConfigTool');

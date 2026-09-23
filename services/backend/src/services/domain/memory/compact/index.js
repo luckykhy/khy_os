@@ -29,7 +29,7 @@ const {
   getPartialCompactPrompt,
   formatCompactSummary,
   getCompactUserMessage,
-} = require('../../../../agents/prompt');
+} = require('./prompt');
 // Canonical chars/4 estimate atom (utils leaf).
 
 // ── Constants ──────────────────────────────────────────────────────────

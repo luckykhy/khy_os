@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [OPS-MAN-203] standards-enforcement.md -->
+<title>规范代码 Enforcement 指南 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>OPS-MAN<span class="sep">›</span>规范代码 Enforcement 指南</div>
+      <header class="hero reveal"><h1>规范代码 Enforcement 指南</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#规范代码-enforcement-指南">规范代码 Enforcement 指南</a></li><li class="lvl-2"><a href="#1-架构总览">1. 架构总览</a></li><li class="lvl-2"><a href="#2-守卫脚本清单">2. 守卫脚本清单</a></li><li class="lvl-3"><a href="#p0-规范守卫-阻断级">P0 规范守卫（阻断级）</a></li><li class="lvl-3"><a href="#p1-规范守卫-警告级">P1 规范守卫（警告级）</a></li><li class="lvl-3"><a href="#p2-规范守卫-文档级">P2 规范守卫（文档级）</a></li><li class="lvl-2"><a href="#3-使用方式">3. 使用方式</a></li><li class="lvl-3"><a href="#本地开发">本地开发</a></li><li class="lvl-3"><a href="#ci-cd">CI/CD</a></li><li class="lvl-3"><a href="#增量检查-仅检查改动文件">增量检查（仅检查改动文件）</a></li><li class="lvl-2"><a href="#4-严重度说明">4. 严重度说明</a></li><li class="lvl-2"><a href="#5-新增标准守卫流程">5. 新增标准守卫流程</a></li><li class="lvl-2"><a href="#6-技术债务管理">6. 技术债务管理</a></li><li class="lvl-2"><a href="#7-版本历史">7. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="规范代码-enforcement-指南">规范代码 Enforcement 指南<a class="anchor" href="#规范代码-enforcement-指南" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>用途</strong>：将 P0/P1/P2 规范从&quot;文档约束&quot;落实到&quot;代码门禁&quot;。<br>本目录下的 <code>scripts/ci/check-*-standards.js</code> 脚本是可机械判定的守卫，<br>在 CI 和 <code>npm run check:all-standards</code> 中自动执行。</p></blockquote>
+<hr>
+<h2 id="1-架构总览">1. 架构总览<a class="anchor" href="#1-架构总览" aria-label="锚点">#</a></h2>
+<pre><code>docs/10_规范/           ← 规范文档（人类可读的契约）
+        ↓ 实现
+scripts/ci/           ← 代码守卫脚本（机械判定的执行层）
+        ↓ 注册
+package.json          ← npm scripts（check:*）
+        ↓ 编排
+scripts/quality-gate/ ← 质量门禁编排（pr / release 模式）
+        ↓ 执行
+CI / 本地开发         ← 每次提交 / PR / 发版前自动检查</code></pre>
+<hr>
+<h2 id="2-守卫脚本清单">2. 守卫脚本清单<a class="anchor" href="#2-守卫脚本清单" aria-label="锚点">#</a></h2>
+<h3 id="p0-规范守卫-阻断级">P0 规范守卫（阻断级）<a class="anchor" href="#p0-规范守卫-阻断级" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>脚本</th><th>对应规范</th><th>检查内容</th><th>严重度</th></tr></thead><tbody><tr><td><code>check-code-standards.js</code></td><td>NAM-001, COM-001, COMP-001</td><td>命名 camelCase/snake_case/BEM；console.log → logger；函数 ≤50 行</td><td>HIGH/MEDIUM</td></tr><tr><td><code>check-security-headers.js</code></td><td>SEC-001</td><td>helmet() 使用；dangerouslySetInnerHTML 防护；SQL 注入检测；敏感数据日志</td><td>CRITICAL/HIGH</td></tr><tr><td><code>check-auth-session.js</code></td><td>AUTH-002, CORS-001</td><td>JWT 算法（禁 HS256）；httpOnly/SameSite cookie；CORS 通配符检测</td><td>CRITICAL/HIGH</td></tr><tr><td><code>check-api-contracts.js</code></td><td>API-001, API-002, API-003</td><td>响应信封格式；幂等键；弃用头</td><td>HIGH/MEDIUM</td></tr><tr><td><code>check-upload-safety.js</code></td><td>UPLOAD-001</td><td>32-hex ID 校验；路径遍历防护；可执行文件阻止</td><td>CRITICAL/HIGH</td></tr></tbody></table>
+<h3 id="p1-规范守卫-警告级">P1 规范守卫（警告级）<a class="anchor" href="#p1-规范守卫-警告级" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>脚本</th><th>对应规范</th><th>检查内容</th><th>严重度</th></tr></thead><tbody><tr><td><code>check-ai-gateway.js</code></td><td>GW-002, PROMPT-001, FF-001</td><td>降级链；Circuit Breaker 阈值；Prompt 版本化；Feature Flag 默认关闭</td><td>MEDIUM/LOW</td></tr><tr><td><code>check-data-lifecycle.js</code></td><td>AUD-001, MIG-001, DLQ-001</td><td>审计日志五字段；迁移 up/down 配对；DLQ 重试配置</td><td>HIGH/MEDIUM</td></tr><tr><td><code>check-ops-health.js</code></td><td>OPS-002, OPS-003</td><td>SIGTERM 优雅关闭；/health /ready /live 三端点</td><td>MEDIUM/LOW</td></tr><tr><td><code>check-frontend-design-tokens.js</code></td><td>FE-004, A11Y-001</td><td>CSS 变量；BEM 命名；alt 文本；ARIA 标签</td><td>MEDIUM/LOW</td></tr></tbody></table>
+<h3 id="p2-规范守卫-文档级">P2 规范守卫（文档级）<a class="anchor" href="#p2-规范守卫-文档级" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>脚本</th><th>对应规范</th><th>检查内容</th><th>严重度</th></tr></thead><tbody><tr><td><code>check-notify-webhook.js</code></td><td>NOTIFY-001</td><td>HMAC 签名；List-Unsubscribe 头</td><td>HIGH/LOW</td></tr><tr><td><code>check-incident-dr.js</code></td><td>IR-001, DR-001</td><td>事件响应文档；灾备 Runbook</td><td>MEDIUM</td></tr></tbody></table>
+<hr>
+<h2 id="3-使用方式">3. 使用方式<a class="anchor" href="#3-使用方式" aria-label="锚点">#</a></h2>
+<h3 id="本地开发">本地开发<a class="anchor" href="#本地开发" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 检查所有标准（完整扫描）</span>
+npm run check:all-standards
+
+<span class="hljs-comment"># 检查单个标准</span>
+npm run check:code-standards
+npm run check:security-headers
+npm run check:auth-session
+npm run check:api-contracts
+npm run check:ai-gateway
+npm run check:data-lifecycle
+npm run check:ops-health
+npm run check:notify-webhook
+npm run check:incident-dr
+npm run check:upload-safety
+npm run check:frontend-design-tokens</code></pre>
+<h3 id="ci-cd">CI/CD<a class="anchor" href="#ci-cd" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># PR 模式（运行核心守卫）</span>
+npm run quality:<span class="hljs-built_in">pr</span>
+
+<span class="hljs-comment"># 发版模式（运行全部守卫 + 版本同步 + 脚本测试）</span>
+npm run quality:gate</code></pre>
+<h3 id="增量检查-仅检查改动文件">增量检查（仅检查改动文件）<a class="anchor" href="#增量检查-仅检查改动文件" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 对本次改动运行标准守卫</span>
+npm run check:changed</code></pre>
+<hr>
+<h2 id="4-严重度说明">4. 严重度说明<a class="anchor" href="#4-严重度说明" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>严重度</th><th>行为</th><th>示例</th></tr></thead><tbody><tr><td><strong>CRITICAL</strong></td><td>CI 阻断</td><td>路径遍历风险；JWT &quot;none&quot; 算法；CORS 通配符 + credentials</td></tr><tr><td><strong>HIGH</strong></td><td>CI 阻断</td><td>无文件大小限制；HS256 JWT；httpOnly 缺失；可执行文件上传</td></tr><tr><td><strong>MEDIUM</strong></td><td>CI 警告</td><td>文件过大；嵌套过深；缺少健康端点</td></tr><tr><td><strong>LOW</strong></td><td>CI 信息</td><td>建议使用 logger；模板版本化；ARIA 标签</td></tr><tr><td><strong>INFO</strong></td><td>纯信息</td><td>helmet() 已检测到</td></tr></tbody></table>
+<hr>
+<h2 id="5-新增标准守卫流程">5. 新增标准守卫流程<a class="anchor" href="#5-新增标准守卫流程" aria-label="锚点">#</a></h2>
+<ol><li>在 <code>docs/10_规范/</code> 创建规范文档（含 定位+红线+反例+守卫）</li><li>在 <code>scripts/ci/</code> 创建 <code>check-&lt;domain&gt;.js</code></li><li>在 <code>package.json</code> 注册 <code>check:&lt;domain&gt;</code> script</li><li>在 <code>scripts/quality-gate/lib/qualityGateStages.js</code> 添加到对应 mode</li><li>更新本文件</li></ol>
+<hr>
+<h2 id="6-技术债务管理">6. 技术债务管理<a class="anchor" href="#6-技术债务管理" aria-label="锚点">#</a></h2>
+<p>某些守卫（如 COMP-001 函数长度）会扫描整个代码库，发现大量历史债务。<br>处理方式：</p>
+<ul><li><strong>立即修复</strong>：CRITICAL/HIGH（安全相关）</li><li><strong>渐进修复</strong>：MEDIUM/LOW（在后续迭代中逐步清理）</li><li><strong>基线化</strong>：对大量 LOW 发现，可在脚本中添加 baseline 文件（如 <code>check-frontend-tokens.js</code> 的 <code>.baseline.json</code>）</li></ul>
+<hr>
+<h2 id="7-版本历史">7. 版本历史<a class="anchor" href="#7-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，创建 11 个守卫脚本，注册到 CI</td></tr></tbody></table>
+<hr>
+<p><em>本指南由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/07_OPS_运维/OPS-MAN/[OPS-MAN-202] oncall.html"><div class="dir">← 上一篇</div><div class="ttl">On-Call Schedule</div></a><a class="next" href="../../../docs/07_OPS_运维/OPS-MAN/[OPS-MAN-204] technical-debt-report.html"><div class="dir">下一篇 →</div><div class="ttl">CI Gate 技术债清理报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/07_OPS_运维/OPS-MAN/[OPS-MAN-203] standards-enforcement.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

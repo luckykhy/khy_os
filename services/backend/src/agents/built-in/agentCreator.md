@@ -77,6 +77,38 @@ permissionMode: dontAsk       # 可选
 **优势**：
 - 创建后自动被发现（`builtin: true` frontmatter 触发自动加载）
 - 不需要修改任何 JS 文件
+
+#### ⚠️ `tools` 与 `disallowedTools` 的授权语义（必读）
+
+本仓库遵循 **默认拒绝** 原则（`[DESIGN-AGENT-002]` / 规则 `RUNTIME-010`）：
+**没有被显式授予的工具，不得可获得**。
+
+| 字段 | 语义 | 建议 |
+|------|------|------|
+| `tools` | **白名单**：只有列出的工具可用 | **强烈建议必填**——这是唯一能表达「上界」的字段 |
+| `disallowedTools` | **黑名单**：列出的工具被剥夺 | 只做**额外**收紧，**不可**作为唯一声明 |
+
+**为什么不能只写 `disallowedTools`**：黑名单只能做减法，无法规定上界。
+只写黑名单意味着「除这几样之外，其余全部可用」——将来新加的任何工具都会被
+**静默授予**给这个 agent。这正是本仓库曾经踩过的坑：多个只读 agent 在提示词里
+反复声明「NEVER use Bash for rm/mv/git add...」，却因为黑名单没列 `Bash`
+而**实际持有**该工具，声明与能力不一致。
+
+**只读 agent 必须同时做两件事**：
+1. 在 `tools` 白名单里只列读类工具（`Read` / `Grep` / `Glob` 等）；
+2. 在 `disallowedTools` 里显式拒绝全部写通道，**包括 `Bash`**——
+
+```yaml
+tools: [Read, Grep, Glob, toolSearch]
+disallowedTools: [Agent, ExitPlanMode, Edit, Write, NotebookEdit, Bash, shellCommand]
+```
+
+> `Bash` 是写通道（重定向、`sed -i`、`tee`）且能改系统状态（`git add`、
+> `npm install`）。若 agent 的职责**确实需要**跑命令（如验证类 agent 跑
+> build/test），那是**显式授予**，应把它列进 `tools` 白名单，并在用途描述里
+> 说明为什么需要——但绝不要靠「没写进黑名单」来默认获得。
+
+**提交前自检**：`npm run check:agent-authz` 会核对授权面与能力面是否一致。
 - 不需要注册步骤
 
 #### 方式 B：JavaScript 文件（复杂 agent）

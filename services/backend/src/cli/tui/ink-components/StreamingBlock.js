@@ -211,6 +211,16 @@ function StreamingBlock({ streaming, status, expanded, reserveRows, contentWidth
   );
   const timeline = _lazyNorm.timeline;
   const _normalizeText = _lazyNorm.normalizeText;
+  // 真实工具行计费(P0-2 帧高纪律):tailTimelineToVisualRows 对每个 tool entry 记 1 行,
+  // 而单条已完成工具实际渲染可到 ~20 行(shell 折叠体 / ±diff / 错误详情)→ 工具密集回合
+  // live 帧越过 rows → ink fullscreen 重绘 → 「同段输出重复多份」([IMPL-RPT-044])。
+  // 下传 estimateToolEntryRows 让尾切预算按真实行数收缩;门控 KHY_TOOL_ROW_BUDGET 关 →
+  // 不下传 → 恒 1 行,逐字节回退今日。渲染下方 ProcessGroup({ expanded, live:true }) 与
+  // 此处估算同参数,首帧即准。
+  const _toolBudgetOn = require('./toolEntryRows').isEnabled(process.env);
+  const _toolCostOf = _toolBudgetOn
+    ? (tool) => require('./toolEntryRows').estimateToolEntryRows(tool, { expanded, live: true, env: process.env })
+    : null;
   if (timeline && timeline.length > 0) {
     // Single tail on the (cheap) normalized RAW text to bodyBudget, THEN render
     // stream-safe markdown once. The old two-pass (pre-tail raw+slack → render →
@@ -225,7 +235,8 @@ function StreamingBlock({ streaming, status, expanded, reserveRows, contentWidth
       bodyBudget,
       columns,
       process.env,
-      _normalizeText
+      _normalizeText,
+      _toolCostOf
     );
     if (gapOn) {
       // Separator rows consume live rows too: probe the kept window, count the
@@ -244,7 +255,8 @@ function StreamingBlock({ streaming, status, expanded, reserveRows, contentWidth
           Math.max(1, bodyBudget - seps),
           columns,
           process.env,
-          _normalizeText
+          _normalizeText,
+          _toolCostOf
         );
       }
     }

@@ -21,7 +21,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 
-const { checkParity } = require('../../../src/services/management/parityGuard');
+const { checkParity } = require('../../../src/services/domain/project/management/parityGuard.js');
 
 // ── 叶纯函数单元:用 deps 注入伪 registry/schema 证明每类违例都被检出(守卫有牙) ──
 

@@ -10,7 +10,7 @@
 // explicitly documented otherwise (revealKey is the single plaintext seam,
 // rate-limited + audited in ipc.ts).
 
-import { promises as fs, existsSync } from 'node:fs'
+import { promises as fs, existsSync, readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import os from 'node:os'
 import path from 'node:path'
@@ -36,12 +36,21 @@ import type {
 import { appendAudit } from './audit.ts'
 
 // ── dataHome resolution (portable-safe, mirrors utils/dataHome.js) ──────────
-// Resolution order:
-//   1. KHY_DATA_HOME env (explicit override, also used by tests)
-//   2. portable root (KHY_PORTABLE_ROOT / KHYQUANT_PORTABLE_ROOT) + '.khy'
-//   3. walk up from this module for a '.portable' marker → its '.khy'
-//   4. os.homedir()/.khy fallback (never fails)
+// Two distinct homes:
+//   • base home — env/portable/repo/homedir chain below. The settings.json
+//     that stores the dataPath pointer ALWAYS lives here (bootstrap: the
+//     pointer must be findable before the effective home is known).
+//   • effective home — where the actual data files live. With no pointer,
+//     it equals the base home; with a user-set pointer (设置→常规→数据存储路径),
+//     it is <dataPath>/.khy (suffix fixed, mirroring ZCode's ".zcode/v2
+//     不可更改" contract). The pointer is only honored when <dataPath>/.khy
+//     exists — a relocated drive that isn't present must not silently boot
+//     with empty data.
 let _dataHome: string | null = null
+
+// The settings file name is owned here so the pointer read stays decoupled
+// from settingsStore (settingsStore imports this constant for its own path).
+export const SETTINGS_FILE = 'settings.json'
 
 export function resolveRepoRoot(): string | null {
   const explicit = process.env.KHYOS_DESKTOP_REPO_ROOT
@@ -70,24 +79,53 @@ function fsSyncExists(p: string): boolean {
   }
 }
 
+// Base home = env/portable/repo/homedir chain, WITHOUT the dataPath pointer.
+// The pointer itself lives here, so this must never recurse into step 2.
+function resolveBaseDataHome(): string {
+  const envHome = process.env.KHY_DATA_HOME
+  if (envHome) return path.resolve(envHome)
+  const portableRoot = process.env.KHY_PORTABLE_ROOT || process.env.KHYQUANT_PORTABLE_ROOT
+  if (portableRoot) return path.join(portableRoot, '.khy')
+  const repoRoot = resolveRepoRoot()
+  if (repoRoot) return path.join(repoRoot, '.khy')
+  return path.join(os.homedir(), '.khy')
+}
+
+// The settings.json that holds the dataPath pointer always lives in the base
+// home (bootstrap invariant above). settingsStore reads/writes this path.
+export function baseHomeFile(name: string): string {
+  return path.join(resolveBaseDataHome(), name)
+}
+
+// Read the user-set dataPath pointer from the BASE settings.json (sync, called
+// once per process before any cache exists). Returns '' when unset/invalid —
+// callers treat '' as "no pointer, effective home = base home".
+function readDataPathPointer(): string {
+  try {
+    const raw = readFileSync(baseHomeFile(SETTINGS_FILE), 'utf-8')
+    const parsed = JSON.parse(raw) as { dataPath?: unknown }
+    const dp = parsed?.dataPath
+    return typeof dp === 'string' && dp.trim() ? dp.trim() : ''
+  } catch {
+    return ''
+  }
+}
+
+// Effective home for DATA files (api_keys, audit, conversations, ...). With no
+// pointer — or a pointer whose .khy dir is missing — it is the base home.
 export function getDataHome(): string {
   if (_dataHome) return _dataHome
-  const envHome = process.env.KHY_DATA_HOME
-  if (envHome) {
-    _dataHome = path.resolve(envHome)
-    return _dataHome
+  let home = resolveBaseDataHome()
+  // KHY_DATA_HOME env is the strongest override AND the test seam: it pins
+  // the base home, so a pointer (if any) must not divert it.
+  if (!process.env.KHY_DATA_HOME) {
+    const pointer = readDataPathPointer()
+    const pointed = pointer ? path.join(pointer, '.khy') : ''
+    if (pointed && pointed !== home && fsSyncExists(pointed)) {
+      home = pointed
+    }
   }
-  const portableRoot = process.env.KHY_PORTABLE_ROOT || process.env.KHYQUANT_PORTABLE_ROOT
-  if (portableRoot) {
-    _dataHome = path.join(portableRoot, '.khy')
-    return _dataHome
-  }
-  const repoRoot = resolveRepoRoot()
-  if (repoRoot) {
-    _dataHome = path.join(repoRoot, '.khy')
-    return _dataHome
-  }
-  _dataHome = path.join(os.homedir(), '.khy')
+  _dataHome = home
   return _dataHome
 }
 

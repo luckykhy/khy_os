@@ -18,7 +18,7 @@
  * 其确认 flag 绕不过上方 Khy 审批，真实风险(INSTALL/DELETE)由动作分级照常审批。
  */
 const { describe, test, expect } = require('@jest/globals');
-const { detectBypassMarkers } = require('../../src/services/syscallGateway/intentSchema');
+const { detectBypassMarkers } = require('../../src/services/domain/system/syscallGateway/intentSchema.js');
 
 const GATE = 'KHY_GATEWAY_BYPASS_SCOPED';
 function withGate(value, fn) {

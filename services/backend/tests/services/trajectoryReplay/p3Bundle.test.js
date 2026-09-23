@@ -19,8 +19,8 @@ const path = require('path');
 const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-p3-bundle-'));
 process.env.KHY_PROJECT_DATA_HOME = TMP_HOME;
 
-const replayLedger = require('../../../src/services/trajectoryReplay/replayLedger');
-const replayBundle = require('../../../src/services/trajectoryReplay/replayBundle');
+const replayLedger = require('../../../src/services/domain/trajectory/trajectoryReplay/replayLedger.js');
+const replayBundle = require('../../../src/services/domain/trajectory/trajectoryReplay/replayBundle.js');
 const { sha256Hex } = require('../../../src/services/sourceSnapshotCrypto');
 
 function seed(sessionId) {

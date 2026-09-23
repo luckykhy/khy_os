@@ -17,7 +17,8 @@ function _env(name) {
 function _getLocalSecretsDir() {
   const dir = path.join(os.homedir(), '.khy', 'secrets');
   if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+    // 0700:凭据目录不应让同机其他用户获得遍历权限。
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
   }
   return dir;
 }
@@ -42,7 +43,14 @@ async function localSetSecret(name, value, metadata = {}) {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  fs.writeFileSync(secretFile, JSON.stringify(entry, null, 2));
+  // 明文 secret 落盘:文件按 0600 写,同机其他用户不可读。
+  // mode 只对**新建**文件生效,已存在的文件需显式 chmod 修正。
+  fs.writeFileSync(secretFile, JSON.stringify(entry, null, 2), { mode: 0o600 });
+  try {
+    fs.chmodSync(secretFile, 0o600);
+  } catch {
+    /* Windows / 只读文件系统上 chmod 不可用,不影响写入结果 */
+  }
   return { success: true, name };
 }
 

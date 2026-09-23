@@ -5,8 +5,8 @@
  *
  * Background: _filterSearchOutput previously fell back to `result.slice(0,
  * targetLen)` when the noise-filtered output still exceeded the budget. That
- * cut from the HEAD and silently dropped the trailing lines â€?where grep-style
- * tools put errors, summaries and the "N matches" footer â€?so a truncated
+ * cut from the HEAD and silently dropped the trailing lines â€”where grep-style
+ * tools put errors, summaries and the "N matches" footer â€”so a truncated
  * search result could lose the very signal that matters. The fix keeps head +
  * tail (with an explicit omission marker) so critical trailing lines survive
  * context compaction.
@@ -58,7 +58,7 @@ describe('Smart Truncation loss Reduction', () => {
       const shellRes = mod.truncate('shellCommand', shellOut, {});
       expect(typeof grepRes.text).toBe('string');
       expect(typeof shellRes.text).toBe('string');
-      expect(grepRes.text.length <= grepLines.join('\n').toBeTruthy().length || grepRes.truncated);
+      expect(grepRes.text.length <= grepLines.join('\n').length || grepRes.truncated).toBeTruthy();
   });
 
   test('test-runner output keeps trailing failure details when over budget', () => {
@@ -66,8 +66,8 @@ describe('Smart Truncation loss Reduction', () => {
       // Input must exceed the runTests soft limit (10000 chars) to trigger noise
       // filtering + the head/tail cut.
       const lines = ['Tests: 200 passed, 1 failed', 'Total: 201'];
-      for (let i = 0; i < 1200; i++) lines.push(`  âœ?passing test ${i}`);
-      lines.push('  âœ?failing test 5', '  AssertionError: expected 1 to equal 2', '  at /src/spec.test.js:42');
+      for (let i = 0; i < 1200; i++) lines.push(`  âœ“passing test ${i}`);
+      lines.push('  âœ“failing test 5', '  AssertionError: expected 1 to equal 2', '  at /src/spec.test.js:42');
       const out = lines.join('\n');
       const res = mod.truncate('runTests', out, {});
       expect(res.text.length < out.length).toBeTruthy();

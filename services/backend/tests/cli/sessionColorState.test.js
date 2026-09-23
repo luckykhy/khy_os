@@ -17,7 +17,7 @@ describe('sessionColorState', () => {
   });
 
   test('getSessionColor returns null by default', () => {
-    expect(getSessionColor()).toBe();
+    expect(getSessionColor()).toBe(null);
   });
 
   test('setSessionColor sets color', () => {
@@ -32,17 +32,17 @@ describe('sessionColorState', () => {
 
   test('setSessionColor treats default as null', () => {
     setSessionColor('default');
-    expect(getSessionColor()).toBe();
+    expect(getSessionColor()).toBe(null);
   });
 
   test('setSessionColor treats empty as null', () => {
     setSessionColor('');
-    expect(getSessionColor()).toBe();
+    expect(getSessionColor()).toBe(null);
   });
 
   test('_reset clears state', () => {
     setSessionColor('green');
     _reset();
-    expect(getSessionColor()).toBe();
+    expect(getSessionColor()).toBe(null);
   });
 });

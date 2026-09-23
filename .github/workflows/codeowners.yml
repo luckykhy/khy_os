@@ -7,7 +7,7 @@ on:
     paths:
       - '.github/CODEOWNERS'
       - '.github/maintainers.json'
-      - 'docs/_维护者/维护映射表.json'
+      - 'docs/14_维护者/registry/维护映射表.json'
       - 'scripts/maintenance/gen-codeowners.js'
       - '.github/workflows/codeowners.yml'
   workflow_dispatch:

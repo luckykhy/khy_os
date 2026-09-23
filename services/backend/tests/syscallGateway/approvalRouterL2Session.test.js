@@ -9,9 +9,9 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { route, DECISIONS, DEFAULT_L2_CONFIRM } = require('../../src/services/syscallGateway/approvalRouter');
+const { route, DECISIONS, DEFAULT_L2_CONFIRM } = require('../../src/services/domain/system/syscallGateway/approvalRouter.js');
 const { PermissionCache } = require('../../src/services/domain/system/syscallGateway/permissionCache');
-const { LEVELS } = require('../../src/services/syscallGateway/resourceClassifier');
+const { LEVELS } = require('../../src/services/domain/system/syscallGateway/resourceClassifier.js');
 
 async function withEnv(overrides, fn) {
   const saved = {};

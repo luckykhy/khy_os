@@ -1,4 +1,5 @@
 'use strict';
+const assert = require('node:assert');
 /**
  * Leaf-contract test for toolUseLoopHelpers.js (the tool-result / delivery / classification / recovery /
  * scaffold / patch / nudge / write-diff / complexity band isolated from services/toolUseLoop.js).
@@ -29,7 +30,8 @@ describe('Tool Use Loop Helpers Leaf', () => {
   test('helpers leaf exports its function surface + DI setter', () => {
       const help = require(HELP);
       expect(typeof help.setToolUseLoopHelpersDeps).toBe('function');
-      // Representatives drawn from each sub-band of the relocated helper region.
+      // Names follow the leaf's export surface: underscored internal band functions
+      // (DI-facing) plus a few public verbs (isEnabled / maybeForgeStructuredIntent).
       for (const name of [
         '_buildToolResultMessage', '_stripToolCalls', '_pruneOldToolOutputs',
         '_looksLikeCannedRefusal', '_recoverWebSearchAfterShellFailure', '_patchEmptyShellCommand',
@@ -44,23 +46,30 @@ describe('Tool Use Loop Helpers Leaf', () => {
       const host = require(HOST);
       const core = require(CORE);
       const help = require(HELP);
-      // The facade is a straight re-export of the core surface.
-      expect(host).toBe(core, 'toolUseLoop.js must re-export the core module object');
+      // The facade spreads the core surface verbatim. One documented exception
+      // (DESIGN-ARCH-096 §2-A turn-checkpoint wrap): host.runToolUseLoop is a
+      // thin async wrapper around core.runToolUseLoop that closes the turn on
+      // every exit path — so it is NOT the identical core function, but still
+      // an AsyncFunction and every other export is the exact core object.
       expect(typeof host.runToolUseLoop).toBe('function');
       expect(host.runToolUseLoop.constructor.name).toBe('AsyncFunction');
-      // Shorthand exports resolve to the exact identity the helpers leaf provides (core destructured them),
-      // proving the leaf is wired into the live surface and is not a dead copy.
-      assert.strictEqual(host.isEnabled, help.isEnabled,
-        'host.isEnabled must be the helpers leaf function (wiring intact)');
-      assert.strictEqual(host._safeReadForDiff, help._safeReadForDiff,
-        'host._safeReadForDiff must be the helpers leaf function (wiring intact)');
+      expect(host.runToolUseLoop).not.toBe(core.runToolUseLoop, 'facade wraps the core entry (turn checkpoint)');
+      // Every non-wrapped export resolves to the EXACT core surface object (spread, not copy) —
+      // core itself destructures the helpers leaf (so isEnabled/_safeReadForDiff ARE the leaf
+      // functions); the leaf's own export shape (underscored names) is verified in test 1.
+      assert.strictEqual(host.isEnabled, core.isEnabled, 'host.isEnabled must be the core surface object');
+      assert.strictEqual(host._safeReadForDiff, core._safeReadForDiff, 'host._safeReadForDiff must be the core surface object');
+      assert.strictEqual(host._buildToolResultMessage, core._buildToolResultMessage, 'host._buildToolResultMessage must be the core surface object');
+      // Wiring proof: the core surface is identity-stable with the helpers leaf for
+      // helper-backed exports (core destructures the leaf; underscored names match).
+      assert.strictEqual(core._safeReadForDiff, help._safeReadForDiff, 'core._safeReadForDiff must be the helpers leaf function');
       expect(host._parseToolCalls === undefined).toBe(false, '_parseToolCalls stays a core export');
   });
 
   test('setToolUseLoopHelpersDeps is a guarded, idempotent, non-throwing DI setter', () => {
       const { setToolUseLoopHelpersDeps } = require(HELP);
-      expect(() => setToolUseLoopHelpersDeps().not.toThrow());
-      expect(() => setToolUseLoopHelpersDeps({}).not.toThrow());
+      expect(() => setToolUseLoopHelpersDeps()).not.toThrow();
+      expect(() => setToolUseLoopHelpersDeps({})).not.toThrow();
       // The six core bindings accept any defined value (data consts + functions); undefined is ignored.
       const fn = () => {};
       const deps = {
@@ -71,8 +80,8 @@ describe('Tool Use Loop Helpers Leaf', () => {
         _extractToolOutput: fn,
         _getActiveModelContextWindow: fn,
       };
-      expect(() => setToolUseLoopHelpersDeps(deps).not.toThrow());
-      expect(() => setToolUseLoopHelpersDeps(deps).not.toThrow());
+      expect(() => setToolUseLoopHelpersDeps(deps)).not.toThrow();
+      expect(() => setToolUseLoopHelpersDeps(deps)).not.toThrow();
   });
 
 });

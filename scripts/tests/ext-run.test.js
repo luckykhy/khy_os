@@ -1,10 +1,10 @@
 'use strict';
 
 /**
- * ext-run 派发器契约测试 —— [DESIGN-ARCH-069] §2.3 / §4.1 在**交付脚本**这条路径上的机器化。
+ * ext-run 派发器契约测试 —— [DESIGN-TOOL-002] §2.3 / §4.1 在**交付脚本**这条路径上的机器化。
  *
- * 为什么单独测它：`extensionRoots` 那套是给运行时用的，而 `npm run portable:build` 这类
- * 目标走的是另一条完全独立的代码路径（scripts/ 不许 import L2，见 [DESIGN-ARCH-068] 第二节，
+ * 为什么单独测它：`extensionRoots` 那套是给运行时用的，而 `npm run portable:build:dev` 这类
+ * 目标走的是另一条完全独立的代码路径（scripts/ 不许 import L2，见 [DESIGN-LAY-005] 第二节，
  * 于是 ext-run 自带了一份两层扫描）。两份实现意味着两份会漂移的语义——这里钉的就是它们
  * 不许漂：同一套「删目录即消失 / 分类只是布局」的行为，在派发器这一侧也必须成立。
  *

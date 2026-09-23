@@ -28,6 +28,7 @@
  */
 
 const React = require('react');
+const { StringDecoder } = require('string_decoder');
 
 const inkRuntime = require('../inkRuntime');
 
@@ -40,18 +41,57 @@ function stripCsi(s) {
   return s.replace(/\x1b\[[0-9;?]*[ -/]*[@-~]/g, '').replace(/\x1b[=>NO]/g, '');
 }
 
+// A trailing ESC whose final byte has not arrived yet. Same chunk-boundary problem
+// as UTF-8 decoding: TCP can cut "\x1b[32m" anywhere, and painting the head of a
+// sequence writes "[3" onto the screen as literal text. (BUG-49b)
+const TRAILING_ESC_RE = /\x1b\[?[0-9;?]*[ -/]*$/;
+// An ESC prefix that never completes must not swallow the rest of the console:
+// past this many held characters we give up and paint what we have.
+const MAX_HELD_SEQ = 64;
+
 /**
  * Minimal line-discipline screen model. Mutated in place by feed(); render reads
  * `lines`. Tracks a cursor (row,col) so \r/\b overwrite within the current line.
+ *
+ * `decoder` and `pending` are part of the model, not optimizations: the serial bytes
+ * reach us as TCP chunks whose boundaries are set by QEMU, so a multi-byte UTF-8
+ * sequence (or an escape sequence) routinely straddles two chunks. Decoding
+ * chunk-by-chunk turns every straddle into U+FFFD (3-byte CJK) or two lone surrogates
+ * (4-byte astral), i.e. 乱码 on a surface that has all the bytes it needs to render
+ * the real glyph. (BUG-49 / BUG-49b)
  */
 function makeScreen() {
-  return { lines: [''], row: 0, col: 0 };
+  return { lines: [''], row: 0, col: 0, decoder: new StringDecoder('utf8'), pending: '' };
 }
 
-function feed(scr, text) {
-  const clean = stripCsi(text);
-  for (let i = 0; i < clean.length; i++) {
-    const ch = clean[i];
+/** Write one code point at the cursor and advance it (the old slice/concat could land
+ *  mid-pair and leave half of an emoji on screen). */
+function writeCell(scr, ch) {
+  const cells = Array.from(scr.lines[scr.row] || '');
+  while (cells.length < scr.col) cells.push(' ');
+  cells[scr.col] = ch;
+  scr.lines[scr.row] = cells.join('');
+  scr.col += 1;
+}
+
+function feed(scr, chunk) {
+  const text = Buffer.isBuffer(chunk)
+    ? (scr.decoder || (scr.decoder = new StringDecoder('utf8'))).write(chunk)
+    : String(chunk == null ? '' : chunk);
+  // Rejoin whatever the previous chunk left dangling so a sequence split across a
+  // chunk boundary is seen as one sequence.
+  const joined = (scr.pending || '') + text;
+  scr.pending = '';
+  const clean = stripCsi(joined);
+  let printable = clean;
+  const held = TRAILING_ESC_RE.exec(clean);
+  if (held && held[0].length <= MAX_HELD_SEQ) {
+    scr.pending = held[0];
+    printable = clean.slice(0, held.index);
+  }
+  // Iterate code points: a surrogate pair is one cell of console output, never two
+  // halves that can be overwritten independently.
+  for (const ch of printable) {
     if (ch === '\n') {
       scr.row += 1;
       scr.col = 0;
@@ -66,16 +106,12 @@ function feed(scr, text) {
       }
     } else if (ch === '\t') {
       const next = (scr.col + 8) & ~7;
-      const line = scr.lines[scr.row] || '';
-      scr.lines[scr.row] = line.padEnd(next, ' ');
+      const cells = Array.from(scr.lines[scr.row] || '');
+      while (cells.length < next) cells.push(' ');
+      scr.lines[scr.row] = cells.join('');
       scr.col = next;
-    } else if (ch >= ' ' || ch.charCodeAt(0) >= 0x80) {
-      let line = scr.lines[scr.row] || '';
-      if (scr.col > line.length) {
-        line = line.padEnd(scr.col, ' ');
-      }
-      scr.lines[scr.row] = line.slice(0, scr.col) + ch + line.slice(scr.col + 1);
-      scr.col += 1;
+    } else if (ch >= ' ') {
+      writeCell(scr, ch);
     }
     // other control bytes ignored
   }
@@ -157,7 +193,9 @@ function KhyOsView({ onExit, isoPath, diskPath }) {
         runner = new khyos.KhyOsRunner({ isoPath: iso, diskPath: diskPath || undefined });
         runnerRef.current = runner;
         runner.on('data', (buf) => {
-          feed(screenRef.current, buf.toString('utf-8'));
+          // Raw bytes into the model — it owns the UTF-8 decoder, so a sequence that
+          // straddles two serial chunks is held instead of rendered as 乱码.
+          feed(screenRef.current, buf);
           dirtyRef.current = true;
         });
         runner.on('error', (err) => {
@@ -296,3 +334,6 @@ function KhyOsView({ onExit, isoPath, diskPath }) {
 }
 
 module.exports = KhyOsView;
+
+// 测试接缝：行模型是纯函数，可脱离 ink 直接喂字节（BUG-49 的守卫靠它）。
+module.exports.__probe = { makeScreen, feed };

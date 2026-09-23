@@ -24,7 +24,7 @@ const os = require('os');
 const path = require('path');
 
 const PATHS = '../../../src/memdir/paths';
-const DISTILLER = '../../../src/services/memoryEngine/distiller';
+const DISTILLER = '../../../src/services/domain/memory/memoryEngine/distiller.js';
 
 const DAY = 24 * 60 * 60 * 1000;
 const NOW = 1_700_000_000_000;

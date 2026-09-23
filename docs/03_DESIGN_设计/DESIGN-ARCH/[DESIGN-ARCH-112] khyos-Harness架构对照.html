@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-112] khyos-Harness架构对照.md -->
+<title>[DESIGN-ARCH-112] khyos-Harness 架构对照 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-112] khyos-Harness 架构对照</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-112] khyos-Harness 架构对照</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-112-khyos-harness-架构对照">[DESIGN-ARCH-112] khyos-Harness 架构对照</a></li><li class="lvl-2"><a href="#一-定位与范围">一、定位与范围</a></li><li class="lvl-2"><a href="#二-agent-model-harness">二、Agent = Model + Harness</a></li><li class="lvl-3"><a href="#2-1-关键洞察">2.1 关键洞察</a></li><li class="lvl-3"><a href="#2-2-三性刻度">2.2 三性刻度</a></li><li class="lvl-3"><a href="#2-3-性质-工件">2.3 性质 ≠ 工件</a></li><li class="lvl-2"><a href="#三-四层架构-khyos-映射">三、四层架构 → khyos 映射</a></li><li class="lvl-3"><a href="#3-1-记忆层-claude-md">3.1 记忆层 —— CLAUDE.md</a></li><li class="lvl-3"><a href="#3-2-扩展层-四大组件">3.2 扩展层 —— 四大组件</a></li><li class="lvl-3"><a href="#3-3-集成层-连接外部世界">3.3 集成层 —— 连接外部世界</a></li><li class="lvl-3"><a href="#3-4-编程层-agent-sdk">3.4 编程层 —— Agent SDK</a></li><li class="lvl-2"><a href="#四-harness-五要素盘点">四、Harness 五要素盘点</a></li><li class="lvl-2"><a href="#五-agentic-loop-对照">五、Agentic Loop 对照</a></li><li class="lvl-2"><a href="#六-baseline-更正记录">六、baseline 更正记录</a></li><li class="lvl-2"><a href="#七-病灶-章节归属表">七、病灶 → 章节归属表</a></li><li class="lvl-2"><a href="#八-本章已执行的改动-2026-09-16">八、本章已执行的改动（2026-09-16）</a></li><li class="lvl-3"><a href="#8-1-代码改动-受版本控制">8.1 代码改动（受版本控制）</a></li><li class="lvl-3"><a href="#8-2-数据改动-khy-被-gitignore-不入版本控制">8.2 数据改动（`.khy/` 被 gitignore，不入版本控制）</a></li><li class="lvl-3"><a href="#8-3-刻意未做">8.3 刻意未做</a></li><li class="lvl-2"><a href="#九-不适用于-khyos-的机制-初步">九、不适用于 khyos 的机制（初步）</a></li><li class="lvl-2"><a href="#十-本文档维护">十、本文档维护</a></li><li class="lvl-2"><a href="#关联规则索引">关联规则索引</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-112-khyos-harness-架构对照">[DESIGN-ARCH-112] khyos-Harness 架构对照<a class="anchor" href="#design-arch-112-khyos-harness-架构对照" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>单一真源声明</strong>：本文档是<strong>对照盘点</strong>（现状快照 + 映射关系），不是规则语义真源。<br>规则语义仍以 <code>CLAUDE.md</code>（红线 R1–R4）、<code>AGENTS.md</code>（RUNTIME-001~004）、<br><a href="../../10_规范/registry/RULES-REGISTRY.json"><code>../10_规范/registry/RULES-REGISTRY.json</code></a>（67 条登记）为准。<br>本文档的作用是提供一张「书中机制 → khyos 文件路径」的可检索地图，<br>使后续章节的施工不必重新盘点全仓。</p>
+<p>来源语料：《Claude Code实战：Harness工程之道》第 1 章<br>（<code>.research-tmp/cc-book-harness/split/ch01.txt</code>）。学习-落地计划真源为<br><code>.khy/plans/learn-claude-code-book.json</code>（step 1）。</p>
+<p>本文档所有「现状」判定均附 <code>文件:行号</code> 实测证据（2026-09-16 实测）。</p>
+<p><strong>版本控制注意</strong>：<code>.khy/</code> 目录被 <code>.gitignore:54</code> 排除，其中的技能 manifest、<br>hooks 配置、权限设置等均<strong>不进入版本控制</strong>，属本地运行时状态。本文档 §8.2<br>的数据改动因此不可从 git 恢复——代码改动（§8.1）才受追踪。</p></blockquote>
+<hr>
+<h2 id="一-定位与范围">一、定位与范围<a class="anchor" href="#一-定位与范围" aria-label="锚点">#</a></h2>
+<p>本文档回答一个问题：<strong>Claude Code 的四层架构与 Harness 五要素，在 khyos 中分别<br>对应哪个文件、实现到什么程度、缺口归哪一章修。</strong></p>
+<p>不在本文档范围内：</p>
+<table><thead><tr><th>排除项</th><th>归属</th></tr></thead><tbody><tr><td>五层记忆分级的具体实现与条件化加载</td><td>第 2 章 / <code>[DESIGN-ARCH-113]</code></td></tr><tr><td>Skills 的 description 质量、allowed-tools 配置、匹配真源收敛</td><td>第 3 章 / <code>[DESIGN-PROCESS-001]</code></td></tr><tr><td>用户级子智能体定义格式与委派链路</td><td>第 4 章 / <code>[DESIGN-ARCH-115]</code></td></tr><tr><td>hooks.json 配置落地、危险命令拦截、审计</td><td>第 5 章 / <code>[DESIGN-ARCH-116]</code>（高风险章，需 dry-run）</td></tr><tr><td>MCP 作用域分层与信任评估</td><td>第 6 章 / <code>[DESIGN-ARCH-117]</code></td></tr><tr><td>Headless 参数与 CI 编排</td><td>第 7 章 / <code>[DESIGN-ARCH-118]</code></td></tr><tr><td>Agent SDK 双语言接口设计</td><td>第 8 章 / <code>[DESIGN-ARCH-119]</code></td></tr><tr><td>plugin.json 清单与分发</td><td>第 9 章 / <code>[DESIGN-ARCH-120]</code></td></tr></tbody></table>
+<hr>
+<h2 id="二-agent-model-harness">二、Agent = Model + Harness<a class="anchor" href="#二-agent-model-harness" aria-label="锚点">#</a></h2>
+<p>Anthropic 官方定义：</p>
+<blockquote><p>&quot;Claude Code serves as the agentic harness around Claude: it provides the tools,<br>context management, and execution environment that turn a language model into a<br>capable coding agent.&quot;</p></blockquote>
+<p>原生模型只具备生成文本的能力；Harness 赋予它读文件、写代码、检索代码库、在终端<br>执行命令的能力。<strong>Agent = Model + Harness。</strong></p>
+<p>Harness 改变的不是模型的能力本身，而是<strong>能力的传导与控制方式</strong>——如同马具不增加<br>马力，只决定力量如何转化为牵引。</p>
+<h3 id="2-1-关键洞察">2.1 关键洞察<a class="anchor" href="#2-1-关键洞察" aria-label="锚点">#</a></h3>
+<blockquote><p>同一模型在不同 Harness 下的表现差异，远大于不同模型在同一 Harness 下的表现差异。</p></blockquote>
+<p>TerminalBench 基准中，仅优化 Harness 即使同一模型从基线以下跃升至 Top 5。</p>
+<p><strong>对 khyos 的含义</strong>：khyos 的多供应商 AI 网关（<code>services/backend/src/services/gateway/aiGateway.js</code>）<br>意味着模型可替换，但 Harness（<code>toolUseLoopCore.js</code> + hooks 运行时 + <code>contextCompressor.js</code></p>
+<ul><li><code>sessions.db</code>）是 khyos 自有资产。因此把工程投入放在 Harness 精雕上，</li></ul>
+<p>其收益不随模型选择变化——模型升级时 Harness 的投入不会贬值。</p>
+<h3 id="2-2-三性刻度">2.2 三性刻度<a class="anchor" href="#2-2-三性刻度" aria-label="锚点">#</a></h3>
+<p>「可编程、可扩展、可组合」是框架的性质，不是症状的解药。</p>
+<table><thead><tr><th>三性</th><th>含义</th><th>khyos 刻度</th></tr></thead><tbody><tr><td>可编程</td><td>用代码驱动，不必人守终端</td><td>CLI 级已通（<code>-p</code>/<code>--output-format</code>/<code>--max-turns</code>/<code>--allowed-tools</code>/<code>--disallowed-tools</code> 全在 <code>services/backend/src/cli/printOutputFormat.js</code>）；<strong>代码级空白</strong>（无可 <code>require</code> 的 SDK 入口）</td></tr><tr><td>可扩展</td><td>加能力不碰核心代码</td><td>扩展<strong>面</strong>齐（技能目录 + settings + hooks 运行时）；扩展<strong>质</strong>差（触发预算饥荒、0/48 allowed-tools、hooks 零挂载）</td></tr><tr><td>可组合</td><td>模块间可自由编排</td><td><strong>接缝在代码里</strong>（11 个 hook 事件含 <code>SubAgentStart</code>/<code>SubAgentEnd</code>/<code>ToolPermission</code>/<code>PromptSection</code>，且 <code>hookContribSeams.tighten</code> 强制单调收紧）；<strong>封装层没有</strong>（无 plugin.json）</td></tr></tbody></table>
+<h3 id="2-3-性质-工件">2.3 性质 ≠ 工件<a class="anchor" href="#2-3-性质-工件" aria-label="锚点">#</a></h3>
+<p>框架三性齐备是症状<strong>可被修复</strong>的前提，不是<strong>已被修复</strong>的状态。三个痛点各需具体工件：</p>
+<table><thead><tr><th>痛点</th><th>所需工件</th><th>khyos 现状</th></tr></thead><tbody><tr><td>失忆</td><td>自动加载的项目指令</td><td>✅ 已解决（三文件加载，见 3.1）</td></tr><tr><td>风格飘忽</td><td>可被自动触发的代码规范载体</td><td>⚠️ 未解决（描述预算饥荒，见 3.2）</td></tr><tr><td>上下文溢出</td><td>子智能体定义与委派</td><td>⚠️ 部分（内置 agent 已在用，用户级定义目录为空）</td></tr></tbody></table>
+<hr>
+<h2 id="三-四层架构-khyos-映射">三、四层架构 → khyos 映射<a class="anchor" href="#三-四层架构-khyos-映射" aria-label="锚点">#</a></h2>
+<p>书以摩天大楼为喻：记忆层是深埋地下的地基，扩展层是承载日常运营的主体楼层，<br>集成层是维系运转的水电管网，编程层是顶楼的建筑师工作室。</p>
+<blockquote><p>自下而上审视是<strong>构建视角</strong>（关注基石与支撑）；自上而下俯瞰是<strong>使用视角</strong><br>（聚焦功能与体验）。</p></blockquote>
+<p><strong>注意区分</strong>：四层架构描述 Agent 能力的组织方式，与 khyos 的技术栈层级<br>（Python launcher → Node.js backend → Vue.js frontend）不是一回事。第 8 章设计<br>SDK 时这个区分会直接影响封装边界。</p>
+<h3 id="3-1-记忆层-claude-md">3.1 记忆层 —— CLAUDE.md<a class="anchor" href="#3-1-记忆层-claude-md" aria-label="锚点">#</a></h3>
+<p>书的模型：模型无状态，新对话对项目背景一无所知；CLAUDE.md 是「给 AI 的员工手册」，<br>每次会话启动自动加载；核心是 <strong>5 级记忆体系</strong>，层级越具体优先级越高，同构于 CSS<br>层叠优先级与「全局-用户-项目-本地」四级覆盖。上层所有配置都构建于记忆层之上。</p>
+<p><strong>khyos 实现（四层中最强）</strong>：</p>
+<table><thead><tr><th>书的机制</th><th>khyos 实现</th><th>证据</th></tr></thead><tbody><tr><td>项目级 CLAUDE.md 自动加载</td><td>三文件加载：<code>khy.md</code> / <code>CLAUDE.md</code> / <code>AGENTS.md</code></td><td><code>services/backend/src/constants/prompts.js:1733</code> 段</td></tr><tr><td>层级优先级</td><td><strong>KHY &gt; CLAUDE &gt; AGENTS</strong>；cwd 优先于 homedir</td><td><code>prompts.js:1746</code> 注释「顺序即冲突时的优先级」</td></tr><tr><td>5 级记忆体系</td><td>兼容 8 种 AI 工具生态指令文件：Codex / Cursor / Copilot / Windsurf / Cline / Roo / Gemini / Qwen，各分 home 与 project</td><td><code>services/backend/src/services/instructionEcosystemRegistry.js</code></td></tr><tr><td>层级覆盖语义</td><td><strong>section 级覆盖</strong>（非文件级）：khy.md 定义语言行为时，剥掉低优先级文件的 Language 段，其余段落保留</td><td><code>_hasKhyLanguageDirective</code> + <code>_stripCompatLanguageSections</code>（<code>prompts.js:1763</code> 起）</td></tr><tr><td>改配置即时生效</td><td>鲜度键折入全部已发现指令文件的 <code>mtime:size</code>，改文件<strong>当轮即生效</strong></td><td><code>constants/promptSectionTaxonomy.js:226</code>；原始 bug 记录于 <code>constants/promptFreshness.js:11</code></td></tr><tr><td>个人长期记忆</td><td><code>.khy/memory/MEMORY.md</code> + <code>feedback/</code> <code>project/</code> <code>reference/</code> <code>user/</code> + <code>services/memoryEngine/</code> + <code>memoryDreaming.js</code> / <code>memoryCompressor.js</code> / <code>memoryContentDedup.js</code></td><td>目录实测</td></tr><tr><td>规则登记</td><td><code>docs/10_规范/registry/RULES-REGISTRY.json</code>，67 条</td><td>实测</td></tr></tbody></table>
+<p><strong>section 级覆盖比书的模型更细</strong>：书里「每一级覆盖上一级」通常理解为整文件覆盖。<br>khyos 做到部分覆盖——同一份 CLAUDE.md 只剥 Language 段、保留其余段落。<br>第 2 章做五层分级时这是现成基座，不必从零建。</p>
+<p><strong>真缺口</strong>：</p>
+<ol><li>5 级里的<strong>「规则级」与「本地级」未成体系</strong>——规则散在 RULES-REGISTRY、CLAUDE.md</li></ol>
+<p>红线、AGENTS.md 工程规则三处，缺统一的条件化加载键。</p>
+<ol><li><code>.khy/preferences.json</code> 仅含 <code>theme</code> 一个键，用户级偏好近乎空。</li><li>无按路径的条件化注入（第 2 章范围）。</li></ol>
+<h3 id="3-2-扩展层-四大组件">3.2 扩展层 —— 四大组件<a class="anchor" href="#3-2-扩展层-四大组件" aria-label="锚点">#</a></h3>
+<p>书的模型：Commands（斜杠命令，命令模式 Command Pattern）、Skills<br>（SKILL.md + YAML frontmatter，模型语义自动触发）、SubAgents（上下文隔离 + 最小权限）、<br>Hooks（唯一具备拦截能力，同构于 Web 中间件）。两要点：<strong>正交性</strong>与 <strong>SRP 单一职责</strong>。<br>书另注明 Commands 已并入 Skills 成「任务型 Skill」，架构图保留它是为强调<br>「手动显式触发」与「语义自动触发」的范式区别。</p>
+<table><thead><tr><th>组件</th><th>khyos 现状</th><th>证据</th></tr></thead><tbody><tr><td>Commands</td><td>❌ 空（历史遗留目录）</td><td><code>.khy/commands/</code> 仅 <code>README.md</code>（716 字节）</td></tr><tr><td>Skills</td><td>⚠️ 部分，见下</td><td>43 目录 + builtin/bridge 共 <strong>48</strong> 个</td></tr><tr><td>SubAgents</td><td>⚠️ <strong>用户级空，内置已在用</strong></td><td><code>.khy/agents/</code> 0 文件；<code>src/agents/built-in/</code> 有 5 个内置 agent</td></tr><tr><td>Hooks</td><td>⚠️ 运行时完整、零挂载</td><td><code>.khy/hooks.json</code> 不存在</td></tr></tbody></table>
+<p><strong>Skills 现状详解</strong>：</p>
+<table><thead><tr><th>维度</th><th>状态</th><th>证据</th></tr></thead><tbody><tr><td>元数据真源</td><td><code>manifest.json</code> + <code>prompt.md</code>，<strong>43/43 齐备</strong></td><td><code>services/backend/src/cli/handlers/initVerifiers.js:13-15</code>、<code>services/domain/skills/skills/verifierScaffoldPlan.js:28</code>（<code>DEFAULT_SKILLS_DIR = '.khy/skills'</code>，注释「绝不写 .claude/skills」）</td></tr><tr><td>SKILL.md 兼容导入</td><td><strong>0 个</strong>（原 <code>frontend-beautify</code> 已删除，§3.2.4）；非平级，是<strong>被导入方</strong></td><td><code>skills/index.js:153-161</code> 回调 <code>discoverSkillsDeep</code>，<code>if (!skills.has(id))</code> 才添加</td></tr><tr><td>字段映射</td><td>几乎无语义损失：<code>when_to_use</code>→<code>whenToUse</code>、<code>allowed-tools</code>→<code>allowedTools</code>、<code>layer</code>→<code>category</code>、<code>context==='fork'</code>、<code>model</code>；但 <code>handlerPath</code> 硬编码 <code>null</code></td><td><code>skills/index.js:701</code> <code>_convertLegacySkill</code></td></tr><tr><td>语义触发</td><td>⚠️ 线通、信号被削，见「§3.2.1 预算饥荒」</td><td><code>services/skillSearch.js:202</code> → <code>skills/index.js:243</code></td></tr><tr><td>死代码</td><td><code>matchSkills</code>（<code>skillLoader.js:228</code> 定义、<code>:450</code> 导出）全仓零调用 —— <strong>已删除（2026-09-16）</strong></td><td><code>grep -rn matchSkills services/backend/</code> 零命中</td></tr><tr><td>allowed-tools</td><td>闸门就绪、<strong>0/48 配置</strong>；<strong>且对 prompt 型技能是空操作</strong>（见下注）</td><td><code>toolCalling.js:212</code> <code>_checkActiveSkillPolicy</code>；激活点仅 <code>skills/index.js:568</code>（handler 块内）</td></tr></tbody></table>
+<p><strong>双轨已确认不对称</strong>：manifest 侧是超集，SKILL.md 是被导入方。反向迁移会丢功能<br>（<code>trigger</code>、<code>aliases</code>、<code>user_invocable</code>、<code>handlerPath</code> 只有 manifest 能表达；<br><code>frontend-beautify</code> 的中文别名 <code>/美化</code>、<code>/ui</code> 就在 manifest 里）。</p>
+<p><strong>⚠️ 真源选择：以 manifest.json 为准，SKILL.md 仅作兼容导入。</strong></p>
+<h4 id="3-2-1-预算饥荒-本章新发现">3.2.1 预算饥荒（本章新发现）<a class="anchor" href="#3-2-1-预算饥荒-本章新发现" aria-label="锚点">#</a></h4>
+<p><code>formatSkillListing</code>（<code>skills/index.js:243</code>）把技能目录注入系统提示——这正是书里<br>「模型自选」的机制，<strong>线是通的</strong>。但描述被按比例截断：</p>
+<pre><code class="language-text">budget=5600 → 5135字符, 48行, 均行107字符, 带&quot;use when:&quot;提示=1行, 被截断=30行
+budget=1400 → 2069字符, 48行, 均行43字符,  带&quot;use when:&quot;提示=1行, 被截断=48行
+budget= 700 → 2069字符, 48行, 均行43字符,  带&quot;use when:&quot;提示=1行, 被截断=48行
+budget= 210 → 2069字符, 48行, 均行43字符,  带&quot;use when:&quot;提示=1行, 被截断=48行</code></pre>
+<p>三个结论：</p>
+<ol><li><strong>目录实际 48 个技能</strong>（<code>.khy/skills/</code> 43 + builtin/bridge 约 5），盘点基数不是 69。</li><li><strong>2069 字符硬底，预算约束在低位静默失效</strong>——<code>skills/index.js:277</code> 的</li></ol>
+<p><code>Math.max(20, maxDescLen)</code> 保证每描述 ≥20 字符，故预算压到 210 时输出仍是 2069。<br>   <code>constants/prompts.js:2122-2126</code> 把预算压到 <code>onePercent</code>（可能 2000）或 minimal 模式<br>   的 300-1000，全部落进这个失效区间。</p>
+<ol><li><strong>触发短语全在被砍的那一半</strong>——<code>formatLine</code> 前向截断 <code>slice(0, descLen-1) + '…'</code>，</li></ol>
+<p>而 <code>code-review-and-quality</code> 的 &quot;Use when reviewing code written by yourself…&quot;<br>   在句尾，107 字符预算下已砍成 &quot;Conducts multi-axis…&quot;。</p>
+<p><strong>④ <code>whenToUse</code> 是现成空槽位</strong>：<code>formatLine</code> 已实现渲染<br>（<code>cmd.whenToUse ? ' (use when: ' + ... : ''</code>），但 <strong>0/48 技能填了该字段</strong><br>（仅 <code>frontend-beautify</code> 填了，对应上表那 1 行）。</p>
+<blockquote><p><strong>第 3 章的性价比最高动作：一行代码不用改，48 个技能各补一个 <code>when_to_use</code> 字段，<br>语义触发立刻获得它该有的输入。</strong></p></blockquote>
+<p><strong>已执行修复（2026-09-16，本章落地）</strong>：</p>
+<table><thead><tr><th>修复</th><th>位置</th><th>效果</th></tr></thead><tbody><tr><td>MCP 排除时不再预留 30% 预算</td><td><code>skillSearch.js:209</code></td><td><code>includeMcp:false</code> 时技能从 3584 → <strong>5120</strong> 字符（+43%）</td></tr><tr><td>hint 长度计入 overhead</td><td><code>skills/index.js:289</code></td><td>批量填 <code>when_to_use</code> 不再静默溢出预算</td></tr><tr><td>15 个技能补 <code>when_to_use</code></td><td><code>.khy/skills/*/manifest.json</code></td><td>带触发提示的技能从 1 → <strong>16</strong>；描述均长 75→105 字符</td></tr></tbody></table>
+<p>修复后实测（预算 5120）：输出 5071 字符，48 行，均行 105，最长 175，<br>被截断 40 行，带 <code>use when:</code> 提示 16 行。代价是 <code>maxDescLen</code> 从 78 降到 53<br>（15 个 hint 共占 1395 字符 overhead），少数短描述技能开始被截断，<br>但首句意图仍在——<strong>触发提示的价值高于描述尾部的 25 个字符</strong>。</p>
+<p><code>when_to_use</code> 只补了 15 个（非全部 43）：overhead 是全量求和，<br>43 个长 hint 会把 <code>maxDescLen</code> 压回 20 字符地板，净效果为负。<br>精选标准是「description 长（200+ 字符，截断实际在切掉有用内容）<br>且触发条件非显而易见」。剩余 28 个技能的触发短语本身在 description 前 78 字符内，<br>补 hint 属重复。</p>
+<p><strong><code>onePercent</code> 未动</strong>：<code>prompts.js:2117</code> 的 <code>Math.floor(tokens * 0.01 * 4)</code> 是<br>刻意的 1% 策略（变量名即声明），抬高需用户裁决——它影响每次推理的提示开销。</p>
+<h4 id="3-2-3-allowed-tools-对-prompt-型技能是空操作-本章新发现">3.2.3 allowed-tools 对 prompt 型技能是空操作（本章新发现）<a class="anchor" href="#3-2-3-allowed-tools-对-prompt-型技能是空操作-本章新发现" aria-label="锚点">#</a></h4>
+<p>A1 白名单闸门（<code>toolCalling.js:212</code> <code>_checkActiveSkillPolicy</code>）的激活点<br><strong>只有 <code>skills/index.js:568</code></strong>，且该行位于<br><code>if (skill.handlerPath &amp;&amp; fs.existsSync(skill.handlerPath))</code> 块内：</p>
+<pre><code class="language-text">executeSkill()
+├─ if (handlerPath 存在) → setActiveSkill(skill)  ← A1 只在这里激活
+│  └─ handler 进程内执行，工具调用受白名单约束
+└─ else → 返回 prompt.md 文本                       ← 从不 setActiveSkill
+   └─ AI 拿到 prompt 后自行调工具（白名单完全不生效）</code></pre>
+<p><code>.khy/skills</code> 全部 43 个都是纯 prompt 技能（<code>handlerPath: null</code>，<br><code>_convertLegacySkill</code> 硬编码），所以给它们加 <code>allowed-tools</code> 是<strong>空操作</strong>——<br>字段会被读取进 skill 对象，但闸门从不检查它。</p>
+<p>生命周期根本不同：handler 技能是「进程内执行，工具调用受限」；<br>prompt 技能是「prompt 注入后 AI 自行推理调工具」，<code>executeSkill</code> 立即返回，<br>「激活窗口」是 AI 后续整个推理过程，不是一个函数调用。这是设计问题，<br>不是几行代码能修的。</p>
+<p><strong>结论</strong>：给 prompt 技能补 <code>allowed-tools</code> 会是骗人的（改了但没效果）。<br>正确动作是扩门禁激活范围到 prompt 返回路径——但那需要一个明确的<br>「prompt 技能激活窗口」定义（何时开始、何时结束），属第 3 章设计范畴。<br>逃生地板（<code>ask_user</code>/<code>abort</code>，<code>constraintLattice.js:275</code>）保证任何白名单<br>都不会清空行动集，所以扩展门禁本身是安全的。</p>
+<h4 id="3-2-4-双文件共存时的发现优先级">3.2.4 双文件共存时的发现优先级<a class="anchor" href="#3-2-4-双文件共存时的发现优先级" aria-label="锚点">#</a></h4>
+<p><code>discoverAllSkills</code>（<code>skills/index.js:140-161</code>）的加载顺序：</p>
+<pre><code class="language-text">1. loadSkillsFromDir(manifest.json)  → manifest 技能先注册
+2. discoverSkillsDeep(SKILL.md)      → if(!skills.has(id)) 才添加</code></pre>
+<p>manifest 优先，SKILL.md 同 ID 时被跳过。所以「目录同时有 manifest.json 和<br>SKILL.md」时，SKILL.md 对运行时是死文件。</p>
+<p><code>frontend-beautify</code> 正是这种情况：manifest.json（当前真源）+ prompt.md<br>（当前正文，引用 <code>references/</code>）+ SKILL.md（旧单体版，8311B，元数据已漂移：<br>有 <code>version</code>/<code>lifecycle</code>/<code>layer</code>/<code>dependencies</code>，无 <code>aliases</code>/<code>trigger</code>/<code>when_to_use</code>）。</p>
+<p>唯一消费者是 <code>exportSkill</code>（<code>skillPackageService.js:277</code>），候选顺序<br><code>SKILL.md</code> → <code>prompt.md</code> → <code>_legacyBody</code>——<strong>SKILL.md 优先导致导出过期内容</strong>。</p>
+<p><strong>已删除</strong> <code>.khy/skills/frontend-beautify/SKILL.md</code>（2026-09-16）：<br>加载器跳过它（manifest 优先），<code>getSkillPrompt</code> 只读 <code>promptPath</code>(=prompt.md)，<br><code>replSession</code>/<code>userSkillCommands</code> 都是「prompt.md 优先，SKILL.md 回退」。<br>删除后 <code>exportSkill</code> 改导出 prompt.md（当前版），bug 消除。</p>
+<p>注意：<code>SKILL.md</code> 本身是 khy 支持的发现格式（<code>skillLoaderNativeSkillMd.test.js</code><br>明确断言 <code>discoverSkillsDeep</code> 能原生发现 <code>.khy/skills</code> 下的 SKILL.md），<br>只是不与同目录 manifest.json 共存时才是死文件。</p>
+<h4 id="3-2-2-内置子智能体已在用">3.2.2 内置子智能体已在用<a class="anchor" href="#3-2-2-内置子智能体已在用" aria-label="锚点">#</a></h4>
+<p>书说子智能体解决上下文窗口有限性——为主对话开辟独立上下文空间，完成后只回注结论。<br>书里的最小权限原则体现为「代码审查员仅拥有读取权限」。</p>
+<p><code>.khy/agents/</code> 为空不等于无子智能体机制：</p>
+<pre><code class="language-text">services/backend/src/agents/
+├── types.js                          ← omitClaudeMd 属性（子智能体可选择性不带项目指令）
+└── built-in/
+    ├── khyGuideAgent.js
+    ├── fixAgent.js
+    ├── mapAgent.js
+    ├── verificationAgent.js
+    └── auditAgent.js</code></pre>
+<p><code>verificationAgent.js:46</code> 的提示词已含「Read the project's CLAUDE.md and/or README …<br>to discover build/test commands」——即书里「子智能体独立上下文」的实际使用形态。<br>hooks 的 <code>SubAgentStart</code> / <code>SubAgentEnd</code> 事件已预留，委派链路的事件面也铺好了。</p>
+<p><strong>第 4 章落点修正</strong>：不是「从零建立子智能体机制」，而是<br>「内置 agent 已 5 个，缺用户级 <code>.khy/agents/</code> 定义格式与委派链路的权限收敛」。<br>执行手册要求的「先用 1 个小任务验证委派链路」应改为<strong>验证现有内置 agent 的链路</strong>，<br>再决定是否开放用户级定义。</p>
+<h3 id="3-3-集成层-连接外部世界">3.3 集成层 —— 连接外部世界<a class="anchor" href="#3-3-集成层-连接外部世界" aria-label="锚点">#</a></h3>
+<p>书的模型：集成层是水电管网，两支柱——<strong>Headless</strong>（<code>-p</code> 非交互 +<br><code>--output-format json</code> 可脚本解析 + <code>--max-turns</code> 控成本 + <code>--allowed-tools</code> 白名单，<br>嵌进 CI/CD 做 PR 自动审查）与 <strong>MCP</strong>（<code>.mcp.json</code>，&quot;AI 时代的 USB-C&quot;，<br>Tools/Resources/Prompts 三大能力）。扩展层在「体内」强化机能，集成层在「体外」建连接。</p>
+<table><thead><tr><th>机制</th><th>khyos 现状</th><th>证据</th></tr></thead><tbody><tr><td>Headless</td><td>✅ 基本齐</td><td><code>services/backend/src/cli/printOutputFormat.js</code>：<code>-p</code>、`--output-format text\</td></tr><tr><td>MCP</td><td>⚠️ 部分</td><td><code>.khy/mcp.json</code> 1 个服务器 <code>deepseek-eyes</code>（stdio，<code>python -m deepseek_eyes</code>）；注意路径是 <code>.khy/mcp.json</code> 而非 <code>.mcp.json</code></td></tr><tr><td>外部生态接入</td><td>⚠️ 意外能力</td><td><code>services/skills/ccSkillBridge.js</code>（<code>KHY_CC_SKILL_BRIDGE</code> 默认 ON）+ OpenClaw bridge，可发现 <code>~/.claude/skills</code>、<code>~/.claude/plugins/cache</code>、<code>~/.claude/local-plugins</code></td></tr></tbody></table>
+<p><strong>缺口</strong>：<code>.github/workflows/</code> 存在但未接 khy headless 调用（第 7 章）；MCP 无作用域<br>分层（用户级/项目级/本地级）与信任评估流程（第 6 章）；MCP 生态深度浅（仅 1 服务器）。</p>
+<h3 id="3-4-编程层-agent-sdk">3.4 编程层 —— Agent SDK<a class="anchor" href="#3-4-编程层-agent-sdk" aria-label="锚点">#</a></h3>
+<p>书的模型：顶楼建筑师工作室，一道<strong>分水岭</strong>——之下靠配置与命令行延展行为（使用者），<br>之上用 Python/TypeScript 直接调用底层核心（构建者）。书给出<br><code>claude_code.query(prompt, allowed_tools, max_turns)</code> 示例，并指出一个耐人寻味的事实：<br><strong>Claude Code 本身就是基于 Agent SDK 构建的一个 AI Agent</strong>——终端里的一切读写执行，<br>本质都是 SDK 层的工具调用。</p>
+<p><strong>khyos 现状</strong>：</p>
+<ul><li>❌ <strong>无对外 SDK</strong>：无可 <code>require('khy')</code> 的库入口，外部程序只能起子进程。</li><li>⚠️ <strong>但 harness 内核存在且相当重</strong>：<code>services/backend/src/services/toolUseLoopCore.js</code></li></ul>
+<p>8000+ 行，含 <code>IterationBudget</code>、token-budget governor（<code>ceiling</code> 参数，0 时禁用并<br>  保持 byte-identical legacy 行为）、<code>_maxTokensRecovery</code>、<code>doomLoopGuard.js</code>。<br>  这就是 khyos 自己的 SDK 层，缺的是稳定 API 边界。</p>
+<p><strong>留给第 8 章的架构抉择</strong>：</p>
+<table><thead><tr><th>路线</th><th>内容</th><th>风险</th></tr></thead><tbody><tr><td>A. 把 <code>toolUseLoopCore.js</code> 库化</td><td>它已是内核，缺稳定 API 边界</td><td>该文件 8000+ 行，是红线 R4 阈值（2500）的 3 倍。属既有债务非新增，<code>KHY_ARCH_GOD_FILE_LOC</code> 只卡新增，但库化会扩大其公开面</td></tr><tr><td>B. 另起 SDK，现有 loop 当参考实现</td><td>干净的封装边界</td><td>双内核，行为可能分叉</td></tr></tbody></table>
+<hr>
+<h2 id="四-harness-五要素盘点">四、Harness 五要素盘点<a class="anchor" href="#四-harness-五要素盘点" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>要素</th><th>刻度</th><th>khyos 实现</th></tr></thead><tbody><tr><td>工具系统</td><td>✅ 有</td><td><code>services/toolCalling.js:3475</code> <code>registerTool</code> + <code>services/toolCatalog/</code> + <code>toolRegistryDedup.collapseRedundant</code> 去重折叠；<code>toolCalling.js:212</code> active-skill <code>allowed-tools</code> 白名单闸门（0/48 配置，<strong>且仅对 handler 技能生效</strong>，§3.2.3）</td></tr><tr><td>权限控制</td><td>⚠️ 机制强、默认宽</td><td><code>.khy/permissions.json</code>（<code>profile: &quot;yolo&quot;</code>、<code>version: 2</code>）+ <code>.khy/tool_permissions.json</code> + <code>toolCallingPermissions.js</code> + <code>execApproval.js</code> / <code>approvalLedger.js</code> / <code>guardApproval.js</code>；<code>ToolPermission</code> hook 只能<strong>收紧</strong>裁决（<code>hookContribSeams.tighten</code> 强制单调性）</td></tr><tr><td>上下文管理</td><td>✅ 有</td><td><code>contextCompressor.js</code> + <code>contextWindowGuard.js</code> + 技能目录 <code>charBudget</code> 预算 + <code>memoryCompressor.js</code></td></tr><tr><td>会话持久化</td><td>✅ 有</td><td><code>.khy/sessions.db</code>（SQLite，含 <code>-shm</code>/<code>-wal</code>）+ <code>.khy/session.json</code> + <code>.khy/sessions/</code>（24 条）+ <code>sessionChecklistResetService.js</code> + <code>sessionFileRepair.js</code></td></tr><tr><td>事件钩子</td><td>⚠️ 通电未挂线</td><td><code>hookRegistry.js</code> 11 事件 + <code>hr.blocked</code> 阻断 + <code>preventContinuation</code> 优雅停机 + <code>_stopHookActive</code> 防无限续跑；<code>.khy/hooks.json</code> 不存在 → 零挂载</td></tr></tbody></table>
+<p><strong>刻度：3 有 / 2 部分 / 0 无。</strong></p>
+<p>khyos 的 Harness <strong>不是缺零件，是缺接线和配置</strong>。这与计划 JSON 原记的「三处主要缺口」<br>描述不同——那个说法低估了底座完成度，也高估了补建成本。</p>
+<p><strong>权限控制的一处需注意项</strong>：<code>.khy/permissions.json</code> 的 <code>profile</code> 为 <code>&quot;yolo&quot;</code>，<br>即默认全放行。机制完备但默认姿态宽——第 5 章落地 hooks.json 时应同时评估这个默认值。</p>
+<hr>
+<h2 id="五-agentic-loop-对照">五、Agentic Loop 对照<a class="anchor" href="#五-agentic-loop-对照" aria-label="锚点">#</a></h2>
+<p>书的模型：提交一个 bug 时，Claude Code 不是「看一眼猜答案」，而是<strong>反复观察、假设、<br>验证</strong>——先查日志、再搜代码、再理解上下文、最后动手。两个终止条件：① 模型主动停止<br>（不再发起工具调用）；② 达到 <code>--max-turns</code> 最大轮次（防无限循环）。</p>
+<table><thead><tr><th>书的机制</th><th>khyos 实现</th></tr></thead><tbody><tr><td>Agentic Loop 主体</td><td><code>services/backend/src/services/toolUseLoopCore.js</code>（8000+ 行）</td></tr><tr><td>最大轮次限制</td><td><code>IterationBudget(effectiveMaxIterations)</code></td></tr><tr><td>防无限循环</td><td><code>services/doomLoopGuard.js</code> + <code>contextWindowGuard.js</code></td></tr><tr><td>成本护栏</td><td>token-budget governor，<code>ceiling</code> 参数（0 时禁用，<code>assessBudget</code> 恒 <code>ok</code>，循环不因此停止）</td></tr><tr><td>截断续写</td><td><code>_maxTokensRecovery</code> + <code>MAX_NEGLIGIBLE_CONTINUATIONS</code></td></tr><tr><td>Hook 优雅停机</td><td><code>toolUseLoopCore.js:3388</code> PostToolUse <code>preventContinuation</code> → <code>_hookStopRequested</code> 早退</td></tr><tr><td>Stop 防无限续跑</td><td><code>toolUseLoopCore.js:3216</code> <code>_stopHookActive</code>（已强制续跑一次后置位）</td></tr></tbody></table>
+<hr>
+<h2 id="六-baseline-更正记录">六、baseline 更正记录<a class="anchor" href="#六-baseline-更正记录" aria-label="锚点">#</a></h2>
+<p>计划 JSON <code>plan.steps[0].khyosBaseline</code> 与 <code>dataNeeds</code> 原记 6 处与实测不符，<br>已按实测更正。后续章节请以此节为准，不要回引旧记。</p>
+<table><thead><tr><th>#</th><th>原记</th><th>实测</th></tr></thead><tbody><tr><td>1</td><td>记忆层「有，但无五层分级」</td><td>多生态 8 种指令文件 + <strong>section 级覆盖</strong> + mtime 鲜度，分级意识强于 CC；真缺口是「规则级/本地级未成体系」与按路径条件化加载</td></tr><tr><td>2</td><td>子智能体「全仓库无子智能体定义文件，本项目最大缺口」</td><td><strong>内置子智能体已 5 个</strong>（<code>src/agents/built-in/</code>）+ <code>SubAgentStart/End</code> hook 预留；空的是<strong>用户级</strong> <code>.khy/agents/</code> 定义目录</td></tr><tr><td>3</td><td>集成层「Headless 参数体系缺」</td><td>五参数全在 <code>printOutputFormat.js</code>，第 7 章范围应从「建参数」改为「接 CI 编排 + 验证成本护栏」</td></tr><tr><td>4</td><td>编程层「完全空白」</td><td>无对外 SDK 成立，但 harness 内核 <code>toolUseLoopCore.js</code> 存在（8000+ 行），缺的是库化封装</td></tr><tr><td>5</td><td>扩展层「.khy/skills/ 69 项」</td><td>69 是<strong>条目数</strong>；43 是目录数；注入模型的目录总数是 <strong>48</strong>（含 builtin + bridge）</td></tr><tr><td>6</td><td>扩展层「无 Hooks 运行时机制」</td><td>运行时完整（11 事件 + block + 优雅停机 + Stop 防续跑）；<code>.khy/hooks.json</code> 不存在 → <strong>零挂载</strong>，不是「无机制」</td></tr></tbody></table>
+<hr>
+<h2 id="七-病灶-章节归属表">七、病灶 → 章节归属表<a class="anchor" href="#七-病灶-章节归属表" aria-label="锚点">#</a></h2>
+<p>1.1 与 1.2 精读发现的每个缺口，按机制归属指定到具体章节。<br><strong>本章不修任何行为</strong>——所有施工动作归各自章节执行。</p>
+<table><thead><tr><th>#</th><th>病灶</th><th>归属章</th><th>该章实际动作</th><th>风险</th><th>本章状态</th></tr></thead><tbody><tr><td>1</td><td>技能语义触发信号被截断（预算饥荒 + 触发短语在句尾）</td><td>第 3 章</td><td>① 48 个技能补 <code>when_to_use</code> ② 预算治理：抬高上限 / 分层注入 / 去 <code>Math.max(20,…)</code> 硬底 ③ 收敛匹配真源</td><td>中</td><td><strong>已做①② 部分</strong>：MCP 30% 浪费已修、overhead 计算已修、15 个技能已补 hint；上限抬高与匹配收敛待第 3 章</td></tr><tr><td>2</td><td>0/48 技能声明 <code>allowed-tools</code>，闸门代码就绪</td><td>第 3 章</td><td>给高危技能补白名单</td><td>中</td><td><strong>发现前置条件不成立</strong>：闸门仅对 handler 技能生效（§3.2.3），prompt 技能加白名单是空操作。需先定义「prompt 技能激活窗口」</td></tr><tr><td>3</td><td>Hooks 零挂载</td><td>第 5 章</td><td>写 <code>.khy/hooks.json</code>，把 <code>scripts/ci/check-*.js</code> 挂为 command 型 hook</td><td>高</td><td>待第 5 章（高风险，需 dry-run + 一键关闭）</td></tr><tr><td>4</td><td>用户级子智能体定义目录为空</td><td>第 4 章</td><td>先验证现有内置 agent 委派链路，再定是否开放 <code>.khy/agents/</code> 定义格式</td><td>高</td><td>待第 4 章</td></tr><tr><td>5</td><td>无对外 Agent SDK</td><td>第 8 章</td><td>决定路线 A（库化 <code>toolUseLoopCore</code>）还是 B（另起 SDK）</td><td>中</td><td>待第 8 章</td></tr><tr><td>6</td><td>无 plugin.json 清单</td><td>第 9 章</td><td>设计清单格式，复用现成 <code>ccSkillBridge</code> 发现通道</td><td>中</td><td>待第 9 章</td></tr><tr><td>7</td><td>MCP 无作用域分层与信任评估</td><td>第 6 章</td><td>三层作用域 + 信任评估流程文档化</td><td>低</td><td>待第 6 章</td></tr><tr><td>8</td><td>CI 未接 khy headless</td><td>第 7 章</td><td><code>.github/workflows/</code> 接 <code>khy -p --output-format json</code> + 成本护栏</td><td>低</td><td>待第 7 章</td></tr><tr><td>9</td><td>记忆层「规则级 / 本地级」未成体系</td><td>第 2 章</td><td>五层分级 + 按路径条件化加载</td><td>高</td><td>待第 2 章</td></tr><tr><td>10</td><td><code>frontend-beautify</code> 双轨漂移</td><td>第 3 章</td><td>以 manifest 为准处置 SKILL.md</td><td>中</td><td><strong>已处置</strong>：删除 SKILL.md（§3.2.4），<code>exportSkill</code> 改导出 prompt.md</td></tr><tr><td>11</td><td><code>initVerifiers.js:14</code> 注释过时</td><td>第 3 章</td><td>更正括注「(khy 不发现该路径)」</td><td>低</td><td><strong>已处置</strong>：改为「(该路径仅经 ccSkillBridge 桥接发现,非 khy 原生路径)」</td></tr><tr><td>12</td><td><code>.khy/permissions.json</code> 默认 <code>profile: &quot;yolo&quot;</code></td><td>第 5 章 / 第 10 章</td><td>评估默认姿态，与 hooks.json 落地一并决定</td><td>中</td><td>待第 5/10 章</td></tr></tbody></table>
+<hr>
+<h2 id="八-本章已执行的改动-2026-09-16">八、本章已执行的改动（2026-09-16）<a class="anchor" href="#八-本章已执行的改动-2026-09-16" aria-label="锚点">#</a></h2>
+<h3 id="8-1-代码改动-受版本控制">8.1 代码改动（受版本控制）<a class="anchor" href="#8-1-代码改动-受版本控制" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>改动</th><th>文件</th><th>风险依据</th></tr></thead><tbody><tr><td>删除 <code>matchSkills</code> 函数（14 行）及其导出项</td><td><code>services/backend/src/skills/skillLoader.js</code></td><td>全仓（含 tests）零调用点；<code>skillLoader.js</code> 本体保留（<code>discoverSkillsDeep</code> 由 <code>skills/index.js:153</code> 在用）；空查询 <code>includes('')</code> 恒真会命中全部技能，属潜在 bug</td></tr><tr><td>项目级 hooks 路径 <code>.khyquant</code> → <code>.khy</code> + 更正文件头注释</td><td><code>services/backend/src/services/domain/extensions/hooks/hookRegistry.js:66</code>、<code>:13</code></td><td>盘上 <code>.khy/hooks.json</code> 与 <code>.khyquant/hooks.json</code> <strong>均不存在</strong>，改动等于纠正一个尚未被使用的路径；与全局侧 <code>_globalHooksPath()</code>（已走 <code>getAppHome()</code>）及 <code>dataHome.js</code> 明文禁令对齐</td></tr><tr><td>MCP 排除时不预留 30% 预算</td><td><code>services/backend/src/services/skillSearch.js:209</code></td><td><code>getSkillCatalogSection</code> 传 <code>includeMcp:false</code>（MCP 工具有独立动态段），预留浪费三分之一预算；技能从 3584 → 5120 字符</td></tr><tr><td>hint 长度计入 overhead</td><td><code>services/backend/src/skills/index.js:289</code></td><td><code>formatLine</code> 的 <code>use when:</code> 提示在 <code>descLen</code> 之外追加，原 overhead 不含它，批量填 hint 会静默溢出预算（第二遍不再复查总量）</td></tr><tr><td>更正过时注释「(khy 不发现该路径)」</td><td><code>services/backend/src/cli/handlers/initVerifiers.js:14-16</code></td><td><code>ccSkillBridge.js:11-12</code> 明列 <code>.claude/skills</code> 两级路径，<code>instructionEcosystemRegistry.js:204</code> 亦确认；脚手架指令本体（目标 = <code>.khy/skills</code>）保持不变</td></tr></tbody></table>
+<h3 id="8-2-数据改动-khy-被-gitignore-不入版本控制">8.2 数据改动（<code>.khy/</code> 被 gitignore，不入版本控制）<a class="anchor" href="#8-2-数据改动-khy-被-gitignore-不入版本控制" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>改动</th><th>位置</th><th>依据</th></tr></thead><tbody><tr><td>15 个技能补 <code>when_to_use</code></td><td><code>.khy/skills/{code-review-and-quality, code-simplification, debug, debugging-and-error-recovery, context-engineering, api-and-interface-design, frontend-ui-engineering, git-workflow-and-versioning, security-and-hardening, performance-optimization, test-driven-development, incremental-implementation, planning-and-task-breakdown, documentation-and-adrs, ci-cd-and-automation}/manifest.json</code></td><td>触发短语原在 description 尾部，被 <code>formatLine</code> 前向截断切掉；<code>when_to_use</code> 在截断之后渲染，不会被砍。只补 15 个（非 43）：overhead 全量求和，全补会把 <code>maxDescLen</code> 压回 20 字符地板</td></tr><tr><td>删除 <code>frontend-beautify/SKILL.md</code></td><td><code>.khy/skills/frontend-beautify/</code></td><td>与 manifest.json 同目录 → <code>discoverAllSkills</code> 跳过它（manifest 优先）；唯一消费者 <code>exportSkill</code> 因 SKILL.md 优先而导出过期内容；<code>prompt.md</code>（当前版，引用 <code>references/</code>）+ manifest.json 已覆盖其全部语义</td></tr></tbody></table>
+<h3 id="8-3-刻意未做">8.3 刻意未做<a class="anchor" href="#8-3-刻意未做" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项</th><th>理由</th><th>归属</th></tr></thead><tbody><tr><td>抬高 <code>onePercent</code> 预算上限</td><td><code>prompts.js:2117</code> 的 1% 是刻意策略（变量名即声明），抬高影响每次推理开销，需用户裁决</td><td>第 3 章</td></tr><tr><td>给 prompt 技能补 <code>allowed-tools</code></td><td>闸门仅对 handler 技能生效（§3.2.3），补了是空操作</td><td>第 3 章</td></tr><tr><td>扩展 A1 门禁到 prompt 返回路径</td><td>需先定义「prompt 技能激活窗口」（何时开始/结束），是设计问题非代码问题</td><td>第 3 章</td></tr><tr><td>创建 <code>.khy/hooks.json</code></td><td>高风险章协议：先 dry-run，保留一键关闭开关，再真实执行</td><td>第 5 章</td></tr><tr><td><code>hookRegistry.js:42</code> catch 兜底路径</td><td>仅 <code>dataHome</code> require 失败时触发的防御分支，改错会吞掉异常；需先确认该兜底是否应改为抛错而非静默降级</td><td>第 5 章</td></tr></tbody></table>
+<hr>
+<h2 id="九-不适用于-khyos-的机制-初步">九、不适用于 khyos 的机制（初步）<a class="anchor" href="#九-不适用于-khyos-的机制-初步" aria-label="锚点">#</a></h2>
+<p>khyos 是 Python launcher + Node.js backend + Vue.js frontend 混合栈，<br>以下机制不能照抄。全书收口时（第 10 章）需逐项复核并补充理由。</p>
+<table><thead><tr><th>书的机制</th><th>不适配原因</th><th>khyos 的替代</th></tr></thead><tbody><tr><td>技能元数据载体 <code>SKILL.md</code> + YAML frontmatter</td><td>YAML 在 khyos 协议中<strong>仅允许用于 CI/CD 与 ML 配置</strong>（<code>docs/10_规范/其它规范/FILE-FORMAT-PROTOCOL.md</code> §2.5）；khyos 元数据用 JSON</td><td><code>manifest.json</code> + <code>prompt.md</code>；SKILL.md 仅作兼容导入</td></tr><tr><td><code>.claude/commands/</code> 独立命令目录</td><td>khyos 的每个技能已同时是斜杠命令（<code>manifest.json</code> 的 <code>trigger</code> + <code>aliases</code>），等于书里「Commands 并入 Skills」的终态</td><td>技能即命令；<code>.khy/commands/</code> 是历史遗留空目录</td></tr><tr><td><code>.mcp.json</code> / <code>.claude/settings.json</code> 路径约定</td><td>khyos 运行时统一收敛在 <code>.khy/</code>，由 <code>dataHome.js</code> 解析</td><td><code>.khy/mcp.json</code>、<code>.khy/settings.json</code>、<code>.khy/hooks.json</code></td></tr><tr><td><code>.khyquant/</code> 遗留路径</td><td><code>dataHome.js</code> 明文禁止新增裸 <code>os.homedir()+'.khyquant'</code> 硬编码</td><td>统一经 <code>getAppHome()</code> / <code>getDataHome()</code></td></tr><tr><td>单一 Python SDK（<code>claude_code.query</code>）</td><td>khyos 是混合栈，SDK 需双语言适配</td><td>第 8 章双语言接口设计</td></tr></tbody></table>
+<hr>
+<h2 id="十-本文档维护">十、本文档维护<a class="anchor" href="#十-本文档维护" aria-label="锚点">#</a></h2>
+<ul><li><strong>编号</strong>：112（2026-09-16 实测 <code>docs/03_DESIGN_设计/</code> 最大编号 111，112 空闲）</li><li><strong>索引登记</strong>：<code>docs/03_DESIGN_设计/00_INDEX_设计-分类索引.md</code> §二清单</li><li><strong>HTML 产物</strong>：由 <code>npm run docs:build</code> 生成，禁止手写</li><li><strong>格式协议</strong>：<code>docs/10_规范/其它规范/FILE-FORMAT-PROTOCOL.md</code> —— LF 换行、标题不跳级、</li></ul>
+<p>代码块标语言、相对路径链接、行宽 ≤120</p>
+<ul><li><strong>关联计划</strong>：<code>.khy/plans/learn-claude-code-book.json</code> <code>plan.steps[0]</code></li></ul>
+<hr>
+<h2 id="关联规则索引">关联规则索引<a class="anchor" href="#关联规则索引" aria-label="锚点">#</a></h2>
+<ul><li><code>CLAUDE.md</code> —— 红线 R1–R4、行为准则 B1–B3 的语义真源</li><li><code>AGENTS.md</code> —— 工程规则 1–4（RUNTIME-001~004）的语义真源</li><li><a href="../../10_规范/registry/RULES-REGISTRY.json"><code>../10_规范/registry/RULES-REGISTRY.json</code></a> —— 规则单一真源登记表</li><li><a href="../../10_规范/其它规范/FILE-FORMAT-PROTOCOL.html"><code>../10_规范/其它规范/FILE-FORMAT-PROTOCOL.md</code></a> —— 文件格式协议</li><li><code>[DESIGN-ARCH-111] 规则遵守保障机制.md</code> —— 规则登记表的门绑定层</li><li>后续章节：<code>[DESIGN-ARCH-113]</code> 记忆系统、<code>[DESIGN-PROCESS-001]</code> Skills、</li></ul>
+<p><code>[DESIGN-ARCH-115]</code> 子智能体、<code>[DESIGN-ARCH-116]</code> Hooks、<br>  <code>[DESIGN-ARCH-117]</code> MCP、<code>[DESIGN-ARCH-118]</code> Headless、<br>  <code>[DESIGN-ARCH-119]</code> Agent SDK、<code>[DESIGN-ARCH-120]</code> Plugins、<br>  <code>[DESIGN-ARCH-121]</code> 工程化最佳实践</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-111] 规则遵守保障机制.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-111] 规则遵守保障机制（ruleguard）</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-113] AI修改三模态反馈契约-客户模式.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-113] AI 修改三模态反馈契约（客户模式）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-112] khyos-Harness架构对照.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

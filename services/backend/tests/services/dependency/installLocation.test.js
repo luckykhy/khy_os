@@ -12,7 +12,7 @@
 const { describe, test, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 
-const il = require('../../../src/services/dependency/installLocation');
+const il = require('../../../src/services/domain/network/dependency/installLocation.js');
 
 function depsWith({ readonlyMarker = '__never__', dataRoot = '/home/u/.khy' } = {}) {
   return {

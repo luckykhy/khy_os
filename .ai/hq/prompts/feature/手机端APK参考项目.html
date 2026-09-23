@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 手机端APK参考项目.md -->
+<title>📋 提示词正文（复制下面代码块内的全部内容） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>.ai<span class="sep">›</span>hq<span class="sep">›</span>prompts<span class="sep">›</span>feature<span class="sep">›</span>📋 提示词正文（复制下面代码块内的全部内容）</div>
+      <header class="hero reveal"><h1>📋 提示词正文（复制下面代码块内的全部内容）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-2"><a href="#提示词正文-复制下面代码块内的全部内容">📋 提示词正文（复制下面代码块内的全部内容）</a></li><li class="lvl-1"><a href="#khy-os-手机端-apk-参考项目手册-附录">khy-os 手机端 APK — 参考项目手册（附录）</a></li><li class="lvl-2"><a href="#一-参考项目总表">一、参考项目总表</a></li><li class="lvl-2"><a href="#二-逐项目详细参考">二、逐项目详细参考</a></li><li class="lvl-3"><a href="#1-open-webui-最重要参考">1. Open WebUI（最重要参考）</a></li><li class="lvl-3"><a href="#2-lobe-chat-ui-标杆">2. Lobe Chat（UI 标杆）</a></li><li class="lvl-3"><a href="#3-dify-agent-架构参考">3. Dify（Agent 架构参考）</a></li><li class="lvl-3"><a href="#4-librechat-多后端参考">4. LibreChat（多后端参考）</a></li><li class="lvl-3"><a href="#5-nextchat-轻量参考">5. NextChat（轻量参考）</a></li><li class="lvl-2"><a href="#三-khy-os-自身的可复用资产">三、khy-os 自身的可复用资产</a></li><li class="lvl-3"><a href="#可以直接照搬的-api-端点">可以直接照搬的 API 端点</a></li><li class="lvl-3"><a href="#khy-os-前端的可直接复用组件">khy-os 前端的可直接复用组件</a></li><li class="lvl-3"><a href="#khy-os-后端的可复用服务">khy-os 后端的可复用服务</a></li><li class="lvl-2"><a href="#四-关键设计决策参考">四、关键设计决策参考</a></li><li class="lvl-3"><a href="#决策-1-webview-vs-原生-flutter">决策 1：WebView vs 原生 Flutter</a></li><li class="lvl-3"><a href="#决策-2-连接-khy-os-的方式">决策 2：连接 khy-os 的方式</a></li><li class="lvl-3"><a href="#决策-3-离线-llm">决策 3：离线 LLM</a></li><li class="lvl-3"><a href="#决策-4-状态管理">决策 4：状态管理</a></li><li class="lvl-2"><a href="#五-给-ai-的编码规范摘要">五、给 AI 的编码规范摘要</a></li><li class="lvl-2"><a href="#六-快速启动命令">六、快速启动命令</a></li><li class="lvl-2"><a href="#七-参考项目快速链接">七、参考项目快速链接</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!--<br>模板：手机端 APK 参考项目手册（02-手机端APK开发.md 的配套素材）<br>触发：执行 T-013~T-015（手机端 APK 系列）时，配合开发模板一起交给 AI<br>用法：将本文件渲染后的提示词（不含本注释块）复制给任意 AI 编程助手<br>占位符：（无）<br>--&gt;</p>
+<h2 id="提示词正文-复制下面代码块内的全部内容">📋 提示词正文（复制下面代码块内的全部内容）<a class="anchor" href="#提示词正文-复制下面代码块内的全部内容" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">【角色】你是在为 khy-os 手机端 APK（T-013~T-015）做技术选型与实现的工程师，需要从成熟开源项目中精准「抄」核心模式，而不是从零发明。
+
+【任务】按本文件附录的《参考项目手册》逐项核对：每个参考项目抄什么、重点文件在哪、khy-os 自身可复用资产有哪些，然后产出选型结论并进入实现。
+
+【要求】
+1. 优先级以附录总表为准（⭐⭐⭐ 项目必读，⭐ 项目按需）。
+2. 只抄模式与结构，不整包引入依赖；逐文件说明「参考了哪个项目的哪个文件」。
+3. 结论落入实现计划后再动手写代码。
+
+【验证命令】本手册为配套素材，无独立可执行命令；实现代码以 02-手机端APK开发.md 的【验证命令】为准（flutter analyze / flutter test / flutter build apk --release）。
+
+【审查清单】
+□ 每个引入的模式都能在附录手册中指出来源项目与文件
+□ 未引入附录之外的重量级依赖
+□ 选型结论已同步到任务备注</code></pre>
+<hr>
+<h1 id="khy-os-手机端-apk-参考项目手册-附录">khy-os 手机端 APK — 参考项目手册（附录）<a class="anchor" href="#khy-os-手机端-apk-参考项目手册-附录" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档是提示词的配套素材，列出了 AI 应该重点参考的开源项目、<br>每个项目的&quot;抄哪里&quot;以及 khy-os 自身的可复用资产。</p></blockquote>
+<hr>
+<h2 id="一-参考项目总表">一、参考项目总表<a class="anchor" href="#一-参考项目总表" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>优先级</th><th>项目</th><th>GitHub</th><th>语言</th><th>抄什么</th></tr></thead><tbody><tr><td>⭐⭐⭐</td><td><strong>Open WebUI</strong></td><td>open-webui/open-webui</td><td>Python + Svelte</td><td>PWA 配置、Tool Use 架构、移动端适配</td></tr><tr><td>⭐⭐⭐</td><td><strong>Lobe Chat</strong></td><td>lobehub/lobe-chat</td><td>Next.js + React</td><td>移动端 UI 组件、PWA 打包、插件架构</td></tr><tr><td>⭐⭐⭐</td><td><strong>Dify</strong></td><td>langgenius/dify</td><td>Python + Vue</td><td>Agent 工作流引擎、Function Calling 流程</td></tr><tr><td>⭐⭐</td><td><strong>LibreChat</strong></td><td>danny-avila/LibreChat</td><td>Node + React</td><td>多 LLM 后端适配、React Native 移动端（开发中）</td></tr><tr><td>⭐⭐</td><td><strong>NextChat</strong></td><td>ChatGPTNextWeb/ChatGPT-Next-Web</td><td>Next.js</td><td>极简对话 UI、PWA manifest、一键部署</td></tr><tr><td>⭐</td><td><strong>Jan</strong></td><td>janhq/jan</td><td>Electron + React</td><td>本地 LLM 推理架构、模型管理</td></tr><tr><td>⭐</td><td><strong>Flowise</strong></td><td>FlowiseAI/Flowise</td><td>Node + Vue</td><td>可视化 Agent 链构建、LangChain 集成</td></tr></tbody></table>
+<hr>
+<h2 id="二-逐项目详细参考">二、逐项目详细参考<a class="anchor" href="#二-逐项目详细参考" aria-label="锚点">#</a></h2>
+<h3 id="1-open-webui-最重要参考">1. Open WebUI（最重要参考）<a class="anchor" href="#1-open-webui-最重要参考" aria-label="锚点">#</a></h3>
+<p><strong>GitHub</strong>: https://github.com/open-webui/open-webui</p>
+<p><strong>为什么参考它</strong>：</p>
+<ul><li>完整的 PWA 支持，可直接在 Android 上安装为应用</li><li>内置代码执行、RAG、Function Calling</li><li>Docker 一键部署，架构清晰</li></ul>
+<p><strong>抄哪里</strong>：</p>
+<pre><code>open-webui/
+├── src/
+│   ├── lib/                          # 核心逻辑
+│   │   ├── api/                      # ★ API 客户端（OpenAI 兼容格式）
+│   │   ├── stores/                   # ★ 状态管理
+│   │   │   ├── chat.ts              # ★ 对话状态（消息列表、流式处理）
+│   │   │   └── settings.ts          # ★ 设置状态
+│   │   └── utils/
+│   │       └── stream.ts            # ★ SSE 流式解析
+│   ├── components/
+│   │   ├── chat/                     # ★ 聊天 UI 组件
+│   │   │   ├── Message.svelte       # ★ 单条消息渲染
+│   │   │   ├── ChatInput.svelte     # ★ 输入框
+│   │   │   └── ChatContainer.svelte # ★ 消息列表容器
+│   │   └── layout/                   # ★ 布局组件
+│   └── routes/
+│       └── +page.svelte              # ★ 主页面
+├── static/
+│   └── manifest.json                 # ★ PWA manifest（直接抄）
+└── docker-compose.yml                # ★ 部署配置</code></pre>
+<p><strong>关键代码模式</strong>：</p>
+<pre><code class="language-typescript"><span class="hljs-comment">// 流式响应处理（src/lib/utils/stream.ts 模式）</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span>* <span class="hljs-title function_">streamChat</span>(<span class="hljs-params"><span class="hljs-attr">messages</span>: <span class="hljs-title class_">Message</span>[]</span>) {
+  <span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fetch</span>(<span class="hljs-string">&#x27;/api/chat/completions&#x27;</span>, {
+    <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;POST&#x27;</span>,
+    <span class="hljs-attr">headers</span>: { <span class="hljs-string">&#x27;Content-Type&#x27;</span>: <span class="hljs-string">&#x27;application/json&#x27;</span> },
+    <span class="hljs-attr">body</span>: <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>({ model, messages, <span class="hljs-attr">stream</span>: <span class="hljs-literal">true</span> }),
+  });
+
+  <span class="hljs-keyword">const</span> reader = response.<span class="hljs-property">body</span>?.<span class="hljs-title function_">getReader</span>();
+  <span class="hljs-keyword">const</span> decoder = <span class="hljs-keyword">new</span> <span class="hljs-title class_">TextDecoder</span>();
+  <span class="hljs-keyword">let</span> buffer = <span class="hljs-string">&#x27;&#x27;</span>;
+
+  <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) {
+    <span class="hljs-keyword">const</span> { done, value } = <span class="hljs-keyword">await</span> reader!.<span class="hljs-title function_">read</span>();
+    <span class="hljs-keyword">if</span> (done) <span class="hljs-keyword">break</span>;
+
+    buffer += decoder.<span class="hljs-title function_">decode</span>(value, { <span class="hljs-attr">stream</span>: <span class="hljs-literal">true</span> });
+    <span class="hljs-keyword">const</span> lines = buffer.<span class="hljs-title function_">split</span>(<span class="hljs-string">&#x27;\n&#x27;</span>);
+    buffer = lines.<span class="hljs-title function_">pop</span>()!;
+
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> line <span class="hljs-keyword">of</span> lines) {
+      <span class="hljs-keyword">if</span> (line.<span class="hljs-title function_">startsWith</span>(<span class="hljs-string">&#x27;data: &#x27;</span>)) {
+        <span class="hljs-keyword">const</span> data = line.<span class="hljs-title function_">slice</span>(<span class="hljs-number">6</span>);
+        <span class="hljs-keyword">if</span> (data === <span class="hljs-string">&#x27;[DONE]&#x27;</span>) <span class="hljs-keyword">return</span>;
+        <span class="hljs-keyword">const</span> parsed = <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(data);
+        <span class="hljs-keyword">yield</span> parsed.<span class="hljs-property">choices</span>[<span class="hljs-number">0</span>]?.<span class="hljs-property">delta</span>?.<span class="hljs-property">content</span> || <span class="hljs-string">&#x27;&#x27;</span>;
+      }
+    }
+  }
+}</code></pre>
+<p><strong>PWA manifest 关键字段</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;khy-os Mobile&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;short_name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;khy-os&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;start_url&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;display&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;standalone&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;background_color&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;#0d1117&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;theme_color&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;#58a6ff&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;icons&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;src&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/icon-192.png&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;sizes&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;192x192&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;image/png&quot;</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;src&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/icon-512.png&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;sizes&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;512x512&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;image/png&quot;</span> <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+<h3 id="2-lobe-chat-ui-标杆">2. Lobe Chat（UI 标杆）<a class="anchor" href="#2-lobe-chat-ui-标杆" aria-label="锚点">#</a></h3>
+<p><strong>GitHub</strong>: https://github.com/lobehub/lobe-chat</p>
+<p><strong>为什么参考它</strong>：</p>
+<ul><li>移动端体验最好的 AI 聊天界面</li><li>优雅的暗色主题、动画过渡</li><li>插件系统架构清晰</li></ul>
+<p><strong>抄哪里</strong>：</p>
+<pre><code>lobe-chat/
+├── src/
+│   ├── features/
+│   │   ├── Chat/                     # ★ 聊天核心
+│   │   │   ├── index.tsx
+│   │   │   ├── components/
+│   │   │   │   ├── ChatInput/        # ★ 输入框（支持 Shift+Enter 多行）
+│   │   │   │   ├── ChatList/         # ★ 消息列表
+│   │   │   │   └── Thinking/
+│   │   │   └── hooks/
+│   │   │       ├── useChat.ts        # ★ 对话 hook（流式、停止、重试）
+│   │   │       └── useChatContext.ts # ★ 上下文管理
+│   │   └── Agent/
+│   │       └── components/
+│   │           └── PluginRender/     # ★ 工具调用渲染
+│   ├── components/
+│   │   ├── Markdown/                 # ★ Markdown 渲染（代码块+复制按钮）
+│   │   │   ├── Markdown.tsx
+│   │   │   ├── CodeBlock.tsx         # ★ 代码块（语言标签 + 复制）
+│   │   │   └── Citation/
+│   │   └── Mobile/                   # ★ 移动端专用组件
+│   │       ├── TabBar/
+│   │       └── PullRefresh/
+│   └── hooks/
+│       └── useMobile.ts              # ★ 移动端检测 hook
+├── public/
+│   └── manifest.json                 # ★ PWA manifest
+└── app/
+    └── provider.tsx                   # ★ 全局状态（主题、语言等）</code></pre>
+<p><strong>关键代码模式</strong>：</p>
+<pre><code class="language-typescript"><span class="hljs-comment">// useChat.ts 模式（features/Chat/hooks/useChat.ts）</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">useChat</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> [messages, setMessages] = useState&lt;<span class="hljs-title class_">Message</span>[]&gt;([]);
+  <span class="hljs-keyword">const</span> [loading, setLoading] = <span class="hljs-title function_">useState</span>(<span class="hljs-literal">false</span>);
+  <span class="hljs-keyword">const</span> [abortController, setAbortController] = useState&lt;<span class="hljs-title class_">AbortController</span> | <span class="hljs-literal">null</span>&gt;(<span class="hljs-literal">null</span>);
+
+  <span class="hljs-keyword">const</span> <span class="hljs-title function_">sendMessage</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params"><span class="hljs-attr">content</span>: <span class="hljs-built_in">string</span></span>) =&gt; {
+    <span class="hljs-keyword">const</span> userMessage = { <span class="hljs-attr">role</span>: <span class="hljs-string">&#x27;user&#x27;</span>, content };
+    <span class="hljs-title function_">setMessages</span>(<span class="hljs-function"><span class="hljs-params">prev</span> =&gt;</span> [...prev, userMessage]);
+    <span class="hljs-title function_">setLoading</span>(<span class="hljs-literal">true</span>);
+
+    <span class="hljs-keyword">const</span> controller = <span class="hljs-keyword">new</span> <span class="hljs-title class_">AbortController</span>();
+    <span class="hljs-title function_">setAbortController</span>(controller);
+
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fetch</span>(<span class="hljs-string">&#x27;/api/chat&#x27;</span>, {
+        <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;POST&#x27;</span>,
+        <span class="hljs-attr">headers</span>: { <span class="hljs-string">&#x27;Content-Type&#x27;</span>: <span class="hljs-string">&#x27;application/json&#x27;</span> },
+        <span class="hljs-attr">body</span>: <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>({
+          <span class="hljs-attr">messages</span>: [...messages, userMessage],
+          <span class="hljs-attr">model</span>: selectedModel,
+        }),
+        <span class="hljs-attr">signal</span>: controller.<span class="hljs-property">signal</span>,
+      });
+
+      <span class="hljs-comment">// 流式读取</span>
+      <span class="hljs-keyword">const</span> reader = response.<span class="hljs-property">body</span>?.<span class="hljs-title function_">getReader</span>();
+      <span class="hljs-keyword">const</span> decoder = <span class="hljs-keyword">new</span> <span class="hljs-title class_">TextDecoder</span>();
+      <span class="hljs-keyword">let</span> assistantContent = <span class="hljs-string">&#x27;&#x27;</span>;
+
+      <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) {
+        <span class="hljs-keyword">const</span> { done, value } = <span class="hljs-keyword">await</span> reader!.<span class="hljs-title function_">read</span>();
+        <span class="hljs-keyword">if</span> (done) <span class="hljs-keyword">break</span>;
+        <span class="hljs-keyword">const</span> text = decoder.<span class="hljs-title function_">decode</span>(value);
+        assistantContent += text;
+        <span class="hljs-title function_">setMessages</span>(<span class="hljs-function"><span class="hljs-params">prev</span> =&gt;</span> {
+          <span class="hljs-keyword">const</span> last = prev[prev.<span class="hljs-property">length</span> - <span class="hljs-number">1</span>];
+          <span class="hljs-keyword">if</span> (last?.<span class="hljs-property">role</span> === <span class="hljs-string">&#x27;assistant&#x27;</span>) {
+            <span class="hljs-keyword">return</span> [...prev.<span class="hljs-title function_">slice</span>(<span class="hljs-number">0</span>, -<span class="hljs-number">1</span>), { ...last, <span class="hljs-attr">content</span>: assistantContent }];
+          }
+          <span class="hljs-keyword">return</span> [...prev, { <span class="hljs-attr">role</span>: <span class="hljs-string">&#x27;assistant&#x27;</span>, <span class="hljs-attr">content</span>: assistantContent }];
+        });
+      }
+    } <span class="hljs-keyword">catch</span> (e) {
+      <span class="hljs-keyword">if</span> (e.<span class="hljs-property">name</span> !== <span class="hljs-string">&#x27;AbortError&#x27;</span>) <span class="hljs-keyword">throw</span> e;
+    } <span class="hljs-keyword">finally</span> {
+      <span class="hljs-title function_">setLoading</span>(<span class="hljs-literal">false</span>);
+      <span class="hljs-title function_">setAbortController</span>(<span class="hljs-literal">null</span>);
+    }
+  };
+
+  <span class="hljs-keyword">const</span> <span class="hljs-title function_">stop</span> = (<span class="hljs-params"></span>) =&gt; abortController?.<span class="hljs-title function_">abort</span>();
+
+  <span class="hljs-keyword">return</span> { messages, loading, sendMessage, stop };
+}</code></pre>
+<p><strong>移动端适配关键</strong>：</p>
+<pre><code class="language-css"><span class="hljs-comment">/* 移动端：底部安全区 + 固定输入栏 */</span>
+<span class="hljs-selector-class">.chat-container</span> {
+  <span class="hljs-attribute">display</span>: flex;
+  <span class="hljs-attribute">flex-direction</span>: column;
+  <span class="hljs-attribute">height</span>: <span class="hljs-number">100</span>dvh; <span class="hljs-comment">/* 动态视口高度 */</span>
+  <span class="hljs-attribute">padding-bottom</span>: <span class="hljs-built_in">env</span>(safe-area-inset-bottom);
+}
+
+<span class="hljs-selector-class">.chat-messages</span> {
+  <span class="hljs-attribute">flex</span>: <span class="hljs-number">1</span>;
+  <span class="hljs-attribute">overflow-y</span>: auto;
+  -webkit-<span class="hljs-attribute">overflow</span>-scrolling: touch;
+}
+
+<span class="hljs-selector-class">.chat-input-bar</span> {
+  <span class="hljs-attribute">position</span>: sticky;
+  <span class="hljs-attribute">bottom</span>: <span class="hljs-number">0</span>;
+  <span class="hljs-attribute">padding</span>: <span class="hljs-number">8px</span> <span class="hljs-number">16px</span>;
+  <span class="hljs-attribute">padding-bottom</span>: <span class="hljs-built_in">calc</span>(<span class="hljs-number">8px</span> + <span class="hljs-built_in">env</span>(safe-area-inset-bottom));
+  <span class="hljs-attribute">background</span>: <span class="hljs-built_in">var</span>(--color-background);
+}</code></pre>
+<hr>
+<h3 id="3-dify-agent-架构参考">3. Dify（Agent 架构参考）<a class="anchor" href="#3-dify-agent-架构参考" aria-label="锚点">#</a></h3>
+<p><strong>GitHub</strong>: https://github.com/langgenius/dify</p>
+<p><strong>为什么参考它</strong>：</p>
+<ul><li>最完整的开源 Agent 工作流引擎</li><li>代码解释器、HTTP 请求、知识库检索等工具实现</li><li>API 设计清晰，可直接参考</li></ul>
+<p><strong>抄哪里</strong>：</p>
+<pre><code>dify/
+├── api/
+│   ├── controllers/
+│   │   └── service_api/              # ★ API 路由设计
+│   ├── services/
+│   │   ├── agent_service.py          # ★ Agent 服务（工具调用循环）
+│   │   ├── llm/                      # ★ LLM 提供商适配
+│   │   │   ├── model_provider_mapping.py  # ★ 模型映射表
+│   │   │   └── utils/                # ★ 流式处理
+│   │   └── tools/                    # ★ 工具系统
+│   │       ├── builtin_tool_manager.py
+│   │       ├── tool_file_handler.py
+│   │       └── tool_parameter.py
+│   └── models/
+│       └── agent.py                  # ★ Agent 数据模型
+├── web/
+│   ├── app/
+│   │   └── components/
+│   │       └── base/
+│   │           └── chat/
+│   │               ├── ChatInput.tsx # ★ 聊天输入
+│   │               ├── ChatList.tsx  # ★ 消息列表
+│   │               └── Tool.tsx      # ★ 工具调用展示</code></pre>
+<p><strong>关键代码模式（Agent 工具调用循环）</strong>：</p>
+<pre><code class="language-python"><span class="hljs-comment"># agent_service.py 模式（简化版）</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">def</span> <span class="hljs-title function_">run_agent</span>(<span class="hljs-params">
+    self,
+    messages: <span class="hljs-built_in">list</span>[<span class="hljs-built_in">dict</span>],
+    model: <span class="hljs-built_in">str</span>,
+    tools: <span class="hljs-built_in">list</span>[<span class="hljs-built_in">dict</span>],
+</span>) -&gt; AsyncIterator[<span class="hljs-built_in">str</span>]:
+    <span class="hljs-string">&quot;&quot;&quot;Agent 主循环：LLM 生成 → 工具调用 → 结果回填 → 继续生成&quot;&quot;&quot;</span>
+    conversation_messages = messages.copy()
+
+    <span class="hljs-keyword">while</span> <span class="hljs-literal">True</span>:
+        <span class="hljs-comment"># 1. 调用 LLM</span>
+        response = <span class="hljs-keyword">await</span> <span class="hljs-variable language_">self</span>.llm.chat(
+            model=model,
+            messages=conversation_messages,
+            tools=tools,  <span class="hljs-comment"># Function Calling</span>
+            stream=<span class="hljs-literal">True</span>,
+        )
+
+        <span class="hljs-comment"># 2. 流式输出文本</span>
+        full_text = <span class="hljs-string">&quot;&quot;</span>
+        tool_calls = []
+
+        <span class="hljs-keyword">async</span> <span class="hljs-keyword">for</span> chunk <span class="hljs-keyword">in</span> response:
+            delta = chunk.choices[<span class="hljs-number">0</span>].delta
+            <span class="hljs-keyword">if</span> delta.content:
+                full_text += delta.content
+                <span class="hljs-keyword">yield</span> <span class="hljs-string">f&quot;data: <span class="hljs-subst">{json.dumps({<span class="hljs-string">&#x27;type&#x27;</span>: <span class="hljs-string">&#x27;text&#x27;</span>, <span class="hljs-string">&#x27;content&#x27;</span>: delta.content}</span>)}\n\n&quot;</span>
+            <span class="hljs-keyword">if</span> delta.tool_calls:
+                tool_calls.extend(delta.tool_calls)
+
+        <span class="hljs-comment"># 3. 如果有工具调用，执行它们</span>
+        <span class="hljs-keyword">if</span> tool_calls:
+            <span class="hljs-keyword">for</span> call <span class="hljs-keyword">in</span> tool_calls:
+                tool_name = call.function.name
+                tool_args = json.loads(call.function.arguments)
+
+                <span class="hljs-comment"># 执行工具</span>
+                result = <span class="hljs-keyword">await</span> <span class="hljs-variable language_">self</span>.execute_tool(tool_name, tool_args)
+
+                <span class="hljs-comment"># 回填到对话</span>
+                conversation_messages.append({
+                    <span class="hljs-string">&quot;role&quot;</span>: <span class="hljs-string">&quot;assistant&quot;</span>,
+                    <span class="hljs-string">&quot;tool_calls&quot;</span>: [call],
+                })
+                conversation_messages.append({
+                    <span class="hljs-string">&quot;role&quot;</span>: <span class="hljs-string">&quot;tool&quot;</span>,
+                    <span class="hljs-string">&quot;tool_call_id&quot;</span>: call.<span class="hljs-built_in">id</span>,
+                    <span class="hljs-string">&quot;content&quot;</span>: <span class="hljs-built_in">str</span>(result),
+                })
+
+                <span class="hljs-keyword">yield</span> <span class="hljs-string">f&quot;data: <span class="hljs-subst">{json.dumps({<span class="hljs-string">&#x27;type&#x27;</span>: <span class="hljs-string">&#x27;tool&#x27;</span>, <span class="hljs-string">&#x27;name&#x27;</span>: tool_name, <span class="hljs-string">&#x27;result&#x27;</span>: result}</span>)}\n\n&quot;</span>
+        <span class="hljs-keyword">else</span>:
+            <span class="hljs-comment"># 没有工具调用，对话结束</span>
+            <span class="hljs-keyword">break</span></code></pre>
+<p><strong>工具注册模式</strong>：</p>
+<pre><code class="language-python"><span class="hljs-comment"># 工具定义（OpenAI Function Calling 格式）</span>
+TOOL_DEFINITIONS = [
+    {
+        <span class="hljs-string">&quot;type&quot;</span>: <span class="hljs-string">&quot;function&quot;</span>,
+        <span class="hljs-string">&quot;function&quot;</span>: {
+            <span class="hljs-string">&quot;name&quot;</span>: <span class="hljs-string">&quot;web_search&quot;</span>,
+            <span class="hljs-string">&quot;description&quot;</span>: <span class="hljs-string">&quot;搜索互联网获取实时信息&quot;</span>,
+            <span class="hljs-string">&quot;parameters&quot;</span>: {
+                <span class="hljs-string">&quot;type&quot;</span>: <span class="hljs-string">&quot;object&quot;</span>,
+                <span class="hljs-string">&quot;properties&quot;</span>: {
+                    <span class="hljs-string">&quot;query&quot;</span>: {
+                        <span class="hljs-string">&quot;type&quot;</span>: <span class="hljs-string">&quot;string&quot;</span>,
+                        <span class="hljs-string">&quot;description&quot;</span>: <span class="hljs-string">&quot;搜索关键词&quot;</span>,
+                    }
+                },
+                <span class="hljs-string">&quot;required&quot;</span>: [<span class="hljs-string">&quot;query&quot;</span>],
+            },
+        },
+    },
+    <span class="hljs-comment"># ... 更多工具</span>
+]
+
+<span class="hljs-comment"># 工具执行分发</span>
+TOOL_HANDLERS = {
+    <span class="hljs-string">&quot;web_search&quot;</span>: <span class="hljs-variable language_">self</span>._tool_web_search,
+    <span class="hljs-string">&quot;code_interpreter&quot;</span>: <span class="hljs-variable language_">self</span>._tool_code_interpreter,
+    <span class="hljs-string">&quot;http_request&quot;</span>: <span class="hljs-variable language_">self</span>._tool_http_request,
+}
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">def</span> <span class="hljs-title function_">execute_tool</span>(<span class="hljs-params">self, name: <span class="hljs-built_in">str</span>, args: <span class="hljs-built_in">dict</span></span>) -&gt; <span class="hljs-built_in">str</span>:
+    handler = TOOL_HANDLERS.get(name)
+    <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> handler:
+        <span class="hljs-keyword">return</span> <span class="hljs-string">f&quot;Error: unknown tool <span class="hljs-subst">{name}</span>&quot;</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">await</span> handler(args)</code></pre>
+<hr>
+<h3 id="4-librechat-多后端参考">4. LibreChat（多后端参考）<a class="anchor" href="#4-librechat-多后端参考" aria-label="锚点">#</a></h3>
+<p><strong>GitHub</strong>: https://github.com/danny-avila/LibreChat</p>
+<p><strong>为什么参考它</strong>：</p>
+<ul><li>支持最多的 LLM 后端（OpenAI / Anthropic / Google / Ollama / Azure）</li><li>正在开发 React Native 移动端</li><li>API 设计简洁</li></ul>
+<p><strong>抄哪里</strong>：</p>
+<pre><code>librechat/
+├── api/
+│   ├── routes/
+│   │   ├── chat.js                   # ★ 聊天路由（多供应商）
+│   │   ├── models.js                 # ★ 模型列表接口
+│   │   └── endpoints/                # ★ 各供应商端点配置
+│   ├── services/
+│   │   ├── chatService.js            # ★ 聊天服务（流式代理）
+│   │   └── modelService.js           # ★ 模型服务
+│   └── middleware/
+│       └── parseEndpoint.js          # ★ 端点解析（从 env 或配置）
+└── client/
+    └── src/
+        ├── components/
+        │   └── Chat/
+        │       ├── ChatInput.jsx     # ★ 输入组件
+        │       └── ChatMessages.jsx  # ★ 消息组件
+        └── hooks/
+            └── useChat.js            # ★ 对话 hook</code></pre>
+<p><strong>关键代码模式（多供应商路由）</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// chatService.js 模式</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span>* <span class="hljs-title function_">streamChat</span>(<span class="hljs-params">{ messages, model, provider }</span>) {
+  <span class="hljs-keyword">const</span> endpoint = <span class="hljs-title function_">getEndpoint</span>(provider); <span class="hljs-comment">// 从配置获取 endpoint</span>
+  <span class="hljs-keyword">const</span> apiKey = <span class="hljs-title function_">getApiKey</span>(provider);     <span class="hljs-comment">// 从配置获取 key</span>
+
+  <span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fetch</span>(<span class="hljs-string">`<span class="hljs-subst">${endpoint}</span>/chat/completions`</span>, {
+    <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;POST&#x27;</span>,
+    <span class="hljs-attr">headers</span>: {
+      <span class="hljs-string">&#x27;Content-Type&#x27;</span>: <span class="hljs-string">&#x27;application/json&#x27;</span>,
+      <span class="hljs-string">&#x27;Authorization&#x27;</span>: <span class="hljs-string">`Bearer <span class="hljs-subst">${apiKey}</span>`</span>,
+    },
+    <span class="hljs-attr">body</span>: <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>({
+      model,
+      messages,
+      <span class="hljs-attr">stream</span>: <span class="hljs-literal">true</span>,
+    }),
+  });
+
+  <span class="hljs-comment">// 解析不同供应商的流式格式（OpenAI / Anthropic / Google 格式差异）</span>
+  <span class="hljs-keyword">yield</span>* <span class="hljs-title function_">parseStream</span>(response.<span class="hljs-property">body</span>, provider);
+}</code></pre>
+<hr>
+<h3 id="5-nextchat-轻量参考">5. NextChat（轻量参考）<a class="anchor" href="#5-nextchat-轻量参考" aria-label="锚点">#</a></h3>
+<p><strong>GitHub</strong>: https://github.com/ChatGPTNextWeb/ChatGPT-Next-Web</p>
+<p><strong>为什么参考它</strong>：</p>
+<ul><li>极简架构，单个 Next.js 项目</li><li>配置简单，环境变量驱动</li><li>PWA 配置完整</li></ul>
+<p><strong>抄哪里</strong>：</p>
+<pre><code>chatgpt-next-web/
+├── app/
+│   ├── api/
+│   │   └── chat/
+│   │       └── route.ts             # ★ 流式聊天 API 端点
+│   ├── globals.css                  # ★ 全局样式
+│   └── page.tsx                     # ★ 主页面
+├── public/
+│   ├── manifest.json                # ★ PWA manifest
+│   └── icon-*.png                   # ★ 图标
+├── middleware.ts                    # ★ 认证中间件
+├── next.config.js                   # ★ PWA 配置
+├── .env.local.example               # ★ 配置模板
+└── package.json</code></pre>
+<p><strong>关键代码模式（流式 API）</strong>：</p>
+<pre><code class="language-typescript"><span class="hljs-comment">// app/api/chat/route.ts</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">POST</span>(<span class="hljs-params"><span class="hljs-attr">req</span>: <span class="hljs-title class_">Request</span></span>) {
+  <span class="hljs-keyword">const</span> { messages, model } = <span class="hljs-keyword">await</span> req.<span class="hljs-title function_">json</span>();
+
+  <span class="hljs-keyword">const</span> encoder = <span class="hljs-keyword">new</span> <span class="hljs-title class_">TextEncoder</span>();
+  <span class="hljs-keyword">const</span> stream = <span class="hljs-keyword">new</span> <span class="hljs-title class_">ReadableStream</span>({
+    <span class="hljs-keyword">async</span> <span class="hljs-title function_">start</span>(<span class="hljs-params">controller</span>) {
+      <span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fetch</span>(<span class="hljs-string">&#x27;https://api.openai.com/v1/chat/completions&#x27;</span>, {
+        <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;POST&#x27;</span>,
+        <span class="hljs-attr">headers</span>: {
+          <span class="hljs-string">&#x27;Content-Type&#x27;</span>: <span class="hljs-string">&#x27;application/json&#x27;</span>,
+          <span class="hljs-string">&#x27;Authorization&#x27;</span>: <span class="hljs-string">`Bearer <span class="hljs-subst">${process.env.OPENAI_API_KEY}</span>`</span>,
+        },
+        <span class="hljs-attr">body</span>: <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>({ model, messages, <span class="hljs-attr">stream</span>: <span class="hljs-literal">true</span> }),
+      });
+
+      <span class="hljs-keyword">const</span> reader = response.<span class="hljs-property">body</span>?.<span class="hljs-title function_">getReader</span>();
+      <span class="hljs-keyword">const</span> decoder = <span class="hljs-keyword">new</span> <span class="hljs-title class_">TextDecoder</span>();
+
+      <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) {
+        <span class="hljs-keyword">const</span> { done, value } = <span class="hljs-keyword">await</span> reader!.<span class="hljs-title function_">read</span>();
+        <span class="hljs-keyword">if</span> (done) <span class="hljs-keyword">break</span>;
+
+        <span class="hljs-keyword">const</span> text = decoder.<span class="hljs-title function_">decode</span>(value);
+        <span class="hljs-keyword">const</span> lines = text.<span class="hljs-title function_">split</span>(<span class="hljs-string">&#x27;\n&#x27;</span>).<span class="hljs-title function_">filter</span>(<span class="hljs-function"><span class="hljs-params">line</span> =&gt;</span> line.<span class="hljs-title function_">startsWith</span>(<span class="hljs-string">&#x27;data: &#x27;</span>));
+
+        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> line <span class="hljs-keyword">of</span> lines) {
+          <span class="hljs-keyword">const</span> data = line.<span class="hljs-title function_">slice</span>(<span class="hljs-number">6</span>);
+          <span class="hljs-keyword">if</span> (data === <span class="hljs-string">&#x27;[DONE]&#x27;</span>) {
+            controller.<span class="hljs-title function_">close</span>();
+            <span class="hljs-keyword">return</span>;
+          }
+          <span class="hljs-keyword">const</span> parsed = <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(data);
+          <span class="hljs-keyword">const</span> content = parsed.<span class="hljs-property">choices</span>[<span class="hljs-number">0</span>]?.<span class="hljs-property">delta</span>?.<span class="hljs-property">content</span> || <span class="hljs-string">&#x27;&#x27;</span>;
+          <span class="hljs-keyword">if</span> (content) {
+            controller.<span class="hljs-title function_">enqueue</span>(encoder.<span class="hljs-title function_">encode</span>(content));
+          }
+        }
+      }
+      controller.<span class="hljs-title function_">close</span>();
+    },
+  });
+
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Response</span>(stream, {
+    <span class="hljs-attr">headers</span>: {
+      <span class="hljs-string">&#x27;Content-Type&#x27;</span>: <span class="hljs-string">&#x27;text/event-stream&#x27;</span>,
+      <span class="hljs-string">&#x27;Cache-Control&#x27;</span>: <span class="hljs-string">&#x27;no-cache&#x27;</span>,
+      <span class="hljs-string">&#x27;Connection&#x27;</span>: <span class="hljs-string">&#x27;keep-alive&#x27;</span>,
+    },
+  });
+}</code></pre>
+<hr>
+<h2 id="三-khy-os-自身的可复用资产">三、khy-os 自身的可复用资产<a class="anchor" href="#三-khy-os-自身的可复用资产" aria-label="锚点">#</a></h2>
+<h3 id="可以直接照搬的-api-端点">可以直接照搬的 API 端点<a class="anchor" href="#可以直接照搬的-api-端点" aria-label="锚点">#</a></h3>
+<p>khy-os 后端已有完整的 REST API，Flutter 端直接调用：</p>
+<table><thead><tr><th>端点</th><th>方法</th><th>说明</th><th>khy-os 实现位置</th></tr></thead><tbody><tr><td><code>/api/ai/prompts</code></td><td>GET</td><td>获取提示词列表（支持 status/source/q 过滤）</td><td><code>aiManagementServer.js:2383</code></td></tr><tr><td><code>/api/ai/prompts/builtin</code></td><td>GET</td><td>内置 12 角度模板（公开，无需认证）</td><td><code>promptTemplateCatalog.js</code></td></tr><tr><td><code>/api/ai/prompts</code></td><td>POST</td><td>创建提示词</td><td><code>aiManagementServer.js:2390</code></td></tr><tr><td><code>/api/ai/prompts/{id}</code></td><td>PUT</td><td>更新提示词</td><td><code>aiManagementConversationsPrompts.js</code></td></tr><tr><td><code>/api/ai/prompts/{id}</code></td><td>DELETE</td><td>删除提示词</td><td>同上</td></tr><tr><td><code>/api/ai/prompts/{id}/use</code></td><td>POST</td><td>记录使用次数</td><td>同上</td></tr><tr><td><code>/api/tools</code></td><td>GET</td><td>获取可用工具列表</td><td><code>aiManagementServer.js:2401</code></td></tr><tr><td><code>/api/ai/conversations</code></td><td>GET</td><td>获取对话历史</td><td>同上</td></tr><tr><td><code>/api/usage</code></td><td>GET</td><td>Token 用量统计</td><td>同上</td></tr><tr><td><code>/api/models/{provider}</code></td><td>GET</td><td>获取供应商模型列表</td><td><code>aiManagementServer.js:2432</code></td></tr></tbody></table>
+<h3 id="khy-os-前端的可直接复用组件">khy-os 前端的可直接复用组件<a class="anchor" href="#khy-os-前端的可直接复用组件" aria-label="锚点">#</a></h3>
+<p>khy-os 已有 <code>apps/ai-frontend/</code>（Vue 3），其中的以下组件/逻辑可以移植到 Flutter：</p>
+<table><thead><tr><th>Vue 组件</th><th>Flutter 等价</th><th>可复用逻辑</th></tr></thead><tbody><tr><td><code>AIChat.vue</code></td><td><code>ChatPage</code></td><td>消息列表、流式渲染、Markdown</td></tr><tr><td><code>PromptLibrary.vue</code></td><td><code>PromptsPage</code></td><td>提示词 CRUD、分类、搜索</td></tr><tr><td><code>ChatInputBar.vue</code></td><td><code>ChatInput</code></td><td>多行输入、发送、语音按钮</td></tr><tr><td><code>KhyOsTerminal.vue</code></td><td>第二版</td><td>终端模拟（xterm.js → flutter_terminal）</td></tr><tr><td><code>usePromptLibrary.js</code></td><td><code>PromptProvider</code></td><td>提示词状态管理</td></tr><tr><td><code>useChatConversations.js</code></td><td><code>ChatProvider</code></td><td>对话管理</td></tr><tr><td><code>useGateway.js</code></td><td><code>KhyOsClient</code></td><td>API 请求封装</td></tr><tr><td><code>newapi-theme.css</code></td><td><code>theme.dart</code></td><td>深色主题色值</td></tr></tbody></table>
+<h3 id="khy-os-后端的可复用服务">khy-os 后端的可复用服务<a class="anchor" href="#khy-os-后端的可复用服务" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>服务</th><th>作用</th><th>复用方式</th></tr></thead><tbody><tr><td><code>multiFreeService.js</code></td><td>多供应商 API 路由</td><td>Flutter 端参考其路由逻辑</td></tr><tr><td><code>promptTemplateCatalog.js</code></td><td>12 角度内置模板</td><td>直接 JSON 移植到 Flutter</td></tr><tr><td><code>promptLibraryService.js</code></td><td>提示词 CRUD</td><td>参考接口设计</td></tr><tr><td><code>toolCalling.js</code></td><td>工具调用循环</td><td>Flutter 端实现类似逻辑</td></tr><tr><td><code>promptAutoCapture.js</code></td><td>AI 自动发现好提示词</td><td>第二版加入</td></tr></tbody></table>
+<hr>
+<h2 id="四-关键设计决策参考">四、关键设计决策参考<a class="anchor" href="#四-关键设计决策参考" aria-label="锚点">#</a></h2>
+<h3 id="决策-1-webview-vs-原生-flutter">决策 1：WebView vs 原生 Flutter<a class="anchor" href="#决策-1-webview-vs-原生-flutter" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>方案</th><th>优点</th><th>缺点</th><th>结论</th></tr></thead><tbody><tr><td>WebView 加载 khy-os Web UI</td><td>零前端开发，直接用</td><td>性能差、离线不可用、APK 体积大</td><td>❌ 不推荐</td></tr><tr><td>Flutter 原生 + 调用 khy-os API</td><td>性能好、离线可用、APK 小</td><td>需要开发 UI</td><td>✅ <strong>推荐</strong></td></tr><tr><td>Capacitor 打包 PWA</td><td>快速、复用 Web 代码</td><td>体验一般</td><td>⚠️ 备选</td></tr></tbody></table>
+<p><strong>最终决定：Flutter 原生</strong></p>
+<h3 id="决策-2-连接-khy-os-的方式">决策 2：连接 khy-os 的方式<a class="anchor" href="#决策-2-连接-khy-os-的方式" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>方式</th><th>复杂度</th><th>用户体验</th><th>推荐</th></tr></thead><tbody><tr><td>手动输入 IP + Port</td><td>低</td><td>差</td><td>备选</td></tr><tr><td>扫描二维码（khy-os 终端显示）</td><td>中</td><td>好</td><td>✅ <strong>主推</strong></td></tr><tr><td>NFC 触碰配对</td><td>高</td><td>极好</td><td>第三版</td></tr><tr><td>账号密码登录</td><td>中</td><td>中</td><td>备选</td></tr></tbody></table>
+<p><strong>最终决定：二维码为主 + 手动输入备选</strong></p>
+<h3 id="决策-3-离线-llm">决策 3：离线 LLM<a class="anchor" href="#决策-3-离线-llm" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>方案</th><th>优点</th><th>缺点</th><th>结论</th></tr></thead><tbody><tr><td>Ollama（需要 Termux）</td><td>完整 LLM 生态</td><td>需要 Linux 环境，设置复杂</td><td>⚠️ 高级选项</td></tr><tr><td>llama.cpp（直接打包）</td><td>纯原生，无需 Termux</td><td>APK 体积大（&gt;100MB）</td><td>❌ 太重</td></tr><tr><td>仅在线模式（第一版）</td><td>最简单</td><td>需要网络</td><td>✅ <strong>第一版</strong></td></tr></tbody></table>
+<p><strong>最终决定：第一版仅在线，第二版加 Ollama/Termux 集成</strong></p>
+<h3 id="决策-4-状态管理">决策 4：状态管理<a class="anchor" href="#决策-4-状态管理" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>方案</th><th>适合</th><th>结论</th></tr></thead><tbody><tr><td>Riverpod</td><td>Flutter 推荐，编译安全</td><td>✅ <strong>推荐</strong></td></tr><tr><td>Bloc</td><td>企业级，样板多</td><td>❌ 太重</td></tr><tr><td>Provider</td><td>简单但不够强</td><td>⚠️ 小项目可用</td></tr><tr><td>GetX</td><td>争议大</td><td>❌ 不推荐</td></tr></tbody></table>
+<p><strong>最终决定：Riverpod</strong></p>
+<hr>
+<h2 id="五-给-ai-的编码规范摘要">五、给 AI 的编码规范摘要<a class="anchor" href="#五-给-ai-的编码规范摘要" aria-label="锚点">#</a></h2>
+<p>在写 Flutter 代码时，AI 应遵循：</p>
+<pre><code class="language-dart"><span class="hljs-comment">// 1. 状态管理用 Riverpod</span>
+<span class="hljs-keyword">final</span> chatProvider = <span class="hljs-title class_">StateNotifierProvider</span>&lt;<span class="hljs-title class_">ChatNotifier</span>, <span class="hljs-title class_">ChatState</span>&gt;((ref) {
+  <span class="hljs-keyword">return</span> <span class="hljs-title class_">ChatNotifier</span>(ref);
+});
+
+<span class="hljs-comment">// 2. API 调用统一封装</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">KhyOsApi</span> </span>{
+  <span class="hljs-keyword">final</span> <span class="hljs-title class_">Dio</span> _dio = <span class="hljs-title class_">Dio</span>(<span class="hljs-title class_">BaseOptions</span>(
+    baseUrl: baseUrl,
+    connectTimeout: <span class="hljs-number">30000</span>,
+  ));
+
+  <span class="hljs-title class_">Future</span>&lt;<span class="hljs-title class_">Stream</span>&lt;<span class="hljs-title class_">String</span>&gt;&gt; <span class="hljs-title function_">chatStream</span>(<span class="hljs-title class_">List</span>&lt;<span class="hljs-title class_">Message</span>&gt; messages) <span class="hljs-keyword">async</span> {
+    <span class="hljs-keyword">final</span> response = <span class="hljs-keyword">await</span> _dio.<span class="hljs-title function_">post</span>(
+      <span class="hljs-string">&#x27;/api/ai/chat&#x27;</span>,
+      data: {<span class="hljs-string">&#x27;messages&#x27;</span>: messages, <span class="hljs-string">&#x27;stream&#x27;</span>: <span class="hljs-keyword">true</span>},
+      options: <span class="hljs-title class_">Options</span>(responseType: <span class="hljs-title class_">ResponseType</span>.stream),
+    );
+    <span class="hljs-keyword">return</span> response.data.stream
+        .<span class="hljs-title function_">transform</span>(utf8.decoder)
+        .<span class="hljs-title function_">transform</span>(<span class="hljs-keyword">const</span> <span class="hljs-title class_">LineSplitter</span>())
+        .<span class="hljs-title function_">where</span>((line) =&gt; line.<span class="hljs-title function_">startsWith</span>(<span class="hljs-string">&#x27;data: &#x27;</span>))
+        .<span class="hljs-title function_">map</span>((line) =&gt; <span class="hljs-title function_">jsonDecode</span>(line.<span class="hljs-title function_">substring</span>(<span class="hljs-number">6</span>)));
+  }
+}
+
+<span class="hljs-comment">// 3. 本地数据库用 sqflite</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AppDatabase</span> </span>{
+  <span class="hljs-keyword">static</span> <span class="hljs-title class_">Future</span>&lt;<span class="hljs-title class_">AppDatabase</span>&gt; <span class="hljs-title function_">getInstance</span>() <span class="hljs-keyword">async</span> {
+    <span class="hljs-keyword">final</span> dbPath = <span class="hljs-keyword">await</span> <span class="hljs-title function_">getDatabasesPath</span>();
+    <span class="hljs-keyword">final</span> path = <span class="hljs-string">&#x27;<span class="hljs-subst">$dbPath</span>/khy_os_mobile.db&#x27;</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-title class_">AppDatabase</span>.<span class="hljs-title function_">_</span>(<span class="hljs-keyword">await</span> <span class="hljs-title function_">openDatabase</span>(path, ...));
+  }
+}
+
+<span class="hljs-comment">// 4. 安全存储 API Key</span>
+<span class="hljs-keyword">final</span> secureStorage = <span class="hljs-title class_">FlutterSecureStorage</span>(
+  aOptions: <span class="hljs-title class_">AndroidOptions</span>(
+    encryptedSharedPreferences: <span class="hljs-keyword">true</span>,
+  ),
+);
+
+<span class="hljs-comment">// 5. WebSocket 带自动重连</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">KhyOsWebSocket</span> </span>{
+  <span class="hljs-title class_">WebSocketChannel</span>? _channel;
+  <span class="hljs-built_in">int</span> _retryCount = <span class="hljs-number">0</span>;
+  <span class="hljs-keyword">static</span> <span class="hljs-keyword">const</span> _maxRetries = <span class="hljs-number">10</span>;
+
+  <span class="hljs-keyword">void</span> <span class="hljs-title function_">connect</span>(<span class="hljs-title class_">String</span> url, <span class="hljs-title class_">String</span> token) {
+    _channel = <span class="hljs-title class_">WebSocketChannel</span>.<span class="hljs-title function_">connect</span>(<span class="hljs-title class_">Uri</span>.<span class="hljs-title function_">parse</span>(<span class="hljs-string">&#x27;<span class="hljs-subst">$url</span>?token=<span class="hljs-subst">$token</span>&#x27;</span>));
+    _channel!.stream.<span class="hljs-title function_">listen</span>(
+      _onMessage,
+      onError: _onError,
+      onDone: _onDone,
+    );
+    _retryCount = <span class="hljs-number">0</span>;
+  }
+
+  <span class="hljs-keyword">void</span> <span class="hljs-title function_">_onDone</span>() {
+    <span class="hljs-keyword">if</span> (_retryCount &lt; _maxRetries) {
+      _retryCount++;
+      <span class="hljs-title class_">Future</span>.<span class="hljs-title function_">delayed</span>(<span class="hljs-title class_">Duration</span>(seconds: _retryCount * <span class="hljs-number">2</span>), connect);
+    }
+  }
+}
+
+<span class="hljs-comment">// 6. 流式文本渲染</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">StreamingText</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">StatefulWidget</span> </span>{
+  <span class="hljs-keyword">final</span> <span class="hljs-title class_">Stream</span>&lt;<span class="hljs-title class_">String</span>&gt; stream;
+  <span class="hljs-comment">// ...</span>
+}
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">_StreamingTextState</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">State</span>&lt;<span class="hljs-title">StreamingText</span>&gt; </span>{
+  <span class="hljs-keyword">final</span> _controller = <span class="hljs-title class_">TextEditingController</span>();
+  <span class="hljs-keyword">final</span> _scrollController = <span class="hljs-title class_">ScrollController</span>();
+
+  <span class="hljs-meta">@override</span>
+  <span class="hljs-title class_">Widget</span> <span class="hljs-title function_">build</span>(<span class="hljs-title class_">BuildContext</span> context) {
+    <span class="hljs-keyword">return</span> <span class="hljs-title class_">TextField</span>(
+      controller: _controller,
+      maxLines: <span class="hljs-keyword">null</span>,
+      readOnly: <span class="hljs-keyword">true</span>,
+      decoration: <span class="hljs-keyword">const</span> <span class="hljs-title class_">InputDecoration</span>(border: <span class="hljs-title class_">InputBorder</span>.none),
+    );
+  }
+
+  <span class="hljs-meta">@override</span>
+  <span class="hljs-keyword">void</span> <span class="hljs-title function_">initState</span>() {
+    <span class="hljs-keyword">super</span>.<span class="hljs-title function_">initState</span>();
+    widget.stream.<span class="hljs-title function_">listen</span>((chunk) {
+      _controller.text += chunk;
+      <span class="hljs-comment">// 自动滚动到底部</span>
+      <span class="hljs-title class_">Future</span>.<span class="hljs-title function_">delayed</span>(<span class="hljs-keyword">const</span> <span class="hljs-title class_">Duration</span>(milliseconds: <span class="hljs-number">50</span>), () {
+        _scrollController.<span class="hljs-title function_">jumpTo</span>(_scrollController.position.maxScrollExtent);
+      });
+    });
+  }
+}</code></pre>
+<hr>
+<h2 id="六-快速启动命令">六、快速启动命令<a class="anchor" href="#六-快速启动命令" aria-label="锚点">#</a></h2>
+<p>AI 应该按此顺序执行：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 创建 Flutter 项目</span>
+flutter create khy_os_mobile --org com.khyos --project-name khy_os_mobile
+<span class="hljs-built_in">cd</span> khy_os_mobile
+
+<span class="hljs-comment"># 2. 添加依赖（pubspec.yaml）</span>
+dependencies:
+  flutter_riverpod: ^2.5.0
+  go_router: ^14.0.0
+  flutter_secure_storage: ^9.0.0
+  sqflite: ^2.3.0
+  path_provider: ^2.1.0
+  web_socket_channel: ^2.4.0
+  dio: ^5.4.0
+  flutter_markdown_quill: ^7.2.0
+  permission_handler: ^11.0.0
+  speech_to_text: ^6.6.0
+  flutter_tts: ^3.8.0
+  qr_code_scanner: ^1.0.0
+  file_picker: ^8.0.0
+  flutter_slidable: ^3.1.0
+  flutter_local_notifications: ^17.0.0
+
+<span class="hljs-comment"># 3. 构建骨架后确认，再逐个实现页面</span></code></pre>
+<hr>
+<h2 id="七-参考项目快速链接">七、参考项目快速链接<a class="anchor" href="#七-参考项目快速链接" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>GitHub</th><th>核心参考文件</th></tr></thead><tbody><tr><td>Open WebUI</td><td>https://github.com/open-webui/open-webui</td><td><code>src/lib/stores/chat.ts</code>, <code>src/lib/utils/stream.ts</code>, <code>static/manifest.json</code></td></tr><tr><td>Lobe Chat</td><td>https://github.com/lobehub/lobe-chat</td><td><code>src/features/Chat/hooks/useChat.ts</code>, <code>src/components/Markdown/</code></td></tr><tr><td>Dify</td><td>https://github.com/langgenius/dify</td><td><code>api/services/agent_service.py</code>, <code>api/services/tools/</code></td></tr><tr><td>LibreChat</td><td>https://github.com/danny-avila/LibreChat</td><td><code>api/routes/chat.js</code>, <code>api/services/chatService.js</code></td></tr><tr><td>NextChat</td><td>https://github.com/ChatGPTNextWeb/ChatGPT-Next-Web</td><td><code>app/api/chat/route.ts</code>, <code>next.config.js</code></td></tr></tbody></table>
+<hr>
+<p><em>最后更新：2026-08-28</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../.ai/hq/prompts/feature/密钥端点中心管理-KeyManager.html"><div class="dir">← 上一篇</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a><a class="next" href="../../../../.ai/hq/prompts/feature/四端跨设备同步.html"><div class="dir">下一篇 →</div><div class="ttl">四端跨设备同步：手机 + 网页 + 桌面 + 终端</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__=".ai/hq/prompts/feature/手机端APK参考项目.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -22,6 +22,7 @@ const reports = require('../src/cli/tui/tuiCommandReports');
 const {
   dispatchNativeCommand, isEnabled, buildHardwareReport, buildScanReport, saveCheckpointReport,
   buildIntentReport, buildStudyReport, buildMindReport, runWorktreeNative,
+  buildCostReport, buildUsageReport, buildStatsReport,
 } = reports;
 
 test('门控判定:仅显式 0/false/off/no 关闭', () => {
@@ -113,6 +114,59 @@ test('buildMindReport show 原生渲染认知双图;on/off 设 env;绝不抛', (
 
   const reset = buildMindReport(['reset'], {});
   assert.ok(/重置/.test(reset[0]), reset.join('|'));
+});
+
+// ── 报告/统计档:/cost /usage /stats(输出转永久 transcript,不再转瞬即逝) ──
+
+test('buildCostReport / buildStatsReport 返回非空纯文本行、剥净 ANSI、绝不抛', () => {
+  const cost = buildCostReport();
+  assert.ok(Array.isArray(cost) && cost.length > 0);
+  const stats = buildStatsReport();
+  assert.ok(Array.isArray(stats) && stats.length > 0);
+  for (const line of [...cost, ...stats]) {
+    assert.ok(!line.includes('\u001b['), `ANSI leaked: ${JSON.stringify(line)}`);
+  }
+  assert.ok(/Token 用量|费用/.test(cost.join('\n')), cost.join('|').slice(0, 200));
+  assert.ok(/会话统计/.test(stats[0]), stats.join('|'));
+});
+
+test('cost/usage 报告首尾不留空行(通知 · 前缀须落在正文首行)', () => {
+  for (const lines of [buildCostReport(), buildUsageReport(null)]) {
+    assert.ok(lines.length > 0);
+    assert.notStrictEqual(lines[0], '', lines.join('|').slice(0, 120));
+    assert.notStrictEqual(lines[lines.length - 1], '', lines.join('|').slice(0, 120));
+  }
+});
+
+test('buildUsageReport today 报当日用量;无子命令回落到费用报告', () => {
+  const today = buildUsageReport('today');
+  assert.ok(Array.isArray(today) && today.length > 0);
+  assert.ok(/今日用量/.test(today.join('\n')), today.join('|'));
+  const hist = buildUsageReport('history');
+  assert.ok(Array.isArray(hist) && hist.length > 0);
+  assert.ok(/近14天用量/.test(hist[0]), hist.join('|'));
+  const def = buildUsageReport(null);
+  assert.ok(/Token 用量|费用/.test(def.join('\n')), def.join('|').slice(0, 200));
+});
+
+test('dispatchNativeCommand 处理 cost/usage/stats(handled:true + 文本行)', () => {
+  for (const parsed of [
+    { command: 'cost' },
+    { command: 'usage' },
+    { command: 'usage', subCommand: 'today' },
+    { command: 'stats' },
+  ]) {
+    const r = dispatchNativeCommand(parsed, { env: {} });
+    assert.strictEqual(r.handled, true, JSON.stringify(parsed));
+    assert.ok(Array.isArray(r.lines) && r.lines.length > 0);
+  }
+});
+
+test('dispatchNativeCommand 门控关 → cost/usage/stats 亦 handled:false(字节回退)', () => {
+  for (const parsed of [{ command: 'cost' }, { command: 'usage' }, { command: 'stats' }]) {
+    const r = dispatchNativeCommand(parsed, { env: { KHY_TUI_NATIVE_COMMANDS: 'off' } });
+    assert.deepStrictEqual(r, { handled: false }, JSON.stringify(parsed));
+  }
 });
 
 // ── 异步档:/worktree ────────────────────────────────────────────────────────

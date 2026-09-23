@@ -8,7 +8,7 @@
  */
 
 const { makeControlPrompter } = require('../../src/services/syscallGateway');
-const { buildIntent } = require('../../src/services/syscallGateway/intentSchema');
+const { buildIntent } = require('../../src/services/domain/system/syscallGateway/intentSchema.js');
 
 function capturePrompter() {
   const seen = [];

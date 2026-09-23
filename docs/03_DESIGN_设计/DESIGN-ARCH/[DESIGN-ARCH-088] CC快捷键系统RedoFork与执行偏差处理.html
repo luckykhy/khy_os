@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-088] CC快捷键系统RedoFork与执行偏差处理.md -->
+<title>[DESIGN-ARCH-088] CC 快捷键系统、Redo/Fork 与执行偏差处理 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-088] CC 快捷键系统、Redo/Fork 与执行偏差处理</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-088] CC 快捷键系统、Redo/Fork 与执行偏差处理</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-088-cc-快捷键系统-redo-fork-与执行偏差处理">[DESIGN-ARCH-088] CC 快捷键系统、Redo/Fork 与执行偏差处理</a></li><li class="lvl-2"><a href="#0-设计原则">0. 设计原则</a></li><li class="lvl-2"><a href="#1-快捷键系统设计">1. 快捷键系统设计</a></li><li class="lvl-3"><a href="#1-1-快捷键分层">1.1 快捷键分层</a></li><li class="lvl-3"><a href="#1-2-全局快捷键-l1">1.2 全局快捷键（L1）</a></li><li class="lvl-3"><a href="#1-3-对话区快捷键-l2">1.3 对话区快捷键（L2）</a></li><li class="lvl-3"><a href="#1-4-消息操作快捷键-l3">1.4 消息操作快捷键（L3）</a></li><li class="lvl-3"><a href="#1-5-vim-模式快捷键-l4">1.5 Vim 模式快捷键（L4）</a></li><li class="lvl-2"><a href="#2-redo-设计">2. Redo 设计</a></li><li class="lvl-3"><a href="#2-1-重做类型">2.1 重做类型</a></li><li class="lvl-3"><a href="#2-2-重新生成-redo">2.2 重新生成（Redo）</a></li><li class="lvl-3"><a href="#2-3-分叉-fork">2.3 分叉（Fork）</a></li><li class="lvl-3"><a href="#2-4-分支管理">2.4 分支管理</a></li><li class="lvl-2"><a href="#3-undo-设计">3. Undo 设计</a></li><li class="lvl-3"><a href="#3-1-撤销类型">3.1 撤销类型</a></li><li class="lvl-3"><a href="#3-2-操作栈实现">3.2 操作栈实现</a></li><li class="lvl-3"><a href="#3-3-命令模式">3.3 命令模式</a></li><li class="lvl-2"><a href="#4-执行偏差处理">4. 执行偏差处理</a></li><li class="lvl-3"><a href="#4-1-偏差检测">4.1 偏差检测</a></li><li class="lvl-3"><a href="#4-2-偏差处理策略">4.2 偏差处理策略</a></li><li class="lvl-3"><a href="#4-3-中断与恢复">4.3 中断与恢复</a></li><li class="lvl-3"><a href="#4-4-用户引导纠正">4.4 用户引导纠正</a></li><li class="lvl-2"><a href="#5-快捷键发现性">5. 快捷键发现性</a></li><li class="lvl-3"><a href="#5-1-四层发现机制">5.1 四层发现机制</a></li><li class="lvl-3"><a href="#5-2-底部提示栏">5.2 底部提示栏</a></li><li class="lvl-3"><a href="#5-3-帮助菜单">5.3 帮助菜单</a></li><li class="lvl-2"><a href="#6-实现架构">6. 实现架构</a></li><li class="lvl-3"><a href="#6-1-快捷键注册表">6.1 快捷键注册表</a></li><li class="lvl-3"><a href="#6-2-执行监控器">6.2 执行监控器</a></li><li class="lvl-2"><a href="#7-验收标准">7. 验收标准</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-088-cc-快捷键系统-redo-fork-与执行偏差处理">[DESIGN-ARCH-088] CC 快捷键系统、Redo/Fork 与执行偏差处理<a class="anchor" href="#design-arch-088-cc-快捷键系统-redo-fork-与执行偏差处理" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>隶属</strong>：本文属 <strong>TUI 设计族</strong>（20 编号 / 21 文件），总纲与 scope 裁决见 <code>[DESIGN-ARCH-122] TUI 设计族总纲</code>；规则冲突一律以 <code>[DESIGN-ARCH-102] Khy TUI 统一规则手册</code> 为准。</p></blockquote>
+<blockquote><h2 id="规则条款的归属已变更">📌 规则条款的归属已变更<a class="anchor" href="#规则条款的归属已变更" aria-label="锚点">#</a></h2>
+<p>本文的<strong>规范条款</strong>已收口至 <strong><code>[DESIGN-ARCH-102] Khy TUI 统一规则手册</code></strong>：快捷键总表 → 102 §6.1；鼠标约定与等价键要求 → 102 §6.2 / H9；滚动动作族 → 102 §6.7；覆盖层优先级 → 102 §6.8。<br><strong>本文保留其自身职责</strong>：键位<strong>语义设计</strong>、撤销/重做、分叉、执行偏差处理的设计推导与来源说明。<br><strong>规则冲突一律以 102 为准。</strong></p></blockquote>
+<blockquote><p><strong>定位</strong>：<del>定义 CC 模式下快捷键系统、撤销/重做、分叉、执行偏差处理的设计规范。</del> → <strong>规范部分见上方横幅；键位表已并入 102 §6.1。</strong><br><strong>适用边界</strong>：全局快捷键、消息操作、计划执行、错误恢复。<br><strong>参考来源</strong>：<code>interaction-patterns.md</code> (Undo/Redo, Confirmation, fzf, lazygit) + <code>advanced-patterns.md</code> (Destructive Actions)</p></blockquote>
+<hr>
+<h2 id="0-设计原则">0. 设计原则<a class="anchor" href="#0-设计原则" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>原则</th><th>说明</th></tr></thead><tbody><tr><td><strong>快捷键一致性</strong></td><td>相同操作在所有视图中行为一致</td></tr><tr><td><strong>可发现性</strong></td><td>快捷键可通过 <code>?</code> 或底部提示发现</td></tr><tr><td><strong>安全网</strong></td><td>破坏性操作可撤销或有确认</td></tr><tr><td><strong>偏差可恢复</strong></td><td>模型跑偏时用户可中断、回滚、分叉</td></tr><tr><td><strong>渐进披露</strong></td><td>常用快捷键显眼，高级快捷键可搜索</td></tr></tbody></table>
+<hr>
+<h2 id="1-快捷键系统设计">1. 快捷键系统设计<a class="anchor" href="#1-快捷键系统设计" aria-label="锚点">#</a></h2>
+<h3 id="1-1-快捷键分层">1.1 快捷键分层<a class="anchor" href="#1-1-快捷键分层" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>层级</th><th>触发方式</th><th>示例</th><th>说明</th></tr></thead><tbody><tr><td><strong>L1 全局</strong></td><td>任何时候</td><td><code>Ctrl+C</code> <code>Ctrl+D</code> <code>Ctrl+P</code> <code>?</code></td><td>最高优先级</td></tr><tr><td><strong>L2 视图</strong></td><td>当前视图内</td><td><code>↑/↓</code> <code>Enter</code> <code>Esc</code></td><td>视图上下文相关</td></tr><tr><td><strong>L3 面板</strong></td><td>面板内</td><td><code>j/k</code> <code>Space</code> <code>c</code></td><td>面板特定操作</td></tr><tr><td><strong>L4 模式</strong></td><td>特定模式</td><td>Vim <code>i/a/o</code></td><td>模式相关</td></tr></tbody></table>
+<h3 id="1-2-全局快捷键-l1">1.2 全局快捷键（L1）<a class="anchor" href="#1-2-全局快捷键-l1" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>快捷键</th><th>功能</th><th>说明</th></tr></thead><tbody><tr><td><code>Ctrl+C</code></td><td>中断/退出</td><td>首次提示，双击退出</td></tr><tr><td><code>Ctrl+D</code></td><td>退出 REPL</td><td>—</td></tr><tr><td><code>Ctrl+P</code></td><td>命令面板</td><td>—</td></tr><tr><td><code>Ctrl+R</code></td><td>历史搜索</td><td>—</td></tr><tr><td><code>Ctrl+O</code></td><td>Transcript 模式</td><td>展开/折叠思考</td></tr><tr><td><code>Ctrl+B</code></td><td>切换右侧看板</td><td>—</td></tr><tr><td><code>Ctrl+T</code></td><td>任务列表</td><td>—</td></tr><tr><td><code>?</code></td><td>帮助菜单</td><td>—</td></tr><tr><td><code>q</code></td><td>退出（非输入模式）</td><td>—</td></tr></tbody></table>
+<h3 id="1-3-对话区快捷键-l2">1.3 对话区快捷键（L2）<a class="anchor" href="#1-3-对话区快捷键-l2" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>快捷键</th><th>功能</th><th>说明</th></tr></thead><tbody><tr><td><code>↑/↓</code></td><td>浏览历史输入</td><td>—</td></tr><tr><td><code>PageUp/PageDown</code></td><td>滚动对话</td><td>—</td></tr><tr><td><code>Home/End</code></td><td>跳到顶部/底部</td><td>—</td></tr><tr><td><code>c</code></td><td>复制当前消息</td><td>—</td></tr><tr><td><code>Ctrl+Shift+C</code></td><td>复制全部对话</td><td>—</td></tr><tr><td><code>r</code></td><td>重做（重新生成）</td><td>从当前点重新生成回复</td></tr><tr><td><code>R</code></td><td>重做（编辑后）</td><td>编辑上一条消息后重做</td></tr><tr><td><code>f</code></td><td>分叉</td><td>从当前点创建新分支</td></tr><tr><td><code>e</code></td><td>编辑上一条消息</td><td>—</td></tr><tr><td><code>d</code></td><td>删除消息</td><td>需确认</td></tr><tr><td><code>z</code></td><td>撤销</td><td>撤销上一次操作</td></tr><tr><td><code>Z</code></td><td>重做</td><td>重做上一次撤销</td></tr></tbody></table>
+<h3 id="1-4-消息操作快捷键-l3">1.4 消息操作快捷键（L3）<a class="anchor" href="#1-4-消息操作快捷键-l3" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>快捷键</th><th>功能</th><th>目标</th></tr></thead><tbody><tr><td><code>Enter</code></td><td>展开/折叠</td><td>工具结果</td></tr><tr><td><code>Space</code></td><td>切换折叠</td><td>思考块</td></tr><tr><td><code>Tab</code></td><td>切换焦点</td><td>面板间</td></tr><tr><td><code>Esc</code></td><td>关闭/返回</td><td>模态/子菜单</td></tr><tr><td><code>o</code></td><td>打开</td><td>选中项</td></tr><tr><td><code>x</code></td><td>关闭/折叠</td><td>当前面板</td></tr></tbody></table>
+<h3 id="1-5-vim-模式快捷键-l4">1.5 Vim 模式快捷键（L4）<a class="anchor" href="#1-5-vim-模式快捷键-l4" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>快捷键</th><th>功能</th><th>模式</th></tr></thead><tbody><tr><td><code>i</code></td><td>进入 INSERT</td><td>NORMAL → INSERT</td></tr><tr><td><code>a</code></td><td>在光标后插入</td><td>NORMAL → INSERT</td></tr><tr><td><code>Esc</code></td><td>进入 NORMAL</td><td>INSERT → NORMAL</td></tr><tr><td><code>h/j/k/l</code></td><td>移动光标</td><td>NORMAL</td></tr><tr><td><code>0/$</code></td><td>行首/行尾</td><td>NORMAL</td></tr><tr><td><code>x</code></td><td>删除字符</td><td>NORMAL</td></tr><tr><td><code>dd</code></td><td>删除行</td><td>NORMAL</td></tr><tr><td><code>u</code></td><td>撤销</td><td>NORMAL</td></tr><tr><td><code>Ctrl+R</code></td><td>重做</td><td>NORMAL</td></tr></tbody></table>
+<hr>
+<h2 id="2-redo-设计">2. Redo 设计<a class="anchor" href="#2-redo-设计" aria-label="锚点">#</a></h2>
+<h3 id="2-1-重做类型">2.1 重做类型<a class="anchor" href="#2-1-重做类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>触发</th><th>效果</th><th>说明</th></tr></thead><tbody><tr><td><strong>重新生成</strong></td><td><code>r</code></td><td>从当前消息重新生成回复</td><td>保持上下文，重新调用模型</td></tr><tr><td><strong>编辑重做</strong></td><td><code>R</code></td><td>编辑上一条用户消息后重新生成</td><td>修改问题，重新回答</td></tr><tr><td><strong>分叉</strong></td><td><code>f</code></td><td>从当前点创建新分支</td><td>保留原分支，创建新对话路径</td></tr><tr><td><strong>撤销重做</strong></td><td><code>Z</code></td><td>撤销上一次撤销</td><td>恢复被撤销的操作</td></tr></tbody></table>
+<h3 id="2-2-重新生成-redo">2.2 重新生成（Redo）<a class="anchor" href="#2-2-重新生成-redo" aria-label="锚点">#</a></h3>
+<pre><code>用户发送消息 → 模型回复 → 用户按 r
+
+  ┌─────────────────────────────────────────────────────┐
+  │ &gt; 分析一下这个文件                                   │
+  │                                                      │
+  │ ● 这是一个包含 Portable 环境完整规则的文档...         │  ← 原回复
+  │                                                      │
+  │ ⏳ Regenerating...                                   │  ← 重新生成中
+  │                                                      │
+  └─────────────────────────────────────────────────────┘</code></pre>
+<p><strong>实现</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// 重新生成</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">handleRedo</span>(<span class="hljs-params">messageId</span>) {
+  <span class="hljs-comment">// 1. 找到消息索引</span>
+  <span class="hljs-keyword">const</span> idx = messages.<span class="hljs-title function_">findIndex</span>(<span class="hljs-function"><span class="hljs-params">m</span> =&gt;</span> m.<span class="hljs-property">id</span> === messageId);
+  <span class="hljs-keyword">if</span> (idx &lt; <span class="hljs-number">0</span>) <span class="hljs-keyword">return</span>;
+
+  <span class="hljs-comment">// 2. 截断消息（删除当前回复及之后的所有消息）</span>
+  <span class="hljs-keyword">const</span> truncated = messages.<span class="hljs-title function_">slice</span>(<span class="hljs-number">0</span>, idx + <span class="hljs-number">1</span>); <span class="hljs-comment">// 保留用户消息</span>
+
+  <span class="hljs-comment">// 3. 重新调用模型</span>
+  <span class="hljs-title function_">regenerateResponse</span>(truncated);
+}</code></pre>
+<h3 id="2-3-分叉-fork">2.3 分叉（Fork）<a class="anchor" href="#2-3-分叉-fork" aria-label="锚点">#</a></h3>
+<pre><code>原始对话：
+  消息 1 → 消息 2 → 消息 3 → 消息 4
+                            │
+                            │ 按 f 分叉
+                            ▼
+  分叉 A（保留）：消息 1 → 消息 2 → 消息 3 → 消息 4
+  分叉 B（新建）：消息 1 → 消息 2 → 消息 3 → [新回复]</code></pre>
+<p><strong>实现</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// 分叉</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">handleFork</span>(<span class="hljs-params">messageId</span>) {
+  <span class="hljs-comment">// 1. 保存当前对话为快照</span>
+  <span class="hljs-keyword">const</span> snapshot = <span class="hljs-title function_">createSnapshot</span>(messages);
+
+  <span class="hljs-comment">// 2. 创建新分支</span>
+  <span class="hljs-keyword">const</span> branch = {
+    <span class="hljs-attr">id</span>: <span class="hljs-title function_">generateId</span>(),
+    <span class="hljs-attr">parent</span>: currentBranch.<span class="hljs-property">id</span>,
+    <span class="hljs-attr">messages</span>: messages.<span class="hljs-title function_">slice</span>(<span class="hljs-number">0</span>, messages.<span class="hljs-title function_">findIndex</span>(<span class="hljs-function"><span class="hljs-params">m</span> =&gt;</span> m.<span class="hljs-property">id</span> === messageId) + <span class="hljs-number">1</span>),
+    <span class="hljs-attr">createdAt</span>: <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>(),
+  };
+
+  <span class="hljs-comment">// 3. 保存到分支列表</span>
+  branches.<span class="hljs-title function_">push</span>(branch);
+
+  <span class="hljs-comment">// 4. 切换到新分支</span>
+  <span class="hljs-title function_">switchBranch</span>(branch.<span class="hljs-property">id</span>);
+}</code></pre>
+<h3 id="2-4-分支管理">2.4 分支管理<a class="anchor" href="#2-4-分支管理" aria-label="锚点">#</a></h3>
+<pre><code>┌─ Branches ────────────────────────────────────────────┐
+│                                                        │
+│  ▸ main                     4 messages                │
+│    branch-1 (from msg 3)    5 messages                │
+│    branch-2 (from msg 2)    3 messages                │
+│                                                        │
+├────────────────────────────────────────────────────────┤
+│ 1-9: jump  Enter: switch  d: delete  n: new  Esc: back│
+└────────────────────────────────────────────────────────┘</code></pre>
+<hr>
+<h2 id="3-undo-设计">3. Undo 设计<a class="anchor" href="#3-undo-设计" aria-label="锚点">#</a></h2>
+<h3 id="3-1-撤销类型">3.1 撤销类型<a class="anchor" href="#3-1-撤销类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>触发</th><th>效果</th><th>实现方式</th></tr></thead><tbody><tr><td><strong>消息删除</strong></td><td><code>d</code> + 确认</td><td>删除消息及之后所有</td><td>状态快照</td></tr><tr><td><strong>操作撤销</strong></td><td><code>z</code></td><td>撤销上一次操作</td><td>操作栈</td></tr><tr><td><strong>重做恢复</strong></td><td><code>Z</code></td><td>恢复被撤销的操作</td><td>撤销栈</td></tr></tbody></table>
+<h3 id="3-2-操作栈实现">3.2 操作栈实现<a class="anchor" href="#3-2-操作栈实现" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// tui/utils/ccUndoStack.js</span>
+<span class="hljs-meta">
+&#x27;use strict&#x27;</span>;
+
+<span class="hljs-comment">/**
+ * 操作栈 — 支持撤销/重做
+ */</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">UndoStack</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">limit = <span class="hljs-number">50</span></span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_undoStack</span> = [];
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_redoStack</span> = [];
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_limit</span> = limit;
+  }
+
+  <span class="hljs-comment">/**
+   * 执行操作
+   */</span>
+  <span class="hljs-title function_">execute</span>(<span class="hljs-params">command</span>) {
+    command.<span class="hljs-title function_">execute</span>();
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_undoStack</span>.<span class="hljs-title function_">push</span>(command);
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_redoStack</span> = []; <span class="hljs-comment">// 新操作清空重做栈</span>
+    <span class="hljs-keyword">if</span> (<span class="hljs-variable language_">this</span>.<span class="hljs-property">_undoStack</span>.<span class="hljs-property">length</span> &gt; <span class="hljs-variable language_">this</span>.<span class="hljs-property">_limit</span>) {
+      <span class="hljs-variable language_">this</span>.<span class="hljs-property">_undoStack</span>.<span class="hljs-title function_">shift</span>();
+    }
+  }
+
+  <span class="hljs-comment">/**
+   * 撤销
+   */</span>
+  <span class="hljs-title function_">undo</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-keyword">if</span> (<span class="hljs-variable language_">this</span>.<span class="hljs-property">_undoStack</span>.<span class="hljs-property">length</span> === <span class="hljs-number">0</span>) <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    <span class="hljs-keyword">const</span> command = <span class="hljs-variable language_">this</span>.<span class="hljs-property">_undoStack</span>.<span class="hljs-title function_">pop</span>();
+    command.<span class="hljs-title function_">undo</span>();
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_redoStack</span>.<span class="hljs-title function_">push</span>(command);
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+  }
+
+  <span class="hljs-comment">/**
+   * 重做
+   */</span>
+  <span class="hljs-title function_">redo</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-keyword">if</span> (<span class="hljs-variable language_">this</span>.<span class="hljs-property">_redoStack</span>.<span class="hljs-property">length</span> === <span class="hljs-number">0</span>) <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    <span class="hljs-keyword">const</span> command = <span class="hljs-variable language_">this</span>.<span class="hljs-property">_redoStack</span>.<span class="hljs-title function_">pop</span>();
+    command.<span class="hljs-title function_">execute</span>();
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_undoStack</span>.<span class="hljs-title function_">push</span>(command);
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+  }
+
+  <span class="hljs-comment">/**
+   * 清空
+   */</span>
+  <span class="hljs-title function_">clear</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_undoStack</span> = [];
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_redoStack</span> = [];
+  }
+
+  <span class="hljs-keyword">get</span> <span class="hljs-title function_">canUndo</span>() { <span class="hljs-keyword">return</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">_undoStack</span>.<span class="hljs-property">length</span> &gt; <span class="hljs-number">0</span>; }
+  <span class="hljs-keyword">get</span> <span class="hljs-title function_">canRedo</span>() { <span class="hljs-keyword">return</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">_redoStack</span>.<span class="hljs-property">length</span> &gt; <span class="hljs-number">0</span>; }
+}
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = { <span class="hljs-title class_">UndoStack</span> };</code></pre>
+<h3 id="3-3-命令模式">3.3 命令模式<a class="anchor" href="#3-3-命令模式" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 命令基类</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">Command</span> {
+  <span class="hljs-title function_">execute</span>(<span class="hljs-params"></span>) {}
+  <span class="hljs-title function_">undo</span>(<span class="hljs-params"></span>) {}
+}
+
+<span class="hljs-comment">// 删除消息命令</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">DeleteMessageCommand</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">messageId, messages, onUpdate</span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">messageId</span> = messageId;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">messages</span> = messages;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">onUpdate</span> = onUpdate;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_deleted</span> = <span class="hljs-literal">null</span>;
+  }
+
+  <span class="hljs-title function_">execute</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-keyword">const</span> idx = <span class="hljs-variable language_">this</span>.<span class="hljs-property">messages</span>.<span class="hljs-title function_">findIndex</span>(<span class="hljs-function"><span class="hljs-params">m</span> =&gt;</span> m.<span class="hljs-property">id</span> === <span class="hljs-variable language_">this</span>.<span class="hljs-property">messageId</span>);
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_deleted</span> = <span class="hljs-variable language_">this</span>.<span class="hljs-property">messages</span>.<span class="hljs-title function_">slice</span>(idx);
+    <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">onUpdate</span>(<span class="hljs-variable language_">this</span>.<span class="hljs-property">messages</span>.<span class="hljs-title function_">slice</span>(<span class="hljs-number">0</span>, idx));
+  }
+
+  <span class="hljs-title function_">undo</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-keyword">if</span> (<span class="hljs-variable language_">this</span>.<span class="hljs-property">_deleted</span>) {
+      <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">onUpdate</span>([...<span class="hljs-variable language_">this</span>.<span class="hljs-property">messages</span>, ...<span class="hljs-variable language_">this</span>.<span class="hljs-property">_deleted</span>]);
+    }
+  }
+}</code></pre>
+<hr>
+<h2 id="4-执行偏差处理">4. 执行偏差处理<a class="anchor" href="#4-执行偏差处理" aria-label="锚点">#</a></h2>
+<h3 id="4-1-偏差检测">4.1 偏差检测<a class="anchor" href="#4-1-偏差检测" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>偏差类型</th><th>检测方式</th><th>严重程度</th></tr></thead><tbody><tr><td><strong>工具调用失败</strong></td><td>工具返回 error</td><td>中</td></tr><tr><td><strong>工具执行超时</strong></td><td>超过设定时间</td><td>高</td></tr><tr><td><strong>模型无响应</strong></td><td>流式输出中断</td><td>高</td></tr><tr><td><strong>输出截断</strong></td><td>输出超过 maxTokens</td><td>低</td></tr><tr><td><strong>权限被拒绝</strong></td><td>用户拒绝工具执行</td><td>中</td></tr><tr><td><strong>上下文溢出</strong></td><td>Token 超过限制</td><td>高</td></tr><tr><td><strong>循环检测</strong></td><td>相同工具调用重复 N 次</td><td>高</td></tr></tbody></table>
+<h3 id="4-2-偏差处理策略">4.2 偏差处理策略<a class="anchor" href="#4-2-偏差处理策略" aria-label="锚点">#</a></h3>
+<h4 id="4-2-1-工具调用失败">4.2.1 工具调用失败<a class="anchor" href="#4-2-1-工具调用失败" aria-label="锚点">#</a></h4>
+<pre><code>✗ Read failed: File not found
+
+  Suggestions:
+  • Check the file path
+  • Use Glob to search for the file
+  • Create the file first
+
+  [R] Retry  [S] Skip  [E] Edit path  [Esc] Cancel</code></pre>
+<h4 id="4-2-2-工具执行超时">4.2.2 工具执行超时<a class="anchor" href="#4-2-2-工具执行超时" aria-label="锚点">#</a></h4>
+<pre><code>✗ Bash timeout (30s): npm test
+
+  The command took too long to complete.
+
+  Suggestions:
+  • Increase timeout: khy config set toolTimeout 120
+  • Run directly: ! npm test
+  • Check if the process is hanging
+
+  [R] Retry  [S] Skip  [K] Kill process  [Esc] Cancel</code></pre>
+<h4 id="4-2-3-模型跑偏-循环检测">4.2.3 模型跑偏（循环检测）<a class="anchor" href="#4-2-3-模型跑偏-循环检测" aria-label="锚点">#</a></h4>
+<pre><code>⚠ Loop detected: The same tool &quot;Read&quot; has been called 5 times with similar parameters.
+
+  Possible causes:
+  • The model is stuck in a loop
+  • The task is too complex for a single step
+
+  [I] Interrupt and provide guidance
+  [C] Continue (ignore warning)
+  [R] Restart from last checkpoint
+  [Esc] Dismiss</code></pre>
+<h4 id="4-2-4-上下文溢出">4.2.4 上下文溢出<a class="anchor" href="#4-2-4-上下文溢出" aria-label="锚点">#</a></h4>
+<pre><code>⚠ Context 95% full (190k/200k)
+
+  The conversation is approaching the token limit.
+
+  Suggestions:
+  • Run /compact to compress the context
+  • Start a new conversation
+  • Remove unnecessary messages
+
+  [/compact] Compress  [New] New conversation  [Esc] Dismiss</code></pre>
+<h3 id="4-3-中断与恢复">4.3 中断与恢复<a class="anchor" href="#4-3-中断与恢复" aria-label="锚点">#</a></h3>
+<h4 id="4-3-1-中断策略">4.3.1 中断策略<a class="anchor" href="#4-3-1-中断策略" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>操作</th><th>效果</th><th>恢复方式</th></tr></thead><tbody><tr><td><code>Ctrl+C</code></td><td>中断当前工具执行</td><td>自动重试或跳过</td></tr><tr><td><code>Esc</code></td><td>取消当前操作</td><td>返回上一状态</td></tr><tr><td><code>Ctrl+Z</code></td><td>挂起（Unix）</td><td><code>fg</code> 恢复</td></tr></tbody></table>
+<h4 id="4-3-2-检查点机制">4.3.2 检查点机制<a class="anchor" href="#4-3-2-检查点机制" aria-label="锚点">#</a></h4>
+<pre><code>检查点：在关键操作前自动保存状态
+
+  ┌─ 工具执行前 ────────────────────────────────────────┐
+  │ 1. 保存当前消息状态为检查点                          │
+  │ 2. 执行工具                                         │
+  │ 3. 成功 → 继续                                      │
+  │ 4. 失败 → 回滚到检查点                              │
+  └─────────────────────────────────────────────────────┘</code></pre>
+<h4 id="4-3-3-回滚界面">4.3.3 回滚界面<a class="anchor" href="#4-3-3-回滚界面" aria-label="锚点">#</a></h4>
+<pre><code>⚠ Execution failed — rollback to checkpoint?
+
+  The following operations will be undone:
+  • Read src/index.ts (success)
+  • Edit src/index.ts (failed: permission denied)
+
+  [R] Rollback to checkpoint
+  [C] Continue from here
+  [V] View diff
+  [Esc] Cancel</code></pre>
+<h3 id="4-4-用户引导纠正">4.4 用户引导纠正<a class="anchor" href="#4-4-用户引导纠正" aria-label="锚点">#</a></h3>
+<p>当模型跑偏时，用户可以注入引导：</p>
+<pre><code>模型正在执行一个错误的操作...
+
+  &gt; 请停止当前操作，改为分析 src/utils.ts 文件
+
+  [Send guidance]  [Interrupt]  [Let it continue]</code></pre>
+<hr>
+<h2 id="5-快捷键发现性">5. 快捷键发现性<a class="anchor" href="#5-快捷键发现性" aria-label="锚点">#</a></h2>
+<h3 id="5-1-四层发现机制">5.1 四层发现机制<a class="anchor" href="#5-1-四层发现机制" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>层级</th><th>机制</th><th>说明</th></tr></thead><tbody><tr><td><strong>L1</strong></td><td>底部提示栏</td><td>始终显示 3-5 个最常用快捷键</td></tr><tr><td><strong>L2</strong></td><td><code>?</code> 帮助菜单</td><td>显示所有快捷键，按分组</td></tr><tr><td><strong>L3</strong></td><td><code>Ctrl+P</code> 命令面板</td><td>搜索命令，显示快捷键</td></tr><tr><td><strong>L4</strong></td><td>Tab 补全</td><td>输入 <code>/</code> 显示命令列表</td></tr></tbody></table>
+<h3 id="5-2-底部提示栏">5.2 底部提示栏<a class="anchor" href="#5-2-底部提示栏" aria-label="锚点">#</a></h3>
+<pre><code>j/k: navigate  Enter: select  /: search  ?: help  q: quit</code></pre>
+<h3 id="5-3-帮助菜单">5.3 帮助菜单<a class="anchor" href="#5-3-帮助菜单" aria-label="锚点">#</a></h3>
+<pre><code>┌─ Keyboard Shortcuts ───────────────────────────────────┐
+│                                                        │
+│ Global                                                 │
+│   Ctrl+C        Cancel/Exit                            │
+│   Ctrl+D        Exit REPL                              │
+│   Ctrl+P        Command palette                        │
+│   Ctrl+R        History search                         │
+│   ?             Toggle this help                       │
+│                                                        │
+│ Conversation                                           │
+│   r             Regenerate response                    │
+│   R             Edit &amp; regenerate                      │
+│   f             Fork from here                          │
+│   e             Edit last message                      │
+│   c             Copy message                           │
+│   z             Undo                                   │
+│   Z             Redo                                   │
+│                                                        │
+│ Navigation                                             │
+│   j/k or ↑/↓    Move                                   │
+│   PageUp/Down   Scroll                                 │
+│   Home/End      Jump to top/bottom                     │
+│                                                        │
+└────────────────────────────────────────────────────────┘</code></pre>
+<hr>
+<h2 id="6-实现架构">6. 实现架构<a class="anchor" href="#6-实现架构" aria-label="锚点">#</a></h2>
+<h3 id="6-1-快捷键注册表">6.1 快捷键注册表<a class="anchor" href="#6-1-快捷键注册表" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// tui/utils/ccKeyRegistry.js</span>
+<span class="hljs-meta">
+&#x27;use strict&#x27;</span>;
+
+<span class="hljs-comment">/**
+ * 快捷键注册表 — 集中管理所有快捷键
+ */</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">KeyRegistry</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_bindings</span> = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>();
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_context</span> = <span class="hljs-string">&#x27;global&#x27;</span>;
+  }
+
+  <span class="hljs-comment">/**
+   * 注册快捷键
+   */</span>
+  <span class="hljs-title function_">register</span>(<span class="hljs-params">key, handler, options = {}</span>) {
+    <span class="hljs-keyword">const</span> k = <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_normalize</span>(key);
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_bindings</span>.<span class="hljs-title function_">set</span>(k, {
+      handler,
+      <span class="hljs-attr">context</span>: options.<span class="hljs-property">context</span> || <span class="hljs-string">&#x27;global&#x27;</span>,
+      <span class="hljs-attr">description</span>: options.<span class="hljs-property">description</span> || <span class="hljs-string">&#x27;&#x27;</span>,
+      <span class="hljs-attr">group</span>: options.<span class="hljs-property">group</span> || <span class="hljs-string">&#x27;General&#x27;</span>,
+    });
+  }
+
+  <span class="hljs-comment">/**
+   * 处理按键
+   */</span>
+  <span class="hljs-title function_">handle</span>(<span class="hljs-params">input, key</span>) {
+    <span class="hljs-keyword">const</span> k = <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_normalizeKey</span>(input, key);
+    <span class="hljs-keyword">const</span> binding = <span class="hljs-variable language_">this</span>.<span class="hljs-property">_bindings</span>.<span class="hljs-title function_">get</span>(k);
+    <span class="hljs-keyword">if</span> (!binding) <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+
+    <span class="hljs-comment">// 检查上下文</span>
+    <span class="hljs-keyword">if</span> (binding.<span class="hljs-property">context</span> !== <span class="hljs-string">&#x27;global&#x27;</span> &amp;&amp; binding.<span class="hljs-property">context</span> !== <span class="hljs-variable language_">this</span>.<span class="hljs-property">_context</span>) {
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    }
+
+    binding.<span class="hljs-title function_">handler</span>(input, key);
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+  }
+
+  <span class="hljs-comment">/**
+   * 获取当前上下文的快捷键列表
+   */</span>
+  <span class="hljs-title function_">getBindingsForContext</span>(<span class="hljs-params">context</span>) {
+    <span class="hljs-keyword">return</span> [...<span class="hljs-variable language_">this</span>.<span class="hljs-property">_bindings</span>.<span class="hljs-title function_">entries</span>()]
+      .<span class="hljs-title function_">filter</span>(<span class="hljs-function">(<span class="hljs-params">[_, b]</span>) =&gt;</span> b.<span class="hljs-property">context</span> === context || b.<span class="hljs-property">context</span> === <span class="hljs-string">&#x27;global&#x27;</span>)
+      .<span class="hljs-title function_">map</span>(<span class="hljs-function">(<span class="hljs-params">[k, b]</span>) =&gt;</span> ({ <span class="hljs-attr">key</span>: k, ...b }));
+  }
+
+  <span class="hljs-title function_">_normalizeKey</span>(<span class="hljs-params">input, key</span>) {
+    <span class="hljs-keyword">const</span> parts = [];
+    <span class="hljs-keyword">if</span> (key.<span class="hljs-property">ctrl</span>) parts.<span class="hljs-title function_">push</span>(<span class="hljs-string">&#x27;ctrl&#x27;</span>);
+    <span class="hljs-keyword">if</span> (key.<span class="hljs-property">shift</span>) parts.<span class="hljs-title function_">push</span>(<span class="hljs-string">&#x27;shift&#x27;</span>);
+    <span class="hljs-keyword">if</span> (key.<span class="hljs-property">meta</span>) parts.<span class="hljs-title function_">push</span>(<span class="hljs-string">&#x27;meta&#x27;</span>);
+    parts.<span class="hljs-title function_">push</span>(input || key.<span class="hljs-property">name</span> || <span class="hljs-string">&#x27;unknown&#x27;</span>);
+    <span class="hljs-keyword">return</span> parts.<span class="hljs-title function_">join</span>(<span class="hljs-string">&#x27;+&#x27;</span>);
+  }
+}
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = { <span class="hljs-title class_">KeyRegistry</span> };</code></pre>
+<h3 id="6-2-执行监控器">6.2 执行监控器<a class="anchor" href="#6-2-执行监控器" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// tui/utils/ccExecutionMonitor.js</span>
+<span class="hljs-meta">
+&#x27;use strict&#x27;</span>;
+
+<span class="hljs-comment">/**
+ * 执行监控器 — 检测偏差并触发恢复
+ */</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">ExecutionMonitor</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">options = {}</span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_toolCallCounts</span> = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>();
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_maxRepeatCalls</span> = options.<span class="hljs-property">maxRepeatCalls</span> || <span class="hljs-number">5</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_timeout</span> = options.<span class="hljs-property">timeout</span> || <span class="hljs-number">30000</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_onLoopDetected</span> = options.<span class="hljs-property">onLoopDetected</span> || (<span class="hljs-function">() =&gt;</span> {});
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_onTimeout</span> = options.<span class="hljs-property">onTimeout</span> || (<span class="hljs-function">() =&gt;</span> {});
+  }
+
+  <span class="hljs-comment">/**
+   * 记录工具调用
+   */</span>
+  <span class="hljs-title function_">recordToolCall</span>(<span class="hljs-params">name, params</span>) {
+    <span class="hljs-keyword">const</span> key = <span class="hljs-string">`<span class="hljs-subst">${name}</span>:<span class="hljs-subst">${<span class="hljs-built_in">JSON</span>.stringify(params)}</span>`</span>;
+    <span class="hljs-keyword">const</span> count = (<span class="hljs-variable language_">this</span>.<span class="hljs-property">_toolCallCounts</span>.<span class="hljs-title function_">get</span>(key) || <span class="hljs-number">0</span>) + <span class="hljs-number">1</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_toolCallCounts</span>.<span class="hljs-title function_">set</span>(key, count);
+
+    <span class="hljs-keyword">if</span> (count &gt;= <span class="hljs-variable language_">this</span>.<span class="hljs-property">_maxRepeatCalls</span>) {
+      <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_onLoopDetected</span>({ name, params, count });
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>; <span class="hljs-comment">// 阻止继续执行</span>
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+  }
+
+  <span class="hljs-comment">/**
+   * 重置计数
+   */</span>
+  <span class="hljs-title function_">reset</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_toolCallCounts</span>.<span class="hljs-title function_">clear</span>();
+  }
+
+  <span class="hljs-comment">/**
+   * 设置超时
+   */</span>
+  <span class="hljs-title function_">startTimeout</span>(<span class="hljs-params">callback</span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_timeoutId</span> = <span class="hljs-built_in">setTimeout</span>(<span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_onTimeout</span>();
+    }, <span class="hljs-variable language_">this</span>.<span class="hljs-property">_timeout</span>);
+  }
+
+  <span class="hljs-comment">/**
+   * 清除超时
+   */</span>
+  <span class="hljs-title function_">clearTimeout</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-keyword">if</span> (<span class="hljs-variable language_">this</span>.<span class="hljs-property">_timeoutId</span>) {
+      <span class="hljs-built_in">clearTimeout</span>(<span class="hljs-variable language_">this</span>.<span class="hljs-property">_timeoutId</span>);
+      <span class="hljs-variable language_">this</span>.<span class="hljs-property">_timeoutId</span> = <span class="hljs-literal">null</span>;
+    }
+  }
+}
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = { <span class="hljs-title class_">ExecutionMonitor</span> };</code></pre>
+<hr>
+<h2 id="7-验收标准">7. 验收标准<a class="anchor" href="#7-验收标准" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>场景</th><th>预期</th></tr></thead><tbody><tr><td>快捷键注册</td><td>集中管理，支持上下文</td></tr><tr><td>重新生成</td><td><code>r</code> 从当前点重新生成</td></tr><tr><td>分叉</td><td><code>f</code> 创建新分支</td></tr><tr><td>撤销</td><td><code>z</code> 撤销上一次操作</td></tr><tr><td>重做</td><td><code>Z</code> 重做上一次撤销</td></tr><tr><td>工具失败</td><td>显示错误 + 重试/跳过建议</td></tr><tr><td>工具超时</td><td>显示超时 + 增加超时建议</td></tr><tr><td>循环检测</td><td>检测到重复调用时警告</td></tr><tr><td>上下文溢出</td><td>80% 黄色 / 95% 红色</td></tr><tr><td>检查点回滚</td><td>失败后回滚到检查点</td></tr><tr><td>用户引导</td><td>可注入指导纠正模型</td></tr><tr><td>快捷键发现</td><td>底部提示 + <code>?</code> 帮助 + <code>Ctrl+P</code></td></tr></tbody></table>
+<hr>
+<blockquote><p><strong>文档状态</strong>：Draft — 待实施<br><strong>创建日期</strong>：2026-09-09<br><strong>依赖</strong>：[DESIGN-ARCH-081] 主设计规范</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-087] CC模式微交互与反馈设计.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-087] CC 模式微交互与反馈设计</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-089] TUI设计模式调研报告.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-089] TUI 设计模式调研报告（100 项目综合分析）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-088] CC快捷键系统RedoFork与执行偏差处理.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

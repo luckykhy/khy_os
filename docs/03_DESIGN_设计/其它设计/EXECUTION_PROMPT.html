@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: EXECUTION_PROMPT.md -->
+<title>CC TUI 复刻工程 — AI 执行提示词 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>其它设计<span class="sep">›</span>CC TUI 复刻工程 — AI 执行提示词</div>
+      <header class="hero reveal"><h1>CC TUI 复刻工程 — AI 执行提示词</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cc-tui-复刻工程-ai-执行提示词">CC TUI 复刻工程 — AI 执行提示词</a></li><li class="lvl-2"><a href="#项目目标">🎯 项目目标</a></li><li class="lvl-2"><a href="#实施前必读">📋 实施前必读</a></li><li class="lvl-2"><a href="#绝对红线-不可违反">🔴 绝对红线（不可违反）</a></li><li class="lvl-2"><a href="#实施步骤">📐 实施步骤</a></li><li class="lvl-3"><a href="#步骤-1-基础设施-phase-0">步骤 1: 基础设施（Phase 0）</a></li><li class="lvl-3"><a href="#步骤-2-核心视觉-phase-1">步骤 2: 核心视觉（Phase 1）</a></li><li class="lvl-3"><a href="#步骤-3-交互组件-phase-2">步骤 3: 交互组件（Phase 2）</a></li><li class="lvl-3"><a href="#步骤-4-高级功能-phase-3">步骤 4: 高级功能（Phase 3）</a></li><li class="lvl-3"><a href="#步骤-5-微交互与反馈-phase-4">步骤 5: 微交互与反馈（Phase 4）</a></li><li class="lvl-3"><a href="#步骤-6-快捷键与执行偏差-phase-5">步骤 6: 快捷键与执行偏差（Phase 5）</a></li><li class="lvl-2"><a href="#代码风格约束">🔧 代码风格约束</a></li><li class="lvl-2"><a href="#测试验证">🧪 测试验证</a></li><li class="lvl-3"><a href="#功能测试">功能测试</a></li><li class="lvl-3"><a href="#兼容性测试">兼容性测试</a></li><li class="lvl-2"><a href="#文件组织">📁 文件组织</a></li><li class="lvl-2"><a href="#常见陷阱">⚠️ 常见陷阱</a></li><li class="lvl-2"><a href="#验收标准">📊 验收标准</a></li><li class="lvl-3"><a href="#功能验收">功能验收</a></li><li class="lvl-3"><a href="#性能验收">性能验收</a></li><li class="lvl-3"><a href="#兼容性验收">兼容性验收</a></li><li class="lvl-2"><a href="#开始执行">🚀 开始执行</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="cc-tui-复刻工程-ai-执行提示词">CC TUI 复刻工程 — AI 执行提示词<a class="anchor" href="#cc-tui-复刻工程-ai-执行提示词" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>用途</strong>：将此提示词交给 AI 编码助手（Claude Code / opencode / Codex），按步骤实施 CC TUI 复刻。<br><strong>前提</strong>：已阅读 <code>docs/03_DESIGN_设计/[DESIGN-ARCH-086]</code> 总计划文档。</p></blockquote>
+<hr>
+<h2 id="项目目标">🎯 项目目标<a class="anchor" href="#项目目标" aria-label="锚点">#</a></h2>
+<p>在 khy-os 的 <code>services/backend/src/cli/tui/</code> 目录下，实现 Claude Code TUI 的 1:1 视觉与交互复刻：</p>
+<ul><li>品牌替换为 <strong>Khy</strong></li><li>全面支持 <strong>OpenAI 协议</strong></li><li>保留 khy 特色功能（中文、过程组、计划模式、语音输入）</li><li><strong>零破坏</strong>：Legacy 模式行为不变</li><li>性能：冷启动 &lt; 100ms，渲染 &lt; 16ms</li></ul>
+<hr>
+<h2 id="实施前必读">📋 实施前必读<a class="anchor" href="#实施前必读" aria-label="锚点">#</a></h2>
+<p>按以下顺序阅读设计文档：</p>
+<ol><li><strong><code>services/backend/src/cli/tui/AGENTS.md</code></strong> — 工程约束（红线，必须遵守）</li><li><strong><code>docs/03_DESIGN_设计/[DESIGN-ARCH-086]</code></strong> — 总计划（单一真源）</li><li><strong><code>docs/03_DESIGN_设计/[DESIGN-ARCH-081]</code></strong> — 主设计规范</li><li><strong><code>docs/03_DESIGN_设计/[DESIGN-ARCH-082]</code></strong> — 输入框与光标</li><li><strong><code>docs/03_DESIGN_设计/[DESIGN-ARCH-083]</code></strong> — 表格与折叠</li><li><strong><code>docs/03_DESIGN_设计/[DESIGN-ARCH-084]</code></strong> — 注意力与选择</li><li><strong><code>docs/03_DESIGN_设计/[DESIGN-ARCH-085]</code></strong> — 子视图/菜单/卡片/滚动</li><li><strong><code>docs/03_DESIGN_设计/[DESIGN-ARCH-087]</code></strong> — 微交互与反馈</li><li><strong><code>docs/03_DESIGN_设计/[DESIGN-ARCH-088]</code></strong> — 快捷键/Redo/Fork/偏差处理</li></ol>
+<hr>
+<h2 id="绝对红线-不可违反">🔴 绝对红线（不可违反）<a class="anchor" href="#绝对红线-不可违反" aria-label="锚点">#</a></h2>
+<pre><code>❌ 禁止修改 Legacy 模式（KHY_CC_TUI 未设置）下的任何代码路径
+❌ 禁止使用 \x1B[n;mr（DECSTBM 滚动区）
+❌ 禁止使用 \x1B[2J（全屏清除）
+❌ 禁止同步阻塞事件循环超过 16ms
+❌ 禁止在渲染路径中执行 IO 操作
+❌ 禁止在 CC 模式 UI 中出现 &quot;Claude Code&quot; 或 &quot;Claude&quot; 品牌文本
+❌ 禁止冷启动超过 100ms
+❌ 禁止单次渲染超过 16ms
+
+✅ 所有 CC 模式代码必须通过 KHY_CC_TUI=1 门控
+✅ 门控关闭时，行为必须与修改前逐字节相同
+✅ 使用 \x1B[0J（ED0）清除光标到末尾
+✅ 使用保存/恢复光标 + 绝对定位进行局部更新
+✅ 品牌文本使用 &quot;Khy&quot;（定义在 ccBrand.js）
+✅ 新增文件优先于修改现有文件</code></pre>
+<hr>
+<h2 id="实施步骤">📐 实施步骤<a class="anchor" href="#实施步骤" aria-label="锚点">#</a></h2>
+<h3 id="步骤-1-基础设施-phase-0">步骤 1: 基础设施（Phase 0）<a class="anchor" href="#步骤-1-基础设施-phase-0" aria-label="锚点">#</a></h3>
+<p><strong>目标</strong>：建立门控体系和基础工具</p>
+<ul><li>[ ] 1.1 创建 <code>tui/utils/ccMode.js</code> — 门控检测工具函数</li><li>[ ] 1.2 创建 <code>tui/utils/ccBrand.js</code> — 品牌文本集中管理</li><li>[ ] 1.3 创建 <code>tui/theme/ccTheme.js</code> — CC 主题色板</li><li>[ ] 1.4 创建 <code>tui/utils/ccResizeHandler.js</code> — 终端 resize 无残影处理</li><li>[ ] 1.5 创建 <code>tui/utils/ccRenderStrategy.js</code> — 渲染策略配置</li><li>[ ] 1.6 创建 <code>tui/utils/ccTimers.js</code> — 计时器常量管理</li><li>[ ] 1.7 创建 <code>tui/utils/ccLayout.js</code> — 布局计算（绝对值+相对值混合）</li><li>[ ] 1.8 修改 <code>tui/theme/themeRegistry.js</code> — 新增 <code>cc</code> 主题注册</li></ul>
+<p><strong>验证</strong>：</p>
+<pre><code class="language-bash">KHY_CC_TUI=1 khy  <span class="hljs-comment"># 应显示 CC 风格主题</span>
+khy               <span class="hljs-comment"># Legacy 模式行为不变</span></code></pre>
+<hr>
+<h3 id="步骤-2-核心视觉-phase-1">步骤 2: 核心视觉（Phase 1）<a class="anchor" href="#步骤-2-核心视觉-phase-1" aria-label="锚点">#</a></h3>
+<p><strong>目标</strong>：实现 CC 风格的核心 UI 组件</p>
+<ul><li>[ ] 2.1 创建 <code>tui/ink-components/CcAssistantMessage.js</code> — 助手消息（● 前缀）</li><li>[ ] 2.2 创建 <code>tui/ink-components/CcToolCard.js</code> — 工具调用卡片（🔧 + 粗体青色）</li><li>[ ] 2.3 创建 <code>tui/ink-components/CcStatusLine.js</code> — 单行状态栏</li><li>[ ] 2.4 创建 <code>tui/ink-components/CcPromptInput.js</code> — 无边框输入框 + 光标</li><li>[ ] 2.5 创建 <code>tui/ink-components/CcLogo.js</code> — Khy 品牌 Logo</li><li>[ ] 2.6 修改 <code>tui/ink-components/MessageBlock.js</code> — 用户消息无背景框</li><li>[ ] 2.7 修改 <code>tui/ink-components/WelcomeBanner.js</code> — CC 风格欢迎界面</li></ul>
+<p><strong>验证</strong>：</p>
+<pre><code class="language-bash">KHY_CC_TUI=1 khy
+<span class="hljs-comment"># 检查：用户消息无背景框</span>
+<span class="hljs-comment"># 检查：助手消息以 ● 开头</span>
+<span class="hljs-comment"># 检查：工具调用显示 🔧 + 粗体青色</span>
+<span class="hljs-comment"># 检查：状态栏为单行</span>
+<span class="hljs-comment"># 检查：输入框无边框</span></code></pre>
+<hr>
+<h3 id="步骤-3-交互组件-phase-2">步骤 3: 交互组件（Phase 2）<a class="anchor" href="#步骤-3-交互组件-phase-2" aria-label="锚点">#</a></h3>
+<p><strong>目标</strong>：实现选择、折叠、表格等交互组件</p>
+<ul><li>[ ] 3.1 创建 <code>tui/ink-components/CcCollapsible.js</code> — 折叠组件（▸/▾）</li><li>[ ] 3.2 创建 <code>tui/ink-components/CcTable.js</code> — 表格组件</li><li>[ ] 3.3 创建 <code>tui/ink-components/CcSelectable.js</code> — 选择列表组件</li><li>[ ] 3.4 创建 <code>tui/ink-components/CcFuzzyPicker.js</code> — 模糊搜索选择器</li><li>[ ] 3.5 创建 <code>tui/ink-components/CcHelpMenu.js</code> — 帮助菜单覆盖层</li></ul>
+<p><strong>验证</strong>：</p>
+<pre><code class="language-bash">KHY_CC_TUI=1 khy
+<span class="hljs-comment"># 检查：? 键打开帮助菜单</span>
+<span class="hljs-comment"># 检查：折叠组件可展开/折叠</span>
+<span class="hljs-comment"># 检查：表格列对齐正确</span></code></pre>
+<hr>
+<h3 id="步骤-4-高级功能-phase-3">步骤 4: 高级功能（Phase 3）<a class="anchor" href="#步骤-4-高级功能-phase-3" aria-label="锚点">#</a></h3>
+<p><strong>目标</strong>：实现视图栈、剪贴板、历史等高级功能</p>
+<ul><li>[ ] 4.1 创建 <code>tui/ink-components/CcViewStack.js</code> — 视图栈管理</li><li>[ ] 4.2 创建 <code>tui/utils/ccClipboard.js</code> — 剪贴板工具（OSC 52）</li><li>[ ] 4.3 创建 <code>tui/utils/ccHistory.js</code> — 历史管理（持久化 + 搜索）</li><li>[ ] 4.4 创建 <code>tui/ink-components/CcMcpStatus.js</code> — MCP 状态栏指示器</li><li>[ ] 4.5 创建 <code>tui/ink-components/CcSidebarPanel.js</code> — 右侧看板容器</li></ul>
+<p><strong>验证</strong>：</p>
+<pre><code class="language-bash">KHY_CC_TUI=1 khy
+<span class="hljs-comment"># 检查：Ctrl+P 打开命令面板</span>
+<span class="hljs-comment"># 检查：Ctrl+R 打开历史搜索</span>
+<span class="hljs-comment"># 检查：复制操作显示字符反馈</span>
+<span class="hljs-comment"># 检查：MCP 状态显示正确</span></code></pre>
+<hr>
+<h3 id="步骤-5-微交互与反馈-phase-4">步骤 5: 微交互与反馈（Phase 4）<a class="anchor" href="#步骤-5-微交互与反馈-phase-4" aria-label="锚点">#</a></h3>
+<p><strong>目标</strong>：完善复制反馈、滚动指示、Toast 等微交互</p>
+<ul><li>[ ] 5.1 创建 <code>tui/utils/ccFeedback.js</code> — 反馈管理器</li><li>[ ] 5.2 创建 <code>tui/components/CcToast.js</code> — 瞬态消息组件</li><li>[ ] 5.3 创建 <code>tui/components/CcScrollIndicators.js</code> — 滚动指示器</li><li>[ ] 5.4 创建 <code>tui/components/CcMessageBar.js</code> — 错误/警告/信息横幅</li><li>[ ] 5.5 修改 <code>tui/ink-components/CcStatusLine.js</code> — 集成 Token 警告</li></ul>
+<p><strong>验证</strong>：</p>
+<pre><code class="language-bash">KHY_CC_TUI=1 khy
+<span class="hljs-comment"># 检查：复制显示 &quot;copied N chars&quot;</span>
+<span class="hljs-comment"># 检查：滚动显示 &quot;⋯ (N above/below)&quot;</span>
+<span class="hljs-comment"># 检查：Toast 3-5 秒自动消失</span>
+<span class="hljs-comment"># 检查：Token 80% 黄色 / 95% 红色</span></code></pre>
+<hr>
+<h3 id="步骤-6-快捷键与执行偏差-phase-5">步骤 6: 快捷键与执行偏差（Phase 5）<a class="anchor" href="#步骤-6-快捷键与执行偏差-phase-5" aria-label="锚点">#</a></h3>
+<p><strong>目标</strong>：实现快捷键系统、Redo/Fork、执行偏差处理</p>
+<ul><li>[ ] 6.1 创建 <code>tui/utils/ccKeyRegistry.js</code> — 快捷键注册表</li><li>[ ] 6.2 创建 <code>tui/utils/ccUndoStack.js</code> — 操作栈（撤销/重做）</li><li>[ ] 6.3 创建 <code>tui/utils/ccExecutionMonitor.js</code> — 执行监控器</li><li>[ ] 6.4 修改 <code>tui/ink-components/CcPromptInput.js</code> — 集成快捷键</li><li>[ ] 6.5 修改 <code>tui/ink-components/App.js</code> — 集成全局快捷键</li></ul>
+<p><strong>验证</strong>：</p>
+<pre><code class="language-bash">KHY_CC_TUI=1 khy
+<span class="hljs-comment"># 检查：r 重新生成</span>
+<span class="hljs-comment"># 检查：f 分叉</span>
+<span class="hljs-comment"># 检查：z 撤销</span>
+<span class="hljs-comment"># 检查：双击 Ctrl+C 退出</span>
+<span class="hljs-comment"># 检查：模型跑偏可中断</span></code></pre>
+<hr>
+<h2 id="代码风格约束">🔧 代码风格约束<a class="anchor" href="#代码风格约束" aria-label="锚点">#</a></h2>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确：2 空格缩进、单引号、分号</span>
+<span class="hljs-keyword">const</span> x = <span class="hljs-number">1</span>;
+<span class="hljs-keyword">const</span> y = <span class="hljs-string">&#x27;hello&#x27;</span>;
+
+<span class="hljs-comment">// ✅ 正确：camelCase 命名</span>
+<span class="hljs-keyword">const</span> isCcMode = <span class="hljs-literal">true</span>;
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">formatModelName</span>(<span class="hljs-params"></span>) {}
+
+<span class="hljs-comment">// ✅ 正确：英文注释</span>
+<span class="hljs-comment">// Detect terminal color support</span>
+<span class="hljs-keyword">const</span> supportsColor = process.<span class="hljs-property">env</span>.<span class="hljs-property">COLORTERM</span> === <span class="hljs-string">&#x27;truecolor&#x27;</span>;
+
+<span class="hljs-comment">// ✅ 正确：面向用户的中文字符串</span>
+<span class="hljs-keyword">const</span> message = <span class="hljs-string">&#x27;正在连接数据库...&#x27;</span>; <span class="hljs-comment">// 用户可见</span>
+<span class="hljs-keyword">const</span> label = <span class="hljs-string">&#x27;model&#x27;</span>; <span class="hljs-comment">// 内部标识，英文</span>
+
+<span class="hljs-comment">// ✅ 正确：函数组件 + React.memo</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">CcStatusLine</span>(<span class="hljs-params">{ model, context, cost }</span>) {
+  <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Text</span>&gt;</span>{model}<span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span></span>;
+}
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = { <span class="hljs-title class_">CcStatusLine</span>: <span class="hljs-title class_">React</span>.<span class="hljs-title function_">memo</span>(<span class="hljs-title class_">CcStatusLine</span>) };
+
+<span class="hljs-comment">// ✅ 正确：门控模式</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">FooterBar</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">if</span> (process.<span class="hljs-property">env</span>.<span class="hljs-property">KHY_CC_TUI</span> === <span class="hljs-string">&#x27;1&#x27;</span>) {
+    <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">CcStatusLine</span> /&gt;</span></span>;
+  }
+  <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">LegacyFooterBar</span> /&gt;</span></span>;
+}
+
+<span class="hljs-comment">// ❌ 错误：在组件内判断</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">Message</span>(<span class="hljs-params">{ text }</span>) {
+  <span class="hljs-keyword">const</span> color = isCcMode ? <span class="hljs-string">&#x27;#00D4D4&#x27;</span> : <span class="hljs-string">&#x27;#00BCD4&#x27;</span>; <span class="hljs-comment">// 禁止！</span>
+  <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Text</span> <span class="hljs-attr">color</span>=<span class="hljs-string">{color}</span>&gt;</span>{text}<span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span></span>;
+}</code></pre>
+<hr>
+<h2 id="测试验证">🧪 测试验证<a class="anchor" href="#测试验证" aria-label="锚点">#</a></h2>
+<h3 id="功能测试">功能测试<a class="anchor" href="#功能测试" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 门控测试</span>
+KHY_CC_TUI=1 khy          <span class="hljs-comment"># 应显示 CC 风格 UI</span>
+KHY_CC_TUI=0 khy          <span class="hljs-comment"># Legacy 模式</span>
+khy                       <span class="hljs-comment"># Legacy 模式（默认）</span>
+
+<span class="hljs-comment"># 2. 性能测试</span>
+<span class="hljs-keyword">time</span> KHY_CC_TUI=1 khy     <span class="hljs-comment"># 冷启动 &lt; 100ms</span>
+
+<span class="hljs-comment"># 3. 快捷键测试</span>
+KHY_CC_TUI=1 khy
+<span class="hljs-comment"># 按 ? 打开帮助菜单</span>
+<span class="hljs-comment"># 按 Ctrl+P 打开命令面板</span>
+<span class="hljs-comment"># 按 Ctrl+R 打开历史搜索</span>
+<span class="hljs-comment"># 按 r 重新生成</span>
+<span class="hljs-comment"># 按 f 分叉</span>
+<span class="hljs-comment"># 按 z 撤销</span>
+
+<span class="hljs-comment"># 4. 复制测试</span>
+KHY_CC_TUI=1 khy
+<span class="hljs-comment"># 复制内容，检查状态栏显示 &quot;copied N chars&quot;</span>
+
+<span class="hljs-comment"># 5. 模型跑偏测试</span>
+KHY_CC_TUI=1 khy
+<span class="hljs-comment"># 执行一个可能跑偏的任务</span>
+<span class="hljs-comment"># 检查是否可中断和纠正</span></code></pre>
+<h3 id="兼容性测试">兼容性测试<a class="anchor" href="#兼容性测试" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># OpenAI 协议</span>
+OPENAI_API_KEY=sk-xxx KHY_CC_TUI=1 khy
+/model gpt-4o
+
+<span class="hljs-comment"># MCP 状态</span>
+KHY_CC_TUI=1 khy
+<span class="hljs-comment"># 检查 MCP 状态显示</span>
+
+<span class="hljs-comment"># 历史持久化</span>
+KHY_CC_TUI=1 khy
+<span class="hljs-comment"># 输入一些命令，退出后重新启动</span>
+<span class="hljs-comment"># 检查历史是否保留</span></code></pre>
+<hr>
+<h2 id="文件组织">📁 文件组织<a class="anchor" href="#文件组织" aria-label="锚点">#</a></h2>
+<pre><code>services/backend/src/cli/tui/
+├── AGENTS.md                    ← 工程约束（已存在）
+├── app.js                       ← 入口（修改）
+├── ink-components/              ← Ink 组件
+│   ├── App.js                   ← 根组件（修改）
+│   ├── CcStatusLine.js          ← 新建：CC 状态栏
+│   ├── CcAssistantMessage.js    ← 新建：CC 助手消息
+│   ├── CcToolCard.js            ← 新建：CC 工具卡片
+│   ├── CcPromptInput.js         ← 新建：CC 输入框
+│   ├── CcPermissionPrompt.js    ← 新建：CC 权限提示
+│   ├── CcFuzzyPicker.js         ← 新建：CC 补全菜单
+│   ├── CcHelpMenu.js            ← 新建：CC 帮助菜单
+│   ├── CcLogo.js                ← 新建：CC Logo
+│   ├── CcMcpStatus.js           ← 新建：MCP 状态栏
+│   ├── CcMcpPanel.js            ← 新建：MCP 详情面板
+│   ├── CcSidebarPanel.js        ← 新建：右侧看板容器
+│   ├── CcSidebarContext.js      ← 新建：Context 面板
+│   ├── CcSidebarFiles.js        ← 新建：Files 面板
+│   ├── CcSidebarTools.js        ← 新建：Tools 面板
+│   ├── CcSidebarStats.js        ← 新建：Stats 面板
+│   ├── CcSidebarMcp.js          ← 新建：MCP 面板
+│   ├── CcViewStack.js           ← 新建：视图栈
+│   ├── CcCollapsible.js         ← 新建：折叠组件
+│   ├── CcTable.js               ← 新建：表格组件
+│   ├── CcSelectable.js          ← 新建：选择组件
+│   └── CcMessageBar.js          ← 新建：消息横幅
+├── utils/                       ← 工具函数
+│   ├── ccMode.js                ← 新建：门控检测
+│   ├── ccBrand.js               ← 新建：品牌文本
+│   ├── ccFormatters.js          ← 新建：格式化函数
+│   ├── ccToolFormat.js          ← 新建：工具参数格式化
+│   ├── ccResizeHandler.js       ← 新建：Resize 处理
+│   ├── ccRenderStrategy.js      ← 新建：渲染策略
+│   ├── ccTimers.js              ← 新建：计时器常量
+│   ├── ccLayout.js              ← 新建：布局计算
+│   ├── ccContextWindows.js      ← 新建：模型上下文窗口
+│   ├── ccPricing.js             ← 新建：模型定价
+│   ├── ccClipboard.js           ← 新建：剪贴板工具
+│   ├── ccHistory.js             ← 新建：历史管理
+│   ├── ccFeedback.js            ← 新建：反馈管理器
+│   ├── ccKeyRegistry.js         ← 新建：快捷键注册表
+│   ├── ccUndoStack.js           ← 新建：操作栈
+│   └── ccExecutionMonitor.js    ← 新建：执行监控器
+├── hooks/                       ← React Hooks
+│   ├── useMcpStatus.js          ← 新建：MCP 状态桥接
+│   └── useSidebarState.js       ← 新建：右侧看板状态
+└── theme/                       ← 主题
+    ├── ccTheme.js               ← 新建：CC 主题色板
+    └── themeRegistry.js         ← 修改：新增 cc 主题</code></pre>
+<hr>
+<h2 id="常见陷阱">⚠️ 常见陷阱<a class="anchor" href="#常见陷阱" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>陷阱</th><th>正确做法</th></tr></thead><tbody><tr><td>修改 Legacy 组件内部实现</td><td>新增 CC 组件，Legacy 组件保持不变</td></tr><tr><td>在组件内判断 <code>isCcMode</code></td><td>在组件外部条件渲染</td></tr><tr><td>使用 <code>\x1B[2J</code> 全屏清除</td><td>使用 <code>\x1B[0J</code> ED0</td></tr><tr><td>直接监听 <code>stdout.on('resize')</code></td><td>使用 <code>ResizeHandler</code> 封装</td></tr><tr><td>硬编码颜色值</td><td>从 <code>ccTheme.js</code> 导入</td></tr><tr><td>不清理定时器</td><td><code>useEffect</code> 返回清理函数</td></tr><tr><td>忘记 <code>React.memo</code></td><td>所有纯展示组件使用 memo</td></tr></tbody></table>
+<hr>
+<h2 id="验收标准">📊 验收标准<a class="anchor" href="#验收标准" aria-label="锚点">#</a></h2>
+<h3 id="功能验收">功能验收<a class="anchor" href="#功能验收" aria-label="锚点">#</a></h3>
+<ul><li>[ ] <code>KHY_CC_TUI=1 khy</code> 启动后显示 CC 风格 UI</li><li>[ ] Legacy 模式（无门控）行为与修改前逐字节相同</li><li>[ ] 复制操作显示字符/字节数反馈</li><li>[ ] 滚动时显示上下方内容指示器</li><li>[ ] 瞬态消息 3-5 秒自动消失</li><li>[ ] Token 用量 80%/95% 显示警告</li><li>[ ] 工具执行超时显示重试建议</li><li>[ ] 粘贴大文本显示行数反馈</li><li>[ ] 双击 Ctrl+C 退出（首次提示）</li><li>[ ] 快捷键系统工作正常</li><li>[ ] Redo/Fork/Undo 工作正常</li><li>[ ] 模型跑偏可中断和纠正</li></ul>
+<h3 id="性能验收">性能验收<a class="anchor" href="#性能验收" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 冷启动 &lt; 100ms</li><li>[ ] 热启动 &lt; 50ms</li><li>[ ] 渲染帧率 ≥ 30 FPS</li><li>[ ] 输入延迟 &lt; 16ms</li><li>[ ] Resize 无残影</li><li>[ ] 内存 &lt; 50MB</li></ul>
+<h3 id="兼容性验收">兼容性验收<a class="anchor" href="#兼容性验收" aria-label="锚点">#</a></h3>
+<ul><li>[ ] OpenAI 模型名格式化正确</li><li>[ ] 上下文窗口计算正确</li><li>[ ] 费用计算正确</li><li>[ ] MCP 状态显示正确</li><li>[ ] 历史持久化正常</li><li>[ ] 剪贴板 OSC 52 工作</li></ul>
+<hr>
+<h2 id="开始执行">🚀 开始执行<a class="anchor" href="#开始执行" aria-label="锚点">#</a></h2>
+<ol><li><strong>确认已阅读所有设计文档</strong></li><li><strong>按步骤 1-6 顺序实施</strong></li><li><strong>每步完成后运行验证命令</strong></li><li><strong>遇到问题查阅 <code>AGENTS.md</code> 红线</strong></li><li><strong>完成后更新总计划文档状态</strong></li></ol>
+<hr>
+<blockquote><p><strong>提示词结束</strong></p>
+<p>将此提示词保存为 <code>docs/03_DESIGN_设计/EXECUTION_PROMPT.md</code>，方便 AI 助手引用。</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/其它设计/00_INDEX_其它设计-总目录.html"><div class="dir">← 上一篇</div><div class="ttl">其它设计</div></a><a class="next" href="../../../docs/03_DESIGN_设计/其它设计/ycode-inspiration-plan.html"><div class="dir">下一篇 →</div><div class="ttl">Y-code (星瑶) → Khyos: Implementation Plan</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/其它设计/EXECUTION_PROMPT.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

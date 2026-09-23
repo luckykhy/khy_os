@@ -26,7 +26,7 @@ describe('createRemoteRepo fetch transport', () => {
     expect(JSON.parse(options.body)).toEqual({
       name: 'fixture-repo',
       private: true,
-      description: 'KHY-Quant trained model',
+      description: 'khy OS trained model',
     });
     expect(options.signal).toBeInstanceOf(AbortSignal);
   });

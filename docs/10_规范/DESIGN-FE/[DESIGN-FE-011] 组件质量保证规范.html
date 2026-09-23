@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-FE-011] 组件质量保证规范.md -->
+<title>[DESIGN-FE-011] 组件质量保证规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-FE<span class="sep">›</span>[DESIGN-FE-011] 组件质量保证规范</div>
+      <header class="hero reveal"><h1>[DESIGN-FE-011] 组件质量保证规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-fe-011-组件质量保证规范">[DESIGN-FE-011] 组件质量保证规范</a></li><li class="lvl-3"><a href="#7-1-代码质量">7.1 代码质量</a></li><li class="lvl-3"><a href="#7-2-测试覆盖率">7.2 测试覆盖率</a></li><li class="lvl-3"><a href="#7-3-性能监控">7.3 性能监控</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-fe-011-组件质量保证规范">[DESIGN-FE-011] 组件质量保证规范<a class="anchor" href="#design-fe-011-组件质量保证规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：代码质量、测试覆盖率、性能监控三道质量门。<br><strong>隶属</strong>：本文是 [<code>[DESIGN-FE-002]</code> 前端组件库规范]([DESIGN-FE-002] 前端组件库规范.md) 的<strong>子篇</strong>；主篇是唯一入口与 scope 裁决真源，本文只承载细则。<br><strong>状态</strong>：随主篇——主篇 §0 声明为「目标态、非现状」，本文同样在组件库真正落地后才生效；在此之前一切以 [<code>[DESIGN-FE-001]</code> 前端页面规范]([DESIGN-FE-001] 前端页面规范.md) 为准。</p></blockquote>
+<hr>
+<h3 id="7-1-代码质量">7.1 代码质量<a class="anchor" href="#7-1-代码质量" aria-label="锚点">#</a></h3>
+<p><strong>ESLint 规则</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// .eslintrc.js</span>
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = {
+  <span class="hljs-attr">extends</span>: [
+    <span class="hljs-string">&#x27;eslint:recommended&#x27;</span>,
+    <span class="hljs-string">&#x27;plugin:vue/vue3-recommended&#x27;</span>,
+    <span class="hljs-string">&#x27;prettier&#x27;</span>
+  ],
+  <span class="hljs-attr">rules</span>: {
+    <span class="hljs-string">&#x27;vue/multi-word-component-names&#x27;</span>: <span class="hljs-string">&#x27;off&#x27;</span>,
+    <span class="hljs-string">&#x27;vue/no-v-html&#x27;</span>: <span class="hljs-string">&#x27;warn&#x27;</span>,
+    <span class="hljs-string">&#x27;vue/require-default-prop&#x27;</span>: <span class="hljs-string">&#x27;error&#x27;</span>,
+    <span class="hljs-string">&#x27;vue/require-prop-types&#x27;</span>: <span class="hljs-string">&#x27;error&#x27;</span>
+  }
+};</code></pre>
+<p><strong>Prettier 配置</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;printWidth&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">100</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;tabWidth&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">2</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;singleQuote&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;trailingComma&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;es5&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;arrowParens&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;always&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;endOfLine&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;lf&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="7-2-测试覆盖率">7.2 测试覆盖率<a class="anchor" href="#7-2-测试覆盖率" aria-label="锚点">#</a></h3>
+<p><strong>覆盖率要求</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// vitest.config.js</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+  <span class="hljs-attr">test</span>: {
+    <span class="hljs-attr">coverage</span>: {
+      <span class="hljs-attr">provider</span>: <span class="hljs-string">&#x27;v8&#x27;</span>,
+      <span class="hljs-attr">reporter</span>: [<span class="hljs-string">&#x27;text&#x27;</span>, <span class="hljs-string">&#x27;json&#x27;</span>, <span class="hljs-string">&#x27;html&#x27;</span>],
+      <span class="hljs-attr">exclude</span>: [<span class="hljs-string">&#x27;node_modules/&#x27;</span>, <span class="hljs-string">&#x27;src/__tests__/&#x27;</span>],
+      <span class="hljs-attr">thresholds</span>: {
+        <span class="hljs-attr">branches</span>: <span class="hljs-number">80</span>,
+        <span class="hljs-attr">functions</span>: <span class="hljs-number">80</span>,
+        <span class="hljs-attr">lines</span>: <span class="hljs-number">80</span>,
+        <span class="hljs-attr">statements</span>: <span class="hljs-number">80</span>
+      }
+    }
+  }
+};</code></pre>
+<h3 id="7-3-性能监控">7.3 性能监控<a class="anchor" href="#7-3-性能监控" aria-label="锚点">#</a></h3>
+<p><strong>Bundle 大小</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// rollup.config.js</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+  <span class="hljs-attr">output</span>: {
+    <span class="hljs-attr">file</span>: <span class="hljs-string">&#x27;dist/khy-components.esm.js&#x27;</span>,
+    <span class="hljs-attr">format</span>: <span class="hljs-string">&#x27;esm&#x27;</span>,
+    <span class="hljs-attr">sourcemap</span>: <span class="hljs-literal">true</span>
+  },
+  <span class="hljs-attr">plugins</span>: [
+    <span class="hljs-title function_">visualizer</span>({
+      <span class="hljs-attr">open</span>: <span class="hljs-literal">true</span>,
+      <span class="hljs-attr">gzipSize</span>: <span class="hljs-literal">true</span>
+    })
+  ]
+};</code></pre>
+<p><strong>性能预算</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;budgets&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;initial&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;maximumWarning&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;500kb&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;maximumError&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1mb&quot;</span>
+    <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;anyComponentStyle&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;maximumWarning&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2kb&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;maximumError&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;4kb&quot;</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-FE/[DESIGN-FE-010] 组件文档与发布规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-FE-010] 组件文档与发布规范</div></a><a class="next" href="../../../docs/10_规范/DESIGN-FE/00_INDEX_DESIGN-FE-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">DESIGN-FE</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-FE/[DESIGN-FE-011] 组件质量保证规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

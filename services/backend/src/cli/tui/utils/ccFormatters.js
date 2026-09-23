@@ -150,11 +150,16 @@ function formatCost(usd) {
 
 /**
  * 格式化复制反馈
+ *
+ * CC 规范（[DESIGN-ARCH-087] §1）：copied N chars / copied N lines / copied N KB。
+ * 计数按 code point（[...text].length）而非 UTF-16 码元（text.length），
+ * 避免 emoji / 代理对过计数（对齐 Claude Code CHANGELOG「copied N chars
+ * overcounting emoji」修正）。N 仅用于反馈文案，不影响实际复制内容。
  */
 function formatCopyFeedback(text) {
   if (!text) return '';
   const lines = text.split('\n').length;
-  const chars = text.length;
+  const chars = [...String(text)].length; // code-point count, emoji-safe
   const bytes = Buffer.byteLength(text, 'utf8');
 
   if (lines > 1) return `copied ${lines} lines`;
@@ -164,12 +169,14 @@ function formatCopyFeedback(text) {
 
 /**
  * 格式化粘贴反馈
+ *
+ * 单行计数同样按 code point（emoji 安全），多行用原始行数。
  */
 function formatPasteFeedback(text) {
   if (!text) return '';
-  const lines = text.split('\n').length;
+  const lines = String(text).split('\n').length;
   if (lines > 1) return `Pasted ~${lines} lines`;
-  return `Pasted ${text.length} chars`;
+  return `Pasted ${[...String(text)].length} chars`;
 }
 
 module.exports = {

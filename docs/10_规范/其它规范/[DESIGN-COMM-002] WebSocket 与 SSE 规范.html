@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-COMM-002] WebSocket 与 SSE 规范.md -->
+<title>[DESIGN-COMM-002] WebSocket 与 SSE 规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-COMM-002] WebSocket 与 SSE 规范</div>
+      <header class="hero reveal"><h1>[DESIGN-COMM-002] WebSocket 与 SSE 规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-comm-002-websocket-与-sse-规范">[DESIGN-COMM-002] WebSocket 与 SSE 规范</a></li><li class="lvl-2"><a href="#1-协议选型">1. 协议选型</a></li><li class="lvl-3"><a href="#1-1-选型决策矩阵">1.1 选型决策矩阵</a></li><li class="lvl-3"><a href="#1-2-统一消息格式">1.2 统一消息格式</a></li><li class="lvl-2"><a href="#2-websocket-规范">2. WebSocket 规范</a></li><li class="lvl-3"><a href="#2-1-连接管理">2.1 连接管理</a></li><li class="lvl-3"><a href="#2-2-心跳机制">2.2 心跳机制</a></li><li class="lvl-3"><a href="#2-3-消息格式">2.3 消息格式</a></li><li class="lvl-3"><a href="#2-4-错误处理">2.4 错误处理</a></li><li class="lvl-2"><a href="#3-sse-server-sent-events-规范">3. SSE（Server-Sent Events）规范</a></li><li class="lvl-3"><a href="#3-1-使用场景">3.1 使用场景</a></li><li class="lvl-3"><a href="#3-2-实现">3.2 实现</a></li><li class="lvl-3"><a href="#3-3-sse-事件格式">3.3 SSE 事件格式</a></li><li class="lvl-2"><a href="#4-重连机制">4. 重连机制</a></li><li class="lvl-3"><a href="#4-1-websocket-重连">4.1 WebSocket 重连</a></li><li class="lvl-3"><a href="#4-2-sse-重连">4.2 SSE 重连</a></li><li class="lvl-2"><a href="#5-背压处理">5. 背压处理</a></li><li class="lvl-3"><a href="#5-1-websocket-背压">5.1 WebSocket 背压</a></li><li class="lvl-3"><a href="#5-2-sse-背压">5.2 SSE 背压</a></li><li class="lvl-2"><a href="#6-安全">6. 安全</a></li><li class="lvl-3"><a href="#6-1-websocket-安全">6.1 WebSocket 安全</a></li><li class="lvl-3"><a href="#6-2-origin-检查">6.2 Origin 检查</a></li><li class="lvl-2"><a href="#7-消息确认">7. 消息确认</a></li><li class="lvl-3"><a href="#7-1-至少一次投递">7.1 至少一次投递</a></li><li class="lvl-2"><a href="#8-版本历史">8. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-comm-002-websocket-与-sse-规范">[DESIGN-COMM-002] WebSocket 与 SSE 规范<a class="anchor" href="#design-comm-002-websocket-与-sse-规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>用途</strong>：定义 khy-os 项目中 WebSocket 和 SSE（Server-Sent Events）的使用标准。<br>COMM-001 定义了通信协议框架，本文档补全实时通信细节。</p></blockquote>
+<hr>
+<h2 id="1-协议选型">1. 协议选型<a class="anchor" href="#1-协议选型" aria-label="锚点">#</a></h2>
+<h3 id="1-1-选型决策矩阵">1.1 选型决策矩阵<a class="anchor" href="#1-1-选型决策矩阵" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>场景</th><th>推荐协议</th><th>原因</th></tr></thead><tbody><tr><td>服务端推送事件（单向）</td><td>SSE</td><td>简单、自动重连、HTTP 兼容</td></tr><tr><td>双向实时通信</td><td>WebSocket</td><td>全双工、低延迟</td></tr><tr><td>AI 流式对话</td><td>WebSocket / fetch + streaming</td><td>流式文本分块</td></tr><tr><td>进度通知</td><td>SSE</td><td>单向，适合进度推送</td></tr><tr><td>文件上传进度</td><td>SSE / WebSocket</td><td>进度事件</td></tr></tbody></table>
+<h3 id="1-2-统一消息格式">1.2 统一消息格式<a class="anchor" href="#1-2-统一消息格式" aria-label="锚点">#</a></h3>
+<p>所有实时消息使用 ACP-001 风格的信封格式：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;event&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;meta&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;requestId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;req-uuid&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;traceId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;trace-uuid&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-10T12:00:00.000Z&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;source&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;backend&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;payload&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;event&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ai.chunk&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;text&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Hello&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;done&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span> <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+<h2 id="2-websocket-规范">2. WebSocket 规范<a class="anchor" href="#2-websocket-规范" aria-label="锚点">#</a></h2>
+<h3 id="2-1-连接管理">2.1 连接管理<a class="anchor" href="#2-1-连接管理" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> { <span class="hljs-title class_">WebSocketServer</span> } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;ws&#x27;</span>);
+
+<span class="hljs-keyword">const</span> wss = <span class="hljs-keyword">new</span> <span class="hljs-title class_">WebSocketServer</span>({
+  <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/ws&#x27;</span>,
+  <span class="hljs-attr">port</span>: <span class="hljs-number">3001</span>,
+  <span class="hljs-attr">perMessageDeflate</span>: <span class="hljs-literal">false</span>   <span class="hljs-comment">// 禁用压缩以降低 CPU</span>
+});
+
+<span class="hljs-comment">// 连接跟踪</span>
+<span class="hljs-keyword">const</span> connections = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>();
+
+wss.<span class="hljs-title function_">on</span>(<span class="hljs-string">&#x27;connection&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">ws, req</span>) =&gt;</span> {
+  <span class="hljs-keyword">const</span> requestId = <span class="hljs-title function_">uuidv4</span>();
+  <span class="hljs-keyword">const</span> traceId = req.<span class="hljs-property">headers</span>[<span class="hljs-string">&#x27;x-trace-id&#x27;</span>] || <span class="hljs-title function_">uuidv4</span>();
+  
+  connections.<span class="hljs-title function_">set</span>(requestId, ws);
+  
+  <span class="hljs-comment">// 注入元数据</span>
+  ws.<span class="hljs-property">requestId</span> = requestId;
+  ws.<span class="hljs-property">traceId</span> = traceId;
+  ws.<span class="hljs-property">authenticated</span> = <span class="hljs-literal">false</span>;
+  ws.<span class="hljs-property">userId</span> = <span class="hljs-literal">null</span>;
+  
+  <span class="hljs-comment">// 认证握手（10 秒超时）</span>
+  <span class="hljs-keyword">const</span> authTimeout = <span class="hljs-built_in">setTimeout</span>(<span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-keyword">if</span> (!ws.<span class="hljs-property">authenticated</span>) {
+      ws.<span class="hljs-title function_">close</span>(<span class="hljs-number">4001</span>, <span class="hljs-string">&#x27;Auth timeout&#x27;</span>);
+      connections.<span class="hljs-title function_">delete</span>(requestId);
+    }
+  }, <span class="hljs-number">10_000</span>);
+  
+  ws.<span class="hljs-title function_">once</span>(<span class="hljs-string">&#x27;message&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">data</span>) =&gt;</span> {
+    <span class="hljs-built_in">clearTimeout</span>(authTimeout);
+    <span class="hljs-keyword">const</span> msg = <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(data);
+    
+    <span class="hljs-keyword">if</span> (msg.<span class="hljs-property">type</span> === <span class="hljs-string">&#x27;auth&#x27;</span>) {
+      <span class="hljs-comment">// 验证 token</span>
+      <span class="hljs-keyword">const</span> decoded = <span class="hljs-title function_">verifyToken</span>(msg.<span class="hljs-property">payload</span>.<span class="hljs-property">token</span>);
+      ws.<span class="hljs-property">authenticated</span> = <span class="hljs-literal">true</span>;
+      ws.<span class="hljs-property">userId</span> = decoded.<span class="hljs-property">sub</span>;
+      
+      ws.<span class="hljs-title function_">send</span>(<span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>({
+        <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;auth_ok&#x27;</span>,
+        <span class="hljs-attr">meta</span>: { requestId, traceId, <span class="hljs-attr">timestamp</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>().<span class="hljs-title function_">toISOString</span>() },
+        <span class="hljs-attr">payload</span>: { <span class="hljs-attr">userId</span>: decoded.<span class="hljs-property">sub</span> }
+      }));
+    }
+  });
+  
+  <span class="hljs-comment">// 心跳</span>
+  ws.<span class="hljs-property">isAlive</span> = <span class="hljs-literal">true</span>;
+  ws.<span class="hljs-title function_">on</span>(<span class="hljs-string">&#x27;pong&#x27;</span>, <span class="hljs-function">() =&gt;</span> { ws.<span class="hljs-property">isAlive</span> = <span class="hljs-literal">true</span>; });
+  
+  <span class="hljs-comment">// 连接关闭</span>
+  ws.<span class="hljs-title function_">on</span>(<span class="hljs-string">&#x27;close&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    connections.<span class="hljs-title function_">delete</span>(requestId);
+  });
+});
+
+<span class="hljs-comment">// 心跳检测（每 30 秒）</span>
+<span class="hljs-built_in">setInterval</span>(<span class="hljs-function">() =&gt;</span> {
+  wss.<span class="hljs-property">clients</span>.<span class="hljs-title function_">forEach</span>(<span class="hljs-function">(<span class="hljs-params">ws</span>) =&gt;</span> {
+    <span class="hljs-keyword">if</span> (!ws.<span class="hljs-property">isAlive</span>) <span class="hljs-keyword">return</span> ws.<span class="hljs-title function_">terminate</span>();
+    ws.<span class="hljs-property">isAlive</span> = <span class="hljs-literal">false</span>;
+    ws.<span class="hljs-title function_">ping</span>();
+  });
+}, <span class="hljs-number">30_000</span>);</code></pre>
+<h3 id="2-2-心跳机制">2.2 心跳机制<a class="anchor" href="#2-2-心跳机制" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>参数</th><th>值</th><th>说明</th></tr></thead><tbody><tr><td>Ping 间隔</td><td>30 秒</td><td>服务端主动 ping</td></tr><tr><td>Pong 超时</td><td>5 秒</td><td>未收到 pong → 断开</td></tr><tr><td>最大空闲</td><td>60 秒</td><td>无任何消息 → 断开</td></tr></tbody></table>
+<h3 id="2-3-消息格式">2.3 消息格式<a class="anchor" href="#2-3-消息格式" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-comment">// 客户端 → 服务端</span>
+<span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;request&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;meta&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;requestId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;client-uuid&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;traceId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;trace-uuid&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;payload&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;action&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ai.chat&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;params&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Hello&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;model&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;default&quot;</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span>
+
+<span class="hljs-comment">// 服务端 → 客户端</span>
+<span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;event&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;meta&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;requestId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;req-uuid&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;traceId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;trace-uuid&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-10T12:00:00.000Z&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;payload&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;event&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ai.chunk&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;text&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Hello&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;done&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;model&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;default&quot;</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="2-4-错误处理">2.4 错误处理<a class="anchor" href="#2-4-错误处理" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 统一错误格式</span>
+{
+  <span class="hljs-string">&quot;type&quot;</span>: <span class="hljs-string">&quot;error&quot;</span>,
+  <span class="hljs-string">&quot;meta&quot;</span>: {
+    <span class="hljs-string">&quot;requestId&quot;</span>: <span class="hljs-string">&quot;req-uuid&quot;</span>,
+    <span class="hljs-string">&quot;traceId&quot;</span>: <span class="hljs-string">&quot;trace-uuid&quot;</span>,
+    <span class="hljs-string">&quot;timestamp&quot;</span>: <span class="hljs-string">&quot;2026-09-10T12:00:00.000Z&quot;</span>
+  },
+  <span class="hljs-string">&quot;payload&quot;</span>: {
+    <span class="hljs-string">&quot;code&quot;</span>: <span class="hljs-string">&quot;AI_ADAPTER_TIMEOUT&quot;</span>,
+    <span class="hljs-string">&quot;message&quot;</span>: <span class="hljs-string">&quot;AI 服务响应超时&quot;</span>,
+    <span class="hljs-string">&quot;retryable&quot;</span>: <span class="hljs-literal">true</span>
+  }
+}</code></pre>
+<hr>
+<h2 id="3-sse-server-sent-events-规范">3. SSE（Server-Sent Events）规范<a class="anchor" href="#3-sse-server-sent-events-规范" aria-label="锚点">#</a></h2>
+<h3 id="3-1-使用场景">3.1 使用场景<a class="anchor" href="#3-1-使用场景" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>场景</th><th>SSE 优势</th></tr></thead><tbody><tr><td>任务进度推送</td><td>单向、自动重连</td></tr><tr><td>日志流</td><td>单向、文本友好</td></tr><tr><td>通知</td><td>单向、事件类型清晰</td></tr></tbody></table>
+<h3 id="3-2-实现">3.2 实现<a class="anchor" href="#3-2-实现" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">app.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/api/v1/stream/tasks/:taskId&#x27;</span>, 
+  requireAuth,
+  <span class="hljs-title function_">async</span> (req, res) =&gt; {
+    res.<span class="hljs-title function_">setHeader</span>(<span class="hljs-string">&#x27;Content-Type&#x27;</span>, <span class="hljs-string">&#x27;text/event-stream&#x27;</span>);
+    res.<span class="hljs-title function_">setHeader</span>(<span class="hljs-string">&#x27;Cache-Control&#x27;</span>, <span class="hljs-string">&#x27;no-cache&#x27;</span>);
+    res.<span class="hljs-title function_">setHeader</span>(<span class="hljs-string">&#x27;Connection&#x27;</span>, <span class="hljs-string">&#x27;keep-alive&#x27;</span>);
+    res.<span class="hljs-title function_">setHeader</span>(<span class="hljs-string">&#x27;X-Accel-Buffering&#x27;</span>, <span class="hljs-string">&#x27;no&#x27;</span>);  <span class="hljs-comment">// 禁用 nginx 缓冲</span>
+    
+    <span class="hljs-keyword">const</span> taskId = req.<span class="hljs-property">params</span>.<span class="hljs-property">taskId</span>;
+    
+    <span class="hljs-comment">// 发送初始事件</span>
+    res.<span class="hljs-title function_">write</span>(<span class="hljs-string">`event: connected\ndata: <span class="hljs-subst">${<span class="hljs-built_in">JSON</span>.stringify({ taskId })}</span>\n\n`</span>);
+    
+    <span class="hljs-comment">// 推送进度</span>
+    <span class="hljs-keyword">const</span> interval = <span class="hljs-built_in">setInterval</span>(<span class="hljs-title function_">async</span> () =&gt; {
+      <span class="hljs-keyword">const</span> progress = <span class="hljs-keyword">await</span> <span class="hljs-title function_">getTaskProgress</span>(taskId);
+      
+      res.<span class="hljs-title function_">write</span>(<span class="hljs-string">`event: progress\ndata: <span class="hljs-subst">${<span class="hljs-built_in">JSON</span>.stringify({
+        taskId,
+        percent: progress.percent,
+        status: progress.status
+      })}</span>\n\n`</span>);
+      
+      <span class="hljs-keyword">if</span> (progress.<span class="hljs-property">done</span>) {
+        <span class="hljs-built_in">clearInterval</span>(interval);
+        res.<span class="hljs-title function_">write</span>(<span class="hljs-string">`event: complete\ndata: <span class="hljs-subst">${<span class="hljs-built_in">JSON</span>.stringify({ result: progress.result })}</span>\n\n`</span>);
+        res.<span class="hljs-title function_">end</span>();
+      }
+    }, <span class="hljs-number">1000</span>);
+    
+    <span class="hljs-comment">// 客户端断开</span>
+    req.<span class="hljs-title function_">on</span>(<span class="hljs-string">&#x27;close&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-built_in">clearInterval</span>(interval);
+    });
+  }
+);</code></pre>
+<h3 id="3-3-sse-事件格式">3.3 SSE 事件格式<a class="anchor" href="#3-3-sse-事件格式" aria-label="锚点">#</a></h3>
+<pre><code>event: progress
+id: evt-001
+data: {&quot;percent&quot;: 50, &quot;status&quot;: &quot;processing&quot;}
+
+event: complete
+id: evt-002
+data: {&quot;result&quot;: &quot;success&quot;}</code></pre>
+<hr>
+<h2 id="4-重连机制">4. 重连机制<a class="anchor" href="#4-重连机制" aria-label="锚点">#</a></h2>
+<h3 id="4-1-websocket-重连">4.1 WebSocket 重连<a class="anchor" href="#4-1-websocket-重连" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">class</span> <span class="hljs-title class_">KhyWebSocket</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">url</span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">url</span> = url;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">ws</span> = <span class="hljs-literal">null</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">reconnectAttempts</span> = <span class="hljs-number">0</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">maxReconnect</span> = <span class="hljs-number">10</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">baseDelay</span> = <span class="hljs-number">1000</span>;
+  }
+  
+  <span class="hljs-title function_">connect</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">ws</span> = <span class="hljs-keyword">new</span> <span class="hljs-title class_">WebSocket</span>(<span class="hljs-variable language_">this</span>.<span class="hljs-property">url</span>);
+    
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">ws</span>.<span class="hljs-property">onopen</span> = <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-variable language_">this</span>.<span class="hljs-property">reconnectAttempts</span> = <span class="hljs-number">0</span>;
+      <span class="hljs-comment">// 重新认证</span>
+      <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">send</span>({ <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;auth&#x27;</span>, <span class="hljs-attr">payload</span>: { <span class="hljs-attr">token</span>: <span class="hljs-title function_">getToken</span>() } });
+    };
+    
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">ws</span>.<span class="hljs-property">onclose</span> = <span class="hljs-function">(<span class="hljs-params">event</span>) =&gt;</span> {
+      <span class="hljs-keyword">if</span> (!event.<span class="hljs-property">wasClean</span> &amp;&amp; <span class="hljs-variable language_">this</span>.<span class="hljs-property">reconnectAttempts</span> &lt; <span class="hljs-variable language_">this</span>.<span class="hljs-property">maxReconnect</span>) {
+        <span class="hljs-keyword">const</span> delay = <span class="hljs-variable language_">this</span>.<span class="hljs-property">baseDelay</span> * <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">pow</span>(<span class="hljs-number">2</span>, <span class="hljs-variable language_">this</span>.<span class="hljs-property">reconnectAttempts</span>);
+        <span class="hljs-built_in">setTimeout</span>(<span class="hljs-function">() =&gt;</span> <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">connect</span>(), delay);
+        <span class="hljs-variable language_">this</span>.<span class="hljs-property">reconnectAttempts</span>++;
+      }
+    };
+    
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">ws</span>.<span class="hljs-property">onerror</span> = <span class="hljs-function">(<span class="hljs-params">error</span>) =&gt;</span> {
+      logger.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;WebSocket error&#x27;</span>, { error });
+    };
+  }
+}</code></pre>
+<h3 id="4-2-sse-重连">4.2 SSE 重连<a class="anchor" href="#4-2-sse-重连" aria-label="锚点">#</a></h3>
+<p>SSE 原生支持重连（浏览器自动），服务端配合：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// 服务端发送 last-event-id</span>
+res.<span class="hljs-title function_">write</span>(<span class="hljs-string">`id: <span class="hljs-subst">${eventId}</span>\n`</span>);
+
+<span class="hljs-comment">// 客户端重连时携带</span>
+<span class="hljs-keyword">const</span> evtSource = <span class="hljs-keyword">new</span> <span class="hljs-title class_">EventSource</span>(<span class="hljs-string">&#x27;/api/v1/stream/tasks/123&#x27;</span>);</code></pre>
+<hr>
+<h2 id="5-背压处理">5. 背压处理<a class="anchor" href="#5-背压处理" aria-label="锚点">#</a></h2>
+<h3 id="5-1-websocket-背压">5.1 WebSocket 背压<a class="anchor" href="#5-1-websocket-背压" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 检测发送队列积压</span>
+ws.<span class="hljs-property">send</span> = <span class="hljs-keyword">function</span>(<span class="hljs-params">data</span>) {
+  <span class="hljs-keyword">if</span> (<span class="hljs-variable language_">this</span>.<span class="hljs-property">bufferedAmount</span> &gt; <span class="hljs-number">1024</span> * <span class="hljs-number">1024</span>) {  <span class="hljs-comment">// &gt; 1MB 积压</span>
+    logger.<span class="hljs-title function_">warn</span>(<span class="hljs-string">&#x27;WebSocket backpressure&#x27;</span>, {
+      <span class="hljs-attr">bufferedAmount</span>: <span class="hljs-variable language_">this</span>.<span class="hljs-property">bufferedAmount</span>
+    });
+    <span class="hljs-comment">// 暂停接收，等积压消化</span>
+    <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">pause</span>();
+  }
+  
+  <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_send</span>(data);
+};</code></pre>
+<h3 id="5-2-sse-背压">5.2 SSE 背压<a class="anchor" href="#5-2-sse-背压" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 检测客户端消费速度</span>
+<span class="hljs-keyword">let</span> sendQueue = [];
+<span class="hljs-keyword">let</span> isSending = <span class="hljs-literal">false</span>;
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">queueEvent</span>(<span class="hljs-params">event</span>) {
+  sendQueue.<span class="hljs-title function_">push</span>(event);
+  <span class="hljs-title function_">processQueue</span>();
+}
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">processQueue</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">if</span> (isSending || sendQueue.<span class="hljs-property">length</span> === <span class="hljs-number">0</span>) <span class="hljs-keyword">return</span>;
+  
+  isSending = <span class="hljs-literal">true</span>;
+  <span class="hljs-keyword">const</span> event = sendQueue.<span class="hljs-title function_">shift</span>();
+  
+  <span class="hljs-keyword">try</span> {
+    res.<span class="hljs-title function_">write</span>(<span class="hljs-title function_">formatEvent</span>(event));
+  } <span class="hljs-keyword">catch</span> (e) {
+    <span class="hljs-comment">// 客户端断开</span>
+    <span class="hljs-built_in">clearInterval</span>(interval);
+    <span class="hljs-keyword">return</span>;
+  }
+  
+  isSending = <span class="hljs-literal">false</span>;
+  
+  <span class="hljs-comment">// 间隔至少 50ms，避免过快</span>
+  <span class="hljs-keyword">await</span> <span class="hljs-title function_">sleep</span>(<span class="hljs-number">50</span>);
+  <span class="hljs-title function_">processQueue</span>();
+}</code></pre>
+<hr>
+<h2 id="6-安全">6. 安全<a class="anchor" href="#6-安全" aria-label="锚点">#</a></h2>
+<h3 id="6-1-websocket-安全">6.1 WebSocket 安全<a class="anchor" href="#6-1-websocket-安全" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>检查</th><th>说明</th></tr></thead><tbody><tr><td>认证握手</td><td>连接后 10 秒内必须发送 auth 消息</td></tr><tr><td>Origin 检查</td><td>验证 <code>Upgrade</code> 请求的 Origin</td></tr><tr><td>Token 绑定</td><td>Refresh Token 过期 → 断开 WS</td></tr><tr><td>消息大小限制</td><td>单条消息 ≤ 1MB</td></tr></tbody></table>
+<h3 id="6-2-origin-检查">6.2 Origin 检查<a class="anchor" href="#6-2-origin-检查" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-variable constant_">ALLOWED_ORIGINS</span> = [<span class="hljs-string">&#x27;https://khyquant.top&#x27;</span>, <span class="hljs-string">&#x27;https://app.khyquant.top&#x27;</span>];
+
+wss.<span class="hljs-title function_">on</span>(<span class="hljs-string">&#x27;connection&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">ws, req</span>) =&gt;</span> {
+  <span class="hljs-keyword">const</span> origin = req.<span class="hljs-property">headers</span>.<span class="hljs-property">origin</span>;
+  
+  <span class="hljs-keyword">if</span> (!<span class="hljs-variable constant_">ALLOWED_ORIGINS</span>.<span class="hljs-title function_">includes</span>(origin)) {
+    ws.<span class="hljs-title function_">close</span>(<span class="hljs-number">4008</span>, <span class="hljs-string">&#x27;Origin not allowed&#x27;</span>);
+    <span class="hljs-keyword">return</span>;
+  }
+  
+  <span class="hljs-comment">// ...</span>
+});</code></pre>
+<hr>
+<h2 id="7-消息确认">7. 消息确认<a class="anchor" href="#7-消息确认" aria-label="锚点">#</a></h2>
+<h3 id="7-1-至少一次投递">7.1 至少一次投递<a class="anchor" href="#7-1-至少一次投递" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 客户端收到消息后发送 ack</span>
+ws.<span class="hljs-title function_">on</span>(<span class="hljs-string">&#x27;message&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">data</span>) =&gt;</span> {
+  <span class="hljs-keyword">const</span> msg = <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(data);
+  
+  <span class="hljs-keyword">if</span> (msg.<span class="hljs-property">type</span> === <span class="hljs-string">&#x27;request&#x27;</span>) {
+    <span class="hljs-comment">// 处理并回复</span>
+    <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> <span class="hljs-title function_">handleRequest</span>(msg.<span class="hljs-property">payload</span>);
+    ws.<span class="hljs-title function_">send</span>(<span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>({
+      <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;response&#x27;</span>,
+      <span class="hljs-attr">meta</span>: { <span class="hljs-attr">requestId</span>: msg.<span class="hljs-property">meta</span>.<span class="hljs-property">requestId</span> },
+      <span class="hljs-attr">payload</span>: result
+    }));
+  }
+});
+
+<span class="hljs-comment">// 超时重发（服务端）</span>
+<span class="hljs-keyword">const</span> pendingRequests = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>();
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">sendWithAck</span>(<span class="hljs-params">ws, msg, timeout = <span class="hljs-number">30_000</span></span>) {
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
+    <span class="hljs-keyword">const</span> requestId = msg.<span class="hljs-property">meta</span>.<span class="hljs-property">requestId</span>;
+    
+    <span class="hljs-keyword">const</span> timer = <span class="hljs-built_in">setTimeout</span>(<span class="hljs-function">() =&gt;</span> {
+      pendingRequests.<span class="hljs-title function_">delete</span>(requestId);
+      <span class="hljs-title function_">reject</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">&#x27;Ack timeout&#x27;</span>));
+    }, timeout);
+    
+    ws.<span class="hljs-title function_">once</span>(<span class="hljs-string">&#x27;message&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">data</span>) =&gt;</span> {
+      <span class="hljs-keyword">const</span> response = <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(data);
+      <span class="hljs-keyword">if</span> (response.<span class="hljs-property">meta</span>.<span class="hljs-property">requestId</span> === requestId) {
+        <span class="hljs-built_in">clearTimeout</span>(timer);
+        pendingRequests.<span class="hljs-title function_">delete</span>(requestId);
+        <span class="hljs-title function_">resolve</span>(response);
+      }
+    });
+    
+    ws.<span class="hljs-title function_">send</span>(<span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>(msg));
+  });
+}</code></pre>
+<hr>
+<h2 id="8-版本历史">8. 版本历史<a class="anchor" href="#8-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义 WebSocket 与 SSE 规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-COMM-001] 通信协议规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-COMM-001] 通信协议规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-COMP-001] 代码复杂度规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-COMP-001] 代码复杂度规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-COMM-002] WebSocket 与 SSE 规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

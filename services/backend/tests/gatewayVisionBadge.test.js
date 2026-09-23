@@ -36,7 +36,7 @@ describe('Gateway Vision Badge', () => {
   });
 
   test('坏输入 → 空串,绝不抛', () => {
-      expect(() => _formatVisionTag().not.toThrow());
+      expect(() => _formatVisionTag()).not.toThrow();
       expect(_formatVisionTag({})).toBe('');
       expect(_formatVisionTag(null)).toBe('');
       expect(_formatVisionTag({ id: '' })).toBe('');

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for sessionFileRepair.js â€?session file validation and repair.
+ * Tests for sessionFileRepair.js â€”session file validation and repair.
  */
 
 const fs = require('fs');

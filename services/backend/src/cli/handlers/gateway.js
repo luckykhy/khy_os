@@ -82,6 +82,8 @@ const {
   handleGatewaySelectModel,
   buildVendorModelChoices,
   handleModelSwitchByVendor,
+  getLastSelectableKeys,
+  isSelectableNow,
   setGatewayModelChoicesDeps,
 } = require('./gatewayModelChoices');
 // 网关配置编辑子系统已抽为同目录叶子；按同名 re-import 保 handleGatewayConfig 契约不变。
@@ -431,6 +433,11 @@ function _formatModelSourceTag(model = {}) {
     config: '配置项',
   };
   const label = map[raw] || raw;
+  // 「未证实」标注(modelListTruth 的 unverified 标记):该通道无上游证据,这条只是本地猜测
+  // (静态目录 / 本机扫描 / env 逗号串)。黄标签把「猜测」与「事实」在选择器里一眼分开。
+  if (model.unverified === true) {
+    return chalk.yellow(`[未证实·${label}]`);
+  }
   return chalk.dim(`[${label}]`);
 }
 
@@ -538,6 +545,14 @@ function _resolvePreferredAdapterIssue(statuses = [], testResults = {}) {
   if (!configured || configured === 'auto') {
     return null;
   }
+  // STRICT 是**放大器**([DESIGN-ARCH-136] 第 3 期):单通道不可用只损失一个通道,
+  // 但 STRICT 未显式关闭时会抑制回退,把「该通道不可用」升级成「每轮 AI 调用必然硬失败」。
+  // 判据与 aiGatewayGenerateMethod 的 strictPreferredByEnv、baseSelfCheckService 的
+  // strictPinned 同源(未显式 false 即视为开启),此处不另立一套。
+  const strict =
+    String(process.env.GATEWAY_PREFERRED_STRICT || '')
+      .trim()
+      .toLowerCase() !== 'false';
   const matched = Array.isArray(statuses)
     ? statuses.find(
         (s) =>
@@ -550,6 +565,7 @@ function _resolvePreferredAdapterIssue(statuses = [], testResults = {}) {
     return {
       type: 'invalid',
       configured: configuredRaw,
+      strict,
       message: `首选通道配置错误: "${configuredRaw}" 未注册`,
     };
   }
@@ -566,6 +582,7 @@ function _resolvePreferredAdapterIssue(statuses = [], testResults = {}) {
     return {
       type: 'unavailable',
       configured: configuredRaw,
+      strict,
       adapterType: matched.type,
       reason,
       message: reason
@@ -951,7 +968,7 @@ const PROTOCOL_LABELS = {
 
 function _resolveProtocolLabel(adapterType) {
   try {
-    const { getProtocolForAdapter } = require('./adapters/_protocolRegistry');
+    const { getProtocolForAdapter } = require('../../services/gateway/adapters/_protocolRegistry');
     const protocol = getProtocolForAdapter(String(adapterType || '').toLowerCase(), null, {});
     return PROTOCOL_LABELS[protocol] || protocol || '—';
   } catch {
@@ -1102,10 +1119,58 @@ function _printLatencyAutoTuneSnapshot() {
   }
 }
 
+/**
+ * 探活状态查询(供 modelListTruth 的实测律注入)。fail-soft:modelCuration 不可用 /
+ * 抛异常 → 恒 'unknown'(即不剔除),绝不因探活层故障影响模型列表。
+ */
+function _modelVerifyStatusOf(adapterKey, modelId) {
+  try {
+    const curation = require('../../services/gateway/modelCuration');
+    if (curation && typeof curation.getVerifyStatus === 'function') {
+      return curation.getVerifyStatus(adapterKey, modelId);
+    }
+  } catch {
+    /* fail-soft: 无探活层 → 不剔除 */
+  }
+  return 'unknown';
+}
+
+/**
+ * 把一条适配器的候选模型列表送过 modelListTruth(存在性真值收敛)。fail-soft:真值层缺失 /
+ * 门控关 / 抛异常 → 原样返回入参(零剔除),绝不因真值层故障影响模型列表。
+ * @returns {{models:Array, dropped:number, reasons:string[]}}
+ */
+function _applyModelListTruth(adapterStatus = {}, list = []) {
+  const passthrough = { models: Array.isArray(list) ? list : [], dropped: 0, reasons: [] };
+  try {
+    const truth = require('../../services/gateway/modelListTruth');
+    if (!truth.isEnabled()) {
+      return passthrough;
+    }
+    const adapterType = String(adapterStatus.type || '').toLowerCase();
+    const verdict = truth.filterByUpstreamAuthority(passthrough.models, {
+      adapterKey: adapterType,
+      verifyStatusOf: _modelVerifyStatusOf,
+    });
+    if (!verdict || !Array.isArray(verdict.models)) {
+      return passthrough;
+    }
+    return { models: verdict.models, dropped: Number(verdict.dropped) || 0, reasons: verdict.reasons || [] };
+  } catch {
+    return passthrough;
+  }
+}
+
 function _filterModelsByReliability(adapterStatus = {}, test = {}, models = []) {
   const sourceModels = Array.isArray(models) ? models.filter(Boolean) : [];
+  // 真值律**先**跑,且不受下方「列表太短就跳过」的捷径豁免:单条垃圾模型不该因为列表只有
+  // 一条就免检(那正是「列表里就一个不存在的模型」的成因)。形态律 + 实测律在此全覆盖。
+  const truthVerdict = _applyModelListTruth(adapterStatus, sourceModels);
+  let kept = truthVerdict.models.slice();
+  let filtered = truthVerdict.dropped;
+  const reasons = truthVerdict.reasons.slice();
   if (sourceModels.length <= 1) {
-    return { models: sourceModels, filtered: 0, reasons: [] };
+    return { models: kept, filtered, reasons };
   }
   const adapterType = String(adapterStatus.type || '').toLowerCase();
   const generationWarn = !!(
@@ -1113,9 +1178,6 @@ function _filterModelsByReliability(adapterStatus = {}, test = {}, models = []) 
     !test.generation.success &&
     shouldTreatGenerationFailureAsWarning(adapterType)
   );
-  let kept = sourceModels.slice();
-  let filtered = 0;
-  const reasons = [];
   const hideFallbackForAdapter = adapterType === 'codex';
   const hideHintForAdapter = adapterType === 'codex';
 
@@ -1157,6 +1219,21 @@ function _filterModelsByReliability(adapterStatus = {}, test = {}, models = []) 
       reasons.push('builtin');
     }
     kept = next;
+  }
+
+  // ── 存在性真值收敛(modelListTruth)────────────────────────────────────────
+  // 已在函数开头(_applyModelListTruth)跑过一次,这里**必须再跑一次**:上面几步(codex 跨提供商
+  // / hint / builtin 过滤)可能把最后一条 remote 记录剔掉,从而让「上游权威」消失 —— 此时原本
+  // 被权威压制的猜测条目会重新获得豁免。重跑一次保证「裁剪后的集合」仍然自洽。
+  {
+    const again = _applyModelListTruth(adapterStatus, kept);
+    if (again.dropped > 0) {
+      filtered += again.dropped;
+      for (const reason of again.reasons) {
+        reasons.push(reason);
+      }
+    }
+    kept = again.models;
   }
 
   if (MODEL_HIDE_UNVERIFIED_ENABLED && generationWarn && kept.length > MODEL_WARN_KEEP_MAX) {
@@ -3110,6 +3187,8 @@ module.exports = {
   persistGatewayPreference,
   buildVendorModelChoices,
   handleModelSwitchByVendor,
+  getLastSelectableKeys,
+  isSelectableNow,
   handleGatewayPreferRemote,
   handleGatewayTest,
   handleGatewayResetFailures,

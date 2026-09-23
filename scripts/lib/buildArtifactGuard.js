@@ -42,7 +42,10 @@ function isEnabled(env) {
 const RULES = Object.freeze([
   Object.freeze({
     id: 'android-build',
-    scopes: Object.freeze(['apps/khy-mobile/android/']),
+    // Scope moved from apps/khy-mobile/android/ (ghost endpoint, isolated per
+    // [DESIGN-ARCH-120] §五) to the surviving Flutter app. The rule is generic
+    // Gradle regenerable-output detection; it applies to any android project.
+    scopes: Object.freeze(['apps/khy-os-client-app/android/']),
     dirs: Object.freeze(['build', '.gradle', '.cxx', 'intermediates', 'outputs']),
     exts: Object.freeze(['.apk', '.aab', '.aar', '.dex', '.ap_', '.hprof']),
     why: 'Gradle 每次构建重新生成；APK/AAB 只应作为 CI artifact 上传',
@@ -50,9 +53,7 @@ const RULES = Object.freeze([
 ]);
 
 /** 允许豁免的具体路径：占位文件本身不是产物，它是让空目录能进 git 的手段。 */
-const ALLOWLIST = Object.freeze([
-  'apps/khy-mobile/android/app/build/.npmkeep',
-]);
+const ALLOWLIST = Object.freeze([]);
 
 /** 统一成 posix 分隔符，让 Windows 上的 `git ls-files` 输出与规则同口径。 */
 function toPosix(value) {

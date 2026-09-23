@@ -3,16 +3,16 @@
  * generateWithAdapterMaxTokensPreflight.test.js (node:test)
  *
  * Locks the symmetric preflight max_tokens resolution on the direct-adapter
- * path (AIGatewayModelMethods.generateWithAdapter â€?used by IDE conversation
+ * path (AIGatewayModelMethods.generateWithAdapter â€”used by IDE conversation
  * mode), which bypasses the generate() main loop and previously fell through
  * to small adapter hardcoded fallbacks when the caller passed no maxTokens.
  *
  * Pins:
- *   - no maxTokens + known context window â†?adapter receives a dynamically
- *     injected maxTokens (= min(maxOutput || available, window âˆ?prompt
- *     estimate âˆ?safety buffer)) plus a _maxTokensPolicy marker;
- *   - explicit maxTokens â†?passed through verbatim, no injection marker;
- *   - KHY_MAX_TOKENS_AUTO_RESOLVE=0 â†?no injection at all.
+ *   - no maxTokens + known context window â†’adapter receives a dynamically
+ *     injected maxTokens (= min(maxOutput || available, window ï¿½?prompt
+ *     estimate ï¿½?safety buffer)) plus a _maxTokensPolicy marker;
+ *   - explicit maxTokens â†’passed through verbatim, no injection marker;
+ *   - KHY_MAX_TOKENS_AUTO_RESOLVE=0 â†’no injection at all.
  *
  * Hermetic: stubs _generateWithAdapterIsolation to capture the options the
  * adapter would receive; prefills _contextWindowCache; no network calls.
@@ -68,12 +68,12 @@ async function withEnv(overrides, fn) {
 }
 
 describe('Generate With Adapter Max Tokens Preflight', () => {
-  test('no maxTokens + known window â†?injects dynamic maxTokens with policy marker', async () => {
+  test('no maxTokens + known window â†’injects dynamic maxTokens with policy marker', async () => {
       await withEnv({ KHY_MAX_TOKENS_AUTO_RESOLVE: undefined, KHY_DEFAULT_MAX_TOKENS: undefined }, async () => {
         await withStubbedGateway({ contextWindows: { 'unit-model-alpha': 32000 } }, async (captured) => {
           const prompt = 'hello preflight world';
           await gateway.generateWithAdapter('stub', prompt, { model: 'unit-model-alpha' });
-          // Expected budget mirrors the policy: window âˆ?prompt estimate âˆ?buffer(512)
+          // Expected budget mirrors the policy: window ï¿½?prompt estimate ï¿½?buffer(512)
           const expected = 32000 - estimateTokens(prompt) - 512;
           expect(captured.options.maxTokens).toBe(expected);
           expect(captured.options._maxTokensPolicy).toBeTruthy();
@@ -84,7 +84,7 @@ describe('Generate With Adapter Max Tokens Preflight', () => {
       });
   });
 
-  test('no maxTokens + window + smaller output limit â†?caps at the output limit', async () => {
+  test('no maxTokens + window + smaller output limit â†’caps at the output limit', async () => {
       await withEnv({ KHY_MAX_TOKENS_AUTO_RESOLVE: undefined, KHY_DEFAULT_MAX_TOKENS: undefined }, async () => {
         await withStubbedGateway({
           contextWindows: { 'unit-model-beta': 128000 },
@@ -97,7 +97,7 @@ describe('Generate With Adapter Max Tokens Preflight', () => {
       });
   });
 
-  test('explicit maxTokens: 123 â†?passed through verbatim, no injection marker', async () => {
+  test('explicit maxTokens: 123 â†’passed through verbatim, no injection marker', async () => {
       await withEnv({ KHY_MAX_TOKENS_AUTO_RESOLVE: undefined }, async () => {
         await withStubbedGateway({ contextWindows: { 'unit-model-alpha': 32000 } }, async (captured) => {
           const callerOptions = { model: 'unit-model-alpha', maxTokens: 123 };
@@ -110,7 +110,7 @@ describe('Generate With Adapter Max Tokens Preflight', () => {
       });
   });
 
-  test('KHY_MAX_TOKENS_AUTO_RESOLVE=0 â†?no injection even with known window', async () => {
+  test('KHY_MAX_TOKENS_AUTO_RESOLVE=0 â†’no injection even with known window', async () => {
       await withEnv({ KHY_MAX_TOKENS_AUTO_RESOLVE: '0' }, async () => {
         await withStubbedGateway({ contextWindows: { 'unit-model-alpha': 32000 } }, async (captured) => {
           await gateway.generateWithAdapter('stub', 'hi', { model: 'unit-model-alpha' });

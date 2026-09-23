@@ -5,6 +5,7 @@
 // ':memory:') is required because Sequelize pools connections and each in-memory
 // connection would otherwise get its own empty database.
 const os = require('node:os');
+const assert = require('node:assert');
 const path = require('node:path');
 const fs = require('node:fs');
 const _dbFile = path.join(os.tmpdir(), `khy-acctpool-switch-${process.pid}.sqlite`);
@@ -28,16 +29,16 @@ async function insertRow({ poolType, email, refreshToken, label }) {
   );
   return Number(rows[0].id);
 }
-test.before(async () => {
+beforeAll(async () => {
   await sequelize.sync();
   await pool.init(sequelize);
 });
-test.after(async () => {
+afterAll(async () => {
   try { pool.stopGC(); } catch { /* ignore */ }
   try { await sequelize.close(); } catch { /* ignore */ }
   try { fs.unlinkSync(_dbFile); } catch { /* ignore */ }
 });
-// Regression for the reported "切换 �?notfound" bug: a Nirvana-discovered row is
+// Regression for the reported "切换 �?notfound" bug: a Nirvana-discovered row is
 // stored with the legacy alias pool_type 'nirvana', but the UI sends back the
 // normalized provider 'trae'. The old id+pool_type AND-scoped lookup missed it.
 

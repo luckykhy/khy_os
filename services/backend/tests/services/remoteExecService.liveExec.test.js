@@ -7,8 +7,8 @@ jest.mock('child_process', () => ({
 }));
 
 const { spawn } = require('child_process');
-const { RemoteExecService } = require('../../src/services/remote/remoteExecService');
-const { createRemoteApprovalBridge } = require('../../src/services/remote/remoteApprovalBridge');
+const { RemoteExecService } = require('../../src/services/domain/network/remote/remoteExecService.js');
+const { createRemoteApprovalBridge } = require('../../src/services/domain/network/remote/remoteApprovalBridge.js');
 
 function makeFakeSshChild({ stdout = [], stderr = [], code = 0, signal = null }) {
   const child = new EventEmitter();

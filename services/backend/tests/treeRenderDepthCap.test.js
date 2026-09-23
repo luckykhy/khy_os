@@ -3,8 +3,8 @@
  * Round-7 regression: tree-render depth cap (stack-overflow guard).
  *
  * _renderTree() in cli/mermaid.js recurses (count + walk) on tree depth with no
- * limit. It runs on ASSISTANT/model output â€?mermaid mindmap fences and deeply
- * nested markdown lists (renderNestedListTrees) â€?NOT on raw user messages
+ * limit. It runs on ASSISTANT/model output ï¿½?mermaid mindmap fences and deeply
+ * nested markdown lists (renderNestedListTrees) ï¿½?NOT on raw user messages
  * (those are char-capped and echoed without tree rendering). A model emitting a
  * ~5000-deep chain overflows the recursion stack (RangeError), and at the one
  * unwrapped render site (repl.js:486 renderAiResponse) that crashes the REPL.
@@ -21,7 +21,7 @@ function load(gate) {
   else process.env.KHY_TREE_DEPTH_CAP = gate;
   return require(MERMAID_PATH);
 }
-test.afterEach(() => { delete process.env.KHY_TREE_DEPTH_CAP; });
+afterEach(() => { delete process.env.KHY_TREE_DEPTH_CAP; });
 function deepMindmap(n) {
   let s = 'mindmap\n';
   for (let i = 0; i < n; i++) s += '  '.repeat(i + 1) + 'node' + i + '\n';
@@ -64,8 +64,8 @@ describe('Tree Render Depth Cap', () => {
 
   test('empty / non-mindmap input returns falsy without throwing', () => {
       const mm = load(undefined);
-      expect(() => mm.renderMermaidBlock('').not.toThrow());
-      expect(() => mm.renderMermaidBlock('not a mermaid block').not.toThrow());
+      expect(() => mm.renderMermaidBlock('')).not.toThrow();
+      expect(() => mm.renderMermaidBlock('not a mermaid block')).not.toThrow();
   });
 
 });

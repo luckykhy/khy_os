@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [OPS-MAN-202] oncall.md -->
+<title>On-Call Schedule · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>OPS-MAN<span class="sep">›</span>On-Call Schedule</div>
+      <header class="hero reveal"><h1>On-Call Schedule</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#on-call-schedule">On-Call Schedule</a></li><li class="lvl-2"><a href="#current-on-call-rotation">Current On-Call Rotation</a></li><li class="lvl-2"><a href="#escalation-path">Escalation Path</a></li><li class="lvl-2"><a href="#on-call-responsibilities">On-Call Responsibilities</a></li><li class="lvl-2"><a href="#incident-response-sla">Incident Response SLA</a></li><li class="lvl-2"><a href="#related">Related</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="on-call-schedule">On-Call Schedule<a class="anchor" href="#on-call-schedule" aria-label="锚点">#</a></h1>
+<blockquote><p>IR-001 reference: oncall schedule for incident response</p></blockquote>
+<h2 id="current-on-call-rotation">Current On-Call Rotation<a class="anchor" href="#current-on-call-rotation" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Week</th><th>Primary</th><th>Secondary</th></tr></thead><tbody><tr><td>W1</td><td>Platform Lead</td><td>Senior Backend</td></tr><tr><td>W2</td><td>Senior Backend</td><td>Platform Lead</td></tr><tr><td>W3</td><td>DevOps Lead</td><td>Platform Lead</td></tr><tr><td>W4</td><td>Platform Lead</td><td>DevOps Lead</td></tr></tbody></table>
+<h2 id="escalation-path">Escalation Path<a class="anchor" href="#escalation-path" aria-label="锚点">#</a></h2>
+<ol><li>Primary on-call engineer</li><li>Secondary on-call engineer</li><li>Team lead (within 30 min if P0/P1)</li><li>Director (within 1 hour if P0)</li></ol>
+<h2 id="on-call-responsibilities">On-Call Responsibilities<a class="anchor" href="#on-call-responsibilities" aria-label="锚点">#</a></h2>
+<ul><li>Monitor alerts in <code>#khy-os-alerts</code> (Slack)</li><li>Acknowledge P0/P1 alerts within SLA</li><li>Create incident ticket for all P0/P1/P2</li><li>Run incident response per runbook</li></ul>
+<h2 id="incident-response-sla">Incident Response SLA<a class="anchor" href="#incident-response-sla" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Phase</th><th>Target Time</th></tr></thead><tbody><tr><td>Acknowledge</td><td>15 minutes (P0), 1 hour (P1), 4 hours (P2)</td></tr><tr><td>Initial assessment</td><td>1 hour (P0/P1), 4 hours (P2)</td></tr><tr><td>Fix and publish</td><td>Priority-based, sync during process</td></tr></tbody></table>
+<h2 id="related">Related<a class="anchor" href="#related" aria-label="锚点">#</a></h2>
+<ul><li><a href="../incident-runbooks/00_INDEX_事件响应剧本-总目录.html">事件响应剧本总目录</a> - incident response runbooks</li><li><a href="../runbooks/00_INDEX_灾备演练剧本-总目录.html">灾备演练剧本总目录</a> - disaster recovery runbooks</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/07_OPS_运维/OPS-MAN/[OPS-MAN-201] dependencies.html"><div class="dir">← 上一篇</div><div class="ttl">Disaster Recovery Dependencies</div></a><a class="next" href="../../../docs/07_OPS_运维/OPS-MAN/[OPS-MAN-203] standards-enforcement.html"><div class="dir">下一篇 →</div><div class="ttl">规范代码 Enforcement 指南</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/07_OPS_运维/OPS-MAN/[OPS-MAN-202] oncall.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

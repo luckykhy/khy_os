@@ -59,6 +59,12 @@ function resolveProtocolContext(deps) {
     // 同源同参——此前本处漏传 measured,名字在此成了事实主判据(一个实测能原生调工具的
     // flash/lite 模型仍被误标为「文本协议·预期」)。best-effort:store 不可用 → measured=null →
     // 回落 provisional 名字启发(仍安全)。
+    //
+    // 这里刻意用 getVerdict(不按来源过滤,而非 getVerdictFor):本模块拿不到适配器身份
+    // (它只有 chatOpts/options,见头部「ZERO requires」的依赖注入约定),而来源未知时
+    // getVerdictFor 也正是按「适用」处理 —— 两条路等价。且本处的产物只是一条
+    // breadcrumb 的**措辞**(「预期文本协议」vs「适配器缺口警告」),不决定 wire;
+    // 负向裁决不扩散那条不变量由两道剥离门各自按来源强制。
     let measuredCap = null;
     try {
       measuredCap = toolCapStore.getVerdict(modelForCap);

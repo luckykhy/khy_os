@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-082] CC模式输入框与光标设计.md -->
+<title>[DESIGN-ARCH-082] CC 模式输入框与光标设计 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-082] CC 模式输入框与光标设计</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-082] CC 模式输入框与光标设计</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-082-cc-模式输入框与光标设计">[DESIGN-ARCH-082] CC 模式输入框与光标设计</a></li><li class="lvl-2"><a href="#0-设计原则">0. 设计原则</a></li><li class="lvl-2"><a href="#1-输入框布局">1. 输入框布局</a></li><li class="lvl-3"><a href="#1-1-外观-对齐-claude-code">1.1 外观（对齐 Claude Code）</a></li><li class="lvl-3"><a href="#1-2-关键差异-khy-os-vs-claude-code">1.2 关键差异：khy-os vs Claude Code</a></li><li class="lvl-3"><a href="#1-3-布局规范">1.3 布局规范</a></li><li class="lvl-2"><a href="#2-光标设计">2. 光标设计</a></li><li class="lvl-3"><a href="#2-1-光标样式">2.1 光标样式</a></li><li class="lvl-3"><a href="#2-2-光标渲染实现">2.2 光标渲染实现</a></li><li class="lvl-3"><a href="#2-3-光标定位策略">2.3 光标定位策略</a></li><li class="lvl-3"><a href="#2-4-光标闪烁">2.4 光标闪烁</a></li><li class="lvl-2"><a href="#3-输入模式">3. 输入模式</a></li><li class="lvl-3"><a href="#3-1-模式指示器">3.1 模式指示器</a></li><li class="lvl-3"><a href="#3-2-模式切换">3.2 模式切换</a></li><li class="lvl-3"><a href="#3-3-模式状态机">3.3 模式状态机</a></li><li class="lvl-2"><a href="#4-占位符设计">4. 占位符设计</a></li><li class="lvl-3"><a href="#4-1-占位符文本">4.1 占位符文本</a></li><li class="lvl-3"><a href="#4-2-占位符渲染">4.2 占位符渲染</a></li><li class="lvl-2"><a href="#5-多行输入">5. 多行输入</a></li><li class="lvl-3"><a href="#5-1-换行处理">5.1 换行处理</a></li><li class="lvl-3"><a href="#5-2-行号提示">5.2 行号提示</a></li><li class="lvl-3"><a href="#5-3-高度窗口化">5.3 高度窗口化</a></li><li class="lvl-2"><a href="#6-实现架构">6. 实现架构</a></li><li class="lvl-3"><a href="#6-1-组件结构">6.1 组件结构</a></li><li class="lvl-3"><a href="#6-2-props-接口">6.2 Props 接口</a></li><li class="lvl-3"><a href="#6-3-状态管理">6.3 状态管理</a></li><li class="lvl-2"><a href="#7-性能约束">7. 性能约束</a></li><li class="lvl-2"><a href="#8-验收标准">8. 验收标准</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-082-cc-模式输入框与光标设计">[DESIGN-ARCH-082] CC 模式输入框与光标设计<a class="anchor" href="#design-arch-082-cc-模式输入框与光标设计" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>隶属</strong>：本文属 <strong>TUI 设计族</strong>（20 编号 / 21 文件），总纲与 scope 裁决见 <code>[DESIGN-ARCH-122] TUI 设计族总纲</code>；规则冲突一律以 <code>[DESIGN-ARCH-102] Khy TUI 统一规则手册</code> 为准。</p></blockquote>
+<blockquote><p><strong>定位</strong>：定义 CC 模式下输入框组件的完整设计规范，包括布局、光标、多行输入、模式切换、占位符等。<br><strong>适用边界</strong>：<code>tui/ink-components/CcPromptInput.js</code> 的实现约束。<br><strong>参考来源</strong>：<code>D:\Portable\Docs\design\claude-code-tui\visual-mockup.md</code> + <code>component-catalog.md</code> + <code>interaction-patterns.md</code></p></blockquote>
+<hr>
+<h2 id="0-设计原则">0. 设计原则<a class="anchor" href="#0-设计原则" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>原则</th><th>说明</th></tr></thead><tbody><tr><td><strong>极简主义</strong></td><td>无边框、无装饰，空间全给内容</td></tr><tr><td><strong>终端原生</strong></td><td>继承终端主题，不强制覆盖颜色</td></tr><tr><td><strong>即时反馈</strong></td><td>输入延迟 &lt; 16ms，光标跟随无跳跃</td></tr><tr><td><strong>模式可见</strong></td><td>Vim 模式、Shell 模式、Voice 模式有明确视觉区分</td></tr><tr><td><strong>零破坏</strong></td><td>Legacy 模式行为不变</td></tr></tbody></table>
+<hr>
+<h2 id="1-输入框布局">1. 输入框布局<a class="anchor" href="#1-输入框布局" aria-label="锚点">#</a></h2>
+<h3 id="1-1-外观-对齐-claude-code">1.1 外观（对齐 Claude Code）<a class="anchor" href="#1-1-外观-对齐-claude-code" aria-label="锚点">#</a></h3>
+<pre><code>&gt; Type a message...                              ← 空输入时显示占位符（灰色）
+
+&gt; Hello, world!                                  ← 有输入时显示内容
+
+&gt; Line 1                                         ← 多行输入（Shift+Enter 换行）
+  Line 2
+  Line 3
+
+! npm run build                                  ← Shell 模式（! 前缀）
+
+🎤 Listening...                                  ← Voice 模式</code></pre>
+<h3 id="1-2-关键差异-khy-os-vs-claude-code">1.2 关键差异：khy-os vs Claude Code<a class="anchor" href="#1-2-关键差异-khy-os-vs-claude-code" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>特性</th><th>Claude Code</th><th>Khy CC 模式</th><th>处理方式</th></tr></thead><tbody><tr><td><strong>边框</strong></td><td>无边框</td><td>无边框（对齐 CC）</td><td>去除现有边框</td></tr><tr><td><strong>提示符</strong></td><td><code>&gt; </code></td><td><code>&gt; </code>（对齐 CC）</td><td>统一为 <code>&gt; </code></td></tr><tr><td><strong>多行</strong></td><td>Shift+Enter</td><td>Shift+Enter（保留）</td><td>保留现有实现</td></tr><tr><td><strong>Shell 模式</strong></td><td>无</td><td><code>!</code> 前缀</td><td>保留 khy 特色</td></tr><tr><td><strong>Voice 模式</strong></td><td>无</td><td><code>🎤</code> 前缀</td><td>保留 khy 特色</td></tr><tr><td><strong>Vim 模式</strong></td><td>无</td><td>NORMAL/INSERT 指示</td><td>保留 khy 特色</td></tr><tr><td><strong>占位符</strong></td><td>灰色文字</td><td>灰色文字（对齐 CC）</td><td>统一风格</td></tr></tbody></table>
+<h3 id="1-3-布局规范">1.3 布局规范<a class="anchor" href="#1-3-布局规范" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>属性</th><th>值</th><th>说明</th></tr></thead><tbody><tr><td><strong>最小高度</strong></td><td>1 行</td><td>绝对值</td></tr><tr><td><strong>最大高度</strong></td><td><code>min(10, rows * 0.3)</code></td><td>相对终端高度</td></tr><tr><td><strong>宽度</strong></td><td><code>cols</code>（全宽）</td><td>无边框，占满可用宽度</td></tr><tr><td><strong>提示符宽度</strong></td><td>2 字符</td><td><code>&gt; </code> 或 <code>  </code>（续行）</td></tr><tr><td><strong>内边距</strong></td><td>0</td><td>无额外内边距</td></tr><tr><td><strong>边框</strong></td><td>无</td><td>对齐 CC 极简风格</td></tr></tbody></table>
+<hr>
+<h2 id="2-光标设计">2. 光标设计<a class="anchor" href="#2-光标设计" aria-label="锚点">#</a></h2>
+<h3 id="2-1-光标样式">2.1 光标样式<a class="anchor" href="#2-1-光标样式" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>模式</th><th>样式</th><th>颜色</th><th>说明</th></tr></thead><tbody><tr><td><strong>INSERT 模式</strong></td><td>竖线 <code>│</code></td><td>绿色 <code>#4ADE80</code></td><td>经典插入光标</td></tr><tr><td><strong>NORMAL 模式</strong></td><td>方块 <code>█</code></td><td>绿色 <code>#4ADE80</code></td><td>Vim 风格块光标</td></tr><tr><td><strong>Shell 模式</strong></td><td>竖线 <code>│</code></td><td>黄色 <code>#FBBF24</code></td><td>区分普通输入</td></tr><tr><td><strong>Voice 模式</strong></td><td>闪烁 <code>●</code></td><td>红色 <code>#F87171</code></td><td>录音指示</td></tr><tr><td><strong>覆盖模式</strong></td><td>下划线 <code>_</code></td><td>绿色 <code>#4ADE80</code></td><td>Vim replace 模式</td></tr></tbody></table>
+<h3 id="2-2-光标渲染实现">2.2 光标渲染实现<a class="anchor" href="#2-2-光标渲染实现" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// tui/ink-components/CcPromptInput.js</span>
+<span class="hljs-meta">
+&#x27;use strict&#x27;</span>;
+
+<span class="hljs-keyword">const</span> <span class="hljs-title class_">React</span> = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;react&#x27;</span>);
+<span class="hljs-keyword">const</span> { <span class="hljs-title class_">Text</span>, <span class="hljs-title class_">Box</span> } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;ink&#x27;</span>);
+<span class="hljs-keyword">const</span> { useCursor } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../hooks/useCursor&#x27;</span>);
+
+<span class="hljs-comment">/**
+ * 光标字符映射
+ */</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">CURSOR_CHARS</span> = {
+  <span class="hljs-attr">insert</span>: <span class="hljs-string">&#x27;│&#x27;</span>,      <span class="hljs-comment">// 竖线</span>
+  <span class="hljs-attr">normal</span>: <span class="hljs-string">&#x27;█&#x27;</span>,      <span class="hljs-comment">// 方块（Vim NORMAL）</span>
+  <span class="hljs-attr">shell</span>: <span class="hljs-string">&#x27;│&#x27;</span>,       <span class="hljs-comment">// 竖线（Shell 模式）</span>
+  <span class="hljs-attr">voice</span>: <span class="hljs-string">&#x27;●&#x27;</span>,       <span class="hljs-comment">// 圆点（录音）</span>
+  <span class="hljs-attr">replace</span>: <span class="hljs-string">&#x27;_&#x27;</span>,     <span class="hljs-comment">// 下划线（覆盖）</span>
+};
+
+<span class="hljs-comment">/**
+ * 光标颜色映射
+ */</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">CURSOR_COLORS</span> = {
+  <span class="hljs-attr">insert</span>: <span class="hljs-string">&#x27;#4ADE80&#x27;</span>,    <span class="hljs-comment">// 绿色</span>
+  <span class="hljs-attr">normal</span>: <span class="hljs-string">&#x27;#4ADE80&#x27;</span>,    <span class="hljs-comment">// 绿色</span>
+  <span class="hljs-attr">shell</span>: <span class="hljs-string">&#x27;#FBBF24&#x27;</span>,     <span class="hljs-comment">// 黄色</span>
+  <span class="hljs-attr">voice</span>: <span class="hljs-string">&#x27;#F87171&#x27;</span>,     <span class="hljs-comment">// 红色</span>
+  <span class="hljs-attr">replace</span>: <span class="hljs-string">&#x27;#4ADE80&#x27;</span>,   <span class="hljs-comment">// 绿色</span>
+};
+
+<span class="hljs-comment">/**
+ * 渲染光标
+ */</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">Cursor</span>(<span class="hljs-params">{ mode = <span class="hljs-string">&#x27;insert&#x27;</span>, visible = <span class="hljs-literal">true</span> }</span>) {
+  <span class="hljs-keyword">const</span> char = <span class="hljs-variable constant_">CURSOR_CHARS</span>[mode] || <span class="hljs-variable constant_">CURSOR_CHARS</span>.<span class="hljs-property">insert</span>;
+  <span class="hljs-keyword">const</span> color = <span class="hljs-variable constant_">CURSOR_COLORS</span>[mode] || <span class="hljs-variable constant_">CURSOR_COLORS</span>.<span class="hljs-property">insert</span>;
+
+  <span class="hljs-keyword">if</span> (!visible) {
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+  }
+
+  <span class="hljs-keyword">return</span> (
+    <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Text</span> <span class="hljs-attr">color</span>=<span class="hljs-string">{color}</span> <span class="hljs-attr">bold</span>&gt;</span>
+      {char}
+    <span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span></span>
+  );
+}</code></pre>
+<h3 id="2-3-光标定位策略">2.3 光标定位策略<a class="anchor" href="#2-3-光标定位策略" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 使用 Ink 的 useCursor hook 进行精确定位</span>
+<span class="hljs-keyword">const</span> { showCursor, hideCursor, setCursorPosition } = <span class="hljs-title function_">useCursor</span>();
+
+<span class="hljs-comment">// 在输入框中获得焦点时显示光标</span>
+<span class="hljs-title function_">useEffect</span>(<span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-keyword">if</span> (focused) {
+    <span class="hljs-title function_">showCursor</span>();
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-title function_">hideCursor</span>();
+  }
+  <span class="hljs-keyword">return</span> <span class="hljs-function">() =&gt;</span> <span class="hljs-title function_">hideCursor</span>();
+}, [focused]);
+
+<span class="hljs-comment">// 光标位置跟随输入偏移</span>
+<span class="hljs-title function_">useEffect</span>(<span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-keyword">if</span> (focused) {
+    <span class="hljs-keyword">const</span> { x, y } = <span class="hljs-title function_">calculateCaretPosition</span>(value, offset);
+    <span class="hljs-title function_">setCursorPosition</span>(x, y);
+  }
+}, [value, offset, focused]);</code></pre>
+<h3 id="2-4-光标闪烁">2.4 光标闪烁<a class="anchor" href="#2-4-光标闪烁" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>属性</th><th>值</th><th>说明</th></tr></thead><tbody><tr><td><strong>闪烁间隔</strong></td><td>530ms</td><td>与终端默认一致</td></tr><tr><td><strong>闪烁模式</strong></td><td>可见/隐藏</td><td>简单切换</td></tr><tr><td><strong>NORMAL 模式</strong></td><td>常亮</td><td>不闪烁（Vim 风格）</td></tr><tr><td><strong>录音模式</strong></td><td>快速闪烁</td><td>200ms 间隔</td></tr></tbody></table>
+<hr>
+<h2 id="3-输入模式">3. 输入模式<a class="anchor" href="#3-输入模式" aria-label="锚点">#</a></h2>
+<h3 id="3-1-模式指示器">3.1 模式指示器<a class="anchor" href="#3-1-模式指示器" aria-label="锚点">#</a></h3>
+<pre><code>&gt; Type a message...                    ← 默认模式（无指示）
+
+[INSERT] &gt; Type a message...           ← Vim INSERT 模式
+
+[NORMAL] &gt; Type a message...           ← Vim NORMAL 模式
+
+[SHELL] ! npm run build                ← Shell 模式
+
+[VOICE] 🎤 Listening...                ← Voice 模式</code></pre>
+<h3 id="3-2-模式切换">3.2 模式切换<a class="anchor" href="#3-2-模式切换" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>快捷键</th><th>从</th><th>到</th><th>说明</th></tr></thead><tbody><tr><td><code>i</code></td><td>NORMAL</td><td>INSERT</td><td>Vim 标准</td></tr><tr><td><code>Esc</code></td><td>INSERT</td><td>NORMAL</td><td>Vim 标准</td></tr><tr><td><code>v</code></td><td>任意</td><td>VOICE</td><td>语音输入（Win+H）</td></tr><tr><td><code>!</code> + 输入</td><td>任意</td><td>Shell</td><td>命令执行</td></tr><tr><td><code>Enter</code></td><td>Shell</td><td>默认</td><td>执行后返回</td></tr></tbody></table>
+<h3 id="3-3-模式状态机">3.3 模式状态机<a class="anchor" href="#3-3-模式状态机" aria-label="锚点">#</a></h3>
+<pre><code>                    ┌─────────┐
+                    │ DEFAULT │
+                    └────┬────┘
+                         │
+          ┌──────────────┼──────────────┐
+          │              │              │
+          ▼              ▼              ▼
+    ┌──────────┐  ┌──────────┐  ┌──────────┐
+    │  INSERT  │  │  SHELL   │  │  VOICE   │
+    │  (Vim)   │  │  (! 前缀) │  │  (Win+H) │
+    └────┬─────┘  └────┬─────┘  └────┬─────┘
+         │              │              │
+         │    ┌─────────┘              │
+         │    │                        │
+         ▼    ▼                        │
+    ┌──────────┐                       │
+    │  NORMAL  │ ◄─────────────────────┘
+    │  (Vim)   │
+    └──────────┘</code></pre>
+<hr>
+<h2 id="4-占位符设计">4. 占位符设计<a class="anchor" href="#4-占位符设计" aria-label="锚点">#</a></h2>
+<h3 id="4-1-占位符文本">4.1 占位符文本<a class="anchor" href="#4-1-占位符文本" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>模式</th><th>占位符</th><th>颜色</th></tr></thead><tbody><tr><td><strong>默认</strong></td><td><code>Send a message...</code></td><td><code>#6B7280</code>（灰色）</td></tr><tr><td><strong>Shell</strong></td><td><code>Run a command...</code></td><td><code>#6B7280</code>（灰色）</td></tr><tr><td><strong>Voice</strong></td><td><code>Listening...</code></td><td><code>#F87171</code>（红色）</td></tr><tr><td><strong>Busy</strong></td><td><code>AI is thinking...</code></td><td><code>#6B7280</code>（灰色）</td></tr></tbody></table>
+<h3 id="4-2-占位符渲染">4.2 占位符渲染<a class="anchor" href="#4-2-占位符渲染" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">/**
+ * 渲染占位符
+ */</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">Placeholder</span>(<span class="hljs-params">{ mode = <span class="hljs-string">&#x27;default&#x27;</span>, busy = <span class="hljs-literal">false</span> }</span>) {
+  <span class="hljs-keyword">if</span> (busy) {
+    <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Text</span> <span class="hljs-attr">color</span>=<span class="hljs-string">&quot;#6B7280&quot;</span>&gt;</span>AI is thinking...<span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span></span>;
+  }
+
+  <span class="hljs-keyword">const</span> placeholders = {
+    <span class="hljs-attr">default</span>: <span class="hljs-string">&#x27;Send a message...&#x27;</span>,
+    <span class="hljs-attr">shell</span>: <span class="hljs-string">&#x27;Run a command...&#x27;</span>,
+    <span class="hljs-attr">voice</span>: <span class="hljs-string">&#x27;Listening...&#x27;</span>,
+  };
+
+  <span class="hljs-keyword">const</span> text = placeholders[mode] || placeholders.<span class="hljs-property">default</span>;
+  <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Text</span> <span class="hljs-attr">color</span>=<span class="hljs-string">&quot;#6B7280&quot;</span>&gt;</span>{text}<span class="hljs-tag">&lt;/<span class="hljs-name">Text</span>&gt;</span></span>;
+}</code></pre>
+<hr>
+<h2 id="5-多行输入">5. 多行输入<a class="anchor" href="#5-多行输入" aria-label="锚点">#</a></h2>
+<h3 id="5-1-换行处理">5.1 换行处理<a class="anchor" href="#5-1-换行处理" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>操作</th><th>效果</th></tr></thead><tbody><tr><td><code>Shift+Enter</code></td><td>插入换行符，继续输入</td></tr><tr><td><code>Enter</code></td><td>发送消息</td></tr><tr><td><code>Ctrl+Enter</code></td><td>多行模式下发送</td></tr><tr><td><code>粘贴多行</code></td><td>自动分割为多行</td></tr></tbody></table>
+<h3 id="5-2-行号提示">5.2 行号提示<a class="anchor" href="#5-2-行号提示" aria-label="锚点">#</a></h3>
+<pre><code>&gt; Line 1                                         ← 第 1 行：&quot;&gt; &quot; 前缀
+  Line 2                                         ← 第 2 行：&quot;  &quot; 前缀（对齐）
+  Line 3</code></pre>
+<h3 id="5-3-高度窗口化">5.3 高度窗口化<a class="anchor" href="#5-3-高度窗口化" aria-label="锚点">#</a></h3>
+<p>当输入行数超过最大高度时，显示滚动窗口：</p>
+<pre><code>⋯ (3 lines above)                                ← 上方省略标记
+  Line 4
+  Line 5
+&gt; Line 6                                         ← 光标所在行
+⋯ (2 lines below)                                ← 下方省略标记</code></pre>
+<hr>
+<h2 id="6-实现架构">6. 实现架构<a class="anchor" href="#6-实现架构" aria-label="锚点">#</a></h2>
+<h3 id="6-1-组件结构">6.1 组件结构<a class="anchor" href="#6-1-组件结构" aria-label="锚点">#</a></h3>
+<pre><code>CcPromptInput (容器)
+├── ModeIndicator (模式指示器，可选)
+├── InputArea (输入区域)
+│   ├── LinePrefix (行前缀 &quot;&gt; &quot; 或 &quot;  &quot;)
+│   ├── TextContent (文本内容)
+│   ├── Cursor (光标)
+│   └── Placeholder (占位符)
+└── FooterHint (底部提示，可选)</code></pre>
+<h3 id="6-2-props-接口">6.2 Props 接口<a class="anchor" href="#6-2-props-接口" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">/**
+ * CcPromptInput Props
+ */</span>
+interface <span class="hljs-title class_">CcPromptInputProps</span> {
+  <span class="hljs-comment">// 核心状态</span>
+  <span class="hljs-attr">value</span>: string;                    <span class="hljs-comment">// 当前输入值</span>
+  <span class="hljs-attr">onChange</span>: <span class="hljs-function">(<span class="hljs-params">value: string</span>) =&gt;</span> <span class="hljs-keyword">void</span>; <span class="hljs-comment">// 输入变化回调</span>
+  <span class="hljs-attr">onSubmit</span>: <span class="hljs-function">(<span class="hljs-params">value: string</span>) =&gt;</span> <span class="hljs-keyword">void</span>; <span class="hljs-comment">// 提交回调</span>
+  
+  <span class="hljs-comment">// 模式</span>
+  <span class="hljs-attr">mode</span>: <span class="hljs-string">&#x27;default&#x27;</span> | <span class="hljs-string">&#x27;insert&#x27;</span> | <span class="hljs-string">&#x27;normal&#x27;</span> | <span class="hljs-string">&#x27;shell&#x27;</span> | <span class="hljs-string">&#x27;voice&#x27;</span>; <span class="hljs-comment">// 当前模式</span>
+  <span class="hljs-attr">busy</span>: boolean;                    <span class="hljs-comment">// 是否正在处理（禁用输入）</span>
+  
+  <span class="hljs-comment">// 配置</span>
+  placeholder?: string;             <span class="hljs-comment">// 自定义占位符</span>
+  maxRows?: number;                 <span class="hljs-comment">// 最大行数</span>
+  vimEnabled?: boolean;             <span class="hljs-comment">// 是否启用 Vim 模式</span>
+  
+  <span class="hljs-comment">// 回调</span>
+  onModeChange?: <span class="hljs-function">(<span class="hljs-params">mode: string</span>) =&gt;</span> <span class="hljs-keyword">void</span>;     <span class="hljs-comment">// 模式切换</span>
+  onShellCommand?: <span class="hljs-function">(<span class="hljs-params">cmd: string</span>) =&gt;</span> <span class="hljs-keyword">void</span>;    <span class="hljs-comment">// Shell 命令</span>
+  onVoiceStart?: <span class="hljs-function">() =&gt;</span> <span class="hljs-keyword">void</span>;                 <span class="hljs-comment">// 语音输入开始</span>
+}</code></pre>
+<h3 id="6-3-状态管理">6.3 状态管理<a class="anchor" href="#6-3-状态管理" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">function</span> <span class="hljs-title function_">CcPromptInput</span>(<span class="hljs-params">props</span>) {
+  <span class="hljs-keyword">const</span> [value, setValue] = <span class="hljs-title function_">useState</span>(<span class="hljs-string">&#x27;&#x27;</span>);
+  <span class="hljs-keyword">const</span> [offset, setOffset] = <span class="hljs-title function_">useState</span>(<span class="hljs-number">0</span>);        <span class="hljs-comment">// 光标位置（UTF-16 偏移）</span>
+  <span class="hljs-keyword">const</span> [mode, setMode] = <span class="hljs-title function_">useState</span>(<span class="hljs-string">&#x27;default&#x27;</span>);     <span class="hljs-comment">// 当前模式</span>
+  <span class="hljs-keyword">const</span> [focused, setFocused] = <span class="hljs-title function_">useState</span>(<span class="hljs-literal">true</span>);    <span class="hljs-comment">// 是否聚焦</span>
+  
+  <span class="hljs-comment">// 使用 useInput 处理键盘事件</span>
+  <span class="hljs-title function_">useInput</span>(handleInput, { <span class="hljs-attr">isActive</span>: focused });
+  
+  <span class="hljs-comment">// 使用 useCursor 控制光标显示</span>
+  <span class="hljs-keyword">const</span> { showCursor, hideCursor } = <span class="hljs-title function_">useCursor</span>();
+  
+  <span class="hljs-comment">// ...</span>
+}</code></pre>
+<hr>
+<h2 id="7-性能约束">7. 性能约束<a class="anchor" href="#7-性能约束" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>约束</th><th>值</th><th>说明</th></tr></thead><tbody><tr><td><strong>输入延迟</strong></td><td>&lt; 16ms</td><td>按键到屏幕响应</td></tr><tr><td><strong>光标跟随</strong></td><td>无跳跃</td><td>光标位置与输入偏移同步</td></tr><tr><td><strong>多行渲染</strong></td><td>O(可见行)</td><td>仅渲染可见区域</td></tr><tr><td><strong>内存</strong></td><td>O(输入长度)</td><td>不缓存历史帧</td></tr></tbody></table>
+<hr>
+<h2 id="8-验收标准">8. 验收标准<a class="anchor" href="#8-验收标准" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>场景</th><th>预期</th></tr></thead><tbody><tr><td>空输入</td><td>显示灰色占位符 <code>Send a message...</code></td></tr><tr><td>单行输入</td><td>显示 <code>&gt; </code> 前缀 + 内容</td></tr><tr><td>多行输入</td><td>续行显示 <code>  </code> 前缀，对齐</td></tr><tr><td>Vim INSERT</td><td>绿色竖线光标 <code>│</code></td></tr><tr><td>Vim NORMAL</td><td>绿色方块光标 <code>█</code>，常亮</td></tr><tr><td>Shell 模式</td><td><code>!</code> 前缀 + 黄色光标</td></tr><tr><td>Voice 模式</td><td><code>🎤</code> 前缀 + 红色闪烁光标</td></tr><tr><td>输入中</td><td>光标跟随输入位置，无跳跃</td></tr><tr><td>长输入</td><td>高度窗口化，显示省略标记</td></tr><tr><td>粘贴多行</td><td>自动分割，保留换行</td></tr></tbody></table>
+<hr>
+<blockquote><p><strong>文档状态</strong>：Draft — 待实施<br><strong>创建日期</strong>：2026-09-09<br><strong>依赖</strong>：[DESIGN-ARCH-081] 主设计规范</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-081] Claude Code TUI 1复刻实施计划.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-081] Claude Code TUI 1:1 复刻实施计划（Khy 品牌版）</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-083] CC模式表格与折叠设计.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-083] CC 模式表格与折叠设计</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-082] CC模式输入框与光标设计.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

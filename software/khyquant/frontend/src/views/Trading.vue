@@ -495,7 +495,7 @@
 
       class="mobile-fab-bot"
 
-      @click="$emit('open-bot')"
+      @click="dispatchEvent(new Event('show-ai-assistant'))"
 
     >
 
@@ -1826,13 +1826,10 @@ async function loadStrategySignals(strategy, symbol) {
 
       
 
-      if (import.meta.env.DEV) { console.log('✅ 策略信号加载成功:', { }
-
+      if (import.meta.env.DEV) { console.log('✅ 策略信号加载成功:', {
         signals: strategySignals.value.length,
-
         auxiliaryData: Object.keys(strategyAuxiliaryData.value)
-
-      })
+      }) }
 
     } else {
 
@@ -1920,15 +1917,11 @@ async function executeStrategyLocally(strategy, symbol) {
 
     if (import.meta.env.DEV) { console.log('📊 信号数量:', strategySignals.value.length, '辅助线数量:', Object.keys(strategyAuxiliaryData.value).length) }
 
-    if (import.meta.env.DEV) { console.log('✅ 本地策略执行成功:', { }
-
+    if (import.meta.env.DEV) { console.log('✅ 本地策略执行成功:', {
       signals: strategySignals.value.length,
-
       auxiliaryData: Object.keys(strategyAuxiliaryData.value),
-
       signalsPreview: Array.isArray(strategySignals.value) ? strategySignals.value.slice(0, 3) : []
-
-    })
+    }) }
 
     
 
@@ -2090,13 +2083,10 @@ function forceShowSignalsInternal(strategy) {
 
       if (strategySignals.value && strategySignals.value.length > 0) {
 
-        if (import.meta.env.DEV) { console.log('📊 策略信号数据:', { }
-
+        if (import.meta.env.DEV) { console.log('📊 策略信号数据:', {
           count: strategySignals.value.length,
-
           signals: strategySignals.value
-
-        })
+        }) }
 
         
 
@@ -2236,7 +2226,7 @@ function generateTestSignalsForStrategyChart(strategyName, count = 6) {
 
     
 
-    if (import.meta.env.DEV) { console.log(`📍 生成信号 ${i + 1}:`, { }
+    if (import.meta.env.DEV) { console.log(`📍 生成信号 ${i + 1}:`, {
 
       type: signal.type,
 
@@ -2246,7 +2236,7 @@ function generateTestSignalsForStrategyChart(strategyName, count = 6) {
 
       chartTime: signal.time
 
-    })
+    }) }
 
   }
 
@@ -2900,13 +2890,13 @@ function handleSignalsGenerated(data) {
 
         strategyAuxiliaryData.value = data.auxiliaryData
 
-        if (import.meta.env.DEV) { console.log('✅ 辅助线数据已更新:', { }
+        if (import.meta.env.DEV) { console.log('✅ 辅助线数据已更新:', {
 
           auxiliaryLines: Object.keys(data.auxiliaryData).length,
 
           lineNames: Object.keys(data.auxiliaryData)
 
-        })
+        }) }
 
       } else {
 
@@ -2930,7 +2920,7 @@ function handleSignalsGenerated(data) {
 
       
 
-      if (import.meta.env.DEV) { console.log('✅ 策略信号已更新:', { }
+      if (import.meta.env.DEV) { console.log('✅ 策略信号已更新:', {
 
         strategy: data.strategy.name,
 
@@ -2940,7 +2930,7 @@ function handleSignalsGenerated(data) {
 
         signals: signals.length > 0 ? signals.slice(0, 3) : [] // 显示前3个信号用于调试
 
-      })
+      }) }
 
       
 
@@ -3015,6 +3005,7 @@ function handleSignalsGenerated(data) {
         ElMessage.success(`策略 "${data.strategy.name}" 生成了 ${data.signals.length} 个交易信号`)
 
       }
+      // if (data && data.signals) 块主体结束
 
     } else {
 
@@ -3023,6 +3014,8 @@ function handleSignalsGenerated(data) {
       ElMessage.warning('策略信号数据格式不正确')
 
     }
+
+    // try 块主体结束
 
   } catch (error) {
 

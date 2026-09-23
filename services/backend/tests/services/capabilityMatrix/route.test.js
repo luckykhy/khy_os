@@ -3,8 +3,8 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 
-const { serializeRoute, formatRouteHuman } = require('../../../src/services/capabilityMatrix/route');
-const { selectPreset } = require('../../../src/services/capabilityMatrix/routePresets');
+const { serializeRoute, formatRouteHuman } = require('../../../src/services/domain/catalog/capabilityMatrix/route.js');
+const { selectPreset } = require('../../../src/services/domain/catalog/capabilityMatrix/routePresets.js');
 
 const SAMPLE = {
   preset: { id: 'delivery', label: 'd' },

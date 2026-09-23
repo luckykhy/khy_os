@@ -139,7 +139,9 @@ describe('describeImageMetadata — deterministic Chinese summary', () => {
     assert.match(desc, /1920×1080/);
     assert.match(desc, /16:9/);
     assert.match(desc, /横向/);
-    assert.match(desc, /480\.0 KB/);
+    // size wording comes from the unified humanBytes utility (single
+    // source of truth): exact KB values render without a decimal.
+    assert.match(desc, /480 KB/);
     assert.match(desc, /百万像素/);
   });
 

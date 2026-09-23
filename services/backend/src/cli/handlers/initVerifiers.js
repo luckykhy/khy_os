@@ -12,7 +12,8 @@
  *   - 注入机制 = 既有 aiForward(repl.js / App.js 消费,同 /ulw-loop、/learn);不另造注入缝。
  *   - 脚手架目标 = khy 真正可发现的技能约定 `<projectDir>/.khy/skills/<name>/{manifest.json,prompt.md}`
  *     (skills/index.js discoverAllSkills 的项目级路径),**不是** CC 的 `.claude/skills/<name>/SKILL.md`
- *     (khy 不发现该路径)——这是刻意的诚实分歧:对齐 CC 的「能力」,但落到 khy 真生效的结构上。
+ *     (该路径仅经 ccSkillBridge 桥接发现,非 khy 原生路径)——这是刻意的诚实分歧:
+ *     对齐 CC 的「能力」,但脚手架落到 khy 原生生效的结构上。
  *
  * 用法:`/init-verifiers`。门控 KHY_INIT_VERIFIERS 默认开;关 → 命令不接管(字节回退)。
  */

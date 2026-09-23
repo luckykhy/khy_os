@@ -4,10 +4,10 @@
  * restore-resolve.js — 三面镜子「矛盾冲突消解」CLI + 文档生成器
  *
  * 用法：
- *   node scripts/restore-resolve.js            # 采集三面镜子 → 检测矛盾 → 生成消解方案
- *   npm run restore-resolve                     # 同上（经 npm 别名）
- *   node scripts/restore-resolve.js --json      # 机器可读（landing agent 先读这个）
- *   node scripts/restore-resolve.js --gen-doc   # 重新生成 OPS-MAN-079 说明
+ *   node scripts/restore/restore-resolve.js            # 采集三面镜子 → 检测矛盾 → 生成消解方案
+ *   npm run restore:resolve                            # 同上（经 npm 别名）
+ *   node scripts/restore/restore-resolve.js --json      # 机器可读（landing agent 先读这个）
+ *   node scripts/restore/restore-resolve.js --gen-doc   # 重新生成 OPS-MAN-079 说明
  *
  * 设计：消解逻辑全在纯叶子 scripts/lib/restoreConflictResolver.js（零 IO、可离线全测）；
  * 本文件只做三件事——
@@ -28,14 +28,10 @@ const { detectRestoreConflicts, SEVERITY_CONTRADICTION } =
   require('../lib/restoreConflictDetector');
 // 复用 restore-plan 的三面镜子采集器（零重复；它已 fail-soft 包好三个探测器）。
 const { gatherAssessments } = require('./restore-plan');
+const { opsDocPath, opsDocRelPath } = require('../lib/docsPaths');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const DOC_PATH = path.join(
-  ROOT,
-  'docs',
-  '07_OPS_运维',
-  '[OPS-MAN-079] 三面镜子矛盾冲突消解.md'
-);
+const DOC_PATH = opsDocPath('[OPS-MAN-079] 三面镜子矛盾冲突消解.md');
 const NPM_PKG_NAME = '@khy-os/khy-os';
 const PIP_PKG_NAME = 'khy-os';
 
@@ -99,7 +95,7 @@ function runRestoreResolve(opts = {}) {
       out += `agent 跑到「须人工」步即止步交人，绝不在残留矛盾上自动还原。${C.reset}\n`;
     }
   }
-  out += `${C.dim}详情见：docs/07_OPS_运维/[OPS-MAN-079] 三面镜子矛盾冲突消解.md${C.reset}\n`;
+  out += `${C.dim}详情见：${opsDocRelPath('[OPS-MAN-079] 三面镜子矛盾冲突消解.md')}${C.reset}\n`;
   process.stdout.write(out);
   return plan.autoResolvable ? 0 : 1;
 }

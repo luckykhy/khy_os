@@ -4,7 +4,7 @@ const {
   isEnabled,
   formatAuthTimestamp,
   deriveSessionExpiry,
-} = require('../../../src/services/authTimeFormat');
+} = require('../../src/services/authTimeFormat.js');
 
 describe('authTimeFormat', () => {
   describe('isEnabled', () => {

@@ -19,7 +19,7 @@
  *     NO funnel bypass and NO new entrance into executeTool.
  *   - **Zero hard-coding**: roots, manifest names and state file all come from
  *     `services/extensions/extensionRoots` — the single source of truth legislated by
- *     [DESIGN-ARCH-069]. This module used to COPY those three constants from
+ *     [DESIGN-TOOL-002]. This module used to COPY those three constants from
  *     extensionManager and keep them in step "by construction" (i.e. by a human
  *     remembering); it no longer owns any path of its own.
  *   - **Pure leaf / no cycles**: this module requires only `_baseTool`, the tools
@@ -59,8 +59,11 @@ const _TOOLS_FIELD = 'tools';
 function _baseTool() {
   return require('../../../../tools/_baseTool');
 }
+// 注册表真源是 src/tools（有 register()），不是 cli/handlers/tools（只有 handleToolsCommand）
+// —— 旧写法会让 register(tool) 在运行期抛 "register is not a function"，
+// 同时构成 services→cli 分层倒置。
 function _toolRegistry() {
-  return require('../../../../cli/handlers/tools');
+  return require('../../../../tools');
 }
 
 // ── Cache of enabled extensions + their declared tool names ─────────
@@ -93,7 +96,7 @@ function _loadStateCached() {
 // collision policy and fail-soft behaviour are unchanged because discover() applies
 // exactly the same rules (sorted dir names, skip-on-bad-manifest, absent state =
 // enabled). `dir` stays the BARE DIRECTORY NAME: it is the state key and the
-// collision key, and [DESIGN-ARCH-069] §3.3 pins both to the directory basename.
+// collision key, and [DESIGN-TOOL-002] §3.3 pins both to the directory basename.
 function _scanEnabledExtensions() {
   const found = [];
   try {
@@ -314,7 +317,7 @@ function activateContributedTool(name) {
  * 拿走了它。这是 khy-notebook 试点实测出来的缺口，不是假想。
  *
  * 补法必须保持惰性：manifest 是 JSON，name/description/inputSchema 三样**不执行任何
- * 拓展代码**就能读到 —— 这正是 [DESIGN-ARCH-069] §3 坚持「manifest 是 JSON 不是 JS」
+ * 拓展代码**就能读到 —— 这正是 [DESIGN-TOOL-002] §3 坚持「manifest 是 JSON 不是 JS」
  * 换来的东西。声明用来广告，入口仍然等到首次真正调用才 require。
  *
  * @returns {Array<{name:string,description:string,inputSchema:object,dir:string}>}

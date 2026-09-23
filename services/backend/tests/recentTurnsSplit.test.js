@@ -62,9 +62,9 @@ test('splitRecent: gate OFF → null (caller uses legacy slice)', () => {
 
 // ── commandRewriter.rewriteHistory 接线活验 ────────────────────────────
 function freshRewriter() {
-  delete require.cache[require.resolve('../src/services/tokenless/commandRewriter')];
+  delete require.cache[require.resolve('../src/services/domain/account/tokenless/commandRewriter.js')];
   delete require.cache[require.resolve('../src/services/recentTurnsSplit')];
-  return require('../src/services/tokenless/commandRewriter');
+  return require('../src/services/domain/account/tokenless/commandRewriter.js');
 }
 
 function withEnv(mut, fn) {

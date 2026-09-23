@@ -25,7 +25,11 @@ const path = require('path');
 
 const projectTemplateService = require('../../../projectTemplateService');
 
-const BLUEPRINTS_DIR = path.join(__dirname, '..', '..', 'blueprints');
+// Data lives in src/blueprints/ (see header doc): this module moved down into
+// services/domain/project/projectBlueprint/, so the join must climb 4 levels
+// back to src/ — the old 2-level climb pointed at a non-existent dir and the
+// catalog silently loaded empty (fail-soft masks it, tests catch it).
+const BLUEPRINTS_DIR = path.join(__dirname, '..', '..', '..', '..', 'blueprints');
 const ARCHETYPES_DIR = path.join(BLUEPRINTS_DIR, 'archetypes');
 const CONCEPTS_DIR = path.join(BLUEPRINTS_DIR, 'concepts');
 

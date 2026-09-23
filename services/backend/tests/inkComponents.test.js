@@ -117,15 +117,17 @@ describe('inkComponents', () => {
   });
 
   // ── ProgressBar ──
-
+  // Glyph sets are platform-adaptive: legacy Windows terminals render ASCII
+  // (# / -), modern terminals render block chars (█ / ░) — asserted accordingly.
   describe('ProgressBar()', () => {
     test('renders at 0%', () => {
       const result = ProgressBar({ value: 0 });
       const plain = stripAnsi(result);
 
       expect(plain).toContain('0%');
-      // Should have all empty characters
-      expect(plain).toContain('░');
+      // Should have all empty characters (legacy Win: '-', modern: '░')
+      expect(plain).toMatch(/[-░]/);
+      expect(plain).not.toMatch(/[#█]/);
     });
 
     test('renders at 50%', () => {
@@ -133,8 +135,8 @@ describe('inkComponents', () => {
       const plain = stripAnsi(result);
 
       expect(plain).toContain('50%');
-      expect(plain).toContain('█');
-      expect(plain).toContain('░');
+      expect(plain).toMatch(/[#█]/);
+      expect(plain).toMatch(/[-░]/);
     });
 
     test('renders at 100%', () => {
@@ -142,9 +144,9 @@ describe('inkComponents', () => {
       const plain = stripAnsi(result);
 
       expect(plain).toContain('100%');
-      // Should have all complete characters
-      expect(plain).toContain('█');
-      expect(plain).not.toContain('░');
+      // Should have all complete characters (legacy Win: '#', modern: '█')
+      expect(plain).toMatch(/[#█]/);
+      expect(plain).not.toMatch(/[-░]/);
     });
 
     test('renders with custom label', () => {

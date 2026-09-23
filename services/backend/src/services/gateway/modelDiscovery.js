@@ -81,6 +81,18 @@ function extractFromText(text) {
 // 保留本地常量名,调用点逐字节不变。
 const normalizeModelId = require('./_modelIdParse').normalizeModelIdCompact;
 
+// 形态律复用真值叶子([DESIGN-ARCH-100] §3.2 律 2),不在本模块再写一份正则。
+// 本模块是「扫描脏数据」的**第一道闸**:被它放行的字符串会被 merge 进 .env 的
+// RELAY_API_MODELS 而**永久留存在模型列表里**(自污染闭环),所以这里的判据必须从严。
+const { isWellFormedId } = require('./modelListTruth');
+
+// 裸家族词(gpt / claude / claude sonnet …)**单独出现**不是模型 ID。
+// MODEL_ID_REGEX 的每个分支都是家族关键词,散文里出现「Claude」就会被整体命中并当成
+// 一个模型 ID 写进 RELAY_API_MODELS —— 真模型 ID 必带版本/变体后缀(claude-sonnet-4-6 /
+// gpt-4o / qwen3.5:4b),裸词一律拒。
+const BARE_FAMILY_RE =
+  /^(?:gpt|o[1-9]|claude|gemini|deepseek|qwen|glm|doubao|llama|mistral|sonnet|haiku|opus|moonshot|yi|ernie|copilot|cursor|codeium|kimi|qvq|qwq|swe|cascade|windsurf)$/i;
+
 function isLikelyModelId(id) {
   const s = normalizeModelId(id).toLowerCase();
   if (!s) {
@@ -92,9 +104,32 @@ function isLikelyModelId(id) {
   if (s.length < 3 || s.length > 96) {
     return false;
   }
+  if (BARE_FAMILY_RE.test(s)) {
+    return false;
+  }
+  // 形态律:规范化后的串也必须像一个模型标识符(不得再含空白/CJK/引号/URL 形状)。
+  if (!isWellFormedId(s)) {
+    return false;
+  }
   return /(gpt|o[1-9]|claude|gemini|deepseek|qwen|glm|doubao|llama|mistral|sonnet|haiku|opus|moonshot|yi|ernie|copilot|cursor|codeium|kimi|qvq|qwq|swe|cascade|windsurf)/i.test(
     s
   );
+}
+
+/**
+ * 从一个**原始**字符串里取模型 ID;不像则返回 ''。
+ * 判序:先看原始串(真实 ID 从不含空白),再规范化。反序会让「Claude 3.5 Sonnet 很好用」
+ * 这类散文被洗成 `Claude3.5Sonnet很好用` 而蒙混过关 —— 那正是垃圾模型 ID 的来历。
+ */
+function acceptRawValue(v) {
+  if (typeof v !== 'string') {
+    return '';
+  }
+  if (!isWellFormedId(v)) {
+    return '';
+  }
+  const id = normalizeModelId(v);
+  return isLikelyModelId(id) ? id : '';
 }
 
 function discoverFromJson(text) {
@@ -106,8 +141,8 @@ function discoverFromJson(text) {
         return;
       }
       if (typeof v === 'string') {
-        const id = normalizeModelId(v);
-        if (isLikelyModelId(id)) {
+        const id = acceptRawValue(v);
+        if (id) {
           models.add(id);
         }
         return;
@@ -122,8 +157,8 @@ function discoverFromJson(text) {
         for (const [k, val] of Object.entries(v)) {
           const lk = String(k).toLowerCase();
           if (lk.includes('model') && typeof val === 'string') {
-            const id = normalizeModelId(val);
-            if (isLikelyModelId(id)) {
+            const id = acceptRawValue(val);
+            if (id) {
               models.add(id);
             }
           }
@@ -144,8 +179,8 @@ function discoverFromToml(text) {
   for (const line of lines) {
     const m = line.match(/^\s*model\s*=\s*"([^"]+)"/i);
     if (m && m[1]) {
-      const id = normalizeModelId(m[1]);
-      if (isLikelyModelId(id)) {
+      const id = acceptRawValue(m[1]);
+      if (id) {
         models.add(id);
       }
     }

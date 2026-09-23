@@ -11,8 +11,12 @@
  * 本模块是「实测」的纯逻辑部分(零 IO/确定性/绝不抛):
  *   - 定义一个极小的探测工具 TRIVIAL_TOOL + 探测提示词 PROBE_PROMPT(发给模型,
  *     要求它调用该工具);
- *   - interpretProbeResult(result):把一次真实 generate 的返回值解释为
- *     'native' / 'text' / 'unknown' 三态裁决;
+ *   - interpretProbeResult(result, opts):把一次真实 generate 的返回值解释为
+ *     'native' / 'text' / 'unknown' 三态裁决。**负向裁决要求正面证据**:只有正文里
+ *     出现显式调用语法(判据由调用方注入,单一真源 toolCallParser)才判 'text';
+ *     「回了散文」「被截断」「空」一律 'unknown'。理由见该函数注释;
+ *   - needsControlGroup / interpretProbePair:A/B 对照组,把「模型不支持」与
+ *     「通道不接受 tools」分开('route-rejects-tools');
  *   - shouldReprobe(record, env):基于 TTL 的纯重测判定;
  *   - normalizeModel / isEnabled:规范化与门控。
  *
@@ -35,10 +39,25 @@ const TRIVIAL_TOOL = Object.freeze({
   }),
 });
 
-// 探测提示词:明确要求「调用工具」而非「文字回答」。能原生调工具的模型会回 tool_calls;
-// 不能的模型会回纯文字(或把调用当文本吐出)。两种都被 interpretProbeResult 区分。
+// 探测提示词:明确要求「调用工具」而非「文字回答」。
+//
+// 为什么逐字强调「不许前言」:探测的 maxTokens 是有限的,模型若先输出一句客套话
+// (「Sure, let me call that tool」),预算会被前言吃光,tool_call 根本来不及生成,
+// 于是探测观察到「没有 tool_calls」——但这是**输出预算**造成的,不是能力造成的。
+// 把这条要求写进提示词,是让「没看到调用」更可能等于「发不出调用」而不是「被截断」。
 const PROBE_PROMPT =
-  'Call the tool khy_probe_echo with ok set to "yes". Do not answer in plain text — use the tool.';
+  'Call the tool khy_probe_echo with ok set to "yes". ' +
+  'Respond with the tool call only — emit no prose, no preamble, no explanation before it. ' +
+  'Do not answer in plain text: use the tool.';
+
+// finish_reason → 「无定论」的原因。命中即不下结论(既不判 native 也不判 text)。
+// 这些值都表示「模型的输出没有正常走完」,此时缺 tool_calls 不携带任何关于能力的信息。
+const INCONCLUSIVE_FINISH = Object.freeze({
+  length: 'truncated_before_tool_call',
+  max_tokens: 'truncated_before_tool_call',
+  max_output_tokens: 'truncated_before_tool_call',
+  content_filter: 'output_filtered',
+});
 
 const DEFAULT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 天
 
@@ -97,17 +116,33 @@ function nativeTtlMs(env = process.env) {
 
 /**
  * 把一次真实 generate 的返回解释为工具调用能力三态。纯函数、绝不抛。
+ *
+ * **负向证据的门槛必须高**:判出 'text' 的后果是把该模型的原生 tools 从每个后续请求里
+ * 删掉;而删掉之后模型再也拿不到 tools、也就再也观察不到原生 tool_calls —— 一旦误判,
+ * 这条记录无法被现实推翻(只有 TTL 到期才重测)。故本函数只在**确证**时才给负向裁决:
  *   - 'native':回包含原生 tool_calls(toolUseBlocks 非空)或 finish_reason==='tool_calls'
  *               → 确证支持原生 function calling。
- *   - 'text'  :成功且有文字内容、但没有任何原生 tool_calls
- *               → 模型没走原生通道(可能把调用当文本吐,或纯聊天);判为不支持原生工具。
- *   - 'unknown':失败/空/异常 → 不下结论(不记录,留待重测)。绝不把瞬时失败误判为不支持。
+ *   - 'text'  :模型把调用**写成了显式语法**(`<tool_call>…`, `<function=…>`,
+ *               `name(args)`, 截断的 JSON 体…),判据复用 toolCallParser 的
+ *               hasExplicitToolCallSyntax(经 opts 注入)→ 确证它走文本通道,不支持原生。
+ *   - 'unknown':**其余一切情形**。失败、空、被截断,以及「只是回了散文」——
+ *               散文是「这一次没看到」,是证据的缺席,不是不支持的确证。
+ *
+ * 旧实现把「成功且有文字且无 tool_calls」一律判 'text',于是把三种性质完全不同、
+ * 且都不含「不支持」信号的输入(散文 / 被 max_tokens 截断 / 自述不会调用工具)判成同一个
+ * 负向结论,现场产出 `gpt-4o → text` 这类假阴性。判据现在要求正面命中才能定罪。
+ *
  * @param {object} result generate 的返回值(或等价的 {success,content,toolUseBlocks,finishReason})
+ * @param {{hasExplicitToolCallSyntax?: (text:string)=>boolean}} [opts]
+ *   hasExplicitToolCallSyntax:由调用方注入(单一真源 toolCallParser)。
+ *   **不注入的后果是只能得到 'native'/'unknown',永远得不到 'text'** —— 这是刻意的
+ *   fail-safe 方向:宁可不下结论,也不制造无法被推翻的假阴性。
  * @returns {{verdict:'native'|'text'|'unknown', reason:string}}
  */
-function interpretProbeResult(result) {
+function interpretProbeResult(result, opts = {}) {
   try {
     const r = result || {};
+
     // native 信号:多种字段名兼容(网关/适配器返回形状的并集)。
     const blocks = r.toolUseBlocks || r.toolCalls || r.tool_calls;
     const blockCount = Array.isArray(blocks) ? blocks.length : 0;
@@ -116,21 +151,105 @@ function interpretProbeResult(result) {
       return { verdict: 'native', reason: 'native_tool_calls_observed' };
     }
 
-    // 成功判定:显式 success===false 视为失败;未给 success 字段时,以「有文字内容」近似成功。
-    const text = String(
-      r.content != null ? r.content : r.thinking != null ? r.thinking : ''
-    ).trim();
-    const explicitlyFailed = r.success === false;
-    if (explicitlyFailed) {
+    // 失败:显式 success===false。绝不能把瞬时失败误判为不支持。
+    if (r.success === false) {
       return { verdict: 'unknown', reason: 'generation_failed' };
     }
-    if (text) {
-      // 成功回了文字却没调工具 → 不支持原生工具(或本轮选择不调,但探测提示词已强制要求调用)。
-      return { verdict: 'text', reason: 'text_only_no_tool_calls' };
+
+    // 输出被截断/被过滤:调用可能还没来得及生成,或干脆没发出来。
+    // 这里**必须早于**文本判定——否则一段被截断的前言会被当成「回了文字=不支持」。
+    const inconclusive = INCONCLUSIVE_FINISH[finish];
+    if (inconclusive) {
+      return { verdict: 'unknown', reason: inconclusive };
     }
-    return { verdict: 'unknown', reason: 'empty_response' };
+
+    const text = String(
+      r.content != null
+        ? r.content
+        : r.reply != null
+          ? r.reply
+          : r.thinking != null
+            ? r.thinking
+            : ''
+    ).trim();
+    if (!text) {
+      return { verdict: 'unknown', reason: 'empty_response' };
+    }
+
+    // 唯一能定罪 'text' 的判据:正文里出现了显式调用语法。
+    const hasSyntax = opts && opts.hasExplicitToolCallSyntax;
+    if (typeof hasSyntax === 'function') {
+      let attempted = false;
+      try {
+        attempted = hasSyntax(text) === true;
+      } catch {
+        attempted = false;
+      } // 判据异常 → 不下结论
+      if (attempted) {
+        return { verdict: 'text', reason: 'text_tool_call_syntax' };
+      }
+    }
+    return { verdict: 'unknown', reason: 'no_call_syntax_no_evidence' };
   } catch {
     return { verdict: 'unknown', reason: 'interpret_error' };
+  }
+}
+
+/**
+ * 是否需要跑对照组(group B)。
+ *
+ * 对照组只为一件事存在:当**主组 A 失败**时,判断这次失败是不是 tools 造成的
+ * (A 带 tools 失败、B 同样提示词不带 tools 成功 → 该通道拒绝 tools)。
+ * 这是「模型不支持」与「通道不接受 tools」的分离点:在此之前,两者在单次观测里
+ * 不可区分,一条通道丢 tools 会让该通道**所有**模型都被判成「不支持工具调用」。
+ * A 给出结论(无论 native/text)或 A 只是「截断/空/散文」时,对照组都帮不上,不必多花一次请求。
+ * @param {object} a 主组结果
+ * @param {object} [opts]
+ * @returns {boolean}
+ */
+function needsControlGroup(a, opts = {}) {
+  try {
+    if (interpretProbeResult(a, opts).verdict !== 'unknown') {
+      return false;
+    }
+    return !!(a && a.success === false);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 合并主组 A 与对照组 B 的裁决。纯函数、绝不抛。
+ *   - A 给出结论(native / text)→ 直接采用,不看 B。
+ *   - A 失败且 B 成功 → 'route-rejects-tools':**通道**拒绝 tools,不是模型不支持。
+ *     这一态属于通道而不是模型,调用方不得按模型键落库(否则一条严格端点的拒绝会被
+ *     写成该模型的永久属性,在其他通道上也被剥离)。P1 只把它回报给 CLI 与日志。
+ *   - A 失败且 B 也失败 / B 未跑 → 'unknown'。
+ *   - A 无结论(截断/空/散文)→ 原样返回 A 的 'unknown'。
+ * @param {{a?: object, b?: object|null}} pair
+ * @param {{hasExplicitToolCallSyntax?: (text:string)=>boolean}} [opts]
+ * @returns {{verdict:'native'|'text'|'unknown'|'route-rejects-tools', reason:string}}
+ */
+function interpretProbePair(pair = {}, opts = {}) {
+  try {
+    const a = pair.a || {};
+    const b = pair.b || null;
+    const verdictA = interpretProbeResult(a, opts);
+    if (verdictA.verdict !== 'unknown') {
+      return verdictA;
+    }
+    if (!(a && a.success === false)) {
+      return verdictA; // 截断/空/散文 —— 对照组不改变结论
+    }
+    if (!b) {
+      return { verdict: 'unknown', reason: 'group_a_failed_no_control' };
+    }
+    if (b.success === true) {
+      return { verdict: 'route-rejects-tools', reason: 'a_failed_b_succeeded' };
+    }
+    return { verdict: 'unknown', reason: 'both_groups_failed' };
+  } catch {
+    return { verdict: 'unknown', reason: 'interpret_pair_error' };
   }
 }
 
@@ -180,11 +299,14 @@ function shouldReprobe(record, env = process.env, now) {
 module.exports = {
   TRIVIAL_TOOL,
   PROBE_PROMPT,
+  INCONCLUSIVE_FINISH,
   DEFAULT_TTL_MS,
   isEnabled,
   normalizeModel,
   ttlMs,
   nativeTtlMs,
   interpretProbeResult,
+  needsControlGroup,
+  interpretProbePair,
   shouldReprobe,
 };

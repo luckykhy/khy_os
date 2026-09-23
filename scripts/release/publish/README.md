@@ -81,7 +81,7 @@ prune」的**黑名单**形态，漏东西是必然的，所以打完包之后�
 
 | 不再分发的内容 | 为什么 | 重建命令 |
 | --- | --- | --- |
-| `docs/_assets/mermaid.min.js`（3.12 MB） | 可再生构建产物，不进 git 却因为 MANIFEST 走工作树而进了包 | `npm run docs:mermaid`（随后 `npm run docs:build` 生成带图表的离线站） |
+| `docs/19_资产/site/mermaid.min.js`（3.12 MB） | 可再生构建产物，不进 git 却因为 MANIFEST 走工作树而进了包 | `npm run docs:mermaid`（随后 `npm run docs:build` 生成带图表的离线站） |
 | `**/*.html`（147 个文档站派生件） | 都是 `build_docs_site.js` 从同名 `.md` 生成的；5 个真入口已单独放回 | `npm run docs:build` |
 | `services/backend/.khy/`、`.khy_*` 标记 | 本机运行时状态。带着预置的 hydration 标记发出去，新装的机器会以为 bootstrap 跑过了 | 无需重建，首次运行自动生成 |
 | `*.db-shm` / `*.db-wal` / `test-data-criterion-*/` | 本机跑校验脚本留下的 SQLite 边角料 | `node services/backend/verify-criterion-*.js` |

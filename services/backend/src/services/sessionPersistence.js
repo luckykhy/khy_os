@@ -826,6 +826,95 @@ function restoreSession(sessionId, opts = {}) {
   }
 }
 
+// ── Parsed-metadata cache (L2a of [DESIGN-PERF-003]) ──
+// listPersistedSessions() sits on the TUI startup critical path: the first frame
+// reaches it via sessionColorState._seedOnce → getCurrentSessionId, and the todo
+// store resolves the session id through the same route, so the work was done
+// twice in one frame. Each call used to readFileSync + JSON.parse EVERY snapshot
+// — hundreds of files, ~10MB of JSON parsed with the event loop held.
+//
+// Cache the parsed metadata per file, keyed by (mtimeMs, size), so a repeat call
+// only stats. Output is unchanged: a file whose mtime or size moved is re-read,
+// entries for vanished files are pruned, and callers still get a fresh object.
+// Hence no gate and no caller changes are needed. The one theoretical stale
+// window is a file rewritten to an identical size within the same mtime tick.
+let _sessionMetaCache = new Map(); // absPath -> { mtimeMs, size, meta }
+
+/**
+ * Build the listed metadata for one snapshot's parsed JSON.
+ * @param {string} file absolute snapshot path
+ * @param {object} data parsed JSON
+ * @param {string} root sessions root, so a root-level file reports projectDir ''
+ * @returns {object} metadata row
+ */
+function _buildSessionMeta(file, data, root) {
+  const projectDir = path.dirname(file);
+  let firstUserMessage = '';
+  if (Array.isArray(data.messages)) {
+    const fu = data.messages.find((m) => m && m.role === 'user');
+    if (fu) {
+      let c = fu.content;
+      if (Array.isArray(c)) {
+        c = c
+          .map((p) => (p && typeof p === 'object' ? p.text || '' : String(p || '')))
+          .join(' ');
+      } else if (c && typeof c === 'object') {
+        c = c.text || '';
+      }
+      firstUserMessage = String(c || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 200);
+    }
+  }
+  return {
+    sessionId: data.sessionId,
+    title: data.title || '(untitled)',
+    model: data.model || '',
+    messageCount: data.messageCount || 0,
+    createdAt: data.createdAt || 0,
+    updatedAt: data.updatedAt || 0,
+    projectDir: projectDir === root ? '' : projectDir,
+    cwd: (data.metadata && data.metadata.cwd) || '',
+    firstUserMessage,
+  };
+}
+
+/**
+ * Metadata for one snapshot file, served from the cache when the file's
+ * (mtimeMs, size) is unchanged; otherwise re-read and re-parsed. Unreadable or
+ * corrupt files return null so the caller skips them — the behaviour before the
+ * cache existed. `seen` collects the files the cache now tracks so the caller can
+ * prune ones that disappeared.
+ *
+ * @param {string} file
+ * @param {string} root
+ * @param {Set<string>} seen
+ * @returns {object|null}
+ */
+function _readSessionMetaCached(file, root, seen) {
+  let stat;
+  try {
+    stat = fs.statSync(file);
+  } catch {
+    return null;
+  }
+  const cached = _sessionMetaCache.get(file);
+  if (cached && cached.mtimeMs === stat.mtimeMs && cached.size === stat.size) {
+    seen.add(file);
+    return cached.meta;
+  }
+  try {
+    const data = JSON.parse(fs.readFileSync(file, 'utf-8'));
+    const meta = _buildSessionMeta(file, data, root);
+    _sessionMetaCache.set(file, { mtimeMs: stat.mtimeMs, size: stat.size, meta });
+    seen.add(file);
+    return meta;
+  } catch {
+    return null; // corrupt — skip, and deliberately do not cache
+  }
+}
+
 /**
  * List all persisted sessions with metadata.
  * @param {object} [opts]
@@ -841,43 +930,21 @@ function listPersistedSessions(opts = {}) {
     return [];
   }
 
+  const seen = new Set();
   const sessions = [];
   for (const file of files) {
-    try {
-      const raw = fs.readFileSync(file, 'utf-8');
-      const data = JSON.parse(raw);
-      const projectDir = path.dirname(file);
-      let firstUserMessage = '';
-      if (Array.isArray(data.messages)) {
-        const fu = data.messages.find((m) => m && m.role === 'user');
-        if (fu) {
-          let c = fu.content;
-          if (Array.isArray(c)) {
-            c = c
-              .map((p) => (p && typeof p === 'object' ? p.text || '' : String(p || '')))
-              .join(' ');
-          } else if (c && typeof c === 'object') {
-            c = c.text || '';
-          }
-          firstUserMessage = String(c || '')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .slice(0, 200);
-        }
+    const meta = _readSessionMetaCached(file, root, seen);
+    if (meta) {
+      // Fresh object per call, as before the cache — callers may mutate rows.
+      sessions.push(Object.assign({}, meta));
+    }
+  }
+  // Drop metadata for snapshots that no longer exist (deleted / cleaned up).
+  if (_sessionMetaCache.size !== seen.size) {
+    for (const key of Array.from(_sessionMetaCache.keys())) {
+      if (!seen.has(key)) {
+        _sessionMetaCache.delete(key);
       }
-      sessions.push({
-        sessionId: data.sessionId,
-        title: data.title || '(untitled)',
-        model: data.model || '',
-        messageCount: data.messageCount || 0,
-        createdAt: data.createdAt || 0,
-        updatedAt: data.updatedAt || 0,
-        projectDir: projectDir === root ? '' : projectDir,
-        cwd: (data.metadata && data.metadata.cwd) || '',
-        firstUserMessage,
-      });
-    } catch {
-      /* skip corrupt */
     }
   }
 

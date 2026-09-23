@@ -1,4 +1,23 @@
 import { Menu, BrowserWindow, app, shell } from 'electron'
+import { createRequire } from 'node:module'
+import path from 'node:path'
+
+// Feedback URL comes from the backend single source of truth
+// (services/backend/src/constants/serviceDefaults.js FEEDBACK_URL) — never a
+// hardcoded production domain (Rule 1). Resolved via KHY_OS_DIR / relative
+// fallback, same as the app:brandingLinks handler.
+function resolveFeedbackUrl(): string {
+  try {
+    const nodeRequire = createRequire(import.meta.url)
+    const root = process.env.KHY_OS_DIR
+      ? path.resolve(process.env.KHY_OS_DIR)
+      : path.resolve(__dirname, '..', '..', '..')
+    const sd = nodeRequire(path.join(root, 'services', 'backend', 'src', 'constants', 'serviceDefaults.js'))
+    return sd.FEEDBACK_URL || ''
+  } catch {
+    return ''
+  }
+}
 
 export function createMenu(mainWindow: BrowserWindow, onOpenKeyManager?: () => void) {
   const isMac = process.platform === 'darwin'
@@ -102,7 +121,11 @@ export function createMenu(mainWindow: BrowserWindow, onOpenKeyManager?: () => v
         },
         {
           label: '问题反馈',
-          click: () => shell.openExternal('https://khyquant.top/feedback')
+          click: () => {
+            const url = resolveFeedbackUrl()
+            if (url) void shell.openExternal(url)
+            else mainWindow.webContents.send('menu:about')
+          }
         },
         { type: 'separator' },
         {

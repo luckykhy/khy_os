@@ -170,7 +170,7 @@ A: 记忆文件位于 `.khy/memory/` 目录，直接备份该目录即可。
 
 ## 相关文档
 
-- [记忆系统标准规范](../../docs/03_DESIGN_设计/[DESIGN-MEM-001]%20记忆系统标准规范.md)
+- [记忆系统标准规范](../../docs/10_规范/DESIGN-MEM/[DESIGN-MEM-001]%20记忆系统标准规范.md)
 - [记忆蒸馏规则](../../services/backend/src/services/domain/memory/memoryEngine/distiller.js)
 - [记忆分层模型](../../services/backend/src/services/memoryTier.js)
 

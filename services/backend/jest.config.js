@@ -79,8 +79,26 @@ const nodeTestIgnores = [
   ...existingRoots.flatMap(findStandaloneTestFiles),
 ].map(escapeRegExp);
 
-module.exports = {
+const moduleExports = {
   testPathIgnorePatterns: ['/node_modules/', ...nodeTestIgnores],
+  // string-width@5 (and its ESM deps) ship only an ESM entry point. The TUI
+  // wrapCell/fill-width leaves require it at runtime; under Jest's CJS transform
+  // that require would hit an ESM file and fail to parse. A no-op transform lets
+  // the default babel-jest/Babel pipeline handle the ESM in node_modules for
+  // those specific packages while leaving the rest of node_modules untouched.
+  transform: {
+    '^.+\\.[jt]s$': 'babel-jest',
+  },
+  transformIgnorePatterns: [
+    '/node_modules/',
+    // Let the ESM-only width/char library through the transform.
+    '/node_modules/(string-width|strip-ansi|get-east-asian-width|ansi-regex|grapheme-splitter)/',
+  ],
+  // Inject a portable Git onto PATH in the MAIN jest process (before workers
+  // fork) so suites that execFileSync('git', …) resolve on machines without a
+  // system Git for Windows. Must be globalSetup, not setupFiles: the sandbox
+  // env is a snapshot copy that child spawns do not see. See the file's header.
+  globalSetup: '<rootDir>/tests/jest.gitGlobalSetup.js',
   // Pin the jest suite to RTK-off so native command-shape assertions are
   // deterministic regardless of whether an `rtk` binary is on PATH (see the
   // setup file's header for the rationale). RTK logic is covered separately by
@@ -95,3 +113,4 @@ module.exports = {
     '<rootDir>/tests/jest.logIsolation.setup.js',
   ],
 };
+module.exports = moduleExports;

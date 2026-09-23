@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-BACKUP-001] 备份恢复规范.md -->
+<title>[DESIGN-BACKUP-001] 备份恢复规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-BACKUP-001] 备份恢复规范</div>
+      <header class="hero reveal"><h1>[DESIGN-BACKUP-001] 备份恢复规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-backup-001-备份恢复规范">[DESIGN-BACKUP-001] 备份恢复规范</a></li><li class="lvl-2"><a href="#1-备份概述">1. 备份概述</a></li><li class="lvl-3"><a href="#1-1-备份原则">1.1 备份原则</a></li><li class="lvl-3"><a href="#1-2-备份类型">1.2 备份类型</a></li><li class="lvl-2"><a href="#2-备份策略">2. 备份策略</a></li><li class="lvl-3"><a href="#2-1-数据库备份">2.1 数据库备份</a></li><li class="lvl-3"><a href="#2-2-文件备份">2.2 文件备份</a></li><li class="lvl-3"><a href="#2-3-备份时间表">2.3 备份时间表</a></li><li class="lvl-2"><a href="#3-恢复策略">3. 恢复策略</a></li><li class="lvl-3"><a href="#3-1-恢复目标">3.1 恢复目标</a></li><li class="lvl-3"><a href="#3-2-数据库恢复">3.2 数据库恢复</a></li><li class="lvl-3"><a href="#3-3-文件恢复">3.3 文件恢复</a></li><li class="lvl-2"><a href="#4-备份验证">4. 备份验证</a></li><li class="lvl-3"><a href="#4-1-验证策略">4.1 验证策略</a></li><li class="lvl-3"><a href="#4-2-验证脚本">4.2 验证脚本</a></li><li class="lvl-2"><a href="#5-数据保留">5. 数据保留</a></li><li class="lvl-3"><a href="#5-1-保留策略">5.1 保留策略</a></li><li class="lvl-3"><a href="#5-2-清理策略">5.2 清理策略</a></li><li class="lvl-2"><a href="#6-存储策略">6. 存储策略</a></li><li class="lvl-3"><a href="#6-1-存储位置">6.1 存储位置</a></li><li class="lvl-3"><a href="#6-2-加密存储">6.2 加密存储</a></li><li class="lvl-2"><a href="#7-灾难恢复">7. 灾难恢复</a></li><li class="lvl-3"><a href="#7-1-灾难恢复流程">7.1 灾难恢复流程</a></li><li class="lvl-3"><a href="#7-2-灾难恢复计划">7.2 灾难恢复计划</a></li><li class="lvl-2"><a href="#8-版本历史">8. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-backup-001-备份恢复规范">[DESIGN-BACKUP-001] 备份恢复规范<a class="anchor" href="#design-backup-001-备份恢复规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: BACKUP-001 -->
+<blockquote><p>本文档定义 khy-os 项目的备份恢复标准，包括备份策略、恢复流程、数据保留等。</p></blockquote>
+<hr>
+<h2 id="1-备份概述">1. 备份概述<a class="anchor" href="#1-备份概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-备份原则">1.1 备份原则<a class="anchor" href="#1-1-备份原则" aria-label="锚点">#</a></h3>
+<ol><li><strong>完整性</strong>：确保备份数据的完整性</li><li><strong>可恢复性</strong>：确保备份可以成功恢复</li><li><strong>及时性</strong>：定期执行备份</li><li><strong>安全</strong>：备份数据加密存储</li></ol>
+<h3 id="1-2-备份类型">1.2 备份类型<a class="anchor" href="#1-2-备份类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>说明</th><th>频率</th></tr></thead><tbody><tr><td>全量备份</td><td>完整备份所有数据</td><td>每日</td></tr><tr><td>增量备份</td><td>备份变更数据</td><td>每小时</td></tr><tr><td>差异备份</td><td>备份自上次全量备份后的变更</td><td>每 6 小时</td></tr></tbody></table>
+<hr>
+<h2 id="2-备份策略">2. 备份策略<a class="anchor" href="#2-备份策略" aria-label="锚点">#</a></h2>
+<h3 id="2-1-数据库备份">2.1 数据库备份<a class="anchor" href="#2-1-数据库备份" aria-label="锚点">#</a></h3>
+<p><strong>SQLite 备份</strong>：</p>
+<pre><code class="language-bash"><span class="hljs-meta">#!/bin/bash</span>
+<span class="hljs-comment"># backup-sqlite.sh</span>
+
+BACKUP_DIR=<span class="hljs-string">&quot;/backups/database&quot;</span>
+TIMESTAMP=$(<span class="hljs-built_in">date</span> +%Y%m%d_%H%M%S)
+DB_FILE=<span class="hljs-string">&quot;./data/production.db&quot;</span>
+
+<span class="hljs-comment"># 创建备份</span>
+sqlite3 <span class="hljs-string">&quot;<span class="hljs-variable">$DB_FILE</span>&quot;</span> <span class="hljs-string">&quot;.backup <span class="hljs-variable">$BACKUP_DIR</span>/db_<span class="hljs-variable">$TIMESTAMP</span>.db&quot;</span>
+
+<span class="hljs-comment"># 压缩备份</span>
+gzip <span class="hljs-variable">$BACKUP_DIR</span>/db_<span class="hljs-variable">$TIMESTAMP</span>.db
+
+<span class="hljs-comment"># 清理旧备份（保留 30 天）</span>
+find <span class="hljs-variable">$BACKUP_DIR</span> -name <span class="hljs-string">&quot;*.db.gz&quot;</span> -mtime +30 -delete</code></pre>
+<p><strong>PostgreSQL 备份</strong>：</p>
+<pre><code class="language-bash"><span class="hljs-meta">#!/bin/bash</span>
+<span class="hljs-comment"># backup-postgres.sh</span>
+
+BACKUP_DIR=<span class="hljs-string">&quot;/backups/database&quot;</span>
+TIMESTAMP=$(<span class="hljs-built_in">date</span> +%Y%m%d_%H%M%S)
+
+<span class="hljs-comment"># 全量备份</span>
+pg_dump -U khyos -Fc khyos &gt; <span class="hljs-variable">$BACKUP_DIR</span>/db_<span class="hljs-variable">$TIMESTAMP</span>.dump
+
+<span class="hljs-comment"># 压缩备份</span>
+gzip <span class="hljs-variable">$BACKUP_DIR</span>/db_<span class="hljs-variable">$TIMESTAMP</span>.dump
+
+<span class="hljs-comment"># 清理旧备份</span>
+find <span class="hljs-variable">$BACKUP_DIR</span> -name <span class="hljs-string">&quot;*.dump.gz&quot;</span> -mtime +30 -delete</code></pre>
+<h3 id="2-2-文件备份">2.2 文件备份<a class="anchor" href="#2-2-文件备份" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-meta">#!/bin/bash</span>
+<span class="hljs-comment"># backup-files.sh</span>
+
+BACKUP_DIR=<span class="hljs-string">&quot;/backups/files&quot;</span>
+TIMESTAMP=$(<span class="hljs-built_in">date</span> +%Y%m%d_%H%M%S)
+SOURCE_DIRS=(
+  <span class="hljs-string">&quot;./data&quot;</span>
+  <span class="hljs-string">&quot;./.khy&quot;</span>
+  <span class="hljs-string">&quot;./logs&quot;</span>
+)
+
+<span class="hljs-comment"># 创建备份</span>
+tar -czf <span class="hljs-variable">$BACKUP_DIR</span>/files_<span class="hljs-variable">$TIMESTAMP</span>.tar.gz <span class="hljs-string">&quot;<span class="hljs-variable">${SOURCE_DIRS[@]}</span>&quot;</span>
+
+<span class="hljs-comment"># 清理旧备份</span>
+find <span class="hljs-variable">$BACKUP_DIR</span> -name <span class="hljs-string">&quot;*.tar.gz&quot;</span> -mtime +30 -delete</code></pre>
+<h3 id="2-3-备份时间表">2.3 备份时间表<a class="anchor" href="#2-3-备份时间表" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>备份类型</th><th>时间</th><th>保留时间</th></tr></thead><tbody><tr><td>全量备份</td><td>每天 02:00</td><td>30 天</td></tr><tr><td>增量备份</td><td>每小时</td><td>7 天</td></tr><tr><td>配置文件</td><td>每天 03:00</td><td>90 天</td></tr></tbody></table>
+<hr>
+<h2 id="3-恢复策略">3. 恢复策略<a class="anchor" href="#3-恢复策略" aria-label="锚点">#</a></h2>
+<h3 id="3-1-恢复目标">3.1 恢复目标<a class="anchor" href="#3-1-恢复目标" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>目标</th></tr></thead><tbody><tr><td>RTO（恢复时间目标）</td><td>&lt; 1 小时</td></tr><tr><td>RPO（恢复点目标）</td><td>&lt; 1 小时</td></tr></tbody></table>
+<h3 id="3-2-数据库恢复">3.2 数据库恢复<a class="anchor" href="#3-2-数据库恢复" aria-label="锚点">#</a></h3>
+<p><strong>SQLite 恢复</strong>：</p>
+<pre><code class="language-bash"><span class="hljs-meta">#!/bin/bash</span>
+<span class="hljs-comment"># restore-sqlite.sh</span>
+
+BACKUP_FILE=<span class="hljs-variable">$1</span>
+DB_FILE=<span class="hljs-string">&quot;./data/production.db&quot;</span>
+
+<span class="hljs-comment"># 停止应用</span>
+<span class="hljs-built_in">sudo</span> systemctl stop khyos
+
+<span class="hljs-comment"># 解压备份</span>
+gunzip -c <span class="hljs-variable">$BACKUP_FILE</span> &gt; <span class="hljs-variable">$DB_FILE</span>
+
+<span class="hljs-comment"># 启动应用</span>
+<span class="hljs-built_in">sudo</span> systemctl start khyos</code></pre>
+<p><strong>PostgreSQL 恢复</strong>：</p>
+<pre><code class="language-bash"><span class="hljs-meta">#!/bin/bash</span>
+<span class="hljs-comment"># restore-postgres.sh</span>
+
+BACKUP_FILE=<span class="hljs-variable">$1</span>
+
+<span class="hljs-comment"># 停止应用</span>
+<span class="hljs-built_in">sudo</span> systemctl stop khyos
+
+<span class="hljs-comment"># 恢复数据库</span>
+gunzip -c <span class="hljs-variable">$BACKUP_FILE</span> | psql -U khyos khyos
+
+<span class="hljs-comment"># 启动应用</span>
+<span class="hljs-built_in">sudo</span> systemctl start khyos</code></pre>
+<h3 id="3-3-文件恢复">3.3 文件恢复<a class="anchor" href="#3-3-文件恢复" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-meta">#!/bin/bash</span>
+<span class="hljs-comment"># restore-files.sh</span>
+
+BACKUP_FILE=<span class="hljs-variable">$1</span>
+
+<span class="hljs-comment"># 解压备份</span>
+tar -xzf <span class="hljs-variable">$BACKUP_FILE</span> -C /</code></pre>
+<hr>
+<h2 id="4-备份验证">4. 备份验证<a class="anchor" href="#4-备份验证" aria-label="锚点">#</a></h2>
+<h3 id="4-1-验证策略">4.1 验证策略<a class="anchor" href="#4-1-验证策略" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>频率</th><th>说明</th></tr></thead><tbody><tr><td>完整性检查</td><td>每次备份后</td><td>验证备份文件完整性</td></tr><tr><td>恢复测试</td><td>每周</td><td>测试备份是否可以恢复</td></tr><tr><td>数据一致性</td><td>每月</td><td>验证数据一致性</td></tr></tbody></table>
+<h3 id="4-2-验证脚本">4.2 验证脚本<a class="anchor" href="#4-2-验证脚本" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-meta">#!/bin/bash</span>
+<span class="hljs-comment"># verify-backup.sh</span>
+
+BACKUP_FILE=<span class="hljs-variable">$1</span>
+
+<span class="hljs-comment"># 检查文件是否存在</span>
+<span class="hljs-keyword">if</span> [ ! -f <span class="hljs-string">&quot;<span class="hljs-variable">$BACKUP_FILE</span>&quot;</span> ]; <span class="hljs-keyword">then</span>
+  <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;ERROR: Backup file not found&quot;</span>
+  <span class="hljs-built_in">exit</span> 1
+<span class="hljs-keyword">fi</span>
+
+<span class="hljs-comment"># 检查文件大小</span>
+FILE_SIZE=$(<span class="hljs-built_in">stat</span> -f%z <span class="hljs-string">&quot;<span class="hljs-variable">$BACKUP_FILE</span>&quot;</span>)
+<span class="hljs-keyword">if</span> [ <span class="hljs-variable">$FILE_SIZE</span> -eq 0 ]; <span class="hljs-keyword">then</span>
+  <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;ERROR: Backup file is empty&quot;</span>
+  <span class="hljs-built_in">exit</span> 1
+<span class="hljs-keyword">fi</span>
+
+<span class="hljs-comment"># 检查文件完整性（SQLite）</span>
+<span class="hljs-keyword">if</span> [[ <span class="hljs-string">&quot;<span class="hljs-variable">$BACKUP_FILE</span>&quot;</span> == *.db.gz ]]; <span class="hljs-keyword">then</span>
+  gunzip -t <span class="hljs-string">&quot;<span class="hljs-variable">$BACKUP_FILE</span>&quot;</span>
+  <span class="hljs-keyword">if</span> [ $? -ne 0 ]; <span class="hljs-keyword">then</span>
+    <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;ERROR: Backup file is corrupted&quot;</span>
+    <span class="hljs-built_in">exit</span> 1
+  <span class="hljs-keyword">fi</span>
+<span class="hljs-keyword">fi</span>
+
+<span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;Backup verification passed&quot;</span></code></pre>
+<hr>
+<h2 id="5-数据保留">5. 数据保留<a class="anchor" href="#5-数据保留" aria-label="锚点">#</a></h2>
+<h3 id="5-1-保留策略">5.1 保留策略<a class="anchor" href="#5-1-保留策略" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>数据类型</th><th>保留时间</th><th>说明</th></tr></thead><tbody><tr><td>全量备份</td><td>30 天</td><td>每日全量备份</td></tr><tr><td>增量备份</td><td>7 天</td><td>每小时增量备份</td></tr><tr><td>配置文件</td><td>90 天</td><td>每日备份</td></tr><tr><td>日志文件</td><td>30 天</td><td>自动轮转</td></tr></tbody></table>
+<h3 id="5-2-清理策略">5.2 清理策略<a class="anchor" href="#5-2-清理策略" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-meta">#!/bin/bash</span>
+<span class="hljs-comment"># cleanup-backups.sh</span>
+
+<span class="hljs-comment"># 清理数据库备份</span>
+find /backups/database -name <span class="hljs-string">&quot;*.db.gz&quot;</span> -mtime +30 -delete
+find /backups/database -name <span class="hljs-string">&quot;*.dump.gz&quot;</span> -mtime +30 -delete
+
+<span class="hljs-comment"># 清理文件备份</span>
+find /backups/files -name <span class="hljs-string">&quot;*.tar.gz&quot;</span> -mtime +30 -delete
+
+<span class="hljs-comment"># 清理日志</span>
+find /var/log/khyos -name <span class="hljs-string">&quot;*.log.*&quot;</span> -mtime +30 -delete</code></pre>
+<hr>
+<h2 id="6-存储策略">6. 存储策略<a class="anchor" href="#6-存储策略" aria-label="锚点">#</a></h2>
+<h3 id="6-1-存储位置">6.1 存储位置<a class="anchor" href="#6-1-存储位置" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>位置</th><th>说明</th><th>用途</th></tr></thead><tbody><tr><td>本地磁盘</td><td>快速访问</td><td>近期备份</td></tr><tr><td>远程存储</td><td>灾难恢复</td><td>重要备份</td></tr><tr><td>异地存储</td><td>灾难恢复</td><td>关键数据</td></tr></tbody></table>
+<h3 id="6-2-加密存储">6.2 加密存储<a class="anchor" href="#6-2-加密存储" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-meta">#!/bin/bash</span>
+<span class="hljs-comment"># encrypt-backup.sh</span>
+
+BACKUP_FILE=<span class="hljs-variable">$1</span>
+ENCRYPTED_FILE=<span class="hljs-string">&quot;<span class="hljs-variable">$BACKUP_FILE</span>.enc&quot;</span>
+
+<span class="hljs-comment"># 使用 AES-256 加密</span>
+openssl enc -aes-256-cbc -salt -<span class="hljs-keyword">in</span> <span class="hljs-variable">$BACKUP_FILE</span> -out <span class="hljs-variable">$ENCRYPTED_FILE</span> -pass file:/etc/khyos/backup-key
+
+<span class="hljs-comment"># 删除未加密文件</span>
+<span class="hljs-built_in">rm</span> <span class="hljs-variable">$BACKUP_FILE</span></code></pre>
+<hr>
+<h2 id="7-灾难恢复">7. 灾难恢复<a class="anchor" href="#7-灾难恢复" aria-label="锚点">#</a></h2>
+<h3 id="7-1-灾难恢复流程">7.1 灾难恢复流程<a class="anchor" href="#7-1-灾难恢复流程" aria-label="锚点">#</a></h3>
+<ol><li><strong>评估</strong>：评估灾难影响范围</li><li><strong>通知</strong>：通知相关人员</li><li><strong>恢复</strong>：执行恢复流程</li><li><strong>验证</strong>：验证数据完整性</li><li><strong>恢复服务</strong>：恢复服务运行</li></ol>
+<h3 id="7-2-灾难恢复计划">7.2 灾难恢复计划<a class="anchor" href="#7-2-灾难恢复计划" aria-label="锚点">#</a></h3>
+<pre><code class="language-markdown"><span class="hljs-section"># 灾难恢复计划</span>
+
+<span class="hljs-section">## 场景：数据库完全损坏</span>
+
+<span class="hljs-section">### 恢复步骤</span>
+<span class="hljs-bullet">1.</span> 停止应用服务
+<span class="hljs-bullet">2.</span> 准备新的数据库服务器
+<span class="hljs-bullet">3.</span> 恢复最近的全量备份
+<span class="hljs-bullet">4.</span> 恢复增量备份
+<span class="hljs-bullet">5.</span> 验证数据完整性
+<span class="hljs-bullet">6.</span> 启动应用服务
+<span class="hljs-bullet">7.</span> 验证服务运行状态
+
+<span class="hljs-section">### 预计恢复时间</span>
+<span class="hljs-bullet">-</span> 全量备份恢复：30 分钟
+<span class="hljs-bullet">-</span> 增量备份恢复：15 分钟
+<span class="hljs-bullet">-</span> 验证和启动：15 分钟
+<span class="hljs-bullet">-</span> 总计：1 小时</code></pre>
+<hr>
+<h2 id="8-版本历史">8. 版本历史<a class="anchor" href="#8-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义备份恢复规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 运维团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-AUTH-002] Session 管理规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-AUTH-002] Session 管理规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-CACHE-001] 缓存规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-CACHE-001] 缓存规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-BACKUP-001] 备份恢复规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

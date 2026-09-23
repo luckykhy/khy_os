@@ -8,6 +8,7 @@
  * Deterministic: no IO, no clock — all inputs passed in.
  */
 const leaf = require('../src/services/subagentContextSummary');
+const assert = require('node:assert');
 
 describe('Subagent Context Summary', () => {
   test('isEnabled: default-on; {0,false,off,no} turn it off', () => {
@@ -63,7 +64,7 @@ describe('Subagent Context Summary', () => {
         { role: 'assistant', content: 'done with src/new.ts' },
       ];
       const block = leaf.buildContextSummary(conv, {}, {});
-      expect(block.startsWith('[Parent Context Summary').toBeTruthy());
+      expect(block.startsWith('[Parent Context Summary')).toBeTruthy();
       expect(block).toContain('最近用户意图');
       // Two most recent user turns, in chronological order
       const firstIdx = block.indexOf('first ask');
@@ -108,7 +109,7 @@ describe('Subagent Context Summary', () => {
       const explicit = 'y'.repeat(5000);
       const out = leaf.resolveSummary(explicit, null, {}, { KHY_SUBAGENT_SUMMARY_MAX_CHARS: '250' });
       expect(out.length <= 250 + 40).toBeTruthy();
-      expect(out.endsWith('…').toBeTruthy());
+      expect(out.endsWith('…')).toBeTruthy();
   });
 
 });

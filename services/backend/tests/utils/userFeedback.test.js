@@ -73,7 +73,9 @@ describe('userFeedback', () => {
     });
 
     test('returns soon for negative remaining', () => {
-      expect(formatETA(1000, 1)).toBe('即将完成');
+      // remaining = elapsed/progress - elapsed; progress > 1 is required for
+      // it to go negative (progress = 1 leaves remaining = 0, not negative).
+      expect(formatETA(1000, 2)).toBe('即将完成');
     });
 
     test('formats remaining time', () => {

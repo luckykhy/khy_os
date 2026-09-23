@@ -12,7 +12,7 @@
 |------|-----|
 | Base URL | `https://speed44.toter.me/v1` |
 | 备用地址 | `https://api.supxh.xin` |
-| API Key | `sk-kxfDu1UuUz4na6gNnoTy9SXrfqBvC5a6xlLWOmcgxvGSyP8y` |
+| API Key | `{env:SUPXH_API_KEY}`（需设置环境变量） |
 | API 类型 | OpenAI 兼容 |
 
 **可用模型：**
@@ -29,7 +29,7 @@
 | 项目 | 值 |
 |------|-----|
 | Base URL | `https://api.commandcode.ai/provider/v1` |
-| API Key | `user_QduohLPx5gneWbdfWEwdjuTgtJ7bEUAfSEJ2urouYdnfUM9xQZaUAoFMgd9GU4KNcfNGk41Dr6ZWMFZweBV7PdU` |
+| API Key | `{env:COMMAND_CODE_API_KEY}`（需设置环境变量） |
 | API 类型 | OpenAI 兼容 |
 
 **可用模型（部分）：**
@@ -53,7 +53,7 @@
 | 项目 | 值 |
 |------|-----|
 | Base URL | `https://open.bigmodel.cn/api/coding/paas/v4` |
-| API Key | `844986c572bf414489be6f7d06fc0d95.p0lOiYflTGXjoury` |
+| API Key | `{env:GLM_API_KEY}`（需设置环境变量） |
 | API 类型 | OpenAI 兼容 |
 
 **可用模型：**
@@ -67,7 +67,7 @@
 | 项目 | 值 |
 |------|-----|
 | Base URL | `https://opencode.ai/zen/go/v1` |
-| API Key | `sk-GfGfEeMHAP9OqViis7N6yFQtzVBTQIalFbWAEdH5MMpUwAXgVToUpX5mzRxxIrCX` |
+| API Key | `{env:OPENCODE_GO_API_KEY}`（需设置环境变量） |
 | API 类型 | OpenAI 兼容 |
 
 **可用模型：**
@@ -130,7 +130,7 @@
 | 项目 | 值 |
 |------|-----|
 | Base URL | `https://token.sensenova.cn/v1` |
-| API Key | `sk-ZqZmy6xPoGTJhAiAVe7RdRCbHQyrXRfo` |
+| API Key | `{env:SENSENOVA_API_KEY}`（需设置环境变量） |
 | API 类型 | OpenAI 兼容 |
 
 **可用模型：**
@@ -143,7 +143,7 @@
 | 项目 | 值 |
 |------|-----|
 | Base URL | `https://apihub.agnes-ai.com/v1` |
-| API Key | `sk-TDyXYtuXXCUrw42bDqtz0PigooeOtb5Oh4HUUvr47hxHrgDG` |
+| API Key | `{env:AGNES_API_KEY}`（需设置环境变量） |
 | API 类型 | OpenAI 兼容 |
 
 **可用模型：**

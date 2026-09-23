@@ -822,18 +822,18 @@ async function dispatchSlashCommand(command, _ctx) {
       );
       fs.writeFileSync(outputPath, markdown, 'utf-8');
 
-      let copied = false;
-      try {
-        copied = require('../services/imageService').writeClipboardText(markdown);
-      } catch {
-        copied = false;
-      }
+      const wrote = require('../cli/tui/utils/ccClipboard').writeClipboard(markdown);
+      const copied = wrote.ok;
 
       printSuccess(`会话已分享为 Markdown：${outputPath}`);
       printInfo(
         copied
-          ? '已复制到剪贴板，可直接粘贴分享。'
-          : '剪贴板不可用（未安装 pbcopy/xclip/wl-copy）— 请直接分享上述文件。'
+          ? `已复制到剪贴板(${wrote.channels.join('+')}),可直接粘贴分享。`
+          : '剪贴板不可用(' +
+              require('./copyReply').describeClipboardFailure(wrote.reasons, {
+                bytes: wrote.bytes,
+              }) +
+              ') — 请直接分享上述文件。'
       );
       return true;
     }

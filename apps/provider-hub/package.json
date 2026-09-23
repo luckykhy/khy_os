@@ -1,0 +1,21 @@
+{
+  "name": "khy-provider-hub",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Provider Card Hub — standalone desktop GUI for unified provider/agent-model management (DESIGN-ARCH-094)",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "test": "node --experimental-strip-types --test tests/providers.test.mjs tests/modelCatalog.test.mjs tests/failover.test.mjs tests/usage.test.mjs && node --test tests/contract.test.cjs",
+    "check:type": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "electron": "^44.2.0",
+    "electron-vite": "^5.0.0",
+    "typescript": "^5.5.0",
+    "@types/node": "^22.0.0"
+  }
+}

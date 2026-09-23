@@ -12,6 +12,7 @@
  * node:http and never throw ERR_INVALID_PROTOCOL. Pure (no network).
  */
 const http = require('http');
+const assert = require('node:assert');
 const https = require('https');
 const ws = require('../../src/services/webSearchService');
 const { httpClientFor } = ws.__parsersForTests;

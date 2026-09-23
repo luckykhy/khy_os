@@ -77,8 +77,10 @@ describe('diffFullWidth', () => {
     });
 
     test('returns 0 for Infinity', () => {
+      // Guard: any non-finite input (either slot) → 0, per the documented
+      // 防呆 contract. Repeat(Infinity) would throw, so 0 is the safe value.
       expect(diffRowPadCount(Infinity, 80)).toBe(0);
-      expect(diffRowPadCount(10, Infinity)).toBe(10);
+      expect(diffRowPadCount(10, Infinity)).toBe(0);
     });
 
     test('returns 0 for -Infinity', () => {

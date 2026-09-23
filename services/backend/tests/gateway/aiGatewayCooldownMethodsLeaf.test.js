@@ -48,10 +48,10 @@ describe('Ai Gateway Cooldown Methods Leaf', () => {
 
   test('setAiGatewayCooldownMethodsDeps is a guarded, idempotent, non-throwing DI setter', () => {
       const { setAiGatewayCooldownMethodsDeps } = require(LEAF);
-      expect(() => setAiGatewayCooldownMethodsDeps().not.toThrow());
-      expect(() => setAiGatewayCooldownMethodsDeps({}).not.toThrow());
+      expect(() => setAiGatewayCooldownMethodsDeps()).not.toThrow();
+      expect(() => setAiGatewayCooldownMethodsDeps({})).not.toThrow();
       // Non-function deps are ignored by the typeof guards; _adaptiveConfig accepts any defined value.
-      expect(() => setAiGatewayCooldownMethodsDeps({ _parseMs: 1, _adaptiveConfig: null }).not.toThrow());
+      expect(() => setAiGatewayCooldownMethodsDeps({ _parseMs: 1, _adaptiveConfig: null })).not.toThrow();
       const fake = {
         _adaptiveConfig: null,
         _isProcessSensitiveAdapter: () => false, _isReconnectOrChannelClosedMessage: () => false,
@@ -59,8 +59,8 @@ describe('Ai Gateway Cooldown Methods Leaf', () => {
         _resolveApiPoolProviderForRequest: () => null, _sanitizeFailureMessage: (m) => m,
         _shouldUseFastFail: () => false, _transientCooldownMs: () => 0,
       };
-      expect(() => setAiGatewayCooldownMethodsDeps(fake).not.toThrow());
-      expect(() => setAiGatewayCooldownMethodsDeps(fake).not.toThrow());
+      expect(() => setAiGatewayCooldownMethodsDeps(fake)).not.toThrow();
+      expect(() => setAiGatewayCooldownMethodsDeps(fake)).not.toThrow();
   });
 
 });

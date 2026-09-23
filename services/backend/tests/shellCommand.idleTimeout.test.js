@@ -18,11 +18,11 @@ describe('shellCommand idle timeout behavior', () => {
       'let i = 0;',
       'const timer = setInterval(() => {',
       '  i += 1;',
-      // 这段 node -e 片段最终会被拼进一�?shell 命令行，所以里面既不能有反引号�?
-      // 不能�?${}：Linux 上走 /bin/bash，双引号内的反引号是命令替换�?{i} �?shell
-      // 变量展开，bash 会先去执�?`tick-` 并报 "tick-: command not found"，node 拿到�?
-      // 是空串。Windows �?cmd 把两者都当字面量，所以本机看不出来。字符串拼接两边都安全�?
-      // 片段本身也不能用双引号（会截断外�?-e "..." 的引号），只能用单引号�?
+      // 这段 node -e 片段最终会被拼进一�?shell 命令行，所以里面既不能有反引号�?
+      // 不能�?${}：Linux 上走 /bin/bash，双引号内的反引号是命令替换�?{i} �?shell
+      // 变量展开，bash 会先去执�?`tick-` 并报 "tick-: command not found"，node 拿到�?
+      // 是空串。Windows �?cmd 把两者都当字面量，所以本机看不出来。字符串拼接两边都安全�?
+      // 片段本身也不能用双引号（会截断外�?-e "..." 的引号），只能用单引号�?
       "  console.log('tick-' + i);",
       '  if (i === 5) clearInterval(timer);',
       '}, 50);',

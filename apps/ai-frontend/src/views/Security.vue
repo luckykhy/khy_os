@@ -1,5 +1,5 @@
 <template>
-  <div class="security-page">
+  <div class="khy-page security-page">
     <KhyPageHeader
       subtitle="改密、密保问题、生物识别与登录会话审计"
       title="账户安全"

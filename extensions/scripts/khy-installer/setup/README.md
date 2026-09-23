@@ -2,7 +2,7 @@
 
 本目录收容**只在装机/首次配置/救急时跑一次**的 Windows 脚本。
 它们原先散落在仓库根目录，2026-08-15 按
-`docs/08_MGMT_项目管理/[MGMT-STD-001] 项目文档结构与索引铁律规范.md` 第一章
+`docs/08_MGMT_项目管理/MGMT-STD/[MGMT-STD-001] 项目文档结构与索引铁律规范.md` 第一章
 （根目录零散落）搬入此处。
 
 **真正的日常入口不在这里**，仍在根目录：`khy.bat` / `khy.sh`（CLI 启动器）、
@@ -24,7 +24,7 @@
 ## 前提与注意
 
 - **只用 CLI 时，这些脚本一个都不需要跑。** CLI 的自动登录不依赖后端，凭据在本机现场生成，
-  见 `docs/07_OPS_运维/[OPS-MAN-175] 首次运行自动登录与凭据.md`。
+  见 `docs/07_OPS_运维/OPS-MAN/[OPS-MAN-175] 首次运行自动登录与凭据.md`。
   需要 Web 界面登录、注册新用户或访问数据库时才必须起后端。
 - 起后端前先装依赖：`npm install`（仓库根，npm workspaces 会一并装 `services/backend`）。
 - **路径解析**：每个脚本都从自身位置（`%~dp0..\..` / `$PSScriptRoot\..\..`）解析仓库根，
@@ -40,4 +40,4 @@
 - 模型可用性与适配器探测（`enabled` ≠ `available`）：`docs/06_DEPLOY_部署/[DEPLOY-MAN-019] 模型可用性与适配器探测.md`
 - API Key 与供应商配置：`docs/06_DEPLOY_部署/[DEPLOY-MAN-020] AI供应商与APIKey配置.md`
 - IDE 桥接：`docs/06_DEPLOY_部署/[DEPLOY-MAN-021] IDE桥接模式.md`
-- 首次运行自动登录与凭据：`docs/07_OPS_运维/[OPS-MAN-175] 首次运行自动登录与凭据.md`
+- 首次运行自动登录与凭据：`docs/07_OPS_运维/OPS-MAN/[OPS-MAN-175] 首次运行自动登录与凭据.md`

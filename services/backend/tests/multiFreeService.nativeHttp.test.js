@@ -10,10 +10,14 @@ const server = http.createServer((req, res) => {
   });
 });
 server.listen(0, '127.0.0.1');
-after(() => server.close());
+const serverReady = new Promise((resolve) => server.once('listening', resolve));
+afterAll(() => server.close());
 
 describe('Multi Free Service native Http', () => {
   test('multi-provider HTTP seam returns a real stream', async () => {
+      // listen() is async: address().port is null until the 'listening' event
+      // fires, so gate the URL on readiness instead of racing the callback.
+      await serverReady;
       const url = `http://127.0.0.1:${server.address().port}/stream`;
       const response = await MultiFreeService.httpClient.post(url, { stream: true }, {
         headers: { 'Content-Type': 'application/json' },

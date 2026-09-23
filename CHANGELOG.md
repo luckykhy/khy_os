@@ -5,6 +5,51 @@ All notable changes to khy OS will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.2.0
+
+> 修复记录：`BUG-014` ｜ 设计真源：[`[DESIGN-ARCH-138]`](docs/03_DESIGN_设计/DESIGN-ARCH/%5BDESIGN-ARCH-138%5D%20工具调用能力判定与文本拦截协议.md) ｜ 取证：`.khy/feedback/toolcall-capability-falseneg-20260923/`
+> 版本段推导：本次同时含 `### Fixed` 与 `### Added`（新增机制与开关），按 `[DESIGN-SEMVER-002]`「`### Added` → MINOR」定为 MINOR。
+
+### Fixed
+
+- **工具调用能力判定系统性偏「不支持」**（`services/backend/src/services/gateway/`、`multiFreeService.js`、`relayApiAdapter.js`）
+  - **改了什么**：判据此前把「成功回了文字、没回 `tool_calls`」直接判成「不支持原生工具调用」。这三种输入性质完全不同且都不含「不支持」信号——回了散文（纯观测）、被 `max_tokens` 截断、模型自述不会调用工具——却得到同一个负向结论，现场产出 `gpt-4o → text` 这类假阴性。现在**负向裁决要求正面证据**：只有正文里出现显式调用语法（判据复用 `toolCallParser.hasExplicitToolCallSyntax`，不另写正则）才判 `text`；失败、截断、空、散文一律 `unknown` 不落库。截断判定（`finish_reason ∈ {length, max_tokens, max_output_tokens, content_filter}`）**早于**文本判定，否则一段被截断的前言会被读成「回了文字 = 不支持」。
+  - **为什么**：判出 `text` 的后果是把该模型的原生 `tools` 从每个后续请求里删掉——删掉之后模型再也拿不到 `tools`、也就再也产生不了原生 `tool_calls`，被动学习无法翻案，一次误判就锁死到 TTL 到期。旧判据没有区分「证据的缺席」与「缺席的证据」。
+  - **影响范围**：判定链三处（`toolCallingProbe` 判据、`modelToolingCapability` 两门、`toolCapabilityStore` 缓存）。文本拦截层（教学门 / `toolCallParser` / `toolProtocolAdapter` / `syntheticToolLayer`）与权限门**未改动**——那部分是正确资产。
+
+- **未实测的模型被名字启发开局剥离 `tools`**（`services/backend/src/services/gateway/modelToolingCapability.js`）
+  - **改了什么**：`shouldStripUpstreamTools`（wire 侧）改为**只认正面证据**——env 钉子 → 实测 `text`/`native` → 通道拒收 → **其余一律发**。名字启发（`SMALL_MODEL_HINTS`）退出 wire 判定，仅保留在提示词侧（`modelLacksReliableToolCalling`）。两门不再锁步：教学文案是加性的（`_toolCallingFallbackProfile` 标题即 `Tool calling (text-based fallback)`，不断言「你没有原生工具」），且文本调用在两条协议下都会被 `resolveToolCalls` 解析执行，故暂定档有两条成功路径。
+  - **为什么**：用户池里带 `-flash`/`-lite` 的模型几乎全部命中名字启发，于是「所有模型都显示不支持工具调用」。未知档的代价是明账：真拒收 `tools` 的通道首次多一个 400 往返，而那一趟正是把通道拒收记下来的对照证据，记下后不再付第二次。
+
+- **env 逃生舱对路由 id 形态失效 + 提示文案指错排障方向**（上述两文件）
+  - **改了什么**：`KHY_NATIVE_TOOL_MODELS` / `KHY_TEXT_ONLY_TOOL_MODELS` 改用与实测缓存同一套键（`capabilityModelKey` 规范化），两种写法（裸名 / 路由 id）都认；提示文案收口为 `modelToolingCapability.stripToolsNotice()` 单一真源，两个剥离门不再各持一份字符串。
+  - **为什么**：教学门拿到的 model 是路由 id、剥离门拿到的是裸名，只比裸名会让同一条 env 只在一个门上生效——用户设了强制原生，模型却仍被注入「你没有原生工具，请用文本语法」教学。文案旧版写「不支持工具调用…请切换到支持 function calling 的模型」，但工具**仍在通过文本协议正常执行**，把内部判定缺陷说成了用户的环境问题。
+
+- **负向裁决跨适配器扩散**（`gateway/toolCapabilityStore.js`、两处剥离门、`khyUpgradeRuntime.js`、`apiAdapter.js`）
+  - **改了什么**：新增 `getVerdictFor(model, {adapter})` 实现**非对称继承**——`native`（正面）全局共享，`text`（负面）只在测出它的那条适配器上生效；来源未知按「适用」处理（向后兼容历史记录）。适配器身份穿线补到 `multiFreeService`（`adapterKey: 'api'`）。
+  - **为什么**：剥离门只存在于 relay/api 两条路径，而教学门按 `(adapter, model)` 判；能力档案却只有一个模型名维度。一条通道的负面结论替另一条通道做决定，是 BUG-014 的形态之一。
+
+- **TUI spinner 文案与实际状态脱节**（`cli/tui/ink-components/App.js`、`Spinner.js`、`appHostHelpers.js`）
+  - **改了什么**：spinner 的三个数（`stalled` / `elapsedSec` / `tokens`）改走**单一真源** `_spinnerProgress`（纯函数，早已存在且被测试锁着），不再在渲染体里手算；`_spinnerProgress` 补出 `stalledSec`，等待行按规则 2.5 渲染成 `⏳ 等待中 · <目标>（已 Ns）`；`buildSpinnerMeta` 支持跳过重复时长；等待行组装抽成纯函数 `Spinner.buildStallLine` 以便无条件单测。
+  - **为什么**：手写副本与 SSOT 漂出三处单位/来源错误——① 毫秒差与字面量 `3` 比较（应为 `3000ms`）⇒ 活跃中几乎恒显「等待中」；② 把 `Date.now()` 当秒数传给 spinner ⇒ meta 渲染出「 · 20719231d」；③ `tokens` 取 `query.tokenEstimate`，而该字段在 TUI 查询层**没有生产者** ⇒ 恒为 0，「~N tok」永不显示。文案要按实际数据渲染，前提是这三个数得真是实际数据。
+
+### Added
+
+- **通道级能力记录与身份**（`gateway/capabilityModelKey.js`、`gateway/toolCapabilityStore.js`）
+  - `capabilityModelKey.routeKey()`：`<adapter或provider>::<host>[:port]::<裸模型名>`（不硬编码任何主机名，只解析调用方报上来的 endpoint）。
+  - `toolCapabilityStore` 新增 `route:` 前缀分区：与模型级记录同文件、不同命名空间、独立 TTL、不参与模型键迁移。两处 400 降级链在**重试成功之后**才记通道拒收（仅凭「看到 400 且当时带着 tools」会把归因搞错）。
+- **工具调用的隔离式挑战**（`services/backend/src/services/gateway/toolChallengeCadence.js`，新开关 `KHY_TOOL_CAP_CHALLENGE`（默认开）+ `KHY_TOOL_CAP_CHALLENGE_EVERY`（默认 10））
+  - 按 `(通道 × 模型)` 计请求，每 N 次放行一次原生尝试（照发 `tools`），让被判 `text` 的模型有机会用原生调用当场翻案，不必等 7 天 TTL。单边实现（只跳过剥离、不动提示词）。通道已被判拒收时不挑战、env 钉子连挑战轮也不越过——两条由判据层强制。
+  - 机制已按 `[DESIGN-PROCESS-002]` 登记进 `FEATURE-OWNERSHIP.json` 的 `rollout.mechanisms[]`（stage S1）。
+- **探测对照组**（`gateway/aiGatewayModelMethods.js`、`gateway/toolCallingProbe.js`）
+  - 主组失败时补一次「同提示词、不带 tools」的请求：A 败 B 成 → `route-rejects-tools`（通道拒绝 `tools`，属通道属性、不按模型键落库）。探测 `maxTokens` 64 → 256，提示词要求不要前言（前言会吃光输出预算，把「没来得及生成」伪装成「没有调用」）。
+- **排障入口**：`khy gateway probe-tools list` 新增第三组「通道拒收 tools」，与模型级两组分开显示（一个要换通道/查端点，一个要换模型）。
+
+### 测试
+
+- 新增 `toolCapabilityFalsenegRegression.test.js`（四条病灶各自钉成断言）、`toolCallParser.explicitSyntax.test.js`（14 例，含「显式判据 ⊆ 解析器」防方言漂移）、`toolChallengeCadence.test.js`。
+- 受影响面复核：`node --test` 286/286、`jest` 155/155。
+
 ## 1.1.14
 
 ### Added
@@ -57,8 +102,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **文档更新**（`docs/03_DESIGN_设计/[DESIGN-ARCH-016] AI_Agent显示规范.md`）
   - 新增 §7「终端分区」章节，完整记录三层区域结构、命名约定、几何契约、覆盖层规则、维护流程。
 
-- **仓库结构卫生收口**（`docs/_报告/历史/`、`docs/00_INDEX_文档索引.md`、`.gitignore`、`scripts/ci/repo-layout-baseline.json`）
-  - 根目录 `fix_diff.txt` / `stash_patch.txt` 收容进 `docs/_报告/历史/`（`root-whitelist` 守卫归零），另清理 `{` 与 `services/backend/{jest_out,tmp_test,test_out}.txt` 一次性测试输出，归档记录见 `docs/_报告/历史/2026-09-根目录补丁存档-归档记录.md`。
+- **仓库结构卫生收口**（`docs/11_报告/历史/`、`docs/00_INDEX_文档索引.md`、`.gitignore`、`scripts/ci/repo-layout-baseline.json`）
+  - 根目录 `fix_diff.txt` / `stash_patch.txt` 收容进 `docs/11_报告/历史/`（`root-whitelist` 守卫归零），另清理 `{` 与 `services/backend/{jest_out,tmp_test,test_out}.txt` 一次性测试输出，归档记录见 `docs/11_报告/历史/2026-09-根目录补丁存档-归档记录.md`。
   - `.gitignore` 补防回渗规则：`*.sqlite-shm` / `*.sqlite-wal`、`.env.bak-*`、一次性测试输出（jest_out.txt / test_out.txt / tmp_test.txt）。
   - 6 篇新文档补登主索引与就近索引（DESIGN-ARCH-072/073、DESIGN-PERF-001、DESIGN-SIZE-001、IMPL-DOC-001、快速配置说明），并补登漏网的 DESIGN-OTHER-005；阶段总数校正（03: 71→78、04: 37→38、07: 177→178）。
   - 结构基线下调（只降不升）：dangling-task 115→86、cross-layer-require 43→38、unresolved-require 24→0。

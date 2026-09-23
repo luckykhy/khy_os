@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-087] CC模式微交互与反馈设计.md -->
+<title>[DESIGN-ARCH-087] CC 模式微交互与反馈设计 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-087] CC 模式微交互与反馈设计</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-087] CC 模式微交互与反馈设计</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-087-cc-模式微交互与反馈设计">[DESIGN-ARCH-087] CC 模式微交互与反馈设计</a></li><li class="lvl-2"><a href="#0-设计原则">0. 设计原则</a></li><li class="lvl-2"><a href="#1-复制反馈设计">1. 复制反馈设计</a></li><li class="lvl-3"><a href="#1-1-反馈格式">1.1 反馈格式</a></li><li class="lvl-3"><a href="#1-2-反馈位置">1.2 反馈位置</a></li><li class="lvl-3"><a href="#1-3-实现">1.3 实现</a></li><li class="lvl-2"><a href="#2-滚动指示器设计">2. 滚动指示器设计</a></li><li class="lvl-3"><a href="#2-1-指示器格式">2.1 指示器格式</a></li><li class="lvl-3"><a href="#2-2-视觉样式">2.2 视觉样式</a></li><li class="lvl-3"><a href="#2-3-实现">2.3 实现</a></li><li class="lvl-2"><a href="#3-瞬态消息-toast-设计">3. 瞬态消息（Toast）设计</a></li><li class="lvl-3"><a href="#3-1-toast-类型">3.1 Toast 类型</a></li><li class="lvl-3"><a href="#3-2-toast-位置">3.2 Toast 位置</a></li><li class="lvl-3"><a href="#3-3-toast-实现">3.3 Toast 实现</a></li><li class="lvl-2"><a href="#4-工具执行反馈设计">4. 工具执行反馈设计</a></li><li class="lvl-3"><a href="#4-1-执行状态反馈">4.1 执行状态反馈</a></li><li class="lvl-3"><a href="#4-2-超时反馈">4.2 超时反馈</a></li><li class="lvl-3"><a href="#4-3-输出截断反馈">4.3 输出截断反馈</a></li><li class="lvl-2"><a href="#5-系统状态反馈设计">5. 系统状态反馈设计</a></li><li class="lvl-3"><a href="#5-1-token-用量警告">5.1 Token 用量警告</a></li><li class="lvl-3"><a href="#5-2-连接状态反馈">5.2 连接状态反馈</a></li><li class="lvl-3"><a href="#5-3-权限模式切换反馈">5.3 权限模式切换反馈</a></li><li class="lvl-3"><a href="#5-4-双击-ctrl-c-退出">5.4 双击 Ctrl+C 退出</a></li><li class="lvl-2"><a href="#6-输入反馈设计">6. 输入反馈设计</a></li><li class="lvl-3"><a href="#6-1-粘贴反馈">6.1 粘贴反馈</a></li><li class="lvl-3"><a href="#6-2-历史导航反馈">6.2 历史导航反馈</a></li><li class="lvl-2"><a href="#7-会话恢复反馈">7. 会话恢复反馈</a></li><li class="lvl-3"><a href="#7-1-恢复提示">7.1 恢复提示</a></li><li class="lvl-3"><a href="#7-2-检查点创建">7.2 检查点创建</a></li><li class="lvl-2"><a href="#8-实现架构">8. 实现架构</a></li><li class="lvl-3"><a href="#8-1-反馈优先级">8.1 反馈优先级</a></li><li class="lvl-3"><a href="#8-2-反馈队列">8.2 反馈队列</a></li><li class="lvl-2"><a href="#9-验收标准">9. 验收标准</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-087-cc-模式微交互与反馈设计">[DESIGN-ARCH-087] CC 模式微交互与反馈设计<a class="anchor" href="#design-arch-087-cc-模式微交互与反馈设计" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>隶属</strong>：本文属 <strong>TUI 设计族</strong>（20 编号 / 21 文件），总纲与 scope 裁决见 <code>[DESIGN-ARCH-122] TUI 设计族总纲</code>；规则冲突一律以 <code>[DESIGN-ARCH-102] Khy TUI 统一规则手册</code> 为准。</p></blockquote>
+<blockquote><h2 id="规则条款的归属已变更">📌 规则条款的归属已变更<a class="anchor" href="#规则条款的归属已变更" aria-label="锚点">#</a></h2>
+<p>本文的<strong>规范条款</strong>已收口至 <strong><code>[DESIGN-ARCH-102] Khy TUI 统一规则手册</code></strong>：复制反馈文案与优先级 → 102 §6.5；Toast 时长与类型 → 102 §6.5；滚动指示器 → 102 §6.7；提示（hint/placeholder）→ 102 §6.6；状态栏 → 102 §5 C11。<br><strong>本文保留其自身职责</strong>：微交互与反馈的<strong>设计推导与来源说明</strong>（为何这样设计、参照了哪些上游模式）。<br><strong>规则冲突一律以 102 为准。</strong></p></blockquote>
+<blockquote><p><strong>定位</strong>：<del>定义 CC 模式下所有微交互、瞬态反馈、状态提示的设计规范。</del> → <strong>规范部分见上方横幅，已并入 102。</strong><br><strong>适用边界</strong>：复制反馈、滚动指示、Toast 消息、工具执行反馈、系统状态提示。<br><strong>参考来源</strong>：<code>interaction-patterns.md</code> (Confirmation, Error States) + <code>advanced-patterns.md</code> (Status Bar, Clipboard)</p></blockquote>
+<hr>
+<h2 id="0-设计原则">0. 设计原则<a class="anchor" href="#0-设计原则" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>原则</th><th>说明</th></tr></thead><tbody><tr><td><strong>即时反馈</strong></td><td>用户操作后立即给出反馈</td></tr><tr><td><strong>信息精确</strong></td><td>反馈内容具体（字符数、行数、百分比）</td></tr><tr><td><strong>不干扰</strong></td><td>反馈不阻挡用户当前操作</td></tr><tr><td><strong>自动消失</strong></td><td>瞬态消息 3-5 秒后自动消失</td></tr><tr><td><strong>可操作</strong></td><td>错误反馈包含修复建议</td></tr></tbody></table>
+<hr>
+<h2 id="1-复制反馈设计">1. 复制反馈设计<a class="anchor" href="#1-复制反馈设计" aria-label="锚点">#</a></h2>
+<h3 id="1-1-反馈格式">1.1 反馈格式<a class="anchor" href="#1-1-反馈格式" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>操作</th><th>反馈文本</th><th>示例</th></tr></thead><tbody><tr><td>复制单个值</td><td><code>copied N chars</code></td><td><code>copied 42 chars</code></td></tr><tr><td>复制多行</td><td><code>copied N lines</code></td><td><code>copied 3 lines</code></td></tr><tr><td>复制 JSON</td><td><code>copied JSON (N bytes)</code></td><td><code>copied JSON (1.2KB)</code></td></tr><tr><td>复制文件路径</td><td><code>copied path</code></td><td><code>copied src/index.ts</code></td></tr><tr><td>复制失败</td><td><code>copy failed (reason)</code></td><td><code>copy failed (no clipboard)</code></td></tr><tr><td>复制到系统剪贴板</td><td><code>copied to clipboard</code></td><td>—</td></tr></tbody></table>
+<h3 id="1-2-反馈位置">1.2 反馈位置<a class="anchor" href="#1-2-反馈位置" aria-label="锚点">#</a></h3>
+<pre><code>状态栏右侧（临时替换 MCP 状态）：
+
+Sonnet 4 │ Context 45% │ $0.42  │  copied 42 chars     ← 3 秒后恢复</code></pre>
+<h3 id="1-3-实现">1.3 实现<a class="anchor" href="#1-3-实现" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// tui/utils/ccFeedback.js</span>
+<span class="hljs-meta">
+&#x27;use strict&#x27;</span>;
+
+<span class="hljs-comment">/**
+ * 反馈管理器
+ */</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">FeedbackManager</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_timeout</span> = <span class="hljs-literal">null</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_originalStatus</span> = <span class="hljs-literal">null</span>;
+  }
+
+  <span class="hljs-comment">/**
+   * 显示复制反馈
+   */</span>
+  <span class="hljs-title function_">showCopied</span>(<span class="hljs-params">text</span>) {
+    <span class="hljs-keyword">let</span> feedback;
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> text === <span class="hljs-string">&#x27;string&#x27;</span>) {
+      <span class="hljs-keyword">const</span> lines = text.<span class="hljs-title function_">split</span>(<span class="hljs-string">&#x27;\n&#x27;</span>).<span class="hljs-property">length</span>;
+      <span class="hljs-keyword">const</span> chars = text.<span class="hljs-property">length</span>;
+      <span class="hljs-keyword">const</span> bytes = <span class="hljs-title class_">Buffer</span>.<span class="hljs-title function_">byteLength</span>(text, <span class="hljs-string">&#x27;utf8&#x27;</span>);
+      <span class="hljs-keyword">if</span> (lines &gt; <span class="hljs-number">1</span>) {
+        feedback = <span class="hljs-string">`copied <span class="hljs-subst">${lines}</span> lines`</span>;
+      } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (bytes &gt; <span class="hljs-number">1024</span>) {
+        feedback = <span class="hljs-string">`copied <span class="hljs-subst">${(bytes / <span class="hljs-number">1024</span>).toFixed(<span class="hljs-number">1</span>)}</span>KB`</span>;
+      } <span class="hljs-keyword">else</span> {
+        feedback = <span class="hljs-string">`copied <span class="hljs-subst">${chars}</span> chars`</span>;
+      }
+    }
+    <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_show</span>(feedback, <span class="hljs-string">&#x27;success&#x27;</span>);
+  }
+
+  <span class="hljs-comment">/**
+   * 显示通用反馈
+   */</span>
+  <span class="hljs-title function_">_show</span>(<span class="hljs-params">message, type = <span class="hljs-string">&#x27;info&#x27;</span></span>) {
+    <span class="hljs-comment">// 清除之前的定时器</span>
+    <span class="hljs-keyword">if</span> (<span class="hljs-variable language_">this</span>.<span class="hljs-property">_timeout</span>) <span class="hljs-built_in">clearTimeout</span>(<span class="hljs-variable language_">this</span>.<span class="hljs-property">_timeout</span>);
+
+    <span class="hljs-comment">// 触发 UI 更新（通过事件或回调）</span>
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_onUpdate</span>?.(message, type);
+
+    <span class="hljs-comment">// 3 秒后清除</span>
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_timeout</span> = <span class="hljs-built_in">setTimeout</span>(<span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-variable language_">this</span>.<span class="hljs-property">_onUpdate</span>?.(<span class="hljs-literal">null</span>);
+      <span class="hljs-variable language_">this</span>.<span class="hljs-property">_timeout</span> = <span class="hljs-literal">null</span>;
+    }, <span class="hljs-number">3000</span>);
+  }
+
+  <span class="hljs-comment">/**
+   * 显示错误反馈
+   */</span>
+  <span class="hljs-title function_">showError</span>(<span class="hljs-params">message, suggestion</span>) {
+    <span class="hljs-keyword">const</span> feedback = suggestion
+      ? <span class="hljs-string">`<span class="hljs-subst">${message}</span> — <span class="hljs-subst">${suggestion}</span>`</span>
+      : message;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_show</span>(feedback, <span class="hljs-string">&#x27;error&#x27;</span>);
+  }
+
+  <span class="hljs-comment">/**
+   * 销毁
+   */</span>
+  <span class="hljs-title function_">destroy</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-keyword">if</span> (<span class="hljs-variable language_">this</span>.<span class="hljs-property">_timeout</span>) <span class="hljs-built_in">clearTimeout</span>(<span class="hljs-variable language_">this</span>.<span class="hljs-property">_timeout</span>);
+  }
+}
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = { <span class="hljs-title class_">FeedbackManager</span> };</code></pre>
+<hr>
+<h2 id="2-滚动指示器设计">2. 滚动指示器设计<a class="anchor" href="#2-滚动指示器设计" aria-label="锚点">#</a></h2>
+<h3 id="2-1-指示器格式">2.1 指示器格式<a class="anchor" href="#2-1-指示器格式" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>场景</th><th>显示</th><th>位置</th></tr></thead><tbody><tr><td>上方有 N 条消息</td><td><code>⋯ (N above)</code></td><td>对话区顶部</td></tr><tr><td>下方有 N 条消息</td><td><code>⋯ (N below)</code></td><td>对话区底部</td></tr><tr><td>上方有更多</td><td><code>⋯ (N more above)</code></td><td>—</td></tr><tr><td>下方有更多</td><td><code>⋯ (N more below)</code></td><td>—</td></tr><tr><td>到达顶部</td><td>无</td><td>—</td></tr><tr><td>到达底部</td><td>无</td><td>—</td></tr></tbody></table>
+<h3 id="2-2-视觉样式">2.2 视觉样式<a class="anchor" href="#2-2-视觉样式" aria-label="锚点">#</a></h3>
+<pre><code>对话区：
+  ⋯ (3 above)                                        ← 顶部指示器（灰色，居左）
+  ┌─────────────────────────────────────────────────────┐
+  │ 消息 4                                              │
+  │ 消息 5                                              │
+  │ 消息 6                                              │
+  └─────────────────────────────────────────────────────┘
+  ⋯ (5 below)                                         ← 底部指示器（灰色，居左）</code></pre>
+<h3 id="2-3-实现">2.3 实现<a class="anchor" href="#2-3-实现" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// tui/components/CcScrollIndicators.js</span>
+<span class="hljs-meta">
+&#x27;use strict&#x27;</span>;
+
+<span class="hljs-keyword">const</span> <span class="hljs-title class_">React</span> = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;react&#x27;</span>);
+<span class="hljs-keyword">const</span> { <span class="hljs-title class_">Box</span>, <span class="hljs-title class_">Text</span> } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;ink&#x27;</span>);
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">CcScrollIndicators</span>(<span class="hljs-params">{ above, below }</span>) {
+  <span class="hljs-keyword">return</span> (
+    <span class="hljs-title class_">React</span>.<span class="hljs-title function_">createElement</span>(<span class="hljs-title class_">React</span>.<span class="hljs-property">Fragment</span>, <span class="hljs-literal">null</span>,
+      above &gt; <span class="hljs-number">0</span> ? (
+        <span class="hljs-title class_">React</span>.<span class="hljs-title function_">createElement</span>(<span class="hljs-title class_">Box</span>, { <span class="hljs-attr">paddingLeft</span>: <span class="hljs-number">2</span> },
+          <span class="hljs-title class_">React</span>.<span class="hljs-title function_">createElement</span>(<span class="hljs-title class_">Text</span>, { <span class="hljs-attr">color</span>: <span class="hljs-string">&#x27;#6B7280&#x27;</span>, <span class="hljs-attr">dimColor</span>: <span class="hljs-literal">true</span> },
+            <span class="hljs-string">`⋯ (<span class="hljs-subst">${above}</span> above)`</span>)
+        )
+      ) : <span class="hljs-literal">null</span>,
+      below &gt; <span class="hljs-number">0</span> ? (
+        <span class="hljs-title class_">React</span>.<span class="hljs-title function_">createElement</span>(<span class="hljs-title class_">Box</span>, { <span class="hljs-attr">paddingLeft</span>: <span class="hljs-number">2</span> },
+          <span class="hljs-title class_">React</span>.<span class="hljs-title function_">createElement</span>(<span class="hljs-title class_">Text</span>, { <span class="hljs-attr">color</span>: <span class="hljs-string">&#x27;#6B7280&#x27;</span>, <span class="hljs-attr">dimColor</span>: <span class="hljs-literal">true</span> },
+            <span class="hljs-string">`⋯ (<span class="hljs-subst">${below}</span> below)`</span>)
+        )
+      ) : <span class="hljs-literal">null</span>,
+    )
+  );
+}
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = { <span class="hljs-title class_">CcScrollIndicators</span> };</code></pre>
+<hr>
+<h2 id="3-瞬态消息-toast-设计">3. 瞬态消息（Toast）设计<a class="anchor" href="#3-瞬态消息-toast-设计" aria-label="锚点">#</a></h2>
+<h3 id="3-1-toast-类型">3.1 Toast 类型<a class="anchor" href="#3-1-toast-类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>图标</th><th>颜色</th><th>持续时间</th><th>示例</th></tr></thead><tbody><tr><td>成功</td><td><code>✓</code></td><td>绿色 <code>#4ADE80</code></td><td>3s</td><td><code>✓ Copied 42 chars</code></td></tr><tr><td>错误</td><td><code>✗</code></td><td>红色 <code>#F87171</code></td><td>5s</td><td><code>✗ Connection failed</code></td></tr><tr><td>警告</td><td><code>⚠</code></td><td>黄色 <code>#FBBF24</code></td><td>4s</td><td><code>⚠ Context 80% full</code></td></tr><tr><td>信息</td><td><code>ℹ</code></td><td>蓝色 <code>#58A6FF</code></td><td>3s</td><td><code>ℹ Resumed from checkpoint</code></td></tr></tbody></table>
+<h3 id="3-2-toast-位置">3.2 Toast 位置<a class="anchor" href="#3-2-toast-位置" aria-label="锚点">#</a></h3>
+<pre><code>状态栏（临时替换右侧区域）：
+
+Sonnet 4 │ Context 45% │ $0.42  │  ✓ Copied 42 chars     ← Toast 显示</code></pre>
+<h3 id="3-3-toast-实现">3.3 Toast 实现<a class="anchor" href="#3-3-toast-实现" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// tui/components/CcToast.js</span>
+<span class="hljs-meta">
+&#x27;use strict&#x27;</span>;
+
+<span class="hljs-keyword">const</span> <span class="hljs-title class_">React</span> = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;react&#x27;</span>);
+<span class="hljs-keyword">const</span> { <span class="hljs-title class_">Box</span>, <span class="hljs-title class_">Text</span> } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;ink&#x27;</span>);
+
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">TOAST_CONFIG</span> = {
+  <span class="hljs-attr">success</span>: { <span class="hljs-attr">icon</span>: <span class="hljs-string">&#x27;✓&#x27;</span>, <span class="hljs-attr">color</span>: <span class="hljs-string">&#x27;#4ADE80&#x27;</span>, <span class="hljs-attr">duration</span>: <span class="hljs-number">3000</span> },
+  <span class="hljs-attr">error</span>:   { <span class="hljs-attr">icon</span>: <span class="hljs-string">&#x27;✗&#x27;</span>, <span class="hljs-attr">color</span>: <span class="hljs-string">&#x27;#F87171&#x27;</span>, <span class="hljs-attr">duration</span>: <span class="hljs-number">5000</span> },
+  <span class="hljs-attr">warning</span>: { <span class="hljs-attr">icon</span>: <span class="hljs-string">&#x27;⚠&#x27;</span>, <span class="hljs-attr">color</span>: <span class="hljs-string">&#x27;#FBBF24&#x27;</span>, <span class="hljs-attr">duration</span>: <span class="hljs-number">4000</span> },
+  <span class="hljs-attr">info</span>:    { <span class="hljs-attr">icon</span>: <span class="hljs-string">&#x27;ℹ&#x27;</span>, <span class="hljs-attr">color</span>: <span class="hljs-string">&#x27;#58A6FF&#x27;</span>, <span class="hljs-attr">duration</span>: <span class="hljs-number">3000</span> },
+};
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">CcToast</span>(<span class="hljs-params">{ type = <span class="hljs-string">&#x27;info&#x27;</span>, message }</span>) {
+  <span class="hljs-keyword">const</span> config = <span class="hljs-variable constant_">TOAST_CONFIG</span>[type] || <span class="hljs-variable constant_">TOAST_CONFIG</span>.<span class="hljs-property">info</span>;
+
+  <span class="hljs-keyword">return</span> (
+    <span class="hljs-title class_">React</span>.<span class="hljs-title function_">createElement</span>(<span class="hljs-title class_">Box</span>, { <span class="hljs-attr">marginLeft</span>: <span class="hljs-number">1</span> },
+      <span class="hljs-title class_">React</span>.<span class="hljs-title function_">createElement</span>(<span class="hljs-title class_">Text</span>, { <span class="hljs-attr">color</span>: config.<span class="hljs-property">color</span> },
+        config.<span class="hljs-property">icon</span> + <span class="hljs-string">&#x27; &#x27;</span> + message)
+    )
+  );
+}
+
+<span class="hljs-comment">// Hook: useToast</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">useToast</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> [toast, setToast] = <span class="hljs-title class_">React</span>.<span class="hljs-title function_">useState</span>(<span class="hljs-literal">null</span>);
+  <span class="hljs-keyword">const</span> timerRef = <span class="hljs-title class_">React</span>.<span class="hljs-title function_">useRef</span>(<span class="hljs-literal">null</span>);
+
+  <span class="hljs-keyword">const</span> showToast = <span class="hljs-title class_">React</span>.<span class="hljs-title function_">useCallback</span>(<span class="hljs-function">(<span class="hljs-params">type, message, duration</span>) =&gt;</span> {
+    <span class="hljs-keyword">if</span> (timerRef.<span class="hljs-property">current</span>) <span class="hljs-built_in">clearTimeout</span>(timerRef.<span class="hljs-property">current</span>);
+    <span class="hljs-title function_">setToast</span>({ type, message });
+    timerRef.<span class="hljs-property">current</span> = <span class="hljs-built_in">setTimeout</span>(<span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-title function_">setToast</span>(<span class="hljs-literal">null</span>);
+      timerRef.<span class="hljs-property">current</span> = <span class="hljs-literal">null</span>;
+    }, duration || <span class="hljs-variable constant_">TOAST_CONFIG</span>[type]?.<span class="hljs-property">duration</span> || <span class="hljs-number">3000</span>);
+  }, []);
+
+  <span class="hljs-keyword">const</span> hideToast = <span class="hljs-title class_">React</span>.<span class="hljs-title function_">useCallback</span>(<span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-keyword">if</span> (timerRef.<span class="hljs-property">current</span>) <span class="hljs-built_in">clearTimeout</span>(timerRef.<span class="hljs-property">current</span>);
+    <span class="hljs-title function_">setToast</span>(<span class="hljs-literal">null</span>);
+  }, []);
+
+  <span class="hljs-keyword">return</span> { toast, showToast, hideToast };
+}
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = { <span class="hljs-title class_">CcToast</span>, useToast };</code></pre>
+<hr>
+<h2 id="4-工具执行反馈设计">4. 工具执行反馈设计<a class="anchor" href="#4-工具执行反馈设计" aria-label="锚点">#</a></h2>
+<h3 id="4-1-执行状态反馈">4.1 执行状态反馈<a class="anchor" href="#4-1-执行状态反馈" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>状态</th><th>显示</th><th>示例</th></tr></thead><tbody><tr><td>等待执行</td><td><code>◦ Waiting...</code></td><td>灰色空心圆</td></tr><tr><td>执行中</td><td><code>⏳ Running...</code></td><td>黄色 + spinner</td></tr><tr><td>重试中</td><td><code>🔄 Retry (2/3)...</code></td><td>黄色 + 计数</td></tr><tr><td>超时</td><td><code>⏱ Timeout (30s)</code></td><td>红色 + 时间</td></tr><tr><td>被中断</td><td><code>⊘ Interrupted</code></td><td>灰色</td></tr><tr><td>完成</td><td><code>✓ Done</code></td><td>绿色</td></tr><tr><td>失败</td><td><code>✗ Failed</code></td><td>红色</td></tr></tbody></table>
+<h3 id="4-2-超时反馈">4.2 超时反馈<a class="anchor" href="#4-2-超时反馈" aria-label="锚点">#</a></h3>
+<pre><code>✗ Timeout (30s): npm test
+
+  Suggestions:
+  • Try a longer timeout: khy config set toolTimeout 120
+  • Run the command directly: ! npm test
+  • Check network connectivity
+
+  [R] Retry  [S] Skip  [Esc] Dismiss</code></pre>
+<h3 id="4-3-输出截断反馈">4.3 输出截断反馈<a class="anchor" href="#4-3-输出截断反馈" aria-label="锚点">#</a></h3>
+<pre><code>┌─ Bash 结果 ────────────────────────────────────────────┐
+│ $ npm test                                              │
+│ PASS src/utils.test.ts                                  │
+│ PASS src/api.test.ts                                    │
+│ ... (truncated, 45 more lines) ...                      │ ← 截断提示
+│ FAIL src/index.test.ts                                  │
+│   ✗ should render correctly                             │
+│     Expected: &quot;Hello&quot;                                   │
+│     Received: &quot;World&quot;                                   │
+│                                                        │
+│ 42 passed, 1 failed                                     │
+└────────────────────────────────────────────────────────┘
+
+  Press [f] to view full output</code></pre>
+<hr>
+<h2 id="5-系统状态反馈设计">5. 系统状态反馈设计<a class="anchor" href="#5-系统状态反馈设计" aria-label="锚点">#</a></h2>
+<h3 id="5-1-token-用量警告">5.1 Token 用量警告<a class="anchor" href="#5-1-token-用量警告" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>使用率</th><th>颜色</th><th>状态栏显示</th><th>行为</th></tr></thead><tbody><tr><td>&lt; 80%</td><td>默认</td><td><code>Context 45% (90k/200k)</code></td><td>无</td></tr><tr><td>80-94%</td><td>黄色</td><td><code>Context 85% (170k/200k)</code></td><td>状态栏黄色</td></tr><tr><td>95-99%</td><td>红色</td><td><code>Context 95% (190k/200k)</code></td><td>状态栏红色 + Toast</td></tr><tr><td>100%</td><td>红色</td><td><code>Context FULL</code></td><td>提示 /compact</td></tr></tbody></table>
+<h3 id="5-2-连接状态反馈">5.2 连接状态反馈<a class="anchor" href="#5-2-连接状态反馈" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>状态</th><th>图标</th><th>颜色</th><th>反馈</th></tr></thead><tbody><tr><td>已连接</td><td><code>•</code></td><td>绿色</td><td>无</td></tr><tr><td>连接中</td><td><code>◦</code></td><td>黄色</td><td><code>Connecting...</code></td></tr><tr><td>已断开</td><td><code>✗</code></td><td>红色</td><td><code>Disconnected</code> + 自动重连</td></tr><tr><td>重连中</td><td><code>◐</code></td><td>黄色</td><td><code>Reconnecting (2/5)...</code></td></tr><tr><td>重连成功</td><td><code>•</code></td><td>绿色</td><td><code>Reconnected</code> Toast</td></tr></tbody></table>
+<h3 id="5-3-权限模式切换反馈">5.3 权限模式切换反馈<a class="anchor" href="#5-3-权限模式切换反馈" aria-label="锚点">#</a></h3>
+<pre><code>从默认模式切换到自动破甲模式：
+
+  ⚠ Switched to auto-edit mode
+  File edits will be applied automatically.
+  Dangerous operations still require confirmation.
+
+  Press [p] to cycle back to default mode.</code></pre>
+<h3 id="5-4-双击-ctrl-c-退出">5.4 双击 Ctrl+C 退出<a class="anchor" href="#5-4-双击-ctrl-c-退出" aria-label="锚点">#</a></h3>
+<pre><code>第一次 Ctrl+C：
+
+  ⚠ Press Ctrl+C again to exit
+  (or press any other key to continue)
+
+第二次 Ctrl+C（2 秒内）：
+  退出程序</code></pre>
+<hr>
+<h2 id="6-输入反馈设计">6. 输入反馈设计<a class="anchor" href="#6-输入反馈设计" aria-label="锚点">#</a></h2>
+<h3 id="6-1-粘贴反馈">6.1 粘贴反馈<a class="anchor" href="#6-1-粘贴反馈" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>场景</th><th>反馈</th><th>示例</th></tr></thead><tbody><tr><td>粘贴文本</td><td><code>Pasted ~N lines</code></td><td><code>Pasted ~200 lines</code></td></tr><tr><td>粘贴图片</td><td><code>Image attached</code></td><td>—</td></tr><tr><td>粘贴过大</td><td><code>Input truncated to N chars</code></td><td>—</td></tr><tr><td>粘贴为空</td><td>无反馈</td><td>—</td></tr></tbody></table>
+<h3 id="6-2-历史导航反馈">6.2 历史导航反馈<a class="anchor" href="#6-2-历史导航反馈" aria-label="锚点">#</a></h3>
+<pre><code>按 ↑ 浏览历史时：
+
+  &gt; /model gpt-4o                                        ← 当前输入
+  &gt; /login                                                ← 上一条历史（高亮）
+  &gt; /mcp list                                             ← 下一条历史
+
+  状态栏显示：History 3/12</code></pre>
+<hr>
+<h2 id="7-会话恢复反馈">7. 会话恢复反馈<a class="anchor" href="#7-会话恢复反馈" aria-label="锚点">#</a></h2>
+<h3 id="7-1-恢复提示">7.1 恢复提示<a class="anchor" href="#7-1-恢复提示" aria-label="锚点">#</a></h3>
+<pre><code>  ℹ Resumed from checkpoint
+  Last activity: 5 minutes ago
+  Context: 12,456 tokens preserved
+
+  Press [d] to view diff since checkpoint</code></pre>
+<h3 id="7-2-检查点创建">7.2 检查点创建<a class="anchor" href="#7-2-检查点创建" aria-label="锚点">#</a></h3>
+<pre><code>  ℹ Checkpoint saved
+  Context: 12,456 tokens
+  Location: .khy/checkpoints/chk-20260909-123456</code></pre>
+<hr>
+<h2 id="8-实现架构">8. 实现架构<a class="anchor" href="#8-实现架构" aria-label="锚点">#</a></h2>
+<h3 id="8-1-反馈优先级">8.1 反馈优先级<a class="anchor" href="#8-1-反馈优先级" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>优先级</th><th>类型</th><th>显示时长</th></tr></thead><tbody><tr><td>1（最高）</td><td>错误</td><td>5s 或手动关闭</td></tr><tr><td>2</td><td>警告</td><td>4s</td></tr><tr><td>3</td><td>成功</td><td>3s</td></tr><tr><td>4</td><td>信息</td><td>3s</td></tr></tbody></table>
+<h3 id="8-2-反馈队列">8.2 反馈队列<a class="anchor" href="#8-2-反馈队列" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 多个反馈同时触发时，按优先级排队</span>
+<span class="hljs-keyword">const</span> queue = <span class="hljs-keyword">new</span> <span class="hljs-title class_">PriorityQueue</span>();
+queue.<span class="hljs-title function_">enqueue</span>({ <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;error&#x27;</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;Connection failed&#x27;</span>, <span class="hljs-attr">priority</span>: <span class="hljs-number">1</span> });
+queue.<span class="hljs-title function_">enqueue</span>({ <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;success&#x27;</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;Copied&#x27;</span>, <span class="hljs-attr">priority</span>: <span class="hljs-number">3</span> });
+<span class="hljs-comment">// 先显示错误，3 秒后显示成功</span></code></pre>
+<hr>
+<h2 id="9-验收标准">9. 验收标准<a class="anchor" href="#9-验收标准" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>场景</th><th>预期</th></tr></thead><tbody><tr><td>复制字符</td><td>显示 <code>copied N chars</code></td></tr><tr><td>复制行</td><td>显示 <code>copied N lines</code></td></tr><tr><td>滚动</td><td>显示 <code>⋯ (N above/below)</code></td></tr><tr><td>Toast</td><td>3-5 秒自动消失</td></tr><tr><td>Token 80%</td><td>状态栏黄色警告</td></tr><tr><td>Token 95%</td><td>状态栏红色 + Toast</td></tr><tr><td>工具超时</td><td>显示超时 + 重试建议</td></tr><tr><td>输出截断</td><td>显示 <code>... (truncated, N lines)</code></td></tr><tr><td>粘贴大文本</td><td>显示 <code>Pasted ~N lines</code></td></tr><tr><td>权限切换</td><td>Toast 提示新模式</td></tr><tr><td>双击退出</td><td>首次提示，二次退出</td></tr><tr><td>会话恢复</td><td>显示恢复提示</td></tr></tbody></table>
+<hr>
+<blockquote><p><strong>文档状态</strong>：Draft — 待实施<br><strong>创建日期</strong>：2026-09-09<br><strong>依赖</strong>：[DESIGN-ARCH-081] 主设计规范</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-086] CC TUI 复刻总计划与子任务跟踪.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-086] CC TUI 复刻总计划与子任务跟踪</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-088] CC快捷键系统RedoFork与执行偏差处理.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-088] CC 快捷键系统、Redo/Fork 与执行偏差处理</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-087] CC模式微交互与反馈设计.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

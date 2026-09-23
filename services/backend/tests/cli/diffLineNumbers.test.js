@@ -25,13 +25,13 @@ describe('diffLineNumbers', () => {
     });
 
     test('returns null for non-hunk lines', () => {
-      expect(parseUnifiedHunkHeader('not a hunk')).toBe();
-      expect(parseUnifiedHunkHeader('')).toBe();
+      expect(parseUnifiedHunkHeader('not a hunk')).toBe(null);
+      expect(parseUnifiedHunkHeader('')).toBe(null);
     });
 
     test('returns null for non-string input', () => {
-      expect(parseUnifiedHunkHeader(null)).toBe();
-      expect(parseUnifiedHunkHeader(123)).toBe();
+      expect(parseUnifiedHunkHeader(null)).toBe(null);
+      expect(parseUnifiedHunkHeader(123)).toBe(null);
     });
   });
 });

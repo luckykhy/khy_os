@@ -31,10 +31,14 @@ export function TerminalPanel() {
     term.loadAddon(fitAddon); term.loadAddon(new WebLinksAddon()); term.loadAddon(new SearchAddon())
     try { term.loadAddon(new WebglAddon()) } catch (e) { /* WebGL not available */ }
     term.open(containerRef.current); fitAddon.fit()
+    // Re-fit on pane resize (side pane drag / maximize): xterm keeps its
+    // initial grid unless FitAddon is re-run against the new box.
+    const resizeObserver = new ResizeObserver(() => { fitAddon.fit() })
+    resizeObserver.observe(containerRef.current)
     term.writeln('KhyOS Terminal'); term.writeln('输入命令开始...'); term.write('\$ ')
     term.onData(data => { term.write(data); if (data === '\r') { term.writeln(''); term.writeln('命令执行结果（stub）'); term.write('\$ ') } })
     termRef.current = term
-    return () => { term.dispose() }
+    return () => { resizeObserver.disconnect(); term.dispose() }
   }, [])
   return <div ref={containerRef} className="h-full bg-terminal-bg" />
 }

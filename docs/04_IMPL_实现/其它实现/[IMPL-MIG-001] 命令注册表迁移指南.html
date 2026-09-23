@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [IMPL-MIG-001] 命令注册表迁移指南.md -->
+<title>命令注册表迁移指南 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>其它实现<span class="sep">›</span>命令注册表迁移指南</div>
+      <header class="hero reveal"><h1>命令注册表迁移指南</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#命令注册表迁移指南">命令注册表迁移指南</a></li><li class="lvl-2"><a href="#背景">背景</a></li><li class="lvl-2"><a href="#目标">目标</a></li><li class="lvl-2"><a href="#架构">架构</a></li><li class="lvl-2"><a href="#新增命令步骤">新增命令步骤</a></li><li class="lvl-2"><a href="#渐进迁移策略">渐进迁移策略</a></li><li class="lvl-3"><a href="#阶段-1-当前-注册表就绪-router-js-保持不变">阶段 1（当前）：注册表就绪，router.js 保持不变</a></li><li class="lvl-3"><a href="#阶段-2-后续-pr-高频命令迁移">阶段 2（后续 PR）：高频命令迁移</a></li><li class="lvl-3"><a href="#阶段-3-长期-switch-注册表查找">阶段 3（长期）：switch → 注册表查找</a></li><li class="lvl-2"><a href="#当前状态">当前状态</a></li><li class="lvl-2"><a href="#注意事项">注意事项</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="命令注册表迁移指南">命令注册表迁移指南<a class="anchor" href="#命令注册表迁移指南" aria-label="锚点">#</a></h1>
+<blockquote><p>对抗式综合方案 C 的实施文档</p></blockquote>
+<h2 id="背景">背景<a class="anchor" href="#背景" aria-label="锚点">#</a></h2>
+<p><code>router.js</code> 包含 119+ 个 case 分支（3351 行），每次新增命令都需修改此文件，合并冲突概率极高。</p>
+<h2 id="目标">目标<a class="anchor" href="#目标" aria-label="锚点">#</a></h2>
+<ul><li>通过注册表元数据驱动命令查找</li><li>新增命令只需添加注册表条目 + handler 文件，无需修改 router.js</li><li>渐进迁移，不一次性重写所有 handler</li></ul>
+<h2 id="架构">架构<a class="anchor" href="#架构" aria-label="锚点">#</a></h2>
+<pre><code>commands/
+  registry.js          # 注册表模块（JS，提供 API）
+  registry.json        # 注册表元数据（JSON，单一真源/文档）
+  handlers/            # 每个命令的独立 handler
+    system/
+      version.js
+      help.js
+      clear.js
+      exit.js
+      menu.js
+    ai/
+      aiChat.js
+    ops/
+      doctor.js
+      storage.js
+      restore.js
+      migrate.js
+    dev/
+      test.js
+      testCoverage.js
+      lint.js
+      docs.js
+    ...</code></pre>
+<h2 id="新增命令步骤">新增命令步骤<a class="anchor" href="#新增命令步骤" aria-label="锚点">#</a></h2>
+<ol><li>在 <code>commands/registry.json</code> 的 <code>commands</code> 中添加条目：</li></ol>
+<pre><code class="language-json"><span class="hljs-attr">&quot;mycommand&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;我的新命令&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;category&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ops&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;handler&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ops/mycommand&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;lazy&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span>
+<span class="hljs-punctuation">}</span></code></pre>
+<ol><li>创建 handler 文件 <code>commands/ops/mycommand.js</code>：</li></ol>
+<pre><code class="language-javascript"><span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = <span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">handleMycommand</span>(<span class="hljs-params">parsed, ctx</span>) {
+  <span class="hljs-comment">// 实现命令逻辑</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+};</code></pre>
+<ol><li>在 <code>commands/registry.js</code> 的 <code>COMMAND_REGISTRY</code> 中添加对应条目。</li><li>无需修改 <code>router.js</code>！</li></ol>
+<h2 id="渐进迁移策略">渐进迁移策略<a class="anchor" href="#渐进迁移策略" aria-label="锚点">#</a></h2>
+<h3 id="阶段-1-当前-注册表就绪-router-js-保持不变">阶段 1（当前）：注册表就绪，router.js 保持不变<a class="anchor" href="#阶段-1-当前-注册表就绪-router-js-保持不变" aria-label="锚点">#</a></h3>
+<ul><li>注册表模块已创建</li><li>router.js 仍然使用 switch，但可通过注册表查询元数据</li><li>新命令通过注册表添加</li></ul>
+<h3 id="阶段-2-后续-pr-高频命令迁移">阶段 2（后续 PR）：高频命令迁移<a class="anchor" href="#阶段-2-后续-pr-高频命令迁移" aria-label="锚点">#</a></h3>
+<ul><li>迁移 Top 20 高频命令到独立 handler</li><li>每个 handler 可独立测试</li><li>router.js 中的 case 逐渐减少</li></ul>
+<h3 id="阶段-3-长期-switch-注册表查找">阶段 3（长期）：switch → 注册表查找<a class="anchor" href="#阶段-3-长期-switch-注册表查找" aria-label="锚点">#</a></h3>
+<ul><li>当 80%+ 命令有独立 handler 后</li><li>重构 router.js 的 switch 为注册表查找</li><li>删除冗余 case</li></ul>
+<h2 id="当前状态">当前状态<a class="anchor" href="#当前状态" aria-label="锚点">#</a></h2>
+<ul><li>[x] 注册表模块创建（registry.js）</li><li>[x] 元数据文件创建（registry.json）</li><li>[x] handler 目录结构创建</li><li>[ ] 高频命令 handler 实现（待后续 PR）</li><li>[ ] router.js 重构（待阶段 3）</li></ul>
+<h2 id="注意事项">注意事项<a class="anchor" href="#注意事项" aria-label="锚点">#</a></h2>
+<ul><li>保持向后兼容：现有命令行为不变</li><li>渐进迁移：每个命令独立迁移，随时可回滚</li><li>测试覆盖：每个 handler 应有独立测试</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/04_IMPL_实现/其它实现/[IMPL-DOC-002] README 内容规范落地记录.html"><div class="dir">← 上一篇</div><div class="ttl">[IMPL-DOC-002] README 内容规范落地记录</div></a><a class="next" href="../../../docs/04_IMPL_实现/其它实现/00_INDEX_其它实现-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">其它实现</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/04_IMPL_实现/其它实现/[IMPL-MIG-001] 命令注册表迁移指南.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

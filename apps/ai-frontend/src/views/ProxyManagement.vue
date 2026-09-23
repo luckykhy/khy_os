@@ -393,6 +393,7 @@ import KhyEmpty from '@/components/KhyEmpty.vue';
 import KhyPageHeader from '@/components/KhyPageHeader.vue';
 import LoadErrorBanner from '@/components/LoadErrorBanner.vue';
 
+import { showSuccess, showError, showWarning, showInfo } from '@/api/notify';
 defineOptions({ name: 'ProxyManagement' });
 
 const proxies = useProxies();
@@ -432,7 +433,7 @@ async function useNode(row) {
     void __group;
     const result = await proxies.enableNode(node);
     if (result?.success) {
-      ElMessage.success(
+      showSuccess(
         `已切换出站到「${node.name || '节点'}」(${egressModeLabel(result.egressMode)})`
       );
     } else {
@@ -441,7 +442,7 @@ async function useNode(row) {
       ElMessageBox.alert(msg, '未能启用该节点', { type: 'warning', confirmButtonText: '知道了' });
     }
   } catch (e) {
-    ElMessage.error(e?.response?.data?.message || e.message || '启用节点失败');
+    showError(e?.response?.data?.message || e.message || '启用节点失败');
   }
 }
 
@@ -450,17 +451,17 @@ async function onToggleEgress(val) {
   try {
     if (!val) {
       await proxies.disableEgress();
-      ElMessage.success('已停用代理出站');
+      showSuccess('已停用代理出站');
     } else if (!egressActiveNode.value) {
       // 无激活节点时打开开关:引导去选节点,不凭空启用。
       await proxies.fetchEgressStatus();
-      ElMessage.info('请先到「代理组」页点某节点的「使用此节点」来选择出站节点。');
+      showInfo('请先到「代理组」页点某节点的「使用此节点」来选择出站节点。');
       activeTabProxy.value = 'groups';
     } else {
       await proxies.fetchEgressStatus();
     }
   } catch (e) {
-    ElMessage.error(e?.response?.data?.message || e.message || '操作失败');
+    showError(e?.response?.data?.message || e.message || '操作失败');
   }
 }
 
@@ -541,7 +542,7 @@ function resetPrefs() {
   prefAuto.value = false;
   prefInterval.value = 10;
   protoFilter.value = '';
-  ElMessage.success('已恢复默认设置');
+  showSuccess('已恢复默认设置');
 }
 
 // ── Node browser (代理组) ─────────────────────────────────────────────────────
@@ -574,7 +575,7 @@ async function loadNodes() {
     }
   } catch (e) {
     nodes.value = [];
-    ElMessage.error(e?.response?.data?.message || e.message || '加载节点失败');
+    showError(e?.response?.data?.message || e.message || '加载节点失败');
   } finally {
     loadingNodes.value = false;
   }
@@ -625,9 +626,9 @@ const filteredNodes = computed(() => {
 async function copyNode(row) {
   try {
     await navigator.clipboard.writeText(prettyNode(row));
-    ElMessage.success('已复制节点配置');
+    showSuccess('已复制节点配置');
   } catch {
-    ElMessage.warning('复制失败,请手动展开该行复制');
+    showWarning('复制失败,请手动展开该行复制');
   }
 }
 
@@ -635,9 +636,9 @@ async function copyNode(row) {
 async function copyText(text, okMsg) {
   try {
     await navigator.clipboard.writeText(String(text || ''));
-    ElMessage.success(okMsg || '已复制');
+    showSuccess(okMsg || '已复制');
   } catch {
-    ElMessage.warning('复制失败,请手动选中文本复制');
+    showWarning('复制失败,请手动选中文本复制');
   }
 }
 
@@ -765,10 +766,10 @@ async function pasteFromClipboard() {
       importForm.value.url = text.trim();
       importForm.value.content = '';
     } else {
-      ElMessage.warning('剪贴板为空');
+      showWarning('剪贴板为空');
     }
   } catch {
-    ElMessage.warning('无法读取剪贴板，请手动粘贴');
+    showWarning('无法读取剪贴板，请手动粘贴');
   }
 }
 
@@ -792,7 +793,7 @@ async function onFilePicked(ev) {
       if (!importForm.value.name) importForm.value.name = file.name.replace(/\.[^.]+$/, '');
     }
   } catch {
-    ElMessage.error('读取文件失败');
+    showError('读取文件失败');
   } finally {
     if (ev?.target) ev.target.value = '';
   }
@@ -802,16 +803,16 @@ async function doImport() {
   const url = importForm.value.url.trim();
   const content = importForm.value.content;
   const name = importForm.value.name.trim();
-  if (!url && !content) return ElMessage.warning('请填写订阅地址，或从剪贴板 / 文件导入内容');
+  if (!url && !content) return showWarning('请填写订阅地址，或从剪贴板 / 文件导入内容');
   try {
     const group = content
       ? await proxies.addByContent(content, name)
       : await proxies.addSubscription(url, name);
-    ElMessage.success(`已导入「${group?.name || '订阅组'}」，共 ${group?.nodeCount || 0} 个节点`);
+    showSuccess(`已导入「${group?.name || '订阅组'}」，共 ${group?.nodeCount || 0} 个节点`);
     importVisible.value = false;
     if (activeTab.value === 'groups') loadNodes();
   } catch (e) {
-    ElMessage.error(e?.response?.data?.message || e.message || '导入失败');
+    showError(e?.response?.data?.message || e.message || '导入失败');
   }
 }
 
@@ -819,10 +820,10 @@ async function doImport() {
 async function doRefresh(g) {
   try {
     const updated = await proxies.refreshGroup(g.id);
-    ElMessage.success(`已刷新，共 ${updated?.nodeCount || 0} 个节点`);
+    showSuccess(`已刷新，共 ${updated?.nodeCount || 0} 个节点`);
     if (activeTab.value === 'groups') loadNodes();
   } catch (e) {
-    ElMessage.error(e?.response?.data?.message || e.message || '刷新失败');
+    showError(e?.response?.data?.message || e.message || '刷新失败');
   }
 }
 
@@ -830,11 +831,11 @@ async function confirmRemove(g) {
   try {
     await ElMessageBox.confirm(`确定删除订阅组「${g.name}」？`, '删除订阅组', { type: 'warning' });
     await proxies.removeGroup(g.id);
-    ElMessage.success('已删除');
+    showSuccess('已删除');
     if (selectedGroupId.value === g.id) selectedGroupId.value = 'all';
     else if (activeTab.value === 'groups') loadNodes();
   } catch (e) {
-    if (e !== 'cancel') ElMessage.error(e?.response?.data?.message || e.message || '删除失败');
+    if (e !== 'cancel') showError(e?.response?.data?.message || e.message || '删除失败');
   }
 }
 
@@ -1088,7 +1089,7 @@ onUnmounted(() => {
 }
 .egress-dl-url {
   word-break: break-all;
-  color: var(--khy-primary, #409eff);
+  color: var(--khy-primary, var(--khy-primary));
   text-decoration: none;
 }
 .egress-dl-url:hover {

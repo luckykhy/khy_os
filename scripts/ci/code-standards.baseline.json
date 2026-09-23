@@ -1,0 +1,35 @@
+{
+  "_comment": "Baseline for check-code-standards.js. The gate fails if counts GROW beyond `max`. QUAL-1: 基线必须是实测值（2026-09-15 实测），不是估值。原基线把 functionLines/nestingDepth 写成 10800/12000（实际 2144/8703），容忍度是实际的 5.6 倍 —— 已修正为实测值并冻结存量；下降经由 scripts/ci/debt-ledger.json 的 target 棘轮驱动。Re-pin 2026-09-18：四项基线被上游 domain 重组的存量增长击穿（非当次改动产生），按 QUAL-1 与当日维护者裁决据实回写实测值；target 与 owner/due 不变，收敛仍由债务台账驱动，回归记录见 debt-ledger 各 standards.* 条目 note。",
+  "generatedAt": "2026-09-18",
+  "baselines": {
+    "fileLines": {
+      "max": 363,
+      "current": 363,
+      "description": "Files exceeding 500 lines (COMP-001). 实测 363（2026-09-18 回写）；目标见 debt-ledger standards.fileLines → 300。"
+    },
+    "functionLines": {
+      "max": 2184,
+      "current": 2184,
+      "description": "Functions exceeding 50 lines (COMP-001). 实测 2184（2026-09-18 回写）；目标见 debt-ledger standards.functionLines → 1600。"
+    },
+    "nestingDepth": {
+      "max": 8754,
+      "current": 8754,
+      "description": "Nesting depth exceeding 4 (COMP-001). 实测 8754（2026-09-18 回写）；该指标改用行缩进估算，口径待修（见 debt-ledger standards.nestingDepth 的 targetPending）。"
+    },
+    "consoleLog": {
+      "max": 4731,
+      "current": 4731,
+      "description": "console.* usage in non-test files (COM-001). 实测 4731（2026-09-18 回写）。目标见 debt-ledger standards.consoleLog → 3000。"
+    },
+    "namingViolations": {
+      "max": 4,
+      "current": 4,
+      "description": "NAM-001 naming violations. 实测 4。目标见 debt-ledger standards.namingViolations → 0。"
+    }
+  },
+  "rules": {
+    "growAction": "fail",
+    "description": "When a metric exceeds its baseline max, the gate fails. To improve, lower the baseline max in the same change AND register a debt-ledger entry with owner/dueBy/plan (QUAL-2)."
+  }
+}

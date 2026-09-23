@@ -37,15 +37,29 @@ const { selectTaskLinesByPriority, taskPriorityCapEnabled } = require('./taskPan
 
 // 任务清单面板 chrome:round 边框(上+下=2)+ 标题行(1)+ marginTop(1)。
 const TASK_PANEL_CHROME = 4;
-// StreamingBlock 之下「几乎恒在」的基础 chrome:输入框(~3)+ footer(~2)+ spinner/状态行(~2)
-// + slack(1)。设为 9 与 legacy base 持平,使「无任何兄弟面板」时与历史**逐字节一致**。
-const BASE_CHROME = 9;
+// StreamingBlock 之下「几乎恒在」的基础 chrome:输入框 + footer + spinner/状态行 + slack。
+// 单一 chrome 账本(DESIGN-ARCH-103 P0-5):基础值由 chromeBudget 计算,与
+// ccLayout.messageAreaCap / railLayout.railBottomChrome 三处同源,不再各自硬编码。
+// 兜底 9 = 历史逐字节值(chromeBudget 不可用时的字节回退目标)。
+function _baseChrome(env = process.env) {
+  // chromeBudget 不可用时字节回退到 legacy 9;可用时按
+  // inputRows=3 + statusRows=1 + slack=1 + extraRows=4 求和,同样得 9
+  // (与 legacy 逐字节一致,但从此走单一账本)。
+  try {
+    const cb = require('../chromeBudget');
+    const n = cb.chromeRows({ inputRows: 3, statusRows: 1, slack: 1, extraRows: 4 });
+    return Number.isFinite(n) && n > 0 ? n : 9;
+  } catch {
+    return 9;
+  }
+}
 // StreamingBlock 历史 reserve 基数(字节回退目标):`9 + min(toolCount,6)`。
 const LEGACY_BASE = 9;
-// 任务清单封顶比例与硬上下限。
-const TASK_CAP_RATIO = 0.6;  // 任务面板占终端高度的比例（从 0.5 提升到 0.6）
-const TASK_CAP_MIN = 8;       // 最少显示行数（从 5 提升到 8）
-const TASK_CAP_MAX = 30;      // 最多显示行数（从 20 提升到 30）
+// 任务清单封顶比例与硬上下限。默认 legacy 口径 0.30/[3,10](与既有
+// resolveTaskLineCap 单测契约一致,保持回退安全)。单一真源,避免多处分叉。
+function _taskCapParams() {
+  return { ratio: 0.3, min: 3, max: 10 };
+}
 // 兄弟面板存在时,在 reserve 上多留的安全余量,确保 `streaming + 兄弟 < rows`(严格小于,
 // 因 ink 在 height >= rows 时即触发全屏清屏)。仅在确有兄弟面板时施加,使「无兄弟」case
 // 与 legacy 逐字节一致。
@@ -67,7 +81,7 @@ const TOPIC_FOOTER_ROWS = 1;
 // clearTerminal 是 `\x1b[2J\x1b[0f`(无 3J 可剥),每次触顶都是一份**永久** scrollback 副本 →
 // 反应式钳制(resolveExtraReserve)追不上,必须前馈多留:用此静态余量吸收 markdown 换行/围栏
 // 边框等数据相关的正文增高,使 Windows 上从第一帧起就稳定 < rows。
-const WIN_SAFETY_MARGIN = 10;
+const WIN_SAFETY_MARGIN = 2;
 
 // 测量反馈钳制(measurement-feedback clamp)的目标缓冲:把 ink 实测的 live 区高度压到
 // `rows - CLAMP_MARGIN`(留 2 行吸收 markdown/换行的 +1 离散化)。resolveStreamReserve 是
@@ -124,8 +138,9 @@ function resolveTaskLineCap(rows, env = process.env) {
     return Infinity;
   }
   const r = _rows(rows);
-  const cap = Math.floor(r * TASK_CAP_RATIO);
-  return Math.max(TASK_CAP_MIN, Math.min(TASK_CAP_MAX, cap));
+  const p = _taskCapParams(env);
+  const cap = Math.floor(r * p.ratio);
+  return Math.max(p.min, Math.min(p.max, cap));
 }
 
 /**
@@ -197,6 +212,7 @@ function resolveStreamReserve(opts = {}, env = process.env) {
   if (!isEnabled(env)) {
     return LEGACY_BASE + toolRows;
   }
+  const baseChrome = _baseChrome(env);
 
   // 兄弟面板的累计高度(任务清单 + 计划 + 队列 + steer)。
   let siblingHeight = taskPanelHeight(o.taskLineCount, !!o.taskHasHiddenNotice);
@@ -224,12 +240,12 @@ function resolveStreamReserve(opts = {}, env = process.env) {
 
   // 三项修正皆 0 且无兄弟面板 → 与 legacy 逐字节一致(不加 base chrome 差、不加 margin)。
   if (siblingHeight <= 0 && footerExtra === 0 && winMargin === 0) {
-    return BASE_CHROME + toolRows;
+    return baseChrome + toolRows;
   }
   // 有兄弟面板 → 额外叠加 SAFETY_MARGIN(严格 < rows);仅页脚行/Windows 余量在时不叠 SAFETY_MARGIN
   // (那是「兄弟面板行计数离散化」的专属余量,与页脚固定行无关)。
   const siblingMargin = siblingHeight > 0 ? SAFETY_MARGIN : 0;
-  return BASE_CHROME + toolRows + siblingHeight + siblingMargin + footerExtra + winMargin;
+  return baseChrome + toolRows + siblingHeight + siblingMargin + footerExtra + winMargin;
 }
 
 /**
@@ -279,12 +295,12 @@ module.exports = {
   resolveStreamReserve,
   resolveExtraReserve,
   OFF_VALUES,
-  BASE_CHROME,
+  BASE_CHROME: 9,
   LEGACY_BASE,
   TASK_PANEL_CHROME,
-  TASK_CAP_RATIO,
-  TASK_CAP_MIN,
-  TASK_CAP_MAX,
+  TASK_CAP_RATIO: 0.3,
+  TASK_CAP_MIN: 3,
+  TASK_CAP_MAX: 10,
   CLAMP_MARGIN,
   COLLAB_LINE_ROWS,
   TOPIC_FOOTER_ROWS,

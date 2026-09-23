@@ -1,6 +1,6 @@
 'use strict';
 /**
- * updateVersionsNpmChannel.test.js â€?pins the fix where `khy publish --version`
+ * updateVersionsNpmChannel.test.js â€” pins the fix where `khy publish --version`
  * (via _updateVersions) must bump the npm channel manifest
  * (packaging/npm/package.json) alongside pyproject.toml, the backend
  * package.json and the Python __init__.py literal.
@@ -11,9 +11,10 @@
  * manifests (pyproject / packaging-npm / services-backend) as the version-sync
  * red line, a CLI bump left the npm channel drifted and check:version-sync would
  * fail. This test builds a full forest fixture and asserts all four sources land
- * on the target version â€?with a focused assertion on the npm channel manifest.
+ * on the target version ï¿½?with a focused assertion on the npm channel manifest.
  */
 const fs = require('fs');
+const assert = require('node:assert');
 const os = require('os');
 const path = require('path');
 const publish = require('../../src/cli/handlers/publish');
@@ -43,13 +44,12 @@ function scaffoldForest(root, initialVersion) {
 function readJsonVersion(file) {
   return JSON.parse(fs.readFileSync(file, 'utf-8')).version;
 }
-describe('publish/_updateVersions â€?npm channel bump', () => {
+
+describe('Update Versions Npm Channel', () => {
+  // merged from describe: publish/_updateVersions ï¿½?npm channel bump
   let tmp;
   beforeEach(() => { tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-updver-')); });
   afterEach(() => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* ignore */ } });
-});
-
-describe('Update Versions Npm Channel', () => {
   test('bumps ALL FOUR sources incl. packaging/npm/package.json', () => {
         scaffoldForest(tmp, '1.0.0');
         publish._updateVersions(tmp, '2.3.4');
@@ -70,7 +70,7 @@ describe('Update Versions Npm Channel', () => {
         assert.equal(
           readJsonVersion(path.join(tmp, 'packaging', 'npm', 'package.json')),
           '2.3.4',
-          'packaging/npm/package.json (npm channel) bumped â€?the fix'
+          'packaging/npm/package.json (npm channel) bumped ï¿½?the fix'
         );
   });
 
@@ -101,8 +101,8 @@ describe('Update Versions Npm Channel', () => {
           `${JSON.stringify({ version: '1.0.0' }, null, 2)}\n`
         );
     
-        expect(() => publish._updateVersions(tmp, '1.1.0').not.toThrow());
-        expect(readJsonVersion(path.join(backendDir).toBe('package.json')), '1.1.0');
+        expect(() => publish._updateVersions(tmp, '1.1.0')).not.toThrow();
+        expect(readJsonVersion(path.join(backendDir, 'package.json'))).toBe('1.1.0');
         assert.equal(
           fs.existsSync(path.join(tmp, 'packaging', 'npm', 'package.json')),
           false,
@@ -112,7 +112,7 @@ describe('Update Versions Npm Channel', () => {
 
   test('rejects an invalid version string before writing anything', () => {
         scaffoldForest(tmp, '1.0.0');
-        expect(() => publish._updateVersions(tmp, 'not-a-version').toThrow());
+        expect(() => publish._updateVersions(tmp, 'not-a-version')).toThrow();
         // Unchanged on rejection.
         expect(readJsonVersion(path.join(tmp, 'packaging', 'npm', 'package.json'))).toBe('1.0.0');
   });

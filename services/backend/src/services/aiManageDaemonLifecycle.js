@@ -74,13 +74,23 @@ function _isAutoSpawnEnabled() {
 }
 
 function _runtimeFile() {
-  return path.resolve(
-    process.env.KHY_DAEMON_RUNTIME_FILE ||
-      path.join(
-        process.env.KHY_DATA_HOME || path.join(require('os').homedir(), '.khy'),
-        DEFAULT_RUNTIME_FILE
-      )
-  );
+  if (process.env.KHY_DAEMON_RUNTIME_FILE) {
+    return path.resolve(process.env.KHY_DAEMON_RUNTIME_FILE);
+  }
+  // Single source of truth: resolve through the daemon's own data-home
+  // resolver (portable-aware) so the lifecycle finds the exact file the daemon
+  // writes. On a portable install the data home is `<install root>/.khy`, NOT
+  // `~/.khy` — falling back to the home dir here is what made the lifecycle
+  // blind to a running daemon and spawn a second one. Lazy-require keeps this
+  // module I/O-free at import time.
+  let baseDir;
+  try {
+    // eslint-disable-next-line global-require
+    baseDir = require('../utils/dataHome').getDataHome();
+  } catch {
+    baseDir = process.env.KHY_DATA_HOME || path.join(require('os').homedir(), '.khy');
+  }
+  return path.resolve(path.join(baseDir, DEFAULT_RUNTIME_FILE));
 }
 
 function _scriptPath() {
@@ -134,7 +144,7 @@ function probeControl(runtime) {
         port: runtime.controlPort,
         method: 'GET',
         path: '/status',
-        headers: { 'X-Control-Token': runtime.controlToken },
+        headers: { 'x-khy-token': runtime.controlToken },
         timeout: STATUS_PROBE_TIMEOUT_MS,
       },
       (res) => {

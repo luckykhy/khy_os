@@ -43,12 +43,12 @@ describe('Router Dispatch Slash Leaf', () => {
 
   test('setRouterDispatchSlashDeps is a guarded, idempotent, non-throwing DI setter', async () => {
       const { setRouterDispatchSlashDeps } = require(LEAF);
-      expect(() => setRouterDispatchSlashDeps().not.toThrow());
-      expect(() => setRouterDispatchSlashDeps({}).not.toThrow());
-      expect(() => setRouterDispatchSlashDeps({ route: 1 }).not.toThrow());
+      expect(() => setRouterDispatchSlashDeps()).not.toThrow();
+      expect(() => setRouterDispatchSlashDeps({})).not.toThrow();
+      expect(() => setRouterDispatchSlashDeps({ route: 1 })).not.toThrow();
       const fake = { route: () => {} };
-      expect(() => setRouterDispatchSlashDeps(fake).not.toThrow());
-      expect(() => setRouterDispatchSlashDeps(fake).not.toThrow());
+      expect(() => setRouterDispatchSlashDeps(fake)).not.toThrow();
+      expect(() => setRouterDispatchSlashDeps(fake)).not.toThrow();
   });
 
 });

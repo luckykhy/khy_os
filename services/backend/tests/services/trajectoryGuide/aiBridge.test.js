@@ -1,6 +1,6 @@
 'use strict';
 /**
- * aiBridge.test.js â€?DESIGN-ARCH-049 G3 (AI repair hook).
+ * aiBridge.test.js â€” DESIGN-ARCH-049 G3 (AI repair hook).
  *
  * The hook drives an injected AgentTool stub (no real model). Verifies:
  *   - it builds a tightly-scoped prompt naming the target path + required sha256
@@ -22,9 +22,9 @@ process.env.KHY_DEP_HEALING = 'off';
 const WORK = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-g3-work-'));
 process.env.KHY_WRITE_EXTRA_ROOTS = WORK;
 process.env.KHY_TRAJ_REPAIR_MAX = '1';
-const aiBridge = require('../../../src/services/trajectoryGuide/aiBridge');
-const replayEngine = require('../../../src/services/trajectoryReplay/replayEngine');
-const artifactHash = require('../../../src/services/trajectoryReplay/artifactHash');
+const aiBridge = require('../../../src/services/domain/trajectory/trajectoryGuide/aiBridge.js');
+const replayEngine = require('../../../src/services/domain/trajectory/trajectoryReplay/replayEngine.js');
+const artifactHash = require('../../../src/services/domain/trajectory/trajectoryReplay/artifactHash.js');
 function step(target, content, seq = 0) {
   const sha256 = artifactHash.sha256Hex(content);
   return {

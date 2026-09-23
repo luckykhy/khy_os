@@ -15,14 +15,14 @@
  *   6. Environment:     KHY_PLUGINS=khyquant,khy-notes
  *
  * Each plugin must export a KhyPlugin-compatible object and have a valid
- * manifest (`khy.extension.json` or `package.json#khy` — see [DESIGN-ARCH-069] §3).
+ * manifest (`khy.extension.json` or `package.json#khy` — see [DESIGN-TOOL-002] §3).
  *
  * **Eager vs deferred.** Sources 1/2/3/5/6 name a plugin explicitly (a config
  * entry, a dependency, an env var), so being named IS the intent to load it and
  * they are activated during init(). Source 4 is a *directory scan* of a tree the
  * user may simply have dropped a folder into — activating those at startup would
  * charge every built-in extension's module body into boot time, which is exactly
- * what [DESIGN-ARCH-069] §4 forbids. They are therefore only *indexed* at init
+ * what [DESIGN-TOOL-002] §4 forbids. They are therefore only *indexed* at init
  * (namespace reserved, manifest known, entry NOT required) and activated on first
  * use via activateNamespace(). Turning the KHY_PLUGIN_LAZY_LOAD gate off restores
  * eager activation for them too.
@@ -33,12 +33,29 @@ const os = require('os');
 const path = require('path');
 
 const { getDataHome } = require('../utils/dataHome');
-// 拓展根的单一真源（[DESIGN-ARCH-069]）。此前本加载器有自己的 5 个发现源，其中**没有
+// 拓展根的单一真源（[DESIGN-TOOL-002]）。此前本加载器有自己的 5 个发现源，其中**没有
 // 一个**是仓库的 extensions/ —— 随包分发的内置拓展对它完全不可见。
 const extensionRoots = require('../services/domain/extensions/extensions/extensionRoots.js');
 
 // Optional SDK load: fall back to a built-in manifest validator when the
 // @khy/plugin-sdk package is missing (fail-soft, warn only once).
+//
+// `@khy/plugin-sdk` (platform/packages/plugin-sdk) is the *single source of
+// truth* for the manifest contract — its validateManifest() and MANIFEST_FIELDS
+// are what a CI gate or a third-party plugin author validates against. The
+// fallback below is a byte-compatible copy of that same rule, kept so a clean
+// install that lacks the optional peerDep still enforces the identical four
+// required fields. Pinned by tests/plugin-sdk.test.js: the two must agree on
+// every input class (same { valid, errors } shape, same error strings, same
+// order), so a future change to the contract that drifts one side is caught.
+//
+// The SDK is declared an OPTIONAL peerDependency (peerDependenciesMeta
+// optional:true) — a clean install legitimately lacks it and runs the
+// fallback validator below. Because this module is pulled into the cold-start
+// require chain on every `khy` invocation (commandAutoRegistry init →
+// handlers/plugin-dev → here), a per-boot console.warn would pollute every
+// startup log with a known, designed-in state. Default: silent fallback.
+// Set KHY_PLUGIN_DEBUG=1 to surface the fallback notice (still once).
 let _sdkLoadWarned = false;
 let validateManifest;
 try {
@@ -46,13 +63,16 @@ try {
 } catch (err) {
   if (!_sdkLoadWarned) {
     _sdkLoadWarned = true;
-    console.warn(
-      `plugin-loader 加载 @khy/plugin-sdk 失败，改用内置回退校验器（manifest 必填字段校验）: ${err && err.message ? err.message : err}`
-    );
+    if (process.env.KHY_PLUGIN_DEBUG === '1') {
+      console.warn(
+        `plugin-loader 加载 @khy/plugin-sdk 失败，改用内置回退校验器（manifest 必填字段校验）: ${err && err.message ? err.message : err}`
+      );
+    }
   }
-  // Fallback validator: mirrors the SDK return shape { valid, errors }.
-  // Checks the fields actually consumed by init(): name, namespace,
-  // engines.khy, main.
+  // Fallback validator: byte-compatible copy of the SDK's rule (see
+  // platform/packages/plugin-sdk/index.js). Kept in lockstep by
+  // tests/plugin-sdk.test.js — same four required fields, same error strings,
+  // same { valid, errors } shape.
   validateManifest = function validateManifestFallback(manifest) {
     const errors = [];
     if (!manifest || typeof manifest !== 'object') {
@@ -314,7 +334,7 @@ function getAllPlugins() {
 }
 
 /**
- * 按需激活一个**已发现但未激活**的拓展（[DESIGN-ARCH-069] §4 的第 ③ 步）。
+ * 按需激活一个**已发现但未激活**的拓展（[DESIGN-TOOL-002] §4 的第 ③ 步）。
  *
  * 幂等且无副作用地可重复调用：
  *   - 已 active → 直接返回它，不重复 require。

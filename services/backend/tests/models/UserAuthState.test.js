@@ -5,7 +5,8 @@ const UserAuthState = require('../../src/models/UserAuthState');
 describe('UserAuthState', () => {
   test('module exports a Sequelize model', () => {
     expect(UserAuthState).toBeDefined();
-    expect(typeof UserAuthState).toBe('object');
+    // Sequelize v6 models are ES classes -> typeof 'function', not 'object'.
+    expect(typeof UserAuthState).toBe('function');
   });
 
   test('model has correct tableName', () => {
@@ -47,7 +48,7 @@ describe('UserAuthState', () => {
   test('model has index on token_invalid_before', () => {
     const indexes = UserAuthState.options.indexes;
     expect(indexes).toBeDefined();
-    expect(Array.isArray(indexes).toBe(true);
+    expect(Array.isArray(indexes)).toBe(true);
     const tokenIndex = indexes.find((idx) => idx.fields && idx.fields.includes('token_invalid_before'));
     expect(tokenIndex).toBeDefined();
   });

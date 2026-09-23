@@ -1,12 +1,13 @@
 'use strict';
 // Unit tests for the Windows "App Paths" registry discovery pure leaf.
-// node:test (jest is broken under rtk â€?run with `node --test`).
+// node:test (jest is broken under rtk ï¿½?run with `node --test`).
 const wap = require('../../src/services/winAppPaths');
+const assert = require('node:assert');
 // ---------------------------------------------------------------------------
-// isEnabled â€?gate ladder (default ON).
+// isEnabled ï¿½?gate ladder (default ON).
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
-// parseAppPathsOutput â€?the real reg output the user had to dig out by hand.
+// parseAppPathsOutput ï¿½?the real reg output the user had to dig out by hand.
 // ---------------------------------------------------------------------------
 // Captured shape of `reg query HKCU\â€¦\App Paths /s` on the user's machine where
 // Quark sits on the D: drive with no Start-Menu shortcut.
@@ -21,22 +22,22 @@ const REAL_REG_OUTPUT = [
   '',
 ].join('\r\n');
 // ---------------------------------------------------------------------------
-// buildAppPathRecords â€?Start-Menu-shaped records, deduped by bin.
+// buildAppPathRecords ï¿½?Start-Menu-shaped records, deduped by bin.
 // ---------------------------------------------------------------------------
 
 describe('Win App Paths', () => {
-  test('isEnabled: unset â†?on', () => {
+  test('isEnabled: unset ï¿½?on', () => {
       expect(wap.isEnabled({})).toBe(true);
       expect(wap.isEnabled(undefined)).toBe(true);
   });
 
-  test('isEnabled: explicit off tokens â†?off', () => {
+  test('isEnabled: explicit off tokens ï¿½?off', () => {
       for (const v of ['0', 'false', 'off', 'no', 'OFF', 'False']) {
         expect(wap.isEnabled({ KHY_APP_PATHS_REGISTRY: v })).toBe(false, `value ${v}`);
       }
   });
 
-  test('isEnabled: any other value â†?on', () => {
+  test('isEnabled: any other value ï¿½?on', () => {
       expect(wap.isEnabled({ KHY_APP_PATHS_REGISTRY: '1' })).toBe(true);
       expect(wap.isEnabled({ KHY_APP_PATHS_REGISTRY: 'yes' })).toBe(true);
   });
@@ -95,7 +96,7 @@ describe('Win App Paths', () => {
       ]);
   });
 
-  test('parseAppPathsOutput: garbage / empty â†?[]', () => {
+  test('parseAppPathsOutput: garbage / empty ï¿½?[]', () => {
       expect(wap.parseAppPathsOutput('')).toEqual([]);
       expect(wap.parseAppPathsOutput(null)).toEqual([]);
       expect(wap.parseAppPathsOutput(undefined)).toEqual([]);
@@ -128,7 +129,7 @@ describe('Win App Paths', () => {
   });
 
   test('buildAppPathRecords: empty path entry skipped', () => {
-      // A (Default) line with only whitespace after the type â†?no path â†?skipped.
+      // A (Default) line with only whitespace after the type ï¿½?no path ï¿½?skipped.
       const empty = [
         'HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\ok.exe',
         '    (Default)    REG_SZ    C:\\ok\\ok.exe',
@@ -138,7 +139,7 @@ describe('Win App Paths', () => {
       expect(recs[0].bin).toBe('ok');
   });
 
-  test('buildAppPathRecords: garbage â†?[]', () => {
+  test('buildAppPathRecords: garbage ï¿½?[]', () => {
       expect(wap.buildAppPathRecords('')).toEqual([]);
       expect(wap.buildAppPathRecords(null)).toEqual([]);
   });

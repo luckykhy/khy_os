@@ -107,11 +107,13 @@ describe('timeFormat', () => {
     });
 
     test('formats days', () => {
-      expect(formatDurationHuman(172800000)).toBe('5d');
+      // 172800000ms = exactly 2 days (single-unit rounding)
+      expect(formatDurationHuman(172800000)).toBe('2d');
+      expect(formatDurationHuman(5 * 24 * 60 * 60 * 1000)).toBe('5d');
     });
 
     test('uses custom fallback', () => {
-      expect(formatDurationHuman(N/A, 'fallback')).toBe('fallback');
+      expect(formatDurationHuman(NaN, 'fallback')).toBe('fallback');
     });
   });
 

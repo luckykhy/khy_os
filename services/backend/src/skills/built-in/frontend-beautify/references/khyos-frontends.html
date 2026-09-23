@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: khyos-frontends.md -->
+<title>khyos 三个前端项目指引 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>frontend-beautify<span class="sep">›</span>references<span class="sep">›</span>khyos 三个前端项目指引</div>
+      <header class="hero reveal"><h1>khyos 三个前端项目指引</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyos-三个前端项目指引">khyos 三个前端项目指引</a></li><li class="lvl-2"><a href="#1-ai-平台前端-apps-ai-frontend">1. AI 平台前端（apps/ai-frontend）</a></li><li class="lvl-3"><a href="#结构">结构</a></li><li class="lvl-3"><a href="#典型美化改动点">典型美化改动点</a></li><li class="lvl-3"><a href="#常用页面速查">常用页面速查</a></li><li class="lvl-3"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#2-量化交易前端-software-khyquant-frontend">2. 量化交易前端（software/khyquant/frontend）</a></li><li class="lvl-3"><a href="#结构-2">结构</a></li><li class="lvl-3"><a href="#典型美化改动点-2">典型美化改动点</a></li><li class="lvl-3"><a href="#验证-2">验证</a></li><li class="lvl-2"><a href="#3-移动伴侣-apps-khy-mobile">3. 移动伴侣（apps/khy-mobile）</a></li><li class="lvl-3"><a href="#结构-3">结构</a></li><li class="lvl-3"><a href="#既有设计语言-必须遵循">既有设计语言（必须遵循）</a></li><li class="lvl-3"><a href="#典型美化改动点-3">典型美化改动点</a></li><li class="lvl-3"><a href="#验证-3">验证</a></li><li class="lvl-2"><a href="#跨端统一注意">跨端统一注意</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khyos-三个前端项目指引">khyos 三个前端项目指引<a class="anchor" href="#khyos-三个前端项目指引" aria-label="锚点">#</a></h1>
+<p>本文档描述 khyos 三个前端的<strong>项目结构、文件定位、典型改动点</strong>，供 frontend-beautify skill 在美化时快速定位。</p>
+<h2 id="1-ai-平台前端-apps-ai-frontend">1. AI 平台前端（apps/ai-frontend）<a class="anchor" href="#1-ai-平台前端-apps-ai-frontend" aria-label="锚点">#</a></h2>
+<h3 id="结构">结构<a class="anchor" href="#结构" aria-label="锚点">#</a></h3>
+<pre><code>apps/ai-frontend/src/
+├── main.js                  # 入口：引 EP 暗色 css-vars + newapi-theme.css + useTheme
+├── styles/
+│   └── newapi-theme.css     # ★ 设计 token 真源（--khy-* 亮暗双主题）
+├── composables/
+│   ├── useTheme.js          # ★ 暗色单例（html.dark 切换）
+│   ├── useRoutePrefetch.js  # ★ viewLoaders（新增页面的 SSOT）
+│   └── useUserGateway.js    # 个人网关数据
+├── router/index.js          # 路由表（新增页面两处：viewLoaders + 这里）
+├── views/                   # 38+ 页面
+├── components/
+│   └── gateway/             # 网关相关组件（含 CcSwitchCard.vue）
+├── api/
+│   └── request.js           # axios 封装
+└── utils/safeStorage.js</code></pre>
+<h3 id="典型美化改动点">典型美化改动点<a class="anchor" href="#典型美化改动点" aria-label="锚点">#</a></h3>
+<ul><li><strong>全局配色/主题</strong>：<code>styles/newapi-theme.css</code> 的 <code>--khy-*</code> token。改一处全站跟随。</li><li><strong>暗色细节</strong>：<code>html.dark</code> 覆盖块。所有新增颜色必须同时给亮暗两版。</li><li><strong>页面级</strong>：<code>views/X.vue</code> 的 <code>&lt;style scoped&gt;</code>（用 <code>--khy-*</code> 变量，不写死色值）。</li><li><strong>组件级</strong>：<code>components/gateway/*.vue</code> 等。</li></ul>
+<h3 id="常用页面速查">常用页面速查<a class="anchor" href="#常用页面速查" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>页面</th><th>文件</th><th>风格要点</th></tr></thead><tbody><tr><td>个人网关</td><td><code>views/MyGateway.vue</code></td><td>tabs + 卡片 + 表单，含供应商卡片</td></tr><tr><td>AI 网关管理</td><td><code>views/AIGateway.vue</code></td><td>管理面板、表格密集</td></tr><tr><td>用量日志</td><td><code>views/UsageLogs.vue</code></td><td>表格 + 统计</td></tr><tr><td>监控</td><td><code>views/AIMonitor.vue</code></td><td>实时流、状态面板</td></tr><tr><td>工作流</td><td><code>views/WorkflowEditor.vue</code></td><td>画布（VueFlow）</td></tr><tr><td>桌面壳</td><td><code>views/KhyOsDesktop.vue</code> / <code>KhyOsTerminal.vue</code></td><td>终端 + 窗口</td></tr></tbody></table>
+<h3 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> apps/ai-frontend &amp;&amp; npx vite build   <span class="hljs-comment"># 无编译错误</span>
+<span class="hljs-built_in">cd</span> apps/ai-frontend &amp;&amp; npm run dev      <span class="hljs-comment"># 目视检查</span></code></pre>
+<h2 id="2-量化交易前端-software-khyquant-frontend">2. 量化交易前端（software/khyquant/frontend）<a class="anchor" href="#2-量化交易前端-software-khyquant-frontend" aria-label="锚点">#</a></h2>
+<h3 id="结构-2">结构<a class="anchor" href="#结构-2" aria-label="锚点">#</a></h3>
+<pre><code>software/khyquant/frontend/src/
+├── main.js                  # 全量引入 EP + 图标 + zhCn
+├── router/index.js          # 路由（/dashboard /trading /strategies /backtest ...）
+├── views/                   # 27+ 页面
+├── components/
+├── services/
+│   └── websocketService.js  # 实时行情
+├── assets/
+│   └── markdown.scss
+└── utils/errorMessage.js</code></pre>
+<h3 id="典型美化改动点-2">典型美化改动点<a class="anchor" href="#典型美化改动点-2" aria-label="锚点">#</a></h3>
+<ul><li><strong>交易数据密集</strong>：<code>views/Trading.vue</code>、<code>views/MarketQuotes.vue</code>、<code>views/BacktestDetail.vue</code>。<ul><li>数字用 <code>tabular-nums</code> 对齐。</li><li>涨跌语义色：<code>#079455</code> 涨 / <code>#d92d20</code> 跌（对齐 ai-frontend 语义）。</li><li>表格 <code>size=&quot;small&quot;</code>。</li></ul></li><li><strong>回测结果</strong>：<code>views/BacktestAnalysis.vue</code>（图表 + 指标卡）。</li><li><strong>管理后台</strong>：<code>views/Admin*.vue</code>（用户/系统/日志）。</li></ul>
+<h3 id="验证-2">验证<a class="anchor" href="#验证-2" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> software/khyquant/frontend &amp;&amp; npx vite build
+<span class="hljs-built_in">cd</span> software/khyquant/frontend &amp;&amp; npm run dev</code></pre>
+<h2 id="3-移动伴侣-apps-khy-mobile">3. 移动伴侣（apps/khy-mobile）<a class="anchor" href="#3-移动伴侣-apps-khy-mobile" aria-label="锚点">#</a></h2>
+<h3 id="结构-3">结构<a class="anchor" href="#结构-3" aria-label="锚点">#</a></h3>
+<pre><code>apps/khy-mobile/
+├── capacitor.config.ts      # Capacitor（appId: com.khyos.companion）
+├── src/
+│   ├── styles.css           # ★ 全局样式（暗色设计：#0b1118 底 + #68d5c0 强调）
+│   ├── App.vue
+│   ├── views/               # 14+ 页面
+│   ├── components/
+│   │   └── ConnectionStatus.vue  # 连接状态（视觉一致源）
+│   ├── api/                 # client/sse/secureSession/runtime/status/trading
+│   └── layouts/
+└── android/                 # Capacitor Android 壳</code></pre>
+<h3 id="既有设计语言-必须遵循">既有设计语言（必须遵循）<a class="anchor" href="#既有设计语言-必须遵循" aria-label="锚点">#</a></h3>
+<ul><li>背景 <code>#0b1118</code>（深蓝黑），表面 <code>#111a24</code>，边框 <code>#243241</code>。</li><li>强调色 <code>#68d5c0</code>（青绿），正文 <code>#e9eef5</code>，次要 <code>#8ca0b5</code>。</li><li>顶栏 sticky + 底部 5 格 nav，内容宽 <code>min(760px, 100%)</code>。</li><li>触控目标 ≥ 44px。</li></ul>
+<h3 id="典型美化改动点-3">典型美化改动点<a class="anchor" href="#典型美化改动点-3" aria-label="锚点">#</a></h3>
+<ul><li>全局：<code>src/styles.css</code> 的 <code>:root</code> token 与 <code>.topbar</code>/<code>.bottom-nav</code>/<code>.shell-content</code>。</li><li>实时页：<code>views/TradingHubView.vue</code>、<code>views/ApprovalsView.vue</code>（审批卡片）、<code>views/TasksView.vue</code>。</li><li>连接状态：统一用 <code>ConnectionStatus.vue</code>。</li></ul>
+<h3 id="验证-3">验证<a class="anchor" href="#验证-3" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> apps/khy-mobile &amp;&amp; npx vite build
+<span class="hljs-comment"># 真机/模拟器：npm run dev + Capacitor（可选）</span></code></pre>
+<h2 id="跨端统一注意">跨端统一注意<a class="anchor" href="#跨端统一注意" aria-label="锚点">#</a></h2>
+<ul><li>三个前端<strong>各自独立</strong>，没有共享样式包（ui-shared 只含 auth/http 工具）。美化时保持各端既有设计语言一致即可，不必强求三端像素级相同。</li><li>ai-frontend 与 khyquant 都基于 Element Plus：优先用 EP 既有组件 + CSS 变量，少写自定义样式。</li><li>khy-mobile 是纯自定义样式（非 EP），遵循它自己的暗色 token。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/skills/built-in/frontend-beautify/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Frontend Beautify — khyos 前端美化</div></a><a class="next" href="../../../../../../../services/backend/src/skills/built-in/frontend-beautify/references/khyos-stack.html"><div class="dir">下一篇 →</div><div class="ttl">khyos 前端技术栈规范（Vue 3 + Element Plus）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/frontend-beautify/references/khyos-frontends.html";</script>
+<script src="../../../../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

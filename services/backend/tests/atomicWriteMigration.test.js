@@ -190,7 +190,7 @@ describe('权限不变:显式 mode 与 writeFileSync 默认值一致', () => {
 });
 
 describe('端到端:mcpConfigStore(注入路径,尾换行)', () => {
-  const store = require('../src/services/mcp/mcpConfigStore');
+  const store = require('../src/services/domain/messaging/mcp/mcpConfigStore.js');
 
   function _fresh() {
     const home = _tmpFile('home');
@@ -234,7 +234,7 @@ describe('端到端:mcpConfigStore(注入路径,尾换行)', () => {
 });
 
 describe('端到端:traceChain(哈希链 sidecar,失败即抛 → {ok:false})', () => {
-  const traceChain = require('../src/services/trajectoryProvenance/traceChain');
+  const traceChain = require('../src/services/domain/trajectory/trajectoryProvenance/traceChain.js');
 
   test('append 后字节 = pretty-2 无尾换行,且 verify 通过', () => {
     const chainFile = _tmpFile('s.trace-chain.json');
@@ -258,7 +258,7 @@ describe('端到端:traceChain(哈希链 sidecar,失败即抛 → {ok:false})', 
 });
 
 describe('端到端:evoLedger(进化黑历史,fsync 强制开)', () => {
-  const ledger = require('../src/services/evoEngine/evoLedger');
+  const ledger = require('../src/services/domain/maintenance/evoEngine/evoLedger.js');
   const branch = `mig-${crypto.randomBytes(3).toString('hex')}`;
 
   test('append 后字节 = pretty-2 无尾换行,verify 通过,链可续写', () => {

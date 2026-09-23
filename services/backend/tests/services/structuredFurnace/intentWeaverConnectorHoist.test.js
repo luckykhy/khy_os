@@ -14,7 +14,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { splitClauses } = require('../../../src/services/structuredFurnace/intentWeaver');
+const { splitClauses } = require('../../../src/services/domain/structured/structuredFurnace/intentWeaver.js');
 
 const shape = (r) => r.map((c) => [c.connector, c.text]);
 

@@ -11,13 +11,11 @@
  *  - _shouldTrustStopReason: 仅 native 协议 + KHY_TRUST_STOP_REASON(默认 on)才信任。
  */
 const loop = require('../../src/services/toolUseLoop');
-describe('_normalizeStopReason — 跨家归一', () => {
-});
-describe('_shouldTrustStopReason — native-only + 逃生阀', () => {
-  afterEach(() => { delete process.env.KHY_TRUST_STOP_REASON; });
-});
 
 describe('Tool Use Loop stop Reason', () => {
+  // merged from empty describe: _normalizeStopReason - 跨家归一
+  // merged from describe: _shouldTrustStopReason - native-only + 逃生阀
+  afterEach(() => { delete process.env.KHY_TRUST_STOP_REASON; });
   test('OpenAI tool_calls / Anthropic tool_use → tool_use', () => {
         expect(loop._normalizeStopReason('tool_calls')).toBe('tool_use');
         expect(loop._normalizeStopReason('tool_use')).toBe('tool_use');

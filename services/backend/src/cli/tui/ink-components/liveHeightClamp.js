@@ -192,7 +192,11 @@ function tailToVisualRows(text, budgetRows, columns, env = process.env) {
 
 // ── 时间线尾切(StreamingBlock.tailTimeline 的视觉行版本) ─────────────────────
 // text 段按 wrappedRows 计视觉行(其最上一段被尾切时按视觉行 tailToVisualRows 收窄);
-// tool 段仍记 1 行。门控关 → 委托原始行版(_tailTimelineRaw,与 StreamingBlock 逐字节一致)。
+// tool 段按 toolCostOf 回调计真实渲染行数(门控 KHY_TOOL_ROW_BUDGET,默认开——见
+// toolEntryRows.js:历史记 1 行系统性低估,单条 shell/±diff 工具实际可到 ~20 行,使工具密集
+// 回合的 live 帧越过 rows → ink fullscreen 重绘 → 「同段输出重复多份」[IMPL-RPT-044])。
+// 门控关 / 未传回调 / 回调异常 → 恒 1 行(逐字节回退今日)。
+// 门控关 → 委托原始行版(_tailTimelineRaw,与 StreamingBlock 逐字节一致)。
 
 function _tailTimelineRaw(timeline, maxLines, normalizeText) {
   // normalizeText 可选:惰性归一化(KHY_LIVE_TIMELINE_LAZY_NORM 开时由上游下传原始时间线)。
@@ -239,16 +243,27 @@ function _tailTimelineRaw(timeline, maxLines, normalizeText) {
 }
 
 /**
- * 时间线尾切到**视觉行预算**。text 段按视觉行、tool 段记 1 行,从末尾向上保留。
- * 门控关 / maxLines 非有限 → 委托 `_tailTimelineRaw`。try/catch 兜底,绝不抛。
+ * 时间线尾切到**视觉行预算**。text 段按视觉行、tool 段按 toolCostOf(e.tool) 回调计真实
+ * 渲染行数(未传/异常 → 恒 1,历史记法),从末尾向上保留。门控关 / maxLines 非有限 → 委托
+ * `_tailTimelineRaw`。try/catch 兜底,绝不抛。
  *
- * @param {Array<{type:string,text?:string}>} timeline
+ * @param {Array<{type:string,text?:string,tool?:*}>} timeline
  * @param {number} budgetRows
  * @param {*} columns
  * @param {object} [env]
+ * @param {Function} [normalizeText] - 惰性归一化回调(见函数体内注释)
+ * @param {Function} [toolCostOf] - (tool) => 单个工具条目的真实渲染行数(≥1)。
+ *   由调用方按门控 KHY_TOOL_ROW_BUDGET 决定是否下传(toolEntryRows.isEnabled);关/未传 → 1。
  * @returns {{ entries: Array, truncated: boolean }}
  */
-function tailTimelineToVisualRows(timeline, budgetRows, columns, env = process.env, normalizeText) {
+function tailTimelineToVisualRows(
+  timeline,
+  budgetRows,
+  columns,
+  env = process.env,
+  normalizeText,
+  toolCostOf
+) {
   // normalizeText 可选:惰性归一化(KHY_LIVE_TIMELINE_LAZY_NORM 开时上游下传原始时间线 + normalizer,
   // 只对本函数从末尾早停实际触及的少数尾部 entry 归一化 → 消每帧对冻结前缀的全量预映射分配)。
   // 传 null/未传(含既有 4 参调用)→ text 已被上游预映射,原样消费 → 与历史逐字节等价。
@@ -302,7 +317,21 @@ function tailTimelineToVisualRows(timeline, budgetRows, columns, env = process.e
         }
       } else if (e.type === 'tool') {
         out.unshift(e);
-        used += 1;
+        // 真实行计费(estimateToolEntryRows,含 ±diff/shell 折叠体/错误详情):回调未传/异常 →
+        // 恒 1(历史记法,逐字节回退)。单条成本可超 max(如 20 行折叠体),此时只保留这一条
+        // (used 直接越过 max → 循环退出)——与 text 段「至少保留最末 1 行」同一兜底语义。
+        let toolRows = 1;
+        if (typeof toolCostOf === 'function') {
+          try {
+            const c = Math.floor(Number(toolCostOf(e.tool)));
+            if (Number.isFinite(c) && c >= 1) {
+              toolRows = c;
+            }
+          } catch {
+            toolRows = 1; // estimator's own fail-soft already returns 1; belt for host bugs
+          }
+        }
+        used += toolRows;
       }
     }
     // truncated 收尾:门控开 → 停点早停判定(消全量 filter + 整条 norm);关 → 逐字节回退全量 filter().length。

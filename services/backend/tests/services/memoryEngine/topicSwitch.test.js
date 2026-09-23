@@ -8,7 +8,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const ts = require('../../../src/services/memoryEngine/topicSwitch');
+const ts = require('../../../src/services/domain/memory/memoryEngine/topicSwitch.js');
 
 test('jaccard: 同集=1, 不相交=0, 双空=1', () => {
   assert.strictEqual(ts.jaccard(new Set(['a', 'b']), new Set(['a', 'b'])), 1);

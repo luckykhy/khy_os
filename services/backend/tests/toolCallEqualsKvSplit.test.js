@@ -32,12 +32,12 @@ describe('Tool Call Equals Kv Split', () => {
   });
 
   test('splitEqualsKvPairs: ON → splits only at comma-before-key=, keeps value commas', () => {
-      expect(leaf.splitEqualsKvPairs('command=echo a).toEqual(b,c', {}), ['command=echo a,b,c']);
-      expect(leaf.splitEqualsKvPairs('path=/a/b).toEqual(content=hello,world', {}), ['path=/a/b', 'content=hello,world']);
+      expect(leaf.splitEqualsKvPairs('command=echo a,b,c', {})).toEqual(['command=echo a,b,c']);
+      expect(leaf.splitEqualsKvPairs('path=/a/b,content=hello,world', {})).toEqual(['path=/a/b', 'content=hello,world']);
       // multi-pair still splits at every real boundary
-      expect(leaf.splitEqualsKvPairs('a=1).toEqual(b=2, c=3', {}), ['a=1', 'b=2', 'c=3']);
+      expect(leaf.splitEqualsKvPairs('a=1,b=2, c=3', {})).toEqual(['a=1', 'b=2', 'c=3']);
       // hyphenated key boundary honored
-      expect(leaf.splitEqualsKvPairs('x=v).toEqual(w, max-count=5', {}), ['x=v,w', 'max-count=5']);
+      expect(leaf.splitEqualsKvPairs('x=v,w, max-count=5', {})).toEqual(['x=v,w', 'max-count=5']);
   });
 
   test('splitEqualsKvPairs: OFF → null; non-string → null', () => {
@@ -47,30 +47,30 @@ describe('Tool Call Equals Kv Split', () => {
   });
 
   test('fail-soft: never throws on bad env', () => {
-      expect(() => leaf.splitEqualsKvPairs('a=1', undefined).not.toThrow());
-      expect(() => leaf.toolCallEqKvSplitEnabled(null).not.toThrow());
+      expect(() => leaf.splitEqualsKvPairs('a=1', undefined)).not.toThrow();
+      expect(() => leaf.toolCallEqKvSplitEnabled(null)).not.toThrow();
   });
 
   test('parseFunctionArgs: gate ON → value commas preserved, multi-pair still split', () => {
       withEnv({ KHY_TOOLCALL_EQ_KV_SPLIT: undefined }, () => {
         const p = freshParser();
-        expect(p.parseFunctionArgs('shell_command').toEqual('command=echo a,b,c'), { command: 'echo a,b,c' });
-        expect(p.parseFunctionArgs('shell_command').toEqual('command=awk -F, x'), { command: 'awk -F, x' });
-        expect(p.parseFunctionArgs('write_file').toEqual('path=/a/b, content=hello,world'), { path: '/a/b', content: 'hello,world' });
+        expect(p.parseFunctionArgs('shell_command', 'command=echo a,b,c')).toEqual({ command: 'echo a,b,c' });
+        expect(p.parseFunctionArgs('shell_command', 'command=awk -F, x')).toEqual({ command: 'awk -F, x' });
+        expect(p.parseFunctionArgs('write_file', 'path=/a/b, content=hello,world')).toEqual({ path: '/a/b', content: 'hello,world' });
         // multi-pair unchanged from legacy
-        expect(p.parseFunctionArgs('x').toEqual('a=1, b=2'), { a: 1, b: 2 });
+        expect(p.parseFunctionArgs('x', 'a=1, b=2')).toEqual({ a: 1, b: 2 });
         // R4 colon-KV path not regressed
-        expect(p.parseFunctionArgs('shell_command').toEqual('command=curl https://x.com'), { command: 'curl https://x.com' });
+        expect(p.parseFunctionArgs('shell_command', 'command=curl https://x.com')).toEqual({ command: 'curl https://x.com' });
       });
   });
 
   test('parseFunctionArgs: gate OFF → byte-revert to legacy (comma-truncated garbage preserved)', () => {
       withEnv({ KHY_TOOLCALL_EQ_KV_SPLIT: '0' }, () => {
         const p = freshParser();
-        expect(p.parseFunctionArgs('shell_command').toEqual('command=echo a,b,c'), { command: 'echo a', b: '', c: '' });
-        expect(p.parseFunctionArgs('write_file').toEqual('path=/a/b, content=hello,world'), { path: '/a/b', content: 'hello', world: '' });
+        expect(p.parseFunctionArgs('shell_command', 'command=echo a,b,c')).toEqual({ command: 'echo a', b: '', c: '' });
+        expect(p.parseFunctionArgs('write_file', 'path=/a/b, content=hello,world')).toEqual({ path: '/a/b', content: 'hello', world: '' });
         // legit multi-pair identical under both gates
-        expect(p.parseFunctionArgs('x').toEqual('a=1, b=2'), { a: 1, b: 2 });
+        expect(p.parseFunctionArgs('x', 'a=1, b=2')).toEqual({ a: 1, b: 2 });
       });
   });
 

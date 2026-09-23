@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-UI-TEST-001] UI设计验证测试规范.md -->
+<title>[DESIGN-UI-TEST-001] UI 设计验证测试规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-UI-TEST-001] UI 设计验证测试规范</div>
+      <header class="hero reveal"><h1>[DESIGN-UI-TEST-001] UI 设计验证测试规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-ui-test-001-ui-设计验证测试规范">[DESIGN-UI-TEST-001] UI 设计验证测试规范</a></li><li class="lvl-2"><a href="#0-术语表">0. 术语表</a></li><li class="lvl-2"><a href="#1-测试金字塔-ui-专版">1. 测试金字塔（UI 专版）</a></li><li class="lvl-2"><a href="#2-设计不变量清单">2. 设计不变量清单</a></li><li class="lvl-3"><a href="#2-1-tui-不变量-来自-design-arch-079-design-arch-016-7">2.1 TUI 不变量（来自 `[DESIGN-ARCH-079]` + `[DESIGN-ARCH-016]` §7）</a></li><li class="lvl-3"><a href="#2-2-web-前端不变量-来自-design-fe-001-design-a11y-001">2.2 Web 前端不变量（来自 `[DESIGN-FE-001]` + `[DESIGN-A11Y-001]`）</a></li><li class="lvl-3"><a href="#2-3-khyquant-前端不变量-来自-design-fe-001-3-3">2.3 khyquant 前端不变量（来自 `[DESIGN-FE-001]` §3.3）</a></li><li class="lvl-3"><a href="#2-4-移动端不变量-手机-capacitor-pwa">2.4 移动端不变量（手机 / Capacitor / PWA）</a></li><li class="lvl-3"><a href="#2-5-桌面端不变量-electron-khyos-desktop">2.5 桌面端不变量（Electron / khyos-desktop）</a></li><li class="lvl-2"><a href="#3-测试文件组织">3. 测试文件组织</a></li><li class="lvl-3"><a href="#3-1-tui-测试">3.1 TUI 测试</a></li><li class="lvl-3"><a href="#3-2-web-前端测试">3.2 Web 前端测试</a></li><li class="lvl-3"><a href="#3-3-移动端测试-khyquant-前端">3.3 移动端测试（khyquant 前端）</a></li><li class="lvl-3"><a href="#3-4-桌面端测试-khyos-desktop">3.4 桌面端测试（khyos-desktop）</a></li><li class="lvl-3"><a href="#3-3-命名规范">3.3 命名规范</a></li><li class="lvl-2"><a href="#4-测试编写规范">4. 测试编写规范</a></li><li class="lvl-3"><a href="#4-1-tui-测试-node-test">4.1 TUI 测试（node:test）</a></li><li class="lvl-3"><a href="#4-2-web-前端测试-vitest">4.2 Web 前端测试（vitest）</a></li><li class="lvl-3"><a href="#4-3-移动端测试-vitest-jsdom">4.3 移动端测试（vitest + jsdom）</a></li><li class="lvl-3"><a href="#4-4-桌面端测试-node-test-源码文本审计">4.4 桌面端测试（node:test，源码文本审计）</a></li><li class="lvl-3"><a href="#4-5-测试边界">4.5 测试边界</a></li><li class="lvl-2"><a href="#5-设计验证-ci-流水线">5. 设计验证 CI 流水线</a></li><li class="lvl-3"><a href="#5-1-提交前-本地">5.1 提交前（本地）</a></li><li class="lvl-3"><a href="#5-2-ci-门禁">5.2 CI 门禁</a></li><li class="lvl-3"><a href="#5-3-发版前-手动-回归清单">5.3 发版前（手动 + 回归清单）</a></li><li class="lvl-2"><a href="#6-已知缺口与收敛方向">6. 已知缺口与收敛方向</a></li><li class="lvl-2"><a href="#7-版本历史">7. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-ui-test-001-ui-设计验证测试规范">[DESIGN-UI-TEST-001] UI 设计验证测试规范<a class="anchor" href="#design-ui-test-001-ui-设计验证测试规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：定义 khy-os 项目 UI 设计验证的<strong>测试策略、分层架构、不变量清单与可执行验证规则</strong>。<br><strong>适用边界</strong>：覆盖 TUI（Ink/React 终端界面）与 Web 前端（Vue 3 + Element Plus）两条 UI 路径；<br>不替代 <code>[DESIGN-TEST-001]</code>（通用测试规范），而是在其上叠加 UI 专有的设计验证层。<br><strong>关联真源</strong>：</p>
+<ul><li>TUI 布局/组件/颜色 → <code>[DESIGN-ARCH-079] TUI界面设计规范</code></li><li>TUI 区域划分 → <code>[DESIGN-ARCH-016] AI_Agent显示规范</code> §7</li><li>Web 前端令牌/组件/API → <code>[DESIGN-FE-001] 前端页面规范</code></li><li>Web 前端组件 API 目标态 → <code>[DESIGN-FE-002] 前端组件库规范</code></li><li>可访问性 → <code>[DESIGN-A11Y-001] 可访问性规范</code></li><li>CC TUI 工程约束 → <code>services/backend/src/cli/tui/AGENTS.md</code></li></ul>
+<p><strong>设计原则</strong>：规范定义的不变量必须有可执行的测试守护；没有测试的不变量只是建议。</p></blockquote>
+<hr>
+<h2 id="0-术语表">0. 术语表<a class="anchor" href="#0-术语表" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>术语</th><th>含义</th></tr></thead><tbody><tr><td><strong>设计不变量 (Design Invariant)</strong></td><td>规范中定义的、不可漂移的 UI 约束（尺寸、颜色、结构、行为）</td></tr><tr><td><strong>设计验证 (Design Verification)</strong></td><td>通过自动化测试验证 UI 实现是否符合规范定义的不变量</td></tr><tr><td><strong>契约测试 (Contract Test)</strong></td><td>验证模块间接口契约不变（如 REGION 枚举、组件 props/emits）</td></tr><tr><td><strong>合规测试 (Compliance Test)</strong></td><td>验证代码是否遵守规范禁令（如禁止硬编码颜色）</td></tr><tr><td><strong>渲染冒烟测试 (Render Smoke Test)</strong></td><td>验证组件能无异常挂载并输出非空帧</td></tr><tr><td><strong>Wiring Test</strong></td><td>验证「声明的数据/路由/调用」与「真实接线」一致（khy-os 前端既有测试范式）</td></tr></tbody></table>
+<hr>
+<h2 id="1-测试金字塔-ui-专版">1. 测试金字塔（UI 专版）<a class="anchor" href="#1-测试金字塔-ui-专版" aria-label="锚点">#</a></h2>
+<pre><code>                    ┌─────────────┐
+                    │  E2E / 手动  │   ← 发版前回归清单 (TEST-RPT-005)
+                    │  回归测试    │
+                  ┌─┴───────────┐ │
+                  │  渲染冒烟    │   ← inkRenderSmoke.test.js (TUI)
+                  │  测试       │     组件 SSR 渲染测试 (Web)
+                ┌─┴──────────┐  │
+                │  契约测试    │   ← regionLayout.test.js (TUI)
+                │  (Contract) │     KhyIcon.test.js (Web)
+              ┌─┴──────────┐  │
+              │  合规测试    │   ← designTokenCompliance.test.js (NEW)
+              │(Compliance) │     themeParity.test.js (NEW)
+            ┌─┴────────────┘  │
+            │  纯叶子单元测试  │   ← sidebarLayout.test.js (TUI)
+            │  (Pure Leaf)    │     effectiveCols.test.js (TUI)
+            └─────────────────┘</code></pre>
+<table><thead><tr><th>层级</th><th>关注点</th><th>工具</th><th>文件后缀</th><th>何时跑</th></tr></thead><tbody><tr><td><strong>L0 纯叶子</strong></td><td>几何计算/布局数学的确定性输出</td><td><code>node:test</code> (TUI) / vitest (Web)</td><td><code>*.test.js</code></td><td>每次提交</td></tr><tr><td><strong>L1 合规</strong></td><td>设计令牌/颜色/主题一致性</td><td>vitest (Web) / <code>node:test</code> (TUI)</td><td><code>*.compliance.test.js</code> 或 <code>*Compliance.test.js</code></td><td>含样式改动时</td></tr><tr><td><strong>L2 契约</strong></td><td>REGION 枚举/组件 props/模块接口冻结</td><td><code>node:test</code> (TUI) / vitest (Web)</td><td><code>*.test.js</code> / <code>*.wiring.test.js</code></td><td>每次提交</td></tr><tr><td><strong>L3 渲染冒烟</strong></td><td>组件能挂载 + 输出非空帧</td><td>jest + <code>--experimental-vm-modules</code> (TUI) / vitest SSR (Web)</td><td><code>*Render*.test.js</code> / <code>*Smoke.test.js</code></td><td>TUI 专属 CI Job</td></tr><tr><td><strong>L4 E2E/手动</strong></td><td>跨页面交互流、Windows 兼容性</td><td>Playwright (手动) / 人工</td><td>回归清单</td><td>发版前</td></tr></tbody></table>
+<hr>
+<h2 id="2-设计不变量清单">2. 设计不变量清单<a class="anchor" href="#2-设计不变量清单" aria-label="锚点">#</a></h2>
+<h3 id="2-1-tui-不变量-来自-design-arch-079-design-arch-016-7">2.1 TUI 不变量（来自 <code>[DESIGN-ARCH-079]</code> + <code>[DESIGN-ARCH-016]</code> §7）<a class="anchor" href="#2-1-tui-不变量-来自-design-arch-079-design-arch-016-7" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>不变量</th><th>来源</th><th>验证方式</th><th>测试文件</th></tr></thead><tbody><tr><td>T1</td><td>REGION 枚举 25 个 ID 冻结（9 顶层 + 6 大区 + 10 小区）</td><td>ARCH-016 §7.2-7.4</td><td>契约测试</td><td><code>regionLayout.test.js</code> ✅</td></tr><tr><td>T2</td><td>三层结构：大区值是小区值的前缀</td><td>ARCH-016 §7.1</td><td>契约测试</td><td><code>regionLayout.test.js</code> ✅</td></tr><tr><td>T3</td><td>OWNING_OVERLAYS 6 个 key 全声明，hideChrome 为 boolean</td><td>ARCH-016 §7.5</td><td>契约测试</td><td><code>regionLayout.test.js</code> ✅</td></tr><tr><td>T4</td><td>TOP_LEVEL_ORDER 自顶向下顺序 = REGION 顶层顺序</td><td>ARCH-016 §7.2</td><td>契约测试</td><td><code>regionLayout.test.js</code> ✅</td></tr><tr><td>T5</td><td>PromptFrame 宽度 = <code>cols - 1</code>（留 1 列 slack）</td><td>ARCH-079 §2.2</td><td>合规测试</td><td><code>uiDesignContract.test.js</code> 🆕</td></tr><tr><td>T6</td><td>PromptFrame 最小高度 = 4 rows，最大高度 = <code>vrows - 10</code></td><td>ARCH-079 §2.2</td><td>合规测试</td><td><code>uiDesignContract.test.js</code> 🆕</td></tr><tr><td>T7</td><td>FooterBar 高度 = 2 rows（Legacy）/ 1 row（三栏）</td><td>ARCH-079 §2.6</td><td>合规测试</td><td><code>uiDesignContract.test.js</code> 🆕</td></tr><tr><td>T8</td><td>看板宽度 clamp(24, 36)，默认 ratio 0.16</td><td>ARCH-079 §3.2</td><td>纯叶子测试</td><td><code>sidebarLayout.test.js</code> ✅</td></tr><tr><td>T9</td><td>看板最小激活列宽 = 120 cols</td><td>ARCH-079 §3.1</td><td>纯叶子测试</td><td><code>sidebarLayout.test.js</code> ✅</td></tr><tr><td>T10</td><td>响应式分类：超窄 &lt;80 / 窄屏 80-119 / 标准 120-159 / 宽屏 ≥160</td><td>ARCH-079 §8.1</td><td>合规测试</td><td><code>uiDesignContract.test.js</code> 🆕</td></tr><tr><td>T11</td><td>effectiveCols 永不抛（缺失/损坏降级）</td><td>effectiveCols.js</td><td>纯叶子测试</td><td><code>effectiveCols.test.js</code> ✅</td></tr><tr><td>T12</td><td>sidebarTopAnchorRows 永不抛（WelcomeBanner 缺失 → 0）</td><td>ARCH-016 §7.6</td><td>契约测试</td><td><code>regionLayout.test.js</code> ✅</td></tr><tr><td>T13</td><td>CC 模式品牌文本不含 &quot;Claude Code&quot; / &quot;Claude&quot;</td><td>tui/AGENTS.md §0.4</td><td>合规测试</td><td><code>uiDesignContract.test.js</code> 🆕</td></tr><tr><td>T14</td><td>TUI 禁止 DECSTBM 滚动区（<code>\x1B[...r</code>）除非备用缓冲区</td><td>AGENTS.md 规则 4</td><td>合规测试</td><td><code>check-agent-rules.js</code> ✅</td></tr></tbody></table>
+<h3 id="2-2-web-前端不变量-来自-design-fe-001-design-a11y-001">2.2 Web 前端不变量（来自 <code>[DESIGN-FE-001]</code> + <code>[DESIGN-A11Y-001]</code>）<a class="anchor" href="#2-2-web-前端不变量-来自-design-fe-001-design-a11y-001" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>不变量</th><th>来源</th><th>验证方式</th><th>测试文件</th></tr></thead><tbody><tr><td>W1</td><td>所有 <code>--khy-*</code> token 在 <code>:root</code> 和 <code>html.dark</code> 成对定义</td><td>FE-001 §3.1</td><td>合规测试</td><td><code>themeParity.test.js</code> 🆕</td></tr><tr><td>W2</td><td><code>--khy-white</code> 必须有定义（已知缺口 G1）</td><td>FE-001 §12 G1</td><td>合规测试</td><td><code>themeParity.test.js</code> 🆕</td></tr><tr><td>W3</td><td><code>.vue</code>/<code>.css</code> 中不得出现字面量 hex 颜色（真源文件除外）</td><td>FE-001 §3.2</td><td>合规测试</td><td><code>designTokenCompliance.test.js</code> 🆕</td></tr><tr><td>W4</td><td>样式必须使用 <code>var(--khy-*)</code>，禁止内联 hex</td><td>FE-001 §5.3</td><td>合规测试</td><td><code>designTokenCompliance.test.js</code> 🆕</td></tr><tr><td>W5</td><td>Khy* 组件必须有 <code>&lt;script setup&gt;</code> + scoped 样式</td><td>FE-001 §5.3</td><td>契约测试</td><td><code>componentContract.wiring.test.js</code> 🆕</td></tr><tr><td>W6</td><td>Khy* 组件 props 带 validator</td><td>FE-001 §5.3</td><td>契约测试</td><td><code>componentContract.wiring.test.js</code> 🆕</td></tr><tr><td>W7</td><td>新页面必须登记 <code>src/nav/index.js</code></td><td>FE-001 §4</td><td>Wiring test</td><td><code>nav.wiring.test.js</code> ✅</td></tr><tr><td>W8</td><td>交互元素键盘可达，focus 态可见</td><td>A11Y §4</td><td>手动 + 自动化</td><td><code>a11yContract.test.js</code> 🆕</td></tr><tr><td>W9</td><td>状态变化区有 <code>aria-live</code>，加载区有 <code>aria-busy</code></td><td>A11Y §3.1/§7.1</td><td>合规测试</td><td><code>a11yContract.test.js</code> 🆕</td></tr><tr><td>W10</td><td>尊重 <code>prefers-reduced-motion</code></td><td>A11Y §5.3</td><td>合规测试</td><td><code>a11yContract.test.js</code> 🆕</td></tr><tr><td>W11</td><td>文本对比度满足 WCAG AA（正文 ≥4.5:1）</td><td>A11Y §5.1</td><td>手动</td><td>回归清单</td></tr><tr><td>W12</td><td>前端体积只降不升</td><td>FE-001 §9</td><td>CI 门禁</td><td><code>check:frontend-size</code> ✅</td></tr></tbody></table>
+<h3 id="2-3-khyquant-前端不变量-来自-design-fe-001-3-3">2.3 khyquant 前端不变量（来自 <code>[DESIGN-FE-001]</code> §3.3）<a class="anchor" href="#2-3-khyquant-前端不变量-来自-design-fe-001-3-3" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>不变量</th><th>来源</th><th>验证方式</th><th>测试文件</th></tr></thead><tbody><tr><td>K1</td><td>khyquant 新代码使用 <code>--khy-*</code> 命名</td><td>FE-001 §3.3</td><td>合规测试</td><td><code>mobileUiCompliance.test.js</code> 🆕</td></tr><tr><td>K2</td><td>khyquant 不新增平行令牌命名（<code>--primary-color</code> 等）</td><td>FE-001 §3.3</td><td>合规测试</td><td><code>mobileUiCompliance.test.js</code> 🆕</td></tr><tr><td>K3</td><td>移动端触控目标 ≥44px</td><td>FE-001 §8</td><td>合规测试</td><td><code>mobileUiCompliance.test.js</code> 🆕</td></tr><tr><td>K4</td><td>移动端输入框字号 ≥16px（防 iOS 自动缩放）</td><td>FE-001 §8</td><td>合规测试</td><td><code>mobileUiCompliance.test.js</code> 🆕</td></tr></tbody></table>
+<h3 id="2-4-移动端不变量-手机-capacitor-pwa">2.4 移动端不变量（手机 / Capacitor / PWA）<a class="anchor" href="#2-4-移动端不变量-手机-capacitor-pwa" aria-label="锚点">#</a></h3>
+<blockquote><p><strong>真源</strong>：<code>[DESIGN-FE-001]</code> §8（响应式与移动端）、<code>software/khyquant/frontend/</code> 实测代码。</p></blockquote>
+<table><thead><tr><th>#</th><th>不变量</th><th>来源</th><th>验证方式</th><th>测试文件</th></tr></thead><tbody><tr><td>M1</td><td>触控目标 ≥44px（<code>min-height: 44px; min-width: 44px</code>）</td><td>FE-001 §8 + mobile.css</td><td>合规测试</td><td><code>mobileUiCompliance.test.js</code> 🆕</td></tr><tr><td>M2</td><td>移动端输入框字号 ≥16px（防 iOS 自动缩放）</td><td>FE-001 §8</td><td>合规测试</td><td><code>mobileUiCompliance.test.js</code> 🆕</td></tr><tr><td>M3</td><td>响应式断点存在（768px 手机 / 1024px 平板 / 480px 小屏）</td><td>FE-001 §8 + responsive.css</td><td>合规测试</td><td><code>mobileUiCompliance.test.js</code> 🆕</td></tr><tr><td>M4</td><td>PWA manifest 含必需字段（name/short_name/theme_color/display/icons）</td><td>vite.config.js PWA 配置</td><td>合规测试</td><td><code>mobileUiCompliance.test.js</code> 🆕</td></tr><tr><td>M5</td><td>Capacitor 配置含 appId / appName / webDir</td><td><code>capacitor.config.ts</code></td><td>契约测试</td><td><code>mobileUiCompliance.test.js</code> 🆕</td></tr><tr><td>M6</td><td>Mobile* 组件族存在（MobileLayout / MobileNav / MobileToast 等）</td><td>FE-001 §5.2</td><td>契约测试</td><td><code>mobileUiCompliance.test.js</code> 🆕</td></tr><tr><td>M7</td><td>PWA 更新提示组件（PwaUpdatePrompt）与离线指示器（OfflineIndicator）存在</td><td>FE-001 §8</td><td>契约测试</td><td><code>mobileUiCompliance.test.js</code> 🆕</td></tr><tr><td>M8</td><td>移动端滚动行为使用 <code>-webkit-overflow-scrolling: touch</code></td><td>mobile-scroll.css</td><td>合规测试</td><td><code>mobileUiCompliance.test.js</code> 🆕</td></tr></tbody></table>
+<h3 id="2-5-桌面端不变量-electron-khyos-desktop">2.5 桌面端不变量（Electron / khyos-desktop）<a class="anchor" href="#2-5-桌面端不变量-electron-khyos-desktop" aria-label="锚点">#</a></h3>
+<blockquote><p><strong>真源</strong>：<code>[DESIGN-ARCH-078]</code>（桌面端与 CLI/TUI 互联方案）、<code>apps/khyos-desktop/</code> 实测代码、<br><code>apps/khyos-desktop/CLAUDE.md</code>、<code>electron/main.js</code>（旧 ai-frontend 壳）。</p></blockquote>
+<table><thead><tr><th>#</th><th>不变量</th><th>来源</th><th>验证方式</th><th>测试文件</th></tr></thead><tbody><tr><td>D1</td><td>BrowserWindow 尺寸：khyos-desktop 1216×808（min 800×600）；旧壳 1280×800（min 900×600）</td><td>main/index.ts + electron/main.js</td><td>契约测试</td><td><code>desktopUiContract.test.js</code> 🆕</td></tr><tr><td>D2</td><td>khyos-desktop 无框窗口（<code>frame: false</code>）；旧壳有框</td><td>main/index.ts:28 + electron/main.js:18</td><td>契约测试</td><td><code>desktopUiContract.test.js</code> 🆕</td></tr><tr><td>D3</td><td>安全配置：<code>contextIsolation: true</code> + <code>nodeIntegration: false</code></td><td>Electron 安全最佳实践</td><td>合规测试</td><td><code>desktopUiContract.test.js</code> 🆕</td></tr><tr><td>D4</td><td>Preload 通过 <code>contextBridge.exposeInMainWorld('__KHYOS__', api)</code> 暴露 API</td><td>preload/index.ts:39</td><td>契约测试</td><td><code>desktopUiContract.test.js</code> 🆕</td></tr><tr><td>D5</td><td>Preload 必需方法集：窗口控制 + 设置 + 主题 + 文件 + AI + 会话 + 平台/版本</td><td>preload/index.ts</td><td>契约测试</td><td><code>desktopUiContract.test.js</code> 🆕</td></tr><tr><td>D6</td><td>IPC 通道命名约定：<code>namespace:action</code>（如 <code>window:minimize</code>、<code>ai:send</code>）</td><td>main/index.ts</td><td>合规测试</td><td><code>desktopUiContract.test.js</code> 🆕</td></tr><tr><td>D7</td><td>菜单含四组（文件/视图/窗口/帮助）</td><td>menu.ts</td><td>契约测试</td><td><code>desktopUiContract.test.js</code> 🆕</td></tr><tr><td>D8</td><td>TitleBar 含窗口控制按钮（最小化/最大化/关闭）</td><td>layout/TitleBar.tsx</td><td>契约测试</td><td><code>desktopUiContract.test.js</code> 🆕</td></tr><tr><td>D9</td><td>品牌文本不含 &quot;ZCode&quot; / &quot;Zhipu&quot; / &quot;智谱&quot;（仅结构复刻，不复用品牌）</td><td>khyos-desktop/CLAUDE.md 品牌规则</td><td>合规测试</td><td><code>desktopUiContract.test.js</code> 🆕</td></tr><tr><td>D10</td><td>源码不得硬编码 <code>localhost:3000</code> / <code>localhost:9222</code> 等端点字面量</td><td>AGENTS.md 规则 1</td><td>合规测试</td><td><code>desktopUiContract.test.js</code> 🆕</td></tr></tbody></table>
+<hr>
+<h2 id="3-测试文件组织">3. 测试文件组织<a class="anchor" href="#3-测试文件组织" aria-label="锚点">#</a></h2>
+<h3 id="3-1-tui-测试">3.1 TUI 测试<a class="anchor" href="#3-1-tui-测试" aria-label="锚点">#</a></h3>
+<pre><code>services/backend/tests/cli/tui/
+├── regionLayout.test.js              # T1-T4, T12 — REGION SSOT 契约 ✅
+├── sidebarLayout.test.js             # T8-T9 — 看板宽度/激活阈值 ✅
+├── effectiveCols.test.js            # T11 — 有效列宽降级 ✅
+├── uiDesignContract.test.js          # T5-T7, T10, T13 — 尺寸/响应式/品牌合规 🆕
+├── footerStability.test.js           # Footer 行数稳定 ✅
+├── promptPlaceholder.test.js         # PromptFrame 占位符 ✅
+├── railLayout.test.js                # Rail 几何/绘制 ✅
+├── sidebarPanel.test.js              # 看板面板渲染 ✅
+├── sidebarRailRuntime.test.js        # Rail 运行时 ✅
+├── liveRegionBudget.test.js          # Live 区高度预算 ✅
+├── inkRenderSmoke.test.js (在 tests/tui/)  # L3 渲染冒烟 ✅
+└── ...</code></pre>
+<h3 id="3-2-web-前端测试">3.2 Web 前端测试<a class="anchor" href="#3-2-web-前端测试" aria-label="锚点">#</a></h3>
+<pre><code>apps/ai-frontend/src/
+├── __tests__/
+│   ├── designTokenCompliance.test.js  # W3-W4 — 颜色/令牌合规 🆕
+│   ├── themeParity.test.js            # W1-W2 — 双主题成对定义 🆕
+│   ├── a11yContract.test.js           # W8-W10 — 可访问性合规 🆕
+│   └── vitest.sanity.test.js          # 环境健全性 ✅
+├── components/
+│   ├── KhyIcon.test.js                # W5-W6 — 组件契约（示例）✅
+│   └── __tests__/
+│       └── componentContract.wiring.test.js  # W5-W6 — 所有 Khy* 组件契约 🆕
+├── compos/
+│   └── *.wiring.test.js               # W7 — wiring tests ✅
+└── router/
+    └── nav.wiring.test.js             # W7 — 导航数据 wiring ✅</code></pre>
+<h3 id="3-3-移动端测试-khyquant-前端">3.3 移动端测试（khyquant 前端）<a class="anchor" href="#3-3-移动端测试-khyquant-前端" aria-label="锚点">#</a></h3>
+<pre><code>software/khyquant/frontend/src/
+├── __tests__/
+│   ├── mobileUiCompliance.test.js     # M1-M8 — 移动端 UI 合规 + 契约 🆕
+│   └── example.test.js                 # placeholder（待替换）✅
+├── vitest.config.js                    # vitest 配置（jsdom, 80% 阈值）✅
+└── components/
+    ├── MobileLayout.vue
+    ├── MobileNav.vue
+    ├── MobileToast.vue
+    └── ...（Mobile* 组件族）</code></pre>
+<h3 id="3-4-桌面端测试-khyos-desktop">3.4 桌面端测试（khyos-desktop）<a class="anchor" href="#3-4-桌面端测试-khyos-desktop" aria-label="锚点">#</a></h3>
+<pre><code>apps/khyos-desktop/
+├── tests/
+│   └── desktopUiContract.test.js       # D1-D10 — 桌面端 UI 契约 + 合规 🆕
+├── scripts/ci/
+│   ├── brand-replace.cjs              # 品牌替换校验 ✅
+│   └── check-api-drift.mjs            # preload API 漂移守卫 ✅
+└── src/
+    ├── main/index.ts                   # 主进程
+    ├── preload/index.ts                # preload
+    └── renderer/
+        ├── components/layout/TitleBar.tsx  # 无框窗口标题栏
+        └── ...</code></pre>
+<h3 id="3-3-命名规范">3.3 命名规范<a class="anchor" href="#3-3-命名规范" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>命名模式</th><th>示例</th></tr></thead><tbody><tr><td>契约测试</td><td><code>{module}.test.js</code></td><td><code>regionLayout.test.js</code></td></tr><tr><td>合规测试</td><td><code>{concern}Compliance.test.js</code></td><td><code>designTokenCompliance.test.js</code></td></tr><tr><td>主题测试</td><td><code>themeParity.test.js</code></td><td>—</td></tr><tr><td>可访问性</td><td><code>a11yContract.test.js</code></td><td>—</td></tr><tr><td>Wiring</td><td><code>{module}.wiring.test.js</code></td><td><code>nav.wiring.test.js</code></td></tr><tr><td>渲染冒烟</td><td><code>{module}RenderSmoke.test.js</code> 或 <code>inkRenderSmoke.test.js</code></td><td>—</td></tr></tbody></table>
+<hr>
+<h2 id="4-测试编写规范">4. 测试编写规范<a class="anchor" href="#4-测试编写规范" aria-label="锚点">#</a></h2>
+<h3 id="4-1-tui-测试-node-test">4.1 TUI 测试（node:test）<a class="anchor" href="#4-1-tui-测试-node-test" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-meta">&#x27;use strict&#x27;</span>;
+
+<span class="hljs-keyword">const</span> test = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;node:test&#x27;</span>);
+<span class="hljs-keyword">const</span> assert = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;node:assert/strict&#x27;</span>);
+
+<span class="hljs-comment">// 路径相对于 tests/cli/tui/</span>
+<span class="hljs-keyword">const</span> modPath = <span class="hljs-string">&#x27;../../../src/cli/tui/someModule&#x27;</span>;
+
+<span class="hljs-title function_">test</span>(<span class="hljs-string">&#x27;不变量描述&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-keyword">const</span> mod = <span class="hljs-built_in">require</span>(modPath);
+  <span class="hljs-comment">// Arrange</span>
+  <span class="hljs-keyword">const</span> input = ...;
+  <span class="hljs-comment">// Act</span>
+  <span class="hljs-keyword">const</span> result = mod.<span class="hljs-keyword">function</span>(<span class="hljs-params">input</span>);
+  <span class="hljs-comment">// Assert</span>
+  assert.<span class="hljs-title function_">strictEqual</span>(result, expected);
+});</code></pre>
+<p><strong>规范</strong>：</p>
+<ol><li>使用 <code>node:test</code> + <code>node:assert/strict</code>（非 jest）</li><li>模块路径用 <code>require('../../../src/...')</code> 相对引用</li><li>每个 test 描述一个不变量，名称包含「不变量」关键词</li><li>测试不依赖终端状态（mock <code>process.stdout</code> / <code>process.env</code>）</li><li>永不抛的函数必须有 null/undefined 入参降级测试</li></ol>
+<h3 id="4-2-web-前端测试-vitest">4.2 Web 前端测试（vitest）<a class="anchor" href="#4-2-web-前端测试-vitest" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">import</span> { describe, it, expect } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;vitest&#x27;</span>;
+<span class="hljs-keyword">import</span> { readFileSync } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;node:fs&#x27;</span>;
+<span class="hljs-keyword">import</span> { join } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;node:path&#x27;</span>;
+
+<span class="hljs-comment">// 设计令牌测试读取 CSS 真源文件</span>
+<span class="hljs-keyword">const</span> themeCss = <span class="hljs-title function_">readFileSync</span>(
+  <span class="hljs-title function_">join</span>(<span class="hljs-keyword">import</span>.<span class="hljs-property">meta</span>.<span class="hljs-property">dirname</span>, <span class="hljs-string">&#x27;../styles/newapi-theme.css&#x27;</span>),
+  <span class="hljs-string">&#x27;utf-8&#x27;</span>
+);
+
+<span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;设计令牌合规&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;:root 中定义的 --khy-* token 必须在 html.dark 中有成对定义&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-comment">// 解析 :root 和 html.dark 块</span>
+    <span class="hljs-comment">// 断言每个 :root --khy-* 在 html.dark 也有定义</span>
+  });
+});</code></pre>
+<p><strong>规范</strong>：</p>
+<ol><li>使用 vitest ESM 语法（<code>import</code>）</li><li>合规测试读取真源文件（CSS/JS），不 mock</li><li>组件渲染测试用 SSR（<code>renderToString</code>），避免 jsdom 依赖</li><li>每个 describe 块覆盖一个不变量域</li><li>失败消息包含规范条目编号（如 <code>W1</code>、<code>T5</code>）</li></ol>
+<h3 id="4-3-移动端测试-vitest-jsdom">4.3 移动端测试（vitest + jsdom）<a class="anchor" href="#4-3-移动端测试-vitest-jsdom" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">import</span> { describe, it, expect } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;vitest&#x27;</span>;
+<span class="hljs-keyword">import</span> { readFileSync, existsSync } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;node:fs&#x27;</span>;
+<span class="hljs-keyword">import</span> { join } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;node:path&#x27;</span>;
+<span class="hljs-keyword">import</span> { fileURLToPath } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;node:url&#x27;</span>;
+
+<span class="hljs-keyword">const</span> __dirname = <span class="hljs-title function_">fileURLToPath</span>(<span class="hljs-keyword">new</span> <span class="hljs-title function_">URL</span>(<span class="hljs-string">&#x27;.&#x27;</span>, <span class="hljs-keyword">import</span>.<span class="hljs-property">meta</span>.<span class="hljs-property">url</span>));
+<span class="hljs-keyword">const</span> srcRoot = <span class="hljs-title function_">join</span>(__dirname, <span class="hljs-string">&#x27;..&#x27;</span>);
+
+<span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;M1: Touch Target ≥44px&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-keyword">const</span> mobileCss = <span class="hljs-title function_">readFileSync</span>(<span class="hljs-title function_">join</span>(srcRoot, <span class="hljs-string">&#x27;styles/mobile.css&#x27;</span>), <span class="hljs-string">&#x27;utf-8&#x27;</span>);
+  <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;button/a/clickable 的 min-height 和 min-width 为 44px&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-title function_">expect</span>(mobileCss).<span class="hljs-title function_">toContain</span>(<span class="hljs-string">&#x27;44px&#x27;</span>);
+  });
+});</code></pre>
+<p><strong>规范</strong>：</p>
+<ol><li>使用 vitest ESM 语法（<code>import</code>），khyquant 前端有 <code>vitest.config.js</code>（jsdom 环境）</li><li>合规测试读取 CSS 真源文件（<code>mobile.css</code> / <code>responsive.css</code> / <code>mobile-scroll.css</code>）</li><li>组件存在性测试用 <code>existsSync</code> 检查文件存在</li><li>PWA/Capacitor 配置测试解析 <code>vite.config.js</code> / <code>capacitor.config.ts</code> 源码文本</li></ol>
+<h3 id="4-4-桌面端测试-node-test-源码文本审计">4.4 桌面端测试（node:test，源码文本审计）<a class="anchor" href="#4-4-桌面端测试-node-test-源码文本审计" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-meta">&#x27;use strict&#x27;</span>;
+
+<span class="hljs-keyword">const</span> test = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;node:test&#x27;</span>);
+<span class="hljs-keyword">const</span> assert = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;node:assert/strict&#x27;</span>);
+<span class="hljs-keyword">const</span> { readFileSync, existsSync } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;node:fs&#x27;</span>);
+<span class="hljs-keyword">const</span> { join } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;node:path&#x27;</span>);
+
+<span class="hljs-keyword">const</span> mainSrc = <span class="hljs-title function_">readFileSync</span>(<span class="hljs-title function_">join</span>(__dirname, <span class="hljs-string">&#x27;../src/main/index.ts&#x27;</span>), <span class="hljs-string">&#x27;utf-8&#x27;</span>);
+
+<span class="hljs-title function_">test</span>(<span class="hljs-string">&#x27;D1: BrowserWindow 尺寸 1216×808, min 800×600&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  assert.<span class="hljs-title function_">match</span>(mainSrc, <span class="hljs-regexp">/width:\s*1216/</span>);
+  assert.<span class="hljs-title function_">match</span>(mainSrc, <span class="hljs-regexp">/height:\s*808/</span>);
+  assert.<span class="hljs-title function_">match</span>(mainSrc, <span class="hljs-regexp">/minWidth:\s*800/</span>);
+  assert.<span class="hljs-title function_">match</span>(mainSrc, <span class="hljs-regexp">/minHeight:\s*600/</span>);
+});</code></pre>
+<p><strong>规范</strong>：</p>
+<ol><li>使用 <code>node:test</code> + <code>node:assert/strict</code>（无框架依赖）</li><li>测试读取 TypeScript 源码文本（不编译，不 import Electron）</li><li>契约测试验证 BrowserWindow 配置、preload API、IPC 通道命名</li><li>合规测试扫描品牌文本、硬编码端点</li><li>安全测试验证 <code>contextIsolation</code> / <code>nodeIntegration</code> 配置</li></ol>
+<h3 id="4-5-测试边界">4.5 测试边界<a class="anchor" href="#4-5-测试边界" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>必须测试</th><th>不必测试</th></tr></thead><tbody><tr><td>规范定义的尺寸约束（min/max/fixed）</td><td>视觉像素级对齐</td></tr><tr><td>枚举/ID 冻结</td><td>性能基准（另有 CI 门禁）</td></tr><tr><td>降级行为（缺失依赖时不崩）</td><td>具体颜色值（令牌真源已锁定）</td></tr><tr><td>禁令合规（无硬编码、无滚动区）</td><td>用户主观体验</td></tr><tr><td>双主题成对定义</td><td>截图对比（khy-os 暂不采用）</td></tr></tbody></table>
+<hr>
+<h2 id="5-设计验证-ci-流水线">5. 设计验证 CI 流水线<a class="anchor" href="#5-设计验证-ci-流水线" aria-label="锚点">#</a></h2>
+<h3 id="5-1-提交前-本地">5.1 提交前（本地）<a class="anchor" href="#5-1-提交前-本地" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># TUI 测试</span>
+<span class="hljs-built_in">cd</span> services/backend &amp;&amp; npm run <span class="hljs-built_in">test</span>:tui
+
+<span class="hljs-comment"># Web 前端测试</span>
+<span class="hljs-built_in">cd</span> apps/ai-frontend &amp;&amp; npx vitest run
+
+<span class="hljs-comment"># 移动端测试（khyquant 前端）</span>
+<span class="hljs-built_in">cd</span> software/khyquant/frontend &amp;&amp; npx vitest run
+
+<span class="hljs-comment"># 桌面端测试（khyos-desktop）</span>
+<span class="hljs-built_in">cd</span> apps/khyos-desktop &amp;&amp; node --<span class="hljs-built_in">test</span> tests/desktopUiContract.test.js
+
+<span class="hljs-comment"># 全仓红线</span>
+node scripts/ci/check-agent-rules.js --changed
+
+<span class="hljs-comment"># 前端体积门禁</span>
+npm run check:frontend-size</code></pre>
+<h3 id="5-2-ci-门禁">5.2 CI 门禁<a class="anchor" href="#5-2-ci-门禁" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>门禁</th><th>命令</th><th>阻断级别</th></tr></thead><tbody><tr><td>TUI 契约 + 合规</td><td><code>npm run test:tui</code></td><td>error</td></tr><tr><td>Web 前端 vitest</td><td><code>npx vitest run</code>（ai-frontend）</td><td>error</td></tr><tr><td>移动端 vitest</td><td><code>npx vitest run</code>（khyquant frontend）</td><td>error</td></tr><tr><td>桌面端契约</td><td><code>node --test tests/desktopUiContract.test.js</code>（khyos-desktop）</td><td>error</td></tr><tr><td>桌面端品牌替换</td><td><code>node scripts/ci/brand-replace.cjs</code>（khyos-desktop）</td><td>error</td></tr><tr><td>桌面端 API 漂移</td><td><code>node scripts/check-api-drift.mjs</code>（khyos-desktop）</td><td>error</td></tr><tr><td>硬编码端点</td><td><code>check-agent-rules.js --changed</code></td><td>error</td></tr><tr><td>ANSI 滚动区</td><td><code>check-agent-rules.js --changed</code></td><td>error</td></tr><tr><td>前端体积</td><td><code>check:frontend-size</code></td><td>error</td></tr><tr><td>含糊状态文案</td><td><code>check-agent-rules.js --changed</code></td><td>warning (strict → error)</td></tr></tbody></table>
+<h3 id="5-3-发版前-手动-回归清单">5.3 发版前（手动 + 回归清单）<a class="anchor" href="#5-3-发版前-手动-回归清单" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>步骤</th><th>文档</th></tr></thead><tbody><tr><td>Windows UI 回归</td><td><code>[TEST-RPT-005] windows-ui-聊天回归清单</code></td></tr><tr><td>双主题肉眼检查</td><td>FE-001 §3.4</td></tr><tr><td>可访问性手动清单</td><td>A11Y §8.1</td></tr><tr><td>响应式断点检查</td><td>FE-001 §8</td></tr><tr><td>移动端真机测试</td><td>Capacitor <code>mobile:run:android</code>，检查 44px 触控 / 16px 字号 / 滚动行为</td></tr><tr><td>桌面端窗口行为测试</td><td>无框窗口拖拽/最大化/还原/关闭，菜单快捷键</td></tr></tbody></table>
+<hr>
+<h2 id="6-已知缺口与收敛方向">6. 已知缺口与收敛方向<a class="anchor" href="#6-已知缺口与收敛方向" aria-label="锚点">#</a></h2>
+<blockquote><p>新增缺口视同违规；收敛一条划掉一条。</p></blockquote>
+<table><thead><tr><th>#</th><th>缺口</th><th>影响</th><th>收敛方向</th><th>优先级</th></tr></thead><tbody><tr><td>G1</td><td>无视觉回归/截图测试基础设施</td><td>无法自动检测视觉漂移</td><td>评估引入 Playwright 截图对比（当前用渲染冒烟 + 契约测试替代）</td><td>P2</td></tr><tr><td>G2</td><td>ai-frontend 无 vitest 配置（用默认值）</td><td>无 jsdom 环境，DOM 依赖测试无法运行</td><td>新增 <code>vitest.config.js</code> 配置 jsdom（仅对需要 DOM 的测试）</td><td>P2</td></tr><tr><td>G3</td><td>Topbar.js 组件无测试</td><td>覆盖缺口</td><td>补 <code>topbar.test.js</code> 契约测试</td><td>P2</td></tr><tr><td>G4</td><td>khyquant 前端仅有 placeholder 测试</td><td>移动端 UI 无守护</td><td>✅ 已补 <code>mobileUiCompliance.test.js</code>（M1-M8）</td><td>已收敛</td></tr><tr><td>G5</td><td>无自动化对比度检查</td><td>WCAG AA 靠手动</td><td>评估 axe-core 集成（当前用 <code>a11yContract.test.js</code> 检查 ARIA 结构）</td><td>P3</td></tr><tr><td>G6</td><td>组件库（FE-002）尚未落地</td><td>W5-W6 的全面验证依赖组件库存在</td><td>组件库落地后扩展 <code>componentContract.wiring.test.js</code></td><td>P3</td></tr><tr><td>G7</td><td>桌面端无测试</td><td>khyos-desktop UI 无守护</td><td>✅ 已补 <code>desktopUiContract.test.js</code>（D1-D10）</td><td>已收敛</td></tr><tr><td>G8</td><td>两个 Capacitor appId 冲突（<code>com.khy.quant.mobile</code> vs <code>com.khyos.companion</code>）</td><td>可能导致应用商店冲突</td><td>统一为一个 appId 或明确两个独立应用</td><td>P2</td></tr><tr><td>G9</td><td>khyos-desktop 所有 IPC handler 为 stub</td><td>桌面端功能不可用</td><td>按 ARCH-078 P1-P4 计划逐步落地</td><td>P1</td></tr></tbody></table>
+<hr>
+<h2 id="7-版本历史">7. 版本历史<a class="anchor" href="#7-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>2.0.0</td><td>2026-09-10</td><td>扩展为四端全覆盖：新增移动端不变量 M1-M8、桌面端不变量 D1-D10、移动端测试编写规范 §4.3、桌面端测试编写规范 §4.4、移动端/桌面端测试目录 §3.3-3.4、CI 流水线新增移动端/桌面端门禁、缺口 G7-G9</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os UI 方向维护；与代码冲突时以代码为准并登记 §6 缺口。</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-UI-002] 界面设计方案.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-UI-002] 界面设计方案（提案）</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-UPLOAD-001] 文件上传规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-UPLOAD-001] 文件上传规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-UI-TEST-001] UI设计验证测试规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

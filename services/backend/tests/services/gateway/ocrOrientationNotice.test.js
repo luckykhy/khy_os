@@ -5,7 +5,7 @@ const {
   computeCorrectedOrientations,
   buildOrientationNotice,
   FLAG,
-} = require('./ocrOrientationNotice');
+} = require('../../../src/services/gateway/ocrOrientationNotice.js');
 
 describe('ocrOrientationNotice', () => {
   describe('FLAG', () => {

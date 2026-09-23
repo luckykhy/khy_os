@@ -19,7 +19,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const leaf = require('../../../src/services/memoryEngine/progressLog');
+const leaf = require('../../../src/services/domain/memory/memoryEngine/progressLog.js');
 const memdir = require('../../../src/memdir/memdir');
 const paths = require('../../../src/memdir/paths');
 const dataHome = require('../../../src/utils/dataHome');

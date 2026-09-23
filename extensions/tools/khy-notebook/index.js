@@ -6,7 +6,7 @@
  * khy-notebook —— Jupyter Notebook (.ipynb) 单元格编辑。
  *
  * 本文件是拓展入口，**不是** BaseTool 子类。这是契约的要求而非风格选择：
- * [DESIGN-ARCH-069] §2.2 的禁止边写着「拓展 → L2 不走深层相对路径」，
+ * [DESIGN-TOOL-002] §2.2 的禁止边写着「拓展 → L2 不走深层相对路径」，
  * 而 `services/backend/src/tools/_baseTool` 正是 L2 深处。拓展导出纯对象，
  * 由漏斗侧的 `pluginContribResolver.activateContributedTool()` 调
  * `defineTool()` 包装成正式工具再注册 —— 拓展一行核代码都不 import。

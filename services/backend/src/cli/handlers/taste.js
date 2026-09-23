@@ -35,7 +35,7 @@
 const path = require('path');
 const { spawn } = require('child_process');
 const chalk = require('picocolors');
-const { printSuccess, printError, printInfo, printWarn } = require('../formatters');
+const { printSuccess, printError, printInfo, printWarn, padToWidth } = require('../formatters');
 
 function _verb(parsed) {
   return (parsed.subCommand || parsed.args[0] || '').toLowerCase();
@@ -126,7 +126,7 @@ async function handleTasteCommand(parsed) {
       for (const c of cats) {
         const total = c.inline + c.overflow;
         const where = c.overflow > 0 ? `${c.inline} inline + ${c.overflow} overflow` : `${c.inline} inline`;
-        console.log(`  ${chalk.cyan(c.category.padEnd(16))}  ${chalk.dim(where)}  (${total})`);
+        console.log(`  ${chalk.cyan(padToWidth(c.category, 16))}  ${chalk.dim(where)}  (${total})`);
       }
       console.log('');
       printInfo('Edit: khy taste add <cat> "<text>"');

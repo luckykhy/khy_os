@@ -32,6 +32,7 @@
  *   node scripts/archDebtScan.js --drift [--json]    # R4 抽取漂移分析（只读，退码 0）
  *   node scripts/archDebtScan.js --scc   [--json]    # 巨型环切点杠杆分析（只读，退码 0）
  *   node scripts/archDebtScan.js --god-report [--json] # 上帝组件拆分待办（只读，退码 0）
+ *   node scripts/archDebtScan.js --baseline-stale [--json] # 基线悬空检测（只读，退码 0）
  *   node scripts/archDebtScan.js --changed [--strict-warnings] # 改动文件体积分级（R2b 同样生效）
  *
  * 防呆：本工具**只读**扫描，绝不改业务代码。基线机制让 CI 只拦**新增**债务，不因存量
@@ -84,7 +85,68 @@ function rel(file) {
   return path.relative(BACKEND_ROOT, file).split(path.sep).join('/');
 }
 
-/** 提取一个文件里所有 require('...') 的字面量参数 + 行号。 */
+/**
+ * 把一个 JS 源文件里的注释区域替换为等长空白（保留换行与列位置）。
+ *
+ * 为什么必须做：`extractRequires` 是逐行正则，**分不清代码与注释**。
+ * 结果是一份「描述某个倒置」的文档注释本身被算成倒置——
+ * 实测 `domain/extensions/extensions/markdownWorkbench.js:10`，
+ * 它的存在意义正是消除这条倒置，却因为注释里引用了解法而被 R1 报出。
+ * 判据错了就要修判据，不该去改注释里的措辞（否则等于让文档为工具让路）。
+ *
+ * 覆盖：`//` 行注释、`/* … *\/` 块注释、以及字符串里的 `//`（避免把 URL 当注释）。
+ * 不做完整词法分析——对「找 require 字面量」这个用途，状态机足够了。
+ *
+ * @param {string} text
+ * @returns {string} 同长度文本，注释区间被空格填掉
+ */
+function stripComments(text) {
+  const out = text.split('');
+  let i = 0;
+  const n = text.length;
+  // state: 0=code 1=line-comment 2=block-comment 3=single-quote 4=double-quote 5=template
+  let state = 0;
+  while (i < n) {
+    const c = text[i];
+    const c2 = text[i + 1];
+    if (state === 0) {
+      if (c === '/' && c2 === '/') { state = 1; out[i] = ' '; out[i + 1] = ' '; i += 2; continue; }
+      if (c === '/' && c2 === '*') { state = 2; out[i] = ' '; out[i + 1] = ' '; i += 2; continue; }
+      if (c === "'") { state = 3; i += 1; continue; }
+      if (c === '"') { state = 4; i += 1; continue; }
+      if (c === '`') { state = 5; i += 1; continue; }
+      i += 1;
+      continue;
+    }
+    if (state === 1) { // 行注释：吃到换行为止
+      if (c === '\n') { state = 0; i += 1; continue; }
+      out[i] = ' '; i += 1; continue;
+    }
+    if (state === 2) { // 块注释
+      if (c === '*' && c2 === '/') { out[i] = ' '; out[i + 1] = ' '; state = 0; i += 2; continue; }
+      if (c !== '\n') out[i] = ' ';
+      i += 1; continue;
+    }
+    // 字符串态：只消处理转义与闭合（不把串内的 require(...) 当调用——
+    // 但保留内容不动，因为 require('x') 的字面量本身就在串里，那是语法结构不是注释）
+    if (state === 3 || state === 4) {
+      const quote = state === 3 ? "'" : '"';
+      if (c === '\\') { i += 2; continue; }
+      if (c === quote) { state = 0; i += 1; continue; }
+      if (c === '\n') { state = 0; i += 1; continue; } // 未闭合的串，容错回代码态
+      i += 1; continue;
+    }
+    if (state === 5) { // 模板串：处理转义与 ${} 内的嵌套
+      if (c === '\\') { i += 2; continue; }
+      if (c === '`') { state = 0; i += 1; continue; }
+      i += 1; continue;
+    }
+    i += 1;
+  }
+  return out.join('');
+}
+
+/** 提取一个文件里所有 require('...') 的字面量参数 + 行号（忽略注释中的伪调用）。 */
 function extractRequires(file) {
   let text;
   try {
@@ -92,14 +154,16 @@ function extractRequires(file) {
   } catch {
     return [];
   }
-  const lines = text.split('\n');
+  // 行号必须来自原文，所以先按原文切行、逐行判注释态，再在「净文本」行上跑正则。
+  const rawLines = text.split('\n');
+  const cleanLines = stripComments(text).split('\n');
   const re = /require\(\s*['"]([^'"]+)['"]\s*\)/g;
   const out = [];
-  for (let i = 0; i < lines.length; i++) {
+  for (let i = 0; i < cleanLines.length; i++) {
     let m;
     re.lastIndex = 0;
-    while ((m = re.exec(lines[i])) !== null) {
-      out.push({ spec: m[1], line: i + 1 });
+    while ((m = re.exec(cleanLines[i])) !== null) {
+      out.push({ spec: m[1], line: i + 1, raw: rawLines[i] });
     }
   }
   return out;
@@ -637,6 +701,53 @@ function loadBaseline(file = BASELINE_FILE) {
   }
 }
 
+/**
+ * 基线悬空检测（T-016 追加，2026-09-22）—— 基线里指向**已不存在路径**的条目。
+ *
+ * ## 为什么需要它（一次真实的静默失效）
+ *
+ * 域迁移（`src/services/foo.js` → `src/services/domain/<域>/…/foo.js`）时，
+ * 基线条目的 `file` 字段**不会自动跟着改**。此时：
+ *   1. 该文件在扫描结果里的**指纹变了**（`file|target` 里的 file 变了）⇒
+ *      基线里那条旧指纹**永不匹配** ⇒ `diffNew` 把它误判为**新增**；
+ *   2. 但同时，基线里那条**悬空旧条目**又永远不会被触发，于是「存量债只降不升」
+ *      的棘轮在该文件上**完全失效**——存量可以随便涨，基线看不见。
+ *
+ * 实测（2026-09-22）：基线 `layering` 38 条里 **12 条悬空**，涉及 5 个已迁入
+ * `domain/` 的文件；`new.layering` 因此恒为 22（真新增 10 + 迁移造成的假新增 12）。
+ * 这正是本扫描器**至今无法接进 CI 门**的根因——接进去就会立刻爆 12 条假红，
+ * 而维护者会误以为是「域迁移引入了 12 处新分层倒置」。
+ *
+ * ⇒ 本节把「基线诚实性」变成**可检测、可回归**的：基线条目指向不存在的文件时
+ * 显式报出（而不是静默假红/静默放行）。配合 `--update-baseline` 刷新即可自愈。
+ *
+ * 纯函数、无副作用、零 IO 之外只做 existsSync。
+ *
+ * @param {object} baseline loadBaseline() 结果
+ * @param {string} [srcRoot] 源码根（默认 BACKEND_ROOT），用于解析基线里的相对路径
+ * @returns {Array<{kind:string, file:string, reason:string}>}
+ */
+function findStaleBaselineEntries(baseline, srcRoot = BACKEND_ROOT) {
+  const out = [];
+  const kinds = ['layering', 'godFiles'];
+  for (const kind of kinds) {
+    for (const item of baseline[kind] || []) {
+      const rel = item && item.file;
+      if (!rel) continue;
+      // 基线里的路径相对 BACKEND_ROOT（archDebtScan 的工作根），非相对 src/。
+      const abs = path.join(srcRoot, rel);
+      if (!fs.existsSync(abs)) {
+        out.push({
+          kind,
+          file: rel,
+          reason: '基线条目指向的文件不存在（疑似域迁移/重命名后未刷新基线）',
+        });
+      }
+    }
+  }
+  return out;
+}
+
 /** 稳定指纹，用于「新增 vs 基线」对比。 */
 function fingerprint(kind, item) {
   if (kind === 'layering') return `${item.file}|${item.target}`; // 行号易抖动，不计入
@@ -875,13 +986,54 @@ function formatGodReport(items, threshold = GOD_FILE_LOC) {
   return L.join('\n');
 }
 
+/** --baseline-stale / 默认报告的「基线悬空」节。 */
+function formatStaleBaselineReport(items) {
+  const L = [];
+  L.push('khyos 基线悬空检测 (baseline staleness)');
+  L.push('='.repeat(48));
+  L.push(`悬空条目: ${items.length} 条`);
+  L.push('');
+  if (!items.length) {
+    L.push('✅ 基线全部指向现存文件——棘轮语义可信。');
+    return L.join('\n');
+  }
+  for (const it of items) {
+    L.push(`  ✗ [${it.kind}] ${it.file}`);
+  }
+  L.push('');
+  L.push('⚠ 危害：悬空条目**永不匹配**当前扫描指纹 ⇒ 该文件被误判为「新增」，');
+  L.push('  同时它的存量增长不再受棘轮约束（可用「假绿」与「假红」两个方向同时失真）。');
+  L.push('  典型诱因：域迁移（src/services/x.js → src/services/domain/<域>/…/x.js）后未刷新基线。');
+  L.push('  处置：核对每条确属迁移而非真删除，然后 `--update-baseline` 刷新。');
+  return L.join('\n');
+}
+
 // ── --changed 模式：改动文件体积分级（T-016 可维护性护栏）─────────────────────
 /**
  * 与 check-agent-rules.js 的 listChangedFiles() 同一取数契约：
  * GIT_BASE_REF（CI）→ staged → HEAD，core.quotePath=false 保中文路径可解析。
  * git 完全不可用时返回 **null**（与「无改动」区分）——调用方必须诚实失败，绝不假绿。
  *
- * @returns {string[]|null} 相对仓库根的改动文件路径列表；无法确定时 null
+ * **[2026-09-22 修复] 显式并入未跟踪文件**：旧取数契约里**没有** `ls-files --others`，
+ * 于是新文件（`??`）在本门禁里**完全不可见**——新建一个 2000 行的超大文件，
+ * `--changed` 会报「改动文件体积全部达标」。实测 2026-09-22：工作区有 61 个
+ * `services/backend/src/**.js` 未跟踪新文件（含 445 行的 `handlers/commit.js`）
+ * 全部逃过本门禁。这与「新增/修改的 src/**.js 超过 800 行 → error」的规则语义
+ * **直接矛盾**：拦的恰恰该是新增文件。
+ *
+ * **[2026-09-22 修复·第二处] 路径基准归一**：`git ls-files --others` 按 **cwd**
+ * （= `BACKEND_ROOT`）输出**相对 backend 的**路径（`src/cli/x.js`），而 `diff --name-only`
+ * 家族按 **仓库根**输出（`services/backend/src/cli/x.js`）。若直接混用，未跟踪文件会
+ * 因不满足调用方的 `startsWith('services/backend/')` 而被**静默跳过**——修了取数却仍假绿。
+ * 故此处统一把 others 的输出**前缀补成仓库根相对路径**（`R`），与 diff 家族对齐。
+ * `--full-name` 在旧版 git 上对 others 不生效，故用显式前缀而非依赖该选项。
+ *
+ * 注意未跟踪文件**只在「无 staged / 无 HEAD diff」时才需要补**：正常提交流里
+ * 新文件会先被 `git add`（进 `--cached`），此时它已在集合里，补一次是幂等去重。
+ * 三道取数按优先级短路返回，故把 others 并入**首个非空结果**而非单独一支，
+ * 避免改变「GIT_BASE_REF 优先」的既有语义。
+ *
+ * @returns {string[]|null} **相对仓库根**的改动文件路径列表；无法确定时 null
  */
 function listChangedFiles() {
   const git = 'git -c core.quotePath=false';
@@ -894,16 +1046,56 @@ function listChangedFiles() {
     }
   };
   const split = (out) => out.split('\n').map((s) => s.trim()).filter(Boolean);
+  /**
+   * BACKEND_ROOT 相对仓库根的路径前缀（如 `services/backend/`），**带尾斜杠**。
+   * 用 git 自己算（`ls-files` 的输出基准就是仓库根），不猜目录深度：
+   * `git rev-parse --show-prefix` 在子目录里返回该目录相对仓库根的前缀，正是所需。
+   * 取不到时（不在 git 工作树、git 不可用）退化为空串 —— 此时 others 的输出
+   * 保持原样，宁可漏补前缀也不拼错路径（拼错会产生「不存在的长路径」）。
+   */
+  const computeRepoPrefix = () => {
+    const out = run(`${git} rev-parse --show-prefix`);
+    return out ? out.replace(/\\/g, '/') : '';
+  };
+  const repoPrefix = computeRepoPrefix();
+  const toRepoRel = (p) => {
+    const norm = p.replace(/\\/g, '/');
+    if (!repoPrefix) return norm;
+    // git 在 BACKEND_ROOT 下输出的是相对 backend 的路径；若已带前缀则原样返回（幂等）。
+    if (norm.startsWith(repoPrefix)) return norm;
+    return repoPrefix + norm;
+  };
+  /** 未跟踪文件（尊重 .gitignore：--exclude-standard 不把被忽略文件当改动）。 */
+  const others = () => {
+    const out = run(`${git} ls-files --others --exclude-standard`);
+    return out ? split(out).map(toRepoRel) : [];
+  };
   const baseRef = String(process.env.GIT_BASE_REF || '').trim();
   if (baseRef) {
     const out = run(`${git} diff --name-only --diff-filter=ACMR ${baseRef}...HEAD`);
-    if (out) return split(out);
+    if (out) return mergeUnique(split(out), others());
   }
   const staged = run(`${git} diff --name-only --cached --diff-filter=ACMR`);
-  if (staged) return split(staged);
+  if (staged) return mergeUnique(split(staged), others());
   const head = run(`${git} diff --name-only --diff-filter=ACMR HEAD`);
-  if (head) return split(head);
+  if (head) return mergeUnique(split(head), others());
+  // 工作区完全干净但存在未跟踪文件时，也应如实返回它们（而非 null=无法确定）。
+  const untracked = others();
+  if (untracked.length) return untracked;
   return null;
+}
+
+/** 有序去重合并（保持 first 的顺序，再追加 b 中未出现者）。 */
+function mergeUnique(a, b) {
+  const seen = new Set(a);
+  const out = [...a];
+  for (const x of b) {
+    if (!seen.has(x)) {
+      seen.add(x);
+      out.push(x);
+    }
+  }
+  return out;
 }
 
 /** --changed 模式人类可读报告。 */
@@ -1004,6 +1196,20 @@ function main(argv = process.argv.slice(2)) {
     return 0;
   }
 
+  // --baseline-stale：基线悬空检测（只读，退码 0）。用于回答「基线还诚不诚实」。
+  // 有悬空条目时**显式报出并给出刷新指引**，不静默假绿、也不阻断（刷新前它必然存在）。
+  if (argv.includes('--baseline-stale')) {
+    const stale = findStaleBaselineEntries(loadBaseline());
+    if (argv.includes('--json')) {
+      process.stdout.write(
+        JSON.stringify({ baselineStale: stale, count: stale.length }, null, 2) + '\n'
+      );
+    } else {
+      process.stdout.write(formatStaleBaselineReport(stale) + '\n');
+    }
+    return 0;
+  }
+
   // --changed：改动文件体积分级（有退码门禁，故置于只读子命令之后、默认全量扫描之前）。
   if (argv.includes('--changed')) {
     return runChangedGate(argv);
@@ -1027,15 +1233,32 @@ function main(argv = process.argv.slice(2)) {
 
   const baseline = loadBaseline();
   const neu = computeNew(result, baseline);
+  const stale = findStaleBaselineEntries(baseline);
 
   if (argv.includes('--json')) {
-    process.stdout.write(JSON.stringify({ result, new: neu }, null, 2) + '\n');
+    process.stdout.write(
+      JSON.stringify({ result, new: neu, baselineStale: stale }, null, 2) + '\n'
+    );
   } else {
     process.stdout.write(formatReport(result, neu) + '\n');
+    if (stale.length) {
+      // 人类可读报告里**必须**附带，否则维护者看到的「新增 N 处」会含假新增而不自知。
+      process.stdout.write('\n' + formatStaleBaselineReport(stale) + '\n');
+    }
   }
 
   const newCount =
     neu.layering.length + neu.godFiles.length + neu.godGrowth.length + neu.cycles.length;
+  // ⚠ 悬空基线**只报不拦**（gate 语义）：它是「基线需要刷新」的信号，不是代码缺陷。
+  // 但若基线悬空且同时有新增项，新增计数里可能混有「域迁移造成的假新增」，
+  // 故 stderr 明确提示，避免维护者按字面读数归因。
+  if (stale.length && newCount > 0) {
+    process.stderr.write(
+      `⚠ 基线有 ${stale.length} 条悬空条目；上方「新增」计数可能含假新增（域迁移所致）。\n` +
+        '  请先跑 `node services/backend/scripts/archDebtScan.js --baseline-stale` 核对，\n' +
+        '  再决定是否 `--update-baseline` 刷新基线。\n'
+    );
+  }
   return newCount > 0 ? 1 : 0;
 }
 
@@ -1046,6 +1269,7 @@ if (require.main === module) {
 module.exports = {
   listJsFiles,
   extractRequires,
+  stripComments,
   scanLayering,
   scanGodFiles,
   scanGodGrowth,
@@ -1062,6 +1286,8 @@ module.exports = {
   analyzeGiantScc,
   scanAll,
   loadBaseline,
+  findStaleBaselineEntries,
+  mergeUnique,
   diffNew,
   diffNewCycles,
   computeNew,
@@ -1071,6 +1297,7 @@ module.exports = {
   formatDriftReport,
   formatSccReport,
   formatGodReport,
+  formatStaleBaselineReport,
   formatChangedReport,
   main,
   SRC_DIR,

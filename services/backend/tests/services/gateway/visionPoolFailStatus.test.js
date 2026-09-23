@@ -1,12 +1,12 @@
 'use strict';
 
-jest.mock('../flagRegistry', () => ({
+jest.mock('../../../src/services/flagRegistry.js', () => ({
   isFlagEnabled: jest.fn(),
   isRegistryEnabled: jest.fn()
 }));
 
 const { isVisionPoolFailStatusHumanizeEnabled, buildVisionPoolFailStatus } = require('../../../src/services/gateway/visionPoolFailStatus');
-const { isFlagEnabled, isRegistryEnabled } = require('../flagRegistry');
+const { isFlagEnabled, isRegistryEnabled } = require('../../../src/services/flagRegistry.js');
 
 describe('visionPoolFailStatus', () => {
   beforeEach(() => {

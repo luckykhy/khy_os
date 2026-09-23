@@ -18,6 +18,11 @@
  */
 
 const { printLines } = require('../bulkLines');
+// Display-width-aware pad (SSOT shared with printTable's column alignment). The
+// relay `list` name column must be padded by display width, not String.padEnd's
+// UTF-16 length — CJK service names would otherwise render 2× wider and shove the
+// url column right into a ragged staircase (BUG-118).
+const { padToWidth } = require('../formatters');
 const renderer = () => require('../aiRenderer');
 
 function createClipboardCommands(deps) {
@@ -95,7 +100,7 @@ function createClipboardCommands(deps) {
       for (const [key, svc] of Object.entries(services)) {
         const marker = key === current ? c.green(' ← 当前') : '';
         console.log(
-          `  ${c.cyan(key.padEnd(10))} ${svc.name.padEnd(20)} ${c.dim(svc.url)}${marker}`
+          `  ${c.cyan(key.padEnd(10))} ${padToWidth(svc.name, 20)} ${c.dim(svc.url)}${marker}`
         );
       }
     } else if (subCmd.startsWith('set ') || subCmd.startsWith('切换 ')) {

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for the s18 fix: worktree isolation â€?binding a task to its own git
+ * Tests for the s18 fix: worktree isolation â€”binding a task to its own git
  * worktree so parallel teammates work in separate directories, never clobbering
  * the same file.
  *
@@ -34,7 +34,7 @@ afterEach(() => {
   bus._resetForTest();
 });
 
-describe('s18 â€?validateName path-traversal hardening', () => {
+describe('s18 â€”validateName path-traversal hardening', () => {
   test('accepts normal and nested names', () => {
     for (const ok of ['feature-login', 'a.b_c-1', 'feature/login', wt.generateWorktreeName()]) {
       expect(wt.validateName(ok)).toBe(true);
@@ -48,7 +48,7 @@ describe('s18 â€?validateName path-traversal hardening', () => {
   });
 });
 
-describe('s18 â€?_taskStore.bindWorktree (binding never changes status)', () => {
+describe('s18 â€”_taskStore.bindWorktree (binding never changes status)', () => {
   test('writes the worktree field and leaves status pending', () => {
     const id = freshId();
     taskStore.add({ id, subject: 'refactor auth', status: 'pending' });
@@ -88,7 +88,7 @@ describe('s18 â€?_taskStore.bindWorktree (binding never changes status)', () => 
   });
 });
 
-describe('s18 â€?teammateBus.autonomousPoll cwd-switch bridge', () => {
+describe('s18 â€”teammateBus.autonomousPoll cwd-switch bridge', () => {
   test('claiming a worktree-bound task surfaces its absolute path', () => {
     bus.setTeammateRunner(() => new Promise(() => {}));
     const t = bus.createTeammate({ name: 'wt-worker', task: 'work the board' });
@@ -120,7 +120,7 @@ describe('s18 â€?teammateBus.autonomousPoll cwd-switch bridge', () => {
 const gitOk = spawnSync('git', ['--version'], { encoding: 'utf-8' }).status === 0;
 const describeGit = gitOk ? describe : describe.skip;
 
-describeGit('s18 â€?worktree lifecycle + events.jsonl audit (temp repo)', () => {
+describeGit('s18 â€”worktree lifecycle + events.jsonl audit (temp repo)', () => {
   let repo;
 
   const git = (args) => spawnSync('git', args, { cwd: repo, encoding: 'utf-8' });

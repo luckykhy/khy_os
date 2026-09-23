@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: MEMORY.md -->
+<title>khy-os 项目长期记忆 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>.workbuddy<span class="sep">›</span>memory<span class="sep">›</span>khy-os 项目长期记忆</div>
+      <header class="hero reveal"><h1>khy-os 项目长期记忆</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-项目长期记忆">khy-os 项目长期记忆</a></li><li class="lvl-2"><a href="#本机环境硬约束-每次开工都适用">本机环境硬约束（每次开工都适用）</a></li><li class="lvl-2"><a href="#ai-网关与后端-ai-两层入口-design-arch-136">AI 网关与后端 AI 两层入口（[DESIGN-ARCH-136]）</a></li><li class="lvl-2"><a href="#tui-design-arch-132-design-arch-135">TUI（[DESIGN-ARCH-132]/[DESIGN-ARCH-135]）</a></li><li class="lvl-2"><a href="#软著-真源见交付包与规范文档">软著（真源见交付包与规范文档）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-项目长期记忆">khy-os 项目长期记忆<a class="anchor" href="#khy-os-项目长期记忆" aria-label="锚点">#</a></h1>
+<h2 id="本机环境硬约束-每次开工都适用">本机环境硬约束（每次开工都适用）<a class="anchor" href="#本机环境硬约束-每次开工都适用" aria-label="锚点">#</a></h2>
+<ul><li>Git Bash 被 shim 破坏（mkdir/ls/echo/head/tail/grep/cat/dirname 全 not found，<strong>cd 也坏</strong>）；PowerShell stdout 恒空。</li></ul>
+<p>→ 取值唯一路线：临时 node 脚本（spawnSync 用 cwd 选项，不靠 cd）+ fs.writeFileSync 落盘 + Read 读。<strong>禁 heredoc</strong>。</p>
+<ul><li>受管 Node：<code>D:/WorkBuddyData/.workbuddy/binaries/node/versions/22.22.2-3/node.exe</code></li><li>git 绝对路径：<code>D:\WorkBuddyData\.workbuddy\binaries\PortableGit\versions\1.2.0\cmd\git.exe</code>（node 子进程 PATH 无 git）</li><li>本仓 git 对象库物理损坏：<code>log --since</code>/<code>rev-list</code>/<code>merge-base</code>/<code>git archive</code> 失败；<strong>单文件 <code>git show HEAD:&lt;path&gt;</code> 与 <code>git diff</code> 可用</strong>。</li><li>探针放 <code>&lt;repo&gt;/.khy/tmp/</code>（已 gitignore），用完 Remove-Item 清；输出文件名不含 <code>:</code>（NTFS ADS）。Write 报 &quot;has not been read yet&quot; 直接换新名。</li><li>Grep 必须带 path 限定否则 timeout；含中文路径 Glob 不可靠 → node 枚举。cache：<code>D:/WorkBuddyData/.khyos/cache/</code>。</li><li>文档编号：枚举目录文件名取 max+1，<strong>绝不读 00_INDEX</strong>（滞后撞号）；方括号路径 Move-Item 用 -LiteralPath。</li><li>新增 <code>*.test.js</code> 一律 <code>require('node:test')</code>（jest 风格在 CI node --test 下落地即红；别往 jest 文件追加 node:test 用例，另建文件）。CI 全量扫 <code>services/backend/tests/**</code>。</li><li>基线数字必须实测（<code># tests/# pass/# fail</code>），不许估。守卫报红先归因再认账（counts 对比 → ERROR 指向 → porcelain 归属；token 集合差+算术闭合）。</li></ul>
+<h2 id="ai-网关与后端-ai-两层入口-design-arch-136">AI 网关与后端 AI 两层入口（[DESIGN-ARCH-136]）<a class="anchor" href="#ai-网关与后端-ai-两层入口-design-arch-136" aria-label="锚点">#</a></h2>
+<ul><li>内层 LLM：<code>cli/ai.js</code> <code>chat()</code>（aiChatCore.js:317）只返回 toolUseBlocks 不执行工具；外层循环 <code>runToolUseLoop</code>（toolUseLoopCore.js）派发工具。<strong>cwd 必须放 chatOpts.cwd</strong>；<code>gateway.generate()</code> 纯文本入口（挂工具=静默丢弃）；<code>onControlRequest</code> 传 undefined 桩 = fail-closed deny 写。</li><li><code>cliFailureEnvelope.js</code> 三处判据同源（<code>a.success===false</code>）：attempts 无 success:false ⇒ 三处同失效 → NONE 兜底（编造因果）。<code>aiChatCore.js:3120</code> 重试结果无条件覆盖首次 ⇒ 好诊断被覆盖；修法「披露必留、诊断择优」。</li><li><code>services/backend/.env</code> 不受 git 跟踪；<code>GATEWAY_PREFERRED_*</code> 钉选残留致同一 bug <strong>复发 5 次</strong>。改值不改机制 = 必复发。</li><li>复现：services/backend 下 <code>node --test tests/gateway/&lt;file&gt;.test.js</code>。</li></ul>
+<h2 id="tui-design-arch-132-design-arch-135">TUI（[DESIGN-ARCH-132]/[DESIGN-ARCH-135]）<a class="anchor" href="#tui-design-arch-132-design-arch-135" aria-label="锚点">#</a></h2>
+<ul><li><code>_chatState.messages</code> 是模型上下文真源；<code>conversationMessages</code> 是压缩视图唯一出口（TUI 直调 loop 不读 = 白做）。</li><li><strong>中文关键词正则禁 <code>\b</code></strong>（永不匹配）。续跑策略真源 <code>agenticHarnessService.continuation</code>；压缩阈值真源 <code>contextRouter.js</code>（别写 ×0.7 字面量）。</li><li>选区漂移一期已落地（<code>selection.js</code> relocate*，指纹=归一化行原文，17 绿）；待二期 <code>App.js:1560</code> 接线、三期行投影。选区基线 <strong>57</strong>。App.js 并行会话共编，动前确认。</li><li>TUI 叶子纪律：零 IO、绝不抛、<strong>绝不读 env</strong>、不改入参、外部数据调用方传。守卫 <code>check-leaf-contract.js</code>（须带文件参数）。</li><li>env 门预算棘轮 MAX_GATES=220 只降不升；「让功能变正确」不加 env 门（用可选参数 = 回滚能力 + 保 B-P1 豁免）。</li></ul>
+<h2 id="软著-真源见交付包与规范文档">软著（真源见交付包与规范文档）<a class="anchor" href="#软著-真源见交付包与规范文档" aria-label="锚点">#</a></h2>
+<ul><li>真源 <code>[DESIGN-IP-001]</code>（PROCESS-010）；执行器 <code>check-copyright-readiness.js</code>（S1 只记录）。登记真源 COPYRIGHT.json / COPYRIGHT-MATERIALS.json。</li><li>顺序铁律：<strong>定名 → 全局改名 → 截图 → 出材料</strong>。三红线：不改 git 历史（88 条 AI 署名如实申报）、不为好看重写代码、不跳过定名。</li><li>交付根：<code>D:\Portable\软著交付\Khy-OS</code>（<strong>仓库外</strong>）。<code>_整档/</code>=隔离归档（只搬不删+README）。浏览器档案严禁落交付包：无头浏览器必须 <code>--user-data-dir</code> 指 <code>D:\WorkBuddyData\.workbuddy\tmp\softreg-prof</code>。</li><li><code>--page-chunks 55</code>：换名/版本后重渲染页数恒 30×56，无需重校准。重出：<code>verify_material.py --name --version</code>。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../.workbuddy/memory/automations/ba189d58-2cc6-4322-8702-378e6c04abc1/memory.html"><div class="dir">← 上一篇</div><div class="ttl">Automation memory — 每日代码审查（khy-os）</div></a><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__=".workbuddy/memory/MEMORY.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

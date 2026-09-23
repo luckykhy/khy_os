@@ -1,9 +1,22 @@
 'use strict';
 const { spawn } = require('child_process');
 const cliTool = require('../../../src/services/gateway/adapters/cliToolAdapter');
+const assert = require('node:assert');
 const { _wireChildAbort, _isCliToolAbortEnabled } = cliTool.__test__;
-// ── 门控:默认 on,�?off/false/0/no �?─────────────────────────────────────
-// ── 功能�?abort signal 触发 �?真子进程被杀 + onAbort 回调收到 err ───────────
+// On Windows there are no POSIX signals: safeKill uses `taskkill /T /F`, so the
+// child's exit event carries code=1, signal=null. On Unix the wired kill is
+// SIGKILL. Assert the platform-appropriate forced-death shape.
+const isWin = process.platform === 'win32';
+const expectForcedDeath = ({ code, signal }) => {
+  if (isWin) {
+    expect(signal).toBeNull();
+    expect(code).not.toBeNull();
+  } else {
+    expect(signal).toBe('SIGKILL');
+  }
+};
+// ── 门控:默认 on,off/false/0/no 关 ──────────────────────────────────────
+// ── 功能:abort signal 触发 → 真子进程被杀 + onAbort 回调收到 err ───────────
 
 describe('Cli Tool Abort Wiring', () => {
   test('_isCliToolAbortEnabled: default on', async () => {
@@ -35,7 +48,7 @@ describe('Cli Tool Abort Wiring', () => {
   });
 
   test('_wireChildAbort: aborting the signal kills the child and fires onAbort', async () => {
-      // 一个会 hang 的子进程(sleep 长时�?,模拟卡住�?CLI 工具�?
+      // 一个会 hang 的子进程(sleep 长时�?,模拟卡住�?CLI 工具�?
       const child = spawn(process.execPath, ['-e', 'setTimeout(()=>{}, 60000)'], {
         stdio: ['ignore', 'ignore', 'ignore'],
       });
@@ -45,17 +58,17 @@ describe('Cli Tool Abort Wiring', () => {
       let abortErr = null;
       const detach = _wireChildAbort(child, ac.signal, (err) => { abortErr = err; });
     
-      // 触发 abort �?�?SIGKILL 子进程�?
+      // 触发 abort �?�?SIGKILL 子进程�?
       ac.abort('user pressed Esc');
     
-      const { signal } = await exited;
-      expect(signal).toBe('SIGKILL', 'child should be killed with SIGKILL');
+      const { code, signal } = await exited;
+      expectForcedDeath({ code, signal });
       expect(abortErr instanceof Error).toBeTruthy();
-      expect(/aborted/.test(abortErr.message).toBeTruthy());
+      expect(/aborted/.test(abortErr.message)).toBeTruthy();
       detach();
   });
 
-  test('_wireChildAbort: gate off �?returns no-op detach, child survives abort', async () => {
+  test('_wireChildAbort: gate off �?returns no-op detach, child survives abort', async () => {
       const saved = process.env.KHY_CLITOOL_ABORT;
       process.env.KHY_CLITOOL_ABORT = 'off';
       const child = spawn(process.execPath, ['-e', 'setTimeout(()=>{}, 2000)'], {
@@ -67,7 +80,7 @@ describe('Cli Tool Abort Wiring', () => {
         let fired = false;
         const detach = _wireChildAbort(child, ac.signal, () => { fired = true; });
         ac.abort();
-        // 门关:不挂监听 �?不杀子进�?onAbort 不触发。给一点时间证明没被杀�?
+        // 门关:不挂监听 �?不杀子进�?onAbort 不触发。给一点时间证明没被杀�?
         await new Promise((r) => setTimeout(r, 100));
         expect(fired).toBe(false, 'onAbort must not fire when gate is off');
         expect(child.killed).toBe(false, 'child must not be killed when gate is off');
@@ -80,7 +93,7 @@ describe('Cli Tool Abort Wiring', () => {
       }
   });
 
-  test('_wireChildAbort: missing signal �?no-op detach, no throw', async () => {
+  test('_wireChildAbort: missing signal �?no-op detach, no throw', async () => {
       const child = spawn(process.execPath, ['-e', ''], { stdio: ['ignore', 'ignore', 'ignore'] });
       assert.doesNotThrow(() => {
         const detach = _wireChildAbort(child, null, () => {});
@@ -98,8 +111,8 @@ describe('Cli Tool Abort Wiring', () => {
       ac.abort('pre-aborted');
       let abortErr = null;
       _wireChildAbort(child, ac.signal, (err) => { abortErr = err; });
-      const { signal } = await exited;
-      expect(signal).toBe('SIGKILL');
+      const { code, signal } = await exited;
+      expectForcedDeath({ code, signal });
       expect(abortErr instanceof Error).toBeTruthy();
   });
 

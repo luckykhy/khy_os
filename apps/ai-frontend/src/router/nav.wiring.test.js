@@ -157,13 +157,26 @@ test('every NAV admin page is gated by the NAV-derived prefix rule', () => {
       `NAV admin page ${path} must be a real route (guard would bounce it to 404)`
     );
   }
-  // Detail routes that are admin-only but not sidebar entries are declared once
-  // in EXTRA_ADMIN_PATHS rather than scattered as markers.
-  assert.match(
-    routerSrc,
-    /EXTRA_ADMIN_PATHS\s*=\s*\[[\s\S]*?'\/agents'[\s\S]*?'\/traffic'[\s\S]*?\]/,
-    'detail-only admin routes must be declared in EXTRA_ADMIN_PATHS'
+  // Since the shell split, every admin page lives in the /admin namespace and
+  // the namespace itself is the gate (isAdminPath). A NAV admin entry outside
+  // it would silently escape that gate — fail loudly here instead.
+  const outside = navAdminPaths.filter((p) => !p.startsWith('/admin'));
+  assert.deepEqual(
+    outside,
+    [],
+    `NAV admin pages must live under /admin: ${outside.join(', ')}`
   );
+  // Detail routes nested under an admin sidebar entry (eval tasks/runs, channel
+  // detail) inherit the gate by the /admin prefix — spot-check the deepest ones.
+  for (const detail of [
+    '/admin/gui-eval/runs/:id',
+    '/admin/web-frontend-eval/tasks/:id',
+    '/admin/channels/:id',
+    '/admin/agents',
+    '/admin/traffic',
+  ]) {
+    assert.ok(routePaths.has(detail), `admin detail route ${detail} must exist`);
+  }
 });
 
 test('every NAV page is routable', () => {
@@ -184,6 +197,16 @@ test('legacy admin paths forward to their /admin/* homes', () => {
     ['/wx-binding', '/admin/settings/wx'],
     ['/my-gateway', '/keys'],
     ['/admin/channel-apis', '/admin/channels'],
+    // Bare admin paths moved under /admin when the shells were split.
+    ['/assets-customers', '/admin/assets-customers'],
+    ['/payments', '/admin/payments'],
+    ['/usage', '/admin/usage'],
+    ['/pricing', '/admin/pricing'],
+    ['/monitor', '/admin/monitor'],
+    ['/traffic', '/admin/traffic'],
+    ['/agents', '/admin/agents'],
+    ['/gui-eval', '/admin/gui-eval'],
+    ['/web-frontend-eval', '/admin/web-frontend-eval'],
   ];
   for (const [from, to] of LEGACY) {
     assert.match(
@@ -276,54 +299,52 @@ test('the console group is gated by role, not by probe state', () => {
   assert.ok(admin.length > user.length);
 });
 
-test('daemon-only entries are hidden only when their namespace is unavailable', () => {
-  const paths = pathsOf(visibleNavGroups(USER));
-  assert.ok(paths.includes('/workflows'), 'fail-open: shown before the probe settles');
-  assert.ok(paths.includes('/marketplace'));
+test('no sidebar entry is capability-gated — declared pages never auto-hide', () => {
+  // Regression guard for the disappearing 工作流/插件市场: entries used to carry
+  // a `daemon` namespace flag that hid them whenever the ai-backend daemon was
+  // unreachable, so the console read as "feature deleted". The flag is banned;
+  // an unavailable backend is reported by the page itself, not by navigation.
+  const flagged = NAV.flatMap((g) => g.items.filter((i) => i.daemon).map((i) => i.path));
+  assert.deepEqual(flagged, [], 'no NAV entry may carry a daemon/capability flag');
 
-  const hidden = pathsOf(
-    visibleNavGroups(USER, { workflow: false, marketplace: false })
-  );
-  assert.ok(!hidden.includes('/workflows'), '/workflows hides when the daemon is absent');
-  assert.ok(!hidden.includes('/marketplace'), '/marketplace hides too');
-  assert.ok(hidden.includes('/chat'), 'unrelated entries are unaffected');
-  assert.ok(
-    hidden.includes('/proxies'),
-    '/proxies is mixed (subscriptions are monolith, egress self-degrades) and stays visible'
+  for (const state of [{}, { workflow: false, marketplace: false }]) {
+    const paths = pathsOf(visibleNavGroups(USER, state));
+    assert.ok(paths.includes('/workflows'), '/workflows stays visible regardless of backend state');
+    assert.ok(paths.includes('/marketplace'), '/marketplace stays visible too');
+    assert.ok(paths.includes('/chat'), 'unrelated entries are unaffected');
+  }
+});
+
+test('the sidebar is a pure function of NAV + role (no probe gate)', () => {
+  // The daemon capability probe was removed with the hiding behaviour; the shell
+  // must not reintroduce a backend-availability filter on the menu.
+  assert.throws(() => read('api/daemonProbe.js'), 'daemonProbe.js should be gone');
+  const shell = read('layouts/AppShell.vue');
+  assert.doesNotMatch(shell, /daemonProbe|probeDaemonNamespaces/, 'AppShell must not probe');
+  assert.match(
+    shell,
+    /visibleNavGroups\(userStore\.user, \{\}, \{ scope: props\.scope \}\)/,
+    'the sidebar must render straight from NAV + role'
   );
 });
 
-test('NAV declares the namespace each hideable entry depends on', () => {
-  const flagged = NAV.flatMap((g) =>
-    g.items.filter((i) => i.daemon).map((i) => [i.path, i.daemon])
-  );
-  assert.deepEqual(
-    flagged,
-    [
-      ['/workflows', 'workflow'],
-      ['/marketplace', 'marketplace'],
-    ],
-    'only the two fully-daemon entries may be flagged'
-  );
-});
+// ---------- shell split: user console vs admin console ----------
 
-test('the probe drives the sidebar and fails open on ambiguity', () => {
-  const probe = read('api/daemonProbe.js');
-  assert.match(probe, /workflow:\s*'\/api\/workflow'/, 'probe covers /api/workflow');
-  assert.match(probe, /marketplace:\s*'\/api\/marketplace'/, 'probe covers /api/marketplace');
-  assert.match(probe, /silent:\s*true/, 'the probe must not raise a toast');
-  assert.match(
-    probe,
-    /status !== 404 && status !== 405/,
-    'only a definite 404/405 hides an entry — 5xx and network errors stay visible'
-  );
-  assert.match(probe, /SESSION_KEY = 'khy_ai_daemon_probe'/, 'results are cached per session');
-
-  const layout = read('views/Layout.vue');
-  assert.match(layout,   /from\s+'@\/api\/daemonProbe'/ ,   'Layout must probe');
-  assert.match(
-    layout,
-    /visibleNavGroups\(userStore\.user, daemonCaps\)/,
-    'the sidebar must filter on the probe result'
-  );
+test('the two shells render disjoint NAV halves, even for an admin', () => {
+  for (const who of [ADMIN, USER]) {
+    const userShell = visibleNavGroups(who, {}, { scope: 'user' });
+    const adminShell = visibleNavGroups(who, {}, { scope: 'admin' });
+    assert.ok(
+      !userShell.some((g) => g.label === '管理控制台'),
+      'the user shell never renders the console group'
+    );
+    assert.ok(
+      !adminShell.some((g) => g.label === '用户中心'),
+      'the admin shell never renders the user group'
+    );
+  }
+  // An admin still gets the user half in the user shell (admin is also a user),
+  // and both halves in the unscoped fallback.
+  assert.ok(visibleNavGroups(ADMIN, {}, { scope: 'user' }).length > 0);
+  assert.ok(visibleNavGroups(ADMIN).length > visibleNavGroups(USER).length);
 });

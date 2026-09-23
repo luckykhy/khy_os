@@ -57,6 +57,26 @@ _describe('truncateToWidth (CJK/emoji regression)', () => {
     assert.ok(displayWidth(out) <= 20, `width ${displayWidth(out)} > 20`);
     _expect(out).toMatch(/\.\.\.$/);
   });
+
+  // BUG-98: Extended-A emoji (U+1FA70–U+1FAFF) render double-width and are
+  // counted as 2 by string-width, but formatters' `_isWideCodePoint` table
+  // stopped at 0x1f9ff. truncateToWidth guarded with displayWidth yet truncated
+  // with that narrower table, so a modern emoji slipped through under-truncated
+  // and the emitted line's real width EXCEEDED maxWidth (→ terminal wrap →
+  // +1 frame row). Now the loop measures per code point with displayWidth.
+  _test('Extended-A emoji stay within maxWidth (BUG-98)', () => {
+    const EXT_A = '\u{1FA91}'; // 🪑 chair, U+1FA91 > 0x1f9ff
+    const s = EXT_A + EXT_A + 'abc'; // real display width 7
+    for (const w of [3, 4, 5, 6, 7, 10]) {
+      const out = truncateToWidth(s, w);
+      assert.ok(
+        displayWidth(out) <= w,
+        `width ${displayWidth(out)} exceeds maxWidth ${w} for ${JSON.stringify(out)}`
+      );
+    }
+    // pre-fix this returned "\u{1FA91}\u{1FA91}..." (real width 7) — overshoot.
+    assert.ok(displayWidth(truncateToWidth(s, 5)) <= 5);
+  });
 });
 
 /* ── truncateWidth: budget mode (ellipsis inside the budget) ────────────── */

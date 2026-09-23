@@ -28,14 +28,10 @@ const path = require('path');
 const {
   checkCryptoSuiteCompat,
 } = require('../lib/cryptoSuiteCompat');
+const { opsDocPath, opsDocRelPath } = require('../lib/docsPaths');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const DOC_PATH = path.join(
-  ROOT,
-  'docs',
-  '07_OPS_运维',
-  '[OPS-MAN-110] 还原解密套件可执行性对账.md'
-);
+const DOC_PATH = opsDocPath('[OPS-MAN-110] 还原解密套件可执行性对账.md');
 const NPM_PKG_NAME = '@khy-os/khy-os';
 const PIP_PKG_NAME = 'khy-os';
 
@@ -123,7 +119,7 @@ function runCheckCrypto(opts = {}) {
   out += `  ${C.bold}目录：${C.reset}${destDir}\n`;
   out += `  ${C.dim}判据：${verdict.reason}${C.reset}\n`;
   out += `\n${C.dim}诚实边界：套件陌生 / 材料残缺一律拒绝放行，绝不让它走到解密再报成假「口令错误」；只看 algo/kdf 与材料存在性，绝不碰密钥。${C.reset}\n`;
-  out += `${C.dim}详情见：docs/07_OPS_运维/[OPS-MAN-110] 还原解密套件可执行性对账.md${C.reset}\n`;
+  out += `${C.dim}详情见：${opsDocRelPath('[OPS-MAN-110] 还原解密套件可执行性对账.md')}${C.reset}\n`;
   process.stdout.write(out);
   return verdict.ok ? 0 : 2;
 }

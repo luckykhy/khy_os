@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: README.md -->
+<title>GitHub / Gitee 双仓同步 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>scripts<span class="sep">›</span>sync<span class="sep">›</span>GitHub / Gitee 双仓同步</div>
+      <header class="hero reveal"><h1>GitHub / Gitee 双仓同步</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#github-gitee-双仓同步">GitHub / Gitee 双仓同步</a></li><li class="lvl-2"><a href="#本机提交后自动同步">本机提交后自动同步</a></li><li class="lvl-2"><a href="#断网-令牌失效-本地留账-恢复后补推">断网 / 令牌失效：本地留账，恢复后补推</a></li><li class="lvl-2"><a href="#github-actions-兜底">GitHub Actions 兜底</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="github-gitee-双仓同步">GitHub / Gitee 双仓同步<a class="anchor" href="#github-gitee-双仓同步" aria-label="锚点">#</a></h1>
+<h2 id="本机提交后自动同步">本机提交后自动同步<a class="anchor" href="#本机提交后自动同步" aria-label="锚点">#</a></h2>
+<p>安装受管 hook：</p>
+<pre><code class="language-powershell">node scripts/lib/ext<span class="hljs-literal">-run</span>.js khy<span class="hljs-literal">-installer</span> hooks</code></pre>
+<p>为当前仓库配置 Gitee 远端（地址只保存仓库 URL，不保存令牌）：</p>
+<pre><code class="language-powershell">git remote add gitee https://gitee.com/OWNER/REPOSITORY.git</code></pre>
+<p>令牌交给 Git Credential Manager 保存。首次推送时按提示输入 Gitee 用户名和令牌；也可以使用 SSH 远端：</p>
+<pre><code class="language-powershell">git remote <span class="hljs-built_in">set-url</span> gitee git@gitee.com:OWNER/REPOSITORY.git</code></pre>
+<p>hook 会依次推送 <code>origin</code> 和 <code>gitee</code>，任一远端失败都保留本地提交，并把这次欠账记进补推队列（见下节）。</p>
+<h2 id="断网-令牌失效-本地留账-恢复后补推">断网 / 令牌失效：本地留账，恢复后补推<a class="anchor" href="#断网-令牌失效-本地留账-恢复后补推" aria-label="锚点">#</a></h2>
+<p><code>post-commit</code> hook 里的推送必然会撞上断网和令牌过期。失败<strong>不只是打一行警告</strong>，而是写进<br><code>.khy/sync/mirror-queue.json</code>（在 <code>.khy/</code>，不入库），下一次提交或一次手动 retry 会自动补齐。</p>
+<pre><code class="language-powershell">npm run sync:mirrors           <span class="hljs-comment"># 补推队列 + 推当前分支（手动等价于 hook）</span>
+npm run sync:mirrors:retry     <span class="hljs-comment"># 只补推队列：网络恢复、令牌更新后执行这一条</span>
+npm run sync:mirrors:status    <span class="hljs-comment"># 只看欠账，不发起任何推送（加 --json 取机器可读输出）</span></code></pre>
+<p>失败被分成四类，决定「能不能自动重试」：</p>
+<table><thead><tr><th>种类</th><th>触发</th><th>行为</th></tr></thead><tbody><tr><td><code>network</code></td><td>域名解析失败、连接超时/重置、TLS 握手失败、RPC 中断</td><td>记账；下次提交或 retry 自动重推</td></tr><tr><td><code>auth</code></td><td>认证失败、401/403、令牌过期或被吊销、终端提示被禁用</td><td>记账；<strong>更新令牌后</strong> retry 才会成功</td></tr><tr><td><code>diverged</code></td><td><code>non-fast-forward</code>、远端已领先</td><td>记账但不盲目重放；<code>git fetch &amp;&amp; git rebase</code> 后本地 tip 变化会自动放行一次（<code>--force</code> 可强制重放）</td></tr><tr><td><code>unknown</code></td><td>未归类的失败</td><td>记账并保留最近几行原始报错，retry 时重试</td></tr></tbody></table>
+<p>要点：</p>
+<ul><li><strong>hook 用 <code>--non-interactive</code></strong>：令牌缺失或过期时立刻失败并记账，绝不弹凭据框把 <code>git commit</code> 挂住。</li></ul>
+<p>首次配置凭据请手动跑一次 <code>npm run sync:mirrors:retry</code>（交互模式，可正常输入用户名/令牌）。</p>
+<ul><li><strong>队列以 <code>(远端, 分支)</code> 为主键</strong>，同一分支只留一条并累加 <code>attempts</code>：补推的是分支当前 tip，</li></ul>
+<p>一次成功就把之前所有欠账一起清掉。</p>
+<ul><li><strong>推送成功即清账</strong>；本地分支已被删除或历史被重写掉的条目在下次执行时自动移除，不会永久刷警告。</li><li><strong>落盘前抹除凭据</strong>：git 报错会原样回显远端 URL，其中可能内联 <code>https://user:token@host/...</code>；</li></ul>
+<p>写队列前统一过 <code>redactSecrets()</code>。</p>
+<ul><li><strong>空闲窗口守护</strong>：单次 <code>git push</code> 静默超过 45 秒判定卡死并软终止（本地提交与队列不受影响），</li></ul>
+<p>不用固定总时长硬杀，所以大仓的慢推送不会被误伤。</p>
+<ul><li>退出码默认 0（hook 绝不能把成功的本地提交变成失败的提交）；CI 里想让失败亮红灯加 <code>--strict</code>。</li></ul>
+<p>代码位置：纯逻辑（失败分类 / 队列 reducer / 文案）在 <code>scripts/lib/mirrorSyncQueue.js</code>，<br>契约测试在 <code>scripts/tests/mirrorSyncQueue.test.js</code>；IO 与 git 调用在 <code>scripts/sync/mirror-sync.js</code>，<br><code>scripts/sync/push-mirrors.sh</code> 只是保持向后兼容的薄封装。</p>
+<h2 id="github-actions-兜底">GitHub Actions 兜底<a class="anchor" href="#github-actions-兜底" aria-label="锚点">#</a></h2>
+<p><code>.github/workflows/sync-gitee.yml</code> 会在 <code>main</code> / <code>master</code> 更新后从 GitHub 拉取同一提交并推送到 Gitee。仓库设置中配置：</p>
+<ul><li>Actions secret：<code>GITEE_TOKEN</code></li><li>Actions variable：<code>GITEE_USER</code>（Gitee 用户名）</li><li>Actions variable：<code>GITEE_REPOSITORY</code>（例如 <code>OWNER/REPOSITORY</code>）</li></ul>
+<p>完成配置后，即使本机离线或 hook 未安装，GitHub 仍会把主干同步到 Gitee。工作流也支持手动运行，用于补齐历史落后分支。</p>
+<p>注意这层兜底只覆盖「已经推到 GitHub 的提交」：本机对 GitHub 的推送本身失败时（断网、令牌过期），<br>补齐工作仍然由上面的本地补推队列负责。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../scripts/release/README-runtime-placement.html"><div class="dir">← 上一篇</div><div class="ttl">内网 / 离线主机:本地放置推理 runner(方案 A)</div></a><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="scripts/sync/README.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

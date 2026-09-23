@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: DEBT.md -->
+<title>测试债务登记 (Test Debt Register) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../docs/index.html">首页</a><span class="sep">›</span>tests<span class="sep">›</span>测试债务登记 (Test Debt Register)</div>
+      <header class="hero reveal"><h1>测试债务登记 (Test Debt Register)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#测试债务登记-test-debt-register">测试债务登记 (Test Debt Register)</a></li><li class="lvl-2"><a href="#一-实测基线-2026-09-08">一、实测基线（2026-09-08）</a></li><li class="lvl-3"><a href="#失败分类-465-个失败套件-去重后按根因互斥分桶">失败分类（465 个失败套件，去重后按根因互斥分桶）</a></li><li class="lvl-2"><a href="#二-与-jest-moduledirectories-解析配置-的澄清">二、与「jest moduleDirectories 解析配置」的澄清</a></li><li class="lvl-2"><a href="#三-已定位的根因">三、已定位的根因</a></li><li class="lvl-3"><a href="#a-domain-迁移删掉了逐模块文件-已部分修复">A. domain 迁移删掉了逐模块文件（已部分修复）</a></li><li class="lvl-3"><a href="#b-双-runner-皆死的-19-个套件">B. 双 runner 皆死的 19 个套件</a></li><li class="lvl-3"><a href="#c-5s-硬超时">C. 5s 硬超时</a></li><li class="lvl-2"><a href="#四-如何诊断">四、如何诊断</a></li><li class="lvl-2"><a href="#五-下一步-按性价比排序">五、下一步（按性价比排序）</a></li><li class="lvl-2"><a href="#七-夜班组值回收记录-2026-09-13-首轮">七、夜班组值回收记录（2026-09-13 首轮）</a></li><li class="lvl-2"><a href="#八-夜班组值回收记录-2026-09-14-第二轮">八、夜班组值回收记录（2026-09-14 第二轮）</a></li><li class="lvl-2"><a href="#九-夜班组值回收记录-2026-09-16-第四轮">九、夜班组值回收记录（2026-09-16 第四轮）</a></li><li class="lvl-2"><a href="#十-夜班组值回收记录-2026-09-18-第五轮">十、夜班组值回收记录（2026-09-18 第五轮）</a></li><li class="lvl-2"><a href="#六-编码损坏隔离-2026-09-12-54-个测试文件转-quarantine-空壳">六、编码损坏隔离（2026-09-12，54 个测试文件转 QUARANTINE 空壳）</a></li><li class="lvl-2"><a href="#十一-锚点漂移探针-故意红-待第二期修复-2026-09-23-登记">十一、锚点漂移探针（**故意红**，待第二期修复）— 2026-09-23 登记</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="测试债务登记-test-debt-register">测试债务登记 (Test Debt Register)<a class="anchor" href="#测试债务登记-test-debt-register" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：登记当前已知失败的测试套件，防止&quot;非阻塞&quot;变成&quot;永久忽略&quot;。<br><strong>规则</strong>：</p>
+<ul><li>每个失败套件必须登记，包含分类、根因、处置状态</li><li>只有 <code>@env-skip</code> 类可永久跳过；<code>@rot</code>（测试腐坏）与 <code>@bug</code> 必须修复</li><li>3 个月后：<code>@bug</code> 类用例失败时阻断 PR</li><li>6 个月后：所有用例阻断 PR</li><li>门禁升级路径见 <code>.github/workflows/pr-gate.yml</code> 的 <code>test-baseline</code> job</li></ul>
+<p><strong>最后更新</strong>：2026-09-23（新增 §十一 锚点漂移探针登记；上次全量基线仍为 2026-09-08）</p></blockquote>
+<hr>
+<h2 id="一-实测基线-2026-09-08">一、实测基线（2026-09-08）<a class="anchor" href="#一-实测基线-2026-09-08" aria-label="锚点">#</a></h2>
+<p>命令：<code>services/backend</code> 目录下 <code>node node_modules/jest/bin/jest.js</code>（等价 <code>npm test</code>）。<br>发现 1182 个 <code>.test.js</code>，jest 实际纳入 1176（6 个被 <code>jest.config.js</code> 的动态忽略排除）。</p>
+<table><thead><tr><th>指标</th><th style="text-align:right">修复前</th><th style="text-align:right">2026-09-08 修复后</th></tr></thead><tbody><tr><td>套件失败</td><td style="text-align:right"><strong>501</strong></td><td style="text-align:right"><strong>465</strong></td></tr><tr><td>套件通过</td><td style="text-align:right">675</td><td style="text-align:right"><strong>711</strong></td></tr><tr><td>套件跳过</td><td style="text-align:right">6</td><td style="text-align:right">6</td></tr><tr><td>用例失败</td><td style="text-align:right">866</td><td style="text-align:right"><strong>798</strong></td></tr><tr><td>用例通过</td><td style="text-align:right">8227</td><td style="text-align:right"><strong>8804</strong></td></tr></tbody></table>
+<p>本轮回收 <strong>36 个套件 / 577 个用例</strong>，全部来自同一处机械修复（见 §三 A）。<br><strong>503 这个数字是准的</strong>——与本次实测的 501 仅差 2，说明报数可靠；错的只有归因。</p>
+<h3 id="失败分类-465-个失败套件-去重后按根因互斥分桶">失败分类（465 个失败套件，去重后按根因互斥分桶）<a class="anchor" href="#失败分类-465-个失败套件-去重后按根因互斥分桶" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>分类</th><th style="text-align:right">套件数</th><th style="text-align:right">修复前</th><th>根因</th><th>处置</th></tr></thead><tbody><tr><td>1</td><td>其它（含测试文件语法损坏）</td><td style="text-align:right">139</td><td style="text-align:right">137</td><td>混合：见下方子项</td><td>待拆</td></tr><tr><td>2</td><td><code>@rot</code> 测试代码作用域错误</td><td style="text-align:right">99</td><td style="text-align:right">91</td><td>测试文件引用未定义标识符（<code>assert</code> / <code>detector</code> / <code>makeDetector</code> / <code>writeUser</code> / <code>mode</code> / <code>tmp</code> / <code>legacy</code> / <code>loadWithEnv</code> …），多数是 node:test 全局写法混进 jest 文件</td><td>待修</td></tr><tr><td>3</td><td>迁移遗留：旧服务路径不存在</td><td style="text-align:right">91</td><td style="text-align:right">139</td><td><code>src/services/domain/**</code> 迁移删掉逐模块文件，只留 barrel <code>index.js</code></td><td><strong>部分已修</strong>（§三 A）</td></tr><tr><td>4</td><td><code>@bug</code> 断言失败</td><td style="text-align:right">80</td><td style="text-align:right">74</td><td>真实行为与断言不符</td><td>待逐个诊断</td></tr><tr><td>5</td><td><code>@bug</code> API 签名漂移</td><td style="text-align:right">33</td><td style="text-align:right">29</td><td>被测函数返回 <code>undefined</code> / 不再是函数</td><td>待逐个诊断</td></tr><tr><td>6</td><td><code>@rot</code> 双 runner 皆死</td><td style="text-align:right">19</td><td style="text-align:right">19</td><td>用 node:test 的 <code>test.before</code> / <code>test.after</code> 但没 import <code>node:test</code></td><td>待修</td></tr><tr><td>7</td><td>5s 硬超时</td><td style="text-align:right">4</td><td style="text-align:right">4</td><td>用例本身跑得慢（实测 5.2–17.6s）</td><td>待加 per-test timeout</td></tr><tr><td></td><td><strong>合计</strong></td><td style="text-align:right"><strong>465</strong></td><td style="text-align:right">501</td><td></td><td></td></tr></tbody></table>
+<p><strong>第 1 桶（139）的子项</strong>，实测首错抽样：</p>
+<ul><li><code>SyntaxError: Unterminated string</code> / <code>Unexpected token</code> / <code>'return' outside function</code> —— 约 30 个</li></ul>
+<p>测试文件<strong>内容损坏</strong>（集中在 <code>tests/services/__tests__/</code>、<code>tests/services/domain/state/stateMachine/__tests__/</code>、<br>  <code>tests/cli/tui/ink-components/</code>）。这是<strong>文件层面</strong>的问题，不是断言问题。</p>
+<ul><li><code>Error: Task not found: concurrency-w1-02a8-37</code> 等 —— 测试间共享状态泄漏，隔离不足。</li><li><code>● Test suite failed to run</code> 但日志无首错行 —— jest worker 崩溃或 setup 文件抛错。</li></ul>
+<hr>
+<h2 id="二-与-jest-moduledirectories-解析配置-的澄清">二、与「jest moduleDirectories 解析配置」的澄清<a class="anchor" href="#二-与-jest-moduledirectories-解析配置-的澄清" aria-label="锚点">#</a></h2>
+<p>调查最初指向 jest 的模块解析配置。<code>jest --showConfig</code> 实测：</p>
+<pre><code>moduleDirectories: [&quot;node_modules&quot;]      ← 默认值
+moduleNameMapper:   []                   ← 空
+roots:              [&quot;&lt;rootDir&gt;&quot;]        ← 默认值
+haste.enableSymlinks: false</code></pre>
+<p><strong>解析配置完全默认，没有任何异常</strong>——503/465 个失败与 jest 配置无关。真正的根因是<br><code>src/services/domain/**</code> 迁移的兼容性缺口，见 §三。</p>
+<hr>
+<h2 id="三-已定位的根因">三、已定位的根因<a class="anchor" href="#三-已定位的根因" aria-label="锚点">#</a></h2>
+<h3 id="a-domain-迁移删掉了逐模块文件-已部分修复">A. domain 迁移删掉了逐模块文件（已部分修复）<a class="anchor" href="#a-domain-迁移删掉了逐模块文件-已部分修复" aria-label="锚点">#</a></h3>
+<p><code>src/services/</code> 下 <strong>139 个目录被清空成只剩 <code>index.js</code></strong>，例如：</p>
+<pre><code class="language-js"><span class="hljs-comment">// src/services/plugins/index.js —— 迁移后留下的 barrel</span>
+<span class="hljs-comment">// Auto-generated shim - re-exports from new domain location</span>
+<span class="hljs-built_in">exports</span>.<span class="hljs-property">pluginContribResolver</span> = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../domain/extensions/plugins/pluginContribResolver.js&#x27;</span>);</code></pre>
+<p>barrel 只声明了<strong>属性级</strong>兼容（<code>require('services/plugins').pluginContribResolver</code>），<br>但<strong>深路径</strong>（<code>require('services/plugins/pluginContribResolver')</code>）彻底断了。<br>测试里 556 处深路径引用全部命中这个缺口。</p>
+<p><strong>处置（2026-09-08 已执行）</strong>：按 barrel 的 <code>exports.&lt;name&gt; = require('&lt;新路径&gt;')</code><br>反推出正确目标，把测试侧 372 处导入改写过去：</p>
+<ul><li>298 处深路径 → <code>src/services/domain/**</code> 新路径（相对深度一并重算，原有深度本来就是错的）</li><li>74 处 <code>tests/services/&lt;dir&gt;/index.test.js</code> 里的 <code>require('./index')</code> → <code>../../../src/services/&lt;dir&gt;</code></li><li>覆盖 214 个测试文件；<code>node --check</code> 全部通过，无语法回归</li></ul>
+<p><strong>改写的安全性</strong>：带坏导入的套件本来就是加载即失败，不可能有通过的用例；<br>因此该操作只可能把失败套件变成能跑，不会弄坏任何当前通过的套件（实测确实只增不减）。</p>
+<p><strong>未修的部分</strong>：另有 <strong>193 个深路径（296 次引用）指向全树不存在的模块</strong>——<br><code>src/services/desktopControl/backendRegistry</code>、<code>memoryEngine/distiller</code>、<code>wasm-sandbox/m1Constants</code>、<br><code>dualTrack/core</code>、<code>contextScope/*</code>、<code>auditTrajectory/*</code>、<code>evoEngine/*</code>、<code>trajectoryReplay/*</code> 等。<br>这些模块的 barrel 是<strong>空壳</strong>（<code>exports=0</code>），全树 basename 检索无命中。<br><strong>结论：这些源文件被删除且未迁移，测试无法靠改导入修好，必须先恢复源码。</strong></p>
+<h3 id="b-双-runner-皆死的-19-个套件">B. 双 runner 皆死的 19 个套件<a class="anchor" href="#b-双-runner-皆死的-19-个套件" aria-label="锚点">#</a></h3>
+<p>以 <code>tests/tools/SaveInstruction.test.js</code> 为例：文件用 <code>test.after(...)</code>（node:test API）<br>却没有 <code>import { test } from 'node:test'</code>。</p>
+<ul><li>在 <strong>jest</strong> 下：<code>test</code> 是 jest 的函数，没有 <code>.before</code> / <code>.after</code> →</li></ul>
+<p><code>TypeError: test.before is not a function</code></p>
+<ul><li>在 <strong>node --test</strong> 下：node:test 不把 <code>test</code> 暴露为全局 →</li></ul>
+<p><code>ReferenceError: test is not defined</code></p>
+<p>两个 runner 都跑不通，属真死代码。修法：补 <code>const { test } = require('node:test');</code><br>（补完 <code>jest.config.js</code> 的 <code>findNodeTestFiles</code> 会按 <code>require('node:test')</code> 标记自动把它们<br>排除出 jest、交给 <code>test:node</code>，不需要改守卫）。注意这些文件用的是 jest 的<br><code>expect()</code>，<code>node:assert</code> 下也跑不通，需一并换成 <code>assert.*</code>。</p>
+<h3 id="c-5s-硬超时">C. 5s 硬超时<a class="anchor" href="#c-5s-硬超时" aria-label="锚点">#</a></h3>
+<p><code>tests/routes/cache.test.js</code>（17.6s）、<code>tests/cli/extensionCommand.test.js</code>（16.5s）、<br><code>tests/tools/dbTimeout.integration.test.js</code> 等 4 个套件超时。jest 默认 5000ms 是<strong>固定墙钟</strong><br>超时，不是活动超时；对这类真慢用例应逐个加 <code>test('...', 30000)</code> 形式的 per-test timeout，<br>而不是调大全局默认。</p>
+<hr>
+<h2 id="四-如何诊断">四、如何诊断<a class="anchor" href="#四-如何诊断" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-comment"># 单个套件（--changed 无效时直接传路径）</span>
+<span class="hljs-built_in">cd</span> services/backend
+npm run <span class="hljs-built_in">test</span>:one -- tests/services/memoryEngine/distiller.test.js
+
+<span class="hljs-comment"># 只看错误签名</span>
+npm <span class="hljs-built_in">test</span> -- --silent 2&gt;&amp;1 | findstr /c:<span class="hljs-string">&quot;Cannot find module&quot;</span> /c:<span class="hljs-string">&quot;is not defined&quot;</span>
+
+<span class="hljs-comment"># 列出 jest 实际纳入哪些套件</span>
+node node_modules/jest/bin/jest.js --listTests</code></pre>
+<blockquote><p><code>git</code> 不在本环境 PATH 上时，<code>check-agent-rules.js --changed</code> 会输出<br>「No target files found」；改为显式传文件路径。</p></blockquote>
+<hr>
+<h2 id="五-下一步-按性价比排序">五、下一步（按性价比排序）<a class="anchor" href="#五-下一步-按性价比排序" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>优先级</th><th>动作</th><th>预期收益</th></tr></thead><tbody><tr><td>P0</td><td>恢复被删的 domain 模块源码（§三 A 尾部 193 个路径）</td><td>解除约 91 个套件的加载阻塞</td></tr><tr><td>P1</td><td>修复约 30 个语法损坏的测试文件</td><td>直接回收 ~30 套件</td></tr><tr><td>P2</td><td>修 19 个双 runner 皆死套件（补 <code>node:test</code> 导入 + <code>assert.*</code>）</td><td>回收 19 套件，且 <code>jest.config.js</code> 无需改动</td></tr><tr><td>P3</td><td>逐个诊断 80 个断言失败 + 33 个签名漂移（真 bug 与测试腐坏需人工判）</td><td>需按用例读代码</td></tr><tr><td>P4</td><td>给 4 个超时套件加 per-test timeout</td><td>4 套件</td></tr></tbody></table>
+<p>P0 是硬阻塞：没有源码，测试改什么都是徒劳。</p>
+<h2 id="七-夜班组值回收记录-2026-09-13-首轮">七、夜班组值回收记录（2026-09-13 首轮）<a class="anchor" href="#七-夜班组值回收记录-2026-09-13-首轮" aria-label="锚点">#</a></h2>
+<blockquote><p>本轮（<code>NIGHTSHIFT.md</code> 有完整简报）定向回收两个套件，全部转绿且 eslint/agent-rules 零告警：</p></blockquote>
+<ul><li><code>tests/promptOnDemandSections.test.js</code>（@rot）：补 <code>node:assert</code> 导入；</li></ul>
+<p>37 处 <code>expect(set.has(id).toBeTruthy())</code> 反模式改为 <code>.toBe(true/false)</code>；<br>  对齐源码后，胶囊 id 全列表断言补上 <code>codebase_analysis</code> / <code>tool_discovery</code>。<br>  <strong>已转绿</strong>，从 §一 桶 2/4 移除。</p>
+<ul><li><code>tests/gatewayAdapters.stability.test.js</code>（@bug）：根因是</li></ul>
+<p><code>src/services/gateway/adapters/cliToolAdapter.js</code> 的 <code>_safeOnChunk</code> 作用域错配<br>  ——generate 循环 / invokeToolAsync / invokeStreamingTool 三处裸调了一个只在<br>  <code>processStreamEvent</code> 作用域内存在的 helper，status 事件全被静默丢弃。<br>  已在三个作用域各补本地 <code>_safeOnChunk</code>。<strong>已转绿</strong>（25/25），属源码真 bug 修复。</p>
+<p>其余 §五 P0–P4 未动（后端全量 jest 在本机 OOM，需逐套件定向跑）。</p>
+<h2 id="八-夜班组值回收记录-2026-09-14-第二轮">八、夜班组值回收记录（2026-09-14 第二轮）<a class="anchor" href="#八-夜班组值回收记录-2026-09-14-第二轮" aria-label="锚点">#</a></h2>
+<blockquote><p>本轮主攻 khyquant 前端交互接线契约测试（interaction.wiring），全部转绿且 eslint/agent-rules 零告警：</p></blockquote>
+<ul><li><code>src/__tests__/interaction.wiring.test.js</code>（Z2 接线 @rot）：<ul><li>路径前缀 @rot——<code>test.each</code> 的 rel 表误带 <code>src/</code> 前缀，叠加 <code>read('../' + rel)</code> 拼成</li></ul></li></ul>
+<p><code>src/src/views/...</code>，16 个 ENOENT 全部消除（改为裸子路径）。</p>
+<ul><li>顺带暴露并修复一批<strong>产品真 bug</strong>（死接线/未声明事件），见 NIGHTSHIFT.md §三：<ul><li>Trading.vue 移动端 FAB 按钮的死 <code>$emit('open-bot')</code> → 改为</li></ul></li></ul>
+<p><code>dispatchEvent(new Event('show-ai-assistant'))</code>（与 Dashboard 同款可用模式）；</p>
+<ul><li>MobileLayout.vue 菜单/底 tab 指向未注册路由 <code>/trades</code>、<code>/data-sources</code>、</li></ul>
+<p><code>/agent-architecture</code> → 改为已注册路由；</p>
+<ul><li>SimpleTradingInterface 的 <code>signal-loaded</code>/<code>navigate-to-backtest-analysis</code> 声明了却从不 emit</li></ul>
+<p>（死 listener）→ 补 emit + 新增 navigateToBacktestAnalysis 并接到「回测分析」按钮；</p>
+<ul><li><code>order-submitted</code> 在 ModernTradingPanel 发射却无人听（PC 下单链断）→</li></ul>
+<p>SimpleTradingInterface 挂 <code>@order-submitted</code> 并转发为 <code>order-placed</code>，Trading.vue 的<br>      handleOrderPlaced 得以刷新账户；</p>
+<ul><li>ModernTradingPanel 发射 <code>strategy-monitoring-started/stopped</code> 却未在 defineEmits 声明</li></ul>
+<p>→ 补入声明；</p>
+<ul><li>Dashboard <code>/backtest-analysis</code>、Announcements <code>/admin/announcements</code>、SimpleTradingInterface</li></ul>
+<p><code>/data-sources</code> 三处 push 到未注册路由 → 改为已注册路由的对象形式。</p>
+<ul><li>测试侧放宽一处断言窗口（show-ai-assistant 监听器与 handler 间隔 80→400 字符），因该链路</li></ul>
+<p>实际已正确接线（addEventListener 紧跟 handleShowAssistant）。</p>
+<ul><li>新增 2 个 khyquant 前端叶子测试（全绿）：<ul><li><code>src/__tests__/device.test.js</code>（8 用例）——锁 device.js 的 UA 分类/设备类型/触摸/屏幕方向口径；</li><li><code>src/__tests__/qrcode.test.js</code>（2 用例）——锁 qrcode.js 懒加载缓存 + 单一命名导出契约。</li></ul></li><li>回归：khyquant 前端 <code>npm test</code> 由 333 全绿 → 343 全绿（interaction.wiring 30/30 转绿，新增 device+qrcode 10 用例）；</li></ul>
+<p>ai-frontend 531 全绿；Python 启动器 187 全绿；后端 3 个已知慢套件（cache/dbTimeout/extensionCommand）单独跑全绿；<br>  <code>check-agent-rules.js</code> 10 个改动文件零违规；<code>khy doctor</code> 34 通过 / 7 警告（均为预存环境项，非本轮引入）。</p>
+<ul><li><strong>后端 jest 全量（test:all/test:backend）仍红</strong>：本轮未改任何后端文件，失败项（工具计量汇总 CJK 腐蚀断言、</li></ul>
+<p>缺 src/services/search/searchNecessity.js、check-agent-rules/check-pattern-coverage/check-repo-layout 等 67 个<br>  test:scripts 子测试）全部为 §一/§五 登记的预存债务，不在本轮范围内，未放宽任何既有基线。</p>
+<h2 id="九-夜班组值回收记录-2026-09-16-第四轮">九、夜班组值回收记录（2026-09-16 第四轮）<a class="anchor" href="#九-夜班组值回收记录-2026-09-16-第四轮" aria-label="锚点">#</a></h2>
+<blockquote><p>本轮主攻两个零覆盖叶子模块，全部新增测试全绿且 eslint/agent-rules 零告警；未改任何产品代码：</p></blockquote>
+<ul><li>后端 <code>tests/services/intentHeuristics.classifiers.test.js</code>（node:test，25 用例）：</li></ul>
+<p>覆盖 intentHeuristics.js 的分类器族（resolveAutoWebSearchMode 内容嗅探回退、<br>  buildSearchQueryCandidates 去重/截断、7 个 looksLike* 分类器、工具名分隔符归一化、<br>  中英双语用户约束提取、约束指令构建、App 目标提取、info-search 尊重 disallow-search<br>  约束）。模块零依赖，jest 自动排除该文件（含 <code>require('node:test')</code>），由<br>  <code>npm run test:node</code> 执行。</p>
+<ul><li>khyquant 前端 <code>src/__tests__/networkMonitor.test.js</code>（vitest，7 用例）：</li></ul>
+<p>覆盖 NetworkMonitor 单例的 checkConnection 三路径 / handleOnline 重置 /<br>  handleOffline 累计 ≥3 次触发 returnToSplash / getSplashUrl 协议分支。<br>  测试技巧：jsdom 下不可 redefine <code>window.location.protocol</code>，改用<br>  <code>vi.stubGlobal('window', {...})</code>；单例方法用 <code>vi.spyOn</code> 而非 Proxy。</p>
+<ul><li>回归：khyquant 前端 32 文件 / 381 全绿（语句覆盖 17.05% → 17.28%）；</li></ul>
+<p>ai-frontend 531 全绿；Python 187 全绿；<code>check-agent-rules.js</code> 2 个新增文件零违规；<br>  <code>khy doctor</code> 36 通过 / 5 警告（均为预存环境项）。</p>
+<ul><li><strong>test:scripts 2 个失败为预存债务，非本轮引入</strong>（本轮未改 scripts/tests/ 任何文件）：<ul><li><code>coverage-gate.test.js:15</code>：期望 threshold=60，实际 <code>undefined</code>（coverage-gate 配置 fixture 漂移）；</li><li><code>provider-contract.test.js:14</code>：期望 18 个 generate exporter，实际发现 19 个（fixture 漂移）。</li></ul></li><li>后端 jest 全量仍 OOM（预存），本轮未触及 §一 465 桶；80% 总目标未达成，</li></ul>
+<p>下一轮优先目标：khyquant <code>requestInterceptor.js</code> + <code>sandboxExecute.js</code>。</p>
+<h2 id="十-夜班组值回收记录-2026-09-18-第五轮">十、夜班组值回收记录（2026-09-18 第五轮）<a class="anchor" href="#十-夜班组值回收记录-2026-09-18-第五轮" aria-label="锚点">#</a></h2>
+<blockquote><p>本轮主攻 khyquant 前端 5 个弱覆盖模块，全部新增测试全绿且 eslint/agent-rules 零告警；未改任何产品代码：</p></blockquote>
+<ul><li><code>src/__tests__/requestInterceptor.test.js</code>（vitest，14 用例）：</li></ul>
+<p>锁 <code>src/utils/requestInterceptor.js</code> 错误分类契约（5xx/404/401/403/400/timeout/network/unknown<br>  分类、自定义 message 优先、auth 静默、连续失败 5 次触发 returnToSplash、成功重置计数）。<br>  技巧：该模块挂<strong>全局 axios</strong>（<code>main.js</code> 中调用已被注释），测试需自行<br>  <code>setupRequestInterceptor()</code> 装配后直接驱动 <code>axios.interceptors.*.handlers[0]</code>。</p>
+<ul><li><code>src/__tests__/sandboxExecute.test.js</code>（vitest，8 用例）：</li></ul>
+<p>锁 <code>src/utils/sandboxExecute.js</code> 沙箱执行契约（success 归一 signals/auxiliaryData、<br>  language/parameters 透传、success=false 按 res.message throw、HTTP 异常原样透传）。</p>
+<ul><li><code>src/__tests__/userStore.test.js</code>（vitest，16 用例）：</li></ul>
+<p>锁 <code>src/stores/user.js</code> Pinia setup store 公共暴露面（token 归一化 + localStorage 同步、<br>  连接模式切换的凭证双向清洗、updateBackendUrl trim、logout 互斥/fail-soft、<br>  loginUser 本地回退三分支）。mock 邻居风格：hoisted mock <code>@/api/auth</code>、<br>  <code>@/services/localAuthService</code>、<code>@/utils/connectionMode</code>；每用例 <code>setActivePinia(createPinia())</code>。</p>
+<ul><li><code>src/__tests__/useDashboardHandover.test.js</code>（vitest，10 用例）：</li></ul>
+<p>锁 <code>src/composables/useDashboardHandover.js</code> 交接快照契约（摘要全零归一/非对象回退、<br>  保留变更截断 5、loadHandoverSnapshot 成功/业务失败 fail-soft/网络异常/失败提示/并发排队）。<br>  SSE 通道状态机（channelState 内部 ref）不在 return 暴露面，未锁，留待下夜挂载级测试。</p>
+<ul><li><code>src/__tests__/useDashboardLanAccess.test.js</code>（vitest，9 用例）：</li></ul>
+<p>锁 <code>src/composables/useDashboardLanAccess.js</code>（LAN URL 规则 IP:8080 vs 域名、<br>  toggleQrCode + generateQrCode 短路、copyLanUrl 剪贴板成功/降级 execCommand）。<br>  技巧：jsdom 未实现 <code>document.execCommand</code>，<code>vi.spyOn</code> 会抛 &quot;does not exist&quot;，<br>  须直接赋值 <code>document.execCommand = vi.fn(() =&gt; true)</code>。</p>
+<ul><li>回归：khyquant 前端 37 文件 / 438 全绿（语句覆盖 17.28% → <strong>18.52%</strong>，分支 81.64%）；</li></ul>
+<p>ai-frontend 43 文件 / 544 全绿；Python 187 全绿；<code>check-agent-rules.js</code> 5 个新增文件零违规；<br>  <code>khy doctor</code> 36 通过 / 5 警告（均为预存环境项）。</p>
+<ul><li><strong>test:scripts 3 个失败为预存债务，非本轮引入</strong>（本轮未改 scripts/tests/ 任何文件）：<ul><li><code>coverage-gate.test.js:15</code> 与 <code>provider-contract.test.js:14</code>：09-16 已登记的 fixture 漂移；</li><li><code>externalRules.test.js:139</code>（<strong>新增登记</strong>）：断言 <code>ARCH-068 是已知的外部规则</code> 失败——</li></ul></li></ul>
+<p>09-16 该用例通过，09-16→09-18 间工作树大规模 churn（3500+ 文件修改）改了外部规则表<br>    导致漂移，需对齐期望值（根因待人工核对 RULES-REGISTRY 中 ARCH-068 条目）。</p>
+<ul><li>80% 总目标未达成（khyquant 18.52%），下一轮优先目标：</li></ul>
+<p>khyquant <code>useDashboardHandover</code> SSE 状态机（挂载级）+ <code>simpleTradingMarketData.js</code>；<br>  后端继续挑 <code>services/</code> 零依赖叶子模块（node:test）。</p>
+<h2 id="六-编码损坏隔离-2026-09-12-54-个测试文件转-quarantine-空壳">六、编码损坏隔离（2026-09-12，54 个测试文件转 QUARANTINE 空壳）<a class="anchor" href="#六-编码损坏隔离-2026-09-12-54-个测试文件转-quarantine-空壳" aria-label="锚点">#</a></h2>
+<blockquote><p><strong>背景</strong>：一批后端测试文件在之前的写入事故中被 UTF-8 多字节 CJK 字符损坏<br>（FFD 替换字符 + 闭合引号丢失 + 注释与代码融合换行丢失），导致 v8 解析失败。<br>本轮修复对 72 个损坏文件中的 18 个做到了字节级恢复（解析通过且内容保留）；<br>对 54 个文件，全位置探测 / 引号配平 / 删行降级等手段均无法在保留内容的前提下恢复解析<br>（损坏是整行的、非确定性的，且本地没有任何可恢复的原始副本：<br>.git 对象库仅 455 个 loose + 78 个 packed 对象，不含这些文件；<br>.khy/checkpoints 与 khy-Trajectory 的快照均不含它们）。</p>
+<p><strong>处置</strong>：这 54 个文件被改写为显式空壳——文件头注明 QUARANTINE 原因，<br>只含 1 个占位 it（恒真断言），保证 jest 可解析、可执行、不误报。<br>它们原本覆盖的行为目前无测试保护，属于本登记册登记的已知损失。</p>
+<p><strong>恢复路径</strong>：<del>从远端 github.com/luckykhy/khy-os 拉取这些文件的原始版本<br>（git pull 或 git checkout 指定 commit）后，删除对应空壳即可；</del><br><strong>⚠️ 2026-09-16 实测：此路径已失效。</strong> 远端（<code>origin/main</code> 与 <code>gitee/main</code>）上这些文件的<br>blob 与本地 HEAD <strong>字节完全相同</strong> —— 损坏早已推送，<code>git pull</code> 拉回来的还是坏文件。<br>本仓仅 151 个 commit，<code>arrowRouting.test.js</code> 全历史只有 <code>d407f975</code> 一个 commit。</p>
+<p><strong>正确的恢复路径 = 对着当前 <code>src/</code> 重写</strong>（<code>toolEntryRows.test.js</code>、<code>mouseButtons.test.js</code><br>已按此路走通）。好消息是<strong>素材没丢</strong>：损坏只吃掉两类东西 ——<br>① <code>expect(X).toBe(Y)</code> 里的 <code>)</code>（GBK 解码吞字节，形如 <code>expect(f(x).toBe(1)</code>）；<br>② CJK 字符串。<strong>断言语义完整可读</strong>，用 <code>git show HEAD:&lt;path&gt;</code> 即可取出。<br>也就是说「无恢复源」这个说法只对「不能直接 checkout」成立，对「能否重建」不成立。</p>
+<p><strong>恢复进展</strong>：</p>
+<ul><li><code>tests/cli/tui/ink-components/toolEntryRows.test.js</code> 已于</li></ul>
+<p>2026-09-13（P0-2 工具行预算接线期间）按当前 src/ 重写恢复——14 用例全绿<br>  （node --test，覆盖 isEnabled 门控梯、退化输入、agentTree、未完成 progress、<br>  错误折叠/展开、shell 折叠/展开/exitCode、Write±diff、非 shell 摘要/透明体/<br>  12 行预览帽、estimateLiteralRows、memo 幂等），已从下表除名。</p>
+<ul><li><code>tests/cli/tui/mouseButtons.test.js</code> 亦已按同一方法重写恢复（70 行，走 node:test）。</li><li><strong>2026-09-16 第三批（5 个，全部走通）</strong>：TUI 滚动/方向键/回滚保全/转录投影四条</li></ul>
+<p>链路的覆盖全部回收，<code>node --test &quot;tests/cli/tui/*.test.js&quot;</code> 由<br>  <strong>632 用例 / 627 pass / 5 fail</strong> 变为 <strong>719 用例 / 719 pass / 0 fail</strong>：</p>
+<table><thead><tr><th>文件</th><th style="text-align:right">恢复后</th><th>覆盖</th></tr></thead><tbody><tr><td><code>tests/cli/tui/arrowRouting.test.js</code></td><td style="text-align:right">25 用例</td><td>context 优先级、4×4 绑定矩阵、executing 条件绑定、显式 context 覆盖、fail-soft</td></tr><tr><td><code>tests/cli/tui/scrollActions.test.js</code></td><td style="text-align:right">17 用例</td><td>动作名词表、less 惯例算术、两端 clamp、畸形入参、viewport 1</td></tr><tr><td><code>tests/cli/tui/scrollbackPreserve.test.js</code></td><td style="text-align:right">20 用例</td><td>第二/三/四层契约、CJK 视觉行预算、fail-soft 直通、Buffer、跨 write 拆分</td></tr><tr><td><code>tests/cli/tui/transcriptLines.test.js</code></td><td style="text-align:right">27 用例</td><td>逐角色投影、showAll、注入渲染器、折行、两级 cap、畸形入参</td></tr><tr><td><code>tests/cli/tui/historyBrowseDecision.test.js</code></td><td style="text-align:right">3 用例</td><td>门控退役后两导出恒 true（<strong>补齐 node:test 导入</strong>，见 §三 B）</td></tr></tbody></table>
+<p><strong>方法</strong>：<code>git show HEAD:&lt;path&gt;</code> 取回损坏原件 → 按当前 <code>src/</code> 逐条核对断言语义 →<br>  改写为 <code>node:test</code> 风格（<code>expect(x).toBe(y)</code> → <code>assert.equal(x, y)</code>）。<br>  注意 4 个文件的断言<strong>语义可读</strong>（只丢了 <code>)</code>），<code>transcriptLines.test.js</code> 例外 ——<br>  它的 CJK 字面量整段丢失，期望行只能从当前源码反推。<br>  另外：<code>historyBrowseDecision.test.js</code> 此前被 jest 用全局 <code>describe</code> 跑（看着是绿），<br>  补上 <code>require('node:test')</code> 后由 <code>jest.config.js</code> 的 <code>findNodeTestFiles</code> 自动<br>  转交 <code>test:node</code>，<strong>jest.config.js 无需改动</strong>（与 §三 B 的修法一致）。</p></blockquote>
+<table><thead><tr><th>文件</th></tr></thead><tbody><tr><td>tests/cli/diskCleanHandler.test.js</td></tr><tr><td>tests/cli/gitDiffCollect.test.js</td></tr><tr><td>tests/cli/repl/intentDebugSnapshot.test.js</td></tr><tr><td>tests/cli/repl/terminalTitle.test.js</td></tr><tr><td>tests/cli/resultGuard.test.js</td></tr><tr><td>tests/cli/toolDisplayMatrix.test.js</td></tr><tr><td>tests/cli/toolDisplayTier.render.test.js</td></tr><tr><td>tests/cli/tui/ink-components/caretGeometry.test.js</td></tr><tr><td>tests/cli/tui/<strong>tests</strong>/outputWidthGuard.test.js</td></tr><tr><td>tests/cli/underscoreAbuse.test.js</td></tr><tr><td>tests/services/codebaseIntentClassifier.test.js</td></tr><tr><td>tests/services/domain/state/stateMachine/<strong>tests</strong>/agentLifecycle.test.js</td></tr><tr><td>tests/services/domain/state/stateMachine/<strong>tests</strong>/fsm.test.js</td></tr><tr><td>tests/services/gateway/agentModelProjection.test.js</td></tr><tr><td>tests/services/gateway/ocrResolutionNotice.test.js</td></tr><tr><td>tests/services/gateway/routeLatencyAware.e2e.test.js</td></tr><tr><td>tests/services/selfEditAdvisory.test.js</td></tr><tr><td>tests/services/selfEditAdvisoryService.test.js</td></tr><tr><td>tests/services/selfEditWatcher.test.js</td></tr><tr><td>tests/services/subAgentModelSelect.test.js</td></tr><tr><td>tests/services/updateProgressRenderer.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/agentAssets.adapters.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/agentAssets.model.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/backgroundTaskManager.ledger.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/chunk_diff.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/crdt_engine.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/crossAgentTasteLearner.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/deliveryLedger.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/detectTeaching.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/externalAgentDirective.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/file_sync_bus.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/file_sync_chunk_bus.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/file_sync_cross_instance.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/file_sync_wiring.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/goalCore.bounded.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/goalStopGate.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/goalStore.bounded.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/keyUpdateFlow.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/procedureCatalog.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/promptStructurer.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/session_registry.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/session_registry_merge.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/taskClosure.decideClosure.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/tasteWatchService.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/toolFailureRecovery.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/toolTierCatalog.test.js</td></tr><tr><td>tests/services/<strong>tests</strong>/weakModelGuidance.test.js</td></tr><tr><td>tests/tools/toolHealer.test.js</td></tr></tbody></table>
+<hr>
+<h2 id="十一-锚点漂移探针-故意红-待第二期修复-2026-09-23-登记">十一、锚点漂移探针（<strong>故意红</strong>，待第二期修复）— 2026-09-23 登记<a class="anchor" href="#十一-锚点漂移探针-故意红-待第二期修复-2026-09-23-登记" aria-label="锚点">#</a></h2>
+<blockquote><p><strong>性质声明（重要，与上面各节不同）</strong>：本节的失败用例<strong>不是腐坏、也不是未知缺陷</strong>，<br>而是<strong>已知根因 + 已写好修复</strong>的「待接线规格」。它们<strong>故意保持红色</strong>，<br>作为「修复真的生效」的验收判据。分类取 <code>@bug</code>（真实行为与断言不符），<br>但<strong>免责期应从宽</strong>：根因已定位、修复第一期已落地，只差第二期接线。</p></blockquote>
+<table><thead><tr><th>项</th><th>内容</th></tr></thead><tbody><tr><td>套件</td><td><code>services/backend/tests/cli/tui/selectionAnchorDrift.test.js</code></td></tr><tr><td>运行器</td><td><code>node:test</code>（文件含 <code>require('node:test')</code>，已被 <code>jest.config.js</code> 的 <code>findNodeTestFiles</code> 排除出 jest，只由 <code>npm run test:node</code> 执行）</td></tr><tr><td>分类</td><td><code>@bug</code>（真实行为与断言不符 —— 复制出的内容 ≠ 用户看到的那段）</td></tr><tr><td>失败用例</td><td><strong>D-02</strong>（头部插入 3 行 → 取到 <code>L07..L11</code>，应为 <code>L10..L14</code>，<strong>错位量恰 = 插入行数</strong>）、<strong>D-04</strong>（折行重排 → 混入 <code>TAIL</code>）</td></tr><tr><td>通过用例</td><td>D-01 基线 / D-03 对照组 / D-05 fail-soft —— 三条绿是「复刻链路可信」的担保，<strong>不要动</strong></td></tr><tr><td>根因</td><td><code>selection.js</code> 的锚点存<strong>行号</strong>，<code>App.js:1617</code> 在<strong>松手那一帧</strong>按行号重新切片 —— 一个数字、两个时刻。手势期间 <code>lines</code> 重排即错位</td></tr><tr><td>处置状态</td><td><strong>修复第一期已落地</strong>（<code>selection.js</code> 新增 <code>relocateLine</code> / <code>relocateSelection</code> / <code>extractTextRelocated</code>，纯新增<strong>未接线</strong>）。<strong>待第二期</strong>：<code>App.js:1560</code> 接线 → D-02 转绿；<strong>待第三期</strong>：行投影 → D-04 转绿</td></tr><tr><td>设计真源</td><td><code>docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-132] TUI选区锚点漂移修复方案.md</code></td></tr><tr><td>复现</td><td>在 <code>services/backend</code> 目录下直接 <code>node --test tests/cli/tui/selectionAnchorDrift.test.js</code>（预期 3 pass / 2 fail）。⚠ <strong>不要用 <code>npm run test:node -- &lt;path&gt;</code></strong> —— <code>test:node</code> 的定义是 <code>node --test tests/**/*.test.js</code>，<code>--</code> 后面是<strong>追加</strong>参数，会变成「跑全量 + 再跑本文件」</td></tr><tr><td>截止</td><td>按本册规则，<code>@bug</code> 类 <strong>3 个月后（≈2026-12-23）</strong> 未修复则阻断 PR。<strong>建议第二期提前完成</strong>，不必等到期限</td></tr></tbody></table>
+<p><strong>为什么不用 <code>test('...', { todo: true })</code> 或把文件挪出 <code>tests/</code></strong>：<br>本册的规则就是「失败套件必须登记」，登记 + 期限比「藏起来」更能防止它变成永久忽略；<br>且这两条红<strong>本身就是第二期的验收判据</strong> —— 先有红，才能证明接线真的生效<br>（而不是「改完顺手把断言改松了」）。</p>
+<p><strong>已核实的非阻断性</strong>：<code>.github/workflows/pr-gate.yml</code> 的 <code>test-baseline</code> job<br>当前是 <code>continue-on-error: true</code>（Phase 1 report-only），本套件<strong>今天不会卡住任何 PR</strong>。<br>但它会计入该 job 的失败计数，而该 job 的升级路径是「失败用例清零后转阻断」<br>⇒ 登记 + 限期是它的正确去处。</p>
+      </article>
+      <nav class="pager"><span></span><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../";window.__KHY_CUR__="tests/DEBT.html";</script>
+<script src="../docs/19_资产/site/nav-data.js"></script>
+<script src="../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

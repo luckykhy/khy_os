@@ -1,5 +1,5 @@
 <template>
-  <div class="projects-page">
+  <div class="khy-page projects-page">
     <KhyPageHeader
       title="项目工作区"
       subtitle="命名的多文件夹编码工作区 · 对齐 Hermes coding projects"
@@ -124,6 +124,7 @@ import { useProjects } from '@/composables/useProjects';
 import { formatTime } from '../utils/formatTimestamp';
 import KhyPageHeader from '@/components/KhyPageHeader.vue';
 
+import { showSuccess, showError, showWarning, showInfo } from '@/api/notify';
 const {
   projects,
   loading,
@@ -193,7 +194,7 @@ function openEdit(row) {
 async function submitDialog() {
   const name = form.name.trim();
   if (!name) {
-    ElMessage.warning('请输入项目名称');
+    showWarning('请输入项目名称');
     return;
   }
   const payload = {
@@ -207,15 +208,15 @@ async function submitDialog() {
   try {
     if (dialogMode.value === 'create') {
       await create(payload);
-      ElMessage.success('已创建');
+      showSuccess('已创建');
     } else {
       await update(editingId.value, payload);
-      ElMessage.success('已保存');
+      showSuccess('已保存');
     }
     dialogVisible.value = false;
     await refresh();
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '操作失败');
+    showError(err?.response?.data?.message || err?.message || '操作失败');
   }
 }
 
@@ -226,10 +227,10 @@ function toggleActive(row) {
 async function toggleArchive(row) {
   try {
     await archive(row.id, !row.archived);
-    ElMessage.success(row.archived ? '已恢复' : '已归档');
+    showSuccess(row.archived ? '已恢复' : '已归档');
     await refresh();
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '操作失败');
+    showError(err?.response?.data?.message || err?.message || '操作失败');
   }
 }
 
@@ -245,10 +246,10 @@ async function confirmDelete(row) {
   }
   try {
     await remove(row.id);
-    ElMessage.success('已删除');
+    showSuccess('已删除');
     await refresh();
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '删除失败');
+    showError(err?.response?.data?.message || err?.message || '删除失败');
   }
 }
 

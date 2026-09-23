@@ -5,7 +5,7 @@
 // fail-soft per-user pref reader. The HTTP _generate* paths are not invoked.
 // Runner: jest (consistent with the other services/backend/test/*.test.js files).
 
-const imageGen = require('../src/services/imageGenService');
+const imageGen = require('../../src/services/imageGenService.js');
 
 // Snapshot + restore the KHY_IMAGE_GEN_* env around each assertion block.
 function withEnv(vars, fn) {
@@ -154,7 +154,7 @@ describe('imageGenUserPref — per-user pref reader (fail-soft)', () => {
   });
 
   test('null for empty/missing userId', async () => {
-    const pref = require('../src/services/imageGenUserPref');
+    const pref = require('../../src/services/imageGenUserPref.js');
     expect(await pref.getUserImagePref(null)).toBeNull();
     expect(await pref.getUserImagePref('')).toBeNull();
     expect(await pref.getUserImagePref(undefined)).toBeNull();
@@ -163,7 +163,7 @@ describe('imageGenUserPref — per-user pref reader (fail-soft)', () => {
   test('fail-soft returns null when the model layer throws', async () => {
     jest.resetModules();
     jest.doMock('@khy/shared/models', () => { throw new Error('models unavailable'); });
-    const pref = require('../src/services/imageGenUserPref');
+    const pref = require('../../src/services/imageGenUserPref.js');
     expect(await pref.getUserImagePref(42)).toBeNull();
   });
 
@@ -174,7 +174,7 @@ describe('imageGenUserPref — per-user pref reader (fail-soft)', () => {
         findOne: async () => ({ imageBackend: 'Agnes', imageModel: 'agnes-image-2.0' }),
       },
     }));
-    const pref = require('../src/services/imageGenUserPref');
+    const pref = require('../../src/services/imageGenUserPref.js');
     expect(await pref.getUserImagePref(7)).toEqual({ backend: 'agnes', model: 'agnes-image-2.0' });
   });
 
@@ -188,7 +188,7 @@ describe('imageGenUserPref — per-user pref reader (fail-soft)', () => {
     jest.doMock('@khy/shared/models', () => ({
       UserGatewayConfig: { findOne: async () => row },
     }));
-    const pref = require('../src/services/imageGenUserPref');
+    const pref = require('../../src/services/imageGenUserPref.js');
     expect(await pref.getUserImagePref(1)).toBeNull();
   });
 });

@@ -119,23 +119,9 @@ function _oneLineClamp(text, maxChars) {
   return `${one.slice(0, maxChars - 1).trimEnd()}…`;
 }
 
-const CATEGORIES = {
-  data: 'Data retrieval & market information',
-  analysis: 'Quantitative analysis & backtesting',
-  execution: 'Code execution & shell commands',
-  filesystem: 'File read/write operations',
-  git: 'Git version control operations',
-  system: 'System administration & configuration',
-  optimization: 'Configuration optimization & code proposals',
-  coordinator: 'Multi-agent coordination & orchestration',
-  mcp: 'MCP protocol tools',
-  multimodal: 'Multimodal content generation (image/audio/video)',
-  storage: 'Data persistence & vector storage',
-  ai: 'AI model management (import/export/list/download)',
-  training: 'Model training & fine-tuning',
-  realtime: 'Real-time streaming & WebSocket APIs',
-  custom: 'User-defined custom tools',
-};
+// Single source of truth for the tool-category taxonomy lives in
+// _toolCategories.js (shared with _toolHealer) so the two can never drift.
+const { CATEGORIES } = require('./_toolCategories');
 
 // ── Behavioral Defaults (fail-closed) ──────────────────────────────
 

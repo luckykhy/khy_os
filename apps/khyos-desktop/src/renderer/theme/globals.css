@@ -1,10 +1,60 @@
-/* ===== KhyOS Desktop — 纯 CSS 方案 ===== */
+/* ===== KhyOS Desktop — Tailwind 4 + CSS variables ===== */
 
-/* 基础重置 */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* Tailwind 4 entry. Utilities like bg-card / text-foreground/70 / border-border
+   are generated against the semantic tokens registered in @theme below; the
+   actual values live in the :root / .theme-zai-light blocks further down, so
+   the dark/light switch keeps working (utilities reference var()). */
+@import "tailwindcss";
+
+@theme {
+  --color-background: #161616;
+  --color-header: #202020;
+  --color-panel: #202020;
+  --color-sidebar: #161616;
+  --color-surface: #ffffff0d;
+  --color-surface-hover: #ffffff1a;
+  --color-card: #2b2b2b;
+  --color-card-selected: #262626;
+  --color-card-border: #ffffff1a;
+  --color-popover: #2b2b2b;
+  --color-popover-foreground: #e5e5e5;
+  --color-popover-header: #a3a3a3;
+  --color-input: #262626;
+  --color-input-border: #ffffff1a;
+  --color-input-border-hover: #ffffff26;
+  --color-input-border-focused: #ffffff;
+  --color-tab: #202020;
+  --color-tab-active: #161616;
+  --color-tab-border: #ffffff1a;
+  --color-menu: #2b2b2b;
+  --color-menu-hover: #363636;
+  --color-brand: #ffffff;
+  --color-primary: #ffffff;
+  --color-primary-foreground: #000000;
+  --color-secondary: #363636;
+  --color-foreground: #e5e5e5;
+  --color-foreground-inverse: #000000;
+  --color-accent: #001d3d;
+  --color-hover: #ffffff0d;
+  --color-selected: #ffffff1a;
+  --color-border: #ffffff1a;
+  --color-border-hover: #ffffff26;
+  --color-success: #46bf72;
+  --color-warning: #ff8a30;
+  --color-destructive: #ff5c5c;
+  --color-toast: #2b2b2b;
+}
+
+/* 基础重置
+   In @layer base on purpose: an unlayered reset outranks every @layer
+   utilities rule, which silently zeroed out all of Tailwind's margin and
+   padding utilities (px-8 / mx-auto / pb-16 …) across the app. */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 }
 
 html, body, #root {
@@ -14,7 +64,8 @@ html, body, #root {
 }
 
 body {
-  font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  /* Matches ZCode --font-sans exactly (incl. symbol + color-emoji fallbacks) */
+  font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
@@ -291,6 +342,13 @@ body {
 .font-medium { font-weight: 500; }
 .font-semibold { font-weight: 600; }
 .whitespace-pre-wrap { white-space: pre-wrap; }
+
+/* Message body font size (设置 → 外观 → 消息字体大小): applied as the
+   --khy-message-font-size CSS var on <html> by theme.applyMessageFontSize;
+   defaults to 14px so the class alone remains renderable. */
+.message-body {
+  font-size: var(--khy-message-font-size, 14px);
+}
 
 /* ===== 边框工具类 ===== */
 .border { border-width: 1px; border-style: solid; }

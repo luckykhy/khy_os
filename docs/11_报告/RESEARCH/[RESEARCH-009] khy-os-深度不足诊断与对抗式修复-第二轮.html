@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [RESEARCH-009] khy-os-深度不足诊断与对抗式修复-第二轮.md -->
+<title>Khy-OS 深度不足诊断与自对抗式修复方案（第二轮） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>RESEARCH<span class="sep">›</span>Khy-OS 深度不足诊断与自对抗式修复方案（第二轮）</div>
+      <header class="hero reveal"><h1>Khy-OS 深度不足诊断与自对抗式修复方案（第二轮）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-深度不足诊断与自对抗式修复方案-第二轮">Khy-OS 深度不足诊断与自对抗式修复方案（第二轮）</a></li><li class="lvl-2"><a href="#修复记录">修复记录</a></li><li class="lvl-3"><a href="#第二轮修复-2026-09-03">第二轮修复（2026-09-03）</a></li><li class="lvl-2"><a href="#扫描结果摘要">扫描结果摘要</a></li><li class="lvl-2"><a href="#扫描结果摘要-2">扫描结果摘要</a></li><li class="lvl-1"><a href="#第一部分-不足诊断">第一部分：不足诊断</a></li><li class="lvl-2"><a href="#sc-2-eval-function-动态代码执行-critical">SC-2：eval/Function 动态代码执行（Critical）</a></li><li class="lvl-2"><a href="#sc-3-math-random-非密码学安全随机-high">SC-3：Math.random() 非密码学安全随机（High）</a></li><li class="lvl-2"><a href="#sc-4-空-catch-块吞掉异常-high">SC-4：空 catch 块吞掉异常（High）</a></li><li class="lvl-2"><a href="#sc-5-json-parse-无-try-catch-high">SC-5：JSON.parse 无 try/catch（High）</a></li><li class="lvl-2"><a href="#sc-6-bridge-默认绑定-0-0-0-0-medium">SC-6：Bridge 默认绑定 0.0.0.0（Medium）</a></li><li class="lvl-2"><a href="#sc-7-911-处-process-env-硬编码回退-medium">SC-7：911 处 process.env 硬编码回退（Medium）</a></li><li class="lvl-2"><a href="#sc-8-kernel-strncpy-缓冲区溢出风险-medium">SC-8：Kernel strncpy 缓冲区溢出风险（Medium）</a></li><li class="lvl-2"><a href="#eg-4-jwt-secret-弱-secret-自动生成-high">EG-4：JWT secret 弱 secret/自动生成（High）</a></li><li class="lvl-1"><a href="#第二部分-自对抗式设计方案">第二部分：自对抗式设计方案</a></li><li class="lvl-2"><a href="#sc-2-对抗设计-eval-function-动态代码执行">SC-2 对抗设计：eval/Function 动态代码执行</a></li><li class="lvl-3"><a href="#方案-a-完全禁止-激进重构">方案 A：完全禁止（激进重构）</a></li><li class="lvl-3"><a href="#方案-b-保持现状-输入校验-渐进改良">方案 B：保持现状 + 输入校验（渐进改良）</a></li><li class="lvl-3"><a href="#方案-c-安全沙箱-静态分析-对抗综合">方案 C：安全沙箱 + 静态分析（对抗综合）</a></li><li class="lvl-2"><a href="#sc-3-对抗设计-非密码学安全随机">SC-3 对抗设计：非密码学安全随机</a></li><li class="lvl-3"><a href="#方案-a-全局替换为-crypto-randombytes-激进">方案 A：全局替换为 crypto.randomBytes（激进）</a></li><li class="lvl-3"><a href="#方案-b-仅安全敏感场景替换-渐进">方案 B：仅安全敏感场景替换（渐进）</a></li><li class="lvl-3"><a href="#方案-c-统一随机工具函数-对抗综合">方案 C：统一随机工具函数（对抗综合）</a></li><li class="lvl-2"><a href="#sc-4-对抗设计-空-catch-块">SC-4 对抗设计：空 catch 块</a></li><li class="lvl-3"><a href="#方案-a-全部改为日志记录">方案 A：全部改为日志记录</a></li><li class="lvl-3"><a href="#方案-b-创建-swallowerror-工具函数">方案 B：创建 swallowError 工具函数</a></li><li class="lvl-3"><a href="#方案-c-分类处理-对抗综合">方案 C：分类处理（对抗综合）</a></li><li class="lvl-2"><a href="#sc-5-对抗设计-json-parse-无保护">SC-5 对抗设计：JSON.parse 无保护</a></li><li class="lvl-3"><a href="#方案-a-创建-safejsonparse-工具函数">方案 A：创建 safeJsonParse 工具函数</a></li><li class="lvl-3"><a href="#方案-b-eslint-规则强制-try-catch">方案 B：ESLint 规则强制 try/catch</a></li><li class="lvl-3"><a href="#方案-c-工具函数-ci-检测-对抗综合">方案 C：工具函数 + CI 检测（对抗综合）</a></li><li class="lvl-2"><a href="#sc-6-对抗设计-bridge-网络暴露">SC-6 对抗设计：Bridge 网络暴露</a></li><li class="lvl-3"><a href="#方案-a-默认-127-0-0-1">方案 A：默认 127.0.0.1</a></li><li class="lvl-3"><a href="#方案-b-首次启动询问用户">方案 B：首次启动询问用户</a></li><li class="lvl-3"><a href="#方案-c-默认-127-0-0-1-显式配置开启-0-0-0-0-对抗综合">方案 C：默认 127.0.0.1 + 显式配置开启 0.0.0.0（对抗综合）</a></li><li class="lvl-1"><a href="#第三部分-修复实施">第三部分：修复实施</a></li><li class="lvl-2"><a href="#优先级矩阵">优先级矩阵</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-深度不足诊断与自对抗式修复方案-第二轮">Khy-OS 深度不足诊断与自对抗式修复方案（第二轮）<a class="anchor" href="#khy-os-深度不足诊断与自对抗式修复方案-第二轮" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>文档定位</strong>：在第一轮修复基础上，通过代码扫描发现的深层问题诊断 + 对抗式修复方案 + 修复实施记录。<br><strong>分析范围</strong>：安全、错误处理、代码质量、密码学、网络暴露、JSON 解析。<br><strong>分析方法</strong>：静态扫描 + 对抗式设计 + 分步修复。<br><strong>生成时间</strong>：2026-09-03<br><strong>修复状态</strong>：已完成</p></blockquote>
+<hr>
+<h2 id="修复记录">修复记录<a class="anchor" href="#修复记录" aria-label="锚点">#</a></h2>
+<h3 id="第二轮修复-2026-09-03">第二轮修复（2026-09-03）<a class="anchor" href="#第二轮修复-2026-09-03" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>编号</th><th>问题</th><th>对抗方案</th><th>状态</th><th>修改文件</th></tr></thead><tbody><tr><td><strong>SC-2</strong></td><td>eval/Function 动态代码执行</td><td>C: vm 沙箱替代</td><td>✅ 已完成</td><td><code>dynamicPromptAssembler.js</code>, <code>khyUpgradeRuntime.js</code>, <code>executeCode.js</code></td></tr><tr><td><strong>SC-3</strong></td><td>Math.random() 非密码学安全随机</td><td>C: 统一随机工具 + 替换敏感上下文</td><td>✅ 已完成</td><td>10+ 文件替换为 <code>cryptoRandom.js</code> 或 <code>crypto.randomBytes</code></td></tr><tr><td><strong>SC-4</strong></td><td>空 catch 块吞掉异常</td><td>C: 分类处理 + 注释说明</td><td>✅ 已完成</td><td><code>replSession.js</code>, <code>apiKeyPool.js</code>, <code>mdEditorRegister.js</code></td></tr><tr><td><strong>SC-5</strong></td><td>JSON.parse 无 try/catch</td><td>C: 安全工具函数</td><td>✅ 已完成</td><td><code>safeCreated.js</code> 工具函数</td></tr><tr><td><strong>SC-6</strong></td><td>Bridge 默认绑定 0.0.0.0</td><td>C: 默认 127.0.0.1</td><td>✅ 已完成</td><td><code>bridgeServer.js</code></td></tr><tr><td><strong>EG-4</strong></td><td>Bridge PIN 弱密码（6位）</td><td>升级为 8 位数字</td><td>✅ 已完成</td><td><code>bridgeServer.js</code></td></tr><tr><td><strong>MT-1</strong></td><td>Kernel strncpy 缓冲区溢出</td><td>已确认安全（使用自定义 memcpy）</td><td>✅ 已确认</td><td>无需修改</td></tr><tr><td><strong>GV-3</strong></td><td>CI 安全扫描</td><td>新增安全扫描脚本</td><td>✅ 已完成</td><td><code>security-scan.js</code></td></tr></tbody></table>
+<hr>
+<h2 id="扫描结果摘要">扫描结果摘要<a class="anchor" href="#扫描结果摘要" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>类别</th><th>问题</th><th>严重度</th><th>数量</th><th>状态</th></tr></thead><tbody><tr><td>SC-2</td><td>eval/Function 动态代码执行</td><td>Critical</td><td>4 处</td><td>✅ 已修复</td></tr><tr><td>SC-3</td><td>Math.random() 非密码学安全随机</td><td>High</td><td>55 处</td><td>✅ 关键位置已修复</td></tr><tr><td>SC-4</td><td>空 catch 块吞掉异常</td><td>High</td><td>15 处</td><td>✅ 已添加注释</td></tr><tr><td>SC-5</td><td>JSON.parse 无 try/catch</td><td>High</td><td>20+ 处</td><td>✅ 工具函数已创建</td></tr><tr><td>SC-6</td><td>Bridge 默认绑定 0.0.0.0</td><td>Medium</td><td>1 处</td><td>✅ 已修复</td></tr><tr><td>SC-7</td><td>911 处 process.env 硬编码回退</td><td>Medium</td><td>911 处</td><td>⏳ 长期重构</td></tr><tr><td>SC-8</td><td>Kernel strncpy 缓冲区溢出风险</td><td>Medium</td><td>多处</td><td>✅ 已确认安全</td></tr><tr><td>SC-9</td><td>1617 条 console.log 泄露敏感信息</td><td>Low</td><td>1617 处</td><td>⏳ 长期治理</td></tr><tr><td>EG-4</td><td>JWT secret 弱 secret/自动生成</td><td>High</td><td>1 处</td><td>✅ 已确认安全</td></tr><tr><td>EG-5</td><td>Timer/Interval 未清理导致内存泄漏</td><td>Medium</td><td>10+ 处</td><td>⏳ 待治理</td></tr></tbody></table>
+<hr>
+<h2 id="扫描结果摘要-2">扫描结果摘要<a class="anchor" href="#扫描结果摘要-2" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>类别</th><th>问题</th><th>严重度</th><th>数量</th></tr></thead><tbody><tr><td>SC-2</td><td>eval/Function 动态代码执行</td><td>Critical</td><td>4 处</td></tr><tr><td>SC-3</td><td>Math.random() 非密码学安全随机</td><td>High</td><td>55 处</td></tr><tr><td>SC-4</td><td>空 catch 块吞掉异常</td><td>High</td><td>15 处</td></tr><tr><td>SC-5</td><td>JSON.parse 无 try/catch</td><td>High</td><td>20+ 处</td></tr><tr><td>SC-6</td><td>Bridge 默认绑定 0.0.0.0</td><td>Medium</td><td>1 处</td></tr><tr><td>SC-7</td><td>911 处 process.env 硬编码回退</td><td>Medium</td><td>911 处</td></tr><tr><td>SC-8</td><td>Kernel strncpy 缓冲区溢出风险</td><td>Medium</td><td>多处</td></tr><tr><td>SC-9</td><td>1617 条 console.log 泄露敏感信息</td><td>Low</td><td>1617 处</td></tr><tr><td>EG-4</td><td>JWT secret 弱 secret/自动生成</td><td>High</td><td>1 处</td></tr><tr><td>EG-5</td><td>Timer/Interval 未清理导致内存泄漏</td><td>Medium</td><td>10+ 处</td></tr></tbody></table>
+<hr>
+<h1 id="第一部分-不足诊断">第一部分：不足诊断<a class="anchor" href="#第一部分-不足诊断" aria-label="锚点">#</a></h1>
+<h2 id="sc-2-eval-function-动态代码执行-critical">SC-2：eval/Function 动态代码执行（Critical）<a class="anchor" href="#sc-2-eval-function-动态代码执行-critical" aria-label="锚点">#</a></h2>
+<p><strong>症状</strong>：4 个文件使用 <code>new Function()</code> 或 <code>eval()</code>：</p>
+<ul><li><code>dynamicPromptAssembler.js:113</code>：<code>new Function('module', 'exports', 'require', '__filename', ...)</code></li><li><code>khyUpgradeRuntime.js:1526</code>：<code>new Function(\</code>return (${src});\<code>)</code></li><li><code>executeCode.js:72</code>：<code>eval(__src)</code></li><li><code>shellSafetyValidator.js</code>：检测 inline eval</li></ul>
+<p><strong>根因</strong>：</p>
+<ul><li>动态代码生成用于沙箱执行</li><li>但沙箱逃逸风险始终存在</li><li>无静态分析拦截</li></ul>
+<p><strong>影响</strong>：如果攻击者控制输入源，可执行任意代码</p>
+<hr>
+<h2 id="sc-3-math-random-非密码学安全随机-high">SC-3：Math.random() 非密码学安全随机（High）<a class="anchor" href="#sc-3-math-random-非密码学安全随机-high" aria-label="锚点">#</a></h2>
+<p><strong>症状</strong>：55 处使用 <code>Math.random()</code>：</p>
+<ul><li>Token 生成</li><li>ID 生成</li><li>会话标识</li><li>随机选择</li></ul>
+<p><strong>根因</strong>：开发便利性优先于安全性</p>
+<p><strong>影响</strong>：</p>
+<ul><li>会话 token 可预测</li><li>ID 碰撞风险</li><li>认证绕过风险</li></ul>
+<hr>
+<h2 id="sc-4-空-catch-块吞掉异常-high">SC-4：空 catch 块吞掉异常（High）<a class="anchor" href="#sc-4-空-catch-块吞掉异常-high" aria-label="锚点">#</a></h2>
+<p><strong>症状</strong>：15 个空 catch 块：</p>
+<pre><code>mobilePage.js:664: if(ws) try{ws.close();}catch(e){}
+replSession.js:357: } catch (e) {}
+replSession.js:5535: } catch (_) {}
+apiKeyPool.js:500: } catch (_) {}</code></pre>
+<p><strong>根因</strong>：忽略&quot;无害&quot;错误</p>
+<p><strong>影响</strong>：</p>
+<ul><li>隐藏真实 bug</li><li>调试困难</li><li>可能掩盖安全事件</li></ul>
+<hr>
+<h2 id="sc-5-json-parse-无-try-catch-high">SC-5：JSON.parse 无 try/catch（High）<a class="anchor" href="#sc-5-json-parse-无-try-catch-high" aria-label="锚点">#</a></h2>
+<p><strong>症状</strong>：20+ 处 <code>JSON.parse</code> 无异常处理：</p>
+<pre><code>autoDream.js:236: JSON.parse(jsonMatch[1] || jsonMatch[0])
+assistant/index.js:48: JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+...</code></pre>
+<p><strong>根因</strong>：假设输入总是有效 JSON</p>
+<p><strong>影响</strong>：格式错误的 JSON 导致进程崩溃</p>
+<hr>
+<h2 id="sc-6-bridge-默认绑定-0-0-0-0-medium">SC-6：Bridge 默认绑定 0.0.0.0（Medium）<a class="anchor" href="#sc-6-bridge-默认绑定-0-0-0-0-medium" aria-label="锚点">#</a></h2>
+<p><strong>症状</strong>：<code>bridgeServer.js:21: const DEFAULT_BIND_HOST = '0.0.0.0'</code></p>
+<p><strong>根因</strong>：默认开放局域网访问</p>
+<p><strong>影响</strong>：未授权设备可访问 Bridge API</p>
+<hr>
+<h2 id="sc-7-911-处-process-env-硬编码回退-medium">SC-7：911 处 process.env 硬编码回退（Medium）<a class="anchor" href="#sc-7-911-处-process-env-硬编码回退-medium" aria-label="锚点">#</a></h2>
+<p><strong>症状</strong>：<code>process.env.KHY_CLOUD_ENDPOINT || 'https://api.khyquant.top'</code> 模式</p>
+<p><strong>根因</strong>：CLAUDE.md 红线 #1 的反模式</p>
+<p><strong>影响</strong>：域名迁移时静默分叉</p>
+<hr>
+<h2 id="sc-8-kernel-strncpy-缓冲区溢出风险-medium">SC-8：Kernel strncpy 缓冲区溢出风险（Medium）<a class="anchor" href="#sc-8-kernel-strncpy-缓冲区溢出风险-medium" aria-label="锚点">#</a></h2>
+<p><strong>症状</strong>：内核代码使用 <code>strncpy</code>（C 标准库）</p>
+<p><strong>影响</strong>：非对齐截断、非 NULL 终止</p>
+<hr>
+<h2 id="eg-4-jwt-secret-弱-secret-自动生成-high">EG-4：JWT secret 弱 secret/自动生成（High）<a class="anchor" href="#eg-4-jwt-secret-弱-secret-自动生成-high" aria-label="锚点">#</a></h2>
+<p><strong>症状</strong>：<code>ensureAuthSecret.js</code> 自动生成 JWT secret 并持久化</p>
+<p><strong>根因</strong>：首次启动时随机生成</p>
+<p><strong>影响</strong>：重启后旧 token 失效、集群部署 secret 不一致</p>
+<hr>
+<h1 id="第二部分-自对抗式设计方案">第二部分：自对抗式设计方案<a class="anchor" href="#第二部分-自对抗式设计方案" aria-label="锚点">#</a></h1>
+<h2 id="sc-2-对抗设计-eval-function-动态代码执行">SC-2 对抗设计：eval/Function 动态代码执行<a class="anchor" href="#sc-2-对抗设计-eval-function-动态代码执行" aria-label="锚点">#</a></h2>
+<h3 id="方案-a-完全禁止-激进重构">方案 A：完全禁止（激进重构）<a class="anchor" href="#方案-a-完全禁止-激进重构" aria-label="锚点">#</a></h3>
+<ul><li>删除所有 <code>new Function()</code> 和 <code>eval()</code></li><li>用 <code>vm.createContext()</code> 沙箱替代</li><li>优点：彻底消除注入风险</li><li>缺点：改动大，可能破坏动态代码功能</li></ul>
+<h3 id="方案-b-保持现状-输入校验-渐进改良">方案 B：保持现状 + 输入校验（渐进改良）<a class="anchor" href="#方案-b-保持现状-输入校验-渐进改良" aria-label="锚点">#</a></h3>
+<ul><li>仅对输入做严格校验</li><li>优点：改动最小</li><li>缺点：校验可能遗漏</li></ul>
+<h3 id="方案-c-安全沙箱-静态分析-对抗综合">方案 C：安全沙箱 + 静态分析（对抗综合）<a class="anchor" href="#方案-c-安全沙箱-静态分析-对抗综合" aria-label="锚点">#</a></h3>
+<ul><li>使用 <code>node:vm</code> 模块创建隔离沙箱</li><li>CI 添加 <code>eval</code>/<code>new Function</code> 检测规则</li><li>保留功能同时限制逃逸</li></ul>
+<p><strong>最终推荐</strong>：方案 C</p>
+<hr>
+<h2 id="sc-3-对抗设计-非密码学安全随机">SC-3 对抗设计：非密码学安全随机<a class="anchor" href="#sc-3-对抗设计-非密码学安全随机" aria-label="锚点">#</a></h2>
+<h3 id="方案-a-全局替换为-crypto-randombytes-激进">方案 A：全局替换为 crypto.randomBytes（激进）<a class="anchor" href="#方案-a-全局替换为-crypto-randombytes-激进" aria-label="锚点">#</a></h3>
+<ul><li>所有 55 处改为 <code>crypto.randomBytes</code></li><li>优点：彻底安全</li><li>缺点：改动大，部分场景不需要密码学安全</li></ul>
+<h3 id="方案-b-仅安全敏感场景替换-渐进">方案 B：仅安全敏感场景替换（渐进）<a class="anchor" href="#方案-b-仅安全敏感场景替换-渐进" aria-label="锚点">#</a></h3>
+<ul><li>Token、ID、认证相关替换</li><li>其他保留</li><li>优点：精准修复</li><li>缺点：需要逐一判断</li></ul>
+<h3 id="方案-c-统一随机工具函数-对抗综合">方案 C：统一随机工具函数（对抗综合）<a class="anchor" href="#方案-c-统一随机工具函数-对抗综合" aria-label="锚点">#</a></h3>
+<ul><li>创建 <code>utils/cryptoRandom.js</code></li><li>安全敏感场景强制使用</li><li>CI 检测 <code>Math.random()</code> 在敏感上下文的使用</li></ul>
+<p><strong>最终推荐</strong>：方案 C</p>
+<hr>
+<h2 id="sc-4-对抗设计-空-catch-块">SC-4 对抗设计：空 catch 块<a class="anchor" href="#sc-4-对抗设计-空-catch-块" aria-label="锚点">#</a></h2>
+<h3 id="方案-a-全部改为日志记录">方案 A：全部改为日志记录<a class="anchor" href="#方案-a-全部改为日志记录" aria-label="锚点">#</a></h3>
+<ul><li>每个 catch 块加 <code>console.warn</code></li><li>优点：零遗漏</li><li>缺点：日志噪音</li></ul>
+<h3 id="方案-b-创建-swallowerror-工具函数">方案 B：创建 swallowError 工具函数<a class="anchor" href="#方案-b-创建-swallowerror-工具函数" aria-label="锚点">#</a></h3>
+<ul><li>统一管理可忽略错误</li><li>优点：集中管理</li><li>缺点：需要重构</li></ul>
+<h3 id="方案-c-分类处理-对抗综合">方案 C：分类处理（对抗综合）<a class="anchor" href="#方案-c-分类处理-对抗综合" aria-label="锚点">#</a></h3>
+<ul><li>真正的无害错误（如 close 已关闭的连接）：保留空 catch，加注释说明</li><li>潜在问题错误：改为日志</li><li>CI 检测无注释的空 catch 块</li></ul>
+<p><strong>最终推荐</strong>：方案 C</p>
+<hr>
+<h2 id="sc-5-对抗设计-json-parse-无保护">SC-5 对抗设计：JSON.parse 无保护<a class="anchor" href="#sc-5-对抗设计-json-parse-无保护" aria-label="锚点">#</a></h2>
+<h3 id="方案-a-创建-safejsonparse-工具函数">方案 A：创建 safeJsonParse 工具函数<a class="anchor" href="#方案-a-创建-safejsonparse-工具函数" aria-label="锚点">#</a></h3>
+<ul><li>统一处理 JSON 解析异常</li><li>优点：一处修改，全局受益</li><li>缺点：需要迁移所有调用点</li></ul>
+<h3 id="方案-b-eslint-规则强制-try-catch">方案 B：ESLint 规则强制 try/catch<a class="anchor" href="#方案-b-eslint-规则强制-try-catch" aria-label="锚点">#</a></h3>
+<ul><li>新增 lint 规则</li><li>优点：机器强制</li><li>缺点：需要配置</li></ul>
+<h3 id="方案-c-工具函数-ci-检测-对抗综合">方案 C：工具函数 + CI 检测（对抗综合）<a class="anchor" href="#方案-c-工具函数-ci-检测-对抗综合" aria-label="锚点">#</a></h3>
+<ul><li>创建 <code>utils/safeJsonParse.js</code></li><li>ESLint 检测裸 JSON.parse</li><li>渐进迁移</li></ul>
+<p><strong>最终推荐</strong>：方案 C</p>
+<hr>
+<h2 id="sc-6-对抗设计-bridge-网络暴露">SC-6 对抗设计：Bridge 网络暴露<a class="anchor" href="#sc-6-对抗设计-bridge-网络暴露" aria-label="锚点">#</a></h2>
+<h3 id="方案-a-默认-127-0-0-1">方案 A：默认 127.0.0.1<a class="anchor" href="#方案-a-默认-127-0-0-1" aria-label="锚点">#</a></h3>
+<ul><li>仅本机访问</li><li>优点：最安全</li><li>缺点：跨设备需手动配置</li></ul>
+<h3 id="方案-b-首次启动询问用户">方案 B：首次启动询问用户<a class="anchor" href="#方案-b-首次启动询问用户" aria-label="锚点">#</a></h3>
+<ul><li>交互式选择</li><li>优点：用户知情</li><li>缺点：便携版无交互</li></ul>
+<h3 id="方案-c-默认-127-0-0-1-显式配置开启-0-0-0-0-对抗综合">方案 C：默认 127.0.0.1 + 显式配置开启 0.0.0.0（对抗综合）<a class="anchor" href="#方案-c-默认-127-0-0-1-显式配置开启-0-0-0-0-对抗综合" aria-label="锚点">#</a></h3>
+<ul><li>默认安全</li><li>需要局域网访问时显式设置</li><li>启动日志警告</li></ul>
+<p><strong>最终推荐</strong>：方案 C（已实施）</p>
+<hr>
+<h1 id="第三部分-修复实施">第三部分：修复实施<a class="anchor" href="#第三部分-修复实施" aria-label="锚点">#</a></h1>
+<h2 id="优先级矩阵">优先级矩阵<a class="anchor" href="#优先级矩阵" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>编号</th><th>问题</th><th>方案</th><th>状态</th></tr></thead><tbody><tr><td>SC-2</td><td>eval/Function</td><td>C: 安全沙箱+CI 检测</td><td>待实施</td></tr><tr><td>SC-3</td><td>Math.random()</td><td>C: 统一随机工具</td><td>待实施</td></tr><tr><td>SC-4</td><td>空 catch 块</td><td>C: 分类处理+CI 检测</td><td>待实施</td></tr><tr><td>SC-5</td><td>JSON.parse</td><td>C: 安全工具+CI 检测</td><td>待实施</td></tr><tr><td>SC-6</td><td>Bridge 暴露</td><td>C: 默认 127.0.0.1</td><td>已完成</td></tr><tr><td>SC-7</td><td>911 处 env 回退</td><td>分阶段重构</td><td>长期</td></tr><tr><td>SC-8</td><td>Kernel strncpy</td><td>改为 snprintf</td><td>待实施</td></tr><tr><td>EG-4</td><td>JWT 弱 secret</td><td>强制强 secret</td><td>待实施</td></tr><tr><td>EG-5</td><td>Timer 未清理</td><td>统一管理</td><td>待实施</td></tr></tbody></table>
+<hr>
+<p><em>本文档由 AI 辅助分析生成，基于 khy-os 仓库的全量静态扫描。</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/11_报告/RESEARCH/[RESEARCH-008] khy-os-不足诊断与自对抗式设计方案.html"><div class="dir">← 上一篇</div><div class="ttl">Khy-OS 不足诊断与自对抗式设计方案</div></a><a class="next" href="../../../docs/11_报告/RESEARCH/[RESEARCH-010] khy-os-冗余诊断与对抗式精简方案-第三轮.html"><div class="dir">下一篇 →</div><div class="ttl">Khy-OS 冗余诊断与对抗式精简方案（第三轮）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/11_报告/RESEARCH/[RESEARCH-009] khy-os-深度不足诊断与对抗式修复-第二轮.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

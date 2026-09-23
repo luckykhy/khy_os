@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-QUAL-002] 官方一致性套件接入规范.md -->
+<title>[DESIGN-QUAL-002] 官方一致性套件接入规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-QUAL-002] 官方一致性套件接入规范</div>
+      <header class="hero reveal"><h1>[DESIGN-QUAL-002] 官方一致性套件接入规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-qual-002-官方一致性套件接入规范">[DESIGN-QUAL-002] 官方一致性套件接入规范</a></li><li class="lvl-2"><a href="#1-目标与边界">1. 目标与边界</a></li><li class="lvl-2"><a href="#2-上游工具-权威清单">2. 上游工具（权威清单）</a></li><li class="lvl-3"><a href="#2-1-mcp">2.1 MCP</a></li><li class="lvl-3"><a href="#2-2-a2a">2.2 A2A</a></li><li class="lvl-2"><a href="#3-接入前提-本地适配器">3. 接入前提（本地适配器）</a></li><li class="lvl-3"><a href="#3-1-mcp-前提">3.1 MCP 前提</a></li><li class="lvl-3"><a href="#3-2-a2a-前提">3.2 A2A 前提</a></li><li class="lvl-2"><a href="#4-接入方式-分步">4. 接入方式（分步）</a></li><li class="lvl-3"><a href="#步骤-a-钉版本-可复现底线">步骤 A — 钉版本（可复现底线）</a></li><li class="lvl-3"><a href="#步骤-b-启动-khy-端-harness-职责">步骤 B — 启动 khy 端（harness 职责）</a></li><li class="lvl-3"><a href="#步骤-c-运行并产出报告">步骤 C — 运行并产出报告</a></li><li class="lvl-3"><a href="#步骤-d-登记已知失败基线-只缩不扩">步骤 D — 登记已知失败基线（只缩不扩）</a></li><li class="lvl-2"><a href="#5-所需产出-门禁验收物">5. 所需产出（门禁验收物）</a></li><li class="lvl-2"><a href="#6-版本钉扎与可复现">6. 版本钉扎与可复现</a></li><li class="lvl-2"><a href="#7-ci-接线">7. CI 接线</a></li><li class="lvl-2"><a href="#8-khy-现状与缺口-诚实登记">8. khy 现状与缺口（诚实登记）</a></li><li class="lvl-2"><a href="#9-分工-自审守卫-vs-官方套件">9. 分工：自审守卫 vs 官方套件</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-qual-002-官方一致性套件接入规范">[DESIGN-QUAL-002] 官方一致性套件接入规范<a class="anchor" href="#design-qual-002-官方一致性套件接入规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>状态</strong>：生效中<br><strong>作者</strong>：协议与工程规范整改（2026-09-15）<br><strong>前置</strong>：[DESIGN-QUAL-001] 门禁基线与债务台账规范、[DESIGN-NAM-002] A2A 与 ACP 命名及术语规范<br><strong>配套守卫</strong>：<code>scripts/ci/check-protocol-conformance.js</code>（自审一致性矩阵）、<code>scripts/ci/conformance-runner.mjs</code>（官方套件编排，降级安全）</p></blockquote>
+<hr>
+<h2 id="1-目标与边界">1. 目标与边界<a class="anchor" href="#1-目标与边界" aria-label="锚点">#</a></h2>
+<p>本规范回答两件事：<strong>怎么接入官方一致性套件</strong>，以及<strong>必须产出什么</strong>。</p>
+<ul><li><strong>为什么要接</strong>：<code>check-protocol-conformance.js</code> 是<strong>自审</strong>——它校验「khy 自己声明的协议面是否自洽」。它无法证明 khy 与</li></ul>
+<p><em>外部</em> 规范（MCP 规范、A2A 规范）一致。外部读者、跨厂商互操作、以及真正的安全/合规审计，都依赖官方套件出具的<strong>独立证据</strong>。</p>
+<ul><li><strong>边界</strong>：官方套件验证的是<strong>协议层行为</strong>（JSON-RPC 信封、生命周期、方法面、Agent Card 形状、状态机）。它<strong>不</strong>替代：</li></ul>
+<p>功能语义测试、鉴权滥用面、租户隔离、压测、密钥扫描、破坏性操作控制。这些仍由各业务测试与 [DESIGN-QUAL-001] 门禁负责。</p>
+<hr>
+<h2 id="2-上游工具-权威清单">2. 上游工具（权威清单）<a class="anchor" href="#2-上游工具-权威清单" aria-label="锚点">#</a></h2>
+<blockquote><p>以下包名/命令来自上游官方仓库，接入前请再次向官方 README 核对 CLI flag（本文件锁定的是包与门禁语义，不是每个 flag 的永久形态）。</p></blockquote>
+<h3 id="2-1-mcp">2.1 MCP<a class="anchor" href="#2-1-mcp" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>工具</th><th>包</th><th>用途</th><th>形态</th></tr></thead><tbody><tr><td><strong>Conformance</strong></td><td><code>@modelcontextprotocol/conformance</code></td><td>官方一致性测试框架，覆盖 client/server 两模式</td><td><code>npx</code> 运行；结果落 <code>results/</code></td></tr><tr><td><strong>Inspector (CLI)</strong></td><td><code>@modelcontextprotocol/inspector</code></td><td>交互/脚本化调试；CLI 模式可做 <code>tools/list</code>、<code>tools/call</code> 冒烟</td><td><code>npx</code> 运行</td></tr></tbody></table>
+<ul><li>服务器模式（khy 用这个）：<code>npx @modelcontextprotocol/conformance server --url &lt;KHY_MCP_ENDPOINT&gt; [--spec-version &lt;VER&gt;]</code></li><li>列场景：<code>npx @modelcontextprotocol/conformance list</code></li><li>结果：每次运行在 <code>results/server-&lt;host&gt;/checks.json</code> 写出<strong>逐场景 pass/fail 数组</strong>；每个场景外加两条合成检查：<ul><li><code>wire-schema-valid</code> —— 被测实现发出的任何 JSON-RPC 消息违反协商版本的 JSON Schema 即失败；</li><li><code>wire-schema-harness-error</code> —— harness 自己发了非法消息（说明套件有 bug，不是实现问题）。</li></ul></li><li>当前（2026 年中）官方发布协议版本为 <strong>2025-11-25</strong>；套件还包含 2026 draft（draft 场景非发布要求）。<strong>khy 当前仅宣称 <code>2024-11-05</code></strong>（见 <code>check-protocol-conformance.js</code> 输出），首轮 conformance 必须以 khy 实际协商的版本运行。</li></ul>
+<h3 id="2-2-a2a">2.2 A2A<a class="anchor" href="#2-2-a2a" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>工具</th><th>包</th><th>用途</th><th>形态</th></tr></thead><tbody><tr><td><strong>TCK</strong></td><td><code>a2a-tck</code>（<code>@a2aproject</code>，PyPI + GitHub）</td><td>官方 Technology Compatibility Kit，pytest</td><td>Python 3.11+，<code>uv</code> 安装；<code>reports/</code> 产物</td></tr><tr><td><strong>Inspector</strong></td><td><code>a2a-inspector</code>（<code>@a2aproject</code>）</td><td>官方合规检查与调试工具</td><td>Python</td></tr></tbody></table>
+<ul><li>运行：<code>./run_tck.py --sut-host &lt;KHY_ACP_A2A_BASE_URL&gt; [--level must|should|may] [--transport grpc,jsonrpc,http_json]</code></li><li>运输由 Agent Card 的 <code>supportedInterfaces</code> 决定；TCK 先 <code>GET /.well-known/agent-card.json</code> 再为每声明接口建客户端。</li><li>报告：<code>reports/compatibility.json</code>（机器可读，逐需求/逐运输分解）、<code>reports/compatibility.html</code>、<code>reports/junitreport.xml</code>、<code>reports/tck_report.html</code>。</li><li>RFC 2119 分级：<code>must</code>=硬失败；<code>should</code>=预期失败（xfail，不挡兼容）；<code>may</code>=可选（未声明能力则跳过）。</li></ul>
+<hr>
+<h2 id="3-接入前提-本地适配器">3. 接入前提（本地适配器）<a class="anchor" href="#3-接入前提-本地适配器" aria-label="锚点">#</a></h2>
+<p>官方套件<strong>不</strong>要求实现任何 server-adapter API——它只认<strong>可达端点</strong>。khy 侧需要的是把真实实现通过「它期望的传输」暴露出来：</p>
+<h3 id="3-1-mcp-前提">3.1 MCP 前提<a class="anchor" href="#3-1-mcp-前提" aria-label="锚点">#</a></h3>
+<ul><li>一个<strong>已启动且健康</strong>的 MCP 端点。优先用 <code>Streamable HTTP</code>（<code>/mcp</code>）或 <code>SSE</code>；纯 stdio 服务器需由 harness 以 <code>--command</code> 拉起（conformance client 模式）。</li><li>端点绑 <code>127.0.0.1</code>，校验 <code>Origin</code>，非本地端点必须鉴权（套件安全建议，不是断言）。</li><li>必填配套：独立 health 路由、确定性的 fixture 依赖、正确的进程终止转发。</li><li><strong>khy 现状</strong>：<code>mcpServerProtocol.js</code> 目前仅实现 <code>2024-11-05</code>，且以 stdio 为主。接入前需决定：① 以 stdio 由 harness 拉起，或 ② 先实现 Streamable HTTP 端点（推荐，便于 CI 与跨进程）。详见 §8。</li></ul>
+<h3 id="3-2-a2a-前提">3.2 A2A 前提<a class="anchor" href="#3-2-a2a-前提" aria-label="锚点">#</a></h3>
+<ul><li><code>/.well-known/agent-card.json</code> 可被 GET（khy 已实现，见 <code>routes/wellKnown.js</code>）。</li><li>Agent Card 的 <code>supportedInterfaces</code> 必须<strong>只声明真实实现的能力</strong>（诚实原则，见 [DESIGN-A2A-002] §capability-honesty）。</li><li>任务处理面：<code>message/send</code>、<code>tasks/get</code>、<code>tasks/cancel</code>、<code>tasks/resubscribe</code>（及可选 <code>message/stream</code>、<code>tasks/pushNotificationConfig/*</code>）需真实可调用。</li><li><strong>khy 现状</strong>：目前<strong>只有 Agent Card 发布，没有任务处理面</strong>（这是最大的一步缺口）。见 §8。</li></ul>
+<hr>
+<h2 id="4-接入方式-分步">4. 接入方式（分步）<a class="anchor" href="#4-接入方式-分步" aria-label="锚点">#</a></h2>
+<h3 id="步骤-a-钉版本-可复现底线">步骤 A — 钉版本（可复现底线）<a class="anchor" href="#步骤-a-钉版本-可复现底线" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># MCP：锁精确版本，本地与 CI 解析同一包</span>
+npm install --save-dev --save-exact @modelcontextprotocol/conformance@0.1.16
+npm <span class="hljs-built_in">exec</span> -- conformance --version
+npm <span class="hljs-built_in">exec</span> -- conformance list --server --spec-version 2024-11-05   <span class="hljs-comment"># khy 当前宣称版本</span>
+
+<span class="hljs-comment"># A2A：用 uv 管理 Python 环境</span>
+git <span class="hljs-built_in">clone</span> https://github.com/a2aproject/a2a-tck.git .ci/a2a-tck
+<span class="hljs-built_in">cd</span> .ci/a2a-tck &amp;&amp; uv venv &amp;&amp; uv pip install -e . &amp;&amp; <span class="hljs-built_in">cd</span> -</code></pre>
+<blockquote><p>接入前记录：套件包版本 + lockfile digest、khy 协商的协议版本、MCP/SDK 与 khy commit、端点传输与鉴权方式、fixture 数据集修订、运行机 OS/Node 版本、suite/scenario 选择器。<br><strong>场景成员会随套件版本变化，命令输出比本文的计数更权威。</strong></p></blockquote>
+<h3 id="步骤-b-启动-khy-端-harness-职责">步骤 B — 启动 khy 端（harness 职责）<a class="anchor" href="#步骤-b-启动-khy-端-harness-职责" aria-label="锚点">#</a></h3>
+<p>MCP：启动生产 server 入口，暴露 health 路由，等待就绪。<br>A2A：启动 agent，确认 <code>/.well-known/agent-card.json</code> 200 且 <code>supportedInterfaces</code> 与实现一致。</p>
+<h3 id="步骤-c-运行并产出报告">步骤 C — 运行并产出报告<a class="anchor" href="#步骤-c-运行并产出报告" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># MCP（以 khy 实际协商版本为准）</span>
+npx @modelcontextprotocol/conformance server \
+  --url http://127.0.0.1:&lt;PORT&gt;/mcp \
+  --spec-version 2024-11-05 \
+  --expected-failures .ci/mcp-expected-failures.yaml
+
+<span class="hljs-comment"># A2A（先跑 MUST 级建立基线）</span>
+./.ci/a2a-tck/run_tck.py --sut-host http://127.0.0.1:&lt;PORT&gt; --level must</code></pre>
+<h3 id="步骤-d-登记已知失败基线-只缩不扩">步骤 D — 登记已知失败基线（只缩不扩）<a class="anchor" href="#步骤-d-登记已知失败基线-只缩不扩" aria-label="锚点">#</a></h3>
+<ul><li>MCP：<code>--expected-failures</code> 指向一份 YAML，列出<strong>当前确实不支持</strong>的场景（如尚未实现的 2025-06-18 sampling/elicitation）。门禁规则：<strong>基线只缩不扩</strong>——新增一条 known-failure 必须带 owner/dueBy/plan，登记进 <code>scripts/ci/debt-ledger.json</code>。</li><li>A2A：首轮 <code>must</code> 级运行会暴露尚未实现的任务方法。把它们的失败固化进 TCK 的 expected-failures（或债务台账），并设定归零期限。</li></ul>
+<hr>
+<h2 id="5-所需产出-门禁验收物">5. 所需产出（门禁验收物）<a class="anchor" href="#5-所需产出-门禁验收物" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>协议</th><th>产物</th><th>格式</th><th>保管</th><th>门禁判定</th></tr></thead><tbody><tr><td>MCP</td><td><code>results/server-&lt;host&gt;/checks.json</code></td><td>JSON（逐场景 pass/fail + <code>wire-schema-valid</code>）</td><td>CI artifact，保留 ≥ 14 天</td><td>任一 <code>fail</code> 且不在 <code>--expected-failures</code> → 门禁红</td></tr><tr><td>MCP</td><td>Inspector CLI 冒烟记录</td><td>stdout（<code>tools/list</code>、<code>tools/call</code> 真实调用）</td><td>CI log</td><td>调用返回非结构化/<code>[object Object]</code> → 红（回归 guard 已防）</td></tr><tr><td>A2A</td><td><code>reports/compatibility.json</code></td><td>JSON（逐需求/运输）</td><td>CI artifact</td><td><code>must</code> 级任一 FAIL 且未登记 → 红</td></tr><tr><td>A2A</td><td><code>reports/compatibility.html</code></td><td>HTML</td><td>人工复核</td><td>人工看板</td></tr><tr><td>A2A</td><td><code>reports/junitreport.xml</code></td><td>JUnit XML</td><td>接入现有 JUnit 汇总</td><td>标准 xunit 门禁</td></tr><tr><td>两者</td><td>版本/环境快照</td><td>YAML/JSON</td><td><code>scripts/ci/conformance-meta.json</code></td><td>版本漂移告警</td></tr></tbody></table>
+<p><strong>判定口径</strong>：不要说「全部 MCP 行为通过」——若只跑了 <code>active</code>、单场景、单传输，结论只能覆盖那部分。报告里必须标注实际运行的 suite/scenario/transport/level 选择器。</p>
+<hr>
+<h2 id="6-版本钉扎与可复现">6. 版本钉扎与可复现<a class="anchor" href="#6-版本钉扎与可复现" aria-label="锚点">#</a></h2>
+<ul><li>MCP 套件用 <code>npm install --save-exact</code>，A2A 用 <code>uv</code> + 锁定 commit；升级套件是<strong>受审变更</strong>，不是 <code>latest</code> 自动副作用。</li><li><code>--spec-version</code> 显式传入；khy 升级协议版本时，门禁版本<strong>同步升级</strong>（见 §8 路线）。</li><li><code>scripts/ci/conformance-meta.json</code> 记录每次运行的：套件版本、协议版本、khy commit、端点传输、fixture 修订、OS/Node。</li></ul>
+<hr>
+<h2 id="7-ci-接线">7. CI 接线<a class="anchor" href="#7-ci-接线" aria-label="锚点">#</a></h2>
+<ul><li><strong>不</strong>把官方套件塞进每次 PR 的 <code>check:all-standards</code>（会引入网络依赖、拖慢 PR、且目前必红）。</li><li>新增独立 release 门禁 <code>conform:all</code>（<code>npm run conform:mcp &amp;&amp; npm run conform:a2a</code>），由 <code>scripts/ci/conformance-runner.mjs</code> 编排；<strong>仅在 release 流水线 / 手动 <code>workflow_dispatch</code> 触发</strong>，产物作为 artifact 留存。</li><li>本地 <code>npm run conform:all</code> 在套件未安装时<strong>降级为 SKIPPED</strong>（写 <code>conformance-report.json</code> 标注 <code>available:false</code>），不阻塞开发机；CI 中通过 <code>required:true</code> 标志强制必须产出真实报告。</li></ul>
+<pre><code class="language-yaml"><span class="hljs-comment"># .github/workflows/conformance.yml（手动触发，产物留存）</span>
+<span class="hljs-attr">on:</span> <span class="hljs-string">workflow_dispatch</span>
+<span class="hljs-attr">jobs:</span>
+  <span class="hljs-attr">conformance:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">ci</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">run</span> <span class="hljs-string">conform:all</span> <span class="hljs-string">--</span> <span class="hljs-string">--required</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/upload-artifact@v4</span>
+        <span class="hljs-attr">with:</span> { <span class="hljs-attr">name:</span> <span class="hljs-string">conformance-report</span>, <span class="hljs-attr">path:</span> <span class="hljs-string">.khy/conformance-report.json</span> }</code></pre>
+<hr>
+<h2 id="8-khy-现状与缺口-诚实登记">8. khy 现状与缺口（诚实登记）<a class="anchor" href="#8-khy-现状与缺口-诚实登记" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>协议</th><th>现状</th><th>接入官方套件的首轮结果</th><th>归零路线</th></tr></thead><tbody><tr><td>MCP</td><td>仅实现 <code>2024-11-05</code>；stdio 为主</td><td>conformance 以 <code>2024-11-05</code> 运行可基线化；2025-03-26 起的 SSE 流式 / <code>Last-Event-ID</code> / sampling / elicitation 全部为 known-failure</td><td>S2：实现 Streamable HTTP 端点 → 升 <code>2025-11-25</code> → 将 known-failure 逐条移出门禁</td></tr><tr><td>A2A</td><td>仅 Agent Card 发布；<strong>无任务处理面</strong></td><td>TCK <code>must</code> 级会失败 <code>message/send</code>/<code>tasks/*</code> 等</td><td>S3：实现标准任务方法面（服务端）→ 暴露 <code>supportedInterfaces</code> → TCK 逐运输通过</td></tr></tbody></table>
+<blockquote><p>这两步是「能被发现 → 能被调用」的质变，也是 <code>check-protocol-conformance.js</code> 已声明但实现缺失的部分。详见 <code>_产物/khy-os-协议与工程规范分步改进计划-2026-09-15.md</code> 的 S2~S5。</p></blockquote>
+<hr>
+<h2 id="9-分工-自审守卫-vs-官方套件">9. 分工：自审守卫 vs 官方套件<a class="anchor" href="#9-分工-自审守卫-vs-官方套件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>守卫</th><th>验证什么</th><th>能证明什么</th><th>不能证明什么</th></tr></thead><tbody><tr><td><code>check-protocol-conformance.js</code></td><td>khy 自声明协议面的内部自洽（一致性矩阵 + 反面断言）</td><td>「我们说的和我们做的自洽」</td><td>「我们与外部规范一致」（需官方套件）</td></tr><tr><td><code>check-protocol-naming.js</code></td><td>A2A/ACP 命名纪律</td><td>「没把私有方言叫成标准 A2A」</td><td>协议行为正确性</td></tr><tr><td><code>check-debt-ledger.js</code></td><td>门禁债务责任归属</td><td>「每个指标有人管、只降不升」</td><td>协议行为正确性</td></tr><tr><td><strong>官方套件（本规范）</strong></td><td>与外部规范的独立一致性</td><td>「外部可验证的一致证据」</td><td>业务语义/安全滥用/压测</td></tr></tbody></table>
+<p>四者互补：<strong>自审守卫保证日常不退化，官方套件提供对外可信证据。</strong></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-QUAL-001] 门禁基线与债务台账规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-QUAL-001] 门禁基线与债务台账规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-REVIEW-001] 代码审查规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-REVIEW-001] 代码审查规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-QUAL-002] 官方一致性套件接入规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

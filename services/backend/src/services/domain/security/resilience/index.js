@@ -20,9 +20,9 @@
  */
 
 const budgetExecutor = require('./budgetExecutor');
-const { DeadLoopDetector } = require('../../maintenance/selfHeal/deadLoopDetector');
+const { DeadLoopDetector } = require('./deadLoopDetector');
 const errorSignature = require('./errorSignature');
-const fallbackTree = require('../../maintenance/selfHeal/fallbackTree');
+const fallbackTree = require('./fallbackTree');
 const intentTrees = require('./intentTrees');
 const { SalvageProtector } = require('./salvage');
 

@@ -95,7 +95,7 @@ describe('commandRegistry', () => {
     });
 
     test('returns empty array for empty input', () => {
-      expect(registry.getCompletions('')).toBe([]);
+      expect(registry.getCompletions('')).toEqual([]);
     });
   });
 

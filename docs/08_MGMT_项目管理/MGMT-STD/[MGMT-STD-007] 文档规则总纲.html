@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [MGMT-STD-007] 文档规则总纲.md -->
+<title>[MGMT-STD-007] 文档规则总纲 — 命名·放置·登记·生命周期 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>MGMT-STD<span class="sep">›</span>[MGMT-STD-007] 文档规则总纲 — 命名·放置·登记·生命周期</div>
+      <header class="hero reveal"><h1>[MGMT-STD-007] 文档规则总纲 — 命名·放置·登记·生命周期</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#mgmt-std-007-文档规则总纲-命名-放置-登记-生命周期">[MGMT-STD-007] 文档规则总纲 — 命名·放置·登记·生命周期</a></li><li class="lvl-2"><a href="#1-红线-必须-禁止-可判定">1. 红线（必须/禁止，可判定）</a></li><li class="lvl-2"><a href="#2-命名规则">2. 命名规则</a></li><li class="lvl-3"><a href="#2-1-编号轴-stage">2.1 编号轴（STAGE）</a></li><li class="lvl-3"><a href="#2-2-类型轴-type">2.2 类型轴（TYPE）</a></li><li class="lvl-3"><a href="#2-3-编号分配">2.3 编号分配</a></li><li class="lvl-3"><a href="#2-4-完整文件名格式">2.4 完整文件名格式</a></li><li class="lvl-2"><a href="#3-放置规则-该放哪里">3. 放置规则（该放哪里）</a></li><li class="lvl-2"><a href="#4-登记规则-cp-3-细化">4. 登记规则（CP-3 细化）</a></li><li class="lvl-2"><a href="#5-生命周期">5. 生命周期</a></li><li class="lvl-2"><a href="#6-索引文件三段式模板-mgmt-std-001-第三章的速查版">6. 索引文件三段式模板（MGMT-STD-001 第三章的速查版）</a></li><li class="lvl-2"><a href="#7-校验工具速查">7. 校验工具速查</a></li><li class="lvl-2"><a href="#8-版本历史">8. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="mgmt-std-007-文档规则总纲-命名-放置-登记-生命周期">[MGMT-STD-007] 文档规则总纲 — 命名·放置·登记·生命周期<a class="anchor" href="#mgmt-std-007-文档规则总纲-命名-放置-登记-生命周期" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: DOCS-001 -->
+<blockquote><p><strong>定位</strong>：本文是 khy-os 文档体系的<strong>单一真源</strong>，收拢散落在 <code>[MGMT-STD-001]</code>（索引铁律）、<code>[DESIGN-DOC-001]</code>（结构规范）、<code>[DESIGN-LAY-005]</code>（仓库层级）中的全部文档规则，并新增「登记」与「生命周期」两章。<br>任何新增、移动、重命名、删除文档的操作，<strong>动手前必须读本文</strong>。</p></blockquote>
+<hr>
+<h2 id="1-红线-必须-禁止-可判定">1. 红线（必须/禁止，可判定）<a class="anchor" href="#1-红线-必须-禁止-可判定" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>红线</th><th>判定方式</th></tr></thead><tbody><tr><td>R1</td><td>根目录<strong>只允许</strong> <code>README.md</code> + 封闭白名单（<code>AGENTS.md</code>/<code>CLAUDE.md</code>/<code>CHANGELOG.md</code>/<code>CONTRIBUTING.md</code>/<code>SECURITY.md</code>/<code>LICENSE</code> 等）；其余说明性 <code>.md</code> 一律归入 <code>docs/</code></td><td><code>check:layout</code> 的 <code>root-whitelist</code> 规则</td></tr><tr><td>R2</td><td><code>docs/</code> 每个子目录<strong>必须</strong>有排序首位的 <code>00_INDEX_*</code> 索引文件；无索引的子目录不得存放业务文档</td><td><code>check:layout</code> 的 <code>docs-index-first</code> 规则</td></tr><tr><td>R3</td><td>每篇业务文档必须带编号前缀 <code>[&lt;STAGE&gt;-&lt;TYPE&gt;-NNN] 中文名.md</code>；<strong>严禁</strong>裸名（如 <code>BORROWINGS.md</code>、<code>SPLIT-PLAN.md</code>）</td><td><code>check:layout</code> 的 <code>docs-index-complete</code> + 人工评审</td></tr><tr><td>R4</td><td>新增/移动/重命名文档后，<strong>必须</strong>同步更新该目录 <code>00_INDEX</code> 与 <code>docs/00_INDEX_文档索引.md</code> 的两处登记；只落文档不更新索引 = 违规</td><td><code>check:layout</code> 的 <code>docs-index-complete</code>（漏链即亮红灯）</td></tr><tr><td>R5</td><td>编号删除后<strong>不回收</strong>；断档保留原样（如 <code>IMPL-RPT</code> 034–039 为空）</td><td>人工评审</td></tr><tr><td>R6</td><td>HTML 孪生件（<code>.html</code>）是 <code>npm run docs:build</code> 的<strong>构建产物</strong>，不是手工维护文件；禁止手改 <code>.html</code>，只改源 <code>.md</code></td><td><code>check:build-artifacts</code> 规则</td></tr><tr><td>R7</td><td>文档内容遵循三段式骨架（红线/反例→正例/校验/版本历史），全文 ≤ 150 行；超出拆子篇</td><td><code>[DESIGN-DOC-001]</code> §12 规范骨架</td></tr></tbody></table>
+<h2 id="2-命名规则">2. 命名规则<a class="anchor" href="#2-命名规则" aria-label="锚点">#</a></h2>
+<h3 id="2-1-编号轴-stage">2.1 编号轴（STAGE）<a class="anchor" href="#2-1-编号轴-stage" aria-label="锚点">#</a></h3>
+<p><code>docs/</code> 顶层按生命周期阶段分目录，目录名 = <code>NN_STAGE_中文名/</code>：</p>
+<table><thead><tr><th>目录</th><th>编号前缀</th><th>收什么</th></tr></thead><tbody><tr><td><code>01_INIT_立项/</code></td><td><code>INIT-</code></td><td>项目定位、PRD</td></tr><tr><td><code>02_CONCEPTS_概念入门/</code></td><td>无编号</td><td>小白向概念（Agent/Tool/MCP/RAG…）</td></tr><tr><td><code>03_DESIGN_设计/</code></td><td><code>DESIGN-ARCH-</code> / <code>DESIGN-PERF-</code> / <code>DESIGN-SIZE-</code> / <code>DESIGN-OTHER-</code> / <code>DESIGN-RESEARCH</code> / <code>DESIGN-PHILOSOPHY</code> 等</td><td>架构设计、调研、方案</td></tr><tr><td><code>04_IMPL_实现/</code></td><td><code>IMPL-RPT-</code> / <code>IMPL-DOC-</code> / <code>IMPL-MIG-</code></td><td>实现记录、修复时间线</td></tr><tr><td><code>05_TEST_测试/</code></td><td><code>TEST-RPT-</code></td><td>测试报告</td></tr><tr><td><code>06_DEPLOY_部署/</code></td><td><code>DEPLOY-MAN-</code></td><td>部署、发布、安装</td></tr><tr><td><code>07_OPS_运维/</code></td><td><code>OPS-MAN-</code></td><td>运维手册、快速开始、配置</td></tr><tr><td><code>08_MGMT_项目管理/</code></td><td><code>MGMT-STD-</code> / <code>MGMT-PLAN-</code> / <code>MGMT-RPT-</code> / <code>MGMT-OTHER-</code></td><td>治理标准、计划、对标报告、杂项</td></tr><tr><td><code>09_STORY_修仙学AI/</code></td><td>无编号</td><td>故事化教材</td></tr></tbody></table>
+<h3 id="2-2-类型轴-type">2.2 类型轴（TYPE）<a class="anchor" href="#2-2-类型轴-type" aria-label="锚点">#</a></h3>
+<p>各阶段目录内的文档类型码：</p>
+<table><thead><tr><th>阶段</th><th>类型码</th><th>含义</th></tr></thead><tbody><tr><td>MGMT</td><td><code>STD</code></td><td>工程治理标准（红线、方法论）</td></tr><tr><td>MGMT</td><td><code>PLAN</code></td><td>计划/路线图/拆分方案</td></tr><tr><td>MGMT</td><td><code>RPT</code></td><td>对标/调研/诊断/报告</td></tr><tr><td>MGMT</td><td><code>OTHER</code></td><td>杂项（事后分析、环境还原等）</td></tr><tr><td>DESIGN</td><td><code>ARCH</code></td><td>架构设计（001–094 + CPA 等未编号件）</td></tr><tr><td>DESIGN</td><td><code>PERF</code> / <code>SIZE</code></td><td>性能/体积方案</td></tr><tr><td>DESIGN</td><td><code>OTHER</code> / <code>RESEARCH</code> / <code>LEGISLATION</code> / <code>PHILOSOPHY</code> / <code>QUICK-REF</code></td><td>杂项调研</td></tr><tr><td>IMPL</td><td><code>RPT</code></td><td>实现记录</td></tr><tr><td>IMPL</td><td><code>DOC</code> / <code>MIG</code></td><td>文档/迁移指南</td></tr></tbody></table>
+<h3 id="2-3-编号分配">2.3 编号分配<a class="anchor" href="#2-3-编号分配" aria-label="锚点">#</a></h3>
+<ul><li>序号 3 位数字（<code>001</code>–<code>999</code>）</li><li>由 AI 感知目录既有文件序列，取<strong>下一个未占用</strong>的编号</li><li>删除的编号<strong>不回收</strong>（R5）</li><li>同编号冲突 → 保留先创建者，新文档取新编号</li></ul>
+<h3 id="2-4-完整文件名格式">2.4 完整文件名格式<a class="anchor" href="#2-4-完整文件名格式" aria-label="锚点">#</a></h3>
+<pre><code>[&lt;STAGE&gt;-&lt;TYPE&gt;-NNN] 中文标题.md</code></pre>
+<p>示例：</p>
+<pre><code>[MGMT-RPT-022] 借鉴项目清单.md
+[MGMT-PLAN-008] replSession与toolUseLoopCore拆分分批计划.md
+[DESIGN-ARCH-094] Provider卡片枢纽（CardHub）GUI设计规范.md</code></pre>
+<h2 id="3-放置规则-该放哪里">3. 放置规则（该放哪里）<a class="anchor" href="#3-放置规则-该放哪里" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文档内容</th><th>放哪</th><th>理由</th></tr></thead><tbody><tr><td>项目级治理标准</td><td><code>docs/08_MGMT_项目管理/</code></td><td>跨阶段约束</td></tr><tr><td>架构设计方案</td><td><code>docs/03_DESIGN_设计/</code></td><td>设计血缘</td></tr><tr><td>某次实现/修复记录</td><td><code>docs/04_IMPL_实现/</code></td><td>实现落地</td></tr><tr><td>测试报告</td><td><code>docs/05_TEST_测试/</code></td><td>验证</td></tr><tr><td>部署/发布操作手册</td><td><code>docs/06_DEPLOY_部署/</code></td><td>交付</td></tr><tr><td>运维配置指南</td><td><code>docs/07_OPS_运维/</code></td><td>运行</td></tr><tr><td>规范族（独立编号跨阶段约束）</td><td><code>docs/10_规范/</code></td><td>编号 ≥ 10 = 跨阶段资产</td></tr><tr><td>子项目专属文档</td><td>子项目目录内（如 <code>apps/khyos-desktop/docs/</code>）</td><td>就近原则</td></tr><tr><td>根目录说明</td><td><strong>禁止</strong></td><td>R1</td></tr></tbody></table>
+<p><strong>判断口诀</strong>：先看「管什么阶段的生命周期」→ 选 01–09；再看「是约束还是记录」→ 约束去 <code>10_规范/</code>、记录去对应阶段目录。</p>
+<h2 id="4-登记规则-cp-3-细化">4. 登记规则（CP-3 细化）<a class="anchor" href="#4-登记规则-cp-3-细化" aria-label="锚点">#</a></h2>
+<p>每新增/移动/重命名一篇文档，<strong>必须</strong>同时：</p>
+<ol><li><strong>更新该目录 <code>00_INDEX_*.md</code></strong>：在文件清单表中加/改对应行</li><li><strong>更新 <code>docs/00_INDEX_文档索引.md</code></strong>：在对应阶段分区加一行链接（或归入「补登记」块）</li><li><strong>重命名时</strong>：全局搜索旧文件名，改写所有入站引用（<code>.md</code> 内链接 + CI 脚本 + <code>.ai/</code> 文件）</li></ol>
+<p>漏第 2 步 → <code>docs-index-complete</code> 亮红灯；漏第 3 步 → 死链。</p>
+<h2 id="5-生命周期">5. 生命周期<a class="anchor" href="#5-生命周期" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>事件</th><th>操作</th></tr></thead><tbody><tr><td><strong>新建</strong></td><td>取下一编号 → 写 <code>.md</code> → 更新两级索引</td></tr><tr><td><strong>移动</strong></td><td>重命名（编号保留）→ 更新旧目录索引（删行）+ 新目录索引（加行）+ 主索引（改路径）</td></tr><tr><td><strong>重命名</strong></td><td>同上 + 全局替换入站引用</td></tr><tr><td><strong>归档</strong></td><td>移入 <code>_archive_已删除孤儿引擎/</code>（03 内）或本目录 <code>18_归档/</code>，主索引标注「已归档」</td></tr><tr><td><strong>删除</strong></td><td>编号不回收；主索引标注「已删除（编号保留）」</td></tr><tr><td><strong>HTML 重建</strong></td><td><code>npm run docs:build</code>（全量）或 <code>npm run docs:mermaid</code>（仅图表引擎）</td></tr></tbody></table>
+<h2 id="6-索引文件三段式模板-mgmt-std-001-第三章的速查版">6. 索引文件三段式模板（MGMT-STD-001 第三章的速查版）<a class="anchor" href="#6-索引文件三段式模板-mgmt-std-001-第三章的速查版" aria-label="锚点">#</a></h2>
+<p>每个 <code>00_INDEX_*.md</code> <strong>必须</strong>包含且仅包含三段：</p>
+<pre><code class="language-markdown"><span class="hljs-section"># 00<span class="hljs-emphasis">_INDEX &lt;分类名&gt;
+
+&gt; <span class="hljs-strong">**索引总领文件**</span> · 本目录唯一入口 · 排序首位 · 结构遵循 [MGMT-STD-001] 第三章
+
+## 一、分类内容边界
+（一段话：收什么、不收什么）
+
+## 二、文件清单
+| 文件名(含编号) | 核心职责(10字内) | 状态 |
+| --- | --- | --- |
+| [XXX-NNN] 标题.md | ... | 草稿/定稿 |
+
+## 三、跨分类关联指引
+（指明相关其他 docs/ 子目录及其入口）</span></span></code></pre>
+<h2 id="7-校验工具速查">7. 校验工具速查<a class="anchor" href="#7-校验工具速查" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>命令</th><th>检查什么</th></tr></thead><tbody><tr><td><code>npm run check:layout</code></td><td>顶层层级、<code>docs-index-complete</code>、<code>root-whitelist</code>、<code>docs-index-first</code></td></tr><tr><td><code>npm run docs:build</code></td><td>全量重建 HTML 孪生件 + nav-data.js</td></tr><tr><td><code>npm run docs:verify</code></td><td>HTML 完整性 + 本地链接死链</td></tr><tr><td><code>npm run docs:lint</code></td><td>文档站 widget 语法</td></tr></tbody></table>
+<h2 id="8-版本历史">8. 版本历史<a class="anchor" href="#8-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-12</td><td>初始版本：收拢 MGMT-STD-001 + DESIGN-DOC-001 + DESIGN-LAY-005 §3 的文档规则为单一真源；新增登记与生命周期两章</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/08_MGMT_项目管理/MGMT-STD/[MGMT-STD-006] khy-vibecoding与speccoding能力对齐-可量化验收标准.html"><div class="dir">← 上一篇</div><div class="ttl">[MGMT-STD-006] khy「vibe-coding / spec-coding 能力对齐 Claude Code」可量化验收标准</div></a><a class="next" href="../../../docs/08_MGMT_项目管理/MGMT-STD/[MGMT-STD-008] 规则编写与管理规范（元规则）.html"><div class="dir">下一篇 →</div><div class="ttl">[MGMT-STD-008] 规则编写与管理规范（元规则）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/MGMT-STD/[MGMT-STD-007] 文档规则总纲.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

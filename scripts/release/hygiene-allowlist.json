@@ -1,0 +1,67 @@
+{
+  "$note": "发布源卫生豁免：只允许 具体文件 + 完整匹配值，禁止整目录/整模式豁免（会掩未来的泄漏）。每条须带 reason 与到期复核。",
+  "updated": "2026-09-20",
+  "exemptions": [
+    {
+      "file": "scripts/tests/releaseHygiene.test.js",
+      "match": "sk-ABCDEFGHIJ0123456789",
+      "reason": "卫生扫描器自身的测试夹具（假值），出现在两个测试用例中",
+      "until": "2027-09-18"
+    },
+    {
+      "file": "scripts/tests/releaseHygiene.test.js",
+      "match": "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+      "reason": "卫生扫描器自身的测试夹具（假值）",
+      "until": "2027-09-18"
+    },
+    {
+      "file": "scripts/tests/releaseHygiene.test.js",
+      "match": "-----BEGIN RSA PRIVATE KEY-----",
+      "reason": "卫生扫描器自身的测试夹具（假 PEM 块）",
+      "until": "2027-09-20"
+    },
+    {
+      "file": "services/backend/tests/services/imageGenFailureSummary.test.js",
+      "match": "sk-abcdef1234567890",
+      "reason": "测试夹具（假值，用于验证脱敏/截断逻辑）",
+      "until": "2027-09-20"
+    },
+    {
+      "file": "services/backend/tests/services/installLedger.test.js",
+      "match": "sk-abcdef0123456789abcdef0123456789",
+      "reason": "测试夹具（假值，用于验证脱敏/截断逻辑）",
+      "until": "2027-09-20"
+    },
+    {
+      "file": "services/backend/tests/visionFailureSummaryModernKey.test.js",
+      "match": "sk-abcd1234EFGH5678ijkl",
+      "reason": "测试夹具（假值，用于验证脱敏/截断逻辑）",
+      "until": "2027-09-20"
+    },
+    {
+      "file": "scripts/gen_keys.py",
+      "match": "sk-kxfDu1UuUz4na6gNnoTy9SXrfqBvC5a6xlLWOmcgxvGSyP8y",
+      "reason": "作者侧密钥输入文件：明文是设计的一部分（XOR 编码后生成 built_in_keys.dart 的字节数组）。按项目决定，这些是免费额度钥匙，提交暴露可接受；出厂 APK 只含混淆数组（scripts/check_builtin_keys.py 验）。（supxh）",
+      "until": "2027-09-20"
+    },
+    {
+      "file": "scripts/gen_keys.py",
+      "match": "sk-GfGfEeMHAP9OqViis7N6yFQtzVBTQIalFbWAEdH5MMpUwAXgVToUpX5mzRxxIrCX",
+      "reason": "作者侧密钥输入文件：明文是设计的一部分（XOR 编码后生成 built_in_keys.dart 的字节数组）。按项目决定，这些是免费额度钥匙，提交暴露可接受；出厂 APK 只含混淆数组（scripts/check_builtin_keys.py 验）。（opencodego）",
+      "until": "2027-09-20"
+    },
+    {
+      "file": "scripts/gen_keys.py",
+      "match": "sk-ZqZmy6xPoGTJhAiAVe7RdRCbHQyrXRfo",
+      "reason": "作者侧密钥输入文件：明文是设计的一部分（XOR 编码后生成 built_in_keys.dart 的字节数组）。按项目决定，这些是免费额度钥匙，提交暴露可接受；出厂 APK 只含混淆数组（scripts/check_builtin_keys.py 验）。（sensenova）",
+      "until": "2027-09-20"
+    },
+    {
+      "file": "scripts/gen_keys.py",
+      "match": "sk-TDyXYtuXXCUrw42bDqtz0PigooeOtb5Oh4HUUvr47hxHrgDG",
+      "reason": "作者侧密钥输入文件：明文是设计的一部分（XOR 编码后生成 built_in_keys.dart 的字节数组）。按项目决定，这些是免费额度钥匙，提交暴露可接受；出厂 APK 只含混淆数组（scripts/check_builtin_keys.py 验）。（agnes）",
+      "until": "2027-09-20"
+    }
+  ],
+  "symlinks": []
+}

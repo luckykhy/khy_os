@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-PRIV-001] 数据隐私规范.md -->
+<title>[DESIGN-PRIV-001] 数据隐私规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-PRIV-001] 数据隐私规范</div>
+      <header class="hero reveal"><h1>[DESIGN-PRIV-001] 数据隐私规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-priv-001-数据隐私规范">[DESIGN-PRIV-001] 数据隐私规范</a></li><li class="lvl-2"><a href="#1-数据隐私概述">1. 数据隐私概述</a></li><li class="lvl-3"><a href="#1-1-设计原则">1.1 设计原则</a></li><li class="lvl-3"><a href="#1-2-适用法规">1.2 适用法规</a></li><li class="lvl-2"><a href="#2-数据分类">2. 数据分类</a></li><li class="lvl-3"><a href="#2-1-数据分类标准">2.1 数据分类标准</a></li><li class="lvl-3"><a href="#2-2-个人数据定义">2.2 个人数据定义</a></li><li class="lvl-3"><a href="#2-3-敏感个人数据">2.3 敏感个人数据</a></li><li class="lvl-2"><a href="#3-用户同意">3. 用户同意</a></li><li class="lvl-3"><a href="#3-1-同意要求">3.1 同意要求</a></li><li class="lvl-3"><a href="#3-2-同意收集">3.2 同意收集</a></li><li class="lvl-3"><a href="#3-3-同意记录">3.3 同意记录</a></li><li class="lvl-2"><a href="#4-用户权利">4. 用户权利</a></li><li class="lvl-3"><a href="#4-1-知情权">4.1 知情权</a></li><li class="lvl-3"><a href="#4-2-访问权">4.2 访问权</a></li><li class="lvl-3"><a href="#4-3-更正权">4.3 更正权</a></li><li class="lvl-3"><a href="#4-4-删除权-被遗忘权">4.4 删除权（被遗忘权）</a></li><li class="lvl-3"><a href="#4-5-数据可携带权">4.5 数据可携带权</a></li><li class="lvl-3"><a href="#4-6-反对权">4.6 反对权</a></li><li class="lvl-2"><a href="#5-数据保护">5. 数据保护</a></li><li class="lvl-3"><a href="#5-1-加密要求">5.1 加密要求</a></li><li class="lvl-3"><a href="#5-2-数据脱敏">5.2 数据脱敏</a></li><li class="lvl-3"><a href="#5-3-数据访问控制">5.3 数据访问控制</a></li><li class="lvl-2"><a href="#6-数据保留">6. 数据保留</a></li><li class="lvl-3"><a href="#6-1-保留期限">6.1 保留期限</a></li><li class="lvl-3"><a href="#6-2-自动清理">6.2 自动清理</a></li><li class="lvl-2"><a href="#7-数据泄露响应">7. 数据泄露响应</a></li><li class="lvl-3"><a href="#7-1-响应流程">7.1 响应流程</a></li><li class="lvl-3"><a href="#7-2-通知要求">7.2 通知要求</a></li><li class="lvl-2"><a href="#8-隐私影响评估">8. 隐私影响评估</a></li><li class="lvl-3"><a href="#8-1-评估范围">8.1 评估范围</a></li><li class="lvl-3"><a href="#8-2-评估内容">8.2 评估内容</a></li><li class="lvl-2"><a href="#9-版本历史">9. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-priv-001-数据隐私规范">[DESIGN-PRIV-001] 数据隐私规范<a class="anchor" href="#design-priv-001-数据隐私规范" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档定义 khy-os 项目的数据隐私标准，包括 GDPR 合规、数据保护、用户权利等。</p></blockquote>
+<hr>
+<h2 id="1-数据隐私概述">1. 数据隐私概述<a class="anchor" href="#1-数据隐私概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-设计原则">1.1 设计原则<a class="anchor" href="#1-1-设计原则" aria-label="锚点">#</a></h3>
+<ol><li><strong>数据最小化</strong>：只收集必需的数据</li><li><strong>目的限制</strong>：数据仅用于明确的目的</li><li><strong>存储限制</strong>：数据保留时间有限</li><li><strong>透明性</strong>：用户知情并同意</li></ol>
+<h3 id="1-2-适用法规">1.2 适用法规<a class="anchor" href="#1-2-适用法规" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>法规</th><th>适用地区</th><th>说明</th></tr></thead><tbody><tr><td>GDPR</td><td>欧盟</td><td>通用数据保护条例</td></tr><tr><td>CCPA</td><td>美国加州</td><td>加州消费者隐私法</td></tr><tr><td>PIPL</td><td>中国</td><td>个人信息保护法</td></tr></tbody></table>
+<hr>
+<h2 id="2-数据分类">2. 数据分类<a class="anchor" href="#2-数据分类" aria-label="锚点">#</a></h2>
+<h3 id="2-1-数据分类标准">2.1 数据分类标准<a class="anchor" href="#2-1-数据分类标准" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类别</th><th>说明</th><th>保护级别</th><th>示例</th></tr></thead><tbody><tr><td>公开数据</td><td>可公开访问</td><td>低</td><td>公开文档、帮助</td></tr><tr><td>内部数据</td><td>内部使用</td><td>中</td><td>配置、日志</td></tr><tr><td>敏感数据</td><td>用户个人信息</td><td>高</td><td>邮箱、手机号</td></tr><tr><td>高度敏感</td><td>身份/财务信息</td><td>极高</td><td>身份证、银行卡</td></tr></tbody></table>
+<h3 id="2-2-个人数据定义">2.2 个人数据定义<a class="anchor" href="#2-2-个人数据定义" aria-label="锚点">#</a></h3>
+<p><strong>个人数据</strong>：任何可识别自然人的信息</p>
+<p><strong>包括</strong>：</p>
+<ul><li>姓名</li><li>邮箱地址</li><li>电话号码</li><li>IP 地址</li><li>设备标识符</li><li>Cookie ID</li><li>位置数据</li></ul>
+<h3 id="2-3-敏感个人数据">2.3 敏感个人数据<a class="anchor" href="#2-3-敏感个人数据" aria-label="锚点">#</a></h3>
+<p><strong>敏感个人数据</strong>：需要额外保护的数据</p>
+<p><strong>包括</strong>：</p>
+<ul><li>种族或民族出身</li><li>政治观点</li><li>宗教信仰</li><li>健康数据</li><li>生物特征数据</li><li>性取向</li></ul>
+<hr>
+<h2 id="3-用户同意">3. 用户同意<a class="anchor" href="#3-用户同意" aria-label="锚点">#</a></h2>
+<h3 id="3-1-同意要求">3.1 同意要求<a class="anchor" href="#3-1-同意要求" aria-label="锚点">#</a></h3>
+<ul><li><strong>自由给予</strong>：用户可以自由选择</li><li><strong>具体明确</strong>：说明数据用途</li><li><strong>知情同意</strong>：用户了解数据使用</li><li><strong>明确同意</strong>：用户主动勾选</li></ul>
+<h3 id="3-2-同意收集">3.2 同意收集<a class="anchor" href="#3-2-同意收集" aria-label="锚点">#</a></h3>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;div class=&quot;consent-form&quot;&gt;
+    &lt;h2&gt;隐私政策&lt;/h2&gt;
+    &lt;p&gt;我们收集和处理您的个人信息，用于以下目的：&lt;/p&gt;
+    
+    &lt;label&gt;
+      &lt;input type=&quot;checkbox&quot; v-model=&quot;consents.essential&quot; disabled checked&gt;
+      基本功能（必需）
+    &lt;/label&gt;
+    
+    &lt;label&gt;
+      &lt;input type=&quot;checkbox&quot; v-model=&quot;consents.analytics&quot;&gt;
+      使用分析（可选）
+    &lt;/label&gt;
+    
+    &lt;label&gt;
+      &lt;input type=&quot;checkbox&quot; v-model=&quot;consents.marketing&quot;&gt;
+      营销通信（可选）
+    &lt;/label&gt;
+    
+    &lt;button @click=&quot;saveConsents&quot;&gt;保存设置&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+import { ref } from 'vue';
+
+const consents = ref({
+  essential: true,  // 必需，不可取消
+  analytics: false,
+  marketing: false
+});
+
+const saveConsents = async () =&gt; {
+  await fetch('/api/user/consents', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(consents.value)
+  });
+};
+&lt;/script&gt;</code></pre>
+<h3 id="3-3-同意记录">3.3 同意记录<a class="anchor" href="#3-3-同意记录" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// models/UserConsent.js</span>
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = <span class="hljs-function">(<span class="hljs-params">sequelize, DataTypes</span>) =&gt;</span> {
+  <span class="hljs-keyword">const</span> <span class="hljs-title class_">UserConsent</span> = sequelize.<span class="hljs-title function_">define</span>(<span class="hljs-string">&#x27;UserConsent&#x27;</span>, {
+    <span class="hljs-attr">id</span>: {
+      <span class="hljs-attr">type</span>: <span class="hljs-title class_">DataTypes</span>.<span class="hljs-property">INTEGER</span>,
+      <span class="hljs-attr">primaryKey</span>: <span class="hljs-literal">true</span>,
+      <span class="hljs-attr">autoIncrement</span>: <span class="hljs-literal">true</span>
+    },
+    <span class="hljs-attr">userId</span>: {
+      <span class="hljs-attr">type</span>: <span class="hljs-title class_">DataTypes</span>.<span class="hljs-property">INTEGER</span>,
+      <span class="hljs-attr">allowNull</span>: <span class="hljs-literal">false</span>
+    },
+    <span class="hljs-attr">consentType</span>: {
+      <span class="hljs-attr">type</span>: <span class="hljs-title class_">DataTypes</span>.<span class="hljs-property">STRING</span>,
+      <span class="hljs-attr">allowNull</span>: <span class="hljs-literal">false</span>
+    },
+    <span class="hljs-attr">granted</span>: {
+      <span class="hljs-attr">type</span>: <span class="hljs-title class_">DataTypes</span>.<span class="hljs-property">BOOLEAN</span>,
+      <span class="hljs-attr">allowNull</span>: <span class="hljs-literal">false</span>
+    },
+    <span class="hljs-attr">ipAddress</span>: {
+      <span class="hljs-attr">type</span>: <span class="hljs-title class_">DataTypes</span>.<span class="hljs-property">STRING</span>
+    },
+    <span class="hljs-attr">userAgent</span>: {
+      <span class="hljs-attr">type</span>: <span class="hljs-title class_">DataTypes</span>.<span class="hljs-property">TEXT</span>
+    }
+  });
+  
+  <span class="hljs-keyword">return</span> <span class="hljs-title class_">UserConsent</span>;
+};</code></pre>
+<hr>
+<h2 id="4-用户权利">4. 用户权利<a class="anchor" href="#4-用户权利" aria-label="锚点">#</a></h2>
+<h3 id="4-1-知情权">4.1 知情权<a class="anchor" href="#4-1-知情权" aria-label="锚点">#</a></h3>
+<p>用户有权了解：</p>
+<ul><li>收集了哪些数据</li><li>数据的使用目的</li><li>数据的存储时间</li><li>与谁共享数据</li></ul>
+<h3 id="4-2-访问权">4.2 访问权<a class="anchor" href="#4-2-访问权" aria-label="锚点">#</a></h3>
+<p>用户可以请求获取其个人数据的副本。</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// GET /api/user/data-export</span>
+router.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/user/data-export&#x27;</span>, authenticateToken, <span class="hljs-title function_">async</span> (req, res) =&gt; {
+  <span class="hljs-keyword">const</span> userId = req.<span class="hljs-property">user</span>.<span class="hljs-property">sub</span>;
+  
+  <span class="hljs-comment">// 收集用户数据</span>
+  <span class="hljs-keyword">const</span> userData = {
+    <span class="hljs-attr">profile</span>: <span class="hljs-keyword">await</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">findByPk</span>(userId),
+    <span class="hljs-attr">orders</span>: <span class="hljs-keyword">await</span> <span class="hljs-title class_">Order</span>.<span class="hljs-title function_">findAll</span>({ <span class="hljs-attr">where</span>: { userId } }),
+    <span class="hljs-attr">consents</span>: <span class="hljs-keyword">await</span> <span class="hljs-title class_">UserConsent</span>.<span class="hljs-title function_">findAll</span>({ <span class="hljs-attr">where</span>: { userId } })
+  };
+  
+  <span class="hljs-comment">// 导出为 JSON</span>
+  res.<span class="hljs-title function_">setHeader</span>(<span class="hljs-string">&#x27;Content-Type&#x27;</span>, <span class="hljs-string">&#x27;application/json&#x27;</span>);
+  res.<span class="hljs-title function_">setHeader</span>(<span class="hljs-string">&#x27;Content-Disposition&#x27;</span>, <span class="hljs-string">&#x27;attachment; filename=&quot;my-data.json&quot;&#x27;</span>);
+  res.<span class="hljs-title function_">json</span>(userData);
+});</code></pre>
+<h3 id="4-3-更正权">4.3 更正权<a class="anchor" href="#4-3-更正权" aria-label="锚点">#</a></h3>
+<p>用户可以更正不准确的个人数据。</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// PUT /api/user/profile</span>
+router.<span class="hljs-title function_">put</span>(<span class="hljs-string">&#x27;/user/profile&#x27;</span>, authenticateToken, <span class="hljs-title function_">async</span> (req, res) =&gt; {
+  <span class="hljs-keyword">const</span> userId = req.<span class="hljs-property">user</span>.<span class="hljs-property">sub</span>;
+  <span class="hljs-keyword">const</span> { username, email } = req.<span class="hljs-property">body</span>;
+  
+  <span class="hljs-keyword">await</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">update</span>(
+    { username, email },
+    { <span class="hljs-attr">where</span>: { <span class="hljs-attr">id</span>: userId } }
+  );
+  
+  res.<span class="hljs-title function_">json</span>({ <span class="hljs-attr">success</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;个人信息已更新&#x27;</span> });
+});</code></pre>
+<h3 id="4-4-删除权-被遗忘权">4.4 删除权（被遗忘权）<a class="anchor" href="#4-4-删除权-被遗忘权" aria-label="锚点">#</a></h3>
+<p>用户可以要求删除其个人数据。</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// DELETE /api/user/account</span>
+router.<span class="hljs-title function_">delete</span>(<span class="hljs-string">&#x27;/user/account&#x27;</span>, authenticateToken, <span class="hljs-title function_">async</span> (req, res) =&gt; {
+  <span class="hljs-keyword">const</span> userId = req.<span class="hljs-property">user</span>.<span class="hljs-property">sub</span>;
+  
+  <span class="hljs-comment">// 删除用户数据</span>
+  <span class="hljs-keyword">await</span> sequelize.<span class="hljs-title function_">transaction</span>(<span class="hljs-title function_">async</span> (t) =&gt; {
+    <span class="hljs-keyword">await</span> <span class="hljs-title class_">Order</span>.<span class="hljs-title function_">destroy</span>({ <span class="hljs-attr">where</span>: { userId }, <span class="hljs-attr">transaction</span>: t });
+    <span class="hljs-keyword">await</span> <span class="hljs-title class_">UserConsent</span>.<span class="hljs-title function_">destroy</span>({ <span class="hljs-attr">where</span>: { userId }, <span class="hljs-attr">transaction</span>: t });
+    <span class="hljs-keyword">await</span> <span class="hljs-title class_">Session</span>.<span class="hljs-title function_">destroy</span>({ <span class="hljs-attr">where</span>: { userId }, <span class="hljs-attr">transaction</span>: t });
+    <span class="hljs-keyword">await</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">destroy</span>({ <span class="hljs-attr">where</span>: { <span class="hljs-attr">id</span>: userId }, <span class="hljs-attr">transaction</span>: t });
+  });
+  
+  res.<span class="hljs-title function_">json</span>({ <span class="hljs-attr">success</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;账户已删除&#x27;</span> });
+});</code></pre>
+<h3 id="4-5-数据可携带权">4.5 数据可携带权<a class="anchor" href="#4-5-数据可携带权" aria-label="锚点">#</a></h3>
+<p>用户可以将其数据导出为通用格式。</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// 支持格式：JSON, CSV</span>
+router.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/user/data-export/:format&#x27;</span>, authenticateToken, <span class="hljs-title function_">async</span> (req, res) =&gt; {
+  <span class="hljs-keyword">const</span> { format } = req.<span class="hljs-property">params</span>;
+  <span class="hljs-keyword">const</span> userData = <span class="hljs-keyword">await</span> <span class="hljs-title function_">collectUserData</span>(req.<span class="hljs-property">user</span>.<span class="hljs-property">sub</span>);
+  
+  <span class="hljs-keyword">if</span> (format === <span class="hljs-string">&#x27;csv&#x27;</span>) {
+    <span class="hljs-keyword">const</span> csv = <span class="hljs-title function_">convertToCSV</span>(userData);
+    res.<span class="hljs-title function_">setHeader</span>(<span class="hljs-string">&#x27;Content-Type&#x27;</span>, <span class="hljs-string">&#x27;text/csv&#x27;</span>);
+    res.<span class="hljs-title function_">setHeader</span>(<span class="hljs-string">&#x27;Content-Disposition&#x27;</span>, <span class="hljs-string">&#x27;attachment; filename=&quot;my-data.csv&quot;&#x27;</span>);
+    res.<span class="hljs-title function_">send</span>(csv);
+  } <span class="hljs-keyword">else</span> {
+    res.<span class="hljs-title function_">json</span>(userData);
+  }
+});</code></pre>
+<h3 id="4-6-反对权">4.6 反对权<a class="anchor" href="#4-6-反对权" aria-label="锚点">#</a></h3>
+<p>用户可以反对其数据的某些用途。</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// 取消营销通信</span>
+router.<span class="hljs-title function_">post</span>(<span class="hljs-string">&#x27;/user/opt-out/marketing&#x27;</span>, authenticateToken, <span class="hljs-title function_">async</span> (req, res) =&gt; {
+  <span class="hljs-keyword">await</span> <span class="hljs-title class_">UserConsent</span>.<span class="hljs-title function_">update</span>(
+    { <span class="hljs-attr">granted</span>: <span class="hljs-literal">false</span> },
+    { <span class="hljs-attr">where</span>: { <span class="hljs-attr">userId</span>: req.<span class="hljs-property">user</span>.<span class="hljs-property">sub</span>, <span class="hljs-attr">consentType</span>: <span class="hljs-string">&#x27;marketing&#x27;</span> } }
+  );
+  
+  res.<span class="hljs-title function_">json</span>({ <span class="hljs-attr">success</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;已取消营销通信&#x27;</span> });
+});</code></pre>
+<hr>
+<h2 id="5-数据保护">5. 数据保护<a class="anchor" href="#5-数据保护" aria-label="锚点">#</a></h2>
+<h3 id="5-1-加密要求">5.1 加密要求<a class="anchor" href="#5-1-加密要求" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>数据类型</th><th>加密方式</th></tr></thead><tbody><tr><td>密码</td><td>bcrypt（cost factor 12）</td></tr><tr><td>API Key</td><td>AES-256-GCM</td></tr><tr><td>传输数据</td><td>TLS 1.3</td></tr><tr><td>静态数据</td><td>文件系统加密</td></tr></tbody></table>
+<h3 id="5-2-数据脱敏">5.2 数据脱敏<a class="anchor" href="#5-2-数据脱敏" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 邮箱脱敏</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">maskEmail</span> = (<span class="hljs-params">email</span>) =&gt; {
+  <span class="hljs-keyword">const</span> [local, domain] = email.<span class="hljs-title function_">split</span>(<span class="hljs-string">&#x27;@&#x27;</span>);
+  <span class="hljs-keyword">return</span> <span class="hljs-string">`<span class="hljs-subst">${local.charAt(<span class="hljs-number">0</span>)}</span>***<span class="hljs-subst">${local.charAt(local.length - <span class="hljs-number">1</span>)}</span>@<span class="hljs-subst">${domain}</span>`</span>;
+};
+
+<span class="hljs-comment">// 手机号脱敏</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">maskPhone</span> = (<span class="hljs-params">phone</span>) =&gt; {
+  <span class="hljs-keyword">return</span> phone.<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/(\d{3})\d{4}(\d{4})/</span>, <span class="hljs-string">&#x27;$1****$2&#x27;</span>);
+};
+
+<span class="hljs-comment">// 日志脱敏</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">sanitizeLog</span> = (<span class="hljs-params">data</span>) =&gt; {
+  <span class="hljs-keyword">const</span> sensitiveFields = [<span class="hljs-string">&#x27;password&#x27;</span>, <span class="hljs-string">&#x27;token&#x27;</span>, <span class="hljs-string">&#x27;apiKey&#x27;</span>, <span class="hljs-string">&#x27;secret&#x27;</span>];
+  <span class="hljs-keyword">const</span> sanitized = { ...data };
+  
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> field <span class="hljs-keyword">of</span> sensitiveFields) {
+    <span class="hljs-keyword">if</span> (sanitized[field]) {
+      sanitized[field] = <span class="hljs-string">&#x27;***REDACTED***&#x27;</span>;
+    }
+  }
+  
+  <span class="hljs-keyword">return</span> sanitized;
+};</code></pre>
+<h3 id="5-3-数据访问控制">5.3 数据访问控制<a class="anchor" href="#5-3-数据访问控制" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 中间件：检查数据访问权限</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">checkDataAccess</span> = (<span class="hljs-params">req, res, next</span>) =&gt; {
+  <span class="hljs-keyword">const</span> requestedUserId = req.<span class="hljs-property">params</span>.<span class="hljs-property">userId</span>;
+  <span class="hljs-keyword">const</span> authenticatedUserId = req.<span class="hljs-property">user</span>.<span class="hljs-property">sub</span>;
+  
+  <span class="hljs-comment">// 用户只能访问自己的数据（除非是管理员）</span>
+  <span class="hljs-keyword">if</span> (requestedUserId !== authenticatedUserId &amp;&amp; req.<span class="hljs-property">user</span>.<span class="hljs-property">role</span> !== <span class="hljs-string">&#x27;admin&#x27;</span>) {
+    <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">403</span>).<span class="hljs-title function_">json</span>({
+      <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>,
+      <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;无权访问此数据&#x27;</span>
+    });
+  }
+  
+  <span class="hljs-title function_">next</span>();
+};</code></pre>
+<hr>
+<h2 id="6-数据保留">6. 数据保留<a class="anchor" href="#6-数据保留" aria-label="锚点">#</a></h2>
+<h3 id="6-1-保留期限">6.1 保留期限<a class="anchor" href="#6-1-保留期限" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>数据类型</th><th>保留期限</th></tr></thead><tbody><tr><td>用户账户数据</td><td>账户存在期间</td></tr><tr><td>订单数据</td><td>7 年</td></tr><tr><td>日志数据</td><td>30 天</td></tr><tr><td>会话数据</td><td>7 天</td></tr><tr><td>分析数据</td><td>1 年</td></tr></tbody></table>
+<h3 id="6-2-自动清理">6.2 自动清理<a class="anchor" href="#6-2-自动清理" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 定期清理过期数据</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">cleanupExpiredData</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params"></span>) =&gt; {
+  <span class="hljs-keyword">const</span> thirtyDaysAgo = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>(<span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() - <span class="hljs-number">30</span> * <span class="hljs-number">24</span> * <span class="hljs-number">60</span> * <span class="hljs-number">60</span> * <span class="hljs-number">1000</span>);
+  
+  <span class="hljs-comment">// 清理过期日志</span>
+  <span class="hljs-keyword">await</span> <span class="hljs-title class_">Log</span>.<span class="hljs-title function_">destroy</span>({
+    <span class="hljs-attr">where</span>: {
+      <span class="hljs-attr">createdAt</span>: { [<span class="hljs-title class_">Op</span>.<span class="hljs-property">lt</span>]: thirtyDaysAgo }
+    }
+  });
+  
+  <span class="hljs-comment">// 清理过期会话</span>
+  <span class="hljs-keyword">await</span> <span class="hljs-title class_">Session</span>.<span class="hljs-title function_">destroy</span>({
+    <span class="hljs-attr">where</span>: {
+      <span class="hljs-attr">expiresAt</span>: { [<span class="hljs-title class_">Op</span>.<span class="hljs-property">lt</span>]: <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>() }
+    }
+  });
+};
+
+<span class="hljs-comment">// 每天执行一次</span>
+<span class="hljs-built_in">setInterval</span>(cleanupExpiredData, <span class="hljs-number">24</span> * <span class="hljs-number">60</span> * <span class="hljs-number">60</span> * <span class="hljs-number">1000</span>);</code></pre>
+<hr>
+<h2 id="7-数据泄露响应">7. 数据泄露响应<a class="anchor" href="#7-数据泄露响应" aria-label="锚点">#</a></h2>
+<h3 id="7-1-响应流程">7.1 响应流程<a class="anchor" href="#7-1-响应流程" aria-label="锚点">#</a></h3>
+<ol><li><strong>发现</strong>：检测数据泄露</li><li><strong>评估</strong>：评估泄露范围和影响</li><li><strong>通知</strong>：通知相关方</li><li><strong>控制</strong>：控制泄露影响</li><li><strong>调查</strong>：调查泄露原因</li><li><strong>修复</strong>：修复安全漏洞</li><li><strong>报告</strong>：向监管机构报告</li></ol>
+<h3 id="7-2-通知要求">7.2 通知要求<a class="anchor" href="#7-2-通知要求" aria-label="锚点">#</a></h3>
+<ul><li><strong>72 小时内</strong>：向监管机构报告</li><li><strong>及时</strong>：通知受影响用户</li><li><strong>内容</strong>：泄露性质、可能后果、已采取措施</li></ul>
+<hr>
+<h2 id="8-隐私影响评估">8. 隐私影响评估<a class="anchor" href="#8-隐私影响评估" aria-label="锚点">#</a></h2>
+<h3 id="8-1-评估范围">8.1 评估范围<a class="anchor" href="#8-1-评估范围" aria-label="锚点">#</a></h3>
+<ul><li>新功能上线前</li><li>数据处理方式变更时</li><li>数据存储位置变更时</li></ul>
+<h3 id="8-2-评估内容">8.2 评估内容<a class="anchor" href="#8-2-评估内容" aria-label="锚点">#</a></h3>
+<ul><li>数据收集必要性</li><li>数据处理合法性</li><li>数据保护措施</li><li>用户权利保障</li></ul>
+<hr>
+<h2 id="9-版本历史">9. 版本历史<a class="anchor" href="#9-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义数据隐私规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 安全团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-PERF-001] 性能规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-PERF-001] 性能规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-PROCESS-001] 委派边界决策矩阵-第六通道外部智能体.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-PROCESS-001] 委派边界决策矩阵（第六通道：外部智能体）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-PRIV-001] 数据隐私规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

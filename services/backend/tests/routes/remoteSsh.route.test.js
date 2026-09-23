@@ -509,7 +509,7 @@ describeWithLoopback('remoteSsh route scaffold', () => {
 
     expect(execRes.status).toBe(400);
     expect(execRes.body.success).toBe(false);
-    expect(execRes.body.message).toContain('idempotency_key');
+    expect(execRes.body.error.message).toContain('idempotency_key');
   });
 
   test('POST /exec returns approval_required for risky command', async () => {
@@ -567,7 +567,7 @@ describeWithLoopback('remoteSsh route scaffold', () => {
 
     expect(res.status).toBe(403);
     expect(res.body.success).toBe(false);
-    expect(res.body.message).toContain('不在允许列表中');
+    expect(res.body.error.message).toContain('不在允许列表中');
   });
 
   test('approval decision flow: pending -> approve -> exec returns execution_disabled in safe mode', async () => {
@@ -626,7 +626,7 @@ describeWithLoopback('remoteSsh route scaffold', () => {
     });
     expect(execWithApprovalRes.status).toBe(409);
     expect(execWithApprovalRes.body.success).toBe(false);
-    expect(execWithApprovalRes.body.data.status).toBe('execution_disabled');
+    expect(execWithApprovalRes.body.error.code).toBe('CONFLICT');
   });
 
   test('approval decision rejects second decision on same ticket', async () => {
@@ -794,7 +794,7 @@ describeWithLoopback('remoteSsh route scaffold', () => {
 
     expect(res.status).toBe(404);
     expect(res.body.success).toBe(false);
-    expect(res.body.message).toContain('未找到对应 stream_id');
+    expect(res.body.error.message).toContain('未找到对应 stream_id');
   });
 
   test('POST /exec/stream returns 409 when same stream_id is reused with different payload', async () => {
@@ -831,7 +831,7 @@ describeWithLoopback('remoteSsh route scaffold', () => {
 
     expect(second.status).toBe(409);
     expect(second.body.success).toBe(false);
-    expect(second.body.data.code).toBe('stream_payload_conflict');
+    expect(second.body.error.code).toBe('CONFLICT');
   });
 
   test('GET /exec/stream/:streamId returns summary and replay events', async () => {
@@ -882,7 +882,7 @@ describeWithLoopback('remoteSsh route scaffold', () => {
 
     expect(res.status).toBe(404);
     expect(res.body.success).toBe(false);
-    expect(res.body.message).toContain('未找到对应 stream_id');
+    expect(res.body.error.message).toContain('未找到对应 stream_id');
   });
 
   test('GET /alerts/persistence returns list payload', async () => {
@@ -1019,7 +1019,7 @@ describeWithLoopback('remoteSsh route scaffold', () => {
       });
       expect(ackAgain.status).toBe(404);
       expect(ackAgain.body.success).toBe(false);
-      expect(ackAgain.body.message).toContain('未找到可确认的告警');
+      expect(ackAgain.body.error.message).toContain('未找到可确认的告警');
     } finally {
       remoteStatePersistence.isEnabled = originalIsEnabled;
       remoteStatePersistence.save = originalSave;
@@ -1194,7 +1194,7 @@ describeWithLoopback('remoteSsh route scaffold', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
-    expect(res.body.message).toContain('alert_id 或 up_to_id 至少提供一个');
+    expect(res.body.error.message).toContain('alert_id 或 up_to_id 至少提供一个');
   });
 
   test('POST /alerts/persistence/ack returns 400 when up_to_id is not a number', async () => {
@@ -1209,7 +1209,7 @@ describeWithLoopback('remoteSsh route scaffold', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
-    expect(res.body.message).toContain('alert_id 或 up_to_id 至少提供一个');
+    expect(res.body.error.message).toContain('alert_id 或 up_to_id 至少提供一个');
   });
 
   test('POST /alerts/persistence/ack returns 400 when alert_id is not a number', async () => {
@@ -1224,7 +1224,7 @@ describeWithLoopback('remoteSsh route scaffold', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
-    expect(res.body.message).toContain('alert_id 或 up_to_id 至少提供一个');
+    expect(res.body.error.message).toContain('alert_id 或 up_to_id 至少提供一个');
   });
 
   test('POST /alerts/persistence/ack uses up_to_id when alert_id is invalid', async () => {

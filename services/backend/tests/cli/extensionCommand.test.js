@@ -21,9 +21,31 @@ const {
   getBuiltinSlashCommands,
 } = require('../../src/constants/commandSchema');
 
-jest.mock('../../src/cli/handlers/extension', () => ({
-  handleExtension: jest.fn(async () => {}),
-}));
+// 完整复刻真实 extension.js 的导出形状(handleExtension + __khyCommandManifest):
+// commandAutoRegistry 靠 manifest 才能把 extension/ext 注册进分派表;manifest 的
+// handler 与真实文件同构 —— 重组 input 后调用本文件的 handleExtension 桩。
+// 不能 mock 整个模块:剥掉 manifest → route 落入未知命令的 inquirer 交互 → 挂死;
+// 也不能只 requireActual 再覆写 handleExtension:manifest handler 闭包引用模块
+// 内部的 handleExtension,jest.mock 拦不到内部闭包,调用次数恒为 0。
+jest.mock('../../src/cli/handlers/extension', () => {
+  const handleExtension = jest.fn(async () => {});
+  return {
+    handleExtension,
+    __khyCommandManifest: {
+      name: 'extension',
+      aliases: ['ext'],
+      description: '拓展市场：列表/搜索/安装/卸载/启用/禁用/更新/信息/链接/新建',
+      usage: 'extension <list|search|install|uninstall|enable|disable|update|info|link|unlink|new>',
+      subCommands: ['list', 'search', 'install', 'uninstall', 'enable', 'disable', 'update', 'info', 'link', 'unlink', 'new'],
+      category: 'system',
+      handler: async (parsed) => {
+        const input = [parsed.subCommand, ...(parsed.args || [])].filter(Boolean).join(' ');
+        await handleExtension(input, { options: parsed.options });
+        return true;
+      },
+    },
+  };
+});
 const { handleExtension: handleExtensionMock } = require('../../src/cli/handlers/extension');
 
 describe('extension/ext command wiring', () => {
@@ -39,10 +61,12 @@ describe('extension/ext command wiring', () => {
     expect(subs.ext).toEqual(expect.arrayContaining(['list', 'search', 'install', 'new']));
   });
 
-  test('parseInput 把 `ext search foo bar` 归类为 ext 命令', () => {
+  test('parseInput 把 `ext search foo bar` 归类为 extension 命令(别名经 alias 表规范化)', () => {
     const router = require('../../src/cli/router');
     const parsed = router.parseInput('ext search foo bar');
-    expect(parsed.command).toBe('ext');
+    // 生产语义:aliases.js 把 ext 规范化为长名 extension,原始 token 保留在 rawCommandToken
+    expect(parsed.command).toBe('extension');
+    expect(parsed.rawCommandToken).toBe('ext');
     expect(parsed.subCommand).toBe('search');
     expect(parsed.args).toEqual(['foo', 'bar']);
   });

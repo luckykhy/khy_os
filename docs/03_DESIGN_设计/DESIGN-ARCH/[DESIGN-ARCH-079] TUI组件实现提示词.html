@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-079] TUI组件实现提示词.md -->
+<title>[DESIGN-ARCH-079] TUI 组件实现提示词 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-079] TUI 组件实现提示词</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-079] TUI 组件实现提示词</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-079-tui-组件实现提示词">[DESIGN-ARCH-079] TUI 组件实现提示词</a></li><li class="lvl-2"><a href="#说明">说明</a></li><li class="lvl-2"><a href="#任务清单">任务清单</a></li><li class="lvl-2"><a href="#提示词模板">提示词模板</a></li><li class="lvl-3"><a href="#t-079-01-promptframe-输入框增强">T-079-01: PromptFrame 输入框增强</a></li><li class="lvl-3"><a href="#t-079-04-streamingblock-流式输出增强">T-079-04: StreamingBlock 流式输出增强</a></li><li class="lvl-3"><a href="#t-079-06-输出表格无框模式">T-079-06: 输出表格无框模式</a></li><li class="lvl-2"><a href="#通用工程铁律-所有任务适用">通用工程铁律（所有任务适用）</a></li><li class="lvl-2"><a href="#验证命令">验证命令</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-079-tui-组件实现提示词">[DESIGN-ARCH-079] TUI 组件实现提示词<a class="anchor" href="#design-arch-079-tui-组件实现提示词" aria-label="锚点">#</a></h1>
+<h2 id="说明">说明<a class="anchor" href="#说明" aria-label="锚点">#</a></h2>
+<p>本提示词基于 <code>[DESIGN-ARCH-079] TUI界面设计规范.md</code> 第 12 节「组件详细规范」生成，覆盖 8 个核心组件的实现任务。</p>
+<p><strong>使用方式</strong>：</p>
+<ol><li>选择一个组件任务</li><li>将下方提示词复制到 khy-os 目录下打开的任意 AI 执行</li><li>完成后回填状态</li></ol>
+<hr>
+<h2 id="任务清单">任务清单<a class="anchor" href="#任务清单" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>任务 ID</th><th>组件</th><th>优先级</th><th>预估工时</th></tr></thead><tbody><tr><td>T-079-01</td><td>PromptFrame 输入框增强</td><td>P0</td><td>2h</td></tr><tr><td>T-079-02</td><td>CompletionMenu 斜杠菜单</td><td>P1</td><td>1h</td></tr><tr><td>T-079-03</td><td>TaskListPanel 任务看板</td><td>P1</td><td>2h</td></tr><tr><td>T-079-04</td><td>StreamingBlock 流式输出</td><td>P0</td><td>3h</td></tr><tr><td>T-079-05</td><td>Spinner 加载指示器</td><td>P2</td><td>0.5h</td></tr><tr><td>T-079-06</td><td>输出表格无框模式</td><td>P1</td><td>1h</td></tr><tr><td>T-079-07</td><td>Markdown 结构化输出</td><td>P1</td><td>2h</td></tr><tr><td>T-079-08</td><td>输入回显 Transcript</td><td>P2</td><td>1h</td></tr></tbody></table>
+<hr>
+<h2 id="提示词模板">提示词模板<a class="anchor" href="#提示词模板" aria-label="锚点">#</a></h2>
+<h3 id="t-079-01-promptframe-输入框增强">T-079-01: PromptFrame 输入框增强<a class="anchor" href="#t-079-01-promptframe-输入框增强" aria-label="锚点">#</a></h3>
+<blockquote><p><strong>角色</strong>：khy-os TUI 高级工程师，熟悉 Ink 渲染模型、Yoga 布局引擎、IME 输入法处理。</p>
+<p><strong>目标</strong>：实现 <code>[DESIGN-ARCH-079]</code> 第 12.1 节定义的 PromptFrame 规范，包括：</p>
+<ul><li>宽度 = <code>cols - 1</code>（防 anti-spill）</li><li>最小高度 4 行，最大高度 <code>max(4, vrows - 10)</code></li><li>光标样式：INSERT 默认 / NORMAL 绿色 / 禁用不可见</li><li>IME 候选窗跟随（<code>useCursor().setCursorPosition()</code>）</li><li>Shell 模式：<code>!</code> 前缀切换，<code>Escape</code>/<code>Backspace</code> 退出</li><li>粘贴处理：短文本直接插入，长文本折叠为 <code>[Pasted ~N lines]</code></li><li>Prompt 历史：<code>↑/↓</code> 浏览，<code>Ctrl+R</code> 反向搜索</li></ul>
+<p><strong>工作目录</strong>：<code>D:\Portable\khy-os</code></p>
+<p><strong>执行流程</strong>：</p>
+<ol><li><strong>审计现有代码</strong>：<ul><li>读取 <code>services/backend/src/cli/tui/ink-components/PromptFrame.js</code>（487 行）</li><li>读取 <code>services/backend/src/cli/tui/effectiveCols.js</code>（宽度计算）</li><li>读取 <code>services/backend/src/cli/tui/viewportHeight.js</code>（高度计算）</li><li>读取 <code>services/backend/src/cli/tui/ink-components/caretGeometry.js</code>（光标几何）</li><li>对比 OpenCode 的 <code>packages/opencode/src/cli/render.ts</code> 中 Input 组件实现</li></ul></li></ol>
+<ol><li><strong>逐项检查规范与实现的差距</strong>：<ul><li>[ ] 宽度是否使用 <code>cols - 1</code></li><li>[ ] 高度是否限制在 <code>max(4, vrows - 10)</code></li><li>[ ] 光标样式是否按 Vim 模式切换</li><li>[ ] IME 跟随是否使用 yoga node 链遍历计算</li><li>[ ] Shell 模式是否支持 <code>!</code> 前缀</li><li>[ ] 粘贴是否有长度门控（150 字符 / 3 行）</li><li>[ ] Prompt 历史是否支持双向搜索</li></ul></li></ol>
+<ol><li><strong>实现差距修复</strong>：<ul><li>每个修复使用环境变量门控（如 <code>KHY_PROMPT_IME_FOLLOW=1</code>）</li><li>保持向后兼容：未设置环境变量时行为与改动前完全一致</li><li>JS 风格：2 空格缩进、单引号、分号、CommonJS</li></ul></li></ol>
+<ol><li><strong>自测</strong>：<ul><li>运行 <code>node services/backend/src/cli/tui/ink-components/PromptFrame.js</code> 无报错</li><li>手动测试：输入长文本 → 验证高度限制</li><li>手动测试：切换 Vim 模式 → 验证光标样式</li><li>手动测试：粘贴长文本 → 验证折叠行为</li></ul></li></ol>
+<ol><li><strong>输出报告</strong>：<ul><li>列出所有修改的文件和行号</li><li>列出所有新增的环境变量</li><li>列出所有通过/未通过的验收项</li></ul></li></ol>
+<p><strong>验收标准</strong>：</p>
+<ul><li>[ ] 宽度计算使用 <code>cols - 1</code></li><li>[ ] 高度限制在 <code>max(4, vrows - 10)</code></li><li>[ ] 光标样式按 Vim 模式切换</li><li>[ ] IME 候选窗跟随光标位置</li><li>[ ] Shell 模式可通过 <code>!</code> 前缀激活</li><li>[ ] 长粘贴自动折叠为占位符</li><li>[ ] Prompt 历史支持 <code>↑/↓</code> 和 <code>Ctrl+R</code></li><li>[ ] 所有增强都在环境变量门控下</li><li>[ ] <code>hq_check.py</code> 全绿</li></ul>
+<p><strong>工程铁律</strong>：</p>
+<ol><li>零盘符硬编码：一切路径从脚本自身位置推算</li><li>向后兼容：新增环境变量默认 off</li><li>JS 风格：2 空格缩进、单引号、分号、CommonJS</li><li>不改 <code>platform/khy_platform/__init__.py</code></li><li>改完必跑 <code>python scripts/hq_check.py</code></li><li>布局计算使用 <code>effectiveCols.js</code> 和 <code>viewportHeight.js</code> 作为 SSOT</li></ol>
+<p><strong>回填</strong>：</p>
+<pre><code class="language-bash">python scripts/update_status.py task T-079-01 <span class="hljs-keyword">done</span> --note <span class="hljs-string">&quot;PromptFrame 输入框增强：宽度 cols-1、高度限制、IME 跟随、Shell 模式、粘贴折叠、Prompt 历史&quot;</span></code></pre></blockquote>
+<hr>
+<h3 id="t-079-04-streamingblock-流式输出增强">T-079-04: StreamingBlock 流式输出增强<a class="anchor" href="#t-079-04-streamingblock-流式输出增强" aria-label="锚点">#</a></h3>
+<blockquote><p><strong>角色</strong>：khy-os TUI 高级工程师，熟悉 Ink 渲染模型、流式输出架构、反阶梯机制。</p>
+<p><strong>目标</strong>：实现 <code>[DESIGN-ARCH-079]</code> 第 12.5 节定义的 StreamingBlock 规范，包括：</p>
+<ul><li>反阶梯架构：高度预算管理 <code>liveBudget = max(6, rows - reserve)</code></li><li>流式组件：Thinking section（可折叠）、Body timeline、Status broadcast</li><li>归一化管道：分层门控（强模型 sanitize / 其他 normalize）</li><li>前缀稳定：live 预览中不关闭 fence/不去重/不修剪</li><li>内容键控缓存：<code>streamNormCache</code> 优化 O(n²)/轮 → O(n)/轮</li><li>Markdown 流式渲染：<code>renderMarkdownStreaming()</code> 关闭悬挂 fence</li></ul>
+<p><strong>工作目录</strong>：<code>D:\Portable\khy-os</code></p>
+<p><strong>执行流程</strong>：</p>
+<ol><li><strong>审计现有代码</strong>：<ul><li>读取 <code>services/backend/src/cli/tui/ink-components/StreamingBlock.js</code>（441 行）</li><li>读取 <code>services/backend/src/cli/tui/markdownRenderer.js</code>（流式渲染）</li><li>读取 <code>services/backend/src/cli/tui/ink-components/TextBlock.js</code>（文本块）</li><li>读取 <code>services/backend/src/cli/tui/ink-components/ToolCard.js</code>（工具卡片）</li><li>对比 OpenCode 的 streaming 实现</li></ul></li></ol>
+<ol><li><strong>逐项检查规范与实现的差距</strong>：<ul><li>[ ] liveBudget 是否使用 <code>max(6, rows - reserve)</code> 计算</li><li>[ ] Thinking section 是否可折叠且有 thinkBudget 限制</li><li>[ ] Body timeline 是否有序且无重复</li><li>[ ] 归一化是否使用分层门控</li><li>[ ] 前缀稳定是否在 live 预览中生效</li><li>[ ] streamNormCache 是否正确实现内容键控</li><li>[ ] renderMarkdownStreaming 是否关闭悬挂 fence</li></ul></li></ol>
+<ol><li><strong>实现差距修复</strong>：<ul><li>每个修复使用环境变量门控</li><li>保持向后兼容</li><li>JS 风格：2 空格缩进、单引号、分号、CommonJS</li></ul></li></ol>
+<ol><li><strong>自测</strong>：<ul><li>运行 <code>node services/backend/src/cli/tui/ink-components/StreamingBlock.js</code> 无报错</li><li>手动测试：流式输出 → 验证无阶梯伪影</li><li>手动测试：长输出 → 验证高度预算管理</li><li>手动测试：复制输出 → 验证无硬换行符</li></ul></li></ol>
+<ol><li><strong>输出报告</strong>：<ul><li>列出所有修改的文件和行号</li><li>列出所有新增的环境变量</li><li>列出所有通过/未通过的验收项</li></ul></li></ol>
+<p><strong>验收标准</strong>：</p>
+<ul><li>[ ] 流式输出不出现阶梯伪影</li><li>[ ] liveBudget 正确计算并限制高度</li><li>[ ] Thinking section 可折叠且有独立预算</li><li>[ ] Body timeline 有序且无重复</li><li>[ ] 复制输出不包含 <code>\n</code>（软换行对齐 opencode）</li><li>[ ] 归一化缓存命中率 &gt; 80%</li><li>[ ] <code>hq_check.py</code> 全绿</li></ul>
+<p><strong>工程铁律</strong>：</p>
+<ol><li>零盘符硬编码</li><li>向后兼容：新增环境变量默认 off</li><li>JS 风格：2 空格缩进、单引号、分号、CommonJS</li><li>不改 <code>platform/khy_platform/__init__.py</code></li><li>改完必跑 <code>python scripts/hq_check.py</code></li><li>流式归一化只用于全宽文本块：表格、边框等精确布局仍使用硬换行</li></ol>
+<p><strong>回填</strong>：</p>
+<pre><code class="language-bash">python scripts/update_status.py task T-079-04 <span class="hljs-keyword">done</span> --note <span class="hljs-string">&quot;StreamingBlock 流式输出增强：反阶梯架构、高度预算、归一化缓存、Markdown 流式渲染&quot;</span></code></pre></blockquote>
+<hr>
+<h3 id="t-079-06-输出表格无框模式">T-079-06: 输出表格无框模式<a class="anchor" href="#t-079-06-输出表格无框模式" aria-label="锚点">#</a></h3>
+<blockquote><p><strong>角色</strong>：khy-os TUI 高级工程师，熟悉 CLI 表格渲染、CJK 字符处理、ANSI 转义序列。</p>
+<p><strong>目标</strong>：实现 <code>[DESIGN-ARCH-079]</code> 第 12.7 节定义的输出表格规范，包括：</p>
+<ul><li>无框模式（默认）：空白对齐 + 2 空格缩进 + dim 分隔线</li><li>全框模式：<code>╭─╮│╰─╯</code> 完整框</li><li>切换方式：<code>KHY_TABLE_BORDERS=minimal|full</code></li><li>CJK 支持：<code>padToWidth()</code> 使用显示宽度（非字符数）</li></ul>
+<p><strong>工作目录</strong>：<code>D:\Portable\khy-os</code></p>
+<p><strong>执行流程</strong>：</p>
+<ol><li><strong>审计现有代码</strong>：<ul><li>读取 <code>services/backend/src/cli/tableStyle.js</code>（边框风格决策）</li><li>读取 <code>services/backend/src/cli/formatters.js</code>（printTable, printErrorPanel, _dressBorderlessTable）</li><li>读取 <code>node_modules/cli-table3/lib/utils.js</code>（padToWidth 实现）</li><li>对比 OpenCode 的 TextTable 组件</li></ul></li></ol>
+<ol><li><strong>逐项检查规范与实现的差距</strong>：<ul><li>[ ] 默认是否使用无框模式</li><li>[ ] 无框模式是否有 2 空格缩进</li><li>[ ] 表头下划线是否使用 dim <code>─</code></li><li>[ ] 全框模式是否使用 <code>╭─╮│╰─╯</code></li><li>[ ] <code>KHY_TABLE_BORDERS</code> 环境变量是否正确切换</li><li>[ ] CJK 字符是否使用显示宽度计算</li><li>[ ] ANSI 转义序列是否不计入宽度</li></ul></li></ol>
+<ol><li><strong>实现差距修复</strong>：<ul><li>每个修复使用环境变量门控</li><li>保持向后兼容</li><li>JS 风格：2 空格缩进、单引号、分号、CommonJS</li></ul></li></ol>
+<ol><li><strong>自测</strong>：<ul><li>运行 <code>node services/backend/src/cli/formatters.js</code> 无报错</li><li>手动测试：ASCII 表格 → 验证无框对齐</li><li>手动测试：CJK 表格 → 验证宽度计算</li><li>手动测试：<code>KHY_TABLE_BORDERS=full</code> → 验证全框显示</li><li>手动测试：复制表格 → 验证无框模式不复制边框</li></ul></li></ol>
+<ol><li><strong>输出报告</strong>：<ul><li>列出所有修改的文件和行号</li><li>列出所有通过/未通过的验收项</li></ul></li></ol>
+<p><strong>验收标准</strong>：</p>
+<ul><li>[ ] 默认使用无框模式</li><li>[ ] 无框模式有 2 空格缩进 + dim 分隔线</li><li>[ ] 全框模式使用 <code>╭─╮│╰─╯</code></li><li>[ ] <code>KHY_TABLE_BORDERS</code> 正确切换模式</li><li>[ ] CJK 字符宽度计算正确（中文 2 列）</li><li>[ ] ANSI 转义序列不计入宽度</li><li>[ ] 复制无框表格不包含边框字符</li><li>[ ] <code>hq_check.py</code> 全绿</li></ul>
+<p><strong>工程铁律</strong>：</p>
+<ol><li>零盘符硬编码</li><li>向后兼容：<code>KHY_TABLE_BORDERS</code> 默认 <code>minimal</code></li><li>JS 风格：2 空格缩进、单引号、分号、CommonJS</li><li>不改 <code>platform/khy_platform/__init__.py</code></li><li>改完必跑 <code>python scripts/hq_check.py</code></li><li>表格宽度计算使用 <code>padToWidth()</code> 而非 <code>.length</code></li></ol>
+<p><strong>回填</strong>：</p>
+<pre><code class="language-bash">python scripts/update_status.py task T-079-06 <span class="hljs-keyword">done</span> --note <span class="hljs-string">&quot;输出表格无框模式：空白对齐、CJK 宽度计算、环境变量切换&quot;</span></code></pre></blockquote>
+<hr>
+<h2 id="通用工程铁律-所有任务适用">通用工程铁律（所有任务适用）<a class="anchor" href="#通用工程铁律-所有任务适用" aria-label="锚点">#</a></h2>
+<ol><li><strong>零盘符硬编码</strong>：一切路径从脚本自身位置推算（<code>hq_common.py</code> 已封装）</li><li><strong>向后兼容</strong>：所有增强都在环境变量门控下，默认 off</li><li><strong>JS 风格</strong>：2 空格缩进、单引号、分号、CommonJS</li><li><strong>不改 <code>platform/khy_platform/__init__.py</code></strong></li><li><strong>改完必跑</strong> <code>python scripts/hq_check.py</code></li><li><strong>软换行只用于全宽文本块</strong>：表格、边框等需要精确布局的组件仍使用硬换行</li></ol>
+<hr>
+<h2 id="验证命令">验证命令<a class="anchor" href="#验证命令" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-comment"># 全量检查</span>
+python scripts/hq_check.py
+
+<span class="hljs-comment"># 单组件测试</span>
+node services/backend/src/cli/tui/ink-components/PromptFrame.js
+node services/backend/src/cli/tui/ink-components/StreamingBlock.js
+node services/backend/src/cli/formatters.js
+
+<span class="hljs-comment"># Lint 检查</span>
+npx eslint services/backend/src/cli/tui/ink-components/*.js</code></pre>
+<hr>
+<p><em>基于 <code>[DESIGN-ARCH-079] TUI界面设计规范.md</code> 第 12 节生成</em><br><em>最后更新：2026-09-08</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-079] TUI界面设计规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-079] khy-os TUI 界面设计规范</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-080] 网页端信息架构与四页重设计-2026-09-08.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-080] 网页端信息架构与四页重设计</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-079] TUI组件实现提示词.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

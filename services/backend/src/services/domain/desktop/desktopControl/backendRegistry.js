@@ -76,8 +76,17 @@ function _sendKeysEscape(text) {
   return String(text).replace(/[+^%~(){}[\]]/g, '{$&}');
 }
 
+// PowerShell 5.1 encodes redirected stdout with the console code page — cp936 on Chinese
+// Windows — while Node decodes execFile output as UTF-8. Every non-ASCII string we read back
+// (window titles, UIA element names) therefore arrived as U+FFFD garbage, which also made
+// name-based clickElement() unreachable for a UI that is required to be Chinese.
+// No BOM: a leading BOM breaks the downstream JSON.parse. Guarded: hosts without a console
+// handle throw on this setter, and an unguarded throw would take down the whole channel.
+const _PS_UTF8_PREAMBLE =
+  'try{[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false)}catch{};';
+
 function _ps(cmd) {
-  return { cmd: 'powershell', args: ['-NoProfile', '-NonInteractive', '-Command', cmd] };
+  return { cmd: 'powershell', args: ['-NoProfile', '-NonInteractive', '-Command', `${_PS_UTF8_PREAMBLE}${cmd}`] };
 }
 
 // ── 工具：pyautogui 跨平台后备。文本/坐标全部经 argv 传入，python 侧读 sys.argv，零注入。 ──
@@ -250,8 +259,9 @@ const LINUX_INSPECT = {
 
 // Windows：UI Automation。脚本已从内联拼接提取为独立文件 scripts/win-uia-tree.ps1
 // （减少每次 inspect 的字符串拼接开销、便于维护），经 `powershell -File` 调用。
-// 可选 -SelfPids 传入 khy 终端自身 PID 做窗口过滤（焦点若是终端自身则跳过）——
-// 仅数值经 argv 传入，零 shell 拼接、零注入。
+// 可选 -SelfPids 传入 khy 终端自身 PID 做窗口过滤（焦点若是终端自身则跳过）；
+// 可选 -TargetName 指定定域的目标顶层窗口（不给则脚本退回到「焦点窗口」的旧行为）。
+// 两者仅经 argv 类型化参数传入，零 shell 拼接、零注入。
 const _WIN_UIA_SCRIPT = path.join(__dirname, 'scripts', 'win-uia-tree.ps1');
 
 function _psFile(scriptPath, extraArgs = []) {
@@ -274,6 +284,11 @@ function _winUiaTree(opts = {}) {
   // selfPids：逗号分隔的数值 PID 串（由 a11yTreeProvider 注入 process.pid/ppid）。
   if (opts && opts.selfPids != null && String(opts.selfPids).trim()) {
     extra.push('-SelfPids', String(opts.selfPids));
+  }
+  // targetName：显式目标窗口。缺失时绝不推空参——空 -TargetName 会让脚本把
+  // 「无目标」误判成「有目标但没匹配上」。
+  if (opts && opts.targetName != null && String(opts.targetName).trim()) {
+    extra.push('-TargetName', String(opts.targetName).trim());
   }
   return _psFile(_WIN_UIA_SCRIPT, extra);
 }
@@ -851,6 +866,8 @@ module.exports = {
   platforms,
   // 暴露纯函数供测试断言（注入安全/转义正确）。
   _internals: {
+    _ps,
+    _PS_UTF8_PREAMBLE,
     _sendKeysEscape,
     _psSingleQuote,
     _winCaptureScript,

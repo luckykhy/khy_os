@@ -13,9 +13,9 @@
 
 const path = require('path');
 const { classifyCommandRisk } = require('../../src/services/commandRiskClassifier');
-const { classify, LEVELS } = require('../../src/services/syscallGateway/resourceClassifier');
-const { buildIntent } = require('../../src/services/syscallGateway/intentSchema');
-const redLine = require('../../src/services/syscallGateway/redLine');
+const { classify, LEVELS } = require('../../src/services/domain/system/syscallGateway/resourceClassifier.js');
+const { buildIntent } = require('../../src/services/domain/system/syscallGateway/intentSchema.js');
+const redLine = require('../../src/services/domain/system/syscallGateway/redLine.js');
 
 const CWD = path.sep === '\\' ? 'C:\\proj' : '/proj';
 const HOME = path.sep === '\\' ? 'C:\\Users\\u' : '/home/u';

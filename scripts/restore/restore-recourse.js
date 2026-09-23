@@ -4,10 +4,10 @@
  * restore-recourse.js — 还原「补救追索 / recourse」CLI + 文档生成器
  *
  * 用法：
- *   node scripts/restore-recourse.js            # 判授权 → 若被挡，给出最短解锁路线图
- *   npm run restore-recourse                     # 同上（经 npm 别名）
- *   node scripts/restore-recourse.js --json      # 机器可读（撞到拒绝的 agent 读这个找出路）
- *   node scripts/restore-recourse.js --gen-doc   # 重新生成 OPS-MAN-085 说明
+ *   node scripts/restore/restore-recourse.js            # 判授权 → 若被挡，给出最短解锁路线图
+ *   npm run restore:recourse                            # 同上（经 npm 别名）
+ *   node scripts/restore/restore-recourse.js --json      # 机器可读（撞到拒绝的 agent 读这个找出路）
+ *   node scripts/restore/restore-recourse.js --gen-doc   # 重新生成 OPS-MAN-085 说明
  *
  * 设计：补救合成全在纯叶子 scripts/lib/restoreRecoursePlan.js（零 IO、可离线全测）；
  * 本文件只做两件事——
@@ -27,14 +27,10 @@ const { synthesizeRecourse, ACTOR_AGENT, ACTOR_HUMAN } =
 const { assessSelfDriveAuthorization } = require('../lib/restoreAutonomyGate');
 // 复用 restore-authorize 的事实采集器（零重复；它已 fail-soft 包好恢复链 + 环境探测）。
 const { gatherAuthorizationFacts } = require('./restore-authorize');
+const { opsDocPath, opsDocRelPath } = require('../lib/docsPaths');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const DOC_PATH = path.join(
-  ROOT,
-  'docs',
-  '07_OPS_运维',
-  '[OPS-MAN-085] 还原补救追索.md'
-);
+const DOC_PATH = opsDocPath('[OPS-MAN-085] 还原补救追索.md');
 const NPM_PKG_NAME = '@khy-os/khy-os';
 const PIP_PKG_NAME = 'khy-os';
 
@@ -70,7 +66,7 @@ function runRestoreRecourse(opts = {}) {
 
   if (!recourse.needed) {
     out += `${C.green}${C.bold}✔ ${recourse.summary}${C.reset}\n`;
-    out += `${C.dim}详情见：docs/07_OPS_运维/[OPS-MAN-085] 还原补救追索.md${C.reset}\n`;
+    out += `${C.dim}详情见：${opsDocRelPath('[OPS-MAN-085] 还原补救追索.md')}${C.reset}\n`;
     process.stdout.write(out);
     return 0;
   }
@@ -94,7 +90,7 @@ function runRestoreRecourse(opts = {}) {
     i += 1;
   }
   out += '\n';
-  out += `${C.dim}详情见：docs/07_OPS_运维/[OPS-MAN-085] 还原补救追索.md${C.reset}\n`;
+  out += `${C.dim}详情见：${opsDocRelPath('[OPS-MAN-085] 还原补救追索.md')}${C.reset}\n`;
   process.stdout.write(out);
   return 1;
 }

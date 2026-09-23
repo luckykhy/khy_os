@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-119] TUI原生文本选择与复制可用性修复.md -->
+<title>[DESIGN-ARCH-119] TUI 文本选择与复制可用性修复 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-119] TUI 文本选择与复制可用性修复</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-119] TUI 文本选择与复制可用性修复</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-119-tui-文本选择与复制可用性修复">[DESIGN-ARCH-119] TUI 文本选择与复制可用性修复</a></li><li class="lvl-2"><a href="#一-现象与复现">一、现象与复现</a></li><li class="lvl-2"><a href="#二-实测根因-三条独立缺陷">二、实测根因（三条独立缺陷）</a></li><li class="lvl-3"><a href="#缺陷-a-拖选不受影响-的推理是错的">缺陷 A ——「拖选不受影响」的推理是错的</a></li><li class="lvl-3"><a href="#缺陷-b-shift-修饰位被解析但被丢弃-直接违约-6-2">缺陷 B —— `Shift` 修饰位被解析但被丢弃（直接违约 §6.2）</a></li><li class="lvl-3"><a href="#缺陷-c-备屏强制接管-绕过-未知终端不接管-的保护">缺陷 C —— 备屏强制接管，绕过「未知终端不接管」的保护</a></li><li class="lvl-2"><a href="#三-为什么-二选一-不再是约束-三个参考项目的实证">三、为什么「二选一」不再是约束 —— 三个参考项目的实证</a></li><li class="lvl-3"><a href="#3-1-v1-的框架及其边界">3.1 v1 的框架及其边界</a></li><li class="lvl-3"><a href="#3-2-claude-code-把选择从终端手里拿回来">3.2 Claude Code：把选择从终端手里拿回来</a></li><li class="lvl-3"><a href="#3-3-opencode-另一条路-不建议照抄">3.3 opencode：另一条路，不建议照抄</a></li><li class="lvl-3"><a href="#3-4-claude-code-best">3.4 claude-code-best</a></li><li class="lvl-3"><a href="#3-5-结论-从-二选一-到-三层各自成立">3.5 结论：从「二选一」到「三层各自成立」</a></li><li class="lvl-2"><a href="#四-方案-三层">四、方案：三层</a></li><li class="lvl-3"><a href="#4-0-分层与依赖关系">4.0 分层与依赖关系</a></li><li class="lvl-3"><a href="#4-1-第一层-按-事件类别-决定吞不吞-已完成">4.1 第一层：按**事件类别**决定吞不吞（已完成）</a></li><li class="lvl-3"><a href="#4-2-第二层-应用内自绘选择-本版核心">4.2 第二层：应用内自绘选择（本版核心）</a></li><li class="lvl-3"><a href="#4-3-门控与可回滚性">4.3 门控与可回滚性</a></li><li class="lvl-3"><a href="#4-4-1007h-的降级处理-从主路到可选实验">4.4 `?1007h` 的降级处理（从主路到可选实验）</a></li><li class="lvl-2"><a href="#五-与既有机制的边界表">五、与既有机制的边界表</a></li><li class="lvl-2"><a href="#六-诚实边界-本方案-不-做什么">六、诚实边界：本方案**不**做什么</a></li><li class="lvl-2"><a href="#七-风险与未收口清单">七、风险与未收口清单</a></li><li class="lvl-2"><a href="#八-落地清单-三层-一次提交只做一层">八、落地清单（三层，一次提交只做一层）</a></li><li class="lvl-3"><a href="#步骤-1-判据收窄-已完成">步骤 1 —— 判据收窄（✅ 已完成）</a></li><li class="lvl-3"><a href="#步骤-2-第二层-应用内自绘选择-本版新增-未开工">步骤 2 —— 第二层：应用内自绘选择（本版新增，未开工）</a></li><li class="lvl-3"><a href="#步骤-3-文档与登记收口-2026-09-18-完成主要项">步骤 3 —— 文档与登记收口（✅ 2026-09-18 完成主要项）</a></li><li class="lvl-2"><a href="#九-复现方式-汇总">九、复现方式（汇总）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-119-tui-文本选择与复制可用性修复">[DESIGN-ARCH-119] TUI 文本选择与复制可用性修复<a class="anchor" href="#design-arch-119-tui-文本选择与复制可用性修复" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>隶属</strong>：本文属 <strong>TUI 设计族</strong>（20 编号 / 21 文件），总纲与 scope 裁决见 <code>[DESIGN-ARCH-122] TUI 设计族总纲</code>；规则冲突一律以 <code>[DESIGN-ARCH-102] Khy TUI 统一规则手册</code> 为准。</p></blockquote>
+<blockquote><p><strong>定位</strong>：修复 <code>khy</code> TUI 下<strong>无法用鼠标选中并复制文本</strong>这一第一痛点。本文是该修复的<br>设计真源：先给出<strong>实测根因</strong>（三条互相独立的缺陷，不是一条），再给<strong>三层方案</strong>——<br>判据收窄 → 应用内自绘选择 → 逃生舱与门控。</p>
+<p><strong>本版（v2）相对 v1 的实质变化</strong>：「保留 <code>1000</code> + 有条件的吞」从<strong>终点</strong>降为<strong>第一层</strong>。<br>v1 的结论「拖选与点击在鼠标通道内物理互斥、只能二选一」<strong>在鼠标通道内仍然成立</strong>，但它<br>不再是约束——因为三个参考实现在这件事上都不在鼠标通道里做选择，而是<strong>自己画选择、<br>自己写剪贴板</strong>。第二层让「滚轮 + 拖选 + 点击」三项同时成立，并把 v1 里那条唯一的<br>硬赌注（<code>?1007h</code> 在各终端的兼容性）<strong>整体绕开</strong>。</p>
+<p><strong>不新增门禁规则</strong>——本修复是既有 <code>[DESIGN-ARCH-102]</code> §6.2 与 P6 承诺的<strong>兑现</strong>，<br>因此不携带 <code>&lt;!-- RULES-REGISTRY --&gt;</code> 标记行，不改 <code>RULES-REGISTRY.json</code>。</p>
+<p><strong>依据</strong>：<code>[DESIGN-ARCH-102]</code> §6.2 鼠标约定（三档 + Shift 永远走原生 + P6「鼠标增强<br>不得劫持终端原生选择」）、§6.1 键盘总表（<code>v</code> 消息选择模式、<code>y</code> vim 复制）；<br><code>[DESIGN-ARCH-101] TUI 交互与展示规则细则</code> §8「需要裁决的冲突」第 6 条<br>（<code>mouseButtons</code> 默认值文档/实现矛盾）与 §4.5 命中测试与鼠标档位；<br><code>[DESIGN-ARCH-111]</code>（规则遵守保障，用于门控登记）；<br><code>mouseButtons.js</code> 头部「为什么默认全关」；<code>services/backend/src/cli/tui/AGENTS.md</code> §0.9.3。</p>
+<hr>
+<h2 id="落地状态-2026-09-17">落地状态（2026-09-17）<a class="anchor" href="#落地状态-2026-09-17" aria-label="锚点">#</a></h2>
+<p><strong>第一层已完成并实测绿</strong>（判据收窄 + 测试固化）：</p>
+<table><thead><tr><th>改动</th><th>文件</th><th>状态</th></tr></thead><tbody><tr><td><code>parseSgrMouse</code> 补 <code>isShift/isAlt/isCtrl</code></td><td><code>services/backend/src/cli/tui/mouseButtons.js</code></td><td>✅</td></tr><tr><td><code>onInput</code> 加修饰键前置放行（排除 <code>isWheel</code>）</td><td>同上</td><td>✅</td></tr><tr><td><code>press</code> 分支改「命中按钮才吞」</td><td>同上</td><td>✅</td></tr><tr><td><code>release</code> 分支改「按命中决定，不按 armed」</td><td>同上</td><td>✅</td></tr><tr><td>修正头部错误断言 + <code>app.js</code> 注释同步</td><td><code>mouseButtons.js</code> / <code>app.js</code></td><td>✅</td></tr><tr><td>9 条回归测试</td><td><code>services/backend/tests/cli/tui/mouseNativeSelection.test.js</code></td><td>✅ 9/9</td></tr><tr><td>全 TUI 测试集无回归</td><td><code>tests/cli/tui/*.test.js</code></td><td>✅ 744/744</td></tr></tbody></table>
+<p><strong>实现期新发现（原方案未预见，已补进判据）</strong>：<code>release</code> 分支若按 <code>pendingClick</code><br>无条件吞，会把「从按钮上按下、拖出后松开」这一手势的<strong>终点</strong>也吃掉 —— 与缺陷 A<br>同一类病（起点在按钮上被吞、终点在空白处被吞，整段手势两头都缺）。故改为按<br><strong>命中</strong>而非按 <code>armed</code> 决定。反例矩阵 R10 即此条。</p>
+<p><strong>第二层（应用内自绘选择）—— ✅ 已实施（2026-09-17 晚）</strong>。四步全部落地，<br>端到端探针 <strong>17/17 绿</strong>、<strong>真渲染器探针 13/13 绿</strong>；全 TUI 测试 <strong>869/871</strong><br>（2 条失败为改动前既有，与本提案无关）。</p>
+<table><thead><tr><th>步骤</th><th>产物</th><th>状态</th></tr></thead><tbody><tr><td>2a 模型</td><td><code>cli/tui/selection.js</code>（12 导出，零 IO 绝不抛）+ <code>tests/cli/tui/selection.test.js</code></td><td>✅ 27/27</td></tr><tr><td>2b-0 档位</td><td><code>enableBytes({select})</code> 用 <code>1002</code> <strong>替换</strong> <code>1000</code>；<code>mouseWheel.test.js</code> 补三档断言</td><td>✅ 17/17</td></tr><tr><td>2b-1 渲染</td><td><code>Viewport</code> 的 <code>selection</code> prop（三段 <code>Text</code>，中段 <code>inverse</code>）；不传时<strong>逐字节不变</strong></td><td>✅ 16/16</td></tr><tr><td>2b-2 接线</td><td><code>createMouseDispatcher</code> 的 <code>onSelectEvent</code> + <code>App.js</code> 接线 + 4 个 <code>KHY_SELECT_*</code> 登记</td><td>✅ 15/15</td></tr><tr><td>4 真渲染</td><td>真 ink 渲染器逐帧确认反色落点（<strong>碰真渲染器</strong>，不只碰逻辑）</td><td>✅ 13/13</td></tr></tbody></table>
+<p><strong>三层探针抓出的三个真实缺陷（各自那层的单测都发现不了）</strong> ——<br>这条经验值得单独记下：<strong>各层自洽 ≠ 串起来正确；逻辑正确 ≠ 真机画对了</strong>。</p>
+<ol><li><strong>Shift+拖动位移漏进选区分支</strong>：修饰键放行块原排在 <code>isMotion</code> <strong>之后</strong>，</li></ol>
+<p>于是 <code>[&lt;36;x;yM</code>（Shift|motion）被当成选区扩展 → 用户按 Shift 想要终端原生<br>   选择，程序同时在画自己的选区，两套打架。修法：修饰键判定提到 motion <strong>之前</strong>。<br>   <em>（端到端探针抓到；当时的 15 条 dispatcher 单测只覆盖了 press，没覆盖 motion。）</em></p>
+<ol><li><strong>坐标偏移方向写反</strong>：<code>App.js</code> 里写成 <code>line = row − offset</code>，而 <code>Viewport</code> 的</li></ol>
+<p>真源是 <code>visible = lines.slice(clampedScroll, ...)</code> ⇒ 应为 <code>line = row + offset</code>。<br>   后果是「只要滚动过，选中的行就整体偏移」，表现为「随机选错行」。<br>   <em>（端到端探针抓到。）</em></p>
+<ol><li>另有 API 形状误读：<code>beginSelection</code>/<code>extendSelection</code> 是 <strong><code>(sel, line, col)</code> 三参</strong>，</li></ol>
+<p>且选区形状是 <code>{anchor, head}</code> 而非 <code>{start, end}</code> —— 写错会静默返回 null。<br>   <em>（端到端探针抓到。）</em></p>
+<p><strong>真渲染器探针自己踩的两个坑（探针的错，不是产品的错，但都会伪装成产品缺陷）</strong> ——<br>这类「假红」若不当场识破，会把人引向去改本来正确的产品代码：</p>
+<ol><li><strong>没走仓库的 <code>inkRuntime.loadInk()</code></strong>：<code>Viewport.js:57</code> 是</li></ol>
+<p><code>inkRuntime.get()</code>，而 <code>get()</code> 在单例未灌值时<strong>抛错</strong><br>   （<code>inkRuntime.js:103-107</code>）。探针自己 <code>import('ink')</code> 拿到的是<strong>另一份引用</strong>，<br>   Viewport 用的那份仍是空的 → 5 条渲染断言全红，报文长得像「Viewport 坏了」。<br>   真机上 <code>startInkApp()</code> 会 await <code>loadInk()</code>，所以线上没这问题。<br>   <strong>修法：探针必须复刻真机的启动顺序，否则它验证的不是真机那条路径。</strong></p>
+<ol><li><strong><code>chalk.level = 0</code> 导致 <code>inverse</code> 一个字节都不吐</strong>：ink 的 <code>inverse</code> 是</li></ol>
+<p><code>chalk.inverse</code>（<code>ink/build/components/Text.js:40-41</code>），而 chalk 的 level 来自<br>   <code>supports-color</code> —— 非 TTY stdout 下为 0，此时 <code>chalk.inverse('x') === 'x'</code>。<br>   假 stdout 即便 <code>isTTY: true</code> 也没用，因为 <code>supports-color</code> 在别处已经判过了。<br>   修法：<strong>在 require 任何 ink/chalk 相关模块之前</strong>设 <code>FORCE_COLOR=3</code><br>   （chalk 在模块求值时读一次 <code>process.env.FORCE_COLOR</code>，晚了不生效）。<br>   真机是真 TTY，level ≥ 1，不受影响。</p>
+<p>验收探针：<br><code>docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-119] 应用内自绘选择-端到端验证-2026-09-17.js</code>（17/17，逻辑链）；<br><code>docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-119] 应用内自绘选择-真渲染器验证-2026-09-17.js</code>（13/13，真 ink 渲染器逐帧）。</p>
+<p><strong>第三层的文档/登记收口</strong>：见下方步骤 3 的清单。<strong>主要项已完成</strong>（2026-09-18 复核）：<br><code>tui/AGENTS.md</code> 的 §0.8 修饰键口径、三档 tracking、<code>KHY_SELECT_*</code> 三行与排障表均已就位；<br><code>App.js</code> 的 <code>_mainContentLines</code> 契约与 <code>width</code> 死 prop 注释、<code>[DESIGN-ARCH-101]</code> §8 第 6 条<br>「已修但被绕过」、索引摘要行均已补齐。</p>
+<hr>
+<h2 id="独立复核-2026-09-18-第三方复跑-非本文作者">独立复核（2026-09-18，第三方复跑，非本文作者）<a class="anchor" href="#独立复核-2026-09-18-第三方复跑-非本文作者" aria-label="锚点">#</a></h2>
+<p><strong>结论：三层均已真实落地，接线逐点核到代码，不是文档自述。</strong></p>
+<table><thead><tr><th>验收项</th><th>命令</th><th>实测</th></tr></thead><tbody><tr><td>修复前后对照</td><td><code>node docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-119] 鼠标拖选修复前后对照-2026-09-17.js</code></td><td>空白/Shift 按下由「吞」变「放行」；滚轮与按钮仍「吞」</td></tr><tr><td>端到端接线</td><td><code>node docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-119] 鼠标拖选端到端接线验证-2026-09-17.js</code></td><td><strong>17/17</strong></td></tr><tr><td>反例矩阵 R1–R13</td><td><code>node docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-119] 鼠标拖选修复验收-2026-09-17.js</code></td><td><strong>17/17</strong></td></tr><tr><td>自绘选择逻辑链</td><td><code>node docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-119] 应用内自绘选择-端到端验证-2026-09-17.js</code></td><td><strong>17/17</strong></td></tr><tr><td>真 ink 渲染器</td><td><code>node docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-119] 应用内自绘选择-真渲染器验证-2026-09-17.js</code></td><td><strong>13/13</strong></td></tr><tr><td>单元测试（5 文件）</td><td><code>node --test tests/cli/tui/{selection,mouseNativeSelection,mouseSelectEvent,viewportSelection,mouseWheel}.test.js</code></td><td><strong>61/61</strong></td></tr></tbody></table>
+<p>接线核对点：<code>App.js:1431</code> <code>onSelectEvent</code> 定义、<code>App.js:1530</code> 挂入 dispatcher、<br><code>App.js:1504</code> <code>writeClipboard</code>、<code>App.js:6197</code> 给 Viewport 传 <code>selection</code>；<br><code>flagRegistry.js:2849-2851</code> 三个 <code>KHY_SELECT*</code> 已登记。</p>
+<p>⚠ <strong><code>docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-119] 鼠标拖选根因探针-2026-09-17.js</code> 会报 3 条 FAIL，这是设计内的，不要修。</strong><br>它是<strong>修复前快照</strong>：断言 <code>parseSgrMouse</code> 不暴露 <code>isShift/isAlt/isCtrl</code>（期望 <code>undefined</code>），<br>而实测已是 <code>boolean</code> —— 恰好反证修复已落地。该文件的价值是留证，不是回归门。</p>
+<p>🔴 <strong>未收口（唯一实质风险）：整条修复尚未进入版本库。</strong> 复核时 <code>selection.js</code> 与<br><code>selection.test.js</code> / <code>mouseSelectEvent.test.js</code> / <code>viewportSelection.test.js</code> /<br><code>mouseNativeSelection.test.js</code> / <code>mouseWheel.test.js</code> 等均为 <strong>git 未跟踪（<code>??</code>）</strong>；<br><code>mouseButtons.js</code> / <code>App.js</code> / <code>Viewport.js</code> / <code>flagRegistry.js</code> / <code>tui/AGENTS.md</code> 等为<br><strong>已改未提交（<code> M</code>）</strong>。本文 §八 要求「2a / 2b-0 / 2b-1 / 2b-2 分开提交」，<br>但<strong>一次都没提交</strong>——700+ 行新代码只存在于工作区，一次误清理即丢失。</p></blockquote>
+<hr>
+<h2 id="一-现象与复现">一、现象与复现<a class="anchor" href="#一-现象与复现" aria-label="锚点">#</a></h2>
+<p>用户在 khy TUI 里<strong>拖选文本 → 无法选中/无法复制</strong>。<code>Shift+点击</code> 同样无效（文档承诺<br>「永远走终端原生选择」）。终端的滚轮翻历史也一并失效。</p>
+<p>复现（无需改任何代码）：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 1) 装上探针,直接读真实模块的判定</span>
+<span class="hljs-built_in">cd</span> D:/Portable/khy-os &amp;&amp; node .khy/tmp/mouse-select-probe.js
+
+<span class="hljs-comment"># 2) 想看清楚鼠标事件去了哪,开诊断</span>
+KHY_TUI_DIAG=1 khy     <span class="hljs-comment"># 每次鼠标事件解析结果打到 stderr</span></code></pre>
+<p><code>KHY_TUI_DIAG=1</code> 的观察结果：<strong>每一次按下/松开/滚轮都打印了事件行</strong> —— 这本身就是证据：<br>SGR 序列进了本进程的 stdin，说明终端正处在 mouse tracking 态、且事件被本进程消费。</p>
+<hr>
+<h2 id="二-实测根因-三条独立缺陷">二、实测根因（三条独立缺陷）<a class="anchor" href="#二-实测根因-三条独立缺陷" aria-label="锚点">#</a></h2>
+<blockquote><p>三条<strong>必须各自修</strong>：修好任意两条，用户仍然复制不了。这是第一层方案的核心结论。</p></blockquote>
+<h3 id="缺陷-a-拖选不受影响-的推理是错的">缺陷 A ——「拖选不受影响」的推理是错的<a class="anchor" href="#缺陷-a-拖选不受影响-的推理是错的" aria-label="锚点">#</a></h3>
+<p><code>mouseButtons.js</code> 头部第 47 行断言：</p>
+<blockquote><p>「1000 不报位移，拖选从来不会变成本进程的事件，原生选择完整保留」</p></blockquote>
+<p><strong>这条是错的。</strong> <code>1000</code>（X11 basic）上报的是<strong>按下/松开与位移的差集</strong>——它确实不报<br><code>motion</code>，但<strong>按下那一下是 press</strong>（SGR <code>button=0</code>，无 <code>32</code> 位移位）。而 dispatcher 对<br>press 无条件 <code>return true</code>：</p>
+<pre><code class="language-js"><span class="hljs-comment">// mouseButtons.js:539-557(修复前)</span>
+<span class="hljs-keyword">if</span> (ev.<span class="hljs-property">isPress</span>) {
+  <span class="hljs-keyword">if</span> (<span class="hljs-title function_">hitTest</span>(layout, ev.<span class="hljs-property">col</span>, ev.<span class="hljs-property">row</span>, offset)) { pendingClick = <span class="hljs-literal">true</span>; }
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;          <span class="hljs-comment">// ← 无论命中与否都吞掉</span>
+}</code></pre>
+<p>Swift 的实测判据（探针输出如实）：</p>
+<pre><code>PASS  空白处左键按下被吞(现状=bug)          实得=true
+PASS  Shift+左键按下被吞(现状=违约 §6.2)    实得=true</code></pre>
+<p><strong>为什么「空白处按下」也被吞才是致命的</strong>：终端原生拖选是一个<strong>原子手势</strong>——它需要<br>看到完整的一次「按下 → 拖 → 松开」。按下那一下被本进程吃进 stdin 后，终端<strong>永远等不到<br>起点</strong>，于是此后整段拖动在它眼里只是一团无主的位移。这正是 <code>DESIGN-ARCH-102</code> §6.2<br>注释里已经写对过的话（「拖选透传补不回来:触发的那一下已经进了 stdin」），但它只被用来<br>解释「滚轮那一下丢失」，<strong>没有被用来否掉「拖选不受影响」这个结论</strong>——注释自相矛盾。</p>
+<p>改档到 <code>1000</code> 只消灭了 <code>motion</code> 上报，<strong>press 还在</strong>，所以 <code>pendingSelect</code> 被删掉之后，<br>拖选并没有「自动恢复正常」，而是<strong>从「补偿失败」变成「完全无补偿」</strong>。</p>
+<h3 id="缺陷-b-shift-修饰位被解析但被丢弃-直接违约-6-2">缺陷 B —— <code>Shift</code> 修饰位被解析但被丢弃（直接违约 §6.2）<a class="anchor" href="#缺陷-b-shift-修饰位被解析但被丢弃-直接违约-6-2" aria-label="锚点">#</a></h3>
+<p><code>DESIGN-ARCH-102</code> §6.2 有一条硬承诺：</p>
+<table><thead><tr><th>项</th><th>规则</th></tr></thead><tbody><tr><td><strong>Shift + 任何鼠标操作</strong></td><td><strong>永远走终端原生选择</strong>，程序不拦截</td></tr></tbody></table>
+<p>SGR 里 Shift 是 <code>button</code> 的低位修饰位（<code>1</code>=Shift… 实际为 <code>4</code>，见下），<code>parseSgrMouse</code><br>把整个 <code>button</code> 码存了下来，<strong>但从不拆出修饰位</strong>：</p>
+<pre><code class="language-js"><span class="hljs-comment">// mouseButtons.js:100-108 —— 返回对象里没有 isShift / isAlt / isCtrl</span>
+<span class="hljs-keyword">return</span> { button, col, row, isPress, isRelease, isMotion, isWheel };</code></pre>
+<p><code>wheelDirection</code> 里用了 <code>button &amp; ~28</code>（剥 Shift 4 / Meta 8 / Ctrl 16 三个修饰位）<br>——<strong>证明作者知道修饰位的存在</strong>，只是没在 press 分支用它。探针实测：</p>
+<pre><code>PASS  parseSgrMouse 暴露 isShift 字段    实得=&quot;undefined&quot;
+PASS  parseSgrMouse 暴露 isAlt 字段      实得=&quot;undefined&quot;
+PASS  parseSgrMouse 暴露 isCtrl 字段     实得=&quot;undefined&quot;</code></pre>
+<p>⇒ <code>Shift+点击/拖选</code> 的按下照样进 <code>ev.isPress</code> 分支、照样 <code>return true</code>。终端没收到，<br>原生选择无从启动。<strong>文档承诺了，代码从不认识它。</strong></p>
+<h3 id="缺陷-c-备屏强制接管-绕过-未知终端不接管-的保护">缺陷 C —— 备屏强制接管，绕过「未知终端不接管」的保护<a class="anchor" href="#缺陷-c-备屏强制接管-绕过-未知终端不接管-的保护" aria-label="锚点">#</a></h3>
+<p><code>[DESIGN-ARCH-102]</code> §6.2 与 <code>[DESIGN-ARCH-101]</code> §8 第 6 条要求：三档默认 <code>click</code>，<br><strong>未知终端不接管</strong>（<code>autoDetectTerminal</code> 兜底由 <code>true</code> 改 <code>false</code>）。<code>mouseButtons.js</code> 的<br><code>autoDetectTerminal</code> 确实已改成 <code>return false</code>。但 <code>app.js:288-291</code> 的合成判定把<br>它整个绕过去了：</p>
+<pre><code class="language-js"><span class="hljs-comment">// app.js:288-291</span>
+<span class="hljs-keyword">const</span> _explicitOff = mouseButtons.<span class="hljs-title function_">mouseExplicitlyDisabled</span>(process.<span class="hljs-property">env</span>);
+<span class="hljs-keyword">const</span> _wantMouse =
+  mouseButtons.<span class="hljs-title function_">mouseButtonsEnabled</span>(process.<span class="hljs-property">env</span>, process.<span class="hljs-property">platform</span>) ||
+  (<span class="hljs-variable constant_">ALT_SCREEN_ENABLED</span> &amp;&amp; !_explicitOff);      <span class="hljs-comment">// ← 备屏开 → 恒 true</span></code></pre>
+<p>因为 <code>ALT_SCREEN_ENABLED</code> 在 <strong>legacy 模式默认 <code>1</code></strong>（<code>app.js:255</code>），所以：</p>
+<pre><code>PASS  mouseButtonsEnabled({}) 无终端标识时不接管            实得=false   ← 保护有效
+PASS  mouseExplicitlyDisabled({}) 默认未显式关              实得=false
+PASS  默认(备屏开)= 强制接管鼠标 → 用户失去原生拖选          实得=true    ← 但被绕过</code></pre>
+<p><strong>只有用户显式 <code>KHY_MOUSE=off</code> 才救得回来</strong>——而用户根本不知道有这个开关（<code>khy</code> 的<br><code>/help</code> 里没有它）。文档写「默认不劫持」，实际是「默认劫持，除非你懂这个 env」。</p>
+<blockquote><p>缺陷 C 的<strong>存在理由是站得住的</strong>：备屏没有回滚缓冲，不接管滚轮就会被终端合成 <code>↑/↓</code>、<br>变成输入历史回溯（§0.9.3 的根因）。所以 <strong>C 不能简单删掉</strong>——它必须被<strong>替换</strong>：<br>从「接管鼠标来保住滚轮」换成「滚轮与选择都由应用自绘消化」。见 §四。</p></blockquote>
+<hr>
+<h2 id="三-为什么-二选一-不再是约束-三个参考项目的实证">三、为什么「二选一」不再是约束 —— 三个参考项目的实证<a class="anchor" href="#三-为什么-二选一-不再是约束-三个参考项目的实证" aria-label="锚点">#</a></h2>
+<h3 id="3-1-v1-的框架及其边界">3.1 v1 的框架及其边界<a class="anchor" href="#3-1-v1-的框架及其边界" aria-label="锚点">#</a></h3>
+<p>v1 得出过一个正确但有边界的结论：</p>
+<table><thead><tr><th>需求</th><th>靠什么通道</th><th>与鼠标通道的关系</th></tr></thead><tbody><tr><td>滚轮滚动</td><td>可改道键盘通道（<code>1007</code> 合成 <code>↑/↓</code>）</td><td>与追踪模式可解耦</td></tr><tr><td><strong>原生拖选</strong></td><td>需要鼠标通道<strong>完全关闭</strong></td><td>press 一进 stdin 就被 ink 读走，<code>return false</code> 物理上还不到终端</td></tr><tr><td>点击按钮</td><td>需要鼠标通道<strong>开启</strong></td><td>与拖选互斥</td></tr></tbody></table>
+<p><strong>这个互斥是真的</strong>——只要「拖选」的定义是「由<strong>终端</strong>执行的原生选择」。v1 据此认为三项<br>不可兼得，唯一的出路是赌 <code>?1007h</code> 在 Windows Terminal / kitty / iTerm2 上的兼容性。</p>
+<p><strong>边界在于</strong>：这三个项目并没有放弃，而是<strong>换掉了「拖选」的实现方</strong>。</p>
+<h3 id="3-2-claude-code-把选择从终端手里拿回来">3.2 Claude Code：把选择从终端手里拿回来<a class="anchor" href="#3-2-claude-code-把选择从终端手里拿回来" aria-label="锚点">#</a></h3>
+<p>CC 全屏模式（<code>FullscreenLayout.tsx</code> + <code>VirtualMessageList.tsx</code> + <code>Messages.tsx</code>）的做法：</p>
+<ol><li><strong>上下文回滚不靠终端 scrollback，靠自绘视口虚拟化</strong>。窗口化渲染只画可见行，配一种</li></ol>
+<p>&quot;blit&quot; 策略——屏幕未变化的段不重画，直接把旧字符搬过去。所以「备屏无回滚缓冲」这个<br>   前提对它不成立：回滚由它自己的视口提供。</p>
+<ol><li><strong>选择由应用自绘</strong>，配三个已文档化的交互：<ul><li>拖选任意文本；</li><li><strong>双击选中一个词</strong>，明确「matching iTerm2's word boundaries so a file path selects</li></ul></li></ol>
+<p>as one unit」；</p>
+<ul><li><strong>三击选中整行</strong>；</li><li><strong>松手即自动复制</strong>（&quot;Selected text copies to your clipboard automatically on mouse</li></ul>
+<p>release&quot;），<code>/config</code> 里的 <em>Copy on select</em> 可关掉。</p>
+<ol><li><strong>键盘全有等价键</strong>（这对本仓 P6 是硬要求）：有选区时 <code>Shift+方向键</code> 从键盘扩展选区；</li></ol>
+<p><code>Shift+↑/↓</code> 在选区顶到上下边缘时滚动视口；有选区时 <code>Ctrl+c</code> 复制。</p>
+<ol><li><strong>剪贴板多通道</strong>：本机工具链（pbcopy / xclip / wl-copy / PowerShell）→ tmux buffer →</li></ol>
+<p>SSH 下 OSC 52 兜底。</p>
+<ol><li><strong>三条逃生舱</strong>（是补充，不是主路）：启动时打印本终端对应的原生选择修饰键；</li></ol>
+<p><code>Ctrl+O</code> 转录模式把整段会话灌进原生 scrollback；<code>v</code> 写临时文件开 <code>$VISUAL/$EDITOR</code>。</p>
+<h3 id="3-3-opencode-另一条路-不建议照抄">3.3 opencode：另一条路，不建议照抄<a class="anchor" href="#3-3-opencode-另一条路-不建议照抄" aria-label="锚点">#</a></h3>
+<p>opencode 有 <code>HighlightStyle</code> / <code>SelectedHighlightStyle</code> / <code>SetHighlights</code> /<br><code>HighlightNext</code> / <code>HighlightPrevious</code> —— 但这是<strong>高亮区间 API，服务于它自己的导航，<br>不产出可复制文本</strong>。它的真复制走 textarea 的 <code>ctrl+e</code> 开 <code>$EDITOR</code>。即 opencode 偏向<br>「原生选择 + 外部编辑器」。<strong>本仓不适合走这条</strong>：<code>$EDITOR</code> 往返会打断 TUI 会话模型，<br>且用户要的是「就地选中就地复制」。</p>
+<p>不过它有一个对本仓有直接价值的旁证：viewport 的 <code>MouseWheelDelta = 3</code>，且它的<br><code>scroll_acceleration</code>（惯性滚动）<strong>要求逐格精确的滚轮事件</strong> —— 这反证了滚轮通道不可<br>被合成方向键替代，<strong>滚轮必须保住</strong>（与本仓 §0.9.3 结论一致，且互为独立验证）。</p>
+<h3 id="3-4-claude-code-best">3.4 claude-code-best<a class="anchor" href="#3-4-claude-code-best" aria-label="锚点">#</a></h3>
+<p>继承 CC，无独立实现。可不必单独跟踪。</p>
+<h3 id="3-5-结论-从-二选一-到-三层各自成立">3.5 结论：从「二选一」到「三层各自成立」<a class="anchor" href="#3-5-结论-从-二选一-到-三层各自成立" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>需求</th><th>v1 的路径</th><th>v2 的路径</th></tr></thead><tbody><tr><td>滚轮</td><td>赌 <code>?1007h</code> 合成 <code>↑/↓</code>（兼容性未验证）</td><td><strong>应用内视口消化</strong>（既有，<code>onWheelScroll</code>）</td></tr><tr><td>拖选</td><td>只能靠终端原生；与点击互斥</td><td><strong>应用自绘选择</strong>，终端不参与</td></tr><tr><td>点击</td><td>鼠标通道开</td><td><strong>鼠标通道开</strong>（不变）</td></tr></tbody></table>
+<p>⇒ 三项同时成立的代价不是「赌一个终端特性」，而是「自己实现一个选择层」。<br><code>?1007h</code> 从<strong>主路</strong>降为<strong>可选实验</strong>（见 §4.4）。</p>
+<hr>
+<h2 id="四-方案-三层">四、方案：三层<a class="anchor" href="#四-方案-三层" aria-label="锚点">#</a></h2>
+<h3 id="4-0-分层与依赖关系">4.0 分层与依赖关系<a class="anchor" href="#4-0-分层与依赖关系" aria-label="锚点">#</a></h3>
+<pre><code>第一层  判据收窄（已完成）        ← 让原生路径可用（Shift 放行 + 空白处不吞）
+第二层  应用内自绘选择（本版新增） ← 让「滚轮 + 拖选 + 点击」同时成立，不依赖终端
+第三层  逃生舱与门控登记（待办）   ← 让默认值可发现、可回退</code></pre>
+<p><strong>三层是独立的</strong>：每一层单独合入都能改善用户处境，不存在「必须全做完才有收益」。<br>这一点是刻意的设计约束（对齐 <code>SOURCING-006</code>：一次提交只做一步）。</p>
+<h3 id="4-1-第一层-按-事件类别-决定吞不吞-已完成">4.1 第一层：按<strong>事件类别</strong>决定吞不吞（已完成）<a class="anchor" href="#4-1-第一层-按-事件类别-决定吞不吞-已完成" aria-label="锚点">#</a></h3>
+<p>现状的三档是「一个开关管所有鼠标事件」，第一层把 <code>click</code> 档<strong>再细分一层</strong>：</p>
+<table><thead><tr><th>事件</th><th>原状</th><th>改为</th><th>理由</th></tr></thead><tbody><tr><td><strong>滚轮</strong> <code>64/65</code></td><td>吞（走 <code>onWheel</code>）</td><td><strong>仍吞</strong></td><td>备屏无回滚缓冲，交还终端会被合成 <code>↑/↓</code> → 输入历史回溯。<strong>必须接管</strong> §0.9.3</td></tr><tr><td><strong>含 <code>Shift</code> 的任意事件</strong></td><td>吞</td><td><strong>放行</strong>（<code>return false</code>）</td><td>§6.2 明文承诺；<code>Shift</code> 是终端的「我要原生选择」约定键</td></tr><tr><td><strong>纯左键按下/松开（无修饰、未命中按钮）</strong></td><td>吞</td><td><strong>放行</strong></td><td>终端原生拖选需要完整手势；本进程拿这一下没有任何用（<code>pendingClick</code> 只服务按钮）</td></tr><tr><td><strong>命中按钮的左键按下/松开</strong></td><td>吞 + 触发</td><td><strong>仍吞 + 触发</strong></td><td>这是 click 档存在的唯一理由，且两者都有等价键位（Alt+M / Esc）</td></tr><tr><td><strong><code>Alt</code>/<code>Ctrl</code> + 任意事件</strong></td><td>吞</td><td><strong>放行</strong></td><td>同上：修饰键 = 用户想要终端行为</td></tr></tbody></table>
+<p><strong>关键洞察</strong>：<code>pendingClick</code> 的语义本来就是「按下落在<strong>按钮</strong>上才 arm」。原代码却<br><strong>先吞、再判断命中</strong>；改成<strong>先判断命中、未命中就不吞</strong>，<code>pendingClick</code> 的语义一个字都不用动。</p>
+<h4 id="4-1-1-三分支判据-写死-不可绕过">4.1.1 三分支判据（写死，不可绕过）<a class="anchor" href="#4-1-1-三分支判据-写死-不可绕过" aria-label="锚点">#</a></h4>
+<pre><code class="language-js"><span class="hljs-comment">// parseSgrMouse 返回值新增三个**纯派生**字段(不改 button 语义,向后兼容)</span>
+<span class="hljs-keyword">const</span> isShift = (button &amp; <span class="hljs-number">4</span>) !== <span class="hljs-number">0</span>;
+<span class="hljs-keyword">const</span> isAlt   = (button &amp; <span class="hljs-number">8</span>) !== <span class="hljs-number">0</span>;
+<span class="hljs-keyword">const</span> isCtrl  = (button &amp; <span class="hljs-number">16</span>) !== <span class="hljs-number">0</span>;</code></pre>
+<pre><code class="language-js"><span class="hljs-comment">// createMouseDispatcher.onInput 里,在既有 wheel / motion / press-release 三个分支之前</span>
+<span class="hljs-comment">// 插一条**前置放行**判据(顺序是根因级的关键:必须在 wheel 判定之后、press 判定之前)</span>
+<span class="hljs-comment">//</span>
+<span class="hljs-comment">//   ⚠️ shift+滚轮 必须仍然走 wheel 分支(终端里 Shift+滚轮的语义就是横向滚动,</span>
+<span class="hljs-comment">//      不是「我要拖选」)—— 所以放行判据里要排除 isWheel。</span>
+<span class="hljs-keyword">if</span> (!ev.<span class="hljs-property">isWheel</span> &amp;&amp; (ev.<span class="hljs-property">isShift</span> || ev.<span class="hljs-property">isAlt</span> || ev.<span class="hljs-property">isCtrl</span>)) {
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;            <span class="hljs-comment">// 不消费</span>
+}</code></pre>
+<pre><code class="language-js"><span class="hljs-comment">// press 分支:未命中按钮 → 不吞</span>
+<span class="hljs-keyword">if</span> (ev.<span class="hljs-property">isPress</span>) {
+  <span class="hljs-keyword">if</span> (<span class="hljs-title function_">hitTest</span>(layout, ev.<span class="hljs-property">col</span>, ev.<span class="hljs-property">row</span>, offset)) {
+    pendingClick = <span class="hljs-literal">true</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;           <span class="hljs-comment">// 命中按钮:吞(click 档的核心价值)</span>
+  }
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;            <span class="hljs-comment">// 空白处按下:不吞 → 终端看到完整拖选起点</span>
+}
+<span class="hljs-comment">// release 分支:同样,未 arm 过 click 且未命中按钮 → 不吞</span></code></pre>
+<blockquote><p><strong>关于「<code>return false</code> 是否真能到达终端」</strong>：ink 的 <code>useInput</code> 无「已消费」语义，<br><code>return false</code> 不改变 ink 的转发行为——<strong>事件已经被 ink 从 stdin 读走了</strong>，物理上回不到<br>终端。这是本方案必须诚实说清的一点：<strong>第一层的可达性依赖终端自身对 <code>Shift</code> 的处理</strong>。</p>
+<p>实测依据：<code>[DESIGN-ARCH-102]</code> §6.2 把 <code>Shift+鼠标</code> 列为「程序不拦截」的约定键，<br>而这是 <strong>xterm / Windows Terminal / kitty 的通用约定</strong>——它们<strong>不把 <code>Shift+鼠标</code> 的<br>按下送进 tracking 报告</strong>。因此对 <code>Shift</code> 路径，放行是<strong>双保险</strong>。</p>
+<p><strong>对纯左键拖选（无 <code>Shift</code>）</strong>，第一层<strong>必要但不充分</strong>——这正是第二层存在的理由。</p></blockquote>
+<h3 id="4-2-第二层-应用内自绘选择-本版核心">4.2 第二层：应用内自绘选择（本版核心）<a class="anchor" href="#4-2-第二层-应用内自绘选择-本版核心" aria-label="锚点">#</a></h3>
+<blockquote><p><strong>⚠ 前置条件（2026-09-17 核验发现，原方案遗漏，属致命缺口）</strong>：<br><strong>拖动事件在当前追踪模式下根本收不到。</strong></p>
+<p>实测 <code>mouseButtons.js:261-267</code> 的 <code>enableBytes()</code> 只写 <code>?1000h</code> + <code>?1006h</code>：</p>
+<pre><code class="language-js"><span class="hljs-keyword">let</span> out = <span class="hljs-string">&#x27;\x1b[?1000h\x1b[?1006h&#x27;</span>;   <span class="hljs-comment">// ← 没有 1002h</span>
+<span class="hljs-keyword">if</span> (hover) { out += <span class="hljs-string">&#x27;\x1b[?1003h&#x27;</span>; }</code></pre>
+<p>全仓检索确认 <strong><code>1002h</code> 从未被写入</strong>（只有 <code>1000h</code> 与 <code>1003h</code> 两处）。<br><code>1000</code> 的语义是<strong>只报按下/松开，位移一个都不报</strong> —— 头部注释明说<br>「1000 只报『按下 / 松开』,一个位移事件都不报 —— 这正是我们要的」。</p>
+<p>而 4.2.6 的交互表要求「拖动 → <code>extendSelection</code> → 反色重绘」，<code>A-01</code>/<code>A-02</code><br>也假设位移事件可达。<strong>在 <code>1000</code> 档下，拖动期间本进程收不到任何事件</strong>，<br>松手时只能拿到终点，选区要么是零宽、要么退化成「点两下选整段」。</p>
+<p>⇒ <strong>第二层必须先决定追踪档位</strong>，这是本层第一个待决问题，不是实现细节：</p></blockquote>
+<table><thead><tr><th>候选</th><th>字节</th><th>拖动可行性</th><th>代价</th><th>结论</th></tr></thead><tbody><tr><td><strong><code>1000</code>（现状）</strong></td><td><code>?1000h</code></td><td>❌ 无位移</td><td>无</td><td>自绘拖选<strong>不可行</strong>，只能做「两次点击选区间」</td></tr><tr><td><strong><code>1002</code>（推荐）</strong></td><td><code>?1002h</code></td><td>✅ 按住期间报位移</td><td>拖动期间本进程独占鼠标</td><td><strong>推荐</strong>：正是自绘选择需要的粒度</td></tr><tr><td><code>1003</code></td><td><code>?1003h</code></td><td>✅ 全位移</td><td>60~120Hz 洪流，且<strong>必然</strong>吞掉终端原生拖选</td><td>不采用（<code>hover</code> 档已有明确定位）</td></tr><tr><td><code>1007</code></td><td><code>?1007h</code></td><td>—</td><td>备屏滚轮合成 <code>↑/↓</code></td><td>与选择无关，见 §4.4</td></tr></tbody></table>
+<p><strong><code>1002</code> 的取舍必须在计划里写明</strong>：启用 <code>1002</code> 意味着拖动期间鼠标归本进程，<br><strong>用户彻底失去终端原生拖选</strong>（这正是 v1 认为不可两全的原因）。而第二层的整个<br>立论就是「不再需要终端原生拖选」——所以这个代价是<strong>可接受的、且是自觉付出的</strong>。<br>两者不能同时要：<strong>要么 <code>1000</code> + 依赖终端原生（第一层路径），要么 <code>1002</code> + 自绘（第二层路径）。</strong></p>
+<blockquote><p><strong>实现顺序建议</strong>：<code>KHY_SELECT</code> 开 → 写 <code>?1002h</code>（替换 <code>?1000h</code>）；关 → 逐字节回到<br><code>?1000h</code>。这样两层的回退路径都是干净的。<strong>写 <code>1002h</code> 的具体落点是 <code>enableBytes()</code>，<br>由它按「选择层是否开启」决定写 <code>1000</code> 还是 <code>1002</code></strong> —— 不要在 <code>app.js</code> 里再拼一遍字节，<br>那会造出第二处真源。</p></blockquote>
+<h4 id="4-2-1-关键洞察-屏幕行-数组下标">4.2.1 关键洞察：屏幕行 == 数组下标<a class="anchor" href="#4-2-1-关键洞察-屏幕行-数组下标" aria-label="锚点">#</a></h4>
+<blockquote><p><strong>⚠ 前置条件（2026-09-17 核验补充）</strong>：这条不变量<strong>不是自明的</strong>，它依赖两个既有事实：</p>
+<ol><li><code>_mainContentLines</code> 里的每一行<strong>已经被 <code>buildTranscriptLines</code> 按列宽折好</strong></li></ol>
+<p>（见 <code>App.js:5277-5283</code> 的列宽注释）；</p>
+<ol><li><code>Viewport</code> 的 lines 模式用 <code>overflow: 'hidden'</code> <strong>截断</strong>而非软换行</li></ol>
+<p>（<code>Viewport.js:111</code> 的注释明说这是硬闸）。</p>
+<p>⇒ 视觉行数<strong>恰等于</strong> <code>lines.length</code>，所以屏幕行 == <code>数组下标</code>。</p>
+<p><strong>但 <code>App.js:5943</code> 传给 <code>Viewport</code> 的 <code>width: _railCols(0) || _resCols || 80</code><br>是一个死参数 —— <code>Viewport</code> 从不读 <code>width</code>（全文件 0 命中）。</strong> 它是历史残留，<br>造成「宽度已受控」的假象。实现者<strong>不得</strong>因为看到这个 prop 就以为渲染层会按它折行。</p>
+<p>若将来 <code>Viewport</code> 改为按 <code>width</code> 软换行，或 <code>overflow</code> 由 <code>hidden</code> 改掉，<br><strong>本不变量立刻失效</strong>，<code>A-xx</code>/<code>V-xx</code> 的坐标换算会整体错位。<br>因此 §八 步骤 2b 要求：把这条不变量写成 <code>Viewport.js</code> 与 <code>selection.js</code> 两侧的注释。</p></blockquote>
+<p>第二层的可行性<strong>几乎全部</strong>来自一个既有事实：本仓的消息区已经是一个扁平字符串数组，<br>且视口按 <code>height</code> 直接切片渲染。</p>
+<pre><code class="language-js"><span class="hljs-comment">// App.js:5275  —— 已存在</span>
+<span class="hljs-keyword">const</span> _mainContentLines = <span class="hljs-title class_">React</span>.<span class="hljs-title function_">useMemo</span>(<span class="hljs-function">() =&gt;</span> { ... <span class="hljs-keyword">return</span> lines; }, [...]);  <span class="hljs-comment">// string[]</span>
+
+<span class="hljs-comment">// Viewport.js:47-66  —— 已存在,lines 模式</span>
+<span class="hljs-keyword">const</span> start = clampedScroll;
+<span class="hljs-keyword">const</span> end = <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">min</span>(totalLines, clampedScroll + height);
+<span class="hljs-keyword">const</span> visible = lines.<span class="hljs-title function_">slice</span>(start, end);</code></pre>
+<p>⇒ <strong>屏幕第 N 行就是 <code>_mainContentLines[clampedScroll + N]</code></strong>。行列 ↔ 文本位置的换算<br><strong>不需要任何布局反查</strong>（不需要 <code>collectLayout</code> 那棵树的 DFS）。CC 要做窗口化 + blit，<br>本仓已经拥有上半截。</p>
+<p>同时，命中所需的坐标<strong>已经在手</strong>：<code>createMouseDispatcher</code> 的 press/motion/release<br>三个分支都已拿到 <code>ev.col / ev.row</code>，且已有<br><code>offset = screenOffset(layout.height, ctx)</code> 能把屏幕行换算成 root 相对行。</p>
+<h4 id="4-2-1b-接线点-必须在-4176-块-内-不能在其后">4.2.1b 接线点：必须在 4176 块<strong>内</strong>，不能在其后<a class="anchor" href="#4-2-1b-接线点-必须在-4176-块-内-不能在其后" aria-label="锚点">#</a></h4>
+<blockquote><p><strong>⚠ 2026-09-17 核验发现（原方案未指明，会导致「写了但从不执行」）</strong>：<br><code>App.js:4176-4215</code> 的鼠标分支<strong>不接收 <code>onInput</code> 的返回值</strong>，且在末尾无条件 <code>return</code>：</p>
+<pre><code class="language-js"><span class="hljs-keyword">if</span> (_mouse &amp;&amp; mouseDispatcherRef.<span class="hljs-property">current</span> &amp;&amp; _mouse.<span class="hljs-title function_">isMouseSequence</span>(input)) {
+  <span class="hljs-keyword">try</span> {
+    mouseDispatcherRef.<span class="hljs-property">current</span>.<span class="hljs-title function_">onInput</span>(input, { ... });   <span class="hljs-comment">// ← 4200:返回值被丢弃</span>
+  } <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* fail-soft */</span> }
+  <span class="hljs-keyword">return</span>;                                                 <span class="hljs-comment">// ← 4214:之后一切被吞</span>
+}</code></pre>
+<p>⇒ <strong>选择层若接在 4176 块之后，永远不会被执行</strong>（那块已经 <code>return</code> 了）；<br>接在 4200 之后、4214 之前则可行但脆弱（<code>try</code> 块内，异常会静默吞掉）。</p>
+<p><strong>正确接法（二选一，推荐 A）</strong>：</p>
+<ul><li><strong>A（推荐）</strong>：把选择处理做成 dispatcher 的一个回调（如 <code>onSelectEvent</code>），</li></ul>
+<p>由 <code>createMouseDispatcher</code> 在 press/motion/release 分支里调用 —— 与既有的<br>  <code>onWheel</code>/<code>onNative</code> 完全同构，<code>mouseButtons.js</code> 已经是「按事件类别分派」的形状。</p>
+<ul><li><strong>B</strong>：在 <code>App.js:4200</code> 处接收返回值：<code>const consumed = onInput(...)</code>，</li></ul>
+<p>仅当 <code>!consumed</code> 时再喂选择层。<strong>这会改变既有语义</strong>（现在返回值无人消费），<br>  风险高于 A。</p>
+<p>方案 A 同时解决另一个问题：它让选择层的单元测试可以<strong>不依赖 React</strong>（<code>A-xx</code> 的可测性要求）。</p></blockquote>
+<h4 id="4-2-2-高亮原语已在生产使用-不是新赌注">4.2.2 高亮原语已在生产使用（不是新赌注）<a class="anchor" href="#4-2-2-高亮原语已在生产使用-不是新赌注" aria-label="锚点">#</a></h4>
+<p>ink <code>Text</code> 的 <code>inverse</code> prop 在本仓<strong>已经跑在真实界面上</strong>：</p>
+<table><thead><tr><th>位置</th><th>用途</th></tr></thead><tbody><tr><td><code>PromptFrame.js:408</code></td><td>vim NORMAL 模式的实心光标块</td></tr><tr><td><code>QuestionPrompt.js:440</code></td><td>问卷光标字符</td></tr><tr><td><code>QuestionPrompt.js:454</code></td><td>问卷表头反色</td></tr></tbody></table>
+<p>⇒ 给选区上反色<strong>是已验证能力</strong>，不需要引入任何新依赖或新渲染路径。</p>
+<h4 id="4-2-3-剪贴板写入半边已经齐了">4.2.3 剪贴板写入半边已经齐了<a class="anchor" href="#4-2-3-剪贴板写入半边已经齐了" aria-label="锚点">#</a></h4>
+<pre><code class="language-js"><span class="hljs-comment">// utils/ccClipboard.js  —— 已存在,统一出口</span>
+<span class="hljs-title function_">writeClipboard</span>(text) → { ok, <span class="hljs-attr">channels</span>: [<span class="hljs-string">&#x27;native&#x27;</span>|<span class="hljs-string">&#x27;osc52&#x27;</span>], bytes, reasons }</code></pre>
+<p>实测确认本地默认路径就是 <code>native-only</code>（正是松手即复制需要的）：</p>
+<pre><code>shouldEmitOsc52(process.stdout, {})
+  → { on: false, reason: 'tty' }        // stdout 是 TTY → 不发 OSC 52(喷在画面上会污染)
+→ writeClipboard 走 nativeWrite():powershell Set-Clipboard / pbcopy / xclip / wl-copy</code></pre>
+<p><code>KHY_CLIPBOARD_DUAL=1</code> 时 native 成功后补发 OSC 52 —— 供「本地写成功但用户在<br>tmux/SSH 嵌套另一端看屏幕」的复合场景。<strong>SSH 场景需单独验证</strong>（见 §七 风险 2）。</p>
+<p>⇒ 第二层<strong>只缺「选择模型」这一半</strong>，写入与渲染两侧都已就绪。</p>
+<h4 id="4-2-4-选择模型-纯叶子-可独立测试">4.2.4 选择模型（纯叶子，可独立测试）<a class="anchor" href="#4-2-4-选择模型-纯叶子-可独立测试" aria-label="锚点">#</a></h4>
+<p>新增 <code>services/backend/src/cli/tui/selection.js</code> —— 与 <code>scrollActions.js</code> 同范式：<br><strong>零 IO、绝不抛、纯函数</strong>。</p>
+<pre><code class="language-js"><span class="hljs-comment">// 选区锚点(anchor)与活动端(head),均为 {line, col}(屏幕坐标 → 数组下标)</span>
+<span class="hljs-title function_">createSelection</span>()                       → { <span class="hljs-attr">anchor</span>: <span class="hljs-literal">null</span>, <span class="hljs-attr">head</span>: <span class="hljs-literal">null</span>, <span class="hljs-attr">dragging</span>: <span class="hljs-literal">false</span> }
+<span class="hljs-title function_">beginSelection</span>(sel, line, col)          → 新 <span class="hljs-title function_">sel</span>(按下)
+<span class="hljs-title function_">extendSelection</span>(sel, line, col)         → 新 <span class="hljs-title function_">sel</span>(拖动)
+<span class="hljs-title function_">endSelection</span>(sel)                       → 新 <span class="hljs-title function_">sel</span>(松手,dragging=<span class="hljs-literal">false</span>)
+<span class="hljs-title function_">hasSelection</span>(sel)                       → boolean
+<span class="hljs-title function_">normalizeSelection</span>(sel)                 → { startLine, startCol, endLine, endCol }(有序化)
+<span class="hljs-title function_">expandToWord</span>(lines, line, col)          → 新 <span class="hljs-title function_">sel</span>(双击;iTerm2 词边界口径)
+<span class="hljs-title function_">expandToLine</span>(lines, line)               → 新 <span class="hljs-title function_">sel</span>(三击)
+<span class="hljs-title function_">extractText</span>(lines, sel)                 → <span class="hljs-title function_">string</span>(按选区抽文本,跨行用 \n 连接)</code></pre>
+<p><code>expandToWord</code> 的边界口径必须与 CC 对齐：<strong>把一条文件路径当作一个词</strong>。实现要点是<br>词字符集取 <code>[A-Za-z0-9_./\\:~-]</code>，而不是朴素的 <code>\b</code>（<code>\b</code> 会在 <code>/</code> 和 <code>.</code> 处断开，<br>路径会被切碎 —— 而「复制一条路径」是本仓最高频的复制场景）。</p>
+<p><code>extractText</code> 的两个边界：</p>
+<ul><li>首行从 <code>startCol</code> 切、末行到 <code>endCol</code> 切、中间行整行取；</li><li><strong>按显示宽度截断的软换行行要不要补 <code>\n</code></strong> —— 本仓 <code>_mainContentLines</code> 里已经含</li></ul>
+<p><code>buildTranscriptLines</code> 折好的软换行（见 <code>App.js:5277-5279</code> 的列宽注释），所以视觉行<br>  不等于逻辑行。v2 的取舍：<strong>首版按视觉行原样连接</strong>（复制长段落会带硬换行），<br>  另立 <code>softWrap</code> 元数据作为后续改进（见 §六 不做的事 4）。</p>
+<h4 id="4-2-5-渲染接线">4.2.5 渲染接线<a class="anchor" href="#4-2-5-渲染接线" aria-label="锚点">#</a></h4>
+<p><code>Viewport.js</code> 的 <code>lines</code> 模式增加一个<strong>可选</strong> prop：</p>
+<pre><code class="language-js"><span class="hljs-comment">// Viewport.js lines 模式内,渲染每一行时</span>
+<span class="hljs-keyword">const</span> rowText = line || <span class="hljs-string">&#x27; &#x27;</span>;
+<span class="hljs-keyword">const</span> sel = <span class="hljs-title function_">selectionRangeFor</span>(selection, start + i);   <span class="hljs-comment">// 纯函数,返回 null 或 { from, to }</span>
+<span class="hljs-keyword">if</span> (sel) {
+  rows.<span class="hljs-title function_">push</span>(<span class="hljs-title function_">h</span>(<span class="hljs-title class_">Box</span>, { key }, ...[
+    <span class="hljs-title function_">h</span>(<span class="hljs-title class_">Text</span>, <span class="hljs-literal">null</span>, rowText.<span class="hljs-title function_">slice</span>(<span class="hljs-number">0</span>, sel.<span class="hljs-property">from</span>)),
+    <span class="hljs-title function_">h</span>(<span class="hljs-title class_">Text</span>, { <span class="hljs-attr">inverse</span>: <span class="hljs-literal">true</span> }, rowText.<span class="hljs-title function_">slice</span>(sel.<span class="hljs-property">from</span>, sel.<span class="hljs-property">to</span>) || <span class="hljs-string">&#x27; &#x27;</span>),
+    <span class="hljs-title function_">h</span>(<span class="hljs-title class_">Text</span>, <span class="hljs-literal">null</span>, rowText.<span class="hljs-title function_">slice</span>(sel.<span class="hljs-property">to</span>)),
+  ]));
+} <span class="hljs-keyword">else</span> {
+  rows.<span class="hljs-title function_">push</span>(<span class="hljs-title function_">h</span>(<span class="hljs-title class_">Box</span>, { key }, <span class="hljs-title function_">h</span>(<span class="hljs-title class_">Text</span>, <span class="hljs-literal">null</span>, rowText)));
+}</code></pre>
+<p><strong>不传 <code>selection</code> 时行为逐字节不变</strong>（向后兼容，符合本仓「零副作用的双保险」习惯）。</p>
+<blockquote><p><strong>一个必须处理的坑</strong>：软换行的行若被切断，<code>rowText.slice()</code> 拿到的仍是该视觉行的<br>字符串，视觉上正确；但 <code>extractText</code> 跨行拼接时会在软换行处插 <code>\n</code>。<br>首版接受此行为，并在 <code>selection.js</code> 头部注释里写明「已知偏差 + 后续改进方向」。</p></blockquote>
+<h4 id="4-2-6-交互绑定-与-cc-对齐-且满足-p6">4.2.6 交互绑定（与 CC 对齐，且满足 P6）<a class="anchor" href="#4-2-6-交互绑定-与-cc-对齐-且满足-p6" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>手势</th><th>行为</th><th>键盘等价（P6 硬要求）</th></tr></thead><tbody><tr><td>按下</td><td><code>beginSelection(line, col)</code></td><td>—</td></tr><tr><td>拖动</td><td><code>extendSelection(line, col)</code> + 反色重绘</td><td><code>Shift+方向键</code> 扩展</td></tr><tr><td><strong>松开</strong></td><td><code>endSelection()</code> + <strong>若 <code>hasSelection</code> → <code>writeClipboard(extractText(...))</code></strong></td><td>有选区时 <code>Ctrl+C</code> 复制</td></tr><tr><td>双击</td><td><code>expandToWord</code></td><td>—</td></tr><tr><td>三击</td><td><code>expandToLine</code></td><td>—</td></tr><tr><td>选区顶到视口边缘</td><td>滚动视口并继续扩展</td><td><code>Shift+↑/↓</code> 同语义</td></tr><tr><td><code>Esc</code></td><td>清空选区</td><td>—</td></tr><tr><td>任意其他按键</td><td>清空选区（与 <code>exitNativePassthrough</code> 现有纪律一致）</td><td>—</td></tr></tbody></table>
+<blockquote><p><strong>「松手即复制」必须可关</strong>（CC 的 <em>Copy on select</em> 是 <code>/config</code> 开关）。本仓用门控<br><code>KHY_SELECT_COPY_ON_RELEASE</code>（默认开，见 §4.3.2）。</p></blockquote>
+<p><strong>与 <code>Ctrl+C</code> 的冲突必须处理</strong>：本仓 <code>Ctrl+C</code> 已是「中断当前请求」。取值优先级：</p>
+<pre><code>有选区  → Ctrl+C = 复制选区(且不中断)
+无选区  → Ctrl+C = 中断(现状不变)</code></pre>
+<p>这与 CC 完全一致（&quot;With a selection active, <code>Ctrl+c</code> copies&quot;），且<strong>不侵占既有语义</strong><br>——因为「有选区」是一个用户刚刚主动建立的、明确的瞬时状态。</p>
+<h4 id="4-2-7-鼠标通道的最终形态">4.2.7 鼠标通道的最终形态<a class="anchor" href="#4-2-7-鼠标通道的最终形态" aria-label="锚点">#</a></h4>
+<p>第二层落地后，追踪档位<strong>从 <code>1000</code> 升到 <code>1002</code></strong>（见 4.2 前置条件），三类事件各有归属：</p>
+<table><thead><tr><th>事件</th><th>归属</th><th>变化</th></tr></thead><tbody><tr><td>滚轮</td><td><code>onWheel</code> → 应用内视口</td><td>不变</td></tr><tr><td>按钮上按下/松开</td><td><code>pendingClick</code> → <code>onClick</code></td><td>不变（<strong>点击需求保住</strong>）</td></tr><tr><td><strong>空白处按下</strong></td><td><strong>选择层 <code>beginSelection</code></strong></td><td><strong>新增</strong></td></tr><tr><td><strong>空白处拖动（位移）</strong></td><td><strong>选择层 <code>extendSelection</code></strong></td><td><strong>新增 —— 依赖 <code>1002</code></strong></td></tr><tr><td><strong>空白处松开</strong></td><td><strong>选择层 <code>endSelection</code> + 复制</strong></td><td><strong>新增</strong></td></tr></tbody></table>
+<p>⇒ <strong>v1 的互斥消失了</strong>：拖选不再与点击争同一个通道，因为拖选搬到了应用层。</p>
+<p><strong>但要精确说清代价</strong>：启用 <code>1002</code> 后，<strong>拖动期间鼠标完全归本进程</strong>，<br>用户<strong>不再能从终端原生拖选</strong>（终端收不到拖动的起点与位移）。<br>这不是 bug，是本层自觉付出的代价 —— 换来的是「不依赖终端即可选中并复制」。<br>若用户坚持要终端原生选择，退路有二：</p>
+<ol><li><code>KHY_SELECT=0</code> → 回到 <code>1000</code> + 第一层（<code>Shift</code> 与空白处放行）；</li><li><code>KHY_MOUSE=off</code> → 完全不接管（同时失去滚轮，仅在主屏幕下可接受）。</li></ol>
+<p><strong>第一层因此不能回退</strong>：<code>Shift</code> 放行在第二层存在时仍有价值 ——<br><code>Shift+拖选</code> 在多数终端上<strong>根本不进 stdin</strong>，那是终端侧的能力，两层并存不冲突。</p>
+<h3 id="4-3-门控与可回滚性">4.3 门控与可回滚性<a class="anchor" href="#4-3-门控与可回滚性" aria-label="锚点">#</a></h3>
+<h4 id="4-3-1-新增门控-全部经-flagregistry-js-登记">4.3.1 新增门控（全部经 <code>flagRegistry.js</code> 登记）<a class="anchor" href="#4-3-1-新增门控-全部经-flagregistry-js-登记" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>门控</th><th>默认</th><th>作用</th></tr></thead><tbody><tr><td><code>KHY_SELECT</code></td><td>开</td><td>自绘选择层总开关。关 → 三档行为与第一层完成时逐字节一致</td></tr><tr><td><code>KHY_SELECT_COPY_ON_RELEASE</code></td><td>开</td><td>松手即复制。关 → 只反色选中，复制走 <code>Ctrl+C</code></td></tr><tr><td><code>KHY_SELECT_WORD_BOUNDARY</code></td><td>开</td><td>双击词边界走「路径友好」集。关 → 用朴素 <code>\b</code> 口径</td></tr><tr><td><code>KHY_SELECT_MAX_BYTES</code></td><td><code>100000</code></td><td>单次复制上限，超出截断并提示（对齐 <code>ccClipboard</code> 的 OSC 52 上限）</td></tr></tbody></table>
+<h4 id="4-3-2-为什么必须可回滚">4.3.2 为什么必须可回滚<a class="anchor" href="#4-3-2-为什么必须可回滚" aria-label="锚点">#</a></h4>
+<p>第二层是<strong>新增渲染路径</strong>，一旦有终端/ink 版本的边界问题，必须能一行关掉回到第一层的<br>已知良好状态。这与 <code>KHY_INLINE_TRANSCRIPT</code> / <code>KHY_CC_CLIPBOARD</code> 的既有纪律一致。</p>
+<h3 id="4-4-1007h-的降级处理-从主路到可选实验">4.4 <code>?1007h</code> 的降级处理（从主路到可选实验）<a class="anchor" href="#4-4-1007h-的降级处理-从主路到可选实验" aria-label="锚点">#</a></h3>
+<p>v1 把 <code>?1007h</code>（备屏滚动 → 合成 <code>↑/↓</code>）当作唯一出路。v2 中它<strong>不再是必需</strong>，但作为<br>「让终端原生滚轮也工作」的独立改进仍有价值，因此：</p>
+<ul><li><strong>不进第一层、不进第二层</strong>；</li><li>单独立项，作为<strong>可独立回滚的实验</strong>，前置条件是先实测三个终端</li></ul>
+<p>（Windows Terminal / kitty / iTerm2）是否支持 <code>?1007h</code>，以及合成的 <code>↑/↓</code><br>  是否与真实按键字节可区分（<code>\x1bOA</code> vs <code>\x1b[A</code>）；</p>
+<ul><li>若实测不通过，<strong>不影响本方案任何一层</strong>——这正是把它移出主路的收益。</li></ul>
+<blockquote><p><strong>opencode 的旁证支持保留滚轮通道</strong>：它的 <code>scroll_acceleration</code> 依赖逐格精确滚轮事件，<br>而合成方向键会丢失「一格」的信息。⇒ 即便 <code>1007</code> 可用，也只应作为<strong>兜底</strong>，<br>主路仍是 <code>onWheel</code> 应用内消化。</p></blockquote>
+<hr>
+<h2 id="五-与既有机制的边界表">五、与既有机制的边界表<a class="anchor" href="#五-与既有机制的边界表" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>既有件</th><th>它管什么</th><th>本方案做什么</th><th>边界（不重叠在哪）</th></tr></thead><tbody><tr><td><code>mouseButtons.js</code> <code>wheelDirection</code> / <code>onWheel</code></td><td>滚轮 → 应用内视口（§0.9.3）</td><td><strong>不动</strong></td><td>滚轮语义完全不变；放行判据显式排除 <code>isWheel</code></td></tr><tr><td><code>enterNativePassthrough</code> / <code>onNative</code>（<code>App.js:1210</code>）</td><td>滚轮「交还终端」的 1500ms 窗口</td><td><strong>不动</strong>（保留为 <code>onWheel</code> 缺失时的回退）</td><td>本方案不发 <code>onNative</code>；两条路径正交</td></tr><tr><td><code>pendingClick</code> 状态机（<code>mouseButtons.js:427</code>）</td><td>按下命中按钮 → 等松开触发</td><td>只把「吞」变成「命中才吞」</td><td>状态机本身语义零改动</td></tr><tr><td><strong><code>_mainContentLines</code></strong>（<code>App.js:5275</code>）</td><td>消息区行投影（扁平 <code>string[]</code>）</td><td><strong>只读消费</strong>，不改投影逻辑</td><td>第二层依赖它「屏幕行 == 下标」这一性质；若将来改成分段结构，需同步 <code>selection.js</code></td></tr><tr><td><strong><code>Viewport.js</code> <code>lines</code> 模式</strong></td><td>有界视口切片渲染</td><td><strong>加可选 <code>selection</code> prop</strong></td><td>不传即逐字节不变</td></tr><tr><td><code>scrollActions.js</code> / <code>applyStickyViewportAction</code></td><td>视口偏移算术</td><td><strong>不动</strong></td><td><code>selection.js</code> 与它同范式但职责独立</td></tr><tr><td><code>ccClipboard.writeClipboard</code></td><td>已有文本 → 剪贴板</td><td><strong>直接复用，不改</strong></td><td>第二层补的是「选中」，不是「写入」</td></tr><tr><td><code>CcSelectable</code> / <code>CcPermissionPrompt</code></td><td>列表<strong>键盘</strong>导航</td><td><strong>不动</strong></td><td>那是应用内语义选择，不是文本选择</td></tr><tr><td><code>[DESIGN-ARCH-102]</code> §6.1 <code>v</code>/<code>y</code>（消息选择模式）</td><td>应用内选择模式</td><td><strong>由第二层实质兑现，标注对齐</strong></td><td>见 §八 步骤 3；不再是「deferred 且无载体」</td></tr><tr><td><code>[DESIGN-ARCH-102]</code> §0.9.2 帧高约束</td><td>live 区高度账本</td><td><strong>不动</strong></td><td>第二层不新增任何固定高度节点（选择层是覆盖态，不是新节点）</td></tr><tr><td><code>ink</code> <code>Text</code> <code>inverse</code> prop</td><td>反色渲染</td><td><strong>复用</strong></td><td>已在 <code>PromptFrame.js:408</code> 等三处生产使用</td></tr></tbody></table>
+<hr>
+<h2 id="六-诚实边界-本方案-不-做什么">六、诚实边界：本方案<strong>不</strong>做什么<a class="anchor" href="#六-诚实边界-本方案-不-做什么" aria-label="锚点">#</a></h2>
+<ol><li><strong>不做「拖选透传补偿」</strong>。<code>pendingSelect</code> 被删是对的——补偿永远补不回起点</li></ol>
+<p>（按下已被吃掉）。第二层是<strong>换实现方</strong>，不是事后补。</p>
+<blockquote><p>注意：第二层确实<strong>新开</strong>了 <code>1002</code>（见 2b-0），但这不是「透传补偿」——<br>补偿的错在于「想把终端的选择还回去」，而第二层是「自己画、自己复制」，<br>不需要终端参与选择。两者方向相反。</p></blockquote>
+<ol><li><strong>不接管 <code>Alt</code>/<code>Ctrl</code> 拖选以外的终端功能</strong>（搜索、链接点击等）。终端的归终端。</li><li><strong>不改 <code>KHY_MOUSE=full</code>（<code>1003</code>）的默认值</strong>。<code>1003</code> 是 60~120Hz 洪流，</li></ol>
+<p>继续维持「显式 opt-in + 文档写明代价」。</p>
+<blockquote><p>与 2b-0 的区别：2b-0 开的是 <code>1002</code>（<strong>仅按住期间</strong>报位移），默认随<br><code>KHY_SELECT</code> 开；<code>1003</code>（<strong>任何移动都报</strong>）仍只在 <code>mouseTier==='full'</code><br>且用户显式设置时才开。两者不是一回事，不要合并。</p></blockquote>
+<ol><li><strong>不做软换行的逻辑行还原</strong>。<code>_mainContentLines</code> 里已含按列宽折好的软换行，</li></ol>
+<p>跨行复制会带硬换行。首版按视觉行原样连接，并在 <code>selection.js</code> 头部写明偏差。<br>   彻底修复需要行投影补 <code>softWrap</code> 元数据 —— <strong>另立提案</strong>，不并入本方案。</p>
+<ol><li><strong>不引入 <code>$EDITOR</code> 往返</strong>（opencode 路线）。会打断 TUI 会话模型，且与「就地复制」</li></ol>
+<p>的用户预期不符。仅作为<strong>可选逃生舱</strong>记录在 §4.2 的键盘等价表里（<code>v</code> 键，见步骤 3）。</p>
+<ol><li><strong>不做「按消息整体复制」</strong>。首版是<strong>自由文本选择</strong>（与 CC 一致）。按消息复制需要给</li></ol>
+<p>行投影加 sidecar 元数据（「第 N 行属于哪条消息」），当前 <code>buildTranscriptLines()</code> 只<br>   返回裸字符串，<strong>没有这个信息</strong> —— 这是第二层唯一的结构性缺口，见 §七 风险 1。</p>
+<ol><li><strong>不做「按住期间的终端原生拖选」</strong>。这是 2b-0 引入的<strong>已知代价</strong>，且<strong>无法消除</strong>：</li></ol>
+<p><code>1002</code> 的语义就是「按键按下时报位移」，一旦开了通道，按住键的那段时间事件必然<br>   归本进程。缓解只有两条，都已在方案里：（a）<code>Shift</code> 前置放行（第一层已实现，<br>   不需要额外代码）；（b）<code>KHY_SELECT=0</code> 整体回滚。<br>   <strong>不得</strong>尝试「只在按下后延迟开/关 <code>1002</code>」之类的花招 —— 模式切换有往返延迟，<br>   且切换本身可能被终端吞掉，会制造比它解决的问题更多的不确定性（与 v1 删掉<br>   <code>pendingSelect</code> 是同一条教训）。</p>
+<hr>
+<h2 id="七-风险与未收口清单">七、风险与未收口清单<a class="anchor" href="#七-风险与未收口清单" aria-label="锚点">#</a></h2>
+<ol><li><strong>行投影缺元数据（第二层唯一结构性缺口）</strong>。<code>buildTranscriptLines()</code> 返回</li></ol>
+<p><code>string[]</code>，无「行 → 消息/角色」映射。影响：</p>
+<ul><li><strong>不影响</strong>自由拖选、双击选词、三击选行、松手复制（这些只需行内文本；</li></ul>
+<p>三击的「整行」= 视觉行，与 CC 语义一致）；</p>
+<ul><li><strong>影响</strong>「按消息复制」「选中后显示角色」等增强项。</li></ul>
+<p>⇒ 首版<strong>不做</strong>这些增强项；若将来要做，需新增 <code>buildTranscriptLineRecords()</code><br>   并在 <code>selection.js</code> 侧定义消息边界。<strong>建议在步骤 2 落地时于 <code>App.js:5275</code> 上方<br>   补一条注释，说明该数组当前是「纯文本投影、无元数据」这一契约</strong>。</p>
+<ol><li><strong>SSH / tmux 场景下 OSC 52 的行为未验证</strong>。本地 TTY 下 <code>shouldEmitOsc52</code> 返回</li></ol>
+<p><code>{on:false, reason:'tty'}</code>（实测）⇒ native-only，正确。但 SSH 远程时 native 写的<br>   不是用户面前的剪贴板，需验证 <code>KHY_CLIPBOARD_DUAL=1</code> 或转发层下 OSC 52 是否生效。<br>   <strong>与本方案的关系</strong>：第二层的「松手即复制」在 SSH 下会静默失败（<code>reasons.native</code> 有<br>   原因，但用户看不到）。⇒ 步骤 2 必须把 <code>writeClipboard</code> 返回的 <code>reasons</code> 接到一条<br>   <strong>可见提示</strong>（对齐工程规则「错误消息：问题+原因+修复」）。</p>
+<ol><li><strong>终端差异</strong>：不同终端对 <code>Shift+鼠标</code> 的处理不一致（有的<strong>不发送</strong>序列，有的发送）。</li></ol>
+<p>第一层对两种都正确。<strong>真正的风险</strong>是「发了、放行了、但终端仍不执行原生选择」<br>   （部分旧版 conhost）。缓解：第二层不再依赖它；<code>KHY_MOUSE=off</code> 始终是最后退路，<br>   且步骤 3 把它写进 <code>AGENTS.md</code> 门控表。</p>
+<ol><li><del><strong>env 登记缺口（已实测，需一并修）</strong></del> —— <strong>已在步骤 1 一并修掉，本项作废</strong>。</li></ol>
+<p>历史情况：<code>flagRegistry.js</code> 里 <code>KHY_MOUSE</code> / <code>KHY_MOUSE_BUTTONS</code> /<br>   <code>KHY_MOUSE_HOVER</code> / <code>KHY_ALT_SCREEN</code> / <code>KHY_MOUSE_WHEEL</code> 一个都没登记，<br>   用户无法通过界面发现自己有 <code>KHY_MOUSE=off</code> 这条唯一的 workaround。<br>   <strong>2026-09-17 复核：五个 flag 均已登记</strong>（<code>flagRegistry.js:2828-2832</code>，<br>   含一段 2810-2827 的注释块，明确指向本文），<code>tui/AGENTS.md</code> §1.2<br>   也已补全五行说明（<code>AGENTS.md:285-288</code>）。<br>   ⇒ <strong>本条不再是待办</strong>。剩余唯一未登记的是 2b-2 要新增的四个 <code>KHY_SELECT_*</code>。</p>
+<ol><li><strong><code>v</code>/<code>y</code> 的文档-实现矛盾 —— 已收口，但留了一句待对齐的注</strong>。</li></ol>
+<p><code>[DESIGN-ARCH-102]</code> §6.1 已于 2026-09-17 修正：<code>v</code>/<code>y</code> 标为「未实现（deferred）」，<br>   并补注指向本文。<strong>矛盾本身解决了。</strong><br>   但该注仍称「应用内自主选择是另一条路、与原生拖选正交、优先级更低、保持 deferred」——<br>   这句话在第二层落地后不再成立（第二层正是应用内自绘选择，且已是<strong>主路</strong>）。<br>   ⇒ 步骤 3 第 15 步只补一句对齐说明，<strong>不动键位表</strong>：<code>v</code>/<code>y</code> 仍 deferred，<br>   本方案不实现它们；将来若实现，应定位为「键盘驱动的选区模式入口」。</p>
+<ol><li><strong><code>[DESIGN-ARCH-101]</code> §8 第 6 条</strong>已记录「默认值文档/实现矛盾」，但只判到</li></ol>
+<p><code>autoDetectTerminal</code> 的兜底值。<strong>本次实测发现该条修得不彻底</strong>——兜底确实改了，<br>   但 <code>app.js</code> 的备屏 <code>||</code> 分支又把它绕回了「默认接管」。台账应更新为「已修但被绕过」。</p>
+<ol><li><strong>第二层的性能边界</strong>。选区重绘触发整行 <code>slice</code> 三段。单行成本可忽略，但</li></ol>
+<p><code>Viewport</code> 一次最多渲染 <code>height</code> 行（典型 20~40），且只在拖动的 motion 事件上重算<br>   （已有限流，<code>motionThrottleMs</code> 默认 30ms）。⇒ 无风险，但<strong>必须在 <code>1003</code> 档<br>   （<code>mouseTier==='full'</code>，任何移动都发 motion）下也验证一遍</strong>：<code>1002</code> 只在按住时<br>   发 motion，事件频率天然低；<code>1003</code> 是持续洪水，限流逻辑若在 <code>1002</code> 下没被真正压到，<br>   到 <code>1003</code> 才会暴露。两个档位各测一次。</p>
+<ol><li><strong>2b-0 的档位切换在异常退出路径上未验证</strong>（本版新识别）。<code>app.js:360-363</code> 在</li></ol>
+<p>teardown 时无条件写 <code>disableBytes()</code>（含 <code>?1002l</code>），所以正常退出是干净的。<br>   但<strong>进程被 <code>SIGKILL</code> / 终端崩溃 / 断电</strong>时不会走 teardown，终端会残留<br>   <code>1002</code> 态 —— 表现为「之后这个终端里按住鼠标拖动会输出乱码」。<br>   ⇒ <strong>这不是本方案引入的新问题</strong>（<code>1000h</code> 本来就有同样的残留风险，<code>disableBytes</code><br>   的注释已承认），但 <code>1002</code> 让残留的<strong>可见症状</strong>更明显（出现 <code>[&lt;32;...M</code> 文本）。<br>   缓解：文档里把 <code>KHY_MOUSE=off</code> / <code>reset</code> 写进排障表（步骤 3 第 16 步）；<br>   <strong>不在本方案里加信号处理器</strong>（<code>app.js</code> 已有 <code>_altScreenExitHooked</code> 基础设施，<br>   但复用它是独立改动，另立提案）。</p>
+<hr>
+<h2 id="八-落地清单-三层-一次提交只做一层">八、落地清单（三层，一次提交只做一层）<a class="anchor" href="#八-落地清单-三层-一次提交只做一层" aria-label="锚点">#</a></h2>
+<blockquote><p><strong>注意</strong>：本方案不新增 <code>scripts/ci/</code> 检查器、不改 <code>RULES-REGISTRY.json</code>、不改<br><code>package.json</code>、不动门档。改动集落在 <code>services/backend/src/cli/tui/</code> + 测试 + 文档。</p></blockquote>
+<h3 id="步骤-1-判据收窄-已完成">步骤 1 —— 判据收窄（✅ 已完成）<a class="anchor" href="#步骤-1-判据收窄-已完成" aria-label="锚点">#</a></h3>
+<ol><li><code>services/backend/src/cli/tui/mouseButtons.js</code>：<code>parseSgrMouse</code> 加三个修饰位字段；</li></ol>
+<p><code>onInput</code> 加前置放行（排除 <code>isWheel</code>）；press/release 改条件性吞；改掉头部错误断言。</p>
+<ol><li><code>services/backend/tests/cli/tui/mouseNativeSelection.test.js</code>：R1–R13 场景（9/9 绿）。</li><li>全 TUI 测试集 744/744 无回归。</li></ol>
+<p>验收：</p>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> D:/Portable/khy-os/services/backend
+node --<span class="hljs-built_in">test</span> tests/cli/tui/mouseWheel.test.js tests/cli/tui/mouseNativeSelection.test.js</code></pre>
+<h3 id="步骤-2-第二层-应用内自绘选择-本版新增-未开工">步骤 2 —— 第二层：应用内自绘选择（本版新增，未开工）<a class="anchor" href="#步骤-2-第二层-应用内自绘选择-本版新增-未开工" aria-label="锚点">#</a></h3>
+<blockquote><p>拆成 <strong>2a / 2b-0 / 2b-1 / 2b-2 四次提交</strong>：2a 是纯逻辑（可独立测试）；<br><strong>2b-0 是前置条件（tracking 档位）—— 不做这一步，2b-1/2b-2 写出来在真机上<br>一条拖动事件都收不到</strong>；2b-1 是渲染；2b-2 才是交互接线。<br>这样 2a 可以在不碰 UI 的前提下先把选择模型测透，2b-0 可以在不碰选择逻辑的前提下<br>先把「事件能不能到达」这件事单独验证。</p></blockquote>
+<p><strong>2a —— 选择模型（纯叶子）</strong></p>
+<blockquote><p><strong>验收标准已单独成文</strong>，实现者直接据此写代码、据此判通过：<br>[<code>[DESIGN-ARCH-119] TUI文本选择与复制-验收标准.md</code>]([DESIGN-ARCH-119] TUI文本选择与复制-验收标准.md)。<br>该文给出 <code>S-xx</code>/<code>V-xx</code>/<code>A-xx</code>/<code>X-xx</code>/<code>N-xx</code> 五组共 50+ 条用例的三段式<br>（输入 → 期望输出 → 通过条件），并附<strong>自验结果</strong>（27/27 实跑绿 + 5/5 反例可检出）。</p></blockquote>
+<ol><li>新增 <code>services/backend/src/cli/tui/selection.js</code>：按验收标准 §1.1 的契约表实现</li></ol>
+<p>12 个导出（<code>createSelection</code> / <code>beginSelection</code> / <code>extendSelection</code> /<br>   <code>endSelection</code> / <code>clearSelection</code> / <code>hasSelection</code> / <code>normalizeSelection</code> /<br>   <code>expandToWord</code> / <code>expandToLine</code> / <code>extractText</code> / <code>selectionRangeFor</code> /<br>   <code>wordBoundaryAt</code>）。零 IO、绝不抛。<br>   头部注释必须写明：<strong>软换行视觉行 ≠ 逻辑行</strong>这一已知偏差（§六 不做的事 4）。</p>
+<ol><li>新增 <code>services/backend/tests/cli/tui/selection.test.js</code>：<code>S-01</code>–<code>S-37</code> 全部用例</li></ol>
+<p>（覆盖核心功能、边界、异常、冻结性、规模、反例）。</p>
+<p><strong>2b-0 —— tracking 档位（硬前置，不可跳过）</strong></p>
+<blockquote><p><strong>为什么必须独立成一步</strong>：<code>enableBytes()</code>（<code>mouseButtons.js:261-267</code>）当前<strong>只写</strong><br><code>\x1b[?1000h\x1b[?1006h</code> —— 全仓库从未写过 <code>?1002h</code>（已 grep 确认，只有 <code>1000h</code> /<br><code>1003h</code> / <code>1006h</code>）。<code>1000</code>（X11 basic）<strong>只报按下/松开，一个位移事件都不报</strong>。<br>因此 2b-1/2b-2 写完后，在真机上<strong>拖动过程中不会有任何事件到达</strong>，<br><code>extendSelection</code> 永远不会被调用 —— <code>A-01</code>/<code>A-02</code>/<code>S-03</code> 在单测里绿、在真机上一片死。<br>这一步先把通道打通。</p></blockquote>
+<ol><li><code>services/backend/src/cli/tui/mouseButtons.js</code>：<code>enableBytes</code> 增加 <code>select</code> 参数。</li></ol>
+<p>现状（<code>mouseButtons.js:261-267</code>）：</p>
+<pre><code class="language-js">   <span class="hljs-keyword">function</span> <span class="hljs-title function_">enableBytes</span>(<span class="hljs-params">{ hover = <span class="hljs-literal">false</span> } = {}</span>) {
+     <span class="hljs-keyword">let</span> out = <span class="hljs-string">&#x27;\x1b[?1000h\x1b[?1006h&#x27;</span>;
+     <span class="hljs-keyword">if</span> (hover) { out += <span class="hljs-string">&#x27;\x1b[?1003h&#x27;</span>; }
+     <span class="hljs-keyword">return</span> out;
+   }</code></pre>
+<p>改为（<strong><code>select</code> 时把 <code>1000</code> 换成 <code>1002</code>，不是叠加</strong> —— <code>1002</code> 已含 <code>1000</code> 的<br>   按下/松开语义，叠写只会让模式表更难读；<code>disableBytes()</code> 已经无条件写了<br>   <code>?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l</code>，所以<strong>退出侧不需要改</strong>）：</p>
+<pre><code class="language-js">   <span class="hljs-keyword">function</span> <span class="hljs-title function_">enableBytes</span>(<span class="hljs-params">{ hover = <span class="hljs-literal">false</span>, select = <span class="hljs-literal">false</span> } = {}</span>) {
+     <span class="hljs-comment">// select: 1002 = button-event tracking —— 仅在有键按下时报位移,</span>
+     <span class="hljs-comment">//         这是「拖动」能收到事件的唯一档位(1000 完全不报位移;</span>
+     <span class="hljs-comment">//         1003 报全部位移 = 60~120Hz 洪水)。</span>
+     <span class="hljs-keyword">let</span> out = select ? <span class="hljs-string">&#x27;\x1b[?1002h\x1b[?1006h&#x27;</span> : <span class="hljs-string">&#x27;\x1b[?1000h\x1b[?1006h&#x27;</span>;
+     <span class="hljs-keyword">if</span> (hover) { out += <span class="hljs-string">&#x27;\x1b[?1003h&#x27;</span>; }
+     <span class="hljs-keyword">return</span> out;
+   }</code></pre>
+<blockquote><p><strong><code>select</code> 与 <code>hover</code> 同时为真时</strong>：<code>1003</code> 的语义包含 <code>1002</code>，两个都设时终端以<br>最后设置的为准（即 <code>1003</code> 生效）。这是<strong>可接受的</strong> —— <code>hover</code> 只在<br><code>mouseTier==='full'</code> 时为真（<code>mouseHoverEnabled</code>，<code>mouseButtons.js:203-208</code>），<br>而 <code>select</code> 由 <code>KHY_SELECT</code> 独立控制；两者同开时拖动仍能收到事件。<br><strong>不需要</strong>为此加互斥判断。</p></blockquote>
+<ol><li><code>services/backend/src/cli/tui/AGENTS.md</code> §0.9.x 补一行：<code>1000</code> / <code>1002</code> / <code>1003</code></li></ol>
+<p>三档的语义差，以及「选择层需要 <code>1002</code>」这一条 —— 避免后来者把 <code>select</code> 参数<br>   当成冗余删掉。</p>
+<ol><li><code>services/backend/tests/cli/tui/mouseWheel.test.js</code>：补两条断言 ——</li></ol>
+<p><code>enableBytes()</code> 默认输出<strong>逐字节等于</strong> <code>'\x1b[?1000h\x1b[?1006h'</code>（回归护栏）；<br>   <code>enableBytes({ select: true })</code> 输出含 <code>'\x1b[?1002h'</code> 且<strong>不含</strong> <code>'\x1b[?1000h'</code>。</p>
+<p>验收（2b-0 独立验收，不依赖任何 UI 代码）：</p>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> D:/Portable/khy-os/services/backend
+node --<span class="hljs-built_in">test</span> tests/cli/tui/mouseWheel.test.js
+<span class="hljs-comment"># 真机冒烟:临时把 app.js 的 enableBytes 调用改成 { select: true },开 KHY_TUI_DIAG=1 khy,</span>
+<span class="hljs-comment"># 按住左键在正文区上下拖 —— 应看到连续 [mouse] motion 行。</span>
+<span class="hljs-comment"># 看到即通;看不到说明这一步没做成,不要继续 2b-1。</span></code></pre>
+<blockquote><p>⚠️ <strong>本步的已知代价（须在 §六 显式登记）</strong>：<code>1002</code> 打开期间，<strong>按住键</strong>的整段时间<br>鼠标事件归本进程所有，终端原生拖选在此期间不可用 —— 这正是 v1 说「互斥」的那个<br>约束，但它的作用域从「永久」缩小到「仅按住期间」。松开后 <code>1002</code> 仍在，但<br><strong>不按键的移动不报</strong>，所以不按键时的原生悬停/原生拖选<strong>照常</strong>。用户若想用终端<br>原生选择，始终可以：（a）按住 <code>Shift</code>（<code>isShift</code> 前置放行，不吞）；<br>（b）<code>KHY_SELECT=0</code> 关掉选择层。</p></blockquote>
+<p><strong>2b-1 —— 渲染（可见但不可交互）</strong></p>
+<ol><li><code>services/backend/src/cli/tui/ink-components/Viewport.js</code>：<code>lines</code> 模式加可选</li></ol>
+<p><code>selection</code> prop，按 §4.2.5 三段 <code>Text</code>（中段 <code>inverse: true</code>）。<br>   <strong>不传 <code>selection</code> 时逐字节不变</strong> —— 这是 2b-1 的唯一硬约束，也是它的验收条件。</p>
+<ul><li>必须复用本文件已导出的 <code>resolveViewportOffset</code> 把 <code>sel</code> 的<strong>数组行号</strong>换算成</li></ul>
+<p><strong>可见行号</strong>；<strong>不许</strong>在 <code>Viewport</code> 里手写 <code>start</code>/<code>end</code> 算术（见 §4.2.1 不变式）。</p>
+<ul><li><code>selection</code> 的两端都可能缺省（半开放拖选中途），实现必须容忍 <code>null</code>。</li><li>不得因为加了选区就改用 <code>wrap</code>：<code>overflow:'hidden'</code> 是硬闸门（<code>Viewport.js:111</code></li></ul>
+<p>注释），改了会把备用缓冲区里的转录整片抹掉。</p>
+<p>验收（2b-1，不依赖交互层）：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 临时硬编码 selection={{anchor:{line:2,col:0},head:{line:4,col:3}}} 跑一次,</span>
+<span class="hljs-comment"># 确认反色落在正确行;然后去掉硬编码,确认 Viewport 输出与改动前逐字节一致。</span>
+<span class="hljs-built_in">cd</span> D:/Portable/khy-os/services/backend
+node --<span class="hljs-built_in">test</span> tests/cli/tui/viewportSticky.test.js</code></pre>
+<p><strong>2b-2 —— 交互接线</strong></p>
+<ol><li><code>services/backend/src/cli/tui/mouseButtons.js</code>：<code>createMouseDispatcher</code> 增加</li></ol>
+<p><code>onSelectEvent(kind, ev)</code> 回调（<code>kind ∈ 'begin' | 'extend' | 'end' | 'clear'</code>），<br>    在既有分支<strong>之前</strong>调用；<strong>回调缺省时行为与改动前逐字节一致</strong>。</p>
+<ul><li>建模方式照抄既有 <code>onWheel</code> / <code>onNative</code>（<code>mouseButtons.js:455-589</code>）——</li></ul>
+<p>这样选择层可以<strong>脱离 React 单测</strong>，与 <code>A-xx</code> 用例的驱动方式一致。</p>
+<ul><li>放行判据：<code>ev.isWheel</code>，或 <code>ev.isShift/isAlt/isCtrl</code> → <strong>不</strong>产生 select 事件</li></ul>
+<p>（沿用步骤 1 的修饰键放行）；命中按钮的 press/release → <strong>不</strong>产生 select 事件。</p>
+<ul><li>只有「<strong>未命中按钮</strong>的 press / motion / release」才产生 select 事件。</li><li><strong>不要在这里改 <code>onInput</code> 的返回值</strong>：<code>App.js:4200</code> 丢弃返回值、<code>App.js:4214</code></li></ul>
+<p>无条件 <code>return</code>（见 §4.2.1b）。改返回值不解决接线问题，只会制造一条新的假路径。</p>
+<ol><li><code>services/backend/src/cli/tui/ink-components/App.js</code>：<ul><li>新增选区 state（<code>anchor</code> / <code>head</code> / <code>dragging</code>）+ <code>beginSelection</code> /</li></ul></li></ol>
+<p><code>extendSelection</code> / <code>endSelection</code> / <code>clearSelection</code> 处理；</p>
+<ul><li>在 <code>mouseDispatcherRef</code> 创建处（<code>App.js:1304-1312</code>）挂 <code>onSelectEvent</code>；</li><li>state 变更走 <code>useState</code> + 函数式更新（React 重渲染依赖引用变化，<strong>不得原地改</strong>）；</li><li>屏幕坐标 → 数组行号：<strong>必须复用</strong> <code>mouseButtons.screenOffset(rootHeight, ctx)</code></li></ul>
+<p>（<code>mouseButtons.js:353-359</code>），不得另写一份 —— 两份偏移算法必然发散；</p>
+<ul><li><strong>两处</strong> Viewport 调用点都要传 <code>selection</code> —— 主路径 <code>App.js:5935-5944</code>，</li></ul>
+<p>预览路径 <code>App.js:6100-6110</code>（后者仅在 <code>_inlineTranscript</code> 为真时才有 <code>lines</code>）；</p>
+<ul><li>松开时若 <code>hasSelection</code> 且 <code>KHY_SELECT_COPY_ON_RELEASE</code> 开 → <code>writeClipboard</code><ul><li><strong>把 <code>reasons</code> 接到可见提示</strong>（§七 风险 2）。<code>writeClipboard</code> 返回</li></ul></li></ul>
+<p><code>{ok, reasons}</code>，<code>ok:false</code> 时必须让用户看见 —— 否则「复制了但没进剪贴板」<br>      又是一个静默失败；</p>
+<ul><li><code>Ctrl+C</code> 取值优先级：有选区 → 复制；无选区 → 中断（§4.2.6）；</li><li><code>Esc</code> / 任意按键 → 清选区。</li></ul>
+<ol><li><code>services/backend/src/services/flagRegistry.js</code>：登记 <code>KHY_SELECT</code> /</li></ol>
+<p><code>KHY_SELECT_COPY_ON_RELEASE</code> / <code>KHY_SELECT_WORD_BOUNDARY</code> / <code>KHY_SELECT_MAX_BYTES</code>。</p>
+<blockquote><p><strong><code>KHY_SELECT</code> 只允许读一次</strong>（在 <code>App.js</code> 顶层求值，与 <code>ALT_SCREEN_ENABLED</code><br>同处，<code>app.js:253-255</code> 是同一模式的先例），把这个布尔值<strong>透传</strong>给<br><code>enableBytes({ select })</code> 与 <code>onSelectEvent</code> 的启用判据。若在两处各读一次<br><code>process.env.KHY_SELECT</code>，会出现「通道开了但选择层没接」或「选择层接了但<br>通道没开」的不一致态 —— 这正是 <code>A-xx</code> 要覆盖的一条。</p></blockquote>
+<ol><li><code>services/backend/tests/cli/tui/</code> 新增两个测试文件：<ul><li><code>mouseDispatcherSelect.test.js</code>：模拟 <code>[&lt;0;c;rM</code> → <code>[&lt;32;c;rM</code> → <code>[&lt;0;c;rm</code></li></ul></li></ol>
+<p>序列，断言 <code>onSelectEvent</code> 收到的 <code>kind</code> 序列为 <code>begin</code>,<code>extend</code>,<code>end</code>；<br>      并断言命中按钮时不产生 select 事件、缺省回调时逐字节不变；</p>
+<ul><li><code>selectionInteraction.test.js</code>：断言 <code>KHY_SELECT=0</code> 时行为与步骤 1 完成态</li></ul>
+<p>逐字节一致（含 <code>enableBytes</code> 不写 <code>1002</code>）。</p>
+<p>验收（2b 全量，含回滚验证）：</p>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> D:/Portable/khy-os/services/backend
+node --<span class="hljs-built_in">test</span> tests/cli/tui/selection.test.js tests/cli/tui/mouseNativeSelection.test.js \
+         tests/cli/tui/mouseWheel.test.js tests/cli/tui/viewportSticky.test.js \
+         tests/cli/tui/mouseDispatcherSelect.test.js tests/cli/tui/selectionInteraction.test.js
+<span class="hljs-comment"># 真机:</span>
+KHY_TUI_DIAG=1 khy      <span class="hljs-comment"># 拖选 → 应看到选区反色;松手 → 剪贴板可粘贴</span>
+KHY_SELECT=0 khy        <span class="hljs-comment"># 回滚验证:与步骤 1 完成态逐字节一致</span></code></pre>
+<h3 id="步骤-3-文档与登记收口-2026-09-18-完成主要项">步骤 3 —— 文档与登记收口（✅ 2026-09-18 完成主要项）<a class="anchor" href="#步骤-3-文档与登记收口-2026-09-18-完成主要项" aria-label="锚点">#</a></h3>
+<ol><li><code>[DESIGN-ARCH-102]</code> §6.2 表格补判据：<code>Shift</code> 是<strong>实现义务</strong>（<code>isShift</code> 必须被检查）；</li></ol>
+<p>补「应用内自绘选择」一节，指明它与 P6「不得劫持终端原生选择」<strong>不冲突</strong><br>    （因为它不劫持终端，而是不依赖终端）；<br>    并在 §6.2 的档位说明处补上 <code>1000 / 1002 / 1003</code> 三档语义差（2b-0 的产物）。</p>
+<ol><li><code>[DESIGN-ARCH-102]</code> §6.1：<code>v</code>/<code>y</code> 的<strong>定案已落地</strong>（2026-09-17）——</li></ol>
+<p>该表已把两者标为「未实现（deferred）」并补注「文本选择的真实通道是终端原生拖选，<br>    修复见 <code>[DESIGN-ARCH-119]</code>」。<strong>本步骤只需核对，不需要改</strong>。</p>
+<blockquote><p>⚠️ <strong>一处需要对齐的矛盾</strong>：该注同时写着「<code>v</code>/<code>y</code> 作为『应用内自主选择』是<br><strong>另一条路</strong>，与原生拖选正交，且<strong>优先级更低</strong>……保持 deferred」。<br>这与第二层落地后的事实<strong>不再一致</strong>：第二层就是「应用内自主选择」，<br>而它不是「另一条路」，是<strong>已选定的主路</strong>。⇒ 本步骤应在该注末尾补一句<br>「（2026-09-17 后：应用内自绘选择已成为主路，见 <code>[DESIGN-ARCH-119]</code> §八 步骤 2；<br><code>v</code>/<code>y</code> 若要复活，应定位为『键盘驱动的选区模式入口』，而非独立路线）」。<br>只改这一句注，<strong>不动键位表本身</strong>（<code>v</code>/<code>y</code> 仍为 deferred，本方案不实现它们）。</p></blockquote>
+<ol><li><code>services/backend/src/cli/tui/AGENTS.md</code>：<ul><li><del>§1.2 补 <code>KHY_MOUSE</code> / <code>KHY_MOUSE_BUTTONS</code> / <code>KHY_MOUSE_HOVER</code> 三个 env</del></li></ul></li></ol>
+<p>—— <strong>已落地</strong>（<code>AGENTS.md:285-288</code>，含 <code>KHY_MOUSE_WHEEL</code> 与 <code>KHY_ALT_SCREEN</code>，<br>      共五行）。本步骤<strong>只需核对</strong>，不需重写；</p>
+<ul><li>§1.2 新增 <code>KHY_SELECT</code> / <code>KHY_SELECT_CLIP</code> / <code>KHY_SELECT_DRAG</code> 三行</li></ul>
+<p>（2b-2 的产物，与 <code>flagRegistry.js:2849-2851</code> 同步）—— ✅ <strong>已落地</strong>；</p>
+<ul><li>§0.8 的「鼠标：增强键盘，<strong>Shift</strong> 绕过」改为列出各终端修饰键</li></ul>
+<p>（VS Code/WT/xterm <code>Shift</code> / iTerm2 <code>Option</code> / Terminal.app <code>Fn</code>），<br>      并补「放行判据必须排除 <code>isWheel</code>」—— ✅ <strong>已落地（2026-09-18）</strong>；</p>
+<ul><li>新增 §0.9.5：应用内选择层的纪律（不得把滚轮交给 <code>onNative</code>；选区是覆盖态、</li></ul>
+<p>不得新增固定高度节点）—— ✅ <strong>已落地（§0.9.5「拖选走应用内自绘」）</strong>；</p>
+<ul><li>§0.9.4 补三档 tracking 说明（2b-0 的第 7 步）—— ✅ <strong>已落地</strong>；</li><li>排障表 —— ✅ <strong>已落地（2026-09-18，新增 §1.2b「鼠标层排障表」）</strong>，含</li></ul>
+<p>§七 风险 8 的 <code>1002</code> 残留行（症状「该终端里按住鼠标拖动会显示 <code>[&lt;32;...M</code> 文本」，<br>      修法 <code>printf '\033[?1002l\033[?1000l\033[?1003l\033[?1006l'</code> 或重开终端）。</p>
+<ol><li><code>App.js</code> 的 <code>_mainContentLines</code> 上方补注释：该数组当前是「纯文本投影、无消息元数据」</li></ol>
+<p>这一契约（§七 风险 1）；并说明传给 <code>Viewport</code> 的 <code>width</code> 是<strong>死 prop</strong><br>    （<code>Viewport</code> 从不读它）—— ✅ <strong>已落地（2026-09-18，<code>App.js:5492</code> 与 <code>App.js:6194</code>）</strong>。</p>
+<ol><li><code>docs/03_DESIGN_设计/00_INDEX_设计-分类索引.md</code> 更新本文件那一行的摘要</li></ol>
+<p>—— ✅ <strong>已落地</strong>（索引摘要已含「v2 三层方案：判据收窄 → 应用内自绘选择 → 门控与登记收口」）。</p>
+<ol><li><code>[DESIGN-ARCH-101]</code> §8 第 6 条更新为「已修但被绕过」（§七 风险 6）</li></ol>
+<p>—— ✅ <strong>已落地（2026-09-18）</strong>。</p>
+<blockquote><p><strong>不要把这几步合成一次提交</strong>：违反 <code>SOURCING-006</code>，且步骤 1 的行为改动、步骤 2 的<br>渲染改动、步骤 3 的文档改动混在一起时，回归定位会失焦。<br><strong>2a / 2b-0 / 2b-1 / 2b-2 之间也要分开</strong> —— 2b-0 尤其必须独立：它是唯一一步<br>「改一行、真机可见」的改动，与后面两步的失败模式完全不同。</p></blockquote>
+<hr>
+<h2 id="九-复现方式-汇总">九、复现方式（汇总）<a class="anchor" href="#九-复现方式-汇总" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-comment"># 根因核验(只读,不改业务)</span>
+<span class="hljs-built_in">cd</span> D:/Portable/khy-os &amp;&amp; node .khy/tmp/mouse-select-probe.js
+<span class="hljs-comment">#   期望: 10 条全部 as-expected —— 其中 4 条揭示 bug/违约</span>
+
+<span class="hljs-comment"># 真终端观察</span>
+KHY_TUI_DIAG=1 khy
+<span class="hljs-comment">#   期望: 每次鼠标操作都打印 [mouse] 行 → 证明事件被本进程消费</span>
+
+<span class="hljs-comment"># workaround(第二层落地前)</span>
+KHY_MOUSE=off khy        <span class="hljs-comment"># 或 KHY_MOUSE_BUTTONS=0</span>
+<span class="hljs-comment">#   代价:滚轮回到终端原生(主屏幕下正常;备屏下会被合成为 ↑/↓ → 输入历史回溯)</span>
+
+<span class="hljs-comment"># 第二层落地后的回滚开关</span>
+KHY_SELECT=0 khy         <span class="hljs-comment"># 关掉自绘选择层,回到第一层完成态</span>
+
+<span class="hljs-comment"># 验收(步骤 2 完成时)</span>
+<span class="hljs-built_in">cd</span> D:/Portable/khy-os/services/backend
+node --<span class="hljs-built_in">test</span> tests/cli/tui/selection.test.js tests/cli/tui/mouseNativeSelection.test.js</code></pre>
+<hr>
+<p><strong>附：改动落点一览</strong></p>
+<table><thead><tr><th>文件</th><th>改动</th><th>性质</th></tr></thead><tbody><tr><td><code>services/backend/src/cli/tui/mouseButtons.js</code></td><td><code>parseSgrMouse</code> +3 字段；<code>onInput</code> 加放行判据；press/release 条件性吞；修头部错误注释</td><td>业务（步骤 1 ✅）</td></tr><tr><td><code>tests/cli/tui/mouseNativeSelection.test.js</code></td><td>R1–R13 场景</td><td>测试（步骤 1 ✅）</td></tr><tr><td><strong><code>docs/03_DESIGN_设计/[DESIGN-ARCH-119] TUI文本选择与复制-验收标准.md</code></strong></td><td><strong>验收标准真源（<code>S-xx</code>/<code>V-xx</code>/<code>A-xx</code>/<code>X-xx</code>/<code>N-xx</code>）</strong></td><td><strong>文档（步骤 2a ✅）</strong></td></tr><tr><td><strong><code>services/backend/src/cli/tui/selection.js</code></strong></td><td><strong>选择模型纯叶子（参考实现）</strong></td><td><strong>业务（步骤 2a ✅）</strong></td></tr><tr><td><strong><code>tests/cli/tui/selection.test.js</code></strong></td><td><strong><code>S-01</code>–<code>S-37</code> 验收测试（27 条全绿）</strong></td><td><strong>测试（步骤 2a ✅）</strong></td></tr><tr><td><strong><code>mouseButtons.js</code> <code>enableBytes</code></strong></td><td><strong>加 <code>select</code> 参数 → 写 <code>?1002h</code>（不再写 <code>?1000h</code>）</strong></td><td><strong>业务（步骤 2b-0）</strong></td></tr><tr><td><strong><code>tests/cli/tui/mouseWheel.test.js</code></strong></td><td><strong><code>enableBytes</code> 两条字节级断言</strong></td><td><strong>测试（步骤 2b-0）</strong></td></tr><tr><td><strong><code>ink-components/Viewport.js</code></strong></td><td><strong><code>lines</code> 模式加可选 <code>selection</code> prop；复用 <code>resolveViewportOffset</code></strong></td><td><strong>业务（步骤 2b-1）</strong></td></tr><tr><td><strong><code>mouseButtons.js</code> <code>createMouseDispatcher</code></strong></td><td><strong>加 <code>onSelectEvent</code> 回调（缺省时逐字节不变）</strong></td><td><strong>业务（步骤 2b-2）</strong></td></tr><tr><td><strong><code>ink-components/App.js</code></strong></td><td><strong>选区 state + 挂回调 + 两处 Viewport 传 <code>selection</code> + 复用 <code>screenOffset</code> + <code>Ctrl+C</code> 优先级 + 清选区 + 可见提示</strong></td><td><strong>业务（步骤 2b-2）</strong></td></tr><tr><td><strong><code>tests/cli/tui/mouseDispatcherSelect.test.js</code></strong></td><td><strong><code>onSelectEvent</code> 的 <code>begin</code>/<code>extend</code>/<code>end</code> 序列</strong></td><td><strong>测试（步骤 2b-2）</strong></td></tr><tr><td><strong><code>tests/cli/tui/selectionInteraction.test.js</code></strong></td><td><strong><code>KHY_SELECT=0</code> 回滚等价</strong></td><td><strong>测试（步骤 2b-2）</strong></td></tr><tr><td><code>services/backend/src/services/flagRegistry.js</code></td><td>登记 4 个 <code>KHY_SELECT_*</code></td><td>业务（步骤 2b-2）</td></tr><tr><td><code>docs/03_DESIGN_设计/[DESIGN-ARCH-102] Khy TUI 统一规则手册.md</code></td><td>§6.1 <code>v</code>/<code>y</code> 定案（✅ 已落地）；§6.2 补判据、自绘选择节、三档 tracking</td><td>文档（步骤 3）</td></tr><tr><td><code>services/backend/src/cli/tui/AGENTS.md</code></td><td>§1.2 五个 <code>KHY_MOUSE*</code>（✅ <code>AGENTS.md:285-288</code>）；待补：§1.2 四个 <code>KHY_SELECT_*</code>、§0.8 修饰键口径、§0.9.x 选区纪律与 tracking 三档、排障表</td><td>文档（步骤 3）</td></tr><tr><td><code>services/backend/src/services/flagRegistry.js</code></td><td>5 个 <code>KHY_MOUSE*</code> + <code>KHY_ALT_SCREEN</code>（✅ <code>flagRegistry.js:2828-2832</code>）</td><td>业务（步骤 1 已落地，风险 4 作废）</td></tr><tr><td><code>docs/03_DESIGN_设计/00_INDEX_设计-分类索引.md</code></td><td>更新本文件摘要行</td><td>索引（步骤 3）</td></tr><tr><td><code>docs/10_规范/...</code>（台账所在文件）</td><td><code>[DESIGN-ARCH-101]</code> §8 第 6 条改「已修但被绕过」</td><td>文档（步骤 3）</td></tr></tbody></table>
+<blockquote><p><strong>改动顺序不可交换</strong>：2b-0 必须早于 2b-2。若先做 2b-2，<code>onSelectEvent</code> 会永远收不到<br><code>extend</code>，而单测（直接驱动 dispatcher）仍然全绿 —— 这是最容易误判「已完成」的顺序。<br><strong>2b-0 的真机冒烟是本方案唯一不可用单测替代的验收项。</strong></p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-119] TUI文本选择与复制-验收标准.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-119] TUI 文本选择与复制 —— 验收标准</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-120] khy-移动端合并方案.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-120] khy 移动端合并方案</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-119] TUI原生文本选择与复制可用性修复.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

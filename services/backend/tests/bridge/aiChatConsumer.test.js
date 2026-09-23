@@ -2,6 +2,7 @@
 // Use the consumer with a mock gateway and broadcast, so we don't have to
 // import the real aiGateway (which pulls in adapters + network code).
 const { attach } = require('../../src/bridge/aiChatConsumer');
+const assert = require('node:assert');
 function _mockDeps() {
   const broadcasts = [];
   const state = { gateway: null, history: null };
@@ -190,10 +191,10 @@ describe('Ai Chat Consumer', () => {
       const ctx = _mockDeps();
       ctx.register({ async generate() {} }, _fakeHistory());
       const c = ctx.consumer();
-    
-      expect(c.handleCancel('c-good')).toBe({});
-      expect(c.handleCancel('c-good')).toBe({ turnId: '' });
-      expect(c.handleCancel('c-good')).toBe({ turnId: 'never-started' });
+
+      expect(c.handleCancel('c-good')).toBe(false);
+      expect(c.handleCancel('c-good', { turnId: '' })).toBe(false);
+      expect(c.handleCancel('c-good', { turnId: 'never-started' })).toBe(false);
   });
 
   test('handleChat passes preferred adapter/model and sessionId=turnId to gateway', async () => {

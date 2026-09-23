@@ -6,14 +6,14 @@
 
 /**
  * export-quality-dashboard.js — Aggregates D1-D5 dimension scores and
- * CI check results into a single JSON dashboard at docs/_报告/质量看板.json.
+ * CI check results into a single JSON dashboard at docs/11_报告/metrics/质量看板.json.
  */
 
 const fs = require('fs');
 const path = require('path');
 
 const REPO_ROOT = path.resolve(__dirname, '../..');
-const HEALTH_REPORT = 'docs/_报告/维度健康.json';
+const HEALTH_REPORT = 'docs/11_报告/metrics/维度健康.json';
 
 function loadReport(relPath) {
   try {
@@ -47,8 +47,8 @@ function main() {
 
   // Load latest reports
   const reportPaths = {
-    skillEval: 'docs/_报告/技能评估-最新.json',
-    skillScenario: 'docs/_报告/技能场景评估-最新.json',
+    skillEval: 'docs/11_报告/metrics/技能评估-最新.json',
+    skillScenario: 'docs/11_报告/metrics/技能场景评估-最新.json',
   };
 
   for (const [key, reportPath] of Object.entries(reportPaths)) {
@@ -66,7 +66,7 @@ function main() {
   dashboard.exitCriteria.twoAt3 = scores.filter(s => s >= 3).length >= 2;
   dashboard.exitCriteria.met = dashboard.exitCriteria.allAtLeast2 && dashboard.exitCriteria.twoAt3;
 
-  const outDir = path.join(REPO_ROOT, 'docs/_报告');
+  const outDir = path.join(REPO_ROOT, 'docs/11_报告/metrics');
   fs.mkdirSync(outDir, { recursive: true });
   const outPath = path.join(outDir, '质量看板.json');
   fs.writeFileSync(outPath, JSON.stringify(dashboard, null, 2) + '\n');

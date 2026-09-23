@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * workflowRunWorker.quantum.test.js �?Phase C-3 (§4.C), worker/DB side.
+ * workflowRunWorker.quantum.test.js — Phase C-3 (§4.C), worker/DB side.
  *
  * The pure interpreter test (workflowExecutor.quantum.test.js) proves the yield
  * math. This proves the CROSS-PROCESS half: a quantum yield is persisted to the

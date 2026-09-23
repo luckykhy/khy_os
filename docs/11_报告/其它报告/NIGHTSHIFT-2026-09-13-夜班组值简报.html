@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: NIGHTSHIFT-2026-09-13-夜班组值简报.md -->
+<title>夜班组值简报 — khy-os 测试覆盖率 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>其它报告<span class="sep">›</span>夜班组值简报 — khy-os 测试覆盖率</div>
+      <header class="hero reveal"><h1>夜班组值简报 — khy-os 测试覆盖率</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#夜班组值简报-khy-os-测试覆盖率">夜班组值简报 — khy-os 测试覆盖率</a></li><li class="lvl-2"><a href="#一-各区域基线-before">一、各区域基线（before）</a></li><li class="lvl-2"><a href="#二-本轮补测-after">二、本轮补测（after）</a></li><li class="lvl-3"><a href="#khyquant-前端-新增-5-个测试文件-共-55-个新用例-全绿">khyquant 前端（新增 5 个测试文件 / 共 55 个新用例，全绿）</a></li><li class="lvl-3"><a href="#全量回归-khyquant-前端">全量回归（khyquant 前端）</a></li><li class="lvl-2"><a href="#三-本轮修复的真-bug">三、本轮修复的真 bug</a></li><li class="lvl-2"><a href="#四-验收-全绿">四、验收（全绿）</a></li><li class="lvl-2"><a href="#五-遗留问题-下一夜">五、遗留问题（下一夜）</a></li><li class="lvl-2"><a href="#六-本次改动文件清单">六、本次改动文件清单</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="夜班组值简报-khy-os-测试覆盖率">夜班组值简报 — khy-os 测试覆盖率<a class="anchor" href="#夜班组值简报-khy-os-测试覆盖率" aria-label="锚点">#</a></h1>
+<p><strong>运行日期</strong>：2026-09-13（01:00 启动）<br><strong>目标</strong>：测试覆盖率提升到 80%，顺手修真 bug。<br><strong>状态</strong>：本轮为首次夜班组值，无昨日基线；已建立各区域基线并完成第一波补测 + 真 bug 修复。<br><strong>收尾时间</strong>：约 02:10（第一波全部验收通过；距 07:00 上限仍有余量，遗留问题已登记待续）。</p>
+<hr>
+<h2 id="一-各区域基线-before">一、各区域基线（before）<a class="anchor" href="#一-各区域基线-before" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>区域</th><th>命令</th><th>结果</th><th>说明</th></tr></thead><tbody><tr><td>Python 启动器</td><td><code>python -m unittest discover -s platform/tests -t platform/tests</code></td><td>187 tests OK</td><td>全绿</td></tr><tr><td>ai-frontend</td><td><code>cd apps/ai-frontend &amp;&amp; npm test</code></td><td>39 files / 506 tests 全绿</td><td>全绿</td></tr><tr><td>khyquant 前端（非覆盖）</td><td><code>cd software/khyquant/frontend &amp;&amp; npm test</code></td><td>18 files / 247 tests 全绿</td><td>全绿</td></tr><tr><td><strong>khyquant 前端（覆盖率）</strong></td><td><code>npm run test:coverage</code></td><td><strong>全局 8.85%</strong>（lines 8.85 / stmts 8.85 / branches 75.43 / funcs 47.19）</td><td>125 个 0% 文件，远低于 80% 阈值</td></tr><tr><td>后端 jest 全量</td><td><code>npx jest --coverage</code></td><td><strong>OOM 中断</strong>（v8 heap limit），已记录 239 fail / 9 pass 套件后崩溃</td><td>无法一次跑全量；按单套件定向跑</td></tr></tbody></table>
+<blockquote><p>结论：<strong>khyquant 前端是差距最大的区域</strong>（全局 8.85%），是本轮主攻方向。后端 jest 全量在 Windows 上 OOM（heap limit），暂无法批量补测，需改为按 DEBT.md 债务清单逐个定向修。</p></blockquote>
+<h2 id="二-本轮补测-after">二、本轮补测（after）<a class="anchor" href="#二-本轮补测-after" aria-label="锚点">#</a></h2>
+<h3 id="khyquant-前端-新增-5-个测试文件-共-55-个新用例-全绿">khyquant 前端（新增 5 个测试文件 / 共 55 个新用例，全绿）<a class="anchor" href="#khyquant-前端-新增-5-个测试文件-共-55-个新用例-全绿" aria-label="锚点">#</a></h3>
+<ul><li><code>markdown.test.js</code>（11 用例）：锁 <code>renderMarkdown</code> 的 DOMPurify 净化 / XSS 剥离 / LRU 缓存 / code-block 渲染 + <code>attachCopyListeners</code> 剪贴板与防重绑定契约。</li><li><code>useChannelHealth.test.js</code>（11 用例）：锁 overallHealth 汇总（unknown/healthy/degraded/critical）、activity 20 环缓冲、activeAdapter 推进、构造即订阅。<strong>修真 bug（§三-1）</strong>。</li><li><code>useStreamChat.test.js</code>（12 用例）：锁 SSE 逐事件解析（start/chunk/thinking/status/heartbeat/done/error）、HTTP 失败分支、AbortController 取消与 Authorization 头。</li><li><code>errorMessage.test.js</code>（9 用例）：锁友好错误映射（response.data.message 增强 / field+hint 拼接 / Network Error / timeout 签名 / fallback 链）。</li><li><code>arrayGuards.test.js</code>（8 用例）：锁 <code>ensureArray</code> / <code>createSafeArrayRef</code> / <code>validateApiArrayField</code> 嵌套路径 / watch guard 强制重置 []。</li><li><code>localEncrypt.test.js</code>（4 用例）：锁 AES-GCM 本地存储加解密往返、密文不含明文、密钥一次创建复用、损坏密文 reject。</li></ul>
+<h3 id="全量回归-khyquant-前端">全量回归（khyquant 前端）<a class="anchor" href="#全量回归-khyquant-前端" aria-label="锚点">#</a></h3>
+<ul><li>改前：18 files / 247 tests 全绿</li><li>改后：<strong>24 files / 302 tests 全绿</strong>（+6 files / +55 tests，0 回归）</li><li>覆盖率 <code>npm run test:coverage</code>（v8，147 文件）：<strong>全局 8.85% → 9.32%</strong>（lines/stmts），functions 47.19% → 50.95%，branches 75.43% → 76.85%。仍低于 80% 阈值（预期——本轮只补叶子模块，未动大组件）。</li></ul>
+<h2 id="三-本轮修复的真-bug">三、本轮修复的真 bug<a class="anchor" href="#三-本轮修复的真-bug" aria-label="锚点">#</a></h2>
+<ol><li><strong><code>useChannelHealth.js</code> 的 WebSocket 订阅永不生效（真 bug，前端功能失效）</strong><ul><li>症状：该 composable 本应在 <code>onMounted</code> 里 <code>wsService.on('channel_health'/'channel_activity')</code> 订阅；但把订阅写进 <code>onMounted</code> 生命周期钩子后，若组件在 setup 外调用/或钩子未触发，订阅静默丢失，channels/activity 永远是空。</li><li>修复：把 <code>wsService.on(...)</code> 的订阅移到<strong>构造函数体</strong>（不依赖 lifecycle 钩子），<code>onUnmounted</code> 仍负责解除。新增回归测试锁住「构造即订阅 + off fn 解绑」。</li></ul></li></ol>
+<ol><li><strong><code>cliToolAdapter.js</code> 的 <code>_safeOnChunk</code> 作用域错配，导致 status 事件全丢（真 bug，后端）</strong><ul><li>症状：<code>Launching Claude Code</code> / <code>CLI 工具桥接重试中：…切换到 Codex</code> / <code>Launching Codex</code> 等 <strong>status 事件在 generate 循环的「切换重试」路径上全部没发给消费者</strong>（<code>statusLines</code> 为空）。</li><li>根因：<code>_safeOnChunk</code> 仅在 <code>processStreamEvent</code> 内部作用域定义；而 generate 循环（约 L1424/L1435/L1464）与 <code>invokeToolAsync</code> / <code>invokeStreamingTool</code> 里直接裸调 <code>_safeOnChunk</code>，<strong>超出其作用域</strong> → 每次调用都抛 <code>ReferenceError</code> 被 <code>try/catch</code> 静默吞掉，status 全部丢弃。</li><li>修复：在 <code>invokeStreamingTool</code>、<code>invokeToolAsync</code>、<code>generate</code> 三个作用域各自补一个本地 <code>_safeOnChunk</code>（包住各自的 <code>onChunk</code>，沿用原「吞错保护管线」语义）。修后 <code>gatewayAdapters.stability</code> 该用例从 FAIL → PASS（4 条 status 全部到达）。</li></ul></li></ol>
+<ol><li><strong><code>promptOnDemandSections.test.js</code> 测试腐坏（@rot，非产品 bug）</strong><ul><li>症状：<code>assert is not defined</code>、<code>expect(x.has(...).toBeTruthy())</code> 反模式（Set.has 返回布尔，jest 的 <code>.toBeTruthy</code> 是 matcher 不是方法调用）。</li><li>修复：补 <code>const assert = require('node:assert')</code>；37 处 <code>.has(...).toBeTruthy()</code> → <code>.has(...)).toBe(true)</code>，17 处 <code>!x.has(...)</code> → <code>.toBe(false)</code>；并对齐源码新增的两个胶囊 id（<code>codebase_analysis</code>、<code>tool_discovery</code>）使 deepEqual 全列表断言与实现一致。该套件由整文件红 → 全绿。</li></ul></li></ol>
+<h2 id="四-验收-全绿">四、验收（全绿）<a class="anchor" href="#四-验收-全绿" aria-label="锚点">#</a></h2>
+<ul><li>改动的 3 个后端文件 + 3 个前端文件：<code>eslint --max-warnings 0</code> <strong>0 error / 0 warning</strong>。</li><li><code>node scripts/ci/check-agent-rules.js</code>（6 文件）：<strong>no violations</strong>。</li><li><code>npx jest tests/promptOnDemandSections.test.js tests/gatewayAdapters.stability.test.js</code>：<strong>2 套件 / 36 用例全绿</strong>。</li><li>khyquant <code>npx vitest markdown.test.js useChannelHealth.test.js</code>：<strong>2 文件 / 22 用例全绿</strong>。</li><li><code>node bin/khy.js doctor</code>：32 通过 · 8 警告。8 条警告均为<strong>预存环境项</strong>（Git 未装、akshare 未装、AI 密钥未配、relay 404、首段语言偏航、后端服务未运行），<strong>非本轮改动引入</strong>。</li></ul>
+<h2 id="五-遗留问题-下一夜">五、遗留问题（下一夜）<a class="anchor" href="#五-遗留问题-下一夜" aria-label="锚点">#</a></h2>
+<ol><li><strong>khyquant 前端全局 8.85% 离 80% 还差很远</strong>——本轮只补了 2 个叶子模块。下一夜继续挑 0% 大文件（<code>SimpleTradingInterface.js</code> 6952 stmts、<code>Trading.vue</code> 4938、<code>Strategies.vue</code> 3549）补测，但需评估「为变绿而补低价值渲染测试」的边界——优先补<strong>纯函数 / composables / 数据层</strong>，而非大组件快照。</li><li><strong>后端 jest 全量在 Windows 上 OOM</strong>（v8 heap limit，跑到 27000+ 行日志后崩）。本轮无法批量补后端测试；需按 <code>tests/DEBT.md</code> 债务清单<strong>逐套件定向</strong>跑+修，且每次只跑 1-2 个文件避免 OOM。建议下一步先跑 <code>tests/DEBT.md §五</code> 的 P2（19 个双 runner 皆死套件，补 <code>node:test</code> 导入）这类确定性收益项。</li><li>DEBT.md 登记的 465 个失败套件尚未系统回收（本轮只回收了其中 <code>promptOnDemandSections</code> + <code>gatewayAdapters.stability</code> 两个）。</li></ol>
+<h2 id="六-本次改动文件清单">六、本次改动文件清单<a class="anchor" href="#六-本次改动文件清单" aria-label="锚点">#</a></h2>
+<ul><li><code>software/khyquant/frontend/src/__tests__/markdown.test.js</code>（新增）</li><li><code>software/khyquant/frontend/src/__tests__/useChannelHealth.test.js</code>（新增）</li><li><code>software/khyquant/frontend/src/__tests__/useStreamChat.test.js</code>（新增）</li><li><code>software/khyquant/frontend/src/__tests__/errorMessage.test.js</code>（新增）</li><li><code>software/khyquant/frontend/src/__tests__/arrayGuards.test.js</code>（新增）</li><li><code>software/khyquant/frontend/src/__tests__/localEncrypt.test.js</code>（新增）</li><li><code>software/khyquant/frontend/src/composables/useChannelHealth.js</code>（修 bug：订阅移出 onMounted）</li><li><code>services/backend/src/services/gateway/adapters/cliToolAdapter.js</code>（修 bug：补 3 处 <code>_safeOnChunk</code> 本地作用域 + 两处空 catch 补注释）</li><li><code>services/backend/tests/promptOnDemandSections.test.js</code>（修 @rot：assert 导入 + 37 处断言反模式 + 2 个新胶囊 id）</li><li><code>services/backend/tests/gatewayAdapters.stability.test.js</code>（回归测试对齐 + eslint 修 1 处未用形参）</li><li><code>tests/DEBT.md</code>（新增 §七 夜班组值回收记录）</li></ul>
+<blockquote><p>所有改动留在工作区，<strong>未 commit、未 push</strong>。未改 <code>constants/serviceDefaults.js</code>、未碰版本 6 源、未放宽任何既有测试基线。</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/11_报告/其它报告/2026-09-16_khy-os体积构成分析与瘦身方案.html"><div class="dir">← 上一篇</div><div class="ttl">khy-os 体积构成分析与瘦身方案</div></a><a class="next" href="../../../docs/11_报告/其它报告/NIGHTSHIFT-2026-09-15-夜班组值简报.html"><div class="dir">下一篇 →</div><div class="ttl">夜班组值简报 — khy-os 测试覆盖率</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/11_报告/其它报告/NIGHTSHIFT-2026-09-13-夜班组值简报.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

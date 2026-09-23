@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-API-003] API 幂等性规范.md -->
+<title>[DESIGN-API-003] API 幂等性规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-API<span class="sep">›</span>[DESIGN-API-003] API 幂等性规范</div>
+      <header class="hero reveal"><h1>[DESIGN-API-003] API 幂等性规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-api-003-api-幂等性规范">[DESIGN-API-003] API 幂等性规范</a></li><li class="lvl-2"><a href="#1-原则">1. 原则</a></li><li class="lvl-2"><a href="#2-幂等性标识">2. 幂等性标识</a></li><li class="lvl-3"><a href="#2-1-idempotency-key">2.1 Idempotency-Key</a></li><li class="lvl-2"><a href="#3-适用端点">3. 适用端点</a></li><li class="lvl-3"><a href="#3-1-必须幂等的端点">3.1 必须幂等的端点</a></li><li class="lvl-3"><a href="#3-2-天然幂等的端点">3.2 天然幂等的端点</a></li><li class="lvl-2"><a href="#4-幂等性存储">4. 幂等性存储</a></li><li class="lvl-3"><a href="#4-1-记录结构">4.1 记录结构</a></li><li class="lvl-3"><a href="#4-2-作用域-scope">4.2 作用域（Scope）</a></li><li class="lvl-2"><a href="#5-处理流程">5. 处理流程</a></li><li class="lvl-3"><a href="#5-1-请求处理">5.1 请求处理</a></li><li class="lvl-2"><a href="#6-intent-hash-意图哈希">6. Intent Hash（意图哈希）</a></li><li class="lvl-3"><a href="#6-1-用途">6.1 用途</a></li><li class="lvl-3"><a href="#6-2-生成规则">6.2 生成规则</a></li><li class="lvl-3"><a href="#6-3-冲突检测">6.3 冲突检测</a></li><li class="lvl-2"><a href="#7-过期与清理">7. 过期与清理</a></li><li class="lvl-3"><a href="#7-1-ttl-规则">7.1 TTL 规则</a></li><li class="lvl-3"><a href="#7-2-清理策略">7.2 清理策略</a></li><li class="lvl-2"><a href="#8-响应格式">8. 响应格式</a></li><li class="lvl-3"><a href="#8-1-幂等重放">8.1 幂等重放</a></li><li class="lvl-3"><a href="#8-2-冲突响应">8.2 冲突响应</a></li><li class="lvl-3"><a href="#8-3-响应头">8.3 响应头</a></li><li class="lvl-2"><a href="#9-客户端指南">9. 客户端指南</a></li><li class="lvl-3"><a href="#9-1-最佳实践">9.1 最佳实践</a></li><li class="lvl-3"><a href="#9-2-重试策略">9.2 重试策略</a></li><li class="lvl-2"><a href="#10-守卫">10. 守卫</a></li><li class="lvl-2"><a href="#11-版本历史">11. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-api-003-api-幂等性规范">[DESIGN-API-003] API 幂等性规范<a class="anchor" href="#design-api-003-api-幂等性规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>用途</strong>：定义 khy-os API 幂等性标准，确保重复请求不产生重复副作用。<br>当前 <code>largeTasks.js</code> 和 <code>remoteSsh.js</code> 已有幂等性实现，但缺少统一规范。</p></blockquote>
+<hr>
+<h2 id="1-原则">1. 原则<a class="anchor" href="#1-原则" aria-label="锚点">#</a></h2>
+<ol><li><strong>副作用操作必须幂等</strong>：创建/更新/删除等有副作用的 API 必须支持幂等性</li><li><strong>安全操作天然幂等</strong>：GET/HEAD/OPTIONS 无需额外处理</li><li><strong>客户端驱动</strong>：幂等性由客户端通过 <code>Idempotency-Key</code> 头控制</li><li><strong>服务端保障</strong>：服务端检测重复请求，返回缓存结果而非重新执行</li></ol>
+<hr>
+<h2 id="2-幂等性标识">2. 幂等性标识<a class="anchor" href="#2-幂等性标识" aria-label="锚点">#</a></h2>
+<h3 id="2-1-idempotency-key">2.1 Idempotency-Key<a class="anchor" href="#2-1-idempotency-key" aria-label="锚点">#</a></h3>
+<pre><code>Idempotency-Key: &lt;uuid&gt;</code></pre>
+<table><thead><tr><th>属性</th><th>要求</th></tr></thead><tbody><tr><td>格式</td><td>UUID v4（<code>xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx</code>）</td></tr><tr><td>长度</td><td>36 字符</td></tr><tr><td>生成</td><td>客户端生成，调用前预生成</td></tr><tr><td>有效期</td><td>24 小时（创建时起算）</td></tr><tr><td>作用域</td><td>幂等性作用域由服务端定义，默认按 endpoint + method 隔离</td></tr></tbody></table>
+<p><strong>生成示例</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">import</span> { randomUUID } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;crypto&#x27;</span>;
+<span class="hljs-keyword">const</span> idempotencyKey = <span class="hljs-title function_">randomUUID</span>(); <span class="hljs-comment">// &#x27;550e8400-e29b-41d4-a716-446655440000&#x27;</span></code></pre>
+<hr>
+<h2 id="3-适用端点">3. 适用端点<a class="anchor" href="#3-适用端点" aria-label="锚点">#</a></h2>
+<h3 id="3-1-必须幂等的端点">3.1 必须幂等的端点<a class="anchor" href="#3-1-必须幂等的端点" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>HTTP 方法</th><th>资源</th><th>幂等性要求</th></tr></thead><tbody><tr><td>POST</td><td><code>/api/v1/large-tasks</code></td><td>必须有 <code>Idempotency-Key</code></td></tr><tr><td>POST</td><td><code>/api/v1/remote-ssh/execute</code></td><td>必须有 <code>Idempotency-Key</code></td></tr><tr><td>POST</td><td><code>/api/v1/payments</code></td><td>必须有 <code>Idempotency-Key</code></td></tr><tr><td>POST</td><td><code>/api/v1/orders</code></td><td>必须有 <code>Idempotency-Key</code></td></tr><tr><td>PUT</td><td><code>/api/v1/resources/:id</code></td><td>建议有 <code>Idempotency-Key</code></td></tr><tr><td>DELETE</td><td><code>/api/v1/resources/:id</code></td><td>建议有 <code>Idempotency-Key</code></td></tr></tbody></table>
+<h3 id="3-2-天然幂等的端点">3.2 天然幂等的端点<a class="anchor" href="#3-2-天然幂等的端点" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>HTTP 方法</th><th>说明</th></tr></thead><tbody><tr><td>GET</td><td>读取资源，无副作用</td></tr><tr><td>HEAD</td><td>同 GET，无响应体</td></tr><tr><td>OPTIONS</td><td>CORS 预检，无副作用</td></tr><tr><td>PUT (全量替换)</td><td>同一请求重复执行结果一致</td></tr></tbody></table>
+<hr>
+<h2 id="4-幂等性存储">4. 幂等性存储<a class="anchor" href="#4-幂等性存储" aria-label="锚点">#</a></h2>
+<h3 id="4-1-记录结构">4.1 记录结构<a class="anchor" href="#4-1-记录结构" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">{
+  <span class="hljs-attr">scope</span>: <span class="hljs-string">&#x27;large_task&#x27;</span>,           <span class="hljs-comment">// 幂等性作用域</span>
+  <span class="hljs-attr">idempotency_key</span>: <span class="hljs-string">&#x27;uuid&#x27;</span>,       <span class="hljs-comment">// 客户端提供的幂等键</span>
+  <span class="hljs-attr">intent_hash</span>: <span class="hljs-string">&#x27;sha256&#x27;</span>,         <span class="hljs-comment">// 请求意图哈希（可选，用于冲突检测）</span>
+  <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;in_progress&#x27;</span>,         <span class="hljs-comment">// in_progress | succeeded | failed | expired</span>
+  <span class="hljs-attr">result_json</span>: <span class="hljs-literal">null</span>,             <span class="hljs-comment">// 成功时的响应结果</span>
+  <span class="hljs-attr">error_message</span>: <span class="hljs-literal">null</span>,           <span class="hljs-comment">// 失败时的错误信息</span>
+  <span class="hljs-attr">created_at</span>: <span class="hljs-string">&#x27;2026-09-10T12:00:00.000Z&#x27;</span>,
+  <span class="hljs-attr">updated_at</span>: <span class="hljs-string">&#x27;2026-09-10T12:00:00.000Z&#x27;</span>,
+  <span class="hljs-attr">expiry_at</span>: <span class="hljs-string">&#x27;2026-09-11T12:00:00.000Z&#x27;</span>  <span class="hljs-comment">// 24h 后过期</span>
+}</code></pre>
+<h3 id="4-2-作用域-scope">4.2 作用域（Scope）<a class="anchor" href="#4-2-作用域-scope" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>作用域</th><th>说明</th><th>示例</th></tr></thead><tbody><tr><td><code>large_task</code></td><td>大型任务创建</td><td><code>POST /api/v1/large-tasks</code></td></tr><tr><td><code>remote_exec</code></td><td>远程命令执行</td><td><code>POST /api/v1/remote-ssh/execute</code></td></tr><tr><td><code>payment</code></td><td>支付操作</td><td><code>POST /api/v1/payments</code></td></tr><tr><td><code>order</code></td><td>订单操作</td><td><code>POST /api/v1/orders</code></td></tr></tbody></table>
+<p><strong>规则</strong>：同一作用域内，相同的 <code>idempotency_key</code> 只能有一个活跃请求。</p>
+<hr>
+<h2 id="5-处理流程">5. 处理流程<a class="anchor" href="#5-处理流程" aria-label="锚点">#</a></h2>
+<pre><code>客户端请求
+    ↓
+生成 Idempotency-Key（UUID v4）
+    ↓
+发送请求（带 Idempotency-Key 头）
+    ↓
+服务端检查幂等性记录
+    ├─ 存在 + succeeded → 返回缓存结果（200 + replay: true）
+    ├─ 存在 + in_progress → 返回 409（idempotency_in_progress）
+    ├─ 存在 + failed → 返回缓存错误（或允许重试）
+    └─ 不存在 → 创建记录（in_progress）→ 执行业务逻辑
+                              ↓
+                       成功 → 更新为 succeeded + 缓存结果
+                       失败 → 更新为 failed + 缓存错误</code></pre>
+<h3 id="5-1-请求处理">5.1 请求处理<a class="anchor" href="#5-1-请求处理" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">handleIdempotentRequest</span>(<span class="hljs-params">req, res, businessLogic</span>) {
+  <span class="hljs-keyword">const</span> idempotencyKey = req.<span class="hljs-property">headers</span>[<span class="hljs-string">&#x27;idempotency-key&#x27;</span>];
+
+  <span class="hljs-keyword">if</span> (!idempotencyKey) {
+    <span class="hljs-comment">// 对于必须幂等的端点，返回 400</span>
+    <span class="hljs-keyword">if</span> (<span class="hljs-title function_">requiresIdempotency</span>(req.<span class="hljs-property">path</span>, req.<span class="hljs-property">method</span>)) {
+      <span class="hljs-keyword">return</span> apiResponse.<span class="hljs-title function_">fail</span>(res, <span class="hljs-string">&#x27;INVALID_ARGUMENT&#x27;</span>,
+        <span class="hljs-string">&#x27;幂等操作需要提供 Idempotency-Key 请求头&#x27;</span>, { <span class="hljs-attr">status</span>: <span class="hljs-number">400</span> });
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">businessLogic</span>(req, res); <span class="hljs-comment">// 非必须幂等的端点直接执行</span>
+  }
+
+  <span class="hljs-keyword">const</span> scope = <span class="hljs-title function_">getScope</span>(req.<span class="hljs-property">path</span>, req.<span class="hljs-property">method</span>);
+  <span class="hljs-keyword">const</span> record = <span class="hljs-keyword">await</span> idempotencyStore.<span class="hljs-title function_">get</span>(scope, idempotencyKey);
+
+  <span class="hljs-keyword">if</span> (record) {
+    <span class="hljs-keyword">if</span> (record.<span class="hljs-property">status</span> === <span class="hljs-string">&#x27;succeeded&#x27;</span>) {
+      <span class="hljs-comment">// 重放缓存结果</span>
+      <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">200</span>).<span class="hljs-title function_">json</span>({
+        ...record.<span class="hljs-property">result_json</span>,
+        <span class="hljs-attr">_meta</span>: { <span class="hljs-attr">replayed</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">original_request_at</span>: record.<span class="hljs-property">created_at</span> }
+      });
+    }
+    <span class="hljs-keyword">if</span> (record.<span class="hljs-property">status</span> === <span class="hljs-string">&#x27;in_progress&#x27;</span>) {
+      <span class="hljs-comment">// 检查是否过期（stale takeover）</span>
+      <span class="hljs-keyword">const</span> ageMs = <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() - <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">parse</span>(record.<span class="hljs-property">updated_at</span>);
+      <span class="hljs-keyword">if</span> (ageMs &gt; <span class="hljs-variable constant_">IN_PROGRESS_TTL_MS</span>) {
+        <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">warn</span>(<span class="hljs-string">`[idempotency] stale takeover: scope=<span class="hljs-subst">${scope}</span> key=<span class="hljs-subst">${idempotencyKey}</span> age=<span class="hljs-subst">${ageMs}</span>ms`</span>);
+        <span class="hljs-comment">// 允许接管，继续执行</span>
+      } <span class="hljs-keyword">else</span> {
+        <span class="hljs-keyword">return</span> apiResponse.<span class="hljs-title function_">fail</span>(res, <span class="hljs-string">&#x27;CONFLICT&#x27;</span>,
+          <span class="hljs-string">&#x27;相同 Idempotency-Key 的请求正在处理中&#x27;</span>, { <span class="hljs-attr">status</span>: <span class="hljs-number">409</span> });
+      }
+    }
+    <span class="hljs-keyword">if</span> (record.<span class="hljs-property">status</span> === <span class="hljs-string">&#x27;failed&#x27;</span>) {
+      <span class="hljs-comment">// 返回缓存错误（允许客户端重试）</span>
+      <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(record.<span class="hljs-property">error_status</span> || <span class="hljs-number">500</span>).<span class="hljs-title function_">json</span>(record.<span class="hljs-property">result_json</span>);
+    }
+  }
+
+  <span class="hljs-comment">// 创建幂等性记录</span>
+  <span class="hljs-keyword">await</span> idempotencyStore.<span class="hljs-title function_">create</span>({
+    scope,
+    <span class="hljs-attr">idempotency_key</span>: idempotencyKey,
+    <span class="hljs-attr">intent_hash</span>: req.<span class="hljs-property">headers</span>[<span class="hljs-string">&#x27;intent-hash&#x27;</span>] || <span class="hljs-literal">null</span>,
+    <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;in_progress&#x27;</span>,
+  });
+
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> <span class="hljs-title function_">businessLogic</span>(req, res);
+    <span class="hljs-keyword">await</span> idempotencyStore.<span class="hljs-title function_">update</span>(scope, idempotencyKey, {
+      <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;succeeded&#x27;</span>,
+      <span class="hljs-attr">result_json</span>: result,
+    });
+    <span class="hljs-keyword">return</span> result;
+  } <span class="hljs-keyword">catch</span> (err) {
+    <span class="hljs-keyword">await</span> idempotencyStore.<span class="hljs-title function_">update</span>(scope, idempotencyKey, {
+      <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;failed&#x27;</span>,
+      <span class="hljs-attr">result_json</span>: { <span class="hljs-attr">error</span>: err.<span class="hljs-property">message</span> },
+      <span class="hljs-attr">error_status</span>: err.<span class="hljs-property">statusCode</span> || <span class="hljs-number">500</span>,
+    });
+    <span class="hljs-keyword">throw</span> err;
+  }
+}</code></pre>
+<hr>
+<h2 id="6-intent-hash-意图哈希">6. Intent Hash（意图哈希）<a class="anchor" href="#6-intent-hash-意图哈希" aria-label="锚点">#</a></h2>
+<h3 id="6-1-用途">6.1 用途<a class="anchor" href="#6-1-用途" aria-label="锚点">#</a></h3>
+<p><code>Intent-Hash</code> 用于检测同一幂等键下的不同意图（防止请求篡改）。</p>
+<pre><code>Intent-Hash: sha256=&lt;base64-encoded-hash&gt;</code></pre>
+<h3 id="6-2-生成规则">6.2 生成规则<a class="anchor" href="#6-2-生成规则" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 对请求体进行确定性排序后计算哈希</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">computeIntentHash</span>(<span class="hljs-params">body</span>) {
+  <span class="hljs-keyword">const</span> canonical = <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>(<span class="hljs-title function_">sortKeysDeep</span>(body));
+  <span class="hljs-keyword">return</span> crypto.<span class="hljs-title function_">createHash</span>(<span class="hljs-string">&#x27;sha256&#x27;</span>).<span class="hljs-title function_">update</span>(canonical).<span class="hljs-title function_">digest</span>(<span class="hljs-string">&#x27;base64&#x27;</span>);
+}</code></pre>
+<h3 id="6-3-冲突检测">6.3 冲突检测<a class="anchor" href="#6-3-冲突检测" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>场景</th><th>处理</th></tr></thead><tbody><tr><td>相同 key + 相同 intent_hash</td><td>返回缓存结果</td></tr><tr><td>相同 key + 不同 intent_hash</td><td>返回 409（<code>idempotency_conflict</code>）</td></tr><tr><td>相同 key + 无 intent_hash</td><td>允许执行（不检测冲突）</td></tr></tbody></table>
+<hr>
+<h2 id="7-过期与清理">7. 过期与清理<a class="anchor" href="#7-过期与清理" aria-label="锚点">#</a></h2>
+<h3 id="7-1-ttl-规则">7.1 TTL 规则<a class="anchor" href="#7-1-ttl-规则" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>状态</th><th>TTL</th><th>说明</th></tr></thead><tbody><tr><td><code>in_progress</code></td><td>15 分钟</td><td>超过 TTL 视为 stale，允许接管</td></tr><tr><td><code>succeeded</code></td><td>24 小时</td><td>缓存结果有效期</td></tr><tr><td><code>failed</code></td><td>1 小时</td><td>缓存错误有效期，之后允许重试</td></tr></tbody></table>
+<h3 id="7-2-清理策略">7.2 清理策略<a class="anchor" href="#7-2-清理策略" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 定期清理过期记录（每小时）</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">cleanupExpiredRecords</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> cutoff = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>(<span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() - <span class="hljs-number">24</span> * <span class="hljs-number">3600</span> * <span class="hljs-number">1000</span>); <span class="hljs-comment">// 24h 前</span>
+  <span class="hljs-keyword">await</span> idempotencyStore.<span class="hljs-title function_">deleteOlderThan</span>(cutoff);
+}</code></pre>
+<hr>
+<h2 id="8-响应格式">8. 响应格式<a class="anchor" href="#8-响应格式" aria-label="锚点">#</a></h2>
+<h3 id="8-1-幂等重放">8.1 幂等重放<a class="anchor" href="#8-1-幂等重放" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">123</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;pending&quot;</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;_meta&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;replayed&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;original_request_at&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-10T12:00:00.000Z&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="8-2-冲突响应">8.2 冲突响应<a class="anchor" href="#8-2-冲突响应" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;IDEMPOTENCY_CONFLICT&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;CLIENT_ERROR&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Idempotency-Key 与历史请求意图不一致&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="8-3-响应头">8.3 响应头<a class="anchor" href="#8-3-响应头" aria-label="锚点">#</a></h3>
+<pre><code class="language-http"><span class="hljs-attribute">Idempotency-Key</span><span class="hljs-punctuation">: </span>uuid           # 回显客户端提供的键（用于调试）
+<span class="hljs-attribute">Idempotency-Replayed</span><span class="hljs-punctuation">: </span>true      # 当结果为重放时出现
+<span class="hljs-attribute">Idempotency-Expires</span><span class="hljs-punctuation">: </span>86400      # 记录过期时间（秒）</code></pre>
+<hr>
+<h2 id="9-客户端指南">9. 客户端指南<a class="anchor" href="#9-客户端指南" aria-label="锚点">#</a></h2>
+<h3 id="9-1-最佳实践">9.1 最佳实践<a class="anchor" href="#9-1-最佳实践" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规则</th><th>说明</th></tr></thead><tbody><tr><td>提前生成</td><td>发送请求前生成 UUID，不依赖服务端响应</td></tr><tr><td>请求间唯一</td><td>每个新操作使用新的 UUID</td></tr><tr><td>重试时复用</td><td>网络超时重试时使用相同的 UUID</td></tr><tr><td>不要猜测</td><td>不要通过重试猜测服务端是否收到</td></tr></tbody></table>
+<h3 id="9-2-重试策略">9.2 重试策略<a class="anchor" href="#9-2-重试策略" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">idempotentRequest</span>(<span class="hljs-params">url, options, maxRetries = <span class="hljs-number">3</span></span>) {
+  <span class="hljs-keyword">const</span> idempotencyKey = crypto.<span class="hljs-title function_">randomUUID</span>();
+
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> attempt = <span class="hljs-number">0</span>; attempt &lt; maxRetries; attempt++) {
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fetch</span>(url, {
+        ...options,
+        <span class="hljs-attr">headers</span>: {
+          ...options.<span class="hljs-property">headers</span>,
+          <span class="hljs-string">&#x27;Idempotency-Key&#x27;</span>: idempotencyKey,
+        },
+      });
+
+      <span class="hljs-keyword">if</span> (response.<span class="hljs-property">ok</span>) <span class="hljs-keyword">return</span> response;
+
+      <span class="hljs-comment">// 409 冲突不重试（需人工处理）</span>
+      <span class="hljs-keyword">if</span> (response.<span class="hljs-property">status</span> === <span class="hljs-number">409</span>) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">&#x27;Idempotency conflict&#x27;</span>);
+
+      <span class="hljs-comment">// 429 限流按 retryAfter 重试</span>
+      <span class="hljs-keyword">if</span> (response.<span class="hljs-property">status</span> === <span class="hljs-number">429</span>) {
+        <span class="hljs-keyword">const</span> retryAfter = response.<span class="hljs-property">headers</span>.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;Retry-After&#x27;</span>);
+        <span class="hljs-keyword">await</span> <span class="hljs-title function_">sleep</span>(<span class="hljs-built_in">parseInt</span>(retryAfter) * <span class="hljs-number">1000</span>);
+        <span class="hljs-keyword">continue</span>;
+      }
+
+      <span class="hljs-comment">// 5xx 可重试</span>
+      <span class="hljs-keyword">if</span> (response.<span class="hljs-property">status</span> &gt;= <span class="hljs-number">500</span>) {
+        <span class="hljs-keyword">await</span> <span class="hljs-title function_">sleep</span>(<span class="hljs-number">1000</span> * <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">pow</span>(<span class="hljs-number">2</span>, attempt));
+        <span class="hljs-keyword">continue</span>;
+      }
+
+      <span class="hljs-keyword">return</span> response;
+    } <span class="hljs-keyword">catch</span> (err) {
+      <span class="hljs-keyword">if</span> (err.<span class="hljs-property">message</span> === <span class="hljs-string">&#x27;Idempotency conflict&#x27;</span>) <span class="hljs-keyword">throw</span> err;
+      <span class="hljs-keyword">if</span> (attempt === maxRetries - <span class="hljs-number">1</span>) <span class="hljs-keyword">throw</span> err;
+      <span class="hljs-keyword">await</span> <span class="hljs-title function_">sleep</span>(<span class="hljs-number">1000</span> * <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">pow</span>(<span class="hljs-number">2</span>, attempt));
+    }
+  }
+}</code></pre>
+<hr>
+<h2 id="10-守卫">10. 守卫<a class="anchor" href="#10-守卫" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>守卫</th><th>检查项</th><th>严重度</th></tr></thead><tbody><tr><td><code>idempotency-gate</code></td><td>POST 副作用端点必须验证 <code>Idempotency-Key</code></td><td>P0</td></tr><tr><td><code>idempotency-gate</code></td><td>幂等键格式必须为 UUID v4</td><td>P1</td></tr><tr><td><code>idempotency-gate</code></td><td>相同 key 重复请求必须返回相同结果</td><td>P1</td></tr><tr><td><code>idempotency-gate</code></td><td>intent_hash 冲突必须返回 409</td><td>P0</td></tr></tbody></table>
+<hr>
+<h2 id="11-版本历史">11. 版本历史<a class="anchor" href="#11-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义 API 幂等性规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-API/[DESIGN-API-002] 外部错误信封与版本弃用政策.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-API-002] 外部错误信封与版本弃用政策</div></a><a class="next" href="../../../docs/10_规范/DESIGN-API/00_INDEX_DESIGN-API-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">DESIGN-API</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-API/[DESIGN-API-003] API 幂等性规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

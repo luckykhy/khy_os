@@ -1,0 +1,25 @@
+  ---
+  duration_ms: 0.8952
+  type: 'test'
+  ...
+# Subtest: fitBorder: busy gutter switches mid char but keeps width
+ok 631 - fitBorder: busy gutter switches mid char but keeps width
+  ---
+  duration_ms: 1.1351
+  type: 'test'
+  ...
+# Subtest: visWidth: emoji width 2, CJK 2, ASCII 1
+ok 632 - visWidth: emoji width 2, CJK 2, ASCII 1
+  ---
+  duration_ms: 0.8631
+  type: 'test'
+  ...
+1..632
+# tests 632
+# suites 0
+# pass 627
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5157.3717

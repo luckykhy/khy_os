@@ -7,6 +7,7 @@ const { loadRegistry, loadBinding, gateIncluded } = require('./registry');
 const { buildManifest } = require('./manifest');
 const baselineLib = require('./baseline');
 const { readSuppressions } = require('./suppression');
+const { interpreterFor, runnerLabel } = require('../../lib/pythonInterpreter');
 const ledger = require('./ledger');
 
 /**
@@ -24,6 +25,11 @@ const ledger = require('./ledger');
  * convention. When a checker does not follow it, the checker's exit code still
  * drives the blocking decision, so an unparseable checker degrades safely
  * rather than silently passing.
+ *
+ * Checkers are launched with the interpreter their suffix demands: node for
+ * `.js`/`.mjs`/`.cjs`, a resolved Python for `.py` (wiring.js counts `.py` as a
+ * checker suffix, so the binding layer must be able to run them — see
+ * `scripts/lib/pythonInterpreter.js`).
  */
 
 const FINDING_LINE = /^\[(ERROR|WARN )\]\s+(\S+)\s+(\S+):(\d+)\s*$/;
@@ -237,15 +243,22 @@ function run(opts = {}) {
     const started = Date.now();
     say('start', checker.script, index + 1, checkers.length, `rules=${checker.rules.join(',')}`);
 
-    const invocation = spawnSync(process.execPath, [path.join(repoRoot, checker.script), ...checker.args], {
-      cwd: repoRoot,
-      env: process.env,
-      encoding: 'utf8',
-      windowsHide: true,
-      timeout: opts.timeoutMs || 300000,
-    });
+    // `.py` checkers need a Python interpreter, not node. Launching them with
+    // `process.execPath` made every Python checker fail by construction (node
+    // parses Python as JS), which read as "the rule has a broken executor".
+    const runner = interpreterFor(checker.script);
+    const invocation = runner.command
+      ? spawnSync(runner.command, [path.join(repoRoot, checker.script), ...checker.args], {
+        cwd: repoRoot,
+        env: process.env,
+        encoding: 'utf8',
+        windowsHide: true,
+        timeout: opts.timeoutMs || 300000,
+      })
+      : { error: new Error(runner.reason), stdout: '', stderr: '' };
     const durationMs = Date.now() - started;
-    // A spawn error (missing script, EACCES) counts as failure, not success.
+    // A spawn error (missing script, EACCES, no interpreter) counts as failure,
+    // not success.
     const code = invocation.error ? 1 : (invocation.status ?? 1);
 
     const parsed = parseFindings(`${invocation.stdout || ''}\n${invocation.stderr || ''}`);
@@ -260,13 +273,26 @@ function run(opts = {}) {
     // as "recorded", not as a blocker.
     let checkerBlocking = false;
 
-    // A checker that exits non-zero without emitting a parseable finding must
-    // still fail the gate: otherwise "fail silently" would read as pass.
+    // A non-zero exit is only *explained* when every error-severity finding the
+    // checker printed is claimed by a registered rule. An error finding no rule
+    // claims never reaches the mapping above, so without counting it here the
+    // checker's failure would read as pass — the silent decoupling that
+    // `registry: check-repo-layout 声明的每一类计数都被某条规则认领` guards by
+    // hand for one checker only. check-change-safety's `changed-count-error` is
+    // a live instance: exit 1, nothing claimed, gate green.
     // Recorded as a checker-level pseudo-finding so the ledger keeps evidence.
     // The verdict follows the owning rules' declared strength, so a checker that
     // only reports standing inventory (an advisory rule) degrades to a recorded
     // finding instead of red-lining every gate for a condition the repo accepts.
-    if (code !== 0 && !parsed.some((f) => f.severity === 'error')) {
+    const unclaimedErrors = unmapped.filter((f) => f.severity === 'error');
+    const hasParsedError = parsed.some((f) => f.severity === 'error');
+    const unexplainedFailure = code !== 0 && (!hasParsedError || unclaimedErrors.length > 0);
+
+    if (unexplainedFailure) {
+      const unclaimedList = [...new Set(unclaimedErrors.map((f) => f.finding))].join(', ');
+      const evidence = hasParsedError
+        ? `无规则认领的 error finding：${unclaimedList}`
+        : '未输出可解析的 finding';
       const ownerRules = checker.rules.join(',');
       const strengths = ownerStrengths(checker.rules, manifest);
       const failClosed = strengths.some((s) => s === 'blocking');
@@ -282,8 +308,8 @@ function run(opts = {}) {
         severity: 'error',
         strength,
         message: failClosed
-          ? `执行器 ${checker.script} 退出码 ${code}，但未输出可解析的 finding；按失败处理。请单独运行 node ${checker.script} 查看原因。`
-          : `执行器 ${checker.script} 退出码 ${code}（存量盘点类检查器，无逐条 finding）；已记录不阻断。请单独运行 node ${checker.script} 查看。`,
+          ? `执行器 ${checker.script} 退出码 ${code}，且 ${evidence}；按失败处理。请单独运行 ${runnerLabel(checker.script)} 查看原因。${runner.reason ? ` ${runner.reason}` : ''}`
+          : `执行器 ${checker.script} 退出码 ${code}（${evidence}；存量盘点类检查器，无逐条 finding）；已记录不阻断。请单独运行 ${runnerLabel(checker.script)} 查看。${runner.reason ? ` ${runner.reason}` : ''}`,
         checker: checker.script,
         blocking: failClosed,
         suppressed: false,

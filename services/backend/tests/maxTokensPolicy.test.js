@@ -1,14 +1,14 @@
 'use strict';
 
 /**
- * Tests for maxTokensPolicy.resolveMaxTokens â€?the unified dynamic max_tokens
+ * Tests for maxTokensPolicy.resolveMaxTokens â€”the unified dynamic max_tokens
  * decision (pure function, zero IO). Pins the four contract rules:
  *   1. Explicit value wins; provably-overflowing explicit values are safely
  *      clamped down to the available window (never raised).
- *   2. No explicit value + known window â†?derive min(outputLimit, available);
+ *   2. No explicit value + known window â†’derive min(outputLimit, available);
  *      abstain (null) when available < minCompletion.
- *   3. Unknown window + known model output limit â†?use the output limit.
- *   4. Everything unknown â†?abstain (null); never invent a large value.
+ *   3. Unknown window + known model output limit â†’use the output limit.
+ *   4. Everything unknown â†’abstain (null); never invent a large value.
  */
 
 const assert = require('assert');
@@ -16,7 +16,7 @@ const assert = require('assert');
 const { resolveMaxTokens } = require('../src/services/gateway/maxTokensPolicy');
 
 describe('maxTokensPolicy.resolveMaxTokens', () => {
-  describe('rule 1 â€?explicit value', () => {
+  describe('rule 1 â€”explicit value', () => {
     test('respects an explicit value that fits the window', () => {
       const r = resolveMaxTokens({
         explicitMaxTokens: 4000,
@@ -37,7 +37,7 @@ describe('maxTokensPolicy.resolveMaxTokens', () => {
     });
 
     test('safely clamps an explicit value that overflows the window', () => {
-      // available = 8000 - 4000 - 512 = 3488; explicit 6000 > 3488 â†?clamp
+      // available = 8000 - 4000 - 512 = 3488; explicit 6000 > 3488 â†’clamp
       const r = resolveMaxTokens({
         explicitMaxTokens: 6000,
         promptTokenEstimate: 4000,
@@ -51,7 +51,7 @@ describe('maxTokensPolicy.resolveMaxTokens', () => {
     });
 
     test('keeps the explicit value when the window is too tight to clamp usefully', () => {
-      // available = 4000 - 3800 - 512 < minCompletion â†?keep explicit, no clamp
+      // available = 4000 - 3800 - 512 < minCompletion â†’keep explicit, no clamp
       const r = resolveMaxTokens({
         explicitMaxTokens: 6000,
         promptTokenEstimate: 3800,
@@ -65,7 +65,7 @@ describe('maxTokensPolicy.resolveMaxTokens', () => {
     });
   });
 
-  describe('rule 2 â€?derive from known context window', () => {
+  describe('rule 2 â€”derive from known context window', () => {
     test('uses the available window when no output limit is known', () => {
       // available = 128000 - 10000 - 512 = 117488
       const r = resolveMaxTokens({
@@ -104,7 +104,7 @@ describe('maxTokensPolicy.resolveMaxTokens', () => {
     });
 
     test('abstains (null) when available < minCompletion', () => {
-      // available = 8000 - 7800 - 512 < 0 â†?no useful budget
+      // available = 8000 - 7800 - 512 < 0 â†’no useful budget
       const r = resolveMaxTokens({
         promptTokenEstimate: 7800,
         contextWindow: 8000,
@@ -116,7 +116,7 @@ describe('maxTokensPolicy.resolveMaxTokens', () => {
     });
   });
 
-  describe('rule 3 â€?unknown window, known output limit', () => {
+  describe('rule 3 â€”unknown window, known output limit', () => {
     test('uses the model output limit as-is', () => {
       const r = resolveMaxTokens({ contextWindow: 0, maxOutputTokens: 32000 });
       expect(r.maxTokens).toBe(32000);
@@ -124,7 +124,7 @@ describe('maxTokensPolicy.resolveMaxTokens', () => {
     });
   });
 
-  describe('rule 4 â€?everything unknown', () => {
+  describe('rule 4 â€”everything unknown', () => {
     test('abstains with null and never invents a value', () => {
       const r = resolveMaxTokens({});
       expect(r.maxTokens).toBe(null);
@@ -143,8 +143,8 @@ describe('maxTokensPolicy.resolveMaxTokens', () => {
     });
   });
 
-  describe('rule 4 â€?centralized defaultFallback', () => {
-    test('everything unknown + defaultFallback > 0 â†?uses the fallback value', () => {
+  describe('rule 4 â€”centralized defaultFallback', () => {
+    test('everything unknown + defaultFallback > 0 â†’uses the fallback value', () => {
       const r = resolveMaxTokens({ defaultFallback: 4096 });
       expect(r.maxTokens).toBe(4096);
       expect(r.source).toBe('default_fallback');
@@ -152,7 +152,7 @@ describe('maxTokensPolicy.resolveMaxTokens', () => {
       expect(r.diagnostics.defaultFallback).toBe(4096);
     });
 
-    test('everything unknown + defaultFallback absent/0 â†?still abstains (null)', () => {
+    test('everything unknown + defaultFallback absent/0 â†’still abstains (null)', () => {
       const rAbsent = resolveMaxTokens({});
       expect(rAbsent.maxTokens).toBe(null);
       expect(rAbsent.source).toBe('unknown');
@@ -162,7 +162,7 @@ describe('maxTokensPolicy.resolveMaxTokens', () => {
     });
 
     test('insufficient_window abstain is NOT overridden by defaultFallback', () => {
-      // available = 8000 - 7800 - 512 < minCompletion â†?abstain regardless of fallback
+      // available = 8000 - 7800 - 512 < minCompletion â†’abstain regardless of fallback
       const r = resolveMaxTokens({
         promptTokenEstimate: 7800,
         contextWindow: 8000,

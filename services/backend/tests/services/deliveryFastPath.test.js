@@ -1,6 +1,6 @@
 'use strict';
 /**
- * deliveryFastPath.test.js �?交付诚实性与快速路径确定性的补充单测�?
+ * deliveryFastPath.test.js — 交付诚实性与快速路径确定性的补充单测�?
  *
  * 覆盖本目标新增的行为:
  *   1) verificationAgent.verify 在「无可运行验证步骤」时如实暴露 noSteps/verified,

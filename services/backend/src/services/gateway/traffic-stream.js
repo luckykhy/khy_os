@@ -262,6 +262,16 @@ function getTrafficStream(opts) {
   return _instance;
 }
 
+// SIGTERM handler for graceful shutdown
+process.on('SIGTERM', async () => {
+  // drain: stop() closes all clients and heartbeat, waiting for connections to drain
+  // db: close database connections managed by aiManagementServer, no direct db access
+  if (_instance && _instance._enabled) {
+    console.log('[traffic-stream] SIGTERM received, shutting down');
+    _instance.stop();
+  }
+});
+
 module.exports = {
   TrafficStream,
   getTrafficStream,

@@ -17,7 +17,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const V = require('../src/services/syscallGateway/actionContractVerifier');
+const V = require('../src/services/domain/system/syscallGateway/actionContractVerifier.js');
 
 const ON = { KHY_ACTION_CONTRACT: 'true' };
 const OFF = { KHY_ACTION_CONTRACT: 'off' };

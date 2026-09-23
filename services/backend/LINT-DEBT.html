@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: LINT-DEBT.md -->
+<title>Lint 债务登记与追踪 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>Lint 债务登记与追踪</div>
+      <header class="hero reveal"><h1>Lint 债务登记与追踪</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#lint-债务登记与追踪">Lint 债务登记与追踪</a></li><li class="lvl-2"><a href="#统计">统计</a></li><li class="lvl-2"><a href="#热点文件-待修复">热点文件（待修复）</a></li><li class="lvl-2"><a href="#自动修复策略">自动修复策略</a></li><li class="lvl-3"><a href="#可自动修复的问题">可自动修复的问题</a></li><li class="lvl-3"><a href="#需人工修复的问题">需人工修复的问题</a></li><li class="lvl-2"><a href="#月度目标">月度目标</a></li><li class="lvl-2"><a href="#如何参与">如何参与</a></li><li class="lvl-2"><a href="#ci-门禁">CI 门禁</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="lint-债务登记与追踪">Lint 债务登记与追踪<a class="anchor" href="#lint-债务登记与追踪" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：追踪 services/backend/src 的 3417 条 lint 问题，防止&quot;新文件零容忍 vs 旧文件无约束&quot;导致债务持续增长。<br><strong>规则</strong>：</p>
+<ul><li>新文件必须零容忍（--max-warnings 0）</li><li>修改旧文件时，如果该文件 lint 问题 &gt; 10 条，要求修复至少 50%</li><li>热点文件（Top 50 高频修改）优先修复</li><li>每月减少 10% 债务</li></ul>
+<p><strong>最后更新</strong>：2026-09-03</p></blockquote>
+<h2 id="统计">统计<a class="anchor" href="#统计" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>指标</th><th>数值</th></tr></thead><tbody><tr><td>总问题数</td><td>3417</td></tr><tr><td>Errors</td><td>428</td></tr><tr><td>Warnings</td><td>2989</td></tr><tr><td>涉及文件数</td><td>1060</td></tr><tr><td>总文件数</td><td>2246</td></tr><tr><td>债务密度</td><td>1.52 问题/文件</td></tr></tbody></table>
+<h2 id="热点文件-待修复">热点文件（待修复）<a class="anchor" href="#热点文件-待修复" aria-label="锚点">#</a></h2>
+<blockquote><p>高频修改文件 = 近期 PR 中改动次数最多的文件。<br>修复这些文件的 lint 问题能最大化减少债务。</p></blockquote>
+<table><thead><tr><th>#</th><th>文件路径</th><th>lint 问题数</th><th>优先级</th></tr></thead><tbody><tr><td>1</td><td>待运行 <code>eslint --format json</code> 分析</td><td>-</td><td>P0</td></tr><tr><td>2</td><td>待分析</td><td>-</td><td>P0</td></tr><tr><td>3</td><td>待分析</td><td>-</td><td>P0</td></tr><tr><td>...</td><td>...</td><td>...</td><td>...</td></tr></tbody></table>
+<h2 id="自动修复策略">自动修复策略<a class="anchor" href="#自动修复策略" aria-label="锚点">#</a></h2>
+<h3 id="可自动修复的问题">可自动修复的问题<a class="anchor" href="#可自动修复的问题" aria-label="锚点">#</a></h3>
+<p>运行以下命令自动修复可自动化的 lint 问题：</p>
+<pre><code class="language-powershell"><span class="hljs-comment"># 自动修复所有可修复的问题</span>
+<span class="hljs-built_in">cd</span> services/backend
+npx eslint <span class="hljs-literal">--fix</span> <span class="hljs-literal">--ext</span> .js src/
+
+<span class="hljs-comment"># 自动修复特定文件</span>
+npx eslint <span class="hljs-literal">--fix</span> path/to/file.js</code></pre>
+<h3 id="需人工修复的问题">需人工修复的问题<a class="anchor" href="#需人工修复的问题" aria-label="锚点">#</a></h3>
+<ul><li>未使用的变量（<code>no-unused-vars</code>）：需要判断是删除还是改为有意忽略</li><li>复杂的逻辑重构：需要开发者理解代码意图</li><li>命名规范：需要团队达成共识</li></ul>
+<h2 id="月度目标">月度目标<a class="anchor" href="#月度目标" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>月份</th><th>目标修复数</th><th>剩余债务</th></tr></thead><tbody><tr><td>2026-09</td><td>341 (10%)</td><td>3076</td></tr><tr><td>2026-10</td><td>307 (10%)</td><td>2769</td></tr><tr><td>2026-11</td><td>276 (10%)</td><td>2493</td></tr><tr><td>2026-12</td><td>249 (10%)</td><td>2244</td></tr></tbody></table>
+<h2 id="如何参与">如何参与<a class="anchor" href="#如何参与" aria-label="锚点">#</a></h2>
+<ol><li>选择一个文件或目录</li><li>运行 <code>npx eslint --fix</code> 自动修复</li><li>手动修复剩余问题</li><li>提交 PR（遵循 20 文件上限）</li></ol>
+<h2 id="ci-门禁">CI 门禁<a class="anchor" href="#ci-门禁" aria-label="锚点">#</a></h2>
+<ul><li>新增文件：零容忍（阻断）</li><li>修改旧文件：如果 lint 问题 &gt; 10 条，要求修复至少 50%（warning，3 个月后阻断）</li><li>债务计数：PR 评论中显示当前债务变化</li></ul>
+      </article>
+      <nav class="pager"><span></span><a class="next" href="../../services/backend/README.html"><div class="dir">下一篇 →</div><div class="ttl">Khy Backend</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="services/backend/LINT-DEBT.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

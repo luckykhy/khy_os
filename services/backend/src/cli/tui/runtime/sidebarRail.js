@@ -195,21 +195,61 @@ function _border(env) {
   try {
     sb = require('../sidebarLayout');
   } catch {
-    return { str: '', cols: 0 };
+    return { str: '', cols: 0, ghost: false };
   }
   try {
     if (!sb.borderOn(env)) {
-      return { str: '', cols: 0 };
+      return { str: '', cols: 0, ghost: false };
+    }
+    // Ghost border (KHY_GHOST_BORDER=1): 边框由 CUP 光标定位叠加绘制，不占内容字符流，
+    // 复制时不带走框线（对齐 OpenCode 行为，[DESIGN-ARCH-079] §11.6）。
+    // 门控 off（默认）→ 返回字符边框（chalk.dim(gray)），逐字节 legacy。
+    let ghostOn = false;
+    try {
+      ghostOn = require('../../ghostBorder').isGhostBorderEnabled(env);
+    } catch {
+      ghostOn = false;
     }
     const ch = sb.borderChar(env);
+    if (ghostOn) {
+      // Ghost 模式：buildRailPaint 收到 {str:'', cols:0, ghost:true} 时会在整块
+      // 之外用 CUP 单独叠加竖线（见 _ghostBorderOverlay 调用点），本行不画边框字符。
+      return { str: '', cols: 0, ghost: true, char: ch };
+    }
     const chalk = _chalk();
     if (!chalk) {
-      return { str: ch, cols: 1 };
+      return { str: ch, cols: 1, ghost: false };
     } // no chalk → bare glyph
-    return { str: chalk.dim(chalk.gray(ch)), cols: 1 };
+    return { str: chalk.dim(chalk.gray(ch)), cols: 1, ghost: false };
   } catch {
-    return { str: '', cols: 0 }; // styling is cosmetic — never break the paint
+    return { str: '', cols: 0, ghost: false }; // styling is cosmetic — never break the paint
   }
+}
+
+/**
+ * Ghost border overlay: 把一列竖线用 CUP 绝对坐标叠加绘制到看板左侧（整块之外），
+ * 不占用 buildRailPaint 的内容流 → 复制时不带走框线。KHY_GHOST_BORDER=1 时才调用；
+ * 门控 off 时 buildRailPaint 已走字符边框路径，本函数不会被调用（逐字节 legacy）。
+ *
+ * 复用 railLayout.buildRailPaint 同一套 CUP + DECSC/DECRC 包裹 + SGR 自闭序列，
+ * 保证与看板正文落在同一次 write()（sidebarRail paintBytes 契约），不引入第二
+ * 个渲染时机。
+ * @param {{left:number, top:number, height:number}} geom
+ * @param {string} ch - 边框字符（'│'）
+ * @returns {string}
+ */
+function _ghostBorderOverlay(geom, ch) {
+  if (!geom || geom.height <= 0) {
+    return '';
+  }
+  let ghostBorder;
+  try {
+    ghostBorder = require('../../ghostBorder');
+  } catch {
+    return ''; // leaf unavailable → 静默降级（与 ghost 门控本身 fail-soft 一致）
+  }
+  // 竖线从看板顶行画到底行（含端点），列 = 看板左缘（与 buildRailPaint 的 geom.left 一致）
+  return ghostBorder.ghostVerticalBorder(geom.left, geom.top, geom.top + geom.height - 1, ch || '│');
 }
 
 /**
@@ -545,8 +585,11 @@ function paintBytes(force = false) {
   }
   let bytes = '';
   // Geometry changed since the last paint (resize / content grew or shrank in
-  // bottom-anchor mode): wipe the OLD gutter first, otherwise stale cells linger
-  // beside or above the new block.
+  // bottom-anchor mode): wipe the OLD gutter first, then paint the new geometry.
+  // The onResize hook is where the old+new union-clear happens (root cause B
+  // fix); within one paint, only `old` cells exist on screen, so a plain
+  // old-geometry clear here is complete and keeps the no-change path emitting
+  // zero bytes (byte-revert guarantee of the lastPaintBytes dedupe).
   const prev = _state.lastGeom;
   if (
     prev &&
@@ -567,6 +610,12 @@ function paintBytes(force = false) {
     borderCols: border.cols,
   });
   bytes += painted;
+  // Ghost border: 边框不经内容流（border.cols === 0 && border.ghost），
+  // 而是 CUP 绝对坐标叠加到看板左缘整列 —— 复制时不带走框线。
+  // KHY_GHOST_BORDER off 时 border.ghost 恒为 false，本段逐字节无输出。
+  if (border.ghost && geom.on) {
+    bytes += _ghostBorderOverlay(geom, border.char);
+  }
   _state.lastGeom = geom;
   if (!force && bytes === _state.lastPaintBytes) {
     return '';
@@ -586,10 +635,30 @@ function paintBytes(force = false) {
  * @returns {string} '' when there is nothing to clear
  */
 function clearBytes(force = false) {
-  if (!_state.enabled || _state.suspended || (!force && _state.lastPaintBytes)) {
+  if (!_state.enabled || _state.suspended) {
     return '';
   }
-  return railLayout.buildRailClear(_state.lastGeom);
+  const cur = _geometry();
+  const prev = _state.lastGeom;
+  // No prior paint → nothing to blank.
+  if (!prev) {
+    return '';
+  }
+  // Geometry unchanged since the last paint and we already emitted it → the
+  // gutter is blank-then-painted within that same write() (paintBytes cleared
+  // the old cells before repainting), so nothing new to clear here. This is
+  // the byte-revert dedupe: skip only when the stable frame is confirmed.
+  if (!force && prev && cur && cur.on === prev.on &&
+    prev.left === cur.left && prev.top === cur.top &&
+    prev.width === cur.width && prev.height === cur.height &&
+    _state.lastPaintBytes) {
+    return '';
+  }
+  // Otherwise (geometry changed — resize/shrink, or a forced repaint) the
+  // OLD geometry's gutter cells are stale and must be blanked by the caller
+  // BEFORE the next frame's ink bytes. Clear the old slot, keep lastGeom so the
+  // subsequent paintBytes() can paint the new geometry.
+  return railLayout.buildRailClear(prev);
 }
 
 /**
@@ -630,16 +699,23 @@ function onResize() {
   if (!prev) {
     return;
   }
-  if (
-    !geom ||
-    prev.left !== geom.left ||
-    prev.width !== geom.width ||
-    prev.height !== geom.height
-  ) {
-    _writeRaw(railLayout.buildRailClear(prev));
-    _state.lastGeom = null;
-    _state.lastPaintBytes = '';
+  // P0-2 (root cause B): erase the UNION of old + new geometry in one pass, so
+  // a shrink cannot leave stale cells in `old \ new`. When the union equals the
+  // previous geometry (no visible change — e.g. only the terminal's height
+  // grew) there is nothing new to wipe, so skip the write entirely.
+  const union = railLayout.unionGeom(prev, geom);
+  const same =
+    prev.on === union.on &&
+    prev.left === union.left &&
+    prev.top === union.top &&
+    prev.width === union.width &&
+    prev.height === union.height;
+  if (same) {
+    return;
   }
+  _writeRaw(railLayout.buildRailClear(union));
+  _state.lastGeom = null;
+  _state.lastPaintBytes = '';
 }
 
 /** Blank the gutter and tear down. Idempotent — safe on every exit path. */

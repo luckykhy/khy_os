@@ -9,7 +9,7 @@
  * dirHints must still surface recognised anchors and preserve DIR_ANCHORS
  * order, whole-word only (no substring false positives), stable across calls.
  */
-const { extractSignals } = require('../../src/services/contextScope/taskSignalExtractor');
+const { extractSignals } = require('../../src/services/domain/session/contextScope/taskSignalExtractor.js');
 
 describe('Task Signal Extractor Anchor Hoist', () => {
   test('recognises anchor dir names as whole words', () => {
@@ -22,8 +22,8 @@ describe('Task Signal Extractor Anchor Hoist', () => {
       // 'libraries' contains 'lib' but \blib\b must not match inside it;
       // 'testing' contains 'test' but \btest\b must not match inside it.
       const sig = extractSignals('reviewing libraries and testing frameworks');
-      expect(!sig.dirHints).toContain('lib');
-      expect(!sig.dirHints).toContain('test');
+      expect(sig.dirHints).not.toContain('lib');
+      expect(sig.dirHints).not.toContain('test');
   });
 
   test('anchor dirHints preserve DIR_ANCHORS declaration order', () => {

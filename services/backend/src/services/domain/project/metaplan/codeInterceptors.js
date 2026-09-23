@@ -25,7 +25,15 @@
 const { spawnSync } = require('child_process');
 const vm = require('vm');
 
-/** Lazy, cached parser handles so a missing optional dep degrades gracefully. */
+/** Lazy, cached parser handle so a missing optional dep degrades gracefully.
+ * @babel/parser ships a CJS face (lib/index.js) that plain node loads fine; in a
+ * jest CJS worker that load can surface a non-catchable
+ * "Cannot use import statement outside a module" that would take the whole
+ * suite down. Detect that case up-front with the testEnvironment flag and fall
+ * straight through to the documented no-babel vm compile probe. The plain
+ * `require` is kept for the production path, wrapped in a hard guard so even an
+ * exotic interop stub (a namespace object whose `.parse` is not a function)
+ * degrades cleanly instead of throwing on the first real call. */
 let _babel = null;
 let _babelTried = false;
 function _getBabel() {
@@ -33,9 +41,19 @@ function _getBabel() {
     return _babel;
   }
   _babelTried = true;
+  // In a jest CJS worker the ESM-interop load of @babel/parser surfaces an
+  // uncatchable "import after environment torn down" error at the require()
+  // site itself. The jest testEnvironment flag is the reliable, documented
+  // signal that we are in that realm; fall through to the vm probe there.
+  if (typeof process !== 'undefined' && process.env && process.env.JEST_WORKER_ID) {
+    return null;
+  }
   try {
     _babel = require('@babel/parser');
   } catch {
+    _babel = null;
+  }
+  if (_babel && typeof _babel.parse !== 'function') {
     _babel = null;
   }
   return _babel;
@@ -55,12 +73,23 @@ function validateJs(code, { typescript = false, jsx = true } = {}) {
     plugins.push('typescript');
   }
   try {
-    babel.parse(String(code == null ? '' : code), {
+    const parsed = babel.parse(String(code == null ? '' : code), {
       sourceType: 'unambiguous',
       allowReturnOutsideFunction: true,
       errorRecovery: false,
       plugins,
     });
+    if (parsed && parsed.errors && parsed.errors.length > 0) {
+      // babel reports soft errors as a list even with errorRecovery off in some
+      // configurations — surface the first one instead of misreporting a pass.
+      const err = parsed.errors[0];
+      return {
+        ok: false,
+        validator: 'babel',
+        error: _fmtErr(err),
+        line: err && err.loc ? err.loc.line : undefined,
+      };
+    }
     return { ok: true, validator: 'babel' };
   } catch (e) {
     return {

@@ -397,3 +397,32 @@ describe('buildAgentTreeRows — directory-tree preview rows', () => {
     expect(rows.some((r) => r.kind === 'preview')).toBe(false);
   });
 });
+
+describe('agentTreePaintRows (BUG-95 ledger SSOT)', () => {
+  const { agentTreePaintRows } = require('../../src/cli/agentTreeView');
+
+  test('空/非数组 → 0（账本不为一个不存在的树留行）', () => {
+    expect(agentTreePaintRows([])).toBe(0);
+    expect(agentTreePaintRows(null)).toBe(0);
+    expect(agentTreePaintRows(undefined)).toBe(0);
+    expect(agentTreePaintRows('nope')).toBe(0);
+  });
+
+  test('非空恒 = 1 header + buildAgentTreeRows 全树（与渲染器 live||expanded 档同判据）', () => {
+    const a = makeAgentState({ name: 'A', status: STATUS.RUNNING });
+    a.currentTool = 'Read';
+    a.currentTarget = 'server.js';
+    const b = makeAgentState({ name: 'B', status: STATUS.COMPLETED });
+    const agents = [a, b];
+    expect(agentTreePaintRows(agents)).toBe(1 + buildAgentTreeRows(agents).length);
+    // 结构下限：header + 每个 agent 至少 1 行 → 2 agents 恒 ≥ 3。
+    expect(agentTreePaintRows(agents)).toBeGreaterThanOrEqual(3);
+  });
+
+  test('折叠与否无关：同一列表恒给上界（busy 也画全树，账本不许按折叠档记 1）', () => {
+    const a = makeAgentState({ name: 'A', status: STATUS.RUNNING });
+    const rows = agentTreePaintRows([a]);
+    expect(rows).toBe(1 + buildAgentTreeRows([a]).length);
+    expect(rows).toBeGreaterThan(1); // 旧算式的「恒记 1」正是本账的病灶
+  });
+});

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: plan-sess_95d4ce6a-4880-4685-853f-353afe97bb4a.md -->
+<title>目标 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>.zcode<span class="sep">›</span>plans<span class="sep">›</span>目标</div>
+      <header class="hero reveal"><h1>目标</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-2"><a href="#目标">目标</a></li><li class="lvl-2"><a href="#设计决策">设计决策</a></li><li class="lvl-2"><a href="#改动文件-7-个-测试">改动文件（7 个 + 测试）</a></li><li class="lvl-2"><a href="#明确不做-范围控制">明确不做（范围控制）</a></li><li class="lvl-2"><a href="#测试与验收">测试与验收</a></li></ul></nav>
+      <article class="doc-body">
+<h2 id="目标">目标<a class="anchor" href="#目标" aria-label="锚点">#</a></h2>
+<p>支持改名：新增 <code>khy user rename &lt;新账号名&gt;</code>（TUI 内 <code>/user</code>），把<strong>当前登录账号</strong>在所有存储面上原子地改名，旧名自动保留为登录别名（现有 ARCH-074 别名机制），避免改名后登录失效。</p>
+<h2 id="设计决策">设计决策<a class="anchor" href="#设计决策" aria-label="锚点">#</a></h2>
+<ul><li><strong>命令名</strong>：<code>khy user rename &lt;新名&gt;</code>（顶层 <code>user</code> + 子命令 <code>rename</code>；裸 <code>khy user &lt;新名&gt;</code> 也接受；不带参数时交互询问；<code>/user</code> 斜杠命令走同一入口）。已确认 <code>user</code> 在各 dispatcher、命令注册表、斜杠菜单中均空闲，不与会话标题改名 <code>/rename</code> 冲突。</li><li><strong>改名对象</strong>：以当前 session 的用户名为准，自动识别两种账号并存更新：<ol><li>默认管理员（<code>.khy/credentials/default-admin.json</code>）</li><li>本地注册账号（<code>credentials.json</code> + 会话 <code>session.json</code>）</li></ol></li><li><strong>旧名保留</strong>：数据库行与本地 credentials 都把旧名 push 进 <code>aliases</code>（登录解析顺序 username→email→alias，旧名/旧 token 仍可登录）；邮箱仅当本地部分等于旧用户名时换 local part、保留域名。</li><li><strong>无密码确认</strong>：默认管理员密码是自动生成的随机值（用户未必知道），且本机改名与 <code>khy doctor/clean</code> 同等信任级别——不设密码门槛。</li><li><strong>安全/冲突</strong>：改名前做硬冲突检查——数据库已存在同名账号或 bridge 库已存在同名 → 直接中止（规则 2.2 具体报错）；数据库不可用则本机照常改名并如实标注「数据库未同步」。</li><li><strong>校验</strong>：2–32 位 <code>[a-zA-Z0-9_-]</code>（复用 <code>credentialGenerator.validateCustomUsername</code>，与首次登录自定义同一契约）；bridge 库自身规则是 2–20 位无连字符，超限时跳过 bridge 并标注（fail-soft，不阻断）。</li></ul>
+<h2 id="改动文件-7-个-测试">改动文件（7 个 + 测试）<a class="anchor" href="#改动文件-7-个-测试" aria-label="锚点">#</a></h2>
+<ol><li><strong><code>services/backend/src/services/credentialGenerator.js</code></strong><ul><li>新增 <code>renameDefaultAdminCredentials(newUsername)</code>：同步改 <code>default-admin.json</code> 的 <code>username</code>（密码不变，写 <code>renamedFrom/renamedAt</code>）；文件不存在/同名/非法名 → <code>{ok:false, reason}</code>。</li><li>新增 <code>renameDefaultAdminUserInDb(oldName, newName, {email})</code>：仿 <code>ensureDefaultAdminPassword</code> 的 fail-soft 模式（<code>@khy/shared/models</code> 不可用不抛）；但<strong>同名/同邮箱冲突是硬失败</strong>（<code>{ok:false, conflict:true}</code>）；更新行 username+email（可选）并把旧名 push 进 <code>user.aliases</code>（beforeUpdate hook 只在 <code>changed('password')</code> 时哈希，改名不碰密码，安全）。</li></ul></li><li><strong><code>services/backend/src/services/cliAuthService.js</code></strong><ul><li>新增 <code>renameAccount(newUsername)</code> 编排器：session 检查 → 名称校验/同名检查 → DB 冲突预检（硬中止）→ DB 改名 → 默认管理员文件改名（若匹配）→ 本地 credentials 改名+旧名入 aliases（若匹配）→ 会话 username 原地更新 → bridge 改名（先冲突预检，fail-soft）→ 返回 <code>{success, oldUsername, username, details[]}</code>（每面一行中文状态，含「数据库未同步：原因」等）。</li></ul></li><li><strong><code>services/backend/src/bridge/bridgeAuth.js</code></strong><ul><li>新增并导出 <code>renameBridgeUser(oldName, newName)</code>：bridge 库文件不存在/新名不符 <code>USERNAME_RE</code>/无此行 → <code>{ok:false, skipped:true, reason}</code>；同名占用 → <code>{ok:false, conflict:true}</code>；否则 <code>UPDATE users SET username=? WHERE username=?</code>。</li></ul></li><li><strong><code>services/backend/src/cli/routerDispatchTail.js</code></strong><ul><li>在 <code>case 'passwd'</code> 旁加 <code>case 'user'</code>：未登录→具体报错；有参取 <code>rename</code> 子命令位或裸名；无参且 TTY→inquirer 单问「新账号名 (当前: xxx)」；非 TTY 无参→打印用法；调用 <code>cliAuth.renameAccount()</code>，成功打印 <code>账号已改名: 旧 → 新</code> + 各明细行。</li></ul></li><li><strong><code>services/backend/src/constants/commandSchema.js</code></strong><ul><li><code>ROUTER_COMMANDS</code> 加 <code>'user'</code>；<code>ROUTER_SUB_COMMANDS</code> 加 <code>user: ['rename']</code>；<code>CATEGORY_BY_COMMAND</code> 加 <code>user: 'security'</code>；<code>BUILTIN_SLASH_COMMANDS</code> 加 <code>{ cmd:'/user', label:'账号改名', desc:'重命名登录账号(/user rename &lt;新名&gt;)', route:'user rename', category:'security' }</code>（TUI 斜杠菜单与 REPL 自动可见）。</li></ul></li><li><strong><code>services/backend/src/cli/aliases.js</code></strong><ul><li>认证区（~576 行）加：<code>改账号名</code>/<code>改用户名</code>/<code>gaidangzhao</code>/<code>gaiyonghuming</code> → <code>{ command:'user', subCommand:'rename' }</code>（naturalLanguageAliasGuard 无需改动——其白名单只保护整句自然语言，不保护明确命令意图）。</li></ul></li><li><strong><code>services/backend/src/cli/tui/ink-components/App.js</code></strong><ul><li>2354–2358 的 auth 命令判断加 <code>parsed.command === 'user'</code>；<code>runAuthForm</code> 加 <code>command === 'user'</code> 分支（仿 <code>passwd</code> 分支，单字段 FormFlow，未登录给 notice，成功后 <code>已改名: 旧 → 新</code>）。</li></ul></li></ol>
+<h2 id="明确不做-范围控制">明确不做（范围控制）<a class="anchor" href="#明确不做-范围控制" aria-label="锚点">#</a></h2>
+<ul><li><code>user_logs.username</code> 历史回刷（展示用，历史行保留旧名属正常审计痕迹）</li><li>服务端新增 rename API 端点（CLI 与 monolith 共享同一 SQLite/PG 库，直接改行即对 Web 端可见）</li><li>Web 前端改名界面</li></ul>
+<h2 id="测试与验收">测试与验收<a class="anchor" href="#测试与验收" aria-label="锚点">#</a></h2>
+<ul><li>新增 <code>services/backend/tests/services/cliAuthRename.test.js</code>（node:test，<code>KHY_APP_HOME</code>+<code>KHY_DATA_HOME</code> 指向临时目录隔离全部存储面）：未登录报错、默认管理员改名（文件/会话更新、密码保留、旧名入 aliases）、本地账号改名（credentials+aliases+会话）、同名/非法名（中文/1 位/33 位）报错、<code>renameDefaultAdminCredentials</code> 边界、bridge 未初始化 skip。</li><li>回归：重跑上一轮 3 个 credentialGenerator 测试文件；<code>node --check</code> 全部改动文件；<code>node scripts/ci/check-agent-rules.js &lt;改动文件&gt;</code> 零违规。</li></ul>
+<p>完成后你机器上用法：<code>khy user rename 想要的名字</code>（或 TUI 内 <code>/user</code>），改名后旧名 <code>mfpLg075</code> 仍可登录（作为别名），下次自动登录显示新名。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../.zcode/plans/plan-sess_2e209ec3-2c22-4fbc-81f2-68ea89ac2dae.html"><div class="dir">← 上一篇</div><div class="ttl">TUI 重构细化执行计划（小模型可执行版）</div></a><a class="next" href="../../.zcode/plans/plan-sess_aae180ad-5e73-48dc-8e06-651b932f3bf9.html"><div class="dir">下一篇 →</div><div class="ttl">khy-os 不稳定因素：先测试、后修复 计划</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__=".zcode/plans/plan-sess_95d4ce6a-4880-4685-853f-353afe97bb4a.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

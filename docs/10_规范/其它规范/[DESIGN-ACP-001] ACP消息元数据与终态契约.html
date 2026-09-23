@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ACP-001] ACP消息元数据与终态契约.md -->
+<title>[DESIGN-ACP-001] ACP 消息元数据与终态契约 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-ACP-001] ACP 消息元数据与终态契约</div>
+      <header class="hero reveal"><h1>[DESIGN-ACP-001] ACP 消息元数据与终态契约</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-acp-001-acp-消息元数据与终态契约">[DESIGN-ACP-001] ACP 消息元数据与终态契约</a></li><li class="lvl-2"><a href="#1-信封三态-uc-004-裁决">1. 信封三态（UC-004 裁决）</a></li><li class="lvl-2"><a href="#2-meta-元数据块-gov-acp-003-冻结">2. `meta` 元数据块（GOV-ACP-003 冻结）</a></li><li class="lvl-2"><a href="#3-协议级终态与错误码-gov-acp-004-冻结">3. 协议级终态与错误码（GOV-ACP-004 冻结）</a></li><li class="lvl-2"><a href="#4-兼容策略">4. 兼容策略</a></li><li class="lvl-2"><a href="#5-落地排期-登记-不阻塞冻结">5. 落地排期（登记，不阻塞冻结）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-acp-001-acp-消息元数据与终态契约">[DESIGN-ACP-001] ACP 消息元数据与终态契约<a class="anchor" href="#design-acp-001-acp-消息元数据与终态契约" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: COMMS-001, COMMS-002, COMMS-003, COMMS-004 -->
+<blockquote><p><strong>定位</strong>：<code>[DESIGN-GOV-001]</code> GOV-ACP-001/003/004 的契约冻结真源 + UC-004 裁决。<br>冻结对象：ACP（<code>services/backend/src/contracts/acp/</code>）的<strong>信封三态拆分</strong>、<strong><code>meta</code> 元数据块</strong>、<strong>协议级终态错误码表</strong>。<br>现状 schema v1（<code>acp-message.schema.json</code>：顶层 <code>required: [&quot;jsonrpc&quot;,&quot;method&quot;]</code>、无 <code>meta</code>）与运行时的偏差以本文为准；落地按 §5，落地前 070 台账登记待工具化。</p></blockquote>
+<h2 id="1-信封三态-uc-004-裁决">1. 信封三态（UC-004 裁决）<a class="anchor" href="#1-信封三态-uc-004-裁决" aria-label="锚点">#</a></h2>
+<p>ACP 是 JSON-RPC 2.0 兼容信封，<strong>必须</strong>按三形态校验，禁止一种 schema 管全部：</p>
+<table><thead><tr><th>形态</th><th>必含</th><th>禁止</th><th>例</th></tr></thead><tbody><tr><td>请求（有应答）</td><td><code>jsonrpc</code>、<code>method</code>、<code>id</code>、<code>params?</code>、<code>meta?</code></td><td><code>result</code>、<code>error</code></td><td><code>task.submit</code>、<code>tool.invoke</code></td></tr><tr><td>通知（无应答）</td><td><code>jsonrpc</code>、<code>method</code>、<code>params?</code>、<code>meta?</code></td><td><code>id</code>、<code>result</code>、<code>error</code></td><td><code>heartbeat</code>、<code>task.progress</code></td></tr><tr><td>响应</td><td><code>jsonrpc</code>、<code>id</code>（同请求）、<code>result</code> 与 <code>error</code> <strong>恰一</strong></td><td><code>method</code>、<code>params</code></td><td>v1「response 带 <code>method</code>」宽松接受<strong>废止</strong></td></tr></tbody></table>
+<p><strong>裁决</strong>：schema v2 把 <code>method</code> 移出顶层 <code>required</code>，用三形态子 schema（<code>oneOf</code>）表达上表；response 携带 <code>method</code> 即校验失败。<br>方法枚举保持 v1 的 12 个不变；新增方法先过 §2/§3 登记（GOV-ACP-002：<code>validate-json-schemas.js</code> + ACP 测试）。</p>
+<h2 id="2-meta-元数据块-gov-acp-003-冻结">2. <code>meta</code> 元数据块（GOV-ACP-003 冻结）<a class="anchor" href="#2-meta-元数据块-gov-acp-003-冻结" aria-label="锚点">#</a></h2>
+<p>信封级可选块；<strong>跨边界消息必须携带</strong>（同进程内可省）：</p>
+<table><thead><tr><th>字段</th><th>必填条件</th><th>规则</th></tr></thead><tbody><tr><td><code>traceId</code></td><td>跨进程/跨 transport</td><td>全链路同值可传播；生成方 = 链首调用者</td></tr><tr><td><code>correlationId</code></td><td>请求↔响应配对</td><td>v1 散落在 <code>task.submit</code>/<code>message.send</code> 的 <code>correlationId</code> 提升到信封级；响应原样回带</td></tr><tr><td><code>callId</code></td><td>一切 <code>tool.invoke</code></td><td><strong>并发</strong>工具调用靠它回配 <code>tool.result</code>（v1 仅按 <code>tool</code> 名回配，同名并发会串线——GOV-ACP-003 反例）</td></tr><tr><td><code>deadline</code></td><td>有超时语义的请求</td><td>unix ms；传输层/被调方必须在 deadline 前产出 §3 终态，不得静默挂过</td></tr><tr><td><code>idempotencyKey</code></td><td>可重试请求（<code>task.submit</code>）</td><td>被调方对同 key 重放只执行一次，后续返回首次结果</td></tr><tr><td><code>version</code></td><td>必填</td><td>schema 大版本（当前冻结 <code>2</code>）；不兼容变更 +1，新旧并存一个发布周期</td></tr></tbody></table>
+<p><code>context.share</code> 的 <code>scope</code>（session/persistent）判定与记录格式按 <code>[DESIGN-MEM-006]</code> §1/§2，本文不重复。</p>
+<h2 id="3-协议级终态与错误码-gov-acp-004-冻结">3. 协议级终态与错误码（GOV-ACP-004 冻结）<a class="anchor" href="#3-协议级终态与错误码-gov-acp-004-冻结" aria-label="锚点">#</a></h2>
+<p>超时/取消/重试耗尽/连接关闭<strong>必须</strong>产出可观察终态；transport 不得把协议级失败包装成成功<br>（v1 反例：WS 发送失败被吞、调用方仍收到成功）。</p>
+<table><thead><tr><th>终态</th><th><code>error.code</code></th><th>语义</th><th>调用方动作</th></tr></thead><tbody><tr><td>超时</td><td><code>-32001</code></td><td>deadline 到达无结果</td><td>视为未完成；带同 <code>idempotencyKey</code> 重试或放弃</td></tr><tr><td>取消</td><td><code>-32002</code></td><td>调用方主动取消</td><td>链路归档</td></tr><tr><td>传输失败</td><td><code>-32003</code></td><td>连接断/发送失败，结果未知</td><td>按 <code>idempotencyKey</code> 语义决定重放</td></tr><tr><td>关闭</td><td><code>-32004</code></td><td>被调 agent 已停止（<code>agent.kill</code> 后）</td><td>改投新 agent</td></tr></tbody></table>
+<ul><li><code>error.message</code> = 人话一句话（遵循 <code>AGENTS.md</code> 规则 2.2「问题+识别码+修复建议」）；<code>error.data</code> 可带 <code>{ traceId, deadlineExceeded, attempts }</code>。</li><li>四终态<strong>互斥</strong>：一条请求最终只落 <code>result</code> 或一个 <code>error</code>；重试是调用方行为，被调方不替调用方重发。</li></ul>
+<h2 id="4-兼容策略">4. 兼容策略<a class="anchor" href="#4-兼容策略" aria-label="锚点">#</a></h2>
+<ul><li>并存期：发送方可带 <code>meta</code>（旧接收方忽略未知字段，<code>additionalProperties</code> 需对 <code>meta</code> 一个键放开）；接收方按 <code>version</code> 判别；</li><li><code>version</code> 缺省按 <code>1</code>；v2 接收方对 v1 消息<strong>降级</strong>处理（无 <code>callId</code> 时回退按 <code>tool</code> 名回配 + 日志一行告警），不得报错丢弃。</li></ul>
+<h2 id="5-落地排期-登记-不阻塞冻结">5. 落地排期（登记，不阻塞冻结）<a class="anchor" href="#5-落地排期-登记-不阻塞冻结" aria-label="锚点">#</a></h2>
+<ol><li>schema v2：<code>acp-message.schema.json</code> 按 §1/§2 改写（<code>$id</code> 加版本后缀），<code>validate-json-schemas.js</code> 同步；</li><li><code>acpTransport.js</code>：response 发送去 <code>method</code>、补 <code>meta</code> 透传、§3 四码接线；</li><li>测试：ACP transport 测试 + JSON schema 检查双守卫，同步 <code>scripts/tests/</code> 用例（070 §7 条款）。</li></ol>
+<p>落地后 070 §4 的 GOV-ACP 校验方式列改指本文 + 上述守卫，UC-004 关闭。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-A2A-002] A2A 标准协议适配规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-A2A-002] A2A 标准协议适配规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-AGENT-001] 子智能体交接契约.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-AGENT-001] 子智能体交接契约</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-ACP-001] ACP消息元数据与终态契约.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

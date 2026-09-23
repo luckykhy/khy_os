@@ -195,8 +195,8 @@ describe('SlackChannel', () => {
       .update(`v0:${ts}:${body}`, 'utf8')
       .digest('hex');
 
-    expect(slack.verifySignature(expected, ts, body)).toBe();
-    expect(!slack.verifySignature('v0=bad', ts, body)).toBe();
+    expect(slack.verifySignature(expected, ts, body)).toBe(true);
+    expect(!slack.verifySignature('v0=bad', ts, body)).toBe(true);
   });
 
   it('handleWebhookEvent emits message event', () => {
@@ -250,7 +250,7 @@ describe('LSPTool schema', () => {
   it('file_path is not required (workspaceSymbols needs only query)', () => {
     const LSPTool = require('../src/tools/LSPTool/index');
     const tool = new LSPTool();
-    expect(!tool.inputSchema.required).toContain('file_path');
+    expect(tool.inputSchema.required).not.toContain('file_path');
   });
 });
 

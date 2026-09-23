@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for fetchTimeout.js â€?timeout signal composition,
+ * Tests for fetchTimeout.js â€”timeout signal composition,
  * fetchWithTimeout execution, and URL sanitization.
  */
 

@@ -8,7 +8,6 @@ class AssistantsTool extends BaseTool {
   static aliases = ['assistants', 'assistant', 'create_assistant'];
   static searchHint = 'assistants api create manage thread';
   static shouldDefer = false;
-  static shouldDefer = false;
 
   isReadOnly() {
     return false;

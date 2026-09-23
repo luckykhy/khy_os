@@ -93,7 +93,7 @@ function _sqliteDriverName() {
 
 function _khyVersion() {
   try {
-    return String(require('../../../package.json').version || '');
+    return String(require('../../../../../package.json').version || '');
   } catch {
     return '';
   }

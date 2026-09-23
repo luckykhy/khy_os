@@ -580,7 +580,7 @@ describe('largeTasks route', () => {
     });
     expect(invalid.status).toBe(400);
     expect(invalid.body.success).toBe(false);
-    expect(invalid.body.message).toContain('更新重试策略审批保留策略失败');
+    expect(invalid.body.error.message).toContain('更新重试策略审批保留策略失败');
   });
 
   test('lists retry-policy approval events with filters and after_id replay', async () => {
@@ -683,7 +683,7 @@ describe('largeTasks route', () => {
     });
     expect(invalid.status).toBe(400);
     expect(invalid.body.success).toBe(false);
-    expect(invalid.body.message).toContain('更新重试策略失败');
+    expect(invalid.body.error.message).toContain('更新重试策略失败');
   });
 
   test('blocks dangerous retry policy combination via guardrails', async () => {
@@ -1005,7 +1005,7 @@ describe('largeTasks route', () => {
     });
     expect(cannotResume.status).toBe(409);
     expect(cannotResume.body.success).toBe(false);
-    expect(cannotResume.body.data.code).toBe('terminal_task');
+    expect(cannotResume.body.error.code).toBe('terminal_task');
   });
 
   test('returns consistent task control error codes across endpoints', async () => {
@@ -1015,7 +1015,7 @@ describe('largeTasks route', () => {
     });
     expect(missingTaskId.status).toBe(400);
     expect(missingTaskId.body.success).toBe(false);
-    expect(missingTaskId.body.data.code).toBe('missing_task_id');
+    expect(missingTaskId.body.error.code).toBe('missing_task_id');
 
     const notFound = await _invokeRoute('post', '/:taskId/cancel', {
       params: { taskId: 'not-found-task' },
@@ -1023,7 +1023,7 @@ describe('largeTasks route', () => {
     });
     expect(notFound.status).toBe(404);
     expect(notFound.body.success).toBe(false);
-    expect(notFound.body.data.code).toBe('task_not_found');
+    expect(notFound.body.error.code).toBe('task_not_found');
 
     const createRes = await _invokeRoute('post', '/', {
       body: {
@@ -1041,7 +1041,7 @@ describe('largeTasks route', () => {
     });
     expect(invalidPause.status).toBe(409);
     expect(invalidPause.body.success).toBe(false);
-    expect(invalidPause.body.data.code).toBe('invalid_state');
+    expect(invalidPause.body.error.code).toBe('invalid_state');
 
     const taskDetail = await _invokeRoute('get', '/:taskId', {
       params: { taskId: queuedTaskId },

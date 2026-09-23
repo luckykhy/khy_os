@@ -29,6 +29,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const readline = require('readline');
+const { pathToFileURL } = require('url');
 
 const {
   Transport,
@@ -38,9 +39,25 @@ const {
   normalizeMcpName,
   serializeTool,
   buildCliState,
-} = require('../../../../agents/types');
+} = require('./types');
 
-const PROTOCOL_VERSION = '2024-11-05';
+// 协议版本与协商逻辑的单一真源在 mcpServerProtocol —— server 与 client 共用同一常量。
+// 此前这里独立硬编码了同一个字面量,改一处必然漂移。
+const { PROTOCOL_VERSION } = require('./mcpServerProtocol');
+
+// ── Client capabilities(单一真源)────────────────────────────────────────────
+// MCP 的 ClientCapabilities 只允许四个字段:experimental / roots / sampling /
+// elicitation。此前这里三处各自内联 `{ tools: {}, resources: {}, prompts: {} }`
+// —— 那是 **ServerCapabilities** 字段,出现在客户端能力里属无效字段,且会让服务端
+// 误判本客户端不支持 roots/sampling,从而主动关闭服务端发起的交互。
+//
+// 只声明**真正实现了**的能力,不做能力虚报:服务端据此决定要不要发起对应请求,
+// 声明了却不响应会让服务端一直等到超时。
+//   roots       — 已实现(服务端可查询本客户端的工作目录根,见 _serverRoots)
+//   sampling    — 未实现:需把服务端的推理请求转给本地 AI 网关,涉及额度与审计,待评估
+//   elicitation — 未实现:需交互式 UI,而 MCP client 常运行在非交互上下文
+const CLIENT_CAPABILITIES = Object.freeze({ roots: {} });
+
 const DEFAULT_CONNECT_TIMEOUT_MS = 30_000;
 const DEFAULT_REQUEST_TIMEOUT_MS = 60_000;
 const MAX_RECONNECT_ATTEMPTS = 3;
@@ -107,6 +124,8 @@ class MCPClient extends EventEmitter {
     this.capabilities = {};
     this.serverInfo = null;
     this.instructions = null;
+    /** 与服务端协商后的协议版本(取自 initialize 回包)。 */
+    this.protocolVersion = null;
 
     this._process = null;
     this._tools = [];
@@ -356,6 +375,71 @@ class MCPClient extends EventEmitter {
 
   // ── Internal: Stdio Transport ───────────────────────────────────────────
 
+  /**
+   * @private Resolve a stdio `command` to a portable interpreter target.
+   * Bare python launchers are resolved via VIRTUAL_ENV → PYTHON_PATH → an
+   * install-root venv (tools/deepseek-eyes/.venv) → PATH. Explicit absolute
+   * paths pass through but are flagged `stale` when missing. Pure + fail-soft:
+   * any failure returns null so the caller keeps the configured command.
+   */
+  _resolvePythonCommand(command, env) {
+    try {
+      const { resolveStdioCommand, isBareLauncher } = require('./pythonCommandResolver');
+      const fsExists = (p) => {
+        try {
+          return fs.existsSync(p);
+        } catch {
+          return false;
+        }
+      };
+      if (!isBareLauncher(command)) {
+        return resolveStdioCommand(command, {
+          platform: process.platform,
+          env,
+          fsExists,
+          pathScan: () => null,
+          venvCandidates: [],
+        });
+      }
+      const venvCandidates = [];
+      try {
+        // eslint-disable-next-line global-require
+        const { getAppRoot } = require('../../../../utils/dataHome');
+        const root = getAppRoot();
+        const isWin = process.platform === 'win32';
+        const rel = isWin
+          ? ['tools', 'deepseek-eyes', '.venv', 'Scripts', 'python.exe']
+          : ['tools', 'deepseek-eyes', '.venv', 'bin', 'python'];
+        venvCandidates.push(path.join(root, ...rel));
+      } catch {
+        /* app-root resolver unavailable — skip install-root candidates */
+      }
+      let pathScan = () => null;
+      try {
+        // eslint-disable-next-line global-require
+        const { searchExecutable } = require('../../../../tools/platformUtils');
+        pathScan = (name) => {
+          try {
+            return searchExecutable(name);
+          } catch {
+            return null;
+          }
+        };
+      } catch {
+        /* PATH scanner unavailable */
+      }
+      return resolveStdioCommand(command, {
+        platform: process.platform,
+        env,
+        fsExists,
+        pathScan,
+        venvCandidates,
+      });
+    } catch {
+      return null;
+    }
+  }
+
   /** @private */
   async _connectStdio() {
     return new Promise((resolve, reject) => {
@@ -367,7 +451,22 @@ class MCPClient extends EventEmitter {
 
       try {
         const env = { ...process.env, ...(this.config.env || {}) };
-        this._process = spawn(this.config.command, this.config.args || [], {
+        // Resolve a bare `python` launcher to a portable interpreter target so a
+        // relocated install follows the venv under the install root instead of a
+        // stale absolute path. Fail-soft: on any resolver problem keep the
+        // configured command as-is.
+        let command = this.config.command;
+        const resolved = this._resolvePythonCommand(command, env);
+        if (resolved && resolved.command) {
+          if (resolved.stale) {
+            console.warn(
+              `[MCP] "${this.name}" interpreter ${resolved.command} is missing (stale path from another machine); ` +
+                `rebuild the venv or use a bare "python" command.`
+            );
+          }
+          command = resolved.command;
+        }
+        this._process = spawn(command, this.config.args || [], {
           stdio: ['pipe', 'pipe', 'pipe'],
           env,
         });
@@ -440,11 +539,7 @@ class MCPClient extends EventEmitter {
         // MCP initialize handshake
         this._sendRequest('initialize', {
           protocolVersion: PROTOCOL_VERSION,
-          capabilities: {
-            tools: {},
-            resources: {},
-            prompts: {},
-          },
+          capabilities: CLIENT_CAPABILITIES,
           clientInfo: {
             name: 'khy-os',
             version: _getVersion(),
@@ -457,6 +552,7 @@ class MCPClient extends EventEmitter {
             this.capabilities = result.capabilities || {};
             this.serverInfo = result.serverInfo || null;
             this.instructions = result.instructions || null;
+            this._checkProtocolVersion(result);
 
             // Send initialized notification
             this._sendNotification('notifications/initialized', {});
@@ -491,13 +587,14 @@ class MCPClient extends EventEmitter {
 
     const result = await this._sendRequestHttp('initialize', {
       protocolVersion: PROTOCOL_VERSION,
-      capabilities: { tools: {}, resources: {}, prompts: {} },
+      capabilities: CLIENT_CAPABILITIES,
       clientInfo: { name: 'khy-os', version: _getVersion() },
     });
 
     this.capabilities = result?.capabilities || {};
     this.serverInfo = result?.serverInfo || null;
     this.instructions = result?.instructions || null;
+    this._checkProtocolVersion(result);
 
     this._sendNotification('notifications/initialized', {});
     await this._loadServerInventory();
@@ -558,12 +655,13 @@ class MCPClient extends EventEmitter {
 
     const result = await this._sendRequest('initialize', {
       protocolVersion: PROTOCOL_VERSION,
-      capabilities: { tools: {}, resources: {}, prompts: {} },
+      capabilities: CLIENT_CAPABILITIES,
       clientInfo: { name: 'khy-os', version: _getVersion() },
     });
     this.capabilities = result?.capabilities || {};
     this.serverInfo = result?.serverInfo || null;
     this.instructions = result?.instructions || null;
+    this._checkProtocolVersion(result);
 
     this._sendNotification('notifications/initialized', {});
     await this._loadServerInventory();
@@ -618,15 +716,30 @@ class MCPClient extends EventEmitter {
   // ── Internal: shared inventory load ─────────────────────────────────────
 
   /**
-   * Fetch tools / resources / prompts after a successful handshake. Each list is
-   * best-effort: a server that does not implement a capability simply yields [].
+   * Fetch tools / resources / prompts after a successful handshake.
+   *
+   * 规范要求客户端**不得**调用服务端未声明支持的能力。此前三个 list 无条件并发发出:
+   * 对只声明 tools 的服务端(例如 khy 自己的 `mcp serve`)会白拿一个 -32601,而
+   * `allSettled` 又把"该能力不存在"与"请求真失败了"混为一谈。
+   *
+   * 判定:`capabilities` 里没有 `resources` / `prompts` 键 → 不请求。规范要求服务端在
+   * initialize 回包里给出 capabilities,故"未声明即不支持"是合规读法。代价是:若某
+   * 服务端省略了 capabilities,它的资源/提示在 khy 侧会不可见 —— 但 `tools/list`
+   * 始终请求,核心能力不受影响。
+   *
+   * 每个 list 仍是 best-effort:未实现的能力产出 `[]`。
    * @private
    */
   async _loadServerInventory() {
+    const caps =
+      this.capabilities && typeof this.capabilities === 'object' ? this.capabilities : {};
+    const wantResources = caps.resources !== undefined;
+    const wantPrompts = caps.prompts !== undefined;
+
     const [toolsResult, resourcesResult, promptsResult] = await Promise.allSettled([
       this._sendRequest('tools/list', {}),
-      this._sendRequest('resources/list', {}),
-      this._sendRequest('prompts/list', {}),
+      wantResources ? this._sendRequest('resources/list', {}) : Promise.resolve({ resources: [] }),
+      wantPrompts ? this._sendRequest('prompts/list', {}) : Promise.resolve({ prompts: [] }),
     ]);
     this._tools = toolsResult.status === 'fulfilled' ? toolsResult.value?.tools || [] : [];
     this._resources =
@@ -884,12 +997,115 @@ class MCPClient extends EventEmitter {
       return;
     }
 
+    // 服务端发起的**请求**(有 method + id)→ 必须回一条响应。
+    // 静默丢弃的后果是服务端一直等到自己的超时,表现为"对面卡住"。
+    // 必须在通知分支**之前**判断:请求同样携带 method。
+    if (typeof msg.method === 'string' && msg.id !== undefined && msg.id !== null) {
+      this._handleServerRequest(msg);
+      return;
+    }
+
     // Server-initiated notifications
     if (msg.method === 'notifications/tools/list_changed') {
       this._refreshTools();
     } else if (msg.method === 'notifications/resources/list_changed') {
       this._refreshResources();
     }
+  }
+
+  /**
+   * 处理服务端发起的请求并回写响应。
+   * @private
+   */
+  _handleServerRequest(msg) {
+    const id = msg.id;
+    Promise.resolve()
+      .then(() => this._dispatchServerRequest(msg.method, msg.params || {}))
+      .then((result) => this._respondToServer({ jsonrpc: '2.0', id, result }))
+      .catch((err) => {
+        const code = err && err.__rpcCode !== undefined ? err.__rpcCode : -32603;
+        const message = err && err.message ? err.message : 'internal error';
+        this._respondToServer({ jsonrpc: '2.0', id, error: { code, message } });
+      });
+  }
+
+  /**
+   * 服务端请求的派发表。
+   *
+   * **只实现已声明的能力**(见 CLIENT_CAPABILITIES);未支持的方法一律回 -32601,
+   * 而不是静默丢弃 —— 服务端至少能立刻知道结果,不必等到超时。
+   *
+   * @private
+   */
+  async _dispatchServerRequest(method, _params) {
+    if (method === 'ping') {
+      return {};
+    }
+    if (method === 'roots/list') {
+      return { roots: this._serverRoots() };
+    }
+    const err = new Error(`method not supported by this client: ${method}`);
+    err.__rpcCode = -32601; // JSON-RPC: Method not found
+    throw err;
+  }
+
+  /**
+   * 本客户端向服务端声明的工作目录根(roots 能力)。
+   * 只暴露当前工作目录,不暴露用户目录全貌。
+   * @private
+   * @returns {Array<{uri: string, name: string}>}
+   */
+  _serverRoots() {
+    try {
+      return [{ uri: pathToFileURL(process.cwd()).href, name: 'cwd' }];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * 把一条 JSON-RPC 消息回写给服务端。复用 `_writeRaw`,因此 stdio / 传统 SSE /
+   * Streamable HTTP 三种传输都能正确回信。
+   * @private
+   */
+  _respondToServer(payload) {
+    try {
+      const r = this._writeRaw(JSON.stringify(payload));
+      if (r && typeof r.catch === 'function') {
+        r.catch(() => {});
+      }
+    } catch {
+      /* 回写失败无法补救,但不能因此打断消息处理循环 */
+    }
+  }
+
+  /**
+   * 校验服务端在 initialize 回包里给出的协议版本。
+   *
+   * 规范:客户端请求的版本若服务端不支持,服务端会回自己支持的版本;此时客户端若
+   * 无法支持该版本,应当断开。这里**不自动断开**(khy 对旧版本仍能工作),但把不匹配
+   * 显式暴露出来 —— 记入 `_lastError` 并 emit `protocolVersionMismatch`,由调用方
+   * 决定去留。此前这里完全不读该字段,不匹配是静默的,正是要修的问题。
+   *
+   * @private
+   * @param {object} result initialize 回包
+   * @returns {boolean} 是否与请求的版本一致
+   */
+  _checkProtocolVersion(result) {
+    const negotiated = result && result.protocolVersion;
+    this.protocolVersion = negotiated || PROTOCOL_VERSION;
+    if (!negotiated || negotiated === PROTOCOL_VERSION) {
+      return true;
+    }
+    this._lastError =
+      `protocol version mismatch: requested ${PROTOCOL_VERSION}, ` +
+      `server offered ${negotiated}`;
+    this.emit('protocolVersionMismatch', {
+      requested: PROTOCOL_VERSION,
+      server: negotiated,
+      serverName: this.name,
+    });
+    return false;
   }
 
   /** @private */
@@ -1517,7 +1733,7 @@ function getConnectedServers() {
 
 function _getVersion() {
   try {
-    return require('../../../package.json').version;
+    return require('../../../../../package.json').version;
   } catch {
     return '0.0.0';
   }
@@ -1558,6 +1774,10 @@ function _parseSseData(raw) {
 }
 
 module.exports = {
+  // 协议常量(单一真源;server 侧与测试共用)
+  PROTOCOL_VERSION,
+  CLIENT_CAPABILITIES,
+
   // Core class
   MCPClient,
 

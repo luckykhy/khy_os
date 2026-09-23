@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-LAY-002] 目录层级与文件归类规范.md -->
+<title>[DESIGN-LAY-002] 目录层级与文件归类规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-LAY<span class="sep">›</span>[DESIGN-LAY-002] 目录层级与文件归类规范</div>
+      <header class="hero reveal"><h1>[DESIGN-LAY-002] 目录层级与文件归类规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-lay-002-目录层级与文件归类规范">[DESIGN-LAY-002] 目录层级与文件归类规范</a></li><li class="lvl-2"><a href="#1-红线">1. 红线</a></li><li class="lvl-2"><a href="#2-第-4-轴-可见性-pub-int-prv">2. 第 4 轴：可见性（PUB / INT / PRV）</a></li><li class="lvl-3"><a href="#2-1-三档定义">2.1 三档定义</a></li><li class="lvl-3"><a href="#2-2-判定四问">2.2 判定四问</a></li><li class="lvl-3"><a href="#2-3-现状登记">2.3 现状登记</a></li><li class="lvl-2"><a href="#3-前缀用法裁定">3. `_` 前缀用法裁定</a></li><li class="lvl-2"><a href="#4-分层-命名风格映射">4. 分层 → 命名风格映射</a></li><li class="lvl-2"><a href="#5-文件归类标准">5. 文件归类标准</a></li><li class="lvl-2"><a href="#6-典型目录树-示例-非强制格式">6. 典型目录树（示例，非强制格式）</a></li><li class="lvl-2"><a href="#7-反例-正例">7. 反例 → 正例</a></li><li class="lvl-2"><a href="#8-冲突裁决-存量矛盾三条">8. 冲突裁决（存量矛盾三条）</a></li><li class="lvl-2"><a href="#9-校验-守卫">9. 校验（守卫）</a></li><li class="lvl-2"><a href="#10-例外与豁免">10. 例外与豁免</a></li><li class="lvl-2"><a href="#11-版本历史">11. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-lay-002-目录层级与文件归类规范">[DESIGN-LAY-002] 目录层级与文件归类规范<a class="anchor" href="#design-lay-002-目录层级与文件归类规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: LAYOUT-001 -->
+<blockquote><p><strong>定位</strong>：管「新文件该放哪个目录、叫什么名、属于谁可见」。层级模型本身（L0–L6 与依赖边）真源在 <code>[DESIGN-LAY-005]</code>，本文<strong>只补它留下的四个空白</strong>：可见性轴、分层命名映射、文件归类、完整树示例。</p>
+<p><strong>结论</strong>：① 仓库有<strong>四条轴</strong>，层轴（L0–L6）之外新增<strong>可见性轴</strong> PUB / INT / PRV，两轴正交，判位置先看层轴再看可见性轴；② 目录名风格由<strong>语言轴</strong>决定（JS/TS 用 camelCase、Python/C 用 snake_case、扩展包 id 用 kebab-case），不是一种风格打天下；③ <code>.js</code> 是 L2 的运行时语言，<code>.mjs</code>/<code>.cjs</code>/<code>.ts</code> 只允许出现在 <code>apps/</code> 与少量脚本边缘，<code>.vue</code> 只允许出现在前端层。</p></blockquote>
+<blockquote><p><strong>本文不写死任何编号格式。</strong> 目录<strong>名</strong>的风格族属语言轴约束，可机械判定；而 <code>docs/</code> 内文档的编号与索引文件名格式，真源在 <code>[MGMT-STD-001]</code> 第 2.3 条——由执行 AI 依目标目录现有文件序列动态决策，本文一律不规定。第 5 节树中的 <code>00_INDEX_</code>、<code>[TAG-NNN]</code> 等字样<strong>仅描述磁盘现状</strong>，不得反向固化为本文的强制条文（<code>[MGMT-STD-001]</code> 第 2.3 条明文禁止）。</p></blockquote>
+<hr>
+<h2 id="1-红线">1. 红线<a class="anchor" href="#1-红线" aria-label="锚点">#</a></h2>
+<blockquote><p>每行均可写成守卫断言或评审 checklist 项。守卫列写「人工」表示暂无机械检查。</p></blockquote>
+<table><thead><tr><th><strong>编号</strong></th><th><strong>红线</strong></th><th><strong>触发条件</strong></th><th><strong>违规后果</strong></th><th><strong>守卫</strong></th></tr></thead><tbody><tr><td>LAY-1</td><td>新文件必须落在 L0–L6 或横切层内</td><td>新建未登记顶层目录</td><td>拒收；须先改 ARCH-068 + 守卫</td><td><code>layer-registry</code></td></tr><tr><td>LAY-2</td><td>跨层依赖必须经 PUB 包，不得深层相对路径</td><td><code>require('../../../&lt;别的包&gt;/src/...')</code></td><td>判违规；改走 workspace 包名</td><td><code>cross-layer-require</code></td></tr><tr><td>LAY-3</td><td>跨层可见的代码必须是 pnpm workspace 包</td><td>目录名含 <code>shared</code>/<code>common</code> 但无 <code>package.json</code></td><td>判违规；要么注册包，要么降级为 PRV</td><td>人工</td></tr><tr><td>LAY-4</td><td>构建产物不得进入源码层</td><td><code>build/</code>、<code>dist/</code>、<code>*.egg-info</code> 被 git 跟踪</td><td>拒收；须保持 <code>.gitignore</code></td><td><code>check-build-artifacts</code></td></tr><tr><td>LAY-5</td><td><code>docs/</code> 内 <code>.md</code> 必有同名 <code>.html</code></td><td>新增 <code>.md</code> 未跑 <code>docs:build</code></td><td>CI 红灯非零退出</td><td><code>verify_docs_site.js</code></td></tr><tr><td>LAY-6</td><td>根目录只放白名单说明文件</td><td>根出现非白名单 <code>.md</code>/<code>.txt</code></td><td>判违规；收容进 <code>docs/</code></td><td><code>root-whitelist</code></td></tr><tr><td>LAY-7</td><td>目录名风格必须匹配所在层语言轴</td><td>L2 出现 kebab 目录、L1 出现 camel 目录</td><td>人工评审拦截</td><td>人工</td></tr><tr><td>LAY-8</td><td><code>_</code> 前缀在代码树内一律表示 PRV</td><td>代码树内 <code>_xxx</code> 被跨包依赖</td><td>判违规；改为 PUB 包或去掉前缀</td><td>人工</td></tr></tbody></table>
+<hr>
+<h2 id="2-第-4-轴-可见性-pub-int-prv">2. 第 4 轴：可见性（PUB / INT / PRV）<a class="anchor" href="#2-第-4-轴-可见性-pub-int-prv" aria-label="锚点">#</a></h2>
+<blockquote><p><strong>结论</strong>：ARCH-068 只回答「文件在哪一层」，没回答「谁能依赖它」。可见性轴与层轴<strong>正交</strong>——同一个 L2 目录里既有 PUB（<code>@khy/shared</code> 被 L4 依赖）也有 PRV（<code>_llmDecomposer.js</code> 只有同目录能碰）。层轴决定目录归属，可见性轴决定 import 权限。</p></blockquote>
+<h3 id="2-1-三档定义">2.1 三档定义<a class="anchor" href="#2-1-三档定义" aria-label="锚点">#</a></h3>
+<p>按「能被谁依赖」划分，判定依据是可执行的，不是主观印象。</p>
+<table><thead><tr><th><strong>档</strong></th><th><strong>谁能依赖</strong></th><th><strong>形态硬要求</strong></th><th><strong>命名信号</strong></th></tr></thead><tbody><tr><td><code>PUB</code> 共享</td><td>跨层（L0–L6 任意）</td><td>必须是 pnpm workspace 包，<code>package.json</code> 带 <code>&quot;private&quot;: true</code></td><td>包名 <code>@khy/*</code>，目录名不带 <code>_</code></td></tr><tr><td><code>INT</code> 内部</td><td>仅同层目录内</td><td>普通目录，无额外形态要求</td><td>语义名词目录</td></tr><tr><td><code>PRV</code> 私有</td><td>仅同包/同子树</td><td>无；靠命名前缀声明意图</td><td><code>_</code> 前缀、<code>__tests__/</code></td></tr></tbody></table>
+<p><code>PUB</code> 之所以要求「必须是包」：只有包才有 <code>exports</code> 边界、才能被 <code>pnpm-workspace.yaml</code> 声明、才能被 <code>prepack.js</code> 打进产物。目录本身没有这些能力，所以「一个共享目录」是不存在的，只有「一个共享包」。</p>
+<h3 id="2-2-判定四问">2.2 判定四问<a class="anchor" href="#2-2-判定四问" aria-label="锚点">#</a></h3>
+<p>新建或移动文件时自上而下问，首个命中即停。</p>
+<table><thead><tr><th><strong>顺序</strong></th><th><strong>问</strong></th><th><strong>命中即</strong></th></tr></thead><tbody><tr><td>1</td><td>别的层需要依赖它吗？</td><td>→ 建/并入 PUB 包，进 <code>platform/packages/</code></td></tr><tr><td>2</td><td>只有同层内的其他目录需要？</td><td>→ INT，留在本层现有语义目录下</td></tr><tr><td>3</td><td>只有同目录/同子树需要？</td><td>→ PRV，加 <code>_</code> 前缀或就地放置</td></tr><tr><td>4</td><td>都不需要，是给人看的产物？</td><td>→ <code>docs/</code> 或 <code>_产物/</code>，不进任何层</td></tr></tbody></table>
+<h3 id="2-3-现状登记">2.3 现状登记<a class="anchor" href="#2-3-现状登记" aria-label="锚点">#</a></h3>
+<p>仓库当前<strong>只有两个 PUB 包</strong>，这是刻意收敛的结果，不是偶然。</p>
+<table><thead><tr><th><strong>包名</strong></th><th><strong>路径</strong></th><th><strong>版本</strong></th><th><strong>模块制</strong></th><th><strong>可见性</strong></th></tr></thead><tbody><tr><td><code>@khy/shared</code></td><td><code>platform/packages/shared</code></td><td>1.6.5</td><td>CommonJS</td><td>PUB</td></tr><tr><td><code>@khy/ui-shared</code></td><td><code>platform/packages/ui-shared</code></td><td>0.1.0</td><td>ESM</td><td>PUB</td></tr></tbody></table>
+<p><code>@khy/shared</code> 的 <code>src/index.js</code> 头部注释是仓库里<strong>唯一一处</strong>「谁可以依赖我」的书面声明（原文写明供 Trading backend 与 AI Management backend 共用）。新增 PUB 包必须仿照补同样一段。</p>
+<p>已登记的 PRV 实体（列举供比对，不是白名单）：</p>
+<ul><li><code>services/backend/vendor/shared/</code> —— 构建期镜像，仅经 npm <code>file:</code> 解析；开发期由 <code>scripts/install/link-shared-dev.js</code> 软链到工作区真源，<code>prepack.js</code> 打包时替换为真实副本。</li><li><code>services/backend/src/services/_llmDecomposer.js</code> —— 807 个条目里唯一的下划线私有文件。</li><li><code>platform/khy_platform/_bootstrap.py</code>、<code>_ui.py</code>、<code>_resources/</code> —— Python 包内私有。</li><li><code>kernel/moonbit/_build/</code> —— 工具生成输出，非源码。</li><li><code>.khyos/deadcode-quarantine/</code> —— 显式隔离的死代码分桶，编号分桶存放。</li></ul>
+<p><strong>应下沉清单</strong>（ARCH-068 第 2.1② 节已点名，本文只登记不执行）：<code>parseBoolean</code>、<code>maskSecret</code>、<code>ensureDirSync</code>、<code>httpError</code>、<code>normalizeAuthToken</code>、<code>modelCapability</code>、<code>modelTier</code>、<code>providerPresets</code> 八个纯函数目前在多个 backend 重复。另有四处 <code>gateway</code> 分层副本（<code>services/backend</code>、<code>services/ai-backend</code>、<code>software/khyquant</code>、<code>platform/packages/shared</code>）与 <code>src/constants/{models.js,serviceDefaults.js}</code> 的两份重复——这些是本文判定框架的<strong>存量债</strong>，本文不动它们。</p>
+<hr>
+<h2 id="3-前缀用法裁定">3. <code>_</code> 前缀用法裁定<a class="anchor" href="#3-前缀用法裁定" aria-label="锚点">#</a></h2>
+<blockquote><p><strong>结论</strong>：同一个 <code>_</code> 前缀在仓库里曾同时表示三种不相干的意思，是查找混乱的主要来源之一。<br><strong>2026-09-16 起 <code>docs/</code> 顶层改用统一编号轴</strong>（见 <code>[DESIGN-LAY-005]</code> §3.1），<code>_</code> 只剩两种含义，且<strong>只限于代码树内</strong>。</p></blockquote>
+<table><thead><tr><th><strong>用法</strong></th><th><strong>含义</strong></th><th><strong>裁定</strong></th></tr></thead><tbody><tr><td><code>_bootstrap.py</code>、<code>_resources/</code>、<code>_llmDecomposer.js</code></td><td>包内私有实现</td><td><strong>保留</strong>，归 PRV。仅限代码树内</td></tr><tr><td><code>khy-Trajectory/_probe*.txt</code> 等</td><td>临时探测草稿</td><td><strong>判定为草稿</strong>。草稿不得进入 <code>docs/</code> 正文层级，只能落 <code>_产物/</code> 或轨迹目录</td></tr></tbody></table>
+<blockquote><p><strong>已废止的第三种含义</strong>：<code>docs/_规范/</code>、<code>docs/_报告/</code> 曾以 <code>_</code> 表示「跨阶段资产，不在生命周期序列里」。<br>该含义<strong>已废止</strong>——<code>docs/</code> 顶层现统一为 <code>NN_中文/</code>，「编号 ≥ 10」即表达跨阶段，真源 <code>[DESIGN-LAY-005]</code> §3.1。<br>废止理由有二：① <code>_</code> 在资源管理器与 <code>ls</code> 中排序位置不确定，读者无法凭名字预判顺序；<br>② 同一个 <code>_</code> 同时表「跨阶段」与「包内私有/草稿」两义，与 LAY-8 冲突。<br>存量目录已于同日改名（<code>_规范</code>→<code>10_规范</code>、<code>_报告</code>→<code>11_报告</code>、<code>_assets</code>→<code>19_资产</code>、<code>_archive</code>→<code>18_归档</code> 等），<strong>不保留 <code>_</code> 别名</strong>。</p></blockquote>
+<p>边界：代码树内 <code>_</code> 一律 PRV（见 LAY-8）；草稿没有第四种合法去处，一律走 <code>_产物/</code>（该目录语义已是「产出即冻结、不再维护」）。</p>
+<hr>
+<h2 id="4-分层-命名风格映射">4. 分层 → 命名风格映射<a class="anchor" href="#4-分层-命名风格映射" aria-label="锚点">#</a></h2>
+<blockquote><p><strong>结论</strong>：风格由<strong>语言轴</strong>决定，不由层号决定。层号只告诉你「在哪」，语言轴告诉你「怎么写名」。此表是 <code>[DESIGN-NAM-001]</code> 第 10.1 节的层级化落地，不替代它。</p></blockquote>
+<table><thead><tr><th><strong>层</strong></th><th><strong>顶层目录</strong></th><th><strong>主语言</strong></th><th><strong>目录名风格</strong></th><th><strong>文件名风格</strong></th></tr></thead><tbody><tr><td>L0</td><td><code>kernel/</code></td><td>C / Nasm</td><td><code>snake_case</code></td><td><code>snake_case</code></td></tr><tr><td>L1</td><td><code>platform/khy_platform</code></td><td>Python</td><td><code>snake_case</code></td><td><code>snake_case</code></td></tr><tr><td>L2</td><td><code>services/backend</code></td><td>Node（CJS）</td><td><code>camelCase</code></td><td><code>camelCase</code></td></tr><tr><td>L2</td><td><code>services/ai-backend</code></td><td>Node（CJS）</td><td><code>camelCase</code></td><td><code>camelCase</code></td></tr><tr><td>L3</td><td><code>apps/*</code></td><td>Vue / TS / Dart</td><td><code>camelCase</code></td><td><code>camelCase</code></td></tr><tr><td>L4</td><td><code>software/khyquant</code></td><td>Python + Vue</td><td><code>snake_case</code>（Py）</td><td><code>snake_case</code>（Py）</td></tr><tr><td>L5</td><td><code>extensions/&lt;分类&gt;/&lt;id&gt;</code></td><td>混合</td><td><code>kebab-case</code> 分类 + id</td><td>随包语言</td></tr><tr><td>L6</td><td><code>tools/</code></td><td>混合</td><td><code>kebab-case</code></td><td>随包语言</td></tr><tr><td>横切</td><td><code>scripts/</code>、<code>packaging/</code></td><td>JS</td><td><code>kebab-case</code></td><td><code>kebab-case</code></td></tr></tbody></table>
+<p>两条补充口径：</p>
+<ul><li>L5 的 <code>&lt;分类&gt;</code> 取自封闭集合 <code>tools</code>、<code>protocols</code>、<code>mcp</code>、<code>scripts</code>、<code>software</code>、<code>bridges</code>，<code>&lt;id&gt;</code> 必须等于叶子目录名且与 <code>khy.extension.json</code> 的 <code>id</code> 一致，深度上限 2 层（真源 <code>[DESIGN-TOOL-002]</code>）。</li><li>例外是 <code>platform/khy_platform</code> 与 <code>services/khy-os-backend</code>/<code>khy-ai-backend</code>：外层目录跟随包名风格（Python 用 snake、npm 包用 kebab），内层再按上表执行。这是存量现实，不追溯修改。</li></ul>
+<hr>
+<h2 id="5-文件归类标准">5. 文件归类标准<a class="anchor" href="#5-文件归类标准" aria-label="锚点">#</a></h2>
+<blockquote><p><strong>结论</strong>：扩展名即语言，语言即层级。下表是「这个扩展名允许落在哪几层」的封闭口径，超出即需人工说明理由。</p></blockquote>
+<table><thead><tr><th><strong>扩展名</strong></th><th><strong>语言 / 职责</strong></th><th><strong>允许层级</strong></th><th><strong>备注</strong></th></tr></thead><tbody><tr><td><code>.js</code></td><td>Node 运行时（CJS）</td><td>L2 主体，L3/L4 前端少量</td><td>存量 6622 个</td></tr><tr><td><code>.mjs</code></td><td>ESM 边缘脚本</td><td>L3、横切、L5</td><td>不与 <code>.js</code> 混放于 L2</td></tr><tr><td><code>.cjs</code></td><td>CJS 显式标记</td><td>L3、L5、横切</td><td>多用于测试对偶</td></tr><tr><td><code>.ts</code> / <code>.tsx</code></td><td>TypeScript</td><td>仅 L3 的 Electron 应用</td><td>L2 不引入</td></tr><tr><td><code>.vue</code></td><td>Vue SFC</td><td>L3、L4 前端</td><td>不越层</td></tr><tr><td><code>.py</code></td><td>Python</td><td>L1、L4、横切、L6</td><td>L2 不放业务 <code>.py</code></td></tr><tr><td><code>.c</code> / <code>.h</code></td><td>C</td><td>仅 L0</td><td>全仓唯一</td></tr><tr><td><code>.asm</code></td><td>Nasm</td><td>仅 L0</td><td>引导 + 内核例程</td></tr><tr><td><code>.mbt</code></td><td>MoonBit</td><td>L0、L1 插件 SDK</td><td>生态桥接</td></tr><tr><td><code>.md</code> + <code>.html</code></td><td>文档 + 孪生</td><td><code>docs/</code>、各层 README</td><td>孪生必成对，见 LAY-5</td></tr><tr><td><code>.json</code></td><td>配置 / 契约</td><td>全部层</td><td>放被其约束的目录内</td></tr><tr><td><code>.bat</code> / <code>.sh</code> / <code>.ps1</code></td><td>启动与运维脚本</td><td>根（PATH 入口）、<code>scripts/</code>、L5</td><td>三档放置见下</td></tr></tbody></table>
+<p>启动器三档放置：① 需进系统 <code>PATH</code> 的 CLI 入口留仓库根（<code>khy.bat</code>、<code>khy.sh</code>）；② 便携/安装型脚本入 <code>extensions/scripts/&lt;id&gt;/</code>；③ 工程任务脚本入 <code>scripts/</code>，共享逻辑写 <code>scripts/lib/</code>，脚本主体保持薄壳。同一脚本的 <code>.bat</code> 与 <code>.sh</code> 应成对同目录，便于跨平台切换。</p>
+<p>产物与源码分界：<code>build/</code>、<code>dist/</code>、<code>dist-electron/</code>、<code>*.egg-info/</code> 属构建工具生成目录，由守卫的封闭集合排除，必须保持被忽略状态。层内的运行期输出（如 <code>apps/*/out/</code>、<code>dist-ts/</code>）不得与源码同级存放。</p>
+<hr>
+<h2 id="6-典型目录树-示例-非强制格式">6. 典型目录树（示例，非强制格式）<a class="anchor" href="#6-典型目录树-示例-非强制格式" aria-label="锚点">#</a></h2>
+<blockquote><p><strong>结论</strong>：这是<strong>当前磁盘现状</strong>的浓缩示意，用于回答「放新东西前先看哪张图」。每个节点标注层号与可见性档；<code>docs/</code> 侧的编号写法是现状描述，非本文强制格式（见文首边界声明）。</p></blockquote>
+<pre><code class="language-text">khy-os/
+├── kernel/                          # L0 · INT  手写 OS 内核（C + Nasm）
+│   ├── boot/                        #      引导例程（long_mode、isr、context_switch）
+│   ├── src/                         #      内核主体（pmm、sched、elf、ramfs、net、agentbus）
+│   ├── userland/                    #      内核行为一致性测试（.asm 形式）
+│   ├── bridge/                      # INT   JS ↔ OS 协议桥（agent、protocol、mcp）
+│   └── docs/                        #      本层双语教程，不入全局 docs 轴
+├── platform/                        # L1 · INT  Python 启动器 + 共享包 + 交付编排
+│   ├── khy_platform/                #      轻量启动器，拉起 Node（snake_case）
+│   │   └── _resources/              # PRV   包内资源与私有实现
+│   ├── packages/shared/             # PUB   @khy/shared 1.6.5（跨层唯一入口）
+│   ├── packages/ui-shared/          # PUB   @khy/ui-shared 0.1.0（前端共用）
+│   ├── packages/moonbit-plugin-sdk/ # INT   MoonBit 插件 SDK
+│   └── delivery/                    # INT   交付编排（adapters、orchestrator、tasks）
+├── services/                        # L2 · INT  Node 运行时，全部业务逻辑
+│   ├── backend/                     #      khy-os-backend（CJS，807 个 services 条目）
+│   │   ├── src/cli/                 # INT   命令层：router、aliases、handlers、tui、repl
+│   │   ├── src/services/            # INT   业务层：gateway、domain、agentsight…
+│   │   │   └── _llmDecomposer.js    # PRV   807 条目中唯一的下划线私有文件
+│   │   ├── src/routes/              # INT   HTTP 路由（58 个）
+│   │   ├── src/constants/           # INT   单一真源默认值（serviceDefaults.js）
+│   │   ├── src/contracts/           # INT   a2a / acp / mobile 契约
+│   │   ├── src/utils/               # INT   工具函数（117 个）
+│   │   ├── vendor/shared/           # PRV   @khy/shared 构建期镜像（非源码）
+│   │   └── tests/                   # PRV   本包测试（含 __tests__、_smoke 子约定）
+│   └── ai-backend/                  #      khy-ai-backend（与 backend 共享版本轨道）
+├── apps/                            # L3 · INT  平台自带管理前端
+│   ├── ai-frontend/                 #      Vue 3 + Vite（type: module）
+│   ├── khyos-desktop/               #      Electron + TS 桌面端
+│   ├── provider-hub/                #      Electron + TS 模型通道中心
+│   ├── khy-mobile/                  #      Flutter 移动端
+│   └── khy-os-client-app/           #      Flutter / Dart 客户端
+├── software/                        # L4 · INT  跑在平台之上的内置应用
+│   └── khyquant/                    #      量化交易终端（Python + Vue）
+│       ├── khy_quant/               #      包内实现（snake_case）
+│       ├── services/  routes/       # INT   业务与路由
+│       └── frontend/                # INT   Vue 交易 UI
+├── extensions/                      # L5 · INT  内置拓展（契约见 ARCH-069）
+│   ├── tools/                       #      khy-markdown、khy-notebook、khy-dsh-compat
+│   ├── scripts/                     #      便携/安装/诊断类可执行拓展（6 个）
+│   └── bridges/                     #      外部 IDE 桥接（khy-trae-bridge）
+├── tools/                           # L6 · INT  独立开发者工具（叶子，仅被 scripts 触达）
+│   └── deepseek-eyes/               #      独立 Python 工具包
+├── scripts/                         # 横切 · INT 工程任务脚本
+│   ├── ci/                          #      64 个 check-*.js 守卫（含 layout / gov-rules）
+│   ├── lib/                         # INT   脚本共享逻辑，主体保持薄壳
+│   ├── tests/                       # PRV   与 lib/ 一一对应的守卫用例
+│   ├── docs/                        #      docs-site 构建与孪生校验工具
+│   └── release/                     #      构建与发布编排
+├── packaging/                       # 横切 · INT 打包清单与板块切分
+│   ├── build/   installer/          #      构建脚本与 NSIS 安装器
+│   ├── modules/                     # INT   modules.json 模块登记
+│   └── npm/                         #      @khy-os/khy-os 发布清单
+├── docs/                            # 横切 · 文档统一编号轴（01–09 阶段 / 10–19 跨阶段）
+│   ├── 01_INIT_立项/ … 09_STORY_修仙学AI/   # 01–09：生命周期阶段（9 个编号目录）
+│   ├── 10_规范/                      # 10–19：跨阶段资产（规范族，本文所在目录）
+│   ├── 11_报告/ 12_模板/ 13_传承/ 14_维护者/ 15_维护记录/
+│   ├── 16_设计模式/ 17_AI协作预设包/ 18_归档/ 19_资产/
+│   └── 00_INDEX_文档索引.md          # 主索引（现状示例，非强制格式）
+├── electron/                        # 根级例外 · 根 package.json 的 electron:dev 入口
+├── tests/                           # 根级例外 · 仅 DEBT.md 测试债务登记
+├── _产物/                           # 根级例外 · 工作产物暂存区，产出即冻结
+├── deploy/   patches/               # 根级例外 · 部署试验 / 第三方依赖补丁
+└── khy_os.egg-info/  build/ …       # 生成目录（封闭集合，必须保持被忽略）</code></pre>
+<p>树中每个顶层节点都在守卫的 <code>LAYERS</code> 或 <code>CROSSCUTTING</code> 封闭集合内；新增顶层目录须同时改 ARCH-068 与守卫清单，否则 <code>layer-registry</code> 直接拦截。</p>
+<hr>
+<h2 id="7-反例-正例">7. 反例 → 正例<a class="anchor" href="#7-反例-正例" aria-label="锚点">#</a></h2>
+<table><thead><tr><th><strong>反例</strong></th><th><strong>问题</strong></th><th><strong>修法</strong></th></tr></thead><tbody><tr><td>在 <code>services/backend/src/</code> 新建 <code>shared-utils/</code> 供 L4 引用</td><td>目录冒充 PUB，无包边界</td><td>下沉为 <code>platform/packages/shared</code> 的导出，或降级为 PRV</td></tr><tr><td><code>require('../../../../software/khyquant/models/X')</code></td><td>深层跨层相对路径</td><td>走 workspace 包名（现存的 57 个单行 re-export 壳仅限纯转发）</td></tr><tr><td>在 L2 新建 <code>api-service.js</code></td><td>违反层语言轴（LAY-7）</td><td>改 <code>apiService.js</code></td></tr><tr><td>在 <code>docs/07_OPS_运维/</code> 放 <code>_probe1.txt</code> 草稿</td><td><code>_</code> 被误用为草稿标记</td><td>草稿移 <code>_产物/</code>，正式文档走 docs 轴</td></tr><tr><td>新增 <code>.md</code> 后直接提交</td><td>缺 <code>.html</code> 孪生，LAY-5 红灯</td><td>先跑 <code>npm run docs:build</code> 再提交</td></tr><tr><td>在 <code>services/backend/src/</code> 放 <code>deploy.py</code></td><td>Python 越层进 L2</td><td>移 <code>scripts/</code> 或 <code>platform/</code></td></tr><tr><td>在 <code>docs/</code> 顶层新建 <code>_新目录/</code></td><td><code>_</code> 表「跨阶段」的含义已废止；且与 PRV/草稿的 <code>_</code> 撞车</td><td>改用 <code>NN_中文/</code>，编号接 <code>10</code>–<code>19</code> 段续编（ARCH-068 §3.1）</td></tr><tr><td>给 <code>docs/</code> 新增一个 <code>10_</code>–<code>19_</code> 之外的编号段（如 <code>20_</code>）</td><td>段位意义是硬约定：<code>≤09</code> 阶段、<code>≥10</code> 跨阶段</td><td>复用 <code>10</code>–<code>19</code> 续编；确需扩段须先改 ARCH-068 §3.1 与守卫</td></tr></tbody></table>
+<hr>
+<h2 id="8-冲突裁决-存量矛盾三条">8. 冲突裁决（存量矛盾三条）<a class="anchor" href="#8-冲突裁决-存量矛盾三条" aria-label="锚点">#</a></h2>
+<blockquote><p><strong>结论</strong>：本次成文时发现三处既有文档与磁盘现状互相矛盾。按 <code>[MGMT-STD-008]</code> 第 2.2 条裁决算法逐条裁定，并如实标注处理力度。</p></blockquote>
+<p><strong>① <code>.html</code> 孪生是否入版本控制 —— 裁定：入。</strong><br><code>[OPS-MAN-169]</code> 第 2.5 条规定「<code>.md</code> 必有同名 <code>.html</code>，由 <code>docs:build</code> 生成、<code>verify_docs_site.js</code> 硬门校验」，且 <code>.gitignore</code> 全文件<strong>无任何 html 条目</strong>，git 已跟踪 461 个 <code>docs/</code> 下的 <code>.html</code>（磁盘 642 个）。而 <code>[DESIGN-DOC-001]</code> 第 6 节原称「HTML 为导出格式，不纳入版本控制」并附了一段并不存在的 gitignore 片段。裁定以 OPS-MAN-169 + 硬门 + 实际跟踪状态为准，<code>DESIGN-DOC-001</code> 第 6 节已于 2026-09-15 同步修正。</p>
+<p><strong>② JS 文件名 camelCase 还是 kebab-case —— 裁定：camelCase 优先，不追溯改名。</strong><br><code>[DESIGN-NAM-001]</code> 第 10.1 节规定 JS 文件 <code>camelCase</code>（示例 <code>aiGateway.js</code>），<code>[DESIGN-ARCH-073]</code> 规范快速参考卡给出 <code>user-service.js</code> 并标注「应该用 kebab-case」。ARCH-073 是<strong>参考卡</strong>，不是一条规则卡，未登记于 <code>RULES-REGISTRY.json</code>，因此不进入裁决算法；且存量 6622 个 <code>.js</code> 全为 camelCase。裁定 NAM-001 优先。ARCH-073 的示例文字不追溯修改，读者以本文为准。</p>
+<p><strong>③ <code>_source/</code> 注册表幻影 —— 裁定：已废弃，待三处同步清除。</strong><br>ARCH-068 第 1.2 节将 <code>_source/</code> 登记为横切层，守卫 <code>CROSSCUTTING</code> 与 <code>repo-layout-baseline.json</code> 同步含该键，但磁盘上该目录<strong>不存在</strong>（全仓无一处）。这是「文档说有、守卫有、磁盘没有」的三方分叉。裁定其为已废弃登记。清除须<strong>三处同步</strong>（ARCH-068 第 1.2 节表格 + 守卫 <code>CROSSCUTTING</code> + baseline），因 ARCH-068 第 1.4 节明文禁止文档与守卫单边修改。本次不执行，登记为待办。</p>
+<hr>
+<h2 id="9-校验-守卫">9. 校验（守卫）<a class="anchor" href="#9-校验-守卫" aria-label="锚点">#</a></h2>
+<blockquote><p><strong>结论</strong>：本文不新增守卫脚本。下表是每条红线的现有覆盖情况，标「人工」者已在此明示，属有意留白而非遗漏。</p>
+<p>本文 8 条红线已作为规则 <code>LAYOUT-001</code> 登记于 <code>RULES-REGISTRY.json</code>（domain <code>LAYOUT</code> / priority <code>P1</code> / status <code>active</code>），由 <code>check-gov-rules.js</code> 的 GOV-TOOL-006 校验字段完整性与权力-约束配对铁律。</p></blockquote>
+<table><thead><tr><th><strong>红线</strong></th><th><strong>覆盖者</strong></th><th><strong>级别</strong></th></tr></thead><tbody><tr><td>LAY-1</td><td><code>scripts/ci/check-repo-layout.js</code> → <code>layer-registry</code></td><td>error</td></tr><tr><td>LAY-2</td><td>同上 → <code>cross-layer-require</code>、<code>unresolved-require</code></td><td>warning + 基线</td></tr><tr><td>LAY-3</td><td>无守卫 → 人工评审（对照第 2.3 节 PUB 清单）</td><td>人工</td></tr><tr><td>LAY-4</td><td><code>scripts/ci/check-build-artifacts.js</code></td><td>error</td></tr><tr><td>LAY-5</td><td><code>scripts/docs/verify_docs_site.js</code></td><td>硬门非零退出</td></tr><tr><td>LAY-6</td><td><code>check-repo-layout.js</code> → <code>root-whitelist</code>、<code>root-junk</code></td><td>error</td></tr><tr><td>LAY-7</td><td>无守卫 → 人工评审（对照第 4 节映射表）</td><td>人工</td></tr><tr><td>LAY-8</td><td>无守卫 → 人工评审（对照第 3 节裁定）</td><td>人工</td></tr></tbody></table>
+<p>运行方式：<code>npm run check:layout</code>（含 LAY-1/2/6）、<code>npm run docs:verify</code>（含 LAY-5）、<code>npm run check:structure</code>（全链）。基线文件 <code>scripts/ci/repo-layout-baseline.json</code> 当前各 warning 计数为 0，本文不得使其升高。</p>
+<hr>
+<h2 id="10-例外与豁免">10. 例外与豁免<a class="anchor" href="#10-例外与豁免" aria-label="锚点">#</a></h2>
+<ul><li><strong>纯 re-export 壳</strong>：<code>module.exports = require('&lt;远端路径&gt;');</code> 形式的单行转发允许跨层（现存 57 处），<strong>仅当保持单行</strong>；一旦加入任何逻辑即违反 LAY-2。真源 ARCH-068 第 2.1① 节。</li><li><strong>生成目录</strong>：<code>build/</code>、<code>dist/</code>、<code>dist-electron/</code>、<code>*.egg-info/</code> 由守卫封闭集合排除，不参与层级判定。</li><li><strong>层内测试目录名</strong>：<code>tests/</code>、<code>test/</code>、<code>__tests__/</code>、<code>_smoke/</code> 四种写法并存，守卫已按此集合识别；本文不收敛存量写法，但<strong>新增</strong>测试目录统一用 <code>tests/</code>。</li><li><strong>Python 与 JS 混放</strong>：<code>services/backend/akshare_scripts/</code> 等历史 Python 目录留在 L2，属存量债，不追溯迁移。</li><li><strong>编号格式</strong>：本文不规定任何编号格式，见文首边界声明。</li></ul>
+<hr>
+<h2 id="11-版本历史">11. 版本历史<a class="anchor" href="#11-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th><strong>版本</strong></th><th><strong>日期</strong></th><th><strong>变更</strong></th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-15</td><td>初始版本。新增可见性轴（PUB/INT/PRV）与 <code>_</code> 前缀三义裁定；补分层命名映射、文件归类矩阵、完整典型树；裁决 HTML 孪生、JS 命名风格、<code>_source/</code> 幻影三条存量矛盾</td></tr><tr><td>1.1.0</td><td>2026-09-16</td><td>随 <code>[DESIGN-LAY-005]</code> §3.1 的「<code>docs/</code> 双轴收敛为单轴」同步修订：§3 去掉 <code>docs/_*</code> 那条裁定（<code>_</code> 在 <code>docs/</code> 的「跨阶段」含义废止，由「编号 ≥ 10」取代）；§6 典型树更新为 <code>01</code>–<code>09</code> 阶段 / <code>10</code>–<code>19</code> 跨阶段；§7 新增两条反例（<code>docs/</code> 顶层新建 <code>_目录</code>、越段编号）。</td></tr></tbody></table>
+<blockquote><p>本文约 200 行，超过 <code>[DESIGN-DOC-001]</code> 第 12 节建议的 150 行上限，原因是用户明确要求「完整典型目录树 + 逐层职责标注」这一节无法压缩，且四个空白主题需在同一篇内闭合以免读者跨篇拼读。红线、反例、校验三节均已按骨架压缩为表格。</p></blockquote>
+<hr>
+<p><em>本规范由 khy-os 架构团队维护；层级模型真源见 <code>[DESIGN-LAY-005]</code></em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-LAY/[DESIGN-LAY-001] 后端分层架构规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-LAY-001] 后端分层架构规范</div></a><a class="next" href="../../../docs/10_规范/DESIGN-LAY/[DESIGN-LAY-003] 仓库整理与巡检规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-LAY-003] 仓库整理与巡检规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-LAY/[DESIGN-LAY-002] 目录层级与文件归类规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

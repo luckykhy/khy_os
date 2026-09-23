@@ -347,7 +347,7 @@ describe('prompt learning rules', () => {
       getCompactPrompt,
       getPartialCompactPrompt,
       getAnchoredCompactPrompt,
-    } = require('../src/services/compact/prompt');
+    } = require('../src/services/domain/memory/compact/prompt.js');
 
     const fullPrompt = getCompactPrompt();
     const partialPrompt = getPartialCompactPrompt();

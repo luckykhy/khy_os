@@ -54,7 +54,7 @@ test('「完成标准」段的条目被解析(反引号在条目内不重复计�
     '## 完成标准',
     '- 所有单测全绿',
     '- arch:god 无新增超限',
-    '- `npm run maintainer:check` 通过',
+    '- `npm run check:maintainer:safety` 通过',
     '',
     '其它说明……',
   ].join('\n');
@@ -66,7 +66,7 @@ test('「完成标准」段的条目被解析(反引号在条目内不重复计�
   assert.ok(kinds.includes('test'), 'test 类(单测全绿)');
   assert.ok(kinds.includes('check'), 'check 类(arch:god / maintainer)');
   assert.ok(c.criteria.every((x) => x.kind !== 'freeform'), '均为可验证标准');
-  assert.ok(c.criteria.some((x) => /maintainer:check/.test(x.text)), '反引号内容并入条目文本');
+  assert.ok(c.criteria.some((x) => /check:maintainer:safety/.test(x.text)), '反引号内容并入条目文本');
 });
 
 test('definition of done 英文标题 + 数字条目', () => {
@@ -102,10 +102,10 @@ test('matchEvidenceAgainstContract:缺一条 → missing 指名', () => {
 });
 
 test('matchEvidenceAgainstContract:命令标准需命令出现在证据里', () => {
-  const c = parseCompletionContract('完成后跑 `npm run maintainer:check`。');
+  const c = parseCompletionContract('完成后跑 `npm run check:maintainer:safety`。');
   assert.equal(matchEvidenceAgainstContract('目标已完成。', c).allMet, false);
   assert.equal(
-    matchEvidenceAgainstContract('已跑 `npm run maintainer:check` → rc=0', c).allMet,
+    matchEvidenceAgainstContract('已跑 `npm run check:maintainer:safety` → rc=0', c).allMet,
     true,
   );
 });

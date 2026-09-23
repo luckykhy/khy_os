@@ -54,6 +54,7 @@
       <div class="gw-actions">
         <el-button type="primary" :loading="busy" @click="onAdd">添加密钥</el-button>
         <el-button @click="onOpenWizard">配置向导（测试 / 一键导入模型）</el-button>
+        <span v-if="progress" class="gw-seed-progress" role="status">{{ progress }}</span>
       </div>
     </el-form>
 
@@ -176,6 +177,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import ProviderLinks from './ProviderLinks.vue';
 import { validateProviderDraft, buildProviderPayload } from './customProviderForm.js';
 
+import { showSuccess, showError, showWarning, showInfo } from '@/api/notify';
 const props = defineProps({
   scope: { type: String, default: 'user' },
   providers: { type: Array, default: () => [] },
@@ -183,6 +185,8 @@ const props = defineProps({
   // Used to draw each key's model "branches"; a provider's keys share its list.
   models: { type: Array, default: () => [] },
   busy: { type: Boolean, default: false },
+  // 多条目播种循环的实时进度文案（RUNTIME-002 状态透明）：如「正在添加模型 deepseek-chat（第 3/10 个）」。
+  progress: { type: String, default: '' },
   // Built-in common-provider presets (from useUserGateway.providerPresets).
   presets: { type: Array, default: () => [] },
 });
@@ -298,7 +302,7 @@ function onAdd() {
   // Validation + payload shape (incl. optional seed-model parsing) live in the
   // tested pure helper; the component stays a thin view.
   const err = validateProviderDraft(draft);
-  if (err) return ElMessage.warning(err);
+  if (err) return showWarning(err);
   // payload.models is always an array (possibly empty); the orchestrator seeds
   // each model after the key is created, then refreshes the catalog.
   emit('add', buildProviderPayload(draft));
@@ -361,7 +365,7 @@ function onCancelReplace() {
 
 function onConfirmReplace(entry) {
   const key = editValue.value.trim();
-  if (!key) return ElMessage.warning('请输入新的 API Key');
+  if (!key) return showWarning('请输入新的 API Key');
   emit('replace-entry', { id: entry.id, key });
   onCancelReplace();
 }
@@ -412,6 +416,11 @@ async function onRemoveProvider(provider) {
 .gw-actions {
   display: flex;
   gap: 10px;
+  align-items: center;
+}
+.gw-seed-progress {
+  font-size: 12px;
+  color: var(--khy-text-muted, var(--el-text-color-secondary));
 }
 .gw-empty {
   color: var(--khy-text-muted);

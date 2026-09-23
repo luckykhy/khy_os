@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-DB-001] 数据库规范.md -->
+<title>[DESIGN-DB-001] 数据库规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>其它设计<span class="sep">›</span>[DESIGN-DB-001] 数据库规范</div>
+      <header class="hero reveal"><h1>[DESIGN-DB-001] 数据库规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-db-001-数据库规范">[DESIGN-DB-001] 数据库规范</a></li><li class="lvl-2"><a href="#1-数据库概述">1. 数据库概述</a></li><li class="lvl-3"><a href="#1-1-支持的数据库">1.1 支持的数据库</a></li><li class="lvl-3"><a href="#1-2-设计原则">1.2 设计原则</a></li><li class="lvl-2"><a href="#2-命名规范">2. 命名规范</a></li><li class="lvl-3"><a href="#2-1-表名">2.1 表名</a></li><li class="lvl-3"><a href="#2-2-列名">2.2 列名</a></li><li class="lvl-3"><a href="#2-3-索引名">2.3 索引名</a></li><li class="lvl-3"><a href="#2-4-约束名">2.4 约束名</a></li><li class="lvl-2"><a href="#3-数据类型">3. 数据类型</a></li><li class="lvl-3"><a href="#3-1-整数类型">3.1 整数类型</a></li><li class="lvl-3"><a href="#3-2-字符串类型">3.2 字符串类型</a></li><li class="lvl-3"><a href="#3-3-日期时间类型">3.3 日期时间类型</a></li><li class="lvl-3"><a href="#3-4-布尔类型">3.4 布尔类型</a></li><li class="lvl-3"><a href="#3-5-json-类型">3.5 JSON 类型</a></li><li class="lvl-2"><a href="#4-表设计规范">4. 表设计规范</a></li><li class="lvl-3"><a href="#4-1-必需列">4.1 必需列</a></li><li class="lvl-3"><a href="#4-2-表定义示例">4.2 表定义示例</a></li><li class="lvl-3"><a href="#4-3-外键约束">4.3 外键约束</a></li><li class="lvl-2"><a href="#5-迁移规范">5. 迁移规范</a></li><li class="lvl-3"><a href="#5-1-迁移文件命名">5.1 迁移文件命名</a></li><li class="lvl-3"><a href="#5-2-迁移文件结构">5.2 迁移文件结构</a></li><li class="lvl-3"><a href="#5-3-迁移执行">5.3 迁移执行</a></li><li class="lvl-3"><a href="#5-4-迁移记录表">5.4 迁移记录表</a></li><li class="lvl-2"><a href="#6-查询规范">6. 查询规范</a></li><li class="lvl-3"><a href="#6-1-基本查询">6.1 基本查询</a></li><li class="lvl-3"><a href="#6-2-关联查询">6.2 关联查询</a></li><li class="lvl-3"><a href="#6-3-聚合查询">6.3 聚合查询</a></li><li class="lvl-3"><a href="#6-4-事务处理">6.4 事务处理</a></li><li class="lvl-2"><a href="#7-索引规范">7. 索引规范</a></li><li class="lvl-3"><a href="#7-1-索引类型">7.1 索引类型</a></li><li class="lvl-3"><a href="#7-2-索引设计原则">7.2 索引设计原则</a></li><li class="lvl-3"><a href="#7-3-复合索引设计">7.3 复合索引设计</a></li><li class="lvl-2"><a href="#8-安全规范">8. 安全规范</a></li><li class="lvl-3"><a href="#8-1-敏感数据加密">8.1 敏感数据加密</a></li><li class="lvl-3"><a href="#8-2-sql-注入防护">8.2 SQL 注入防护</a></li><li class="lvl-3"><a href="#8-3-数据脱敏">8.3 数据脱敏</a></li><li class="lvl-2"><a href="#9-备份与恢复">9. 备份与恢复</a></li><li class="lvl-3"><a href="#9-1-备份策略">9.1 备份策略</a></li><li class="lvl-3"><a href="#9-2-sqlite-备份">9.2 SQLite 备份</a></li><li class="lvl-3"><a href="#9-3-postgresql-备份">9.3 PostgreSQL 备份</a></li><li class="lvl-2"><a href="#10-性能优化">10. 性能优化</a></li><li class="lvl-3"><a href="#10-1-查询优化">10.1 查询优化</a></li><li class="lvl-3"><a href="#10-2-连接池配置">10.2 连接池配置</a></li><li class="lvl-3"><a href="#10-3-慢查询日志">10.3 慢查询日志</a></li><li class="lvl-2"><a href="#11-版本历史">11. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-db-001-数据库规范">[DESIGN-DB-001] 数据库规范<a class="anchor" href="#design-db-001-数据库规范" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档定义 khy-os 项目的数据库设计标准，包括命名、迁移、查询等规范。</p></blockquote>
+<hr>
+<h2 id="1-数据库概述">1. 数据库概述<a class="anchor" href="#1-数据库概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-支持的数据库">1.1 支持的数据库<a class="anchor" href="#1-1-支持的数据库" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>数据库</th><th>用途</th><th>配置</th></tr></thead><tbody><tr><td>SQLite</td><td>开发/测试环境</td><td>默认</td></tr><tr><td>PostgreSQL</td><td>生产环境</td><td>推荐</td></tr></tbody></table>
+<h3 id="1-2-设计原则">1.2 设计原则<a class="anchor" href="#1-2-设计原则" aria-label="锚点">#</a></h3>
+<ol><li><strong>一致性</strong>：所有数据库对象使用统一的命名规范</li><li><strong>可迁移性</strong>：支持从 SQLite 迁移到 PostgreSQL</li><li><strong>版本控制</strong>：所有变更通过迁移脚本管理</li><li><strong>安全性</strong>：敏感数据加密存储</li></ol>
+<hr>
+<h2 id="2-命名规范">2. 命名规范<a class="anchor" href="#2-命名规范" aria-label="锚点">#</a></h2>
+<h3 id="2-1-表名">2.1 表名<a class="anchor" href="#2-1-表名" aria-label="锚点">#</a></h3>
+<p><strong>规则</strong>：</p>
+<ul><li>使用小写字母</li><li>使用下划线分隔单词</li><li>使用复数形式</li></ul>
+<p><strong>示例</strong>：</p>
+<pre><code>users
+user_profiles
+trading_strategies
+order_items</code></pre>
+<h3 id="2-2-列名">2.2 列名<a class="anchor" href="#2-2-列名" aria-label="锚点">#</a></h3>
+<p><strong>规则</strong>：</p>
+<ul><li>使用小写字母</li><li>使用下划线分隔单词</li><li>避免使用保留字</li></ul>
+<p><strong>示例</strong>：</p>
+<pre><code>id
+username
+email
+created_at
+updated_at</code></pre>
+<h3 id="2-3-索引名">2.3 索引名<a class="anchor" href="#2-3-索引名" aria-label="锚点">#</a></h3>
+<p><strong>规则</strong>：</p>
+<pre><code>idx_{table}_{column}</code></pre>
+<p><strong>示例</strong>：</p>
+<pre><code>idx_users_email
+idx_users_username
+idx_orders_user_id</code></pre>
+<h3 id="2-4-约束名">2.4 约束名<a class="anchor" href="#2-4-约束名" aria-label="锚点">#</a></h3>
+<p><strong>规则</strong>：</p>
+<pre><code>pk_{table}_{column}     -- 主键
+fk_{table}_{column}     -- 外键
+uq_{table}_{column}     -- 唯一约束
+ck_{table}_{condition}  -- 检查约束</code></pre>
+<p><strong>示例</strong>：</p>
+<pre><code>pk_users_id
+fk_orders_user_id
+uq_users_email</code></pre>
+<hr>
+<h2 id="3-数据类型">3. 数据类型<a class="anchor" href="#3-数据类型" aria-label="锚点">#</a></h2>
+<h3 id="3-1-整数类型">3.1 整数类型<a class="anchor" href="#3-1-整数类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>范围</th><th>用途</th></tr></thead><tbody><tr><td>INTEGER</td><td>-2^31 到 2^31-1</td><td>主键、外键、计数</td></tr><tr><td>BIGINT</td><td>-2^63 到 2^63-1</td><td>大数值、时间戳</td></tr></tbody></table>
+<h3 id="3-2-字符串类型">3.2 字符串类型<a class="anchor" href="#3-2-字符串类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>最大长度</th><th>用途</th></tr></thead><tbody><tr><td>VARCHAR(50)</td><td>50 字符</td><td>用户名、短文本</td></tr><tr><td>VARCHAR(255)</td><td>255 字符</td><td>邮箱、URL</td></tr><tr><td>TEXT</td><td>无限制</td><td>长文本、JSON</td></tr></tbody></table>
+<h3 id="3-3-日期时间类型">3.3 日期时间类型<a class="anchor" href="#3-3-日期时间类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>精度</th><th>用途</th></tr></thead><tbody><tr><td>TIMESTAMP</td><td>秒</td><td>创建时间、更新时间</td></tr><tr><td>TIMESTAMPTZ</td><td>秒（带时区）</td><td>跨时区时间</td></tr></tbody></table>
+<h3 id="3-4-布尔类型">3.4 布尔类型<a class="anchor" href="#3-4-布尔类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>值</th><th>用途</th></tr></thead><tbody><tr><td>BOOLEAN</td><td>true/false</td><td>状态标志</td></tr></tbody></table>
+<h3 id="3-5-json-类型">3.5 JSON 类型<a class="anchor" href="#3-5-json-类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>用途</th></tr></thead><tbody><tr><td>JSONB</td><td>配置、元数据</td></tr></tbody></table>
+<hr>
+<h2 id="4-表设计规范">4. 表设计规范<a class="anchor" href="#4-表设计规范" aria-label="锚点">#</a></h2>
+<h3 id="4-1-必需列">4.1 必需列<a class="anchor" href="#4-1-必需列" aria-label="锚点">#</a></h3>
+<p>每张表必须包含以下列：</p>
+<pre><code class="language-sql">id          <span class="hljs-type">INTEGER</span> <span class="hljs-keyword">PRIMARY KEY</span> AUTOINCREMENT,
+created_at  <span class="hljs-type">TIMESTAMP</span> <span class="hljs-keyword">DEFAULT</span> <span class="hljs-built_in">CURRENT_TIMESTAMP</span>,
+updated_at  <span class="hljs-type">TIMESTAMP</span> <span class="hljs-keyword">DEFAULT</span> <span class="hljs-built_in">CURRENT_TIMESTAMP</span></code></pre>
+<h3 id="4-2-表定义示例">4.2 表定义示例<a class="anchor" href="#4-2-表定义示例" aria-label="锚点">#</a></h3>
+<pre><code class="language-sql"><span class="hljs-keyword">CREATE TABLE</span> users (
+    id          <span class="hljs-type">INTEGER</span> <span class="hljs-keyword">PRIMARY KEY</span> AUTOINCREMENT,
+    username    <span class="hljs-type">VARCHAR</span>(<span class="hljs-number">50</span>) <span class="hljs-keyword">NOT NULL</span> <span class="hljs-keyword">UNIQUE</span>,
+    email       <span class="hljs-type">VARCHAR</span>(<span class="hljs-number">255</span>) <span class="hljs-keyword">NOT NULL</span> <span class="hljs-keyword">UNIQUE</span>,
+    password    <span class="hljs-type">VARCHAR</span>(<span class="hljs-number">255</span>) <span class="hljs-keyword">NOT NULL</span>,
+    role        <span class="hljs-type">VARCHAR</span>(<span class="hljs-number">20</span>) <span class="hljs-keyword">DEFAULT</span> <span class="hljs-string">&#x27;user&#x27;</span>,
+    status      <span class="hljs-type">VARCHAR</span>(<span class="hljs-number">20</span>) <span class="hljs-keyword">DEFAULT</span> <span class="hljs-string">&#x27;active&#x27;</span>,
+    created_at  <span class="hljs-type">TIMESTAMP</span> <span class="hljs-keyword">DEFAULT</span> <span class="hljs-built_in">CURRENT_TIMESTAMP</span>,
+    updated_at  <span class="hljs-type">TIMESTAMP</span> <span class="hljs-keyword">DEFAULT</span> <span class="hljs-built_in">CURRENT_TIMESTAMP</span>
+);
+
+<span class="hljs-keyword">CREATE</span> INDEX idx_users_email <span class="hljs-keyword">ON</span> users(email);
+<span class="hljs-keyword">CREATE</span> INDEX idx_users_username <span class="hljs-keyword">ON</span> users(username);</code></pre>
+<h3 id="4-3-外键约束">4.3 外键约束<a class="anchor" href="#4-3-外键约束" aria-label="锚点">#</a></h3>
+<pre><code class="language-sql"><span class="hljs-keyword">CREATE TABLE</span> orders (
+    id          <span class="hljs-type">INTEGER</span> <span class="hljs-keyword">PRIMARY KEY</span> AUTOINCREMENT,
+    user_id     <span class="hljs-type">INTEGER</span> <span class="hljs-keyword">NOT NULL</span>,
+    total       <span class="hljs-type">DECIMAL</span>(<span class="hljs-number">10</span>, <span class="hljs-number">2</span>) <span class="hljs-keyword">NOT NULL</span>,
+    status      <span class="hljs-type">VARCHAR</span>(<span class="hljs-number">20</span>) <span class="hljs-keyword">DEFAULT</span> <span class="hljs-string">&#x27;pending&#x27;</span>,
+    created_at  <span class="hljs-type">TIMESTAMP</span> <span class="hljs-keyword">DEFAULT</span> <span class="hljs-built_in">CURRENT_TIMESTAMP</span>,
+    <span class="hljs-keyword">FOREIGN KEY</span> (user_id) <span class="hljs-keyword">REFERENCES</span> users(id) <span class="hljs-keyword">ON</span> <span class="hljs-keyword">DELETE</span> CASCADE
+);
+
+<span class="hljs-keyword">CREATE</span> INDEX idx_orders_user_id <span class="hljs-keyword">ON</span> orders(user_id);</code></pre>
+<hr>
+<h2 id="5-迁移规范">5. 迁移规范<a class="anchor" href="#5-迁移规范" aria-label="锚点">#</a></h2>
+<h3 id="5-1-迁移文件命名">5.1 迁移文件命名<a class="anchor" href="#5-1-迁移文件命名" aria-label="锚点">#</a></h3>
+<p><strong>格式</strong>：</p>
+<pre><code>YYYYMMDDHHMMSS_{description}.js</code></pre>
+<p><strong>示例</strong>：</p>
+<pre><code>20260904120000_create_users_table.js
+20260904130000_add_email_index.js
+20260904140000_add_user_profile_table.js</code></pre>
+<h3 id="5-2-迁移文件结构">5.2 迁移文件结构<a class="anchor" href="#5-2-迁移文件结构" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-meta">&#x27;use strict&#x27;</span>;
+
+<span class="hljs-comment">/** <span class="hljs-doctag">@type</span> {<span class="hljs-type">import(&#x27;sequelize-cli&#x27;).Migration</span>} */</span>
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = {
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">up</span>(<span class="hljs-params">queryInterface, Sequelize</span>) {
+    <span class="hljs-keyword">await</span> queryInterface.<span class="hljs-title function_">createTable</span>(<span class="hljs-string">&#x27;users&#x27;</span>, {
+      <span class="hljs-attr">id</span>: {
+        <span class="hljs-attr">type</span>: <span class="hljs-title class_">Sequelize</span>.<span class="hljs-property">INTEGER</span>,
+        <span class="hljs-attr">primaryKey</span>: <span class="hljs-literal">true</span>,
+        <span class="hljs-attr">autoIncrement</span>: <span class="hljs-literal">true</span>
+      },
+      <span class="hljs-attr">username</span>: {
+        <span class="hljs-attr">type</span>: <span class="hljs-title class_">Sequelize</span>.<span class="hljs-title function_">STRING</span>(<span class="hljs-number">50</span>),
+        <span class="hljs-attr">allowNull</span>: <span class="hljs-literal">false</span>,
+        <span class="hljs-attr">unique</span>: <span class="hljs-literal">true</span>
+      },
+      <span class="hljs-attr">email</span>: {
+        <span class="hljs-attr">type</span>: <span class="hljs-title class_">Sequelize</span>.<span class="hljs-title function_">STRING</span>(<span class="hljs-number">255</span>),
+        <span class="hljs-attr">allowNull</span>: <span class="hljs-literal">false</span>,
+        <span class="hljs-attr">unique</span>: <span class="hljs-literal">true</span>
+      },
+      <span class="hljs-attr">password</span>: {
+        <span class="hljs-attr">type</span>: <span class="hljs-title class_">Sequelize</span>.<span class="hljs-title function_">STRING</span>(<span class="hljs-number">255</span>),
+        <span class="hljs-attr">allowNull</span>: <span class="hljs-literal">false</span>
+      },
+      <span class="hljs-attr">createdAt</span>: {
+        <span class="hljs-attr">type</span>: <span class="hljs-title class_">Sequelize</span>.<span class="hljs-property">DATE</span>,
+        <span class="hljs-attr">allowNull</span>: <span class="hljs-literal">false</span>,
+        <span class="hljs-attr">defaultValue</span>: <span class="hljs-title class_">Sequelize</span>.<span class="hljs-title function_">literal</span>(<span class="hljs-string">&#x27;CURRENT_TIMESTAMP&#x27;</span>)
+      },
+      <span class="hljs-attr">updatedAt</span>: {
+        <span class="hljs-attr">type</span>: <span class="hljs-title class_">Sequelize</span>.<span class="hljs-property">DATE</span>,
+        <span class="hljs-attr">allowNull</span>: <span class="hljs-literal">false</span>,
+        <span class="hljs-attr">defaultValue</span>: <span class="hljs-title class_">Sequelize</span>.<span class="hljs-title function_">literal</span>(<span class="hljs-string">&#x27;CURRENT_TIMESTAMP&#x27;</span>)
+      }
+    });
+
+    <span class="hljs-keyword">await</span> queryInterface.<span class="hljs-title function_">addIndex</span>(<span class="hljs-string">&#x27;users&#x27;</span>, [<span class="hljs-string">&#x27;email&#x27;</span>]);
+    <span class="hljs-keyword">await</span> queryInterface.<span class="hljs-title function_">addIndex</span>(<span class="hljs-string">&#x27;users&#x27;</span>, [<span class="hljs-string">&#x27;username&#x27;</span>]);
+  },
+
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">down</span>(<span class="hljs-params">queryInterface, Sequelize</span>) {
+    <span class="hljs-keyword">await</span> queryInterface.<span class="hljs-title function_">dropTable</span>(<span class="hljs-string">&#x27;users&#x27;</span>);
+  }
+};</code></pre>
+<h3 id="5-3-迁移执行">5.3 迁移执行<a class="anchor" href="#5-3-迁移执行" aria-label="锚点">#</a></h3>
+<p><strong>执行迁移</strong>：</p>
+<pre><code class="language-bash">npx sequelize-cli db:migrate</code></pre>
+<p><strong>回滚迁移</strong>：</p>
+<pre><code class="language-bash">npx sequelize-cli db:migrate:undo</code></pre>
+<p><strong>查看迁移状态</strong>：</p>
+<pre><code class="language-bash">npx sequelize-cli db:migrate:status</code></pre>
+<h3 id="5-4-迁移记录表">5.4 迁移记录表<a class="anchor" href="#5-4-迁移记录表" aria-label="锚点">#</a></h3>
+<p>迁移系统会自动创建 <code>SequelizeMeta</code> 表来记录已执行的迁移：</p>
+<pre><code class="language-sql"><span class="hljs-keyword">CREATE TABLE</span> SequelizeMeta (
+    name <span class="hljs-type">VARCHAR</span>(<span class="hljs-number">255</span>) <span class="hljs-keyword">NOT NULL</span> <span class="hljs-keyword">PRIMARY KEY</span>
+);</code></pre>
+<hr>
+<h2 id="6-查询规范">6. 查询规范<a class="anchor" href="#6-查询规范" aria-label="锚点">#</a></h2>
+<h3 id="6-1-基本查询">6.1 基本查询<a class="anchor" href="#6-1-基本查询" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 查询单条记录</span>
+<span class="hljs-keyword">const</span> user = <span class="hljs-keyword">await</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">findOne</span>({
+  <span class="hljs-attr">where</span>: { <span class="hljs-attr">id</span>: <span class="hljs-number">123</span> }
+});
+
+<span class="hljs-comment">// 查询多条记录</span>
+<span class="hljs-keyword">const</span> users = <span class="hljs-keyword">await</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">findAll</span>({
+  <span class="hljs-attr">where</span>: { <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;active&#x27;</span> },
+  <span class="hljs-attr">order</span>: [[<span class="hljs-string">&#x27;createdAt&#x27;</span>, <span class="hljs-string">&#x27;DESC&#x27;</span>]],
+  <span class="hljs-attr">limit</span>: <span class="hljs-number">20</span>,
+  <span class="hljs-attr">offset</span>: <span class="hljs-number">0</span>
+});
+
+<span class="hljs-comment">// 查询特定字段</span>
+<span class="hljs-keyword">const</span> users = <span class="hljs-keyword">await</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">findAll</span>({
+  <span class="hljs-attr">attributes</span>: [<span class="hljs-string">&#x27;id&#x27;</span>, <span class="hljs-string">&#x27;username&#x27;</span>, <span class="hljs-string">&#x27;email&#x27;</span>],
+  <span class="hljs-attr">where</span>: { <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;active&#x27;</span> }
+});</code></pre>
+<h3 id="6-2-关联查询">6.2 关联查询<a class="anchor" href="#6-2-关联查询" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 一对一关联</span>
+<span class="hljs-keyword">const</span> user = <span class="hljs-keyword">await</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">findOne</span>({
+  <span class="hljs-attr">where</span>: { <span class="hljs-attr">id</span>: <span class="hljs-number">123</span> },
+  <span class="hljs-attr">include</span>: [{
+    <span class="hljs-attr">model</span>: <span class="hljs-title class_">UserProfile</span>,
+    <span class="hljs-attr">as</span>: <span class="hljs-string">&#x27;profile&#x27;</span>
+  }]
+});
+
+<span class="hljs-comment">// 一对多关联</span>
+<span class="hljs-keyword">const</span> user = <span class="hljs-keyword">await</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">findOne</span>({
+  <span class="hljs-attr">where</span>: { <span class="hljs-attr">id</span>: <span class="hljs-number">123</span> },
+  <span class="hljs-attr">include</span>: [{
+    <span class="hljs-attr">model</span>: <span class="hljs-title class_">Order</span>,
+    <span class="hljs-attr">as</span>: <span class="hljs-string">&#x27;orders&#x27;</span>
+  }]
+});
+
+<span class="hljs-comment">// 多对多关联</span>
+<span class="hljs-keyword">const</span> strategies = <span class="hljs-keyword">await</span> <span class="hljs-title class_">Strategy</span>.<span class="hljs-title function_">findAll</span>({
+  <span class="hljs-attr">include</span>: [{
+    <span class="hljs-attr">model</span>: <span class="hljs-title class_">Tag</span>,
+    <span class="hljs-attr">through</span>: { <span class="hljs-attr">attributes</span>: [] }
+  }]
+});</code></pre>
+<h3 id="6-3-聚合查询">6.3 聚合查询<a class="anchor" href="#6-3-聚合查询" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 计数</span>
+<span class="hljs-keyword">const</span> count = <span class="hljs-keyword">await</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">count</span>({
+  <span class="hljs-attr">where</span>: { <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;active&#x27;</span> }
+});
+
+<span class="hljs-comment">// 求和</span>
+<span class="hljs-keyword">const</span> total = <span class="hljs-keyword">await</span> <span class="hljs-title class_">Order</span>.<span class="hljs-title function_">sum</span>(<span class="hljs-string">&#x27;total&#x27;</span>, {
+  <span class="hljs-attr">where</span>: { <span class="hljs-attr">userId</span>: <span class="hljs-number">123</span> }
+});
+
+<span class="hljs-comment">// 平均值</span>
+<span class="hljs-keyword">const</span> avg = <span class="hljs-keyword">await</span> <span class="hljs-title class_">Order</span>.<span class="hljs-title function_">avg</span>(<span class="hljs-string">&#x27;total&#x27;</span>);
+
+<span class="hljs-comment">// 分组统计</span>
+<span class="hljs-keyword">const</span> stats = <span class="hljs-keyword">await</span> <span class="hljs-title class_">Order</span>.<span class="hljs-title function_">findAll</span>({
+  <span class="hljs-attr">attributes</span>: [
+    <span class="hljs-string">&#x27;status&#x27;</span>,
+    [<span class="hljs-title class_">Sequelize</span>.<span class="hljs-title function_">fn</span>(<span class="hljs-string">&#x27;COUNT&#x27;</span>, <span class="hljs-title class_">Sequelize</span>.<span class="hljs-title function_">col</span>(<span class="hljs-string">&#x27;id&#x27;</span>)), <span class="hljs-string">&#x27;count&#x27;</span>],
+    [<span class="hljs-title class_">Sequelize</span>.<span class="hljs-title function_">fn</span>(<span class="hljs-string">&#x27;SUM&#x27;</span>, <span class="hljs-title class_">Sequelize</span>.<span class="hljs-title function_">col</span>(<span class="hljs-string">&#x27;total&#x27;</span>)), <span class="hljs-string">&#x27;total&#x27;</span>]
+  ],
+  <span class="hljs-attr">group</span>: [<span class="hljs-string">&#x27;status&#x27;</span>]
+});</code></pre>
+<h3 id="6-4-事务处理">6.4 事务处理<a class="anchor" href="#6-4-事务处理" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> transaction = <span class="hljs-keyword">await</span> sequelize.<span class="hljs-title function_">transaction</span>();
+
+<span class="hljs-keyword">try</span> {
+  <span class="hljs-keyword">const</span> user = <span class="hljs-keyword">await</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">create</span>({
+    <span class="hljs-attr">username</span>: <span class="hljs-string">&#x27;john&#x27;</span>,
+    <span class="hljs-attr">email</span>: <span class="hljs-string">&#x27;john@example.com&#x27;</span>
+  }, { transaction });
+
+  <span class="hljs-keyword">await</span> <span class="hljs-title class_">Order</span>.<span class="hljs-title function_">create</span>({
+    <span class="hljs-attr">userId</span>: user.<span class="hljs-property">id</span>,
+    <span class="hljs-attr">total</span>: <span class="hljs-number">100.00</span>
+  }, { transaction });
+
+  <span class="hljs-keyword">await</span> transaction.<span class="hljs-title function_">commit</span>();
+} <span class="hljs-keyword">catch</span> (error) {
+  <span class="hljs-keyword">await</span> transaction.<span class="hljs-title function_">rollback</span>();
+  <span class="hljs-keyword">throw</span> error;
+}</code></pre>
+<hr>
+<h2 id="7-索引规范">7. 索引规范<a class="anchor" href="#7-索引规范" aria-label="锚点">#</a></h2>
+<h3 id="7-1-索引类型">7.1 索引类型<a class="anchor" href="#7-1-索引类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>用途</th></tr></thead><tbody><tr><td>主键索引</td><td>唯一标识记录</td></tr><tr><td>唯一索引</td><td>确保数据唯一性</td></tr><tr><td>普通索引</td><td>加速查询</td></tr><tr><td>复合索引</td><td>加速多列查询</td></tr></tbody></table>
+<h3 id="7-2-索引设计原则">7.2 索引设计原则<a class="anchor" href="#7-2-索引设计原则" aria-label="锚点">#</a></h3>
+<ol><li><strong>主键必须有索引</strong></li><li><strong>外键必须有索引</strong></li><li><strong>频繁查询的列创建索引</strong></li><li><strong>唯一约束的列创建索引</strong></li><li><strong>避免过度索引</strong>（影响写入性能）</li></ol>
+<h3 id="7-3-复合索引设计">7.3 复合索引设计<a class="anchor" href="#7-3-复合索引设计" aria-label="锚点">#</a></h3>
+<p><strong>最左前缀原则</strong>：</p>
+<pre><code class="language-sql"><span class="hljs-comment">-- 复合索引 (a, b, c)</span>
+<span class="hljs-keyword">CREATE</span> INDEX idx_abc <span class="hljs-keyword">ON</span> table_name(a, b, c);
+
+<span class="hljs-comment">-- 可以使用索引的查询：</span>
+<span class="hljs-keyword">SELECT</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">FROM</span> table_name <span class="hljs-keyword">WHERE</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span>;
+<span class="hljs-keyword">SELECT</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">FROM</span> table_name <span class="hljs-keyword">WHERE</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span> <span class="hljs-keyword">AND</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span>;
+<span class="hljs-keyword">SELECT</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">FROM</span> table_name <span class="hljs-keyword">WHERE</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span> <span class="hljs-keyword">AND</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span> <span class="hljs-keyword">AND</span> c <span class="hljs-operator">=</span> <span class="hljs-number">3</span>;
+
+<span class="hljs-comment">-- 无法使用索引的查询：</span>
+<span class="hljs-keyword">SELECT</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">FROM</span> table_name <span class="hljs-keyword">WHERE</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span>;
+<span class="hljs-keyword">SELECT</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">FROM</span> table_name <span class="hljs-keyword">WHERE</span> c <span class="hljs-operator">=</span> <span class="hljs-number">3</span>;</code></pre>
+<hr>
+<h2 id="8-安全规范">8. 安全规范<a class="anchor" href="#8-安全规范" aria-label="锚点">#</a></h2>
+<h3 id="8-1-敏感数据加密">8.1 敏感数据加密<a class="anchor" href="#8-1-敏感数据加密" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 密码加密</span>
+<span class="hljs-keyword">const</span> bcrypt = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;bcrypt&#x27;</span>);
+<span class="hljs-keyword">const</span> saltRounds = <span class="hljs-number">10</span>;
+
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">hashPassword</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">password</span>) =&gt; {
+  <span class="hljs-keyword">return</span> bcrypt.<span class="hljs-title function_">hash</span>(password, saltRounds);
+};
+
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">verifyPassword</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params">password, hash</span>) =&gt; {
+  <span class="hljs-keyword">return</span> bcrypt.<span class="hljs-title function_">compare</span>(password, hash);
+};</code></pre>
+<h3 id="8-2-sql-注入防护">8.2 SQL 注入防护<a class="anchor" href="#8-2-sql-注入防护" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确：使用参数化查询</span>
+<span class="hljs-keyword">const</span> users = <span class="hljs-keyword">await</span> sequelize.<span class="hljs-title function_">query</span>(
+  <span class="hljs-string">&#x27;SELECT * FROM users WHERE id = :id&#x27;</span>,
+  {
+    <span class="hljs-attr">replacements</span>: { <span class="hljs-attr">id</span>: userId },
+    <span class="hljs-attr">type</span>: <span class="hljs-title class_">QueryTypes</span>.<span class="hljs-property">SELECT</span>
+  }
+);
+
+<span class="hljs-comment">// ❌ 错误：字符串拼接</span>
+<span class="hljs-keyword">const</span> users = <span class="hljs-keyword">await</span> sequelize.<span class="hljs-title function_">query</span>(
+  <span class="hljs-string">`SELECT * FROM users WHERE id = <span class="hljs-subst">${userId}</span>`</span>
+);</code></pre>
+<h3 id="8-3-数据脱敏">8.3 数据脱敏<a class="anchor" href="#8-3-数据脱敏" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// toJSON 方法脱敏</span>
+<span class="hljs-title class_">User</span>.<span class="hljs-property"><span class="hljs-keyword">prototype</span></span>.<span class="hljs-property">toJSON</span> = <span class="hljs-keyword">function</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> values = <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">assign</span>({}, <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">get</span>());
+  <span class="hljs-keyword">delete</span> values.<span class="hljs-property">password</span>;
+  <span class="hljs-keyword">delete</span> values.<span class="hljs-property">securityAnswer</span>;
+  <span class="hljs-keyword">return</span> values;
+};</code></pre>
+<hr>
+<h2 id="9-备份与恢复">9. 备份与恢复<a class="anchor" href="#9-备份与恢复" aria-label="锚点">#</a></h2>
+<h3 id="9-1-备份策略">9.1 备份策略<a class="anchor" href="#9-1-备份策略" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>频率</th><th>保留时间</th></tr></thead><tbody><tr><td>全量备份</td><td>每日</td><td>30 天</td></tr><tr><td>增量备份</td><td>每小时</td><td>7 天</td></tr></tbody></table>
+<h3 id="9-2-sqlite-备份">9.2 SQLite 备份<a class="anchor" href="#9-2-sqlite-备份" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 备份</span>
+sqlite3 data.db <span class="hljs-string">&quot;.backup backup_<span class="hljs-subst">$(date +%Y%m%d)</span>.db&quot;</span>
+
+<span class="hljs-comment"># 恢复</span>
+sqlite3 data.db &lt; backup_20260904.db</code></pre>
+<h3 id="9-3-postgresql-备份">9.3 PostgreSQL 备份<a class="anchor" href="#9-3-postgresql-备份" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 备份</span>
+pg_dump -U username -d dbname &gt; backup_$(<span class="hljs-built_in">date</span> +%Y%m%d).sql
+
+<span class="hljs-comment"># 恢复</span>
+psql -U username -d dbname &lt; backup_20260904.sql</code></pre>
+<hr>
+<h2 id="10-性能优化">10. 性能优化<a class="anchor" href="#10-性能优化" aria-label="锚点">#</a></h2>
+<h3 id="10-1-查询优化">10.1 查询优化<a class="anchor" href="#10-1-查询优化" aria-label="锚点">#</a></h3>
+<ol><li><strong>避免 SELECT </strong>*：只查询需要的字段</li><li><strong>使用 LIMIT</strong>：限制返回的记录数</li><li><strong>使用索引</strong>：加速查询</li><li><strong>避免 N+1 查询</strong>：使用关联查询</li></ol>
+<h3 id="10-2-连接池配置">10.2 连接池配置<a class="anchor" href="#10-2-连接池配置" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> sequelize = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Sequelize</span>(database, username, password, {
+  <span class="hljs-attr">host</span>: <span class="hljs-string">&#x27;localhost&#x27;</span>,
+  <span class="hljs-attr">dialect</span>: <span class="hljs-string">&#x27;postgres&#x27;</span>,
+  <span class="hljs-attr">pool</span>: {
+    <span class="hljs-attr">max</span>: <span class="hljs-number">20</span>,
+    <span class="hljs-attr">min</span>: <span class="hljs-number">5</span>,
+    <span class="hljs-attr">acquire</span>: <span class="hljs-number">30000</span>,
+    <span class="hljs-attr">idle</span>: <span class="hljs-number">10000</span>
+  }
+});</code></pre>
+<h3 id="10-3-慢查询日志">10.3 慢查询日志<a class="anchor" href="#10-3-慢查询日志" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> sequelize = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Sequelize</span>(database, username, password, {
+  <span class="hljs-attr">logging</span>: <span class="hljs-function">(<span class="hljs-params">msg</span>) =&gt;</span> {
+    <span class="hljs-keyword">if</span> (msg.<span class="hljs-title function_">includes</span>(<span class="hljs-string">&#x27;slow query&#x27;</span>)) {
+      logger.<span class="hljs-title function_">warn</span>(msg);
+    }
+  }
+});</code></pre>
+<hr>
+<h2 id="11-版本历史">11. 版本历史<a class="anchor" href="#11-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义数据库规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 数据库团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/其它设计/[DESIGN-COMM-001] 通信协议规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-COMM-001] 通信协议规范</div></a><a class="next" href="../../../docs/03_DESIGN_设计/其它设计/[DESIGN-DEP-001] 依赖管理规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-DEP-001] 依赖管理规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/其它设计/[DESIGN-DB-001] 数据库规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

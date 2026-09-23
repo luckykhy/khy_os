@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-A2A-001] A2A 协议规范.md -->
+<title>[DESIGN-A2A-001] A2A 协议规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-A2A-001] A2A 协议规范</div>
+      <header class="hero reveal"><h1>[DESIGN-A2A-001] A2A 协议规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-a2a-001-a2a-协议规范">[DESIGN-A2A-001] A2A 协议规范</a></li><li class="lvl-2"><a href="#0-方法集更正表-本节权威-覆盖下文第-4-节">0. 方法集更正表（**本节权威，覆盖下文第 4 节**）</a></li><li class="lvl-3"><a href="#0-1-实际存在的方法-12-个">0.1 实际存在的方法（12 个）</a></li><li class="lvl-3"><a href="#0-2-历史错误命名-实现中零存在-勿使用">0.2 历史错误命名（**实现中零存在，勿使用**）</a></li><li class="lvl-2"><a href="#1-协议概述">1. 协议概述</a></li><li class="lvl-3"><a href="#1-1-设计目标">1.1 设计目标</a></li><li class="lvl-3"><a href="#1-2-设计原则">1.2 设计原则</a></li><li class="lvl-3"><a href="#1-3-协议版本">1.3 协议版本</a></li><li class="lvl-2"><a href="#2-协议架构">2. 协议架构</a></li><li class="lvl-3"><a href="#2-1-分层架构">2.1 分层架构</a></li><li class="lvl-3"><a href="#2-2-组件架构">2.2 组件架构</a></li><li class="lvl-2"><a href="#3-消息格式规范">3. 消息格式规范</a></li><li class="lvl-3"><a href="#3-1-基础消息格式">3.1 基础消息格式</a></li><li class="lvl-3"><a href="#3-2-响应消息格式">3.2 响应消息格式</a></li><li class="lvl-3"><a href="#3-3-错误码定义">3.3 错误码定义</a></li><li class="lvl-2"><a href="#4-核心方法定义">4. 核心方法定义</a></li><li class="lvl-3"><a href="#4-1-发现类方法-discovery">4.1 发现类方法 (Discovery)</a></li><li class="lvl-3"><a href="#4-2-能力类方法-capability">4.2 能力类方法 (Capability)</a></li><li class="lvl-3"><a href="#4-3-任务类方法-task">4.3 任务类方法 (Task)</a></li><li class="lvl-3"><a href="#4-4-状态类方法-status">4.4 状态类方法 (Status)</a></li><li class="lvl-2"><a href="#5-传输层规范">5. 传输层规范</a></li><li class="lvl-3"><a href="#5-1-websocket-传输">5.1 WebSocket 传输</a></li><li class="lvl-3"><a href="#5-2-http-2-传输">5.2 HTTP/2 传输</a></li><li class="lvl-3"><a href="#5-3-grpc-传输">5.3 gRPC 传输</a></li><li class="lvl-2"><a href="#6-安全规范">6. 安全规范</a></li><li class="lvl-3"><a href="#6-1-认证机制">6.1 认证机制</a></li><li class="lvl-3"><a href="#6-2-授权机制">6.2 授权机制</a></li><li class="lvl-3"><a href="#6-3-加密通信">6.3 加密通信</a></li><li class="lvl-2"><a href="#7-发现机制">7. 发现机制</a></li><li class="lvl-3"><a href="#7-1-服务注册">7.1 服务注册</a></li><li class="lvl-3"><a href="#7-2-服务发现">7.2 服务发现</a></li><li class="lvl-3"><a href="#7-3-健康检查">7.3 健康检查</a></li><li class="lvl-2"><a href="#8-实现计划">8. 实现计划</a></li><li class="lvl-3"><a href="#8-1-阶段-1-基础框架-1-2-周">8.1 阶段 1：基础框架（1-2 周）</a></li><li class="lvl-3"><a href="#8-2-阶段-2-核心功能-2-3-周">8.2 阶段 2：核心功能（2-3 周）</a></li><li class="lvl-3"><a href="#8-3-阶段-3-高级特性-3-4-周">8.3 阶段 3：高级特性（3-4 周）</a></li><li class="lvl-2"><a href="#9-配置规范">9. 配置规范</a></li><li class="lvl-3"><a href="#9-1-配置文件">9.1 配置文件</a></li><li class="lvl-3"><a href="#9-2-环境变量">9.2 环境变量</a></li><li class="lvl-2"><a href="#10-测试规范">10. 测试规范</a></li><li class="lvl-3"><a href="#10-1-单元测试">10.1 单元测试</a></li><li class="lvl-3"><a href="#10-2-集成测试">10.2 集成测试</a></li><li class="lvl-3"><a href="#10-3-性能测试">10.3 性能测试</a></li><li class="lvl-2"><a href="#11-相关文档">11. 相关文档</a></li><li class="lvl-2"><a href="#12-版本历史">12. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-a2a-001-a2a-协议规范">[DESIGN-A2A-001] A2A 协议规范<a class="anchor" href="#design-a2a-001-a2a-协议规范" aria-label="锚点">#</a></h1>
+<p>&lt;!-- naming-guard: exempt 本文档保留历史错误命名作为对照，供读过旧版本的读者自查 --&gt;</p>
+<blockquote><p>⚠️ <strong>定位更正（2026-09-15）—— 请先读这一段再读正文。</strong></p>
+<p>本文档描述的是 khy-os 自有的<strong>进程内 ACP 方言</strong>，<strong>不是</strong> Linux Foundation 的<br>Agent2Agent (A2A) 标准协议。二者<strong>仅命名撞车</strong>，方法集无一重合：</p>
+<table><thead><tr><th></th><th>本文档（私有 ACP 方言）</th><th>标准 A2A v0.3.0</th></tr></thead><tbody><tr><td>方法名</td><td>点分形式 <code>&lt;域&gt;.&lt;动作&gt;</code>（见 §0）</td><td>斜杠形式 <code>message/send</code> / <code>tasks/get</code> / <code>tasks/cancel</code> / <code>message/stream</code> …</td></tr><tr><td>协议版本</td><td><code>1.0</code>（私有）</td><td><code>0.3.0</code></td></tr><tr><td>传输</td><td>WebSocket / HTTP-2 / gRPC（均为自建）</td><td>JSON-RPC 2.0 over HTTP + <strong>SSE</strong>（非 WebSocket）</td></tr><tr><td>状态集</td><td>私有集合</td><td><code>submitted</code> / <code>working</code> / <code>input-required</code> / <code>completed</code> / <code>canceled</code> / <code>failed</code> / <code>rejected</code> / <code>auth-required</code> / <code>unknown</code></td></tr><tr><td>发现</td><td>自建注册表</td><td><code>GET /.well-known/agent-card.json</code></td></tr><tr><td>作用域</td><td><strong>进程内</strong></td><td>跨厂商、跨网络</td></tr></tbody></table>
+<p>因此<strong>下游消费者请勿依据本文档对接</strong>。标准 A2A 的适配规范、契约 schema、<br>Agent Card 发布面与 TaskState 映射表见<br><strong>[<code>[DESIGN-A2A-002] A2A 标准协议适配规范</code>]([DESIGN-A2A-002] A2A 标准协议适配规范.md)</strong>；<br>两者的术语区分见<br><strong>[<code>[DESIGN-NAM-002] A2A 与 ACP 命名及术语规范</code>]([DESIGN-NAM-002] A2A 与 ACP 命名及术语规范.md)</strong>。</p>
+<p>本文档正文中出现的「A2A」「A2A 协议」字样，一律按「私有 ACP 方言」理解。<br>其内容（分层架构、安全方案、配置格式）对<strong>进程内 agent 编排</strong>仍然有效。</p>
+<p>下文第 5 节（传输层）与第 8 节（实现计划）描述的是<strong>私有方言</strong>的传输与计划，<br>与标准 A2A 无关，不要与 <code>[DESIGN-A2A-002]</code> §8 的迁移路线混淆。</p></blockquote>
+<hr>
+<h2 id="0-方法集更正表-本节权威-覆盖下文第-4-节">0. 方法集更正表（<strong>本节权威，覆盖下文第 4 节</strong>）<a class="anchor" href="#0-方法集更正表-本节权威-覆盖下文第-4-节" aria-label="锚点">#</a></h2>
+<blockquote><p>本表是本文档中<strong>唯一</strong>与实现相符的方法清单。<br>真源：<code>services/backend/src/services/acpTransport.js</code> 的 <code>ACP_METHODS</code> 与<br><code>services/backend/src/contracts/acp/acp-message.schema.json</code> 的 <code>method</code> enum<br>（二者由 <code>npm run check:protocol-naming</code> 断言逐字一致）。</p></blockquote>
+<h3 id="0-1-实际存在的方法-12-个">0.1 实际存在的方法（12 个）<a class="anchor" href="#0-1-实际存在的方法-12-个" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>方法</th><th>语义</th></tr></thead><tbody><tr><td><code>agent.spawn</code></td><td>起一个子 agent</td></tr><tr><td><code>agent.kill</code></td><td>终止子 agent</td></tr><tr><td><code>agent.status</code></td><td>查询 agent 状态</td></tr><tr><td><code>task.submit</code></td><td>提交任务</td></tr><tr><td><code>task.result</code></td><td>回传任务结果</td></tr><tr><td><code>task.progress</code></td><td>上报任务进度</td></tr><tr><td><code>context.share</code></td><td>共享上下文</td></tr><tr><td><code>tool.invoke</code></td><td>请求对端调工具</td></tr><tr><td><code>tool.result</code></td><td>回传工具结果</td></tr><tr><td><code>message.send</code></td><td>点对点消息</td></tr><tr><td><code>message.broadcast</code></td><td>广播消息</td></tr><tr><td><code>heartbeat</code></td><td>心跳</td></tr></tbody></table>
+<h3 id="0-2-历史错误命名-实现中零存在-勿使用">0.2 历史错误命名（<strong>实现中零存在，勿使用</strong>）<a class="anchor" href="#0-2-历史错误命名-实现中零存在-勿使用" aria-label="锚点">#</a></h3>
+<p>下表左列是本文档早期版本与 <code>[DESIGN-ARCH-073]</code> 中曾出现的写法。实测全仓<strong>只出现在<br>文档里</strong>，代码中从未实现过 —— 它们属设计草案遗留，继续保留只会让外部读者以为<br>存在这样一套 API。</p>
+<table><thead><tr><th>历史错误命名</th><th>实际应为</th><th>说明</th></tr></thead><tbody><tr><td><code>a2a.discovery.register</code></td><td><code>agent.spawn</code></td><td>私有方言没有「注册/发现」概念，只有起停 agent</td></tr><tr><td><code>a2a.discovery.query</code></td><td>（无对应）</td><td>私有方言无服务发现；能力查询走内存注册表</td></tr><tr><td><code>a2a.discovery.unregister</code></td><td><code>agent.kill</code></td><td>—</td></tr><tr><td><code>a2a.capability.query</code></td><td>（无对应）</td><td>—</td></tr><tr><td><code>a2a.capability.invoke</code></td><td><code>tool.invoke</code></td><td>—</td></tr><tr><td><code>a2a.task.create</code></td><td><code>task.submit</code></td><td>—</td></tr><tr><td><code>a2a.task.status</code></td><td><code>task.progress</code></td><td>—</td></tr><tr><td><code>a2a.task.cancel</code></td><td><code>agent.kill</code></td><td>私有方言无协议级任务取消</td></tr><tr><td><code>a2a.status.update</code></td><td><code>agent.status</code></td><td>—</td></tr><tr><td><code>a2a.status.subscribe</code></td><td>（无对应）</td><td>私有方言无订阅机制，靠事件总线</td></tr></tbody></table>
+<p><strong>处置</strong>：本文档第 4 节的标题沿用了上表左列的写法，<strong>请以本节为准</strong>；<br>第 4 节保留是为记录设计演进过程，不代表存在该 API。<br>命名纪律由 <code>[DESIGN-NAM-002]</code> §2（NAM-A2A-1）与<br><code>scripts/ci/check-protocol-naming.js</code> 机器强制。</p>
+<hr>
+<blockquote><p>本文档定义 khy-os 智能体间通信的 A2A (Agent-to-Agent) 协议规范。</p></blockquote>
+<hr>
+<h2 id="1-协议概述">1. 协议概述<a class="anchor" href="#1-协议概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-设计目标">1.1 设计目标<a class="anchor" href="#1-1-设计目标" aria-label="锚点">#</a></h3>
+<p><strong>A2A 协议</strong>旨在实现：</p>
+<ul><li><strong>智能体发现</strong>：自动发现网络中的其他智能体</li><li><strong>能力广播</strong>：智能体广播自己的能力和服务</li><li><strong>任务协商</strong>：智能体之间协商任务分配和协作</li><li><strong>状态同步</strong>：智能体状态实时同步</li><li><strong>安全通信</strong>：加密和认证机制</li></ul>
+<h3 id="1-2-设计原则">1.2 设计原则<a class="anchor" href="#1-2-设计原则" aria-label="锚点">#</a></h3>
+<ol><li><strong>去中心化</strong>：无单点故障，支持 P2P 通信</li><li><strong>可扩展</strong>：支持动态加入/退出智能体</li><li><strong>互操作</strong>：基于标准协议，支持异构智能体</li><li><strong>安全可靠</strong>：端到端加密，完整审计</li><li><strong>高性能</strong>：低延迟，高吞吐</li></ol>
+<h3 id="1-3-协议版本">1.3 协议版本<a class="anchor" href="#1-3-协议版本" aria-label="锚点">#</a></h3>
+<ul><li><strong>当前版本</strong>：<code>1.0.0</code></li><li><strong>协议标识</strong>：<code>a2a/1.0</code></li><li><strong>兼容版本</strong>：无（初始版本）</li></ul>
+<hr>
+<h2 id="2-协议架构">2. 协议架构<a class="anchor" href="#2-协议架构" aria-label="锚点">#</a></h2>
+<h3 id="2-1-分层架构">2.1 分层架构<a class="anchor" href="#2-1-分层架构" aria-label="锚点">#</a></h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                    A2A 协议栈                                 │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              应用层 (Application Layer)              │   │
+│  │  • 任务管理  • 能力发现  • 状态同步  • 结果聚合      │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              消息层 (Message Layer)                   │   │
+│  │  • JSON-RPC 2.0  • 消息路由  • 优先级队列  • 序列化   │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              传输层 (Transport Layer)                 │   │
+│  │  • WebSocket  • HTTP/2  • gRPC  • TCP  • UDP         │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              安全层 (Security Layer)                  │   │
+│  │  • mTLS  • JWT  • RBAC  • 审计日志  • 密钥管理       │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              发现层 (Discovery Layer)                 │   │
+│  │  • 服务注册  • 服务发现  • 健康检查  • 负载均衡       │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘</code></pre>
+<h3 id="2-2-组件架构">2.2 组件架构<a class="anchor" href="#2-2-组件架构" aria-label="锚点">#</a></h3>
+<pre><code>┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│   智能体 A   │────▶│   消息总线   │◀────│   智能体 B   │
+│  (Agent A)   │     │ (Message Bus)│     │  (Agent B)   │
+└──────────────┘     └──────────────┘     └──────────────┘
+       │                    │                    │
+       ▼                    ▼                    ▼
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│   能力注册   │     │   服务发现   │     │   任务队列   │
+│ (Capability  │     │  (Service    │     │  (Task Queue)│
+│  Registry)   │     │  Discovery)  │     │              │
+└──────────────┘     └──────────────┘     └──────────────┘</code></pre>
+<hr>
+<h2 id="3-消息格式规范">3. 消息格式规范<a class="anchor" href="#3-消息格式规范" aria-label="锚点">#</a></h2>
+<h3 id="3-1-基础消息格式">3.1 基础消息格式<a class="anchor" href="#3-1-基础消息格式" aria-label="锚点">#</a></h3>
+<p><strong>所有 A2A 消息必须遵循以下基础格式</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;jsonrpc&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2.0&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;msg-uuid&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;method&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;a2a.method.name&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;params&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;metadata&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;sender&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent-id&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;receiver&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent-id | broadcast&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;priority&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;normal | high | low&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;ttl&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">30000</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;correlationId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;request-uuid&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>字段说明</strong>：</p>
+<ul><li><code>jsonrpc</code>：JSON-RPC 版本，固定为 &quot;2.0&quot;</li><li><code>id</code>：消息唯一标识（UUID v4）</li><li><code>method</code>：方法名，格式为 <code>a2a.&lt;category&gt;.&lt;action&gt;</code></li><li><code>params</code>：方法参数</li><li><code>metadata</code>：消息元数据</li></ul>
+<h3 id="3-2-响应消息格式">3.2 响应消息格式<a class="anchor" href="#3-2-响应消息格式" aria-label="锚点">#</a></h3>
+<p><strong>成功响应</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;jsonrpc&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2.0&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;msg-uuid&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;result&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;success&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>错误响应</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;jsonrpc&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2.0&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;msg-uuid&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">-32600</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Invalid Request&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;details&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;错误详情&quot;</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="3-3-错误码定义">3.3 错误码定义<a class="anchor" href="#3-3-错误码定义" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>错误码</th><th>名称</th><th>说明</th></tr></thead><tbody><tr><td>-32700</td><td>Parse Error</td><td>JSON 解析错误</td></tr><tr><td>-32600</td><td>Invalid Request</td><td>无效请求</td></tr><tr><td>-32601</td><td>Method Not Found</td><td>方法不存在</td></tr><tr><td>-32602</td><td>Invalid Params</td><td>无效参数</td></tr><tr><td>-32603</td><td>Internal Error</td><td>内部错误</td></tr><tr><td>-32000</td><td>Agent Not Found</td><td>智能体不存在</td></tr><tr><td>-32001</td><td>Capability Not Available</td><td>能力不可用</td></tr><tr><td>-32002</td><td>Task Rejected</td><td>任务被拒绝</td></tr><tr><td>-32003</td><td>Authentication Failed</td><td>认证失败</td></tr><tr><td>-32004</td><td>Authorization Failed</td><td>授权失败</td></tr><tr><td>-32005</td><td>Rate Limited</td><td>请求限流</td></tr><tr><td>-32006</td><td>Timeout</td><td>请求超时</td></tr></tbody></table>
+<hr>
+<h2 id="4-核心方法定义">4. 核心方法定义<a class="anchor" href="#4-核心方法定义" aria-label="锚点">#</a></h2>
+<blockquote><p>⚠️ <strong>本节方法名已废弃。</strong> 下列方法名是早期设计草案的写法，<strong>实现中零存在</strong><br>（实测全仓只出现在文档里）。实际存在的方法集与逐条对照见 <strong>§0 方法集更正表</strong>。<br>本节保留仅为记录设计演进过程 —— 请勿据此处对接，也不要在新代码/新文档里引用这些名字。<br>命名纪律由 <code>[DESIGN-NAM-002]</code> NAM-A2A-1 与 <code>scripts/ci/check-protocol-naming.js</code> 强制。</p></blockquote>
+<h3 id="4-1-发现类方法-discovery">4.1 发现类方法 (Discovery)<a class="anchor" href="#4-1-发现类方法-discovery" aria-label="锚点">#</a></h3>
+<h4 id="4-1-1-智能体注册">4.1.1 智能体注册<a class="anchor" href="#4-1-1-智能体注册" aria-label="锚点">#</a></h4>
+<p><strong>方法</strong>：<code>a2a.discovery.register</code></p>
+<p><strong>请求</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;method&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;a2a.discovery.register&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;params&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;agent&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent-001&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;khy-quant&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1.0.0&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;量化交易智能体&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;capabilities&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+        <span class="hljs-punctuation">{</span>
+          <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;trading&quot;</span><span class="hljs-punctuation">,</span>
+          <span class="hljs-attr">&quot;version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1.0.0&quot;</span><span class="hljs-punctuation">,</span>
+          <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;量化交易执行&quot;</span><span class="hljs-punctuation">,</span>
+          <span class="hljs-attr">&quot;parameters&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+            <span class="hljs-attr">&quot;symbols&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;BTC&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;ETH&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+            <span class="hljs-attr">&quot;exchanges&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;binance&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;okx&quot;</span><span class="hljs-punctuation">]</span>
+          <span class="hljs-punctuation">}</span>
+        <span class="hljs-punctuation">}</span>
+      <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;endpoint&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ws://localhost:3001&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;healthCheck&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;http://localhost:3001/health&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;metadata&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;region&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;asia&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;environment&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;production&quot;</span>
+      <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>响应</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;result&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;success&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;registered&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;agentId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent-001&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;expiresAt&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:30:00.000Z&quot;</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h4 id="4-1-2-智能体发现">4.1.2 智能体发现<a class="anchor" href="#4-1-2-智能体发现" aria-label="锚点">#</a></h4>
+<p><strong>方法</strong>：<code>a2a.discovery.query</code></p>
+<p><strong>请求</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;method&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;a2a.discovery.query&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;params&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;filter&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;capabilities&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;trading&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;region&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;asia&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;available&quot;</span>
+    <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;limit&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">10</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;offset&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>响应</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;result&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;success&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;agents&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+        <span class="hljs-punctuation">{</span>
+          <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent-001&quot;</span><span class="hljs-punctuation">,</span>
+          <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;khy-quant&quot;</span><span class="hljs-punctuation">,</span>
+          <span class="hljs-attr">&quot;capabilities&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;trading&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+          <span class="hljs-attr">&quot;endpoint&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ws://localhost:3001&quot;</span><span class="hljs-punctuation">,</span>
+          <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;available&quot;</span><span class="hljs-punctuation">,</span>
+          <span class="hljs-attr">&quot;lastSeen&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T11:59:00.000Z&quot;</span>
+        <span class="hljs-punctuation">}</span>
+      <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;total&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;hasMore&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h4 id="4-1-3-智能体注销">4.1.3 智能体注销<a class="anchor" href="#4-1-3-智能体注销" aria-label="锚点">#</a></h4>
+<p><strong>方法</strong>：<code>a2a.discovery.unregister</code></p>
+<p><strong>请求</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;method&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;a2a.discovery.unregister&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;params&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;agentId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent-001&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;reason&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;shutdown&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="4-2-能力类方法-capability">4.2 能力类方法 (Capability)<a class="anchor" href="#4-2-能力类方法-capability" aria-label="锚点">#</a></h3>
+<h4 id="4-2-1-能力查询">4.2.1 能力查询<a class="anchor" href="#4-2-1-能力查询" aria-label="锚点">#</a></h4>
+<p><strong>方法</strong>：<code>a2a.capability.query</code></p>
+<p><strong>请求</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;method&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;a2a.capability.query&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;params&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;agentId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent-001&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;capability&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;trading&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>响应</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;result&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;success&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;capability&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;trading&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1.0.0&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;量化交易执行&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;parameters&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+          <span class="hljs-attr">&quot;symbols&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+            <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;array&quot;</span><span class="hljs-punctuation">,</span>
+            <span class="hljs-attr">&quot;items&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;string&quot;</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+            <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;交易对列表&quot;</span>
+          <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+          <span class="hljs-attr">&quot;exchanges&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+            <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;array&quot;</span><span class="hljs-punctuation">,</span>
+            <span class="hljs-attr">&quot;items&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;string&quot;</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+            <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;交易所列表&quot;</span>
+          <span class="hljs-punctuation">}</span>
+        <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;returns&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+          <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;object&quot;</span><span class="hljs-punctuation">,</span>
+          <span class="hljs-attr">&quot;properties&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+            <span class="hljs-attr">&quot;orderId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;string&quot;</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+            <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;string&quot;</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+            <span class="hljs-attr">&quot;filledPrice&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;number&quot;</span><span class="hljs-punctuation">}</span>
+          <span class="hljs-punctuation">}</span>
+        <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;examples&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+          <span class="hljs-punctuation">{</span>
+            <span class="hljs-attr">&quot;input&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;symbol&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;BTC&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;side&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;buy&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;amount&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0.1</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+            <span class="hljs-attr">&quot;output&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;orderId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ord-001&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;filled&quot;</span><span class="hljs-punctuation">}</span>
+          <span class="hljs-punctuation">}</span>
+        <span class="hljs-punctuation">]</span>
+      <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h4 id="4-2-2-能力调用">4.2.2 能力调用<a class="anchor" href="#4-2-2-能力调用" aria-label="锚点">#</a></h4>
+<p><strong>方法</strong>：<code>a2a.capability.invoke</code></p>
+<p><strong>请求</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;method&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;a2a.capability.invoke&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;params&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;agentId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent-001&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;capability&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;trading&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;input&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;symbol&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;BTC&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;side&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;buy&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;amount&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0.1</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;price&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">50000</span>
+    <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;options&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;timeout&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">30000</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;retries&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">3</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;priority&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;high&quot;</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>响应</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;result&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;success&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;executionId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;exec-001&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;result&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;orderId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ord-001&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;filled&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;filledPrice&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">50000</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;filledAmount&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0.1</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span>
+      <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="4-3-任务类方法-task">4.3 任务类方法 (Task)<a class="anchor" href="#4-3-任务类方法-task" aria-label="锚点">#</a></h3>
+<h4 id="4-3-1-任务创建">4.3.1 任务创建<a class="anchor" href="#4-3-1-任务创建" aria-label="锚点">#</a></h4>
+<p><strong>方法</strong>：<code>a2a.task.create</code></p>
+<p><strong>请求</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;method&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;a2a.task.create&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;params&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;task&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;task-001&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;analysis&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;市场分析任务&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;分析 BTC/USDT 市场趋势&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;input&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;symbol&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;BTC/USDT&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;timeframe&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1h&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;limit&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">100</span>
+      <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;requirements&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;capabilities&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;market_analysis&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;priority&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;high&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;deadline&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T13:00:00.000Z&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;maxCost&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">10.0</span>
+      <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;callback&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;url&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;http://localhost:3000/callback&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;method&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;POST&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;headers&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span>
+      <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>响应</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;result&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;success&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;taskId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;task-001&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;created&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;assignedTo&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent-002&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;estimatedCompletion&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:30:00.000Z&quot;</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h4 id="4-3-2-任务状态查询">4.3.2 任务状态查询<a class="anchor" href="#4-3-2-任务状态查询" aria-label="锚点">#</a></h4>
+<p><strong>方法</strong>：<code>a2a.task.status</code></p>
+<p><strong>请求</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;method&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;a2a.task.status&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;params&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;taskId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;task-001&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>响应</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;result&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;success&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;taskId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;task-001&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;in_progress&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;progress&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0.75</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;assignedTo&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent-002&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;startedAt&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;estimatedCompletion&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:30:00.000Z&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;partialResults&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;trend&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;bullish&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;confidence&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0.85</span>
+      <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h4 id="4-3-3-任务取消">4.3.3 任务取消<a class="anchor" href="#4-3-3-任务取消" aria-label="锚点">#</a></h4>
+<p><strong>方法</strong>：<code>a2a.task.cancel</code></p>
+<p><strong>请求</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;method&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;a2a.task.cancel&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;params&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;taskId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;task-001&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;reason&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;用户取消&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="4-4-状态类方法-status">4.4 状态类方法 (Status)<a class="anchor" href="#4-4-状态类方法-status" aria-label="锚点">#</a></h3>
+<h4 id="4-4-1-状态推送">4.4.1 状态推送<a class="anchor" href="#4-4-1-状态推送" aria-label="锚点">#</a></h4>
+<p><strong>方法</strong>：<code>a2a.status.update</code></p>
+<p><strong>请求</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;method&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;a2a.status.update&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;params&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;agentId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent-001&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;state&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;busy&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;currentTask&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;task-001&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;progress&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0.75</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;resourceUsage&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;cpu&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0.65</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;memory&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0.45</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;gpu&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0.80</span>
+      <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;metrics&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;tasksCompleted&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">150</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;successRate&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0.98</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;avgResponseTime&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1200</span>
+      <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h4 id="4-4-2-状态订阅">4.4.2 状态订阅<a class="anchor" href="#4-4-2-状态订阅" aria-label="锚点">#</a></h4>
+<p><strong>方法</strong>：<code>a2a.status.subscribe</code></p>
+<p><strong>请求</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;method&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;a2a.status.subscribe&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;params&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;agentId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent-001&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;events&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;state_change&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;task_complete&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;error&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;interval&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">5000</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+<h2 id="5-传输层规范">5. 传输层规范<a class="anchor" href="#5-传输层规范" aria-label="锚点">#</a></h2>
+<h3 id="5-1-websocket-传输">5.1 WebSocket 传输<a class="anchor" href="#5-1-websocket-传输" aria-label="锚点">#</a></h3>
+<p><strong>连接地址</strong>：<code>ws://&lt;host&gt;:&lt;port&gt;/a2a/v1</code></p>
+<p><strong>握手请求</strong>：</p>
+<pre><code class="language-http"><span class="hljs-keyword">GET</span> <span class="hljs-string">/a2a/v1</span> <span class="hljs-meta">HTTP/1.1</span>
+<span class="hljs-attribute">Host</span><span class="hljs-punctuation">: </span>localhost:3001
+<span class="hljs-attribute">Upgrade</span><span class="hljs-punctuation">: </span>websocket
+<span class="hljs-attribute">Connection</span><span class="hljs-punctuation">: </span>Upgrade
+<span class="hljs-attribute">Sec-WebSocket-Key</span><span class="hljs-punctuation">: </span>dGhlIHNhbXBsZSBub25jZQ==
+<span class="hljs-attribute">Sec-WebSocket-Version</span><span class="hljs-punctuation">: </span>13
+<span class="hljs-attribute">Authorization</span><span class="hljs-punctuation">: </span>Bearer &lt;jwt-token&gt;</code></pre>
+<p><strong>消息帧</strong>：</p>
+<pre><code>┌─────────┬─────────┬─────────┬─────────┐
+│ FIN     │ RSV     │ Opcode  │ Mask    │
+│ (1 bit) │ (3 bit) │ (4 bit) │ (1 bit) │
+├─────────┴─────────┴─────────┼─────────┤
+│ Payload Length              │ Masking │
+│ (7/16/64 bit)               │ Key     │
+├─────────────────────────────┼─────────┤
+│ Payload Data                │         │
+└─────────────────────────────┴─────────┘</code></pre>
+<h3 id="5-2-http-2-传输">5.2 HTTP/2 传输<a class="anchor" href="#5-2-http-2-传输" aria-label="锚点">#</a></h3>
+<p><strong>端点</strong>：<code>https://&lt;host&gt;:&lt;port&gt;/a2a/v1</code></p>
+<p><strong>请求格式</strong>：</p>
+<pre><code class="language-http"><span class="hljs-keyword">POST</span> <span class="hljs-string">/a2a/v1</span> <span class="hljs-meta">HTTP/2</span>
+<span class="hljs-attribute">Host</span><span class="hljs-punctuation">: </span>localhost:3001
+<span class="hljs-attribute">Content-Type</span><span class="hljs-punctuation">: </span>application/json
+<span class="hljs-attribute">Authorization</span><span class="hljs-punctuation">: </span>Bearer &lt;jwt-token&gt;
+<span class="hljs-attribute">Content-Length</span><span class="hljs-punctuation">: </span>123
+
+<span class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;jsonrpc&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2.0&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;msg-001&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;method&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;a2a.discovery.query&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;params&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></span></code></pre>
+<p><strong>流式响应</strong>：</p>
+<pre><code class="language-http"><span class="hljs-meta">HTTP/2</span> <span class="hljs-number">200</span> OK
+<span class="hljs-attribute">Content-Type</span><span class="hljs-punctuation">: </span>application/json
+<span class="hljs-attribute">Transfer-Encoding</span><span class="hljs-punctuation">: </span>chunked
+
+<span class="language-nim">{<span class="hljs-string">&quot;jsonrpc&quot;</span>:<span class="hljs-string">&quot;2.0&quot;</span>,<span class="hljs-string">&quot;id&quot;</span>:<span class="hljs-string">&quot;msg-001&quot;</span>,<span class="hljs-string">&quot;result&quot;</span>:<span class="hljs-meta">{...}</span>}</span></code></pre>
+<h3 id="5-3-grpc-传输">5.3 gRPC 传输<a class="anchor" href="#5-3-grpc-传输" aria-label="锚点">#</a></h3>
+<p><strong>Proto 定义</strong>：</p>
+<pre><code class="language-protobuf">syntax = <span class="hljs-string">&quot;proto3&quot;</span>;
+
+<span class="hljs-keyword">package</span> a2a;
+
+<span class="hljs-keyword">service </span><span class="hljs-title class_">A2AService</span> {
+  <span class="hljs-comment">// 发现</span>
+  <span class="hljs-function"><span class="hljs-keyword">rpc</span> Register(RegisterRequest) <span class="hljs-keyword">returns</span> (RegisterResponse)</span>;
+  <span class="hljs-function"><span class="hljs-keyword">rpc</span> Query(QueryRequest) <span class="hljs-keyword">returns</span> (QueryResponse)</span>;
+  <span class="hljs-function"><span class="hljs-keyword">rpc</span> Unregister(UnregisterRequest) <span class="hljs-keyword">returns</span> (UnregisterResponse)</span>;
+  
+  <span class="hljs-comment">// 能力</span>
+  <span class="hljs-function"><span class="hljs-keyword">rpc</span> QueryCapability(QueryCapabilityRequest) <span class="hljs-keyword">returns</span> (QueryCapabilityResponse)</span>;
+  <span class="hljs-function"><span class="hljs-keyword">rpc</span> InvokeCapability(InvokeCapabilityRequest) <span class="hljs-keyword">returns</span> (InvokeCapabilityResponse)</span>;
+  
+  <span class="hljs-comment">// 任务</span>
+  <span class="hljs-function"><span class="hljs-keyword">rpc</span> CreateTask(CreateTaskRequest) <span class="hljs-keyword">returns</span> (CreateTaskResponse)</span>;
+  <span class="hljs-function"><span class="hljs-keyword">rpc</span> GetTaskStatus(GetTaskStatusRequest) <span class="hljs-keyword">returns</span> (GetTaskStatusResponse)</span>;
+  <span class="hljs-function"><span class="hljs-keyword">rpc</span> CancelTask(CancelTaskRequest) <span class="hljs-keyword">returns</span> (CancelTaskResponse)</span>;
+  
+  <span class="hljs-comment">// 状态</span>
+  <span class="hljs-function"><span class="hljs-keyword">rpc</span> UpdateStatus(UpdateStatusRequest) <span class="hljs-keyword">returns</span> (UpdateStatusResponse)</span>;
+  <span class="hljs-function"><span class="hljs-keyword">rpc</span> SubscribeStatus(SubscribeStatusRequest) <span class="hljs-keyword">returns</span> (stream StatusEvent)</span>;
+}</code></pre>
+<hr>
+<h2 id="6-安全规范">6. 安全规范<a class="anchor" href="#6-安全规范" aria-label="锚点">#</a></h2>
+<h3 id="6-1-认证机制">6.1 认证机制<a class="anchor" href="#6-1-认证机制" aria-label="锚点">#</a></h3>
+<p><strong>JWT Token 格式</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;header&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;alg&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;RS256&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;typ&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;JWT&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;payload&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;iss&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;a2a-auth-server&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;sub&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent-001&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;aud&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;a2a-network&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;exp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1693833600</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;iat&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1693830000</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;scope&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;discovery&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;capability&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;task&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;status&quot;</span><span class="hljs-punctuation">]</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>认证流程</strong>：</p>
+<ol><li>智能体向认证服务器注册</li><li>获取客户端证书（mTLS）或 JWT Token</li><li>在每次请求中携带认证信息</li><li>服务端验证认证信息</li></ol>
+<h3 id="6-2-授权机制">6.2 授权机制<a class="anchor" href="#6-2-授权机制" aria-label="锚点">#</a></h3>
+<p><strong>RBAC 角色定义</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;roles&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;admin&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;permissions&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;*&quot;</span><span class="hljs-punctuation">]</span>
+    <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;agent&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;permissions&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+        <span class="hljs-string">&quot;discovery:register&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-string">&quot;discovery:query&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-string">&quot;capability:query&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-string">&quot;capability:invoke&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-string">&quot;task:create&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-string">&quot;task:status&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-string">&quot;status:update&quot;</span>
+      <span class="hljs-punctuation">]</span>
+    <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;observer&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;permissions&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+        <span class="hljs-string">&quot;discovery:query&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-string">&quot;capability:query&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-string">&quot;task:status&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-string">&quot;status:read&quot;</span>
+      <span class="hljs-punctuation">]</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="6-3-加密通信">6.3 加密通信<a class="anchor" href="#6-3-加密通信" aria-label="锚点">#</a></h3>
+<p><strong>TLS 配置</strong>：</p>
+<ul><li>最低版本：TLS 1.3</li><li>密码套件：TLS_AES_256_GCM_SHA384</li><li>证书验证：双向认证（mTLS）</li></ul>
+<p><strong>消息加密</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;encrypted&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;algorithm&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;AES-256-GCM&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;iv&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;base64-encoded-iv&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;tag&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;base64-encoded-tag&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;ciphertext&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;base64-encoded-ciphertext&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+<h2 id="7-发现机制">7. 发现机制<a class="anchor" href="#7-发现机制" aria-label="锚点">#</a></h2>
+<h3 id="7-1-服务注册">7.1 服务注册<a class="anchor" href="#7-1-服务注册" aria-label="锚点">#</a></h3>
+<p><strong>注册中心</strong>：</p>
+<ul><li>自注册：智能体启动时自动注册</li><li>心跳：定期发送心跳保持注册状态</li><li>注销：智能体关闭时主动注销</li></ul>
+<p><strong>注册信息</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;agent&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent-001&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;khy-quant&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;endpoint&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ws://localhost:3001&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;capabilities&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;trading&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;healthCheck&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;http://localhost:3001/health&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;metadata&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1.0.0&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;region&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;asia&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;environment&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;production&quot;</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;registration&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;registeredAt&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;expiresAt&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:30:00.000Z&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;lastHeartbeat&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:05:00.000Z&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="7-2-服务发现">7.2 服务发现<a class="anchor" href="#7-2-服务发现" aria-label="锚点">#</a></h3>
+<p><strong>发现方式</strong>：</p>
+<ul><li><strong>主动查询</strong>：智能体主动查询其他智能体</li><li><strong>订阅通知</strong>：订阅智能体状态变化通知</li><li><strong>广播发现</strong>：广播发现请求</li></ul>
+<p><strong>负载均衡</strong>：</p>
+<ul><li>轮询（Round Robin）</li><li>加权轮询（Weighted Round Robin）</li><li>最少连接（Least Connections）</li><li>响应时间（Response Time）</li></ul>
+<h3 id="7-3-健康检查">7.3 健康检查<a class="anchor" href="#7-3-健康检查" aria-label="锚点">#</a></h3>
+<p><strong>检查方式</strong>：</p>
+<ul><li><strong>HTTP 检查</strong>：GET /health</li><li><strong>TCP 检查</strong>：端口连通性</li><li><strong>自定义检查</strong>：智能体自定义检查逻辑</li></ul>
+<p><strong>检查间隔</strong>：30 秒</p>
+<p><strong>超时时间</strong>：5 秒</p>
+<p><strong>失败阈值</strong>：3 次</p>
+<hr>
+<h2 id="8-实现计划">8. 实现计划<a class="anchor" href="#8-实现计划" aria-label="锚点">#</a></h2>
+<h3 id="8-1-阶段-1-基础框架-1-2-周">8.1 阶段 1：基础框架（1-2 周）<a class="anchor" href="#8-1-阶段-1-基础框架-1-2-周" aria-label="锚点">#</a></h3>
+<p><strong>目标</strong>：建立 A2A 协议基础框架</p>
+<p><strong>任务</strong>：</p>
+<ul><li>[ ] 定义消息格式和协议规范</li><li>[ ] 实现基础消息解析和构建</li><li>[ ] 建立 WebSocket 传输层</li><li>[ ] 实现基础认证机制</li></ul>
+<p><strong>交付物</strong>：</p>
+<ul><li>A2A 协议核心库</li><li>基础测试用例</li><li>协议规范文档</li></ul>
+<h3 id="8-2-阶段-2-核心功能-2-3-周">8.2 阶段 2：核心功能（2-3 周）<a class="anchor" href="#8-2-阶段-2-核心功能-2-3-周" aria-label="锚点">#</a></h3>
+<p><strong>目标</strong>：实现核心 A2A 功能</p>
+<p><strong>任务</strong>：</p>
+<ul><li>[ ] 实现智能体注册和发现</li><li>[ ] 实现能力广播和查询</li><li>[ ] 实现任务创建和状态管理</li><li>[ ] 实现状态同步机制</li></ul>
+<p><strong>交付物</strong>：</p>
+<ul><li>完整的 A2A 协议实现</li><li>集成测试用例</li><li>使用示例</li></ul>
+<h3 id="8-3-阶段-3-高级特性-3-4-周">8.3 阶段 3：高级特性（3-4 周）<a class="anchor" href="#8-3-阶段-3-高级特性-3-4-周" aria-label="锚点">#</a></h3>
+<p><strong>目标</strong>：实现高级特性和生产就绪</p>
+<p><strong>任务</strong>：</p>
+<ul><li>[ ] 实现 mTLS 和高级认证</li><li>[ ] 实现负载均衡和故障转移</li><li>[ ] 实现审计和监控</li><li>[ ] 性能优化和压力测试</li></ul>
+<p><strong>交付物</strong>：</p>
+<ul><li>生产级 A2A 协议实现</li><li>性能测试报告</li><li>部署指南</li></ul>
+<hr>
+<h2 id="9-配置规范">9. 配置规范<a class="anchor" href="#9-配置规范" aria-label="锚点">#</a></h2>
+<h3 id="9-1-配置文件">9.1 配置文件<a class="anchor" href="#9-1-配置文件" aria-label="锚点">#</a></h3>
+<p><strong>文件位置</strong>：<code>./.khy/a2a.json</code></p>
+<p><strong>配置格式</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;a2a&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;enabled&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1.0.0&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;transport&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;websocket&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;enabled&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;port&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">3001</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;path&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/a2a/v1&quot;</span>
+      <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;http&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;enabled&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;port&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">3002</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;path&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/a2a/v1&quot;</span>
+      <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;grpc&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;enabled&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;port&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">3003</span>
+      <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;security&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;authentication&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;jwt&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;issuer&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;a2a-auth-server&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;audience&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;a2a-network&quot;</span>
+      <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;authorization&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;enabled&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;defaultRole&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent&quot;</span>
+      <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;encryption&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;enabled&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;tls&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+          <span class="hljs-attr">&quot;enabled&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+          <span class="hljs-attr">&quot;cert&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;./certs/server.crt&quot;</span><span class="hljs-punctuation">,</span>
+          <span class="hljs-attr">&quot;key&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;./certs/server.key&quot;</span><span class="hljs-punctuation">,</span>
+          <span class="hljs-attr">&quot;ca&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;./certs/ca.crt&quot;</span>
+        <span class="hljs-punctuation">}</span>
+      <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;discovery&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;registry&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;memory&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;ttl&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">300</span>
+      <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;healthCheck&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;interval&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">30</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;timeout&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">5</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;failureThreshold&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">3</span>
+      <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;logging&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;level&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;info&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;format&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;json&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;output&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;./logs/a2a.log&quot;</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="9-2-环境变量">9.2 环境变量<a class="anchor" href="#9-2-环境变量" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>变量</th><th>默认值</th><th>说明</th></tr></thead><tbody><tr><td><code>A2A_ENABLED</code></td><td>true</td><td>启用 A2A 协议</td></tr><tr><td><code>A2A_PORT</code></td><td>3001</td><td>WebSocket 端口</td></tr><tr><td><code>A2A_HTTP_PORT</code></td><td>3002</td><td>HTTP 端口</td></tr><tr><td><code>A2A_GRPC_PORT</code></td><td>3003</td><td>gRPC 端口</td></tr><tr><td><code>A2A_AUTH_TYPE</code></td><td>jwt</td><td>认证类型</td></tr><tr><td><code>A2A_TLS_ENABLED</code></td><td>true</td><td>启用 TLS</td></tr><tr><td><code>A2A_LOG_LEVEL</code></td><td>info</td><td>日志级别</td></tr></tbody></table>
+<hr>
+<h2 id="10-测试规范">10. 测试规范<a class="anchor" href="#10-测试规范" aria-label="锚点">#</a></h2>
+<h3 id="10-1-单元测试">10.1 单元测试<a class="anchor" href="#10-1-单元测试" aria-label="锚点">#</a></h3>
+<p><strong>测试覆盖</strong>：</p>
+<ul><li>消息解析和构建</li><li>协议方法实现</li><li>安全认证机制</li><li>错误处理</li></ul>
+<p><strong>测试命令</strong>：</p>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:a2a:unit</code></pre>
+<h3 id="10-2-集成测试">10.2 集成测试<a class="anchor" href="#10-2-集成测试" aria-label="锚点">#</a></h3>
+<p><strong>测试场景</strong>：</p>
+<ul><li>智能体注册和发现</li><li>能力查询和调用</li><li>任务创建和状态管理</li><li>多智能体协作</li></ul>
+<p><strong>测试命令</strong>：</p>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:a2a:integration</code></pre>
+<h3 id="10-3-性能测试">10.3 性能测试<a class="anchor" href="#10-3-性能测试" aria-label="锚点">#</a></h3>
+<p><strong>测试指标</strong>：</p>
+<ul><li>消息吞吐量</li><li>响应延迟</li><li>并发连接数</li><li>资源占用</li></ul>
+<p><strong>测试命令</strong>：</p>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:a2a:performance</code></pre>
+<hr>
+<h2 id="11-相关文档">11. 相关文档<a class="anchor" href="#11-相关文档" aria-label="锚点">#</a></h2>
+<ul><li><code>[DESIGN-ARCH-072]</code> 项目规范化总纲</li><li><code>[DESIGN-MEM-001]</code> 记忆系统标准规范</li><li><code>[OPS-MAN-173]</code> MCP 工具接入快速上手</li></ul>
+<hr>
+<h2 id="12-版本历史">12. 版本历史<a class="anchor" href="#12-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义 A2A 协议规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 架构团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-A11Y-001] 可访问性规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-A11Y-001] 可访问性规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-A2A-002] A2A 标准协议适配规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-A2A-002] A2A 标准协议适配规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-A2A-001] A2A 协议规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

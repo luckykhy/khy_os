@@ -331,6 +331,15 @@ function forceWindowsUtf8(shellCfg, command, env = process.env) {
       outputEncoding: 'utf-8',
     };
   }
+  if (shellCfg && (shellCfg.shell === 'bash' || shellCfg.shell === 'sh')) {
+    // Git Bash / MSYS 恒以 UTF-8 输出(其内部 locale 即 UTF-8),无需也**不能**前置 chcp
+    // (bash 不认 chcp)。但若不声明编码,spawn 侧退回 getSystemEncoding() 探测**父进程**
+    // chcp——中文 Windows 上是 GBK/CP936——于是把子进程的 UTF-8 字节按 GBK 流解码 → 乱码
+    // (node/python/ls 等一切 UTF-8 程序的中文输出全塌)。声明 'utf-8' 走 spawn 侧
+    // smartWinUtf8 路径:先按 UTF-8 解,仅当出现 U+FFFD 才回落系统 OEM 码页——故在 bash 里
+    // 跑原生 GBK 程序(ipconfig 等)仍能正确解码。ASCII 输出逐字节一致(零回归)。
+    return { command, outputEncoding: 'utf-8' };
+  }
   return { command, outputEncoding: null };
 }
 

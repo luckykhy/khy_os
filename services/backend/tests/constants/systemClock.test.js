@@ -60,7 +60,9 @@ describe('systemClock', () => {
       const result = formatSystemClockLines({ now, env: {}, offsetMinutes: 480 });
       expect(result).toHaveLength(3);
       expect(result[0]).toMatch(/ - Current date: 2024-03-15 \(Friday\)/);
-      expect(result[1]).toMatch(/ - Current time: 10:30:45 \(UTC\+08:00\)/);
+      // No trailing anchor: the host-timezone suffix (", Asia/Shanghai" on a
+      // UTC+8 dev box) is appended by design when timeZone is not pinned.
+      expect(result[1]).toMatch(/ - Current time: 10:30:45 \(UTC\+08:00/);
       expect(result[2]).toMatch(/ - Current timestamp \(ISO 8601\):/);
     });
 

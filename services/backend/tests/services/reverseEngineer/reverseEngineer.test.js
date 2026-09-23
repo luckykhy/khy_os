@@ -15,13 +15,13 @@ const os = require('os');
 const path = require('path');
 const zlib = require('zlib');
 
-const registry = require('../../../src/services/reverseEngineer/formatRegistry');
-const scanner = require('../../../src/services/reverseEngineer/artifactScanner');
-const stringHarvester = require('../../../src/services/reverseEngineer/stringHarvester');
-const sourceRecoverer = require('../../../src/services/reverseEngineer/sourceRecoverer');
-const toolOrchestrator = require('../../../src/services/reverseEngineer/toolOrchestrator');
-const reconstructionPort = require('../../../src/services/reverseEngineer/reconstructionPort');
-const ledger = require('../../../src/services/reverseEngineer/verificationLedger');
+const registry = require('../../../src/services/domain/data/reverseEngineer/formatRegistry.js');
+const scanner = require('../../../src/services/domain/data/reverseEngineer/artifactScanner.js');
+const stringHarvester = require('../../../src/services/domain/data/reverseEngineer/stringHarvester.js');
+const sourceRecoverer = require('../../../src/services/domain/data/reverseEngineer/sourceRecoverer.js');
+const toolOrchestrator = require('../../../src/services/domain/data/reverseEngineer/toolOrchestrator.js');
+const reconstructionPort = require('../../../src/services/domain/data/reverseEngineer/reconstructionPort.js');
+const ledger = require('../../../src/services/domain/data/reverseEngineer/verificationLedger.js');
 const engine = require('../../../src/services/reverseEngineer');
 
 // ── fixtures ────────────────────────────────────────────────────────────────
@@ -497,7 +497,7 @@ describe('reverseEngineer subsystem', () => {
     });
 
     test('every recommended depId resolves to a registered dependency', () => {
-      const depRegistry = require('../../../src/services/dependency/registry');
+      const depRegistry = require('../../../src/services/domain/network/dependency/registry.js');
       for (const fam of ['elf', 'pe', 'macho', 'dalvik', 'wasm', 'dotnet', 'python', 'go', 'rust']) {
         const rec = toolOrchestrator.recommendInstall(fam);
         if (!rec) continue;
@@ -527,14 +527,14 @@ describe('reverseEngineer subsystem', () => {
       // （依赖真实 which），故验证「探活模式不触发」+「映射可解析」两条已覆盖；此处验证
       // 工具在 runTools 且 orchestration.missingDependency 存在时构造结构化失败的契约。
       assert.equal(typeof tool.execute, 'function');
-      const { MissingDependencyError } = require('../../../src/services/dependency/resolver');
+      const { MissingDependencyError } = require('../../../src/services/domain/network/dependency/resolver.js');
       const err = new MissingDependencyError('jadx', {});
       const s = err.toStructuredResult();
       assert.equal(s.success, false);
       assert.equal(s.error.code, 'MISSING_DEPENDENCY');
       // depId 透传后 resolver 应能零文本匹配回溯辨认。
       s.depId = 'jadx';
-      const resolver = require('../../../src/services/dependency/resolver');
+      const resolver = require('../../../src/services/domain/network/dependency/resolver.js');
       const det = resolver.detectFromError(s);
       assert.ok(det && det.depId === 'jadx');
     });

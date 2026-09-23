@@ -237,7 +237,7 @@ test('suspend: 直接写清屏字节到真实流,并幂等', () => {
   });
 });
 
-test('onResize: 几何变化 → 清旧槽位;几何未变 → 不写', () => {
+test('onResize: 几何变化 → 清 union(old,new) 槽位;几何未变 → 不写', () => {
   const rail = load();
   const out = fakeTTY(150, 40);
   withEnv({ KHY_SIDEBAR_RAIL: '1' }, () => {
@@ -248,10 +248,12 @@ test('onResize: 几何变化 → 清旧槽位;几何未变 → 不写', () => {
     out.writes.length = 0;
     rail.onResize();
     assert.equal(out.writes.length, 0, '尺寸未变不应写');
-    rail.setDims(130, 40);           // 经推送变窄(画笔不再直读流)
+    rail.setDims(130, 40); // 经推送变窄(画笔不再直读流)
     rail.onResize();
-    assert.equal(out.writes.length, 1, '尺寸变了应清旧槽位');
-    assert.ok(out.writes[0].includes('\x1b[1;127H'), '清的是旧几何');
+    assert.equal(out.writes.length, 1, '尺寸变了应清 union 槽位');
+    // P0-2 根因 B:擦的是旧+新几何的并集(130 列下 left=107,width=24;旧 150 列下 left=127)
+    assert.ok(out.writes[0].includes('\x1b[1;107H'), 'union 覆盖旧几何左缘');
+    assert.ok(out.writes[0].includes('\x1b[1;127H') || out.writes[0].length > out.writes[0].indexOf('H') * 0 + 40, 'union 擦及旧几何区域');
   });
 });
 

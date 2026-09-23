@@ -8,7 +8,7 @@
  */
 'use strict';
 
-const registrar = require('../src/services/customProviderRegistrar');
+const registrar = require('../../src/services/customProviderRegistrar.js');
 
 afterEach(() => { delete process.env.KHY_PROVIDER_PRESETS; });
 

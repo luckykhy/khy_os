@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-NAM-002] A2A 与 ACP 命名及术语规范.md -->
+<title>[DESIGN-NAM-002] A2A 与 ACP 命名及术语规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-NAM-002] A2A 与 ACP 命名及术语规范</div>
+      <header class="hero reveal"><h1>[DESIGN-NAM-002] A2A 与 ACP 命名及术语规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-nam-002-a2a-与-acp-命名及术语规范">[DESIGN-NAM-002] A2A 与 ACP 命名及术语规范</a></li><li class="lvl-2"><a href="#1-术语表-唯一真源">1. 术语表（唯一真源）</a></li><li class="lvl-3"><a href="#1-1-关键区分点-对外解释时用这张表">1.1 关键区分点（对外解释时用这张表）</a></li><li class="lvl-2"><a href="#2-命名规则-强制">2. 命名规则（强制）</a></li><li class="lvl-3"><a href="#nam-a2a-1-禁止-a2a-前缀方法名">NAM-A2A-1 —— 禁止 `a2a.` 前缀方法名</a></li><li class="lvl-3"><a href="#nam-a2a-2-环境变量前缀">NAM-A2A-2 —— 环境变量前缀</a></li><li class="lvl-3"><a href="#nam-a2a-3-文档标题与首段">NAM-A2A-3 —— 文档标题与首段</a></li><li class="lvl-3"><a href="#nam-a2a-4-标准-a2a-的能力声明必须诚实">NAM-A2A-4 —— 标准 A2A 的能力声明必须诚实</a></li><li class="lvl-3"><a href="#nam-a2a-5-私有方言不得出现在对外契约中">NAM-A2A-5 —— 私有方言不得出现在对外契约中</a></li><li class="lvl-2"><a href="#3-重命名映射表-p2-阶段执行">3. 重命名映射表（P2 阶段执行）</a></li><li class="lvl-2"><a href="#4-文档纠正清单">4. 文档纠正清单</a></li><li class="lvl-2"><a href="#5-守卫">5. 守卫</a></li><li class="lvl-2"><a href="#6-版本历史">6. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-nam-002-a2a-与-acp-命名及术语规范">[DESIGN-NAM-002] A2A 与 ACP 命名及术语规范<a class="anchor" href="#design-nam-002-a2a-与-acp-命名及术语规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: NAM-002 -->
+<p>&lt;!-- naming-guard: exempt 本文是本规则的规范真源，必须引用错误命名才能定义「什么算违规」 --&gt;</p>
+<blockquote><p><strong>状态</strong>：生效中<br><strong>适用范围</strong>：全仓（代码 / 文档 / 环境变量 / 任务入口命名）<br><strong>解决的问题</strong>：仓库里有两个都被称为「A2A」的东西 —— 标准 Agent2Agent 协议，<br>与 khy-os 自有的<strong>进程内 ACP 方言</strong>。文档把后者逐字写成了「A2A 协议规范」，<br>连方法名都是实现中<strong>根本不存在</strong>的虚构集合，外部读者据此对接必然失败。<br><strong>强制手段</strong>：<code>npm run check:protocol-naming</code>（<code>scripts/ci/check-protocol-naming.js</code>）<br><strong>相关文档</strong>：<code>[DESIGN-A2A-001]</code>（私有方言，更名中）、<code>[DESIGN-A2A-002]</code>（标准 A2A 适配）、<br><code>[DESIGN-COMM-001]</code> 通信协议规范、<code>[DESIGN-NAM-001]</code> 统一命名规范</p></blockquote>
+<hr>
+<h2 id="1-术语表-唯一真源">1. 术语表（唯一真源）<a class="anchor" href="#1-术语表-唯一真源" aria-label="锚点">#</a></h2>
+<p>本表是全仓<strong>唯一</strong>允许用来称呼这两套协议的词汇。任何文档/注释/提交信息使用其它<br>说法（尤其是裸用「A2A」指代私有方言）都视为违规。</p>
+<table><thead><tr><th>规范术语</th><th>定义</th><th>协议版本</th><th>传输</th><th>作用域</th></tr></thead><tbody><tr><td><strong>标准 A2A</strong>&lt;br&gt;（Standard A2A / Agent2Agent）</td><td>Linux Foundation 的 Agent2Agent Protocol，代表实现为 <code>services/a2a/**</code></td><td><code>0.3.0</code>&lt;br&gt;（<code>agentCardSpec.A2A_PROTOCOL_VERSION</code>）</td><td>JSON-RPC 2.0 over HTTP + <strong>SSE</strong>（REST 绑定路径 <code>/v1/message:send</code> 等）</td><td><strong>跨厂商、跨网络</strong></td></tr><tr><td><strong>私有 ACP</strong>&lt;br&gt;（Private ACP dialect）</td><td>khy-os 自有的进程内 agent 编排方言，代表实现为 <code>acpTransport.js</code> + <code>a2a*</code> 模块群</td><td><code>1.0</code>&lt;br&gt;（<code>ACP_PROTOCOL_VERSION</code>）</td><td>进程内 / 自建 ipc·ws·http</td><td><strong>单进程内</strong></td></tr></tbody></table>
+<h3 id="1-1-关键区分点-对外解释时用这张表">1.1 关键区分点（对外解释时用这张表）<a class="anchor" href="#1-1-关键区分点-对外解释时用这张表" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>标准 A2A</th><th>私有 ACP</th></tr></thead><tbody><tr><td>方法名</td><td><code>message/send</code>、<code>message/stream</code>、<code>tasks/get</code>、<code>tasks/cancel</code>、<code>tasks/pushNotificationConfig/*</code></td><td><code>agent.spawn</code>、<code>agent.kill</code>、<code>agent.status</code>、<code>task.submit</code>、<code>task.result</code>、<code>task.progress</code>、<code>context.share</code>、<code>tool.invoke</code>、<code>tool.result</code>、<code>message.send</code>、<code>message.broadcast</code>、<code>heartbeat</code></td></tr><tr><td>方法名形状</td><td>斜杠分隔（<code>域/动作</code>）</td><td>点号分隔（<code>域.动作</code>）</td></tr><tr><td>任务状态集</td><td><code>submitted</code> / <code>working</code> / <code>input-required</code> / <code>completed</code> / <code>canceled</code> / <code>failed</code> / <code>rejected</code> / <code>auth-required</code> / <code>unknown</code>（封闭枚举）</td><td><code>pending</code> / <code>spawning</code> / <code>running</code> / <code>waiting</code> / <code>completing</code> / <code>completed</code> / <code>failed</code> / <code>killing</code> / <code>killed</code> / <code>timed_out</code>（私有）</td></tr><tr><td>发现机制</td><td><code>GET /.well-known/agent-card.json</code>（公开）</td><td>自建内存注册表（<code>a2aRegistry</code>），无对外端点</td></tr><tr><td>流式</td><td>SSE（<code>message/stream</code>）</td><td>无</td></tr><tr><td>持久化</td><td>任务需可持久（<code>tasks/get</code> 跨请求）</td><td>全内存，进程重启即清零</td></tr></tbody></table>
+<blockquote><p><strong>方法名的权威真源</strong>：标准 A2A 见 <code>contracts/a2a/*.schema.json</code>；私有 ACP 见<br><code>contracts/acp/acp-message.schema.json</code> 的 <code>method</code> enum 与 <code>acpTransport.ACP_METHODS</code>。<br><strong>两处必须一致</strong>，由 <code>check-protocol-conformance.js</code> 与本节守卫共同锁定。</p></blockquote>
+<hr>
+<h2 id="2-命名规则-强制">2. 命名规则（强制）<a class="anchor" href="#2-命名规则-强制" aria-label="锚点">#</a></h2>
+<h3 id="nam-a2a-1-禁止-a2a-前缀方法名">NAM-A2A-1 —— 禁止 <code>a2a.</code> 前缀方法名<a class="anchor" href="#nam-a2a-1-禁止-a2a-前缀方法名" aria-label="锚点">#</a></h3>
+<p>全仓（代码 + 文档）<strong>禁止</strong>出现 <code>a2a.&lt;域&gt;.&lt;动作&gt;</code> 形式的方法名。</p>
+<p><strong>理由</strong>：<code>a2a.discovery.register</code> / <code>a2a.task.create</code> / <code>a2a.capability.invoke</code> /<br><code>a2a.status.*</code> 这一整套名字<strong>在实现中零存在</strong> —— 实测全仓只出现在文档里<br>（<code>[DESIGN-A2A-001]</code>、<code>[DESIGN-ARCH-073]</code>）。它们是设计草案遗留，从未落地。<br>保留它们只会让外部读者以为有这样一套 API。</p>
+<p><strong>唯一豁免方式</strong>：文件顶部（前 40 行内）放置显式豁免标记：</p>
+<pre><code class="language-html"><span class="hljs-comment">&lt;!-- naming-guard: exempt 理由（≤60 字） --&gt;</span></code></pre>
+<p>豁免标记必须带<strong>理由</strong>，且只允许用于「记录历史错误命名」的场合 ——<br>不允许用它来继续描述一套不存在的 API。</p>
+<h3 id="nam-a2a-2-环境变量前缀">NAM-A2A-2 —— 环境变量前缀<a class="anchor" href="#nam-a2a-2-环境变量前缀" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>前缀</th><th>归属</th><th>规则</th></tr></thead><tbody><tr><td><code>KHY_A2A_*</code></td><td><strong>标准 A2A</strong></td><td>新增需登记进 <code>scripts/ci/protocol-naming.json</code> 的 <code>a2aEnvAllowlist</code>。当前白名单：<code>KHY_A2A_ENABLED</code>、<code>KHY_A2A_PUBLIC_URL</code>、<code>KHY_A2A_API_KEY</code>、<code>KHY_A2A_AGENT_VERSION</code>、<code>KHY_A2A_TIMEOUT_MS</code>、<code>KHY_A2A_LEGACY_AGENT_JSON</code></td></tr><tr><td><code>KHY_ACP_*</code></td><td><strong>私有 ACP</strong></td><td>私有方言的<strong>新增</strong>环境变量一律用此前缀</td></tr></tbody></table>
+<p><strong>已知遗留冲突（登记在案，P2 修复）</strong>：<code>KHY_A2A_ENABLED</code> 目前被<strong>两个子系统</strong><br>同时读取 —— <code>agentCardSpec.isPublishEnabled()</code>（标准 A2A 发现端点）<br>与 <code>a2aConfig.isEnabled()</code>（私有 ACP 总闸）。二者默认均为 <code>on</code>，故当前无行为差异；<br>但关掉这一个变量会<strong>同时</strong>关掉两个子系统，语义含糊。修复随 P2 重命名一并完成<br>（私有侧改为 <code>KHY_ACP_ENABLED</code>，过渡期回退读 <code>KHY_A2A_ENABLED</code>）。</p>
+<h3 id="nam-a2a-3-文档标题与首段">NAM-A2A-3 —— 文档标题与首段<a class="anchor" href="#nam-a2a-3-文档标题与首段" aria-label="锚点">#</a></h3>
+<p>描述私有 ACP 的文档，其标题与首段<strong>必须</strong>至少出现一次「私有」或「进程内」限定词。</p>
+<p><strong>反例</strong>（现状，已加更正横幅）：<code># [DESIGN-A2A-001] A2A 协议规范</code><br><strong>正例</strong>：<code># [DESIGN-ACP-002] 私有 ACP 方言协议规范（进程内 agent 编排）</code></p>
+<h3 id="nam-a2a-4-标准-a2a-的能力声明必须诚实">NAM-A2A-4 —— 标准 A2A 的能力声明必须诚实<a class="anchor" href="#nam-a2a-4-标准-a2a-的能力声明必须诚实" aria-label="锚点">#</a></h3>
+<p>标准 A2A 侧声明的任何能力，必须在代码中确有其事，真源为<br><code>agentCardSpec.IMPLEMENTED_CAPABILITIES</code>，由 <code>check-protocol-conformance.js</code> 的<br><code>capability-honesty:*</code> 断言实测。<strong>禁止</strong>先改卡片再补实现。</p>
+<h3 id="nam-a2a-5-私有方言不得出现在对外契约中">NAM-A2A-5 —— 私有方言不得出现在对外契约中<a class="anchor" href="#nam-a2a-5-私有方言不得出现在对外契约中" aria-label="锚点">#</a></h3>
+<p>私有 ACP 的方法名、状态集、传输方式<strong>禁止</strong>出现在：</p>
+<ul><li>Agent Card 的 <code>skills</code> / <code>capabilities</code> / <code>description</code>；</li><li><code>contracts/a2a/**</code> 的任何 schema；</li><li>任何面向外部 integrator 的文档（<code>docs/10_规范/</code> 中以标准 A2A 为主题的文档）。</li></ul>
+<hr>
+<h2 id="3-重命名映射表-p2-阶段执行">3. 重命名映射表（P2 阶段执行）<a class="anchor" href="#3-重命名映射表-p2-阶段执行" aria-label="锚点">#</a></h2>
+<p>当前私有方言的<strong>文件名</strong>仍是 A2A 前缀（内部标识符早已是 ACP），构成持续混淆源。</p>
+<table><thead><tr><th>现名</th><th>目标名</th><th>直接引用方（实测）</th><th>备注</th></tr></thead><tbody><tr><td><code>src/services/a2aRegistry.js</code></td><td><code>src/services/acp/acpRegistry.js</code></td><td>5 个</td><td>—</td></tr><tr><td><code>src/services/a2aMessageRouter.js</code></td><td><code>src/services/acp/acpMessageRouter.js</code></td><td>5 个</td><td>—</td></tr><tr><td><code>src/services/a2aAgentLifecycle.js</code></td><td><code>src/services/acp/acpAgentLifecycle.js</code></td><td>5 个</td><td>—</td></tr><tr><td><code>src/services/a2aFacade.js</code></td><td><code>src/services/acp/acpFacade.js</code></td><td>5 个</td><td>—</td></tr><tr><td><code>src/services/a2aConfig.js</code></td><td><code>src/services/acp/acpConfig.js</code></td><td>—</td><td>含 <code>KHY_A2A_*</code> 私有 env</td></tr><tr><td><code>src/services/a2aInit.js</code></td><td><strong>直接删除</strong></td><td>0 个</td><td>死代码（<code>initializeA2A</code> 全仓无调用方）</td></tr><tr><td><code>docs/10_规范/[DESIGN-A2A-001] …</code></td><td><code>docs/10_规范/[DESIGN-ACP-002] 私有 ACP 方言协议规范.md</code></td><td>2 份文档引用</td><td>旧文件名保留为跳转桩</td></tr></tbody></table>
+<p><strong>5 个直接引用方</strong>（实测）：<code>tools/teammateBus.js</code>、<code>services/a2aFacade.js</code>、<br><code>services/a2aMessageRouter.js</code>、<code>services/agentCommunicationService.js</code>、<br><code>services/externalAgentDirective.js</code>。</p>
+<p><strong>过渡策略</strong>（三步，每步可独立回滚）：</p>
+<ol><li><strong>别名层</strong>：新路径建 re-export 壳，旧路径保留为 <code>module.exports = require('../acp/xxx')</code>。</li></ol>
+<p>跑全量测试，确认零回归。</p>
+<ol><li><strong>切换引用</strong>：把 5 个引用方改为新路径；旧壳加 <code>@deprecated</code> JSDoc + 一行 <code>console.warn</code>（仅 <code>KHY_ACP_DEPRECATION_WARN=1</code> 时输出）。</li><li><strong>移除旧壳</strong>：下一个 minor 版本删除；同时在 <code>CHANGELOG</code> 标注破坏性变更。</li></ol>
+<blockquote><p><strong>为什么不在本次整改里直接做</strong>：改名牵动 5 个引用方 + 14 处 agent 注册路径 +<br>既有测试，属独立破坏性批次。且<strong>命名纪律本身已由 NAM-A2A-1~5 覆盖</strong> ——<br>文档层混淆（真正的危害源）已经消除。改名是「消除剩余的命名噪音」，优先级低于它。</p></blockquote>
+<hr>
+<h2 id="4-文档纠正清单">4. 文档纠正清单<a class="anchor" href="#4-文档纠正清单" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>问题</th><th>处置</th><th>状态</th></tr></thead><tbody><tr><td><code>docs/10_规范/[DESIGN-A2A-001] A2A 协议规范.md</code></td><td>把私有方言写成「A2A 协议规范」；§4 方法名（<code>a2a.discovery.register</code> 等）实现中零存在；§5 传输写 WebSocket/gRPC</td><td>加定位更正横幅（已做）；新增 §0 术语与方法集更正表（权威 ACP 方法集 + 历史错误命名对照）；§4 前插入更正警示</td><td>✅ 本次</td></tr><tr><td><code>docs/03_DESIGN_设计/[DESIGN-ARCH-073] 规范快速参考卡.md</code></td><td><code>## A2A 协议速查</code> 把虚构方法族（<code>a2a.discovery.*</code> / <code>a2a.capability.*</code> / <code>a2a.task.*</code> / <code>a2a.status.*</code>）当作真实 API 速查</td><td>改为真实 ACP 方法集，并拆成「私有 ACP（进程内）」与「标准 A2A（对外互操作）」两节</td><td>✅ 本次</td></tr><tr><td><code>docs/10_规范/[DESIGN-A2A-002] A2A 标准协议适配规范.md</code></td><td>文中引用历史错误命名作为对照</td><td>已带豁免标记，保留为反例</td><td>✅ 本次</td></tr><tr><td>代码注释</td><td><code>a2aRegistry.js</code> 等文件头自述「A2A Registry」</td><td>P2 随改名同步修正为「ACP Registry」</td><td>⬜ P2</td></tr></tbody></table>
+<hr>
+<h2 id="5-守卫">5. 守卫<a class="anchor" href="#5-守卫" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">npm run check:protocol-naming            <span class="hljs-comment"># 全仓</span>
+node scripts/ci/check-protocol-naming.js --json</code></pre>
+<p>守卫检查项：</p>
+<table><thead><tr><th>规则</th><th>检查</th><th>严重度</th></tr></thead><tbody><tr><td>NAM-A2A-1</td><td><code>a2a.&lt;域&gt;.&lt;动作&gt;</code> 方法名出现在无豁免标记的文件中</td><td>error</td></tr><tr><td>NAM-A2A-2</td><td>出现 <code>a2aEnvAllowlist</code> 之外的新 <code>KHY_A2A_*</code> 环境变量</td><td>error</td></tr><tr><td>NAM-A2A-5</td><td><code>contracts/a2a/**</code> 中出现私有 ACP 方法名或私有状态名</td><td>error</td></tr><tr><td>NAM-A2A-3</td><td>描述私有方言的文档标题/首段缺「私有」「进程内」限定词</td><td>warning</td></tr><tr><td>一致性</td><td><code>acpTransport.ACP_METHODS</code> 与 <code>contracts/acp/acp-message.schema.json</code> 的 enum 不一致</td><td>error</td></tr></tbody></table>
+<p><strong>豁免标记格式</strong>（必须带理由）：</p>
+<pre><code class="language-html"><span class="hljs-comment">&lt;!-- naming-guard: exempt 记录历史错误命名，实现中不存在 --&gt;</span></code></pre>
+<hr>
+<h2 id="6-版本历史">6. 版本历史<a class="anchor" href="#6-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-15</td><td>首版：术语表、五条命名规则、重命名映射表与三步过渡策略、文档纠正清单、守卫</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-NAM-001] 统一命名规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-NAM-001] 统一命名规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-NOTIFY-001] 通知与邮件规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-NOTIFY-001] 通知与邮件规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-NAM-002] A2A 与 ACP 命名及术语规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

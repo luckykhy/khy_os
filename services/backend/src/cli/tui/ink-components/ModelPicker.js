@@ -20,6 +20,13 @@
  *   title      — optional heading (defaults to a generic prompt).
  *   defaultValue — optional { adapter, model } to start the cursor on.
  *   recent     — optional [{ model, adapter }] recent models to show at top.
+ *   cols       — overlay width in display columns (App passes `_overlayCols`).
+ *                When present, each row is clipped to one visual row (BUG-56).
+ *                Absent → rows render as before, i.e. no width cap.
+ *   rows       — terminal height in lines (App passes `_resRows`). When present
+ *                the page size shrinks so the whole frame, including the
+ *                「Esc 取消」 footer, fits on screen (BUG-56). Absent → the
+ *                historical 12-rows-per-page cap is used.
  *
  * Navigation: ↑/↓ move (skipping disabled rows), 1-9 jump+select, Enter selects
  * the highlighted row, Esc cancels. A scroll window keeps the cursor visible
@@ -29,10 +36,14 @@
 const React = require('react');
 
 const inkRuntime = require('../inkRuntime');
+const {
+  clipCell,
+  pickerRowBudget,
+  pickerPageRows,
+} = require('../wrapCell');
 
 const MARKER = '❯';
 const RECENT_MARKER = '★';
-const PAGE_SIZE = 12;
 
 function sameValue(v, target) {
   if (!v || !target) {
@@ -79,7 +90,7 @@ function filterChoices(list, query) {
     .map((x) => x.item);
 }
 
-function ModelPicker({ choices = [], onResolve, title, defaultValue, recent = [] }) {
+function ModelPicker({ choices = [], onResolve, title, defaultValue, recent = [], cols, rows }) {
   const { Box, Text, useInput } = inkRuntime.get();
   const h = React.createElement;
 
@@ -158,12 +169,19 @@ function ModelPicker({ choices = [], onResolve, title, defaultValue, recent = []
       return;
     }
     // 全角(CJK IME)数字折半角后判定(单一真源 cli/fullWidthInput.js,门控关→原样字节回退)。
+    // 数字跳转必须映射到**屏幕上标注的那一行**:行号标签按窗口位置编号(见下方 numberLabel),
+    // 故目标 filtered 下标 = 窗口起点 + (n-1),而不是 n-1。用 n-1 会出现「列表滚动后按 3 选中的
+    // 是另一行」(用户报的「莫名跳到别的模型」)。
     const navCh = require('../../fullWidthInput').foldDigits(ch, process.env);
     if (navCh && navCh >= '1' && navCh <= '9' && !query) {
-      const idx = parseInt(navCh, 10) - 1;
-      if (idx >= 0 && idx < filtered.length) {
-        setCursor(idx);
-        choose(idx);
+      const windowSize = Math.max(0, end - start);
+      const offset = parseInt(navCh, 10) - 1;
+      if (windowSize > 0 && offset >= 0 && offset < windowSize) {
+        const idx = start + offset;
+        if (idx >= 0 && idx < filtered.length && filtered[idx] && !filtered[idx].disabled) {
+          setCursor(idx);
+          choose(idx);
+        }
       }
       return;
     }
@@ -182,7 +200,17 @@ function ModelPicker({ choices = [], onResolve, title, defaultValue, recent = []
   }
 
   // Compute the visible window so the cursor stays in view.
-  const pageSize = Math.min(PAGE_SIZE, filtered.length);
+  const headerText = `? ${title || '选择模型（↑/↓ 选择，回车确认）'}`;
+  const footerText = `  Enter 选择 · ↑/↓ 导航 · 打字搜索 · Esc 取消${recent.length ? ' · ★最近' : ''}`;
+  // The search echo is this picker's own extra chrome row — bill it here, where
+  // it is known, on top of the shared frame-chrome accounting.
+  const pageSize = Math.max(
+    1,
+    Math.min(
+      pickerPageRows(rows, cols, headerText, footerText) - (query ? 1 : 0),
+      filtered.length
+    )
+  );
   let start = Math.max(0, Math.min(cursor - Math.floor(pageSize / 2), filtered.length - pageSize));
   if (start < 0) {
     start = 0;
@@ -191,18 +219,29 @@ function ModelPicker({ choices = [], onResolve, title, defaultValue, recent = []
 
   const recentKeys = new Set(recent.map((r) => `${r.adapter}/${r.model}`));
 
-  const rows = [];
+  const rowNodes = [];
   for (let i = start; i < end; i++) {
     const c = filtered[i];
     const active = i === cursor;
     const marker = active ? MARKER : ' ';
-    const numberLabel = i < 9 ? `${i + 1}.` : '  ';
+    // 行号按**窗口位置**编号(1..9),与数字键跳转(见 useInput 的 start + offset)严格同源:
+    // 屏幕上写「1.」的那一行,按 1 就选中它。此前用全局下标 `i + 1`,列表一滚动标签就与
+    // 实际选中的行脱节(用户报的「按数字跳到别的模型」)。
+    const windowPos = i - start;
+    const numberLabel = windowPos < 9 ? `${windowPos + 1}.` : '  ';
     const label = (c && c.name) || (c && c.value && c.value.model) || `${i + 1}`;
     const disabledTag = c && c.disabled ? ' (不可选)' : '';
     const isRecent =
       c && c.value && recentKeys.has(`${c.value.adapter}/${c.value.model}`);
     const recentTag = isRecent ? RECENT_MARKER : ' ';
-    rows.push(
+    const prefix = `   ${marker} ${numberLabel} ${recentTag}`;
+    // One model = one visual row. A gateway model ID is an external string
+    // (40+ chars is normal), and an uncapped row wrapped to 2 lines on a
+    // narrow terminal, inflating the frame until the 「Esc 取消」 hint fell off
+    // the bottom — same defect as BUG-54/BUG-55, measured in AK.
+    const budget = pickerRowBudget(cols, prefix, disabledTag);
+    const shown = budget > 0 ? clipCell(label, budget) : label;
+    rowNodes.push(
       h(
         Text,
         {
@@ -211,7 +250,7 @@ function ModelPicker({ choices = [], onResolve, title, defaultValue, recent = []
           bold: active,
           dimColor: c && c.disabled ? true : undefined,
         },
-        `   ${marker} ${numberLabel} ${recentTag}${label}${disabledTag}`
+        `${prefix}${shown}${disabledTag}`
       )
     );
   }
@@ -222,19 +261,14 @@ function ModelPicker({ choices = [], onResolve, title, defaultValue, recent = []
       : '';
 
   const queryHint = query ? `  搜索: ${query}` : '';
-  const recentCount = recent.length ? ` · ★最近` : '';
 
   return h(
     Box,
     { flexDirection: 'column', borderStyle: 'round', borderColor: 'cyan', paddingX: 1 },
-    h(Text, { color: 'cyan', bold: true }, `? ${title || '选择模型（↑/↓ 选择，回车确认）'}`),
+    h(Text, { color: 'cyan', bold: true }, headerText),
     queryHint ? h(Text, { color: 'yellow' }, queryHint) : null,
-    h(Box, { flexDirection: 'column' }, rows),
-    h(
-      Text,
-      { dimColor: true },
-      `  Enter 选择 · ↑/↓ 导航 · 打字搜索 · Esc 取消${recentCount}${scrollHint}`
-    )
+    h(Box, { flexDirection: 'column' }, rowNodes),
+    h(Text, { dimColor: true }, `${footerText}${scrollHint}`)
   );
 }
 

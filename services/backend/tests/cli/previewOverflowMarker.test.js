@@ -8,6 +8,7 @@
 //   - 门控关 → 恒复数(`+1 lines`/`1 more rows`)= legacy 字节回退。
 //   - expanded 切 `(capped)` / `capped`;sign 只认 `-`,其余归 `+`;非有限 → 0。
 const m = require('../../src/cli/previewOverflowMarker');
+const assert = require('node:assert');
 const ON = {}; // 默认开
 const OFF = { KHY_PREVIEW_OVERFLOW_PLURAL: '0' };
 const INLINE_OFF = { KHY_PREVIEW_OVERFLOW_INLINE_ONE: '0' };
@@ -132,7 +133,7 @@ describe('Preview Overflow Marker', () => {
       assert.deepEqual(m.resolveFold(NaN, 10, ON), { keep: 0, hidden: 0 });
       assert.deepEqual(m.resolveFold(11, NaN, ON), { keep: 0, hidden: 11 }); // previewMax→0,11>0 全隐藏
       assert.deepEqual(m.resolveFold(undefined, undefined, ON), { keep: 0, hidden: 0 });
-      expect(() => m.resolveFold(undefined, undefined, ON).not.toThrow());
+      expect(() => m.resolveFold(undefined, undefined, ON)).not.toThrow();
   });
 
 });

@@ -18,7 +18,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const leaf = require('../../src/services/orphanSweep/orphanSweep');
+const leaf = require('../../src/services/orphanSweep');
 
 function mktmp() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'orphan-sweep-'));

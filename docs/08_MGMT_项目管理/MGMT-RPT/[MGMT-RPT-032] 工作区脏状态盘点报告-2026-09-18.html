@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [MGMT-RPT-032] 工作区脏状态盘点报告-2026-09-18.md -->
+<title>工作区脏状态盘点报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>MGMT-RPT<span class="sep">›</span>工作区脏状态盘点报告</div>
+      <header class="hero reveal"><h1>工作区脏状态盘点报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#工作区脏状态盘点报告">工作区脏状态盘点报告</a></li><li class="lvl-2"><a href="#一-总量-git-status-porcelain">一、总量（`git status --porcelain`）</a></li><li class="lvl-2"><a href="#二-按顶层目录分布">二、按顶层目录分布</a></li><li class="lvl-2"><a href="#三-核心发现-60-个设计提案从未进版本库">三、核心发现：60 个设计提案从未进版本库</a></li><li class="lvl-2"><a href="#四-未跟踪的代码与工具-311-个-js">四、未跟踪的代码与工具（311 个 .js）</a></li><li class="lvl-2"><a href="#五-新增目录-43-个">五、新增目录（43 个）</a></li><li class="lvl-2"><a href="#六-对-119-提交的直接影响">六、对 119 提交的直接影响</a></li><li class="lvl-2"><a href="#七-结论与建议顺序">七、结论与建议顺序</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="工作区脏状态盘点报告">工作区脏状态盘点报告<a class="anchor" href="#工作区脏状态盘点报告" aria-label="锚点">#</a></h1>
+<blockquote><p>生成时间：2026-09-18 · HEAD <code>1e35ee0a</code> · 分支 <code>main</code> · 上游 <code>khy-mirror/main</code><br>触发：<code>[DESIGN-ARCH-119]</code> 修复无法单独提交 —— 查出根因是整个工作区长期失守</p></blockquote>
+<hr>
+<h2 id="一-总量-git-status-porcelain">一、总量（<code>git status --porcelain</code>）<a class="anchor" href="#一-总量-git-status-porcelain" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>类别</th><th>条目数</th></tr></thead><tbody><tr><td>已跟踪文件改动（<code> M</code> / <code> D</code> 等）</td><td><strong>2707</strong></td></tr><tr><td>未跟踪文件/目录（<code>??</code>）</td><td><strong>922</strong></td></tr><tr><td>合计</td><td><strong>3629</strong></td></tr></tbody></table>
+<p>HEAD 停在 <code>1e35ee0a</code>（<code>feat(khy-os-client-app): Shizuku build config…</code>），<br>即工作区累积了远不止 119 一项工作的成果。</p>
+<hr>
+<h2 id="二-按顶层目录分布">二、按顶层目录分布<a class="anchor" href="#二-按顶层目录分布" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>条目数</th><th>顶层目录</th></tr></thead><tbody><tr><td>1682</td><td><code>services/</code></td></tr><tr><td>1319</td><td><code>docs/</code></td></tr><tr><td>197</td><td><code>apps/</code></td></tr><tr><td>184</td><td><code>scripts/</code></td></tr><tr><td>117</td><td><code>software/</code></td></tr><tr><td>34</td><td><code>extensions/</code></td></tr><tr><td>20</td><td><code>platform/</code></td></tr><tr><td>13</td><td><code>.github/</code></td></tr><tr><td>11</td><td><code>.ai/</code></td></tr></tbody></table>
+<hr>
+<h2 id="三-核心发现-60-个设计提案从未进版本库">三、核心发现：60 个设计提案从未进版本库<a class="anchor" href="#三-核心发现-60-个设计提案从未进版本库" aria-label="锚点">#</a></h2>
+<p><code>docs/03_DESIGN_设计/</code> 下有 <strong>101 个未跟踪文档</strong>，覆盖 <strong>60 个提案编号</strong>：</p>
+<pre><code>DESIGN-ARCH-071 … 124（连续区间，含 119）
+DESIGN-CPA-001/002/003
+DESIGN-OTHER-005, DESIGN-PERF-002
+DESIGN-RES-001/002/003, DESIGN-SIZE-001</code></pre>
+<p><strong>含义</strong>：从 <code>[DESIGN-ARCH-071]</code> 到 <code>[DESIGN-ARCH-124]</code> 的<strong>全部设计提案文档</strong>都只在工作区，<br>没有一份进入版本库。HEAD 里没有它们。</p>
+<hr>
+<h2 id="四-未跟踪的代码与工具-311-个-js">四、未跟踪的代码与工具（311 个 .js）<a class="anchor" href="#四-未跟踪的代码与工具-311-个-js" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>数量</th><th>目录</th><th>性质</th></tr></thead><tbody><tr><td>95</td><td><code>services/backend/tests/</code></td><td>测试</td></tr><tr><td>82</td><td><code>services/backend/src/</code></td><td>业务代码（含 <code>selection.js</code>）</td></tr><tr><td>36</td><td><code>software/khyquant/frontend/</code></td><td>前端</td></tr><tr><td>22</td><td><code>apps/ai-frontend/src/</code></td><td>前端</td></tr><tr><td>16</td><td><code>services/backend/scripts/</code></td><td>脚本</td></tr><tr><td><strong>38</strong></td><td><code>scripts/ci/*.js</code></td><td><strong>CI 检查器</strong>（<code>check-agent-docs</code> / <code>check-wiring</code> / <code>check-tui-gates</code> …）</td></tr></tbody></table>
+<p><strong>注意</strong>：<code>scripts/ci/</code> 下几十个检查器本身是<strong>未跟踪的新文件</strong>，<br>但 <code>package.json</code> 已经在引用它们（<code>npm run check:*</code>）——<br>即「门禁已被接线，但门的实现从未提交」。</p>
+<hr>
+<h2 id="五-新增目录-43-个">五、新增目录（43 个）<a class="anchor" href="#五-新增目录-43-个" aria-label="锚点">#</a></h2>
+<p>含 <code>docs/11_报告/</code> … <code>docs/19_资产/</code>（整套新目录层级）、<br><code>services/backend/src/services/entrypoints/</code>、<code>services/backend/src/contracts/a2a/</code>、<br><code>.ai/hq/</code>、<code>deploy/</code>、<code>entries/</code> 等。</p>
+<hr>
+<h2 id="六-对-119-提交的直接影响">六、对 119 提交的直接影响<a class="anchor" href="#六-对-119-提交的直接影响" aria-label="锚点">#</a></h2>
+<p>六个 <code> M</code> 状态的 119 相关文件是<strong>混装</strong>的：</p>
+<table><thead><tr><th>文件</th><th>总新增</th><th>119 相关</th><th>混入的其他工作</th></tr></thead><tbody><tr><td><code>App.js</code></td><td>805</td><td>105</td><td><code>[DESIGN-ARCH-115]</code> 启动节拍 / <code>startupBeats</code> / 网关降级看门狗</td></tr><tr><td><code>app.js</code></td><td>190</td><td>21</td><td>备屏恢复 <code>_altScreenActive</code> / <code>_altScreenExitHooked</code></td></tr><tr><td><code>flagRegistry.js</code></td><td>192</td><td>51</td><td><code>[DESIGN-ARCH-098]</code> 提示词锚点 / 新鲜度 cacheKey</td></tr><tr><td><code>tui/AGENTS.md</code></td><td>220</td><td>51</td><td>冲突解决公理 / 优先级不自封</td></tr><tr><td><code>mouseButtons.js</code></td><td>251</td><td>89</td><td><code>autoDetectTerminal</code> 等（部分与 119 交织）</td></tr><tr><td><code>Viewport.js</code></td><td>239</td><td>42</td><td>贴底哨兵 <code>scroll: null</code> 语义</td></tr></tbody></table>
+<p>⇒ <strong>整文件 <code>git add</code> 会把至少 4 项无关工作卷进 119 提交</strong>，违反 <code>SOURCING-006</code>。</p>
+<hr>
+<h2 id="七-结论与建议顺序">七、结论与建议顺序<a class="anchor" href="#七-结论与建议顺序" aria-label="锚点">#</a></h2>
+<ol><li><strong>119 无法「单独」提交</strong> —— 它依附的文件被其他工作污染。必须先决定这些混装文件的切分口径。</li><li><strong>真正的问题是仓库版本控制失守</strong>，不是 119 一项。60 个提案 + 38 个检查器 + 整套新目录都在工作区。</li><li>风险：工作区是唯一副本。任何误清理 = 丢失 60 项工作的全部产出。</li></ol>
+<p><strong>建议</strong>（需用户拍板）：</p>
+<ul><li>方案 A：<strong>先按「提案」为单元做批量提交</strong>（每个提案 = 文档 + 其代码 + 其测试），</li></ul>
+<p>119 作为其中一批。这符合「一次提交只做一步」且一次解决整体失守。</p>
+<ul><li>方案 B：<strong>先只提交 119</strong>，用 <code>git add -p</code> 逐 hunk 从六个混装文件里挑出 119 部分。</li></ul>
+<p>其余 59 个提案仍留在工作区（问题继续存在）。</p>
+<ul><li>方案 C：先做<strong>全量备份</strong>（<code>git stash -u</code> 到分支 / 打包快照），再从容分组提交。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-031] GitHub调研-终端渲染TUI-2026-09-17.html"><div class="dir">← 上一篇</div><div class="ttl">GitHub 调研 — 终端渲染 / TUI / ANSI 规范板块 — 2026-09-17</div></a><a class="next" href="../../../docs/08_MGMT_项目管理/MGMT-RPT/00_INDEX_MGMT-RPT-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">MGMT-RPT</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-032] 工作区脏状态盘点报告-2026-09-18.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

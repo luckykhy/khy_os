@@ -11,8 +11,8 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const presets = require('../../../src/services/mcp/mcpServerPresets');
-const spec = require('../../../src/services/mcp/mcpAddSpec');
+const presets = require('../../../src/services/domain/messaging/mcp/mcpServerPresets.js');
+const spec = require('../../../src/services/domain/messaging/mcp/mcpAddSpec.js');
 
 // ── 门控 ──────────────────────────────────────────────────────────────────────
 test('isPresetsEnabled: default ON; CANON off-words disable; EXTENDED stays on', () => {

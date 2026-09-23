@@ -2079,7 +2079,10 @@ async function makeSystemPrompt(
         adapterSupportsNativeToolUse = _toolCap.adapterSupportsNativeToolUse(adapter);
         let _measured = null;
         try {
-          _measured = require('./gateway/toolCapabilityStore').getVerdict(_modelForTier);
+          // 按来源读(P4):text 只在测出它的那条适配器上生效;native 全局共享。
+          _measured = require('./gateway/toolCapabilityStore').getVerdictFor(_modelForTier, {
+            adapter,
+          });
         } catch {
           /* best effort */
         }
@@ -2413,7 +2416,9 @@ async function makeSystemPrompt(
       adapterSupportsNativeToolUse = _toolCap.adapterSupportsNativeToolUse(adapter);
       let _measured = null;
       try {
-        _measured = require('./gateway/toolCapabilityStore').getVerdict(_modelId);
+        // 按来源读(P4):text 只在测出它的那条适配器上生效 —— 教学门正是「看适配器」
+        // 的地方(它已经按 adapter 判原生通道),负面裁决不该跨适配器扩散。
+        _measured = require('./gateway/toolCapabilityStore').getVerdictFor(_modelId, { adapter });
       } catch {
         /* best effort */
       }

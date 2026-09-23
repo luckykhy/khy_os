@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-128] khyos结构化输出方案-输出卫生层与语义渲染契约.md -->
+<title>《khyos 结构化输出方案 — 输出卫生层与语义渲染契约》 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>《khyos 结构化输出方案 — 输出卫生层与语义渲染契约》</div>
+      <header class="hero reveal"><h1>《khyos 结构化输出方案 — 输出卫生层与语义渲染契约》</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyos-结构化输出方案-输出卫生层与语义渲染契约">《khyos 结构化输出方案 — 输出卫生层与语义渲染契约》</a></li><li class="lvl-2"><a href="#0-问题陈述">0. 问题陈述</a></li><li class="lvl-3"><a href="#0-1-这不是两个病-是一个病">0.1 这不是两个病，是一个病</a></li><li class="lvl-2"><a href="#1-根因-剥一半的转义比不剥更糟">1. 根因：剥一半的转义比不剥更糟</a></li><li class="lvl-3"><a href="#1-1-完整因果链">1.1 完整因果链</a></li><li class="lvl-3"><a href="#1-2-为什么-剥一半-比-完全不剥-更糟">1.2 为什么「剥一半」比「完全不剥」更糟</a></li><li class="lvl-3"><a href="#1-3-次生病灶-utils-stripansi-js-漏剥-5-6">1.3 次生病灶：`utils/stripAnsi.js` 漏剥 5/6</a></li><li class="lvl-2"><a href="#2-设计目标与硬约束">2. 设计目标与硬约束</a></li><li class="lvl-3"><a href="#2-1-核心诉求">2.1 核心诉求</a></li><li class="lvl-3"><a href="#2-2-防呆规则-不可违反">2.2 防呆规则（不可违反）</a></li><li class="lvl-2"><a href="#3-架构-三层结构化输出契约">3. 架构：三层结构化输出契约</a></li><li class="lvl-2"><a href="#4-实现">4. 实现</a></li><li class="lvl-3"><a href="#4-1-新增-src-cli-ansisanitizer-js-单一真源">4.1 新增 `src/cli/ansiSanitizer.js`（单一真源）</a></li><li class="lvl-3"><a href="#4-2-改造-modeltextnormalizer-stripinvisible">4.2 改造 `modelTextNormalizer._stripInvisible`</a></li><li class="lvl-3"><a href="#4-3-改造-utils-stripansi-js">4.3 改造 `utils/stripAnsi.js`</a></li><li class="lvl-2"><a href="#5-为什么不选另一条路">5. 为什么不选另一条路</a></li><li class="lvl-2"><a href="#6-验证">6. 验证</a></li><li class="lvl-3"><a href="#6-1-复现-修复前-修复后">6.1 复现（修复前 / 修复后）</a></li><li class="lvl-3"><a href="#6-2-自动化测试">6.2 自动化测试</a></li><li class="lvl-3"><a href="#6-3-守卫">6.3 守卫</a></li><li class="lvl-3"><a href="#6-4-验收标准-可复现命令">6.4 验收标准（可复现命令）</a></li><li class="lvl-2"><a href="#7-影响面与回退">7. 影响面与回退</a></li><li class="lvl-2"><a href="#8-与既有机制的关系">8. 与既有机制的关系</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khyos-结构化输出方案-输出卫生层与语义渲染契约">《khyos 结构化输出方案 — 输出卫生层与语义渲染契约》<a class="anchor" href="#khyos-结构化输出方案-输出卫生层与语义渲染契约" aria-label="锚点">#</a></h1>
+<blockquote><p>文档编号：DESIGN-ARCH-128<br>主题：消除模型输出中 ANSI 残留（<code>1m</code>）与 Markdown 定界符裸上屏（<code>_文字_</code>），并建立「语义 → 样式 → 渲染」三层结构化输出契约<br>范围：<code>services/backend/src/cli/**</code>（输出清洗与渲染）+ <code>software/khyquant/frontend</code>（Web 渲染消费方）<br>关联实现：<br><code>src/cli/ansiSanitizer.js</code>（新增·单一真源）、<code>src/cli/modelTextNormalizer.js</code>、<br><code>src/utils/stripAnsi.js</code>、<code>src/cli/underscoreEmphasis.js</code>、<code>src/cli/markdownRenderer.js</code>、<br><code>src/services/domain/structured/typeset/*</code>、<code>src/services/outputIntegrityMonitor.js</code><br>测试：<code>tests/ansiSanitizer.test.js</code>、<code>tests/stripAnsi.test.js</code>、<code>tests/modelTextNormalizer.test.js</code>、<code>tests/markdownEmphasis.test.js</code><br>证据：<code>.khy/feedback/structured-output-20260922/</code><br>规则依据：RUNTIME-007（修复先复现）、PROCESS-010（软著就绪·谁要的/为什么/怎么验证）、DOCS-001（文档命名与索引）</p></blockquote>
+<hr>
+<h2 id="0-问题陈述">0. 问题陈述<a class="anchor" href="#0-问题陈述" aria-label="锚点">#</a></h2>
+<p>用户在 khy CLI / 桌面端提问「曲靖天气」后，输出中出现两类不美观字符（截图见<br><code>.khy/clipboard-img2file/screenshot_20260922_165201_904.png</code>）：</p>
+<ol><li><strong>大量裸下划线</strong>：<code>_曲靖实况与预报（9月22日）_</code>、<code>_今天：_</code>、<code>_明天 (9月23日)_</code> —— 定界符连内容一起字面显示，强调完全丢失，整段回答被下划线噪声淹没。</li><li><strong><code>1m</code> 等 ANSI 残留</strong>：行首出现 <code>1m</code>，行尾出现 <code>0m</code>。</li></ol>
+<p>用户原话：</p>
+<blockquote><p>khyos的输出中有大量下划线，1m等不美观，需要设计一个结构化输出方案</p></blockquote>
+<h3 id="0-1-这不是两个病-是一个病">0.1 这不是两个病，是一个病<a class="anchor" href="#0-1-这不是两个病-是一个病" aria-label="锚点">#</a></h3>
+<p>初看像「下划线渲染没做」+「ANSI 没剥干净」两件独立的事。实测证明<strong>它们是同一个病的两个症状</strong>，且<strong>因果方向是反的</strong>——不是下划线渲染缺失，而是 ANSI 残留<strong>主动破坏</strong>了下划线渲染。</p>
+<hr>
+<h2 id="1-根因-剥一半的转义比不剥更糟">1. 根因：剥一半的转义比不剥更糟<a class="anchor" href="#1-根因-剥一半的转义比不剥更糟" aria-label="锚点">#</a></h2>
+<h3 id="1-1-完整因果链">1.1 完整因果链<a class="anchor" href="#1-1-完整因果链" aria-label="锚点">#</a></h3>
+<pre><code>① 模型原文
+   \x1b[1m_1m曲靖实况与预报（9月22日）_\x1b[0m
+   └─ 模型把 ANSI 粗体码当正文吐了出来
+
+② modelTextNormalizer.sanitize()
+   [1m_1m曲靖实况与预报（9月22日）_[0m
+   └─ CONTROL_CHARS = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g
+      只吃掉 0x1B(ESC) 这一个字节；紧跟的 CSI 参数 &quot;[1m&quot; / &quot;[0m&quot; 无人接管 → 残留
+
+③ marked.parse()（前端）/ CommonMark（后端渲染）
+   &lt;p&gt;[1m_1m曲靖实况与预报（9月22日）_[0m&lt;/p&gt;
+   └─ &quot;[&quot;(0x5B) / &quot;1&quot;(0x31) / &quot;m&quot;(0x6D) 均非空白、非单词字符，
+      使紧随的 &quot;_&quot; 不满足 CommonMark「左侧接（left-flanking）」条件
+      → 强调不成立 → &quot;_&quot; 作为字面显示
+
+④ 屏幕可见
+   1m_1m曲靖实况与预报（9月22日）_0m   ← 用户截图所见</code></pre>
+<p>复现命令与原始输出全文见 <code>.khy/feedback/structured-output-20260922/repro-before.txt</code><br>与 <code>root-cause-chain.txt</code>。</p>
+<h3 id="1-2-为什么-剥一半-比-完全不剥-更糟">1.2 为什么「剥一半」比「完全不剥」更糟<a class="anchor" href="#1-2-为什么-剥一半-比-完全不剥-更糟" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>处理方式</th><th>结果</th></tr></thead><tbody><tr><td><strong>完全不剥</strong>（保留完整 <code>ESC[1m</code>）</td><td>渲染器（CommonMark/marked）把 <code>ESC[1m</code> 视为<strong>不可见</strong>控制序列，连同参数一起忽略 → 下划线<strong>正常配对</strong> → 输出反而干净</td></tr><tr><td><strong>剥一半</strong>（只删 0x1B，留下 <code>[1m</code>）</td><td><code>[1m</code> 是<strong>可见 ASCII</strong> → 污染屏幕，且破坏下划线 flanking → 双重伤害</td></tr></tbody></table>
+<p>这是本方案的核心论断：<strong>输出卫生是一个「要么整段剥净、要么整段别动」的原子操作，不存在「剥一部分」的中间态。</strong></p>
+<h3 id="1-3-次生病灶-utils-stripansi-js-漏剥-5-6">1.3 次生病灶：<code>utils/stripAnsi.js</code> 漏剥 5/6<a class="anchor" href="#1-3-次生病灶-utils-stripansi-js-漏剥-5-6" aria-label="锚点">#</a></h3>
+<p>同源的第二个入口。该模块兜底正则 <code>/…\x1b\[[0-9;]*m/g</code> <strong>只认纯数字/分号参数的 SGR</strong>，实测：</p>
+<table><thead><tr><th>输入</th><th>是否剥净</th></tr></thead><tbody><tr><td><code>ESC[0m</code> / <code>ESC[1m</code> / <code>ESC[22m</code>（纯数字 SGR）</td><td>✅</td></tr><tr><td><code>ESC[38:2:255:0:0m</code>（冒号分隔真彩 SGR）</td><td>❌ 漏</td></tr><tr><td><code>ESC[?25l</code> / <code>ESC[?25h</code>（光标私有模式）</td><td>❌ 漏</td></tr><tr><td><code>ESC[2J</code>（清屏）</td><td>❌ 漏</td></tr><tr><td><code>ESC[2A</code>（光标上移）</td><td>❌ 漏</td></tr></tbody></table>
+<p>漏剥率 <strong>5/6</strong>。更隐蔽的是：该正则<strong>只在 <code>strip-ansi</code> 包加载失败时才生效</strong>，即「输出卫生」取决于运行时包是否可用——不可接受的偶然性。</p>
+<hr>
+<h2 id="2-设计目标与硬约束">2. 设计目标与硬约束<a class="anchor" href="#2-设计目标与硬约束" aria-label="锚点">#</a></h2>
+<h3 id="2-1-核心诉求">2.1 核心诉求<a class="anchor" href="#2-1-核心诉求" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>诉求</th><th>本方案如何满足</th></tr></thead><tbody><tr><td>①</td><td><strong>控制序列原子剥净</strong></td><td>新增 <code>cli/ansiSanitizer.js</code> 作单一真源，完整覆盖 CSI/OSC/DCS/ESC-短序列/裸控制字符；「先删整段序列、再删裸控制字符」顺序不可颠倒</td></tr><tr><td>②</td><td><strong>不依赖运行时包可用性</strong></td><td>自带零依赖实现；<code>stripAnsi.js</code> 由「lazy-load 包 + 弱正则兜底」改为直接委托单一真源，消除分叉</td></tr><tr><td>③</td><td><strong>剥净后语义不被破坏</strong></td><td>只删控制序列，<strong>不动任何可见字符</strong>；fence 内容由调用方保护（本层不感知代码块语义）</td></tr><tr><td>④</td><td><strong>渲染层不做输入卫生</strong></td><td>渲染器（markdownRenderer / marked）保持「只认干净输入」的单一职责；卫生是上游门禁</td></tr></tbody></table>
+<h3 id="2-2-防呆规则-不可违反">2.2 防呆规则（不可违反）<a class="anchor" href="#2-2-防呆规则-不可违反" aria-label="锚点">#</a></h3>
+<ol><li><strong>顺序敏感</strong>：<code>_stripInvisible</code> 必须<strong>先</strong> <code>stripAnsiSequences</code>、<strong>再</strong> <code>CONTROL_CHARS</code>。颠倒会把 ESC 单独吃掉、留下孤儿参数——正是本方案要消灭的 bug。</li><li><strong>剥离顺序内层也敏感</strong>：多字节序列（OSC/CSI/DCS）必须<strong>先于</strong> ESC 短序列执行。否则 <code>ESC]</code> 的 <code>]</code>、<code>ESC[</code> 的 <code>[</code> 会被两字节规则先吃掉，留下 OSC/CSI 主体成为可见垃圾。</li><li><strong>纯叶子契约</strong>：<code>ansiSanitizer</code> 零 IO、零业务 require、确定性、<strong>绝不抛</strong>（非字符串原样返回）。</li><li><strong>裸参契约不变</strong>：<code>stripAnsi(str)</code> 对非字符串<strong>照旧抛 TypeError</strong>（被收敛的五处调用点皆假定字符串输入）；不得为「更宽容」而改成强转，那会静默改变五处既有行为。</li><li><strong>只新增、最小改</strong>：不改 <code>markdownRenderer</code> 的渲染逻辑、不改 <code>underscoreEmphasis</code> 的 flanking 正则（已正确）、不触碰核心调度器。</li></ol>
+<hr>
+<h2 id="3-架构-三层结构化输出契约">3. 架构：三层结构化输出契约<a class="anchor" href="#3-架构-三层结构化输出契约" aria-label="锚点">#</a></h2>
+<p>本方案把「模型自由文本 → 终端可见字符」的路径明确为三层，<strong>任何一层都不允许把标记/控制码透传到屏幕</strong>：</p>
+<pre><code>┌─────────────────────────────────────────────────────────────────┐
+│ 第 0 层：输入卫生层（本方案新增的收口）                            │
+│   ansiSanitizer.stripAnsiSequences()                             │
+│   · CSI / OSC / DCS / ESC-短序列 / 裸控制字符 / 零宽               │
+│   · 原子剥净，绝不残留参数碎片                                     │
+│   · 消费方：modelTextNormalizer._stripInvisible、utils/stripAnsi   │
+├─────────────────────────────────────────────────────────────────┤
+│ 第 1 层：语义层（既有）                                           │
+│   模型自由文本 → 语义 AST / Markdown 标记                          │
+│   · underscoreEmphasis.js：CommonMark flanking 判定                │
+│   · domain/structured/typeset/contentSchema.js：语义 AST 白名单     │
+│   · turnEnvelope.js：回合结构化信封                                │
+├─────────────────────────────────────────────────────────────────┤
+│ 第 2 层：样式层（既有·单一真源）                                   │
+│   typeset/textEmphasisPolicy.js：强调/标题层级/是否字面放大         │
+│   · 终端无字号概念 → 字重+高对比+层级+留白，或 DEC 双宽             │
+├─────────────────────────────────────────────────────────────────┤
+│ 第 3 层：渲染层（既有）                                           │
+│   markdownRenderer.js（CLI/TUI）· marked + DOMPurify（Web）        │
+│   · 只认干净输入的语义标记，不承担卫生职责                          │
+└─────────────────────────────────────────────────────────────────┘</code></pre>
+<p><strong>分层收益</strong>：下划线问题的修复落在第 0 层，因此 CLI、TUI、Web SSE 三条出口<strong>同时</strong>受益，无需各自打补丁。</p>
+<hr>
+<h2 id="4-实现">4. 实现<a class="anchor" href="#4-实现" aria-label="锚点">#</a></h2>
+<h3 id="4-1-新增-src-cli-ansisanitizer-js-单一真源">4.1 新增 <code>src/cli/ansiSanitizer.js</code>（单一真源）<a class="anchor" href="#4-1-新增-src-cli-ansisanitizer-js-单一真源" aria-label="锚点">#</a></h3>
+<p>覆盖范围（对齐 ANSI X3.64 / ECMA-48）：</p>
+<table><thead><tr><th>序列族</th><th>正则</th><th>说明</th></tr></thead><tbody><tr><td>CSI</td><td><code>ESC [ 参数 中间符 终态</code></td><td>SGR 颜色/样式、光标移动、擦除、私有模式 <code>?25l</code>、冒号真彩 <code>38:2::r:g:b</code></td></tr><tr><td>OSC</td><td>`ESC ] … (BEL \</td><td>ESC \)`</td></tr><tr><td>DCS/SOS/PM/APC</td><td>`ESC (P\</td><td>X\</td></tr><tr><td>ESC 短序列</td><td><code>ESC [中间符] 终态</code></td><td><code>ESC#6</code> 双宽、<code>ESC( B</code> 字符集、<code>ESC 7/8</code> 存取光标</td></tr><tr><td>裸控制字符</td><td><code>[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]</code></td><td>保留 <code>\n</code>(0x0A) 与 <code>\t</code>(0x09)</td></tr><tr><td>零宽字符</td><td><code>[\u200b-\u200d\u2060\ufeff]</code></td><td>小模型偶发，会撑坏列宽计算</td></tr></tbody></table>
+<p>导出 <code>stripAnsiSequences(text)</code>（剥离）、<code>hasAnsiSequences(text)</code>（判定，供按需触发与观测）。</p>
+<h3 id="4-2-改造-modeltextnormalizer-stripinvisible">4.2 改造 <code>modelTextNormalizer._stripInvisible</code><a class="anchor" href="#4-2-改造-modeltextnormalizer-stripinvisible" aria-label="锚点">#</a></h3>
+<pre><code class="language-js"><span class="hljs-comment">// 顺序敏感：先整段删 ANSI/CSI/OSC 序列，再删不属于任何序列的裸控制字符。</span>
+<span class="hljs-keyword">const</span> sequenceFree = _ansiSanitizer
+  ? _ansiSanitizer.<span class="hljs-title function_">stripAnsiSequences</span>(text)
+  : <span class="hljs-title class_">String</span>(text);
+<span class="hljs-keyword">return</span> sequenceFree.<span class="hljs-title function_">replace</span>(<span class="hljs-variable constant_">CONTROL_CHARS</span>, <span class="hljs-string">&#x27;&#x27;</span>).<span class="hljs-title function_">replace</span>(<span class="hljs-variable constant_">ZERO_WIDTH</span>, <span class="hljs-string">&#x27;&#x27;</span>);</code></pre>
+<p><code>fail-soft</code>：<code>ansiSanitizer</code> 缺失时退回原行为（<code>CONTROL_CHARS</code>），绝不因新模块缺失而让清洗整体失效。</p>
+<h3 id="4-3-改造-utils-stripansi-js">4.3 改造 <code>utils/stripAnsi.js</code><a class="anchor" href="#4-3-改造-utils-stripansi-js" aria-label="锚点">#</a></h3>
+<p>body 由 <code>str.replace(/\x1b\[[0-9;]*m/g, '')</code> 改为委托 <code>stripAnsiSequences(str)</code>；<br>非字符串分支保留原有的 <code>str.replace(...)</code> 以维持 <strong>抛 TypeError</strong> 的裸参契约。<br>五处调用点（<code>aiRenderer</code> / <code>hudRenderer</code> / <code>permissionDialog</code> / <code>textMeasure</code> / <code>diffViewer</code>）<strong>逐字节不变</strong>。</p>
+<hr>
+<h2 id="5-为什么不选另一条路">5. 为什么不选另一条路<a class="anchor" href="#5-为什么不选另一条路" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>备选方案</th><th>否决理由</th></tr></thead><tbody><tr><td><strong>只扩充 <code>CONTROL_CHARS</code> 字符类</strong></td><td>字符类无法表达「CSI 参数 + 终止符」这种<strong>多字符结构</strong>。任何把 <code>[0-9;\[</code> 塞进字符类的做法都会误伤正文里合法的方括号与数字。</td></tr><tr><td><strong>只依赖 <code>strip-ansi</code> npm 包</strong></td><td>该包在 <code>utils/stripAnsi.js</code> 里 lazy-load，<strong>加载失败即静默回退</strong>到弱正则（实测漏 5/6）。输出卫生是每次对话都走的关键路径，不能有不生效的兜底分叉。</td></tr><tr><td><strong>在渲染层（markdownRenderer / marked）兜底剥 ANSI</strong></td><td>渲染器职责是「把标记转成样式」。让它承担卫生职责会使 CLI/TUI/Web 三条出口各写一份，且渲染前的宽度计算已被残留字符污染（列宽算错→换行错位），属于「病已发作才治」。</td></tr><tr><td><strong>改 <code>underscoreEmphasis</code> 的 flanking 正则去容忍残留参数</strong></td><td>治错了部位。flanking 判定是正确的（符合 CommonMark）；放宽它会让真正的 snake_case（<code>getUserName_or_default</code>）被误斜体，引回 2026-09-05 修掉的旧病。</td></tr><tr><td><strong>前端改用支持 intraword 下划线的 markdown 库</strong></td><td>前端 <code>marked@18</code> 实测<strong>已正确</strong>渲染 <code>_今天_</code> → <code>&lt;em&gt;今天&lt;/em&gt;</code>（见 <code>differential.md</code> H4 证伪）。换库是无效改动，且引入新依赖。</td></tr></tbody></table>
+<hr>
+<h2 id="6-验证">6. 验证<a class="anchor" href="#6-验证" aria-label="锚点">#</a></h2>
+<h3 id="6-1-复现-修复前-修复后">6.1 复现（修复前 / 修复后）<a class="anchor" href="#6-1-复现-修复前-修复后" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>内容</th></tr></thead><tbody><tr><td><code>repro-before.txt</code></td><td>修复前逐条探针原始输出（含 5/6 漏剥计数）</td></tr><tr><td><code>repro-after.txt</code></td><td>修复后同一命令输出</td></tr></tbody></table>
+<p>关键对比（步骤 2 清洗结果）：</p>
+<pre><code>修复前： [1m_1m曲靖实况与预报（9月22日）_[0m     ← [1m / [0m 残留
+修复后： _1m曲靖实况与预报（9月22日）_           ← 整段剥净</code></pre>
+<p>（注：修复后仍存在的 <code>1m</code> 是<strong>本来就在 <code>_…_</code> 内部</strong>的字面文本，非残留；该下划线已被 marked 正确渲染为 <code>&lt;em&gt;1m曲靖实况与预报（9月22日）&lt;/em&gt;</code>。）</p>
+<h3 id="6-2-自动化测试">6.2 自动化测试<a class="anchor" href="#6-2-自动化测试" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>测试</th><th>结果</th></tr></thead><tbody><tr><td><code>tests/ansiSanitizer.test.js</code>（新增，21 条：CSI 全覆盖 / ESC 短序列 / OSC·DCS / 保留正文与换行 / 纯叶子契约 / 截图回归）</td><td>✅ PASS</td></tr><tr><td><code>tests/stripAnsi.test.js</code>（预期随修复反转：<code>ESC[2A</code> 由「保留」改为「剥离」）</td><td>✅ PASS</td></tr><tr><td><code>tests/modelTextNormalizer.test.js</code></td><td>✅ PASS</td></tr><tr><td>回归批次（`--testPathPattern &quot;underscore\</td><td>markdown\</td></tr></tbody></table>
+<h3 id="6-3-守卫">6.3 守卫<a class="anchor" href="#6-3-守卫" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>守卫</th><th>结果</th></tr></thead><tbody><tr><td><code>check:leaf-contract</code>（对新增文件单查）</td><td>✅ 无违规</td></tr><tr><td><code>check:flag-registry</code></td><td>✅ 结构完好</td></tr><tr><td><code>check-agent-feedback --evidence=.khy/feedback/structured-output-20260922</code></td><td>✅ 0 error / 0 warning</td></tr><tr><td><code>node --check</code>（三改文件语法）</td><td>✅</td></tr></tbody></table>
+<h3 id="6-4-验收标准-可复现命令">6.4 验收标准（可复现命令）<a class="anchor" href="#6-4-验收标准-可复现命令" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 1) 单一真源覆盖度</span>
+node .khy/feedback/structured-output-20260922/probe.js
+<span class="hljs-comment"># 期望：ANSI 段「漏剥: 0/6」</span>
+
+<span class="hljs-comment"># 2) 端到端链路</span>
+node .khy/feedback/structured-output-20260922/probe3.js
+<span class="hljs-comment"># 期望：步骤 2 输出不含 [1m / [0m；步骤 3 输出含 &lt;em&gt;</span>
+
+<span class="hljs-comment"># 3) 测试</span>
+./node_modules/.bin/jest --config services/backend/jest.config.js --rootDir services/backend \
+  tests/ansiSanitizer.test.js tests/stripAnsi.test.js
+<span class="hljs-comment"># 期望：25 passed</span></code></pre>
+<hr>
+<h2 id="7-影响面与回退">7. 影响面与回退<a class="anchor" href="#7-影响面与回退" aria-label="锚点">#</a></h2>
+<p><strong>改动清单</strong>（3 文件新增/改 + 2 测试 + 1 文档，未触及 <code>fix-blast-radius</code> 的「≥4 文件或 ≥3 顶层目录」阈值）：</p>
+<table><thead><tr><th>文件</th><th>动作</th></tr></thead><tbody><tr><td><code>services/backend/src/cli/ansiSanitizer.js</code></td><td>新增（单一真源，纯叶子）</td></tr><tr><td><code>services/backend/src/cli/modelTextNormalizer.js</code></td><td>改 <code>_stripInvisible</code>（序列优先）</td></tr><tr><td><code>services/backend/src/utils/stripAnsi.js</code></td><td>改 body 委托单一真源</td></tr><tr><td><code>services/backend/tests/ansiSanitizer.test.js</code></td><td>新增</td></tr><tr><td><code>services/backend/tests/stripAnsi.test.js</code></td><td>改 1 条预期（随修复反转）</td></tr></tbody></table>
+<p><strong>回退</strong>：删除 <code>ansiSanitizer.js</code> 后，<code>modelTextNormalizer</code> 的 <code>try/catch</code> 与<br><code>stripAnsi.js</code> 的委托点即失去依赖 —— 为使回退不依赖未提交代码，回退动作 =<br><code>git revert</code> 本任务提交（提交信息将引用本文档编号与规则 ID）。三处改动均为<strong>结构性新增</strong>，<br>无数据迁移、无状态残留。</p>
+<p><strong>风险</strong>：<code>stripAnsi</code> 的剥离面由「仅纯数字 SGR」扩大为「全部控制序列」。对既有的<br>5 处调用点（宽度计算 / 权限弹窗 / diff 视图）而言，输入本就是自己生成的 <code>ESC[…m</code>，<br>新实现的剥离是其<strong>超集</strong>；实测 206 条相关回归全绿。</p>
+<hr>
+<h2 id="8-与既有机制的关系">8. 与既有机制的关系<a class="anchor" href="#8-与既有机制的关系" aria-label="锚点">#</a></h2>
+<ul><li><strong>不与 <code>underscoreEmphasis</code> 的对抗式自愈冲突</strong>：该机制处理「下划线<strong>滥用</strong>」（snake_case 密集时自动关渲染）；本方案处理「<strong>残留参数导致合法强调无法成立</strong>」。两者正交：前者是策略选择，后者是输入卫生。</li><li><strong>复用既有分层</strong>：<code>domain/structured/typeset/*</code> 已是「内容与样式分离」真源（见 <code>[DESIGN-ARCH-023]</code>），本方案把自己的第 0 层挂在它上游，不重复实现样式决策。</li><li><strong><code>outputIntegrityMonitor</code> 已有 <code>underscore-abuse</code> 信号</strong>，此前注释称「渲染层已通过 adaptiveUnderscorePolicy 自动修复，此处仅记录」。本方案补上它未覆盖的那一类：<strong>上游污染型</strong>下划线裸露（非滥用，而是配对被破坏）。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-127] khyos 可维护性诊断与减负方案.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-127] khyos 可维护性诊断与减负方案</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-129] TUI 滚动-选择-历史-固定底部共存设计.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-129] TUI 滚动 / 文本选择 / 输入历史 / 固定底部 —— 共存机制设计</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-128] khyos结构化输出方案-输出卫生层与语义渲染契约.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

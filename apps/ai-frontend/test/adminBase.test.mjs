@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { collectAdminRouteSegments, resolveRouterBase } from '../src/router/adminBase.js';
 
 // 与 src/router/index.js 里真实的 admin 路由条目同形（嵌套在 '/' 的 children
-// 下）。P2.5 之后 /admin/* 从两条扩到八条，排除段也随之从一段变成五段 ——
-// 这正是本文件要证明的：排除集不是手工清单，而是路由表的派生物。
+// 下）。P2.5 把 /admin/* 从两条扩到八条，P3.6 又把 bridge-channels 收进
+// /admin/bridge —— 排除段随之从一段涨到七段。这正是本文件要证明的：排除集不是
+// 手工清单，而是路由表的派生物。
 const ADMIN_ROUTES = [
   { path: '/login', component: {} },
   {
@@ -14,7 +15,7 @@ const ADMIN_ROUTES = [
       { path: 'home', component: {} },
       { path: 'admin/overview', component: {} },
       { path: 'admin/models', component: {} },
-      { path: 'bridge-channels', component: {} },
+      { path: 'admin/bridge', component: {} },
       { path: 'admin/settings/wx', component: {} },
       { path: 'admin/accounts', component: {} },
       { path: 'admin/settings', component: {} },
@@ -32,7 +33,7 @@ const ADMIN_ROUTES = [
 test('collectAdminRouteSegments 从嵌套 children 派生 /admin/ 首段', () => {
   assert.deepEqual(
     collectAdminRouteSegments(ADMIN_ROUTES),
-    new Set(['overview', 'models', 'settings', 'accounts', 'channels', 'channel-apis']),
+    new Set(['overview', 'models', 'settings', 'accounts', 'channels', 'bridge', 'channel-apis']),
   );
 });
 

@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-16_khy-os体积构成分析与瘦身方案.md -->
+<title>khy-os 体积构成分析与瘦身方案 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>其它报告<span class="sep">›</span>khy-os 体积构成分析与瘦身方案</div>
+      <header class="hero reveal"><h1>khy-os 体积构成分析与瘦身方案</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-体积构成分析与瘦身方案">khy-os 体积构成分析与瘦身方案</a></li><li class="lvl-2"><a href="#一-结论摘要">一、结论摘要</a></li><li class="lvl-2"><a href="#二-体积构成">二、体积构成</a></li><li class="lvl-3"><a href="#分类占比">分类占比</a></li><li class="lvl-3"><a href="#逐项明细-按体积降序">逐项明细（按体积降序）</a></li><li class="lvl-2"><a href="#三-根因定位">三、根因定位</a></li><li class="lvl-3"><a href="#根因-1-flutter-android-构建产物长期未清理-3-78-gb-占-47-9">根因 1｜Flutter/Android 构建产物长期未清理 —— 3.78 GB，占 47.9%</a></li><li class="lvl-3"><a href="#根因-2-git-对象库含大量不可达对象与松散对象-可回收约-670-mb">根因 2｜git 对象库含大量不可达对象与松散对象 —— 可回收约 670 MB</a></li><li class="lvl-3"><a href="#根因-3-两套-electron-运行时并存-冗余-266-mb">根因 3｜两套 Electron 运行时并存 —— 冗余 266 MB</a></li><li class="lvl-3"><a href="#根因-4-产物归档散落于仓库内且未被忽略-约-855-mb">根因 4｜产物归档散落于仓库内且未被忽略 —— 约 855 MB</a></li><li class="lvl-3"><a href="#根因-5-目录链接造成重复计数-246-mb">根因 5｜目录链接造成重复计数 —— 246 MB</a></li><li class="lvl-2"><a href="#四-瘦身方案">四、瘦身方案</a></li><li class="lvl-3"><a href="#第一档-立即执行-零风险-回收-4-3-gb">第一档｜立即执行（零风险，回收 ≈ 4.3 GB）</a></li><li class="lvl-3"><a href="#第二档-短期治理-低风险-回收-1-65-gb">第二档｜短期治理（低风险，回收 ≈ 1.65 GB）</a></li><li class="lvl-3"><a href="#第三档-结构性优化-防复发">第三档｜结构性优化（防复发）</a></li><li class="lvl-2"><a href="#五-保障-不影响开发体验-核心功能与文档完整性">五、保障：不影响开发体验、核心功能与文档完整性</a></li><li class="lvl-3"><a href="#预期收益">预期收益</a></li><li class="lvl-2"><a href="#六-执行顺序建议">六、执行顺序建议</a></li><li class="lvl-2"><a href="#七-执行结果与方案修正-2026-09-16-17-5x-追加">七、执行结果与方案修正（2026-09-16 17:5x 追加）</a></li><li class="lvl-3"><a href="#7-1-实测结果">7.1 实测结果</a></li><li class="lvl-3"><a href="#7-2-方案修正-4-处">7.2 方案修正（4 处）</a></li><li class="lvl-3"><a href="#7-3-执行中遇到的两个环境约束">7.3 执行中遇到的两个环境约束</a></li><li class="lvl-3"><a href="#7-4-未执行项">7.4 未执行项</a></li><li class="lvl-3"><a href="#7-5-并发写入提示">7.5 并发写入提示</a></li><li class="lvl-2"><a href="#八-第二轮瘦身执行结果-2026-09-16-18-0x-追加">八、第二轮瘦身执行结果（2026-09-16 18:0x 追加）</a></li><li class="lvl-3"><a href="#8-1-git-回收明细">8.1 `.git` 回收明细</a></li><li class="lvl-3"><a href="#8-2-未执行项及原因">8.2 未执行项及原因</a></li><li class="lvl-3"><a href="#8-3-一处判断更正-git-index-lock-的占用者">8.3 一处判断更正：`.git/index.lock` 的占用者</a></li><li class="lvl-3"><a href="#8-4-另一处自我更正-本轮曾引入一条悬空任务引用">8.4 另一处自我更正：本轮曾引入一条悬空任务引用</a></li><li class="lvl-3"><a href="#8-5-验收">8.5 验收</a></li><li class="lvl-2"><a href="#九-防复发-把官方命令补齐并堵住误删-2026-09-16-20-xx-追加">九、防复发：把官方命令补齐并堵住误删（2026-09-16 20:xx 追加）</a></li><li class="lvl-3"><a href="#9-1-khy-cleanup-从-幻影命令-变为可用">9.1 `khy cleanup` 从「幻影命令」变为可用</a></li><li class="lvl-3"><a href="#9-2-让保留策略只有一个真源">9.2 让保留策略只有一个真源</a></li><li class="lvl-3"><a href="#9-3-修补-khy-clean-runtime-会销毁-housekeeping-隔离区">9.3 修补：`khy clean --runtime` 会销毁 housekeeping 隔离区</a></li><li class="lvl-3"><a href="#9-4-gitignore-补齐-本轮实测的未覆盖项">9.4 `.gitignore` 补齐（本轮实测的未覆盖项）</a></li><li class="lvl-3"><a href="#9-5-让清理器覆盖真-自动膨胀源">9.5 让清理器覆盖真·自动膨胀源</a></li><li class="lvl-3"><a href="#9-6-验收">9.6 验收</a></li><li class="lvl-3"><a href="#9-7-仍待处理-需维护者决定-本轮未动">9.7 仍待处理（需维护者决定，本轮未动）</a></li><li class="lvl-2"><a href="#附-统计口径说明">附：统计口径说明</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-体积构成分析与瘦身方案">khy-os 体积构成分析与瘦身方案<a class="anchor" href="#khy-os-体积构成分析与瘦身方案" aria-label="锚点">#</a></h1>
+<ul><li>测量时间：2026-09-16</li><li>测量对象：<code>D:\Portable\khy-os</code> 全树，149,014 个文件（含 <code>node_modules</code> 与 <code>.git</code>）</li><li>测量方式：递归文件长度实测 + <code>git</code> 对象库分析</li><li>落点：<code>docs/11_报告/</code>（一次性快照，写完冻结。依据 <code>[DESIGN-LAY-005]</code> §1.4「<code>_产物/</code> 仅收含非文档资产的产物」与本目录 <code>00_INDEX_报告-分类索引.md</code> 的「这份文档还会不会被更新」判据——本文是纯 <code>.md</code>/<code>.html</code> 快照，归 docs 轴）</li></ul>
+<blockquote><p><strong>关联文档</strong>：同主题的完整方案为 <a href="REPO-SIZE-MANAGEMENT-PLAN.html"><code>REPO-SIZE-MANAGEMENT-PLAN.md</code></a>（2026-09-13，含 git-filter-repo / BFG 工具调研与大厂案例）。<br>本文是 <strong>2026-09-16 的实测复核</strong>，不替代它，只更新测量口径并补入它未覆盖的三块：<br>① <code>khy-Trajectory</code> 目录链接重复计数 246 MB；② <code>.git-backup-20260913</code> 历史副本 720 MB；<br>③ 忽略规则缺口与双机 <code>--clean-only</code> 门禁无法触发之间的因果链。</p>
+<p><strong>该方案已过时的数据（本次实测复核）</strong>：根级 <code>dist/</code>（0.65 GB）、<code>dist-electron/</code>（0.32 GB）、<code>lib/</code>、<code>coverage/</code> <strong>均已不存在</strong>（09-13 之后已清理）；<br><code>.git</code> 被记为 0.7 GB「正常范围」，实测为 <strong>923 MB</strong> 且含 1,830 个不可达对象 + 280 MB 松散对象 + 24 MB garbage，「正常」不成立；<br>「<code>.gitignore</code> 生效良好」的结论不成立（实测 <strong>2,476 条</strong>未忽略条目）；APK 被记为 10+ 个 / 300 MB，实测 <strong>17 个 / 489 MB</strong>。</p></blockquote>
+<hr>
+<h2 id="一-结论摘要">一、结论摘要<a class="anchor" href="#一-结论摘要" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>指标</th><th>数值</th></tr></thead><tbody><tr><td>磁盘总占用</td><td><strong>7.89 GB</strong>（8,080 MB，含目录链接重复计数）</td></tr><tr><td>git 真实跟踪内容</td><td><strong>≈ 96 MB</strong>（8,752 个文件，占 1.2%）</td></tr><tr><td>与源码无关的占用</td><td><strong>98.8%</strong></td></tr><tr><td>可回收空间</td><td><strong>≈ 6.0 GB</strong>，瘦身后约 1.9 GB</td></tr></tbody></table>
+<p><strong>核心结论：这不是「代码仓库太大」的问题。</strong> git 真正跟踪的源码与文档合计仅约 96 MB，7.88 GB 中的 98.8% 是<strong>从未进入版本库的本地产物</strong>——构建输出、依赖目录、git 历史副本、运行时临时数据。瘦身几乎不触碰任何源码或文档，风险极低、收益极高。</p>
+<p><strong>附带隐患：</strong> 当前 <code>git status</code> 有 <strong>2,476 条</strong>待处理条目，其中 <code>.research-tmp/</code>、<code>apps/khy-mobile/release/</code>、<code>apps/khy-os-client-app/release/</code>、<code>_产物/</code>、<code>.opencode/</code>、<code>.zcode/</code> <strong>未被 <code>.gitignore</code> 覆盖</strong>。这与 <code>.gitignore</code> 注释中记载的历史事故（<code>tools/deepseek-eyes</code>、<code>platform/packages/shared/logs</code> 导致双机同步 <code>--clean-only</code> 门禁无法触发）属于<strong>同一类故障</strong>。</p>
+<hr>
+<h2 id="二-体积构成">二、体积构成<a class="anchor" href="#二-体积构成" aria-label="锚点">#</a></h2>
+<h3 id="分类占比">分类占比<a class="anchor" href="#分类占比" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>分类</th><th>体积</th><th>占比</th><th>性质</th></tr></thead><tbody><tr><td><strong>构建产物</strong></td><td><strong>3,874 MB</strong></td><td>47.9%</td><td>可再生，删后一条命令重建</td></tr><tr><td>git 仓库与历史副本</td><td>1,642 MB</td><td>20.3%</td><td>含 1,830 个不可达对象 + 一份完整历史备份</td></tr><tr><td>依赖与包缓存</td><td>1,596 MB</td><td>19.8%</td><td>可重装；含 Electron 双版本冗余</td></tr><tr><td>运行时与临时数据</td><td>556 MB</td><td>6.9%</td><td>调研克隆、隔离区、会话缓存</td></tr><tr><td>目录链接重复计数</td><td>246 MB</td><td>3.0%</td><td><code>khy-Trajectory</code> 为 <code>.khy</code> 的 junction</td></tr><tr><td><strong>源码 + 文档 + 配置</strong></td><td><strong>≈ 96 MB</strong></td><td>1.2%</td><td><strong>必须保留</strong></td></tr><tr><td>其他（工具链、少量资产）</td><td>62 MB</td><td>0.8%</td><td>platform / kernel / scripts</td></tr></tbody></table>
+<h3 id="逐项明细-按体积降序">逐项明细（按体积降序）<a class="anchor" href="#逐项明细-按体积降序" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>路径</th><th>体积</th><th>说明</th><th>可回收</th></tr></thead><tbody><tr><td><code>apps/khy-os-client-app/build/</code></td><td>2,893 MB</td><td>Flutter/Android 构建输出</td><td>全部</td></tr><tr><td>↳ <code>build/app/intermediates/</code></td><td>2,326 MB</td><td>Gradle 中间产物，含 4 个 ABI 的 <code>libflutter.so</code>（单文件最大 377 MB）</td><td>全部</td></tr><tr><td>↳ <code>build/app/outputs/</code></td><td>509 MB</td><td>APK 产物（debug/release 各一份）</td><td>全部</td></tr><tr><td><code>.git/</code></td><td>923 MB</td><td>pack 617 MB + 松散对象 280 MB + garbage 24 MB</td><td>≈670 MB</td></tr><tr><td><code>.git-backup-20260913/</code></td><td>720 MB</td><td>完整 git 历史副本</td><td>全部（外迁）</td></tr><tr><td><code>node_modules/.pnpm/</code></td><td>1,465 MB</td><td>pnpm 内容寻址仓库</td><td>部分</td></tr><tr><td>↳ <code>electron@44.2.0</code></td><td>369 MB</td><td>Electron 运行时，含 235 MB <code>electron.exe</code></td><td>按需</td></tr><tr><td>↳ <code>electron@32.3.3</code></td><td>266 MB</td><td><strong>旧版本，疑似闲置</strong>，含 178 MB <code>electron.exe</code></td><td>可删</td></tr><tr><td><code>apps/khy-mobile/release/</code></td><td>489 MB</td><td>12 个历史版本 debug APK（v2–v12）</td><td>全部</td></tr><tr><td><code>.research-tmp/repos/</code></td><td>280 MB</td><td>调研克隆（<code>opencode</code> 206 MB、<code>cli</code> 38 MB、<code>claude-code</code> 25 MB）</td><td>全部</td></tr><tr><td><code>.khy/</code></td><td>246 MB</td><td><code>tmp/quarantine</code> 132 MB、<code>checkpoints</code> 36 MB、<code>sessions.db</code> 27 MB</td><td>部分</td></tr><tr><td><code>khy-Trajectory/</code></td><td>246 MB</td><td><strong>junction → <code>.khy</code></strong>，与上一行完全重复</td><td>全部</td></tr><tr><td><code>apps/khy-os-client-app/.dart_tool/</code></td><td>190 MB</td><td>Dart 缓存，含 67 MB <code>app.dill</code> ×3 份</td><td>全部</td></tr><tr><td><code>services/backend/dist/</code></td><td>128 MB</td><td>后端打包产物，含 41 MB <code>cli.cjs.map</code></td><td>全部</td></tr><tr><td><code>apps/khyos-desktop/dist-electron/</code></td><td>107 MB</td><td>桌面端 Electron 打包产物</td><td>全部</td></tr><tr><td><code>apps/khy-os-client-app/release/</code></td><td>57 MB</td><td>release APK 副本（与 build 输出重复）</td><td>全部</td></tr><tr><td><code>.opencode/node_modules/</code></td><td>52 MB</td><td>第三方 CLI 自带依赖</td><td>可删</td></tr><tr><td><code>apps/ai-frontend/node_modules/</code></td><td>43 MB</td><td>前端依赖</td><td>可重装</td></tr><tr><td><code>docs/</code></td><td>28 MB</td><td>文档树，1,460 个文件（713 md + 714 html）</td><td><strong>不建议动</strong></td></tr></tbody></table>
+<blockquote><p><strong>关于文档：</strong> <code>docs/</code> 仅 28 MB（0.35%），已跟踪 1,182 个文件（432 md + 363 html）；另有 278 个未跟踪文件需人工甄别。文档不构成膨胀源，本方案<strong>不对文档做任何删除</strong>。</p></blockquote>
+<hr>
+<h2 id="三-根因定位">三、根因定位<a class="anchor" href="#三-根因定位" aria-label="锚点">#</a></h2>
+<h3 id="根因-1-flutter-android-构建产物长期未清理-3-78-gb-占-47-9">根因 1｜Flutter/Android 构建产物长期未清理 —— 3.78 GB，占 47.9%<a class="anchor" href="#根因-1-flutter-android-构建产物长期未清理-3-78-gb-占-47-9" aria-label="锚点">#</a></h3>
+<p>单一目录 <code>apps/khy-os-client-app/build/</code> 占 <strong>2.83 GB</strong>，是最大空间黑洞。冗余度高：Gradle 为 <code>arm64-v8a</code>、<code>x86_64</code>、<code>armeabi-v7a</code> 三个 ABI 各存一份 <code>libflutter.so</code>（377 + 372 + 333 MB）；同一份 <code>kernel_blob.bin</code>（67 MB）在 <code>intermediates/flutter/</code>、<code>intermediates/assets/</code> 与 <code>.dart_tool/</code> 存在 <strong>3 份副本</strong>；<code>app-debug.apk</code>（179 MB）在 <code>apk/</code> 与 <code>flutter-apk/</code> 下各一份。全部可再生，积累原因是 debug 与 release 产物并存且从未执行 <code>flutter clean</code>。</p>
+<h3 id="根因-2-git-对象库含大量不可达对象与松散对象-可回收约-670-mb">根因 2｜git 对象库含大量不可达对象与松散对象 —— 可回收约 670 MB<a class="anchor" href="#根因-2-git-对象库含大量不可达对象与松散对象-可回收约-670-mb" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>成分</th><th>体积</th><th>诊断</th></tr></thead><tbody><tr><td>pack 文件</td><td>617 MB</td><td>内含 <strong>1,830 个不可达对象</strong>；5 个最大对象（177.7 / 103.9 / 37 / 19.3 / 10 MB，合计 <strong>348 MB</strong>）经 <code>git log --all --find-object</code> 验证<strong>不被任何可达提交引用</strong></td></tr><tr><td>松散对象</td><td>280 MB</td><td>2,001 个对象散落未打包，无法享受 delta 压缩</td></tr><tr><td>garbage</td><td>24 MB</td><td><code>git count-objects</code> 已明确报出 <code>size-garbage: 24.07 MiB</code></td></tr></tbody></table>
+<p>另有 <code>.git-backup-20260913/</code>（720 MB）已被 <code>.gitignore</code> 正确忽略，但仍占工作区磁盘。两份历史合计 1.64 GB，占 20.3%。</p>
+<h3 id="根因-3-两套-electron-运行时并存-冗余-266-mb">根因 3｜两套 Electron 运行时并存 —— 冗余 266 MB<a class="anchor" href="#根因-3-两套-electron-运行时并存-冗余-266-mb" aria-label="锚点">#</a></h3>
+<p><code>node_modules/.pnpm/</code> 下同时存在 <code>electron@44.2.0</code>（369 MB）与 <code>electron@32.3.3</code>（266 MB），各携带完整 <code>electron.exe</code>（235 / 178 MB）。大版本跨度如此之大，通常意味着旧版本已无引用方。</p>
+<h3 id="根因-4-产物归档散落于仓库内且未被忽略-约-855-mb">根因 4｜产物归档散落于仓库内且未被忽略 —— 约 855 MB<a class="anchor" href="#根因-4-产物归档散落于仓库内且未被忽略-约-855-mb" aria-label="锚点">#</a></h3>
+<p><code>apps/khy-mobile/release/</code>（489 MB）、<code>apps/khy-os-client-app/release/</code>（57 MB）、<code>.research-tmp/repos/</code>（280 MB）、<code>.zcode/tmp/</code>（28 MB）等<strong>既不在 <code>.gitignore</code> 覆盖内，也不是仓库交付物</strong>。</p>
+<h3 id="根因-5-目录链接造成重复计数-246-mb">根因 5｜目录链接造成重复计数 —— 246 MB<a class="anchor" href="#根因-5-目录链接造成重复计数-246-mb" aria-label="锚点">#</a></h3>
+<p><code>khy-Trajectory/</code> 是指向 <code>.khy/</code> 的 NTFS junction（<code>LinkType=Junction</code>）。并非两份数据，但按目录递归统计（含本次测量）会计两次。<code>.gitignore</code> 中已有两条相关规则，说明它本就不该存在于工作区。</p>
+<hr>
+<h2 id="四-瘦身方案">四、瘦身方案<a class="anchor" href="#四-瘦身方案" aria-label="锚点">#</a></h2>
+<h3 id="第一档-立即执行-零风险-回收-4-3-gb">第一档｜立即执行（零风险，回收 ≈ 4.3 GB）<a class="anchor" href="#第一档-立即执行-零风险-回收-4-3-gb" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 1) Flutter / Android 构建产物        → -2,893 MB</span>
+<span class="hljs-built_in">cd</span> apps/khy-os-client-app &amp;&amp; flutter clean
+
+<span class="hljs-comment"># 2) Dart 工具缓存                     → -190 MB</span>
+<span class="hljs-built_in">rm</span> -rf apps/khy-os-client-app/.dart_tool
+
+<span class="hljs-comment"># 3) APK 归档（12 个历史 debug 版本）   → -489 MB</span>
+<span class="hljs-built_in">rm</span> -rf apps/khy-mobile/release/*.apk
+
+<span class="hljs-comment"># 4) release APK 副本                  → -57 MB</span>
+<span class="hljs-built_in">rm</span> -rf apps/khy-os-client-app/release
+
+<span class="hljs-comment"># 5) 后端 / 桌面端打包产物              → -128 MB / -107 MB</span>
+<span class="hljs-built_in">rm</span> -rf services/backend/dist  apps/khyos-desktop/dist-electron
+
+<span class="hljs-comment"># 6) 运行时临时数据                     → -162 MB</span>
+<span class="hljs-built_in">rm</span> -rf .khy/tmp/quarantine-*  .zcode/tmp
+
+<span class="hljs-comment"># 7) 重复的目录链接（确认后）            → -246 MB</span>
+<span class="hljs-built_in">rm</span> -rf khy-Trajectory</code></pre>
+<p><strong>重建成本：</strong> <code>flutter pub get</code>（约 1 分钟）、<code>flutter build apk --debug</code>（约 10–20 分钟）、<code>npm run build</code>（约 1 分钟）、桌面端重新打包。</p>
+<h3 id="第二档-短期治理-低风险-回收-1-65-gb">第二档｜短期治理（低风险，回收 ≈ 1.65 GB）<a class="anchor" href="#第二档-短期治理-低风险-回收-1-65-gb" aria-label="锚点">#</a></h3>
+<p><strong>2.1 git 对象库回收 —— 约 670 MB</strong></p>
+<pre><code class="language-bash">git count-objects -vH
+git fsck --unreachable --no-progress | <span class="hljs-built_in">wc</span> -l
+
+git reflog expire --expire=now --all
+git gc --prune=now --aggressive</code></pre>
+<blockquote><p>⚠️ <code>--prune=now</code> 会<strong>永久删除</strong>不可达对象。执行前确认：无依赖 reflog 恢复近期的需求；<code>.git-backup-20260913/</code> 保持原状直到 <code>git gc</code> 验证通过（<code>git log</code>、<code>git fsck</code>、切分支均正常）——它此刻正是唯一的历史兜底。</p></blockquote>
+<p><strong>2.2 历史副本外迁 —— 720 MB</strong></p>
+<p>在 2.1 验证通过后，将 <code>.git-backup-20260913/</code> <strong>移出仓库</strong>（外部盘或对象存储归档），而非直接删除。</p>
+<p><strong>2.3 调研克隆清理 —— 280 MB</strong></p>
+<p><code>.research-tmp/repos/</code> 是一次性调研资产。结论已沉淀进 <code>docs/</code> 则可直接删除；需保留时建议压缩为单文件（预计 60–80 MB）。</p>
+<h3 id="第三档-结构性优化-防复发">第三档｜结构性优化（防复发）<a class="anchor" href="#第三档-结构性优化-防复发" aria-label="锚点">#</a></h3>
+<p><strong>3.1 补齐 <code>.gitignore</code> —— 消除 2,476 条状态噪音</strong></p>
+<pre><code class="language-gitignore"># 调研 / 归档产物
+/.research-tmp/
+/_产物/
+/tmp-cmp/
+
+# 移动端与客户端 APK 归档
+*.apk
+*.aab
+/apps/khy-mobile/release/
+/apps/khy-os-client-app/release/
+
+# 本机 IDE / 工具临时状态
+/.opencode/
+/.zcode/
+/.zcode-tmp/</code></pre>
+<blockquote><p>这条比省空间更重要：仓库 <code>AGENTS.md</code> 的双机流水线依赖 <code>sync.py --status</code> 与 <code>--clean-only</code> 门禁，而门禁<strong>要求工作树收敛到干净状态</strong>。<code>.gitignore</code> 里已有两段注释专门记录这类事故，正是它们导致「工作树永远带未跟踪文件 → 门禁永远跳过 → 任务循环无法闭合」。2,476 条未忽略条目属于<strong>完全相同</strong>的故障模式。</p></blockquote>
+<p><strong>3.2 Electron 双版本去重 —— 266 MB</strong></p>
+<pre><code class="language-bash">rg -n <span class="hljs-string">&quot;electron.*32\.&quot;</span> package.json apps/*/package.json services/*/package.json
+pnpm install --force
+pnpm store prune</code></pre>
+<p><strong>3.3 建立体积守卫</strong></p>
+<ul><li>在 <code>scripts/ci/</code> 新增体积守卫，纳入现有 <code>ruleguard</code> 绑定层与 <code>check:wiring</code> 反孤儿检查，登记为 <code>PROCESS</code> 域规则（如「工作区非跟踪体积 &gt; 2 GB 判 error」）。</li><li>把第一档清理收敛为可重复动作。仓库<strong>已有</strong> <code>npm run clean</code>（干跑）与 <code>npm run clean:apply</code>（真删，白名单 + <code>PROTECTED_SUBTREE</code> 保护，见 <code>scripts/maintenance/clean.js</code>），且<strong>已覆盖</strong> Flutter <code>build/</code> 与 <code>.dart_tool</code>——<strong>无需新增脚本</strong>。只需把本轮新增的两类补进该脚本的 <code>TARGETS</code>：<code>apps/khy-mobile/release/*.apk</code>（保留最新一份）与 <code>services/backend/dist/*.map</code>。</li><li>Flutter 固定只构建目标 ABI：<code>flutter build apk --target-platform android-arm64</code>，可让 <code>build/</code> 直接降到约三分之一（三个 ABI 的 <code>libflutter.so</code> 合计 <strong>694 MB</strong>，通常只需 <code>arm64-v8a</code>）。</li></ul>
+<hr>
+<h2 id="五-保障-不影响开发体验-核心功能与文档完整性">五、保障：不影响开发体验、核心功能与文档完整性<a class="anchor" href="#五-保障-不影响开发体验-核心功能与文档完整性" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>关切</th><th>保障依据</th></tr></thead><tbody><tr><td><strong>核心功能</strong></td><td>不删除任何被 git 跟踪的文件。已跟踪内容仅约 96 MB（1.2%），全部保留。待清理对象均经 <code>git check-ignore</code> / <code>git ls-files</code> 验证为<strong>未跟踪</strong>本地产物</td></tr><tr><td><strong>文档完整性</strong></td><td><code>docs/</code> 全程不受影响。1,182 个已跟踪文件保持原样；278 个未跟踪文件留待人工甄别，<strong>不做自动删除</strong></td></tr><tr><td><strong>开发体验</strong></td><td>仅损失「免构建」便利，需按需执行 <code>flutter pub get</code> / <code>flutter build apk</code> / <code>npm run build</code>。版本历史、分支、工作树结构、IDE 配置均不变</td></tr><tr><td><strong>可回退性</strong></td><td>第一档删除的全部是构建产物，重建即恢复。<code>.git-backup-20260913/</code> 在 <code>git gc</code> 期间保留作为兜底</td></tr><tr><td><strong>双机流水线</strong></td><td>补齐 <code>.gitignore</code> 后 <code>git status</code> 趋于干净，<code>--clean-only</code> 门禁可正常触发，同步流程反而更顺畅</td></tr></tbody></table>
+<h3 id="预期收益">预期收益<a class="anchor" href="#预期收益" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>阶段</th><th>回收</th><th>剩余体积</th><th>累计降幅</th></tr></thead><tbody><tr><td>现状</td><td>—</td><td><strong>7.89 GB</strong></td><td>—</td></tr><tr><td>仅第一档</td><td>≈ 4.3 GB</td><td><strong>≈ 3.6 GB</strong></td><td>-55%</td></tr><tr><td>第一档 + 第二档</td><td>≈ 6.0 GB</td><td><strong>≈ 1.9 GB</strong></td><td>-76%</td></tr><tr><td>三档全执行</td><td>≈ 6.3 GB</td><td><strong>≈ 1.6 GB</strong></td><td>-80%</td></tr></tbody></table>
+<hr>
+<h2 id="六-执行顺序建议">六、执行顺序建议<a class="anchor" href="#六-执行顺序建议" aria-label="锚点">#</a></h2>
+<ol><li><strong>先量后动</strong>：记录基线 <code>git count-objects -vH</code> 与 <code>du -sh</code>。</li><li><strong>清理工作区</strong>：执行第一档 1–7 步。</li><li><strong>补齐忽略规则</strong>：先做 3.1，确认 <code>git status</code> 收敛——<strong>这一步应排在 git gc 之前</strong>。</li><li><strong>回收 git 对象库</strong>：执行 2.1，用 <code>git fsck</code>、<code>git log</code>、切分支三重验证。</li><li><strong>外迁历史副本</strong>：验证通过后移动 <code>.git-backup-20260913/</code>。</li><li><strong>建立守卫</strong>：落地 3.3，把体积阈值与清理脚本纳入常规 CI。</li></ol>
+<hr>
+<h2 id="七-执行结果与方案修正-2026-09-16-17-5x-追加">七、执行结果与方案修正（2026-09-16 17:5x 追加）<a class="anchor" href="#七-执行结果与方案修正-2026-09-16-17-5x-追加" aria-label="锚点">#</a></h2>
+<p>第一档已实际执行。执行前逐项复核，<strong>发现原方案 4 处判断有误或过头，已按更安全方向收敛</strong>——本节同时修正正文，避免后来者照错误清单施工。</p>
+<h3 id="7-1-实测结果">7.1 实测结果<a class="anchor" href="#7-1-实测结果" aria-label="锚点">#</a></h3>
+<p>仓库体积 <strong>7.89 GB → 4.22 GB</strong>，释放 <strong>3,761 MB（-46.6%）</strong>。</p>
+<table><thead><tr><th>已删除项</th><th>释放</th><th>说明</th></tr></thead><tbody><tr><td><code>apps/khy-os-client-app/build/</code></td><td>2,893 MB</td><td>Flutter/Android 构建缓存</td></tr><tr><td><code>apps/khy-mobile/release/</code> 15 个历史 APK</td><td>452 MB</td><td>保留最新 <code>khy-mobile-final.apk</code>（25.3 MB）</td></tr><tr><td><code>apps/khy-os-client-app/.dart_tool/</code></td><td>190 MB</td><td>Dart 工具链缓存</td></tr><tr><td><code>apps/khyos-desktop/dist-electron/</code></td><td>107 MB</td><td>Electron 打包产物</td></tr><tr><td><code>services/backend/dist/*.map</code></td><td>101.5 MB</td><td><strong>仅 sourcemap</strong>，见 7.2①</td></tr><tr><td><code>software/khyquant/frontend/dist/</code></td><td>3.3 MB</td><td>Vite 产物</td></tr><tr><td><code>apps/ai-frontend/dist/</code></td><td>2.8 MB</td><td>Vite 产物</td></tr></tbody></table>
+<h3 id="7-2-方案修正-4-处">7.2 方案修正（4 处）<a class="anchor" href="#7-2-方案修正-4-处" aria-label="锚点">#</a></h3>
+<p><strong>① <code>services/backend/dist</code> 不能整删 —— 正文第一档第 5 步有误。</strong><br><code>services/backend/esbuild.config.js</code> 明文写着 <code>dist/cli.cjs</code> 是<strong>生产启动路径</strong>（<code>invoke as node dist/cli.cjs</code>）。它<strong>不是</strong>纯粹的构建产物。正确做法是<strong>只删 <code>*.map</code></strong>（101.5 MB 的纯调试辅助），保留 <code>cli.cjs</code> / <code>khy.cjs</code> / <code>khy.mjs</code> / <code>meta.json</code>（26.3 MB）。已按此执行，<code>node --check</code> 三个入口全部 exit 0。</p>
+<p><strong>② <code>apps/khy-os-client-app/release/</code> 应保留 —— 正文第一档第 4 步方向反了。</strong><br>其中 <code>khy-os-client-20260915-2206.apk</code>（57 MB）是<strong>唯一的 release 正式包</strong>。它与 <code>build/app/outputs/apk/release/app-release.apk</code> 确实是同名的双份，但 <code>flutter clean</code> 会删掉 build 里那份——<strong>删这个就等于两个都不剩</strong>。正确取舍是保留「有版本号的那份」。已保留。</p>
+<p><strong>③ <code>.khy/tmp/quarantine-*</code> 不得删除 —— 正文第一档第 6 步违反仓库红线。</strong><br><code>[DESIGN-LAY-003] 仓库整理与巡检规范</code> HK-3 规定「<strong>只隔离不删除</strong>」，同规范 §3 风险分级把 L3 删除定为「<strong>永不执行，一律人工确认</strong>」。隔离区的存在意义就是「等人工确认」，清理它等于绕过该机制。<strong>已保留，未动。</strong></p>
+<p><strong>④ <code>khy-Trajectory</code> junction 不值得删 —— 正文第一档第 7 步的收益是虚假的。</strong><br>它是 NTFS reparse point，<strong>本身几乎不占磁盘</strong>；统计里的 246 MB 是按目标目录递归算出来的<strong>重复计数</strong>，删除链接<strong>不释放任何真实空间</strong>，却可能弄坏写轨迹的路径。<strong>已保留。</strong> 连带地，正文「可回收 ≈ 4.3 GB」这个数字偏高——其中含 246 MB 虚假重复计数与 132 MB 不该删的隔离区，<strong>实际可回收约 3.6 GB</strong>。</p>
+<h3 id="7-3-执行中遇到的两个环境约束">7.3 执行中遇到的两个环境约束<a class="anchor" href="#7-3-执行中遇到的两个环境约束" aria-label="锚点">#</a></h3>
+<ul><li><strong>宿主批量删除安全门</strong>：一次删除超过 <strong>50 个文件/轮次</strong>会被整体拒绝（<code>SAFE_DELETE_BULK_CONFIRM_REQUIRED</code>），<code>npm run clean:apply</code> 因此报「0/5 项已删」（<strong>无半删状态</strong>）。此门属于安全控制，须经人工确认后方可继续，不应以底层 API 静默绕过。</li><li><strong>Windows 超长路径</strong>：<code>build/</code> 内有 Android 生成的 100+ 字符 lambda 类名文件，普通递归删除会因超过 <code>MAX_PATH</code> 失败。解法是加 <code>\\?\</code> 扩展长度前缀。</li></ul>
+<h3 id="7-4-未执行项">7.4 未执行项<a class="anchor" href="#7-4-未执行项" aria-label="锚点">#</a></h3>
+<p>第二档三项按维护者决定<strong>暂不执行</strong>，理由记录如下，供后续决策：</p>
+<ul><li><code>git gc --prune=now</code>（≈670 MB）——<strong>不可逆</strong>，且执行时 <code>.git/index.lock</code> 被占用导致写操作受阻（真因见 §8.3），故推迟到第二轮执行；</li><li><code>.git-backup-20260913/</code>（720 MB）——是当前<strong>唯一的历史兜底</strong>，应在 <code>git gc</code> 验证通过后再外迁（不是直接删除）；</li><li><code>.research-tmp/repos/</code>（283 MB）——一次性调研克隆，需确认调研结论是否已沉淀进 <code>docs/</code>。</li></ul>
+<h3 id="7-5-并发写入提示">7.5 并发写入提示<a class="anchor" href="#7-5-并发写入提示" aria-label="锚点">#</a></h3>
+<p>本次执行期间发现<strong>另一个会话正在同时修改同一工作树</strong>（<code>scripts/ci/repo-layout-baseline.json</code> 于 17:40 被更新、数个 <code>services/backend/src/**</code> 源文件于 17:33–17:37 被修）。因此 <code>check:layout</code> 的计数在本次执行前后发生了变化（<code>unresolved-require</code> 17→0、<code>extension-id-hardcode</code> 1→0 系对方修复所致，<strong>非本次清理的连带效果</strong>）。<strong>该仓库当前处于多会话并发写同一工作树 + 僵尸 git 进程叠加的状态，后续批量操作前应先确认无其他会话在写。</strong></p>
+<hr>
+<h2 id="八-第二轮瘦身执行结果-2026-09-16-18-0x-追加">八、第二轮瘦身执行结果（2026-09-16 18:0x 追加）<a class="anchor" href="#八-第二轮瘦身执行结果-2026-09-16-18-0x-追加" aria-label="锚点">#</a></h2>
+<p>第一轮后体积为 4.22 GB，仍有约 1.9 GB 可压缩。第二轮执行结果：</p>
+<table><thead><tr><th>处理项</th><th>结果</th></tr></thead><tbody><tr><td><code>.git</code> 对象库回收</td><td><strong>922.8 MB → 108.3 MB</strong>（回收 <strong>814.5 MB</strong>，超出预估 670 MB）</td></tr><tr><td><code>.git-backup-20260913/</code> 外迁</td><td>720 MB 移出仓库至 <code>D:\Portable\khy-os-git-backup-20260913\</code>（<strong>移动而非删除</strong>）</td></tr><tr><td><code>.research-tmp/</code> 清理</td><td>283 MB（删前已把 <code>TUI-microinteraction-research.md</code> 与 <code>cc-book-harness/</code> 备份到 <code>.khy/tmp/research-preserved/</code>）</td></tr><tr><td><code>.opencode/node_modules/</code> 清理</td><td>52 MB（该目录是独立 npm 项目，不属 pnpm workspace）</td></tr></tbody></table>
+<p><strong>体积：4.22 GB → 2.39 GB</strong>（真实物理占用 <strong>2.15 GB</strong>，已扣除 <code>khy-Trajectory</code> junction 的 247.7 MB 重复计数）。</p>
+<h3 id="8-1-git-回收明细">8.1 <code>.git</code> 回收明细<a class="anchor" href="#8-1-git-回收明细" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>gc 前</th><th>gc 后</th></tr></thead><tbody><tr><td>松散对象</td><td>2,001 个 / 279.94 MiB</td><td>0</td></tr><tr><td>pack 体积</td><td>617.48 MiB</td><td><strong>107.01 MiB</strong></td></tr><tr><td>garbage</td><td>24.07 MiB</td><td>0</td></tr><tr><td>in-pack 对象数</td><td>20,383</td><td>19,485（清除 898 个不可达对象）</td></tr></tbody></table>
+<p>健康验证：<code>HEAD</code> 仍为 <code>e12bfa3f</code>、提交总数 209、<code>git fsck</code> 无输出（健康）。<code>pack.compression</code> 实测为 <strong>6</strong>（已正确设置，未来 gc 不会重新膨胀）。</p>
+<h3 id="8-2-未执行项及原因">8.2 未执行项及原因<a class="anchor" href="#8-2-未执行项及原因" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项</th><th>原因</th></tr></thead><tbody><tr><td><code>apps/ai-frontend/node_modules</code>、<code>apps/khyos-desktop/node_modules</code>（50 MB）</td><td>二者是 <code>pnpm-workspace.yaml</code> 声明的 <strong>workspace 成员</strong>，其 <code>node_modules</code> 由根安装统一管理；删除会形成<strong>半卸载状态</strong>，需重跑根 <code>pnpm install</code> 才能恢复，且会破坏依赖前端依赖的守卫运行。收益 50 MB 不值得</td></tr><tr><td><code>pnpm store prune</code></td><td>全局 store 位于 <code>D:\Portable\Tools\opencode\xdg\pnpm\store\v10</code>，<strong>在仓库之外</strong>，prune 不减小仓库体积</td></tr><tr><td><code>node_modules/electron@32.3.3</code>（265.8 MB）</td><td><strong>不是冗余</strong>：<code>node_modules/electron</code> 是指向它的 junction，说明根级 electron 壳应用正在使用；<code>[DESIGN-LAY-005]</code> §1.4 明确根级 <code>electron/</code> 与 <code>apps/khyos-desktop/</code> 是<strong>两条并行产物线</strong>，两者各自必需</td></tr><tr><td><code>.khy/</code> 运行时数据（约 100 MB）</td><td>该目录含 <code>credentials/</code>、<code>memory/</code>、<code>conversations/</code>，属<strong>用户真实数据而非缓存</strong>。正确入口是产品自带机制：<code>khy cleanup</code>（日志/快照/会话保留，见 <code>services/backend/src/services/cleanupService.js</code>）与 <code>khy clean</code> 的 <code>planCheckpointStorage</code>（检查点）。<strong>不宜手删</strong></td></tr></tbody></table>
+<h3 id="8-3-一处判断更正-git-index-lock-的占用者">8.3 一处判断更正：<code>.git/index.lock</code> 的占用者<a class="anchor" href="#8-3-一处判断更正-git-index-lock-的占用者" aria-label="锚点">#</a></h3>
+<p>§7.4 曾把阻塞写操作的进程记为「僵尸 git 进程」，<strong>判错了</strong>。实测其命令行为<br><code>git fsmonitor--daemon run --detach --ipc-threads=8</code>——这是 git 的<strong>文件系统监视守护进程</strong>，<br>本就是常驻后台服务，低 CPU 占用是正常表现，并非卡死。</p>
+<p>正确的处理方式是官方命令 <code>git fsmonitor--daemon stop</code>（而非 kill），随后清除<strong>当时遗留的陈旧<br><code>.git/index.lock</code></strong>（其时间戳与一次失败的 <code>git mv</code> 批次吻合，属那条命令的残留），再执行 gc。</p>
+<h3 id="8-4-另一处自我更正-本轮曾引入一条悬空任务引用">8.4 另一处自我更正：本轮曾引入一条悬空任务引用<a class="anchor" href="#8-4-另一处自我更正-本轮曾引入一条悬空任务引用" aria-label="锚点">#</a></h3>
+<p>§7 第三档曾建议「在 <code>package.json</code> 里新增一个一键清理脚本（目标名 <code>clean:heavy</code>）」。该目标<strong>并不存在</strong>，<br><code>check:layout</code> 的 <code>dangling-task</code> 规则如实把它计为一条悬空引用（88 → 89）。<br>且该建议本身多余——仓库<strong>已有</strong> <code>npm run clean</code> / <code>clean:apply</code>（白名单 + <code>PROTECTED_SUBTREE</code> 保护，<br>见 <code>scripts/maintenance/clean.js</code>）且已覆盖 Flutter 目录。<strong>已在 §7 改为「把新增两类补进该脚本的 <code>TARGETS</code>」</strong>，不再新增脚本。</p>
+<blockquote><p><strong>教训（本条自身就是例证）</strong>：在 <code>docs/</code> 里推荐尚未存在的 <code>npm run</code> 目标，会被 <code>dangling-task</code> 门直接判为违规。<br>更要紧的是——<strong>连「引述这个错误」都会再次触发它</strong>：本节初稿为了举例而原样写出了那个 <code>npm run &lt;不存在目标&gt;</code> 字符串，<br>结果把已修好的计数又顶回 89。描述这类错误时必须脱掉 <code>npm run </code> 前缀。推荐脚本时要么同步建脚本，要么只引用已存在的目标。</p></blockquote>
+<h3 id="8-5-验收">8.5 验收<a class="anchor" href="#8-5-验收" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>门禁</th><th>结果</th></tr></thead><tbody><tr><td><code>docs:verify</code></td><td>✅ exit 0（981 md / 982 html，11,777 条本地链接全可达）</td></tr><tr><td><code>check:layout</code></td><td><code>docs-index-complete</code> 0、<code>unresolved-require</code> 0、<code>extension-id-hardcode</code> 0（均较初始基线改善）；<code>dangling-task</code> 89（含 §8.4 已定位的一条，改正后应回落）</td></tr><tr><td><code>node --check</code> × <code>services/backend/dist/{cli.cjs,khy.cjs,khy.mjs}</code></td><td>✅ 全部 exit 0</td></tr><tr><td><code>git fsck</code> / <code>git log</code></td><td>✅ 健康，HEAD <code>e12bfa3f</code> 未变</td></tr></tbody></table>
+<hr>
+<h2 id="九-防复发-把官方命令补齐并堵住误删-2026-09-16-20-xx-追加">九、防复发：把官方命令补齐并堵住误删（2026-09-16 20:xx 追加）<a class="anchor" href="#九-防复发-把官方命令补齐并堵住误删-2026-09-16-20-xx-追加" aria-label="锚点">#</a></h2>
+<p>清理只是止血；这一节做的是<strong>让它不再长回来</strong>，并修补一处清理机制自身的缺陷。</p>
+<h3 id="9-1-khy-cleanup-从-幻影命令-变为可用">9.1 <code>khy cleanup</code> 从「幻影命令」变为可用<a class="anchor" href="#9-1-khy-cleanup-从-幻影命令-变为可用" aria-label="锚点">#</a></h3>
+<p><strong>问题</strong>：<code>diskClean.js</code> 与 <code>aliases.js</code> 的注释都把 <code>khy cleanup</code> 当作已存在的命令引述（「khy 自身数据保留：日志/快照/会话」），但实测：</p>
+<ul><li><code>handlers/</code> 下没有 <code>cleanup.js</code></li><li><code>router.js</code> 里没有任何 <code>cleanup</code> 分派</li><li><code>aliases.js</code> 里只在<strong>注释</strong>中提到它，<strong>没有别名条目</strong></li></ul>
+<p>即敲 <code>khy cleanup</code> 会落到未知命令。而 <code>cleanupService.js</code> 其实<strong>早已实现</strong> 20+ 个保留函数（日志轮转、快照、训练数据、遥测、审计轨迹、隔离区、会话 7 天、轨迹 30 天、任务输出 24h、检查点 500 MB 封顶），只是<strong>一个入口都没有</strong>——典型的「文档说有、实现没有」。</p>
+<p><strong>做法</strong>：按 <code>services/backend/src/cli/COMMAND_AUTHORING.md</code> 的<strong>自注册机制</strong>，只新增 <code>handlers/cleanup.js</code> 一个文件即可（别名自动注入、schema 自动补全，无需改 <code>aliases.js</code> 或 <code>router.js</code>）。</p>
+<pre><code>khy cleanup            预览：各目标当前占用 + 保留策略（默认，不动数据）
+khy cleanup --yes      按保留策略执行
+khy cleanup --report   查看上次清理报告
+khy cleanup --json     机器可读（供脚本消费）</code></pre>
+<p>三条纪律与 <code>clean</code> 对齐：默认只预览、每项标出保留策略、不做激进删除。别名取 <code>数据保留</code> / <code>保留清理</code> / <code>khycleanup</code>——<strong>刻意避开 <code>清理</code></strong>，因为该别名已被静态表占用并指向 <code>cleandisk</code>（静态别名优先，冲突会被静默吞掉）。</p>
+<h3 id="9-2-让保留策略只有一个真源">9.2 让保留策略只有一个真源<a class="anchor" href="#9-2-让保留策略只有一个真源" aria-label="锚点">#</a></h3>
+<p>命令要展示「保留多久、上限多少」，而这些数值原本全是 <code>cleanupService.js</code> 的<strong>模块内私有常量</strong>。若在命令侧抄一份，两处迟早漂移——而<strong>两个不一致的保留期比没有保留期更坏</strong>（用户按 A 预期，实际按 B 删）。</p>
+<p>因此新增 <code>cleanupService.getRetentionPolicy()</code>：由服务自己只读地导出当前生效的策略，命令只负责展示。命令侧<strong>一个阈值都不写死</strong>（<code>RUNTIME-001</code> 零硬编码）。</p>
+<h3 id="9-3-修补-khy-clean-runtime-会销毁-housekeeping-隔离区">9.3 修补：<code>khy clean --runtime</code> 会销毁 housekeeping 隔离区<a class="anchor" href="#9-3-修补-khy-clean-runtime-会销毁-housekeeping-隔离区" aria-label="锚点">#</a></h3>
+<p><strong>这是本轮发现的最严重缺陷。</strong> <code>clean.js</code> 的 <code>RUNTIME_TARGETS</code> 含 <code>{ rel: 'tmp' }</code> 且<strong>无任何排除</strong>，而 <code>.khy/tmp</code> 下躺着 131.7 MB 的 <code>quarantine-20260915</code>（housekeeping 隔离区）。也就是说：</p>
+<blockquote><p>跑一次 <code>khy clean --runtime --yes</code>，会把<strong>待人工确认的隔离件全部销毁</strong>，直接违反<br><code>[DESIGN-LAY-003]</code> 的 HK-3「<strong>只隔离不删除</strong>；淘汰一律进隔离区人工确认」与 §3<br>「L3 删除 —— <strong>永不执行</strong>」。<strong>那是绕过机制，不叫清理。</strong></p></blockquote>
+<p><strong>修补</strong>：给运行时目标加「保留前缀」能力（按名字前缀 <code>quarantine*</code> 匹配，不写死日期）：</p>
+<ul><li>计划侧：命中前缀的子项体积<strong>从「将回收」中扣除</strong>，并登记进既有的 <code>held</code> 列表（复用检查点那套「刻意不清 + 说明理由」机制）</li><li>执行侧：该目标改为<strong>逐个删子项、跳过保留项</strong>，而不是整目录 <code>rmSync</code></li></ul>
+<p><strong>验证</strong>：<code>.khy/tmp</code> 报的可回收从 136 MB 降为 <strong>5.1 MB</strong>，131.7 MB 隔离区出现在 <code>held</code> 中并附 HK-3 理由。修补前它会静默消失。</p>
+<h3 id="9-4-gitignore-补齐-本轮实测的未覆盖项">9.4 <code>.gitignore</code> 补齐（本轮实测的未覆盖项）<a class="anchor" href="#9-4-gitignore-补齐-本轮实测的未覆盖项" aria-label="锚点">#</a></h3>
+<p>以下目录本轮实测<strong>当时未被任何忽略规则覆盖</strong>，既持续污染 <code>git status</code>，又有被 <code>git add -A</code> 误收的风险：</p>
+<pre><code class="language-gitignore">/_产物/  tmp-cmp/  /.zcode-tmp/      # _产物 是 ARCH-068 §1.4 登记的「工作产物暂存区」，语义即不入库
+/.research-tmp/                       # 调研克隆与探测碎片
+/.opencode/node_modules/  /.zcode/tmp/   # 只忽略这两处——它们的配置文件仍在版本库内
+*.apk  *.aab  /apps/khy-mobile/release/  /apps/khy-os-client-app/release/</code></pre>
+<blockquote><p>刻意<strong>不</strong>整目录忽略 <code>.opencode/</code>、<code>.zcode/</code>：它们各有 1–2 个<strong>已跟踪</strong>的配置文件，整目录忽略会造成「已跟踪文件躺在忽略目录里」的不一致。</p></blockquote>
+<h3 id="9-5-让清理器覆盖真-自动膨胀源">9.5 让清理器覆盖真·自动膨胀源<a class="anchor" href="#9-5-让清理器覆盖真-自动膨胀源" aria-label="锚点">#</a></h3>
+<p><code>khy clean</code> 的 <code>BUILD_GLOBS</code> 新增一条，覆盖<strong>每次后端打包都会重新产生</strong>的 sourcemap：</p>
+<pre><code class="language-js">{ <span class="hljs-attr">dir</span>: <span class="hljs-string">&#x27;services/backend/dist&#x27;</span>, <span class="hljs-attr">match</span>: <span class="hljs-regexp">/\.map$/</span>,
+  <span class="hljs-attr">why</span>: <span class="hljs-string">&#x27;后端 bundle 的 sourcemap（调试辅助；cli.cjs / khy.cjs / khy.mjs 保留）&#x27;</span>,
+  <span class="hljs-attr">rebuild</span>: <span class="hljs-string">&#x27;cd services/backend &amp;&amp; node esbuild.config.js&#x27;</span> }</code></pre>
+<p><strong>只匹配 <code>.map</code>、不整目录清</strong>——因为 <code>services/backend/dist/cli.cjs</code> 是<strong>生产启动路径</strong>（见 <code>esbuild.config.js</code>），整目录清会当场弄坏 <code>khy</code> 命令。用探针文件实测确认 glob 生效后已移除探针。</p>
+<blockquote><p><strong>判断更正</strong>：APK 归档目录（<code>apps/*/release/</code>）<strong>不是自动膨胀源</strong>——<code>flutter build</code> 写的是 <code>build/</code>（已被覆盖），<code>release/</code> 只在有人主动归档时才增长。故未将其加入默认清理档，避免替维护者决定发布归档的去留。</p></blockquote>
+<h3 id="9-6-验收">9.6 验收<a class="anchor" href="#9-6-验收" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>检查</th><th>结果</th></tr></thead><tbody><tr><td><code>check:layout</code></td><td>✅ <strong>exit 0</strong>（本会话首次转绿；接手时 <code>dangling-task</code> 88 vs 基线 0，现 88 = 基线）</td></tr><tr><td><code>check:node-syntax</code></td><td>✅ exit 0，5,878 个 JS 文件</td></tr><tr><td><code>jest tests/cli/cleanHandler.test.js</code></td><td>✅ <strong>18/18</strong>（含「每项必须带非空重建命令」「executeClean 回收字节数与计划一致」）</td></tr><tr><td><code>jest tests/services/cleanupService*</code></td><td>✅ <strong>5 套件 30/30</strong></td></tr><tr><td><code>check:code-standards</code></td><td>归因后<strong>我的文件未引入新违规</strong>：<code>clean.js</code> 新增代码触发的嵌套超标（深度 5–6）已通过抽出 <code>_rmChildrenExcept</code> 压平；残余 4 处基线突破（<code>COMP-001-file/func/nest</code>、<code>COM-001</code>）均指向 <code>cleanupService.js</code> 的存量长函数（<code>getStorageReport</code> 99 行、<code>cleanTrajectories</code> 111 行等），与本轮改动无关</td></tr></tbody></table>
+<p>命令实测：注册命令总数 69（含 <code>cleanup</code>）、别名 66（含 <code>数据保留</code>）、预览与 <code>--json</code> 均正确渲染真实策略数值。</p>
+<h3 id="9-7-仍待处理-需维护者决定-本轮未动">9.7 仍待处理（需维护者决定，本轮未动）<a class="anchor" href="#9-7-仍待处理-需维护者决定-本轮未动" aria-label="锚点">#</a></h3>
+<ol><li><strong><code>scripts/maintenance/organize.py</code> 零接线</strong> —— <code>check:wiring</code> 报 <code>TOOLING-005</code> 两条：该检查器未被任何脚本/workflow/hook/阶段表引用，且 <code>LAYOUT-004</code> 声明的执行器正是它（<code>gate=pr</code>）。<strong>这是「防膨胀」最关键的一环</strong>——每日巡检本就是设计好的存量杂物收敛机制，却因为没接线而从未在门里跑过。修法是给它补一个 npm 入口或加进阶段表。</li><li><strong>体积守卫</strong> —— 建议在 <code>docs/_规范/RULES-REGISTRY.json</code> 登记一条 <code>PROCESS</code> 域规则（如「工作区非跟踪体积 &gt; 2 GB 判 error」），并新增对应检查器接入 <code>scripts/ruleguard/</code>。本轮未做：登记表正被并发会话改动，不宜单边修改。</li><li><strong><code>git gc</code> 的周期性</strong> —— 本轮实测 <code>gc.auto</code> 未设置（走 Git 默认 6700），这正是 2,001 个松散对象 / 280 MB 能积累起来的原因；<code>maintenance.auto=false</code> 亦关闭。建议维护者执行 <code>git maintenance start</code> 注册后台维护（会在系统计划任务中留一条），本轮未做——它创建的是仓库外的系统级状态。</li></ol>
+<hr>
+<h2 id="附-统计口径说明">附：统计口径说明<a class="anchor" href="#附-统计口径说明" aria-label="锚点">#</a></h2>
+<ul><li>总计 8,080 MB 含 <code>khy-Trajectory</code> junction 重复计数 246 MB 与 <code>node_modules/khy-os-backend</code> junction 重复计数 181 MB；扣除后物理占用约 <strong>7.65 GB</strong>。</li><li>「git 跟踪内容 ≈ 96 MB」由 <code>git archive --format=tar HEAD</code> 实测 104.2 MB 扣除 8,752 个文件的 tar 头开销（约 8 MB）得出。</li><li>大文件实测前 5 名：<code>.git-backup-20260913</code> pack 619.3 MB、<code>.git</code> pack 616.9 MB、<code>build/.../arm64-v8a/libflutter.so</code> 377 MB、<code>x86_64/libflutter.so</code> 371.9 MB、<code>armeabi-v7a/libflutter.so</code> 332.7 MB。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/11_报告/其它报告/2026-09-16_三项门禁缺口整改方案.html"><div class="dir">← 上一篇</div><div class="ttl">三项门禁缺口整改方案（接线 · 体积守卫 · git 维护周期化）</div></a><a class="next" href="../../../docs/11_报告/其它报告/NIGHTSHIFT-2026-09-13-夜班组值简报.html"><div class="dir">下一篇 →</div><div class="ttl">夜班组值简报 — khy-os 测试覆盖率</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/11_报告/其它报告/2026-09-16_khy-os体积构成分析与瘦身方案.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

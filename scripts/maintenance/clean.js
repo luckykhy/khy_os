@@ -48,6 +48,30 @@ const ROOT = path.resolve(__dirname, '..', '..');
  */
 const TARGETS = [
   {
+    rel: 'apps/khy-os-client-app/build',
+    group: 'build',
+    what: 'Flutter Android 构建缓存（~3.2 GB：native libs、DEX、APK 中间产物）',
+    rebuild: 'flutter build apk / flutter run（自动重建，首次 ~5 分钟）',
+  },
+  {
+    rel: 'apps/khy-os-client-app/.dart_tool',
+    group: 'build',
+    what: 'Flutter/Dart 工具链缓存（~325 MB：build_runner、hooks）',
+    rebuild: 'flutter pub get（自动重建）',
+  },
+  {
+    rel: 'dist-electron',
+    group: 'build',
+    what: 'Electron 构建输出（~328 MB）',
+    rebuild: 'pnpm run electron:dev 或 electron-builder',
+  },
+  {
+    rel: 'apps/khyos-desktop/dist-electron',
+    group: 'build',
+    what: '桌面端 Electron 构建输出（~359 MB）',
+    rebuild: 'pnpm run electron:dev',
+  },
+  {
     rel: 'dist',
     group: 'build',
     what: 'Python sdist/wheel 与 dist/modules 下的 6 份模块 bundle',
@@ -58,12 +82,6 @@ const TARGETS = [
     group: 'build',
     what: 'setuptools 的中间目录（build/lib、build/bdist.*）',
     rebuild: 'python -m build（或任一次 pip wheel 构建）',
-  },
-  {
-    rel: 'apps/khy-mobile/android/app/build',
-    group: 'build',
-    what: 'Gradle 构建缓存与 APK 中间产物',
-    rebuild: 'cd apps/khy-mobile/android && ./gradlew assembleDebug',
   },
   {
     rel: 'apps/ai-frontend/dist',
@@ -102,13 +120,19 @@ const TARGETS = [
     rebuild: '下次运行对应检查脚本时自动重建，只是第一次会慢一点',
   },
   {
+    rel: 'tmp-cov',
+    group: 'build',
+    what: 'quality-gate 覆盖率跑测的临时工作区（k1/k2，内含各自 node_modules 与 c8 原始数据）',
+    rebuild: 'npm run quality:gate / npm run cover-unit 每次跑测时重新生成',
+  },
+  {
     rel: 'extensions/tools/khy-markdown/vendor',
     group: 'vendor',
     what: 'muya WYSIWYG 引擎（约 11 MB，不进 git）',
     rebuild: 'node extensions/tools/khy-markdown/muya-embed/ensure-vendor.mjs',
   },
   {
-    rel: 'docs/_assets/mermaid.min.js',
+    rel: 'docs/19_资产/site/mermaid.min.js',
     group: 'vendor',
     what: '文档站 Mermaid 引擎（约 3.3 MB，不进 git）',
     rebuild: 'npm run docs:mermaid',

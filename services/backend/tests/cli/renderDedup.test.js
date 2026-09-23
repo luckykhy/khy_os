@@ -1,6 +1,6 @@
 'use strict';
 
-const { renderDedupEnabled, finalAlreadyStreamed } = require('./renderDedup');
+const { renderDedupEnabled, finalAlreadyStreamed } = require('../../src/cli/renderDedup.js');
 
 describe('renderDedup', () => {
   describe('renderDedupEnabled', () => {

@@ -1,5 +1,8 @@
 'use strict';
 
+// Webhook retry configuration
+const WEBHOOK_MAX_RETRIES = 3;
+
 /**
  * aiManagementServer 的「AI 网关管理平面」子系统(从上帝文件抽出)。
  *
@@ -319,7 +322,9 @@ async function collectGatewayModelsSnapshot() {
     let modelError = '';
     if (row.available) {
       try {
-        models = (await gw.listModels(row.type)) || [];
+        // 管理面(增删改 / 改名 / 设默认)必须看到全量([DESIGN-ARCH-100]):
+        // 用户得先看得见,才能隐藏或改名 —— 那是管理意图,不是「是否可调用」的结论。
+        models = (await gw.listModels(row.type, { unfiltered: true })) || [];
       } catch (err) {
         modelError = err.message || String(err);
       }
@@ -671,7 +676,9 @@ async function handleModelVerify(req, res, adapterKey, searchParams) {
       targets = [String(singleModel)];
     } else {
       const modelCuration = require('./gateway/modelCuration');
-      const raw = await gw.listModels(adapterKey).catch(() => []);
+      // 探活面必须看到**全量**([DESIGN-ARCH-100]):探活的目的正是给「未经证实的猜测条目」
+      // 一个被证实/证伪的机会。若此处已被真值过滤,用户就永远无法验证那些条目。
+      const raw = await gw.listModels(adapterKey, { unfiltered: true }).catch(() => []);
       targets = modelCuration.applyOverrides(adapterKey, raw || []).map((m) => m.id);
     }
     const results = [];
@@ -1447,15 +1454,38 @@ async function handleAiGatewayListCustomers(req, res, searchParams) {
 }
 
 async function handleAiGatewayCreateCustomer(req, res) {
-  const body = await parseBody(req);
-  const created = getCustomerRegistry().createCustomer(body || {});
-  sendJson(res, 200, created);
+  try {
+    const body = await parseBody(req);
+    const created = getCustomerRegistry().createCustomer(body || {});
+    sendJson(res, 200, created);
+  } catch (err) {
+    const message = String(err?.message || 'create customer failed');
+    const status = /already bound to customer/i.test(message)
+      ? 409
+      : /required/i.test(message)
+        ? 400
+        : 500;
+    sendError(res, status, message);
+  }
 }
 
 async function handleAiGatewayUpdateCustomer(req, res, customerId) {
-  const body = await parseBody(req);
-  const updated = getCustomerRegistry().updateCustomer(customerId, body || {});
-  sendJson(res, 200, updated);
+  try {
+    const body = await parseBody(req);
+    const updated = getCustomerRegistry().updateCustomer(customerId, body || {});
+    sendJson(res, 200, updated);
+  } catch (err) {
+    const message = String(err?.message || 'update customer failed');
+    // ownerUserId 绑定冲突（同一账号已绑到别的 customer）是资源状态冲突，不是服务端错误。
+    const status = /already bound to customer/i.test(message)
+      ? 409
+      : /not found/i.test(message)
+        ? 404
+        : /required/i.test(message)
+          ? 400
+          : 500;
+    sendError(res, status, message);
+  }
 }
 
 async function handleAiGatewaySetCustomerEnabled(req, res, customerId, enabled) {
@@ -1536,11 +1566,13 @@ async function handleAiGatewayCreatePayment(req, res) {
     sendJson(res, 200, created);
   } catch (err) {
     const message = String(err?.message || 'create payment failed');
-    const status = /required|greater than 0|unsupported payment provider/i.test(message)
-      ? 400
-      : /customer not found/i.test(message)
-        ? 404
-        : 500;
+    const status = /forbidden/i.test(message)
+      ? 403
+      : /required|greater than 0|unsupported payment provider|user not found/i.test(message)
+        ? 400
+        : /customer not found/i.test(message)
+          ? 404
+          : 500;
     sendError(res, status, message);
   }
 }

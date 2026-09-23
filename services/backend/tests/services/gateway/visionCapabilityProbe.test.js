@@ -1,5 +1,6 @@
 'use strict';
 const probe = require('../../../src/services/gateway/visionCapabilityProbe');
+const assert = require('node:assert');
 
 describe('Vision Capability Probe', () => {
   test('vision probe: observed visual attributes mean supported', () => {

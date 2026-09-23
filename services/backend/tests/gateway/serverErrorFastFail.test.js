@@ -1,22 +1,23 @@
 'use strict';
 /**
- * server_error fast-fail 熔断接线测试�?
+ * server_error fast-fail 熔断接线测试�?
  *
- * 背景修复:网关�?server_error(502/503/504) 此前不设 transient 冷却 �?_getRecentFastFail
- * �?5xx 恒返�?null �?同一请求/连续请求对同一把抖�?key 无限重试(卡死 1 小时根因)�?
- * 修复:_TRANSIENT_COOLDOWN_MS 增加 server_error(默认 15s,GATEWAY_SERVER_ERROR_COOLDOWN_MS 可覆�?�?
+ * 背景修复:网关�?server_error(502/503/504) 此前不设 transient 冷却 �?_getRecentFastFail
+ * �?5xx 恒返�?null �?同一请求/连续请求对同一把抖�?key 无限重试(卡死 1 小时根因)�?
+ * 修复:_TRANSIENT_COOLDOWN_MS 增加 server_error(默认 15s,GATEWAY_SERVER_ERROR_COOLDOWN_MS 可覆�?�?
  *
- * 验证�?
- *   1. _TRANSIENT_COOLDOWN_MS.server_error 存在且默�?�?5000ms
+ * 验证�?
+ *   1. _TRANSIENT_COOLDOWN_MS.server_error 存在且默�?�?5000ms
  *   2. env 覆盖生效
- *   3. _getRecentFastFail �?server_error 失败(在冷却窗口内)返回非空 �?熔断生效
+ *   3. _getRecentFastFail �?server_error 失败(在冷却窗口内)返回非空 �?熔断生效
  */
 const fs = require('fs');
+const assert = require('node:assert');
 const path = require('path');
 const GATEWAY_SRC = path.join(__dirname, '..', '..', 'src', 'services', 'gateway', 'aiGateway.js');
 
 describe('Server Error Fast Fail', () => {
-  test('_TRANSIENT_COOLDOWN_MS 包含 server_error(默认 �?5000ms)', () => {
+  test('_TRANSIENT_COOLDOWN_MS 包含 server_error(默认 �?5000ms)', () => {
       const src = fs.readFileSync(GATEWAY_SRC, 'utf-8');
       assert.match(src, /server_error[^,]*_parseMs\(process\.env\.GATEWAY_SERVER_ERROR_COOLDOWN_MS,\s*15000,\s*5000\)/,
         'server_error 冷却应存在且默认 15000ms');
@@ -26,7 +27,7 @@ describe('Server Error Fast Fail', () => {
       const { _parseMs } = require('../../src/services/gateway/_envParse');
       process.env.GATEWAY_SERVER_ERROR_COOLDOWN_MS = '5000';
       try {
-        // _TRANSIENT_COOLDOWN_MS 在模块加载时求�?�?_parseMs(env, 15000, 5000)�?
+        // _TRANSIENT_COOLDOWN_MS 在模块加载时求�?�?_parseMs(env, 15000, 5000)�?
         const v = _parseMs(process.env.GATEWAY_SERVER_ERROR_COOLDOWN_MS, 15000, 5000);
         expect(v).toBe(5000);
       } finally {
@@ -34,12 +35,12 @@ describe('Server Error Fast Fail', () => {
       }
   });
 
-  test('真实网关:_getRecentFastFail �?server_error 失败在窗口内返回非空(熔断生效)', () => {
-      // 加载真实 gateway,�?DI 注入 cooldown mixin 依赖,驱动完整 fast-fail 判定路径�?
+  test('真实网关:_getRecentFastFail �?server_error 失败在窗口内返回非空(熔断生效)', () => {
+      // 加载真实 gateway,�?DI 注入 cooldown mixin 依赖,驱动完整 fast-fail 判定路径�?
       const gatewayMod = require('../../src/services/gateway/aiGateway');
       const cooldownLeaf = require('../../src/services/gateway/aiGatewayCooldownMethods');
-      // 注入真实模块�?helper(�?aiGateway 加载时已�?setAiGatewayCooldownMethodsDeps 接线;
-      // 这里显式重注�?保证测试环境与生产一�?�?
+      // 注入真实模块�?helper(�?aiGateway 加载时已�?setAiGatewayCooldownMethodsDeps 接线;
+      // 这里显式重注�?保证测试环境与生产一�?�?
       cooldownLeaf.setAiGatewayCooldownMethodsDeps({
         _transientCooldownMs: (t) => gatewayMod._transientCooldownMs
           ? gatewayMod._transientCooldownMs(t)
@@ -66,13 +67,13 @@ describe('Server Error Fast Fail', () => {
       gw._adapterFirstFailureAt = {};
       gw._resolveFastFailCooldownMs = (k, type) => 30000;
     
-      // server_error 现在应有 transient 冷却 �?_getRecentFastFail 返回非空
+      // server_error 现在应有 transient 冷却 �?_getRecentFastFail 返回非空
       const transient = gatewayMod._transientCooldownMs
         ? gatewayMod._transientCooldownMs('server_error')
         : 15000;
       expect(transient >= 5000).toBeTruthy();
     
-      // 手动写入一�?server_error 失败记录,验证 _getRecentFastFail 在窗口内能读到它�?
+      // 手动写入一�?server_error 失败记录,验证 _getRecentFastFail 在窗口内能读到它�?
       gw._adapterLastError['api'] = {
         at: Date.now(),
         errorType: 'server_error',

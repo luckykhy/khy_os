@@ -480,6 +480,19 @@ const FLAGS = {
   // 归因:每轮对 system/tools 拍 SHA-256 短哈希,命中低时定位「哪段变了」(system/tools/order);
   // 关 → captureShape 返 null、不显示归因(逐字节回退到只报百分比)。
   KHY_CACHE_PREFIX_SHAPE: { mode: 'default-on', off: 'CANON', default: true },
+
+  // ── [DESIGN-ARCH-098] 系统提示词分区可观测化(锚点 + 新鲜度键)────────────────────────
+  // P0 装配锚点:给每个装配段插入 `<!-- khy:<slot>:<id> -->` 标记,把「分层」从隐含的数组位置
+  // 变成可解析、可计量、可守卫的事实(逐段字节数 / 单条 token 上限 / 前缀失效归因到段)。
+  // 标记会进入模型可见文本(约 +1.4KB),故**默认关**:仅度量与守卫需要时显式打开。
+  // ⚠️ 必须登记为 opt-in:未登记的 name 会被 isFlagEnabled 保守放行为 true(gateOn 的契约),
+  // 不登记等于默认开,与「P0 零产物变更」矛盾。关(或缺省) → 装配产物与启用前逐字节一致。
+  KHY_PROMPT_ANCHORS: { mode: 'opt-in', off: 'CANON', default: false },
+  // P1 新鲜度 cacheKey:修 git_status / project_instructions / skill_catalog 三段的段缓存冻结
+  // (段缓存按 id 存一条,cacheKey 不变即永不重算 → 与三段自己声明的易变性矛盾)。
+  // 默认**开**(属缺陷修复);关(0/false/off/no) → 三段各自回退旧键(cwd / contextWindowTokens),
+  // 段缓存行为逐字节等于修复前。
+  KHY_PROMPT_FRESH_KEYS: { mode: 'default-on', off: 'CANON', default: true },
   // 会话累计命中率:把整会话每轮 hit/miss 累加,aggregate=hit/(hit+miss),比单轮稳;
   // 关 → 不累计、不显示会话行(逐字节回退到只显示单轮命中率)。
   KHY_CACHE_SESSION_AGGREGATE: { mode: 'default-on', off: 'CANON', default: true },
@@ -1074,6 +1087,21 @@ const FLAGS = {
   // 逐字节回退(不前置,直接落通用墙)。诚实:只翻译已发生信号,不代办;纯叶子零 IO 绝不抛。
   KHY_CHANNEL_FAILURE_ADVICE: { mode: 'default-on', off: 'CANON', default: true },
 
+  // ── CLI 失败信封([DESIGN-ARCH-114] / RUNTIME-005,cliFailureEnvelope.js)──
+  // 缺口:buildChannelFailureAdvice 等叶子已把真实诊断前置好了,但 CLI 出口
+  // (aiChatCore.js 失败分支)把 result.content 整段当「失败信息」贴出且**截断 180 字符**,
+  // 恰好切在「⚠ 通道失败原因与下一步:」表头之后 → 机器码/通道名/钉选元原因全丢;
+  // 再叠加两份近义散文 + 12 行静态推广清单占首屏,用户看不出「哪条通道、什么码、
+  // 为什么没回退」。2026-09-17 实测:.env 残留 GATEWAY_PREFERRED_ADAPTER=windsurf +
+  // STRICT=true 钉死在未安装通道上,却只能看到「所有 AI 通道均不可用」墙。
+  // 开该门(默认)→ 失败首屏由结构化信封渲染:机器码(单射互斥)+ 主因通道 + 路由披露
+  // (钉选时必现)+ 可执行 hint;静态推广清单只在确实无建议可给时才占首屏。
+  // 关键边界(§3.1):钉选**不可**无条件优先——仅当被钉通道 statusCode===0/不存在时才报
+  // 钉选专项码;通道给出真实 HTTP 拒绝(401/403/404/429/5xx)须照实报通道侧事实,
+  // 否则会把 09-13→15 的误诊(钉选读成密钥)反向重犯(密钥读成钉选)。
+  // 关门/任何异常 → 逐字节回退今日 errorMsg 拼接路径。纯叶子零 IO 绝不抛。
+  KHY_CLI_FAILURE_ENVELOPE: { mode: 'default-on', off: 'CANON', default: true },
+
   // ── 人肉中转不作自动兜底(manualRelayAutoFallbackPolicy;排障「为什么出现剪贴板中转模式」收尾修)──
   // 剪贴板中转(clipboardRelayAdapter)本质是人肉复制粘贴 + 监听剪贴板(最长等人 5 分钟),网页中转
   // (webRelayAdapter)同样要人把提示词粘进网页再贴回。旧行为:generate 级联遍历整份 _adapters,manual
@@ -1406,6 +1434,18 @@ const FLAGS = {
   // 丢弃为 null(用通道默认模型);关 → 逐字节回退(原样透传外来 id=今日行为)。仅治 relay_api,
   // 不碰 api 代理(它 honor PROXY_MODEL_ROUTE_MAP 能正确转发自定义 provider)。
   KHY_RELAY_MODEL_GUARD: { mode: 'default-on', off: 'CANON', default: true },
+
+  // ── 模型列表「存在性真值」收敛(modelListTruth;用户实测:前端 TUI 模型列表频繁出现大量真实
+  // 不存在的模型,选中即报错)──
+  // 适配器的 listModels() 是**候选池**而不是真值表:它把上游亲口返回的 remote id、静态硬编码目录
+  // (builtin)、本机 IDE storage.json 正则扫描拾取的 local、RELAY_API_MODELS 等 env 逗号串(hint)
+  // 扁平混成一个数组,下游无从分辨「事实」与「猜测」,于是把猜测展示成可选模型 → 选中即
+  // model_not_found。开该门 → 上游权威覆盖律:某适配器产出 ≥1 条 remote 记录时,该 remote 集即
+  // 唯一权威,非权威来源除非是上游 id 的结构性变体(`id::mode` / `_baseModelId`)一律剔除;无
+  // remote 记录(上游不可达 / 该通道无列表接口)→ 一条不剔,仅打 `unverified` 标注供 UI 显式提示。
+  // 另加两条恒定律:形态律(非法 ID 剔除)、实测律(探活 TTL 内判 failed 的剔除)。关 → isEnabled
+  // 恒 false → 调用方走原路径,逐字节回退今日行为。
+  KHY_MODEL_LIST_TRUTH: { mode: 'default-on', off: 'CANON', default: true },
 
   // ── 级联模型作用域(cascadeModelScope;用户实测:codex 未安装 → gpt-5.3-codex-review
   // 被带给 relay_api(端点 api.stepfun.com)→ HTTP 404 model_invalid → 重试才答出话)──
@@ -1942,6 +1982,12 @@ const FLAGS = {
   // 兜底句补上目标;关 → 逐字节回退到「只有 websearch 会换」的历史行为。
   KHY_TOOL_NARRATION_LIVE_VOICE: { mode: 'default-on', off: 'CANON', default: true },
 
+  // ── 意图拍首句从思维链抽取(toolPrefaceVoice;2026-08-30 用户诉求「不硬编码,从思维链里抽」)──
+  // 首发句此前是 JS 字面量模板,与模型实际在想什么脱节。开 → 调用方把模型思维链文本经
+  // options.cotText 传入 toolProgressReason,从中抽一句短句当 occurrence 0 首发句(续接句
+  // 仍走 _voice 轮换不受影响);抽不到/门关/抽错 → 字节级回退字面量 first(逐字测试不退化)。
+  KHY_TOOL_PREFACE_COT: { mode: 'default-on', off: 'CANON', default: true },
+
   // ── turn 级即时确认「先回应用户,再干活」(turnAckVoice;2026-07-05 用户反馈)────────────
   // 用户反馈:khy 收到提示词后直接静默进 runToolUseLoop 调模型,全程没有任何「先回应用户」的文本
   // (现有 preface 全是逐工具、且在模型跑起来之后才出)。用户要 khy 代码级先甩一句确定性短句回应、
@@ -2296,19 +2342,25 @@ const FLAGS = {
   // 不变复用上帧 rows;关 → 每帧重算,逐字节回退今日行为。重排是纯函数,逐字节等价。
   KHY_PROMPT_LAYOUT_MEMO: { mode: 'default-on', off: 'CANON', default: true },
 
-  // ── 长粘贴折叠为占位符(promptPasteSummary;「大段粘贴撑爆输入框」)──────────────────
+  // ── 长粘贴折叠为带 ID 占位符(promptPasteSummary;「大段粘贴撑爆输入框」)──────────────
   // useTextInput 的 flushPaste 在 accumulated paste 超过门限(150 字符或 3 行)时不把全文
-  // 插入 buffer,而是替换为一行 `[Pasted ~N lines]` 占位符。短粘贴(< 150 字符且 < 3 行)
-  // 仍原样插入(逐字节回退今日行为)。关(0/false/off/no) → flushPaste 不检查门限,全文直接
-  // 插入 = 逐字节回退。仅影响粘贴路径,手动输入/历史回览/其他编辑不受影响。
-  KHY_PROMPT_PASTE_SUMMARY: { mode: 'opt-in', off: 'CANON', default: false },
+  // 插入 buffer,而是折成 `[Pasted text #N (+M lines)]` 内联 tag,原文存入粘贴归档(20 条
+  // 上限)供提交时展开——AI 收到 `<pasted-content>` 包裹的原始字节,不丢数据(对齐经典 REPL
+  // 的 _pasteArchive)。短粘贴(< 150 字符且 < 3 行)仍原样插入(逐字节回退今日行为)。
+  // 关(0/false/off/no) → flushPaste 不检查门限,全文直接插入 = 逐字节回退。仅影响粘贴路径,
+  // 手动输入/历史回览/其他编辑不受影响。门控实现在 useTextInput.isPasteSummaryEnabled
+  // (默认开,非 off 词表即开),此处登记此前误标为 opt-in/default:false,与运行时矛盾,
+  // 已修正登记口径。
+  KHY_PROMPT_PASTE_SUMMARY: { mode: 'default-on', off: 'CANON', default: true },
 
   // ── Shell 模式:! 前缀切换 + Escape/Backspace 退出(promptShellMode)────────────────
   // 输入框检测到 `!` 前缀时切换 shell 模式:占位符变为 "Run a command…"、Escape 或光标在
   // 首位时 Backspace 退出 shell 模式回普通输入。关 → useTextInput 不检测 `!` 前缀、不切换
   // 占位符、不拦截 Escape/Backspace = 逐字节回退今日行为。提交时 `!` 路由到 shellCommand
-  // 仍由 App.js handleSubmit 处理(与本门控无关)。
-  KHY_PROMPT_SHELL_MODE: { mode: 'opt-in', off: 'CANON', default: false },
+  // 仍由 App.js handleSubmit 处理(与本门控无关)。门控实现在
+  // useTextInput.isShellModeEnabled(默认开,非 off 词表即开),此处登记此前误标为
+  // opt-in/default:false,与运行时矛盾,已修正登记口径。
+  KHY_PROMPT_SHELL_MODE: { mode: 'default-on', off: 'CANON', default: true },
 
   // ── live spinner token 懒估算(spinnerTokenLazy;「动画/输入体验卡顿,无法做真正的软件项目」)──
   // App._spinnerProgress 在渲染体内被调(忙碌时每帧 + 1s nowTick),每次对整条累积
@@ -2563,12 +2615,36 @@ const FLAGS = {
   // 结构化超时、绝不悬挂)。关 → resolveToolTimeoutMs 直返 defaultMs,逐字节回退今日行为。
   KHY_TOOL_TIMEOUT: { mode: 'default-on', off: 'CANON', default: true },
 
+  // ── 工具调用能力的隔离式挑战(P3;BUG-014 的最后一环)──────────────────────────────
+  // 一个模型被判 text 之后 tools 就不再上行,于是它再也没有机会用原生调用翻案,只能等
+  // 7 天 TTL。开该门 → 每 N 次请求放行一次「原生挑战」(照发 tools);模型若原生调用了,
+  // 被动学习立即晋升 native,错误结论当场推翻。通道已被记为拒收时不挑战(那是通道定论)。
+  // 关 → toolChallengeCadence.shouldChallenge 恒 false,逐字节回退到「一律按判定档位走」。
+  KHY_TOOL_CAP_CHALLENGE: { mode: 'default-on', off: 'CANON', default: true },
+
+  // 挑战间隔(每 N 次请求一次)。默认 10;声明下限 2 —— 每 1 次都挑战等于不剥离,失去节流意义,
+  // 故非法/越界值回落默认(everyRequests 里实现,不在本表强校验)。
+  KHY_TOOL_CAP_CHALLENGE_EVERY: {
+    mode: 'numeric',
+    off: 'CANON',
+    default: 10,
+    min: 2,
+    max: 1000,
+  },
+
   // ── ESC / 用户中断 → 取消执行中的工具(治「工具在跑时按 ESC 打不断,要等 120s 硬超时」)──
   // ESC(cancelActiveRequest)今天只 abort 模型/网关流,到不了在途工具。开该门 → loop 把
   // parentAbort.signal(仅真·中断时触发)穿进工具执行,_withToolTimeout 让在途工具与 abort
   // 竞赛,信号触发 → 诚实、可重试的「已取消」结果,loop 迭代间断开本轮。关 → 工具不与 abort
   // 竞赛、上下文不带 signal、入口不传 abortSignal,逐字节回退今日行为。
   KHY_TOOL_ABORT_SIGNAL: { mode: 'default-on', off: 'CANON', default: true },
+
+  // ── G-B 协作式取消：外部 abort 在「下一 phase 边界」干净收尾(治「取消只松手工具、loop 又重发模型」)──
+  // 现状缺口：外部 abortSignal/ESC 只置 parentAbort，让批次内剩余工具 break(松手)，但外层 while
+  // 随即重入并再发一次 chat()——那一回合不是用户要的。开该门 → 迭代顶部检测 externalSignal.aborted
+  // (纯外部取消；/i 暂停走 interruptSignal.interrupted 另一条路，不受影响，规避 ZCode #174「切会话误杀在飞回合」)
+  // → 以既有 { cancelled:true, stopped:true } 形状干净收尾,不再重发模型。关 → 逐字节回退今日「继续重发」行为。
+  KHY_TURN_CANCEL_PHASE_BOUNDARY: { mode: 'default-on', off: 'CANON', default: true },
 
   // ── WebFetch 总墙钟 + abort 接线(webFetchDeadline;治「一显示正在处理就卡死·抓取卡 1m59s」)──
   // 现场:一次 WebFetch 卡在「正在检索外部信息… 1m59s · 等待响应…」直到外层 120s 工具硬顶才松手。
@@ -2686,27 +2762,99 @@ const FLAGS = {
   // shouldContinue 恒 false → 逐字节回退历史「尾部 \ 直接提交」行为。
   KHY_BACKSLASH_NEWLINE: { mode: 'default-on', off: 'CANON', default: true },
 
+  // ── 键盘交互:中文输入法组字上屏的 Enter 近因守卫(imeCommitGuard)────────────────
+  // CJK 输入法确认组字时,终端原子地送出「组字文本(+可能的 Enter)」;ink 拆成两个事件后,
+  // 那个裸 Enter 被误读为用户提交——半截输入被发出/补全菜单命令被立即执行/反向搜索被误收。
+  // 共享纯叶子按「全宽字符插入后的守卫窗(120ms)」吞掉该裸 Enter(组字文本已上屏,下一次
+  // Enter 才是真提交)。消费者:useTextInput / CcPromptInput / App.js revSearch 与补全菜单。
+  // 关 → shouldSwallowBareEnter 恒 false → 逐字节回退「IME Enter 即提交」的历史行为。
+  KHY_IME_ENTER_GUARD: { mode: 'default-on', off: 'CANON', default: true },
+
+  // ── 帧高纪律 P0-2:live 工具行真实计费 + CcApp 已提交消息尾窗(toolEntryRows / CcApp)──
+  // KHY_TOOL_ROW_BUDGET:liveHeightClamp.tailTimelineToVisualRows 对 tool entry 历史上恒记
+  // 1 行,而单条已完成工具实际渲染可到 ~20 行(shell 折叠体 / ±diff / 错误详情)→ 工具密集
+  // 回合 live 帧越过 rows → ink 全屏重绘 → 「同段输出重复多份」([IMPL-RPT-044])。开 →
+  // StreamingBlock 下传 estimateToolEntryRows(toolCostOf 回调,与渲染逐分支同源 + 共用
+  // memo 缓存)按真实行数收缩尾窗;关 → 不下传 → 恒记 1 行,逐字节回退今日。
+  // KHY_CC_MESSAGE_CAP:CcApp(KHY_CC_TUI=1)已提交消息区从全量渲染改为按
+  // ccLayout.messageAreaCap 尾窗化(帧高 ≤ rows,Chrome 份额:logo/AgentTree/横幅/toast/
+  // 状态栏/输入框/streaming 行/2 行 frame slack 预扣)。关 → 全量渲染,逐字节回退今日。
+  KHY_TOOL_ROW_BUDGET: { mode: 'default-on', off: 'CANON', default: true },
+  KHY_CC_MESSAGE_CAP: { mode: 'default-on', off: 'CANON', default: true },
+
+  // ── 统一剪贴板出口:原生写入 + OSC 52 兜底通道(clipboard 统一出口;纯叶子判定 + IO 壳)──
+  // 统一剪板出口的五扇门:
+  //   KHY_CC_CLIPBOARD        总闸:统一剪贴板出口(原生写入 + OSC 52 兜底)是否启用。
+  //                           默认开。关 → 逐字节回退旧路径(直接调 imageService 原生写入,
+  //                           无 OSC 52 兜底)。
+  //   KHY_CLIPBOARD_OSC52     OSC 52 兜底通道:原生写入不可用/失败时,经终端 OSC 52
+  //                           写剪贴板(远程/SSH 场景无本地剪贴板进程时的兜底)。默认开;
+  //                           parent=KHY_CC_CLIPBOARD(父关→子必关)。关 → 不走 OSC 52,
+  //                           逐字节回退仅原生写入。
+  //   KHY_CLIPBOARD_DUAL      双通道并行:原生 + OSC 52 同时写(互不等待,任一成功即成功)。
+  //                           默认关。parent=KHY_CC_CLIPBOARD。开 → 并行双写;关 → 逐字节
+  //                           回退「先原生、失败才走 OSC 52」的顺序兜底路径。
+  //   KHY_CLIPBOARD_PASSTHROUGH tmux/screen DCS passthrough 包装:外层终端是 tmux/screen
+  //                            时,OSC 52 写不出去(被其吞掉),改为 DCS passthrough
+  //                            (Ptmux; 6776 私有标记 + 转发)绕过。默认开;
+  //                            parent=KHY_CLIPBOARD_OSC52(父关→子必关)。关 → 不套
+  //                            passthrough 包装,逐字节回退裸 OSC 52。
+  //   KHY_CLIPBOARD_MAX_BYTES  OSC 52 载荷字节上限:base64 编码后超过该值的 payload 拒绝
+  //                            走 OSC 52(避免终端缓冲区溢出/拒绝)。默认 100000(100KB);
+  //                            0 = 不限制(不设上限)。parent=KHY_CLIPBOARD_OSC52。
+  KHY_CC_CLIPBOARD: { mode: 'default-on', off: 'CANON', default: true },
+  KHY_CLIPBOARD_OSC52: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_CC_CLIPBOARD',
+  },
+  KHY_CLIPBOARD_DUAL: {
+    mode: 'opt-in',
+    default: false,
+    parent: 'KHY_CC_CLIPBOARD',
+  },
+  KHY_CLIPBOARD_PASSTHROUGH: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_CLIPBOARD_OSC52',
+  },
+  KHY_CLIPBOARD_MAX_BYTES: {
+    mode: 'numeric',
+    default: 100000,
+    min: 0,
+    max: 10485760,
+    parent: 'KHY_CLIPBOARD_OSC52',
+  },
+
   // ── 终端鼠标层与备用缓冲区(TUI 原生拖选/滚轮可用性;三档 + 独立覆写)────────────────
   // 为什么必须登记(2026-09-17,[DESIGN-ARCH-119]):这些 flag 此前**只存在于代码里**,
   // 483 个已登记 flag 中一个都没有。后果是用户遇到「拖选选不中」时,唯一退路
   // `KHY_MOUSE=off` 无从发现 —— 而这恰恰是当时唯一能自解的办法。登记本身即是修复的
   // 一部分:一个没有出口的开关等于不存在。
   //
-  //   KHY_MOUSE        三档主开关:off(完全不接管,原生滚轮+拖选全保留)/
-  //                    click(默认:接管滚轮与按钮,press/release 按命中条件性放行,
-  //                    拖选不受影响)/ full(额外开 1003 悬停高亮,**必然**吞掉拖选)。
-  //                    未识别终端由 autoDetectTerminal 兜底不接管。
+  //   KHY_MOUSE        三档主开关:off(完全不接管,原生滚轮+拖选全保留;备屏下等于
+  //                    把滚轮交给终端合成 ↑/↓)/ click(接管滚轮与按钮,press/release
+  //                    按命中条件性放行)/ full(额外开 1003 悬停高亮,**必然**吞掉拖选)。
+  //                    **未表态时的默认值按缓冲区定**(2026-09-20):备屏开 → click,
+  //                    备屏关 → off。判词见 mouseButtons.js 头部「滚轮在备用缓冲区里
+  //                    必须有主」。未识别终端由 autoDetectTerminal 兜底不接管。
   //   KHY_MOUSE_BUTTONS 旧版布尔覆写(**优先于 KHY_MOUSE 档位**):1/true/on/yes 强制
   //                    开点击层;0/false/off/no 强制关(等价 off 档)。保留为兼容入口。
   //   KHY_MOUSE_HOVER  悬停追踪(1003)独立门控:仅 full 档默认开,显式可覆写。
   //                    1003 是 60~120Hz 事件洪流,且**必然**吞掉拖选 —— 只在明确需要
   //                    悬停高亮时开。
   //   KHY_MOUSE_WHEEL  滚轮路由:默认开 → 滚轮驱动应用内视口(onWheel)。显式 0 → 回退
-  //                    「交还终端原生滚动」。⚠ 只在主屏幕下有意义;备用缓冲区没有回滚
-  //                    缓冲,交还终端会被合成为 ↑/↓ → 变成输入历史回溯(§0.9.3)。
-  //   KHY_ALT_SCREEN   备用缓冲区(1049h):legacy 模式默认开(退出时恢复原终端内容,
-  //                    防残影);CC 模式(KHY_CC_TUI=1)默认关,让原生回滚正常工作。
-  //                    开 → 强制接管滚轮(见 KHY_MOUSE_WHEEL 的备屏注意事项)。
+  //                    「交还终端原生滚动」。⚠ 回退只在**主屏幕**(KHY_ALT_SCREEN=0)
+  //                    下有意义;备用缓冲区没有回滚缓冲,交还终端会被合成为 ↑/↓ →
+  //                    变成输入历史回溯(§0.9.3)。备屏下**不要**关它。
+  //   KHY_ALT_SCREEN   备用缓冲区(1049h):默认开(退出时恢复原终端内容,防残影)。
+  //                    它与滚轮归属**耦合**:备屏开着就必须有人接管滚轮(见 KHY_MOUSE),
+  //                    否则终端把滚轮合成 ↑/↓ → 输入历史回溯。
+  //                    ⚠ 本段曾写「CC 模式(KHY_CC_TUI=1)默认关」,与代码不符 ——
+  //                    app.js 写 1049h 时**不看** CC 模式,两种模式都进备屏。照那句推
+  //                    会得出「CC 模式原生滚轮可用」的错结论,已订正。
   KHY_MOUSE: { mode: 'opt-in', default: false },
   KHY_MOUSE_BUTTONS: { mode: 'opt-in', default: false, parent: 'KHY_MOUSE' },
   KHY_MOUSE_HOVER: { mode: 'opt-in', default: false, parent: 'KHY_MOUSE' },
@@ -2731,6 +2879,7 @@ const FLAGS = {
   KHY_SELECT: { mode: 'default-on', off: 'CANON', default: true },
   KHY_SELECT_CLIP: { mode: 'default-on', off: 'CANON', default: true },
   KHY_SELECT_DRAG: { mode: 'default-on', off: 'CANON', default: true },
+
   // ── 键盘快捷键对齐 Claude Code:Ctrl+R 反向增量历史搜索(historyReverseSearch)──────────
   // Ctrl+R 打开反向增量历史搜索浮层,复用既有 ~/.khyquant_history 持久化 + session 历史;纯叶子
   // 只做「query → 命中(新→旧序)」搜索计算,IO/渲染留 App.js 薄壳与 HistorySearchOverlay。关 →
@@ -3513,7 +3662,7 @@ const FLAGS = {
   KHY_HOOK_PROMPT_SECTION: { mode: 'default-on', off: 'CANON', default: true },
 
   // ── 内置拓展根(extensionRoots:仓库/安装根下的 extensions/ 参与发现)──
-  // [DESIGN-ARCH-069] 拓展契约。此前三套拓展机制都只扫用户目录,仓库自己的 extensions/
+  // [DESIGN-TOOL-002] 拓展契约。此前三套拓展机制都只扫用户目录,仓库自己的 extensions/
   // 没有任何加载器看它 —— 本门控打开的正是这一路新增发现(<appRoot>/extensions,随主包
   // 分发的内置拓展)。默认开(内置拓展是平台承诺的一部分,不该要用户额外开一个开关);
   // 关 → extensionRoots.listRoots() 不再产出 builtin 根,根集合逐字节回退到本契约引入前
@@ -3579,8 +3728,19 @@ const FLAGS = {
 };
 
 /**
- * 判定一个已登记 flag 是否启用。父→子优先级在此集中施加:父门控关 → 子门控必关。
- * 未登记 name → 保守放行(true)。绝不抛;坏 env/坏 spec → 安全默认。
+ * 判定一个 flag 是否启用。父→子优先级在此集中施加:父门控关 → 子门控必关。
+ * 绝不抛;坏 env/坏 spec → 安全默认。
+ *
+ * 未登记 name 的语义(关键,勿再回退成无条件 true):
+ *   - env 里也无该值 → true(缺省即「默认开」——与所有消费方 local CANON 回退一致);
+ *   - env 里有显式值 → 按 CANON 4 词表解析(0/false/off/no → false,其余 true)。
+ *   历史上这里是无条件 `return true`,而 190+ 消费文件(isEnabledDefaultOn / gateOn /
+ *   modernKeyRedaction / visionFailureSummary / …)把**全部**判定委派给本函数,且
+ *   `require('../services/flagRegistry')` 永不抛 → 它们文档里的「require 失败回退本地
+ *   CANON」是死代码,等于 KHY_MODERN_KEY_REDACTION=0 / KHY_VISION_FAILURE_SUMMARY=0
+ *   等关闭词对未登记 flag **静默失效**(kill-switch 断裂,含安全脱敏门)。
+ *   逐字节修复:未登记 + 缺值 → true(默认开不变);未登记 + 显式值 → CANON 解析,
+ *   与每处 local 回退的语义完全一致。
  *
  * @param {string} name             flag 名(如 'KHY_GOAL_STOP_GATE')
  * @param {object} [env]            默认 process.env
@@ -3591,8 +3751,13 @@ function isFlagEnabled(name, env = process.env, _seen) {
   try {
     const spec = FLAGS[name];
     if (!spec) {
-      return true;
-    } // 未登记 → 保守放行
+      // 未登记:缺值 → 默认开;显式值 → CANON 解析(绝不吞掉用户的关闭词)。
+      const raw = env && env[name];
+      if (raw === undefined || raw === null) {
+        return true;
+      }
+      return !OFF_WORDS.CANON.includes(String(raw).trim().toLowerCase());
+    }
 
     // 父→子优先级:父关则子必关。_seen 防父子成环导致的无限递归。
     const seen = _seen || new Set();

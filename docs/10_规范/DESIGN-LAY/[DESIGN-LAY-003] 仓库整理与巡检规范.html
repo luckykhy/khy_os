@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-LAY-003] 仓库整理与巡检规范.md -->
+<title>[DESIGN-LAY-003] 仓库整理与巡检规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-LAY<span class="sep">›</span>[DESIGN-LAY-003] 仓库整理与巡检规范</div>
+      <header class="hero reveal"><h1>[DESIGN-LAY-003] 仓库整理与巡检规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-lay-003-仓库整理与巡检规范">[DESIGN-LAY-003] 仓库整理与巡检规范</a></li><li class="lvl-2"><a href="#1-红线">1. 红线</a></li><li class="lvl-2"><a href="#2-整理对象白名单">2. 整理对象白名单</a></li><li class="lvl-2"><a href="#3-风险分级">3. 风险分级</a></li><li class="lvl-2"><a href="#4-每日巡检流程">4. 每日巡检流程</a></li><li class="lvl-2"><a href="#5-反例-易踩的坑">5. 反例（易踩的坑）</a></li><li class="lvl-2"><a href="#6-存量债登记-本文不执行-只登记">6. 存量债登记（本文不执行，只登记）</a></li><li class="lvl-2"><a href="#版本历史">版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-lay-003-仓库整理与巡检规范">[DESIGN-LAY-003] 仓库整理与巡检规范<a class="anchor" href="#design-lay-003-仓库整理与巡检规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: LAYOUT-004 -->
+<blockquote><p><strong>定位</strong>：管「存量杂物怎么清、每日怎么巡检」。新文件该放哪个目录、该怎么命名、谁能依赖，真源是 <code>[DESIGN-LAY-002]</code>（LAYOUT-001）与 <code>[DESIGN-LAY-005]</code>，本文<strong>不重复、不覆盖、不裁决</strong>，只补它们没管的下半段：已存在的生成物、临时物、产物如何回收。</p>
+<p><strong>结论</strong>：① 整理对象只有<strong>生成物 / 临时物 / 产物</strong>三类，源码、配置、运行时数据<strong>零触碰</strong>；② <strong>只隔离、不删除</strong>，隔离区 <code>.khyos/housekeeping/&lt;日期&gt;/</code>，凭 manifest 原路撤回；③ 全仓 687 个 <code>.html</code> 孪生是 <strong>LAY-5 强制要求</strong>的合法产出，<strong>不是孤儿文件，不得清理</strong>——这是本规范最容易被误判的一条。</p></blockquote>
+<hr>
+<h2 id="1-红线">1. 红线<a class="anchor" href="#1-红线" aria-label="锚点">#</a></h2>
+<blockquote><p>每行均可写成守卫断言或评审 checklist 项。守卫列写「人工」表示暂无机械检查。</p></blockquote>
+<table><thead><tr><th><strong>编号</strong></th><th><strong>红线</strong></th><th><strong>触发条件</strong></th><th><strong>违规后果</strong></th><th><strong>守卫</strong></th></tr></thead><tbody><tr><td>HK-1</td><td>git 已跟踪文件一律不动</td><td>整理动作命中 <code>git ls-files</code> 结果</td><td>中止该动作并记入「已拒绝」</td><td><code>organize.py</code></td></tr><tr><td>HK-2</td><td>运行时数据只读</td><td>触碰 <code>.khy/</code>、<code>.khyos/</code>（除隔离区子目录）</td><td>中止；可能破坏正在运行的 khy-os</td><td><code>organize.py</code></td></tr><tr><td>HK-3</td><td>只隔离，不删除</td><td>整理流程出现 <code>unlink</code>/<code>rmtree</code>/<code>del</code></td><td>判违规；淘汰一律进隔离区人工确认</td><td>人工</td></tr><tr><td>HK-4</td><td><code>.html</code> 孪生不得当孤儿清理</td><td>以「无同名 <code>.md</code>」为由删 <code>.html</code></td><td>判违规；违反 LAY-5，CI 红灯</td><td><code>verify_docs_site.js</code></td></tr><tr><td>HK-5</td><td>不穿透软链与 junction</td><td>遍历进入链接目标目录</td><td>判违规；<code>os.walk</code> 默认会穿透，须显式规避</td><td><code>organize.py</code></td></tr><tr><td>HK-6</td><td>隔离区必须被 gitignore</td><td>隔离区内容进入 <code>git status</code></td><td>判违规；污染工作区状态</td><td><code>check-build-artifacts</code></td></tr><tr><td>HK-7</td><td>单批限流 10 个</td><td>一次运行移动超过 10 个文件</td><td>中止后续批次，留待下次</td><td><code>organize.py</code></td></tr><tr><td>HK-8</td><td>不覆盖目标</td><td>目标路径已存在同名文件</td><td>自动加 <code>_1</code> 后缀；绝不覆盖</td><td><code>organize.py</code></td></tr></tbody></table>
+<hr>
+<h2 id="2-整理对象白名单">2. 整理对象白名单<a class="anchor" href="#2-整理对象白名单" aria-label="锚点">#</a></h2>
+<blockquote><p>只有下表三处允许纳入整理范围；其余一律只读。</p></blockquote>
+<table><thead><tr><th><strong>区域</strong></th><th><strong>性质</strong></th><th><strong>判定口径</strong></th><th><strong>处理方式</strong></th></tr></thead><tbody><tr><td><code>.research-tmp/</code></td><td>研究过程临时碎片</td><td>未跟踪、非构建产物</td><td>超 7 天 → 隔离</td></tr><tr><td><code>_产物/</code></td><td>人工成果堆放区（语义：产出即冻结、不再维护，见 LAY-002 §3）</td><td>未跟踪</td><td>只报告，去向由人决定</td></tr><tr><td>根目录 <code>.html</code> 镜像</td><td><code>docs:build</code> 生成物</td><td>未跟踪、有同名 <code>.md</code></td><td>只报告；若生成器可配置输出路径，统一收 <code>docs/_generated/</code></td></tr></tbody></table>
+<p><strong>明确排除</strong>：<code>docs/</code>、<code>kernel/</code>、<code>scripts/</code>、<code>tests/</code>、<code>.ai/</code> 下的 <code>.html</code> —— 它们是 LAY-5 孪生或 Vite/Electron 入口（如 <code>apps/*/index.html</code>），<strong>不是垃圾</strong>。</p>
+<hr>
+<h2 id="3-风险分级">3. 风险分级<a class="anchor" href="#3-风险分级" aria-label="锚点">#</a></h2>
+<table><thead><tr><th><strong>级别</strong></th><th><strong>动作</strong></th><th><strong>权限</strong></th></tr></thead><tbody><tr><td>L1 报告</td><td>生成清单与建议，零改动</td><td>默认，每次运行都做</td></tr><tr><td>L2 隔离</td><td>移入 <code>.khyos/housekeeping/&lt;日期&gt;/</code>，保留 manifest</td><td>需显式 <code>--apply</code>，且仅限白名单</td></tr><tr><td>L3 删除</td><td>——</td><td><strong>永不执行</strong>，一律人工确认</td></tr></tbody></table>
+<hr>
+<h2 id="4-每日巡检流程">4. 每日巡检流程<a class="anchor" href="#4-每日巡检流程" aria-label="锚点">#</a></h2>
+<pre><code>06:00  organize.py --report   基线报告（零改动）
+       └─ 人工确认后 → --apply  隔离白名单内超期临时文件</code></pre>
+<ul><li>脚本：<code>scripts/maintenance/organize.py</code>（仅标准库，无第三方依赖）</li><li>报告：<code>90-System/reports/khy-os-&lt;日期&gt;.md</code>（在 agent 工作区，不污染本仓库）</li><li>清单：<code>90-System/manifests/khy-os-&lt;日期&gt;-manifest.json</code></li></ul>
+<p><strong>安全兜底</strong>：<code>git ls-files</code> 基线为空时，脚本拒绝执行隔离 —— 宁可不干活，也不能凭「未跟踪」误判去搬文件。</p>
+<hr>
+<h2 id="5-反例-易踩的坑">5. 反例（易踩的坑）<a class="anchor" href="#5-反例-易踩的坑" aria-label="锚点">#</a></h2>
+<table><thead><tr><th><strong>做法</strong></th><th><strong>为什么错</strong></th></tr></thead><tbody><tr><td>用 <code>scripts/docs/cleanup-orphan-html.js</code> 全仓删孤儿 <code>.html</code></td><td>该脚本只应作用于 <code>docs/</code>；全仓跑会误删 <code>apps/*/index.html</code> 等入口文件，且直接删除违反 HK-3</td></tr><tr><td>用 <code>os.walk</code> 直接遍历仓库</td><td>会穿透 junction，误入 <code>.khy/</code> 运行时目录（HK-5）</td></tr><tr><td>把 687 个 <code>.html</code> 孪生当冗余清理</td><td>它们是 LAY-5 强制的 md/html 孪生对（HK-4）</td></tr><tr><td>在仓库脏（大量未提交变更）时搬源码文件</td><td>移动会产生删除+新增噪音，污染在途重构</td></tr><tr><td>用 <code>\\\\?\\</code> 前缀路径做 <code>relative_to</code> 判定</td><td>判定失效，会把仓库内链接误报为「越界」</td></tr></tbody></table>
+<hr>
+<h2 id="6-存量债登记-本文不执行-只登记">6. 存量债登记（本文不执行，只登记）<a class="anchor" href="#6-存量债登记-本文不执行-只登记" aria-label="锚点">#</a></h2>
+<ul><li><del><code>_产物/</code>：<code>khy-os不如Y-code_能力差距</code> 存在 3 个并行版本（含 <code>_对抗修复版</code>、<code>_最终对抗版</code>），违反版本命名约定。</del></li></ul>
+<p><strong>【2026-09-17 已处置】</strong> 3 个并行版本连同其余临时物共 36 项移入 <code>.khyos/housekeeping/2026-09-17/from-_产物/</code>，台账含 rollback。<code>_产物/</code> 现已清空（<code>organize.py</code> 实测 <code>_产物条目: 0</code>）。</p>
+<ul><li><code>_产物/khy-Trajectory</code>：junction 指向 <code>D:\Portable\.khy</code>（<strong>仓库外</strong>）；对比根目录 <code>khy-Trajectory</code> → <code>D:\Portable\khy-os\.khy</code>（仓库内，正常）。</li></ul>
+<p><strong>【2026-09-17 复核：仍待人工裁定】</strong> 实测两者目标不同且内容不同——<code>D:\Portable\.khy</code> 含 <code>api_keys.json</code>、<code>credentials/</code>、<code>custom_providers.json</code>，是另一套独立运行时数据目录，非仓库内 <code>.khy</code> 的重复。按 HK-2（运行时数据只读）与 HK-5（不穿透软链），整理流程<strong>不触碰</strong>该链接；因链接本身不占空间，<code>_产物/</code> 已视为清空。是否删除链接或改指仓库内目录，需项目所有者裁定。</p>
+<ul><li><code>.research-tmp/</code>：150 个研究碎片，未跟踪且未被 gitignore，会持续出现在 <code>git status</code>。</li></ul>
+<hr>
+<h2 id="版本历史">版本历史<a class="anchor" href="#版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-16</td><td>初始版本。确立三类整理对象、HK-1–HK-8 红线、L1–L3 风险分级；登记 687 个 <code>.html</code> 孪生为 LAY-5 合法产出，禁止清理</td></tr><tr><td>1.0.1</td><td>2026-09-17</td><td>执行 <code>_产物/</code> 分发整理：36 项移入 <code>.khyos/housekeeping/2026-09-17/</code>；18 对报告类孪生件按 LAY-002 判定树编入 <code>docs/11_报告/</code>（<code>[RESEARCH-003]</code>~<code>014</code>）、<code>docs/04_IMPL_实现/</code>（<code>[IMPL-RPT-052]</code>~<code>055</code>）、<code>docs/08_MGMT_项目管理/</code>（<code>[MGMT-RPT-029]</code>/<code>030</code>）；<code>build-root-demo.js</code> 识别为 LAY-004 规范正文引用 12 处的配套原型，归还 <code>docs/10_规范/</code>；§6 存量债第 1 条标记已处置、第 2 条补充复核结论</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-LAY/[DESIGN-LAY-002] 目录层级与文件归类规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-LAY-002] 目录层级与文件归类规范</div></a><a class="next" href="../../../docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] 构建产物单一根规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-LAY-004] 构建产物单一根规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-LAY/[DESIGN-LAY-003] 仓库整理与巡检规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

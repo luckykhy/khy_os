@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-MEM-007] 记忆规则系统总纲.md -->
+<title>[DESIGN-MEM-007] 记忆规则系统总纲：触发、方式、类型、层级与回忆 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-MEM<span class="sep">›</span>[DESIGN-MEM-007] 记忆规则系统总纲：触发、方式、类型、层级与回忆</div>
+      <header class="hero reveal"><h1>[DESIGN-MEM-007] 记忆规则系统总纲：触发、方式、类型、层级与回忆</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-mem-007-记忆规则系统总纲-触发-方式-类型-层级与回忆">[DESIGN-MEM-007] 记忆规则系统总纲：触发、方式、类型、层级与回忆</a></li><li class="lvl-2"><a href="#0-一句话结论">0. 一句话结论</a></li><li class="lvl-3"><a href="#覆盖面矩阵-用户五问-vs-现状">覆盖面矩阵（用户五问 vs 现状）</a></li><li class="lvl-2"><a href="#1-现状实证-file-line-可复核">1. 现状实证（file:line 可复核）</a></li><li class="lvl-2"><a href="#2-借鉴提案-b-p2-七字段">2. 借鉴提案（B-P2 七字段）</a></li><li class="lvl-2"><a href="#3-规则正文-mr">3. 规则正文（MR-\*）</a></li><li class="lvl-3"><a href="#a-写入触发-何时写">A. 写入触发（何时写）</a></li><li class="lvl-3"><a href="#b-记忆方式-格式-组织-写入流程">B. 记忆方式（格式、组织、写入流程）</a></li><li class="lvl-3"><a href="#c-记忆类型与落点路由">C. 记忆类型与落点路由</a></li><li class="lvl-3"><a href="#d-记忆层级-映射-不扩枚举">D. 记忆层级（映射，不扩枚举）</a></li><li class="lvl-3"><a href="#e-回忆触发与冲突优先级-全量新增-本文主体增量">E. 回忆触发与冲突优先级（全量新增，本文主体增量）</a></li><li class="lvl-3"><a href="#各系列边界-防重叠声明">各系列边界（防重叠声明）</a></li><li class="lvl-2"><a href="#4-实施分期-每期独立可回滚">4. 实施分期（每期独立可回滚）</a></li><li class="lvl-2"><a href="#5-诚实边界-刻意不纳入">5. 诚实边界（刻意不纳入）</a></li><li class="lvl-2"><a href="#6-反模式-这条路别走">6. 反模式（这条路别走）</a></li><li class="lvl-2"><a href="#7-验收方式">7. 验收方式</a></li><li class="lvl-2"><a href="#8-待核实项">8. 待核实项</a></li><li class="lvl-2"><a href="#9-变更日志">9. 变更日志</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-mem-007-记忆规则系统总纲-触发-方式-类型-层级与回忆">[DESIGN-MEM-007] 记忆规则系统总纲：触发、方式、类型、层级与回忆<a class="anchor" href="#design-mem-007-记忆规则系统总纲-触发-方式-类型-层级与回忆" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>状态</strong>：提案（待评审拍板）<br><strong>范围</strong>：khy-os 记忆系统的行为规则总纲 —— 写入触发、记录方式、类型判定、层级与过期、回忆触发与冲突优先级<br><strong>真源关系</strong>：本文<strong>不推翻</strong>任何既有真源，只做三件事：① 给 000–006 画覆盖面地图（指针化）；② 补齐唯一真缺口「回忆触发与冲突优先级」；③ 把散在四处的判据收敛成互相不重叠的可执行规则（MR-\*）。<br><strong>上游依赖</strong>：<code>[DESIGN-MEM-001]</code>（格式/生命周期）、<code>[DESIGN-MEM-002]</code>（时机）、<code>[DESIGN-MEM-006]</code>（治理真源，MEMORY-001~004）、<code>MEMORY-RECORD-SCHEMA.json</code>、<code>services/backend/src/services/memoryTrigger.js</code>、<code>services/backend/src/memdir/memdir.js</code></p></blockquote>
+<hr>
+<h2 id="0-一句话结论">0. 一句话结论<a class="anchor" href="#0-一句话结论" aria-label="锚点">#</a></h2>
+<p>仓库的记忆体系<strong>地基已齐、缺的是屋顶</strong>：捕获触发（<code>memoryTrigger.js</code>）、格式（001 §2）、层级（001 §1.2 三层）、治理五字段（006 §2）都已存在且各有守卫，但「<strong>什么时候该想起来去查记忆</strong>」和「<strong>两条记忆打架听谁的</strong>」没有任何文档定义 —— 这两块是本提案的主体；其余四块以收敛和判据化为主，不新建并行真源。</p>
+<h3 id="覆盖面矩阵-用户五问-vs-现状">覆盖面矩阵（用户五问 vs 现状）<a class="anchor" href="#覆盖面矩阵-用户五问-vs-现状" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>需求</th><th>现有覆盖</th><th>缺口</th><th>本文处理</th></tr></thead><tbody><tr><td>1. 写入触发时机</td><td>002 §2 八时机（示例式）；<code>memoryTrigger.js</code> explicit/proactive/none 三态（已接线）</td><td>缺「不写」门控的硬规则与判定顺序</td><td>§3.A（W 系列，收敛+补门控）</td></tr><tr><td>2. 记忆方式</td><td>001 §2 frontmatter 格式；006 §2 五字段；memdir 写入单点</td><td>两套格式各自适用边界没人写；写入流程四步没串起来</td><td>§3.B（F 系列）</td></tr><tr><td>3. 记忆类型判断依据</td><td>001 §1.1 四语义类型；<code>memoryTrigger.js</code> INSTRUCTION 分支</td><td>「用户四类诉求 → 类型/落点」的路由表不存在；工作标准误入记忆无判据</td><td>§3.C（T 系列）</td></tr><tr><td>4. 记忆层级与过期</td><td>001 §1.2 三层 + 保鲜天数 + 蒸馏；006 §1/§4 session/persistent 治理二分</td><td>两个轴（持久化 × 治理）正交关系没说清；「五层级」诉求的映射没有</td><td>§3.D（L 系列，映射不扩枚举）</td></tr><tr><td>5. 回忆触发与冲突优先级</td><td>env 门存在（<code>KHY_PROACTIVE_MEMORY</code> / <code>KHY_MEMORY_SESSION_PRIME</code>）但<strong>无任何规则文档</strong></td><td><strong>完全缺失</strong> —— 本文主要增量</td><td>§3.E（R 系列，全量新增）</td></tr></tbody></table>
+<hr>
+<h2 id="1-现状实证-file-line-可复核">1. 现状实证（file:line 可复核）<a class="anchor" href="#1-现状实证-file-line-可复核" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>事实</th><th>证据</th></tr></thead><tbody><tr><td>1</td><td>捕获侧分类器已存在且是纯叶子单一真源：explicit（必须捕获）/ proactive（高精度白名单）/ none 三态；层级推断 permanent/short_term/cross_session；同 topic key 走 <code>decideUpdate</code> 原地 supersede</td><td><code>services/backend/src/services/memoryTrigger.js:1-31</code>（文件头自述契约）</td></tr><tr><td>2</td><td>项目级约定已单独分支路由到<strong>指令文件</strong>而非个人记忆库</td><td><code>memoryTrigger.js:89-101</code>（<code>INSTRUCTION_RE</code> 白名单与注释）</td></tr><tr><td>3</td><td>捕获侧三道 env 门默认开：<code>KHY_MEMORY_TRIGGER</code> / <code>KHY_PROACTIVE_CAPTURE</code> / <code>KHY_INSTRUCTION_CANDIDATE</code></td><td><code>memoryTrigger.js:38-66</code></td></tr><tr><td>4</td><td>记忆写入单点 seam 存在：<code>saveMemory</code> / <code>deleteMemory</code> / <code>updateMemoryIndex</code>，原子写走 <code>memoryWriteSafety</code></td><td><code>services/backend/src/memdir/memdir.js:344,414,440</code>；<code>MEMORY-RECORD-SCHEMA.json</code> <code>observed.canonicalWriteSeam</code></td></tr><tr><td>5</td><td>存在<strong>实测绕过 seam 的裸写</strong>（AI 直接产出整个 MEMORY.md）</td><td><code>MEMORY-RECORD-SCHEMA.json</code> <code>observed.bypassWrites</code>：<code>assistant/autoDream.js:214,248,256</code>、<code>memoryEngine/distiller.js:293,309,443</code></td></tr><tr><td>6</td><td>治理侧五字段 + 指定入口 + 禁止清单已是登记规则，两条 enforced、一条人工兜底</td><td><code>[DESIGN-MEM-006]</code> §1–§4；<code>MEMORY-RECORD-SCHEMA.json</code> <code>enforcementPlan.items[0].status=&quot;enforced&quot;</code>、<code>items[2].status=&quot;not-enforced&quot;</code></td></tr><tr><td>7</td><td>回忆侧 env 门被消费（会话 prime / 主动回忆层）</td><td><code>services/backend/src/cli/aiChatCore.js</code> 中 <code>KHY_PROACTIVE_MEMORY</code> / <code>KHY_MEMORY_SESSION_PRIME</code> 引用（Grep 实测命中）</td></tr><tr><td>8</td><td>「重启后 session 残留禁升格」判定无检查器，靠人工评审</td><td><code>MEMORY-RECORD-SCHEMA.json</code> <code>enforcementPlan.items[2].reason</code></td></tr></tbody></table>
+<hr>
+<h2 id="2-借鉴提案-b-p2-七字段">2. 借鉴提案（B-P2 七字段）<a class="anchor" href="#2-借鉴提案-b-p2-七字段" aria-label="锚点">#</a></h2>
+<p><strong>不适用。</strong> 依据：本提案是对本仓既有能力域（<code>memoryTrigger.js</code> / <code>memdir.js</code> / DESIGN-MEM-000–006）的规则收敛与缺口补全，<strong>不借鉴任何外部项目</strong>，无上游 commit、无许可证问题，走 <code>[SOURCING-001]</code> B-P1「已登记能力域内的行为修正/规则化」路径，无需填七字段。</p>
+<hr>
+<h2 id="3-规则正文-mr">3. 规则正文（MR-\*）<a class="anchor" href="#3-规则正文-mr" aria-label="锚点">#</a></h2>
+<blockquote><p>规则编号空间：<code>MR-W</code>（写入触发）、<code>MR-F</code>（记录方式）、<code>MR-T</code>（类型与落点）、<code>MR-L</code>（层级与过期）、<code>MR-R</code>（回忆与冲突）。<br>每条规则 = 陈述 + 判据 + 动作。规则间引用一律指编号，语义不重复。</p></blockquote>
+<h3 id="a-写入触发-何时写">A. 写入触发（何时写）<a class="anchor" href="#a-写入触发-何时写" aria-label="锚点">#</a></h3>
+<p><strong>MR-W0（禁写门控，先于一切触发判定）</strong><br>一条信息命中以下任一情形，<strong>禁止</strong>进入任何持久记忆（含 <code>.khy/memory/</code> 与 <code>.ai/</code>）：</p>
+<ul><li>一次性命令输出、临时 diff、调试过程细节（真源：<code>[DESIGN-MEM-006]</code> §1 禁止行 + <code>MEMORY-RECORD-SCHEMA.json</code> <code>prohibitedWrites</code>）；</li><li>含凭据<strong>值</strong>（key/密码/token —— 只允许引用存放位置，真源：006 §2 凭据条款）；</li><li>无可溯来源（给不出 source：文档编号 / 文件路径 / 命令输出引用，同 006 §2 五字段要求）；</li><li>仅对当前任务有意义的中间状态（→ 属 session，见 MR-L1）。</li></ul>
+<p>判定顺序上 MR-W0 是<strong>第一闸</strong>：先判不写，再判写往哪。</p>
+<p><strong>MR-W1（用户显式要求 → 必须写，权威不打折）</strong><br>用户消息命中显式记忆意图（「记住 / 别忘 / remember this」等，与 <code>memoryTrigger.js</code> <code>EXPLICIT_RE</code> 同口径）⇒ 必须捕获，type/tier 按用户措辞推断（「永久/永远」→ permanent；「这次/临时」→ short_term；其余 → cross_session，与 <code>memoryTrigger.js:19-22</code> 层级推断一致）。用户说「忘掉 X」⇒ 对 X 执行归档（不是硬删，见 MR-F4）。</p>
+<p><strong>MR-W2（用户纠正行为 → 泛化才写）</strong><br>用户纠正 AI 的行为（「不要用英文注释」）⇒ 若纠正可泛化为稳定偏好（含「以后/别再/from now on」语气，对齐 <code>FEEDBACK_RE</code>）⇒ 写 feedback 类；若只针对本次输出（「这句改一下」）⇒ 只改当次，不写。</p>
+<p><strong>MR-W3（重复模式 → 三次成文）</strong><br>同一偏好、同一问题模式、同一纠正<strong>出现 ≥3 次</strong>而未被前两条捕获 ⇒ 写入，description 里注明「依据 N 次重复归纳」。不足 3 次不写（保守偏向，对齐 <code>memoryTrigger.js</code> proactive 层的零假阳性纪律）。</p>
+<p><strong>MR-W4（关键进度节点 → 不进个人记忆）</strong><br>任务完成、方案拍板、版本定名、决策变更等进度节点 ⇒ <strong>路由规则见 MR-T3</strong>：落 <code>.ai/hq/PROGRESS.json</code> 或决策文档，不落 <code>.khy/memory/</code>。触发判定属于本条，落点判定属于 MR-T。</p>
+<p><strong>MR-W5（工作标准/项目约定 → 指令文件或规范，不进个人记忆）</strong><br>内容属于「项目级长期约定 / 规范 / 构建/提交/测试命令 / 协作方式」（对齐 <code>memoryTrigger.js:89-101</code> <code>INSTRUCTION_RE</code> 白名单）⇒ 写入指令文件（khy.md / agent.md）或 <code>docs/10_规范/</code>，让它们注入系统提示或被守卫执行；个人记忆文件最多存<strong>指针</strong>（MR-T2）。</p>
+<p><strong>判定顺序（A 系列总流程）</strong>：<code>MR-W0 门控 → W1（显式）→ W2（纠正）→ W3（重复）→ W4/W5（进度/约定，交 T 系列路由）→ 都不命中 = 不写</code>。此顺序与 <code>memoryTrigger.js</code> 的 explicit → proactive → none 求值方向一致，不引入第二套触发器。</p>
+<h3 id="b-记忆方式-格式-组织-写入流程">B. 记忆方式（格式、组织、写入流程）<a class="anchor" href="#b-记忆方式-格式-组织-写入流程" aria-label="锚点">#</a></h3>
+<p><strong>MR-F1（两套格式的适用边界，互斥）</strong></p>
+<ul><li>记录给 <strong>AI 日常回忆</strong>用、存 <code>.khy/memory/</code> ⇒ 用 001 §2 frontmatter 五项（<code>name</code> / <code>description</code> / <code>type</code> / <code>tier</code> / <code>updated</code>）；</li><li>记录是<strong>治理/协作事实凭证</strong>、落 <code>.ai/</code> 或跨机共享存储 ⇒ 用 006 §2 治理五字段（<code>subject</code> / <code>source</code> / <code>writtenAt</code> / <code>scope</code> / <code>cleanup</code>）。</li></ul>
+<p>判据一句话：<strong>「回忆用 frontmatter，凭证用五字段」</strong>。一份记录不得同时只带半套字段；两边都不是的（纯过程数据）回 MR-W0 拒绝。</p>
+<p><strong>MR-F2（写入必经指定入口，禁止裸写）</strong></p>
+<ul><li><code>.khy/memory/</code> 读写删：一律经 <code>memdir.js</code> seam（<code>saveMemory:344</code> / <code>deleteMemory:414</code> / <code>updateMemoryIndex:440</code>），享受原子写（<code>memoryWriteSafety</code>）；</li><li><code>.ai/</code> 机器文件：一律经 <code>khy metadata gen / refresh / link</code>（006 §3 指定入口表）；</li><li>新增记忆持久化模块：先在 <code>MEMORY-RECORD-SCHEMA.json</code> <code>designatedEntries</code> 加行登记，再动码（006 §3 登记规则）。</li></ul>
+<p>已知违例 <code>autoDream.js</code> / <code>distiller.js</code> 裸写为<strong>存量债</strong>，处置见 §4 分期 S3，不因存量违例放松本条。</p>
+<p><strong>MR-F3（写入四步，顺序固定）</strong><br>① 查重：与既有记录比 token Jaccard，≥0.82 视为重复 → 归并到较强者（001 §2.3/§3.3 同阈值）；<br>② 定型定层：按 MR-T 定 type、按 MR-L 定 tier；<br>③ 经 MR-F2 入口写入；<br>④ 经 <code>updateMemoryIndex</code> 更新索引。跳步不得写。</p>
+<p><strong>MR-F4（「忘记」= 归档，不是删除）</strong><br>任何清理/遗忘动作都走归档（<code>.khy/memory/.archive/</code>），persistent 治理记录的删除另留一行台账（006 §4「禁止静默删」）。恢复用既有 <code>npm run memory:restore</code>。</p>
+<h3 id="c-记忆类型与落点路由">C. 记忆类型与落点路由<a class="anchor" href="#c-记忆类型与落点路由" aria-label="锚点">#</a></h3>
+<p><strong>MR-T1（类型判定依据 = 谁消费 + 多久失效）</strong></p>
+<table><thead><tr><th>内容形态</th><th>type</th><th>依据（消费方 × 保鲜）</th></tr></thead><tbody><tr><td>用户身份、核心习惯（「我叫 X」「我习惯先写测试」）</td><td><code>user</code></td><td>个人交互消费；保鲜 3650 天</td></tr><tr><td>交互风格、纠偏、<strong>用户明确要求</strong>（带出处）</td><td><code>feedback</code></td><td>个人交互消费；保鲜 540 天</td></tr><tr><td>项目背景、架构、技术栈</td><td><code>project</code></td><td>项目上下文消费；保鲜 180 天</td></tr><tr><td>外部链接、文档、API 参考</td><td><code>reference</code></td><td>按需检索消费；保鲜 365 天</td></tr></tbody></table>
+<p>与 001 §1.1 四类型一一对应，<strong>不新增类型枚举</strong>。</p>
+<p><strong>MR-T2（用户明确要求的特殊标记）</strong><br>「用户明确要求」在类型上归 <code>feedback</code>（或身份事实归 <code>user</code>），但必须满足：正文含<strong>用户原话或出处</strong>（哪次会话/哪条消息）；未指定 tier 时<strong>默认 permanent</strong> —— 用户亲口要求的事不应被保鲜期自动忘掉。这是它区别于普通 feedback（AI 归纳的、540 天）的唯一判据。</p>
+<p><strong>MR-T3（落点路由表 —— W4/W5 的权威落点）</strong></p>
+<table><thead><tr><th>内容</th><th>落点</th><th>为什么不是记忆文件</th></tr></thead><tbody><tr><td>任务进度、里程碑</td><td><code>.ai/hq/PROGRESS.json</code>（多机共享真源，AGENTS.md「多机协作自举」节）</td><td>进度要跨机器同步，个人记忆目录不在 <code>.ai/</code> 共享面内</td></tr><tr><td>决策、方案拍板</td><td><code>docs/03_DESIGN_设计/</code> 提案文档（先提案后编码惯例）</td><td>决策要可评审可追溯，散文记忆守卫管不了</td></tr><tr><td>工作标准、项目约定</td><td>指令文件（khy.md/agent.md）或 <code>docs/10_规范/</code> + RULES-REGISTRY</td><td>标准要被守卫执行；记忆里的规则<strong>没有任何门能执行</strong>（并行真源，见 §6 反模式 2）</td></tr><tr><td>用户偏好、明确要求</td><td><code>.khy/memory/</code>（MR-T1/T2）</td><td>只服务于个人交互回忆</td></tr><tr><td>一次性/临时</td><td>不落任何持久位（MR-W0/MR-L1）</td><td>—</td></tr></tbody></table>
+<h3 id="d-记忆层级-映射-不扩枚举">D. 记忆层级（映射，不扩枚举）<a class="anchor" href="#d-记忆层级-映射-不扩枚举" aria-label="锚点">#</a></h3>
+<p><strong>MR-L1（会话内 = short_term，禁落盘）</strong><br>只对当前会话有意义的记忆 = Layer 1 <code>short_term</code>：不落盘、会话结束即清除；重启后残留的临时上下文<strong>不得自动升格</strong>为 persistent（006 §4，schema <code>items[2]</code> 人工兜底）。「短期记忆」一词即指本层，不另设层级名。</p>
+<p><strong>MR-L2（短期/长期 = cross_session，用保鲜天数表达长短，不造第五层）</strong><br>跨会话记忆统一为 Layer 2 <code>cross_session</code>，其内部「短期 vs 长期」<strong>用类型保鲜天数区分</strong>（180/365/540 天，001 §1.1），<strong>不新增 tier 枚举值</strong> —— <code>tier</code> 字段是 schema 闭合集，加值会同时撞 001 §1.2 与蒸馏阈值体系。</p>
+<p><strong>MR-L3（永久 = permanent，进出都要有出处）</strong><br>Layer 3 <code>permanent</code> 只收两类：① 用户显式要求（MR-W1/MR-T2）；② 稳定身份事实（<code>IDENTITY_RE</code> 同口径）。它<strong>不是</strong>「重要内容停车场」——进入需出处，退出需显式 <code>cleanup</code> 触发（006 §4），蒸馏对它几乎不自动过期（001 §3.3）。</p>
+<p><strong>MR-L4（治理轴与持久化轴正交）</strong><br>006 的 session/persistent 二分管「是否是协作凭证」，001 的三层管「是否落盘、活多久」。两条轴独立判定，先 MR-L1–L3 定持久化层，再按 MR-F1 决定要不要带治理五字段。典型组合：<code>.ai/hq</code> 进度 = persistent + 治理五字段；<code>.khy/memory</code> 偏好 = cross_session + frontmatter；会话内草稿 = short_term + 什么都不落。</p>
+<p><strong>过期与清理（D 系列汇总）</strong>：short_term 会话末清除 → cross_session 超保鲜天数经蒸馏归档（001 §3 三阶段做梦/蒸馏）→ permanent 仅显式 cleanup。全程归档不硬删（MR-F4）。</p>
+<h3 id="e-回忆触发与冲突优先级-全量新增-本文主体增量">E. 回忆触发与冲突优先级（全量新增，本文主体增量）<a class="anchor" href="#e-回忆触发与冲突优先级-全量新增-本文主体增量" aria-label="锚点">#</a></h3>
+<p><strong>MR-R1（回忆触发时机 —— 何时必须去查）</strong></p>
+<table><thead><tr><th>触发点</th><th>动作</th><th>门</th></tr></thead><tbody><tr><td>会话启动</td><td>prime 注入 <code>user</code>/<code>permanent</code> 全量 + 最近 N 条 <code>cross_session</code></td><td><code>KHY_MEMORY_SESSION_PRIME</code>（默认开）</td></tr><tr><td>回答涉及用户偏好/身份</td><td>按 description 主题匹配检索，命中即注入候选</td><td><code>KHY_PROACTIVE_MEMORY</code></td></tr><tr><td>执行写操作前</td><td>检索目标模块相关记忆与约定（防重复犯错、防违反既有决策）</td><td>—</td></tr><tr><td>用户问「之前/上次/记得吗」</td><td>显式检索</td><td>—</td></tr><tr><td><strong>MR-W0/W2/W3 判定写入前</strong></td><td><strong>必查</strong>：新信息与已有记忆是否冲突/重复（冲突走 MR-R3，重复走 MR-F3①）</td><td>—</td></tr></tbody></table>
+<p>最后一行是新增的<strong>写前必读</strong>义务：现在捕获与回忆两条链路互不知道对方，冲突记忆就是这么堆出来的。</p>
+<p><strong>MR-R2（检索排序 —— 多条命中时先看谁）</strong><br>四键排序，依次比较：① scope 匹配度（模块级 &gt; 板块级 &gt; 仓库级，粒度细者先）② type 权重（<code>user</code>/permanent &gt; <code>feedback</code> &gt; <code>project</code> &gt; <code>reference</code>）③ <code>updated</code> 新鲜度（新者先）④ 相似度（Jaccard 高者先）。前三键平手才比后一键。</p>
+<p><strong>MR-R3（冲突优先级 —— 打架时听谁的）</strong></p>
+<table><thead><tr><th>优先级</th><th>来源</th><th>说明</th></tr></thead><tbody><tr><td>P0</td><td>用户<strong>当前会话</strong>的明确指令</td><td>最高权威；且应<strong>反写</strong>：若与记忆冲突，更新记忆（MR-R4）</td></tr><tr><td>P1</td><td>规范/指令文件（<code>docs/10_规范/</code>、khy.md、RULES-REGISTRY）</td><td>文档是真源，记忆是缓存 —— <strong>记忆与文档冲突，文档赢</strong>，防并行真源</td></tr><tr><td>P1′</td><td><code>.ai/hq</code> 状态文件</td><td>多机共享真源，同理压过个人记忆</td></tr><tr><td>P2</td><td>用户显式要求记住的记录（MR-T2，带出处）</td><td></td></tr><tr><td>P3</td><td>permanent 层记录</td><td></td></tr><tr><td>P4</td><td>cross_session：<code>updated</code> 新者胜</td><td>同级冲突新者赢</td></tr><tr><td>P5</td><td>旧 cross_session</td><td>被推翻者归档（MR-R4），不参与后续回忆</td></tr></tbody></table>
+<p>同优先级且 updated 无法分新旧 ⇒ 保守取「不确定」并向用户求证，<strong>不猜</strong>。</p>
+<p><strong>MR-R4（冲突处置动作 —— 三步，禁止静默）</strong><br>① 胜者保留：同 topic key 原地 supersede（对齐 <code>memoryTrigger.js</code> <code>decideUpdate</code> 既有行为）；<br>② 败者归档：进 <code>.archive/</code>，persistent 记录留一行台账（006 §4）；<br>③ 反写与提示：P0 反写更新记忆；P1 冲突时提示用户「记忆与规范 X 冲突，已按规范执行，建议修正/归档该记忆」。</p>
+<h3 id="各系列边界-防重叠声明">各系列边界（防重叠声明）<a class="anchor" href="#各系列边界-防重叠声明" aria-label="锚点">#</a></h3>
+<p>W 系列<strong>只回答「写不写」</strong>；T 系列<strong>只回答「落到哪、什么类型」</strong>；F 系列<strong>只回答「怎么落」</strong>；L 系列<strong>只回答「活多久」</strong>；R 系列<strong>只回答「何时读、谁让路」</strong>。跨系列只引用编号（如 W4→T3），不重复语义。既有真源分工：001 管格式与蒸馏算法、002 管时机示例、006 管治理五字段与指定入口、<code>memoryTrigger.js</code> 是捕获侧实现真源 —— 本文对它们全部指针化，未改写任何一条既有语义。</p>
+<hr>
+<h2 id="4-实施分期-每期独立可回滚">4. 实施分期（每期独立可回滚）<a class="anchor" href="#4-实施分期-每期独立可回滚" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>期</th><th>内容</th><th>验收</th></tr></thead><tbody><tr><td>S1</td><td>本文评审拍板；将 MR-R1（写前必查）与 MR-R3（冲突优先级）登记进 <code>RULES-REGISTRY.json</code> 为 <code>MEMORY-005</code>/<code>MEMORY-006</code>（<code>gate=manual</code> 或 S1 只记录，遵守 PROCESS-008 阶段纪律）；生成规则卡</td><td><code>npm run check:rules</code> / <code>rules:coverage</code> 通过，无死指针</td></tr><tr><td>S2</td><td>回忆接线核对：确认 <code>aiChatCore.js</code> 的 prime/proactive 消费点行为与 MR-R1/R2 一致；在写路径加「写前检索」钩子（对齐 MR-W0→MR-R1 最后一行）</td><td>手工复现：写入一条与旧记忆矛盾的偏好，观察 supersede 而非堆叠</td></tr><tr><td>S3</td><td>清偿 §1#5 存量债：<code>autoDream.js</code> / <code>distiller.js</code> 裸写改走 memdir seam</td><td><code>check-memory-schema.js</code> 对 bypassWrites 的观测清零；蒸馏/做梦既有测试零回归</td></tr><tr><td>S4</td><td>（可选）<code>MEMORY-RECORD-SCHEMA.json</code> 补登 <code>memdir.js</code> seam 进 <code>designatedEntries</code>（现状是「已存在未登记」，schema 自身已记录此缺口）</td><td>登记后 <code>items[1]</code> 检测口径不误报</td></tr></tbody></table>
+<hr>
+<h2 id="5-诚实边界-刻意不纳入">5. 诚实边界（刻意不纳入）<a class="anchor" href="#5-诚实边界-刻意不纳入" aria-label="锚点">#</a></h2>
+<ul><li><strong>不做语义向量检索</strong>：MR-R2 用 Jaccard + 结构化字段排序，因为现有检索就是词面匹配；上 embedding 是 000 §9.3 的长期计划，本文不抢。</li><li><strong>不定义记忆的 UI/展示</strong>：只管行为规则。</li><li><strong>不动 <code>MEMORY-001~004</code> 任何语义</strong>：本文是它们的下游消费者。</li><li><strong>不解决跨设备同步</strong>：000 §9.2 中期计划，与冲突优先级正交。</li></ul>
+<h2 id="6-反模式-这条路别走">6. 反模式（这条路别走）<a class="anchor" href="#6-反模式-这条路别走" aria-label="锚点">#</a></h2>
+<ol><li><strong>为「五层级」诉求新增 tier 枚举</strong>（如加 <code>long_term</code>）—— <code>tier</code> 是闭合集，加值撞 001 §1.2 + 蒸馏阈值 + schema closedSet 三处；「短期/长期」用保鲜天数表达已足够。</li><li><strong>把工作标准写成记忆散文</strong> —— 记忆里的规则没有任何守卫能执行；标准进规范/指令文件才有门管（MR-T3），否则就是第二真源，改一处漂一处。</li><li><strong>冲突时静默删旧记忆</strong> —— 败者必须归档留台账（MR-R4/006 §4），否则误杀无法恢复（既有 <code>memory:restore</code> 是按归档设计的）。</li><li><strong>把 permanent 当荣誉勋章乱发</strong> —— 只收显式要求与身份事实（MR-L3）；permanent 垃圾场比没有 permanent 更糟，因为它永不自动过期。</li><li><strong>在 <code>memoryTrigger.js</code> 之外写第二套触发判定</strong> —— 捕获侧三态分类已是单一真源（§1#1）；本文的 W 系列是它的<strong>规则化表述</strong>，不是新实现。</li></ol>
+<h2 id="7-验收方式">7. 验收方式<a class="anchor" href="#7-验收方式" aria-label="锚点">#</a></h2>
+<ul><li>编号唯一：<code>DESIGN-MEM-007</code> 未与既有文档撞号（已枚举 DESIGN-MEM 目录 000–006）。</li><li>语义零冲突：本文引用 001/002/006 处全部为指针 + 章节号，未复制改写其规则正文；人工对照 006 §1–§4 逐条过。</li><li>守卫现状：<code>node scripts/ci/check-memory-schema.js</code> 在本文落地前后行为不变（本文不改任何被它消费的文件）。</li><li>S1 落地后：<code>npm run check:rules</code> 校验新登记的 MEMORY-005/006 双向可达。</li></ul>
+<h2 id="8-待核实项">8. 待核实项<a class="anchor" href="#8-待核实项" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>项</th><th>状态</th></tr></thead><tbody><tr><td>1</td><td><code>KHY_MEMORY_*</code> env 是否全部实际接线</td><td>已核：<code>memoryTrigger.js:38-66</code> 三道捕获门、<code>aiChatCore.js</code> 消费 prime/proactive（§1#3/#7）✅</td></tr><tr><td>2</td><td>memdir seam 的行号</td><td>已核：<code>memdir.js:344/414/440</code> ✅</td></tr><tr><td>3</td><td>prime 注入的 N（最近 cross_session 条数）现有实现取值多少、是否可配</td><td><strong>未核</strong> —— 不阻断 S1/S2 设计，S2 接线核对时确认</td></tr><tr><td>4</td><td><code>memoryEngine.addStructuredMemory</code> 的 <code>decideUpdate</code> supersede 行为是否与 MR-R4① 完全一致</td><td><strong>未核</strong> —— memoryTrigger.js 文件头自述如此（:24-26），S2 时对实现逐行确认</td></tr></tbody></table>
+<h2 id="9-变更日志">9. 变更日志<a class="anchor" href="#9-变更日志" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>日期</th><th>版本</th><th>变更</th></tr></thead><tbody><tr><td>2026-09-23</td><td>0.1</td><td>初稿：覆盖面矩阵 + MR-W/F/T/L/R 五组规则 + 四期实施计划</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-MEM/[DESIGN-MEM-005] 记忆系统使用指南.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-MEM-005] 记忆系统使用指南</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-MEM/00_INDEX_DESIGN-MEM-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">DESIGN-MEM</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-MEM/[DESIGN-MEM-007] 记忆规则系统总纲.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

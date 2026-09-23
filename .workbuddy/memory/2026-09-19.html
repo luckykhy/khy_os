@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-19.md -->
+<title>2026-09-19 工作日志 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>.workbuddy<span class="sep">›</span>memory<span class="sep">›</span>2026-09-19 工作日志</div>
+      <header class="hero reveal"><h1>2026-09-19 工作日志</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#2026-09-19-工作日志">2026-09-19 工作日志</a></li><li class="lvl-2"><a href="#每日代码审查-自动化任务-第-5-次运行">每日代码审查（自动化任务，第 5 次运行）</a></li><li class="lvl-3"><a href="#本轮最值钱的三条">本轮最值钱的三条</a></li><li class="lvl-3"><a href="#其余-a-类">其余 A 类</a></li><li class="lvl-3"><a href="#固化判据-新增第三类-c-在途未提交">固化判据：新增第三类 C（在途未提交）</a></li><li class="lvl-3"><a href="#交人工-未解决">交人工（未解决）</a></li><li class="lvl-3"><a href="#b-类-只记录">B 类（只记录）</a></li><li class="lvl-3"><a href="#环境教训-新增-后续直接用">环境教训（新增，后续直接用）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="2026-09-19-工作日志">2026-09-19 工作日志<a class="anchor" href="#2026-09-19-工作日志" aria-label="锚点">#</a></h1>
+<h2 id="每日代码审查-自动化任务-第-5-次运行">每日代码审查（自动化任务，第 5 次运行）<a class="anchor" href="#每日代码审查-自动化任务-第-5-次运行" aria-label="锚点">#</a></h2>
+<p><strong>一行摘要</strong>：范围走规则 ①（24h 内 <strong>14</strong> 个提交 <code>e12bfa3f..HEAD</code>，1713 文件 <code>+215970/−50935</code>，主体是 TUI 选区层 DESIGN-ARCH-119、Shizuku 构建配置、以及一次搬动 <strong>980</strong> 个文档路径的「B9/DR7 按标签归夹」）；修 <strong>11 项 A 类 / 14 文件（未提交）</strong>，其中四条守卫红直接收敛：<code>check:protocol-naming</code> <strong>22 error → 0</strong>、<code>check:proposal-index</code> <strong>1 error → 0</strong>、<code>unresolved-require</code> <strong>2 → 0</strong>、<code>test:scripts</code> <strong>17 → 5</strong> 失败；守卫红灯 <strong>9 → 7</strong>（按检查项），无新增未归因债务。</p>
+<p>报告：<code>.khy/reports/code-review/2026-09-19.md</code></p>
+<h3 id="本轮最值钱的三条">本轮最值钱的三条<a class="anchor" href="#本轮最值钱的三条" aria-label="锚点">#</a></h3>
+<ol><li><strong><code>scripts/lib/docsPaths.js</code> 一处常量 → 11 条测试转绿</strong>。<code>965b8371</code> 把 <code>[OPS-MAN-*]</code> 从 <code>docs/07_OPS_运维/</code> 平铺迁入 <code>OPS-MAN/</code> 子目录，而该文件的「路径单一真源」<code>OPS_DIR</code> 没跟 → <strong>46 个调用点 / 22 个手册名</strong>全部 ENOENT。加 <code>OPS_MAN_DIR</code> 后逐项核验：22 个手册名全部落位子目录、0 死链。<strong>佐证「编号被当路径用」这类耦合的杠杆率</strong>。</li><li><strong><code>.githooks/pre-commit</code> 的大文件检查一直是死的</strong>。<code>for file in $(git diff --cached --name-only)</code> <strong>按空白词分割</strong>：文件名含空格/中括号（如 <code>docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] build-root-demo.js</code>）被拆成多段 → <code>[ -f ]</code> 恒假 → 检查静默放行（本机还缺 <code>bc</code>）。改为 <code>while IFS= read -r -d ''</code> + <code>git diff --cached --name-only -z</code>、去掉 <code>bc</code>；用夹具实测「旧写法漏掉 11MB 文件、新写法命中」。这是「门禁看起来在跑、实际放行」的典型。</li><li><strong><code>commandCodeAdapter.js</code> 缺 fixture 是 <code>provider contract gate</code> 悬案（19 !== 18）的确切根因</strong> —— 实测 <code>discoverAdapters()</code>=19 / <code>FIXTURES</code>=18，差的就是它。完整修法两步：① 为该 adapter 补 fixture recipe（<code>family</code>/<code>transports</code>/<code>markers</code>）；② 测试期望值 18 → 19。</li></ol>
+<h3 id="其余-a-类">其余 A 类<a class="anchor" href="#其余-a-类" aria-label="锚点">#</a></h3>
+<ul><li><strong>A2 <code>[DESIGN-A2A-001]</code> 重复件</strong>：<code>docs/03_DESIGN_设计/其它设计/</code>（948 行，更正前）与 <code>docs/10_规范/其它规范/</code>（1033 行，含「定位更正」横幅）同号分叉，前者缺豁免标记 → 22 error。按仓库自己的方案 <code>[MGMT-PLAN-009]</code> §1.5「通信协议 → <strong>各保留，补边界声明</strong>」补边界声明（历史副本 + 指向权威副本）+ <code>naming-guard: exempt</code> → 转绿。<strong>未删未移</strong>。</li><li><strong>A3/A8/A9/A10 登记表与产物陈旧路径</strong>：<code>PROPOSAL-ARTIFACT-INDEX.json</code>（DESIGN-ARCH-105）、<code>RULES-REGISTRY.json</code>（IMPL-RPT-015、DESIGN-SEMVER-001）、<code>FEATURE-OWNERSHIP.json</code>（DESIGN-ARCH-113）→ 补子目录；规则卡 <code>[RUNTIME-004]</code> 由 <code>gen-rules-cards.js</code> 重生成 172 件，<code>check-rules-registry</code>（TOOLING-008 逐字节）EXIT 0。</li><li><strong>A4/A5 错级死 require</strong>：<code>crossPlatform/clients/terminalClient.js:27</code>、<code>crossPlatform/ws/syncServer.js:56</code> 的 <code>../../utils/dataHome</code> → <code>../../../utils/dataHome</code>（目标实存于 <code>services/backend/src/utils/dataHome.js</code>）。</li><li><strong>A6 派生文档漂移</strong>：<code>[OPS-MAN-067]</code> 速查表落盘件停在旧扁平路径，生成器输出指向<strong>实存</strong>的新路径 → 重跑 <code>npm run maintenance:triage-doc</code>（<code>maintainerTriage.test.js</code> 15/15）。</li><li><strong>A11 <code>ruleguard.test.js:503</code> 探针前提失效</strong>：探针 <code>'非存在目录/x.js'</code> 断言「未命中任何 paths 的路径不得返回规则」，但 <code>RUNTIME-009</code>（删除先报部位）的 <code>paths</code> 是 <code>**/*.js</code> 等「全仓代码文件」——<code>.js</code> <strong>正是</strong>它应命中的。改用 <code>x.zzz</code>（登记表全部 133 个 glob 无一含 <code>.zzz</code>）→ 30/30 绿。</li></ul>
+<h3 id="固化判据-新增第三类-c-在途未提交">固化判据：新增第三类 C（在途未提交）<a class="anchor" href="#固化判据-新增第三类-c-在途未提交" aria-label="锚点">#</a></h3>
+<p>沿用「上一份报告绿、今天红 = A；同值同症状 = B」之外，本轮必须引入 <strong>C 类 = 由未提交的在途工作（索引态 <code>A </code> / <code>M </code>）造成、不在本次提交区间内</strong> → <strong>不修，只交人工</strong>：</p>
+<ul><li><strong>C1（最值得人工看）</strong>：<code>scripts/tests/check-repo-layout.test.js</code> 已改为断言 <code>docs/13_传承/</code>（嵌套路径），但 <code>scripts/ci/check-repo-layout.js</code> 的 <code>checkDocsIndexFirst()</code> <strong>仍只扫 <code>docs/</code> 一级子目录</strong>（单层 <code>readdirSync</code>，<code>markdown.length === 0</code> 即 <code>continue</code>）→ 嵌套目录永不报。两文件都在索引里（<code>M </code>）= <strong>半成品</strong>。需一条策略裁定：归夹后是否要求<strong>每个嵌套阶段子目录各自</strong>带 <code>00_INDEX_*</code>？若是 → 扩守卫为递归并<strong>先评估全仓亮红面</strong>；若否 → 回退夹具为一级路径。</li><li><strong>C2/C3</strong>：<code>scripts/tests/repoCodeStandards.test.js</code>、<code>repoTaskEntryIntegrity.test.js</code> 均为新增（<code>A </code>）且<strong>测试本身是对的</strong>，红在既有债务（code-standards 3 突破、dangling 103 &gt; 98）。</li></ul>
+<h3 id="交人工-未解决">交人工（未解决）<a class="anchor" href="#交人工-未解决" aria-label="锚点">#</a></h3>
+<ul><li><strong>U1 同号跨阶段家族</strong>：<code>[DESIGN-A2A-001]</code> 两份 85 行内容分叉，是否择一隔离待裁决（<code>965b8371</code> 提交说明已登记为「跨阶段同号族」下批待办）。</li><li><strong>U2 同根因未覆盖点</strong>：<code>scripts/docs/md-to-pdf.js:515</code> 仍硬编码 <code>docs/07_OPS_运维</code>，其 <code>ONBOARDING_DOCS</code>（OPS-MAN-043/044）实测只在子目录；但 <code>docs:pdf:onboarding</code> <strong>本身就在 dangling-task 清单里</strong>（<code>package.json</code> 无此脚本）→ preset 当前不可达，<strong>未修只记录</strong>。</li><li><strong>U3 HEAD 不自洽</strong>：<code>scripts/lib/docsPaths.js</code> <strong>不在 HEAD</strong>（索引态 <code>A </code>）却被 22 个文件 require（复核：HEAD 的 <code>restore-plan.js</code> 尚未 require 它 → 属 B4b 在途，非 HEAD 已坏）；<code>RULES-REGISTRY.json</code> 在 HEAD <strong>仍在 <code>docs/_规范/</code></strong>，与消费者读的 <code>docs/10_规范/</code> 不符（<strong>回归 09-17 已报项</strong>）。</li><li><strong>U4 <code>dangling-task</code> 103 的 +5 未逐项归因</strong>。全量清单已导出 <code>.khy/tmp/f0919-dangling-list.txt</code>（103 项，主体是 <code>does-not-exist</code>/<code>X</code>/<code>x</code>/<code>rebuild-me</code>/<code>bench</code>/<code>test:*</code> 这类<strong>测试夹具与文档示例引用的假目标</strong>）→ 该指标含大量<strong>测量噪声</strong>，建议人工裁定「补脚本」还是「把夹具目标排除出统计口径」。</li></ul>
+<h3 id="b-类-只记录">B 类（只记录）<a class="anchor" href="#b-类-只记录" aria-label="锚点">#</a></h3>
+<p><code>check:code-standards</code> 3 突破（09-18 为 4 → <strong>在改善</strong>）· <code>check:pattern-coverage</code> 3419&gt;3238 · <code>check:leaf-contract</code> 4 error <strong>全是 <code>scripts/tests/leaf-contract.test.js</code> 的故意夹具</strong>（断言文本里含 <code>const fs = require('fs')</code> 以测规则本身）· <code>check:file-ratchet</code> 624/783（<strong>标定问题</strong>：base=merge-base 旧提交 vs after=含 3993 条未提交改动的整棵脏树）· <code>check:change-safety</code> · <code>check:agent-rules</code> <strong>exit 124 @900s</strong>（<code>--changed</code> 在 3993 文件上不收敛；无参单跑秒回「No target files found」EXIT 0 → 环境性超时）· <code>test:backend</code> 32 套件/63 用例（09-18 为 10/22，按 09-18 结论<strong>本机不可作回归判据</strong>）· <code>test:node</code> 轨<strong>连续第 6 日未能验证</strong>。</p>
+<h3 id="环境教训-新增-后续直接用">环境教训（新增，后续直接用）<a class="anchor" href="#环境教训-新增-后续直接用" aria-label="锚点">#</a></h3>
+<ul><li><strong><code>--list=&lt;id&gt;</code> 是拿全量清单的正路</strong>：守卫主输出只给前 12 条 + 「共 N 个」，<code>node scripts/ci/check-repo-layout.js --list=dangling-task</code> 才吐全表（103 行）。做归因必须用 <code>--list</code>。</li><li><strong><code>node -e</code> 内联脚本遇中文路径 / 反斜杠正则 / <code>[...]</code> 字符类必炸</strong>（<code>SyntaxError</code> / <code>Unexpected token</code>）。<strong>一律写成 <code>.khy/tmp/*.js</code> 文件再 <code>node</code> 跑</strong>，且<strong>必须从仓库根跑</strong>（从 <code>.khy/tmp</code> 跑会让相对路径拼成 <code>.khy/tmp/.khy/tmp/…</code>）。本轮多次踩。</li><li><strong>工作区是「长期脏」而不是「正在被改」</strong>：脏条目数 1984(09-15) → 2406 → 3291 → 3538 → 3996，连续 5 天单调上升；很多红来自<strong>索引态</strong>（<code>A </code>/<code>M </code>）而非提交。因此归因前必须先 <code>git status --porcelain -- &lt;file&gt;</code> 区分「提交引入」与「在途引入」——这是本轮引入 C 类的直接原因。</li><li><strong><code>grep -c</code> / <code>git ls-tree --name-only &lt;dir&gt;</code> 的坑</strong>：后者对目录会回显目录名本身（不是内容），别用它列目录文件。</li><li><code>test:scripts</code> 的失败清单要<strong>连缩进一起抓</strong>（<code>/^\s*not ok /</code>），只抓 <code>^not ok </code> 会漏掉全部子测试，只剩 describe 层的包装失败。</li><li>基线驱动脚本 <code>.khy/tmp/baseline-driver.js</code> 继续可用（32 条串行，约 12 分钟）；<code>check:node-syntax</code> 567s 仍是最慢项。</li><li>跑测试会附带改写 <code>docs/11_报告/metrics/维度健康.json</code> / <code>质量看板.json</code> 的 <code>generatedAt</code>（<strong>内容不变</strong>）——报 <code>git diff</code> 时要主动说明，否则看起来像多改了文件。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../.workbuddy/memory/2026-09-18.html"><div class="dir">← 上一篇</div><div class="ttl">2026-09-18 工作日志</div></a><a class="next" href="../../.workbuddy/memory/2026-09-20.html"><div class="dir">下一篇 →</div><div class="ttl">2026-09-20</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__=".workbuddy/memory/2026-09-19.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

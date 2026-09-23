@@ -125,7 +125,8 @@ describe('computeToolProgress (执行中 staged narration)', () => {
   });
 
   test('unknown tool falls back to a generic running line (never blank/throw)', () => {
-    expect(computeToolProgress({ name: 'unknown_xyz', params: {}, env: {} })).toBe('正在执行…');
+    // Named unknown tool → the fallback names the target (red line ②: action + object).
+    expect(computeToolProgress({ name: 'unknown_xyz', params: {}, env: {} })).toBe('正在执行 unknown_xyz…');
     expect(computeToolProgress()).toBe('正在执行…');
   });
 

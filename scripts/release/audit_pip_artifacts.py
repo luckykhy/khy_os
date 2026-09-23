@@ -12,6 +12,11 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+# Sibling import: pip_packaging_rules.py lives next to this script. Portable
+# Python distributions with a python311._pth disable script-dir sys.path[0],
+# so resolve it from __file__ explicitly.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 from pip_packaging_rules import (
     AUDIT_FORBIDDEN_CLASSIFIER_SUBSTRINGS,
     AUDIT_FORBIDDEN_DIRS,

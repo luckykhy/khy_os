@@ -15,17 +15,17 @@ describe('Parse List To Set', () => {
   });
 
   test('逗号分隔 → 小写去重', () => {
-      expect([...parseListToSet('A).toEqual(B,c')], ['a', 'b', 'c']);
-      expect([...parseListToSet('X).toEqual(x,X')], ['x']);
+      expect([...parseListToSet('A,B,c')]).toEqual(['a', 'b', 'c']);
+      expect([...parseListToSet('X,x,X')]).toEqual(['x']);
   });
 
   test('空白 / 混合分隔', () => {
       expect([...parseListToSet('a b\tc')]).toEqual(['a', 'b', 'c']);
-      expect([...parseListToSet('a).toEqual(b ,  c')], ['a', 'b', 'c']);
+      expect([...parseListToSet('a,b ,  c')]).toEqual(['a', 'b', 'c']);
   });
 
   test('trim 空段被丢弃', () => {
-      expect([...parseListToSet(').toEqual(,a,,')], ['a']);
+      expect([...parseListToSet(',a,,')]).toEqual(['a']);
       expect([...parseListToSet('   ')]).toEqual([]);
   });
 

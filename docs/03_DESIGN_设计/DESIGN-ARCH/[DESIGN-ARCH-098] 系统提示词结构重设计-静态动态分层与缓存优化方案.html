@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-098] 系统提示词结构重设计-静态动态分层与缓存优化方案.md -->
+<title>[DESIGN-ARCH-098] 系统提示词结构重设计：静态/动态分层与缓存优化方案 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-098] 系统提示词结构重设计：静态/动态分层与缓存优化方案</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-098] 系统提示词结构重设计：静态/动态分层与缓存优化方案</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-098-系统提示词结构重设计-静态-动态分层与缓存优化方案">[DESIGN-ARCH-098] 系统提示词结构重设计：静态/动态分层与缓存优化方案</a></li><li class="lvl-2"><a href="#0-结论摘要">0. 结论摘要</a></li><li class="lvl-2"><a href="#1-现状诊断-实测">1. 现状诊断（实测）</a></li><li class="lvl-3"><a href="#1-1-分区占比">1.1 分区占比</a></li><li class="lvl-3"><a href="#1-2-动态区最大的五段">1.2 动态区最大的五段</a></li><li class="lvl-3"><a href="#1-3-三个具体病灶">1.3 三个具体病灶</a></li><li class="lvl-2"><a href="#2-设计原则-三轴分离">2. 设计原则：三轴分离</a></li><li class="lvl-2"><a href="#3-目标结构-l0-l4-五层">3. 目标结构：L0–L4 五层</a></li><li class="lvl-3"><a href="#3-1-与现状的映射">3.1 与现状的映射</a></li><li class="lvl-3"><a href="#3-2-关键改动-boundary-后移">3.2 关键改动：boundary 后移</a></li><li class="lvl-2"><a href="#4-两部分的组织方式">4. 两部分的组织方式</a></li><li class="lvl-3"><a href="#4-1-显式锚点-而非隐式位置">4.1 显式锚点，而非隐式位置</a></li><li class="lvl-3"><a href="#4-2-声明式装配">4.2 声明式装配</a></li><li class="lvl-2"><a href="#5-加载时机-四时机模型">5. 加载时机（四时机模型）</a></li><li class="lvl-3"><a href="#5-1-每轮重算的字节预算">5.1 每轮重算的字节预算</a></li><li class="lvl-3"><a href="#5-2-绝不每轮重算的清单-必须进-t0-t2">5.2 绝不每轮重算的清单（必须进 T0–T2）</a></li><li class="lvl-2"><a href="#6-提升意图理解的四个机制">6. 提升意图理解的四个机制</a></li><li class="lvl-3"><a href="#6-1-本轮意图块-intent-block-把-系统认为你要做什么-说出口">6.1 本轮意图块（intent block）—— 把「系统认为你要做什么」说出口</a></li><li class="lvl-3"><a href="#6-2-胶囊自解释">6.2 胶囊自解释</a></li><li class="lvl-3"><a href="#6-3-冲突裁决优先级-写进-l0-只写一次">6.3 冲突裁决优先级（写进 L0，只写一次）</a></li><li class="lvl-3"><a href="#6-4-规则去重-单一真源-引用">6.4 规则去重（单一真源 + 引用）</a></li><li class="lvl-2"><a href="#7-具体改动清单">7. 具体改动清单</a></li><li class="lvl-2"><a href="#8-迁移路径-5-步-每步可字节回退">8. 迁移路径（5 步，每步可字节回退）</a></li><li class="lvl-2"><a href="#9-验收指标">9. 验收指标</a></li><li class="lvl-2"><a href="#10-风险与不做的事">10. 风险与不做的事</a></li><li class="lvl-2"><a href="#12-本次落地的测试标准与完成定义">12. 本次落地的测试标准与完成定义</a></li><li class="lvl-3"><a href="#12-1-落地范围-本次">12.1 落地范围（本次）</a></li><li class="lvl-3"><a href="#12-2-验收条件-ac">12.2 验收条件（AC）</a></li><li class="lvl-3"><a href="#12-3-完成定义-dod">12.3 完成定义（DoD）</a></li><li class="lvl-3"><a href="#12-4-文档未覆盖处的假设与偏离-实施时明确声明">12.4 文档未覆盖处的假设与偏离（实施时明确声明）</a></li><li class="lvl-2"><a href="#11-版本历史">11. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-098 | 阶段: 设计 | 关联: [DESIGN-PROMPT-002] 分层规范、DESIGN-ARCH-047 缓存边界 --&gt;</p>
+<h1 id="design-arch-098-系统提示词结构重设计-静态-动态分层与缓存优化方案">[DESIGN-ARCH-098] 系统提示词结构重设计：静态/动态分层与缓存优化方案<a class="anchor" href="#design-arch-098-系统提示词结构重设计-静态-动态分层与缓存优化方案" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>性质</strong>：设计方案（提案），<strong>尚未实施</strong>。当前运行时结构与分层规范见<br>[<code>[DESIGN-PROMPT-002] 系统提示词分层规范</code>](../../10_规范/其它规范/[DESIGN-PROMPT-002] 系统提示词分层规范-静态与动态分区.md)；<br>本文描述<strong>目标结构</strong>与<strong>迁移路径</strong>。<br><strong>目标</strong>：① 提升前缀缓存命中率；② 让模型更准确地理解用户意图；③ 让两部分（静态/动态）的组织方式与加载时机可被机器校验。</p>
+<p>⚠️ <strong>已被调研修正（2026-09-15）</strong>：横向比对 Claude Code / opencode / Codex CLI / Gemini CLI /<br>DeepSeek Harness 后，本文 <strong>§3 的「项目章程搬进 L1 前缀」与 §7 改动 9 的路径被修正</strong>——<br>改为 Codex 式的 <strong>messages 增量注入</strong>。原因：khy 走自建 relay 路径、无跨用户共享缓存，<br>前缀方案与 messages 方案命中率等价，但后者下<strong>前缀永不因项目文件改动而作废</strong>。<br>修正细节与新增的 R1–R9 对齐清单见<br>[`[DESIGN-ARCH-099] 提示词架构横向调研与 khy-os 对[DESIGN-ARCH-099] 提示词架构横向调研与khy-os对齐方案.md齐方案.md)。<br>本文其余结论（五问判据、L0–L4 分层、锚点方案、L4 意图块、四时机加载）在调研中<strong>得到强化，无需修改</strong>。</p></blockquote>
+<hr>
+<h2 id="0-结论摘要">0. 结论摘要<a class="anchor" href="#0-结论摘要" aria-label="锚点">#</a></h2>
+<p><strong>诊断</strong>：实测单轮装配产物 66,780 字符，其中<strong>静态前缀只有 13,927 字符（20.9%）</strong>，<br>而 boundary 之后的动态区占 52,817 字符（79.1%）——<strong>但真正每轮必变的只有约 2,037 字符（3.0%）</strong>。<br>也就是说，<strong>约 76% 的提示词字节是「会话内基本稳定」的，却被排在了缓存边界之后</strong>。</p>
+<p><strong>方案</strong>：把 boundary 从「常量 / 动态 的分界」重新定义为<br><strong>「会话级可缓存前缀 / 每轮区 的分界」</strong>，并按<strong>三轴分离</strong>（稳定性、作用域、触发条件）<br>把内容重排为五层 L0–L4。核心是<strong>把会话级稳定内容整体前移进可缓存前缀</strong>。</p>
+<table><thead><tr><th>指标</th><th>现状</th><th>目标</th></tr></thead><tbody><tr><td>可缓存前缀占提示词字节</td><td>20.9%</td><td><strong>≥ 60%</strong></td></tr><tr><td>每轮重算字节数</td><td>≈ 52,817</td><td><strong>≤ 8,000</strong></td></tr><tr><td>同一规则被重复表述的段数（验证类）</td><td>13 段</td><td><strong>≤ 2 段</strong></td></tr><tr><td>跨段冗余字符</td><td>≈ 9,578（14.3%）</td><td><strong>≤ 2,000</strong></td></tr><tr><td>意图信号是否显式</td><td>否（埋在 <code>khy_specific</code> 的 cacheKey 里）</td><td><strong>是（独立 intent 块）</strong></td></tr></tbody></table>
+<hr>
+<h2 id="1-现状诊断-实测">1. 现状诊断（实测）<a class="anchor" href="#1-现状诊断-实测" aria-label="锚点">#</a></h2>
+<h3 id="1-1-分区占比">1.1 分区占比<a class="anchor" href="#1-1-分区占比" aria-label="锚点">#</a></h3>
+<p>单轮实测（<code>cwd</code> + 一条普通工程类用户消息）：</p>
+<table><thead><tr><th>区域</th><th>字符数</th><th>占比</th></tr></thead><tbody><tr><td>静态前缀（boundary 之前，12 段）</td><td>13,927</td><td><strong>20.9%</strong></td></tr><tr><td>动态区（boundary 之后）</td><td>52,817</td><td><strong>79.1%</strong></td></tr><tr><td>合计（21 个装配段）</td><td>66,780</td><td>100%</td></tr><tr><td>其中「每轮必变」候选（<code>env_info</code> 1,100 + <code>git_status</code> 937）</td><td>2,037</td><td><strong>3.0%</strong></td></tr></tbody></table>
+<h3 id="1-2-动态区最大的五段">1.2 动态区最大的五段<a class="anchor" href="#1-2-动态区最大的五段" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>段</th><th>字符数</th><th>占全量</th><th>归属</th><th>真实变化频率</th></tr></thead><tbody><tr><td><code># claudeMd</code>（项目指令注入）</td><td>26,378</td><td><strong>39.5%</strong></td><td><code>project_instructions</code></td><td>会话内几乎不变</td></tr><tr><td><code># Runtime (khy OS v1.1.15)</code></td><td>11,587</td><td>17.4%</td><td><code>khy_specific</code> + <code>model_guidance</code></td><td><strong>每轮可能变</strong>（键含 <code>taskScale</code>）</td></tr><tr><td><code># Project structure</code></td><td>5,297</td><td>7.9%</td><td><code>project_structure</code></td><td>顶层增删才变</td></tr><tr><td><code># Available Skills</code></td><td>2,151</td><td>3.2%</td><td><code>skill_catalog</code></td><td>装/卸技能才变</td></tr><tr><td><code># Planning and verification</code></td><td>1,764</td><td>2.6%</td><td>按需胶囊</td><td>按意图选片</td></tr></tbody></table>
+<p><strong>结论</strong>：占比最大的三块（合计 50.3%）都是「会话级稳定」，却被安排在缓存边界之后。<br>只有 3% 的字节真正需要每轮重算。</p>
+<h3 id="1-3-三个具体病灶">1.3 三个具体病灶<a class="anchor" href="#1-3-三个具体病灶" aria-label="锚点">#</a></h3>
+<p><strong>病灶 A：稳定内容被关在缓存门外（最大损失）</strong><br>按现状 76% 的字节每轮重新计算/重新计费。在中转（relay）/ DeepSeek 路径上标记被剥离、<br>命中率完全依赖「最长前缀匹配」，这部分字节<strong>一次都命中不了</strong>。</p>
+<p><strong>病灶 B：每轮变量混在静态前缀里（反向污染）</strong><br><code>deferred_tools_hint</code>（router 逐轮算）、<code>using_your_tools</code>（<code>enabledTools</code> 的函数）、<br><code>simple_intro</code> / <code>doing_tasks</code>（<code>outputStyle</code> 的函数）都在 boundary <strong>之前</strong>。<br>一次 deferred 揭示、一次工具档位切换、一次样式切换，静态前缀即从该点起全部作废。<br><strong>当前设计在最需要稳定的位置放了最会变的内容。</strong></p>
+<p><strong>病灶 C：规则跨段重复（稀释重点 + 虚耗 token）</strong><br>按「规则主题」统计跨段覆盖：</p>
+<table><thead><tr><th>规则主题</th><th>被多少段重复表述</th><th>冗余估算</th></tr></thead><tbody><tr><td><strong>改动后验证</strong></td><td><strong>13 段</strong>（ExecutionDiscipline、ScopeMinimization、PlanningAndRecovery、PlanningAndVerification、ErrorHandling、MultiAgent、FileOperations、CommandExecution、ResponseFormatting、ToneAndStyle、UnifiedOutput、GitOperations、CompactTaskDiscipline）</td><td>~2,500 字</td></tr><tr><td>最小改动 / 不越界</td><td>6 段</td><td>~1,700 字</td></tr><tr><td>破坏性/外部动作先确认</td><td>6 段</td><td>~1,100 字</td></tr><tr><td>输出简短直接</td><td>5 段</td><td>~700 字</td></tr><tr><td>失败先诊断再重试</td><td>4 段</td><td>~700 字</td></tr><tr><td>改前先读</td><td>4 段</td><td>~600 字</td></tr><tr><td>并行工具调用</td><td>4 段</td><td>~500 字</td></tr><tr><td>敏感信息脱敏 / 不确定就说不确定</td><td>各 3 段</td><td>~800 字</td></tr><tr><td><strong>合计</strong></td><td>—</td><td><strong>≈ 9,578 字（14.3%）</strong></td></tr></tbody></table>
+<p>除数量浪费外还有<strong>语义副作用</strong>：同一条规则说 13 遍，模型无法判断哪条是重点——<br><strong>重点被平均化</strong>，这直接损害「准确理解意图」。</p>
+<hr>
+<h2 id="2-设计原则-三轴分离">2. 设计原则：三轴分离<a class="anchor" href="#2-设计原则-三轴分离" aria-label="锚点">#</a></h2>
+<p>现状把三个正交维度揉成一个隐式判断（「这个段放哪」由它在数组里的位置 + 它的 cacheKey<br>两处共同隐性决定）：</p>
+<table><thead><tr><th>轴</th><th>含义</th><th>决定</th><th>现状</th></tr></thead><tbody><tr><td><strong>A 稳定性</strong></td><td>会不会变、多久变一次</td><td><strong>位置</strong>（能否进可缓存前缀）</td><td>隐式，散落五处</td></tr><tr><td><strong>B 作用域</strong></td><td>对谁生效：进程 / 会话 / 项目 / 轮次</td><td><strong>归属</strong>（属于哪一层）</td><td>未建模</td></tr><tr><td><strong>C 触发条件</strong></td><td>何时必须出现（无条件 / 上下文变化 / 意图命中）</td><td><strong>加载时机</strong></td><td>只用了一个「按需胶囊」概念</td></tr></tbody></table>
+<p><strong>重设计的第一原则</strong>：<strong>位置只由轴 A 决定，归属只由轴 B 决定，出现与否只由轴 C 决定。</strong><br>三者互不越界——这正是当前设计最缺的纪律。</p>
+<p><strong>第二原则</strong>：<strong>能进前缀的字节，绝不留到边界之后。</strong><br>判据是「它会不会在<strong>不使用户产生新输入</strong>的情况下变化」：不会 → 进前缀；会 → 进每轮区。</p>
+<p><strong>第三原则</strong>：<strong>同一条规则只有一个真源段落</strong>，其他段落用引用而非复述。</p>
+<hr>
+<h2 id="3-目标结构-l0-l4-五层">3. 目标结构：L0–L4 五层<a class="anchor" href="#3-目标结构-l0-l4-五层" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>层</th><th>名称</th><th>内容</th><th>稳定性契约</th><th>失效方式</th><th>位置</th></tr></thead><tbody><tr><td><strong>L0</strong></td><td>不可变内核</td><td>角色设定、使命、能力边界（能/不能做什么）、绝对红线（安全/合规）、输出格式约定、冲突裁决优先级</td><td>编译期常量：无参数、无 env、无 <code>Date</code></td><td>只在发版时变</td><td>前缀最前</td></tr><tr><td><strong>L1</strong></td><td>会话配置</td><td>语言、输出风格、模型族与执行纪律档位、权限模式、工具档位（<code>enabledTools</code>）、项目指令的<strong>稳定部分</strong>（角色/约定/架构规范）</td><td>会话内不变（装配一次）</td><td>用户显式切换</td><td>前缀（boundary 之前）</td></tr><tr><td><strong>L2</strong></td><td>项目与记忆</td><td>项目指令的<strong>易变部分</strong>（当前任务清单、进行中的约定）、<code>memory</code>、<code>references</code>、<code>persona/role/companion</code>、<code>skill_catalog</code>、<code>project_structure</code></td><td>只在底层文件变化时变</td><td>新鲜度戳（<code>mtime:size</code> / 指纹）</td><td>边界之后第 1 段（可打第 2 个缓存断点）</td></tr><tr><td><strong>L3</strong></td><td>轮次状态</td><td><code>env_info</code>（时钟）、<code>git_status</code>、<code>task_memory</code>、<code>mcp_instructions</code>、<code>deferred_tools_hint</code></td><td>每轮或每分钟可变</td><td>每轮重算</td><td>尾部</td></tr><tr><td><strong>L4</strong></td><td>本轮意图与任务</td><td><strong>intent 块</strong>（任务规模、命中的能力胶囊、判定理由）、按需胶囊正文、任务参数</td><td>每轮必变</td><td>每轮重算</td><td>绝对尾部（dead-last）</td></tr></tbody></table>
+<h3 id="3-1-与现状的映射">3.1 与现状的映射<a class="anchor" href="#3-1-与现状的映射" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>现状 tier</th><th>目标层</th><th>变化</th></tr></thead><tbody><tr><td><code>static</code></td><td><strong>L0</strong></td><td>剔除参数化内容（<code>simple_intro</code> / <code>doing_tasks</code> 的 output-style 依赖）</td></tr><tr><td><code>dynamic_stable</code></td><td>拆为 <strong>L1</strong> + <strong>L2</strong></td><td>会话级配置前移进前缀；文件级内容留在 L2 并修 cacheKey</td></tr><tr><td><code>dynamic_volatile</code></td><td><strong>L3</strong></td><td>位置不变，补齐新鲜度戳</td></tr><tr><td><code>on_demand</code></td><td><strong>L4</strong></td><td>增加显式 intent 块作为「为什么选它们」的解释</td></tr></tbody></table>
+<h3 id="3-2-关键改动-boundary-后移">3.2 关键改动：boundary 后移<a class="anchor" href="#3-2-关键改动-boundary-后移" aria-label="锚点">#</a></h3>
+<p><strong>这是本次重设计的核心动作。</strong></p>
+<pre><code class="language-text">现状：
+  [ 常量 12 段 13.9k ] │ boundary │ [ 会话配置 + 项目 + 记忆 + 每轮 52.8k ]
+     可缓存 20.9%                            每轮重算 79.1%
+
+目标：
+  [ L0 内核 + L1 会话配置 ≈ 40k+ ] │ boundary │ [ L2 项目/记忆 │ L3 每轮 │ L4 意图 ]
+       可缓存 ≥ 60%                                 每轮重算 ≤ 8k
+                └─ 原生路径在此再打第二个缓存断点，得到两级缓存</code></pre>
+<p><strong>为什么可行</strong>：L1 的失效条件是「用户显式切换语言/风格/模型/工具档位」——这是低频的<br>用户主动动作，不是每轮波动。<strong>为低频事件付出一次前缀失效，换掉每轮 50k 的重算，是划算的。</strong></p>
+<p><strong>风险与对策</strong>：L1 一旦变化，前缀全部失效（比现状更「一刀切」）。对策是把 L1 收敛到<br><strong>真正由用户显式设定</strong>的四五项，任何「系统自动推导」的值都不许进 L1（如 <code>taskScale</code><br>必须留在 L4）。</p>
+<hr>
+<h2 id="4-两部分的组织方式">4. 两部分的组织方式<a class="anchor" href="#4-两部分的组织方式" aria-label="锚点">#</a></h2>
+<h3 id="4-1-显式锚点-而非隐式位置">4.1 显式锚点，而非隐式位置<a class="anchor" href="#4-1-显式锚点-而非隐式位置" aria-label="锚点">#</a></h3>
+<p>现状靠 <code>getSystemPrompt()</code> 返回数组里的位置来隐含分区。目标改为<strong>显式锚点标记</strong>：</p>
+<pre><code class="language-text">&lt;!-- khy:l0 --&gt;
+  # Who you are
+  # What you can and cannot do
+  # Non-negotiable rules
+  # Conflict resolution order
+  # Output format contract
+&lt;!-- /khy:l0 --&gt;
+
+&lt;!-- khy:l1 --&gt;
+  # Language
+  # Output style
+  # Model execution discipline
+  # Tooling profile
+  # Project charter            ← 项目指令中「不变」的部分
+&lt;!-- /khy:l1 --&gt;
+
+__SYSTEM_PROMPT_DYNAMIC_BOUNDARY__
+
+&lt;!-- khy:l2 --&gt;
+  # Project state             ← 项目指令中「会变」的部分
+  # Memory
+  # Persona / Role
+  # Skill catalog
+  # Project structure
+&lt;!-- /khy:l2 --&gt;
+
+&lt;!-- khy:l3 --&gt;
+  # Environment
+  # Git status
+  # Task memory
+  # MCP servers
+  # Deferred tools
+&lt;!-- /khy:l3 --&gt;
+
+&lt;!-- khy:l4 --&gt;
+  # This turn                  ← intent 块
+  # &lt;启用的能力胶囊正文&gt;
+&lt;!-- /khy:l4 --&gt;</code></pre>
+<p>锚点的三个用途：</p>
+<ol><li><strong>可机器校验</strong>：守卫直接断言「L0/L1 必须在 boundary 之前」「L3/L4 必须在最后」，</li></ol>
+<p>不再依赖人工核对数组位置。</p>
+<ol><li><strong>可解释</strong>：<code>khy prompt --explain</code> 能按层列出字节数与命中情况，缓存问题可定位。</li><li><strong>可裁剪</strong>：调试/小模型路径可按层裁剪（如低档模型只保留 L0 + L4）。</li></ol>
+<h3 id="4-2-声明式装配">4.2 声明式装配<a class="anchor" href="#4-2-声明式装配" aria-label="锚点">#</a></h3>
+<p>把「哪一段、属于哪层、cacheKey 是什么、什么时机装配」从代码里的调用顺序<br><strong>提升为一张声明表</strong>（即 [DESIGN-PROMPT-002] 已有的 <code>promptSectionTaxonomy.js</code>，<br>在 P1 阶段把 tier 从 <code>static/dynamic_*</code> 重命名为 <code>L0..L4</code>）。<br>装配器只消费声明表，杜绝「新增段忘了声明分层」。</p>
+<hr>
+<h2 id="5-加载时机-四时机模型">5. 加载时机（四时机模型）<a class="anchor" href="#5-加载时机-四时机模型" aria-label="锚点">#</a></h2>
+<p>现状只有「每轮全部重跑一次」和「段缓存」两种机制混用。目标明确四个时机：</p>
+<table><thead><tr><th>时机</th><th>触发</th><th>装配内容</th><th>频次</th><th>字节量目标</th></tr></thead><tbody><tr><td><strong>T0 进程启动</strong></td><td>进程拉起</td><td><strong>L0</strong> 全量：编译期常量，进程级复用一份不可变字符串</td><td>1 次/进程</td><td>≈ 14k（零成本复用）</td></tr><tr><td><strong>T1 会话开始</strong></td><td>新会话 / <code>/clear</code> / <code>/compact</code></td><td><strong>L1</strong> 全量：读语言、风格、模型、权限、工具档位、项目章程；装订一整块</td><td>1 次/会话</td><td>≈ 26k</td></tr><tr><td><strong>T2 上下文变更</strong></td><td>L2 各段的戳变化（文件 mtime、技能集指纹、git 状态摘要）</td><td>只重算<strong>戳变了的那一段</strong></td><td>低频</td><td>0–5k</td></tr><tr><td><strong>T3 每一轮</strong></td><td>每次用户消息</td><td><strong>L3 + L4</strong>：时钟、git、任务板、MCP、deferred、intent 块、胶囊选片</td><td>每轮</td><td><strong>≤ 8k</strong></td></tr></tbody></table>
+<h3 id="5-1-每轮重算的字节预算">5.1 每轮重算的字节预算<a class="anchor" href="#5-1-每轮重算的字节预算" aria-label="锚点">#</a></h3>
+<p><strong>硬指标：T3 每轮重算 ≤ 8,000 字符</strong>（现状 ≈ 52,817）。构成：</p>
+<table><thead><tr><th>段</th><th>预估</th><th>说明</th></tr></thead><tbody><tr><td><code>env_info</code></td><td>~1,100</td><td>时钟桶，60s 滚动</td></tr><tr><td><code>git_status</code></td><td>~940</td><td>折入 status 摘要哈希</td></tr><tr><td><code>task_memory</code></td><td>0–1,500</td><td>无任务时为空</td></tr><tr><td><code>mcp_instructions</code></td><td>0–800</td><td>无 MCP 时为空</td></tr><tr><td><code>deferred_tools_hint</code></td><td>0–600</td><td>无 deferred 时为空</td></tr><tr><td><strong>intent 块</strong></td><td>~300</td><td>新增</td></tr><tr><td>命中的胶囊（1–3 个）</td><td>1,000–3,000</td><td>其余留空</td></tr></tbody></table>
+<h3 id="5-2-绝不每轮重算的清单-必须进-t0-t2">5.2 绝不每轮重算的清单（必须进 T0–T2）<a class="anchor" href="#5-2-绝不每轮重算的清单-必须进-t0-t2" aria-label="锚点">#</a></h3>
+<p><code>claudeMd</code> 项目指令、<code>Runtime</code> 执行纪律、<code>Project structure</code>、<code>Available Skills</code>、<br><code>Memory</code>、<code>persona/role/companion</code>、语言与风格、工具档位描述。</p>
+<hr>
+<h2 id="6-提升意图理解的四个机制">6. 提升意图理解的四个机制<a class="anchor" href="#6-提升意图理解的四个机制" aria-label="锚点">#</a></h2>
+<p>缓存的另一个前提是<strong>不要为了缓存牺牲理解</strong>。以下四项专门解决后者。</p>
+<h3 id="6-1-本轮意图块-intent-block-把-系统认为你要做什么-说出口">6.1 本轮意图块（intent block）—— 把「系统认为你要做什么」说出口<a class="anchor" href="#6-1-本轮意图块-intent-block-把-系统认为你要做什么-说出口" aria-label="锚点">#</a></h3>
+<p>现状：意图判定（任务规模、命中哪些胶囊）<strong>只体现为「哪些段出现了」</strong>，模型只能靠猜；<br>而 <code>taskScale</code> 还被折进 <code>khy_specific</code> 的 cacheKey —— 既破了缓存，又没让模型看清意图。</p>
+<p>目标：在 L4 顶部注入一个约 300 字符的短块：</p>
+<pre><code class="language-markdown"><span class="hljs-section"># This turn</span>
+<span class="hljs-bullet">-</span> Task scale: large
+<span class="hljs-bullet">-</span> Active guidance: file<span class="hljs-emphasis">_operations, command_</span>execution, planning<span class="hljs-emphasis">_verification
+- Because: the request names a source file and asks for a behavioural fix
+- Note: if this reading of your intent is wrong, say so and the guidance set will change</span></code></pre>
+<p>三个作用：</p>
+<ol><li><strong>模型看得见</strong>：不必再从段落有无反推意图，减少误用（例如把&quot;改一行&quot;当重构来规划）。</li><li><strong>用户可纠偏</strong>：显式写「读错了就说」——用户一句&quot;不对，我要的是 X&quot;即可让 re-selection 生效。</li><li><strong>不破缓存</strong>：它本身就在 L4（每轮区），把 <code>taskScale</code> <strong>从 <code>khy_specific</code> 的 cacheKey 里移除</strong>，</li></ol>
+<p>L1/L2 因此不再受逐轮评分影响。</p>
+<h3 id="6-2-胶囊自解释">6.2 胶囊自解释<a class="anchor" href="#6-2-胶囊自解释" aria-label="锚点">#</a></h3>
+<p>每个能力胶囊首行写明触发条件：</p>
+<pre><code class="language-markdown"><span class="hljs-section"># File operations</span>
+Applies when: reading, editing, or creating files.
+Since: the request references a source file.</code></pre>
+<p>模型因此知道「这段为什么在这儿」，比不知道来由的规则更容易被正确执行；<br>也让「胶囊该不该出现」的调试变得可读。</p>
+<h3 id="6-3-冲突裁决优先级-写进-l0-只写一次">6.3 冲突裁决优先级（写进 L0，只写一次）<a class="anchor" href="#6-3-冲突裁决优先级-写进-l0-只写一次" aria-label="锚点">#</a></h3>
+<p>现状：规则之间的优先级从未声明，模型在矛盾指令（如「最小改动」vs「完整验证」）之间摇摆。<br>L0 明确一条链，全局只此一处：</p>
+<pre><code class="language-text">1. 安全与合规红线（绝对）
+2. 用户在本轮消息中的显式指令
+3. 项目章程（khy.md / AGENTS.md 中的约定）
+4. 本轮能力胶囊的建议
+5. 风格与措辞偏好</code></pre>
+<h3 id="6-4-规则去重-单一真源-引用">6.4 规则去重（单一真源 + 引用）<a class="anchor" href="#6-4-规则去重-单一真源-引用" aria-label="锚点">#</a></h3>
+<p>按 §1.3 的实测重复清单合并。合并原则：<strong>保留最完整的表述，其余段改为一句引用</strong>。</p>
+<table><thead><tr><th>规则主题</th><th>真源段落（保留全文）</th><th>其他段处理</th></tr></thead><tbody><tr><td>改动后验证</td><td><code># Verification</code>（由 PlanningAndVerification 收敛而来）</td><td>13 → 改为 1 句引用，或直接删除</td></tr><tr><td>最小改动 / 不越界</td><td><code># Scope discipline</code>（ScopeMinimization 收敛）</td><td>6 → 2（保留 L0 的总则 + 真源段）</td></tr><tr><td>破坏性动作先确认</td><td><code># Acting with care</code>（Actions 收敛）</td><td>6 → 1</td></tr><tr><td>失败先诊断再重试</td><td><code># Error handling</code>（ErrorHandling 收敛）</td><td>4 → 1</td></tr><tr><td>改前先读</td><td><code># File operations</code></td><td>4 → 1</td></tr><tr><td>并行工具调用</td><td><code># Using your tools</code></td><td>4 → 1</td></tr><tr><td>输出简短直接</td><td><code># Output and tone</code></td><td>5 → 1</td></tr></tbody></table>
+<p><strong>注意</strong>：<code>tone_and_style</code> 与 <code>unified_output_and_tone</code> 实测为 100% 重合，但二者由<br><code>KHY_PROMPT_UNIFIED_OUTPUT</code> 门控<strong>互斥</strong>，属设计内，不在去重范围。</p>
+<hr>
+<h2 id="7-具体改动清单">7. 具体改动清单<a class="anchor" href="#7-具体改动清单" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>问题（对应 CONCERNS）</th><th>改动</th><th>收益</th><th>风险</th></tr></thead><tbody><tr><td>1</td><td><code>staleKey</code>：<code>git_status</code> 键只有 <code>cwd</code>，会话内冻结</td><td>cacheKey 折入 <code>git status --short</code> 的摘要哈希</td><td>状态真实、可观测</td><td>每轮多一次 git 调用（可缓存 60s）</td></tr><tr><td>2</td><td><code>staleKey</code>：<code>project_instructions</code> 键只有 <code>cwd</code></td><td>折入指令文件集合的 <code>mtime:size</code></td><td>编辑 <code>AGENTS.md</code> 立即生效</td><td>无</td></tr><tr><td>3</td><td><code>staleKey</code>：<code>skill_catalog</code> 键只有 <code>contextWindowTokens</code></td><td>折入技能集指纹</td><td>新装技能立刻可见</td><td>无</td></tr><tr><td>4</td><td><code>volatileInPrefix</code>：<code>deferred_tools_hint</code> 在前缀内</td><td>移入 <strong>L3</strong></td><td>揭示 deferred 不再破前缀</td><td>无（本就是每轮值）</td></tr><tr><td>5</td><td><code>parametrizedStatic</code>：<code>simple_intro</code> / <code>doing_tasks</code> 读 output style</td><td>output-style 相关句子拆出，移入 <strong>L1</strong></td><td>静态段变纯常量</td><td>需要一次文案搬迁</td></tr><tr><td>6</td><td><code>volatileInPrefix</code>：<code>using_your_tools</code> 是 <code>enabledTools</code> 的函数</td><td>移入 <strong>L1</strong>（档位是会话级设定）</td><td>档位切换只失效一次</td><td>无</td></tr><tr><td>7</td><td><code>misfiledTaskScale</code>：<code>taskScale</code> 折进 <code>khy_specific</code> 键</td><td>从键中移除；改为 <strong>L4 intent 块</strong> 的一个字段</td><td>措辞变化不再击穿缓存；意图显式</td><td>需验证 re-selection 行为不变</td></tr><tr><td>8</td><td>规则跨段重复（9,578 字）</td><td>按 §6.4 收敛到单一真源</td><td>省 token + 重点突出</td><td>文案搬迁需逐条回归</td></tr><tr><td>9</td><td><code>claudeMd</code> 26.4k 整块在动态区</td><td>按「稳定/易变」切分：章程入 <strong>L1</strong>，任务态入 <strong>L2</strong></td><td>最大单块进入可缓存前缀</td><td><strong>最高风险项</strong>，见 §10</td></tr></tbody></table>
+<hr>
+<h2 id="8-迁移路径-5-步-每步可字节回退">8. 迁移路径（5 步，每步可字节回退）<a class="anchor" href="#8-迁移路径-5-步-每步可字节回退" aria-label="锚点">#</a></h2>
+<p>对齐仓库既有的「门控 + 逐字节回退」文化：每步独立门控，关闭后产物与改动前逐字节一致。</p>
+<table><thead><tr><th>阶段</th><th>内容</th><th>门控</th><th>验收</th><th>回退</th></tr></thead><tbody><tr><td><strong>P0</strong></td><td>打锚点：在装配产物中插入 <code>&lt;!-- khy:lN --&gt;</code> 标记，<strong>不改变段序与内容</strong></td><td><code>KHY_PROMPT_ANCHORS</code></td><td>除锚点外逐字节一致</td><td>关掉即完全还原</td></tr><tr><td><strong>P1</strong></td><td>修 3 处 cacheKey 戳（改动 1–3），并把 <code>taskScale</code> 移出键（改动 7 的一半）</td><td><code>KHY_PROMPT_FRESH_KEYS</code></td><td>单测 + 会话内状态更新实测</td><td>关掉回旧键</td></tr><tr><td><strong>P2</strong></td><td><strong>boundary 后移</strong>：<code>using_your_tools</code> + output-style 相关句子 + 项目章程移入 L1</td><td><code>KHY_PROMPT_L1_PREFIX</code></td><td>前缀占比 ≥ 60%；缓存命中率提升可观测</td><td>关掉回旧序</td></tr><tr><td><strong>P3</strong></td><td>引入 <strong>L4 intent 块</strong>（改动 7 的另一半）</td><td><code>KHY_PROMPT_INTENT_BLOCK</code></td><td>意图纠偏用例 + re-selection 行为等价</td><td>关掉不注入</td></tr><tr><td><strong>P4</strong></td><td>规则去重（改动 8），按主题逐条合并、逐条回归</td><td>每主题一个子门控</td><td>主题跨段数达标；行为回归测试全绿</td><td>按主题单独回退</td></tr></tbody></table>
+<p><strong>P2 之前必须先有 P1</strong>：否则「移进前缀的段自带会冻结的键」，会放大错误。</p>
+<hr>
+<h2 id="9-验收指标">9. 验收指标<a class="anchor" href="#9-验收指标" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>指标</th><th>现状</th><th>目标</th><th>观测方式</th></tr></thead><tbody><tr><td>1</td><td>可缓存前缀字节占比</td><td>20.9%</td><td>≥ 60%</td><td>实测装配产物按锚点统计</td></tr><tr><td>2</td><td>每轮重算字节数</td><td>52,817</td><td>≤ 8,000</td><td>同上</td></tr><tr><td>3</td><td>前缀稳定度（连续两轮前缀的公共前缀长度）</td><td>受 output-style / deferred 影响而破裂</td><td>无用户显式切换时应等于整个 L0+L1</td><td>单测：连续两次装配求公共前缀</td></tr><tr><td>4</td><td>「改动后验证」跨段数</td><td>13</td><td>≤ 2</td><td>守卫按主题扫描</td></tr><tr><td>5</td><td>跨段冗余字符</td><td>9,578</td><td>≤ 2,000</td><td>同上</td></tr><tr><td>6</td><td>意图块存在且字段完整</td><td>—</td><td>每轮必有</td><td>守卫</td></tr><tr><td>7</td><td>会话内 <code>git_status</code> 会更新</td><td>冻结</td><td>工作树变化后当轮可见</td><td>集成测试</td></tr><tr><td>8</td><td>编辑 <code>AGENTS.md</code> 后当轮生效</td><td>不生效</td><td>当轮生效</td><td>集成测试</td></tr></tbody></table>
+<p>守卫侧新增断言（接入 <code>check-prompt-taxonomy</code>）：</p>
+<ul><li><code>PTX-100</code>：L0 与 L1 的锚点必须<strong>全部</strong>出现在 boundary 之前。</li><li><code>PTX-101</code>：L3 与 L4 的锚点必须<strong>全部</strong>出现在最后。</li><li><code>PTX-102</code>：L0 段的 <code>dependsOn</code> 必须为空（内核不得参数化）。</li><li><code>PTX-103</code>：每轮重算字节数不得超预算（按锚点统计，超限即红）。</li></ul>
+<hr>
+<h2 id="10-风险与不做的事">10. 风险与不做的事<a class="anchor" href="#10-风险与不做的事" aria-label="锚点">#</a></h2>
+<p><strong>风险</strong></p>
+<ol><li><strong><code>claudeMd</code> 切分（改动 9）是最高风险项</strong>。26.4k 字符是用户项目约定的唯一入口，</li></ol>
+<p>切错会<strong>静默丢失上下文</strong>——而且丢失是「模型不再遵守某条约定」这种难以察觉的形式。<br>   对策：先只做「加新鲜度戳 + 保持整块位置」，切分单独立项、单独验收。</p>
+<ol><li><strong>L1 一刀切失效</strong>：L1 内容比 L0 多，变化时前缀失效范围更大。</li></ol>
+<p>对策：L1 只放用户显式设定项；任何系统推导值（<code>taskScale</code>、意图、工具推荐）不得进 L1。</p>
+<ol><li><strong>规则去重可能改变语义</strong>：合并措辞会带来行为漂移。</li></ol>
+<p>对策：逐主题独立门控、逐主题回归（P4 分解为子门控）。</p>
+<ol><li><strong>原生路径断点数</strong>：多打一个断点会占用 provider 的断点配额。</li></ol>
+<p>对策：L2 断点做成可配置，默认仅在提示词总量超阈值时启用。</p>
+<p><strong>不做的事（明确划界）</strong></p>
+<ul><li>不改任何规则的<strong>语义</strong>，只改位置、去重与暴露方式。</li><li>不做语义召回式胶囊选择（向量检索）——那是另一个课题，且会引入不可预测的字节变化。</li><li>不做自动压缩/摘要式裁剪：它会让「前缀稳定」这个前提失效。</li><li>不为小模型单独维护第二套结构：<code>HARDCORE_SYSTEM_PROMPT</code> 走同一份 L0 的子集</li></ul>
+<p>（按锚点裁剪），而非另写一套。</p>
+<hr>
+<h2 id="12-本次落地的测试标准与完成定义">12. 本次落地的测试标准与完成定义<a class="anchor" href="#12-本次落地的测试标准与完成定义" aria-label="锚点">#</a></h2>
+<blockquote><p>本节是<strong>实施前先立标准</strong>的产物：逐条列出可验证的验收条件与预期结果；实际结果在落地后回填。</p></blockquote>
+<h3 id="12-1-落地范围-本次">12.1 落地范围（本次）<a class="anchor" href="#12-1-落地范围-本次" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>阶段</th><th>内容</th><th>状态</th></tr></thead><tbody><tr><td><strong>P0</strong></td><td>装配锚点：<code>id + slot</code> 描述符 → <code>&lt;!-- khy:&lt;slot&gt;:&lt;id&gt; --&gt;</code> 标记（门控默认关）</td><td>✅ 已落地</td></tr><tr><td><strong>P1</strong></td><td>三处新鲜度 cacheKey（git_status / project_instructions / skill_catalog）</td><td>✅ 已落地</td></tr><tr><td><strong>度量/守卫</strong></td><td>逐段字节计量、单条 token 上限、前缀稳定度测试、门控登记守卫</td><td>✅ 已落地</td></tr><tr><td>P2</td><td>boundary 后移（<code>using_your_tools</code> + output-style 派生内容移出前缀）</td><td>❌ 未落地</td></tr><tr><td>P3</td><td>L4 本轮意图块（含 taskScale 从 <code>khy_specific</code> 键中移出）</td><td>❌ 未落地</td></tr><tr><td>P4</td><td>规则去重（验证类 13 段 → ≤2 段）</td><td>❌ 未落地</td></tr><tr><td>099 R1</td><td>每轮状态改 messages 增量注入</td><td>❌ 未落地（最高收益也最高风险）</td></tr></tbody></table>
+<p><strong>P2–P4 未落地的原因</strong>：① 098 §8 明确「P2 必须晚于 P1」；② 099 §6 已把「项目章程进 L1 前缀」修正为 Codex 式 messages 增量注入，需单独设计；③ 三项都会<strong>改变模型可见文本</strong>，属行为变更，需要独立的回归验证窗口，不宜与度量设施同批交付。</p>
+<h3 id="12-2-验收条件-ac">12.2 验收条件（AC）<a class="anchor" href="#12-2-验收条件-ac" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>验收条件</th><th>验证方式</th><th>预期结果</th><th>实测结果</th></tr></thead><tbody><tr><td>AC-1</td><td>门控关时产物零变更</td><td>改动前后各跑一次快照，逐元素 SHA 比对</td><td>35 段全一致、flatSha 相同</td><td>✅ 35/35 一致，flatSha <code>94bf5f198f92b1c0</code> 相同</td></tr><tr><td>AC-2</td><td>默认配置下不引入新的产物差异</td><td>同口径复跑，逐元素比对</td><td>仅环境性差异（时间戳 / 目录树）</td><td>✅ 仅 <code># Environment</code>（含墙钟时间，与时钟门无关）与 <code># Project structure</code>（我新增了文件）2 段不同</td></tr><tr><td>AC-3</td><td>锚点纯附加</td><td>开锚点数组去掉标记元素 == 关锚点数组</td><td>逐元素相同</td><td>✅ 逐元素相同（35 段）</td></tr><tr><td>AC-4</td><td>扁平产物不含锚点</td><td><code>assembleSystemPrompt</code> 结果断言</td><td>开/关锚点逐字节相同</td><td>✅ 逐字节相同、无 <code>&lt;!-- khy:</code> 残留</td></tr><tr><td>AC-5</td><td>每个段有唯一锚点</td><td>解析标记 id</td><td>&gt;20 段、id 无重复</td><td>✅ 35 段、id 唯一</td></tr><tr><td>AC-6</td><td>槽位落点单调</td><td>解析 slot 序列，按 prefix→dynamic→trailing→tail 校验</td><td>单调不回退</td><td>✅ 单调</td></tr><tr><td>AC-7</td><td>boundary 落点</td><td>源码断言 _push 顺序</td><td>最后一个 prefix &lt; boundary &lt; 第一个 dynamic</td><td>✅ 满足</td></tr><tr><td>AC-8</td><td>易变段在 tail 槽</td><td>与 <code>promptCacheOrder.VOLATILE_SECTION_IDS</code> 交叉校验</td><td>5 段全在 tail</td><td>✅ 全在 tail</td></tr><tr><td>AC-9</td><td>内核段在 prefix 槽</td><td>simple_intro / simple_system</td><td>在 prefix</td><td>✅ 满足</td></tr><tr><td>AC-10</td><td>每轮必变字节预算</td><td>汇总 tail 槽中易变子集</td><td>≤ 8,000 字符（§5.1）</td><td>✅ <strong>7,212 字符</strong></td></tr><tr><td>AC-11</td><td>单条内容硬上限可计量</td><td>逐段估算 token，比对 10k</td><td>能列出超限条目</td><td>✅ 列出 <code>project_instructions = 11,693 tok</code>（超限，需 P4/R2 修复）</td></tr><tr><td>AC-12</td><td>三处新鲜度键已接线</td><td>单测断言键值</td><td>门控开 ≠ 旧键；门控关 == 旧键</td><td>✅ 均满足</td></tr><tr><td>AC-13</td><td>git_status 不再冻结</td><td>键含时间桶</td><td>跨桶变化</td><td>✅ 键形如 `cwd</td></tr><tr><td>AC-14</td><td>前缀稳定度</td><td>同会话连续两次装配</td><td>每段的字节数不变</td><td>✅ 全段一致</td></tr><tr><td>AC-15</td><td>门控登记口径</td><td>守卫读 flagRegistry 默认值</td><td>anchors 默认关、fresh 默认开</td><td>✅ 与实现一致</td></tr><tr><td>AC-16</td><td>既有测试不回归</td><td>跑既有提示词套件</td><td>全绿</td><td>✅ node:test 21 项、jest 提示词套件全绿</td></tr><tr><td>AC-17</td><td>分层守卫不回归</td><td><code>check-prompt-taxonomy</code></td><td>exit 0</td><td>✅ exit 0</td></tr></tbody></table>
+<h3 id="12-3-完成定义-dod">12.3 完成定义（DoD）<a class="anchor" href="#12-3-完成定义-dod" aria-label="锚点">#</a></h3>
+<p>本次视为「完成」需同时满足：</p>
+<ol><li><strong>零产物变更可证</strong>：门控关时，装配产物与改动前逐字节一致（AC-1）。</li><li><strong>可观测</strong>：每个装配段都有唯一 id 与槽位标记，且扁平产物不被污染（AC-3/4/5）。</li><li><strong>可计量</strong>：逐段字节数与 token 估算可导出，预算与上限有数（AC-10/11）。</li><li><strong>缺陷已修</strong>：三处段缓存冻结修复且有反向断言防止回退（AC-12/13）。</li><li><strong>可守卫</strong>：新增/更新的守卫断言全绿，既有测试无回归（AC-15~17）。</li><li><strong>有记录</strong>：未实现的 P2–P4 与假设均已写明（本节 + §12.4）。</li></ol>
+<h3 id="12-4-文档未覆盖处的假设与偏离-实施时明确声明">12.4 文档未覆盖处的假设与偏离（实施时明确声明）<a class="anchor" href="#12-4-文档未覆盖处的假设与偏离-实施时明确声明" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>情形</th><th>处理方式</th><th>理由</th></tr></thead><tbody><tr><td>A1</td><td>098 §8 的 P1 写「把 <code>taskScale</code> 移出键（改动 7 的一半）」</td><td><strong>不执行</strong>该半步</td><td><code>getKhySpecificSection</code> 的<strong>内容</strong>依赖 <code>taskScale</code>（<code>if (opts.taskScale === 'large')</code>）。只移键不移内容 = 把段缓存冻结在首轮的 taskScale 上，<strong>制造一个新的 staleKey</strong>。改动 7 必须与 P3（intent 块）原子完成</td></tr><tr><td>A2</td><td>锚点的默认值</td><td>定<strong>默认关</strong>（<code>opt-in</code>）</td><td>锚点进入模型可见文本（约 +1.4KB），P0 只服务度量/守卫，不应改变线上产物。且 flagRegistry 对未登记 name 保守放行为 true —— 不登记就等于默认开，故<strong>必须</strong>显式登记</td></tr><tr><td>A3</td><td>锚点标注的是现状还是目标</td><td>标注<strong>现状</strong></td><td><code>deferred_tools_hint</code> 目标层是 L3 但当前位于 prefix 槽 → 锚点如实标 <code>prefix</code>。锚点必须先反映现实，P2 真正搬动后才改 slot 语义</td></tr><tr><td>A4</td><td>099 R2 建议逐段配 <code>maxTokens</code></td><td>改用<strong>全局阈值</strong> 10k（<code>KHY_PROMPT_ENTRY_MAX_TOKENS</code> 可覆盖）</td><td>除真实分位数外，凭空给 32 段各定一个预算是伪精确；全局阈值已能暴露最大膨胀源</td></tr><tr><td>A5</td><td>扁平路径如何避免锚点污染</td><td><code>assembleSystemPrompt</code> <strong>过滤锚点元素</strong>（与它已过滤 boundary 同款）</td><td>曾有方案是「字符串层 strip 掉标记」，但段正文可能自带前导换行，导致无损重建不可行；在装配层过滤是结构性解法</td></tr><tr><td>A6</td><td>测试中的时间不确定性</td><td>单测内<strong>冻结 Date</strong></td><td><code># Environment</code> 段含墙钟时间戳（不受 <code>KHY_SYSTEM_CLOCK</code> 门控影响），两次装配跨秒即产生伪差异</td></tr></tbody></table>
+<hr>
+<h2 id="11-版本历史">11. 版本历史<a class="anchor" href="#11-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-15</td><td>首版：基于实测诊断提出 L0–L4 五层结构、boundary 后移、四时机加载模型、intent 块与规则去重</td></tr></tbody></table>
+<hr>
+<p><em>本方案为提案；实施后应回写 [<code>[DESIGN-PROMPT-002../../10_规范/其它规范/[DESIGN-PROMPT-002] 系统提示词分层规范-静态与动态分区.md区.md)<br>与 </code>services/backend/src/constants/promptSectionTaxonomy.js`（tier 重命名为 L0–L4）。</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-097] KhyOS 核心边界定稿-一词一解.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-097] KhyOS 核心边界定稿 —— 一词一解</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-099] 提示词架构横向调研与khy-os对齐方案.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-099] 提示词架构横向调研与 khy-os 对齐方案</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-098] 系统提示词结构重设计-静态动态分层与缓存优化方案.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

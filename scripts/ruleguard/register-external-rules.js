@@ -4,10 +4,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const REG = path.join(__dirname, '..', '..', 'docs', '_规范', 'RULES-REGISTRY.json');
+const REG = path.join(__dirname, '..', '..', 'docs', '10_规范', 'registry', 'RULES-REGISTRY.json');
 const reg = JSON.parse(fs.readFileSync(REG, 'utf8'));
 
-const D = 'docs/_规范';
+const D = 'docs/10_规范/其它规范';
 const NOW = '2026-09-16';
 const NO_POWER = '无新增权力：仅约束具体做法，不授予任何新权限。';
 
@@ -351,7 +351,7 @@ const R = [
   {
     id: 'MOD-004', name: '治理总纲板块入口',
     domain: 'DOCS', nature: '约束',
-    scope: 'docs/03_DESIGN_设计/[DESIGN-ARCH-070] 治理总纲与可执行规则.md',
+    scope: 'docs/10_规范/其它规范/[DESIGN-GOV-001] 治理总纲与可执行规则.md',
     priority: 'P2',
     trigger: '新增治理板块、调整总纲结构时',
     constraint: '治理总纲必须提供六个板块的规则入口，缺失任一板块判违规；总纲将既有规则收拢为 MOD、MEM、TOOL、ACP、API、BORROW、RUNTIME、PROCESS、SECURITY、DOCS 十个可检索板块，与 [MGMT-STD-008] §3 的十大域一一对应，不替代各自单一真源。',
@@ -359,7 +359,7 @@ const R = [
     benefit: '十条板块入口保证治理总纲是导航而非替代，读者能定位到每条规则的语义真源。',
     exception: null,
     version: '1.0.0 (2026-09-16)', formerly: 'GOV-MOD-004',
-    ssot: 'docs/03_DESIGN_设计/[DESIGN-ARCH-070] 治理总纲与可执行规则.md', owner: 'architecture-team',
+    ssot: 'docs/10_规范/其它规范/[DESIGN-GOV-001] 治理总纲与可执行规则.md', owner: 'architecture-team',
     gate: 'pr',
     paths: ['docs/03_DESIGN_设计/**'],
     exec: { script: 'scripts/ci/check-gov-rules.js', args: [], findings: ['GOV-MOD-004'] }

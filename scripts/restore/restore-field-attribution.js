@@ -33,14 +33,10 @@ const path = require('path');
 
 const { assessFieldAttribution } = require('../lib/restoreFieldAttribution');
 const { buildEffectProbe } = require('./restore-effect-probe');
+const { opsDocPath, opsDocRelPath } = require('../lib/docsPaths');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const DOC_PATH = path.join(
-  ROOT,
-  'docs',
-  '07_OPS_运维',
-  '[OPS-MAN-114] 还原字段归属探针（label preservation）.md'
-);
+const DOC_PATH = opsDocPath('[OPS-MAN-114] 还原字段归属探针（label preservation）.md');
 const NPM_PKG_NAME = '@khy-os/khy-os';
 const PIP_PKG_NAME = 'khy-os';
 
@@ -110,7 +106,7 @@ function runFieldAttribution(opts = {}) {
   out += `\n  ${C.bold}目录：${C.reset}${destDir}\n`;
   out += `  ${C.dim}判据：${attribution.reason}${C.reset}\n`;
   out += `\n${C.dim}诚实边界：本层是 OPS-113 的正交对偶——OPS-113 数「有没有效应」，本层看「效应打在对的门上没」；证据不足（上游无字段）判 unverifiable 不臆断绿；只报字段路径与门名，绝不碰密钥。${C.reset}\n`;
-  out += `${C.dim}详情见：docs/07_OPS_运维/[OPS-MAN-114] 还原字段归属探针（label preservation）.md${C.reset}\n`;
+  out += `${C.dim}详情见：${opsDocRelPath('[OPS-MAN-114] 还原字段归属探针（label preservation）.md')}${C.reset}\n`;
   process.stdout.write(out);
   return attribution.ok ? 0 : 2;
 }

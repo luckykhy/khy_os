@@ -27,6 +27,7 @@
  */
 const { execSync, spawn } = require('child_process');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const { findPython } = require('../utils/pythonPath');
 
@@ -462,12 +463,31 @@ function exportDataset(format = 'alpaca', filter = {}) {
     clean.push({ ...row, ...check.data });
   }
 
+  // P1: dataset curation (shingle dedup + DEITA three-axis scoring +
+  // train/val split). Borrowed from distilabel's MinHashLSH + DEITA pipeline
+  // but implemented zero-dependency in Node. Opt out via filter.curate=false.
+  let curation = null;
+  let datasetRows = clean;
+  if (filter.curate !== false) {
+    const { curateDataset } = require('./dataCuration');
+    const c = curateDataset(clean, {
+      shingleN: filter.shingleN,
+      dedupThreshold: filter.dedupThreshold,
+      valRatio: filter.valRatio,
+    });
+    curation = c.report;
+    // Train on the curated train split; the held-out val split is exposed
+    // separately below so the post-train eval gate has a benchmark.
+    datasetRows = c.train;
+    curation._valRows = c.val; // carried to the val-file write below
+  }
+
   // Convert to training format
   let dataset;
   const timestamp = Date.now();
 
   if (format === 'alpaca') {
-    dataset = clean
+    dataset = datasetRows
       .filter((r) => r.instruction && r.output)
       .map((r) => ({
         instruction: r.instruction,
@@ -476,7 +496,7 @@ function exportDataset(format = 'alpaca', filter = {}) {
         system: 'You are khy OS, a professional quantitative trading AI assistant.',
       }));
   } else if (format === 'sharegpt') {
-    dataset = clean
+    dataset = datasetRows
       .filter((r) => r.instruction && r.output)
       .map((r) => ({
         conversations: [
@@ -490,7 +510,7 @@ function exportDataset(format = 'alpaca', filter = {}) {
       }));
   } else {
     // OpenAI fine-tune format
-    dataset = clean
+    dataset = datasetRows
       .filter((r) => r.instruction && r.output)
       .map((r) => ({
         messages: [
@@ -507,7 +527,68 @@ function exportDataset(format = 'alpaca', filter = {}) {
   const outFile = path.join(DATASETS_DIR, `khy_dataset_${format}_${timestamp}.json`);
   fs.writeFileSync(outFile, JSON.stringify(dataset, null, 2), 'utf-8');
 
-  return { path: outFile, count: dataset.length, format, dropped };
+  // Write the held-out val set alongside (same format) for the eval gate.
+  if (curation && Array.isArray(curation._valRows) && curation._valRows.length > 0) {
+    let valData;
+    if (format === 'alpaca') {
+      valData = curation._valRows
+        .filter((r) => r.instruction && r.output)
+        .map((r) => ({
+          instruction: r.instruction,
+          input: '',
+          output: r.output,
+          system: 'You are khy OS, a professional quantitative trading AI assistant.',
+        }));
+    } else if (format === 'sharegpt') {
+      valData = curation._valRows
+        .filter((r) => r.instruction && r.output)
+        .map((r) => ({
+          conversations: [
+            {
+              from: 'system',
+              value: 'You are khy OS, a professional quantitative trading AI assistant.',
+            },
+            { from: 'human', value: r.instruction },
+            { from: 'gpt', value: r.output },
+          ],
+        }));
+    } else {
+      valData = curation._valRows
+        .filter((r) => r.instruction && r.output)
+        .map((r) => ({
+          messages: [
+            {
+              role: 'system',
+              content: 'You are khy OS, a professional quantitative trading AI assistant.',
+            },
+            { role: 'user', content: r.instruction },
+            { role: 'assistant', content: r.output },
+          ],
+        }));
+    }
+    if (valData.length > 0) {
+      const valOutFile = path.join(
+        DATASETS_DIR,
+        `khy_dataset_${format}_${timestamp}_val.json`
+      );
+      fs.writeFileSync(valOutFile, JSON.stringify(valData, null, 2), 'utf-8');
+      curation.valPath = valOutFile;
+    } else {
+      curation.valPath = null;
+    }
+  }
+  // Drop the internal carrier before returning
+  if (curation) {
+    delete curation._valRows;
+  }
+
+  return {
+    path: outFile,
+    count: dataset.length,
+    format,
+    dropped,
+    curation,
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -588,6 +669,7 @@ function getComputeStatus() {
       const smi = execSync('nvidia-smi --query-gpu=name,memory.total --format=csv,noheader', {
         encoding: 'utf-8',
         stdio: 'pipe',
+        timeout: 10000,
       }).trim();
       if (smi) {
         const gpus = smi.split('\n').map((line) => {
@@ -625,8 +707,10 @@ async function trainLocal(opts) {
     preset = 'standard',
     method = 'lora',
     onProgress,
+    skipEvalGate = false,
+    autoRollback = true,
+    evalPassThreshold = 0.7,
   } = opts;
-
   const base = BASE_MODELS[baseModel];
   if (!base) {
     throw new Error(
@@ -649,6 +733,9 @@ async function trainLocal(opts) {
   const outputDir = path.join(MODELS_DIR, outputName);
   ensureDir(outputDir);
 
+  // Structured JSON-lines progress log (P0: LlamaFactory LogCallback pattern).
+  const trainLogPath = path.join(outputDir, TRAIN_LOG_FILENAME);
+
   // Generate training script
   const trainScript = generateTrainScript({
     baseModelId: base.hfId,
@@ -659,6 +746,7 @@ async function trainLocal(opts) {
     config,
     useCuda: compute.cuda,
     useMps: compute.mps,
+    trainLogPath,
   });
 
   const scriptPath = path.join(TRAINING_DIR, `train_${Date.now()}.py`);
@@ -668,24 +756,62 @@ async function trainLocal(opts) {
   return new Promise((resolve) => {
     const proc = spawn(findPython(), [scriptPath], {
       cwd: TRAINING_DIR,
-      env: { ...process.env, PYTHONUNBUFFERED: '1' },
+      env: { ...process.env, PYTHONUNBUFFERED: '1', KHY_TRAIN_LOG: trainLogPath },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
 
     let output = '';
     let lastProgress = 0;
+    let lastLogOffset = 0;
     let settled = false;
+
+    // Tail-parse the JSON-lines training log for structured progress events.
+    const pollTrainLog = () => {
+      if (settled) {
+        return;
+      }
+      try {
+        const stat = fs.statSync(trainLogPath);
+        if (stat.size > lastLogOffset) {
+          const fd = fs.openSync(trainLogPath, 'r');
+          try {
+            const buf = Buffer.alloc(stat.size - lastLogOffset);
+            fs.readSync(fd, buf, 0, buf.length, lastLogOffset);
+            const chunk = buf.toString('utf-8');
+            output += chunk;
+            lastLogOffset += chunk.length;
+            const progress = parseTrainLogProgress(chunk);
+            const pct = progress.pct ?? lastProgress;
+            if (onProgress && pct >= lastProgress) {
+              lastProgress = pct;
+              const detail =
+                progress.step != null
+                  ? `step ${progress.step}/${progress.totalSteps || '?'} epoch ${progress.epoch + 1}/${progress.epochs} loss=${progress.loss != null ? progress.loss.toFixed(4) : '-'} lr=${progress.lr != null ? progress.lr.toExponential(1) : '-'}`
+                  : `epoch ${progress.epoch != null ? progress.epoch + 1 : '?'}/${progress.epochs || '?'}${progress.loss != null ? ` loss=${progress.loss.toFixed(4)}` : ''}`;
+              onProgress(pct, `训练 ${outputName}: ${detail}`);
+            }
+          } finally {
+            fs.closeSync(fd);
+          }
+        }
+      } catch {
+        /* log not created yet — expected at startup */
+      }
+    };
+
+    const logTimer = setInterval(pollTrainLog, 2000);
+    logTimer.unref?.();
 
     proc.stdout.on('data', (data) => {
       const text = data.toString();
       output += text;
-      // Parse progress from training output
+      // Fallback progress source: regex % from stdout (legacy behaviour).
       const progressMatch = text.match(/(\d+)%/);
       if (progressMatch && onProgress) {
         const pct = parseInt(progressMatch[1]);
         if (pct > lastProgress) {
           lastProgress = pct;
-          onProgress(pct, text.trim());
+          onProgress(pct, text.trim().slice(-120));
         }
       }
     });
@@ -699,20 +825,24 @@ async function trainLocal(opts) {
         return;
       }
       settled = true;
+      clearInterval(logTimer);
       // Clean up script
       try {
         fs.unlinkSync(scriptPath);
       } catch {
         /* ignore */
       }
-      resolve({ success: false, error: err.message });
+      resolve({ success: false, error: err.message, trainLogPath });
     });
 
-    proc.on('close', (code) => {
+    proc.on('close', async (code) => {
       if (settled) {
         return;
       }
       settled = true;
+      clearInterval(logTimer);
+      // Drain remaining log lines before settling
+      pollTrainLog();
       // Clean up script
       try {
         fs.unlinkSync(scriptPath);
@@ -721,17 +851,71 @@ async function trainLocal(opts) {
       }
 
       if (code === 0) {
-        // Register model in local registry
+        // Register model in local registry (P0: reproducible recipe snapshot)
+        const recipe = buildRecipeSnapshot({
+          base,
+          baseModel,
+          method,
+          preset,
+          config,
+          datasetPath,
+          datasetSize: getDatasetStats().total,
+          compute,
+        });
         registerModel(outputName, {
           basedOn: base.hfId,
           method,
           datasetSize: getDatasetStats().total,
           trainedAt: new Date().toISOString(),
           path: outputDir,
+          recipe,
         });
-        resolve({ success: true, modelPath: outputDir });
+
+        // P0: post-training eval gate + auto-rollback (Axolotl lm_eval_post_train).
+        // Best-effort: the gate must never turn a successful training into a
+        // failure; a skipped gate is reported, not hidden.
+        let evalResult = null;
+        let evalDecision = null;
+        if (!skipEvalGate) {
+          if (onProgress) {
+            onProgress(
+              95,
+              `训练完成 · 评测门: 对 ${outputName} 运行 ${EVAL_PROBES.length} 条固定探针 (0/${EVAL_PROBES.length})`
+            );
+          }
+          try {
+            evalResult = await evaluateModel(outputDir, outputName, {
+              passThreshold: evalPassThreshold,
+              onProgress: (probeIdx, msg) => {
+                if (onProgress) {
+                  onProgress(
+                    95 + Math.round((probeIdx / Math.max(EVAL_PROBES.length, 1)) * 4),
+                    msg
+                  );
+                }
+              },
+            });
+            if (autoRollback) {
+              evalDecision = autoRollbackOnEvalFailure(outputName, evalResult);
+            }
+          } catch {
+            evalDecision = {
+              success: false,
+              message: '评测门执行异常，已跳过自动回滚判定',
+            };
+          }
+        }
+
+        resolve({
+          success: true,
+          modelPath: outputDir,
+          trainLogPath,
+          recipe,
+          evalResult,
+          evalDecision,
+        });
       } else {
-        resolve({ success: false, error: output.slice(-500) });
+        resolve({ success: false, error: output.slice(-500), trainLogPath });
       }
     });
   });
@@ -781,8 +965,44 @@ async function trainCloud(opts) {
  * @param {string[]} opts.prompts - Prompts to generate teacher responses for
  * @param {string} opts.outputName - Output model name
  */
+/**
+ * Multi-teacher distillation with rejection sampling (distilabel pattern).
+ *
+ * - teacherModels: array of model names (single-teacher = length-1 array).
+ *   `teacherModel` (string) is kept for back-compat and normalised into the
+ *   array. Teachers are invoked through the local Ollama adapter, so each
+ *   must already be pulled (`ollama pull <name>`).
+ * - mixture: prompt type-ratio protocol { short, code, quant }. Records are
+ *   bucketed by content, and each bucket is sampled to its target ratio so a
+ *   skewed prompt list cannot starve a bucket.
+ * - multi-teacher voting: each prompt is answered by every teacher; the
+ *   responses are pairwise-compared via shingle Jaccard. The best response
+ *   (highest mean similarity to the other teachers) is kept — a form of
+ *   consensus rejection sampling.
+ * - single-teacher mode: responses are scored by the DEITA quality axis and
+ *   those below `rejectThreshold` are dropped.
+ *
+ * @param {object} opts
+ * @param {string} [opts.teacherModel] - legacy single-teacher name
+ * @param {string[]} [opts.teacherModels] - multi-teacher list (preferred)
+ * @param {string} [opts.studentBase] - small base model key (e.g. 'qwen-1.5b')
+ * @param {string[]} opts.prompts - prompts to distill
+ * @param {string} [opts.outputName] - output model name
+ * @param {object} [opts.mixture] - { short, code, quant } target ratios
+ * @param {number} [opts.rejectThreshold=0.25] - DEITA quality floor (single-teacher)
+ * @param {function} [opts.onProgress]
+ */
 async function distill(opts) {
-  const { teacherModel = 'best-available', studentBase = 'qwen-1.5b', prompts, outputName } = opts;
+  const {
+    teacherModel,
+    teacherModels,
+    studentBase = 'qwen-1.5b',
+    prompts,
+    outputName,
+    mixture,
+    rejectThreshold = 0.25,
+    onProgress,
+  } = opts;
 
   if (!prompts || prompts.length === 0) {
     throw new Error(
@@ -790,43 +1010,668 @@ async function distill(opts) {
     );
   }
 
-  // Step 1: Generate teacher responses
-  const teacherData = [];
-  // aiGateway exports an already-constructed singleton instance; use it directly.
+  // Normalise teachers: teacherModels (preferred) or [teacherModel] (legacy).
+  let teachers = Array.isArray(teacherModels) && teacherModels.length > 0
+    ? teacherModels.map((t) => String(t).trim()).filter(Boolean)
+    : null;
+  if (!teachers && teacherModel && teacherModel !== 'best-available') {
+    teachers = [String(teacherModel).trim()];
+  }
+  if (!teachers || teachers.length === 0) {
+    throw new Error(
+      'Distillation needs at least one teacher. Pass teacherModels: ["model-a","model-b"] or teacherModel: "model-a". Teachers must be pulled Ollama models (ollama pull).'
+    );
+  }
+
+  const { curateDataset, deitaScore, responseSimilarity } = require('./dataCuration');
+
+  // ── Step 1: bucket prompts by type + apply mixture ratio ──────────────────
+  const bucketOf = (p) => {
+    const s = String(p);
+    if (/```|function |if\s*\( |for\s*\( |import |class \w+/.test(s)) return 'code';
+    if (/\d+\.?\d*\s*%|波动|夏普|年化|收益|风险/.test(s)) return 'quant';
+    return 'short';
+  };
+  const buckets = { short: [], code: [], quant: [] };
+  for (const p of prompts) {
+    buckets[bucketOf(p)].push(p);
+  }
+  const mix = mixture || { short: 0.5, code: 0.3, quant: 0.2 };
+  const totalTarget = prompts.length;
+  const sampledPrompts = [];
+  for (const key of ['short', 'code', 'quant']) {
+    const target = Math.round(totalTarget * (mix[key] || 0));
+    // If a bucket is short of its target, top up from the others (no starvation).
+    const take = Math.min(target, buckets[key].length);
+    sampledPrompts.push(...buckets[key].slice(0, take));
+  }
+  // Backfill shortfall from any bucket that had surplus.
+  if (sampledPrompts.length < totalTarget) {
+    const surplus = [];
+    for (const key of ['short', 'code', 'quant']) {
+      const target = Math.round(totalTarget * (mix[key] || 0));
+      surplus.push(...buckets[key].slice(target));
+    }
+    sampledPrompts.push(...surplus.slice(0, totalTarget - sampledPrompts.length));
+  }
+  const activePrompts = sampledPrompts.slice(0, totalTarget);
+
+  // ── Step 2: generate teacher responses (multi-teacher or single) ─────────
   const gw = require('./gateway/aiGateway');
   if (!gw.isInitialized()) {
     await gw.init();
   }
 
-  for (const prompt of prompts) {
-    try {
-      const result = await gw.generate(prompt, { temperature: 0.3, maxTokens: 1024 });
-      if (result.success) {
-        teacherData.push({
-          instruction: prompt,
-          input: '',
-          output: result.content,
-          system: 'You are khy OS, a professional quantitative trading AI assistant.',
-        });
-      }
-    } catch {
-      /* skip failed */
+  const teacherData = [];
+  for (let i = 0; i < activePrompts.length; i++) {
+    const prompt = activePrompts[i];
+    if (onProgress) {
+      onProgress(
+        Math.round(((i + 1) / activePrompts.length) * 60),
+        `蒸馏生成: 提示 ${i + 1}/${activePrompts.length} · ${teachers.length} 教师`
+      );
     }
+
+    // One response per teacher for this prompt.
+    const responses = [];
+    for (const teacher of teachers) {
+      try {
+        const result = await gw.generate(prompt, {
+          preferredAdapter: 'ollama',
+          model: teacher,
+          temperature: 0.3,
+          maxTokens: 1024,
+        });
+        if (result && result.success && result.content) {
+          responses.push({ teacher, content: String(result.content) });
+        }
+      } catch {
+        /* skip failed teacher */
+      }
+    }
+    if (responses.length === 0) continue;
+
+    let chosen;
+    if (responses.length >= 2) {
+      // Multi-teacher consensus: pick the response most similar to the others.
+      let best = responses[0];
+      let bestMean = 0;
+      for (const cand of responses) {
+        let sum = 0;
+        for (const other of responses) {
+          if (other === cand) continue;
+          sum += responseSimilarity(cand.content, other.content);
+        }
+        const mean = sum / Math.max(1, responses.length - 1);
+        if (mean > bestMean) {
+          bestMean = mean;
+          best = cand;
+        }
+      }
+      chosen = { content: best.content, consensus: bestMean };
+    } else {
+      // Single-teacher: reject-sample on DEITA quality axis.
+      const cand = responses[0];
+      const probe = deitaScore({ instruction: prompt, output: cand.content });
+      if (probe.quality < rejectThreshold) {
+        continue; // reject low-quality teacher response
+      }
+      chosen = { content: cand.content, consensus: probe.quality };
+    }
+
+    teacherData.push({
+      instruction: prompt,
+      input: '',
+      output: chosen.content,
+      system: 'You are khy OS, a professional quantitative trading AI assistant.',
+      _teacher: teachers.length >= 2 ? 'multi-teacher' : teachers[0],
+      _consensus: chosen.consensus,
+    });
   }
 
-  // Step 2: Save as dataset
+  if (teacherData.length === 0) {
+    throw new Error(
+      `蒸馏无有效输出: ${teachers.join(', ')} 对所有提示均未产生可用响应（教师是否已 ollama pull？）`
+    );
+  }
+
+  // ── Step 3: curation (dedup + DEITA + train/val) on the distilled data ──
+  const { train, val, report } = curateDataset(teacherData);
+  const finalData = train.length > 0 ? train : teacherData;
+
   const datasetFile = path.join(DATASETS_DIR, `distill_${Date.now()}.json`);
   ensureDir(DATASETS_DIR);
-  fs.writeFileSync(datasetFile, JSON.stringify(teacherData, null, 2), 'utf-8');
+  fs.writeFileSync(
+    datasetFile,
+    JSON.stringify(finalData.map(({ instruction, input, output, system }) => ({ instruction, input, output, system })), null, 2),
+    'utf-8'
+  );
 
-  // Step 3: Train student model on teacher outputs
+  if (onProgress) {
+    onProgress(70, `蒸馏数据整备: 保留 ${finalData.length}/${teacherData.length} (去重 -${report.dedup.dropped})`);
+  }
+
+  // ── Step 4: train the student on the curated teacher outputs ─────────────
   return trainLocal({
     baseModel: studentBase,
     datasetPath: datasetFile,
     outputName: outputName || `khy-${getNextVersion()}`,
     method: 'lora',
     preset: 'standard',
+    onProgress: (pct, msg) => {
+      if (onProgress) onProgress(70 + Math.round(pct * 0.3), msg);
+    },
   });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 3b. Training progress log (JSON-lines protocol between Python and Node)
+//     Borrowed from LlamaFactory LogCallback / unsloth PipeCapture patterns.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const TRAIN_LOG_FILENAME = 'trainer_log.jsonl';
+
+/**
+ * Return the Python source for the KHY training-log helper block,
+ * designed to be inlined into the top of every generated training script.
+ *
+ * Protocol (khy-trainlog/v1) — one JSON object per line, appended to
+ * $KHY_TRAIN_LOG (env var set by the Node-side spawn):
+ *   log_header  { protocol, ts }                       — written at startup
+ *   epoch_start { epoch, total, ts }                   — first step of an epoch
+ *   log_step    { step, total, loss, eval_loss, lr,
+ *                 elapsed, remaining, ts }              — every logging_steps
+ *   epoch_end   { epoch, train_loss, eval_loss, ts }   — epoch finished
+ *   done        { totalSteps, ts }                     — training finished
+ * The Node-side parser in trainLocal reads these lines with fs.watchFile
+ * and ignores any unknown event type (forward-compatible).
+ */
+function buildTrainLogHelper() {
+  // Each helper function is emitted as a plain-Python source snippet kept in
+  // single-quoted JS strings (with \n escapes) to avoid the backtick/${}
+  // collision with the outer template literal that inlines this block.
+  const emitHeader =
+    'def _khy_emit_header():\n' +
+    '    _khy_log_event({"type": "log_header", "protocol": "khy-trainlog/v1"})\n';
+  const epochStart =
+    'def _khy_epoch_start(epoch, total_epochs):\n' +
+    '    _khy_log_event({"type": "epoch_start", "epoch": epoch, "total": total_epochs})\n';
+  const logStep =
+    'def _khy_log_step(step, total_steps, loss=None, eval_loss=None, lr=None, elapsed=None, remaining=None):\n' +
+    '    _khy_log_event({"type": "log_step", "step": step, "total": total_steps, "loss": loss, "eval_loss": eval_loss, "lr": lr, "elapsed": elapsed, "remaining": remaining})\n';
+  const epochEnd =
+    'def _khy_epoch_end(epoch, train_loss=None, eval_loss=None):\n' +
+    '    _khy_log_event({"type": "epoch_end", "epoch": epoch, "train_loss": train_loss, "eval_loss": eval_loss})\n';
+  const done =
+    'def _khy_done(total_steps):\n' +
+    '    _khy_log_event({"type": "done", "totalSteps": total_steps})\n';
+
+  const core =
+    'import json, datetime\n' +
+    '_KHY_TRAIN_LOG = os.environ.get("KHY_TRAIN_LOG")\n' +
+    'def _khy_log_event(event):\n' +
+    '    if not _KHY_TRAIN_LOG:\n' +
+    '        return\n' +
+    '    try:\n' +
+    '        event["ts"] = datetime.datetime.now().isoformat()\n' +
+    '        with open(_KHY_TRAIN_LOG, "a", encoding="utf-8") as _f:\n' +
+    '            _f.write(json.dumps(event, ensure_ascii=False) + chr(10))\n' +
+    '    except OSError:\n' +
+    '        pass\n';
+
+  return core + emitHeader + epochStart + logStep + epochEnd + done;
+}
+
+/**
+ * Parse the tail of the JSON-lines training log into a progress object.
+ * Tolerates a partially written final line (Python flushes on each event).
+ * @param {string} raw — raw log file contents
+ * @returns {{ pct?: number, epoch?: number, epochs?: number, step?: number, totalSteps?: number, loss?: number, evalLoss?: number, lr?: number, elapsedSec?: number, remainingSec?: number }}
+ */
+function parseTrainLogProgress(raw) {
+  const lines = String(raw || '').split(/\r?\n/).filter(Boolean);
+  let result = {};
+  let stepSeen = 0;
+  let headerSeen = false;
+  let doneSeen = false;
+  let totalEpochs = 0;
+  let lastStepInfo = null;
+  let lastEpochInfo = null;
+  let lastLoss = null;
+  let lastEvalLoss = null;
+  let lastLr = null;
+  let lastElapsed = null;
+  let lastRemaining = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    let ev;
+    try {
+      ev = JSON.parse(lines[i]);
+    } catch {
+      continue; // skip malformed or partially written line
+    }
+    if (ev.type === 'log_header') {
+      headerSeen = true;
+    } else if (ev.type === 'epoch_start') {
+      totalEpochs = ev.total || totalEpochs;
+      result.epoch = ev.epoch;
+      result.epochs = totalEpochs;
+    } else if (ev.type === 'log_step') {
+      stepSeen++;
+      lastStepInfo = ev;
+    } else if (ev.type === 'epoch_end') {
+      lastEpochInfo = ev;
+      lastLoss = ev.train_loss ?? lastLoss;
+      lastEvalLoss = ev.eval_loss ?? lastEvalLoss;
+    } else if (ev.type === 'done') {
+      doneSeen = true;
+    }
+  }
+
+  if (lastStepInfo) {
+    lastLoss = lastStepInfo.loss ?? lastLoss;
+    lastEvalLoss = lastStepInfo.eval_loss ?? lastEvalLoss;
+    lastLr = lastStepInfo.lr ?? lastLr;
+    lastElapsed = lastStepInfo.elapsed ?? lastElapsed;
+    lastRemaining = lastStepInfo.remaining ?? lastRemaining;
+    if (lastStepInfo.total) result.totalSteps = lastStepInfo.total;
+    if (lastStepInfo.step) result.step = lastStepInfo.step;
+  }
+  if (lastEpochInfo) {
+    result.epoch = lastEpochInfo.epoch;
+    result.epochs = totalEpochs || result.epochs;
+  }
+  result.loss = lastLoss;
+  result.evalLoss = lastEvalLoss;
+  result.lr = lastLr;
+  result.elapsedSec = lastElapsed;
+  result.remainingSec = doneSeen ? 0 : lastRemaining;
+
+  // Compute pct: prefer step-based, fall back to epoch-based.
+  if (result.step && result.totalSteps && result.totalSteps > 0) {
+    result.pct = Math.min(100, Math.round((result.step / result.totalSteps) * 100));
+  } else if (result.epochs && totalEpochs > 0 && result.epoch != null) {
+    result.pct = Math.min(100, Math.round(((result.epoch + 1) / totalEpochs) * 100));
+  } else if (doneSeen) {
+    result.pct = 100;
+  } else if (headerSeen) {
+    result.pct = 0;
+  }
+  return result;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 3c. Reproducible recipe snapshot (P0: LlamaFactory/Axolotl YAML-recipe
+//     pattern — every run writes recipe.json so a khy-<version> can be
+//     re-trained byte-identically from the snapshot).
+// ═══════════════════════════════════════════════════════════════════════════
+
+const RECIPE_FILENAME = 'recipe.json';
+
+/**
+ * Compute a stable fingerprint of a dataset file (sha256 of sorted content,
+ * first 16 hex chars). Used by the recipe snapshot for reproducibility.
+ * @param {string} datasetPath
+ * @returns {string}
+ */
+function datasetFingerprint(datasetPath) {
+  try {
+    const raw = fs.readFileSync(datasetPath, 'utf-8');
+    return crypto.createHash('sha256').update(raw, 'utf-8').digest('hex').slice(0, 16);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Build a reproducible recipe snapshot for a training run.
+ * Mirrors LlamaFactory YAML-recipe + Axolotl DictDefault patterns:
+ * every hyperparameter, data provenance, and environment fact that
+ * affects the outcome is captured so the run can be re-created.
+ *
+ * @param {object} p
+ * @param {object} p.base - BASE_MODELS entry
+ * @param {string} p.baseModel - base model key
+ * @param {string} p.method - 'lora' | 'full' | 'distill'
+ * @param {string} p.preset - 'quick' | 'standard' | 'thorough'
+ * @param {object} p.config - resolved TRAINING_PRESETS entry
+ * @param {string} p.datasetPath
+ * @param {number} p.datasetSize
+ * @param {object} p.compute - getComputeStatus() result
+ * @returns {object}
+ */
+function buildRecipeSnapshot({
+  base,
+  baseModel,
+  method,
+  preset,
+  config,
+  datasetPath,
+  datasetSize,
+  compute,
+}) {
+  // Try to capture git commit + dirty flag from the khy-os repo root.
+  let gitHash = null;
+  let gitDirty = false;
+  try {
+    gitHash = execSync('git rev-parse --short HEAD', {
+      cwd: path.join(__dirname, '..', '..', '..', '..'),
+      stdio: 'pipe',
+      encoding: 'utf-8',
+    }).trim() || null;
+    const status = execSync('git status --porcelain', {
+      cwd: path.join(__dirname, '..', '..', '..', '..'),
+      stdio: 'pipe',
+      encoding: 'utf-8',
+    }).trim();
+    gitDirty = status.length > 0;
+  } catch {
+    /* not a git checkout or git unavailable */
+  }
+
+  const seed = 42; // LoRA init seed; kept explicit for reproducibility
+  const recipe = {
+    schema: 'khy-recipe/v1',
+    createdAt: new Date().toISOString(),
+    model: {
+      name: baseModel,
+      hfId: base ? base.hfId : baseModel,
+      size: base ? base.size : null,
+      vram: base ? base.vram : null,
+    },
+    method,
+    preset,
+    hyperparams: {
+      epochs: config ? config.epochs : null,
+      lr: config ? config.lr : null,
+      batchSize: config ? config.batchSize : null,
+      loraR: config ? config.loraR : null,
+      loraAlpha: config ? config.loraAlpha : null,
+      seed,
+      warmupRatio: 0.1,
+    },
+    data: {
+      path: datasetPath,
+      count: datasetSize,
+      fingerprint: datasetFingerprint(datasetPath),
+    },
+    compute: {
+      platform: compute ? compute.platform : os.platform(),
+      arch: compute ? compute.arch : os.arch(),
+      cpus: compute ? compute.cpus : os.cpus().length,
+      totalRAMGB: compute ? compute.totalRAM : null,
+      cuda: compute ? compute.cuda : false,
+      mps: compute ? compute.mps : false,
+      gpuType: compute && compute.gpu ? compute.gpu.type : null,
+      gpuCount: compute && compute.gpu ? compute.gpu.count : null,
+    },
+    environment: {
+      nodeVersion: process.version,
+      python: compute ? compute.pythonAvailable : false,
+      torch: compute ? compute.torchAvailable : false,
+      gitHash,
+      gitDirty,
+    },
+    seed,
+  };
+  return recipe;
+}
+
+/**
+ * Write the recipe snapshot to the model output directory.
+ * Silently skips if the directory is not writable (recipe is advisory).
+ * @param {string} outputDir
+ * @param {object} recipe
+ * @returns {string|null} path if written, null otherwise
+ */
+function writeRecipeSnapshot(outputDir, recipe) {
+  try {
+    ensureDir(outputDir);
+    const recipePath = path.join(outputDir, RECIPE_FILENAME);
+    fs.writeFileSync(recipePath, JSON.stringify(recipe, null, 2), 'utf-8');
+    return recipePath;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Read a recipe snapshot from a model directory.
+ * @param {string} outputDir
+ * @returns {object|null}
+ */
+function readRecipeSnapshot(outputDir) {
+  try {
+    const recipePath = path.join(outputDir, RECIPE_FILENAME);
+    if (!fs.existsSync(recipePath)) {
+      return null;
+    }
+    return JSON.parse(fs.readFileSync(recipePath, 'utf-8'));
+  } catch {
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 3d. Post-training eval gate + auto-rollback (P0: Axolotl lm_eval_post_train
+//     pattern — run a lightweight eval probe after training; auto-rollback
+//     the active version when the new model degrades below threshold).
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Fixed eval probe set for khy quantitative-trading domain.
+ * Each probe has a deterministic expected property (contains / startsWith)
+ * that a healthy fine-tuned model should satisfy at ≥ 70% pass rate.
+ */
+const EVAL_PROBES = [
+  {
+    id: 'math-arith',
+    prompt: '计算: 24 * 3 + 12 = ?',
+    expectContains: '84',
+  },
+  {
+    id: 'trading-glossary',
+    prompt: '用一句话解释什么是夏普比率 (Sharpe Ratio)',
+    expectContains: '风险',
+  },
+  {
+    id: 'python-code',
+    prompt: '写一段 Python 代码, 计算列表 [3,1,4,1,5] 的均值',
+    expectContains: 'sum',
+  },
+  {
+    id: 'risk-assessment',
+    prompt: '一只股票日波动率 5%, 年化大约多少?',
+    expectContains: '80', // 5% * sqrt(252) ≈ 79%
+  },
+];
+
+/**
+ * Evaluate a trained model directory with the fixed probe set.
+ * Uses the local Ollama endpoint (OpenAI-compatible) to run each probe;
+ * if Ollama is unreachable the gate is skipped (fail-open) and reported
+ * as `skipped: true` so callers can surface the reason to the user.
+ *
+ * @param {string} modelDir - path to a safetensors/LoRA dir
+ * @param {string} modelName - khy-<version> name (used for Ollama lookup)
+ * @param {object} [opts]
+ * @param {number} [opts.passThreshold=0.7]
+ * @param {function} [opts.onProgress]
+ * @returns {Promise<{
+ *   passed: boolean,
+ *   score: number,
+ *   total: number,
+ *   results: Array,
+ *   skipped: boolean,
+ *   reason?: string
+ * }>}
+ */
+async function evaluateModel(modelDir, modelName, opts = {}) {
+  const passThreshold = opts.passThreshold ?? 0.7;
+  const { onProgress } = opts;
+
+  // Ollama endpoint single source of truth: import from serviceDefaults.js
+  // instead of hardcoding the loopback port (Zero Hardcoding rule).
+  const { OLLAMA_HOST } = require('../constants/serviceDefaults');
+  const ollamaEndpoint = process.env.KHY_OLLAMA_ENDPOINT || OLLAMA_HOST;
+  const apiUrl = new URL('/api/generate', ollamaEndpoint);
+
+  // Probe liveness first (short handshake timeout — legal exception per Rule 3).
+  let ollamaReachable = false;
+  try {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 3000);
+    const res = await fetch(apiUrl.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: modelName, prompt: 'hi', stream: false }),
+      signal: ctl.signal,
+    });
+    clearTimeout(timer);
+    ollamaReachable = res.status < 500;
+  } catch {
+    ollamaReachable = false;
+  }
+
+  if (!ollamaReachable) {
+    return {
+      passed: false,
+      score: 0,
+      total: EVAL_PROBES.length,
+      results: [],
+      skipped: true,
+      reason: `Ollama 不可达 (${apiUrl.host})，评测门已跳过；请确认 Ollama 已启动后手动重评`,
+    };
+  }
+
+  const results = [];
+  for (let i = 0; i < EVAL_PROBES.length; i++) {
+    const probe = EVAL_PROBES[i];
+    if (onProgress) {
+      onProgress(i, `评测 ${modelName}: 探针 ${i + 1}/${EVAL_PROBES.length} (${probe.id})`);
+    }
+    let passed = false;
+    let output = '';
+    try {
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), 30000);
+      const res = await fetch(apiUrl.toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: modelName,
+          prompt: probe.prompt,
+          stream: false,
+          options: { temperature: 0.2, num_predict: 256 },
+        }),
+        signal: ctl.signal,
+      });
+      clearTimeout(timer);
+      if (res.ok) {
+        const body = await res.json();
+        output = String(body.response || '').trim();
+        passed = output.includes(probe.expectContains);
+      }
+    } catch {
+      passed = false;
+      output = '';
+    }
+    results.push({
+      id: probe.id,
+      prompt: probe.prompt,
+      expectContains: probe.expectContains,
+      output: output.slice(0, 200),
+      passed,
+    });
+  }
+
+  const passedCount = results.filter((r) => r.passed).length;
+  const score = results.length > 0 ? passedCount / results.length : 0;
+  return {
+    passed: score >= passThreshold,
+    score,
+    total: results.length,
+    results,
+    skipped: false,
+  };
+}
+
+/**
+ * Roll back the active model to the previous best version if the current
+ * one failed the eval gate. Writes the decision to the model registry so
+ * `listModels` can surface it.
+ *
+ * @param {string} failedModelName - khy-<version> that failed
+ * @param {object} evalResult - evaluateModel() return
+ * @returns {{ success: boolean, message: string, rolledBackTo?: string }}
+ */
+function autoRollbackOnEvalFailure(failedModelName, evalResult) {
+  const registry = loadModelRegistry();
+  if (!registry[failedModelName]) {
+    return { success: false, message: `Model ${failedModelName} not in registry` };
+  }
+
+  // Find the previous best: latest version before the failed one numerically.
+  const parseSegments = (name) => name.replace('khy-', '').split('.').map(Number);
+  const compareVersions = (a, b) => {
+    const len = Math.max(a.length, b.length);
+    for (let i = 0; i < len; i++) {
+      const diff = (a[i] || 0) - (b[i] || 0);
+      if (diff !== 0) {
+        return diff;
+      }
+    }
+    return 0;
+  };
+  const candidates = Object.keys(registry)
+    .filter((n) => /^khy-\d+(\.\d+)*$/.test(n) && n !== failedModelName)
+    .sort((a, b) => compareVersions(parseSegments(a), parseSegments(b)));
+  const target = candidates[candidates.length - 1] || null;
+
+  // Mark the failed model in the registry
+  registry[failedModelName].evalResult = {
+    skipped: evalResult.skipped,
+    score: evalResult.score,
+    total: evalResult.total,
+    passedCount: evalResult.results ? evalResult.results.filter((r) => r.passed).length : 0,
+    reason: evalResult.reason || null,
+    evaluatedAt: new Date().toISOString(),
+    passed: evalResult.passed,
+  };
+  if (evalResult.passed) {
+    registry[failedModelName].evalStatus = 'passed';
+  } else if (evalResult.skipped) {
+    registry[failedModelName].evalStatus = 'skipped';
+  } else {
+    registry[failedModelName].evalStatus = 'failed';
+    registry[failedModelName].autoRolledBack = !!target;
+    if (target) {
+      process.env.KHY_ACTIVE_MODEL = target;
+      process.env.KHY_ACTIVE_MODEL_PATH = registry[target].path;
+      registry[failedModelName].rolledBackTo = target;
+    }
+  }
+  try {
+    ensureDir(TRAINING_DIR);
+    fs.writeFileSync(MODEL_REGISTRY_FILE, JSON.stringify(registry, null, 2), 'utf-8');
+  } catch {
+    /* registry write is best-effort */
+  }
+
+  if (evalResult.passed) {
+    return { success: true, message: `评测通过 (${evalResult.score.toFixed(2)})` };
+  }
+  if (evalResult.skipped) {
+    return { success: true, message: `评测跳过: ${evalResult.reason}` };
+  }
+  if (target) {
+    return {
+      success: true,
+      message: `评测未通过 (${evalResult.score.toFixed(2)})，已自动回滚到 ${target}`,
+      rolledBackTo: target,
+    };
+  }
+  return { success: false, message: `评测未通过且无历史版本可回滚` };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -926,9 +1771,14 @@ function verifyExportPassword(_password) {
 function registerModel(name, metadata) {
   validateModelName(name);
   const registry = loadModelRegistry();
-  registry[name] = { ...metadata, registeredAt: new Date().toISOString() };
+  const { recipe, ...publicMeta } = metadata || {};
+  registry[name] = { ...publicMeta, registeredAt: new Date().toISOString() };
   ensureDir(TRAINING_DIR);
   fs.writeFileSync(MODEL_REGISTRY_FILE, JSON.stringify(registry, null, 2), 'utf-8');
+  // P0: persist the reproducible recipe snapshot next to the model files.
+  if (recipe && registry[name].path) {
+    writeRecipeSnapshot(registry[name].path, recipe);
+  }
 }
 
 /**
@@ -1171,6 +2021,12 @@ PARAMETER num_ctx 4096
       encoding: 'utf-8',
       timeout: 120000,
     });
+    // P2: model-discovery marker. The front-end's /api/ai-gateway/models
+    // merges a live Ollama probe, so a freshly-registered model becomes
+    // visible on the next model-list fetch. Writing a small notification file
+    // lets the UI (or any watcher) surface "a new local model appeared"
+    // without a WebSocket push channel.
+    writeModelNotify(modelName);
     return {
       success: true,
       message: `Model ${modelName} registered with Ollama. Use: ollama run ${modelName}`,
@@ -1183,6 +2039,62 @@ PARAMETER num_ctx 4096
     } catch {
       /* ignore */
     }
+  }
+}
+
+/**
+ * Append a model registration event to the discovery-notify file so the UI
+ * can detect newly-available local models on its next refresh. Kept as an
+ * append-only JSONL at `<dataHome>/models-notify.jsonl` (one JSON object per
+ * line) — no rotation, small by design.
+ *
+ * @param {string} modelName - khy-<version>
+ * @returns {string|null} path of the notify file, or null on write failure
+ */
+function writeModelNotify(modelName) {
+  try {
+    ensureDir(TRAINING_DIR);
+    const notifyFile = path.join(path.dirname(TRAINING_DIR), 'models-notify.jsonl');
+    const entry = {
+      event: 'model:registered',
+      model: modelName,
+      source: 'ollama',
+      at: new Date().toISOString(),
+    };
+    fs.appendFileSync(notifyFile, JSON.stringify(entry) + '\n', 'utf-8');
+    return notifyFile;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Read recent model-notify events (newest last). The UI merges the last
+ * `limit` events to show "新注册" badges.
+ * @param {number} [limit=20]
+ * @returns {Array}
+ */
+function readModelNotify(limit = 20) {
+  try {
+    const notifyFile = path.join(path.dirname(TRAINING_DIR), 'models-notify.jsonl');
+    if (!fs.existsSync(notifyFile)) return [];
+    const lines = fs
+      .readFileSync(notifyFile, 'utf-8')
+      .split(/\r?\n/)
+      .filter(Boolean);
+    const events = lines
+      .slice(-limit)
+      .map((l) => {
+        try {
+          return JSON.parse(l);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
+    return events;
+  } catch {
+    return [];
   }
 }
 
@@ -1450,11 +2362,13 @@ function getNextVersion() {
     return 0;
   };
 
+  // Sort registry keys numerically so khy-1.10 ranks after khy-1.9.
+  const versionKeys = Object.keys(registry).filter((n) => /^khy-\d+(\.\d+)*$/.test(n));
+  const sortVersionKeys = (arr) =>
+    arr.slice().sort((x, y) => compareVersions(parseSegments(x), parseSegments(y)));
+
   // Match multi-segment versions (e.g. khy-1.0, khy-2.1.3) to align with validateModelName.
-  const versions = Object.keys(registry)
-    .filter((name) => /^khy-\d+(\.\d+)*$/.test(name))
-    .map(parseSegments)
-    .sort(compareVersions);
+  const versions = sortVersionKeys(versionKeys).map(parseSegments);
 
   if (versions.length === 0) {
     return '1.0';
@@ -1496,12 +2410,22 @@ function getActiveModel() {
 function setActiveModel(version) {
   const registry = loadModelRegistry();
   if (!version) {
-    // Find latest
-    const versions = Object.keys(registry)
-      .filter((n) => /^khy-\d+\.\d+$/.test(n))
-      .sort()
-      .reverse();
-    version = versions[0] || null;
+    // Find latest — sort numerically so khy-1.10 ranks after khy-1.9.
+    const parseSegments = (name) => name.replace('khy-', '').split('.').map(Number);
+    const versionKeys = Object.keys(registry).filter((n) => /^khy-\d+(\.\d+)*$/.test(n));
+    versionKeys.sort((a, b) => {
+      const sa = parseSegments(a);
+      const sb = parseSegments(b);
+      const len = Math.max(sa.length, sb.length);
+      for (let i = 0; i < len; i++) {
+        const diff = (sa[i] || 0) - (sb[i] || 0);
+        if (diff !== 0) {
+          return diff;
+        }
+      }
+      return 0;
+    });
+    version = versionKeys[versionKeys.length - 1] || null;
   }
   if (version && registry[version]) {
     process.env.KHY_ACTIVE_MODEL = version;
@@ -1719,21 +2643,139 @@ function generateTrainScript({
   config,
   useCuda,
   useMps,
+  trainLogPath,
 }) {
   const device = useCuda ? 'cuda' : useMps ? 'mps' : 'cpu';
+  const logHelper = buildTrainLogHelper();
+  const pySafe = (s) => String(s).replace(/\\/g, '/').replace(/"/g, '\\"');
+
+  // Tokenize block: pad token is masked out of labels (-100) so the loss is
+  // not diluted by padding. Chat-template markers are built from unescaped
+  // literals to keep the generated Python valid.
+  const tokenizeBlock = `
+def tokenize(example):
+    system_text = "<|" + "system|>" + "\\n" + example.get("system", "") + "\\n" + "<|" + "/system|>"
+    user_text = "<|" + "user|>" + "\\n" + example["instruction"] + "\\n" + "<|" + "/user|>"
+    assistant_text = "<|" + "assistant|>" + "\\n" + example["output"] + "\\n" + "<|" + "/assistant|>"
+    text = system_text + "\\n" + user_text + "\\n" + assistant_text
+    tokens = tokenizer(text, truncation=True, max_length=2048, padding="max_length")
+    labels = tokens["input_ids"].copy()
+    labels = [([t if t != tokenizer.pad_token_id else -100 for t in row]) for row in labels]
+    tokens["labels"] = labels
+    return tokens
+`;
+
+  // Load dataset + 95/5 train/val split (held-out set feeds the eval gate
+  // and EarlyStoppingCallback; deterministic seed for reproducibility).
+  const datasetBlock = `
+with open(DATASET_PATH, "r") as f:
+    raw_data = json.load(f)
+
+dataset = Dataset.from_list(raw_data).map(tokenize)
+print(f"Dataset size: {len(dataset)}")
+if len(dataset) >= 20:
+    _split = dataset.train_test_split(test_size=0.05, seed=42)
+    train_ds, eval_ds = _split["train"], _split["test"]
+else:
+    train_ds, eval_ds = dataset, None
+print(f"Train size: {len(train_ds)}, Val size: {len(eval_ds) if eval_ds else 0}")
+`;
+
+  // Structured progress callback writing khy-trainlog/v1 JSON-lines events.
+  const logCallbackClass = `
+class KhyTrainLogCallback:
+    """Emits khy-trainlog/v1 JSON-lines progress events (LlamaFactory LogCallback pattern)."""
+    def __init__(self, total_epochs):
+        self.total_epochs = total_epochs
+        self.start = None
+        self._first_step_seen = False
+
+    def on_train_begin(self, args, state, control, **kwargs):
+        self.start = time.time()
+
+    def on_epoch_begin(self, args, state, control, **kwargs):
+        _khy_epoch_start(state.epoch, self.total_epochs)
+
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        if logs is None:
+            return
+        elapsed = time.time() - self.start if self.start else None
+        remaining = None
+        if elapsed is not None and state.epoch >= 1 and state.num_train_epochs:
+            remaining = elapsed * max(state.num_train_epochs - state.epoch, 0) / state.epoch
+        step = state.global_step or 0
+        total = 0
+        try:
+            total = int(len(train_ds) / max(args.per_device_train_batch_size, 1)) * int(state.num_train_epochs or 1)
+        except Exception:
+            total = 0
+        lr = logs.get("learning_rate") or logs.get("lr")
+        loss = logs.get("loss")
+        eval_loss = logs.get("eval_loss")
+        _khy_log_step(step, total, loss, eval_loss, lr, elapsed, remaining)
+
+    def on_epoch_end(self, args, state, control, **kwargs):
+        _khy_epoch_end(state.epoch, train_loss=None, eval_loss=None)
+`;
+
+  // Trainer assembly: eval split + early stopping on val loss (patience=2).
+  const trainerBlock = `
+_callbacks = [KhyTrainLogCallback(EPOCHS)]
+if eval_ds is not None:
+    _callbacks.append(EarlyStoppingCallback(patience=2, metric="eval_loss"))
+
+training_args = TrainingArguments(
+    output_dir=OUTPUT_DIR,
+    num_train_epochs=EPOCHS,
+    per_device_train_batch_size=BATCH_SIZE,
+    learning_rate=LR,
+    warmup_ratio=0.1,
+    logging_steps=10,
+    save_strategy="epoch",
+    fp16=(DEVICE == "cuda"),
+    report_to="none",
+    eval_strategy="epoch" if eval_ds is not None else "no",
+    load_best_model_at_end=(eval_ds is not None),
+    metric_for_best_model="eval_loss" if eval_ds is not None else "train_loss",
+)
+
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=train_ds,
+    eval_dataset=eval_ds,
+    callbacks=_callbacks,
+)
+_khy_emit_header()
+print("Starting training...")
+trainer.train()
+
+# Save
+model.save_pretrained(OUTPUT_DIR)
+tokenizer.save_pretrained(OUTPUT_DIR)
+_khy_done(trainer.state.global_step)
+print(f"Model saved to: {OUTPUT_DIR}")
+print("100% complete")
+`;
 
   if (method === 'lora') {
     return `#!/usr/bin/env python3
 """Auto-generated khy OS LoRA fine-tuning script."""
-import json, os, torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer
+import json, os, time, torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer, EarlyStoppingCallback
 from peft import LoraConfig, get_peft_model, TaskType
 from datasets import Dataset
 
+# khy-trainlog/v1 helper block
+${logHelper}
+
+# Structured progress callback
+${logCallbackClass}
+
 # Config
-BASE_MODEL = "${baseModelId}"
-DATASET_PATH = "${datasetPath.replace(/\\/g, '/')}"
-OUTPUT_DIR = "${outputDir.replace(/\\/g, '/')}"
+BASE_MODEL = "${pySafe(baseModelId)}"
+DATASET_PATH = "${pySafe(datasetPath)}"
+OUTPUT_DIR = "${pySafe(outputDir)}"
 DEVICE = "${device}"
 EPOCHS = ${config.epochs}
 LR = ${config.lr}
@@ -1767,56 +2809,37 @@ model = get_peft_model(model, lora_config)
 model.print_trainable_parameters()
 
 # Load dataset
-with open(DATASET_PATH, "r") as f:
-    raw_data = json.load(f)
-
-def tokenize(example):
-    text = f"<|im_start|>system\\n{example.get('system', '')}\\n<|im_end|>\\n<|im_start|>user\\n{example['instruction']}\\n<|im_end|>\\n<|im_start|>assistant\\n{example['output']}\\n<|im_end|>"
-    tokens = tokenizer(text, truncation=True, max_length=2048, padding="max_length")
-    tokens["labels"] = tokens["input_ids"].copy()
-    return tokens
-
-dataset = Dataset.from_list(raw_data).map(tokenize)
-print(f"Dataset size: {len(dataset)}")
+${tokenizeBlock}
+${datasetBlock}
 
 # Train
-training_args = TrainingArguments(
-    output_dir=OUTPUT_DIR,
-    num_train_epochs=EPOCHS,
-    per_device_train_batch_size=BATCH_SIZE,
-    learning_rate=LR,
-    warmup_ratio=0.1,
-    logging_steps=10,
-    save_strategy="epoch",
-    fp16=(DEVICE == "cuda"),
-    report_to="none",
-)
-
-trainer = Trainer(model=model, args=training_args, train_dataset=dataset)
-print("Starting training...")
-trainer.train()
-
-# Save
-model.save_pretrained(OUTPUT_DIR)
-tokenizer.save_pretrained(OUTPUT_DIR)
-print(f"Model saved to: {OUTPUT_DIR}")
-print(f"100% complete")
+${trainerBlock}
 `;
   }
 
   // Full fine-tune (no LoRA)
   return `#!/usr/bin/env python3
 """Auto-generated khy OS full fine-tuning script."""
-import json, torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer
+import json, os, time, torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer, EarlyStoppingCallback
 from datasets import Dataset
 
-BASE_MODEL = "${baseModelId}"
-DATASET_PATH = "${datasetPath.replace(/\\/g, '/')}"
-OUTPUT_DIR = "${outputDir.replace(/\\/g, '/')}"
-DEVICE = "${device}"
+# khy-trainlog/v1 helper block
+${logHelper}
 
-print(f"Full fine-tune: {BASE_MODEL} on {DEVICE}")
+# Structured progress callback
+${logCallbackClass}
+
+# Config
+BASE_MODEL = "${pySafe(baseModelId)}"
+DATASET_PATH = "${pySafe(datasetPath)}"
+OUTPUT_DIR = "${pySafe(outputDir)}"
+DEVICE = "${device}"
+EPOCHS = ${config.epochs}
+LR = ${config.lr}
+BATCH_SIZE = ${config.batchSize}
+
+print(f"Full fine-tune: {BASE_MODEL} on {DEVICE}, Epochs: {EPOCHS}")
 
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
 if tokenizer.pad_token is None:
@@ -1829,36 +2852,12 @@ model = AutoModelForCausalLM.from_pretrained(
     trust_remote_code=True,
 )
 
-with open(DATASET_PATH, "r") as f:
-    raw_data = json.load(f)
+# Load dataset
+${tokenizeBlock}
+${datasetBlock}
 
-def tokenize(example):
-    text = f"<|im_start|>system\\n{example.get('system', '')}\\n<|im_end|>\\n<|im_start|>user\\n{example['instruction']}\\n<|im_end|>\\n<|im_start|>assistant\\n{example['output']}\\n<|im_end|>"
-    tokens = tokenizer(text, truncation=True, max_length=2048, padding="max_length")
-    tokens["labels"] = tokens["input_ids"].copy()
-    return tokens
-
-dataset = Dataset.from_list(raw_data).map(tokenize)
-print(f"Dataset: {len(dataset)} samples")
-
-training_args = TrainingArguments(
-    output_dir=OUTPUT_DIR,
-    num_train_epochs=${config.epochs},
-    per_device_train_batch_size=${config.batchSize},
-    learning_rate=${config.lr},
-    warmup_ratio=0.1,
-    logging_steps=10,
-    save_strategy="epoch",
-    fp16=(DEVICE == "cuda"),
-    report_to="none",
-)
-
-trainer = Trainer(model=model, args=training_args, train_dataset=dataset)
-trainer.train()
-
-model.save_pretrained(OUTPUT_DIR)
-tokenizer.save_pretrained(OUTPUT_DIR)
-print(f"100% complete - saved to {OUTPUT_DIR}")
+# Train
+${trainerBlock}
 `;
 }
 
@@ -1980,6 +2979,7 @@ module.exports = {
   recordFeedback,
   getDatasetStats,
   exportDataset,
+  curateDataset: require('./dataCuration').curateDataset,
 
   // Training
   trainLocal,
@@ -1989,6 +2989,22 @@ module.exports = {
   BASE_MODELS,
   TRAINING_PRESETS,
 
+  // Structured training log (khy-trainlog/v1)
+  TRAIN_LOG_FILENAME,
+  buildTrainLogHelper,
+  parseTrainLogProgress,
+
+  // Reproducible recipe snapshot
+  RECIPE_FILENAME,
+  buildRecipeSnapshot,
+  writeRecipeSnapshot,
+  readRecipeSnapshot,
+
+  // Post-training eval gate + auto-rollback
+  EVAL_PROBES,
+  evaluateModel,
+  autoRollbackOnEvalFailure,
+
   // Models & Export
   listModels,
   registerModel,
@@ -1996,6 +3012,10 @@ module.exports = {
   exportSafetensors,
   registerWithOllama,
   abliterateModel,
+
+  // Model discovery notify (P2: front-end "new model appeared" marker)
+  writeModelNotify,
+  readModelNotify,
 
   // Version management & Relay
   getNextVersion,

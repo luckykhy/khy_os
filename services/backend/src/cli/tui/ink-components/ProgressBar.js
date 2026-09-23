@@ -130,9 +130,9 @@ function ProgressBar(props) {
   }
 
   if (kind === 'stage') {
-    const current = Math.max(1, Number(props.current) || 1);
     const total = Math.max(1, Number(props.total) || 1);
-    const filled = '●'.repeat(current - 1) + '●';
+    const current = Math.min(Math.max(1, Number(props.current) || 1), total);
+    const filled = '●'.repeat(current);
     const empty = '○'.repeat(total - current);
     return h(
       Box,

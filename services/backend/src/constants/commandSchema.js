@@ -78,6 +78,7 @@ const ROUTER_COMMANDS = [
   'whoami',
   'passwd',
   'forgot',
+  'user',
   'self',
   'cleanup',
   'memory',
@@ -106,6 +107,7 @@ const ROUTER_COMMANDS = [
   'receipts',
   'rewind',
   'undo',
+  'turn-rollback',
   'publish',
   'mobile',
   'restore',
@@ -363,6 +365,8 @@ const ROUTER_SUB_COMMANDS = {
     'unpin',
     'archive',
     'restore',
+    'sync',
+    'restore-builtin',
   ],
   extension: [
     'list',
@@ -749,6 +753,7 @@ const ROUTER_SUB_COMMANDS = {
   ],
   receipts: ['list', 'show', 'search'],
   rewind: ['list'],
+  'turn-rollback': ['list'],
   publish: [
     'check',
     'build',
@@ -861,6 +866,7 @@ const ROUTER_SUB_COMMANDS = {
     'ecosystem',
     '生态',
   ],
+  user: ['rename'],
 };
 
 const CATEGORY_BY_COMMAND = {
@@ -890,6 +896,7 @@ const CATEGORY_BY_COMMAND = {
   whoami: 'security',
   passwd: 'security',
   forgot: 'security',
+  user: 'security',
 
   review: 'dev',
   doctor: 'dev',
@@ -1354,6 +1361,13 @@ const BUILTIN_SLASH_COMMANDS = [
     label: '撤销改动',
     desc: '撤销最近一次(或指定文件)的文件编辑(patch 级,对齐 Claude Code /undo → khy undo)',
     route: 'undo',
+    category: 'workflow',
+  },
+  {
+    cmd: '/turn-rollback',
+    label: '逐回合撤销',
+    desc: '按回合原子回滚最近(或指定)AI 回合的全部文件改动,逐文件原子 + 冲突零写入(对齐 ycode turn_undo, DESIGN-ARCH-096 §2-A)',
+    route: 'turn-rollback',
     category: 'workflow',
   },
   // ── 菜单补齐:可路由但此前从不出现在 /help 与 / 自动补全的 CC 对齐命令 ──
@@ -1976,6 +1990,13 @@ const BUILTIN_SLASH_COMMANDS = [
   { cmd: '/hooks', label: 'Hooks', desc: 'Manage lifecycle hooks', route: null, flag: 'hooks', category: 'dev' },
   { cmd: '/login', label: 'Login', desc: 'Authenticate with API', route: 'login' },
   { cmd: '/logout', label: 'Logout', desc: 'Clear authentication', route: 'logout' },
+  {
+    cmd: '/user',
+    label: '账号改名',
+    desc: '重命名当前登录账号，旧名保留为登录别名(/user rename <新账号名>)',
+    route: 'user rename',
+    category: 'security',
+  },
   { cmd: '/mcp', label: 'MCP', desc: 'Manage MCP servers', route: null, flag: 'mcp', category: 'dev' },
   { cmd: '/plugin', label: 'Plugins', desc: 'Manage plugins', route: 'plugin list', category: 'dev' },
   { cmd: '/session', label: 'Session', desc: 'Session management', route: null, flag: 'session', category: 'workflow' },

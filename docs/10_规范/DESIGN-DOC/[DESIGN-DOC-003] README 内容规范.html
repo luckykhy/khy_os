@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-DOC-003] README 内容规范.md -->
+<title>[DESIGN-DOC-003] README 内容规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-DOC<span class="sep">›</span>[DESIGN-DOC-003] README 内容规范</div>
+      <header class="hero reveal"><h1>[DESIGN-DOC-003] README 内容规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-doc-003-readme-内容规范">[DESIGN-DOC-003] README 内容规范</a></li><li class="lvl-2"><a href="#1-红线">1. 红线</a></li><li class="lvl-3"><a href="#1-1-全域禁项-不分档位-本文核心">1.1 全域禁项（不分档位，本文核心）</a></li><li class="lvl-3"><a href="#1-2-指针标识-事实副本">1.2 指针标识 ≠ 事实副本</a></li><li class="lvl-3"><a href="#1-3-档位判据-机械可判">1.3 档位判据（机械可判）</a></li><li class="lvl-3"><a href="#1-4-必答清单">1.4 必答清单</a></li><li class="lvl-3"><a href="#1-5-首屏-台账与孪生件">1.5 首屏、台账与孪生件</a></li><li class="lvl-2"><a href="#2-反例-正例">2. 反例 → 正例</a></li><li class="lvl-2"><a href="#3-校验-守卫">3. 校验（守卫）</a></li><li class="lvl-2"><a href="#4-版本历史">4. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-doc-003-readme-内容规范">[DESIGN-DOC-003] README 内容规范<a class="anchor" href="#design-doc-003-readme-内容规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: DOCS-004 -->
+<blockquote><p><strong>定位</strong>：管仓库内一切 <code>README.md</code> 及其语言变体<strong>写什么内容</strong>。<br>与 <code>[DESIGN-DOC-002]</code>（AI 指令文件标准，管 <code>AGENTS.md</code>/<code>CLAUDE.md</code>/<code>khy.md</code> 一族）<strong>互斥</strong>，<br>两族无重叠管辖；README 的<strong>位置</strong>归 <code>check-repo-layout.js</code> 的 <code>ROOT_DOC_WHITELIST</code> /<br><code>README_VARIANT_RE</code>，<code>docs/**</code> 内 README 的<strong>命名</strong>归 <code>DOCS-001</code>。<br>实测证据、公理、判据论证与落地设计见 <code>[IMPL-DOC-002]</code>。</p>
+<p><strong>【scope 边界 2026-09-17，DOCS 域四篇分工】</strong> 文档规则族按 scope 分层、互不覆盖<br>（依据元规则 <code>[MGMT-STD-008]</code> §2.2「重叠即违规」）：</p>
+<table><thead><tr><th>文档</th><th>管什么</th></tr></thead><tbody><tr><td><code>[MGMT-STD-007] 文档规则总纲</code></td><td>命名 / 放置 / 登记 / 生命周期（总纲）</td></tr><tr><td><code>[DESIGN-DOC-001] 文档结构规范</code></td><td><code>.md</code> 的结构（§12 骨架）+ 中文排版（§13，唯一真源）</td></tr><tr><td><code>[DESIGN-DOC-002] AI 指令文件标准</code></td><td><code>AGENTS.md</code>/<code>CLAUDE.md</code>/<code>khy.md</code> 一族</td></tr><tr><td><strong>本篇</strong></td><td><strong><code>README.md</code> 一族</strong>，与 <code>DOC-002</code> <strong>互斥</strong>，两族无重叠管辖</td></tr></tbody></table>
+<p><strong>结论</strong>：① <strong>README 不得成为第二真源</strong> —— 端口、版本、命令全集、目录树等一律给指针不给副本；<br>② <strong>每条命令必须在写作时实际可执行</strong>；③ 必答内容按档位递减（T0 七问 / T1 五问 / T2 三问），<br><strong>必备项是下限，不是上限</strong>。</p></blockquote>
+<hr>
+<h2 id="1-红线">1. 红线<a class="anchor" href="#1-红线" aria-label="锚点">#</a></h2>
+<h3 id="1-1-全域禁项-不分档位-本文核心">1.1 全域禁项（不分档位，本文核心）<a class="anchor" href="#1-1-全域禁项-不分档位-本文核心" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>正文禁止出现</th><th>只能给指针，真源是</th></tr></thead><tbody><tr><td>端口 / IP / 域名 / URL 字面量</td><td><code>constants/serviceDefaults.js</code>（<code>RUNTIME-001</code> 单一真源）</td></tr><tr><td>引擎与运行时版本阈值</td><td>各 <code>package.json</code> 的 <code>engines</code>、<code>pyproject.toml</code> 的 <code>requires-python</code></td></tr><tr><td>版本号字面量</td><td>三条版本轨道的 9 个 manifest（<code>check-version-sync.js</code>）</td></tr><tr><td>版本同步的源清单</td><td><code>check-version-sync.js</code> 的 <code>VERSION_GROUPS</code>（代码即真源）</td></tr><tr><td>命令全集</td><td><code>khy --help</code>、<code>[OPS-MAN-174]</code> 任务入口总表、就近 <code>package.json</code></td></tr><tr><td>完整目录树</td><td><code>[DESIGN-LAY-005]</code> + <code>npm run check:layout</code></td></tr><tr><td>规则正文</td><td><code>RULES-REGISTRY.json</code> + 各规则 <code>ssot</code>（正文只给规则 ID 与指针）</td></tr><tr><td>变更历史</td><td><code>CHANGELOG.md</code></td></tr><tr><td>进度 / TODO / 临时说明</td><td>任务板、<code>tests/DEBT.md</code></td></tr></tbody></table>
+<h3 id="1-2-指针标识-事实副本">1.2 指针标识 ≠ 事实副本<a class="anchor" href="#1-2-指针标识-事实副本" aria-label="锚点">#</a></h3>
+<p>判据：写<strong>标识</strong>合法，写<strong>值</strong>违规 —— <code>AI_FRONTEND_PORT</code> ✅ / <code>:8090</code> ❌；<br><code>npm run test:backend</code> ✅（须真实存在）/ 列出全部脚本 ❌。</p>
+<p><strong>引用代码时给符号名，不给行号</strong>：<code>serviceDefaults.js</code> 的 <code>BACKEND_PORT</code> ✅ /<br><code>serviceDefaults.js:89</code> ❌。行号是最易漂移的副本 —— 任何一次在文件前部的插入都会<br>让全文引用集体失准，而符号名不会。<strong>同理适用于其他一切「位置型」引用</strong>：<br>不写「第 N 节」「第 N 行」，写小节标题或符号名。</p>
+<p><strong>三类例外</strong>（必须可机械识别）：<br>① 落在 <code>❌</code>/<code>✅</code> 对照块，或紧邻标题含「示例 / Example / 示意 / e.g.」的语境；<br>② 徽章 URL（<strong>只允许外部服务实时取值</strong>，如 PyPI/npm 版本、CI 覆盖率；手写数字徽章违规）；<br>③ 指向真源的变量名 / 脚本名 / 规则 ID / 文档编号。</p>
+<h3 id="1-3-档位判据-机械可判">1.3 档位判据（机械可判）<a class="anchor" href="#1-3-档位判据-机械可判" aria-label="锚点">#</a></h3>
+<p><code>T0</code> = 仓库根；<code>T1</code> = 所在目录存在 <code>package.json</code> / <code>pyproject.toml</code> / <code>Makefile</code> /<br><code>Cargo.toml</code> 之一（即可独立构建或启动的单元）；<code>T2</code> = 其余（含 <code>docs/**</code>，其命名另归 <code>DOCS-001</code>）。</p>
+<h3 id="1-4-必答清单">1.4 必答清单<a class="anchor" href="#1-4-必答清单" aria-label="锚点">#</a></h3>
+<p><strong>T0 仓库入口（<code>README.md</code>）—— 必答 7 问</strong></p>
+<table><thead><tr><th>#</th><th>必答</th><th>怎样算答了</th></tr></thead><tbody><tr><td>Q1</td><td>这是什么</td><td>一句话定位 + <strong>不是什么</strong>（边界）</td></tr><tr><td>Q2</td><td>凭什么用它</td><td>3–5 条能力，每条一句话，不堆形容词</td></tr><tr><td>Q3</td><td>怎么装</td><td>每个分发渠道一条<strong>可复制</strong>命令</td></tr><tr><td>Q4</td><td>装完第一步</td><td>一条命令 + 读者会看到什么</td></tr><tr><td>Q5</td><td>源码怎么跑</td><td>环境要求 + 依赖安装 + 启动；版本阈值给真源指针</td></tr><tr><td>Q6</td><td>东西放在哪</td><td>配置 / 数据位置；目录结构给指针，不抄树</td></tr><tr><td>Q7</td><td>去哪看更多 / 参与 / 许可</td><td>文档索引、贡献指南、许可各一条指针</td></tr></tbody></table>
+<p><strong>T1 部署单元 —— 必答 5 问</strong>：职责与边界 / 依赖谁与被谁用 / 本地怎么起（端口给环境变量名）/<br>怎么测（一条命令）/ 真源指针（配置、契约、上层规范）。</p>
+<p><strong>T2 内部模块 —— 必答 3 问</strong>：这个目录里有什么（<strong>全域唯一允许的清单</strong> —— 它描述目录自身，<br>不会与外部真源漂移）/ 怎么跑它的校验或测试 / 与上级单元的关系。</p>
+<h3 id="1-5-首屏-台账与孪生件">1.5 首屏、台账与孪生件<a class="anchor" href="#1-5-首屏-台账与孪生件" aria-label="锚点">#</a></h3>
+<ul><li><strong>首屏</strong>（首个 H2 之前 + 第一个 H2 节）必须答完「这是什么 + 怎么跑」；徽章墙、目录树、长表不得占据首屏。</li><li>README <strong>不承载</strong>进度、TODO、临时说明。</li><li><strong>孪生件必须成对</strong>：有 <code>.md</code> 必须有同名 <code>.html</code>（由 LAY-5 / <code>scripts/docs/verify_docs_site.js</code> 硬门）；</li></ul>
+<p><strong>有 <code>.html</code> 不得无源</strong>（孤儿孪生属违规）；<code>.html</code> 由 <code>npm run docs:build</code> 生成，<strong>禁止手改</strong>。</p>
+<ul><li>文件名须匹配 <code>check-repo-layout.js</code> 的 <code>README_VARIANT_RE</code>。</li></ul>
+<hr>
+<h2 id="2-反例-正例">2. 反例 → 正例<a class="anchor" href="#2-反例-正例" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>❌ 反例</th><th>✅ 正例</th><th>判据</th></tr></thead><tbody><tr><td>1</td><td><code>后端 API http://localhost:5000</code></td><td><code>后端 API 端口由 </code>PORT<code> 决定，真源 </code>constants/serviceDefaults.js``</td><td>1.1 端口</td></tr><tr><td>2</td><td><code>Node.js ≥ 20</code></td><td><code>Node.js ≥ 20.18.1（见 </code>services/backend<code> 的 </code>engines<code>）</code></td><td>1.1 版本阈值</td></tr><tr><td>3</td><td><code>run.ps1</code> 等价于 <code>npm run dev</code></td><td><code>run.ps1 -Command dev -Workspace apps/ai-frontend</code></td><td>1.1 命令全集</td></tr><tr><td>4</td><td>贴出整棵顶层目录树</td><td>指向 <code>[DESIGN-LAY-005]</code>，由 <code>npm run check:layout</code> 强制</td><td>1.1 目录树</td></tr><tr><td>5</td><td>「版本需同步三处真源」</td><td>「版本一致性由 <code>check-version-sync.js</code> 强制，源清单见其 <code>VERSION_GROUPS</code>」</td><td>1.1 源清单</td></tr><tr><td>6</td><td>「本次重构已完成 80%，待办…」</td><td>删除；进度写任务板，变更写 <code>CHANGELOG.md</code></td><td>1.5 台账</td></tr><tr><td>7</td><td><code>README-联调.md</code></td><td><code>README.zh-CN.md</code>，或并入上级 README</td><td>1.5 命名</td></tr><tr><td>8</td><td><code>apps/khy-mobile/README.html</code>（有 html 无 md）</td><td>补同名 <code>.md</code>，或删除孤儿 <code>.html</code></td><td>1.5 孪生件</td></tr><tr><td>9</td><td>T2 模块 README 只写标题一行</td><td>至少答 Q1/Q2/Q3 三问</td><td>1.4 T2</td></tr><tr><td>10</td><td>首屏只有徽章墙 + 长目录树</td><td>首屏先给「是什么 + 怎么跑」</td><td>1.5 首屏</td></tr><tr><td>11</td><td>手写 <code>v1.1.15</code> 徽章</td><td>用 shields.io 的 <code>pypi/v/khy-os</code>（实时取值）</td><td>1.2 例外②</td></tr></tbody></table>
+<blockquote><p>反向对照（<strong>证明不是无脑拦</strong>）：T2 README 写到 200 行 ✅（下限非上限）；<br><code>❌ :3000 / ✅ 由 PORT 决定</code> 对照块 ✅；<code>khy gateway status</code>（真实子命令）✅；<br>引擎版本写成 <code>engines</code> 指针 ✅。</p></blockquote>
+<hr>
+<h2 id="3-校验-守卫">3. 校验（守卫）<a class="anchor" href="#3-校验-守卫" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项</th><th>现状</th></tr></thead><tbody><tr><td>自动执行器</td><td><strong>本期无</strong>。规则 <code>DOCS-004</code> 的 <code>gate</code> = <code>manual</code>，执行强度为<strong>人工评审</strong>（诚实登记，不伪造门）</td></tr><tr><td>人工评审清单</td><td>8 项：禁项（1.1）/ 命令可达 / 路径可达 / 档位节齐备 / 首屏 / 台账污染 / 命名与孪生 / 指针有效性。逐条判据见 <code>[IMPL-DOC-002]</code> §5</td></tr><tr><td>已有的相邻守卫</td><td>LAY-5 孪生：<code>scripts/docs/verify_docs_site.js</code>（硬门）· 根目录白名单与命名：<code>scripts/ci/check-repo-layout.js</code>（<code>DOCS-001</code>）</td></tr><tr><td>机械化子集</td><td><strong>可复用</strong> <code>check-agent-docs.js</code> 的 D3a/D3b/D3d 判据（<code>npm run</code> / <code>khy</code> 子命令 / 路径可达性），不另写一套。执行器 <code>scripts/ci/check-readme.js</code> 的接线清单（含 <code>check-wiring.js</code> 的零接线会判 error、P2 棘轮基线、规则卡重生成）见 <code>[IMPL-DOC-002]</code> §6</td></tr><tr><td>复现核对方式</td><td>见 <code>[IMPL-DOC-002]</code> §5</td></tr></tbody></table>
+<blockquote><p><strong>为什么本期不建执行器</strong>：判据先于执行器 —— 执行器若把错误判据写死，会重演<br><code>[DESIGN-DOC-002]</code> §1.1 的循环论证（拿守卫自己的输出当实测证据）。故先登记判据、<br>标为人工评审，验证有效后再机械化。</p></blockquote>
+<hr>
+<h2 id="4-版本历史">4. 版本历史<a class="anchor" href="#4-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-17</td><td>初版。登记为规则 <code>DOCS-004</code>（P2 / <code>gate=manual</code>）；确定全域禁项表、指针标识判据、T0/T1/T2 档位与必答清单；§1.2 补「引用代码给符号名、不给行号」（编写过程中 <code>check-repo-layout.js</code> 行号被并发改动而当场失准，见 <code>[IMPL-DOC-002]</code> §1.3 教训）；实测证据与落地设计移入 <code>[IMPL-DOC-002]</code></td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-DOC/[DESIGN-DOC-002] AI 指令文件标准.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-DOC-002] AI 指令文件标准</div></a><a class="next" href="../../../docs/10_规范/DESIGN-DOC/00_INDEX_DESIGN-DOC-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">DESIGN-DOC</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-DOC/[DESIGN-DOC-003] README 内容规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -18,9 +18,9 @@
 const { describe, test, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 
-const parser = require('../src/services/auditFixLoop/auditParser');
-const triggerGate = require('../src/services/auditFixLoop/triggerGate');
-const promptBuilder = require('../src/services/auditFixLoop/promptBuilder');
+const parser = require('../src/services/domain/maintenance/auditFixLoop/auditParser.js');
+const triggerGate = require('../src/services/domain/maintenance/auditFixLoop/triggerGate.js');
+const promptBuilder = require('../src/services/domain/maintenance/auditFixLoop/promptBuilder.js');
 const loop = require('../src/services/auditFixLoop');
 
 const AUDIT_2_ACTIONABLE = `### [CRITICAL] Path traversal

@@ -63,19 +63,19 @@ const SOLUTION_RULES = Object.freeze([
     solution:
       '下载/网络请求失败(远端 404 或错误响应):是远端资源没找到,不是本地命令或路径缺失。核对下载 URL 的仓库/标签(tag)/资产名(发布资产名常随版本变化,别猜固定 URL),先用发布 API 列出真实资产再选对应系统架构的那个(`gh release list -R <owner>/<repo>` 或 GitHub releases API)后重新下载。',
   },
-  // ── 路径不存在 ────────────────────────────────────────────────────────────
-  {
-    name: 'path-not-found',
-    re: /\benoent\b|no such file or directory|not found|不存在|找不到(文件|路径|目录)/,
-    solution:
-      '目标路径不存在:确认文件/目录路径是否正确(区分相对/绝对路径与大小写),或先创建它再重试。',
-  },
   // ── 命令未找到(与「路径不存在」区分:127 / not recognized) ────────────────
   {
     name: 'command-not-found',
     re: /command not found|: not found\b|not recognized as an internal|无法将“.+”识别为|exit(ed)? (with )?(code )?127\b/,
     solution:
       '命令未安装或不在 PATH:确认该命令已安装并可在 PATH 中找到(用 `which`/`where` 检查),或改用其等价命令。',
+  },
+  // ── 路径不存在 ────────────────────────────────────────────────────────────
+  {
+    name: 'path-not-found',
+    re: /\benoent\b|no such file or directory|not found|不存在|找不到(文件|路径|目录)/,
+    solution:
+      '目标路径不存在:确认文件/目录路径是否正确(区分相对/绝对路径与大小写),或先创建它再重试。',
   },
   // ── 工具调用缺必填参数(dogfood 发现:grep 未传 pattern → 只报错无建议) ──────
   {

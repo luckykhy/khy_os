@@ -21,16 +21,19 @@
  *   command-code→ ~/.commandcode/providers.json BYOK 表 + config.json 默认模型
  *                 (key 只写 env 引用 $KHY_CC_SWITCH_<ID>_KEY，官方拒绝裸密钥)
  *   ycode       → .ycode/config.json provider 块 (key 只写 api_key_env 引用)
+ *   zcode       → ~/.zcode/cli/config.json provider.zai 槽位 + model.main/lite 双角色
+ *                 （zcode 登录门要求内联非空 key，中继模式下写入 khy 网关令牌）
  *
  * Fail-soft: every app writer returns { success, ... } — never throws.
  */
 
-const { APPS, PROTOCOLS } = require('../../collab/proactiveCollaboration/constants');
+const { APPS, PROTOCOLS } = require('./constants');
 const claudeCodeAdapter = require('../../network/externalApps/claudeCodeAdapter');
 const opencodeAdapter = require('../../network/externalApps/opencodeAdapter');
 const geminiCliAdapter = require('../../network/externalApps/geminiCliAdapter');
 const commandCodeAdapter = require('../../network/externalApps/commandCodeAdapter');
 const ycodeAdapter = require('../../network/externalApps/ycodeAdapter');
+const zcodeAdapter = require('../../network/externalApps/zcodeAdapter');
 
 /**
  * Preflight a card for an app: return a human-readable verdict on whether the
@@ -82,6 +85,13 @@ function preflightCardForApp(card, app) {
     // YCode's hosted-API connection is OpenAI-compatible only.
     if (![PROTOCOLS.OPENAI, PROTOCOLS.RESPONSES].includes(card.protocol)) {
       return { ok: false, reason: 'YCode api 连接仅支持 OpenAI 兼容协议（openai / openai_responses）' };
+    }
+    return { ok: true };
+  }
+  if (app === APPS.ZCODE) {
+    // ZCode runtime kinds: anthropic / openai-compatible / openai — no gemini/responses wire.
+    if (![PROTOCOLS.OPENAI, PROTOCOLS.ANTHROPIC].includes(card.protocol)) {
+      return { ok: false, reason: 'ZCode 仅支持 anthropic / OpenAI 兼容端点（openai / anthropic 协议卡片）；其余协议请先经 khy 代理转换为 OpenAI 协议' };
     }
     return { ok: true };
   }
@@ -170,6 +180,17 @@ async function applyCardToApp(card, app, opts = {}) {
         });
         return { success: result.success, app, error: result.error, detail: result };
       }
+      case APPS.ZCODE: {
+        // ZCode 登录门：provider 槽位固定 `zai`（内联 key），双模型角色 main/lite。
+        const result = zcodeAdapter.add({
+          provider: card.name,
+          model: defaultModel,
+          apiKey: key || undefined,
+          endpoint: card.baseUrl,
+          protocol: card.protocol,
+        });
+        return { success: result.success, app, error: result.error, detail: result };
+      }
       default:
         return { success: false, app, error: `暂不支持把卡片写到应用: ${app}` };
     }
@@ -215,6 +236,8 @@ function detectCardInApp(app) {
         return commandCodeAdapter.list();
       case APPS.YCODE:
         return ycodeAdapter.list();
+      case APPS.ZCODE:
+        return zcodeAdapter.list();
       default:
         return { success: false, providers: [], error: `不支持的应用: ${app}` };
     }

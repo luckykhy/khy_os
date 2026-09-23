@@ -28,7 +28,7 @@ const {
   MISJUDGMENT_KIND,
   BANDS,
 } = require('../../../src/services/intentArbiter');
-const { ZeroRiskViolationError } = require('../../../src/services/intentArbiter/tieredResponseRouter');
+const { ZeroRiskViolationError } = require('../../../src/services/domain/state/intentArbiter/tieredResponseRouter.js');
 
 test.after(() => {
   try { fs.rmSync(TMP_HOME, { recursive: true, force: true }); } catch { /* ignore */ }

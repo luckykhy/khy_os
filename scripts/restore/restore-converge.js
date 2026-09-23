@@ -4,10 +4,10 @@
  * restore-converge.js — 三面镜子还原「收敛/防循环」CLI + 文档生成器
  *
  * 用法：
- *   node scripts/restore-converge.js            # 采一次镜子作基线，示范收敛判定 + 自检
- *   npm run restore-converge                     # 同上（经 npm 别名）
- *   node scripts/restore-converge.js --json      # 机器可读（自驱 agent 的闭环用这个）
- *   node scripts/restore-converge.js --gen-doc   # 重新生成 OPS-MAN-082 说明
+ *   node scripts/restore/restore-converge.js            # 采一次镜子作基线，示范收敛判定 + 自检
+ *   npm run restore:converge                            # 同上（经 npm 别名）
+ *   node scripts/restore/restore-converge.js --json      # 机器可读（自驱 agent 的闭环用这个）
+ *   node scripts/restore/restore-converge.js --gen-doc   # 重新生成 OPS-MAN-082 说明
  *
  * 设计：收敛判定全在纯叶子 scripts/lib/restoreConvergenceVerifier.js（零 IO、可离线全测）；
  * 本文件只做三件事——
@@ -36,14 +36,10 @@ const {
 } = require('../lib/restoreConvergenceVerifier');
 // 复用 restore-plan 的三面镜子采集器（零重复；它已 fail-soft 包好三个探测器）。
 const { gatherAssessments } = require('./restore-plan');
+const { opsDocPath, opsDocRelPath } = require('../lib/docsPaths');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const DOC_PATH = path.join(
-  ROOT,
-  'docs',
-  '07_OPS_运维',
-  '[OPS-MAN-082] 三面镜子还原收敛与防循环.md'
-);
+const DOC_PATH = opsDocPath('[OPS-MAN-082] 三面镜子还原收敛与防循环.md');
 const NPM_PKG_NAME = '@khy-os/khy-os';
 const PIP_PKG_NAME = 'khy-os';
 
@@ -99,7 +95,7 @@ function runRestoreConverge(opts = {}) {
   out += `     · ${C.green}converged-stop${C.reset} → 三镜子全绿，停止并声称还原成功\n`;
   out += `     · ${C.yellow}continue${C.reset}       → 在推进（或首次无进展），带回 stallCount 继续\n`;
   out += `     · ${C.red}escalate-human${C.reset} → 倒退 或 连续无进展达上限，止步交人\n`;
-  out += `${C.dim}详情见：docs/07_OPS_运维/[OPS-MAN-082] 三面镜子还原收敛与防循环.md${C.reset}\n`;
+  out += `${C.dim}详情见：${opsDocRelPath('[OPS-MAN-082] 三面镜子还原收敛与防循环.md')}${C.reset}\n`;
   process.stdout.write(out);
   return verdict.escalate ? 1 : 0;
 }

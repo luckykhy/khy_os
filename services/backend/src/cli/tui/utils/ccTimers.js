@@ -39,11 +39,6 @@ const TIMING = Object.freeze({
     debounce: 16,
   }),
 
-  // Resize 防抖
-  resize: Object.freeze({
-    debounce: 50,
-  }),
-
   // 思考块折叠/展开
   thinking: Object.freeze({
     animationDuration: 200,

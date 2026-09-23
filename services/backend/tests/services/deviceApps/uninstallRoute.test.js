@@ -1,9 +1,9 @@
 'use strict';
 /**
- * uninstallRoute.test.js �?卸载分档路由决策锁死(node:test)�?
+ * uninstallRoute.test.js — 卸载分档路由决策锁死(node:test)�?
  *
  * 锁死三档判定:T1 包管理器标识 �?T2 原生自带卸载�?�?T3 诚实拒绝(绝不猜删);
- * �?query 拒绝;多命中标�?ambiguous;绝不抛�?
+ * �?query 拒绝;多命中标�?ambiguous;绝不抛错
  */
 const { decideUninstallRoute } = require('../../../src/services/domain/desktop/deviceApps/uninstallRoute.js');
 

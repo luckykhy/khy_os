@@ -16,6 +16,7 @@ const {
   ccFormatFileSize,
   ccRelativeAgeParts,
 } = require('../../src/cli/ccFormat');
+const assert = require('node:assert');
 const SEC = 1000;
 const MIN = 60 * SEC;
 const HOUR = 60 * MIN;
@@ -145,9 +146,9 @@ describe('Cc Format', () => {
       expect(ccFormatDuration('abc')).toBe('');
       expect(ccFormatNumber(NaN)).toBe('');
       expect(ccFormatNumber(Infinity)).toBe('');
-      expect(() => ccFormatDuration().not.toThrow());
-      expect(() => ccFormatTokens().not.toThrow());
-      expect(() => ccFormatTokens('xyz').not.toThrow());
+      expect(() => ccFormatDuration()).not.toThrow();
+      expect(() => ccFormatTokens()).not.toThrow();
+      expect(() => ccFormatTokens('xyz')).not.toThrow();
   });
 
   test('ccFormatFileSize: CC formatFileSize 逐分支移植', () => {
@@ -205,7 +206,7 @@ describe('Cc Format', () => {
       expect(ccRelativeAgeParts(NaN)).toBe(null);
       expect(ccRelativeAgeParts(Infinity)).toBe(null);
       expect(ccRelativeAgeParts('abc')).toBe(null);
-      expect(() => ccRelativeAgeParts().not.toThrow());
+      expect(() => ccRelativeAgeParts()).not.toThrow();
   });
 
 });

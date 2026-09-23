@@ -379,6 +379,6 @@ console.log('\nPattern distribution:');
 ALL_23.forEach(p => console.log(`  ${p}: ${stats[p] || 0}`));
 
 // 写入 JSON
-const outPath = path.join(__dirname, '..', '..', 'docs', 'design-patterns', 'pattern-registry.json');
+const outPath = path.join(__dirname, '..', '..', 'docs', '16_设计模式', 'registry', '模式注册表.json');
 fs.writeFileSync(outPath, JSON.stringify(registry, null, 2) + '\n');
 console.log(`\nWritten to ${outPath}`);

@@ -11,6 +11,7 @@
  * 纯字符串规范化,确定性,无 IO。经 __test__ 钩子取内部函数。
  */
 const gateway = require('../../src/services/gateway/aiGateway');
+const assert = require('node:assert');
 const { normalizeModelForAdapter } = gateway.__test__;
 function withGate(value, fn) {
   const prev = process.env.KHY_RELAY_COMPOSITE_MODEL_STRIP;
@@ -75,9 +76,11 @@ describe('Relay Composite Model Strip', () => {
 
   test('非字符串 / 空值安全透传', () => {
       withGate(undefined, () => {
-        expect(normalizeModelForAdapter('relay_api')).toBe(null);
-        expect(normalizeModelForAdapter('relay_api')).toBe('');
-        expect(normalizeModelForAdapter('relay_api')).toBe(undefined);
+        // Pass the actual empty values as the model argument — three identical
+        // calls with no second arg would all return the same thing.
+        expect(normalizeModelForAdapter('relay_api', null)).toBe(null);
+        expect(normalizeModelForAdapter('relay_api', '')).toBe('');
+        expect(normalizeModelForAdapter('relay_api', undefined)).toBe(undefined);
       });
   });
 

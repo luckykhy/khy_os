@@ -18,7 +18,7 @@ const path = require('path');
 
 const paths = require('../../../src/memdir/paths');
 const memdir = require('../../../src/memdir/memdir');
-const scoring = require('../../../src/services/memoryEngine/scoring');
+const scoring = require('../../../src/services/domain/memory/memoryEngine/scoring.js');
 
 const DAY = 24 * 60 * 60 * 1000;
 

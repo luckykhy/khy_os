@@ -42,7 +42,7 @@ function _defaultDependencyInstaller() {
     async install(dep, { control } = {}) {
       let dependency = null;
       try {
-        dependency = require('../dependency');
+        dependency = require('../../network/dependency');
       } catch {
         return { ok: false, reason: 'dependency-subsystem-unavailable' };
       }

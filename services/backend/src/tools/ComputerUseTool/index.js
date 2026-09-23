@@ -168,7 +168,7 @@ Graded confirmation by action risk (low/medium/high/critical): 'on' auto-runs lo
               const {
                 resolveTargetApps,
                 parseAtApp,
-              } = require('../../services/computerUse/appTarget');
+              } = require('../../services/domain/desktop/computerUse/appTarget');
               const at = parseAtApp(goal);
               if (at.ok && at.app) {
                 targetApp = at.app;

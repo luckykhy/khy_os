@@ -7,6 +7,7 @@
  * 纯叶子零 IO,不触真实 OCR/网络。
  */
 const fb = require('../src/services/gateway/visionOcrFallback');
+const assert = require('node:assert');
 describe('visionOcrFallback — rate-limit OCR rescue', () => {
 });
 

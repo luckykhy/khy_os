@@ -1,0 +1,431 @@
+{
+  "$schemaNote": "能力域 → 唯一实现位置登记表。schema 单一真源：docs/10_规范/其它规范/[DESIGN-SOURCING-001] 借鉴与实现统一规则.md §4 B-U1。守卫脚本 check:feature-ownership 尚未落地（B-G1/B-G2 分阶段建设项），本文件当前由人工评审使用。",
+  "version": 2,
+  "updated": "2026-09-23",
+  "status": "seeded",
+  "capabilities": [
+    {
+      "domain": "ai-gateway",
+      "summary": "多供应商 AI 调用的统一入口",
+      "canonical": "services/backend/src/services/gateway/aiGateway.js",
+      "ownedLayers": [
+        "L2"
+      ],
+      "pattern": "Adapter",
+      "method": "self-developed",
+      "source": null,
+      "aliases": [
+        "aiGateway",
+        "AI 网关",
+        "多供应商 AI 调用"
+      ],
+      "forbidden": [
+        "services/ai-backend/src/services/gateway/aiGateway.js"
+      ],
+      "status": "active",
+      "notes": "新增供应商必须走适配器模式，不得新增并行调用入口。seed 2026-09-15：已核实存在两份 aiGateway.js（backend 与 ai-backend 各一份），属 B-L1 P1 级重复（两处都在被维护），迁移按 B-L2 三步走，不做一次性大重构。两份同层（均 L2），check:layout 无法捕获，只能靠本登记表 + check:duplication 兜底——这是 check:feature-ownership 待建的首要动因。"
+    },
+    {
+      "domain": "token-usage",
+      "summary": "以人民币计的 token 用量统计",
+      "canonical": "services/backend/src/services/tokenUsageService.js",
+      "ownedLayers": [
+        "L2"
+      ],
+      "pattern": "Facade",
+      "method": "self-developed",
+      "source": null,
+      "aliases": [
+        "tokenUsage",
+        "用量统计",
+        "Token 统计"
+      ],
+      "forbidden": [
+        "services/ai-backend/src/services/tokenUsageService.js"
+      ],
+      "status": "active",
+      "notes": "seed 2026-09-15：ai-backend 侧同名服务已核实存在，属 B-L1 P1 级重复，待按 B-L2 三步迁移后从 forbidden 移除。"
+    },
+    {
+      "domain": "cli-router",
+      "summary": "CLI 命令解析与分派",
+      "canonical": "services/backend/src/cli/router.js",
+      "ownedLayers": [
+        "L2"
+      ],
+      "pattern": "Command",
+      "method": "self-developed",
+      "source": null,
+      "aliases": [
+        "router",
+        "CLI 路由",
+        "命令分派"
+      ],
+      "forbidden": [],
+      "status": "active",
+      "notes": "新增命令走三步（aliases.js → handlers/ → router.js case），不得新建并行路由入口。别名表见 services/backend/src/cli/aliases.js。"
+    },
+    {
+      "domain": "builtin-skill-sync",
+      "summary": "内置技能的内容指纹同步、随版原子升级与恢复",
+      "canonical": "services/backend/src/services/skillVersionSync.js",
+      "ownedLayers": [
+        "L2"
+      ],
+      "pattern": "Strategy",
+      "method": "idea",
+      "source": "xingyao-y-code@3dc5546 — 遍历在「进入目录之前」按段名剪枝，依赖与构建产物不计入技能本体内容；跳过规则变更即哈希口径变更，须给口径加版本并做保守一次性迁移",
+      "aliases": [
+        "skillVersionSync",
+        "computeDirFingerprint",
+        "syncBuiltinSkills",
+        "内置技能同步",
+        "技能指纹",
+        "builtin skill sync"
+      ],
+      "forbidden": [],
+      "status": "active",
+      "notes": "登记 2026-09-16（[DESIGN-ARCH-105] P-01 落地）。指纹与时间戳解耦（Timestamps are ignored），改动跳过规则必须同步递增 FP_ALGO_VERSION 并保留保守迁移，不得静默改跳过集合。INDEX_VERSION 刻意未 bump：口径版本走独立字段 fingerprintAlgo（加法式扩展，旧读者忽略未知字段、新读者容忍字段缺失，layout 不变），代价是 tests/services/skillVersionSync.test.js:117 硬断言 idx.version === 1；若评审认为新增字段即须 bump schema 版本，须同时放宽该断言。已知重复信号（B-L1 P3 级，未合并）：后端另有 3 处各自本地的噪声目录集 services/sourceHealService.js:47、cli/handlers/lazy.js:56、services/fileSalience.js:52；本域刻意不抽公共模块，因用途不同（相关性降权 vs 指纹正确性）且抽公共件属 B-P1 新能力域需单独提案。未落地项：廉价元数据签名 + 昂贵哈希的两级失效缓存已刻意不做——上游 f3a89f6 表明 mtime 判据在 Windows 上有纳秒抖动假失效，会削弱本仓现有的时间戳无关性质。"
+    },
+    {
+      "domain": "asset-customer-panel",
+      "summary": "AI 资产与客户面板的双源并行刷新与非主源失败降级",
+      "canonical": "apps/ai-frontend/src/composables/useAssetCustomer.js",
+      "ownedLayers": [
+        "L3"
+      ],
+      "pattern": "Observer",
+      "method": "idea",
+      "source": "xingyao-y-code@d1bd12b — search_sessions 异常退化为纯文件补全；提炼的跨栈结论是「并行发起的数据源中，非主源失败必须降级，不得让主源的成功结果与后续副作用一起被丢弃」",
+      "aliases": [
+        "useAssetCustomer",
+        "refreshAll",
+        "asset customer",
+        "资产客户面板",
+        "AIAssetsCustomers"
+      ],
+      "forbidden": [],
+      "status": "active",
+      "notes": "登记 2026-09-17（ycode 借用第 2 轮落地）。refreshAll 用 Promise.allSettled 取代 Promise.all，并划主/次源：customers 为主源（消费方 AIAssetsCustomers.vue 在 await 之后立即读 customers 做首行自动选中），overview 为次源。次源失败只记录进 failed[]、不 reject；主源失败仍原样 reject——若吞掉主源失败，客户列表为空且无任何提示，比改动前更坏，也违反 RUNTIME-002 §2.2 错误消息具体化。返回值从 undefined 改为 { customers, overview, failed }，是加法式变更（既有消费方只 await 不读返回值，零破坏）。failed[] 只携带 source/status/message 结构化数据，面向用户的措辞留给视图层，composable 不掺展示语义。未落地项：前端另有约 24 处、后端约 16 处 Promise.all([...]) 扇出点未排查未改造（多数落点文件处于 M 状态，且无逐处活触发证据）；本仓刻意不新增公共 fail-soft 并行工具——既有惯例是每处内联 Promise.allSettled（先例 AIDashboard.vue:393 注释明写 one unreachable block must not blank the whole overview，后端 toolExecutionEngine.js / subAgentOrchestrator.js / mcp/index.js 同），新增公共件属 B-P1 新能力域需单独提案。负决策记录：[DESIGN-ARCH-105] P-05 的「MCP tools 按名排序」本仓已实现——src/tools/index.js 的 _buildToolPool 已对每个分区按 localeCompare 排序（JSDoc 明写 sorted for prompt cache stability，与上游同一理据），在 toolPool.js 再排一层是 B-U5.1 重复实现。另：本仓另有 services/ai-backend/src/services/aiAssetCustomerService.js（ai-backend 侧），本轮未核其是否与本域同一能力，故不列入 forbidden，留待后续裁决。"
+    },
+    {
+      "domain": "shell-command-risk",
+      "summary": "命令风险分级与执行门禁的单一入口，跨 POSIX / cmd.exe / PowerShell 三执行器家族",
+      "canonical": "services/backend/src/services/commandRiskClassifier.js",
+      "ownedLayers": [
+        "L2"
+      ],
+      "pattern": "Facade",
+      "method": "idea",
+      "source": "xingyao-y-code@ae12f08 — 上游用单一跨执行器内联执行标志集合 _INLINE_EXEC_FLAGS 覆盖 -c/-e/--eval/-command/-encodedcommand///c///k/-m/-p；提炼的跨栈结论是「删除与内联执行的判定必须按执行器家族建模，一个家族表漏掉的词就是门禁盲区」，而非上游的单一集合形态",
+      "aliases": [
+        "commandRiskClassifier",
+        "command risk",
+        "risk gate",
+        "shellToToolMapper",
+        "shellSafetyValidator",
+        "命令风险分级",
+        "风险门禁"
+      ],
+      "forbidden": [],
+      "status": "active",
+      "notes": "登记 2026-09-17（ycode 借用第 3 轮落地）。本轮修的是 Windows/PowerShell 盲区，落两处：shellToToolMapper.js 的 DESTRUCTIVE_COMMANDS 从 7 个 POSIX 词扩到 12 个（+del/erase/rd/remove-item/remove-itemproperty），使 cmd.exe 与 PowerShell cmdlet 删除从「未知命令默认 medium、isDestructive=false」升到 high+isDestructive=true；shellSafetyValidator.js 的 INTERPRETER_EVAL_SPECS 新增 PowerShell 家族（powershell/pwsh/powershell_ise，-command 与 -encodedcommand），并给 detectInlineEval 增加加法式字段 opaque——-EncodedCommand 携带 base64，解包层读不到内容，只有 -EncodedCommand 一个 flag 判 critical，其余所有内联执行 flag 保持 warning 不动。critical 的理由是「内容不可检视」这个不同性质，不是把同一族调严：可见的 -Command 载荷本来就是明文，Layer 1 已解包继续分析，所以仍留 warning。forbidden 留空是有意的：本仓无本能力的并行实现；最近的两个邻居刻意不列——tools/powershell.js 是工具清单层的 risk 声明（声明式元数据，不是分类器），services/actionAttribution.js 是归属标注层（只打标签不阻断），二者与门禁层是设计上的分工而非重复，列入 forbidden 会让正当改动被判 ERROR。残留缺口（本轮不做，留评审）：cmd.exe 的 /c /k 未纳入 COMMAND_CARRIERS，故 `cmd /c del x` 仍只被解包层当作普通 cmd 参数、判 medium，`erase`/`rd` 已覆盖但 `cmd /c` 前缀的载荷不递归分析；纳入需处理 CMD 引号转义语义，属独立提案。另：上游单一 _INLINE_EXEC_FLAGS 集合未采纳，本仓按解释器分族的 spec 表更精确（-m/-p 跨族语义不同，python -m 是模块调用不是任意代码执行），强行合并按上游形态会引入误判。",
+      "rolloutStage": "S3",
+      "rolloutNote": "命令风险分级是既有的拦截型机制，早于 PROCESS-006 成文，按 PP-1 的「存量豁免」不予追溯；其 pattern 规则早已在生产门禁中生效（见 [DESIGN-PROCESS-002] §3 双层防线）。"
+    },
+    {
+      "domain": "credential-lease",
+      "summary": "凭据短租约：宿主独占长期凭据，子进程经本地 IPC 凭 capability 领分钟级短时 token",
+      "canonical": "services/backend/src/services/credentialLease/index.js",
+      "ownedLayers": [
+        "L2"
+      ],
+      "pattern": "Proxy",
+      "method": "reference",
+      "source": "MiniMax-AI/minimax-code@main(2026-09-18 浅克隆) — oauth-lease-protocol/lease-broker 的协议结论：capability 门 + generation 单调吊销 + 单飞刷新 + u32BE 帧≤64KiB；帧语义与命名按本仓约定重写",
+      "aliases": [
+        "credentialLease",
+        "凭据租约",
+        "凭据短租约",
+        "lease broker",
+        "短时令牌",
+        "credential lease"
+      ],
+      "forbidden": [],
+      "status": "active",
+      "notes": "登记 2026-09-18（第一梯队提案 1，见 .khy/feedback/2026-09-18-tier1-minimax-code/proposal-b-p2.md）。诚实边界：静态 key 轨道的 TTL 是宿主侧消费纪律而非供应商吊销（providers.js 注释明写），OAuth 轨道才是真过期。接入委派链（claudeDelegation/cliAgentRunner 改走租约）刻意留待后续提案，本域先落地被调用侧。"
+    },
+    {
+      "domain": "mcp-disclosure",
+      "summary": "MCP 工具目录渐进披露：估算超阈值×上下文窗口时整分区 defer，经既有 toolSearch 揭示",
+      "canonical": "services/backend/src/services/domain/messaging/mcp/mcpDisclosurePlan.js",
+      "ownedLayers": [
+        "L2"
+      ],
+      "pattern": "Strategy",
+      "method": "reference",
+      "source": "MiniMax-AI/minimax-code@main(2026-09-18 浅克隆) — mcp-disclosure/plan.ts 的阈值计划行为；不引入 mcode 式 mcp_invoke 门，揭示复用本仓 toolSearch/ensureTool（B-U5 扩展既有 canonical）",
+      "aliases": [
+        "mcpDisclosurePlan",
+        "渐进披露",
+        "progressive disclosure",
+        "MCP 工具目录",
+        "MCP defer"
+      ],
+      "forbidden": [],
+      "status": "active",
+      "notes": "登记 2026-09-18（第一梯队提案 2）。开关 KHY_MCP_DISCLOSURE=0 回退全内联；阈值 KHY_MCP_DISCLOSURE_THRESHOLD_PCT（默认 0.15）；兜底窗口 KHY_MCP_DISCLOSURE_WINDOW（默认 32k token）。已知简化：toolUseLoopCore 每回合调用点未透传真实模型窗口（12k 行文件避免大 diff），defer 判定因此偏保守且功能无损（揭示路径仍可达）；透传 _contextWindowForBudget 留待后续小提案。"
+    },
+    {
+      "domain": "subagent-result-footer",
+      "summary": "子代理结果尾块与部分成果打捞：工具报错不再一票否决整任务（尾块告警交由主 Agent 判断复核），超时/取消/熔断中止时打捞已产出正文并呈现回合级中止原因，统一尾保留截断",
+      "canonical": "services/backend/src/services/subAgentResultFooter.js",
+      "ownedLayers": [
+        "L2"
+      ],
+      "pattern": "Strategy",
+      "method": "idea",
+      "source": "xingyao-y-code@d88bbf4 (v1.3.0, 2026-09-19) — 其子代理结果处理的两个设计点：① 执行期工具报错不再让整任务判死，而是以尾块形式随结果返回供主 Agent 判断是否复核；② 超时/取消/熔断时打捞 partial_result、呈现 turn_error、截断统一保留尾部。khy-os 根目录无 LICENSE，按 B-S4.1 method 上限降为 idea/reference，本条按 idea 档提炼语义后自写；未粘贴上游任何源码片段。",
+      "aliases": [
+        "subAgentResultFooter",
+        "withToolErrorFooter",
+        "salvagePartial",
+        "truncateHeadPreserveTail",
+        "toolErrorsFromLog",
+        "KHY_SUBAGENT_RESULT_FOOTER",
+        "子代理结果尾块",
+        "子代理部分打捞",
+        "subagent partial result"
+      ],
+      "forbidden": [],
+      "status": "active",
+      "notes": "登记 2026-09-23（ycode 借用第 4 轮落地，khy-Trajectory/ycode-borrowing/2026-09-23-子代理结果尾块与部分打捞-台账.md）。纯叶子 subAgentResultFooter.js 实现两个借鉴点：withToolErrorFooter（无工具报错时字节级不变，有报错时追加 ⚠️ 尾块，>5 条折叠为「另有 N 个未展开」，单条 >200 字符截断，并携带可选的回合级中止原因行）与 truncateHeadPreserveTail（超限截断时保留含尾块的尾部、省略号内写真实省略字符数）；salvagePartial 供超时/catch 路径打捞中止前正文。薄接线在 AgentTool/index.js _runStandaloneAgent 的 onToolResult/_chainedOnChunk/成功/catch 四处，全部由开关 KHY_SUBAGENT_RESULT_FOOTER 门控（默认开；0/false/off/no 关闭时字节级回退既有行为），体量上限 KHY_SUBAGENT_RESULT_MAX_CHARS 默认 20000 可 env 覆盖。刻意取舍：① 不采纳上游 Python SubagentManager 整条链路（khy-os 已有 toolUseLoop+KHY_AGENT_IDLE_WATCHDOG，只取结果处理语义）；② 体量上限只在「追加了尾块」时才施加，不做上游式无条件 cap——无报错的干净结果不因引入本机制而被截断。既有邻居不列 forbidden：ccOutputTruncate/maxTokensRecovery 是上下文压缩/续写语义、interruptionMarker 是用户中断渲染语义，与本域「结果诚实呈现」分工不同。测试 services/backend/tests/subAgentResultFooter.test.js 12 条全绿（先红后绿，MODULE_NOT_FOUND 记录在案）。"
+    }
+  ],
+  "rollout": {
+    "$note": "新机制落地阶段登记（单一真源 [DESIGN-PROCESS-002] §6 建议落点）。gate 成员资格仍以 RULES-REGISTRY.json 为准；本段只登记「处于哪一阶段」，供 scripts/ci/check-rollout-stage.js 校验 PP-1（禁止直进 S3）、PP-2（毕业看样本量）、PP-6（一次只升一阶）。stage 取值 S1|S2|S3|S4。",
+    "updated": "2026-09-19",
+    "mechanisms": [
+      {
+        "id": "agent-feedback-contract",
+        "name": "AI 修改三模态反馈契约（客户模式）",
+        "ssot": "docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-113] AI修改三模态反馈契约-客户模式.md",
+        "rules": [
+          "RUNTIME-007",
+          "RUNTIME-008",
+          "RUNTIME-009"
+        ],
+        "executor": "scripts/ci/check-agent-feedback.js",
+        "stage": "S1",
+        "stageSince": "2026-09-18",
+        "stageAuthority": "scripts/ci/check-agent-feedback.js 的 STAGE 常量",
+        "samples": {
+          "observed": 68,
+          "target": 200,
+          "note": "截至 2026-09-18T11:50：S1 记录样本 68 条（< 200 门槛），且 62/68（91%）出自单一探针 delete-documented-code、同一次运行。曾提前登记为 S2（提示通道启用）；2026-09-18 经用户裁决按 PP-2 降回 S1 观察期——样本量（尤其探针稀释后的有效样本）不足以支撑 S1 毕业，补齐 ≥200 条真实分布样本前不再升阶。",
+          "hints": {
+            "observed": 0,
+            "target": 50,
+            "note": "S2 的提示样本从现在开始计数。"
+          }
+        },
+        "rollback": "删 .khy/hooks.json 的对应条目 / 将 STAGE 常量改回 S1（纯配置，PP-4 合规）",
+        "blockedBy": [],
+        "executorStage": {
+          "file": "scripts/ci/check-agent-feedback.js",
+          "constant": "STAGE",
+          "note": "阶段权威在执行器源码里（STAGE 常量），登记表只是镜像。check-rollout-stage.js 会比对两者，漂移即报错——防止「登记说 S1、代码其实在拦」。"
+        },
+        "previousStage": "S2",
+        "hintChannel": {
+          "enabled": true,
+          "enabledAt": "2026-09-18",
+          "hook": ".khy/hooks.json → PreToolUse / scripts/hooks/agentFeedbackHint.js (priority 40)",
+          "injector": "hookSystem.init() → PrePrompt / agentFeedbackService.makePrePromptInjector()",
+          "killSwitch": "KHY_AGENT_FEEDBACK=0|off|false|no|disable",
+          "note": "提示通道钩子已接线（各机 .khy/hooks.json 本机态）。2026-09-18 机制降回 S1 后，登记语义为「只记录」；钩子保留作应急关闭对象，S1 毕业前不得据此宣称处于 S2。"
+        }
+      },
+      {
+        "id": "rollout-stage-guard",
+        "name": "新机制落地阶段守卫（PROCESS-008）",
+        "ssot": "docs/10_规范/其它规范/[DESIGN-PROCESS-002] 新机制落地四阶段流程.md",
+        "rules": [
+          "PROCESS-008"
+        ],
+        "executor": "scripts/ci/check-rollout-stage.js",
+        "stage": "S1",
+        "stageSince": "2026-09-18",
+        "stageAuthority": "see executorStage",
+        "previousStage": "",
+        "executorStage": {
+          "file": "scripts/ci/check-rollout-stage.js",
+          "constant": "GUARD_STAGE",
+          "note": "本守卫自身也有阶段常量 GUARD_STAGE。当前 S1：只记录不阻断。升到 S3（真阻断）前需按 PP-2 攒够样本 —— 守门人自己也要过观察期。"
+        },
+        "samples": {
+          "observed": 0,
+          "target": 200,
+          "note": "刚落地，样本 0。首跑已用 8 个反例自测验证六条红线均可真报警（.khyos/tmp/test-rollout-stage.js）。"
+        },
+        "rollback": "从 RULES-REGISTRY.json 摘掉 PROCESS-008 的 exec（回到 gate=manual 人工评审），无需回滚代码",
+        "blockedBy": []
+      },
+      {
+        "id": "release-source-hygiene",
+        "name": "发布前源卫生扫描（凭据形态/跟踪 .env/符号链接/LICENSE 漂移）",
+        "ssot": "提案 3：.khy/feedback/2026-09-18-tier1-minimax-code/proposal-b-p2.md（idea 档，借鉴自 MiniMax-AI/minimax-code 开源卫生实践的思路重写）",
+        "rules": [],
+        "executor": "scripts/release/source-hygiene-scan.js",
+        "stage": "S1",
+        "stageSince": "2026-09-18",
+        "stageAuthority": "scripts/release/source-hygiene-scan.js 的 STAGE 常量",
+        "previousStage": "",
+        "executorStage": {
+          "file": "scripts/release/source-hygiene-scan.js",
+          "constant": "STAGE",
+          "note": "阶段权威在执行器 STAGE 常量。S1 恒 exit 0，只记录。升 S2 前样本须达门槛且逐条分诊（PP-2）。"
+        },
+        "samples": {
+          "observed": 1,
+          "target": 200,
+          "note": "首跑 2026-09-18：8947 个跟踪文本文件，51 条发现（50 条 secret-shape 待人工分诊，其中 docs/opencode-provider-keys.md:15 与 scripts/gen_keys.py:11 的 sk-kxfDu… 疑似真实密钥已上报用户；1 条 license-missing 为 SOURCING-001 已知缺口）。台账 .khy/ruleguard/release-hygiene.jsonl。"
+        },
+        "rollback": "删除本机制登记与 scripts/release/source-hygiene-scan.js、scripts/lib/releaseHygieneGuard.js 即可，无其他消费者（纯配置回滚，PP-4 合规）",
+        "blockedBy": []
+      },
+      {
+        "id": "check-data-layout",
+        "name": "三态目录立体分层守卫（数据态档位归位 + 预算 + 绕表直拼）",
+        "ssot": "docs/10_规范/DESIGN-LAY/[DESIGN-LAY-007] 三态目录立体分层方案.md §7",
+        "rules": [
+          "LAYOUT-007"
+        ],
+        "executor": "scripts/ci/check-data-layout.js",
+        "stage": "S1",
+        "stageSince": "2026-09-18",
+        "stageAuthority": "scripts/ci/check-data-layout.js 的 GUARD_STAGE 常量",
+        "previousStage": "",
+        "executorStage": {
+          "file": "scripts/ci/check-data-layout.js",
+          "constant": "GUARD_STAGE",
+          "note": "阶段权威在执行器 GUARD_STAGE。S1 恒 exit 0，只记录三态预算、未归位条目与绕表直拼命中。升 S2 前样本须达门槛且逐条分诊（PP-2）。"
+        },
+        "samples": {
+          "observed": 3,
+          "target": 200,
+          "note": "首跑 2026-09-18：242 条发现（.khy 未归位 211 + .khyos 未归位 29 + 两个数据根各 1 条超预算）；仓库顶层 71 条 vs 预算 20；绕表字面 203/3070（硬下界 52 个完全不 import dataHome 的文件）。全部为真：T* 档位尚未创建，故未归位数≈全量。台账待 S2 落 .khy/ruleguard/data-layout.jsonl。 复核 2026-09-19：§10 四项裁决落地后复跑 2 次，发现数仍为 242（未搬任何文件，符合 S1）；顶层口径改为可寻址 69（71 减 2 个已登记安装产物），validate-json-schemas 独立佐证 .khy 入仓文件 0 个，即 §6.11 成立。"
+        },
+        "rollback": "删除本机制登记 + scripts/ci/check-data-layout.js + docs/10_规范/registry/DATA-LOCATIONS.json + RULES-REGISTRY 的 LAYOUT-007 条目即可；S1 未搬任何文件，无数据副作用（纯配置回滚，PP-4 合规）",
+        "blockedBy": [],
+        "version": "1.1.0 (2026-09-19) 并入 §10 裁决"
+      },
+      {
+        "id": "commit-timing-contract",
+        "name": "提交时机判据（到点就提交）",
+        "ssot": "docs/10_规范/DESIGN-GIT/[DESIGN-GIT-004] 提交时机规范.md",
+        "rules": [
+          "PROCESS-009"
+        ],
+        "executor": "scripts/ci/check-commit-timing.js",
+        "stage": "S1",
+        "stageSince": "2026-09-19",
+        "stageAuthority": "scripts/ci/check-commit-timing.js 的 STAGE 常量",
+        "previousStage": "",
+        "executorStage": {
+          "file": "scripts/ci/check-commit-timing.js",
+          "constant": "STAGE",
+          "note": "阶段权威在执行器源码里（STAGE 常量），登记表只是镜像。check-rollout-stage.js 会比对两者的**阻断语义**（STAGE_ORDER[常量]>=3 与 stage>=3 是否一致），漂移即报错。当前 S1：恒 exit 0，只记录不阻断（PP-3）。"
+        },
+        "samples": {
+          "observed": 0,
+          "target": 200,
+          "note": "刚落地，样本 0，按 PP-1 处于 S1 观察期。首跑已用 6 场景反例矩阵自测（4 条应拦 + 2 条应放行，全部命中，且 clean-unit / docs-only 得 0 finding，证明不是无脑拦）。单机单用户，时间不产生新信息，毕业判据是样本量（PP-2）。",
+          "hints": {
+            "observed": 0,
+            "target": 50,
+            "note": "S2 的提示样本从升 S2 后开始计数。"
+          }
+        },
+        "rollback": "把 RULES-REGISTRY.json 里 PROCESS-009 的 exec 摘掉（回到 gate=manual 人工评审），或改 check-commit-timing.js 的 STAGE 常量回 S1（纯配置，PP-4 合规，不依赖未提交代码）",
+        "blockedBy": []
+      },
+      {
+        "id": "zcode-baseline-scoreboard",
+        "name": "ZCode 级别代理指标记分器（架构/稳定/编码/分发）",
+        "ssot": "AGENTS.md（工程规则）+ 本对话差距分析；无独立设计文档，指标定义内聚在执行器源码注释",
+        "rules": [],
+        "executor": "scripts/ci/check-zcode-baseline.js",
+        "stage": "S1",
+        "stageSince": "2026-09-21",
+        "stageAuthority": "scripts/ci/check-zcode-baseline.js 的 STAGE 常量",
+        "previousStage": "",
+        "executorStage": {
+          "file": "scripts/ci/check-zcode-baseline.js",
+          "constant": "STAGE",
+          "note": "阶段权威在执行器源码里（STAGE='S1'）。S1 恒 exit 0、只记录不拦截（PP-3）：记分板打印 current-vs-target，不参与任何放行判定。升阶是人的决定，需先积累真实回归样本。"
+        },
+        "samples": {
+          "observed": 0,
+          "target": 200,
+          "note": "刚落地，样本 0，按 PP-1 处于 S1 观察期。毕业判据为样本量（PP-2）：需积累 ≥200 条跨运行分布、且无解释不了的误判（如 M4 对 GBK-but-valid-as-UTF8 的漏判需先证实）后，再议升 S2（把 GAP 变成 CI 提示）。",
+          "hints": {
+            "observed": 0,
+            "target": 50,
+            "note": "S2 的提示样本从升 S2 后开始计数。"
+          }
+        },
+        "rollback": "删除 scripts/ci/check-zcode-baseline.js + package.json 的 check:zcode-baseline 脚本 + 本登记条目（纯新增只读度量器，回滚不依赖未提交代码，PP-4 合规）",
+        "blockedBy": []
+      },
+      {
+        "id": "copyright-readiness-guard",
+        "name": "软件著作权就绪守卫（PROCESS-010 从人工升级为有执行器）",
+        "ssot": "docs/10_规范/其它规范/[DESIGN-IP-001] 软件著作权就绪规范.md",
+        "rules": [
+          "PROCESS-010"
+        ],
+        "executor": "scripts/ci/check-copyright-readiness.js",
+        "stage": "S1",
+        "stageSince": "2026-09-21",
+        "stageAuthority": "scripts/ci/check-copyright-readiness.js 的 STAGE 常量",
+        "previousStage": "",
+        "executorStage": {
+          "file": "scripts/ci/check-copyright-readiness.js",
+          "constant": "STAGE",
+          "note": "阶段权威在执行器源码里（STAGE='S1'）。S1 恒 exit 0、只记录不拦截（PP-3）：7 项检查全部输出 finding，但 error 级按 degradeForStage() 降为 WARN，不参与放行判定。升阶是人的决定，需先积累真实样本。"
+        },
+        "samples": {
+          "observed": 0,
+          "target": 200,
+          "note": "刚落地，样本 0，按 PP-1 处于 S1 观察期。首跑已在真实仓库上验证 7 项检查全部生效（AGENTS 与官方脚本对账一致：.vue style≥50% 命中 20=20；AI 署名 88/251=35.1%），但按 PP-2 毕业判据仍须积累 ≥200 条跨运行样本、且逐条分诊假阳性后才能议升 S2。",
+          "hints": {
+            "observed": 0,
+            "target": 50,
+            "note": "S2 的提示样本从升 S2 后开始计数。"
+          }
+        },
+        "rollback": "把 RULES-REGISTRY.json 里 PROCESS-010 的 gate 改回 manual 并摘掉 exec（回到人工评审），或改 check-copyright-readiness.js 的 STAGE 常量回 S1（纯配置，PP-4 合规，不依赖未提交代码）。两个登记真源 COPYRIGHT.json / COPYRIGHT-MATERIALS.json 可同时保留——它们是数据，不是机制。",
+        "blockedBy": []
+      },
+      {
+        "id": "tool-challenge-cadence",
+        "name": "工具调用能力的隔离式挑战（每 N 次请求放行一次原生尝试）",
+        "ssot": "docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-138] 工具调用能力判定与文本拦截协议.md",
+        "rules": [],
+        "executor": "services/backend/src/services/gateway/toolChallengeCadence.js",
+        "stage": "S1",
+        "stageSince": "2026-09-23",
+        "stageAuthority": "无 RULES-REGISTRY 规则条目 ⇒ gateStrength 无法派生出 blocking 强度",
+        "previousStage": "",
+        "samples": {
+          "observed": 0,
+          "target": 200,
+          "note": "2026-09-23 刚落地（BUG-014 / [DESIGN-ARCH-138] §2.5）。本机制**非拦截型**：它放宽剥离（每 N 次请求多发一次 tools，好让被判 text 的模型有机会用原生调用翻案），从不阻断任何流程——登记 S1 是保守取值。样本 = 挑战轮的实际观测次数。"
+        },
+        "rollback": "KHY_TOOL_CAP_CHALLENGE=0（纯配置，PP-4 合规，不依赖未提交代码；关后 shouldChallenge 恒 false，逐字节回退到「一律按判定档位走」）",
+        "blockedBy": []
+      }
+    ]
+  }
+}

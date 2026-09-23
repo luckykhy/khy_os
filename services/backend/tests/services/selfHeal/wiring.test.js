@@ -1,6 +1,6 @@
 'use strict';
 /**
- * toolCalling.selfHealWiring.test.js â€?C-class wiring contract for selfHeal +
+ * toolCalling.selfHealWiring.test.js â€” C-class wiring contract for selfHeal +
  * resilience (DESIGN-ARCH-029).
  *
  * Both subsystems were implemented but never wired into the live tool path
@@ -12,15 +12,16 @@
  *
  * This test registers controllable fake web tools so the degradation runs
  * deterministically offline, and pins the wiring contract:
- *   1. EXPLICIT OFF (KHY_SELF_HEAL=off) â†?no routing: a failing WebBrowser
+ *   1. EXPLICIT OFF (KHY_SELF_HEAL=off) ï¿½?no routing: a failing WebBrowser
  *      returns its own failure; WebFetch is never reached (escape hatch).
- *   2. FLAG ON â†?degradation: WebBrowser fails â†?WebFetch succeeds â†?the routed
+ *   2. FLAG ON ï¿½?degradation: WebBrowser fails ï¿½?WebFetch succeeds ï¿½?the routed
  *      call returns WebFetch's success result (cross-tool degrade in one call).
- *   3. INTENT-MAP MISS â†?a tool with no tree (readFile) is never routed.
- *   4. RECURSION GUARD â†?the run terminates (the coordinator's re-entrant
+ *   3. INTENT-MAP MISS ï¿½?a tool with no tree (readFile) is never routed.
+ *   4. RECURSION GUARD ï¿½?the run terminates (the coordinator's re-entrant
  *      executeTool calls are not re-routed).
  */
 const os = require('os');
+const assert = require('node:assert');
 const path = require('path');
 const fs = require('fs');
 const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-selfheal-wiring-'));
@@ -37,36 +38,56 @@ const registry = require('../../../src/tools');
 // Per-test call ledger + scripted results for the fake web tools.
 const calls = [];
 let script = {};
-function makeFake(name) {
+function makeFake(name, ledgerName = name) {
   return {
     name,
     description: `fake ${name}`,
     risk: 'low',
     isReadOnly: true,
     inputSchema: { type: 'object', properties: {} },
+    // _resolveToolDescriptor resolves real builtins (e.g. WebSearch) at
+    // priority 2, ahead of registry tools lacking alwaysLoad (priority 3).
+    // alwaysLoad hoists this fake to priority 1 so it shadows the builtin â€”
+    // without it, tier 3 would fire the REAL WebSearch and hit the network.
+    alwaysLoad: true,
     execute: async (params) => {
-      calls.push(name);
-      const r = script[name];
+      // Alias fakes still ledger + script under the CANONICAL name:
+      // normalizeToolName maps WebFetch/WebSearch to webFetch/webSearch, so
+      // those alias keys resolve first; without this indirection the ledger
+      // would record 'webFetch' and script lookups would miss.
+      calls.push(ledgerName);
+      const r = script[ledgerName];
       if (typeof r === 'function') return r(params);
-      return r || { success: false, error: `${name} no-script` };
+      return r || { success: false, error: `${ledgerName} no-script` };
     },
   };
 }
-before(() => {
+
+describe('Wiring', () => {
+beforeAll(() => {
   registry.register(makeFake('WebBrowser'));
   registry.register(makeFake('WebFetch'));
   registry.register(makeFake('WebSearch'));
   registry.register(makeFake('readFile')); // intent-map miss control
+  // _findRegistryTool resolves name VARIANTS first (webSearch, web_search, â€¦)
+  // before the exact key, and a sibling REAL `webSearch` registry entry
+  // exists for WebSearch. Shadow every alias too, or tier 3 would execute
+  // the real tool and hit the network instead of the scripted fake.
+  const ALIASES = {
+    WebBrowser: ['webBrowser', 'web_browser', 'browser'],
+    WebFetch: ['webFetch', 'web_fetch', 'fetch_url'],
+    WebSearch: ['webSearch', 'web_search', 'search_web'],
+  };
+  for (const [name, aliases] of Object.entries(ALIASES)) {
+    for (const alias of aliases) registry.register(makeFake(alias, name));
+  }
 });
-describe('selfHeal/resilience wiring contract (C-class)', () => {
+  // merged from describe: selfHeal/resilience wiring contract (C-class)
   afterEach(() => {
     calls.length = 0;
     script = {};
     delete process.env.KHY_SELF_HEAL;
   });
-});
-
-describe('Wiring', () => {
   test('explicit off (KHY_SELF_HEAL=off): a failing WebBrowser is NOT routed (no degrade to WebFetch)', async () => {
         process.env.KHY_SELF_HEAL = 'off';
         script.WebBrowser = { success: false, error: 'browser boom' };
@@ -78,7 +99,7 @@ describe('Wiring', () => {
         assert.deepEqual(calls, ['WebBrowser'], 'only WebBrowser runs when routing is off');
   });
 
-  test('default on (KHY_SELF_HEAL unset): WebBrowser fails â†?degrades to WebFetch', async () => {
+  test('default on (KHY_SELF_HEAL unset): WebBrowser fails ï¿½?degrades to WebFetch', async () => {
         delete process.env.KHY_SELF_HEAL; // unset = active by default
         script.WebBrowser = { success: false, error: 'browser boom' };
         script.WebFetch = { success: true, content: 'KHY-HEAL-DEFAULT-ON' };
@@ -90,7 +111,7 @@ describe('Wiring', () => {
         expect(calls.includes('WebBrowser') && calls.includes('WebFetch')).toBeTruthy();
   });
 
-  test('flag on: WebBrowser fails â†?degrades to WebFetch success within one call', async () => {
+  test('flag on: WebBrowser fails ï¿½?degrades to WebFetch success within one call', async () => {
         process.env.KHY_SELF_HEAL = 'on';
         script.WebBrowser = { success: false, error: 'browser boom' };
         script.WebFetch = { success: true, content: 'KHY-HEAL-OK' };
@@ -103,7 +124,9 @@ describe('Wiring', () => {
         expect(!calls.includes('WebSearch')).toBeTruthy();
   });
 
-  test('flag on, all tiers fail â†?structured salvage report, no infinite recursion', async () => {
+  // Exhausting every tier (diagnose + heal attempts per tier) legitimately
+  // takes longer than jest's 5s default; still bounded to catch real hangs.
+  test('flag on, all tiers fail â†’ structured salvage report, no infinite recursion', async () => {
         process.env.KHY_SELF_HEAL = 'on';
         script.WebBrowser = { success: false, error: 'b' };
         script.WebFetch = { success: false, error: 'f' };
@@ -114,7 +137,7 @@ describe('Wiring', () => {
         expect(res.success).toBe(false);
         expect(res._selfHealReport).toBeTruthy();
         expect(res._selfHealReport.status).toBe('failed');
-        // It degraded past the first tier (browser â†?fetch) before the bounded-window
+        // It degraded past the first tier (browser ï¿½?fetch) before the bounded-window
         // circuit broke; how far it gets is governed by the budget floor (by design it
         // need not exhaust every tier). The wiring contract we assert is the recursion
         // guard: no tool is ever invoked more than once (the coordinator's re-entrant
@@ -123,7 +146,7 @@ describe('Wiring', () => {
         expect(calls.filter(c => c === 'WebBrowser').length <= 1).toBeTruthy();
         expect(calls.filter(c => c === 'WebFetch').length <= 1).toBeTruthy();
         expect(calls.filter(c => c === 'WebSearch').length <= 1).toBeTruthy();
-  });
+  }, 30000);
 
   test('intent-map miss: a tool with no tree is never routed even when flag is on', async () => {
         process.env.KHY_SELF_HEAL = 'on';

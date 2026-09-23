@@ -8,7 +8,7 @@
  *      its prohibitions, and never leaks another platform's service manager.
  *   2. An unrecognized platform degrades to portable cross-platform guidance only.
  *   3. The guidance is GROUNDED in the real probe (the live host's branch only
- *      recommends tools that are actually present â€?no phantom recommendations).
+ *      recommends tools that are actually present â€”no phantom recommendations).
  *   4. getEnvironmentSection() injects the branch guidance and, on the real host,
  *      contains no duplicated platform headers.
  */
@@ -43,11 +43,11 @@ describe('Platform Capabilities branch Guidance', () => {
         expect(g).toMatch(/macOS Optimal Path/);
         expect(g).toMatch(/launchctl/);
         expect(g).toMatch(/zsh/);
-        // macOS must steer AWAY from systemctl â€?only as an explicit "Avoid" note.
+        // macOS must steer AWAY from systemctl â€”only as an explicit "Avoid" note.
         expect(g).not.toMatch(/use `systemctl`/i);
   });
 
-  test('unrecognized platform â†?portable generic guidance only', () => {
+  test('unrecognized platform â†’portable generic guidance only', () => {
         const g = pc.branchGuidance('sunos').join('\n');
         expect(g).toMatch(/unrecognized OS/i);
         expect(g).toMatch(/Node\.js/);

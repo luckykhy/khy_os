@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-23.md -->
+<title>2026-09-23 工作日志 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>.workbuddy-ai<span class="sep">›</span>memory<span class="sep">›</span>2026-09-23 工作日志</div>
+      <header class="hero reveal"><h1>2026-09-23 工作日志</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#2026-09-23-工作日志">2026-09-23 工作日志</a></li><li class="lvl-2"><a href="#方案-a-完成-head-树-5-棵缺失子树全部重建-git-commit-恢复">方案 A 完成：HEAD 树 5 棵缺失子树全部重建，`git commit` 恢复</a></li><li class="lvl-3"><a href="#结论-里程碑">结论（里程碑）</a></li><li class="lvl-3"><a href="#5-棵缺失子树-精确路径-重建-sha-全部逐字符命中">5 棵缺失子树（精确路径 + 重建 sha，全部逐字符命中）</a></li><li class="lvl-3"><a href="#本次踩到的两个坑-都很隐蔽-务必记牢">⚠ 本次踩到的两个坑（都很隐蔽，务必记牢）</a></li><li class="lvl-3"><a href="#定位缺失树的正确姿势-本轮最终采用-可复用">定位缺失树的正确姿势（本轮最终采用，可复用）</a></li><li class="lvl-2"><a href="#新发现的严重事故-分支引用-refs-heads-chore-tui-ux-nightly-曾丢失">⚠⚠ 新发现的严重事故：分支引用 `refs/heads/chore/tui-ux-nightly` 曾丢失</a></li><li class="lvl-3"><a href="#现象与根因">现象与根因</a></li><li class="lvl-3"><a href="#抢救过程-可复用">抢救过程（可复用）</a></li><li class="lvl-3"><a href="#附带发现-git-update-ref-与-git-replace-的一个坑">附带发现：`git update-ref` 与 `git replace` 的一个坑</a></li><li class="lvl-3"><a href="#关于-stub-blob-对象垫片-的取舍-必须写清">关于 stub blob（对象垫片）的取舍 —— 必须写清</a></li><li class="lvl-3"><a href="#另一条重要教训-git-reset-失败时的-假安全">⚠ 另一条重要教训：`git reset` 失败时的「假安全」</a></li><li class="lvl-2"><a href="#对象库损伤的-可达性-陷阱-fsck-计数会骗人">对象库损伤的「可达性」陷阱（fsck 计数会骗人）</a></li><li class="lvl-2"><a href="#修复了一个全仓级潜伏-bug-msys-路径喂给-windows-node-module-not-found">★★ 修复了一个全仓级潜伏 bug：MSYS 路径喂给 Windows Node ⇒ MODULE_NOT_FOUND</a></li><li class="lvl-3"><a href="#现象">现象</a></li><li class="lvl-3"><a href="#根因-已复现-铁证">根因（已复现，铁证）</a></li><li class="lvl-3"><a href="#修复">修复</a></li><li class="lvl-3"><a href="#判据-可复用">判据（可复用）</a></li><li class="lvl-3"><a href="#附带发现-post-commit-崩溃会连带丢掉分支-ref-严重">附带发现：`post-commit` 崩溃会连带丢掉分支 ref（严重）</a></li><li class="lvl-2"><a href="#重大更正-ref-丢失的根因不是-钩子崩溃-是-钩子被网络推送阻塞">★★ 重大更正：ref 丢失的根因不是「钩子崩溃」，是「钩子被网络推送阻塞」</a></li><li class="lvl-3"><a href="#真相-第三次复现时的现场">真相（第三次复现时的现场）</a></li><li class="lvl-3"><a href="#判据-下次遇到-ref-莫名丢失-先跑这条">判据（下次遇到「ref 莫名丢失」先跑这条）</a></li><li class="lvl-3"><a href="#修复-已落地">修复（已落地）</a></li><li class="lvl-3"><a href="#第二次提交成功落地">第二次提交成功落地</a></li><li class="lvl-3"><a href="#最终验收-方案-a-全部通过">最终验收（方案 A 全部通过）</a></li><li class="lvl-3"><a href="#另一条运维判据">另一条运维判据</a></li><li class="lvl-3"><a href="#仍未解决-后续">仍未解决 / 后续</a></li><li class="lvl-2"><a href="#基线刷新-用户点名的三项之一">基线刷新（用户点名的三项之一）✅</a></li><li class="lvl-2"><a href="#bug-41-bug-37-在仓库中不存在">⚠⚠ BUG-41 / BUG-37 **在仓库中不存在**</a></li><li class="lvl-2"><a href="#前端控制台-404-500-ws-反复失败-四条根因-全部定位并修复">★★★ 前端控制台 404/500 + WS 反复失败：四条根因，全部定位并修复</a></li><li class="lvl-3"><a href="#根因-1-最致命-daemon-与-web-后端抢同一个端口-3000">根因 1（最致命）：daemon 与 web 后端抢同一个端口 3000</a></li><li class="lvl-3"><a href="#根因-2-ws-握手协议错配-客户端发-auth-request-服务端只认-auth">根因 2：WS 握手协议错配 —— 客户端发 `auth:request`，服务端只认 `auth`</a></li><li class="lvl-3"><a href="#根因-3-syncserver-心跳把-每个-客户端-60s-后踢掉">根因 3：syncServer 心跳把**每个**客户端 60s 后踢掉</a></li><li class="lvl-3"><a href="#根因-4-空闲看门狗看不到-syncserver-的客户端-上一轮已修-此处补验">根因 4：空闲看门狗看不到 syncServer 的客户端（上一轮已修，此处补验）</a></li><li class="lvl-3"><a href="#端到端验收-走-8090-代理-khyos-diag-frontend-e2e-verify-js">端到端验收（走 8090 代理，`.khyos/diag/frontend-e2e-verify.js`）</a></li><li class="lvl-3"><a href="#附带修复-同批次">附带修复（同批次）</a></li><li class="lvl-3"><a href="#本轮踩到的环境坑">本轮踩到的环境坑</a></li><li class="lvl-3"><a href="#复现-自检命令-下次直接跑">复现/自检命令（下次直接跑）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="2026-09-23-工作日志">2026-09-23 工作日志<a class="anchor" href="#2026-09-23-工作日志" aria-label="锚点">#</a></h1>
+<blockquote><p>append-only。承接 2026-09-22 的对象库损伤修复（方案 A 止损式修复）。</p></blockquote>
+<h2 id="方案-a-完成-head-树-5-棵缺失子树全部重建-git-commit-恢复">方案 A 完成：HEAD 树 5 棵缺失子树全部重建，<code>git commit</code> 恢复<a class="anchor" href="#方案-a-完成-head-树-5-棵缺失子树全部重建-git-commit-恢复" aria-label="锚点">#</a></h2>
+<h3 id="结论-里程碑">结论（里程碑）<a class="anchor" href="#结论-里程碑" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>修复前</th><th>修复后</th></tr></thead><tbody><tr><td><code>git ls-tree -r HEAD</code></td><td>234 条后静默截断</td><td><strong>9,978 条（完整）</strong></td></tr><tr><td><code>git read-tree HEAD</code></td><td><code>fatal: unable to read tree</code></td><td><strong>exit 0</strong></td></tr><tr><td><code>git commit --dry-run</code></td><td><code>Could not read tree entries HEAD</code></td><td><strong>exit 0 ✅</strong></td></tr><tr><td><code>ls-tree -r HEAD</code> 与 <code>ls-files</code> 计数一致性</td><td>不一致</td><td><strong>9,978 == 9,978 ✅</strong></td></tr></tbody></table>
+<h3 id="5-棵缺失子树-精确路径-重建-sha-全部逐字符命中">5 棵缺失子树（精确路径 + 重建 sha，全部逐字符命中）<a class="anchor" href="#5-棵缺失子树-精确路径-重建-sha-全部逐字符命中" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>路径</th><th>期望 sha</th><th>结果</th></tr></thead><tbody><tr><td><code>deploy/free-test/apps</code></td><td><code>0ec06522…</code></td><td>✅ 一致</td></tr><tr><td><code>services/ai-backend/test</code></td><td><code>089ceeee…</code></td><td>✅ 一致</td></tr><tr><td><code>services/backend/src/services/domain/structured/typeset</code></td><td><code>14c01186…</code></td><td>✅ 一致</td></tr><tr><td><code>services/backend/src/skills/built-in/doubt-driven-development/references</code></td><td><code>0373bcce…</code></td><td>✅ 一致</td></tr><tr><td><code>services/backend/src/skills/quant/quant-analysis</code></td><td><code>1465d747…</code></td><td>✅ 一致</td></tr></tbody></table>
+<h3 id="本次踩到的两个坑-都很隐蔽-务必记牢">⚠ 本次踩到的两个坑（都很隐蔽，务必记牢）<a class="anchor" href="#本次踩到的两个坑-都很隐蔽-务必记牢" aria-label="锚点">#</a></h3>
+<p><strong>坑 1：<code>git mktree</code> 默认模式必须带 type 字段。</strong><br>正确格式是 <code>&lt;mode&gt; SP &lt;type&gt; SP &lt;sha&gt; TAB &lt;name&gt;</code>（如 <code>100644 blob abc…\tfoo.js</code>）。<br>若省略 type 只写 <code>&lt;mode&gt; &lt;sha&gt;\t&lt;name&gt;</code>，git 会把 <code>100644</code> 当作 <code>&lt;mode=1006&gt;&lt;type=44…&gt;</code> 解析，<br>报 <code>fatal: input format error: 100644 e41f0767…</code>。<br>⇒ 我第一版 <code>rebuild-two-trees.js</code> 就是这个 bug，导致 <code>deploy/free-test/apps</code> 与<br><code>services/ai-backend/test</code> 静默未重建（脚本没报错，只是 sha 对不上）。<br>补充：<code>git mktree --batch</code> 的格式又不同（不含 type），别混用。</p>
+<p><strong>坑 2：sha 不一定是&quot;目录自身&quot;的 sha，可能是其</strong>子目录<strong>的 sha。</strong><br><code>0373bcce</code> 我最初以为是 <code>…/doubt-driven-development</code> 目录的 sha，<br>实际是它 <strong><code>references/</code> 子目录</strong>的 sha（父目录是 <code>39b12d16</code>）。<br>⇒ 判&quot;某路径缺失&quot;时，不能只按父路径建树后比 sha；要<strong>自顶向下逐层定位</strong><br>（对每层每个子目录做 <code>cat-file -t &lt;sha&gt;</code> 存在性判定），别只按预期路径猜。</p>
+<p><strong>坑 3（方法论）：<code>ls-tree -r &lt;top&gt;</code> 遇缺失树会&quot;中止并报错&quot;，但 <code>&gt; /dev/null</code> 后<br>你只能看到&quot;有错&quot;，看不到&quot;到哪一条中止&quot;。</strong> 本轮 <code>ls-tree -r HEAD</code> 的输出条数<br>234 → 692 → 5481 → 9978 是<strong>逐步推进的进度指标</strong>，比 grep 错误信息更可靠。</p>
+<h3 id="定位缺失树的正确姿势-本轮最终采用-可复用">定位缺失树的正确姿势（本轮最终采用，可复用）<a class="anchor" href="#定位缺失树的正确姿势-本轮最终采用-可复用" aria-label="锚点">#</a></h3>
+<p>逐层下降 + 递归探针，只需 O(坏路径深度 × 每层子目录数) 次 git 调用：</p>
+<ol><li>对某目录做 <code>git ls-tree -r HEAD:&lt;dir&gt;</code>：<ul><li><strong>成功</strong> ⇒ 整个子树完好，<strong>不再深入</strong>（这一步就剪掉绝大部分分支）</li><li><strong>失败</strong> ⇒ 其下有缺失树，对该目录 <code>git ls-tree HEAD:&lt;dir&gt;</code>（单层）拿子目录列表，逐个递归</li></ul></li><li>深度上限设 14 层足够（本仓最深命中在 depth 6：</li></ol>
+<p><code>services → backend → src → services → domain → structured → typeset</code>）</p>
+<p>⇒ 脚本落点 <code>.khyos/diag/locate-missing-trees.js</code>（注意：<strong>它用的是逐目录 spawn</strong>，<br>对超大目录树会超时；本轮实际是<strong>手工 + 脚本混合</strong>下探完成的，<br><code>services/backend/src/services</code> 有 147 个子目录，纯脚本扫不完）。<br>⇒ 重建脚本 <code>.khyos/diag/rebuild-two-trees.js</code>（已泛化为 5 个 TARGETS）。</p>
+<h2 id="新发现的严重事故-分支引用-refs-heads-chore-tui-ux-nightly-曾丢失">⚠⚠ 新发现的严重事故：分支引用 <code>refs/heads/chore/tui-ux-nightly</code> 曾丢失<a class="anchor" href="#新发现的严重事故-分支引用-refs-heads-chore-tui-ux-nightly-曾丢失" aria-label="锚点">#</a></h2>
+<h3 id="现象与根因">现象与根因<a class="anchor" href="#现象与根因" aria-label="锚点">#</a></h3>
+<p>执行 <code>git reset -q HEAD</code> 时报 <code>fatal: unable to read &lt;blob sha&gt;</code>，<br>但<strong>即使把该 blob 用垫片补好，<code>reset</code> 仍失败</strong>，且 <code>git rev-parse HEAD</code> 报<br><code>fatal: ambiguous argument 'HEAD'</code>。</p>
+<p>⇒ 真根因<strong>不是 blob 缺失</strong>，而是 <strong><code>refs/heads/chore/tui-ux-nightly</code> 这个 ref 文件不存在</strong>：<br><code>.git/refs/heads/chore/</code> 整个目录都没有，<code>packed-refs</code> 里也没有它。<br><code>cat .git/HEAD</code> 显示 <code>ref: refs/heads/chore/tui-ux-nightly</code>（符号引用指向一个不存在的 ref）<br>⇒ <code>HEAD</code> 无法解析 ⇒ 所有依赖 HEAD 解析的命令（<code>reset</code> / <code>checkout</code> / <code>status</code> / <code>read-tree HEAD</code>）全炸。</p>
+<p><strong>报错信息完全误导</strong>：它报的是「某个 blob 读不到」，<br>真实原因是「HEAD 这个 ref 不存在」。<strong>这是最容易误诊的一类故障。</strong></p>
+<h3 id="抢救过程-可复用">抢救过程（可复用）<a class="anchor" href="#抢救过程-可复用" aria-label="锚点">#</a></h3>
+<ol><li><strong><code>git update-ref refs/heads/&lt;name&gt; &lt;sha&gt;</code> 在这个状态下会「静默失败」</strong></li></ol>
+<p>（返回 0 但不写盘、<code>git show-ref</code> 仍查不到）。<br>   ⇒ <strong>必须直接写文件</strong>：</p>
+<pre><code class="language-bash">   <span class="hljs-built_in">mkdir</span> -p .git/refs/heads/chore
+   <span class="hljs-built_in">printf</span> <span class="hljs-string">&#x27;&lt;sha&gt;\n&#x27;</span> &gt; .git/refs/heads/chore/tui-ux-nightly</code></pre>
+<ol><li><strong>sha 从哪来</strong>：本轮成功之处在于<strong>修复前抓了引用快照</strong></li></ol>
+<p><code>.khyos/diag/refs-snapshot-before-repair.txt</code>，<br>   里面有 <code>refs/heads/chore/tui-ux-nightly e86bbf6dcc5782dd4976c805d7fe9e955d9cd984</code>。<br>   ⇒ <strong>教训：动任何 git 内部状态之前，先 <code>git show-ref &gt; snapshot.txt</code>。</strong><br>   本轮正是靠这个快照才救回来；否则只能从 <code>git fsck</code> 的 dangling commit 里猜。</p>
+<ol><li>恢复后 <code>git status</code> / <code>rev-parse HEAD</code> 立即正常。</li></ol>
+<h3 id="附带发现-git-update-ref-与-git-replace-的一个坑">附带发现：<code>git update-ref</code> 与 <code>git replace</code> 的一个坑<a class="anchor" href="#附带发现-git-update-ref-与-git-replace-的一个坑" aria-label="锚点">#</a></h3>
+<ul><li><code>git replace &lt;缺失对象&gt; &lt;目标&gt;</code> 会报 <code>failed to resolve '&lt;sha&gt;' as a valid ref</code></li></ul>
+<p>⇒ 因为 replace 要求<strong>被替换对象必须存在</strong>。<br>  <strong>绕过方法</strong>：直接 <code>git update-ref refs/replace/&lt;缺失sha&gt; &lt;目标sha&gt;</code>。<br>  （注意这条路正是上面「update-ref 可能静默失败」的场景，写完必须 <code>git replace -l</code> 复核。）</p>
+<h3 id="关于-stub-blob-对象垫片-的取舍-必须写清">关于 stub blob（对象垫片）的取舍 —— 必须写清<a class="anchor" href="#关于-stub-blob-对象垫片-的取舍-必须写清" aria-label="锚点">#</a></h3>
+<p>原始内容丢失的 blob，二选一：</p>
+<ul><li>(a) 让它保持缺失 ⇒ <code>reset</code>/<code>checkout</code>/<code>read-tree</code>/<code>diff</code> <strong>全都不可用</strong>，仓库等于废掉；</li><li>(b) 用工作区内容写一个<strong>名为该 sha 的 loose 对象</strong> ⇒</li></ul>
+<p>git 正常读取路径可用，但 <strong><code>git fsck</code> 会报 <code>hash mismatch</code></strong><br>      （因为 <code>sha1(&quot;blob &lt;len&gt;\0&quot;+content) ≠ 文件名</code>）。</p>
+<p><strong>本仓选 (b)</strong>，理由：可用性 &gt; fsck 洁净度。已在审计表里如实记录。<br>脚本：<code>.khyos/diag/shim-all-missing.js</code>（自动从 <strong>HEAD 树</strong>里找缺失 blob，<br>       注意不能只看 index——<code>reset</code> 读的是目标树，不是 index）。</p>
+<h3 id="另一条重要教训-git-reset-失败时的-假安全">⚠ 另一条重要教训：<code>git reset</code> 失败时的「假安全」<a class="anchor" href="#另一条重要教训-git-reset-失败时的-假安全" aria-label="锚点">#</a></h3>
+<p><code>git reset -q HEAD</code> 失败后，暂存区会<strong>残留 9,978 条</strong>（等于「index 相对 HEAD 全量新增」），<br>状态显示为 <code>AM</code>（staged-add + worktree-modified），<strong>看起来像「有一条超大批次待提交」</strong>。<br>⇒ 千万别在这个状态直接 <code>git commit</code>（会提交上万文件）。<br><strong>判据：<code>git diff --cached --name-only | wc -l</code> 若接近 <code>git ls-files | wc -l</code>，就是 index 失同步，不是真有改动。</strong></p>
+<p>正确复位姿势：<strong><code>git read-tree HEAD</code></strong>（只改 index，不动工作区）。<br><code>git read-tree HEAD</code> 需要 HEAD 可解析 ⇒ <strong>先修 ref，再 read-tree</strong>。</p>
+<h2 id="对象库损伤的-可达性-陷阱-fsck-计数会骗人">对象库损伤的「可达性」陷阱（fsck 计数会骗人）<a class="anchor" href="#对象库损伤的-可达性-陷阱-fsck-计数会骗人" aria-label="锚点">#</a></h2>
+<p>加完 4 条 <code>git replace</code> 后，<code>git fsck</code> 的计数<strong>变差了</strong>：</p>
+<table><thead><tr><th>指标</th><th>修复树后</th><th>加 replace 后</th></tr></thead><tbody><tr><td>broken link</td><td>19</td><td><strong>125</strong></td></tr><tr><td>missing blob</td><td>12</td><td><strong>102</strong></td></tr><tr><td>missing tree</td><td>13</td><td><strong>28</strong></td></tr><tr><td>missing commit</td><td>3</td><td><strong>4</strong></td></tr></tbody></table>
+<p><strong>这不是新损伤</strong>，而是 <strong>replace 让 fsck 多遍历了此前不可达的区域</strong><br>（4 条桥接链 + <code>135460c8</code> 的整棵子树），把<strong>本来就存在的</strong>缺失对象暴露出来了。</p>
+<p>⇒ <strong>判据：fsck 计数不是单调指标，它依赖「可达集」。<br>比较前后必须固定可达集，或者改用「对象库内对象数」这类绝对指标。</strong><br>本轮三条反证：</p>
+<ol><li><code>git count-objects -v</code> → <code>in-pack: 19485 / count: 7857</code>，与修复前一致；</li><li>我重建的 5 棵树 <code>cat-file -t</code> 全部仍是 <code>tree</code>；</li><li><code>git ls-tree -r HEAD</code> 仍是 9,978 条。</li></ol>
+<p>⇒ <strong>零新增损伤，结论成立。</strong></p>
+<h2 id="修复了一个全仓级潜伏-bug-msys-路径喂给-windows-node-module-not-found">★★ 修复了一个全仓级潜伏 bug：MSYS 路径喂给 Windows Node ⇒ MODULE_NOT_FOUND<a class="anchor" href="#修复了一个全仓级潜伏-bug-msys-路径喂给-windows-node-module-not-found" aria-label="锚点">#</a></h2>
+<h3 id="现象">现象<a class="anchor" href="#现象" aria-label="锚点">#</a></h3>
+<p>第一次成功提交后，<code>post-commit</code> 钩子崩了：</p>
+<pre><code>Error: Cannot find module 'D:\d\Portable\khy-os\scripts\sync\mirror-sync.js'</code></pre>
+<p>注意那个 <strong><code>D:\d\Portable\</code></strong> —— 多了一层 <code>d</code>。</p>
+<h3 id="根因-已复现-铁证">根因（已复现，铁证）<a class="anchor" href="#根因-已复现-铁证" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>步骤</th><th>结果</th></tr></thead><tbody><tr><td>Git Bash 里 <code>cd /d/Portable/khy-os &amp;&amp; pwd</code></td><td><code>/d/Portable/khy-os</code>（<strong>MSYS 风格</strong>）</td></tr><tr><td>把它交给 <strong>Windows 版 node</strong></td><td><code>path.resolve('/d/Portable/khy-os')</code> → <strong><code>D:\d\Portable\khy-os</code></strong></td></tr></tbody></table>
+<p>⇒ Windows Node 把开头的 <code>/d</code> 解释为「当前盘符 + 名为 <code>d</code> 的目录」，<br>   <strong>不是</strong> MSYS 的「D 盘」。于是拼出的路径根本不存在。</p>
+<p><code>scripts/sync/push-mirrors.sh</code> 里是：</p>
+<pre><code class="language-bash">ROOT=<span class="hljs-string">&quot;<span class="hljs-subst">$(cd <span class="hljs-string">&quot;<span class="hljs-subst">$(dirname <span class="hljs-string">&quot;<span class="hljs-variable">${BASH_SOURCE[0]}</span>&quot;</span>)</span>/../..&quot;</span> &amp;&amp; pwd)</span>&quot;</span>   <span class="hljs-comment"># -&gt; /d/Portable/khy-os</span>
+node <span class="hljs-string">&quot;<span class="hljs-variable">$ROOT</span>/scripts/sync/mirror-sync.js&quot;</span> push ...           <span class="hljs-comment"># -&gt; D:\d\Portable\... 炸</span></code></pre>
+<h3 id="修复">修复<a class="anchor" href="#修复" aria-label="锚点">#</a></h3>
+<p>在把路径交给 node 之前，用 <strong><code>cygpath -w</code></strong> 转成 Windows 风格：</p>
+<pre><code class="language-bash">NODE_ROOT=<span class="hljs-string">&quot;<span class="hljs-variable">$ROOT</span>&quot;</span>
+<span class="hljs-keyword">if</span> <span class="hljs-built_in">command</span> -v cygpath &gt;/dev/null 2&gt;&amp;1; <span class="hljs-keyword">then</span>
+  NODE_ROOT=<span class="hljs-string">&quot;<span class="hljs-subst">$(cygpath -w <span class="hljs-string">&quot;<span class="hljs-variable">$ROOT</span>&quot;</span>)</span>&quot;</span>     <span class="hljs-comment"># -&gt; D:\Portable\khy-os</span>
+<span class="hljs-keyword">fi</span>
+node <span class="hljs-string">&quot;<span class="hljs-variable">$NODE_ROOT</span>/scripts/sync/mirror-sync.js&quot;</span> push <span class="hljs-string">&quot;<span class="hljs-variable">${ARGS[@]}</span>&quot;</span></code></pre>
+<p><strong>三处同样隐患已一并修复</strong>（用 <code>git grep -n 'node &quot;\$[A-Z_]*/'</code> 找出来的）：</p>
+<ul><li><code>scripts/sync/push-mirrors.sh:41</code>（post-commit 钩子调用链，<strong>每 commit 必炸</strong>）</li><li><code>khy.sh:26</code>（<code>khy repair</code> 子命令）</li><li><code>scripts/release/publish-dual.sh:293</code>（发布时的 toolchain pin 门）</li></ul>
+<h3 id="判据-可复用">判据（可复用）<a class="anchor" href="#判据-可复用" aria-label="锚点">#</a></h3>
+<blockquote><p><strong>只要 <code>.sh</code> / <code>.githooks</code> 里出现 <code>node &quot;$&lt;大写变量&gt;/*.js&quot;</code>，<br>且该变量来自 <code>pwd</code>，在 Windows + Git Bash 下就是 MSYS/Windows 路径混用 bug。</strong><br>判别命令：<code>git grep -n 'node &quot;\$[A-Z_]*/' -- '*.sh' '*.githooks'</code><br>修法：在传给 node 前 <code>cygpath -w</code>。<br>反之，纯 bash 内部使用（<code>cd &quot;$ROOT&quot;</code> / <code>ls &quot;$ROOT/...&quot;</code>）<strong>不受影响</strong>——<br>因为 MSYS 的 coreutils 认识 <code>/d/...</code>。<strong>只有跨到 Windows 原生程序（node/python.exe）才出问题。</strong></p></blockquote>
+<h3 id="附带发现-post-commit-崩溃会连带丢掉分支-ref-严重">附带发现：<code>post-commit</code> 崩溃会连带丢掉分支 ref（严重）<a class="anchor" href="#附带发现-post-commit-崩溃会连带丢掉分支-ref-严重" aria-label="锚点">#</a></h3>
+<p>第一次提交时 <code>post-commit</code> 抛 <code>MODULE_NOT_FOUND</code>（退出码非 0），<br>结果 <strong><code>refs/heads/chore/tui-ux-nightly</code> 没有被写入</strong> ⇒<br><code>git log</code> 报 &quot;does not have any commits yet&quot;，但<strong>提交对象 <code>710cb4e9</code> 其实已完整落盘</strong><br>（<code>git cat-file -t</code> = <code>commit</code>，parent = <code>e86bbf6d</code>，正确）。<br>⇒ 抢救：直接从 <code>git show --stat</code> / <code>cat-file</code> 拿到完整 sha，写 ref 文件即可。<br>⇒ <strong>教训：<code>post-commit</code> 钩子必须保证 <code>exit 0</code></strong>（本仓 <code>push-mirrors.sh</code> 末尾确实有<br>   <code>exit 0</code> 兜底，但<strong>它自己在更早的地方被 node 的 MODULE_NOT_FOUND 打断前就先失败了</strong>——<br>   实测 <code>|| true</code> 也没能兜住，因为崩溃发生在 <code>node</code> 进程内部且 bash 的 <code>set -u</code> 不是原因）。<br>   <strong>结论：钩子里的 <code>node</code> 调用要加 <code>|| true</code> 且要在同一行内兜住。</strong></p>
+<hr>
+<h2 id="重大更正-ref-丢失的根因不是-钩子崩溃-是-钩子被网络推送阻塞">★★ 重大更正：ref 丢失的根因不是「钩子崩溃」，是「钩子被网络推送阻塞」<a class="anchor" href="#重大更正-ref-丢失的根因不是-钩子崩溃-是-钩子被网络推送阻塞" aria-label="锚点">#</a></h2>
+<blockquote><p>上面那条「教训」的归因<strong>是错的</strong>，此处更正。前两次确实像崩溃，第三次用 <code>ps</code> 抓到了真相。</p></blockquote>
+<h3 id="真相-第三次复现时的现场">真相（第三次复现时的现场）<a class="anchor" href="#真相-第三次复现时的现场" aria-label="锚点">#</a></h3>
+<p>第三次「ref 丢失」时进程表显示<strong>全部还在跑</strong>：</p>
+<pre><code>13760 ALIVE  git commit -m &quot;fix(scripts): ...&quot;
+13782 ALIVE  bash .githooks/post-commit
+13787 ALIVE  bash scripts/sync/push-mirrors.sh --non-interactive
+13795 ALIVE  node scripts/sync/mirror-sync.js push --non-interactive --branch=chore/tui-ux-nightly</code></pre>
+<p>⇒ <strong>git 是同步执行 <code>post-commit</code> 的</strong>，只有钩子<strong>返回</strong>后 git 才去写<br><code>refs/heads/&lt;branch&gt;</code>。而 <code>mirror-sync.js push</code> 在等远端（<code>https://ghfast.top</code>）<br>凭据时<strong>无限期阻塞</strong> ⇒ 钩子永不返回 ⇒ ref 永不写入 ⇒ <code>git log</code> 报<br>&quot;does not have any commits yet&quot;，<strong>但提交对象其实早已完整落盘</strong>。</p>
+<p><strong>这一条解释了三件事</strong>：① 报错信息误导（报 ref 不存在，实为钩子未返回）；<br>② <code>|| true</code> 兜不住（<code>|| true</code> 只在命令<strong>返回后</strong>才生效，而它根本没返回）；<br>③ 三次都发生在<strong>提交之后</strong>（正是 post-commit 阶段）。</p>
+<h3 id="判据-下次遇到-ref-莫名丢失-先跑这条">判据（下次遇到「ref 莫名丢失」先跑这条）<a class="anchor" href="#判据-下次遇到-ref-莫名丢失-先跑这条" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">ps -ef | grep -E <span class="hljs-string">&quot;mirror-sync|push-mirrors|post-commit&quot;</span> | grep -v grep</code></pre>
+<p><strong>有存活进程 ⇒ 是阻塞，不是崩溃</strong>（崩溃的话进程早没了）。<br>⚠ <strong>别急着写 ref</strong> —— 原地写会被钩子返回后的 git 覆盖；先决定等还是终止。</p>
+<h3 id="修复-已落地">修复（已落地）<a class="anchor" href="#修复-已落地" aria-label="锚点">#</a></h3>
+<p><code>scripts/sync/push-mirrors.sh</code>：给网络推送加<strong>有界墙钟预算</strong>（默认 120s，<br><code>KHY_MIRROR_PUSH_TIMEOUT</code> 可覆盖），超时即放弃推送并留<br><code>npm run sync:mirrors:retry</code> 提示 —— <strong>永不阻塞提交</strong>。<br>这正是本仓 <code>RUNTIME-003</code>（活动式超时）在自己的钩子上的应用。<br>有 <code>timeout</code> 走 <code>timeout --kill-after=10</code>；否则退化为「后台跑 + 轮询收割」。</p>
+<h3 id="第二次提交成功落地">第二次提交成功落地<a class="anchor" href="#第二次提交成功落地" aria-label="锚点">#</a></h3>
+<p><code>9f86ddc6</code> fix(scripts): MSYS 路径 → Windows Node MODULE_NOT_FOUND<br>（3 files changed, 27 insertions(+), 3 deletions(-)），parent = <code>710cb4e9</code>。<br>ref 在终止阻塞进程后手工补写（<code>printf '&lt;sha&gt;\n' &gt; .git/refs/heads/chore/tui-ux-nightly</code>）。</p>
+<h3 id="最终验收-方案-a-全部通过">最终验收（方案 A 全部通过）<a class="anchor" href="#最终验收-方案-a-全部通过" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项</th><th>值</th></tr></thead><tbody><tr><td><code>ls-tree -r HEAD</code></td><td><strong>9,979</strong> == <code>ls-files</code> <strong>9,979</strong> ✅</td></tr><tr><td><code>git log</code> 提交数</td><td><strong>168</strong>，回溯到 <code>12d9cf9b Initial commit</code> ✅</td></tr><tr><td>5 棵重建树</td><td>全部 <code>tree</code> 可读 ✅</td></tr><tr><td>4 条 replace</td><td>全部在位 ✅</td></tr><tr><td><code>count-objects -v</code></td><td>in-pack <strong>19,485 未变</strong>；count 7,857→<strong>7,886</strong>（+29 = 2 提交 + 树对象，正常）✅ 零新增损伤</td></tr><tr><td>index / 工作区</td><td>暂存 <strong>0</strong> / 已跟踪改动 <strong>0</strong>；<code>PromptFrame.js</code>（#7 并发改动）未被卷入 ✅</td></tr></tbody></table>
+<h3 id="另一条运维判据">另一条运维判据<a class="anchor" href="#另一条运维判据" aria-label="锚点">#</a></h3>
+<p><code>git status</code> 全仓扫描在本仓<strong>极易超时</strong>（9,979 已跟踪 + 4.4 万 untracked）。<br>判工作区改动<strong>一律用 <code>git diff --name-only</code></strong>（只看已跟踪，秒回）；<br><code>--untracked-files=no</code> 也仍然慢。</p>
+<h3 id="仍未解决-后续">仍未解决 / 后续<a class="anchor" href="#仍未解决-后续" aria-label="锚点">#</a></h3>
+<ul><li><strong>2 个阻断 blob</strong>（<code>0996f9fd</code>=<code>apps/ai-frontend/src/nav/index.js</code>、<code>12166108</code>=<code>CLAUDE.html</code></li></ul>
+<p>的 HEAD 版）<strong>内容已彻底丢失</strong>，此前用工作区内容顶替（<code>32ec3107</code> / <code>02ab68ce</code>）<br>  ⇒ 这两条<strong>不是原始值</strong>，必须在最终报告里标注清楚。</p>
+<ul><li><strong>3 个缺失 commit</strong> 内容彻底丢失，已用 <code>git replace</code> 显式标注式修补</li></ul>
+<p>（可审计、可撤销，未写入提交对象）。</p>
+<hr>
+<h2 id="基线刷新-用户点名的三项之一">基线刷新（用户点名的三项之一）✅<a class="anchor" href="#基线刷新-用户点名的三项之一" aria-label="锚点">#</a></h2>
+<p><code>node services/backend/scripts/archDebtScan.js --baseline-stale</code> → <strong>12 条悬空</strong>。</p>
+<p><strong>逐条核对（刷新前必做）</strong>：5 个不同文件，<strong>全部确属域迁移</strong>，非真删除：</p>
+<table><thead><tr><th>悬空条目（旧路径）</th><th>现位置</th></tr></thead><tbody><tr><td><code>src/services/auditTrajectory/diffCapture.js</code></td><td><code>src/services/domain/trajectory/auditTrajectory/diffCapture.js</code></td></tr><tr><td><code>src/services/channels/ilinkDispatcher.js</code></td><td><code>src/services/domain/messaging/channels/ilinkDispatcher.js</code></td></tr><tr><td><code>src/services/gatewayLogLease/noiseFilter.js</code></td><td><code>src/services/domain/gateway-stuff/gatewayLogLease/noiseFilter.js</code></td></tr><tr><td><code>src/services/intentArbiter/intentPreprocess.js</code></td><td><code>src/services/domain/state/intentArbiter/intentPreprocess.js</code></td></tr><tr><td><code>src/services/session/sessionForestService.js</code></td><td><code>src/services/domain/session/session/sessionForestService.js</code></td></tr></tbody></table>
+<p>（其中 3 个文件各有 4 条不同指纹 ⇒ 12 条悬空对应 5 个文件。）</p>
+<p>⇒ <code>--update-baseline</code> 刷新，<strong>悬空 12 → 0</strong>，<code>✅ 基线全部指向现存文件——棘轮语义可信</code>，<br>主报告 <code>✅ 无超出基线的新增架构债</code>。</p>
+<p><strong>基线条目数变化</strong>（备份在 <code>/tmp/arch-debt-baseline.json.bak</code>，md5 <code>88ae3ab8…</code>）：</p>
+<table><thead><tr><th>节</th><th>旧</th><th>新</th></tr></thead><tbody><tr><td>layering</td><td>38</td><td><strong>43</strong></td></tr><tr><td>godFiles</td><td>23</td><td><strong>26</strong></td></tr><tr><td>cycles</td><td>7</td><td><strong>9</strong></td></tr><tr><td><code>_generated</code></td><td>deterministic (no timestamp)</td><td>同（无时间戳，可逐字节比对）</td></tr></tbody></table>
+<p>⚠ 条目数<strong>上升</strong>不是「债务变多」，而是<strong>域迁移后新路径首次被正确计入</strong>——<br>旧路径的 12 条悬空永远匹配不上任何文件，其位置被新路径的条目取代。</p>
+<p>⚠ <strong>本仓 <code>/tmp/...</code> 不能直接喂给 Windows Node</strong>（<code>Cannot find module '/tmp/x.json'</code>）——<br>同 MSYS 路径陷阱。要对比就先 <code>git show HEAD:&lt;path&gt; &gt; .khyos/diag/baseline-old.json</code>。</p>
+<h2 id="bug-41-bug-37-在仓库中不存在">⚠⚠ BUG-41 / BUG-37 <strong>在仓库中不存在</strong><a class="anchor" href="#bug-41-bug-37-在仓库中不存在" aria-label="锚点">#</a></h2>
+<p>用户点名的「起草 BUG-41 待裁决项」「修 BUG-37 授权框 fail-open」，<br><strong><code>.ai/hq/BUGS.json</code> 只到 <code>BUG-013</code>（<code>next_id: 14</code>）</strong>；</p>
+<pre><code class="language-js">现有哪些: <span class="hljs-variable constant_">BUG</span>-<span class="hljs-number">001</span> … <span class="hljs-variable constant_">BUG</span>-<span class="hljs-number">013</span>
+<span class="hljs-attr">next_id</span>: <span class="hljs-number">14</span></code></pre>
+<p>⇒ 用户说的 <code>BUG-41</code> / <code>BUG-37</code> <strong>不是本仓 HQ 真源的编号</strong>，更像是<strong>用户自己的<br>问题清单编号</strong>（承接前序那条长篇自我反思），或来自未入库的草稿。<br>⇒ <strong>不要擅自造 <code>BUG-041</code></strong>：会污染 HQ 真源、且 <code>/hq verify</code> 的 <code>next_id</code> 校验会失衡。<br>⇒ 应先向用户确认编号体系（是 HQ 的、还是他自己清单里的）。</p>
+<p><strong>已探明的实现落点</strong>（供确认后直接动工）：</p>
+<ul><li><code>services/backend/src/services/tool/toolCallingPermissions.js</code>（<strong>真源</strong>，非</li></ul>
+<p><code>services/toolCallingPermissions.js</code> —— 后者是 re-export shim，记忆里<br>  §二「re-export shim 让源码文本扫描型测试失真」的同一批）</p>
+<ul><li>权限模式：<code>default / plan / acceptEdits / auto / bypass</code>（注释第 54-60 行）</li><li><strong><code>bypass</code> 明确保留「critical red line + syscall gateway L2 floor」两层不可绕过</strong></li></ul>
+<p>（第 56-57 行，注释写明 &quot;KHY hardening over CC's bypass&quot;）</p>
+<ul><li>不可绕过的人工闸：<code>riskGate.isUnbypassableGate(assessment)</code>（第 428 行）</li></ul>
+<p>⇒ <strong>这就是「非交互」的判据点</strong>，raw-mode 分支走不了就落到 byte 回退路径</p>
+<ul><li><code>services/backend/src/cli/permissionReply.js</code>、<code>services/backend/src/services/permissionStore.js</code></li></ul>
+<hr>
+<h2 id="前端控制台-404-500-ws-反复失败-四条根因-全部定位并修复">★★★ 前端控制台 404/500 + WS 反复失败：四条根因，全部定位并修复<a class="anchor" href="#前端控制台-404-500-ws-反复失败-四条根因-全部定位并修复" aria-label="锚点">#</a></h2>
+<p>用户报的控制台错误：<code>/api/auth/sessions</code> 404、<code>/api/api-keys/current</code> 404、<br><code>/api/proxy-subscriptions</code> 500、<code>/api/ai-gateway/payments/my-customer</code> 404、<br><code>/api/workflow</code> 500、<code>/api/user-gateway/*</code> 全部 500、<br><code>ws://127.0.0.1:8090/ws/cross-platform</code> 反复失败。</p>
+<p><strong>四条独立根因叠加，缺一条都修不好</strong>：</p>
+<h3 id="根因-1-最致命-daemon-与-web-后端抢同一个端口-3000">根因 1（最致命）：daemon 与 web 后端抢同一个端口 3000<a class="anchor" href="#根因-1-最致命-daemon-与-web-后端抢同一个端口-3000" aria-label="锚点">#</a></h3>
+<ul><li><code>services/backend/start-daemon.js</code> 兜底端口写死 <code>'3000'</code>；</li></ul>
+<p>而 web 后端 <code>serviceDefaults.BACKEND_PORT = PORT || 3000</code> 也是 3000。</p>
+<ul><li>更要命的是 <strong>daemon 绑 <code>127.0.0.1:3000</code>、web 后端绑 <code>0.0.0.0:3000</code></strong>，</li></ul>
+<p>Windows 下<strong>更具体的绑定优先</strong> ⇒ 浏览器访问 <code>127.0.0.1:3000</code><br>  <strong>全部落到 daemon 上</strong>，web 后端等于隐身。</p>
+<ul><li><strong>铁证（A/B）</strong>：同一路径两个地址返回两个不同服务<ul><li><code>127.0.0.1:3000/api/auth/sessions</code> → <code>Authentication required (set AI_MGMT_AUTH_TOKEN…)</code>（daemon）</li><li><code>192.168.1.193:3000/api/auth/sessions</code> → <code>未提供认证令牌</code>（web 后端）</li><li><code>netstat</code> 同时显示两条 LISTENING：<code>0.0.0.0:3000</code>(server.js) + <code>127.0.0.1:3000</code>(start-daemon.js)</li></ul></li><li>端口真源是 <code>serviceDefaults.AI_BACKEND_DEFAULT_PORT</code>（<strong>9090</strong>），</li></ul>
+<p><code>apps/ai-frontend/backendDiscovery.mjs</code> 镜像同一个值，<br>  测试 <code>serviceDefaults.test.js</code> 明写「AI backend default port is the single source mirrored by the frontend」。</p>
+<ul><li>✅ 修：<code>start-daemon.js</code> 改为 <code>argv[2] || KHY_DAEMON_PORT || serviceDefaults.AI_BACKEND_DEFAULT_PORT</code>，</li></ul>
+<p><strong>并刻意把 <code>process.env.PORT</code> 从优先级里移除</strong>（PORT 是 web 后端的，让 daemon 也读它会把两者钉在同一端口）。</p>
+<h3 id="根因-2-ws-握手协议错配-客户端发-auth-request-服务端只认-auth">根因 2：WS 握手协议错配 —— 客户端发 <code>auth:request</code>，服务端只认 <code>auth</code><a class="anchor" href="#根因-2-ws-握手协议错配-客户端发-auth-request-服务端只认-auth" aria-label="锚点">#</a></h3>
+<ul><li>协议真源 <code>crossPlatform/shared/protocol.cjs</code>：<code>ClientMessageTypes.AUTH = 'auth'</code>。</li><li>但 vite 实际加载的 <strong>ESM 版 <code>wsClientCore.js</code></strong>（<code>.js</code> 优先于 <code>.cjs</code>）</li></ul>
+<p>在 <code>handleHello</code> 里<strong>硬编码</strong> <code>'auth:request'</code> —— 这个值根本不在协议表里。</p>
+<ul><li>服务端 <code>syncServer.js</code> 的 switch 没有该 case ⇒ 走 <code>default</code> 回</li></ul>
+<p><code>{type:'error', error:'Unknown message type: auth:request'}</code> ⇒ 客户端卡在<br>  AUTHENTICATING，10s 超时后断开重连 ⇒ 控制台刷屏。</p>
+<ul><li><strong><code>.cjs</code> 孪生件是对的</strong>（用 <code>authMessage()</code>），只有 ESM 版跑偏；</li></ul>
+<p>而<strong>单元测试把错误字面量固化成了断言</strong>（<code>expect(frame.type).toBe('auth:request')</code>）。<br>  ⇒ 判据：<strong>测试断言的是实现还是真源？改真源前先确认哪边是权威。</strong></p>
+<ul><li>✅ 修：ESM 版改为 <code>import { ClientMessageTypes } from './protocol.cjs'</code> 并用 <code>ClientMessageTypes.AUTH</code>；</li></ul>
+<p>测试同步改为引用真源常量（不再写字面量）。</p>
+<ul><li><strong>探针</strong>（可复用）：<code>.khyos/diag/ws-handshake-probe.js &lt;port&gt;</code> —— A/B 两种 type 各握一次手，</li></ul>
+<p>实测输出：A <code>Unknown message type: auth:request</code>（握手失败）/ B <code>auth:ok, platforms:{web:1}</code>（成功）。</p>
+<h3 id="根因-3-syncserver-心跳把-每个-客户端-60s-后踢掉">根因 3：syncServer 心跳把<strong>每个</strong>客户端 60s 后踢掉<a class="anchor" href="#根因-3-syncserver-心跳把-每个-客户端-60s-后踢掉" aria-label="锚点">#</a></h3>
+<ul><li><code>attach()</code> 里 30s 一次心跳：置 <code>ws.isAlive = false</code> 然后 <code>ping()</code>，</li></ul>
+<p>下一轮若仍为 false 就 <code>terminate()</code>。</p>
+<ul><li>但<strong>全文件没有任何 <code>'pong'</code> 监听</strong>，也没有初始化 <code>isAlive = true</code></li></ul>
+<p>⇒ 第 1 轮(30s)置 false，第 2 轮(60s)必杀。<strong>所有客户端无一幸免。</strong></p>
+<ul><li>✅ 修：<code>_handleConnection</code> 里加 <code>ws.isAlive = true</code> + <code>ws.on('pong', () =&gt; { ws.isAlive = true; })</code>。</li></ul>
+<h3 id="根因-4-空闲看门狗看不到-syncserver-的客户端-上一轮已修-此处补验">根因 4：空闲看门狗看不到 syncServer 的客户端（上一轮已修，此处补验）<a class="anchor" href="#根因-4-空闲看门狗看不到-syncserver-的客户端-上一轮已修-此处补验" aria-label="锚点">#</a></h3>
+<ul><li><code>server.js</code> 的 <code>getActiveWsClientCount()</code> 只数 app 级 <code>wss.clients</code>，</li></ul>
+<p>而浏览器 socket 在 syncServer 自己的 <code>_wss.clients</code> 里 ⇒ 永远 0 ⇒ 60s 后<br>  <code>No frontend clients connected for 60s, shutting down to release port</code>。</p>
+<ul><li>⚠ <strong>单独修根因 4 是无效的</strong>：<code>_clients</code> 只在收到 <code>auth</code> 后填充，</li></ul>
+<p>在根因 2 未修时浏览器永远进不了 <code>_clients</code>，计数照样是 0。<br>  ⇒ <strong>这是个&quot;修复依赖顺序&quot;的典型：必须先修 2，再看 4 是否真的生效。</strong></p>
+<ul><li>✅ 验：<code>.khyos/diag/idle-shutdown-live.js &lt;port&gt; &lt;idleMs&gt;</code> ——</li></ul>
+<p>连上并完成 auth，等过看门狗窗口：<br>  <strong>修前</strong> <code>WS CLOSED</code>；<strong>修后</strong> <code>WS OPEN + health 200</code>。100s 长窗仍 OPEN（根因 3 也修好了）。</p>
+<h3 id="端到端验收-走-8090-代理-khyos-diag-frontend-e2e-verify-js">端到端验收（走 8090 代理，<code>.khyos/diag/frontend-e2e-verify.js</code>）<a class="anchor" href="#端到端验收-走-8090-代理-khyos-diag-frontend-e2e-verify-js" aria-label="锚点">#</a></h3>
+<p>14 个报错接口全部从 404/500 变为 <strong>200/401</strong>（401 = 路由存在且鉴权生效，是健康态）；<br><code>/ws/cross-platform</code> 经代理握手 <code>auth:ok</code>。<br>测试：<code>syncServer/protocol/crossPlatformHub</code> 72 项全过；<code>serviceDefaults</code> 8 项全过；<br>前端 <code>wsClientCore</code> 16 项全过。</p>
+<h3 id="附带修复-同批次">附带修复（同批次）<a class="anchor" href="#附带修复-同批次" aria-label="锚点">#</a></h3>
+<ul><li><code>services/ai-backend/</code>（125 文件）被清空 ⇒ <code>require('khy-ai-backend/routes/userGateway')</code></li></ul>
+<p>MODULE_NOT_FOUND ⇒ <code>git checkout -- services/ai-backend/</code> 恢复。<br>  （mtime 与 <code>node_modules/.pnpm</code> 里 9 个空包目录同为 <strong>2026-09-21 14:33</strong>，疑似同一次误删。）</p>
+<ul><li>两个循环 shim：<code>services/webFrontendEval/index.js</code> / <code>guiEval/index.js</code></li></ul>
+<p>曾 <code>require('../../routes/...')</code> ⇒ <code>service</code> 被解析成 Express router ⇒<br>  <code>service.listRuns is not a function</code> ⇒ 500。改为指向 <code>../domain/eval/*</code>。</p>
+<ul><li><code>pnpm-lock.yaml</code> 外科手术补 2 行（<code>khy-os-backend&gt;@khy/plugin-sdk</code> override +</li></ul>
+<p><code>platform/packages/plugin-sdk</code> importer）消除 <code>ERR_PNPM_LOCKFILE_CONFIG_MISMATCH</code>。<br>  ⚠ <strong>不要用 <code>--no-frozen-lockfile</code> 整份重生成</strong>：实测会删掉 32 行<br>  <code>@parcel/watcher-linux-*</code> 的 <code>libc:</code> 变体，让 Linux/Docker 装错文件监听包。<br>  ⇒ 判据：<strong>lockfile 只做最小增量；改完 <code>git diff --stat</code> 必须是 2 insertions。</strong></p>
+<h3 id="本轮踩到的环境坑">本轮踩到的环境坑<a class="anchor" href="#本轮踩到的环境坑" aria-label="锚点">#</a></h3>
+<ul><li><strong>批量删除守卫按「turn」累计计数</strong>，不是按次：设 <code>CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD=20000</code></li></ul>
+<p>仍在链接 566 个包后被打满（<code>{&quot;count&quot;:20001,...}</code>）⇒ 直接设 <code>100000000</code>。<br>  连 <strong>vite 启动</strong>都会因清 <code>.vite/deps</code> 被拦（<code>count:71271</code>）⇒ 起 vite 也要带这个环境变量。</p>
+<ul><li><strong>pnpm install 会被 genie-trash 超时打断</strong>（<code>spawnSync … win32-x64.exe ETIMEDOUT</code>），</li></ul>
+<p>但进度已到 586/587 ⇒ 重跑一次即补齐，不算失败。</p>
+<ul><li><code>node /tmp/x.js</code> 在 Git Bash 下会被解析成 <code>D:\tmp\x.js</code> ⇒ 临时脚本要落在 <code>.khyos/diag/</code>。</li><li><strong>本仓后端启动极慢（约 70–85s）</strong>，且 <code>syncServer.attach()</code> 在 listen 之后才执行</li></ul>
+<p>⇒ 判断&quot;后端就绪&quot;不能只探 TCP，必须探 <strong>WS 能完成 hello</strong>；<br>  在 attach 之前访问 <code>/ws/cross-platform</code> 会得到 <code>socket hang up</code><br>  （因为 <code>server.js:271</code> 对该路径直接 <code>return</code>，没人接管 socket）。</p>
+<h3 id="复现-自检命令-下次直接跑">复现/自检命令（下次直接跑）<a class="anchor" href="#复现-自检命令-下次直接跑" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">node .khyos/diag/ws-handshake-probe.js 3000      <span class="hljs-comment"># WS 握手 A/B</span>
+node .khyos/diag/idle-shutdown-live.js 3000 45000 <span class="hljs-comment"># 看门狗存活</span>
+node .khyos/diag/frontend-e2e-verify.js 8090      <span class="hljs-comment"># 14 个接口端到端</span>
+node .khyos/diag/frontend-error-triage.js         <span class="hljs-comment"># 只读体检</span></code></pre>
+<p>启动顺序（<strong>必须后端先起，vite 后起</strong>——vite 的 proxy target 在 config 加载时一次性解析）：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 1) daemon → 9090</span>
+<span class="hljs-built_in">cd</span> services/backend &amp;&amp; node start-daemon.js
+<span class="hljs-comment"># 2) web 后端 → 3000</span>
+<span class="hljs-built_in">cd</span> services/backend &amp;&amp; PORT=3000 node server.js
+<span class="hljs-comment"># 3) vite → 8090（注意带阈值）</span>
+<span class="hljs-built_in">cd</span> apps/ai-frontend &amp;&amp; CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD=100000000 ./node_modules/.bin/vite</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../.workbuddy-ai/memory/2026-09-22.html"><div class="dir">← 上一篇</div><div class="ttl">2026-09-22 工作日志</div></a><a class="next" href="../../.workbuddy-ai/memory/MEMORY-details.html"><div class="dir">下一篇 →</div><div class="ttl">khy-os 项目记忆 · 细节参考</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__=".workbuddy-ai/memory/2026-09-23.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-MCP-001] MCP 协议实现规范.md -->
+<title>[DESIGN-MCP-001] MCP 协议实现规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-MCP-001] MCP 协议实现规范</div>
+      <header class="hero reveal"><h1>[DESIGN-MCP-001] MCP 协议实现规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-mcp-001-mcp-协议实现规范">[DESIGN-MCP-001] MCP 协议实现规范</a></li><li class="lvl-2"><a href="#1-为什么需要这份规范">1. 为什么需要这份规范</a></li><li class="lvl-2"><a href="#2-分层契约-不得打破">2. 分层契约（不得打破）</a></li><li class="lvl-2"><a href="#3-协议修订-声明多少-做多少">3. 协议修订：声明多少，做多少</a></li><li class="lvl-3"><a href="#3-1-当前状态">3.1 当前状态</a></li><li class="lvl-3"><a href="#3-2-能力声明的诚实原则">3.2 能力声明的诚实原则</a></li><li class="lvl-2"><a href="#4-传输层要求">4. 传输层要求</a></li><li class="lvl-3"><a href="#4-1-streamable-http-post-mcp">4.1 Streamable HTTP（`POST /mcp`）</a></li><li class="lvl-3"><a href="#4-2-传统-http-sse-get-sse">4.2 传统 HTTP+SSE（`GET /sse`）</a></li><li class="lvl-3"><a href="#4-3-stdio">4.3 stdio</a></li><li class="lvl-3"><a href="#4-4-授权">4.4 授权</a></li><li class="lvl-2"><a href="#5-工具与结果的形状">5. 工具与结果的形状</a></li><li class="lvl-3"><a href="#5-1-tools-list-khy-tofunctiondef-mcp-tool">5.1 `tools/list`：khy `toFunctionDef()` → MCP `Tool`</a></li><li class="lvl-3"><a href="#5-2-tools-call-khy-归一结果-mcp-calltoolresult">5.2 `tools/call`：khy 归一结果 → MCP `CallToolResult`</a></li><li class="lvl-2"><a href="#6-json-rpc-2-0-信封">6. JSON-RPC 2.0 信封</a></li><li class="lvl-2"><a href="#7-如何扩展-sop">7. 如何扩展（SOP）</a></li><li class="lvl-3"><a href="#7-1-要支持一个新协议修订">7.1 要支持一个新协议修订</a></li><li class="lvl-3"><a href="#7-2-要新增一个-mcp-方法">7.2 要新增一个 MCP 方法</a></li><li class="lvl-2"><a href="#8-验证">8. 验证</a></li><li class="lvl-2"><a href="#9-反模式清单-出现即视为回归">9. 反模式清单（出现即视为回归）</a></li><li class="lvl-2"><a href="#10-版本历史">10. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-mcp-001-mcp-协议实现规范">[DESIGN-MCP-001] MCP 协议实现规范<a class="anchor" href="#design-mcp-001-mcp-协议实现规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>状态</strong>：生效中<br><strong>适用范围</strong>：<code>services/backend/src/services/domain/messaging/mcp/**</code>（khy 作为 MCP<br>server 与 MCP client 的全部实现）<br><strong>对照标准</strong>：Model Context Protocol（Linux Foundation）修订<br><code>2024-11-05</code> / <code>2025-03-26</code> / <code>2025-06-18</code> / <code>2025-11-25</code><br><strong>机器可读真源</strong>：<code>mcpServerProtocol.PROTOCOL_CONFORMANCE</code>、<code>SUPPORTED_PROTOCOL_VERSIONS</code><br><strong>强制手段</strong>：<code>npm run check:protocol-conformance</code>（已接入 <code>check:structure</code>）<br><strong>相关文档</strong>：<code>[DESIGN-COMM-001] 通信协议规范</code>、<code>[OPS-MAN-173] MCP 工具接入快速上手</code></p></blockquote>
+<hr>
+<h2 id="1-为什么需要这份规范">1. 为什么需要这份规范<a class="anchor" href="#1-为什么需要这份规范" aria-label="锚点">#</a></h2>
+<p>khy-os 的 MCP 实现本身质量不低 —— 工具注册、权限门控、名称归一化、注解驱动权限<br>映射都做得比多数实现规范。真正的问题不在「有没有做」，而在<strong>声明与实现之间没有<br>任何机器校验</strong>，于是反复出现三类故障：</p>
+<table><thead><tr><th>类型</th><th>历史实例</th><th>后果</th></tr></thead><tbody><tr><td><strong>能力虚报</strong></td><td>client 上报 <code>capabilities: { tools, resources, prompts }</code> —— 那是 <strong>ServerCapabilities</strong> 字段，出现在客户端能力里属无效声明</td><td>服务端据此判定本客户端不支持 <code>roots</code>，主动关闭服务端发起的能力</td></tr><tr><td><strong>自相矛盾</strong></td><td>server 端诚实只声明 <code>tools</code>，自家 client 连上去却发 <code>resources/list</code></td><td>必收 <code>-32601</code>，且 <code>Promise.allSettled</code> 吞掉原因，无法区分「不支持」与「真失败」</td></tr><tr><td><strong>静默降级</strong></td><td>协议版本硬编码 <code>2024-11-05</code> 且在两个文件里各自维护一份；<code>initialize</code> 完全不读客户端的 <code>protocolVersion</code></td><td>新版客户端按规范应当断开；且两份常量必然漂移</td></tr></tbody></table>
+<p>这三类的共同点是：<strong>没有一处能在 CI 里被抓住</strong>。本规范的首要任务不是新增功能，<br>而是把「声明」变成被实测的数据。</p>
+<hr>
+<h2 id="2-分层契约-不得打破">2. 分层契约（不得打破）<a class="anchor" href="#2-分层契约-不得打破" aria-label="锚点">#</a></h2>
+<pre><code>mcpServerProtocol.js   纯叶子：零 IO、确定性、绝不抛 —— 协议构形/解析/派发/一致性矩阵
+        ▲                                                         ▲
+        │ require                                          require │
+mcpStdioServer.js   mcpHttpServer.js   传输层：薄 IO（读写 stdin/stdout/socket）
+        ▲                    ▲
+        └────────┬───────────┘
+         mcpServer.js   引擎：注入 handlers + try/catch 兜底（不含业务逻辑）
+                 ▲
+          cli/handlers/tools.js  工具源（loadTools / getEnabled / execute）</code></pre>
+<p><strong>强制条款</strong></p>
+<ul><li><strong>MCP-1</strong> 所有协议构形（<code>initialize</code> 回包、<code>Tool</code> 形状转换、<code>CallToolResult</code> 转换）</li></ul>
+<p><strong>必须</strong>放在 <code>mcpServerProtocol.js</code>，且该文件必须保持零 IO。传输层不得自行拼装<br>  协议对象。</p>
+<ul><li><strong>MCP-2</strong> <code>tools/call</code> <strong>必须</strong>与本地模型调工具走<strong>同一条</strong>权限门控</li></ul>
+<p>（<code>cli/handlers/tools.execute</code>）。禁止为 MCP 客户端开后门。</p>
+<ul><li><strong>MCP-3</strong> 不在暴露集内的工具 <strong>必须</strong>视为「不存在」并回 <code>-32602</code>，不得泄露隐藏</li></ul>
+<p>工具的存在。</p>
+<hr>
+<h2 id="3-协议修订-声明多少-做多少">3. 协议修订：声明多少，做多少<a class="anchor" href="#3-协议修订-声明多少-做多少" aria-label="锚点">#</a></h2>
+<p><code>SUPPORTED_PROTOCOL_VERSIONS</code> 是<strong>唯一</strong>的修订声明来源。它的取值不是任意的，而是<br>由一致性矩阵推导出来的：</p>
+<pre><code>SUPPORTED_PROTOCOL_VERSIONS ≡ { 修订 R | R 的全部 required 特性都 implemented:true }</code></pre>
+<p>守卫会断言这个恒等式双向成立：声明集合里多一个 → 红灯；少一个 → 红灯。</p>
+<h3 id="3-1-当前状态">3.1 当前状态<a class="anchor" href="#3-1-当前状态" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>修订</th><th>是否声明</th><th>原因</th></tr></thead><tbody><tr><td><code>2024-11-05</code></td><td>✅ 声明</td><td>全部 required 特性已实现</td></tr><tr><td><code>2025-03-26</code></td><td>❌ 不声明</td><td><code>required</code> 的 <strong>SSE 流式响应体</strong> 与 <strong><code>Last-Event-ID</code> 断线续传</strong>未实现</td></tr><tr><td><code>2025-06-18</code></td><td>❌ 不声明</td><td>依赖 2025-03-26 的传输能力；另缺 OAuth 资源服务器接入</td></tr><tr><td><code>2025-11-25</code></td><td>❌ 不声明</td><td>同上</td></tr></tbody></table>
+<p><strong>这不影响互操作</strong>：<code>initialize</code> 会做版本协商 —— 客户端报支持的版本，若在<br><code>SUPPORTED_PROTOCOL_VERSIONS</code> 内则<strong>回显</strong>，否则回本端支持的版本。新版客户端拿到<br><code>2024-11-05</code> 后自行决定是否继续，而不是被静默欺骗。</p>
+<h3 id="3-2-能力声明的诚实原则">3.2 能力声明的诚实原则<a class="anchor" href="#3-2-能力声明的诚实原则" aria-label="锚点">#</a></h3>
+<p><code>buildInitializeResult()</code> 的 <code>capabilities</code> <strong>只能</strong>声明真的实现了的服务端能力。<br>当前为：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;capabilities&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;tools&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span> <span class="hljs-punctuation">}</span> <span class="hljs-punctuation">}</span></code></pre>
+<p><code>resources</code> / <code>prompts</code> <strong>不得</strong>出现在这里 —— 写上去就等于告诉客户端「可以调<br><code>resources/list</code>」，而实际会回 <code>-32601</code>。</p>
+<p>客户端侧同理：<code>ClientCapabilities</code> 的合法字段是 <code>experimental</code> / <code>roots</code> /<br><code>sampling</code> / <code>elicitation</code>。khy 当前只声明 <code>roots</code>（已实现 <code>roots/list</code> 响应）；<br><code>sampling</code> 与 <code>elicitation</code> <strong>刻意不声明</strong>，因为前者需把服务端推理请求路由到本地<br>AI 网关（涉及额度与审计），后者需交互式 UI。</p>
+<hr>
+<h2 id="4-传输层要求">4. 传输层要求<a class="anchor" href="#4-传输层要求" aria-label="锚点">#</a></h2>
+<h3 id="4-1-streamable-http-post-mcp">4.1 Streamable HTTP（<code>POST /mcp</code>）<a class="anchor" href="#4-1-streamable-http-post-mcp" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>要求</th><th>条款</th><th>实现落点</th></tr></thead><tbody><tr><td><strong><code>Origin</code> 校验，非法来源回 <code>403</code></strong></td><td>MCP-4（2025-11-25 明确）</td><td><code>mcpHttpServer.isAllowedOrigin</code></td></tr><tr><td>入站 <code>MCP-Protocol-Version</code> 头：不认识的版本回 <code>400</code> + <code>supported</code></td><td>MCP-5</td><td><code>checkProtocolVersionHeader</code> + <code>rejectBadProtocolVersion</code></td></tr><tr><td>未知 / 已失效 <code>Mcp-Session-Id</code> 回 <code>404</code></td><td>MCP-6</td><td><code>streamSessions</code> 校验 → <code>SESSION_NOT_FOUND</code></td></tr><tr><td>会话表<strong>必须</strong>与 SSE 连接表分离</td><td>MCP-7</td><td><code>streamSessions</code> vs <code>sseSessions</code></td></tr></tbody></table>
+<p><strong>MCP-4 的威胁模型必须写清楚</strong>：绑定 <code>127.0.0.1</code> <strong>不构成安全边界</strong> —— 用户浏览器<br>里的任意网页都能 <code>fetch</code> 到本机端口。真正的防线是 <code>Origin</code> 校验（页面脚本无法伪造<br><code>Origin</code>）。而 khy 的 MCP server 默认暴露全量工具（含 shell 执行与文件写入），<br>所以这条是 <strong>P0 级</strong>要求。</p>
+<h3 id="4-2-传统-http-sse-get-sse">4.2 传统 HTTP+SSE（<code>GET /sse</code>）<a class="anchor" href="#4-2-传统-http-sse-get-sse" aria-label="锚点">#</a></h3>
+<p><code>2024-11-05</code> 传输，保留以兼容旧客户端。<strong>已知偏离</strong>：<code>GET /</code> 既是传统 SSE 入口、<br><code>POST /</code> 又是 Streamable HTTP，而规范将两者定义为互斥传输。拆分端点属破坏性变更，<br>需单独决策；当前由 <code>config.type</code> 在客户端侧区分。</p>
+<h3 id="4-3-stdio">4.3 stdio<a class="anchor" href="#4-3-stdio" aria-label="锚点">#</a></h3>
+<p>启动外部 server <strong>必须</strong>用 <code>spawn(command, args, { stdio })</code>，<strong>禁止</strong>经过 shell。<br>（对比反面案例：<code>extensions/extensionManager.js</code> 用 <code>execSync</code> 拼串。）</p>
+<h3 id="4-4-授权">4.4 授权<a class="anchor" href="#4-4-授权" aria-label="锚点">#</a></h3>
+<ul><li><code>401</code> <strong>必须</strong>携带 <code>WWW-Authenticate</code>，并指向 RFC 9728 Protected Resource Metadata</li></ul>
+<p>端点，客户端据此发现授权服务器。</p>
+<ul><li><strong>禁止</strong>支持 <code>?token=</code> 查询串传令牌 —— 查询串会进入访问日志、浏览器历史、</li></ul>
+<p><code>Referer</code> 头、代理日志。令牌比较<strong>必须</strong>用 <code>crypto.timingSafeEqual</code>。</p>
+<ul><li>未配置令牌时<strong>不得</strong>绑定非 loopback 地址（启动即拒绝）。</li></ul>
+<hr>
+<h2 id="5-工具与结果的形状">5. 工具与结果的形状<a class="anchor" href="#5-工具与结果的形状" aria-label="锚点">#</a></h2>
+<h3 id="5-1-tools-list-khy-tofunctiondef-mcp-tool">5.1 <code>tools/list</code>：khy <code>toFunctionDef()</code> → MCP <code>Tool</code><a class="anchor" href="#5-1-tools-list-khy-tofunctiondef-mcp-tool" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>khy 字段</th><th>MCP 字段</th><th>说明</th></tr></thead><tbody><tr><td><code>name</code> / <code>description</code></td><td>同名</td><td>—</td></tr><tr><td><code>parameters</code></td><td><strong><code>inputSchema</code></strong></td><td>必须改名</td></tr><tr><td><code>title</code></td><td><code>title</code></td><td>可选，存在才透传</td></tr><tr><td><code>annotations</code></td><td><code>annotations</code></td><td><strong>必须透传</strong>：<code>readOnlyHint</code> / <code>destructiveHint</code> / <code>idempotentHint</code> / <code>openWorldHint</code> 是客户端做权限决策的唯一依据</td></tr><tr><td><code>outputSchema</code></td><td><code>outputSchema</code></td><td>声明结构化返回的 schema</td></tr><tr><td><code>aliases</code></td><td><strong>丢弃</strong></td><td>MCP 客户端不认</td></tr></tbody></table>
+<p><strong>MCP-8</strong>：字段透传遵循「存在才出现」原则，<strong>不得</strong>为凑格式而编造默认值。</p>
+<h3 id="5-2-tools-call-khy-归一结果-mcp-calltoolresult">5.2 <code>tools/call</code>：khy 归一结果 → MCP <code>CallToolResult</code><a class="anchor" href="#5-2-tools-call-khy-归一结果-mcp-calltoolresult" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;content&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;text&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;text&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;...&quot;</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;structuredContent&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;...&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;...&quot;</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;isError&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>MCP-9（结构化保真）</strong>：当结果体是<strong>普通对象</strong>时，除 <code>content</code> 外<strong>必须</strong>同时回<br><code>structuredContent</code>。禁止用 <code>String(obj)</code> 折叠 —— 那会产出 <code>&quot;[object Object]&quot;</code>，<br>是静默的数据损坏。数组<strong>不得</strong>写入 <code>structuredContent</code>（规范要求该字段是对象），<br>只做 <code>JSON.stringify</code> 进 <code>content[0].text</code>。</p>
+<p><strong>MCP-10（错误分类）</strong>：输入<strong>校验</strong>失败必须作为 <strong>Tool Execution Error</strong><br>（<code>isError: true</code>）返回而非协议错误，以便模型自我纠正。</p>
+<hr>
+<h2 id="6-json-rpc-2-0-信封">6. JSON-RPC 2.0 信封<a class="anchor" href="#6-json-rpc-2-0-信封" aria-label="锚点">#</a></h2>
+<p><strong>MCP-11</strong>：入站消息若带 <code>jsonrpc</code> 字段，<strong>必须</strong>精确等于字符串 <code>&quot;2.0&quot;</code>，否则回<br><code>-32600 Invalid Request</code>。缺该字段按 2.0 处理（部分旧客户端省略，服务端宽容不构成<br>攻击面）。</p>
+<p>错误码<strong>必须</strong>取自 <code>ERROR_CODES</code>，不得自造：</p>
+<table><thead><tr><th>码</th><th>含义</th></tr></thead><tbody><tr><td><code>-32700</code></td><td>Parse Error（不是 JSON）</td></tr><tr><td><code>-32600</code></td><td>Invalid Request（是 JSON 但信封非法）</td></tr><tr><td><code>-32601</code></td><td>Method Not Found</td></tr><tr><td><code>-32602</code></td><td>Invalid Params</td></tr><tr><td><code>-32603</code></td><td>Internal Error</td></tr></tbody></table>
+<hr>
+<h2 id="7-如何扩展-sop">7. 如何扩展（SOP）<a class="anchor" href="#7-如何扩展-sop" aria-label="锚点">#</a></h2>
+<h3 id="7-1-要支持一个新协议修订">7.1 要支持一个新协议修订<a class="anchor" href="#7-1-要支持一个新协议修订" aria-label="锚点">#</a></h3>
+<ol><li>在 <code>PROTOCOL_CONFORMANCE</code> 中为该修订补<strong>全部</strong>必需特性行，<code>required: true</code>。</li><li>实现它们，逐条把 <code>implemented</code> 改成 <code>true</code>，并在 <code>evidence</code> 里写清代码落点。</li><li>把该修订加入 <code>SUPPORTED_PROTOCOL_VERSIONS</code>。</li><li>在 <code>scripts/ci/check-protocol-conformance.js</code> 的 <code>mcpProbes()</code> 里为<strong>每个</strong></li></ol>
+<p><code>implemented: true</code> 的特性补一条探针（<code>behavior</code> 优先，其次 <code>source</code> / <code>file</code>）。</p>
+<ol><li>跑 <code>npm run check:protocol-conformance</code>，必须全绿。</li></ol>
+<p><strong>没有探针的 <code>implemented: true</code> 会被守卫判为红灯</strong> —— 这是刻意的：不可验证的声明<br>等于空声明。</p>
+<h3 id="7-2-要新增一个-mcp-方法">7.2 要新增一个 MCP 方法<a class="anchor" href="#7-2-要新增一个-mcp-方法" aria-label="锚点">#</a></h3>
+<ol><li>在 <code>mcpServerProtocol</code> 里加纯构形函数（如需要）。</li><li>在 <code>mcpServer.handlers</code> 里加 handler。</li><li>若该方法使某个能力从「未实现」变为「已实现」，同步更新</li></ol>
+<p><code>buildInitializeResult</code> 的 <code>capabilities</code> 与矩阵，然后走 7.1 的第 4 步。</p>
+<hr>
+<h2 id="8-验证">8. 验证<a class="anchor" href="#8-验证" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">npm run check:protocol-conformance          <span class="hljs-comment"># MCP + A2A 全量</span>
+node scripts/ci/check-protocol-conformance.js --mcp --json
+npm run check:leaf-contract -- services/backend/src/services/domain/messaging/mcp/mcpServerProtocol.js</code></pre>
+<p>端到端互操作验证（需真实起 server，不在 CI 内）：</p>
+<pre><code class="language-bash">npx @modelcontextprotocol/inspector node services/backend/src/services/domain/messaging/mcp/mcpStdioServer.js</code></pre>
+<hr>
+<h2 id="9-反模式清单-出现即视为回归">9. 反模式清单（出现即视为回归）<a class="anchor" href="#9-反模式清单-出现即视为回归" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>反模式</th><th>为什么</th></tr></thead><tbody><tr><td>1</td><td>在 <code>capabilities</code> 里声明未实现的能力</td><td>客户端会据此走进必然失败的分支</td></tr><tr><td>2</td><td>在<strong>客户端</strong>能力里写 <code>tools</code> / <code>resources</code> / <code>prompts</code></td><td>那是服务端字段，属无效声明</td></tr><tr><td>3</td><td>无条件请求服务端未声明支持的能力接口</td><td>规范 <strong>MUST NOT</strong>；且污染对端日志</td></tr><tr><td>4</td><td>把多个协议修订支持的版本写死在多个文件里</td><td>必然漂移，且无单一真源</td></tr><tr><td>5</td><td>用 <code>String(obj)</code> 折叠结构化结果</td><td>静默数据损坏</td></tr><tr><td>6</td><td><code>?token=</code> 传令牌</td><td>OWASP 明确反模式</td></tr><tr><td>7</td><td>缺 <code>Origin</code> 校验就暴露全量工具</td><td>DNS rebinding → 任意 shell 执行</td></tr><tr><td>8</td><td>为 MCP 客户端绕过 <code>--allowedTools</code> 权限门控</td><td>破坏唯一的安全闸</td></tr></tbody></table>
+<hr>
+<h2 id="10-版本历史">10. 版本历史<a class="anchor" href="#10-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-15</td><td>首版：分层契约、修订声明恒等式、一致性矩阵与守卫、传输/工具/信封要求、扩展 SOP</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-LOG-001] 日志规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-LOG-001] 日志规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-MIG-001] 数据迁移规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-MIG-001] 数据迁移规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-MCP-001] MCP 协议实现规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

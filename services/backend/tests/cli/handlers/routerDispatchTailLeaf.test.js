@@ -43,12 +43,12 @@ describe('Router Dispatch Tail Leaf', () => {
 
   test('setRouterDispatchTailDeps is a guarded, idempotent, non-throwing DI setter', async () => {
       const { setRouterDispatchTailDeps } = require(LEAF);
-      expect(() => setRouterDispatchTailDeps().not.toThrow());
-      expect(() => setRouterDispatchTailDeps({}).not.toThrow());
-      expect(() => setRouterDispatchTailDeps({ chk: 1 }).not.toThrow());
+      expect(() => setRouterDispatchTailDeps()).not.toThrow();
+      expect(() => setRouterDispatchTailDeps({})).not.toThrow();
+      expect(() => setRouterDispatchTailDeps({ chk: 1 })).not.toThrow();
       const fake = { chk: () => ({}) };
-      expect(() => setRouterDispatchTailDeps(fake).not.toThrow());
-      expect(() => setRouterDispatchTailDeps(fake).not.toThrow());
+      expect(() => setRouterDispatchTailDeps(fake)).not.toThrow();
+      expect(() => setRouterDispatchTailDeps(fake)).not.toThrow();
   });
 
 });

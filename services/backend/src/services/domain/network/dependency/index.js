@@ -14,7 +14,8 @@
 
 const healingLoop = require('./healingLoop');
 const installRunner = require('./installRunner');
-const registry = require('../../../../cli/commands/registry');
+// 同 resolver.js：依赖表真源是同目录 ./registry，不是 cli/commands/registry。
+const registry = require('./registry');
 const resolver = require('./resolver');
 const toolchainVersions = require('./toolchainVersions');
 

@@ -1675,10 +1675,18 @@ async function _fetchJokeFromWeb(category) {
 
   // 方案 2: 中文笑话（通过 web search 服务）
   try {
-    const { searchWeb } = require('./webSearchService');
-    if (typeof searchWeb === 'function') {
-      const results = await searchWeb(query, { maxResults: 5, timeout: 5000 });
-      if (Array.isArray(results) && results.length > 0) {
+    // webSearchService 公开 `search`(=searchUnified)，返回 {success, results:[…]}；
+    // 历史代码取不存在的 `searchWeb` → typeof 守卫永假、本分支静默空跑。
+    // 容错取数组载荷：裸数组或 {results} 皆可，避免绑定名后仍被 Array.isArray 挡掉。
+    const { search } = require('./webSearchService');
+    if (typeof search === 'function') {
+      const resp = await search(query, { maxResults: 5, timeout: 5000 });
+      const results = Array.isArray(resp)
+        ? resp
+        : resp && Array.isArray(resp.results)
+          ? resp.results
+          : null;
+      if (results && results.length > 0) {
         const snippets = results
           .map((r) => String(r.snippet || r.description || '').trim())
           .filter((s) => s.length > 10 && s.length < 500 && _isNew(s));
@@ -2957,6 +2965,7 @@ module.exports = {
   _detectApiQuery,
   _executeApiQuery,
   _formatApiResult,
+  _fetchJokeFromWeb,
   // 计算子能力已抽出至 localBrainCalc.js；保留同名导出以兼容既有调用方/测试。
   _safeEvalArithmetic: calcService.safeEvalArithmetic,
   _executeCalc: calcService.executeCalc,

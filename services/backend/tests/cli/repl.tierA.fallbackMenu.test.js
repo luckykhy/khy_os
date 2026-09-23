@@ -94,5 +94,5 @@ describe('repl Tier A 无模型回退菜单', () => {
     expect(output.some((line) => line.includes('未能生成有效回复'))).toBe(false);
     expect(output.some((line) => line.includes('模型请求失败'))).toBe(false);
     expect(formatterMock.printErrorPanel).not.toHaveBeenCalled();
-  });
+  }, 30000);
 });

@@ -1,11 +1,12 @@
 'use strict';
-const authTime = require('../authTimeFormat');
+const authTime = require('../../../src/services/authTimeFormat.js');
+const assert = require('node:assert');
 const DAY = 24 * 60 * 60 * 1000;
 const WEEK = 7 * DAY;
 test('formatAuthTimestamp: valid ISO → localized non-empty, never "Invalid Date"', () => {
   const out = authTime.formatAuthTimestamp('2026-06-01T16:23:07.000Z', { locale: 'zh-CN' });
   expect(typeof out === 'string' && out.length > 0).toBeTruthy();
-  expect(!out.toLowerCase()).toContain('invalid');
+  expect(out.toLowerCase()).not.toContain('invalid');
 });
 
 describe('Auth Time Format', () => {
@@ -34,8 +35,10 @@ describe('Auth Time Format', () => {
       const now = 2_000_000_000_000; // fixed injected clock
       const past = new Date(now - DAY).toISOString();
       const future = new Date(now + DAY).toISOString();
-      expect(authTime.formatAuthTimestamp(past).toBeTruthy();
-      expect(!authTime.formatAuthTimestamp(future).toBeTruthy();
+      const pastOut = authTime.formatAuthTimestamp(past, { markExpired: true, now });
+      const futureOut = authTime.formatAuthTimestamp(future, { markExpired: true, now });
+      expect(pastOut).toContain('已过期');
+      expect(futureOut).not.toContain('已过期');
   });
 
   test('formatAuthTimestamp: markExpired invalid value still → fallback (no crash)', () => {

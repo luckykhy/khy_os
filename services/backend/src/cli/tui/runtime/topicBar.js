@@ -27,11 +27,22 @@
 const OSC = '\x1b]'; // Operating System Command introducer
 const BEL = '\x07'; // string terminator (most compatible across emulators)
 
+// Max DISPLAY columns of the topic (ellipsis included) — generous; emulators
+// cut the rest visually, but the budget has to be ours to be predictable.
+const TITLE_MAX_COLS = 120;
+const { visWidth } = require('../wrapCell');
+
 // Working indicator: the glyph LEFT of the topic. Idle → static ✱ ("太阳"); while
 // khy is busy → a left-right bouncing dot. Pure-leaf decides the prefix per frame;
 // this module owns only the timer that advances the frame and repaints. Gated
 // (KHY_TOPIC_BAR_WORKING_DOT, default-on) — off → prefix stays ✱, timer never runs.
 const _workingIndicator = require('./topicBarWorkingIndicator');
+
+// The topic is model output (or the user's own words): it may carry BEL/ESC,
+// which are OSC *delimiters* — an unsanitized topic lets the title text open a
+// second OSC command (verified: OSC 52 clipboard write). Sanitizing at this one
+// write site covers every producer, including the local coarse-title path.
+const { toOscSafeText } = require('../../../utils/oscSafeText');
 
 let _state = {
   enabled: false,
@@ -79,11 +90,26 @@ function _resolveStdout(stdout) {
   return stdout || process.stdout;
 }
 
-// Window titles are plain text (no SGR). Keep a generous cap so an unusually long
-// topic does not bloat the title; emulators truncate visually anyway.
+// Window titles are plain text (no SGR). Meter by DISPLAY columns, not code
+// units: a CJK glyph is 2 columns, so the old `s.length > 120` cap let a
+// Chinese title reach ~240 columns and leaned on the emulator to cut it.
 function _clamp(text) {
-  const s = String(text || '');
-  return s.length > 120 ? s.slice(0, 119) + '…' : s;
+  const s = toOscSafeText(text);
+  const chars = Array.from(s); // code points: never split an emoji/CJK extension pair
+  const widths = chars.map(visWidth);
+  let total = 0;
+  let n = 0;
+  for (; n < chars.length; n++) {
+    if (total + widths[n] > TITLE_MAX_COLS) break;
+    total += widths[n];
+  }
+  if (n >= chars.length) return s; // it fits as-is — no ellipsis, no truncation claim
+  // The '…' column comes out of the BODY, so prefix + body still respects the cap.
+  while (n > 0 && total > TITLE_MAX_COLS - 1) {
+    n -= 1;
+    total -= widths[n];
+  }
+  return chars.slice(0, n).join('') + '…';
 }
 
 // Write the OSC 0 title. Empty topic clears the title (used on disable).

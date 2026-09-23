@@ -1,16 +1,16 @@
 'use strict';
 /**
- * imageOcr.noCascade.test.js �?imageOcr tool no longer cascades into the gateway
+ * imageOcr.noCascade.test.js — imageOcr tool no longer cascades into the gateway
  * when no vision model exists, and bounds the vision call (node:test).
  *
- * Goal「不要一识别图片就网络中断就失败,导致接下来换那个模型都是失败�?
- *  - 无视觉模�?+ 本地有文�?�?直接用本�?OCR,**绝不�?aiVisionOcr**(不重入网关→不级�?�?
- *  - 无视觉模�?+ 本地无文�?�?诚实失败,**绝不�?aiVisionOcr**�?
- *  - 有视觉模�?+ 本地不充�?�?单次 aiVisionOcr�?
- *  - 门控�?�?逐字节回退到旧路径(本地失败即无条件 aiVisionOcr)�?
+ * Goal「不要一识别图片就网络中断就失败,导致接下来换那个模型都是失败�?
+ *  - 无视觉模�?+ 本地有文�?�?直接用本�?OCR,**绝不�?aiVisionOcr**(不重入网关→不级�?�?
+ *  - 无视觉模�?+ 本地无文�?�?诚实失败,**绝不�?aiVisionOcr**�?
+ *  - 有视觉模�?+ 本地不充�?�?单次 aiVisionOcr�?
+ *  - 门控�?�?逐字节回退到旧路径(本地失败即无条件 aiVisionOcr)�?
  *
- * �?Symbol.for('khyos.imageOcr.__impl') 注入入口 stub runPython / aiVisionOcr /
- * computeVisionAvailable,避免真起 python / 真打网关�?
+ * �?Symbol.for('khyos.imageOcr.__impl') 注入入口 stub runPython / aiVisionOcr /
+ * computeVisionAvailable,避免真起 python / 真打网关�?
  */
 const fs = require('fs');
 const os = require('os');
@@ -18,13 +18,13 @@ const path = require('path');
 const imageOcr = require('../../src/tools/imageOcr');
 const impl = globalThis[Symbol.for('khyos.imageOcr.__impl')];
 const _orig = { ...impl };
-// 一个真实存在、扩展名受支持的临时图片(execute �?fs.existsSync + 校验扩展�?�?
+// 一个真实存在、扩展名受支持的临时图片(execute �?fs.existsSync + 校验扩展�?�?
 let _imgPath;
-test.before(() => {
+beforeAll(() => {
   _imgPath = path.join(os.tmpdir(), `khy-ocr-test-${process.pid}.png`);
-  fs.writeFileSync(_imgPath, Buffer.from([0x89, 0x50, 0x4e, 0x47])); // PNG magic, 内容无关(�?stub OCR)
+  fs.writeFileSync(_imgPath, Buffer.from([0x89, 0x50, 0x4e, 0x47])); // PNG magic, 内容无关(�?stub OCR)
 });
-test.after(() => {
+afterAll(() => {
   Object.assign(impl, _orig);
   try { fs.unlinkSync(_imgPath); } catch { /* ignore */ }
   delete process.env.KHY_IMAGE_OCR_NO_CASCADE;
@@ -34,7 +34,7 @@ function reset(overrides) {
 }
 
 describe('Image Ocr no Cascade', () => {
-  test('no vision model + local has text �?use-local, NEVER calls aiVisionOcr', async () => {
+  test('no vision model + local has text �?use-local, NEVER calls aiVisionOcr', async () => {
       delete process.env.KHY_IMAGE_OCR_NO_CASCADE; // default on
       let visionCalls = 0;
       reset({
@@ -50,7 +50,7 @@ describe('Image Ocr no Cascade', () => {
       expect(String(r.note || '')).toMatch(/本地 OCR/);
   });
 
-  test('no vision model + local NO text �?fail-honest, NEVER calls aiVisionOcr', async () => {
+  test('no vision model + local NO text �?fail-honest, NEVER calls aiVisionOcr', async () => {
       delete process.env.KHY_IMAGE_OCR_NO_CASCADE;
       let visionCalls = 0;
       reset({
@@ -65,7 +65,7 @@ describe('Image Ocr no Cascade', () => {
       expect(String(r.error || r.content || '')).toMatch(/khy gateway model|视觉模型/);
   });
 
-  test('vision available + local insufficient �?single bounded aiVisionOcr call', async () => {
+  test('vision available + local insufficient �?single bounded aiVisionOcr call', async () => {
       delete process.env.KHY_IMAGE_OCR_NO_CASCADE;
       let visionCalls = 0;
       let lastOpts = null;
@@ -81,7 +81,7 @@ describe('Image Ocr no Cascade', () => {
       expect(r.text).toMatch(/VISION OK/);
   });
 
-  test('gate OFF �?legacy cascade (local fail �?aiVisionOcr) regardless of vision', async () => {
+  test('gate OFF �?legacy cascade (local fail �?aiVisionOcr) regardless of vision', async () => {
       process.env.KHY_IMAGE_OCR_NO_CASCADE = 'off';
       let visionCalls = 0;
       let visionUnbounded = false;
@@ -96,7 +96,7 @@ describe('Image Ocr no Cascade', () => {
       expect(r.success).toBe(true);
   });
 
-  test('forceAi + vision available �?straight to vision, no local OCR run', async () => {
+  test('forceAi + vision available �?straight to vision, no local OCR run', async () => {
       delete process.env.KHY_IMAGE_OCR_NO_CASCADE;
       let localCalls = 0;
       let visionCalls = 0;

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [IMPL-RPT-049] 规范族文档拆分为独立规范目录-2026-09-10.md -->
+<title>[IMPL-RPT-049] 规范族文档拆分为独立规范目录-2026-09-10 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>IMPL-RPT<span class="sep">›</span>[IMPL-RPT-049] 规范族文档拆分为独立规范目录-2026-09-10</div>
+      <header class="hero reveal"><h1>[IMPL-RPT-049] 规范族文档拆分为独立规范目录-2026-09-10</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#impl-rpt-049-规范族文档拆分为独立规范目录-2026-09-10">[IMPL-RPT-049] 规范族文档拆分为独立规范目录-2026-09-10</a></li><li class="lvl-2"><a href="#1-拆分口径">1. 拆分口径</a></li><li class="lvl-2"><a href="#2-迁移清单-42-项-node-脚本-fs-renamesync-原子迁移-无内容改动">2. 迁移清单（42 项，node 脚本 `fs.renameSync` 原子迁移，无内容改动）</a></li><li class="lvl-2"><a href="#3-引用修复-同日完成">3. 引用修复（同日完成）</a></li><li class="lvl-2"><a href="#4-重新生成的构建产物-npm-run-docs-build">4. 重新生成的构建产物（`npm run docs:build`）</a></li><li class="lvl-2"><a href="#5-验收">5. 验收</a></li><li class="lvl-2"><a href="#6-遗留-如实登记-独立一轮">6. 遗留（如实登记，独立一轮）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="impl-rpt-049-规范族文档拆分为独立规范目录-2026-09-10">[IMPL-RPT-049] 规范族文档拆分为独立规范目录-2026-09-10<a class="anchor" href="#impl-rpt-049-规范族文档拆分为独立规范目录-2026-09-10" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：记录 2026-09-10「规范族文档自 <code>docs/03_DESIGN_设计/</code> 拆分迁入 <code>docs/10_规范/</code>」<br>的完整口径：迁了什么、留下了什么、改了哪些引用、哪些产物需要重新生成。<br>用户诉求：把规范单独放到一个文件夹作为规范目录，不要和设计混在一起。</p></blockquote>
+<h2 id="1-拆分口径">1. 拆分口径<a class="anchor" href="#1-拆分口径" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>归属</th><th>范围</th><th>理由</th></tr></thead><tbody><tr><td>迁入 <code>docs/10_规范/</code></td><td>独立编号规范族 37 篇（<code>DESIGN-A11Y/A2A/ACP/API/BACKUP/CACHE/CICD/COMM/DB/DEP/DEPLOY/DOC/ENV/ERR/FE/GIT/I18N/INDEX/LOG/MEM(000–006)/MONITOR/MS/OUT/PERF(性能规范)/PRIV/REVIEW/SEC/TEST/TOOL</code>）+ 未编号协议件 2 篇（<code>FILE-FORMAT-PROTOCOL.md</code>、<code>RELIABILITY-PROTOCOL.md</code>，含 <code>.html</code> 孪生件）+ <code>[DESIGN-CICD-001] CI/</code> 目录（内含 <code>CD 规范.md</code>）</td><td>规范是跨阶段约束资产，按 <code>[DESIGN-LAY-005]</code> §3.1 归 <code>_</code> 前缀跨阶段资产轴；不属任何单一生命周期阶段</td></tr><tr><td>留在 <code>03_DESIGN_设计/</code></td><td><code>DESIGN-ARCH-001</code>–<code>090</code> 全部设计族；治理单一真源 <code>068/069/070/071/072/076/077</code>；<code>DESIGN-OTHER/RESEARCH/LEGISLATION/SIZE/PHILOSOPHY/QUICK-REF</code>；<code>[DESIGN-PERF-001] khy-cli-交互流畅度修复方案-v1</code>（设计提案，非规范）</td><td>ARCH 编号承载设计血缘与入站硬引用（<code>AGENTS.md</code>、CI 守卫按 <code>docs/03_DESIGN_设计/</code> 路径固化引用 068–071）；规范味的 ARCH 文档（015/016/019/022/023/047/072 规范化总纲/073 速查卡/079）留在 03，重编/搬移属独立一轮工作（与 03_INDEX 既有「重命名须同步改写全部入站引用」原则一致）</td></tr></tbody></table>
+<p><code>docs/10_规范</code> 不在 <code>docs-index-complete</code> 的阶段扫描范围（<code>STAGE_DIR_RE = /^\d{2}_/</code>），<br>其完整性由目录内 <code>00_INDEX_规范-总目录.md</code> 维护（该篇于 2026-09-17 并入原 <code>[DESIGN-INDEX-001] 规范索引.md</code>，见 <code>[MGMT-PLAN-009]</code> B1）；<br>主索引保留 <code>10_规范/</code> 目录入口行（总览表 + 分区行），不逐篇点名。</p>
+<h2 id="2-迁移清单-42-项-node-脚本-fs-renamesync-原子迁移-无内容改动">2. 迁移清单（42 项，node 脚本 <code>fs.renameSync</code> 原子迁移，无内容改动）<a class="anchor" href="#2-迁移清单-42-项-node-脚本-fs-renamesync-原子迁移-无内容改动" aria-label="锚点">#</a></h2>
+<ul><li>37 篇规范族 <code>.md</code>（含 2026-09-10 新增的 <code>MEM-006</code>/<code>TOOL-001</code>/<code>ACP-001</code>/<code>API-002</code> 四篇 GOV 契约冻结规范）；</li><li><code>FILE-FORMAT-PROTOCOL.{md,html}</code>、<code>RELIABILITY-PROTOCOL.{md,html}</code>；</li><li>目录 <code>[DESIGN-CICD-001] CI/</code>（含 <code>CD 规范.md</code>）。</li></ul>
+<h2 id="3-引用修复-同日完成">3. 引用修复（同日完成）<a class="anchor" href="#3-引用修复-同日完成" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>位置</th><th>修复</th></tr></thead><tbody><tr><td><code>docs/00_INDEX_文档索引.md</code></td><td>删除 03 分区中已迁出的 39 行；新增 <code>10_规范/</code> 分区（目录入口 + 7 篇要点行）；总览表新增 <code>10_规范/</code> 行并把 03 文档数从陈旧的 121 修正为 99；04 分区补 IMPL-RPT-049 行</td></tr><tr><td><code>docs/03_DESIGN_设计/00_INDEX_设计-分类索引.md</code></td><td>移除已迁出行；未编号件表删 2 协议件；新增「2026-09-10 规范族拆分」注记</td></tr><tr><td><code>docs/17_AI协作预设包/给人看/长任务提示词库-给人.md</code></td><td>3 处 <code>docs/03_DESIGN_设计/RELIABILITY-PROTOCOL.md</code> → <code>docs/10_规范/其它规范/RELIABILITY-PROTOCOL.md</code></td></tr><tr><td><code>docs/03_DESIGN_设计/[DESIGN-ARCH-077] …总纲.md</code></td><td>1 处 RELIABILITY-PROTOCOL 路径同上</td></tr><tr><td><code>scripts/release/lib/releaseGateStages.js</code></td><td>2 处注释补新真源路径（纯注释，不改逻辑）</td></tr><tr><td>被迁文档内部相对链接</td><td>扫描确认 0 处新增断链（唯一既有死链 <code>COMMUNICATION-PROTOCOL.md</code> 系 03_INDEX 早已如实登记的仓库外文件，非本次引入）</td></tr></tbody></table>
+<h2 id="4-重新生成的构建产物-npm-run-docs-build">4. 重新生成的构建产物（<code>npm run docs:build</code>）<a class="anchor" href="#4-重新生成的构建产物-npm-run-docs-build" aria-label="锚点">#</a></h2>
+<p><code>docs/19_资产/site/nav-data.js</code>、<code>docs/19_资产/site/dead-links.json</code>、<code>docs/index.html</code>、各 <code>.html</code> 孪生件<br>由 <code>scripts/docs/build_docs_site.js</code> 重新生成（该脚本注释明确「自动生成：勿手改」）；<br><code>.ai/</code> 三件套由 <code>khy metadata refresh</code> 刷新。</p>
+<h2 id="5-验收">5. 验收<a class="anchor" href="#5-验收" aria-label="锚点">#</a></h2>
+<ul><li><code>node scripts/ci/check-repo-layout.js</code> 全绿（<code>docs-index-first</code>：<code>10_规范/</code> 的 00_INDEX 居首；</li></ul>
+<p><code>docs-index-complete</code>：03 剩余文件全在主索引，<code>10_规范/</code> 不在阶段扫描范围）；</p>
+<ul><li><code>node scripts/ci/check-gov-rules.js</code> 通过（070 总纲等治理真源仍在 03 原路径）；</li><li><code>khy metadata check</code> 退出 0。</li></ul>
+<h2 id="6-遗留-如实登记-独立一轮">6. 遗留（如实登记，独立一轮）<a class="anchor" href="#6-遗留-如实登记-独立一轮" aria-label="锚点">#</a></h2>
+<ul><li>03 内规范味的 ARCH 编号文档（015/016/019/022/023/047/072 总纲/073 速查卡/079）如需并入</li></ul>
+<p><code>10_规范/</code>，须同步改写全部入站引用与 <code>.html</code> 孪生件并裁决编号轴归属，未随本次执行。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-048] 网页端 Phase1 把坏暴露出来-落地记录-2026-09-08.html"><div class="dir">← 上一篇</div><div class="ttl">[IMPL-RPT-048] 网页端 Phase 1「把坏暴露出来」落地记录-2026-09-08</div></a><a class="next" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-050] 规范简洁化与情景速查-2026-09-10.html"><div class="dir">下一篇 →</div><div class="ttl">[IMPL-RPT-050] 规范简洁化与情景速查-2026-09-10</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-049] 规范族文档拆分为独立规范目录-2026-09-10.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

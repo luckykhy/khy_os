@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 仓库层级/结构守卫 —— [DESIGN-ARCH-068] 仓库层级板块规范 的强制执行者。
+ * 仓库层级/结构守卫 —— [DESIGN-LAY-005] 仓库层级板块规范 的强制执行者。
  *
  * Usage:
  *   node scripts/ci/check-repo-layout.js
@@ -14,10 +14,10 @@
  * 层级是仓库的全局属性，只看改动集会漏掉「别人搬走了索引文件」这类破坏。
  *
  * 真源关系（改本脚本必须同步改文档，否则守卫与规范会各说各话）：
- *   - 层级清单 L0-L6 与横切层  → docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范.md 第一节
- *   - 根目录封闭白名单          → docs/08_MGMT_项目管理/[MGMT-STD-001] 项目文档结构与索引铁律规范.md 第 1.3 条
+ *   - 层级清单 L0-L6 与横切层  → docs/10_规范/DESIGN-LAY/[DESIGN-LAY-005] 仓库层级板块规范.md 第一节
+ *   - 根目录封闭白名单          → docs/08_MGMT_项目管理/MGMT-STD/[MGMT-STD-001] 项目文档结构与索引铁律规范.md 第 1.3 条
  *   - docs/ 索引首位铁律        → 同上 第 2.1/2.2 条与 CP-5
- *   - 任务入口命名与「每个入口须有脚本」→ [DESIGN-ARCH-068] 第五节
+ *   - 任务入口命名与「每个入口须有脚本」→ [DESIGN-LAY-005] 第五节
  *
  * HOW-TO-EXTEND（给维护者/小模型）：
  *   新增一条规则 = ①写一个 checkXxx(findings) 函数；②把 finding id 加进 ALL_FINDING_IDS；
@@ -60,6 +60,7 @@ const listIds = new Set(
 
 const ALL_FINDING_IDS = new Set([
   'root-whitelist',
+  'root-junk',
   'docs-index-first',
   'layer-registry',
   'dangling-task',
@@ -82,14 +83,14 @@ const BASELINE_IDS = new Set([
   'extension-path-drift',
 ]);
 
-// ── 层级清单（真源 [DESIGN-ARCH-068] 第一节）────────────────────────────────
+// ── 层级清单（真源 [DESIGN-LAY-005] 第一节）────────────────────────────────
 const LAYERS = {
   kernel: 'L0 手写 OS 内核',
   platform: 'L1 Python 启动器 + 共享包 + 交付',
   services: 'L2 Node 运行时（全部业务逻辑）',
   apps: 'L3 平台自带管理前端',
   software: 'L4 跑在平台之上的内置应用',
-  extensions: 'L5 内置拓展（随主包分发，契约见 [DESIGN-ARCH-069]）',
+  extensions: 'L5 内置拓展（随主包分发，契约见 [DESIGN-TOOL-002]）',
   tools: 'L6 独立开发者工具',
 };
 // 横切层：服务于所有层，不参与依赖判定（真源同上 第 1.2/1.4 节）。
@@ -98,11 +99,22 @@ const CROSSCUTTING = {
   scripts: '工程任务脚本',
   packaging: '打包清单与板块切分',
   _source: '加密源码快照与恢复说明',
-  // 根级例外目录（真源 [DESIGN-ARCH-068] 第 1.4 节）：不属 L0-L6，也不属
+  // 运行时横切（与上面四项的「工程横切」不同类，但同样「服务于所有层、不参与依赖
+  // 判定」，故登记在同一张表；真源 [DESIGN-LAY-005] 第 1.2 节）：
+  // 多端入口的**真源数据**——有哪些端、入口在哪、怎么起、怎么构建。
+  // 它必须待在根：Python 启动器、Node CLI、脚本与文档都要按路径读同一份表，
+  // 埋进任何一层的实现目录都会让其余读取方绕路或触碰禁止边。实现（含
+  // child_process）仍在 L2 `services/backend/src/services/entrypoints/`。
+  // 规范 [DESIGN-ARCH-117]。
+  entries: '多端入口真源数据（端矩阵 entries.json + 人读地图 + 跨平台入口壳）',
+  // 根级例外目录（真源 [DESIGN-LAY-005] 第 1.4 节）：不属 L0-L6，也不属
   // scripts/packaging/docs 这类工程横切，是历史遗留的根级实体，登记在册以免
   // 每次都被 layer-registry 判违规。
   electron: '根级 Electron 桌面壳（根 package.json 的 electron:dev 入口）',
   tests: '根级测试债务登记（DEBT.md，内容属文档性质，待迁 docs/05_TEST_测试/）',
+  '_产物': '根级工作产物暂存区（诊断报告/能力矩阵/方案文档，含非文档资产）',
+  deploy: '根级部署配置与试验（deploy/free-test/）',
+  patches: '根级第三方依赖补丁（npm 依赖的本地 patch）',
 };
 // 构建/打包工具在仓库根生成的目录，不是源码层。保持封闭集合，新增项须有对应忽略规则。
 const GENERATED_TOP_LEVEL_DIRS = new Set(['build', 'dist', 'dist-electron', 'khy_os.egg-info']);
@@ -125,7 +137,83 @@ const README_VARIANT_RE = /^README(?:\.[A-Za-z-]+)?\.md$/;
 // 只有 .md / .txt 属「说明性文件」范畴；其余扩展名（.json/.toml/.bat/.sh…）不在本规则内。
 const ROOT_DOC_EXT_RE = /\.(?:md|txt)$/i;
 
-// ── 跨层深引用（真源 [DESIGN-ARCH-068] 第二节禁止边）─────────────────────────
+// ── 规则 1b：根目录垃圾签名（CP-1 补充）──────────────────────────────────────
+// 规则 1 只扫 `.md`/`.txt` 且只扫**文件**，因此下面这些现场真实落地的残留
+// 全部在它视野之外、门禁一路绿着放行（历史 commit dafef34c 曾手工清过一批
+// 同类垃圾，说明这是复发问题，必须由门禁兜住而不是靠人记得清）：
+//   `1` / `console.log(r))` / `console.log((11441+i)+'`  → 重定向或贴错的截断名
+//   `tmp-*.js` / `tmp-*.out` / `tmp-*.txt`（20+ 个）      → 临时探测产物
+//   `_flagcheck.txt` / `_gitst.txt` / `_p*.txt`            → 下划线开头的一次性笔记
+//   `.coverage` / `.tmp_startup_lines.txt`                 → 构建工具残留
+//   `-p/`                                                  → shell 事故目录
+//
+// 取向是**高精度签名**：只抓「明显是临时/事故产物」的名字，不试图枚举合法根文件
+// （那需要一个封闭白名单 —— 属方案文档 Phase 2，可随时收严）。
+const ROOT_JUNK_FILE_RES = [
+  /^tmp[-_.]/i, // tmp-x / tmp_x / tmp.x
+  /^_/, // _flagcheck.txt / _gitst.txt / _p2.txt
+  /^\d+$/, // 1 之类纯数字（重定向事故）
+  /^\.(?:tmp|coverage|nyc_output|eslintcache|stylelintcache)/i, // .coverage / .tmp_*
+  /[-+]{1,}$/, // 以运算符结尾（命令被行尾截断的痕迹）
+  /[(){}'"`\s]/, // 含 shell/jest 元字符：合法仓库文件名不会带这些
+];
+// 目录只吃更窄的签名：`_产物`/`对齐` 这类是**未登记**（layer-registry 负责），
+// 不是垃圾，不能在这里误伤。
+const ROOT_JUNK_DIR_RES = [/^-/, /^tmp[-_.]/i, /[(){}'"`\s]/];
+
+function _matchesAny(res, name) {
+  return res.some((re) => re.test(name));
+}
+
+/** 根目录条目名是否命中垃圾签名。绝不抛。 */
+function isRootJunkName(name) {
+  try {
+    const n = String(name == null ? '' : name);
+    if (!n) {
+      return false;
+    }
+    return _matchesAny(ROOT_JUNK_FILE_RES, n);
+  } catch {
+    return false;
+  }
+}
+
+/** 从 readdir 结果里挑出垃圾条目名（文件与目录用各自的签名）。绝不抛。 */
+function findRootJunkEntries(entries) {
+  try {
+    if (!Array.isArray(entries)) {
+      return [];
+    }
+    return entries
+      .filter((e) => e && typeof e.name === 'string' && e.name)
+      .filter((e) =>
+        e.isDirectory ? _matchesAny(ROOT_JUNK_DIR_RES, e.name) : isRootJunkName(e.name)
+      )
+      .map((e) => e.name)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+function checkRootJunk(findings) {
+  const offenders = findRootJunkEntries(
+    fs.readdirSync(repoRoot, { withFileTypes: true }).map((e) => ({
+      name: e.name,
+      isDirectory: e.isDirectory(),
+    }))
+  );
+  if (offenders.length === 0) return;
+  findings.push({
+    id: 'root-junk',
+    severity: 'error',
+    message: `根目录有 ${offenders.length} 个临时/事故残留（[MGMT-STD-001] 第 1.3 条，CP-1 补充）。`,
+    detail: `删除或收容进 .khy/tmp 后重跑：${offenders.join(', ')}`,
+    full: offenders,
+  });
+}
+
+// ── 跨层深引用（真源 [DESIGN-LAY-005] 第二节禁止边）─────────────────────────
 // workspace 根：一个 require 若从文件所在 workspace 根逃出去，就是跨包深引用。
 const WORKSPACE_ROOTS = [
   'services/backend',
@@ -179,7 +267,7 @@ function checkRootWhitelist(findings) {
 }
 
 // ── 规则 2：docs/ 分类目录须有排序首位的 00_INDEX_*（第 2.1/2.2 条，CP-5）────
-// 只查 docs/ 的一级子目录，且只查「直接含 .md 的目录」——这样 _assets/（纯资产）
+// 只查 docs/ 的一级子目录，且只查「直接含 .md 的目录」——这样 19_资产/（纯资产）
 // 与 _ref/（爬取样本）不会被误判，无需维护特例名单。
 function checkDocsIndexFirst(findings) {
   const docsRoot = path.join(repoRoot, 'docs');
@@ -230,12 +318,26 @@ function checkDocsIndexFirst(findings) {
 // 先把这三种还原再做纯文本包含判断。只要文件名在页面任意处出现（链接或正文提及）
 // 就算「已列」——本规则查的是**可达性**，不是链接语法是否规范。
 const MASTER_INDEX_REL = 'docs/00_INDEX_文档索引.md';
-const STAGE_DIR_RE = /^\d{2}_/;
+// 阶段目录 = `01`–`09`（生命周期阶段段）。`10`–`19` 是**跨阶段段**（规范/报告/模板/传承/
+// 维护者/维护记录/设计模式/AI协作预设包/归档/资产），不属于任何单一阶段，完整性由各自目录内的
+// `00_INDEX_*` 就近索引维护（`docs-index-first` 仍会查它们有没有索引），**不要求**在主索引逐篇点名。
+// 真源：`[DESIGN-LAY-005]` §3.1「01–09 阶段 / 10–19 跨阶段」。
+// 2026-09-16 前这批目录用 `_` 前缀，天然不被本正则命中；双轴收敛为编号轴后，
+// 若仍用 /^\d{2}_/ 会把它们误判为阶段目录（实测一次冒出 78 条假漏链），故收窄为 0[1-9]。
+const STAGE_DIR_RE = /^0[1-9]_/;
 // 02/09 两个小白向目录**刻意不**要求主索引逐篇点名：它们的可达性由另一条守卫
 // scripts/docs/check_beginner_docs.js（`npm run docs:check-beginner`）保证——
 // 禁孤儿页、禁死链、禁无导航死胡同页，比「主索引里有没有这一行」更强。
 // 主索引只链它们的目录入口。改动此豁免须同步改 [MGMT-STD-001] CP-3 的落地说明。
 const MASTER_INDEX_EXEMPT_DIRS = new Set(['02_CONCEPTS_概念入门', '09_STORY_修仙学AI']);
+
+// B8（2026-09-18）去重写法：主索引**不再被要求逐篇点名**阶段文档。
+// 覆盖判据放宽为「主索引里有」**或**「本阶段目录自己的 00_INDEX_* 就近索引里有」——
+// 后者才是清单的真源，主索引退回「导读」角色（[MGMT-PLAN-009] §2 五层骨架 L-D0）。
+// 这样做的收益：新增阶段文档只要登记就近索引即合规，不必再往主索引里塞一行，
+// 主索引不再因「必须列举全部」而无限膨胀、也不必与就近索引重复同一份清单。
+// 仍会亮红的只剩「两处都没有」的真漏链。被就近索引接管的份数另计入
+// `docs-index-delegated`（观察口径，不入基线、不判违规）。
 
 function decodeIndexText(raw) {
   return raw
@@ -248,6 +350,7 @@ function checkDocsIndexComplete(findings, counts) {
   const masterPath = path.join(repoRoot, MASTER_INDEX_REL);
   const docsRoot = path.join(repoRoot, 'docs');
   counts['docs-index-complete'] = 0;
+  counts['docs-index-delegated'] = 0;
   if (!fs.existsSync(masterPath) || !fs.existsSync(docsRoot)) return;
 
   const text = decodeIndexText(fs.readFileSync(masterPath, 'utf8'));
@@ -260,13 +363,26 @@ function checkDocsIndexComplete(findings, counts) {
 
   const missing = [];
   const perStage = {};
+  let delegated = 0;
   for (const dir of stageDirs) {
+    const dirPath = path.join(docsRoot, dir);
+    // 就近索引：本阶段目录自己的 00_INDEX_*.md —— 阶段内清单的真源（B8）。
+    const nearbyText = fs
+      .readdirSync(dirPath)
+      .filter(name => name.toLowerCase().endsWith('.md') && name.startsWith('00_INDEX_'))
+      .map(name => decodeIndexText(fs.readFileSync(path.join(dirPath, name), 'utf8')))
+      .join('\n');
     let dirMissing = 0;
-    for (const name of fs.readdirSync(path.join(docsRoot, dir)).sort()) {
+    for (const name of fs.readdirSync(dirPath).sort()) {
       if (!name.toLowerCase().endsWith('.md')) continue;
       // 就近索引自身不必被主索引逐个点名（主索引按阶段分区链接正文文档）。
       if (name.startsWith('00_INDEX_')) continue;
       if (text.includes(name)) continue;
+      // 就近索引已收录 → 视为主索引的合法委派，不再算漏链（B8 去重）。
+      if (nearbyText.includes(name)) {
+        delegated += 1;
+        continue;
+      }
       missing.push(`docs/${dir}/${name}`);
       dirMissing += 1;
     }
@@ -274,6 +390,7 @@ function checkDocsIndexComplete(findings, counts) {
   }
 
   counts['docs-index-complete'] = missing.length;
+  counts['docs-index-delegated'] = delegated;
   if (missing.length === 0) return;
 
   const breakdown = Object.entries(perStage)
@@ -282,10 +399,10 @@ function checkDocsIndexComplete(findings, counts) {
   findings.push({
     id: 'docs-index-complete',
     severity: 'warning',
-    message: `${missing.length} 份阶段文档没有出现在主索引 ${MASTER_INDEX_REL} 里（CP-3 漏链）。`,
+    message: `${missing.length} 份阶段文档既不在主索引 ${MASTER_INDEX_REL}、也不在本阶段就近 00_INDEX_* 里（CP-3 漏链）。`,
     detail:
-      `分布：${breakdown}。就近 00_INDEX_* 比主索引完整，排查时以就近索引为准；` +
-      `全量名单用 --list=docs-index-complete。`,
+      `分布：${breakdown}。另有 ${delegated} 份由就近索引接管（主索引已不必逐篇点名，B8 去重）；` +
+      `排查时以就近索引为准；全量名单用 --list=docs-index-complete。`,
     full: missing,
   });
 }
@@ -310,20 +427,20 @@ function checkLayerRegistry(findings) {
     message: `${unregistered.length} 个顶层目录未登记在层级清单里。`,
     detail:
       `${unregistered.join(', ')} —— 要新增顶层目录，先改 ` +
-      `docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范.md 第一节，再改本脚本的 LAYERS / CROSSCUTTING。`,
+      `docs/10_规范/DESIGN-LAY/[DESIGN-LAY-005] 仓库层级板块规范.md 第一节，再改本脚本的 LAYERS / CROSSCUTTING。`,
   });
 }
 
 // ── 规则 8：extensions/ 下每个目录都须遵守拓展契约 ────────────────────────
-// 真源 docs/03_DESIGN_设计/[DESIGN-ARCH-069] 拓展契约与核心边界规范.md 第三节。
+// 真源 docs/10_规范/其它规范/[DESIGN-TOOL-002] 拓展契约与核心边界规范.md 第三节。
 // 字段清单同时在 services/backend/src/services/extensions/extensionRoots.js 落地；
-// 这里刻意**不 require** 那个模块 —— 守卫属横切层，按 [DESIGN-ARCH-068] 第二节
+// 这里刻意**不 require** 那个模块 —— 守卫属横切层，按 [DESIGN-LAY-005] 第二节
 // 「任何层 → L5/L6」的禁止边，scripts/ 只许按路径操作，不许 import L2 的实现。
 // 代价是两处各有一份字段名，收益是守卫不会因为被守卫的代码坏掉而一起坏掉。
 const EXTENSION_MANIFEST = 'khy.extension.json';
 const EXTENSION_KINDS = new Set(['runtime', 'ide-bridge', 'asset', 'toolchain', 'reference']);
 
-// 仓库自己的分类名白名单（真源 [DESIGN-ARCH-069] §2.3 的表；来自用户原话枚举的六类：
+// 仓库自己的分类名白名单（真源 [DESIGN-TOOL-002] §2.3 的表；来自用户原话枚举的六类：
 // tool / plugin / scripts / mcp / software / 协议）。
 //
 // 加载器**不**认这份表 —— 它只认「有没有 manifest」，任何空壳目录都能当分类（见
@@ -348,7 +465,7 @@ function listSubdirs(dir) {
 /**
  * 枚举 extensions/ 下的拓展目录，深度与 extensionRoots.discover() 一致（两层，§2.3）。
  *
- * 刻意重复实现而不 require 那个模块：守卫属横切层，按 [DESIGN-ARCH-068] 第二节的禁止边
+ * 刻意重复实现而不 require 那个模块：守卫属横切层，按 [DESIGN-LAY-005] 第二节的禁止边
  * scripts/ 不许 import L2 的实现 —— 代价是两份深度逻辑，收益是守卫不会因为被守卫的
  * 代码坏掉而一起坏掉。两处的一致性由 contribToolLifecycle.test.js 的分类用例组兜住。
  *
@@ -502,14 +619,14 @@ function checkExtensionContract(findings, counts) {
     message: `${violations.length} 处 extensions/ 目录不合拓展契约。`,
     detail:
       `${violations.slice(0, 3).join('；')}${violations.length > 3 ? ' …' : ''} —— 契约见 ` +
-      `docs/03_DESIGN_设计/[DESIGN-ARCH-069] 拓展契约与核心边界规范.md 第三节；` +
+      `docs/10_规范/其它规范/[DESIGN-TOOL-002] 拓展契约与核心边界规范.md 第三节；` +
       `全量清单用 --list=extension-contract。`,
     full: violations,
   });
 }
 
 // ── 规则：核里不得硬编码拓展 id ──────────────────────────
-// 真源 [DESIGN-ARCH-069] §1.3 第四条：「核里**不允许**出现任何拓展 id 的硬编码分支」。
+// 真源 [DESIGN-TOOL-002] §1.3 第四条：「核里**不允许**出现任何拓展 id 的硬编码分支」。
 //
 // 为什么需要机器强制：这条此前靠人守，而人没守住 —— khy-markdown 一个拓展就在核里
 // 积了**三份**互不认识的定位逻辑，其中 docs.js 那份在拓展迁目录后指向空气，
@@ -675,13 +792,47 @@ function checkExtensionIdHardcode(findings, counts) {
     detail:
       `${violations.slice(0, 3).join('；')}${violations.length > 3 ? ' …' : ''} —— ` +
       `改用服务名定位（manifest 的 provides + extensionRoots.findProvider），契约见 ` +
-      `docs/03_DESIGN_设计/[DESIGN-ARCH-069] 拓展契约与核心边界规范.md §1.3；` +
+      `docs/10_规范/其它规范/[DESIGN-TOOL-002] 拓展契约与核心边界规范.md §1.3；` +
       `全量清单用 --list=extension-id-hardcode。`,
     full: violations,
   });
 }
 
 // ── 规则 4：npm run 目标须能解析到已定义脚本 ──────────────────────────────
+
+// 非目标名的「引用」形态。规则本意是「文档承诺了一条命令，它必须真的存在」，
+// 但 `npm run <token>` 这个字面形态在四类语境里并不构成承诺，收进集合只会制造
+// 误报（公理 A4：误报比漏报更贵）。这四类全部有实证（2026-09-19 全量 98 条分类）：
+//   ① 通配符截断   `npm run check:*` → 正则 `[a-zA-Z0-9:_-]+` 吃到 `check:`；
+//      仓内实例：check: / test: / portable: / quality: / memory:restore:
+//   ② 占位符与夹具  文档里的 `npm run X`（[DESIGN-LAY-005] §5.1 自己举的反例）、
+//      测试夹具里的假命令名（scripts/tests/buildDepsCleanup.test.js 用 `npm run x`、
+//      `npm run rebuild-me`；check-agent-docs.js 用 `npm run does-not-exist`）。
+//      **夹具的假名被当成真违规**，这是最不该发生的误报。
+//   ③ 尖括号形式   `npm run <目标>` —— [DESIGN-LAY-005] §5.1 指定的占位符写法。
+//   ④ 非命令语境   诊断/对比报告里描述**别人**的做法（[MGMT-RPT-005] 写
+//      「KHY 缺 CI pipeline | npm run test:ci」是描述缺失，不是本仓承诺）。
+//      这一类靠名字无法判别，仍由基线棘轮兜底，不在此处排除。
+const TASK_NON_TARGETS = new Set([
+  // ② 占位符 / 测试夹具里的假命令名
+  'X', 'x',
+  'does-not-exist',
+  'rebuild-me',
+  'targets',
+  'foo', 'bar', 'baz', // 常见的占位示例名
+]);
+
+function isNonTargetTask(target) {
+  if (!target) return true;
+  // ① 通配符/示例被截断：`check:*`、`test:<单场景>` 一律留下尾冒号
+  if (target.endsWith(':')) return true;
+  // ③ 尖括号占位：`<目标>`、`<name>`
+  if (/^<.*>$/.test(target)) return true;
+  // ② 明确的占位/夹具名单
+  if (TASK_NON_TARGETS.has(target)) return true;
+  return false;
+}
+
 function collectDefinedScripts() {
   const defined = new Set();
   const manifests = git(['ls-files', '*package.json'])
@@ -710,6 +861,9 @@ function collectReferencedTasks() {
     const target = match[1];
     // `npm run --workspace …` 之类的 flag 形态不是目标名。
     if (target.startsWith('-')) continue;
+    // 通配符截断 / 占位符 / 测试夹具里的假命令名 —— 不是「文档承诺了这条命令」，
+    // 详见 isNonTargetTask() 上方注释。
+    if (isNonTargetTask(target)) continue;
     referenced.set(target, (referenced.get(target) || 0) + 1);
   }
   return referenced;
@@ -726,7 +880,7 @@ function checkDanglingTasks(findings, counts) {
   findings.push({
     id: 'dangling-task',
     severity: 'warning',
-    message: `${dangling.length} 个被引用的 npm run 目标没有对应脚本定义（[DESIGN-ARCH-068] 第 5.1 节）。`,
+    message: `${dangling.length} 个被引用的 npm run 目标没有对应脚本定义（[DESIGN-LAY-005] 第 5.1 节）。`,
     detail: `${preview}${dangling.length > 12 ? ` …（共 ${dangling.length} 个，全量用 --list=dangling-task）` : ''}`,
     full: dangling,
   });
@@ -803,7 +957,7 @@ function isTestFixture(relFile) {
     || /(?:^|\.)test\.[cm]?js$/.test(relFile);
 }
 
-// ── 拓展路径漂移（[DESIGN-ARCH-069] §4.1 的机器化）─────────────────────────
+// ── 拓展路径漂移（[DESIGN-TOOL-002] §4.1 的机器化）─────────────────────────
 // 为什么单列一条而不是靠 unresolved-require：那条只看 `../../` 起步的深层 require，
 // 于是漏掉两类「搬目录搬坏了」的典型：
 //   ① 单层 `../lib/x` —— 拓展从 scripts/<子目录>/ 挪到 extensions/scripts/<id>/ 后，
@@ -1001,7 +1155,7 @@ function checkCrossLayerRequires(findings, counts) {
     findings.push({
       id: 'cross-layer-require',
       severity: 'warning',
-      message: `${offenders.length} 处跨 workspace 的深层相对 require（[DESIGN-ARCH-068] 第二节禁止边）。`
+      message: `${offenders.length} 处跨 workspace 的深层相对 require（[DESIGN-LAY-005] 第二节禁止边）。`
         + `${shimCount > 0 ? ` 另有 ${shimCount} 处纯 re-export 壳文件按兼容别名豁免。` : ''}`,
       detail: `应改为 workspace 包名（如 @khy/shared）。首例：${offenders.slice(0, 3).join(' | ')}`,
       full: offenders,
@@ -1040,6 +1194,7 @@ function main() {
   const counts = {};
 
   checkRootWhitelist(findings);
+  checkRootJunk(findings);
   checkDocsIndexFirst(findings);
   checkDocsIndexComplete(findings, counts);
   checkLayerRegistry(findings);
@@ -1086,7 +1241,7 @@ function main() {
     return 'warning';
   };
 
-  console.log('check-repo-layout: 层级/结构守卫（真源 [DESIGN-ARCH-068] + [MGMT-STD-001]）');
+  console.log('check-repo-layout: 层级/结构守卫（真源 [DESIGN-LAY-005] + [MGMT-STD-001]）');
   console.log(`counts: ${JSON.stringify(counts)}`);
   if (baseline && baseline.counts) {
     console.log(`baseline: ${JSON.stringify(baseline.counts)} (updated ${baseline.updated || 'n/a'})`);
@@ -1119,4 +1274,16 @@ function main() {
   }
 }
 
-main();
+// 只在作为 CLI 直接运行时才执行 —— main() 会在有 error 时 process.exit(1)，
+// 若在 require 时无条件跑，任何想复用下面这些纯函数的测试都会被直接终止进程。
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  isRootJunkName,
+  findRootJunkEntries,
+  checkRootJunk,
+  ROOT_JUNK_FILE_RES,
+  ROOT_JUNK_DIR_RES,
+};

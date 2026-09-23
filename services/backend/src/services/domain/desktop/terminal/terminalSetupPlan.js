@@ -10,8 +10,11 @@
  * 插入换行(useTextInput.js),但这依赖**终端本身**把 Shift+Enter 作为一个**可区分的转义序列**
  * 投递给 khy。多数终端默认不投递,需要在终端/编辑器配置里装一条「Shift+Enter → 发送 ESC+CR」的
  * 键绑定。CC 的 terminalSetup 把这件事自动化;其真正有价值的「背后逻辑」是一张分类表:
- *   ① 原生支持 CSI u / Kitty 键盘协议的终端(Ghostty/Kitty/iTerm2/WezTerm/Warp)—— **无需任何配置**;
- *   ② 已知需配置的终端(Apple Terminal / VSCode·Cursor·Windsurf / Alacritty / Zed)—— 各有其
+ *   ① 原生支持 CSI u / Kitty 键盘协议终端(Ghostty/Kitty/iTerm2/WezTerm/Warp)——**终端侧**能送出
+ *      可区分的 Shift+Enter,但 **khy 侧尚未向终端申请该协议**(ink 的 kittyKeyboard 是 opt-in,
+ *      `render()` 未传,见 BUG-35 实测),所以这一档今天同样需要 ② 的绑定才能换行;真接通协议后
+ *      它们才是「零配置」;
+ *   ② 已知需配置的终端(Apple Terminal / VSCode·Cursor·Windsurf / Alacritty / Zed / Windows Terminal)—— 各有其
  *      配置文件位置与要写入的绑定片段;
  *   ③ 其余未知终端 —— 给出通用引导。
  * 本叶子就是这张表 + 路径推导 + 片段生成。**khy 刻意只产出「方案」(路径 + 片段 + 步骤),由薄壳
@@ -26,7 +29,9 @@
 
 const path = require('path');
 
-// 原生支持 CSI u / Kitty 键盘协议的终端:khy TUI 已能解析,无需任何配置。
+// 终端侧支持 CSI u / Kitty 键盘协议的终端。注意:协议须由**应用**申请(ink:
+// `render({ kittyKeyboard })`,默认不申请),khy 当前未开启,故本档只表示「终端有能力」
+// 而非「khy 已能解析」—— 见 planTerminalSetup 的 native 分支 reason 与 BUG-35。
 // 键为 detectTerminal().name 归一(小写)后的取值;值为展示名。
 const NATIVE_CSIU_TERMINALS = Object.freeze({
   ghostty: 'Ghostty',
@@ -60,6 +65,13 @@ const _ZED_SNIPPET = `[
   }
 ]`;
 
+// Windows Terminal(settings.json)。sendInput 自 WT 1.11 起要求 action 对象写法。
+const _WINDOWS_TERMINAL_SNIPPET = `{
+  "keybindings": [
+    { "command": { "action": "sendInput", "input": "${_ESC_CR}" }, "keys": "shift+enter" }
+  ]
+}`;
+
 // 收敛到 utils/isOffValue 单一真源(逐字节委托,调用点不变)
 const _falsy = require('../../../../utils/isOffValue');
 
@@ -89,6 +101,23 @@ function _alacrittyConfigPath(homedir, platformId, env) {
     }
   }
   return path.join(homedir, '.config', 'alacritty', 'alacritty.toml');
+}
+
+/**
+ * Windows Terminal 的 settings.json 路径。两种安装方式路径不同,以微软商店版为默认
+ * (装机量最大),免商店版(%LOCALAPPDATA%\Microsoft\Windows Terminal)在步骤里并列给出。
+ * LOCALAPPDATA 缺失(非 win32 / 精简环境)→ null,薄壳只给片段不给路径。
+ */
+function _windowsTerminalConfigPath(env) {
+  const base = env && env.LOCALAPPDATA;
+  if (!(base && String(base).trim())) return null;
+  return path.join(
+    String(base).trim(),
+    'Packages',
+    'Microsoft.WindowsTerminal_8wekyb3d8bbwe',
+    'LocalState',
+    'settings.json'
+  );
 }
 
 /**
@@ -143,7 +172,7 @@ function planTerminalSetup(input = {}) {
       displayName: NATIVE_CSIU_TERMINALS[name],
       category: 'native',
       needsSetup: false,
-      reason: '该终端原生支持 CSI u / Kitty 键盘协议,khy TUI 可直接解析 Shift+Enter,无需任何配置。',
+      reason: '该终端支持 CSI u / Kitty 键盘协议;但键盘协议要由应用向终端申请,khy 目前未申请(ink 的 kittyKeyboard 为 opt-in),故 Shift+Enter 今天仍与 Enter 送出同一字节。现在可用的换行键:Ctrl + J(送裸 LF),或在终端里自配一条「Shift+Enter 发送 ESC+CR」绑定。',
     });
   }
 
@@ -227,13 +256,35 @@ function planTerminalSetup(input = {}) {
     });
   }
 
+  // Windows Terminal(detectTerminal 给 'windows-terminal';TERM_PROGRAM 在时给 'windows terminal')。
+  // 实测(BUG-35, WT 1.24):Shift+Enter 与 Enter 同送 `\r`,Ctrl+Enter 被终端自用为全屏、
+  // 零字节送达 —— 不装这条绑定,本机可直接用的换行键只有 Ctrl + J(送裸 LF)。
+  if (name === 'windows-terminal' || name === 'windows terminal') {
+    return Object.assign(base, {
+      displayName: 'Windows Terminal',
+      category: 'needs-setup',
+      needsSetup: true,
+      method: 'windows-terminal-keybindings',
+      reason:
+        'Windows Terminal 默认把 Shift+Enter 送成与 Enter 无异的 `\\r`,需在 settings.json 加一条 sendInput 绑定;不配置时用 Ctrl + J 换行(实测可用)。Alt + Enter 在本终端被自用为全屏切换,只送回一个孤立 ESC,不能当换行键。',
+      configPath: _windowsTerminalConfigPath(env),
+      snippet: _WINDOWS_TERMINAL_SNIPPET,
+      steps: [
+        '按 Ctrl+, (逗号) 打开 Windows Terminal 设置 → 右上角「打开 JSON 文件」。',
+        '免商店版的路径也可能是 %LOCALAPPDATA%\\Microsoft\\Windows Terminal\\settings.json。',
+        '把下面片段并入该 JSON 的顶层(与 "profiles" 同级;若已有 keybindings 数组,把对象追加进去即可)。',
+        '保存后新开一个标签页生效 —— 此后 Shift+Enter 会向 khy 投递 ESC+CR,即插入换行。',
+      ],
+    });
+  }
+
   // ③ 未知终端 —— 通用引导。
   return Object.assign(base, {
     displayName: name || '未知终端',
     category: 'unknown',
     needsSetup: false,
     reason:
-      '未识别该终端是否需要 Shift+Enter 配置。多数现代终端原生支持;若 Shift+Enter 无法换行,请查阅终端文档配置「Shift+Enter 发送 ESC+CR(\\u001b\\r)」,或改用换行的替代键。',
+      '未识别该终端是否需要 Shift+Enter 配置。多数终端默认把 Shift+Enter 送成与 Enter 同一条字节(实测:Windows Terminal 1.24 即如此),不要假定原生可用。可先试 Ctrl + J(送裸 LF,khy 直接插换行),或查阅终端文档配置「Shift+Enter 发送 ESC+CR(\\u001b\\r)」。',
   });
 }
 

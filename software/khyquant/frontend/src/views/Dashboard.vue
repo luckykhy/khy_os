@@ -663,12 +663,14 @@ const loadDashboardData = async () => {
     if (response.data.success) {
       const data = response.data.data;
       
-      if (import.meta.env.DEV) { console.log('📊 后端返回的数据:', { }
-        stats: data.stats,
-        strategiesCount: data.recentStrategies?.length,
-        backtestsCount: data.recentBacktests?.length,
-        backtests: data.recentBacktests
-      })
+      if (import.meta.env.DEV) {
+        console.log('📊 后端返回的数据:', {
+          stats: data.stats,
+          strategiesCount: data.recentStrategies?.length,
+          backtestsCount: data.recentBacktests?.length,
+          backtests: data.recentBacktests
+        })
+      }
       
       // 更新统计数据
       stats.value = data.stats
@@ -693,11 +695,13 @@ const loadDashboardData = async () => {
         createdAt: formatDate(b.createdAt)
       }))
       
-      if (import.meta.env.DEV) { console.log('✅ 主页数据加载成功:', { }
-        strategies: recentStrategies.value.length,
-        backtests: recentBacktests.value.length,
-        stats: stats.value
-      })
+      if (import.meta.env.DEV) {
+        console.log('✅ 主页数据加载成功:', {
+          strategies: recentStrategies.value.length,
+          backtests: recentBacktests.value.length,
+          stats: stats.value
+        })
+      }
     }
   } catch (error) {
     console.error('加载主页数据失败:', error)
@@ -758,8 +762,11 @@ const viewStrategy = (strategy) => {
 }
 
 // 查看回测详情
+// NOTE: there is no standalone backtest-analysis route; backtest detail is a
+// tab of the /trading route (meta.tab=backtest), so push there with the tab
+// + strategy query instead of the dead /backtest-analysis path.
 const viewBacktest = (backtest) => {
-  router.push(`/backtest-analysis?id=${backtest.id}`)
+  router.push({ path: '/trading', query: { tab: 'backtest', id: backtest.id } })
 }
 
 // 查看标的详情

@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: MINIAPP_WEBVIEW_SINGLETON.md -->
+<title>小程序 WebView 单例管理规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../docs/index.html">首页</a><span class="sep">›</span>.ai<span class="sep">›</span>小程序 WebView 单例管理规范</div>
+      <header class="hero reveal"><h1>小程序 WebView 单例管理规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#小程序-webview-单例管理规范">小程序 WebView 单例管理规范</a></li><li class="lvl-2"><a href="#1-变量命名规范">1. 变量命名规范</a></li><li class="lvl-3"><a href="#当前命名-统一使用">当前命名（统一使用）</a></li><li class="lvl-3"><a href="#废弃命名-不再使用">废弃命名（不再使用）</a></li><li class="lvl-2"><a href="#2-单例管理器接口">2. 单例管理器接口</a></li><li class="lvl-2"><a href="#3-webviewid-命名空间">3. webviewId 命名空间</a></li><li class="lvl-3"><a href="#格式">格式</a></li><li class="lvl-3"><a href="#示例">示例</a></li><li class="lvl-3"><a href="#生成函数">生成函数</a></li><li class="lvl-3"><a href="#理由">理由</a></li><li class="lvl-2"><a href="#4-多实例场景">4. 多实例场景</a></li><li class="lvl-3"><a href="#架构">架构</a></li><li class="lvl-3"><a href="#场景处理">场景处理</a></li><li class="lvl-2"><a href="#5-canvasprofile-hook">5. CanvasProfile Hook</a></li><li class="lvl-3"><a href="#接口定义">接口定义</a></li><li class="lvl-3"><a href="#调用点">调用点</a></li><li class="lvl-2"><a href="#6-安全检查清单">6. 安全检查清单</a></li><li class="lvl-2"><a href="#7-实施状态">7. 实施状态</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="小程序-webview-单例管理规范">小程序 WebView 单例管理规范<a class="anchor" href="#小程序-webview-单例管理规范" aria-label="锚点">#</a></h1>
+<blockquote><p>版本：v2.0  <br>更新日期：2026-09-05  <br>关联项目：khyos-tauri（Windows 桌面 APP）</p></blockquote>
+<hr>
+<h2 id="1-变量命名规范">1. 变量命名规范<a class="anchor" href="#1-变量命名规范" aria-label="锚点">#</a></h2>
+<h3 id="当前命名-统一使用">当前命名（统一使用）<a class="anchor" href="#当前命名-统一使用" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>变量名</th><th>类型</th><th>用途</th></tr></thead><tbody><tr><td><code>webviewId</code></td><td><code>string</code></td><td>当前 webview 的唯一标识，如 <code>&quot;instance-a::miniapp-trade&quot;</code></td></tr><tr><td><code>webviewInstance</code></td><td>`BrowserView \</td><td>null`</td></tr></tbody></table>
+<h3 id="废弃命名-不再使用">废弃命名（不再使用）<a class="anchor" href="#废弃命名-不再使用" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>废弃名</th><th>替代为</th><th>状态</th></tr></thead><tbody><tr><td><code>miniappWebviewId</code></td><td><code>webviewId</code></td><td>❌ 已废弃</td></tr><tr><td><code>miniappWebview</code></td><td><code>webviewInstance</code></td><td>❌ 已废弃</td></tr><tr><td><code>activeWebview</code></td><td><code>webviewInstance</code></td><td>❌ 已废弃</td></tr><tr><td><code>miniAppWebview</code></td><td><code>webviewInstance</code></td><td>❌ 已废弃</td></tr></tbody></table>
+<hr>
+<h2 id="2-单例管理器接口">2. 单例管理器接口<a class="anchor" href="#2-单例管理器接口" aria-label="锚点">#</a></h2>
+<pre><code class="language-js"><span class="hljs-comment">// webviewSingleton.js</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">WebViewSingleton</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">webviewId</span> = <span class="hljs-literal">null</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">webviewInstance</span> = <span class="hljs-literal">null</span>;
+  }
+  
+  <span class="hljs-comment">/**
+   * 获取或创建 webview
+   * <span class="hljs-doctag">@param</span> {<span class="hljs-type">string</span>} <span class="hljs-variable">id</span> - webviewId（格式：&quot;{instanceId}::{miniappId}&quot;）
+   * <span class="hljs-doctag">@param</span> {<span class="hljs-type">object</span>} <span class="hljs-variable">opts</span> - 创建选项
+   * <span class="hljs-doctag">@returns</span> {<span class="hljs-type">BrowserView</span>}
+   */</span>
+  <span class="hljs-title function_">acquire</span>(<span class="hljs-params">id, opts</span>) {
+    <span class="hljs-keyword">if</span> (<span class="hljs-variable language_">this</span>.<span class="hljs-property">webviewId</span> === id 
+        &amp;&amp; <span class="hljs-variable language_">this</span>.<span class="hljs-property">webviewInstance</span> 
+        &amp;&amp; !<span class="hljs-variable language_">this</span>.<span class="hljs-property">webviewInstance</span>.<span class="hljs-property">isDestroyed</span>?.()) {
+      <span class="hljs-keyword">return</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">webviewInstance</span>;
+    }
+    <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">release</span>();
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">webviewId</span> = id;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">webviewInstance</span> = <span class="hljs-title function_">createWebview</span>(opts);
+    <span class="hljs-keyword">return</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">webviewInstance</span>;
+  }
+  
+  <span class="hljs-comment">/**
+   * 释放当前 webview
+   */</span>
+  <span class="hljs-title function_">release</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-keyword">if</span> (<span class="hljs-variable language_">this</span>.<span class="hljs-property">webviewInstance</span> &amp;&amp; !<span class="hljs-variable language_">this</span>.<span class="hljs-property">webviewInstance</span>.<span class="hljs-property">isDestroyed</span>?.()) {
+      <span class="hljs-variable language_">this</span>.<span class="hljs-property">webviewInstance</span>.<span class="hljs-title function_">destroy</span>();
+    }
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">webviewId</span> = <span class="hljs-literal">null</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">webviewInstance</span> = <span class="hljs-literal">null</span>;
+  }
+  
+  <span class="hljs-comment">/**
+   * 检查是否持有某个 webview
+   */</span>
+  <span class="hljs-title function_">holds</span>(<span class="hljs-params">id</span>) {
+    <span class="hljs-keyword">return</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">webviewId</span> === id 
+      &amp;&amp; <span class="hljs-variable language_">this</span>.<span class="hljs-property">webviewInstance</span> 
+      &amp;&amp; !<span class="hljs-variable language_">this</span>.<span class="hljs-property">webviewInstance</span>.<span class="hljs-property">isDestroyed</span>?.();
+  }
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> webviewSingleton = <span class="hljs-keyword">new</span> <span class="hljs-title class_">WebViewSingleton</span>();</code></pre>
+<hr>
+<h2 id="3-webviewid-命名空间">3. webviewId 命名空间<a class="anchor" href="#3-webviewid-命名空间" aria-label="锚点">#</a></h2>
+<h3 id="格式">格式<a class="anchor" href="#格式" aria-label="锚点">#</a></h3>
+<pre><code>{instanceId}::{miniappId}</code></pre>
+<h3 id="示例">示例<a class="anchor" href="#示例" aria-label="锚点">#</a></h3>
+<pre><code>instance-a::miniapp-trade
+instance-b::miniapp-trade
+instance-a::miniapp-analysis</code></pre>
+<h3 id="生成函数">生成函数<a class="anchor" href="#生成函数" aria-label="锚点">#</a></h3>
+<pre><code class="language-js"><span class="hljs-keyword">function</span> <span class="hljs-title function_">makeWebviewId</span>(<span class="hljs-params">miniappId, instanceId</span>) {
+  <span class="hljs-keyword">return</span> <span class="hljs-string">`<span class="hljs-subst">${instanceId}</span>::<span class="hljs-subst">${miniappId}</span>`</span>;
+}</code></pre>
+<h3 id="理由">理由<a class="anchor" href="#理由" aria-label="锚点">#</a></h3>
+<p>多个 khyos-tauri 实例同时运行时，每个实例有独立的 Electron 主进程。<br>webviewId 加入实例前缀后，跨实例 IPC 通信不会产生 ID 冲突。</p>
+<hr>
+<h2 id="4-多实例场景">4. 多实例场景<a class="anchor" href="#4-多实例场景" aria-label="锚点">#</a></h2>
+<h3 id="架构">架构<a class="anchor" href="#架构" aria-label="锚点">#</a></h3>
+<pre><code>┌─────────────────────┐  ┌─────────────────────┐
+│   实例 A (进程)      │  │   实例 B (进程)      │
+│                     │  │                     │
+│  WebViewSingleton   │  │  WebViewSingleton   │
+│  ├─ webviewId       │  │  ├─ webviewId       │
+│  └─ webviewInstance │  │  └─ webviewInstance │
+│                     │  │                     │
+│  CanvasStateManager │  │  CanvasStateManager │
+│  └─ states Map      │  │  └─ states Map      │
+└─────────┬───────────┘  └─────────┬───────────┘
+          │                        │
+          └──────┬─────────────────┘
+                 │
+          同一后端服务（通过 session/token 区分）</code></pre>
+<h3 id="场景处理">场景处理<a class="anchor" href="#场景处理" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>场景</th><th>处理方式</th></tr></thead><tbody><tr><td>两实例同时打开同一小程序</td><td>允许，各自独立 webviewInstance，后端通过 session 区分</td></tr><tr><td>实例 A 启用 Canvas，实例 B 未启用</td><td>隔离，Canvas 状态是 per-webviewId 的</td></tr><tr><td>实例 A 销毁 webview，实例 B 仍持有</td><td>防护，<code>isDestroyed()</code> 检查</td></tr><tr><td>webviewId 跨实例冲突</td><td>命名空间 <code>{instanceId}::{miniappId}</code> 防冲突</td></tr></tbody></table>
+<hr>
+<h2 id="5-canvasprofile-hook">5. CanvasProfile Hook<a class="anchor" href="#5-canvasprofile-hook" aria-label="锚点">#</a></h2>
+<h3 id="接口定义">接口定义<a class="anchor" href="#接口定义" aria-label="锚点">#</a></h3>
+<pre><code class="language-js"><span class="hljs-keyword">const</span> canvasProfile = {
+  <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;canvasProfile&#x27;</span>,
+  
+  <span class="hljs-comment">/**
+   * 执行前钩子：检测 BrowserWindow 可用性，决定是否启用 Canvas 模式
+   * <span class="hljs-doctag">@param</span> {<span class="hljs-type">object</span>} <span class="hljs-variable">ctx</span>
+   * <span class="hljs-doctag">@param</span> {<span class="hljs-type">BrowserWindow</span>} ctx.window
+   * <span class="hljs-doctag">@param</span> {<span class="hljs-type">string</span>} ctx.webviewId
+   * <span class="hljs-doctag">@param</span> {<span class="hljs-type">object</span>} ctx.manifest
+   * <span class="hljs-doctag">@returns</span> {<span class="hljs-type">{ proceed: boolean, reason?: string </span>}}
+   */</span>
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">prepareExecution</span>(<span class="hljs-params">ctx</span>) {
+    <span class="hljs-keyword">const</span> { <span class="hljs-variable language_">window</span>, webviewId, manifest } = ctx;
+    
+    <span class="hljs-comment">// 1. BrowserWindow 有效性</span>
+    <span class="hljs-keyword">if</span> (!<span class="hljs-variable language_">window</span> || <span class="hljs-variable language_">window</span>.<span class="hljs-title function_">isDestroyed</span>()) {
+      <span class="hljs-keyword">return</span> { <span class="hljs-attr">proceed</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">reason</span>: <span class="hljs-string">&#x27;BrowserWindow 已销毁&#x27;</span> };
+    }
+    
+    <span class="hljs-comment">// 2. WebView 实例有效性</span>
+    <span class="hljs-keyword">const</span> wv = webviewSingleton.<span class="hljs-property">webviewInstance</span>;
+    <span class="hljs-keyword">if</span> (!wv || wv.<span class="hljs-property">isDestroyed</span>?.()) {
+      <span class="hljs-keyword">return</span> { <span class="hljs-attr">proceed</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">reason</span>: <span class="hljs-string">&#x27;WebView 实例已销毁&#x27;</span> };
+    }
+    
+    <span class="hljs-comment">// 3. Canvas 模式检测</span>
+    <span class="hljs-keyword">const</span> needsCanvas = manifest?.<span class="hljs-property">canvas</span> === <span class="hljs-literal">true</span> 
+      || manifest?.<span class="hljs-property">renderMode</span> === <span class="hljs-string">&#x27;canvas&#x27;</span>
+      || manifest?.<span class="hljs-property">appConfig</span>?.<span class="hljs-property">canvas</span>;
+    
+    <span class="hljs-keyword">if</span> (needsCanvas) {
+      <span class="hljs-title class_">CanvasStateManager</span>.<span class="hljs-title function_">forceCanvasForWebview</span>(webviewId);
+    }
+    
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">proceed</span>: <span class="hljs-literal">true</span> };
+  }
+};</code></pre>
+<h3 id="调用点">调用点<a class="anchor" href="#调用点" aria-label="锚点">#</a></h3>
+<pre><code class="language-js"><span class="hljs-comment">// core.js → execute()</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">execute</span>(<span class="hljs-params">task, <span class="hljs-variable language_">window</span></span>) {
+  <span class="hljs-keyword">const</span> hookResult = <span class="hljs-keyword">await</span> canvasProfile.<span class="hljs-title function_">prepareExecution</span>({
+    <span class="hljs-variable language_">window</span>,
+    <span class="hljs-attr">webviewId</span>: currentWebviewId,
+    <span class="hljs-attr">manifest</span>: task.<span class="hljs-property">manifest</span>,
+  });
+  
+  <span class="hljs-keyword">if</span> (!hookResult.<span class="hljs-property">proceed</span>) {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">`Canvas 检测失败: <span class="hljs-subst">${hookResult.reason}</span>`</span>);
+  }
+  
+  <span class="hljs-comment">// ... 后续执行</span>
+}</code></pre>
+<hr>
+<h2 id="6-安全检查清单">6. 安全检查清单<a class="anchor" href="#6-安全检查清单" aria-label="锚点">#</a></h2>
+<p>在以下三个生命周期节点必须检查 <code>isDestroyed()</code>：</p>
+<ul><li>[ ] <code>acquire()</code> — 复用前检查现有实例</li><li>[ ] <code>release()</code> — 销毁前检查实例有效性</li><li>[ ] <code>prepareExecution()</code> — 执行前检查 window 和 webview</li></ul>
+<hr>
+<h2 id="7-实施状态">7. 实施状态<a class="anchor" href="#7-实施状态" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>任务</th><th>状态</th><th>位置</th></tr></thead><tbody><tr><td>命名规范文档</td><td>✅ 完成</td><td><code>.ai/MINIAPP_WEBVIEW_SINGLETON.md</code></td></tr><tr><td>CanvasProfile hook 实现</td><td>⏳ 待实现</td><td><code>khyos-tauri/src/core/core.js</code></td></tr><tr><td>多实例 ID 命名空间</td><td>⏳ 待实现</td><td><code>khyos-tauri/src/core/webviewSingleton.js</code></td></tr><tr><td>CanvasStateManager 适配</td><td>⏳ 待实现</td><td><code>khyos-tauri/src/core/canvasStateManager.js</code></td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../.ai/MAP.html"><div class="dir">← 上一篇</div><div class="ttl">MAP — khy-os 骨架与导航</div></a><a class="next" href="../.ai/plans/miniapp-webview-singleton.html"><div class="dir">下一篇 →</div><div class="ttl">小程序 WebView 单例 &amp; Canvas 检测 Hook 实施计划</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../";window.__KHY_CUR__=".ai/MINIAPP_WEBVIEW_SINGLETON.html";</script>
+<script src="../docs/19_资产/site/nav-data.js"></script>
+<script src="../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

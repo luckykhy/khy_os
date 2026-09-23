@@ -8,6 +8,9 @@
  *     按主机名派生的稳定密钥，保证功能开箱可用；同时打一条 warning 提示建议显式配置。
  *     回退密钥的边界是诚实的：拿到数据库文件的人在本机同样能解出明文，真正的强度
  *     提升来自显式配置这个 env。
+ *   - 不接受该降级的部署（生产 / 多用户 / 备份会离开本机）应置
+ *     `KHY_REQUIRE_CHANNEL_KEY_SECRET=1`：此时未配置主 KEK 会**直接抛错**，而不是
+ *     静默用弱密钥加密。静默降级比启动失败更危险 —— 它不会有人发现。
  *   - 密钥经 SHA-256 归一化为 32 字节，因此 env 里可以放任意长度的口令而非必须 32 字节。
  *   - 解密 fail-soft：格式错、tag 校验失败、密钥不匹配一律返回 ''，绝不抛——
  *     与 configSyncService.decrypt 的口径一致，一条坏记录不应让整个列表 500。
@@ -37,6 +40,9 @@ const os = require('os');
 const KEY_SECRET_ENV = 'KHY_CHANNEL_KEY_SECRET';
 // 退役 KEK：逗号分隔，按书写顺序在主 KEK 之后尝试。用于平滑轮换的过渡期。
 const KEY_SECRET_PREVIOUS_ENV = 'KHY_CHANNEL_KEY_SECRET_PREVIOUS';
+// 严格模式开关：开启后，未显式配置主 KEK 即**拒绝工作**，而不是回退到本机派生密钥。
+// 生产/多用户部署应开启；单机开发保持关闭以维持开箱可用。
+const KEY_SECRET_STRICT_ENV = 'KHY_REQUIRE_CHANNEL_KEY_SECRET';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12; // 96-bit nonce, GCM 标准
@@ -62,6 +68,14 @@ function _fallbackSecret() {
     .digest('hex');
 }
 
+/** 严格模式是否开启（未配置主 KEK 时拒绝工作）。绝不抛。 */
+function _isStrict(env) {
+  const v = String((env && env[KEY_SECRET_STRICT_ENV]) || '')
+    .trim()
+    .toLowerCase();
+  return v === '1' || v === 'true' || v === 'yes' || v === 'on';
+}
+
 /**
  * 解析主加密密钥。
  * @param {object} [env=process.env] 注入以便测试
@@ -72,13 +86,22 @@ function resolveSecret(env = process.env) {
   if (fromEnv) {
     return { secret: fromEnv, fromEnv: true };
   }
+  // 严格模式:宁可不工作,也不静默使用「可从主机名推导」的密钥。
+  if (_isStrict(env)) {
+    throw new Error(
+      `${KEY_SECRET_STRICT_ENV} 已开启,但 ${KEY_SECRET_ENV} 未设置:` +
+        '拒绝回退到本机派生密钥(该密钥由主机名派生,持有数据库副本且知道主机名者即可复现)。' +
+        `请显式配置 ${KEY_SECRET_ENV},或关闭严格模式以接受降级。`
+    );
+  }
   const secret = _fallbackSecret();
   if (!_fallbackWarned) {
     _fallbackWarned = true;
     try {
       console.warn(
         `渠道 API Key 加密使用本机派生密钥（${KEY_SECRET_ENV} 未设置）：` +
-          '单机本机访问仍安全，但拷贝数据库到别的机器将无法解密。'
+          '该密钥由主机名派生，持有数据库副本且知道主机名者即可解密；' +
+          `生产/多用户部署请显式配置该 env，并置 ${KEY_SECRET_STRICT_ENV}=1 以强制要求。`
       );
     } catch {
       /* console 不可用时忽略——warning 不能反过来影响功能 */
@@ -328,6 +351,7 @@ function maskApiKey(value) {
 module.exports = {
   KEY_SECRET_ENV,
   KEY_SECRET_PREVIOUS_ENV,
+  KEY_SECRET_STRICT_ENV,
   ALGORITHM,
   VERSION_PREFIX,
   resolveSecret,

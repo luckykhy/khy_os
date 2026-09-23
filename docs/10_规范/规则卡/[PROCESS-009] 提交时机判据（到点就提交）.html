@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [PROCESS-009] 提交时机判据（到点就提交）.md -->
+<title>[PROCESS-009] 提交时机判据（到点就提交） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[PROCESS-009] 提交时机判据（到点就提交）</div>
+      <header class="hero reveal"><h1>[PROCESS-009] 提交时机判据（到点就提交）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#process-009-提交时机判据-到点就提交">[PROCESS-009] 提交时机判据（到点就提交）</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 提交时机判据（到点就提交）<br>id: PROCESS-009<br>domain: PROCESS<br>nature: 约束为主，兼权力与福利<br>scope: &quot;一切将要进入版本库的改动集（暂存集）：服务的对象是 AI 助手与人类维护者双方 —— 判据不区分谁在提交。&quot;<br>priority: P1<br>trigger: &quot;commit 档（每次提交前）；以及 AI 判断「一个工作单元是否已闭合」时&quot;<br>constraint: &quot;一个提交必须满足五条判据才可提交：T1 单元闭合（只有一个逻辑意图，代码顶层板块跨度 &lt;3）；T2 可运行（改了可执行代码则须有验证证据，落 .khy/feedback/&lt;task-id&gt;/verify.txt，不接受转述）；T3 仓库自洽（暂存集不得含本机态文件，不得卷入 mtime 早于本会话开工的并发方改动）；T4 无游离产物（tmp-* / <em>.tmp / probe / </em>.bak / *.orig 不得入库）；T5 可回滚（改动集 ≤20 个文件，且能单独 revert）。任一 R 判据不满足则不得提交，且必须输出「缺哪一条」。AI 主动提交前还须过四道问询闸：含删除、板块跨度 ≥3、文件数 &gt;20、触及敏感路径四者之一时改为先问人。绝对禁止 git add -A / git add . / git commit -a。&quot;<br>grants: &quot;见约束边界：授权 AI 助手在 T1–T4 全绿、无删除、板块跨度 ≤2、文件数 ≤20 且不触敏感路径时<strong>不经逐次确认直接执行提交</strong>（这是本规则对被授权方的核心让渡）；并授权其在判据不满足时自主选择「不提交并说明缺失项」而无需先征得同意。判据不满足即不再持有该授权。&quot;<br>benefit: &quot;补上本仓 Git 治理唯一缺失的一半。既有件已成对覆盖提交「格式」（DESIGN-GIT-001 §2 / 002，守卫 check-commit-message.js）与「内容」（DESIGN-GIT-003 §4，pre-commit 前三项），但「什么时候该提交」无任何判据 —— 全仓检索只命中 3 处无关巧合。后果是判据缺失被转嫁给人：AI 要么改完就提交（半成品入库），要么永不提交（实测工作区 4002 项未提交），两条路都不会被任何既有守卫报出来。本规则把「要记住的动作」变成「有判据的结论」。&quot;<br>exception: &quot;紧急安全修补可在判据未全绿时提交，但须在同一次提交的信息里写明跳过的判据与原因；纯文档单元的 T2（可运行）不适用；发布/回滚类提交按 DESIGN-GIT-001 §5 处理，不适用 T1 的单元闭合。&quot;<br>version: &quot;1.0.0 (2026-09-19)&quot;<br>status: active<br>ssot: &quot;docs/10_规范/DESIGN-GIT/[DESIGN-GIT-004] 提交时机规范.md&quot;<br>formerly: 无<br>owner: governance-team</p>
+<hr>
+<h1 id="process-009-提交时机判据-到点就提交">[PROCESS-009] 提交时机判据（到点就提交）<a class="anchor" href="#process-009-提交时机判据-到点就提交" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: PROCESS-009 -->
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/10_规范/DESIGN-GIT/[DESIGN-GIT-004] 提交时机规范.md。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>一个提交必须满足五条判据才可提交：T1 单元闭合（只有一个逻辑意图，代码顶层板块跨度 &lt;3）；T2 可运行（改了可执行代码则须有验证证据，落 .khy/feedback/&lt;task-id&gt;/verify.txt，不接受转述）；T3 仓库自洽（暂存集不得含本机态文件，不得卷入 mtime 早于本会话开工的并发方改动）；T4 无游离产物（tmp-* / <em>.tmp / probe / </em>.bak / *.orig 不得入库）；T5 可回滚（改动集 ≤20 个文件，且能单独 revert）。任一 R 判据不满足则不得提交，且必须输出「缺哪一条」。AI 主动提交前还须过四道问询闸：含删除、板块跨度 ≥3、文件数 &gt;20、触及敏感路径四者之一时改为先问人。绝对禁止 git add -A / git add . / git commit -a。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>见约束边界：授权 AI 助手在 T1–T4 全绿、无删除、板块跨度 ≤2、文件数 ≤20 且不触敏感路径时<strong>不经逐次确认直接执行提交</strong>（这是本规则对被授权方的核心让渡）；并授权其在判据不满足时自主选择「不提交并说明缺失项」而无需先征得同意。判据不满足即不再持有该授权。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>补上本仓 Git 治理唯一缺失的一半。既有件已成对覆盖提交「格式」（DESIGN-GIT-001 §2 / 002，守卫 check-commit-message.js）与「内容」（DESIGN-GIT-003 §4，pre-commit 前三项），但「什么时候该提交」无任何判据 —— 全仓检索只命中 3 处无关巧合。后果是判据缺失被转嫁给人：AI 要么改完就提交（半成品入库），要么永不提交（实测工作区 4002 项未提交），两条路都不会被任何既有守卫报出来。本规则把「要记住的动作」变成「有判据的结论」。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>见 <code>ssot</code> 指向的真源原文；本卡不复制反例，以免与真源漂移。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>人工评审（该规则暂无机械守卫）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>紧急安全修补可在判据未全绿时提交，但须在同一次提交的信息里写明跳过的判据与原因；纯文档单元的 T2（可运行）不适用；发布/回滚类提交按 DESIGN-GIT-001 §5 处理，不适用 T1 的单元闭合。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-19) 初版 / 迁移自 无</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/规则卡/[PROCESS-008] 新机制落地阶段可校验.html"><div class="dir">← 上一篇</div><div class="ttl">[PROCESS-008] 新机制落地阶段可校验</div></a><a class="next" href="../../../docs/10_规范/规则卡/[PROCESS-010] 软件著作权就绪.html"><div class="dir">下一篇 →</div><div class="ttl">[PROCESS-010] 软件著作权就绪</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/规则卡/[PROCESS-009] 提交时机判据（到点就提交）.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

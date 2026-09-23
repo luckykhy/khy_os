@@ -757,6 +757,13 @@ async function runLocalToolLoop(userInput, opts = {}) {
   const resultCap = _intFromEnv('KHY_LOCAL_LOOP_RESULT_MAXLEN', 2000, 200);
   const onStep = typeof opts.onStep === 'function' ? opts.onStep : () => {};
   const traceContext = opts.traceContext || {};
+  // [DESIGN-AGENT-002] A2-4: carry the per-agent authorization scope down to
+  // executeTool, so the denylist that narrows the DEFINITION surface is also
+  // enforced at the EXECUTION surface. Without this wiring the sub-agent's
+  // disallowedTools would only hide tools, not block them.
+  if (traceContext._agentContext == null && opts.agentContext != null) {
+    traceContext._agentContext = opts.agentContext;
+  }
 
   const messages = [{ role: 'user', content: String(userInput || '') }];
   const allToolCalls = [];

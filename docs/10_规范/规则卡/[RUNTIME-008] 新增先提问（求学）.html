@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [RUNTIME-008] 新增先提问（求学）.md -->
+<title>[RUNTIME-008] 新增先提问（求学） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[RUNTIME-008] 新增先提问（求学）</div>
+      <header class="hero reveal"><h1>[RUNTIME-008] 新增先提问（求学）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#runtime-008-新增先提问-求学">[RUNTIME-008] 新增先提问（求学）</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 新增先提问（求学）<br>id: RUNTIME-008<br>domain: RUNTIME<br>nature: 约束为主，兼福利<br>scope: &quot;被判定为 BUILD 的改动集（加功能 / 加入口）：新增文件、新增顶层入口（cli/handlers、routes、tools/<em>/index.js、extensions/</em>/*/manifest.json）&quot;<br>priority: P2<br>trigger: 写第一行代码前（判定为主模态 BUILD 时）<br>constraint: &quot;必须先产出 requirement-5q.md，回答需求五问（谁用 / 何时用 / 现有替代 / 成功长什么样=命令+期望输出 / 不做会怎样），每条答案须带 <code>source: &lt;用户原话&gt;</code> 出处；压缩成 3 行复述待客户点头。五问回答均 &lt;40 字或缺 source 字段判 self-answered。&quot;<br>grants: &quot;见约束边界：授权说「我不确定」并就此提问而不动代码——本规则明确<strong>不扣分</strong>；被禁止的是装作确定。&quot;<br>benefit: &quot;需求错误是本仓最贵的返工源，且在写代码前发现成本最低。把「猜需求」换成「问需求」，客户不必在成品阶段才发现做错了。&quot;<br>exception: 改动集已有 docs/ 设计文档背书（含需求与验收）时豁免——已有文档即已答复五问。<br>version: &quot;1.0.0 (2026-09-18)&quot;<br>status: active<br>ssot: &quot;docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-113] AI修改三模态反馈契约-客户模式.md#32-求学模式build&quot;<br>formerly: 无<br>owner: governance-team</p>
+<hr>
+<h1 id="runtime-008-新增先提问-求学">[RUNTIME-008] 新增先提问（求学）<a class="anchor" href="#runtime-008-新增先提问-求学" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: RUNTIME-008 -->
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-113] AI修改三模态反馈契约-客户模式.md#32-求学模式build。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>必须先产出 requirement-5q.md，回答需求五问（谁用 / 何时用 / 现有替代 / 成功长什么样=命令+期望输出 / 不做会怎样），每条答案须带 <code>source: &lt;用户原话&gt;</code> 出处；压缩成 3 行复述待客户点头。五问回答均 &lt;40 字或缺 source 字段判 self-answered。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>见约束边界：授权说「我不确定」并就此提问而不动代码——本规则明确<strong>不扣分</strong>；被禁止的是装作确定。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>需求错误是本仓最贵的返工源，且在写代码前发现成本最低。把「猜需求」换成「问需求」，客户不必在成品阶段才发现做错了。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>见 <code>ssot</code> 指向的真源原文；本卡不复制反例，以免与真源漂移。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>人工评审（该规则暂无机械守卫）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>改动集已有 docs/ 设计文档背书（含需求与验收）时豁免——已有文档即已答复五问。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-18) 初版 / 迁移自 无</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/规则卡/[RUNTIME-007] 修复先复现（看病）.html"><div class="dir">← 上一篇</div><div class="ttl">[RUNTIME-007] 修复先复现（看病）</div></a><a class="next" href="../../../docs/10_规范/规则卡/[RUNTIME-009] 删除先报部位（搓澡）.html"><div class="dir">下一篇 →</div><div class="ttl">[RUNTIME-009] 删除先报部位（搓澡）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/规则卡/[RUNTIME-008] 新增先提问（求学）.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

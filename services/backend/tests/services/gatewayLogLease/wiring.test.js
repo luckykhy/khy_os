@@ -1,27 +1,30 @@
 'use strict';
 /**
- * wiring.test.js â€?C-class wiring contract for gatewayLogLease (DESIGN-ARCH-031).
+ * wiring.test.js â€” C-class wiring contract for gatewayLogLease (DESIGN-ARCH-031).
  *
  * The subsystem was implemented but never wired into the live path ("é›¶ä¾µå…¥å¾…æŽ¥å…¥").
  * It is now installed once at daemon boot in aiManagementServer.start() via
  * `require('./gatewayLogLease').install()`. That single line relies on three
  * guarantees this test pins down:
  *
- *   1. DEFAULT OFF â†?install() is a no-op: it must NOT patch console/stdout when
+ *   1. DEFAULT OFF ï¿½?install() is a no-op: it must NOT patch console/stdout when
  *      KHY_GATEWAY_LOG_LEASE is unset/off, so the boot line is zero behavior
  *      change by default.
- *   2. FLAG ON â†?install() activates the lease (console is intercepted) and
+ *   2. FLAG ON ï¿½?install() activates the lease (console is intercepted) and
  *      uninstall() fully restores the originals (no leak).
- *   3. install() is idempotent â€?calling it twice (boot + re-entry) is safe.
+ *   3. install() is idempotent ï¿½?calling it twice (boot + re-entry) is safe.
  */
 const os = require('os');
+const assert = require('node:assert');
 const path = require('path');
 const fs = require('fs');
 const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-loglease-wiring-'));
 process.env.HOME = TMP_HOME;
 process.env.USERPROFILE = TMP_HOME;
 const lease = require('../../../src/services/gatewayLogLease');
-describe('gatewayLogLease wiring contract (C-class)', () => {
+
+describe('Wiring', () => {
+  // merged from describe: gatewayLogLease wiring contract (C-class)
   const origLog = console.log;
   const origStdoutWrite = process.stdout.write;
   beforeEach(() => { lease.uninstall(); });
@@ -32,9 +35,6 @@ describe('gatewayLogLease wiring contract (C-class)', () => {
     console.log = origLog;
     process.stdout.write = origStdoutWrite;
   });
-});
-
-describe('Wiring', () => {
   test('default off: install() does NOT patch console/stdout (zero behavior change)', () => {
         delete process.env.KHY_GATEWAY_LOG_LEASE;
         const ret = lease.install();

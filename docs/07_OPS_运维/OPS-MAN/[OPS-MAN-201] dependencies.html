@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [OPS-MAN-201] dependencies.md -->
+<title>Disaster Recovery Dependencies · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>OPS-MAN<span class="sep">›</span>Disaster Recovery Dependencies</div>
+      <header class="hero reveal"><h1>Disaster Recovery Dependencies</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#disaster-recovery-dependencies">Disaster Recovery Dependencies</a></li><li class="lvl-2"><a href="#critical-dependencies">Critical Dependencies</a></li><li class="lvl-3"><a href="#infrastructure">Infrastructure</a></li><li class="lvl-3"><a href="#external-services">External Services</a></li><li class="lvl-3"><a href="#internal-services">Internal Services</a></li><li class="lvl-2"><a href="#dependency-health-monitoring">Dependency Health Monitoring</a></li><li class="lvl-2"><a href="#recovery-priority">Recovery Priority</a></li><li class="lvl-2"><a href="#related">Related</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="disaster-recovery-dependencies">Disaster Recovery Dependencies<a class="anchor" href="#disaster-recovery-dependencies" aria-label="锚点">#</a></h1>
+<blockquote><p>DR-001 reference: critical service dependency map for disaster recovery</p></blockquote>
+<h2 id="critical-dependencies">Critical Dependencies<a class="anchor" href="#critical-dependencies" aria-label="锚点">#</a></h2>
+<h3 id="infrastructure">Infrastructure<a class="anchor" href="#infrastructure" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Component</th><th>Dependency</th><th>Impact if Lost</th><th>Recovery</th></tr></thead><tbody><tr><td>PostgreSQL</td><td>Primary DB</td><td>All services down</td><td>Promote replica</td></tr><tr><td>Redis</td><td>Session/cache</td><td>Auth failures, cache miss</td><td>Restart + warm cache</td></tr><tr><td>Ollama</td><td>Local LLM</td><td>AI features degraded</td><td>Fallback to cloud models</td></tr><tr><td>NVIDIA GPU</td><td>Local inference</td><td>Slow AI responses</td><td>CPU fallback or cloud</td></tr></tbody></table>
+<h3 id="external-services">External Services<a class="anchor" href="#external-services" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Service</th><th>Dependency</th><th>Impact if Lost</th><th>Recovery</th></tr></thead><tbody><tr><td>Zhipu AI API</td><td>GLM model access</td><td>AI features degraded</td><td>Retry + fallback</td></tr><tr><td>GitHub API</td><td>Issue/PR sync</td><td>Dev workflow blocked</td><td>Cache + retry</td></tr><tr><td>npm/PyPI</td><td>Package install</td><td>Deployment blocked</td><td>Use cached packages</td></tr></tbody></table>
+<h3 id="internal-services">Internal Services<a class="anchor" href="#internal-services" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Service</th><th>Dependency</th><th>Impact if Lost</th><th>Recovery</th></tr></thead><tbody><tr><td>aiManagementServer</td><td>Central gateway</td><td>All AI features down</td><td>Restart + health check</td></tr><tr><td>daemonEntry</td><td>Service manager</td><td>CLI commands fail</td><td>Restart daemon</td></tr><tr><td>proxyServer</td><td>Traffic routing</td><td>External access blocked</td><td>Failover to standby</td></tr></tbody></table>
+<h2 id="dependency-health-monitoring">Dependency Health Monitoring<a class="anchor" href="#dependency-health-monitoring" aria-label="锚点">#</a></h2>
+<ul><li>Health checks: <code>/health</code>, <code>/ready</code>, <code>/live</code></li><li>Alert thresholds: 3 consecutive failures = alert</li><li>Circuit breaker: 50% failure rate = open circuit</li></ul>
+<h2 id="recovery-priority">Recovery Priority<a class="anchor" href="#recovery-priority" aria-label="锚点">#</a></h2>
+<ol><li>Infrastructure (DB, Redis, GPU)</li><li>Internal services (gateway, daemon)</li><li>External services (retry + fallback)</li></ol>
+<h2 id="related">Related<a class="anchor" href="#related" aria-label="锚点">#</a></h2>
+<ul><li><a href="../00_INDEX_运维-分类索引.html">00_INDEX_运维-分类索引.md</a> - disaster recovery runbooks</li><li><a href="../incident-runbooks/00_INDEX_事件响应剧本-总目录.html">incident-runbooks/00_INDEX_事件响应剧本-总目录.md</a> - incident response</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/07_OPS_运维/OPS-MAN/[OPS-MAN-200] config-auto-repair.html"><div class="dir">← 上一篇</div><div class="ttl">网关配置自动修复与重置</div></a><a class="next" href="../../../docs/07_OPS_运维/OPS-MAN/[OPS-MAN-202] oncall.html"><div class="dir">下一篇 →</div><div class="ttl">On-Call Schedule</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/07_OPS_运维/OPS-MAN/[OPS-MAN-201] dependencies.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

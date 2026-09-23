@@ -78,6 +78,7 @@ function FooterBar({
   contextPlan,
   cooldownUntilMs,
   modelStatus,
+  pinnedSkip,
 }) {
   const { Box, Text } = inkRuntime.get();
   const h = React.createElement;
@@ -109,7 +110,6 @@ function FooterBar({
   const permColors = { acceptEdits: 'green', plan: 'cyan', bypass: 'yellow', RedPass: 'red' };
   const permLabel = permLabels[permissionMode] || permLabels.default;
   const permColor = permColors[permissionMode];
-  const cycleHint = preferEnglishUi ? '(shift+tab to cycle)' : '(shift+tab 切换)';
 
   // max/high/medium/low are KHY's own presets; xhigh/minimal come from codex
   // config.toml model_reasoning_effort (sourced via ai.getActiveEffort).
@@ -163,6 +163,25 @@ function FooterBar({
   const modelLabel = modelWarning + formatModelLabel(model);
   const leftParts = [modelLabel, effortStr].filter(Boolean).join(' · ');
 
+  // 钉选通道被跳过（2026-09-17「页脚 agnes / 报错 windsurf」事故）：
+  // 页脚原本只显示 getActiveAdapter() 给出的「能用」通道，于是出现「页脚说 agnes、
+  // 报错说 windsurf」的上下矛盾。此处把「意图通道」也渲出来，形成
+  // `windsurf→agnes-3.0-flash` 的双段标签 —— 两个名字同时在屏，用户一眼可对上报错。
+  //   strict 时它是「下次请求必然失败」的硬预警（红）；非 strict 时只是「已回退」的
+  //   中性提示（黄），语义不同故着色不同。
+  //   截断保护：通道名过长时只保留末尾标记，避免挤掉右侧上下文用量（ink 右侧先被裁）。
+  let pinnedSkipSeg = null;
+  const skipAdapter = pinnedSkip && pinnedSkip.active ? String(pinnedSkip.adapter || '') : '';
+  if (skipAdapter) {
+    const color = pinnedSkip.strict ? 'red' : 'yellow';
+    // 文案(2026-09-19 用户评审):「已禁用回退」读者不知所云;改为动作+后果的
+    // 完整中文短句,strict(下次请求必然失败)与非 strict(已回退)语义分开。
+    const skipText = pinnedSkip.strict
+      ? `⟲ ${skipAdapter} 通道已停用回退：请求失败将直接报错`
+      : `⟲ ${skipAdapter} 通道不可用，已自动回退`;
+    pinnedSkipSeg = h(Text, { color }, `  ${skipText}`);
+  }
+
   // CC 对齐:页脚左侧常驻一段「进程内存(RSS)· pid」,按阈值上色(512MB→warning,1GB→error)。
   // 判定在纯叶子 footerMemory 里;这里只读 process.memoryUsage().rss/pid(IO)并把 level 映射成
   // ink 颜色 props。门控关/异常 → seg 为 null → 不渲该段(逐字节回退今日「无内存段」页脚)。
@@ -181,58 +200,56 @@ function FooterBar({
     /* footer memory segment is optional; never let it break footer render */
   }
 
-  // 布局对齐 layout-preview.html:2 行页脚。
-  //   行1:权限 + 模式徽标(local/fast/voice) + goal + 冷却
-  //   行2:模型/强度 + 内存/pid + 上下文用量
-  //   bridgeLine 已迁移至 WelcomeBanner,topic 已迁移至 topicBar,页脚不再重复。
+  // DESIGN-ARCH-102 C11:页脚恒 1 行(旧实现 2 行)。左侧:权限 + 模式徽标 +
+  // goal/冷却;右侧:模型/强度 + 内存/pid + 上下文用量。空间不足时右侧段优先
+  // 被 ink 裁切,左侧(权限决策)恒可见。
+  // 单行页脚(102 C11):左侧=权限/模式徽标/goal/冷却,右侧=模型·内存·上下文。
+  // 左侧各段前缀 `  ` 由 Text 自带(空格),ink 按显示宽度裁切(右侧先被裁,
+  // 权限决策永远可见),段内文案不再加额外空格以省宽。
+  const left = h(
+    Box,
+    null,
+    h(Text, { dimColor: !permColor, color: permColor }, '■ ' + permLabel),
+    localMode ? h(Text, { color: 'green' }, '  ◆ 本地模式 (/local)') : null,
+    fastMode ? h(Text, { color: 'yellow' }, '  ◆ 快速模式 (/fast)') : null,
+    voiceMode ? h(Text, { color: 'magenta' }, '  ◆ 语音模式 (/voice)') : null,
+    autoRedPass ? h(Text, { color: 'red' }, '  🔴 自动破甲 (拒绝时切换 RedPass)') : null,
+    goalActive && goalActive.elapsedLabel != null
+      ? h(
+          Text,
+          { color: 'cyan' },
+          '  ◎ /goal ' +
+            (preferEnglishUi ? 'active' : '进行中') +
+            ' (' +
+            goalActive.elapsedLabel +
+            ')'
+        )
+      : null,
+    cooldownUntilMs > 0
+      ? h(
+          Text,
+          { color: 'red' },
+          '  ⏳ 冷却 ' + Math.max(0, Math.ceil((cooldownUntilMs - Date.now()) / 1000)) + 's'
+        )
+      : null
+  );
+  const right = h(
+    Box,
+    null,
+    h(Text, { dimColor: true }, '[' + leftParts + ']'),
+    pinnedSkipSeg,
+    memSeg,
+    // 段间分隔:memSeg 文案以 `pid:<n>` 结尾、ctxStr 以 `<pct>%` 开头,直接相邻会
+    // 拼成 `pid:305680% ctx`(2026-09-19 实测误读)。统一给每段 2 空格前缀。
+    h(Text, { dimColor: true }, '  ' + ctxStr),
+    compactSeg
+  );
+
   return h(
     Box,
-    { flexDirection: 'column' },
-    // ── 行1:权限 + 模式徽标 + goal ──
-    h(
-      Box,
-      null,
-      h(Text, { dimColor: !permColor, color: permColor }, '■ ' + permLabel + ' ' + cycleHint),
-      localMode ? h(Text, { color: 'green' }, '  ◆ 本地模式 (/local)') : null,
-      fastMode ? h(Text, { color: 'yellow' }, '  ◆ 快速模式 (/fast)') : null,
-      voiceMode ? h(Text, { color: 'magenta' }, '  ◆ 语音模式 (/voice)') : null,
-      autoRedPass ? h(Text, { color: 'red' }, '  🔴 自动破甲 (拒绝时切换 RedPass)') : null,
-      goalActive && goalActive.elapsedLabel != null
-        ? h(
-            Text,
-            { color: 'cyan' },
-            '  ◎ /goal ' +
-              (preferEnglishUi ? 'active' : '进行中') +
-              ' (' +
-              goalActive.elapsedLabel +
-              ')'
-          )
-        : null,
-      cooldownUntilMs > 0
-        ? h(
-            Text,
-            { color: 'red' },
-            '  ⏳ 冷却 ' + Math.max(0, Math.ceil((cooldownUntilMs - Date.now()) / 1000)) + 's'
-          )
-        : null
-    ),
-    // ── 行2:模型/强度 + 内存/pid + 上下文用量 ──
-    h(
-      Box,
-      { justifyContent: 'space-between' },
-      h(
-        Box,
-        null,
-        h(Text, { dimColor: true }, '[' + leftParts + ']'),
-        memSeg
-      ),
-      h(
-        Box,
-        null,
-        h(Text, { dimColor: true }, ctxStr),
-        compactSeg
-      )
-    )
+    { justifyContent: 'space-between', height: 1 },
+    left,
+    right
   );
 }
 

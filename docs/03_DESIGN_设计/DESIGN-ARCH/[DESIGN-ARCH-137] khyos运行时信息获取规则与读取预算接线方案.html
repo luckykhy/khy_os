@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-137] khyos运行时信息获取规则与读取预算接线方案.md -->
+<title>[DESIGN-ARCH-137] khyos 运行时信息获取规则与读取预算接线方案 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-137] khyos 运行时信息获取规则与读取预算接线方案</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-137] khyos 运行时信息获取规则与读取预算接线方案</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-137-khyos-运行时信息获取规则与读取预算接线方案">[DESIGN-ARCH-137] khyos 运行时信息获取规则与读取预算接线方案</a></li><li class="lvl-2"><a href="#0-一句话结论">0. 一句话结论</a></li><li class="lvl-2"><a href="#1-现状实证-file-line-可复核">1. 现状实证（file:line 可复核）</a></li><li class="lvl-3"><a href="#1-1-规则存在-但只作用于-改本仓-这一场景">1.1 规则存在，但只作用于「改本仓」这一场景</a></li><li class="lvl-3"><a href="#1-2-b4-的执行体已建成-但三重休眠">1.2 B4 的执行体已建成，但三重休眠</a></li><li class="lvl-3"><a href="#1-3-b5-的通道建了半截">1.3 B5 的通道建了半截</a></li><li class="lvl-3"><a href="#1-4-顷刻间就满-的确切算术">1.4 「顷刻间就满」的确切算术</a></li><li class="lvl-3"><a href="#1-5-可复用的既有范式-本方案不重造">1.5 可复用的既有范式（本方案不重造）</a></li><li class="lvl-3"><a href="#1-6-已闭环项-明确不在本方案范围">1.6 已闭环项（明确不在本方案范围）</a></li><li class="lvl-2"><a href="#2-规则设计-运行时信息获取规则-三轴六条">2. 规则设计：运行时信息获取规则（三轴六条）</a></li><li class="lvl-2"><a href="#3-目标形态-组件级契约">3. 目标形态（组件级契约）</a></li><li class="lvl-3"><a href="#契约-a-读取计划的送达-r1-r2-生效">契约 A —— 读取计划的送达（R1/R2 生效）</a></li><li class="lvl-3"><a href="#契约-b-累计读取预算生效-r3-生效">契约 B —— 累计读取预算生效（R3 生效）</a></li><li class="lvl-3"><a href="#契约-c-单次上限取小-r4-生效">契约 C —— 单次上限取小（R4 生效）</a></li><li class="lvl-3"><a href="#契约-d-保留清单钉住-r5-生效">契约 D —— 保留清单钉住（R5 生效）</a></li><li class="lvl-2"><a href="#4-实施分期-每期独立可回滚">4. 实施分期（每期独立可回滚）</a></li><li class="lvl-3"><a href="#4-1-每期随附的登记动作-process-008">4.1 每期随附的登记动作（`PROCESS-008`）</a></li><li class="lvl-2"><a href="#5-诚实边界-刻意不纳入-逐条给原因">5. 诚实边界（刻意不纳入 —— 逐条给原因）</a></li><li class="lvl-2"><a href="#6-反模式-这条路别走">6. 反模式（这条路别走）</a></li><li class="lvl-2"><a href="#7-验收方式-可复现命令-关联门禁">7. 验收方式（可复现命令 + 关联门禁）</a></li><li class="lvl-3"><a href="#7-1-单元层-每期各自的用例">7.1 单元层（每期各自的用例）</a></li><li class="lvl-3"><a href="#7-2-集成层-人工-一次性">7.2 集成层（人工，一次性）</a></li><li class="lvl-3"><a href="#7-3-关联门禁">7.3 关联门禁</a></li><li class="lvl-2"><a href="#8-待核实项">8. 待核实项</a></li><li class="lvl-2"><a href="#9-变更日志">9. 变更日志</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-137-khyos-运行时信息获取规则与读取预算接线方案">[DESIGN-ARCH-137] khyos 运行时信息获取规则与读取预算接线方案<a class="anchor" href="#design-arch-137-khyos-运行时信息获取规则与读取预算接线方案" aria-label="锚点">#</a></h1>
+<blockquote><p>状态：<strong>提案待评审</strong>（2026-09-23 初稿，尚未编码）<br>范围：<code>PROCESS-007</code>（B4 引导式搜索 / B5 压缩保留清单）从「只服务外部 AI 改本仓」扩展为「同时约束 khyos 运行时的信息获取」，并把它已建成但休眠的执行体接电<br>上游依赖：<code>[DESIGN-ARCH-052]</code>（任务驱动读取与搜索范围规划）、<code>[DESIGN-ARCH-135]</code>（压缩回写，一期已落地）、<code>[DESIGN-ARCH-121]</code> §K-06（B4/B5 的来源）<br>规则映射：<code>PROCESS-007</code>（本文扩展对象）、<code>PROCESS-008</code>（新机制落地阶段）、<code>RUNTIME-003</code>（活动式超时）<br>模板合规：体例照 <code>[DESIGN-ARCH-124]</code>；<strong>不引入任何外部借用</strong>，故不涉及 B-P2 七字段</p></blockquote>
+<hr>
+<h2 id="0-一句话结论">0. 一句话结论<a class="anchor" href="#0-一句话结论" aria-label="锚点">#</a></h2>
+<p>规则早就有了，缺的是<strong>接线</strong>——而接线断在四个各自独立、都已被实测确认的缝上：</p>
+<ol><li><strong>B4/B5 的正文与运行时脱节</strong>：<code>services/backend/src</code> 下 3120 个文件中，「引导式搜索」「全量读取」「精准而非全知」「PROCESS-007」命中数<strong>全部为 0</strong>。B4 只管「外部 AI 改这个仓库」，不管「khyos 做用户的任务」。</li><li><strong>B4 的执行体已建成但三重休眠</strong>：<code>contextScope</code> 五个模块齐备、测试全绿，却「默认关 × 输出零消费者 × 能力矩阵标 catalog-only」。</li><li><strong>B5 的通道建了半截</strong>：<code>PreCompact</code> 在 <code>hookRunner.js:33</code> 声明了 <code>additionalContext</code>，而唯一的触发方 <code>contextCompressor.js:624</code> <strong>只读 <code>.blocked</code></strong>，1600 行内该字段命中 0 ⇒ 今天就算插一条 PreCompact 钩子，它返回的保留清单也会被<strong>静默丢弃</strong>。</li><li><strong>真正填满窗口的东西不在规则射程内</strong>：单次工具结果 = 窗口的 5%，<strong>且全仓无任务级累计上限</strong>；同时动态预算<strong>覆盖</strong>而非取小，使一批刻意调小的 per-tool 上限在 loop 内全部失效。</li></ol>
+<p>⇒ 本方案不新建规则体系、不新建注入通道，只把既有实现接上电，并在 <strong>S1 观察者档</strong>起步。</p>
+<hr>
+<h2 id="1-现状实证-file-line-可复核">1. 现状实证（file:line 可复核）<a class="anchor" href="#1-现状实证-file-line-可复核" aria-label="锚点">#</a></h2>
+<h3 id="1-1-规则存在-但只作用于-改本仓-这一场景">1.1 规则存在，但只作用于「改本仓」这一场景<a class="anchor" href="#1-1-规则存在-但只作用于-改本仓-这一场景" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项</th><th>位置</th><th>实测</th></tr></thead><tbody><tr><td>B4 引导式搜索</td><td><code>CLAUDE.md:63</code></td><td>正文是四步动作序（Grep 符号 → Glob → Read 2–3 个 → 大输出先评估委派）</td></tr><tr><td>B5 压缩保留清单</td><td><code>CLAUDE.md:79</code></td><td>四类：已改文件路径 / 失败用例与堆栈 / 未完成步骤 / 本次守卫结论</td></tr><tr><td>登记</td><td><code>RULES-REGISTRY.json:2760-2784</code></td><td><code>gate: &quot;manual&quot;</code>，<strong>无 <code>exec</code>、无 <code>severity</code></strong></td></tr><tr><td>自认无守卫</td><td><code>RULES-REGISTRY.json:2772</code></td><td><code>exception</code> 原文：「B4/B5 均属流程约定，<strong>无机械守卫</strong>，靠人工评审与压缩器日志兜底」</td></tr><tr><td>运行时命中</td><td><code>services/backend/src/**</code>（3120 文件）</td><td>四个特征串命中 <strong>0</strong></td></tr></tbody></table>
+<h3 id="1-2-b4-的执行体已建成-但三重休眠">1.2 B4 的执行体已建成，但三重休眠<a class="anchor" href="#1-2-b4-的执行体已建成-但三重休眠" aria-label="锚点">#</a></h3>
+<ul><li>路径：<code>services/contextScope/index.js:2</code> 是转发壳（注释「Do not edit - move …」），实体在 <code>services/backend/src/services/domain/session/contextScope/</code>。</li><li>五个模块齐备：<code>taskSignalExtractor</code> / <code>aiMapIndex</code>（解析 <code>.ai/CONTEXT.yaml</code> 建符号倒排）/ <code>scopeRanker</code>（带理由排序）/ <code>budgetController</code>（<strong>「不全知」内核</strong>）/ <code>searchPlanBuilder</code>。</li><li><code>budgetController.js:22-29</code> 的默认值就是 R3 要的契约：<code>maxFiles 8</code> / <code>maxBytes 256KB</code> / <code>marginalFloorRatio 0.18</code> / <code>satisfiedConfidence 0.85</code> / <code>confidenceScale 18</code>；<code>:114-121</code> 恒返回 <code>selected/deferred/stopReason/confidence</code>，注释明写 <em>&quot;The function never selects 'all files'&quot;</em>。</li></ul>
+<p><strong>休眠三重（三重都必须解，缺一不可）</strong>：</p>
+<table><thead><tr><th>#</th><th>休眠</th><th>证据</th></tr></thead><tbody><tr><td>1</td><td>默认关</td><td><code>agenticHarnessService.js:141</code> 要求 `KHY_CONTEXT_SCOPE === '1' \</td></tr><tr><td>2</td><td><strong>输出零消费者</strong></td><td>全仓 <code>scopePlan</code> 命中 6 处：3 处在文档，3 处在 <code>agenticHarnessService.js</code> 的 <code>let</code>/赋值/<code>return</code>。<strong>无一处读取 <code>.readPlan</code> 或 <code>.searchPlan</code></strong>（<code>readPlan</code>/<code>searchPlan</code> 的其它命中全在测试里）</td></tr><tr><td>3</td><td>能力矩阵标只读</td><td><code>capabilityMatrix/predicates.js:81</code> 注释 <code>(cognitiveSnapshot, contextScope). Catalog-only in cut 1.</code></td></tr></tbody></table>
+<blockquote><p><code>[DESIGN-ARCH-052]</code> §7 自认第 2 条：「后续可用 <code>scopePlan.searchPlan</code> 驱动 <code>cli/ai.js</code> 预取替换启发式 <code>exploreTool</code> 推断（<strong>待后续 PR</strong>）」。该 PR 从未落地。</p></blockquote>
+<h3 id="1-3-b5-的通道建了半截">1.3 B5 的通道建了半截<a class="anchor" href="#1-3-b5-的通道建了半截" aria-label="锚点">#</a></h3>
+<pre><code class="language-js"><span class="hljs-comment">// contextCompressor.js:624  ——  生产端已就位，消费端缺失</span>
+<span class="hljs-keyword">const</span> preHr = <span class="hljs-keyword">await</span> hookSys.<span class="hljs-title function_">trigger</span>(<span class="hljs-string">&#x27;PreCompact&#x27;</span>, { messageCount, totalTokens, usageRatio });
+<span class="hljs-keyword">if</span> (preHr.<span class="hljs-property">blocked</span>) { <span class="hljs-comment">/* … */</span> }        <span class="hljs-comment">// ← 只读这一个字段</span></code></pre>
+<ul><li><code>hookRunner.js:33</code>：<code>PreCompact: ['additionalContext']</code> —— 契约上允许返回。</li><li><code>contextCompressor.js</code> 全文 1600 行：<code>additionalContext</code> 命中 <strong>0</strong>。</li><li>全仓 <code>additionalContext</code> 的<strong>唯一有效消费者</strong>是 <code>toolUseLoopCore.js:2359</code>（<code>PrePrompt</code> 路径，clean append 语义）。这一点本仓已实测记录在 <code>agentFeedbackService.js:16-18</code> 与 <code>hookSystem.js:48-53</code> 的注释里：</li></ul>
+<blockquote><p><em>「Lives on PrePrompt because <code>additionalContext</code>（the only field that reaches the conversation）is whitelisted for PrePrompt but NOT for PreToolUse」</em></p></blockquote>
+<ul><li><code>.khy/hooks.json</code> 现有 4 条 <code>PreToolUse</code>，<strong>无 <code>PreCompact</code></strong>。</li></ul>
+<h3 id="1-4-顷刻间就满-的确切算术">1.4 「顷刻间就满」的确切算术<a class="anchor" href="#1-4-顷刻间就满-的确切算术" aria-label="锚点">#</a></h3>
+<pre><code class="language-js"><span class="hljs-comment">// tools/index.js:977-988</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">CHARS_PER_TOKEN</span> = <span class="hljs-number">3</span>;
+<span class="hljs-keyword">const</span> contextChars = contextWindowTokens * <span class="hljs-variable constant_">CHARS_PER_TOKEN</span>;
+<span class="hljs-keyword">const</span> budget = <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">round</span>(contextChars * <span class="hljs-number">0.05</span>);         <span class="hljs-comment">// 窗口的 5%</span>
+_dynamicResultLimit = <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">max</span>(<span class="hljs-number">8000</span>, <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">min</span>(<span class="hljs-number">40000</span>, budget));</code></pre>
+<table><thead><tr><th>事实</th><th>后果</th></tr></thead><tbody><tr><td>200K 模型 → <code>600000 × 0.05 = 30000</code> 字符 ≈ <strong>10,000 token／次调用</strong></td><td>单次工具结果即占窗口 5%</td></tr><tr><td>该预算是<strong>每次调用独立计算</strong>的，全仓<strong>无任务级累计上限</strong></td><td>约 20 次调用 = 100% 窗口</td></tr><tr><td><code>tools/index.js:1029-1043</code> 优先级为 <code>显式参数 &gt; 动态预算 &gt; per-tool 静态值</code></td><td>动态预算一旦设置，per-tool 静态值<strong>完全不被查询</strong></td></tr><tr><td>⇒ <code>FileWriteTool=1000</code> / <code>ConfigureModelProvider=2000</code> / <code>scaffoldFiles=3000</code></td><td>在 loop 内被统一抬到 8K–40K，<strong>刻意调小的上限静默失效</strong></td></tr></tbody></table>
+<p><strong>完整时间线（这就是用户感知到的现象）</strong>：约 20 次工具调用 → 触发压缩（阈值单一表达式见 <code>[DESIGN-ARCH-135]</code> §10.6）→ 摘要折叠细节 → 模型重读刚读过的文件 → 再次触发。</p>
+<blockquote><p>压缩只<strong>推迟</strong>一轮症状，<strong>读取量本身无人约束</strong>。B4 管「读几个文件」，而填满窗口的是「每次能塞多少」，这一层此前没有任何一条规则在管。</p></blockquote>
+<h3 id="1-5-可复用的既有范式-本方案不重造">1.5 可复用的既有范式（本方案不重造）<a class="anchor" href="#1-5-可复用的既有范式-本方案不重造" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>范式</th><th>位置</th><th>复用于</th></tr></thead><tbody><tr><td><strong>钉住原文而非嘱咐模型</strong></td><td><code>contextCompressor.js:745-767</code>（<code>&lt;original_task&gt;</code> 锚点，<code>TASK_ANCHOR_MAX_CHARS = 1500</code>）；<code>:843-846</code> 把锚点作为独立消息注入压缩结果</td><td>契约 D</td></tr><tr><td>摘要提示词的拼装缝</td><td><code>contextCompressor.js:772-774</code>（<code>[Original task to preserve]</code> + <code>oldTextWithTasks</code> → <code>callModelFn</code>）</td><td>契约 D</td></tr><tr><td>工作集 pin</td><td><code>contextCompressor.js:1349</code>（Working-Set Aware Pinning，B8）+ <code>:1468 adjustSplitForPins</code></td><td>契约 D</td></tr><tr><td><strong>代码级 function hook 注入</strong></td><td><code>hookSystem.js:37-47</code>（<code>ChangeWatchInjector</code>）/ <code>:54-64</code>（<code>AgentFeedbackInjector</code>）—— <code>registerFunction('PrePrompt', makePrePromptInjector(), {source, priority})</code></td><td>契约 A、D</td></tr><tr><td>PrePrompt 注入器工厂</td><td><code>changeWatchService.js:695-711</code>、<code>agentFeedbackService.js:217-234</code>（返回 <code>{action:'modify', additionalContext}</code>）</td><td>契约 A、D</td></tr><tr><td><code>iteration</code> 已传入 PrePrompt</td><td><code>toolUseLoopCore.js:2346-2349</code></td><td>契约 A（只在首轮注入）</td></tr></tbody></table>
+<blockquote><p><strong>关键约束（决定契约 D 的生产端形态）</strong>：<code>.khy/</code> 被 gitignore，属<strong>本机态</strong>（<code>AGENTS.md</code>）。因此保留清单<strong>不能</strong>依赖 <code>.khy/hooks.json</code> 条目——那份配置不随产品发布。生产端必须是 <code>hookSystem.init()</code> 里的<strong>代码级 function hook</strong>。两个既有注入器正是这么做的，本方案照此。</p></blockquote>
+<h3 id="1-6-已闭环项-明确不在本方案范围">1.6 已闭环项（明确不在本方案范围）<a class="anchor" href="#1-6-已闭环项-明确不在本方案范围" aria-label="锚点">#</a></h3>
+<ul><li><code>[DESIGN-ARCH-135]</code> 一期/二期<strong>已于 2026-09-23 落地</strong>：压缩结果<strong>已回写会话真源</strong>（<code>reconcileTurnHistory</code> 可选第四参 + <code>_applyCompactedView</code>），终态信号已透出。本方案<strong>不再处理</strong>「压缩不接续」。</li><li>压缩阈值三方不一致已收敛为同一表达式（<code>contextRouter.toolLoopCompactTriggerTokens</code>）。本方案<strong>不再处理</strong>阈值。</li></ul>
+<hr>
+<h2 id="2-规则设计-运行时信息获取规则-三轴六条">2. 规则设计：运行时信息获取规则（三轴六条）<a class="anchor" href="#2-规则设计-运行时信息获取规则-三轴六条" aria-label="锚点">#</a></h2>
+<p><strong>三轴</strong>：<strong>定位</strong>（搜什么）→ <strong>取样</strong>（读多少）→ <strong>存续</strong>（读过的怎么活过压缩）。</p>
+<table><thead><tr><th>#</th><th>轴</th><th>规则</th><th>可机判契约</th><th>复用机制</th><th>现状</th></tr></thead><tbody><tr><td><strong>R1</strong></td><td>定位</td><td><strong>先定位后读取</strong>——任何 Read 之前必须有一次 Grep/Glob 或 <code>.ai/</code> 索引命中</td><td>同一任务内 <code>Read</code> 调用不得早于首个 <code>Grep</code>/<code>Glob</code></td><td><code>aiMapIndex</code> + <code>searchPlanBuilder</code></td><td>已建成，未接</td></tr><tr><td><strong>R2</strong></td><td>定位</td><td><strong>按符号名定位</strong>——以符号/标识符为主键，不以文件名为唯一依据（本仓同名文件多）</td><td>排序理由须含「精确符号 / 部分符号」类证据</td><td><code>taskSignalExtractor</code> + <code>scopeRanker</code></td><td>已建成，未接</td></tr><tr><td><strong>R3</strong></td><td>取样</td><td><strong>任务级累计读取预算 + 充分即停</strong>——累计 <code>maxFiles</code>/<code>maxBytes</code> 双上限，恒返回 <code>stopReason</code>，禁止「读全部」</td><td><code>applyBudget</code> 恒有 <code>stopReason</code>；累计而非单次</td><td><code>budgetController.applyBudget</code></td><td>已建成，未接</td></tr><tr><td><strong>R4</strong></td><td>取样</td><td><strong>单次上限取小</strong>——<code>min(动态预算, per-tool 静态值)</code>，不覆盖</td><td><code>applyResultBudget</code> 的取值序</td><td><code>tools/index.js:1029</code></td><td><strong>缺陷</strong>：现为覆盖</td></tr><tr><td><strong>R5</strong></td><td>存续</td><td><strong>读过的活过压缩</strong>——四类保留清单以<strong>钉住区块</strong>注入，不依赖模型服从</td><td>压缩结果中四类区块存在</td><td><code>contextCompressor</code>（两端各缺一半）</td><td><strong>半接通</strong></td></tr><tr><td><strong>R6</strong></td><td>存续</td><td><strong>已读不重读</strong>——同任务内已读且未变的文件不重读</td><td>读取台账去重</td><td>新增（会话内台账）</td><td>未建</td></tr></tbody></table>
+<p><strong>规则归属决策</strong>：<strong>扩展 <code>PROCESS-007</code>，不新建规则 ID</strong>。理由：<code>[DESIGN-ARCH-052]</code> 已把 B4 的语义完整实现并验证（22 例测试），新建规则会产生两份意图相同的语义真源，违反单一真源原则。扩展方式是在 B4/B5 正文各补一句「运行时同样适用 + 执行器指向」，<strong>不改规则语义</strong>。</p>
+<hr>
+<h2 id="3-目标形态-组件级契约">3. 目标形态（组件级契约）<a class="anchor" href="#3-目标形态-组件级契约" aria-label="锚点">#</a></h2>
+<h3 id="契约-a-读取计划的送达-r1-r2-生效">契约 A —— 读取计划的送达（R1/R2 生效）<a class="anchor" href="#契约-a-读取计划的送达-r1-r2-生效" aria-label="锚点">#</a></h3>
+<p><strong>不新建注入通道</strong>，用 <code>PrePrompt</code> 的 <code>additionalContext</code>（唯一被证明可达对话的字段）。</p>
+<ul><li>新增 <code>builtin:ReadScopeInjector</code>，注册在 <code>hookSystem.init()</code>，范式照 <code>ChangeWatchInjector</code>（<code>hookSystem.js:37-47</code>）。</li><li><strong>仅在 <code>iteration === 1</code> 注入</strong>（<code>toolUseLoopCore.js:2346-2349</code> 已把 <code>iteration</code> 传入 context）。</li><li>内容 = <code>scopePlan.readPlan.files</code>（≤ <code>maxFiles</code> 条，含理由）+ <code>searchPlan.grepPatterns</code>，渲染为确定性中文块（零 LLM、可单测），并附一句 <code>stopReason</code> 与 <code>confidence</code> —— 让模型知道「这是<strong>够用</strong>的清单，不是候选清单」。</li><li><strong>落在 user 轮，不落 system 段</strong>（理由见 §6）。</li><li>依赖：<code>agenticHarnessService.buildContextPacket</code> 的 <code>scopePlan</code> 需可达注入器（一期打通）。</li></ul>
+<h3 id="契约-b-累计读取预算生效-r3-生效">契约 B —— 累计读取预算生效（R3 生效）<a class="anchor" href="#契约-b-累计读取预算生效-r3-生效" aria-label="锚点">#</a></h3>
+<ul><li><code>KHY_CONTEXT_SCOPE</code> 由「默认关」改为「<strong>默认开、可关</strong>」（<code>KHY_CONTEXT_SCOPE=0</code> 关）。不新增 env 门（§5）。</li><li><code>budgetController</code> 的 <code>maxBytes</code> 默认值从 <code>256KB</code> <strong>下调</strong>：256KB ÷ 3 ≈ <strong>87K token ≈ 200K 窗口的 43%</strong>，等于没省。改为按窗口派生，与 <code>contextProfile.deriveToolResultCap</code> 同源。</li><li>保留 <code>applyBudget</code> 的确定性内核不动——它是对的。</li></ul>
+<h3 id="契约-c-单次上限取小-r4-生效">契约 C —— 单次上限取小（R4 生效）<a class="anchor" href="#契约-c-单次上限取小-r4-生效" aria-label="锚点">#</a></h3>
+<p><code>tools/index.js:1029-1043</code> 改为：</p>
+<pre><code>limit = min(显式参数 ?? ∞, 动态预算 ?? ∞, per-tool 静态值 ?? DEFAULT)</code></pre>
+<p>三者全缺 → <code>DEFAULT_MAX_RESULT_CHARS</code>。per-tool 未声明的工具行为不变 ⇒ 可逐字节回滚（撤一处改动即回旧行为）。</p>
+<h3 id="契约-d-保留清单钉住-r5-生效">契约 D —— 保留清单钉住（R5 生效）<a class="anchor" href="#契约-d-保留清单钉住-r5-生效" aria-label="锚点">#</a></h3>
+<p><strong>两处改动，缺一不可</strong>（这是 1.3 实测的直接结论）：</p>
+<table><thead><tr><th>端</th><th>改动</th><th>落点</th></tr></thead><tbody><tr><td><strong>消费端</strong></td><td>新增读取 <code>preHr.context?.additionalContext</code>，非空则拼进摘要提示</td><td><code>contextCompressor.js:624</code>（触发处）+ <code>:772</code>（<code>summaryInput</code> 拼装处）</td></tr><tr><td><strong>生产端</strong></td><td>新增 <code>builtin:CompactRetentionInjector</code>（代码级 function hook，<strong>非</strong> <code>.khy/hooks.json</code>，理由见 §1.5）</td><td><code>hookSystem.init()</code>，范式照 <code>:54-64</code></td></tr><tr><td><strong>落点</strong></td><td>生成的四类区块以 <strong>pin 形式</strong>追加到压缩结果（照 <code>:843-846</code> 任务锚点范式）</td><td><code>contextCompressor.js</code></td></tr></tbody></table>
+<p><strong>四类的确定性来源</strong>（不依赖模型回忆）：</p>
+<table><thead><tr><th>类别</th><th>来源</th><th>现成度</th></tr></thead><tbody><tr><td>已修改文件完整路径</td><td>本回合 tool call log / <code>git status --porcelain</code></td><td>现有</td></tr><tr><td>失败用例与错误堆栈</td><td>工具结果中的 test/build 输出（<code>smartTruncation</code> 已按 profile 分类）</td><td>现有</td></tr><tr><td>未完成步骤</td><td><code>&lt;execution_plan&gt;</code> 的 <code>parseExecutionPlan</code>（<code>aiChatCore.js:3657-3671</code>）</td><td>现有</td></tr><tr><td>本次守卫结论</td><td>ruleguard 台账 <code>.khy/ruleguard/violations.jsonl</code></td><td>现有</td></tr></tbody></table>
+<blockquote><p><strong>诚实边界</strong>：某一类若无法确定性取得，<strong>如实留空并标注该类别未采集</strong>，不得用摘要代填（<code>RUNTIME-002</code>）。</p></blockquote>
+<hr>
+<h2 id="4-实施分期-每期独立可回滚">4. 实施分期（每期独立可回滚）<a class="anchor" href="#4-实施分期-每期独立可回滚" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>期</th><th>内容</th><th>触及文件</th><th>回滚方式</th><th>独立价值</th></tr></thead><tbody><tr><td><strong>一期</strong></td><td>契约 B + C：取小 + 累计预算生效</td><td><code>tools/index.js</code>、<code>agenticHarnessService.js</code></td><td>恢复旧优先级 / 恢复旧门</td><td><strong>最高</strong>——直接减少单次与累计读取量，不需要任何新通道</td></tr><tr><td><strong>二期</strong></td><td>契约 A：读取计划注入</td><td>新增 injector + <code>hookSystem.js</code></td><td>注销 <code>registerFunction</code></td><td>让 B4 从文档变成每轮一次的注入</td></tr><tr><td><strong>三期</strong></td><td>契约 D：保留清单钉住</td><td><code>contextCompressor.js</code> ×2 + 新增生成器</td><td>字段缺省 → 走旧 prompt</td><td>打断「压缩 → 忘 → 重读 → 又满」循环</td></tr><tr><td><strong>四期</strong></td><td>R6 读取台账</td><td>会话内台账</td><td>台账缺省 → 不拦截</td><td>消除重复读取</td></tr></tbody></table>
+<p><strong>一期单独就应可交付</strong>，且不依赖任何后续期。建议按一 → 三 → 二 → 四的顺序做：三期打断的是<strong>循环</strong>（结构性收益），二期只优化<strong>首轮</strong>（边际收益）。</p>
+<h3 id="4-1-每期随附的登记动作-process-008">4.1 每期随附的登记动作（<code>PROCESS-008</code>）<a class="anchor" href="#4-1-每期随附的登记动作-process-008" aria-label="锚点">#</a></h3>
+<p>每期落地时同步完成，缺一则守卫会报：</p>
+<table><thead><tr><th>动作</th><th>落点</th><th>判据</th></tr></thead><tbody><tr><td>新增执行器</td><td><code>scripts/ci/check-read-discipline.js</code>（<strong>必须在 <code>scripts/ci/</code> 下</strong>，ruleguard 只跑该目录）</td><td>顶部 <code>const STAGE = 'S1';</code>，单点 `if (STAGE === 'S1' \</td></tr><tr><td>登记机制</td><td><code>FEATURE-OWNERSHIP.json</code> 的 <code>rollout.mechanisms[]</code></td><td><code>stage/stageSince/previousStage/executorStage{file,constant,note}/samples{observed,target,note}/rollback/blockedBy</code></td></tr><tr><td>挂执行器</td><td><code>RULES-REGISTRY.json</code> 的 <code>PROCESS-007</code></td><td><code>gate: &quot;manual&quot; → &quot;commit&quot;</code>（<strong>不可写 <code>advisory</code></strong>——<code>gate=advisory</code> 在任何门档都不执行）、<code>severity: &quot;advisory&quot;</code>、<code>exec: {script, args, findings, anchors, carriers}</code></td></tr><tr><td>更新 <code>exception</code></td><td><code>RULES-REGISTRY.json:2772</code></td><td>现文「无机械守卫」在挂上执行器后<strong>即失效</strong>，须改写</td></tr><tr><td>npm 别名</td><td><code>package.json</code> 加 <code>check:read-discipline</code></td><td><code>check:wiring</code> 要求 <code>scripts/ci/</code> 下检查器被至少一个门面引用</td></tr><tr><td>重生成规则卡</td><td><code>npm run docs:rules-cards</code></td><td>规则卡是构建产物，禁手改；<code>check:rules</code> 会比对</td></tr></tbody></table>
+<p><strong>执行器的 findings（S1 只记录，不阻断）</strong>——它检查的是<strong>接线完整性</strong>，不是行为：</p>
+<table><thead><tr><th>finding</th><th>判据</th></tr></thead><tbody><tr><td><code>retention-consumer-missing</code></td><td><code>PreCompact</code> 声明了 <code>additionalContext</code>，而 <code>contextCompressor</code> 未读取</td></tr><tr><td><code>retention-producer-missing</code></td><td><code>hookSystem.init()</code> 未注册 PreCompact function hook</td></tr><tr><td><code>result-budget-shadows-static</code></td><td><code>applyResultBudget</code> 的取值序仍是覆盖而非取小</td></tr><tr><td><code>scope-plan-unconsumed</code></td><td><code>scopePlan</code> 被产出但无消费者</td></tr><tr><td><code>scope-gate-default-off</code></td><td>读取计划仍为默认关闭</td></tr></tbody></table>
+<blockquote><p>这个守卫的价值正在于钉住<strong>接线</strong>：本方案要修的四个缝，全都是「两端各自存在、中间没连上」——只有接线完整性守卫能防它再次断开。</p></blockquote>
+<hr>
+<h2 id="5-诚实边界-刻意不纳入-逐条给原因">5. 诚实边界（刻意不纳入 —— 逐条给原因）<a class="anchor" href="#5-诚实边界-刻意不纳入-逐条给原因" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>不做</th><th>原因</th></tr></thead><tbody><tr><td><strong>不新建规则 ID</strong></td><td>见 §2 归属决策：会产生两份同义真源</td></tr><tr><td><strong>不新增 env 门</strong></td><td><code>scripts/ci/check-tui-gates.js</code> 的 <code>MAX_GATES = 220</code> 是<strong>只降不升</strong>棘轮；<code>utils/selectGates.js:18</code> 明写「只有当开关对应一种真实的用户可见权衡时才值得加门」。回滚能力用「可选参数缺省 = 旧行为」实现</td></tr><tr><td><strong>不改 <code>PROCESS-007</code> 的 <code>ssot</code></strong>（仍为 <code>CLAUDE.md</code>）</td><td>只在 B4/B5 正文补「运行时同样适用」一句，保持单一语义真源</td></tr><tr><td><strong>S1 不阻断</strong></td><td><code>PROCESS-008</code> PP-3 是红线：S1/S2 必须旁路记录</td></tr><tr><td><strong>不重复处理「压缩不接续」/压缩阈值</strong></td><td><code>[DESIGN-ARCH-135]</code> 一二期已落地（§1.6）</td></tr><tr><td><strong>不引入向量检索 / embedding</strong></td><td>词法打分 + <code>.ai/</code> 符号倒排已足够定位；引入 embedding 是另一个量级的成本与依赖</td></tr><tr><td><strong>不引入固定时长 kill</strong></td><td>与 <code>RUNTIME-003</code> 冲突；读取预算用累计上限表达，不用墙钟</td></tr><tr><td><strong>不试图拦截模型的每一次 Read</strong></td><td>工具层硬拦截属 S3 门禁档，须先有 S1/S2 的样本；一期只做「让读取计划可见 + 让预算真的生效」</td></tr></tbody></table>
+<hr>
+<h2 id="6-反模式-这条路别走">6. 反模式（这条路别走）<a class="anchor" href="#6-反模式-这条路别走" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>❌ 别做</th><th>为什么</th></tr></thead><tbody><tr><td><strong>把读取计划注入 system prompt</strong></td><td>它每任务一变 → 摧毁 prompt 缓存。<code>systemPromptSections.js:68</code> 的 <code>DANGEROUS_uncachedSystemPromptSection</code> 正是为此存在的；正确落点是 user 轮</td></tr><tr><td><strong>用 PreCompact 钩子直接往对话里注入</strong></td><td><code>PreCompact</code> 的 <code>additionalContext</code> <strong>无消费者</strong>（§1.3）；能从钩子进对话的<strong>只有 <code>PrePrompt</code></strong></td></tr><tr><td><strong>靠「嘱咐模型保留四类」实现 B5</strong></td><td>与 B5 失效同因：文本约束零机制强制。要<strong>钉住</strong>（<code>&lt;original_task&gt;</code> 范式），不要<strong>嘱咐</strong></td></tr><tr><td><strong>把 <code>maxBytes = 256KB</code> 原样接上</strong></td><td>87K token ≈ 200K 窗口 43%，等于没省。接线时必须一并下调</td></tr><tr><td><strong>在 <code>.khy/hooks.json</code> 里配 <code>PreCompact</code></strong></td><td>该目录 gitignore，不随产品发布；必须是 <code>hookSystem.init()</code> 的代码级 hook</td></tr><tr><td><strong>为「让回滚可测」新增 env 门</strong></td><td>撞门预算棘轮。用可选参数缺省（<code>undefined</code> → 旧行为）+ 逐字节等价断言</td></tr><tr><td><strong><code>process.exitCode = 0</code> 之后没有单点短路</strong></td><td>S1 的正确形态是「判定全跑、finding 全打印、<strong>单点</strong>决定退出码」；分散短路会漏掉 finding</td></tr></tbody></table>
+<hr>
+<h2 id="7-验收方式-可复现命令-关联门禁">7. 验收方式（可复现命令 + 关联门禁）<a class="anchor" href="#7-验收方式-可复现命令-关联门禁" aria-label="锚点">#</a></h2>
+<h3 id="7-1-单元层-每期各自的用例">7.1 单元层（每期各自的用例）<a class="anchor" href="#7-1-单元层-每期各自的用例" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 一期：取小语义 + per-tool 静态值不再被静默覆盖</span>
+node --<span class="hljs-built_in">test</span> services/backend/tests/services/contextResultBudget.minSemantics.test.js
+
+<span class="hljs-comment"># 一期：累计预算恒返回 stopReason，且永不为「读全部」</span>
+node --<span class="hljs-built_in">test</span> services/backend/tests/services/contextScopeBudget.test.js
+
+<span class="hljs-comment"># 二期：仅 iteration===1 注入；计划渲染确定性（同输入同输出）</span>
+node --<span class="hljs-built_in">test</span> services/backend/tests/hooks/prePromptScopeInjector.test.js
+
+<span class="hljs-comment"># 三期：消费端读到 additionalContext；四类区块 pin 进压缩结果</span>
+node --<span class="hljs-built_in">test</span> services/backend/tests/services/contextCompressorRetention.test.js
+
+<span class="hljs-comment"># 接线完整性守卫（S1 只记录）</span>
+node scripts/ci/check-read-discipline.js</code></pre>
+<p><strong>必须钉住的两条语义</strong>（照 <code>[DESIGN-ARCH-135]</code> 的方法论）：</p>
+<ol><li><strong>逐字节等价回滚</strong>：契约 C 改动后，per-tool <strong>未声明</strong> <code>maxResultSizeChars</code> 的工具，其截断行为与改动前 <code>deepStrictEqual</code>；</li><li><strong>缺失即降级</strong>：契约 D 的生产端不返回 <code>additionalContext</code> 时，<code>contextCompressor</code> 的摘要提示词与改动前<strong>逐字节相同</strong>。</li></ol>
+<blockquote><p>⚠️ 新增用例一律用 <code>require('node:test')</code>——CI 跑 <code>test:node = node --test tests/**/*.test.js</code>，<strong>落地即绿</strong>是硬要求；用 jest 全局写在 <code>node --test</code> 下会 <code>jest is not defined</code> 落地即红（<code>[DESIGN-ARCH-135]</code> §4.1/§10.7 已实测）。</p></blockquote>
+<h3 id="7-2-集成层-人工-一次性">7.2 集成层（人工，一次性）<a class="anchor" href="#7-2-集成层-人工-一次性" aria-label="锚点">#</a></h3>
+<ol><li>开 TUI，给一个会触发多轮工具调用的任务；</li><li>用 <code>KHY_CONTEXT_PREEMPTIVE_RATIO=0.1</code> + <code>KHY_CONTEXT_HARD_FLOOR=0</code> 让压缩提前触发（<code>contextRouter.js:51-64</code> 已支持）；</li><li>断言：<strong>首轮</strong>的对话上下文中含读取计划块，且带 <code>stopReason</code>；</li><li>断言：压缩结果行出现后，<strong>下一轮</strong>的上下文里四类区块仍在，且<strong>不是摘要转述</strong>（含原始路径/堆栈原文）；</li><li>断言：把同一任务的文件读取次数与改动前对比，<strong>累计读取字符数下降</strong>（这是本方案唯一的量化收益判据）。</li></ol>
+<h3 id="7-3-关联门禁">7.3 关联门禁<a class="anchor" href="#7-3-关联门禁" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">npm run docs:verify          <span class="hljs-comment"># 本文 .html 孪生（docs:build 产物）</span>
+npm run check:layout         <span class="hljs-comment"># 层级 / 索引完整性</span>
+npm run check:wiring         <span class="hljs-comment"># 新执行器必须被门面引用</span>
+npm run rules:coverage       <span class="hljs-comment"># 覆盖率红线（P0 无执行器 / 死指针）</span>
+npm run check:rules          <span class="hljs-comment"># 登记表 ↔ 真源双向可达 + 规则卡一致</span>
+npm run rules:gate -- --mode <span class="hljs-built_in">pr</span></code></pre>
+<blockquote><p>⚠️ <code>docs:build</code> 是<strong>手动</strong>的（<code>.githooks/*</code> 与 <code>.github/workflows/*</code> 均未接线），<code>docs:verify</code> 也未进 CI ⇒ 新文档的 <code>.html</code> 孪生必须本机跑完，否则遗漏不会被自动发现。</p></blockquote>
+<hr>
+<h2 id="8-待核实项">8. 待核实项<a class="anchor" href="#8-待核实项" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>项</th><th>影响</th><th>优先级</th></tr></thead><tbody><tr><td>1</td><td><code>scopePlan</code> 该由谁持有给注入器——<code>buildContextPacket</code> 的返回值在 TUI 直调路径上是否可达（TUI 绕过 harness，见 <code>[DESIGN-ARCH-135]</code> §0）</td><td>决定契约 A 二期是走 harness 还是需在 TUI 侧另取</td><td><strong>高</strong></td></tr><tr><td>2</td><td><code>parseExecutionPlan</code> 在压缩发生时是否已有当前步骤进度（<code>onPlanProgress</code> 的时点）</td><td>决定「未完成步骤」这一类的可用性</td><td>中</td></tr><tr><td>3</td><td>ruleguard 台账 <code>.khy/ruleguard/violations.jsonl</code> 的「本次」边界如何切（按任务 ID 还是按会话）</td><td>决定第四类的语义精确度</td><td>中</td></tr><tr><td>4</td><td>下调后的 <code>maxBytes</code> 取值（按窗口比例派生 vs 固定值）</td><td>影响 R3 的实际收益</td><td>中</td></tr></tbody></table>
+<blockquote><p>未列入的都没查清就<strong>不写</strong>。以上四项均为已知未决，不是遗漏。</p></blockquote>
+<hr>
+<h2 id="9-变更日志">9. 变更日志<a class="anchor" href="#9-变更日志" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>2026-09-23</td><td>初稿。诊断基于 <code>tools/index.js</code> / <code>contextCompressor.js</code> / <code>hookRunner.js</code> / <code>hookSystem.js</code> / <code>agenticHarnessService.js</code> / <code>contextScope/*</code> 源码实测；「运行时零命中」经 <code>services/backend/src</code> 全量 3120 文件扫描确认；<code>scopePlan</code> 零消费者经全仓符号扫描确认；压缩回写与阈值两项已确认由 <code>[DESIGN-ARCH-135]</code> 闭环，故不在本方案范围</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-136] 零尝试失败被误报为钉选抑制的修复方案.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-136] 零尝试失败被误报为「钉选抑制」的修复方案</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-138] 工具调用能力判定与文本拦截协议.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-138] 工具调用能力判定与文本拦截协议</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-137] khyos运行时信息获取规则与读取预算接线方案.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

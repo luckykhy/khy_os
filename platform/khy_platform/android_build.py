@@ -251,7 +251,15 @@ def _parse_args(argv: Sequence[str]) -> Optional[dict]:
 
 # -- 步骤 1：定位 Capacitor 工程 ----------------------------------------------
 def _project_candidates() -> list:
-    """Capacitor 工程候选路径，按可信度排序。"""
+    """Capacitor 工程候选路径，按可信度排序。
+
+    刻意不再把 <仓库根>/apps/khy-mobile 列为候选：该目录已是无源码检出的幽灵端
+    （0 个 git 跟踪文件，dist/ 只是 software/khyquant/frontend 的编译副本），
+    把它当作默认工程会让 `khy build android` 静默构建一个空壳。真实的随身端是
+    Flutter 工程 apps/khy-os-client-app，走 `npm run android:release`。
+    本工具仍保留为「构建外部 Capacitor 工程」的入口 —— 用 KHY_ANDROID_PROJECT
+    显式指定即可。见 [DESIGN-ARCH-117] khy-多端入口矩阵。
+    """
     package_dir = Path(__file__).resolve().parent
     cwd = Path.cwd()
     candidates = []
@@ -259,10 +267,8 @@ def _project_candidates() -> list:
     if override:
         candidates.append(Path(override).expanduser())
     candidates.extend([
-        _repo_root() / "apps" / "khy-mobile",                       # 源码检出
         package_dir / "bundled" / "khy-mobile",                     # 标准 wheel 载荷
         package_dir.parent / "khy_os" / "bundled" / "khy-mobile",   # 旧版 wheel 布局
-        cwd / "apps" / "khy-mobile",                                # 在别处的仓库根执行
         cwd,                                                        # 直接在工程目录里执行
     ])
     return candidates
@@ -737,9 +743,12 @@ def run_android_build(argv: Sequence[str]) -> int:
     project = _find_project()
     if project is None:
         _step(1, "定位", "Capacitor 工程", "失败")
-        _action_required("找不到随身 App 的 Capacitor 工程", [
-            "预期位置：<仓库根>/apps/khy-mobile（源码检出）",
-            "或用环境变量显式指定：KHY_ANDROID_PROJECT=<工程目录> khy build android",
+        _action_required("没有指定 Capacitor 工程（且当前目录不是）", [
+            "构建随身 App 请改用 Flutter 工程：npm run android:release",
+            "  → 打包 apps/khy-os-client-app（APK + AAB + 签名校验）",
+            "如需构建外部 Capacitor 工程，用环境变量显式指定：",
+            "  KHY_ANDROID_PROJECT=<工程目录> khy build android",
+            "注意：<仓库根>/apps/khy-mobile 已无源码检出（0 个 git 跟踪文件），不是可用工程",
         ])
         return 2
     _step(1, "定位", "Capacitor 工程", str(project))

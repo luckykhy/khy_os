@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: LOG.md -->
+<title>TUI 人机交互夜间优化日志 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>tui-interaction-optimize<span class="sep">›</span>TUI 人机交互夜间优化日志</div>
+      <header class="hero reveal"><h1>TUI 人机交互夜间优化日志</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#tui-人机交互夜间优化日志">TUI 人机交互夜间优化日志</a></li><li class="lvl-2"><a href="#2026-09-21-07-25-未执行-工作树不干净">2026-09-21 07:25 — 未执行（工作树不干净）</a></li><li class="lvl-2"><a href="#下一轮建议切入点">下一轮建议切入点</a></li><li class="lvl-2"><a href="#2026-09-21-08-10-轮次-已改动并提交-ca7d8067">2026-09-21 08:10 轮次 — 已改动并提交（ca7d8067）</a></li><li class="lvl-2"><a href="#2026-09-21-09-25-轮次-未执行-工作树不干净-已过停工线">2026-09-21 09:25 轮次 — 未执行（工作树不干净 + 已过停工线）</a></li><li class="lvl-2"><a href="#2026-09-21-09-30-追加-发现-暂存区被整体-git-add-扫过-待人工处理">2026-09-21 09:30 追加 — 发现：暂存区被整体 `git add` 扫过（待人工处理）</a></li><li class="lvl-2"><a href="#2026-09-23-第-3-节-门控关回退实机复验完成-conpty-通道-零代码改动">2026-09-23 第 3 节 — 门控关回退实机复验完成（conPTY 通道），零代码改动</a></li><li class="lvl-2"><a href="#2026-09-23-04-00-段-第-4-节-cost-usage-通知-前缀落在隐形空行-已修-提交被损坏对象库阻断">2026-09-23 04:00 段（第 4 节）：/cost /usage 通知「·」前缀落在隐形空行 — 已修，提交被损坏对象库阻断</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="tui-人机交互夜间优化日志">TUI 人机交互夜间优化日志<a class="anchor" href="#tui-人机交互夜间优化日志" aria-label="锚点">#</a></h1>
+<p>无人值守定时任务的执行记录。每轮先读本文件，避免重复劳动。</p>
+<p>约束回顾：工作树必须干净才开改；只在本地分支 <code>chore/tui-ux-nightly</code> 提交；<br>禁止 push / force / PR / 删分支 / 改远端与 CI；不新增依赖；06:45 后只收尾。</p>
+<hr>
+<h2 id="2026-09-21-07-25-未执行-工作树不干净">2026-09-21 07:25 — 未执行（工作树不干净）<a class="anchor" href="#2026-09-21-07-25-未执行-工作树不干净" aria-label="锚点">#</a></h2>
+<p><strong>结论</strong>：本轮未做任何代码改动。</p>
+<p><strong>原因</strong>：<code>git status</code> 显示工作树上有大量他人未提交的改动（约 70 个已修改文件</p>
+<ul><li>数十个未跟踪文件），且当前分支为 <code>main</code>（非本任务分支）。改动集直接覆盖了</li></ul>
+<p>本任务的靶区，例如：</p>
+<ul><li><code>services/backend/src/cli/tui/app.js</code></li><li><code>services/backend/src/cli/tui/ink-components/</code>：<code>App.js</code>、<code>CcApp.js</code>、</li></ul>
+<p><code>CompletionMenu.js</code>、<code>HelpMenu.js</code>、<code>HistorySearchOverlay.js</code>、<br>  <code>PermissionsPrompt.js</code>、<code>ToolLines.js</code>、<code>Viewport.js</code></p>
+<ul><li><code>services/backend/src/cli/tui/</code>：<code>mouseButtons.js</code>、<code>selection.js</code></li><li><code>services/backend/src/cli/tui/hooks/useCompletions.js</code></li><li>相关测试：<code>tests/cli/tui/mouseButtons.test.js</code>、<code>mouseWheel.test.js</code>、</li></ul>
+<p><code>viewportSticky.test.js</code>，另有未跟踪的新测试<br>  <code>viewportDragEdgeScroll.test.js</code>、<code>toolLinesClipWidth.test.js</code>、<br>  <code>selectionDisplayCol.test.js</code></p>
+<p>这些正是「补全菜单 / 帮助菜单 / 权限提示 / 视口与选区 / 鼠标」一类的交互热点。<br>在他人未提交的同区域改动之上再叠一层，冲突与误判风险高，且无法判断哪些<br>改进已经被对方做过。</p>
+<p><strong>处置</strong>：按流程第 2 条，不 stash / reset / checkout --，直接放弃本轮改动，<br>仅提交本日志文件（该文件为本任务专属，不与上述改动冲突）。</p>
+<p><strong>另</strong>：取时间时已是 07:25，超过 06:45 的停工线，本轮本身也只允许收尾。</p>
+<hr>
+<h2 id="下一轮建议切入点">下一轮建议切入点<a class="anchor" href="#下一轮建议切入点" aria-label="锚点">#</a></h2>
+<ol><li><strong>先确认工作树状态</strong>：上一轮（2026-09-21）的未提交改动若仍未收口，继续只记录、</li></ol>
+<p>不开改。若已提交，则先 <code>git log</code> 看这批 TUI 改动做了什么，避免重复。</p>
+<ol><li><strong>键位可发现性</strong>（优先级最高，未被上批改动明显覆盖）：<code>HelpMenu.js</code> 与状态栏</li></ol>
+<p>的提示行是否说得出「当前上下文中真正可用的键」。用户高频卡点是不知道该按什么，<br>   这比视觉美化收益大。</p>
+<ol><li><strong>确认类提示的默认选项与一键撤销</strong>：<code>PermissionsPrompt.js</code> / <code>CcPermissionPrompt.js</code></li></ol>
+<p>/ <code>PlanApproval.js</code> 的默认高亮项是否符合大多数人的选择，事后能否一步撤回。</p>
+<ol><li><strong>中断与重试反馈</strong>：Esc / Ctrl-C 分级行为，卡住时是否告知「在等什么」（结合</li></ol>
+<p>规则 2.5「等待状态须显示目标」）。</p>
+<ol><li><strong>slash 命令与路径补全匹配质量</strong>：<code>slashMenuFilter.js</code>、<code>useCompletions.js</code>、</li></ol>
+<p><code>CompletionMenu.js</code>。注意上批改动已触及 <code>useCompletions.js</code> 与<br>   <code>completionContract.js</code>，开改前先看 diff。</p>
+<ol><li>真实界面验证：环境允许时用 PTY 起 <code>npm run cli</code> 观察渲染与按键；</li></ol>
+<p>若做不到，在日志里明确写「未做真实界面验证」。</p>
+<hr>
+<h2 id="2026-09-21-08-10-轮次-已改动并提交-ca7d8067">2026-09-21 08:10 轮次 — 已改动并提交（ca7d8067）<a class="anchor" href="#2026-09-21-08-10-轮次-已改动并提交-ca7d8067" aria-label="锚点">#</a></h2>
+<p><strong>痛点</strong>：TUI 内 <code>/cost</code> <code>/usage</code> <code>/stats</code> 的输出走 <code>route()</code> 瞬态清屏区，<br>下一帧即消失，用户无法回看。</p>
+<p><strong>改动</strong>：<code>cli/tui/tuiCommandReports.js</code> 新增 cost/usage/stats 同步报告档<br>（复用 tokenUsageService / ai.getConversationStats，stripAnsi 剥色拍成纯文本行，<br>经 <code>dispatchNativeCommand</code> 渲染成永久 transcript 通知）。App.js 零改动；<br>门控沿用 <code>KHY_TUI_NATIVE_COMMANDS</code>（关 → 字节回退旧路径）。</p>
+<p><strong>验证</strong>：单测 17/17；<code>check-agent-rules --changed</code> 0 违规；实机 TUI 确认<br>/usage 报告跨后续渲染持久保留、/stats 以 <code>· 会话统计:</code> 通知落 transcript。<br>门控关的实机复验因终端自动化把 env 前缀误输进旧实例而未完成（shell 探针证实<br>env 未生效），由单测覆盖，留待下节复验。</p>
+<p><strong>约束遵守</strong>：改动全部落在当时干净的 2 个文件上，未触碰他人 dirty 文件；<br>仅本地 commit 于 <code>chore/tui-ux-nightly</code>，本节未执行 push<br>（提交后仓库自带 post-commit 钩子自行发起补推重试，非本节操作）。</p>
+<p>详细记录：<code>.khy/tui-nightlog/2026-09-21.md</code>（含下一节候选清单）。</p>
+<hr>
+<h2 id="2026-09-21-09-25-轮次-未执行-工作树不干净-已过停工线">2026-09-21 09:25 轮次 — 未执行（工作树不干净 + 已过停工线）<a class="anchor" href="#2026-09-21-09-25-轮次-未执行-工作树不干净-已过停工线" aria-label="锚点">#</a></h2>
+<p><strong>结论</strong>：本轮未做任何代码改动，未跑测试，未驱动 TUI。</p>
+<p><strong>两条各自独立的拦停理由</strong>：</p>
+<ol><li><strong>工作树不干净</strong>：<code>git status --porcelain</code> 共 117 项（65 已跟踪改动 +</li></ol>
+<p>50 未跟踪）。其中直接覆盖本任务靶区的文件与 07:25 轮次记录的<strong>完全同一批</strong>，<br>   即已滞留 2 小时无人收口：<br>   <code>tui/app.js</code>、<code>tui/AGENTS.md</code>、<code>hooks/useCompletions.js</code>、<br>   <code>ink-components/{App,CcApp,CompletionMenu,HelpMenu,HistorySearchOverlay,PermissionsPrompt,ToolLines,Viewport}.js</code>、<br>   <code>tui/{mouseButtons,selection}.js</code>，以及 6 个测试文件<br>   （含 4 个未跟踪新测试 <code>viewportDragEdgeScroll</code> / <code>toolLinesClipWidth</code> /<br>   <code>selectionDisplayCol</code> / <code>useCompletions.refRootRegression</code>、<br>   <code>liveFrameGeometry</code> / <code>viewportIndicatorRowBudget</code>）。<br>   本轮候选切入点（键位可发现性 → <code>HelpMenu.js</code>；确认提示默认项 →<br>   <code>PermissionsPrompt.js</code>）<strong>两个都正好在这批 dirty 文件里</strong>，无处可绕。</p>
+<ol><li><strong>已过停工线</strong>：取系统时间为 09:25，晚于 06:45，按收尾规则只允许记录。</li></ol>
+<p><strong>处置</strong>：按流程第 2 条，不 stash / reset / checkout --，以 pathspec 方式只提交<br>本日志文件，保留他人 65 项已跟踪改动与 50 项未跟踪文件的原有状态（其中<br><code>scripts/gen_keys.py</code>、<code>scripts/release/hygiene-allowlist.json</code> 仍处于暂存区，<br>本轮未取消暂存）。</p>
+<p><strong>已核实的低风险事实</strong>（供后续轮次参考）：<br><code>chore/tui-ux-nightly</code> <strong>没有配置 upstream</strong>（<code>git rev-parse --abbrev-ref @{upstream}</code><br>→ fatal）。因此本分支上的 commit 在结构上无法被误推；08:10 轮次提到的<br>「post-commit 钩子自行补推」来自其它分支的上游跟踪，不是本分支。<br>仓库当前 <code>.git/hooks/</code> 只有 <code>post-checkout</code> 与 <code>post-commit</code> 两个 Qoder 统计脚本<br>（均以 <code>|| true</code> 兜底），<strong>没有 pre-commit 钩子</strong>。</p>
+<p><strong>遗留风险 / 需要人处理</strong>：夜检已连续两轮（07:25、09:25）被同一批未提交改动拦停。<br>这批改动体量（117 项）与滞留时长都不像瞬时中间态，更像是有人正在进行的成套工作。<br>在不违反「禁止 push、不擅动他人工作」的前提下，本任务无法自行解除阻塞——<br>需要人来收口（提交或明确废弃）。若第三轮仍是同一批文件，建议<strong>不要再原地重跑</strong>，<br>改为人工指定一条不与该批冲突的切入点。</p>
+<p><strong>下一轮建议</strong>：</p>
+<ol><li><strong>先跑一次 <code>git status --porcelain | grep cli/tui</code></strong>：若这批 TUI 文件仍在，</li></ol>
+<p>本轮直接记日志结束，不做无谓探索。</p>
+<ol><li><strong>若已收口</strong>：先 <code>git log</code> / <code>git diff</code> 看这批 TUI 改动做了什么——它改了</li></ol>
+<p>HelpMenu、CompletionMenu、useCompletions、Viewport、selection，<br>   与台账里第 2、3、5 号候选高度重叠，<strong>很可能已经把「键位可发现性」和<br>   「补全匹配质量」做掉了</strong>，不要重复劳动。</p>
+<ol><li><strong>候选清单（更新优先级）</strong>，按上条核对后取其中 1～2 个：<ul><li><strong>中断与重试反馈</strong>：Esc / Ctrl-C 分级，以及卡住时是否说得出「在等什么」</li></ul></li></ol>
+<p>（规则 2.5）。此项与上述 dirty 集合<strong>不重叠</strong>，是首选的绕行目标。</p>
+<ul><li><strong>确认类提示的一键撤销</strong>：<code>CcPermissionPrompt.js</code>、<code>PlanApproval.js</code></li></ul>
+<p>事后能否一步撤回。dirty 集合里是 <code>PermissionsPrompt.js</code>（无 Cc 前缀），<br>     两者是不同文件，可作次选。</p>
+<ul><li><strong>滚动/回看/定位最新消息</strong>、<strong>状态栏信息密度</strong>、<strong>长输出折叠</strong>。</li></ul>
+<p>按键；环境做不到时，明确写「未做真实界面验证」，不把单测通过说成体验已验证。</p>
+<hr>
+<h2 id="2026-09-21-09-30-追加-发现-暂存区被整体-git-add-扫过-待人工处理">2026-09-21 09:30 追加 — 发现：暂存区被整体 <code>git add</code> 扫过（待人工处理）<a class="anchor" href="#2026-09-21-09-30-追加-发现-暂存区被整体-git-add-扫过-待人工处理" aria-label="锚点">#</a></h2>
+<p>本轮收尾检查索引时发现异常，与台账上节记录的入口状态不符：</p>
+<table><thead><tr><th>指标</th><th>本轮 09:25 入口实测</th><th>本轮 09:26 提交后复核</th></tr></thead><tbody><tr><td>索引中与 HEAD 不同的条目</td><td><strong>2</strong>（<code>gen_keys.py</code>、<code>hygiene-allowlist.json</code>）</td><td><strong>190</strong></td></tr><tr><td>其中新增（状态 A）文件</td><td>0</td><td><strong>121</strong></td></tr><tr><td>仍未跟踪（<code>??</code>）</td><td>50</td><td><strong>2</strong></td></tr></tbody></table>
+<p>即入口时那 50 个未跟踪文件里，有 121 个条目（含子目录展开）被一次性加入了暂存区。</p>
+<p><strong>归因</strong>：本轮（09:25 起）至 09:26 期间<strong>未执行过任何 <code>git add</code></strong>。最可能的触发点是<br>仓库自带的 <code>.git/hooks/post-commit</code>（Qoder AI 代码统计钩子）——本任务分支上<br>09:26 的这次提交是窗口内唯一一次提交。旧记录「07:25 入口索引 = 2 项」系转述更早<br>的 <code>git diff --cached --stat</code> 输出、且当时被管道 <code>tail -5</code> 截断，可信度低于本轮的<br>直接计数，故不据此反推发生时刻。<strong>无论归因如何，事实是：任何一次 <code>git commit</code><br>之后，工作树都会被整体纳入暂存区。</strong></p>
+<p><strong>为什么必须处理</strong>：此刻任何人跑一次<strong>裸</strong> <code>git commit</code>（不带 pathspec），就会把<br>121 个杂物一次性提交，其中包括明显是误创建的垃圾文件名：<br><code>x[1].toUpperCase()+'</code>、<code>0)</code>、<code>...md</code>，以及 <code>.zcode/</code>、<code>.workbuddy/</code>、<br><code>gui-test-screenshots/</code>、<code>services/backend/note.txt</code> 等工具中间态。</p>
+<p><strong>安全扫描结果（本轮已做）</strong>：暂存集中<strong>无</strong> <code>.env</code>、凭据、密钥、<code>node_modules</code><br>类文件命中（仅 <code>scripts/ci/check-staged-secrets.js</code> 这个检查器脚本本身按关键词<br>匹配到）。所以这是「提交卫生」问题，不是泄露问题。</p>
+<p><strong>本任务处置：不修。</strong> 按硬性约束「不 stash / reset / checkout --、不擅动他人工作」，<br>取消暂存（<code>git restore --staged .</code>）会连带抹掉他人刻意保留的 staged/unstaged<br>边界，属于不可逆的破坏性动作，超出夜检任务的授权范围。<strong>留给人工收口。</strong></p>
+<p><strong>给下一轮的注意事项（重要）</strong>：</p>
+<ol><li>本任务后续所有提交<strong>一律用 pathspec 形式</strong></li></ol>
+<p><code>git commit -m &quot;…&quot; -- &lt;明确的路径&gt;</code>，<strong>禁止</strong> <code>git add</code> + 裸 <code>git commit</code><br>   —— 后者会把上述 121 个杂物一起提交。</p>
+<ol><li>提交后立刻 <code>git show --stat HEAD</code> 核对文件数，确认只含自己改的文件。</li><li>若钩子行为证实为「每次 commit 都 <code>git add</code> 全树」，则本分支上的提交越少越好；</li></ol>
+<p>台账类改动尽量合并成一次提交。</p>
+<hr>
+<h2 id="2026-09-23-第-3-节-门控关回退实机复验完成-conpty-通道-零代码改动">2026-09-23 第 3 节 — 门控关回退实机复验完成（conPTY 通道），零代码改动<a class="anchor" href="#2026-09-23-第-3-节-门控关回退实机复验完成-conpty-通道-零代码改动" aria-label="锚点">#</a></h2>
+<p><strong>背景</strong>：Computer Use 连续三节被物理 Esc 停屏，屏幕操作通道视为不可用；改用<br>node-repl MCP + 仓库自带 node-pty(conpty) 起<strong>真 TUI 进程</strong>、写 stdin、抓渲染字节流，<br>以帧切分（<code>\x1b[?2026h</code>）做对照实验。完整记录见 <code>.khy/tui-nightlog/2026-09-23.md</code>。</p>
+<p><strong>结论（闭合 09-21/09-23 两节遗留的验证缺口）</strong>：</p>
+<ul><li><code>KHY_TUI_NATIVE_COMMANDS=off</code>：<code>/stats</code>、<code>/usage</code> 输出仅闪现单帧即被下一次重绘抹掉、</li></ul>
+<p>全程无 <code>· </code> 前缀通知行——逐字节回退旧 route() 瞬态路径，门控语义实机成立。</p>
+<ul><li>默认（开）：<code>· 会话统计:</code> / <code>· 今日用量:</code> 为永久 transcript 通知，跨帧存活、被新内容</li></ul>
+<p>顶出视口时带 <code>↑9</code> 上滚指示——ca7d8067 修复行为再证。</p>
+<ul><li>原始证据：<code>.khy/tmp/pty_off.log</code> / <code>pty_on.log</code>。测试实例（42388/48476）已全部清理，</li></ul>
+<p>全机 <code>khy.js</code> 进程数复查 = 0。</p>
+<p><strong>新发现（留给后续节，见夜检台账候选 1）</strong>：模糊别名（如 <code>/usa</code>，非静态别名）由 route()<br>did-you-mean 距离-1 兜底自动执行（router.js:2660-2675），落<strong>瞬态</strong>路径；静态别名与规范名<br>走<strong>永久</strong>通知。同一意图两种持久性。修复需动他人 dirty 的 App.js/router 兜底处，且有<br>「猜错即执行」风险，须先过规则 6 需求五问，暂不修。</p>
+<p><strong>下一节绕行提示</strong>：node-pty 通道已验证可用（真 node 路径 <code>D:/Portable/Tools/nodejs/node.exe</code>，<br>启动画面需一次按键放行）。他人 dirty 的 TUI 改动合入后可用该通道做纯观察回归，无需写权限。</p>
+<h2 id="2026-09-23-04-00-段-第-4-节-cost-usage-通知-前缀落在隐形空行-已修-提交被损坏对象库阻断">2026-09-23 04:00 段（第 4 节）：/cost /usage 通知「·」前缀落在隐形空行 — 已修，提交被损坏对象库阻断<a class="anchor" href="#2026-09-23-04-00-段-第-4-节-cost-usage-通知-前缀落在隐形空行-已修-提交被损坏对象库阻断" aria-label="锚点">#</a></h2>
+<ul><li>复现：第 3 节真机帧证据显示 <code>/cost</code> 通知把 <code>· </code> 前缀加在了报告首行的<strong>空行</strong>上</li></ul>
+<p>（<code>formatCostReport</code> 以空行开头，通知渲染只前缀第一行），肉眼等于「无标记通知」。</p>
+<ul><li>修复：<code>tuiCommandReports.js::_textLines</code> 去首尾空行；新增回归测试，套件 18/18 绿；</li></ul>
+<p><code>check-agent-rules.js</code> 对两文件 0 违规。</p>
+<ul><li>实机验证（node-pty, 工作树实例）：<code>/cost</code> 后连续 5 帧首行为 <code>·   💰 Token 用量 &amp; 费用</code>，</li></ul>
+<p>上下方向键重绘后仍存活——前缀可见且持久。日志 <code>.khy/tmp/pty_wt2.log</code>；测试进程全部清理。</p>
+<ul><li>阻断点（维持人工急件）：坏 blob <code>121661084...</code>（HEAD 树内 <code>CLAUDE.html</code>）复查仍缺失，</li></ul>
+<p>本分支依旧无法创建任何提交。本节三产物 + 上节 LOG.md 追加均保留在工作树，<br>  待对象库修复后 pathspec 一次性提交。详见夜检台账 <code>.khy/tui-nightlog/2026-09-23.md</code>。</p>
+      </article>
+      <nav class="pager"><span></span><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/tui-interaction-optimize/LOG.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

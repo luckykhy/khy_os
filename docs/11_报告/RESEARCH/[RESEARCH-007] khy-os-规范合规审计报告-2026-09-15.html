@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [RESEARCH-007] khy-os-规范合规审计报告-2026-09-15.md -->
+<title>khy-os 规范合规审计报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>RESEARCH<span class="sep">›</span>khy-os 规范合规审计报告</div>
+      <header class="hero reveal"><h1>khy-os 规范合规审计报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-规范合规审计报告">khy-os 规范合规审计报告</a></li><li class="lvl-2"><a href="#严重度定义">严重度定义</a></li><li class="lvl-2"><a href="#总体结论">总体结论</a></li><li class="lvl-3"><a href="#问题统计">问题统计</a></li><li class="lvl-3"><a href="#补丁状态总览">补丁状态总览</a></li><li class="lvl-1"><a href="#第一部分-mcp-model-context-protocol-合规审计">第一部分：MCP（Model Context Protocol）合规审计</a></li><li class="lvl-2"><a href="#1-1-违规项清单">1.1 违规项清单</a></li><li class="lvl-3"><a href="#m1-协议版本硬编码-2024-11-05-全链路无版本协商-p1">M1 — 协议版本硬编码 2024-11-05，全链路无版本协商 【P1】</a></li><li class="lvl-3"><a href="#m2-客户端能力声明错误-把服务端能力当客户端能力上报-p1">M2 — 客户端能力声明错误：把服务端能力当客户端能力上报 【P1】</a></li><li class="lvl-3"><a href="#m3-客户端不响应服务端发起的请求-sampling-roots-elicitation-p1">M3 — 客户端不响应服务端发起的请求（sampling / roots / elicitation）【P1】</a></li><li class="lvl-3"><a href="#m4-无条件调用-resources-list-与-prompts-list-不检查服务端能力-p2">M4 — 无条件调用 `resources/list` 与 `prompts/list`，不检查服务端能力 【P2】</a></li><li class="lvl-3"><a href="#m5-streamable-http-服务端缺-origin-校验-dns-rebinding-防护缺失-p0">M5 — Streamable HTTP 服务端缺 `Origin` 校验（DNS rebinding 防护缺失）【P0】</a></li><li class="lvl-3"><a href="#m6-未处理-mcp-protocol-version-请求头-p2">M6 — 未处理 `MCP-Protocol-Version` 请求头 【P2】</a></li><li class="lvl-3"><a href="#m7-会话机制为-伪会话-签发但不校验-p2">M7 — 会话机制为&quot;伪会话&quot;：签发但不校验 【P2】</a></li><li class="lvl-3"><a href="#m8-401-响应缺-www-authenticate-头-支持查询串传令牌-p1">M8 — 401 响应缺 `WWW-Authenticate` 头；支持查询串传令牌 【P1】</a></li><li class="lvl-3"><a href="#m9-两种传输混用同一端点-客户端无法按规范区分-p2">M9 — 两种传输混用同一端点，客户端无法按规范区分 【P2】</a></li><li class="lvl-3"><a href="#m10-json-rpc-2-0-入站不校验-jsonrpc-字段-p3">M10 — JSON-RPC 2.0 入站不校验 `jsonrpc` 字段 【P3】</a></li><li class="lvl-3"><a href="#m11-工具结果折叠为文本时丢失结构-object-object-p2">M11 — 工具结果折叠为文本时丢失结构（`[object Object]`）【P2】</a></li><li class="lvl-3"><a href="#m12-unwraprpc-无匹配时静默返回-undefined-p3">M12 — `_unwrapRpc` 无匹配时静默返回 `undefined` 【P3】</a></li><li class="lvl-2"><a href="#1-2-mcp-合规亮点-应保留">1.2 MCP 合规亮点（应保留）</a></li><li class="lvl-1"><a href="#第二部分-a2a-agent-to-agent-合规审计">第二部分：A2A（Agent-to-Agent）合规审计</a></li><li class="lvl-2"><a href="#2-0-前置发现-两套-a2a-并存且互不相通-p1">2.0 前置发现：两套&quot; A2A &quot;并存且互不相通 【P1】</a></li><li class="lvl-2"><a href="#2-1-违规项清单">2.1 违规项清单</a></li><li class="lvl-3"><a href="#a2-无-agent-card-服务端托管端点-p1">A2 — 无 Agent Card 服务端托管端点 【P1】</a></li><li class="lvl-3"><a href="#a3-agent-card-字段不符规范-p1">A3 — Agent Card 字段不符规范 【P1】</a></li><li class="lvl-3"><a href="#a4-任务生命周期状态集私有-无标准-taskstate-p1">A4 — 任务生命周期状态集私有，无标准 TaskState 【P1】</a></li><li class="lvl-3"><a href="#a5-无-tasks-cancel-操作-p1">A5 — 无 `tasks/cancel` 操作 【P1】</a></li><li class="lvl-3"><a href="#a6-无流式传输-message-stream-及状态-产物更新事件-p1">A6 — 无流式传输（`message/stream` 及状态/产物更新事件）【P1】</a></li><li class="lvl-3"><a href="#a7-createtask-请求体字段错误-p2">A7 — `createTask` 请求体字段错误 【P2】</a></li><li class="lvl-3"><a href="#a8-实测确认-sendmessage-createtask-在未配置-api-key-时必然失败-p1">A8 — 【实测确认】`sendMessage` / `createTask` 在未配置 API key 时必然失败 【P1】</a></li><li class="lvl-3"><a href="#a9-initializea2a-为死代码-14-个内置-agent-注册从不执行-p2">A9 — `initializeA2A` 为死代码，14 个内置 agent 注册从不执行 【P2】</a></li><li class="lvl-3"><a href="#a10-无任务持久化-跨进程能力-p2">A10 — 无任务持久化 / 跨进程能力 【P2】</a></li><li class="lvl-3"><a href="#a11-acp-错误码落在-json-rpc-惯例区间之外-p3">A11 — ACP 错误码落在 JSON-RPC 惯例区间之外 【P3】</a></li><li class="lvl-2"><a href="#2-2-a2a-合规亮点-应保留">2.2 A2A 合规亮点（应保留）</a></li><li class="lvl-1"><a href="#第三部分-工具调用循环的完整性校验与终止条件">第三部分：工具调用循环的完整性校验与终止条件</a></li><li class="lvl-2"><a href="#3-1-现状-机制完备度-全仓最强项">3.1 现状：机制完备度（全仓最强项）</a></li><li class="lvl-3"><a href="#主循环">主循环</a></li><li class="lvl-3"><a href="#已实现的终止条件-多路径且均有记录">已实现的终止条件（多路径且均有记录）</a></li><li class="lvl-3"><a href="#轮次上限">轮次上限</a></li><li class="lvl-3"><a href="#死循环检测-11-个检测器">死循环检测：11 个检测器</a></li><li class="lvl-3"><a href="#超时与取消">超时与取消</a></li><li class="lvl-3"><a href="#入参校验">入参校验</a></li><li class="lvl-2"><a href="#3-2-缺口清单">3.2 缺口清单</a></li><li class="lvl-3"><a href="#t1-主循环无-journal-逐轮持久化-崩溃后无法精确恢复-p1">T1 — 主循环无 journal / 逐轮持久化，崩溃后无法精确恢复 【P1】</a></li><li class="lvl-3"><a href="#t2-工具返回结果无-schema-校验-p2">T2 — 工具返回结果无 schema 校验 【P2】</a></li><li class="lvl-3"><a href="#t3-畸形工具调用被静默丢弃-p2">T3 — 畸形工具调用被静默丢弃 【P2】</a></li><li class="lvl-3"><a href="#t4-轮次上限文档与实现不符-p3">T4 — 轮次上限文档与实现不符 【P3】</a></li><li class="lvl-3"><a href="#t5-khy-tool-loop-max-iterations-未登记-flagregistry-p3">T5 — `KHY_TOOL_LOOP_MAX_ITERATIONS` 未登记 flagRegistry 【P3】</a></li><li class="lvl-3"><a href="#t6-取消覆盖受门控-关闭即无工具级取消-p2">T6 — 取消覆盖受门控，关闭即无工具级取消 【P2】</a></li><li class="lvl-3"><a href="#t7-可观测性默认关闭-且缺循环结束事件-p2">T7 — 可观测性默认关闭，且缺循环结束事件 【P2】</a></li><li class="lvl-3"><a href="#t8-检测器文件头注释与实现不符-p3">T8 — 检测器文件头注释与实现不符 【P3】</a></li><li class="lvl-2"><a href="#3-3-核心回答-如何通过规范确认循环执行的完整性与终止条件">3.3 【核心回答】如何通过规范确认循环执行的完整性与终止条件</a></li><li class="lvl-3"><a href="#lc-1-有界性-boundedness">LC-1 有界性（Boundedness）</a></li><li class="lvl-3"><a href="#lc-2-终止完备性-termination-completeness">LC-2 终止完备性（Termination Completeness）</a></li><li class="lvl-3"><a href="#lc-3-进度性-progress-guarantee">LC-3 进度性（Progress Guarantee）</a></li><li class="lvl-3"><a href="#lc-4-可恢复性-recoverability">LC-4 可恢复性（Recoverability）</a></li><li class="lvl-3"><a href="#lc-5-可观测性-observability-by-default">LC-5 可观测性（Observability by Default）</a></li><li class="lvl-3"><a href="#lc-6-取消传播-cancellation-propagation">LC-6 取消传播（Cancellation Propagation）</a></li><li class="lvl-3"><a href="#lc-7-结果保真-result-integrity">LC-7 结果保真（Result Integrity）</a></li><li class="lvl-3"><a href="#判定结果汇总">判定结果汇总</a></li><li class="lvl-1"><a href="#第四部分-其他规范漏洞-数据格式-安全认证-错误处理">第四部分：其他规范漏洞（数据格式 / 安全认证 / 错误处理）</a></li><li class="lvl-2"><a href="#4-1-安全与认证">4.1 安全与认证</a></li><li class="lvl-3"><a href="#s1-p0-无鉴权的宿主控制端点">S1 — 【P0】无鉴权的宿主控制端点</a></li><li class="lvl-3"><a href="#s2-p0-已修-凭据明文落盘">S2 — 【P0，已修】凭据明文落盘</a></li><li class="lvl-3"><a href="#s3-p1-无鉴权的写文件与模型代理端点">S3 — 【P1】无鉴权的写文件与模型代理端点</a></li><li class="lvl-3"><a href="#s4-p1-命令注入面-变量直接拼入-shell">S4 — 【P1】命令注入面（变量直接拼入 shell）</a></li><li class="lvl-3"><a href="#s5-p1-cors-默认-且与自述矛盾">S5 — 【P1】CORS 默认 `'*'` 且与自述矛盾</a></li><li class="lvl-3"><a href="#s6-p2-内部错误消息直出客户端">S6 — 【P2】内部错误消息直出客户端</a></li><li class="lvl-2"><a href="#4-2-数据格式">4.2 数据格式</a></li><li class="lvl-3"><a href="#s7-p2-无统一运行时-schema-校验">S7 — 【P2】无统一运行时 schema 校验</a></li><li class="lvl-3"><a href="#s8-p2-协议版本化不一致">S8 — 【P2】协议版本化不一致</a></li><li class="lvl-2"><a href="#4-3-错误处理">4.3 错误处理</a></li><li class="lvl-3"><a href="#s9-p3-错误码体系存在但不强制">S9 — 【P3】错误码体系存在但不强制</a></li><li class="lvl-3"><a href="#s10-p2-读路径默认无边界">S10 — 【P2】读路径默认无边界</a></li><li class="lvl-3"><a href="#错误处理亮点">错误处理亮点</a></li><li class="lvl-1"><a href="#第五部分-整改优先级路线图">第五部分：整改优先级路线图</a></li><li class="lvl-2"><a href="#立即处理-p0-建议当轮修">立即处理（P0，建议当轮修）</a></li><li class="lvl-2"><a href="#高优先级-p1-建议本周">高优先级（P1，建议本周）</a></li><li class="lvl-2"><a href="#中优先级-p2">中优先级（P2）</a></li><li class="lvl-2"><a href="#低优先级-p3">低优先级（P3）</a></li><li class="lvl-1"><a href="#附录-a-仓库内标准不一致清单">附录 A：仓库内标准不一致清单</a></li><li class="lvl-1"><a href="#附录-b-审计方法与可复现性">附录 B：审计方法与可复现性</a></li><li class="lvl-2"><a href="#建议的后续动作">建议的后续动作</a></li><li class="lvl-1"><a href="#附录-c-p0-补丁记录-2026-09-15">附录 C：P0 补丁记录（2026-09-15）</a></li><li class="lvl-2"><a href="#c-1-m5-mcp-http-server-补-origin-校验">C.1 M5 — MCP HTTP server 补 Origin 校验</a></li><li class="lvl-2"><a href="#c-2-s1-宿主控制端点补鉴权">C.2 S1 — 宿主控制端点补鉴权</a></li><li class="lvl-2"><a href="#c-3-s2-凭据存储加固">C.3 S2 — 凭据存储加固</a></li><li class="lvl-2"><a href="#c-4-回归结果">C.4 回归结果</a></li><li class="lvl-2"><a href="#c-5-遗留与残余风险">C.5 遗留与残余风险</a></li><li class="lvl-1"><a href="#附录-d-p1-补丁记录-2026-09-15-第二批">附录 D：P1 补丁记录（2026-09-15 第二批）</a></li><li class="lvl-2"><a href="#d-1-a8-a2a-客户端-undefined-header-修好一条完整失效的链路">D.1 A8 — A2A 客户端 undefined header（修好一条完整失效的链路）</a></li><li class="lvl-2"><a href="#d-2-m2-m3-mcp-客户端能力声明与服务端请求响应">D.2 M2 + M3 — MCP 客户端能力声明与服务端请求响应</a></li><li class="lvl-2"><a href="#d-3-m1-协议版本协商">D.3 M1 — 协议版本协商</a></li><li class="lvl-2"><a href="#d-4-m4-按能力调用-顺带修复">D.4 M4 — 按能力调用（顺带修复）</a></li><li class="lvl-2"><a href="#d-5-回归结果">D.5 回归结果</a></li><li class="lvl-2"><a href="#d-6-遗留">D.6 遗留</a></li><li class="lvl-1"><a href="#附录-e-p1-补丁记录-第二批-m8-m6-m7">附录 E：P1 补丁记录（第二批：M8 / M6 / M7）</a></li><li class="lvl-2"><a href="#e-1-m8-401-响应头-移除查询串传令牌">E.1 M8 — 401 响应头 + 移除查询串传令牌</a></li><li class="lvl-3"><a href="#e-1-1-补-www-authenticate-rfc-6750-3-mcp-授权规范">E.1.1 补 `WWW-Authenticate`（RFC 6750 §3 / MCP 授权规范）</a></li><li class="lvl-3"><a href="#e-1-2-移除-token-查询串传令牌">E.1.2 移除 `?token=` 查询串传令牌</a></li><li class="lvl-3"><a href="#e-1-3-迁移影响-已核实">E.1.3 迁移影响（已核实）</a></li><li class="lvl-3"><a href="#e-1-4-实测">E.1.4 实测</a></li><li class="lvl-2"><a href="#e-2-m6-m7-协议版本头与会话校验">E.2 M6 + M7 — 协议版本头与会话校验</a></li><li class="lvl-3"><a href="#e-2-1-m6-mcp-protocol-version-头">E.2.1 M6 — `MCP-Protocol-Version` 头</a></li><li class="lvl-3"><a href="#e-2-2-m7-会话校验">E.2.2 M7 — 会话校验</a></li><li class="lvl-3"><a href="#e-2-3-实测">E.2.3 实测</a></li><li class="lvl-2"><a href="#e-3-测试与回归">E.3 测试与回归</a></li><li class="lvl-2"><a href="#e-4-遗留-本批未做">E.4 遗留（本批未做）</a></li><li class="lvl-1"><a href="#附录-f-p1-补丁记录-第三批-t1-工具循环-journal">附录 F：P1 补丁记录（第三批：T1 — 工具循环 journal）</a></li><li class="lvl-2"><a href="#f-1-问题回顾">F.1 问题回顾</a></li><li class="lvl-2"><a href="#f-2-改动">F.2 改动</a></li><li class="lvl-3"><a href="#f-2-1-新增-services-backend-src-services-toolloopjournal-js">F.2.1 新增 `services/backend/src/services/toolLoopJournal.js`</a></li><li class="lvl-3"><a href="#f-2-2-三条刻意的设计取舍">F.2.2 三条刻意的设计取舍</a></li><li class="lvl-3"><a href="#f-2-3-接线-tooluseloopcore-js-共-3-处">F.2.3 接线（`toolUseLoopCore.js`，共 3 处）</a></li><li class="lvl-2"><a href="#f-3-实测">F.3 实测</a></li><li class="lvl-2"><a href="#f-4-测试与回归">F.4 测试与回归</a></li><li class="lvl-2"><a href="#f-5-遗留-本批未做">F.5 遗留（本批未做）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-规范合规审计报告">khy-os 规范合规审计报告<a class="anchor" href="#khy-os-规范合规审计报告" aria-label="锚点">#</a></h1>
+<ul><li><strong>审计日期</strong>：2026-09-15</li><li><strong>审计对象</strong>：<code>D:\Portable\khy-os</code> 第一方源码</li><li><strong>审计范围界定</strong>：排除 <code>.research-tmp/</code>（opencode 等第三方参考代码）、<code>node_modules/</code>、<code>dist-ts/</code>、<code>docs/**/*.html</code>（markdown 副本）。所有结论均基于第一方源码。</li><li><strong>方法</strong>：静态代码审计 + 关键行为实测（Node 22.22.2 运行时验证）</li></ul>
+<h2 id="严重度定义">严重度定义<a class="anchor" href="#严重度定义" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>级别</th><th>含义</th></tr></thead><tbody><tr><td><strong>P0</strong></td><td>可被利用的安全缺陷，或造成不可逆数据/系统风险</td></tr><tr><td><strong>P1</strong></td><td>明确的规范违反，导致互操作失败、静默失败或功能不可用</td></tr><tr><td><strong>P2</strong></td><td>规范偏离，影响健壮性 / 可维护性 / 可观测性</td></tr><tr><td><strong>P3</strong></td><td>文档不一致、命名与行业惯例偏差</td></tr></tbody></table>
+<h2 id="总体结论">总体结论<a class="anchor" href="#总体结论" aria-label="锚点">#</a></h2>
+<p><strong>khy-os 的规范合规呈现明显的&quot;三档分化&quot;：</strong></p>
+<ol><li><strong>MCP —— 工具面扎实，协议面有硬缺口。</strong> 工具注册、权限门控、名称归一化防注入、注解驱动权限映射都做得很规范，甚至优于多数实现；但<strong>协议生命周期（版本协商、能力声明）与 Streamable HTTP 传输层存在明确违反规范之处</strong>，其中 HTTP 服务端缺 <code>Origin</code> 校验是 P0 安全缺陷。</li><li><strong>A2A —— &quot;名义合规&quot;。</strong> 存在两套互不相通的东西：一个真正的 A2A 出站客户端（约 127 行，很薄），和一套<strong>借 A2A 之名的私有 ACP JSON-RPC 方言</strong>（被 14 个内置 agent、registry、router、facade 大量引用）。后者与 A2A 规范毫无关系。真正的 A2A 客户端本身也有字段错误与一个<strong>实测确认的必然失败缺陷</strong>。</li><li><strong>工具调用循环 —— 全仓工程实现最强项。</strong> 11 个死循环检测器、多路径终止条件、超时分层、AbortController 贯穿，完备度超过多数开源 agent 框架。缺口集中在<strong>崩溃恢复（无 journal）与结果层校验</strong>。</li><li><strong>安全横切面 —— 存在 2 个 P0。</strong> 无鉴权的宿主控制端点 + 明文凭据落盘。</li></ol>
+<h3 id="问题统计">问题统计<a class="anchor" href="#问题统计" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>严重度</th><th>数量</th><th>分布</th></tr></thead><tbody><tr><td>P0</td><td><strong>3</strong></td><td>MCP×1、安全×2</td></tr><tr><td>P1</td><td><strong>15</strong></td><td>MCP×4、A2A×7、工具循环×1、安全×3</td></tr><tr><td>P2</td><td><strong>16</strong></td><td>MCP×5、A2A×3、工具循环×4、数据格式×3、安全×1</td></tr><tr><td>P3</td><td><strong>7</strong></td><td>MCP×2、A2A×1、工具循环×3、错误处理×1</td></tr><tr><td><strong>合计</strong></td><td><strong>41</strong></td><td></td></tr></tbody></table>
+<h3 id="补丁状态总览">补丁状态总览<a class="anchor" href="#补丁状态总览" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>编号</th><th>问题</th><th>级别</th><th>状态</th></tr></thead><tbody><tr><td>M5</td><td>MCP HTTP server 缺 Origin 校验</td><td>P0</td><td>✅ 已修（附录 C.1）</td></tr><tr><td>S1</td><td>无鉴权宿主控制端点</td><td>P0</td><td>✅ 已修（附录 C.2）</td></tr><tr><td>S2</td><td>凭据明文落盘</td><td>P0</td><td>✅ 已修（附录 C.3）</td></tr><tr><td>A8</td><td>A2A 客户端 undefined header 必然失败</td><td>P1</td><td>✅ 已修（附录 D.1）</td></tr><tr><td>M2</td><td>客户端能力声明错误</td><td>P1</td><td>✅ 已修（附录 D.2）</td></tr><tr><td>M3</td><td>不响应服务端请求</td><td>P1</td><td>✅ 已修（附录 D.2）</td></tr><tr><td>M1</td><td>协议版本无协商</td><td>P1</td><td>✅ 已修（附录 D.3）</td></tr><tr><td>M4</td><td>无条件调用未声明能力</td><td>P2</td><td>✅ 已修（附录 D.4）</td></tr><tr><td>M8</td><td>401 缺 <code>WWW-Authenticate</code> + <code>?token=</code> 传令牌</td><td>P1</td><td>✅ 已修（附录 E.1）</td></tr><tr><td>M6</td><td>未处理 <code>MCP-Protocol-Version</code> 头</td><td>P1</td><td>✅ 已修（附录 E.2）</td></tr><tr><td>M7</td><td>Streamable HTTP 会话不校验</td><td>P1</td><td>✅ 已修（附录 E.2）</td></tr><tr><td>T1</td><td>主循环无 journal，崩溃无法精确恢复</td><td>P1</td><td>✅ 已修（附录 F）</td></tr><tr><td>其余 29 项</td><td>—</td><td>P1×7 / P2×15 / P3×7</td><td>⬜ 待处理</td></tr></tbody></table>
+<blockquote><p>修复口径：只改「不合规」的部分，不动业务语义；每项都补测试并跑回归。<br>具体改动、实测数据与残余风险见附录 C（P0）与附录 D（P1/P2）。</p></blockquote>
+<hr>
+<h1 id="第一部分-mcp-model-context-protocol-合规审计">第一部分：MCP（Model Context Protocol）合规审计<a class="anchor" href="#第一部分-mcp-model-context-protocol-合规审计" aria-label="锚点">#</a></h1>
+<p><strong>对照规范版本</strong>：MCP 2025-06-18（当前）、2025-03-26（Streamable HTTP 引入）、2024-11-05（历史 HTTP+SSE）</p>
+<h2 id="1-1-违规项清单">1.1 违规项清单<a class="anchor" href="#1-1-违规项清单" aria-label="锚点">#</a></h2>
+<h3 id="m1-协议版本硬编码-2024-11-05-全链路无版本协商-p1">M1 — 协议版本硬编码 2024-11-05，全链路无版本协商 【P1】<a class="anchor" href="#m1-协议版本硬编码-2024-11-05-全链路无版本协商-p1" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：</p>
+<ul><li><code>services/backend/src/services/domain/messaging/mcp/mcpServerProtocol.js:49</code> — <code>const PROTOCOL_VERSION = '2024-11-05';</code></li><li><code>services/backend/src/services/domain/messaging/mcp/index.js:43</code> — 同名常量<strong>在客户端侧独立重复定义</strong></li><li><code>mcpServerProtocol.js:135-141</code> — <code>buildInitializeResult(opts)</code> <strong>完全不读取</strong> <code>params.protocolVersion</code>，无条件返回固定版本</li><li><code>index.js:578-580</code>、<code>:644-646</code> — 客户端握手后只取 <code>capabilities</code> / <code>serverInfo</code> / <code>instructions</code>，<strong>从不读取服务端返回的 <code>protocolVersion</code></strong></li></ul>
+<p><strong>违反规范</strong>：</p>
+<ul><li>MCP Lifecycle §<em>Version Negotiation</em>：客户端在 <code>initialize</code> 中发送其支持的最新版本；服务端若支持则回同版本，否则回自己支持的版本；<strong>客户端若无法支持服务端返回的版本，必须断开连接</strong>。</li><li>服务端<strong>必须</strong>基于客户端请求的版本做协商，而非无条件回固定值。</li></ul>
+<p><strong>影响</strong>：</p>
+<ul><li>任何符合 2025-03-26 / 2025-06-18 的客户端连接 <code>khy mcp serve</code>，收到 <code>2024-11-05</code> 应答后按规范应断开 → <strong>khy 作为 MCP server 事实上只对旧客户端可用</strong>。</li><li>客户端侧同样不检测版本不匹配，属于&quot;静默降级&quot;，掩盖真实的不兼容。</li><li>两处常量独立维护，无单一真源 → 已构成漂移风险（AGENTS.md 工程规则 1「零硬编码」的同类问题）。</li></ul>
+<p><strong>整改</strong>：抽出单一真源常量；<code>buildInitializeResult</code> 接收并回显客户端版本（若不支持则回自己最高版本）；客户端在 <code>_handleMessage</code>/握手返回处比对版本，不匹配时发出明确警告或断开。</p>
+<hr>
+<h3 id="m2-客户端能力声明错误-把服务端能力当客户端能力上报-p1">M2 — 客户端能力声明错误：把服务端能力当客户端能力上报 【P1】<a class="anchor" href="#m2-客户端能力声明错误-把服务端能力当客户端能力上报-p1" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>（三处重复，无共享常量）：</p>
+<ul><li><code>index.js:523-527</code>（stdio）、<code>:574</code>（Streamable HTTP）、<code>:641</code>（传统 SSE）</li></ul>
+<pre><code class="language-js"><span class="hljs-attr">capabilities</span>: {
+  <span class="hljs-attr">tools</span>: {},
+  <span class="hljs-attr">resources</span>: {},
+  <span class="hljs-attr">prompts</span>: {},
+},</code></pre>
+<p><strong>违反规范</strong>：<br>MCP <code>ClientCapabilities</code> 的合法字段为 <code>experimental</code> / <code>roots</code> / <code>sampling</code> / <code>elicitation</code>。<code>tools</code>、<code>resources</code>、<code>prompts</code> 是 <strong>ServerCapabilities</strong> 字段，出现在客户端能力中属于<strong>无效字段</strong>。</p>
+<p><strong>影响</strong>：</p>
+<ul><li>服务端据此判断客户端<strong>不支持</strong> <code>roots</code> / <code>sampling</code>，会主动关闭服务端发起的 <code>sampling/createMessage</code>、<code>roots/list</code> 交互 → 功能被静默降级。</li><li>三处重复声明，修改时极易漏改。</li></ul>
+<p><strong>整改</strong>：改为声明真实客户端能力（如 <code>roots: {}</code>、<code>sampling: {}</code>），并抽成单一常量。</p>
+<hr>
+<h3 id="m3-客户端不响应服务端发起的请求-sampling-roots-elicitation-p1">M3 — 客户端不响应服务端发起的请求（sampling / roots / elicitation）【P1】<a class="anchor" href="#m3-客户端不响应服务端发起的请求-sampling-roots-elicitation-p1" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：</p>
+<ul><li><code>index.js:950-973</code> — <code>_handleMessage(msg)</code> 仅处理三类：匹配 <code>_pendingRequests</code> 的响应、<code>notifications/tools/list_changed</code>、<code>notifications/resources/list_changed</code></li><li>无任何对<strong>入站 request</strong>（有 <code>method</code> + <code>id</code>）的响应逻辑</li></ul>
+<p><strong>违反规范</strong>：<br>MCP 是<strong>双向</strong>协议。服务端可向客户端发起 <code>sampling/createMessage</code>、<code>roots/list</code>、<code>elicitation/create</code> 等请求，<strong>客户端必须返回响应</strong>。</p>
+<p><strong>影响</strong>：<br>服务端发出请求后永远等不到响应（只会在自身超时后失败），相关能力形同虚设。同时 <code>_readSseResponse</code>（<code>index.js:851-852</code>）会把这类请求交给 <code>_handleMessage</code> 后<strong>静默丢弃</strong>。</p>
+<p><strong>整改</strong>：在 <code>_handleMessage</code> 中增加 request 分支，按 method 分派到 handler 并回写响应。</p>
+<hr>
+<h3 id="m4-无条件调用-resources-list-与-prompts-list-不检查服务端能力-p2">M4 — 无条件调用 <code>resources/list</code> 与 <code>prompts/list</code>，不检查服务端能力 【P2】<a class="anchor" href="#m4-无条件调用-resources-list-与-prompts-list-不检查服务端能力-p2" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：</p>
+<ul><li><code>index.js:705-715</code> — <code>_loadServerInventory()</code> 用 <code>Promise.allSettled</code> <strong>并行无条件</strong>发起三个请求：</li></ul>
+<pre><code class="language-js"><span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_sendRequest</span>(<span class="hljs-string">&#x27;tools/list&#x27;</span>, {}),
+<span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_sendRequest</span>(<span class="hljs-string">&#x27;resources/list&#x27;</span>, {}),
+<span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_sendRequest</span>(<span class="hljs-string">&#x27;prompts/list&#x27;</span>, {}),</code></pre>
+<p><strong>违反规范</strong>：<br>MCP 明确要求客户端 <strong>MUST NOT</strong> 调用服务端未声明支持的能力接口。</p>
+<p><strong>讽刺的自证</strong>：khy 自己的 server 端<strong>诚实地只声明了 tools</strong>（<code>mcpServerProtocol.js:138</code> — <code>capabilities: { tools: {} }</code>），而 khy 自己的 client 连上去就会发 <code>resources/list</code> 与 <code>prompts/list</code>，必然收到 <code>-32601 Method not found</code>。<strong>自家 client 违反自家 server 的诚实声明</strong>，这是最直接的证据。</p>
+<p><strong>影响</strong>：</p>
+<ul><li>向不支持的服务端发无效请求（浪费往返、污染服务端日志）。</li><li><code>Promise.allSettled</code> 吞掉失败原因，<strong>无法区分&quot;服务端不支持该能力&quot;与&quot;请求真的失败了&quot;</strong>，掩盖真实故障。</li></ul>
+<p><strong>整改</strong>：先读 <code>this.capabilities</code>，仅对已声明能力发起对应 list 请求。</p>
+<hr>
+<h3 id="m5-streamable-http-服务端缺-origin-校验-dns-rebinding-防护缺失-p0">M5 — Streamable HTTP 服务端缺 <code>Origin</code> 校验（DNS rebinding 防护缺失）【P0】<a class="anchor" href="#m5-streamable-http-服务端缺-origin-校验-dns-rebinding-防护缺失-p0" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：</p>
+<ul><li><code>services/backend/src/services/domain/messaging/mcp/mcpHttpServer.js:142-224</code> — 完整请求处理流程中<strong>无任何 <code>Origin</code> 头读取或校验</strong></li><li><code>:151-154</code> 仅有 token 校验</li></ul>
+<p><strong>违反规范</strong>：<br>MCP Streamable HTTP 传输规范明确要求：服务端 <strong>MUST</strong> 校验 <code>Origin</code> 头，以防止 DNS rebinding 攻击（规范原文要求 validate Origin header to prevent DNS rebinding attacks）。</p>
+<p><strong>影响（这是本次审计最严重的安全发现之一）</strong>：</p>
+<ul><li>khy 的 MCP server 默认暴露<strong>全量工具，含 shell 执行与文件写入</strong>（<code>mcpHttpServer.js:12-13</code> 自述：&quot;khy 暴露全量工具（含 shell/文件写），绝不裸奔上网&quot;）。</li><li>当绑定在 <code>127.0.0.1</code>（默认）时，<strong>任何用户访问的恶意网页</strong>都可以通过 <code>fetch('http://127.0.0.1:3737/mcp', ...)</code> 向本机 MCP server 发送 <code>tools/call</code>，执行任意 shell 命令。</li><li>缺 <code>Origin</code> 校验使浏览器成为攻击跳板，loopback 绑定<strong>并不构成安全边界</strong>。</li></ul>
+<p><strong>整改</strong>：校验 <code>Origin</code> 头，仅允许白名单来源（或对无 Origin 的非浏览器客户端放行）；对不合规来源返回 403。</p>
+<hr>
+<h3 id="m6-未处理-mcp-protocol-version-请求头-p2">M6 — 未处理 <code>MCP-Protocol-Version</code> 请求头 【P2】<a class="anchor" href="#m6-未处理-mcp-protocol-version-请求头-p2" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：</p>
+<ul><li><code>mcpHttpServer.js</code> 全文无 <code>MCP-Protocol-Version</code> 头读取（仅 <code>:206</code> 读 <code>mcp-session-id</code>）</li></ul>
+<p><strong>违反规范</strong>：<br>MCP 2025-06-18 要求 Streamable HTTP 客户端在<strong>所有</strong>请求中携带 <code>MCP-Protocol-Version</code> 头；服务端在收到无该头的请求时，应假定为 <code>2025-03-26</code>，或对不支持的版本返回 <code>400 Bad Request</code>。</p>
+<p><strong>影响</strong>：无法感知客户端的协议版本，与 M1 叠加后造成版本协商彻底失效。</p>
+<hr>
+<h3 id="m7-会话机制为-伪会话-签发但不校验-p2">M7 — 会话机制为&quot;伪会话&quot;：签发但不校验 【P2】<a class="anchor" href="#m7-会话机制为-伪会话-签发但不校验-p2" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：</p>
+<ul><li><code>mcpHttpServer.js:206-207</code></li></ul>
+<pre><code class="language-js"><span class="hljs-keyword">const</span> sid = req.<span class="hljs-property">headers</span>[<span class="hljs-string">&#x27;mcp-session-id&#x27;</span>] || <span class="hljs-string">`khy-<span class="hljs-subst">${++sessionSeq}</span>`</span>;
+headers[<span class="hljs-string">&#x27;Mcp-Session-Id&#x27;</span>] = sid;</code></pre>
+<p><strong>问题</strong>：</p>
+<ol><li>服务端<strong>不保存</strong>任何会话状态（注释 <code>:125</code> 明确说会话表仅用于传统 SSE 回信）。</li><li>客户端传来的任意 <code>Mcp-Session-Id</code> 都被原样回显，<strong>从不校验有效性</strong>。</li><li>未知/已失效的 session id 应返回 <code>404 Not Found</code>（规范要求），当前一律 <code>200</code>。</li></ol>
+<p><strong>影响</strong>：会话语义不可信；客户端无法判断会话是否已失效（例如服务端重启后）。</p>
+<hr>
+<h3 id="m8-401-响应缺-www-authenticate-头-支持查询串传令牌-p1">M8 — 401 响应缺 <code>WWW-Authenticate</code> 头；支持查询串传令牌 【P1】<a class="anchor" href="#m8-401-响应缺-www-authenticate-头-支持查询串传令牌-p1" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：</p>
+<ul><li><code>mcpHttpServer.js:151-154</code> — 401 响应体为 <code>{ error: 'unauthorized: ...' }</code>，<strong>无 <code>WWW-Authenticate</code> 头</strong></li><li><code>mcpHttpServer.js:86-88</code> — 显式接受 <code>?token=</code> 查询串传令牌</li></ul>
+<pre><code class="language-js"><span class="hljs-keyword">if</span> (r.<span class="hljs-property">queryToken</span> &amp;&amp; <span class="hljs-title class_">String</span>(r.<span class="hljs-property">queryToken</span>) === token) {
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+}</code></pre>
+<p><strong>违反规范/最佳实践</strong>：</p>
+<ul><li>MCP 授权规范要求 <code>401 Unauthorized</code> 响应携带 <code>WWW-Authenticate</code> 头，客户端据此发现授权服务器。</li><li>令牌置于 URL 查询串会进入<strong>服务器访问日志、浏览器历史、Referer 头、代理日志</strong>，是 OWASP 明确列为反模式的凭据传递方式。</li></ul>
+<p><strong>影响</strong>：令牌泄露面扩大；标准 MCP 客户端无法完成 OAuth 发现流程。</p>
+<hr>
+<h3 id="m9-两种传输混用同一端点-客户端无法按规范区分-p2">M9 — 两种传输混用同一端点，客户端无法按规范区分 【P2】<a class="anchor" href="#m9-两种传输混用同一端点-客户端无法按规范区分-p2" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：</p>
+<ul><li><code>mcpHttpServer.js:159</code> — <code>GET /</code> 或 <code>GET /sse</code> → 开 <code>text/event-stream</code>，发 <code>endpoint</code> 事件（这是 <strong>2024-11-05 传统 HTTP+SSE</strong> 传输）</li><li><code>mcpHttpServer.js:200</code> — <code>POST /</code> 或 <code>POST /mcp</code> → JSON 回包（这是 <strong>2025 Streamable HTTP</strong> 传输）</li></ul>
+<p><strong>问题</strong>：<br><code>GET /</code> 同时承担传统 SSE 的入口角色，而 <code>POST /</code> 是 Streamable HTTP。规范将两者定义为<strong>互斥的传输方式</strong>，客户端通过配置（<code>type: &quot;sse&quot;</code> vs <code>type: &quot;http&quot;</code>）选择，<strong>不通过同端点的 HTTP 方法区分</strong>。</p>
+<p><strong>影响</strong>：一个 Streamable HTTP 客户端对 <code>GET /</code> 发探测请求时，会意外挂上一条 SSE 流；反之传统 SSE 客户端可能误判端点。<code>index.js:568-584</code>（<code>_connectHttp</code>）与 <code>:595-650</code>（<code>_connectSse</code>）正是靠 <code>config.type</code> 区分，而非靠端点语义。</p>
+<hr>
+<h3 id="m10-json-rpc-2-0-入站不校验-jsonrpc-字段-p3">M10 — JSON-RPC 2.0 入站不校验 <code>jsonrpc</code> 字段 【P3】<a class="anchor" href="#m10-json-rpc-2-0-入站不校验-jsonrpc-字段-p3" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：</p>
+<ul><li><code>mcpServerProtocol.js:78-102</code> — <code>parseMessage</code> 校验了 JSON 合法性、对象类型、<code>method</code>、<code>id</code>，但<strong>未校验 <code>obj.jsonrpc === '2.0'</code></strong></li></ul>
+<p><strong>违反规范</strong>：JSON-RPC 2.0 要求成员 <code>jsonrpc</code> <strong>必须</strong>精确为字符串 <code>&quot;2.0&quot;</code>。回包侧（<code>:111</code>、<code>:126</code>）始终写入 <code>'2.0'</code>，入站却不校验。</p>
+<p><strong>影响</strong>：接受畸形请求（如 <code>{jsonrpc:'1.0',...}</code>），协议一致性不完整。</p>
+<hr>
+<h3 id="m11-工具结果折叠为文本时丢失结构-object-object-p2">M11 — 工具结果折叠为文本时丢失结构（<code>[object Object]</code>）【P2】<a class="anchor" href="#m11-工具结果折叠为文本时丢失结构-object-object-p2" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：</p>
+<ul><li><code>mcpServerProtocol.js:184-188</code></li></ul>
+<pre><code class="language-js"><span class="hljs-keyword">const</span> text = r.<span class="hljs-property">content</span> != <span class="hljs-literal">null</span> ? r.<span class="hljs-property">content</span> : r.<span class="hljs-property">error</span> != <span class="hljs-literal">null</span> ? r.<span class="hljs-property">error</span> : <span class="hljs-string">&#x27;&#x27;</span>;
+<span class="hljs-keyword">return</span> { <span class="hljs-attr">content</span>: [{ <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;text&#x27;</span>, <span class="hljs-attr">text</span>: <span class="hljs-title class_">String</span>(text) }], isError };</code></pre>
+<p><strong>问题</strong>：当 <code>result.content</code> 是<strong>对象或数组</strong>（非 MCP 原生 <code>content</code> 数组形）时，<code>String(obj)</code> 产出 <code>&quot;[object Object]&quot;</code>，<strong>数据静默损坏</strong>。</p>
+<p><strong>影响</strong>：khy 工具返回结构化结果经 MCP server 暴露给外部客户端时，接收方拿到无意义的 <code>[object Object]</code>。属于数据保真缺陷。</p>
+<p><strong>整改</strong>：对非字符串内容做 <code>JSON.stringify</code> 而非 <code>String</code>。</p>
+<hr>
+<h3 id="m12-unwraprpc-无匹配时静默返回-undefined-p3">M12 — <code>_unwrapRpc</code> 无匹配时静默返回 <code>undefined</code> 【P3】<a class="anchor" href="#m12-unwraprpc-无匹配时静默返回-undefined-p3" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：</p>
+<ul><li><code>index.js:866-874</code> — 若响应既无 <code>error</code> 也不匹配 <code>id</code>，落到 <code>return msg &amp;&amp; msg.result</code>（即 <code>undefined</code>），不抛错、不告警</li></ul>
+<p><strong>影响</strong>：协议错乱（如服务端回错 id）时，调用方拿到 <code>undefined</code> 而非明确错误，故障被掩盖。</p>
+<hr>
+<h2 id="1-2-mcp-合规亮点-应保留">1.2 MCP 合规亮点（应保留）<a class="anchor" href="#1-2-mcp-合规亮点-应保留" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>亮点</th><th>证据</th></tr></thead><tbody><tr><td>工具名归一化防注入/防碰撞</td><td><code>types.js:121-123</code> — 非 <code>[A-Za-z0-9_-]</code> 字符全替换为 <code>_</code>，确保 <code>mcp__server__tool</code> 分隔符不被破坏</td></tr><tr><td>注解驱动权限映射</td><td><code>types.js:150-154</code> — <code>readOnlyHint</code> / <code>destructiveHint</code> 显式映射到 <code>isReadOnly</code> / <code>isDestructive</code>，缺失时<strong>不猜测</strong>，交由权限层决策</td></tr><tr><td><code>tools/call</code> 不开后门</td><td><code>mcpServer.js:14-15</code>、<code>:78-80</code> — 与本地模型调工具走<strong>同一条</strong>权限门控（<code>--allowedTools</code> / 风险闸）</td></tr><tr><td>非 loopback 无 token 拒绝启动</td><td><code>mcpHttpServer.js:54-67</code> — 安全默认设计正确</td></tr><tr><td>请求体大小上限</td><td><code>mcpHttpServer.js:272</code> — 4MB 保护</td></tr><tr><td>JSON-RPC 标准错误码使用正确</td><td><code>mcpServerProtocol.js:53-59</code> — -32700/-32600/-32601/-32602/-32603 全部正确</td></tr><tr><td>capabilities 诚实不虚报</td><td><code>mcpServerProtocol.js:130</code> 注释与 <code>:138</code> 实现一致，只声明已实现的 tools</td></tr><tr><td>请求级超时</td><td><code>index.js:744-754</code> — 每个 pending 请求独立超时并清理 Map，无泄漏</td></tr><tr><td>传输解耦</td><td><code>mcpServerProtocol.js</code>（纯函数）与 <code>mcpServer.js</code> / <code>mcpHttpServer.js</code> / <code>mcpStdioServer.js</code>（薄 IO）分层清晰，可确定性单测</td></tr></tbody></table>
+<hr>
+<h1 id="第二部分-a2a-agent-to-agent-合规审计">第二部分：A2A（Agent-to-Agent）合规审计<a class="anchor" href="#第二部分-a2a-agent-to-agent-合规审计" aria-label="锚点">#</a></h1>
+<p><strong>对照规范版本</strong>：A2A Protocol v0.2.x / v0.3.x（Linux Foundation）</p>
+<h2 id="2-0-前置发现-两套-a2a-并存且互不相通-p1">2.0 前置发现：两套&quot; A2A &quot;并存且互不相通 【P1】<a class="anchor" href="#2-0-前置发现-两套-a2a-并存且互不相通-p1" aria-label="锚点">#</a></h2>
+<p>这是理解 A2A 部分所有问题的关键前提。</p>
+<table><thead><tr><th>实现</th><th>位置</th><th>性质</th></tr></thead><tbody><tr><td><strong>真 A2A 出站客户端</strong></td><td><code>services/backend/src/services/a2a/index.js</code>（127 行）</td><td>使用 A2A 风格 REST 路径（<code>/.well-known/agent-card.json</code>、<code>/v1/message:send</code>）、<code>role</code> + <code>parts[]</code>、Bearer 认证</td></tr><tr><td><strong>私有 ACP 方言</strong></td><td><code>acpTransport.js</code> / <code>a2aRegistry.js</code> / <code>a2aMessageRouter.js</code> / <code>a2aFacade.js</code> / <code>a2aAgentLifecycle.js</code></td><td><strong>纯进程内私有 JSON-RPC 方言</strong>，方法名 <code>agent.spawn</code> / <code>task.submit</code> / <code>message.send</code>，与 A2A 规范无关，仅<strong>命名撞车</strong></td></tr></tbody></table>
+<p><strong>证据</strong>：</p>
+<ul><li><code>acpTransport.js:50-63</code> — <code>ACP_METHODS</code> 枚举为 <code>agent.spawn</code> / <code>agent.kill</code> / <code>agent.status</code> / <code>task.submit</code> / <code>task.result</code> / <code>task.progress</code> / <code>context.share</code> / <code>tool.invoke</code> / <code>tool.result</code> / <code>message.send</code> / <code>message.broadcast</code> / <code>heartbeat</code></li><li><code>acpTransport.js:80</code> — <code>ACP_PROTOCOL_VERSION = '1.0'</code>（私有版本号）</li><li><code>acpTransport.js:6-14</code> — 自述支持 ipc / ws / http 三种通道，<strong>全为进程内或自建</strong></li></ul>
+<p><strong>违反规范</strong>：A2A 定义的方法集为 <code>message/send</code>、<code>message/stream</code>、<code>tasks/get</code>、<code>tasks/cancel</code>、<code>tasks/pushNotificationConfig/set</code> 等。上表方法名<strong>无一匹配</strong>。</p>
+<p><strong>影响</strong>：内部代码（含 14 个内置 agent 注册）大量引用 <code>a2a*</code> 命名，造成&quot;已实现 A2A&quot;的错觉；实际与 A2A 互操作无关。</p>
+<hr>
+<h2 id="2-1-违规项清单">2.1 违规项清单<a class="anchor" href="#2-1-违规项清单" aria-label="锚点">#</a></h2>
+<h3 id="a2-无-agent-card-服务端托管端点-p1">A2 — 无 Agent Card 服务端托管端点 【P1】<a class="anchor" href="#a2-无-agent-card-服务端托管端点-p1" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：</p>
+<ul><li>全仓 <code>.well-known</code> 仅出现在 <code>a2a/index.js:48</code>（<strong>出站拉取</strong>）</li><li><code>services/backend/src/routes/</code> 下搜索 <code>a2a</code> 零命中 → <strong>无服务端路由</strong></li><li><code>a2a/index.js:85-106</code> 的 <code>createLocalAgentCard()</code> 只返回一个<strong>本地对象</strong>，从未被任何 HTTP 端点托管</li></ul>
+<p><strong>违反规范</strong>：A2A 要求 agent 在 <code>/.well-known/agent-card.json</code>（v0.3）或 <code>/.well-known/agent.json</code>（v0.2.x）<strong>发布</strong> Agent Card，供外部发现。</p>
+<p><strong>影响</strong>：khy <strong>无法被任何外部 A2A agent 发现或调用</strong>，互操作仅为单向出站。</p>
+<hr>
+<h3 id="a3-agent-card-字段不符规范-p1">A3 — Agent Card 字段不符规范 【P1】<a class="anchor" href="#a3-agent-card-字段不符规范-p1" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：<code>a2a/index.js:94-104</code></p>
+<pre><code class="language-js"><span class="hljs-attr">capabilities</span>: {
+  <span class="hljs-attr">streaming</span>: <span class="hljs-literal">true</span>,           <span class="hljs-comment">// ← 空声明：全仓无 SSE 实现</span>
+  <span class="hljs-attr">pushNotifications</span>: <span class="hljs-literal">false</span>,
+  <span class="hljs-attr">stateTransitionHistory</span>: <span class="hljs-literal">true</span>,  <span class="hljs-comment">// ← 无对应实现</span>
+},
+<span class="hljs-attr">authentication</span>: {
+  <span class="hljs-attr">schemes</span>: [<span class="hljs-string">&#x27;bearer&#x27;</span>],       <span class="hljs-comment">// ← 字段名非标准</span>
+},
+<span class="hljs-attr">skills</span>: options.<span class="hljs-property">skills</span> || [],  <span class="hljs-comment">// ← 默认空数组</span></code></pre>
+<p><strong>违反规范</strong>：</p>
+<ol><li><code>authentication.schemes</code> <strong>不是</strong> A2A 字段。A2A 使用 <code>securitySchemes</code>（OpenAPI 风格的安全方案定义）+ <code>security</code>（引用列表）。</li><li>缺 <code>protocolVersion</code>、<code>provider</code>、<code>documentationUrl</code> 等规范字段。</li><li><strong><code>streaming: true</code> 是能力虚报</strong>——全仓搜索 <code>message/stream</code>、<code>TaskStatusUpdateEvent</code>、<code>TaskArtifactUpdateEvent</code> <strong>零命中</strong>。这与 MCP 部分&quot;诚实不虚报&quot;的做法形成鲜明对比，属同一仓库内的标准不一致。</li></ol>
+<p><strong>影响</strong>：外部 agent 依此卡片能力协商时会选择流式交互，随后必然失败。</p>
+<hr>
+<h3 id="a4-任务生命周期状态集私有-无标准-taskstate-p1">A4 — 任务生命周期状态集私有，无标准 TaskState 【P1】<a class="anchor" href="#a4-任务生命周期状态集私有-无标准-taskstate-p1" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>（三套互不相同的私有状态机）：</p>
+<table><thead><tr><th>位置</th><th>状态集</th></tr></thead><tbody><tr><td><code>a2aAgentLifecycle.js:21-32</code></td><td><code>pending</code> / <code>spawning</code> / <code>running</code> / <code>waiting</code> / <code>completing</code> / <code>completed</code> / <code>failed</code> / <code>killing</code> / <code>killed</code> / <code>timed_out</code></td></tr><tr><td><code>subAgentOrchestrator.js:26-34</code></td><td><code>created</code> / <code>running</code> / <code>waiting</code> / <code>completed</code> / <code>failed</code> / <code>killed</code> / <code>timed_out</code></td></tr><tr><td><code>domain/state/stateMachine/agentLifecycle.js:22-30</code></td><td><code>created</code> / <code>initializing</code> / <code>ready</code> / <code>running</code> / <code>completed</code> / <code>error</code> / <code>killed</code></td></tr></tbody></table>
+<p><strong>违反规范</strong>：A2A <code>TaskState</code> 为 <code>submitted</code> / <code>working</code> / <code>input-required</code> / <code>completed</code> / <code>canceled</code> / <code>failed</code> / <code>unknown</code> / <code>rejected</code> / <code>auth-required</code>。<strong>上述三套状态集中，仅 <code>completed</code> / <code>failed</code> 两个词与规范重合</strong>，且语义不等价（如 A2A 的 <code>input-required</code> 表示需要补充输入，khy 无对应态）。</p>
+<p><strong>附加缺陷</strong>：<code>a2aAgentLifecycle.js</code> 的状态赋值（<code>:157</code>、<code>:161</code>、<code>:192</code>、<code>:195</code>、<code>:218</code>、<code>:223</code>、<code>:251</code>）<strong>直接赋值，无迁移合法性校验</strong>。仅 <code>agentLifecycle.js:46-68</code> 有迁移表，且 <code>fsm.js:118-146</code> 对非法迁移<strong>只记录不抛错</strong>。</p>
+<p><strong>影响</strong>：无法与任何标准 A2A 实现交换任务状态；状态机可能进入非法态且无人察觉。</p>
+<hr>
+<h3 id="a5-无-tasks-cancel-操作-p1">A5 — 无 <code>tasks/cancel</code> 操作 【P1】<a class="anchor" href="#a5-无-tasks-cancel-操作-p1" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：</p>
+<ul><li><code>A2ATool/index.js:36</code> — 操作枚举<strong>不含</strong> <code>cancel</code></li><li><code>a2a/index.js</code> 导出仅 <code>getAgentCard</code> / <code>sendMessage</code> / <code>createTask</code> / <code>getTask</code> / <code>createLocalAgentCard</code> / <code>listProviders</code>，<strong>无 <code>cancelTask</code></strong></li><li>内部仅 <code>a2aAgentLifecycle.js:177</code> 的 <code>kill()</code>，属进程管理操作，<strong>非协议操作</strong></li></ul>
+<p><strong>违反规范</strong>：A2A 要求实现 <code>tasks/cancel</code>，使调用方可取消已提交任务。</p>
+<p><strong>影响</strong>：长任务无法通过协议取消，只能强杀进程。</p>
+<hr>
+<h3 id="a6-无流式传输-message-stream-及状态-产物更新事件-p1">A6 — 无流式传输（<code>message/stream</code> 及状态/产物更新事件）【P1】<a class="anchor" href="#a6-无流式传输-message-stream-及状态-产物更新事件-p1" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：全仓 <code>message/stream</code>、<code>TaskStatusUpdateEvent</code>、<code>TaskArtifactUpdateEvent</code> <strong>零命中</strong>。<br><code>subAgentTextStream.js:3-22</code> 是<strong>进程内 TUI 事件</strong>（<code>agent_text</code>），非协议流。</p>
+<p><strong>违反规范</strong>：A2A 定义 SSE 流式接口，通过 <code>TaskStatusUpdateEvent</code> / <code>TaskArtifactUpdateEvent</code> 推送增量。</p>
+<p><strong>影响</strong>：与 A3 的 <code>streaming: true</code> 声明直接矛盾。</p>
+<hr>
+<h3 id="a7-createtask-请求体字段错误-p2">A7 — <code>createTask</code> 请求体字段错误 【P2】<a class="anchor" href="#a7-createtask-请求体字段错误-p2" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：<code>a2a/index.js:70-73</code></p>
+<pre><code class="language-js"><span class="hljs-keyword">return</span> <span class="hljs-title function_">_request</span>(<span class="hljs-string">`<span class="hljs-subst">${agentUrl}</span>/v1/tasks`</span>, <span class="hljs-string">&#x27;POST&#x27;</span>, {
+  <span class="hljs-attr">id</span>: options.<span class="hljs-property">taskId</span> || <span class="hljs-string">`task_<span class="hljs-subst">${<span class="hljs-built_in">Date</span>.now()}</span>`</span>,
+  <span class="hljs-attr">messages</span>: [{ <span class="hljs-attr">parts</span>: [{ <span class="hljs-attr">text</span>: task }], <span class="hljs-attr">role</span>: <span class="hljs-string">&#x27;user&#x27;</span> }],
+  <span class="hljs-attr">metadata</span>: options.<span class="hljs-property">metadata</span> || {},
+}, ...);</code></pre>
+<p><strong>违反规范</strong>：</p>
+<ul><li>A2A 的任务创建经由 <code>message/send</code>，请求体为 <code>{ message: {...}, configuration?: {...}, metadata?: {...} }</code>。</li><li><strong>无顶层 <code>id</code></strong>（任务 id 由服务端生成）。</li><li><strong>无 <code>messages</code> 数组</strong>（单数 <code>message</code>）。</li><li>对比：同文件的 <code>sendMessage</code>（<code>:54-60</code>）字段是<strong>正确</strong>的（<code>message: { messageId, parts, role }</code>）。<strong>同一文件内两种风格并存</strong>，说明 <code>createTask</code> 是未经校验的私有扩展。</li></ul>
+<p><strong>影响</strong>：<code>createTask</code> 无法与任何标准 A2A agent 互通。</p>
+<hr>
+<h3 id="a8-实测确认-sendmessage-createtask-在未配置-api-key-时必然失败-p1">A8 — 【实测确认】<code>sendMessage</code> / <code>createTask</code> 在未配置 API key 时必然失败 【P1】<a class="anchor" href="#a8-实测确认-sendmessage-createtask-在未配置-api-key-时必然失败-p1" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：<code>a2a/index.js:52-65</code></p>
+<pre><code class="language-js"><span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">sendMessage</span>(<span class="hljs-params">agentUrl, message, options = {}</span>) {
+  <span class="hljs-keyword">const</span> apiKey = <span class="hljs-title function_">_env</span>(<span class="hljs-string">&#x27;API_KEY&#x27;</span>);
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">_request</span>(<span class="hljs-string">`<span class="hljs-subst">${agentUrl}</span>/v1/message:send`</span>, <span class="hljs-string">&#x27;POST&#x27;</span>, {...}, {
+    <span class="hljs-string">&#x27;Authorization&#x27;</span>: apiKey ? <span class="hljs-string">`Bearer <span class="hljs-subst">${apiKey}</span>`</span> : <span class="hljs-literal">undefined</span>,   <span class="hljs-comment">// ← undefined</span>
+    <span class="hljs-string">&#x27;X-User-Id&#x27;</span>: options.<span class="hljs-property">userId</span>,                                 <span class="hljs-comment">// ← 未传则 undefined</span>
+  });
+}</code></pre>
+<p>配合 <code>:16-43</code> 的 <code>_request</code>，<code>try</code> 块包裹了 <code>lib.request(...)</code>，而 <code>catch</code> 将其降级为：</p>
+<pre><code class="language-js">} <span class="hljs-keyword">catch</span> (e) {
+  <span class="hljs-title function_">resolve</span>({ <span class="hljs-attr">status</span>: <span class="hljs-number">0</span>, <span class="hljs-attr">error</span>: e.<span class="hljs-property">message</span> });   <span class="hljs-comment">// :40-42</span>
+}</code></pre>
+<p><strong>实测验证</strong>（Node v22.22.2）：</p>
+<pre><code>Authorization=undefined: THROWS -&gt; ERR_HTTP_INVALID_HEADER_VALUE
+X-User-Id=undefined: THROWS -&gt; ERR_HTTP_INVALID_HEADER_VALUE
+no undefined: NO THROW (request object created)</code></pre>
+<p><strong>结论</strong>：Node 的 <code>http.request</code> 对 <code>undefined</code> 值的 header <strong>同步抛 <code>ERR_HTTP_INVALID_HEADER_VALUE</code></strong>。因此：</p>
+<ul><li>未配置 <code>KHY_A2A_API_KEY</code> 时，<code>sendMessage</code> 与 <code>createTask</code> <strong>100% 失败</strong>；</li><li>未传 <code>options.userId</code> 时，<code>sendMessage</code> <strong>同样 100% 失败</strong>；</li><li>失败被静默吞成 <code>{ status: 0, error: 'Invalid value &quot;undefined&quot; for header &quot;...&quot;' }</code>，调用方拿到 <code>status: 0</code>，<strong>难以定位是网络问题还是本地参数问题</strong>。</li></ul>
+<p><strong>严重度说明</strong>：这是本次审计中<strong>唯一经运行时实测确认的功能性缺陷</strong>。出站 A2A 通信在默认配置下完全不可用。</p>
+<p><strong>整改</strong>：构造 headers 时过滤 <code>undefined</code> / <code>null</code> 值（<code>Object.entries().filter(([,v]) =&gt; v != null)</code>）。</p>
+<hr>
+<h3 id="a9-initializea2a-为死代码-14-个内置-agent-注册从不执行-p2">A9 — <code>initializeA2A</code> 为死代码，14 个内置 agent 注册从不执行 【P2】<a class="anchor" href="#a9-initializea2a-为死代码-14-个内置-agent-注册从不执行-p2" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：</p>
+<ul><li><code>a2aInit.js:19</code> 定义、<code>:171</code> 导出</li><li>全仓 Grep <code>initializeA2A</code> 仅命中这两处（<strong>无任何调用方</strong>）</li><li>其 <code>_registerBuiltinAgents</code>（<code>:76-101</code>）注册的 14 个 agent（基本面/技术面/情绪面分析师、多空研究员、交易决策师、风控经理、协调者、探索者、规划者、审计者、修复者、研究员）</li></ul>
+<p><strong>影响</strong>：这些内置 agent 的注册逻辑<strong>在真实运行中从不生效</strong>；子系统改由 <code>getA2A()</code> 懒加载（<code>agentCommunicationService.js:84-113</code>、<code>teammateBus.js:39-50</code>、<code>externalAgentDirective.js:277,306</code>）。启动初始化与懒加载两套路径并存，且启动路径是死的。</p>
+<hr>
+<h3 id="a10-无任务持久化-跨进程能力-p2">A10 — 无任务持久化 / 跨进程能力 【P2】<a class="anchor" href="#a10-无任务持久化-跨进程能力-p2" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：</p>
+<ul><li><code>a2aRegistry.js:49</code>（内存 Map）、<code>a2aMessageRouter.js:53</code>、<code>a2aAgentLifecycle.js:71</code></li></ul>
+<p><strong>影响</strong>：agent 注册表、消息路由队列、生命周期状态<strong>全部驻留内存</strong>，进程重启即清零，且<strong>无法跨进程/跨主机</strong>。与 A2A&quot;跨厂商、跨网络&quot;的设计目标相去甚远。</p>
+<hr>
+<h3 id="a11-acp-错误码落在-json-rpc-惯例区间之外-p3">A11 — ACP 错误码落在 JSON-RPC 惯例区间之外 【P3】<a class="anchor" href="#a11-acp-错误码落在-json-rpc-惯例区间之外-p3" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：<code>acpTransport.js:67-77</code></p>
+<pre><code class="language-js"><span class="hljs-attr">AGENT_NOT_FOUND</span>: -<span class="hljs-number">40001</span>,
+<span class="hljs-attr">AGENT_BUSY</span>: -<span class="hljs-number">40002</span>,
+<span class="hljs-attr">TIMEOUT</span>: -<span class="hljs-number">40003</span>,
+<span class="hljs-attr">CHANNEL_CLOSED</span>: -<span class="hljs-number">40004</span>,</code></pre>
+<p><strong>说明</strong>：JSON-RPC 2.0 保留 <code>-32768</code> 至 <code>-32000</code> 区间给预定义错误。<code>-40001</code> 等值<strong>不违反规范的硬性禁止</strong>（规范未禁止其他数字），但<strong>偏离行业惯例</strong>——生态（含 MCP 的 <code>-32002 ResourceNotFound</code>）普遍在 <code>-32000</code> ~ <code>-32099</code> 内定义实现级错误码。使用 <code>-400xx</code> 会与生态工具的错误码解析逻辑产生冲突风险。</p>
+<hr>
+<h2 id="2-2-a2a-合规亮点-应保留">2.2 A2A 合规亮点（应保留）<a class="anchor" href="#2-2-a2a-合规亮点-应保留" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>亮点</th><th>证据</th></tr></thead><tbody><tr><td><strong>有 JSON Schema 契约 + 运行时校验</strong></td><td><code>contracts/acp/acp-message.schema.json</code>，<code>acpTransport.js:20-46</code> 加载并按 <code>METHOD_PARAM_DEF</code> 做参数校验——这是全仓<strong>唯一</strong>做到&quot;契约即代码&quot;的协议层</td></tr><tr><td>防失控资源限制</td><td><code>a2aAgentLifecycle.js:36-42</code> — <code>maxDepth: 3</code>、<code>maxChildren: 10</code>、<code>agentTimeoutMs: 300_000</code>、<code>maxTotalAgents: 50</code></td></tr><tr><td>注册表健康检查</td><td><code>a2aRegistry.js</code> 心跳 + <code>agent:unhealthy</code> / <code>agent:recovered</code> 事件</td></tr><tr><td>路由具备死信机制</td><td><code>a2aInit.js:46-52</code> — <code>maxRetries</code> / <code>retryDelayMs</code> / <code>maxQueueSize</code> / <code>deadLetterEnabled</code></td></tr><tr><td>出站 <code>sendMessage</code> 消息体合规</td><td><code>a2a/index.js:54-60</code> — <code>message: { messageId, parts: [{text}], role: 'user' }</code> 结构正确</td></tr><tr><td>凭据不硬编码</td><td><code>a2a/index.js:12-14</code> 从 <code>KHY_A2A_*</code> 环境变量读取；<code>:92</code> 端口取自 <code>serviceDefaults.BACKEND_PORT</code>（符合 AGENTS.md 零硬编码规则）</td></tr></tbody></table>
+<hr>
+<h1 id="第三部分-工具调用循环的完整性校验与终止条件">第三部分：工具调用循环的完整性校验与终止条件<a class="anchor" href="#第三部分-工具调用循环的完整性校验与终止条件" aria-label="锚点">#</a></h1>
+<p>用户问题包含两个层面：<strong>（a）现状如何</strong>；<strong>（b）如何通过规范确认循环的完整性与终止条件</strong>。以下分别回答。</p>
+<h2 id="3-1-现状-机制完备度-全仓最强项">3.1 现状：机制完备度（全仓最强项）<a class="anchor" href="#3-1-现状-机制完备度-全仓最强项" aria-label="锚点">#</a></h2>
+<h3 id="主循环">主循环<a class="anchor" href="#主循环" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：<code>services/backend/src/services/toolUseLoopCore.js:3280</code></p>
+<pre><code class="language-js"><span class="hljs-keyword">while</span> (!budget.<span class="hljs-property">depleted</span> || _gracePending) {</code></pre>
+<p>入口 <code>runToolUseLoop</code> 在 <code>:1866</code>。循环条件<strong>不依赖模型输出</strong>，由 <code>IterationBudget</code>（<code>:519-546</code>）控制，属静态可判定的有界循环。</p>
+<h3 id="已实现的终止条件-多路径且均有记录">已实现的终止条件（多路径且均有记录）<a class="anchor" href="#已实现的终止条件-多路径且均有记录" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>终止原因</th><th>证据</th></tr></thead><tbody><tr><td>无 <code>tool_use</code> → 正常收尾</td><td><code>:6160</code> / <code>:7713</code>（breadcrumb <code>conclude</code>）</td></tr><tr><td>达最大轮次</td><td><code>:11251-11286</code>（<code>maxIterationsReached</code> / <code>truncated</code>）</td></tr><tr><td>绝对超时</td><td><code>:3466-3492</code>（<code>KHY_TOOL_LOOP_ABSOLUTE_TIMEOUT_MS</code>，默认 1,200,000ms，<code>0</code>=禁用）</td></tr><tr><td>空闲超时</td><td><code>:3497-3536</code>（活动感知宽限 30,000ms，<code>:3125-3128</code>）</td></tr><tr><td>用户中断</td><td><code>:3383-3457</code>（<code>interrupted</code> / <code>cancelled</code>）</td></tr><tr><td>Token 预算硬停</td><td><code>:3340-3379</code>（<code>budgetStopped</code>）</td></tr><tr><td>连续失败阈值</td><td><code>MAX_CONSECUTIVE_FAILURES = 3/5</code>（<code>:3016</code>、<code>:11125</code>、<code>:11215-11224</code>）</td></tr><tr><td>PostToolUse hook 停机</td><td><code>:3310-3332</code></td></tr><tr><td>全量去重卡死（连续 2 轮）</td><td><code>:10939-10967</code></td></tr></tbody></table>
+<h3 id="轮次上限">轮次上限<a class="anchor" href="#轮次上限" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：<code>:346</code> <code>const MAX_ITERATIONS = 100;</code>，<code>_resolveMaxIterations</code>（<code>:850-869</code>）优先级为<br><code>options.maxIterations</code> → <code>KHY_TOOL_LOOP_MAX_ITERATIONS</code> → 默认 100，并 clamp 到 <code>[minSafe, 100]</code>（<code>minSafe</code> 动态 5-15，<code>:828-836</code>）。boost 叠加后封顶 200（<code>:2418-2429</code>）。</p>
+<h3 id="死循环检测-11-个检测器">死循环检测：11 个检测器<a class="anchor" href="#死循环检测-11-个检测器" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：<code>services/backend/src/services/toolLoopDetector.js:4-25</code></p>
+<table><thead><tr><th>#</th><th>检测器</th><th>作用</th></tr></thead><tbody><tr><td>1</td><td><code>genericRepeat</code></td><td>同工具+同参数哈希反复出现</td></tr><tr><td>2</td><td><code>unknownToolRepeat</code></td><td>反复调用不存在的工具</td></tr><tr><td>3</td><td><code>noProgressStreak</code></td><td>同工具+参数+结果哈希（输出无变化）</td></tr><tr><td>4</td><td><code>pingPong</code></td><td>两个工具交替无进展</td></tr><tr><td>5</td><td><code>circuitBreaker</code></td><td>全局调用数硬上限（默认 50，<code>:42-43</code>）</td></tr><tr><td>6</td><td><code>contentChanting</code></td><td>AI 输出文本循环重复</td></tr><tr><td>7</td><td><code>readFileLoop</code></td><td>过度读取类调用（含冷启动门控）</td></tr><tr><td>8</td><td><code>actionStagnation</code></td><td>同名工具反复，含<strong>参数多样性抑制</strong>（高区分度参数比不阻断）</td></tr><tr><td>9</td><td><code>shellIntentRepeat</code></td><td>同 shell 意图、不同语法</td></tr><tr><td>10</td><td><code>pathIntentRepeat</code></td><td>同路径跨工具/跨语法访问</td></tr><tr><td>11</td><td><code>webRetrievalFailureStreak</code></td><td>连续失败的网页抓取（&quot;死亡之握&quot;）</td></tr></tbody></table>
+<p>严重度分级：<code>ok</code> → <code>warning</code> → <code>critical</code> → <code>circuit_breaker</code>。调用点 <code>:8193</code>、<code>:9120</code>。</p>
+<h3 id="超时与取消">超时与取消<a class="anchor" href="#超时与取消" aria-label="锚点">#</a></h3>
+<ul><li>单工具超时：<code>toolCalling.js:2516-2568</code>（<code>Promise.race</code>，默认 120,000ms，<code>KHY_TOOL_EXEC_TIMEOUT_MS</code> 可覆盖，支持 per-call <code>timeoutMs</code>）</li><li>取消链路：<code>parentAbort</code> / 外部 signal（<code>:2274-2293</code>）→ sibling（<code>:2331-2359</code>）→ <code>traceContext.abortSignal</code> → <code>toolCalling.js:1661-1672</code> + <code>attachAbortRace</code>（<code>:2536</code>）</li></ul>
+<h3 id="入参校验">入参校验<a class="anchor" href="#入参校验" aria-label="锚点">#</a></h3>
+<ul><li>registry <code>.validate()</code>（<code>toolCalling.js:2694-2760</code>）</li><li>builtin <code>validateParams</code>（<code>:2768-2817</code>，基类 <code>_baseTool.js:293</code>）</li><li>校验失败返回 <code>{success:false, error, canRetry, hint}</code> <strong>回灌模型</strong>（自愈设计，很好）</li><li>未知参数按 schema 过滤（<code>:2660-2671</code>）</li><li>工具名纠正：<code>toolCallCorrection.js:66-117</code></li></ul>
+<h2 id="3-2-缺口清单">3.2 缺口清单<a class="anchor" href="#3-2-缺口清单" aria-label="锚点">#</a></h2>
+<h3 id="t1-主循环无-journal-逐轮持久化-崩溃后无法精确恢复-p1">T1 — 主循环无 journal / 逐轮持久化，崩溃后无法精确恢复 【P1】<a class="anchor" href="#t1-主循环无-journal-逐轮持久化-崩溃后无法精确恢复-p1" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：</p>
+<ul><li><code>orchestrationJournal.js</code> <strong>仅</strong>被 <code>orchestrationService.js:28/144</code> 引用（子代理编排），<code>toolUseLoopCore.js</code> <strong>零引用</strong></li><li>主循环仅暴露 <code>onCheckpoint</code> 回调（每 3 轮 / 45s，<code>:10919-10935</code>；中断时 <code>:3387-3402</code>）</li><li>落盘实现：<code>agenticHarnessService.js:388-416</code> → <code>boulderState.js</code>（<code>&lt;dataHome&gt;/boulder/&lt;md5(cwd)&gt;.json</code>，24h TTL）</li><li>恢复为&quot;快照拼回 prompt&quot;，<strong>非精确重放</strong>；且<strong>按 cwd 单槽覆盖</strong>——同一目录下并发会话会互相覆盖</li></ul>
+<p><strong>影响</strong>：长任务（接近 100 轮）中途崩溃，只能靠粗粒度快照恢复；同目录并发任务存在<strong>检查点互相覆盖</strong>风险。</p>
+<hr>
+<h3 id="t2-工具返回结果无-schema-校验-p2">T2 — 工具返回结果无 schema 校验 【P2】<a class="anchor" href="#t2-工具返回结果无-schema-校验-p2" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：全仓无 <code>outputSchema</code> / <code>validateResult</code> 用于<strong>结果</strong>层校验（入参有，结果没有）。</p>
+<p><strong>影响</strong>：工具返回畸形/超预期结果时，在结果层无拦截，直接回灌模型，可能污染后续推理。</p>
+<hr>
+<h3 id="t3-畸形工具调用被静默丢弃-p2">T3 — 畸形工具调用被静默丢弃 【P2】<a class="anchor" href="#t3-畸形工具调用被静默丢弃-p2" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：<code>toolCallParser.js:561-562</code> — JSON 解析失败时注释为 <code>skip malformed JSON</code>，<strong>无告警、无重试、无状态记录</strong>。</p>
+<p><strong>影响</strong>：模型产出的坏调用凭空消失，排查时无痕迹。与 T7（可观测性默认关闭）叠加后问题更隐蔽。</p>
+<hr>
+<h3 id="t4-轮次上限文档与实现不符-p3">T4 — 轮次上限文档与实现不符 【P3】<a class="anchor" href="#t4-轮次上限文档与实现不符-p3" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：</p>
+<ul><li>JSDoc <code>:1837</code> — <code>@param {number} [options.maxIterations] - Safety limit on loop iterations (fallback: KHY_TOOL_LOOP_MAX_ITERATIONS or 10)</code></li><li>实现 <code>:346</code> — <code>MAX_ITERATIONS = 100</code></li></ul>
+<p><strong>影响</strong>：文档说 10，实际 100（10 倍差异）。维护者据此估算成本会严重偏差。</p>
+<hr>
+<h3 id="t5-khy-tool-loop-max-iterations-未登记-flagregistry-p3">T5 — <code>KHY_TOOL_LOOP_MAX_ITERATIONS</code> 未登记 flagRegistry 【P3】<a class="anchor" href="#t5-khy-tool-loop-max-iterations-未登记-flagregistry-p3" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：<code>:850-869</code> 直接读 <code>process.env</code>，未走 <code>flagRegistry</code>（对比 <code>mcpServerProtocol.js:29-46</code> 的 <code>isServeEnabled</code> 正确走了注册表）。</p>
+<p><strong>影响</strong>：该 env 无集中登记、无类型校验、无上限声明，与仓库自身的 flag 治理约定不一致。</p>
+<hr>
+<h3 id="t6-取消覆盖受门控-关闭即无工具级取消-p2">T6 — 取消覆盖受门控，关闭即无工具级取消 【P2】<a class="anchor" href="#t6-取消覆盖受门控-关闭即无工具级取消-p2" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：abort 竞赛受 <code>KHY_TOOL_ABORT_SIGNAL</code> 门控（<code>toolCalling.js:2536</code> 附近）。</p>
+<p><strong>影响</strong>：门控关闭时，只剩单工具 120s 硬超时，用户中断无法及时传导到工具执行层。</p>
+<hr>
+<h3 id="t7-可观测性默认关闭-且缺循环结束事件-p2">T7 — 可观测性默认关闭，且缺循环结束事件 【P2】<a class="anchor" href="#t7-可观测性默认关闭-且缺循环结束事件-p2" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：</p>
+<ul><li>breadcrumb 需 <code>KHY_LOOP_DEBUG</code> 才写（<code>:264-278</code>，<strong>默认关</strong>）</li><li>有 <code>traceAudit.logEvent('agent.loop.start')</code>（<code>:2080</code>），但<strong>无对应的 <code>agent.loop.end</code></strong></li></ul>
+<p><strong>影响</strong>：默认配置下循环相位不可观测；有 start 无 end 使 trace 无法自动配对计算循环时长。</p>
+<hr>
+<h3 id="t8-检测器文件头注释与实现不符-p3">T8 — 检测器文件头注释与实现不符 【P3】<a class="anchor" href="#t8-检测器文件头注释与实现不符-p3" aria-label="锚点">#</a></h3>
+<p><strong>证据</strong>：<code>toolLoopDetector.js:4</code> 标题为 <code>9-detector tool loop detection system</code>，但 <code>:9-22</code> 列出 <strong>11</strong> 个检测器。</p>
+<hr>
+<h2 id="3-3-核心回答-如何通过规范确认循环执行的完整性与终止条件">3.3 【核心回答】如何通过规范确认循环执行的完整性与终止条件<a class="anchor" href="#3-3-核心回答-如何通过规范确认循环执行的完整性与终止条件" aria-label="锚点">#</a></h2>
+<p>现状是&quot;有机制但无判定标准&quot;。以下提出一套<strong>可执行的循环完整性判定规范（LC-1 ~ LC-7）</strong>，每条给出：判定问题 → 可观测信号 → 通过标准 → khy-os 当前判定结果。</p>
+<h3 id="lc-1-有界性-boundedness">LC-1 有界性（Boundedness）<a class="anchor" href="#lc-1-有界性-boundedness" aria-label="锚点">#</a></h3>
+<ul><li><strong>判定问题</strong>：循环是否具备<strong>不依赖模型输出</strong>的静态上界？</li><li><strong>可观测信号</strong>：循环条件表达式中是否出现模型返回值；是否存在迭代计数器常量。</li><li><strong>通过标准</strong>：循环条件仅依赖本地计数器/预算对象；上限为命名常量且可配置、有 clamp。</li><li><strong>khy-os 判定</strong>：<strong>通过</strong> — <code>while (!budget.depleted || _gracePending)</code>，<code>MAX_ITERATIONS = 100</code> 且 clamp 到 <code>[minSafe, 100]</code>。</li></ul>
+<h3 id="lc-2-终止完备性-termination-completeness">LC-2 终止完备性（Termination Completeness）<a class="anchor" href="#lc-2-终止完备性-termination-completeness" aria-label="锚点">#</a></h3>
+<ul><li><strong>判定问题</strong>：每条退出路径是否都显式设置<strong>终止原因</strong>并落审计事件？</li><li><strong>可观测信号</strong>：退出点是否统一经由&quot;设置 reason → 记录事件 → 返回&quot;的收口函数。</li><li><strong>通过标准</strong>：终止原因取值来自<strong>封闭枚举</strong>；无裸 <code>break</code> / 裸 <code>return</code>；每个 reason 都能在 trace 中检索到。</li><li><strong>khy-os 判定</strong>：<strong>部分通过</strong> — 九类终止路径均有命名标记（<code>conclude</code> / <code>maxIterationsReached</code> / <code>interrupted</code> / <code>budgetStopped</code> 等），但<strong>无 <code>agent.loop.end</code> 事件</strong>（T7），无法在 trace 层闭环校验&quot;每次 start 必有 end&quot;。</li></ul>
+<h3 id="lc-3-进度性-progress-guarantee">LC-3 进度性（Progress Guarantee）<a class="anchor" href="#lc-3-进度性-progress-guarantee" aria-label="锚点">#</a></h3>
+<ul><li><strong>判定问题</strong>：如何证明循环在&quot;前进&quot;而非空转？</li><li><strong>可观测信号</strong>：是否存在&quot;调用签名哈希 + 结果哈希&quot;的进展度量；无进展的连续轮次是否被计数并触发终止。</li><li><strong>通过标准</strong>：定义&quot;进展&quot;为<strong>新调用签名</strong>或<strong>结果哈希变化</strong>；连续无进展 N 轮（N ≤ 8）必须触发告警并终止。</li><li><strong>khy-os 判定</strong>：<strong>通过</strong> — 检测器 1/3/4/8/9/10 覆盖，阈值 3-8，且检测器 8 有参数多样性抑制（避免误杀合法的批量操作）。</li></ul>
+<h3 id="lc-4-可恢复性-recoverability">LC-4 可恢复性（Recoverability）<a class="anchor" href="#lc-4-可恢复性-recoverability" aria-label="锚点">#</a></h3>
+<ul><li><strong>判定问题</strong>：崩溃后能否从确定的状态点续跑？</li><li><strong>可观测信号</strong>：是否每轮写 checkpoint；checkpoint 是否含&quot;轮次 + 已完成调用 + 待办&quot;；是否支持多会话隔离。</li><li><strong>通过标准</strong>：每轮结束必写；checkpoint 可重放（幂等）；<strong>按会话而非按目录</strong>分槽存储；TTL 与清理策略明确。</li><li><strong>khy-os 判定</strong>：<strong>不通过</strong> — 无逐轮 journal（T1）；checkpoint 每 3 轮 / 45s 一次；<strong>按 cwd 单槽覆盖</strong>，并发会话会互相覆盖。</li></ul>
+<h3 id="lc-5-可观测性-observability-by-default">LC-5 可观测性（Observability by Default）<a class="anchor" href="#lc-5-可观测性-observability-by-default" aria-label="锚点">#</a></h3>
+<ul><li><strong>判定问题</strong>：不设任何环境变量时，能否观测一次完整循环？</li><li><strong>可观测信号</strong>：<code>loop.start</code> / 每轮摘要 / <code>loop.end</code> 三事件是否<strong>默认开启</strong>。</li><li><strong>通过标准</strong>：三事件默认开启且可配对；token 累计与每轮耗时默认暴露。</li><li><strong>khy-os 判定</strong>：<strong>不通过</strong> — breadcrumb 需 <code>KHY_LOOP_DEBUG</code>（默认关）；缺 <code>loop.end</code>。</li></ul>
+<h3 id="lc-6-取消传播-cancellation-propagation">LC-6 取消传播（Cancellation Propagation）<a class="anchor" href="#lc-6-取消传播-cancellation-propagation" aria-label="锚点">#</a></h3>
+<ul><li><strong>判定问题</strong>：中断信号能否<strong>无条件</strong>抵达最内层工具执行？</li><li><strong>可观测信号</strong>：AbortSignal 的传递链路上是否存在 feature flag 门控。</li><li><strong>通过标准</strong>：取消是<strong>安全属性</strong>，不应受开关控制；无门控的取消链路 + 兜底硬超时。</li><li><strong>khy-os 判定</strong>：<strong>部分通过</strong> — 链路完整，但受 <code>KHY_TOOL_ABORT_SIGNAL</code> 门控（T6）。</li></ul>
+<h3 id="lc-7-结果保真-result-integrity">LC-7 结果保真（Result Integrity）<a class="anchor" href="#lc-7-结果保真-result-integrity" aria-label="锚点">#</a></h3>
+<ul><li><strong>判定问题</strong>：工具返回的数据在进入模型上下文前是否被校验与保真？</li><li><strong>可观测信号</strong>：是否存在结果层 schema 校验；结构化数据是否被无损传递。</li><li><strong>通过标准</strong>：结果经 schema 校验后才回灌；结构化内容不被字符串化损坏。</li><li><strong>khy-os 判定</strong>：<strong>不通过</strong> — 无结果层校验（T2）；MCP 暴露路径还会把对象折叠成 <code>[object Object]</code>（M11）。</li></ul>
+<h3 id="判定结果汇总">判定结果汇总<a class="anchor" href="#判定结果汇总" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规则</th><th>判定</th><th>关键缺口</th></tr></thead><tbody><tr><td>LC-1 有界性</td><td>✅ 通过</td><td>—</td></tr><tr><td>LC-2 终止完备性</td><td>⚠️ 部分</td><td>缺 <code>agent.loop.end</code></td></tr><tr><td>LC-3 进度性</td><td>✅ 通过</td><td>—</td></tr><tr><td>LC-4 可恢复性</td><td>❌ 不通过</td><td>无逐轮 journal、按 cwd 单槽覆盖</td></tr><tr><td>LC-5 可观测性</td><td>❌ 不通过</td><td>默认关闭、缺结束事件</td></tr><tr><td>LC-6 取消传播</td><td>⚠️ 部分</td><td>受 flag 门控</td></tr><tr><td>LC-7 结果保真</td><td>❌ 不通过</td><td>无结果校验</td></tr></tbody></table>
+<p><strong>一句话</strong>：khy-os 的工具循环在&quot;<strong>防止失控</strong>&quot;上做得很好（LC-1/LC-3），在&quot;<strong>证明它正确地跑完了</strong>&quot;上做得不够（LC-4/LC-5/LC-7）。前者是安全，后者是可信。</p>
+<hr>
+<h1 id="第四部分-其他规范漏洞-数据格式-安全认证-错误处理">第四部分：其他规范漏洞（数据格式 / 安全认证 / 错误处理）<a class="anchor" href="#第四部分-其他规范漏洞-数据格式-安全认证-错误处理" aria-label="锚点">#</a></h1>
+<h2 id="4-1-安全与认证">4.1 安全与认证<a class="anchor" href="#4-1-安全与认证" aria-label="锚点">#</a></h2>
+<h3 id="s1-p0-无鉴权的宿主控制端点">S1 — 【P0】无鉴权的宿主控制端点<a class="anchor" href="#s1-p0-无鉴权的宿主控制端点" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>端点</th><th>证据</th><th>危害</th></tr></thead><tbody><tr><td><code>POST /api/system/trigger-voice-input</code></td><td><code>server.js:593</code>（<code>/api/system</code> 无 auth 中间件）+ <code>routes/system.js:170</code></td><td>触发宿主机语音输入</td></tr><tr><td><code>POST /api/daemon/shutdown</code></td><td><code>aiManagementServer.js:246</code> + <code>routes/daemon.js:61</code></td><td>关闭守护进程</td></tr><tr><td><code>GET /api/system/network-info</code></td><td><code>routes/system.js:11</code></td><td>泄露局域网 IP</td></tr></tbody></table>
+<p><strong>违反</strong>：OWASP ASVS V4（访问控制）、行业通用的&quot;默认拒绝&quot;原则。</p>
+<h3 id="s2-p0-已修-凭据明文落盘">S2 — 【P0，已修】凭据明文落盘<a class="anchor" href="#s2-p0-已修-凭据明文落盘" aria-label="锚点">#</a></h3>
+<blockquote><p><strong>审计后修正（同日）</strong>：初次判定时本项措辞过重，实测复核后收紧如下。原文称<br><code>channelApiCrypto</code> 的密钥回退&quot;等同无加密&quot;是不准确的 —— 该文件<strong>已有</strong>告警与诚实的<br>边界注释（<code>channelApiCrypto.js:7-10</code>、<code>:76-86</code>），且 <code>credentialGenerator.js:22-23</code><br><strong>已经</strong>做了 <code>chmod 0o600</code>。真实缺口比初判窄。</p></blockquote>
+<table><thead><tr><th>位置</th><th>证据</th><th>实测结论</th></tr></thead><tbody><tr><td>API key 池</td><td><code>apiKeyPool.js</code>（原 <code>:492</code> 传 <code>mode: 0o666</code>）</td><td>明文存储属实；<code>0o666</code> 是<strong>刻意的</strong>兼容决定 —— <code>atomicWriteJson.js:79-82</code> 注释说明&quot;换写入原语和改权限必须分批做&quot;（多用户共享目录下收紧会让另一用户读不到）</td></tr><tr><td>管理员凭据</td><td><code>credentialGenerator.js:9-12</code></td><td>明文属实，但<strong>已</strong> best-effort <code>chmod 0o600</code></td></tr><tr><td>本地 secret</td><td><code>secretManagers/index.js:45</code></td><td><strong>真实遗漏</strong>：<code>writeFileSync</code> 未传 mode，且目录 <code>mkdirSync</code> 未设 0700</td></tr><tr><td>渠道密钥加密</td><td><code>channelApiCrypto.js:58-63</code> 主机名派生回退</td><td>有告警、有诚实注释；缺的是&quot;拒绝降级&quot;的强制手段</td></tr></tbody></table>
+<p><strong>违反</strong>：OWASP ASVS V6（密码学存储）—— 明文凭据应由 OS 级凭据库（DPAPI / Keychain /<br>libsecret）或用户口令保护。本仓库<strong>未发现 keytar / DPAPI / safeStorage 的使用</strong>。</p>
+<p><strong>威胁模型澄清</strong>：这是本地桌面应用，<code>.khy/</code> 位于用户数据目录。真实威胁是「文件被复制<br>出本机」（备份、同步盘、恶意软件），而非&quot;同机用户读取&quot; —— 后者在 Windows 用户目录<br>ACL 下已部分缓解。因此<strong>权限收紧只是缓解，真正的解法是加密存储</strong>，那是独立工作量。</p>
+<p><strong>已实施的补丁</strong>（见附录 C）：默认权限收紧至 0600 且保留 env 退路；新增严格模式开关<br>让生产部署可拒绝弱密钥降级。</p>
+<h3 id="s3-p1-无鉴权的写文件与模型代理端点">S3 — 【P1】无鉴权的写文件与模型代理端点<a class="anchor" href="#s3-p1-无鉴权的写文件与模型代理端点" aria-label="锚点">#</a></h3>
+<ul><li><code>/api/cache</code>（<code>server.js:584</code> → <code>routes/cache.js:10,13</code>）：可写文件</li><li><code>/api/llm</code>（<code>server.js:620</code>，freeLLM 8 个端点含 <code>/generate</code>）：免费模型代理，可被滥用</li></ul>
+<h3 id="s4-p1-命令注入面-变量直接拼入-shell">S4 — 【P1】命令注入面（变量直接拼入 shell）<a class="anchor" href="#s4-p1-命令注入面-变量直接拼入-shell" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>位置</th><th>代码</th></tr></thead><tbody><tr><td><code>extensions/extensionManager.js:101</code></td><td>`<code> execSync(</code>git clone --depth 1 ${url} ${dest}<code>) </code>`</td></tr><tr><td><code>cliAnythingService.js:531/536/584</code></td><td><code>npm install -g ${pkg}</code> / <code>pip uninstall -y ...</code></td></tr><tr><td><code>containers/index.js:96</code></td><td><code>docker stop ${containerName}</code></td></tr><tr><td><code>commitMessageService.js:212</code></td><td><code>git add ${fileList}</code></td></tr><tr><td><code>cli/routerDispatchOps.js:526</code></td><td>`<code> execSync(</code>${cmd} 2&gt;&amp;1<code>) </code>`</td></tr><tr><td><code>cli/handlers/crossPlatform.js:323,330</code></td><td><code>findstr :${port}</code> / <code>taskkill /PID ${pid}</code></td></tr></tbody></table>
+<p><strong>对比亮点</strong>：MCP stdio 启动用 <code>spawn(command, args, {stdio})</code> <strong>无 shell</strong>（<code>mcp/index.js:450</code>），做法正确。说明仓库内安全实践不统一。</p>
+<h3 id="s5-p1-cors-默认-且与自述矛盾">S5 — 【P1】CORS 默认 <code>'*'</code> 且与自述矛盾<a class="anchor" href="#s5-p1-cors-默认-且与自述矛盾" aria-label="锚点">#</a></h3>
+<ul><li><code>aiManagementServer.js:749</code> 注释声称 <code>Wildcard '*' is never used</code></li><li><code>aiManagementServer.js:752</code> 实际 <code>let origin = '*'</code> 为默认值</li><li><code>gateway/proxyServer.js:1055</code> 同样 <code>'*'</code> 兜底</li></ul>
+<p><strong>对比亮点</strong>：monolith 侧 <code>server.js:325-342</code> 白名单正确（仅 localhost:START_PORT/8080/8090，<code>credentials: true</code>）。<strong>同一仓库两套 CORS 策略</strong>。</p>
+<h3 id="s6-p2-内部错误消息直出客户端">S6 — 【P2】内部错误消息直出客户端<a class="anchor" href="#s6-p2-内部错误消息直出客户端" aria-label="锚点">#</a></h3>
+<ul><li><code>aiManagementServer.js:3373</code> — `<code> sendError(res, 500, </code>Internal error: ${err.message}<code>) </code>`</li><li>另 <code>:3299</code>、<code>:3307</code>、<code>:3351</code>、<code>:2401</code>、<code>:463</code></li><li><code>aiManagementGatewayAdmin.js</code> 十余处 <code>sendError(res, 500, err.message)</code></li><li><code>routes/daemon.js:33</code> 回 <code>e.message</code></li></ul>
+<p><strong>对比亮点</strong>：<code>platform/packages/shared/src/middleware/errorHandler.js:30-32</code> 正确（仅 development 回 stack）。<strong>又是仓库内不一致</strong>。</p>
+<h2 id="4-2-数据格式">4.2 数据格式<a class="anchor" href="#4-2-数据格式" aria-label="锚点">#</a></h2>
+<h3 id="s7-p2-无统一运行时-schema-校验">S7 — 【P2】无统一运行时 schema 校验<a class="anchor" href="#s7-p2-无统一运行时-schema-校验" aria-label="锚点">#</a></h3>
+<ul><li>零依赖自实现 <code>services/domain/structured/output/jsonSchemaValidate.js</code>（<code>:10-12</code> 明确注释&quot;刻意不用 ajv&quot;）</li><li><code>express-validator</code> 仅 <code>routes/auth.js:5</code>、<code>routes/external.js:3</code> 两处</li><li>无 ajv / zod / joi 全局校验</li></ul>
+<p><strong>评价</strong>：自实现校验器本身是<strong>合理选择</strong>（零依赖、确定性、可离线——符合本仓&quot;零外部依赖&quot;纪律）。问题在于<strong>覆盖面</strong>：MCP 的 <code>tools/list</code> 返回的 <code>inputSchema</code> 直接透传不校验（<code>types.js:148</code>），工具<strong>结果</strong>层无校验（T2）。</p>
+<h3 id="s8-p2-协议版本化不一致">S8 — 【P2】协议版本化不一致<a class="anchor" href="#s8-p2-协议版本化不一致" aria-label="锚点">#</a></h3>
+<ul><li><strong>有</strong>：MCP（<code>mcp/index.js:522</code> 等 <code>protocolVersion</code>）、数据文件（<code>boulderState.js:291,397-472</code> 有 SCHEMA_VERSION + 逐版本迁移；<code>backupManifest.js:119,154</code>；<code>manifestLoader.js:68</code> 不符即抛）、渠道密文（<code>channelApiCrypto.js:18-20</code> 的 <code>v2:</code> 前缀 + 兼容读取）</li><li><strong>无</strong>：HTTP API 无 <code>/v1</code> 版本前缀</li></ul>
+<p><strong>评价</strong>：数据文件的版本化做得<strong>很好</strong>（<code>boulderState.js</code> 有完整迁移链），HTTP API 层缺失，形成落差。</p>
+<h2 id="4-3-错误处理">4.3 错误处理<a class="anchor" href="#4-3-错误处理" aria-label="锚点">#</a></h2>
+<h3 id="s9-p3-错误码体系存在但不强制">S9 — 【P3】错误码体系存在但不强制<a class="anchor" href="#s9-p3-错误码体系存在但不强制" aria-label="锚点">#</a></h3>
+<ul><li><strong>有</strong>：<code>platform/packages/shared/src/errorEnvelope.js:38-72</code> 统一 <code>CODES</code> 枚举（30+ 码）；<code>services/domain/security/failsafe/errorCodes.js:27-116</code> E01-E08；<code>utils/apiResponse.js:22,132</code> 委托 CODES</li><li><strong>并存</strong>：直接 <code>throw new Error('中文消息')</code>（如 <code>apiKeyPool.js:515</code>、<code>extensionManager.js:89,98</code>）</li></ul>
+<p><strong>评价</strong>：有体系但无 lint / 守卫强制，属治理缺口。</p>
+<h3 id="s10-p2-读路径默认无边界">S10 — 【P2】读路径默认无边界<a class="anchor" href="#s10-p2-读路径默认无边界" aria-label="锚点">#</a></h3>
+<ul><li><code>tools/inputValidators.js:282-284</code> — <code>validateReadAccess</code> <strong>默认全局放行</strong>，仅 <code>KHY_STRICT_READ_BOUNDARY=1</code> 才限制</li><li>对比亮点：写路径校验完备 — <code>validateNoPathTraversal</code>（<code>:190-256</code>，<code>path.resolve</code> + 分隔符锚定 + 敏感 home 写保护）、<code>FileWriteTool/index.js:76-90</code> 调 <code>validateNotUNCPath</code> + <code>validateNoPathTraversal</code></li></ul>
+<p><strong>评价</strong>：写保护严格、读保护默认关闭，不对称。</p>
+<h3 id="错误处理亮点">错误处理亮点<a class="anchor" href="#错误处理亮点" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>亮点</th><th>证据</th></tr></thead><tbody><tr><td>全局错误中间件正确</td><td><code>errorHandler.js:30-32</code> 仅 development 回 stack</td></tr><tr><td>未捕获异常兜底完整</td><td><code>daemonEntry.js:310,315</code>、<code>crashRecovery.js:436,492</code>、<code>agentWorkerEntry.js:213,218</code>、<code>streamInjector.js:188,191</code>、<code>replSession.js:1244</code></td></tr><tr><td>写路径校验完备</td><td><code>inputValidators.js:190-256</code></td></tr><tr><td>工具参数校验失败回灌模型自愈</td><td><code>toolCalling.js:2694-2817</code></td></tr></tbody></table>
+<hr>
+<h1 id="第五部分-整改优先级路线图">第五部分：整改优先级路线图<a class="anchor" href="#第五部分-整改优先级路线图" aria-label="锚点">#</a></h1>
+<h2 id="立即处理-p0-建议当轮修">立即处理（P0，建议当轮修）<a class="anchor" href="#立即处理-p0-建议当轮修" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>问题</th><th>动作</th></tr></thead><tbody><tr><td>1</td><td><strong>M5</strong> MCP HTTP 服务端缺 <code>Origin</code> 校验</td><td>增加 Origin 白名单校验；对不合规来源返回 403。这是本机 shell 暴露面的直接入口</td></tr><tr><td>2</td><td><strong>S1</strong> 无鉴权宿主控制端点</td><td>给 <code>/api/system</code>、<code>/api/daemon</code> 挂 <code>authMiddleware</code></td></tr><tr><td>3</td><td><strong>S2</strong> 凭据明文落盘</td><td>接入 OS 凭据库（Windows DPAPI / macOS Keychain / libsecret）；至少移除&quot;主机名派生密钥&quot;回退</td></tr></tbody></table>
+<h2 id="高优先级-p1-建议本周">高优先级（P1，建议本周）<a class="anchor" href="#高优先级-p1-建议本周" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>问题</th><th>动作</th></tr></thead><tbody><tr><td>4</td><td><strong>A8</strong> A2A 客户端 undefined header 必然失败</td><td>构造 headers 时过滤 <code>null</code>/<code>undefined</code>。<strong>改动量极小、收益极大</strong></td></tr><tr><td>5</td><td><strong>M2</strong> 客户端能力声明错误</td><td>改为 <code>roots</code> / <code>sampling</code> / <code>elicitation</code>，并抽成单一常量</td></tr><tr><td>6</td><td><strong>M3</strong> 不响应服务端请求</td><td><code>_handleMessage</code> 增加 request 分支</td></tr><tr><td>7</td><td><strong>M1</strong> 协议版本协商</td><td>抽单一真源；服务端回显/协商；客户端比对并告警</td></tr><tr><td>8</td><td><strong>M8</strong> 401 缺 <code>WWW-Authenticate</code> + <code>?token=</code></td><td>补响应头；移除查询串令牌（保留 header 方式）</td></tr><tr><td>9</td><td><strong>T1</strong> 主循环无 journal</td><td>接入逐轮 checkpoint；按<strong>会话</strong>而非 cwd 分槽</td></tr><tr><td>10</td><td><strong>A2/A3/A4/A5/A6</strong> A2A 规范字段与状态机</td><td>建议<strong>先决定战略</strong>：是&quot;真做 A2A&quot;还是&quot;承认这是私有 ACP 并改名&quot;</td></tr><tr><td>11</td><td><strong>S3/S4/S5</strong> 端点鉴权、命令注入、CORS</td><td>按表逐项修</td></tr></tbody></table>
+<h2 id="中优先级-p2">中优先级（P2）<a class="anchor" href="#中优先级-p2" aria-label="锚点">#</a></h2>
+<p>M4、M6、M7、M9、M11、T2、T3、T6、T7、A7、A9、A10、S6、S7、S8、S10</p>
+<h2 id="低优先级-p3">低优先级（P3）<a class="anchor" href="#低优先级-p3" aria-label="锚点">#</a></h2>
+<p>M10、M12、A11、T4、T5、T8、S9</p>
+<hr>
+<h1 id="附录-a-仓库内标准不一致清单">附录 A：仓库内标准不一致清单<a class="anchor" href="#附录-a-仓库内标准不一致清单" aria-label="锚点">#</a></h1>
+<p>本次审计最有价值的发现之一：<strong>多处同类问题在仓库内存在&quot;做对了&quot;和&quot;做错了&quot;两个版本</strong>。这说明问题不在能力，而在<strong>治理与强制</strong>。</p>
+<table><thead><tr><th>维度</th><th>做对了</th><th>做错了</th></tr></thead><tbody><tr><td>MCP 能力声明</td><td>server 端诚实只声明 tools（<code>mcpServerProtocol.js:138</code>）</td><td>client 端虚报 + 声明错字段（<code>index.js:523-527</code>）</td></tr><tr><td>A2A 能力声明</td><td>—</td><td>声明 <code>streaming: true</code> 但零实现（<code>a2a/index.js:95</code>）</td></tr><tr><td>CORS</td><td>monolith 白名单（<code>server.js:325-342</code>）</td><td>gateway 默认 <code>*</code>（<code>proxyServer.js:1055</code>）</td></tr><tr><td>错误输出</td><td>全局中间件只回 stack in dev（<code>errorHandler.js:30-32</code>）</td><td>管理服务直出 <code>err.message</code>（<code>aiManagementServer.js:3373</code>）</td></tr><tr><td>命令执行</td><td>MCP stdio 用 <code>spawn</code> 无 shell（<code>mcp/index.js:450</code>）</td><td>扩展管理用 <code>execSync</code> 拼串（<code>extensionManager.js:101</code>）</td></tr><tr><td>契约校验</td><td>ACP 有 JSON Schema + 运行时校验（<code>acpTransport.js:20-46</code>）</td><td>MCP 结果层无校验；工具结果无校验</td></tr><tr><td>flag 治理</td><td><code>isServeEnabled</code> 走 flagRegistry（<code>mcpServerProtocol.js:29-46</code>）</td><td><code>KHY_TOOL_LOOP_MAX_ITERATIONS</code> 直读 env</td></tr><tr><td>数据版本化</td><td><code>boulderState.js</code> 有完整迁移链</td><td>HTTP API 无版本前缀</td></tr></tbody></table>
+<p><strong>建议</strong>：仓库已有 <code>services/backend/scripts/archDebtScan.js</code> 做分层/巨石/循环依赖守卫。上述不一致<strong>大多可静态检测</strong>，建议扩展该守卫（或新增同类扫描器）覆盖：</p>
+<ol><li>未挂鉴权的路由（对比路由注册表与 auth 中间件表）</li><li><code>execSync</code> / <code>exec</code> 中出现模板字符串拼接</li><li><code>catch</code> 块中 <code>resolve({status:0})</code> 类静默降级</li><li>CORS <code>origin</code> 字面量 <code>'*'</code></li><li><code>sendError(res, 5xx, err.message)</code> 模式</li></ol>
+<hr>
+<h1 id="附录-b-审计方法与可复现性">附录 B：审计方法与可复现性<a class="anchor" href="#附录-b-审计方法与可复现性" aria-label="锚点">#</a></h1>
+<ul><li><strong>静态审计</strong>：逐文件精读 MCP 全部实现（<code>domain/messaging/mcp/</code> 共 2,602 行）、A2A 全部实现（<code>a2a*</code> / <code>acp*</code> / <code>a2a/index.js</code>）、工具循环核心（<code>toolUseLoopCore.js</code> 关键路径、<code>toolLoopDetector.js</code>）、安全横切面（路由注册、凭据、CORS、命令执行、校验器）</li><li><strong>实测验证</strong>：Node v22.22.2 验证 <code>undefined</code> header 行为（A8）</li><li><strong>范围排除</strong>：<code>.research-tmp/</code>（第三方参考）、<code>node_modules/</code>、<code>dist-ts/</code>、<code>docs/**/*.html</code></li><li><strong>未覆盖</strong>：运行时动态行为（未起服务做端到端 MCP/A2A 互通测试）、前端 <code>apps/</code> 的 UI 层规范、<code>software/khyquant/</code> 业务逻辑</li></ul>
+<h2 id="建议的后续动作">建议的后续动作<a class="anchor" href="#建议的后续动作" aria-label="锚点">#</a></h2>
+<ol><li><strong>补端到端互通测试</strong>：用官方 MCP Inspector 连接 <code>khy mcp serve</code>，实测 M1/M5/M6/M7 的实际表现。</li><li><strong>A2A 战略决策</strong>：明确&quot;做真 A2A&quot;或&quot;承认私有 ACP 并改名&quot;，避免继续维护两套命名撞车的实现。</li><li><strong>把本次判定规则沉淀为守卫</strong>：LC-1 ~ LC-7 可部分静态化（LC-1 查循环条件、LC-5 查默认开启的 trace 事件、LC-7 查结果校验），纳入 CI。</li></ol>
+<hr>
+<h1 id="附录-c-p0-补丁记录-2026-09-15">附录 C：P0 补丁记录（2026-09-15）<a class="anchor" href="#附录-c-p0-补丁记录-2026-09-15" aria-label="锚点">#</a></h1>
+<p>三个 P0 已修复并验证。改动遵循仓库既有纪律：零硬编码、纯逻辑抽叶子、留回退退路。</p>
+<h2 id="c-1-m5-mcp-http-server-补-origin-校验">C.1 M5 — MCP HTTP server 补 Origin 校验<a class="anchor" href="#c-1-m5-mcp-http-server-补-origin-校验" aria-label="锚点">#</a></h2>
+<p><strong>改动</strong>：<code>services/backend/src/services/domain/messaging/mcp/mcpHttpServer.js</code></p>
+<ul><li>新增纯函数 <code>parseAllowedOrigins(env)</code> / <code>isAllowedOrigin(origin, env)</code></li><li>Origin 校验置于<strong>鉴权之前</strong>（不合规来源不应借响应差异探测令牌是否有效）</li><li>新 env <code>KHY_MCP_ALLOWED_ORIGINS</code>（逗号分隔）用于显式扩展白名单</li><li>启动横幅新增 Origin 策略显示</li></ul>
+<p><strong>判定口径</strong>：无 Origin → 放行（MCP SDK / CLI / curl 不带该头）；http(s) 且 host 为<br>loopback → 放行；<code>null</code> / <code>file://</code> / 任意公网来源 → <strong>拒绝</strong>。</p>
+<p><strong>端到端实测</strong>（真实起 server，POST <code>/mcp</code>）：</p>
+<table><thead><tr><th>请求 Origin</th><th>结果</th></tr></thead><tbody><tr><td><code>https://evil.example</code></td><td><strong>403</strong> <code>forbidden: origin not allowed</code></td></tr><tr><td><code>http://192.168.1.10:8090</code></td><td><strong>403</strong></td></tr><tr><td><code>http://localhost:5173</code></td><td>200</td></tr><tr><td>（无 Origin）</td><td>200</td></tr><tr><td><code>null</code></td><td><strong>403</strong></td></tr></tbody></table>
+<p><strong>测试</strong>：<code>tests/services/mcp/mcpHttpServer.test.js</code> 新增 5 个用例（10/10 通过）。</p>
+<h2 id="c-2-s1-宿主控制端点补鉴权">C.2 S1 — 宿主控制端点补鉴权<a class="anchor" href="#c-2-s1-宿主控制端点补鉴权" aria-label="锚点">#</a></h2>
+<p><strong>改动</strong>：</p>
+<ul><li><code>server.js</code> — <code>/api/system</code> 挂 <code>authMiddleware</code>（原为裸挂载）</li><li><code>src/middleware/originGuard.js</code>（<strong>新增</strong>，零依赖叶子）— <code>requireLoopback</code> + <code>originGuard</code></li><li><code>src/middleware/auth.js</code> — re-export 上述守卫，保持既有引用路径可用</li><li><code>src/routes/daemon.js</code> — 挂 <code>requireLoopback, originGuard</code></li></ul>
+<p><strong>为什么 daemon 路由不加 JWT</strong>：其文件头注释说明该路由<strong>必须</strong>在用户拿到凭据前可用<br>（登录页要在&quot;khychat 起不来&quot;时拉起/停掉守护进程）。因此改为「保持公开，但仅本机 +<br>可信来源」——这是<strong>有意的设计决策</strong>，不是疏忽。</p>
+<p><strong>为什么抽独立叶子模块</strong>：<code>middleware/auth.js</code> 顶部 <code>require('../models')</code> 会拉入整条<br>ORM 初始化链。守卫寄生在那里会让 <code>tests/routes/daemon.test.js</code> 的单项加载从 0.34s<br>膨胀到 17s（实测）。抽叶子后该套件总耗时 <strong>25.9s → 2.0s</strong>。</p>
+<p><strong>端到端实测</strong>（真实挂载 <code>routes/daemon.js</code>）：</p>
+<table><thead><tr><th>请求</th><th>Origin</th><th>结果</th></tr></thead><tbody><tr><td><code>POST /api/daemon/shutdown</code></td><td><code>https://evil.example</code></td><td><strong>403</strong></td></tr><tr><td><code>GET /api/daemon/status</code></td><td><code>https://evil.example</code></td><td><strong>403</strong></td></tr><tr><td><code>GET /api/daemon/status</code></td><td>（无）</td><td>200（正常路径未被破坏）</td></tr></tbody></table>
+<p><strong>测试</strong>：<code>tests/middleware/originGuard.test.js</code>（<strong>新增</strong>，11/11 通过）。</p>
+<h2 id="c-3-s2-凭据存储加固">C.3 S2 — 凭据存储加固<a class="anchor" href="#c-3-s2-凭据存储加固" aria-label="锚点">#</a></h2>
+<p><strong>改动</strong>：</p>
+<ul><li><code>src/services/apiKeyPool.js</code> — 凭据文件 mode 由 <code>0o666</code> 改为经 <code>resolveCredentialsFileMode()</code></li></ul>
+<p>解析，<strong>默认 0600</strong>；新 env <code>KHY_CREDENTIALS_FILE_MODE</code> 可显式回退（留退路）</p>
+<ul><li><code>src/services/secretManagers/index.js</code> — 目录 <code>mkdirSync</code> 加 <code>mode: 0o700</code>；</li></ul>
+<p>secret 文件写入加 <code>{ mode: 0o600 }</code> + <code>chmodSync</code> 修正已存在文件</p>
+<ul><li><code>src/services/channelApiCrypto.js</code> — 新增 <code>KHY_REQUIRE_CHANNEL_KEY_SECRET</code> 严格模式：</li></ul>
+<p>开启后未配置主 KEK 即<strong>抛错</strong>，不再静默回退到主机名派生密钥</p>
+<p><strong>刻意没做</strong>：不改动明文存储本身。真正的解法是接入 OS 凭据库或用户口令加密，属独立<br>工作量；本轮只做「默认收紧 + 拒绝静默降级 + 保留退路」。</p>
+<p><strong>测试</strong>：<code>tests/security/credentialsHardening.test.js</code>（<strong>新增</strong>，8/8 通过）。</p>
+<h2 id="c-4-回归结果">C.4 回归结果<a class="anchor" href="#c-4-回归结果" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>套件</th><th>结果</th></tr></thead><tbody><tr><td><code>tests/services/mcp</code> + <code>tests/routes/daemon</code> + <code>tests/routeAuth.regression</code> + <code>tests/security</code>（jest）</td><td><strong>13 suites / 187 tests 全通过</strong></td></tr><tr><td><code>tests/atomicWriteMigration.test.js</code>（node:test，最可能断言 mode 的用例）</td><td><strong>34 pass / 0 fail</strong></td></tr><tr><td><code>mcpHttpServer.test.js</code>（node:test）</td><td>10/10</td></tr><tr><td><code>originGuard.test.js</code>（node:test，新增）</td><td>11/11</td></tr><tr><td><code>credentialsHardening.test.js</code>（node:test，新增）</td><td>8/8</td></tr><tr><td>eslint（改动文件）</td><td><strong>0 errors</strong>（未新增既有 warnings）</td></tr></tbody></table>
+<h2 id="c-5-遗留与残余风险">C.5 遗留与残余风险<a class="anchor" href="#c-5-遗留与残余风险" aria-label="锚点">#</a></h2>
+<ol><li><strong><code>originGuard</code> 对 <code>null</code> / <code>file://</code> 放行</strong>（为保 Electron 生产构建——其渲染进程</li></ol>
+<p><code>loadFile()</code> 的 Origin 即 <code>null</code>）。残余风险由 <code>requireLoopback</code> 兜底：攻击者需在<br>   目标机器上运行浏览器。<strong>彻底关闭需引入登录前 token</strong>，是独立工作量。</p>
+<ol><li><strong>凭据仍是明文</strong>：权限收紧只缓解&quot;被复制出本机&quot;以外的场景。</li><li><strong>MCP 侧 <code>null</code> Origin 被拒</strong>：若将来出现基于 <code>file://</code> 的 MCP 客户端，需将其加入</li></ol>
+<p><code>KHY_MCP_ALLOWED_ORIGINS</code>。</p>
+<ol><li><strong>Windows 上 <code>mode</code> 被忽略</strong>：<code>0600</code> 仅在 POSIX 生效；Windows 依赖用户目录 ACL。</li></ol>
+<hr>
+<h1 id="附录-d-p1-补丁记录-2026-09-15-第二批">附录 D：P1 补丁记录（2026-09-15 第二批）<a class="anchor" href="#附录-d-p1-补丁记录-2026-09-15-第二批" aria-label="锚点">#</a></h1>
+<p>承接 P0 之后，按&quot;性价比优先&quot;处理三条 P1 与一条强相关的 P2。<br>其中 A2A 出站通信在默认配置下此前<strong>完全不可用</strong>，本次修复后恢复。</p>
+<h2 id="d-1-a8-a2a-客户端-undefined-header-修好一条完整失效的链路">D.1 A8 — A2A 客户端 undefined header（修好一条完整失效的链路）<a class="anchor" href="#d-1-a8-a2a-客户端-undefined-header-修好一条完整失效的链路" aria-label="锚点">#</a></h2>
+<p><strong>问题</strong>：<code>a2a/index.js</code> 未配置 <code>KHY_A2A_API_KEY</code> 时传 <code>Authorization: undefined</code>，<br>未传 <code>userId</code> 时传 <code>X-User-Id: undefined</code>。Node 对 undefined 值的 header <strong>同步抛</strong><br><code>ERR_HTTP_INVALID_HEADER_VALUE</code>，被 <code>_request</code> 的 catch 吞成 <code>{ status: 0 }</code>。</p>
+<p><strong>改动</strong>：<code>src/services/a2a/index.js</code></p>
+<ul><li>新增 <code>_cleanHeaders()</code>，在 <code>_request</code> <strong>入口</strong>统一过滤 <code>undefined</code> / <code>null</code> / <code>''</code></li></ul>
+<p>（入口级修复 —— 未来新增调用点不会再犯）</p>
+<ul><li>失败结果新增 <code>phase</code> 字段区分 <code>build</code> / <code>network</code> / <code>timeout</code>，不再让&quot;参数问题&quot;</li></ul>
+<p>与&quot;对端不可达&quot;混在同一个 <code>status: 0</code> 里</p>
+<p><strong>端到端实测</strong>（真实本地 echo server）：</p>
+<table><thead><tr><th>场景</th><th>修复前</th><th>修复后</th></tr></thead><tbody><tr><td>无 API key + <code>sendMessage</code></td><td><code>status:0</code>（静默失败）</td><td><strong>200</strong></td></tr><tr><td>无 API key + <code>createTask</code></td><td><code>status:0</code></td><td><strong>200</strong></td></tr><tr><td>有 API key</td><td><code>status:0</code>（同样失败）</td><td><strong>200</strong>，<code>Bearer</code> 正确透传</td></tr><tr><td>对端不可达</td><td><code>status:0</code>（原因不明）</td><td><code>status:0</code> + <code>phase:'network'</code></td></tr></tbody></table>
+<p><strong>测试</strong>：<code>tests/services/a2aSendHeaders.test.js</code>（<strong>新增</strong>，5/5）。</p>
+<h2 id="d-2-m2-m3-mcp-客户端能力声明与服务端请求响应">D.2 M2 + M3 — MCP 客户端能力声明与服务端请求响应<a class="anchor" href="#d-2-m2-m3-mcp-客户端能力声明与服务端请求响应" aria-label="锚点">#</a></h2>
+<p>二者必须一起修：<strong>声明了能力却不响应，比不声明更糟</strong>。</p>
+<p><strong>M2 改动</strong>（<code>mcp/index.js</code>）：</p>
+<ul><li>三处内联的 <code>{ tools: {}, resources: {}, prompts: {} }</code> → 单一常量 <code>CLIENT_CAPABILITIES</code></li><li>内容改为 <code>{ roots: {} }</code> —— 只声明<strong>真正实现了</strong>的能力。原字段（tools/resources/prompts）</li></ul>
+<p>是 <strong>ServerCapabilities</strong>，出现在客户端能力里属无效字段，且会让服务端误判本客户端不支持<br>  roots/sampling，从而主动关闭服务端发起的交互。</p>
+<ul><li>刻意<strong>不声明</strong> <code>sampling</code> / <code>elicitation</code>（前者需把推理请求转给本地 AI 网关、涉及额度与审计；</li></ul>
+<p>后者需交互式 UI，而 MCP client 常运行在非交互上下文）。<strong>不做能力虚报。</strong></p>
+<p><strong>M3 改动</strong>（<code>mcp/index.js</code>）：</p>
+<ul><li><code>_handleMessage</code> 新增&quot;服务端请求&quot;分支（有 <code>method</code> + <code>id</code>），排在通知分支<strong>之前</strong></li><li>新增 <code>_handleServerRequest</code> / <code>_dispatchServerRequest</code> / <code>_serverRoots</code> / <code>_respondToServer</code></li><li>已实现：<code>ping</code>、<code>roots/list</code>（返回当前工作目录）；未支持的方法回标准 <strong>-32601</strong></li><li>回写复用既有 <code>_writeRaw</code>，因此 stdio / 传统 SSE / Streamable HTTP 三种传输都能正确回信</li></ul>
+<p><strong>测试</strong>：<code>tests/services/mcp/mcpClientCapabilities.test.js</code>（<strong>新增</strong>，8/8）。</p>
+<h2 id="d-3-m1-协议版本协商">D.3 M1 — 协议版本协商<a class="anchor" href="#d-3-m1-协议版本协商" aria-label="锚点">#</a></h2>
+<p><strong>改动</strong>：</p>
+<ul><li><code>mcpServerProtocol.js</code> — 新增 <code>SUPPORTED_PROTOCOL_VERSIONS</code> 与 <code>negotiateProtocolVersion()</code>；</li></ul>
+<p><code>buildInitializeResult</code> 改为读取 <code>requestedVersion</code> 参与协商</p>
+<ul><li><code>mcpServer.js</code> — <code>initialize</code> handler 透传 <code>params.protocolVersion</code></li><li><code>mcp/index.js</code> — <strong>删除本地重复的 <code>PROTOCOL_VERSION</code></strong>，改为从 <code>mcpServerProtocol</code> require</li></ul>
+<p>（消除双份硬编码）；新增 <code>_checkProtocolVersion</code>，三处握手点接入</p>
+<p><strong>协商语义</strong>：请求的版本受支持 → <strong>回显</strong>；不受支持 → 回自己支持的版本（规范行为）。<br><code>SUPPORTED_PROTOCOL_VERSIONS</code> 目前只含 <code>2024-11-05</code> —— 2025-03-26 起的 Streamable HTTP<br>要求（<code>MCP-Protocol-Version</code> 头、SSE 流式响应、会话校验）尚未实现，<strong>不列入</strong>。</p>
+<p><strong>客户端行为</strong>：版本不匹配时<strong>不自动断开</strong>（khy 对旧版本仍能工作），但记入 <code>_lastError</code><br>并 emit <code>protocolVersionMismatch</code> 事件，由调用方决定去留。此前是完全静默的。</p>
+<p><strong>测试</strong>：<code>tests/services/mcp/mcpProtocolNegotiation.test.js</code>（<strong>新增</strong>，10/10）。</p>
+<h2 id="d-4-m4-按能力调用-顺带修复">D.4 M4 — 按能力调用（顺带修复）<a class="anchor" href="#d-4-m4-按能力调用-顺带修复" aria-label="锚点">#</a></h2>
+<p><strong>为什么顺带做</strong>：M4（无条件请求 <code>resources/list</code> / <code>prompts/list</code>）与 M2 是同一条逻辑链<br>——「声明了能力就该按能力调用」。分开修会让 M2 只改声明、调用侧仍违反规范。</p>
+<p><strong>改动</strong>：<code>_loadServerInventory</code> 改为检查 <code>this.capabilities</code>，未声明的能力不再请求。</p>
+<p><strong>取舍</strong>：<code>capabilities</code> 里没有 <code>resources</code> / <code>prompts</code> 键 → 不请求。规范要求服务端在<br>initialize 回包给出 capabilities，故&quot;未声明即不支持&quot;是合规读法。代价是若某服务端省略了<br>capabilities，其资源/提示在 khy 侧不可见 —— 但 <code>tools/list</code> <strong>始终请求</strong>，核心能力不受影响。</p>
+<h2 id="d-5-回归结果">D.5 回归结果<a class="anchor" href="#d-5-回归结果" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>套件</th><th>结果</th></tr></thead><tbody><tr><td>jest（<code>tests/services/mcp</code> + <code>tests/mcp</code> + daemon + security + routeAuth）</td><td><strong>19 suites / 241 tests 全绿</strong></td></tr><tr><td>node:test（本次 6 个文件合计）</td><td><strong>50 / 50</strong></td></tr><tr><td>eslint（改动文件）</td><td><strong>0 errors</strong>，未新增既有 warnings</td></tr></tbody></table>
+<h2 id="d-6-遗留">D.6 遗留<a class="anchor" href="#d-6-遗留" aria-label="锚点">#</a></h2>
+<ol><li><strong><code>sampling</code> / <code>elicitation</code> 未实现</strong>：这是能力缺口，不是规范违反（已诚实不声明）。</li></ol>
+<p>实现 sampling 需把服务端的推理请求路由到本地 AI 网关并处理额度与审计。</p>
+<ol><li><strong>协议版本仍停在 2024-11-05</strong>：协商逻辑已合规，但要真正支持新客户端，需实现</li></ol>
+<p>2025-03-26 的 Streamable HTTP 要求（见 M6 / M7 / M9）。本轮只修&quot;无协商&quot;与&quot;静默&quot;。</p>
+<ol><li><strong>客户端不自动断开版本不匹配</strong>：属规范中的 SHOULD 而非 MUST，选择暴露事件由调用方决策。</li></ol>
+<hr>
+<h1 id="附录-e-p1-补丁记录-第二批-m8-m6-m7">附录 E：P1 补丁记录（第二批：M8 / M6 / M7）<a class="anchor" href="#附录-e-p1-补丁记录-第二批-m8-m6-m7" aria-label="锚点">#</a></h1>
+<blockquote><p>本批处理建议清单第一、二项。三项都落在同一个文件<br><code>services/backend/src/services/domain/messaging/mcp/mcpHttpServer.js</code><br>及其协议叶子 <code>mcpServerProtocol.js</code> —— 它们是&quot;让 khy 作为 MCP server 时，<br>真能被标准客户端当 MCP server 用&quot;的最后一截。</p></blockquote>
+<h2 id="e-1-m8-401-响应头-移除查询串传令牌">E.1 M8 — 401 响应头 + 移除查询串传令牌<a class="anchor" href="#e-1-m8-401-响应头-移除查询串传令牌" aria-label="锚点">#</a></h2>
+<p><strong>改动</strong>：<code>mcpHttpServer.js</code></p>
+<h3 id="e-1-1-补-www-authenticate-rfc-6750-3-mcp-授权规范">E.1.1 补 <code>WWW-Authenticate</code>（RFC 6750 §3 / MCP 授权规范）<a class="anchor" href="#e-1-1-补-www-authenticate-rfc-6750-3-mcp-授权规范" aria-label="锚点">#</a></h3>
+<p>401 响应现在携带：</p>
+<pre><code>WWW-Authenticate: Bearer realm=&quot;khy-mcp&quot;, resource_metadata=&quot;/.well-known/oauth-protected-resource&quot;</code></pre>
+<p><code>resource_metadata</code> 指向 RFC 9728 Protected Resource Metadata 端点，客户端据此<br><strong>发现授权服务器</strong>。端点可经 <code>KHY_MCP_RESOURCE_METADATA</code> 覆盖 —— 遵循仓库<br>「零硬编码」纪律，不自造域名。</p>
+<p>新增导出：<code>RESOURCE_METADATA_ENV</code>、<code>DEFAULT_RESOURCE_METADATA</code>。</p>
+<h3 id="e-1-2-移除-token-查询串传令牌">E.1.2 移除 <code>?token=</code> 查询串传令牌<a class="anchor" href="#e-1-2-移除-token-查询串传令牌" aria-label="锚点">#</a></h3>
+<p><code>isAuthorized</code> 现在<strong>只认</strong> <code>Authorization: Bearer &lt;token&gt;</code>。<code>req.queryToken</code><br>的字段签名保留（调用点不必改），但值<strong>一律被忽略</strong>。</p>
+<p><strong>为什么必须删而不是&quot;加个告警&quot;</strong>：查询串会进入服务器访问日志、浏览器历史、<br>Referer 头、中间代理日志 —— 令牌泄露面是 header 方式的数倍，且用户无感。<br>这是 OWASP 明确列为反模式的凭据传递方式，没有&quot;温和弃用&quot;的中间态。</p>
+<p><strong>顺带加固</strong>：令牌比较从 <code>===</code> 改为 <code>crypto.timingSafeEqual</code>（新导出<br><code>timingSafeEqualStr</code>）。<code>===</code> 短路比较会泄露令牌前缀匹配长度。</p>
+<h3 id="e-1-3-迁移影响-已核实">E.1.3 迁移影响（已核实）<a class="anchor" href="#e-1-3-迁移影响-已核实" aria-label="锚点">#</a></h3>
+<p>全仓检索 <code>queryToken</code> / <code>?token=</code> 后确认：<strong>MCP server 侧无任何调用方依赖该方式</strong>。</p>
+<table><thead><tr><th>命中位置</th><th>是否受影响</th></tr></thead><tbody><tr><td><code>mcpHttpServer.js</code> 自身（<code>isAuthorized</code> + 请求处理）</td><td>是，已改</td></tr><tr><td><code>tests/services/mcp/mcpHttpServer.test.js</code> 5 个用例</td><td>是，已改为断言&quot;传了也不认&quot;</td></tr><tr><td><code>extensions/tools/khy-markdown/khyos-md-bridge.js</code></td><td><strong>否</strong> —— 另一台 server，独立实现</td></tr><tr><td><code>bridgeServer.js</code> / <code>routes/auth.js</code> / 前端 <code>?token=</code></td><td><strong>否</strong> —— 与本 server 无关</td></tr></tbody></table>
+<blockquote><p>注意 <code>khyos-md-bridge.js</code> 有一处历史教训（见 <code>[IMPL-RPT-048]</code>）：那里删掉<br><code>?token=</code> 曾导致三个 POST 全部 401 → <code>failureCount</code> 打满 → 桥静默死亡，后已回退。<br><strong>本处不适用</strong>：那个 server 是给浏览器页面直接 POST 的，无法带自定义 header；<br>而本 MCP server 的客户端是 SDK/CLI，带 header 毫无障碍。两者约束不同，不要类推。</p></blockquote>
+<h3 id="e-1-4-实测">E.1.4 实测<a class="anchor" href="#e-1-4-实测" aria-label="锚点">#</a></h3>
+<p>真起 server 发请求（<code>_产物/_m8_e2e.js</code>）：</p>
+<table><thead><tr><th>场景</th><th>结果</th></tr></thead><tbody><tr><td>无凭据</td><td><code>401</code> + <code>WWW-Authenticate</code> ✅</td></tr><tr><td><strong><code>?token=&lt;合法令牌&gt;</code></strong></td><td><strong><code>401</code></strong> ✅（改造生效，此前会 <code>200</code>）</td></tr><tr><td><code>Authorization: Bearer &lt;合法令牌&gt;</code></td><td><code>200</code> ✅</td></tr><tr><td><code>Authorization: Bearer &lt;错误令牌&gt;</code></td><td><code>401</code> + <code>WWW-Authenticate</code> ✅</td></tr></tbody></table>
+<h2 id="e-2-m6-m7-协议版本头与会话校验">E.2 M6 + M7 — 协议版本头与会话校验<a class="anchor" href="#e-2-m6-m7-协议版本头与会话校验" aria-label="锚点">#</a></h2>
+<p>两项都属 2025-03-26 Streamable HTTP 的要求，且都改在同一段请求处理逻辑里，<br>故合并实施。</p>
+<h3 id="e-2-1-m6-mcp-protocol-version-头">E.2.1 M6 — <code>MCP-Protocol-Version</code> 头<a class="anchor" href="#e-2-1-m6-mcp-protocol-version-头" aria-label="锚点">#</a></h3>
+<p><strong>新增纯函数</strong> <code>mcpServerProtocol.checkProtocolVersionHeader(headerValue)</code><br>（零 IO、绝不抛、可单测）：</p>
+<table><thead><tr><th>入参</th><th>结果</th></tr></thead><tbody><tr><td>支持的版本（<code>2024-11-05</code>）</td><td><code>ok:true</code>，<code>assumed:false</code></td></tr><tr><td>不支持的版本（<code>2025-06-18</code> 等）</td><td><code>ok:false</code> + <code>supported:[...]</code> + <code>reason</code></td></tr><tr><td>缺失 / 空白</td><td><code>ok:true</code>，<code>assumed:true</code>（回落 <code>DEFAULT_ASSUMED_VERSION</code>）</td></tr></tbody></table>
+<p><strong>接线</strong>：<code>rejectBadProtocolVersion(req, res)</code> 挂在三个请求分支入口<br>（<code>GET /sse</code>、<code>POST /messages</code>、<code>POST /mcp</code>）。不支持的版本 → <code>400</code><br>并回 <code>{ error, supported }</code>。</p>
+<p><strong>一处刻意的取舍</strong>：规范说缺头时<strong>应假定为 2025-03-26</strong>。本项目<strong>没有</strong>实现<br>2025-03-26 的流式语义，照抄会变成&quot;假兼容&quot;——客户端以为能拿 SSE 流，实际拿到<br>JSON。故缺头时回落到<strong>本服务端支持的最高版本</strong>，并在判定结果里标注<br><code>assumed:true</code>，让调用方与日志看得见&quot;这是一次假定，不是协商结果&quot;。<br>这正是本报告反复强调的口径：<strong>声明必须与实现一致</strong>。</p>
+<p><strong>回归锁</strong>：新增测试断言 <code>PROTOCOL_VERSION_HEADER === 'mcp-protocol-version'</code><br>（全小写）—— Node 的 <code>req.headers</code> 键一律小写，写成驼峰会导致<strong>永远取不到值</strong><br>而静默走&quot;缺头&quot;分支。</p>
+<h3 id="e-2-2-m7-会话校验">E.2.2 M7 — 会话校验<a class="anchor" href="#e-2-2-m7-会话校验" aria-label="锚点">#</a></h3>
+<p>改造前是&quot;<strong>回显或现签</strong>&quot;：客户端带什么 id 就回什么 id，不带就现签一个。<br>等于把 <code>Mcp-Session-Id</code> 当装饰品 —— 任何伪造 id 都被接受，服务端重启后<br>客户端也永远发现不了会话已失效。</p>
+<p>改造后：</p>
+<table><thead><tr><th>场景</th><th>行为</th></tr></thead><tbody><tr><td><code>initialize</code>（建立会话）</td><td>免检；签发新 id 并记入 <code>streamSessions</code></td></tr><tr><td>其余请求 + 已知 id</td><td>正常处理</td></tr><tr><td>其余请求 + 伪造 / 缺失 id</td><td><strong><code>404</code></strong> + <code>{ code: 'SESSION_NOT_FOUND' }</code>（规范要求）</td></tr><tr><td><code>DELETE /mcp</code></td><td>销掉会话，回 <code>204</code></td></tr></tbody></table>
+<p><strong>会话表拆成两张</strong>：<code>sseSessions</code>（sessionId → SSE response stream）与<br><code>streamSessions</code>（sessionId → 记账）。二者生命周期不同 —— 前者随 SSE 连接走，<br>后者靠 DELETE 或进程退出。混在一张表里会让 <code>DELETE</code> 误关别人的 SSE 流。</p>
+<p><strong>实测踩到并修掉的一个真缺陷</strong>：首版判定条件写成 <code>streamSessions.size &gt; 0</code>，<br>导致<strong>删掉唯一会话后表变空 → 校验整体失效 → 拿旧 id 反而畅通无阻</strong>，正是要防的事。<br>实测第 8 项（DELETE 后再用）暴露了它，改为 <code>sessionSeq &gt; 0</code>（&quot;这个进程签发过会话&quot;）<br>后修正。</p>
+<h3 id="e-2-3-实测">E.2.3 实测<a class="anchor" href="#e-2-3-实测" aria-label="锚点">#</a></h3>
+<p><code>_产物/_m67_e2e.js</code>，真起 server：</p>
+<table><thead><tr><th>#</th><th>场景</th><th>期望</th><th>实测</th></tr></thead><tbody><tr><td>1</td><td><code>initialize</code> 无版本头</td><td>200 + 签发 id</td><td><code>200</code> + <code>khy-1</code> ✅</td></tr><tr><td>2</td><td>不支持的版本头</td><td>400 + supported</td><td><code>400</code> + <code>[&quot;2024-11-05&quot;]</code> ✅</td></tr><tr><td>3</td><td>支持的版本头</td><td>200</td><td><code>200</code> ✅</td></tr><tr><td>4</td><td><strong>小写头名</strong> + 坏版本</td><td>400</td><td><code>400</code> ✅</td></tr><tr><td>5</td><td>伪造会话 id</td><td>404</td><td><code>404</code> ✅</td></tr><tr><td>6</td><td>正确会话 id</td><td>200</td><td><code>200</code> ✅</td></tr><tr><td>7</td><td>缺会话 id（已建会话后）</td><td>404</td><td><code>404</code> ✅</td></tr><tr><td>8</td><td><code>DELETE</code> 会话</td><td>204</td><td><code>204</code> ✅</td></tr><tr><td>9</td><td><strong>DELETE 后再用</strong></td><td>404</td><td><code>404</code> ✅</td></tr></tbody></table>
+<h2 id="e-3-测试与回归">E.3 测试与回归<a class="anchor" href="#e-3-测试与回归" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>套件</th><th>结果</th></tr></thead><tbody><tr><td><code>tests/services/mcp/mcpHttpServer.test.js</code>（node:test）</td><td><strong>18 / 18</strong>（原 10 → 新增 8）</td></tr><tr><td>node:test（<code>mcpHttpServer</code> + <code>mcpClientCapabilities</code> + <code>mcpProtocolNegotiation</code> + <code>a2aSendHeaders</code> + <code>originGuard</code> + <code>credentialsHardening</code>）</td><td><strong>58 / 58</strong></td></tr><tr><td>jest（<code>mcpServer</code> / <code>mcpServerProtocol</code> / <code>mcpServeToolPolicy</code>）</td><td><strong>14 / 14</strong></td></tr><tr><td>eslint（改动文件）</td><td><strong>0 errors</strong>，未新增 warning</td></tr></tbody></table>
+<blockquote><p><strong>踩到的 runner 陷阱</strong>（已在项目记忆中）：<br><code>tests/services/mcp/</code> 下 9 个文件<strong>混用两种 runner</strong> —— <code>mcpHttpServer</code> /<br><code>mcpClientCapabilities</code> / <code>mcpProtocolNegotiation</code> 是 node:test，<br><code>mcpServer</code> / <code>mcpServerProtocol</code> / <code>mcpServeToolPolicy</code> 是 jest（<code>describe</code>）。<br>用 <code>node --test</code> 跑 jest 风格文件会以 <code>describe is not defined</code> 失败 ——<br>那是 <strong>runner 用错</strong>，不是测试挂了。另：本 Node 版本下 <code>node --test &lt;目录&gt;</code><br>会把目录当模块加载，须显式列文件。</p></blockquote>
+<h2 id="e-4-遗留-本批未做">E.4 遗留（本批未做）<a class="anchor" href="#e-4-遗留-本批未做" aria-label="锚点">#</a></h2>
+<ol><li><strong>M9 — 两种传输混用同一端点</strong>：<code>GET /</code> 既是传统 SSE 入口，<code>POST /</code> 又是</li></ol>
+<p>Streamable HTTP。规范将两者定义为互斥传输，客户端靠配置区分而非 HTTP 方法。<br>   本批未动，因为拆分端点会<strong>破坏现有客户端兼容</strong>，需要一次明确的破坏性变更决策。</p>
+<ol><li><strong>协议版本仍停在 2024-11-05</strong>：M6 让服务端<strong>诚实拒绝</strong>不支持的版本，但没让</li></ol>
+<p>它<strong>支持</strong>新版本。要真支持 2025-03-26，还需实现 SSE 流式响应体与<br>   <code>Last-Event-ID</code> 断线续传 —— 那是一个独立的、更大的改动。</p>
+<ol><li><strong>会话无 TTL / 无上限</strong>：<code>streamSessions</code> 只增不减（除非客户端 DELETE），</li></ol>
+<p>长跑进程会缓慢泄漏。当前无鉴权暴露面已由 Origin + token 收口，故不紧急，<br>   但应列入后续批次。</p>
+<hr>
+<h1 id="附录-f-p1-补丁记录-第三批-t1-工具循环-journal">附录 F：P1 补丁记录（第三批：T1 — 工具循环 journal）<a class="anchor" href="#附录-f-p1-补丁记录-第三批-t1-工具循环-journal" aria-label="锚点">#</a></h1>
+<blockquote><p>建议清单第三项，也是全仓最值得投入的健壮性缺口。</p></blockquote>
+<h2 id="f-1-问题回顾">F.1 问题回顾<a class="anchor" href="#f-1-问题回顾" aria-label="锚点">#</a></h2>
+<p>主循环 <code>toolUseLoopCore.js</code>（12000+ 行）此前<strong>没有</strong>任何逐轮持久记录：</p>
+<ul><li>唯一的落盘是 <code>onCheckpoint</code> → <code>boulderState</code>，<strong>按 <code>md5(cwd)</code> 单槽</strong>存储 →</li></ul>
+<p>同一目录下并发会话<strong>互相覆盖</strong>检查点；</p>
+<ul><li>恢复方式是&quot;把快照拼回 prompt&quot;，属<strong>粗粒度近似</strong>，不是精确重放；</li><li><code>orchestrationJournal.js</code> 虽已存在，但<strong>仅</strong>服务于子代理编排，主循环零引用；</li><li>既有的 <code>_loopBreadcrumb()</code> 是<strong>默认关闭</strong>的调试设施，且写全局单文件</li></ul>
+<p>（<code>os.tmpdir()/khy-loop-debug.log</code>），并发会话会交错。</p>
+<h2 id="f-2-改动">F.2 改动<a class="anchor" href="#f-2-改动" aria-label="锚点">#</a></h2>
+<h3 id="f-2-1-新增-services-backend-src-services-toolloopjournal-js">F.2.1 新增 <code>services/backend/src/services/toolLoopJournal.js</code><a class="anchor" href="#f-2-1-新增-services-backend-src-services-toolloopjournal-js" aria-label="锚点">#</a></h3>
+<p>薄 IO 层，模板沿用 <code>domain/state/orchestrator/orchestrationJournal.js</code>：</p>
+<table><thead><tr><th>能力</th><th>说明</th></tr></thead><tbody><tr><td><code>generateRunId()</code></td><td><strong>不按 cwd 派生</strong> —— 直接针对 T1 根因。500 次连续生成零重复（已锁测试）</td></tr><tr><td><code>appendJournal(runId, rec)</code></td><td>append-only JSONL，<strong>每 run 一个文件</strong></td></tr><tr><td><code>buildStartRecord</code> / <code>buildIterationRecord</code> / <code>buildEndRecord</code></td><td>纯函数记录构造，可单测</td></tr><tr><td><code>readJournal</code> / <code>listRunIds</code></td><td>读回；坏行（写到一半崩了）跳过而非整条作废</td></tr><tr><td><code>findIncompleteRuns()</code></td><td>有 <code>start</code> 无 <code>end</code> 的 run → 崩溃候选</td></tr><tr><td><code>isPidAlive(pid)</code></td><td>把&quot;未完成&quot;细分为&quot;崩了&quot;与&quot;还在跑&quot;</td></tr><tr><td><code>summarizeForResume(runId)</code></td><td>恢复摘要：第几轮、跑过哪些工具、哪些失败</td></tr></tbody></table>
+<p><strong>落盘位置</strong>：<code>getDataDir('toolLoop')/loop-&lt;runId&gt;.jsonl</code>。<br><strong>门控</strong>：<code>KHY_LOOP_JOURNAL</code>（默认 ON，<code>0</code>/<code>false</code>/<code>off</code>/<code>no</code> 关闭）。</p>
+<h3 id="f-2-2-三条刻意的设计取舍">F.2.2 三条刻意的设计取舍<a class="anchor" href="#f-2-2-三条刻意的设计取舍" aria-label="锚点">#</a></h3>
+<ol><li><strong>用户原文不落盘</strong>。<code>start</code> 只记 <code>userMessageLength</code> + <code>userMessageSha1</code> 前 12 位。</li></ol>
+<p>仍足以分辨&quot;这次跑的是什么&quot;，但敏感内容不写进磁盘。</p>
+<ol><li><strong>记录有上限</strong>。每轮工具最多 50 条、错误文案截断 120 字符、结果不整体 dump。</li></ol>
+<p>100 轮循环不会产出 MB 级 journal。</p>
+<ol><li><strong>对象型错误取 <code>message</code></strong>。工具结果的 <code>error</code> 常是 <code>{message, code}</code>，</li></ol>
+<p>直接 <code>String(v)</code> 会得到 <code>[object Object]</code> —— journal 里等于没记。</p>
+<h3 id="f-2-3-接线-tooluseloopcore-js-共-3-处">F.2.3 接线（<code>toolUseLoopCore.js</code>，共 3 处）<a class="anchor" href="#f-2-3-接线-tooluseloopcore-js-共-3-处" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>位置</th><th>动作</th></tr></thead><tbody><tr><td><code>_turnId</code> 创建之后</td><td><code>beginRun</code>：生成 runId、写 <code>start</code></td></tr><tr><td>每轮循环<strong>开头</strong></td><td>写 <code>iteration</code> 记录（含上一轮的工具切片）</td></tr><tr><td>5 个出口</td><td>写 <code>end</code>：<code>posttool-hook-stop</code>、<code>token-budget-stop</code>、<code>interrupt-cancelled</code>、<code>interrupt-stop</code>、<code>absolute-timeout</code></td></tr></tbody></table>
+<p><strong>为什么挂在轮首而不是轮尾</strong>：轮尾有 <strong>19 条</strong> <code>return</code> 分支，逐个挂既易漏又易错；<br>轮首只有一处，且此时 <code>toolCallLog</code> 已含上一轮全部结果，按游标切片即可。</p>
+<h2 id="f-3-实测">F.3 实测<a class="anchor" href="#f-3-实测" aria-label="锚点">#</a></h2>
+<p><code>_产物/_t1_e2e.js</code> 真跑一次循环（假 chat，3 轮）：</p>
+<pre><code>落盘 run 数: 1
+文件 = &lt;KHY_DATA_HOME&gt;\toolLoop\loop-r20260916014757-8627ba54.jsonl
+记录数 = 4
+  - {&quot;type&quot;:&quot;start&quot;,...,&quot;sessionId&quot;:&quot;e2e-session&quot;,&quot;turnId&quot;:&quot;turn-...&quot;,&quot;maxIterations&quot;:...}
+  - {&quot;type&quot;:&quot;iteration&quot;,&quot;seq&quot;:1,&quot;iteration&quot;:1,&quot;tools&quot;:[],&quot;toolCount&quot;:0,...}
+  - {&quot;type&quot;:&quot;iteration&quot;,&quot;seq&quot;:2,&quot;iteration&quot;:2,&quot;tools&quot;:[{&quot;name&quot;:&quot;echo&quot;,&quot;ok&quot;:false,
+     &quot;durationMs&quot;:98,&quot;error&quot;:&quot;Unknown tool: echo&quot;}],...}
+  - {&quot;type&quot;:&quot;iteration&quot;,&quot;seq&quot;:3,...}
+恢复摘要: {&quot;lastIteration&quot;:3,&quot;completedIterations&quot;:3,&quot;toolsRun&quot;:2,
+           &quot;failedTools&quot;:2,&quot;endsWithoutEnd&quot;:true}
+未完成 run 数: 1</code></pre>
+<p>工具名、耗时、错误文案都正确落盘，恢复摘要可精确回答&quot;死在第 3 轮、跑过 2 个工具、2 个失败&quot;。</p>
+<h2 id="f-4-测试与回归">F.4 测试与回归<a class="anchor" href="#f-4-测试与回归" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>套件</th><th>结果</th></tr></thead><tbody><tr><td><code>tests/services/toolLoopJournal.test.js</code>（node:test，<strong>新建</strong>）</td><td><strong>19 / 19</strong></td></tr><tr><td>eslint（新模块）</td><td><strong>0 problems</strong>（error + warning 全清）</td></tr><tr><td>eslint（<code>toolUseLoopCore.js</code>）</td><td>5 个 error <strong>经 HEAD 对照确认既有</strong>（<code>_responseDebounce</code>/<code>sanitizedUser</code>/<code>context</code> 未定义，行号正好偏移本次新增的 ~70 行）</td></tr></tbody></table>
+<blockquote><p><strong>踩到的测试隔离坑</strong>：<code>utils/dataHome.js</code> 有模块级 <code>_cached</code>，只清 journal 模块的<br><code>require.cache</code> 不够 —— 后续用例会复用<strong>第一个</strong>临时目录（而它已被上一个用例删掉），<br>表现为 <code>listRunIds()</code> 里冒出别的用例留下的 run id。<br><strong>必须同时清 <code>dataHome</code> 的缓存。</strong></p></blockquote>
+<h2 id="f-5-遗留-本批未做">F.5 遗留（本批未做）<a class="anchor" href="#f-5-遗留-本批未做" aria-label="锚点">#</a></h2>
+<ol><li><strong><code>end</code> 覆盖不完整</strong>：19 个出口只挂了 5 个。因此 <code>findIncompleteRuns()</code> 是<strong>保守</strong>的 ——</li></ol>
+<p>它可能把&quot;从其他出口正常结束&quot;的 run 也列为未完成。<br>   崩溃<strong>取证</strong>（<code>summarizeForResume</code> 的&quot;跑到第几轮、做过什么&quot;）不受影响，<br>   但&quot;崩溃 vs 正常结束&quot;的判定要靠 <code>isPidAlive()</code> 交叉验证。<br>   要彻底解决需给所有出口加 <code>end</code>，或引入统一的收尾漏斗 —— 那是更大的重构。</p>
+<ol><li><strong>journal 无 TTL / 无清理</strong>：<code>toolLoop/</code> 目录只增不减。长跑机器上会累积，</li></ol>
+<p>应配套一个按时间的清理任务（可参照既有 cleanupService）。</p>
+<ol><li><strong>尚未接入真正的&quot;恢复&quot;</strong>：本批只提供了<strong>取证数据</strong>。真正用它做自动续跑</li></ol>
+<p>（读最后一次未完成 run → 从第 N 轮继续）属产品决策，未在本批实现。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/11_报告/RESEARCH/[RESEARCH-006] khy-os-规则合规检查报告-2026-09-15.html"><div class="dir">← 上一篇</div><div class="ttl">khy-os 规则合规检查报告</div></a><a class="next" href="../../../docs/11_报告/RESEARCH/[RESEARCH-008] khy-os-不足诊断与自对抗式设计方案.html"><div class="dir">下一篇 →</div><div class="ttl">Khy-OS 不足诊断与自对抗式设计方案</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/11_报告/RESEARCH/[RESEARCH-007] khy-os-规范合规审计报告-2026-09-15.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

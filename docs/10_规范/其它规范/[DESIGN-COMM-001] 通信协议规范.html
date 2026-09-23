@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-COMM-001] 通信协议规范.md -->
+<title>[DESIGN-COMM-001] 通信协议规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-COMM-001] 通信协议规范</div>
+      <header class="hero reveal"><h1>[DESIGN-COMM-001] 通信协议规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-comm-001-通信协议规范">[DESIGN-COMM-001] 通信协议规范</a></li><li class="lvl-2"><a href="#1-协议概述">1. 协议概述</a></li><li class="lvl-3"><a href="#1-1-设计目标">1.1 设计目标</a></li><li class="lvl-3"><a href="#1-2-设计原则">1.2 设计原则</a></li><li class="lvl-3"><a href="#1-3-协议版本">1.3 协议版本</a></li><li class="lvl-2"><a href="#2-消息格式规范">2. 消息格式规范</a></li><li class="lvl-3"><a href="#2-1-http-响应信封">2.1 HTTP 响应信封</a></li><li class="lvl-3"><a href="#2-2-websocket-消息格式">2.2 WebSocket 消息格式</a></li><li class="lvl-3"><a href="#2-3-sse-消息格式">2.3 SSE 消息格式</a></li><li class="lvl-3"><a href="#2-4-ipc-消息格式">2.4 IPC 消息格式</a></li><li class="lvl-2"><a href="#3-http-rest-api-规范">3. HTTP REST API 规范</a></li><li class="lvl-3"><a href="#3-1-url-设计">3.1 URL 设计</a></li><li class="lvl-3"><a href="#3-2-http-方法">3.2 HTTP 方法</a></li><li class="lvl-3"><a href="#3-3-状态码使用">3.3 状态码使用</a></li><li class="lvl-3"><a href="#3-4-请求头规范">3.4 请求头规范</a></li><li class="lvl-3"><a href="#3-5-分页规范">3.5 分页规范</a></li><li class="lvl-3"><a href="#3-6-过滤和搜索">3.6 过滤和搜索</a></li><li class="lvl-2"><a href="#4-websocket-规范">4. WebSocket 规范</a></li><li class="lvl-3"><a href="#4-1-连接管理">4.1 连接管理</a></li><li class="lvl-3"><a href="#4-2-消息类型">4.2 消息类型</a></li><li class="lvl-3"><a href="#4-3-心跳机制">4.3 心跳机制</a></li><li class="lvl-3"><a href="#4-4-重连机制">4.4 重连机制</a></li><li class="lvl-3"><a href="#4-5-订阅机制">4.5 订阅机制</a></li><li class="lvl-2"><a href="#5-sse-规范">5. SSE 规范</a></li><li class="lvl-3"><a href="#5-1-连接管理">5.1 连接管理</a></li><li class="lvl-3"><a href="#5-2-事件格式">5.2 事件格式</a></li><li class="lvl-3"><a href="#5-3-事件类型">5.3 事件类型</a></li><li class="lvl-3"><a href="#5-4-错误处理">5.4 错误处理</a></li><li class="lvl-2"><a href="#6-ipc-规范">6. IPC 规范</a></li><li class="lvl-3"><a href="#6-1-通信方式">6.1 通信方式</a></li><li class="lvl-3"><a href="#6-2-消息格式">6.2 消息格式</a></li><li class="lvl-3"><a href="#6-3-状态码">6.3 状态码</a></li><li class="lvl-3"><a href="#6-4-连接管理">6.4 连接管理</a></li><li class="lvl-2"><a href="#7-错误处理规范">7. 错误处理规范</a></li><li class="lvl-3"><a href="#7-1-错误分类">7.1 错误分类</a></li><li class="lvl-3"><a href="#7-2-错误码定义">7.2 错误码定义</a></li><li class="lvl-3"><a href="#7-3-错误响应格式">7.3 错误响应格式</a></li><li class="lvl-3"><a href="#7-4-错误处理流程">7.4 错误处理流程</a></li><li class="lvl-2"><a href="#8-安全规范">8. 安全规范</a></li><li class="lvl-3"><a href="#8-1-认证机制">8.1 认证机制</a></li><li class="lvl-3"><a href="#8-2-授权机制">8.2 授权机制</a></li><li class="lvl-3"><a href="#8-3-加密通信">8.3 加密通信</a></li><li class="lvl-3"><a href="#8-4-输入验证">8.4 输入验证</a></li><li class="lvl-2"><a href="#9-性能规范">9. 性能规范</a></li><li class="lvl-3"><a href="#9-1-响应时间">9.1 响应时间</a></li><li class="lvl-3"><a href="#9-2-并发处理">9.2 并发处理</a></li><li class="lvl-3"><a href="#9-3-缓存策略">9.3 缓存策略</a></li><li class="lvl-2"><a href="#10-监控规范">10. 监控规范</a></li><li class="lvl-3"><a href="#10-1-监控指标">10.1 监控指标</a></li><li class="lvl-3"><a href="#10-2-日志规范">10.2 日志规范</a></li><li class="lvl-3"><a href="#10-3-告警规则">10.3 告警规则</a></li><li class="lvl-2"><a href="#11-测试规范">11. 测试规范</a></li><li class="lvl-3"><a href="#11-1-接口测试">11.1 接口测试</a></li><li class="lvl-3"><a href="#11-2-契约测试">11.2 契约测试</a></li><li class="lvl-2"><a href="#12-相关文档">12. 相关文档</a></li><li class="lvl-2"><a href="#13-版本历史">13. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-comm-001-通信协议规范">[DESIGN-COMM-001] 通信协议规范<a class="anchor" href="#design-comm-001-通信协议规范" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档定义 khy-os 项目中服务间通信的统一协议规范。</p></blockquote>
+<hr>
+<h2 id="1-协议概述">1. 协议概述<a class="anchor" href="#1-协议概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-设计目标">1.1 设计目标<a class="anchor" href="#1-1-设计目标" aria-label="锚点">#</a></h3>
+<p><strong>通信协议规范</strong>旨在统一：</p>
+<ul><li><strong>HTTP REST API</strong>：前后端通信</li><li><strong>WebSocket</strong>：实时双向通信</li><li><strong>SSE</strong>：服务器推送事件</li><li><strong>IPC</strong>：进程间通信</li><li><strong>RPC</strong>：远程过程调用</li></ul>
+<h3 id="1-2-设计原则">1.2 设计原则<a class="anchor" href="#1-2-设计原则" aria-label="锚点">#</a></h3>
+<ol><li><strong>一致性</strong>：所有通信使用统一的消息格式</li><li><strong>可扩展</strong>：支持新协议和消息类型</li><li><strong>可靠性</strong>：完整的错误处理和重试机制</li><li><strong>安全性</strong>：端到端加密和认证</li><li><strong>可观测</strong>：完整的日志和监控</li></ol>
+<h3 id="1-3-协议版本">1.3 协议版本<a class="anchor" href="#1-3-协议版本" aria-label="锚点">#</a></h3>
+<ul><li><strong>当前版本</strong>：<code>1.0.0</code></li><li><strong>协议标识</strong>：<code>khy-comm/1.0</code></li><li><strong>兼容版本</strong>：无（初始版本）</li></ul>
+<hr>
+<h2 id="2-消息格式规范">2. 消息格式规范<a class="anchor" href="#2-消息格式规范" aria-label="锚点">#</a></h2>
+<h3 id="2-1-http-响应信封">2.1 HTTP 响应信封<a class="anchor" href="#2-1-http-响应信封" aria-label="锚点">#</a></h3>
+<p><strong>成功响应</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;操作成功&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;metadata&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;requestId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;req-uuid&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1.0.0&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;pagination&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;page&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;pageSize&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">20</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;total&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">100</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;totalPages&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">5</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>错误响应</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;错误描述&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ERROR_CODE&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;VALIDATION_ERROR&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;details&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;stack&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;堆栈信息（仅开发环境）&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;metadata&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;requestId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;req-uuid&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>字段说明</strong>：</p>
+<ul><li><code>success</code>：操作是否成功</li><li><code>data</code>：响应数据</li><li><code>message</code>：人类可读的消息</li><li><code>error</code>：错误信息（仅失败时）</li><li><code>metadata</code>：请求元数据</li><li><code>pagination</code>：分页信息（仅列表接口）</li></ul>
+<h3 id="2-2-websocket-消息格式">2.2 WebSocket 消息格式<a class="anchor" href="#2-2-websocket-消息格式" aria-label="锚点">#</a></h3>
+<p><strong>请求消息</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;request&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;msg-uuid&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;method&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;service.action&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;params&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;metadata&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;timeout&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">30000</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>响应消息</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;response&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;msg-uuid&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;result&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">null</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;metadata&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;processingTime&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">150</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>事件消息</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;event&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;event&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;event.name&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;metadata&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;source&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;service-name&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>心跳消息</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ping&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ping-uuid&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1693833600000</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;pong&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ping-uuid&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1693833600000</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="2-3-sse-消息格式">2.3 SSE 消息格式<a class="anchor" href="#2-3-sse-消息格式" aria-label="锚点">#</a></h3>
+<p><strong>事件格式</strong>：</p>
+<pre><code>event: message_type
+id: event-uuid
+data: {&quot;key&quot;: &quot;value&quot;}
+</code></pre>
+<p><strong>事件类型</strong>：</p>
+<ul><li><code>message</code>：普通消息</li><li><code>error</code>：错误消息</li><li><code>heartbeat</code>：心跳消息</li><li><code>close</code>：关闭消息</li></ul>
+<p><strong>示例</strong>：</p>
+<pre><code>event: ai_response
+id: resp-001
+data: {&quot;content&quot;: &quot;AI回复内容&quot;, &quot;model&quot;: &quot;gpt-4&quot;, &quot;tokens&quot;: 150}
+
+event: tool_call
+id: tool-001
+data: {&quot;name&quot;: &quot;search&quot;, &quot;arguments&quot;: {&quot;query&quot;: &quot;关键词&quot;}}
+
+event: heartbeat
+id: hb-001
+data: {&quot;timestamp&quot;: 1693833600000}
+</code></pre>
+<h3 id="2-4-ipc-消息格式">2.4 IPC 消息格式<a class="anchor" href="#2-4-ipc-消息格式" aria-label="锚点">#</a></h3>
+<p><strong>二进制协议</strong>：</p>
+<pre><code>┌─────────┬─────────┬─────────┬─────────┬─────────┐
+│ Magic   │ Version │ Type    │ Length  │ Payload │
+│ (2B)    │ (1B)    │ (1B)    │ (4B)    │ (nB)    │
+└─────────┴─────────┴─────────┴─────────┴─────────┘</code></pre>
+<p><strong>字段说明</strong>：</p>
+<ul><li>Magic：魔数，固定为 <code>0x4B48</code> (&quot;KH&quot;)</li><li>Version：协议版本，当前为 <code>0x01</code></li><li>Type：消息类型</li><li>Length：负载长度（大端序）</li><li>Payload：消息负载</li></ul>
+<p><strong>消息类型</strong>：</p>
+<ul><li><code>0x01</code>：请求</li><li><code>0x02</code>：响应</li><li><code>0x03</code>：事件</li><li><code>0x04</code>：心跳</li></ul>
+<hr>
+<h2 id="3-http-rest-api-规范">3. HTTP REST API 规范<a class="anchor" href="#3-http-rest-api-规范" aria-label="锚点">#</a></h2>
+<h3 id="3-1-url-设计">3.1 URL 设计<a class="anchor" href="#3-1-url-设计" aria-label="锚点">#</a></h3>
+<p><strong>格式</strong>：</p>
+<pre><code>/api/v{version}/{resource}
+/api/v{version}/{resource}/{id}
+/api/v{version}/{resource}/{id}/{sub-resource}</code></pre>
+<p><strong>示例</strong>：</p>
+<pre><code>GET    /api/v1/users
+GET    /api/v1/users/123
+POST   /api/v1/users
+PUT    /api/v1/users/123
+DELETE /api/v1/users/123
+GET    /api/v1/users/123/orders</code></pre>
+<h3 id="3-2-http-方法">3.2 HTTP 方法<a class="anchor" href="#3-2-http-方法" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>方法</th><th>用途</th><th>幂等性</th><th>安全性</th></tr></thead><tbody><tr><td>GET</td><td>获取资源</td><td>✅</td><td>✅</td></tr><tr><td>POST</td><td>创建资源</td><td>❌</td><td>❌</td></tr><tr><td>PUT</td><td>更新资源（全量）</td><td>✅</td><td>❌</td></tr><tr><td>PATCH</td><td>更新资源（部分）</td><td>❌</td><td>❌</td></tr><tr><td>DELETE</td><td>删除资源</td><td>✅</td><td>❌</td></tr></tbody></table>
+<h3 id="3-3-状态码使用">3.3 状态码使用<a class="anchor" href="#3-3-状态码使用" aria-label="锚点">#</a></h3>
+<p><strong>成功状态码</strong>：</p>
+<ul><li><code>200 OK</code>：请求成功</li><li><code>201 Created</code>：资源创建成功</li><li><code>204 No Content</code>：删除成功（无返回内容）</li></ul>
+<p><strong>客户端错误</strong>：</p>
+<ul><li><code>400 Bad Request</code>：请求参数错误</li><li><code>401 Unauthorized</code>：未认证</li><li><code>403 Forbidden</code>：无权限</li><li><code>404 Not Found</code>：资源不存在</li><li><code>409 Conflict</code>：资源冲突</li><li><code>422 Unprocessable Entity</code>：验证失败</li><li><code>429 Too Many Requests</code>：请求限流</li></ul>
+<p><strong>服务端错误</strong>：</p>
+<ul><li><code>500 Internal Server Error</code>：服务器内部错误</li><li><code>502 Bad Gateway</code>：网关错误</li><li><code>503 Service Unavailable</code>：服务不可用</li><li><code>504 Gateway Timeout</code>：网关超时</li></ul>
+<h3 id="3-4-请求头规范">3.4 请求头规范<a class="anchor" href="#3-4-请求头规范" aria-label="锚点">#</a></h3>
+<p><strong>标准请求头</strong>：</p>
+<pre><code class="language-http"><span class="hljs-attribute">Content-Type</span><span class="hljs-punctuation">: </span>application/json
+<span class="hljs-attribute">Accept</span><span class="hljs-punctuation">: </span>application/json
+<span class="hljs-attribute">Authorization</span><span class="hljs-punctuation">: </span>Bearer &lt;jwt-token&gt;
+<span class="hljs-attribute">X-Request-ID</span><span class="hljs-punctuation">: </span>&lt;uuid&gt;
+<span class="hljs-attribute">X-Client-Version</span><span class="hljs-punctuation">: </span>1.0.0
+<span class="hljs-attribute">X-Client-Platform</span><span class="hljs-punctuation">: </span>web|mobile|cli
+<span class="hljs-attribute">Accept-Language</span><span class="hljs-punctuation">: </span>zh-CN,en-US</code></pre>
+<p><strong>标准响应头</strong>：</p>
+<pre><code class="language-http"><span class="hljs-attribute">Content-Type</span><span class="hljs-punctuation">: </span>application/json
+<span class="hljs-attribute">X-Request-ID</span><span class="hljs-punctuation">: </span>&lt;uuid&gt;
+<span class="hljs-attribute">X-Response-Time</span><span class="hljs-punctuation">: </span>150
+<span class="hljs-attribute">X-RateLimit-Limit</span><span class="hljs-punctuation">: </span>100
+<span class="hljs-attribute">X-RateLimit-Remaining</span><span class="hljs-punctuation">: </span>95
+<span class="hljs-attribute">X-RateLimit-Reset</span><span class="hljs-punctuation">: </span>1693833600</code></pre>
+<h3 id="3-5-分页规范">3.5 分页规范<a class="anchor" href="#3-5-分页规范" aria-label="锚点">#</a></h3>
+<p><strong>请求参数</strong>：</p>
+<pre><code>GET /api/v1/users?page=1&amp;pageSize=20&amp;sort=createdAt&amp;order=desc</code></pre>
+<p><strong>响应格式</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;pagination&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;page&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;pageSize&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">20</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;total&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">100</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;totalPages&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">5</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;hasNext&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;hasPrev&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="3-6-过滤和搜索">3.6 过滤和搜索<a class="anchor" href="#3-6-过滤和搜索" aria-label="锚点">#</a></h3>
+<p><strong>过滤</strong>：</p>
+<pre><code>GET /api/v1/users?status=active&amp;role=admin
+GET /api/v1/orders?createdAt[gte]=2026-01-01&amp;createdAt[lte]=2026-12-31</code></pre>
+<p><strong>搜索</strong>：</p>
+<pre><code>GET /api/v1/users?q=john&amp;fields=name,email</code></pre>
+<p><strong>字段选择</strong>：</p>
+<pre><code>GET /api/v1/users?fields=id,name,email</code></pre>
+<hr>
+<h2 id="4-websocket-规范">4. WebSocket 规范<a class="anchor" href="#4-websocket-规范" aria-label="锚点">#</a></h2>
+<h3 id="4-1-连接管理">4.1 连接管理<a class="anchor" href="#4-1-连接管理" aria-label="锚点">#</a></h3>
+<p><strong>连接地址</strong>：</p>
+<pre><code>ws://host:port/ws/v1
+wss://host:port/ws/v1</code></pre>
+<p><strong>握手请求</strong>：</p>
+<pre><code class="language-http"><span class="hljs-keyword">GET</span> <span class="hljs-string">/ws/v1</span> <span class="hljs-meta">HTTP/1.1</span>
+<span class="hljs-attribute">Host</span><span class="hljs-punctuation">: </span>localhost:3000
+<span class="hljs-attribute">Upgrade</span><span class="hljs-punctuation">: </span>websocket
+<span class="hljs-attribute">Connection</span><span class="hljs-punctuation">: </span>Upgrade
+<span class="hljs-attribute">Sec-WebSocket-Key</span><span class="hljs-punctuation">: </span>dGhlIHNhbXBsZSBub25jZQ==
+<span class="hljs-attribute">Sec-WebSocket-Version</span><span class="hljs-punctuation">: </span>13
+<span class="hljs-attribute">Authorization</span><span class="hljs-punctuation">: </span>Bearer &lt;jwt-token&gt;</code></pre>
+<p><strong>握手响应</strong>：</p>
+<pre><code class="language-http"><span class="hljs-meta">HTTP/1.1</span> <span class="hljs-number">101</span> Switching Protocols
+<span class="hljs-attribute">Upgrade</span><span class="hljs-punctuation">: </span>websocket
+<span class="hljs-attribute">Connection</span><span class="hljs-punctuation">: </span>Upgrade
+<span class="hljs-attribute">Sec-WebSocket-Accept</span><span class="hljs-punctuation">: </span>s3pPLMBiTxaQ9kYGzzhZRbK+xOo=</code></pre>
+<h3 id="4-2-消息类型">4.2 消息类型<a class="anchor" href="#4-2-消息类型" aria-label="锚点">#</a></h3>
+<p><strong>文本消息</strong>：JSON 格式</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;request&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;msg-001&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;method&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;chat.send&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;params&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;content&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Hello&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>二进制消息</strong>：用于文件传输</p>
+<pre><code>[Header (4B)] [Payload (nB)]</code></pre>
+<h3 id="4-3-心跳机制">4.3 心跳机制<a class="anchor" href="#4-3-心跳机制" aria-label="锚点">#</a></h3>
+<p><strong>心跳间隔</strong>：30 秒</p>
+<p><strong>心跳流程</strong>：</p>
+<ol><li>客户端发送 ping 消息</li><li>服务端响应 pong 消息</li><li>超过 60 秒无响应，断开连接</li></ol>
+<p><strong>心跳消息</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ping&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ping-001&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1693833600000</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="4-4-重连机制">4.4 重连机制<a class="anchor" href="#4-4-重连机制" aria-label="锚点">#</a></h3>
+<p><strong>重连策略</strong>：</p>
+<ul><li>初始延迟：1 秒</li><li>最大延迟：30 秒</li><li>退避因子：2</li><li>最大重试：10 次</li></ul>
+<p><strong>重连流程</strong>：</p>
+<ol><li>检测连接断开</li><li>等待退避时间</li><li>尝试重新连接</li><li>恢复订阅和状态</li><li>重连失败，通知上层</li></ol>
+<h3 id="4-5-订阅机制">4.5 订阅机制<a class="anchor" href="#4-5-订阅机制" aria-label="锚点">#</a></h3>
+<p><strong>订阅请求</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;subscribe&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;sub-001&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;channel&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ai.responses&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;filter&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;model&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;gpt-4&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>订阅确认</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;subscribed&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;sub-001&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;channel&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ai.responses&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;subscriptionId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;sub-uuid&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>取消订阅</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;unsubscribe&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;unsub-001&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;subscriptionId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;sub-uuid&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+<h2 id="5-sse-规范">5. SSE 规范<a class="anchor" href="#5-sse-规范" aria-label="锚点">#</a></h2>
+<h3 id="5-1-连接管理">5.1 连接管理<a class="anchor" href="#5-1-连接管理" aria-label="锚点">#</a></h3>
+<p><strong>连接地址</strong>：</p>
+<pre><code>GET /api/v1/events
+GET /api/v1/events?channel=ai&amp;model=gpt-4</code></pre>
+<p><strong>请求头</strong>：</p>
+<pre><code class="language-http"><span class="hljs-attribute">Accept</span><span class="hljs-punctuation">: </span>text/event-stream
+<span class="hljs-attribute">Cache-Control</span><span class="hljs-punctuation">: </span>no-cache
+<span class="hljs-attribute">Authorization</span><span class="hljs-punctuation">: </span>Bearer &lt;jwt-token&gt;</code></pre>
+<p><strong>响应头</strong>：</p>
+<pre><code class="language-http"><span class="hljs-attribute">Content-Type</span><span class="hljs-punctuation">: </span>text/event-stream
+<span class="hljs-attribute">Cache-Control</span><span class="hljs-punctuation">: </span>no-cache
+<span class="hljs-attribute">Connection</span><span class="hljs-punctuation">: </span>keep-alive
+<span class="hljs-attribute">X-Accel-Buffering</span><span class="hljs-punctuation">: </span>no</code></pre>
+<h3 id="5-2-事件格式">5.2 事件格式<a class="anchor" href="#5-2-事件格式" aria-label="锚点">#</a></h3>
+<p><strong>标准事件</strong>：</p>
+<pre><code>event: message
+id: event-001
+data: {&quot;content&quot;: &quot;Hello&quot;, &quot;model&quot;: &quot;gpt-4&quot;}
+</code></pre>
+<p><strong>多行数据</strong>：</p>
+<pre><code>event: message
+id: event-002
+data: {&quot;content&quot;: &quot;第一行&quot;}
+data: {&quot;content&quot;: &quot;第二行&quot;}
+</code></pre>
+<p><strong>重试间隔</strong>：</p>
+<pre><code>retry: 5000
+event: message
+data: {&quot;content&quot;: &quot;Hello&quot;}
+</code></pre>
+<h3 id="5-3-事件类型">5.3 事件类型<a class="anchor" href="#5-3-事件类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>事件类型</th><th>说明</th><th>数据格式</th></tr></thead><tbody><tr><td><code>message</code></td><td>普通消息</td><td><code>{content, model, tokens}</code></td></tr><tr><td><code>tool_call</code></td><td>工具调用</td><td><code>{name, arguments, id}</code></td></tr><tr><td><code>tool_result</code></td><td>工具结果</td><td><code>{id, result, error}</code></td></tr><tr><td><code>error</code></td><td>错误</td><td><code>{code, message}</code></td></tr><tr><td><code>heartbeat</code></td><td>心跳</td><td><code>{timestamp}</code></td></tr><tr><td><code>done</code></td><td>完成</td><td><code>{usage, cost}</code></td></tr></tbody></table>
+<h3 id="5-4-错误处理">5.4 错误处理<a class="anchor" href="#5-4-错误处理" aria-label="锚点">#</a></h3>
+<p><strong>错误事件</strong>：</p>
+<pre><code>event: error
+data: {&quot;code&quot;: &quot;RATE_LIMIT&quot;, &quot;message&quot;: &quot;请求过于频繁，请稍后重试&quot;}
+</code></pre>
+<p><strong>连接关闭</strong>：</p>
+<pre><code>event: close
+data: {&quot;reason&quot;: &quot;timeout&quot;, &quot;retry&quot;: true}
+</code></pre>
+<hr>
+<h2 id="6-ipc-规范">6. IPC 规范<a class="anchor" href="#6-ipc-规范" aria-label="锚点">#</a></h2>
+<h3 id="6-1-通信方式">6.1 通信方式<a class="anchor" href="#6-1-通信方式" aria-label="锚点">#</a></h3>
+<p><strong>命名管道</strong>：</p>
+<ul><li>Windows：<code>\\.\pipe\khy-{name}</code></li><li>Unix：<code>/tmp/khy-{name}.sock</code></li></ul>
+<p><strong>共享内存</strong>：</p>
+<ul><li>用于高性能数据传输</li><li>配合信号量同步</li></ul>
+<h3 id="6-2-消息格式">6.2 消息格式<a class="anchor" href="#6-2-消息格式" aria-label="锚点">#</a></h3>
+<p><strong>请求消息</strong>：</p>
+<pre><code>┌─────────┬─────────┬─────────┬─────────┬─────────┬─────────┐
+│ Magic   │ Version │ Type    │ ID      │ Length  │ Payload │
+│ (2B)    │ (1B)    │ (1B)    │ (4B)    │ (4B)    │ (nB)    │
+└─────────┴─────────┴─────────┴─────────┴─────────┴─────────┘</code></pre>
+<p><strong>响应消息</strong>：</p>
+<pre><code>┌─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┐
+│ Magic   │ Version │ Type    │ ID      │ Status  │ Length  │ Payload │
+│ (2B)    │ (1B)    │ (1B)    │ (4B)    │ (2B)    │ (4B)    │ (nB)    │
+└─────────┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────┘</code></pre>
+<h3 id="6-3-状态码">6.3 状态码<a class="anchor" href="#6-3-状态码" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>状态码</th><th>名称</th><th>说明</th></tr></thead><tbody><tr><td>0x0000</td><td>SUCCESS</td><td>成功</td></tr><tr><td>0x0001</td><td>INVALID_REQUEST</td><td>无效请求</td></tr><tr><td>0x0002</td><td>NOT_FOUND</td><td>未找到</td></tr><tr><td>0x0003</td><td>PERMISSION_DENIED</td><td>权限拒绝</td></tr><tr><td>0x0004</td><td>TIMEOUT</td><td>超时</td></tr><tr><td>0x0005</td><td>INTERNAL_ERROR</td><td>内部错误</td></tr></tbody></table>
+<h3 id="6-4-连接管理">6.4 连接管理<a class="anchor" href="#6-4-连接管理" aria-label="锚点">#</a></h3>
+<p><strong>连接建立</strong>：</p>
+<ol><li>创建命名管道/Unix Socket</li><li>等待客户端连接</li><li>握手认证</li><li>建立消息通道</li></ol>
+<p><strong>连接断开</strong>：</p>
+<ol><li>发送关闭消息</li><li>等待确认</li><li>清理资源</li><li>记录日志</li></ol>
+<hr>
+<h2 id="7-错误处理规范">7. 错误处理规范<a class="anchor" href="#7-错误处理规范" aria-label="锚点">#</a></h2>
+<h3 id="7-1-错误分类">7.1 错误分类<a class="anchor" href="#7-1-错误分类" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>分类</th><th>说明</th><th>HTTP 状态码</th><th>错误码前缀</th></tr></thead><tbody><tr><td>用户错误</td><td>请求参数错误</td><td>4xx</td><td><code>USER_</code></td></tr><tr><td>认证错误</td><td>认证失败</td><td>401</td><td><code>AUTH_</code></td></tr><tr><td>授权错误</td><td>权限不足</td><td>403</td><td><code>PERM_</code></td></tr><tr><td>资源错误</td><td>资源不存在</td><td>404</td><td><code>RES_</code></td></tr><tr><td>业务错误</td><td>业务逻辑错误</td><td>422</td><td><code>BIZ_</code></td></tr><tr><td>限流错误</td><td>请求过于频繁</td><td>429</td><td><code>RATE_</code></td></tr><tr><td>网络错误</td><td>网络问题</td><td>502/503</td><td><code>NET_</code></td></tr><tr><td>内部错误</td><td>服务器内部错误</td><td>500</td><td><code>INT_</code></td></tr></tbody></table>
+<h3 id="7-2-错误码定义">7.2 错误码定义<a class="anchor" href="#7-2-错误码定义" aria-label="锚点">#</a></h3>
+<p><strong>用户错误</strong>：</p>
+<ul><li><code>USER_INVALID_PARAM</code>：无效参数</li><li><code>USER_MISSING_PARAM</code>：缺少参数</li><li><code>USER_INVALID_FORMAT</code>：格式错误</li></ul>
+<p><strong>认证错误</strong>：</p>
+<ul><li><code>AUTH_TOKEN_EXPIRED</code>：Token 过期</li><li><code>AUTH_TOKEN_INVALID</code>：Token 无效</li><li><code>AUTH_CREDENTIALS_INVALID</code>：凭据无效</li></ul>
+<p><strong>授权错误</strong>：</p>
+<ul><li><code>PERM_DENIED</code>：权限拒绝</li><li><code>PERM_INSUFFICIENT</code>：权限不足</li></ul>
+<p><strong>资源错误</strong>：</p>
+<ul><li><code>RES_NOT_FOUND</code>：资源不存在</li><li><code>RES_ALREADY_EXISTS</code>：资源已存在</li><li><code>RES_CONFLICT</code>：资源冲突</li></ul>
+<p><strong>业务错误</strong>：</p>
+<ul><li><code>BIZ_VALIDATION_FAILED</code>：验证失败</li><li><code>BIZ_STATE_INVALID</code>：状态无效</li><li><code>BIZ_OPERATION_FAILED</code>：操作失败</li></ul>
+<p><strong>限流错误</strong>：</p>
+<ul><li><code>RATE_LIMIT_EXCEEDED</code>：超出限流</li><li><code>RATE_QUOTA_EXCEEDED</code>：超出配额</li></ul>
+<p><strong>网络错误</strong>：</p>
+<ul><li><code>NET_CONNECTION_FAILED</code>：连接失败</li><li><code>NET_TIMEOUT</code>：网络超时</li><li><code>NET_DNS_FAILED</code>：DNS 解析失败</li></ul>
+<p><strong>内部错误</strong>：</p>
+<ul><li><code>INT_INTERNAL_ERROR</code>：内部错误</li><li><code>INT_SERVICE_UNAVAILABLE</code>：服务不可用</li><li><code>INT_DEPENDENCY_FAILED</code>：依赖失败</li></ul>
+<h3 id="7-3-错误响应格式">7.3 错误响应格式<a class="anchor" href="#7-3-错误响应格式" aria-label="锚点">#</a></h3>
+<p><strong>标准错误响应</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;用户友好的错误描述&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;USER_INVALID_PARAM&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;VALIDATION_ERROR&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;details&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;field&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;email&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;邮箱格式不正确&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;value&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;invalid-email&quot;</span>
+    <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;stack&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Error: ...\n    at ...&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;requestId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;req-uuid&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="7-4-错误处理流程">7.4 错误处理流程<a class="anchor" href="#7-4-错误处理流程" aria-label="锚点">#</a></h3>
+<p><strong>客户端错误处理</strong>：</p>
+<ol><li>捕获网络异常</li><li>解析错误响应</li><li>根据错误类型处理</li><li>显示用户友好消息</li><li>记录错误日志</li></ol>
+<p><strong>服务端错误处理</strong>：</p>
+<ol><li>捕获业务异常</li><li>记录详细日志</li><li>返回标准错误响应</li><li>发送告警（严重错误）</li><li>更新监控指标</li></ol>
+<hr>
+<h2 id="8-安全规范">8. 安全规范<a class="anchor" href="#8-安全规范" aria-label="锚点">#</a></h2>
+<h3 id="8-1-认证机制">8.1 认证机制<a class="anchor" href="#8-1-认证机制" aria-label="锚点">#</a></h3>
+<p><strong>JWT Token</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;header&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;alg&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;RS256&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;typ&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;JWT&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;payload&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;iss&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;khy-auth&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;sub&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;user-id&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;aud&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;khy-api&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;exp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1693833600</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;iat&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1693830000</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;scope&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;read&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;write&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;roles&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;user&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;admin&quot;</span><span class="hljs-punctuation">]</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>认证流程</strong>：</p>
+<ol><li>用户登录，获取 Token</li><li>请求携带 Token</li><li>服务端验证 Token</li><li>提取用户信息</li><li>检查权限</li></ol>
+<h3 id="8-2-授权机制">8.2 授权机制<a class="anchor" href="#8-2-授权机制" aria-label="锚点">#</a></h3>
+<p><strong>RBAC 角色</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;roles&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;admin&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;permissions&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;*&quot;</span><span class="hljs-punctuation">]</span>
+    <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;user&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;permissions&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+        <span class="hljs-string">&quot;users:read&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-string">&quot;users:update:self&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-string">&quot;orders:read&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-string">&quot;orders:create&quot;</span>
+      <span class="hljs-punctuation">]</span>
+    <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;guest&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;permissions&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+        <span class="hljs-string">&quot;users:read:self&quot;</span>
+      <span class="hljs-punctuation">]</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="8-3-加密通信">8.3 加密通信<a class="anchor" href="#8-3-加密通信" aria-label="锚点">#</a></h3>
+<p><strong>TLS 配置</strong>：</p>
+<ul><li>最低版本：TLS 1.2</li><li>推荐版本：TLS 1.3</li><li>密码套件：强密码套件</li><li>证书验证：双向认证（可选）</li></ul>
+<p><strong>数据加密</strong>：</p>
+<ul><li>敏感字段加密存储</li><li>传输数据加密</li><li>密钥安全存储</li></ul>
+<h3 id="8-4-输入验证">8.4 输入验证<a class="anchor" href="#8-4-输入验证" aria-label="锚点">#</a></h3>
+<p><strong>验证规则</strong>：</p>
+<ul><li>类型检查</li><li>长度限制</li><li>格式验证</li><li>范围检查</li><li>白名单验证</li></ul>
+<p><strong>防护措施</strong>：</p>
+<ul><li>SQL 注入防护</li><li>XSS 防护</li><li>CSRF 防护</li><li>文件上传防护</li></ul>
+<hr>
+<h2 id="9-性能规范">9. 性能规范<a class="anchor" href="#9-性能规范" aria-label="锚点">#</a></h2>
+<h3 id="9-1-响应时间">9.1 响应时间<a class="anchor" href="#9-1-响应时间" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>接口类型</th><th>目标响应时间</th><th>最大响应时间</th></tr></thead><tbody><tr><td>简单查询</td><td>&lt; 100ms</td><td>500ms</td></tr><tr><td>复杂查询</td><td>&lt; 500ms</td><td>2s</td></tr><tr><td>写入操作</td><td>&lt; 200ms</td><td>1s</td></tr><tr><td>批量操作</td><td>&lt; 1s</td><td>5s</td></tr></tbody></table>
+<h3 id="9-2-并发处理">9.2 并发处理<a class="anchor" href="#9-2-并发处理" aria-label="锚点">#</a></h3>
+<p><strong>连接池配置</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;pool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;min&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">5</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;max&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">20</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;idleTimeout&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">30000</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;connectionTimeout&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">5000</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>限流配置</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;rateLimit&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;windowMs&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">60000</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;max&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">100</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;请求过于频繁，请稍后重试&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="9-3-缓存策略">9.3 缓存策略<a class="anchor" href="#9-3-缓存策略" aria-label="锚点">#</a></h3>
+<p><strong>缓存层次</strong>：</p>
+<ul><li>浏览器缓存</li><li>CDN 缓存</li><li>应用缓存</li><li>数据库缓存</li></ul>
+<p><strong>缓存配置</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;cache&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;ttl&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">300</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;maxSize&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1000</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;strategy&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;lru&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+<h2 id="10-监控规范">10. 监控规范<a class="anchor" href="#10-监控规范" aria-label="锚点">#</a></h2>
+<h3 id="10-1-监控指标">10.1 监控指标<a class="anchor" href="#10-1-监控指标" aria-label="锚点">#</a></h3>
+<p><strong>性能指标</strong>：</p>
+<ul><li>响应时间（P50/P90/P99）</li><li>吞吐量（QPS）</li><li>错误率</li><li>并发连接数</li></ul>
+<p><strong>业务指标</strong>：</p>
+<ul><li>用户活跃度</li><li>功能使用率</li><li>业务成功率</li></ul>
+<h3 id="10-2-日志规范">10.2 日志规范<a class="anchor" href="#10-2-日志规范" aria-label="锚点">#</a></h3>
+<p><strong>日志格式</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00.000Z&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;level&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;info&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;请求处理完成&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;context&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;requestId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;req-uuid&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;method&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;GET&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;path&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/api/v1/users&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;statusCode&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">200</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;duration&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">150</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;userAgent&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Mozilla/5.0&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;clientIp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;192.168.1.1&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>日志级别</strong>：</p>
+<ul><li><code>error</code>：错误日志</li><li><code>warn</code>：警告日志</li><li><code>info</code>：信息日志</li><li><code>debug</code>：调试日志</li></ul>
+<h3 id="10-3-告警规则">10.3 告警规则<a class="anchor" href="#10-3-告警规则" aria-label="锚点">#</a></h3>
+<p><strong>告警阈值</strong>：</p>
+<ul><li>错误率 &gt; 5%</li><li>响应时间 P99 &gt; 5s</li><li>并发连接 &gt; 80%</li><li>磁盘使用 &gt; 90%</li></ul>
+<p><strong>告警通知</strong>：</p>
+<ul><li>邮件通知</li><li>短信通知</li><li>即时通讯通知</li></ul>
+<hr>
+<h2 id="11-测试规范">11. 测试规范<a class="anchor" href="#11-测试规范" aria-label="锚点">#</a></h2>
+<h3 id="11-1-接口测试">11.1 接口测试<a class="anchor" href="#11-1-接口测试" aria-label="锚点">#</a></h3>
+<p><strong>测试覆盖</strong>：</p>
+<ul><li>正常流程测试</li><li>异常流程测试</li><li>边界条件测试</li><li>性能测试</li></ul>
+<p><strong>测试工具</strong>：</p>
+<ul><li>Jest/Vitest（单元测试）</li><li>Supertest（HTTP 测试）</li><li>Artillery（性能测试）</li></ul>
+<h3 id="11-2-契约测试">11.2 契约测试<a class="anchor" href="#11-2-契约测试" aria-label="锚点">#</a></h3>
+<p><strong>契约定义</strong>：</p>
+<pre><code class="language-yaml"><span class="hljs-attr">openapi:</span> <span class="hljs-number">3.0</span><span class="hljs-number">.0</span>
+<span class="hljs-attr">info:</span>
+  <span class="hljs-attr">title:</span> <span class="hljs-string">khy-os</span> <span class="hljs-string">API</span>
+  <span class="hljs-attr">version:</span> <span class="hljs-number">1.0</span><span class="hljs-number">.0</span>
+<span class="hljs-attr">paths:</span>
+  <span class="hljs-string">/api/v1/users:</span>
+    <span class="hljs-attr">get:</span>
+      <span class="hljs-attr">summary:</span> <span class="hljs-string">获取用户列表</span>
+      <span class="hljs-attr">responses:</span>
+        <span class="hljs-attr">&#x27;200&#x27;:</span>
+          <span class="hljs-attr">description:</span> <span class="hljs-string">成功</span>
+          <span class="hljs-attr">content:</span>
+            <span class="hljs-attr">application/json:</span>
+              <span class="hljs-attr">schema:</span>
+                <span class="hljs-string">$ref:</span> <span class="hljs-string">&#x27;#/components/schemas/UserList&#x27;</span></code></pre>
+<p><strong>契约验证</strong>：</p>
+<pre><code class="language-bash">npm run check:protocol-contracts</code></pre>
+<hr>
+<h2 id="12-相关文档">12. 相关文档<a class="anchor" href="#12-相关文档" aria-label="锚点">#</a></h2>
+<ul><li><code>[DESIGN-ARCH-072]</code> 项目规范化总纲</li><li><code>[DESIGN-A2A-001]</code> A2A 协议规范</li><li><code>[DESIGN-MEM-001]</code> 记忆系统标准规范</li></ul>
+<hr>
+<h2 id="13-版本历史">13. 版本历史<a class="anchor" href="#13-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义通信协议规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 架构团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-COM-001] 代码注释规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-COM-001] 代码注释规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-COMM-002] WebSocket 与 SSE 规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-COMM-002] WebSocket 与 SSE 规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-COMM-001] 通信协议规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

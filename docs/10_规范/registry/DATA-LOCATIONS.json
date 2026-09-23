@@ -1,0 +1,212 @@
+{
+  "$comment": "数据落点的单一真源。派生对象：[DESIGN-LAY-007] §2 目录表、utils/dataHome.js 的 DATA_PATHS 查表、scripts/ci/check-data-layout.js 的预算常量、.gitignore 数据段。禁止在任何一处手写第二份。见 [DESIGN-LAY-004] 的「登记表派生」原则。",
+  "ssot": "docs/10_规范/DESIGN-LAY/[DESIGN-LAY-007] 三态目录立体分层方案.md",
+  "ruleId": "LAYOUT-007",
+  "version": "1.0.0 (2026-09-18) 初版，配套 S1 观察者执行器",
+  "roots": {
+    "khy": {
+      "rel": ".khy",
+      "accessor": "getDataHome()",
+      "role": "应用层运行态数据"
+    },
+    "khyos": {
+      "rel": ".khyos",
+      "accessor": "getBaseHome()",
+      "role": "底座层运行态数据"
+    },
+    "state": {
+      "rel": ".state",
+      "accessor": "getStateHome()",
+      "role": "代码态运行残留根（本篇新增，尚未启用）"
+    }
+  },
+  "tiers": [
+    {
+      "id": "T0-authoritative",
+      "semantics": "删了就丢、无法再生",
+      "budget": 50,
+      "recursiveDelete": false,
+      "backup": "home-user",
+      "children": [
+        "config",
+        "state",
+        "secrets"
+      ]
+    },
+    {
+      "id": "T1-domains",
+      "semantics": "业务领域数据，按领域轴劈",
+      "budget": 50,
+      "recursiveDelete": "policy",
+      "backup": "home-app",
+      "children": [
+        "sessions",
+        "memory",
+        "ai",
+        "agents",
+        "tools",
+        "desktop",
+        "telemetry",
+        "secrets",
+        "_unsorted"
+      ],
+      "perChildBudget": 20
+    },
+    {
+      "id": "T2-regenerable",
+      "semantics": "删了能重建（缓存、派生索引）",
+      "budget": 50,
+      "recursiveDelete": true,
+      "backup": "none"
+    },
+    {
+      "id": "T3-archives",
+      "semantics": "只追加只轮转，永不裁剪",
+      "budget": 50,
+      "recursiveDelete": false,
+      "compressForbidden": true,
+      "backup": "home-project"
+    },
+    {
+      "id": "T4-transient",
+      "semantics": "进程副产物与一次性诊断转储",
+      "budget": 50,
+      "recursiveDelete": true,
+      "backup": "none",
+      "children": [
+        "scratch"
+      ]
+    }
+  ],
+  "tierPrefixIsNotId": true,
+  "tierPrefixNote": "T0-…T4- 的数字前缀不是规则 ID 也不是文档编号，不可解析引用、不参与 [XXX-YYY-NNN] 编号校验；跨文引用一律写档名全称（T0-authoritative，而非 T0）。裁决见 [DESIGN-LAY-007] §10 Q4。",
+  "topLevel": {
+    "maxAddressable": 20,
+    "budgetNote": "顶层预算只计可寻址项。安装产物在此登记并显式不搬（搬 node_modules 会破坏 npm 按名解析），但必须在报告里单列可见，不得静默隐藏。裁决见 §10 Q2。",
+    "installArtifacts": [
+      {
+        "name": "node_modules",
+        "moved": false,
+        "reason": "npm 按名解析依赖，搬动即破坏安装与 require"
+      },
+      {
+        "name": "khy_os.egg-info",
+        "moved": false,
+        "reason": "setuptools 构建元数据，由 pip 构建再生"
+      }
+    ]
+  },
+  "seedEntries": [
+    {
+      "id": "sessions-db",
+      "name": "sessions.db",
+      "home": "khy",
+      "tier": "T2-regenerable",
+      "kind": "file",
+      "regenerable": true,
+      "backup": "none",
+      "delete": "recursive",
+      "note": "FTS5 派生索引，可由 conversations JSON reindex 重建；移动时 -wal/-shm 同档同移（§6.8）。裁决见 §10 Q3。"
+    },
+    {
+      "id": "taskboard-db",
+      "name": "taskboard.db",
+      "home": "khy",
+      "tier": "T0-authoritative",
+      "domain": "state",
+      "kind": "file",
+      "regenerable": false,
+      "backup": "home-user",
+      "delete": "never",
+      "note": "无 JSON 源，权威库；禁止与 sessions.db 在备份脚本里同等对待（§6.6）。裁决见 §10 Q3。"
+    }
+  ],
+  "budgets": [
+    {
+      "dir": ".",
+      "max": 20,
+      "axis": "A",
+      "note": "仓库顶层：三态根 + 七板块 + 工具契约文件"
+    },
+    {
+      "dir": ".khy",
+      "max": 6,
+      "axis": "B",
+      "note": "数据态根只允许五档 + 1 个索引"
+    },
+    {
+      "dir": ".khyos",
+      "max": 6,
+      "axis": "B"
+    },
+    {
+      "dir": ".state",
+      "max": 20,
+      "axis": "B"
+    }
+  ],
+  "protected": {
+    "$comment": "永不可搬：工具按名读取的契约文件与 append-only 通道（[DESIGN-LAY-007] §6）",
+    "toolContractRootFiles": [
+      "package.json",
+      "package-lock.json",
+      "pyproject.toml",
+      "MANIFEST.in",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "CONTRIBUTING.md",
+      "SECURITY.md",
+      "README.md",
+      "CHANGELOG.md",
+      "Dockerfile",
+      "fly.staging.toml",
+      ".gitignore",
+      ".dockerignore",
+      ".gitattributes",
+      ".npmrc",
+      ".editorconfig",
+      ".portable",
+      ".clinerules",
+      ".windsurfrules"
+    ],
+    "appendOnlyDataPaths": [
+      ".khy/audit-trajectory"
+    ],
+    "permissionPreservingDataPaths": [
+      ".khy/credentials",
+      ".khy/api_keys.json"
+    ]
+  },
+  "measured": {
+    "repoRootEntries": 71,
+    "khyEntries": 211,
+    "khyosEntries": 29,
+    "khyDepthRange": "1-5",
+    "khyosDepthRange": "1-13",
+    "unregisteredTotal": 240,
+    "bypassLiteralFiles": 203,
+    "bypassHardMinimumFiles": 52,
+    "housekeepingExists": true,
+    "housekeepingBatches": [
+      "2026-09-17",
+      "2026-09-17-doc-plan",
+      "2026-09-18",
+      "2026-09-18-b10"
+    ],
+    "note": "2026-09-18 复核：回收站根已存在且被 git 跟踪，缺口是 .khy 侧未接入"
+  },
+  "rollout": {
+    "mechanism": "check-data-layout",
+    "stage": "S1",
+    "previousStage": null,
+    "samples": {
+      "observed": 0
+    },
+    "rollback": "S1 停进程即回退；S2 起按 .khyos/housekeeping/<date>/manifest.jsonl 原路撤回",
+    "executorStage": {
+      "file": "scripts/ci/check-data-layout.js",
+      "constant": "GUARD_STAGE"
+    }
+  },
+  "measuredComment": "2026-09-18 首跑基线，由 npm run check:data-layout 复算；棘轮只降不升"
+}

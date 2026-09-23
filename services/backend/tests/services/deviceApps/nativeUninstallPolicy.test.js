@@ -1,13 +1,13 @@
 'use strict';
 /**
- * nativeUninstallPolicy.test.js �?原生卸载纯叶子契约锁�?node:test)�?
+ * nativeUninstallPolicy.test.js — 原生卸载纯叶子契约锁�?node:test)�?
  *
  * 「卸干净」的核心不变�?只跑 app 自带卸载�?绝不猜删安装目录。本套件锁死:
  *   - normalizeRecord:字段归一 + 家族分类(MSI/Inno/NSIS/generic)+ **无卸载器即拒�?*;
  *   - buildNativeUninstallCommand:MSI→msiexec argv、quiet 串优先、补静默 flag、无 exe 即拒�?
  *   - matchRecords:精确优先子串兜底;
  *   - argv 永远是数�?execFile 直传,�?shell);
- *   - 门控默认开,CANON off �?�?�?绝不抛�?
+ *   - 门控默认开,CANON off �?�?�?绝不抛错
  */
 const {
   isEnabled,
@@ -20,6 +20,7 @@ const {
   _splitCommandLine,
   _MSI_GUID_RE,
 } = require('../../../src/services/domain/desktop/deviceApps/nativeUninstallPolicy.js');
+const assert = require('node:assert');
 
 describe('Native Uninstall Policy', () => {
   test('gate default-on; CANON off values close it (byte-revert)', () => {

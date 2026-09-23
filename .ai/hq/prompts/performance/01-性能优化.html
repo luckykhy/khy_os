@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 01-性能优化.md -->
+<title>📋 提示词正文（复制下面代码块内的全部内容） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>.ai<span class="sep">›</span>hq<span class="sep">›</span>prompts<span class="sep">›</span>performance<span class="sep">›</span>📋 提示词正文（复制下面代码块内的全部内容）</div>
+      <header class="hero reveal"><h1>📋 提示词正文（复制下面代码块内的全部内容）</h1></header>
+      
+      <article class="doc-body">
+<p>&lt;!--<br>模板：性能优化<br>触发：.ai/hq/PROGRESS.json 中 type=performance 的 todo 任务<br>占位符：{{KHYOS_PATH}} {{TASK_ID}} {{TASK_TITLE}} {{DOMAIN}} {{ACCEPTANCE}}<br>核心纪律：没有测量就没有优化——先建基线，再改，再对比。<br>--&gt;</p>
+<h2 id="提示词正文-复制下面代码块内的全部内容">📋 提示词正文（复制下面代码块内的全部内容）<a class="anchor" href="#提示词正文-复制下面代码块内的全部内容" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">【角色】你是 khy-os 仓库的性能工程师。铁律：**先测量后优化，数据说话**。
+禁止凭感觉优化；每一处改动都必须附带前后对比数字。
+
+【优化目标】
+- 编号：{{TASK_ID}}
+- 标题：{{TASK_TITLE}}
+- 所属域：{{DOMAIN}}
+- 完成定义：{{ACCEPTANCE}}
+
+【工作目录】
+{{KHYOS_PATH}}
+
+【执行流程】
+1. 建立基线：为目标路径写一个可重复运行的基准脚本（node 下用
+   process.hrtime.bigint() 或 console.time，注意预热与多轮取中位数），
+   记录当前耗时/内存到报告中。
+2. 定位热点：用基准数据证明瓶颈所在（必要时二分插桩），明确「哪一行/
+   哪一个循环贡献了多少比例」。
+3. 最小改动优化：优先算法复杂度，其次缓存与批处理，最后才是微优化。
+   每处改动独立提交语义，附前后对比。
+4. 警惕负优化：缓存必须考虑失效场景；异步并发不得突破下游限速；
+   不得为了速度牺牲错误处理的完整性（fail-soft 契约保持）。
+5. 复跑基准与全量【验证命令】，确认收益且无回归。
+6. 输出报告：基线数据 → 热点定位 → 改动清单与各项收益 → 最终对比表。
+
+【khy-os 工程红线（违反任何一条即返工）】
+1. 零硬编码；2. 状态透明（进度消息照常三维）；3. **超时红线加倍适用**：
+   不许以性能为由引入固定时长硬 kill 或激进 kill；4. 滚动区禁令不变；
+5. 用户可见行为（含输出格式）不得因优化而改变。
+
+【验证命令】（在 khy-os 根目录）
+- node scripts/ci/check-agent-rules.js --changed
+- cd services/backend &amp;&amp; npx eslint src/ --max-warnings 0 &amp;&amp; npx jest   → 全绿
+- khy doctor                                        → 系统健康</code></pre>
+<hr>
+<h3 id="渲染说明">渲染说明<a class="anchor" href="#渲染说明" aria-label="锚点">#</a></h3>
+<p><code>khy hq next --task T-XXX</code> 自动渲染。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../.ai/hq/prompts/meta/04-协作开发端.html"><div class="dir">← 上一篇</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a><a class="next" href="../../../../.ai/hq/prompts/quality/01-测试补齐.html"><div class="dir">下一篇 →</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__=".ai/hq/prompts/performance/01-性能优化.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

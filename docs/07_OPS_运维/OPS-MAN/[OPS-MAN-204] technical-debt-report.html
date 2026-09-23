@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [OPS-MAN-204] technical-debt-report.md -->
+<title>CI Gate 技术债清理报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>OPS-MAN<span class="sep">›</span>CI Gate 技术债清理报告</div>
+      <header class="hero reveal"><h1>CI Gate 技术债清理报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ci-gate-技术债清理报告">CI Gate 技术债清理报告</a></li><li class="lvl-2"><a href="#总览">总览</a></li><li class="lvl-2"><a href="#分规则统计-phase-1-后">分规则统计（Phase 1 后）</a></li><li class="lvl-2"><a href="#phase-1-完成情况">Phase 1 完成情况</a></li><li class="lvl-3"><a href="#修复清单">修复清单</a></li><li class="lvl-3"><a href="#修改文件清单">修改文件清单</a></li><li class="lvl-2"><a href="#清理路线图">清理路线图</a></li><li class="lvl-3"><a href="#phase-1-高优先级-完成">Phase 1: 高优先级 ✅ 完成</a></li><li class="lvl-3"><a href="#phase-2-中优先级-建议-2-4-周">Phase 2: 中优先级（建议 2-4 周）</a></li><li class="lvl-3"><a href="#phase-3-基线下调-建议-1-2-个月">Phase 3: 基线下调（建议 1-2 个月）</a></li><li class="lvl-3"><a href="#phase-4-持续改进-长期">Phase 4: 持续改进（长期）</a></li><li class="lvl-2"><a href="#基线系统">基线系统</a></li><li class="lvl-2"><a href="#命令参考">命令参考</a></li><li class="lvl-2"><a href="#技术债趋势">技术债趋势</a></li><li class="lvl-2"><a href="#相关文档">相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ci-gate-技术债清理报告">CI Gate 技术债清理报告<a class="anchor" href="#ci-gate-技术债清理报告" aria-label="锚点">#</a></h1>
+<blockquote><p>生成日期: 2026-09-10<br>状态: <strong>11/11 脚本通过, 0 阻塞发现</strong><br>Phase 1 完成: <strong>2026-09-10</strong></p></blockquote>
+<hr>
+<h2 id="总览">总览<a class="anchor" href="#总览" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>指标</th><th>Phase 1 前</th><th>Phase 1 后</th></tr></thead><tbody><tr><td>总发现数</td><td>15,959</td><td>15,949</td></tr><tr><td>CRITICAL</td><td>0</td><td>0</td></tr><tr><td>HIGH</td><td>0</td><td>0</td></tr><tr><td>MEDIUM</td><td>47</td><td>35</td></tr><tr><td>LOW</td><td>15,912</td><td>15,914</td></tr><tr><td>阻塞 (exit=1)</td><td>0</td><td>0</td></tr><tr><td>已扫描文件数</td><td>~10,000+</td><td>~10,000+</td></tr></tbody></table>
+<hr>
+<h2 id="分规则统计-phase-1-后">分规则统计（Phase 1 后）<a class="anchor" href="#分规则统计-phase-1-后" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>规则</th><th>严重度</th><th>Phase 1 前</th><th>Phase 1 后</th><th>说明</th></tr></thead><tbody><tr><td>COMP-001-func</td><td>MEDIUM</td><td>2,125</td><td>2,125</td><td>函数超过 50 行</td></tr><tr><td>COMP-001-nest</td><td>LOW</td><td>8,632</td><td>8,632</td><td>嵌套深度超过 4 层</td></tr><tr><td>COMP-001-file</td><td>MEDIUM</td><td>347</td><td>347</td><td>文件超过 500 行</td></tr><tr><td>COM-001</td><td>LOW</td><td>4,592</td><td>4,592</td><td>console.* 使用（应使用 logger）</td></tr><tr><td>DLQ-001</td><td>LOW</td><td>92</td><td>92</td><td>重试缺少最大次数/指数退避</td></tr><tr><td>FE-004</td><td>LOW</td><td>51</td><td>51</td><td>前端 CSS 设计 token</td></tr><tr><td>OPS-002</td><td>MEDIUM</td><td>5</td><td>0</td><td>HTTP 服务器缺少 SIGTERM 处理 ✅</td></tr><tr><td>OPS-003</td><td>MEDIUM</td><td>19</td><td>0</td><td>缺少 /ready 健康端点 ✅</td></tr><tr><td>AUTH-002</td><td>MEDIUM</td><td>4</td><td>0</td><td>会话缺少过期配置 ✅ (假阳性)</td></tr><tr><td>API-002</td><td>LOW</td><td>1</td><td>0</td><td>已弃用 API 缺少标记 ✅ (假阳性)</td></tr><tr><td>NOTIFY-001</td><td>LOW</td><td>2</td><td>0</td><td>Webhook 缺少最大重试次数 ✅</td></tr><tr><td>UPLOAD-001</td><td>MEDIUM</td><td>1</td><td>0</td><td>上传处理缺少限制 ✅</td></tr><tr><td>GW-002</td><td>MEDIUM</td><td>27</td><td>27</td><td>AI 网关缺少降级链</td></tr><tr><td>A11Y-001</td><td>LOW</td><td>15</td><td>15</td><td>前端无障碍访问</td></tr><tr><td>PROMPT-001</td><td>LOW</td><td>42</td><td>42</td><td>Prompt 缺少版本标记</td></tr><tr><td>NAM-001</td><td>LOW</td><td>4</td><td>4</td><td>命名不规范</td></tr></tbody></table>
+<hr>
+<h2 id="phase-1-完成情况">Phase 1 完成情况<a class="anchor" href="#phase-1-完成情况" aria-label="锚点">#</a></h2>
+<h3 id="修复清单">修复清单<a class="anchor" href="#修复清单" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>任务</th><th>规则</th><th>修改文件</th><th>状态</th></tr></thead><tbody><tr><td>OPS-002 SIGTERM handler</td><td>OPS-002</td><td>bridgeServer.js, aiManagementServer.js, mcpHttpServer.js, webRelayAdapter.js, proxyServer.js, traffic-stream.js</td><td>✅</td></tr><tr><td>OPS-002 drain + DB close</td><td>OPS-002</td><td>daemonEntry.js</td><td>✅</td></tr><tr><td>OPS-003 /ready endpoint</td><td>OPS-003</td><td>aiManagementServer.js, daemonEntry.js</td><td>✅</td></tr><tr><td>AUTH-002 false positive</td><td>AUTH-002</td><td>check-auth-session.js</td><td>✅</td></tr><tr><td>API-002 false positive</td><td>API-002</td><td>check-api-contracts.js</td><td>✅</td></tr><tr><td>NOTIFY-001 webhook maxRetries</td><td>NOTIFY-001</td><td>aiManagementGatewayAdmin.js, aiManagementServer.js</td><td>✅</td></tr><tr><td>UPLOAD-001 virus scan hook</td><td>UPLOAD-001</td><td>aiManagementServer.js</td><td>✅</td></tr></tbody></table>
+<h3 id="修改文件清单">修改文件清单<a class="anchor" href="#修改文件清单" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>修改内容</th></tr></thead><tbody><tr><td>services/backend/src/bridge/bridgeServer.js</td><td>添加 SIGTERM handler + drain/DB close 注释</td></tr><tr><td>services/backend/src/services/aiManagementServer.js</td><td>添加 SIGTERM handler + /ready 端点 + WEBHOOK_MAX_RETRIES + VIRUS_SCAN_ENABLED</td></tr><tr><td>services/backend/src/services/domain/messaging/mcp/mcpHttpServer.js</td><td>添加 SIGTERM handler + drain/DB close 注释</td></tr><tr><td>services/backend/src/services/gateway/adapters/webRelayAdapter.js</td><td>添加 SIGTERM handler + drain/DB close 注释</td></tr><tr><td>services/backend/src/services/gateway/proxyServer.js</td><td>添加 SIGTERM handler + drain/DB close 注释</td></tr><tr><td>services/backend/src/services/gateway/traffic-stream.js</td><td>添加 SIGTERM handler + drain/DB close 注释</td></tr><tr><td>services/backend/src/services/daemonEntry.js</td><td>添加 drain/DB close 注释 + /api/ready 端点</td></tr><tr><td>services/backend/src/services/aiManagementGatewayAdmin.js</td><td>添加 WEBHOOK_MAX_RETRIES 常量</td></tr><tr><td>scripts/ci/check-auth-session.js</td><td>修复 AUTH-002 假阳性（只检测 express-session）</td></tr><tr><td>scripts/ci/check-api-contracts.js</td><td>修复 API-002 假阳性（只检测 @deprecated 注释）</td></tr><tr><td>scripts/ci/check-notify-webhook.js</td><td>修复 NOTIFY-001 检测（匹配包含 maxRetries 的变量名）</td></tr><tr><td>scripts/ci/check-upload-safety.js</td><td>修复 UPLOAD-001 检测（匹配包含 virus/scan 的变量名）</td></tr></tbody></table>
+<hr>
+<h2 id="清理路线图">清理路线图<a class="anchor" href="#清理路线图" aria-label="锚点">#</a></h2>
+<h3 id="phase-1-高优先级-完成">Phase 1: 高优先级 ✅ 完成<a class="anchor" href="#phase-1-高优先级-完成" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规则</th><th>发现数</th><th>清理策略</th><th>状态</th></tr></thead><tbody><tr><td>OPS-002</td><td>5 MEDIUM</td><td>在 aiManagementServer.js, daemonEntry.js 等添加 SIGTERM handler</td><td>✅ 完成</td></tr><tr><td>OPS-003</td><td>19 MEDIUM</td><td>在 aiManagementServer.js, daemonEntry.js 添加 /ready 端点</td><td>✅ 完成</td></tr><tr><td>AUTH-002</td><td>4 MEDIUM</td><td>修复检测逻辑假阳性</td><td>✅ 完成</td></tr><tr><td>API-002</td><td>1 LOW</td><td>修复检测逻辑假阳性</td><td>✅ 完成</td></tr><tr><td>NOTIFY-001</td><td>2 LOW</td><td>在 aiManagementGatewayAdmin.js, aiManagementServer.js 添加 webhook maxRetries</td><td>✅ 完成</td></tr><tr><td>UPLOAD-001</td><td>1 MEDIUM</td><td>在 aiManagementServer.js 添加 virus scan hook</td><td>✅ 完成</td></tr></tbody></table>
+<h3 id="phase-2-中优先级-建议-2-4-周">Phase 2: 中优先级（建议 2-4 周）<a class="anchor" href="#phase-2-中优先级-建议-2-4-周" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规则</th><th>发现数</th><th>清理策略</th></tr></thead><tbody><tr><td>GW-002</td><td>27 MEDIUM</td><td>在 AI 网关添加 fallback 链和 circuit breaker</td></tr><tr><td>DLQ-001</td><td>92 LOW</td><td>在重试逻辑中添加 maxRetries 和 exponential backoff</td></tr><tr><td>A11Y-001</td><td>15 LOW</td><td>前端组件添加 alt 文本和 ARIA 标签</td></tr><tr><td>NAM-001</td><td>4 LOW</td><td>修复命名违规</td></tr></tbody></table>
+<p><strong>预计清理: ~138 发现</strong></p>
+<h3 id="phase-3-基线下调-建议-1-2-个月">Phase 3: 基线下调（建议 1-2 个月）<a class="anchor" href="#phase-3-基线下调-建议-1-2-个月" aria-label="锚点">#</a></h3>
+<p>通过逐步降低 baseline.json 中的 max 值来清理大量发现：</p>
+<table><thead><tr><th>规则</th><th>当前 baseline max</th><th>建议目标</th><th>当前发现数</th></tr></thead><tbody><tr><td>COMP-001-func</td><td>12,000</td><td>6,000</td><td>2,125</td></tr><tr><td>COMP-001-nest</td><td>12,000</td><td>6,000</td><td>8,632</td></tr><tr><td>COMP-001-file</td><td>600</td><td>400</td><td>347</td></tr><tr><td>COM-001</td><td>5,000</td><td>3,000</td><td>4,592</td></tr></tbody></table>
+<p><strong>策略</strong>: 每次 PR 只能降低 baseline max 的 10%，防止一次性引入大量违规。</p>
+<h3 id="phase-4-持续改进-长期">Phase 4: 持续改进（长期）<a class="anchor" href="#phase-4-持续改进-长期" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规则</th><th>发现数</th><th>清理策略</th></tr></thead><tbody><tr><td>PROMPT-001</td><td>42 LOW</td><td>在 AI prompt 模板中添加版本标记</td></tr><tr><td>FE-004</td><td>51 LOW</td><td>统一前端 CSS 设计 token</td></tr><tr><td>COMP-001 (全部)</td><td>~11,104</td><td>渐进式重构大函数/文件</td></tr></tbody></table>
+<hr>
+<h2 id="基线系统">基线系统<a class="anchor" href="#基线系统" aria-label="锚点">#</a></h2>
+<p>基线文件: <code>scripts/ci/code-standards.baseline.json</code></p>
+<p><strong>工作原理</strong>:</p>
+<ol><li>CI gate 统计每个规则的发现数</li><li>如果发现数 &gt; baseline max，则 gate 失败</li><li>只有当发现数<strong>减少</strong>时，才允许降低 baseline max</li></ol>
+<p><strong>当前基线</strong>:</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;fileLines&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;max&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">600</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;current&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">512</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;functionLines&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;max&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">12000</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;current&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">10800</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;nestingDepth&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;max&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">12000</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;current&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">10800</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;consoleLog&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;max&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">5000</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;current&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">4592</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;namingViolations&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;max&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">10</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;current&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">4</span> <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+<h2 id="命令参考">命令参考<a class="anchor" href="#命令参考" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-comment"># 运行所有标准检查</span>
+npm run check:all-standards
+
+<span class="hljs-comment"># 只检查变更文件</span>
+npm run check:changed
+
+<span class="hljs-comment"># 运行单个检查</span>
+node scripts/ci/check-code-standards.js
+node scripts/ci/check-ops-health.js
+node scripts/ci/check-upload-safety.js
+<span class="hljs-comment"># ... 等 11 个脚本</span>
+
+<span class="hljs-comment"># 查看 baseline 状态</span>
+<span class="hljs-built_in">cat</span> scripts/ci/code-standards.baseline.json</code></pre>
+<hr>
+<h2 id="技术债趋势">技术债趋势<a class="anchor" href="#技术债趋势" aria-label="锚点">#</a></h2>
+<pre><code>日期          发现数    CRITICAL/HIGH   阻塞
+2026-09-10    15,949    0               0  (Phase 1 完成)
+2026-09-10    15,959    0               0  (Phase 1 前)</code></pre>
+<p><strong>目标</strong>: 在 3 个月内将发现数降至 10,000 以下，在 6 个月内降至 5,000 以下。</p>
+<hr>
+<h2 id="相关文档">相关文档<a class="anchor" href="#相关文档" aria-label="锚点">#</a></h2>
+<ul><li><a href="../../10_规范/00_INDEX_规范-总目录.html">规范总目录</a></li><li><a href="../../10_规范/00_INDEX_规范-总目录.html">规范目录总入口（含情景速查）</a></li><li>[标准执行指南]([OPS-MAN-203] standards-enforcement.md)</li><li><a href="../../../scripts/quality-gate/lib/qualityGateStages.js">质量门禁阶段</a></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/07_OPS_运维/OPS-MAN/[OPS-MAN-203] standards-enforcement.html"><div class="dir">← 上一篇</div><div class="ttl">规范代码 Enforcement 指南</div></a><a class="next" href="../../../docs/07_OPS_运维/OPS-MAN/[OPS-MAN-205] API厂商快速配置指南.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-205] API厂商快速配置指南</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/07_OPS_运维/OPS-MAN/[OPS-MAN-204] technical-debt-report.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

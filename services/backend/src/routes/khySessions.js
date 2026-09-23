@@ -4,7 +4,7 @@
  * khySessions.js — khy REPL 会话真源的只读 HTTP 暴露（CH-4）。
  *
  * 真源：services/sessionPersistence（.khy/sessions/ 的 JSONL+JSON 双轨持久化，
- * CLI REPL 经 CH-2 直调）。桌面端按 [DESIGN-ARCH-068] L3→L2 仅 HTTP 消费它，
+ * CLI REPL 经 CH-2 直调）。桌面端按 [DESIGN-LAY-005] L3→L2 仅 HTTP 消费它，
  * 因此这里提供最小的只读视图；一切写操作仍走 CLI/服务层正门，本路由不提供写端点。
  *
  * 挂载：server.js 以 `app.use('/api/khy-sessions', authMiddleware, ...)` 挂载

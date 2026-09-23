@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-18.md -->
+<title>2026-09-18 工作日志 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>.workbuddy<span class="sep">›</span>memory<span class="sep">›</span>2026-09-18 工作日志</div>
+      <header class="hero reveal"><h1>2026-09-18 工作日志</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#2026-09-18-工作日志">2026-09-18 工作日志</a></li><li class="lvl-2"><a href="#每日代码审查-自动化任务-第-4-次运行">每日代码审查（自动化任务，第 4 次运行）</a></li><li class="lvl-3"><a href="#本轮最有价值的两条判断-复用">本轮最有价值的两条判断（复用）</a></li><li class="lvl-3"><a href="#环境教训-新增-后续直接用">环境教训（新增，后续直接用）</a></li><li class="lvl-2"><a href="#cc-模式剪贴板复制补齐-侦察-提案">CC 模式剪贴板复制补齐 —— 侦察 + 提案</a></li><li class="lvl-2"><a href="#文档精简方案-mgmt-plan-009-b3-批次执行">文档精简方案（[MGMT-PLAN-009]）B3 批次执行</a></li><li class="lvl-2"><a href="#鼠标拖选-应用内自绘选择-design-arch-119-落地复核">鼠标拖选 / 应用内自绘选择（DESIGN-ARCH-119）落地复核</a></li><li class="lvl-2"><a href="#design-arch-119-方案-v2-收口-步骤-3-完成">DESIGN-ARCH-119 方案 v2 收口（步骤 3 完成）</a></li><li class="lvl-2"><a href="#文档精简方案-mgmt-plan-009-b5-b8-全部执行完毕-方案升到-1-9-0">文档精简方案 [MGMT-PLAN-009] B5–B8 全部执行完毕（方案升到 1.9.0）</a></li><li class="lvl-3"><a href="#本轮确立的收敛范式-可复用">本轮确立的收敛范式（可复用）</a></li><li class="lvl-3"><a href="#三处-实测推翻前提-本轮最大价值">三处「实测推翻前提」——本轮最大价值</a></li><li class="lvl-3"><a href="#b8-守卫去重-关键改动">B8 守卫去重（关键改动）</a></li><li class="lvl-3"><a href="#环境-工具坑-本仓通用">环境/工具坑（本仓通用）</a></li><li class="lvl-3"><a href="#最终守卫-全绿">最终守卫（全绿）</a></li><li class="lvl-3"><a href="#遗留-见-impl-rpt-056-6">遗留（见 IMPL-RPT-056 §6）</a></li><li class="lvl-2"><a href="#工作区脏状态盘点-尝试提交-119-时查出">工作区脏状态盘点（尝试提交 119 时查出）</a></li><li class="lvl-2"><a href="#119-逐-hunk-拆分提交-执行中">119 逐 hunk 拆分提交（执行中）</a></li><li class="lvl-2"><a href="#阻塞-检测到并发写盘">⚠ 阻塞：检测到并发写盘</a></li><li class="lvl-2"><a href="#备份与可回滚">备份与可回滚</a></li><li class="lvl-2"><a href="#13-11-并发会话崩溃-119-收口-续">13:11 并发会话崩溃 + 119 收口(续)</a></li><li class="lvl-3"><a href="#119-代码层已全部提交-7-个-未推送">119 代码层已全部提交(7 个, 未推送)</a></li><li class="lvl-3"><a href="#并发-arch-124-重组会话-13-11-崩溃-已恢复">并发 ARCH-124 重组会话 13:11 崩溃(已恢复)</a></li><li class="lvl-3"><a href="#关键事实-给后续会话">关键事实(给后续会话)</a></li><li class="lvl-2"><a href="#abc-三决策点处置-14-00-15-10">ABC 三决策点处置（14:00–15:10）</a></li><li class="lvl-2"><a href="#b9-按标签归夹-落地收尾-链接修复-html-重建-守卫-索引-版本记录">B9 按标签归夹 —— 落地收尾（链接修复 + HTML 重建 + 守卫 + 索引 + 版本记录）</a></li><li class="lvl-2"><a href="#15-55-16-40-b9-还原事故清理-用户报-根目录还有重复">15:55–16:40 B9 还原事故清理（用户报&quot;根目录还有重复&quot;）</a></li><li class="lvl-2"><a href="#16-42-17-05-提交落地-待办登记-用户指令">16:42–17:05 提交落地 + 待办登记（用户指令）</a></li><li class="lvl-2"><a href="#17-41-17-55-孤儿-html-清理-用户报-067-opencode-文件未归夹">17:41–17:55 孤儿 HTML 清理（用户报 067 opencode 文件未归夹）</a></li><li class="lvl-2"><a href="#18-05-18-30-dr7-红线归夹-代码-文档同批改造-用户指令执行">18:05–18:30 DR7 红线归夹——代码+文档同批改造（用户指令执行）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="2026-09-18-工作日志">2026-09-18 工作日志<a class="anchor" href="#2026-09-18-工作日志" aria-label="锚点">#</a></h1>
+<h2 id="每日代码审查-自动化任务-第-4-次运行">每日代码审查（自动化任务，第 4 次运行）<a class="anchor" href="#每日代码审查-自动化任务-第-4-次运行" aria-label="锚点">#</a></h2>
+<p><strong>一行摘要</strong>：24h 无新提交（HEAD 停留第 2 天）→ 范围按规则 ②③ 收敛为 1720 个源码文件、实审 mtime 前 40 个；修掉 <strong>4 项 A 类</strong> —— ① <code>services/backend/scripts/_tmp_dbg15.js:11</code> 正则跨行（<code>[^\]</code> 换行）<strong>令 check:node-syntax 对全仓 5935 个文件整体红</strong>（守卫失明），已按注释自述意图合成一行 → 转绿；② <code>docs/11_报告/[RESEARCH-005]…md:149</code> 引用被禁方法名但漏加同族豁免标记 → <code>check:protocol-naming</code> 红，按 <code>[RESEARCH-003/004]</code> 既有写法补 <code>&lt;!-- naming-guard: exempt … --&gt;</code>（<code>.html</code> 孪生同步）→ 转绿；③ <code>scripts/tests/externalRules.test.js</code> 探针 <code>ARCH-068</code> <strong>第二次复发</strong>（<code>check-repo-layout.js</code> 注释把它换成 <code>ARCH-117</code>）→ 改为<strong>探族不探号</strong>（<code>/^ARCH-\d{3}$/</code>）+ 加「外部集与登记表互斥」「CLI 与扫描函数计数一致」两条不漂移的不变量；④ 新增第 12 个守卫后 <code>tests/services/toolGuards.test.js</code> 仍钉死 11 → 改 12 并补 <code>builtin:WeakModelEditGuard</code> 断言。守卫红灯 <strong>10 → 8</strong>，<code>test:scripts</code> <strong>3 → 2</strong>，<code>cross-layer-require</code> 39 / <code>unresolved-require</code> 0 逐项持平（无新债）。</p>
+<p>报告：<code>.khy/reports/code-review/2026-09-18.md</code>（5 个文件改动，未提交 —— 工作区脏，<code>main</code> 原地改）。</p>
+<h3 id="本轮最有价值的两条判断-复用">本轮最有价值的两条判断（复用）<a class="anchor" href="#本轮最有价值的两条判断-复用" aria-label="锚点">#</a></h3>
+<ol><li><strong><code>test:backend</code> 在本机不能作回归判定依据</strong> —— 修复前后两次跑出的失败套件集合几乎完全不同（10 套件/22 例 → 14 套件/35 例），根因已实测定位：<ul><li><code>D:\WorkBuddyData\.khyquant\proxy_server_runtime.json</code> 在<strong>两次跑之间被写入</strong>（mtime <code>2026-09-17T18:26:11Z</code>，正落在第二次跑的中途），而 <code>resolveLocalProxyBaseUrl()</code> <strong>优先读该运行时文件</strong>、<code>PROXY_HOST/PROXY_PORT</code> 只是兜底 ⇒ <code>tests/utils/proxyBaseUrl.test.js</code> 由 PASS 翻 FAIL（<strong>环境依赖型测试，非本次引入</strong>，mtime 09-13）；</li><li>其余多报失败带 <code>A jest worker process crashed for an unknown reason: exitCode=0</code> / <code>Exceeded timeout of 5000 ms</code>；把 7 个新失败套件用 <code>--runInBand</code> 复跑，<strong>6 个转绿</strong>。</li></ul></li></ol>
+<p>→ <strong>纪律</strong>：A/B 判定改以<strong>守卫</strong>与 <code>test:scripts</code>/单文件 jest 为准；<code>test:backend</code> 只作「套件级异常信号」看，差值不计回归。</p>
+<ol><li><strong>A/B 的可操作判据</strong>（沿用并固化）：<strong>「上一份报告时是绿的、今天是红的」= A；「上一份报告同值同症状」= B</strong>。本轮 4 项 A 全部符合前半句（新文件 mtime 均晚于上一份报告 02:00），而 <code>coverage gate</code>/<code>provider contract gate</code>/<code>check:layout</code> 各项均符后半句 → 归 B 不动（§4：B 类只为清零大改是错的）。</li></ol>
+<h3 id="环境教训-新增-后续直接用">环境教训（新增，后续直接用）<a class="anchor" href="#环境教训-新增-后续直接用" aria-label="锚点">#</a></h3>
+<ul><li><strong>一次跑齐基线的正确姿势</strong>：写一个 node 驱动脚本（<code>.khy/tmp/baseline-driver.js</code>）<strong>串行</strong>跑 32 条命令，每条 <code>spawnSync</code> + <code>timeout:900000</code> + 输出落 <code>.khy/tmp/baseline-logs-&lt;tag&gt;/</code>，结果追加 JSONL。一次 11~12 分钟跑完整个基线（<code>check:node-syntax</code> 单独 272–288s），避免并发顶超时，也让「修复后复跑」可逐项对照（<code>RUN_TAG=after</code>）。</li><li><code>check:file-ratchet</code> <strong>首次运行的 618 error 是标定问题不是缺陷</strong>：<code>resolveBaseRef</code> 取 <code>git merge-base HEAD @{upstream}</code>=旧提交，而 after 侧读的是含 3538 条未提交改动的<strong>工作树</strong> ⇒ 它实际在度量「整棵脏树 vs 旧提交」。本地脏工作树下该守卫无法满足，需人工定 base 口径。</li><li><code>check:build-root</code> 与 <code>check:flag-registry</code> <strong>都不在 <code>check:structure</code>/<code>check:changed</code> 链里</strong>，要单独补跑（本轮两者均 exit 0）。</li><li>指挥部仓库 <code>D:\Portable\Projects\khy-os-hq</code> <strong>目录已不存在</strong>（HQ 于 09-17 归档、能力吸收进本仓 <code>.ai/hq/</code>）⇒ 每日审查的「先拉 HQ」步骤<strong>已无对象，建议从清单移除</strong>。</li><li><code>NIGHTSHIFT.md</code> 是<strong>夜班程序的覆盖式简报</strong>（首行自述「每夜被下一次夜班覆盖式更新」，本次记录「夜班 5」），它顶红 <code>check:layout</code> 的 <code>root-whitelist</code>。按任务 §5（根目录散落文件只列清单不给处置）<strong>未删未移</strong>；根治要么让夜班程序改写到非根目录，要么经人工确认登记白名单 —— 否则每夜必红。</li><li><code>services/backend/scripts/</code> 下 <strong>16 个 <code>_tmp_dbg*.js</code> 调试残留</strong>（只列清单未处置）；<code>check-protocol-naming</code> 的豁免标记必须落在<strong>文件前 40 行</strong>内（<code>exemptMarkerMaxLine:40</code>）。</li></ul>
+<h2 id="cc-模式剪贴板复制补齐-侦察-提案">CC 模式剪贴板复制补齐 —— 侦察 + 提案<a class="anchor" href="#cc-模式剪贴板复制补齐-侦察-提案" aria-label="锚点">#</a></h2>
+<p><strong>任务</strong>：CC 模式（KHY_CC_TUI=1）剪贴板复制不可用，要求查调用链、移植选择层、说明 AGENTS.md:20 适用范围、给双路径验证法。</p>
+<p><strong>关键实证（file:line）</strong>：</p>
+<ul><li>断点不在底层：app.js:294-329 已按 KHY_SELECT 开 1002，CC 已在收 SGR 事件；mouseButtons.js / selection.js / Viewport.js / ccClipboard.js 全绿。</li><li>断点在消费者：CcApp.js 对 isMouseSequence|onInput|mouseDispatcher|_mouse 零命中 → 没人接事件。</li><li>Legacy 比 CC 多的四件：鼠标序列守卫(App.js:4390-4435)、选区state+ref镜像(1086-1100/5589-5602)、坐标换算(1431-1518)、反色挂载点(6173-6185)。</li><li><strong>结构差异是真正难点</strong>：Legacy 的 _mainContentLines 是预折扁平 string[]，row==index 成立；CC 消息区是组件树(CcApp.js:582-591) + CcAssistantMessage 自带 marginTop:1 + ● 前缀，CcApp.js:177-183 的 estimateMessageRows 只是估算，撑不起 row==index。</li></ul>
+<p><strong>规则位置纠正</strong>：用户说的「禁止修改 Legacy 模式代码路径」<strong>不在根 AGENTS.md</strong>，在 services/backend/src/cli/tui/AGENTS.md:20（§0.1 零破坏原则）。同目录还有 626/627（禁止改 Legacy 组件内部实现 / 禁止 CC 组件引用 Legacy 组件）。判定依据是 app.js:96-103 三元分支：Legacy 路径 = 未设 KHY_CC_TUI 时 require 的文件树。</p>
+<p><strong>基线实测</strong>：selection 27/27、mouseSelectEvent 15/15、mouseNativeSelection 9/9、viewportSelection 16/16、ccClipboard 20/20 = 87/87 绿。</p>
+<p><strong>提案</strong>：docs/03_DESIGN_设计/[DESIGN-ARCH-120] CC 模式剪贴板复制能力补齐提案.md</p>
+<ul><li>方案 A（推荐）：新增叶子 ccMessageProjection.js 把消息投影成 lines[]，喂现成 Viewport，row==index 重新成立。方案 B（行映射反查）判为反模式。</li><li>净新增发现：v/y/Ctrl+C复制 在 Legacy 里<strong>不存在</strong>（_selectTextRef 只写不读，全仓无读取点），是新增不是移植。Ctrl+C 已被双击退出占用，建议不动。</li><li>本次新引入的风险：开 1002 后 CC 无守卫会把 SGR 字节当键盘输入，必须补。</li></ul>
+<p><strong>环境</strong>：Git Bash shim 坏（dirname/cd not found），全部取值靠 node -e + fs.writeFileSync + Read。已清理 _scan1.js/_scan1.txt/_t1~t4.txt/_agents_list.txt 等临时文件。</p>
+<blockquote><p>编号更正：上条提案文档实际磁盘编号为 <strong><code>[DESIGN-ARCH-124]</code></strong>（非 120）；120 已被「移动端合并方案」占用，剪贴板提案在某次整理中被重编号为 124。登记索引时务必以磁盘实际编号为准。</p></blockquote>
+<h2 id="文档精简方案-mgmt-plan-009-b3-批次执行">文档精简方案（[MGMT-PLAN-009]）B3 批次执行<a class="anchor" href="#文档精简方案-mgmt-plan-009-b3-批次执行" aria-label="锚点">#</a></h2>
+<p><strong>任务</strong>：按方案 B3 收敛 TUI 设计族（20 编号 / 21 文件 → 1 总纲 + 21 篇隶属头），零代码耦合、不改路径。</p>
+<p><strong>动作</strong>：</p>
+<ul><li>新建 <code>docs/03_DESIGN_设计/[DESIGN-ARCH-122] TUI 设计族总纲.md</code>（五组全景 + scope 裁决 + 邻接文档 + 状态），为 21 个 TUI <code>.md</code> 原地加「隶属」头（脚本 <code>_b3_add_membership.py</code>）。</li><li>122 登记主索引 + <code>03_DESIGN_设计/00_INDEX_设计-分类索引.md</code>。</li><li>顺带修两处孤儿漏链（另一会话新增未登记）：<code>[DESIGN-ARCH-124]</code> 剪贴板提案、<code>[MGMT-RPT-031] GitHub调研-终端渲染TUI-2026-09-17</code> 补登主索引 + 就近索引 → <code>docs-index-complete</code> 由 2 回到 0。</li></ul>
+<p><strong>守卫全绿</strong>：docs:verify 1048/1049/12497；check:layout docs-index-complete=0；check-rules-registry/check-agent-docs/check-gov-rules 均 PASS。方案 §9 升 1.4.0，manifest 同步（revision 1.4.0）。</p>
+<p><strong>环境教训（复用）</strong>：</p>
+<ul><li>守卫 <code>checkDocsIndexComplete</code> 只扫阶段目录根层 <code>.md</code> 并要求出现在<strong>主索引</strong>逐篇；阶段文档漏登记主索引会直接让 <code>docs-index-complete</code> 升 error（基线 0）。补文档时主索引 + 就近索引都要补。</li><li>登记索引前先核对磁盘<strong>实际编号</strong>（守卫首次 <code>--list</code> 报的编号可能滞后/被重编号），避免登记指向不存在的文件。</li><li>派生类索引（规则卡 <code>00_INDEX_规则卡总目录.md</code> 等 <code>gen-rules-cards.js</code> 产物）<strong>禁手改</strong>，误改触发 TOOLING-008，需重跑生成器还原。</li></ul>
+<p><strong>待续</strong>：B4a（还原子系统加隶属头）、B4b（路径常量收敛代码重构）、B5（OCR 17→3）、B6（散落合并）、B7（长文档拆分）、B8（收口 + 改守卫去重）。根目录 <code>_chk.txt/_h.txt/_hb.txt</code> 临时残留违反 <code>[MGMT-STD-001]</code> CP-1，非 B3 范围待专项清理。</p>
+<h2 id="鼠标拖选-应用内自绘选择-design-arch-119-落地复核">鼠标拖选 / 应用内自绘选择（DESIGN-ARCH-119）落地复核<a class="anchor" href="#鼠标拖选-应用内自绘选择-design-arch-119-落地复核" aria-label="锚点">#</a></h2>
+<p>问题：khy TUI 下无法用鼠标拖选并复制文本（第一痛点）。设计真源在<br>docs/03_DESIGN_设计/[DESIGN-ARCH-119] TUI原生文本选择与复制可用性修复.md，<br>拆为三条独立缺陷 A（press 无条件吞）/ B（Shift 修饰位解析后被丢弃）/ C（备屏强制接管绕过未知终端保护）。</p>
+<p>复核结论：三层均已真落地（实测，非文档自述）。</p>
+<ul><li>第一层判据收窄：两个接线类探针各 17/17；mouseButtons.js:122-124 isShift/isAlt/isCtrl 已在；</li></ul>
+<p>修饰键前置放行在 mouseButtons.js:548。</p>
+<ul><li>第二层自绘选择：services/backend/src/cli/tui/selection.js 已建；</li></ul>
+<p>端到端探针 17/17、真渲染器探针 13/13。</p>
+<ul><li>接线真实：App.js:1431 onSelectEvent / App.js:1530 挂 dispatcher / App.js:1504 writeClipboard /</li></ul>
+<p>App.js:6184 Viewport 传 selection；flagRegistry.js:2849-2851 三个 KHY_SELECT* 已登记。</p>
+<ul><li>单测 61/61 绿（selection / mouseNativeSelection / mouseSelectEvent / viewportSelection / mouseWheel）。</li></ul>
+<p>重要状态：selection.js、mouseSelectEvent.test.js、viewportSelection.test.js、selection.test.js 等<br>全部处于 git 未跟踪（??）；mouseButtons.js / App.js / flagRegistry.js 等仍是已改未提交（ M）。<br>即整条修复尚未入版本库，有丢失风险。</p>
+<p>注：_产物/鼠标拖选根因探针-2026-09-17.js 有 3 条 FAIL 属设计内的「修复前快照」<br>（期望 isShift=undefined，实测 boolean），非回归，不应修。</p>
+<h2 id="design-arch-119-方案-v2-收口-步骤-3-完成">DESIGN-ARCH-119 方案 v2 收口（步骤 3 完成）<a class="anchor" href="#design-arch-119-方案-v2-收口-步骤-3-完成" aria-label="锚点">#</a></h2>
+<p>任务：把 v2 三层方案的「未收口部分」补进 docs（方案正文本就已在文档里，缺的是落地状态）。</p>
+<p>改动落点：</p>
+<ul><li>App.js:5492  _mainContentLines 上方补契约注释（纯文本投影/无元数据、视觉行==下标不变量、</li></ul>
+<p>软换行已知偏差）</p>
+<ul><li>App.js:6194  给 Viewport 的 width prop 标注「死 prop，Viewport 从不读它」</li><li>tui/AGENTS.md §0.8  修饰键口径由「Shift 绕过」扩为各终端枚举（WT/xterm Shift、</li></ul>
+<p>iTerm2 Option、Terminal.app Fn），并写明放行判据须排除 isWheel</p>
+<ul><li>tui/AGENTS.md 新增 §1.2b 鼠标层排障表（4 行，含 1002 异常退出残留的复位命令）</li><li>[DESIGN-ARCH-101] §8 第 6 条改为「已修，但曾被绕过」并指向 119 的化解</li><li>[DESIGN-ARCH-119] 增补「独立复核（2026-09-18）」小节 + 步骤 3 逐项完成标记</li></ul>
+<p>门禁实测：</p>
+<ul><li>check:flag-registry  PASS</li><li>node --check App.js   OK</li><li>五个 TUI 测试文件      61/61 通过</li><li>check:tui-gates       FAIL —— 222 &gt; 212。已确认与本次文档编辑无关：</li></ul>
+<p>该检查器只扫 TUI_DIR 下 .js 源码，AGENTS.md 是 .md 不入扫描；<br>    222 是前序未提交改动（selection.js 等新增 KHY_SELECT*）导致。</p>
+<p>仍未收口（唯一实质风险）：整条 119 修复未进版本库 —— selection.js 等为 git 未跟踪(??)，<br>mouseButtons.js/App.js/Viewport.js/flagRegistry.js/tui/AGENTS.md 为已改未提交( M)。</p>
+<hr>
+<h2 id="文档精简方案-mgmt-plan-009-b5-b8-全部执行完毕-方案升到-1-9-0">文档精简方案 [MGMT-PLAN-009] B5–B8 全部执行完毕（方案升到 1.9.0）<a class="anchor" href="#文档精简方案-mgmt-plan-009-b5-b8-全部执行完毕-方案升到-1-9-0" aria-label="锚点">#</a></h2>
+<p>落地记录正本：<code>docs/04_IMPL_实现/[IMPL-RPT-056] 文档精简与结构化整理落地记录.md</code><br>留痕目录：<code>.khyos/housekeeping/2026-09-17-doc-plan/</code>（manifest revision 1.9.0，48 个 changed_files）</p>
+<h3 id="本轮确立的收敛范式-可复用">本轮确立的收敛范式（可复用）<a class="anchor" href="#本轮确立的收敛范式-可复用" aria-label="锚点">#</a></h3>
+<p>「收敛一族文档」在本仓<strong>不是物理合并</strong>，而是三件套：</p>
+<ol><li>一篇<strong>总纲</strong>（唯一导航入口 + scope 裁决真源 + 代码耦合表 + 生成层边界）</li><li>逐篇加「<strong>隶属</strong>」头指向总纲</li><li><strong>零路径改动</strong></li></ol>
+<p>原因：DR1 禁删、DR7 禁移（手册编号被代码当路径常量用）。B3/B4a/B5/B6 全部走此范式，共建成<br><code>ARCH-122</code>(TUI 族)、<code>OPS-MAN-207</code>(还原簇)、<code>208</code>(OCR 族)、<code>209</code>(AI 供应商接入族) 四篇总纲。</p>
+<h3 id="三处-实测推翻前提-本轮最大价值">三处「实测推翻前提」——本轮最大价值<a class="anchor" href="#三处-实测推翻前提-本轮最大价值" aria-label="锚点">#</a></h3>
+<ol><li><strong>部署对 016/017</strong>：方案称「结构同构、只差 7 行」是<strong>错的</strong>——行级重合 23.5%、章节骨架序列重合</li></ol>
+<p>仅 6.4%、差异约 700 行。实为「有域名一键部署+SSL」与「无域名手动 IP-only」两条路径 → 不合并。</p>
+<ol><li><strong>供应商接入族</strong>：方案列的 6 篇中 <code>002</code>/<code>003</code> 是管理页 UI/登录，主题不符 → 剔出、补入 <code>096</code>，</li></ol>
+<p>真实成员 4 篇。「6 组」订正为「4 组」。</p>
+<ol><li><strong>B7 的 ≤150 行</strong>：复核 <code>[DESIGN-DOC-001]</code> §12 原文——标题即「<strong>新写规范</strong>必遵…<strong>存量不追溯</strong>」，</li></ol>
+<p>正文「<strong>不强制整篇重写</strong>」→ 不是存量强制预算。全仓 388/779 篇（49.8%）超 150 行，批量拆不现实。</p>
+<blockquote><p>教训：<strong>方案是假设，实测才是事实</strong>。每批动手前先跑测量脚本证伪，比照着方案硬做安全得多。</p></blockquote>
+<h3 id="b8-守卫去重-关键改动">B8 守卫去重（关键改动）<a class="anchor" href="#b8-守卫去重-关键改动" aria-label="锚点">#</a></h3>
+<p><code>scripts/ci/check-repo-layout.js</code> 的 <code>checkDocsIndexComplete</code>：覆盖判据由「主索引里有」放宽为<br>「**主索引里有 或 本阶段就近 00_INDEX_* 里有<strong>」，被就近索引接管的份数另计 <code>docs-index-delegated</code><br>（观察口径，不入基线）。这一步解开了 B1「主索引降为导读」被卡死的死结。<br>随后按「只删已收录行、缺口行保留」删 402 行 → </strong>主索引 706 → 325 行**，389 篇交由就近索引接管。<br>基线 <code>dangling-task</code> 88 → 87 下调。</p>
+<h3 id="环境-工具坑-本仓通用">环境/工具坑（本仓通用）<a class="anchor" href="#环境-工具坑-本仓通用" aria-label="锚点">#</a></h3>
+<ul><li>生成层文档（带「请勿手改」banner，如 <code>scripts/restore/*.js --gen-doc</code> 的 18 篇、<code>096</code>）<strong>手改会被覆盖</strong>，</li></ul>
+<p>加导航必须改生成器。判断方法：grep <code>请勿手改</code> / <code>--gen-doc</code>。</p>
+<ul><li><code>.html</code> 孪生件由 <code>npm run docs:build</code> 生成，<strong>禁止手改</strong>；改完 .md 必须重跑 build + <code>verify_docs_site.js</code>。</li><li><code>build_docs_site.js</code> 与 <code>verify_docs_site.js</code> 两份 <code>SKIP_PATH_PARTS</code> <strong>必须逐项一致</strong>（已含 <code>/.khyos/</code>、<code>/.khyquant/</code>、</li></ul>
+<p><code>/housekeeping/</code>、<code>/bundled/</code>、<code>/19_资产/</code>），否则会扫到瞬态目录产生数百条假断链。</p>
+<ul><li><code>npm run maintainer:check</code> <strong>不存在</strong>（它是 87 个 dangling-task 之一）；真实守卫是</li></ul>
+<p><code>node scripts/tests/maintainerMapDocCoverage.test.js</code>（TAP 风格，用 node 跑，不是 Jest）。</p>
+<ul><li>新建文档后<strong>必须同时登记主索引 + 就近索引</strong>，<code>docs-index-complete</code> 才是 0；登记前先用 <code>os.listdir</code></li></ul>
+<p>核对磁盘上的真实编号（守卫 <code>--list</code> 输出可能过时）。</p>
+<h3 id="最终守卫-全绿">最终守卫（全绿）<a class="anchor" href="#最终守卫-全绿" aria-label="锚点">#</a></h3>
+<p><code>docs:verify</code> 1057/1058/12605 · <code>check:layout</code> docs-index-complete=0、delegated=390 ·<br><code>check-repo-layout.test.js</code> 49/49 · <code>check-rules-registry</code> / <code>check-gov-rules</code> / <code>check-agent-docs</code>(0/0) /<br><code>check:wiring</code>(80 检查器全接线) 均通过。</p>
+<h3 id="遗留-见-impl-rpt-056-6">遗留（见 IMPL-RPT-056 §6）<a class="anchor" href="#遗留-见-impl-rpt-056-6" aria-label="锚点">#</a></h3>
+<p>生成层导航注入待改生成器；<code>03_DESIGN_设计</code> 就近索引缺 40 篇、02/09 缺 32/29（补后主索引可再降）；<br><code>FE-005~011</code> 中 5 篇仍超 150 行（建议配长度棘轮守卫）。</p>
+<h2 id="工作区脏状态盘点-尝试提交-119-时查出">工作区脏状态盘点（尝试提交 119 时查出）<a class="anchor" href="#工作区脏状态盘点-尝试提交-119-时查出" aria-label="锚点">#</a></h2>
+<p>起因：119 修复未进版本库，要求提交。查证后发现根因是整个仓库版本控制失守。</p>
+<p>硬数据（HEAD 1e35ee0a / main / 上游 khy-mirror/main / ahead 41）：</p>
+<ul><li>已跟踪改动 2707 + 未跟踪条目 922 = 3629</li><li>docs/03_DESIGN_设计 下 101 个未跟踪文档，覆盖 60 个提案编号（ARCH-071~124 连续区间全缺）</li><li>未跟踪 .js 311 个，其中 scripts/ci/*.js 38 个检查器未跟踪（但 package.json 已引用）</li><li>新增目录 43 个（docs/11_报告 ~ docs/19_资产 整套、services/.../entrypoints、contracts/a2a 等）</li><li>git stash 为空、无备份分支 —— 3629 处改动是唯一副本</li></ul>
+<p>119 无法单独提交的原因：六个  M 文件是混装的，119 只占 ~13%，<br>其余是 DESIGN-ARCH-115（启动节拍）、098（提示词锚点）、备屏恢复等其他工作。<br>整文件 add 会违反 SOURCING-006。</p>
+<p>产物：_产物/工作区脏状态盘点报告-2026-09-18.md（_产物/ 被 gitignore，不入库）</p>
+<p>待用户拍板：按提案批量提交 / 只提交119+逐hunk / 先全量备份再分组提交。</p>
+<h2 id="119-逐-hunk-拆分提交-执行中">119 逐 hunk 拆分提交（执行中）<a class="anchor" href="#119-逐-hunk-拆分提交-执行中" aria-label="锚点">#</a></h2>
+<p>方案：行级精确重建 —— 从 <code>git show HEAD:&lt;file&gt;</code> 出发，按步骤叠加 <code>-U0</code> hunk 子集生成<br>每个中间态，<code>node --check</code> 验语法，换盘后跑该步测试，再提交。<br>重建器 <code>_产物/_tmp_build.js</code> + spec <code>_产物/_tmp_spec_*.json</code>，已验证末态与工作区<strong>字节一致</strong>。</p>
+<p>⚠ 两个坑（踩过）：</p>
+<ol><li>spec 里 <code>&quot;all&quot;</code> 是字符串，<code>build()</code> 若按对象读 <code>s.add</code> 会静默不加行（只留旧行）。</li><li>纯插入 hunk（<code>@@ -107,0 +118,7 @@</code>）插入点在旧行 <code>h.a</code> <strong>之后</strong>，要复制到 <code>h.a</code> 为止；</li></ol>
+<p>替换型 hunk 复制到 <code>h.a-1</code>。否则整体差一行。</p>
+<p>已提交 5 个（全部经过该步测试实跑）：</p>
+<ul><li><code>07e01323</code> 步骤 1 判据收窄 —— mouseButtons +98 / mouseNativeSelection.test.js +156（8/8）</li><li><code>f1763c2d</code> 2a selection.js 纯叶子 + 验收标准 + selection.test.js</li><li><code>dcb05c86</code> 2b-0 三档 mouseTier + enableBytes(select)→1002（26/26）</li><li><code>a2748b35</code> 2b-1 Viewport 可选 selection prop（29/29）</li><li><code>7f7ea242</code> 2b-2 之一 createMouseDispatcher.onSelectEvent（68/68）</li></ul>
+<p>步骤 1 的测试里 R7/R8 依赖 <code>onWheel</code>（2b-0 能力）→ 步骤 1 先提交裁剪版（去 R7/R8），<br>2b-0 再补回。新测试文件可两版提交（先缺后补），不必改测试归属。</p>
+<h2 id="阻塞-检测到并发写盘">⚠ 阻塞：检测到并发写盘<a class="anchor" href="#阻塞-检测到并发写盘" aria-label="锚点">#</a></h2>
+<p>12:26 新建 <code>services/backend/src/cli/tui/utils/selectGates.js</code><br>12:27 重写 <code>ink-components/App.js</code> <strong>并转成 CRLF</strong>（HEAD 是 LF；<code>.gitattributes</code> 不管 .js、<br><code>core.autocrlf=false</code>）→ git 把整个 App.js 当成 6521 行重写，diff 退化成 1 个 hunk<br>12:28 改 <code>ink-components/ccMessageProjection.js</code></p>
+<p>且内容也变了：App.js 出现备份里没有的 <code>utils/selectGates.js</code> 引用；<br>flagRegistry 的 <code>KHY_SELECT_*</code> 从文档的 4 个（<code>_COPY_ON_RELEASE</code>/<code>_WORD_BOUNDARY</code>/<code>_MAX_BYTES</code>）<br>变成 3 个（<code>_CLIP</code>/<code>_DRAG</code>）—— <strong>有人在改 119 的门控设计</strong>。</p>
+<p>⇒ App.js / flagRegistry(119 部分) / AGENTS.md / 步骤 3 文档<strong>挂起</strong>，等并发写入收敛。<br>直接提交会把别人的半成品 + 6521 行 CRLF 空白改动一起入库。</p>
+<h2 id="备份与可回滚">备份与可回滚<a class="anchor" href="#备份与可回滚" aria-label="锚点">#</a></h2>
+<p>分支 <code>backup-workspace-20260918</code> + 标签 <code>backup-workspace-20260918-tag</code> → <code>40791a3e</code><br>物理副本 <code>D:/Portable/BuildArtifacts/khy-os-工作区备份-2026-09-18</code><br>（注意：该副本的 App.js 是 LF、6501 行，可用于还原 CRLF 污染）</p>
+<h2 id="13-11-并发会话崩溃-119-收口-续">13:11 并发会话崩溃 + 119 收口(续)<a class="anchor" href="#13-11-并发会话崩溃-119-收口-续" aria-label="锚点">#</a></h2>
+<h3 id="119-代码层已全部提交-7-个-未推送">119 代码层已全部提交(7 个, 未推送)<a class="anchor" href="#119-代码层已全部提交-7-个-未推送" aria-label="锚点">#</a></h3>
+<ul><li>链: 07e01323(步骤1) f1763c2d(2a selection.js+验收标准) dcb05c86(2b-0 三档1002)</li></ul>
+<p>a2748b35(2b-1 Viewport selection) 7f7ea242(2b-2 mouseButtons onSelectEvent)<br>  6324501f(flagRegistry 119 门控切片) 2313e753(mouseButtons 判据注释)</p>
+<ul><li>保险标签 tag 119-plumbing-20260918 -&gt; 2313e753</li><li>flagRegistry 用&quot;重建 HEAD+仅119块→提交→还原工作树&quot;非破坏手法, 其余7个提案(ARCH-098/114/clipboard/ime/isFlagEnabled等)仍未提交</li></ul>
+<h3 id="并发-arch-124-重组会话-13-11-崩溃-已恢复">并发 ARCH-124 重组会话 13:11 崩溃(已恢复)<a class="anchor" href="#并发-arch-124-重组会话-13-11-崩溃-已恢复" aria-label="锚点">#</a></h3>
+<ul><li>症状: .git/index.lock 19分钟空锁(死锁) + 索引被写坏(&quot;short read while indexing&quot;) + 3327 未提交改动</li><li>恢复: 改名死锁为 index.lock.stale-20260918-1330; 备份坏索引 index.corrupt-20260918-1330 后 git reset 从 HEAD 重建</li><li>git fsck --full 0 错误(对象库完好); 119 提交链对象可读(diff --stat 正常)</li><li>之前两次 &quot;short read&quot; 是崩溃余波瞬态, 重建索引后 git status 正常(3310~3327 脏项)</li></ul>
+<h3 id="关键事实-给后续会话">关键事实(给后续会话)<a class="anchor" href="#关键事实-给后续会话" aria-label="锚点">#</a></h3>
+<ul><li>119 设计文档被重组从磁盘删: 验收标准.md 在 f1763c2d 可恢复; 主文档在 git 07d31a22(stash态)/物理备份可恢复</li><li>App.js 接线层(2b-2 之二)被 ARCH-124 接管: App.js 整文件 CRLF 重写, 新建 utils/selectGates.js 当门控纯叶子真源</li><li>那 3327 项重组残局未提交、未丢弃(在磁盘); 不该由我强行提交(崩溃半成品+非我的任务)</li><li>物理备份: D:/Portable/BuildArtifacts/khy-os-工作区备份-2026-09-18 (App.js 为 LF 可还原 CRLF 污染)</li></ul>
+<h2 id="abc-三决策点处置-14-00-15-10">ABC 三决策点处置（14:00–15:10）<a class="anchor" href="#abc-三决策点处置-14-00-15-10" aria-label="锚点">#</a></h2>
+<p><strong>用户令&quot;按照你的建议处理ABC&quot;</strong>。处置前先重取证（上次教训：并发写入者&quot;以为停了其实没停&quot;），实测改变了两项建议：</p>
+<ul><li><strong>A 推送 → 已完成</strong>。先 fetch 确认 <code>khy-mirror/main</code>=<code>d917a35a</code> 是 HEAD 祖先（干净 FF）；<code>ghfast.top</code> 代理拒绝匿名写 → 绕过代理直连 <code>https://github.com/luckykhy/khy_os.git</code> 推送成功（GCM 有存好凭据）：<code>d917a35a..2313e753 main</code>，tag <code>119-plumbing-20260918</code> 同推；直连 ls-remote 复核 main/tag 均=<code>2313e753</code>。实际推送 10 个提交（119×7 + e12bfa3f rules / c45234fe ruleguard-gate / 1e35ee0a Shizuku）。</li><li><strong>固化修复</strong>：<code>git remote set-url --push khy-mirror https://github.com/luckykhy/khy_os.git</code>（fetch 走代理提速、push 直连带凭据），下次不会再撞同一堵墙。</li><li><strong>B 残局 → 按住不动（建议修正）</strong>：原想 stash/隔离，但实测脏项 3387→3391→3074 持续跳动、最新 mtime 距探测仅 2 分钟（<code>docs/10_规范/registry/FEATURE-OWNERSHIP.json</code>）——<strong>并发重组会话仍活</strong>，stash/commit/丢弃都会打断它的工作树，故保持原样交还原主。</li><li><strong>C 文档恢复 → 按住不动</strong>：重组正大面积翻 docs/（含 119/选择 相关条目），此刻恢复两份 119 文档必撞车。两份均可恢复（验收标准.md@f1763c2d；主文档@07d31a22/物理备份），等写入停后一条 <code>git checkout f1763c2d -- &lt;path&gt;</code> 即可。</li><li><strong>新发现的环境坑</strong>：ghfast 代理缓存陈旧（ serving 几天前的 <code>8e15cdb3</code> 快照）+ <code>autopull.js</code> 计划任务周期 fetch ⇒ <code>khy-mirror/main</code> 跟踪引用被反复拖回旧值（update-ref 后毫秒级被打回，实测两次）。<strong>不跟定时任务抢引用</strong>：GitHub 真实状态以直连 ls-remote 为准（已验证 <code>2313e753</code>），跟踪引用等代理缓存刷新后自愈，纯记账无数据影响。</li><li>探针临时文件已清（<code>_产物/_tmp_abc_probe*</code>）；注意 shim 的 <code>rm</code> 包装脚本也坏了（safe-bin 报 dirname/safe_delete_main 缺失），删文件用 node <code>fs.unlinkSync</code>。</li></ul>
+<h2 id="b9-按标签归夹-落地收尾-链接修复-html-重建-守卫-索引-版本记录">B9 按标签归夹 —— 落地收尾（链接修复 + HTML 重建 + 守卫 + 索引 + 版本记录）<a class="anchor" href="#b9-按标签归夹-落地收尾-链接修复-html-重建-守卫-索引-版本记录" aria-label="锚点">#</a></h2>
+<p><strong>范围</strong>：khy-os 文档整理长项目最后一步。把可移动 <code>.md</code> 按 <code>[TAG-XXX]</code> 标签归入阶段目录下的子文件夹（族≥3 独立成夹、≤2 入「其它」桶）；DR7 代码耦合文档留根不移动。</p>
+<p><strong>落地数字</strong>：</p>
+<ul><li>物理移动 <strong>377 篇</strong> 入标签子目录；<strong>46 篇</strong> DR7 留根；合并 <strong>38 篇</strong> 重复件；HK-3 隔离 <strong>38 篇</strong> 冗余件（只隔离不删除，隔离区 <code>.khyos/housekeeping/2026-09-17-doc-plan/_dup_quarantine/</code>）。</li><li>入站链接全面重写 <strong>924 处 / 97 文件</strong>；HTML 孪生重建 <strong>1197 个 <code>.html</code></strong>。</li><li>损坏文件最终 = <strong>0</strong>；剩余 <strong>11 处断链全部为既有损坏</strong>（<code>COMMUNICATION-PROTOCOL.md</code>、<code>[DESIGN-PROMPT-002]</code>、<code>[DESIGN-ARCH-011]</code> 编码链接、<code>platform/packages/agent-sdk/docs/*</code> 外部路径、<code>postmortem-template.md</code>、<code>drill-schedule.md</code> 模板缺件）——B9 与修复均未新增断链。</li></ul>
+<p><strong>守卫结论</strong>：</p>
+<ul><li><code>docs:verify</code> ✅ 1468 md / 1469 html / 16480 链接全过。</li><li><code>check:layout</code>：B9 重写就近索引（<code>03_DESIGN_设计/00_INDEX_设计-分类索引.md</code>）误删根级 2 篇 <code>[DESIGN-BACKUP-001]</code>/<code>[DESIGN-SEC-001]</code>（其规范族副本已迁 <code>docs/10_规范/</code> 但根留 stale 副本）→ 补回后 <code>docs-index-complete</code> 回 <strong>0</strong>；<code>dangling-task</code> <strong>88</strong>（B9 未新增，为旧基线漂移：基线 87，+1 来自 CI/AI 记忆等无关在途改动，非 B9）。</li></ul>
+<p><strong>两处关键技术教训（复用）</strong>：</p>
+<ol><li><strong>正则/字符串替换的 offset-mutation 坑</strong>：循环里用 <code>new_text[:m.start(1)] + new + new_text[m.end(1):]</code> 复用<strong>原文本</strong>偏移；当新 URL 长度与原 URL 不同（尤其 <code>%5B</code>→<code>[</code>、<code>%20</code>→空格）时，文件内后续每处链接在错误偏移被拼接、交错污染。修法：收集全部 <code>(start,end,new)</code> 后<strong>按原始偏移逆序</strong>落地。</li><li><strong><code>checkDocsIndexComplete</code> 是非递归的</strong>（只扫阶段目录根级，子目录文件不查）；但 B9 自动重写就近索引时会<strong>整表按当前目录重生成</strong>，可能把未移动的根级件漏掉 → 重写后必复跑 <code>check:layout</code> 核对 <code>docs-index-complete</code>。</li></ol>
+<p><strong>留痕</strong>：一次性脚本与快照在 <code>.khyos/housekeeping/2026-09-17-doc-plan/</code>（<code>_b9_*.py</code>、<code>_linkfix_bak/</code>、<code>_dup_quarantine/</code>），可原路撤回。<br><strong>版本记录</strong>：<code>[MGMT-PLAN-009]</code> §9 加 v1.10.0（B9 行）；<code>[IMPL-RPT-056]</code> §1 加 B9 行 + §7 落地记录。</p>
+<h2 id="15-55-16-40-b9-还原事故清理-用户报-根目录还有重复">15:55–16:40 B9 还原事故清理（用户报&quot;根目录还有重复&quot;）<a class="anchor" href="#15-55-16-40-b9-还原事故清理-用户报-根目录还有重复" aria-label="锚点">#</a></h2>
+<p><strong>成因</strong>：B9 全部改动未提交；并发 TUI 会话当天 12:03/12:24/13:32 三次 <code>git reset</code>（reflog 佐证），另有 10:55/13:38–43/14:05–06/14:23 多批 <code>git checkout/restore</code>（不进 reflog，靠 mtime 群判断），把所有已移动/改名的旧路径文件按 HEAD 内容<strong>批量复活</strong>。B9 子目录副本是未跟踪文件幸存 → 形成&quot;根旧件 + 子目录正本&quot;双份。</p>
+<p><strong>处置（HK-3 只隔离不删除）</strong>：分类脚本 <code>_b9_classify_rootdups.js</code>（DR7 73 / 索引 24 / 真重复 203 / 独一份 270）；隔离 <code>_b9_quarantine_restored.py</code>（203 篇 dirty 件先逐行校验无独有内容）+ <code>_b9_quarantine_olddirs.py</code>（<code>_报告/_规范/_设计模式</code> 等 8 个旧下划线目录 99 篇，1 篇 HOLD）；<code>_aipreset_migrate.py</code> 把 <code>_AI协作预设包/skills/README.md</code>（唯一正本）迁 <code>17_</code> 并改 4 条入站链接。隔离区：<code>_dup_quarantine/restored_2026-09-18/</code>（302 篇 md + html 孪生，保留原路径可原路撤回）。修复 <code>[INIT-PRD-003]</code> 4 处交错损坏（L5/32/33/35）。</p>
+<p><strong>教训</strong>：① 同一文件的多处 Edit <strong>严禁并行</strong>发出（同基线互相覆盖，只有最后一个生效）——本会话 INIT-PRD-003 前 4 连 Edit 就丢了 2 处修复；② git 未提交的移动/改名在共享仓库里随时可能被并发会话 reset 复活，<strong>大重组必须尽快 commit</strong> 才算落地；③ verify/layout 全绿不等于无重复——守卫按 basename 匹配索引，同名异位副本天然穿透（今天 203 篇重复就是这么躲过守卫的）。</p>
+<p><strong>结果</strong>：<code>docs:build</code> EXIT 0；<code>docs:verify</code> 1166 md/13096 链接全绿；<code>check:layout</code> <strong>EXIT 0</strong>（dangling-task 84 &lt; 基线 88，隔离顺带消了 4 条悬空引用）。遗留（非本次造成）：跨阶段同号族 DESIGN-FE/MEM 同时在 03_DESIGN 子目录与 10_规范、DESIGN-ARCH-072/079/119 同号不同名——属内容归属决策，留给后续批次。</p>
+<h2 id="16-42-17-05-提交落地-待办登记-用户指令">16:42–17:05 提交落地 + 待办登记（用户指令）<a class="anchor" href="#16-42-17-05-提交落地-待办登记-用户指令" aria-label="锚点">#</a></h2>
+<p><strong>待办登记</strong>：两大遗留已写入 <code>[IMPL-RPT-056]</code> §6 表（DESIGN-FE/MEM 跨阶段同号族、DESIGN-ARCH-072/079/119 同号不同名），随提交落库。</p>
+<p><strong>提交</strong>：<strong>965b8371</strong> <code>docs: B9 按标签归夹落地 + 还原事故清理（隔离 302 重复件）</code>（父 2313e753）。1670 文件全在 docs/（+209221/−51788），并发会话暂存的 apps 文件未卷入。门禁豁免经用户明确授权：SECURITY-001 限 20 文件/次硬阻断 1670 文件提交，用 <code>write-tree</code>+<code>commit-tree</code>+<code>update-ref</code>（CAS 旧值校验）plumbing 路径完成，<strong>未改动任何门禁配置</strong>，豁免理由写入提交信息。docs:verify/check:layout 全绿作背书。</p>
+<p><strong>过程要点</strong>：</p>
+<ul><li>预提交钩子两次拦截：① 密钥钩——<code>docs/opencode-provider-keys.md/.html</code> 含真实 API Key（该 md 在 HEAD 早已跟踪 4 把旧钥，本次工作区又加 2 把新钥）→ 按钩子要求<strong>排除出提交</strong>，工作区保留；建议用户移入 .env 或退出跟踪（HEAD 历史里的旧钥是既有暴露面）。② SECURITY-001 体量阻断 → 用户授权豁免。</li><li><code>check-agent-rules.js</code> 在钩子里 1670 文件下跑满 300s 超时失败，但单独运行秒级通过——大体量暂存下钩子有性能坑，拆小提交更稳。</li><li><code>_x</code> 旧目录里的非 md 残留（<code>RULES-REGISTRY.json</code>、技能评估/质量看板 json、模式注册表.json）是<strong>工具活数据不是文档</strong>，勿清理——RULES-REGISTRY.json 是钩子门禁真源。</li><li>plumbing 提交注意：<code>-F /tmp/xx</code> Windows 原生 git 读不到 Git Bash 的 /tmp，消息文件要放 <code>.git/</code> 内。</li><li>提交后 docs 工作树仅剩 2 个未跟踪件：并发会话刚新建的 <code>[DESIGN-ARCH-125]</code>（它在持续产出，勿动）+ 密钥 html。<strong>复活风险已关闭</strong>——今后 reset 只会回到已提交的新布局。</li></ul>
+<h2 id="17-41-17-55-孤儿-html-清理-用户报-067-opencode-文件未归夹">17:41–17:55 孤儿 HTML 清理（用户报 067 opencode 文件未归夹）<a class="anchor" href="#17-41-17-55-孤儿-html-清理-用户报-067-opencode-文件未归夹" aria-label="锚点">#</a></h2>
+<p><strong>真相</strong>：该文档正本早已归夹——<code>DESIGN-ARCH/[DESIGN-ARCH-075] opencode高含金量功能教学…md</code>（曾用号 067，改号后旧号 HTML 残留在阶段根，无 .md 配对）。067 号现已被《动态模型差异化适配引擎》使用（已归夹）。</p>
+<p><strong>处置</strong>：全阶段根孤儿 HTML 扫描仅此 1 例 → HK-3 隔离至 <code>_dup_quarantine/orphan_html_2026-09-18/</code>。根上其余 4 篇 .md 均为 <strong>DR7 红线</strong>，按设计留根：079/113←check-agent-feedback.js、100←check-model-list-truth.js、OTHER-005←extensions/scripts/khy-desktop-rd/khy.extension.json。</p>
+<p><strong>提交</strong>：<strong>ceedffbb</strong>（3 文件：1 D + IMPL-RPT-056 §7.2 的 md/html）。钩子正常通过，无需豁免。</p>
+<p><strong>新坑</strong>：check-agent-rules 的 <code>--changed</code> 用 <code>--diff-filter=ACMR</code>（不含 D）——<strong>纯删除型暂存</strong>会使变更列表为空，执行器回退扫工作树，把并发会话未提交的代码违规（apps package.json 硬编码域名 RUNTIME-001）卷进来误伤。解法：删除型提交捆绑一个真实 M 类文件即可让执行器只扫暂存清单。</p>
+<p><strong>守卫</strong>：verify 1167 md/13107 链接全绿；layout EXIT 0。</p>
+<h2 id="18-05-18-30-dr7-红线归夹-代码-文档同批改造-用户指令执行">18:05–18:30 DR7 红线归夹——代码+文档同批改造（用户指令执行）<a class="anchor" href="#18-05-18-30-dr7-红线归夹-代码-文档同批改造-用户指令执行" aria-label="锚点">#</a></h2>
+<p>4 篇 DR7 红线（079/100/113/OTHER-005）从 03_DESIGN_设计 阶段根迁入 DESIGN-ARCH//DESIGN-OTHER/，代码侧 4 处路径引用同批同步（check-agent-feedback.js L8/L206、check-model-list-truth.js L12、khy.extension.json L24——全部是注释/说明性引用，运行时无路径常量；docsBackedTokens 递归遍历+内容匹配，守卫行为不受影响）。<code>modelListTruthGuard.js</code> 的 3 处纯标签引用（[DESIGN-ARCH-100] §四等）不带路径，编号未变无需改。</p>
+<p><strong>三个提交</strong>（均 ≤20 文件、钩子全过、无需豁免）：<strong>2fd12216</strong>（代码引用同步+8 文件迁移，11 条目）、<strong>bfaacea5</strong>（7 处入站链接修缮+子目录索引登记，16 文件）、<strong>6376988f</strong>（主索引 079 两链接补 DESIGN-ARCH/ 段，2 文件）。两守卫 JS 原为未跟踪新文件，已随提交入库。终验：代码侧旧路径引用=0、docs 侧旧根路径链接=0、verify 1167 md/13109 链接全绿、layout EXIT 0。阶段根 HEAD 只剩 00_INDEX + 子目录。</p>
+<p><strong>新坑记录</strong>：① 纯删除型暂存使 check-agent-rules 的 ACMR 过滤列表为空→回退扫工作树，会误卷并发会话的未提交代码违规；解法=捆绑一个真实 M 类文件。② 钩子的 commit message 校验读的是 <code>.git/COMMIT_EDITMSG</code>（不是 -F 的文件）——用 <code>git commit -F</code> 时必须同步写 COMMIT_EDITMSG。③ post-commit 的 mirror-sync.js 在 shim 环境下路径错乱（<code>D:\d\Portable\...</code> 双盘符）报 MODULE_NOT_FOUND，不影响提交本体。④ git pathspec 的 <code>[...]</code> 会被当字符类，操作括号文件名一律用 <code>:(literal)</code>。⑤ shell shim 的 PATH 时坏（grep/head/cat 找不到）——全程改用 node 单进程完成文件操作与 git 调用最稳。</p>
+<p><strong>遗留备注</strong>：<code>docs/03_DESIGN_设计/[DESIGN-CICD-001] CI</code> 是个以文档标签命名的<strong>目录</strong>（HEAD 中存在），成因不明，列为下批排查项。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../.workbuddy/memory/2026-09-17.html"><div class="dir">← 上一篇</div><div class="ttl">2026-09-17 工作日志</div></a><a class="next" href="../../.workbuddy/memory/2026-09-19.html"><div class="dir">下一篇 →</div><div class="ttl">2026-09-19 工作日志</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__=".workbuddy/memory/2026-09-18.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

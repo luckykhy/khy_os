@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'" />
+  <title>KhyOS Provider Hub</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">KhyOS <span class="brand-sub">Provider Hub</span></div>
+    <div class="top-actions">
+      <button id="proxyToggle" class="ghost">代理: 检测中…</button>
+      <select id="toolSwitcher" class="select" title="当前管理的工具"></select>
+      <button id="importBtn" class="ghost">一键导入已安装</button>
+      <button id="addCardBtn" class="primary">+ 添加供应商</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="card-list" id="cardList" aria-label="供应商卡片列表"></section>
+    <aside class="drawer" id="drawer" hidden>
+      <div class="drawer-head">
+        <span id="drawerTitle">卡片详情</span>
+        <button id="drawerClose" class="ghost">×</button>
+      </div>
+      <div class="drawer-body">
+        <h3>模型管理</h3>
+        <div class="row">
+          <button id="fetchModelsBtn" class="primary">拉取模型目录</button>
+          <span id="fetchStatus" class="status">未拉取</span>
+        </div>
+        <table class="model-table" id="modelTable"></table>
+        <h3>工具矩阵（应用到 Agent）</h3>
+        <div id="toolMatrix" class="tool-matrix"></div>
+        <h3>Failover 备卡（当前工具）</h3>
+        <div id="failoverView" class="pool-view"></div>
+        <h3>密钥池</h3>
+        <div id="poolView" class="pool-view"></div>
+        <h3>近 7 日用量（khy 账本）</h3>
+        <div id="usageChart" class="usage-chart"></div>
+        <div id="usageNote" class="status"></div>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="statusbar">
+    <span id="statusMsg">准备就绪</span>
+  </footer>
+
+  <template id="cardTpl">
+    <article class="card">
+      <div class="drag" title="拖拽排序">≡</div>
+      <div class="icon"></div>
+      <div class="meta">
+        <div class="name"></div>
+        <div class="endpoint"></div>
+      </div>
+      <div class="keymask"></div>
+      <div class="models-n"></div>
+      <div class="actions">
+        <button data-act="active" class="ghost sm">启用</button>
+        <button data-act="probe" class="ghost sm">测速</button>
+        <button data-act="duplicate" class="ghost sm">复制</button>
+        <button data-act="remove" class="ghost sm danger">删除</button>
+      </div>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>

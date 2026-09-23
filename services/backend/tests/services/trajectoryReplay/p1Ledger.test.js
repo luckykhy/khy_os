@@ -20,9 +20,9 @@ const path = require('path');
 const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-p1-ledger-'));
 process.env.KHY_PROJECT_DATA_HOME = TMP_HOME;
 
-const tierRegistry = require('../../../src/services/trajectoryReplay/tierRegistry');
-const artifactHash = require('../../../src/services/trajectoryReplay/artifactHash');
-const replayLedger = require('../../../src/services/trajectoryReplay/replayLedger');
+const tierRegistry = require('../../../src/services/domain/trajectory/trajectoryReplay/tierRegistry.js');
+const artifactHash = require('../../../src/services/domain/trajectory/trajectoryReplay/artifactHash.js');
+const replayLedger = require('../../../src/services/domain/trajectory/trajectoryReplay/replayLedger.js');
 const { sha256Hex } = require('../../../src/services/sourceSnapshotCrypto');
 
 test('tierRegistry classifies the three tiers and collapses unknown to SHELL', () => {

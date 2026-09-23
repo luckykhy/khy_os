@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [INIT-PRD-003] KhyOS 的核心-定位口径单一真源.md -->
+<title>[INIT-PRD-003] KhyOS 的核心 —— 定位口径单一真源 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>01_INIT_立项<span class="sep">›</span>INIT-PRD<span class="sep">›</span>[INIT-PRD-003] KhyOS 的核心 —— 定位口径单一真源</div>
+      <header class="hero reveal"><h1>[INIT-PRD-003] KhyOS 的核心 —— 定位口径单一真源</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#init-prd-003-khyos-的核心-定位口径单一真源">[INIT-PRD-003] KhyOS 的核心 —— 定位口径单一真源</a></li><li class="lvl-2"><a href="#〇-一句话">〇、一句话</a></li><li class="lvl-2"><a href="#一-核心-一词必须先一词一解">一、「核心」一词必须先一词一解</a></li><li class="lvl-2"><a href="#二-核心清单-以-b-为准-标注-a-子集">二、核心清单（以 B 为准，标注 A 子集）</a></li><li class="lvl-3"><a href="#运行核-a-删掉即无法启动或无法完成一次工具调用">运行核（= A，删掉即无法启动或无法完成一次工具调用）</a></li><li class="lvl-3"><a href="#主张核-b-a-删掉系统仍能跑-但产品主张塌一角">主张核（= B \ A，删掉系统仍能跑，但产品主张塌一角）</a></li><li class="lvl-3"><a href="#为什么是这七个-而不是五个或三个">为什么是这七个，而不是五个或三个</a></li><li class="lvl-2"><a href="#三-非核心的裁决-明确排除-附理由">三、非核心的裁决（明确排除，附理由）</a></li><li class="lvl-2"><a href="#四-口径冲突登记-本轮实测发现-需人工确认">四、口径冲突登记（本轮实测发现，需人工确认）</a></li><li class="lvl-3"><a href="#4-1-内核-readme-与-097-正面冲突">4.1 内核：README 与 097 正面冲突 ⚠️</a></li><li class="lvl-3"><a href="#4-2-核心-的多套口径并存">4.2 「核心」的多套口径并存</a></li><li class="lvl-3"><a href="#4-3-文档编号冲突-5-处-docs-index-complete-之外的债">4.3 文档编号冲突（5 处，`docs-index-complete` 之外的债）</a></li><li class="lvl-2"><a href="#五-与既有文档的关系-避免本文自己制造漂移">五、与既有文档的关系（避免本文自己制造漂移）</a></li><li class="lvl-2"><a href="#附录-复现命令">附录 · 复现命令</a></li><li class="lvl-2"><a href="#变更记录">变更记录</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: INIT-PRD-003 | 阶段: 立项 | 原路径: 新建 --&gt;</p>
+<h1 id="init-prd-003-khyos-的核心-定位口径单一真源">[INIT-PRD-003] KhyOS 的核心 —— 定位口径单一真源<a class="anchor" href="#init-prd-003-khyos-的核心-定位口径单一真源" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：回答「KhyOS 的核心是什么」，并<strong>收口「核心」一词在全仓的多套口径</strong>。<br><strong>性质</strong>：定位层收口件，不是新规范。它不推翻 [<code>DESIGN-TOOL-002</code>](../../10_规范/其它规范/[DESIGN-TOOL-002] 拓展契约与核心边界规范.md)（核的边界与契约）、[<code>DESIGN-ARCH-097</code>](../../03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-097] KhyOS 核心边界定稿-一词一解.md)（核心边界定稿）、[<code>DESIGN-PHILOSOPHY</code>](../../03_DESIGN_设计/其它设计/[DESIGN-PHILOSOPHY] 设计哲学总纲.md)（设计不变式）；本文只回答「这些核加起来的那个东西，是什么」。<br><strong>证据基线</strong>：工作树 <code>v1.1.15</code>，2026-09-14 一次实际扫描。文中每个数字都可复现，命令见附录。<br><strong>状态</strong>：定稿（2026-09-14）。</p></blockquote>
+<hr>
+<h2 id="〇-一句话">〇、一句话<a class="anchor" href="#〇-一句话" aria-label="锚点">#</a></h2>
+<p><strong>KhyOS 的核心是：一套把「模型调用」当作系统调用一样统一收口的 AI 平台运行时。</strong></p>
+<p>它对外是一个 CLI / TUI 形态的智能体工作台；对内是一套 <strong>壳 → 漏斗 → 网关</strong> 的不可卸载运行时。其余一切——应用、工具、技能、MCP、IDE 桥接、自研内核——都是挂在这套运行时上的<strong>可增删单元</strong>。</p>
+<p>这句话有两个推论，是本篇与既有文档最不同的地方：</p>
+<ol><li><strong>核心不是「功能最多的那部分」，而是「删了就跑不起来的那部分」。</strong> 判据是删除实验，不是重要性排序。</li><li><strong>「核心」有两个轴，必须先切开再谈。</strong> 混着用是当前全仓口径漂移的根源（见第一节）。</li></ol>
+<hr>
+<h2 id="一-核心-一词必须先一词一解">一、「核心」一词必须先一词一解<a class="anchor" href="#一-核心-一词必须先一词一解" aria-label="锚点">#</a></h2>
+<blockquote><p>本节是本文存在的理由。不先切开，任何关于核心的讨论都会各说各话。</p></blockquote>
+<p>全仓至少有四处用「核心」/「核」，它们回答的是<strong>不同的问题</strong>：</p>
+<table><thead><tr><th>口径</th><th>出处</th><th>回答的问题</th><th>判据</th></tr></thead><tbody><tr><td><strong>A · 不可卸载核</strong></td><td>[<code>069</code>](../../10_规范/其它规范/[DESIGN-TOOL-002] 拓展契约与核心边界规范.md)**，有机器守卫）</td><td>删掉什么，系统就跑不起来？</td><td>「删掉它，还能启动并跑通一次工具调用吗？」</td></tr><tr><td><strong>B · 产品核心</strong>../03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-097] KhyOS 核心边界定稿-一词一解.md界定稿-一词一解.md)（定稿收口件）</td><td>产品的价值由哪几块构成？</td><td>A 的判据 <strong>+</strong> 「删掉它系统仍能跑，但产品主张塌掉一角」</td><td></td></tr><tr><td><strong>C · 定位栈</strong></td><td>[<code>INIT-PRD-002</code>]([INIT-PRD-002] 项目-定位.md) / <code>README.md</code></td><td>对外怎么讲这个故事？</td><td>分层叙事，<strong>无判据</strong></td></tr><tr><td><strong>D · 设计不变式</strong></td><td>[<code>DESIGN-PHILOSOPHY</code>](../../03_DESIGN_设计/其它设计/[DESIGN-PHILOSOPHY] 设计哲学总纲.md)</td><td>代码必须遵守什么？</td><td>机器守卫 + 人工评审</td></tr></tbody></table>
+<p><strong>本文的裁定：A ⊂ B。</strong></p>
+<ul><li>A 是 B 的<strong>硬子集</strong>——A 的每一项必然在 B 里。</li><li>B 额外收录「删了还能跑、但产品主张塌一角」的项，所以 B 严格大于 A。</li><li>C 是<strong>叙事</strong>，D 是<strong>约束</strong>，两者都不参与「哪几块是核心」的裁决。把 C 或 D 当成核心清单读，就会得出「核心有五个」或「核心有七条」这类无法互相验证的结论。</li></ul>
+<p><strong>为什么必须切开</strong>：069 的「核」是<strong>安全边界语义</strong>（拓展必须穿过漏斗、不得绕过），097 的「核心」是<strong>产品构成语义</strong>。同一份仓库里，一个词承担两种语义，且 069 是强制规范、097 是定稿件——不显式声明 <code>A ⊂ B</code>，后来者只能靠猜。</p>
+<hr>
+<h2 id="二-核心清单-以-b-为准-标注-a-子集">二、核心清单（以 B 为准，标注 A 子集）<a class="anchor" href="#二-核心清单-以-b-为准-标注-a-子集" aria-label="锚点">#</a></h2>
+<h3 id="运行核-a-删掉即无法启动或无法完成一次工具调用">运行核（= A，删掉即无法启动或无法完成一次工具调用）<a class="anchor" href="#运行核-a-删掉即无法启动或无法完成一次工具调用" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>核</th><th>一句话</th><th>实测锚点（v1.1.15）</th></tr></thead><tbody><tr><td><strong>壳</strong></td><td>承载启动、REPL/TUI 与命令路由的运行时底座</td><td><code>platform/khy_platform/</code> 16 个 <code>.py</code>；<code>services/backend/src/cli/</code> 顶层 177 个 <code>.js</code>（含子目录 535 个）；<code>router.js</code> / <code>aliases.js</code> / <code>repl.js</code> / <code>tui/</code> 均在位</td></tr><tr><td><strong>漏斗</strong></td><td>所有工具调用的唯一出口，权限与沙箱的裁决边界</td><td><code>services/backend/src/services/tool*</code> 35 个文件（<code>toolCalling</code> / <code>toolSandbox</code> / <code>permissionBroker</code> / <code>shellSafetyValidator</code> 均在位）；<code>src/tools/</code> 102 个子目录 + 122 个文件</td></tr><tr><td><strong>网关</strong></td><td>统一多供应商模型路由、密钥池与协议转换</td><td><code>services/backend/src/services/gateway/adapters/</code> 66 个文件，其中 19 个 <code>*Adapter.js</code>；<code>services/ai-backend/</code> 在位</td></tr></tbody></table>
+<h3 id="主张核-b-a-删掉系统仍能跑-但产品主张塌一角">主张核（= B \ A，删掉系统仍能跑，但产品主张塌一角）<a class="anchor" href="#主张核-b-a-删掉系统仍能跑-但产品主张塌一角" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>核</th><th>一句话</th><th>实测锚点（v1.1.15）</th></tr></thead><tbody><tr><td><strong>智能体</strong></td><td>驱动模型自主调用工具的循环引擎与内置智能体</td><td><code>services/backend/src/services/toolUseLoopCore.js</code> 12,018 行；<code>src/agents/built-in/</code> 26 个 <code>.js</code></td></tr><tr><td><strong>工作流</strong></td><td>登记 → 执行 → 裁决 → 交付 → 台账的任务收尾循环</td><td><code>taskClosure.js</code> / <code>backgroundTaskManager.js</code> / <code>deliveryLedger.js</code> 均在位；台账 <code>.khy/taskboard.db</code> 存在</td></tr><tr><td><strong>记忆</strong></td><td>会话续接、向量召回与 RAG 注入的跨回合连续性设施</td><td><code>services/backend/src/services/domain/memory/</code>（<code>memoryEngine/</code> / <code>compact/</code> / <code>cognitiveSnapshot/</code>）；<code>vectorRecall.js</code> / <code>vectorStore.js</code> / <code>distiller.js</code> 均在位</td></tr><tr><td><strong>拓展契约</strong></td><td>一套 <code>khy.extension.json</code> 机制承载 tool / plugin / scripts / mcp / software / 协议六类拓展</td><td>全仓 10 个 <code>khy.extension.json</code>；<code>extensions/</code> 为两层 <code>&lt;分类&gt;/&lt;id&gt;/</code></td></tr></tbody></table>
+<blockquote><p><strong>一处勘误</strong>：097 把记忆锚点写作 <code>domain/memory/memoryEngine/</code>，实测完整路径是 <code>services/backend/src/services/domain/memory/memoryEngine/</code>。本文以实测为准。</p></blockquote>
+<h3 id="为什么是这七个-而不是五个或三个">为什么是这七个，而不是五个或三个<a class="anchor" href="#为什么是这七个-而不是五个或三个" aria-label="锚点">#</a></h3>
+<ul><li><strong>智能体入核而非归「壳」</strong>：壳提供进程与命令路由，但「模型自主循环调用工具」是另一套引擎（12,018 行的 <code>toolUseLoopCore.js</code>），删掉它壳还在、命令还能敲，但没有 agent 了。它不满足 A 的判据（系统仍能启动），满足 B 的判据（产品主张塌掉最大一角）。</li><li><strong>记忆入核而非归「功能」</strong>：它不是装饰件——<code>memoryEngine/</code> 下有独立的向量召回、向量存储、蒸馏三层，是跨回合连续性的实现主体。</li><li><strong>技能 / MCP 不入核</strong>：069 §1.2 明确 tool / plugin / scripts / mcp / software / 协议是<strong>同一套拓展机制下的六类实现</strong>。它们不是独立的核，是拓展契约的内容。</li></ul>
+<hr>
+<h2 id="三-非核心的裁决-明确排除-附理由">三、非核心的裁决（明确排除，附理由）<a class="anchor" href="#三-非核心的裁决-明确排除-附理由" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>被排除者</th><th>位置</th><th>裁决理由</th></tr></thead><tbody><tr><td><strong>内核</strong></td><td><code>kernel/</code></td><td><strong>不占核心席位</strong>。它是「操作系统」定位的<strong>实验分支</strong>：128 个 <code>.c/.h</code>（46 <code>.c</code> + 82 <code>.h</code>）在位，但<strong>零构建产物</strong>（无 <code>.iso</code> / <code>.bin</code> / <code>.img</code>，<code>kernel/iso/</code> 仅有 <code>boot/</code>），CI 为 <code>continue-on-error</code>，仓库自评「教学/实验/爱好级」。<strong>见第四节的冲突登记</strong></td></tr><tr><td><strong>khyquant</strong></td><td><code>software/khyquant/</code></td><td><strong>内置默认示例应用</strong>，非项目本身（<code>README.md</code> / <code>AGENTS.md</code> / <code>068</code> §1.1 三处同述）。判据：删掉它，Khy-OS 仍是 Khy-OS</td></tr><tr><td><strong>平台前端</strong></td><td><code>apps/ai-frontend/</code></td><td>L3，平台自带管理界面。经 Web API 消费核心，本身不是核心</td></tr><tr><td><strong>桌面端 / 移动端</strong></td><td><code>apps/khyos-desktop/</code>、<code>electron/</code></td><td>应用层，经 bridge / API 消费核心</td></tr><tr><td><strong>工具集</strong></td><td><code>services/backend/src/tools/</code>（102 个子目录）</td><td><strong>漏斗下的实现</strong>。工具是核心能力的<strong>内容</strong>，不是核心机制本身——机制是漏斗（统一出口 + 权限裁决），工具可增删</td></tr><tr><td><strong>IDE 桥接</strong></td><td><code>extensions/bridges/</code></td><td><code>kind: ide-bridge</code> 类拓展，可卸载</td></tr></tbody></table>
+<p><strong>一条判据通吃</strong>：问「删掉它，Khy-OS 还是 Khy-OS 吗？」——是 → 非核心；不是 → 核心。这条与 <code>068</code> §1.1 的 L3/L4 分界判据同构，是同一个思路在不同粒度上的应用。</p>
+<hr>
+<h2 id="四-口径冲突登记-本轮实测发现-需人工确认">四、口径冲突登记（本轮实测发现，需人工确认）<a class="anchor" href="#四-口径冲突登记-本轮实测发现-需人工确认" aria-label="锚点">#</a></h2>
+<blockquote><p>这些是「核心不清」的具体病灶。本文给出裁决，但<strong>涉及 README 等对外材料的改写属独立一轮工作</strong>，本文只登记、不擅自改。</p></blockquote>
+<h3 id="4-1-内核-readme-与-097-正面冲突">4.1 内核：README 与 097 正面冲突 ⚠️<a class="anchor" href="#4-1-内核-readme-与-097-正面冲突" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>出处</th><th>表述</th></tr></thead><tbody><tr><td><code>README.md</code> 项目简介</td><td>三大件之一：「<strong>手写 OS 内核</strong>（<code>kernel/</code>，C 语言）：抢占式调度、按需分页、写时复制 <code>fork</code>……<strong>可在 QEMU 下引导运行</strong>」</td></tr><tr><td><code>[INIT-PRD-002]</code> 架构栈</td><td>五层栈的<strong>最底层</strong>：「KHY Kernel — x86_../03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-097] KhyOS 核心边界定稿-一词一解.mdKhyOS%20核心边界定稿-一词一解.md) §定位裁决</td></tr></tbody></table>
+<p><strong>本文裁决</strong>：以 097 为准——<strong>内核不是核心</strong>。实测支持这个裁决：当前工作树上 <code>kernel/</code> 无任何构建产物，「可在 QEMU 下引导运行」<strong>无法从工作树复现</strong>（需先 <code>make</code> 构建）。</p>
+<p><strong>待办（不属本文）</strong>：<code>README.md</code> 把内核列为「三大件」之一，与本文及 097 冲突。要么改 README 的措辞（降级为「实验分支」），要么在 README 里显式标注「需先构建」。<strong>建议后者</strong>——内核是项目叙事资产，直接删掉会损失「单人手写 OS」的差异化，但必须把「实验」二字显性化。</p>
+<h3 id="4-2-核心-的多套口径并存">4.2 「核心」的多套口径并存<a class="anchor" href="#4-2-核心-的多套口径并存" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>出处</th><th>口径</th><th>数量</th><th>本文裁决</th></tr></thead><tbody><tr><td><code>README.md</code></td><td>智能体 CLI + AI 网关 + OS 内核</td><td>3</td><td>叙事口径（C），保留，但内核需按 4.1 降级</td></tr><tr><td><code>[INIT-PRD-002]</code></td><td>Kernel / Shell / Gateway / Runtime / Apps</td><td>5</td><td>叙事口径（C），保留</td></tr><tr><td>[<code>069</code>](../../10_规范/其它规范/[DESIGN-TOOL-002] 拓展契约与核心边界规范.md)</td><td>七核两层</td><td>7</td><td>口径 B，<strong>定稿，不动</strong></td></tr><tr><td>本文</td><td>A ⊂ B，一句话定位</td><td>—</td><td><strong>收口</strong>：A 与 B 从此各有明确定义，不再混用</td></tr></tbody></table>
+<h3 id="4-3-文档编号冲突-5-处-docs-index-complete-之外的债">4.3 文档编号冲突（5 处，<code>docs-index-complete</code> 之外的债）<a class="anchor" href="#4-3-文档编号冲突-5-处-docs-index-complete-之外的债" aria-label="锚点">#</a></h3>
+<p>索引 <code>00_INDEX_文档索引.md</code> 自己已标注一处（<code>DESIGN-ARCH-067</code>），实测共 <strong>5 组</strong>编号被两个不同文档占用：</p>
+<table><thead><tr><th>编号</th><th>文档甲</th><th>文档乙</th></tr></thead><tbody><tr><td><code>067</code></td><td>opencode 高含金量功能教学…</td><td>动态模型差异化适配引擎</td></tr><tr><td><code>072</code></td><td>模型上下文窗口探测规范</td><td>项目规范化总纲</td></tr><tr><td><code>073</code></td><td>规范快速参考卡</td><td>khyos 核心任务循环-稳定交付总纲</td></tr><tr><td><code>076</code></td><td>任务最小闭环-裁决接线与交付台账</td><td>（索引另列同名件）</td></tr><tr><td><code>077</code></td><td>khyos 核心任务循环-稳定交付总纲</td><td>（索引另列同名件）</td></tr></tbody></table>
+<p><strong>裁决</strong>：属独立一轮工作（重编须同步改写全部入站引用）。本文只登记，供后续批量处理。</p>
+<hr>
+<h2 id="五-与既有文档的关系-避免本文自己制造漂移">五、与既有文档的关系（避免本文自己制造漂移）<a class="anchor" href="#五-与既有文档的关系-避免本文自己制造漂移" aria-label="锚点">#</a></h2>
+<p>本文<strong>不新增规范、不新增守卫、不改动任何既有文档的语义</strong>。它只做三件事：</p>
+<ol><li>把「核心」一词按 A / B / C / D 四个轴切开，声明 <code>A ⊂ B</code>；</li><li>给出定位层的一句话核心；</li><li>登记全仓仍在漂移的口径，并给出裁决。</li></ol>
+<p><strong>真源归属（谁管什么，从此不再重叠）</strong>：</p>
+<table><thead><tr><th>问题</th><th>真源</th></tr></thead><tbody><tr><td>什么东西算「不可卸载核」，拓展与核的边界与契约</td><td>[<code>069</code>](../../10_规范/其它规范/[DESIGN-TOOL-002] 拓展契约与核心边界规范.md)</td></tr><tr><td><strong>「核心」一词的轴切分与定位层的一句话</strong></td><td><strong>本文</strong></td></tr><tr><td>顶层目录 L0–L6 与依赖边</td><td>[<code>068</code>](../../10_规范/DESIGN-LAY/[DESIGN-LAY-005] 仓库层级板块规范.md)</td></tr></tbody></table>
+<hr>
+<h2 id="附录-复现命令">附录 · 复现命令<a class="anchor" href="#附录-复现命令" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-comment"># 运行核 / 主张核的锚点规模</span>
+<span class="hljs-built_in">ls</span> platform/khy_platform/*.py | <span class="hljs-built_in">wc</span> -l
+find services/backend/src/cli -name <span class="hljs-string">&#x27;*.js&#x27;</span> | <span class="hljs-built_in">wc</span> -l
+<span class="hljs-built_in">ls</span> services/backend/src/services/tool*.js | <span class="hljs-built_in">wc</span> -l
+<span class="hljs-built_in">ls</span> services/backend/src/services/gateway/adapters/ | <span class="hljs-built_in">wc</span> -l
+<span class="hljs-built_in">wc</span> -l services/backend/src/services/toolUseLoopCore.js
+<span class="hljs-built_in">ls</span> services/backend/src/agents/built-in/*.js | <span class="hljs-built_in">wc</span> -l
+<span class="hljs-built_in">ls</span> services/backend/src/services/domain/memory/
+
+<span class="hljs-comment"># 拓展契约</span>
+find . -name <span class="hljs-string">&#x27;khy.extension.json&#x27;</span> -not -path <span class="hljs-string">&#x27;./node_modules/*&#x27;</span> | <span class="hljs-built_in">wc</span> -l
+
+<span class="hljs-comment"># 内核（关键：验证有无构建产物）</span>
+find kernel -name <span class="hljs-string">&#x27;*.c&#x27;</span> | <span class="hljs-built_in">wc</span> -l &amp;&amp; find kernel -name <span class="hljs-string">&#x27;*.h&#x27;</span> | <span class="hljs-built_in">wc</span> -l
+find kernel -name <span class="hljs-string">&#x27;*.iso&#x27;</span> -o -name <span class="hljs-string">&#x27;*.bin&#x27;</span> -o -name <span class="hljs-string">&#x27;*.img&#x27;</span>   <span class="hljs-comment"># 期望：空</span></code></pre>
+<hr>
+<h2 id="变更记录">变更记录<a class="anchor" href="#变更记录" aria-label="锚点">#</a></h2>
+<ul><li>2026-09-14：初版。基于工作树 v1.1.15 的实际扫描建立；收口「核心」四套口径为 A/B/C/D 四轴并声明 <code>A ⊂ B</code>；登记 3 处口径冲突（内核 README vs 097、核心多口径、编号冲突 5 组）。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/01_INIT_立项/INIT-PRD/[INIT-PRD-002] 项目-定位.html"><div class="dir">← 上一篇</div><div class="ttl">KHY OS — 项目定位</div></a><a class="next" href="../../../docs/01_INIT_立项/INIT-PRD/00_INDEX_INIT-PRD-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">INIT-PRD</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/01_INIT_立项/INIT-PRD/[INIT-PRD-003] KhyOS 的核心-定位口径单一真源.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

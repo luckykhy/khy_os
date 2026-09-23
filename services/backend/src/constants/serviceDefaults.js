@@ -39,6 +39,9 @@ const CLOUD_DEFAULT_HOST = (() => {
 })();
 // Attribution referer sent to OpenRouter-style upstreams (HTTP-Referer header).
 const HTTP_REFERER = process.env.KHY_HTTP_REFERER || 'https://khyquant.com';
+// User-facing feedback URL (khyos-desktop 帮助菜单「问题反馈」等入口).
+// Derived from the cloud endpoint root — no second domain literal.
+const FEEDBACK_URL = process.env.KHY_FEEDBACK_URL || `https://${CLOUD_DEFAULT_HOST}/feedback`;
 
 // ── Local AI backend (daemon) default ───────────────────────────────────────
 // The loopback port the daemon listens on when nothing else is discoverable.
@@ -46,6 +49,10 @@ const HTTP_REFERER = process.env.KHY_HTTP_REFERER || 'https://khyquant.com';
 // package that cannot import backend code) — keep the two in lock-step.
 const AI_BACKEND_DEFAULT_PORT = parseInt(process.env.KHY_DAEMON_PORT || '9090', 10);
 const AI_BACKEND_DEFAULT_URL = `http://localhost:${AI_BACKEND_DEFAULT_PORT}`;
+
+// A2A agent-card 占位 url：baseUrl 缺失时卡片仍须合法，端口 0 不可连接，
+// 外部 orchestrator 据此识别「本卡不可用于真实发现」。见 [DESIGN-A2A-002]。
+const A2A_CARD_FALLBACK_URL = 'http://127.0.0.1:0';
 
 /**
  * Discover the daemon API URL from runtime state.
@@ -88,12 +95,22 @@ const BACKEND_PORT = parseInt(process.env.PORT || '3000', 10);
 // 四端配置同步客户端用此值拼接后端 URL, 避免硬编码。
 const BACKEND_HOST = process.env.BACKEND_HOST || '127.0.0.1';
 
+// 协作 bridge server 默认端口。单一真源: bridgeServer.js 与 bridgeUrlHint.js 都从此导入,
+// 不再各自硬编码 9222。env BRIDGE_PORT 可覆盖。
+const BRIDGE_DEFAULT_PORT = parseInt(process.env.BRIDGE_PORT || '9222', 10);
+
 // ── Cross-platform launcher (crossLauncher.js) local dev ports ───────────────
 // Web/mobile frontend dev-server ports. Env-overridable so a port conflict is a
 // single env change, not a code edit. crossLauncher.js is the ONLY consumer that
 // should reference these — no other module may re-hardcode 8090/5173.
 // AI_FRONTEND_PORT mirrors apps/ai-frontend/vite.config.js (same env, same default).
 const WEB_FRONTEND_PORT = parseInt(process.env.AI_FRONTEND_PORT || '8090', 10);
+// Legacy: dev-server port of the old `apps/khy-mobile` Capacitor shell. The live
+// mobile client is the Flutter app `apps/khy-os-client-app`, which is a native
+// process with no dev-server port, so crossLauncher.js no longer reads this.
+// Kept as the single source of truth for the KHY_MOBILE_PORT env so a future
+// Capacitor shell has one place to read from; do not wire it back into a
+// "mobile" status check — that would report a port no process ever opens.
 const MOBILE_FRONTEND_PORT = parseInt(process.env.KHY_MOBILE_PORT || '5173', 10);
 
 // ARCH-074: ai-backend listen 绑定的 host。默认 '0.0.0.0'（Node express 默认行为），
@@ -114,6 +131,17 @@ const DEEPSEEK_BASE_URL = process.env.KHY_DEEPSEEK_BASE_URL || 'https://api.deep
 // Local Ollama OpenAI-compatible endpoint: derived from OLLAMA_HOST so the host
 // is defined once; env override wins when a fully custom URL is needed.
 const OLLAMA_OPENAI_BASE_URL = process.env.KHY_OLLAMA_OPENAI_BASE_URL || `${OLLAMA_HOST}/v1`;
+
+// ── OpenCode Zen free-tier endpoints (dynamicFreeModelService / zenGatekeeper) ──
+// Literal defaults live ONLY here (Zero Hardcoding). Both the free-model catalog
+// fetch and the chat gatekeeper headers read these so a mirror is one env edit.
+// ZEN_BASE_URL is the OpenAI-compatible chat root (…/zen/v1); the models list is
+// derived as `${ZEN_BASE_URL}/models`.
+const ZEN_BASE_URL = process.env.KHY_ZEN_BASE_URL || 'https://opencode.ai/zen/v1';
+// Client fingerprint the free gate expects (mirrors OpenCode Installation.USER_AGENT
+// shape: opencode/<channel>/<version>/<client>). env override for UA drift.
+const OPENCODE_USER_AGENT =
+  process.env.KHY_OPENCODE_USER_AGENT || 'opencode/latest/1.18.27/cli';
 
 // Redis gateway key prefix (shared across all gateway Redis keys)
 const REDIS_KEY_PREFIX = process.env.REDIS_KEY_PREFIX || 'khy:gw:';
@@ -375,6 +403,28 @@ const API_KEY_POOL = Object.freeze({
   MAX_RETRY_AFTER_MS: _poolInt(process.env.KHY_API_KEY_POOL_MAX_RETRY_AFTER_MS, 600000, 1000),
 });
 
+// ── CPA (CLIProxyAPI) 多账号池参数单一真源（services/domain/cpa/cpaKeyPool.js） ──
+// 账号是 CLI 订阅配额（日/周窗口），冷却默认比 key 池更保守（60s 起步，
+// 封顶 1h）——一次 429 后频繁重打同一账号会加速配额耗尽。env 可覆盖。
+const _cpaInt = (raw, fallback, min) => {
+  const n = parseInt(String(raw ?? '').trim(), 10);
+  return Number.isFinite(n) && n >= min ? n : fallback;
+};
+const CPA_KEY_POOL = Object.freeze({
+  BASE_COOLDOWN_MS: _cpaInt(process.env.KHY_CPA_POOL_BASE_COOLDOWN_MS, 60000, 1000),
+  MAX_COOLDOWN_MS: _cpaInt(process.env.KHY_CPA_POOL_MAX_COOLDOWN_MS, 3600000, 1000),
+  MAX_BACKOFF_LEVEL: _cpaInt(process.env.KHY_CPA_POOL_MAX_BACKOFF_LEVEL, 5, 1),
+  // 服务端 Retry-After 上界（同 API_KEY_POOL 夹子语义：坏响应不得无限停用账号）
+  MAX_RETRY_AFTER_MS: _cpaInt(process.env.KHY_CPA_POOL_MAX_RETRY_AFTER_MS, 3600000, 1000),
+});
+
+// ── CPA 服务端口（接入层本地网关默认端口；实际端口永远经探测顺延，动态发现） ──
+const CPA_SERVICE = Object.freeze({
+  DEFAULT_PORT: _cpaInt(process.env.KHY_CPA_PORT, 8317, 1),
+  // 端口探测目标回环地址（env 可覆盖，避免字面量散落）
+  LOOPBACK_HOST: process.env.KHY_CPA_LOOPBACK_HOST || '127.0.0.1',
+});
+
 // ── Self-update sources ─────────────────────────────────────────────────────
 // Release sources and release tracks are separate concepts. Consumers select
 // sources in this fixed order while stable/preview/dev remains the track.
@@ -480,18 +530,26 @@ const exported = {
   TOGETHER_BASE_URL,
   DEEPSEEK_BASE_URL,
   OLLAMA_OPENAI_BASE_URL,
+  // OpenCode Zen free-tier SSOT (dynamicFreeModelService + zenGatekeeper)
+  ZEN_BASE_URL,
+  OPENCODE_USER_AGENT,
   // Cloud endpoint single source of truth
   CLOUD_DEFAULT_ENDPOINT,
   CLOUD_FALLBACK_ENDPOINTS,
   TELEMETRY_DEFAULT_ENDPOINT,
   CLOUD_DEFAULT_HOST,
   HTTP_REFERER,
+  FEEDBACK_URL,
   // Local AI backend default
   AI_BACKEND_DEFAULT_PORT,
   AI_BACKEND_DEFAULT_URL,
+  // A2A agent-card placeholder url (agentCardSpec.js / wellKnown.js)
+  A2A_CARD_FALLBACK_URL,
   // Cross-platform launcher local dev ports (crossLauncher.js)
   WEB_FRONTEND_PORT,
   MOBILE_FRONTEND_PORT,
+  // Collaboration bridge server default port (bridgeServer.js / bridgeUrlHint.js)
+  BRIDGE_DEFAULT_PORT,
   // Portable copy root single source of truth (khy portable sync)
   PORTABLE_ROOT_DEFAULT,
   // Geolocation single source of truth (GetLocation tool)
@@ -545,6 +603,9 @@ const exported = {
   COLD_EXPORT,
   // API key 池冷却/退避单一真源(services/apiKeyPool.js)
   API_KEY_POOL,
+  // CPA 多账号池冷却/退避 + 服务端口单一真源(services/domain/cpa/)
+  CPA_KEY_POOL,
+  CPA_SERVICE,
   UPDATE,
   PAYLOAD,
   // Observability thresholds SSOT (slow-request alerting + CPU profiling).

@@ -8,6 +8,7 @@
  * <tool_call> 文本语法」—— 它于是只用散文说「我先用 WebSearch 搜索」而一个工具都不调。
  */
 const { capabilityModelKey } = require('../../../src/services/gateway/capabilityModelKey');
+const assert = require('node:assert');
 describe('capabilityModelKey — 折叠成裸模型名', () => {
 });
 describe('漂移断言 — 与 apiAdapter.parseProviderModel 同源', () => {

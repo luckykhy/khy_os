@@ -1,8 +1,8 @@
 'use strict';
 /**
- * khySettingsLayering.test.js â€?layered settings resolution (Claude Code aligned).
+ * khySettingsLayering.test.js â€” layered settings resolution (Claude Code aligned).
  *
- * Precedence LOWESTâ†’HIGHEST: user â†?project-shared â†?project-local â†?managed.
+ * Precedence LOWESTâ†’HIGHEST: user ï¿½?project-shared ï¿½?project-local ï¿½?managed.
  * Managed is highest by design: an enterprise policy is not overridable by user
  * or project files. Writes target the user layer only and must never flatten
  * another layer's keys into the user file.
@@ -12,28 +12,35 @@
  * KHY_MANAGED_SETTINGS.
  */
 const fs = require('fs');
+const assert = require('node:assert');
 const os = require('os');
 const path = require('path');
 function freshModule() {
   delete require.cache[require.resolve('../../src/cli/repl/khySettings')];
   return require('../../src/cli/repl/khySettings');
 }
-describe('khySettings â€?layered resolution', () => {
+
+describe('Khy Settings Layering', () => {
+  // merged from describe: khySettings ï¿½?layered resolution
   let tmp;
   let prevHome;
+  let prevUserprofile;
   let prevManaged;
   let projectCwd;
   beforeEach(() => {
     tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-settings-'));
     prevHome = process.env.HOME;
+    prevUserprofile = process.env.USERPROFILE;
     prevManaged = process.env.KHY_MANAGED_SETTINGS;
     process.env.HOME = path.join(tmp, 'home');
+    if (prevUserprofile !== undefined) process.env.USERPROFILE = process.env.HOME;
     fs.mkdirSync(path.join(tmp, 'home', '.khy'), { recursive: true });
     projectCwd = path.join(tmp, 'project');
     fs.mkdirSync(path.join(projectCwd, '.khy'), { recursive: true });
   });
   afterEach(() => {
     if (prevHome === undefined) delete process.env.HOME; else process.env.HOME = prevHome;
+    if (prevUserprofile === undefined) delete process.env.USERPROFILE; else process.env.USERPROFILE = prevUserprofile;
     if (prevManaged === undefined) delete process.env.KHY_MANAGED_SETTINGS; else process.env.KHY_MANAGED_SETTINGS = prevManaged;
     try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* ignore */ }
   });
@@ -45,9 +52,6 @@ describe('khySettings â€?layered resolution', () => {
     process.env.KHY_MANAGED_SETTINGS = p;
     fs.writeFileSync(p, JSON.stringify(obj));
   };
-});
-
-describe('Khy Settings Layering', () => {
   test('user-only is byte-equivalent to the legacy single-file read', () => {
         const k = freshModule();
         writeUser({ theme: 'dark', verbose: true });
@@ -64,7 +68,7 @@ describe('Khy Settings Layering', () => {
         expect(merged.model).toBe('sonnet');
   });
 
-  test('managed layer is highest precedence â€?not overridable by user/project', () => {
+  test('managed layer is highest precedence ï¿½?not overridable by user/project', () => {
         const k = freshModule();
         writeUser({ telemetry: true });
         writeShared({ telemetry: true });

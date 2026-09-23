@@ -1,5 +1,11 @@
 'use strict';
+/**
+ * jest suite: assert is NOT a global in jest, so import it explicitly.
+ * The first (empty) describe block below is historical and intentionally
+ * kept as a no-op anchor.
+ */
 const fs = require('fs');
+const assert = require('node:assert');
 const os = require('os');
 const path = require('path');
 describe('on-demand prompt sections', () => {
@@ -58,16 +64,18 @@ describe('Prompt On Demand Sections', () => {
           enabledTools,
         }));
     
-        expect(activeIds.has('scope_minimization').toBeTruthy());
-        expect(activeIds.has('planning_verification').toBeTruthy());
-        expect(activeIds.has('task_progress_management').toBeTruthy());
-        expect(activeIds.has('error_handling_fallback').toBeTruthy());
-        expect(activeIds.has('file_operations').toBeTruthy());
-        expect(activeIds.has('command_execution').toBeTruthy());
-        expect(activeIds.has('search_exploration').toBeTruthy());
-        expect(activeIds.has('response_formatting').toBeTruthy());
-        expect(!activeIds.has('feature_access_proxy_boundary').toBeTruthy());
-        expect(!activeIds.has('multi_agent_collaboration').toBeTruthy());
+        expect(activeIds.has('scope_minimization')).toBe(true);
+        expect(activeIds.has('planning_verification')).toBe(true);
+        expect(activeIds.has('task_progress_management')).toBe(true);
+        expect(activeIds.has('error_handling_fallback')).toBe(true);
+        expect(activeIds.has('file_operations')).toBe(true);
+        expect(activeIds.has('command_execution')).toBe(true);
+        expect(activeIds.has('search_exploration')).toBe(true);
+          'codebase_analysis',
+          'tool_discovery',
+        expect(activeIds.has('response_formatting')).toBe(true);
+        expect(activeIds.has('feature_access_proxy_boundary')).toBe(false);
+        expect(activeIds.has('multi_agent_collaboration')).toBe(false);
     
         const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-prompt-capsule-'));
         try {
@@ -111,9 +119,9 @@ describe('Prompt On Demand Sections', () => {
           enabledTools,
         }));
     
-        expect(activeIds.has('feature_access_proxy_boundary').toBeTruthy());
-        expect(!activeIds.has('command_execution').toBeTruthy());
-        expect(!activeIds.has('git_operations').toBeTruthy());
+        expect(activeIds.has('feature_access_proxy_boundary')).toBe(true);
+        expect(activeIds.has('command_execution')).toBe(false);
+        expect(activeIds.has('git_operations')).toBe(false);
     
         const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-prompt-capsule-'));
         try {
@@ -146,8 +154,8 @@ describe('Prompt On Demand Sections', () => {
           enabledTools,
         }));
     
-        expect(activeIds.has('scope_minimization').toBeTruthy());
-        expect(activeIds.has('git_operations').toBeTruthy());
+        expect(activeIds.has('scope_minimization')).toBe(true);
+        expect(activeIds.has('git_operations')).toBe(true);
     
         const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-prompt-capsule-'));
         try {
@@ -175,7 +183,7 @@ describe('Prompt On Demand Sections', () => {
           enabledTools: ['Read', 'Edit', 'Write', 'Bash', 'Glob', 'Grep', 'Agent', 'SendMessage'],
         }));
     
-        expect(activeIds.has('multi_agent_collaboration').toBeTruthy());
+        expect(activeIds.has('multi_agent_collaboration')).toBe(true);
   });
 
   test('injects safety capsules only for risky or sensitive requests', async () => {
@@ -193,9 +201,9 @@ describe('Prompt On Demand Sections', () => {
           enabledTools,
         }));
     
-        expect(activeIds.has('action_safety').toBeTruthy());
-        expect(activeIds.has('security_permission_boundaries').toBeTruthy());
-        expect(activeIds.has('sensitive_data').toBeTruthy());
+        expect(activeIds.has('action_safety')).toBe(true);
+        expect(activeIds.has('security_permission_boundaries')).toBe(true);
+        expect(activeIds.has('sensitive_data')).toBe(true);
     
         const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-prompt-capsule-'));
         try {
@@ -252,6 +260,8 @@ describe('Prompt On Demand Sections', () => {
           'file_operations',
           'command_execution',
           'search_exploration',
+          'codebase_analysis',
+          'tool_discovery',
           'response_formatting',
           'feature_access_proxy_boundary',
           'git_operations',
@@ -270,60 +280,60 @@ describe('Prompt On Demand Sections', () => {
           taskScale: 'small',
           enabledTools,
         }));
-        expect(!marketingIds.has('action_safety').toBeTruthy());
-        expect(!marketingIds.has('security_permission_boundaries').toBeTruthy());
-        expect(!marketingIds.has('sensitive_data').toBeTruthy());
+        expect(marketingIds.has('action_safety')).toBe(false);
+        expect(marketingIds.has('security_permission_boundaries')).toBe(false);
+        expect(marketingIds.has('sensitive_data')).toBe(false);
     
         const explainIds = new Set(listOnDemandPromptSectionIds({
           userMessage: '把生产环境发布流程解释一下。',
           taskScale: 'small',
           enabledTools,
         }));
-        expect(!explainIds.has('action_safety').toBeTruthy());
-        expect(!explainIds.has('security_permission_boundaries').toBeTruthy());
-        expect(!explainIds.has('sensitive_data').toBeTruthy());
+        expect(explainIds.has('action_safety')).toBe(false);
+        expect(explainIds.has('security_permission_boundaries')).toBe(false);
+        expect(explainIds.has('sensitive_data')).toBe(false);
     
         const gitExplainIds = new Set(listOnDemandPromptSectionIds({
           userMessage: '解释一下 force push 的风险。',
           taskScale: 'small',
           enabledTools,
         }));
-        expect(gitExplainIds.has('git_operations').toBeTruthy());
-        expect(!gitExplainIds.has('action_safety').toBeTruthy());
-        expect(!gitExplainIds.has('command_execution').toBeTruthy());
+        expect(gitExplainIds.has('git_operations')).toBe(true);
+        expect(gitExplainIds.has('action_safety')).toBe(false);
+        expect(gitExplainIds.has('command_execution')).toBe(false);
     
         const resetExplainIds = new Set(listOnDemandPromptSectionIds({
           userMessage: '请把 reset --hard 的行为解释清楚。',
           taskScale: 'small',
           enabledTools,
         }));
-        expect(resetExplainIds.has('git_operations').toBeTruthy());
-        expect(!resetExplainIds.has('action_safety').toBeTruthy());
-        expect(!resetExplainIds.has('command_execution').toBeTruthy());
+        expect(resetExplainIds.has('git_operations')).toBe(true);
+        expect(resetExplainIds.has('action_safety')).toBe(false);
+        expect(resetExplainIds.has('command_execution')).toBe(false);
     
         const gitCommandExplainIds = new Set(listOnDemandPromptSectionIds({
           userMessage: '解释 git push 怎么执行。',
           taskScale: 'small',
           enabledTools,
         }));
-        expect(gitCommandExplainIds.has('git_operations').toBeTruthy());
-        expect(!gitCommandExplainIds.has('command_execution').toBeTruthy());
+        expect(gitCommandExplainIds.has('git_operations')).toBe(true);
+        expect(gitCommandExplainIds.has('command_execution')).toBe(false);
     
         const fileExplainIds = new Set(listOnDemandPromptSectionIds({
           userMessage: '解释一下 backend/src/cli/router.js 的作用。',
           taskScale: 'small',
           enabledTools,
         }));
-        expect(fileExplainIds.has('file_operations').toBeTruthy());
-        expect(!fileExplainIds.has('search_exploration').toBeTruthy());
+        expect(fileExplainIds.has('file_operations')).toBe(true);
+        expect(fileExplainIds.has('search_exploration')).toBe(false);
     
         const searchLocateIds = new Set(listOnDemandPromptSectionIds({
           userMessage: '帮我在仓库里搜索 login handler 在哪里。',
           taskScale: 'small',
           enabledTools,
         }));
-        expect(searchLocateIds.has('search_exploration').toBeTruthy());
-        expect(!searchLocateIds.has('file_operations').toBeTruthy());
+        expect(searchLocateIds.has('search_exploration')).toBe(true);
+        expect(searchLocateIds.has('file_operations')).toBe(false);
   });
 
   test('falls back to full optional section set for continuation turns', async () => {

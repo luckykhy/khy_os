@@ -20,14 +20,14 @@ const path = require('path');
 const {
   DualTrackRuntime, STATES, USER_TRACK_PROTECTED_NAMES,
 } = require('../../../src/services/dualTrack');
-const { parseModelResponse } = require('../../../src/services/dualTrack/lenientResponseParser');
-const { ActionRegistry, CorePollutionError } = require('../../../src/services/dualTrack/actionRegistry');
-const { decideFlow } = require('../../../src/services/dualTrack/degradeStateMachine');
-const { buildUnknownActionPlaceholder } = require('../../../src/services/dualTrack/unknownActionView');
-const { loadUserTrack, assertWithinUserTrack } = require('../../../src/services/dualTrack/extensionLoader');
-const { writeUserExtension, AuthorizationRequiredError } = require('../../../src/services/dualTrack/extensionWriter');
-const { planOfficialUpdate, detectBreakingChange, applyOfficialUpdate } = require('../../../src/services/dualTrack/updateGuard');
-const { CORE_ACTIONS } = require('../../../src/services/dualTrack/core/coreActions');
+const { parseModelResponse } = require('../../../src/services/domain/trajectory/dualTrack/lenientResponseParser.js');
+const { ActionRegistry, CorePollutionError } = require('../../../src/services/domain/trajectory/dualTrack/actionRegistry.js');
+const { decideFlow } = require('../../../src/services/domain/trajectory/dualTrack/degradeStateMachine.js');
+const { buildUnknownActionPlaceholder } = require('../../../src/services/domain/trajectory/dualTrack/unknownActionView.js');
+const { loadUserTrack, assertWithinUserTrack } = require('../../../src/services/domain/trajectory/dualTrack/extensionLoader.js');
+const { writeUserExtension, AuthorizationRequiredError } = require('../../../src/services/domain/trajectory/dualTrack/extensionWriter.js');
+const { planOfficialUpdate, detectBreakingChange, applyOfficialUpdate } = require('../../../src/services/domain/trajectory/dualTrack/updateGuard.js');
+const { CORE_ACTIONS } = require('../../../src/services/domain/trajectory/dualTrack/core/coreActions.js');
 
 const REPO_USER_PATCH = path.resolve(__dirname, '../../../../../user_patch');
 

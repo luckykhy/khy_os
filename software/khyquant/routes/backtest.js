@@ -57,6 +57,10 @@ router.post('/run', authMiddleware, async (req, res) => {
           signalFn: strategy.code,
           params: strategy.parameters || {}
         });
+        // Reproducibility (freqtrade-style): store the result fingerprint so a
+        // backtest row can be matched to the exact strategy code + params +
+        // data range + cost model that produced it. Persisted inside the
+        // JSON `parameters` field — no schema change required.
         await backtest.update({
           status: 'completed',
           finalCapital: result.finalCapital,
@@ -68,7 +72,12 @@ router.post('/run', authMiddleware, async (req, res) => {
           losingTrades: result.losingTrades,
           winRate: result.winRate,
           trades: result.trades,
-          parameters: { ...strategy.parameters, sharpeRatio: result.sharpeRatio }
+          parameters: {
+            ...strategy.parameters,
+            sharpeRatio: result.sharpeRatio,
+            resultFingerprint: result.fingerprint,
+            execution: result.execution,
+          }
         });
       } catch (err) {
         await backtest.update({ status: 'failed' }).catch(() => {});

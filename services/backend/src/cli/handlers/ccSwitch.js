@@ -23,7 +23,7 @@ const {
   APP_LABELS,
   PROTOCOLS,
   PROTOCOL_DEFAULT_MODELS,
-} = require('../../services/domain/collab/proactiveCollaboration/constants.js');
+} = require('../../services/domain/config/ccSwitch/constants.js');
 const store = require('../../services/domain/config/ccSwitch/store.js');
 const maskToken = require('../../utils/maskToken');
 

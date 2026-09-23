@@ -3122,8 +3122,43 @@ async function chat(userMessage, opts = {}) {
     );
     // Always surface the retry outcome (success or failure) so users don't get
     // stuck with the initial strict-preferred error after fallback was attempted.
+    //
+    // ── 诊断质量不得降级([DESIGN-ARCH-136] 第 2 期)─────────────────────────────
+    // 旧写法**无条件**用重试结果覆盖首次结果。意图(让用户看到「回退已尝试过」)
+    // 是对的,但代价是重试那轮的诊断可能**比首次更差**。2026-09-23 TUI 实测:
+    //   首次(strict=true) → CHANNEL_ABSENT_PINNED「被钉选的通道不存在或未启用」
+    //                        (可解钉、有明确下一步 —— 唯一有用的线索)
+    //   重试(strict=false) → 通道级联一条记录都没留下 → [NONE]
+    //                        + 误报「路由: 钉选 strict(...),本轮不回退」
+    // 后者覆盖前者,把线索换成了误导。正解不是删掉回退(回退本身有价值:被钉通道
+    // 死了就该切别的),而是「**披露必留、诊断择优**」——提示照加,诊断取信息量
+    // 更大的那个。信噪排序由 cliFailureEnvelope._diagnosticRank 给出(纯叶子)。
     if (retryPass && retryPass.result) {
-      result = retryPass.result;
+      let _preferFirstDiagnosis = false;
+      try {
+        const {
+          buildCliFailureEnvelope,
+          _diagnosticRank,
+        } = require('../services/gateway/cliFailureEnvelope');
+        const _rkFirst = _diagnosticRank(buildCliFailureEnvelope({ result, env: process.env }));
+        const _rkRetry = _diagnosticRank(
+          buildCliFailureEnvelope({ result: retryPass.result, env: process.env })
+        );
+        // 任一为 -1 = 信封不可比较(门关 / 非常规形状)→ 不做择优,逐字节回退旧行为。
+        _preferFirstDiagnosis = _rkFirst >= 0 && _rkRetry >= 0 && _rkRetry < _rkFirst;
+      } catch {
+        /* fail-soft:择优不可用 → 直接覆盖,与改造前一致 */
+      }
+      if (_preferFirstDiagnosis) {
+        const _firstContent = String(result.content || '').trim();
+        const _disclosure = '（已自动放宽钉选并重试一轮，仍未成功。）';
+        result = {
+          ...result,
+          content: _firstContent ? `${_firstContent}\n\n${_disclosure}` : _disclosure,
+        };
+      } else {
+        result = retryPass.result;
+      }
       firstPass = retryPass;
     }
   }
@@ -3270,11 +3305,90 @@ async function chat(userMessage, opts = {}) {
       })
       .join('\n')
       .trim();
+    const failureDetails = _formatGatewayFailureDetails(result);
+
+    // ── RUNTIME-005 / [DESIGN-ARCH-114] CLI 错误标准化 ──────────────────────────
+    // 首屏改由结构化失败信封渲染:机器码 + 主因通道 + 路由披露 + 可执行 hint。
+    // 旧路径把 result.content(一段已含真实诊断的散文)整段当「失败信息」贴出,
+    // 机器码/通道名/钉选元原因全埋在散文里 → 用户看不出「哪条通道、什么码、
+    // 为什么没回退」。信封把这些提成首屏的确定字段,散文降级为展开层。
+    // 门 KHY_CLI_FAILURE_ENVELOPE 关(0/false/off/no)或叶子不可用 → 逐字节回退旧行为。
+    let _env0 = null;
+    try {
+      const { buildCliFailureEnvelope, renderCliFailureEnvelope } = require('../services/gateway/cliFailureEnvelope');
+      _env0 = buildCliFailureEnvelope({ result, env: process.env });
+      if (_env0 && _env0.enabled && _env0.ok === false) {
+        const head = renderCliFailureEnvelope(_env0);
+        if (head) {
+          // 第 1 屏:信封;第 2 屏:旧诊断(仍保留,只是不再抢占首屏)。
+          let msg = head;
+          if (rawFailureText) {
+            msg = `${msg}\n\n${rawFailureText}`;
+          }
+          if (failureDetails && !/真实失败原因/.test(msg)) {
+            msg = `${msg}\n\n${failureDetails}`;
+          }
+          // 推广清单(🆓 免费方案 / 💰 付费订阅 / ⚡ 快速配置)只在既有通道确实无法
+          // 给出任何可执行建议时才保留 —— 否则它是每次失败的装饰噪声,不是诊断。
+          const _keepPromo = !!_env0.showPromoPanel;
+          if (!_keepPromo && rawFailureText) {
+            msg = msg
+              .split('\n')
+              .filter((line) => {
+                const t = line.trim();
+                return (
+                  !/^🆓\s*免费方案/.test(t) &&
+                  !/^💰\s*付费订阅/.test(t) &&
+                  !/^⚡\s*快速配置/.test(t) &&
+                  !/^\s*•\s*(Kiro|Trae|Ollama|Claude|OpenAI|Cursor|智谱AI|通义千问)/.test(t) &&
+                  !/^\s*•\s*(ai config|\/proxy|khy gateway relay)/.test(t)
+                );
+              })
+              .join('\n')
+              .replace(/\n{3,}/g, '\n\n')
+              .trim();
+          }
+          const _rec = (() => {
+            try {
+              return _buildRecoveryAttemptsNote(result, result && result.errorType) || '';
+            } catch {
+              return '';
+            }
+          })();
+          if (_rec) {
+            msg += _rec;
+          }
+          const _t = _recordLatencySample({
+            success: false,
+            errorType: (result && result.errorType) || 'unknown',
+            adapter: (result && (result.adapter || result.provider)) || 'none',
+          });
+          _maybeAnnounceAutoTune(_t);
+          _uncommitOrphanTurn(_turnCommittedMsg);
+          const _gwErrType0 = (result && result.errorType) || 'unknown';
+          const _gwResumable0 = _env0.resumable === true || _isResumableError(_gwErrType0);
+          if (_gwResumable0 && !/继续/.test(msg)) {
+            msg = `${msg}\n\n${_CONTINUE_HINT}`;
+          }
+          return {
+            reply: msg,
+            commands: [],
+            errorType: _gwErrType0,
+            failureCode: _env0.code,
+            failureDetails,
+            resumable: _gwResumable0,
+            continueHint: _gwResumable0 ? _CONTINUE_HINT : null,
+          };
+        }
+      }
+    } catch {
+      /* fail-soft:信封不可用 → 落到下方旧路径,逐字节回退 */
+    }
+
     let errorMsg = '⚠️ 本次请求未能完成，AI 服务没有返回回答。';
     if (rawFailureText) {
       errorMsg = `${errorMsg}\n\n失败信息: ${rawFailureText}`;
     }
-    const failureDetails = _formatGatewayFailureDetails(result);
     if (failureDetails && !/真实失败原因/.test(errorMsg)) {
       errorMsg = `${errorMsg}\n\n${failureDetails}`;
     }

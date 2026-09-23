@@ -16,7 +16,10 @@
  *      no credentials file is written and nothing is printed by callers.
  *   2. An existing credentials file wins (idempotent: never regenerated,
  *      never overwritten).
- *   3. Otherwise generate + persist once (best-effort chmod 0o600; failures
+ *   3. Username priority on generation: env KHY_ADMIN_USERNAME >
+ *      validated first-login customUsername (khy.js prompt) > OS user name
+ *      (sanitized) > 'admin'.
+ *   4. Otherwise generate + persist once (best-effort chmod 0o600; failures
  *      on Windows are ignored).
  *
  * Path resolution MUST go through utils/dataHome.js (portable deployments
@@ -65,6 +68,23 @@ function sanitizeUsername(raw) {
 }
 
 /**
+ * Validate a user-supplied first-login custom username.
+ *
+ * Accepts 2-32 chars of [a-zA-Z0-9_-] (case preserved — same as the
+ * KHY_ADMIN_USERNAME env path, which is passed through unsanitized; the DB
+ * User.username is STRING(50) unique, so 32 leaves headroom). Returns the
+ * trimmed value, or '' when invalid so callers fall back to the next
+ * resolution rule instead of persisting a malformed account name.
+ */
+function validateCustomUsername(raw) {
+  const value = String(raw || '').trim();
+  if (!/^[a-zA-Z0-9_-]{2,32}$/.test(value)) {
+    return '';
+  }
+  return value;
+}
+
+/**
  * Read the persisted default-admin credentials (read-only, never creates).
  * @returns {{username: string, password: string}|null}
  */
@@ -88,10 +108,16 @@ function readDefaultAdminCredentials() {
 
 /**
  * Resolve the default admin username.
- * Priority: env KHY_ADMIN_USERNAME > existing credentials file > OS user name
- * (sanitized) > 'admin'.
+ * Priority: env KHY_ADMIN_USERNAME > existing credentials file > validated
+ * customUsername (first-login customization, see khy.js ensureAuthenticated)
+ * > OS user name (sanitized) > 'admin'.
+ *
+ * @param {object} [env] environment (default process.env)
+ * @param {string} [customUsername] user-picked name from the first-login
+ *   prompt; honored only when neither the env pin nor an existing
+ *   credentials file provides a name, and only after validation.
  */
-function resolveDefaultAdminUsername(env = process.env) {
+function resolveDefaultAdminUsername(env = process.env, customUsername) {
   const fromEnv = String(env.KHY_ADMIN_USERNAME || '').trim();
   if (fromEnv) {
     return fromEnv;
@@ -99,6 +125,10 @@ function resolveDefaultAdminUsername(env = process.env) {
   const fromFile = readDefaultAdminCredentials();
   if (fromFile && fromFile.username) {
     return fromFile.username;
+  }
+  const fromCustom = validateCustomUsername(customUsername);
+  if (fromCustom) {
+    return fromCustom;
   }
   let osName = '';
   try {
@@ -203,13 +233,17 @@ function generateMachinePassword() {
  * Load existing credentials or generate + persist new ones (idempotent).
  *
  * @param {object} [env] environment (default process.env)
+ * @param {string} [customUsername] first-login user-picked account name;
+ *   honored only when generating (no existing file) and neither the env pin
+ *   nor the file provides a name. Invalid values fall back to the OS-user
+ *   resolution — never persisted malformed.
  * @returns {{username: string, password: string, created: boolean,
  *            fromEnv: boolean, filePath: string|null}}
  *   - fromEnv=true → password came from env; no file was written.
  *   - filePath=null when persistence was skipped or failed (best-effort).
  */
-function loadOrCreateDefaultAdminCredentials(env = process.env) {
-  const username = resolveDefaultAdminUsername(env);
+function loadOrCreateDefaultAdminCredentials(env = process.env, customUsername) {
+  const username = resolveDefaultAdminUsername(env, customUsername);
   const envPassword = String(env.KHY_ADMIN_PASSWORD || env.DEFAULT_ADMIN_PASSWORD || '').trim();
   if (envPassword) {
     return { username, password: envPassword, created: false, fromEnv: true, filePath: null };
@@ -319,13 +353,162 @@ async function ensureDefaultAdminPassword(env = process.env) {
   }
 }
 
+/**
+ * Rename the persisted default-admin account in the credentials file.
+ *
+ * The password is preserved (only the username field + audit metadata change).
+ * Idempotency guard: renaming to the current name is a no-op error, never a
+ * silent rewrite. Synchronous, fs-only — DB syncing is a separate concern
+ * (renameDefaultAdminUserInDb) so callers can order file vs DB explicitly.
+ *
+ * @param {string} newUsername validated new name (validateCustomUsername)
+ * @returns {{ok: boolean, username?: string, previousUsername?: string,
+ *            filePath?: string|null, reason?: string}}
+ */
+function renameDefaultAdminCredentials(newUsername) {
+  const file = getDefaultAdminCredentialsPath();
+  if (!fs.existsSync(file)) {
+    return { ok: false, reason: '默认管理员凭据文件不存在' };
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return { ok: false, reason: '凭据文件读取失败（JSON 解析错误）' };
+  }
+  const oldUsername = String((parsed && parsed.username) || '').trim();
+  if (!oldUsername) {
+    return { ok: false, reason: '凭据文件缺少 username 字段' };
+  }
+  const newClean = validateCustomUsername(newUsername);
+  if (!newClean) {
+    return { ok: false, reason: '新账号名不合法（需 2-32 位字母/数字/下划线/连字符）' };
+  }
+  if (newClean === oldUsername) {
+    return { ok: false, reason: '新账号名与当前相同，无需改名' };
+  }
+  parsed.username = newClean;
+  parsed.renamedFrom = oldUsername;
+  parsed.renamedAt = new Date().toISOString();
+  try {
+    fs.writeFileSync(file, JSON.stringify(parsed, null, 2) + '\n', {
+      encoding: 'utf8',
+      mode: 0o600,
+    });
+    try {
+      fs.chmodSync(file, 0o600);
+    } catch {
+      /* Windows may not support chmod — ignore */
+    }
+  } catch (err) {
+    return { ok: false, reason: `凭据文件写入失败: ${err.message || String(err)}` };
+  }
+  return { ok: true, username: newClean, previousUsername: oldUsername, filePath: file };
+}
+
+/**
+ * Rename the default-admin User row in the shared database (fail-soft shell,
+ * hard conflict signal) — same contract shape as ensureDefaultAdminPassword:
+ * model/DB unavailable → { ok:false, reason } and NEVER throws; a username or
+ * email UNIQUE conflict → { ok:false, conflict:true } so the caller aborts
+ * the whole rename instead of leaving a half-renamed identity.
+ *
+ * The old name is pushed into user.aliases (ARCH-074 login-alias set) so
+ * existing logins/tokens keep resolving. The beforeUpdate hook only re-hashes
+ * a CHANGED password; a pure rename leaves the bcrypt hash untouched.
+ *
+ * @param {string} oldUsername current username (looked up in users)
+ * @param {string} newUsername validated new name
+ * @param {object} [options] reserved (email derivation is internal)
+ * @returns {Promise<{ok: boolean, updated?: boolean, conflict?: boolean,
+ *                    reason?: string, username?: string}>}
+ */
+async function renameDefaultAdminUserInDb(oldUsername, newUsername, options = {}) {
+  const newClean = validateCustomUsername(newUsername);
+  if (!newClean) {
+    return { ok: false, reason: '新账号名不合法（需 2-32 位字母/数字/下划线/连字符）' };
+  }
+  const oldName = String(oldUsername || '').trim();
+  if (!oldName || oldName === newClean) {
+    return { ok: false, reason: '账号名参数不完整，未做改名' };
+  }
+  let User;
+  try {
+    ({ User } = require('@khy/shared/models'));
+  } catch {
+    return { ok: false, reason: '数据库模型不可用（未安装或未同步）' };
+  }
+  // Conflict pre-check (hard signal, NOT fail-soft).
+  let conflict = null;
+  try {
+    conflict = await User.findOne({ where: { username: newClean } });
+  } catch (err) {
+    return { ok: false, reason: `数据库查询失败: ${err.message || String(err)}` };
+  }
+  if (conflict) {
+    return { ok: false, conflict: true, reason: `账号名 ${newClean} 已被占用` };
+  }
+  let user;
+  try {
+    user = await User.findOne({ where: { username: oldName } });
+  } catch (err) {
+    return { ok: false, reason: `数据库查询失败: ${err.message || String(err)}` };
+  }
+  if (!user) {
+    return { ok: false, reason: '数据库无此账号行（尚未播种或账号非数据库账号）' };
+  }
+  // Email derivation: only when the local part equals the old username
+  // (derived-style `<name>@domain`), swap the local part and keep the domain.
+  // User-set emails stay untouched. An email UNIQUE collision is a hard
+  // conflict, reported before any mutation.
+  let newEmail = null;
+  const emailStr = String(user.email || '');
+  const at = emailStr.indexOf('@');
+  if (at > 0 && emailStr.slice(0, at).toLowerCase() === oldName.toLowerCase()) {
+    newEmail = `${newClean}${emailStr.slice(at)}`;
+    if (newEmail !== emailStr) {
+      let emailConflict = null;
+      try {
+        emailConflict = await User.findOne({ where: { email: newEmail } });
+      } catch (err) {
+        return { ok: false, reason: `数据库查询失败: ${err.message || String(err)}` };
+      }
+      if (emailConflict) {
+        return { ok: false, conflict: true, reason: `邮箱 ${newEmail} 已被占用` };
+      }
+    }
+  }
+  user.username = newClean;
+  if (newEmail) {
+    user.email = newEmail;
+  }
+  const aliases = Array.isArray(user.aliases) ? [...user.aliases] : [];
+  if (!aliases.includes(oldName)) {
+    aliases.push(oldName);
+  }
+  user.aliases = aliases;
+  try {
+    await user.save();
+  } catch (err) {
+    // UNIQUE violation at save time (username/email races) → conflict signal.
+    if (err && (err.name === 'SequelizeUniqueConstraintError' || err.name === 'UniqueConstraintError')) {
+      return { ok: false, conflict: true, reason: `账号名 ${newClean} 已被占用` };
+    }
+    return { ok: false, reason: `数据库改名失败: ${err.message || String(err)}` };
+  }
+  return { ok: true, updated: true, username: newClean };
+}
+
 module.exports = {
   resolveDefaultAdminUsername,
   resolveDefaultAdminEmail,
   sanitizeUsername,
+  validateCustomUsername,
   generateMachinePassword,
   readDefaultAdminCredentials,
   loadOrCreateDefaultAdminCredentials,
+  renameDefaultAdminCredentials,
+  renameDefaultAdminUserInDb,
   getCredentialsDir,
   getDefaultAdminCredentialsPath,
   // ARCH-074

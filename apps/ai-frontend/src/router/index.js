@@ -45,11 +45,13 @@ const routes = [
     redirect: '/forgot-password',
   },
   {
-    // Legacy admin paths (pre P2.5) forward to their /admin/* homes so existing
-    // bookmarks, docs and the khy CLI's copy of the dashboard URL keep working.
-    // Component-free: vue-router chains a redirect straight into the target
-    // route, and its guard re-checks the role there — the redirect cannot be
-    // used to reach an admin page without the 403 gate.
+    // Legacy redirects. Two generations of them:
+    //   - pre P2.5 bare admin paths (/dashboard, /gateway, ...);
+    //   - pre shell-split bare admin paths (/payments, /gui-eval, ...), moved
+    //     under the /admin parent when the user/admin shells were separated
+    //     (2026-09). Bookmarks, docs and copy-pasted URLs keep working; each
+    //     target re-checks the role at the destination, so a redirect cannot be
+    //     used to reach an admin page without the 403 gate.
     path: '/dashboard',
     redirect: '/admin/overview',
   },
@@ -74,6 +76,85 @@ const routes = [
     redirect: '/keys',
   },
   {
+    path: '/assets-customers',
+    redirect: '/admin/assets-customers',
+  },
+  {
+    path: '/payments',
+    redirect: '/admin/payments',
+  },
+  {
+    path: '/usage',
+    redirect: '/admin/usage',
+  },
+  {
+    path: '/pricing',
+    redirect: '/admin/pricing',
+  },
+  {
+    path: '/monitor',
+    redirect: '/admin/monitor',
+  },
+  {
+    path: '/traffic',
+    redirect: '/admin/traffic',
+  },
+  {
+    path: '/agents',
+    redirect: '/admin/agents',
+  },
+  {
+    path: '/gui-eval',
+    redirect: '/admin/gui-eval',
+  },
+  {
+    path: '/gui-eval/tasks',
+    redirect: '/admin/gui-eval/tasks',
+  },
+  {
+    path: '/gui-eval/tasks/:id',
+    redirect: (to) => `/admin/gui-eval/tasks/${to.params.id}`,
+  },
+  {
+    path: '/gui-eval/runs',
+    redirect: '/admin/gui-eval/runs',
+  },
+  {
+    path: '/gui-eval/runs/:id',
+    redirect: (to) => `/admin/gui-eval/runs/${to.params.id}`,
+  },
+  {
+    // The 复核 button in GuiEvalRuns pushes /gui-eval/review/:id (now
+    // /admin/gui-eval/review/:id). The review UI lives inside GuiEvalRunDetail
+    // (人工复核 dialog), so the path redirects there and ?review=1 auto-opens
+    // the dialog — without this entry the button lands on the catch-all 404.
+    path: '/gui-eval/review/:id',
+    redirect: (to) => ({
+      path: `/admin/gui-eval/runs/${to.params.id}`,
+      query: { review: '1' },
+    }),
+  },
+  {
+    path: '/web-frontend-eval',
+    redirect: '/admin/web-frontend-eval',
+  },
+  {
+    path: '/web-frontend-eval/tasks',
+    redirect: '/admin/web-frontend-eval/tasks',
+  },
+  {
+    path: '/web-frontend-eval/tasks/:id',
+    redirect: (to) => `/admin/web-frontend-eval/tasks/${to.params.id}`,
+  },
+  {
+    path: '/web-frontend-eval/runs',
+    redirect: '/admin/web-frontend-eval/runs',
+  },
+  {
+    path: '/web-frontend-eval/runs/:id',
+    redirect: (to) => `/admin/web-frontend-eval/runs/${to.params.id}`,
+  },
+  {
     // Declared before the /admin/channels route so exact '/admin/channel-apis'
     // is caught here rather than being read as a detail path with id = 'new'.
     path: '/admin/channel-apis',
@@ -84,6 +165,11 @@ const routes = [
     redirect: (to) => `/admin/channels/${to.params.id}`,
   },
   {
+    path: '/bridge-channels',
+    redirect: '/admin/bridge',
+  },
+  {
+    // 用户中心外壳 — NAV 的「用户中心」组在这里渲染。
     path: '/',
     component: viewLoaders['/'],
     redirect: '/home',
@@ -93,79 +179,6 @@ const routes = [
         path: 'home',
         name: 'UserHome',
         component: viewLoaders['/home'],
-      },
-      {
-        // /admin/* prefix replaces the bare admin paths (DESIGN-ARCH-080 P2.5).
-        // The pages still render inside this AuthenticatedLayout — the prefix
-        // namespaces the URL, it does not spawn a second shell.
-        path: 'admin/overview',
-        name: 'AIDashboard',
-        component: viewLoaders['/admin/overview'],
-      },
-      {
-        path: 'admin/models',
-        name: 'AIGateway',
-        component: viewLoaders['/admin/models'],
-      },
-      {
-        path: 'bridge-channels',
-        name: 'BridgeChannels',
-        component: viewLoaders['/bridge-channels'],
-      },
-      {
-        // Nested under /admin/settings but declared as its own sibling route:
-        // Settings.vue renders six tabs and owns no <router-view>, so a child
-        // route would render into a hole. detectRouterBase() only inspects the
-        // first /admin/<seg> segment, so 'settings' here and in /admin/settings
-        // dedupe to one excluded segment.
-        path: 'admin/settings/wx',
-        name: 'WxBinding',
-        component: viewLoaders['/admin/settings/wx'],
-      },
-      {
-        path: 'admin/accounts',
-        name: 'AccountPool',
-        component: viewLoaders['/admin/accounts'],
-      },
-      {
-        path: 'assets-customers',
-        name: 'AIAssetsCustomers',
-        component: viewLoaders['/assets-customers'],
-      },
-      {
-        path: 'payments',
-        name: 'AIPayments',
-        component: viewLoaders['/payments'],
-      },
-      {
-        path: 'usage',
-        name: 'AIUsageLogs',
-        component: viewLoaders['/usage'],
-      },
-      {
-        path: 'pricing',
-        name: 'AIPricing',
-        component: viewLoaders['/pricing'],
-      },
-      {
-        path: 'monitor',
-        name: 'AIMonitor',
-        component: viewLoaders['/monitor'],
-      },
-      {
-        path: 'traffic',
-        name: 'TrafficMonitor',
-        component: viewLoaders['/traffic'],
-      },
-      {
-        path: 'admin/settings',
-        name: 'AISettings',
-        component: viewLoaders['/admin/settings'],
-      },
-      {
-        path: 'agents',
-        name: 'AgentDashboard',
-        component: viewLoaders['/agents'],
       },
       {
         path: 'chat',
@@ -200,8 +213,7 @@ const routes = [
       },
       {
         // Per-user (multi-tenant) gateway — auth only, NO requiresAdmin. Lives
-        // at the bare /keys (not /admin/*): it is the user's own keys, so it is
-        // the /admin/models twin rather than a sub-page of it.
+        // at the bare /keys: it is the user's own keys, the /admin/models twin.
         path: 'keys',
         name: 'MyGateway',
         component: viewLoaders['/keys'],
@@ -250,75 +262,181 @@ const routes = [
         name: 'Proxies',
         component: viewLoaders['/proxies'],
       },
+    ],
+  },
+  {
+    // 管理控制台外壳 — NAV 的「管理控制台」组在这里渲染，与用户中心是两个独立
+    // 外壳（views/AdminLayout.vue vs views/Layout.vue）。整个 /admin 子树由
+    // isAdminPath() 盖 requiresAdmin，普通用户在路由守卫处被弹到 /403。
+    path: '/admin',
+    component: viewLoaders['/admin'],
+    redirect: '/admin/overview',
+    meta: { requiresAuth: true },
+    children: [
       {
-        // GUI Agent 评测平台 (admin only)
+        path: 'overview',
+        name: 'AIDashboard',
+        component: viewLoaders['/admin/overview'],
+      },
+      {
+        path: 'models',
+        name: 'AIGateway',
+        component: viewLoaders['/admin/models'],
+      },
+      {
+        // Bridge Token pool for Claude/Codex/Kiro relays. Kept as its own page
+        // rather than folded into /admin/channels: it talks to
+        // /api/ai-gateway/* (proxied to ai-backend) while ChannelApis talks to
+        // /api/channel-apis/* (local Express registry) — different backends and
+        // different domains, so one merged file would be two unrelated services
+        // in a single component.
+        path: 'bridge',
+        name: 'BridgeChannels',
+        component: viewLoaders['/admin/bridge'],
+      },
+      {
+        // Nested under /admin/settings but declared as its own sibling route:
+        // Settings.vue renders six tabs and owns no <router-view>, so a child
+        // route would render into a hole. detectRouterBase() only inspects the
+        // first /admin/<seg> segment, so 'settings' here and in /admin/settings
+        // dedupe to one excluded segment.
+        path: 'settings/wx',
+        name: 'WxBinding',
+        component: viewLoaders['/admin/settings/wx'],
+      },
+      {
+        path: 'settings',
+        name: 'AISettings',
+        component: viewLoaders['/admin/settings'],
+      },
+      {
+        path: 'accounts',
+        name: 'AccountPool',
+        component: viewLoaders['/admin/accounts'],
+      },
+      {
+        path: 'assets-customers',
+        name: 'AIAssetsCustomers',
+        component: viewLoaders['/admin/assets-customers'],
+      },
+      {
+        path: 'payments',
+        name: 'AIPayments',
+        component: viewLoaders['/admin/payments'],
+      },
+      {
+        path: 'usage',
+        name: 'AIUsageLogs',
+        component: viewLoaders['/admin/usage'],
+      },
+      {
+        path: 'pricing',
+        name: 'AIPricing',
+        component: viewLoaders['/admin/pricing'],
+      },
+      {
+        path: 'monitor',
+        name: 'AIMonitor',
+        component: viewLoaders['/admin/monitor'],
+      },
+      {
+        // 大型任务看板：只读聚合 + 暂停/恢复/取消。放在 admin 组是因为
+        // 数据源 largeTaskRuntimeStore 是全局的（含平台后台任务），不属于单个用户。
+        path: 'tasks',
+        name: 'AdminTaskBoard',
+        component: viewLoaders['/admin/tasks'],
+      },
+      {
+        path: 'traffic',
+        name: 'TrafficMonitor',
+        component: viewLoaders['/admin/traffic'],
+      },
+      {
+        path: 'agents',
+        name: 'AgentDashboard',
+        component: viewLoaders['/admin/agents'],
+      },
+      {
+        // GUI Agent 评测平台 + 它的任务/运行下钻页（admin only）。
         path: 'gui-eval',
         name: 'GuiEvalDashboard',
-        component: viewLoaders['/gui-eval'],
+        component: viewLoaders['/admin/gui-eval'],
       },
       {
         path: 'gui-eval/tasks',
         name: 'GuiEvalTasks',
-        component: viewLoaders['/gui-eval/tasks'],
+        component: viewLoaders['/admin/gui-eval/tasks'],
       },
       {
         path: 'gui-eval/tasks/:id',
         name: 'GuiEvalTaskEditor',
-        component: viewLoaders['/gui-eval/tasks/:id'],
+        component: viewLoaders['/admin/gui-eval/tasks/:id'],
       },
       {
         path: 'gui-eval/runs',
         name: 'GuiEvalRuns',
-        component: viewLoaders['/gui-eval/runs'],
+        component: viewLoaders['/admin/gui-eval/runs'],
       },
       {
         path: 'gui-eval/runs/:id',
         name: 'GuiEvalRunDetail',
-        component: viewLoaders['/gui-eval/runs/:id'],
+        component: viewLoaders['/admin/gui-eval/runs/:id'],
       },
       {
+        // The 复核 button in GuiEvalRuns pushes /admin/gui-eval/review/:id. The
+        // review UI lives inside GuiEvalRunDetail (人工复核 dialog), so the path
+        // redirects there and ?review=1 auto-opens the dialog — without this
+        // entry the button lands on the catch-all NotFound page.
+        path: 'gui-eval/review/:id',
+        redirect: (to) => ({
+          path: `/admin/gui-eval/runs/${to.params.id}`,
+          query: { review: '1' },
+        }),
+      },
+      {
+        // 2D/3D Web 前端轨迹数据标注平台 + 任务/运行下钻页（admin only）。
         path: 'web-frontend-eval',
         name: 'WebFrontendEvalDashboard',
-        component: viewLoaders['/web-frontend-eval'],
+        component: viewLoaders['/admin/web-frontend-eval'],
       },
       {
         path: 'web-frontend-eval/tasks',
         name: 'WebFrontendEvalTasks',
-        component: viewLoaders['/web-frontend-eval/tasks'],
+        component: viewLoaders['/admin/web-frontend-eval/tasks'],
       },
       {
         path: 'web-frontend-eval/tasks/:id',
         name: 'WebFrontendEvalTaskEditor',
-        component: viewLoaders['/web-frontend-eval/tasks/:id'],
+        component: viewLoaders['/admin/web-frontend-eval/tasks/:id'],
       },
       {
         path: 'web-frontend-eval/runs',
         name: 'WebFrontendEvalRuns',
-        component: viewLoaders['/web-frontend-eval/runs'],
+        component: viewLoaders['/admin/web-frontend-eval/runs'],
       },
       {
         path: 'web-frontend-eval/runs/:id',
         name: 'WebFrontendEvalRunDetail',
-        component: viewLoaders['/web-frontend-eval/runs/:id'],
+        component: viewLoaders['/admin/web-frontend-eval/runs/:id'],
       },
       {
         // 渠道 API 文档：各 AI 渠道端点 + 加密 Key + Agent 配置指南（admin only）。
         // /admin/* 前缀与 detectRouterBase() 的 /admin/<seg> 部署基址启发式共存：
         // 该函数从本路由表派生需排除的段，新增 /admin/xxx 路由无需额外登记。
         // /admin/channels/:id 同时承接 /admin/channels/new（id === 'new'）。
-        path: 'admin/channels',
+        path: 'channels',
         name: 'ChannelApis',
         component: viewLoaders['/admin/channels'],
       },
       {
-        path: 'admin/channels/:id',
+        path: 'channels/:id',
         name: 'ChannelApiEditor',
         component: viewLoaders['/admin/channels/:id'],
       },
     ],
   },
   {
-    // Markdown 工作台 — 独立顶层挂载 Layout 外壳，meta.requiresAuth:false 使其
+    // Markdown 工作台 — 独立顶层挂载用户外壳，meta.requiresAuth:false 使其
     // 在未登录时也可经外壳访问（不分割的关键）。守卫用 to.matched.some(...) 判定，
     // 故该链上无 requiresAuth:true 记录 → 匿名访问不会 401 跳 login。已登录用户点
     // 同一菜单项同样命中此路由，两类用户 UI 统一。浏览器内编辑零后端；服务器文件
@@ -364,28 +482,23 @@ const routes = [
   },
 ];
 
-// Admin access is declared in NAV, not repeated in this table. Adding a page to
-// NAV's admin group guards it here automatically, so a new page is one edit,
-// not two. Everything nested under an admin entry (its task/run drill-downs)
-// inherits the gate by path prefix.
+// Admin access is declared in NAV, not repeated in this table. Since the shell
+// split, every admin page also physically lives under the /admin parent route,
+// so the namespace itself is the gate — anything under /admin/ is admin, and
+// ADMIN_NAV_PATHS stays as a drift check in case a future NAV entry ever grows
+// outside the namespace.
 const ADMIN_NAV_PATHS = NAV.filter(
   (group) => (group.requiredRole ?? ROLE.USER) >= ROLE.ADMIN
 ).flatMap((group) => group.items.map((item) => item.path));
 
-// Admin-only detail routes that are deliberately not sidebar entries — reached by
-// drilling into a list page, so NAV should not list them. Declared here once;
-// this plus NAV are the only two places that decide admin access.
-const EXTRA_ADMIN_PATHS = [
-  '/agents',
-  '/traffic',
-];
+const ADMIN_NAMESPACE = '/admin';
 
 function isAdminPath(absPath) {
-  return (
-    EXTRA_ADMIN_PATHS.includes(absPath) ||
-    ADMIN_NAV_PATHS.some(
-      (p) => absPath === p || absPath.startsWith(`${p}/`)
-    )
+  if (absPath === ADMIN_NAMESPACE || absPath.startsWith(`${ADMIN_NAMESPACE}/`)) {
+    return true;
+  }
+  return ADMIN_NAV_PATHS.some(
+    (p) => absPath === p || absPath.startsWith(`${p}/`)
   );
 }
 

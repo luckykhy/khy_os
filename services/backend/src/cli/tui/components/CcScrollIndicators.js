@@ -12,7 +12,7 @@
  */
 
 const React = require('react');
-const { Text, Box } = require('../inkRuntime').get();
+const inkRuntime = require('../inkRuntime');
 const { CC_COLORS } = require('../theme/ccTheme');
 
 const ELLIPSIS = '⋯';
@@ -24,15 +24,16 @@ function CcScrollIndicators({
   above = 0,    // 上方隐藏行数
   below = 0,    // 下方隐藏行数
 }) {
+  const { Text, Box } = inkRuntime.get();
   if (above <= 0 && below <= 0) return null;
 
   return (
     React.createElement(Box, { flexDirection: 'column' },
       above > 0
-        ? React.createElement(Text, { color: CC_COLORS.dimColor }, ELLIPSIS + ' (' + above + ' above)')
+        ? React.createElement(Text, { key: 'above', color: CC_COLORS.dimColor }, ELLIPSIS + ' (' + above + ' above)')
         : null,
       below > 0
-        ? React.createElement(Text, { color: CC_COLORS.dimColor }, ELLIPSIS + ' (' + below + ' below)')
+        ? React.createElement(Text, { key: 'below', color: CC_COLORS.dimColor }, ELLIPSIS + ' (' + below + ' below)')
         : null,
     )
   );
@@ -43,6 +44,7 @@ function CcScrollIndicators({
  */
 function CcScrollHint({ direction, count }) {
   if (count <= 0) return null;
+  const { Text } = inkRuntime.get();
 
   const label = direction === 'up' ? `${count} above` : `${count} below`;
 

@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-131] 报错一键交修闭环方案.md -->
+<title>[DESIGN-ARCH-131] 报错一键交修闭环方案 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-131] 报错一键交修闭环方案</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-131] 报错一键交修闭环方案</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-131-报错一键交修闭环方案">[DESIGN-ARCH-131] 报错一键交修闭环方案</a></li><li class="lvl-2"><a href="#0-一句话">0. 一句话</a></li><li class="lvl-2"><a href="#1-现状证据-引真实文件与常量">1. 现状证据（引真实文件与常量）</a></li><li class="lvl-3"><a href="#1-1-已有的一半-错误-被结构化-了-但没地方去">1.1 已有的一半：错误「被结构化」了，但没地方去</a></li><li class="lvl-3"><a href="#1-2-已有的另一半-三模态契约在了-但没有生产者">1.2 已有的另一半：三模态契约在了，但没有生产者</a></li><li class="lvl-3"><a href="#1-3-最关键的一条实证-存证目录-零生产写入">1.3 ★ 最关键的一条实证：存证目录「零生产写入」</a></li><li class="lvl-3"><a href="#1-4-端侧能力缺口-tui-侧">1.4 端侧能力缺口（TUI 侧）</a></li><li class="lvl-2"><a href="#2-设计公理-不可让渡">2. 设计公理（不可让渡）</a></li><li class="lvl-2"><a href="#3-与既有机制的边界-不重复造">3. 与既有机制的边界（不重复造）</a></li><li class="lvl-2"><a href="#4-整体流程-五环节">4. 整体流程（五环节）</a></li><li class="lvl-2"><a href="#5-各环节的输入-输出">5. 各环节的输入 / 输出</a></li><li class="lvl-3"><a href="#5-1-环节-2-反馈入口">5.1 环节 [2] 反馈入口</a></li><li class="lvl-3"><a href="#5-2-环节-3-交修单-repairticket">5.2 环节 [3] 交修单（RepairTicket）</a></li><li class="lvl-3"><a href="#5-3-环节-4-agent-修复">5.3 环节 [4] Agent 修复</a></li><li class="lvl-3"><a href="#5-4-环节-5-迭代与验证">5.4 环节 [5] 迭代与验证</a></li><li class="lvl-2"><a href="#6-错误信息的传递格式与内容">6. 错误信息的传递格式与内容</a></li><li class="lvl-3"><a href="#6-1-线上格式-沿用既有-零改动">6.1 线上格式（沿用既有，零改动）</a></li><li class="lvl-3"><a href="#6-2-5-5-契约可行性实证-逐字段回真源核对">6.2 §5.5 契约可行性实证（逐字段回真源核对）</a></li><li class="lvl-3"><a href="#6-3-repairticket-结构-本方案新增-snake-case-沿用真源">6.3 RepairTicket 结构（本方案新增，`snake_case` 沿用真源）</a></li><li class="lvl-3"><a href="#6-4-注入文本-渲染后-进-ai-上下文的那段话">6.4 注入文本（渲染后，进 AI 上下文的那段话）</a></li><li class="lvl-2"><a href="#7-落地路径-b-l2-三步-一次提交只做一步">7. 落地路径（B-L2 三步，一次提交只做一步）</a></li><li class="lvl-3"><a href="#步骤-1-标记-只加能力-不加判据-零守卫影响">步骤 1「标记」——只加能力，不加判据（零守卫影响）</a></li><li class="lvl-3"><a href="#步骤-2-迁移-接上-agent-补生产者">步骤 2「迁移」——接上 agent，补生产者</a></li><li class="lvl-3"><a href="#步骤-3-收口-接判据与验证">步骤 3「收口」——接判据与验证</a></li><li class="lvl-2"><a href="#8-迭代与验证机制-详细">8. 迭代与验证机制（详细）</a></li><li class="lvl-3"><a href="#8-1-一轮的生命周期">8.1 一轮的生命周期</a></li><li class="lvl-3"><a href="#8-2-判定为什么不能由-ai-做-a3-的落地">8.2 判定为什么不能由 AI 做（A3 的落地）</a></li><li class="lvl-3"><a href="#8-3-反例清单-每条-预期判定">8.3 反例清单（每条 → 预期判定）</a></li><li class="lvl-3"><a href="#8-4-error-code-是否可交修-映射表">8.4 `error_code` → 是否可交修（映射表）</a></li><li class="lvl-2"><a href="#9-用户端反馈交互设计">9. 用户端反馈交互设计</a></li><li class="lvl-3"><a href="#9-1-错误卡片-改造后">9.1 错误卡片（改造后）</a></li><li class="lvl-3"><a href="#9-2-交修确认-防误触-且必须告知边界">9.2 交修确认（防误触，且必须告知边界）</a></li><li class="lvl-3"><a href="#9-3-修复中-过程可见">9.3 修复中（过程可见）</a></li><li class="lvl-3"><a href="#9-4-修复完成后-对比卡片">9.4 修复完成后（对比卡片）</a></li><li class="lvl-3"><a href="#9-5-未修复-带证据进下一轮">9.5 未修复（带证据进下一轮）</a></li><li class="lvl-3"><a href="#9-6-tui-侧-同构-但降级呈现">9.6 TUI 侧（同构，但降级呈现）</a></li><li class="lvl-2"><a href="#10-未决问题-需人裁决-不代为决定">10. 未决问题（需人裁决，不代为决定）</a></li><li class="lvl-2"><a href="#11-验证与复现方式">11. 验证与复现方式</a></li><li class="lvl-3"><a href="#交付前自检">交付前自检</a></li><li class="lvl-2"><a href="#12-交付说明-必须向用户点明">12. 交付说明（必须向用户点明）</a></li><li class="lvl-2"><a href="#附录-a-一句话记住三个按钮">附录 A：一句话记住三个按钮</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-131-报错一键交修闭环方案">[DESIGN-ARCH-131] 报错一键交修闭环方案<a class="anchor" href="#design-arch-131-报错一键交修闭环方案" aria-label="锚点">#</a></h1>
+<blockquote><p>状态：设计提案（未落地）<br>落点：<code>docs/03_DESIGN_设计/DESIGN-ARCH/</code><br>关联：<code>[DESIGN-ARCH-113]</code>（三模态反馈契约）、<code>[DESIGN-ARCH-087]</code>（CC 模式微交互与反馈设计）、<br><code>[DESIGN-PROCESS-002]</code>（新机制落地四阶段）、<code>[DESIGN-ARCH-111]</code>（规则遵守保障机制）</p></blockquote>
+<h2 id="0-一句话">0. 一句话<a class="anchor" href="#0-一句话" aria-label="锚点">#</a></h2>
+<p>把「端上一条结构化错误」变成「一份可执行的修复工单」，由用户一键交办给 agent，<br>agent 按 <code>[DESIGN-ARCH-113]</code> 的 FIX 模态受约束地修，<strong>修复结果用「同一命令输出对比」自证</strong>，<br>失败则带着新证据进入下一轮，直到错误被判定解决或用户叫停。</p>
+<hr>
+<h2 id="1-现状证据-引真实文件与常量">1. 现状证据（引真实文件与常量）<a class="anchor" href="#1-现状证据-引真实文件与常量" aria-label="锚点">#</a></h2>
+<h3 id="1-1-已有的一半-错误-被结构化-了-但没地方去">1.1 已有的一半：错误「被结构化」了，但没地方去<a class="anchor" href="#1-1-已有的一半-错误-被结构化-了-但没地方去" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>环节</th><th>真源</th><th>实况</th></tr></thead><tbody><tr><td>错误码字典</td><td><code>services/backend/src/services/domain/security/failsafe/errorCodes.js</code></td><td>E01–E08 单一真源，每码带 <code>reason / suggestion / retryable / resumable / continueHint / sensitive / requiredFields</code>；<code>FALLBACK_CODE = 'E04'</code></td></tr><tr><td>强制兜底注入</td><td><code>.../failsafe/streamInjector.js</code>（264 行）</td><td><code>StreamFailSafeInjector</code>，<code>finalized</code> 幂等闸门；<code>_inject()</code> 在 <code>:117</code></td></tr><tr><td>前端归一</td><td><code>apps/ai-frontend/src/views/aiChatEventUtils.js:401</code></td><td><code>structuredErrorEvent(payload)</code> → <code>{type,text,code,category,reason,suggestion,retryable,sensitive,requestId}</code></td></tr><tr><td>挂到消息</td><td><code>apps/ai-frontend/src/views/AIChat.vue:2233</code></td><td><code>applyStructuredError()</code> → <code>msg.error = {code,category,why,how,retryable,sensitive,requestId,_trace,_traceLoading,_traceOpen}</code></td></tr><tr><td>错误卡片</td><td><code>apps/ai-frontend/src/views/AIChat.vue:485–560</code></td><td><code>⚠ {{category}} [{{code}}]</code> + <strong>为什么</strong> + <strong>我可以怎么办</strong> + 两个按钮</td></tr><tr><td>追溯接口</td><td><code>GET /api/ai-gateway/monitor/attribution?requestId=…</code></td><td>路由在 <code>services/backend/src/services/aiManagementGatewayAdmin.js:2049</code></td></tr></tbody></table>
+<p><strong>关键事实：错误卡片只有两个动作。</strong></p>
+<pre><code class="language-html"><span class="hljs-tag">&lt;<span class="hljs-name">el-button</span> <span class="hljs-attr">v-if</span>=<span class="hljs-string">&quot;msg.error.retryable&quot;</span> @<span class="hljs-attr">click</span>=<span class="hljs-string">&quot;regenerate(msg)&quot;</span>&gt;</span>重试<span class="hljs-tag">&lt;/<span class="hljs-name">el-button</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">el-button</span> <span class="hljs-attr">v-if</span>=<span class="hljs-string">&quot;msg.error.requestId &amp;&amp; !msg.error.sensitive&quot;</span> @<span class="hljs-attr">click</span>=<span class="hljs-string">&quot;toggleTrace(msg)&quot;</span>&gt;</span>技术详情 / 追溯<span class="hljs-tag">&lt;/<span class="hljs-name">el-button</span>&gt;</span></code></pre>
+<p>而 <code>regenerate(msg)</code>（<code>AIChat.vue:2224</code>）的语义是 <strong>&quot;把同一条用户提问原样重发&quot;</strong>：</p>
+<pre><code class="language-js"><span class="hljs-keyword">const</span> text = userMsg.<span class="hljs-property">content</span> || <span class="hljs-string">&#x27;&#x27;</span>;
+msg.<span class="hljs-property">content</span> = <span class="hljs-string">&#x27;&#x27;</span>; msg.<span class="hljs-property">steps</span> = []; msg.<span class="hljs-property">model</span> = <span class="hljs-string">&#x27;&#x27;</span>; msg.<span class="hljs-property">error</span> = <span class="hljs-literal">null</span>;
+<span class="hljs-keyword">await</span> <span class="hljs-title function_">runAssistantTurn</span>(text, msg, attachmentIds);</code></pre>
+<p>⇒ <strong>重试 = 空手再试一次，错误信息本身不进上下文。</strong> 这正是本方案要补的空白。</p>
+<h3 id="1-2-已有的另一半-三模态契约在了-但没有生产者">1.2 已有的另一半：三模态契约在了，但没有生产者<a class="anchor" href="#1-2-已有的另一半-三模态契约在了-但没有生产者" aria-label="锚点">#</a></h3>
+<p><code>scripts/ci/check-agent-feedback.js</code>（629 行）实现了完整契约：<code>detectMode()</code> 纯函数（<code>:122</code>）、<br><code>EVIDENCE</code> 存证清单（<code>:162</code>）、<code>auditFiveQuestions()</code> 反形式主义（<code>:185</code>）、<br><code>docsBackedTokens()</code> 文档背书写护（<code>:245</code>）、<code>customerSpeech()</code> 客户回话文案（<code>:293</code>）。</p>
+<p>登记状态（现查真源）：</p>
+<table><thead><tr><th>规则</th><th>优先级</th><th>gate</th><th>severity</th><th>执行器</th></tr></thead><tbody><tr><td><code>RUNTIME-007</code> 修复先复现</td><td>P1</td><td>commit</td><td><strong>advisory</strong></td><td><code>scripts/ci/check-agent-feedback.js</code></td></tr><tr><td><code>RUNTIME-008</code> 新增先提问</td><td>P2</td><td>commit</td><td>advisory</td><td>同上</td></tr><tr><td><code>RUNTIME-009</code> 删除先报部位</td><td>P1</td><td>commit</td><td>advisory</td><td>同上</td></tr></tbody></table>
+<p>⇒ 三条都处于 <strong>S1 观察期</strong>（<code>gate:commit</code> + <code>severity:advisory</code>，符合 <code>[DESIGN-ARCH-111]</code> 的<br>「只记录不拦截」正确表达）。</p>
+<h3 id="1-3-最关键的一条实证-存证目录-零生产写入">1.3 ★ 最关键的一条实证：存证目录「零生产写入」<a class="anchor" href="#1-3-最关键的一条实证-存证目录-零生产写入" aria-label="锚点">#</a></h3>
+<p>契约要求把证据留在 <code>.khy/feedback/&lt;task-id&gt;/</code>：</p>
+<pre><code class="language-js"><span class="hljs-keyword">const</span> <span class="hljs-variable constant_">EVIDENCE</span> = {
+  <span class="hljs-attr">FIX</span>: [
+    { <span class="hljs-attr">file</span>: <span class="hljs-string">&#x27;complaint.md&#x27;</span>,       <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;主诉（条件 + 现象）&#x27;</span> },
+    { <span class="hljs-attr">file</span>: <span class="hljs-string">&#x27;repro-before.txt&#x27;</span>,   <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;复现原始输出（体温单）&#x27;</span> },
+    { <span class="hljs-attr">file</span>: <span class="hljs-string">&#x27;differential.md&#x27;</span>,    <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;≥2 候选病因 + 可证伪预测&#x27;</span> },
+    { <span class="hljs-attr">file</span>: <span class="hljs-string">&#x27;repro-after.txt&#x27;</span>,    <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;改后同一命令输出（复诊）&#x27;</span> },
+  ], ...
+};</code></pre>
+<p>但 §5.8 四问核验的结果是：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># ① 字段在真源吗 → 在（EVIDENCE 常量）</span>
+<span class="hljs-comment"># ② 写入函数在吗 → 只有 checker 内部自测才写（:435 fs.writeFileSync，在 scenario 分支内）</span>
+git grep -n <span class="hljs-string">&quot;khy/feedback\|evidenceDir&quot;</span> -- <span class="hljs-string">&#x27;services/**&#x27;</span> <span class="hljs-string">&#x27;scripts/**&#x27;</span> | grep -v <span class="hljs-string">&quot;/tests/&quot;</span>
+<span class="hljs-comment"># → 生产侧命中 0 处 createEvidence/writeEvidence；checker 侧全部是 readEvidence()</span></code></pre>
+<table><thead><tr><th>证据</th><th>结论</th></tr></thead><tbody><tr><td><code>readEvidence(dir, file)</code>（<code>:173</code>）</td><td>✅ 只读</td></tr><tr><td><code>fs.writeFileSync</code>（<code>:435</code>）</td><td>⚠ 仅在 <code>--scenario=</code> 自测分支内</td></tr><tr><td>生产调用点（服务/CLI/routes 调它写存证）</td><td>❌ <strong>0 处</strong></td></tr></tbody></table>
+<p>⇒ <strong>契约把「写存证」的责任完全留给 AI 的自觉，没有任何机器通道帮它落盘。</strong><br>结果是：<code>fix-without-repro</code> 这条 error 判据在真实运行时<strong>永远命不中</strong>——因为没人写，也没人查。<br>（这正是 <code>[DESIGN-ARCH-113]</code> 自己都点出的「存证靠自觉」的漏洞。）</p>
+<h3 id="1-4-端侧能力缺口-tui-侧">1.4 端侧能力缺口（TUI 侧）<a class="anchor" href="#1-4-端侧能力缺口-tui-侧" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">git grep -n <span class="hljs-string">&quot;errorCode\|error_code\|E0[1-8]&quot;</span> -- <span class="hljs-string">&#x27;services/backend/src/cli/tui/**&#x27;</span> | grep -v <span class="hljs-string">&quot;.html&quot;</span>
+<span class="hljs-comment"># → 空</span></code></pre>
+<p>TUI 侧只有自由文本 <code>push('error', tuiErrorOf(err, {action, target}))</code>（<code>ink-components/App.js</code> 多处），<br><strong>没有</strong> E01–E08 结构化呈现，也没有「交修」入口。</p>
+<hr>
+<h2 id="2-设计公理-不可让渡">2. 设计公理（不可让渡）<a class="anchor" href="#2-设计公理-不可让渡" aria-label="锚点">#</a></h2>
+<p><strong>A1 · 交修不是外发。</strong><br>「一键交修」= 把错误<strong>交给本会话的 agent</strong>，不是上传到任何远端服务。<br>沿用 <code>/feedback</code> 既有红线：<code>cli/handlers/feedback.js</code> <strong>绝不假装已提交、绝不静默外发</strong>。<br>任何新增网络写入必须由用户显式点击「上传」并展示目标地址。</p>
+<p><strong>A2 · 错误进上下文必须是「证据」而非「转述」。</strong><br>喂给 agent 的必须是<strong>原始输出 + 可复现命令</strong>，不是错误文案的摘要。<br>依据：<code>[DESIGN-ARCH-113]</code> FIX 模态第 2 条「我要看到它，不要你的转述」。</p>
+<p><strong>A3 · 修好了没有，不由 AI 自称。</strong><br>验收判据只能是<strong>客观产物</strong>：同一命令的前后输出对比（<code>repro-before.txt</code> vs <code>repro-after.txt</code>）。<br>依据：本仓既有纪律「判定/分级不接受 AI 自称」。</p>
+<p><strong>A4 · 强度梯度：事前 advisory、事中 warning、事末 error。</strong><br>过早阻断会逼 AI 谎报「已复现/已确认」（<code>[DESIGN-ARCH-113]</code> §5）。<br>本方案新增判据一律从 S1 起步。</p>
+<p><strong>A5 · 单轮交修有界，续修要用户点头。</strong><br>不许出现「agent 自旋 N 轮烧 token」。每轮结束必须给用户一个可读判定 + 一个明确选择。</p>
+<hr>
+<h2 id="3-与既有机制的边界-不重复造">3. 与既有机制的边界（不重复造）<a class="anchor" href="#3-与既有机制的边界-不重复造" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>既有件</th><th>它管什么</th><th>本方案做什么</th><th>边界</th></tr></thead><tbody><tr><td><code>failsafe/errorCodes.js</code></td><td><strong>错误分类学</strong>：把异常归到 E01–E08</td><td><strong>消费</strong>它，不改它</td><td>若发现缺码，走独立提案扩真源</td></tr><tr><td><code>failsafe/streamInjector.js</code></td><td><strong>保证错误一定送达端上</strong></td><td>复用，不改</td><td>—</td></tr><tr><td><code>AI管理网关 /monitor/attribution</code></td><td>单请求<strong>分阶段时间线</strong>下钻</td><td>复用为「<strong>技术证据</strong>」来源</td><td>只读，不写</td></tr><tr><td><code>[DESIGN-ARCH-113]</code> 三模态契约</td><td><strong>改动过程</strong>中约束 AI 行为</td><td><strong>复用</strong>其 FIX 模态，补上<strong>生产者</strong></td><td>不重复定义模态与判据</td></tr><tr><td><code>cli/handlers/feedback.js</code> <code>/feedback</code></td><td>收集环境信息 → <strong>本地草稿</strong> → 指向上游</td><td>复用其<strong>采集/脱敏</strong>逻辑</td><td>交修 ≠ 上报；两者不互相替代</td></tr><tr><td><code>routes/feedback.js</code></td><td>SaaS 工单 CRUD（admin）</td><td><strong>无关</strong></td><td>明确排除，避免误接线</td></tr><tr><td><code>traceAuditService</code></td><td>全链路审计与保留策略</td><td>复用为证据来源</td><td>遵守其脱敏与角色可见性</td></tr></tbody></table>
+<p><strong>一句话边界</strong>：既有机制解决「错误<strong>是什么</strong>」与「改动<strong>该守什么规矩</strong>」；<br>本方案解决「错误<strong>怎么变成一次受约束的修复任务</strong>」以及「修完<strong>怎么自证</strong>」。</p>
+<hr>
+<h2 id="4-整体流程-五环节">4. 整体流程（五环节）<a class="anchor" href="#4-整体流程-五环节" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">[1] 端上捕获        错误发生 → StreamFailSafeInjector 注入结构化事件
+        │            （已有，零改动）
+        ▼
+[2] 反馈入口        错误卡片新增「交给 AI 修」按钮
+        │            输入：msg.error（含 requestId / code / why / how）
+        ▼
+[3] 交修单构造      RepairTicket 组装：环境 + 错误归因 + 技术证据 + 复现命令
+        │            输出：结构化 ticket（内存对象 + 可选落盘）
+        ▼
+[4] Agent 修复      ticket 作为用户消息注入本会话；FIX 模态契约生效
+        │            产出：repro-before.txt / differential.md / 最小改动
+        ▼
+[5] 迭代与验证      同一命令前后对比 → 判定 → 未过则带新证据续修
+                     │
+                     └─ 有界：默认 1 轮，续修需用户确认</code></pre>
+<p><strong>与既有链路的咬合点</strong>：第 4 步的约束由 <code>agentFeedbackService</code> 的 <code>PrePrompt</code> 注入器提供<br>（<code>hookSystem.js:57</code> 注册，<code>builtin:AgentFeedbackInjector</code>，priority 30），<br>它已是「文本进入 AI 上下文的唯一注入点」的既有实现，<strong>本方案不新开注入通道</strong>。</p>
+<hr>
+<h2 id="5-各环节的输入-输出">5. 各环节的输入 / 输出<a class="anchor" href="#5-各环节的输入-输出" aria-label="锚点">#</a></h2>
+<h3 id="5-1-环节-2-反馈入口">5.1 环节 [2] 反馈入口<a class="anchor" href="#5-1-环节-2-反馈入口" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项</th><th>内容</th></tr></thead><tbody><tr><td><strong>输入</strong></td><td><code>msg.error = {code, category, why, how, retryable, sensitive, requestId}</code></td></tr><tr><td><strong>输出</strong></td><td><code>click → openRepairDialog(msg)</code>；或 <code>sensitive === true</code> 时<strong>不提供</strong>该按钮</td></tr><tr><td><strong>显示条件</strong></td><td><code>msg.error.code</code> 存在 <strong>且</strong> <code>!msg.error.sensitive</code></td></tr><tr><td><strong>按钮文案</strong></td><td>「交给 AI 修」（与「重试」并列，语义必须可区分）</td></tr></tbody></table>
+<p><strong>为什么 <code>sensitive</code> 要挡</strong>：E02（安全审查）/ E07（权限拦截）的 <code>sensitive = true</code>，<br>其 <code>detail</code> 与 <code>fields</code> 按 <code>errorCodes.js</code> 头部约定<strong>不得泄露命中的具体安全策略</strong>。<br>把这类错误喂给 agent 会绕开这条脱敏边界。</p>
+<p><strong>与「重试」的区别（必须让用户看懂）</strong>：</p>
+<table><thead><tr><th>按钮</th><th>语义</th><th>错误信息去向</th></tr></thead><tbody><tr><td>重试</td><td>原样再发一次</td><td>❌ 不进上下文</td></tr><tr><td><strong>交给 AI 修</strong></td><td><strong>带着错误证据请 agent 排查修复</strong></td><td>✅ 作为证据进上下文</td></tr></tbody></table>
+<h3 id="5-2-环节-3-交修单-repairticket">5.2 环节 [3] 交修单（RepairTicket）<a class="anchor" href="#5-2-环节-3-交修单-repairticket" aria-label="锚点">#</a></h3>
+<p><strong>输入</strong>：<code>msg.error</code> + 会话上下文 + 环境信息<br><strong>输出</strong>：<code>RepairTicket</code> 对象（§6 定义）</p>
+<p>组装动作分三步：</p>
+<ol><li><strong>拉技术证据</strong>：<code>GET /api/ai-gateway/monitor/attribution?requestId=&lt;id&gt;</code></li></ol>
+<p>→ <code>{ok, summary, timeline, delivery.brokenStage}</code></p>
+<ol><li><strong>采集环境</strong>：复用 <code>cli/feedbackDoc.js</code> 的既有采集口径</li></ol>
+<p>（<code>buildFeedbackDoc({version, platform})</code>，所有随环境变化的输入由薄壳注入以保证确定性）</p>
+<ol><li><strong>推导复现命令</strong>：从 <code>brokenStage</code> 反推「重放哪一步」——<ul><li><code>before_tool_call</code> ⇒ 重放模型请求（工具未调用）</li><li><code>tool_execution</code> ⇒ 重放<strong>那一次工具调用</strong>（最有价值：命令级可复现）</li><li><code>after_tool_result</code> ⇒ 重放工具 + 结果注入</li><li><code>final_conclusion</code> / <code>delivery_event_missing</code> ⇒ 重放整轮</li></ul></li></ol>
+<h3 id="5-3-环节-4-agent-修复">5.3 环节 [4] Agent 修复<a class="anchor" href="#5-3-环节-4-agent-修复" aria-label="锚点">#</a></h3>
+<p><strong>输入</strong>：RepairTicket 渲染成的一段用户消息<br><strong>输出</strong>：按 FIX 模态契约产出的四件存证</p>
+<p>存证落点（<strong>建议</strong>）：<code>.khy/feedback/&lt;ticket-id&gt;/</code>，与 <code>check-agent-feedback.js:429</code> 的<br><code>argValue('--evidence', ...)</code> 默认口径一致。</p>
+<p>⚠ <strong>落地前提</strong>：该目录在 <code>.khy/</code> 下，而 <code>.khy/</code> 被 gitignore（本机态）。<br>这不影响本方案（修复是<strong>本会话内的动作</strong>，不需要跨机同步），但<strong>必须在文档里讲明</strong>：<br>存证不随仓库分发。</p>
+<h3 id="5-4-环节-5-迭代与验证">5.4 环节 [5] 迭代与验证<a class="anchor" href="#5-4-环节-5-迭代与验证" aria-label="锚点">#</a></h3>
+<p><strong>输入</strong>：<code>repro-before.txt</code>（改前）+ <code>repro-after.txt</code>（改后）<br><strong>输出</strong>：三值判定 <code>fixed | not-fixed | inconclusive</code></p>
+<table><thead><tr><th>判定</th><th>判据（机器可判）</th><th>后续动作</th></tr></thead><tbody><tr><td><code>fixed</code></td><td>两文件内容<strong>不同</strong> 且 改后输出<strong>不含</strong>原始错误签名</td><td>展示对比，闭环结束</td></tr><tr><td><code>not-fixed</code></td><td>两文件内容<strong>相同</strong>，或改后仍含相同错误签名</td><td>带新证据进下一轮（需用户确认）</td></tr><tr><td><code>inconclusive</code></td><td>缺少任一文件，或复现命令本身无法执行</td><td><strong>不改判为成功</strong>，明示「无法判定」</td></tr></tbody></table>
+<p><strong>错误签名如何取</strong>（关键实现细节）：<br>取 <code>error_code</code> + <code>reason</code> 的字面量（二者都是<strong>固定可枚举</strong>的，见 <code>errorCodes.js</code> 头部约定），<br><strong>不用</strong> <code>detail</code>（动态、可能含时间戳/路径 ⇒ 假阴性）。</p>
+<hr>
+<h2 id="6-错误信息的传递格式与内容">6. 错误信息的传递格式与内容<a class="anchor" href="#6-错误信息的传递格式与内容" aria-label="锚点">#</a></h2>
+<h3 id="6-1-线上格式-沿用既有-零改动">6.1 线上格式（沿用既有，零改动）<a class="anchor" href="#6-1-线上格式-沿用既有-零改动" aria-label="锚点">#</a></h3>
+<p>后端 → 前端的错误事件字段<strong>已经定好</strong>，本方案不扩：</p>
+<pre><code class="language-js">{ <span class="hljs-attr">type</span>:<span class="hljs-string">&#x27;error&#x27;</span>, error_code, reason, detail, suggestion,
+  retryable, resumable, continueHint, sensitive, requestId, partial, fallback }</code></pre>
+<h3 id="6-2-5-5-契约可行性实证-逐字段回真源核对">6.2 §5.5 契约可行性实证（逐字段回真源核对）<a class="anchor" href="#6-2-5-5-契约可行性实证-逐字段回真源核对" aria-label="锚点">#</a></h3>
+<p>初稿曾想直接复用前端 <code>msg.error</code> 当交修单。<strong>逐字段核对后发现有 3 处不成立</strong>：</p>
+<table><thead><tr><th>初稿写的字段</th><th>真源实况</th><th>处置</th></tr></thead><tbody><tr><td><code>msg.error.detail</code></td><td>前端 <code>applyStructuredError</code> <strong>未接收</strong> <code>detail</code>（只取 <code>reason</code> 作 <code>why</code>）</td><td><strong>降级</strong>：从 attribution 的 timeline 取原始错误对象</td></tr><tr><td><code>msg.error.requestId</code></td><td>✅ 存在（<code>structuredErrorEvent</code> 归一，<code>AIChat.vue:2240</code>）</td><td>保留，作为拉证据的支点</td></tr><tr><td><code>msg.error.retryable</code></td><td>✅ 存在</td><td>保留（用于决定是否同时显示「重试」）</td></tr><tr><td><code>msg.error.resumable / continueHint</code></td><td>后端<strong>有</strong>，但 <code>structuredErrorEvent</code> <strong>未透传</strong></td><td><strong>需扩前端归一</strong>（见 §7 步 1）</td></tr><tr><td><code>msg.error.code / category / why / how</code></td><td>✅ 存在</td><td>保留</td></tr></tbody></table>
+<p>⇒ <strong>结论</strong>：<code>requestId</code> 是本方案<strong>唯一真正的支点字段</strong>，且<strong>已存在</strong>。<br><code>resumable</code> / <code>continueHint</code> 需补透传（这是一处<strong>新增</strong>，不是现状）。</p>
+<h3 id="6-3-repairticket-结构-本方案新增-snake-case-沿用真源">6.3 RepairTicket 结构（本方案新增，<code>snake_case</code> 沿用真源）<a class="anchor" href="#6-3-repairticket-结构-本方案新增-snake-case-沿用真源" aria-label="锚点">#</a></h3>
+<pre><code class="language-js">{
+  <span class="hljs-attr">ticket_id</span>: <span class="hljs-string">&#x27;rt-&lt;requestId 后 8 位&gt;&#x27;</span>,
+  <span class="hljs-attr">created_at</span>: <span class="hljs-string">&#x27;&lt;ISO8601&gt;&#x27;</span>,
+  <span class="hljs-attr">source</span>: { <span class="hljs-attr">kind</span>: <span class="hljs-string">&#x27;structured_error&#x27;</span>, request_id, error_code, category,
+            reason, suggestion, retryable, resumable, continue_hint, sensitive },
+  <span class="hljs-attr">env</span>:    { khy_version, platform },                    <span class="hljs-comment">// 复用 feedbackDoc 口径</span>
+  <span class="hljs-attr">trace</span>:  { broken_stage, <span class="hljs-attr">timeline</span>: [...], ok },         <span class="hljs-comment">// 复用 attribution 端点</span>
+  <span class="hljs-attr">repro</span>:  { command, expected_signature, stage },        <span class="hljs-comment">// 机器推导</span>
+  <span class="hljs-attr">evidence_dir</span>: <span class="hljs-string">&#x27;.khy/feedback/&lt;ticket_id&gt;&#x27;</span>,             <span class="hljs-comment">// 与既有默认口径一致</span>
+  <span class="hljs-attr">attempt</span>: <span class="hljs-number">1</span>,
+  <span class="hljs-attr">prior_attempts</span>: []                                     <span class="hljs-comment">// 每轮追加 {attempt, verdict, signature_after}</span>
+}</code></pre>
+<p><strong>命名纪律</strong>（§5.5 配套）：一律 <code>snake_case</code>，<strong>不在契约层做驼峰转换</strong>——<br>转换层就是第二套字段名，违反「一处真源」。</p>
+<h3 id="6-4-注入文本-渲染后-进-ai-上下文的那段话">6.4 注入文本（渲染后，进 AI 上下文的那段话）<a class="anchor" href="#6-4-注入文本-渲染后-进-ai-上下文的那段话" aria-label="锚点">#</a></h3>
+<p>按 <code>[DESIGN-ARCH-113]</code> FIX 模态，<code>check-agent-feedback.js:293</code> 的 <code>customerSpeech()</code> 已有权威文案。<br>本方案<strong>复用</strong>它的五条，不改写：</p>
+<pre><code class="language-text">【客户 · 患者】你还没量体温。
+  1. 先复述主诉：谁、在什么条件下、出现了什么现象 —— 不许直接说病因。
+  2. 跑复现命令，把**原始输出**存成 repro-before.txt。我要看到它，不要你的转述。
+  3. 列 ≥2 个候选病因，每个给一条可证伪预测：`若 &lt;病因&gt;，则 &lt;命令&gt; 应输出 &lt;期望&gt;`。
+  4. 只改能证伪病因的那一处。顺手重构 = 我要重新做一遍全套检查。
+  5. 复诊：跑同一条复现命令，把改后输出存成 repro-after.txt。</code></pre>
+<p><strong>前置的实际错误证据</strong>（这是本方案的新增部分，附在五条之前）：</p>
+<pre><code class="language-text">[错误] E04 工具执行崩溃（requestId=…）
+  reason: 工具内部抛出未捕获异常
+  断点阶段: tool_execution
+  复现命令: &lt;repro.command&gt;
+  技术证据: &lt;trace.timeline 的可读摘要&gt;</code></pre>
+<p><strong>为什么顺序是「证据在前、契约在后」</strong>：契约是<strong>稳定规则</strong>，证据是<strong>本次具体问题</strong>。<br>AI 读长文本时后段更易被引用；把稳定的行为契约放在最后，保证它不被具体证据淹没。</p>
+<hr>
+<h2 id="7-落地路径-b-l2-三步-一次提交只做一步">7. 落地路径（B-L2 三步，一次提交只做一步）<a class="anchor" href="#7-落地路径-b-l2-三步-一次提交只做一步" aria-label="锚点">#</a></h2>
+<blockquote><p>依据本 Skill §4：四件事必须<strong>成对</strong>做；<code>gate:advisory</code> 是陷阱，须用 <code>gate:commit</code> + <code>severity:advisory</code>。</p></blockquote>
+<h3 id="步骤-1-标记-只加能力-不加判据-零守卫影响">步骤 1「标记」——只加能力，不加判据（零守卫影响）<a class="anchor" href="#步骤-1-标记-只加能力-不加判据-零守卫影响" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>动作</th><th>文件</th><th>说明</th></tr></thead><tbody><tr><td>1.1</td><td>前端透传 <code>resumable</code> / <code>continueHint</code> / <code>detail</code></td><td><code>aiChatEventUtils.js:401</code> + <code>AIChat.vue:2233</code></td><td>纯增量字段</td></tr><tr><td>1.2</td><td>错误卡片加「交给 AI 修」按钮</td><td><code>AIChat.vue:485–560</code></td><td>与「重试」并列</td></tr><tr><td>1.3</td><td>新增 <code>repairTicketService</code>（构造 ticket）</td><td><code>services/backend/src/services/</code></td><td>纯函数优先，便于单测</td></tr><tr><td>1.4</td><td>新增 <code>POST /api/ai-gateway/repair/ticket</code></td><td>挂 <code>aiManagementGatewayAdmin.js</code> 路由表</td><td>只回 ticket，不触发修复</td></tr></tbody></table>
+<p><strong>验收</strong>：手工构造一个错误 → 点按钮 → 拿到 ticket JSON（含 <code>trace.broken_stage</code>）。<br><strong>必须实测</strong>：不新增任何规则时，<code>check:wiring</code> / <code>check:gov-rules</code> <strong>不应因本步变红</strong>。</p>
+<h3 id="步骤-2-迁移-接上-agent-补生产者">步骤 2「迁移」——接上 agent，补生产者<a class="anchor" href="#步骤-2-迁移-接上-agent-补生产者" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>动作</th><th>说明</th></tr></thead><tbody><tr><td>2.1</td><td>交修单渲染成用户消息并 <code>runAssistantTurn</code></td><td>复用既有轮次入口，<strong>不新开通道</strong></td></tr><tr><td>2.2</td><td>★ <strong>补存证写入通道</strong></td><td>让 agent 能真的写出 <code>.khy/feedback/&lt;id&gt;/repro-before.txt</code></td></tr><tr><td>2.3</td><td>端到端验证</td><td>见 §8</td></tr></tbody></table>
+<p><strong>2.2 是本方案的核心补齐</strong>（对应 §1.3 的实证缺口）。<br>两个候选实现方向（<strong>需人裁决，见 §10</strong>）：</p>
+<ul><li><strong>(a) 工具通道</strong>：给 agent 一个 <code>WriteEvidence</code> 工具，显式写存证；</li><li><strong>(b) 钩子通道</strong>：在 <code>PostToolUse</code> 观测到复现命令执行后自动落盘。</li></ul>
+<h3 id="步骤-3-收口-接判据与验证">步骤 3「收口」——接判据与验证<a class="anchor" href="#步骤-3-收口-接判据与验证" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>动作</th><th>说明</th></tr></thead><tbody><tr><td>3.1</td><td>三值判定实现</td><td><code>fixed / not-fixed / inconclusive</code>，纯函数</td></tr><tr><td>3.2</td><td>前端展示前后对比</td><td>复用既有 <code>chat-error-trace</code> 样式族</td></tr><tr><td>3.3</td><td>续修确认</td><td>默认 1 轮；续修需用户点「继续修」</td></tr><tr><td>3.4</td><td>新增规则（S1 起步）</td><td><code>gate:'commit'</code> + <code>severity:'advisory'</code></td></tr></tbody></table>
+<p><strong>3.4 的接线四件</strong>（缺一即红）：</p>
+<ol><li><code>package.json</code> 加 <code>check:*</code> 别名</li><li><code>docs/10_规范/registry/RULES-REGISTRY.json</code> 补条目（含 <code>nature</code>/<code>grants</code>/<code>benefit</code> 三元；</li></ol>
+<p><code>domain</code> 十域封闭枚举内选；同步 <code>meta.ruleCount</code> 与 <code>rules.length</code>）</p>
+<ol><li><code>&lt;!-- RULES-REGISTRY: ID --&gt;</code> 标记行（放在 <code>ssot</code> 首个目标文件第 3 行）</li><li><code>npm run docs:rules-cards</code> 重生成</li></ol>
+<p><strong>必做的阶段实证</strong>（否则是空接线）：</p>
+<pre><code class="language-bash">npm run rules:gate:commit 2&gt;&amp;1 | grep <span class="hljs-string">&quot;&lt;执行器名&gt;&quot;</span>
+<span class="hljs-comment"># 必须看到 action=start ... mode=commit rules=&lt;finding ids&gt;</span></code></pre>
+<hr>
+<h2 id="8-迭代与验证机制-详细">8. 迭代与验证机制（详细）<a class="anchor" href="#8-迭代与验证机制-详细" aria-label="锚点">#</a></h2>
+<h3 id="8-1-一轮的生命周期">8.1 一轮的生命周期<a class="anchor" href="#8-1-一轮的生命周期" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">ticket 注入
+   │
+   ├─ agent 复现 → 写 repro-before.txt
+   ├─ agent 列候选病因 → 写 differential.md
+   ├─ agent 改最小一处
+   └─ agent 复跑同命令 → 写 repro-after.txt
+        │
+        ▼
+   判定（纯函数，不发生在 agent 脑内）
+        │
+   ┌────┴────┬────────────┐
+   ▼         ▼            ▼
+ fixed   not-fixed   inconclusive
+   │         │            │
+ 展示对比   追加一轮     明示无法判定
+ 闭环      （需确认）    （不算成功）</code></pre>
+<h3 id="8-2-判定为什么不能由-ai-做-a3-的落地">8.2 判定为什么不能由 AI 做（A3 的落地）<a class="anchor" href="#8-2-判定为什么不能由-ai-做-a3-的落地" aria-label="锚点">#</a></h3>
+<p>AI 说「已修复」是<strong>自称</strong>，不是证据。判定必须：</p>
+<ol><li>由<strong>确定性纯函数</strong>执行，输入只有两个文件内容 + <code>expected_signature</code>；</li><li><strong>不接受</strong> AI 的任何文字断言；</li><li>缺文件时返回 <code>inconclusive</code>，<strong>绝不默认 succceed</strong>。</li></ol>
+<p>伪代码（双向判据，防 §5.7 空转断言）：</p>
+<pre><code class="language-js"><span class="hljs-keyword">function</span> <span class="hljs-title function_">judgeFix</span>(<span class="hljs-params">beforeText, afterText, signature</span>) {
+  <span class="hljs-keyword">if</span> (beforeText == <span class="hljs-literal">null</span> || afterText == <span class="hljs-literal">null</span>) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;inconclusive&#x27;</span>;
+  <span class="hljs-keyword">if</span> (beforeText === afterText) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;not-fixed&#x27;</span>;       <span class="hljs-comment">// 应拦</span>
+  <span class="hljs-keyword">if</span> (afterText.<span class="hljs-title function_">includes</span>(signature)) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;not-fixed&#x27;</span>;  <span class="hljs-comment">// 应拦</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;fixed&#x27;</span>;                                          <span class="hljs-comment">// 应放行</span>
+}
+<span class="hljs-comment">// 双向对照必须有：</span>
+<span class="hljs-comment">//   非法输入（缺文件）→ inconclusive</span>
+<span class="hljs-comment">//   合法输入（真变了且不含签名）→ fixed</span>
+<span class="hljs-comment">// 只测「应拦」的话，把函数改成恒返 &#x27;not-fixed&#x27; 也能全绿。</span></code></pre>
+<h3 id="8-3-反例清单-每条-预期判定">8.3 反例清单（每条 → 预期判定）<a class="anchor" href="#8-3-反例清单-每条-预期判定" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>反例</th><th>预期</th></tr></thead><tbody><tr><td>1</td><td>agent 只写 <code>repro-after.txt</code>，不改代码</td><td><code>not-fixed</code>（两文件相同）</td></tr><tr><td>2</td><td>agent 改了代码但没跑复现命令</td><td><code>inconclusive</code>（缺 after）</td></tr><tr><td>3</td><td>agent 顺手重构，错误确实消失</td><td><code>fixed</code>，但 <code>fix-blast-radius</code> 判据同时报 warning</td></tr><tr><td>4</td><td>错误是 E01（模型静默空响应）</td><td><strong>不应交修</strong>——模型侧问题，非代码缺陷；入口需按码分级</td></tr><tr><td>5</td><td>错误是 E02 / E07（<code>sensitive</code>）</td><td><strong>入口不出现</strong>（§5.1）</td></tr><tr><td>6</td><td>用户连点 3 次「交给 AI 修」</td><td>第二次起应被「已有进行中 ticket」挡住</td></tr><tr><td>7</td><td>复现命令本身需要交互输入</td><td><code>inconclusive</code>，且提示用户命令不可自动化</td></tr></tbody></table>
+<p>⚠ <strong>反例 4 是设计上的一个重要分流</strong>：<code>E01/E02/E03/E06</code> 属<strong>模型/网络/安全</strong>侧，<br>交修毫无意义（改了代码也不会好）。<strong>只有 E04/E05/E08 是代码侧可修的</strong>。<br>入口应按 <code>error_code</code> 分级，不能一视同仁。</p>
+<h3 id="8-4-error-code-是否可交修-映射表">8.4 <code>error_code</code> → 是否可交修（映射表）<a class="anchor" href="#8-4-error-code-是否可交修-映射表" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>码</th><th>类别</th><th>可交修</th><th>理由</th></tr></thead><tbody><tr><td>E01</td><td>模型静默空响应</td><td>❌</td><td>模型侧；引导「重试 / 换通道」</td></tr><tr><td>E02</td><td>模型强制中断</td><td>❌（且 <code>sensitive</code>）</td><td>安全策略，不得绕</td></tr><tr><td>E03</td><td>上下文溢出</td><td>❌</td><td>需压缩上下文，非代码缺陷</td></tr><tr><td><strong>E04</strong></td><td><strong>工具执行崩溃</strong></td><td>✅</td><td><strong>代码/工具可修，首选场景</strong></td></tr><tr><td><strong>E05</strong></td><td><strong>依赖缺失阻断</strong></td><td>✅</td><td>装依赖 / 修 require 路径</td></tr><tr><td>E06</td><td>网络熔断</td><td>❌</td><td>网络侧</td></tr><tr><td>E07</td><td>权限拦截</td><td>❌（且 <code>sensitive</code>）</td><td>安全策略，不得绕</td></tr><tr><td>E08</td><td>格式校验失败</td><td>✅</td><td>契约/校验器可修</td></tr></tbody></table>
+<p>⇒ <strong>可实现交修的只有 3/8</strong>。这条必须写进文档，否则会被误当成「万能修错按钮」。</p>
+<hr>
+<h2 id="9-用户端反馈交互设计">9. 用户端反馈交互设计<a class="anchor" href="#9-用户端反馈交互设计" aria-label="锚点">#</a></h2>
+<h3 id="9-1-错误卡片-改造后">9.1 错误卡片（改造后）<a class="anchor" href="#9-1-错误卡片-改造后" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">┌────────────────────────────────────────────────────┐
+│ ⚠ 工具执行崩溃  [E04]                               │
+│                                                     │
+│ 为什么        工具内部抛出未捕获异常                  │
+│ 我可以怎么办   请检查该工具的依赖与参数…              │
+│                                                     │
+│ [交给 AI 修]  [重试]  [技术详情 / 追溯]              │
+└────────────────────────────────────────────────────┘</code></pre>
+<p><strong>按钮显示规则</strong>（可机器判定，无歧义）：</p>
+<table><thead><tr><th>按钮</th><th>显示条件</th></tr></thead><tbody><tr><td>交给 AI 修</td><td><code>REPAIRABLE.has(code) &amp;&amp; !sensitive</code></td></tr><tr><td>重试</td><td><code>retryable === true</code>（既有逻辑不变）</td></tr><tr><td>技术详情 / 追溯</td><td><code>requestId &amp;&amp; !sensitive</code>（既有逻辑不变）</td></tr></tbody></table>
+<h3 id="9-2-交修确认-防误触-且必须告知边界">9.2 交修确认（防误触，且必须告知边界）<a class="anchor" href="#9-2-交修确认-防误触-且必须告知边界" aria-label="锚点">#</a></h3>
+<p>点「交给 AI 修」后先弹一个<strong>非阻塞</strong>确认条：</p>
+<pre><code class="language-text">将向当前会话的 AI 提交一份修复工单：
+
+  错误      E04 工具执行崩溃
+  会话      &lt;session_id 前 8 位&gt;
+  证据      技术时间线（3 个阶段）+ 复现命令
+  落盘      .khy/feedback/&lt;ticket_id&gt;/
+
+  ▸ 仅提交给本会话的 AI，不会上传到任何服务器
+  ▸ 修复过程会修改仓库文件，你随时可以叫停
+                                    [取消]  [提交]</code></pre>
+<p>最后两行<strong>不可省略</strong>——它们同时守住 A1（不外发）与用户的知情权。</p>
+<h3 id="9-3-修复中-过程可见">9.3 修复中（过程可见）<a class="anchor" href="#9-3-修复中-过程可见" aria-label="锚点">#</a></h3>
+<p>复用既有 thinking-log 通道（<code>addThinkingLog</code>），不新开 UI 组件：</p>
+<pre><code class="language-text">▸ 步骤 1/3：已提交修复工单 rt-xxxxxxxx
+▸ 步骤 2/3：AI 正在复现（repro-before.txt）
+▸ 步骤 3/3：最小改动 + 复诊（repro-after.txt）</code></pre>
+<h3 id="9-4-修复完成后-对比卡片">9.4 修复完成后（对比卡片）<a class="anchor" href="#9-4-修复完成后-对比卡片" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">┌────────────────────────────────────────────────────┐
+│ ✓ 已修复  E04 工具执行崩溃                          │
+│                                                     │
+│ 复现命令    node scripts/ci/check-agent-feedback.js │
+│                                                     │
+│ 改前        Error: Cannot find module &#x27;...&#x27;         │
+│ 改后        Summary: 0 error(s), 0 warning(s).      │
+│                                                     │
+│ 改动        2 个文件（未触及测试）                   │
+│ [查看完整对比]  [还原这次修复]                       │
+└────────────────────────────────────────────────────┘</code></pre>
+<p><strong>「还原这次修复」是必须的</strong>（A5 的对偶）：给了 agent 改仓库的权力，就必须给用户一键退回的权力。<br>依据：<code>[DESIGN-ARCH-113]</code> DELETE 模态第 4 条「没有回滚路径我不躺下」——同一精神适用于 FIX。</p>
+<h3 id="9-5-未修复-带证据进下一轮">9.5 未修复（带证据进下一轮）<a class="anchor" href="#9-5-未修复-带证据进下一轮" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">┌────────────────────────────────────────────────────┐
+│ ✗ 未修复  E04 工具执行崩溃（第 1 轮）               │
+│                                                     │
+│ 改后输出仍包含相同错误签名                           │
+│ ▸ 已追加诊断：repro-after.txt 与改前逐字相同         │
+│                                                     │
+│ [继续修（第 2 轮）]  [查看分析]  [停在这里]          │
+└────────────────────────────────────────────────────┘</code></pre>
+<p><strong>默认不自动续轮</strong>，必须用户点（A5）。</p>
+<h3 id="9-6-tui-侧-同构-但降级呈现">9.6 TUI 侧（同构，但降级呈现）<a class="anchor" href="#9-6-tui-侧-同构-但降级呈现" aria-label="锚点">#</a></h3>
+<p>TUI 目前无结构化错误（§1.4）。建议<strong>最小改造</strong>：</p>
+<ul><li>错误行后追加一行提示：<code>按 F 交给 AI 修（E04）</code>；</li><li>无 <code>requestId</code> 或 <code>sensitive</code> 时不显示该提示；</li><li>不引入弹窗，用既有 <code>pushNotice</code> 通道。</li></ul>
+<hr>
+<h2 id="10-未决问题-需人裁决-不代为决定">10. 未决问题（需人裁决，不代为决定）<a class="anchor" href="#10-未决问题-需人裁决-不代为决定" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>问题</th><th>选项</th><th>影响</th></tr></thead><tbody><tr><td><strong>Q1</strong></td><td>存证写入通道走<strong>工具</strong>还是<strong>钩子</strong>？</td><td>(a) <code>WriteEvidence</code> 工具 / (b) <code>PostToolUse</code> 自动落盘</td><td>决定 §7 步 2.2 的实现形态；钩子更省 AI 注意力但更难判「哪次执行是复现」</td></tr><tr><td><strong>Q2</strong></td><td>交修单<strong>落盘还是仅内存</strong>？</td><td>落盘可跨会话，但 <code>.khy/</code> 是本机态、不随仓库分发</td><td>若要求跨机，需改落 <code>.ai/</code>（受 <code>MEMORY-003</code> 管辖），代价高得多</td></tr><tr><td><strong>Q3</strong></td><td>是否把「交修」纳入 <code>RUNTIME-007</code> 的<strong>存证生产者</strong>，还是新立规则？</td><td>复用 vs 新规则</td><td>复用会扩大既有规则的 scope；新规则要付 §7 步 3.4 的四件接线成本</td></tr><tr><td><strong>Q4</strong></td><td>「还原这次修复」用 git 还是文件快照？</td><td>本仓工作区长期有上千未提交文件，<code>git</code> 基线不可靠</td><td><strong>建议文件快照</strong>，但需人确认</td></tr><tr><td><strong>Q5</strong></td><td>前端 <code>resumable</code>/<code>continueHint</code> 透传是否算破坏性改动？</td><td>纯增量字段</td><td>需确认无既有消费者依赖「字段不存在」</td></tr><tr><td><strong>Q6</strong></td><td>E08 是否真可交修？</td><td>E08 多为上游契约不匹配</td><td>可能是「改错方」而非「改调用方」</td></tr></tbody></table>
+<hr>
+<h2 id="11-验证与复现方式">11. 验证与复现方式<a class="anchor" href="#11-验证与复现方式" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-comment"># 0) 现状复核（证明 §1 的每条实证仍成立）</span>
+git grep -n <span class="hljs-string">&quot;CMD_HOOK_ALLOWED_FIELDS&quot;</span> -A 12 -- <span class="hljs-string">&#x27;services/backend/src/services/domain/extensions/hooks/hookRunner.js&#x27;</span>
+git grep -n <span class="hljs-string">&quot;PrePrompt&quot;</span> -- <span class="hljs-string">&#x27;services/backend/src/services/domain/extensions/hooks/hookSystem.js&#x27;</span>
+git grep -n <span class="hljs-string">&quot;structuredErrorEvent&quot;</span> -- <span class="hljs-string">&#x27;apps/ai-frontend/src/views/aiChatEventUtils.js&#x27;</span>
+
+<span class="hljs-comment"># 1) ★ 存证零生产写入的复核（本方案的核心立论）</span>
+git grep -n <span class="hljs-string">&quot;khy/feedback\|evidenceDir&quot;</span> -- <span class="hljs-string">&#x27;services/**&#x27;</span> <span class="hljs-string">&#x27;scripts/**&#x27;</span> | grep -v <span class="hljs-string">&quot;/tests/&quot;</span>
+
+<span class="hljs-comment"># 2) 端侧结构化能力缺口</span>
+git grep -n <span class="hljs-string">&quot;errorCode\|error_code\|E0[1-8]&quot;</span> -- <span class="hljs-string">&#x27;services/backend/src/cli/tui/**&#x27;</span> | grep -v <span class="hljs-string">&quot;.html&quot;</span>
+
+<span class="hljs-comment"># 3) 三模态契约当前阶段</span>
+node -e <span class="hljs-string">&quot;const j=require(&#x27;./docs/10_规范/registry/RULES-REGISTRY.json&#x27;);for(const r of j.rules){if(/^RUNTIME-00[789]\$/.test(r.id))console.log(r.id,r.gate,r.severity,(r.exec||{}).script)}&quot;</span>
+
+<span class="hljs-comment"># 4) 契约自测（既有入口，确认判据可用）</span>
+node scripts/ci/check-agent-feedback.js --scenario=fix-no-repro
+node scripts/ci/check-agent-feedback.js --scenario=fix-with-repro</code></pre>
+<h3 id="交付前自检">交付前自检<a class="anchor" href="#交付前自检" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">node scripts/docs/build_docs_site.js     <span class="hljs-comment"># 生成 .html 孪生件（非零副作用，见 §12）</span>
+node scripts/docs/verify_docs_site.js    <span class="hljs-comment"># 期望「全部通过」</span>
+node scripts/ci/check-repo-layout.js     <span class="hljs-comment"># 逐条确认没点到自己</span></code></pre>
+<hr>
+<h2 id="12-交付说明-必须向用户点明">12. 交付说明（必须向用户点明）<a class="anchor" href="#12-交付说明-必须向用户点明" aria-label="锚点">#</a></h2>
+<ol><li><strong>本文档为设计提案，未落地任何代码。</strong> §7 的三步是待执行计划。</li><li><code>node scripts/docs/build_docs_site.js</code> <strong>不是零副作用</strong>：它会重写全站陈旧 <code>.html</code> 孪生件</li></ol>
+<p>（历史实测 232 个），属预期且有益的修复（顺手修好指向已改名资产的断链）。</p>
+<ol><li><strong>本方案不新建注入通道</strong>：<code>additionalContext</code> 已是 <code>PrePrompt</code> 的既有白名单字段</li></ol>
+<p>（<code>hookRunner.js:31</code>），本方案只<strong>消费</strong>这个既有通道。</p>
+<ol><li><strong>本方案不新增网络外发</strong>：所有证据留在本机（<code>.khy/feedback/</code> 与 <code>audit/</code>）。</li><li><strong>可实现交修的错误只有 E04/E05/E08 三种</strong>（§8.4），不是「万能修错按钮」。</li></ol>
+<hr>
+<h2 id="附录-a-一句话记住三个按钮">附录 A：一句话记住三个按钮<a class="anchor" href="#附录-a-一句话记住三个按钮" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>按钮</th><th>一句话</th></tr></thead><tbody><tr><td>重试</td><td><strong>空手再试一次</strong>（错误不进上下文）</td></tr><tr><td>交给 AI 修</td><td><strong>带着体温单去看病</strong>（证据进上下文 + 契约约束 + 前后对比自证）</td></tr><tr><td>技术详情 / 追溯</td><td><strong>调病历</strong>（分阶段时间线，只读不改）</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-130] 前台与后台任务编排方案.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-130] 前台与后台任务编排方案</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-132] TUI选区锚点漂移修复方案.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-132] TUI 选区锚点漂移修复方案（内容指纹重定位）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-131] 报错一键交修闭环方案.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

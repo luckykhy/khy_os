@@ -23,6 +23,82 @@ const ensureDir = require('../../utils/mkdirpSync');
 
 const customerRegistry = require('./customerRegistry');
 
+// Auth users live in the sequelize models; required lazily so this service
+// stays loadable (and unit-testable) without a configured database. When the
+// models are unavailable the existence check degrades to "unknown user" and
+// the binding gate below still decides access.
+let _userModel = null;
+function getUserModel() {
+  if (_userModel === null) {
+    try {
+      _userModel = require('../../models').User || false;
+    } catch {
+      _userModel = false;
+    }
+  }
+  return _userModel || null;
+}
+
+async function findUserById(userId) {
+  const User = getUserModel();
+  if (!User) {
+    return null;
+  }
+  try {
+    return await User.findByPk(userId);
+  } catch {
+    return null;
+  }
+}
+
+// Resolve which account an order belongs to. Three shapes:
+//   admin + explicit input.userId      → that account (代客下单, validated)
+//   admin + customer bound to a user   → the bound account (绑定即归属)
+//   admin + neither                    → the admin themselves (legacy behaviour)
+//   normal user                        → only ever their own account, and only
+//                                        for a customer bound to them (自助充值)
+async function resolvePaymentOwner(input, actorUser, customer) {
+  const actorIsAdmin = isAdminLikeUser(actorUser);
+  const actorId = Number(actorUser?.id || 0);
+
+  if (actorIsAdmin) {
+    if (input.userId !== undefined && input.userId !== null && input.userId !== '') {
+      const requested = Number(input.userId);
+      if (!Number.isFinite(requested) || requested <= 0) {
+        throw new Error('userId must be greater than 0');
+      }
+      const target = await findUserById(Math.floor(requested));
+      if (!target) {
+        throw new Error(`user not found: ${Math.floor(requested)}`);
+      }
+      return { id: target.id, role: String(target.role || 'user') };
+    }
+    const bound = Number(customer?.ownerUserId || 0);
+    if (bound > 0) {
+      const owner = await findUserById(bound);
+      return {
+        id: bound,
+        role: owner ? String(owner.role || 'user') : 'user',
+      };
+    }
+    return { id: actorId, role: String(actorUser.role || 'admin') };
+  }
+
+  // Non-admin self-service: no owner override, and the customer must be bound
+  // to the caller. Everything else keeps the admin-only create path closed.
+  if (input.userId !== undefined && input.userId !== null && input.userId !== '') {
+    const requested = Number(input.userId);
+    if (!Number.isFinite(requested) || Math.floor(requested) !== actorId) {
+      throw new Error('forbidden: userId must be the caller for self-service orders');
+    }
+  }
+  const bound = Number(customer?.ownerUserId || 0);
+  if (bound <= 0 || bound !== actorId) {
+    throw new Error('forbidden: customer is not bound to this account');
+  }
+  return { id: actorId, role: String(actorUser.role || 'user') };
+}
+
 function safeJsonParse(raw, fallback) {
   try {
     const parsed = JSON.parse(raw);
@@ -412,11 +488,10 @@ function ensureCustomerOrThrow(customerId) {
 
 async function createPayment(input = {}, options = {}) {
   const actorUser = options.actorUser || { id: 0, role: 'admin' };
-  if (!isAdminLikeUser(actorUser)) {
-    throw new Error('admin access is required to create payment orders');
-  }
 
   const customer = ensureCustomerOrThrow(input.customerId);
+  // 属主解析放在金额校验之前：越权下单应在任何副作用之前被拒绝。
+  const owner = await resolvePaymentOwner(input || {}, actorUser, customer);
   const amountCny = roundCny(input.amountCny);
   if (!(amountCny > 0)) {
     throw new Error('amountCny must be greater than 0');
@@ -457,11 +532,8 @@ async function createPayment(input = {}, options = {}) {
   const now = new Date();
   const order = normalizePayment({
     id: generateId('pay'),
-    userId: Number(actorUser.id || 0),
-    userRole:
-      String(actorUser.role || 'admin')
-        .trim()
-        .toLowerCase() || 'admin',
+    userId: owner.id,
+    userRole: owner.role,
     customerId: customer.id,
     customerName: customer.name,
     provider,
@@ -502,9 +574,6 @@ async function createPayment(input = {}, options = {}) {
 
 async function listPayments(filters = {}, options = {}) {
   const actorUser = options.actorUser || { id: 0, role: 'admin' };
-  if (!isAdminLikeUser(actorUser)) {
-    throw new Error('admin access is required to list payment orders');
-  }
 
   const store = loadStore();
   const { page, pageSize } = parsePaging(filters);
@@ -517,6 +586,10 @@ async function listPayments(filters = {}, options = {}) {
     .toLowerCase();
 
   let rows = store.payments.slice();
+  // Listing follows the same ownership rule as getPayment's canAccessOrder:
+  // admins see every order, a normal user only their own. This is what the
+  // user-center 我的账单 card reads, so gating the whole list behind admin
+  // made that page fail with 403 for every non-admin.
   if (!isAdminLikeUser(actorUser)) {
     rows = rows.filter((item) => Number(item.userId || 0) === Number(actorUser.id || -1));
   }
@@ -742,6 +815,17 @@ async function confirmMockPayment(paymentId, input = {}, options = {}) {
   });
 }
 
+// The account-side read of the binding (used by GET /my-customer): which
+// customer does this user own, if any? Returns the public view — no token
+// secrets — so the user center can offer self-service top-up.
+async function getBoundCustomerForUser(userId) {
+  const id = Number(userId || 0);
+  if (!Number.isFinite(id) || id <= 0) {
+    return null;
+  }
+  return customerRegistry.getCustomerByOwnerUserId(Math.floor(id));
+}
+
 module.exports = {
   createPayment,
   listPayments,
@@ -750,6 +834,7 @@ module.exports = {
   processWebhook,
   confirmMockPayment,
   inferBaseUrl,
+  getBoundCustomerForUser,
   signMockWebhookPayload,
   verifyMockWebhookSignature,
   __test__: {
@@ -761,5 +846,6 @@ module.exports = {
     buildSignaturePayload,
     buildCheckoutDescriptor,
     isAdminLikeUser,
+    resolvePaymentOwner,
   },
 };

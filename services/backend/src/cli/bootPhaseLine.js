@@ -60,16 +60,31 @@ function _noopHandle() {
   return { write() {}, end() {} };
 }
 
+// 格式化已等待毫秒 → 人类可读:「320ms」「3.2s」「1m 04s」。
+function _elapsedMsToStr(ms) {
+  const v = Math.max(0, ms | 0);
+  if (v < 1000) return `${v}ms`;
+  const s = v / 1000;
+  if (s < 60) return `${s.toFixed(1).replace(/\.0$/, '')}s`;
+  const m = Math.floor(s / 60);
+  const rs = Math.floor(s - m * 60);
+  return `${m}m ${String(rs).padStart(2, '0')}s`;
+}
+
 /**
  * 创建一条瞬时进度行,并在其存活期间接管 console.*。
+ *
+ * 每次 write(text[, totalSteps]) 点亮后,若未传 totalSteps,则启动 1s 间隔的
+ * elapsed 时钟(显示「已等待 Xs」);传 totalSteps(整数 > 0)时改用步骤分母
+ * 显示「text 2/5」,并停止 elapsed 时钟(由调用方控制步进节奏)。
  *
  * @param {object} [options]
  * @param {object} [options.env] - 门控环境(测试注入)
  * @param {{write: function(string): *}} [options.stream] - 进度行输出流,默认 process.stderr
  * @param {object} [options.console] - 被接管的 console 对象(测试注入)
  * @param {{write: function(string): *}} [options.stdout] - 被让位的 stdout,默认 process.stdout
- * @returns {{write: function(string): void, end: function(): void}}
- *   write(text) 覆写进度行;end() 擦掉进度行并还原所有接管。两者均可重复调用。
+ * @returns {{write: function(string, [number]): void, end: function(): void}}
+ *   write(text, totalSteps?) 覆写进度行;end() 擦掉进度行并还原所有接管。两者均可重复调用。
  */
 function create(options = {}) {
   const env = options.env || process.env;
@@ -81,11 +96,15 @@ function create(options = {}) {
   const sink = options.console || console;
   const out = options.stdout || process.stdout;
 
-  let live = false; // 进度行当前是否亮着(亮着才需要让位)
+  let live = false;
   let ended = false;
-  let stdoutPatch = null; // 非 null 表示 stdout 上正挂着让位层
+  let stdoutPatch = null;
+  let phaseStartHr = 0;
+  let elapsedTimer = null;
+  let lastText = '';
+  let lastStep = 0;
+  let lastTotalSteps = 0;
 
-  // stdout 是全应用最热的写入路径,让位层必须尽早摘掉:让完一次位就还原。
   const unpatchStdout = () => {
     if (!stdoutPatch) {
       return;
@@ -95,13 +114,33 @@ function create(options = {}) {
     try {
       target.write = original;
     } catch {
-      /* 还原不了也不能抛 —— 最坏只是多留一层透传包装 */
+      /* 还原不了也不能抛 */
     }
   };
 
+  const stopElapsedTimer = () => {
+    if (elapsedTimer) {
+      clearInterval(elapsedTimer);
+      elapsedTimer = null;
+    }
+  };
+
+  // 渲染一行进度:
+  //   有 step/totalSteps  →  `text (step/total)`
+  //   无 step/totalSteps  →  `text (已等待 Xs)`  或 `text`  (0ms)
+  const _renderLine = (text, step, totalSteps, elapsedMs) => {
+    let display = text;
+    const hasStep = Number.isInteger(totalSteps) && totalSteps > 0 && Number.isInteger(step) && step > 0;
+    if (hasStep) {
+      display = `${text} (${step}/${totalSteps})`;
+    }
+    const suffix = hasStep ? '' : elapsedMs > 0 ? ` (已等待 ${_elapsedMsToStr(elapsedMs)})` : '';
+    return `\r  ${display}${suffix}...\x1b[K`;
+  };
+
   const clear = () => {
-    // 先摘让位层再写擦除序列:万一 stream 与 out 是同一个对象,也不会打转。
     unpatchStdout();
+    stopElapsedTimer();
     if (!live) {
       return;
     }
@@ -109,7 +148,7 @@ function create(options = {}) {
     try {
       stream.write(CLEAR_LINE);
     } catch {
-      /* 终端可能已关闭 —— 让位是尽力而为 */
+      /* 终端可能已关闭 */
     }
   };
 
@@ -139,13 +178,43 @@ function create(options = {}) {
   }
 
   return {
-    write(text) {
+    /**
+     * 覆写进度行。
+     * @param {string} text - 阶段文本
+     * @param {number} [step] - 当前步骤号(1-based)
+     * @param {number} [totalSteps] - 总步骤数;step+totalSteps 同时传时显示「(step/total)」,
+     *   否则(仅 text)显示已等待 elapsed 时钟(≥1s 后开始)
+     */
+    write(text, step, totalSteps) {
       if (ended) {
         return;
       }
+      stopElapsedTimer();
+      lastText = text;
+      lastStep = Number.isInteger(step) ? step : 0;
+      lastTotalSteps = Number.isInteger(totalSteps) ? totalSteps : 0;
+      phaseStartHr = process.hrtime.bigint();
       try {
-        stream.write(`\r  ${text}...\x1b[K`);
+        stream.write(_renderLine(text, lastStep, lastTotalSteps, 0));
         live = true;
+        // 有步骤分母时保持静态(由调用方控制步进节奏);无分母时每 1s 刷新 elapsed
+        if (!lastTotalSteps) {
+          elapsedTimer = setInterval(() => {
+            if (!live || ended) {
+              stopElapsedTimer();
+              return;
+            }
+            try {
+              const ms = Number(process.hrtime.bigint() - phaseStartHr) / 1e6;
+              stream.write(_renderLine(lastText, 0, 0, ms));
+            } catch {
+              /* stderr 不可写 */
+            }
+          }, 1000);
+          if (elapsedTimer.unref) {
+            elapsedTimer.unref();
+          }
+        }
       } catch {
         /* stderr 不可写时静默 */
         return;
@@ -157,6 +226,7 @@ function create(options = {}) {
         return;
       }
       ended = true;
+      stopElapsedTimer();
       clear();
       for (const m of METHODS) {
         if (typeof original[m] === 'function') {
@@ -170,6 +240,7 @@ function create(options = {}) {
 module.exports = {
   create,
   isEnabled,
+  _elapsedMsToStr, // export for tests
   METHODS,
   OFF_VALUES,
   CLEAR_LINE,

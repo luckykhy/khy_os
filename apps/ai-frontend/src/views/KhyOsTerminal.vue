@@ -222,7 +222,7 @@ onMounted(() => {
     cursorBlink: true,
     fontFamily: 'Menlo, Consolas, "DejaVu Sans Mono", monospace',
     fontSize: 14,
-    theme: { background: '#0b0e14', foreground: '#d7d7d7' },
+    theme: { background: 'var(--khy-code-bg)', foreground: 'var(--khy-gray-200)' },
     convertEol: false,
   });
   fitAddon = new FitAddon();
@@ -321,8 +321,8 @@ onBeforeUnmount(() => {
 .khyos-term {
   flex: 1;
   min-height: 0;
-  background: #0b0e14;
-  border: 1px solid var(--el-border-color, #2a2f3a);
+  background: var(--khy-code-bg);
+  border: 1px solid var(--el-border-color, var(--khy-code-border));
   border-radius: 8px;
   padding: 8px;
   overflow: hidden;
@@ -330,10 +330,10 @@ onBeforeUnmount(() => {
 .khyos-hint {
   margin-top: 8px;
   font-size: 12px;
-  color: var(--el-text-color-secondary, #909399);
+  color: var(--el-text-color-secondary, var(--khy-gray-400));
 }
 .khyos-hint code {
-  background: var(--el-fill-color-light, #1f2430);
+  background: var(--el-fill-color-light, var(--khy-code-surface));
   padding: 1px 5px;
   border-radius: 4px;
 }

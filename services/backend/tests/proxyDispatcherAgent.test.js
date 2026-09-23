@@ -25,9 +25,9 @@ describe('Proxy Dispatcher Agent', () => {
 
   test('绝不抛(任意 env 状态)', () => {
       clearProxyEnv();
-      expect(() => proxyDispatcherAgent().not.toThrow());
+      expect(() => proxyDispatcherAgent()).not.toThrow();
       process.env.HTTP_PROXY = 'http://127.0.0.1:1080';
-      expect(() => proxyDispatcherAgent().not.toThrow());
+      expect(() => proxyDispatcherAgent()).not.toThrow();
       clearProxyEnv();
   });
 

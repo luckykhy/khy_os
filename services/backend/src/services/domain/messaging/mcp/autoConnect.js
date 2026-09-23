@@ -27,7 +27,11 @@
  * dispatch logic are unit-testable with fakes — no subprocess, no network.
  */
 
-const defaultManager = require('../../../../agents/index');
+// The default manager is the consumer-side MCP client (this directory's index),
+// which owns loadConfig() + connectAll(). (It was previously pointed at the
+// agent registry, which has neither — so the production call sites silently
+// never connected any configured MCP server.)
+const defaultManager = require('./index');
 
 /**
  * Whether auto-connect is enabled. Default ON; only an explicit `false`

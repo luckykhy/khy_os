@@ -5,6 +5,7 @@ const {
   parseAdapterListEnv,
   adapterHandlesImagesNatively,
 } = require('../src/services/gateway/adapterVisionCapability');
+const assert = require('node:assert');
 // ── isEnabled:门控默认开,仅 0/false/off/no 关 ──────────────────────────────
 // ── 内置集:codex 原生收图 ──────────────────────────────────────────────────
 // ── 门控关 → 字节回退(恒 false,等于此能力不存在) ─────────────────────────
@@ -30,33 +31,33 @@ describe('Adapter Vision Capability', () => {
   });
 
   test('codex 原生收图(默认门控开)', () => {
-      expect(adapterHandlesImagesNatively('codex')).toBe({});
+      expect(adapterHandlesImagesNatively('codex')).toBe(true);
   });
 
   test('codex 大小写/空白不敏感', () => {
-      expect(adapterHandlesImagesNatively('  CODEX ')).toBe({});
+      expect(adapterHandlesImagesNatively('  CODEX ')).toBe(true);
   });
 
   test('cli 仅在实际适配器报告文件视觉时判定原生', () => {
       const adapter = { handlesImagesNatively: () => true };
-      expect(adapterHandlesImagesNatively('cli')).toBe({}, { adapter, options: {} });
+      expect(adapterHandlesImagesNatively('cli', {}, { adapter, options: {} })).toBe(true);
       assert.strictEqual(
         adapterHandlesImagesNatively('cli', {}, { adapter: { handlesImagesNatively: () => false }, options: {} }),
         false
       );
-      expect(adapterHandlesImagesNatively('cli')).toBe({}, { options: {} });
+      expect(adapterHandlesImagesNatively('cli', {}, { options: {} })).toBe(false);
   });
 
   test('非原生收图适配器 → false', () => {
       for (const k of ['sensenova', 'trae', 'kiro', 'localLLM', 'claude', '']) {
-        expect(adapterHandlesImagesNatively(k)).toBe({});
+        expect(adapterHandlesImagesNatively(k)).toBe(false);
       }
   });
 
   test('null/undefined/数字 adapterKey → false 不抛', () => {
-      expect(adapterHandlesImagesNatively(null)).toBe({});
-      expect(adapterHandlesImagesNatively(undefined)).toBe({});
-      expect(adapterHandlesImagesNatively(123)).toBe({});
+      expect(adapterHandlesImagesNatively(null)).toBe(false);
+      expect(adapterHandlesImagesNatively(undefined)).toBe(false);
+      expect(adapterHandlesImagesNatively(123)).toBe(false);
   });
 
   test('门控关 → codex 也判 false(字节回退)', () => {
@@ -85,7 +86,7 @@ describe('Adapter Vision Capability', () => {
 
   test('parseAdapterListEnv 逗号空白混合 + 归一小写', () => {
       const s = parseAdapterListEnv('Codex,  Foo\tBar ');
-      expect([...s].sort()).toBe(['bar', 'codex', 'foo']);
+      expect([...s].sort()).toEqual(['bar', 'codex', 'foo']);
   });
 
   test('parseAdapterListEnv 非字符串/空 → 空集', () => {
@@ -97,7 +98,7 @@ describe('Adapter Vision Capability', () => {
 
   test('NATIVE_VISION_ADAPTERS 含 codex 且冻结', () => {
       expect(NATIVE_VISION_ADAPTERS).toContain('codex');
-      expect(Object.isFrozen(NATIVE_VISION_ADAPTERS).toBeTruthy());
+      expect(Object.isFrozen(NATIVE_VISION_ADAPTERS)).toBeTruthy();
   });
 
 });

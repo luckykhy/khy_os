@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-14_claude_code_vs_khyos对齐报告.md -->
+<title>2026-09-14 Claude Code vs khy-os 终端对齐报告（第 2 次运行） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>对齐<span class="sep">›</span>报告<span class="sep">›</span>2026-09-14 Claude Code vs khy-os 终端对齐报告（第 2 次运行）</div>
+      <header class="hero reveal"><h1>2026-09-14 Claude Code vs khy-os 终端对齐报告（第 2 次运行）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#2026-09-14-claude-code-vs-khy-os-终端对齐报告-第-2-次运行">2026-09-14 Claude Code vs khy-os 终端对齐报告（第 2 次运行）</a></li><li class="lvl-2"><a href="#本次实测项">本次实测项</a></li><li class="lvl-2"><a href="#前置状态复查-与昨日报告一致">前置状态复查（与昨日报告一致）</a></li><li class="lvl-2"><a href="#实测数据表">实测数据表</a></li><li class="lvl-2"><a href="#结论">结论</a></li><li class="lvl-2"><a href="#剩余待实测项清单-同步自任务单">剩余待实测项清单（同步自任务单）</a></li><li class="lvl-2"><a href="#建议">建议</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="2026-09-14-claude-code-vs-khy-os-终端对齐报告-第-2-次运行">2026-09-14 Claude Code vs khy-os 终端对齐报告（第 2 次运行）<a class="anchor" href="#2026-09-14-claude-code-vs-khy-os-终端对齐报告-第-2-次运行" aria-label="锚点">#</a></h1>
+<h2 id="本次实测项">本次实测项<a class="anchor" href="#本次实测项" aria-label="锚点">#</a></h2>
+<p>任务单中「待实测」最早的项：<strong>项3 文件读取能力</strong> + <strong>项4 CLI 命令执行</strong>（合并为一次任务：让两边都执行 <code>dir /b .</code> 并统计顶层条目数，同时要求读 AGENTS.md 要点，二选一取 CLI 执行作为可对比项，因为该项两边都有对等 CLI 工具）。</p>
+<p>实际选择：<strong>项4「CLI 命令执行 —— 同一命令 <code>dir /b .</code>」</strong>。<br>（说明：项3 文件读取需要两边都发起 AI 对话来解读 AGENTS.md，但当前 AI 渠道鉴权仍失效（见下），故本轮先测纯 CLI 执行路径，避开 AI 解读环节。）</p>
+<h2 id="前置状态复查-与昨日报告一致">前置状态复查（与昨日报告一致）<a class="anchor" href="#前置状态复查-与昨日报告一致" aria-label="锚点">#</a></h2>
+<ul><li>khy CLI 渠道现状：昨日 4 渠道（relay/agnes）401；今日探测发现默认路由已切到 <strong>codex 渠道且显示 <code>unavailable</code></strong>（渠道健康度比昨天更差，但失败路径更快，见下）</li><li>Claude Code 渠道现状：仍是 <code>401 Incorrect API key provided</code>（未变）</li></ul>
+<h2 id="实测数据表">实测数据表<a class="anchor" href="#实测数据表" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>命令</th><th>启动/命令耗时</th><th>结果</th><th>输出一致性</th><th>功能等价性</th></tr></thead><tbody><tr><td>khy CLI 执行 <code>dir /b .</code>（R1）</td><td><code>khy -p &quot;在 D:\Portable\khy-os 目录下执行 dir /b .，统计并输出顶层条目总数&quot;</code></td><td>12,000 ms</td><td>失败：<code>codex [unavailable]: OpenAI Codex unavailable</code>，无有效数字输出</td><td>不适用（AI 解读环节失败）</td><td>不适用</td></tr><tr><td>khy CLI 执行 <code>dir /b .</code>（R2）</td><td>同上</td><td>8,981 ms</td><td>失败：同上（codex 不可用，路径比 relay 更快失败）</td><td>不适用</td><td>不适用</td></tr><tr><td>Claude Code 执行 <code>dir /b .</code>（R1）</td><td><code>claude -p &quot;同上&quot;</code></td><td>179,429 ms</td><td>失败：<code>401 Incorrect API key provided</code>，无有效数字输出</td><td>不适用</td><td>不适用</td></tr><tr><td>Claude Code 执行 <code>dir /b .</code>（R2）</td><td>同上</td><td>182,467 ms</td><td>失败：同上</td><td>不适用</td><td>不适用</td></tr><tr><td>对照（非 AI，纯 shell 直接执行 <code>dir /b .</code>）</td><td>直接 PowerShell 计数</td><td>~100 ms（不计入对齐项，仅作基线参考）</td><td>成功，返回条目数</td><td>不适用</td><td>不适用（这是绕过 AI 的对照，不是对齐项本身）</td></tr></tbody></table>
+<h2 id="结论">结论<a class="anchor" href="#结论" aria-label="锚点">#</a></h2>
+<ul><li><strong>项4（CLI 命令执行）—— 未对齐（前置鉴权仍阻塞）</strong>：两侧都未能在 AI 解读环节拿到有效输出；khy 侧当前默认渠道（codex）已标记 <code>unavailable</code>，比昨日（relay 401）状态更差，但失败路径耗时反而更短（约 9-12s vs 188s）；Claude 侧 401 未变化，耗时稳定在 179-183s。</li><li><strong>需要修改（非本轮可修复，仅登记）</strong>：<ol><li>khy-os 渠道健康度劣化：默认路由切到 codex 后直接 unavailable，未回退到其他可用渠道（relay/agnes 虽然 401 但至少能返回明确的 401，而不是笼统的 &quot;unavailable&quot;）。指向 <code>services/backend/src/services/gateway/aiGateway.js</code> 的渠道回退顺序。</li><li>Claude Code 侧 401 未修复，同昨日。</li></ol></li><li>本轮未获得有效可比对数据，故<strong>未将项4 标记为「已对齐」</strong>，保持「待实测」状态待鉴权修复后重跑。</li></ul>
+<h2 id="剩余待实测项清单-同步自任务单">剩余待实测项清单（同步自任务单）<a class="anchor" href="#剩余待实测项清单-同步自任务单" aria-label="锚点">#</a></h2>
+<ul><li>[x] 项1：khy doctor —— 已对齐（09-13）</li><li>[ ] 项2：单轮问答速度 —— 待实测（鉴权阻塞）</li><li>[ ] 项3：文件读取能力（AGENTS.md）—— 待实测（鉴权阻塞）</li><li>[ ] 项4：CLI 命令执行（<code>dir /b .</code>）—— <strong>本次尝试，仍因鉴权不可用未获有效输出，未通过</strong></li><li>[ ] 项5：多轮上下文保持 —— 待实测</li></ul>
+<h2 id="建议">建议<a class="anchor" href="#建议" aria-label="锚点">#</a></h2>
+<p>修复鉴权（khy 的 codex/relay/agnes key + Claude 401）后再触发本流水线，才能真正测出项2/3/4 的速度对齐数据。在此之前每日 13:00 的实测会继续遇到相同阻塞，建议在任务单「需修改」区累积此阻塞项，而非每天重复无效实测。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../docs/11_报告/对齐/报告/2026-09-14_前端启动速度错误稳定性检查.html"><div class="dir">← 上一篇</div><div class="ttl">前端启动速度 / 错误 / 稳定性检查（2026-09-14 即时专项）</div></a><a class="next" href="../../../../docs/11_报告/对齐/报告/2026-09-14_TUI启动速度错误稳定性检查.html"><div class="dir">下一篇 →</div><div class="ttl">TUI 启动速度 / 错误 / 稳定性检查（2026-09-14 即时专项）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="docs/11_报告/对齐/报告/2026-09-14_claude_code_vs_khyos对齐报告.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

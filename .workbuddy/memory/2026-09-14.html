@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-14.md -->
+<title>2026-09-14 工作日志 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>.workbuddy<span class="sep">›</span>memory<span class="sep">›</span>2026-09-14 工作日志</div>
+      <header class="hero reveal"><h1>2026-09-14 工作日志</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#2026-09-14-工作日志">2026-09-14 工作日志</a></li><li class="lvl-2"><a href="#khy-os-现状诊断-用户问-现在最应该做什么">khy-os 现状诊断（用户问「现在最应该做什么」）</a></li><li class="lvl-3"><a href="#结论-1-ai-通道不是-密钥失效-是健康判定误判-高价值">结论 1：AI 通道不是「密钥失效」，是健康判定误判（高价值）</a></li><li class="lvl-3"><a href="#结论-2-tui-红线门禁一片红-根因是单一-hook-超时-一行可修">结论 2：TUI 红线门禁一片红，根因是单一 hook 超时（一行可修）</a></li><li class="lvl-3"><a href="#结论-3-仓库卫生">结论 3：仓库卫生</a></li><li class="lvl-3"><a href="#结论-4-自检系统-4-个真-bug-khy-doctor-khy-selfcheck-log-证据">结论 4：自检系统 4 个真 bug（`khy doctor` + `.khy/selfcheck.log` 证据）</a></li><li class="lvl-3"><a href="#操作留痕">操作留痕</a></li><li class="lvl-2"><a href="#第二轮-测试先行-方案-实现-用户指令-先补测试作为标准-然后准备方案-最后实现">第二轮：测试先行 → 方案 → 实现（用户指令「先补测试作为标准，然后准备方案，最后实现」）</a></li><li class="lvl-3"><a href="#真因定位-纠正前一轮的推测">真因定位（纠正前一轮的推测）</a></li><li class="lvl-3"><a href="#已实现并验证通过">已实现并验证通过</a></li><li class="lvl-3"><a href="#新增验收标准-测试文件">新增验收标准（测试文件）</a></li><li class="lvl-3"><a href="#重大意外发现">重大意外发现</a></li><li class="lvl-3"><a href="#未解决-交给下一轮">未解决 / 交给下一轮</a></li><li class="lvl-3"><a href="#方案文档">方案文档</a></li><li class="lvl-2"><a href="#建立-每日-02-00-khy-os-代码审查-自动化">建立「每日 02:00 khy-os 代码审查」自动化</a></li><li class="lvl-3"><a href="#为让自动化真能跑通而确认的运行时事实">为让自动化真能跑通而确认的运行时事实</a></li><li class="lvl-3"><a href="#采集到的基线-写入-khy-reports-code-review-2026-09-14-md-作第-0-号基线">采集到的基线（写入 `.khy/reports/code-review/2026-09-14.md` 作第 0 号基线）</a></li><li class="lvl-3"><a href="#设计决策-复用价值高">设计决策（复用价值高）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="2026-09-14-工作日志">2026-09-14 工作日志<a class="anchor" href="#2026-09-14-工作日志" aria-label="锚点">#</a></h1>
+<h2 id="khy-os-现状诊断-用户问-现在最应该做什么">khy-os 现状诊断（用户问「现在最应该做什么」）<a class="anchor" href="#khy-os-现状诊断-用户问-现在最应该做什么" aria-label="锚点">#</a></h2>
+<p>做了一轮证据型排查，纠正了 09-13/09-14/09-15 三份对齐报告里的一个关键误判。</p>
+<h3 id="结论-1-ai-通道不是-密钥失效-是健康判定误判-高价值">结论 1：AI 通道不是「密钥失效」，是健康判定误判（高价值）<a class="anchor" href="#结论-1-ai-通道不是-密钥失效-是健康判定误判-高价值" aria-label="锚点">#</a></h3>
+<ul><li>直接探测：<code>POST https://apihub.agnes-ai.com/v1/chat/completions</code>，用 <code>.khy/api_keys.json</code> 里的 agnes key，</li></ul>
+<p><code>agnes-2.5-flash</code> 与 <code>agnes-3.0-flash</code> <strong>均返回 HTTP 200</strong>（有正常 completion）。</p>
+<ul><li>同一 key 打 <code>GET /v1/models</code> → <strong>HTTP 404</strong>（agnes 未实现该端点）。</li><li>因此「key 过期 / 需修复 key」是错误结论；方向应在 <code>apiAdapter.detectAsync</code>（:251 用 <code>/models</code> 探测）</li></ul>
+<p>与失败分类 / 回退顺序：把 <code>/models</code> 404 当作通道不可用，会直接把请求降级到 <code>codex</code> 并输出<br>  <code>codex [unavailable]: OpenAI Codex unavailable</code>。</p>
+<ul><li>旁证：<code>khy doctor</code> 报 <code>⚠ AI 密钥 — 未配置</code>、<code>⚠ API 云端服务 运行时诊断 — 通道异常(404)，未触发自愈</code>；</li></ul>
+<p><code>.khy/last_verified_model.json</code> 显示 09-14 09:26 还验证通过过 <code>agnes-2.5-flash</code>。</p>
+<ul><li>影响面：每日 13:00 对齐流水线（<code>对齐/待办与进度/2026-07-11_claude_code_vs_khyos对齐任务单.md</code>）</li></ul>
+<p>已连续 3 天因该阻塞产出空数据，正在退化成仪式。</p>
+<h3 id="结论-2-tui-红线门禁一片红-根因是单一-hook-超时-一行可修">结论 2：TUI 红线门禁一片红，根因是单一 hook 超时（一行可修）<a class="anchor" href="#结论-2-tui-红线门禁一片红-根因是单一-hook-超时-一行可修" aria-label="锚点">#</a></h3>
+<ul><li>实跑 <code>node services/backend/scripts/run-ink-tui-tests.js inkRenderSmoke --runInBand</code>：</li></ul>
+<p><code>Tests: 112 failed, 323 passed, 435 total</code>；224 条 <code>Exceeded timeout of 5000 ms for a hook</code>。</p>
+<ul><li>全部失败都挂在同一个 <code>tests/tui/inkRenderSmoke.test.js:214</code> 的 <code>beforeAll</code></li></ul>
+<p>（<code>await rt.loadInk()</code> 动态 import ESM <code>ink</code> 超 jest 默认 5s）。<br>  同文件每个 test 都显式给了 <code>15000</code>（:242，注释还专门解释了原因），唯独 hook 漏了。</p>
+<ul><li><strong>修正 09-13 报告</strong>：其点名的 3 个「断言笔误」文件</li></ul>
+<p>（ccFormat / toolResultTransparency / diffLineNumbers）<strong>现已全部 PASS</strong>，早已修好。<br>  即整片红已从「4 文件 118 用例」收敛为「1 文件 112 用例、单一根因」。</p>
+<h3 id="结论-3-仓库卫生">结论 3：仓库卫生<a class="anchor" href="#结论-3-仓库卫生" aria-label="锚点">#</a></h3>
+<ul><li>未提交规模：1484 文件（+113898 / −177683），最后提交 2026-09-11 18:39（已 3 天），675 个未跟踪文件。</li><li>根目录再次被垃圾污染：<code>1</code>、<code>-p/</code>、<code>console.log(r))</code>、<code>console.log((11441+i)+'</code>、</li></ul>
+<p><code>tmp-b9-*.js</code>、<code>tmp-batch-next.*</code>、<code>_flagcheck.txt</code>、<code>_gitst.txt</code>、<code>.coverage</code>。<br>  历史 commit 专门清理过一次同类垃圾（<code>dafef34c</code>），说明属复发问题，值得加 CI 守卫而非手工清。</p>
+<ul><li><code>docs/03_DESIGN_设计</code> 与 <code>docs/09_STORY_修仙学AI</code> 共约 120 个 .md 被清空（−30746 / +321）。</li></ul>
+<p>若属「内容内嵌进 html 工作台」的迁移，需确认 .md 留指针而非空壳。</p>
+<h3 id="结论-4-自检系统-4-个真-bug-khy-doctor-khy-selfcheck-log-证据">结论 4：自检系统 4 个真 bug（<code>khy doctor</code> + <code>.khy/selfcheck.log</code> 证据）<a class="anchor" href="#结论-4-自检系统-4-个真-bug-khy-doctor-khy-selfcheck-log-证据" aria-label="锚点">#</a></h3>
+<ol><li>同一组 5 issue 以 <code>trigger:&quot;start&quot;</code> 每约 10s 重复写入 selfcheck.log（23:40→00:57 上百条），score 恒 55/critical，无去重 → 日志风暴。</li><li><code>trigger:&quot;test&quot;</code> 的自愈把首选项道写进 <code>%TEMP%\khy-selfcheck-*\.env</code>，下次仍报 <code>__missing__ 未注册或已禁用</code> → <strong>修复不落盘</strong>。</li><li><code>services.unhealthy: []</code> 但 <code>unknownCount: 30</code> → 服务健康检查空转却判 healthy。</li><li><code>suspicious_port: 3333</code> 被判为 mining pool port，需确认是否自家服务（误报）还是真风险。</li><li>另：<code>khyquant</code> 前端 <code>vendor-element</code> 1056 kB 超 600 kB 阈值，<code>manualChunks</code> 未生效。</li></ol>
+<h3 id="操作留痕">操作留痕<a class="anchor" href="#操作留痕" aria-label="锚点">#</a></h3>
+<ul><li>为跑 git 命令执行过 <code>git config --global --add safe.directory D:/Portable/khy-os</code>（仓库 owner 与本机用户不一致）。</li><li>本次诊断产生的 22 个 <code>_p*.txt</code> / <code>_probe*.txt</code> 临时文件已全部清理，仓库根无残留。</li><li>环境提示：本会话 Bash 工具的 shim 损坏（<code>dirname</code>/<code>ls</code>/<code>grep</code>/<code>rm</code> 不可用，<code>rm</code> 被 safe-bin 拦截），</li></ul>
+<p>git/文件操作需走 PowerShell，输出需落盘再读；PowerShell 工具不回显 stdout。</p>
+<hr>
+<h2 id="第二轮-测试先行-方案-实现-用户指令-先补测试作为标准-然后准备方案-最后实现">第二轮：测试先行 → 方案 → 实现（用户指令「先补测试作为标准，然后准备方案，最后实现」）<a class="anchor" href="#第二轮-测试先行-方案-实现-用户指令-先补测试作为标准-然后准备方案-最后实现" aria-label="锚点">#</a></h2>
+<h3 id="真因定位-纠正前一轮的推测">真因定位（纠正前一轮的推测）<a class="anchor" href="#真因定位-纠正前一轮的推测" aria-label="锚点">#</a></h3>
+<ul><li><strong>AI 通道真因 = <code>services/backend/.env</code> 的首选通道钉选残留</strong>：</li></ul>
+<p><code>GATEWAY_PREFERRED_ADAPTER=codex</code> + <code>GATEWAY_PREFERRED_STRICT=true</code> + <code>GATEWAY_PREFERRED_MODEL=gpt-5.3-codex-review</code>。<br>  加载路径 <code>src/cli/bootstrap.js:42</code> → <code>path.resolve(__dirname,'../../.env')</code>；strict 语义见<br>  <code>aiGatewayGenerateMethod.js:2072-2081</code> 与仓库自述注释 <code>ilinkDispatcher.js:1293</code>（「首选通道不可用就硬失败」）。<br>  本机 codex 无凭据 ⇒ 硬失败且不回退 ⇒ 三天误诊为「密钥失效」。</p>
+<ul><li><strong>为什么误诊能持续</strong>：<code>buildChannelFailureAdvice</code> 只有 5 类信号，缺「钉选致不回退」这一类，</li></ul>
+<p>真因被翻译成 auth/404 表象。</p>
+<ul><li><strong>纠正 09-13 报告</strong>：它点名要修的 3 个测试文件（ccFormat / toolResultTransparency / diffLineNumbers）早已修好，当前全绿。</li><li><strong><code>loadInk()</code> 不是 TUI 冒烟失败的原因</strong>（实测 424ms 成功返回，<code>typeof render === 'function'</code>）。</li></ul>
+<h3 id="已实现并验证通过">已实现并验证通过<a class="anchor" href="#已实现并验证通过" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项</th><th>改动</th><th>验收</th></tr></thead><tbody><tr><td>通道钉选诊断</td><td><code>buildChannelFailureAdvice.js</code> 新增 <code>channelPinned</code> 信号 + <code>_resolveStrictPin</code>；调用点 <code>aiGatewayGenerateMethod.js:6303</code> 传 <code>pin</code></td><td><code>node --test tests/gateway/buildChannelFailureAdvice.test.js</code> → <strong>17/17</strong>（改前 4 失败）</td></tr><tr><td>根目录垃圾守卫</td><td><code>check-repo-layout.js</code> 新增 <code>root-junk</code> 规则；导出纯函数；<code>main()</code> 加 <code>require.main</code> 守卫</td><td><code>jest -t repoLayoutRootJunk</code> → <strong>6/6</strong></td></tr><tr><td>autoConnect off-by-one</td><td>2 处 <code>../../</code> → <code>../</code>（原指向不存在的 `services/backend/services</td><td>constants/…`）</td></tr><tr><td><code>.env</code> 钉选残留</td><td>备份 <code>.env.bak-20260914-codexpin</code>，改 <code>auto</code> / <code>strict=false</code>，注释掉 MODEL</td><td>配置已核实；端到端待有权限终端复验</td></tr></tbody></table>
+<h3 id="新增验收标准-测试文件">新增验收标准（测试文件）<a class="anchor" href="#新增验收标准-测试文件" aria-label="锚点">#</a></h3>
+<ul><li><code>tests/gateway/buildChannelFailureAdvice.test.js</code>（+8 条钉选测试）</li><li><code>tests/ci/repoLayoutRootJunk.test.js</code>（新增，6 条）</li><li><code>tests/cli/requireResolution.autoConnect.test.js</code>（新增，4 条）</li></ul>
+<h3 id="重大意外发现">重大意外发现<a class="anchor" href="#重大意外发现" aria-label="锚点">#</a></h3>
+<ul><li><code>node scripts/ci/check-repo-layout.js</code> <strong>exit=1 且已持续至少一天</strong>。违规：root-junk <strong>297</strong>、</li></ul>
+<p>root-whitelist 24、layer-registry 7、dangling-task 88（基线 0）、cross-layer-require 37（基线 0）、<br>  <strong>unresolved-require 26（require 指向不存在文件 = 潜伏崩溃）</strong>、docs-index-complete 14、extension-id-hardcode 1。</p>
+<ul><li>根目录垃圾远超预估：297 条，含 20+ 组 <code>tmp-*.{js,log,txt,out}</code>、<code>tmp-bb.py;</code>/<code>tmp-lean.json;</code>（带尾分号）、</li></ul>
+<p><code>1</code>、<code>console.log(r))</code>、<code>-p/</code>、<code>.coverage</code>。历史 commit <code>dafef34c</code> 手工清过同类 → 属复发问题。</p>
+<ul><li>历史 commit <code>dafef34c</code> 之后根目录再次被污染，说明「靠人记得清」不可行。</li></ul>
+<h3 id="未解决-交给下一轮">未解决 / 交给下一轮<a class="anchor" href="#未解决-交给下一轮" aria-label="锚点">#</a></h3>
+<ol><li><strong>TUI <code>inkRenderSmoke</code> hook（未修好）</strong>：超时 5s→15s 是<strong>必要但不充分</strong>。</li></ol>
+<p>实测：5s hook → 112 失败；15s hook → 仍 112 失败（hook 烧满 15000ms）；<br>   但带诊断文件一起跑 → 仅 7 失败。<strong>间歇性，非「慢」</strong>。<br>   怀疑 <code>inkRuntime.js:66-83</code> <code>loadInk()</code> 串了两个动态 import，可选的 eager <code>import(instances.js)</code><br>   会连带拖死整个 <code>_loading</code> promise。建议下一轮：先连跑 5 次量化失败率 → 把 eager import 移出关键路径<br>   （<code>instances.js</code> 已确认存在）→ 必要时查 jest 对 <code>ink</code>（纯 ESM, v6.8.0）的 transformIgnorePatterns。</p>
+<ol><li><code>services/backend/.env</code> 里 <code>GATEWAY_API_POOL_PROVIDER=relay</code>（池里只有 agnes）与</li></ol>
+<p><code>RELAY_API_ENDPOINT=https://api.codeium.com/windsurf/v1</code> 未敢动，可能与 doctor 报的 404 同源，待 <code>khy gateway status</code> 确认。</p>
+<ol><li>selfcheck 四个 bug 未动：重复告警风暴、自愈写进 <code>%TEMP%</code> 不落盘、服务健康 <code>unknownCount:30</code> 空转、端口 3333 判定。</li><li>297 个根目录残留<strong>未擅自删除</strong>，等用户决策（建议整体挪进 <code>.khy/tmp/</code>）。</li><li>端到端 <code>khy -p</code> 在本沙箱被 reg.exe 程序黑名单拦截，无法复验 AI 通道是否真的恢复。</li></ol>
+<h3 id="方案文档">方案文档<a class="anchor" href="#方案文档" aria-label="锚点">#</a></h3>
+<p><code>对齐/报告/2026-09-14_根因诊断与修复方案.md</code>（含证据链、验收命令、未完成项与诚实边界）</p>
+<h2 id="建立-每日-02-00-khy-os-代码审查-自动化">建立「每日 02:00 khy-os 代码审查」自动化<a class="anchor" href="#建立-每日-02-00-khy-os-代码审查-自动化" aria-label="锚点">#</a></h2>
+<p>用户要求：每天 2 点对 khy-os 做 code review，<strong>先跑测试确立标准，再修错误</strong>。<br>已创建 recurring 自动化（id <code>ba189d58-2cc6-4322-8702-378e6c04abc1</code>，cwd <code>D:\Portable\khy-os</code>，每日 02:00）。</p>
+<h3 id="为让自动化真能跑通而确认的运行时事实">为让自动化真能跑通而确认的运行时事实<a class="anchor" href="#为让自动化真能跑通而确认的运行时事实" aria-label="锚点">#</a></h3>
+<ul><li><strong><code>npm</code> 不在 PATH</strong>，直接调用 exit 127。可用入口（已验证）：</li></ul>
+<p><code>node &quot;D:/WorkBuddyData/.workbuddy/binaries/node/versions/22.22.2-3/node_modules/npm/bin/npm-cli.js&quot; run &lt;script&gt;</code>；<br>  守卫也可直接 <code>node scripts/ci/*.js</code> 绕开 npm。</p>
+<ul><li><code>node</code> v22.22.2 ✅、<code>git</code> ✅；但 Bash 缺 <code>wc</code>，<code>cmd.exe</code> 被安全策略拦截 → 统计类改用 node 读 stdin。</li></ul>
+<h3 id="采集到的基线-写入-khy-reports-code-review-2026-09-14-md-作第-0-号基线">采集到的基线（写入 <code>.khy/reports/code-review/2026-09-14.md</code> 作第 0 号基线）<a class="anchor" href="#采集到的基线-写入-khy-reports-code-review-2026-09-14-md-作第-0-号基线" aria-label="锚点">#</a></h3>
+<ul><li><code>check:version-sync</code> ✅、<code>check:gov-rules</code> ✅、<strong><code>check:layout</code> ❌（7 类违规）</strong>：</li></ul>
+<p>root-whitelist 24 / docs-index-complete 14 / layer-registry 7 / dangling-task 88 /<br>  cross-layer-require 37 / unresolved-require 26 / extension-id-hardcode 1。<br>  守卫自身 baseline 为 2026-09-13 且全 0 → 判定为<strong>历史欠账</strong>，非新增。</p>
+<ul><li>工作区 2162 个未提交改动（678 未跟踪），HEAD <code>d917a35a</code> 停在 2026-09-11 →</li></ul>
+<p>最近 24h <strong>无新提交</strong>；24h 内 mtime 变化 1202 个文件但绝大多数是 <code>dist-ts/</code>、<code>*.map</code>、镜像 <code>.html</code> 等构建产物。</p>
+<h3 id="设计决策-复用价值高">设计决策（复用价值高）<a class="anchor" href="#设计决策-复用价值高" aria-label="锚点">#</a></h3>
+<ol><li>审查范围必须收敛：无提交时取 <code>git status --porcelain</code> 的<strong>源码类</strong>路径，排除生成物，按 mtime 倒序取前 40 个，</li></ol>
+<p>未纳入的列入「未覆盖」。否则会去审 1202 个构建产物。</p>
+<ol><li>基线红灯分 A 类（本次改动引入，必须修绿）/ B 类（历史欠账，只记录）。<strong>判断不清一律归 B 类</strong>，</li></ol>
+<p>禁止用 <code>--update-baseline</code> 刷绿守卫。</p>
+<ol><li>B 类里优先修 <code>unresolved-require</code>（潜伏崩溃），其余不追求清零。</li><li>提交边界：工作区脏（当前即如此）→ 原地改、<strong>不提交</strong>，只给 <code>git diff</code> 清单供人工挑；禁止 push/reset/clean/stash/rebase。</li><li>报告落 <code>.khy/reports/code-review/&lt;YYYY-MM-DD&gt;.md</code>（<code>.khy/</code> 已 gitignore，避免污染 docs/ 的命名守卫）。</li></ol>
+      </article>
+      <nav class="pager"><span></span><a class="next" href="../../.workbuddy/memory/2026-09-15.html"><div class="dir">下一篇 →</div><div class="ttl">2026-09-15</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__=".workbuddy/memory/2026-09-14.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

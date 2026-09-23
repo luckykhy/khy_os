@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-OPS-002] Graceful Shutdown 规范.md -->
+<title>[DESIGN-OPS-002] Graceful Shutdown 规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-OPS-002] Graceful Shutdown 规范</div>
+      <header class="hero reveal"><h1>[DESIGN-OPS-002] Graceful Shutdown 规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-ops-002-graceful-shutdown-规范">[DESIGN-OPS-002] Graceful Shutdown 规范</a></li><li class="lvl-2"><a href="#1-关闭原则">1. 关闭原则</a></li><li class="lvl-2"><a href="#2-信号处理">2. 信号处理</a></li><li class="lvl-3"><a href="#2-1-信号映射">2.1 信号映射</a></li><li class="lvl-3"><a href="#2-2-信号处理代码">2.2 信号处理代码</a></li><li class="lvl-2"><a href="#3-连接-drain">3. 连接 Drain</a></li><li class="lvl-3"><a href="#3-1-http-连接跟踪">3.1 HTTP 连接跟踪</a></li><li class="lvl-3"><a href="#3-2-express-集成">3.2 Express 集成</a></li><li class="lvl-2"><a href="#4-数据持久化">4. 数据持久化</a></li><li class="lvl-3"><a href="#4-1-需要持久化的数据">4.1 需要持久化的数据</a></li><li class="lvl-3"><a href="#4-2-持久化代码">4.2 持久化代码</a></li><li class="lvl-2"><a href="#5-关闭顺序">5. 关闭顺序</a></li><li class="lvl-3"><a href="#5-1-标准关闭序列">5.1 标准关闭序列</a></li><li class="lvl-3"><a href="#5-2-khy-os-特有资源">5.2 khy-os 特有资源</a></li><li class="lvl-2"><a href="#6-docker-容器化部署">6. Docker / 容器化部署</a></li><li class="lvl-3"><a href="#6-1-dockerfile-配置">6.1 Dockerfile 配置</a></li><li class="lvl-3"><a href="#6-2-docker-compose">6.2 Docker Compose</a></li><li class="lvl-3"><a href="#6-3-kubernetes">6.3 Kubernetes</a></li><li class="lvl-2"><a href="#7-热重载-开发环境">7. 热重载（开发环境）</a></li><li class="lvl-3"><a href="#7-1-nodemon-配置">7.1 nodemon 配置</a></li><li class="lvl-3"><a href="#7-2-进程管理器-pm2">7.2 进程管理器（PM2）</a></li><li class="lvl-2"><a href="#8-关闭验证">8. 关闭验证</a></li><li class="lvl-3"><a href="#8-1-关闭检查清单">8.1 关闭检查清单</a></li><li class="lvl-3"><a href="#8-2-日志输出">8.2 日志输出</a></li><li class="lvl-2"><a href="#9-版本历史">9. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-ops-002-graceful-shutdown-规范">[DESIGN-OPS-002] Graceful Shutdown 规范<a class="anchor" href="#design-ops-002-graceful-shutdown-规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: OPS-002 -->
+<blockquote><p><strong>用途</strong>：定义 khy-os 服务优雅关闭标准，确保连接 drain、数据持久化、资源释放的有序完成。<br>当前无此规范，服务重启时可能导致请求丢失和数据不一致。</p></blockquote>
+<hr>
+<h2 id="1-关闭原则">1. 关闭原则<a class="anchor" href="#1-关闭原则" aria-label="锚点">#</a></h2>
+<ol><li><strong>信号优先</strong>：响应 <code>SIGTERM</code> → 有序关闭；<code>SIGKILL</code> → 强制终止（不做清理）</li><li><strong>停止接受新请求</strong>：关闭前先关闭监听端口</li><li><strong>Drain 存量连接</strong>：等待活跃请求完成，设置超时</li><li><strong>数据持久化优先</strong>：内存数据先落盘，再释放连接</li><li><strong>关闭顺序</strong>：子进程 → 工作线程 → 数据库连接 → 定时器</li></ol>
+<hr>
+<h2 id="2-信号处理">2. 信号处理<a class="anchor" href="#2-信号处理" aria-label="锚点">#</a></h2>
+<h3 id="2-1-信号映射">2.1 信号映射<a class="anchor" href="#2-1-信号映射" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>信号</th><th>来源</th><th>行为</th></tr></thead><tbody><tr><td><code>SIGTERM</code></td><td><code>docker stop</code>、<code>kill</code>、<code>systemctl stop</code></td><td>有序关闭（推荐）</td></tr><tr><td><code>SIGINT</code></td><td><code>Ctrl+C</code></td><td>有序关闭（开发环境）</td></tr><tr><td><code>SIGQUIT</code></td><td><code>kill -QUIT</code></td><td>有序关闭 + core dump（调试用）</td></tr><tr><td><code>SIGKILL</code></td><td><code>kill -9</code></td><td>强制终止（跳过清理）</td></tr><tr><td><code>SIGHUP</code></td><td>终端关闭</td><td>热重载（不关闭，仅重载配置）</td></tr></tbody></table>
+<h3 id="2-2-信号处理代码">2.2 信号处理代码<a class="anchor" href="#2-2-信号处理代码" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-variable constant_">SHUTDOWN_TIMEOUT</span> = <span class="hljs-number">30_000</span>;  <span class="hljs-comment">// 30 秒</span>
+<span class="hljs-keyword">let</span> isShuttingDown = <span class="hljs-literal">false</span>;
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">setupGracefulShutdown</span>(<span class="hljs-params">server, cleanupFn</span>) {
+  <span class="hljs-keyword">const</span> signals = [<span class="hljs-string">&#x27;SIGTERM&#x27;</span>, <span class="hljs-string">&#x27;SIGINT&#x27;</span>];
+  
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> signal <span class="hljs-keyword">of</span> signals) {
+    process.<span class="hljs-title function_">once</span>(signal, <span class="hljs-title function_">async</span> () =&gt; {
+      <span class="hljs-keyword">if</span> (isShuttingDown) <span class="hljs-keyword">return</span>;
+      isShuttingDown = <span class="hljs-literal">true</span>;
+      
+      logger.<span class="hljs-title function_">info</span>(<span class="hljs-string">`Received <span class="hljs-subst">${signal}</span>, starting graceful shutdown...`</span>);
+      
+      <span class="hljs-keyword">try</span> {
+        <span class="hljs-keyword">await</span> <span class="hljs-title function_">performShutdown</span>(server, cleanupFn);
+      } <span class="hljs-keyword">catch</span> (error) {
+        logger.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;Error during shutdown&#x27;</span>, { <span class="hljs-attr">error</span>: error.<span class="hljs-property">message</span> });
+        process.<span class="hljs-title function_">exit</span>(<span class="hljs-number">1</span>);
+      }
+    });
+  }
+}
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">performShutdown</span>(<span class="hljs-params">server, cleanupFn</span>) {
+  <span class="hljs-comment">// 1. 停止接受新连接</span>
+  logger.<span class="hljs-title function_">info</span>(<span class="hljs-string">&#x27;Step 1: Stopping new connections...&#x27;</span>);
+  server.<span class="hljs-title function_">close</span>();
+  
+  <span class="hljs-comment">// 2. 等待活跃连接 drain（带超时）</span>
+  <span class="hljs-keyword">const</span> drainPromise = <span class="hljs-title function_">waitForActiveConnections</span>(server);
+  <span class="hljs-keyword">const</span> timeoutPromise = <span class="hljs-title function_">sleep</span>(<span class="hljs-variable constant_">SHUTDOWN_TIMEOUT</span>).<span class="hljs-title function_">then</span>(<span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">&#x27;Shutdown timeout exceeded&#x27;</span>);
+  });
+  
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">await</span> <span class="hljs-title class_">Promise</span>.<span class="hljs-title function_">race</span>([drainPromise, timeoutPromise]);
+    logger.<span class="hljs-title function_">info</span>(<span class="hljs-string">&#x27;Step 2: All connections drained&#x27;</span>);
+  } <span class="hljs-keyword">catch</span> (error) {
+    logger.<span class="hljs-title function_">warn</span>(<span class="hljs-string">`Step 2: <span class="hljs-subst">${error.message}</span>, forcing close`</span>);
+    <span class="hljs-title function_">forceCloseConnections</span>(server);
+  }
+  
+  <span class="hljs-comment">// 3. 持久化内存数据</span>
+  logger.<span class="hljs-title function_">info</span>(<span class="hljs-string">&#x27;Step 3: Persisting in-memory state...&#x27;</span>);
+  <span class="hljs-keyword">await</span> <span class="hljs-title function_">cleanupFn</span>();
+  
+  <span class="hljs-comment">// 4. 关闭数据库连接</span>
+  logger.<span class="hljs-title function_">info</span>(<span class="hljs-string">&#x27;Step 4: Closing database connections...&#x27;</span>);
+  <span class="hljs-keyword">await</span> sequelize.<span class="hljs-title function_">close</span>();
+  
+  <span class="hljs-comment">// 5. 关闭其他资源</span>
+  <span class="hljs-keyword">await</span> <span class="hljs-title function_">closeRemainingResources</span>();
+  
+  logger.<span class="hljs-title function_">info</span>(<span class="hljs-string">&#x27;Graceful shutdown complete&#x27;</span>);
+  process.<span class="hljs-title function_">exit</span>(<span class="hljs-number">0</span>);
+}</code></pre>
+<hr>
+<h2 id="3-连接-drain">3. 连接 Drain<a class="anchor" href="#3-连接-drain" aria-label="锚点">#</a></h2>
+<h3 id="3-1-http-连接跟踪">3.1 HTTP 连接跟踪<a class="anchor" href="#3-1-http-连接跟踪" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 跟踪活跃连接</span>
+<span class="hljs-keyword">const</span> activeConnections = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Set</span>();
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">trackConnection</span>(<span class="hljs-params">socket</span>) {
+  socket.<span class="hljs-title function_">on</span>(<span class="hljs-string">&#x27;finish&#x27;</span>, <span class="hljs-function">() =&gt;</span> activeConnections.<span class="hljs-title function_">delete</span>(socket));
+  socket.<span class="hljs-title function_">on</span>(<span class="hljs-string">&#x27;close&#x27;</span>, <span class="hljs-function">() =&gt;</span> activeConnections.<span class="hljs-title function_">delete</span>(socket));
+  activeConnections.<span class="hljs-title function_">add</span>(socket);
+}
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">waitForActiveConnections</span>(<span class="hljs-params">server</span>) {
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve</span>) =&gt;</span> {
+    <span class="hljs-keyword">if</span> (activeConnections.<span class="hljs-property">size</span> === <span class="hljs-number">0</span>) {
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">resolve</span>();
+    }
+    
+    <span class="hljs-keyword">const</span> checkInterval = <span class="hljs-built_in">setInterval</span>(<span class="hljs-function">() =&gt;</span> {
+      logger.<span class="hljs-title function_">info</span>(<span class="hljs-string">`Waiting for <span class="hljs-subst">${activeConnections.size}</span> active connections...`</span>);
+      <span class="hljs-keyword">if</span> (activeConnections.<span class="hljs-property">size</span> === <span class="hljs-number">0</span>) {
+        <span class="hljs-built_in">clearInterval</span>(checkInterval);
+        <span class="hljs-title function_">resolve</span>();
+      }
+    }, <span class="hljs-number">500</span>);
+  });
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">forceCloseConnections</span>(<span class="hljs-params">server</span>) {
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> socket <span class="hljs-keyword">of</span> activeConnections) {
+    socket.<span class="hljs-title function_">destroy</span>();
+  }
+  activeConnections.<span class="hljs-title function_">clear</span>();
+}</code></pre>
+<h3 id="3-2-express-集成">3.2 Express 集成<a class="anchor" href="#3-2-express-集成" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 在连接建立时跟踪</span>
+server.<span class="hljs-title function_">on</span>(<span class="hljs-string">&#x27;connection&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">socket</span>) =&gt;</span> {
+  <span class="hljs-title function_">trackConnection</span>(socket);
+});
+
+<span class="hljs-comment">// WebSocket 连接也需要跟踪</span>
+wss.<span class="hljs-title function_">on</span>(<span class="hljs-string">&#x27;connection&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">ws</span>) =&gt;</span> {
+  activeConnections.<span class="hljs-title function_">add</span>(ws);
+  ws.<span class="hljs-title function_">on</span>(<span class="hljs-string">&#x27;close&#x27;</span>, <span class="hljs-function">() =&gt;</span> activeConnections.<span class="hljs-title function_">delete</span>(ws));
+});</code></pre>
+<hr>
+<h2 id="4-数据持久化">4. 数据持久化<a class="anchor" href="#4-数据持久化" aria-label="锚点">#</a></h2>
+<h3 id="4-1-需要持久化的数据">4.1 需要持久化的数据<a class="anchor" href="#4-1-需要持久化的数据" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>数据类型</th><th>持久化目标</th><th>时机</th></tr></thead><tbody><tr><td>Token 用量统计</td><td><code>~/.khyquant/token_usage.json</code></td><td>每次写入或关闭前</td></tr><tr><td>对话记录</td><td><code>~/.khyquant/conversations/</code></td><td>流式对话结束时</td></tr><tr><td>训练数据</td><td>已持久化，无需额外操作</td><td>—</td></tr><tr><td>策略配置</td><td>DB（已持久化）</td><td>—</td></tr><tr><td>内存缓存</td><td>无（可重建）</td><td>—</td></tr></tbody></table>
+<h3 id="4-2-持久化代码">4.2 持久化代码<a class="anchor" href="#4-2-持久化代码" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">persistInMemoryData</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> tasks = [];
+  
+  <span class="hljs-comment">// 1. Token 用量</span>
+  <span class="hljs-keyword">if</span> (tokenUsageService.<span class="hljs-title function_">hasUnsaved</span>()) {
+    tasks.<span class="hljs-title function_">push</span>(tokenUsageService.<span class="hljs-title function_">flushToDisk</span>());
+  }
+  
+  <span class="hljs-comment">// 2. 对话记录（已通过流式写盘，检查遗漏）</span>
+  <span class="hljs-keyword">if</span> (conversationStore.<span class="hljs-title function_">hasDirty</span>()) {
+    tasks.<span class="hljs-title function_">push</span>(conversationStore.<span class="hljs-title function_">flush</span>());
+  }
+  
+  <span class="hljs-comment">// 3. 运行状态文件</span>
+  tasks.<span class="hljs-title function_">push</span>(<span class="hljs-title function_">writeRuntimeState</span>());
+  
+  <span class="hljs-keyword">await</span> <span class="hljs-title class_">Promise</span>.<span class="hljs-title function_">allSettled</span>(tasks);
+}</code></pre>
+<hr>
+<h2 id="5-关闭顺序">5. 关闭顺序<a class="anchor" href="#5-关闭顺序" aria-label="锚点">#</a></h2>
+<h3 id="5-1-标准关闭序列">5.1 标准关闭序列<a class="anchor" href="#5-1-标准关闭序列" aria-label="锚点">#</a></h3>
+<pre><code>┌─────────────────────────────────────────┐
+│  SIGTERM 收到                            │
+│           ↓                              │
+│  1. 停止监听端口（server.close()）         │
+│           ↓                              │
+│  2. Drain 活跃连接（30s 超时）              │
+│           ↓                              │
+│  3. 持久化内存数据                         │
+│           ↓                              │
+│  4. 停止子进程（worker / daemon）           │
+│           ↓                              │
+│  5. 关闭数据库连接池                       │
+│           ↓                              │
+│  6. 关闭 Redis / 缓存连接                  │
+│           ↓                              │
+│  7. 清理定时器 / 清理中间件                 │
+│           ↓                              │
+│  process.exit(0)                         │
+└─────────────────────────────────────────┘</code></pre>
+<h3 id="5-2-khy-os-特有资源">5.2 khy-os 特有资源<a class="anchor" href="#5-2-khy-os-特有资源" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">closeKhyResources</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-comment">// Worker 子进程</span>
+  <span class="hljs-keyword">if</span> (workerPool) {
+    logger.<span class="hljs-title function_">info</span>(<span class="hljs-string">&#x27;Terminating worker pool...&#x27;</span>);
+    <span class="hljs-keyword">await</span> workerPool.<span class="hljs-title function_">terminate</span>(<span class="hljs-number">5000</span>);
+  }
+  
+  <span class="hljs-comment">// Daemon 进程</span>
+  <span class="hljs-keyword">if</span> (daemonProcess) {
+    logger.<span class="hljs-title function_">info</span>(<span class="hljs-string">&#x27;Stopping daemon...&#x27;</span>);
+    <span class="hljs-keyword">await</span> daemonProcess.<span class="hljs-title function_">stop</span>();
+  }
+  
+  <span class="hljs-comment">// CLI REPL（如果活跃）</span>
+  <span class="hljs-keyword">if</span> (replServer) {
+    logger.<span class="hljs-title function_">info</span>(<span class="hljs-string">&#x27;Closing REPL...&#x27;</span>);
+    replServer.<span class="hljs-title function_">close</span>();
+  }
+  
+  <span class="hljs-comment">// TUI 实例</span>
+  <span class="hljs-keyword">if</span> (tuiInstance) {
+    logger.<span class="hljs-title function_">info</span>(<span class="hljs-string">&#x27;Cleaning up TUI...&#x27;</span>);
+    tuiInstance.<span class="hljs-title function_">cleanup</span>();
+  }
+}</code></pre>
+<hr>
+<h2 id="6-docker-容器化部署">6. Docker / 容器化部署<a class="anchor" href="#6-docker-容器化部署" aria-label="锚点">#</a></h2>
+<h3 id="6-1-dockerfile-配置">6.1 Dockerfile 配置<a class="anchor" href="#6-1-dockerfile-配置" aria-label="锚点">#</a></h3>
+<pre><code class="language-dockerfile"><span class="hljs-comment"># 明确终止信号</span>
+<span class="hljs-keyword">STOPSIGNAL</span> SIGTERM
+
+<span class="hljs-comment"># 健康检查（供编排系统使用）</span>
+<span class="hljs-keyword">HEALTHCHECK</span><span class="language-bash"> --interval=30s --<span class="hljs-built_in">timeout</span>=5s --start-period=10s --retries=3 \
+  CMD node health-check.js || <span class="hljs-built_in">exit</span> 1</span></code></pre>
+<h3 id="6-2-docker-compose">6.2 Docker Compose<a class="anchor" href="#6-2-docker-compose" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-attr">services:</span>
+  <span class="hljs-attr">backend:</span>
+    <span class="hljs-attr">stop_grace_period:</span> <span class="hljs-string">30s</span>  <span class="hljs-comment"># 给足 30 秒完成优雅关闭</span>
+    <span class="hljs-attr">healthcheck:</span>
+      <span class="hljs-attr">test:</span> [<span class="hljs-string">&quot;CMD&quot;</span>, <span class="hljs-string">&quot;node&quot;</span>, <span class="hljs-string">&quot;health-check.js&quot;</span>]
+      <span class="hljs-attr">interval:</span> <span class="hljs-string">30s</span>
+      <span class="hljs-attr">timeout:</span> <span class="hljs-string">5s</span>
+      <span class="hljs-attr">retries:</span> <span class="hljs-number">3</span>
+      <span class="hljs-attr">start_period:</span> <span class="hljs-string">10s</span></code></pre>
+<h3 id="6-3-kubernetes">6.3 Kubernetes<a class="anchor" href="#6-3-kubernetes" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-attr">spec:</span>
+  <span class="hljs-attr">terminationGracePeriodSeconds:</span> <span class="hljs-number">30</span>
+  <span class="hljs-attr">containers:</span>
+    <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">backend</span>
+      <span class="hljs-attr">lifecycle:</span>
+        <span class="hljs-attr">preStop:</span>
+          <span class="hljs-attr">exec:</span>
+            <span class="hljs-attr">command:</span> [<span class="hljs-string">&quot;/bin/sh&quot;</span>, <span class="hljs-string">&quot;-c&quot;</span>, <span class="hljs-string">&quot;sleep 5&quot;</span>]</code></pre>
+<hr>
+<h2 id="7-热重载-开发环境">7. 热重载（开发环境）<a class="anchor" href="#7-热重载-开发环境" aria-label="锚点">#</a></h2>
+<h3 id="7-1-nodemon-配置">7.1 nodemon 配置<a class="anchor" href="#7-1-nodemon-配置" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;scripts&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;dev&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;nodemon --signal SIGTERM --exitcrash bin/khy.js&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;nodemonConfig&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;signal&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;SIGTERM&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;events&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;exit&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;echo &#x27;Process exited gracefully&#x27;&quot;</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="7-2-进程管理器-pm2">7.2 进程管理器（PM2）<a class="anchor" href="#7-2-进程管理器-pm2" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ecosystem.config.js</span>
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = {
+  <span class="hljs-attr">apps</span>: [{
+    <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;khy-backend&#x27;</span>,
+    <span class="hljs-attr">script</span>: <span class="hljs-string">&#x27;bin/khy.js&#x27;</span>,
+    <span class="hljs-attr">kill_timeout</span>: <span class="hljs-number">30000</span>,      <span class="hljs-comment">// 等待 30s 再 SIGKILL</span>
+    <span class="hljs-attr">wait_ready</span>: <span class="hljs-literal">true</span>,
+    <span class="hljs-attr">listen_timeout</span>: <span class="hljs-number">10000</span>
+  }]
+};</code></pre>
+<hr>
+<h2 id="8-关闭验证">8. 关闭验证<a class="anchor" href="#8-关闭验证" aria-label="锚点">#</a></h2>
+<h3 id="8-1-关闭检查清单">8.1 关闭检查清单<a class="anchor" href="#8-1-关闭检查清单" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">verifyShutdown</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-comment">// 验证所有连接已关闭</span>
+  <span class="hljs-keyword">if</span> (activeConnections.<span class="hljs-property">size</span> &gt; <span class="hljs-number">0</span>) {
+    logger.<span class="hljs-title function_">warn</span>(<span class="hljs-string">`Shutdown with <span class="hljs-subst">${activeConnections.size}</span> active connections`</span>);
+  }
+  
+  <span class="hljs-comment">// 验证数据已持久化</span>
+  <span class="hljs-keyword">const</span> pendingWrites = <span class="hljs-keyword">await</span> <span class="hljs-title function_">checkPendingWrites</span>();
+  <span class="hljs-keyword">if</span> (pendingWrites &gt; <span class="hljs-number">0</span>) {
+    logger.<span class="hljs-title function_">error</span>(<span class="hljs-string">`Shutdown with <span class="hljs-subst">${pendingWrites}</span> pending writes`</span>);
+  }
+  
+  <span class="hljs-comment">// 验证子进程已停止</span>
+  <span class="hljs-keyword">const</span> runningWorkers = <span class="hljs-keyword">await</span> workerPool.<span class="hljs-title function_">getActiveCount</span>();
+  <span class="hljs-keyword">if</span> (runningWorkers &gt; <span class="hljs-number">0</span>) {
+    logger.<span class="hljs-title function_">warn</span>(<span class="hljs-string">`Shutdown with <span class="hljs-subst">${runningWorkers}</span> active workers`</span>);
+  }
+}</code></pre>
+<h3 id="8-2-日志输出">8.2 日志输出<a class="anchor" href="#8-2-日志输出" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 关闭日志必须包含以下信息</span>
+logger.<span class="hljs-title function_">info</span>(<span class="hljs-string">&#x27;Graceful shutdown complete&#x27;</span>, {
+  <span class="hljs-attr">activeConnections</span>: activeConnections.<span class="hljs-property">size</span>,
+  <span class="hljs-attr">pendingWrites</span>: pendingWriteCount,
+  <span class="hljs-attr">workerPoolSize</span>: workerPool.<span class="hljs-title function_">getActiveCount</span>(),
+  <span class="hljs-attr">shutdownDuration</span>: <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() - shutdownStartTime,
+  <span class="hljs-attr">exitCode</span>: <span class="hljs-number">0</span>
+});</code></pre>
+<hr>
+<h2 id="9-版本历史">9. 版本历史<a class="anchor" href="#9-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义 Graceful Shutdown 规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-OBS-001] 可观测性三支柱规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-OBS-001] 可观测性三支柱规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-OPS-003] Health Check 规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-OPS-003] Health Check 规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-OPS-002] Graceful Shutdown 规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

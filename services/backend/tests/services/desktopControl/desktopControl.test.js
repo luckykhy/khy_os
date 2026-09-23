@@ -8,13 +8,13 @@
  * 「填表编排」「门面前置授权」「工具路由」等不变量。
  */
 
-const registry = require('../../../src/services/desktopControl/backendRegistry');
-const detector = require('../../../src/services/desktopControl/backendDetector');
-const screenCapture = require('../../../src/services/desktopControl/screenCapture');
-const inputController = require('../../../src/services/desktopControl/inputController');
-const formFiller = require('../../../src/services/desktopControl/formFiller');
-const safetyGate = require('../../../src/services/desktopControl/safetyGate');
-const windowController = require('../../../src/services/desktopControl/windowController');
+const registry = require('../../../src/services/domain/desktop/desktopControl/backendRegistry.js');
+const detector = require('../../../src/services/domain/desktop/desktopControl/backendDetector.js');
+const screenCapture = require('../../../src/services/domain/desktop/desktopControl/screenCapture.js');
+const inputController = require('../../../src/services/domain/desktop/desktopControl/inputController.js');
+const formFiller = require('../../../src/services/domain/desktop/desktopControl/formFiller.js');
+const safetyGate = require('../../../src/services/domain/desktop/desktopControl/safetyGate.js');
+const windowController = require('../../../src/services/domain/desktop/desktopControl/windowController.js');
 const { DesktopController } = require('../../../src/services/desktopControl');
 const DesktopControlTool = require('../../../src/tools/DesktopControlTool');
 const desktopIntent = require('../../../src/services/gateway/desktopIntentInterceptor');

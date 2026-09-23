@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-085] CC模式子视图子菜单卡片与滚动设计.md -->
+<title>[DESIGN-ARCH-085] CC 模式子视图、子菜单、卡片与滚动设计 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-085] CC 模式子视图、子菜单、卡片与滚动设计</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-085] CC 模式子视图、子菜单、卡片与滚动设计</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-085-cc-模式子视图-子菜单-卡片与滚动设计">[DESIGN-ARCH-085] CC 模式子视图、子菜单、卡片与滚动设计</a></li><li class="lvl-2"><a href="#0-设计原则">0. 设计原则</a></li><li class="lvl-2"><a href="#1-agent-子视图设计">1. Agent 子视图设计</a></li><li class="lvl-3"><a href="#1-1-视图栈模型">1.1 视图栈模型</a></li><li class="lvl-3"><a href="#1-2-视图状态管理">1.2 视图状态管理</a></li><li class="lvl-3"><a href="#1-3-agent-列表视图">1.3 Agent 列表视图</a></li><li class="lvl-3"><a href="#1-4-agent-详情视图-分屏">1.4 Agent 详情视图（分屏）</a></li><li class="lvl-2"><a href="#2-子菜单设计">2. 子菜单设计</a></li><li class="lvl-3"><a href="#2-1-命令面板-ctrl-p">2.1 命令面板（Ctrl+P）</a></li><li class="lvl-3"><a href="#2-2-子菜单交互">2.2 子菜单交互</a></li><li class="lvl-3"><a href="#2-3-嵌套子菜单">2.3 嵌套子菜单</a></li><li class="lvl-2"><a href="#3-卡片设计">3. 卡片设计</a></li><li class="lvl-3"><a href="#3-1-工具调用卡片">3.1 工具调用卡片</a></li><li class="lvl-3"><a href="#3-2-信息卡片">3.2 信息卡片</a></li><li class="lvl-3"><a href="#3-3-卡片设计规范">3.3 卡片设计规范</a></li><li class="lvl-2"><a href="#4-滚动-复制-历史设计">4. 滚动/复制/历史设计</a></li><li class="lvl-3"><a href="#4-1-滚动设计-不影响选择和复制">4.1 滚动设计（不影响选择和复制）</a></li><li class="lvl-3"><a href="#4-2-复制设计">4.2 复制设计</a></li><li class="lvl-3"><a href="#4-3-历史回溯设计">4.3 历史回溯设计</a></li><li class="lvl-2"><a href="#5-resume-设计-完成后恢复">5. Resume 设计（完成后恢复）</a></li><li class="lvl-3"><a href="#5-1-完成状态显示">5.1 完成状态显示</a></li><li class="lvl-3"><a href="#5-2-resume-交互">5.2 Resume 交互</a></li><li class="lvl-3"><a href="#5-3-子命令完成后的恢复">5.3 子命令完成后的恢复</a></li><li class="lvl-2"><a href="#6-实现架构">6. 实现架构</a></li><li class="lvl-3"><a href="#6-1-视图路由">6.1 视图路由</a></li><li class="lvl-3"><a href="#6-2-滚动状态管理">6.2 滚动状态管理</a></li><li class="lvl-2"><a href="#7-验收标准">7. 验收标准</a></li><li class="lvl-3"><a href="#7-1-已成-可用现状验收">7.1 已成（可用现状验收）</a></li><li class="lvl-3"><a href="#7-2-未成-当前不满足-勿据此判缺陷">7.2 未成（**当前不满足，勿据此判缺陷**）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-085-cc-模式子视图-子菜单-卡片与滚动设计">[DESIGN-ARCH-085] CC 模式子视图、子菜单、卡片与滚动设计<a class="anchor" href="#design-arch-085-cc-模式子视图-子菜单-卡片与滚动设计" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>隶属</strong>：本文属 <strong>TUI 设计族</strong>（20 编号 / 21 文件），总纲与 scope 裁决见 <code>[DESIGN-ARCH-122] TUI 设计族总纲</code>；规则冲突一律以 <code>[DESIGN-ARCH-102] Khy TUI 统一规则手册</code> 为准。</p></blockquote>
+<blockquote><p><strong>定位</strong>：定义 CC 模式下子视图（Agent）、子菜单、卡片、滚动/复制/历史的设计规范。</p>
+<p><strong>适用边界</strong>：Agent 面板、命令面板、工具卡片、消息历史、滚动交互。</p>
+<p><strong>参考来源</strong>：<code>advanced-patterns.md</code> (View Stack, History, Clipboard) + <code>interaction-patterns.md</code> (fzf, OSC) + <code>exemplar-apps.md</code> (Claude Code)</p>
+<p>⚠ <strong>参考来源为悬空引用</strong>（2026-09-18 核实）：上述三份 <code>*.md</code> 在<strong>本仓 <code>find</code> 零命中</strong>，</p>
+<p>应为设计期的外部资料，未随文档入库。因此本文头部无法据以回溯 Claude Code / opencode 的</p>
+<p>原始设计依据。<strong>回溯原始依据请改看</strong>：<code>[DESIGN-ARCH-063]</code>（对照《Claude Code 架构》）、</p>
+<p><code>[DESIGN-ARCH-075]</code>（opencode 差距补齐路线）、<code>[DESIGN-ARCH-081]</code>（Claude Code TUI 复刻计划）、</p>
+<p><code>[DESIGN-ARCH-121]</code>（CC-Harness 借鉴清单，含源码级行号核对）。</p>
+<p>⚠ <strong>§4 已于 2026-09-18 按实现校正</strong>。此前 §4.1/§4.2 的键位表与示例代码是<strong>设计期草案</strong>，</p>
+<p>与落地实现严重脱节（表格里三个键在代码中不存在、示例代码的通道优先级与实现相反）。</p>
+<p>现 §4 以「<strong>实现现状</strong>（file:line 可复核）+ <strong>设计意图</strong>（草案保留并标注）+ <strong>差距</strong>」三段式重写。</p>
+<p>若本文与实现冲突，<strong>以实现为准</strong>，并回来改本文。</p></blockquote>
+<hr>
+<h2 id="0-设计原则">0. 设计原则<a class="anchor" href="#0-设计原则" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>原则</th><th>说明</th></tr></thead><tbody><tr><td><strong>视图隔离</strong></td><td>子视图不影响主对话流</td></tr><tr><td><strong>渐进披露</strong></td><td>复杂操作分步呈现</td></tr><tr><td><strong>滚动独立</strong></td><td>滚动/复制/历史互不干扰</td></tr><tr><td><strong>上下文保持</strong></td><td>切换视图后恢复位置和状态</td></tr><tr><td><strong>键盘优先</strong></td><td>所有操作键盘可达</td></tr></tbody></table>
+<hr>
+<h2 id="1-agent-子视图设计">1. Agent 子视图设计<a class="anchor" href="#1-agent-子视图设计" aria-label="锚点">#</a></h2>
+<h3 id="1-1-视图栈模型">1.1 视图栈模型<a class="anchor" href="#1-1-视图栈模型" aria-label="锚点">#</a></h3>
+<pre><code>主对话视图（根）
+  ├─ Agent 列表视图
+  │   ├─ Agent 详情视图
+  │   │   └─ Agent 执行日志
+  │   └─ Agent 配置视图
+  ├─ MCP 管理视图
+  │   ├─ MCP 服务器列表
+  │   └─ MCP 服务器详情
+  └─ 设置视图
+      ├─ 模型设置
+      └─ 权限设置</code></pre>
+<h3 id="1-2-视图状态管理">1.2 视图状态管理<a class="anchor" href="#1-2-视图状态管理" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// tui/context/ViewContext.js</span>
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">ViewProvider</span>(<span class="hljs-params">{ children }</span>) {
+  <span class="hljs-keyword">const</span> [viewStack, setViewStack] = <span class="hljs-title function_">useState</span>([<span class="hljs-string">&#x27;main&#x27;</span>]); <span class="hljs-comment">// 视图栈</span>
+  <span class="hljs-keyword">const</span> [viewState, setViewState] = <span class="hljs-title function_">useState</span>({});        <span class="hljs-comment">// 每视图状态缓存</span>
+
+  <span class="hljs-keyword">const</span> currentView = viewStack[viewStack.<span class="hljs-property">length</span> - <span class="hljs-number">1</span>];
+
+  <span class="hljs-keyword">const</span> pushView = <span class="hljs-title function_">useCallback</span>(<span class="hljs-function">(<span class="hljs-params">viewId, initialState = {}</span>) =&gt;</span> {
+    <span class="hljs-title function_">setViewStack</span>(<span class="hljs-function"><span class="hljs-params">s</span> =&gt;</span> [...s, viewId]);
+    <span class="hljs-title function_">setViewState</span>(<span class="hljs-function"><span class="hljs-params">s</span> =&gt;</span> ({ ...s, [viewId]: initialState }));
+  }, []);
+
+  <span class="hljs-keyword">const</span> popView = <span class="hljs-title function_">useCallback</span>(<span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-keyword">if</span> (viewStack.<span class="hljs-property">length</span> &lt;= <span class="hljs-number">1</span>) <span class="hljs-keyword">return</span>; <span class="hljs-comment">// 主视图不能弹出</span>
+    <span class="hljs-title function_">setViewStack</span>(<span class="hljs-function"><span class="hljs-params">s</span> =&gt;</span> s.<span class="hljs-title function_">slice</span>(<span class="hljs-number">0</span>, -<span class="hljs-number">1</span>));
+  }, [viewStack]);
+
+  <span class="hljs-keyword">const</span> replaceView = <span class="hljs-title function_">useCallback</span>(<span class="hljs-function">(<span class="hljs-params">viewId</span>) =&gt;</span> {
+    <span class="hljs-title function_">setViewStack</span>(<span class="hljs-function"><span class="hljs-params">s</span> =&gt;</span> [...s.<span class="hljs-title function_">slice</span>(<span class="hljs-number">0</span>, -<span class="hljs-number">1</span>), viewId]);
+  }, []);
+
+  <span class="hljs-keyword">return</span> (
+    <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">ViewContext.Provider</span> <span class="hljs-attr">value</span>=<span class="hljs-string">{{</span>
+      <span class="hljs-attr">currentView</span>,
+      <span class="hljs-attr">viewStack</span>,
+      <span class="hljs-attr">viewState</span>,
+      <span class="hljs-attr">pushView</span>,
+      <span class="hljs-attr">popView</span>,
+      <span class="hljs-attr">replaceView</span>,
+    }}&gt;</span>
+      {children}
+    <span class="hljs-tag">&lt;/<span class="hljs-name">ViewContext.Provider</span>&gt;</span></span>
+  );
+}</code></pre>
+<h3 id="1-3-agent-列表视图">1.3 Agent 列表视图<a class="anchor" href="#1-3-agent-列表视图" aria-label="锚点">#</a></h3>
+<pre><code>┌─ Agents ───────────────────────────────────────────────┐
+│                                                        │
+│  ▸ main          idle     Khy v1.0.0                   │
+│    code-review   running  Analyzing src/index.ts        │
+│    test-runner   done     ✓ 42 tests passed            │
+│    deploy        failed   ✗ Connection timeout         │
+│                                                        │
+├────────────────────────────────────────────────────────┤
+│ 1-9: jump  Enter: focus  n: new  d: delete  Esc: back  │
+└────────────────────────────────────────────────────────┘</code></pre>
+<h3 id="1-4-agent-详情视图-分屏">1.4 Agent 详情视图（分屏）<a class="anchor" href="#1-4-agent-详情视图-分屏" aria-label="锚点">#</a></h3>
+<pre><code>┌─ Agent: code-review ────────────┬─ Logs ───────────────┐
+│                                 │                       │
+│  Status: running                │  12:34:05 Starting...  │
+│  Model: Sonnet 4                │  12:34:06 Reading...   │
+│  Started: 2 min ago             │  12:34:07 Analyzing... │
+│  Tokens: 1,245 / 200k           │  12:34:08 Found 3...   │
+│                                 │  12:34:09 ...          │
+│  Task:                          │                       │
+│  Review src/index.ts for        │                       │
+│  security issues                │                       │
+│                                 │                       │
+│  [Stop]  [Restart]  [Config]    │                       │
+│                                 │                       │
+├─────────────────────────────────┴───────────────────────┤
+│ Esc: back  Tab: switch panel  Ctrl+C: stop agent       │
+└───────────────────────────────────────────────────────┘</code></pre>
+<hr>
+<h2 id="2-子菜单设计">2. 子菜单设计<a class="anchor" href="#2-子菜单设计" aria-label="锚点">#</a></h2>
+<h3 id="2-1-命令面板-ctrl-p">2.1 命令面板（Ctrl+P）<a class="anchor" href="#2-1-命令面板-ctrl-p" aria-label="锚点">#</a></h3>
+<pre><code>┌─ Command Palette ──────────────────────────────────────┐
+│ &gt; model                                               │ ← 搜索输入
+├────────────────────────────────────────────────────────┤
+│ Model &amp; Provider                                       │
+│   /model                Switch AI model                │
+│   /login                Configure provider             │
+│   /status               Gateway status                 │
+│                                                        │
+│ Session                                                │
+│   /clear                Clear conversation             │
+│   /compact              Compress context               │
+│   /cost                 Token usage                    │
+│                                                        │
+│ Tools                                                  │
+│   /mcp                  MCP server management          │
+│   /agents               Agent management               │
+│   /goal                 Set goal                       │
+│                                                        │
+│ Help                                                   │
+│   /help                 Show help                      │
+│   /doctor               System health                  │
+└────────────────────────────────────────────────────────┘</code></pre>
+<h3 id="2-2-子菜单交互">2.2 子菜单交互<a class="anchor" href="#2-2-子菜单交互" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>操作</th><th>效果</th></tr></thead><tbody><tr><td><code>Ctrl+P</code></td><td>打开命令面板</td></tr><tr><td>输入字符</td><td>实时过滤命令</td></tr><tr><td><code>↑/↓</code></td><td>导航命令</td></tr><tr><td><code>Enter</code></td><td>执行选中命令</td></tr><tr><td><code>Esc</code></td><td>关闭面板</td></tr><tr><td><code>1-9</code></td><td>跳转到分组</td></tr></tbody></table>
+<h3 id="2-3-嵌套子菜单">2.3 嵌套子菜单<a class="anchor" href="#2-3-嵌套子菜单" aria-label="锚点">#</a></h3>
+<pre><code>/model →
+  ├─ Claude Sonnet 4        ← 当前使用（✓）
+  ├─ Claude Opus 4
+  ├─ Claude Haiku 4.5
+  ├─ GPT-4o
+  ├─ GPT-4o-mini
+  ├─ o1-preview
+  └─ o1-mini
+
+/mcp →
+  ├─ List servers
+  ├─ Add server
+  ├─ Remove server
+  └─ Configure server</code></pre>
+<hr>
+<h2 id="3-卡片设计">3. 卡片设计<a class="anchor" href="#3-卡片设计" aria-label="锚点">#</a></h2>
+<h3 id="3-1-工具调用卡片">3.1 工具调用卡片<a class="anchor" href="#3-1-工具调用卡片" aria-label="锚点">#</a></h3>
+<pre><code>┌─ 🔧 Read ──────────────────────────────────────────────┐
+│ file_path: src/index.ts                                │
+│                                                        │
+│ ▸ 5 lines                                              │
+│                                                        │
+│ Status: ✓ done                                         │
+└────────────────────────────────────────────────────────┘
+
+┌─ 🔧 Read ──────────────────────────────────────────────┐
+│ file_path: src/index.ts                                │
+│                                                        │
+│ ▾ 结果:                                                │
+│   │ 1 │ import React from 'react'                      │
+│   │ 2 │ import { View } from 'ink'                     │
+│   │ 3 │ export function App() {                       │
+│   │ 4 │   return &lt;View&gt;...&lt;/View&gt;                     │
+│   │ 5 │ }                                             │
+│                                                        │
+│ Status: ✓ done                                         │
+└────────────────────────────────────────────────────────┘</code></pre>
+<h3 id="3-2-信息卡片">3.2 信息卡片<a class="anchor" href="#3-2-信息卡片" aria-label="锚点">#</a></h3>
+<pre><code>┌─ 📊 Session Stats ─────────────────────────────────────┐
+│                                                        │
+│  Tokens:  12,456 / 200,000 (6%)                        │
+│  Cost:    $0.42                                        │
+│  Messages: 23                                          │
+│  Tools:   8 calls                                      │
+│  Duration: 15 min                                      │
+│                                                        │
+└────────────────────────────────────────────────────────┘</code></pre>
+<h3 id="3-3-卡片设计规范">3.3 卡片设计规范<a class="anchor" href="#3-3-卡片设计规范" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>属性</th><th>规范</th></tr></thead><tbody><tr><td><strong>边框</strong></td><td>单线 <code>─│┌┐└┘</code>，圆角可选</td></tr><tr><td><strong>标题</strong></td><td>图标 + 名称，粗体</td></tr><tr><td><strong>内容</strong></td><td>缩进 2 空格</td></tr><tr><td><strong>折叠</strong></td><td><code>▸</code> 折叠 / <code>▾</code> 展开</td></tr><tr><td><strong>状态</strong></td><td>右下角显示状态</td></tr><tr><td><strong>最大宽度</strong></td><td>80 列或终端宽度</td></tr></tbody></table>
+<hr>
+<h2 id="4-滚动-复制-历史设计">4. 滚动/复制/历史设计<a class="anchor" href="#4-滚动-复制-历史设计" aria-label="锚点">#</a></h2>
+<blockquote><p><strong>本节的读法</strong>（2026-09-18 重写）：每条分 <strong>① 实现现状</strong>（file:line 可复核，权威）/</p>
+<p><strong>② 设计意图</strong>（原始草案，保留以存演进痕迹）/ <strong>③ 差距</strong>（两者差在哪、为何）。</p>
+<p>实现与本节冲突时<strong>以实现为准</strong>。</p></blockquote>
+<h3 id="4-1-滚动设计-不影响选择和复制">4.1 滚动设计（不影响选择和复制）<a class="anchor" href="#4-1-滚动设计-不影响选择和复制" aria-label="锚点">#</a></h3>
+<h4 id="4-1-1-滚动模式分离">4.1.1 滚动模式分离<a class="anchor" href="#4-1-1-滚动模式分离" aria-label="锚点">#</a></h4>
+<h5 id="①-实现现状">① 实现现状<a class="anchor" href="#①-实现现状" aria-label="锚点">#</a></h5>
+<p><strong>核心事实：CC 模式当前没有「滚动模式 / 选择模式 / 复制模式」的</strong>作用域状态机。</p>
+<p>滚动是<strong>无模式</strong>的 —— 任何时刻按键都直接作用，不需要先「进入」某个模式。</p>
+<table><thead><tr><th>作用对象</th><th>触发键</th><th>行为</th><th>真源</th></tr></thead><tbody><tr><td>转录覆盖层（<code>Ctrl+O</code> 打开的 <code>CcTranscriptView</code>）</td><td><code>↑</code> / <code>↓</code></td><td>单条上/下移（<strong>同时</strong>移动选中项）</td><td><code>CcTranscriptView.js:96-108</code></td></tr><tr><td>同上</td><td><code>PageUp</code> / <code>PageDown</code></td><td>半页上/下</td><td><code>CcTranscriptView.js:110-118</code></td></tr><tr><td>同上</td><td><code>g</code> / <code>G</code></td><td>跳顶 / 跳底</td><td><code>CcTranscriptView.js:120-128</code></td></tr><tr><td>同上</td><td><code>Enter</code></td><td>切换当前条的工具展开</td><td><code>CcTranscriptView.js:130-140</code></td></tr><tr><td>同上</td><td><code>Esc</code></td><td>关闭覆盖层</td><td><code>CcTranscriptView.js:93-95</code></td></tr><tr><td>主对话区</td><td>鼠标滚轮</td><td>视口滚动</td><td><code>mouseButtons</code> → <code>onWheel</code> → <code>applyViewportScroll</code></td></tr></tbody></table>
+<blockquote><p>⚠ <strong>无 <code>PageUp</code>/<code>PageDown</code> 的全局绑定</strong>：全仓 <code>grep -rn &quot;pageup\|pagedown&quot; --include=*.js</code></p>
+<p>在 <code>tui/</code> 下<strong>零命中</strong> —— 翻页键只存在于 <code>CcTranscriptView</code> 覆盖层内部。</p>
+<p>主对话区目前<strong>只能靠滚轮</strong>滚动，没有键盘翻页。</p></blockquote>
+<p>所有滚动动作统一收敛到 <strong><code>tui/scrollActions.js</code> 的 <code>applyScroll(action, dims)</code></strong>（单一真源）：</p>
+<pre><code class="language-js"><span class="hljs-comment">// scrollActions.js:27-36 —— CC `scroll:*` 动作族全集（顺序 = CC 注册表出现顺序）</span>
+<span class="hljs-string">&#x27;lineUp&#x27;</span> | <span class="hljs-string">&#x27;lineDown&#x27;</span> | <span class="hljs-string">&#x27;halfPageUp&#x27;</span> | <span class="hljs-string">&#x27;halfPageDown&#x27;</span>
+| <span class="hljs-string">&#x27;fullPageUp&#x27;</span> | <span class="hljs-string">&#x27;fullPageDown&#x27;</span> | <span class="hljs-string">&#x27;top&#x27;</span> | <span class="hljs-string">&#x27;bottom&#x27;</span></code></pre>
+<p>设计上刻意与 CC 注册表同名，且<strong>同时接受裸名与带前缀名</strong>（<code>'lineUp'</code> 与 <code>'scroll:lineUp'</code>）——</p>
+<p>调用方可逐字节照抄 CC 注册表而不必再翻译一层（<code>scrollActions.js:20-24</code>）。</p>
+<h5 id="②-设计意图-原始草案-未落地">② 设计意图（原始草案，未落地）<a class="anchor" href="#②-设计意图-原始草案-未落地" aria-label="锚点">#</a></h5>
+<pre><code>| 模式 | 触发 | 行为 |
+| 浏览模式 | 默认 | ↑/↓ 浏览历史，PageUp/PageDown 滚动 |
+| 选择模式 | v 进入 | ↑/↓ 选择文本，Space 标记 |
+| 复制模式 | c 进入 | 选择后 y 复制 |</code></pre>
+<h5 id="③-差距">③ 差距<a class="anchor" href="#③-差距" aria-label="锚点">#</a></h5>
+<table><thead><tr><th>差距</th><th>说明</th></tr></thead><tbody><tr><td><strong>无模式机</strong></td><td>草案的三个模式均未实现。<code>v</code> 的现状是<strong>输入框的 vim visual 模式</strong>（见 §4.2.3），不是「选择模式」</td></tr><tr><td><strong>无 <code>Space</code> 标记</strong></td><td>草案的「多选标记」未实现；选中态是单选（<code>selectedIndex</code>）</td></tr><tr><td><strong>主对话区无键盘翻页</strong></td><td>草案的 <code>PageUp/PageDown</code> 只落在转录覆盖层；主区仅滚轮</td></tr><tr><td><strong>模式机未做并非缺陷</strong></td><td>无模式更贴合 Claude Code 实际体验（<code>Ctrl+O</code> 开覆盖层后直接 <code>↑/↓</code>/<code>g</code>/<code>G</code>，无需先进入模式）；<strong>建议把草案的三个模式正式废弃</strong>，而非补齐</td></tr></tbody></table>
+<h4 id="4-1-2-滚动实现-claude-code-风格">4.1.2 滚动实现（Claude Code 风格）<a class="anchor" href="#4-1-2-滚动实现-claude-code-风格" aria-label="锚点">#</a></h4>
+<p><strong>实现现状</strong>：滚动指示器由 <code>components/CcScrollIndicators.js</code> 渲染，</p>
+<p><code>Viewport.js</code> 负责切片与边界钳制（<code>clampedScroll = clamp(scroll, 0, maxScroll)</code>）。</p>
+<pre><code>对话区（可滚动）：
+  ┌─────────────────────────────────────────────────────┐
+  │ ▸ 消息 1                                            │  ← 可见区域顶部
+  │   消息 2                                            │
+  │   消息 3                                            │
+  │   消息 4                                            │
+  │   消息 5                                            │  ← 可见区域底部
+  └─────────────────────────────────────────────────────┘
+
+  滚动指示器：
+  ⋯ (3 above)        ← 上方有 3 条消息
+  ⋯ (5 below)        ← 下方有 5 条消息</code></pre>
+<h3 id="4-2-复制设计">4.2 复制设计<a class="anchor" href="#4-2-复制设计" aria-label="锚点">#</a></h3>
+<h4 id="4-2-1-复制方式">4.2.1 复制方式<a class="anchor" href="#4-2-1-复制方式" aria-label="锚点">#</a></h4>
+<h5 id="①-实现现状-权威">① 实现现状（权威）<a class="anchor" href="#①-实现现状-权威" aria-label="锚点">#</a></h5>
+<p><strong>CC 模式下当前只有两个复制入口</strong>：</p>
+<table><thead><tr><th>操作</th><th>效果</th><th>反馈</th><th>真源</th></tr></thead><tbody><tr><td><strong><code>Ctrl+Y</code></strong></td><td>复制<strong>最近一条助手回复</strong>到剪贴板</td><td><code>copied N chars</code> / <code>已复制 N 字节到剪贴板(native)</code></td><td><code>CcApp.js:359-361</code> → <code>handleCopyLast()</code> (<code>:239</code>)</td></tr><tr><td><strong><code>y</code></strong>（输入框 vim VISUAL 模式下）</td><td>yank 输入框选中片段：写入内部寄存器 <code>_vimYank</code> <strong>并</strong>写系统剪贴板（双写）</td><td><code>已复制 N 字节到剪贴板(channels)</code> / <code>复制失败:reason</code></td><td><code>CcPromptInput.js:326-347</code></td></tr><tr><td><code>Ctrl+C</code></td><td><strong>中断</strong>（非复制）</td><td>—</td><td><code>CcApp.js:299-311</code></td></tr></tbody></table>
+<p><code>Ctrl+Y</code> 的反馈文案走 <code>utils/ccFormatters.formatCopyFeedback</code>（code-point 计数，emoji 安全），</p>
+<p>门控 <code>KHY_CC_COPY_TOAST</code>（默认开）；显式 <code>0</code> → 回退中文旧文案。<strong>失败时如实告知，绝不假装成功</strong></p>
+<p>（<code>CcApp.js:267-281</code>）。<code>y</code> 的反馈同理走 <code>onToast</code>，且 <strong>fail-soft</strong>：剪贴板不可用不阻断 vim 操作。</p>
+<p><strong>输入框 vim 模式的其他相关键</strong>（<code>CcPromptInput.js:246-350</code>，供对照）：</p>
+<table><thead><tr><th>键</th><th>作用</th></tr></thead><tbody><tr><td><code>v</code> / <code>V</code></td><td>进 VISUAL：<code>v</code> 从光标起、<code>V</code> 整行（<code>visualStart=0</code>，光标到行尾）</td></tr><tr><td><code>h</code> / <code>l</code> / <code>w</code> / <code>b</code> / <code>0</code> / <code>$</code></td><td>光标移动</td></tr><tr><td><code>d</code> / <code>x</code></td><td>删除选中片段</td></tr><tr><td><code>y</code></td><td>yank（见上）</td></tr><tr><td><code>p</code></td><td>粘贴（粘 <code>_vimYank</code>）</td></tr><tr><td><code>u</code></td><td>撤销</td></tr><tr><td><code>i</code> / <code>a</code></td><td>回 INSERT</td></tr></tbody></table>
+<h5 id="②-设计意图-原始草案-未落地-2">② 设计意图（原始草案，未落地）<a class="anchor" href="#②-设计意图-原始草案-未落地-2" aria-label="锚点">#</a></h5>
+<pre><code>| c              | 复制当前选中内容   | copied 42 bytes        |
+| C              | 复制整行/整段      | copied 1 line          |
+| Ctrl+C         | 中断操作           | —                      |
+| Ctrl+Shift+C   | 复制到剪贴板       | copied                 |</code></pre>
+<h5 id="③-差距-重要-三个键在代码中不存在">③ 差距（重要：<strong>三个键在代码中不存在</strong>）<a class="anchor" href="#③-差距-重要-三个键在代码中不存在" aria-label="锚点">#</a></h5>
+<pre><code>❌ `c`             → 全仓无此绑定
+❌ `C`             → 全仓无此绑定
+❌ `Ctrl+Shift+C`  → 全仓无此绑定（且终端普遍不上报带 Shift 的 Ctrl 组合，
+                      ink 的 key 对象也拿不到可靠判据 —— 草案这条在终端层就不成立）
+✅ `Ctrl+Y`        → 实现采用的键（草案未提）</code></pre>
+<p>⇒ <strong>草案的键位表不可作为实施依据</strong>。若要让「复制选中内容」成立，</p>
+<p>真正缺的是 §4.2.4 说的<strong>消息区选择消费者</strong>（见 <code>[DESIGN-ARCH-124]</code>），</p>
+<p>不是补三个键绑定。</p>
+<h4 id="4-2-2-复制实现">4.2.2 复制实现<a class="anchor" href="#4-2-2-复制实现" aria-label="锚点">#</a></h4>
+<h5 id="①-实现现状-权威-tui-utils-ccclipboard-js">① 实现现状（权威，<code>tui/utils/ccClipboard.js</code>）<a class="anchor" href="#①-实现现状-权威-tui-utils-ccclipboard-js" aria-label="锚点">#</a></h5>
+<p>模块头注释写明的策略与<strong>草案相反</strong> —— <strong>native 先行，OSC 52 仅作非 TTY 兜底</strong>：</p>
+<table><thead><tr><th>顺序</th><th>通道</th><th>条件</th><th>真源</th></tr></thead><tbody><tr><td>1</td><td><strong>native</strong></td><td>总是先试；复用 <code>services/imageService.writeClipboardText</code>（跨平台工具链单一真源，stdin 管道注入安全 + CJK UTF-8 安全）</td><td><code>ccClipboard.js:112-123</code></td></tr><tr><td>2</td><td><strong>OSC 52</strong></td><td>仅当 native <strong>失败</strong>时兜底；或 <code>KHY_CLIPBOARD_DUAL=1</code> 时双通道并行</td><td><code>ccClipboard.js:178-188</code></td></tr></tbody></table>
+<p>统一出口 <code>writeClipboard(text)</code> <strong>绝不抛</strong>，返回 <code>{ ok, channels, bytes, reasons }</code>。</p>
+<p><strong>OSC 52 的三个额外约束</strong>（草案完全没写）：</p>
+<pre><code class="language-js"><span class="hljs-title function_">shouldEmitOsc52</span>(stream, env)   <span class="hljs-comment">// ccClipboard.js:70-80</span>
+  → 门控关            → { <span class="hljs-attr">on</span>:<span class="hljs-literal">false</span>, <span class="hljs-attr">reason</span>:<span class="hljs-string">&#x27;gate-off&#x27;</span> }
+  → stream.<span class="hljs-property">isTTY</span>      → { <span class="hljs-attr">on</span>:<span class="hljs-literal">false</span>, <span class="hljs-attr">reason</span>:<span class="hljs-string">&#x27;tty&#x27;</span> }      <span class="hljs-comment">// TTY 下喷转义会污染画面</span>
+  → 否则              → { <span class="hljs-attr">on</span>:<span class="hljs-literal">true</span> }
+
+<span class="hljs-title function_">buildOsc52Frame</span>(text, {env})   <span class="hljs-comment">// 载荷 &gt; maxBytes → { skip:true, reason:&#x27;oversize&#x27; }</span>
+
+<span class="hljs-variable constant_">TMUX</span>/<span class="hljs-variable constant_">STY</span> passthrough           <span class="hljs-comment">// ccClipboard.js:98-102</span>
+  → tmux 下须包 <span class="hljs-string">`\x1bPtmux;\x1b…\x1b\\`</span> 外层 <span class="hljs-variable constant_">DCS</span> 才能穿透
+  → 嵌套 tmux 只包一层（tmux 自身会透传内层）</code></pre>
+<p><strong>环境变量</strong>（真源 <code>services/backend/src/services/flagRegistry.js</code>）：</p>
+<table><thead><tr><th>变量</th><th>默认</th><th>作用</th></tr></thead><tbody><tr><td><code>KHY_CC_CLIPBOARD</code></td><td><strong>开</strong></td><td>统一出口总闸；关 → 逐字节回退 legacy 直调 <code>imageService</code></td></tr><tr><td><code>KHY_CLIPBOARD_OSC52</code></td><td>开</td><td>OSC 52 通道独立门控</td></tr><tr><td><code>KHY_CLIPBOARD_DUAL</code></td><td><strong>关</strong></td><td>native 成功后仍补发 OSC 52（opencode #4751 实证用户要这个开关）</td></tr><tr><td><code>KHY_CLIPBOARD_PASSTHROUGH</code></td><td>开</td><td>tmux/screen 的 DCS 外层包装</td></tr><tr><td><code>KHY_CLIPBOARD_MAX_BYTES</code></td><td><code>100000</code></td><td>OSC 52 载荷上限；<code>0</code> = 不限</td></tr></tbody></table>
+<h5 id="②-设计意图-原始草案">② 设计意图（原始草案）<a class="anchor" href="#②-设计意图-原始草案" aria-label="锚点">#</a></h5>
+<pre><code class="language-js"><span class="hljs-comment">// 草案写法：OSC 52 优先，失败才 fallback 到系统命令</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">OSC_52</span> = <span class="hljs-string">&#x27;\x1B]52;c;&#x27;</span>;
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">copyToClipboard</span>(<span class="hljs-params">text</span>) {
+  <span class="hljs-keyword">try</span> {
+    process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-variable constant_">OSC_52</span> + <span class="hljs-title class_">Buffer</span>.<span class="hljs-title function_">from</span>(text,<span class="hljs-string">&#x27;utf8&#x27;</span>).<span class="hljs-title function_">toString</span>(<span class="hljs-string">&#x27;base64&#x27;</span>) + <span class="hljs-string">&#x27;\x07&#x27;</span>);
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+  } <span class="hljs-keyword">catch</span> {
+    <span class="hljs-comment">// fallback: pbcopy / xclip / clip</span>
+  }
+}</code></pre>
+<h5 id="③-差距-优先级完全颠倒-且草案版本会污染-tty">③ 差距（<strong>优先级完全颠倒</strong>，且草案版本会污染 TTY）<a class="anchor" href="#③-差距-优先级完全颠倒-且草案版本会污染-tty" aria-label="锚点">#</a></h5>
+<table><thead><tr><th>维度</th><th>草案</th><th>实现</th><th>为何实现更优</th></tr></thead><tbody><tr><td>通道优先级</td><td>OSC 52 <strong>优先</strong></td><td>native <strong>优先</strong></td><td>OSC 52 依赖终端支持（部分终端忽略），native 走系统工具链<strong>确定性更高</strong></td></tr><tr><td>TTY 判定</td><td><strong>无</strong></td><td><code>isTTY → 不发射</code></td><td>草案会在用户画面上<strong>喷出 base64 转义串</strong></td></tr><tr><td>tmux 穿透</td><td><strong>无</strong></td><td>DCS 外层包装</td><td>草案在 tmux 内<strong>静默失效</strong></td></tr><tr><td>载荷上限</td><td><strong>无</strong></td><td>100KB（可配）</td><td>超大载荷会卡住终端</td></tr><tr><td>门控</td><td><strong>无</strong></td><td>5 个 env</td><td>无法在异常环境降级</td></tr><tr><td>失败可见性</td><td><code>false</code></td><td><code>{ok, channels, reasons}</code></td><td>草案的布尔值<strong>无法区分失败原因</strong></td></tr></tbody></table>
+<p>⇒ 草案是<strong>早期草稿</strong>，实现已演进为生产级版本。<strong>保留草案只为记录演进，不作为依据。</strong></p>
+<h4 id="4-2-3-与-v-y-的真实关系-澄清高频误读">4.2.3 与 <code>v</code>/<code>y</code> 的真实关系（澄清高频误读）<a class="anchor" href="#4-2-3-与-v-y-的真实关系-澄清高频误读" aria-label="锚点">#</a></h4>
+<p><code>[DESIGN-ARCH-102]</code> §6.1 与本文草案都提「<code>v</code> 进入选择模式 / <code>y</code> 复制」，</p>
+<p>容易误读为「消息区的 vim 式选择复制」。<strong>实际语义完全不同</strong>：</p>
+<table><thead><tr><th>键</th><th>真实作用域</th><th>真实语义</th><th>真源</th></tr></thead><tbody><tr><td><code>v</code></td><td><strong>输入框内</strong></td><td>进入 vim <strong>VISUAL 模式</strong>，标记 <code>visualStart = offset</code>（<code>V</code> 则为整行）</td><td><code>CcPromptInput.js:252-253</code></td></tr><tr><td><code>y</code>（visual 中）</td><td>输入框内</td><td><strong>yank</strong>：写入 <code>_vimYank</code> 寄存器，<strong>并</strong>双写系统剪贴板（有 Toast 回执）</td><td><code>CcPromptInput.js:326-347</code></td></tr><tr><td><code>d</code> / <code>x</code>（visual 中）</td><td>输入框内</td><td>删除输入框内的选中片段</td><td><code>CcPromptInput.js:317-326</code></td></tr></tbody></table>
+<blockquote><p>⚠ <strong>无 <code>Space</code> 标记</strong>：草案与早期文档常提「<code>Space</code> 标记选择」，实际**全仓无 <code>input === ' '</code></p>
+<p>的 visual 分支** —— 该键未实现。</p></blockquote>
+<p>⇒ 这是 <strong>输入框的 vim 编辑语义</strong>（作用于 <code>value</code>/<code>offset</code>），</p>
+<p><strong>不是消息区的文本选择</strong>。消息区（转录）<strong>当前没有任何选择/复制能力</strong> ——</p>
+<p>这正是 <code>[DESIGN-ARCH-124]</code> 要补的那个洞。</p>
+<h4 id="4-2-4-消息区复制-唯一的结构性缺口">4.2.4 消息区复制：唯一的结构性缺口<a class="anchor" href="#4-2-4-消息区复制-唯一的结构性缺口" aria-label="锚点">#</a></h4>
+<p><strong>CC 模式下，鼠标拖选复制不可用的根因</strong>（<code>[DESIGN-ARCH-124]</code> §1 逐层实证）：</p>
+<table><thead><tr><th>层</th><th>状态</th></tr></thead><tbody><tr><td>进程级鼠标层（<code>tui/app.js</code> 开 1002）</td><td>✅ 已在收 SGR 事件</td></tr><tr><td>事件分发（<code>mouseButtons.js</code> 的 <code>onSelectEvent</code>）</td><td>✅ 通道完整</td></tr><tr><td>选区算法（<code>selection.js</code>）</td><td>✅ 纯叶子，27/27 绿</td></tr><tr><td>反色渲染（<code>Viewport.js</code> 的 <code>selection</code> prop）</td><td>✅ 通用，未传时逐字节不变</td></tr><tr><td>剪贴板出口（<code>ccClipboard.js</code>）</td><td>✅ 本节 4.2.2 已实测可用</td></tr><tr><td><strong>消费者（<code>CcApp.js</code>）</strong></td><td>❌ <strong>零命中</strong></td></tr></tbody></table>
+<p>⇒ 前 5 层全部就绪且实测通过，<strong>断点只在最后一层</strong>：CC 消息区没有消费鼠标事件、把</p>
+<p>消息树投影成 <code>lines[]</code> 的组件。补齐方案见 <strong><code>[DESIGN-ARCH-124]</code> §2 方案 A</strong></p>
+<p>（投影成 <code>lines[]</code> 喂给现成的 <code>Viewport</code>，复用 legacy 已验证的路径；<strong>Legacy 路径一行不改</strong>）。</p>
+<h3 id="4-3-历史回溯设计">4.3 历史回溯设计<a class="anchor" href="#4-3-历史回溯设计" aria-label="锚点">#</a></h3>
+<h4 id="4-3-1-输入历史">4.3.1 输入历史<a class="anchor" href="#4-3-1-输入历史" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>操作</th><th>效果</th></tr></thead><tbody><tr><td><code>↑</code></td><td>上一条历史输入</td></tr><tr><td><code>↓</code></td><td>下一条历史输入</td></tr><tr><td><code>Ctrl+R</code></td><td>反向搜索历史</td></tr></tbody></table>
+<h4 id="4-3-2-历史持久化">4.3.2 历史持久化<a class="anchor" href="#4-3-2-历史持久化" aria-label="锚点">#</a></h4>
+<pre><code class="language-javascript"><span class="hljs-comment">// tui/utils/ccHistory.js</span>
+<span class="hljs-meta">
+&#x27;use strict&#x27;</span>;
+
+<span class="hljs-comment">/**
+ * 输入历史管理
+ * 持久化到 ~/.khyquant/.khy_history
+ */</span>
+
+<span class="hljs-keyword">const</span> fs = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;fs&#x27;</span>);
+<span class="hljs-keyword">const</span> path = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;path&#x27;</span>);
+<span class="hljs-keyword">const</span> os = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;os&#x27;</span>);
+
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">HISTORY_FILE</span> = path.<span class="hljs-title function_">join</span>(os.<span class="hljs-title function_">homedir</span>(), <span class="hljs-string">&#x27;.khyquant&#x27;</span>, <span class="hljs-string">&#x27;.khy_history&#x27;</span>);
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">MAX_HISTORY</span> = <span class="hljs-number">100</span>;
+
+<span class="hljs-keyword">let</span> _cache = <span class="hljs-literal">null</span>;
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">loadHistory</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">if</span> (_cache) <span class="hljs-keyword">return</span> _cache;
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> text = fs.<span class="hljs-title function_">readFileSync</span>(<span class="hljs-variable constant_">HISTORY_FILE</span>, <span class="hljs-string">&#x27;utf8&#x27;</span>);
+    _cache = text.<span class="hljs-title function_">split</span>(<span class="hljs-string">&#x27;\n&#x27;</span>).<span class="hljs-title function_">filter</span>(<span class="hljs-title class_">Boolean</span>).<span class="hljs-title function_">slice</span>(-<span class="hljs-variable constant_">MAX_HISTORY</span>);
+  } <span class="hljs-keyword">catch</span> {
+    _cache = [];
+  }
+  <span class="hljs-keyword">return</span> _cache;
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">saveHistory</span>(<span class="hljs-params">history</span>) {
+  _cache = history.<span class="hljs-title function_">slice</span>(-<span class="hljs-variable constant_">MAX_HISTORY</span>);
+  <span class="hljs-keyword">try</span> {
+    fs.<span class="hljs-title function_">mkdirSync</span>(path.<span class="hljs-title function_">dirname</span>(<span class="hljs-variable constant_">HISTORY_FILE</span>), { <span class="hljs-attr">recursive</span>: <span class="hljs-literal">true</span> });
+    fs.<span class="hljs-title function_">writeFileSync</span>(<span class="hljs-variable constant_">HISTORY_FILE</span>, _cache.<span class="hljs-title function_">join</span>(<span class="hljs-string">&#x27;\n&#x27;</span>) + <span class="hljs-string">&#x27;\n&#x27;</span>);
+  } <span class="hljs-keyword">catch</span> {
+    <span class="hljs-comment">// fail-soft</span>
+  }
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">addHistory</span>(<span class="hljs-params">entry</span>) {
+  <span class="hljs-keyword">if</span> (!entry || !entry.<span class="hljs-title function_">trim</span>()) <span class="hljs-keyword">return</span>;
+  <span class="hljs-keyword">const</span> history = <span class="hljs-title function_">loadHistory</span>();
+  <span class="hljs-comment">// 去重：如果最后一条相同则不添加</span>
+  <span class="hljs-keyword">if</span> (history[history.<span class="hljs-property">length</span> - <span class="hljs-number">1</span>] === entry) <span class="hljs-keyword">return</span>;
+  history.<span class="hljs-title function_">push</span>(entry);
+  <span class="hljs-title function_">saveHistory</span>(history);
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">searchHistory</span>(<span class="hljs-params">query</span>) {
+  <span class="hljs-keyword">const</span> history = <span class="hljs-title function_">loadHistory</span>();
+  <span class="hljs-keyword">if</span> (!query) <span class="hljs-keyword">return</span> history;
+  <span class="hljs-keyword">const</span> q = query.<span class="hljs-title function_">toLowerCase</span>();
+  <span class="hljs-keyword">return</span> history.<span class="hljs-title function_">filter</span>(<span class="hljs-function"><span class="hljs-params">h</span> =&gt;</span> h.<span class="hljs-title function_">toLowerCase</span>().<span class="hljs-title function_">includes</span>(q));
+}
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = { loadHistory, addHistory, searchHistory };</code></pre>
+<h4 id="4-3-3-历史搜索界面">4.3.3 历史搜索界面<a class="anchor" href="#4-3-3-历史搜索界面" aria-label="锚点">#</a></h4>
+<pre><code>┌─ History Search ───────────────────────────────────────┐
+│ &gt; model                                               │ ← 搜索输入
+├────────────────────────────────────────────────────────┤
+│   /model claude-opus-4                                │
+│   /model gpt-4o                                       │
+│   /login                                              │
+│   /mcp list                                           │
+│   /compact                                            │
+│                                                        │
+│   5 matches                                           │
+└────────────────────────────────────────────────────────┘</code></pre>
+<hr>
+<h2 id="5-resume-设计-完成后恢复">5. Resume 设计（完成后恢复）<a class="anchor" href="#5-resume-设计-完成后恢复" aria-label="锚点">#</a></h2>
+<h3 id="5-1-完成状态显示">5.1 完成状态显示<a class="anchor" href="#5-1-完成状态显示" aria-label="锚点">#</a></h3>
+<pre><code>┌─ Task Complete ────────────────────────────────────────┐
+│                                                        │
+│  ✓ 任务完成                                            │
+│                                                        │
+│  摘要：                                                │
+│  - 修改了 3 个文件                                     │
+│  - 运行了 42 个测试                                    │
+│  - 生成了 1 个提交                                     │
+│                                                        │
+│  耗时：2m 34s                                          │
+│  Token：12,456                                         │
+│  费用：$0.42                                           │
+│                                                        │
+│  [Continue]  [Review]  [New Task]                      │
+│                                                        │
+└────────────────────────────────────────────────────────┘</code></pre>
+<h3 id="5-2-resume-交互">5.2 Resume 交互<a class="anchor" href="#5-2-resume-交互" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>操作</th><th>效果</th></tr></thead><tbody><tr><td><code>Enter</code></td><td>继续对话（默认）</td></tr><tr><td><code>r</code></td><td>查看执行详情</td></tr><tr><td><code>n</code></td><td>新建任务</td></tr><tr><td><code>Esc</code></td><td>关闭面板</td></tr></tbody></table>
+<h3 id="5-3-子命令完成后的恢复">5.3 子命令完成后的恢复<a class="anchor" href="#5-3-子命令完成后的恢复" aria-label="锚点">#</a></h3>
+<pre><code>&gt; /model gpt-4o
+
+✓ 模型已切换到 GPT-4o
+
+  按 Enter 继续对话，或输入 /help 查看可用命令</code></pre>
+<hr>
+<h2 id="6-实现架构">6. 实现架构<a class="anchor" href="#6-实现架构" aria-label="锚点">#</a></h2>
+<h3 id="6-1-视图路由">6.1 视图路由<a class="anchor" href="#6-1-视图路由" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// tui/views/ViewRouter.js</span>
+
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">VIEWS</span> = {
+  <span class="hljs-attr">main</span>: <span class="hljs-title class_">MainView</span>,
+  <span class="hljs-attr">agents</span>: <span class="hljs-title class_">AgentListView</span>,
+  <span class="hljs-attr">agentDetail</span>: <span class="hljs-title class_">AgentDetailView</span>,
+  <span class="hljs-attr">mcpList</span>: <span class="hljs-title class_">McpListView</span>,
+  <span class="hljs-attr">mcpDetail</span>: <span class="hljs-title class_">McpDetailView</span>,
+  <span class="hljs-attr">settings</span>: <span class="hljs-title class_">SettingsView</span>,
+  <span class="hljs-attr">help</span>: <span class="hljs-title class_">HelpView</span>,
+  <span class="hljs-attr">commandPalette</span>: <span class="hljs-title class_">CommandPalette</span>,
+};
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">ViewRouter</span>(<span class="hljs-params">{ viewId }</span>) {
+  <span class="hljs-keyword">const</span> <span class="hljs-title class_">View</span> = <span class="hljs-variable constant_">VIEWS</span>[viewId] || <span class="hljs-title class_">MainView</span>;
+  <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">View</span> /&gt;</span></span>;
+}</code></pre>
+<h3 id="6-2-滚动状态管理">6.2 滚动状态管理<a class="anchor" href="#6-2-滚动状态管理" aria-label="锚点">#</a></h3>
+<blockquote><p>⚠ <strong>本节已按实现校正</strong>（2026-09-18）。原草案指定的 <code>tui/hooks/useScroll.js</code> <strong>不存在</strong></p>
+<p>（<code>hooks/</code> 下无此文件），草案把「滚动」与「光标跟随」揉进一个 hook，实现则拆成三个正交件。</p></blockquote>
+<h4 id="6-2-1-实现现状-权威">6.2.1 实现现状（权威）<a class="anchor" href="#6-2-1-实现现状-权威" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>职责</th><th>真源</th><th>说明</th></tr></thead><tbody><tr><td><strong>滚动动作计算</strong></td><td><code>tui/scrollActions.js</code> 的 <code>applyScroll(action, dims)</code></td><td>纯函数叶子，零 React 依赖，8 个动作</td></tr><tr><td><strong>边界钳制</strong></td><td><code>tui/scrollActions.js</code> 的 <code>clampOffset</code> / <code>maxOffset</code></td><td><code>offset ∈ [0, max(0, total-viewport)]</code></td></tr><tr><td><strong>视口切片</strong></td><td><code>tui/ink-components/Viewport.js</code></td><td><code>visible = lines.slice(clampedScroll, clampedScroll + height)</code></td></tr><tr><td><strong>光标（选中项）跟随</strong></td><td>调用点各自持有 <code>selectedIndex</code>，<strong>不</strong>与 <code>scrollOffset</code> 自动联动</td><td>见 <code>CcTranscriptView.js:96-108</code>（两者同时改，但语义独立）</td></tr></tbody></table>
+<p><code>applyScroll</code> 的契约（<code>scrollActions.js:94-125</code>）：</p>
+<pre><code class="language-js"><span class="hljs-title function_">applyScroll</span>(action, { offset, viewport, total })
+  <span class="hljs-comment">// action: &#x27;lineUp&#x27;|&#x27;lineDown&#x27;|&#x27;halfPageUp&#x27;|&#x27;halfPageDown&#x27;</span>
+  <span class="hljs-comment">//       | &#x27;fullPageUp&#x27;|&#x27;fullPageDown&#x27;|&#x27;top&#x27;|&#x27;bottom&#x27;</span>
+  <span class="hljs-comment">//          （亦接受 CC 带前缀名 &#x27;scroll:lineUp&#x27;）</span>
+  <span class="hljs-comment">// 返回: 新 offset（已钳制，绝不抛；非数/NaN/Infinity/负数 → 按 0 处理）</span></code></pre>
+<p><strong>为什么拆成这样</strong>：<code>applyScroll</code> 是纯函数 ⇒ 可被 <code>node --test</code> 直接单测（<code>tests/cli/tui/scrollActions.test.js</code>），</p>
+<p>不必挂 React 渲染器。这是本仓 TUI 的通用纪律：<strong>能抽成纯叶子的，就不要塞进 hook</strong>。</p>
+<h4 id="6-2-2-设计意图-原始草案-未落地">6.2.2 设计意图（原始草案，未落地）<a class="anchor" href="#6-2-2-设计意图-原始草案-未落地" aria-label="锚点">#</a></h4>
+<p>草案的 <code>useScroll(itemCount, visibleCount)</code> 把「滚动偏移」与「光标跟随」耦合在</p>
+<p>一个 hook 里，并让 <code>useEffect</code> 在 cursor 越界时回推 <code>scrollOffset</code>。<strong>未采用</strong>，原因：</p>
+<table><thead><tr><th>草案做法</th><th>为何不采用</th></tr></thead><tbody><tr><td>滚动 + 光标耦合在一个 hook</td><td>破坏「能测的纯叶子优先」纪律；且不同视图对「光标是否跟随滚动」诉求不同</td></tr><tr><td><code>useEffect</code> 回推 scrollOffset</td><td>隐式联动，长转录下每帧 effect 开销；且与 <code>autoScroll</code> 贴底语义会打架</td></tr><tr><td>硬编码 <code>scrollUp/scrollDown</code> 两动作</td><td>缺半页/整页/顶/底；<code>scrollActions</code> 的 8 动作集已被 CC 注册表对齐</td></tr></tbody></table>
+<details>
+<summary>原始草案代码（保留以存演进痕迹，不作为依据）</summary>
+<pre><code class="language-javascript"><span class="hljs-comment">// tui/hooks/useScroll.js   ← 此文件不存在</span>
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">useScroll</span>(<span class="hljs-params">itemCount, visibleCount</span>) {
+  <span class="hljs-keyword">const</span> [scrollOffset, setScrollOffset] = <span class="hljs-title function_">useState</span>(<span class="hljs-number">0</span>);
+  <span class="hljs-keyword">const</span> [cursor, setCursor] = <span class="hljs-title function_">useState</span>(<span class="hljs-number">0</span>);
+
+  <span class="hljs-comment">// 确保 cursor 在可见范围内</span>
+  <span class="hljs-title function_">useEffect</span>(<span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-keyword">if</span> (cursor &lt; scrollOffset) {
+      <span class="hljs-title function_">setScrollOffset</span>(cursor);
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (cursor &gt;= scrollOffset + visibleCount) {
+      <span class="hljs-title function_">setScrollOffset</span>(cursor - visibleCount + <span class="hljs-number">1</span>);
+    }
+  }, [cursor, scrollOffset, visibleCount]);
+
+  <span class="hljs-keyword">const</span> scrollUp = <span class="hljs-title function_">useCallback</span>(<span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-title function_">setScrollOffset</span>(<span class="hljs-function"><span class="hljs-params">s</span> =&gt;</span> <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">max</span>(<span class="hljs-number">0</span>, s - <span class="hljs-number">1</span>));
+  }, []);
+
+  <span class="hljs-keyword">const</span> scrollDown = <span class="hljs-title function_">useCallback</span>(<span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-title function_">setScrollOffset</span>(<span class="hljs-function"><span class="hljs-params">s</span> =&gt;</span> <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">min</span>(itemCount - visibleCount, s + <span class="hljs-number">1</span>));
+  }, [itemCount, visibleCount]);
+
+  <span class="hljs-keyword">const</span> moveCursor = <span class="hljs-title function_">useCallback</span>(<span class="hljs-function">(<span class="hljs-params">delta</span>) =&gt;</span> {
+    <span class="hljs-title function_">setCursor</span>(<span class="hljs-function"><span class="hljs-params">c</span> =&gt;</span> <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">max</span>(<span class="hljs-number">0</span>, <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">min</span>(itemCount - <span class="hljs-number">1</span>, c + delta)));
+  }, [itemCount]);
+
+  <span class="hljs-keyword">return</span> {
+    scrollOffset,
+    cursor,
+    <span class="hljs-attr">visibleItems</span>: <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">min</span>(visibleCount, itemCount - scrollOffset),
+    scrollUp,
+    scrollDown,
+    moveCursor,
+    setCursor,
+  };
+}</code></pre>
+</details>
+<hr>
+<h2 id="7-验收标准">7. 验收标准<a class="anchor" href="#7-验收标准" aria-label="锚点">#</a></h2>
+<blockquote><p>本节按<strong>实现现状</strong>重写（2026-09-18）。原版把「滚动/复制」写成验收项，</p>
+<p>但混合了草案键位；现拆成 <strong>已成条目</strong>（可用现状验收）与 <strong>未成条目</strong>（待 ARCH-124 等落地后验收）。</p></blockquote>
+<h3 id="7-1-已成-可用现状验收">7.1 已成（可用现状验收）<a class="anchor" href="#7-1-已成-可用现状验收" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>场景</th><th>预期</th><th>验收方式</th></tr></thead><tbody><tr><td>Agent 列表</td><td>显示所有 Agent 状态，数字键跳转</td><td>人工</td></tr><tr><td>Agent 详情</td><td>分屏显示详情和日志</td><td>人工</td></tr><tr><td>命令面板</td><td><code>Ctrl+P</code> 打开，实时过滤</td><td>人工</td></tr><tr><td>子菜单</td><td>嵌套导航，<code>Esc</code> 返回</td><td>人工</td></tr><tr><td>工具卡片</td><td>可折叠，状态清晰</td><td>人工</td></tr><tr><td>信息卡片</td><td>数据对齐，易读</td><td>人工</td></tr><tr><td>转录滚动</td><td>覆盖层内 <code>↑/↓</code> 单条、<code>PgUp/PgDn</code> 半页、<code>g/G</code> 跳顶底</td><td><code>tests/cli/tui/scrollActions.test.js</code> + 人工</td></tr><tr><td>主区滚动</td><td>鼠标滚轮滚动，边界钳制正确</td><td>人工</td></tr><tr><td>复制（最近回复）</td><td><code>Ctrl+Y</code> 复制最近的助手回复；成功/失败<strong>均有回执</strong>，绝不假装成功</td><td>人工</td></tr><tr><td>复制（输入框）</td><td>vim VISUAL 下 <code>y</code> yank 并双写系统剪贴板（有 Toast）；<code>d</code>/<code>x</code> 删除选中</td><td>人工</td></tr><tr><td>剪贴板通道</td><td>native 先行；非 TTY 时 OSC 52 兜底；tmux 下 DCS 穿透</td><td><code>tests/cli/tui/ccClipboard*.test.js</code></td></tr><tr><td>历史</td><td><code>Ctrl+R</code> 搜索输入历史</td><td>人工</td></tr><tr><td>Resume</td><td>完成后显示摘要，<code>Enter</code> 继续</td><td>人工</td></tr></tbody></table>
+<h3 id="7-2-未成-当前不满足-勿据此判缺陷">7.2 未成（<strong>当前不满足，勿据此判缺陷</strong>）<a class="anchor" href="#7-2-未成-当前不满足-勿据此判缺陷" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>场景</th><th>现状</th><th>阻塞项</th></tr></thead><tbody><tr><td><strong>消息区拖选复制</strong></td><td>❌ 完全不可用（CC 无选择消费者）</td><td><code>[DESIGN-ARCH-124]</code> §2 方案 A</td></tr><tr><td><strong>复制选中内容（<code>c</code>/<code>C</code>/<code>Ctrl+Shift+C</code>）</strong></td><td>❌ 三键均无绑定，且 <code>Ctrl+Shift+C</code> 在终端层不可靠</td><td>同上；建议<strong>废弃草案键位</strong>，改由拖选承担</td></tr><tr><td><strong>主区键盘翻页</strong></td><td>❌ 仅覆盖层有 <code>PgUp/PgDn</code>；主区只有滚轮</td><td>待定（是否值得补，见 §4.1.1 ③）</td></tr><tr><td><strong>滚动/选择/复制三模式机</strong></td><td>❌ 未实现</td><td>见 §4.1.1 ③ —— <strong>建议正式废弃</strong></td></tr></tbody></table>
+<hr>
+<blockquote><p><strong>文档状态</strong>：<strong>Implemented（§4 已按实现校正，2026-09-18）</strong> —— 非 Draft。</p>
+<p>子视图/子菜单/卡片/滚动主体已在 CC 模式落地；<strong>复制部分存在结构性缺口</strong>（消息区无选择消费者），</p>
+<p>缺口与补齐方案见 <code>[DESIGN-ARCH-124]</code>。</p>
+<p><strong>创建日期</strong>：2026-09-09</p>
+<p><strong>校正日期</strong>：2026-09-18（§4 滚动/复制全节重写；§6.2 按实现校正；§7 拆已成/未成）</p>
+<p><strong>依赖</strong>：[DESIGN-ARCH-081] 主设计规范 · [DESIGN-ARCH-102] TUI 统一规则手册（规则真源） ·</p>
+<p>[DESIGN-ARCH-119] 应用内自绘选择 · [DESIGN-ARCH-124] CC 剪贴板补齐提案</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-084] CC模式注意力与选择设计.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-084] CC 模式注意力与选择设计</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-086] CC TUI 复刻总计划与子任务跟踪.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-086] CC TUI 复刻总计划与子任务跟踪</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-085] CC模式子视图子菜单卡片与滚动设计.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

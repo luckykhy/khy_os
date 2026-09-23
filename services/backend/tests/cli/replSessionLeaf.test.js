@@ -47,18 +47,18 @@ describe('Repl Session Leaf', () => {
 
   test('setReplSessionDeps is a guarded, idempotent, non-throwing DI setter', () => {
       const { setReplSessionDeps } = require(SIB);
-      expect(() => setReplSessionDeps().not.toThrow());
-      expect(() => setReplSessionDeps({}).not.toThrow());
+      expect(() => setReplSessionDeps()).not.toThrow();
+      expect(() => setReplSessionDeps({})).not.toThrow();
       // Non-function fn-deps are ignored; the value dep accepts any defined value.
-      expect(() => setReplSessionDeps({ _formatImageSize: 1, READ_SEARCH_TOOLS: null }).not.toThrow());
+      expect(() => setReplSessionDeps({ _formatImageSize: 1, READ_SEARCH_TOOLS: null })).not.toThrow();
       const fn = () => {};
       const fake = {
         _formatImageSize: fn, _tk1: fn, _tk0: fn, _tkSpin: fn,
         formatShellEscapeContext: fn, _resetGatewayBreakerOnSessionClear: fn,
         READ_SEARCH_TOOLS: new Set(['Read']),
       };
-      expect(() => setReplSessionDeps(fake).not.toThrow());
-      expect(() => setReplSessionDeps(fake).not.toThrow());
+      expect(() => setReplSessionDeps(fake)).not.toThrow();
+      expect(() => setReplSessionDeps(fake)).not.toThrow();
   });
 
 });

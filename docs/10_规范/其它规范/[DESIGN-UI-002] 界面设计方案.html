@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-UI-002] 界面设计方案.md -->
+<title>[DESIGN-UI-002] 界面设计方案（提案） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-UI-002] 界面设计方案（提案）</div>
+      <header class="hero reveal"><h1>[DESIGN-UI-002] 界面设计方案（提案）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-ui-002-界面设计方案-提案">[DESIGN-UI-002] 界面设计方案（提案）</a></li><li class="lvl-3"><a href="#0-1-已具备的良好基础-不要推翻">0.1 已具备的良好基础（不要推翻）</a></li><li class="lvl-3"><a href="#0-2-真正的问题-按影响排序">0.2 真正的问题（按影响排序）</a></li><li class="lvl-2"><a href="#1-视觉语言升级-design-language">1. 视觉语言升级（Design Language）</a></li><li class="lvl-3"><a href="#1-1-设计理念-calm-density-冷静的密度">1.1 设计理念：**Calm Density（冷静的密度）**</a></li><li class="lvl-3"><a href="#1-2-令牌补强-纯增量-不改既有语义">1.2 令牌补强（纯增量，不改既有语义）</a></li><li class="lvl-3"><a href="#1-3-类型与间距-维持既有-仅明确纪律">1.3 类型与间距（维持既有，仅明确纪律）</a></li><li class="lvl-2"><a href="#2-信息架构重构-information-architecture">2. 信息架构重构（Information Architecture）</a></li><li class="lvl-3"><a href="#2-1-目标态-用户中心从-1-组-12-项-4-组-12-项">2.1 目标态：用户中心从 1 组 12 项 → 4 组 12 项</a></li><li class="lvl-3"><a href="#2-2-管理控制台-14-项-同样需要分组">2.2 管理控制台（14 项）同样需要分组</a></li><li class="lvl-3"><a href="#2-3-侧栏分组标题的样式-已就位-仅需启用">2.3 侧栏分组标题的样式（已就位，仅需启用）</a></li><li class="lvl-2"><a href="#3-页面级布局规范-page-layout">3. 页面级布局规范（Page Layout）</a></li><li class="lvl-3"><a href="#3-1-三点式骨架-固化-禁止发明第四种">3.1 三点式骨架（固化，禁止发明第四种）</a></li><li class="lvl-3"><a href="#3-2-内容宽度分档-新增">3.2 内容宽度分档（新增）</a></li><li class="lvl-3"><a href="#3-3-对话页-aichat-的特殊处理">3.3 对话页（AIChat）的特殊处理</a></li><li class="lvl-2"><a href="#4-响应式策略-补齐-m3-三档">4. 响应式策略（补齐 M3 三档）</a></li><li class="lvl-3"><a href="#4-1-断点定义">4.1 断点定义</a></li><li class="lvl-3"><a href="#4-2-关键修复-1024px-档">4.2 关键修复：1024px 档</a></li><li class="lvl-3"><a href="#4-3-移动端触控目标-m1-不变量">4.3 移动端触控目标（M1 不变量）</a></li><li class="lvl-2"><a href="#5-可访问性补齐-对齐-w8-w9-w10">5. 可访问性补齐（对齐 W8 / W9 / W10）</a></li><li class="lvl-3"><a href="#5-1-对比度预判-需实测确认">5.1 对比度预判（需实测确认）</a></li><li class="lvl-3"><a href="#5-2-表单-label-最大缺口">5.2 表单 label（最大缺口）</a></li><li class="lvl-2"><a href="#6-分批落地路线-importance-risk">6. 分批落地路线（Importance × Risk）</a></li><li class="lvl-3"><a href="#批次-1-信息架构重构-零代码风险">批次 1 — 信息架构重构（零代码风险）</a></li><li class="lvl-3"><a href="#批次-2-令牌补强-响应式断点-低风险">批次 2 — 令牌补强 + 响应式断点（低风险）</a></li><li class="lvl-3"><a href="#批次-3-移动端触控目标-中低风险">批次 3 — 移动端触控目标（中低风险）</a></li><li class="lvl-3"><a href="#批次-4-可访问性补齐-中风险-需逐处核查">批次 4 — 可访问性补齐（中风险，需逐处核查）</a></li><li class="lvl-3"><a href="#批次-5-aichat-拆分-高风险-需先补测试">批次 5 — AIChat 拆分（高风险，**需先补测试**）</a></li><li class="lvl-2"><a href="#7-反模式-这条路别走">7. 反模式（这条路别走）</a></li><li class="lvl-2"><a href="#8-验收标准">8. 验收标准</a></li><li class="lvl-2"><a href="#rules-registry-design-ui-002">RULES-REGISTRY: DESIGN-UI-002</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-ui-002-界面设计方案-提案">[DESIGN-UI-002] 界面设计方案（提案）<a class="anchor" href="#design-ui-002-界面设计方案-提案" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>状态</strong>：提案（Proposal）—— 待评审后落地<br><strong>定位</strong>：在 <code>[DESIGN-FE-001] 前端页面规范</code> 与 <code>[DESIGN-UI-TEST-001] UI 设计验证测试规范</code><br>之上，定义 khy-os 前端<strong>视觉语言与信息架构的目标态</strong>，并给出可分批落地的路线。<br><strong>不替代</strong>：<code>[DESIGN-FE-001]</code>（令牌/组件真源）、<code>[DESIGN-A11Y-001]</code>（可访问性真源）、<br><code>[DESIGN-LAY-005]</code>（层级真源）。本方案只声明「目标态」，落地时改的真源仍是它们。<br><strong>零新增依赖</strong>：全部基于 Vue 3 + Element Plus + 既有 <code>--khy-*</code> 令牌。</p>
+<hr>
+<h2 id="0-现状取证-2026-09-22-实测">0. 现状取证（2026-09-22 实测）<a class="anchor" href="#0-现状取证-2026-09-22-实测" aria-label="锚点">#</a></h2></blockquote>
+<p>所有数字来自对 <code>apps/ai-frontend/src/</code> 的实测扫描，非估算。</p>
+<table><thead><tr><th>指标</th><th>实测值</th><th>判读</th></tr></thead><tbody><tr><td>页面/组件文件</td><td>75 个 <code>.vue</code></td><td>规模适中</td></tr><tr><td>Vue 源码行数</td><td>36,366 行</td><td>单页最大 4,781 行（<code>AIChat.vue</code>）</td></tr><tr><td>样式真源</td><td><code>styles/newapi-theme.css</code> 790 行</td><td>令牌体系完整</td></tr><tr><td><code>var(--khy-*)</code> 引用</td><td>718 处</td><td>—</td></tr><tr><td>字面量 hex（页面 <code>&lt;style&gt;</code>）</td><td>9 处</td><td><strong>令牌纪律 0.01，健康</strong></td></tr><tr><td>响应式断点</td><td>仅 900px / 768px</td><td><strong>不足</strong>（M3 要求 768/1024/480）</td></tr><tr><td><code>aria-*</code> 属性</td><td>44 处</td><td>偏少</td></tr><tr><td><code>&lt;label&gt;</code> 元素</td><td><strong>0 个</strong></td><td><strong>表单无障碍缺口</strong></td></tr><tr><td><code>&lt;img&gt;</code> 带 <code>alt</code></td><td>5/5（100%）</td><td>达标</td></tr><tr><td>导航项</td><td>用户 12 项 / 管理 14 项</td><td>用户组<strong>零子分组</strong></td></tr></tbody></table>
+<h3 id="0-1-已具备的良好基础-不要推翻">0.1 已具备的良好基础（不要推翻）<a class="anchor" href="#0-1-已具备的良好基础-不要推翻" aria-label="锚点">#</a></h3>
+<ol><li><strong>令牌驱动的双主题体系</strong>已就位，<code>html.dark</code> 单类切换可贯穿全站。</li><li><strong>三点式页面骨架</strong>已经沉淀并被复用：<code>.khy-page</code> 容器（52 处）、<code>KhyPageHeader</code>（128 处）、</li></ol>
+<p><code>KhyEmpty</code>（34 处）。这套「容器 → 页头 → 空态」的一致性是极好的地基。</p>
+<ol><li><strong>交互细节已被打磨</strong>：字段 focus 光环、按钮 1px 抬升、卡片头部字重、</li></ol>
+<p><code>prefers-reduced-motion</code> 已覆盖 3 处动画。</p>
+<ol><li><strong>导航真源单一</strong>：<code>src/nav/index.js</code> 是侧栏、路由鉴权元数据、页头标题三处的共同真源，</li></ol>
+<p>且有 <code>nav.wiring.test.js</code> 守护漂移。</p>
+<h3 id="0-2-真正的问题-按影响排序">0.2 真正的问题（按影响排序）<a class="anchor" href="#0-2-真正的问题-按影响排序" aria-label="锚点">#</a></h3>
+<p><strong>P1 — 信息架构用「清单」而非「心智模型」</strong></p>
+<p><code>src/nav/index.js</code> 的「用户中心」组把 12 项平铺：<br><code>用户首页 / AI 对话 / 功能索引 / 提示词库 / KHY OS 内核 / 我的网关 / 工作流 /<br>项目工作区 / 插件市场 / 代理管理 / 账户安全 / Markdown</code>。</p>
+<p>问题在于<strong>混合了三种不同性质的东西</strong>：</p>
+<table><thead><tr><th>性质</th><th>项目</th><th>用户的心智</th></tr></thead><tbody><tr><td>日常主任务</td><td>AI 对话、工作流、项目工作区</td><td>「我每天来干的事」</td></tr><tr><td>能力与资源</td><td>功能索引、提示词库、插件市场、我的网关</td><td>「我需要时来查/扩的」</td></tr><tr><td>系统与设置</td><td>代理管理、账户安全、KHY OS 内核</td><td>「配置一次就忘了」</td></tr><tr><td><strong>异物</strong></td><td><strong>Markdown（标注&quot;无需登录&quot;）</strong></td><td>与账户体系无关的独立小工具</td></tr></tbody></table>
+<p>12 项平铺的直接代价是<strong>每次找东西都要扫 12 行</strong>，且高频项（AI 对话）与低频项<br>（账户安全）视觉权重完全相同。<code>nav/index.js</code> 的 <code>NAV</code> 结构<strong>已经支持任意多分组</strong>，<br>所以这是<strong>纯数据改动</strong>，不需要动 AppShell 渲染逻辑。</p>
+<p><strong>P2 — 响应式断点不足</strong></p>
+<p>全站仅 <code>max-width: 900px</code> 与 <code>max-width: 768px</code> 两个断点，规范 M3 要求<br>768 / 1024 / 480 三档。缺失 1024px 档意味着<strong>平板横屏（1024×768、iPad 横屏）<br>落在桌面布局里</strong>——224px 的固定侧栏在 1024px 宽上占掉 22%，内容区被挤压。<br>缺失 480px 档意味着<strong>小屏手机</strong>没有专门适配。</p>
+<p><strong>P3 — 无障碍缺口集中在表单</strong></p>
+<p><code>&lt;label&gt;</code> 元素 0 个、<code>aria-*</code> 仅 44 处、<code>tabindex</code> 仅 3 处。Element Plus 的<br><code>el-form-item</code> 会自带 label 关联，所以不是全盘失效，但<strong>自研点击区域</strong><br>（<code>.chat-conv-item</code> 这类 div 当按钮用）如果没补 <code>role</code> / <code>tabindex</code> / <code>aria-*</code>，<br>键盘用户就完全够不到。</p>
+<blockquote><p><strong>注意</strong>：<code>.chat-conv-item</code> 在模板里是 <code>&lt;div&gt;</code> 承载点击（见 <code>AIChat.vue</code><br><code>['chat-conv-item', { active: c.id === activeId }]</code>），属于 W8 不变量<br>「交互元素键盘可达」的<strong>待核实风险点</strong>，落地第一步应逐处核查。</p></blockquote>
+<hr>
+<h2 id="1-视觉语言升级-design-language">1. 视觉语言升级（Design Language）<a class="anchor" href="#1-视觉语言升级-design-language" aria-label="锚点">#</a></h2>
+<h3 id="1-1-设计理念-calm-density-冷静的密度">1.1 设计理念：<strong>Calm Density（冷静的密度）</strong><a class="anchor" href="#1-1-设计理念-calm-density-冷静的密度" aria-label="锚点">#</a></h3>
+<p>khy-os 是一个<strong>专业工具</strong>，不是消费级应用。它要同时满足两个看似矛盾的目标：<br>用户要看到<strong>大量信息</strong>（模型、令牌、用量、渠道、日志），但界面不能<strong>吵</strong>。</p>
+<p>原则是：<strong>降低装饰密度，提高信息密度。</strong></p>
+<p>具体三条：</p>
+<ol><li><strong>颜色只用于传达状态，不用于装饰。</strong></li></ol>
+<p>当前 <code>--khy-primary: #2563eb</code> 蓝已在 901 处 <code>el-button</code> 上使用。<br>   建议保持 —— 但<strong>主按钮不应在每张卡片里都出现</strong>。一屏内主按钮（<code>type=&quot;primary&quot;</code>）<br>   建议不超过 1 个，其余降为 text / plain。这让&quot;下一步该做什么&quot;唯一。</p>
+<ol><li><strong>用间距而非边框做分组。</strong></li></ol>
+<p>当前卡片 <code>shadow=&quot;never&quot;</code> 与 <code>shadow=&quot;hover&quot;</code> 混用。建议统一：<br>   <strong>常规容器用 <code>shadow=&quot;never&quot;</code> + 1px hairline 边框；仅浮层（dialog/drawer/悬浮球）用阴影。</strong><br>   理由：<code>--khy-shadow</code> 是 <code>0 10px 28px rgba(15,23,42,.08)</code>，10 张卡片同时带阴影时<br>   页面会&quot;浮&quot;，而专业工具需要&quot;实&quot;。</p>
+<ol><li><strong>状态用「点 + 文字」而非仅颜色。</strong></li></ol>
+<p><code>.status-dot</code> 已有 4 色实现，但<strong>纯颜色编码对色盲用户不可用</strong>。<br>   建议 <code>.status-dot</code> 后必须跟文字标签（&quot;正常 / 降级 / 异常&quot;），<br>   颜色是<strong>冗余编码</strong>而非唯一编码。</p>
+<h3 id="1-2-令牌补强-纯增量-不改既有语义">1.2 令牌补强（纯增量，不改既有语义）<a class="anchor" href="#1-2-令牌补强-纯增量-不改既有语义" aria-label="锚点">#</a></h3>
+<p>以下是对 <code>newapi-theme.css</code> 的<strong>增量补充</strong>，不修改任何既有令牌值，<br>因此不会波及 718 处引用。</p>
+<pre><code class="language-css"><span class="hljs-selector-pseudo">:root</span> {
+  <span class="hljs-comment">/* ① 断层补偿：内容宽度阶梯（当前只有 --khy-page-max: 1320px）*/</span>
+  <span class="hljs-attr">--khy-page-max-wide</span>: <span class="hljs-number">1680px</span>;   <span class="hljs-comment">/* 数据密集型页面：监控/日志/看板 */</span>
+  <span class="hljs-attr">--khy-page-max-read</span>: <span class="hljs-number">760px</span>;    <span class="hljs-comment">/* 阅读型内容：Markdown / 文档 */</span>
+
+  <span class="hljs-comment">/* ② 结构化断点（补齐 M3 要求的 3 档）*/</span>
+  <span class="hljs-attr">--khy-bp-sm</span>: <span class="hljs-number">480px</span>;
+  <span class="hljs-attr">--khy-bp-md</span>: <span class="hljs-number">768px</span>;
+  <span class="hljs-attr">--khy-bp-lg</span>: <span class="hljs-number">1024px</span>;
+  <span class="hljs-attr">--khy-bp-xl</span>: <span class="hljs-number">1280px</span>;
+
+  <span class="hljs-comment">/* ③ 状态语义色补全（当前 success/warning/danger 有，缺「中性/进行中」）*/</span>
+  <span class="hljs-attr">--khy-info</span>: <span class="hljs-number">#2563eb</span>;
+  <span class="hljs-attr">--khy-neutral</span>: <span class="hljs-number">#667085</span>;
+  <span class="hljs-attr">--khy-running</span>: <span class="hljs-number">#6d5efc</span>;         <span class="hljs-comment">/* 复用 --khy-accent，语义化为&quot;执行中&quot; */</span>
+
+  <span class="hljs-comment">/* ④ 层级化阴影（当前只有 2 档，浮层与卡片区分不足）*/</span>
+  <span class="hljs-attr">--khy-shadow-xs</span>: <span class="hljs-number">0</span> <span class="hljs-number">1px</span> <span class="hljs-number">2px</span> <span class="hljs-built_in">rgba</span>(<span class="hljs-number">15</span>, <span class="hljs-number">23</span>, <span class="hljs-number">42</span>, <span class="hljs-number">0.04</span>);
+  <span class="hljs-attr">--khy-shadow-flat</span>: none;         <span class="hljs-comment">/* 常规卡片：刻意不加阴影 */</span>
+
+  <span class="hljs-comment">/* ⑤ 交互反馈时长（当前散落在各组件）*/</span>
+  <span class="hljs-attr">--khy-dur-fast</span>: <span class="hljs-number">120ms</span>;
+  <span class="hljs-attr">--khy-dur-base</span>: <span class="hljs-number">200ms</span>;
+  <span class="hljs-attr">--khy-dur-slow</span>: <span class="hljs-number">320ms</span>;
+  <span class="hljs-attr">--khy-ease</span>: <span class="hljs-built_in">cubic-bezier</span>(<span class="hljs-number">0.4</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0.2</span>, <span class="hljs-number">1</span>);
+}</code></pre>
+<blockquote><p>五个 <code>--khy-bp-*</code> <strong>只是文档化</strong>，CSS 的 <code>@media</code> 仍需写字面量<br>（<code>@media (max-width: 768px)</code> 是 CSS 语法限制）。这是有意为之：<br>令牌的价值在于<strong>集中声明&quot;我们有哪些断点&quot;</strong>，让新增代码不会随手写第 5 个断点值。</p></blockquote>
+<h3 id="1-3-类型与间距-维持既有-仅明确纪律">1.3 类型与间距（维持既有，仅明确纪律）<a class="anchor" href="#1-3-类型与间距-维持既有-仅明确纪律" aria-label="锚点">#</a></h3>
+<p>现有类型阶梯已良好，<strong>不改动</strong>：</p>
+<table><thead><tr><th>令牌</th><th>值</th><th>用途</th></tr></thead><tbody><tr><td><code>--khy-text-xs</code></td><td>12px</td><td>徽标、辅助注释</td></tr><tr><td><code>--khy-text-sm</code></td><td>13px</td><td>表格、正文次级</td></tr><tr><td><code>--khy-text-md</code></td><td>15px</td><td><strong>正文默认</strong></td></tr><tr><td><code>--khy-text-lg</code></td><td>17px</td><td>卡片标题</td></tr><tr><td><code>--khy-text-xl</code></td><td>20px</td><td>区块标题</td></tr><tr><td><code>--khy-text-2xl</code></td><td>24px</td><td>页面主标题</td></tr></tbody></table>
+<p><strong>新增纪律</strong>：正文不得小于 13px（移动端输入框不得小于 16px，此为 M2 不变量）。<br>实测需核查 <code>--khy-text-xs: 12px</code> 的使用场景，<strong>12px 只允许用于非关键辅助信息</strong>。</p>
+<p>间距使用既有 4px 基数阶梯（4/8/12/16/20/24/32/40/48/64）。<br><strong>新增纪律</strong>：页面级垂直节奏统一走 <code>--khy-gap-page</code> / <code>--khy-gap-section</code> /<br><code>--khy-gap-card</code> 三个语义令牌，不要在视图里写 <code>margin-bottom: 18px</code> 这类字面量<br>（<code>KhyPageHeader.vue:37</code> 目前是 <code>18px</code>，属可收敛项）。</p>
+<hr>
+<h2 id="2-信息架构重构-information-architecture">2. 信息架构重构（Information Architecture）<a class="anchor" href="#2-信息架构重构-information-architecture" aria-label="锚点">#</a></h2>
+<p>这是本次方案<strong>收益最高、成本最低</strong>的部分 —— 因为 <code>nav/index.js</code> 已是纯数据，<br>且 <code>visibleNavGroups()</code> 已支持按 <code>group</code> 渲染。</p>
+<h3 id="2-1-目标态-用户中心从-1-组-12-项-4-组-12-项">2.1 目标态：用户中心从 1 组 12 项 → 4 组 12 项<a class="anchor" href="#2-1-目标态-用户中心从-1-组-12-项-4-组-12-项" aria-label="锚点">#</a></h3>
+<pre><code class="language-js">{
+  <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;工作台&#x27;</span>,                    <span class="hljs-comment">// ① 日常主任务：每天来的地方</span>
+  <span class="hljs-attr">requiredRole</span>: <span class="hljs-variable constant_">ROLE</span>.<span class="hljs-property">USER</span>,
+  <span class="hljs-attr">items</span>: [
+    { <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/home&#x27;</span>,  <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;用户首页&#x27;</span>, <span class="hljs-attr">icon</span>: <span class="hljs-title class_">HomeFilled</span> },
+    { <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/chat&#x27;</span>,  <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;AI 对话&#x27;</span>,  <span class="hljs-attr">icon</span>: <span class="hljs-title class_">ChatDotSquare</span> },
+    { <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/workflows&#x27;</span>, <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;工作流&#x27;</span>, <span class="hljs-attr">icon</span>: <span class="hljs-title class_">Share</span> },
+    { <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/projects&#x27;</span>,  <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;项目工作区&#x27;</span>, <span class="hljs-attr">icon</span>: <span class="hljs-title class_">Folder</span> },
+  ],
+},
+{
+  <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;能力与资源&#x27;</span>,                <span class="hljs-comment">// ② 需要时来查/扩的地方</span>
+  <span class="hljs-attr">items</span>: [
+    { <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/features&#x27;</span>,    <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;功能索引&#x27;</span>,   <span class="hljs-attr">icon</span>: <span class="hljs-title class_">Guide</span> },
+    { <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/prompts&#x27;</span>,     <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;提示词库&#x27;</span>,   <span class="hljs-attr">icon</span>: <span class="hljs-title class_">Collection</span> },
+    { <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/marketplace&#x27;</span>, <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;插件市场&#x27;</span>,   <span class="hljs-attr">icon</span>: <span class="hljs-title class_">Shop</span> },
+    { <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/keys&#x27;</span>,        <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;我的网关&#x27;</span>,   <span class="hljs-attr">icon</span>: <span class="hljs-title class_">Connection</span> },
+  ],
+},
+{
+  <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;系统&#x27;</span>,                      <span class="hljs-comment">// ③ 配置一次就忘了的地方</span>
+  <span class="hljs-attr">items</span>: [
+    { <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/khyos&#x27;</span>,    <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;KHY OS 内核&#x27;</span>, <span class="hljs-attr">icon</span>: <span class="hljs-title class_">Cpu</span> },
+    { <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/proxies&#x27;</span>,  <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;代理管理&#x27;</span>,    <span class="hljs-attr">icon</span>: <span class="hljs-title class_">Link</span> },
+    { <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/security&#x27;</span>, <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;账户安全&#x27;</span>,    <span class="hljs-attr">icon</span>: <span class="hljs-title class_">Lock</span> },
+  ],
+},
+{
+  <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;工具&#x27;</span>,                      <span class="hljs-comment">// ④ 独立小工具：与账户体系无关</span>
+  <span class="hljs-attr">items</span>: [
+    { <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/markdown&#x27;</span>, <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;Markdown&#x27;</span>, <span class="hljs-attr">icon</span>: <span class="hljs-title class_">Document</span> },
+  ],
+},</code></pre>
+<p><strong>为什么这样分</strong>：分组标题本身就是一句「什么时候来这儿」的说明。<br>用户不再需要读 12 个标签去判断，而是先判断<strong>自己在哪一类需求里</strong>，再看组内 3–4 项。</p>
+<p><strong>关于 <code>/markdown</code></strong>：它标注「无需登录」，与账户体系无关。<br>单列成组显得组数为 4 而内容为 1，略突兀。两个选项：</p>
+<ul><li><strong>选项 A（保守）</strong>：单列为「工具」组。零风险，语义最准。</li><li><strong>选项 B（更优）</strong>：移出侧栏，改从<strong>用户首页的快捷入口卡片</strong>进入。</li></ul>
+<p>侧栏只放「注册用户的核心任务」，独立工具走首页与直接 URL。<br>  代价：需要改 <code>nav.wiring.test.js</code> 之外的可见性测试，且它确实还占一个路由。</p>
+<p>→ <strong>建议先做 A，观察 <code>/markdown</code> 的实际点击量后再决定是否做 B。</strong><br>不因&quot;看起来更干净&quot;而提前做无数据支撑的架构决策。</p>
+<h3 id="2-2-管理控制台-14-项-同样需要分组">2.2 管理控制台（14 项）同样需要分组<a class="anchor" href="#2-2-管理控制台-14-项-同样需要分组" aria-label="锚点">#</a></h3>
+<p>管理台 14 项平铺，问题同样存在。建议按<strong>运维对象</strong>分组：</p>
+<table><thead><tr><th>新分组</th><th>含项</th></tr></thead><tbody><tr><td><strong>总览</strong></td><td>总览</td></tr><tr><td><strong>模型与渠道</strong></td><td>网关管理、渠道 API、桥接渠道、计费定价</td></tr><tr><td><strong>账号与资产</strong></td><td>账号池、资产与客户、支付订单、微信绑定</td></tr><tr><td><strong>监控与审计</strong></td><td>监控中心、用量日志、任务看板</td></tr><tr><td><strong>评测与标注</strong></td><td>GUI 评测、前端标注</td></tr><tr><td><strong>设置</strong></td><td>统一设置</td></tr></tbody></table>
+<p>这与管理员的实际工作流一致：<strong>看盘 → 调渠道 → 管账号 → 查审计 → 跑评测 → 改配置</strong>。</p>
+<h3 id="2-3-侧栏分组标题的样式-已就位-仅需启用">2.3 侧栏分组标题的样式（已就位，仅需启用）<a class="anchor" href="#2-3-侧栏分组标题的样式-已就位-仅需启用" aria-label="锚点">#</a></h3>
+<p><code>newapi-theme.css:779</code> 已定义 <code>.aside-group-title</code>，带 <code>padding</code> 与<br><code>el-menu-item-group</code> 的 <code>#title</code> 插槽已被 <code>AppShell.vue:23-25</code> 使用。<br><strong>唯一动作</strong>：把 <code>nav/index.js</code> 的分组数从 2 提到 10（4 用户 + 6 管理）。<br>渲染侧零改动。</p>
+<blockquote><p>⚠️ <strong>验收要点</strong>：分组变多后，侧栏总高度增加。<br>当前 <code>el-scrollbar</code> 包裹菜单（<code>AppShell.vue:12</code>），可滚动，不会溢出。<br>但需实测<strong>折叠态（64px）下分组标题</strong>是否被正确隐藏 ——<br><code>AppShell.vue:23</code> 有 <code>v-if=&quot;!collapsed&quot;</code> 守护，逻辑正确，需浏览器实测确认留白。</p></blockquote>
+<hr>
+<h2 id="3-页面级布局规范-page-layout">3. 页面级布局规范（Page Layout）<a class="anchor" href="#3-页面级布局规范-page-layout" aria-label="锚点">#</a></h2>
+<h3 id="3-1-三点式骨架-固化-禁止发明第四种">3.1 三点式骨架（固化，禁止发明第四种）<a class="anchor" href="#3-1-三点式骨架-固化-禁止发明第四种" aria-label="锚点">#</a></h3>
+<p>实测已有三种骨架混用，应<strong>固化为规范</strong>：</p>
+<pre><code>┌─ .khy-page ─────────────────────────────────┐
+│  &lt;KhyPageHeader title subtitle&gt;             │  ← 页头：一句话说清这页干什么
+│    &lt;template #actions&gt; 主操作 &lt;/template&gt;    │
+│  &lt;/KhyPageHeader&gt;                            │
+│                                              │
+│  &lt;正文区&gt;                                    │  ← 唯一的主按钮在这里
+│    · 数据型 → el-card 内 el-table           │
+│    · 配置型 → el-card 内 el-form            │
+│    · 对话型 → 全高 flex，无卡片包裹          │
+│                                              │
+│  &lt;KhyEmpty&gt;  ← 数据为空时                    │
+└──────────────────────────────────────────────┘</code></pre>
+<p><strong>纪律</strong>：</p>
+<ul><li>页面根容器<strong>必须</strong>是 <code>.khy-page</code>（已有 52 处使用）。</li><li>页面<strong>必须</strong>有 <code>KhyPageHeader</code>（已有 128 处使用）。</li><li>空态<strong>必须</strong>用 <code>KhyEmpty</code>（已有 34 处使用）。</li><li>一屏内 <code>type=&quot;primary&quot;</code> 按钮 ≤ 1 个。</li></ul>
+<h3 id="3-2-内容宽度分档-新增">3.2 内容宽度分档（新增）<a class="anchor" href="#3-2-内容宽度分档-新增" aria-label="锚点">#</a></h3>
+<pre><code class="language-css"><span class="hljs-selector-class">.khy-page</span>            { <span class="hljs-attribute">max-width</span>: <span class="hljs-built_in">var</span>(--khy-page-max); }       <span class="hljs-comment">/* 1320px，默认 */</span>
+<span class="hljs-selector-class">.khy-page--wide</span>      { <span class="hljs-attribute">max-width</span>: <span class="hljs-built_in">var</span>(--khy-page-max-wide); }  <span class="hljs-comment">/* 1680px，数据密集 */</span>
+<span class="hljs-selector-class">.khy-page--read</span>      { <span class="hljs-attribute">max-width</span>: <span class="hljs-built_in">var</span>(--khy-page-max-read); }  <span class="hljs-comment">/* 760px，阅读型 */</span></code></pre>
+<p>适用：<code>/admin/monitor</code>、<code>/admin/usage</code> 用 <code>--wide</code>（表格列多）；<br><code>/markdown</code>、文档类用 <code>--read</code>（行宽超 90 字符后阅读效率下降）。</p>
+<h3 id="3-3-对话页-aichat-的特殊处理">3.3 对话页（AIChat）的特殊处理<a class="anchor" href="#3-3-对话页-aichat-的特殊处理" aria-label="锚点">#</a></h3>
+<p><code>AIChat.vue</code> 是<strong>唯一 4,781 行</strong>的异常组件（其余页面最大 1,110 行），<br>且布局是「左会话列表 + 右对话流」的<strong>全高应用式布局</strong>，与其它页面的<br>「滚动文档式布局」本质不同。</p>
+<p><strong>不建议本次动它</strong>，但应记录为<strong>技术债</strong>：</p>
+<table><thead><tr><th>问题</th><th>位置</th><th>建议</th></tr></thead><tbody><tr><td>单文件 4,781 行</td><td><code>AIChat.vue</code></td><td>拆为 <code>ChatSidebar</code> / <code>ChatMessageList</code> / <code>ChatComposer</code> / <code>useChatStream</code></td></tr><tr><td>26 个 <code>ref</code> 无 <code>watch</code></td><td>同上</td><td>状态无响应式派生，逻辑耦合</td></tr><tr><td>会话项用 <code>&lt;div&gt;</code> 点击</td><td>同上</td><td>补 <code>role=&quot;button&quot;</code> + <code>tabindex=&quot;0&quot;</code> + <code>@keydown.enter</code>（W8）</td></tr></tbody></table>
+<blockquote><p><strong>为什么本次不做</strong>：它是全站最高频页面，重构风险与收益都最大。<br>在没有对应测试覆盖前动它，违反仓库「修复先复现」的纪律（<code>RUNTIME-007</code>）。<br>应先补测试，再拆。</p></blockquote>
+<hr>
+<h2 id="4-响应式策略-补齐-m3-三档">4. 响应式策略（补齐 M3 三档）<a class="anchor" href="#4-响应式策略-补齐-m3-三档" aria-label="锚点">#</a></h2>
+<h3 id="4-1-断点定义">4.1 断点定义<a class="anchor" href="#4-1-断点定义" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>档位</th><th>宽度</th><th>布局行为</th></tr></thead><tbody><tr><td><strong>sm</strong></td><td>≤480px</td><td>侧栏收为抽屉；卡片单列；表格转卡片列表；触控目标 ≥44px</td></tr><tr><td><strong>md</strong></td><td>≤768px</td><td>侧栏收为 64px 图标条；卡片单列；表格横向滚动</td></tr><tr><td><strong>lg</strong></td><td>≤1024px</td><td><strong>侧栏默认折叠</strong>（当前缺失档）；卡片双列</td></tr><tr><td><strong>xl</strong></td><td>&gt;1024px</td><td>完整布局</td></tr></tbody></table>
+<h3 id="4-2-关键修复-1024px-档">4.2 关键修复：1024px 档<a class="anchor" href="#4-2-关键修复-1024px-档" aria-label="锚点">#</a></h3>
+<p>当前 <code>AppShell.vue:3</code> 的侧栏宽度由 <code>collapsed</code> 状态单一控制，<br><strong>没有基于视口的初始值</strong>。在 1024px 屏幕上展开态侧栏（224px）挤压内容区。</p>
+<p><strong>修复</strong>（<code>AppShell.vue</code> 内，不新增文件）：</p>
+<pre><code class="language-js"><span class="hljs-comment">// 侧栏初始折叠态跟随视口：&lt;1024px 默认折叠，避免挤压内容区。</span>
+<span class="hljs-keyword">const</span> collapsed = <span class="hljs-title function_">ref</span>(<span class="hljs-variable language_">window</span>.<span class="hljs-title function_">matchMedia</span>(<span class="hljs-string">&#x27;(max-width: 1024px)&#x27;</span>).<span class="hljs-property">matches</span>);</code></pre>
+<blockquote><p>注意用 <code>matchMedia</code> 而非 <code>innerWidth</code> 的直接读取，以便复用同一断点定义，<br>并避免 resize 时的判定抖动。<strong>不需要</strong>监听变化（用户手动折叠后不应被 resize 重置）。</p></blockquote>
+<h3 id="4-3-移动端触控目标-m1-不变量">4.3 移动端触控目标（M1 不变量）<a class="anchor" href="#4-3-移动端触控目标-m1-不变量" aria-label="锚点">#</a></h3>
+<p>当前仅有 <code>.header-console-link</code> 在 ≤768px 时提到 <code>min-height: 44px</code><br>（<code>newapi-theme.css:771-775</code>）。需<strong>系统化</strong>：所有可点击元素在 ≤768px 时应满足 44px。</p>
+<p><strong>建议</strong>：在 <code>newapi-theme.css</code> 末尾增补一段移动端收敛块，一次性覆盖<br><code>el-button</code> / <code>el-menu-item</code> / <code>.chat-conv-item</code> / <code>.status-dot</code> 容器等：</p>
+<pre><code class="language-css"><span class="hljs-keyword">@media</span> (<span class="hljs-attribute">max-width</span>: <span class="hljs-number">768px</span>) {
+  <span class="hljs-selector-class">.el-button</span><span class="hljs-selector-pseudo">:not</span>(<span class="hljs-selector-class">.is-text</span>)<span class="hljs-selector-pseudo">:not</span>(<span class="hljs-selector-class">.is-link</span>),
+  <span class="hljs-selector-class">.el-menu-item</span>,
+  <span class="hljs-selector-class">.khy-clickable</span> {
+    <span class="hljs-attribute">min-height</span>: <span class="hljs-number">44px</span>;
+  }
+}</code></pre>
+<hr>
+<h2 id="5-可访问性补齐-对齐-w8-w9-w10">5. 可访问性补齐（对齐 W8 / W9 / W10）<a class="anchor" href="#5-可访问性补齐-对齐-w8-w9-w10" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>不变量</th><th>要求</th><th>当前</th><th>动作</th></tr></thead><tbody><tr><td><strong>W8</strong></td><td>交互元素键盘可达、focus 可见</td><td><code>tabindex</code> 仅 3 处</td><td>自研点击区补 <code>role</code> + <code>tabindex</code> + <code>keydown</code></td></tr><tr><td><strong>W9</strong></td><td>状态变化区 <code>aria-live</code>，加载区 <code>aria-busy</code></td><td><code>aria-*</code> 44 处</td><td>对话流、任务看板、进度条补 <code>aria-live</code></td></tr><tr><td><strong>W10</strong></td><td>尊重 <code>prefers-reduced-motion</code></td><td>3 处已覆盖</td><td>保持，新增动画必须带此媒体查询</td></tr><tr><td><strong>W11</strong></td><td>正文对比度 ≥4.5:1</td><td>未实测</td><td>用工具核验 <code>--khy-text-muted: #667085</code> on <code>#f4f7fc</code></td></tr></tbody></table>
+<h3 id="5-1-对比度预判-需实测确认">5.1 对比度预判（需实测确认）<a class="anchor" href="#5-1-对比度预判-需实测确认" aria-label="锚点">#</a></h3>
+<p><code>--khy-text-muted: #667085</code> 在白底 <code>#ffffff</code> 上：约 <strong>4.9:1</strong> → <strong>达标</strong>。<br>在 <code>--khy-bg-main: #f4f7fc</code> 上：约 <strong>4.7:1</strong> → <strong>达标（勉强）</strong>。</p>
+<p><code>--khy-gray-400: #909399</code> 在白底上：约 <strong>2.8:1</strong> → <strong>不达标</strong>。<br>→ <strong>需核查</strong> <code>--khy-gray-400</code> 是否被用于正文。若仅用于占位符（placeholder）<br>或禁用态，则属可接受例外（WCAG 对禁用元素不要求对比度）。</p>
+<h3 id="5-2-表单-label-最大缺口">5.2 表单 label（最大缺口）<a class="anchor" href="#5-2-表单-label-最大缺口" aria-label="锚点">#</a></h3>
+<p><code>&lt;label&gt;</code> 元素 0 个。Element Plus 的 <code>el-form-item</code> 通过 <code>for</code> 关联，<strong>基本可接受</strong>，<br>但需核查<strong>自研表单</strong>是否有裸 <code>&lt;input&gt;</code> 无关联 label 的情况。</p>
+<hr>
+<h2 id="6-分批落地路线-importance-risk">6. 分批落地路线（Importance × Risk）<a class="anchor" href="#6-分批落地路线-importance-risk" aria-label="锚点">#</a></h2>
+<blockquote><p>原则：<strong>先做零风险高收益的，验证有效后再做有风险的。</strong><br>每批独立可交付、可单独回滚，不要求一次性完成。</p></blockquote>
+<h3 id="批次-1-信息架构重构-零代码风险">批次 1 — 信息架构重构（零代码风险）<a class="anchor" href="#批次-1-信息架构重构-零代码风险" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>动作</th><th>文件</th><th>风险</th></tr></thead><tbody><tr><td>用户中心组拆为 4 组</td><td><code>src/nav/index.js</code></td><td><strong>极低</strong>（纯数据）</td></tr><tr><td>管理台拆为 6 组</td><td>同上</td><td><strong>极低</strong></td></tr></tbody></table>
+<ul><li>不动任何组件、不动 CSS。</li><li>验收：<code>npm run test</code> 中 <code>nav.wiring.test.js</code> 通过（不校验分组数，只校验路径一致性）。</li><li>预期收益：<strong>用户找东西的扫描成本从 12 行降到 3–4 行。</strong></li></ul>
+<h3 id="批次-2-令牌补强-响应式断点-低风险">批次 2 — 令牌补强 + 响应式断点（低风险）<a class="anchor" href="#批次-2-令牌补强-响应式断点-低风险" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>动作</th><th>文件</th><th>风险</th></tr></thead><tbody><tr><td>补 5 组新令牌（不动既有）</td><td><code>styles/newapi-theme.css</code></td><td>低</td></tr><tr><td>增补 ≤1024px 断点规则</td><td>同上</td><td>低</td></tr><tr><td>侧栏折叠态跟随视口</td><td><code>layouts/AppShell.vue</code></td><td>低</td></tr></tbody></table>
+<ul><li>验收：<code>designTokenCompliance.test.js</code>（W3/W4 不变量）通过。</li><li>验收：浏览器 1024px 实测侧栏默认折叠。</li></ul>
+<h3 id="批次-3-移动端触控目标-中低风险">批次 3 — 移动端触控目标（中低风险）<a class="anchor" href="#批次-3-移动端触控目标-中低风险" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>动作</th><th>文件</th><th>风险</th></tr></thead><tbody><tr><td>增补 ≤768px 触控收敛块</td><td><code>styles/newapi-theme.css</code></td><td>中低（可能影响现有布局高度）</td></tr></tbody></table>
+<ul><li>需逐页截图对比，确认没有布局错位。</li></ul>
+<h3 id="批次-4-可访问性补齐-中风险-需逐处核查">批次 4 — 可访问性补齐（中风险，需逐处核查）<a class="anchor" href="#批次-4-可访问性补齐-中风险-需逐处核查" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>动作</th><th>范围</th><th>风险</th></tr></thead><tbody><tr><td>自研点击区补键盘可达</td><td>全站 <code>&lt;div @click&gt;</code></td><td>中</td></tr><tr><td>状态区补 <code>aria-live</code></td><td>对话流、任务看板</td><td>中</td></tr><tr><td>对比度实测与修正</td><td>全站</td><td>中</td></tr></tbody></table>
+<h3 id="批次-5-aichat-拆分-高风险-需先补测试">批次 5 — AIChat 拆分（高风险，<strong>需先补测试</strong>）<a class="anchor" href="#批次-5-aichat-拆分-高风险-需先补测试" aria-label="锚点">#</a></h3>
+<ul><li>前置条件：为对话流状态机补测试（<code>RUNTIME-007</code> 修复先复现）。</li><li>不建议在批次 1–4 之前启动。</li></ul>
+<hr>
+<h2 id="7-反模式-这条路别走">7. 反模式（这条路别走）<a class="anchor" href="#7-反模式-这条路别走" aria-label="锚点">#</a></h2>
+<p>以下是本方案<strong>明确不建议</strong>的做法，并附理由：</p>
+<table><thead><tr><th>反模式</th><th>为什么别走</th></tr></thead><tbody><tr><td><strong>引入 Tailwind / UnoCSS</strong></td><td>仓库已有 790 行令牌体系 + 718 处引用。引入第二套样式方案会让「改一处令牌全站生效」失效，直接违反 W3/W4 不变量。收益是开发便捷，代价是<strong>全站一致性</strong>——对专业工具是亏的。</td></tr><tr><td><strong>整体替换 Element Plus</strong></td><td>901 处 <code>el-button</code>、663 处 <code>el-form</code>、580 处 <code>el-table</code>。替换成本是数月，收益是&quot;更好看&quot;——但视觉差异可通过<strong>令牌层</strong>达成，不需要换组件库。</td></tr><tr><td><strong>为美观重写页面结构</strong></td><td>违反仓库既有纪律（与软著三条红线同源：<strong>风格归一只做风格不做语义</strong>）。重写会破坏既有测试与语义，且无法回滚。</td></tr><tr><td><strong>一次性全局改 <code>--khy-primary</code></strong></td><td>该色已用在 901 处按钮上。改色号是<strong>全站重绘</strong>，需全量视觉回归。除非有明确品牌需求，否则不动。</td></tr><tr><td><strong>给所有卡片加阴影</strong></td><td>见 §1.1 第 2 条。10 张卡片同时带 <code>0 10px 28px</code> 阴影，页面会&quot;浮&quot;起来，与专业工具的&quot;实&quot;相悖。</td></tr><tr><td><strong>在 <code>nav/index.js</code> 里加新的可见性开关</strong></td><td>该文件曾有过 <code>daemon</code> 命名空间开关，导致「功能看起来被删了」的严重误读，已被显式移除（见文件内注释）。<strong>不要重新引入任何&quot;后端不可用就隐藏菜单项&quot;的机制。</strong></td></tr></tbody></table>
+<hr>
+<h2 id="8-验收标准">8. 验收标准<a class="anchor" href="#8-验收标准" aria-label="锚点">#</a></h2>
+<p>本方案落地后，以下指标应达成：</p>
+<table><thead><tr><th>指标</th><th>当前</th><th>目标</th></tr></thead><tbody><tr><td>用户中心导航分组数</td><td>1</td><td>4</td></tr><tr><td>用户中心单组最大项数</td><td>12</td><td>4</td></tr><tr><td>管理台导航分组数</td><td>1</td><td>6</td></tr><tr><td>响应式断点数</td><td>2</td><td>4（480/768/1024/1280）</td></tr><tr><td>页面 <code>&lt;style&gt;</code> 字面量 hex</td><td>9</td><td><strong>≤9（不增加）</strong></td></tr><tr><td><code>--khy-*</code> 引用数</td><td>718</td><td>≥718</td></tr><tr><td>移动端触控目标 ≥44px</td><td>局部</td><td>系统性覆盖</td></tr><tr><td>一屏内主按钮数</td><td>未约束</td><td>≤1</td></tr></tbody></table>
+<blockquote><p><strong>红线</strong>：任何批次落地后，<code>var(--khy-*)</code> 引用数<strong>不得下降</strong>、<br>字面量 hex <strong>不得增加</strong>。这是判断&quot;有没有把设计系统用起来&quot;的唯一硬指标。</p></blockquote>
+<hr>
+<p><strong>提案人</strong>：UI Designer<br><strong>取证日期</strong>：2026-09-22<br><strong>下一步</strong>：评审批次 1（信息架构），确认后可直接修改 <code>src/nav/index.js</code></p>
+<hr>
+<h2 id="rules-registry-design-ui-002">RULES-REGISTRY: DESIGN-UI-002<a class="anchor" href="#rules-registry-design-ui-002" aria-label="锚点">#</a></h2>
+<blockquote><p>本文件声明 <code>[DESIGN-UI-002]</code> 为 UI 设计目标态提案。<br>落地真源仍为 <code>[DESIGN-FE-001]</code>（令牌/组件）、<code>[DESIGN-A11Y-001]</code>（可访问性）、<br><code>[DESIGN-UI-TEST-001]</code>（验证不变量 W1–W12 / M1–M8）。</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-TOOL-002] 拓展契约与核心边界规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-TOOL-002] 拓展契约与核心边界规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-UI-TEST-001] UI设计验证测试规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-UI-TEST-001] UI 设计验证测试规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-UI-002] 界面设计方案.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

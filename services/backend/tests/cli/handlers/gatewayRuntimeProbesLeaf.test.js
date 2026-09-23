@@ -6,8 +6,8 @@
  * functions; (2) the host re-imports the public handlers by the SAME names so the
  * `gateway relay|detect|test|probe-tools|sample` command contracts stay byte-identical; (3)
  * setGatewayRuntimeProbesDeps is a guarded, idempotent, non-throwing DI setter that only wires
- * function-typed deps (the four host callbacks â€?prompt guard / reason compaction / home-risk
- * snapshot / .env writer â€?that avoid a require cycle).
+ * function-typed deps (the four host callbacks ï¿½?prompt guard / reason compaction / home-risk
+ * snapshot / .env writer ï¿½?that avoid a require cycle).
  *
  * The leaf performs IO (spawns the khy binary for sampling, reads run artifacts, prints to the
  * terminal) so it does NOT self-declare as a pure zero-IO leaf; the assertions below stay on the
@@ -46,16 +46,16 @@ describe('Gateway Runtime Probes Leaf', () => {
   test('setGatewayRuntimeProbesDeps is a guarded, idempotent, non-throwing DI setter', () => {
       const { setGatewayRuntimeProbesDeps } = require(LEAF);
       // No throw on empty / partial / non-function deps (guards ignore non-functions).
-      expect(() => setGatewayRuntimeProbesDeps().not.toThrow());
-      expect(() => setGatewayRuntimeProbesDeps({}).not.toThrow());
-      expect(() => setGatewayRuntimeProbesDeps({ promptWithReplGuard: 1, _writeEnvMap: null, _compactReasonText: 'x' }).not.toThrow());
+      expect(() => setGatewayRuntimeProbesDeps()).not.toThrow();
+      expect(() => setGatewayRuntimeProbesDeps({})).not.toThrow();
+      expect(() => setGatewayRuntimeProbesDeps({ promptWithReplGuard: 1, _writeEnvMap: null, _compactReasonText: 'x' })).not.toThrow();
       // Idempotent re-injection with real functions across the full dep surface.
       const fakeDeps = {};
       for (const n of ['promptWithReplGuard', '_compactReasonText', '_getGatewayHomeRiskSnapshot', '_writeEnvMap']) {
         fakeDeps[n] = () => undefined;
       }
-      expect(() => setGatewayRuntimeProbesDeps(fakeDeps).not.toThrow());
-      expect(() => setGatewayRuntimeProbesDeps(fakeDeps).not.toThrow());
+      expect(() => setGatewayRuntimeProbesDeps(fakeDeps)).not.toThrow();
+      expect(() => setGatewayRuntimeProbesDeps(fakeDeps)).not.toThrow();
   });
 
 });

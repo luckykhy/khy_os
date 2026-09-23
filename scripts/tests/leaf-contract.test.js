@@ -44,7 +44,9 @@ test('declaresLeaf: 仅 // 行提到纯叶子(描述依赖)→ false', () => {
   assert.strictEqual(guard.declaresLeaf(src), false);
 });
 test('declaresLeaf: 真叶子识别 / 编排器不识别', () => {
-  assert.strictEqual(guard.declaresLeaf(readSrc('services/backend/src/services/search/searchNecessity.js')), true);
+  // 路径随该叶子搬迁至 domain/query/search/（search/index.js:7 的 re-export 是现役引用）；
+  // 旧路径 services/backend/src/services/search/searchNecessity.js 已不存在，直读会 ENOENT。
+  assert.strictEqual(guard.declaresLeaf(readSrc('services/backend/src/services/domain/query/search/searchNecessity.js')), true);
   assert.strictEqual(guard.declaresLeaf(readSrc('services/backend/src/services/memoryTier.js')), true);
   assert.strictEqual(guard.declaresLeaf(readSrc('services/backend/src/services/toolUseLoop.js')), false);
   assert.strictEqual(guard.declaresLeaf(readSrc('services/backend/src/services/webSearchService.js')), false);

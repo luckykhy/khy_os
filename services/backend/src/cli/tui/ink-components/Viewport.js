@@ -60,7 +60,12 @@ function Viewport({
   // ── lines 模式:直接切片字符串数组 ──────────────────────────────────────────
   if (lines !== null && lines !== undefined) {
     const totalLines = lines.length;
-    const maxScroll = Math.max(0, totalLines - height);
+    // 指示器与内容**共用同一份高度预算**:它一旦被推进这个 `height` 高的固定盒,
+    // 盒里就有 `height + 1` 个子节点,yoga 按 flexShrink 把总高摊回 `height` ——
+    // 中间那一行的高度取整成 0,**内容凭空少一行**(真机现象:第11行在模型里存在、
+    // 能复制出来,但屏幕上永远看不见)。所以要让指示器就得先给它扣一行。
+    const contentRows = viewportContentRows(height, totalLines, showIndicator);
+    const maxScroll = Math.max(0, totalLines - contentRows);
     // 贴底语义:`scroll` 为 null/undefined/负数 → **追随底部**(显示最新内容)。
     // 历史实现用 `scroll >= maxScroll` 判「之前在底部」,但调用方初值是 0 ——
     // 内容一旦长过视口(`0 >= maxScroll` 恒假),视口就永远停在**顶部**,用户看到的
@@ -76,7 +81,7 @@ function Viewport({
 
     // 可见窗口
     const start = clampedScroll;
-    const end = Math.min(totalLines, clampedScroll + height);
+    const end = Math.min(totalLines, clampedScroll + contentRows);
     const visible = lines.slice(start, end);
 
     // 空内容
@@ -317,6 +322,36 @@ function sliceLineForSelection(line, lineIdx, selection) {
 }
 
 /**
+ * 纯叶子:盒子高 → **可用内容行数**。
+ *
+ * 为什么需要它:滚动指示器是第 `height + 1` 个子节点,而外层 Box 是
+ * `height` 高 + `overflow:'hidden'`。yoga 会把多出来的那一行摊到所有子节点上,
+ * 中间那一行的高度取整成 0 —— 内容**在视口正中凭空少一行**,而且丢的是哪一行
+ * 随滚动偏移变化(实测 height=23 丢第 12 行、height=10 丢第 5 行)。
+ * 指示器要占位就必须先从预算里扣一行,而不是和内容抢同一格。
+ *
+ * 只有「内容多到需要滚动」时才扣:内容 ≤ 盒高时不画指示器,一行都不该少。
+ *
+ * ⚠ 本函数返回值是 `resolveViewportOffset` / `applyStickyViewportAction` /
+ *   `applyViewportScroll` / `dragAutoScroll` 里 `viewH` 参数的**唯一合法实参**。
+ *   传盒子高度会让调用方算出的 maxScroll 比渲染侧大 1,贴底哨兵与选区行号
+ *   会整体错位一行(同一类 bug 的第二次发生)。
+ *
+ * @param {number} height 视口盒子高(外层 Box 的 height)
+ * @param {number} totalLines 内容总行数
+ * @param {boolean} [showIndicator=true] 是否可能画指示器
+ * @returns {number} 内容行数(≥1)
+ */
+function viewportContentRows(height, totalLines, showIndicator = true) {
+  const h = Math.max(1, Math.floor(Number(height) || 1));
+  const t = Math.max(0, Math.floor(Number(totalLines) || 0));
+  if (showIndicator === false || t <= h) {
+    return h;
+  }
+  return Math.max(1, h - 1);
+}
+
+/**
  * 贴底哨兵:调用方把偏移置为 `null` 即表示「跟随最新内容」。
  * @type {null}
  */
@@ -365,6 +400,48 @@ function applyStickyViewportAction(action, s, viewH, total) {
 }
 
 /**
+ * 纯叶子:拖动到**视口边缘**时该往哪滚、滚完指针落在哪一行（验收标准 A-09）。
+ *
+ * 为什么需要它：选区的两端存的是**绝对行号**（`lines` 数组下标），而鼠标只能停在
+ * 屏幕内 —— 指针拖到视口最后一行就不再往下了。不做边缘滚动，选区就被**一屏**卡住，
+ * 用户看到的正是「能选中，但只能选当前这一页，跨页就复制不出来」。
+ *
+ * 判据（一次一格，靠位移事件天然限速，不需要定时器）：
+ *   - 指针在**可见区下沿或更下** → 下滚一格（把刚露出的那行纳进选区）；
+ *   - 指针在**可见区上沿或更上** → 上滚一格；
+ *   - 内容不超视口 / 已滚到端点 → 不动。
+ * 返回的 `line` 是**滚动之后**指针所指的绝对行 —— 锚点不动、活动端跟到新行，
+ * 这才是「继续扩展」而不是「跳回起点」。
+ *
+ * 无 IO、不抛、确定性；`offset` 直接可用于同步 App 侧的滚动 ref。
+ *
+ * @param {number} rawLine 指针绝对行 = 屏幕行 + 当前偏移（**未** clamp）
+ * @param {number} offset 当前视口偏移（数字，已 clamp）
+ * @param {number} viewH 视口高
+ * @param {number} total 内容总行
+ * @returns {{delta: -1|0|1, line: number, offset: number}}
+ */
+function dragAutoScroll(rawLine, offset, viewH, total) {
+  const vh = Math.max(1, Math.floor(Number(viewH) || 1));
+  const t = Math.max(0, Math.floor(Number(total) || 0));
+  const maxScroll = Math.max(0, t - vh);
+  const n = Number(rawLine);
+  const raw = Number.isFinite(n) ? Math.trunc(n) : 0;
+  const off = Math.max(0, Math.min(Math.trunc(Number(offset) || 0), maxScroll));
+  let delta = 0;
+  if (t > vh) {
+    if (raw >= off + vh - 1 && off < maxScroll) delta = 1;
+    else if (raw <= off && off > 0) delta = -1;
+  }
+  const last = Math.max(0, t - 1);
+  return {
+    delta,
+    line: Math.max(0, Math.min(raw + delta, last)),
+    offset: Math.max(0, Math.min(off + delta, maxScroll)),
+  };
+}
+
+/**
  * 纯叶子:应用滚动动作,返回新偏移(已 clamp)。
  * 与 scrollActions 同一范式,但针对视口内偏移。
  */
@@ -409,5 +486,7 @@ module.exports = Viewport;
 module.exports.applyViewportScroll = applyViewportScroll;
 module.exports.resolveViewportOffset = resolveViewportOffset;
 module.exports.applyStickyViewportAction = applyStickyViewportAction;
+module.exports.dragAutoScroll = dragAutoScroll;
+module.exports.viewportContentRows = viewportContentRows;
 module.exports.sliceLineForSelection = sliceLineForSelection;
 module.exports.STICKY_BOTTOM = STICKY_BOTTOM;

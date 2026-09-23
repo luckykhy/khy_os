@@ -48,7 +48,11 @@ function _deps(opts = {}) {
   return {
     daemon: opts.daemonManager || require('../../../daemonManager'),
     bridge: opts.bridge || require('../../../../bridge/bridgeServer'),
-    remote: opts.remote || require('../../../../cli/handlers/remote'),
+    // 真源是 services/remote（本文件的协作者清单第 13 行已如此声明）。
+    // 曾写成 ../../../../cli/handlers/remote —— 那是 L2 CLI 侧的薄封装，
+    // 它自己也只是 `require('../../services/remote')` 再转手；
+    // 从 domain 层够到 cli 层去拿一个「同层的服务」属于层级倒置（archDebtScan R1）。
+    remote: opts.remote || require('../../../remote'),
     store: opts.store || require('./remoteDevSessionStore'),
     env: opts.env || process.env,
   };

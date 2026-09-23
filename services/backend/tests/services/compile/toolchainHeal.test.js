@@ -24,7 +24,7 @@ const path = require('path');
 
 const buildProject = require('../../../src/tools/buildProject');
 const compileFile = require('../../../src/tools/compileFile');
-const resolver = require('../../../src/services/dependency/resolver');
+const resolver = require('../../../src/services/domain/network/dependency/resolver.js');
 
 function mkProject(markerFile) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-toolchain-'));

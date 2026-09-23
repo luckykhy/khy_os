@@ -1295,6 +1295,13 @@ const AIGatewayRoutingMethods = {
       /* best effort — never block gateway init */
     }
 
+    // Seed OpenCode Zen free channel (zero-registration local gate).
+    try {
+      require('../customProviderRegistrar').ensureBuiltinZen();
+    } catch {
+      /* best effort — never block gateway init */
+    }
+
     // Seed the qoder reverse-proxy channels (OpenAI + Anthropic lines) only when
     // the user has opted in (QODER_PROXY_ENDPOINT/API_KEY or KHY_QODER_PROXY);
     // otherwise this is an internal no-op (avoids dead ECONNREFUSED entries).

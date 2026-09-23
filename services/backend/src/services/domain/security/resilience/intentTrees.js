@@ -15,7 +15,7 @@
  * （部分 HTML / 摘要 / 标题），喂给 SalvageProtector，做到「兜底必须交差」。
  */
 
-const { FallbackTreeBuilder } = require('../../maintenance/selfHeal/fallbackTree');
+const { FallbackTreeBuilder } = require('./fallbackTree');
 
 /** 从任意工具结果里尽力抠出一段可读文本残料（fail-safe，绝不抛错）。 */
 function _textSalvage(result) {

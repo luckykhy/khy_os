@@ -176,6 +176,18 @@ function calculateTokenWarningState(opts) {
   };
 }
 
+// Compact token format for the warning line (keeps this leaf zero-require):
+// >=1000 → one-decimal k ("79k"), below → integer. Non-finite/<=0 → ''.
+function _fmtCompactTokens(t) {
+  const n = Number(t);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  if (n >= 1000) {
+    const k = Math.round(n / 100) / 10;
+    return (Number.isInteger(k) ? k.toFixed(0) : k.toFixed(1)) + 'k';
+  }
+  return String(Math.round(n));
+}
+
 // Full display decision. Returns { show, text, style } where style is one of
 // 'dim' | 'warning' | 'error'. When show=false there is nothing to render
 // (we are not yet inside the warning band).
@@ -198,7 +210,16 @@ function buildContextWarning(opts) {
   }
 
   if (autoCompactEnabled) {
-    return { show: true, text: `${state.percentLeft}% until auto-compact`, style: 'dim', state };
+    // 2026-09-19 BUG-19c: 裸的「1% until auto-compact」与页脚另一段
+    // 「60% ctx (77.3k/128k)」并列时, 用户无法判断 1% 是占谁的比例
+    // (阈值≈79k, 远小于窗口 128k)。把触发阈值一并显示, 两段即可自洽。
+    const th = _fmtCompactTokens(state.autoCompactThreshold);
+    return {
+      show: true,
+      text: th ? `${state.percentLeft}% until auto-compact @${th}` : `${state.percentLeft}% until auto-compact`,
+      style: 'dim',
+      state,
+    };
   }
 
   // Auto-compact disabled: escalate to an actionable "Context low" prompt.

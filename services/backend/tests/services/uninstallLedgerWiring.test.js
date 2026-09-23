@@ -1,20 +1,21 @@
 'use strict';
 /**
- * uninstallLedgerWiring.test.js �?uninstall handler 台账接线契约(node:test)�?
+ * uninstallLedgerWiring.test.js — uninstall handler 台账接线契约(node:test)�?
  *
- * 锁死块B行为(�?spawn 真进程、不碰真数据�?用临时目�?+ KHY_DATA_HOME 注入):
- *   - _readLedgerEntries:�?~/.khy/.install-ledger.jsonl 逐行解析,坏行跳过,缺失→[];
- *   - _rollbackLedger dryRun:computeRollback 排序正确 + 不真删文�?
- *   - _rollbackLedger 执行:真删 runtime/file,checksum 不匹配则保留(用户改动不误�?;
- *   - _executeRollbackStep:autostart/stop-process �?skipped 不谎报成�?
- *   - �?KHY_INSTALL_LEDGER �?�?台账不读(_rollbackLedger 空步�?�?
+ * 锁死块B行为(�?spawn 真进程、不碰真数据�?用临时目�?+ KHY_DATA_HOME 注入):
+ *   - _readLedgerEntries:�?~/.khy/.install-ledger.jsonl 逐行解析,坏行跳过,缺失→[];
+ *   - _rollbackLedger dryRun:computeRollback 排序正确 + 不真删文�?
+ *   - _rollbackLedger 执行:真删 runtime/file,checksum 不匹配则保留(用户改动不误�?;
+ *   - _executeRollbackStep:autostart/stop-process �?skipped 不谎报成�?
+ *   - �?KHY_INSTALL_LEDGER �?�?台账不读(_rollbackLedger 空步�?�?
  */
 const fs = require('fs');
+const assert = require('node:assert');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const handler = require('../../src/cli/handlers/uninstall');
-/** 建一个临时数据家 + 台账文件,返回 {dataHome, cleanup}�?*/
+/** 建一个临时数据家 + 台账文件,返回 {dataHome, cleanup}�?*/
 function _mkLedgerHome(lines) {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-ledger-test-'));
   const dataHome = path.join(base, '.khy');
@@ -27,7 +28,7 @@ function _mkLedgerHome(lines) {
 describe('Uninstall Ledger Wiring', () => {
   test('_readLedgerEntries parses jsonl, skips malformed lines, empty on missing', () => {
       const env0 = { KHY_DATA_HOME: path.join(os.tmpdir(), 'khy-nope-' + process.pid) };
-      assert.deepEqual(handler._readLedgerEntries(env0), []); // missing �?[]
+      assert.deepEqual(handler._readLedgerEntries(env0), []); // missing �?[]
     
       const h = _mkLedgerHome([
         JSON.stringify({ v: 1, kind: 'file', target: '/a/x', action: 'unlink' }),
@@ -110,7 +111,7 @@ describe('Uninstall Ledger Wiring', () => {
       } finally { try { fs.rmSync(base, { recursive: true, force: true }); } catch { /* ignore */ } }
   });
 
-  test('gate off �?_rollbackLedger yields no steps (byte-revert to allowlist-only)', () => {
+  test('gate off �?_rollbackLedger yields no steps (byte-revert to allowlist-only)', () => {
       const h = _mkLedgerHome([JSON.stringify({ v: 1, kind: 'file', target: '/a/x', action: 'unlink' })]);
       try {
         const out = handler._rollbackLedger({ KHY_DATA_HOME: h.dataHome, KHY_INSTALL_LEDGER: '0' }, { dryRun: true });

@@ -1,6 +1,6 @@
 'use strict';
 
-const { createRemoteApprovalBridge } = require('../../src/services/remote/remoteApprovalBridge');
+const { createRemoteApprovalBridge } = require('../../src/services/domain/network/remote/remoteApprovalBridge.js');
 
 describe('RemoteApprovalBridge state import/export', () => {
   test('importState skips expired pending ticket and keeps active ticket', () => {

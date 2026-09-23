@@ -15,9 +15,66 @@ const request = axios.create({
 });
 
 const RETRYABLE_METHODS = new Set(['get', 'head', 'options']);
+// Single source of truth for "which auth endpoints must NOT run the
+// 401 → refresh / logout flow on themselves" — a 401 on these is the *result*
+// of a login/refresh attempt, not a stale token. Both the refresh gate
+// (L81) and the logout-redirect gate (L116) use this predicate so a new
+// sub-route under /api/auth/login can't slip past one but trip the other.
+const AUTH_RETRY_URLS = new Set(['/api/auth/login', '/api/auth/refresh', '/api/auth/qr-confirm']);
 
 function getRequestUrl(error) {
   return String(error?.config?.url || '').trim();
+}
+
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+function onRefreshed(newToken) {
+  refreshSubscribers.forEach((cb) => cb(newToken));
+  refreshSubscribers = [];
+}
+
+/**
+ * Shared 401 recovery: try to refresh the access token (de-duping concurrent
+ * callers) and hand back a new Bearer token, or false when the session is
+ * genuinely dead. Exported so the bare-fetch path (authedFetch.js) reuses the
+ * exact same refresh-before-logout policy instead of hard-redirecting on a
+ * transient 401 mid-stream.
+ * @returns {Promise<string|false>} new access token on success, false when the
+ *   caller should fall through to logout.
+ */
+export async function tryRefreshAndRotate() {
+  const userStore = useUserStore();
+  if (isRefreshing) {
+    // Another refresh is in flight — piggyback on its result.
+    return new Promise((resolve) => {
+      refreshSubscribers.push((newToken) => resolve(newToken || false));
+    });
+  }
+  isRefreshing = true;
+  let refreshed = false;
+  try {
+    refreshed = await userStore.refreshAccessToken();
+    if (refreshed) {
+      onRefreshed(userStore.token);
+      return userStore.token;
+    }
+    return false;
+  } finally {
+    isRefreshing = false;
+  }
+}
+
+function finalizeUnauthorized() {
+  const userStore = useUserStore();
+  userStore.logout();
+  try {
+    if (!String(window.location?.pathname || '').startsWith('/login')) {
+      window.location.href = '/login';
+    }
+  } catch {
+    /* noop */
+  }
 }
 
 request.interceptors.request.use(
@@ -53,7 +110,7 @@ request.interceptors.response.use(
     const cfg = error?.config || {};
     const method = String(cfg?.method || '').toLowerCase();
     const requestUrl = getRequestUrl(error);
-    const isRetryPending = cfg.__networkRetryDone;
+    const isRetryPending = cfg.__networkRetryDone || cfg.__authRetryDone;
     if (!isRetryPending) httpDone();
 
     if (isNetworkLikeError(error) && !cfg.__networkRetryDone && RETRYABLE_METHODS.has(method)) {
@@ -66,11 +123,29 @@ request.interceptors.response.use(
       error.userMessage = `网络连接异常：无法访问 ${requestUrl || '/api'}。请确认 ai-backend 服务可用后重试。`;
     }
 
-    const isLoginRequest = requestUrl.includes('/api/auth/login');
-    if (error.response?.status === 401 && !isLoginRequest) {
-      const userStore = useUserStore();
-      userStore.logout();
-      window.location.href = '/login';
+    // Token refresh: on 401, try to refresh the access token before logging out.
+    // Skip refresh for auth endpoints themselves (login, refresh, qr-confirm).
+    const isAuthEndpoint = AUTH_RETRY_URLS.has(requestUrl);
+    if (error.response?.status === 401 && !isAuthEndpoint && !cfg.__authRetryDone) {
+      const newToken = await tryRefreshAndRotate();
+      if (newToken) {
+        cfg.headers.Authorization = `Bearer ${newToken}`;
+        cfg.__authRetryDone = true;
+        httpStart();
+        return request(cfg);
+      }
+      // Refresh failed → session is genuinely dead.
+      finalizeUnauthorized();
+    }
+
+    // Logout gate: a 401 that is NOT on a known auth endpoint and did not go
+    // through the refresh path above (fresh 401, or refresh already attempted)
+    // means the session is dead → log out + redirect. Use the same Set for the
+    // predicate so a 401 on /api/auth/refresh (refresh-token rejected) falls
+    // into this branch and logs out, while /api/auth/login (wrong credentials)
+    // is handled by the login page itself and never triggers a redirect loop.
+    if (error.response?.status === 401 && !isAuthEndpoint) {
+      finalizeUnauthorized();
     }
     if (error.response?.status === 403) {
       const msg = String(
@@ -91,7 +166,9 @@ request.interceptors.response.use(
     //     AgentDashboard 轮询退避），不需要再叠一条 toast。
     const status = error.response?.status;
     const silent = cfg.silent === true;
-    if (!silent && !(status === 401 && !isLoginRequest) && !isLoginRequest) {
+    // 401 已触发登出/跳登录（finalizeUnauthorized），登录请求由页面自行处理，
+    // 两者都不再叠 toast。isAuthEndpoint 与上面登出门是同一个谓词。
+    if (!silent && status !== 401 && !isAuthEndpoint) {
       notifyError(deriveErrorMessage(error));
     }
     return Promise.reject(error);

@@ -145,7 +145,9 @@ function _assertHttpResult(httpResult, expected = {}) {
   expect(httpResult.status).toBe(expected.status);
   expect(Boolean(httpResult.body?.success)).toBe(Boolean(expected.success));
   if (expected.code) {
-    expect(httpResult.body?.data?.code).toBe(expected.code);
+    // Error envelope: code lives at body.error.code (apiResponse.fail);
+    // success envelope payload lives at body.data.
+    expect(httpResult.body?.error?.code).toBe(expected.code);
   }
   if (expected.flag) {
     expect(httpResult.body?.data?.[expected.flag]).toBe(true);

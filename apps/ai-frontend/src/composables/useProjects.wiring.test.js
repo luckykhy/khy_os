@@ -56,13 +56,13 @@ test('sidebar menu exposes the 项目工作区 entry with the Folder icon', () =
     /path:\s*'\/projects'.*icon:\s*Folder/s,
     'NAV must list /projects with the Folder icon'
   );
-  // The sidebar must keep reading NAV; if Layout stops importing it, the menu
+  // The sidebar must keep reading NAV; if AppShell stops importing it, the menu
   // silently goes blank without any assertion catching it.
-  const layout = read('views/Layout.vue');
+  const shell = read('layouts/AppShell.vue');
   assert.match(
-    layout,
+    shell,
     /from\s+'@\/nav'/,
-    'Layout must render the sidebar from src/nav (single source of truth)'
+    'AppShell must render the sidebar from src/nav (single source of truth)'
   );
 });
 

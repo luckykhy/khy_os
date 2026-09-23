@@ -1,5 +1,9 @@
 'use strict';
 
+// The global `crypto` is the Web Crypto object (no randomBytes) outside
+// `node -e` contexts; this call site needs the Node PRNG for request ids.
+const crypto = require('crypto');
+
 /**
  * guardApproval.js — Turn a soft PreToolUse guard block into a user approval.
  *

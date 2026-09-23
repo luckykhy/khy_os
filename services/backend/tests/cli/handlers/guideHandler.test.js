@@ -20,8 +20,8 @@ process.env.KHY_DATA_HOME = TMP_DATA;
 process.env.KHY_PROJECT_DATA_HOME = TMP_PROJ;
 process.env.KHY_DEP_HEALING = 'off';
 const { handleGuide } = require('../../../src/cli/handlers/guide');
-const replayLedger = require('../../../src/services/trajectoryReplay/replayLedger');
-const mapStore = require('../../../src/services/trajectoryGuide/mapStore');
+const replayLedger = require('../../../src/services/domain/trajectory/trajectoryReplay/replayLedger.js');
+const mapStore = require('../../../src/services/domain/trajectory/trajectoryGuide/mapStore.js');
 async function capture(fn) {
   const lines = [];
   const sinks = ['log', 'error', 'warn', 'info'];
@@ -47,7 +47,7 @@ describe('Guide Handler', () => {
       const out = await capture(() => handleGuide('map', ['g9-strong'], { model: 'claude-opus-4-8' }));
       expect(out).toMatch(/地图模板已蒸馏/);
       expect(out).toMatch(/质量分/);
-      expect(mapStore.listMaps().toBeTruthy().length >= 1);
+      expect(mapStore.listMaps().length >= 1).toBeTruthy();
   });
 
   test('map with a weak model is refused', async () => {

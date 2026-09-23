@@ -18,7 +18,7 @@ const { describe, test, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 
 const webSearchService = require('../../../src/services/webSearchService');
-const resolver = require('../../../src/services/dependency/resolver');
+const resolver = require('../../../src/services/domain/network/dependency/resolver.js');
 
 const webSearchTool = require('../../../src/tools/webSearch');
 const newsTool = require('../../../src/tools/news');

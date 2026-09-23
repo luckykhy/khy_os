@@ -404,6 +404,16 @@ function getDetectedTools() {
  */
 function invokeStreamingTool(tool, prompt, onChunk, options = {}) {
   return new Promise((resolve, reject) => {
+    // Local safe wrapper: status/progress lines emitted on the streaming path
+    // must reach the consumer's onChunk. A consumer throw is swallowed so a
+    // bad callback never kills the stream pipeline.
+    const _safeOnChunk = (chunk) => {
+      try {
+        if (typeof onChunk === 'function') onChunk(chunk);
+      } catch {
+        /* consumer error — swallow to protect stream integrity */
+      }
+    };
     try {
       _safeOnChunk({ type: 'status', text: `Launching ${tool.name}...` });
     } catch {
@@ -652,7 +662,9 @@ function invokeStreamingTool(tool, prompt, onChunk, options = {}) {
             type: 'status',
             text: `${tool.name} failed: ${stderr.trim() || `exit ${code}`}`,
           });
-        } catch {}
+        } catch {
+          /* best effort */
+        }
         done(new Error(stderr.trim() || `Process exited with code ${code}`));
       }
     });
@@ -660,7 +672,9 @@ function invokeStreamingTool(tool, prompt, onChunk, options = {}) {
     child.on('error', (err) => {
       try {
         _safeOnChunk({ type: 'status', text: `${tool.name} process error: ${err.message}` });
-      } catch {}
+      } catch {
+        /* best effort */
+      }
       done(err);
     });
 
@@ -1048,6 +1062,15 @@ function processStreamEvent(
 function invokeToolAsync(tool, prompt, options = {}) {
   return new Promise((resolve, reject) => {
     const onChunk = typeof options.onChunk === 'function' ? options.onChunk : () => {};
+    // Local safe wrapper for the non-streaming (Codex/Aider/opencode) path —
+    // the processStreamEvent-scoped _safeOnChunk is not visible in here.
+    const _safeOnChunk = (chunk) => {
+      try {
+        if (typeof onChunk === 'function') onChunk(chunk);
+      } catch {
+        /* consumer error — swallow to protect stream integrity */
+      }
+    };
     let args;
     if (tool.useStdin) {
       args = tool.buildArgs();
@@ -1386,6 +1409,17 @@ async function generate(prompt, options = {}) {
 
   const attempts = [];
   const onChunk = options.onChunk || (() => {});
+
+  // Local safe wrapper for the generate() fallback loop's status lines
+  // (retry/switching + Launching + failure). The _safeOnChunk helpers live in
+  // the invoke* / processStreamEvent scopes, not here.
+  const _safeOnChunk = (chunk) => {
+    try {
+      onChunk(chunk);
+    } catch {
+      /* consumer error — swallow to protect stream integrity */
+    }
+  };
 
   // CLI tools receive only a flat text prompt via stdin/args. Extract critical
   // behavioral directives from the system prompt so they survive the bridge.

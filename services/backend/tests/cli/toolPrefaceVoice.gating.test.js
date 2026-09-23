@@ -11,58 +11,53 @@
  *    KHY_TOOL_OUTCOME_FAIL=0 回退旧的"失败即静音"。
  */
 
-const { describe, test, afterEach } = require('node:test');
-const assert = require('node:assert/strict');
-
 const voice = require('../../src/cli/toolPrefaceVoice');
 
 describe('segmentMentionsTool — 段内点名检测', () => {
   test('类别关键词命中(读→read)', () => {
-    assert.equal(voice.segmentMentionsTool('我先读一下实现', 'read', {}), true);
-    assert.equal(voice.segmentMentionsTool('我先看看', 'read', {}), true);
+    expect(voice.segmentMentionsTool('我先读一下实现', 'read', {})).toBe(true);
+    expect(voice.segmentMentionsTool('我先看看', 'read', {})).toBe(true);
   });
 
   test('类别关键词命中(搜→grep / 改→edit / 跑→bash)', () => {
-    assert.equal(voice.segmentMentionsTool('我搜一下 TODO', 'grep', {}), true);
-    assert.equal(voice.segmentMentionsTool('我来改下这里', 'edit', {}), true);
-    assert.equal(voice.segmentMentionsTool('我跑一下测试', 'bash', {}), true);
+    expect(voice.segmentMentionsTool('我搜一下 TODO', 'grep', {})).toBe(true);
+    expect(voice.segmentMentionsTool('我来改下这里', 'edit', {})).toBe(true);
+    expect(voice.segmentMentionsTool('我跑一下测试', 'bash', {})).toBe(true);
   });
 
   test('路径 basename 命中(跨 OS)', () => {
-    assert.equal(
-      voice.segmentMentionsTool('稍等，我处理 foo.js', 'read', { file_path: '/a/b/foo.js' }),
-      true
-    );
-    assert.equal(
-      voice.segmentMentionsTool('看看 Desktop 里有什么', 'ls', { path: 'D:\\Users\\x\\Desktop' }),
-      true
-    );
+    expect(
+      voice.segmentMentionsTool('稍等，我处理 foo.js', 'read', { file_path: '/a/b/foo.js' })
+    ).toBe(true);
+    expect(
+      voice.segmentMentionsTool('看看 Desktop 里有什么', 'ls', { path: 'D:\\Users\\x\\Desktop' })
+    ).toBe(true);
   });
 
   test('命令首 token(去路径裸命令名)命中', () => {
-    assert.equal(voice.segmentMentionsTool('我用 npm 装一下', 'bash', { command: 'npm install' }), true);
-    assert.equal(voice.segmentMentionsTool('跑 pytest', 'bash', { command: '/usr/bin/pytest -q' }), true);
+    expect(voice.segmentMentionsTool('我用 npm 装一下', 'bash', { command: 'npm install' })).toBe(true);
+    expect(voice.segmentMentionsTool('跑 pytest', 'bash', { command: '/usr/bin/pytest -q' })).toBe(true);
   });
 
   test('pattern/query 原样回显命中', () => {
-    assert.equal(voice.segmentMentionsTool('找一下 FIXME 标记', 'grep', { pattern: 'FIXME' }), true);
+    expect(voice.segmentMentionsTool('找一下 FIXME 标记', 'grep', { pattern: 'FIXME' })).toBe(true);
   });
 
   test('泛泛而谈、没点到这个工具 → 不命中(preface 照常出)', () => {
-    assert.equal(voice.segmentMentionsTool('好的，我来处理一下。', 'read', { file_path: '/a/b/foo.js' }), false);
-    assert.equal(voice.segmentMentionsTool('明白了，这就开始。', 'bash', { command: 'npm test' }), false);
+    expect(voice.segmentMentionsTool('好的，我来处理一下。', 'read', { file_path: '/a/b/foo.js' })).toBe(false);
+    expect(voice.segmentMentionsTool('明白了，这就开始。', 'bash', { command: 'npm test' })).toBe(false);
   });
 
   test('空文字 / 空工具名 → false,绝不抛', () => {
-    assert.equal(voice.segmentMentionsTool('', 'read', {}), false);
-    assert.equal(voice.segmentMentionsTool('   ', 'read', {}), false);
-    assert.equal(voice.segmentMentionsTool('随便说点', '', {}), false);
-    assert.equal(voice.segmentMentionsTool(undefined, undefined, undefined), false);
+    expect(voice.segmentMentionsTool('', 'read', {})).toBe(false);
+    expect(voice.segmentMentionsTool('   ', 'read', {})).toBe(false);
+    expect(voice.segmentMentionsTool('随便说点', '', {})).toBe(false);
+    expect(voice.segmentMentionsTool(undefined, undefined, undefined)).toBe(false);
   });
 
   test('单字符 basename 不参与匹配(避免噪声误命中)', () => {
     // basename "a" 长度 1 → 不应仅因文字里出现 "a" 就静音
-    assert.equal(voice.segmentMentionsTool('this is a sentence', 'read', { file_path: '/x/a' }), false);
+    expect(voice.segmentMentionsTool('this is a sentence', 'read', { file_path: '/x/a' })).toBe(false);
   });
 });
 
@@ -71,24 +66,24 @@ describe('toolOutcomeNarration 失败衔接句 — KHY_TOOL_OUTCOME_FAIL', () =>
 
   test('默认 on:失败步给一句中性恢复衔接(带 basename)', () => {
     const out = voice.toolOutcomeNarration('read', { success: false }, { file_path: '/a/foo.js' });
-    assert.match(out, /foo\.js/);
-    assert.match(out, /没走通/);
+    expect(out).toMatch(/foo\.js/);
+    expect(out).toMatch(/没走通/);
   });
 
   test('默认 on:denied / 非零退码也发声', () => {
-    assert.match(voice.toolOutcomeNarration('write', { denied: true }, { file_path: '/a/foo.js' }), /没走通/);
+    expect(voice.toolOutcomeNarration('write', { denied: true }, { file_path: '/a/foo.js' })).toMatch(/没走通/);
     const nonZero = voice.toolOutcomeNarration('bash', { success: true, exitCode: 3 }, { command: 'make' });
-    assert.match(nonZero, /非零/);
-    assert.match(nonZero, /3/);
+    expect(nonZero).toMatch(/非零/);
+    expect(nonZero).toMatch(/3/);
   });
 
   test('KHY_TOOL_OUTCOME_FAIL=0:回退旧的"失败即静音"', () => {
     process.env.KHY_TOOL_OUTCOME_FAIL = '0';
-    assert.equal(voice.toolOutcomeNarration('read', { success: false }, { file_path: '/a/foo.js' }), '');
-    assert.equal(voice.toolOutcomeNarration('bash', { success: true, exitCode: 3 }, { command: 'make' }), '');
+    expect(voice.toolOutcomeNarration('read', { success: false }, { file_path: '/a/foo.js' })).toBe('');
+    expect(voice.toolOutcomeNarration('bash', { success: true, exitCode: 3 }, { command: 'make' })).toBe('');
   });
 
   test('成功步不受影响(仍是原文案)', () => {
-    assert.match(voice.toolOutcomeNarration('bash', { success: true, exitCode: 0 }, { command: 'make' }), /跑通/);
+    expect(voice.toolOutcomeNarration('bash', { success: true, exitCode: 0 }, { command: 'make' })).toMatch(/跑通/);
   });
 });

@@ -1,6 +1,6 @@
 'use strict';
 
-const config = require('../../src/services/config/index');
+const config = require('../../../src/services/config/index.js');
 
 describe('config index', () => {
   test('module is defined', () => {

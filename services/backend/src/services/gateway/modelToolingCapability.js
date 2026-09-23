@@ -97,6 +97,59 @@ function adapterSupportsNativeToolUse(adapter) {
  *   measured:实测裁决(toolCapabilityStore.getVerdict 的结果);胜过名字启发,但低于 env 强制。
  * @returns {boolean}
  */
+/**
+ * 用户强制名单命中判定。两种写法都认。
+ *
+ * 为什么:调用方拿到的 model 有两种形态 —— 教学门给路由 id(`api:agnes:agnes-3.0-flash`),
+ * 剥离门给裸模型名(`agnes-3.0-flash`)。只比裸名会让同一条 env 只在一个门上生效:
+ * 用户设了 KHY_NATIVE_TOOL_MODELS,模型却仍被注入「你没有原生工具,请用文本语法」教学。
+ * 与实测缓存(capabilityModelKey 规范化)用同一套键,两个门才不可能各执一词。
+ * @param {Set<string>} set
+ * @param {string} m 已 _norm 的 model 串
+ * @returns {boolean}
+ */
+function _forcedHit(set, m) {
+  if (set.has(m)) {
+    return true;
+  }
+  let key = '';
+  try {
+    key = require('./capabilityModelKey').capabilityModelKey(m);
+  } catch {
+    key = '';
+  } // 叶子不可用 → 只认裸名,绝不抛
+  return !!key && key !== m && set.has(key);
+}
+
+/**
+ * model 维度:该模型是否**缺乏**可靠的原生工具调用(=须退回文本拦截)。
+ *
+ * 用途是**提示词侧**(教学门):被判「缺」的模型会被注入 `<tool_call>` 文本协议教学。
+ *
+ * 档位优先级:
+ *   1. env 强制原生 / 强制纯文本(用户主权,最高)
+ *   2. 实测裁决 measured('native'→不缺 / 'text'→缺),或通道拒收 → 缺
+ *   3. 名字启发 SMALL_MODEL_HINTS(暂定档)
+ *
+ * ⚠ **本函数自 2026-09-23 起不再决定 wire 行为**。它保留名字启发档,因为「先教一遍文本
+ * 协议」对暂定档是零代价的(教了不用不花钱);而「先剥掉 tools」不是零代价的 —— 剥掉之后
+ * 模型再也无法用原生调用证明自己,误判无法被现实推翻(BUG-014)。wire 侧请用
+ * shouldStripUpstreamTools,那条路只认正面证据。
+ *
+ * 为什么「既发 tools 又教回退语法」不是矛盾指令(别把它改成与剥离门耦合):
+ * 教学文案是**加性**的 —— prompts.js:_toolCallingFallbackProfile 的标题就是
+ * 「Tool calling (text-based fallback)」,只告诉模型「可以这样写」,从不断言「你没有原生
+ * 工具」。而且文本协议下的调用是**一等公民**:resolveToolCalls 在两条协议里都会解析执行
+ * 它(resolveToolCalls.js:50-113)。所以暂定档有两条成功路径,任一条走通都算成功:
+ * 原生通道可用 → 结构化调用;原生通道不可用 → 模型回退到文本语法 → 照样执行。
+ * 真正会失败的是「两条路都不走、只在散文里说『我先搜索一下』」——那要靠实测把该模型
+ * 判进 text 档来纠正,不是靠让两个门互相耦合。
+ * @param {string} model
+ * @param {{env?: object, measured?: ('native'|'text'|null), routeRejects?: boolean}} [opts]
+ *   measured:实测裁决(toolCapabilityStore.getVerdict 的结果);胜过名字启发,但低于 env 强制。
+ *   routeRejects:该通道是否被记为「拒收 tools」(toolCapabilityStore.routeRejectsTools)。
+ * @returns {boolean}
+ */
 function modelLacksReliableToolCalling(model, opts = {}) {
   const m = _norm(model);
   if (!m) {
@@ -105,12 +158,12 @@ function modelLacksReliableToolCalling(model, opts = {}) {
   const env = (opts && opts.env) || process.env;
 
   const nativeForced = parseModelListEnv(env && env.KHY_NATIVE_TOOL_MODELS);
-  if (nativeForced.has(m)) {
+  if (_forcedHit(nativeForced, m)) {
     return false;
   } // 用户强制原生,最高优先级
 
   const textForced = parseModelListEnv(env && env.KHY_TEXT_ONLY_TOOL_MODELS);
-  if (textForced.has(m)) {
+  if (_forcedHit(textForced, m)) {
     return true;
   } // 用户强制纯文本工具
 
@@ -122,6 +175,9 @@ function modelLacksReliableToolCalling(model, opts = {}) {
   if (measured === 'text') {
     return true;
   } // 实测不支持原生工具
+  if (opts && opts.routeRejects === true) {
+    return true;
+  } // 通道收不了 tools → 只能走文本协议
 
   // 实测前的暂定默认:小模型名 → 缺(安全走文本协议);其余 → 不缺(保留原生)。
   return SMALL_MODEL_HINTS.test(m);
@@ -130,26 +186,98 @@ function modelLacksReliableToolCalling(model, opts = {}) {
 /**
  * 组合判定:在某个 adapter 上跑某个 model 时,是否具备可靠原生工具调用。
  * 取代四处历史内联逻辑的统一表达:有原生通道的适配器 ∧ 模型不缺。
- * @param {{model?: string, adapter?: string, env?: object, measured?: ('native'|'text'|null)}} [opts]
+ * @param {{model?: string, adapter?: string, env?: object, measured?: ('native'|'text'|null), routeRejects?: boolean}} [opts]
  * @returns {boolean}
  */
 function hasNativeToolUse(opts = {}) {
-  const { model, adapter, env, measured } = opts || {};
+  const { model, adapter, env, measured, routeRejects } = opts || {};
   if (!adapterSupportsNativeToolUse(adapter)) {
     return false;
   }
-  return !modelLacksReliableToolCalling(model, { env, measured });
+  return !modelLacksReliableToolCalling(model, { env, measured, routeRejects });
 }
 
 /**
- * 剥离门判据:relay/multiFree 这类原生适配器在发请求前,是否应把 tools 从上游请求里
- * 删掉(模型不支持 function calling,发 tools 会 400)。等价于 model 维度的「缺」判定。
+ * 剥离门判据(**wire 侧**):relay/multiFree 这类原生适配器在发请求前,是否应把 tools 从
+ * 上游请求里删掉。
+ *
+ * **只认正面证据**(2026-09-23 起,BUG-014):
+ *   - env 强制纯文本 / 强制原生 —— 用户主权,最高
+ *   - measured === 'native' / 'text' —— 实测裁决
+ *   - routeRejects === true —— 该**通道**带 tools 被拒、去掉 tools 成功(端点属性)
+ *   - **challenge === true** —— 隔离式挑战轮(每 N 次请求放行一次):即便已判 text 也照发,
+ *     让模型有机会原生调用一次来推翻结论。见 toolChallengeCadence
+ *   - 其余一切(含「未实测 + 名字含 flash」)→ **发**
+ *
+ * 为什么不认名字:剥掉 tools 之后模型再也拿不到 tools、也就再也产生不了原生 tool_calls,
+ * 被动学习无法翻案 —— 一旦猜错就锁死到 TTL 到期。而「先发」错了可以挽回:端点真拒收就会
+ * 回 400,那条 400 恰好构成 routeRejects 的对照证据,记下之后该通道不再付第二次。
+ *
+ * 与 modelLacksReliableToolCalling 的分工:那个函数保留名字启发档,供**提示词侧**(教学门)
+ * 使用 —— 先教一遍文本协议是零代价的(教了不用不花钱);而剥掉 tools 不是零代价的。
  * @param {string} model
- * @param {{env?: object}} [opts]
- * @returns {boolean}
+ * @param {{env?: object, measured?: ('native'|'text'|null), routeRejects?: boolean, challenge?: boolean}} [opts]
+ * @returns {boolean} true=应剥离 tools(消息中的工具块须内联为文本)
  */
 function shouldStripUpstreamTools(model, opts = {}) {
-  return modelLacksReliableToolCalling(model, opts);
+  const m = _norm(model);
+  if (!m) {
+    return false;
+  }
+  const env = (opts && opts.env) || process.env;
+
+  const nativeForced = parseModelListEnv(env && env.KHY_NATIVE_TOOL_MODELS);
+  if (_forcedHit(nativeForced, m)) {
+    return false;
+  }
+  const textForced = parseModelListEnv(env && env.KHY_TEXT_ONLY_TOOL_MODELS);
+  if (_forcedHit(textForced, m)) {
+    return true;
+  } // 用户钉子连挑战轮也不越过 —— 那是用户明确要的状态
+
+  const measured = opts && opts.measured;
+  if (measured === 'native') {
+    return false;
+  } // 见过真实原生 tool_calls —— 正面证据压过通道否决
+
+  // 通道拒收是**端点的定论**,不参与挑战:挑战要推翻的是「模型被判 text」这个关于模型的
+  // 结论。这里必须在 challenge 之前判 —— 否则这条不变量就只剩调用方的约定,而调用方一行
+  // 疏忽就会让严格端点每次都吃 400(SECURITY-004 fail-closed / RUNTIME-010 同精神)。
+  if (opts && opts.routeRejects === true) {
+    return true;
+  }
+
+  // 隔离式挑战:只有「被判 text」的模型需要这一趟。
+  if (opts && opts.challenge === true) {
+    return false;
+  }
+
+  if (measured === 'text') {
+    return true;
+  }
+
+  return false; // 未知 → 先发,让现实给证据
+}
+
+/**
+ * 剥离 tools 时给用户看的说明(单一真源)。
+ *
+ * 为什么收口到这里:multiFreeService 与 relayApiAdapter 两个剥离门各自内联过一份文案,
+ * 已经是同一判断的两个副本。文案要说的其实是「本模块做的那个决定」,而决定只有一份,
+ * 所以说明也只有一份 —— 两处都不再持有字符串,漂移在结构上不可能发生。
+ *
+ * 措辞原则(旧文案的教训):旧文案写「不支持工具调用…请切换到支持 function calling 的模型」,
+ * 但工具**仍在通过文本协议正常执行**,于是用户被引导去换模型,排障方向被指错。新文案只陈述
+ * 两个可核对的事实(未确证 / 工具仍可用),再给一条能自己验证的出路(复测命令)。
+ * @param {string} model
+ * @returns {string}
+ */
+function stripToolsNotice(model) {
+  const m = String(model == null ? '' : model).trim() || '(当前模型)';
+  return (
+    `模型 ${m} 未确证原生工具调用：本轮改由文本协议携带调用（工具仍可用）。` +
+    `复测原生通道：khy gateway probe-tools ${m}（可用 --adapter 指定通道）`
+  );
 }
 
 module.exports = {
@@ -161,4 +289,5 @@ module.exports = {
   modelLacksReliableToolCalling,
   hasNativeToolUse,
   shouldStripUpstreamTools,
+  stripToolsNotice,
 };

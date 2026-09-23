@@ -131,7 +131,7 @@ function _stripBullet(line) {
 }
 
 function _pushCriterion(criteria, seen, rawText) {
-  // 去掉反引号:让「`npm run maintainer:check` 通过」这类条目文本干净,便于分类与去重。
+  // 去掉反引号:让「`npm run check:maintainer:safety` 通过」这类条目文本干净,便于分类与去重。
   const text = _clip(_str(rawText).replace(/`/g, '').trim());
   if (!text) {
     return;

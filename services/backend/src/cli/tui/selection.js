@@ -24,10 +24,21 @@
  *     直觉一致（拖到第 5 列反色到第 4 列），`extractText` 取 `slice(from, to)`。
  *
  * 已知偏差（诚实边界，见 `[DESIGN-ARCH-119]` §六 不做的事 4）：
- *   `_mainContentLines` 里已含 `buildTranscriptLines` 按列宽折好的**软换行**，
- *   所以视觉行 ≠ 逻辑行。跨软换行复制会在折行处带一个硬 `\n`。
- *   彻底修复需要行投影补 `softWrap` 元数据 —— 另立提案，不在本层范围。
+ *   1. `_mainContentLines` 里已含 `buildTranscriptLines` 按列宽折好的**软换行**，
+ *      所以视觉行 ≠ 逻辑行。跨软换行复制会在折行处带一个硬 `\n`。
+ *      彻底修复需要行投影补 `softWrap` 元数据 —— 另立提案，不在本层范围。
+ *   2. **锚点漂移（2026-09-23 探针实测确认）**：`beginSelection` 存的是**行号**，
+ *      而 `extractText` 在松手那一帧按行号重新切片 —— 一个数字、两个时刻。
+ *      只要手势期间 `lines` 发生「行插入 / 行删除 / 折行重排」，同一个行号就指向
+ *      不同内容，表现为「复制出来的比选中的少一截 / 整段错位」。
+ *      实测：头部插入 3 行 → 取到的是**上移 3 行**的那一段（错位量 = 插入行数）。
+ *      复现见 `tests/cli/tui/selectionAnchorDrift.test.js` 的 D-02 / D-04（当前为红）。
+ *      修法：锚点补**内容指纹**（行首 hash + 行序号），松手时按指纹在当帧 lines 里
+ *      重定位后再切片。**不要**改成「用按下时的行快照」—— 那会让流式内容复制到旧
+ *      文本，制造第二种不一致。本层是纯叶子（零 IO），指纹需由调用方随锚点一起传入。
  */
+
+const { visWidth } = require('./wrapCell');
 
 /** 布尔解析用的关闭词（与 `ccClipboard._isOn` 同口径，此处仅作常量占位说明）。 */
 const OFF_WORDS = Object.freeze(['0', 'false', 'off', 'no']);
@@ -87,6 +98,74 @@ function _point(p) {
   return { line: _nat(p && p.line), col: _nat(p && p.col) };
 }
 
+/**
+ * 端点规范化 —— **保留指纹**（若存在）。
+ *
+ * 为什么不能直接用 `_point`：它会丢掉 `fp`，而 `fp` 正是「内容锚定」的全部依据。
+ * 三个状态转移（begin/extend/end）都要把它带过去，漏一处锚点就退化成纯行号。
+ */
+function _anchor(p) {
+  const base = _point(p);
+  if (p && typeof p === 'object' && p.fp !== undefined) {
+    return { ...base, fp: _fp(p.fp) };
+  }
+  return base;
+}
+
+/**
+ * 指纹规范化：任何非字符串 → 空串（哨兵「不可用」，绝不留 null/undefined 给比较逻辑）。
+ * 折叠连续空白并 trim —— 行首缩进与折行处的空格差异不该让同一行认不出来。
+ */
+function _fp(v) {
+  if (typeof v !== 'string') {
+    return '';
+  }
+  return v.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * 鼠标「显示列」→ 行内「字符下标」。
+ *
+ * 为什么必须有这一步：SGR 鼠标序列上报的是**终端单元格**列，而本模块的 `col`
+ * 与 `extractText` / `Viewport.sliceLineForSelection` 一律按**字符串下标**取
+ * `slice(from, to)`。中文行上两个口径差近一倍（CJK 字 1 字符 = 2 列）：指针停在
+ * 第 20 列，选区却从第 20 个**字符**（≈第 40 列）开始 —— 表现为「反色跑不到指针
+ * 底下、拖选选不中、复制出来的比选中的多一截」。
+ *
+ * 语义：
+ *   - 宽字符占两格，指针落在它的**右半格**时归到该字符起始下标（不劈开字形，
+ *     与「拖到第 5 列反色到第 4 列」的半开区间一致）；
+ *   - 纯 ASCII 行逐格恒等（`col` 不变），所以英文用户逐字节零改变；
+ *   - 越界 clamp 到行尾；行文本缺失（投影变短）→ 0，绝不抛。
+ *
+ * 宽度度量复用 `wrapCell.visWidth` —— 与把这些行折成视觉行的**同一把尺子**，
+ * 另起一把正是 [DESIGN-ARCH-103] H6 反复踩的「折行与计费不同源」。
+ *
+ * @param {string} lineText 该行原文
+ * @param {number} displayCol 0-based 显示列（鼠标上报的单元格列）
+ * @returns {number} 0-based 字符下标
+ */
+function charColForDisplay(lineText, displayCol) {
+  const text = typeof lineText === 'string' ? lineText : '';
+  const target = _nat(displayCol);
+  if (text.length === 0) {
+    return 0;
+  }
+  let w = 0; // 当前字符的起始显示列
+  let i = 0; // 当前字符的起始下标
+  for (const ch of text) {
+    const cw = visWidth(ch);
+    // 落点在 `[w, w+cw)` 之内 → 就是本字符：宽字符的右半格归到它**起始**下标，
+    // 绝不劈开字形（ASCII 时 cw=1，本式退化为恒等）。
+    if (target < w + cw) {
+      return i;
+    }
+    w += cw;
+    i += ch.length; // 代理对（emoji / 扩展汉字）占 2 个 code unit
+  }
+  return text.length; // 指针拖过行尾 → 行尾
+}
+
 // ── 构造 / 状态转移 ─────────────────────────────────────────────────────────
 
 /**
@@ -104,14 +183,23 @@ function clearSelection() {
 
 /**
  * 按下：建立锚点，活动端同起点。
+ *
+ * `fp` 是**可选的锚点指纹**（见 `relocate` 的说明）：调用方若持有按下那一帧的行
+ * 数组，传入该行原文即可；不传 → 锚点退化为纯行号，行为与历史上逐字节相同。
+ *
  * @param {object} sel 当前选区（被忽略，保持签名一致性）
  * @param {number} line 0-based 屏幕行（= lines 下标）
  * @param {number} col 0-based 列
+ * @param {string} [fp] 锚点所在行的原文（用于松手时按内容重定位）
  * @returns {object} 新选区
  */
-function beginSelection(sel, line, col) {
+function beginSelection(sel, line, col, fp) {
   const p = _point({ line, col });
-  return { anchor: p, head: { line: p.line, col: p.col }, dragging: true };
+  return {
+    anchor: fp === undefined ? p : { ...p, fp: _fp(fp) },
+    head: { line: p.line, col: p.col },
+    dragging: true,
+  };
 }
 
 /**
@@ -121,7 +209,7 @@ function beginSelection(sel, line, col) {
  */
 function extendSelection(sel, line, col) {
   const p = _point({ line, col });
-  const anchor = _isPoint(sel && sel.anchor) ? _point(sel.anchor) : p;
+  const anchor = _isPoint(sel && sel.anchor) ? _anchor(sel.anchor) : p;
   return { anchor, head: p, dragging: true };
 }
 
@@ -134,7 +222,7 @@ function endSelection(sel) {
     return createSelection();
   }
   return {
-    anchor: _isPoint(sel.anchor) ? _point(sel.anchor) : null,
+    anchor: _isPoint(sel.anchor) ? _anchor(sel.anchor) : null,
     head: _isPoint(sel.head) ? _point(sel.head) : null,
     dragging: false,
   };
@@ -297,6 +385,104 @@ function expandToLine(lines, line) {
   };
 }
 
+// ── 锚点重定位（内容锚定，修锚点漂移）────────────────────────────────────────
+
+/**
+ * 在两个行数组之间，按**内容**重定位一个带指纹的行号。
+ *
+ * 为什么需要它（缺陷本体，见文件头「已知偏差 2」）：
+ *   锚点存行号，取文却发生在松手那一帧 —— 手势期间只要行数组重排，行号就指向
+ *   别的内容。实测：头部插入 3 行 → 复制结果整体上移 3 行。
+ *
+ * 判定策略（三档，逐档降级）：
+ *   1. **精确命中**：`from[line]` 的指纹在 `to` 里**唯一**出现 → 高置信，直接采用。
+ *      唯一性是关键：同一行文本可能出现多次（如连续的空行、重复的日志行），
+ *      此时「按内容找」会有歧义，宁可降级到第 3 档也不猜。
+ *   2. **偏移补偿**：指纹出现多次时，取**离原行号最近**的那个（最小位移）——
+ *      这是「内容重排」最常见的形态（前后各插一段，整体平移）。
+ *   3. **失配**：指纹为空 / 找不到 / `to` 里没有该内容 → 返回原行号（clamp 到
+ *      `to` 的合法范围）。这是**诚实降级**：宁可保持今天的行为，也不猜一个行号。
+ *
+ * 纯函数：零 IO、确定性、绝不抛、不改入参。
+ *
+ * @param {string[]} from T0（按下那一帧）的行数组
+ * @param {string[]} to T1（当帧）的行数组
+ * @param {{line:number, col:number, fp?:string}} point 带指纹的端点
+ * @returns {number} 重定位后的 0-based 行号（始终落在 `to` 的合法范围内）
+ */
+function relocateLine(from, to, point) {
+  const src = _asLines(from);
+  const dst = _asLines(to);
+  const p = _point(point);
+  if (dst.length === 0) {
+    return 0;
+  }
+  const originalLine = Math.min(p.line, dst.length - 1);
+  // 指纹不可用（老调用方没传 / 传了空）→ 保持今天的行为（纯行号 + clamp）。
+  const want = _fp(point && point.fp);
+  if (!want) {
+    return originalLine;
+  }
+
+  // 候选 = `to` 里指纹相同的所有行号（用同一把尺子归一化后再比）。
+  const hits = [];
+  for (let i = 0; i < dst.length; i++) {
+    if (_fp(dst[i]) === want) {
+      hits.push(i);
+    }
+  }
+  if (hits.length === 0) {
+    // 内容在 T1 里不存在（被删 / 被改写）→ 诚实降级，不猜。
+    return originalLine;
+  }
+  if (hits.length === 1) {
+    return hits[0]; // 唯一命中：高置信
+  }
+  // 多命中：取离原行号最近的（最小位移）。并列时取靠前的，保证确定性。
+  let best = hits[0];
+  let bestDist = Math.abs(best - originalLine);
+  for (const h of hits) {
+    const d = Math.abs(h - originalLine);
+    if (d < bestDist) {
+      best = h;
+      bestDist = d;
+    }
+  }
+  return best;
+}
+
+/**
+ * 把整个选区从 T0 的行数组重定位到 T1 的行数组。
+ *
+ * 锚点与活动端**各自**重定位（两端可能因折行重排而位移量不同）。
+ * 任一端无法重定位 → 该端退回 clamp 后的原行号（见 `relocateLine` 第 3 档）。
+ *
+ * 返回**新**选区对象（含重定位后的端点），并丢弃 `fp`（已消费完毕）。
+ * 无有效端点 → 原样返回（绝不抛）。
+ *
+ * @param {object} selection
+ * @param {string[]} from
+ * @param {string[]} to
+ * @returns {object}
+ */
+function relocateSelection(selection, from, to) {
+  if (!selection || typeof selection !== 'object') {
+    return createSelection();
+  }
+  const a = selection.anchor;
+  const h = selection.head;
+  const next = {
+    anchor: _isPoint(a)
+      ? { line: relocateLine(from, to, a), col: _nat(a.col) }
+      : null,
+    head: _isPoint(h)
+      ? { line: relocateLine(from, to, h), col: _nat(h.col) }
+      : null,
+    dragging: !!selection.dragging,
+  };
+  return next;
+}
+
 // ── 抽取（选区 → 文本）──────────────────────────────────────────────────────
 
 /**
@@ -344,8 +530,35 @@ function extractText(lines, sel) {
 }
 
 /**
- * 供渲染层：该行在选区内需要反色的 `[from, to)` 列区间；不在选区内 → `null`。
+ * 抽取的**锚点重定位版** —— 修「复制不完整 / 整段错位」的入口。
  *
+ * 与 `extractText(lines, sel)` 的唯一差别：在切片之前，先把锚点按**内容**从
+ * `fromLines`（按下那一帧）重定位到 `lines`（当帧），再切片。
+ *
+ * 何时需要：手势期间行数组可能被重建（流式追加、工具输出插入、折行重排），
+ * 而锚点只存了一个行号 —— 一个数字跨两个时刻。`extractText` 直接用松手帧的
+ * 行号切片，就取到了错位的内容。
+ *
+ * 降级行为（**关键：不传 `fromLines` 时与 `extractText` 逐字节相同**）：
+ *   - `fromLines` 不是数组 → 跳过重定位，等价 `extractText`；
+ *   - 锚点没带 `fp`（老调用方）→ `relocateLine` 第 3 档，等价 `extractText`；
+ *   - 内容在当帧找不到 → 同上，保持今天的行为。
+ * 即：**接线是纯增量，不接线不会有任何行为变化**。
+ *
+ * @param {string[]} lines 当帧（松手那一帧）的行数组
+ * @param {string[]} fromLines 按下那一帧的行数组；不传 → 退化为 `extractText`
+ * @param {object} sel 选区
+ * @returns {string}
+ */
+function extractTextRelocated(lines, fromLines, sel) {
+  if (!Array.isArray(fromLines)) {
+    return extractText(lines, sel);
+  }
+  return extractText(lines, relocateSelection(sel, fromLines, lines));
+}
+
+/**
+ * 供渲染层：该行在选区内需要反色的 `[from, to)` 列区间；不在选区内 → `null`。
  * 零宽（`from === to`）也返回 `null` —— 没有内容可反色，渲染层走原路径。
  *
  * **端点一律是具体列号**（非 `Infinity`）：渲染层可直接 `slice(from, to)`，
@@ -385,6 +598,7 @@ module.exports = {
   WORD_CHARS,
   createSelection,
   clearSelection,
+  charColForDisplay,
   beginSelection,
   extendSelection,
   endSelection,
@@ -393,6 +607,9 @@ module.exports = {
   wordBoundaryAt,
   expandToWord,
   expandToLine,
+  relocateLine,
+  relocateSelection,
   extractText,
+  extractTextRelocated,
   selectionRangeFor,
 };

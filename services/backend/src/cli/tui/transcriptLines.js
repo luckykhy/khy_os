@@ -23,6 +23,9 @@
 
 // 总行数上限:超过后从**尾部**保留(用户要看的永远是最近的对话),头部截断并注明。
 const TOTAL_LINE_CAP = 20000;
+
+// 唯一的例外依赖:折行/行计费的单一真源(纯叶子、零 IO、fail-soft 自带兜底)。
+const { wrapCell } = require('./wrapCell');
 // showAll 时单个工具结果最多展开的行数。
 const TOOL_BODY_LINE_CAP = 200;
 // 单行硬截断宽度兜底(cols 非法时用)。
@@ -46,21 +49,17 @@ function _str(v) {
   }
 }
 
-// 把一段可能含换行的文本切成行;每行按 width 硬折(不做断词,终端等宽字体下够用)。
+// 把一段可能含换行的文本切成行;每行按**显示宽度**硬折(不做断词)。
+// 折行必须委托 wrapCell —— 它是「折行 + 行计费」的单一真源(DESIGN-ARCH-103
+// P0-4 / H6)。此处曾自己按 `line.length` 切字符:CJK 每字占 2 列 ⇒ 切出的行
+// 实际 ≈ 2×cols 宽，被 Viewport 的 overflow:hidden 裁掉右半；内联着色的
+// `ESC[36m` 又会被从中间锯断，终端把剩下的 `36m` 当正文打出来(BUG-32)。
 function _wrap(text, width) {
-  const out = [];
   const w = width > 0 ? width : DEFAULT_COLS;
-  for (const raw of _str(text).split('\n')) {
-    const line = raw.replace(/\s+$/, '');
-    if (line.length <= w) {
-      out.push(line);
-      continue;
-    }
-    for (let i = 0; i < line.length; i += w) {
-      out.push(line.slice(i, i + w));
-    }
-  }
-  return out;
+  // 与历史行为一致：逐逻辑行去掉行尾空白，再交给单一真源折行。
+  return _str(text)
+    .split('\n')
+    .reduce((acc, raw) => acc.concat(wrapCell(raw.replace(/\s+$/, ''), w)), []);
 }
 
 function _truncate(s, max) {

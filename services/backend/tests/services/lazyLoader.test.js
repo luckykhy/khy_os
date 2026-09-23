@@ -13,7 +13,7 @@
  * 7. Error handling
  */
 
-const { LazyLoader, LazyModule, ModuleState } = require('./lazyLoader');
+const { LazyLoader, LazyModule, ModuleState } = require('../../src/services/lazyLoader.js');
 
 // ── Test Helpers ──────────────────────────────────────────────────────────
 

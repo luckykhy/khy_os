@@ -1,16 +1,16 @@
 'use strict';
 /**
- * g2EngineRepairSeam.test.js â€?DESIGN-ARCH-049 G2 (replayEngine repair hook).
+ * g2EngineRepairSeam.test.js â€” DESIGN-ARCH-049 G2 (replayEngine repair hook).
  *
  * Verifies the additive opts.repair seam:
- *   - absent hook â‡?byte-identical 048 behavior (skip/halt paths unchanged);
+ *   - absent hook ï¿½?byte-identical 048 behavior (skip/halt paths unchanged);
  *   - a fake hook that reproduces a file turns a post-verify divergence into a
  *     'repaired' step (counted as replayed + repaired), with sha256 still the
  *     sole oracle (a lying hook that doesn't fix the file still halts);
  *   - a hook returning {attempted:false} declines and the original path runs;
  *   - a hook can bridge a NETWORK_AI step into 'repaired'.
  *
- * No model is involved â€?the hook is a plain function (proves the engine is
+ * No model is involved ï¿½?the hook is a plain function (proves the engine is
  * model-free and the bridge is purely injected).
  *
  * KHY_PROJECT_DATA_HOME / write roots are set before requiring funnel modules.
@@ -23,8 +23,8 @@ process.env.KHY_PROJECT_DATA_HOME = TMP_HOME;
 process.env.KHY_DEP_HEALING = 'off';
 const WORK = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-g2-work-'));
 process.env.KHY_WRITE_EXTRA_ROOTS = WORK;
-const replayEngine = require('../../../src/services/trajectoryReplay/replayEngine');
-const artifactHash = require('../../../src/services/trajectoryReplay/artifactHash');
+const replayEngine = require('../../../src/services/domain/trajectory/trajectoryReplay/replayEngine.js');
+const artifactHash = require('../../../src/services/domain/trajectory/trajectoryReplay/artifactHash.js');
 /** Build a single-FILE-step manifest whose artifact is `content` at `target`. */
 function fileManifest(target, content, tier = 'FILE') {
   const sha256 = artifactHash.sha256Hex(content);
@@ -32,7 +32,7 @@ function fileManifest(target, content, tier = 'FILE') {
     v: 1,
     kind: 'khyos-replay-bundle',
     sessionId: 'g2',
-    env: null, // compare(null, â€? yields match â†?no env gate in this unit test
+    env: null, // compare(null, ï¿½? yields match ï¿½?no env gate in this unit test
     steps: [
       {
         seq: 0,
@@ -90,10 +90,10 @@ describe('G2 Engine Repair Seam', () => {
       expect(report.status).toBe('diverged');
       expect(report.divergedAt).toBe(0);
       expect(report.steps[0].action).toBe('halted');
-      expect(!fs.existsSync(target).toBeTruthy());
+      expect(!fs.existsSync(target)).toBeTruthy();
   });
 
-  test('hook returning {attempted:false} declines â†?original skip path runs', async () => {
+  test('hook returning {attempted:false} declines ï¿½?original skip path runs', async () => {
       const target = path.join(WORK, 'g2-decline.txt');
       const m = fileManifest(target, 'x', 'NETWORK_AI');
       const repair = async () => ({ attempted: false });

@@ -1,12 +1,12 @@
 'use strict';
 
 /**
- * create-frontend-e2e.test.js â€?end-to-end acceptance for the vue-multipage
+ * create-frontend-e2e.test.js â€” end-to-end acceptance for the vue-multipage
  * frontend generation pipeline.
  *
  * WHAT IT DOES
- *   render(vue-multipage) â†?write to a unique temp dir â†?`npm install` â†?
- *   `npm run build` (exit code 0) â†?assert a `dist/` directory exists â†?
+ *   render(vue-multipage) ï¿½?write to a unique temp dir ï¿½?`npm install` ï¿½?
+ *   `npm run build` (exit code 0) ï¿½?assert a `dist/` directory exists ï¿½?
  *   recursively clean up the temp dir (always, including on failure).
  *
  * HOW TO ENABLE (default: skipped)
@@ -19,7 +19,7 @@
  *
  * RUNTIME PROBE / FAULT TOLERANCE
  *   Uses whatever `node`/`npm` is on PATH. If none is found, it falls back to
- *   the runtime bundled under `.khy/node/` (discovered dynamically â€?no
+ *   the runtime bundled under `.khy/node/` (discovered dynamically ï¿½?no
  *   hard-coded absolute path). If no usable runtime is found, or if the
  *   network is unavailable during `npm install`, the test degrades gracefully
  *   (warns and returns) instead of failing, so an offline machine is not a
@@ -27,7 +27,7 @@
  *
  * TIMEOUT
  *   The per-test budget is Jest's own timeout argument (10 minutes). There is
- *   deliberately NO custom setTimeout that hard-kills an active build â€?that is
+ *   deliberately NO custom setTimeout that hard-kills an active build ï¿½?that is
  *   banned by AGENTS.md and would murder a legitimately slow-but-progressing
  *   install/build.
  *
@@ -39,13 +39,13 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const projectTemplateService = require('../services/projectTemplateService');
+const projectTemplateService = require('../../src/services/projectTemplateService.js');
 
 const TEMPLATE_NAME = 'vue-multipage';
 const E2E_ENABLED = process.env.KHY_E2E_FRONTEND === '1';
-const TEST_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes â€?Jest's own budget only.
+const TEST_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes ï¿½?Jest's own budget only.
 
-// Repo root, resolved relatively from this file (â€?services/backend/src/__tests__).
+// Repo root, resolved relatively from this file (ï¿½?services/backend/src/__tests__).
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 
 /**
@@ -117,7 +117,7 @@ function writeRendered(targetDir, rendered) {
 
 const describeMaybe = E2E_ENABLED ? describe : describe.skip;
 
-describeMaybe('create-frontend e2e: render â†?npm install â†?npm run build', () => {
+describeMaybe('create-frontend e2e: render ï¿½?npm install ï¿½?npm run build', () => {
   let workDir = null;
 
   beforeAll(() => {
@@ -125,7 +125,7 @@ describeMaybe('create-frontend e2e: render â†?npm install â†?npm run build', () 
   });
 
   afterAll(() => {
-    // Always clean up â€?including the failure path â€?so the temp dir never
+    // Always clean up ï¿½?including the failure path ï¿½?so the temp dir never
     // leaks and the repo is never polluted.
     if (workDir) {
       try {

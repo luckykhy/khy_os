@@ -18,7 +18,7 @@ import { computed } from 'vue';
  * KhyIcon — khy 品牌专属图标系统。
  *
  * 设计语言：
- *  - 圆润端点 (round caps/joins)、单线 stroke、品牌蓝 #2f7ef7
+ *  - 圆润端点 (round caps/joins)、单线 stroke、品牌蓝 var(--khy-primary)
  *  - 24×24 viewBox、stroke-width 1.8、可配置 glow 光晕
  *  - 全部 SVG path 内联，零外部图标库依赖
  */
@@ -87,12 +87,12 @@ const paths = computed(() => {
 
 const cssVars = computed(() => {
   const s = SIZES[props.size] ?? SIZES.md;
-  const c = props.color || 'var(--khy-primary, #2f7ef7)';
+  const c = props.color || 'var(--khy-primary, var(--khy-primary))';
   return { '--khy-icon-size': `${s}px`, '--khy-icon-color': c };
 });
 
 const pathAttrs = computed(() => ({
-  stroke: props.color || 'var(--khy-primary, #2f7ef7)',
+  stroke: props.color || 'var(--khy-primary, var(--khy-primary))',
   'stroke-width': 1.8,
   'stroke-linecap': 'round',
   'stroke-linejoin': 'round',
@@ -118,8 +118,8 @@ const pathAttrs = computed(() => ({
     opacity 0.2s ease;
 }
 .khy-icon:not(.khy-icon--no-glow) svg {
-  filter: drop-shadow(0 0 4px var(--khy-icon-color, #2f7ef7))
-    drop-shadow(0 0 1px var(--khy-icon-color, #2f7ef7));
+  filter: drop-shadow(0 0 4px var(--khy-icon-color, var(--khy-primary)))
+    drop-shadow(0 0 1px var(--khy-icon-color, var(--khy-primary)));
 }
 .khy-icon--no-glow svg {
   filter: none;

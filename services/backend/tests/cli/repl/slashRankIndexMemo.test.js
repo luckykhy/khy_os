@@ -1,6 +1,6 @@
 'use strict';
 
-const { isEnabled, getRankIndex, OFF_VALUES } = require('./slashRankIndexMemo');
+const { isEnabled, getRankIndex, OFF_VALUES } = require('../../../src/cli/repl/slashRankIndexMemo.js');
 
 describe('slashRankIndexMemo', () => {
   describe('isEnabled', () => {

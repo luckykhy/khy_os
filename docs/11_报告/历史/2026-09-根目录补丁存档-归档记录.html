@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-根目录补丁存档-归档记录.md -->
+<title>2026-09 根目录补丁存档-归档记录 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>历史<span class="sep">›</span>2026-09 根目录补丁存档-归档记录</div>
+      <header class="hero reveal"><h1>2026-09 根目录补丁存档-归档记录</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#2026-09-根目录补丁存档-归档记录">2026-09 根目录补丁存档-归档记录</a></li><li class="lvl-2"><a href="#一-归档明细">一、归档明细</a></li><li class="lvl-2"><a href="#二-同轮清理-可再生产物-直接删除">二、同轮清理（可再生产物，直接删除）</a></li><li class="lvl-2"><a href="#三-同轮索引收口">三、同轮索引收口</a></li><li class="lvl-2"><a href="#四-关联">四、关联</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="2026-09-根目录补丁存档-归档记录">2026-09 根目录补丁存档-归档记录<a class="anchor" href="#2026-09-根目录补丁存档-归档记录" aria-label="锚点">#</a></h1>
+<blockquote><p>类别：仓库卫生 / 根目录收容（[MGMT-STD-001] CP-1）<br>日期：2026-09-01<br>触发：<code>npm run check:layout</code> 的 <code>root-whitelist</code> 规则报 error（根目录 2 个白名单外说明性文件）。</p></blockquote>
+<h2 id="一-归档明细">一、归档明细<a class="anchor" href="#一-归档明细" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>原位置</th><th>新位置</th><th>内容</th><th>处置理由</th></tr></thead><tbody><tr><td><code>/fix_diff.txt</code></td><td><code>docs/11_报告/历史/fix_diff.txt</code></td><td><code>App.js</code> 启动横幅「画一次即冻结」修复的手工 diff 存档</td><td>修复本体已随 579ab9b（fix(tui): banner…）落地，diff 仅供追溯</td></tr><tr><td><code>/stash_patch.txt</code></td><td><code>docs/11_报告/历史/stash_patch.txt</code></td><td>一次性 git stash 补丁存档：<code>.gitignore</code> 增 <code>*.sqlite-shm</code>/<code>*.sqlite-wal</code> 两行 + <code>AGENTS.md</code> 任务最小闭环段落</td><td><code>.gitignore</code> 两行已于本轮直接落库；AGENTS.md 段落已由任务闭环工作（DESIGN-ARCH-072/073）覆盖</td></tr></tbody></table>
+<h2 id="二-同轮清理-可再生产物-直接删除">二、同轮清理（可再生产物，直接删除）<a class="anchor" href="#二-同轮清理-可再生产物-直接删除" aria-label="锚点">#</a></h2>
+<ul><li><code>/{</code> —— 一次失败的 <code>node -e</code> REPL 冒烟输出（语法错误栈），无信息量。</li><li><code>services/backend/jest_out.txt</code>、<code>services/backend/tmp_test.txt</code> —— 空文件。</li><li><code>services/backend/test_out.txt</code> —— 4 行测试文件临时清单。</li><li>防回渗：<code>.gitignore</code> 新增 <code>*.sqlite-shm</code>、<code>*.sqlite-wal</code>、<code>.env.bak-*</code> 与一次性测试输出规则（jest_out.txt / test_out.txt / tmp_test.txt）。</li></ul>
+<h2 id="三-同轮索引收口">三、同轮索引收口<a class="anchor" href="#三-同轮索引收口" aria-label="锚点">#</a></h2>
+<ul><li>6 篇新文档补登主索引与就近索引：DESIGN-ARCH-072 / DESIGN-ARCH-073 / DESIGN-PERF-001 / DESIGN-SIZE-001 / IMPL-DOC-001 / 快速配置说明；并补登此前漏登的 DESIGN-OTHER-005。</li><li>阶段总数校正（主索引「阶段总览」表）：03_DESIGN 71→78、04_IMPL 37→38、07_OPS 177→178。</li><li><code>scripts/ci/repo-layout-baseline.json</code> 只降不升：dangling-task 115→86、cross-layer-require 43→38、unresolved-require 24→0。</li></ul>
+<h2 id="四-关联">四、关联<a class="anchor" href="#四-关联" aria-label="锚点">#</a></h2>
+<ul><li>上一轮根目录归档：<code>2026-08-根目录归档-修复记录.md</code>。</li><li>守卫：<code>npm run check:layout</code>（<code>scripts/ci/check-repo-layout.js</code>）；基线：<code>scripts/ci/repo-layout-baseline.json</code>。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/11_报告/历史/2026-08-依赖削减调研报告.html"><div class="dir">← 上一篇</div><div class="ttl">Khy-OS 依赖削减调研报告</div></a><a class="next" href="../../../docs/11_报告/其它报告/00_INDEX_其它报告-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">其它报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/11_报告/历史/2026-09-根目录补丁存档-归档记录.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

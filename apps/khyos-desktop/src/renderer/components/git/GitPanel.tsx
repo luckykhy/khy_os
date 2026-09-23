@@ -1,151 +1,224 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { EmptyState } from '../ui/EmptyState'
+import { Spinner } from '../ui/Spinner'
+
+// Result contract of main's git:status handler (git status --porcelain=v1
+// -z --branch over the workspace cwd). Four outcome states:
+// ok / notRepository / gitUnavailable (no git.exe on PATH) / error.
+interface GitStatusResult {
+  ok: boolean
+  state?: 'ok' | 'notRepository' | 'gitUnavailable' | 'error'
+  branch?: string
+  upstream?: string
+  ahead?: number
+  behind?: number
+  changes?: { path: string; status: 'modified' | 'added' | 'deleted' | 'renamed' | 'untracked'; staged: boolean }[]
+  error?: string
+}
 
 interface GitChange {
   path: string
   status: 'modified' | 'added' | 'deleted' | 'renamed' | 'untracked'
-  additions?: number
-  deletions?: number
+  staged: boolean
 }
 
-const mockChanges: GitChange[] = [
-  { path: 'src/renderer/App.tsx', status: 'modified', additions: 12, deletions: 3 },
-  { path: 'src/renderer/components/layout/TitleBar.tsx', status: 'added', additions: 85 },
-  { path: 'src/renderer/components/terminal/Terminal.tsx', status: 'added', additions: 120 },
-  { path: 'src/renderer/components/composer/Composer.tsx', status: 'modified', additions: 45, deletions: 8 },
-  { path: 'old-file.js', status: 'deleted', deletions: 30 },
-  { path: 'src/renderer/theme/globals.css', status: 'modified', additions: 200, deletions: 50 },
-]
+// git.kind.* i18n: 新增 / 冲突 / 删除 / 修改 / 重命名 (untracked falls under
+// the untracked section, labeled by section.untracked)
+const KIND_LABEL: Record<GitChange['status'], string> = {
+  added: '新增',
+  modified: '修改',
+  deleted: '删除',
+  renamed: '重命名',
+  untracked: '新增',
+}
 
-const STATUS_CONFIG: Record<string, { color: string; label: string; icon: string }> = {
-  modified: { color: 'var(--color-git-modified)', label: 'M', icon: '✏️' },
-  added: { color: 'var(--color-git-added)', label: 'A', icon: '➕' },
-  deleted: { color: 'var(--color-git-deleted)', label: 'D', icon: '🗑️' },
-  renamed: { color: 'var(--color-git-renamed)', label: 'R', icon: '📝' },
-  untracked: { color: 'var(--color-git-untracked)', label: 'U', icon: '❓' },
+const STATUS_CONFIG: Record<GitChange['status'], { color: string; letter: string }> = {
+  modified: { color: 'var(--color-git-modified)', letter: 'M' },
+  added: { color: 'var(--color-git-added)', letter: 'A' },
+  deleted: { color: 'var(--color-git-deleted)', letter: 'D' },
+  renamed: { color: 'var(--color-git-renamed)', letter: 'R' },
+  untracked: { color: 'var(--color-git-untracked)', letter: 'U' },
+}
+
+type PanelState =
+  | { phase: 'loading' }
+  | { phase: 'ready'; data: GitStatusResult }
+  | { phase: 'empty'; data: GitStatusResult }
+  | { phase: 'gitUnavailable' }
+  | { phase: 'notRepository' }
+  | { phase: 'error'; message: string }
+
+function classify(result: GitStatusResult | null, err?: unknown): PanelState {
+  if (!result) {
+    // preload not injected or IPC threw before returning a payload
+    const msg = err instanceof Error ? err.message : String(err ?? '未知错误')
+    return { phase: 'error', message: msg || 'preload 未注入：__KHYOS__ 不可用，请重启应用' }
+  }
+  if (!result.ok) {
+    if (result.state === 'gitUnavailable') return { phase: 'gitUnavailable' }
+    if (result.state === 'notRepository') return { phase: 'notRepository' }
+    return { phase: 'error', message: result.error || 'git status 执行失败' }
+  }
+  const changes = result.changes || []
+  if (changes.length === 0) return { phase: 'empty', data: result }
+  return { phase: 'ready', data: result }
+}
+
+function ChangeRow({ change }: { change: GitChange }) {
+  const config = STATUS_CONFIG[change.status]
+  return (
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-md mx-1 hover:bg-surface-hover transition-colors">
+      <span
+        className="w-4 h-4 rounded text-xs font-bold flex items-center justify-center shrink-0"
+        style={{ backgroundColor: config.color + '20', color: config.color }}
+      >
+        {config.letter}
+      </span>
+      <span className="text-sm text-foreground truncate flex-1" title={change.path}>
+        {change.path}
+      </span>
+      <span className="text-xs" style={{ color: config.color }}>
+        {KIND_LABEL[change.status]}
+      </span>
+    </div>
+  )
+}
+
+function Section({ title, changes }: { title: string; changes: GitChange[] }) {
+  if (changes.length === 0) return null
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 px-4 pt-3 pb-1">
+        <span className="text-xs font-medium text-foreground/60">{title}</span>
+        <span className="text-xs text-foreground/30">{changes.length}</span>
+      </div>
+      {changes.map((c) => (
+        <ChangeRow key={`${c.staged ? 's' : 'u'}:${c.path}`} change={c} />
+      ))}
+    </div>
+  )
 }
 
 export function GitPanel() {
-  const [activeTab, setActiveTab] = useState('changes')
-  const [commitMessage, setCommitMessage] = useState('')
-  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set(mockChanges.map(c => c.path)))
+  const [state, setState] = useState<PanelState>({ phase: 'loading' })
+  const [refreshing, setRefreshing] = useState(false)
 
-  const toggleFile = (path: string) => {
-    setSelectedFiles(prev => {
-      const next = new Set(prev)
-      if (next.has(path)) next.delete(path)
-      else next.add(path)
-      return next
-    })
-  }
+  const load = useCallback(async () => {
+    const api = (window as unknown as {
+      __KHYOS__?: { gitStatus?: () => Promise<GitStatusResult> }
+    }).__KHYOS__
+    if (!api?.gitStatus) {
+      setState({ phase: 'error', message: 'preload 未注入：__KHYOS__ 不可用，请重启应用' })
+      return
+    }
+    try {
+      const result = await api.gitStatus()
+      setState(classify(result))
+    } catch (err) {
+      setState(classify(null, err))
+    } finally {
+      setRefreshing(false)
+    }
+  }, [])
 
-  const selectAll = () => {
-    setSelectedFiles(new Set(mockChanges.map(c => c.path)))
-  }
+  useEffect(() => {
+    void load()
+  }, [load])
 
   return (
     <div className="h-full flex flex-col">
-      {/* 标签栏 */}
-      <div className="flex border-b border-border">
+      {/* 头部：分支信息 + 刷新（git.action.refresh） */}
+      <div className="flex items-center gap-2 px-3 h-11 border-b border-border shrink-0">
+        {state.phase === 'ready' && (
+          <span className="text-xs text-foreground/50 truncate">
+            {state.data.branch === 'HEAD' ? '游离 HEAD' : state.data.branch}
+            {state.data.ahead !== undefined && state.data.behind !== undefined && (
+              <span className="ml-1 text-foreground/30">
+                (↑{state.data.ahead} ↓{state.data.behind})
+              </span>
+            )}
+          </span>
+        )}
+        <div className="flex-1" />
         <button
-          onClick={() => setActiveTab('changes')}
-          className={`px-3 py-2.5 text-sm font-medium transition-all relative ${
-            activeTab === 'changes' ? 'text-brand' : 'text-foreground/60 hover:text-foreground hover:bg-surface-hover'
-          }`}
+          onClick={() => {
+            setRefreshing(true)
+            void load()
+          }}
+          disabled={refreshing}
+          className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-surface-hover text-foreground/60 hover:text-foreground transition-colors disabled:opacity-40"
+          title="刷新"
+          aria-label="刷新"
         >
-          Changes
-          {activeTab === 'changes' && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-brand rounded-full" />}
-        </button>
-        <button
-          onClick={() => setActiveTab('commit')}
-          className={`px-3 py-2.5 text-sm font-medium transition-all relative ${
-            activeTab === 'commit' ? 'text-brand' : 'text-foreground/60 hover:text-foreground hover:bg-surface-hover'
-          }`}
-        >
-          Commit
-          {activeTab === 'commit' && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-brand rounded-full" />}
+          {refreshing ? (
+            <Spinner size="sm" />
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+              <path d="M13.5 2.5v4h-4" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M13.3 6.4A5.5 5.5 0 1 0 13.5 8.5" strokeLinecap="round" />
+            </svg>
+          )}
         </button>
       </div>
 
-      {/* Changes 面板 */}
-      {activeTab === 'changes' && (
-        <div className="flex-1 overflow-auto">
-          {/* 全选按钮 */}
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
-            <button
-              onClick={selectAll}
-              className="text-xs text-foreground/40 hover:text-foreground transition-colors"
-            >
-              {selectedFiles.size === mockChanges.length ? '取消全选' : '全选'}
-            </button>
-            <span className="text-xs text-foreground/30">
-              {selectedFiles.size}/{mockChanges.length} 文件
-            </span>
+      <div className="flex-1 overflow-auto">
+        {state.phase === 'loading' && (
+          <div className="flex flex-col items-center justify-center h-full text-center px-8 animate-fade-in">
+            <Spinner size="md" />
+            <p className="text-sm text-foreground/50 mt-3">正在读取当前工作区的 Git 状态和文件改动。</p>
           </div>
+        )}
 
-          {/* 文件列表 */}
-          <div className="py-1">
-            {mockChanges.map(change => {
-              const config = STATUS_CONFIG[change.status]
-              const isSelected = selectedFiles.has(change.path)
-              return (
-                <div
-                  key={change.path}
-                  className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors rounded-md mx-1 ${
-                    isSelected ? 'bg-selected' : 'hover:bg-surface-hover'
-                  }`}
-                  onClick={() => toggleFile(change.path)}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggleFile(change.path)}
-                    className="rounded border-border"
-                  />
-                  <span
-                    className="w-4 h-4 rounded text-xs font-bold flex items-center justify-center"
-                    style={{ backgroundColor: config.color + '20', color: config.color }}
-                  >
-                    {config.label}
-                  </span>
-                  <span className="text-sm text-foreground truncate flex-1">{change.path}</span>
-                  {change.additions !== undefined && (
-                    <span className="text-xs text-success">+{change.additions}</span>
-                  )}
-                  {change.deletions !== undefined && (
-                    <span className="text-xs text-destructive">-{change.deletions}</span>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Commit 面板 */}
-      {activeTab === 'commit' && (
-        <div className="flex-1 p-3 flex flex-col">
-          <textarea
-            value={commitMessage}
-            onChange={e => setCommitMessage(e.target.value)}
-            placeholder="Commit message..."
-            className="flex-1 w-full bg-input border border-input-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-foreground/30 resize-none focus:outline-none focus:border-input-border-focused transition-colors"
-            rows={4}
+        {state.phase === 'gitUnavailable' && (
+          <EmptyState
+            icon="🔧"
+            title="当前环境没有可用的 Git"
+            description="请先安装 Git，或确认当前运行环境里可以执行 git 命令。"
           />
-          <div className="flex items-center gap-2 mt-3">
-            <span className="text-xs text-foreground/40">
-              {selectedFiles.size} 个文件已暂存
-            </span>
-            <div className="flex-1" />
-            <button
-              onClick={() => { setCommitMessage(''); console.log('[git] commit') }}
-              disabled={!commitMessage.trim() || selectedFiles.size === 0}
-              className="bg-success text-success-foreground px-4 py-1.5 rounded-lg text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-            >
-              Commit
-            </button>
+        )}
+
+        {state.phase === 'notRepository' && (
+          <EmptyState
+            icon="📁"
+            title="当前 workspace 不在 Git 仓库中"
+            description="打开一个 Git 仓库目录后，这里会展示当前 workspace 作用域内的改动。"
+          />
+        )}
+
+        {state.phase === 'error' && (
+          <EmptyState
+            icon="⚠️"
+            title="无法加载 Git 改动"
+            description={`Git 返回错误：${state.message}`}
+          />
+        )}
+
+        {state.phase === 'empty' && (
+          <EmptyState
+            icon="✅"
+            title="当前来源下没有可展示的改动"
+            description="可以切换其它来源，或等当前 workspace 产生新的 Git 改动后再查看。"
+          />
+        )}
+
+        {state.phase === 'ready' && (
+          <div className="pb-3">
+            {/* git.section.* 三节：已暂存 / 未暂存 / 未跟踪 */}
+            <Section
+              title="已暂存"
+              changes={(state.data.changes || []).filter((c) => c.staged)}
+            />
+            <Section
+              title="未暂存"
+              changes={(state.data.changes || []).filter((c) => !c.staged && c.status !== 'untracked')}
+            />
+            <Section
+              title="未跟踪"
+              changes={(state.data.changes || []).filter((c) => c.status === 'untracked')}
+            />
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

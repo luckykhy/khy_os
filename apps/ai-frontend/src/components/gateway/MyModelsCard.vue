@@ -89,6 +89,7 @@ import { reactive, computed } from 'vue';
 import { List } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 
+import { showSuccess, showError, showWarning, showInfo } from '@/api/notify';
 const props = defineProps({
   models: { type: Array, default: () => [] },
   // Built-in provider presets — only used to offer a convenient provider dropdown.
@@ -128,8 +129,8 @@ function onAdd() {
     .trim()
     .toLowerCase();
   const model = String(draft.model || '').trim();
-  if (!provider) return ElMessage.warning('请填写供应商');
-  if (!model) return ElMessage.warning('请填写模型 ID');
+  if (!provider) return showWarning('请填写供应商');
+  if (!model) return showWarning('请填写模型 ID');
   const payload = { provider, model };
   if (draft.capability) payload.capability = draft.capability;
   emit('add', payload);

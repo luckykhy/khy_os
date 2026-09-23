@@ -11,15 +11,8 @@
 </template>
 
 <script setup>
-// PublicLayout — the shared container for pages rendered outside Layout.vue:
-// /forgot-password and the status pages (/401 /403 /404 /500).
-//
-// /login deliberately keeps its own .login-shell instead of being wrapped here:
-// its ambient brand orbs are position:absolute children that need the shell's
-// `position: relative` + `overflow: hidden` to stay clipped to the card area.
-// Consolidating that last public page onto this layout is Phase 4 (visual
-// consolidation) work, paired with the Phase 3.3 login rewrite that deletes the
-// orbs.
+// PublicLayout — the shared container for every page rendered outside
+// Layout.vue: /login, /forgot-password and the status pages (/401 /403 /404 /500).
 //
 // It deliberately does NOT emit <html>/<head>/<body>: index.html owns the
 // document shell, and a <title> rendered into #app would never reach the
@@ -27,9 +20,9 @@
 defineOptions({ name: 'PublicLayout' });
 
 defineProps({
-  // Status pages carry the compact brand bar. /forgot-password renders its own
-  // larger brand inside the card, so it passes :branded="false" to avoid a
-  // doubled logo.
+  // Status pages carry the compact brand bar. /login and /forgot-password each
+  // render their own larger brand inside the card, so both pass
+  // :branded="false" to avoid a doubled logo.
   branded: {
     type: Boolean,
     default: true,

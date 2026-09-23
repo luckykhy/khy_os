@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-A2A-002] A2A 标准协议适配规范.md -->
+<title>[DESIGN-A2A-002] A2A 标准协议适配规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-A2A-002] A2A 标准协议适配规范</div>
+      <header class="hero reveal"><h1>[DESIGN-A2A-002] A2A 标准协议适配规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-a2a-002-a2a-标准协议适配规范">[DESIGN-A2A-002] A2A 标准协议适配规范</a></li><li class="lvl-2"><a href="#1-问题陈述-仓库里有两个-a2a">1. 问题陈述：仓库里有两个「A2A」</a></li><li class="lvl-3"><a href="#处置决策-2026-09-15">处置决策（2026-09-15）</a></li><li class="lvl-2"><a href="#2-发布面-agent-card">2. 发布面：Agent Card</a></li><li class="lvl-3"><a href="#2-1-端点">2.1 端点</a></li><li class="lvl-3"><a href="#2-2-三条硬约束">2.2 三条硬约束</a></li><li class="lvl-3"><a href="#2-3-能力诚实性-a2a-4">2.3 能力诚实性（A2A-4）</a></li><li class="lvl-3"><a href="#2-4-技能来源-a2a-5">2.4 技能来源（A2A-5）</a></li><li class="lvl-2"><a href="#3-数据对象">3. 数据对象</a></li><li class="lvl-2"><a href="#4-任务状态-映射而非透出">4. 任务状态：映射而非透出</a></li><li class="lvl-3"><a href="#4-1-规范状态集-封闭">4.1 规范状态集（封闭）</a></li><li class="lvl-3"><a href="#4-2-内部状态-规范状态">4.2 内部状态 → 规范状态</a></li><li class="lvl-2"><a href="#5-客户端操作-出站">5. 客户端操作（出站）</a></li><li class="lvl-2"><a href="#6-私有-acp-方言的边界">6. 私有 ACP 方言的边界</a></li><li class="lvl-2"><a href="#7-与-mcp-的分工">7. 与 MCP 的分工</a></li><li class="lvl-2"><a href="#8-迁移路线">8. 迁移路线</a></li><li class="lvl-2"><a href="#9-验证">9. 验证</a></li><li class="lvl-2"><a href="#10-版本历史">10. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-a2a-002-a2a-标准协议适配规范">[DESIGN-A2A-002] A2A 标准协议适配规范<a class="anchor" href="#design-a2a-002-a2a-标准协议适配规范" aria-label="锚点">#</a></h1>
+<p>&lt;!-- naming-guard: exempt 本文对照列出私有方言的历史错误命名，作为「不要这样写」的反例 --&gt;</p>
+<blockquote><p><strong>状态</strong>：生效中<br><strong>适用范围</strong>：<code>services/backend/src/services/a2a/**</code>、<code>src/routes/wellKnown.js</code>、<br><code>src/contracts/a2a/**</code>、<code>src/tools/A2ATool/**</code>，以及所有 <code>a2a*</code> / <code>acp*</code> 模块的<br><strong>命名与协议边界</strong><br><strong>对照标准</strong>：Agent2Agent (A2A) Protocol <strong>v0.3.0</strong>（Linux Foundation，Google 捐赠；<br>v1.0 RC 已发布）<br><strong>机器可读真源</strong>：<code>agentCardSpec.js</code>、<code>taskStateSpec.js</code>、<code>builtinAgentManifest.js</code><br><strong>契约</strong>：<code>services/backend/src/contracts/a2a/*.schema.json</code><br><strong>强制手段</strong>：<code>npm run check:protocol-conformance</code><br><strong>前置阅读</strong>：<code>[DESIGN-A2A-001] A2A 协议规范</code>（那是<strong>另一套东西</strong>，见 §1）</p></blockquote>
+<hr>
+<h2 id="1-问题陈述-仓库里有两个-a2a">1. 问题陈述：仓库里有两个「A2A」<a class="anchor" href="#1-问题陈述-仓库里有两个-a2a" aria-label="锚点">#</a></h2>
+<p>这是理解本规范所有条款的前提，也是审计中最容易误判的一点。</p>
+<table><thead><tr><th>实现</th><th>位置</th><th>实质</th></tr></thead><tbody><tr><td><strong>标准 A2A 出站客户端</strong></td><td><code>services/backend/src/services/a2a/index.js</code></td><td>使用 A2A 的 REST 绑定路径（<code>/.well-known/agent-card.json</code>、<code>/v1/message:send</code>），<code>role</code> + <code>parts[]</code>，Bearer 认证</td></tr><tr><td><strong>私有 ACP 方言</strong></td><td><code>acpTransport.js</code> / <code>a2aRegistry.js</code> / <code>a2aMessageRouter.js</code> / <code>a2aFacade.js</code> / <code>a2aAgentLifecycle.js</code></td><td><strong>纯进程内私有 JSON-RPC 方言</strong>，方法名 <code>agent.spawn</code> / <code>task.submit</code> / <code>message.send</code>，协议版本号 <code>1.0</code>，传输为自建 ipc/ws/http</td></tr></tbody></table>
+<p>两者的方法集<strong>无一重合</strong>：A2A 标准方法是 <code>message/send</code>、<code>message/stream</code>、<br><code>tasks/get</code>、<code>tasks/cancel</code>、<code>tasks/pushNotificationConfig/*</code>；私有方言是<br><code>a2a.discovery.register</code>、<code>a2a.task.create</code>、<code>a2a.capability.invoke</code> …</p>
+<p><strong>命名撞车带来的真实危害</strong>：内部代码（含 14 个内置 agent 的注册）大量以 <code>a2a</code> 为<br>前缀，造成「已实现 A2A」的错觉；<code>docs/10_规范/[DESIGN-A2A-001]</code> 更是把私有方言<br>逐字写成「A2A 协议规范」，把传输层写成 WebSocket/gRPC（与标准 A2A 的<br>HTTP + SSE 完全不同），状态集写成一套无人认识的私有集合。任何外部读者据此对接<br>都会失败。</p>
+<h3 id="处置决策-2026-09-15">处置决策（2026-09-15）<a class="anchor" href="#处置决策-2026-09-15" aria-label="锚点">#</a></h3>
+<p><strong>两条线各自独立演进，通过本规范划清边界：</strong></p>
+<ol><li><strong>私有 ACP 方言保留原样</strong>（它有真实用途：进程内多 agent 编排、子代理生命周期、</li></ol>
+<p>死信队列），但<strong>改名事宜暂缓</strong> —— 改名会牵动 14 处内置 agent 注册、router、<br>   facade、生命周期与既有测试，属独立的破坏性变更批次。本规范先解决「文档与协议<br>   边界被混淆」这一层。</p>
+<ol><li><strong>标准 A2A 建设为对外互操作面</strong>：发布 Agent Card、统一状态语义、补齐</li></ol>
+<p><code>tasks/cancel</code>、修正对象形状。</p>
+<p><strong>条款 A2A-0（命名纪律，立即生效）</strong>：任何文档、注释、工具描述中，<br><strong>禁止</strong>把私有 ACP 方言称作「A2A 协议」。引用它时必须写明「私有 ACP 方言」并链接<br><code>[DESIGN-A2A-001]</code>。<code>[DESIGN-A2A-001]</code> 自身已加定位横幅。</p>
+<hr>
+<h2 id="2-发布面-agent-card">2. 发布面：Agent Card<a class="anchor" href="#2-发布面-agent-card" aria-label="锚点">#</a></h2>
+<h3 id="2-1-端点">2.1 端点<a class="anchor" href="#2-1-端点" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>路径</th><th>状态</th><th>说明</th></tr></thead><tbody><tr><td><code>GET /.well-known/agent-card.json</code></td><td>✅ 发布</td><td>标准 A2A v0.3.0 发现端点（RFC 8615）</td></tr><tr><td><code>GET /.well-known/agent.json</code></td><td>⚪ 默认 404</td><td>v0.2.x 历史路径。需 <code>KHY_A2A_LEGACY_AGENT_JSON=1</code> 显式开启</td></tr><tr><td><code>GET /.well-known/*</code></td><td>404</td><td>其余一律 JSON 404</td></tr></tbody></table>
+<p>实现：<code>src/routes/wellKnown.js</code>，挂载于 <code>server.js</code> 的 <code>app.use('/.well-known', …)</code>。</p>
+<h3 id="2-2-三条硬约束">2.2 三条硬约束<a class="anchor" href="#2-2-三条硬约束" aria-label="锚点">#</a></h3>
+<p><strong>A2A-1（公开）</strong> Agent Card 端点<strong>必须</strong>无需鉴权即可读取 —— 它正是外部 orchestrator<br>用来判断「要不要给我令牌」的依据，挂上鉴权会让发现流程死锁。卡片只含能力元数据，<br><code>securitySchemes</code> 描述的是<strong>如何</strong>鉴权，不是密钥本身。</p>
+<p><strong>A2A-2（不进信封）</strong> 响应体<strong>必须</strong>逐字段符合 <code>agent-card.schema.json</code>，<br><strong>不得</strong>套 khy 的 <code>{success, data}</code> 信封。（<code>envelopeMiddleware</code> 只包装带布尔<br><code>success</code> 字段的对象，故本路由天然不受影响 —— 但这条必须写下来，否则将来有人<br>「顺手统一格式」就会把协议打穿。）</p>
+<p><strong>A2A-3（零硬编码）</strong> <code>url</code> 优先取 <code>KHY_A2A_PUBLIC_URL</code>；缺省则<strong>从请求头推导</strong><br><code>protocol://host</code>。<strong>禁止</strong>写死域名或端口（<code>AGENTS.md</code> 工程规则 1）。<br>唯一例外是畸形输入时的兜底 <code>http://127.0.0.1:0</code>。</p>
+<h3 id="2-3-能力诚实性-a2a-4">2.3 能力诚实性（A2A-4）<a class="anchor" href="#2-3-能力诚实性-a2a-4" aria-label="锚点">#</a></h3>
+<p><code>capabilities</code> 的每个 <code>true</code> 都<strong>必须</strong>在代码里确有其事。当前：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;streaming&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;pushNotifications&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;stateTransitionHistory&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span> <span class="hljs-punctuation">}</span></code></pre>
+<p>三项全 false 是<strong>诚实</strong>结果，不是没做完的占位：</p>
+<ul><li><code>streaming</code> → 全仓 <code>message/stream</code>、<code>TaskStatusUpdateEvent</code>、</li></ul>
+<p><code>TaskArtifactUpdateEvent</code> 零命中；</p>
+<ul><li><code>pushNotifications</code> → 无 <code>tasks/pushNotificationConfig/*</code>；</li><li><code>stateTransitionHistory</code> → <code>tasks/get</code> 不回迁移历史。</li></ul>
+<p><strong>要打开某一项，先在代码里把它做出来，再改布尔</strong> —— 不允许反过来先改卡片。<br>守卫 <code>capability-honesty:*</code> 会对此做实测断言。</p>
+<h3 id="2-4-技能来源-a2a-5">2.4 技能来源（A2A-5）<a class="anchor" href="#2-4-技能来源-a2a-5" aria-label="锚点">#</a></h3>
+<p><code>skills</code> <strong>必须</strong>来自 <code>builtinAgentManifest.js</code> 这一单一真源（每个能力标签一条<br>AgentSkill）。<strong>禁止</strong>为卡片手写营销式描述 —— 卡片上写的应当是真实存在的 agent 能力。</p>
+<hr>
+<h2 id="3-数据对象">3. 数据对象<a class="anchor" href="#3-数据对象" aria-label="锚点">#</a></h2>
+<p>契约目录：<code>services/backend/src/contracts/a2a/</code>（与 <code>../acp/</code>、<code>../mobile/</code> 同约定）。</p>
+<table><thead><tr><th>文件</th><th>对象</th></tr></thead><tbody><tr><td><code>agent-card.schema.json</code></td><td><code>AgentCard</code></td></tr><tr><td><code>message.schema.json</code></td><td><code>Message</code> + <code>Part</code>（TextPart / FilePart / DataPart）</td></tr><tr><td><code>task.schema.json</code></td><td><code>Task</code> / <code>TaskStatus</code> / <code>TaskState</code> / <code>Artifact</code></td></tr></tbody></table>
+<p><strong>A2A-6</strong> <code>Part</code> 是 <strong><code>kind</code> 判别联合</strong>。<code>{ &quot;text&quot;: &quot;…&quot; }</code> 而缺 <code>kind</code> <strong>不是</strong>合法<br>Part，标准客户端会拒收。这是 <code>services/a2a/index.js</code> 的历史真实缺陷，守卫用反面<br>断言（<code>message-schema:rejects-part-without-kind</code>）把它锁死。</p>
+<p><strong>A2A-7</strong> Agent Card 必填字段（schema 强制）：<br><code>protocolVersion</code>、<code>name</code>、<code>description</code>、<code>url</code>、<code>version</code>、<code>capabilities</code>、<br><code>defaultInputModes</code>、<code>defaultOutputModes</code>、<code>skills</code>。</p>
+<p><strong>A2A-8</strong> 旧字段 <code>authentication: { schemes: [...] }</code> <strong>不是</strong> A2A 字段。正确写法是<br><code>securitySchemes</code>（OpenAPI 风格） + <code>security</code>（引用列表）。声明 <code>security</code> 却无<br><code>securitySchemes</code> 属悬空引用，schema 与 <code>validateCardShape()</code> 都会拒。</p>
+<hr>
+<h2 id="4-任务状态-映射而非透出">4. 任务状态：映射而非透出<a class="anchor" href="#4-任务状态-映射而非透出" aria-label="锚点">#</a></h2>
+<h3 id="4-1-规范状态集-封闭">4.1 规范状态集（封闭）<a class="anchor" href="#4-1-规范状态集-封闭" aria-label="锚点">#</a></h3>
+<pre><code>submitted | working | input-required | completed | canceled |
+failed | rejected | auth-required | unknown</code></pre>
+<p>终态（<strong>不得</strong>再有出边）：<code>completed</code> / <code>canceled</code> / <code>failed</code> / <code>rejected</code>。</p>
+<h3 id="4-2-内部状态-规范状态">4.2 内部状态 → 规范状态<a class="anchor" href="#4-2-内部状态-规范状态" aria-label="锚点">#</a></h3>
+<p>khy 内部有<strong>至少三套</strong>互不相同的生命周期状态机，与规范的词面重合只有 2 个。<br><strong>A2A-9</strong>：禁止把内部状态直接透出到协议边界，<strong>必须</strong>经<br><code>taskStateSpec.toA2aState()</code> 映射。</p>
+<table><thead><tr><th>内部（来源）</th><th>规范目标</th><th>理由</th></tr></thead><tbody><tr><td><code>pending</code> / <code>spawning</code>（a2aAgentLifecycle）</td><td><code>submitted</code></td><td>已登记、尚未起进程 / 起进程属准备阶段</td></tr><tr><td><code>created</code> / <code>initializing</code> / <code>ready</code>（stateMachine）</td><td><code>submitted</code></td><td>就绪但未开工</td></tr><tr><td><code>running</code></td><td><code>working</code></td><td>正在干活</td></tr><tr><td><code>completing</code></td><td><code>working</code></td><td>规范无「完成中」态</td></tr><tr><td><code>killing</code></td><td><code>working</code></td><td>取消尚未生效；成功取消后转 <code>canceled</code></td></tr><tr><td><code>waiting</code></td><td><code>input-required</code></td><td>等待外部输入/子代理，规范里最接近的中断态</td></tr><tr><td><code>completed</code> / <code>success</code> / <code>ok</code></td><td><code>completed</code></td><td>—</td></tr><tr><td><code>failed</code> / <code>error</code> / <code>timed_out</code> / <code>timeout</code></td><td><code>failed</code></td><td>超时是失败的一种</td></tr><tr><td><code>killed</code> / <code>cancelled</code></td><td><code>canceled</code></td><td>被主动终止 ≡ 规范 <code>canceled</code></td></tr><tr><td>未知 / 畸形输入</td><td><code>unknown</code></td><td>规范定义的合法值，代表「无法判定」</td></tr></tbody></table>
+<p><strong>A2A-10</strong>：新增内部状态时<strong>必须</strong>同步映射表。<code>unmappedKnownStates()</code> 与守卫<br><code>task-state-mapping-complete</code> 会立刻报出未映射的状态名。<br>严格模式 <code>KHY_A2A_STRICT_TASK_STATE=1</code> 下，未映射状态还会触发告警回调。</p>
+<p><strong>A2A-11</strong>：状态集是封闭的。守卫用反面断言<br>（<code>task-schema:rejects-private-state:spawning</code>）确保私有状态无法通过 schema。</p>
+<hr>
+<h2 id="5-客户端操作-出站">5. 客户端操作（出站）<a class="anchor" href="#5-客户端操作-出站" aria-label="锚点">#</a></h2>
+<p><code>services/a2a/index.js</code> 导出与规范方法的对应：</p>
+<table><thead><tr><th>函数</th><th>规范方法</th><th>REST 绑定路径</th><th>备注</th></tr></thead><tbody><tr><td><code>getAgentCard(url)</code></td><td>—</td><td><code>GET /.well-known/agent-card.json</code></td><td>发现</td></tr><tr><td><code>sendMessage(url, text, opts)</code></td><td><code>message/send</code></td><td><code>POST /v1/message:send</code></td><td>任务由服务端隐式创建</td></tr><tr><td><code>createTask(url, text, opts)</code></td><td><code>message/send</code></td><td>同上</td><td><strong>别名</strong>，见下</td></tr><tr><td><code>getTask(url, id)</code></td><td><code>tasks/get</code></td><td><code>GET /v1/tasks/{id}</code></td><td>id 做 URL 编码</td></tr><tr><td><code>cancelTask(url, id)</code></td><td><code>tasks/cancel</code></td><td><code>POST /v1/tasks/{id}:cancel</code></td><td>2026-09-15 新增</td></tr></tbody></table>
+<p><strong>A2A-12（无独立的创建任务 RPC）</strong> A2A 中任务由服务端在 <code>message/send</code> 时隐式创建，<br><code>taskId</code> 由<strong>服务端</strong>生成。旧实现 <code>POST /v1/tasks</code> 并自带顶层 <code>id</code> 与 <code>messages[]</code><br>数组，既不是 JSON-RPC 方法也不是任何 REST 绑定路径，属私有扩展，无法与标准 agent<br>互通。<code>createTask</code> 现<strong>委托</strong> <code>sendMessage</code>（函数名保留以兼容调用方）。<br>守卫 <code>no-nonstandard-tasks-post</code> 禁止该私有端点复活。</p>
+<p><strong>A2A-13（header 卫生）</strong> 出站 header <strong>必须</strong>在 <code>_request</code> 入口统一过滤<br><code>undefined</code> / <code>null</code> / <code>''</code>。Node 的 <code>http.request</code> 对 <code>undefined</code> 值的 header<br><strong>同步抛</strong> <code>ERR_HTTP_INVALID_HEADER_VALUE</code>，异常若被 catch 吞掉就表现为「出站<br>A2A 100% 静默失败」。失败结果<strong>必须</strong>带 <code>phase</code>（<code>build</code> / <code>network</code> / <code>timeout</code>）<br>以便区分「参数问题」与「对端不可达」。</p>
+<hr>
+<h2 id="6-私有-acp-方言的边界">6. 私有 ACP 方言的边界<a class="anchor" href="#6-私有-acp-方言的边界" aria-label="锚点">#</a></h2>
+<p><strong>A2A-14</strong> 私有方言<strong>不得</strong>：</p>
+<ul><li>出现在 Agent Card 的 <code>skills</code> / <code>capabilities</code> 中；</li><li>被任何文档描述为 A2A 标准实现；</li><li>新增以 <code>a2a.</code> 为前缀的方法名（该前缀已被标准方法的语义占据，会持续加剧混淆）。</li></ul>
+<p>新增内部方法一律用 <code>acp.</code> 前缀。</p>
+<p><strong>A2A-15</strong> 其错误码应迁回 JSON-RPC 惯例区间 <code>-32000 ~ -32099</code><br>（现状 <code>-40001</code> 等虽不违反 JSON-RPC 硬性禁止，但与生态工具的错误码解析逻辑冲突）。<br>属独立批次，登记为技术债。</p>
+<hr>
+<h2 id="7-与-mcp-的分工">7. 与 MCP 的分工<a class="anchor" href="#7-与-mcp-的分工" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>面</th><th>协议</th><th>用途</th></tr></thead><tbody><tr><td>工具访问</td><td><strong>MCP</strong></td><td>khy 连接外部工具/数据源；同时把自身工具暴露为 MCP server</td></tr><tr><td>Agent 互操作</td><td><strong>A2A</strong></td><td>khy 与其它 agent 互相发现、委派任务</td></tr></tbody></table>
+<p>两者互补，<strong>不得</strong>互相替代。Agent Card 的 <code>description</code> 中应明确写清「工具面走<br>MCP」，避免外部 orchestrator 误以为 A2A 是工具通道。</p>
+<hr>
+<h2 id="8-迁移路线">8. 迁移路线<a class="anchor" href="#8-迁移路线" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>阶段</th><th>内容</th><th>状态</th></tr></thead><tbody><tr><td><strong>P1 划清边界</strong></td><td>Agent Card 端点、契约 schema、状态映射、<code>tasks/cancel</code>、Part <code>kind</code>、能力诚实化、命名纪律条款</td><td>✅ 本规范落地</td></tr><tr><td><strong>P2 让私有方言名副其实</strong></td><td>评估把 <code>a2a*</code> 模块改名为 <code>acp*</code>（含 14 处内置 agent 注册、router、facade、测试）</td><td>⬜ 待决策</td></tr><tr><td><strong>P3 服务端任务面</strong></td><td>实现 <code>message/send</code> / <code>tasks/get</code> / <code>tasks/cancel</code> 的服务端 handler + 任务存储（当前只有出站客户端）</td><td>⬜ 未开始</td></tr><tr><td><strong>P4 流式</strong></td><td>SSE <code>message/stream</code>、<code>TaskStatusUpdateEvent</code> / <code>TaskArtifactUpdateEvent</code>，然后把 <code>capabilities.streaming</code> 改为 <code>true</code></td><td>⬜ 未开始</td></tr><tr><td><strong>P5 推送</strong></td><td><code>tasks/pushNotificationConfig/*</code></td><td>⬜ 未开始</td></tr><tr><td><strong>P6 一致性验证</strong></td><td>接入官方 <code>a2a-tck</code> / <code>a2a-inspector</code> 做端到端合规测试</td><td>⬜ 未开始</td></tr></tbody></table>
+<p><strong>P3 是真正的能力缺口</strong>：khy 目前能被外部<strong>发现</strong>（P1 已做到），但被<strong>调用</strong>时<br>没有服务端任务处理面。这是与「真做 A2A」之间最大的一步。</p>
+<hr>
+<h2 id="9-验证">9. 验证<a class="anchor" href="#9-验证" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">npm run check:protocol-conformance                  <span class="hljs-comment"># MCP + A2A 全量</span>
+node scripts/ci/check-protocol-conformance.js --a2a
+npm <span class="hljs-built_in">test</span> --workspace services/backend -- tests/services/a2a</code></pre>
+<hr>
+<h2 id="10-版本历史">10. 版本历史<a class="anchor" href="#10-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-15</td><td>首版：双 A2A 边界划定、Agent Card 发布面、契约 schema、TaskState 映射表、客户端操作对照、迁移路线</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-A2A-001] A2A 协议规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-A2A-001] A2A 协议规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-ACP-001] ACP消息元数据与终态契约.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ACP-001] ACP 消息元数据与终态契约</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-A2A-002] A2A 标准协议适配规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

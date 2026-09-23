@@ -1,6 +1,6 @@
 'use strict';
 /**
- * FileEditTool (Edit) â€?occurrence count must match the actual replacement.
+ * FileEditTool (Edit) â€”occurrence count must match the actual replacement.
  *
  * Regression: the count loop advanced the search cursor by `idx + 1`, counting
  * OVERLAPPING matches, while the replace path uses `original.split(old_string)

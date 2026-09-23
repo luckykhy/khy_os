@@ -910,6 +910,26 @@ async function dispatchOpsCommand(command, _ctx) {
           if (result.success) {
             printSuccess(`模型训练完成: ${modelName}`);
             printInfo(`路径: ${result.modelPath}`);
+            // P0: surface eval gate outcome (LlamaFactory/Axolotl post-train eval)
+            if (result.evalResult) {
+              if (result.evalResult.skipped) {
+                printInfo(`评测门已跳过: ${result.evalResult.reason}`);
+              } else if (result.evalResult.passed) {
+                printSuccess(
+                  `评测门通过: ${result.evalResult.results.filter((r) => r.passed).length}/${result.evalResult.total} 探针 (score=${result.evalResult.score.toFixed(2)})`
+                );
+              } else {
+                printWarn(
+                  `评测门未通过: ${result.evalResult.results.filter((r) => r.passed).length}/${result.evalResult.total} 探针 (score=${result.evalResult.score.toFixed(2)})`
+                );
+              }
+            }
+            if (result.evalDecision && result.evalDecision.message) {
+              printInfo(result.evalDecision.message);
+            }
+            if (result.recipe) {
+              printInfo(`配方快照: ${result.modelPath}/${training.RECIPE_FILENAME}`);
+            }
             printInfo('导出: train export ' + modelName + ' --format gguf');
           } else {
             printError('训练失败: ' + (result.error || '').slice(0, 200));
@@ -931,18 +951,76 @@ async function dispatchOpsCommand(command, _ctx) {
           printError(err.message);
         }
       } else if (subCommand === 'distill') {
-        printInfo('知识蒸馏: 从大模型生成训练数据，训练小模型');
+        printInfo('知识蒸馏: 大模型教师生成响应 → 多教师投票 + 拒采样 → 训练小模型学生');
         const studentBase = options.student || options.base || 'qwen-1.5b';
-        // Use recorded conversation prompts
         const stats = training.getDatasetStats();
         if (stats.total < 5) {
-          printWarn('需要更多交互数据用于蒸馏。请先积累对话记录');
+          printWarn(`蒸馏需至少 5 条交互记录 (当前 ${stats.total} 条)。请先用 AI 对话积累数据，或传 --prompts-json`);
           return true;
         }
-        printInfo(`学生模型: ${studentBase}, 使用已记录的对话作为蒸馏素材`);
-        printInfo('蒸馏过程较长，请耐心等待...');
-        // Extract prompts from saved interactions for distillation
-        printInfo('功能就绪，需要 Python 环境支持。详见: compute');
+        // Build the prompt list: from recorded conversations, or --prompts-json.
+        let prompts;
+        if (options['prompts-json']) {
+          try {
+            prompts = JSON.parse(options['prompts-json']);
+            if (!Array.isArray(prompts) || prompts.length === 0) {
+              throw new Error('empty array');
+            }
+          } catch (e) {
+            printError(`--prompts-json 解析失败: ${e.message}。需为 JSON 字符串数组`);
+            return true;
+          }
+        } else {
+          // Pull recent conversation instructions as distillation material.
+          const ds = training.exportDataset('alpaca', { quality: 'good' });
+          prompts = JSON.parse(
+            require('fs').readFileSync(ds.path, 'utf-8')
+          )
+            .slice(0, parseInt(options.count || '50', 10))
+            .map((r) => r.instruction);
+        }
+        // Multi-teacher: --teacher a,b,c (comma-separated Ollama model names).
+        const teacherRaw = options.teacher || options.teachers || '';
+        const teacherModels = teacherRaw
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        printInfo(
+          `学生: ${studentBase} · 教师: ${teacherModels.length > 0 ? teacherModels.join(', ') : '(未指定 --teacher，需教师为已 pull 的 Ollama 模型)'}`
+        );
+        printInfo(`蒸馏提示: ${prompts.length} 条 · 开始生成教师响应...`);
+
+        if (teacherModels.length === 0) {
+          printError('请指定教师模型: train distill --teacher qwen2.5:7b (或逗号分隔多个)');
+          printInfo('教师需已拉取: ollama pull <模型名>');
+          return true;
+        }
+
+        try {
+          const result = await training.distill({
+            teacherModels,
+            studentBase,
+            prompts,
+            onProgress: (pct, msg) => {
+              process.stdout.write(`\r  蒸馏进度: ${pct}% ${msg || ''}`);
+            },
+          });
+          console.log('');
+          if (result.success) {
+            printSuccess(`蒸馏完成: ${result.modelPath}`);
+            if (result.evalResult) {
+              printInfo(
+                result.evalResult.skipped
+                  ? `评测门已跳过: ${result.evalResult.reason}`
+                  : `评测门 ${result.evalResult.passed ? '通过' : '未通过'} (score=${result.evalResult.score.toFixed(2)})`
+              );
+            }
+          } else {
+            printError('蒸馏失败: ' + (result.error || '').slice(0, 300));
+          }
+        } catch (err) {
+          printError(err.message);
+        }
       } else if (subCommand === 'export') {
         const modelName = args[0];
         if (!modelName) {
@@ -961,10 +1039,15 @@ async function dispatchOpsCommand(command, _ctx) {
             const result = await training.exportGGUF(modelName, quant, password);
             if (result.success) {
               printSuccess(`GGUF 导出完成: ${result.ggufPath}`);
-              printInfo('注册到 Ollama: ollama create ' + modelName + ' -f Modelfile');
+              printInfo(`自动注册到 Ollama (${modelName})...`);
               const reg = await training.registerWithOllama(modelName, result.ggufPath);
               if (reg.success) {
                 printSuccess(reg.message);
+                // One-click chain: this Ollama model can now act as a
+                // distillation teacher. Surface the concrete next step so the
+                // export → register → distill loop closes without guessing.
+                printInfo(`可继续蒸馏: khy train distill --teacher ${modelName} --prompts-json '[...]'`);
+                printInfo(`${modelName} 已注册为 Ollama 模型，可直接作为蒸馏教师；前端模型列表会出现「新」标记`);
               }
             } else {
               printError('导出失败: ' + (result.error || '').slice(0, 200));

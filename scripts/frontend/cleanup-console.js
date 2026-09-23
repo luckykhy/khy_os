@@ -33,8 +33,7 @@ const CONFIG = {
   // 需要处理的目录
   directories: [
     'software/khyquant/frontend/src',
-    'apps/ai-frontend/src',
-    'apps/khy-mobile/src'
+    'apps/ai-frontend/src'
   ],
   
   // 需要处理的文件扩展名

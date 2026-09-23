@@ -1,5 +1,6 @@
 'use strict';
 const fs = require('fs');
+const assert = require('node:assert');
 const path = require('path');
 const {
   EXECUTION_DISCIPLINE,
@@ -103,8 +104,11 @@ describe('Agent Constraints', () => {
           task: 'planning',
           role: 'explore the codebase and design implementation plans',
         });
-        expect(EXPLORE_AGENT.getSystemPrompt()).toBe(exploreBlock);
-        expect(PLAN_AGENT.getSystemPrompt()).toBe(planBlock);
+        // The built-in prompts have since grown richer (intro, strengths,
+        // guidelines beyond the injected block), so the injected read-only
+        // block is contained in the prompt rather than being the whole text.
+        expect(EXPLORE_AGENT.getSystemPrompt()).toContain(exploreBlock);
+        expect(PLAN_AGENT.getSystemPrompt()).toContain(planBlock);
   });
 
   test('the read-only block is defined once, not duplicated in agent prompts', () => {

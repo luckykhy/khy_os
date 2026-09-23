@@ -26,14 +26,10 @@ const { synthesizeRecourse } = require('../lib/restoreRecoursePlan');
 // 复用已有 CLI 的采集/串链器(零重复)。
 const { buildAppliedPlan } = require('./restore-apply');
 const { gatherAuthorizationFacts } = require('./restore-authorize');
+const { opsDocPath, opsDocRelPath } = require('../lib/docsPaths');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const DOC_PATH = path.join(
-  ROOT,
-  'docs',
-  '07_OPS_运维',
-  '[OPS-MAN-090] 还原导航器.md'
-);
+const DOC_PATH = opsDocPath('[OPS-MAN-090] 还原导航器.md');
 const NPM_PKG_NAME = '@khy-os/khy-os';
 const PIP_PKG_NAME = 'khy-os';
 
@@ -113,7 +109,7 @@ function runRestoreNavigate(opts = {}) {
   }
   out += `  ${C.dim}为什么：${nextAction.why}${C.reset}\n`;
   out += `\n${C.dim}诚实边界：只读既有裁决、绝不重排/删除/伪造授权；危险命令一律隐去并强制交人。${C.reset}\n`;
-  out += `${C.dim}详情见：docs/07_OPS_运维/[OPS-MAN-090] 还原导航器.md${C.reset}\n`;
+  out += `${C.dim}详情见：${opsDocRelPath('[OPS-MAN-090] 还原导航器.md')}${C.reset}\n`;
   process.stdout.write(out);
   return nextAction.status === 'unknown' ? 2 : 0;
 }

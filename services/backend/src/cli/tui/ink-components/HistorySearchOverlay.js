@@ -24,15 +24,17 @@ function HistorySearchOverlay({ state }) {
   const current = String(state.current == null ? '' : state.current);
   const noMatch = !current && query !== '';
 
-  // `(reverse-i-search)'query': match` — dim the fixed label, keep the query and
-  // matched command legible. A non-empty query with no match shows a hint.
+  // `反向搜索'query': 匹配` —— 2026-09-19 BUG-20: 标签原为英文 bash 惯例
+  // `(reverse-i-search)`,与本仓「用户可见文案默认中文」策略(对齐 FooterBar
+  // 同款 KHY_UI_LANG 语言感知)不一致;配套提示行本就是中文,故标签一并中文化。
+  // 查询词与命中结果的可见性不变:标签 dim? 否——保持彩色锚点,查询/结果可读。
   return h(
     Box,
     { flexDirection: 'column' },
     h(
       Box,
       null,
-      h(Text, { color: noMatch ? 'red' : 'cyan' }, '(reverse-i-search)'),
+      h(Text, { color: noMatch ? 'red' : 'cyan' }, '反向搜索'),
       h(Text, { dimColor: true }, `'${query}': `),
       h(Text, null, current)
     ),

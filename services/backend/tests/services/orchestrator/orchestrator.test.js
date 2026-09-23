@@ -1,6 +1,6 @@
 'use strict';
 
-const orchestrator = require('../../src/services/orchestrator/index');
+const orchestrator = require('../../../src/services/orchestrator/index.js');
 
 describe('orchestrator index', () => {
   test('module is defined', () => {

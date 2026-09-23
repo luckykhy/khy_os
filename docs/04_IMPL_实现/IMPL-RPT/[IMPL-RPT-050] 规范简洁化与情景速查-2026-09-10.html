@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [IMPL-RPT-050] 规范简洁化与情景速查-2026-09-10.md -->
+<title>[IMPL-RPT-050] 规范简洁化与情景速查-2026-09-10 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>IMPL-RPT<span class="sep">›</span>[IMPL-RPT-050] 规范简洁化与情景速查-2026-09-10</div>
+      <header class="hero reveal"><h1>[IMPL-RPT-050] 规范简洁化与情景速查-2026-09-10</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#impl-rpt-050-规范简洁化与情景速查-2026-09-10">[IMPL-RPT-050] 规范简洁化与情景速查-2026-09-10</a></li><li class="lvl-2"><a href="#1-做了什么">1. 做了什么</a></li><li class="lvl-2"><a href="#2-验收">2. 验收</a></li><li class="lvl-2"><a href="#3-遗留-独立一轮">3. 遗留（独立一轮）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="impl-rpt-050-规范简洁化与情景速查-2026-09-10">[IMPL-RPT-050] 规范简洁化与情景速查-2026-09-10<a class="anchor" href="#impl-rpt-050-规范简洁化与情景速查-2026-09-10" aria-label="锚点">#</a></h1>
+<blockquote><p>用户诉求：完善规范、让规范可用、规范简洁清晰。承接 [IMPL-RPT-049] 规范目录拆分。</p></blockquote>
+<h2 id="1-做了什么">1. 做了什么<a class="anchor" href="#1-做了什么" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项</th><th>内容</th></tr></thead><tbody><tr><td>契约规范压缩</td><td><code>MEM-006</code>/<code>TOOL-001</code>/<code>ACP-001</code>/<code>API-002</code> 四篇按「定位 + 红线表 + 反例 + 守卫」重写：去重复叙述、合并同义条款、每节压到一张表；<strong>070 引用的 § 锚点（MEM §1–§6、TOOL §1–§5、ACP §1–§5、API §1–§7）原编号保留</strong></td></tr><tr><td>建速查入口</td><td><code>[DESIGN-INDEX-001]</code> 重写为「拿来就用」入口：§1 情景速查（24 情景 → 篇 → 一条红线，红线逐条核对自各规范正文）、§2 分域清单、§3 使用与维护（新增规范登记流程）。<strong>2026-09-17 追记</strong>：该篇已并入 <code>10_规范/00_INDEX_规范-总目录.md</code> §2/§3，情景条目由 24 条扩为 48 条（<code>[MGMT-PLAN-009]</code> B1）</td></tr><tr><td>立写法标准</td><td><code>[DESIGN-DOC-001]</code> 新增 §12 规范骨架（≤150 行、每句「必须/禁止」可判定、定位行说清边界）；§3.1 补 <code>10_规范/</code> 目录；§5.2 补域字母轴编号说明</td></tr><tr><td>存量口径</td><td>其余 35 篇存量规范<strong>不动正文</strong>（部分正文被守卫/台账按章节引用，且篇幅质量参差属独立一轮工作）；在 INDEX-001 §3 登记「修订时逐步靠拢骨架」口径</td></tr></tbody></table>
+<h2 id="2-验收">2. 验收<a class="anchor" href="#2-验收" aria-label="锚点">#</a></h2>
+<ul><li><code>node scripts/ci/check-repo-layout.js</code> 全绿；<code>check-gov-rules</code> 通过；</li><li>4 篇契约规范被 070 引用的章节号未变（070 §2/§3/§4/§5 校验方式列链接有效）；</li><li>构建产物（html 孪生件 / nav-data / dead-links）已随 <code>npm run docs:build</code> 重建。</li></ul>
+<h2 id="3-遗留-独立一轮">3. 遗留（独立一轮）<a class="anchor" href="#3-遗留-独立一轮" aria-label="锚点">#</a></h2>
+<p>存量 35 篇按 §12 骨架逐篇收敛（建议顺序：被守卫引用的先行——SEC/DB/ERR/LOG/TEST → 高频查阅 FE-003 类 → 低频域）；FE-002 保持「目标态」标注直至组件库落地。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-049] 规范族文档拆分为独立规范目录-2026-09-10.html"><div class="dir">← 上一篇</div><div class="ttl">[IMPL-RPT-049] 规范族文档拆分为独立规范目录-2026-09-10</div></a><a class="next" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-051] 工具注册表自愈层规范.html"><div class="dir">下一篇 →</div><div class="ttl">[IMPL-RPT-045] 工具注册表自愈层规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-050] 规范简洁化与情景速查-2026-09-10.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+{
+  "$schemaNote": "软著登记材料候选清单 —— 「哪两端进材料」的机器可读登记（DESIGN-IP-001 C-MAT1 / C-X3）。由 scripts/ci/check-copyright-readiness.js 消费：核验候选文件不落在 vendor/third_party/dist 等排除目录、不命中 *_gen.*/_blob.h/字体数据表/压缩产物，且文件真实存在（防清单与实际脱节）。",
+  "source": "由交付目录 01_草稿/代码文件选择.json 的实测度量段转换而来（2026-09-21）。真源文档 docs/10_规范/其它规范/[DESIGN-IP-001] 软件著作权就绪规范.md §四 C-MAT1。",
+  "generatedAt": "2026-09-21",
+  "repo": "khy-os",
+  "编制原则": "按运行时调用顺序串成一条链，不东摘西摘：前 30 页 = 启动链（Python 层入口 → 环境检测 → Node 供给），证明这是可运行的完整软件；后 30 页 = 手写内核核心（引导 → 中断 → 调度 → 内存 → 进程），证明这是有原创硬资产的软件。中段文件不进 60 页，但在操作手册里完整描述。",
+  "页数要求": {
+    "依据": "《计算机软件著作权登记办法》—— 源程序前、后各连续 30 页，每页不少于 50 行",
+    "实测每页容量": "约 55.4 行/页（A4 / 8pt / 13pt 固定行距，经真实 PDF 页数校准；不是按 1500/30=50 估算）",
+    "两端备料": "每端 1660 有效代码行 → 输出 30 页",
+    "行数口径": "去纯空行 + 剥离整行注释（实测下唯一能让两端同时达标的口径：保留注释时前 30 页 49.8 行/页、后 30 页 43.6 行/页）"
+  },
+  "前30页": [
+    { "file": "platform/khy_platform/__main__.py", "有效代码行": 16 },
+    { "file": "platform/khy_platform/cli.py", "有效代码行": 2184 },
+    { "file": "platform/khy_platform/_bootstrap.py", "有效代码行": 1724, "角色": "备选/续入" }
+  ],
+  "后30页": [
+    { "file": "kernel/boot/boot.asm", "有效代码行": 123 },
+    { "file": "kernel/boot/long_mode.asm", "有效代码行": 16 },
+    { "file": "kernel/boot/isr.asm", "有效代码行": 181 },
+    { "file": "kernel/boot/context_switch.asm", "有效代码行": 32 },
+    { "file": "kernel/boot/usermode.asm", "有效代码行": 51 },
+    { "file": "kernel/src/sched.c", "有效代码行": 267 },
+    { "file": "kernel/src/vmm.c", "有效代码行": 434 },
+    { "file": "kernel/src/process.c", "有效代码行": 763 },
+    { "file": "kernel/src/syscall.c", "有效代码行": 1367, "角色": "后备/续入（后 30 页素材余量仅 14%，Word 版每页行数低于 55 时续入）" }
+  ],
+  "中段（不提交，手册描述）": [
+    { "file": "services/backend/bin/khy.js", "有效代码行": 1538 }
+  ],
+  "排除清单_已核验": {
+    "核验日期": "2026-09-20",
+    "结论": "候选文件全部「排除命中 = 否」",
+    "全仓排除项命中总数": 40,
+    "构成": {
+      "二进制blob_*_blob.h": 37,
+      "字体数据表": 1,
+      "压缩产物*.min.js": 1,
+      "自动生成物tools_gen_*": 1
+    },
+    "排除目录重点": [
+      "kernel/vendor（含 moonbit/runtime.c、moonbit_gen.c）",
+      "services/backend/vendor",
+      "apps/khyos-desktop/dist-ts、out",
+      "任意 node_modules"
+    ]
+  },
+  "原创性声明": {
+    "前30页": "自研（Python 启动器）",
+    "后30页": "自研（手写 OS 内核；全仓 .c 共 12946 行、.asm 共 5381 行，100% 位于 kernel/，是仓内唯一的原创底层语言层）",
+    "第三方": "vendor/ 与 node_modules/ 一律不入选材（已在排除清单中）"
+  },
+  "未决项": [
+    "Word 导出后的真实页数需再复核一次（Chrome 与 Word 分页不会逐行一致）",
+    "后 30 页素材余量仅 14%，若 Word 版每页行数低于 55 需续入 kernel/src/syscall.c",
+    "人工确认：是否接受「剥离整行注释」这一材料编排方式"
+  ]
+}

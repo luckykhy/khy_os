@@ -1,14 +1,15 @@
 'use strict';
 const path = require('node:path');
-const guard = require(path.join(__dirname, 'naturalLanguageAliasGuard.js'));
+const assert = require('node:assert');
+const guard = require('../../src/cli/naturalLanguageAliasGuard.js');
 
 describe('Natural Language Alias Guard', () => {
   test('gate default-on: reserved NL phrase 我是谁 → true', () => {
-      expect(guard.isReservedNaturalLanguagePhrase('我是谁')).toBe({});
+      expect(guard.isReservedNaturalLanguagePhrase('我是谁')).toBe(true);
   });
 
   test('trim + case-insensitive normalization on reserved match', () => {
-      expect(guard.isReservedNaturalLanguagePhrase('  我是谁  ')).toBe({});
+      expect(guard.isReservedNaturalLanguagePhrase('  我是谁  ')).toBe(true);
   });
 
   test('non-reserved command alias passes through (returns false)', () => {
@@ -40,15 +41,15 @@ describe('Natural Language Alias Guard', () => {
   });
 
   test('non-string / empty input → false, never throws', () => {
-      expect(guard.isReservedNaturalLanguagePhrase('')).toBe({});
-      expect(guard.isReservedNaturalLanguagePhrase(null)).toBe({});
-      expect(guard.isReservedNaturalLanguagePhrase(undefined)).toBe({});
-      expect(guard.isReservedNaturalLanguagePhrase(42)).toBe({});
-      expect(guard.isReservedNaturalLanguagePhrase({})).toBe({});
+      expect(guard.isReservedNaturalLanguagePhrase('')).toBe(false);
+      expect(guard.isReservedNaturalLanguagePhrase(null)).toBe(false);
+      expect(guard.isReservedNaturalLanguagePhrase(undefined)).toBe(false);
+      expect(guard.isReservedNaturalLanguagePhrase(42)).toBe(false);
+      expect(guard.isReservedNaturalLanguagePhrase({})).toBe(false);
   });
 
   test('reserved phrase list is frozen and conservative', () => {
-      expect(Object.isFrozen(guard.RESERVED_NL_ALIAS_PHRASES).toBeTruthy());
+      expect(Object.isFrozen(guard.RESERVED_NL_ALIAS_PHRASES)).toBeTruthy();
       expect(guard.RESERVED_NL_ALIAS_PHRASES).toContain('我是谁');
   });
 

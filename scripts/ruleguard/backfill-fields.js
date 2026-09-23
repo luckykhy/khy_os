@@ -23,7 +23,7 @@ const path = require('path');
 
 const ROOT = path.resolve(process.argv.includes('--write') ? process.cwd() : process.cwd());
 const WRITE = process.argv.includes('--write');
-const REGISTRY_REL = path.join('docs', '_规范', 'RULES-REGISTRY.json');
+const REGISTRY_REL = path.join('docs', '10_规范', 'registry', 'RULES-REGISTRY.json');
 
 // LAYOUT-002's checker lives outside scripts/ci; ruleguard tracks it because
 // a rule declares it, not because of its directory.
@@ -133,17 +133,17 @@ const MAPPING = {
   'TOOLING-006': {
     gate: 'pr',
     exec: { script: 'scripts/ci/check-gov-rules.js', args: [], findings: [], anchors: ['checkRulesRegistry'] },
-    paths: ['docs/_规范/RULES-REGISTRY.json', 'docs/_规范/rules-registry.json'],
+    paths: ['docs/10_规范/registry/RULES-REGISTRY.json', 'docs/10_规范/rules-registry.json'],
   },
   'TOOLING-007': {
     gate: 'pr',
     exec: { script: 'scripts/ci/check-rules-registry.js', args: ['--changed'], findings: [] },
-    paths: ['docs/_规范/**', 'docs/03_DESIGN_设计/**', 'docs/08_MGMT_项目管理/**'],
+    paths: ['docs/10_规范/**', 'docs/03_DESIGN_设计/**', 'docs/08_MGMT_项目管理/**'],
   },
   'TOOLING-008': {
     gate: 'pr',
     exec: { script: 'scripts/ci/check-rules-registry.js', args: [], findings: [], anchors: [], carriers: ['scripts/docs/gen-rules-cards.js'] },
-    paths: ['docs/_规范/**'],
+    paths: ['docs/10_规范/**'],
   },
   'PROCESS-002': {
     gate: 'pr',
@@ -193,7 +193,7 @@ const MAPPING = {
   'MGMT-STD-008': {
     gate: 'pr',
     exec: { script: 'scripts/ci/check-gov-rules.js', args: [], findings: [], anchors: ['checkRulesRegistry'] },
-    paths: ['docs/_规范/**', 'docs/08_MGMT_项目管理/**'],
+    paths: ['docs/10_规范/**', 'docs/08_MGMT_项目管理/**'],
   },
 };
 
@@ -209,7 +209,7 @@ const MANUAL = {
   'SOURCING-001': '上游源码是否"复制"需与上游仓库逐文件比对，且需人读 LICENSE 文本判定归属；CODEOWNERS 与 PR 评审兜底。',
   'SOURCING-002': '许可证分级硬门槛依赖人工核对上游 LICENSE 与分级表；自动判级会误判宽松/非宽松许可证的语义差异。',
   'SOURCING-003': '六字段提案是流程约定，产物在指挥部仓库而非本仓库；机械上无法在本机校验。',
-  'SOURCING-004': 'FEATURE-OWNERSHIP.json 登记表已就位，守卫 check:feature-ownership 尚未落地（[DESIGN-ARCH-104] §6 B-G1/B-G2 分阶段建设项）。',
+  'SOURCING-004': 'FEATURE-OWNERSHIP.json 登记表已就位，守卫 check:feature-ownership 尚未落地（[DESIGN-SOURCING-001] §6 B-G1/B-G2 分阶段建设项）。',
   'SOURCING-006': '"只追加不改写"需对比历史版本判断语义改写，静态守卫只能看单快照；评审兜底。',
   'PROCESS-001': '分支纪律属人机协作约定：机械上无法区分"用户授权的提交"与"擅自提交"，误判会阻断正常协作；由 khy 的确认对话框与审计轨迹兜底。',
   'PROCESS-101': '贡献者规则提案权是流程权利，无可判定的机器信号；靠 CONTRIBUTING.md 与评审兜底。',
@@ -217,10 +217,10 @@ const MANUAL = {
 
 function resolveRegistryFile() {
   for (const candidate of ['rules-registry.json', 'RULES-REGISTRY.json']) {
-    const rel = path.join('docs', '_规范', candidate);
+    const rel = path.join('docs', '10_规范', 'registry', candidate);
     if (fs.existsSync(path.join(ROOT, rel))) return rel;
   }
-  throw new Error('找不到规则登记表（docs/_规范/rules-registry.json）');
+  throw new Error('找不到规则登记表（docs/10_规范/rules-registry.json）');
 }
 
 function main() {

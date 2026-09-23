@@ -4,6 +4,29 @@
 
 /* 全局CSS变量 - 统一设计系统 */
 :root {
+  /* KHY design tokens (FE-001 G2 fix — resolve dangling --khy-* references) */
+  --khy-primary: #1890ff;
+  --khy-primary-100: #e6f7ff;
+  --khy-primary-soft: rgba(24, 144, 255, 0.1);
+  --khy-primary-strong: #096dd9;
+  --khy-success: #52c41a;
+  --khy-success-50: #f6ffed;
+  --khy-danger: #ff4d4f;
+  --khy-warning: #faad14;
+  --khy-info: #1890ff;
+  --khy-white: #ffffff;
+  --khy-black: #000000;
+  --khy-gray-50: #f0f0f0;
+  --khy-gray-100: #e8e8e8;
+  --khy-gray-200: #d9d9d9;
+  --khy-gray-300: #bfbfbf;
+  --khy-gray-400: #8c8c8c;
+  --khy-gray-500: #595959;
+  --khy-gray-600: #434343;
+  --khy-gray-700: #262626;
+  --khy-gray-800: #1f1f1f;
+  --khy-gray-900: #141414;
+
   /* 主色调 - 专业金融蓝 */
   --primary-color: var(--khy-primary);
   --primary-light: #40a9ff;
@@ -370,6 +393,18 @@ body {
 /* 深色模式支持（预留） */
 @media (prefers-color-scheme: dark) {
   :root {
+    /* Gray scale — dark mode inversion (FE-001 G2) */
+    --khy-gray-50: #1f1f1f;
+    --khy-gray-100: #262626;
+    --khy-gray-200: #2d2d2d;
+    --khy-gray-300: #333333;
+    --khy-gray-400: #595959;
+    --khy-gray-500: #8c8c8c;
+    --khy-gray-600: #a6a6a6;
+    --khy-gray-700: #bfbfbf;
+    --khy-gray-800: #d9d9d9;
+    --khy-gray-900: #e8e8e8;
+
     --text-primary: #e8e8e8;
     --text-secondary: #a6a6a6;
     --text-tertiary: #737373;

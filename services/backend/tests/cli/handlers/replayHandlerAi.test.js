@@ -22,7 +22,7 @@ const WORK = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-g4-work-'));
 process.env.KHY_WRITE_EXTRA_ROOTS = WORK;
 delete process.env.KHY_TRAJ_AI_REPLAY;
 const { handleReplay } = require('../../../src/cli/handlers/replay');
-const replayLedger = require('../../../src/services/trajectoryReplay/replayLedger');
+const replayLedger = require('../../../src/services/domain/trajectory/trajectoryReplay/replayLedger.js');
 async function capture(fn) {
   const lines = [];
   const sinks = ['log', 'error', 'warn', 'info'];
@@ -57,7 +57,7 @@ describe('Replay Handler Ai', () => {
       const out = await capture(() => handleReplay('run', ['g4-off'], { force: true }));
       expect(out).not.toMatch(/AI 修桥已启用/);
       expect(out).toMatch(/回放完成/);
-      expect(fs.existsSync(target).toBeTruthy());
+      expect(fs.existsSync(target)).toBeTruthy();
   });
 
   test('with --ai: AI banner shown, run still completes for a FILE step', async () => {
@@ -69,7 +69,7 @@ describe('Replay Handler Ai', () => {
       const out = await capture(() => handleReplay('run', ['g4-flag'], { force: true, ai: true }));
       expect(out).toMatch(/AI 修桥已启用/);
       expect(out).toMatch(/回放完成/);
-      expect(fs.existsSync(target).toBeTruthy());
+      expect(fs.existsSync(target)).toBeTruthy();
   });
 
   test('KHY_TRAJ_AI_REPLAY=on enables the banner without the flag', async () => {

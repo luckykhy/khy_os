@@ -1,0 +1,13 @@
+// Supabase Edge Functions 本地开发配置。
+// 仅用于 `supabase start` 本地联调;生产部署走 `supabase functions deploy`。
+// 测试期不跑本地,所以这里最小化。
+
+project_id = "khyos-free-test"
+
+[functions.khyos-api]
+entrypoint = "index.ts"
+verify_jwt = false   # 测试期不校验 JWT,anon 可访问 (见 EF 内 extractAuth)
+
+[functions.khyos-ai]
+entrypoint = "index.ts"
+verify_jwt = false   # LLM 代理不需要登录

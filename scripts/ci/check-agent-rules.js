@@ -59,6 +59,17 @@ const IGNORE_DIRS = new Set([
   '.ruff_cache',
   'vendor',
   'third_party',
+  // `.ai/` holds machine-readable *state and prose*, not this repo's source:
+  // task/bug records, the roadmap, and the 19 prompt templates. A bug report
+  // quoting the symptom it was filed about (`connect ECONNREFUSED 127.0.0.1:7890`)
+  // is DATA describing a failure, not a hardcoded endpoint in shipped code —
+  // flagging it is a false positive that pins the gate red and trains readers to
+  // skip real findings (axiom A4: a false report costs more than a missed one).
+  //
+  // This is a *scope* correction, not a suppression: RUNTIME-001's own `paths`
+  // in RULES-REGISTRY.json lists `services/** apps/** platform/** software/**
+  // kernel/** tools/** scripts/**` and has never included `.ai/**`.
+  '.ai',
 ]);
 
 const HARD_ENDPOINT_PATTERNS = [

@@ -5,12 +5,12 @@ const detector = require('../src/services/gitExecutableDetector');
 describe('Git Spawn Helper', () => {
   test('spawnGit returns structured result on success', () => {
       detector.clearCache();
-      // 使用真实 git（本环境�?git�?
+      // 使用真实 git（本环境�?git�?
       const result = helper.spawnGit(['--version']);
     
       expect(result).toBeTruthy();
       expect(typeof result.status).toBe('number');
-      // git --version 应成�?
+      // git --version 应成�?
       if (result.status === 0) {
         expect(result.stdout).toContain('git version');
       }
@@ -19,7 +19,7 @@ describe('Git Spawn Helper', () => {
   test('spawnGitOutput returns stdout on success, null on failure', () => {
       detector.clearCache();
       const version = helper.spawnGitOutput(['--version']);
-      // 本环境有 git，应返回版本字符�?
+      // 本环境有 git，应返回版本字符�?
       if (version !== null) {
         expect(version).toContain('git version');
       }
@@ -39,7 +39,7 @@ describe('Git Spawn Helper', () => {
   test('getGitPath returns a path or null', () => {
       detector.clearCache();
       const gitPath = helper.getGitPath();
-      // 本环境有 git，应返回 'git' 或具体路�?
+      // 本环境有 git，应返回 'git' 或具体路�?
       expect(gitPath === null || typeof gitPath === 'string').toBeTruthy();
   });
 

@@ -84,13 +84,14 @@
         <div v-else-if="tasksStatus === 'disabled'" class="khy-fb__tasks-hint">
           本机动作已关闭(KHY_WEB_LOCAL_ACTIONS)
         </div>
-        <div
+        <button
           v-else-if="tasksStatus === 'error'"
-          class="khy-fb__tasks-hint is-error"
+          type="button"
+          class="khy-fb__tasks-hint is-error khy-fb__retry-btn"
           @click="startPanelSync"
         >
           同步失败,点此重试
-        </div>
+        </button>
         <div v-else-if="!tasks.length" class="khy-fb__tasks-hint">暂无任务记录</div>
 
         <ul v-else class="khy-fb__tasks-list">
@@ -145,7 +146,13 @@
           <div class="khy-fb__mcp-hint">暂无激活的 MCP 服务</div>
         </div>
         <div class="khy-fb__mcp" v-else-if="mcpStatus === 'error'">
-          <div class="khy-fb__mcp-hint is-error" @click="startPanelSync">MCP 同步失败,点此重试</div>
+          <button
+            type="button"
+            class="khy-fb__mcp-hint is-error khy-fb__retry-btn"
+            @click="startPanelSync"
+          >
+            MCP 同步失败,点此重试
+          </button>
         </div>
       </div>
     </transition>
@@ -180,6 +187,7 @@ import { resolveWsUrl } from '@/utils/ws';
 import { safeSet } from '@/utils/safeStorage';
 import { useUserStore } from '@/stores/user';
 
+import { showSuccess, showError, showWarning, showInfo } from '@/api/notify';
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
@@ -483,11 +491,11 @@ async function startTray() {
   busy.value = true;
   try {
     const res = await runLocalAction('khyos_tray_start', 'khyos_tray_status');
-    if (res.status === 'starting') ElMessage.success('系统托盘启动中…');
-    else if (res.status === 'disabled') ElMessage.warning(res.message || '本机动作已关闭');
-    else ElMessage.warning(res.message || '托盘启动未成功');
+    if (res.status === 'starting') showSuccess('系统托盘启动中…');
+    else if (res.status === 'disabled') showWarning(res.message || '本机动作已关闭');
+    else showWarning(res.message || '托盘启动未成功');
   } catch (err) {
-    ElMessage.error(`托盘启动失败:${(err && err.message) || err}`);
+    showError(`托盘启动失败:${(err && err.message) || err}`);
   } finally {
     busy.value = false;
   }
@@ -502,14 +510,14 @@ async function openKhyMd() {
     const res = await runLocalAction('khyos_md_open', 'khyos_md_status');
     if (res.status === 'ready' && res.url) {
       window.open(res.url, '_blank', 'noopener');
-      ElMessage.success('khy.md 工作台已就绪');
+      showSuccess('khy.md 工作台已就绪');
     } else if (res.status === 'disabled') {
-      ElMessage.warning(res.message || '本机动作已关闭');
+      showWarning(res.message || '本机动作已关闭');
     } else {
-      ElMessage.warning(res.message || '打开 khy.md 未成功');
+      showWarning(res.message || '打开 khy.md 未成功');
     }
   } catch (err) {
-    ElMessage.error(`打开 khy.md 失败:${(err && err.message) || err}`);
+    showError(`打开 khy.md 失败:${(err && err.message) || err}`);
   } finally {
     busy.value = false;
   }
@@ -1130,6 +1138,27 @@ onBeforeUnmount(() => {
 .khy-fb__tasks-hint.is-error:hover {
   text-decoration: underline;
 }
+/* 重试提示现为 <button>:重置默认按钮样式,保留原观感 + 键盘焦点环 */
+.khy-fb__retry-btn {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  font: inherit;
+  text-align: center;
+}
+.khy-fb__retry-btn.is-error {
+  color: var(--khy-danger);
+}
+.khy-fb__retry-btn:hover,
+.khy-fb__retry-btn:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+.khy-fb__retry-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--khy-danger);
+  border-radius: 4px;
+}
 .khy-fb__tasks-list {
   list-style: none;
   margin: 0;
@@ -1265,6 +1294,9 @@ onBeforeUnmount(() => {
 }
 .khy-fb__mcp-hint.is-error:hover {
   text-decoration: underline;
+}
+.khy-fb__mcp-hint.khy-fb__retry-btn {
+  cursor: pointer;
 }
 .khy-fb__mcp-list {
   list-style: none;

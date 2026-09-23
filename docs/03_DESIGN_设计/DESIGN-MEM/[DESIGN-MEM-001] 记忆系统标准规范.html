@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-MEM-001] 记忆系统标准规范.md -->
+<title>[DESIGN-MEM-001] 记忆系统标准规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-MEM<span class="sep">›</span>[DESIGN-MEM-001] 记忆系统标准规范</div>
+      <header class="hero reveal"><h1>[DESIGN-MEM-001] 记忆系统标准规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-mem-001-记忆系统标准规范">[DESIGN-MEM-001] 记忆系统标准规范</a></li><li class="lvl-2"><a href="#1-记忆分类体系">1. 记忆分类体系</a></li><li class="lvl-3"><a href="#1-1-语义类型-semantic-types">1.1 语义类型（Semantic Types）</a></li><li class="lvl-3"><a href="#1-2-保留层级-retention-tiers">1.2 保留层级（Retention Tiers）</a></li><li class="lvl-2"><a href="#2-记忆文件格式规范">2. 记忆文件格式规范</a></li><li class="lvl-3"><a href="#2-1-文件命名规则">2.1 文件命名规则</a></li><li class="lvl-3"><a href="#2-2-文件内容格式">2.2 文件内容格式</a></li><li class="lvl-3"><a href="#2-3-内容质量要求">2.3 内容质量要求</a></li><li class="lvl-2"><a href="#3-记忆生命周期管理">3. 记忆生命周期管理</a></li><li class="lvl-3"><a href="#3-1-生命周期状态机">3.1 生命周期状态机</a></li><li class="lvl-3"><a href="#3-2-三阶段-做梦-记忆巩固">3.2 三阶段&quot;做梦&quot;记忆巩固</a></li><li class="lvl-3"><a href="#3-3-蒸馏规则-distillation-rules">3.3 蒸馏规则（Distillation Rules）</a></li><li class="lvl-2"><a href="#4-记忆存储位置">4. 记忆存储位置</a></li><li class="lvl-3"><a href="#4-1-核心记忆目录">4.1 核心记忆目录</a></li><li class="lvl-3"><a href="#4-2-环境变量控制">4.2 环境变量控制</a></li><li class="lvl-2"><a href="#5-记忆清空规范">5. 记忆清空规范</a></li><li class="lvl-3"><a href="#5-1-清空原则">5.1 清空原则</a></li><li class="lvl-3"><a href="#5-2-清空优先级">5.2 清空优先级</a></li><li class="lvl-3"><a href="#5-3-清空脚本设计">5.3 清空脚本设计</a></li><li class="lvl-2"><a href="#6-标准记忆模板">6. 标准记忆模板</a></li><li class="lvl-3"><a href="#6-1-用户画像模板">6.1 用户画像模板</a></li><li class="lvl-3"><a href="#6-2-项目背景模板">6.2 项目背景模板</a></li><li class="lvl-3"><a href="#6-3-反馈偏好模板">6.3 反馈偏好模板</a></li><li class="lvl-2"><a href="#7-验证与监控">7. 验证与监控</a></li><li class="lvl-3"><a href="#7-1-健康检查命令">7.1 健康检查命令</a></li><li class="lvl-3"><a href="#7-2-监控指标">7.2 监控指标</a></li><li class="lvl-2"><a href="#8-最佳实践">8. 最佳实践</a></li><li class="lvl-3"><a href="#8-1-记忆写入">8.1 记忆写入</a></li><li class="lvl-3"><a href="#8-2-记忆清空">8.2 记忆清空</a></li><li class="lvl-3"><a href="#8-3-记忆恢复">8.3 记忆恢复</a></li><li class="lvl-2"><a href="#9-故障排除">9. 故障排除</a></li><li class="lvl-3"><a href="#9-1-常见问题">9.1 常见问题</a></li><li class="lvl-3"><a href="#9-2-紧急恢复">9.2 紧急恢复</a></li><li class="lvl-2"><a href="#10-版本历史">10. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-mem-001-记忆系统标准规范">[DESIGN-MEM-001] 记忆系统标准规范<a class="anchor" href="#design-mem-001-记忆系统标准规范" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档定义 khy-os 记忆系统的标准规范，包括记忆分类、文件格式、生命周期管理、清空与恢复流程。</p></blockquote>
+<hr>
+<h2 id="1-记忆分类体系">1. 记忆分类体系<a class="anchor" href="#1-记忆分类体系" aria-label="锚点">#</a></h2>
+<h3 id="1-1-语义类型-semantic-types">1.1 语义类型（Semantic Types）<a class="anchor" href="#1-1-语义类型-semantic-types" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>说明</th><th>默认保留层级</th><th>保鲜天数</th><th>典型内容</th></tr></thead><tbody><tr><td><code>user</code></td><td>用户身份、核心偏好</td><td>permanent</td><td>3650</td><td>用户姓名、语言偏好、工作习惯</td></tr><tr><td><code>feedback</code></td><td>反馈偏好、交互风格</td><td>cross_session</td><td>540</td><td>回复风格偏好、错误反馈模式</td></tr><tr><td><code>reference</code></td><td>外部资源、参考资料</td><td>cross_session</td><td>365</td><td>文档链接、API 参考、知识库</td></tr><tr><td><code>project</code></td><td>项目背景、上下文</td><td>cross_session</td><td>180</td><td>项目架构、技术栈、开发约定</td></tr></tbody></table>
+<h3 id="1-2-保留层级-retention-tiers">1.2 保留层级（Retention Tiers）<a class="anchor" href="#1-2-保留层级-retention-tiers" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>层级</th><th>名称</th><th>说明</th><th>持久化</th></tr></thead><tbody><tr><td>Layer 1</td><td><code>short_term</code></td><td>会话内记忆，会话结束即遗忘</td><td>❌ 不落盘</td></tr><tr><td>Layer 2</td><td><code>cross_session</code></td><td>跨会话持久记忆，按保鲜期自然老化</td><td>✅ 落盘</td></tr><tr><td>Layer 3</td><td><code>permanent</code></td><td>永久记忆，永不自动遗忘</td><td>✅ 落盘</td></tr></tbody></table>
+<hr>
+<h2 id="2-记忆文件格式规范">2. 记忆文件格式规范<a class="anchor" href="#2-记忆文件格式规范" aria-label="锚点">#</a></h2>
+<h3 id="2-1-文件命名规则">2.1 文件命名规则<a class="anchor" href="#2-1-文件命名规则" aria-label="锚点">#</a></h3>
+<pre><code>&lt;type&gt;_&lt;name&gt;_&lt;hash&gt;.md</code></pre>
+<ul><li><code>type</code>: 语义类型（user/feedback/project/reference）</li><li><code>name</code>: 记忆名称（URL-safe，不超过 50 字符）</li><li><code>hash</code>: 8 位 UUID 前缀（防冲突）</li></ul>
+<p><strong>示例</strong>: <code>feedback_system------_dd1d67bf.md</code></p>
+<h3 id="2-2-文件内容格式">2.2 文件内容格式<a class="anchor" href="#2-2-文件内容格式" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-meta">---</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">&lt;记忆标题&gt;</span>                    <span class="hljs-comment"># 必填，唯一标识</span>
+<span class="hljs-attr">description:</span> <span class="hljs-string">&lt;一行摘要&gt;</span>              <span class="hljs-comment"># 必填，用于召回匹配</span>
+<span class="hljs-attr">type:</span> <span class="hljs-string">&lt;user|feedback|project|reference&gt;</span>  <span class="hljs-comment"># 语义类型</span>
+<span class="hljs-attr">tier:</span> <span class="hljs-string">&lt;short_term|cross_session|permanent&gt;</span>  <span class="hljs-comment"># 保留层级</span>
+<span class="hljs-attr">updated:</span> <span class="hljs-string">&lt;ISO-8601&gt;</span>                 <span class="hljs-comment"># 最后更新时间</span>
+<span class="hljs-meta">---
+</span>
+<span class="hljs-string">&lt;记忆正文内容&gt;</span></code></pre>
+<h3 id="2-3-内容质量要求">2.3 内容质量要求<a class="anchor" href="#2-3-内容质量要求" aria-label="锚点">#</a></h3>
+<ul><li><strong>最小长度</strong>: 正文 ≥ 12 字符（<code>KHY_MEMORY_MIN_BODY_CHARS</code>）</li><li><strong>去重阈值</strong>: Jaccard 相似度 ≥ 0.82 视为重复（<code>KHY_MEMORY_DUP_THRESHOLD</code>）</li><li><strong>结构化</strong>: 优先使用列表、表格等结构化格式</li><li><strong>语言</strong>: 面向用户的字符串使用中文，代码注释使用英文</li></ul>
+<hr>
+<h2 id="3-记忆生命周期管理">3. 记忆生命周期管理<a class="anchor" href="#3-记忆生命周期管理" aria-label="锚点">#</a></h2>
+<h3 id="3-1-生命周期状态机">3.1 生命周期状态机<a class="anchor" href="#3-1-生命周期状态机" aria-label="锚点">#</a></h3>
+<pre><code>active → recent → archived → dream → compressed → pruned
+                                                    ↓
+                                              可恢复到 active</code></pre>
+<h3 id="3-2-三阶段-做梦-记忆巩固">3.2 三阶段&quot;做梦&quot;记忆巩固<a class="anchor" href="#3-2-三阶段-做梦-记忆巩固" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>阶段</th><th>触发时机</th><th>主要任务</th><th>相似度阈值</th></tr></thead><tbody><tr><td>Light</td><td>每 6 小时</td><td>快速去重</td><td>0.9</td></tr><tr><td>Deep</td><td>每日凌晨 3 点</td><td>分析合成，健康评分</td><td>0.35（低于自动恢复）</td></tr><tr><td>REM</td><td>每周日凌晨 5 点</td><td>跨记忆模式提取</td><td>-</td></tr></tbody></table>
+<h3 id="3-3-蒸馏规则-distillation-rules">3.3 蒸馏规则（Distillation Rules）<a class="anchor" href="#3-3-蒸馏规则-distillation-rules" aria-label="锚点">#</a></h3>
+<ol><li><strong>空记忆</strong>: 正文 &lt; 12 字符 → 归档</li><li><strong>重复</strong>: token Jaccard ≥ 0.82 的近重复 → 归档较弱者</li><li><strong>过期</strong>: 超过类型保鲜天数 → 归档（user 类几乎不过期）</li></ol>
+<hr>
+<h2 id="4-记忆存储位置">4. 记忆存储位置<a class="anchor" href="#4-记忆存储位置" aria-label="锚点">#</a></h2>
+<h3 id="4-1-核心记忆目录">4.1 核心记忆目录<a class="anchor" href="#4-1-核心记忆目录" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>位置</th><th>用途</th><th>文件类型</th></tr></thead><tbody><tr><td><code>.khy/memory/</code></td><td>核心记忆文件</td><td><code>.md</code>（frontmatter 格式）</td></tr><tr><td><code>.khy/memory/MEMORY.md</code></td><td>索引入口</td><td>Markdown</td></tr><tr><td><code>.khy/growth/</code></td><td>成长/学习数据</td><td><code>.json</code></td></tr><tr><td><code>.khy/skills/</code></td><td>学习缓存</td><td><code>.md</code></td></tr><tr><td><code>.khy/training/</code></td><td>训练数据</td><td><code>.jsonl</code></td></tr><tr><td><code>.khy/sessions.db</code></td><td>会话数据库</td><td>SQLite</td></tr><tr><td><code>.khyos/</code></td><td>侧记忆系统</td><td><code>.json</code></td></tr></tbody></table>
+<h3 id="4-2-环境变量控制">4.2 环境变量控制<a class="anchor" href="#4-2-环境变量控制" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>变量</th><th>默认值</th><th>说明</th></tr></thead><tbody><tr><td><code>KHY_DISABLE_MEMORY</code></td><td>off</td><td>全局记忆开关</td></tr><tr><td><code>KHY_MEMORY_DIR</code></td><td>-</td><td>自定义记忆目录</td></tr><tr><td><code>KHY_PROACTIVE_MEMORY</code></td><td>on</td><td>主动回忆层</td></tr><tr><td><code>KHY_MEMORY_TIERS</code></td><td>on</td><td>分层模型</td></tr><tr><td><code>KHY_MEMORY_TRIGGER</code></td><td>on</td><td>自动捕获</td></tr><tr><td><code>KHY_PROACTIVE_CAPTURE</code></td><td>on</td><td>主动捕获子层</td></tr><tr><td><code>KHY_MEMORY_STALENESS</code></td><td>on</td><td>过期判定</td></tr><tr><td><code>KHY_MEMORY_DISTILL_AUTO</code></td><td>report</td><td>自动蒸馏模式</td></tr><tr><td><code>KHY_MEMORY_SESSION_PRIME</code></td><td>on</td><td>会话启动填充</td></tr><tr><td><code>KHY_PROJECT_MEMORY</code></td><td>on</td><td>项目级记忆</td></tr></tbody></table>
+<hr>
+<h2 id="5-记忆清空规范">5. 记忆清空规范<a class="anchor" href="#5-记忆清空规范" aria-label="锚点">#</a></h2>
+<h3 id="5-1-清空原则">5.1 清空原则<a class="anchor" href="#5-1-清空原则" aria-label="锚点">#</a></h3>
+<ul><li><strong>安全第一</strong>: 所有清空操作必须可恢复</li><li><strong>归档而非删除</strong>: &quot;忘记&quot; = 归档到 <code>.archive/</code> 目录</li><li><strong>Dry-run 默认</strong>: 不加 <code>--apply</code> 仅生成报告</li><li><strong>分层清理</strong>: 按优先级分层清理，避免误删重要记忆</li></ul>
+<h3 id="5-2-清空优先级">5.2 清空优先级<a class="anchor" href="#5-2-清空优先级" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>优先级</th><th>位置</th><th>操作</th><th>说明</th></tr></thead><tbody><tr><td><strong>P0</strong></td><td><code>.khy/memory/*.md</code></td><td>归档到 <code>.archive/</code></td><td>核心记忆文件</td></tr><tr><td><strong>P0</strong></td><td><code>.khy/memory/MEMORY.md</code></td><td>重置为模板</td><td>索引入口</td></tr><tr><td><strong>P0</strong></td><td><code>.khy/growth/agent_memory.json</code></td><td>重置为初始结构</td><td>最大记忆体</td></tr><tr><td><strong>P1</strong></td><td><code>.khy/growth/*.json</code>（其余）</td><td>重置为初始值</td><td>知识/偏好/习惯/技能</td></tr><tr><td><strong>P1</strong></td><td><code>.khy/skills/learn-*.md</code></td><td>归档</td><td>学习缓存</td></tr><tr><td><strong>P1</strong></td><td><code>.khy/training/*.jsonl</code></td><td>清空</td><td>训练交互记录</td></tr><tr><td><strong>P2</strong></td><td><code>.khy/sessions.db</code></td><td>可选清理</td><td>会话数据库</td></tr><tr><td><strong>P2</strong></td><td><code>.khy/sessions/</code></td><td>清理 replay/trace 文件</td><td>会话回放数据</td></tr><tr><td><strong>P2</strong></td><td><code>.khy/profile.json</code></td><td>重置</td><td>用户画像</td></tr><tr><td><strong>P3</strong></td><td><code>.khy/.khyquant_history</code></td><td>清空</td><td>命令历史</td></tr><tr><td><strong>P3</strong></td><td><code>.khyos/</code> 相关文件</td><td>可选清理</td><td>ilink/taste 数据</td></tr></tbody></table>
+<h3 id="5-3-清空脚本设计">5.3 清空脚本设计<a class="anchor" href="#5-3-清空脚本设计" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// scripts/memory/clear-memory.js</span>
+<span class="hljs-keyword">const</span> fs = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;fs&#x27;</span>);
+<span class="hljs-keyword">const</span> path = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;path&#x27;</span>);
+
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">MEMORY_DIR</span> = path.<span class="hljs-title function_">resolve</span>(<span class="hljs-string">&#x27;.khy/memory&#x27;</span>);
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">ARCHIVE_DIR</span> = path.<span class="hljs-title function_">join</span>(<span class="hljs-variable constant_">MEMORY_DIR</span>, <span class="hljs-string">&#x27;.archive&#x27;</span>);
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">GROWTH_DIR</span> = path.<span class="hljs-title function_">resolve</span>(<span class="hljs-string">&#x27;.khy/growth&#x27;</span>);
+
+<span class="hljs-comment">// 1. 归档核心记忆文件</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">archiveMemoryFiles</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-comment">// 确保归档目录存在</span>
+  <span class="hljs-keyword">if</span> (!fs.<span class="hljs-title function_">existsSync</span>(<span class="hljs-variable constant_">ARCHIVE_DIR</span>)) {
+    fs.<span class="hljs-title function_">mkdirSync</span>(<span class="hljs-variable constant_">ARCHIVE_DIR</span>, { <span class="hljs-attr">recursive</span>: <span class="hljs-literal">true</span> });
+  }
+  
+  <span class="hljs-comment">// 归档所有 .md 文件（除 MEMORY.md）</span>
+  <span class="hljs-keyword">const</span> files = fs.<span class="hljs-title function_">readdirSync</span>(<span class="hljs-variable constant_">MEMORY_DIR</span>)
+    .<span class="hljs-title function_">filter</span>(<span class="hljs-function"><span class="hljs-params">f</span> =&gt;</span> f.<span class="hljs-title function_">endsWith</span>(<span class="hljs-string">&#x27;.md&#x27;</span>) &amp;&amp; f !== <span class="hljs-string">&#x27;MEMORY.md&#x27;</span>);
+  
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> file <span class="hljs-keyword">of</span> files) {
+    <span class="hljs-keyword">const</span> src = path.<span class="hljs-title function_">join</span>(<span class="hljs-variable constant_">MEMORY_DIR</span>, file);
+    <span class="hljs-keyword">const</span> dest = path.<span class="hljs-title function_">join</span>(<span class="hljs-variable constant_">ARCHIVE_DIR</span>, file);
+    fs.<span class="hljs-title function_">renameSync</span>(src, dest);
+  }
+  
+  <span class="hljs-keyword">return</span> files.<span class="hljs-property">length</span>;
+}
+
+<span class="hljs-comment">// 2. 重置 MEMORY.md 为模板</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">resetMemoryIndex</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> template = <span class="hljs-string">`# 记忆索引
+
+&gt; 本文件由记忆系统自动维护，记录所有持久化记忆的索引。
+
+## 记忆列表
+
+*暂无记忆*
+
+---
+*最后更新: <span class="hljs-subst">${<span class="hljs-keyword">new</span> <span class="hljs-built_in">Date</span>().toISOString()}</span>*
+`</span>;
+  
+  fs.<span class="hljs-title function_">writeFileSync</span>(path.<span class="hljs-title function_">join</span>(<span class="hljs-variable constant_">MEMORY_DIR</span>, <span class="hljs-string">&#x27;MEMORY.md&#x27;</span>), template);
+}
+
+<span class="hljs-comment">// 3. 重置成长数据</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">resetGrowthData</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> initialStructures = {
+    <span class="hljs-string">&#x27;agent_memory.json&#x27;</span>: {
+      <span class="hljs-attr">version</span>: <span class="hljs-number">1</span>,
+      <span class="hljs-attr">sharedContext</span>: {
+        <span class="hljs-attr">currentMarketRegime</span>: <span class="hljs-string">&#x27;unknown&#x27;</span>,
+        <span class="hljs-attr">recentSignals</span>: [],
+        <span class="hljs-attr">crossAgentInsights</span>: [],
+        <span class="hljs-attr">lastUpdated</span>: <span class="hljs-literal">null</span>,
+        <span class="hljs-attr">responseStyles</span>: []
+      }
+    },
+    <span class="hljs-string">&#x27;agent_specialization.json&#x27;</span>: { <span class="hljs-attr">domains</span>: [], <span class="hljs-attr">updated</span>: <span class="hljs-literal">null</span> },
+    <span class="hljs-string">&#x27;analysis_patterns.json&#x27;</span>: { <span class="hljs-attr">patterns</span>: [], <span class="hljs-attr">updated</span>: <span class="hljs-literal">null</span> },
+    <span class="hljs-string">&#x27;habits.json&#x27;</span>: { <span class="hljs-attr">habits</span>: [], <span class="hljs-attr">updated</span>: <span class="hljs-literal">null</span> },
+    <span class="hljs-string">&#x27;knowledge.json&#x27;</span>: { <span class="hljs-attr">items</span>: [], <span class="hljs-attr">updated</span>: <span class="hljs-literal">null</span> },
+    <span class="hljs-string">&#x27;skills_learned.json&#x27;</span>: { <span class="hljs-attr">skills</span>: [], <span class="hljs-attr">updated</span>: <span class="hljs-literal">null</span> },
+    <span class="hljs-string">&#x27;skill_usage.json&#x27;</span>: { <span class="hljs-attr">usage</span>: [], <span class="hljs-attr">updated</span>: <span class="hljs-literal">null</span> },
+    <span class="hljs-string">&#x27;strategy_performance.json&#x27;</span>: { <span class="hljs-attr">strategies</span>: [], <span class="hljs-attr">updated</span>: <span class="hljs-literal">null</span> },
+    <span class="hljs-string">&#x27;user_knowledge_base.json&#x27;</span>: { <span class="hljs-attr">items</span>: [], <span class="hljs-attr">updated</span>: <span class="hljs-literal">null</span> },
+    <span class="hljs-string">&#x27;user_preferences.json&#x27;</span>: { <span class="hljs-attr">preferences</span>: [], <span class="hljs-attr">updated</span>: <span class="hljs-literal">null</span> }
+  };
+  
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> [file, structure] <span class="hljs-keyword">of</span> <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">entries</span>(initialStructures)) {
+    <span class="hljs-keyword">const</span> filePath = path.<span class="hljs-title function_">join</span>(<span class="hljs-variable constant_">GROWTH_DIR</span>, file);
+    <span class="hljs-keyword">if</span> (fs.<span class="hljs-title function_">existsSync</span>(filePath)) {
+      fs.<span class="hljs-title function_">writeFileSync</span>(filePath, <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>(structure, <span class="hljs-literal">null</span>, <span class="hljs-number">2</span>));
+    }
+  }
+}
+
+<span class="hljs-comment">// 主函数</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">clearMemory</span>(<span class="hljs-params">options = {}</span>) {
+  <span class="hljs-keyword">const</span> { dryRun = <span class="hljs-literal">true</span>, level = <span class="hljs-string">&#x27;all&#x27;</span> } = options;
+  
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`\n🧹 记忆清空<span class="hljs-subst">${dryRun ? <span class="hljs-string">&#x27;预览&#x27;</span> : <span class="hljs-string">&#x27;执行&#x27;</span>}</span>\n`</span>);
+  
+  <span class="hljs-keyword">if</span> (dryRun) {
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;将执行以下操作:&#x27;</span>);
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;1. 归档 .khy/memory/*.md 文件&#x27;</span>);
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;2. 重置 MEMORY.md 为模板&#x27;</span>);
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;3. 重置 .khy/growth/*.json 为初始结构&#x27;</span>);
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;\n使用 --apply 参数执行实际操作&#x27;</span>);
+    <span class="hljs-keyword">return</span>;
+  }
+  
+  <span class="hljs-comment">// 执行清空</span>
+  <span class="hljs-keyword">const</span> archivedCount = <span class="hljs-title function_">archiveMemoryFiles</span>();
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`✓ 已归档 <span class="hljs-subst">${archivedCount}</span> 个记忆文件`</span>);
+  
+  <span class="hljs-title function_">resetMemoryIndex</span>();
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;✓ 已重置 MEMORY.md&#x27;</span>);
+  
+  <span class="hljs-title function_">resetGrowthData</span>();
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;✓ 已重置成长数据&#x27;</span>);
+  
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;\n✅ 记忆清空完成&#x27;</span>);
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;恢复命令: /memory distill restore&#x27;</span>);
+}
+
+<span class="hljs-comment">// CLI 入口</span>
+<span class="hljs-keyword">if</span> (<span class="hljs-built_in">require</span>.<span class="hljs-property">main</span> === <span class="hljs-variable language_">module</span>) {
+  <span class="hljs-keyword">const</span> args = process.<span class="hljs-property">argv</span>.<span class="hljs-title function_">slice</span>(<span class="hljs-number">2</span>);
+  <span class="hljs-keyword">const</span> dryRun = !args.<span class="hljs-title function_">includes</span>(<span class="hljs-string">&#x27;--apply&#x27;</span>);
+  <span class="hljs-title function_">clearMemory</span>({ dryRun });
+}
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = { clearMemory, archiveMemoryFiles, resetMemoryIndex, resetGrowthData };</code></pre>
+<hr>
+<h2 id="6-标准记忆模板">6. 标准记忆模板<a class="anchor" href="#6-标准记忆模板" aria-label="锚点">#</a></h2>
+<h3 id="6-1-用户画像模板">6.1 用户画像模板<a class="anchor" href="#6-1-用户画像模板" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-meta">---</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">user-profile-basic</span>
+<span class="hljs-attr">description:</span> <span class="hljs-string">用户基本信息与核心偏好</span>
+<span class="hljs-attr">type:</span> <span class="hljs-string">user</span>
+<span class="hljs-attr">tier:</span> <span class="hljs-string">permanent</span>
+<span class="hljs-attr">updated:</span> <span class="hljs-number">2026-09-04T00:00:00.000Z</span>
+<span class="hljs-meta">---
+</span>
+<span class="hljs-comment">## 基本信息</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">称呼:</span> [<span class="hljs-string">用户称呼</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">语言偏好:</span> <span class="hljs-string">简体中文</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">时区:</span> [<span class="hljs-string">用户时区</span>]
+
+<span class="hljs-comment">## 工作习惯</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">活跃时段:</span> [<span class="hljs-string">常用时间段</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">交互风格:</span> [<span class="hljs-string">简洁/详细</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">反馈偏好:</span> [<span class="hljs-string">直接/委婉</span>]
+
+<span class="hljs-comment">## 技术背景</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">主要语言:</span> [<span class="hljs-string">编程语言</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">框架偏好:</span> [<span class="hljs-string">技术栈</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">工具链:</span> [<span class="hljs-string">常用工具</span>]</code></pre>
+<h3 id="6-2-项目背景模板">6.2 项目背景模板<a class="anchor" href="#6-2-项目背景模板" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-meta">---</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">project-context-{project-name}</span>
+<span class="hljs-attr">description:</span> {<span class="hljs-string">项目名称</span>} <span class="hljs-string">的技术架构与开发约定</span>
+<span class="hljs-attr">type:</span> <span class="hljs-string">project</span>
+<span class="hljs-attr">tier:</span> <span class="hljs-string">cross_session</span>
+<span class="hljs-attr">updated:</span> <span class="hljs-number">2026-09-04T00:00:00.000Z</span>
+<span class="hljs-meta">---
+</span>
+<span class="hljs-comment">## 项目概览</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">名称:</span> {<span class="hljs-string">项目名称</span>}
+<span class="hljs-bullet">-</span> <span class="hljs-string">类型:</span> [<span class="hljs-string">Web/CLI/库/服务</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">技术栈:</span> [<span class="hljs-string">主要技术</span>]
+
+<span class="hljs-comment">## 架构约定</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">目录结构:</span> [<span class="hljs-string">规范链接</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">命名规范:</span> [<span class="hljs-string">约定</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">测试要求:</span> [<span class="hljs-string">覆盖率/框架</span>]
+
+<span class="hljs-comment">## 开发流程</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">分支策略:</span> [<span class="hljs-string">Git</span> <span class="hljs-string">Flow/Trunk</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">代码审查:</span> [<span class="hljs-string">要求</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">部署流程:</span> [<span class="hljs-string">CI/CD</span>]</code></pre>
+<h3 id="6-3-反馈偏好模板">6.3 反馈偏好模板<a class="anchor" href="#6-3-反馈偏好模板" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-meta">---</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">feedback-style-{场景}</span>
+<span class="hljs-attr">description:</span> {<span class="hljs-string">场景</span>} <span class="hljs-string">下的交互风格偏好</span>
+<span class="hljs-attr">type:</span> <span class="hljs-string">feedback</span>
+<span class="hljs-attr">tier:</span> <span class="hljs-string">cross_session</span>
+<span class="hljs-attr">updated:</span> <span class="hljs-number">2026-09-04T00:00:00.000Z</span>
+<span class="hljs-meta">---
+</span>
+<span class="hljs-comment">## 场景</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">触发条件:</span> [<span class="hljs-string">具体场景</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">期望行为:</span> [<span class="hljs-string">AI</span> <span class="hljs-string">应该怎么做</span>]
+
+<span class="hljs-comment">## 偏好设置</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">详细程度:</span> [<span class="hljs-string">简洁/详细</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">格式偏好:</span> [<span class="hljs-string">列表/段落/代码</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">语言风格:</span> [<span class="hljs-string">正式/随意</span>]
+
+<span class="hljs-comment">## 示例</span>
+<span class="hljs-bullet">-</span> <span class="hljs-string">好的回复:</span> [<span class="hljs-string">示例</span>]
+<span class="hljs-bullet">-</span> <span class="hljs-string">不好的回复:</span> [<span class="hljs-string">示例</span>]</code></pre>
+<hr>
+<h2 id="7-验证与监控">7. 验证与监控<a class="anchor" href="#7-验证与监控" aria-label="锚点">#</a></h2>
+<h3 id="7-1-健康检查命令">7.1 健康检查命令<a class="anchor" href="#7-1-健康检查命令" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 检查记忆系统状态</span>
+khy memory project
+
+<span class="hljs-comment"># 查看蒸馏报告</span>
+khy memory distill
+
+<span class="hljs-comment"># 查看已归档记忆</span>
+khy memory distill archived
+
+<span class="hljs-comment"># 恢复误删记忆</span>
+khy memory distill restore [filename]</code></pre>
+<h3 id="7-2-监控指标">7.2 监控指标<a class="anchor" href="#7-2-监控指标" aria-label="锚点">#</a></h3>
+<ul><li><strong>记忆总数</strong>: 各类型记忆文件数量</li><li><strong>健康评分</strong>: 蒸馏算法计算的记忆质量分数</li><li><strong>老化率</strong>: 过期记忆占比</li><li><strong>重复率</strong>: 重复记忆占比</li></ul>
+<hr>
+<h2 id="8-最佳实践">8. 最佳实践<a class="anchor" href="#8-最佳实践" aria-label="锚点">#</a></h2>
+<h3 id="8-1-记忆写入">8.1 记忆写入<a class="anchor" href="#8-1-记忆写入" aria-label="锚点">#</a></h3>
+<ol><li><strong>明确类型</strong>: 根据内容选择正确的语义类型</li><li><strong>简洁描述</strong>: description 字段用于召回匹配，应简洁准确</li><li><strong>避免重复</strong>: 写入前检查是否已存在相似记忆</li><li><strong>定期维护</strong>: 每月运行一次蒸馏，清理过期记忆</li></ol>
+<h3 id="8-2-记忆清空">8.2 记忆清空<a class="anchor" href="#8-2-记忆清空" aria-label="锚点">#</a></h3>
+<ol><li><strong>备份优先</strong>: 清空前确保有完整备份</li><li><strong>分批清理</strong>: 按优先级分批清理，避免一次性清空所有</li><li><strong>验证恢复</strong>: 清空后测试关键功能是否正常</li><li><strong>文档记录</strong>: 记录清空原因和恢复方法</li></ol>
+<h3 id="8-3-记忆恢复">8.3 记忆恢复<a class="anchor" href="#8-3-记忆恢复" aria-label="锚点">#</a></h3>
+<ol><li><strong>精准恢复</strong>: 优先恢复特定文件，而非全部恢复</li><li><strong>验证内容</strong>: 恢复后检查记忆内容是否仍然有效</li><li><strong>更新时间</strong>: 恢复后更新 <code>updated</code> 时间戳</li></ol>
+<hr>
+<h2 id="9-故障排除">9. 故障排除<a class="anchor" href="#9-故障排除" aria-label="锚点">#</a></h2>
+<h3 id="9-1-常见问题">9.1 常见问题<a class="anchor" href="#9-1-常见问题" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>问题</th><th>原因</th><th>解决方案</th></tr></thead><tbody><tr><td>记忆丢失</td><td>误删或蒸馏过度</td><td>使用 <code>/memory distill restore</code> 恢复</td></tr><tr><td>记忆重复</td><td>自动捕获重复写入</td><td>运行蒸馏去重</td></tr><tr><td>记忆过期</td><td>超过保鲜期</td><td>检查类型设置，调整保鲜天数</td></tr><tr><td>索引损坏</td><td>MEMORY.md 文件损坏</td><td>重置为模板</td></tr></tbody></table>
+<h3 id="9-2-紧急恢复">9.2 紧急恢复<a class="anchor" href="#9-2-紧急恢复" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 停止记忆系统</span>
+<span class="hljs-built_in">export</span> KHY_DISABLE_MEMORY=1
+
+<span class="hljs-comment"># 2. 从备份恢复</span>
+<span class="hljs-built_in">cp</span> -r /backup/.khy/memory/* .khy/memory/
+
+<span class="hljs-comment"># 3. 重建索引</span>
+khy memory project
+
+<span class="hljs-comment"># 4. 重新启用记忆系统</span>
+<span class="hljs-built_in">unset</span> KHY_DISABLE_MEMORY</code></pre>
+<hr>
+<h2 id="10-版本历史">10. 版本历史<a class="anchor" href="#10-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义标准记忆规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 记忆系统设计团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-MEM/[DESIGN-MEM-000] 记忆系统总结.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-MEM-000] 记忆系统总结</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-MEM/[DESIGN-MEM-002] 记忆时机指南.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-MEM-002] 记忆时机指南</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-MEM/[DESIGN-MEM-001] 记忆系统标准规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

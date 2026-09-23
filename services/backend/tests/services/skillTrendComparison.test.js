@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-describe('compareWithHistory â€?skill-scenario drift detection', () => {
+describe('compareWithHistory â€”skill-scenario drift detection', () => {
   let tmpDir;
   let historyDir;
 

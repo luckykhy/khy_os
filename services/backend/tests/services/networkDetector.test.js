@@ -1,15 +1,17 @@
 'use strict';
 /**
- * networkDetector.test.js (node:test)
+ * networkDetector.test.js (jest)
  *
- * Goal "优化khy的本地模�?: the connectivity oracle that drives offline /
+ * Goal "优化khy的本地模�?: the connectivity oracle that drives offline /
  * local-mode degradation must (a) carry no hardcoded finance host, (b) treat
  * the system online when ANY of several neutral probes connects, only offline
  * when all fail, (c) honor env-configured targets/timeout (零硬编码), and
  * (d) expose freshness via getStatus() (状态透明).
  *
  * Hermetic: net.connect is monkeypatched to a scripted fake socket; no real
- * sockets are opened. The module is re-required per case to pick up env config.
+ * sockets are opened. The module registry is reset per case so each test gets
+ * a fresh singleton with its own env config (jest.resetModules — jest keeps
+ * its own registry, so require.cache surgery is a no-op here).
  */
 const net = require('net');
 const { EventEmitter } = require('events');
@@ -37,13 +39,12 @@ function loadDetector({ env = {}, outcome }) {
     queueMicrotask(() => sock.emit(ev));
     return sock;
   };
-  delete require.cache[DETECTOR_PATH];
-  delete require.cache[LOGGER_PATH];
-  require.cache[LOGGER_PATH] = {
-    id: LOGGER_PATH, filename: LOGGER_PATH, loaded: true, exports: {
-      info() {}, warn() {}, error() {}, debug() {},
-    },
-  };
+  // Fresh registry: constructor must re-read env, and the logger stub must
+  // take effect for THIS require of the detector.
+  jest.resetModules();
+  jest.mock(LOGGER_PATH, () => ({
+    info() {}, warn() {}, error() {}, debug() {},
+  }), { virtual: false });
   const detector = require(DETECTOR_PATH);
   const restore = () => {
     net.connect = savedConnect;
@@ -51,12 +52,11 @@ function loadDetector({ env = {}, outcome }) {
       if (savedEnv[k] === undefined) delete process.env[k];
       else process.env[k] = savedEnv[k];
     }
-    delete require.cache[DETECTOR_PATH];
-    delete require.cache[LOGGER_PATH];
+    jest.restoreAllMocks();
+    jest.resetModules();
   };
   return { detector, restore };
 }
-// ── shouldAttemptNetwork(): permissive gate for forced-local web fallback ─────
 
 describe('Network Detector', () => {
   test('no hardcoded finance host in default targets', async () => {
@@ -109,7 +109,7 @@ describe('Network Detector', () => {
         outcome: () => 'error',
       });
       try {
-        assert.deepStrictEqual(detector.getStatus().targets, [
+        expect(detector.getStatus().targets).toEqual([
           'proxy.internal:8443',
           'mirror.local:443', // default port applied when omitted
         ]);
@@ -136,14 +136,14 @@ describe('Network Detector', () => {
         expect(s.online).toBe(true);
         expect(s.stale).toBe(false);
         expect(typeof s.ageMs === 'number' && s.ageMs >= 0).toBeTruthy();
-        expect(Array.isArray(s.targets).toBeTruthy() && s.targets.length >= 1);
+        expect(Array.isArray(s.targets) && s.targets.length >= 1).toBe(true);
       } finally { restore(); }
   });
 
   test('shouldAttemptNetwork() is permissive before any check', async () => {
       const { detector, restore } = loadDetector({ outcome: () => 'error' });
       try {
-        // Never checked �?must NOT skip network (could be online, we just don't know).
+        // Never checked — must NOT skip network (could be online, we just don't know).
         expect(detector.shouldAttemptNetwork()).toBe(true);
       } finally { restore(); }
   });
@@ -153,7 +153,7 @@ describe('Network Detector', () => {
       try {
         await detector.checkNow();
         expect(detector.isOnline()).toBe(false);
-        // Fresh + offline �?skip the doomed network attempt.
+        // Fresh + offline — skip the doomed network attempt.
         expect(detector.shouldAttemptNetwork()).toBe(false);
       } finally { restore(); }
   });
@@ -169,7 +169,7 @@ describe('Network Detector', () => {
 
   test('shouldAttemptNetwork() falls back to permissive when offline reading is stale', async () => {
       // Tiny interval so the reading goes stale immediately; stale offline must NOT
-      // be trusted to skip �?re-attempt rather than wrongly assume still-offline.
+      // be trusted to skip — re-attempt rather than wrongly assume still-offline.
       const { detector, restore } = loadDetector({
         env: { KHY_NET_PROBE_INTERVAL_MS: '1' },
         outcome: () => 'error',
@@ -178,9 +178,8 @@ describe('Network Detector', () => {
         await detector.checkNow();
         expect(detector.isOnline()).toBe(false);
         await new Promise(r => setTimeout(r, 10)); // age past intervalMs*2
-        expect(detector.shouldAttemptNetwork()).toBe(true, 'stale offline must not suppress');
+        expect(detector.shouldAttemptNetwork()).toBe(true);
       } finally { restore(); }
   });
 
 });
-

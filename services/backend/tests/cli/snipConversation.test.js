@@ -1,13 +1,13 @@
 'use strict';
 /**
- * snipConversation.test.js â€?manual context-trim (CC's Snip) on the authoritative
+ * snipConversation.test.js â€” manual context-trim (CC's Snip) on the authoritative
  * module-closure `_messages` of cli/ai.js.
  *
  * /snip is the user-driven counterpart to /compact: instead of summarizing, it
  * removes content the user judges no longer worth its tokens. Modes:
- *   - default â†?drop the most recent turn (last `user` message through the end)
- *   - count   â†?drop the last N messages
- *   - range   â†?drop 1-based messages a..b (inclusive)
+ *   - default ï¿½?drop the most recent turn (last `user` message through the end)
+ *   - count   ï¿½?drop the last N messages
+ *   - range   ï¿½?drop 1-based messages a..b (inclusive)
  *
  * After removal a trailing assistant message carrying an unresolved tool_use is
  * popped too, so stored history stays Anthropic-API-valid.
@@ -15,14 +15,14 @@
  * Exercises the real `_messages` via the __test__ seam (same as orphanTurnRollback).
  */
 const ai = require('../../src/cli/ai');
+const assert = require('node:assert');
 const { _pushRawMessage } = ai.__test__;
-describe('ai.js â€?snipConversation (manual context trim, CC Snip alignment)', () => {
+
+describe('Snip Conversation', () => {
+  // merged from describe: ai.js â€” snipConversation (manual context trim, CC Snip alignment)
   beforeEach(() => {
     ai.clearHistory();
   });
-});
-
-describe('Snip Conversation', () => {
   test('default drops the most recent turn (from last user message to end)', () => {
         _pushRawMessage({ role: 'user', content: 'Q1' });
         _pushRawMessage({ role: 'assistant', content: 'A1' });

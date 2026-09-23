@@ -28,6 +28,7 @@ describe('humanBytes', () => {
   });
 
   test('formats GB', () => {
-    expect(humanBytes(2 * 1024 * 1024 * 1024)).toBe('2 GB');
+    // Contract: >=100 (or the B tier) rounds, else keep 1 decimal → 2.0 GB
+    expect(humanBytes(2 * 1024 * 1024 * 1024)).toBe('2.0 GB');
   });
 });

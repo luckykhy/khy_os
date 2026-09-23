@@ -24,14 +24,10 @@ const os = require('os');
 const path = require('path');
 
 const { deriveStrategyLedger } = require('../lib/restoreStrategyLedger');
+const { opsDocPath, opsDocRelPath } = require('../lib/docsPaths');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const DOC_PATH = path.join(
-  ROOT,
-  'docs',
-  '07_OPS_运维',
-  '[OPS-MAN-088] 还原策略台账.md'
-);
+const DOC_PATH = opsDocPath('[OPS-MAN-088] 还原策略台账.md');
 const NPM_PKG_NAME = '@khy-os/khy-os';
 const PIP_PKG_NAME = 'khy-os';
 
@@ -116,7 +112,7 @@ function runRestoreLedger(opts = {}) {
     }
   }
   out += `\n${C.dim}诚实边界：台账只建议跳过已证死策略，绝不重排 resolver 的安全恢复链顺序。${C.reset}\n`;
-  out += `${C.dim}详情见：docs/07_OPS_运维/[OPS-MAN-088] 还原策略台账.md${C.reset}\n`;
+  out += `${C.dim}详情见：${opsDocRelPath('[OPS-MAN-088] 还原策略台账.md')}${C.reset}\n`;
   process.stdout.write(out);
   return 0;
 }

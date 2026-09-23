@@ -34,6 +34,7 @@ const APPS = Object.freeze({
   REASONIX: 'reasonix',
   COMMAND_CODE: 'command-code',
   YCODE: 'ycode',
+  ZCODE: 'zcode',
 });
 
 // App → human label (CLI/UI display).
@@ -46,6 +47,7 @@ const APP_LABELS = Object.freeze({
   [APPS.REASONIX]: 'Reasonix',
   [APPS.COMMAND_CODE]: 'Command Code',
   [APPS.YCODE]: 'YCode',
+  [APPS.ZCODE]: 'ZCode',
 });
 
 // Card-level default model per protocol (used by the switch writers when a card

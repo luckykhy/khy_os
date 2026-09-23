@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-QUAL-001] 门禁基线与债务台账规范.md -->
+<title>[DESIGN-QUAL-001] 门禁基线与债务台账规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-QUAL-001] 门禁基线与债务台账规范</div>
+      <header class="hero reveal"><h1>[DESIGN-QUAL-001] 门禁基线与债务台账规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-qual-001-门禁基线与债务台账规范">[DESIGN-QUAL-001] 门禁基线与债务台账规范</a></li><li class="lvl-2"><a href="#1-两种失效模式-先诊断-再开方">1. 两种失效模式（先诊断，再开方）</a></li><li class="lvl-2"><a href="#2-三条原则">2. 三条原则</a></li><li class="lvl-3"><a href="#qual-1-基线必须是-实测值-不是估值">QUAL-1 —— 基线必须是**实测值**，不是估值</a></li><li class="lvl-3"><a href="#qual-2-基线只降不升-上升必须走台账">QUAL-2 —— 基线只降不升；上升必须走台账</a></li><li class="lvl-3"><a href="#qual-3-每一类债务都必须有责任人-期限与分期目标">QUAL-3 —— 每一类债务都必须有责任人、期限与分期目标</a></li><li class="lvl-2"><a href="#3-收敛策略">3. 收敛策略</a></li><li class="lvl-3"><a href="#3-1-通用分期法-存量冻结-增量归零">3.1 通用分期法：存量冻结 + 增量归零</a></li><li class="lvl-3"><a href="#3-2-逐指标处置表-实测于-2026-09-15">3.2 逐指标处置表（实测于 2026-09-15）</a></li><li class="lvl-2"><a href="#4-债务台账">4. 债务台账</a></li><li class="lvl-3"><a href="#4-1-条目结构">4.1 条目结构</a></li><li class="lvl-3"><a href="#4-2-守卫校验项">4.2 守卫校验项</a></li><li class="lvl-2"><a href="#5-收敛后的门禁语义">5. 收敛后的门禁语义</a></li><li class="lvl-2"><a href="#6-版本历史">6. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-qual-001-门禁基线与债务台账规范">[DESIGN-QUAL-001] 门禁基线与债务台账规范<a class="anchor" href="#design-qual-001-门禁基线与债务台账规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>状态</strong>：生效中<br><strong>解决的问题</strong>：两个门禁都<strong>长期为红或形同虚设</strong>，于是被全体忽略 ——<br>① <code>code-standards</code> 的基线数字<strong>不是测出来的</strong>（<code>functionLines</code> 与 <code>nestingDepth</code><br>都写 10800，最大容忍 12000，而实测分别是 2145 与 8707，容忍度是实际的 5.6 倍与 1.4 倍）；<br>② <code>check-repo-layout</code> 存量 5 类违规（合计 148 处）而 baseline 全为 <code>0</code>，门永远红。<br>红着的门等于没有门。<br><strong>强制手段</strong>：<code>npm run check:debt-ledger</code>（<code>scripts/ci/check-debt-ledger.js</code>）<br><strong>真源数据</strong>：<code>scripts/ci/debt-ledger.json</code><br><strong>相关文档</strong>：<code>[DESIGN-COMP-001]</code> 代码复杂度规范、<code>[DESIGN-LAY-005]</code> 仓库层级板块规范、<br><code>[DESIGN-GOV-001]</code> 治理总纲</p></blockquote>
+<hr>
+<h2 id="1-两种失效模式-先诊断-再开方">1. 两种失效模式（先诊断，再开方）<a class="anchor" href="#1-两种失效模式-先诊断-再开方" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>模式</th><th>现象</th><th>本质</th><th>现存实例</th></tr></thead><tbody><tr><td><strong>A 基线膨胀</strong></td><td>基线数字远大于真实水平，门只能拦「翻倍」级别恶化</td><td>基线是<strong>手写估值</strong>而非<strong>实测</strong></td><td><code>code-standards.baseline.json</code></td></tr><tr><td><strong>B 基线与实测脱节</strong></td><td>基线设为 <code>0</code>（意图=零容忍），但实测长年为 N&gt;0，门恒红</td><td>有意图、<strong>无清偿计划</strong>，红被习惯化</td><td><code>repo-layout-baseline.json</code></td></tr></tbody></table>
+<p><strong>两者的共同根因</strong>：基线文件里只有数字，<strong>没有责任人、没有期限、没有分期目标</strong>。<br>没有这些，数字要么被随手写大（模式 A），要么被长期无视（模式 B）。</p>
+<hr>
+<h2 id="2-三条原则">2. 三条原则<a class="anchor" href="#2-三条原则" aria-label="锚点">#</a></h2>
+<h3 id="qual-1-基线必须是-实测值-不是估值">QUAL-1 —— 基线必须是<strong>实测值</strong>，不是估值<a class="anchor" href="#qual-1-基线必须是-实测值-不是估值" aria-label="锚点">#</a></h3>
+<p>任何 <code>*.baseline.json</code> 里的 <code>current</code> / <code>measured</code> 必须可由一条命令复现。<br><strong>发现基线数字与实际不符时，第一步是把基线改成实测值</strong>（即使实测值更宽松），<br>因为一个<strong>准确</strong>的棘轮仍然能拦住回归，而一个<strong>错误</strong>的棘轮连恶化都拦不住。</p>
+<blockquote><p><strong>注意这是收紧而非放宽</strong>：<code>code-standards</code> 的 <code>functionLines</code> 从 <code>12000</code> 改成 <code>2145</code><br>是把容忍度<strong>降低 5.6 倍</strong>。禁止把这一步误解为「放宽标准」。</p></blockquote>
+<h3 id="qual-2-基线只降不升-上升必须走台账">QUAL-2 —— 基线只降不升；上升必须走台账<a class="anchor" href="#qual-2-基线只降不升-上升必须走台账" aria-label="锚点">#</a></h3>
+<p><code>--update-baseline</code> 只允许<strong>下调</strong>。任何上调都必须：</p>
+<ol><li>在 <code>scripts/ci/debt-ledger.json</code> 中新增/更新对应条目；</li><li>条目标明 <code>owner</code> / <code>dueBy</code> / <code>plan</code>；</li><li>在 PR 描述里给出「为什么不能在新代码里直接满足标准」的理由。</li></ol>
+<h3 id="qual-3-每一类债务都必须有责任人-期限与分期目标">QUAL-3 —— 每一类债务都必须有责任人、期限与分期目标<a class="anchor" href="#qual-3-每一类债务都必须有责任人-期限与分期目标" aria-label="锚点">#</a></h3>
+<p>债务台账（<code>scripts/ci/debt-ledger.json</code>）是<strong>唯一的债务登记处</strong>。<br><strong>每一类门禁指标都必须有一条台账条目</strong> —— 由守卫强制（见 §4），<br>这样「新增一类可豁免指标」这个动作本身就自动携带了责任人与期限，<br>不可能悄悄新增一个没人管的指标。</p>
+<hr>
+<h2 id="3-收敛策略">3. 收敛策略<a class="anchor" href="#3-收敛策略" aria-label="锚点">#</a></h2>
+<h3 id="3-1-通用分期法-存量冻结-增量归零">3.1 通用分期法：存量冻结 + 增量归零<a class="anchor" href="#3-1-通用分期法-存量冻结-增量归零" aria-label="锚点">#</a></h3>
+<p>对<strong>无法短期归零</strong>的存量指标（如 352 个超 500 行的文件、2145 个超 50 行的函数）：</p>
+<table><thead><tr><th>动作</th><th>做法</th></tr></thead><tbody><tr><td><strong>存量冻结</strong></td><td>基线设为<strong>实测值</strong>，只降不升（QUAL-1）</td></tr><tr><td><strong>增量归零</strong></td><td>新增/修改的文件必须直接满足标准 —— 参照 <code>pr-gate.yml</code> 既有先例：「Lint added files (blocking, zero tolerance)」正是这个模式</td></tr><tr><td><strong>分期下调</strong></td><td>每清理一批，把基线调低到新实测；台账 <code>target</code> 记录下一站</td></tr><tr><td><strong>禁止新债</strong></td><td>修订后的文件若使该文件指标恶化（如本就 400 行的文件涨到 700 行），按新增违规处理</td></tr></tbody></table>
+<p>这个模式的价值：<strong>存量不被妖魔化，增量被彻底堵死</strong>。库容不再增长，则总债务单调下降。</p>
+<h3 id="3-2-逐指标处置表-实测于-2026-09-15">3.2 逐指标处置表（实测于 2026-09-15）<a class="anchor" href="#3-2-逐指标处置表-实测于-2026-09-15" aria-label="锚点">#</a></h3>
+<h4 id="a-check-repo-layout-模式-b-基线-0-实测-148">A. <code>check-repo-layout</code>（模式 B：基线 0，实测 148）<a class="anchor" href="#a-check-repo-layout-模式-b-基线-0-实测-148" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>指标</th><th>实测</th><th>风险</th><th>处置</th></tr></thead><tbody><tr><td><code>unresolved-require</code></td><td><strong>21</strong></td><td><strong>P1 — 每一处都是潜伏崩溃</strong>（惰性 require 只在跑到那条命令时才炸）</td><td><strong>第一批修完</strong>。80% 是同一类 <code>../</code> 深度算错，机械可修</td></tr><tr><td><code>cross-layer-require</code></td><td><strong>37</strong></td><td>P2 — 违反分层依赖方向</td><td>第二批：改为 workspace 包名引用</td></tr><tr><td><code>dangling-task</code></td><td><strong>89</strong></td><td>P2 — <strong>文档漂移</strong>（实测这些 <code>npm run</code> 目标只出现在文档里，从未定义）</td><td>第三批：逐条三分（改名对齐 / 实现 / 删除引用）</td></tr><tr><td><code>extension-id-hardcode</code></td><td><strong>1</strong></td><td>P2</td><td>随手修</td></tr><tr><td><code>docs-index-complete</code></td><td><strong>0</strong></td><td>—</td><td>✅ 本次已归零</td></tr><tr><td><code>extension-contract</code> / <code>extension-path-drift</code></td><td><strong>0</strong></td><td>—</td><td>✅ 已归零</td></tr></tbody></table>
+<p><strong><code>unresolved-require</code> 的 21 处分组</strong>（实测清单）：</p>
+<table><thead><tr><th>组</th><th>位置</th><th>数量</th><th>特征</th></tr></thead><tbody><tr><td>G1</td><td><code>services/backend/src/cli/tui/ink-components/App.js</code></td><td>10</td><td>指向 <code>src/services/{conversation,session,redpass,workspace}/*</code> —— 这些<strong>目录不存在</strong>，属搬迁后路径未跟改</td></tr><tr><td>G2</td><td><code>services/backend/src/services/domain/**</code></td><td>4</td><td>写成 <code>src/services/package.json</code> —— 应为 <code>services/backend/package.json</code>，<strong><code>../</code> 多算一级</strong></td></tr><tr><td>G3</td><td><code>services/backend/src/services/domain/**</code></td><td>2</td><td>写成 <code>services/backend/src/services/domain/tools/AgentTool</code> —— 应为 <code>src/tools/AgentTool</code>，<strong>目录层级搞错</strong></td></tr><tr><td>G4</td><td><code>services/backend/src/services/domain/maintenance/selfRepair/primitives.js</code></td><td>2</td><td>写成 <code>services/backend/scripts/lib/*</code> —— 应为<strong>仓库根</strong> <code>scripts/lib/*</code></td></tr><tr><td>G5</td><td><code>cli/handlers/provider.js</code> / <code>cli/replSession.js</code></td><td>3</td><td>单点错算，逐个核对</td></tr></tbody></table>
+<p><strong>G2 是最高性价比的靶子</strong>：4 处同一错误模式，改完即消 4 处，且模式清晰到可写守卫防复发。</p>
+<h4 id="b-code-standards-模式-a-基线是估值">B. <code>code-standards</code>（模式 A：基线是估值）<a class="anchor" href="#b-code-standards-模式-a-基线是估值" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>指标</th><th>基线声称</th><th><strong>实测</strong></th><th>偏差</th><th>处置</th></tr></thead><tbody><tr><td><code>fileLines</code>（&gt;500 行文件数）</td><td>512</td><td><strong>352</strong></td><td>高估 1.45×</td><td>改为 352；存量冻结 + 增量归零</td></tr><tr><td><code>functionLines</code>（&gt;50 行函数数）</td><td>10800</td><td><strong>2145</strong></td><td><strong>高估 5.0×</strong></td><td>改为 2145；存量冻结 + 增量归零</td></tr><tr><td><code>nestingDepth</code>（嵌套 &gt;4）</td><td>10800</td><td><strong>8707</strong></td><td>高估 1.24×</td><td><strong>先修计量</strong>（见下）再定目标</td></tr><tr><td><code>consoleLog</code>（非测试文件 <code>console.*</code>）</td><td>4592</td><td><strong>4584</strong></td><td>基本准确</td><td>改为 4584；分批改结构化 logger，目标 0</td></tr><tr><td><code>namingViolations</code></td><td>4</td><td><strong>4</strong></td><td>✅ 准确</td><td>直接修掉 4 处 → 归零</td></tr></tbody></table>
+<p><strong><code>functionLines === nestingDepth === 10800</code> 是决定性证据</strong>：两个独立指标的<br><code>current</code> 与 <code>max</code> <strong>四个数字完全相同</strong>，而实测分别为 2145 与 8707。<br>这只能是「一个数字被填进了两个字段」，即基线从未被测量。<br><code>code-standards.baseline.json</code> 自己的注释还写着「Counted together with function lines」，<br>但守卫的 <code>metricMap</code> 把它们当<strong>两个独立阈值</strong>比对 —— 口径与实现不一致。</p>
+<p><strong><code>nestingDepth</code> 的计量本身也不可靠</strong>：它用行缩进估算嵌套<br>（<code>Math.floor(indent / 2) + 1 &gt; 4</code>），而不是真实块嵌套。这使得<br><strong>4 空格缩进的文件会系统性误报</strong>，8707 这个数字的可信度存疑。<br>处置：<strong>先修计量，再定目标</strong> —— 一个测错的指标，清偿它没有意义。</p>
+<hr>
+<h2 id="4-债务台账">4. 债务台账<a class="anchor" href="#4-债务台账" aria-label="锚点">#</a></h2>
+<h3 id="4-1-条目结构">4.1 条目结构<a class="anchor" href="#4-1-条目结构" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;layout.unresolved-require&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;guard&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;scripts/ci/check-repo-layout.js&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;metric&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;unresolved-require&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;measured&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">21</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;measuredAt&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-15&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;target&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;risk&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;P1&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;owner&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;platform&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;dueBy&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-30&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;open&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;note&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;每一处都是潜伏崩溃……&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;plan&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;G2 先修（4 处同模式）→ G1 → G3/G4 → G5&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<table><thead><tr><th>字段</th><th>含义</th></tr></thead><tbody><tr><td><code>status</code></td><td><code>open</code>（在期限内）/ <code>slipped</code>（逾期，需 <code>slippedReason</code> + 新 <code>dueBy</code>）/ <code>closed</code>（已归零）</td></tr><tr><td><code>target</code></td><td>下一站目标。<strong>必须严格小于 <code>measured</code></strong>（<code>measured</code> 为 0 时可为 0）</td></tr><tr><td><code>dueBy</code></td><td>ISO 日期。逾期且未标记 <code>slipped</code> → 守卫报错</td></tr><tr><td><code>measuredAt</code></td><td>测量日期。超过 90 天未更新 → 守卫警告（防止台账变成化石）</td></tr></tbody></table>
+<h3 id="4-2-守卫校验项">4.2 守卫校验项<a class="anchor" href="#4-2-守卫校验项" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>检查</th><th>严重度</th></tr></thead><tbody><tr><td>条目字段完整、类型正确</td><td>error</td></tr><tr><td><code>target &lt; measured</code>（或二者同为 0）</td><td>error</td></tr><tr><td><code>dueBy</code> 合法且未逾期（<code>slipped</code> 需理由 + 新日期）</td><td>error</td></tr><tr><td><code>id</code> 唯一、<code>guard</code> 指向的文件存在</td><td>error</td></tr><tr><td><strong>覆盖完整性</strong>：每个门禁指标都必须在台账里有一条</td><td>error</td></tr><tr><td><code>measuredAt</code> 超过 90 天</td><td>warning</td></tr><tr><td><code>slipped</code> 条目数（每次滑动都会在输出里点名）</td><td>warning</td></tr></tbody></table>
+<p><strong>覆盖完整性</strong>是这套机制的关键：守卫会<strong>从守卫脚本源码里</strong>解析出<br><code>check-repo-layout.js</code> 的 <code>BASELINE_IDS</code> 集合、以及<br><code>code-standards.baseline.json</code> 的 <code>baselines</code> 键集合，断言二者都被台账覆盖。<br>于是「新增一类可豁免指标」这个动作<strong>自动携带责任人与期限</strong>。</p>
+<hr>
+<h2 id="5-收敛后的门禁语义">5. 收敛后的门禁语义<a class="anchor" href="#5-收敛后的门禁语义" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>门禁</th><th>收敛前</th><th>收敛后</th></tr></thead><tbody><tr><td><code>check:layout</code></td><td>恒红（基线 0 vs 实测 148）→ 被忽略</td><td>实测 0 或台账全部在期限内 → 红=真信号</td></tr><tr><td><code>check:code-standards</code></td><td>容忍度 5.6×，只能拦翻倍</td><td>基线=实测，任何一处新增即红</td></tr><tr><td><code>check:debt-ledger</code></td><td>不存在</td><td>逾期/未覆盖/目标倒退 → 红</td></tr></tbody></table>
+<p><strong>判定「门禁健康」的标准</strong>（写进发布门）：</p>
+<ol><li>全部门禁 exit 0；</li><li>台账无 <code>slipped</code> 条目；</li><li>无 <code>measuredAt</code> 超过 90 天的条目。</li></ol>
+<hr>
+<h2 id="6-版本历史">6. 版本历史<a class="anchor" href="#6-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-15</td><td>首版：两种失效模式诊断、三条原则、存量冻结+增量归零分期法、逐指标处置表（含实测数据与 21 处清单分组）、债务台账结构与守卫校验项</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-PROMPT-002] 系统提示词分层规范-静态与动态分区.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-PROMPT-002] 系统提示词分层规范：静态与动态分区</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-QUAL-002] 官方一致性套件接入规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-QUAL-002] 官方一致性套件接入规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-QUAL-001] 门禁基线与债务台账规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

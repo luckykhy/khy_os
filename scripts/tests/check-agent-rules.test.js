@@ -136,6 +136,61 @@ describe('check-agent-rules Rules 1-3 — regression guard', () => {
   });
 });
 
+describe('check-agent-rules scope — .ai/ is state/prose, not source', () => {
+  // Regression lock for the 2026-09-17 false positive: `.ai/hq/BUGS.json` is a
+  // bug-record file whose `symptom`/`repro` fields quote the failure being
+  // reported (`connect ECONNREFUSED 127.0.0.1:7890`). Rule 1 flagged that DATA
+  // as a hardcoded endpoint and pinned `--changed` red with 5 errors, which is
+  // exactly the "false report costs more than a missed one" failure mode.
+  //
+  // The fix is a *scope* correction (RUNTIME-001's declared `paths` never
+  // included `.ai/**`), so this file must lock BOTH halves: the exemption holds,
+  // AND the rule still fires on real code. Asserting only the first half would
+  // let a future "just ignore everything" edit pass silently.
+  function withRepoFile(relPath, content, fn) {
+    const full = path.join(ROOT, relPath);
+    const existed = fs.existsSync(full);
+    const prior = existed ? fs.readFileSync(full, 'utf8') : null;
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    // Assemble the URL at runtime: a contiguous host:port token here would make
+    // the gate flag THIS test file when CI scans scripts/.
+    fs.writeFileSync(full, content);
+    try {
+      return fn(relPath);
+    } finally {
+      // Remove the probe DIRECTORY, not just the file: leaving an empty
+      // `__scope_probe/` behind would itself become repo litter that later
+      // scans and `git status` have to explain.
+      if (existed) fs.writeFileSync(full, prior);
+      else fs.rmSync(path.dirname(full), { recursive: true, force: true });
+    }
+  }
+
+  test('does not flag a hardcoded host:port quoted inside .ai/ bug records', () => {
+    const badUrl = 'http://127.0.0.1:' + '7890';
+    const body = `{"bugs":[{"id":"BUG-999","symptom":"connect ECONNREFUSED ${badUrl}"}]}\n`;
+    withRepoFile(path.join('.ai', '__scope_probe', 'probe.json'), body, (rel) => {
+      const { status, stdout } = runGate(rel);
+      // The gate reports "no target files" and exits 1 when a target resolves to
+      // nothing — that is its designed behaviour ("I resolved no files, so I
+      // proved nothing"), NOT a violation. The assertion that matters is that no
+      // Rule 1 finding was produced; assert on the finding, not the exit code.
+      assert.doesNotMatch(stdout, /\[ERROR\] no-hardcoded-endpoint/);
+      assert.match(stdout, /No target files found/);
+      assert.equal(status, 1);
+    });
+  });
+
+  test('still flags the same content outside .ai/ (scope fix, not a blanket mute)', () => {
+    const badUrl = 'http://127.0.0.1:' + '7890';
+    withRepoFile(path.join('.khyos', '__scope_probe', 'probe.js'), `const u = '${badUrl}';\n`, (rel) => {
+      const { status, stdout } = runGate(rel);
+      assert.equal(status, 1, `expected a real hardcode outside .ai/ to still fail, got:\n${stdout}`);
+      assert.match(stdout, /\[ERROR\] no-hardcoded-endpoint/);
+    });
+  });
+});
+
 describe('check-agent-rules Rule 1c — absolute-path exemptions', () => {
   test('allows a documented known-installation candidate', () => {
     const file = fixture(

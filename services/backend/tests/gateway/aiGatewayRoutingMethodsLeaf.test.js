@@ -7,8 +7,8 @@
  * still carries every mixed-in method on its prototype (so Object.assign onto AIGateway.prototype kept the
  * contract intact) alongside untouched class methods like generate / init and the cooldown mixin methods;
  * (3) setAiGatewayRoutingMethodsDeps is a guarded, idempotent, non-throwing DI setter that wires the
- * injected aiGateway.js module-scope helpers (functions via typeof guards, value deps â€?route tuning
- * tables, adapters, localLLMService â€?via a `!== undefined` guard so null is accepted).
+ * injected aiGateway.js module-scope helpers (functions via typeof guards, value deps ï¿½?route tuning
+ * tables, adapters, localLLMService ï¿½?via a `!== undefined` guard so null is accepted).
  *
  * The methods perform IO (adapter calls, timers, network, model refresh) and run only against a live
  * gateway instance, so this test stays on the deterministic surface (export shape, prototype presence,
@@ -29,6 +29,8 @@ const MIXIN_METHODS = [
   '_resolveActiveChannelKey', '_syncChannelLifecycle', 'setActiveChannel', 'setModelContextWindow',
   'setModelMaxOutputTokens', 'getModelMaxOutputTokens',
   'getModelContextWindow', '_resolveContextWindowAsync',
+  // Context-window cache trio added after this test was first authored:
+  '_setContextWindowCache', 'getModelContextWindowAsync', '_probeContextWindowForModel',
 ];
 
 describe('Ai Gateway Routing Methods Leaf', () => {
@@ -57,10 +59,10 @@ describe('Ai Gateway Routing Methods Leaf', () => {
 
   test('setAiGatewayRoutingMethodsDeps is a guarded, idempotent, non-throwing DI setter', () => {
       const { setAiGatewayRoutingMethodsDeps } = require(LEAF);
-      expect(() => setAiGatewayRoutingMethodsDeps().not.toThrow());
-      expect(() => setAiGatewayRoutingMethodsDeps({}).not.toThrow());
+      expect(() => setAiGatewayRoutingMethodsDeps()).not.toThrow();
+      expect(() => setAiGatewayRoutingMethodsDeps({})).not.toThrow();
       // Non-function fn-deps are ignored; value deps accept any defined value (incl. null).
-      expect(() => setAiGatewayRoutingMethodsDeps({ _parseMs: 1, localLLMService: null }).not.toThrow());
+      expect(() => setAiGatewayRoutingMethodsDeps({ _parseMs: 1, localLLMService: null })).not.toThrow();
       const fake = {
         _appendKhyProtocolDebugLog: () => {}, _buildKhyProtocolDebugSummary: () => '',
         _formatRouteAgeMs: () => '', _getKhyProtocolPriorityRisk: () => 0,
@@ -70,8 +72,8 @@ describe('Ai Gateway Routing Methods Leaf', () => {
         DEFAULT_ROUTE_BASE_PRIORITY: {}, DEFAULT_ROUTE_MANUAL_FALLBACK_KEYS: new Set(),
         kiroAdapter: {}, ollamaAdapter: {}, localLLMService: null,
       };
-      expect(() => setAiGatewayRoutingMethodsDeps(fake).not.toThrow());
-      expect(() => setAiGatewayRoutingMethodsDeps(fake).not.toThrow());
+      expect(() => setAiGatewayRoutingMethodsDeps(fake)).not.toThrow();
+      expect(() => setAiGatewayRoutingMethodsDeps(fake)).not.toThrow();
   });
 
 });

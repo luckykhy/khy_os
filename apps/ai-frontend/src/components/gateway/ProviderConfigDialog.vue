@@ -128,6 +128,7 @@ import { reactive, ref, computed } from 'vue';
 import { ElMessage } from 'element-plus';
 import ProviderLinks from './ProviderLinks.vue';
 
+import { showSuccess, showError, showWarning, showInfo } from '@/api/notify';
 const props = defineProps({
   visible: { type: Boolean, default: false },
   // 'add' opens a blank form; 'edit' prefills from `entry` + `initialModels`.
@@ -240,14 +241,14 @@ async function onTest() {
   // In edit mode an empty key means "reuse the stored one" — but the dry-run
   // probe can't read the stored secret, so we require a key to test.
   if (!apiKey) {
-    return ElMessage.warning(
+    return showWarning(
       props.mode === 'edit'
         ? '测试连接需要填入 API Key（留空仅用于保存时不修改）'
         : '请先填写 API Key'
     );
   }
   if (!form.baseUrl.trim() && !form.endpoint.trim()) {
-    return ElMessage.warning('请填写 Base URL 后再测试');
+    return showWarning('请填写 Base URL 后再测试');
   }
   testing.value = true;
   testState.value = '';
@@ -287,8 +288,8 @@ function importAllDiscovered() {
 
 function onSubmit() {
   const provider = form.provider.trim().toLowerCase();
-  if (!provider) return ElMessage.warning('请填写 Provider');
-  if (props.mode === 'add' && !form.key.trim()) return ElMessage.warning('请填写 API Key');
+  if (!provider) return showWarning('请填写 Provider');
+  if (props.mode === 'add' && !form.key.trim()) return showWarning('请填写 API Key');
 
   // Emit the full desired state; the parent diffs against the current entry/models
   // (add → create + seed; edit → updateProvider + sync models by new provider name).

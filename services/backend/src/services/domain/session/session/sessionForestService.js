@@ -10,8 +10,11 @@
  * 复用既有、绝不另起炉灶:
  *   - 读:sessionPersistence.listPersistedSessions / loadSessionMeta(轻量,不重建消息链)
  *   - 写槽:sessionPersistence.updateSessionMetadata(就地改快照,镜像 renameSession)
- *   - 算法:cli/sessionTopology(buildForest / renderForestTree / buildHereLine,纯叶子)
+ *   - 算法:sessionTopology(buildForest / renderForestTree / buildHereLine,纯叶子)
  *   - 当前会话 id:ai.getLiveSessionId,退最近一条持久会话(对齐 handlers/fork._resolveSource)
+ *
+ * 依赖方向:上述 cli 资产一律经 sessionForestPort 这个 IoC seam 取(不再 require cli/)。
+ * 端口未注册(cli 从未加载)时,各路径按各自的 fail-soft 退化——与改造前语义一致。
  *
  * 门控:KHY_SESSION_TOPOLOGY(森林索引)默认开;关 → buildForest flat(平铺退化)。
  */
@@ -20,15 +23,53 @@ function _persistence() {
   return require('../../../sessionPersistence');
 }
 
+/**
+ * 取 CLI 会话森林面(topology / slots / synthesis / session)。
+ * 两档回落:sessionForestPort 已注册 → 用;未注册 → 自举 cli/ai 触发自注册 → 再取一次。
+ *
+ * `require('./cli/ai')` 是全文件**唯一**的 cli 引用,且语义是「拉起 CLI 让其自注册」,
+ * 不是「取实现」——取实现一律经 port。CLI 在本进程不可用时返回 null,
+ * 调用方各自退化(门控关 / 平铺 / 跳过),绝不让森林服务把 CLI 图拖进非 CLI 进程。
+ *
+ * @returns {object|null} sessionForestPort 单例;两档都失败返回 null。
+ */
+function _forestPort() {
+  const port = require('../../../sessionForestPort');
+  if (port.getTopology() || port.getSlots() || port.getSynthesis()) {
+    return port;
+  }
+  try {
+    require('../../../../cli/ai');
+  } catch {
+    /* CLI 不可用:端口保持空,调用方退化 */
+  }
+  return port.getTopology() || port.getSlots() || port.getSynthesis() ? port : null;
+}
+
+/** Forest topology builder;cli 不可用时 null(调用方走 flat 退化)。 */
 function _topology() {
-  return require('../../../../cli/sessionTopology');
+  const port = _forestPort();
+  return port ? port.getTopology() : null;
+}
+
+/** Slot store;cli 不可用时 null。 */
+function _slots() {
+  const port = _forestPort();
+  return port ? port.getSlots() : null;
+}
+
+/** Cross-branch synthesis planner;cli 不可用时 null。 */
+function _synthesis() {
+  const port = _forestPort();
+  return port ? port.getSynthesis() : null;
 }
 
 /** 当前 live 会话 id;无 live → 当前项目作用域最近一条持久会话。对齐 handlers/fork._resolveSource。 */
 function getCurrentSessionId() {
   try {
-    const ai = require('../../../../cli/ai');
-    const liveId = ai.getLiveSessionId && ai.getLiveSessionId();
+    const port = _forestPort();
+    const getLive = port && port.getGetLiveSessionId();
+    const liveId = getLive && getLive();
     if (liveId) {
       return liveId;
     }
@@ -124,8 +165,10 @@ function listForest(opts) {
     });
   }
 
-  const flat = !topo.topologyEnabled(env);
-  const forest = topo.buildForest(records, { flat });
+  // topo 取不到(cli 从未加载)等价于门控关闭:平铺退化。
+  // 空森林须带上 buildForest 的返回形状(roots/nodes),否则下游 buildForestRows 会崩。
+  const flat = !topo || !topo.topologyEnabled(env);
+  const forest = topo ? topo.buildForest(records, { flat }) : { roots: [], nodes: [] };
   return { forest, records, byMeta };
 }
 
@@ -174,10 +217,7 @@ function getNode(sessionId) {
 }
 
 // ── 刀 2:每轮注入 + 一次性 insight + memory 蒸馏 + 槽写入 ─────────────────
-
-function _slots() {
-  return require('../../../../cli/sessionSlots');
-}
+// （_slots() 定义在文件头部的 port 访问区，此处不再重复定义。）
 
 /**
  * 为「当前所在节点」产「你在这里」注入串(供 cli/ai.js chat() 每轮注入)。
@@ -231,7 +271,7 @@ function buildHereLineForCurrent(opts) {
     const o = opts || {};
     const env = o.env || process.env;
     const topo = _topology();
-    if (!topo.topologyEnabled(env)) {
+    if (!topo || !topo.topologyEnabled(env)) {
       return '';
     }
     const current = o.currentId || getCurrentSessionId();
@@ -269,7 +309,7 @@ function consumeInsightForCurrent(opts) {
     const o = opts || {};
     const env = o.env || process.env;
     const slots = _slots();
-    if (!slots.slotsEnabled(env)) {
+    if (!slots || !slots.slotsEnabled(env)) {
       return { insightText: '', changed: false };
     }
     const current = o.currentId || getCurrentSessionId();
@@ -311,7 +351,7 @@ function _putSlot(sessionId, slot, text) {
     }
     const env = process.env;
     const slots = _slots();
-    if (!slots.slotsEnabled(env)) {
+    if (!slots || !slots.slotsEnabled(env)) {
       return false;
     }
     const sp = _persistence();
@@ -355,7 +395,7 @@ async function consolidateCurrent(opts) {
     const o = opts || {};
     const env = o.env || process.env;
     const slots = _slots();
-    if (!slots.slotsEnabled(env)) {
+    if (!slots || !slots.slotsEnabled(env)) {
       return { distilled: false, reason: 'disabled' };
     }
 
@@ -448,10 +488,8 @@ function _consolidatePrompt(messages, base) {
 async function synthesize(opts) {
   const o = opts || {};
   const env = o.env || process.env;
-  let cbs;
-  try {
-    cbs = require('../../../../cli/crossBranchSynthesis');
-  } catch {
+  const cbs = _synthesis();
+  if (!cbs) {
     return { ok: false, reason: 'error' };
   }
   if (!cbs.synthesisEnabled(env)) {

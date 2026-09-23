@@ -45,6 +45,23 @@ function init(projectDir) {
   } catch {
     // changeWatchService not available — skip (feedback still reachable via cli/ai.js seam)
   }
+  // Register the three-mode feedback injector ([DESIGN-ARCH-113] / RUNTIME-007~009):
+  // the "clearance" channel that lets the codebase speak **while** a change is being
+  // made, not only at commit time. Lives on PrePrompt because `additionalContext`
+  // (the only field that reaches the conversation) is whitelisted for PrePrompt but
+  // NOT for PreToolUse — see agentFeedbackService's module doc for the measurement.
+  // Gated by KHY_AGENT_FEEDBACK: off by default, so nothing changes unless opted in.
+  try {
+    const feedback = require('../../../agentFeedbackService');
+    if (feedback.isEnabled(process.env)) {
+      module.exports.registerFunction('PrePrompt', feedback.makePrePromptInjector(), {
+        source: 'builtin:AgentFeedbackInjector',
+        priority: 30,
+      });
+    }
+  } catch {
+    // agentFeedbackService not available — skip (commit-time checker still stands)
+  }
   _initialized = true;
   if (registry.count > 0) {
     // Inside the Ink TUI this load report would be injected into the transcript

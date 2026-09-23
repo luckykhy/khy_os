@@ -70,11 +70,14 @@ test('buildContextWarning:警告带外 show=false', () => {
   assert.strictEqual(d.text, '');
 });
 
-test('buildContextWarning:auto-compact 开 → dim "% until auto-compact"', () => {
+test('buildContextWarning:auto-compact 开 → dim "% until auto-compact"(带触发阈值, BUG-19c)', () => {
   const d = leaf.buildContextWarning({ tokenUsage: 150000, contextWindow: WINDOW, autoCompactRatio: RATIO });
   assert.strictEqual(d.show, true);
   assert.strictEqual(d.style, 'dim');
-  assert.match(d.text, /^\d+% until auto-compact$/);
+  // 2026-09-19 BUG-19c: 阈值一并显示, 用户才能与页脚「60% ctx」口径自洽;
+  // 阈值不可测(0/非有限)时逐字节回退无 @ 后缀的旧文案。
+  assert.match(d.text, /^\d+% until auto-compact( @\d+(\.\d)?k)?$/);
+  assert.match(d.text, /^6% until auto-compact @160k$/);
 });
 
 test('buildContextWarning:auto-compact 关 → escalation "Context low … Run /compact"', () => {
@@ -125,7 +128,7 @@ test('buildContextWarning:压缩后陈旧窗口内应抑制(show=false·suppress
     tokenUsage: 150000, contextWindow: WINDOW, autoCompactRatio: RATIO,
   });
   assert.strictEqual(shown.show, true, '刷新后照常显示');
-  assert.match(shown.text, /^\d+% until auto-compact$/);
+  assert.match(shown.text, /^\d+% until auto-compact( @\d+(\.\d)?k)?$/);
 });
 
 test('buildContextWarning:压缩释放后计数刷新到低位 → 一次性门解除,不再抑制', () => {

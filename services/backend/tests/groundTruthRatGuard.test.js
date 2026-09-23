@@ -5,7 +5,7 @@
  * Defect (REAL, user-reachable P1 freeze): detectComputableClaims(userMessage)
  * runs on raw chat text (ai.js:4703 routeGroundTruth({text: userMessage}),
  * KHY_GROUND_TRUTH default ON). _pow has a 6000-digit cap, but bare
- * multiplication chains â€?term() -> _mul -> _rat â€?had NO magnitude guard.
+ * multiplication chains ï¿½?term() -> _mul -> _rat ï¿½?had NO magnitude guard.
  * A pasted string like "99999*99999*...*99999" (thousands of terms) makes the
  * BigInt product grow without bound; single-threaded multiplication blocks the
  * event loop. Measured: 2000 terms of a 5000-digit literal froze ~103s;
@@ -37,7 +37,7 @@ describe('Ground Truth Rat Guard', () => {
       const facts = gt.detectComputableClaims(expr);
       const ms = Date.now() - t;
       expect(ms < 2000).toBeTruthy();
-      // Astronomical result is correctly skipped (over the digit cap â†?no fact).
+      // Astronomical result is correctly skipped (over the digit cap ï¿½?no fact).
       expect(facts.length).toBe(0);
   });
 
@@ -99,13 +99,13 @@ describe('Ground Truth Rat Guard', () => {
       for (const expr of ['2^2^2^2^999', '9^999999999', '123456789^4096']) {
         const t = Date.now();
         gt.detectComputableClaims(expr);
-        expect(Date.now().toBeTruthy() - t < 1000);
+        expect(Date.now() - t < 1000).toBe(true);
       }
   });
 
   test('detectComputableClaims never throws on hostile input', () => {
       for (const bad of [null, undefined, 42, {}, [], '%%%', '\x00'.repeat(100), '9'.repeat(200000) + '*2']) {
-        expect(() => gt.detectComputableClaims(bad).not.toThrow());
+        expect(() => gt.detectComputableClaims(bad)).not.toThrow();
       }
   });
 

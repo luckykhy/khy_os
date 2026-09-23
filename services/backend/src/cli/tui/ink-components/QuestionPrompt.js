@@ -29,11 +29,24 @@
  *
  * All deterministic row/answer logic lives in the pure `questionCardModel`
  * single source (unit-tested without rendering ink); this file stays thin.
+ *
+ * Props `cols`/`rows` carry the terminal box the overlay is allowed to occupy
+ * (App.js passes its rail content width and its rows). Without them the frame
+ * renders exactly as before; with them the row set degrades in three tiers —
+ * full → clip (display-column clipped) → labels (descriptions dropped, footer
+ * says so) — so the frame never grows past the screen and pushes 「Esc 取消」
+ * out of the visible region.
  */
 const React = require('react');
 
 const inkRuntime = require('../inkRuntime');
 const { Cursor } = require('../utils/Cursor');
+const {
+  clipCell,
+  visualRows,
+  pickerRowBudget,
+  PICKER_BOX_CHROME_COLS,
+} = require('../wrapCell');
 
 const model = require('./questionCardModel');
 
@@ -60,7 +73,11 @@ const {
 
 const MARKER = '❯'; // ❯
 
-function QuestionPrompt({ request, onResolve }) {
+// Appended to the footer only in the last degradation tier, so an omitted
+// option description is visible rather than silent (BUG-57).
+const LABELS_HINT = ' · 屏高不足，已省略选项说明';
+
+function QuestionPrompt({ request, onResolve, cols, rows }) {
   const { Box, Text, useInput } = inkRuntime.get();
   const h = React.createElement;
 
@@ -371,44 +388,45 @@ function QuestionPrompt({ request, onResolve }) {
   }
 
   // Build rows: real options → 「可讨论」 → 「Other」.
-  const rows = [];
+  // Rows are described as {prefix, label, desc} instead of one finished string
+  // because the size ladder below (BUG-57) has to be able to drop or clip the
+  // `desc` half while keeping the numbered label intact.
+  const rowSpecs = [];
   for (let i = 0; i < options.length; i++) {
     const active = i === cursor;
-    const marker = active ? MARKER : ' ';
     const box = multi ? (checked.has(i) ? '[x] ' : '[ ] ') : '';
     const desc = optDesc(options[i]);
-    rows.push(
-      h(
-        Text,
-        { key: `opt-${i}`, color: active ? 'cyan' : undefined, bold: active },
-        `   ${marker} ${i + 1}. ${box}${optLabel(options[i])}${desc ? `  — ${desc}` : ''}`
-      )
-    );
+    rowSpecs.push({
+      key: `opt-${i}`,
+      prefix: `   ${active ? MARKER : ' '} ${i + 1}. ${box}`,
+      label: optLabel(options[i]),
+      desc: desc ? `  — ${desc}` : '',
+      color: active ? 'cyan' : undefined,
+      bold: active,
+    });
   }
   // 「可讨论」row — always present; a deliberate "let's discuss / you decide" escape.
   const discussActive = cursor === discussRow;
   const discussBox = multi ? (discussOn ? '[x] ' : '[ ] ') : '';
-  rows.push(
-    h(
-      Text,
-      { key: 'opt-discuss', color: discussActive ? 'cyan' : 'magenta', bold: discussActive },
-      `   ${discussActive ? MARKER : ' '} ${discussRow + 1}. ${discussBox}${DISCUSS_LABEL}  — ${DISCUSS_HINT}`
-    )
-  );
+  rowSpecs.push({
+    key: 'opt-discuss',
+    prefix: `   ${discussActive ? MARKER : ' '} ${discussRow + 1}. ${discussBox}`,
+    label: DISCUSS_LABEL,
+    desc: `  — ${DISCUSS_HINT}`,
+    color: discussActive ? 'cyan' : 'magenta',
+    bold: discussActive,
+  });
   // "Other (free input)" row.
   const otherActive = cursor === otherRow;
-  rows.push(
-    h(
-      Text,
-      {
-        key: 'opt-other',
-        color: otherActive ? 'cyan' : undefined,
-        bold: otherActive,
-        dimColor: !otherActive,
-      },
-      `   ${otherActive ? MARKER : ' '} ${otherRow + 1}. ${OTHER_LABEL}${otherValue ? `: ${otherValue}` : ''}`
-    )
-  );
+  rowSpecs.push({
+    key: 'opt-other',
+    prefix: `   ${otherActive ? MARKER : ' '} ${otherRow + 1}. `,
+    label: `${OTHER_LABEL}${otherValue ? `: ${otherValue}` : ''}`,
+    desc: '',
+    color: otherActive ? 'cyan' : undefined,
+    bold: otherActive,
+    dim: !otherActive,
+  });
 
   const navHint = cardCount > 1 ? '←/→ 切换卡片 · ' : '';
   // Fix 3 — 单选卡(未提升、门控开)提示可按 Space 转多选。
@@ -462,8 +480,64 @@ function QuestionPrompt({ request, onResolve }) {
       ? h(Text, { dimColor: true }, `选项卡 ${qIdx + 1}/${cardCount}（←/→ 可左右切换）`)
       : null;
 
+  // ── 尺寸收敛阶梯(BUG-57) ────────────────────────────────────────────
+  // 一行一视觉行不是审美问题：40 列终端上每条「— 说明」折成 2-3 行，实测整框
+  // 19 行 > 12 行屏幕，从底部掉出去的正是带「Esc 取消」的那一行(探针 AL)。
+  // 三档，只在装不下时才降档，降档必须让用户看得出降了：
+  //   full   —— 逐字节今日形态（放得下就绝不改样）
+  //   clip   —— 每条说明截到一视觉行（省略号）
+  //   labels —— 整条说明去掉，只留编号标签 + footer 上说明为什么少了
+  // `cols`/`rows` 缺失时恒为 full —— 非浮层挂载点与改前完全一致。
+  const inner = cols > 0 ? cols - PICKER_BOX_CHROME_COLS : 0;
+  const previewSplit = hasPreview && !multi && cursor < options.length;
+  // 预览版式下选项列只占框宽的左半（Box width:'50%' + marginRight:2）。
+  const listInner = inner > 0 && previewSplit ? Math.max(8, Math.floor(inner / 2) - 2) : inner;
+  const footerBase = `  ${footer}`;
+  // 最后一档（labels）会把「已省略选项说明」拼进 footer，而这一档恰恰出现在最挤
+  // 的屏幕上：36 列内宽里 74 列的整串要占 3 行，比它替换掉的普通 footer 还多一行
+  // ——降档反而吃掉一行。所以那一档同时把可发现性最低的两段（数字键、Space/多选）
+  // 换成最小集「Enter · ↑/↓ · (←/→) · Esc」，提示才装得回 2 行(61 列)。
+  const compactFooter = multi
+    ? `Enter 确认本卡 · ↑/↓ 导航 · ${navHint}Esc 取消`
+    : `Enter 选择 · ↑/↓ 导航 · ${navHint}Esc 取消`;
+  function footerFor(mode) {
+    return mode === 'labels' ? `  ${compactFooter}${LABELS_HINT}` : footerBase;
+  }
+  const plainHeader = qHeader ? ` ${qHeader}  ${qText}` : `?  ${qText}`;
+  const plainContext = contextNote ? `  ${contextNote.replace(/\n/g, ' ')}` : '';
+  const plainProgress = cardCount > 1 ? `选项卡 ${qIdx + 1}/${cardCount}（←/→ 可左右切换）` : '';
+
+  function rowTextOf(spec, mode) {
+    const body = `${spec.label}${spec.desc}`;
+    if (mode === 'labels') return `${spec.prefix}${spec.label}`;
+    if (mode === 'clip' && spec.desc) {
+      const budget = pickerRowBudget(cols, spec.prefix, '');
+      return `${spec.prefix}${budget > 0 ? clipCell(body, budget) : body}`;
+    }
+    return `${spec.prefix}${body}`;
+  }
+
+  function projectedHeight(mode) {
+    if (rows <= 0 || cols <= 0) return 0;
+    const chrome = [plainHeader, plainContext, plainProgress, footerFor(mode)].filter(Boolean);
+    const chromeH = chrome.reduce((n, t) => n + visualRows(t, inner), 0);
+    const listH = rowSpecs.reduce((n, s) => n + visualRows(rowTextOf(s, mode), listInner), 0);
+    return 2 + chromeH + listH + (typing ? 1 : 0);
+  }
+
+  let rowMode = 'full';
+  if (projectedHeight('full') > rows) rowMode = 'clip';
+  if (rowMode === 'clip' && projectedHeight('clip') > rows) rowMode = 'labels';
+
+  const rowNodes = rowSpecs.map((s) => h(
+    Text,
+    { key: s.key, color: s.color, bold: s.bold, dimColor: s.dim },
+    rowTextOf(s, rowMode)
+  ));
+  const footerText = footerFor(rowMode);
+
   // Side-by-side layout when any option has preview (single-select only).
-  if (hasPreview && !multi && cursor < options.length) {
+  if (previewSplit) {
     const preview = optPreview(options[cursor]);
     const leftPanel = h(
       Box,
@@ -471,9 +545,9 @@ function QuestionPrompt({ request, onResolve }) {
       progressLine,
       headerLine,
       contextLine,
-      h(Box, { flexDirection: 'column' }, rows),
+      h(Box, { flexDirection: 'column' }, rowNodes),
       renderTyping(),
-      h(Text, { dimColor: true }, `  ${footer}`)
+      h(Text, { dimColor: true }, footerText)
     );
     const rightPanel = preview
       ? h(
@@ -504,9 +578,9 @@ function QuestionPrompt({ request, onResolve }) {
     progressLine,
     headerLine,
     contextLine,
-    h(Box, { flexDirection: 'column' }, rows),
+    h(Box, { flexDirection: 'column' }, rowNodes),
     renderTyping(),
-    h(Text, { dimColor: true }, `  ${footer}`)
+    h(Text, { dimColor: true }, footerText)
   );
 }
 

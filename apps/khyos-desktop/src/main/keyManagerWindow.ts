@@ -21,6 +21,7 @@ export function openKeyManagerWindow(opts: KeyManagerWindowOptions = {}): Browse
     show: false,
     title: 'KhyOS 密钥与端点管理',
     webPreferences: {
+      // Preload built as CJS — see src/main/index.ts / electron.vite.config.ts (P0-6)
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false

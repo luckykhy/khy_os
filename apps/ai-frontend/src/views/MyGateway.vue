@@ -33,6 +33,7 @@
           :providers="gw.providers.value"
           :models="gw.models.value"
           :busy="providerBusy"
+          :progress="providerProgress"
           :presets="gw.providerPresets.value"
           @add="onAddProvider"
           @add-model="onAddProviderModel"
@@ -303,8 +304,11 @@ import CcAccessCard from '@/components/gateway/CcAccessCard.vue';
 import ImageModelCard from '@/components/gateway/ImageModelCard.vue';
 import GatewayOnboarding from '@/components/gateway/GatewayOnboarding.vue';
 
+import { showSuccess, showError, showWarning, showInfo } from '@/api/notify';
 const gw = useUserGateway();
 const providerBusy = ref(false);
+// 多条目模型播种循环的实时进度（RUNTIME-002：动作+目标+进度），展示在 CustomProviderCard 按钮旁。
+const providerProgress = ref('');
 const modelBusy = ref(false);
 const ccBusy = ref(false);
 const justIssued = ref('');
@@ -400,9 +404,9 @@ const imageOptions = computed(() => {
 async function onUpdateImageConfig(payload) {
   try {
     await gw.updateImageConfig(payload);
-    ElMessage.success('图像模型已更新');
+    showSuccess('图像模型已更新');
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '更新失败');
+    showError(err?.response?.data?.message || err?.message || '更新失败');
   }
 }
 
@@ -485,7 +489,7 @@ function scrollToProviderEditor(provider) {
     if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
   if (provider) {
-    ElMessage.info(
+    showInfo(
       `请在「自定义供应商 / 密钥池」里点供应商「${provider}」某条密钥旁的「替换」按钮更新 Key`
     );
   }
@@ -530,18 +534,18 @@ onMounted(() => {
 async function onDetect() {
   try {
     await gw.detectModels();
-    ElMessage.success('检测完成');
+    showSuccess('检测完成');
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || '检测失败');
+    showError(err?.response?.data?.message || '检测失败');
   }
 }
 
 async function onSaveRelay(payload) {
   try {
     await gw.saveRelayConfig(payload);
-    ElMessage.success('上游配置已保存');
+    showSuccess('上游配置已保存');
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || '保存失败');
+    showError(err?.response?.data?.message || '保存失败');
   }
 }
 
@@ -563,6 +567,8 @@ async function onAddProvider(payload) {
     let seeded = 0;
     const failed = [];
     for (const model of seedModels) {
+      // 状态透明:多条目循环要带「动作+目标+进度」(RUNTIME-002),不能只给静态 spinner。
+      providerProgress.value = `正在添加模型 ${model}（第 ${seeded + 1}/${seedModels.length} 个）…`;
       try {
         // eslint-disable-next-line no-await-in-loop
         await gw.addModel({ provider, model });
@@ -573,16 +579,17 @@ async function onAddProvider(payload) {
         else failed.push(model);
       }
     }
-
-    if (!seedModels.length) ElMessage.success('已添加密钥');
-    else if (!failed.length) ElMessage.success(`已添加密钥，并新增 ${seeded} 个模型`);
+    providerProgress.value = '';
+    if (!seedModels.length) showSuccess('已添加密钥');
+    else if (!failed.length) showSuccess(`已添加密钥，并新增 ${seeded} 个模型`);
     else
-      ElMessage.warning(
+      showWarning(
         `已添加密钥；${seeded} 个模型已加，${failed.length} 个失败：${failed.join(', ')}`
       );
   } catch (err) {
+    providerProgress.value = '';
     const code = err?.response?.status;
-    ElMessage.error(code === 409 ? '该密钥已存在' : err?.response?.data?.message || '添加失败');
+    showError(code === 409 ? '该密钥已存在' : err?.response?.data?.message || '添加失败');
   } finally {
     providerBusy.value = false;
   }
@@ -601,7 +608,7 @@ async function onConfigSubmit(payload) {
     configVisible.value = false;
   } catch (err) {
     const code = err?.response?.status;
-    ElMessage.error(
+    showError(
       code === 409 ? '该供应商 / 密钥已存在' : err?.response?.data?.message || '保存失败'
     );
   } finally {
@@ -619,7 +626,11 @@ async function submitAddConfig(payload) {
 
   let seeded = 0;
   const failed = [];
+  const total = payload.models.length;
   for (const model of payload.models) {
+    providerProgress.value = total
+      ? `正在添加模型 ${model}（第 ${seeded + 1}/${total} 个）…`
+      : '';
     try {
       // eslint-disable-next-line no-await-in-loop
       await gw.addModel({ provider, model });
@@ -629,10 +640,11 @@ async function submitAddConfig(payload) {
       else failed.push(model);
     }
   }
-  if (!payload.models.length) ElMessage.success('已添加供应商');
-  else if (!failed.length) ElMessage.success(`已添加供应商，并新增 ${seeded} 个模型`);
+  providerProgress.value = '';
+  if (!total) showSuccess('已添加供应商');
+  else if (!failed.length) showSuccess(`已添加供应商，并新增 ${seeded} 个模型`);
   else
-    ElMessage.warning(
+    showWarning(
       `已添加供应商；${seeded} 个模型已加，${failed.length} 个失败：${failed.join(', ')}`
     );
 }
@@ -656,13 +668,19 @@ async function submitEditConfig(payload) {
   const initialSet = new Set(payload.initialModels);
 
   // Add models the user introduced in the dialog (409 = already there, benign).
-  for (const model of payload.models) {
-    if (initialSet.has(model)) continue;
+  const toAdd = payload.models.filter((m) => !initialSet.has(m));
+  let added = 0;
+  for (const model of toAdd) {
+    providerProgress.value = toAdd.length
+      ? `正在添加模型 ${model}（第 ${added + 1}/${toAdd.length} 个）…`
+      : '';
     try {
       // eslint-disable-next-line no-await-in-loop
       await gw.addModel({ provider, model });
+      added += 1;
     } catch (e) {
       if (e?.response?.status !== 409) throw e;
+      added += 1;
     }
   }
   // Remove models the user dropped — resolve each to its row id under the (new)
@@ -671,17 +689,34 @@ async function submitEditConfig(payload) {
   const rows = (gw.models.value || []).filter(
     (m) => m && String(m.provider || '').toLowerCase() === provider
   );
-  for (const row of rows) {
-    if (initialSet.has(row.model) && !finalSet.has(row.model)) {
-      try {
-        // eslint-disable-next-line no-await-in-loop
-        await gw.removeModel(row.id);
-      } catch {
-        /* ignore — best effort */
-      }
+  const toRemove = rows.filter(
+    (row) => initialSet.has(row.model) && !finalSet.has(row.model)
+  );
+  const removeFailures = [];
+  for (let i = 0; i < toRemove.length; i += 1) {
+    const row = toRemove[i];
+    providerProgress.value = toRemove.length
+      ? `正在移除模型 ${row.model}（第 ${i + 1}/${toRemove.length} 个）…`
+      : '';
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await gw.removeModel(row.id);
+    } catch (e) {
+      // 删除失败不再静默吞掉：收集起来，最终用 warning 诚实汇报（RUNTIME-002.2）。
+      removeFailures.push(`${row.model}（${e?.response?.status || '请求失败'}）`);
     }
   }
-  ElMessage.success('供应商配置已保存');
+  providerProgress.value = '';
+  if (removeFailures.length) {
+    showWarning(
+      `供应商配置已保存；但有 ${removeFailures.length} 个模型删除失败：` +
+        removeFailures.slice(0, 5).join('、') +
+        (removeFailures.length > 5 ? ' 等' : '') +
+        '（可稍后在「模型总览」手动移除）'
+    );
+  } else {
+    showSuccess('供应商配置已保存');
+  }
 }
 
 async function onAddProviderModel(provider) {
@@ -695,28 +730,28 @@ async function onAddProviderModel(provider) {
 async function onRemoveEntry(id) {
   try {
     await gw.removeProviderEntry(id);
-    ElMessage.success('已移除密钥');
+    showSuccess('已移除密钥');
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || '移除失败');
+    showError(err?.response?.data?.message || '移除失败');
   }
 }
 
 async function onReplaceEntry({ id, key }) {
   try {
     await gw.replaceProviderKey(id, key);
-    ElMessage.success('密钥已替换');
+    showSuccess('密钥已替换');
   } catch (err) {
     const code = err?.response?.status;
-    ElMessage.error(code === 409 ? '该密钥已存在' : err?.response?.data?.message || '替换失败');
+    showError(code === 409 ? '该密钥已存在' : err?.response?.data?.message || '替换失败');
   }
 }
 
 async function onRemoveProvider(provider) {
   try {
     await gw.removeProvider(provider);
-    ElMessage.success(`已删除 provider「${provider}」`);
+    showSuccess(`已删除 provider「${provider}」`);
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || '删除失败');
+    showError(err?.response?.data?.message || '删除失败');
   }
 }
 
@@ -724,10 +759,10 @@ async function onAddModel(payload) {
   modelBusy.value = true;
   try {
     await gw.addModel(payload);
-    ElMessage.success('已添加模型');
+    showSuccess('已添加模型');
   } catch (err) {
     const code = err?.response?.status;
-    ElMessage.error(code === 409 ? '该模型已存在' : err?.response?.data?.message || '添加失败');
+    showError(code === 409 ? '该模型已存在' : err?.response?.data?.message || '添加失败');
   } finally {
     modelBusy.value = false;
   }
@@ -736,19 +771,19 @@ async function onAddModel(payload) {
 async function onUpdateModel({ id, patch }) {
   try {
     await gw.updateModel(id, patch);
-    ElMessage.success('已更新');
+    showSuccess('已更新');
   } catch (err) {
     const code = err?.response?.status;
-    ElMessage.error(code === 409 ? '同名模型已存在' : err?.response?.data?.message || '更新失败');
+    showError(code === 409 ? '同名模型已存在' : err?.response?.data?.message || '更新失败');
   }
 }
 
 async function onRemoveModel(id) {
   try {
     await gw.removeModel(id);
-    ElMessage.success('已删除模型');
+    showSuccess('已删除模型');
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || '删除失败');
+    showError(err?.response?.data?.message || '删除失败');
   }
 }
 
@@ -763,9 +798,9 @@ async function onPivotChangeCapability(edge, capability) {
   modelBusy.value = true;
   try {
     await gw.updateModel(id, { capability });
-    ElMessage.success('已更新能力');
+    showSuccess('已更新能力');
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || '更新失败');
+    showError(err?.response?.data?.message || '更新失败');
   } finally {
     modelBusy.value = false;
   }
@@ -777,9 +812,9 @@ async function onPivotToggleActive(edge, isActive) {
   modelBusy.value = true;
   try {
     await gw.updateModel(id, { isActive });
-    ElMessage.success(isActive ? '已启用' : '已停用');
+    showSuccess(isActive ? '已启用' : '已停用');
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || '更新失败');
+    showError(err?.response?.data?.message || '更新失败');
   } finally {
     modelBusy.value = false;
   }
@@ -798,9 +833,9 @@ async function onPivotRemove(edge) {
   modelBusy.value = true;
   try {
     await gw.removeModel(id);
-    ElMessage.success('已删除模型');
+    showSuccess('已删除模型');
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || '删除失败');
+    showError(err?.response?.data?.message || '删除失败');
   } finally {
     modelBusy.value = false;
   }
@@ -810,7 +845,7 @@ async function onPivotRemove(edge) {
 // then call the per-user models API. Shared by the catalog pivot affordance and
 // the provider-key card's "+ 添加模型".
 async function promptAddModelForProvider(provider) {
-  if (!provider) return ElMessage.warning('该分组无法确定归属供应商，无法添加');
+  if (!provider) return showWarning('该分组无法确定归属供应商，无法添加');
   let model = '';
   try {
     const res = await ElMessageBox.prompt(`为供应商「${provider}」添加一个模型 ID`, '添加模型', {
@@ -822,14 +857,14 @@ async function promptAddModelForProvider(provider) {
   } catch {
     return; /* cancelled */
   }
-  if (!model) return ElMessage.warning('请填写模型 ID');
+  if (!model) return showWarning('请填写模型 ID');
   modelBusy.value = true;
   try {
     await gw.addModel({ provider, model });
-    ElMessage.success('已添加模型');
+    showSuccess('已添加模型');
   } catch (err) {
     const code = err?.response?.status;
-    ElMessage.error(code === 409 ? '该模型已存在' : err?.response?.data?.message || '添加失败');
+    showError(code === 409 ? '该模型已存在' : err?.response?.data?.message || '添加失败');
   } finally {
     modelBusy.value = false;
   }
@@ -846,10 +881,10 @@ async function onIssueToken(label) {
     const row = await gw.issueCcToken(label);
     if (row?.key) {
       justIssued.value = row.key;
-      ElMessage.success('已签发新 Token');
+      showSuccess('已签发新 Token');
     }
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || '签发失败');
+    showError(err?.response?.data?.message || '签发失败');
   } finally {
     ccBusy.value = false;
   }
@@ -858,9 +893,9 @@ async function onIssueToken(label) {
 async function onRevokeToken(id) {
   try {
     await gw.revokeCcToken(id);
-    ElMessage.success('Token 已撤销');
+    showSuccess('Token 已撤销');
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || '撤销失败');
+    showError(err?.response?.data?.message || '撤销失败');
   }
 }
 </script>

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-SKILL-001] Skill 编写规范.md -->
+<title>[DESIGN-SKILL-001] Skill 编写规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-SKILL-001] Skill 编写规范</div>
+      <header class="hero reveal"><h1>[DESIGN-SKILL-001] Skill 编写规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-skill-001-skill-编写规范">[DESIGN-SKILL-001] Skill 编写规范</a></li><li class="lvl-2"><a href="#1-红线">1. 红线</a></li><li class="lvl-2"><a href="#2-description-四段式-khyos-本地化版">2. description 四段式（khyos 本地化版）</a></li><li class="lvl-2"><a href="#3-allowed-tools-的语法差异-实测踩过的坑-勿混用">3. `allowed-tools` 的语法差异（**实测踩过的坑，勿混用**）</a></li><li class="lvl-2"><a href="#4-渐进式披露-三档按需加载">4. 渐进式披露：三档按需加载</a></li><li class="lvl-2"><a href="#5-description-预算机制-这是-sk-1-到-sk-4-的根本原因">5. description 预算机制（**这是 SK-1 到 SK-4 的根本原因**）</a></li><li class="lvl-2"><a href="#6-校验-守卫">6. 校验（守卫）</a></li><li class="lvl-2"><a href="#7-版本历史">7. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-skill-001-skill-编写规范">[DESIGN-SKILL-001] Skill 编写规范<a class="anchor" href="#design-skill-001-skill-编写规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: SKILL-001 -->
+<blockquote><p><strong>定位</strong>：本文件回答一个问题——<strong>写一个 khy Skill 时，<code>manifest.json</code> 的字段填什么、<br><code>prompt.md</code> 怎么组织、什么时候该拆成多个文件</strong>。它是 Skill <strong>作者侧</strong>的书写约束。</p>
+<p><strong>边界</strong>（与相邻规范谁管什么）：</p>
+<ul><li>本文件管<strong>怎么写</strong>（内容与字段形态）；<code>[DESIGN-TOOL-002]</code> 管<strong>什么是核/什么是拓展</strong>（收纳边界）；</li></ul>
+<p><code>[DESIGN-ARCH-116]</code> 管<strong>运行时契约</strong>（<code>@khy-plugin-sdk</code> 的加载与调用时序）。</p>
+<ul><li>本文件<strong>不重复</strong> <code>FILE-FORMAT-PROTOCOL</code> 的通用格式规定（LF / 标题层级 / 代码块语言），</li></ul>
+<p>只补 Skill 特有的约束。</p>
+<p><strong>规则 ID</strong>：<code>SKILL-001</code>。登记见 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>。<br><strong>上游依据</strong>：<code>[DESIGN-ARCH-121]</code> §K-09（对黄佳《Claude Code 实战：Harness 工程之道》<br>ch03 §3.4 的借鉴与 khyos 本地化）。</p></blockquote>
+<hr>
+<h2 id="1-红线">1. 红线<a class="anchor" href="#1-红线" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>必须 / 禁止</th><th>判据</th></tr></thead><tbody><tr><td>SK-1</td><td><strong>description 必须四段式</strong>，且触发短语必须落在<strong>前 60 字符</strong>内</td><td>见 §2 模板；<code>scripts/ci/check-skill-triggers.js</code></td></tr><tr><td>SK-2</td><td>description <strong>不得超过 1024 字符</strong></td><td>实测本仓 43 个 manifest，最长 485（<code>interview-me</code>），平均 167</td></tr><tr><td>SK-3</td><td><strong>必须写 <code>when_to_use</code></strong>；不写即视为未完成</td><td>实测 <strong>16/43</strong> 已填，缺口 27 个</td></tr><tr><td>SK-4</td><td><code>when_to_use</code> <strong>不得超过 120 字符</strong></td><td>渲染层在此截断（<code>skills/index.js</code> 的 <code>hintLen</code>）</td></tr><tr><td>SK-5</td><td>任务型 Skill <strong>必须</strong>显式声明 <code>disableModelInvocation</code></td><td>缺省会被注入目录、挤占预算</td></tr><tr><td>SK-6</td><td>需要工具的 Skill <strong>必须</strong>写 <code>allowed-tools</code>，<strong>禁止</strong>留空表示「全部允许」</td><td>最小权限；留空 = 无限权限</td></tr><tr><td>SK-7</td><td><code>allowed-tools</code> 的 Bash 项<strong>必须</strong>用前缀形式，且用 <code>:*</code> 而非 <code> *</code></td><td>见 §3 语法差异（<strong>这是实测踩过的坑</strong>）</td></tr><tr><td>SK-8</td><td>触发短语<strong>必须</strong>是可命中的具体词，禁止 <code>help</code> / <code>assist</code> / <code>general</code> 等空泛词</td><td>评审 checklist</td></tr><tr><td>SK-9</td><td>细则<strong>必须</strong>下沉 <code>reference/</code>，禁止把全文塞进 <code>prompt.md</code></td><td>渐进式披露；见 §4</td></tr></tbody></table>
+<hr>
+<h2 id="2-description-四段式-khyos-本地化版">2. description 四段式（khyos 本地化版）<a class="anchor" href="#2-description-四段式-khyos-本地化版" aria-label="锚点">#</a></h2>
+<p>书侧（ch03 §3.4.2）用三段式 <code>What / When / Not For</code>。khyos <strong>多一段且提到最前</strong>，<br>原因是实测的渲染预算极紧——见 §5。</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;&lt;触发短语前置&gt; &lt;What&gt; &lt;When&gt; &lt;Not For&gt;&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;when_to_use&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;&lt;≤120 字符的简短触发语&gt;&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<table><thead><tr><th>段</th><th>作用</th><th>写法要求</th><th>长度建议</th></tr></thead><tbody><tr><td>0. <strong>触发短语前置</strong></td><td>khyos 特有。触发信号必须在<strong>前 60 字符</strong>内出现</td><td>用用户真会说出口的词，不用类名</td><td>≤60</td></tr><tr><td>1. What</td><td>这技能做什么</td><td>一句话，动词开头</td><td>60–120</td></tr><tr><td>2. When</td><td>什么时候用</td><td>多个 <code>Use when ...</code> 短句</td><td>80–200</td></tr><tr><td>3. Not For</td><td>什么时候<strong>不</strong>用（防误触发）</td><td><code>Not for ...</code>，点名相邻技能</td><td>40–100</td></tr></tbody></table>
+<p><strong>反例 → 正例</strong></p>
+<table><thead><tr><th>❌ 反例</th><th>问题</th><th>✅ 正例</th></tr></thead><tbody><tr><td><code>&quot;Helps with skills.&quot;</code></td><td>空泛词、无触发信号、无 When</td><td><code>&quot;创作和修改 khy Skill：写 manifest.json、组织 prompt.md、配 allowed-tools。Use when 用户要新建/改一个 skill。Not for 插件系统契约（见 ARCH-116）。&quot;</code></td></tr><tr><td><code>&quot;A comprehensive guide to ...&quot;</code></td><td>What 段冗长，触发短语被推到 200 字符外</td><td><code>&quot;&lt;触发词&gt;。...&quot;</code></td></tr></tbody></table>
+<hr>
+<h2 id="3-allowed-tools-的语法差异-实测踩过的坑-勿混用">3. <code>allowed-tools</code> 的语法差异（<strong>实测踩过的坑，勿混用</strong>）<a class="anchor" href="#3-allowed-tools-的语法差异-实测踩过的坑-勿混用" aria-label="锚点">#</a></h2>
+<p>khyos 有<strong>两套</strong>互不相通的写法，混用会<strong>静默失效</strong>：</p>
+<table><thead><tr><th>载体</th><th>语法</th><th>真源</th></tr></thead><tbody><tr><td><strong>Skill 的 <code>allowed-tools</code></strong></td><td><code>Bash(npm run test:*)</code> —— 前缀 + <code>:*</code></td><td><code>toolCalling.js:212</code> <code>_checkActiveSkillPolicy</code></td></tr><tr><td><strong>权限的 <code>patternRules</code></strong></td><td><code>{ toolName:&quot;Bash&quot;, pattern:&quot;npm run *&quot; }</code> —— glob</td><td><code>permissionStore.js</code> <code>_patternRules</code></td></tr></tbody></table>
+<blockquote><p>⚠️ <strong>另有一条实测陷阱</strong>：Skill 的 <code>allowed-tools</code> 闸门<strong>仅对 handler 技能生效</strong>——<br>激活点在 <code>if (skill.handlerPath &amp;&amp; fs.existsSync(skill.handlerPath))</code> 块内。<br>实测本仓 <strong>0/43</strong> 技能有 handler，故<strong>现阶段该字段配了也不会被强制</strong>。<br>这不是「不用配」，而是「配了是给未来留契约」——按 SK-6 仍必须配。</p></blockquote>
+<p><strong>前缀必须用 <code>:*</code> 的理由</strong>：<code>Bash(git *)</code> 里的 <code> *</code> 是 <strong>glob 单星</strong>，<br>而 <code>Bash(git:*)</code> 是<strong>前缀标记</strong>。两者在 <code>patternMatcher</code> 与 Skill 闸门里语义不同，<br>写错后既不报错也不生效。<strong>统一写 <code>:*</code>。</strong></p>
+<hr>
+<h2 id="4-渐进式披露-三档按需加载">4. 渐进式披露：三档按需加载<a class="anchor" href="#4-渐进式披露-三档按需加载" aria-label="锚点">#</a></h2>
+<p>书的做法（ch03 §3.4.3）：<code>description</code> → <code>SKILL.md</code> 正文 → <code>reference/</code> 按需，<br>声称省 50%–98% Token。khyos 的对应物：</p>
+<table><thead><tr><th>档</th><th>书的载体</th><th>khyos 载体</th><th>何时进上下文</th></tr></thead><tbody><tr><td>1</td><td><code>description</code> 字段</td><td><code>manifest.json</code> 的 <code>description</code> + <code>when_to_use</code></td><td><strong>总是</strong>（目录清单）</td></tr><tr><td>2</td><td><code>SKILL.md</code> 正文</td><td><code>prompt.md</code></td><td>技能被激活时</td></tr><tr><td>3</td><td><code>reference/*.md</code></td><td><code>reference/*.md</code></td><td>模型显式读取时</td></tr></tbody></table>
+<p><strong>约束</strong>：<code>reference/</code> 里每个文件<strong>必须有独立标题</strong>且<strong>可被单独读懂</strong>——<br>因为模型可能只读其中一份。禁止跨文件用「见上文」。</p>
+<hr>
+<h2 id="5-description-预算机制-这是-sk-1-到-sk-4-的根本原因">5. description 预算机制（<strong>这是 SK-1 到 SK-4 的根本原因</strong>）<a class="anchor" href="#5-description-预算机制-这是-sk-1-到-sk-4-的根本原因" aria-label="锚点">#</a></h2>
+<p>khyos 的技能目录清单有<strong>字符预算</strong>：</p>
+<pre><code class="language-text">charBudget = clamp(1% × contextWindowTokens × 4, 500, 8000)     constants/prompts.js:2119-2125
+  128K 上下文 → 5120 字符          KHY_SKILL_CATALOG_CHARS 可覆盖</code></pre>
+<p><code>formatSkillListing()</code>（<code>services/backend/src/skills/index.js</code>）的降档逻辑：</p>
+<ol><li>首渲染用 <code>descLen = 250</code>（<code>:278</code>）</li><li>总和 ≤ 预算 → 直接返回</li><li>超预算 → 按 <code>availableForDescs / 技能数</code> <strong>统一压缩每个 description</strong>（<code>:293</code>）</li></ol>
+<blockquote><p>📌 <strong>2026-09-18 实测</strong>：43 技能 / 5120 预算下，<code>maxDescLen</code> 被压到 <strong>62</strong> 字符。<br>而<strong>触发短语必须在前 60 字符内</strong>（SK-1）——两者几乎相等<strong>不是巧合</strong>，<br>正是因为预算压缩到 62，触发信号一旦不在前 60 就<strong>必被截掉</strong>，技能从此检索不到。</p>
+<p><strong>同时实测到并行修订</strong>：<code>overhead</code> 的计算已加入 <code>hintLen()</code>，把 <code>when_to_use</code><br>的长度也计入预算（此前漏算，导致一批填充了 <code>when_to_use</code> 的技能静默溢出预算）。<br>→ 这使 SK-4 的 120 字符上限成为<strong>硬约束</strong>。</p></blockquote>
+<p><strong>收益测算</strong>（移出任务型技能可释放的 desc 空间）：</p>
+<table><thead><tr><th>移出数量</th><th>5</th><th>10</th><th>15</th></tr></thead><tbody><tr><td><code>maxDescLen</code></td><td>78</td><td>100</td><td>131</td></tr></tbody></table>
+<p>→ <strong>任务型技能改 <code>disableModelInvocation: true</code> 是当前性价比最高的动作</strong>（SK-5）。</p>
+<hr>
+<h2 id="6-校验-守卫">6. 校验（守卫）<a class="anchor" href="#6-校验-守卫" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>红线</th><th>守卫</th><th>状态</th></tr></thead><tbody><tr><td>SK-1 / SK-2 / SK-3 / SK-4 / SK-8</td><td><code>scripts/ci/check-skill-triggers.js</code></td><td><strong>待建</strong>（<code>[DESIGN-ARCH-121]</code> §K-08）</td></tr><tr><td>SK-5 / SK-6 / SK-7</td><td>无自动守卫，评审 checklist</td><td>待工具化</td></tr><tr><td>SK-9</td><td>无自动守卫</td><td>待工具化</td></tr></tbody></table>
+<blockquote><p>⚠️ <strong><code>check-skill-triggers.js</code> 属概率性检查（触发命中靠语义判断），<br>建议不进三守卫，只做独立脚本</strong>——否则会给门禁带来不稳定的红。</p></blockquote>
+<hr>
+<h2 id="7-版本历史">7. 版本历史<a class="anchor" href="#7-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>2026-09-18</td><td>首版。依据 <code>[DESIGN-ARCH-121]</code> §K-09，把书的 description 三段式本地化为四段式（触发短语提到最前），并补入 khyos 特有的预算机制实测数据（<code>maxDescLen = 62</code>）。<code>allowed-tools</code> 双语法差异与「仅 handler 技能生效」的实测陷阱一并写入 §3。</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-SEMVER-002] 版本管理与发布触发规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-SEMVER-002] 版本管理与发布触发规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-SOURCING-001] 借鉴与实现统一规则.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-SOURCING-001] 借鉴与实现统一规则</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-SKILL-001] Skill 编写规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

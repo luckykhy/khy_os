@@ -17,6 +17,7 @@ const FILE_EDIT_TOOL_NAME = 'Edit';
 const FILE_WRITE_TOOL_NAME = 'Write';
 const NOTEBOOK_EDIT_TOOL_NAME = 'NotebookEdit';
 const BASH_TOOL_NAME = 'Bash';
+const SHELL_TOOL_NAMES = ['Bash', 'bash', 'shellCommand', 'shell_command'];
 
 const { readOnlyProhibitions } = require('../constraints');
 
@@ -96,6 +97,11 @@ const AUDIT_AGENT = {
     FILE_EDIT_TOOL_NAME,
     FILE_WRITE_TOOL_NAME,
     NOTEBOOK_EDIT_TOOL_NAME,
+    // [DESIGN-AGENT-002] A2-2/A2-6: the prompt above says "ONLY for read-only
+    // inspection ... NEVER for edits, installs, or any state change" — but prose
+    // is not enforcement, and Bash can write files and mutate repo state. Withhold
+    // it at the mechanism layer so the declaration and the capability agree.
+    ...SHELL_TOOL_NAMES,
   ],
   source: 'built-in',
   baseDir: 'built-in',

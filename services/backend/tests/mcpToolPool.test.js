@@ -18,8 +18,8 @@
 
 const assert = require('assert');
 
-const { normalizeMcpName, serializeTool } = require('../src/services/mcp/types');
-const { syncMcpToolsToRegistry, annotateDescription, refreshMcpToolPool } = require('../src/services/mcp/toolPool');
+const { normalizeMcpName, serializeTool } = require('../src/services/domain/messaging/mcp/types');
+const { syncMcpToolsToRegistry, annotateDescription, refreshMcpToolPool } = require('../src/services/domain/messaging/mcp/toolPool');
 
 // ── Fakes ───────────────────────────────────────────────────────────────────
 

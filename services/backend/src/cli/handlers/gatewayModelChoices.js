@@ -141,6 +141,51 @@ const MODEL_PROBE_DEBOUNCE_MAX_RETRIES = Math.max(
 const _modelDeepProbeInFlight = new Map();
 
 /**
+ * 最近一次 buildGatewayModelChoices 产出的**可选项快照**(`adapter/model` 小写 key)。
+ *
+ * 为什么存在:模型列表(候选池 → 真值表的收敛)只在「构建」那一刻完成。任何**绕过选择器**的
+ * 应用路径 —— F2「最近模型」轮换、启动默认值、自然语言直选 —— 都不经过构建,于是可以把一个
+ * 早已不存在的 (adapter, model)(历史残留 / 静态目录猜测 / 本机扫描垃圾)直接写进偏好并应用,
+ * 用户看到的就是「TUI 莫名跳到不存在的模型,下一次生成才报错」。快照让这些入口能与**当前真值**
+ * 对账:不在快照里 → 拒绝并给出可执行提示,绝不落盘。
+ */
+let _lastSelectableKeys = null;
+
+/** 读最近一次 catalog 的可选 key 集(未构建过 → null,表示「无快照,不阻断」)。 */
+function getLastSelectableKeys() {
+  return _lastSelectableKeys;
+}
+
+/**
+ * 选择入口对账闸:该选择在**最近一次构建**里是否仍然可选。
+ * 无快照(null)/ model 为空(adapter 级默认模型入口)/ adapter === 'auto' → 放行(不阻断)。
+ * 有快照且快照里没有这条 → false(调用方应拒绝应用并提示重新选择)。
+ * 绝不抛。
+ * @param {{adapter?:string, model?:string|null}} selected
+ * @returns {boolean}
+ */
+function isSelectableNow(selected) {
+  try {
+    const keys = _lastSelectableKeys;
+    if (!keys || !selected) {
+      return true;
+    }
+    const adapter = String(selected.adapter || '')
+      .trim()
+      .toLowerCase();
+    const model = String(selected.model || '')
+      .trim()
+      .toLowerCase();
+    if (!adapter || adapter === 'auto' || !model) {
+      return true;
+    }
+    return keys.has(`${adapter}/${model}`);
+  } catch {
+    return true;
+  }
+}
+
+/**
  * Select AI model from available adapters (with connectivity indicators).
  */
 /**
@@ -661,6 +706,9 @@ async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {
       builtin: '内置回退模型',
       'warn-unverified': '告警通道的未验证模型',
       'cross-provider-claude': '跨提供商 Claude 模型',
+      unconfirmed: '无上游证据的猜测模型（静态目录/本机扫描）',
+      malformed: '形态非法的模型 ID',
+      'verify-failed': '实测探活失败的模型',
     };
     const reasonSummary = Object.keys(filteredModelReasonCount)
       .map((key) => `${reasonLabels[key] || key}×${filteredModelReasonCount[key]}`)
@@ -713,6 +761,22 @@ async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {
   }
 
     onProgress({ kind: 'count', current: 100, total: 100, label: '完成' });
+    // 记录本次构建的可选快照:选择/回跳入口(F2 最近模型、启动默认、自然语言直选)据此对账,
+    // 防止把一个已不在列表里的模型写进偏好并应用(见 isSelectableNow 的注释)。
+    try {
+      _lastSelectableKeys = new Set(
+        modelChoices
+          .filter((c) => c && c.value && !c.disabled && c.value.adapter && c.value.model)
+          .map(
+            (c) =>
+              `${String(c.value.adapter).trim().toLowerCase()}/${String(c.value.model)
+                .trim()
+                .toLowerCase()}`
+          )
+      );
+    } catch {
+      _lastSelectableKeys = null;
+    }
     return { modelChoices, preferredIssueAfterProbe, empty: false };
   } catch (err) {
     onError(`构建模型列表失败: ${(err && err.message) || 'unknown'}`);
@@ -1103,5 +1167,7 @@ module.exports = {
   handleGatewaySelectModel,
   buildVendorModelChoices,
   handleModelSwitchByVendor,
+  getLastSelectableKeys,
+  isSelectableNow,
   setGatewayModelChoicesDeps,
 };

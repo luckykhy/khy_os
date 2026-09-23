@@ -38,7 +38,7 @@ function _getFailsafe() {
     return _failsafe;
   }
   try {
-    _failsafe = require('../failsafe');
+    _failsafe = require('../../security/failsafe');
   } catch {
     _failsafe = undefined;
     return null;
@@ -53,7 +53,7 @@ function _classifyFailure(failure) {
   }
   if (!_resilience) {
     try {
-      _resilience = require('../resilience');
+      _resilience = require('../../security/resilience');
     } catch {
       _resilience = undefined;
       return _fallbackClassify(failure);

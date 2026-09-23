@@ -38,8 +38,11 @@ const titleBarSrc = existsSync(titleBarPath) ? readFileSync(titleBarPath, 'utf-8
 // ── D1: BrowserWindow 尺寸 ──────────────────────────────────────
 
 test('D1: BrowserWindow 默认尺寸 1216×808', () => {
-  assert.match(mainSrc, /width:\s*1216/, 'BrowserWindow width 应为 1216');
-  assert.match(mainSrc, /height:\s*808/, 'BrowserWindow height 应为 808');
+  // Window geometry is restored from settings.json (desktopWindowSize) with
+  // ZCode's 1216×808 as the fallback default — the literal must stay a
+  // single-source default in createWindow, not a hardcoded BrowserWindow prop.
+  assert.match(mainSrc, /:\s*1216/, 'BrowserWindow 宽度回退默认值应为 1216');
+  assert.match(mainSrc, /:\s*808/, 'BrowserWindow 高度回退默认值应为 808');
 });
 
 test('D1: BrowserWindow 最小尺寸 800×600', () => {

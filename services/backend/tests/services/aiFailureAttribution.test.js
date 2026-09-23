@@ -1,14 +1,15 @@
 'use strict';
 /**
- * aiFailureAttribution.test.js �?Agent 失败「归因说人话 + 可追溯」交付（DESIGN-ARCH-028
- * 的传输层收口）。覆盖三件事�?
- *   1) GET �?monitor/attribution 详情接口：缺 requestId�?00；无审计事件�?00 空时间线
- *      （非错误）；有事件→200 透传 traceAudit role 投影结果，且按调用�?role 取数�?
- *   2) WS 失败结构化：classify 把空回复 / 抛错映射�?E0x，发出与 SSE 注入器同形的
- *      结构�?error 事件（带 error_code / requestId / 人话 reason）�?
- *   3) StreamFailSafeInjector 把本�?requestId 盖到 error 事件上（追溯回连键）�?
+ * aiFailureAttribution.test.js — Agent 失败「归因说人话 + 可追溯」交付（DESIGN-ARCH-028
+ * 的传输层收口）。覆盖三件事�?
+ *   1) GET �?monitor/attribution 详情接口：缺 requestId�?00；无审计事件�?00 空时间线
+ *      （非错误）；有事件→200 透传 traceAudit role 投影结果，且按调用�?role 取数�?
+ *   2) WS 失败结构化：classify 把空回复 / 抛错映射�?E0x，发出与 SSE 注入器同形的
+ *      结构�?error 事件（带 error_code / requestId / 人话 reason）�?
+ *   3) StreamFailSafeInjector 把本�?requestId 盖到 error 事件上（追溯回连键）�?
  */
 const server = require('../../src/services/aiManagementServer');
+const assert = require('node:assert');
 const { handleAttributionDetail, _wsSendStructuredFailure, _genChatRequestId } = server.__test__;
 const traceAudit = require('../../src/services/traceAuditService');
 const { StreamFailSafeInjector } = require('../../src/services/failsafe');
@@ -53,7 +54,7 @@ function makeWsSession() {
 // ── requestId generator sanity ────────────────────────────────────────────────
 
 describe('Ai Failure Attribution', () => {
-  test('attribution: missing requestId �?400 without touching trace store', async () => {
+  test('attribution: missing requestId �?400 without touching trace store', async () => {
       const res = makeRes();
       await handleAttributionDetail(makeReq(), res, makeSearch({}));
       expect(res.statusCode).toBe(400);
@@ -62,8 +63,8 @@ describe('Ai Failure Attribution', () => {
       assert.deepEqual(capturedJson(res).timeline, []);
   });
 
-  test('attribution: unauthenticated �?401, never leaks a timeline', async () => {
-      // No AI_MGMT_SKIP_AUTH, no token, no env token �?authenticate fails closed.
+  test('attribution: unauthenticated �?401, never leaks a timeline', async () => {
+      // No AI_MGMT_SKIP_AUTH, no token, no env token �?authenticate fails closed.
       const prevSkip = process.env.AI_MGMT_SKIP_AUTH;
       const prevToken = process.env.AI_MGMT_AUTH_TOKEN;
       delete process.env.AI_MGMT_SKIP_AUTH;
@@ -117,7 +118,7 @@ describe('Ai Failure Attribution', () => {
       }
   });
 
-  test('attribution: no audit events �?200 with an empty timeline (not an error)', async () => {
+  test('attribution: no audit events �?200 with an empty timeline (not an error)', async () => {
       const prevSkip = process.env.AI_MGMT_SKIP_AUTH;
       const prevEnv = process.env.NODE_ENV;
       process.env.AI_MGMT_SKIP_AUTH = 'true';

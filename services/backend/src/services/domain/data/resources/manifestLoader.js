@@ -95,7 +95,7 @@ function loadManifest(manifestPath = defaultManifestPath()) {
     // Static require lets esbuild embed the small channel manifest in bundle.mjs.
     // Source and regular installs still read config/resources.json first, so an
     // operator can update the channel metadata without rebuilding JavaScript.
-    return validateManifest(require('../../../config/resources.json'));
+    return validateManifest(require('../../../../../config/resources.json'));
   }
 }
 

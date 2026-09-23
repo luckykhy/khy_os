@@ -9,7 +9,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 
 const SUT = '../../src/services/domain/system/syscallGateway/permissionCache';
-const { LEVELS } = require('../../src/services/syscallGateway/resourceClassifier');
+const { LEVELS } = require('../../src/services/domain/system/syscallGateway/resourceClassifier.js');
 
 function fresh() {
   delete require.cache[require.resolve(SUT)];

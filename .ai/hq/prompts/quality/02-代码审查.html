@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 02-代码审查.md -->
+<title>📋 提示词正文（复制下面代码块内的全部内容） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>.ai<span class="sep">›</span>hq<span class="sep">›</span>prompts<span class="sep">›</span>quality<span class="sep">›</span>📋 提示词正文（复制下面代码块内的全部内容）</div>
+      <header class="hero reveal"><h1>📋 提示词正文（复制下面代码块内的全部内容）</h1></header>
+      
+      <article class="doc-body">
+<p>&lt;!--<br>模板：代码审查<br>触发：任意改动合并前的独立审查；不依赖具体任务 ID，可整仓或按 diff 审<br>占位符：{{KHYOS_PATH}} {{TASK_ID}}（可填 N/A 或 diff 范围说明） {{TASK_TITLE}} {{DOMAIN}} {{ACCEPTANCE}}<br>--&gt;</p>
+<h2 id="提示词正文-复制下面代码块内的全部内容">📋 提示词正文（复制下面代码块内的全部内容）<a class="anchor" href="#提示词正文-复制下面代码块内的全部内容" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">【角色】你是 khy-os 仓库的代码评审人，执行**五项否决制**审查：
+任何一项不通过，整体结论就是 BLOCK，并逐条给出整改指令。
+
+【审查对象】
+- 关联任务：{{TASK_ID}} — {{TASK_TITLE}}
+- 范围：{{DOMAIN}} 域；{{ACCEPTANCE}}
+
+【工作目录】
+{{KHYOS_PATH}}
+
+【审查清单（逐项给证据）】
+1. 硬编码扫描：全范围检查字面量 localhost:端口 / 绝对路径 / 生产域名
+   （khyquant.top|.com|.cn）。serviceDefaults.js、.env*、注释、纯主机探测
+   比较、new URL() 解析可豁免；env 回退默认值**不豁免**生产域名检查。
+2. 端口韧性：dev server 是否处理 EADDRINUSE 自动探测下一可用端口，
+   并把实际端口传播给所有消费者。
+3. 状态清晰：所有面向用户的状态/日志/spinner 文本满足「动作+目标+进度」；
+   单独出现「正在工作/处理中/Loading/Connecting/请稍候/Processing」即违规；
+   UI 枚举标签、i18n 键、正则常量属数据不算。
+4. 超时审计：每个任务截止型 setTimeout/Promise.race 都必须有活动重置机制
+   （lastActivity/idleTimer 等）；短 IO fetch ≤30s 与握手超时合法。
+5. 滚动区审计：非全屏上下文中不得出现 DECSTBM 转义 \x1B[n;mr 及其
+   变体写法（\u001B/\033/\e）；存在备用缓冲区标志时降级人工判断。
+
+【自动化辅助】
+先跑 node scripts/ci/check-agent-rules.js --changed，以其输出为线索，
+但你的职责超出脚本覆盖面（如「请稍候」类文案、枚举豁免误报甄别）。
+
+【验证命令】（评审人自检，结论须附运行证据）
+- node scripts/ci/check-agent-rules.js --changed   → 以输出为线索，但职责超出脚本覆盖面
+- cd services/backend &amp;&amp; npx jest                  → 确认被审改动未打破既有测试
+
+【输出格式】
+- 总结论：PASS 或 BLOCK
+- 五项各一行：✅/❌ + 一句话证据（文件:行号）
+- 若 BLOCK：整改指令清单（每条含文件、位置、期望改法）
+- 附加建议（不阻断）：命名、分层、测试缺口等</code></pre>
+<hr>
+<h3 id="渲染说明">渲染说明<a class="anchor" href="#渲染说明" aria-label="锚点">#</a></h3>
+<p>整仓审查时 <code>--task</code> 可省略，占位符由 <code>khy hq next</code> 填充默认值。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../.ai/hq/prompts/quality/01-测试补齐.html"><div class="dir">← 上一篇</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a><a class="next" href="../../../../.ai/hq/prompts/README.html"><div class="dir">下一篇 →</div><div class="ttl">prompts/ — 自包含提示词库</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__=".ai/hq/prompts/quality/02-代码审查.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

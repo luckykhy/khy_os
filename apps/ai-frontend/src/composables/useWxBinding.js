@@ -205,6 +205,9 @@ export function useWxBinding() {
       const resp = await authedFetch(`${base}/api/wx/login/stream`, {
         signal: controller.signal,
         stream: true,
+        // 长流中瞬时 401 不应硬跳登录(会毁掉本卡状态)——交回 401 Response,
+        // 由下方 !resp.ok 分支给出可操作的提示。
+        retry401: false,
       });
 
       // 超并发上限:后端 429 + {error},展示到本卡并停止该路流。
@@ -217,6 +220,10 @@ export function useWxBinding() {
           /* 解析失败用默认文案 */
         }
         _failItem(item, msg);
+        return;
+      }
+      if (resp.status === 401) {
+        _failItem(item, '登录态已失效 (401)：请重新登录后再扫码');
         return;
       }
       if (!resp.ok || !resp.body) throw new Error(`SSE failed: ${resp.status}`);
@@ -238,7 +245,7 @@ export function useWxBinding() {
       }
     } catch (err) {
       if (controller.signal.aborted) return; // 主动停止/取消,非错误
-      _failItem(item, err?.message || '扫码连接失败，请重试');
+      _failItem(item, err?.message || '扫码连接失败：请确认网络后重试');
     } finally {
       if (item._controller === controller) item._controller = null;
     }

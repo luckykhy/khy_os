@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-CHANGELOG-001] Changelog 格式规范.md -->
+<title>[DESIGN-CHANGELOG-001] Changelog 格式规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-CHANGELOG-001] Changelog 格式规范</div>
+      <header class="hero reveal"><h1>[DESIGN-CHANGELOG-001] Changelog 格式规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-changelog-001-changelog-格式规范">[DESIGN-CHANGELOG-001] Changelog 格式规范</a></li><li class="lvl-2"><a href="#1-格式">1. 格式</a></li><li class="lvl-2"><a href="#2-版本分类">2. 版本分类</a></li><li class="lvl-2"><a href="#3-书写规则">3. 书写规则</a></li><li class="lvl-2"><a href="#4-自动化">4. 自动化</a></li><li class="lvl-2"><a href="#5-版本历史">5. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-changelog-001-changelog-格式规范">[DESIGN-CHANGELOG-001] Changelog 格式规范<a class="anchor" href="#design-changelog-001-changelog-格式规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>用途</strong>：定义 khy-os 项目的 CHANGELOG 格式标准，基于 <a href="https://keepachangelog.com/" target="_blank" rel="noopener">Keep a Changelog</a>。<br>当前 <code>CHANGELOG.md</code> 存在但格式不统一。</p></blockquote>
+<hr>
+<h2 id="1-格式">1. 格式<a class="anchor" href="#1-格式" aria-label="锚点">#</a></h2>
+<pre><code># Changelog
+
+## [Unreleased]
+
+## [1.2.0] - 2026-09-10
+
+### Added
+- New feature description
+
+### Changed
+- Changed description
+
+### Deprecated
+- Deprecated feature (will be removed in 2.0.0)
+
+### Removed
+- Removed feature
+
+### Fixed
+- Bug fix description
+
+### Security
+- Security fix description</code></pre>
+<hr>
+<h2 id="2-版本分类">2. 版本分类<a class="anchor" href="#2-版本分类" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>分类</th><th>说明</th><th>使用场景</th></tr></thead><tbody><tr><td><code>Added</code></td><td>新功能</td><td>新 API、新 CLI 命令、新组件</td></tr><tr><td><code>Changed</code></td><td>变更</td><td>功能修改、配置变更</td></tr><tr><td><code>Deprecated</code></td><td>即将移除</td><td>标记为废弃，指定移除版本</td></tr><tr><td><code>Removed</code></td><td>已移除</td><td>废弃功能正式删除</td></tr><tr><td><code>Fixed</code></td><td>修复</td><td>Bug 修复</td></tr><tr><td><code>Security</code></td><td>安全</td><td>安全漏洞修复</td></tr></tbody></table>
+<hr>
+<h2 id="3-书写规则">3. 书写规则<a class="anchor" href="#3-书写规则" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>规则</th><th>说明</th><th>示例</th></tr></thead><tbody><tr><td>版本号链接</td><td>链接到 Git tag</td><td><code>[1.2.0]</code></td></tr><tr><td>日期格式</td><td>ISO 8601</td><td><code>2026-09-10</code></td></tr><tr><td>变更描述</td><td>祈使句、简洁</td><td><code>Add refresh token rotation</code></td></tr><tr><td>关联 Issue</td><td>括号引用</td><td><code>Fix login crash (#198)</code></td></tr><tr><td>分组</td><td>按分类分组</td><td>Added / Changed / Fixed</td></tr><tr><td>不重复</td><td>一个变更只出现一次</td><td>不在多个分类重复</td></tr></tbody></table>
+<hr>
+<h2 id="4-自动化">4. 自动化<a class="anchor" href="#4-自动化" aria-label="锚点">#</a></h2>
+<pre><code class="language-json"><span class="hljs-comment">// package.json</span>
+<span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;scripts&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;changelog&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;conventional-changelog -p angular -i CHANGELOG.md -s&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p>配合 <code>commitlint</code> + <code>conventional-changelog</code> 自动生成。</p>
+<hr>
+<h2 id="5-版本历史">5. 版本历史<a class="anchor" href="#5-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义 Changelog 格式规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-CAP-001] 容量规划规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-CAP-001] 容量规划规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-CICD-001] CI-CD 规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-CICD-001] CI/CD 规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-CHANGELOG-001] Changelog 格式规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

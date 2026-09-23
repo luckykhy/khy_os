@@ -23,9 +23,11 @@
  *
  * HOW-TO-EXTEND（给下一个维护者 / 小模型）：
  *   - 要把一类**新的只读角色**纳入收窄：把它加进 `_READ_ONLY_ROLES`（小写）。
- *   - 要改**被剥离的工具集**（如严格模式也剥 Bash）：改 `_READ_ONLY_DENY` 一处。
- *     注意默认**不剥 `Bash`**——探索 / 验证常跑只读命令（`ls` / `grep` /
- *     `node --test`），剥 Bash 会误伤合法只读 shell（诚实边界，宁可保守少剥）。
+ *   - 要改**被剥离的工具集**：改 `_READ_ONLY_DENY` / `_SHELL_DENY_ROLES` 两处。
+ *     `Bash` 是**写通道**（重定向 / `sed -i` / `tee`）且能改系统状态
+ *     （`git add` / `npm install`），所以**默认剥**（[DESIGN-AGENT-002] A2-2）。
+ *     例外：`verify` **需要**跑 build/test，故在 `_SHELL_DENY_ROLES` 之外——
+ *     它的 `Bash` 是**显式授予**的，不是默认继承的。
  *   - 要**接线**让 arc 真正生效：在 `AgentTool.buildSubagentDenylist` 的 union
  *     点用 `mergeRoleScopeInto(base, role)` 替换 base（形状已对齐，纯加性）。
  *   - 保持纯、绝不抛、门关返回空。加一条 node:test 覆盖新角色 / 新工具。
@@ -38,13 +40,18 @@
 const EDIT = 'Edit';
 const WRITE = 'Write';
 const NOTEBOOK_EDIT = 'NotebookEdit';
+const SHELL_TOOL_NAMES = ['Bash', 'bash', 'shellCommand', 'shell_command'];
 
 // 只读语义的角色。与 exploreAgent（探索）/ readingAgent（深读）/ auditAgent
 // （审计）/ planAgent（规划）/ researchAgent（调研）的只读定义对齐。write 角色
 // (`implement` / `coder` / `general` / 未知) 不在此集 → 不收窄。
 const _READ_ONLY_ROLES = new Set(['explore', 'verify', 'plan', 'research', 'audit', 'review']);
 
-// 只读角色被剥离的工具集。默认只剥文件写工具，**不剥 Bash**（见 HOW-TO-EXTEND）。
+// 需要跑命令（build / test / lint）才能完成职责的只读角色。它们**不**被剥 shell：
+// 这是**显式授予**（[DESIGN-AGENT-002] A2-1），不是「默认继承」。
+const _SHELL_GRANTED_ROLES = new Set(['verify']);
+
+// 只读角色一律被剥的文件写工具。
 const _READ_ONLY_DENY = Object.freeze([EDIT, WRITE, NOTEBOOK_EDIT]);
 
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
@@ -84,10 +91,15 @@ function roleToolScope(role) {
   if (!key) {
     return [];
   }
-  if (_READ_ONLY_ROLES.has(key)) {
-    return [..._READ_ONLY_DENY];
+  if (!_READ_ONLY_ROLES.has(key)) {
+    return [];
   }
-  return [];
+  const deny = [..._READ_ONLY_DENY];
+  // [DESIGN-AGENT-002] A2-2: only roles that got an explicit shell grant keep it.
+  if (!_SHELL_GRANTED_ROLES.has(key)) {
+    deny.push(...SHELL_TOOL_NAMES);
+  }
+  return deny;
 }
 
 /**

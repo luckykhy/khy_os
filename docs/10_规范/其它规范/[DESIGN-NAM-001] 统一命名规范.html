@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-NAM-001] 统一命名规范.md -->
+<title>[DESIGN-NAM-001] 统一命名规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-NAM-001] 统一命名规范</div>
+      <header class="hero reveal"><h1>[DESIGN-NAM-001] 统一命名规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-nam-001-统一命名规范">[DESIGN-NAM-001] 统一命名规范</a></li><li class="lvl-2"><a href="#1-命名原则">1. 命名原则</a></li><li class="lvl-2"><a href="#2-javascript-node-js-命名">2. JavaScript / Node.js 命名</a></li><li class="lvl-3"><a href="#2-1-基础规则">2.1 基础规则</a></li><li class="lvl-3"><a href="#2-2-模块导出命名">2.2 模块导出命名</a></li><li class="lvl-3"><a href="#2-3-express-中间件命名">2.3 Express 中间件命名</a></li><li class="lvl-2"><a href="#3-python-命名">3. Python 命名</a></li><li class="lvl-3"><a href="#3-1-基础规则">3.1 基础规则</a></li><li class="lvl-3"><a href="#3-2-函数名动词前缀">3.2 函数名动词前缀</a></li><li class="lvl-2"><a href="#4-sql-数据库命名">4. SQL / 数据库命名</a></li><li class="lvl-3"><a href="#4-1-已有规范-design-db-001-2">4.1 已有规范（DESIGN-DB-001 §2）</a></li><li class="lvl-3"><a href="#4-2-sequelize-model-类名映射">4.2 Sequelize Model 类名映射</a></li><li class="lvl-2"><a href="#5-css-命名">5. CSS 命名</a></li><li class="lvl-3"><a href="#5-1-bem-规范-khy-os-事实标准">5.1 BEM 规范（khy-os 事实标准）</a></li><li class="lvl-3"><a href="#5-2-khy-os-特定约定">5.2 khy-os 特定约定</a></li><li class="lvl-2"><a href="#6-vue-组件命名">6. Vue 组件命名</a></li><li class="lvl-3"><a href="#6-1-单文件组件文件名">6.1 单文件组件文件名</a></li><li class="lvl-3"><a href="#6-2-组件内命名">6.2 组件内命名</a></li><li class="lvl-3"><a href="#6-3-composables">6.3 Composables</a></li><li class="lvl-2"><a href="#7-环境变量命名">7. 环境变量命名</a></li><li class="lvl-3"><a href="#7-1-前缀规则">7.1 前缀规则</a></li><li class="lvl-3"><a href="#7-2-风格">7.2 风格</a></li><li class="lvl-2"><a href="#8-git-标签命名">8. Git 标签命名</a></li><li class="lvl-3"><a href="#8-1-格式">8.1 格式</a></li><li class="lvl-3"><a href="#8-2-约束">8.2 约束</a></li><li class="lvl-2"><a href="#9-npm-包命名">9. npm 包命名</a></li><li class="lvl-2"><a href="#10-文件名规范">10. 文件名规范</a></li><li class="lvl-3"><a href="#10-1-目录名">10.1 目录名</a></li><li class="lvl-3"><a href="#10-2-测试文件">10.2 测试文件</a></li><li class="lvl-2"><a href="#11-禁止清单">11. 禁止清单</a></li><li class="lvl-2"><a href="#12-版本历史">12. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-nam-001-统一命名规范">[DESIGN-NAM-001] 统一命名规范<a class="anchor" href="#design-nam-001-统一命名规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: NAM-001 -->
+<blockquote><p><strong>用途</strong>：定义 khy-os 全栈代码的统一命名标准，覆盖 JavaScript、Python、SQL、CSS、配置文件等所有语言。<br>AGENTS.md 只给了一句 &quot;camelCase（JS）、snake_case（Python）&quot;，本文档补全全量细节与例外。</p></blockquote>
+<hr>
+<h2 id="1-命名原则">1. 命名原则<a class="anchor" href="#1-命名原则" aria-label="锚点">#</a></h2>
+<ol><li><strong>可读优先</strong>：名称应自解释，不依赖注释说明意图</li><li><strong>一致性</strong>：同一域内必须使用同一种风格</li><li><strong>领域词优先</strong>：用业务域术语（<code>strategy</code> 而非 <code>config</code>，<code>broker</code> 而非 <code>client</code>）</li><li><strong>长度适中</strong>：短命名用于窄域（循环变量），长命名用于宽域（模块/类名）</li><li><strong>避免歧义</strong>：不用 <code>data</code>、<code>info</code>、<code>handle</code>、<code>manager</code> 等无意义词</li></ol>
+<hr>
+<h2 id="2-javascript-node-js-命名">2. JavaScript / Node.js 命名<a class="anchor" href="#2-javascript-node-js-命名" aria-label="锚点">#</a></h2>
+<h3 id="2-1-基础规则">2.1 基础规则<a class="anchor" href="#2-1-基础规则" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>风格</th><th>示例</th></tr></thead><tbody><tr><td>变量 / 函数 / 参数</td><td><code>camelCase</code></td><td><code>userProfile</code>、<code>getUserById()</code>、<code>maxRetries</code></td></tr><tr><td>常量（模块级）</td><td><code>SCREAMING_SNAKE_CASE</code></td><td><code>MAX_RETRY_COUNT</code>、<code>DEFAULT_TIMEOUT_MS</code></td></tr><tr><td>对象键</td><td><code>camelCase</code></td><td><code>{ userId, createdAt }</code></td></tr><tr><td>文件路径（目录）</td><td><code>camelCase</code></td><td><code>gateway/</code>、<code>aiChatPort.js</code></td></tr><tr><td>文件名（JS 模块）</td><td><code>camelCase</code></td><td><code>aiGateway.js</code>、<code>rateLimit.js</code></td></tr><tr><td>类名</td><td><code>PascalCase</code></td><td><code>KhyError</code>、<code>TokenUsageService</code></td></tr><tr><td>私有属性</td><td><code>#camelCase</code>（# 前缀）</td><td><code>#cachedResult</code></td></tr><tr><td>枚举值</td><td><code>SCREAMING_SNAKE_CASE</code></td><td><code>STATUS_ACTIVE</code>、<code>ROLE_ADMIN</code></td></tr></tbody></table>
+<h3 id="2-2-模块导出命名">2.2 模块导出命名<a class="anchor" href="#2-2-模块导出命名" aria-label="锚点">#</a></h3>
+<p><strong>默认导出</strong>：仅限单一实体，名称与文件名 camelCase 对齐：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// aiGateway.js — 模块级唯一重要实体</span>
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = { <span class="hljs-variable constant_">AI_GATEWAY_DEFAULTS</span>, createAIGateway };</code></pre>
+<p><strong>具名导出</strong>：优先于默认导出，便于 tree-shaking：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">export</span> { validateInput, sanitizeOutput };</code></pre>
+<h3 id="2-3-express-中间件命名">2.3 Express 中间件命名<a class="anchor" href="#2-3-express-中间件命名" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 中间件函数名：动词 + 职责</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">requireAuth</span> = (<span class="hljs-params">req, res, next</span>) =&gt; { ... };
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">validateRequestBody</span> = (<span class="hljs-params">schema</span>) =&gt; <span class="hljs-function">(<span class="hljs-params">req, res, next</span>) =&gt;</span> { ... };
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">logApiPerformance</span> = (<span class="hljs-params">req, res, next</span>) =&gt; { ... };</code></pre>
+<hr>
+<h2 id="3-python-命名">3. Python 命名<a class="anchor" href="#3-python-命名" aria-label="锚点">#</a></h2>
+<h3 id="3-1-基础规则">3.1 基础规则<a class="anchor" href="#3-1-基础规则" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>风格</th><th>示例</th></tr></thead><tbody><tr><td>模块名</td><td><code>snake_case</code></td><td><code>cli_parser.py</code>、<code>version_sync.py</code></td></tr><tr><td>类名</td><td><code>PascalCase</code></td><td><code>KhyPlatform</code>、<code>TokenUsageTracker</code></td></tr><tr><td>函数名</td><td><code>snake_case</code></td><td><code>get_user_by_id()</code>、<code>parse_config()</code></td></tr><tr><td>变量名</td><td><code>snake_case</code></td><td><code>user_profile</code>、<code>max_retries</code></td></tr><tr><td>常量</td><td><code>UPPER_SNAKE_CASE</code></td><td><code>MAX_CONNECTIONS</code>、<code>DEFAULT_TIMEOUT</code></td></tr><tr><td>私有属性/方法</td><td><code>_camelCase</code>（_ 前缀）</td><td><code>_cached_result</code></td></tr><tr><td>包名</td><td><code>snake_case</code></td><td><code>khy_platform</code>、<code>ai_backend</code></td></tr></tbody></table>
+<h3 id="3-2-函数名动词前缀">3.2 函数名动词前缀<a class="anchor" href="#3-2-函数名动词前缀" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>前缀</th><th>含义</th><th>示例</th></tr></thead><tbody><tr><td><code>get_</code></td><td>获取（不改变状态）</td><td><code>get_user_profile()</code></td></tr><tr><td><code>set_</code></td><td>设置（改变状态）</td><td><code>set_log_level()</code></td></tr><tr><td><code>is_</code> / <code>has_</code></td><td>布尔判断</td><td><code>is_valid_token()</code>、<code>has_permission()</code></td></tr><tr><td><code>fetch_</code></td><td>异步获取</td><td><code>fetch_model_list()</code></td></tr><tr><td><code>validate_</code></td><td>验证</td><td><code>validate_config()</code></td></tr><tr><td><code>sanitize_</code></td><td>清理/脱敏</td><td><code>sanitize_path()</code></td></tr></tbody></table>
+<hr>
+<h2 id="4-sql-数据库命名">4. SQL / 数据库命名<a class="anchor" href="#4-sql-数据库命名" aria-label="锚点">#</a></h2>
+<h3 id="4-1-已有规范-design-db-001-2">4.1 已有规范（DESIGN-DB-001 §2）<a class="anchor" href="#4-1-已有规范-design-db-001-2" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>对象</th><th>风格</th><th>示例</th></tr></thead><tbody><tr><td>表名</td><td><code>snake_case</code> 复数</td><td><code>users</code>、<code>trading_strategies</code>、<code>api_keys</code></td></tr><tr><td>列名</td><td><code>snake_case</code></td><td><code>user_id</code>、<code>created_at</code>、<code>is_active</code></td></tr><tr><td>外键</td><td><code>{表名单数}_id</code></td><td><code>user_id</code>、<code>strategy_id</code></td></tr><tr><td>索引名</td><td><code>idx_{表名}_{列名}</code></td><td><code>idx_users_email</code></td></tr><tr><td>唯一约束</td><td><code>uq_{表名}_{列名}</code></td><td><code>uq_users_email</code></td></tr></tbody></table>
+<h3 id="4-2-sequelize-model-类名映射">4.2 Sequelize Model 类名映射<a class="anchor" href="#4-2-sequelize-model-类名映射" aria-label="锚点">#</a></h3>
+<p><strong>规则</strong>：模型类名用 PascalCase，映射到 snake_case 复数表名（Sequelize 默认即可）：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// models/User.js → 自动映射表名 users</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">User</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_ inherited__">Model</span> { }
+<span class="hljs-title class_">User</span>.<span class="hljs-title function_">init</span>({ ... }, { <span class="hljs-attr">tableName</span>: <span class="hljs-string">&#x27;users&#x27;</span> }); <span class="hljs-comment">// 显式指定可读性更好</span></code></pre>
+<hr>
+<h2 id="5-css-命名">5. CSS 命名<a class="anchor" href="#5-css-命名" aria-label="锚点">#</a></h2>
+<h3 id="5-1-bem-规范-khy-os-事实标准">5.1 BEM 规范（khy-os 事实标准）<a class="anchor" href="#5-1-bem-规范-khy-os-事实标准" aria-label="锚点">#</a></h3>
+<pre><code>.block__element--modifier</code></pre>
+<table><thead><tr><th>部分</th><th>风格</th><th>示例</th></tr></thead><tbody><tr><td>Block</td><td><code>kebab-case</code></td><td><code>.khy-card</code>、<code>.login-form</code></td></tr><tr><td>Element</td><td>双下划线 + <code>kebab-case</code></td><td><code>.khy-card__header</code>、<code>.login-form__input</code></td></tr><tr><td>Modifier</td><td>双连字符 + <code>kebab-case</code></td><td><code>.khy-card--elevated</code>、<code>.btn--primary</code></td></tr><tr><td>状态</td><td><code>.is-{state}</code> / <code>.has-{state}</code></td><td><code>.is-loading</code>、<code>.is-error</code>、<code>.has-value</code></td></tr><tr><td>工具类</td><td>功能描述 + 参数</td><td><code>.mt-16</code>、<code>.text-center</code>、<code>.flex-gap-8</code></td></tr></tbody></table>
+<h3 id="5-2-khy-os-特定约定">5.2 khy-os 特定约定<a class="anchor" href="#5-2-khy-os-特定约定" aria-label="锚点">#</a></h3>
+<ul><li>组件级样式：<code>scoped</code> + BEM，类名以 <code>c-</code> 前缀（component）</li><li>布局级样式：类名以 <code>l-</code> 前缀（layout）</li><li>工具类：<code>u-</code> 前缀（utility）</li><li>主题令牌：全部走 <code>var(--khy-*)</code>，不在 CSS 中硬编码值</li></ul>
+<pre><code class="language-css"><span class="hljs-comment">/* 组件 */</span>
+<span class="hljs-selector-class">.c-login-form__input</span> { }
+<span class="hljs-selector-class">.c-login-form__input--error</span> { }
+
+<span class="hljs-comment">/* 布局 */</span>
+<span class="hljs-selector-class">.l-page-header</span> { }
+
+<span class="hljs-comment">/* 工具 */</span>
+<span class="hljs-selector-class">.u-sr-only</span> { }  <span class="hljs-comment">/* screen reader only */</span></code></pre>
+<hr>
+<h2 id="6-vue-组件命名">6. Vue 组件命名<a class="anchor" href="#6-vue-组件命名" aria-label="锚点">#</a></h2>
+<h3 id="6-1-单文件组件文件名">6.1 单文件组件文件名<a class="anchor" href="#6-1-单文件组件文件名" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">PascalCase.vue    — 组件文件（自动注册或显式 import）</code></pre>
+<pre><code class="language-bash">KhyPageHeader.vue
+MobileNav.vue
+AgentDashboard.vue</code></pre>
+<h3 id="6-2-组件内命名">6.2 组件内命名<a class="anchor" href="#6-2-组件内命名" aria-label="锚点">#</a></h3>
+<pre><code class="language-vue">&lt;script setup&gt;
+// 组件名：PascalCase
+const props = defineProps({
+  userName: String,        // camelCase
+  isActive: Boolean        // camelCase + is 前缀（布尔）
+})
+const emit = defineEmits(['update:modelValue', 'close'])  // camelCase
+&lt;/script&gt;</code></pre>
+<h3 id="6-3-composables">6.3 Composables<a class="anchor" href="#6-3-composables" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">use{Feature}.js   — camelCase，use 前缀</code></pre>
+<pre><code class="language-javascript"><span class="hljs-comment">// useTheme.js、useProjects.js、useGateway.js</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">useTheme</span>(<span class="hljs-params"></span>) { }
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">useGateway</span>(<span class="hljs-params"></span>) { }</code></pre>
+<hr>
+<h2 id="7-环境变量命名">7. 环境变量命名<a class="anchor" href="#7-环境变量命名" aria-label="锚点">#</a></h2>
+<h3 id="7-1-前缀规则">7.1 前缀规则<a class="anchor" href="#7-1-前缀规则" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>范围</th><th>前缀</th><th>示例</th></tr></thead><tbody><tr><td>项目级</td><td><code>KHY_</code></td><td><code>KHY_DATA_HOME</code>、<code>KHY_CC_TUI</code></td></tr><tr><td>服务级</td><td><code>{SERVICE}_</code></td><td><code>AI_BACKEND_PORT</code>、<code>DAEMON_PORT</code></td></tr><tr><td>功能开关</td><td><code>FEATURE_</code></td><td><code>FEATURE_ENABLE_TUI</code></td></tr><tr><td>前端 Vite</td><td><code>VITE_</code></td><td><code>VITE_AI_API_BASE_URL</code></td></tr></tbody></table>
+<h3 id="7-2-风格">7.2 风格<a class="anchor" href="#7-2-风格" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">SCREAMING_SNAKE_CASE，单词间下划线分隔</code></pre>
+<pre><code class="language-bash">KHY_DATA_HOME=~/.khy
+VITE_AI_HTTP_TIMEOUT_MS=30000
+FEATURE_ENABLE_REPL=<span class="hljs-literal">true</span></code></pre>
+<hr>
+<h2 id="8-git-标签命名">8. Git 标签命名<a class="anchor" href="#8-git-标签命名" aria-label="锚点">#</a></h2>
+<h3 id="8-1-格式">8.1 格式<a class="anchor" href="#8-1-格式" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">v{major}.{minor}.{patch}[-{prerelease}][+{buildmetadata}]</code></pre>
+<table><thead><tr><th>场景</th><th>示例</th></tr></thead><tbody><tr><td>正式版</td><td><code>v1.2.3</code></td></tr><tr><td>预发布</td><td><code>v1.3.0-beta.1</code>、<code>v2.0.0-rc.2</code></td></tr><tr><td>构建元数据</td><td><code>v1.2.3+build.20260910</code></td></tr></tbody></table>
+<h3 id="8-2-约束">8.2 约束<a class="anchor" href="#8-2-约束" aria-label="锚点">#</a></h3>
+<ul><li>仅用于发布，禁止用标签标记日常开发</li><li>标签与 <code>package.json</code> / <code>pyproject.toml</code> 的 <code>version</code> 完全一致</li><li><code>scripts/ci/check-version-sync.js</code> 在 CI 中校验</li></ul>
+<hr>
+<h2 id="9-npm-包命名">9. npm 包命名<a class="anchor" href="#9-npm-包命名" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>类型</th><th>风格</th><th>示例</th></tr></thead><tbody><tr><td>公开包</td><td><code>@khy-os/{name}</code></td><td><code>@khy-os/khy-os</code>、<code>@khy-os/ui-shared</code></td></tr><tr><td>内部包</td><td><code>@khy/{name}</code></td><td><code>@khy/shared</code>、<code>@khy/platform</code></td></tr><tr><td>作用域包</td><td>全小写</td><td>避免 <code>@Khy/</code></td></tr></tbody></table>
+<hr>
+<h2 id="10-文件名规范">10. 文件名规范<a class="anchor" href="#10-文件名规范" aria-label="锚点">#</a></h2>
+<h3 id="10-1-目录名">10.1 目录名<a class="anchor" href="#10-1-目录名" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>风格</th><th>示例</th></tr></thead><tbody><tr><td>JS/TS 目录</td><td><code>camelCase</code></td><td><code>gateway/</code>、<code>aiGateway/</code></td></tr><tr><td>Python 目录</td><td><code>snake_case</code></td><td><code>cli_parser/</code>、<code>model_training/</code></td></tr><tr><td>测试目录</td><td><code>__tests__/</code> 或 <code>tests/</code></td><td>—</td></tr></tbody></table>
+<h3 id="10-2-测试文件">10.2 测试文件<a class="anchor" href="#10-2-测试文件" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">{sourceFile}.test.js    — 同目录
+tests/{module}/         — 独立测试目录</code></pre>
+<hr>
+<h2 id="11-禁止清单">11. 禁止清单<a class="anchor" href="#11-禁止清单" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>禁止</th><th>原因</th><th>正确做法</th></tr></thead><tbody><tr><td>中英混写</td><td><code>get用户信息</code></td><td><code>getUserInfo()</code></td></tr><tr><td>缩写无共识</td><td><code>usr</code>、<code>cfg</code></td><td><code>user</code>、<code>config</code></td></tr><tr><td>用类型前缀</td><td><code>strName</code>、<code>objData</code></td><td><code>name</code>、<code>data</code>（类型由 IDE 感知）</td></tr><tr><td>魔法字符串直接硬编码</td><td><code>'user'</code> 散落各处</td><td>常量 <code>ROLE_USER</code></td></tr><tr><td>CSS 类名 PascalCase</td><td><code>.KhyButton</code></td><td><code>.khy-button</code>（BEM）</td></tr></tbody></table>
+<hr>
+<h2 id="12-版本历史">12. 版本历史<a class="anchor" href="#12-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义全栈统一命名规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-MS-001] 微服务通信规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-MS-001] 微服务通信规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-NAM-002] A2A 与 ACP 命名及术语规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-NAM-002] A2A 与 ACP 命名及术语规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-NAM-001] 统一命名规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

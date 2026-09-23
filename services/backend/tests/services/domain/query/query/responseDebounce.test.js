@@ -9,7 +9,7 @@ const {
   _normalize,
   _splitLeadingSentence,
   _isPureGreeting,
-} = require('../../src/services/domain/query/query/responseDebounce');
+} = require('../../../../../src/services/domain/query/query/responseDebounce.js');
 
 describe('responseDebounce', () => {
   describe('_normalize', () => {
@@ -82,12 +82,15 @@ describe('responseDebounce', () => {
     const statesReason = (s) => /因为|原因是/.test(s);
 
     test('strips bare refusal prefix', () => {
-      const result = stripLeadingRefusal('你好，我无法给到相关内容。这是真实回答。', {
+      // The remainder must clear minRemainderChars (default 8) or the
+      // safety gate keeps the refusal — pick real answer body text that
+      // actually qualifies, mirroring production input shapes.
+      const result = stripLeadingRefusal('你好，我无法给到相关内容。这是真实回答，内容足够长。', {
         isCanned,
         statesReason,
       });
       expect(result.stripped).toBe(true);
-      expect(result.text).toBe('这是真实回答。');
+      expect(result.text).toBe('这是真实回答，内容足够长。');
     });
 
     test('does not strip refusal with reason', () => {

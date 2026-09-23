@@ -23,9 +23,9 @@ const {
   DualTrackForge, PhysicalAssertionGate, PhysicalException, DeterministicElevator,
   LogicalSelfAssessor, DualTrackRequirementMerger, SOURCE_TRACK, PHYSICAL_CODES,
 } = require('../../../src/services/dualTrackForge');
-const evoRequirement = require('../../../src/services/evoEngine/evoRequirement');
-const evoLevels = require('../../../src/services/evoEngine/evoLevels');
-const { mappingFor } = require('../../../src/services/dualTrackForge/physicalCodes');
+const evoRequirement = require('../../../src/services/domain/maintenance/evoEngine/evoRequirement.js');
+const evoLevels = require('../../../src/services/domain/maintenance/evoEngine/evoLevels.js');
+const { mappingFor } = require('../../../src/services/domain/trajectory/dualTrackForge/physicalCodes.js');
 
 after(() => { try { fs.rmSync(TMP_HOME, { recursive: true, force: true }); } catch { /* best-effort */ } });
 

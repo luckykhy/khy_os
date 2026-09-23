@@ -12,7 +12,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { convertScreenshot } = require('../../../src/services/desktopControl/screenshotToContentBlocks');
+const { convertScreenshot } = require('../../../src/services/domain/desktop/desktopControl/screenshotToContentBlocks.js');
 
 // 1x1 red PNG (valid magic + IHDR)
 const PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';

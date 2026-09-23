@@ -33,7 +33,7 @@ const path = require('path');
 const crypto = require('crypto');
 const os = require('os');
 
-const { APPS } = require('../../collab/proactiveCollaboration/constants');
+const { APPS } = require('./constants');
 
 // Cursor state file lives in the app home (portable-aware), not in the tool dir.
 let _cursorStore = null;

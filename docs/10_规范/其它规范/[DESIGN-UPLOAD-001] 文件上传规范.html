@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-UPLOAD-001] 文件上传规范.md -->
+<title>[DESIGN-UPLOAD-001] 文件上传规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-UPLOAD-001] 文件上传规范</div>
+      <header class="hero reveal"><h1>[DESIGN-UPLOAD-001] 文件上传规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-upload-001-文件上传规范">[DESIGN-UPLOAD-001] 文件上传规范</a></li><li class="lvl-2"><a href="#1-原则">1. 原则</a></li><li class="lvl-2"><a href="#2-文件-id-规范">2. 文件 ID 规范</a></li><li class="lvl-3"><a href="#2-1-id-格式">2.1 ID 格式</a></li><li class="lvl-3"><a href="#2-2-扩展名处理">2.2 扩展名处理</a></li><li class="lvl-2"><a href="#3-大小限制">3. 大小限制</a></li><li class="lvl-3"><a href="#3-1-按文件类型的限制">3.1 按文件类型的限制</a></li><li class="lvl-3"><a href="#3-2-全局上限">3.2 全局上限</a></li><li class="lvl-3"><a href="#3-3-请求大小限制">3.3 请求大小限制</a></li><li class="lvl-2"><a href="#4-内容类型检查">4. 内容类型检查</a></li><li class="lvl-3"><a href="#4-1-允许的类型">4.1 允许的类型</a></li><li class="lvl-3"><a href="#4-2-检测策略">4.2 检测策略</a></li><li class="lvl-2"><a href="#5-内容检查">5. 内容检查</a></li><li class="lvl-3"><a href="#5-1-文本提取">5.1 文本提取</a></li><li class="lvl-3"><a href="#5-2-病毒扫描">5.2 病毒扫描</a></li><li class="lvl-2"><a href="#6-存储结构">6. 存储结构</a></li><li class="lvl-3"><a href="#6-1-目录布局">6.1 目录布局</a></li><li class="lvl-3"><a href="#6-2-元数据清单">6.2 元数据清单</a></li><li class="lvl-2"><a href="#7-上传方式">7. 上传方式</a></li><li class="lvl-3"><a href="#7-1-标准上传-小文件-50mb">7.1 标准上传（小文件 &lt; 50MB）</a></li><li class="lvl-3"><a href="#7-2-分片上传-大文件-50mb">7.2 分片上传（大文件 &gt; 50MB）</a></li><li class="lvl-2"><a href="#8-生命周期">8. 生命周期</a></li><li class="lvl-3"><a href="#8-1-有效期">8.1 有效期</a></li><li class="lvl-3"><a href="#8-2-清理策略">8.2 清理策略</a></li><li class="lvl-2"><a href="#9-安全要求">9. 安全要求</a></li><li class="lvl-3"><a href="#9-1-禁止事项">9.1 禁止事项</a></li><li class="lvl-3"><a href="#9-2-路径安全">9.2 路径安全</a></li><li class="lvl-3"><a href="#9-3-文件名消毒">9.3 文件名消毒</a></li><li class="lvl-2"><a href="#10-响应格式">10. 响应格式</a></li><li class="lvl-3"><a href="#10-1-上传成功">10.1 上传成功</a></li><li class="lvl-3"><a href="#10-2-错误响应">10.2 错误响应</a></li><li class="lvl-2"><a href="#11-客户端要求">11. 客户端要求</a></li><li class="lvl-2"><a href="#12-守卫">12. 守卫</a></li><li class="lvl-2"><a href="#13-版本历史">13. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-upload-001-文件上传规范">[DESIGN-UPLOAD-001] 文件上传规范<a class="anchor" href="#design-upload-001-文件上传规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: UPLOAD-001 -->
+<blockquote><p><strong>用途</strong>：定义 khy-os 文件上传标准，确保上传安全、可控、可审计。<br>当前 <code>aiUploadStore.js</code> 已有上传实现（大小限制、内容类型检查、16进制 ID），<br>本规范将其沉淀为标准并补充缺失部分。</p></blockquote>
+<hr>
+<h2 id="1-原则">1. 原则<a class="anchor" href="#1-原则" aria-label="锚点">#</a></h2>
+<ol><li><strong>不信任客户端</strong>：所有文件必须经过服务端验证</li><li><strong>最小权限</strong>：上传文件不可执行、不可访问其他目录</li><li><strong>可追溯</strong>：每个文件有唯一 ID 和完整元数据</li><li><strong>可清理</strong>：文件有生命周期，自动清理过期文件</li><li><strong>类型安全</strong>：严格的内容类型检查，防止伪装攻击</li></ol>
+<hr>
+<h2 id="2-文件-id-规范">2. 文件 ID 规范<a class="anchor" href="#2-文件-id-规范" aria-label="锚点">#</a></h2>
+<h3 id="2-1-id-格式">2.1 ID 格式<a class="anchor" href="#2-1-id-格式" aria-label="锚点">#</a></h3>
+<pre><code>&lt;32-hex-chars&gt;.&lt;extension&gt;</code></pre>
+<table><thead><tr><th>属性</th><th>要求</th></tr></thead><tbody><tr><td>长度</td><td>32 字符十六进制</td></tr><tr><td>生成</td><td><code>crypto.randomBytes(16).toString('hex')</code></td></tr><tr><td>可读性</td><td>不可读、不可猜测（无序号/时间戳）</td></tr><tr><td>路径安全</td><td>只允许十六进制字符，拒绝路径遍历</td></tr></tbody></table>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-variable constant_">ID_RE</span> = <span class="hljs-regexp">/^[a-f0-9]{32}$/</span>;
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">validateId</span>(<span class="hljs-params">id</span>) {
+  <span class="hljs-keyword">return</span> <span class="hljs-variable constant_">ID_RE</span>.<span class="hljs-title function_">test</span>(<span class="hljs-title class_">String</span>(id || <span class="hljs-string">&#x27;&#x27;</span>));
+}</code></pre>
+<h3 id="2-2-扩展名处理">2.2 扩展名处理<a class="anchor" href="#2-2-扩展名处理" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">function</span> <span class="hljs-title function_">safeExt</span>(<span class="hljs-params">originalName</span>) {
+  <span class="hljs-keyword">const</span> ext = path.<span class="hljs-title function_">extname</span>(<span class="hljs-title class_">String</span>(originalName || <span class="hljs-string">&#x27;&#x27;</span>)).<span class="hljs-title function_">toLowerCase</span>();
+  <span class="hljs-comment">// 只保留简短纯字母数字扩展名</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-regexp">/^\.[a-z0-9]{1,8}$/</span>.<span class="hljs-title function_">test</span>(ext) ? ext : <span class="hljs-string">&#x27;&#x27;</span>;
+}</code></pre>
+<p><strong>规则</strong>：</p>
+<ul><li>最大 8 字符</li><li>只允许小写字母和数字</li><li>不合规则丢弃扩展名（文件以无扩展名存储）</li></ul>
+<hr>
+<h2 id="3-大小限制">3. 大小限制<a class="anchor" href="#3-大小限制" aria-label="锚点">#</a></h2>
+<h3 id="3-1-按文件类型的限制">3.1 按文件类型的限制<a class="anchor" href="#3-1-按文件类型的限制" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件类型</th><th>扩展名</th><th>默认上限</th><th>环境变量</th></tr></thead><tbody><tr><td>图片</td><td><code>.jpg</code>, <code>.png</code>, <code>.gif</code>, <code>.webp</code>, <code>.svg</code></td><td>50 MB</td><td><code>KHY_AI_UPLOAD_IMAGE_MAX_BYTES</code></td></tr><tr><td>视频</td><td><code>.mp4</code>, <code>.webm</code>, <code>.mov</code>, <code>.avi</code></td><td>500 MB</td><td><code>KHY_AI_UPLOAD_VIDEO_MAX_BYTES</code></td></tr><tr><td>音频</td><td><code>.mp3</code>, <code>.wav</code>, <code>.ogg</code>, <code>.m4a</code></td><td>100 MB</td><td><code>KHY_AI_UPLOAD_AUDIO_MAX_BYTES</code></td></tr><tr><td>文档</td><td><code>.pdf</code>, <code>.docx</code>, <code>.xlsx</code>, <code>.pptx</code></td><td>50 MB</td><td><code>KHY_AI_UPLOAD_DOC_MAX_BYTES</code></td></tr><tr><td>代码</td><td><code>.js</code>, <code>.py</code>, <code>.go</code>, <code>.rs</code>, 等</td><td>5 MB</td><td><code>KHY_AI_UPLOAD_CODE_MAX_BYTES</code></td></tr><tr><td>文本</td><td><code>.txt</code>, <code>.md</code>, <code>.json</code>, <code>.csv</code></td><td>10 MB</td><td><code>KHY_AI_UPLOAD_TEXT_MAX_BYTES</code></td></tr><tr><td>压缩包</td><td><code>.zip</code>, <code>.tar.gz</code>, <code>.rar</code></td><td>200 MB</td><td><code>KHY_AI_UPLOAD_ARCHIVE_MAX_BYTES</code></td></tr><tr><td>通用</td><td>其他</td><td>100 MB</td><td><code>KHY_AI_UPLOAD_MAX_BYTES</code></td></tr></tbody></table>
+<h3 id="3-2-全局上限">3.2 全局上限<a class="anchor" href="#3-2-全局上限" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 单文件上限（默认 100MB）</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">DEFAULT_MAX_BYTES</span> = <span class="hljs-number">100</span> * <span class="hljs-number">1024</span> * <span class="hljs-number">1024</span>;
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">maxFileBytes</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> raw = <span class="hljs-built_in">parseInt</span>(process.<span class="hljs-property">env</span>.<span class="hljs-property">KHY_AI_UPLOAD_MAX_BYTES</span> || <span class="hljs-string">&#x27;&#x27;</span>, <span class="hljs-number">10</span>);
+  <span class="hljs-keyword">return</span> <span class="hljs-title class_">Number</span>.<span class="hljs-built_in">isFinite</span>(raw) &amp;&amp; raw &gt; <span class="hljs-number">0</span> ? raw : <span class="hljs-variable constant_">DEFAULT_MAX_BYTES</span>;
+}</code></pre>
+<h3 id="3-3-请求大小限制">3.3 请求大小限制<a class="anchor" href="#3-3-请求大小限制" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>参数</th><th>默认值</th><th>说明</th></tr></thead><tbody><tr><td>单文件上限</td><td>100 MB</td><td>可通过环境变量调整</td></tr><tr><td>单请求文件数</td><td>10</td><td>多文件上传时限制</td></tr><tr><td>单请求总大小</td><td>500 MB</td><td>多文件上传总上限</td></tr></tbody></table>
+<hr>
+<h2 id="4-内容类型检查">4. 内容类型检查<a class="anchor" href="#4-内容类型检查" aria-label="锚点">#</a></h2>
+<h3 id="4-1-允许的类型">4.1 允许的类型<a class="anchor" href="#4-1-允许的类型" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-variable constant_">ALLOWED_MIME_TYPES</span> = {
+  <span class="hljs-attr">image</span>: [<span class="hljs-string">&#x27;image/jpeg&#x27;</span>, <span class="hljs-string">&#x27;image/png&#x27;</span>, <span class="hljs-string">&#x27;image/gif&#x27;</span>, <span class="hljs-string">&#x27;image/webp&#x27;</span>, <span class="hljs-string">&#x27;image/svg+xml&#x27;</span>],
+  <span class="hljs-attr">video</span>: [<span class="hljs-string">&#x27;video/mp4&#x27;</span>, <span class="hljs-string">&#x27;video/webm&#x27;</span>, <span class="hljs-string">&#x27;video/quicktime&#x27;</span>, <span class="hljs-string">&#x27;video/x-msvideo&#x27;</span>],
+  <span class="hljs-attr">audio</span>: [<span class="hljs-string">&#x27;audio/mpeg&#x27;</span>, <span class="hljs-string">&#x27;audio/wav&#x27;</span>, <span class="hljs-string">&#x27;audio/ogg&#x27;</span>, <span class="hljs-string">&#x27;audio/mp4&#x27;</span>, <span class="hljs-string">&#x27;audio/flac&#x27;</span>],
+  <span class="hljs-attr">document</span>: [
+    <span class="hljs-string">&#x27;application/pdf&#x27;</span>,
+    <span class="hljs-string">&#x27;application/vnd.openxmlformats-officedocument.wordprocessingml.document&#x27;</span>,
+    <span class="hljs-string">&#x27;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet&#x27;</span>,
+    <span class="hljs-string">&#x27;application/vnd.openxmlformats-officedocument.presentationml.presentation&#x27;</span>,
+  ],
+  <span class="hljs-attr">text</span>: [<span class="hljs-string">&#x27;text/plain&#x27;</span>, <span class="hljs-string">&#x27;text/markdown&#x27;</span>, <span class="hljs-string">&#x27;text/csv&#x27;</span>, <span class="hljs-string">&#x27;application/json&#x27;</span>, <span class="hljs-string">&#x27;application/xml&#x27;</span>],
+  <span class="hljs-attr">code</span>: [<span class="hljs-string">&#x27;text/plain&#x27;</span>, <span class="hljs-string">&#x27;application/json&#x27;</span>, <span class="hljs-string">&#x27;application/javascript&#x27;</span>, <span class="hljs-string">&#x27;text/x-python&#x27;</span>],
+  <span class="hljs-attr">archive</span>: [<span class="hljs-string">&#x27;application/zip&#x27;</span>, <span class="hljs-string">&#x27;application/gzip&#x27;</span>, <span class="hljs-string">&#x27;application/x-tar&#x27;</span>, <span class="hljs-string">&#x27;application/x-rar-compressed&#x27;</span>],
+};</code></pre>
+<h3 id="4-2-检测策略">4.2 检测策略<a class="anchor" href="#4-2-检测策略" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">function</span> <span class="hljs-title function_">validateFileType</span>(<span class="hljs-params">originalName, mimeType, buffer</span>) {
+  <span class="hljs-comment">// 1. 检查 MIME 类型是否在允许列表</span>
+  <span class="hljs-keyword">if</span> (!<span class="hljs-title function_">isAllowedMimeType</span>(mimeType)) {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">`MIME type not allowed: <span class="hljs-subst">${mimeType}</span>`</span>);
+  }
+
+  <span class="hljs-comment">// 2. 魔数检测（magic bytes）</span>
+  <span class="hljs-keyword">const</span> detected = <span class="hljs-title function_">detectMimeType</span>(buffer);
+  <span class="hljs-keyword">if</span> (detected &amp;&amp; !<span class="hljs-title function_">isAllowedMimeType</span>(detected)) {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">`File content type mismatch: declared=<span class="hljs-subst">${mimeType}</span>, detected=<span class="hljs-subst">${detected}</span>`</span>);
+  }
+
+  <span class="hljs-comment">// 3. 扩展名一致性检查</span>
+  <span class="hljs-keyword">const</span> ext = path.<span class="hljs-title function_">extname</span>(originalName).<span class="hljs-title function_">toLowerCase</span>();
+  <span class="hljs-keyword">if</span> (!<span class="hljs-title function_">isConsistentWithExtension</span>(detected || mimeType, ext)) {
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">warn</span>(<span class="hljs-string">`Extension mismatch: <span class="hljs-subst">${ext}</span> with <span class="hljs-subst">${mimeType}</span>`</span>);
+  }
+}</code></pre>
+<p><strong>规则</strong>：MIME 类型必须以魔数检测为准，不接受客户端声明的类型。</p>
+<hr>
+<h2 id="5-内容检查">5. 内容检查<a class="anchor" href="#5-内容检查" aria-label="锚点">#</a></h2>
+<h3 id="5-1-文本提取">5.1 文本提取<a class="anchor" href="#5-1-文本提取" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件类型</th><th>提取方式</th><th>上限</th></tr></thead><tbody><tr><td><code>.txt</code>, <code>.md</code>, <code>.csv</code>, <code>.json</code></td><td>直接读取</td><td>32 KB（<code>KHY_AI_UPLOAD_EXCERPT_BYTES</code>）</td></tr><tr><td><code>.js</code>, <code>.py</code>, <code>.go</code> 等代码文件</td><td>直接读取</td><td>32 KB</td></tr><tr><td><code>.pdf</code></td><td><code>pdftotext</code></td><td>32 KB</td></tr><tr><td><code>.docx</code></td><td>Python docHelper</td><td>32 KB</td></tr><tr><td><code>.mp3</code>, <code>.wav</code></td><td>Whisper 转录</td><td>可配置（<code>KHY_UPLOAD_TRANSCRIBE_TIMEOUT_MS</code>）</td></tr><tr><td><code>.mp4</code>, <code>.webm</code></td><td>Whisper 转录</td><td>可配置</td></tr></tbody></table>
+<h3 id="5-2-病毒扫描">5.2 病毒扫描<a class="anchor" href="#5-2-病毒扫描" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 上传后必须经过病毒扫描</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">scanFile</span>(<span class="hljs-params">filePath</span>) {
+  <span class="hljs-comment">// 方式 1：ClamAV</span>
+  <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> clamav.<span class="hljs-title function_">scan</span>(filePath);
+  <span class="hljs-keyword">if</span> (result.<span class="hljs-property">isInfected</span>) {
+    fs.<span class="hljs-title function_">unlinkSync</span>(filePath);
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">`File infected: <span class="hljs-subst">${result.viruses.join(<span class="hljs-string">&#x27;, &#x27;</span>)}</span>`</span>);
+  }
+
+  <span class="hljs-comment">// 方式 2：第三方 API（备用）</span>
+  <span class="hljs-comment">// await virusTotal.scan(filePath);</span>
+}</code></pre>
+<p><strong>规则</strong>：</p>
+<ul><li>生产环境必须启用病毒扫描</li><li>检测到病毒必须立即删除文件</li><li>扫描超时视为通过（不阻塞上传流程）</li></ul>
+<hr>
+<h2 id="6-存储结构">6. 存储结构<a class="anchor" href="#6-存储结构" aria-label="锚点">#</a></h2>
+<h3 id="6-1-目录布局">6.1 目录布局<a class="anchor" href="#6-1-目录布局" aria-label="锚点">#</a></h3>
+<pre><code>&lt;data-dir&gt;/ai-uploads/
+├── &lt;id32&gt;.json          # 元数据清单
+├── &lt;id32&gt;&lt;.ext&gt;         # 实际文件
+├── &lt;id32&gt;.extracted.txt # 提取的文本（可选）
+└── .cleanup.json        # 清理记录</code></pre>
+<h3 id="6-2-元数据清单">6.2 元数据清单<a class="anchor" href="#6-2-元数据清单" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">{
+  <span class="hljs-attr">id</span>: <span class="hljs-string">&#x27;a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4&#x27;</span>,
+  <span class="hljs-attr">originalName</span>: <span class="hljs-string">&#x27;report.pdf&#x27;</span>,
+  <span class="hljs-attr">storedName</span>: <span class="hljs-string">&#x27;a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4.pdf&#x27;</span>,
+  <span class="hljs-attr">storedPath</span>: <span class="hljs-string">&#x27;/data/ai-uploads/a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4.pdf&#x27;</span>,
+  <span class="hljs-attr">mimeType</span>: <span class="hljs-string">&#x27;application/pdf&#x27;</span>,
+  <span class="hljs-attr">size</span>: <span class="hljs-number">1048576</span>,
+  <span class="hljs-attr">kind</span>: <span class="hljs-string">&#x27;document&#x27;</span>,           <span class="hljs-comment">// image | video | audio | text | code | document | archive | other</span>
+  <span class="hljs-attr">textExcerpt</span>: <span class="hljs-string">&#x27;...&#x27;</span>,         <span class="hljs-comment">// 提取的文本（如果有）</span>
+  <span class="hljs-attr">textTruncated</span>: <span class="hljs-literal">false</span>,       <span class="hljs-comment">// 是否截断</span>
+  <span class="hljs-attr">extracted</span>: <span class="hljs-string">&#x27;pdf:pdftotext&#x27;</span>, <span class="hljs-comment">// 提取引擎</span>
+  <span class="hljs-attr">virusScanResult</span>: <span class="hljs-string">&#x27;clean&#x27;</span>,   <span class="hljs-comment">// clean | infected | skipped</span>
+  <span class="hljs-attr">createdAt</span>: <span class="hljs-string">&#x27;2026-09-10T12:00:00.000Z&#x27;</span>,
+  <span class="hljs-attr">expiresAt</span>: <span class="hljs-string">&#x27;2026-09-17T12:00:00.000Z&#x27;</span>  <span class="hljs-comment">// 7 天后过期</span>
+}</code></pre>
+<hr>
+<h2 id="7-上传方式">7. 上传方式<a class="anchor" href="#7-上传方式" aria-label="锚点">#</a></h2>
+<h3 id="7-1-标准上传-小文件-50mb">7.1 标准上传（小文件 &lt; 50MB）<a class="anchor" href="#7-1-标准上传-小文件-50mb" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> multer = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;multer&#x27;</span>);
+<span class="hljs-keyword">const</span> { nanoid } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;nanoid&#x27;</span>);
+
+<span class="hljs-keyword">const</span> storage = multer.<span class="hljs-title function_">diskStorage</span>({
+  <span class="hljs-attr">destination</span>: <span class="hljs-function">(<span class="hljs-params">req, _file, cb</span>) =&gt;</span> {
+    <span class="hljs-title function_">cb</span>(<span class="hljs-literal">null</span>, <span class="hljs-title function_">getDataDir</span>(<span class="hljs-string">&#x27;ai-uploads-temp&#x27;</span>));
+  },
+  <span class="hljs-attr">filename</span>: <span class="hljs-function">(<span class="hljs-params">_req, file, cb</span>) =&gt;</span> {
+    <span class="hljs-title function_">cb</span>(<span class="hljs-literal">null</span>, <span class="hljs-string">`tmp-<span class="hljs-subst">${nanoid()}</span>`</span>);
+  },
+});
+
+<span class="hljs-keyword">const</span> upload = <span class="hljs-title function_">multer</span>({
+  storage,
+  <span class="hljs-attr">limits</span>: {
+    <span class="hljs-attr">fileSize</span>: <span class="hljs-built_in">parseInt</span>(process.<span class="hljs-property">env</span>.<span class="hljs-property">KHY_AI_UPLOAD_MAX_BYTES</span>) || <span class="hljs-number">100</span> * <span class="hljs-number">1024</span> * <span class="hljs-number">1024</span>,
+    <span class="hljs-attr">files</span>: <span class="hljs-number">10</span>,
+  },
+  <span class="hljs-attr">fileFilter</span>: <span class="hljs-function">(<span class="hljs-params">req, file, cb</span>) =&gt;</span> {
+    <span class="hljs-keyword">if</span> (!<span class="hljs-title function_">isAllowedMimeType</span>(file.<span class="hljs-property">mimetype</span>)) {
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">cb</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">`MIME type not allowed: <span class="hljs-subst">${file.mimetype}</span>`</span>), <span class="hljs-literal">false</span>);
+    }
+    <span class="hljs-title function_">cb</span>(<span class="hljs-literal">null</span>, <span class="hljs-literal">true</span>);
+  },
+});
+
+<span class="hljs-comment">// POST /api/v1/upload</span>
+router.<span class="hljs-title function_">post</span>(<span class="hljs-string">&#x27;/&#x27;</span>, upload.<span class="hljs-title function_">array</span>(<span class="hljs-string">&#x27;files&#x27;</span>, <span class="hljs-number">10</span>), <span class="hljs-title function_">async</span> (req, res) =&gt; {
+  <span class="hljs-keyword">const</span> manifests = [];
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> file <span class="hljs-keyword">of</span> req.<span class="hljs-property">files</span>) {
+    <span class="hljs-keyword">const</span> manifest = <span class="hljs-keyword">await</span> <span class="hljs-title function_">commitUpload</span>({
+      <span class="hljs-attr">tempPath</span>: file.<span class="hljs-property">path</span>,
+      <span class="hljs-attr">originalName</span>: file.<span class="hljs-property">originalname</span>,
+      <span class="hljs-attr">mimeType</span>: file.<span class="hljs-property">mimetype</span>,
+      <span class="hljs-attr">size</span>: file.<span class="hljs-property">size</span>,
+    });
+    manifests.<span class="hljs-title function_">push</span>(manifest);
+  }
+  res.<span class="hljs-title function_">json</span>({ <span class="hljs-attr">success</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">data</span>: manifests });
+});</code></pre>
+<h3 id="7-2-分片上传-大文件-50mb">7.2 分片上传（大文件 &gt; 50MB）<a class="anchor" href="#7-2-分片上传-大文件-50mb" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 初始化分片上传</span>
+<span class="hljs-variable constant_">POST</span> /api/v1/upload/chunked/init
+{
+  <span class="hljs-string">&quot;fileName&quot;</span>: <span class="hljs-string">&quot;large-video.mp4&quot;</span>,
+  <span class="hljs-string">&quot;fileSize&quot;</span>: <span class="hljs-number">500000000</span>,
+  <span class="hljs-string">&quot;mimeType&quot;</span>: <span class="hljs-string">&quot;video/mp4&quot;</span>,
+  <span class="hljs-string">&quot;chunkSize&quot;</span>: <span class="hljs-number">10485760</span>  <span class="hljs-comment">// 10MB per chunk</span>
+}
+
+<span class="hljs-comment">// 响应</span>
+{
+  <span class="hljs-string">&quot;uploadId&quot;</span>: <span class="hljs-string">&quot;a1b2c3d4&quot;</span>,
+  <span class="hljs-string">&quot;totalChunks&quot;</span>: <span class="hljs-number">50</span>,
+  <span class="hljs-string">&quot;chunkSize&quot;</span>: <span class="hljs-number">10485760</span>
+}
+
+<span class="hljs-comment">// 上传分片</span>
+<span class="hljs-variable constant_">PUT</span> /api/v1/upload/chunked/:uploadId/chunk/:chunkIndex
+<span class="hljs-title class_">Content</span>-<span class="hljs-title class_">Range</span>: bytes <span class="hljs-number">0</span>-<span class="hljs-number">10485759</span>/<span class="hljs-number">500000000</span>
+
+<span class="hljs-comment">// 合并分片</span>
+<span class="hljs-variable constant_">POST</span> /api/v1/upload/chunked/:uploadId/complete</code></pre>
+<p><strong>分片规则</strong>：</p>
+<ul><li>分片大小：5-20 MB（客户端自选）</li><li>支持断点续传：丢失分片可单独重传</li><li>合并后验证 MD5：确保分片完整性</li><li>合并后删除临时分片</li></ul>
+<hr>
+<h2 id="8-生命周期">8. 生命周期<a class="anchor" href="#8-生命周期" aria-label="锚点">#</a></h2>
+<h3 id="8-1-有效期">8.1 有效期<a class="anchor" href="#8-1-有效期" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件类型</th><th>默认有效期</th><th>说明</th></tr></thead><tbody><tr><td>聊天附件</td><td>7 天</td><td>AI 对话附带的文件</td></tr><tr><td>用户上传</td><td>30 天</td><td>用户主动上传的文件</td></tr><tr><td>临时文件</td><td>1 天</td><td>处理中的临时文件</td></tr></tbody></table>
+<h3 id="8-2-清理策略">8.2 清理策略<a class="anchor" href="#8-2-清理策略" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 定期清理过期文件（每日）</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">cleanupExpiredUploads</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> cutoff = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>(<span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() - <span class="hljs-number">7</span> * <span class="hljs-number">24</span> * <span class="hljs-number">3600</span> * <span class="hljs-number">1000</span>); <span class="hljs-comment">// 7 天</span>
+  <span class="hljs-keyword">const</span> manifests = <span class="hljs-keyword">await</span> <span class="hljs-title function_">getExpiredManifests</span>(cutoff);
+
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> manifest <span class="hljs-keyword">of</span> manifests) {
+    <span class="hljs-keyword">try</span> {
+      fs.<span class="hljs-title function_">unlinkSync</span>(manifest.<span class="hljs-property">storedPath</span>);
+      fs.<span class="hljs-title function_">unlinkSync</span>(<span class="hljs-title function_">manifestPath</span>(manifest.<span class="hljs-property">id</span>));
+      <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`[upload] cleaned up: <span class="hljs-subst">${manifest.id}</span>`</span>);
+    } <span class="hljs-keyword">catch</span> (err) {
+      <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">`[upload] cleanup failed: <span class="hljs-subst">${manifest.id}</span>`</span>, err);
+    }
+  }
+}</code></pre>
+<hr>
+<h2 id="9-安全要求">9. 安全要求<a class="anchor" href="#9-安全要求" aria-label="锚点">#</a></h2>
+<h3 id="9-1-禁止事项">9.1 禁止事项<a class="anchor" href="#9-1-禁止事项" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>禁止</th><th>原因</th></tr></thead><tbody><tr><td>上传 <code>.exe</code>, <code>.bat</code>, <code>.sh</code>, <code>.dll</code> 等可执行文件</td><td>防止恶意代码执行</td></tr><tr><td>使用原始文件名存储</td><td>防止路径遍历和覆盖</td></tr><tr><td>上传目录设置为可执行</td><td>防止上传后执行</td></tr><tr><td>信任客户端 MIME 类型</td><td>防止类型伪装</td></tr><tr><td>返回服务器绝对路径</td><td>防止信息泄露</td></tr></tbody></table>
+<h3 id="9-2-路径安全">9.2 路径安全<a class="anchor" href="#9-2-路径安全" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ 正确：验证 ID 格式</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">getUpload</span>(<span class="hljs-params">id</span>) {
+  <span class="hljs-keyword">if</span> (!<span class="hljs-title function_">validateId</span>(id)) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">&#x27;Invalid upload ID&#x27;</span>);
+  <span class="hljs-keyword">return</span> fs.<span class="hljs-title function_">readFileSync</span>(path.<span class="hljs-title function_">join</span>(<span class="hljs-title function_">uploadDir</span>(), <span class="hljs-string">`<span class="hljs-subst">${id}</span>.json`</span>));
+}
+
+<span class="hljs-comment">// ❌ 错误：直接使用用户输入</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">getUploadBad</span>(<span class="hljs-params">id</span>) {
+  <span class="hljs-keyword">return</span> fs.<span class="hljs-title function_">readFileSync</span>(path.<span class="hljs-title function_">join</span>(<span class="hljs-title function_">uploadDir</span>(), id)); <span class="hljs-comment">// 路径遍历风险</span>
+}</code></pre>
+<h3 id="9-3-文件名消毒">9.3 文件名消毒<a class="anchor" href="#9-3-文件名消毒" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">function</span> <span class="hljs-title function_">sanitizeFileName</span>(<span class="hljs-params">name</span>) {
+  <span class="hljs-keyword">return</span> <span class="hljs-title class_">String</span>(name || <span class="hljs-string">&#x27;&#x27;</span>)
+    .<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/[&lt;&gt;:&quot;/\\|?*\x00-\x1f]/g</span>, <span class="hljs-string">&#x27;&#x27;</span>)  <span class="hljs-comment">// 移除非法字符</span>
+    .<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/\s+/g</span>, <span class="hljs-string">&#x27;_&#x27;</span>)                      <span class="hljs-comment">// 空格转下划线</span>
+    .<span class="hljs-title function_">slice</span>(<span class="hljs-number">0</span>, <span class="hljs-number">200</span>);                            <span class="hljs-comment">// 截断过长名称</span>
+}</code></pre>
+<hr>
+<h2 id="10-响应格式">10. 响应格式<a class="anchor" href="#10-响应格式" aria-label="锚点">#</a></h2>
+<h3 id="10-1-上传成功">10.1 上传成功<a class="anchor" href="#10-1-上传成功" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;originalName&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;report.pdf&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;mimeType&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;application/pdf&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;size&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1048576</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;kind&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;document&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;url&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/api/v1/uploads/a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;expiresAt&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-17T12:00:00.000Z&quot;</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="10-2-错误响应">10.2 错误响应<a class="anchor" href="#10-2-错误响应" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;UPLOAD_FILE_TOO_LARGE&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;USER_ERROR&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;文件大小超过限制（最大 100MB）&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;details&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;fileName&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;large.zip&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;fileSize&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">104857600</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;maxSize&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">104857600</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+<h2 id="11-客户端要求">11. 客户端要求<a class="anchor" href="#11-客户端要求" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>要求</th><th>说明</th></tr></thead><tbody><tr><td>文件类型预检</td><td>上传前检查 <code>accept</code> 属性</td></tr><tr><td>文件大小预检</td><td>上传前检查 <code>maxSize</code> 限制</td></tr><tr><td>分片上传</td><td>&gt; 50MB 文件必须使用分片上传</td></tr><tr><td>断点续传</td><td>网络中断后可从断点恢复</td></tr><tr><td>进度显示</td><td>显示上传进度条</td></tr><tr><td>失败重试</td><td>自动重试失败的分片</td></tr></tbody></table>
+<hr>
+<h2 id="12-守卫">12. 守卫<a class="anchor" href="#12-守卫" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>守卫</th><th>检查项</th><th>严重度</th></tr></thead><tbody><tr><td><code>upload-safety-gate</code></td><td>上传文件 ID 必须为 32 位十六进制</td><td>P0</td></tr><tr><td><code>upload-safety-gate</code></td><td>文件大小必须在上限内</td><td>P0</td></tr><tr><td><code>upload-safety-gate</code></td><td>MIME 类型必须经过魔数验证</td><td>P0</td></tr><tr><td><code>upload-safety-gate</code></td><td>禁止可执行文件上传</td><td>P0</td></tr><tr><td><code>upload-cleanup-gate</code></td><td>超过有效期的文件必须自动清理</td><td>P2</td></tr></tbody></table>
+<hr>
+<h2 id="13-版本历史">13. 版本历史<a class="anchor" href="#13-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义文件上传规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-UI-TEST-001] UI设计验证测试规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-UI-TEST-001] UI 设计验证测试规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/00_INDEX_其它规范-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">其它规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-UPLOAD-001] 文件上传规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

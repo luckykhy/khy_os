@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * server.js 对量化应用缺席的容忍度 —— [DESIGN-ARCH-069] §4.1 的机器化。
+ * server.js 对量化应用缺席的容忍度 —— [DESIGN-TOOL-002] §4.1 的机器化。
  *
  * 断边之前，`server.js` 在**加载期**直接 require 19 个指向 `software/khyquant` 的路由壳。
  * 删掉那个目录，19 个 require 一起抛 MODULE_NOT_FOUND，服务器连启动都失败。那不是

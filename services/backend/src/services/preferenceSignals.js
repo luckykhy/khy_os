@@ -270,10 +270,33 @@ function detectPreferenceSignal(userText) {
   return null;
 }
 
+// Map a detectPreferenceSignal result to a cmdc-style taste item. The text is
+// the human-readable assertion the user is implicitly making; the category
+// groups it for `khy taste list`. Returning null means "no taste mapping"
+// — the caller should drop the signal rather than invent a preference.
+const SIGNAL_TO_TASTE = Object.freeze({
+  too_long: { category: 'response-style', text: '用户偏好简短回复' },
+  too_short: { category: 'response-style', text: '用户偏好详细回复' },
+  too_much_code: { category: 'response-style', text: '用户不希望回复中贴大段代码' },
+  wants_code: { category: 'response-style', text: '用户希望回复中贴代码' },
+  skipped_plan: { category: 'workflow', text: '用户偏好直接执行,不要先给计划' },
+  liked_plan: { category: 'workflow', text: '用户偏好先给计划再执行' },
+  skipped_tip: { category: 'response-style', text: '用户不希望回复中带小贴士' },
+});
+
+function signalToTaste(signal) {
+  if (typeof signal !== 'string') {
+    return null;
+  }
+  return SIGNAL_TO_TASTE[signal] || null;
+}
+
 module.exports = {
   detectPreferenceSignal,
+  signalToTaste,
   // Exported for tests / introspection — not for mutation.
   STANDALONE_MAX_CHARS,
   META_MARKERS,
   SIGNAL_TABLE,
+  SIGNAL_TO_TASTE,
 };

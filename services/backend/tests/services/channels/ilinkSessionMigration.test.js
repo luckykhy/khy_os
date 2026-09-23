@@ -155,14 +155,15 @@ test('迁移: 持久化模块不可用 → no-op 不抛', () => {
 // ── dispatcher 接线:迁移发生在 scopeSession 之前;抛错时 fail-soft ───────────
 
 test('dispatcher: 迁移在 scopeSession 之前完成,scopeSession 落在新键', async () => {
-  const ai = require('../../../src/cli/ai');
-  const original = ai.scopeSession;
+  // dispatcher 经 aiChatPort 取 scopeSession(不再直接 require cli/ai)⇒ spy port 的 getter。
+  const port = require('../../../src/services/aiChatPort');
+  const original = port.getScopeSession;
   const P = makeFakePersistence({
     'ilink:u1': { messages: [{ role: 'user', content: '旧历史' }] },
   });
   let keyAtScope = null;
   let migratedBeforeScope = false;
-  ai.scopeSession = (key) => {
+  port.getScopeSession = () => (key) => {
     keyAtScope = key;
     // scopeSession 被调用时,新键应已被迁移填充 → 证明顺序:先迁移,后 scope。
     const s = P.store.get('ilink:acc1:u1');
@@ -179,20 +180,20 @@ test('dispatcher: 迁移在 scopeSession 之前完成,scopeSession 落在新键'
     assert.strictEqual(keyAtScope, 'ilink:acc1:u1', 'scopeSession 应落在账号隔离新键');
     assert.strictEqual(migratedBeforeScope, true, '迁移必须发生在 scopeSession 之前');
   } finally {
-    ai.scopeSession = original;
+    port.getScopeSession = original;
   }
 });
 
 test('dispatcher: 迁移抛错 → fail-soft,仍照常 scopeSession 新键', async () => {
-  const ai = require('../../../src/cli/ai');
-  const original = ai.scopeSession;
+  const port = require('../../../src/services/aiChatPort');
+  const original = port.getScopeSession;
   const throwingP = {
     loadSessionMeta() { return null; },
     restoreSession() { throw new Error('boom: 持久化层炸了'); },
     persistSession() { throw new Error('should-not-reach'); },
   };
   let keyAtScope = null;
-  ai.scopeSession = (key) => { keyAtScope = key; };
+  port.getScopeSession = () => (key) => { keyAtScope = key; };
   try {
     const d = new IlinkDispatcher({
       channel: fakeChannel(),
@@ -204,6 +205,6 @@ test('dispatcher: 迁移抛错 → fail-soft,仍照常 scopeSession 新键', asy
     await d.handle({ userId: 'u1', channelId: 'u1', text: '你好' });
     assert.strictEqual(keyAtScope, 'ilink:acc1:u1', '迁移异常后仍应 scopeSession 新键');
   } finally {
-    ai.scopeSession = original;
+    port.getScopeSession = original;
   }
 });

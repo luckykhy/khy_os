@@ -1,20 +1,31 @@
 'use strict';
 
 /**
- * s03 权限管线 阶段②：子代理权限冒泡�?
+ * s03 权限管线 阶段②：子代理权限冒泡�?
  *
- * 验证 onControlRequest 审批通道从父�?execContext �?
- * _context.traceContext 抵达 AgentTool，并被透传进子代理�?runToolUseLoop�?
- * 使子代理内的高风�?shell 命令能向宿主发起审批，而非 fail-closed 直接拒绝�?
+ * 验证 onControlRequest 审批通道从父�?execContext �?
+ * _context.traceContext 抵达 AgentTool，并被透传进子代理�?runToolUseLoop�?
+ * 使子代理内的高风�?shell 命令能向宿主发起审批，而非 fail-closed 直接拒绝�?
  *
- * 同时回归 progressCallback 键名修复：onAgentProgress 现可被读取到�?
+ * 同时回归 progressCallback 键名修复：onAgentProgress 现可被读取到�?
  */
 
 describe('s03 AgentTool onControlRequest bubbling', () => {
   const originalEnv = { ...process.env };
 
+  // Host-leak isolation: execute() routes to the coordinator/worker branch
+  // (which never calls runToolUseLoop) when KHY_COORDINATOR_MODE is active.
+  // A dev shell that exported the flag would otherwise silently break this
+  // suite on one machine and pass on another. This suite tests the standalone
+  // loop path only — pin the mode off for its whole lifetime.
+  delete process.env.KHY_COORDINATOR_MODE;
+
   afterEach(() => {
     process.env = { ...originalEnv };
+    // The originalEnv snapshot itself may carry the host's
+    // KHY_COORDINATOR_MODE leak; restoring it verbatim would re-poison
+    // every test after the first. Re-pin the mode off after each restore.
+    delete process.env.KHY_COORDINATOR_MODE;
     jest.resetModules();
     jest.clearAllMocks();
   });

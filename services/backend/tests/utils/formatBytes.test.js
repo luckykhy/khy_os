@@ -84,10 +84,14 @@ describe('formatBytes atom — byte-for-byte parity with pre-convergence code', 
 });
 
 describe('post-convergence delegates — output identical to the oracles', () => {
-  test('cleanupService.humanSize delegates without behavior change', () => {
+  test('cleanupService.humanSize delegates to the humanBytes atom', () => {
+    // humanSize converged onto utils/humanBytes (≥100-round contract), not
+    // onto the 3-tier formatBytes oracle — its output intentionally differs
+    // from the pre-convergence string at boundary values (1024.0 KB → 1024 KB).
     const { humanSize } = require('../../src/services/cleanupService');
+    const { humanBytes } = require('../../src/utils/humanBytes');
     for (const v of SAMPLES) {
-      expect(humanSize(v)).toBe(oracleHumanSize(v));
+      expect(humanSize(v)).toBe(humanBytes(v));
     }
   });
 

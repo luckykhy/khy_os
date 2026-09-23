@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 01-修复指定Bug.md -->
+<title>📋 提示词正文（复制下面代码块内的全部内容） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>.ai<span class="sep">›</span>hq<span class="sep">›</span>prompts<span class="sep">›</span>bugfix<span class="sep">›</span>📋 提示词正文（复制下面代码块内的全部内容）</div>
+      <header class="hero reveal"><h1>📋 提示词正文（复制下面代码块内的全部内容）</h1></header>
+      
+      <article class="doc-body">
+<p>&lt;!--<br>模板：Bug 修复（主模板）<br>触发：.ai/hq/BUGS.json 中 status=open 的 Bug，由 <code>khy hq next</code> 自动填充渲染<br>占位符：{{KHYOS_PATH}} {{BUG_ID}} {{BUG_TITLE}} {{SEVERITY}} {{DOMAIN}} {{SYMPTOM}} {{REPRO}} {{SUSPECT}}<br>用法A：在 khy-os 目录内打开 AI，粘贴渲染后的整段提示词<br>用法B：在别处打开 AI 远程指挥时，<code>khy hq next</code> 用绝对路径填充 KHYOS_PATH，直接粘即可<br>--&gt;</p>
+<h2 id="提示词正文-复制下面代码块内的全部内容">📋 提示词正文（复制下面代码块内的全部内容）<a class="anchor" href="#提示词正文-复制下面代码块内的全部内容" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">【角色】你是 khy-os 仓库的资深维护工程师，负责定位并修复一个真实 Bug。
+只做修复必需的最小改动，不做无关重构。
+
+【目标 Bug】
+- 编号：{{BUG_ID}}（优先级 {{SEVERITY}}）
+- 标题：{{BUG_TITLE}}
+- 所属域：{{DOMAIN}}
+- 现象：{{SYMPTOM}}
+- 复现步骤：{{REPRO}}
+- 怀疑范围：{{SUSPECT}}
+
+【工作目录】
+{{KHYOS_PATH}}
+
+【执行流程】
+1. 先读 AGENTS.md 与 .ai/GUARDS.md 了解红线；再按怀疑范围阅读相关源码，
+   用 node -e &quot;require(&#x27;...&#x27;)&quot; 或写临时探针脚本复现问题，确认根因后再动手。
+2. 给出根因分析（一句话说清「为什么错」），然后实施最小修复。
+3. 若修复触及启动/网络/任务执行/终端 UI，逐条自查下方工程红线第 1-4 条。
+4. 修复完成后运行【验证命令】。完成定义：【验证命令】全绿 + 输出三段式报告。
+
+【khy-os 工程红线（违反任何一条即返工）】
+1. 零硬编码：不得引入字面量 IP、端口、绝对路径、生产域名；端点来自
+   constants/serviceDefaults.js 或 env 覆盖。
+2. 状态透明：面向用户的状态/日志必须「动作+目标+进度」；禁用
+   「正在工作/处理中/Loading/Connecting/请稍候/Processing」单独出现。
+3. 基于活动的超时：长任务禁止固定时长硬 kill，用空闲重置计时器。
+4. 终端渲染：与回滚输出共存的 CLI 禁用 ANSI 滚动区 \x1B[n;mr。
+5. 风格：JS 2 空格、单引号、分号；用户可见串中文；注释英文；
+   fail-soft（叶子返回 {ok:false,error} 不抛）；优先编辑现有文件。
+6. 不改 platform/khy_platform/__init__.py；版本号只在 4 个真源文件改。
+
+【验证命令】（在 khy-os 根目录依次执行）
+- node scripts/ci/check-agent-rules.js --changed   → 无 error
+- cd services/backend &amp;&amp; npx eslint src/ --max-warnings 0 &amp;&amp; npx jest   → 全绿
+- khy doctor                                       → 系统健康
+若某命令不存在或与本改动无关，说明理由后跳过并如实报告。
+
+【完成后的回填】
+把根因与修法摘要交还给调用方（人工复制或由 `khy hq bug set BUG-XXX pending_verify
+--root-cause &quot;…&quot; --fix &quot;…&quot;` 记录进 .ai/hq/BUGS.json 的 root_cause / fix_summary
+字段），并将 Bug 状态推进到 pending_verify。</code></pre>
+<hr>
+<h3 id="渲染说明">渲染说明<a class="anchor" href="#渲染说明" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>占位符</th><th>来源</th></tr></thead><tbody><tr><td><code>{{KHYOS_PATH}}</code></td><td>用法A填「当前目录」；用法B填 khy-os 绝对路径</td></tr><tr><td>其余</td><td>.ai/hq/BUGS.json 对应字段，<code>khy hq next --bug BUG-XXX</code> 可自动渲染</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../.ai/hq/CONTEXT.html"><div class="dir">← 上一篇</div><div class="ttl">CONTEXT.md — khy-os 架构速查（AI 上下文注入素材）</div></a><a class="next" href="../../../../.ai/hq/prompts/bugfix/02-回归验证.html"><div class="dir">下一篇 →</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__=".ai/hq/prompts/bugfix/01-修复指定Bug.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

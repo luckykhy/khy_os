@@ -27,11 +27,12 @@ describe('Doc Suggest Draft', () => {
       expect(p).toContain('services/backend/src/x.js');
       expect(p).toContain('端口是 1234');
       expect(p).toContain('9090');
-      expect(p.includes('只输出改稿建议') || p).toContain('绝不直接改文件');
+      // 提示词必须强调「只出建议不落地」:含「只输出改稿建议」或等价表述
+      expect(p).toMatch(/只输出改稿建议|绝不直接改文件|不改文件/);
   });
 
   test('buildSuggestionPrompt:缺字段有兜底,不抛', () => {
-      expect(() => buildSuggestionPrompt().not.toThrow());
+      expect(() => buildSuggestionPrompt()).not.toThrow();
       const p = buildSuggestionPrompt({});
       expect(p.includes('(未指定文档).toBeTruthy()'));
       expect(p.includes('(未提供).toBeTruthy()'));

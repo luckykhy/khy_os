@@ -8,6 +8,7 @@ const { spawn } = require('child_process');
 const StreamZip = require('node-stream-zip');
 const { requireFromProvider } = require('../../extensions/extensions/providerModule');
 const { validateUpdateIndex } = require('../../../updateIndexProtocol');
+const { SWAP_SCRIPT_BODY } = require('./windowsSwapScript');
 
 const { UPDATE } = require('../../../../constants/serviceDefaults');
 
@@ -271,29 +272,7 @@ function scheduleDeferredSwap({ live, incoming, backup }, opts = {}) {
   const token = `${process.pid}-${Date.now()}`;
   const scriptPath = path.join(path.dirname(live), `.khy-update-${token}.ps1`);
   const resultPath = path.join(path.dirname(live), `.khy-update-${token}.json`);
-  const script = [
-    'param([int]$ParentPid, [string]$Live, [string]$Incoming, [string]$Backup, [string]$Result)',
-    '$ErrorActionPreference = "Stop"',
-    'try { Wait-Process -Id $ParentPid -ErrorAction SilentlyContinue } catch {}',
-    'try {',
-    '  $LiveExists = Test-Path -LiteralPath $Live',
-    '  $BackupExists = Test-Path -LiteralPath $Backup',
-    '  if ($LiveExists) {',
-    '    if ($BackupExists) { Remove-Item -LiteralPath $Backup -Recurse -Force }',
-    '    Move-Item -LiteralPath $Live -Destination $Backup',
-    '  } elseif (-not $BackupExists) {',
-    '    throw "Neither the active nor backup portable directory exists."',
-    '  }',
-    '  try { Move-Item -LiteralPath $Incoming -Destination $Live } catch {',
-    '    Move-Item -LiteralPath $Backup -Destination $Live',
-    '    throw',
-    '  }',
-    '  @{ success = $true; backup = $Backup; completedAt = (Get-Date).ToUniversalTime().ToString("o") } | ConvertTo-Json | Set-Content -LiteralPath $Result -Encoding UTF8',
-    '} catch {',
-    '  @{ success = $false; error = $_.Exception.Message; completedAt = (Get-Date).ToUniversalTime().ToString("o") } | ConvertTo-Json | Set-Content -LiteralPath $Result -Encoding UTF8',
-    '}',
-    'Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue',
-  ].join('\r\n');
+  const script = SWAP_SCRIPT_BODY;
   fs.writeFileSync(scriptPath, script, 'utf8');
   const spawnImpl = opts.spawn || spawn;
   const child = spawnImpl('powershell.exe', [

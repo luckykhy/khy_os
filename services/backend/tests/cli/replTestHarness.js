@@ -431,6 +431,12 @@ async function setupCliHarness(config = {}) {
         enablePluginAutoload: false,
         showGettingStarted: false,
         startupModelPicker: false,
+        // jest 的 CJS 沙箱不支持动态 ESM import(`--experimental-vm-modules`
+        // 未开),Ink TUI 在测试进程里**必然**加载失败,只能走「自愈阶梯(同步
+        // SHA-256 扫描)→ 降级经典 REPL」。本 harness 测的就是经典 FakeReadline
+        // REPL,显式关掉 TUI 分支:跳过注定失败的 import + 高开销自愈,直接进入
+        // 被测路径,行为与 CI(stdout.isTTY=false)下完全一致。
+        fullTui: false,
       }, config.startOptions || {});
   await replModule[startMethod](startOptions);
 

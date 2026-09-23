@@ -2,10 +2,10 @@
 
 /**
  * Tests for the s13 gap-closure:
- *   (1) shellCommand `run_in_background` �?slow shell commands dispatch detached
- *       and flow back through the same collectBackgroundResults() �?
+ *   (1) shellCommand `run_in_background` —slow shell commands dispatch detached
+ *       and flow back through the same collectBackgroundResults() →
  *       <task_notification> keystone used by background sub-agents.
- *   (2) spawnWithIdleTimeout interactive-prompt watchdog �?an idle stall that is
+ *   (2) spawnWithIdleTimeout interactive-prompt watchdog —an idle stall that is
  *       actually a child waiting on (y/n)/password input is surfaced with a
  *       precise, actionable reason instead of a silent generic kill.
  */
@@ -25,34 +25,34 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-describe('s13 gap �?detectInteractivePrompt', () => {
+describe('s13 gap —detectInteractivePrompt', () => {
   test('detects common confirmation prompts', () => {
-    expect(detectInteractivePrompt('Proceed? (y/n) ')).toBe();
-    expect(detectInteractivePrompt('Overwrite existing file? [Y/n]')).toBe();
-    expect(detectInteractivePrompt('Are you sure you want to continue?')).toBe();
-    expect(detectInteractivePrompt('Password: ')).toBe();
-    expect(detectInteractivePrompt('Do you want to remove it?')).toBe();
-    expect(detectInteractivePrompt('Press any key to continue . . .')).toBe();
-    expect(detectInteractivePrompt('Continue (yes/no)?')).toBe();
+    expect(detectInteractivePrompt('Proceed? (y/n) ')).toBe(true);
+    expect(detectInteractivePrompt('Overwrite existing file? [Y/n]')).toBe(true);
+    expect(detectInteractivePrompt('Are you sure you want to continue?')).toBe(true);
+    expect(detectInteractivePrompt('Password: ')).toBe(true);
+    expect(detectInteractivePrompt('Do you want to remove it?')).toBe(true);
+    expect(detectInteractivePrompt('Press any key to continue . . .')).toBe(true);
+    expect(detectInteractivePrompt('Continue (yes/no)?')).toBe(true);
   });
 
   test('detects the prompt even with leading log noise', () => {
     const log = 'Resolving deps...\nDownloading...\nThis will modify 12 files. Continue? (y/n) ';
-    expect(detectInteractivePrompt(log)).toBe();
+    expect(detectInteractivePrompt(log)).toBe(true);
   });
 
   test('does NOT fire on ordinary output', () => {
-    expect(!detectInteractivePrompt('Build succeeded in 4.2s')).toBe();
-    expect(!detectInteractivePrompt('Installed 120 packages')).toBe();
-    expect(!detectInteractivePrompt('All tests passed')).toBe();
-    expect(!detectInteractivePrompt('')).toBe();
-    expect(!detectInteractivePrompt(null)).toBe();
+    expect(!detectInteractivePrompt('Build succeeded in 4.2s')).toBe(true);
+    expect(!detectInteractivePrompt('Installed 120 packages')).toBe(true);
+    expect(!detectInteractivePrompt('All tests passed')).toBe(true);
+    expect(!detectInteractivePrompt('')).toBe(true);
+    expect(!detectInteractivePrompt(null)).toBe(true);
   });
 });
 
-describe('s13 gap �?spawnWithIdleTimeout interactive watchdog', () => {
+describe('s13 gap —spawnWithIdleTimeout interactive watchdog', () => {
   test('an interactive prompt followed by silence rejects with interactive=true', async () => {
-    // Print a prompt, then go silent forever �?the watchdog must classify it.
+    // Print a prompt, then go silent forever —the watchdog must classify it.
     const script = 'process.stdout.write("Continue? (y/n) "); setInterval(() => {}, 1000);';
     let err;
     try {
@@ -62,7 +62,7 @@ describe('s13 gap �?spawnWithIdleTimeout interactive watchdog', () => {
     }
     expect(err).toBeTruthy();
     expect(err.interactive).toBe(true);
-    expect(/交互输入/.test(err.message)).toBe();
+    expect(/交互输入/.test(err.message)).toBe(true);
   });
 
   test('a plain silent stall rejects with interactive=false', async () => {
@@ -75,7 +75,7 @@ describe('s13 gap �?spawnWithIdleTimeout interactive watchdog', () => {
     }
     expect(err).toBeTruthy();
     expect(err.interactive).toBe(false);
-    expect(/空闲超时/.test(err.message)).toBe();
+    expect(/空闲超时/.test(err.message)).toBe(true);
   });
 
   test('a productive process that finishes is not killed', async () => {
@@ -86,21 +86,21 @@ describe('s13 gap �?spawnWithIdleTimeout interactive watchdog', () => {
   });
 });
 
-describe('s13 gap �?shellCommand run_in_background', () => {
+describe('s13 gap —shellCommand run_in_background', () => {
   afterEach(() => {
     try { backgroundShellRegistry.backgroundShells.clear(); } catch { /* ignore */ }
   });
 
   test('exposes the collectBackgroundResults contract', () => {
     expect(typeof backgroundShellRegistry.collectBackgroundResults).toBe('function');
-    expect(Array.isArray(backgroundShellRegistry.collectBackgroundResults())).toBe();
+    expect(Array.isArray(backgroundShellRegistry.collectBackgroundResults())).toBe(true);
   });
 
   test('returns immediately with a backgroundTaskId and does not block', async () => {
     const res = await shellCommand.execute({ command: 'echo bg-marker', run_in_background: true });
     expect(res.success).toBe(true);
-    expect(/^bgsh-/.test(res.backgroundTaskId)).toBe();
-    expect(/task_notification/.test(res.output)).toBe();
+    expect(/^bgsh-/.test(res.backgroundTaskId)).toBe(true);
+    expect(/task_notification/.test(res.output)).toBe(true);
   });
 
   test('a finished background command drains as a <task_notification> descriptor', async () => {
@@ -120,7 +120,7 @@ describe('s13 gap �?shellCommand run_in_background', () => {
     expect(drained[0].summary).toContain('bg-done');
 
     // One-shot: a second drain must not re-emit the same completion.
-    expect(backgroundShellRegistry.collectBackgroundResults()).toBe([]);
+    expect(backgroundShellRegistry.collectBackgroundResults()).toEqual([]);
   });
 
   test('a failing background command drains as failed', async () => {

@@ -359,6 +359,7 @@ async function _gatewayGenerate(
   const _greetingNoTools = Boolean(
     opts._pureFirstTurnGreeting && !opts._isFollowUp && !opts._agentContext
   );
+  let _authzFailed = false;
   try {
     if (_greetingNoTools) {
       toolDefs = undefined;
@@ -393,8 +394,26 @@ async function _gatewayGenerate(
         toolDefs = toolDefs.filter((t) => !deny.has(t.name) && !deny.has(t.function?.name));
       }
     }
-  } catch {
+  } catch (err) {
+    // [DESIGN-AGENT-002] A2-7: an authorization-scope failure must NOT silently
+    // degrade into a usable tool set. Record it and pass NO tools, so the agent
+    // cannot act on an unauthorized surface. Surface it loudly in debug mode.
+    _authzFailed = true;
     toolDefs = undefined;
+    if (process.env.KHY_DEBUG_TOOLS === '1') {
+      console.error(`[DEBUG-PROFILE] authorization scope resolution FAILED: ${err && err.message}`);
+    }
+    try {
+      const { recordAuthzFailure } = require('../services/domain/state/orchestrator/authzFailureLedger');
+      recordAuthzFailure({
+        where: 'aiMessageBuilder.toolScope',
+        role: opts._agentContext?.role || null,
+        toolFilter: opts._agentContext?.toolFilter || null,
+        message: err && err.message ? String(err.message) : String(err),
+      });
+    } catch {
+      /* ledger is best-effort; must never mask the original failure */
+    }
   }
 
   // 弱模型按需裁剪(「工具按需调用,而非跳过」):实测缺原生工具调用(text)或小名弱模型

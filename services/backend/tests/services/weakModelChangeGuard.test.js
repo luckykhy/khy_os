@@ -181,14 +181,17 @@ describe('weakModelChangeGuard', () => {
       expect(result.risk).toBe('normal');
     });
 
-    test('handles unknown tier', () => {
+    test('resolves empty model id to the T2 weak default', () => {
+      // modelTier pins an EMPTY model id to T2 (mid/unknown default), so
+      // omitting both tier and modelId lands in the weak-tier red-line block
+      // (allow:false, require-strong-review), NOT the tier==null confirm path.
       const result = assessWeakModelChange({
         filePath: '.env',
         env: {},
       });
-      expect(result.allow).toBe(true);
-      expect(result.requireConfirm).toBe(true);
-      expect(result.tier).toBeNull();
+      expect(result.tier).toBe('T2');
+      expect(result.allow).toBe(false);
+      expect(result.action).toBe('require-strong-review');
     });
 
     test('includes changeKind', () => {

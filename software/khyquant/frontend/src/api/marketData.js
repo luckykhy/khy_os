@@ -79,10 +79,15 @@ export async function getMarketQuotes(limit = 20) {
       params: { limit },
       timeout: 5000
     })
-    
-    if (response && response.length > 0) {
-      if (import.meta.env.DEV) { console.log(`✅ 使用通用API数据: ${response.length} 条`) }
-      return response.map(item => ({
+
+    // 后端信封 { success, data:{ quotes } } 与裸数组两种形状都接受
+    const quotes = Array.isArray(response)
+      ? response
+      : (response && Array.isArray(response.data && response.data.quotes) ? response.data.quotes : [])
+
+    if (quotes.length > 0) {
+      if (import.meta.env.DEV) { console.log(`✅ 使用通用API数据: ${quotes.length} 条`) }
+      return quotes.map(item => ({
         ...item,
         dataSource: '实时数据'
       }))

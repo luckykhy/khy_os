@@ -37,7 +37,8 @@ describe('Get Tool Definitions Stable', () => {
       delete process.env.KHY_STABLE_PREFIX;
       try {
         const defs = toolCalling.getToolDefinitions();
-        expect(Array.isArray(defs).toBeTruthy() && defs.length > 0);
+        expect(Array.isArray(defs)).toBeTruthy();
+        expect(defs.length > 0).toBe(true);
         const names = defs.map((d) => String(d.name || ''));
         const uniq = new Set(names.map((n) => n.toLowerCase().replace(/_/g, '')));
         expect(uniq.size).toBe(names.length, 'no normalized duplicates');

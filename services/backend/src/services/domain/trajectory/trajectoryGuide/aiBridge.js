@@ -24,7 +24,7 @@
  *     {attempted, ok?, reason, agent?} the engine surfaces in its report.
  */
 
-const config = require('../../../../cli/handlers/config');
+const config = require('./config');
 
 /** Truncate a value to a short, log-safe preview string. */
 function _preview(v, max = 200) {
@@ -105,7 +105,7 @@ function createRepairHook(opts = {}) {
     if (agentTool) {
       return agentTool;
     }
-    const AgentTool = require('../../tools/AgentTool');
+    const AgentTool = require('../../../../tools/AgentTool');
     const Ctor = AgentTool && AgentTool.AgentTool ? AgentTool.AgentTool : AgentTool;
     agentTool = new Ctor();
     return agentTool;

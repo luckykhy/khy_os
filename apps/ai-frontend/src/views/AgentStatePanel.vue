@@ -129,7 +129,7 @@ const orbLabel = computed(() => ORB_LABELS[props.orbState] || ORB_LABELS.idle);
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--khy-bg, #fff);
+  background: var(--khy-bg, var(--khy-white));
   opacity: 0.85;
   transition:
     width 0.3s ease,
@@ -141,7 +141,7 @@ const orbLabel = computed(() => ORB_LABELS[props.orbState] || ORB_LABELS.idle);
 .orb--idle {
   width: 40px;
   height: 40px;
-  background: radial-gradient(circle, #9aa4b2 0%, #6b7280 100%);
+  background: radial-gradient(circle, var(--khy-gray-400) 0%, var(--khy-gray-500) 100%);
   box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.12);
 }
 
@@ -152,21 +152,21 @@ const orbLabel = computed(() => ORB_LABELS[props.orbState] || ORB_LABELS.idle);
 
 /* listening — steady blue pulse */
 .orb--listening {
-  background: radial-gradient(circle, #5b9dff 0%, #2563eb 100%);
+  background: radial-gradient(circle, var(--khy-primary) 0%, var(--khy-primary) 100%);
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
   animation: orb-pulse 1.8s ease-in-out infinite;
 }
 
 /* thinking — amber, faster pulse */
 .orb--thinking {
-  background: radial-gradient(circle, #fbbf6b 0%, #d97706 100%);
+  background: radial-gradient(circle, var(--khy-warning) 0%, var(--khy-warning) 100%);
   box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.2);
   animation: orb-pulse 0.9s ease-in-out infinite;
 }
 
 /* speaking — green, lively pulse */
 .orb--speaking {
-  background: radial-gradient(circle, #5fd68a 0%, #16a34a 100%);
+  background: radial-gradient(circle, var(--khy-success) 0%, var(--khy-success) 100%);
   box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.22);
   animation: orb-pulse 0.6s ease-in-out infinite;
 }
@@ -183,11 +183,11 @@ const orbLabel = computed(() => ORB_LABELS[props.orbState] || ORB_LABELS.idle);
 
 .orb-label {
   font-size: 13px;
-  color: var(--khy-text-secondary, #6b7280);
+  color: var(--khy-text-secondary, var(--khy-gray-500));
 }
 
 .state-card {
-  border: 1px solid var(--khy-border, #ebeef5);
+  border: 1px solid var(--khy-border, var(--khy-gray-100));
 }
 
 .card-title {
@@ -198,19 +198,19 @@ const orbLabel = computed(() => ORB_LABELS[props.orbState] || ORB_LABELS.idle);
 .card-count {
   float: right;
   font-size: 12px;
-  color: var(--khy-text-secondary, #909399);
+  color: var(--khy-text-secondary, var(--khy-gray-400));
 }
 
 .card-line {
   font-size: 12px;
-  color: var(--khy-text, #303133);
+  color: var(--khy-text, var(--khy-gray-700));
   padding: 2px 0;
   word-break: break-all;
 }
 
 .card-empty {
   font-size: 12px;
-  color: var(--khy-text-secondary, #c0c4cc);
+  color: var(--khy-text-secondary, var(--khy-gray-300));
 }
 
 .persona-sec {
@@ -220,12 +220,12 @@ const orbLabel = computed(() => ORB_LABELS[props.orbState] || ORB_LABELS.idle);
 .persona-sec-title {
   font-size: 12px;
   font-weight: 600;
-  color: var(--khy-primary, #409eff);
+  color: var(--khy-primary, var(--khy-primary));
 }
 
 .persona-sec-line {
   font-size: 12px;
-  color: var(--khy-text-secondary, #606266);
+  color: var(--khy-text-secondary, var(--khy-gray-500));
   padding-left: 6px;
 }
 
@@ -234,7 +234,7 @@ const orbLabel = computed(() => ORB_LABELS[props.orbState] || ORB_LABELS.idle);
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--khy-primary, #409eff);
+  background: var(--khy-primary, var(--khy-primary));
   margin-right: 6px;
 }
 </style>

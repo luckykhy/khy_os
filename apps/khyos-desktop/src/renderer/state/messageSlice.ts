@@ -82,6 +82,16 @@ const messageSlice = createSlice({
       state.currentThinking = null
       state.error = null
     },
+    // Replace the whole stream at once — used when a persisted session is
+    // loaded (sidebar task click / 重载会话). Keeps streaming/agent flags at
+    // rest so a load never looks like an in-flight generation.
+    setMessages: (state, action: PayloadAction<Message[]>) => {
+      state.messages = action.payload
+      state.isStreaming = false
+      state.isAgentWorking = false
+      state.currentThinking = null
+      state.error = null
+    },
     setCurrentSession: (state, action: PayloadAction<string>) => {
       state.currentSessionId = action.payload
     },
@@ -91,7 +101,7 @@ const messageSlice = createSlice({
 export const {
   addMessage, updateMessage, appendMessageContent, setMessageStatus,
   setStreaming, setAgentWorking, setCurrentThinking, setError,
-  clearMessages, setCurrentSession,
+  clearMessages, setCurrentSession, setMessages,
 } = messageSlice.actions
 
 export default messageSlice.reducer

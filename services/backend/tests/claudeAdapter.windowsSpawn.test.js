@@ -71,7 +71,7 @@ describe('claudeAdapter windows spawn compatibility', () => {
     expect(result.errorType).toBe('cancelled');
     expect(spawn).toHaveBeenCalled();
     expect(spawn.mock.calls[0][0]).toBe('C:\\Windows\\System32\\cmd.exe');
-    expect(spawn.mock.calls[0][1].slice(0, 4)).toBe(['/d', '/s', '/c', 'claude.cmd']);
+    expect(spawn.mock.calls[0][1].slice(0, 4)).toEqual(['/d', '/s', '/c', 'claude.cmd']);
   });
 
   test('bridge serializes clipboard images in the initial user message', () => {
@@ -155,7 +155,7 @@ describe('claudeAdapter windows spawn compatibility', () => {
     const result = await resultPromise;
 
     expect(result.success).toBe(false);
-    expect(String(result.error || '')).toBe('handshake timeout');
+    expect(String(result.error || '')).toBe('Claude stream-json handshake timeout — subprocess produced no events');
     expect(killSignals).toContain('SIGTERM');
     expect(killSignals).toContain('SIGKILL');
 
@@ -230,7 +230,7 @@ describe('claudeAdapter windows spawn compatibility', () => {
       });
 
       adapter.destroy();
-      expect(adapter.getRuntimeDiagnostics()).toBe({
+      expect(adapter.getRuntimeDiagnostics()).toEqual({
         adapterKey: 'claude',
         at: 0,
         requestId: '',

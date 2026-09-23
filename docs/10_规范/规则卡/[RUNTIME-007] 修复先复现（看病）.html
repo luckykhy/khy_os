@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [RUNTIME-007] 修复先复现（看病）.md -->
+<title>[RUNTIME-007] 修复先复现（看病） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[RUNTIME-007] 修复先复现（看病）</div>
+      <header class="hero reveal"><h1>[RUNTIME-007] 修复先复现（看病）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#runtime-007-修复先复现-看病">[RUNTIME-007] 修复先复现（看病）</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 修复先复现（看病）<br>id: RUNTIME-007<br>domain: RUNTIME<br>nature: 约束为主，兼权力与福利<br>scope: &quot;被判定为 FIX 的改动集（改 bug / 修回归）：改动集含失败特征词、或改了既有测试（services/<strong>、apps/</strong>、extensions/<strong>、scripts/</strong>）&quot;<br>priority: P1<br>trigger: 动手修 bug 前（判定为主模态 FIX 时）<br>constraint: &quot;必须有 repro-before.txt（复现命令的<strong>原始输出</strong>，非转述）才可改代码；改后必须有 repro-after.txt 跑同一条命令；differential.md 须列 ≥2 个候选病因且每个给可证伪预测；处方必须最小化——FIX 触及 ≥4 文件或 ≥3 顶层目录即报 fix-blast-radius。&quot;<br>grants: &quot;见约束边界：授权在「复现输出已存证」后动手，也授权因无法复现而<strong>拒绝修改</strong>并回报客户（不修不是失败，谎报已复现才是）。&quot;<br>benefit: &quot;把「修 bug」从 AI 单方面手术变成可复核的诊疗记录：客户不必相信 AI 的转述，直接看原始输出。防止「改了三处、病没好、顺手重构」这一类最贵的失败。&quot;<br>exception: &quot;纯文档 / 纯注释改动；或改动集无法构造复现命令时，须在 complaint.md 写明「不可复现」及理由——缺此说明不豁免。&quot;<br>version: &quot;1.0.0 (2026-09-18)&quot;<br>status: active<br>ssot: &quot;docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-113] AI修改三模态反馈契约-客户模式.md#31-看病模式fix&quot;<br>formerly: 无<br>owner: governance-team</p>
+<hr>
+<h1 id="runtime-007-修复先复现-看病">[RUNTIME-007] 修复先复现（看病）<a class="anchor" href="#runtime-007-修复先复现-看病" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: RUNTIME-007 -->
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-113] AI修改三模态反馈契约-客户模式.md#31-看病模式fix。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>必须有 repro-before.txt（复现命令的<strong>原始输出</strong>，非转述）才可改代码；改后必须有 repro-after.txt 跑同一条命令；differential.md 须列 ≥2 个候选病因且每个给可证伪预测；处方必须最小化——FIX 触及 ≥4 文件或 ≥3 顶层目录即报 fix-blast-radius。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>见约束边界：授权在「复现输出已存证」后动手，也授权因无法复现而<strong>拒绝修改</strong>并回报客户（不修不是失败，谎报已复现才是）。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>把「修 bug」从 AI 单方面手术变成可复核的诊疗记录：客户不必相信 AI 的转述，直接看原始输出。防止「改了三处、病没好、顺手重构」这一类最贵的失败。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>见 <code>ssot</code> 指向的真源原文；本卡不复制反例，以免与真源漂移。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>人工评审（该规则暂无机械守卫）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>纯文档 / 纯注释改动；或改动集无法构造复现命令时，须在 complaint.md 写明「不可复现」及理由——缺此说明不豁免。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-18) 初版 / 迁移自 无</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/规则卡/[RUNTIME-006] 网关首选通道不得硬钉.html"><div class="dir">← 上一篇</div><div class="ttl">[RUNTIME-006] 网关首选通道不得硬钉</div></a><a class="next" href="../../../docs/10_规范/规则卡/[RUNTIME-008] 新增先提问（求学）.html"><div class="dir">下一篇 →</div><div class="ttl">[RUNTIME-008] 新增先提问（求学）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/规则卡/[RUNTIME-007] 修复先复现（看病）.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

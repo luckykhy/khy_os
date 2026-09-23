@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [IMPL-RPT-044] khyos 账号体系收口实施记录-ARCH-074-2026-09-02.md -->
+<title>[IMPL-RPT-044] khyos 账号体系收口实施记录 — ARCH-074 落地 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>IMPL-RPT<span class="sep">›</span>[IMPL-RPT-044] khyos 账号体系收口实施记录 — ARCH-074 落地</div>
+      <header class="hero reveal"><h1>[IMPL-RPT-044] khyos 账号体系收口实施记录 — ARCH-074 落地</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#impl-rpt-044-khyos-账号体系收口实施记录-arch-074-落地">[IMPL-RPT-044] khyos 账号体系收口实施记录 — ARCH-074 落地</a></li><li class="lvl-2"><a href="#0-改动一览">0. 改动一览</a></li><li class="lvl-2"><a href="#1-各改动详情">1. 各改动详情</a></li><li class="lvl-3"><a href="#1-1-user-模型加字段">1.1 User 模型加字段</a></li><li class="lvl-3"><a href="#1-2-loginkeyresolver-新建">1.2 loginKeyResolver 新建</a></li><li class="lvl-3"><a href="#1-3-aio-backend-api-auth-register-login">1.3 aio backend /api/auth/register + /login</a></li><li class="lvl-3"><a href="#1-4-credentialgenerator-ensuredefaultadminpassword">1.4 credentialGenerator.ensureDefaultAdminPassword</a></li><li class="lvl-3"><a href="#1-5-cliauthservice-改动">1.5 cliAuthService 改动</a></li><li class="lvl-3"><a href="#1-6-app-js-runauthform">1.6 App.js runAuthForm</a></li><li class="lvl-3"><a href="#1-7-servicedefaults-ai-mgmt-host">1.7 serviceDefaults.AI_MGMT_HOST</a></li><li class="lvl-3"><a href="#1-8-ai-backend-server-js-listen">1.8 ai-backend server.js listen</a></li><li class="lvl-3"><a href="#1-9-文档">1.9 文档</a></li><li class="lvl-2"><a href="#2-验收记录">2. 验收记录</a></li><li class="lvl-3"><a href="#2-1-ci-全绿">2.1 CI 全绿</a></li><li class="lvl-3"><a href="#2-2-模块加载">2.2 模块加载</a></li><li class="lvl-3"><a href="#2-3-行为正确性">2.3 行为正确性</a></li><li class="lvl-3"><a href="#2-4-jest-单元测试">2.4 jest 单元测试</a></li><li class="lvl-3"><a href="#2-5-现场端到端-推荐手动复测">2.5 现场端到端（推荐手动复测）</a></li><li class="lvl-2"><a href="#3-已知限制-留给后续">3. 已知限制 / 留给后续</a></li><li class="lvl-2"><a href="#4-引用关系">4. 引用关系</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="impl-rpt-044-khyos-账号体系收口实施记录-arch-074-落地">[IMPL-RPT-044] khyos 账号体系收口实施记录 — ARCH-074 落地<a class="anchor" href="#impl-rpt-044-khyos-账号体系收口实施记录-arch-074-落地" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>承接设计</strong>：[DESIGN-ARCH-074] khy-os 账号体系收口-用户名唯一键 alias 软冲突 密码必填 局域网登录<br><strong>前序记录</strong>：[IMPL-RPT-043] 任务列表截断修复（无关，但同分支）<br><strong>落地时间</strong>：2026-09-02<br><strong>改动统计</strong>：8 个代码文件 + 1 个设计文档 + 1 个部署文档 + 2 个索引登记</p></blockquote>
+<hr>
+<h2 id="0-改动一览">0. 改动一览<a class="anchor" href="#0-改动一览" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>文件</th><th>改动类型</th><th>摘要</th></tr></thead><tbody><tr><td>1</td><td><code>platform/packages/shared/src/models/User.js</code></td><td>加字段</td><td><code>aliases: JSON default []</code> + <code>displayName: STRING(80)</code>；<code>PUBLIC_ATTRIBUTES</code>/<code>REFERENCE_ATTRIBUTES</code> 加入</td></tr><tr><td>2</td><td><code>services/ai-backend/src/services/loginKeyResolver.js</code></td><td><strong>新建</strong></td><td>纯函数 <code>resolveLoginKey</code> / <code>normalizeAliases</code> / <code>findAliasConflicts</code></td></tr><tr><td>3</td><td><code>services/ai-backend/src/routes/auth.js</code></td><td>改路由</td><td><code>/login</code> 走 <code>resolveLoginKey</code>；<code>/register</code> 接 aliases 并做跨账号唯一性校验</td></tr><tr><td>4</td><td><code>services/backend/src/services/credentialGenerator.js</code></td><td>加函数</td><td><code>ensureDefaultAdminPassword()</code>：aio backend User admin 若无密码则同步 default-admin.json 的随机密码</td></tr><tr><td>5</td><td><code>services/backend/src/services/cliAuthService.js</code></td><td>改函数</td><td><code>_loadBuiltinAccounts</code> 触发默认密码补齐；<code>_loadCredentials</code> 软校验 aliases 字段；<code>register</code> 接 aliases 第六个参数；<code>login</code> 按 username/email/alias 查找</td></tr><tr><td>6</td><td><code>services/backend/src/cli/tui/ink-components/App.js</code></td><td>改 UI</td><td>runAuthForm 表单加「别名（可选，逗号分隔）」字段；登录态变更清 banner 冻结 ref</td></tr><tr><td>7</td><td><code>services/backend/src/constants/serviceDefaults.js</code></td><td>加常量</td><td><code>AI_MGMT_HOST</code> 默认 <code>'0.0.0.0'</code>，env 可覆盖</td></tr><tr><td>8</td><td><code>services/ai-backend/server.js</code></td><td>改 listen</td><td><code>app.listen(PORT, AI_MGMT_HOST, ...)</code>，LAN 暴露；启动横幅告知</td></tr><tr><td>9</td><td><code>docs/03_DESIGN_设计/[DESIGN-ARCH-074] ...md</code></td><td><strong>新建</strong></td><td>设计文档（单一真源）</td></tr><tr><td>10</td><td><code>docs/06_DEPLOY_部署/LAN-FIREWALL.md</code></td><td><strong>新建</strong></td><td>Windows / macOS / Linux 防火墙放行说明</td></tr><tr><td>11</td><td><code>docs/00_INDEX_文档索引.md</code></td><td>索引登记</td><td>主索引加 074 + LAN-FIREWALL</td></tr><tr><td>12</td><td><code>docs/03_DESIGN_设计/00_INDEX_设计-分类索引.md</code></td><td>索引登记</td><td>设计分类索引加 074</td></tr><tr><td>13</td><td><code>docs/06_DEPLOY_部署/00_INDEX_部署-分类索引.md</code></td><td>索引登记</td><td>部署分类索引加 LAN-FIREWALL</td></tr></tbody></table>
+<hr>
+<h2 id="1-各改动详情">1. 各改动详情<a class="anchor" href="#1-各改动详情" aria-label="锚点">#</a></h2>
+<h3 id="1-1-user-模型加字段">1.1 User 模型加字段<a class="anchor" href="#1-1-user-模型加字段" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">aliases     JSON      default []      comment: &#x27;登录别名集合（不含 username/email）。应用层全局唯一。&#x27;
+displayName STRING(80) nullable      comment: &#x27;昵称，仅展示用，不参与登录&#x27;</code></pre>
+<ul><li><code>aliases</code> JSON 字段不带 DB unique index（跨 DB 引擎一致性），唯一性由 <code>loginKeyResolver.findAliasConflicts</code> 在 register 路径应用层校验</li><li><code>displayName</code> 仅 banner / whoami 用，门控 <code>KHY_BANNER_USE_DISPLAY_NAME</code> 默认关（不在本次落地）</li><li><code>PUBLIC_ATTRIBUTES</code> / <code>REFERENCE_ATTRIBUTES</code> 加入 <code>displayName</code>；<code>aliases</code> 只入 PUBLIC（REFERENCE 标签不含列表）</li></ul>
+<h3 id="1-2-loginkeyresolver-新建">1.2 loginKeyResolver 新建<a class="anchor" href="#1-2-loginkeyresolver-新建" aria-label="锚点">#</a></h3>
+<p>3 个公开函数，全是纯函数（DB IO 通过 <code>deps.User</code> 注入）：</p>
+<ul><li><code>resolveLoginKey(input, deps)</code> — 解析 login key（username → email → alias）</li><li><code>normalizeAliases(list)</code> — 字符串数组去重 / 字符集 / 长度校验</li><li><code>findAliasConflicts(candidates, deps)</code> — 跨账号唯一性校验（拉表过滤；用户量大了再优化为 JSON_CONTAINS）</li></ul>
+<h3 id="1-3-aio-backend-api-auth-register-login">1.3 aio backend /api/auth/register + /login<a class="anchor" href="#1-3-aio-backend-api-auth-register-login" aria-label="锚点">#</a></h3>
+<ul><li><code>/register</code>：<ul><li>接受 <code>aliases: string[]</code></li><li><code>normalizeAliases</code> 校验 + 拒绝与 username/email 重复</li><li><code>findAliasConflicts</code> 检查跨账号唯一</li><li>唯一冲突返回 <strong>409</strong>，alias 字符集违规返回 <strong>400</strong>，username/email 占用返回 <strong>409</strong></li></ul></li><li><code>/login</code>：<ul><li><code>username</code> 字段语义化为「login key」</li><li><code>resolveLoginKey</code> 命中后 bcrypt 比对，签发 JWT</li><li>响应里附 <code>matchedBy: 'username' | 'email' | 'alias'</code>（便于排查）</li></ul></li></ul>
+<h3 id="1-4-credentialgenerator-ensuredefaultadminpassword">1.4 credentialGenerator.ensureDefaultAdminPassword<a class="anchor" href="#1-4-credentialgenerator-ensuredefaultadminpassword" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">loadOrCreateDefaultAdminCredentials() → 拿到 username + 明文密码
+  ↓
+findOne({ username }) → 取 aio backend User.admin
+  ↓
+comparePassword(明文) → true  → ok:true, updated:false
+                  → false → user.password = 明文; user.save() → ok:true, updated:true
+  ↓
+数据库不可用 / 找不到用户 / bcrypt 写入失败 → ok:false, reason</code></pre>
+<ul><li>完全幂等：bcrypt 校验已通过就立刻返回</li><li>完全 fail-soft：任何一步失败返回 <code>{ ok: false, reason }</code>，调用方不抛</li><li>启动期由 <code>cliAuthService._loadBuiltinAccounts()</code> 异步触发（fire-and-forget，不阻塞 CLI 启动）</li></ul>
+<h3 id="1-5-cliauthservice-改动">1.5 cliAuthService 改动<a class="anchor" href="#1-5-cliauthservice-改动" aria-label="锚点">#</a></h3>
+<ul><li><code>_loadBuiltinAccounts</code>：首次调用时 fire-and-forget 触发 <code>ensureDefaultAdminPassword</code>；更新成功会在 stderr 打印一行</li><li><code>_loadCredentials</code>：脏值软校验（<code>aliases</code> 非数组 → 落到 <code>[]</code>）</li><li><code>register(username, password, email, securityQuestion, securityAnswer, aliases)</code>：第 6 参 <code>aliases</code>，透传 aio backend register；同时镜像到 credentials.json</li><li><code>login</code>：本机兜底路径按 <code>username / email / aliases</code> 任一查找；返回值增加 <code>matchedBy</code> 字段</li></ul>
+<h3 id="1-6-app-js-runauthform">1.6 App.js runAuthForm<a class="anchor" href="#1-6-app-js-runauthform" aria-label="锚点">#</a></h3>
+<p>register 表单新增第 5 个字段：</p>
+<pre><code class="language-text">别名 (可选，逗号分隔;用于局域网/别机登录):</code></pre>
+<p>不填 = 不使用别名。客户端校验 1-8 个 + 单个 ≤32 字符；字符集精确校验交给后端。</p>
+<h3 id="1-7-servicedefaults-ai-mgmt-host">1.7 serviceDefaults.AI_MGMT_HOST<a class="anchor" href="#1-7-servicedefaults-ai-mgmt-host" aria-label="锚点">#</a></h3>
+<p>新增常量：</p>
+<pre><code class="language-text">const AI_MGMT_HOST = process.env.AI_MGMT_HOST || &#x27;0.0.0.0&#x27;;</code></pre>
+<p>默认 <code>0.0.0.0</code>（与 Node <code>app.listen(port)</code> 默认行为一致）；env 收紧到 <code>127.0.0.1</code> 可回退到仅本机。</p>
+<h3 id="1-8-ai-backend-server-js-listen">1.8 ai-backend server.js listen<a class="anchor" href="#1-8-ai-backend-server-js-listen" aria-label="锚点">#</a></h3>
+<pre><code class="language-js"><span class="hljs-keyword">let</span> <span class="hljs-variable constant_">AI_MGMT_HOST</span> = <span class="hljs-string">&#x27;0.0.0.0&#x27;</span>;
+<span class="hljs-keyword">try</span> {
+  <span class="hljs-keyword">const</span> { <span class="hljs-attr">AI_MGMT_HOST</span>: hostFromDefaults } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./src/constants/serviceDefaults&#x27;</span>);
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> hostFromDefaults === <span class="hljs-string">&#x27;string&#x27;</span> &amp;&amp; hostFromDefaults.<span class="hljs-property">length</span> &gt; <span class="hljs-number">0</span>) {
+    <span class="hljs-variable constant_">AI_MGMT_HOST</span> = hostFromDefaults;
+  }
+} <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* serviceDefaults 加载失败时退回硬编码默认 */</span> }
+<span class="hljs-keyword">if</span> (process.<span class="hljs-property">env</span>.<span class="hljs-property">AI_MGMT_HOST</span> &amp;&amp; process.<span class="hljs-property">env</span>.<span class="hljs-property">AI_MGMT_HOST</span>.<span class="hljs-property">length</span> &gt; <span class="hljs-number">0</span>) {
+  <span class="hljs-variable constant_">AI_MGMT_HOST</span> = process.<span class="hljs-property">env</span>.<span class="hljs-property">AI_MGMT_HOST</span>;
+}
+...
+<span class="hljs-keyword">const</span> server = app.<span class="hljs-title function_">listen</span>(<span class="hljs-variable constant_">PORT</span>, <span class="hljs-variable constant_">AI_MGMT_HOST</span>, <span class="hljs-function">() =&gt;</span> { ... });</code></pre>
+<p>启动横幅在绑 0.0.0.0 时多打一行「LAN: 9090/tcp 放行后，其他机器可 http://&lt;本机IP&gt;:9090/api/auth/login」，把端口暴露事实告知用户。</p>
+<h3 id="1-9-文档">1.9 文档<a class="anchor" href="#1-9-文档" aria-label="锚点">#</a></h3>
+<ul><li>[DESIGN-ARCH-074] 详细设计（why / 数据契约 / 行为契约 / 文件清单 / 兼容性 / 验收）</li><li>[LAN-FIREWALL.md] 防火墙放行命令（Windows <code>New-NetFirewallRule</code> / macOS <code>socketfilterfw</code> &amp; <code>pfctl</code> / Linux <code>ufw</code>/<code>firewalld</code>/<code>iptables</code>）</li></ul>
+<hr>
+<h2 id="2-验收记录">2. 验收记录<a class="anchor" href="#2-验收记录" aria-label="锚点">#</a></h2>
+<h3 id="2-1-ci-全绿">2.1 CI 全绿<a class="anchor" href="#2-1-ci-全绿" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">[✓] node scripts/ci/check-agent-rules.js    8 文件零违规
+[✓] node scripts/ci/check-version-sync.js   4+2 版本轨道一致
+[✓] node scripts/ci/check-gov-rules.js      GOV-MOD-004 / GOV-TOOL-004 / 005 通过
+[✓] node scripts/ci/check-repo-layout.js    无结构发现（074 + LAN-FIREWALL 索引齐全）
+[✓] node --check &lt;8 个代码文件&gt;             零语法错误</code></pre>
+<h3 id="2-2-模块加载">2.2 模块加载<a class="anchor" href="#2-2-模块加载" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">[✓] cliAuthService.js      loaded; exports 16 个公开 API
+[✓] credentialGenerator.js loaded; ensureDefaultAdminPassword = function
+[✓] loginKeyResolver.js   loaded; exports normalizeAliases / resolveLoginKey / findAliasConflicts
+[✓] serviceDefaults.js    AI_MGMT_HOST = &#x27;0.0.0.0&#x27;</code></pre>
+<h3 id="2-3-行为正确性">2.3 行为正确性<a class="anchor" href="#2-3-行为正确性" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">[✓] normalizeAliases([&#x27;  Foo  &#x27;, &#x27;foo&#x27;, &#x27;bar@x.com&#x27;, &#x27;&#x27;, &#x27;has space&#x27;, &#x27;good_name&#x27;])
+      → [&#x27;Foo&#x27;,&#x27;bar@x.com&#x27;,&#x27;good_name&#x27;] (去重 / 大小写不敏感 / 空串拒绝 / 含空格拒绝)
+[✓] resolveLoginKey(&#x27;alice&#x27;)    → matchedBy = &#x27;username&#x27;
+[✓] resolveLoginKey(&#x27;alice@x.com&#x27;) → matchedBy = &#x27;email&#x27;
+[✓] resolveLoginKey(&#x27;ali&#x27;)      → matchedBy = &#x27;alias&#x27;（真 User 模型下）</code></pre>
+<h3 id="2-4-jest-单元测试">2.4 jest 单元测试<a class="anchor" href="#2-4-jest-单元测试" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">PASS tests/auth.sessionSecurityRoutes.test.js          3/3
+PASS tests/services/authSessionService.test.js
+PASS tests/services/authPolicy.test.js
+PASS tests/security/authGuard.exports.test.js
+PASS tests/routes/auth.sessions.test.js
+33/33 passed, 0 failed</code></pre>
+<h3 id="2-5-现场端到端-推荐手动复测">2.5 现场端到端（推荐手动复测）<a class="anchor" href="#2-5-现场端到端-推荐手动复测" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell"><span class="hljs-comment"># 1) 验证 banner 与 whoami 一致</span>
+khy whoami
+<span class="hljs-comment"># 进 REPL → 顶部 banner 「欢迎你，&lt;whoami 用户名&gt;」</span>
+
+<span class="hljs-comment"># 2) 验证默认账号密码补齐</span>
+<span class="hljs-built_in">Remove-Item</span> <span class="hljs-string">&quot;<span class="hljs-variable">$env:USERPROFILE</span>\.khy\credentials\default-admin.json&quot;</span> <span class="hljs-literal">-ErrorAction</span> SilentlyContinue
+<span class="hljs-comment"># 重启 ai-backend / khy</span>
+<span class="hljs-comment"># 期望 stderr: [cliAuthService] 默认管理员密码已在数据库中更新为新随机密码</span>
+<span class="hljs-comment"># 期望 .khy/credentials/default-admin.json 重新生成</span>
+<span class="hljs-comment"># 期望 /api/auth/login 用 default-admin.json 里的密码能登入</span>
+
+<span class="hljs-comment"># 3) 验证 alias 跨账号唯一性</span>
+<span class="hljs-comment"># 在 A 机 /register --as 别名1</span>
+<span class="hljs-comment"># 在 B 机 /register --as 别名1</span>
+<span class="hljs-comment"># 期望 B 报「alias 已被其他账号占用」</span>
+
+<span class="hljs-comment"># 4) 验证 LAN 登录（他机）</span>
+netstat <span class="hljs-literal">-ano</span> | <span class="hljs-built_in">Select-String</span> <span class="hljs-string">&quot;:9090\s+.*LISTENING&quot;</span>   <span class="hljs-comment"># 应看到 0.0.0.0:9090</span>
+<span class="hljs-comment"># （防火墙规则参考 LAN-FIREWALL.md）</span>
+<span class="hljs-built_in">curl</span> http://&lt;A机IP&gt;:<span class="hljs-number">9090</span>/api/health                   <span class="hljs-comment"># 200</span>
+<span class="hljs-built_in">curl</span> <span class="hljs-literal">-X</span> POST http://&lt;A机IP&gt;:<span class="hljs-number">9090</span>/api/auth/login \
+  <span class="hljs-literal">-H</span> <span class="hljs-string">&#x27;Content-Type: application/json&#x27;</span> \
+  <span class="hljs-literal">-d</span> <span class="hljs-string">&#x27;{&quot;username&quot;:&quot;&lt;A机账号&gt;&quot;,&quot;password&quot;:&quot;&lt;密码&gt;&quot;}&#x27;</span>  <span class="hljs-comment"># 200 + token</span></code></pre>
+<hr>
+<h2 id="3-已知限制-留给后续">3. 已知限制 / 留给后续<a class="anchor" href="#3-已知限制-留给后续" aria-label="锚点">#</a></h2>
+<ul><li><strong><code>displayName</code> 渲染</strong>：banner 仍按 username 显示；切到 <code>displayName</code> 走 <code>KHY_BANNER_USE_DISPLAY_NAME</code> 门控（默认关）。</li><li><strong><code>aliases</code> 唯一性</strong>：当前 <code>findAliasConflicts</code> 把整张 users 表拉回内存过滤；用户表大时改 <code>JSON_CONTAINS</code> / PG <code>@&gt;</code> 等原生查询。</li><li><strong><code>alias</code> 类型细分</strong>（email / nickname）：本设计把 email 视作 alias 特例。后续如需 <code>alias.type</code> 字段，按 user/email/nickname 三类路由。</li><li><strong>OAuth / SAML / LDAP</strong>：本文不做，留作 [DESIGN-ARCH-074] §7「不做」清单。</li><li><strong>HTTPS</strong>：LAN-FIREWALL.md 不配 HTTPS；公网部署请走反向代理 + [DEPLOY-MAN-016]。</li><li><strong>WebAuthn</strong>：User 模型已有 webauthn_* 字段，本设计不动。</li></ul>
+<hr>
+<h2 id="4-引用关系">4. 引用关系<a class="anchor" href="#4-引用关系" aria-label="锚点">#</a></h2>
+<ul><li>设计：[DESIGN-ARCH-074]</li><li>横幅修复：[IMPL-RPT-043] 任务列表截断修复（无关）→ 后续会加 [IMPL-RPT-NNN] khyos 启动横幅与登录账号对齐（本次上一轮独立修复）</li><li>配套部署文档：[LAN-FIREWALL.md]</li><li>单一真源：<ul><li>鉴权路由：<code>services/ai-backend/src/routes/auth.js</code></li><li>本机鉴权：<code>services/backend/src/services/cliAuthService.js</code></li><li>User 模型：<code>platform/packages/shared/src/models/User.js</code></li><li>默认账号密码：<code>services/backend/src/services/credentialGenerator.js</code></li><li>服务启服：<code>services/ai-backend/server.js</code></li><li>服务默认值：<code>services/backend/src/constants/serviceDefaults.js</code></li></ul></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-043] 输出截断根治与无感接续-max_tokens元数据缺失与锚点续写-2026-08-07.html"><div class="dir">← 上一篇</div><div class="ttl">[IMPL-RPT-043] 输出截断根治与无感接续：maxtokens 元数据缺失与锚点续写</div></a><a class="next" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-045] TUI按钮点击调研与鼠标历史回溯设计决策-2026-09-05.html"><div class="dir">下一篇 →</div><div class="ttl">TUI 按钮点击调研与鼠标/历史回溯设计决策</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-044] khyos 账号体系收口实施记录-ARCH-074-2026-09-02.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

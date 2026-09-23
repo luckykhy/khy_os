@@ -9,7 +9,7 @@ const {
   parseResultDate,
   applyRecencyRanking,
   WINDOW_DAYS,
-} = require('../../src/services/domain/query/search/searchFreshness');
+} = require('../../../../../src/services/domain/query/search/searchFreshness.js');
 
 describe('searchFreshness', () => {
   describe('detectFreshness', () => {

@@ -1,0 +1,335 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-09-23",
+  "khy_os_version": "1.1.11",
+  "khy_os_path_note": "khy-os 实际位于 Portable 根目录下（scripts/hq_common.py 自动探测，勿在脚本外硬编码盘符）",
+  "schema": {
+    "id": "T-XXX，自动生成，递增",
+    "title": "一句话描述任务",
+    "domain": "cli|gateway|services|kernel|frontend|khyquant|platform|packaging|cross",
+    "type": "feature|refactor|performance|quality|docs",
+    "priority": "P0(阻断)/P1(严重)/P2(一般)/P3(轻微)",
+    "status": "todo -> doing -> review -> done；旁路: doing->todo, review->doing(打回)",
+    "acceptance": "完成定义。**必须**包含至少一条可执行命令或可核对数字阈值，否则 review->done 无法机器核对（2026-09-23 新增约束，见下方 review 判据）。文中引用的仓内路径会被 `khy hq verify` 核对是否存在（改名/搬家检测）",
+    "evidence": "（可选，翻 done 时必填）`.khy/feedback/` 下的证据目录名，格式 <task-id>-<slug>，只允许字母/数字/./_/-。约定：review->done 前必须声明并让该目录非空、含 acceptance.md",
+    "baseline_metrics": "（可选）「不劣化」类判据的基线数字，如 {\"jest_suites\":1231,\"jest_failed\":24}。没有基线数字的『不劣化于批次前』不可机器核对",
+    "scope_guard": "（可选）边界清单，每条一句「不做什么」。是 RUNTIME-008 BUILD 五问第 5 问在任务级的落地；越界时 `khy hq verify` 报出（不拦，只让偏离可见）",
+    "cod": "PROCESS-102 档内评分：变更必要性 1-5（可选，存量未填，同档并列时缺它则落 G4 问人）",
+    "conf": "PROCESS-102 档内评分：置信度 1-3（可选）",
+    "size": "PROCESS-102 档内评分：规模 S/M/L（可选）",
+    "claimed_by": "多机租约持有者（doing/review 期间应存在，到 review/done 应清除）",
+    "claimed_at": "租约起始时间",
+    "lease_expires": "租约到期时间（默认 120 分钟）",
+    "updated": "最后状态变更日期",
+    "notes": [
+      "按时间追加的工作备注"
+    ]
+  },
+  "review_done_rule": {
+    "kind": "命令写入路径校验（不是 CI 检查器，故不需门引用、不新增规则 ID）",
+    "position": "khy hq task set <ID> done 的 saveJson 前置条件",
+    "rationale": "『能落在命令写入路径上的约束，就不要升级成检查器』（hqStore.js 写入路径约束一节的既定裁决）",
+    "blockers": [
+      "缺 evidence 字段",
+      "evidence 目录不存在或为空",
+      "缺 acceptance.md 或其中存在 error（SKIP 无理由 / PASS 无证据 / 有 FAIL / 结果取值非法）",
+      "勾选条数少于 acceptance 判据条数"
+    ],
+    "warnings_only": [
+      "acceptance 无命令无数值",
+      "acceptance 引用路径不存在",
+      "doing/review 无占用或租约过期"
+    ]
+  },
+  "domains": [
+    "cli",
+    "gateway",
+    "services",
+    "kernel",
+    "frontend",
+    "khyquant",
+    "platform",
+    "packaging"
+  ],
+  "task_types": [
+    "feature",
+    "refactor",
+    "performance",
+    "quality",
+    "docs"
+  ],
+  "task_states": [
+    "todo",
+    "doing",
+    "review",
+    "done"
+  ],
+  "priority_order": [
+    "P0",
+    "P1",
+    "P2",
+    "P3"
+  ],
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "微信 ilink 通道端到端手测收尾：扫码登录→发消息→工具审批→回复闭环",
+      "domain": "services",
+      "type": "feature",
+      "priority": "P1",
+      "status": "todo",
+      "acceptance": "khy wx login 出码并绑定成功；khy wx status 显示掩码 token；微信发「你好」收到回复且工具调用可 y/n 审批；KHY_MSG=off 时完全静默；Slack/飞书/钉钉/企业微信四通道无回归",
+      "updated": "2026-09-20",
+      "notes": [
+        "2026-09-20: 2026-09-20 清理死占用：claimed_by=2541UGH10NVUR7S 为本机旧机器 ID（现 QiQiaoBan），租约 2026-08-24 早已过期；release 不识别旧 ID，故按租约协议置回 todo 待重新领取。任务本身（微信 ilink 端到端手测）仍未完成，验收标准不变。"
+      ]
+    },
+    {
+      "id": "T-002",
+      "title": "全量跑 check-agent-rules.js 清零硬编码端点与含糊状态文本",
+      "domain": "services",
+      "type": "quality",
+      "priority": "P2",
+      "status": "todo",
+      "acceptance": "node scripts/ci/check-agent-rules.js 全仓运行 error=0 warning=0 或逐条给出豁免理由并存档"
+    },
+    {
+      "id": "T-003",
+      "title": "auditLog 幂等去重与 getModuleStats 前缀过滤补单测",
+      "domain": "services",
+      "type": "quality",
+      "priority": "P2",
+      "status": "todo",
+      "acceptance": "logToolExecution 5s 窗口去重、{written,deduped,reason} 返回契约、getModuleStats({module}) 前缀收窄各有用例覆盖，npx jest 通过"
+    },
+    {
+      "id": "T-004",
+      "title": "同步 AGENTS.md / .ai/MAP.md 与实际目录树的一致性",
+      "domain": "cross",
+      "type": "docs",
+      "priority": "P3",
+      "status": "todo",
+      "acceptance": ".ai/MAP.md 目录树、CONTEXT.yaml entry_points 与仓库现状一致；khy metadata refresh 后无 diff 漂移"
+    },
+    {
+      "id": "T-005",
+      "title": "为 no-hardcoded-abs-path 增加「第三方安装探测候选表」显式豁免通道",
+      "domain": "packaging",
+      "type": "quality",
+      "priority": "P2",
+      "status": "todo",
+      "acceptance": "check-agent-rules.js 支持行内注解豁免（如 // khy-allow-abs-path: <理由>）并要求理由非空；ideDetector.js / traeAdapter.js / gitExecutableResolver.js 的 16 条候选路径收敛到 constants 下的候选表并逐条标注理由；node scripts/ci/check-agent-rules.js services/backend/src 的 no-hardcoded-abs-path error 归零，且新增一条无理由豁免必须报错的自测"
+    },
+    {
+      "id": "T-006",
+      "title": "多机（N 机）协作与「一处出错不处处报」遏制闭环",
+      "domain": "cross",
+      "type": "feature",
+      "priority": "P2",
+      "status": "todo",
+      "acceptance": "1) PROGRESS 任务带机器级占用字段：next.py 领取时写入领取机标识并续租，他机在租约有效期内不再重复领取同一任务；2) 任一机器 hq_check 非 0 时 sync.py 拒绝推送；3) 分叉一律以远程已推送为准、本地重放，--ff-only 拒绝时明确报告绝不 force；4) check_sync.py 在任意机器可核验本机 HEAD==origin/main；5) 文档统一用「多机/N 机」措辞，删除仅限双机的表述"
+    },
+    {
+      "id": "T-007",
+      "title": "sync.py 自动判断分支合并时机（方案 A：检测后询问）",
+      "domain": "platform",
+      "type": "feature",
+      "priority": "P2",
+      "status": "done",
+      "acceptance": "1) should_offer_merge() 检测：分支已推 origin（0 领先）+ 工作区干净 + 与 origin/main 有共同祖先；2) --push-khyos 时满足条件则输出提示（人读）或 actions 条目（JSON）；3) --merge-branch <branch> --push-khyos 执行自动 rebase + 快进 main + 推送；4) rebase 冲突时回退并报告，绝不 force；5) 全流程有单测覆盖"
+    },
+    {
+      "id": "T-008",
+      "title": "环境/运行时管理：网页端可列出、下载安装、卸载 node/python/js/jdk 等运行时",
+      "domain": "platform",
+      "type": "feature",
+      "priority": "P2",
+      "status": "todo",
+      "acceptance": "1) 新增运行时管理 Web API（services/backend/src/routes/）：列出本机已安装运行时及其版本、可选/最新版本、指定运行时下载并安装到 Portable 目录、卸载指定运行时；2) 前端页面（apps/ai-frontend/src/views/）展示已装/可选运行时并支持一键下载/安装/卸载；3) node/python/js(jdk 亦需列出)各至少一种可走通「列出→安装→卸载」；4) 遵循零硬编码盘符（Portable 根由脚本/常量推算）、fail-soft、状态透明（动作+目标+进度）、端点来自 serviceDefaults/env；5) 探针复用现有 khy doctor 的运行时检测；6) 验证：node scripts/ci/check-agent-rules.js --changed 无 error，cd services/backend && npx eslint src/ --max-warnings 0 && npx jest 全绿，页面操作有端到端可验证步骤"
+    },
+    {
+      "id": "T-009",
+      "title": "T-008 收尾：SHA-256 按(版本/平台/架构)存+安装时取官方 SHASUMS 校验+实测国内镜像 jdk 命名+接入 khy doctor 运行环境体检",
+      "domain": "platform",
+      "type": "feature",
+      "priority": "P2",
+      "status": "todo",
+      "acceptance": "1) catalog.js 的 sha256 改为按 (版本, 平台, 架构) 存储，或安装时从官方 SHASUMS 源按具体文件实时获取/校验——绝不伪造/硬编码未核实哈希，KHY_RUNTIME_MANAGER_STRICT_VERIFY 行为正确（有 sha256 则严格比对、无则诚实跳过/按门控失败）；2) 实测国内镜像（清华 tsinghua）的 jdk 文件命名与官方差异，将对应 file 字段对齐镜像实际文件名；3) khy doctor 新增运行环境体检行：报告各便携运行时『就绪/可升级』，复用 runtimeManager 的 probe+catalog，不重复造检测逻辑；4) 遵循零硬编码盘符（便携根由 paths.resolveRuntimeRoot 推算）、fail-soft、状态透明；5) 验证：node scripts/ci/check-agent-rules.js --changed 无 error、相关 node --test 单测全绿、khy doctor 输出该体检行；6) 在 T-008 提交推送后、基于干净的已提交版本实现（以远程为准+本地重放，绝不 force）"
+    },
+    {
+      "id": "T-010",
+      "title": "五通道决策矩阵：API/CLI/状态直读/服务直调/看屏幕的清晰判定机制（khy-os DESIGN-ARCH-071）",
+      "domain": "cross",
+      "type": "docs",
+      "priority": "P2",
+      "status": "done",
+      "acceptance": "1) khy-os docs/03_DESIGN_设计/[DESIGN-ARCH-071] 通道选择决策矩阵.md 落盘：五通道真源表+五问判定顺序+各通道适用/禁止/降级+六条反模式+与 068/070/056 的治理关系；2) khy-os AGENTS.md 架构速查新增「通道选择判定」首屏节并链接 071；3) 03_DESIGN 00_INDEX 与 docs 主索引均收录 071（docs-index-complete=0）；4) 纯文档不改代码不动红线；5) node scripts/ci/check-gov-rules.js 通过、check-repo-layout 无本次新增违规"
+    },
+    {
+      "id": "T-011",
+      "title": "启动提速第一刀：dbHealth 完整性检查后台化 + chcp 直调 + TUI enhanced 预热延后",
+      "domain": "cross",
+      "type": "performance",
+      "priority": "P1",
+      "status": "done",
+      "acceptance": "1) services/backend/src/bootstrap/init.js：dbHealthService.init 默认后台化（KHY_DB_HEALTH_DEFER=0 回退阻塞），getDbHealthInitPromise 导出在途 promise 供 shutdown await；2) services/backend/bin/khy.js：chcp 直调 System32\\\\chcp.com（env 推算路径，失败回退 cmd /c），省 ~35ms；3) services/backend/src/cli/tui/hooks/useQueryBridge.js：enhanced/diagnostic 预热阶段默认延后 1200ms（KHY_TUI_PREWARM_ENHANCED_DELAY_MS=0 回退立即），首帧后头一秒让给用户输入；4) 实测：defer 测试 init() 先于完整性检查返回（78ms 移出关键路径）、khy --version 1043→950ms 无回归、node scripts/ci/check-agent-rules.js 3 文件零违规；5) 纯行为门控改动，全部有 env 逃生口"
+    },
+    {
+      "id": "T-012",
+      "title": "启动提速第二刀（深水区）：Ink 1.4s 载入、Python 稳态 bootstrap 串行检查合并、双重版本检查去重",
+      "domain": "cross",
+      "type": "performance",
+      "priority": "P2",
+      "status": "todo",
+      "acceptance": "基于 2026-08-28 实测数据立项：khy --version 地板 ~950ms（Python 启动器稳态 ~10 项串行文件检查 _bootstrap.py:750-759 + Node 冷启）；Ink ESM import 注释实测 ~1.4s（services/backend/src/cli/replSession.js:342-343，已与 pre-mount 重叠但仍是首帧大头）；启动 checkForUpdateAll 与 deferredPrefetch 5s 的 updateCoordinator.checkUpdate 双份三源网络探测（services/backend/bin/khy.js:1864 + prefetch.js:296-313）应共享一次结果；孤儿 parallelPrefetch（prefetch.js:24-80 无调用点）接回或删除。每项独立可验收、有 env 逃生口、不阻塞输入框就绪"
+    },
+    {
+      "id": "T-013",
+      "title": "打造 khy-os 手机端智能体 APK：Flutter 项目骨架 + 对话页面 + 直连 AI API + 本地存储",
+      "domain": "frontend",
+      "type": "feature",
+      "priority": "P1",
+      "status": "todo",
+      "acceptance": "1) Flutter 项目脚手架完成（pubspec.yaml + main.dart + Riverpod 状态管理 + go_router 路由 + 深色主题）；2) 对话页面可用：用户输入 → 流式 AI 回复（打字机效果 + Markdown 渲染）；3) 直连 AI API 工作（OpenAI 兼容格式，用户输入 API key 即可对话）；4) 本地 SQLite 存储对话历史（增删改查 + 搜索）；5) 模型选择器 + API Key 加密存储（flutter_secure_storage）；6) flutter build apk --release 成功，安装包 < 50MB，Android 12+ 正常运行"
+    },
+    {
+      "id": "T-014",
+      "title": "khy-os 手机端 APK Sprint 2：WebSocket 连接 khy-os 后端 + 扫码配对 + 远程对话 + 工具调用可视化",
+      "domain": "frontend",
+      "type": "feature",
+      "priority": "P2",
+      "status": "todo",
+      "acceptance": "1) WebSocket 客户端实现（连接 khy-os /ws/ai，指数退避重连最多 10 次）；2) 扫码配对流程（qr_code_scanner 扫描 khy-os 终端二维码 → 自动填入地址 + token）；3) 手动输入地址连接（备用方案）；4) 远程模式对话（通过 khy-os AI 网关获得 15+ 供应商能力）；5) 工具调用可视化（折叠卡片展示工具名 → 参数 → 结果）；6) 断线自动重连 + 连接状态指示；7) 提示词库与 khy-os 同步（GET /api/ai/prompts + /api/ai/prompts/builtin）",
+      "claimed_by": "",
+      "claimed_at": "",
+      "lease_expires": ""
+    },
+    {
+      "id": "T-015",
+      "title": "khy-os 手机端 APK Sprint 3：语音交互 + 多对话管理 + 文件上传 + 搜索 + APK 签名发布",
+      "domain": "frontend",
+      "type": "feature",
+      "priority": "P2",
+      "status": "todo",
+      "acceptance": "1) 语音输入（speech_to_text，点击麦克风 → 语音转文字 → 填入输入框）；2) TTS 朗读 AI 回复（flutter_tts，长按消息 → 朗读）；3) 多对话管理（新建/切换/删除/搜索/置顶）；4) 搜索功能（对话历史 + 提示词库全局搜索）；5) 文件上传（file_picker，远程模式下发送给 khy-os 处理）；6) Token 用量统计显示（以 RMB 计费）；7) APK 签名 + 发布准备（keystore + 混淆 + 发布配置）"
+    },
+    {
+      "id": "T-016",
+      "title": "可维护性阶段0·立护栏：文件体积门禁 + 根目录残留清理（绞杀者重构前置）",
+      "domain": "cross",
+      "type": "quality",
+      "priority": "P1",
+      "status": "done",
+      "acceptance": "1) services/backend 新增 CI 门禁脚本 scripts/ci/check-file-ratchet.js（立项时拟名 check-file-size.js，落地时定名 check-file-ratchet.js）：新增/修改的 .js 文件超过 800 行报 error、超过 500 行报 warning；存量巨石文件建立基线清单（file-ratchet.config.json，138 个 >1000 行文件）禁止继续增长；2) 门禁接入 npm run check:layout 或独立 script 可在根目录一键运行；3) 清理 khy-os 根目录 8 个 test_*.log、pnputil*.log、install-driver-out.log、sdkmgr*.log、test_out*.log 等运行时残留并补 .gitignore 规则防复发；4) 全部改动通过 node scripts/ci/check-agent-rules.js --changed 与 npx eslint src/ --max-warnings 0"
+    },
+    {
+      "id": "T-017",
+      "title": "可维护性阶段1·拆双子星：replSession.js(13421行) 与 toolUseLoopCore.js(12227行) 按职责提取子模块",
+      "domain": "cross",
+      "type": "refactor",
+      "priority": "P2",
+      "status": "done",
+      "acceptance": "1) 两文件按内聚职责拆为子模块（入口文件保留薄 facade，require 路径向后兼容，外部调用方零改动）；2) 行为零变更：拆分前后 npx jest 全绿且数量不减；3) 单文件不高于 800 行（或给出分批计划）；4) 每步拆分独立提交，可回滚"
+    },
+    {
+      "id": "T-018",
+      "title": "可维护性阶段2·网关适配器去重：claude/codex/trae/kiro 等 adapter 抽公共基类",
+      "domain": "gateway",
+      "type": "refactor",
+      "priority": "P2",
+      "status": "todo",
+      "acceptance": "1) 盘点各 adapter（2400~3200 行/个）重复逻辑，抽公共基类/工具模块（fail-soft {ok,error} 契约不变）；2) 各 adapter 行数显著下降（目标合计减 ≥30%）；3) npx jest 全绿；4) 新增适配器只需实现差异部分（验证：以 mock adapter 走通 generate 契约）"
+    },
+    {
+      "id": "T-019",
+      "title": "可维护性阶段3·功能审计裁剪：flagRegistry(2331行) 开关盘点 + 死功能归档",
+      "domain": "cross",
+      "type": "refactor",
+      "priority": "P3",
+      "status": "todo",
+      "acceptance": "1) 输出 flagRegistry 全量开关清单：默认值/门控/最后引用位置；2) 标记「默认关且无引用/无用户证据」的候选废弃项，经确认后归档删除（代码进 _deprecated 或 git 历史即可）；3) 每删一个功能 jest 全绿 + CHANGELOG 记录；4) 输出审计报告存 docs/"
+    },
+    {
+      "id": "T-020",
+      "title": "replSession.js 拆分批次 B2-B11：按 [MGMT-PLAN-008] 拆分分批计划逐批提取至 repl/ 子模块",
+      "domain": "cli",
+      "type": "refactor",
+      "priority": "P2",
+      "status": "doing",
+      "acceptance": "1) 严格按 docs/08_MGMT_项目管理/MGMT-PLAN/[MGMT-PLAN-008] replSession与toolUseLoopCore拆分分批计划.md 的批次协议执行（工厂+deps 袋模式、每批独立提交可回滚）；2) 每批全量 jest 四数（suites/tests/passed/failed）不劣化于批次前基线，flaky 白名单除外；3) 新文件 eslint 零告警、replSession 不新增 lint 问题；4) R2b 呈负增长（node services/backend/scripts/archDebtScan.js 输出负值）；5) 终点：services/backend/src/cli/replSession.js ≤800 行且 module.exports 面零改动",
+      "updated": "2026-09-23",
+      "notes": [
+        "2026-09-19: 2026-09-19 机器侧验收不通过，review→doing：终点判据『replSession.js ≤800 行』实测 13420 行。cli/repl/ 已有 35 个子模块落地，但批次未到终点。",
+        "2026-09-23 判据纠错（人工）：当日备注称『_meta/SPLIT-PLAN.md 在仓内已不存在』属**误判** —— 该文件并非丢失，而是**改名搬家**，现位于 docs/08_MGMT_项目管理/MGMT-PLAN/[MGMT-PLAN-008] replSession与toolUseLoopCore拆分分批计划.md（105 行，首行仍自称 SPLIT-PLAN.md，含 B1-B11 / C1-C3+ 全批次表）。『文件不存在』与『文件改名了』被混为一谈，导致任务被判成『需从归档救回真源』而停滞 4 天。acceptance 与 title 已改指真实路径，无需再救回归档。"
+      ]
+    },
+    {
+      "id": "T-021",
+      "title": "toolUseLoopCore.js 拆分批次 C1-C3：顶层叶子外迁 + runToolUseLoop 阶段拆解",
+      "domain": "services",
+      "type": "refactor",
+      "priority": "P2",
+      "status": "doing",
+      "acceptance": "1) C1 六个顶层叶子外迁前逐个核对模块私有状态引用（零引用才搬）；2) C2 产出 runToolUseLoop 阶段-依赖矩阵（横幅地图）；3) C3+ 按 [MGMT-PLAN-008] 拆分分批计划的工厂模式逐阶段拆分，每批验收协议同 T-020；4) 终点：services/backend/src/services/tool/toolUseLoopCore.js ≤800 行，runToolUseLoop 对外契约与 jest 全量四数不劣化",
+      "updated": "2026-09-23",
+      "notes": [
+        "2026-09-19: 2026-09-19 机器侧验收不通过，review→doing：终点判据『toolUseLoopCore.js ≤800 行』实测 12117 行。C1-C3 未达终点。",
+        "2026-09-23 判据纠错（人工）：本任务两处判据不可机器核对，已修正 ——（a）『批次计划真源 _meta/SPLIT-PLAN.md 不在仓内』系误判，同 T-020，文件已改名至 docs/08_MGMT_项目管理/MGMT-PLAN/[MGMT-PLAN-008]；（b）终点判据未写明路径，而仓内有**两个** toolUseLoopCore.js —— services/backend/src/services/tool/toolUseLoopCore.js（真源，实测 10313 行）与 services/backend/src/services/toolUseLoopCore.js（2 行转发壳）。不写明路径则『≤800 行』无意义。acceptance 已补全完整路径。"
+      ]
+    },
+    {
+      "id": "T-022",
+      "title": "四端跨设备同步：手机+网页+桌面+终端 WebSocket 实时同步与会话交接",
+      "domain": "cross",
+      "type": "feature",
+      "priority": "P1",
+      "status": "todo",
+      "acceptance": "终端 khy cross connect 连接并认证；网页端可见终端设备在线；会话状态终端↔网页实时同步；跨设备消息投递成功；断线自动重连（指数退避）；后端重启后磁盘持久化恢复会话状态；REST /api/cross-platform/status 返回正确状态"
+    },
+    {
+      "id": "T-023",
+      "title": "密钥与端点中心管理（KeyManager）：khyos-desktop 独立 GUI 一处配 key/端点，全 Agent 双模式（khy 聚合 Mode B / 直连 Mode A）一键激活",
+      "domain": "cross",
+      "type": "feature",
+      "priority": "P1",
+      "status": "review",
+      "acceptance": "设计真源 khy-os docs/03_DESIGN_设计/[DESIGN-ARCH-091]（P1 切片）：1) keyStore 三 JSON CRUD+原子写+.bak 自愈+脱敏，单测全绿；2) 独立窗口+三入口+T1 池/导入/模型自动拉取+T2 端点预设；3) Mode B 一键激活 claude-code/opencode/qodercli（产物只落 relay 哨兵端点+token，grep 断言无真实 key 明文）；4) 回归：services/backend jest 全绿 + desktopUiContract D1-D10 + E1/E5/E7/E8 通过；5) check-agent-rules.js --changed error=0，审计 jsonl 入 .gitignore",
+      "notes": [
+        "2026-09-19: 2026-09-19 机器侧验收证据（review 维持，done 待人工确认）：apps/khyos-desktop npm test 全绿——keyStore/agentWriters/health 21/21 + keyManagerContract/desktopUiContract 34/34；含 D1-D10 全通过、Mode B 激活（claude-code/opencode/qodercli 门控）、『无真实 key 明文』grep 不变式、reveal 限流、.bak 自愈。验收项中的 services/backend 全量 jest 未跑（工程量大），故不代人工翻 done。",
+        "2026-09-20: 2026-09-20 T-023 后端回归补齐（原备注唯一缺口 services/backend 全量 jest）：全量 jest 实测 1231 套件纳入 1223——1199 passed / 24 failed / 8 skipped，用例 12338 中 12161 passed / 38 failed。对比 DEBT.md 09-08 基线 465 失败套件已回收至 24，且失败清单全部位于 toolUseLoop/queryEngine/worktree/shellCommand 等预存债务区，与 T-023 触及面（keyStore/apiKeyPool/relay/credentials/agentWriters）零交集；相关套件（apiKeyPoolHotReload、relayAccessBoundary、security/credentialsHardening、gateway wildcardPoolGuard 等）全部 PASS。至此 T-023 机器可验证面全部闭环，done 翻转待人工确认。"
+      ],
+      "updated": "2026-09-20"
+    },
+    {
+      "id": "T-024",
+      "title": "长任务收敛机制：review→done 验收清算门 + todo→doing 边界锁 + acceptance 路径核对（2026-09-23 取证落地）",
+      "domain": "cli",
+      "type": "feature",
+      "priority": "P1",
+      "status": "done",
+      "acceptance": "1) node --test services/backend/tests/cli/hqReviewGate.test.js 全绿（node:test；含反向验证矩阵：8 类坏数据必拒且状态不变、好数据放行落盘 done、未填模板过不了门）；2) 端到端反向验证 9/9 场景符合预期（spawn 真实 CLI 记录退出码，报告存 evidence 目录 gate-verify-result.md；同矩阵已固化为永久测试）；3) khy hq verify 0 error，且 doing/review 无占用三类停滞任务首次变为可见（warning）；4) 存量数据修正：T-011/T-012/T-016/T-020/T-021 五条任务 acceptance 引用的失效路径全部改指真实文件，auditAcceptancePaths 全量 0 告警；5) PROGRESS.json schema 固化 review_done_rule 与 evidence/baseline_metrics/scope_guard 字段语义（出现即校验、存量不追溯）",
+      "evidence": "T-024-acceptance-gate",
+      "scope_guard": [
+        "不改 .ai/hq/BUGS.json 与既有任务的既存状态/备注",
+        "不进 scripts/ci/ 门禁体系（不新增检查器、不新增规则 ID、不接门引用）",
+        "不删改 .khy/feedback/ 下 52 个存量存证目录"
+      ],
+      "updated": "2026-09-23",
+      "notes": [
+        "2026-09-23: 机制来源 = 用户提问「长任务常常偏离、完成缺判断标准」的取证与提案（_产物/long-task-convergence-proposal.md）。四动作全落地：判据路径修正、数据契约、done 验收清算门、scope_guard 边界锁。设计裁决沿用 hqStore.js 既定立场「能落在命令写入路径上的约束，就不要升级成检查器」。",
+        "2026-09-23: 实测两处环境坑并修复 ——（a）spawnSync 管道版会被 khy.js 启动期后台辅助进程攥住写端导致不返回（实测一次 988s，远超 kill 超时），测试的 stdio 改落文件后全套 25/25 用时 14.6s；（b）router.js options 解析对重复 --key 是 last-wins（router.js:764），同命令重复 --scope 只剩最后一条，边界追加改为每条一次调用。"
+      ],
+      "acceptance_audit": {
+        "at": "2026-09-23",
+        "total": 5,
+        "verdicts": [
+          "PASS:1) 甲：node --test services/backend/tests/cli/hqReviewGate.test.js 全绿（node:te",
+          "PASS:2) 乙：端到端反向验证 9/9 场景符合预期（spawn 真实 CLI 记录退出码，报告存 evidence 目录 gate-verify-resu",
+          "PASS:3) 丙：khy hq verify 0 error，且 doing/review 无占用三类停滞任务首次变为可见（warning）",
+          "PASS:4) 丁：存量数据修正：T-011/T-012/T-016/T-020/T-021 五条任务 acceptance 引用的失效路径全部改指真实文件，a",
+          "PASS:5) 戊：PROGRESS.json schema 固化 review_done_rule 与 evidence/baseline_metrics/s"
+        ]
+      }
+    }
+  ]
+}

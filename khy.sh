@@ -7,6 +7,14 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Git Bash's `pwd` yields MSYS-style paths ("/d/Portable/khy-os"), which Windows Node
+# resolves as "D:\d\Portable\khy-os" (prepends the current drive and treats the leading
+# "d" as a literal directory name) -> MODULE_NOT_FOUND. Convert before handing to node.
+NODE_SCRIPT_DIR="$SCRIPT_DIR"
+if command -v cygpath >/dev/null 2>&1; then
+    NODE_SCRIPT_DIR="$(cygpath -w "$SCRIPT_DIR")"
+fi
+
 # --- khy repair: one-shot portable self-repair (Node only, bypasses python cli) ---
 if [[ "${1:-}" == "repair" ]]; then
     if ! command -v node >/dev/null 2>&1; then
@@ -15,7 +23,7 @@ if [[ "${1:-}" == "repair" ]]; then
     fi
     export KHYQUANT_PORTABLE_ROOT="$SCRIPT_DIR"
     shift
-    node "$SCRIPT_DIR/extensions/scripts/khy-portable/repair-portable.js" "$@"
+    node "$NODE_SCRIPT_DIR/extensions/scripts/khy-portable/repair-portable.js" "$@"
     exit $?
 fi
 

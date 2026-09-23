@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-SIZE-001] khy-os 体积优化方案.md -->
+<title>[DESIGN-SIZE-001] khy-os 体积优化方案 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>其它设计<span class="sep">›</span>[DESIGN-SIZE-001] khy-os 体积优化方案</div>
+      <header class="hero reveal"><h1>[DESIGN-SIZE-001] khy-os 体积优化方案</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-size-001-khy-os-体积优化方案">[DESIGN-SIZE-001] khy-os 体积优化方案</a></li><li class="lvl-2"><a href="#一-现状诊断">一、现状诊断</a></li><li class="lvl-3"><a href="#1-1-体积构成-开发机全量">1.1 体积构成（开发机全量）</a></li><li class="lvl-3"><a href="#1-2-分发体积-用户实际下载">1.2 分发体积（用户实际下载）</a></li><li class="lvl-2"><a href="#二-三层优化策略">二、三层优化策略</a></li><li class="lvl-2"><a href="#三-第一层-删除可弃物-零代码改动">三、第一层：删除可弃物（零代码改动）</a></li><li class="lvl-3"><a href="#3-1-构建产物清理">3.1 构建产物清理</a></li><li class="lvl-3"><a href="#3-2-运行时数据清理">3.2 运行时数据清理</a></li><li class="lvl-3"><a href="#3-3-参考文件清理">3.3 参考文件清理</a></li><li class="lvl-3"><a href="#3-4-git-历史压缩">3.4 git 历史压缩</a></li><li class="lvl-2"><a href="#四-第二层-依赖替代-改配置-不改核心逻辑">四、第二层：依赖替代（改配置，不改核心逻辑）</a></li><li class="lvl-3"><a href="#4-1-终端-tui-框架-ink-react-外部化">4.1 终端 TUI 框架：Ink(React) → 外部化</a></li><li class="lvl-3"><a href="#4-2-日志框架-winston-pino">4.2 日志框架：winston → pino</a></li><li class="lvl-3"><a href="#4-3-颜色库-chalk-picocolors">4.3 颜色库：chalk → picocolors</a></li><li class="lvl-3"><a href="#4-4-日期库-moment-dayjs">4.4 日期库：moment → dayjs</a></li><li class="lvl-3"><a href="#4-5-markdown-编辑器-同步预打包-按需动态加载">4.5 Markdown 编辑器：同步预打包 → 按需动态加载</a></li><li class="lvl-2"><a href="#五-第三层-架构改造-改动较大-收益最高">五、第三层：架构改造（改动较大，收益最高）</a></li><li class="lvl-3"><a href="#5-1-三档分发架构">5.1 三档分发架构</a></li><li class="lvl-3"><a href="#5-2-数据库适配器懒加载">5.2 数据库适配器懒加载</a></li><li class="lvl-3"><a href="#5-3-ai-网关适配器懒加载">5.3 AI 网关适配器懒加载</a></li><li class="lvl-2"><a href="#六-esbuild-重复二进制去重">六、esbuild 重复二进制去重</a></li><li class="lvl-3"><a href="#6-1-现状">6.1 现状</a></li><li class="lvl-3"><a href="#6-2-方案">6.2 方案</a></li><li class="lvl-2"><a href="#七-执行路线图">七、执行路线图</a></li><li class="lvl-3"><a href="#phase-1-立刻执行-本周-零代码风险">Phase 1：立刻执行（本周，零代码风险）</a></li><li class="lvl-3"><a href="#phase-2-配置优化-本周-改-package-json-构建脚本">Phase 2：配置优化（本周，改 package.json + 构建脚本）</a></li><li class="lvl-3"><a href="#phase-3-依赖替换-下周-改源码-import">Phase 3：依赖替换（下周，改源码 import）</a></li><li class="lvl-3"><a href="#phase-4-架构升级-本月">Phase 4：架构升级（本月）</a></li><li class="lvl-3"><a href="#phase-5-长期">Phase 5：长期</a></li><li class="lvl-2"><a href="#八-预算线-ci-门禁">八、预算线（CI 门禁）</a></li><li class="lvl-2"><a href="#九-风险与回退">九、风险与回退</a></li><li class="lvl-2"><a href="#十-参考">十、参考</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-size-001-khy-os-体积优化方案">[DESIGN-SIZE-001] khy-os 体积优化方案<a class="anchor" href="#design-size-001-khy-os-体积优化方案" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>状态</strong>: Draft  <br><strong>日期</strong>: 2026-08-28  <br><strong>目标</strong>: 从 ~1.25 GB 开发盘占 → 分发 bundle &lt; 15 MB，开发环境 &lt; 500 MB  <br><strong>策略</strong>: 删除可弃物 + 用更小依赖替代重型库 + 架构级懒加载</p></blockquote>
+<hr>
+<h2 id="一-现状诊断">一、现状诊断<a class="anchor" href="#一-现状诊断" aria-label="锚点">#</a></h2>
+<h3 id="1-1-体积构成-开发机全量">1.1 体积构成（开发机全量）<a class="anchor" href="#1-1-体积构成-开发机全量" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>来源</th><th>大小</th><th>是否进 git</th><th>可操作</th></tr></thead><tbody><tr><td><code>.git/objects</code></td><td>326 MB</td><td>✅</td><td><code>git gc</code> 可压缩</td></tr><tr><td>node_modules（根 + workspace）</td><td>~370 MB</td><td>❌ gitignore</td><td>可删重装 / 瘦依赖</td></tr><tr><td><code>apps/khy-mobile/</code> 构建产物</td><td>217 MB（其中 build/ 118 MB）</td><td>❌</td><td>可删，随时重建</td></tr><tr><td><code>apps/ai-frontend/</code></td><td>105 MB（其中 .ignored/ 75 MB）</td><td>❌</td><td>可清理</td></tr><tr><td><code>khy-Trajectory/</code> 运行时数据</td><td>81 MB</td><td>❌</td><td>可删，运行时重建</td></tr><tr><td><code>.khy/</code> 运行时数据</td><td>81 MB</td><td>❌</td><td>可删，运行时重建</td></tr><tr><td><code>services/</code></td><td>51 MB</td><td>混合</td><td>部分可清理</td></tr><tr><td><code>docs/</code></td><td>28 MB</td><td>混合</td><td>部分可精简</td></tr><tr><td><code>packaging/npm/bundle.mjs</code></td><td>17 MB</td><td>❌</td><td>可删，发布时重建</td></tr><tr><td><code>extensions/tools/khy-markdown/</code></td><td>13 MB</td><td>混合</td><td>可优化</td></tr><tr><td>源码本身（.js/.vue/.md/.py）</td><td>~50 MB</td><td>✅</td><td>不可压缩</td></tr></tbody></table>
+<p><strong>总计</strong>: ~1,250 MB 开发盘占。git 跟踪源码仅 ~50 MB。</p>
+<h3 id="1-2-分发体积-用户实际下载">1.2 分发体积（用户实际下载）<a class="anchor" href="#1-2-分发体积-用户实际下载" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>产物</th><th>大小</th><th>说明</th></tr></thead><tbody><tr><td><code>khy</code> bundle (--prod)</td><td><strong>13.12 MB</strong></td><td>完整平台（6 模块之一，已 externalize express/pg/sequelize/ws 等）</td></tr><tr><td><code>khy-gateway</code> bundle</td><td><strong>10.67 MB</strong></td><td>网关（仅 bundled 业务逻辑）</td></tr><tr><td><code>khy-tools</code> bundle</td><td><strong>11.90 MB</strong></td><td>开发者工具</td></tr><tr><td><code>khy-server</code> bundle</td><td><strong>11.62 MB</strong></td><td>Web 管理后台</td></tr><tr><td>gzip 后全平台</td><td>~3.2 MB</td><td>实际网络传输（~75% 压缩率）</td></tr><tr><td>node_modules（运行时）</td><td>~80 MB</td><td>npm install 拉入的外部依赖（开发盘占，不进 bundle）</td></tr></tbody></table>
+<p><strong>核心问题已解决</strong>: 从单一 16.7 MB 进化为 6 个独立模块，full platform 降至 13.12 MB（-21.5%）。用户可按需加载单个模块（gateway 仅 10.67 MB）。外部依赖在运行时通过 npm install 提供，不进 bundle。</p>
+<hr>
+<h2 id="二-三层优化策略">二、三层优化策略<a class="anchor" href="#二-三层优化策略" aria-label="锚点">#</a></h2>
+<pre><code>┌─────────────────────────────────────────────────────┐
+│  第一层：删除（零代码风险，立刻省 ~370 MB）            │
+│  构建产物 + 运行时数据 + 重复缓存                      │
+├─────────────────────────────────────────────────────┤
+│  第二层：替代（改依赖配置，省 ~50 MB bundle）          │
+│  用更小库替换重型依赖 + 清理僵尸依赖                   │
+├─────────────────────────────────────────────────────┤
+│  第三层：架构（改源码结构，省 ~10 MB bundle + 更快）   │
+│  懒加载 + 三档分发 + 模块拆分                         │
+└─────────────────────────────────────────────────────┘</code></pre>
+<hr>
+<h2 id="三-第一层-删除可弃物-零代码改动">三、第一层：删除可弃物（零代码改动）<a class="anchor" href="#三-第一层-删除可弃物-零代码改动" aria-label="锚点">#</a></h2>
+<h3 id="3-1-构建产物清理">3.1 构建产物清理<a class="anchor" href="#3-1-构建产物清理" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>操作</th><th>路径</th><th>省多少</th><th>恢复方式</th></tr></thead><tbody><tr><td>Android clean</td><td><code>apps/khy-mobile/android/</code></td><td>-123 MB</td><td><code>./gradlew assembleDebug</code></td></tr><tr><td>删除 bundle.mjs</td><td><code>packaging/npm/bundled/</code></td><td>-17 MB</td><td><code>npm run prepack</code> 自动重建</td></tr><tr><td>删除 .ignored/</td><td><code>apps/ai-frontend/node_modules/.ignored/</code></td><td>-75 MB</td><td>前端重装时自动清理</td></tr><tr><td>删除 public/vendor/</td><td><code>apps/ai-frontend/public/vendor/</code></td><td>-11 MB</td><td><code>npm run predev</code> 同步</td></tr></tbody></table>
+<h3 id="3-2-运行时数据清理">3.2 运行时数据清理<a class="anchor" href="#3-2-运行时数据清理" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>操作</th><th>路径</th><th>省多少</th><th>恢复方式</th></tr></thead><tbody><tr><td>清理 khy-Trajectory/</td><td>删除 logs/ + 旧 checkpoints</td><td>-81 MB</td><td>运行时自动重建</td></tr><tr><td>清理 .khy/</td><td>删除 logs/ + audit/</td><td>-76 MB</td><td>运行时自动重建</td></tr></tbody></table>
+<p><strong>注意</strong>: <code>.khy/</code> 和 <code>khy-Trajectory/</code> 内容镜像，建议确认是否为迁移残留。若确认重复，可全删一个。</p>
+<h3 id="3-3-参考文件清理">3.3 参考文件清理<a class="anchor" href="#3-3-参考文件清理" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>操作</th><th>路径</th><th>省多少</th></tr></thead><tbody><tr><td>删除测试视频</td><td><code>docs/_ref/*/测试视频.mp4</code></td><td>-12 MB</td></tr></tbody></table>
+<h3 id="3-4-git-历史压缩">3.4 git 历史压缩<a class="anchor" href="#3-4-git-历史压缩" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">git gc --aggressive --prune=now
+<span class="hljs-comment"># 预期从 326 MB → ~200 MB</span></code></pre>
+<hr>
+<h2 id="四-第二层-依赖替代-改配置-不改核心逻辑">四、第二层：依赖替代（改配置，不改核心逻辑）<a class="anchor" href="#四-第二层-依赖替代-改配置-不改核心逻辑" aria-label="锚点">#</a></h2>
+<h3 id="4-1-终端-tui-框架-ink-react-外部化">4.1 终端 TUI 框架：Ink(React) → 外部化<a class="anchor" href="#4-1-终端-tui-框架-ink-react-外部化" aria-label="锚点">#</a></h3>
+<p><strong>现状</strong>: <code>ink</code> (v6.8) + <code>react</code> (v19.2) 打包进主 bundle，占 ~18 MB。<br>实际上只有 TUI 交互模式需要它们，服务端模式完全不需要。</p>
+<p><strong>方案</strong>: esbuild bundle 时把 ink/react 标记为 external：</p>
+<pre><code class="language-js"><span class="hljs-comment">// packaging/npm/build/esbuild-modules.js</span>
+<span class="hljs-comment">// 当前（全打入 bundle）:</span>
+<span class="hljs-comment">//   build({ entryPoints: [&#x27;src/cli/khy.js&#x27;], bundle: true, ... })</span>
+
+<span class="hljs-comment">// 改为分档打包:</span>
+<span class="hljs-title function_">build</span>({
+  <span class="hljs-attr">entryPoints</span>: [<span class="hljs-string">&#x27;src/cli/khy.js&#x27;</span>],
+  <span class="hljs-attr">bundle</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-attr">external</span>: [<span class="hljs-string">&#x27;ink&#x27;</span>, <span class="hljs-string">&#x27;react&#x27;</span>, <span class="hljs-string">&#x27;react-dom&#x27;</span>, <span class="hljs-string">&#x27;react-reconciler&#x27;</span>],
+  <span class="hljs-comment">// ink 留在 node_modules，不进入 bundle.mjs</span>
+});</code></pre>
+<p><strong>效果</strong>: <code>bundle.mjs</code> 从 16.7 MB → ~12 MB。终端用户仍然 require 到本地 node_modules 的 ink，行为不变。</p>
+<p><strong>备选（长期）</strong>: 逐步替换 <code>cli/tui/ink-components/</code> 下的组件为原生实现。优先级：</p>
+<ol><li><code>PromptFrame</code>（输入框）→ 原生 readline + 光标控制</li><li><code>StreamingBlock</code>（流式输出）→ ansi-escapes + 直接 stdout</li><li><code>CompletionMenu</code>（自动补全菜单）→ 原生列表渲染</li></ol>
+<p>每替换一个组件，bundle 减少对应 react 组件树的体积。</p>
+<h3 id="4-2-日志框架-winston-pino">4.2 日志框架：winston → pino<a class="anchor" href="#4-2-日志框架-winston-pino" aria-label="锚点">#</a></h3>
+<p><strong>现状</strong>: <code>winston</code> (3.19.0) + <code>winston-daily-rotate-file</code> (5.0.0)，合计 ~2.5 MB。</p>
+<p><strong>引用点</strong>:</p>
+<ul><li><code>services/backend/src/services/</code> — 多处 logger 实例</li><li><code>platform/packages/shared/src/utils/logger.js</code> — 共享 logger</li><li><code>services/ai-backend/</code> — 间接使用</li></ul>
+<p><strong>方案</strong>: 不急着全量替换，先在 <code>@khy/shared</code> 的 logger 层做适配：</p>
+<pre><code class="language-js"><span class="hljs-comment">// src/utils/logger.js — 现有接口不变，底层切换</span>
+<span class="hljs-comment">// 当前:</span>
+<span class="hljs-comment">//   const winston = require(&#x27;winston&#x27;);</span>
+<span class="hljs-comment">//   const DailyRotateFile = require(&#x27;winston-daily-rotate-file&#x27;);</span>
+
+<span class="hljs-comment">// 改为:</span>
+<span class="hljs-comment">//   const pino = require(&#x27;pino&#x27;);</span>
+<span class="hljs-comment">//   const pinoDaily = require(&#x27;pino-daily-rotate-file&#x27;);</span>
+<span class="hljs-comment">//   包装成兼容 winston 的 transport 接口</span></code></pre>
+<p><strong>效果</strong>: 运行时 -2 MB + 日志写入速度提升 ~100x。</p>
+<h3 id="4-3-颜色库-chalk-picocolors">4.3 颜色库：chalk → picocolors<a class="anchor" href="#4-3-颜色库-chalk-picocolors" aria-label="锚点">#</a></h3>
+<p><strong>现状</strong>: <code>chalk</code> (4.1.2) 在 backend、ai-backend、shared 三处声明。依赖链 supports-color → has-flag → [...] 拉入 ~10 个小包。</p>
+<p><strong>方案</strong>: 全局替换：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 安装替代</span>
+pnpm add picocolors -D
+<span class="hljs-comment"># 2. 搜索所有使用点</span>
+grep -rl <span class="hljs-string">&quot;require(&#x27;chalk&#x27;)&quot;</span> services/ src/ --include=<span class="hljs-string">&quot;*.js&quot;</span>
+<span class="hljs-comment"># 3. 批量替换 require(&#x27;chalk&#x27;) → require(&#x27;picocolors&#x27;)</span>
+<span class="hljs-comment"># 4. API 差异: chalk.red(text) → picocolors.red(text)  (兼容)</span>
+<span class="hljs-comment">#                chalk.bold.cyan(text) → picocolors.bold.cyan(text) (兼容)</span></code></pre>
+<p><strong>效果</strong>: 每个引用点省 ~50 KB 依赖树。bundle 里 chalk 及其依赖被 tree-shake 后接近零。</p>
+<h3 id="4-4-日期库-moment-dayjs">4.4 日期库：moment → dayjs<a class="anchor" href="#4-4-日期库-moment-dayjs" aria-label="锚点">#</a></h3>
+<p><strong>现状</strong>: <code>moment</code> (2.30.1, ~300 KB) 在 <code>services/backend/dependencies</code> 里，实际只在 <code>software/khyquant/</code> 的 klineDataService.js 中使用。属于后端&quot;代持&quot;的依赖。</p>
+<p><strong>方案</strong>: 把 moment 从 backend/dependencies 移到 software/khyquant 自身的声明（如果 khyquant 有自己的 package.json），或替换为 dayjs：</p>
+<pre><code class="language-js"><span class="hljs-comment">// 当前: const moment = require(&#x27;moment&#x27;);</span>
+<span class="hljs-comment">// 改为: const dayjs = require(&#x27;dayjs&#x27;);</span>
+<span class="hljs-comment">// API 兼容度: 80% (format, diff, add, subtract, utc)</span></code></pre>
+<p><strong>效果</strong>: -300 KB（单副本）。khy-mobile 里还有一个 typescript 副本 8.7 MB，但那是不相关的。</p>
+<h3 id="4-5-markdown-编辑器-同步预打包-按需动态加载">4.5 Markdown 编辑器：同步预打包 → 按需动态加载<a class="anchor" href="#4-5-markdown-编辑器-同步预打包-按需动态加载" aria-label="锚点">#</a></h3>
+<p><strong>现状</strong>:</p>
+<ul><li><code>extensions/tools/khy-markdown/muya-embed/</code> — 12.7 MB（含 10 MB esbuild.exe 重复）</li><li><code>apps/ai-frontend/public/vendor/khyos-muya.js</code> — 6.1 MB（打包产物）</li><li><code>apps/ai-frontend/public/vendor/khyos-muya.css</code> — 4.4 MB</li></ul>
+<p>合计 ~23 MB markdown 相关资产，其中大部分在首屏加载时进入内存，但用户可能一辈子不打开编辑器。</p>
+<p><strong>方案</strong>: 前端改为动态 import：</p>
+<pre><code class="language-js"><span class="hljs-comment">// 当前: prebuild 脚本把 muya 复制到 public/vendor/，index.html 同步加载</span>
+<span class="hljs-comment">// &lt;script src=&quot;/vendor/khyos-muya.js&quot;&gt;&lt;/script&gt;</span>
+
+<span class="hljs-comment">// 改为: 用户点击编辑按钮时才加载</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">openMarkdownEditor</span>(<span class="hljs-params">container</span>) {
+  <span class="hljs-keyword">const</span> [{ <span class="hljs-attr">default</span>: <span class="hljs-title class_">Editor</span> }, css] = <span class="hljs-keyword">await</span> <span class="hljs-title class_">Promise</span>.<span class="hljs-title function_">all</span>([
+    <span class="hljs-keyword">import</span>(<span class="hljs-string">&#x27;@khy/markdown-editor&#x27;</span>),
+    <span class="hljs-keyword">import</span>(<span class="hljs-string">&#x27;@khy/markdown-editor/style.css&#x27;</span>)
+  ]);
+  <span class="hljs-comment">// 注入编辑器</span>
+}</code></pre>
+<p><strong>效果</strong>: 首屏 bundle -10 MB。编辑器在后台预加载，用户点击时 ~100ms 可见。</p>
+<hr>
+<h2 id="五-第三层-架构改造-改动较大-收益最高">五、第三层：架构改造（改动较大，收益最高）<a class="anchor" href="#五-第三层-架构改造-改动较大-收益最高" aria-label="锚点">#</a></h2>
+<h3 id="5-1-三档分发架构">5.1 三档分发架构<a class="anchor" href="#5-1-三档分发架构" aria-label="锚点">#</a></h3>
+<p><strong>现状</strong>: 单一 <code>bundle.mjs</code>（16.7 MB），包含所有功能。</p>
+<p><strong>目标</strong>: 按功能裁剪，用户只需下载自己需要的部分。</p>
+<table><thead><tr><th>档位</th><th>内容</th><th>入口</th><th>目标体积</th></tr></thead><tbody><tr><td><strong>lite</strong></td><td>AI 网关 + CLI 核心命令（无 TUI、无浏览器引擎）</td><td><code>khy</code> 命令默认</td><td>~6 MB</td></tr><tr><td><strong>standard</strong></td><td>lite + Ink TUI + 基础工具 + SQLite</td><td>终端交互用户</td><td>~12 MB</td></tr><tr><td><strong>full</strong></td><td>standard + Playwright 浏览器引擎 + 扩展系统</td><td>完整平台</td><td>~22 MB</td></tr></tbody></table>
+<p><strong>实现</strong>:</p>
+<pre><code class="language-js"><span class="hljs-comment">// packaging/npm/build/esbuild-modules.js</span>
+
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">SHARED_EXTERNALS</span> = [<span class="hljs-string">&#x27;express&#x27;</span>, <span class="hljs-string">&#x27;sequelize&#x27;</span>, <span class="hljs-string">&#x27;ws&#x27;</span>, <span class="hljs-string">&#x27;pg&#x27;</span>, <span class="hljs-string">&#x27;pg-hstore&#x27;</span>];
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">LITE_EXTERNALS</span> = [...<span class="hljs-variable constant_">SHARED_EXTERNALS</span>];
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">STANDARD_EXTERNALS</span> = [...<span class="hljs-variable constant_">SHARED_EXTERNALS</span>, <span class="hljs-string">&#x27;ink&#x27;</span>, <span class="hljs-string">&#x27;react&#x27;</span>, <span class="hljs-string">&#x27;react-dom&#x27;</span>];
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">FULL_EXTERNALS</span> = [...<span class="hljs-variable constant_">SHARED_EXTERNALS</span>, <span class="hljs-string">&#x27;playwright&#x27;</span>, <span class="hljs-string">&#x27;playwright-core&#x27;</span>];
+
+<span class="hljs-title function_">build</span>(<span class="hljs-string">&#x27;bundle.lite.mjs&#x27;</span>,     { <span class="hljs-attr">entryPoints</span>: [<span class="hljs-string">&#x27;src/cli/khy.js&#x27;</span>], <span class="hljs-attr">external</span>: <span class="hljs-variable constant_">LITE_EXTERNALS</span> });
+<span class="hljs-title function_">build</span>(<span class="hljs-string">&#x27;bundle.standard.mjs&#x27;</span>, { <span class="hljs-attr">entryPoints</span>: [<span class="hljs-string">&#x27;src/cli/khy.js&#x27;</span>], <span class="hljs-attr">external</span>: <span class="hljs-variable constant_">STANDARD_EXTERNALS</span> });
+<span class="hljs-title function_">build</span>(<span class="hljs-string">&#x27;bundle.browser.mjs&#x27;</span>,  { <span class="hljs-attr">entryPoints</span>: [<span class="hljs-string">&#x27;src/tools/WebBrowserTool/index.js&#x27;</span>], <span class="hljs-attr">external</span>: <span class="hljs-variable constant_">FULL_EXTERNALS</span> });</code></pre>
+<p><strong>安装入口</strong>:</p>
+<pre><code class="language-bash"><span class="hljs-comment"># pip/npm 默认装 lite</span>
+pip install khy-os          <span class="hljs-comment"># → bundle.lite.mjs, 6 MB</span>
+
+<span class="hljs-comment"># 需要终端交互</span>
+khy install ui              <span class="hljs-comment"># → 下载 bundle.standard.mjs + ink/react</span>
+
+<span class="hljs-comment"># 需要浏览器引擎</span>
+khy install browser         <span class="hljs-comment"># → 下载 bundle.browser.mjs + playwright</span></code></pre>
+<h3 id="5-2-数据库适配器懒加载">5.2 数据库适配器懒加载<a class="anchor" href="#5-2-数据库适配器懒加载" aria-label="锚点">#</a></h3>
+<p><strong>现状</strong>: Sequelize + pg (PostgreSQL) + mysql2 + better-sqlite3 全在 bundle 闭包里。即使只用 SQLite，也打包了 pg 和 mysql2 驱动。</p>
+<p><strong>引用点</strong>:</p>
+<ul><li><code>platform/packages/shared/src/config/database.js</code> — dialect 加载</li><li><code>services/backend/src/services/backup/sqliteHotCopy.js</code> — better-sqlite3</li><li><code>services/backend/src/tools/databaseQuery.js</code> — 多数据库查询</li></ul>
+<p><strong>方案</strong>: 在 <code>database.js</code> 层做按需加载：</p>
+<pre><code class="language-js"><span class="hljs-comment">// 当前: 顶部一次性 require 所有 dialect</span>
+<span class="hljs-comment">// const { PostgresDialect } = require(&#x27;./dialects/postgres&#x27;);</span>
+<span class="hljs-comment">// const { MySQLDialect } = require(&#x27;./dialects/mysql&#x27;);</span>
+
+<span class="hljs-comment">// 改为: 工厂函数按需加载</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">createDialect</span>(<span class="hljs-params">type, config</span>) {
+  <span class="hljs-keyword">const</span> dialectMap = {
+    <span class="hljs-attr">sqlite</span>: <span class="hljs-function">() =&gt;</span> <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./dialects/sqlite&#x27;</span>).<span class="hljs-title function_">create</span>(config),
+    <span class="hljs-attr">postgres</span>: <span class="hljs-function">() =&gt;</span> <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./dialects/postgres&#x27;</span>).<span class="hljs-title function_">create</span>(config),
+    <span class="hljs-attr">mysql</span>: <span class="hljs-function">() =&gt;</span> <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./dialects/mysql&#x27;</span>).<span class="hljs-title function_">create</span>(config),
+  };
+  <span class="hljs-keyword">const</span> factory = dialectMap[type];
+  <span class="hljs-keyword">if</span> (!factory) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">`Unknown dialect: <span class="hljs-subst">${type}</span>`</span>);
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">factory</span>();
+}</code></pre>
+<p><strong>esbuild 配置</strong>: <code>external: ['pg', 'mysql2', 'better-sqlite3', 'sqlite3']</code></p>
+<p><strong>效果</strong>: bundle -5 MB（pg + mysql2 驱动各 ~2.5 MB）。</p>
+<h3 id="5-3-ai-网关适配器懒加载">5.3 AI 网关适配器懒加载<a class="anchor" href="#5-3-ai-网关适配器懒加载" aria-label="锚点">#</a></h3>
+<p><strong>现状</strong>: <code>services/backend/src/services/gateway/adapters/</code> 下有 cursorAdapter、kiroAdapter、traeAdapter、codewhispererAdapter 等。每个都 require 自己的客户端库（@aws/codewhisperer-streaming-client 等）。</p>
+<p><strong>方案</strong>: 适配器注册表改为按需加载：</p>
+<pre><code class="language-js"><span class="hljs-comment">// 当前: 顶部 require 所有适配器</span>
+<span class="hljs-comment">// const cursorAdapter = require(&#x27;./cursorAdapter&#x27;);</span>
+<span class="hljs-comment">// const kiroAdapter = require(&#x27;./kiroAdapter&#x27;);</span>
+
+<span class="hljs-comment">// 改为: 注册表按名称懒加载</span>
+<span class="hljs-keyword">const</span> adapterRegistry = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>();
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">registerAdapter</span>(<span class="hljs-params">name, loader</span>) {
+  adapterRegistry.<span class="hljs-title function_">set</span>(name, loader); <span class="hljs-comment">// loader 是 () =&gt; require(&#x27;./xxxAdapter&#x27;)</span>
+}
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">getAdapter</span>(<span class="hljs-params">name</span>) {
+  <span class="hljs-keyword">if</span> (!adapterRegistry.<span class="hljs-title function_">has</span>(name)) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">`Unknown adapter: <span class="hljs-subst">${name}</span>`</span>);
+  <span class="hljs-keyword">return</span> adapterRegistry.<span class="hljs-title function_">get</span>(name)();
+}</code></pre>
+<p><strong>esbuild 配置</strong>: 所有 <code>adapters/*</code> 标记为 external，bundle 只包含注册表框架 (~5 KB)。</p>
+<p><strong>效果</strong>: bundle -3 MB（adapter 客户端库总和）。</p>
+<hr>
+<h2 id="六-esbuild-重复二进制去重">六、esbuild 重复二进制去重<a class="anchor" href="#六-esbuild-重复二进制去重" aria-label="锚点">#</a></h2>
+<h3 id="6-1-现状">6.1 现状<a class="anchor" href="#6-1-现状" aria-label="锚点">#</a></h3>
+<p><code>@esbuild/win32-x64/esbuild.exe</code> 在 4 个位置出现，合计 ~40 MB：</p>
+<table><thead><tr><th>位置</th><th>大小</th></tr></thead><tbody><tr><td><code>node_modules/@esbuild/win32-x64/esbuild.exe</code></td><td>10.1 MB</td></tr><tr><td><code>extensions/tools/khy-markdown/muya-embed/node_modules/@esbuild/win32-x64/esbuild.exe</code></td><td>10.1 MB</td></tr><tr><td><code>apps/khy-mobile/node_modules/@esbuild/win32-x64/esbuild.exe</code></td><td>9.5 MB</td></tr><tr><td><code>node_modules/vite/node_modules/@esbuild/win32-x64/esbuild.exe</code></td><td>9.5 MB</td></tr></tbody></table>
+<h3 id="6-2-方案">6.2 方案<a class="anchor" href="#6-2-方案" aria-label="锚点">#</a></h3>
+<p>这不是源码问题，是 pnpm/npm 的依赖提升策略差异。</p>
+<p><strong>pnpm 严格模式下</strong>，同一包应该硬链接到全局 store，只算一次。检查 <code>.npmrc</code>：</p>
+<pre><code class="language-ini"><span class="hljs-comment"># 确保 pnpm 严格模式 + 全局 store</span>
+<span class="hljs-attr">shared-workspace-lockfile</span>=<span class="hljs-literal">true</span>
+<span class="hljs-attr">hoist-pattern</span>=[]          <span class="hljs-comment"># 不提升到顶层</span>
+<span class="hljs-attr">public-hoist-pattern</span>=[]   <span class="hljs-comment"># 不公开提升</span></code></pre>
+<p>如果已经是严格模式仍有 4 份，可能是 workspace 之间的 peer 组合不同导致 pnpm 认为是不同实例。需要检查 <code>pnpm-lock.yaml</code> 中 esbuild 的 peer 组合数。</p>
+<p><strong>短期</strong>: 不影响功能，仅在磁盘空间紧张时清理。  <br><strong>长期</strong>: 统一 esbuild 版本到单一版本号，消除 peer 组合差异。</p>
+<hr>
+<h2 id="七-执行路线图">七、执行路线图<a class="anchor" href="#七-执行路线图" aria-label="锚点">#</a></h2>
+<h3 id="phase-1-立刻执行-本周-零代码风险">Phase 1：立刻执行（本周，零代码风险）<a class="anchor" href="#phase-1-立刻执行-本周-零代码风险" aria-label="锚点">#</a></h3>
+<pre><code>1. 清理构建产物
+   cd apps/khy-mobile/android &amp;&amp; ./gradlew clean
+   Remove-Item packaging/npm/bundled/ -Recurse -Force
+   Remove-Item apps/ai-frontend/node_modules/.ignored/ -Recurse -Force
+
+2. 清理运行时数据
+   # 确认 .khy/ 和 khy-Trajectory/ 是否重复
+   # 安全地清理 logs/ + audit/ + old checkpoints
+
+3. 清理参考文件
+   Remove-Item docs/_ref/*/测试视频.mp4 -Force
+
+4. git gc
+   git gc --aggressive --prune=now</code></pre>
+<p><strong>预期收益</strong>: -370 MB 开发盘占。</p>
+<h3 id="phase-2-配置优化-本周-改-package-json-构建脚本">Phase 2：配置优化（本周，改 package.json + 构建脚本）<a class="anchor" href="#phase-2-配置优化-本周-改-package-json-构建脚本" aria-label="锚点">#</a></h3>
+<pre><code>5. esbuild external 化 ink/react（bundle 从 16.7 MB → 12 MB）
+6. 数据库 dialect 按需加载（bundle -5 MB）
+7. 网关适配器懒加载（bundle -3 MB）</code></pre>
+<p><strong>预期收益</strong>: bundle.mjs 从 16.7 MB → ~9 MB。</p>
+<p><strong>实际结果 (2026-08-28)</strong> — 分三个阶段逐步 externalize:</p>
+<table><thead><tr><th>阶段</th><th>khy (full)</th><th>khy-gateway</th><th>说明</th></tr></thead><tbody><tr><td>旧（单 bundle）</td><td>16.7 MB</td><td>—</td><td>全部打入</td></tr><tr><td>Phase 2.1（per-module excludeDeps）</td><td>15.90 MB</td><td>13.12 MB</td><td>仅排除 ink/react 等 UI 依赖</td></tr><tr><td>Phase 2.5（RUNTIME_SERVICE_MODULES）</td><td><strong>13.12 MB</strong></td><td><strong>10.67 MB</strong></td><td>express/pg/sequelize/ws/winston 等全部 external</td></tr></tbody></table>
+<p>核心架构变更：</p>
+<ol><li><code>computeExternals()</code> 新增 <code>RUNTIME_SERVICE_MODULES</code> 全局 external 列表（express, pg, sequelize, ws, winston, axios, cors, helmet, jsonwebtoken, bcryptjs, multer, node-cron, chalk, ora, inquirer 等）</li><li><code>modules.json</code> 的 <code>excludeDeps</code> 精简为仅含不在全局列表中的特殊依赖（ink/react 用于 TUI, @aws/* 用于 tools）</li><li>npm 包 (<code>packaging/npm/package.json</code>) 声明了所有 external 依赖，安装后 alongside bundle 提供</li><li>pip wheel 的 <code>package-data</code> 包含所有 6 个 bundle + <code>package.json</code>，bootstrap 首次启动时跑 <code>npm install</code></li><li><code>_bootstrap.py</code> 在 pip-bundled 模式下也从 <code>bundled/</code> 目录跑 <code>npm install</code></li><li><code>cli.py</code> 在 pip-bundled 模式下设置 <code>NODE_PATH</code> 指向 <code>bundled/node_modules/</code></li></ol>
+<h3 id="phase-3-依赖替换-下周-改源码-import">Phase 3：依赖替换（下周，改源码 import）<a class="anchor" href="#phase-3-依赖替换-下周-改源码-import" aria-label="锚点">#</a></h3>
+<pre><code>8. chalk → picocolors（全局 grep + 替换）
+9. moment → dayjs（在 khyquant 层替换）
+10. winston → pino（logger 层适配）</code></pre>
+<p><strong>预期收益</strong>: 运行时依赖树 -5 MB，日志性能 +100x。</p>
+<h3 id="phase-4-架构升级-本月">Phase 4：架构升级（本月）<a class="anchor" href="#phase-4-架构升级-本月" aria-label="锚点">#</a></h3>
+<pre><code>11. Markdown 编辑器动态加载（首屏 -10 MB）
+12. 三档 bundle profile（lite 6 MB / standard 12 MB / full 22 MB）
+13. 扩展按需安装机制</code></pre>
+<p><strong>预期收益</strong>: 用户按需下载，非全量。</p>
+<h3 id="phase-5-长期">Phase 5：长期<a class="anchor" href="#phase-5-长期" aria-label="锚点">#</a></h3>
+<pre><code>14. Ink TUI 逐步替换为原生实现（bundle -15 MB）
+15. muya-embed → CodeMirror 6（extensions -10 MB）
+16. check:dep-size 加入 CI 防止回归</code></pre>
+<hr>
+<h2 id="八-预算线-ci-门禁">八、预算线（CI 门禁）<a class="anchor" href="#八-预算线-ci-门禁" aria-label="锚点">#</a></h2>
+<p>在 <code>scripts/ci/check-dependency-size.js</code> 基础上新增 bundle 预算：</p>
+<table><thead><tr><th>档位</th><th>预算</th><th>阻断条件</th></tr></thead><tbody><tr><td><code>bundle.lite.mjs</code></td><td>&lt; 8 MB</td><td>超限 → CI 失败</td></tr><tr><td><code>bundle.standard.mjs</code></td><td>&lt; 15 MB</td><td>超限 → CI 失败</td></tr><tr><td><code>bundle.browser.mjs</code></td><td>&lt; 25 MB</td><td>超限 → CI 失败</td></tr><tr><td>开发安装（pnpm install）</td><td>&lt; 600 MB 磁盘</td><td>仅报告，不阻断</td></tr><tr><td>前端首屏 chunk</td><td>&lt; 500 KB</td><td>超限 → CI 失败</td></tr></tbody></table>
+<hr>
+<h2 id="九-风险与回退">九、风险与回退<a class="anchor" href="#九-风险与回退" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>改动</th><th>风险</th><th>回退方式</th></tr></thead><tbody><tr><td>清理构建产物</td><td>零</td><td>重建即可</td></tr><tr><td>ink/react external</td><td>低</td><td>改回 internal</td></tr><tr><td>数据库懒加载</td><td>中（触及核心 I/O）</td><td>保持同步 require 作为 fallback</td></tr><tr><td>适配器懒加载</td><td>低</td><td>保持同步 require</td></tr><tr><td>chalk → picocolors</td><td>低（API 兼容）</td><td>保留 chalk 作为 fallback</td></tr><tr><td>winston → pino</td><td>中（日志格式变更）</td><td>双写过渡</td></tr><tr><td>moment → dayjs</td><td>低（API 80% 兼容）</td><td>保留 moment 作为 fallback</td></tr><tr><td>三档 bundle</td><td>中（分发流程变更）</td><td>保留全量 bundle 作为 fallback</td></tr></tbody></table>
+<hr>
+<h2 id="十-参考">十、参考<a class="anchor" href="#十-参考" aria-label="锚点">#</a></h2>
+<ul><li><code>scripts/ci/check-dependency-size.js</code> — 依赖体积预算 CI</li><li><code>scripts/ci/check-frontend-size.js</code> — 前端体积检查</li><li><code>packaging/npm/build/</code> — esbuild 打包脚本</li><li><code>services/backend/esbuild.config.js</code> — 后端 bundle 配置</li><li><code>.gitignore</code> — 已排除的构建产物和运行时数据</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/其它设计/[DESIGN-REVIEW-001] 代码审查规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-REVIEW-001] 代码审查规范</div></a><a class="next" href="../../../docs/03_DESIGN_设计/其它设计/[DESIGN-TEST-001] 测试规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-TEST-001] 测试规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/其它设计/[DESIGN-SIZE-001] khy-os 体积优化方案.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

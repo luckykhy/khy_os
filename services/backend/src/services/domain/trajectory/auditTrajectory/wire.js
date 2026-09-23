@@ -157,8 +157,11 @@ function attach(opts = {}) {
 
   let hooks = opts.hookSystem;
   if (!hooks) {
+    // 直连同层真源。`cli/hooks/hookSystem` 只是 14 行 back-compat shim，
+    // hooks 子系统早已下移到 services/domain/extensions/hooks/ 就是为了消除
+    // R1 倒置；本文件当时漏改，仍走 shim = domain → cli → 再折回 services 的无谓绕路。
     try {
-      hooks = require('../../../../cli/hooks/hookSystem');
+      hooks = require('../../extensions/hooks/hookSystem.js');
     } catch (err) {
       return { enabled: false, reason: `hook 系统不可用: ${(err && err.message) || err}` };
     }

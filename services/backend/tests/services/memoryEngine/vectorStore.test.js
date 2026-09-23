@@ -21,7 +21,7 @@ const os = require('os');
 const path = require('path');
 
 const paths = require('../../../src/memdir/paths');
-const vectorStore = require('../../../src/services/memoryEngine/vectorStore');
+const vectorStore = require('../../../src/services/domain/memory/memoryEngine/vectorStore.js');
 
 const MODEL = 'stub-embed-model';
 

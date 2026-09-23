@@ -9,11 +9,11 @@
  *
  * 设计约束（对齐 CLAUDE.md）：
  *   - 确定性：同样输入 => 同样输出（不含时间戳/随机数），可重复运行。
- *   - 离线自包含：图表用 docs/_assets/mermaid.min.js，代码高亮在构建期完成。
- *   - 外科手术式：只新增 .html 与 docs/_assets/nav-data.js，不改任何 .md 源文。
+ *   - 离线自包含：图表用 docs/19_资产/site/mermaid.min.js，代码高亮在构建期完成。
+ *   - 外科手术式：只新增 .html 与 docs/19_资产/site/nav-data.js，不改任何 .md 源文。
  *
  * HOW-TO-EXTEND（给维护者/小模型）：
- *   - 想改样式/动画 => 编辑 docs/_assets/docs-site.css / docs-site.js，然后重跑本脚本。
+ *   - 想改样式/动画 => 编辑 docs/19_资产/site/docs-site.css / docs-site.js，然后重跑本脚本。
  *   - 想改 Markdown 支持的语法 => 改 renderMarkdown() 里的块级/行内规则。
  *   - 想改哪些目录参与生成 => 改 SKIP_DIRS / SKIP_PATH_PARTS。
  *
@@ -26,7 +26,7 @@ const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..", "..");
-const ASSETS_DIRNAME = path.join("docs", "_assets");
+const ASSETS_DIRNAME = path.join("docs", "19_资产", "site");
 const QUIET = process.argv.includes("--quiet");
 
 // 不参与生成的目录（node_modules、构建产物、供应商副本、归档、爬取样本）
@@ -34,9 +34,15 @@ const SKIP_DIRS = new Set([
   ".git", "node_modules", "build", "dist", ".venv", "venv", "coverage",
   "__pycache__", ".pytest_cache", ".tox", "muya-embed", "national-exam-site",
   "_archive_已删除孤儿引擎", ".claude", ".khy",
+  // 临时研究材料（外部仓库克隆，非本项目文档）。2026-09-15 实测：不跳过时
+  // build 会在其中原地生成数百个文档站 html，污染研究目录。
+  ".research-tmp",
 ]);
 // 路径片段命中即跳过（bundled 是打包时生成的副本，非源文）
-const SKIP_PATH_PARTS = ["/bundled/", "/_assets/"];
+// `/housekeeping/` 是 [DESIGN-LAY-003] HK-3 的隔离区：其内容是被撤下的文档原文，
+// 保留只为可核对与撤销，不是现行文档。若放行，build 会为其生成 html 并写进
+// nav-data.js，使已隔离的文档重新出现在站点导航里 —— 隔离即失效。
+const SKIP_PATH_PARTS = ["/bundled/", "/19_资产/", "/housekeeping/", "/.khyos/", "/.khyquant/"];
 
 // ---- 构建期代码高亮（可选，缺失则优雅降级为纯转义代码块）----
 let hljs = null;
@@ -146,7 +152,7 @@ function highlightCode(code, lang) {
 
 // ============================================================
 // 交互组件（面向小白：吉祥物插话 / 练习互动 / 翻卡动画 / 悬浮弹窗）
-// 全部离线、无外部依赖；交互逻辑在 docs/_assets/docs-site.js。
+// 全部离线、无外部依赖；交互逻辑在 docs/19_资产/site/docs-site.js。
 // ------------------------------------------------------------
 // HOW-TO-EXTEND（作者抄写式用法，写在任意 .md 里）：
 //   1) 吉祥物插话：  ```callout tip|小提示   （kind ∈ tip/note/warn/star/ask，
@@ -352,6 +358,23 @@ function renderMarkdown(src) {
     // 空行
     if (line.trim() === "") { i += 1; continue; }
 
+    // 机器标记行：`<!-- MIRROR: X -->` / `<!-- RULES-REGISTRY: ... -->`
+    //
+    // 这两类标记是**守卫读机器可判的锚点**（`check-agent-docs.js` 的 D4/D9、
+    // `check-rules-registry.js` 的双向可达检查）。它们必须原样透传为**真正的 HTML 注释**，
+    // 不能被 `escapeHtml()` 转成可见文本 —— 否则孪生面之间无法互相声明，
+    // D9 的「反向可达」判定会把每一对真孪生件都误报（实测：转义后为
+    // `&lt;!-- MIRROR: X --&gt;`，肉眼看得见但机器认不出）。
+    //
+    // 只放行这两个已知前缀，避免把正文里偶然出现的注释当成机器标记透传：
+    // 透传意味着**注释内的内容对读者不可见**，误透传会静默吞掉正文。
+    const machineMarker = line.match(/^\s*<!--\s*(MIRROR|RULES-REGISTRY):.*?-->\s*$/);
+    if (machineMarker) {
+      out.push(line.trim());
+      i += 1;
+      continue;
+    }
+
     // 围栏代码块 ``` / ~~~（含交互组件：callout / quiz / flip / mermaid）
     const fence = line.match(/^(\s*)(```+|~~~+)\s*([\w-]*)(.*)$/);
     if (fence) {
@@ -510,6 +533,14 @@ function groupOf(rel) {
 function pageTemplate(opts) {
   const { rootPrefix, curHref, title, crumb, bodyHtml, toc, pager, headings } = opts;
   const assets = rootPrefix + ASSETS_DIRNAME.split(path.sep).join("/") + "/";
+  // 孪生面反向声明：把源 `.md` 里的 `<!-- MIRROR: X -->` 派生成 `<!-- MIRROR: <源>.md -->`
+  // 写进 `.html` 的 `<head>`。这是 D9（`check-agent-docs.js`）判定「双向可达」的依据 ——
+  // 由生成器派生而非手写，保证 `.html` 重建后声明不会丢。
+  // `curHref` 形如 `AGENTS.html` / `docs/03_DESIGN_设计/X.html`；取 basename 再换回 `.md`。
+  const srcMd = opts.srcMd || null;
+  const mirrorMeta = srcMd
+    ? `<!-- MIRROR: ${path.basename(srcMd)} -->\n`
+    : "";
   const tocHtml = headings.length >= 3
     ? `<nav class="toc reveal"><div class="toc-title">本页目录</div><ul>` +
       headings.map((hd) => `<li class="lvl-${hd.level}"><a href="#${escapeAttr(hd.id)}">${escapeHtml(hd.text)}</a></li>`).join("") +
@@ -520,7 +551,7 @@ function pageTemplate(opts) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(title)} · Khy-OS 文档</title>
+${mirrorMeta}<title>${escapeHtml(title)} · Khy-OS 文档</title>
 <link rel="stylesheet" href="${assets}hljs-github-dark.min.css">
 <link rel="stylesheet" href="${assets}docs-site.css">
 </head>
@@ -562,7 +593,7 @@ ${bodyHtml}
 // 或畸形 href）。生成器已正确改写 .md→.html，但目标本就不存在——这些是
 // pre-existing 的内容缺陷，且约束要求不改动源 .md。这里在产出 HTML 后统一
 // 把「解析不到真实文件」的 <a>/<img> 降级：<a> 变纯文本 <span>，<img> 变占位。
-// 命中项写入 docs/_assets/dead-links.json 供审计（数量大 => 提示系统性路径 bug）。
+// 命中项写入 docs/19_资产/site/dead-links.json 供审计（数量大 => 提示系统性路径 bug）。
 function neutralizeDeadLinks(html, htmlAbsPath, deadAcc, willExist) {
   const dir = path.dirname(htmlAbsPath);
   const fromRel = path.relative(ROOT, htmlAbsPath).split(path.sep).join("/");
@@ -670,6 +701,7 @@ function main() {
     const html = pageTemplate({
       rootPrefix, curHref: d.htmlRel, title: d.title, crumb,
       bodyHtml: rendered.html, headings: rendered.headings, pager,
+      srcMd: d.rel,
     });
     const absPath = path.join(ROOT, d.htmlRel);
     fs.writeFileSync(absPath, neutralizeDeadLinks(html, absPath, deadLinks, willExist));
@@ -685,7 +717,7 @@ function main() {
     JSON.stringify({ total: deadLinks.length, items: deadLinks }, null, 2) + "\n"
   );
   log(`[docs-site] 生成 ${count} 个页面 + 首页 index.html + nav-data.js`);
-  if (deadLinks.length) log(`[docs-site] 已降级 ${deadLinks.length} 个陈旧断链为纯文本（见 docs/_assets/dead-links.json）`);
+  if (deadLinks.length) log(`[docs-site] 已降级 ${deadLinks.length} 个陈旧断链为纯文本（见 docs/19_资产/site/dead-links.json）`);
   return count;
 }
 

@@ -24,14 +24,10 @@ const {
   assessInstallIntegrity,
   CRITICAL_BUNDLE_PATHS,
 } = require('../../../scripts/lib/installIntegrity');
+const { opsDocPath, opsDocRelPath } = require('../../../scripts/lib/docsPaths');
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
-const DOC_PATH = path.join(
-  ROOT,
-  'docs',
-  '07_OPS_运维',
-  '[OPS-MAN-069] 已装副本完整性自检清单.md'
-);
+const DOC_PATH = opsDocPath('[OPS-MAN-069] 已装副本完整性自检清单.md');
 const NPM_PKG_NAME = '@khy-os/khy-os';
 const PIP_PKG_NAME = 'khy-os';
 
@@ -148,7 +144,7 @@ function runVerifyInstall(opts = {}) {
   } else if (verdict.intact) {
     out += `${C.dim}  已核对 ${verdict.present.length} 项运行时关键文件，全部就位。${C.reset}\n\n`;
   }
-  out += `${C.dim}详情见：docs/07_OPS_运维/[OPS-MAN-069] 已装副本完整性自检清单.md${C.reset}\n`;
+  out += `${C.dim}详情见：${opsDocRelPath('[OPS-MAN-069] 已装副本完整性自检清单.md')}${C.reset}\n`;
   process.stdout.write(out);
   return verdict.intact ? 0 : 1;
 }

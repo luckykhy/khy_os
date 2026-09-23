@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-OPS-003] Health Check 规范.md -->
+<title>[DESIGN-OPS-003] Health Check 规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-OPS-003] Health Check 规范</div>
+      <header class="hero reveal"><h1>[DESIGN-OPS-003] Health Check 规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-ops-003-health-check-规范">[DESIGN-OPS-003] Health Check 规范</a></li><li class="lvl-2"><a href="#1-健康检查原则">1. 健康检查原则</a></li><li class="lvl-2"><a href="#2-三个端点">2. 三个端点</a></li><li class="lvl-3"><a href="#2-1-health-存活检查-liveness">2.1 `/health` — 存活检查（Liveness）</a></li><li class="lvl-3"><a href="#2-2-ready-就绪检查-readiness">2.2 `/ready` — 就绪检查（Readiness）</a></li><li class="lvl-3"><a href="#2-3-live-依赖健康检查">2.3 `/live` — 依赖健康检查</a></li><li class="lvl-2"><a href="#3-依赖检查">3. 依赖检查</a></li><li class="lvl-3"><a href="#3-1-检查项">3.1 检查项</a></li><li class="lvl-3"><a href="#3-2-检查实现">3.2 检查实现</a></li><li class="lvl-3"><a href="#3-3-缓存策略">3.3 缓存策略</a></li><li class="lvl-2"><a href="#4-响应格式">4. 响应格式</a></li><li class="lvl-3"><a href="#4-1-标准响应">4.1 标准响应</a></li><li class="lvl-3"><a href="#4-2-状态枚举">4.2 状态枚举</a></li><li class="lvl-2"><a href="#5-kubernetes-集成">5. Kubernetes 集成</a></li><li class="lvl-3"><a href="#5-1-probe-配置">5.1 Probe 配置</a></li><li class="lvl-3"><a href="#5-2-启动就绪">5.2 启动就绪</a></li><li class="lvl-2"><a href="#6-容器化健康检查">6. 容器化健康检查</a></li><li class="lvl-3"><a href="#6-1-dockerfile">6.1 Dockerfile</a></li><li class="lvl-3"><a href="#6-2-docker-compose">6.2 Docker Compose</a></li><li class="lvl-2"><a href="#7-监控集成">7. 监控集成</a></li><li class="lvl-3"><a href="#7-1-告警规则">7.1 告警规则</a></li><li class="lvl-3"><a href="#7-2-日志">7.2 日志</a></li><li class="lvl-2"><a href="#8-安全考虑">8. 安全考虑</a></li><li class="lvl-2"><a href="#9-版本历史">9. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-ops-003-health-check-规范">[DESIGN-OPS-003] Health Check 规范<a class="anchor" href="#design-ops-003-health-check-规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: OPS-003 -->
+<blockquote><p><strong>用途</strong>：定义 khy-os 服务的健康检查端点标准，供负载均衡、容器编排、监控系统使用。<br>当前无统一健康检查机制。</p></blockquote>
+<hr>
+<h2 id="1-健康检查原则">1. 健康检查原则<a class="anchor" href="#1-健康检查原则" aria-label="锚点">#</a></h2>
+<ol><li><strong>三端点分离</strong>：<code>/health</code>（存活）/ <code>/ready</code>（就绪）/ <code>/live</code>（依赖检查）</li><li><strong>轻量快速</strong>：健康检查本身不应拖慢启动或增加依赖压力</li><li><strong>状态精确</strong>：不返回 &quot;OK&quot; 掩盖实际故障</li><li><strong>分级返回</strong>：返回各依赖的独立状态，便于定位</li></ol>
+<hr>
+<h2 id="2-三个端点">2. 三个端点<a class="anchor" href="#2-三个端点" aria-label="锚点">#</a></h2>
+<h3 id="2-1-health-存活检查-liveness">2.1 <code>/health</code> — 存活检查（Liveness）<a class="anchor" href="#2-1-health-存活检查-liveness" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>属性</th><th>值</th></tr></thead><tbody><tr><td>用途</td><td>进程是否存活（Kubernetes liveness probe）</td></tr><tr><td>检查内容</td><td>进程是否在运行、内存是否可用</td></tr><tr><td>超时</td><td>&lt; 100ms</td></tr><tr><td>响应码</td><td>200 始终（存活不代表就绪）</td></tr></tbody></table>
+<pre><code class="language-javascript">app.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/health&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">req, res</span>) =&gt;</span> {
+  <span class="hljs-keyword">const</span> memUsage = process.<span class="hljs-title function_">memoryUsage</span>();
+  <span class="hljs-keyword">const</span> heapOk = memUsage.<span class="hljs-property">heapUsed</span> / memUsage.<span class="hljs-property">heapTotal</span> &lt; <span class="hljs-number">0.9</span>;
+  
+  res.<span class="hljs-title function_">status</span>(<span class="hljs-number">200</span>).<span class="hljs-title function_">json</span>({
+    <span class="hljs-attr">status</span>: heapOk ? <span class="hljs-string">&#x27;ok&#x27;</span> : <span class="hljs-string">&#x27;degraded&#x27;</span>,
+    <span class="hljs-attr">uptime</span>: process.<span class="hljs-title function_">uptime</span>(),
+    <span class="hljs-attr">timestamp</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>().<span class="hljs-title function_">toISOString</span>()
+  });
+});</code></pre>
+<h3 id="2-2-ready-就绪检查-readiness">2.2 <code>/ready</code> — 就绪检查（Readiness）<a class="anchor" href="#2-2-ready-就绪检查-readiness" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>属性</th><th>值</th></tr></thead><tbody><tr><td>用途</td><td>服务是否准备好接收流量（Kubernetes readiness probe）</td></tr><tr><td>检查内容</td><td>所有依赖是否可达、数据连接是否正常</td></tr><tr><td>超时</td><td>&lt; 5s</td></tr><tr><td>响应码</td><td>200（就绪）/ 503（未就绪）</td></tr></tbody></table>
+<pre><code class="language-javascript">app.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/ready&#x27;</span>, <span class="hljs-title function_">async</span> (req, res) =&gt; {
+  <span class="hljs-keyword">const</span> checks = <span class="hljs-keyword">await</span> <span class="hljs-title function_">runDependencyChecks</span>();
+  <span class="hljs-keyword">const</span> allHealthy = checks.<span class="hljs-title function_">every</span>(<span class="hljs-function"><span class="hljs-params">c</span> =&gt;</span> c.<span class="hljs-property">status</span> === <span class="hljs-string">&#x27;healthy&#x27;</span>);
+  
+  res.<span class="hljs-title function_">status</span>(allHealthy ? <span class="hljs-number">200</span> : <span class="hljs-number">503</span>).<span class="hljs-title function_">json</span>({
+    <span class="hljs-attr">status</span>: allHealthy ? <span class="hljs-string">&#x27;ready&#x27;</span> : <span class="hljs-string">&#x27;not_ready&#x27;</span>,
+    checks
+  });
+});</code></pre>
+<h3 id="2-3-live-依赖健康检查">2.3 <code>/live</code> — 依赖健康检查<a class="anchor" href="#2-3-live-依赖健康检查" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>属性</th><th>值</th></tr></thead><tbody><tr><td>用途</td><td>各依赖的详细状态（供监控/告警）</td></tr><tr><td>检查内容</td><td>数据库、Redis、外部 API、文件系统</td></tr><tr><td>超时</td><td>&lt; 10s</td></tr><tr><td>缓存</td><td>结果缓存 30s（避免频繁探测）</td></tr></tbody></table>
+<pre><code class="language-javascript">app.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/live&#x27;</span>, <span class="hljs-title function_">async</span> (req, res) =&gt; {
+  res.<span class="hljs-title function_">json</span>({
+    <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;ok&#x27;</span>,
+    <span class="hljs-attr">checks</span>: <span class="hljs-keyword">await</span> <span class="hljs-title function_">getDetailedHealth</span>()
+  });
+});</code></pre>
+<hr>
+<h2 id="3-依赖检查">3. 依赖检查<a class="anchor" href="#3-依赖检查" aria-label="锚点">#</a></h2>
+<h3 id="3-1-检查项">3.1 检查项<a class="anchor" href="#3-1-检查项" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>依赖</th><th>检查方式</th><th>超时</th><th>降级策略</th></tr></thead><tbody><tr><td>SQLite / PostgreSQL</td><td><code>SELECT 1</code></td><td>2s</td><td>服务降级（缓存模式）</td></tr><tr><td>Redis（如有）</td><td><code>PING</code></td><td>1s</td><td>跳过缓存，直连 DB</td></tr><tr><td>文件系统</td><td><code>access(dataDir, R_OK)</code></td><td>500ms</td><td>报错</td></tr><tr><td>外部 AI API</td><td>轻量 ping</td><td>3s</td><td>标记为 degraded</td></tr><tr><td>磁盘空间</td><td><code>statvfs</code></td><td>500ms</td><td>标记为 degraded</td></tr></tbody></table>
+<h3 id="3-2-检查实现">3.2 检查实现<a class="anchor" href="#3-2-检查实现" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">runDependencyChecks</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> checks = [];
+  <span class="hljs-keyword">const</span> startTime = <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>();
+  
+  <span class="hljs-comment">// 1. 数据库</span>
+  checks.<span class="hljs-title function_">push</span>(<span class="hljs-keyword">await</span> <span class="hljs-title function_">checkDatabase</span>());
+  
+  <span class="hljs-comment">// 2. 磁盘空间</span>
+  checks.<span class="hljs-title function_">push</span>(<span class="hljs-keyword">await</span> <span class="hljs-title function_">checkDiskSpace</span>());
+  
+  <span class="hljs-comment">// 3. 外部服务</span>
+  checks.<span class="hljs-title function_">push</span>(<span class="hljs-keyword">await</span> <span class="hljs-title function_">checkExternalServices</span>());
+  
+  <span class="hljs-keyword">return</span> checks;
+}
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">checkDatabase</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> start = <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>();
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">await</span> sequelize.<span class="hljs-title function_">query</span>(<span class="hljs-string">&#x27;SELECT 1&#x27;</span>, { <span class="hljs-attr">type</span>: <span class="hljs-title class_">QueryTypes</span>.<span class="hljs-property">RAW</span> });
+    <span class="hljs-keyword">return</span> {
+      <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;database&#x27;</span>,
+      <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;healthy&#x27;</span>,
+      <span class="hljs-attr">responseTime</span>: <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() - start
+    };
+  } <span class="hljs-keyword">catch</span> (error) {
+    <span class="hljs-keyword">return</span> {
+      <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;database&#x27;</span>,
+      <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;unhealthy&#x27;</span>,
+      <span class="hljs-attr">responseTime</span>: <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() - start,
+      <span class="hljs-attr">error</span>: error.<span class="hljs-property">message</span>
+    };
+  }
+}
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">checkDiskSpace</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> stats = <span class="hljs-keyword">await</span> fs.<span class="hljs-property">promises</span>.<span class="hljs-title function_">stat</span>(process.<span class="hljs-property">env</span>.<span class="hljs-property">KHY_DATA_HOME</span> || dataDir);
+  <span class="hljs-comment">// 检查可用空间 &gt; 100MB</span>
+  <span class="hljs-comment">// ...</span>
+}</code></pre>
+<h3 id="3-3-缓存策略">3.3 缓存策略<a class="anchor" href="#3-3-缓存策略" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">let</span> healthCache = { <span class="hljs-attr">data</span>: <span class="hljs-literal">null</span>, <span class="hljs-attr">cachedAt</span>: <span class="hljs-number">0</span> };
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">HEALTH_CACHE_TTL</span> = <span class="hljs-number">30_000</span>;  <span class="hljs-comment">// 30 秒</span>
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">getDetailedHealth</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> now = <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>();
+  <span class="hljs-keyword">if</span> (healthCache.<span class="hljs-property">data</span> &amp;&amp; now - healthCache.<span class="hljs-property">cachedAt</span> &lt; <span class="hljs-variable constant_">HEALTH_CACHE_TTL</span>) {
+    <span class="hljs-keyword">return</span> healthCache.<span class="hljs-property">data</span>;
+  }
+  
+  <span class="hljs-keyword">const</span> data = <span class="hljs-keyword">await</span> <span class="hljs-title function_">runDependencyChecks</span>();
+  healthCache = { data, <span class="hljs-attr">cachedAt</span>: now };
+  <span class="hljs-keyword">return</span> data;
+}</code></pre>
+<hr>
+<h2 id="4-响应格式">4. 响应格式<a class="anchor" href="#4-响应格式" aria-label="锚点">#</a></h2>
+<h3 id="4-1-标准响应">4.1 标准响应<a class="anchor" href="#4-1-标准响应" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ready&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-10T12:00:00.000Z&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;uptime&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">3600</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;checks&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;database&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;healthy&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;responseTime&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">2</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;details&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;dialect&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;sqlite&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;3.45.0&quot;</span> <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;disk&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;healthy&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;responseTime&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;details&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;freeMB&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">2048</span> <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;external_api&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;degraded&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;responseTime&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">3500</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;details&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;reason&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;timeout&quot;</span> <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="4-2-状态枚举">4.2 状态枚举<a class="anchor" href="#4-2-状态枚举" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>status</th><th>含义</th><th>HTTP 码</th></tr></thead><tbody><tr><td><code>ok</code></td><td>完全健康</td><td>200</td></tr><tr><td><code>degraded</code></td><td>部分功能降级，核心可用</td><td>200</td></tr><tr><td><code>ready</code></td><td>就绪可接收流量</td><td>200</td></tr><tr><td><code>not_ready</code></td><td>未就绪（依赖不可用）</td><td>503</td></tr><tr><td><code>unhealthy</code></td><td>严重故障</td><td>503</td></tr></tbody></table>
+<hr>
+<h2 id="5-kubernetes-集成">5. Kubernetes 集成<a class="anchor" href="#5-kubernetes-集成" aria-label="锚点">#</a></h2>
+<h3 id="5-1-probe-配置">5.1 Probe 配置<a class="anchor" href="#5-1-probe-配置" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-attr">livenessProbe:</span>
+  <span class="hljs-attr">httpGet:</span>
+    <span class="hljs-attr">path:</span> <span class="hljs-string">/health</span>
+    <span class="hljs-attr">port:</span> <span class="hljs-number">3000</span>
+  <span class="hljs-attr">initialDelaySeconds:</span> <span class="hljs-number">10</span>
+  <span class="hljs-attr">periodSeconds:</span> <span class="hljs-number">30</span>
+  <span class="hljs-attr">timeoutSeconds:</span> <span class="hljs-number">5</span>
+  <span class="hljs-attr">failureThreshold:</span> <span class="hljs-number">3</span>
+
+<span class="hljs-attr">readinessProbe:</span>
+  <span class="hljs-attr">httpGet:</span>
+    <span class="hljs-attr">path:</span> <span class="hljs-string">/ready</span>
+    <span class="hljs-attr">port:</span> <span class="hljs-number">3000</span>
+  <span class="hljs-attr">initialDelaySeconds:</span> <span class="hljs-number">5</span>
+  <span class="hljs-attr">periodSeconds:</span> <span class="hljs-number">10</span>
+  <span class="hljs-attr">timeoutSeconds:</span> <span class="hljs-number">5</span>
+  <span class="hljs-attr">failureThreshold:</span> <span class="hljs-number">3</span></code></pre>
+<h3 id="5-2-启动就绪">5.2 启动就绪<a class="anchor" href="#5-2-启动就绪" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 启动序列中，等所有依赖就绪后再标记 ready</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">waitForStartup</span>(<span class="hljs-params"></span>) {
+  logger.<span class="hljs-title function_">info</span>(<span class="hljs-string">&#x27;Waiting for dependencies...&#x27;</span>);
+  
+  <span class="hljs-comment">// 轮询 /ready 直到依赖全部就绪</span>
+  <span class="hljs-keyword">const</span> maxAttempts = <span class="hljs-number">30</span>;
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i = <span class="hljs-number">0</span>; i &lt; maxAttempts; i++) {
+    <span class="hljs-keyword">const</span> ready = <span class="hljs-keyword">await</span> <span class="hljs-title function_">checkReady</span>();
+    <span class="hljs-keyword">if</span> (ready) {
+      logger.<span class="hljs-title function_">info</span>(<span class="hljs-string">&#x27;All dependencies ready&#x27;</span>);
+      <span class="hljs-keyword">return</span>;
+    }
+    <span class="hljs-keyword">await</span> <span class="hljs-title function_">sleep</span>(<span class="hljs-number">1000</span>);
+  }
+  
+  <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">&#x27;Startup timeout: dependencies not ready within 30s&#x27;</span>);
+}</code></pre>
+<hr>
+<h2 id="6-容器化健康检查">6. 容器化健康检查<a class="anchor" href="#6-容器化健康检查" aria-label="锚点">#</a></h2>
+<h3 id="6-1-dockerfile">6.1 Dockerfile<a class="anchor" href="#6-1-dockerfile" aria-label="锚点">#</a></h3>
+<pre><code class="language-dockerfile"><span class="hljs-keyword">HEALTHCHECK</span><span class="language-bash"> --interval=30s --<span class="hljs-built_in">timeout</span>=5s --start-period=15s --retries=3 \
+  CMD node -e <span class="hljs-string">&quot;require(&#x27;http&#x27;).get(&#x27;http://localhost:3000/health&#x27;, (r) =&gt; { process.exit(r.statusCode === 200 ? 0 : 1) })&quot;</span></span></code></pre>
+<h3 id="6-2-docker-compose">6.2 Docker Compose<a class="anchor" href="#6-2-docker-compose" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"><span class="hljs-attr">healthcheck:</span>
+  <span class="hljs-attr">test:</span> [<span class="hljs-string">&quot;CMD&quot;</span>, <span class="hljs-string">&quot;node&quot;</span>, <span class="hljs-string">&quot;-e&quot;</span>, <span class="hljs-string">&quot;require(&#x27;http&#x27;).get(&#x27;http://localhost:3000/health&#x27;, (r) =&gt; process.exit(r.statusCode === 200 ? 0 : 1))&quot;</span>]
+  <span class="hljs-attr">interval:</span> <span class="hljs-string">30s</span>
+  <span class="hljs-attr">timeout:</span> <span class="hljs-string">5s</span>
+  <span class="hljs-attr">retries:</span> <span class="hljs-number">3</span>
+  <span class="hljs-attr">start_period:</span> <span class="hljs-string">15s</span></code></pre>
+<hr>
+<h2 id="7-监控集成">7. 监控集成<a class="anchor" href="#7-监控集成" aria-label="锚点">#</a></h2>
+<h3 id="7-1-告警规则">7.1 告警规则<a class="anchor" href="#7-1-告警规则" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>条件</th><th>严重度</th><th>说明</th></tr></thead><tbody><tr><td><code>/ready</code> 返回 503 &gt; 30s</td><td>P0</td><td>服务不可用</td></tr><tr><td><code>/health</code> 返回 <code>degraded</code> &gt; 60s</td><td>P1</td><td>内存或磁盘异常</td></tr><tr><td>依赖检查 <code>responseTime</code> &gt; 5000ms</td><td>P1</td><td>依赖响应过慢</td></tr><tr><td><code>/ready</code> 间歇性 503</td><td>P2</td><td>不稳定，需排查</td></tr></tbody></table>
+<h3 id="7-2-日志">7.2 日志<a class="anchor" href="#7-2-日志" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 健康检查请求必须记录</span>
+app.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/health&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">req, res</span>) =&gt;</span> {
+  logger.<span class="hljs-title function_">info</span>(<span class="hljs-string">&#x27;Health check&#x27;</span>, {
+    <span class="hljs-attr">method</span>: req.<span class="hljs-property">method</span>,
+    <span class="hljs-attr">path</span>: req.<span class="hljs-property">path</span>,
+    <span class="hljs-attr">responseTime</span>: <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() - startTime,
+    <span class="hljs-attr">result</span>: <span class="hljs-string">&#x27;ok&#x27;</span>
+  });
+  res.<span class="hljs-title function_">json</span>({ <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;ok&#x27;</span> });
+});</code></pre>
+<hr>
+<h2 id="8-安全考虑">8. 安全考虑<a class="anchor" href="#8-安全考虑" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>考虑</th><th>要求</th></tr></thead><tbody><tr><td>端点公开性</td><td>健康检查端点<strong>不需要认证</strong>（负载均衡器需访问）</td></tr><tr><td>信息泄露</td><td>不返回内部 IP、端口、版本号等敏感信息</td></tr><tr><td>限流</td><td>健康检查端点单独限流（免于常规限流）</td></tr><tr><td>DDoS 防护</td><td>健康检查路径在 CDN/网关层白名单</td></tr></tbody></table>
+<hr>
+<h2 id="9-版本历史">9. 版本历史<a class="anchor" href="#9-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义 Health Check 规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-OPS-002] Graceful Shutdown 规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-OPS-002] Graceful Shutdown 规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-OUT-001] 输出结构规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-OUT-001] 输出结构规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-OPS-003] Health Check 规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

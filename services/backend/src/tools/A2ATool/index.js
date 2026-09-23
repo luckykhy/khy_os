@@ -20,11 +20,12 @@ class A2ATool extends BaseTool {
     return `A2A (Agent-to-Agent) Protocol — communicate with other AI agents.
 
 Operations:
-- "get_agent_card" — Get agent card from remote agent
-- "send_message" — Send a message to another agent
-- "create_task" — Create a task on a remote agent
-- "get_task" — Get task status from remote agent
-- "create_local_card" — Create local agent card`;
+- "get_agent_card" — Fetch a remote agent's A2A Agent Card (/.well-known/agent-card.json)
+- "send_message" — Send a message (A2A message/send; the server creates the task)
+- "create_task" — Alias of send_message (A2A has no separate task-create RPC)
+- "get_task" — Get task state (A2A tasks/get)
+- "cancel_task" — Cancel a running task (A2A tasks/cancel)
+- "create_local_card" — Build this node's A2A Agent Card`;
   }
 
   get inputSchema() {
@@ -33,7 +34,14 @@ Operations:
       properties: {
         operation: {
           type: 'string',
-          enum: ['get_agent_card', 'send_message', 'create_task', 'get_task', 'create_local_card'],
+          enum: [
+            'get_agent_card',
+            'send_message',
+            'create_task',
+            'get_task',
+            'cancel_task',
+            'create_local_card',
+          ],
           description: 'Operation to perform',
         },
         agentUrl: {
@@ -46,7 +54,7 @@ Operations:
         },
         taskId: {
           type: 'string',
-          description: 'Task ID (for get_task)',
+          description: 'Task ID (for get_task / cancel_task)',
         },
         name: {
           type: 'string',
@@ -85,6 +93,10 @@ Operations:
         case 'get_task':
           if (!params.agentUrl || !params.taskId) return { success: false, error: 'agentUrl and taskId are required' };
           return await withDeadline(() => a2a.getTask(params.agentUrl, params.taskId), timeoutMs);
+
+        case 'cancel_task':
+          if (!params.agentUrl || !params.taskId) return { success: false, error: 'agentUrl and taskId are required' };
+          return await withDeadline(() => a2a.cancelTask(params.agentUrl, params.taskId), timeoutMs);
 
         case 'create_local_card':
           return { success: true, card: a2a.createLocalAgentCard({ name: params.name }) };

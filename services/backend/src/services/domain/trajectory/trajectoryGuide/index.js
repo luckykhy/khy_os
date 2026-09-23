@@ -18,7 +18,7 @@
  */
 
 const aiBridge = require('./aiBridge');
-const config = require('../../../../cli/handlers/config');
+const config = require('./config');
 const guideInjector = require('./guideInjector');
 const guideRetriever = require('./guideRetriever');
 const mapAuthor = require('./mapAuthor');

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for liveModelSwitch.js â€?live model switching during sessions.
+ * Tests for liveModelSwitch.js â€”live model switching during sessions.
  */
 
 let mod;

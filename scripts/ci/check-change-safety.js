@@ -7,10 +7,17 @@
  *   node scripts/ci/check-change-safety.js --changed --strict-warnings
  *   node scripts/ci/check-change-safety.js --changed --promote=sensitive-paths
  *   node scripts/ci/check-change-safety.js <file-or-dir> [more...]
+ *   node scripts/ci/check-change-safety.js               # 全量出厂件检查（见下）
  *
  * --strict-warnings 把**所有** warning 视为 error(适合 agent 的单次改动自检)。
  * --promote=<id,id> 只把指定 finding 升为 error(适合 PR 门禁,见下方常量注释)。
  * 可用 id 见 ALL_FINDING_IDS;拼错会以退出码 2 失败,不会静默放过。
+ *
+ * 出厂件明文密钥（SECURITY-001）：本脚本兼作它的执行器。改动集模式下只看本次
+ * 暂存的改动（`--changed` 透传给 `scripts/check_builtin_keys.py`）；**不带
+ * `--changed` 且不给目标时**改动集为空、但出厂件检查照跑，此时会连同打包产物
+ * （`apps/khy-os-client-app/release/*.apk`）一起扫 —— 这也是验证「APK 里只有
+ * 混淆密钥、没有明文」的那条命令。
  */
 'use strict';
 
@@ -18,9 +25,11 @@ const fs = require('fs');
 const path = require('path');
 const cp = require('child_process');
 
+const { interpreterFor, runnerLabel } = require('../lib/pythonInterpreter');
+
 const cwd = process.cwd();
 const repoRoot = path.resolve(__dirname, '..', '..');
-const maintainerMapPath = path.join(repoRoot, 'docs', '_维护者', '维护映射表.json');
+const maintainerMapPath = path.join(repoRoot, 'docs', '14_维护者', 'registry', '维护映射表.json');
 const args = process.argv.slice(2);
 const strictWarnings = args.includes('--strict-warnings');
 // --promote=<id,id>:把指定 id 的 warning 单独视为 error。
@@ -69,6 +78,8 @@ const ALL_FINDING_IDS = new Set([
   'high-risk-surface',
   'weak-model-banner',
   'many-areas',
+  'builtin-key-plaintext',
+  'builtin-key-check-failed',
 ]);
 
 const SENSITIVE_PATH_RE = /(?:^|\/)(?:\.env(?:\..*)?|credentials\.json|secrets?\.(?:ya?ml|json)|.*\.(?:pem|key))$/i;
@@ -274,6 +285,31 @@ function getMaintainerPathType(relPath) {
   return type;
 }
 
+/**
+ * 映射表 paths 悬空检测:一条 areaPath 既不是文件也不是目录(磁盘上不存在)。
+ *
+ * 为什么需要:check-change-safety 的推荐命令来自「改动文件落在哪个 area 的 paths 下」。
+ * 若 areaPath 在目录迁移后变成陈旧路径(如 services/src/services/<name>/x.js 整批搬进
+ * 同名的 domain/<板块>/ 分组),匹配恒为 false → 整个 area 静默失效,它登记的 verify
+ * 命令永不进入「建议跑的验证」,而守卫自身全绿。这是「静默失效」而非「报错」,
+ * 恰恰最难发现。故这里把悬空本身当 finding 报出,让改名/迁移后忘了同步映射表的情况
+ * 立刻可见(与 maintainerMapDocCoverage.test.js 的 docs[] 引用完整性互补 ——
+ * 该测试只管 docs,不管 paths)。
+ */
+function collectDanglingMaintainerPaths(maintainerMap) {
+  const dangling = [];
+  for (const area of (maintainerMap && maintainerMap.areas) || []) {
+    for (const areaPath of (Array.isArray(area.paths) ? area.paths : [])) {
+      const normalized = normalizeRepoPath(areaPath);
+      if (!normalized) continue;
+      if (getMaintainerPathType(normalized) === 'missing') {
+        dangling.push({ area: area.id, path: normalized });
+      }
+    }
+  }
+  return dangling;
+}
+
 function pathMatchesMaintainerAreaPath(filePath, areaPath) {
   const normalizedFile = normalizeRepoPath(filePath);
   const normalizedAreaPath = normalizeRepoPath(areaPath);
@@ -290,15 +326,27 @@ function pathMatchesMaintainerAreaPath(filePath, areaPath) {
   return normalizedFile === normalizedAreaPath || normalizedFile.startsWith(`${normalizedAreaPath}/`);
 }
 
-function buildRecommendedCommands(entries) {
+function buildRecommendedCommands(entries, findings = []) {
   const paths = entries.map(entry => entry.path);
   const commands = new Set();
   const maintainerMatchedPaths = new Set();
 
-  if (changedMode) {
-    commands.add('node scripts/ci/check-agent-rules.js --changed');
-  } else {
-    commands.add(`node scripts/ci/check-agent-rules.js ${paths.map(shellQuote).join(' ')}`);
+  // ⚠ 只在**真有改动路径**时才推荐 check-agent-rules：无目标参数时它按
+  // `process.exit(rawTargets.length > 0 ? 1 : 0)` 直接 exit 0 —— 是一条**必然空转**的命令。
+  // 而「改动集为空但有 finding」正是全量出厂件检查（release 门）的形态：那时推荐一条空转
+  // 命令等于没推荐，还会把读者的注意力从真问题上引开。
+  if (paths.length > 0) {
+    if (changedMode) {
+      commands.add('node scripts/ci/check-agent-rules.js --changed');
+    } else {
+      commands.add(`node scripts/ci/check-agent-rules.js ${paths.map(shellQuote).join(' ')}`);
+    }
+  }
+
+  // 形态类 finding 与改动路径无关（全量模式下 paths 为空），必须单独补一条可执行的下一步，
+  // 否则「发现了出厂件明文密钥」这件事在推荐块里完全没有出口。
+  if (findings.some(finding => String(finding.id).startsWith('builtin-key-'))) {
+    commands.add(runnerLabel(BUILTIN_KEYS_SCRIPT));
   }
 
   if (paths.some(file => /\.(?:js|cjs|mjs|ts|tsx|vue|json|ya?ml)$/i.test(file))) {
@@ -351,11 +399,90 @@ function buildRecommendedCommands(entries) {
   return [...commands];
 }
 
+// ── 出厂件明文密钥（SECURITY-001 的形态判据）─────────────────────────────────
+// `built_in_keys.dart` 里的内置密钥是 XOR 混淆的，所以**明文形态**不该出现在出厂
+// 链路的任何一环（客户端源树 / 打包产物）。判定委托给 `scripts/check_builtin_keys.py`
+// ——它从 Dart 数组解码自动派生候选清单，不需要维护枚举；在这里重写一遍解码逻辑
+// 必然与它漂移（旧 `check_keys.ps1` 就是因为硬编码 6 个前缀漏掉第 7 把）。
+//
+// 为什么挂在 check-change-safety 而不是自己开一条规则：这条约束的语义真源
+// （CLAUDE.md §一 R2）本来就归 SECURITY-001，而本脚本正是它的执行器；另起一条
+// 会与它同域同 subject（[MGMT-STD-008] §3 单一职责），而 §2.2 允许的两条补救
+// （合并 / 拆父子）里，「拆父子」在本仓不可实现 —— `check-gov-rules.js` 的 ID
+// 正则是 /^[A-Z0-9]+(?:-[A-Z0-9]+)*-\d{3}$/，`SECURITY-001.1` 判非法。
+//
+// 模式：改动集模式传 `--changed`（只看暂存改动，毫秒级）；全量模式（不带 --changed）
+// 才连同打包产物（APK）一起扫 —— APK 是构建产物，提交时刻根本不存在。
+const BUILTIN_KEYS_SCRIPT = 'scripts/check_builtin_keys.py';
+const BUILTIN_KEYS_TIMEOUT_MS = 120000;
+
+function builtinKeysUnavailable(reason) {
+  return {
+    id: 'builtin-key-check-failed',
+    severity: 'warning',
+    message: 'Built-in key plaintext check could not run.',
+    detail: `${reason} 复现：${runnerLabel(BUILTIN_KEYS_SCRIPT)}`,
+  };
+}
+
+function collectBuiltinKeyFindings() {
+  const { command, reason } = interpreterFor(BUILTIN_KEYS_SCRIPT);
+  if (!command) return [builtinKeysUnavailable(reason)];
+
+  const cliArgs = [path.join(repoRoot, BUILTIN_KEYS_SCRIPT), '--json'];
+  if (changedMode) cliArgs.push('--changed');
+
+  let proc;
+  try {
+    proc = cp.spawnSync(command, cliArgs, {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      windowsHide: true,
+      timeout: BUILTIN_KEYS_TIMEOUT_MS,
+    });
+  } catch (error) {
+    return [builtinKeysUnavailable(`执行器无法启动：${error.message}`)];
+  }
+  if (proc.error) {
+    return [builtinKeysUnavailable(`执行器无法启动：${proc.error.message}`)];
+  }
+  // 退出码 2 是「用法 / 环境错误」（Dart 文件缺失、解不出任何数组）——
+  // 那是判据本身坏了，必须报出来，不能当成「干净」。
+  if (proc.status === 2) {
+    return [builtinKeysUnavailable(
+      `执行器以退出码 2 结束（用法或环境错误）：${String(proc.stderr || '').trim()}`,
+    )];
+  }
+
+  // `--json` 之后还会追加一行 `Summary: …`（scripts/ 下脚本的既有约定，
+  // 与 rules 里 `--json` 后追加 Summary 同一形态）⇒ 直接 JSON.parse 会炸。
+  const stdout = String(proc.stdout || '');
+  let payload;
+  try {
+    payload = JSON.parse(stdout.split(/\n(?=Summary:)/)[0]);
+  } catch (error) {
+    return [builtinKeysUnavailable(`执行器输出不是合法 JSON：${error.message}`)];
+  }
+
+  return (payload.findings || []).map(hit => ({
+    id: 'builtin-key-plaintext',
+    severity: 'error',
+    message: `Built-in key appears in plaintext in shipped artifact: [${hit.key}] @ ${hit.where}`,
+    detail: '内置密钥只能以 XOR 混淆形态随包分发（SECURITY-001 / CLAUDE.md §一 R2）。'
+      + ' 把明文改回混淆数组，或确认该文件本就不该出现在出厂链路上。'
+      + ` 复现：${runnerLabel(BUILTIN_KEYS_SCRIPT)}`,
+  }));
+}
+
 function main() {
   const entries = uniquePaths(gatherEntries());
   const findings = [];
 
-  if (entries.length === 0) {
+  // 出厂件明文密钥：与改动集无关的形态检查，必须排在下面的早退**之前** ——
+  // 否则「本次没改任何文件」时它会静默不执行，而那恰恰是它最该在场的场合之一。
+  findings.push(...collectBuiltinKeyFindings());
+
+  if (entries.length === 0 && findings.length === 0) {
     console.log('check-change-safety: no matching changed files.');
     process.exit(0);
   }
@@ -449,7 +576,22 @@ function main() {
     });
   }
 
-  const recommendedCommands = buildRecommendedCommands(entries);
+  // 映射表 paths 悬空:与改动集无关的「存量体检」——每次跑都报,否则迁移造成的
+  // 静默失效会被「这次改了啥」的视角永久漏掉。故放在末尾、独立于 entries。
+  const danglingMaintainerPaths = collectDanglingMaintainerPaths(loadMaintainerMapSafe());
+  if (danglingMaintainerPaths.length > 0) {
+    findings.push({
+      id: 'dangling-maintainer-paths',
+      severity: 'warning',
+      message: `Maintainer map has ${danglingMaintainerPaths.length} dangling path(s); those areas can never match a change set.`,
+      detail: `Affected areas: ${[...new Set(danglingMaintainerPaths.map(d => d.area))].join(', ')}. `
+        + `First few: ${danglingMaintainerPaths.slice(0, 5).map(d => `${d.area} → ${d.path}`).join('; ')}. `
+        + 'Fix by updating paths[] to the real location (source of truth: '
+        + 'docs/14_维护者/registry/维护映射表.json).',
+    });
+  }
+
+  const recommendedCommands = buildRecommendedCommands(entries, findings);
 
   console.log(`check-change-safety: scanned ${entries.length} changed file(s).`);
   console.log(`files: ${entries.map(entry => `${entry.status}:${entry.path}`).join(', ')}`);

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [MGMT-RPT-026] GitHub调研-回测引擎-2026-09-13.md -->
+<title>GitHub 调研 — 回测引擎与策略模拟板块 — 2026-09-13 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>MGMT-RPT<span class="sep">›</span>GitHub 调研 — 回测引擎与策略模拟板块 — 2026-09-13</div>
+      <header class="hero reveal"><h1>GitHub 调研 — 回测引擎与策略模拟板块 — 2026-09-13</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#github-调研-回测引擎与策略模拟板块-2026-09-13">GitHub 调研 — 回测引擎与策略模拟板块 — 2026-09-13</a></li><li class="lvl-2"><a href="#调研对象">调研对象</a></li><li class="lvl-2"><a href="#对标项目">对标项目</a></li><li class="lvl-2"><a href="#值得借鉴的点">值得借鉴的点</a></li><li class="lvl-3"><a href="#1-a股-t-1-结算锁定-p0">1. A股 T+1 结算锁定（P0）</a></li><li class="lvl-3"><a href="#2-交易成本模型-佣金-印花税-滑点参数化-p0">2. 交易成本模型：佣金 + 印花税 + 滑点参数化（P0）</a></li><li class="lvl-3"><a href="#3-结果指纹可复现-p0">3. 结果指纹可复现（P0）</a></li><li class="lvl-3"><a href="#4-基准对齐-补齐风险指标-p1">4. 基准对齐 + 补齐风险指标（P1）</a></li><li class="lvl-3"><a href="#5-参数网格-滚动验证-p1">5. 参数网格 / 滚动验证（P1）</a></li><li class="lvl-3"><a href="#6-涨跌停-10-20-成交约束-p1">6. 涨跌停 ±10%/±20% 成交约束（P1）</a></li><li class="lvl-3"><a href="#7-多资产组合回测-p2">7. 多资产组合回测（P2）</a></li><li class="lvl-2"><a href="#落地建议-排序">落地建议（排序）</a></li><li class="lvl-2"><a href="#参考链接">参考链接</a></li><li class="lvl-2"><a href="#落地记录">落地记录</a></li><li class="lvl-3"><a href="#已实现条目-3-条-p0">已实现条目（3 条 P0）</a></li><li class="lvl-3"><a href="#改动文件清单">改动文件清单</a></li><li class="lvl-3"><a href="#检查结果">检查结果</a></li><li class="lvl-3"><a href="#未实现项-标-待人工决策-p1-p2">未实现项（标「待人工决策」，P1/P2）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="github-调研-回测引擎与策略模拟板块-2026-09-13">GitHub 调研 — 回测引擎与策略模拟板块 — 2026-09-13<a class="anchor" href="#github-调研-回测引擎与策略模拟板块-2026-09-13" aria-label="锚点">#</a></h1>
+<blockquote><p>每日板块轮转调研（索引 4/12）：khy-os 回测引擎板块（<code>software/khyquant/services/backtestEngine.js</code> 日级引擎、<code>tickBacktestEngine.js</code> tick 级引擎、<code>strategyEngine.js</code> 策略执行、<code>routes/backtest.js</code> 回测路由）对标 GitHub 开源量化回测框架，寻找可借鉴点。<br>注：<code>services/backend/src/services/backtestEngine.js</code> 是 quantApp 的兼容别名 shim（[DESIGN-TOOL-002] §3.4），真实实现位于 L4 应用层 <code>software/khyquant</code>。</p></blockquote>
+<h2 id="调研对象">调研对象<a class="anchor" href="#调研对象" aria-label="锚点">#</a></h2>
+<p>khy-os 回测引擎板块现状：</p>
+<table><thead><tr><th>组件</th><th>位置</th><th>机制</th></tr></thead><tbody><tr><td>日级回测</td><td><code>software/khyquant/services/backtestEngine.js</code></td><td>vm 沙箱执行策略 signal 函数，单标的、按收盘价零成本成交，算 8 项指标</td></tr><tr><td>tick 级回测</td><td><code>software/khyquant/services/tickBacktestEngine.js</code></td><td>期货 tick CSV，有佣金/滑点/保证金/多空，但无 T+1</td></tr><tr><td>策略执行</td><td><code>software/khyquant/services/strategyEngine.js</code></td><td>JS/Python/TDX 三语言，有硬编码 0.0003 佣金 + 0.001 印花税雏形</td></tr><tr><td>回测路由</td><td><code>software/khyquant/routes/backtest.js</code></td><td>收 <code>symbols[]</code> 但只跑 <code>symbols[0]</code>，结果落 Sequelize 无指纹</td></tr></tbody></table>
+<p><strong>短板（5 条）</strong>：</p>
+<ol><li><strong>无 A股 T+1 结算</strong>：<code>backtestEngine.js:202-217</code> 的 buy/sell 在同一条 bar 内即时成交且同 bar 可卖，不符合 A股「今日买入不可今日卖出」核心规则，结果系统性失真。</li><li><strong>日级引擎零交易成本</strong>：<code>backtestEngine.js:208</code> 直接 <code>cash -= qty*close</code>，无佣金、无印花税、无滑点；<code>strategyEngine.js</code> 已有成本雏形但未进主引擎。</li><li><strong>结果不可复现</strong>：<code>routes/backtest.js</code> 落库无「策略代码 + 参数 + 数据区间」指纹，同参数改数据或改策略代码后无法对照复跑。</li><li><strong>无基准对齐与扩展风险指标</strong>：只有 Sharpe（无风险利率=0）+ 最大回撤 + 胜率，缺 Sortino/Calmar/年化波动率/beta/alpha/超额收益，无 vs HS300 或买入持有对比。</li><li><strong>单标的</strong>：<code>routes/backtest.js:53</code> 只跑 <code>symbols[0]</code>，多资产组合回测缺失。</li></ol>
+<h2 id="对标项目">对标项目<a class="anchor" href="#对标项目" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>Star（2026-09-13）</th><th>技术栈 / 许可</th><th>相关度</th><th>链接</th></tr></thead><tbody><tr><td>backtrader</td><td>~23.2k</td><td>Python / GPLv3</td><td>高：broker/commission/slippage/sizer/Cerebros 分层，最贴近 Node 单进程引擎</td><td>https://github.com/mementum/backtrader</td></tr><tr><td>QuantConnect/Lean</td><td>~21.6k</td><td>C# + Python / Apache-2.0</td><td>高：多资产/基准对齐/WalkForward，体量巨大取设计</td><td>https://github.com/QuantConnect/Lean</td></tr><tr><td>freqtrade</td><td>~54.3k</td><td>Python / GPLv3</td><td>高：hyperopt + 回测缓存指纹（可复现性典范）</td><td>https://github.com/freqtrade/freqtrade</td></tr><tr><td>microsoft/qlib</td><td>~48.5k</td><td>Python / MIT</td><td>高（A股）：T+1/涨跌停/中国市场规则唯一权威参照</td><td>https://github.com/microsoft/qlib</td></tr><tr><td>vectorbt</td><td>~9.1k</td><td>Python / 许可证 NOASSERTION</td><td>中：向量化多参数批量回测架构，Pro 化只借设计</td><td>https://github.com/polakowo/vectorbt</td></tr><tr><td>nautilus_trader</td><td>~28.9k</td><td>Rust + Python / LGPLv3</td><td>中：生产级事件驱动，对日频单进程引擎过重</td><td>https://github.com/nautechsystems/nautilus_trader</td></tr></tbody></table>
+<p><strong>关键发现</strong>：七大框架无一内置 A股 T+1/涨跌停——它们面向欧美/加密市场，默认即时成交。T+1 与涨跌停是<strong>必须自实现的市场规则</strong>，qlib 是规则参照的唯一权威来源。</p>
+<h2 id="值得借鉴的点">值得借鉴的点<a class="anchor" href="#值得借鉴的点" aria-label="锚点">#</a></h2>
+<h3 id="1-a股-t-1-结算锁定-p0">1. A股 T+1 结算锁定（P0）<a class="anchor" href="#1-a股-t-1-结算锁定-p0" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：qlib 回测执行语义中「今日买入不可今日卖出」是 A股核心规则。开源界无现成 Node 实现，需自实现：维护 <code>lockedShares</code> 计数，bar i 买入的份额在 bar i+1 才允许卖出。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>backtestEngine.js:202-217</code> buy/sell 同 bar 即时成交，T+0 失真。</p>
+<p><strong>改哪些文件</strong>：<code>software/khyquant/services/backtestEngine.js</code>（模拟循环，加 <code>lockedShares</code> + 当日不可卖判定）。</p>
+<h3 id="2-交易成本模型-佣金-印花税-滑点参数化-p0">2. 交易成本模型：佣金 + 印花税 + 滑点参数化（P0）<a class="anchor" href="#2-交易成本模型-佣金-印花税-滑点参数化-p0" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：backtrader <code>comminfo.py</code> 的 <code>CommInfoBase</code> 支持 perc/fixed 佣金，<code>brokers/bbroker.py</code> 提供 <code>set_slippage_perc()</code>/<code>set_slippage_fixed()</code>；每笔 trade 记录费用字段。khy-os <code>strategyEngine.js:468/494</code> 已有 0.0003 佣金 + 0.001 印花税硬编码雏形，但未进主引擎。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>backtestEngine.js</code> 零成本成交，A股卖出 0.1% 印花税 + 双边佣金完全缺失。</p>
+<p><strong>改哪些文件</strong>：<code>software/khyquant/services/backtestEngine.js</code>（加 <code>commissionRate</code>/<code>stampDutyRate</code>/<code>slippage</code> 可选参数，默认对齐 strategyEngine 的 0.0003/0.001，trade 记录费用字段）。</p>
+<h3 id="3-结果指纹可复现-p0">3. 结果指纹可复现（P0）<a class="anchor" href="#3-结果指纹可复现-p0" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：freqtrade <code>optimize/backtest_caching.py</code> 用 SHA-1 对 config + 策略文件哈希生成唯一 key，参数/策略变更自动失效缓存。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>routes/backtest.js</code> 落库无指纹，结果不可对照复跑。</p>
+<p><strong>改哪些文件</strong>：<code>software/khyquant/routes/backtest.js</code>（加 <code>resultFingerprint = sha1(strategy.code + JSON.stringify(params) + symbol + start + end + 成本参数)</code> 字段）。</p>
+<h3 id="4-基准对齐-补齐风险指标-p1">4. 基准对齐 + 补齐风险指标（P1）<a class="anchor" href="#4-基准对齐-补齐风险指标-p1" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：Lean 对 benchmark 算 excess return、Sortino、Calmar、beta/alpha；vectorbt <code>portfolio/</code> 支持 benchmark series。</p>
+<p><strong>khy-os 现状差在哪</strong>：只有 Sharpe（rf=0）+ 最大回撤 + 胜率，缺 Sortino/Calmar/年化波动率/beta/alpha，无 HS300 对比。</p>
+<p><strong>改哪些文件</strong>：<code>backtestEngine.js</code> 指标段（纯计算，加 <code>benchmarkClose</code> 可选输入）。</p>
+<h3 id="5-参数网格-滚动验证-p1">5. 参数网格 / 滚动验证（P1）<a class="anchor" href="#5-参数网格-滚动验证-p1" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：backtrader Cerebros 多实例批量回测容器；Lean WalkForward 滚动 in-sample/out-of-sample；freqtrade hyperopt + overfitting 防护（train/test split、random-seed）。</p>
+<p><strong>khy-os 现状差在哪</strong>：单参数单标的，无 grid search、无 walk-forward、无过拟合防护。</p>
+<p><strong>改哪些文件</strong>：<code>backtestEngine.js</code> 加 <code>paramsGrid</code> 选项（Node 单进程天然适合循环批量跑）。</p>
+<h3 id="6-涨跌停-10-20-成交约束-p1">6. 涨跌停 ±10%/±20% 成交约束（P1）<a class="anchor" href="#6-涨跌停-10-20-成交约束-p1" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：qlib 数据含 limit-up/limit-down 标志，涨停无法买入 / 跌停无法卖出。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>klineDataService</code> 已有 <code>changePercent</code>，但引擎未判定涨跌停跳过成交。</p>
+<p><strong>改哪些文件</strong>：<code>backtestEngine.js</code> 模拟循环（数据侧已有 <code>changePercent</code>，只需判定 |changePercent| ≥ 阈值时该 bar 不可成交）。</p>
+<h3 id="7-多资产组合回测-p2">7. 多资产组合回测（P2）<a class="anchor" href="#7-多资产组合回测-p2" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：bt <code>bt/backtesting.py</code> 的 <code>universe</code> 多资产 + 组合再平衡；Lean 单算法内多 symbol 跨资产组合净值。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>routes/backtest.js:53</code> 只跑 <code>symbols[0]</code>。</p>
+<p><strong>改哪些文件</strong>：<code>routes/backtest.js</code> + <code>backtestEngine.js</code>（重构量大，留后续）。</p>
+<h2 id="落地建议-排序">落地建议（排序）<a class="anchor" href="#落地建议-排序" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>行动</th><th>优先级</th><th>工作量</th></tr></thead><tbody><tr><td>1</td><td>A股 T+1 结算锁定（<code>lockedShares</code>，当日买入次日才可卖）</td><td>P0</td><td>1 小时</td></tr><tr><td>2</td><td>交易成本模型：佣金 0.0003 + 印花税 0.001（卖出）+ 滑点参数化，trade 记录费用</td><td>P0</td><td>1 小时</td></tr><tr><td>3</td><td>结果指纹：SHA-1(策略代码 + 参数 + 标的 + 区间 + 成本参数) 随回测记录落库</td><td>P0</td><td>半小时</td></tr><tr><td>4</td><td>基准对齐 + Sortino/Calmar/年化波动率/beta/alpha 补齐</td><td>P1</td><td>半天</td></tr><tr><td>5</td><td>参数网格 + walk-forward in/out-of-sample</td><td>P1</td><td>1 天</td></tr><tr><td>6</td><td>涨跌停 ±10%/±20% 成交约束</td><td>P1</td><td>半天（依赖数据侧标志）</td></tr><tr><td>7</td><td>多资产组合回测</td><td>P2</td><td>数天</td></tr></tbody></table>
+<h2 id="参考链接">参考链接<a class="anchor" href="#参考链接" aria-label="锚点">#</a></h2>
+<ul><li>https://github.com/mementum/backtrader — <code>comminfo.py</code>、<code>brokers/bbroker.py</code>、<code>sizers.py</code>、<code>cerebro.py</code></li><li>https://github.com/freqtrade/freqtrade — <code>optimize/backtest_caching.py</code>（指纹）、<code>optimize/hyperopt/</code></li><li>https://github.com/microsoft/qlib — A股 T+1/涨跌停规则参照</li><li>https://github.com/QuantConnect/Lean — 基准对齐、WalkForward</li><li>https://github.com/polakowo/vectorbt — 向量化多参数（仅借设计，许可证 NOASSERTION）</li><li>https://github.com/nautechsystems/nautilus_trader — 确定性重放（思想参照）</li></ul>
+<h2 id="落地记录">落地记录<a class="anchor" href="#落地记录" aria-label="锚点">#</a></h2>
+<h3 id="已实现条目-3-条-p0">已实现条目（3 条 P0）<a class="anchor" href="#已实现条目-3-条-p0" aria-label="锚点">#</a></h3>
+<p><strong>P0-1 A股 T+1 结算锁定（qlib 规则，自实现）</strong> — ✅ 已实现</p>
+<ul><li><code>software/khyquant/services/backtestEngine.js</code>：模拟循环新增 <code>lockedShares</code> 计数——bar i 买入的份额进 <code>lockedShares</code>，bar i+1 循环顶 <code>position += lockedShares</code> 解锁；卖出仅作用于已解锁的 <code>position</code>，当日买入不可当日卖出。<code>options.tPlus1</code> 默认 <code>true</code>（A股），可设 <code>false</code> 退回 T+0（非 A股标的）。</li><li>强制平仓分支把 <code>position + lockedShares</code> 一并了结，避免 T+1 锁定的余仓在数据末尾被遗漏。</li></ul>
+<p><strong>P0-2 交易成本模型：佣金 + 印花税 + 滑点（backtrader comminfo 分层设计）</strong> — ✅ 已实现</p>
+<ul><li><code>backtestEngine.js</code> 新增 <code>DEFAULT_COSTS</code>（commissionRate 0.0003 双边、stampDutyRate 0.001 仅卖出、slippage 0.001、tPlus1 true）作为本引擎成本单一真源，对齐 <code>strategyEngine.js:468/494</code> 既有的 0.0003/0.001 硬编码，两套引擎不再分叉。</li><li><code>resolveCosts(options)</code> 解析有效成本模型（数值可覆盖、未指定走默认）；买入按 <code>close*(1+slippage)</code> 成交、卖出按 <code>close*(1-slippage)</code>，trade 记录新增 <code>commission</code>/<code>stampDuty</code>/<code>slippageCost</code>/<code>totalCost</code> 字段。</li><li>结果对象新增顶层 <code>totalCommission</code>/<code>totalStampDuty</code>/<code>totalSlippageCost</code> 与 <code>execution</code> 元数据块（成本参数 + 费用合计），让使用者看清数字是在哪些假设下产生的。</li></ul>
+<p><strong>P0-3 结果指纹可复现（freqtrade backtest cache key）</strong> — ✅ 已实现</p>
+<ul><li><code>backtestEngine.js</code> 新增 <code>buildFingerprint({signalCode, params, symbol, startDate, endDate, costs})</code>：对确定性决定结果的要素做 SHA-1，取 16 位 hex。同输入恒同指纹，改策略代码/参数/区间/成本模型任一即变。</li><li><code>run()</code> 返回结果携带 <code>fingerprint</code> 字段；<code>routes/backtest.js</code> 把 <code>resultFingerprint</code> + <code>execution</code> 写进 <code>Backtest.parameters</code>（JSON 字段），<strong>不改 DB schema/migration</strong>（符合「不改 schema」红线）。</li></ul>
+<h3 id="改动文件清单">改动文件清单<a class="anchor" href="#改动文件清单" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td><code>software/khyquant/services/backtestEngine.js</code></td><td>改</td><td>T+1 结算（<code>lockedShares</code>）、成本模型（<code>DEFAULT_COSTS</code>/<code>resolveCosts</code>/滑点/印花税/费用字段）、结果指纹（<code>buildFingerprint</code>）、导出附 <code>buildFingerprint</code>/<code>resolveCosts</code>/<code>DEFAULT_COSTS</code></td></tr><tr><td><code>software/khyquant/routes/backtest.js</code></td><td>改</td><td>回测落库追加 <code>resultFingerprint</code> + <code>execution</code> 到 <code>parameters</code> JSON 字段</td></tr><tr><td><code>software/khyquant/tests/backtestEngine.test.js</code></td><td>新增</td><td>5 个 <code>node:test</code> 用例（成本默认/覆盖、指纹确定性+输入敏感、T+1 锁定、成本降资金）</td></tr></tbody></table>
+<h3 id="检查结果">检查结果<a class="anchor" href="#检查结果" aria-label="锚点">#</a></h3>
+<ul><li><code>require('./software/khyquant/services/backtestEngine.js')</code> + <code>require('./routes/backtest.js')</code>：✅ 加载成功</li><li><code>node --test software/khyquant/tests/backtestEngine.test.js</code>：✅ 5/5 通过</li><li><code>node scripts/ci/check-agent-rules.js backtestEngine.js routes/backtest.js backtestEngine.test.js</code>：✅ 3 文件零违规</li></ul>
+<h3 id="未实现项-标-待人工决策-p1-p2">未实现项（标「待人工决策」，P1/P2）<a class="anchor" href="#未实现项-标-待人工决策-p1-p2" aria-label="锚点">#</a></h3>
+<ul><li><strong>P1 基准对齐 + 风险指标补齐（Sortino/Calmar/年化波动率/beta/alpha、vs HS300 或买入持有）</strong>：纯计算层，加在指标段，需先定基准数据源（HS300 指数 K线），留后续</li><li><strong>P1 参数网格 + walk-forward in/out-of-sample</strong>：<code>backtestEngine.run</code> 加 <code>paramsGrid</code> 选项即可（Node 单进程循环批量跑），但优化目标函数与过拟合防护（deflated Sharpe）需单独立项</li><li><strong>P1 涨跌停 ±10%/±20% 成交约束</strong>：依赖数据侧 <code>changePercent</code> 判定，<code>klineDataService</code> 已有该字段，引擎侧只需加「|changePercent| ≥ 阈值时该 bar 不可成交」判定</li><li><strong>P2 多资产组合回测</strong>：<code>routes/backtest.js:53</code> 只跑 <code>symbols[0]</code>，需重构 <code>backtestEngine.run</code> 支持多 symbol 组合结算，重构量大</li><li><strong><code>strategyEngine.js</code> 硬编码佣金/印花税收敛到 <code>DEFAULT_COSTS</code></strong>：本次只统一了主引擎，<code>strategyEngine.js:468/494</code> 的 0.0003/0.001 仍各自硬编码，留后续统一引用</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-025] 模型发现UI与一键链路收敛-2026-09-13.html"><div class="dir">← 上一篇</div><div class="ttl">模型发现 UI + Ollama 一键链路 + ai-backend 死路径收敛 设计方案 — 2026-09-13</div></a><a class="next" href="../../../docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-027] GitHub调研-双机同步-2026-09-14.html"><div class="dir">下一篇 →</div><div class="ttl">GitHub 调研 — 双机流水线与指挥部状态同步板块 — 2026-09-14</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-026] GitHub调研-回测引擎-2026-09-13.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

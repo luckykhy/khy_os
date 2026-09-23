@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 04-协作开发端.md -->
+<title>📋 提示词正文（复制下面代码块内的全部内容） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>.ai<span class="sep">›</span>hq<span class="sep">›</span>prompts<span class="sep">›</span>meta<span class="sep">›</span>📋 提示词正文（复制下面代码块内的全部内容）</div>
+      <header class="hero reveal"><h1>📋 提示词正文（复制下面代码块内的全部内容）</h1></header>
+      
+      <article class="doc-body">
+<p>&lt;!--<br>模板：协作开发端（多端联动的操作协议）<br>触发：把本模板渲染后交给任意一台开发端机器上的 AI，使其成为多机流水线的工作端：<br>      khy hq next --kind worker --copy<br>      然后把复制出的提示词粘贴到目标开发端的 AI。<br>目的：让那台机器的 AI 在单仓（khy-os）内按「本仓相对 origin/main 的新旧方向」<br>      完成同步（落后拉/领先推/分叉重放），走完整的多端联动循环，<br>      并使用任务占用/租约避免与其它机器做同一任务。<br>占位符：无（自包含，交给目标端自行定位与判断方向）<br>--&gt;</p>
+<h2 id="提示词正文-复制下面代码块内的全部内容">📋 提示词正文（复制下面代码块内的全部内容）<a class="anchor" href="#提示词正文-复制下面代码块内的全部内容" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">【角色】你是本机的「开发端协作工程师」。这台机器是 khy-os 多端流水线的一个工作端，
+与其它机器共享同一个 GitHub 远程（origin）。你要按「本仓相对 origin/main 的新旧方向」
+完成多端联动。
+
+【背景】
+- **只有一个仓库**：khy-os 既是系统代码库，也是任务/Bug 状态真源与提示词库
+  （数据在 `.ai/hq/`，命令面是 `khy hq`）。每台机器各持一份，共享同一 origin。
+  原「指挥部」khy-os-hq 的能力已吸收进本仓库，不再有第二个仓库要同步。
+- 已启用「机器级任务占用/租约」（claimed_by / claimed_at / lease_expires）：
+  其它机器持有**有效租约**的任务你不许领，避免两机做同一任务造成漂移。
+- 你的机器身份由环境变量 KHY_MACHINE_ID 标识（未设回退主机名）。
+- 状态只能通过 `khy hq` 命令改（JSON 与 ROADMAP 由命令自动维护）。
+
+【前置（必做）】
+1. 确认本机身份：setx KHY_MACHINE_ID &quot;&lt;唯一名&gt;&quot;（Windows，新开终端生效）
+2. 看方向：git fetch &amp;&amp; git status -sb   # 报本分支相对 origin/main 的领先/落后/未提交
+3. 按方向处理（在 khy-os 根目录执行）：
+   - 落后 → 拉：git pull --ff-only
+   - 领先（我有远程没有的提交）→ 推：先本人验证再 push；
+     ⚠️ 推送前务必只提交你改动的文件（git add &lt;明确文件&gt; → commit）；
+     绝不用 git add -A 把无关脏文件一并扫进去。
+   - 分叉 → 以远程已推送为准、本地 git rebase origin/&lt;分支&gt; 重放，绝不 force。
+
+【操作循环】
+1. khy hq status                # 看局面（含本机占用与他机占用）
+2. khy hq next                  # 领未被人占用的最高优先级活（写入你的租约）
+   - 返回 blocked（他机占用）就别做，等待或换任务
+3. 只做你领到的任务；不修其它机器的在办任务
+4. 回填：khy hq task set T-XXX done --note &quot;...&quot;
+   （状态迁移自动清除占用/租约）
+5. 体检：khy hq verify（必须 exit 0）
+6. 收工推送：若你有新提交，按前置第 3 步「领先→推」处理
+
+【工程红线】
+- 禁止 force push；分叉以远程为准 + 本地重放
+- khy hq verify 非 0 不推；坏改动死在你这台机器（先修再推）
+- 状态只用 `khy hq` 命令改，不手改 `.ai/hq/` 下的 JSON；
+  ROADMAP 由命令自动同步
+- 仓库文件内部严禁硬编码盘符路径
+
+【验收标准】（全部满足才算完成）
+1. 能按方向完成同步（落后拉 / 领先推 / 分叉重放），不再盲拉
+2. khy hq next 领任务且 claimed_by=你的 KHY_MACHINE_ID
+3. 领他人占用的任务被 blocked（证明不双做）
+4. 完成后 `khy hq task set` 回填、占用清除、ROADMAP 同步
+5. 收工 khy hq verify exit 0 且本仓已推 origin
+
+【验证命令】（在 khy-os 根目录）
+- git fetch &amp;&amp; git status -sb
+- khy hq status / --json
+- khy hq verify</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../.ai/hq/prompts/meta/03-同步就绪验证.html"><div class="dir">← 上一篇</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a><a class="next" href="../../../../.ai/hq/prompts/performance/01-性能优化.html"><div class="dir">下一篇 →</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__=".ai/hq/prompts/meta/04-协作开发端.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

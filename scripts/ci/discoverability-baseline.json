@@ -1,0 +1,11 @@
+{
+  "_note": "层级可发现性基线（规则 LAYOUT-006 / 真源 docs/10_规范/DESIGN-LAY/[DESIGN-LAY-006] 仓库层级可发现性规范.md）。只降不升：上调基线让 CI 变绿是违规（与 [DESIGN-LAY-005] §7 同一纪律）。降低基线的唯一合法方式是按 [DESIGN-LAY-006] §4 整族拆分一个目录**并清理其 re-export 壳**（§4.2）后重跑 --update-baseline。",
+  "_scope": "本表记录 [DESIGN-LAY-006] §1.5 的存量：40 个目录直接条目数超可发现性预算，4 份 docs 索引有形无实（最大单块 > 80）。全部已逐条人工核验为真。",
+  "_ratchet-note": "⚠ 2026-09-18 实测（[DESIGN-LAY-006] §1.3.1 缺陷 ②）：flat-overflow 的计数**不因「整族迁移 + 留壳」而下降** —— 壳计入可发现性预算（discoverabilityGuard.classifyEntry 只按名字分类），父目录实测 808 → 809（+1）。降低该计数必须「迁移 + 清壳」两步。故 2.1 批 tool* 迁移**不构成**一次基线下调，flat-overflow 保持 40 是正确读数。",
+  "_strength-note": "no-grouping 已于 2026-09-18 由 warning 升 error（[DESIGN-LAY-006] §7 步骤3）—— 文档索引编组无「+1 副作用」，可先行收紧。flat-overflow 的升级须待存量家族完成「迁移 + 清壳」，否则会把照 §4 做完标准动作的目录判红（与 §6「强度必须与有可行解同步」冲突）。",
+  "counts": {
+    "flat-overflow": 40,
+    "no-grouping": 4
+  },
+  "updated": "2026-09-18"
+}

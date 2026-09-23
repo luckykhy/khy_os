@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 02-新机器接入.md -->
+<title>📋 提示词正文（复制下面代码块内的全部内容） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>.ai<span class="sep">›</span>hq<span class="sep">›</span>prompts<span class="sep">›</span>meta<span class="sep">›</span>📋 提示词正文（复制下面代码块内的全部内容）</div>
+      <header class="hero reveal"><h1>📋 提示词正文（复制下面代码块内的全部内容）</h1></header>
+      
+      <article class="doc-body">
+<p>&lt;!--<br>模板：新机器接入单机工作节点流水线<br>触发：在一台还没部署 khy-os 的机器上，把本模板渲染后交给该机上打开的<br>      任意编码 AI 执行：khy hq next --kind onboard<br>目的：让另一台机器的 AI 自主完成 clone、检查、自动拉取任务注册与验收，<br>      无需人工逐步操作<br>占位符：无（自包含）<br>--&gt;</p>
+<h2 id="提示词正文-复制下面代码块内的全部内容">📋 提示词正文（复制下面代码块内的全部内容）<a class="anchor" href="#提示词正文-复制下面代码块内的全部内容" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">【角色】你是开发环境接入工程师。这台电脑要加入一条多机协作流水线：
+每台机器各持有一份「khy-os」仓库——它既是操作系统代码库，也是提示词库与
+任务/Bug 状态真源（数据在 `.ai/hq/`，命令面是 `khy hq`）——靠 GitHub 仓库互相同步。
+你的任务是让这台机器成为完整的工作节点，全程自主完成，只在需要凭据时询问用户。
+
+【背景事实】
+- 系统代码仓库（同时承载任务/Bug 状态真源）：https://github.com/luckykhy/khy_os
+- 状态真源：仓库内 `.ai/hq/`（PROGRESS.json / BUGS.json / MODELS.json /
+  ROADMAP.md / CONTEXT.md + 19 个提示词模板），只走 `khy hq` 命令读写，
+  不手改 JSON
+- 同步机制：单仓。开工 `git pull --ff-only`、收工检查全绿后 `git push`；
+  autopull.bat + Windows 计划任务只在工作区干净时周期同步已提交内容
+- 会话协议与铁律以 khy-os 根目录 AGENTS.md 为准，接入完成后先读它；
+  单仓六步会话协议速查见 `.ai/hq/CONTEXT.md` 第八节
+
+【流程】
+1. 定位本机的 khy-os 目录：依次探测环境变量 KHY_OS_DIR、
+   &lt;便携根&gt;\khy-os、&lt;盘符根&gt;\khy-os。都不存在则先安装 git、Node.js 与 Python，
+   再 clone https://github.com/luckykhy/khy_os.git 到 &lt;便携根&gt;\khy-os。
+   已存在则尝试 git pull --ff-only 更新；若因本地有未推送提交而失败，
+   不要强推不要重置——如实报告用户，由用户决定处理方式
+2. 确认本仓库的 git 提交身份已配置（否则 commit 报
+   Author identity unknown，会卡死整个同步链）：git config user.name 与
+   user.email 任一为空时，参照仓库既有历史设定仓库级身份：
+     git log -1 --format=&quot;%an|%ae&quot;     ← 查看历史作者
+     git config --local user.name &quot;&lt;历史作者名&gt;&quot;
+     git config --local user.email &quot;&lt;历史作者邮箱&gt;&quot;
+3. 机械验收：在 khy-os 根目录运行 khy hq verify，必须 exit 0
+4. 同步体检：git fetch &amp;&amp; git status -sb，确认本分支与 origin/main 的
+   领先/落后状态
+5. 注册周期拉取（当前用户即可，无需管理员）：
+   schtasks /Create /F /TN &quot;khy-hq-autopull&quot; /SC MINUTE /MO 10
+            /TR &quot;&lt;khy-os 的绝对路径&gt;\autopull.bat&quot;
+   注册后必须加固——schtasks 默认 StopOnIdleEnd=true，机器一离开空闲状态
+   Windows 就掐断运行中的任务，Last Result 报 -1073741510（0xC000013A）。
+   在 PowerShell 里执行：
+     $t = Get-ScheduledTask khy-hq-autopull
+     $s = $t.Settings
+     $s.IdleSettings.StopOnIdleEnd = $false
+     $s.ExecutionTimeLimit = &#x27;PT30M&#x27;
+     $s.DisallowStartIfOnBatteries = $false
+     $s.StopIfGoingOnBatteries = $false
+     Set-ScheduledTask khy-hq-autopull -Settings $s
+   然后 schtasks /Run 手动触发一次，schtasks /Query /V 确认 Last Result = 0。
+   说明：计划任务指向本机路径属机器配置，允许含盘符
+6. 试运行领活循环：在 khy-os 根目录执行 khy hq status，能输出任务总览即接入成功
+
+【工程红线】
+- 全程禁止 force push；禁止把 token/密码写进任何被 git 跟踪的文件
+- 仓库文件内部严禁硬编码盘符路径（脚本一律从自身位置推算）；
+  只有计划任务注册这类机器级配置可用绝对路径
+- 任何推送动作前必须 khy hq verify 全绿；本任务原则上只 clone/pull，不主动 push
+- 不要手改 `.ai/hq/` 下的 JSON——状态迁移一律走 `khy hq` 命令正门
+
+【验收标准】（全部满足才算完成，缺一即返工）
+1. khy hq verify exit 0
+2. git fetch &amp;&amp; git status -sb 能如实报出本分支与 origin/main 的领先/落后状态
+3. 计划任务 khy-hq-autopull 存在，手动运行后 Last Result = 0，
+   且 IdleSettings.StopOnIdleEnd 已为 False
+4. khy hq status 能输出总览
+5. 最终报告逐条列出每个步骤的实际命令与结果
+
+【验证命令】（在 khy-os 根目录）
+- khy hq verify
+- git fetch &amp;&amp; git status -sb
+- schtasks /Query /TN &quot;khy-hq-autopull&quot; /V /FO LIST
+- powershell -NoProfile -Command &quot;(Get-ScheduledTask khy-hq-autopull).Settings.IdleSettings.StopOnIdleEnd&quot;</code></pre>
+<hr>
+<h3 id="使用说明">使用说明<a class="anchor" href="#使用说明" aria-label="锚点">#</a></h3>
+<ul><li>场景：新机器只有 khy-os（甚至什么都没有），想让它成为第二工作节点</li><li>把渲染出的提示词发给该机上任意编码 AI（Claude Code / Codex / opencode 等），</li></ul>
+<p>它会自主完成 clone→检查→计划任务注册→验收，仅在需要 GitHub 授权时找你</p>
+<ul><li>完成后该机即纳入多机协议：其上的 AI 用 <code>khy hq next</code> 自己领活，无需人工传提示词</li><li>khy-os 的 AGENTS.md 已内置「多机流水线自举」一节：只要那台机器的 khy-os</li></ul>
+<p>拉到含该节的提交，其 AI 冷启动即可自行发现接入指令——本模板是它的<br>  显式人工触发版，二者内容保持一致</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../.ai/hq/prompts/meta/01-能力沉淀.html"><div class="dir">← 上一篇</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a><a class="next" href="../../../../.ai/hq/prompts/meta/03-同步就绪验证.html"><div class="dir">下一篇 →</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__=".ai/hq/prompts/meta/02-新机器接入.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

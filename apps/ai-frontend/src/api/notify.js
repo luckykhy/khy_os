@@ -119,3 +119,36 @@ export function deriveErrorMessage(error, opts = {}) {
   const hint = env.hint ? `（提示：${env.hint}）` : '';
   return `${env.message || env.code}${hint}`;
 }
+
+/**
+ * Lightweight toast wrappers (FE-001 W9 — centralize ElMessage calls).
+ * These bypass KhyError classification and directly wrap ElMessage.
+ */
+export function showSuccess(message, options = {}) {
+  return _showToast('success', message, options);
+}
+
+export function showError(message, options = {}) {
+  return _showToast('error', message, options);
+}
+
+export function showWarning(message, options = {}) {
+  return _showToast('warning', message, options);
+}
+
+export function showInfo(message, options = {}) {
+  return _showToast('info', message, options);
+}
+
+function _showToast(type, message, options = {}) {
+  try {
+    ElMessage({ message, type, showClose: true, ...options });
+  } catch {
+    try {
+      // eslint-disable-next-line no-console
+      console.error('[notify]', message);
+    } catch {
+      /* noop */
+    }
+  }
+}

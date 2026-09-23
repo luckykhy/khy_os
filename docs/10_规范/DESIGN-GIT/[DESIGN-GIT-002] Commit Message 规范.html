@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-GIT-002] Commit Message 规范.md -->
+<title>[DESIGN-GIT-002] Commit Message 规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-GIT<span class="sep">›</span>[DESIGN-GIT-002] Commit Message 规范</div>
+      <header class="hero reveal"><h1>[DESIGN-GIT-002] Commit Message 规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-git-002-commit-message-规范">[DESIGN-GIT-002] Commit Message 规范</a></li><li class="lvl-2"><a href="#1-格式总览">1. 格式总览</a></li><li class="lvl-2"><a href="#2-type-完整枚举">2. Type 完整枚举</a></li><li class="lvl-2"><a href="#3-scope-约定">3. Scope 约定</a></li><li class="lvl-3"><a href="#3-1-使用场景">3.1 使用场景</a></li><li class="lvl-3"><a href="#3-2-推荐-scope">3.2 推荐 Scope</a></li><li class="lvl-3"><a href="#3-3-示例">3.3 示例</a></li><li class="lvl-2"><a href="#4-subject-规则">4. Subject 规则</a></li><li class="lvl-3"><a href="#4-1-格式要求">4.1 格式要求</a></li><li class="lvl-3"><a href="#4-2-动词选择">4.2 动词选择</a></li><li class="lvl-2"><a href="#5-body-格式">5. Body 格式</a></li><li class="lvl-3"><a href="#5-1-何时写-body">5.1 何时写 Body</a></li><li class="lvl-3"><a href="#5-2-body-格式要求">5.2 Body 格式要求</a></li><li class="lvl-3"><a href="#5-3-示例">5.3 示例</a></li><li class="lvl-2"><a href="#6-footer-格式">6. Footer 格式</a></li><li class="lvl-3"><a href="#6-1-issue-引用">6.1 Issue 引用</a></li><li class="lvl-3"><a href="#6-2-破坏性变更-breaking-change">6.2 破坏性变更（BREAKING CHANGE）</a></li><li class="lvl-2"><a href="#7-完整示例">7. 完整示例</a></li><li class="lvl-3"><a href="#7-1-功能提交">7.1 功能提交</a></li><li class="lvl-3"><a href="#7-2-修复提交">7.2 修复提交</a></li><li class="lvl-3"><a href="#7-3-重构提交">7.3 重构提交</a></li><li class="lvl-3"><a href="#7-4-破坏性变更">7.4 破坏性变更</a></li><li class="lvl-3"><a href="#7-5-回滚提交">7.5 回滚提交</a></li><li class="lvl-2"><a href="#8-commit-质量规则">8. Commit 质量规则</a></li><li class="lvl-3"><a href="#8-1-一个-commit-一件事">8.1 一个 Commit 一件事</a></li><li class="lvl-3"><a href="#8-2-禁用">8.2 禁用</a></li><li class="lvl-2"><a href="#9-工具集成">9. 工具集成</a></li><li class="lvl-3"><a href="#9-1-commitlint-建议后续添加">9.1 commitlint（建议后续添加）</a></li><li class="lvl-3"><a href="#9-2-交互式提交">9.2 交互式提交</a></li><li class="lvl-2"><a href="#10-版本历史">10. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-git-002-commit-message-规范">[DESIGN-GIT-002] Commit Message 规范<a class="anchor" href="#design-git-002-commit-message-规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>用途</strong>：定义 khy-os 项目的 Commit Message 详细格式规范。<br>CONTRIBUTING.md §2 和 DESIGN-GIT-001 §2 已给出基本格式，本文档补全完整细节。</p></blockquote>
+<hr>
+<h2 id="1-格式总览">1. 格式总览<a class="anchor" href="#1-格式总览" aria-label="锚点">#</a></h2>
+<pre><code>&lt;type&gt;(&lt;scope&gt;): &lt;subject&gt;
+
+&lt;body&gt;
+
+&lt;footer&gt;</code></pre>
+<table><thead><tr><th>部分</th><th>必选</th><th>说明</th></tr></thead><tbody><tr><td><code>type</code></td><td>✅</td><td>变更类型</td></tr><tr><td><code>scope</code></td><td>❌</td><td>变更范围</td></tr><tr><td><code>subject</code></td><td>✅</td><td>变更简述</td></tr><tr><td><code>body</code></td><td>❌</td><td>变更详情</td></tr><tr><td><code>footer</code></td><td>❌</td><td>Issue 引用 + 破坏性变更</td></tr></tbody></table>
+<hr>
+<h2 id="2-type-完整枚举">2. Type 完整枚举<a class="anchor" href="#2-type-完整枚举" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>type</th><th>说明</th><th>使用场景</th></tr></thead><tbody><tr><td><code>feat</code></td><td>新功能</td><td>新增功能、新增端点、新组件</td></tr><tr><td><code>fix</code></td><td>修复 bug</td><td>修复错误、修复异常行为</td></tr><tr><td><code>docs</code></td><td>文档变更</td><td>README、规范、注释（非代码）</td></tr><tr><td><code>refactor</code></td><td>重构</td><td>代码结构变更，无功能变化</td></tr><tr><td><code>perf</code></td><td>性能优化</td><td>性能提升、内存优化</td></tr><tr><td><code>test</code></td><td>测试</td><td>新增/修改测试用例</td></tr><tr><td><code>build</code></td><td>构建系统</td><td>webpack、vite、esbuild 配置</td></tr><tr><td><code>ci</code></td><td>CI 配置</td><td>GitHub Actions、脚本变更</td></tr><tr><td><code>chore</code></td><td>维护任务</td><td>依赖更新、工具变更</td></tr><tr><td><code>style</code></td><td>代码格式</td><td>不影响代码逻辑的格式变更（prettier）</td></tr><tr><td><code>revert</code></td><td>回滚</td><td>撤销之前的 commit</td></tr></tbody></table>
+<hr>
+<h2 id="3-scope-约定">3. Scope 约定<a class="anchor" href="#3-scope-约定" aria-label="锚点">#</a></h2>
+<h3 id="3-1-使用场景">3.1 使用场景<a class="anchor" href="#3-1-使用场景" aria-label="锚点">#</a></h3>
+<p>Scope 描述变更的<strong>模块/区域</strong>，帮助定位变更影响面。</p>
+<h3 id="3-2-推荐-scope">3.2 推荐 Scope<a class="anchor" href="#3-2-推荐-scope" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Scope</th><th>对应目录/模块</th></tr></thead><tbody><tr><td><code>auth</code></td><td>认证、授权、JWT、Session</td></tr><tr><td><code>api</code></td><td>API 路由、请求/响应格式</td></tr><tr><td><code>cli</code></td><td>CLI 命令、别名、REPL</td></tr><tr><td><code>gateway</code></td><td>AI 网关、适配器</td></tr><tr><td><code>models</code></td><td>Sequelize 模型</td></tr><tr><td><code>migrations</code></td><td>数据库迁移</td></tr><tr><td><code>services</code></td><td>业务逻辑层</td></tr><tr><td><code>middleware</code></td><td>Express 中间件</td></tr><tr><td><code>frontend</code></td><td>前端页面/组件</td></tr><tr><td><code>styles</code></td><td>CSS/主题/令牌</td></tr><tr><td><code>docs</code></td><td>文档</td></tr><tr><td><code>ci</code></td><td>CI/CD 配置</td></tr><tr><td><code>deps</code></td><td>依赖更新</td></tr><tr><td><code>AGENTS.md</code></td><td>AGENTS.md 规则变更</td></tr></tbody></table>
+<h3 id="3-3-示例">3.3 示例<a class="anchor" href="#3-3-示例" aria-label="锚点">#</a></h3>
+<pre><code>feat(auth): add refresh token rotation
+fix(services/gateway): handle timeout in adapter pool
+refactor(cli): extract daemon handler from main router
+docs(AGENTS.md): clarify port self-healing mechanism</code></pre>
+<hr>
+<h2 id="4-subject-规则">4. Subject 规则<a class="anchor" href="#4-subject-规则" aria-label="锚点">#</a></h2>
+<h3 id="4-1-格式要求">4.1 格式要求<a class="anchor" href="#4-1-格式要求" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规则</th><th>说明</th><th>示例</th></tr></thead><tbody><tr><td><strong>≤ 50 字符</strong></td><td>第一行（标题行）不超过 50 字符</td><td><code>feat(auth): add refresh token</code> ✅</td></tr><tr><td><strong>祈使句</strong></td><td>用动词原形开头</td><td><code>add</code> 而非 <code>added</code> / <code>adds</code></td></tr><tr><td><strong>首字母小写</strong></td><td>不句首大写</td><td><code>add</code> 而非 <code>Add</code></td></tr><tr><td><strong>不以句号结尾</strong></td><td>标题不加句号</td><td><code>add feature</code> ✅</td></tr><tr><td><strong>不换行</strong></td><td>subject 不换行</td><td>—</td></tr></tbody></table>
+<h3 id="4-2-动词选择">4.2 动词选择<a class="anchor" href="#4-2-动词选择" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>场景</th><th>推荐动词</th></tr></thead><tbody><tr><td>新增</td><td><code>add</code>、<code>implement</code>、<code>introduce</code></td></tr><tr><td>修复</td><td><code>fix</code>、<code>patch</code>、<code>resolve</code></td></tr><tr><td>删除</td><td><code>remove</code>、<code>drop</code>、<code>delete</code></td></tr><tr><td>修改</td><td><code>update</code>、<code>change</code>、<code>modify</code></td></tr><tr><td>优化</td><td><code>optimize</code>、<code>improve</code>、<code>refactor</code></td></tr><tr><td>替换</td><td><code>replace</code>、<code>migrate</code>、<code>rename</code></td></tr><tr><td>支持</td><td><code>support</code>、<code>handle</code>、<code>allow</code></td></tr></tbody></table>
+<hr>
+<h2 id="5-body-格式">5. Body 格式<a class="anchor" href="#5-body-格式" aria-label="锚点">#</a></h2>
+<h3 id="5-1-何时写-body">5.1 何时写 Body<a class="anchor" href="#5-1-何时写-body" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>场景</th><th>Body 建议</th></tr></thead><tbody><tr><td>涉及 2+ 模块</td><td>必写</td></tr><tr><td>有 trade-off</td><td>必写</td></tr><tr><td>修复非显式 bug</td><td>必写</td></tr><tr><td>单模块简单变更</td><td>可选</td></tr><tr><td>依赖更新</td><td>可选</td></tr></tbody></table>
+<h3 id="5-2-body-格式要求">5.2 Body 格式要求<a class="anchor" href="#5-2-body-格式要求" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规则</th><th>说明</th></tr></thead><tbody><tr><td><strong>祈使句</strong></td><td>与 subject 一致</td></tr><tr><td><strong>≤ 72 字符/行</strong></td><td>终端友好</td></tr><tr><td><strong>说明 WHY</strong></td><td>不重复 WHAT（WHAT 在 subject 中已说明）</td></tr><tr><td><strong>空行分隔</strong></td><td>Subject → 空行 → Body</td></tr></tbody></table>
+<h3 id="5-3-示例">5.3 示例<a class="anchor" href="#5-3-示例" aria-label="锚点">#</a></h3>
+<pre><code>feat(auth): implement refresh token rotation
+
+Previous refresh tokens were reusable, allowing session hijacking
+if the token was leaked. This change rotates the refresh token on
+each use and invalidates the previous one.
+
+Trade-off: increases DB writes on each refresh. Mitigated by
+caching the session hash in Redis (TTL 7d).</code></pre>
+<hr>
+<h2 id="6-footer-格式">6. Footer 格式<a class="anchor" href="#6-footer-格式" aria-label="锚点">#</a></h2>
+<h3 id="6-1-issue-引用">6.1 Issue 引用<a class="anchor" href="#6-1-issue-引用" aria-label="锚点">#</a></h3>
+<pre><code>Closes #123
+Fixes #456
+Refs #789</code></pre>
+<table><thead><tr><th>关键字</th><th>行为</th></tr></thead><tbody><tr><td><code>Closes #123</code></td><td>PR 合并后自动关闭 Issue 123</td></tr><tr><td><code>Fixes #456</code></td><td>同上</td></tr><tr><td><code>Refs #789</code></td><td>关联但不关闭</td></tr></tbody></table>
+<h3 id="6-2-破坏性变更-breaking-change">6.2 破坏性变更（BREAKING CHANGE）<a class="anchor" href="#6-2-破坏性变更-breaking-change" aria-label="锚点">#</a></h3>
+<pre><code>feat(api)!: change error response format
+
+BREAKING CHANGE: Error response format changed from
+{ message, error } to { success, error: { code, message } }
+
+Clients must update error handling to match new format.
+Migration guide: docs/04_IMPL_实现/IMPL-RPT-050-error-format-migration.md
+
+Closes #234</code></pre>
+<p><strong>规则</strong>：</p>
+<ul><li><code>BREAKING CHANGE:</code> 必须大写，后跟冒号</li><li>在 Footer 中，Body 之后，Issue 引用之前</li><li>必须描述变更内容 + 影响范围 + 迁移方法</li></ul>
+<hr>
+<h2 id="7-完整示例">7. 完整示例<a class="anchor" href="#7-完整示例" aria-label="锚点">#</a></h2>
+<h3 id="7-1-功能提交">7.1 功能提交<a class="anchor" href="#7-1-功能提交" aria-label="锚点">#</a></h3>
+<pre><code>feat(services/gateway): add circuit breaker for AI adapters
+
+Implement circuit breaker pattern to prevent cascade failures
+when an AI provider becomes unavailable. Uses half-open state
+to test recovery before fully reopening.
+
+Closes #182</code></pre>
+<h3 id="7-2-修复提交">7.2 修复提交<a class="anchor" href="#7-2-修复提交" aria-label="锚点">#</a></h3>
+<pre><code>fix(cli): prevent crash on empty input in REPL
+
+Empty lines in REPL mode caused TypeError when accessing
+input.trim().split(). Guard against empty input before parsing.
+
+Fixes #198</code></pre>
+<h3 id="7-3-重构提交">7.3 重构提交<a class="anchor" href="#7-3-重构提交" aria-label="锚点">#</a></h3>
+<pre><code>refactor(services): extract token counting from aiGateway
+
+Move token counting logic into dedicated tokenUsageService.
+aiGateway now delegates to the service, reducing handler
+complexity from 18 to 8.</code></pre>
+<h3 id="7-4-破坏性变更">7.4 破坏性变更<a class="anchor" href="#7-4-破坏性变更" aria-label="锚点">#</a></h3>
+<pre><code>feat(api)!: bump API version to v2
+
+BREAKING CHANGE: API base path changed from /api/v1 to /api/v2.
+All clients must update endpoint URLs. Old /api/v1 endpoints
+are deprecated and will be removed in v3.0.
+
+Migration: update VITE_AI_API_BASE_URL to /api/v2
+Deprecation sunset: 2026-12-01
+
+Closes #300</code></pre>
+<h3 id="7-5-回滚提交">7.5 回滚提交<a class="anchor" href="#7-5-回滚提交" aria-label="锚点">#</a></h3>
+<pre><code>revert: revert &quot;feat(auth): add refresh token rotation&quot;
+
+This reverts commit abc1234.
+
+Reason: rotation caused session loss for users with multiple
+tabs open. Will re-implement with tab-aware session tracking.</code></pre>
+<hr>
+<h2 id="8-commit-质量规则">8. Commit 质量规则<a class="anchor" href="#8-commit-质量规则" aria-label="锚点">#</a></h2>
+<h3 id="8-1-一个-commit-一件事">8.1 一个 Commit 一件事<a class="anchor" href="#8-1-一个-commit-一件事" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>原则</th><th>说明</th></tr></thead><tbody><tr><td><strong>一个功能点 = 一个 commit</strong></td><td>不要混多个变更</td></tr><tr><td><strong>可独立回滚</strong></td><td>每个 commit 可单独 revert</td></tr><tr><td><strong>原子性</strong></td><td>不出现 &quot;part 1 of 3&quot;</td></tr></tbody></table>
+<h3 id="8-2-禁用">8.2 禁用<a class="anchor" href="#8-2-禁用" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>禁止</th><th>原因</th></tr></thead><tbody><tr><td><code>Update</code> / <code>Fix</code> / <code>WIP</code></td><td>无信息量</td></tr><tr><td><code>Merge pull request #123</code></td><td>squash merge 时自动生成，手动 commit 禁止</td></tr><tr><td><code>temp</code> / <code>tmp</code> / <code>debug</code></td><td>不应进入历史</td></tr><tr><td>50 字符以上的 subject</td><td>超出终端显示</td></tr></tbody></table>
+<hr>
+<h2 id="9-工具集成">9. 工具集成<a class="anchor" href="#9-工具集成" aria-label="锚点">#</a></h2>
+<h3 id="9-1-commitlint-建议后续添加">9.1 commitlint（建议后续添加）<a class="anchor" href="#9-1-commitlint-建议后续添加" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-comment">// package.json</span>
+<span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;commitlint&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;rules&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;type-enum&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-number">2</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;always&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-punctuation">[</span>
+        <span class="hljs-string">&quot;feat&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;fix&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;docs&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;style&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;refactor&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-string">&quot;perf&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;test&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;build&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;ci&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;chore&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;revert&quot;</span>
+      <span class="hljs-punctuation">]</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;type-case&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-number">2</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;always&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;lower-case&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;subject-case&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-number">2</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;never&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;upper-case&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;subject-max-length&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-number">2</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;always&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-number">50</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;header-max-length&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-number">2</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;always&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-number">72</span><span class="hljs-punctuation">]</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<blockquote><p>当前仓库<strong>没有</strong> commitlint（CONTRIBUTING.md 注明了原因：钩子拖慢提交）。本文档作为约定规范存在，未来可工具化。</p></blockquote>
+<h3 id="9-2-交互式提交">9.2 交互式提交<a class="anchor" href="#9-2-交互式提交" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 使用 git commit 的交互式模式</span>
+git commit -m <span class="hljs-string">&quot;<span class="hljs-subst">$(cat &lt;&lt;&#x27;EOF&#x27;
+feat(scope)</span>: subject
+
+body text here
+
+BREAKING CHANGE: description
+Closes #123
+EOF
+)&quot;</span></code></pre>
+<hr>
+<h2 id="10-版本历史">10. 版本历史<a class="anchor" href="#10-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义 Commit Message 规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-GIT/[DESIGN-GIT-001] Git 工作流规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-GIT-001] Git 工作流规范</div></a><a class="next" href="../../../docs/10_规范/DESIGN-GIT/[DESIGN-GIT-003] Git 自动化治理规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-GIT-003] Git 规范与自动化治理</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-GIT/[DESIGN-GIT-002] Commit Message 规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

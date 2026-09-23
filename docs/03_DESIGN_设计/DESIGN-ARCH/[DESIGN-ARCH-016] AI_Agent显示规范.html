@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-016] AI_Agent显示规范.md -->
+<title>khyos 生态 AI Agent 显示规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>khyos 生态 AI Agent 显示规范</div>
+      <header class="hero reveal"><h1>khyos 生态 AI Agent 显示规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyos-生态-ai-agent-显示规范">khyos 生态 AI Agent 显示规范</a></li><li class="lvl-2"><a href="#0-设计目标与分层">0. 设计目标与分层</a></li><li class="lvl-2"><a href="#1-开发者结构化日志标准-可观测层">1. 开发者结构化日志标准（可观测层）</a></li><li class="lvl-3"><a href="#1-1-格式">1.1 格式</a></li><li class="lvl-3"><a href="#1-2-字段契约">1.2 字段契约</a></li><li class="lvl-3"><a href="#1-3-脱敏-必须">1.3 脱敏（必须）</a></li><li class="lvl-3"><a href="#1-4-大文本摘要-必须">1.4 大文本摘要（必须）</a></li><li class="lvl-3"><a href="#1-5-输出去向">1.5 输出去向</a></li><li class="lvl-2"><a href="#2-用户-ui-提示标准-交互层">2. 用户 UI 提示标准（交互层）</a></li><li class="lvl-3"><a href="#2-1-三类提示">2.1 三类提示</a></li><li class="lvl-3"><a href="#2-2-硬规则">2.2 硬规则</a></li><li class="lvl-3"><a href="#2-3-通道">2.3 通道</a></li><li class="lvl-2"><a href="#3-与-khyos-底座的集成-双模运行">3. 与 khyos 底座的集成（双模运行）</a></li><li class="lvl-3"><a href="#3-1-模式判定">3.1 模式判定</a></li><li class="lvl-3"><a href="#3-2-嵌入模式-eco">3.2 嵌入模式（eco）</a></li><li class="lvl-3"><a href="#3-3-独立模式-standalone">3.3 独立模式（standalone）</a></li><li class="lvl-2"><a href="#4-反模式-严禁项-硬红线">4. 反模式 — 严禁项（硬红线）</a></li><li class="lvl-2"><a href="#5-落地检查清单">5. 落地检查清单</a></li><li class="lvl-2"><a href="#6-参考实现">6. 参考实现</a></li><li class="lvl-2"><a href="#7-终端分区-tui-区域划分">7. 终端分区（TUI 区域划分）</a></li><li class="lvl-3"><a href="#7-1-命名层级约定">7.1 命名层级约定</a></li><li class="lvl-3"><a href="#7-2-顶层区域-9-个-自顶向下">7.2 顶层区域（9 个，自顶向下）</a></li><li class="lvl-3"><a href="#7-3-main-大区-6-个宏观组">7.3 MAIN 大区（6 个宏观组）</a></li><li class="lvl-3"><a href="#7-4-main-小区-10-个-挂在大区之下">7.4 MAIN 小区（10 个，挂在大区之下）</a></li><li class="lvl-3"><a href="#7-5-几何契约">7.5 几何契约</a></li><li class="lvl-3"><a href="#7-6-维护流程">7.6 维护流程</a></li><li class="lvl-3"><a href="#7-7-相关文件">7.7 相关文件</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-016 | 阶段: 设计 | 原路径: docs/03_DESIGN_设计/[DESIGN-ARCH-016] AI_Agent显示规范.md（新建） --&gt;</p>
+<h1 id="khyos-生态-ai-agent-显示规范">khyos 生态 AI Agent 显示规范<a class="anchor" href="#khyos-生态-ai-agent-显示规范" aria-label="锚点">#</a></h1>
+<blockquote><p>版本 v1.0（2026-06-12）。本规范定义 khyos 生态内<strong>所有</strong> AI Agent（含 khyos 内置<br>agent 与 khyquant 等生态应用）在运行期如何向<strong>开发者</strong>与<strong>用户</strong>呈现信息。<br>规范遵循 khyos 三条架构原则：<strong>按需加载</strong>、<strong>零待机噪音</strong>、<strong>双模运行（独立 / 嵌入）</strong>。</p>
+<p>关键词 <strong>必须 / 严禁 / 应 / 可</strong> 按 RFC 2119 语义理解。<br>本规范是<strong>硬约束</strong>：新增或重构任何涉及 Agent 运行、LLM 调用、工具调用的代码，<br>其日志与提示输出必须符合本规范，否则视为缺陷。</p></blockquote>
+<hr>
+<h2 id="0-设计目标与分层">0. 设计目标与分层<a class="anchor" href="#0-设计目标与分层" aria-label="锚点">#</a></h2>
+<p>一次 Agent 运行同时面向两类受众，二者<strong>物理隔离、互不污染</strong>：</p>
+<table><thead><tr><th>层</th><th>受众</th><th>通道</th><th>形态</th><th>触发时机</th></tr></thead><tbody><tr><td><strong>开发者可观测层</strong></td><td>开发者 / 运维 / 排障</td><td>结构化日志（stderr / 日志文件 / khyos 上报）</td><td>单行 JSON（NDJSON）</td><td>仅任务执行期间</td></tr><tr><td><strong>用户交互层</strong></td><td>终端用户</td><td>stdout（独立）/ khyos UI（嵌入）</td><td>自然语言短句</td><td>仅任务执行期间</td></tr></tbody></table>
+<p><strong>核心红线</strong>：</p>
+<ul><li>用户交互层<strong>严禁</strong>出现任何 JSON、trace_id、step 序号、token 数等内部字段。</li><li>开发者层<strong>严禁</strong>在没有任务运行时（待机、初始化、等待输入）产生任何输出。</li><li>两层共享同一个 <code>trace_id</code>，但<strong>仅开发者层</strong>可见它。</li></ul>
+<hr>
+<h2 id="1-开发者结构化日志标准-可观测层">1. 开发者结构化日志标准（可观测层）<a class="anchor" href="#1-开发者结构化日志标准-可观测层" aria-label="锚点">#</a></h2>
+<h3 id="1-1-格式">1.1 格式<a class="anchor" href="#1-1-格式" aria-label="锚点">#</a></h3>
+<p>开发者日志<strong>必须</strong>为<strong>单行 JSON（NDJSON）</strong>，一事件一行，便于 <code>grep</code> / <code>jq</code> /<br>日志管道消费。<strong>严禁</strong>多行美化 JSON，<strong>严禁</strong>自由文本穿插。</p>
+<h3 id="1-2-字段契约">1.2 字段契约<a class="anchor" href="#1-2-字段契约" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>字段</th><th>类型</th><th style="text-align:center">必填</th><th>说明</th></tr></thead><tbody><tr><td><code>ts</code></td><td>string(ISO8601)</td><td style="text-align:center">✅</td><td>事件时间戳</td></tr><tr><td><code>trace_id</code></td><td>string(32hex)</td><td style="text-align:center">✅</td><td>单次 Agent 运行的全局关联 id，贯穿所有 step</td></tr><tr><td><code>span_id</code></td><td>string(16hex)</td><td style="text-align:center">◐</td><td>子步骤 id（并行工具/子 agent 时用）</td></tr><tr><td><code>app</code></td><td>string</td><td style="text-align:center">✅</td><td>产生方，如 <code>khyos</code> / <code>khyquant</code></td></tr><tr><td><code>agent</code></td><td>string</td><td style="text-align:center">✅</td><td>agent 角色名，如 <code>technical</code> / <code>general-purpose</code></td></tr><tr><td><code>step</code></td><td>number</td><td style="text-align:center">✅</td><td>步骤序号，从 1 递增</td></tr><tr><td><code>phase</code></td><td>string</td><td style="text-align:center">✅</td><td><code>start</code> / <code>llm</code> / <code>tool</code> / <code>result</code> / <code>error</code> / <code>end</code></td></tr><tr><td><code>thought</code></td><td>string</td><td style="text-align:center">◐</td><td>思考<strong>摘要</strong>（见 §1.4 截断），<strong>严禁</strong>全量</td></tr><tr><td><code>action</code></td><td>string</td><td style="text-align:center">◐</td><td>当前动作，如 <code>llm.analyze</code> / <code>tool.getStockData</code></td></tr><tr><td><code>tokens</code></td><td>object</td><td style="text-align:center">◐</td><td><code>{in, out, total}</code>，无则省略</td></tr><tr><td><code>duration_ms</code></td><td>number</td><td style="text-align:center">◐</td><td>该 step 耗时</td></tr><tr><td><code>status</code></td><td>string</td><td style="text-align:center">◐</td><td><code>ok</code> / <code>fallback</code> / <code>error</code></td></tr><tr><td><code>detail</code></td><td>string</td><td style="text-align:center">◐</td><td>补充信息<strong>摘要</strong>（见 §1.4）</td></tr></tbody></table>
+<p>示例（一行）：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;ts&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-string">&quot;2026-06-12T03:14:00.123Z&quot;</span><span class="hljs-punctuation">,</span><span class="hljs-attr">&quot;trace_id&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-string">&quot;a1b2...&quot;</span><span class="hljs-punctuation">,</span><span class="hljs-attr">&quot;app&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-string">&quot;khyquant&quot;</span><span class="hljs-punctuation">,</span><span class="hljs-attr">&quot;agent&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-string">&quot;technical&quot;</span><span class="hljs-punctuation">,</span><span class="hljs-attr">&quot;step&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-number">2</span><span class="hljs-punctuation">,</span><span class="hljs-attr">&quot;phase&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-string">&quot;llm&quot;</span><span class="hljs-punctuation">,</span><span class="hljs-attr">&quot;action&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-string">&quot;llm.analyze&quot;</span><span class="hljs-punctuation">,</span><span class="hljs-attr">&quot;tokens&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;in&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-number">812</span><span class="hljs-punctuation">,</span><span class="hljs-attr">&quot;out&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-number">156</span><span class="hljs-punctuation">,</span><span class="hljs-attr">&quot;total&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-number">968</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span><span class="hljs-attr">&quot;duration_ms&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-number">1340</span><span class="hljs-punctuation">,</span><span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-string">&quot;ok&quot;</span><span class="hljs-punctuation">,</span><span class="hljs-attr">&quot;thought&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-string">&quot;MACD 金叉，量能温和放大…&quot;</span><span class="hljs-punctuation">}</span></code></pre>
+<h3 id="1-3-脱敏-必须">1.3 脱敏（必须）<a class="anchor" href="#1-3-脱敏-必须" aria-label="锚点">#</a></h3>
+<p>开发者日志在写出前<strong>必须</strong>对以下内容打码，<strong>严禁</strong>明文落盘：</p>
+<ul><li>API Key / Token / Bearer / Secret / Password / Cookie：保留前 4 + 后 2 字符，</li></ul>
+<p>其余以 <code>***</code> 代替（如 <code>sk-1***-2</code>）；无法判断长度时整体替换为 <code>***REDACTED***</code>。</p>
+<ul><li>形如 <code>sk-…</code>、<code>khy-…</code>、<code>Bearer …</code>、<code>Authorization: …</code>、<code>token=…</code>、<code>api_key=…</code></li></ul>
+<p>的子串<strong>必须</strong>命中脱敏。</p>
+<ul><li>邮箱/手机号等 PII <strong>应</strong>按需打码（最小化原则）。</li></ul>
+<h3 id="1-4-大文本摘要-必须">1.4 大文本摘要（必须）<a class="anchor" href="#1-4-大文本摘要-必须" aria-label="锚点">#</a></h3>
+<p>任何进入日志的字符串字段（<code>thought</code> / <code>action</code> / <code>detail</code> / prompt / completion /<br>工具输入输出）<strong>必须</strong>截断：</p>
+<ul><li>默认上限 <strong>100 字符</strong>；超出则取前 100 字符 + <code>…(+N chars)</code> 后缀。</li><li><strong>严禁</strong>把完整 prompt、完整 LLM 回复、完整 DataFrame、完整工具结果打进日志。</li><li>需要全量留存时<strong>应</strong>写入专门的 trace/audit 落盘通道，<strong>不得</strong>进常规日志流。</li></ul>
+<h3 id="1-5-输出去向">1.5 输出去向<a class="anchor" href="#1-5-输出去向" aria-label="锚点">#</a></h3>
+<ul><li><strong>独立模式</strong>：写 <strong>stderr</strong>（保持 stdout 纯净，供数据/JSON-RPC 管道使用）。</li><li><strong>嵌入模式</strong>：见 §3，经 khyos 上报通道。</li><li>开发者层<strong>默认开启</strong>但<strong>仅在任务期间</strong>产生事件；<strong>可</strong>经环境变量</li></ul>
+<p><code>KHY_AGENT_LOG=0</code> 关闭（用于极致静默场景）。</p>
+<hr>
+<h2 id="2-用户-ui-提示标准-交互层">2. 用户 UI 提示标准（交互层）<a class="anchor" href="#2-用户-ui-提示标准-交互层" aria-label="锚点">#</a></h2>
+<h3 id="2-1-三类提示">2.1 三类提示<a class="anchor" href="#2-1-三类提示" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>内容</th><th>形态</th><th>反例（严禁）</th></tr></thead><tbody><tr><td><strong>进度提示</strong></td><td>把内部步骤翻译成自然语言</td><td><code>正在分析技术面…</code></td><td><code>Step 2: tool_call getStockData</code></td></tr><tr><td><strong>结果汇报</strong></td><td>结论 + 简要资源消耗</td><td><code>分析完成，耗时 12 秒，建议：观望</code></td><td>直接打印结果 JSON</td></tr><tr><td><strong>错误降级</strong></td><td>用户能懂的安抚 + 可选动作</td><td><code>数据源暂时不可用，已用缓存结果继续</code></td><td>抛出堆栈 / 打印 error 对象</td></tr></tbody></table>
+<h3 id="2-2-硬规则">2.2 硬规则<a class="anchor" href="#2-2-硬规则" aria-label="锚点">#</a></h3>
+<ul><li><strong>严禁</strong>向用户暴露任何内部 JSON、trace_id、step 序号、token 原始数字、堆栈、</li></ul>
+<p>类名 / 方法名 / 文件路径。</p>
+<ul><li>进度提示<strong>应</strong>为简短现在进行时短句（&quot;正在 X…&quot;），<strong>不应</strong>逐条罗列工具调用。</li><li>结果汇报<strong>必须</strong>附<strong>简要</strong>资源消耗（至少耗时；<strong>可</strong>含 token 概数），</li></ul>
+<p>用人话表达（&quot;耗时 12 秒 / 消耗约 1.2k tokens&quot;），<strong>严禁</strong>裸露 <code>tokens:{in,out}</code>。</p>
+<ul><li>错误<strong>必须</strong>降级为自然语言，并尽量给出<strong>已采取的兜底</strong>（&quot;已切换备用数据源&quot;），</li></ul>
+<p><strong>严禁</strong>把异常对象直接 <code>console.error(error)</code> 暴露给用户通道。</p>
+<h3 id="2-3-通道">2.3 通道<a class="anchor" href="#2-3-通道" aria-label="锚点">#</a></h3>
+<ul><li><strong>独立模式</strong>：进度/错误写 <strong>stderr</strong>，最终结果<strong>可</strong>走 stdout（结构化交付）或 stderr（纯交互）；二者择一并保持一致。</li><li><strong>嵌入模式</strong>：经 khyos UI 通道（§3），由底座决定如何渲染（spinner / 折叠组 / 通知）。</li></ul>
+<hr>
+<h2 id="3-与-khyos-底座的集成-双模运行">3. 与 khyos 底座的集成（双模运行）<a class="anchor" href="#3-与-khyos-底座的集成-双模运行" aria-label="锚点">#</a></h2>
+<p>Agent <strong>必须</strong>在启动时判定运行模式，并据此选择通道。<strong>严禁</strong>两种模式混用通道。</p>
+<h3 id="3-1-模式判定">3.1 模式判定<a class="anchor" href="#3-1-模式判定" aria-label="锚点">#</a></h3>
+<p>按优先级（khyquant 既有约定，见 <code>khy_quant/cli.py</code> <code>_detect_mode</code>）：</p>
+<ol><li>显式环境变量：<code>KHYQUANT_MODE=eco|standalone</code>（Node 侧）/ <code>KHYOS_ECO_MODE</code>（Python 侧）；</li><li>能 <code>import khy_platform.app_protocol</code> / 检测到 khyos 注入的环境 → <strong>嵌入（eco）</strong>；</li><li>默认 → <strong>独立（standalone）</strong>。</li></ol>
+<h3 id="3-2-嵌入模式-eco">3.2 嵌入模式（eco）<a class="anchor" href="#3-2-嵌入模式-eco" aria-label="锚点">#</a></h3>
+<ul><li>用户进度/结果/错误<strong>必须</strong>通过 <strong>khyos 上报通道</strong>交给底座，由底座统一渲染，</li></ul>
+<p><strong>不得</strong>直接 <code>console.log</code> 抢占终端（会破坏 khyos TUI 布局）。</p>
+<ul><li>上报通道约定（当前实现，向后兼容）：<ul><li>若宿主提供 <code>khyos.api.report_status(event)</code>（Python <code>app_protocol</code> ctx 注入）→ 调用之；</li><li>否则降级为向 <strong><code>KHYOS_REPORT_FD</code></strong> 指定的文件描述符写 <strong>NDJSON 状态事件</strong></li></ul></li></ul>
+<p>（事件含 <code>{type:&quot;agent.status&quot;, trace_id, phase, message}</code>），由底座排空；</p>
+<ul><li>再降级（无 fd）→ 写 stderr 并打 <code>khyos.status</code> 前缀，供底座解析。</li></ul>
+<blockquote><p>集成点尚未由宿主提供具体 API 时，实现<strong>必须</strong>优雅降级到 stderr，并以<br><code># TODO: [Agent-Display-Unresolved]</code> 标注真正的 <code>khyos.api</code> 绑定位置，<br><strong>严禁</strong>直接调用不存在的 API 导致 Agent 崩溃。</p></blockquote>
+<h3 id="3-3-独立模式-standalone">3.3 独立模式（standalone）<a class="anchor" href="#3-3-独立模式-standalone" aria-label="锚点">#</a></h3>
+<ul><li>进度/错误 → stderr；开发者日志 → stderr（或 <code>KHY_AGENT_LOG</code> 控制）。</li><li>不依赖任何 khyos 运行时；缺失 <code>khy_platform</code> <strong>必须</strong>静默降级，<strong>严禁</strong>报错。</li></ul>
+<hr>
+<h2 id="4-反模式-严禁项-硬红线">4. 反模式 — 严禁项（硬红线）<a class="anchor" href="#4-反模式-严禁项-硬红线" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>严禁</th><th>原因</th><th>正确做法</th></tr></thead><tbody><tr><td>R1</td><td><strong>心跳/轮询日志</strong>：定时器每 N 秒吐 &quot;still alive / checking…&quot;</td><td>污染日志、淹没真实事件</td><td>仅在<strong>状态跃迁</strong>时记录（参考 <code>networkDetector._record</code>）</td></tr><tr><td>R2</td><td><strong>待机吐日志</strong>：无任务时打印（初始化、等待输入、空闲轮询）</td><td>违反零待机噪音</td><td>待机绝对静默；日志只在任务 <code>start</code>→<code>end</code> 之间产生</td></tr><tr><td>R3</td><td><strong>全量打印大文本</strong>：完整 prompt / LLM 回复 / DataFrame / 工具结果</td><td>撑爆日志、泄露、性能</td><td>一律摘要（§1.4，≤100 字符 + 长度标注）</td></tr><tr><td>R4</td><td><strong>明文密钥</strong>：API Key / Token 进日志</td><td>安全事故</td><td>强制脱敏（§1.3）</td></tr><tr><td>R5</td><td><strong>向用户暴露 JSON/内部字段</strong>：step、trace_id、tokens 裸值、堆栈</td><td>体验灾难</td><td>翻译成自然语言（§2）</td></tr><tr><td>R6</td><td><strong>嵌入模式直接 console.log</strong></td><td>破坏 khyos TUI</td><td>走 khyos 上报通道（§3.2）</td></tr><tr><td>R7</td><td><strong>吞掉错误后静默</strong>或<strong>把 error 对象丢给用户</strong></td><td>难排障 / 吓用户</td><td>开发者层记 <code>phase:error</code>，用户层降级为人话</td></tr></tbody></table>
+<hr>
+<h2 id="5-落地检查清单">5. 落地检查清单<a class="anchor" href="#5-落地检查清单" aria-label="锚点">#</a></h2>
+<p>任何 Agent 相关代码合入前，逐条自检：</p>
+<ul><li>[ ] 一次运行有唯一 <code>trace_id</code>，贯穿所有 step（§1.2）</li><li>[ ] 开发者日志为单行 JSON，字段齐全（§1.2）</li><li>[ ] 密钥/Token 已脱敏（§1.3 / R4）</li><li>[ ] 大文本已摘要 ≤100 字符（§1.4 / R3）</li><li>[ ] 用户提示是自然语言，无任何内部字段（§2 / R5）</li><li>[ ] 结果汇报含简要耗时/资源（§2.2）</li><li>[ ] 已判定双模，嵌入走 khyos 通道、独立走 stderr（§3 / R6）</li><li>[ ] 待机/初始化期间零输出（§4 R1/R2）</li><li>[ ] 错误已降级为人话且记录了兜底动作（R7）</li><li>[ ] 不确定如何改的代码<strong>保持原状</strong>并标 <code># TODO: [Agent-Display-Unresolved]</code></li></ul>
+<hr>
+<h2 id="6-参考实现">6. 参考实现<a class="anchor" href="#6-参考实现" aria-label="锚点">#</a></h2>
+<ul><li><strong>khyquant</strong>：<code>software/khyquant/services/agentDisplay.js</code>（本规范的生态应用侧参考实现：</li></ul>
+<p>trace_id、NDJSON 开发者日志、脱敏、摘要、双模上报、资源汇报、idle 静默）。</p>
+<ul><li><strong>khyos</strong>：<code>services/backend/src/services/agentDevLog.js</code>（本规范的<strong>底座侧参考实现</strong>：</li></ul>
+<p>以监听者身份消费 <code>diagnosticEvents.js</code> 的 <code>diagnostics</code> 单一事件源——贯穿调度 /<br>  LLM / 工具链路的 choke-point——在序列化边界完成 trace_id、NDJSON 单行、字段级<br>  脱敏、大文本摘要、双模上报、step 计数与 idle 静默，<strong>绝不</strong>改写既有事件对象）；<br>  由 <code>services/backend/src/services/toolUseLoop.js</code> 的 <code>runToolUseLoop</code> 起点幂等挂载。<br>  用户自然语言层见 <code>cli/aiRenderer.js</code> / <code>cli/repl.js</code>（已对工具轨迹做归一化，<br>  不向用户暴露任何内部字段）。</p>
+<hr>
+<h2 id="7-终端分区-tui-区域划分">7. 终端分区（TUI 区域划分）<a class="anchor" href="#7-终端分区-tui-区域划分" aria-label="锚点">#</a></h2>
+<p>khyOS TUI 的显示区域分为三层：<strong>顶层(9)</strong> → <strong>大区(6)</strong> → <strong>小区(10)</strong>，共 25 个区域 ID。</p>
+<p>区域 ID 的单一真源(SSOT)在 <code>services/backend/src/cli/tui/ink-components/regionLayout.js</code>。<br>App.js 的渲染数组是「按本文件声明的顺序」拼装的契约消费者，不能在其中夹塞未声明的兄弟节点。</p>
+<p><strong>职责边界原则</strong>：每个区域只管自己的渲染，不干涉其他区域的显示/隐藏/尺寸。<br>修改某个区域时，只允许动该区域对应的组件 + regionLayout.js 的 ID 定义，<br>不允许在该区域的渲染逻辑里掺入其他区域的判定条件。</p>
+<h3 id="7-1-命名层级约定">7.1 命名层级约定<a class="anchor" href="#7-1-命名层级约定" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>层级</th><th>REGION JS key</th><th>REGION 值</th><th>示例</th></tr></thead><tbody><tr><td>顶层</td><td>下划线</td><td>连字符/单词</td><td><code>BANNER: 'banner'</code>, <code>TASK_PANEL: 'task-panel'</code></td></tr><tr><td>大区</td><td><code>MAIN_XXX</code></td><td><code>main.xxx</code></td><td><code>MAIN_OUTPUT: 'main.output'</code></td></tr><tr><td>小区</td><td><code>MAIN_XXX_YYY</code></td><td><code>main.xxx.yyy</code></td><td><code>MAIN_OUTPUT_HDR: 'main.output.hdr'</code></td></tr></tbody></table>
+<p>约束：</p>
+<ul><li>值禁止下划线（测试断言）</li><li>key 禁止点（JS 语法限制）</li><li>大区值是小区值的前缀（层级可推导，测试断言）</li></ul>
+<h3 id="7-2-顶层区域-9-个-自顶向下">7.2 顶层区域（9 个，自顶向下）<a class="anchor" href="#7-2-顶层区域-9-个-自顶向下" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>编号</th><th>ID</th><th>组件</th><th>职责边界</th></tr></thead><tbody><tr><td>①</td><td><code>BANNER</code></td><td><code>WelcomeBanner</code></td><td>启动横幅，顶部，首轮 commit 后进 scrollback；不干涉 MAIN / SIDEBAR</td></tr><tr><td>②</td><td><code>MAIN</code></td><td>左列 Box</td><td>主区（宏观 ID，内部按 6 大区 + 10 小区拆解）；不干涉 PROMPT / FOOTER / OVERLAY</td></tr><tr><td>③</td><td><code>SIDEBAR</code></td><td><code>SidebarPanel</code></td><td>侧栏（可选，仅宽终端），顶对齐 MAIN 第一行；不干涉 MAIN / TASK_PANEL</td></tr><tr><td>④</td><td><code>TASK_PANEL</code></td><td><code>TaskListPanel</code></td><td>全宽任务看板，Ctrl+T 隐藏；不干涉 MAIN / SIDEBAR</td></tr><tr><td>⑤</td><td><code>COMPLETION_MENU</code></td><td><code>CompletionMenu</code></td><td>斜杠命令 / @file 补全菜单，浮在 PROMPT 上方；不干涉 PROMPT</td></tr><tr><td>⑥</td><td><code>FOOTER</code></td><td><code>FooterBar</code></td><td>状态栏，显示模型/精度/上下文/权限模式/桥接/目标；不干涉 PROMPT / OVERLAY</td></tr><tr><td>⑦</td><td><code>PROMPT</code></td><td><code>PromptFrame</code></td><td>输入框，固定置底（terminal rows - 6）；不干涉 STATUS_AREA / OVERLAY</td></tr><tr><td>⑧</td><td><code>STATUS_AREA</code></td><td>5 行空行</td><td>状态区，PROMPT 之下 5 行空行，预留未来扩展；不干涉 PROMPT</td></tr><tr><td>⑨</td><td><code>OVERLAY</code></td><td>多种覆盖层</td><td>全屏覆盖层，独占输入时使用；不干涉其他区域</td></tr></tbody></table>
+<h3 id="7-3-main-大区-6-个宏观组">7.3 MAIN 大区（6 个宏观组）<a class="anchor" href="#7-3-main-大区-6-个宏观组" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>编号</th><th>ID</th><th>说明</th></tr></thead><tbody><tr><td>②.1</td><td><code>MAIN_TEXT</code></td><td>流式正文（不含思考）；StreamingBlock 内 <code>t${i}</code> / <code>'text'</code> 等文本段</td></tr><tr><td>②.2</td><td><code>MAIN_REASONING</code></td><td>思考区（大区）；含 live + committed 两个小区</td></tr><tr><td>②.3</td><td><code>MAIN_OUTPUT</code></td><td>输出大区（工具相关）；含 HDR / VIEW / INLINE 三个小区</td></tr><tr><td>②.4</td><td><code>MAIN_ACTIVITY</code></td><td>活动区（忙态指示）；含 SPINNER / QUEUE / STEER / INTERRUPT 四个小区</td></tr><tr><td>②.5</td><td><code>MAIN_TIP</code></td><td>提示区（大区）；含 DOUBLE_PRESS 一个小区</td></tr><tr><td>②.6</td><td><code>MAIN_SUBVIEW</code></td><td>局部子视图；Ctrl+O 详情 + PlanApproval + TranscriptView</td></tr></tbody></table>
+<h3 id="7-4-main-小区-10-个-挂在大区之下">7.4 MAIN 小区（10 个，挂在大区之下）<a class="anchor" href="#7-4-main-小区-10-个-挂在大区之下" aria-label="锚点">#</a></h3>
+<h4 id="思考区-②-2-main-reasoning">思考区（②.2 MAIN_REASONING）<a class="anchor" href="#思考区-②-2-main-reasoning" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>编号</th><th>ID</th><th>落点</th><th>说明</th></tr></thead><tbody><tr><td>②.2.1</td><td><code>MAIN_REASONING_LIVE</code></td><td><code>StreamingBlock.js:194/196</code></td><td>思考区（live 段）；<code>'think-ell'</code> / <code>'think'</code> 行；gate: <code>streaming.thinking</code></td></tr><tr><td>②.2.2</td><td><code>MAIN_REASONING_COMMITTED</code></td><td><code>Transcript.js:411-431</code></td><td>思考区（committed 段）；<code>'k${i}'</code> 行；gate: timeline <code>e.type==='thinking'</code></td></tr></tbody></table>
+<h4 id="输出大区-②-3-main-output">输出大区（②.3 MAIN_OUTPUT）<a class="anchor" href="#输出大区-②-3-main-output" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>编号</th><th>ID</th><th>落点</th><th>说明</th></tr></thead><tbody><tr><td>②.3.1</td><td><code>MAIN_OUTPUT_HDR</code></td><td><code>ToolLines.js:921-929</code></td><td>工具说明区 —— <code>✓ readFile(src/a.js)</code> 摘要头行；<code>ToolLines.summarizeArgs</code> 派生</td></tr><tr><td>②.3.2</td><td><code>MAIN_OUTPUT_VIEW</code></td><td><code>App.js:4951-4953</code> → <code>ShellView.js</code></td><td>工具结果展示区（检视子视图）—— ShellView；↓ while turn is executing</td></tr><tr><td>②.3.3</td><td><code>MAIN_OUTPUT_INLINE</code></td><td><code>ToolLines.js:754-770 / 621-669</code></td><td>工具结果展示区（内联行）—— literal output + ±diff 行</td></tr></tbody></table>
+<h4 id="活动区-②-4-main-activity">活动区（②.4 MAIN_ACTIVITY）<a class="anchor" href="#活动区-②-4-main-activity" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>编号</th><th>ID</th><th>落点</th><th>说明</th></tr></thead><tbody><tr><td>②.4.1</td><td><code>MAIN_ACTIVITY_SPINNER</code></td><td><code>App.js:4982-4995</code></td><td>Spinner + CompactionProgress；状态指示核心</td></tr><tr><td>②.4.2</td><td><code>MAIN_ACTIVITY_QUEUE</code></td><td><code>App.js:4997</code></td><td>排队消息条数（<code>已排 N 条待发</code>）</td></tr><tr><td>②.4.3</td><td><code>MAIN_ACTIVITY_STEER</code></td><td><code>App.js:4999-5007</code></td><td>方向修正提示（<code>⟳ N 条方向修正待注入</code>）</td></tr><tr><td>②.4.4</td><td><code>MAIN_ACTIVITY_INTERRUPT</code></td><td><code>App.js:5009-5028</code></td><td>Esc 中断提示（<code>⎋ ${hint}</code>）；<code>interruptHint</code> 派生</td></tr></tbody></table>
+<h4 id="提示区-②-5-main-tip">提示区（②.5 MAIN_TIP）<a class="anchor" href="#提示区-②-5-main-tip" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>编号</th><th>ID</th><th>落点</th><th>说明</th></tr></thead><tbody><tr><td>②.5.1</td><td><code>MAIN_TIP_DOUBLE_PRESS</code></td><td><code>App.js:5189</code></td><td>双击提示（1.5s 自动消失）；<code>showHint()</code> 驱动</td></tr></tbody></table>
+<h3 id="7-5-几何契约">7.5 几何契约<a class="anchor" href="#7-5-几何契约" aria-label="锚点">#</a></h3>
+<h4 id="横向栏宽">横向栏宽<a class="anchor" href="#横向栏宽" aria-label="锚点">#</a></h4>
+<p>物理列宽的单一真源：<code>regionLayout.railCols()</code>（消费 <code>effectiveCols.stickyCols</code>）。<br>SidebarPanel / StreamingBlock / TaskListPanel 的宽度预算均消费此处。</p>
+<h4 id="纵向顶对齐">纵向顶对齐<a class="anchor" href="#纵向顶对齐" aria-label="锚点">#</a></h4>
+<p>SidebarPanel 必须贴在 BANNER 之下 = MAIN 的同一行，纵向偏移等于 <code>bannerRowsBeforeVersion()</code>。<br>改 WelcomeBanner 起始行数时，只动 <code>bannerRowsBeforeVersion()</code> 一处，本契约自动跟随。</p>
+<h4 id="覆盖层隐藏规则">覆盖层隐藏规则<a class="anchor" href="#覆盖层隐藏规则" aria-label="锚点">#</a></h4>
+<p>独占输入的全屏覆盖层注册表在 <code>regionLayout.js#OWNING_OVERLAYS</code>。<br><code>hideChrome=true</code> 的覆盖层在挂载期间隐藏 ⑤ PROMPT + ⑥ FOOTER（防 ink 全屏分支触发 win32 scrollback 重复 + 输入框残影）。</p>
+<p>已知覆盖层：</p>
+<table><thead><tr><th>key</th><th>组件</th><th>hideChrome</th><th>说明</th></tr></thead><tbody><tr><td><code>modelPicker</code></td><td><code>ModelPicker</code></td><td>true</td><td>/model，已确认贴顶</td></tr><tr><td><code>khyosOpen</code></td><td><code>KhyOsView</code></td><td>true</td><td>/khyos，QEMU 内核串口，已确认贴顶</td></tr><tr><td><code>rewindPicker</code></td><td><code>RewindPicker</code></td><td>false</td><td>双击 Esc 触发的回溯选择</td></tr><tr><td><code>rollbackPicker</code></td><td><code>RewindPicker</code></td><td>false</td><td>/rollback 检查点选择</td></tr><tr><td><code>formFlow</code></td><td><code>FormFlow</code></td><td>false</td><td>/login /register /passwd 等顺序表单</td></tr><tr><td><code>topologyView</code></td><td><code>TopologyPanel</code></td><td>false</td><td>/topology view 会话森林只读视图</td></tr></tbody></table>
+<h3 id="7-6-维护流程">7.6 维护流程<a class="anchor" href="#7-6-维护流程" aria-label="锚点">#</a></h3>
+<ul><li><strong>新增子区域</strong>：在 <code>regionLayout.js#REGION</code> 加一行 + 加进 <code>MAIN_SUBREGIONS</code> + 改测试预期数组。</li><li><strong>调整顺序</strong>：改 <code>TOP_LEVEL_ORDER</code>（顶层）/ 调整 <code>MAIN_SUBREGIONS</code> 顺序（子区域）。</li><li><strong>隐藏某一子区域</strong>：在 App.js 把对应 <code>[区域②.X]</code> 注释的 children 包上条件渲染即可。</li><li><strong>新增独占输入覆盖层</strong>：在 <code>OWNING_OVERLAYS</code> 加一行 + App.js 加 state + 渲染数组加条件分支。如确认贴顶，把对应 key 的 <code>hideChrome</code> 翻成 <code>true</code>。</li></ul>
+<h3 id="7-7-相关文件">7.7 相关文件<a class="anchor" href="#7-7-相关文件" aria-label="锚点">#</a></h3>
+<ul><li>SSOT：<code>services/backend/src/cli/tui/ink-components/regionLayout.js</code></li><li>覆盖层判定：<code>services/backend/src/cli/tui/ink-components/overlayLiveBudget.js</code></li><li>渲染数组：<code>services/backend/src/cli/tui/ink-components/App.js</code></li><li>契约测试：<code>services/backend/tests/cli/tui/regionLayout.test.js</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-015] 编码规范.html"><div class="dir">← 上一篇</div><div class="ttl">GoF 23 设计模式标注规范</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-017] 元工具系统设计.html"><div class="dir">下一篇 →</div><div class="ttl">khyos 元工具系统设计（Meta-Tool / Tool-Forging）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-016] AI_Agent显示规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

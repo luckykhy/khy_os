@@ -126,3 +126,125 @@ test('never throws on garbage input', () => {
   assert.strictEqual(buildChannelFailureAdvice({ attempts: [null, 'x', 42] }), null);
   assert.doesNotThrow(() => buildChannelFailureAdvice({ attempts: [{}] }));
 });
+
+// ── 通道钉选诊断（首选通道被 strict 钉死 → 不回退）────────────────────────────
+//
+// 现场事故：services/backend/.env 残留 `GATEWAY_PREFERRED_ADAPTER=codex` +
+// `GATEWAY_PREFERRED_STRICT=true`，而本机 codex 无凭据 → 每次调用都在首选通道
+// 硬失败、不回退到可用的 api/agnes 通道。因为本叶子此前**只认** 5xx/auth/限流/
+// 网络/模型不存在五类信号，这种「钉选导致不回退」被翻译成了 404/auth 之类
+// 的表象，排障者于是连续三天去查密钥——真因从未浮出。
+// 契约：只要 pin 指明「有具体首选通道且 strict 生效」，就必须输出一条独立的
+// channelPinned 指引，点名该通道并给出解除钉选的 env 开关；且必须与既有信号
+// 指引**叠加**而非替换。
+
+test('strict channel pin is surfaced as its own actionable advice', () => {
+  const out = buildChannelFailureAdvice({
+    attempts: [
+      { adapterKey: 'codex', error: 'codex [unavailable]: OpenAI Codex unavailable' },
+    ],
+    pin: { adapter: 'codex', strict: true, fallbackSuppressed: true },
+    ...ON,
+  });
+  assert.ok(out, 'pin advice must be produced');
+  assert.ok(out.reasons.includes('channelPinned'), 'must carry the channelPinned reason');
+  assert.ok(out.message.includes('codex'), 'must name the pinned adapter');
+  assert.ok(
+    out.message.includes('GATEWAY_PREFERRED_ADAPTER'),
+    'must name the env var the user has to change'
+  );
+  assert.ok(
+    out.message.includes('GATEWAY_PREFERRED_STRICT'),
+    'must name the strict switch'
+  );
+});
+
+test('pin advice names the pinned adapter, not a hardcoded one', () => {
+  const out = buildChannelFailureAdvice({
+    attempts: [{ adapterKey: 'trae', error: 'trae login required' }],
+    pin: { adapter: 'trae', strict: true, fallbackSuppressed: true },
+    ...ON,
+  });
+  assert.ok(out);
+  assert.ok(out.message.includes('trae'));
+  assert.ok(!out.message.includes('codex'), 'must not hardcode another channel name');
+});
+
+test('no pin advice when strict is off (auto fallback still allowed)', () => {
+  const out = buildChannelFailureAdvice({
+    attempts: [{ adapterKey: 'codex', statusCode: 502, errorType: 'server_error' }],
+    pin: { adapter: 'codex', strict: false },
+    ...ON,
+  });
+  assert.ok(out);
+  assert.ok(!out.reasons.includes('channelPinned'));
+});
+
+test('no pin advice when the preference is auto / unset', () => {
+  const bare = buildChannelFailureAdvice({
+    attempts: [{ adapterKey: 'api', statusCode: 502, errorType: 'server_error' }],
+    pin: { adapter: 'auto', strict: true },
+    ...ON,
+  });
+  assert.ok(bare);
+  assert.ok(!bare.reasons.includes('channelPinned'));
+
+  const unset = buildChannelFailureAdvice({
+    attempts: [{ adapterKey: 'api', statusCode: 502, errorType: 'server_error' }],
+    ...ON,
+  });
+  assert.ok(unset);
+  assert.ok(!unset.reasons.includes('channelPinned'));
+});
+
+test('pin advice is additive, never replaces the underlying signal advice', () => {
+  const out = buildChannelFailureAdvice({
+    attempts: [{ adapterKey: 'codex', statusCode: 401, error: 'Incorrect API key provided' }],
+    pin: { adapter: 'codex', strict: true, fallbackSuppressed: true },
+    ...ON,
+  });
+  assert.ok(out);
+  assert.ok(out.reasons.includes('channelPinned'));
+  assert.ok(out.reasons.includes('auth'), 'the real auth signal must survive');
+  assert.ok(out.message.includes('API key'));
+});
+
+test('pin alone (no other matching signal) still yields advice', () => {
+  const out = buildChannelFailureAdvice({
+    attempts: [{ adapterKey: 'codex', error: 'unavailable' }],
+    pin: { adapter: 'codex', strict: true, fallbackSuppressed: true },
+    ...ON,
+  });
+  assert.ok(out, 'pin is itself a sufficient signal');
+  assert.deepStrictEqual(out.reasons, ['channelPinned']);
+});
+
+test('gate off suppresses pin advice too (byte-identical fallback)', () => {
+  assert.strictEqual(
+    buildChannelFailureAdvice({
+      attempts: [{ adapterKey: 'codex', error: 'unavailable' }],
+      pin: { adapter: 'codex', strict: true, fallbackSuppressed: true },
+      ...OFF,
+    }),
+    null
+  );
+});
+
+test('never throws on garbage pin input', () => {
+  assert.strictEqual(buildChannelFailureAdvice({ attempts: [{}], pin: null, ...ON }), null);
+  assert.strictEqual(buildChannelFailureAdvice({ attempts: [{}], pin: 'x', ...ON }), null);
+  assert.strictEqual(buildChannelFailureAdvice({ attempts: [{}], pin: [], ...ON }), null);
+  assert.doesNotThrow(() =>
+    buildChannelFailureAdvice({ attempts: [{}], pin: { adapter: 42, strict: 'yes' }, ...ON })
+  );
+  assert.doesNotThrow(() =>
+    buildChannelFailureAdvice({ attempts: [{}], pin: { adapter: 'codex', strict: {} }, ...ON })
+  );
+  assert.doesNotThrow(() =>
+    buildChannelFailureAdvice({
+      attempts: [{}],
+      pin: Object.create(null),
+      ...ON,
+    })
+  );
+});

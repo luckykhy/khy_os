@@ -13,7 +13,10 @@ const {
 describe('provider contract gate', () => {
   test('discovers every generate exporter and has an exact fixture set', () => {
     const files = discoverAdapters();
-    assert.equal(files.length, 18);
+    // 19 adapters as of 2026-09-23: commandCodeAdapter.js (KHY_COMMANDCODE, opt-in)
+    // is a thin shell over cliToolAdapter and exports generate, so the gate must
+    // cover it too. Keep this count in sync with providerContractFixtures.js.
+    assert.equal(files.length, 19);
     assert.doesNotThrow(() => validateFixtureCoverage(files));
     for (const file of files) assert.doesNotThrow(() => validateSourceContract(file));
   });

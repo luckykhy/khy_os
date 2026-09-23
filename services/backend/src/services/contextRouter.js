@@ -54,6 +54,11 @@ const PREEMPTIVE_RATIO = (() => {
 })();
 const SINGLE_RESULT_SHARE = 0.5;
 const TRUNCATION_BUFFER = 512;
+// 工具循环侧的压缩触发比例（占 contextWindow）—— 历史真值，来自 toolUseLoopCore 的
+// `_ccThreshold = floor(_ccCtxWindow * 0.7)`，与 contextCompressor 内部的
+// COMPRESSION_TOKEN_THRESHOLD（0.70）双层同值。**仅供「拿不到本轮预算」时的降级路径**：
+// 有预算时一律走 autoCompactTriggerTokens(budget)，与底栏倒计时同源。
+const TOOL_LOOP_COMPACT_RATIO = 0.7;
 // A3: 硬地板 — 低 token 时不触发压缩，保护 prefix cache（学习自 DeepSeek-TUI 500K 硬地板）
 // 动态化：与模型 context window 成比例，小模型不会因 floor > budget 永不压缩。
 // KHY_CONTEXT_HARD_FLOOR=0 可关闭硬地板(压缩演示用)。原 `Number(...) || 32768` 使 0
@@ -340,6 +345,39 @@ function autoCompactTriggerTokens(contextBudget) {
   return Math.floor((b * PREEMPTIVE_RATIO) / SAFETY_MARGIN);
 }
 
+/**
+ * 工具循环用的**真实**压缩触发点（绝对 token）—— 与底栏 autoCompactAt **同源**。
+ *
+ * 背景（2026-09-23 实测，[DESIGN-ARCH-135] §8）：修复前同一个「该压缩了」在一轮里有**三个**
+ * 不同数值，用户看到的是其中一个、行为走的是另一个：
+ *   - 底栏倒计时：`autoCompactTriggerTokens(budget)` = budget × 0.75
+ *   - 经典 REPL（经 agenticHarnessService 把 budget 塞进 contextWindowTokens）：budget × 0.7
+ *   - Ink TUI（直调 loop，contextWindowTokens 缺席 → 回退模型窗口）：window × 0.7
+ * 128k 窗 / medium 档下三者分别约 **78.3k / 73.3k / 89.6k**。TUI 用户在 78.3k~89.6k 之间
+ * 会看到「底栏说该压了，却迟迟不压」—— 正是「上下文爆满却无法自动压缩」的观感来源。
+ *
+ * 收敛规则：
+ *   - 有预算 → 直接走 `autoCompactTriggerTokens(budget)`。两者是**同一个表达式**，
+ *     结构上不可能再漂移（这正是 autoCompactTriggerTokens 存在的理由）；
+ *   - 无预算（首轮、或调用方未接线）→ 回退 `floor(window × TOOL_LOOP_COMPACT_RATIO)`，
+ *     与改动前的 `Math.floor(_ccCtxWindow * 0.7)` **逐字节相同** ⇒ 可回滚性成立。
+ *
+ * @param {number} contextWindow 模型上下文窗口（仅降级路径使用）
+ * @param {number} [contextBudget] 本轮可用预算（_resolveContextBudget 算出）
+ * @returns {number} 触发压缩的已用 token 阈值；入参全非法 → 0（调用方据此不压缩）
+ */
+function toolLoopCompactTriggerTokens(contextWindow, contextBudget) {
+  const b = Number(contextBudget);
+  if (Number.isFinite(b) && b > 0) {
+    return autoCompactTriggerTokens(b);
+  }
+  const w = Number(contextWindow);
+  if (!Number.isFinite(w) || w <= 0) {
+    return 0;
+  }
+  return Math.floor(w * TOOL_LOOP_COMPACT_RATIO);
+}
+
 module.exports = {
   routeContextStrategy,
   truncateToolResults,
@@ -351,4 +389,6 @@ module.exports = {
   HARD_FLOOR_TOKENS: HARD_FLOOR_TOKENS_DEFAULT,
   getHardFloor,
   autoCompactTriggerTokens,
+  toolLoopCompactTriggerTokens,
+  TOOL_LOOP_COMPACT_RATIO,
 };

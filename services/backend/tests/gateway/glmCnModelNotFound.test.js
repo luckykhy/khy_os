@@ -11,6 +11,7 @@
  * 纯字符串分类,确定性,无 IO。
  */
 const { classifyAdapterError } = require('../../src/services/gateway/adapters/_errorClassifiers');
+const assert = require('node:assert');
 function withGate(value, fn) {
   const prev = process.env.KHY_GLM_CN_MODEL_NOT_FOUND;
   if (value === undefined) delete process.env.KHY_GLM_CN_MODEL_NOT_FOUND;

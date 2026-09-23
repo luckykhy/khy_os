@@ -1,5 +1,5 @@
 <template>
-  <div class="marketplace-page">
+  <div class="khy-page marketplace-page">
     <KhyPageHeader title="插件市场" subtitle="Coze 兼容 · OpenAPI 插件 · 工作流与对话 Agent 通用">
       <template #actions>
         <el-button :icon="Upload" @click="openImport">导入插件</el-button>
@@ -289,6 +289,7 @@ import { useMarketplace } from '@/composables/useMarketplace';
 import KhyEmpty from '@/components/KhyEmpty.vue';
 import KhyPageHeader from '@/components/KhyPageHeader.vue';
 
+import { showSuccess, showError, showWarning, showInfo } from '@/api/notify';
 const mp = useMarketplace();
 const { catalog, categories, installed, loading, busy } = mp;
 
@@ -334,21 +335,21 @@ function importBody() {
 async function doPreview() {
   try {
     importPreview.value = await mp.previewImport(importBody());
-    ElMessage.success('预览成功');
+    showSuccess('预览成功');
   } catch (e) {
-    ElMessage.error(e?.response?.data?.message || e.message || '预览失败');
+    showError(e?.response?.data?.message || e.message || '预览失败');
   }
 }
 
 async function doImport() {
   try {
     await mp.importPlugin(importBody());
-    ElMessage.success('已导入并安装');
+    showSuccess('已导入并安装');
     importVisible.value = false;
     activeTab.value = 'installed';
     await reload();
   } catch (e) {
-    ElMessage.error(e?.response?.data?.message || e.message || '导入失败');
+    showError(e?.response?.data?.message || e.message || '导入失败');
   }
 }
 
@@ -361,7 +362,7 @@ async function openDetail(id) {
     detail.value = await mp.getDetail(id);
     detailVisible.value = true;
   } catch (e) {
-    ElMessage.error(e.message || '加载详情失败');
+    showError(e.message || '加载详情失败');
   }
 }
 
@@ -369,11 +370,11 @@ async function quickInstall(p) {
   if (!p) return;
   try {
     await mp.install(p.id);
-    ElMessage.success(`已安装「${p.name}」，可在「已安装」中配置鉴权`);
+    showSuccess(`已安装「${p.name}」，可在「已安装」中配置鉴权`);
     detailVisible.value = false;
     await reload();
   } catch (e) {
-    ElMessage.error(e?.response?.data?.message || e.message || '安装失败');
+    showError(e?.response?.data?.message || e.message || '安装失败');
   }
 }
 
@@ -382,7 +383,7 @@ async function toggle(row, enabled) {
   try {
     await mp.setEnabled(row.id, enabled);
   } catch (e) {
-    ElMessage.error(e.message || '操作失败');
+    showError(e.message || '操作失败');
     await mp.listInstalled();
   }
 }
@@ -391,9 +392,9 @@ async function confirmUninstall(row) {
   try {
     await ElMessageBox.confirm(`确定卸载「${row.name}」？`, '卸载插件', { type: 'warning' });
     await mp.uninstall(row.id);
-    ElMessage.success('已卸载');
+    showSuccess('已卸载');
   } catch (e) {
-    if (e !== 'cancel') ElMessage.error(e.message || '卸载失败');
+    if (e !== 'cancel') showError(e.message || '卸载失败');
   }
 }
 
@@ -443,10 +444,10 @@ function buildAuthConfig() {
 async function saveAuth() {
   try {
     await mp.setAuth(authRow.value.id, buildAuthConfig());
-    ElMessage.success('鉴权已保存');
+    showSuccess('鉴权已保存');
     authVisible.value = false;
   } catch (e) {
-    ElMessage.error(e?.response?.data?.message || e.message || '保存失败');
+    showError(e?.response?.data?.message || e.message || '保存失败');
   }
 }
 
@@ -485,14 +486,14 @@ async function runTest() {
     try {
       args = JSON.parse(testForm.value.argsText);
     } catch {
-      return ElMessage.error('参数 JSON 解析失败');
+      return showError('参数 JSON 解析失败');
     }
   }
-  if (!testForm.value.operationId) return ElMessage.error('请选择一个操作');
+  if (!testForm.value.operationId) return showError('请选择一个操作');
   try {
     testResult.value = await mp.testInvoke(testRow.value.id, testForm.value.operationId, args);
   } catch (e) {
-    ElMessage.error(e?.response?.data?.message || e.message || '调用失败');
+    showError(e?.response?.data?.message || e.message || '调用失败');
   }
 }
 </script>

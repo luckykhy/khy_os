@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-110] TUI-CLASSIC-SYNC 设计笔记.md -->
+<title>[DESIGN-ARCH-110] TUI 与经典模式同步指南 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-110] TUI 与经典模式同步指南</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-110] TUI 与经典模式同步指南</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-110-tui-与经典模式同步指南">[DESIGN-ARCH-110] TUI 与经典模式同步指南</a></li><li class="lvl-2"><a href="#统一-ui-架构-2026-09-05-新增">统一 UI 架构（2026-09-05 新增）</a></li><li class="lvl-3"><a href="#核心原则">核心原则</a></li><li class="lvl-3"><a href="#新增模块">新增模块</a></li><li class="lvl-3"><a href="#使用方式">使用方式</a></li><li class="lvl-3"><a href="#已集成的命令处理器">已集成的命令处理器</a></li><li class="lvl-3"><a href="#新模式开发指南">新模式开发指南</a></li><li class="lvl-3"><a href="#添加新的-ui-类型">添加新的 UI 类型</a></li><li class="lvl-2"><a href="#代码分层与同步规则">代码分层与同步规则</a></li><li class="lvl-3"><a href="#第-1-层-共享代码-自动同步">第 1 层：共享代码（自动同步）</a></li><li class="lvl-3"><a href="#uiprompt-js-兼容层-现有">uiPrompt.js 兼容层（现有）</a></li><li class="lvl-3"><a href="#第-2-层-入口代码-需手动同步">第 2 层：入口代码（需手动同步）</a></li><li class="lvl-3"><a href="#第-3-层-命令处理器-需逐命令同步">第 3 层：命令处理器（需逐命令同步）</a></li><li class="lvl-2"><a href="#已知同步点-2026-09-04-已修复">已知同步点（2026-09-04 已修复）</a></li><li class="lvl-3"><a href="#1-shim-测试文件加载-已修复">1. shim 测试文件加载（已修复）</a></li><li class="lvl-3"><a href="#2-gateway-pool-maps-已修复">2. Gateway Pool Maps（已修复）</a></li><li class="lvl-3"><a href="#3-banner-重复显示-已修复">3. Banner 重复显示（已修复）</a></li><li class="lvl-3"><a href="#4-熔断器注释错误-已修复">4. 熔断器注释错误（已修复）</a></li><li class="lvl-2"><a href="#同步检查清单">同步检查清单</a></li><li class="lvl-3"><a href="#修改共享代码-自动同步">修改共享代码（自动同步）</a></li><li class="lvl-3"><a href="#修改入口代码-需手动同步">修改入口代码（需手动同步）</a></li><li class="lvl-3"><a href="#修改命令处理器-需逐命令同步">修改命令处理器（需逐命令同步）</a></li><li class="lvl-2"><a href="#claude-code-风格-banner-规范">Claude Code 风格 Banner 规范</a></li><li class="lvl-2"><a href="#参考-claude-code-权限提示">参考：Claude Code 权限提示</a></li><li class="lvl-2"><a href="#测试验证">测试验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-110-tui-与经典模式同步指南">[DESIGN-ARCH-110] TUI 与经典模式同步指南<a class="anchor" href="#design-arch-110-tui-与经典模式同步指南" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>隶属</strong>：本文属 <strong>TUI 设计族</strong>（20 编号 / 21 文件），总纲与 scope 裁决见 <code>[DESIGN-ARCH-122] TUI 设计族总纲</code>；规则冲突一律以 <code>[DESIGN-ARCH-102] Khy TUI 统一规则手册</code> 为准。</p></blockquote>
+<p><strong>日期</strong>：2026-09-05（更新）<br><strong>目的</strong>：确保 TUI 模式和经典模式的修复同步，避免一个模式修复了另一个没修复。</p>
+<hr>
+<h2 id="统一-ui-架构-2026-09-05-新增">统一 UI 架构（2026-09-05 新增）<a class="anchor" href="#统一-ui-架构-2026-09-05-新增" aria-label="锚点">#</a></h2>
+<h3 id="核心原则">核心原则<a class="anchor" href="#核心原则" aria-label="锚点">#</a></h3>
+<p><strong>命令处理器返回结构化响应，UI 适配器根据模式渲染。</strong></p>
+<pre><code>命令处理器 → 返回 { type: 'info'|'confirm'|'list'|'form', data: {} }
+                    │
+                    ▼
+            uiFacade.renderResponse()
+                    │
+        ┌───────────┴───────────┐
+        ▼                       ▼
+   TUI 适配器              经典适配器
+   (Ink/React)            (inquirer)</code></pre>
+<h3 id="新增模块">新增模块<a class="anchor" href="#新增模块" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>模块</th><th>路径</th><th>职责</th></tr></thead><tbody><tr><td><strong>uiResponse</strong></td><td><code>cli/uiResponse.js</code></td><td>统一响应协议</td></tr><tr><td><strong>uiFacade</strong></td><td><code>cli/uiFacade.js</code></td><td>统一入口点</td></tr><tr><td><strong>uiAdapter</strong></td><td><code>cli/uiAdapter.js</code></td><td>模式分发器</td></tr><tr><td><strong>tui/uiAdapter</strong></td><td><code>cli/tui/uiAdapter.js</code></td><td>TUI 渲染器</td></tr><tr><td><strong>classic/uiAdapter</strong></td><td><code>classic/uiAdapter.js</code></td><td>经典渲染器</td></tr><tr><td><strong>tui/uiBridge</strong></td><td><code>cli/tui/uiBridge.js</code></td><td>TUI 原生组件桥接</td></tr><tr><td><strong>permissionService</strong></td><td><code>cli/services/permissionService.js</code></td><td>权限逻辑</td></tr><tr><td><strong>modelSelectService</strong></td><td><code>cli/services/modelSelectService.js</code></td><td>模型选择逻辑</td></tr><tr><td><strong>bannerDataService</strong></td><td><code>cli/bannerDataService.js</code></td><td>Banner 数据</td></tr></tbody></table>
+<h3 id="使用方式">使用方式<a class="anchor" href="#使用方式" aria-label="锚点">#</a></h3>
+<pre><code class="language-js"><span class="hljs-comment">// 在命令处理器中</span>
+<span class="hljs-keyword">const</span> ui = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../uiFacade&#x27;</span>);
+
+<span class="hljs-comment">// 显示信息（两种模式自动适配）</span>
+<span class="hljs-keyword">await</span> ui.<span class="hljs-title function_">info</span>(<span class="hljs-string">&#x27;Operation complete&#x27;</span>);
+<span class="hljs-keyword">await</span> ui.<span class="hljs-title function_">success</span>(<span class="hljs-string">&#x27;File saved&#x27;</span>);
+<span class="hljs-keyword">await</span> ui.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;Failed to save&#x27;</span>, <span class="hljs-string">&#x27;Error&#x27;</span>, <span class="hljs-string">&#x27;E001&#x27;</span>);
+
+<span class="hljs-comment">// 询问确认</span>
+<span class="hljs-keyword">const</span> ok = <span class="hljs-keyword">await</span> ui.<span class="hljs-title function_">confirm</span>(<span class="hljs-string">&#x27;Delete this file?&#x27;</span>, { <span class="hljs-attr">danger</span>: <span class="hljs-literal">true</span> });
+<span class="hljs-keyword">if</span> (!ok) <span class="hljs-keyword">return</span>;
+
+<span class="hljs-comment">// 列表选择</span>
+<span class="hljs-keyword">const</span> model = <span class="hljs-keyword">await</span> ui.<span class="hljs-title function_">list</span>(<span class="hljs-string">&#x27;Choose a model&#x27;</span>, [
+  { <span class="hljs-attr">id</span>: <span class="hljs-string">&#x27;claude&#x27;</span>, <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;Claude Sonnet&#x27;</span>, <span class="hljs-attr">description</span>: <span class="hljs-string">&#x27;Recommended&#x27;</span> },
+  { <span class="hljs-attr">id</span>: <span class="hljs-string">&#x27;gpt&#x27;</span>, <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;GPT-4&#x27;</span>, <span class="hljs-attr">description</span>: <span class="hljs-string">&#x27;Powerful&#x27;</span> },
+]);
+
+<span class="hljs-comment">// 表单输入</span>
+<span class="hljs-keyword">const</span> values = <span class="hljs-keyword">await</span> ui.<span class="hljs-title function_">form</span>(<span class="hljs-string">&#x27;Login&#x27;</span>, [
+  { <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;username&#x27;</span>, <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;Username&#x27;</span>, <span class="hljs-attr">required</span>: <span class="hljs-literal">true</span> },
+  { <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;password&#x27;</span>, <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;Password&#x27;</span>, <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;password&#x27;</span> },
+]);</code></pre>
+<h3 id="已集成的命令处理器">已集成的命令处理器<a class="anchor" href="#已集成的命令处理器" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>处理器</th><th>文件</th><th>集成点</th></tr></thead><tbody><tr><td>/learn</td><td><code>handlers/learn.js</code></td><td><code>_askChoice()</code> 使用 <code>ui.list()</code></td></tr><tr><td>/plugin</td><td><code>handlers/plugin-dev.js</code></td><td><code>askChoice()</code> 使用 <code>ui.list()</code></td></tr><tr><td>/ide</td><td><code>handlers/ide.js</code></td><td><code>promptModelSelection()</code> 使用 <code>ui.list()</code></td></tr></tbody></table>
+<h3 id="新模式开发指南">新模式开发指南<a class="anchor" href="#新模式开发指南" aria-label="锚点">#</a></h3>
+<p>当添加新的交互式命令时，遵循以下模式：</p>
+<pre><code class="language-js"><span class="hljs-meta">&#x27;use strict&#x27;</span>;
+<span class="hljs-keyword">const</span> ui = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../uiFacade&#x27;</span>);
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">handleCommand</span>(<span class="hljs-params">args</span>) {
+  <span class="hljs-comment">// 1. 显示信息</span>
+  <span class="hljs-keyword">await</span> ui.<span class="hljs-title function_">info</span>(<span class="hljs-string">&#x27;Starting operation...&#x27;</span>);
+
+  <span class="hljs-comment">// 2. 询问确认（危险操作）</span>
+  <span class="hljs-keyword">const</span> ok = <span class="hljs-keyword">await</span> ui.<span class="hljs-title function_">confirm</span>(<span class="hljs-string">&#x27;Delete this file?&#x27;</span>, { <span class="hljs-attr">danger</span>: <span class="hljs-literal">true</span> });
+  <span class="hljs-keyword">if</span> (!ok) <span class="hljs-keyword">return</span>;
+
+  <span class="hljs-comment">// 3. 列表选择</span>
+  <span class="hljs-keyword">const</span> choice = <span class="hljs-keyword">await</span> ui.<span class="hljs-title function_">list</span>(<span class="hljs-string">&#x27;Select an option:&#x27;</span>, [
+    { <span class="hljs-attr">id</span>: <span class="hljs-string">&#x27;opt1&#x27;</span>, <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;Option 1&#x27;</span>, <span class="hljs-attr">description</span>: <span class="hljs-string">&#x27;First option&#x27;</span> },
+    { <span class="hljs-attr">id</span>: <span class="hljs-string">&#x27;opt2&#x27;</span>, <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;Option 2&#x27;</span>, <span class="hljs-attr">description</span>: <span class="hljs-string">&#x27;Second option&#x27;</span> },
+  ]);
+
+  <span class="hljs-comment">// 4. 表单输入</span>
+  <span class="hljs-keyword">const</span> values = <span class="hljs-keyword">await</span> ui.<span class="hljs-title function_">form</span>(<span class="hljs-string">&#x27;Enter details&#x27;</span>, [
+    { <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;name&#x27;</span>, <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;Name&#x27;</span>, <span class="hljs-attr">required</span>: <span class="hljs-literal">true</span> },
+    { <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;email&#x27;</span>, <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;Email&#x27;</span>, <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;email&#x27;</span> },
+  ]);
+
+  <span class="hljs-comment">// 5. 显示结果</span>
+  <span class="hljs-keyword">await</span> ui.<span class="hljs-title function_">success</span>(<span class="hljs-string">&#x27;Operation complete!&#x27;</span>);
+}</code></pre>
+<p><strong>关键点</strong>：</p>
+<ul><li>不需要检查 <code>isTuiActive()</code> - uiFacade 自动处理</li><li>不需要 <code>if/else</code> 分支 - 两种模式自动适配</li><li>命令处理器只负责业务逻辑，UI 渲染由适配器处理</li></ul>
+<h3 id="添加新的-ui-类型">添加新的 UI 类型<a class="anchor" href="#添加新的-ui-类型" aria-label="锚点">#</a></h3>
+<p>如果需要新的 UI 类型（如 <code>editor</code>、<code>progress</code>）：</p>
+<ol><li>在 <code>uiResponse.js</code> 添加新的响应类型</li><li>在 <code>tui/uiAdapter.js</code> 添加 TUI 渲染器</li><li>在 <code>classic/uiAdapter.js</code> 添加经典渲染器</li><li>在 <code>uiFacade.js</code> 添加入口函数</li><li>在 <code>uiAdapter.js</code> 的 <code>renderResponse()</code> 和 <code>renderClassic()</code> 中添加分发逻辑</li></ol>
+<pre><code>用户启动 khy
+    │
+    ├── KHY_FULL_TUI=0 或 非 TTY → 经典模式 (readline + inquirer)
+    │
+    └── 默认 (TTY + 未 opt-out) → TUI 模式 (Ink + React)</code></pre>
+<p>决策代码：<code>replSession.js</code> <code>startRepl()</code> 约 388-642 行</p>
+<hr>
+<h2 id="代码分层与同步规则">代码分层与同步规则<a class="anchor" href="#代码分层与同步规则" aria-label="锚点">#</a></h2>
+<h3 id="第-1-层-共享代码-自动同步">第 1 层：共享代码（自动同步）<a class="anchor" href="#第-1-层-共享代码-自动同步" aria-label="锚点">#</a></h3>
+<p>以下代码被 TUI 和经典模式共同使用，修复自动同步：</p>
+<table><thead><tr><th>模块</th><th>路径</th><th>说明</th></tr></thead><tbody><tr><td><strong>Gateway</strong></td><td><code>services/gateway/</code></td><td>AI 网关、适配器、熔断器、冷却</td></tr><tr><td><strong>Tools</strong></td><td><code>tools/</code></td><td>所有工具实现（文件读写、Shell、搜索等）</td></tr><tr><td><strong>Services</strong></td><td><code>services/</code></td><td>业务逻辑（会话、权限、内存、量化等）</td></tr><tr><td><strong>Utils</strong></td><td><code>utils/</code></td><td>工具函数（格式化、路径、错误等）</td></tr><tr><td><strong>Permissions</strong></td><td><code>permissions/</code></td><td>权限规则、bash 安全分类</td></tr><tr><td><strong>Auth</strong></td><td><code>services/cliAuthService.js</code></td><td>认证、会话管理</td></tr><tr><td><strong>Router</strong></td><td><code>cli/router.js</code></td><td>命令路由、分派</td></tr><tr><td><strong>Shim</strong></td><td><code>services/*/index.js</code></td><td>domain 重导出（需排除 test）</td></tr></tbody></table>
+<p><strong>同步规则</strong>：修改共享代码时，无需额外操作，两个模式自动获得修复。</p>
+<p><strong>注意</strong>：shim 文件必须排除 <code>*.test.js</code>，否则测试代码会在生产环境执行。</p>
+<h3 id="uiprompt-js-兼容层-现有">uiPrompt.js 兼容层（现有）<a class="anchor" href="#uiprompt-js-兼容层-现有" aria-label="锚点">#</a></h3>
+<p><code>cli/uiPrompt.js</code> 是一个成熟的兼容性层，用于桥接 inquirer 和 TUI FormFlow：</p>
+<pre><code class="language-js"><span class="hljs-comment">// 在命令处理器中</span>
+<span class="hljs-keyword">const</span> { isTuiActive, promptCompat } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../uiPrompt&#x27;</span>);
+
+<span class="hljs-comment">// 当 TUI 激活时，使用 FormFlow 原生组件</span>
+<span class="hljs-comment">// 当经典模式时，使用 inquirer</span>
+<span class="hljs-keyword">const</span> answers = <span class="hljs-keyword">await</span> <span class="hljs-title function_">promptCompat</span>(questions);</code></pre>
+<p><strong>已使用 uiPrompt.js 的处理器</strong>：</p>
+<ul><li><code>handlers/gateway.js</code> - 模型选择、配置等</li><li>其他需要复杂表单的处理器</li></ul>
+<p><strong>选择指南</strong>：</p>
+<ul><li>简单确认/列表/表单 → 使用 <code>uiFacade.js</code>（更简洁）</li><li>复杂表单（when/filter/transformer/editor/expand 等）→ 使用 <code>uiPrompt.js</code>（功能更完整）</li></ul>
+<hr>
+<h3 id="第-2-层-入口代码-需手动同步">第 2 层：入口代码（需手动同步）<a class="anchor" href="#第-2-层-入口代码-需手动同步" aria-label="锚点">#</a></h3>
+<p>以下代码有 TUI 和经典两条路径，修复需要手动同步：</p>
+<table><thead><tr><th>功能</th><th>TUI 路径</th><th>经典路径</th><th>同步要点</th></tr></thead><tbody><tr><td><strong>Banner</strong></td><td><code>tui/ink-components/WelcomeBanner.js</code></td><td><code>cli/formatters.js</code> <code>printBanner()</code> + <code>cli/repl/startupHeader.js</code></td><td>显示内容一致（版本、模型、认证、网关）</td></tr><tr><td><strong>权限提示</strong></td><td><code>tui/ink-components/PermissionsPrompt.js</code></td><td><code>cli/permissionDialog.js</code></td><td>权限分类、提示文案、回调逻辑</td></tr><tr><td><strong>模型选择</strong></td><td><code>tui/ink-components/ModelPicker.js</code></td><td><code>cli/handlers/gateway.js</code> (inquirer)</td><td>模型列表、探测、选择逻辑</td></tr><tr><td><strong>登录/注册</strong></td><td><code>tui/ink-components/FormFlow.js</code></td><td><code>cli/handlers/</code> (inquirer)</td><td>表单字段、验证、API 调用</td></tr><tr><td><strong>启动头</strong></td><td><code>tui/ink-components/App.js</code> banner 逻辑</td><td><code>cli/repl/startupHeader.js</code> renderStartupHeader</td><td>显示时机、内容、格式</td></tr></tbody></table>
+<p><strong>同步规则</strong>：修改入口代码时，检查另一模式是否需要同步。</p>
+<hr>
+<h3 id="第-3-层-命令处理器-需逐命令同步">第 3 层：命令处理器（需逐命令同步）<a class="anchor" href="#第-3-层-命令处理器-需逐命令同步" aria-label="锚点">#</a></h3>
+<p>部分命令在 TUI 中有原生实现，经典模式使用 inquirer：</p>
+<table><thead><tr><th>命令</th><th>TUI 原生实现</th><th>经典实现</th><th>状态</th></tr></thead><tbody><tr><td><code>/model</code></td><td><code>tui/ink-components/ModelPicker.js</code></td><td><code>cli/handlers/gatewayModelChoices.js</code></td><td>需同步</td></tr><tr><td><code>/login</code></td><td><code>FormFlow.js</code></td><td><code>cli/handlers/login.js</code></td><td>需同步</td></tr><tr><td><code>/register</code></td><td><code>FormFlow.js</code></td><td><code>cli/handlers/register.js</code></td><td>需同步</td></tr><tr><td><code>/passwd</code></td><td><code>FormFlow.js</code></td><td><code>cli/handlers/passwd.js</code></td><td>需同步</td></tr><tr><td><code>/apikey</code></td><td><code>FormFlow.js</code> (基础)</td><td><code>cli/handlers/apikey.js</code> (完整)</td><td>经典更完整</td></tr><tr><td><code>/forgot</code></td><td>不支持</td><td><code>cli/handlers/forgot.js</code></td><td>仅经典</td></tr><tr><td><code>/hardware</code></td><td><code>tuiCommandReports.js</code></td><td><code>cli/handlers/hardware.js</code></td><td>需同步</td></tr><tr><td><code>/scan</code></td><td><code>tuiCommandReports.js</code></td><td><code>cli/handlers/scan.js</code></td><td>需同步</td></tr><tr><td><code>/checkpoint</code></td><td><code>tuiCommandReports.js</code></td><td><code>cli/handlers/backup.js</code></td><td>需同步</td></tr></tbody></table>
+<p><strong>同步规则</strong>：修改命令处理器时，检查另一模式的实现是否需要同步。</p>
+<hr>
+<h2 id="已知同步点-2026-09-04-已修复">已知同步点（2026-09-04 已修复）<a class="anchor" href="#已知同步点-2026-09-04-已修复" aria-label="锚点">#</a></h2>
+<h3 id="1-shim-测试文件加载-已修复">1. shim 测试文件加载（已修复）<a class="anchor" href="#1-shim-测试文件加载-已修复" aria-label="锚点">#</a></h3>
+<p><strong>问题</strong>：<code>services/query/index.js</code> shim 错误加载 <code>.test.js</code> 文件<br><strong>影响</strong>：两个模式都会执行测试代码，TAP 输出写入 stdout<br><strong>修复</strong>：删除 shim 中对 <code>.test.js</code> 的导出<br><strong>同步状态</strong>：✅ 自动同步（共享代码路径）</p>
+<h3 id="2-gateway-pool-maps-已修复">2. Gateway Pool Maps（已修复）<a class="anchor" href="#2-gateway-pool-maps-已修复" aria-label="锚点">#</a></h3>
+<p><strong>问题</strong>：<code>sensenova</code>/<code>stepfun</code> 在 gateway pool maps 中缺失<br><strong>影响</strong>：两个模式都无法路由到这些 provider<br><strong>修复</strong>：补齐 <code>DEFAULT_API_POOL_PROVIDER_ALIASES</code> 和 <code>DEFAULT_API_POOL_TO_SERVICE_PROVIDER</code><br><strong>同步状态</strong>：✅ 自动同步（共享代码路径）</p>
+<h3 id="3-banner-重复显示-已修复">3. Banner 重复显示（已修复）<a class="anchor" href="#3-banner-重复显示-已修复" aria-label="锚点">#</a></h3>
+<p><strong>问题</strong>：TUI 模式中 banner 重复显示两次<br><strong>影响</strong>：TUI 模式<br><strong>修复</strong>：</p>
+<ul><li>删除 shim 测试文件导出</li><li>还原 <code>railOn</code> 同步初始化</li><li>banner 移至 <code>&lt;Static&gt;</code> 区域</li><li><code>staticItems[0]</code> 作为 banner item</li></ul>
+<p><strong>同步状态</strong>：✅ TUI 已修复</p>
+<h3 id="4-熔断器注释错误-已修复">4. 熔断器注释错误（已修复）<a class="anchor" href="#4-熔断器注释错误-已修复" aria-label="锚点">#</a></h3>
+<p><strong>问题</strong>：注释说&quot;5次/60s&quot;，代码实际是&quot;3次/30s&quot;<br><strong>影响</strong>：两个模式的文档可读性<br><strong>修复</strong>：修正注释<br><strong>同步状态</strong>：✅ 自动同步（共享代码路径）</p>
+<hr>
+<h2 id="同步检查清单">同步检查清单<a class="anchor" href="#同步检查清单" aria-label="锚点">#</a></h2>
+<p>修改代码时，按以下清单检查：</p>
+<h3 id="修改共享代码-自动同步">修改共享代码（自动同步）<a class="anchor" href="#修改共享代码-自动同步" aria-label="锚点">#</a></h3>
+<ul><li>[ ] Gateway / Services / Tools / Utils → 无需额外操作</li><li>[ ] Shim 文件 → 确认排除 <code>*.test.js</code></li><li>[ ] 权限规则 → 确认 TUI 和经典使用同一份规则</li></ul>
+<h3 id="修改入口代码-需手动同步">修改入口代码（需手动同步）<a class="anchor" href="#修改入口代码-需手动同步" aria-label="锚点">#</a></h3>
+<ul><li>[ ] Banner → 检查 <code>printBanner()</code> 和 <code>WelcomeBanner.js</code> 内容一致</li><li>[ ] 权限提示 → 检查 <code>PermissionsPrompt.js</code> 和 <code>permissionDialog.js</code></li><li>[ ] 模型选择 → 检查 <code>ModelPicker.js</code> 和 <code>gatewayModelChoices.js</code></li><li>[ ] 登录/注册 → 检查 <code>FormFlow.js</code> 和对应 handler</li></ul>
+<h3 id="修改命令处理器-需逐命令同步">修改命令处理器（需逐命令同步）<a class="anchor" href="#修改命令处理器-需逐命令同步" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 确认命令在两种模式下的实现路径</li><li>[ ] 修复需要同时应用到两个路径</li><li>[ ] 测试两种模式下的行为一致</li></ul>
+<hr>
+<h2 id="claude-code-风格-banner-规范">Claude Code 风格 Banner 规范<a class="anchor" href="#claude-code-风格-banner-规范" aria-label="锚点">#</a></h2>
+<p>Banner 应包含以下元素（参考 Claude Code v2.1.215）：</p>
+<pre><code>&lt;ASCII Art&gt;        Claude Code v2.1.215
+                   claude-sonnet-4-20250514 · API Usage Billing
+                   @workspace /path/to/project</code></pre>
+<p><strong>TUI 实现</strong>：<code>WelcomeBanner.js</code></p>
+<ul><li>左侧：四叶草 ASCII art（已有）</li><li>右侧：版本、模型、认证、网关、工作目录</li></ul>
+<p><strong>经典实现</strong>：<code>formatters.js</code> <code>printBanner()</code> + <code>startupHeader.js</code></p>
+<ul><li>需要同步显示相同信息</li></ul>
+<hr>
+<h2 id="参考-claude-code-权限提示">参考：Claude Code 权限提示<a class="anchor" href="#参考-claude-code-权限提示" aria-label="锚点">#</a></h2>
+<p>Claude Code 使用简洁的权限提示：</p>
+<pre><code>┌─────────────────────────────────────────────────┐
+│  Do you want to proceed?                        │
+│  ● Yes, and don't ask again for X               │
+│  ○ Yes                                          │
+│  ○ No                                           │
+└─────────────────────────────────────────────────┘</code></pre>
+<p>khy 的权限提示应与此保持一致。</p>
+<hr>
+<h2 id="测试验证">测试验证<a class="anchor" href="#测试验证" aria-label="锚点">#</a></h2>
+<p>每次同步后，需在两种模式下验证：</p>
+<pre><code class="language-powershell"><span class="hljs-comment"># TUI 模式</span>
+khy
+
+<span class="hljs-comment"># 经典模式</span>
+<span class="hljs-variable">$env:KHY_FULL_TUI</span> = <span class="hljs-string">&#x27;0&#x27;</span>
+khy</code></pre>
+<p>验证点：</p>
+<ul><li>[ ] Banner 显示正确且不重复</li><li>[ ] 权限提示正常工作</li><li>[ ] 模型选择正常工作</li><li>[ ] 登录/注册流程正常</li><li>[ ] 所有命令在两种模式下行为一致</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-109] Y-code 借鉴实施方案.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-109] Y-code（星瑶）借鉴实施方案</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-111] 规则遵守保障机制.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-111] 规则遵守保障机制（ruleguard）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-110] TUI-CLASSIC-SYNC 设计笔记.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

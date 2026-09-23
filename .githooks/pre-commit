@@ -34,7 +34,10 @@ echo "  ✅ 无临时文件\n"
 # 2. 检查是否有大文件（>10MB）
 echo "📏 检查大文件..."
 LARGE_FILES=""
-for file in $(git diff --cached --name-only); do
+# ⚠ 必须用 `-z` + `while IFS= read -r -d ''`，不能用 `for file in $(...)`：
+# 本仓大量文件名含空格与方括号（如 `docs/10_规范/DESIGN-LAY/[DESIGN-LAY-004] build-root-demo.js`），
+# 词分割会把一个路径切成多个 token → `[ -f "$file" ]` 恒假 → 整个大文件检查静默失效。
+while IFS= read -r -d '' file; do
   if [ -f "$file" ]; then
     # 跨平台获取文件大小
     if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -42,12 +45,17 @@ for file in $(git diff --cached --name-only); do
     else
       SIZE=$(stat -c%s "$file" 2>/dev/null || echo 0)
     fi
-    
+    case "$SIZE" in
+      '' | *[!0-9]*) SIZE=0 ;;
+    esac
+
     if [ "$SIZE" -gt 10485760 ]; then
-      LARGE_FILES="$LARGE_FILES$file ($(echo "scale=2; $SIZE/1048576" | bc)MB)\n"
+      # 用 shell 整数算术而非 `bc`：本机 Git Bash 没有 bc（`command -v bc` 为空），
+      # 原来那句会静默产出空串并往 stderr 喷 `bc: command not found`。
+      LARGE_FILES="${LARGE_FILES}${file} ($((SIZE / 1048576))MB)\n"
     fi
   fi
-done
+done < <(git diff --cached --name-only -z)
 
 if [ -n "$LARGE_FILES" ]; then
   echo "❌ 错误：检测到大文件（>10MB）："
@@ -57,13 +65,13 @@ if [ -n "$LARGE_FILES" ]; then
 fi
 echo "  ✅ 无大文件\n"
 
-# 3. 检查是否有敏感信息
+# 3. 检查是否有敏感信息（真源：scripts/ci/check-staged-secrets.js）
+#    形态集合与豁免策略都在那个检查器里：它读 scripts/release/hygiene-allowlist.json
+#    的「文件 + 完整值」豁免，并用 \b 词边界避免把 task-template-hint-injection
+#    这类标识符判成密钥形态。原来这里是一段裸 grep，既不读白名单也无词边界，
+#    导致测试夹具与白名单自身被误拦。
 echo "🔒 检查敏感信息..."
-SENSITIVE_PATTERNS="sk-[a-z0-9]{16,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----"
-FOUND_SECRETS=$(git diff --cached -U0 | grep -iE "$SENSITIVE_PATTERNS" || true)
-if [ -n "$FOUND_SECRETS" ]; then
-  echo "❌ 错误：检测到可能的密钥泄露："
-  echo "$FOUND_SECRETS" | head -5
+if ! node "$ROOT/scripts/ci/check-staged-secrets.js"; then
   echo ""
   echo "请确保密钥未被提交："
   echo "  git reset HEAD <file>"
@@ -73,7 +81,7 @@ fi
 echo "  ✅ 无敏感信息\n"
 
 # 4. 规则执行器 commit 快档（[DESIGN-ARCH-111]）
-#    门成员资格从 docs/_规范/RULES-REGISTRY.json 派生，不在此硬编码。
+#    门成员资格从 docs/10_规范/RULES-REGISTRY.json 派生，不在此硬编码。
 #    commit 档只跑 gate=commit 且声明了 --changed 的执行器（秒级），
 #    全仓库检查留给 PR 门（npm run rules:gate）。
 #    违规留痕在 .khy/ruleguard/violations.jsonl；抑制用
@@ -91,6 +99,39 @@ if ! node "$ROOT/scripts/ruleguard/index.js" run --mode commit --no-ledger; then
   exit 1
 fi
 echo "  ✅ commit 快档通过\n"
+
+# 4.2 软著就绪（PROCESS-010 / [DESIGN-IP-001]）
+#      这条规则声明了 gate=pr，所以**不会**被上面的 commit 快档带上；
+#      但「不得把 AI 列为作者」是唯一必须**在提交时**就挡住的判据 ——
+#      AI 署名一旦进了历史就是既成事实（本仓已有 88 条，不改写历史），
+#      事后任何 PR 门都只能记录、不能挽回。
+#      所以这里单独调用执行器，且**按其 STAGE 常量决定是否拦截**：
+#      当前 STAGE=S1（观察者），执行器恒 exit 0 —— 本段只做可见回执，不阻断。
+#      升到 S3 后执行器自己有非零退出码，预提交自动开始拦截（无需改本文件）。
+#      ⚠ 不要在这里硬编码判据：判据真源是 docs/10_规范/registry/COPYRIGHT.json
+#      与执行器的 STAGE 常量，改本文件只会让两者各说各话。
+echo "📜 软著就绪检查（PROCESS-010，S1 观察者档）..."
+if ! node "$ROOT/scripts/ci/check-copyright-readiness.js" --changed; then
+  echo ""
+  echo "❌ 软著就绪检查未通过（当前为 S3+ 阶段，已开始拦截）。修复："
+  echo "  npm run check:copyright:explain   # 看每条判据与修复方向"
+  echo "  最常见的情况：提交信息里有 Co-Authored-By: <AI> 一行 —— 删掉即可，代码不用动"
+  exit 1
+fi
+echo "  ✅ 软著就绪回执完成\n"
+
+# 4.5 GitHub Actions 工作流体检
+#      只检查本次改动的工作流文件。挡的是「push 之后才发现整个 workflow
+#      废掉」这类问题：step name 里的裸冒号、pinn 版本漂移、Windows 路径等。
+#      这些在本地静态可查，没必要花一轮 CI 才发现。
+if git diff --cached --name-only | grep -qE '^\.github/workflows/.*\.ya?ml$'; then
+  echo "🔧 检查 GitHub Actions 工作流..."
+  if ! node "$ROOT/scripts/ci/check-workflow-sanity.js" --changed; then
+    echo ""
+    echo "❌ 工作流体检未通过。全部检查：npm run check:workflow-sanity:all"
+    exit 1
+  fi
+fi
 
 # 5. 检查 commit message 格式
 echo "📝 检查 commit message..."

@@ -66,6 +66,22 @@ const STAGES = [
     command: 'npm run check:small-model:safety',
   },
   {
+    // 出厂件明文密钥(SECURITY-001 的形态判据),**全量**模式。
+    // 与上一条 small-model-safety 是同一判据的两个模式:那条经 `check:change-safety`
+    // 自带 `--changed`,只看本次暂存的改动;本条目**刻意不带 --changed** ⇒ 改动集为空、
+    // 检查照跑,并连同打包产物(apps/khy-os-client-app/release/*.apk)一起逐 zip 条目扫。
+    // APK 是构建产物,提交时刻根本不存在 —— 所以「装到机器上的包只有混淆密钥」这件事
+    // 只有发版前才查得到,也只有这道门查。APK 缺失不算失败(与 android-signature 同样
+    // 容忍缺产物),此时只覆盖源树。
+    // --strict-warnings:全量模式下与改动集无关的 finding 只有「检查器自己跑不起来」
+    // (缺 Python 等)一条,把这类 warning 也判失败 ⇒ 发布门宁可误报也不静默放行。
+    id: 'builtin-key-plaintext',
+    title: '出厂件明文密钥(全量,含 APK 打包产物)',
+    tier: 'must',
+    kind: 'deterministic',
+    command: 'node scripts/ci/check-change-safety.js --strict-warnings',
+  },
+  {
     id: 'maintainer-safety',
     title: '维护映射表 + 安全门禁',
     tier: 'must',
@@ -123,7 +139,20 @@ const STAGES = [
     command: 'npm run check:pip-packaging',
   },
   {
+    // Android 发布包签名校验:跑 apksigner + keytool,核对 dist/android 的 release
+    // 包签名与 release keystore 指纹一致。缺 Android 工具链 / 缺产物时薄壳自身
+    // fail-soft 退出 0 并打印 SKIP(不阻断 pip/npm 双渠道);只有「签名无效」或
+    // 「签错 key」才退出 1。tier=recommended:是 Android 渠道专属,不该让没装
+    // Android SDK 的 CI 机器上 pip/npm 发布翻红。
+    id: 'android-signature',
+    title: 'Android 发布包签名校验(apksigner + release keystore 指纹)',
+    tier: 'recommended',
+    kind: 'deterministic',
+    command: 'node scripts/release/verify-android-signature.js',
+  },
+  {
     // 协议合规:校验 .khy/ 下 JSON 文件是否符合 FILE-FORMAT-PROTOCOL.md 注册的 schema。
+    // 真源:docs/10_规范/其它规范/FILE-FORMAT-PROTOCOL.md(2026-09-10 规范目录拆分后由 03_DESIGN_设计 迁入)。
     // 防止运行时状态 / 审计记录结构漂移导致解析器静默失败。
     id: 'json-schema-validation',
     title: 'JSON 协议合规(.khy/ JSON schema 校验)',
@@ -142,7 +171,8 @@ const STAGES = [
   },
   {
     // 可靠性契约:校验任务状态机完整性、Watchdog 覆盖率、Receipt 闭合性、AbortSignal
-    // 传播链路、重试分类。对应 RELIABILITY-PROTOCOL.md 定义，防止长任务可靠性机制漂移。
+    // 传播链路、重试分类。对应 RELIABILITY-PROTOCOL.md 定义（真源:docs/10_规范/其它规范/RELIABILITY-PROTOCOL.md，
+    // 2026-09-10 规范目录拆分后由 03_DESIGN_设计 迁入），防止长任务可靠性机制漂移。
     id: 'reliability-gate',
     title: '可靠性契约校验(状态机/Watchdog/Receipt/AbortSignal/重试)',
     tier: 'must',

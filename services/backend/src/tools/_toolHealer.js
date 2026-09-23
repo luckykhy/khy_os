@@ -24,27 +24,13 @@
  */
 
 const { RISK_LEVELS } = require('../constants/riskOrder');
+const { VALID_CATEGORIES } = require('./_toolCategories');
 
 // ── Valid value registries ────────────────────────────────────────────
 // Each registry is a frozen array of valid strings. Healers fuzzy-match against these.
-
-const VALID_CATEGORIES = Object.freeze([
-  'data',
-  'analysis',
-  'execution',
-  'filesystem',
-  'git',
-  'system',
-  'optimization',
-  'coordinator',
-  'mcp',
-  'multimodal',
-  'storage',
-  'ai',
-  'training',
-  'realtime',
-  'custom',
-]);
+//
+// VALID_CATEGORIES is derived from the single CATEGORIES source in
+// _toolCategories.js (shared with _baseTool) — never a hand-maintained copy.
 
 const VALID_RISK_LEVELS = Object.freeze([...RISK_LEVELS]); // ['safe','low','medium','high','critical']
 

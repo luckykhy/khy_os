@@ -11,7 +11,7 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const ledger = require('../src/services/deploy/deployLedger');
+const ledger = require('../src/services/domain/deploy/deploy/deployLedger.js');
 
 function makeDeps(overrides = {}) {
   const store = new Map();

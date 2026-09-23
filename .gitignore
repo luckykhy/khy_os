@@ -26,6 +26,23 @@ build/
 *.sqlite-shm
 *.sqlite-wal
 
+# Flutter build caches (regenerable: flutter build / flutter pub get)
+apps/khy-os-client-app/build/
+apps/khy-os-client-app/.dart_tool/
+
+# Git local backups (never commit)
+.git-backup-*/
+
+# Android build artifacts leaked to repo root (never tracked)
+classes*.dex
+AndroidManifest.xml
+META-INF/
+kotlin/
+res/
+assets/
+resources.arsc
+DebugProbesKt.bin
+
 # Environment & secrets
 .env
 .env.local
@@ -186,3 +203,50 @@ nul
 dist-electron/
 
 apps/khyos-desktop/dist-electron/
+
+# ── 体积防复发（2026-09-16 体积治理后补）────────────────────────────────
+# 本轮实测的膨胀源中，以下几类**当时未被任何忽略规则覆盖**，因此持续出现在
+# `git status` 里、并有被 `git add -A` 误收的风险。规则留下防复发。
+#
+# `_产物/` 是 [DESIGN-LAY-005] §1.4 登记的根级例外「工作产物暂存区」：
+# 语义是「产出即冻结、不再维护」，[DESIGN-LAY-003] §2 也标注其为**未跟踪**。
+# 显式忽略，让它不再污染工作树状态。
+/_产物/
+tmp-cmp/
+/.zcode-tmp/
+
+# 调研用上游克隆与探测碎片（2026-09-16 已清理，规则保留以防再次落盘）
+/.research-tmp/
+
+# 第三方 CLI / 工具自带的依赖与临时状态。**只忽略这两处**——它们的配置文件
+# （.opencode/config.json、.zcode/plans/*.md）仍在版本库内，整目录忽略会与
+# 「已跟踪文件出现在忽略目录里」形成不一致。
+/.opencode/node_modules/
+/.zcode/tmp/
+
+# APK / AAB 产物：可从源码重建，归档件属发布物而非仓库资产，两者都不入库。
+*.apk
+*.aab
+/apps/khy-mobile/release/
+/apps/khy-os-client-app/release/
+
+# ── 构建产物单一根 entries/（LAYOUT-005 / [DESIGN-LAY-004]，2026-09-18 根迁移）──
+# entries/ 同时承载两类内容：
+#   ① 提交的「多端入口真源」——entries.json / launch.js / README.*（人读地图）；
+#   ② 各端「构建产物」——wheel / exe / apk / html（entries/<producer>[/<variant>]）。
+# 采取「默认忽略、真源白名单放行」：entries/ 下除下列真源文件外一律不入库，
+# 未来新增的产物子目录（entries/pip、entries/electron…）自动被忽略，无需再改本表。
+entries/*
+!entries/entries.json
+!entries/launch.js
+!entries/README.md
+!entries/README.html
+
+# --- 调试与临时产物（2026-09-20 加入）---
+# 起因：一次历史暂存区里混进了 19 个 _tmp_dbg*.js 与 *.tmp-* 文件，
+# 而 .githooks/pre-commit 的临时文件正则是 ^tmp-|\.tmp$，抓不到这些形态，
+# 于是它们能一路通过 pre-commit 进入提交。此处按「形态」兜住。
+_tmp_dbg*
+*.tmp-*
+
+

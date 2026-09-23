@@ -11,6 +11,7 @@
  * node:test(jest 经 rtk 代理报 Exec format error 不可用)。
  */
 const fs = require('node:fs');
+const assert = require('node:assert');
 const path = require('node:path');
 const mod = require('../../src/tools/pythonInvocationHint');
 
@@ -22,7 +23,7 @@ describe('Python Invocation Hint', () => {
         {},
       );
       expect(hint).toBeTruthy();
-      expect(/python -c/.test(hint).toBeTruthy());
+      expect(/python -c/.test(hint)).toBeTruthy();
       expect(/\.py|heredoc|分号/.test(hint)).toBeTruthy();
   });
 
@@ -44,7 +45,7 @@ describe('Python Invocation Hint', () => {
         {},
       );
       expect(hint).toBeTruthy();
-      expect(/import json/.test(hint).toBeTruthy());
+      expect(/import json/.test(hint)).toBeTruthy();
   });
 
   test('坑③边界:裸 NameError(无 Python 建议)→ null(不臆测是否漏 import)', () => {
@@ -75,7 +76,7 @@ describe('Python Invocation Hint', () => {
         {},
       );
       expect(hint).toBeTruthy();
-      expect(/python|py -3/.test(hint).toBeTruthy());
+      expect(/python|py -3/.test(hint)).toBeTruthy();
   });
 
   test('两坑同时命中 → 合并成一行(含两句指引)', () => {
@@ -85,8 +86,8 @@ describe('Python Invocation Hint', () => {
         {},
       );
       expect(hint).toBeTruthy();
-      expect(/python -c/.test(hint).toBeTruthy());
-      expect(/py -3|python/.test(hint).toBeTruthy());
+      expect(/python -c/.test(hint)).toBeTruthy();
+      expect(/py -3|python/.test(hint)).toBeTruthy();
   });
 
   test('只识别姿势错,不猜逻辑错:KeyError / 非 python 命令 → null', () => {
@@ -126,7 +127,7 @@ describe('Python Invocation Hint', () => {
 
   test('fail-soft:异常 / 非字符串输入绝不抛', () => {
       for (const bad of [null, undefined, 123, {}, []]) {
-        expect(() => mod.buildPythonInvocationHint(bad, bad, {}).not.toThrow());
+        expect(() => mod.buildPythonInvocationHint(bad, bad, {})).not.toThrow();
       }
   });
 

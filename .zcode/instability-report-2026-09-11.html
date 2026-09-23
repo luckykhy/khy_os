@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: instability-report-2026-09-11.md -->
+<title>khy-os 运行不稳定因素排查（2026-09-11） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../docs/index.html">首页</a><span class="sep">›</span>.zcode<span class="sep">›</span>khy-os 运行不稳定因素排查（2026-09-11）</div>
+      <header class="hero reveal"><h1>khy-os 运行不稳定因素排查（2026-09-11）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-运行不稳定因素排查-2026-09-11">khy-os 运行不稳定因素排查（2026-09-11）</a></li><li class="lvl-2"><a href="#一-当前真实运行时状态-证据基线">一、当前真实运行时状态（证据基线）</a></li><li class="lvl-2"><a href="#二-确定的不稳定因素-按影响排序">二、确定的不稳定因素（按影响排序）</a></li><li class="lvl-3"><a href="#1-守护进程-自杀-按需重启-抖动循环-最高优先级">1. 守护进程「自杀 + 按需重启」抖动循环（最高优先级）</a></li><li class="lvl-3"><a href="#2-历史崩溃-module-not-found-模块-shim-脆弱">2. 历史崩溃：`MODULE_NOT_FOUND` + 模块 shim 脆弱</a></li><li class="lvl-3"><a href="#3-桌面端无单实例锁-electron-僵尸进程堆积">3. 桌面端无单实例锁 → Electron 僵尸进程堆积</a></li><li class="lvl-3"><a href="#4-端口-9090-被两个守护共享-潜在-eaddrinuse-抖动">4. 端口 9090 被两个守护共享（潜在 EADDRINUSE 抖动）</a></li><li class="lvl-3"><a href="#5-硬编码绝对路径破坏可移植性-本仓为-portable-部署-重点违规">5. 硬编码绝对路径破坏可移植性（本仓为 portable 部署，重点违规）</a></li><li class="lvl-3"><a href="#6-sqlite-会话库曾发生-损坏-孤儿-wal-事件">6. SQLite 会话库曾发生「损坏 + 孤儿 WAL」事件</a></li><li class="lvl-3"><a href="#7-配置漂移-外部通道故障">7. 配置漂移 / 外部通道故障</a></li><li class="lvl-3"><a href="#8-日志编码乱码-可诊断性劣化">8. 日志编码乱码（可诊断性劣化）</a></li><li class="lvl-2"><a href="#三-相对健康的部分-避免误判">三、相对健康的部分（避免误判）</a></li><li class="lvl-2"><a href="#四-修复优先级建议-供决策-未改动任何代码">四、修复优先级建议（供决策，未改动任何代码）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-运行不稳定因素排查-2026-09-11">khy-os 运行不稳定因素排查（2026-09-11）<a class="anchor" href="#khy-os-运行不稳定因素排查-2026-09-11" aria-label="锚点">#</a></h1>
+<blockquote><p>目标：找出 khy-os 在<strong>运行期</strong>（不是编译期）真正导致崩溃、抖动、静默劣化的因素。<br>方法：以本机 <code>D:\Portable\khy-os</code> 的<strong>真实运行时证据</strong>（<code>.khy/</code> 状态文件 + 日志 + 活进程 +<br>仓库自带检查脚本）为主，以代码走查为辅。每条都附可复核的证据。</p></blockquote>
+<hr>
+<h2 id="一-当前真实运行时状态-证据基线">一、当前真实运行时状态（证据基线）<a class="anchor" href="#一-当前真实运行时状态-证据基线" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>组件</th><th>状态文件</th><th>记录</th><th>实际</th></tr></thead><tbody><tr><td>KHY daemon</td><td><code>.khy/daemon.pid</code></td><td>pid 35556, port 9090</td><td><strong>进程已死（NOT RUNNING）</strong></td></tr><tr><td>ai-manage daemon</td><td><code>.khy/ai_manage_runtime.json</code></td><td>pid 37944, apiPort 9090, controlPort 23165</td><td><strong>进程已死</strong>；<code>frontendAvailable:false</code></td></tr><tr><td>backend 单体</td><td><code>.khy/backend_runtime.json</code></td><td>pid 39716, apiPort 3000</td><td><strong>存活</strong>，RSS ≈ 708 MB</td></tr><tr><td>桌面端</td><td><code>tasklist</code></td><td>—</td><td><strong>48 个 <code>KhyOS Desktop.exe</code></strong>，起始时间跨 09-06 → 09-08 数天</td></tr></tbody></table>
+<p>结论：<strong>除 backend 单体外，两个常驻管理守护进程都不在运行</strong>；桌面端进程在持续堆积。<br>这就是“开 App 才临时拉起、拉起来又 10 分钟自杀”的抖动现场。</p>
+<hr>
+<h2 id="二-确定的不稳定因素-按影响排序">二、确定的不稳定因素（按影响排序）<a class="anchor" href="#二-确定的不稳定因素-按影响排序" aria-label="锚点">#</a></h2>
+<h3 id="1-守护进程-自杀-按需重启-抖动循环-最高优先级">1. 守护进程「自杀 + 按需重启」抖动循环（最高优先级）<a class="anchor" href="#1-守护进程-自杀-按需重启-抖动循环-最高优先级" aria-label="锚点">#</a></h3>
+<ul><li>证据：<code>.khy/logs/ai_manage_daemon.log</code> 尾部反复出现</li></ul>
+<p><code>[ai-manage-daemon] 正在关闭守护进程: 原因=startup-timeout 无活动≈600000ms 阈值=600000ms 曾见会话=false</code><br>  → <code>shutdown: startup-timeout</code> → <code>[workflow-worker] started</code> → 再 shutdown，成对循环。</p>
+<ul><li>根因：<code>scripts/ai-manage-daemon.js</code> 的 GC 循环（L517-545）：</li></ul>
+<p><code>limit = seenAnySession ? idleMs : startupGraceMs</code>，两者默认都是 <strong>10 分钟</strong>（L77/L79）。<br>  只要守护进程<strong>从没等到任何会话</strong>（<code>曾见会话=false</code>），就在 10 分钟空闲后被<br>  <code>shutdown('startup-timeout')</code> 自杀；随后由 <code>aiManageDaemonLifecycle.ensureStarted()</code><br>  在用户再次触及时临时拉起 → 又 10 分钟自杀 → <strong>常驻进程永远驻留不住</strong>。</p>
+<ul><li>后果：工作流任务在守护进程停摆的空窗里停留在 <code>queued</code>（源码注释自证：</li></ul>
+<p>“Without a worker in-process nothing claims those rows, so runs sit in <code>queued</code> forever”）。</p>
+<h3 id="2-历史崩溃-module-not-found-模块-shim-脆弱">2. 历史崩溃：<code>MODULE_NOT_FOUND</code> + 模块 shim 脆弱<a class="anchor" href="#2-历史崩溃-module-not-found-模块-shim-脆弱" aria-label="锚点">#</a></h3>
+<ul><li>证据：<code>ai_manage_daemon.log</code> 中</li></ul>
+<p><code>Error: Cannot find module '../src/services/workflow/workflowRunWorker'</code>（<code>ai-manage-daemon.js:49</code>）。</p>
+<ul><li>现状：已重构为 <code>src/services/workflow/index.js</code>（自动生成的 shim，re-export 到</li></ul>
+<p><code>domain/project/workflow/workflowRunWorker.js</code>，该文件<strong>现已存在</strong>）。</p>
+<ul><li>风险：守护进程把一个 shim 的 re-export 当作启动必需（L48 <code>require</code> 顶层同步），</li></ul>
+<p>一旦 domain 侧文件再被移动/改名，<strong>整个管理守护进程会在启动即崩</strong>（不是 fail-soft）。</p>
+<h3 id="3-桌面端无单实例锁-electron-僵尸进程堆积">3. 桌面端无单实例锁 → Electron 僵尸进程堆积<a class="anchor" href="#3-桌面端无单实例锁-electron-僵尸进程堆积" aria-label="锚点">#</a></h3>
+<ul><li>证据：<code>tasklist</code> 有 48 个 <code>KhyOS Desktop.exe</code>，StartTime 横跨 09-06/07/08 数天；</li></ul>
+<p><code>electron/</code> 全目录 grep 不到 <code>requestSingleInstanceLock</code> / <code>second-instance</code>。</p>
+<ul><li>根因：<code>electron/main.js</code> 仅 <code>window-all-closed → app.quit()</code>，<strong>没有单实例锁</strong>，</li></ul>
+<p>用户多次启动 / 旧实例未清干净时，每个实例各自拉起一套 Electron 进程树，<br>  且退出时可能残留 GPU/utility/renderer 子进程 → <strong>进程与句柄持续累积</strong>。</p>
+<h3 id="4-端口-9090-被两个守护共享-潜在-eaddrinuse-抖动">4. 端口 9090 被两个守护共享（潜在 EADDRINUSE 抖动）<a class="anchor" href="#4-端口-9090-被两个守护共享-潜在-eaddrinuse-抖动" aria-label="锚点">#</a></h3>
+<ul><li><code>.khy/daemon.pid</code>（KHY daemon，<code>daemonManager.js</code> 写）与 <code>.khy/ai_manage_runtime.json</code></li></ul>
+<p>（ai-manage，<code>ai-manage-daemon.js</code> 写）<strong>都用 apiPort 9090</strong>。</p>
+<ul><li>缓解：<code>aiManagementServer.js</code> L3301-3336 有 EADDRINUSE 自动 +1 重试（最多 +10，</li></ul>
+<p>符合“端口韧性”红线）。</p>
+<ul><li>残留风险：两者各自写 runtime 文件记录“实际端口”，一旦 9090 被占后重试到 9091，</li></ul>
+<p>缓存了 9090 的下游消费者会打到错误服务 → 间歇性“连不上 / 连错”。</p>
+<h3 id="5-硬编码绝对路径破坏可移植性-本仓为-portable-部署-重点违规">5. 硬编码绝对路径破坏可移植性（本仓为 portable 部署，重点违规）<a class="anchor" href="#5-硬编码绝对路径破坏可移植性-本仓为-portable-部署-重点违规" aria-label="锚点">#</a></h3>
+<ul><li>证据 A（真实运行报错）：<code>ai_manage_daemon.log</code></li></ul>
+<p><code>[MCP] auto-connect failed: spawn C:\khy-os\tools\deepseek-eyes\.venv\Scripts\python.exe ENOENT</code><br>  —— 本机在 <code>D:\Portable\khy-os</code>，<code>C:\khy-os\...</code> 的 venv 不存在 → <strong>视觉 MCP（deepseek-eyes）在本机永久不可用</strong>。<br>  （用户 <code>mcp.json</code> 写的是动态 <code>python</code>，但 MCP 客户端把 <code>python</code> 解析到了旧机器的绝对 venv。）</p>
+<ul><li>证据 B（检查脚本实锤，<code>check-agent-rules.js</code> 14 error）：<ul><li><code>services/backend/fix.js</code> / <code>fix2.js</code> / <code>fix3.js</code> / <code>survey.tmp.js</code>：<strong>遗留的临时调试脚本</strong>，</li></ul></li></ul>
+<p>内含 <code>D:/Portable/khy-os/...</code> 硬路径，且直接改写 <code>proxy.js</code>（其中还夹带 <code>apiKey</code>）——本应删除。</p>
+<ul><li><code>services/backend/start-with-db.js</code> L21-26：写死 6 条 PostgreSQL 安装绝对路径</li></ul>
+<p>（<code>C:\Program Files\PostgreSQL\18</code> 等），正是 AGENTS.md 规则 1 点名的反例（应走 <code>PG_HOME</code>/扫盘）。</p>
+<ul><li><code>inference_server.py:185</code>：硬编码 host:port。</li></ul>
+<h3 id="6-sqlite-会话库曾发生-损坏-孤儿-wal-事件">6. SQLite 会话库曾发生「损坏 + 孤儿 WAL」事件<a class="anchor" href="#6-sqlite-会话库曾发生-损坏-孤儿-wal-事件" aria-label="锚点">#</a></h3>
+<ul><li>证据：<code>.khy/sessions.db.incident-2026-08.zip</code> 内含</li></ul>
+<p><code>sessions.db.corrupted-*</code>（两次损坏存档）+ <code>sessions.db-shm.orphan-*</code> / <code>sessions.db-wal.orphan-*</code>。</p>
+<ul><li>含义：<strong>写会话库的进程经历过非正常终止（崩溃/被 kill），留下未合并的 WAL/SHM</strong>，</li></ul>
+<p>后续启动靠“检测损坏→归档→恢复”兜底。这与第 1 条的守护进程抖动/崩溃同源。</p>
+<h3 id="7-配置漂移-外部通道故障">7. 配置漂移 / 外部通道故障<a class="anchor" href="#7-配置漂移-外部通道故障" aria-label="锚点">#</a></h3>
+<ul><li><strong>代理订阅失效</strong>：<code>.khy/proxy.json</code> 的 <code>activeSubscriptionId</code> 指向一个 `lastStatus:&quot;error&quot;,</li></ul>
+<p>HTTP 404<code> 的订阅；</code>daemon.log<code> 反复 </code>RELAY-PROXY-FALLBACK ... target=api.codeium.com<br>  err=ECONNREFUSED/ socket hang up → falling back to direct`。代理不可用、只能回退直连。</p>
+<ul><li><strong>微信 ilink 通道轮询失败</strong>：<code>daemon.log</code> <code>ilink 轮询失败(连续 3 次),30000ms 后重试 fetch failed</code>。</li><li><strong>ToolRegistry 曾静默丢工具</strong>（已修）：<code>daemon.log</code>(09-05) `Failed to load</li></ul>
+<p>EmbeddingExtendedTool / ImageGenExtendedTool: invalid category &quot;multimodal&quot;<code>。<br>  根因：</code>_baseTool.js<code> 的 </code>CATEGORIES<code> 当时没有 </code>multimodal<code>，而 6 个 </code><em>ExtendedTool<code> 已声明该分类<br>  （分类表两处不同步）。**09-08 已在 </code>_baseTool.js<code>/</code>index.js<code> 补齐 </code>multimodal` 修复</em>*，但属回归事件。</p>
+<ul><li><strong>后端 ML 依赖缺失</strong>：<code>backend.out</code> <code>[WARN] ML Python dependencies missing</code>。</li></ul>
+<h3 id="8-日志编码乱码-可诊断性劣化">8. 日志编码乱码（可诊断性劣化）<a class="anchor" href="#8-日志编码乱码-可诊断性劣化" aria-label="锚点">#</a></h3>
+<ul><li><code>ai_manage_daemon.log</code> / <code>daemon.log</code> 大量中文是 GBK/UTF-8 错配产生的乱码</li></ul>
+<p>（如 <code>姝ｅ湪鍏抽棴</code> = “正在关闭”）。不影响功能，但<strong>严重削弱线上排障能力</strong>——<br>  本次排障必须靠上下文反推每条日志的真实含义。</p>
+<hr>
+<h2 id="三-相对健康的部分-避免误判">三、相对健康的部分（避免误判）<a class="anchor" href="#三-相对健康的部分-避免误判" aria-label="锚点">#</a></h2>
+<ul><li><code>bin/khy.js</code> 的 <code>unhandledRejection</code> / <code>uncaughtException</code> 处理成熟（L572-582，</li></ul>
+<p>交给 <code>crashRecovery</code>，致命码才 <code>exit</code>，交互式兜底不崩）。</p>
+<ul><li><code>aiManagementServer.js</code> 的端口 EADDRINUSE 自动重试（+1..+10）合规。</li><li><code>ai-manage-daemon.js</code> 把 workflow worker 启动失败做了 fail-soft（L669-678，</li></ul>
+<p>worker 崩不影响管理栈服务）。</p>
+<ul><li><code>check-agent-rules.js</code> 共扫 5285 文件，仅 14 error（全在临时脚本/dev 脚本）+</li></ul>
+<p>3 warning（<code>feedback.js</code>/<code>remoteSsh.js</code> 模糊状态文案），主链路无硬超时/滚动区违规。</p>
+<hr>
+<h2 id="四-修复优先级建议-供决策-未改动任何代码">四、修复优先级建议（供决策，未改动任何代码）<a class="anchor" href="#四-修复优先级建议-供决策-未改动任何代码" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>优先级</th><th>动作</th><th>对应因素</th></tr></thead><tbody><tr><td>P0</td><td>给 <code>electron/</code> 加 <code>requestSingleInstanceLock</code> + 旧实例清理，止住 48 进程堆积</td><td>#3</td></tr><tr><td>P0</td><td>让守护进程“曾见会话”后不再 <code>startup-timeout</code> 自杀（或提高 startupGrace / 改为常驻 + 真空闲回收），消除 10 分钟抖动</td><td>#1</td></tr><tr><td>P0</td><td>删除 <code>fix.js/fix2.js/fix3.js/survey.tmp.js</code> 遗留脚本；<code>start-with-db.js</code> 改 <code>PG_HOME</code>/扫盘</td><td>#5</td></tr><tr><td>P1</td><td>MCP <code>python</code> 解析改为“从当前 install root / PATH 动态解析”，不再回落到旧机器绝对 venv</td><td>#5A</td></tr><tr><td>P1</td><td>修 <code>proxy.json</code> 失效订阅（删掉 404 订阅或换可用节点），止住 RELAY-PROXY-FALLBACK</td><td>#7</td></tr><tr><td>P1</td><td>统一 daemon / ai-manage 的 9090 归属，或让 runtime 文件的实际端口传播到所有消费者</td><td>#4</td></tr><tr><td>P2</td><td>加 WAL 正常关闭钩子 + 启动时孤儿 WAL 清理告警，避免再触发“损坏→恢复”</td><td>#6</td></tr><tr><td>P2</td><td>统一 <code>CATEGORIES</code> 单一真源（<code>_baseTool</code> 与 ToolRegistry 校验），防分类漂移复发</td><td>#7</td></tr><tr><td>P2</td><td>日志统一 UTF-8 输出（或终端强制 codepage 65001），止住乱码</td><td>#8</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><span></span><a class="next" href="../.zcode/plans/plan-sess_2e209ec3-2c22-4fbc-81f2-68ea89ac2dae.html"><div class="dir">下一篇 →</div><div class="ttl">TUI 重构细化执行计划（小模型可执行版）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../";window.__KHY_CUR__=".zcode/instability-report-2026-09-11.html";</script>
+<script src="../docs/19_资产/site/nav-data.js"></script>
+<script src="../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

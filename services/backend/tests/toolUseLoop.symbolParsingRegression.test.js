@@ -32,7 +32,7 @@ describe('toolUseLoop symbol-prefixed tool call parsing regressions', () => {
       return { success: false, error: `unexpected tool: ${name}` };
     });
 
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool,
       clearPreflightContext: jest.fn(),
     }));

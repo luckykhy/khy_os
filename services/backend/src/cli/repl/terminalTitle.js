@@ -14,9 +14,13 @@
  * loop open.
  */
 
+const { toOscSafeText } = require('../../utils/oscSafeText');
+
 function setTerminalTitle(title) {
   if (process.stdout.isTTY) {
-    process.stdout.write(`\x1b]0;${title}\x07`);
+    // Same OSC-delimiter hazard as the TUI topic bar: the title carries
+    // conversation text, so BEL/ESC in it would open a second OSC command.
+    process.stdout.write(`\x1b]0;${toOscSafeText(title)}\x07`);
   }
 }
 

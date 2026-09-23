@@ -1,7 +1,7 @@
 // build.mjs — bundle mermaid into a self-contained offline asset at
-// docs/_assets/mermaid.min.js, loaded by every page the doc-site generator emits.
+// docs/19_资产/site/mermaid.min.js, loaded by every page the doc-site generator emits.
 //
-// Output (gitignored): docs/_assets/mermaid.min.js. All diagram back-ends are
+// Output (gitignored): docs/19_资产/site/mermaid.min.js. All diagram back-ends are
 // inlined (no code splitting, no dynamic fetch) so the doc site stays fully
 // offline — that is a hard constraint stated in build_docs_site.js's header.
 //
@@ -14,7 +14,7 @@ import { dirname, resolve } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..', '..', '..');
-const outfile = resolve(root, 'docs', '_assets', 'mermaid.min.js');
+const outfile = resolve(root, 'docs', '19_资产', 'mermaid.min.js');
 
 await build({
   entryPoints: [resolve(here, 'entry.mjs')],
@@ -33,4 +33,4 @@ await build({
 });
 
 const bytes = statSync(outfile).size;
-console.log(`[build] docs/_assets/mermaid.min.js written: ${(bytes / 1048576).toFixed(2)} MiB`);
+console.log(`[build] docs/19_资产/site/mermaid.min.js written: ${(bytes / 1048576).toFixed(2)} MiB`);

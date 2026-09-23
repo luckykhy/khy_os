@@ -1,19 +1,20 @@
 'use strict';
 /**
- * mcpServer â€?engine wiring tests via injected fake registry (node:test).
+ * mcpServer ï¿½?engine wiring tests via injected fake registry (node:test).
  *
- * Drives createServerCore with a fake registry (getEnabled â†?2 stub tools,
+ * Drives createServerCore with a fake registry (getEnabled ï¿½?2 stub tools,
  * execute records args). Verifies the full requestâ†’response contract without
  * starting a process or touching the real tool registry:
- *   - initialize â†?protocolVersion + serverInfo
- *   - tools/list â†?2 tools with {name, inputSchema} (parameters renamed)
- *   - tools/call â†?goes through registry.execute (permission-gated dispatcher),
+ *   - initialize ï¿½?protocolVersion + serverInfo
+ *   - tools/list ï¿½?2 tools with {name, inputSchema} (parameters renamed)
+ *   - tools/call ï¿½?goes through registry.execute (permission-gated dispatcher),
  *     result mapped to MCP CallToolResult
- *   - tools/call on a non-exposed tool â†?-32602
- *   - bad JSON â†?-32700
- *   - handler throwing â†?-32603 (never crashes)
+ *   - tools/call on a non-exposed tool ï¿½?-32602
+ *   - bad JSON ï¿½?-32700
+ *   - handler throwing ï¿½?-32603 (never crashes)
  */
-const { createServerCore } = require('../../../src/services/mcp/mcpServer');
+const { createServerCore } = require('../../../src/services/domain/messaging/mcp/mcpServer.js');
+const assert = require('node:assert');
 function stubTool(name) {
   return {
     name,
@@ -43,7 +44,7 @@ function fakeRegistry() {
 }
 
 describe('Mcp Server', () => {
-  test('initialize â†?protocolVersion + serverInfo', async () => {
+  test('initialize ï¿½?protocolVersion + serverInfo', async () => {
       const core = createServerCore({ version: '1.2.3', registry: fakeRegistry(), env: {} });
       const resp = await core.handleMessage('{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}');
       expect(resp.id).toBe(1);
@@ -52,17 +53,17 @@ describe('Mcp Server', () => {
       assert.deepEqual(resp.result.capabilities, { tools: {} });
   });
 
-  test('tools/list â†?2 tools with inputSchema (parameters renamed, aliases dropped)', async () => {
+  test('tools/list ï¿½?2 tools with inputSchema (parameters renamed, aliases dropped)', async () => {
       const core = createServerCore({ version: '1.0.0', registry: fakeRegistry(), env: {} });
       const resp = await core.handleMessage('{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}');
       expect(resp.result.tools.length).toBe(2);
       const alpha = resp.result.tools.find((t) => t.name === 'Alpha');
       expect(alpha.inputSchema && alpha.inputSchema.properties.q).toBeTruthy();
-      expect(!('parameters' in alpha).toBeTruthy());
-      expect(!('aliases' in alpha).toBeTruthy());
+      expect(!('parameters' in alpha)).toBeTruthy();
+      expect(!('aliases' in alpha)).toBeTruthy();
   });
 
-  test('tools/call â†?registry.execute called (permission-gated), result â†?CallToolResult', async () => {
+  test('tools/call ï¿½?registry.execute called (permission-gated), result ï¿½?CallToolResult', async () => {
       const reg = fakeRegistry();
       const core = createServerCore({ version: '1.0.0', registry: reg, env: {} });
       const resp = await core.handleMessage(
@@ -74,7 +75,7 @@ describe('Mcp Server', () => {
       expect(resp.result.isError).toBe(false);
   });
 
-  test('tools/call on a non-exposed tool â†?-32602 (not exposed), execute NOT called', async () => {
+  test('tools/call on a non-exposed tool ï¿½?-32602 (not exposed), execute NOT called', async () => {
       const reg = fakeRegistry();
       const core = createServerCore({ version: '1.0.0', registry: reg, env: {} });
       const resp = await core.handleMessage(

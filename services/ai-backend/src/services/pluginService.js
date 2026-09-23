@@ -23,11 +23,10 @@ const importSvc = require('./pluginImportService');
 // Runtime invoker + tool bridge live in the trading backend (shared with the
 // workflow node + chat Agent). ai-backend already reaches backend services this
 // way; reusing the bridge keeps the tool projection a single source of truth.
-const pluginInvoker = require(
-  path.resolve(__dirname, '../../../backend/src/services/plugins/pluginInvoker')
-);
-const pluginToolBridge = require(
-  path.resolve(__dirname, '../../../backend/src/services/plugins/pluginToolBridge')
+// Both were moved to the domain tree and re-exported by the plugins shim, so
+// resolve through the shim index (requiring the old per-file paths breaks).
+const { pluginInvoker, pluginToolBridge } = require(
+  path.resolve(__dirname, '../../../backend/src/services/plugins')
 );
 
 /** Mask an auth config down to a non-secret descriptor for the client. */

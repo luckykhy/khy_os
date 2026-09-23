@@ -27,9 +27,9 @@ describe('Ai Management Chat Http Leaf', () => {
   test('_resolveChatAttachments passes through the no-attachment path deterministically', () => {
       const leaf = require(LEAF);
       const out = leaf._resolveChatAttachments({ }, 'hello');
-      // No attachments/images â†?message unchanged, images empty. Shape must be stable.
+      // No attachments/images ï¿½?message unchanged, images empty. Shape must be stable.
       expect(out.message).toBe('hello');
-      expect(Array.isArray(out.images).toBeTruthy());
+      expect(Array.isArray(out.images)).toBeTruthy();
       expect(out.images.length).toBe(0);
   });
 
@@ -39,7 +39,7 @@ describe('Ai Management Chat Http Leaf', () => {
       leaf.setChatHttpDeps({ sendJson: (res, code, body) => { captured = { code, body }; } });
       leaf.handlePersonaHttp({}, {});
       expect(captured).toBeTruthy();
-      expect(typeof captured.code).toBe('number'); // 200 (or 500 if personaService throws) â€?either proves the wire
+      expect(typeof captured.code).toBe('number'); // 200 (or 500 if personaService throws) ï¿½?either proves the wire
       expect(typeof captured.body).toBe('object');
   });
 

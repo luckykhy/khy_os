@@ -93,12 +93,15 @@ function useVimInput(props = {}) {
       };
     }
 
-    // Vim moves the cursor left by 1 when leaving INSERT (unless at line start
-    // or offset 0).
+    // Vim moves the cursor left by one when leaving INSERT (unless at line start
+    // or offset 0). Step a whole grapheme, not one UTF-16 code unit: if the char
+    // before the caret is astral (emoji / CJK ext-B), a raw offset-1 lands on the
+    // pair's low half, and a follow-up `x` then slices only that half → lone
+    // surrogate 乱码 (BUG-97). VimCursor.left() is grapheme-aware (BUG-95).
     const offset = offsetRef.current;
     const value = valueRef.current;
     if (offset > 0 && value[offset - 1] !== '\n') {
-      textInput.setOffset(offset - 1);
+      textInput.setOffset(VimCursor.fromText(value, offset).left().offset);
     }
 
     vimStateRef.current = { mode: 'NORMAL', command: { type: 'idle' } };
@@ -330,6 +333,11 @@ function useVimInput(props = {}) {
 
   return {
     ...textInput,
+    // 展开会把 getter 当场求值成一次性快照 —— 凡「实时镜像」语义的属性都必须
+    // 在这里重新声明，否则消费方拿到的永远是本次渲染时的值。
+    get liveCursor() {
+      return textInput.liveCursor;
+    },
     onInput: handleVimInput,
     mode: enabled ? mode : 'INSERT',
     setMode: setModeExternal,

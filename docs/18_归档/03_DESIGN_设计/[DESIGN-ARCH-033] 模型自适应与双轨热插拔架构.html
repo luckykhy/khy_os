@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-033] 模型自适应与双轨热插拔架构.md -->
+<title>[DESIGN-ARCH-033] 模型自适应与双轨热插拔架构 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>18_归档<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-033] 模型自适应与双轨热插拔架构</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-033] 模型自适应与双轨热插拔架构</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-033-模型自适应与双轨热插拔架构">[DESIGN-ARCH-033] 模型自适应与双轨热插拔架构</a></li><li class="lvl-2"><a href="#1-目标">1. 目标</a></li><li class="lvl-2"><a href="#2-双轨与物理隔离">2. 双轨与物理隔离</a></li><li class="lvl-2"><a href="#3-合并策略-运行时拼装">3. 合并策略（运行时拼装）</a></li><li class="lvl-2"><a href="#4-模型自适应与安全降级">4. 模型自适应与安全降级</a></li><li class="lvl-2"><a href="#5-官方更新防破坏协议">5. 官方更新防破坏协议</a></li><li class="lvl-2"><a href="#6-红线符合性">6. 红线符合性</a></li><li class="lvl-2"><a href="#7-交付物">7. 交付物</a></li><li class="lvl-2"><a href="#8-验收">8. 验收</a></li><li class="lvl-2"><a href="#9-跨分类关联指引">9. 跨分类关联指引</a></li></ul></nav>
+      <article class="doc-body">
+<blockquote><p>⚠️ <strong>已归档（孤儿设计稿）· 请勿据此实现</strong> ⚠️</p>
+<p>本规范描述的治理引擎 <code>dualTrack（官方核心轨 + user_patch 扩展轨）</code> 经 2026-06-14「接线或删除」证据级核实为 <strong>ORPHAN</strong><br>（零消费者、从 <code>executeTool</code>/<code>toolUseLoop</code>/<code>aiManagementServer</code> 三入口均不可达），<br>已按 <code>.ai/GOVERNANCE-LEDGER.md</code> §B.0 <strong>删除其实现代码</strong>（基线 <code>0437b6b</code>，删除提交<br><code>a76785e</code> + <code>99ea828</code>）。本文件仅作<strong>历史可追溯</strong>留存，<strong>非在产、不得作为实现依据</strong>。<br>判「在产」唯一标准见 <code>.ai/GUARDS-AI.md</code> §0。</p>
+<p>——归档于 2026-06-14</p></blockquote>
+<h1 id="design-arch-033-模型自适应与双轨热插拔架构">[DESIGN-ARCH-033] 模型自适应与双轨热插拔架构<a class="anchor" href="#design-arch-033-模型自适应与双轨热插拔架构" aria-label="锚点">#</a></h1>
+<table><thead><tr><th>项</th><th>值</th></tr></thead><tbody><tr><td>文档类型</td><td>架构设计（ARCH）</td></tr><tr><td>适用范围</td><td><code>services/backend/src/services/dualTrack/</code>（官方核心轨）与 <code>user_patch/</code>（用户扩展轨）</td></tr><tr><td>强制级别</td><td>设计基线（实现须符合本文「红线符合性」一节）</td></tr><tr><td>上位治理</td><td>[MGMT-STD-003]（任务三综合系统提示词）、[MGMT-STD-001]（文档结构铁律）</td></tr><tr><td>状态</td><td>定稿</td></tr></tbody></table>
+<hr>
+<h2 id="1-目标">1. 目标<a class="anchor" href="#1-目标" aria-label="锚点">#</a></h2>
+<p>让 khyos 对<strong>未知的未来模型代际</strong>前向兼容：模型新增字段、新增指令时系统不崩；用户（乃至<br>用户的 AI 模型在运行时经授权）可 DIY 注入本地适配 / Bug 修复；官方更新<strong>绝不</strong>覆盖或破坏<br>用户的私有迭代。一句话——构建「AI 能力自适应、用户可 DIY 扩展、官方更新无冲突」的永动机架构。</p>
+<h2 id="2-双轨与物理隔离">2. 双轨与物理隔离<a class="anchor" href="#2-双轨与物理隔离" aria-label="锚点">#</a></h2>
+<pre><code>官方核心轨（受保护基座，官方维护，用户/模型严禁直接改）
+  services/backend/src/services/dualTrack/
+    lenientResponseParser.js   宽松解析层（红线1/2/3）
+    actionRegistry.js          双轨注册表 + 核心密封（红线5）
+    degradeStateMachine.js     安全降级状态机（红线2/3）
+    unknownActionView.js       未知指令占位符（红线2 防白屏）
+    extensionLoader.js         用户轨装载 + 沙箱边界（红线5）
+    extensionWriter.js         模型 DIY 授权写入（红线5）
+    updateGuard.js             官方更新防破坏协议（红线4）
+    core/coreActions.js        官方内置动作（受保护源，覆写不改它）
+    index.js                   DualTrackRuntime 门面
+
+用户扩展轨（DIY 试验田，用户掌控，模型经授权可运行时写）
+  user_patch/                  ← 与官方核心轨物理隔离；官方更新绝不触碰（红线4）
+    manifest.json              覆写 / 新增执行器清单
+    overrides/*.js             覆写官方默认动作（影子覆盖）
+    actions/*.js               为未来模型能力新增执行器</code></pre>
+<blockquote><p>注：仓库根 <code>extensions/</code> 已被 VS Code 扩展 <code>khy-trae-bridge</code> 占用，语义不同；用户扩展轨<br>取红线 4 钦定的另一名字 <code>user_patch/</code>。更新守卫同时把 <code>user_patch</code> 与 <code>extensions</code> 两个名字<br>识别为受保护用户领地。</p></blockquote>
+<h2 id="3-合并策略-运行时拼装">3. 合并策略（运行时拼装）<a class="anchor" href="#3-合并策略-运行时拼装" aria-label="锚点">#</a></h2>
+<p><code>DualTrackRuntime.assemble()</code> 三步：① 注册官方内置动作进核心轨 → ② <strong>密封核心</strong>（此后核心<br>不可改写）→ ③ 扫描用户扩展轨 <code>manifest.json</code>，把覆写 / 新增执行器注入注册表影子层。</p>
+<p>解析优先级：<strong>用户覆写 &gt; 官方核心 &gt; 默认分支兜底</strong>。用户覆写以「影子」生效，官方核心源<br>条目原样保留（<code>coreSnapshot</code> 前后一致即实证未污染）。</p>
+<h2 id="4-模型自适应与安全降级">4. 模型自适应与安全降级<a class="anchor" href="#4-模型自适应与安全降级" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>层</th><th>行为</th><th>红线</th></tr></thead><tbody><tr><td>数据解析</td><td>宽松解析：未知顶层字段 / 动作内未知键全部捕获 + 记日志，绝不因多字段抛 Fatal；坏 JSON / null / 数字一律降级 salvage，永不抛错</td><td>1、2、3</td></tr><tr><td>UI 渲染</td><td>未识别动作 → 安全「未知指令占位符」（<code>renderable:true</code> + 原始数据视图 + 「可通过扩展实现」），严禁白屏崩溃</td><td>2</td></tr><tr><td>状态机</td><td>未定义指令状态 → 降级「人工确认」交还控制权，绝不自主执行、绝不静默丢弃</td><td>2、3</td></tr><tr><td>模型 DIY</td><td>可经授权把适配代码写入用户扩展轨，但越用户轨边界（指向核心 / 轨外）一律拒（沙箱）</td><td>5</td></tr></tbody></table>
+<h2 id="5-官方更新防破坏协议">5. 官方更新防破坏协议<a class="anchor" href="#5-官方更新防破坏协议" aria-label="锚点">#</a></h2>
+<ul><li><strong>更新策略</strong>：<code>planOfficialUpdate</code> 逐文件判定——目标必须落在核心轨内、且绝不命中用户扩展轨；</li></ul>
+<p>任一越界即整包 fail-closed 不安全，<code>applyOfficialUpdate</code> 拒绝施工，<strong>绝不</strong>覆盖 / 删除用户轨。</p>
+<ul><li><strong>兼容性契约</strong>：<code>detectBreakingChange</code> 比对接入点；若新核心移除了用户轨依赖的 Hook/Slot/Override</li></ul>
+<p>入口或破坏向后兼容数据结构 → 启动期检出 breaking + 产出手动迁移提示，<strong>绝不</strong>静默作废。</p>
+<ul><li><strong>隔离施工</strong>：仅安全包写入核心轨；用户扩展轨物理隔离、零触碰。</li></ul>
+<h2 id="6-红线符合性">6. 红线符合性<a class="anchor" href="#6-红线符合性" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>宪法红线</th><th>落点</th></tr></thead><tbody><tr><td>1 严禁脆弱解析</td><td><code>lenientResponseParser</code>：未知字段捕获不致命；任意坏输入降级 salvage，永不抛错</td></tr><tr><td>2 严禁静默吞没</td><td><code>unknownActionView</code> 占位符 + <code>degradeStateMachine</code> 人工确认；显式「可通过扩展实现」，不丢弃</td></tr><tr><td>3 严禁假设终态</td><td><code>actionRegistry.resolve</code> 默认分支兜底；状态机 default → 人工确认；执行器抛错亦降级不崩</td></tr><tr><td>4 严禁官方覆盖</td><td><code>updateGuard</code> fail-closed：命中 <code>user_patch/</code> <code>extensions/</code> 或越界即拒整包；破坏性变更必提示迁移</td></tr><tr><td>5 严禁核心污染</td><td>覆写只入影子层、核心密封 + <code>coreSnapshot</code> 实证；模型写入需授权 + <code>assertWithinUserTrack</code> 沙箱</td></tr></tbody></table>
+<h2 id="7-交付物">7. 交付物<a class="anchor" href="#7-交付物" aria-label="锚点">#</a></h2>
+<pre><code>services/backend/src/services/dualTrack/   9 个纯 Node 零依赖模块（DI 可测）
+user_patch/                                用户扩展轨样例（manifest + override + 新增执行器 + README）
+services/backend/tests/services/dualTrack/dualTrack.test.js   37 用例</code></pre>
+<h2 id="8-验收">8. 验收<a class="anchor" href="#8-验收" aria-label="锚点">#</a></h2>
+<p><code>node --test tests/services/dualTrack/dualTrack.test.js</code> → <strong>37 用例绿</strong>：宽松解析 5 + 注册表核心<br>不污染 3 + 安全降级占位 5 + 装载沙箱 4 + 模型 DIY 写入 3 + 官方更新防破坏 9 + 端到端真实<br><code>user_patch</code> 样例 8。零网络、隔离 tmp、测后清理。邻近子系统回归 120/120 绿，零回归。</p>
+<h2 id="9-跨分类关联指引">9. 跨分类关联指引<a class="anchor" href="#9-跨分类关联指引" aria-label="锚点">#</a></h2>
+<ul><li>任务三综合系统提示词与宪法红线全文：<code>docs/08_MGMT_项目管理/[MGMT-STD-003]</code>。</li><li>文档结构与索引铁律：<code>docs/08_MGMT_项目管理/[MGMT-STD-001]</code>。</li><li>实现代码：<code>services/backend/src/services/dualTrack/</code>、用户轨样例 <code>user_patch/</code>。</li><li>同源治理脉络：元规划约束注入 <code>[DESIGN-ARCH-025]</code>、有限窗口降级兜底 <code>[DESIGN-ARCH-029]</code>。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/18_归档/03_DESIGN_设计/[DESIGN-ARCH-024] khyos元帅双模式任命与约束规范.html"><div class="dir">← 上一篇</div><div class="ttl">《khyos 元帅（Marshal）双模式任命与约束规范》</div></a><a class="next" href="../../../docs/18_归档/03_DESIGN_设计/[DESIGN-ARCH-035] 上下文永续与认知压缩引擎.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-035] 上下文永续与认知压缩引擎</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/18_归档/03_DESIGN_设计/[DESIGN-ARCH-033] 模型自适应与双轨热插拔架构.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

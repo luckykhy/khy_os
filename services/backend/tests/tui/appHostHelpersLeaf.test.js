@@ -66,15 +66,29 @@ test('_estimateTok:空返 0;字符兜底 CC 口径 round(len/4),关门 ceil', ()
   assert.ok(cc >= 1);
 });
 
-test('_spinnerProgress:纯时间派生 elapsedSec/stalled(now 传入,3s 阈)', () => {
+test('_spinnerProgress:纯时间派生 elapsedSec/stalled/stalledSec(now 传入,3s 阈)', () => {
   const started = 1_000_000;
-  // 距上次活动 2s < 3s → 未停滞
+  // 距上次活动 2s < 3s → 未停滞;停滞秒数为 0(调用方据此不加「已 Ns」后缀)
   const fresh = leaf._spinnerProgress(started, started + 5000, started + 3000, null, {});
   assert.equal(fresh.elapsedSec, 5);
   assert.equal(fresh.stalled, false);
-  // 距上次活动 9s > 3s → 停滞
+  assert.equal(fresh.stalledSec, 0);
+  // 距上次活动 9s > 3s → 停滞;stalledSec = 真实停滞秒数(规则 2.5 等待行要的那个数)
   const stalled = leaf._spinnerProgress(started, started + 10000, started + 1000, null, {});
   assert.equal(stalled.stalled, true);
+  assert.equal(stalled.stalledSec, 9);
+  // 阈下不下结论:3s 恰好不 stalled(严格大于),避免「还在活跃」被写成「等待中」
+  const edge = leaf._spinnerProgress(started, started + 3000, started, null, {});
+  assert.equal(edge.stalled, false);
+  assert.equal(edge.stalledSec, 0);
+  // 刚过阈 +1ms → 秒数是真实的 3(取整),不是一个凑出来的下限
+  const barely = leaf._spinnerProgress(started, started + 3001, started, null, {});
+  assert.equal(barely.stalled, true);
+  assert.equal(barely.stalledSec, 3);
+  // 无 lastActivity（回合刚起）→ 不判停滞也不给秒数
+  const noActivity = leaf._spinnerProgress(started, started + 5000, 0, null, {});
+  assert.equal(noActivity.stalled, false);
+  assert.equal(noActivity.stalledSec, 0);
 });
 
 test('_queuePanelLines:空→[];超 5 条折叠 + 末条↑取回 + 汇总行', () => {

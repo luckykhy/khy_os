@@ -11,11 +11,16 @@ const fs = require('fs');
 const path = require('path');
 
 const MOD = require.resolve('../../../src/cli/tui/effectiveCols');
+const DIMS_MOD = require.resolve('../../../src/cli/tui/effectiveDims');
 const BACKEND_ROOT = path.resolve(__dirname, '../../../');
 
-/** Fresh module instance per test — the sticky cache is module-level state. */
+/**
+ * Fresh module instance per test — the sticky cache lives in effectiveDims
+ * (effectiveCols is a thin alias), so BOTH caches must be cleared.
+ */
 function load() {
   delete require.cache[MOD];
+  delete require.cache[DIMS_MOD];
   return require(MOD);
 }
 
@@ -136,13 +141,20 @@ test('effectiveCols: 震荡帧不再跌回 fallback 宽度(树宽稳定 = 不抖
   }));
 });
 
-test('effectiveCols: 首帧 unknown → 收窄后的假定宽度(与画笔 fallback 几何同源)', () => {
+test('effectiveCols: 首帧 unknown → 与画笔 fallback 几何同源(带宽外不收窄)', () => {
   const eff = load();
   withColumns((set) => withEnv(CLEAN, () => {
     set(undefined);
-    const { sidebarWidth, fallbackCols } = require('../../../src/cli/tui/sidebarLayout');
+    const { fallbackCols } = require('../../../src/cli/tui/sidebarLayout');
     const fb = fallbackCols(process.env);
-    assert.equal(eff.effectiveCols(80), fb - sidebarWidth(fb, process.env));
+    // R1-2 带宽模型(DESIGN-ARCH-103 §4.3,取代旧的 railActive + hysteresis):
+    // 窄化只在 cols >= BAND_ENTER(120) 时发生。默认假定宽度 80 **不在带内**
+    // → 不收窄,原样返回调用方 fallback。
+    // 这条同时钉住「与画笔同源」:railGeometry 在 unknown 时也代入 fallbackCols,
+    // 带外同样不窄化 —— 两边一致,不会出现「树窄了画笔没窄」的错位。
+    assert.ok(fb < 120, `前提:默认假定宽度应在窄化带外(实际 ${fb})`);
+    assert.equal(eff.effectiveCols(80), 80, '带外 → 不收窄,返回调用方 fallback');
+    assert.equal(eff.effectiveCols(fb), fb, '假定宽度本身在带外 → 原样返回');
   }));
 });
 
@@ -172,7 +184,7 @@ test('App wiring(根因 B): 尺寸解析走 stickyCols / stickyDim,不再裸读 
     'App must import stickyCols from ../effectiveCols');
   assert.ok(/const _rawCols = _stickyCols\(process\.env\);/.test(src),
     'the dims block must resolve columns through stickyCols');
-  assert.ok(/sidebarLayout\.stickyDim\(process\.stdout\.rows,\s*_stickyRowsRef\.current/.test(src),
+  assert.ok(/sidebarLayout\.stickyDim\(\s*process\.stdout\.rows,\s*_stickyRowsRef\.current/.test(src),
     'rows must resolve through the same pure sticky rule');
   assert.ok(/const _rawC = _resCols;/.test(src),
     '_railContentCols must reuse the SAME resolved columns (no fresh stdout read)');
@@ -184,10 +196,22 @@ test('App wiring(根因 A): 每帧向画笔推送同一份解析尺寸', () => {
     'App must push its sticky-resolved dims to the painter every render');
 });
 
-test('App wiring(根因 C): StreamingBlock 在 rail 激活时也收窄', () => {
-  const src = APP_SRC();
-  assert.ok(/contentWidth:\s*\(\(_sidebarOn \|\| _railOut\) && _mainColsV > 0\)\s*\?\s*_mainColsV\s*:\s*null/.test(src),
-    'StreamingBlock contentWidth must narrow when EITHER the in-tree board OR the rail is active');
+test('App wiring(根因 C): StreamingBlock 拿到的宽度在 rail/看板激活时收窄', () => {
+  // 接线点已从 App.js 迁到 ChatColumn.js(StreamingBlock 的实际渲染处,经
+  // ThreeColumnLayout 转发)。App.js 侧不再渲染 StreamingBlock —— 它把
+  // 转录 + streaming 投影成 `_mainContentLines` 交给 Viewport。
+  // 因此本契约分两处钉住:
+  //   ① 渲染方:必须把 mainCols(树内看板或 rail 收窄后的左列宽)优先传下去;
+  //   ② 组件兜底:拿不到 prop 时也必须经 effectiveCols(rail 激活 → cols − 栏宽),
+  //      而不是裸全宽 —— 否则代码框/表格按全宽折行后被 ink 二次软换行。
+  const chat = TUI_SRC('ink-components/ChatColumn.js');
+  assert.ok(/contentWidth:\s*mainCols\s*\|\|\s*contentWidth/.test(chat),
+    'ChatColumn must pass mainCols first (in-tree board OR rail narrowing) to StreamingBlock');
+  const sb = TUI_SRC('ink-components/StreamingBlock.js');
+  assert.ok(/require\(['"]\.\.\/effectiveCols['"]\)/.test(sb),
+    'StreamingBlock must import the effectiveCols single accessor for its width fallback');
+  assert.ok(/effectiveCols\(/.test(sb),
+    'StreamingBlock must actually call effectiveCols (not read stdout, not assume full width)');
 });
 
 // ── 评审 Major/Minor:全链路零裸读契约(唯一 sticky 缓存持有者) ───────────
@@ -211,17 +235,17 @@ function bareColumnReads(src) {
   return hits;
 }
 
-test('App wiring(评审 Major 1+2): App.js 代码层零裸读 columns(Ctrl+T 提示与 resize 已收敛)', () => {
+test('App wiring(评审 Major 1+2): App.js 代码层零裸读 columns(resize 已收敛)', () => {
   const src = APP_SRC();
   assert.deepEqual(bareColumnReads(src), [],
     'every columns access in App.js must funnel through stickyCols/effectiveCols');
-  // The two former divergence points now reuse the single sticky cache holder.
-  assert.ok(/const _sticky = _stickyCols\(process\.env\);/.test(src),
-    'Ctrl+T hint must resolve width through _stickyCols');
-  assert.ok(/const _cur = \(_cols == null\) \? '宽度未知' : `当前 \$\{_cols\} 列`;/.test(src),
-    'Ctrl+T hint must never render "当前 null 列" when the width is unknown');
+  // resize 三态解析器:preferred → 上一帧稳定值 → fallback,全部经 _stickyCols 单一缓存。
+  // (2026-09-16:此前这里还断言过 Ctrl+T「窄屏提示」的两行代码 —— 该提示已从 App.js
+  //  移除,断言随之删除。宽度收敛的契约由下面的 _resolveResizeCols 断言承载。)
   assert.ok(/const _resolveResizeCols = \(preferred, prev\) =>/.test(src),
     'resize logic must resolve through the shared tri-state resolver');
+  assert.ok(/const s = _stickyCols\(process\.env\);/.test(src),
+    '_resolveResizeCols must resolve width through the _stickyCols single cache holder');
   assert.ok(/const curCols = _resolveResizeCols\(out \? out\.columns : null, _resizePrevCols\.current\);/.test(src),
     'curCols must not use a `||` falsy chain (0 vs undefined conflation)');
 });
@@ -245,16 +269,16 @@ test('叶子 wiring(评审 Minor): FooterBar/WelcomeBanner 不自读宽度(不�
 });
 
 // ── 阶段二: 首帧 80 列锁定与 _lastRailActive 粘滞/重置 ─────────────────────────
-test('effectiveCols: 首帧 80 列锁定 — stickyCols=null 时走 fallback 收窄路径', () => {
+test('effectiveCols: 首帧 unknown 且假定宽度在窄化带内 → 走 mainColumnCols 收窄', () => {
   const eff = load();
-  withColumns((set) => withEnv(CLEAN, () => {
-    // Simulate first-frame: no known columns yet
-    set(undefined);
-    const fb = eff.effectiveCols(80);
-    // First frame unknown → fallback narrowed (not 80, which would be full width)
-    const { sidebarWidth, fallbackCols } = require('../../../src/cli/tui/sidebarLayout');
-    const expected = fallbackCols(process.env) - sidebarWidth(fallbackCols(process.env), process.env);
-    assert.equal(fb, expected, '首帧 unknown → 收窄后的假定宽度');
+  withColumns((set) => withEnv({ ...CLEAN, KHY_TERM_FALLBACK_COLS: '150' }, () => {
+    set(undefined); // 首帧:还不知道真实列宽
+    const { mainColumnCols, fallbackCols } = require('../../../src/cli/tui/sidebarLayout');
+    const fb = fallbackCols(process.env);
+    assert.equal(fb, 150, '前提:门控把假定宽度抬进窄化带(>=120)');
+    const w = eff.effectiveCols(80);
+    assert.equal(w, mainColumnCols(fb, process.env), '带内 → 与 mainColumnCols 同源收窄');
+    assert.ok(w < fb, `收窄后必须小于全宽(得到 ${w},全宽 ${fb})`);
   }));
 });
 
@@ -273,15 +297,16 @@ test('_lastRailActive 粘滞: 连续帧边界值不拍(第一帧 120 激活后�
   }));
 });
 
-test('_resetStickyColsForTest: 同时清零 _lastRailActive(迟滞状态重置)', () => {
+test('_resetStickyColsForTest: 同时清零 _lastRailActive(死区模型:重置后 119 退出窄化带)', () => {
   const eff = load();
   withColumns((set) => withEnv(CLEAN, () => {
     set(120);
-    eff.effectiveCols(80); // _lastRailActive = true
-    eff._resetStickyColsForTest(); // should reset both caches
+    eff.effectiveCols(80); // band verdict = active
+    eff._resetStickyColsForTest(); // should reset both caches + band verdict
     set(119);
-    // After reset, _lastRailActive = false; 119 < 120 should NOT activate
+    // R1-2 band model (replaces the old boolean hysteresis): 119 < 120 is OUTSIDE
+    // the enter threshold and no verdict is threaded after a reset → not active.
     const w = eff.effectiveCols(80);
-    assert.equal(w, 119, '119 列重置后无迟滞 → 不收窄');
+    assert.equal(w, 119, '119 列重置后不在进入阈值内 → 不收窄');
   }));
 });

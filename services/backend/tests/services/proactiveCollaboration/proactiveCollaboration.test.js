@@ -18,9 +18,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const collab = require('../../../src/services/proactiveCollaboration');
-const detector = require('../../../src/services/proactiveCollaboration/opportunityDetector');
-const planner = require('../../../src/services/proactiveCollaboration/delegationPlanner');
-const { LIMITS } = require('../../../src/services/proactiveCollaboration/constants');
+const detector = require('../../../src/services/domain/collab/proactiveCollaboration/opportunityDetector.js');
+const planner = require('../../../src/services/domain/collab/proactiveCollaboration/delegationPlanner.js');
+const { LIMITS } = require('../../../src/services/domain/collab/proactiveCollaboration/constants.js');
 
 const { detectCollaborationOpportunity } = detector;
 const { planDelegation, inferRole } = planner;

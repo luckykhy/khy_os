@@ -1,6 +1,6 @@
 'use strict';
 /**
- * statusLineRunner.test.js â€?hermetic: a synthetic exec is injected so no real
+ * statusLineRunner.test.js â€”hermetic: a synthetic exec is injected so no real
  * child process ever runs.
  */
 const runner = require('../src/cli/statusLine/statusLineRunner');
@@ -28,7 +28,7 @@ describe('Status Line Runner', () => {
       expect(called).toBe(false);
   });
 
-  test('renderOnce: unconfigured â†?reason=unconfigured, never execs', () => {
+  test('renderOnce: unconfigured â†’reason=unconfigured, never execs', () => {
       let called = false;
       const exec = () => { called = true; return { status: 0, stdout: 'x' }; };
       const res = runner.renderOnce({ settings: {}, env: {}, exec });
@@ -53,7 +53,7 @@ describe('Status Line Runner', () => {
       expect(res.error).toMatch(/boom/);
   });
 
-  test('renderOnce: empty output â†?reason=empty_output with stderr surfaced', () => {
+  test('renderOnce: empty output â†’reason=empty_output with stderr surfaced', () => {
       const exec = () => ({ status: 1, stdout: '   \n', stderr: 'bad config', error: null });
       const res = runner.renderOnce({ settings: SETTINGS, env: {}, exec });
       expect(res.ok).toBe(false);

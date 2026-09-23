@@ -25,7 +25,9 @@ describe('nearestExistingDir', () => {
     expect(nearestExistingDir(path.join(nestedDir, 'file.txt'))).toBe(tmpDir);
   });
 
-  test('returns null if no ancestor exists', () => {
-    expect(nearestExistingDir('/non/existent/path/file.txt')).toBe(null);
+  test('falls back to the filesystem root when no ancestor matches', () => {
+    // The fs root always exists (POSIX '/' / Windows current-drive root), so
+    // the walk terminates at it; null is reserved for fs errors / 10-level cap.
+    expect(nearestExistingDir('/non/existent/path/file.txt')).toBe('/');
   });
 });

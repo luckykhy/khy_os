@@ -16,7 +16,7 @@
  * 一旦填入真实用户名，归属会解析成与注释相反的结果。
  *
  * 因此改为生成式：
- *   docs/_维护者/维护映射表.json   →  area 的 id / label / paths（已存在的真源）
+ *   docs/14_维护者/registry/维护映射表.json   →  area 的 id / label / paths（已存在的真源）
  *   .github/maintainers.json      →  area id → GitHub 账号（本次新增，需人工填写）
  *   .github/CODEOWNERS            →  生成产物，不要手改
  *
@@ -36,7 +36,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const MAP = path.join(ROOT, 'docs', '_维护者', '维护映射表.json');
+const MAP = path.join(ROOT, 'docs', '14_维护者', 'registry', '维护映射表.json');
 const ROSTER = path.join(ROOT, '.github', 'maintainers.json');
 const OUT = path.join(ROOT, '.github', 'CODEOWNERS');
 
@@ -87,7 +87,7 @@ function build(areas, roster) {
   lines.push('# 要调整归属：编辑 .github/maintainers.json，然后重跑');
   lines.push('#   node scripts/maintenance/gen-codeowners.js');
   lines.push('#');
-  lines.push('# 真源：docs/_维护者/维护映射表.json（area 的 label 与 paths）');
+  lines.push('# 真源：docs/14_维护者/registry/维护映射表.json（area 的 label 与 paths）');
   lines.push('#       .github/maintainers.json（area → GitHub 账号）');
   lines.push('#');
   lines.push('# 优先级：CODEOWNERS 是**最后匹配者优先**（不是最先）。因此全局兜底规则');

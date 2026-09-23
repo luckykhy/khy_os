@@ -13,8 +13,8 @@ const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const inventory = require('../src/services/dependencyInventory');
-const resolver = require('../src/services/dependency/resolver');
-const registry = require('../src/services/dependency/registry');
+const resolver = require('../src/services/domain/network/dependency/resolver.js');
+const registry = require('../src/services/domain/network/dependency/registry.js');
 
 // A runner stub: map bin -> { code, stdout, stderr, error }.
 function makeRunner(table) {

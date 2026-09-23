@@ -1,0 +1,226 @@
+{
+  "$schemaVersion": "1.0.0",
+  "$artifact": "提案工件索引（git 提交 ↔ 提案工件映射）",
+  "$registry": "docs/10_规范/registry/RULES-REGISTRY.json",
+  "$ruleIds": ["SOURCING-003", "SOURCING-006"],
+  "$consumedBy": [
+    "scripts/ci/check-proposal-index.js",
+    "scripts/ruleguard/lib/externalRules.js"
+  ],
+  "$status": "active",
+  "$updated": "2026-09-16",
+
+  "ssot": {
+    "doc": "docs/10_规范/其它规范/[DESIGN-SOURCING-001] 借鉴与实现统一规则.md",
+    "clauses": {
+      "proposalTemplate": "§3 B-P2（line 168-185）",
+      "orderingRule": "§3 B-P2.1（line 187-189）",
+      "decisionAuthority": "§3 B-P3（line 191-199）",
+      "migrationSteps": "§5 B-L2（line 324-333）",
+      "appendOnlyDecisions": "§5 B-L3（line 335-343）"
+    }
+  },
+
+  "proposalTemplate": {
+    "headingVerbatim": "### B-P2 借鉴提案（六字段模板，缺一不落地）",
+    "docLine": 168,
+    "countDiscrepancy": {
+      "note": "文档标题称「六字段」，但模板内编号为 1-7 共七项；第 6 项含 a/b 两个子字段。",
+      "modeledAs": 7,
+      "docQuote": "但六个字段必须齐全且可检索。"
+    },
+    "carrierKinds": [
+      "PR 描述",
+      "看板卡片",
+      "提交信息正文"
+    ],
+    "carrierKindsVerbatim": "提案可以是一段 PR 描述、一条看板卡片，或一段提交信息正文；**不必单独开文件**，",
+    "carriersVerbatimDocLine": 170,
+    "fields": [
+      {
+        "no": 1,
+        "key": "subject",
+        "labelVerbatim": "借鉴对象",
+        "required": true,
+        "meaningVerbatim": "项目名 + 版本/commit",
+        "line": 175
+      },
+      {
+        "no": 2,
+        "key": "content",
+        "labelVerbatim": "借鉴内容",
+        "required": true,
+        "meaningVerbatim": "一句话，说清借的是结论、结构、行为还是测试",
+        "line": 176
+      },
+      {
+        "no": 3,
+        "key": "gap",
+        "labelVerbatim": "解决的问题",
+        "required": true,
+        "meaningVerbatim": "khyos 当前的具体缺口（指向现有文件/命令/现象），不是「上游有这个」",
+        "line": 177
+      },
+      {
+        "no": 4,
+        "key": "licenseAndNature",
+        "labelVerbatim": "许可证与代码性质",
+        "required": true,
+        "meaningVerbatim": "上游许可证名 + 核实位置（文件路径/链接）；无法核实即按 B-S4.1 从严",
+        "line": 178
+      },
+      {
+        "no": 5,
+        "key": "method",
+        "labelVerbatim": "借鉴方式",
+        "required": true,
+        "meaningVerbatim": "idea | reference | adapter | vendored | fork（按 B-M 判定，写明判定依据）",
+        "enumValues": ["idea", "reference", "adapter", "vendored", "fork"],
+        "line": 179
+      },
+      {
+        "no": 6,
+        "key": "landingAndDiff",
+        "labelVerbatim": "落点与现有实现对比",
+        "required": true,
+        "meaningVerbatim": "a. 落点：目标文件路径（必须已存在于注册表，或本提案新增） / b. 现有同类实现：搜索结论（搜索过哪些词、在哪些目录）",
+        "subFields": [
+          {
+            "key": "landingPath",
+            "labelVerbatim": "落点",
+            "meaningVerbatim": "目标文件路径（必须已存在于注册表，或本提案新增）",
+            "line": 181
+          },
+          {
+            "key": "existingSearch",
+            "labelVerbatim": "现有同类实现",
+            "meaningVerbatim": "搜索结论（搜索过哪些词、在哪些目录），若已有实现则说明本提案是「扩展既有 canonical」而非新增并行实现；若无既有实现则说明为何不复用任何现有件",
+            "line": 182
+          }
+        ],
+        "line": 180
+      },
+      {
+        "no": 7,
+        "key": "acceptance",
+        "labelVerbatim": "验收方式",
+        "required": true,
+        "meaningVerbatim": "可复现的一条命令或一次操作，说明「怎么算做成了」",
+        "note": "模板内编号但不在「六字段」计数内",
+        "line": 184
+      }
+    ]
+  },
+
+  "orderingRule": {
+    "id": "B-P2.1",
+    "docLine": 187,
+    "coreVerbatim": "先提案、后编码",
+    "fullVerbatim": "**先提案、后编码**。以「先写出来再补提案」的方式提交，即使实现已完成，也必须被标记为违规并要求补充六字段，评审不得以「反正都写好了」放行。",
+    "rationaleVerbatim": "提案的价值在于**决策发生在写代码之前**，事后补写无法阻止盲目借鉴。",
+    "assertion": "存在实现提交但无对应提案工件 => 判违规（SOURCING-003）",
+    "postHocMarker": "事后补写的提案必须标记为违规，不得静默豁免"
+  },
+
+  "decisionAuthority": {
+    "id": "B-P3",
+    "docLine": 193,
+    "rows": [
+      { "method": "idea / reference", "decider": "作者自评 + 任一评审", "note": "六字段齐全即可" },
+      { "method": "adapter", "decider": "作者自评 + 任一评审", "note": "需说明调用边界与降级路径" },
+      { "method": "vendored", "decider": "维护者（仓库 owner）显式批准", "note": "许可证 + 无官方包 + 可整删，三点必须复核" },
+      { "method": "fork", "decider": "维护者显式批准 + 写入同步策略", "note": "见 B-M3" },
+      { "method": "触及 B-S2 黑名单或 B-S3 红线", "decider": "无决策权，直接拒绝", "note": "不接受「特批」" }
+    ]
+  },
+
+  "migrationSteps": {
+    "id": "B-L2",
+    "docLine": 324,
+    "headingVerbatim": "### B-L2 迁移流程（三步，每步独立可回滚）",
+    "steps": [
+      {
+        "no": 1,
+        "labelVerbatim": "标记",
+        "meaningVerbatim": "在注册表中把目标标记为 deprecated，写清替代路径与预计删除日期"
+      },
+      {
+        "no": 2,
+        "labelVerbatim": "迁调用方",
+        "meaningVerbatim": "逐个把调用方改到 canonical，每迁一个可独立提交"
+      },
+      {
+        "no": 3,
+        "labelVerbatim": "删旧实现",
+        "meaningVerbatim": "调用方归零后删除；删除 PR 不得夹带其他改动"
+      }
+    ],
+    "rollbackRuleVerbatim": "不允许「一次 PR 同时标记 + 迁移 + 删除」——那会让回滚无从下手。",
+    "assertion": "一次提交同时含标记 deprecated + 迁调用方 + 删旧实现 => 判违规（SOURCING-006）"
+  },
+
+  "appendOnlyDecisions": {
+    "id": "B-L3",
+    "docLine": 335,
+    "headingVerbatim": "### B-L3 决策不可回退（决策日志）",
+    "coreVerbatim": "架构决策一旦记录，**只能追加新的取代决策，不能原地改写或删除旧决策**",
+    "rulesVerbatim": [
+      "决策记录写在注册表 `notes`、设计文档或提案正文中",
+      "撤销一个决策时，保留原决策 + 写明「被哪条新决策取代、何时、为什么」",
+      "禁止把已有决策「悄悄改掉措辞」来让其看起来像是原本就如此"
+    ],
+    "rationaleVerbatim": "这条是为了防止历史反复：同一个决定被改三次，等于从未决定过。",
+    "assertion": "决策记录被原地改写/删除（而非追加取代决策）=> 判违规（SOURCING-006）",
+    "decisionRecordLocations": [
+      "docs/10_规范/registry/FEATURE-OWNERSHIP.json 的 notes 字段",
+      "docs/ 下设计文档",
+      ".ai/GOVERNANCE-LEDGER.md（追加式台账，一行一条）",
+      "提案正文"
+    ]
+  },
+
+  "proposalArtifacts": {
+    "note": "实测（2026-09-16）：全仓唯一的按 B-P2 模板填写的提案工件集合。无独立 ADR 目录、无 proposal/ 目录，与 B-P2「不必单独开文件」一致。",
+    "measuredAt": "2026-09-16",
+    "primary": {
+      "path": "docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-105] ycode 第三轮增量借鉴调研报告.md",
+      "headingPattern": "### 【借鉴提案 P-NN】<一句话主题>",
+      "count": 7,
+      "items": [
+        { "proposalId": "P-01", "line": 62, "title": "技能指纹剪枝 + 两级失效缓存 + 口径版本迁移" },
+        { "proposalId": "P-02", "line": 94, "title": "首屏「返回缓存 + 事件补齐」与空态消歧" },
+        { "proposalId": "P-03", "line": 139, "title": "回合事件 Journal + 单调 seq + 事务内提交 + 不重放语义（分期立项）" },
+        { "proposalId": "P-04", "line": 178, "title": "权限双终止语义与「取消 ≠ 拒绝」结果分离" },
+        { "proposalId": "P-05", "line": 213, "title": "MCP tools 列表按名排序 + 凭据隔离复核" },
+        { "proposalId": "P-06", "line": 243, "title": "桌面能力审计矩阵 + 分段耗时如实上报" },
+        { "proposalId": "P-07", "line": 277, "title": "用户可定义的自定义子代理注册中心" }
+      ]
+    }
+  },
+
+  "commitProposalMapping": {
+    "description": "提交 ↔ 提案工件的映射记录。B-P2 允许提案载体是「提交信息正文」，因此映射键为 commit sha 前缀，工件键为 proposalId 或 doc#line。",
+    "schema": {
+      "fields": [
+        { "key": "commitSha", "type": "string", "required": true, "constraint": "git 短 sha（≥7 位）或完整 40 位 sha" },
+        { "key": "proposalRef", "type": "string", "required": true, "constraint": "P-NN 提案号，或 <文档路径>#<行号>，或 'inline-message-body'（提案写在提交正文内）" },
+        { "key": "artifactPath", "type": "string", "required": false, "constraint": "提案工件所在文件（载体为 PR 描述/看板时填对应文档路径）" },
+        { "key": "method", "type": "string", "required": false, "enum": ["idea", "reference", "adapter", "vendored", "fork"], "description": "B-P2 第 5 字段" },
+        { "key": "landingPath", "type": "string", "required": false, "description": "B-P2 第 6a 字段落点" },
+        { "key": "newCapabilityDomain", "type": "boolean", "required": false, "description": "是否引入本仓此前不存在的能力域（决定 B-P2.1 是否强制适用）" },
+        { "key": "postHoc", "type": "boolean", "required": false, "description": "true = 事后补写，按 B-P2.1 判违规" },
+        { "key": "supersedes", "type": "array", "required": false, "description": "若本提案取代既有决策，列出被取代的 proposalRef（B-L3）" }
+      ]
+    },
+    "entries": [],
+    "emptyReason": "首次登记，尚无已核实的 commit↔提案映射。历史映射需由维护者从 git log 与 DESIGN-ARCH-105 逐条回填；检查器对空表不报错，但对「新增能力域提交却无映射」报错。"
+  },
+
+  "integrityChecks": [
+    "proposalTemplate.fields 七项全部 required=true；工件缺任一字段即不可判为「齐全」",
+    "存在能力域新增提交且 commitProposalMapping 无对应条目 => SOURCING-003 违规",
+    "commitProposalMapping.entries[].postHoc=true 的条目必须保留，不得删除（B-L3）",
+    "migrationSteps 三步出现在同一提交 => SOURCING-006 违规",
+    "appendOnlyDecisions.decisionRecordLocations 内的文件被原地改写而非追加 => SOURCING-006 违规"
+  ]
+}

@@ -18,7 +18,7 @@
 | `chore/<简述>` | 构建、依赖、CI | 无 |
 | `dev/<姓名>/<简述>` | 个人实验，不要求可合并 | 无 |
 
-`<area-id>` 取自 [`docs/_维护者/维护映射表.json`](docs/_维护者/维护映射表.json) 的 `areas[].id`，
+`<area-id>` 取自 [`docs/14_维护者/registry/维护映射表.json`](docs/14_维护者/registry/维护映射表.json) 的 `areas[].id`，
 共 111 个区域。用它做前缀的好处是：分支名直接对应 CODEOWNERS 的归属单元。
 
 > **关于 `main` 与 `master`**：本仓库主干名为 `master`，但所有 workflow 的触发条件同时列出
@@ -137,7 +137,7 @@ node scripts/ci/check-dependency-size.js               # 报告态：包数 / �
 ## 6. 代码审查要求
 
 **归属**：由 [`.github/CODEOWNERS`](.github/CODEOWNERS) 决定，该文件是生成产物 ——
-真源是 `docs/_维护者/维护映射表.json`（区域与路径）+ [`.github/maintainers.json`](.github/maintainers.json)（区域 → GitHub 账号）。
+真源是 `docs/14_维护者/registry/维护映射表.json`（区域与路径）+ [`.github/maintainers.json`](.github/maintainers.json)（区域 → GitHub 账号）。
 
 ```bash
 # 给某个区域分配维护者：编辑 .github/maintainers.json 的 areaOwners，然后
@@ -226,8 +226,8 @@ scripts\sync\merge-contributions.bat <bundle1> <bundle2> ...  # 多人合入（�
 
 发布由维护者执行。流程文档：
 
-- [`docs/07_OPS_运维/[OPS-MAN-042] 发布手册-pip与npm-无AI照做.md`](docs/07_OPS_运维/) — 逐步照做的发布手册
-- [`docs/07_OPS_运维/[OPS-MAN-061] 发布门禁.md`](docs/07_OPS_运维/) — 发布前必须通过的检查
+- [`docs/07_OPS_运维/OPS-MAN/[OPS-MAN-042] 发布手册-pip与npm-无AI照做.md`](docs/07_OPS_运维/) — 逐步照做的发布手册
+- [`docs/07_OPS_运维/OPS-MAN/[OPS-MAN-061] 发布门禁.md`](docs/07_OPS_运维/) — 发布前必须通过的检查
 - [`.github/workflows/dual-channel-release.yml`](.github/workflows/dual-channel-release.yml) — npm + PyPI 双通道自动化
 
 贡献者只需注意一点：**改动版本号时多处必须同步**，以 `node scripts/ci/check-version-sync.js`

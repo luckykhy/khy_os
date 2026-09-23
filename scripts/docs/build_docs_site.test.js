@@ -158,3 +158,34 @@ test("回归：.md 链接改写成 .html，普通段落照常", () => {
   assert.match(html, /href="\.\/00_INDEX\.html"/);
   assert.match(html, /^<p>/);
 });
+
+// ── 机器标记透传（D4/D9 守卫的判定锚点）──────────────────────────────────────
+//
+// `<!-- MIRROR: X -->` 与 `<!-- RULES-REGISTRY: ... -->` 是守卫读的机器标记。
+// 它们必须原样透传为**真正的 HTML 注释**，不能被 escapeHtml 转成可见文本
+// （转义后为 `&lt;!-- MIRROR: X --&gt;`，机器认不出 → 每一对孪生件都会被 D9 误报）。
+
+test("机器标记：MIRROR 行原样透传为真 HTML 注释，不被转义", () => {
+  const html = R("<!-- MIRROR: AGENTS.html -->\n正文。");
+  assert.match(html, /<!-- MIRROR: AGENTS\.html -->/);
+  // 反例锁：不得出现转义形态（那正是会让 D9 永久误报的回归）
+  assert.doesNotMatch(html, /&lt;!-- MIRROR/);
+});
+
+test("机器标记：RULES-REGISTRY 行同样原样透传", () => {
+  const html = R("<!-- RULES-REGISTRY: RUNTIME-001, RUNTIME-002 -->\n正文。");
+  assert.match(html, /<!-- RULES-REGISTRY: RUNTIME-001, RUNTIME-002 -->/);
+  assert.doesNotMatch(html, /&lt;!-- RULES-REGISTRY/);
+});
+
+test("机器标记：只有白名单前缀透传，其它注释仍按普通文本转义显示", () => {
+  // 安全边界：透传 = 内容对读者不可见，误透传会静默吞掉正文。
+  const html = R("<!-- 这是正文里的普通注释，应该可以被读者看到 -->");
+  assert.doesNotMatch(html, /<!-- 这是正文/);
+  assert.match(html, /&lt;!-- 这是正文/);
+});
+
+test("机器标记：行首有缩进也能识别（Markdown 里常被嵌在列表下）", () => {
+  const html = R("  <!-- MIRROR: X.html -->");
+  assert.match(html, /<!-- MIRROR: X\.html -->/);
+});

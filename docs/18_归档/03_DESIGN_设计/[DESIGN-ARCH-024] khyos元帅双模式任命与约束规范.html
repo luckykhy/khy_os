@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-024] khyos元帅双模式任命与约束规范.md -->
+<title>《khyos 元帅（Marshal）双模式任命与约束规范》 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>18_归档<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>《khyos 元帅（Marshal）双模式任命与约束规范》</div>
+      <header class="hero reveal"><h1>《khyos 元帅（Marshal）双模式任命与约束规范》</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyos-元帅-marshal-双模式任命与约束规范">《khyos 元帅（Marshal）双模式任命与约束规范》</a></li><li class="lvl-2"><a href="#0-问题陈述">0. 问题陈述</a></li><li class="lvl-2"><a href="#1-设计目标与硬约束">1. 设计目标与硬约束</a></li><li class="lvl-3"><a href="#1-1-核心诉求-必须满足">1.1 核心诉求（必须满足）</a></li><li class="lvl-3"><a href="#1-2-防呆红线-逐条落到代码-非仅-prompt">1.2 防呆红线（逐条落到代码，非仅 Prompt）</a></li><li class="lvl-2"><a href="#2-架构总览">2. 架构总览</a></li><li class="lvl-3"><a href="#2-1-模块清单-src-services-marshal">2.1 模块清单（`src/services/marshal/`）</a></li><li class="lvl-2"><a href="#3-能力向量与强-弱裁决-capabilityvector">3. 能力向量与强/弱裁决（capabilityVector）</a></li><li class="lvl-2"><a href="#4-双模式任命-2-marshalappointment">4. 双模式任命（§2 marshalAppointment）</a></li><li class="lvl-2"><a href="#5-弱主适配协议-3">5. 弱主适配协议（§3）</a></li><li class="lvl-2"><a href="#6-强主赋能协议-4">6. 强主赋能协议（§4）</a></li><li class="lvl-2"><a href="#7-降级弹劾机制-5-impeachment">7. 降级弹劾机制（§5 impeachment）</a></li><li class="lvl-2"><a href="#8-无缝切换-contextbaton">8. 无缝切换（contextBaton）</a></li><li class="lvl-2"><a href="#9-cli-api-接入">9. CLI / API 接入</a></li><li class="lvl-2"><a href="#10-端到端三场景-验收口径">10. 端到端三场景（验收口径）</a></li><li class="lvl-2"><a href="#11-边界与后续">11. 边界与后续</a></li></ul></nav>
+      <article class="doc-body">
+<blockquote><p>⚠️ <strong>已归档（孤儿设计稿）· 请勿据此实现</strong> ⚠️</p>
+<p>本规范描述的治理引擎 <code>marshal（任命/弹劾/接力生命周期半边）</code> 经 2026-06-14「接线或删除」证据级核实为 <strong>ORPHAN</strong><br>（零消费者、从 <code>executeTool</code>/<code>toolUseLoop</code>/<code>aiManagementServer</code> 三入口均不可达），<br>已按 <code>.ai/GOVERNANCE-LEDGER.md</code> §B.0 <strong>删除其实现代码</strong>（基线 <code>0437b6b</code>，删除提交<br><code>a76785e</code> + <code>99ea828</code>）。本文件仅作<strong>历史可追溯</strong>留存，<strong>非在产、不得作为实现依据</strong>。<br>判「在产」唯一标准见 <code>.ai/GUARDS-AI.md</code> §0。 <strong>例外</strong>：叶子 <code>marshal/capabilityVector</code> 仍在产（经 metaConstraint/capabilityProbe 投影分带），其单一真源文档见 <code>.ai/GUARDS-AI.md</code> §2；仅本规范描述的任命/弹劾半边被删。</p>
+<p>——归档于 2026-06-14</p></blockquote>
+<h1 id="khyos-元帅-marshal-双模式任命与约束规范">《khyos 元帅（Marshal）双模式任命与约束规范》<a class="anchor" href="#khyos-元帅-marshal-双模式任命与约束规范" aria-label="锚点">#</a></h1>
+<blockquote><p>文档编号：DESIGN-ARCH-024<br>主题：主控模型（元帅）的「自动选举 ⇄ 用户强制指定」双模式任命，及其能力分级约束与弹劾移交<br>范围：<code>services/backend</code> 调度器的<strong>任命与约束</strong>子系统（不触碰核心业务逻辑）<br>关联实现：<code>src/services/marshal/*</code>、<code>platform/khy_platform/cli.py</code>（<code>--marshal</code>）、<code>tests/services/marshal/marshalSubsystem.test.js</code><br>关联规范：[DESIGN-ARCH-002] CB-SSP（可逆性分层 / 约束格）、[DESIGN-ARCH-013] 弱模型兼容</p></blockquote>
+<hr>
+<h2 id="0-问题陈述">0. 问题陈述<a class="anchor" href="#0-问题陈述" aria-label="锚点">#</a></h2>
+<p>khyos 是「单人 AI 原生 OS」，其 agent 由一个<strong>主控模型</strong>驱动宏观规划。此前系统：</p>
+<ol><li><strong>没有「元帅」这一概念</strong>——既无硬编码的主控选择逻辑，也无用户干预接口；最接近的只是</li></ol>
+<p>hybrid 启动器里硬编码的 <code>CLAUDE_CODE_SUBAGENT_MODEL</code>。</p>
+<ol><li>因此存在一对<strong>核心矛盾</strong>：<ul><li>若系统自动用「最强模型」当主控，用户无法把控成本 / 隐私 / 偏好；</li><li>若放开让用户指定<strong>任意</strong>模型当主控，一个低能力模型（如 <code>qwen-4b</code>）做自由宏观规划时</li></ul></li></ol>
+<p>极易产出逻辑不自洽的长计划，进而<strong>直接操作文件系统造成不可逆破坏</strong>。</p>
+<p>本规范在「<strong>用户意志至上</strong>」与「<strong>系统底线不死</strong>」之间架一座桥：让任何在线模型都能被任命为元帅，<br>同时保证最弱的元帅在镣铐下也只能产出<strong>文件安全、逻辑自洽</strong>的计划。</p>
+<hr>
+<h2 id="1-设计目标与硬约束">1. 设计目标与硬约束<a class="anchor" href="#1-设计目标与硬约束" aria-label="锚点">#</a></h2>
+<h3 id="1-1-核心诉求-必须满足">1.1 核心诉求（必须满足）<a class="anchor" href="#1-1-核心诉求-必须满足" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>诉求</th><th>本方案如何满足</th></tr></thead><tbody><tr><td>①</td><td><strong>用户意志至上</strong></td><td>任何在线模型都可经 <code>--marshal=&lt;model&gt;</code> 强制任命；系统<strong>绝不</strong>因「太笨」而拒绝或过度警告，只静默切入「弱主适配协议」。</td></tr><tr><td>②</td><td><strong>系统底线不死</strong></td><td>弱元帅被剥夺自由规划权，只能在严格 JSON Schema 内从<strong>预置战略库</strong>做「选择题」；其选择由<strong>确定性规则引擎</strong>展开为单一微步，不可逆动作一律降级须审批，绝不损坏项目文件。</td></tr><tr><td>③</td><td><strong>无缝切换</strong></td><td>弹劾移交时，业务需求与已积累的步骤/观察/失败日志由<strong>上下文接力棒</strong>逐字无损携带给继任者。</td></tr></tbody></table>
+<h3 id="1-2-防呆红线-逐条落到代码-非仅-prompt">1.2 防呆红线（逐条落到代码，非仅 Prompt）<a class="anchor" href="#1-2-防呆红线-逐条落到代码-非仅-prompt" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>红线</th><th>落点</th></tr></thead><tbody><tr><td>①</td><td>弱元帅绝不允许直接操作文件系统或执行不可逆命令，必须经规则引擎二次校验</td><td><code>ruleEngineGuard.vetAction</code>：弱主 + A_commit + 未授权 → <code>allowed:false, requiresApproval:true</code></td></tr><tr><td>②</td><td>用户指定元帅时，必须校验该模型是否在当前池中存活，否则立刻报错</td><td><code>marshalAppointment.appointMarshal</code>：不在线 → <code>{error:'model_not_in_pool'}</code>，不静默降级</td></tr><tr><td>③</td><td>弱主适配协议的 Prompt 注入绝不修改用户原始业务需求，只能修改「完成需求的方式」</td><td><code>contextBaton</code> 用 <code>Object.defineProperty</code> 冻结 <code>businessRequest</code>；渲染器逐字嵌入需求于 <code>&quot;&quot;&quot;</code> 围栏</td></tr><tr><td>④</td><td>不碰核心业务逻辑，只重构调度器的任命与约束模块</td><td>全部为 <code>src/services/marshal/</code> 新文件，零侵入既有 toolUseLoop / 网关</td></tr></tbody></table>
+<hr>
+<h2 id="2-架构总览">2. 架构总览<a class="anchor" href="#2-架构总览" aria-label="锚点">#</a></h2>
+<pre><code>                       ┌──────────────────────────────────────────────┐
+   用户 --marshal=X ──► │  MarshalCoordinator  (marshal/index.js)        │
+   （或留空=自动）       │  一个任务的元帅生命周期编排                      │
+                       └──────────────────────────────────────────────┘
+                                 │ appoint()
+                                 ▼
+        §2 marshalAppointment ──────────────► capabilityVector
+        ├─ 留空 → electMarshal（reasoning 最高）   （层级 → 连续分数 + 强/弱裁决）
+        └─ 指定 → 校验存活(防呆②) → user-override
+                                 │ protocol = strength
+              ┌──────────────────┴───────────────────┐
+              ▼ strong                                 ▼ weak
+   §4 strongMasterProtocol                  §3 weakMasterProtocol
+   赋予全权 / 跨级指挥 / 自我反省            限制兵权(strategySOP选择题)
+   自由文本计划原样接受                       → 解析 → 确定性展开单一微步
+                                              → ruleEngineGuard 二次校验(防呆①)
+                                                       │ 连续非法 ≥ 阈值
+                                                       ▼
+                                       §5 impeachment 弹劾状态机
+                                       逼宫提案(精确文案) → 用户裁决
+                                       批准 → contextBaton.handover(无损,防呆③)
+                                            → 继任者按其 strength 重新选协议
+                                       拒绝 → 挂起(绝不静默覆盖用户意志)</code></pre>
+<h3 id="2-1-模块清单-src-services-marshal">2.1 模块清单（<code>src/services/marshal/</code>）<a class="anchor" href="#2-1-模块清单-src-services-marshal" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>职责</th><th>关键导出</th></tr></thead><tbody><tr><td><code>capabilityVector.js</code></td><td>把离散层级投影成连续能力向量 + 强/弱裁决</td><td><code>assess</code>、<code>capabilityScore</code>、<code>strongThreshold</code></td></tr><tr><td><code>marshalAppointment.js</code></td><td>§2 双模式任命 + 防呆②</td><td><code>appointMarshal</code>、<code>electMarshal</code>、<code>isAlive</code></td></tr><tr><td><code>strategySOP.js</code></td><td>预置战略库（弱主选择题）+ JSON Schema</td><td><code>STRATEGIC_INTENTS</code>、<code>buildChoiceSchema</code>、<code>isLegalChoice</code></td></tr><tr><td><code>ruleEngineGuard.js</code></td><td>§3 强化护卫 / 防呆① 二次校验</td><td><code>vetAction</code>、<code>vetBatch</code></td></tr><tr><td><code>weakMasterProtocol.js</code></td><td>§3 渲染 / 解析 / 确定性展开</td><td><code>renderWeakMasterPrompt</code>、<code>parseStrategicDecision</code>、<code>expandToMicroStep</code></td></tr><tr><td><code>strongMasterProtocol.js</code></td><td>§4 强主赋能</td><td><code>strongCapabilities</code>、<code>renderStrongMasterPrompt</code>、<code>ingestStrongPlan</code></td></tr><tr><td><code>contextBaton.js</code></td><td>无缝切换载体 + 防呆③ 需求冻结</td><td><code>createBaton</code>、<code>handover</code>、<code>assertRequestIntact</code></td></tr><tr><td><code>impeachment.js</code></td><td>§5 降级弹劾状态机</td><td><code>recordOutcome</code>、<code>buildHandoverProposal</code>、<code>resolveProposal</code></td></tr><tr><td><code>index.js</code></td><td><code>MarshalCoordinator</code> 编排（唯一对外集成面）</td><td><code>MarshalCoordinator</code> + 全部子模块再导出</td></tr></tbody></table>
+<p>所有模块<strong>纯函数式、零副作用</strong>（除协调器自身内部状态对象外），复用既有单一真源：<br><code>modelTier</code>（层级）、<code>reversibility</code>（可逆性分层）、<code>constraintLattice</code>（约束格 / 红线）、<br><code>safeJsonParse.extractFirstJson</code>（结构化输出恢复）、<code>taskDecomposer</code>（确定性拆解）。</p>
+<hr>
+<h2 id="3-能力向量与强-弱裁决-capabilityvector">3. 能力向量与强/弱裁决（capabilityVector）<a class="anchor" href="#3-能力向量与强-弱裁决-capabilityvector" aria-label="锚点">#</a></h2>
+<p><code>modelTier</code> 给出离散序数层级（T0 前沿 &gt; T1 强 &gt; T2 默认 &gt; T3 弱）。任命子系统在其上叠加两件事：</p>
+<ol><li><strong>连续分数</strong>——把四层映射为能力向量（<code>reasoning</code> 为选举主维），加权聚合成 <code>[0,100]</code> 分数，</li></ol>
+<p>使一池模型可排序、选出唯一最优（§2 自动选举要求「reasoning 得分最高」）。</p>
+<ul><li>权重：<code>reasoning 0.5 / planning 0.25 / instruction 0.15 / jsonStrict 0.1</code>（和为 1）。</li></ul>
+<p>决定走哪套协议。结果：T0/T1 强、T2/T3 弱。</p>
+<blockquote><p>该模块<strong>不引入任何新的模型知识</strong>，只把既有四层投影到向量；所有阈值带命名默认值、环境可覆盖（零硬编码）。</p></blockquote>
+<hr>
+<h2 id="4-双模式任命-2-marshalappointment">4. 双模式任命（§2 marshalAppointment）<a class="anchor" href="#4-双模式任命-2-marshalappointment" aria-label="锚点">#</a></h2>
+<ul><li><strong>自动选举（默认）</strong>：<code>electMarshal</code> 对在线池按聚合分数排序，并列时比 <code>reasoning</code>，再并列按池内稳定顺序——<strong>确定性</strong>。</li><li><strong>用户指定（皇权特许）</strong>：<code>appointMarshal({pool, requested})</code> 命中 <code>requested</code> 时：<ol><li><strong>防呆②</strong>：<code>isAlive</code> 校验该模型在在线池中，否则立即返回 <code>{error:'model_not_in_pool', available:[…]}</code>，<strong>绝不静默降级</strong>。</li><li>解析到池内规范大小写，按其 <code>strength</code> 选定 <code>protocol</code>。</li></ol></li><li>池归一化 <code>normalizePool</code> 接受 <code>['id']</code> / <code>[{id|model|modelId|name, online|alive|healthy}]</code>，</li></ul>
+<p>除非显式 <code>false</code> 否则视为在线。</p>
+<hr>
+<h2 id="5-弱主适配协议-3">5. 弱主适配协议（§3）<a class="anchor" href="#5-弱主适配协议-3" aria-label="锚点">#</a></h2>
+<p>三道镣铐，全部落在代码而非仅 Prompt：</p>
+<ol><li><strong>限制兵权</strong>：<code>renderWeakMasterPrompt</code> 强制弱元帅<strong>只能</strong>从 <code>strategySOP</code> 预置战略库选恰好一个宏观方向，</li></ol>
+<p>输出必须满足 <code>buildChoiceSchema</code>（<code>sopId</code> 为闭枚举 + 极简 <code>params</code> + 一句 <code>reason</code>）。</p>
+<ul><li>战略库（安全优先排序）：<code>investigate</code>(只读探查) / <code>minimal_change</code>(最小切片改) / <code>decompose</code>(确定性拆解) /</li></ul>
+<p><code>verify</code>(跑构建测试) / <code>clarify</code>(向用户澄清·逃生地板) / <code>halt</code>(安全停止·逃生地板)。</p>
+<ul><li>逃生地板恒为只读，保证可行动作集 <code>A(s) ≠ ∅</code>（呼应约束格的活性地板）。</li></ul>
+<p>（弱元帅含混的意图同样会误导聪明模型）。拆解优先用注入 dep，回退 <code>taskDecomposer</code> 仅确定性策略。</p>
+<ol><li><strong>分割政权</strong>：一次只产出一个小微步，下一轮再选——弱元帅永远跑不远就到下一个校验点。</li></ol>
+<p><strong>防呆① 落点</strong>：任何可变微步都经 <code>ruleEngineGuard.vetAction(…, {strength:'weak'})</code>。不可逆（A_commit）动作在弱主下<br><strong>绝不自动执行</strong>，降级为 <code>requiresApproval:true</code> 的提案；红线来源（<code>pathTraversalGuard</code>/<code>ssrfGuard</code>/…）硬拦截，<br>任何审批都不可解除；逃生地板（<code>abort</code>/<code>askuserquestion</code>）对任何人始终可行。</p>
+<p><strong>防呆③ 落点</strong>：渲染器把原始业务需求逐字放进 <code>&quot;&quot;&quot;…&quot;&quot;&quot;</code> 围栏，并显式声明「只决定怎么做，不改做什么」。</p>
+<hr>
+<h2 id="6-强主赋能协议-4">6. 强主赋能协议（§4）<a class="anchor" href="#6-强主赋能协议-4" aria-label="锚点">#</a></h2>
+<p>当系统选出（或用户钦点）高能力元帅，撤掉脚手架、释放「天才红利」：</p>
+<ul><li><strong>赋予全权</strong>：允许自由文本思维链 + 复杂宏观意图，无 SOP 镣铐（<code>renderStrongMasterPrompt</code> 刻意精简，</li></ul>
+<p>对齐 modelTier 的 T0 lean 路径）。</p>
+<ul><li><strong>跨级指挥</strong>：可直接产出具体微观执行指令，跳过规则引擎展开器，直发工具 / 低智模型（<code>ruleEngineGuard</code></li></ul>
+<p>对 strong 豁免 commit 降级）。</p>
+<ul><li><strong>自我反省</strong>：失败时可查看完整日志并自我修正宏观策略（<code>reflecting:true</code> 渲染修正头）。</li></ul>
+<blockquote><p>安全红线与逃生地板对<strong>所有人</strong>生效——赋能放开的是脚手架，不是安全格。</p></blockquote>
+<hr>
+<h2 id="7-降级弹劾机制-5-impeachment">7. 降级弹劾机制（§5 impeachment）<a class="anchor" href="#7-降级弹劾机制-5-impeachment" aria-label="锚点">#</a></h2>
+<p>弱元帅在 SOP 镣铐下仍<strong>连续</strong> <code>threshold</code>（默认 2，<code>KHY_MARSHAL_IMPEACH_THRESHOLD</code> 可覆盖）次产不出合法战略意图<br>（「连选择题都做不对」），触发「逼宫」：</p>
+<pre><code>governing ──(合法)──► governing（计数清零）
+    │
+    └──(非法)──► governing(n++) ──(n≥阈值)──► proposed
+                                                │
+                       用户拒绝 ◄───────────────┤
+                       → suspended（挂起待用户，绝不静默覆盖意志）
+                                                │
+                       用户批准 ────────────────► handover
+                                                → governing（新元帅）</code></pre>
+<ul><li><code>buildHandoverProposal</code> 在排除失败元帅后选出最优继任者，给出<strong>逐字精确</strong>文案：</li></ul>
+<p><code>[Action Required] 指定元帅&lt;from&gt;连续规划失败，建议移交&lt;candidate&gt;指挥，是否同意？</code><br>  （池中无其它可接管模型时给出补充模型/调整需求的变体文案）。</p>
+<ul><li>任务在用户确认前<strong>挂起</strong>；<code>resolveProposal</code> 批准 → <code>handover</code> 态并清零，拒绝 → <code>suspended</code>。</li></ul>
+<hr>
+<h2 id="8-无缝切换-contextbaton">8. 无缝切换（contextBaton）<a class="anchor" href="#8-无缝切换-contextbaton" aria-label="锚点">#</a></h2>
+<p>接力棒是<strong>与元帅无关</strong>的快照，含：冻结的业务需求、已完成微步、累积观察、触发弹劾的失败日志、历任元帅链。</p>
+<ul><li><strong>防呆③ 结构性保证</strong>：<code>businessRequest</code> 在创建时即被 <code>Object.defineProperty(writable:false)</code> 冻结，</li></ul>
+<p>任何操作都无法改写「做什么」；<code>_clone</code> 在每次派生时重新钉死该不变量；<code>assertRequestIntact</code> 供调用方证明。</p>
+<ul><li>每个 mutator（<code>recordStep</code>/<code>recordFailure</code>/<code>handover</code>…）返回<strong>新接力棒</strong>，原对象不被篡改，</li></ul>
+<p>故移交时可对前态留快照供审计。<code>handover</code> 只换 <code>currentMarshal</code>，需求逐字不动。</p>
+<hr>
+<h2 id="9-cli-api-接入">9. CLI / API 接入<a class="anchor" href="#9-cli-api-接入" aria-label="锚点">#</a></h2>
+<p><code>platform/khy_platform/cli.py</code> 的 <code>_run_claude_code_launcher</code> 解析 <code>--marshal &lt;model&gt;</code> / <code>--marshal=&lt;model&gt;</code>，<br>透传为环境变量 <code>KHY_MARSHAL</code>（<code>_build_khy_proxy_env(marshal=…)</code>）。<strong>透传层不做任何能力封锁</strong>——<br>用户意志在入口处即被尊重，能力适配全部下沉到 <code>MarshalCoordinator</code>。留空则走自动选举。</p>
+<hr>
+<h2 id="10-端到端三场景-验收口径">10. 端到端三场景（验收口径）<a class="anchor" href="#10-端到端三场景-验收口径" aria-label="锚点">#</a></h2>
+<p><code>MarshalCoordinator</code> 对<strong>同一复杂任务</strong>在三种任命情形下的完整流转（见 [TEST-RPT-008]）：</p>
+<table><thead><tr><th>场景</th><th>入口</th><th>任命</th><th>协议</th><th>流转</th></tr></thead><tbody><tr><td>① 自动选举</td><td><code>--marshal</code> 留空</td><td><code>mode:auto</code>，选出 <code>claude-opus-4-8</code></td><td>strong</td><td>接受自由计划，跨级指挥</td></tr><tr><td>② 强主指定</td><td><code>--marshal=claude-sonnet-4-6</code></td><td><code>mode:user-override</code></td><td>strong</td><td>接受自由计划，赋予全权</td></tr><tr><td>③ 弱主指定</td><td><code>--marshal=qwen-4b</code> / <code>gpt-4o-mini</code></td><td><code>mode:user-override</code></td><td>weak</td><td>选择题→规则引擎微步；编辑须审批；连续 2 次非法→弹劾→用户批准→无损移交</td></tr></tbody></table>
+<p>三大核心诉求与四条防呆红线均有对应断言（35 个用例全绿）。</p>
+<hr>
+<h2 id="11-边界与后续">11. 边界与后续<a class="anchor" href="#11-边界与后续" aria-label="锚点">#</a></h2>
+<ul><li>本子系统是<strong>纯任命与约束层</strong>，不自行驱动模型调用；宿主负责：提供在线池 + 用户 <code>--marshal</code> 选择、</li></ul>
+<p>调渲染器取 Prompt、把模型原始输出回喂 <code>ingestPlanningOutput</code>、把弹劾提案呈现给用户。</p>
+<ul><li>后续可选增强：把 <code>KHY_MARSHAL</code> 在 toolUseLoop 入口实接为协调器的宿主接线（当前为零侵入设计，</li></ul>
+<p>接线属核心业务逻辑改动，依防呆④另行评审）；战略库可随实践扩充新的安全宏观方向。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/18_归档/00_INDEX_归档-总目录.html"><div class="dir">← 上一篇</div><div class="ttl">00INDEX 归档-总目录</div></a><a class="next" href="../../../docs/18_归档/03_DESIGN_设计/[DESIGN-ARCH-033] 模型自适应与双轨热插拔架构.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-033] 模型自适应与双轨热插拔架构</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/18_归档/03_DESIGN_设计/[DESIGN-ARCH-024] khyos元帅双模式任命与约束规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

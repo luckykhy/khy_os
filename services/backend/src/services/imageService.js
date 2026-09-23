@@ -10,6 +10,7 @@
  * No npm dependencies — uses child_process + Buffer only.
  */
 const { execSync } = require('child_process');
+const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -355,9 +356,9 @@ function writeClipboardText(text) {
   const platform = os.platform();
   const payload = String(text == null ? '' : text);
   const EXEC = { input: payload, timeout: 5000, stdio: ['pipe', 'ignore', 'ignore'] };
-  const tryPipe = (cmd) => {
+  const tryPipe = (cmd, stdin) => {
     try {
-      execSync(cmd, EXEC);
+      execSync(cmd, { ...EXEC, input: stdin == null ? payload : stdin });
       return true;
     } catch {
       return false;
@@ -368,9 +369,17 @@ function writeClipboardText(text) {
       return tryPipe('pbcopy');
     }
     if (platform === 'win32') {
+      // 2026-09-19: PowerShell 把重定向 stdin 按控制台输入代码页(中文 Windows 为
+      // GBK/cp936)解码,UTF-8 载荷里的盒线字符(└ U+2514 → 鈳?)与 CJK 全部乱码。
+      // 改走 base64:node 侧把 UTF-8 字节 base64 后灌 stdin,PS 端显式按 UTF-8 解码,
+      // 与代码页无关;-Value 传单字符串避免管道逐行枚举改写换行。
+      const b64 = Buffer.from(payload, 'utf8').toString('base64');
       for (const shell of POWERSHELL_BINS) {
-        // Set-Clipboard reads the piped stdin; -Raw keeps newlines intact.
-        if (tryPipe(`${shell} -noprofile -command "$input | Set-Clipboard"`)) {
+        const ok = tryPipe(
+          `${shell} -noprofile -command "$b=[Console]::In.ReadToEnd().Trim(); Set-Clipboard -Value ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($b)))"`,
+          b64
+        );
+        if (ok) {
           return true;
         }
       }

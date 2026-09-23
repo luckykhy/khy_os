@@ -22,7 +22,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const TEMPLATE_DIR = path.join(__dirname, '../../templates/docstyles');
+// Style templates are pure data at src/templates/docstyles — four levels up from
+// this domain location (src/services/domain/structured/typeset). Keep the depth in
+// sync if this file moves again.
+const TEMPLATE_DIR = path.join(__dirname, '../../../../templates/docstyles');
 const DEFAULT_TEMPLATE = 'default';
 
 let _cache = null;

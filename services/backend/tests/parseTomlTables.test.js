@@ -1,7 +1,7 @@
 'use strict';
 /**
- * parseTomlTables â€?pins the tolerant TOML **subset** parser that lets khy reuse
- * Codex CLI's MCP servers (`~/.codex/config.toml` â†?`[mcp_servers.<name>]`),
+ * parseTomlTables ï¿½?pins the tolerant TOML **subset** parser that lets khy reuse
+ * Codex CLI's MCP servers (`~/.codex/config.toml` ï¿½?`[mcp_servers.<name>]`),
  * the one ecosystem in the registry that is not JSON/JSON5. Zero-IO: text in,
  * object out, so the suite is deterministic. Covers: table headers, dotted
  * headers, table arrays, every supported value form, multi-line arrays/inline
@@ -9,6 +9,7 @@
  * lines skipped rather than losing the whole file).
  */
 const parseTomlTables = require('../src/utils/parseTomlTables');
+const assert = require('node:assert');
 
 describe('Parse Toml Tables', () => {
   test('parses the real Codex mcp_servers shape', () => {

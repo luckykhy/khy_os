@@ -577,6 +577,80 @@ LOWER:=MID-P*STD(CLOSE,N);
 });
 
 /**
+ * GET /api/strategies/presets —— 按策略类型与复杂度返回参数预设
+ *
+ * 消费方：khyquant 前端 intelligentStrategyService.getParameterPresets(type, complexity)。
+ * 类型枚举与 intelligentStrategyAdapter.detectStrategyType 一致（5 类）；
+ * 复杂度沿用前端契约 low/medium/high。
+ * 无需认证，与 /templates 同级只读目录数据。
+ *
+ * 对应论文：第4.3节（策略适配层 — 参数预设）
+ */
+const STRATEGY_PARAM_PRESETS = {
+  trend: {
+    low: { shortPeriod: 5, longPeriod: 20 },
+    medium: { shortPeriod: 10, longPeriod: 60 },
+    high: { shortPeriod: 20, longPeriod: 120, confirmPeriod: 10 }
+  },
+  mean_reversion: {
+    low: { period: 14, overbought: 70, oversold: 30 },
+    medium: { period: 14, overbought: 75, oversold: 25 },
+    high: { period: 21, overbought: 80, oversold: 20, confirmPeriod: 5 }
+  },
+  momentum: {
+    low: { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 },
+    medium: { fastPeriod: 8, slowPeriod: 21, signalPeriod: 5 },
+    high: { fastPeriod: 6, slowPeriod: 19, signalPeriod: 4, confirmPeriod: 10 }
+  },
+  arbitrage: {
+    low: { spreadThreshold: 0.5 },
+    medium: { spreadThreshold: 0.3, correlationWindow: 20 },
+    high: { spreadThreshold: 0.2, correlationWindow: 60, hedgeRatio: 0.8 }
+  },
+  market_making: {
+    low: { spreadTicks: 2, orderSize: 100 },
+    medium: { spreadTicks: 1, orderSize: 500, inventoryLimit: 1000 },
+    high: { spreadTicks: 1, orderSize: 1000, inventoryLimit: 5000, refreshMs: 500 }
+  }
+};
+
+router.get('/presets', async (req, res) => {
+  try {
+    const { type, complexity = 'medium' } = req.query;
+    const byType = STRATEGY_PARAM_PRESETS[type];
+
+    if (!byType) {
+      return res.status(404).json({
+        success: false,
+        message: `未知的策略类型: ${type}（可选: ${Object.keys(STRATEGY_PARAM_PRESETS).join(', ')}）`
+      });
+    }
+    if (!byType[complexity]) {
+      return res.status(404).json({
+        success: false,
+        message: `未知的复杂度: ${complexity}（可选: ${Object.keys(byType).join(', ')}）`
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        type,
+        complexity,
+        params: byType[complexity]
+      },
+      message: '策略参数预设获取成功'
+    });
+  } catch (error) {
+    console.error('❌ 获取策略参数预设失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取策略参数预设失败: ' + error.message
+    });
+  }
+});
+
+/**
  * POST /api/strategies/recommend —— 策略推荐
  *
  * 根据用户持有的策略和指定标的，调用 strategyRecommender 服务

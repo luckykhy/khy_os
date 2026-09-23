@@ -282,8 +282,13 @@ function formatSkillListing(charBudget = 8000, context) {
     return full;
   }
 
-  // Truncate descriptions to fit within budget
-  const overhead = commands.reduce((sum, cmd) => sum + cmd.trigger.length + 4, 0);
+  // Truncate descriptions to fit within budget. The `use when:` hint is
+  // appended outside descLen (see formatLine), so charge its length to overhead
+  // here — otherwise a batch of populated hints silently overflows the budget,
+  // because the pass below does not re-check the resulting total.
+  const hintLen = (cmd) =>
+    cmd.whenToUse ? Math.min(120, cmd.whenToUse.length) + ' (use when: )'.length : 0;
+  const overhead = commands.reduce((sum, cmd) => sum + cmd.trigger.length + 4 + hintLen(cmd), 0);
   const availableForDescs = charBudget - overhead;
   const maxDescLen = Math.max(20, Math.floor(availableForDescs / commands.length));
 

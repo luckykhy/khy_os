@@ -1,3 +1,5 @@
+
+// RULES-REGISTRY: SECURITY-003
 'use strict';
 
 /**

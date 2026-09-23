@@ -23,8 +23,8 @@ const {
   EnvSymbiosis, EnvFingerprintScanner, NativeAffinityRouter,
   CompatibilityQuencher, SpecialtyBreaker, ROUTE_STATUS, FUSE_CAUSE, PLATFORM,
 } = require('../../../src/services/envSymbiosis');
-const evoRequirement = require('../../../src/services/evoEngine/evoRequirement');
-const evoLevels = require('../../../src/services/evoEngine/evoLevels');
+const evoRequirement = require('../../../src/services/domain/maintenance/evoEngine/evoRequirement.js');
+const evoLevels = require('../../../src/services/domain/maintenance/evoEngine/evoLevels.js');
 
 after(() => { try { fs.rmSync(TMP_HOME, { recursive: true, force: true }); } catch { /* best-effort */ } });
 

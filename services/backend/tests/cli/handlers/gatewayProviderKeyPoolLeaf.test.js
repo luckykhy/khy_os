@@ -1,11 +1,12 @@
 'use strict';
+const assert = require('node:assert');
 /**
  * Leaf-contract test for gatewayProviderKeyPool.js (extracted from cli/handlers/gateway.js).
  *
  * Proves: (1) the leaf exports the host-consumed handlers + _addCustomProviderInteractive
  * + the DI setter as functions; (2) the host re-imports the handlers by the SAME names so the
  * public gateway command contract is byte-identical; (3) setGatewayProviderKeyPoolDeps is a
- * guarded, idempotent, non-throwing DI setter (only wires function-typed deps â€?the two host
+ * guarded, idempotent, non-throwing DI setter (only wires function-typed deps ï¿½?the two host
  * callbacks promptWithReplGuard / _resolveEnvPathForDiscoverModels that avoid a require cycle).
  *
  * The leaf performs IO (reads/writes .env, spawns upstream probes, lazy-loads pools) so it does
@@ -42,9 +43,9 @@ describe('Gateway Provider Key Pool Leaf', () => {
   test('setGatewayProviderKeyPoolDeps is a guarded, idempotent, non-throwing DI setter', async () => {
       const { setGatewayProviderKeyPoolDeps } = require(LEAF);
       // No throw on empty / partial / non-function deps (guards ignore non-functions).
-      expect(() => setGatewayProviderKeyPoolDeps().not.toThrow());
-      expect(() => setGatewayProviderKeyPoolDeps({}).not.toThrow());
-      expect(() => setGatewayProviderKeyPoolDeps({ promptWithReplGuard: 123, _resolveEnvPathForDiscoverModels: null }).not.toThrow());
+      expect(() => setGatewayProviderKeyPoolDeps()).not.toThrow();
+      expect(() => setGatewayProviderKeyPoolDeps({})).not.toThrow();
+      expect(() => setGatewayProviderKeyPoolDeps({ promptWithReplGuard: 123, _resolveEnvPathForDiscoverModels: null })).not.toThrow();
       // Idempotent re-injection with real functions.
       assert.doesNotThrow(() => setGatewayProviderKeyPoolDeps({
         promptWithReplGuard: async () => '',

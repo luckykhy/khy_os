@@ -31,7 +31,7 @@ describe('toolUseLoop app-launch interruption fallback', () => {
       return { success: false, error: `unexpected tool: ${name}` };
     });
 
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool,
       clearPreflightContext: jest.fn(),
     }));
@@ -82,7 +82,7 @@ describe('toolUseLoop app-launch interruption fallback', () => {
       return { success: false, error: `unexpected tool: ${name}` };
     });
 
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool,
       clearPreflightContext: jest.fn(),
     }));

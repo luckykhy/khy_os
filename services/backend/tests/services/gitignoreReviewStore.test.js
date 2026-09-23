@@ -1,12 +1,12 @@
 'use strict';
 /**
- * gitignoreReviewStore.test.js �?.gitignore 写入「待审核队列」的确定性测试�?
+ * gitignoreReviewStore.test.js — .gitignore 写入「待审核队列」的确定性测试�?
  *
- * 锁定:�?enqueue �?list �?approve(真写 .gitignore 且移�?pending)�?discard 全链;
- * �?非法 pattern 拒绝入队;�?去重(同一�?pattern �?pending �?skip);�?门控�?enqueue no-op;
- * �?IO fail-soft(�?id / 空输入不�?�?
+ * 锁定:�?enqueue �?list �?approve(真写 .gitignore 且移�?pending)�?discard 全链;
+ * �?非法 pattern 拒绝入队;�?去重(同一�?pattern �?pending �?skip);�?门控�?enqueue no-op;
+ * �?IO fail-soft(�?id / 空输入不�?�?
  *
- * 隔离:临时 data home(队列�?pending.json)+ 临时 cwd(approve �?.gitignore �?cwd)�?
+ * 隔离:临时 data home(队列�?pending.json)+ 临时 cwd(approve �?.gitignore �?cwd)�?
  */
 const fs = require('fs');
 const os = require('os');
@@ -21,15 +21,15 @@ const store = require('../../src/services/gitignoreReviewStore');
 const origCwd = process.cwd();
 const workCwd = path.join(TMP, 'work');
 fs.mkdirSync(workCwd, { recursive: true });
-test.before(() => { process.chdir(workCwd); });
-test.after(() => {
+beforeAll(() => { process.chdir(workCwd); });
+afterAll(() => {
   process.chdir(origCwd);
   try { fs.rmSync(TMP, { recursive: true, force: true }); } catch { /* best-effort */ }
 });
 function fresh() { store.clear(); }
 
 describe('Gitignore Review Store', () => {
-  test('enqueue �?list:候选进队列', () => {
+  test('enqueue �?list:候选进队列', () => {
       fresh();
       const r = store.enqueue({ patterns: ['secret.env', 'big.bin'], reason: 'precommit', source: 'auto' });
       expect(r.success).toBe(true, r.error || '');
@@ -40,7 +40,7 @@ describe('Gitignore Review Store', () => {
       expect(store.count()).toBe(1);
   });
 
-  test('去重:同一�?pattern �?pending �?skip', () => {
+  test('去重:同一�?pattern �?pending �?skip', () => {
       fresh();
       store.enqueue({ patterns: ['a', 'b'] });
       const r2 = store.enqueue({ patterns: ['b', 'a'] }); // 顺序无关
@@ -57,7 +57,7 @@ describe('Gitignore Review Store', () => {
       expect(ap.file && ap.file.endsWith('.gitignore')).toBeTruthy();
       const content = fs.readFileSync(ap.file, 'utf-8');
       expect(content).toContain('secret.env');
-      expect(store.list().length).toBe(0); // pending 已移�?
+      expect(store.list().length).toBe(0); // pending 已移�?
   });
 
   test('discard:丢弃不写文件', () => {
@@ -76,7 +76,7 @@ describe('Gitignore Review Store', () => {
       expect(store.list().length).toBe(0);
   });
 
-  test('门控�?�?enqueue no-op(disabled)', () => {
+  test('门控�?�?enqueue no-op(disabled)', () => {
       fresh();
       const saved = process.env.KHY_GITIGNORE_REVIEW;
       process.env.KHY_GITIGNORE_REVIEW = 'off';
@@ -89,7 +89,7 @@ describe('Gitignore Review Store', () => {
       }
   });
 
-  test('fail-soft:�?id / 空输入绝不抛', () => {
+  test('fail-soft:�?id / 空输入绝不抛', () => {
       fresh();
       expect(store.approve('').success).toBe(false);
       expect(store.approve('nonexistent').success).toBe(false);

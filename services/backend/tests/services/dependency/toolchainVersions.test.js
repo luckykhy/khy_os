@@ -11,7 +11,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const tv = require('../../../src/services/dependency/toolchainVersions');
+const tv = require('../../../src/services/domain/network/dependency/toolchainVersions.js');
 
 test('isEnabled: 默认开,仅 {0,false,off,no} 关', () => {
   assert.equal(tv.isEnabled({}), true);

@@ -1,6 +1,6 @@
 'use strict';
 /**
- * mapExport.test.js â€?DESIGN-ARCH-049 G6 (map â†?skill ecosystem).
+ * mapExport.test.js â€” DESIGN-ARCH-049 G6 (map ï¿½?skill ecosystem).
  *
  * Verifies exportAsSkill stages a stored map's SKILL.md and delegates to
  * skillPackageService.importSkill so it lands in the user skills root:
@@ -13,6 +13,7 @@
  * requiring, so both land under temp dirs. No model invoked.
  */
 const fs = require('fs');
+const assert = require('node:assert');
 const os = require('os');
 const path = require('path');
 const TMP_DATA = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-g6-data-'));
@@ -20,9 +21,9 @@ const TMP_PROJ = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-g6-proj-'));
 process.env.KHY_DATA_HOME = TMP_DATA;
 process.env.KHY_PROJECT_DATA_HOME = TMP_PROJ;
 process.env.KHY_DEP_HEALING = 'off';
-const mapAuthor = require('../../../src/services/trajectoryGuide/mapAuthor');
-const mapStore = require('../../../src/services/trajectoryGuide/mapStore');
-const mapExport = require('../../../src/services/trajectoryGuide/mapExport');
+const mapAuthor = require('../../../src/services/domain/trajectory/trajectoryGuide/mapAuthor.js');
+const mapStore = require('../../../src/services/domain/trajectory/trajectoryGuide/mapStore.js');
+const mapExport = require('../../../src/services/domain/trajectory/trajectoryGuide/mapExport.js');
 const { parseSkillFile } = require('../../../src/skills/skillLoader');
 function seedMap() {
   const manifest = {

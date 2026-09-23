@@ -18,7 +18,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const leaf = require('../../../src/services/memoryEngine/sessionCheckpoint');
+const leaf = require('../../../src/services/domain/memory/memoryEngine/sessionCheckpoint.js');
 
 const mk = (role, content) => ({ role, content });
 

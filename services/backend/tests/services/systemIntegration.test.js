@@ -17,7 +17,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { SystemIntegration } = require('./systemIntegration');
+const { SystemIntegration } = require('../../src/services/systemIntegration.js');
 
 // ── Test Helpers ──────────────────────────────────────────────────────────
 

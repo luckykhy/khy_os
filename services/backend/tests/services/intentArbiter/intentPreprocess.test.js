@@ -5,7 +5,7 @@
  * 验证:门控梯、全角空格/数字折半角(复用 fullWidthInput)、空白折叠、trim、
  *      门控关原样字节回退、非串入参不抛、「全角空格致规则落空」缺口被修复。
  */
-const pre = require('../../../src/services/intentArbiter/intentPreprocess');
+const pre = require('../../../src/services/domain/state/intentArbiter/intentPreprocess.js');
 
 describe('Intent Preprocess', () => {
   test('isEnabled: 默认开;{0,false,off,no} 关闭', () => {

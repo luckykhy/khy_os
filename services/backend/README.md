@@ -277,9 +277,9 @@ pm2 monit
 
 ## 相关文档
 
-- [项目规范化总纲](../../docs/03_DESIGN_设计/[DESIGN-ARCH-072]%20项目规范化总纲.md)
-- [MCP 工具接入快速上手](../../docs/07_OPS_运维/[OPS-MAN-173]%20MCP工具接入快速上手.md)
-- [记忆系统标准规范](../../docs/03_DESIGN_设计/[DESIGN-MEM-001]%20记忆系统标准规范.md)
+- [项目规范化总纲](../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-106]%20项目规范化总纲.md)
+- [MCP 工具接入快速上手](../../docs/07_OPS_运维/OPS-MAN/[OPS-MAN-173]%20MCP工具接入快速上手.md)
+- [记忆系统标准规范](../../docs/10_规范/DESIGN-MEM/[DESIGN-MEM-001] 记忆系统标准规范.md)
 
 ## 许可证
 

@@ -17,7 +17,7 @@ const {
   ToolRegistry,
   ToolCategory,
   RiskLevel,
-} = require('./toolSpec');
+} = require('../../src/services/toolSpec.js');
 
 // ── Test Helpers ──────────────────────────────────────────────────────────
 

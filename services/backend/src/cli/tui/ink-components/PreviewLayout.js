@@ -77,6 +77,10 @@ function PreviewLayout(props) {
     onViewportScroll,
     sidebarScroll = 0,
     onSidebarScroll,
+    // 转录行投影(门控 KHY_INLINE_TRANSCRIPT,默认开)。null → 回退旧的「转录走 <Static>」
+    // 行为,Viewport 里只放 live 工具 + 任务面板。
+    lines = null,
+    emptyText = '',
   } = props;
 
   const busy = status !== 'idle' && status !== 'done';
@@ -84,14 +88,18 @@ function PreviewLayout(props) {
   // 自适应分隔线生成器(避免硬编码长度导致折行)
   const sep = (color, len) => h(Text, { color }, '─'.repeat(Math.max(1, len)));
 
+  // 内联转录模式:转录进应用内 Viewport(可滚、不被 fullscreen 清屏擦掉)。
+  // 关 → 逐字节回退:Viewport 只放 live 工具 + 任务面板,转录仍走 <Static>。
+  const inlineTranscript = Array.isArray(lines);
+
   return h(
     Box,
     { flexDirection: 'column' },
     // ── 标题栏 ──
     h(Topbar, titleBar),
     // ── 主分割区 ──
-    // 横幅作为 Static 第一个元素(scrollback 顶部固定),对话历史紧随其后 ——
-    // 这样横幅始终在内容上方,且不会每帧重绘产生多个 spinner。
+    // 横幅作为 Static 第一个元素(scrollback 顶部固定)。内联转录模式下 staticItems 只含
+    // 横幅(转录由下方 Viewport 承载),不再依赖终端回滚缓冲。
     h(
       Box,
       { flexDirection: 'row', flexGrow: 1, minHeight: 0, overflow: 'hidden' },
@@ -99,37 +107,60 @@ function PreviewLayout(props) {
       h(
         Box,
         { flexDirection: 'column', flexGrow: 1, minWidth: 0 },
-        // 对话历史 + 横幅 (Static → scrollback,横幅为首项)
+        // 横幅 (Static → scrollback,只画一次)
         h(Static, { items: staticItems }, (item) =>
           item.kind === 'banner'
             ? bannerElement
             : h(MemoMessageBlock, { key: item.key, msg: item.msg, expanded })
         ),
-            // 流式工具调用 + 任务面板 (包裹在 Viewport 内,页面内滚动,不带动输入框)
-        h(Viewport, {
-          height: viewportHeight,
-          scroll: viewportScroll,
-          onScroll: onViewportScroll,
-          showIndicator: true,
-        },
-          // 子元素:工具调用
-          streaming
-            ? h(ToolLines, {
-                key: 'live-tools',
-                tools: streaming.tools,
-                expanded,
-                live: true,
-                onErrorClick: onToolErrorClick,
+        // 内容区:内联转录模式下是**整段对话**;回退模式下是 live 工具 + 任务面板。
+        // 固定高度 = App 的 chrome 账本预算,内容在视口内滚动,输入框不动。
+        inlineTranscript
+          ? h(Viewport, {
+              height: viewportHeight,
+              lines,
+              scroll: viewportScroll,
+              onScroll: onViewportScroll,
+              autoScroll: true,
+              showIndicator: true,
+              emptyText,
+            })
+          : h(
+              Viewport,
+              {
+                height: viewportHeight,
+                scroll: viewportScroll,
+                onScroll: onViewportScroll,
+                showIndicator: true,
+              },
+              // 子元素:工具调用
+              streaming
+                ? h(ToolLines, {
+                    key: 'live-tools',
+                    tools: streaming.tools,
+                    expanded,
+                    live: true,
+                    onErrorClick: onToolErrorClick,
+                  })
+                : null,
+              // 任务面板
+              h(TaskListPanel, {
+                key: 'task-panel',
+                tick: nowTick,
+                ...taskProps,
+                ...(tasksHidden ? { lines: [], hidden: 0, hiddenLines: [] } : {}),
               })
-            : null,
-          // 任务面板
-          h(TaskListPanel, {
-            key: 'task-panel',
-            tick: nowTick,
-            ...taskProps,
-            ...(tasksHidden ? { lines: [], hidden: 0, hiddenLines: [] } : {}),
-          })
-        )
+            ),
+        // 任务面板:内联转录模式下移到视口**之外**(全宽常驻,与 legacy 布局同款)。
+        // 高度已由 App 的 chrome 账本从 viewportHeight 里扣掉,不会把 live 区顶过 rows。
+        inlineTranscript
+          ? h(TaskListPanel, {
+              key: 'task-panel',
+              tick: nowTick,
+              ...taskProps,
+              ...(tasksHidden ? { lines: [], hidden: 0, hiddenLines: [] } : {}),
+            })
+          : null
       ),
       // 右侧 SIDEBAR (可滚动)
       h(Sidebar, {

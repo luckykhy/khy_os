@@ -1,6 +1,6 @@
 'use strict';
 /**
- * fileReadImageExtsHoist.test.js �?Ch2「不要每轮重建可复用结构�?
+ * fileReadImageExtsHoist.test.js — Ch2「不要每轮重建可复用结构�?
  *
  * Verifies the pure module-const hoist of the image-extension Set out of
  * FileReadTool#execute. It was rebuilt inline on every Read invocation; now it
@@ -12,6 +12,7 @@
  * whereas an empty image-extension file takes the isImage branch instead.
  */
 const fs = require('fs');
+const assert = require('node:assert');
 const os = require('os');
 const path = require('path');
 const tool = require('../../src/tools/FileReadTool');
@@ -36,7 +37,7 @@ describe('File Read Image Exts Hoist', () => {
   test('empty image-extension files take the image branch (not empty-text)', async () => {
       for (const name of ['a.png', 'b.svg', 'c.webp', 'd.jpeg', 'e.gif', 'f.tiff']) {
         const res = await tool.execute({ file_path: tmpEmpty(name) });
-        // Must NOT be treated as an empty text file �?isImage was true.
+        // Must NOT be treated as an empty text file �?isImage was true.
         const content = String(res.content || '');
         expect(!content.includes(EMPTY_TEXT_MARKER)).toBeTruthy();
       }
@@ -55,7 +56,7 @@ describe('File Read Image Exts Hoist', () => {
         String(p2.content || '').includes(EMPTY_TEXT_MARKER));
       // The text branch stays text; the image branch stays non-empty-text across calls.
       expect(String(t1.content || '')).toContain(EMPTY_TEXT_MARKER);
-      expect(!String(p1.content || '')).toContain(EMPTY_TEXT_MARKER);
+      expect(String(p1.content || '')).not.toContain(EMPTY_TEXT_MARKER);
   });
 
 });

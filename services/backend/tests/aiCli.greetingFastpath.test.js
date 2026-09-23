@@ -96,6 +96,8 @@ describe('ai cli greeting fastpath', () => {
     expect(result.provider).not.toBe('khy-fastpath');
     expect(result.adapter).not.toBe('khy-fastpath');
     expect(gatewayGenerate).toHaveBeenCalled();
-    expect(statuses.some(s => s.includes('任务规模识别: small'))).toBe(true);
+    // Rule 2.6: multi-phase status carries step numbering —
+    // "步骤 2/5: 任务规模识别 — small" (em-dash separator)
+    expect(statuses.some(s => s.includes('任务规模识别') && s.includes('small'))).toBe(true);
   });
 });

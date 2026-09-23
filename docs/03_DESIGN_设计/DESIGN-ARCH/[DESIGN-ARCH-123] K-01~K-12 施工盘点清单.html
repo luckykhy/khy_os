@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-123] K-01~K-12 施工盘点清单.md -->
+<title>[DESIGN-ARCH-123] K-01~K-12 施工盘点清单 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-123] K-01~K-12 施工盘点清单</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-123] K-01~K-12 施工盘点清单</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-123-k-01-k-12-施工盘点清单">[DESIGN-ARCH-123] K-01~K-12 施工盘点清单</a></li><li class="lvl-2"><a href="#零-盘点的四条结论-改变了原方案的判断">零、盘点的四条结论（改变了原方案的判断）</a></li><li class="lvl-3"><a href="#修正-1-k-12-a-的落点错了-不是-rules-是-patternrules">修正 1：K-12(a) 的落点错了 —— 不是 `rules`，是 `_patternRules`</a></li><li class="lvl-3"><a href="#修正-2-pattern-rules-的开关语义是个陷阱">修正 2：pattern rules 的开关语义是个陷阱</a></li><li class="lvl-3"><a href="#修正-3-k-07-的-5-个内置-agent-严重低估-实测-26-个">修正 3：K-07 的「5 个内置 agent」严重低估 —— 实测 26 个</a></li><li class="lvl-3"><a href="#修正-4-loadagents-js-读的是-yaml-frontmatter-与-2-5-冲突">修正 4：`loadAgents.js` 读的是 YAML frontmatter —— 与 §2.5 冲突</a></li><li class="lvl-3"><a href="#修正-5-k-12-规则集有两处-实测不成立-必须改写法">修正 5：K-12 规则集有两处**实测不成立**，必须改写法</a></li><li class="lvl-3"><a href="#修正-6-落点文件正被-并行修改-行号已开始漂移">修正 6：落点文件正被**并行修改**——行号已开始漂移</a></li><li class="lvl-2"><a href="#一-逐条盘点表">一、逐条盘点表</a></li><li class="lvl-3"><a href="#第一轮-零代码-6-条">第一轮（零代码，6 条）</a></li><li class="lvl-3"><a href="#第二轮-配置化-低风险代码-5-条">第二轮（配置化 + 低风险代码，5 条）</a></li><li class="lvl-3"><a href="#第三轮-高风险-4-条">第三轮（高风险，4 条）</a></li><li class="lvl-3"><a href="#三条巨石约束-实测复核-与上轮一致">三条巨石约束（实测复核，与上轮一致）</a></li><li class="lvl-2"><a href="#二-施工前必须先裁决的-5-件事">二、施工前必须先裁决的 5 件事</a></li><li class="lvl-2"><a href="#三-施工前置检查-每次动手前跑">三、施工前置检查（每次动手前跑）</a></li><li class="lvl-2"><a href="#四-回滚路径">四、回滚路径</a></li><li class="lvl-2"><a href="#五-盘点结论">五、盘点结论</a></li><li class="lvl-2"><a href="#六-第一轮-零冲突项-已施工完成-2026-09-18">六、第一轮「零冲突项」已施工完成（2026-09-18）</a></li><li class="lvl-3"><a href="#三篇文档的核心内容与实测依据">三篇文档的核心内容与实测依据</a></li><li class="lvl-3"><a href="#登记动作-三处全齐">登记动作（三处全齐）</a></li><li class="lvl-3"><a href="#门禁终态-本次-7-个文件">门禁终态（本次 7 个文件）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-123-k-01-k-12-施工盘点清单">[DESIGN-ARCH-123] K-01~K-12 施工盘点清单<a class="anchor" href="#design-arch-123-k-01-k-12-施工盘点清单" aria-label="锚点">#</a></h1>
+<blockquote><p>上游：[<code>[DESIGN-ARCH-121] khyos-CC-Harness借鉴清单.md</code>]([DESIGN-ARCH-121] khyos-CC-Harness借鉴清单.md)<br>盘点日期：2026-09-18 ｜ 状态：<strong>待用户确认后才施工</strong>（遵循 B1 先想再写）<br>本文档为<strong>盘点记录</strong>，不是施工指令。每条都附实测证据，可复核。</p>
+<p><strong>编号说明</strong>：本清单原拟占用 <code>122</code>，落盘后发现该号已被<br>《[DESIGN-ARCH-122] TUI 设计族总纲》占用（并行写入，非本作者所改），<br>故改号 <strong>123</strong>。另 <code>120</code> 亦已被《khy-移动端合并方案》占用——<br><strong>下一位作者请从 <code>124</code> 起取号</strong>，勿沿用旧结论。</p></blockquote>
+<hr>
+<h2 id="零-盘点的四条结论-改变了原方案的判断">零、盘点的四条结论（改变了原方案的判断）<a class="anchor" href="#零-盘点的四条结论-改变了原方案的判断" aria-label="锚点">#</a></h2>
+<p>盘点发现 <code>[DESIGN-ARCH-121]</code> 有 <strong>4 处与实测不符</strong>，其中 2 处会直接导致施工走错方向。<br><strong>以下按「实测为准」修正，原文档需同步订正。</strong></p>
+<h3 id="修正-1-k-12-a-的落点错了-不是-rules-是-patternrules">修正 1：K-12(a) 的落点错了 —— 不是 <code>rules</code>，是 <code>_patternRules</code><a class="anchor" href="#修正-1-k-12-a-的落点错了-不是-rules-是-patternrules" aria-label="锚点">#</a></h3>
+<p>原方案：往 <code>.khy/permissions.json</code> 的 <code>rules</code> 字段填 deny 规则。<br><strong>实测</strong>：<code>rules</code> 是<strong>精确匹配</strong>（<code>toolName</code> 全等），<strong>不支持 <code>Bash(git push *)</code> 这种前缀语法</strong>。<br>前缀语法属于 <strong>pattern rules</strong> 体系（<code>_patternRules</code>），是独立字段、独立门控。</p>
+<p>证据：<code>services/backend/src/services/permissionStore.js</code></p>
+<table><thead><tr><th>行</th><th>内容</th></tr></thead><tbody><tr><td><code>60-64</code></td><td><code>_patternRules = [{ toolName, pattern, decision, scope, since }]</code></td></tr><tr><td><code>201-212</code></td><td><code>DEFAULT_PATTERN_RULES</code>，<strong>已内置 10 条</strong>（含 <code>git status</code>/<code>git log</code>/<code>git diff</code> allow、<code>rm -rf *</code>/<code>sudo *</code> deny）</td></tr><tr><td><code>317-339</code></td><td><code>check()</code> 中 pattern 分支：<strong>deny 先判</strong>（<code>:326</code>）→ 再判 allow（<code>:333</code>），<strong>fail-closed</strong></td></tr><tr><td><code>67-78</code></td><td>门控 <code>_patternRulesEnabled()</code></td></tr><tr><td><code>218-240</code></td><td><code>_initDefaultPatternRules()</code>：<strong>仅当 <code>permissions.json</code> 不存在时</strong>才写默认规则</td></tr></tbody></table>
+<h3 id="修正-2-pattern-rules-的开关语义是个陷阱">修正 2：pattern rules 的开关语义是个陷阱<a class="anchor" href="#修正-2-pattern-rules-的开关语义是个陷阱" aria-label="锚点">#</a></h3>
+<p><code>services/backend/src/services/flagRegistry.js:3456</code>：</p>
+<pre><code class="language-js"><span class="hljs-attr">KHY_PERMISSION_PATTERN_RULES</span>: { <span class="hljs-attr">mode</span>: <span class="hljs-string">&#x27;opt-in&#x27;</span>, <span class="hljs-attr">off</span>: <span class="hljs-string">&#x27;CANON&#x27;</span>, <span class="hljs-attr">default</span>: <span class="hljs-literal">true</span> },</code></pre>
+<p><strong><code>default: true</code> 在这里不起作用。</strong> 看 <code>isFlagEnabled</code> 的判定（<code>flagRegistry.js:3724-3727</code>）：</p>
+<pre><code class="language-js"><span class="hljs-keyword">if</span> (spec.<span class="hljs-property">mode</span> === <span class="hljs-string">&#x27;opt-in&#x27;</span>) {
+  <span class="hljs-comment">// KHY_FEATURE_* 方言:仅显式开</span>
+  <span class="hljs-keyword">return</span> raw === <span class="hljs-string">&#x27;true&#x27;</span> || raw === <span class="hljs-string">&#x27;1&#x27;</span>;
+}</code></pre>
+<p><code>opt-in</code> 模式<strong>只认显式 <code>true</code>/<code>1</code>，忽略 <code>default</code> 字段</strong>。<br>→ <strong>实测结论：pattern rules 当前是关闭的</strong>，<code>_patternRules</code> 为空，<br><code>permissions.json</code> 里也没有 <code>patternRules</code> 字段。</p>
+<p><strong>推论</strong>：<code>.khy/permissions.json</code> 是 2026-09-17 08:25 被写入的（profile 已从 <code>yolo</code> 变为<br><code>acceptEdits</code>），文件已存在 → 即使现在开开关，<code>_initDefaultPatternRules()</code> 也会因<br><code>:220-222</code> 的「已有配置，不覆盖」而<strong>跳过</strong>默认规则写入。</p>
+<h3 id="修正-3-k-07-的-5-个内置-agent-严重低估-实测-26-个">修正 3：K-07 的「5 个内置 agent」严重低估 —— 实测 26 个<a class="anchor" href="#修正-3-k-07-的-5-个内置-agent-严重低估-实测-26-个" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项</th><th>原文档</th><th>实测</th></tr></thead><tbody><tr><td>内置 agent 数</td><td>5</td><td><strong>26</strong>（<code>services/backend/src/agents/built-in/*.js</code>）</td></tr><tr><td>定义载体</td><td>需新建 <code>agent.json</code></td><td><strong>已存在 <code>loadAgents.js</code>（314 行）</strong>，读 <code>.khy/agents/*.md</code></td></tr><tr><td>schema</td><td>需设计</td><td><strong>已完整</strong>：<code>tools</code>/<code>disallowedTools</code>/<code>model</code>/<code>permissionMode</code>/<code>maxTurns</code></td></tr><tr><td>调用链</td><td>需接线</td><td><strong>已接线</strong>：<code>agents/index.js:30 → loadCustomAgents(cwd)</code></td></tr><tr><td>六层优先级</td><td>需实现</td><td><strong>已实现</strong>：<code>builtIn→plugin→user→project→flag→managed</code>，后写覆盖</td></tr></tbody></table>
+<p><strong>真实缺口只有一个</strong>：<code>.khy/agents/</code> 与 <code>~/.khy/agents/</code> <strong>目录为空</strong>。<br>→ K-07 的风险等级应从「<strong>高</strong>」下调为「<strong>中</strong>」，工作量从「新建加载器」降为「放文件」。</p>
+<p><strong>但产生一个新的格式冲突</strong>（见修正 4）。</p>
+<h3 id="修正-4-loadagents-js-读的是-yaml-frontmatter-与-2-5-冲突">修正 4：<code>loadAgents.js</code> 读的是 YAML frontmatter —— 与 §2.5 冲突<a class="anchor" href="#修正-4-loadagents-js-读的是-yaml-frontmatter-与-2-5-冲突" aria-label="锚点">#</a></h3>
+<p><code>loadAgents.js:28-69</code> 的 <code>parseFrontmatter()</code> 解析 <code>---\nkey: value\n---</code> 结构，<br>字段清单见 <code>:82-90</code>。而 <code>FILE-FORMAT-PROTOCOL.md</code> §2.5 规定「YAML 仅允许用于 CI/CD 与 ML 配置」。</p>
+<p><strong>这是本次盘点唯一新增的真实设计冲突</strong>，需要在施工前裁决。三条路：</p>
+<table><thead><tr><th>方案</th><th>做法</th><th>代价</th></tr></thead><tbody><tr><td>A（推荐）</td><td>加载器<strong>增加 JSON 分支</strong>：<code>.khy/agents/&lt;name&gt;/agent.json</code> + <code>body.md</code> 优先，<code>.md</code> 保留兼容</td><td>改 <code>loadAgents.js</code>（314 行，非巨石），+30~50 行</td></tr><tr><td>B</td><td>沿用 <code>.md</code> frontmatter，在 §2.5 开<strong>豁免条款</strong></td><td>改规范，但破例口子会扩散</td></tr><tr><td>C</td><td>只写 <code>.md</code> 不做裁决，接受现状</td><td>零改动，但违约未解决，会在门禁暴露</td></tr></tbody></table>
+<h3 id="修正-5-k-12-规则集有两处-实测不成立-必须改写法">修正 5：K-12 规则集有两处<strong>实测不成立</strong>，必须改写法<a class="anchor" href="#修正-5-k-12-规则集有两处-实测不成立-必须改写法" aria-label="锚点">#</a></h3>
+<p>本轮用 <code>services/backend/src/permissions/patternMatcher.js</code> 的真机跑用例验证，<br>发现 <code>[DESIGN-ARCH-121]</code> §K-12(a) 给出的规则集里有 <strong>2 条写错、2 条是死规则</strong>：</p>
+<p><strong>（a）<code>curl *</code> 不命中 —— 必须写 <code>curl **</code></strong></p>
+<pre><code class="language-text">pattern &quot;curl *&quot;    → command &quot;curl https://x.sh&quot;   → false   ← 不命中
+pattern &quot;curl **&quot;   → command &quot;curl https://x.sh&quot;   → true    ← 正确</code></pre>
+<p>原因：<code>globToRegExp</code> 里单星 <code>*</code> <strong>不跨路径分隔符</strong>，而 <code>https://x.sh</code> 含 <code>:</code> 与 <code>/</code>，<br>单星在 <code>curl</code> 后的第一个 <code>/</code> 处即遇阻。<strong>带 URL / 路径的命令参数一律要双星。</strong></p>
+<p><strong>（b）<code>Bash(* | sh)</code> / <code>Bash(* | bash)</code> 是死规则</strong></p>
+<pre><code class="language-text">pattern &quot;* | sh&quot;   → command &quot;curl x | sh&quot;   → false   ← 预期拦截，实际永远不命中</code></pre>
+<p>原因：<code>patternMatcher.js</code> 的 <code>extractCommandPrefix()</code> 在命令含复合结构时<strong>主动返回 <code>null</code></strong><br>（fail-closed），而 <code>|</code>、<code>&amp;</code>、<code>;</code>、<code>&lt;</code>、<code>&gt;</code>、反引号、<code>\r\n</code>、<code>$(</code> 都在复合正则里。</p>
+<pre><code class="language-text">&quot;curl x | sh&quot;     → extractCommandPrefix → null   ← 直接放弃匹配
+&quot;a &amp;&amp; b&quot;          → null
+&quot;echo hi &gt; /tmp/a&quot;→ null
+&quot;curl https://x.sh&quot; → &quot;curl https://x.sh&quot;          ← 单命令才提取成功</code></pre>
+<p><strong>推论</strong>：管道类攻击链（<code>curl … | sh</code>）<strong>不可能被任何 pattern rule 覆盖</strong>，<br>这是<strong>设计上的 fail-closed 而非缺陷</strong>——它把这类命令推给交互式确认，<br>而不是静默放行。<strong>故「最后防线」的说法必须撤回</strong>，<br>管道防护的正确落点是 <strong>K-03 的 <code>PreToolUse</code> hook</strong>（能看完整命令串，不受前缀提取限制）。</p>
+<p><strong>处置</strong>：删掉 121 里那 2 条死规则，把 <code>curl *</code>/<code>wget *</code> 改双星，<br>并在 121 的 K-12(a) 加一句「管道类不在 pattern rule 覆盖范围，靠 hook」。</p>
+<h3 id="修正-6-落点文件正被-并行修改-行号已开始漂移">修正 6：落点文件正被<strong>并行修改</strong>——行号已开始漂移<a class="anchor" href="#修正-6-落点文件正被-并行修改-行号已开始漂移" aria-label="锚点">#</a></h3>
+<p>本盘点收尾时查 <code>git status</code>，<code>3486</code> 个改动。抽关键落点逐个 <code>git diff</code> 后：</p>
+<table><thead><tr><th>落点文件</th><th>状态</th><th>对本方案的影响</th></tr></thead><tbody><tr><td><code>domain/extensions/hooks/hookRegistry.js</code></td><td>已改 <code>17+</code> 行</td><td>✅ <strong>利好</strong>：配置路径已从 <code>.khyquant/hooks.json</code> 改为<strong><code>.khy/hooks.json</code></strong>，且新增 <code>hookDef.source</code> 作为 hook 身份键——<strong>K-03 的落点假设被证实</strong>，<code>.khy/hooks.json</code> 已能生效</td></tr><tr><td><code>domain/extensions/hooks/hookConfigSchema.js</code></td><td><strong>新文件</strong>（6,697 B）</td><td>✅ <strong>利好</strong>：hook 配置 schema 正在被建，K-03 可复用</td></tr><tr><td><code>services/backend/src/skills/index.js</code></td><td>已改 <code>9+</code> 行</td><td>⚠️ <strong>K-02 落点已被他人动过</strong>：<code>formatSkillListing</code> 的 <code>overhead</code> 已加 <code>hintLen()</code>（把 <code>whenToUse</code> 计入预算）。行号 <code>:286-293</code> 与本文档首轮登记的 <code>:273</code>/<code>:293</code> <strong>已不一致</strong></td></tr><tr><td><code>CLAUDE.md</code></td><td>已改（<code>159+</code> 行 diff）</td><td>⚠️ <strong>K-06 落点已被改动</strong>，施工前必须重读</td></tr><tr><td><code>tmp-cmp/</code>（顶层空目录）</td><td>新增</td><td><code>root-junk</code> + <code>layer-registry</code> 两条 error，<strong>非本盘点引入</strong></td></tr></tbody></table>
+<p><strong>处置</strong>：本文档 §一 的行号<strong>施工前一律需复核</strong>。<br>因 <code>skills/index.js</code> 的预算计算已被重写（<code>hintLen</code> 入 overhead），<br>K-02 的 <code>maxDescLen = 62</code> 精算值<strong>需重新计算</strong>——但这反而降低了 K-02 的紧迫性<br>（他人已在修「whenToUse 溢出预算」这条同源缺陷）。</p>
+<hr>
+<h2 id="一-逐条盘点表">一、逐条盘点表<a class="anchor" href="#一-逐条盘点表" aria-label="锚点">#</a></h2>
+<p>图例：<strong>落点状态</strong> ✅已具备 / 🔧需接线 / 🆕需新建 ｜ <strong>巨石</strong> ⚠️ 是 / — 否</p>
+<h3 id="第一轮-零代码-6-条">第一轮（零代码，6 条）<a class="anchor" href="#第一轮-零代码-6-条" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>编号</th><th>落点</th><th>落点状态</th><th>巨石</th><th>改动量</th><th>门禁风险</th></tr></thead><tbody><tr><td>K-06</td><td><code>CLAUDE.md</code>（201 行）+ <code>CLAUDE.html</code> 孪生</td><td>🔧 加两节</td><td>—</td><td>+40~60 行</td><td>需登记 <code>RULES-REGISTRY.json</code>；<code>CLAUDE.html</code> 由 <code>docs:build</code> 生成</td></tr><tr><td>K-09</td><td>新建 <code>docs/10_规范/[DESIGN-SKILL-001]</code>（SKILL 段空闲）</td><td>🆕</td><td>—</td><td>新文件</td><td>需登记 3 处索引</td></tr><tr><td>K-11</td><td>新建 <code>docs/10_规范/[DESIGN-PROCESS-…]</code></td><td>🆕</td><td>—</td><td>新文件</td><td>同上</td></tr><tr><td>K-04</td><td>新建 <code>AGENT-HANDOFF-PROTOCOL.md</code></td><td>🆕</td><td>—</td><td>新文件</td><td>同上；另需核对 26 个 agent 的现有产出格式</td></tr><tr><td>K-05</td><td>新建判据卡（并入 K-11 或独立）</td><td>🆕</td><td>—</td><td>新文件</td><td>同上</td></tr><tr><td>K-12(a)</td><td><code>.khy/permissions.json</code></td><td>🔧 <strong>见修正 1/2</strong></td><td>—</td><td>配置</td><td>需先开 flag 再写 <code>patternRules</code>（顺序敏感）</td></tr></tbody></table>
+<h3 id="第二轮-配置化-低风险代码-5-条">第二轮（配置化 + 低风险代码，5 条）<a class="anchor" href="#第二轮-配置化-低风险代码-5-条" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>编号</th><th>落点</th><th>落点状态</th><th>巨石</th><th>改动量</th><th>门禁风险</th></tr></thead><tbody><tr><td>K-03 S1</td><td>新建 <code>.khy/hooks.json</code> + <code>scripts/hooks/</code>（<strong>目录不存在</strong>）</td><td>🆕</td><td>—</td><td>新文件</td><td><code>KHY_HOOKS_*</code> 无已注册 flag，需新增</td></tr><tr><td>K-02</td><td><code>services/backend/src/skills/index.js</code>（<strong>798 行</strong>）</td><td>🔧 字段已有，<strong>渲染层未过滤</strong></td><td>—</td><td>+10~20 行</td><td>低</td></tr><tr><td>K-12(b)</td><td><code>toolCallingPermissions.js</code>（<strong>973 行</strong>）</td><td>🔧</td><td>—</td><td>+30~60 行</td><td>低</td></tr><tr><td>K-01</td><td>新建 <code>.khy/rules/</code> + 选取器（<code>domain/extensions/</code> 新子目录）</td><td>🆕 无目录、无读取逻辑</td><td>—</td><td>新文件 + 接入</td><td>低</td></tr><tr><td>K-08</td><td>新建 <code>scripts/ci/check-skill-triggers.js</code> + 6 个测试集</td><td>🆕</td><td>—</td><td>新文件</td><td>建议<strong>不进三守卫</strong>（概率性）</td></tr></tbody></table>
+<h3 id="第三轮-高风险-4-条">第三轮（高风险，4 条）<a class="anchor" href="#第三轮-高风险-4-条" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>编号</th><th>落点</th><th>落点状态</th><th>巨石</th><th>改动量</th><th>门禁风险</th></tr></thead><tbody><tr><td>K-07</td><td><code>.khy/agents/</code>（空）+ <code>~/.khy/agents/</code>（空）</td><td>🔧 <strong>加载器/校验/调用链全具备</strong></td><td>—</td><td>放文件 + 格式裁决</td><td><strong>中</strong>（原判「高」偏保守）</td></tr><tr><td>K-03 S2</td><td><code>scripts/hooks/protect-secrets.js</code> 等</td><td>🆕</td><td>—</td><td>新文件</td><td>需 S1 样本量毕业</td></tr><tr><td>K-10</td><td><code>toolUseLoopCore.js</code></td><td>🔧</td><td>⚠️ <strong>12,105 行</strong></td><td>受 R2b 约束</td><td><strong>高</strong>——须抽叶子</td></tr><tr><td>K-06(c)</td><td><code>AGENTS.md</code>（<strong>796 行</strong>）拆分</td><td>🔧</td><td>—</td><td>大</td><td>需 K-01 稳定后</td></tr></tbody></table>
+<h3 id="三条巨石约束-实测复核-与上轮一致">三条巨石约束（实测复核，与上轮一致）<a class="anchor" href="#三条巨石约束-实测复核-与上轮一致" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">R2 巨石文件（&gt;2500 行）总数：26
+  12,105 行  services/backend/src/services/toolUseLoopCore.js   ← K-10 落点
+   3,598 行  services/backend/src/services/toolCalling.js       ← K-07 可能触及
+     973 行  services/backend/src/services/toolCallingPermissions.js ← K-12(b) 落点，安全</code></pre>
+<p><strong>规则 R2b「存量巨石只许减不许增」</strong>。扫描已报存量告警：<br><code>toolCalling.js 增长 4 行 (3594 → 3598)</code>。<br>另 <code>toolCalling.js:1993 → ../cli/hooks/hookSystem</code> 有未清 <strong>R1 分层倒置</strong>，<br><strong>不宜作新增逻辑载体</strong>。</p>
+<hr>
+<h2 id="二-施工前必须先裁决的-5-件事">二、施工前必须先裁决的 5 件事<a class="anchor" href="#二-施工前必须先裁决的-5-件事" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>待裁决</th><th>选项</th><th>影响</th></tr></thead><tbody><tr><td>1</td><td><code>loadAgents.js</code> 的 YAML 冲突</td><td>A 加 JSON 分支（推荐）/ B 规范豁免 / C 不处理</td><td>决定 K-07 全部工作量</td></tr><tr><td>2</td><td>pattern rules 是否开启 <code>KHY_PERMISSION_PATTERN_RULES</code></td><td>开 / 不开</td><td>不开则 K-12(a) 只能靠精确匹配，<code>Bash(git push *)</code> 无法表达</td></tr><tr><td>3</td><td>是否把 <code>ask: [&quot;Bash(git push *)&quot;]</code> 生效</td><td>是 / 否</td><td><strong>把红线 R1 从建议升级为机制</strong>，需你明确同意</td></tr><tr><td>4</td><td><code>permissions.json</code> 的 <code>profile</code> 现值 <code>acceptEdits</code> 是否合适</td><td>保持 / 收紧为 <code>normal</code></td><td>上一轮实测是 <code>yolo</code>，已被改为 <code>acceptEdits</code>（非我改）</td></tr><tr><td>5</td><td>K-10 的默认预算值</td><td>建议单会话 2M 输出 token</td><td>原文档标「须用户裁决」</td></tr><tr><td>6</td><td><strong>并行改动如何处理</strong>（新增）</td><td>等对方 commit 后再施工 / 现在施工但每步先 <code>git diff</code> 复核 / 仅做第一轮零代码项</td><td><code>skills/index.js</code>、<code>CLAUDE.md</code>、<code>hookRegistry.js</code> 均在他人在改中</td></tr></tbody></table>
+<p><strong>关于第 6 项的说明</strong>：本轮盘点实测到 3 个落点在并行修改中。<br>其中 <code>hookRegistry.js</code> 与新建的 <code>hookConfigSchema.js</code> 是<strong>利好</strong><br>（把 K-03 的落点从「需新建」变为「已备好」）；<br>但 <code>skills/index.js</code>（K-02 落点）与 <code>CLAUDE.md</code>（K-06 落点）<strong>冲突风险真实存在</strong>。</p>
+<p><strong>建议</strong>：第一轮 6 条中，<strong>K-04 / K-05 / K-09 / K-11 是纯新建文档</strong>（零冲突），<br>可立即开工；<strong>K-06（改 <code>CLAUDE.md</code>）与 K-12(a)（改 permissions.json）建议先等一等</strong><br>或先 <code>git diff</code> 确认对方意图。</p>
+<hr>
+<h2 id="三-施工前置检查-每次动手前跑">三、施工前置检查（每次动手前跑）<a class="anchor" href="#三-施工前置检查-每次动手前跑" aria-label="锚点">#</a></h2>
+<blockquote><p>⚠️ <strong>本次盘点新增强制项</strong>：因本仓多智能体共写，第 0 步不可跳过。</p></blockquote>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> /d/Portable/khy-os
+
+<span class="hljs-comment"># 0. 【必做】落点漂移复核 —— 行号可能已失效</span>
+git status --short -- &lt;本次落点文件...&gt;
+git diff -- &lt;本次落点文件...&gt;
+
+<span class="hljs-comment"># 1. 施工前基线（巨石 / R1 / R2b / R3）</span>
+node services/backend/scripts/archDebtScan.js --changed
+<span class="hljs-comment">#    ⚠️ 实测 --changed 会把全仓 3486 个并行改动算进来，</span>
+<span class="hljs-comment">#       报「改动且已扫描的 src/**.js: 0 个」而无法给基线。</span>
+<span class="hljs-comment">#       并行改动期请改用定向方式复核巨石体积。</span>
+
+<span class="hljs-comment"># 2. 三守卫（定向传文件，避免被并行改动淹没）</span>
+node scripts/ci/check-change-safety.js &lt;本次改动文件...&gt;
+node scripts/ci/check-agent-rules.js --changed
+node scripts/ci/check-repo-layout.js
+
+<span class="hljs-comment"># 3. 文档类改动追加</span>
+node scripts/docs/build_docs_site.js
+node scripts/docs/verify_docs_site.js</code></pre>
+<h2 id="四-回滚路径">四、回滚路径<a class="anchor" href="#四-回滚路径" aria-label="锚点">#</a></h2>
+<p><code>.khy/</code> 被 <code>.gitignore:54</code> 排除，<strong>不入版本控制</strong>。<br>故 K-01/K-02/K-03/K-07/K-12 的所有改动必须在动手前备份：</p>
+<pre><code class="language-bash"><span class="hljs-built_in">cp</span> -r .khy/{skills,agents,permissions.json,settings.json} .khy/backups/2026-09-18/</code></pre>
+<p><code>.khy/backups/</code> 已存在，可直接复用。</p>
+<hr>
+<h2 id="五-盘点结论">五、盘点结论<a class="anchor" href="#五-盘点结论" aria-label="锚点">#</a></h2>
+<p><strong><code>[DESIGN-ARCH-121]</code> 的核心论断成立且被强化</strong>：</p>
+<blockquote><p>khyos 的 Harness 不是缺零件，是缺接线和配置。</p></blockquote>
+<p>盘点进一步发现，<strong>「缺接线」比原文档估计的还要彻底</strong>：</p>
+<ul><li>agent 体系：加载器、schema、六层优先级、调用链<strong>全部齐备</strong>，只缺目录里的文件</li><li>skill 体系：<code>disableModelInvocation</code> <strong>字段已解析</strong>，只缺渲染层的 1 行过滤</li><li>权限体系：pattern rules 含 <strong>deny 优先 + fail-closed</strong> 的完整实现，只缺开关与规则</li></ul>
+<p><strong>这降低了施工风险，但提高了「裁决」的重要性</strong>——多数条目不是「写代码」，而是<br>「打开一个开关 / 放一个文件 / 填一行配置」，此时<strong>决策的质量比实现的质量更关键</strong>。</p>
+<p><strong>并且新出现一个约束</strong>（修正 6）：本仓正被多智能体并行写入，<br><strong>盘点的行号结论有保质期</strong>。故本次盘点的产出应被理解为<br>「<strong>方向性结论（可信）+ 行号坐标（施工前须复核）</strong>」两层，<br>不要把行号当作可直接使用的施工依据。</p>
+<p><strong>盘点已完成的动作</strong>：6 处订正已全部回写<br><code>[DESIGN-ARCH-121]</code>（含 K-12 规则集的两处实测纠错）与本文档。</p>
+<hr>
+<h2 id="六-第一轮-零冲突项-已施工完成-2026-09-18">六、第一轮「零冲突项」已施工完成（2026-09-18）<a class="anchor" href="#六-第一轮-零冲突项-已施工完成-2026-09-18" aria-label="锚点">#</a></h2>
+<p><code>[DESIGN-ARCH-121]</code> §5.2 第一轮共 6 条，其中 <strong>4 条是纯新建文档</strong>（不碰任何被并行修改的文件），<br>已在本次盘点的后续动作中直接落地。<strong>代码零改动。</strong></p>
+<table><thead><tr><th>编号</th><th>产出</th><th>行数</th><th>规则 ID</th><th>门禁</th></tr></thead><tbody><tr><td>K-09</td><td><code>[DESIGN-SKILL-001] Skill 编写规范.md</code></td><td>150</td><td><code>SKILL-001</code> (DOCS)</td><td>manual</td></tr><tr><td>K-04</td><td><code>[DESIGN-AGENT-001] 子智能体交接契约.md</code></td><td>138</td><td><code>AGENT-001</code> (RUNTIME)</td><td>manual</td></tr><tr><td>K-11</td><td><code>[DESIGN-PROCESS-002] 新机制落地四阶段流程.md</code></td><td>133</td><td><code>PROCESS-006</code> (PROCESS)</td><td>manual</td></tr><tr><td>K-05</td><td><strong>并入</strong> K-11 的 §5「Token 经济学判据卡」</td><td>—</td><td>—</td><td>—</td></tr></tbody></table>
+<p><strong>未做（等裁决）</strong>：K-06（改 <code>CLAUDE.md</code>，被并行修改中）、K-12(a)（改 <code>.khy/permissions.json</code>，<br>需先裁决是否开 flag 与是否启用 <code>ask</code> → 影响红线 R1 强制力级别）。</p>
+<h3 id="三篇文档的核心内容与实测依据">三篇文档的核心内容与实测依据<a class="anchor" href="#三篇文档的核心内容与实测依据" aria-label="锚点">#</a></h3>
+<p><strong>K-09 → <code>[DESIGN-SKILL-001]</code></strong>：description <strong>四段式</strong>（khyos 把「触发短语前置」提到第 0 段，<br>要求落在<strong>前 60 字符</strong>内）。实测依据：43 技能 / 128K 窗口下 <code>maxDescLen</code> 被压到 <strong>62 字符</strong>，<br>与 60 几乎相等——<strong>触发信号一旦不在前 60 就必被截掉</strong>，技能从此检索不到。<br>另实测 <code>when_to_use</code> 仅填 <strong>16/43</strong>；并记录了两套语法不可混用<br>（Skill 闸门 <code>Bash(git:*)</code> vs 权限 <code>patternRules</code> glob <code>git *</code>）与<br>「<code>allowed-tools</code> 仅对 handler 技能生效、实测 0/43 有 handler」的陷阱。</p>
+<p><strong>K-04 → <code>[DESIGN-AGENT-001]</code></strong>：把书的「交接契约」落为 khyos 的<strong>两向信封</strong><br>（下行派发 / 上行回报），并锚定机制真源——<code>AgentTool/index.js:317</code> 明写<br>「子体只收到 compact summary，<strong>NOT the full conversation</strong>」，<br>故 <code>parent_context_summary</code>（<code>:368</code>/<code>:912-919</code>）是<strong>必须显式传</strong>的，不是可选优化。<br>26 个内置 agent 完成书侧五模式映射，<code>audit → fix</code> 认定为<strong>流水线型范例</strong>。</p>
+<p><strong>K-11 → <code>[DESIGN-PROCESS-002]</code></strong>：S1 观察者 → S2 顾问 → S3 门禁 → S4 主动修复，<br><strong>两处对书结论的修正</strong>：① 毕业条件由书的「2–4 周」改为<strong>样本量</strong><br>（S1 ≥200 事件 / S2 误报 &lt;10% / S3 豁免 &lt;20%），因 khyos 单机单用户无团队接受度维度；<br>② Token 收益优先级由书的「成本优先」重排为<br><strong>「上下文窗口保护 &gt; 响应质量 &gt; 成本」</strong>，因 khyos 的窗口是硬约束（<code>charBudget</code>），<br>而书的 6.8% 算例会被多供应商价差与 Prompt Caching 稀释到 1–2%。</p>
+<h3 id="登记动作-三处全齐">登记动作（三处全齐）<a class="anchor" href="#登记动作-三处全齐" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>登记处</th><th>内容</th></tr></thead><tbody><tr><td><code>docs/10_规范/registry/RULES-REGISTRY.json</code></td><td>新增 3 条（<code>SKILL-001</code>/<code>AGENT-001</code>/<code>PROCESS-006</code>），ruleCount <strong>74 → 77</strong>，version 2.5.0；每条的 <code>nature</code>/<code>grants</code>/<code>benefit</code>/<code>formerly</code> 均齐全</td></tr><tr><td><code>docs/10_规范/其它规范/[DESIGN-GOV-001] 治理总纲与可执行规则.md</code></td><td>三个板块各加一行（<code>GOV-DOCS-005</code> / <code>GOV-RUNTIME-005</code> / <code>GOV-PROCESS-006</code>）+ §0 审计矩阵更新</td></tr><tr><td><code>docs/10_规范/00_INDEX_规范-总目录.md</code> + <code>docs/00_INDEX_文档索引.md</code></td><td>文件清单 3 行 + 情景速查 3 行 + 主索引 3 行</td></tr><tr><td><code>docs/10_规范/规则卡/</code></td><td><code>gen-rules-cards.js</code> 重生成 <strong>77 张卡</strong>（由生成器产出，非手写）</td></tr></tbody></table>
+<h3 id="门禁终态-本次-7-个文件">门禁终态（本次 7 个文件）<a class="anchor" href="#门禁终态-本次-7-个文件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>守卫</th><th>结果</th></tr></thead><tbody><tr><td><code>check-change-safety.js</code>（定向 7 文件）</td><td><strong>no safety findings</strong></td></tr><tr><td><code>check-gov-rules.js</code></td><td>通过（含 GOV-TOOL-006 规则登记表）</td></tr><tr><td><code>check-rules-registry.js</code></td><td>通过（含 TOOLING-008 规则卡逐字节一致）</td></tr><tr><td><code>check-agent-rules.js --changed</code></td><td>本次文件 <strong>0 命中</strong>（唯一 error 在 <code>apps/khyos-desktop/package.json</code>，他人改动）</td></tr><tr><td><code>docs:build</code> + <code>verify_docs_site</code></td><td><strong>1039 页 / 全部通过</strong>（较上轮 +6）</td></tr><tr><td><code>check-repo-layout.js</code></td><td>4 条 error <strong>全部归属他人并行改动</strong>（<code>NIGHTSHIFT.md</code> / <code>tmp-cmp/</code> / <code>MGMT-RPT-031</code>）</td></tr><tr><td>格式复检（6 文档）</td><td><strong>CR=0 干净 LF</strong>（除 <code>00_INDEX_规范-总目录.md</code> 本就是 CRLF、未改其行尾）、围栏偶数配对、新增行无超宽</td></tr></tbody></table>
+<p><strong>结论</strong>：第一轮零冲突项已完成 4/6，<code>[DESIGN-ARCH-121]</code> 的三条关键不变量<br>（鲜度键单一真源 / 收敛单向性单一表达 / <code>.khy/</code> 备份回滚）未被触碰；<br><strong>K-06 与 K-12(a) 仍待裁决，未动</strong>。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-122] TUI 设计族总纲.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-122] TUI 设计族总纲</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-124] CC 模式剪贴板复制能力补齐提案.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-124] CC 模式剪贴板复制能力补齐提案</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-123] K-01~K-12 施工盘点清单.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

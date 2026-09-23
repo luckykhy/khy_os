@@ -177,10 +177,25 @@ describe('Phase 3 — feature locks (toolUseLoop authoritative behavior)', () =>
     }));
 
     expect(hostDecision).toHaveBeenCalledWith(expect.objectContaining({ requestId: 'req-9' }));
-    expect(events).toEqual(expect.arrayContaining([
-      expect.objectContaining({ type: 'control_request', data: expect.objectContaining({ requestId: 'req-9' }) }),
-      expect.objectContaining({ type: 'done', data: expect.objectContaining({ reply: '已处理。' }) }),
-    ]));
+    // Feature lock 5 (round-trip): the control_request is surfaced on the stream
+    // AND the terminal done event carries the model reply. The deterministic
+    // mock re-issues the same can_use_tool payload on every round, so the loop
+    // legitimately spends its redrive/nudge budget (bounded, never infinite)
+    // before closing — hence assert bounded control_request count + last event
+    // shape, not "the stream ends immediately after the first control_request".
+    const controlRequests = events.filter((e) => e.type === 'control_request');
+    expect(controlRequests.length).toBeGreaterThanOrEqual(1);
+    expect(controlRequests.every((e) => e.data.requestId === 'req-9')).toBe(true);
+    // Bounded: at most the loop's nudge/redrive budget (KHY_TASK_CLOSURE_REDRIVE_MAX
+    // default 1 + earlyEndTurn + deliveryConclusion + summaryAssist) per model round.
+    expect(controlRequests.length).toBeLessThanOrEqual(12);
+    expect(events[events.length - 1].type).toBe('done');
+    expect(events[events.length - 1].data).toHaveProperty('reply');
+    // close_partial honesty annotation (taskClosure gate, AGENTS.md rule 3): the
+    // mock's per-round 「已处理。」 reply is an evidence-free claim, so when the
+    // bounded redrive budget exhausts, the loop appends the 未能完整闭环 note to
+    // the reply — assert the base reply is present, not byte-equality.
+    expect(String(events[events.length - 1].data.reply)).toContain('已处理。');
   });
 
   // ── 6. onCost / onThinking projections (Step 1) ─────────────────────────────

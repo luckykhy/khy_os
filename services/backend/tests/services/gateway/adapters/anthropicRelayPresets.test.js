@@ -5,7 +5,7 @@ const {
   listRelayPresetNames,
   listRelayPresets,
   getRelayPreset,
-} = require('./anthropicRelayPresets');
+} = require('../../../../src/services/gateway/adapters/anthropicRelayPresets.js');
 
 describe('anthropicRelayPresets', () => {
   describe('RELAY_PRESETS', () => {

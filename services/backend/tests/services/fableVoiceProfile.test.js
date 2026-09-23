@@ -48,15 +48,15 @@ describe('Fable Voice Profile', () => {
   test('items() return fresh copies (caller mutation is isolated)', () => {
       const a = responseFormattingItems({});
       a.push('mutant');
-      expect(!responseFormattingItems({})).toContain('mutant');
+      expect(responseFormattingItems({})).not.toContain('mutant');
       expect(a).not.toBe(RESPONSE_FORMATTING_ITEMS);
   });
 
   test('never throws on junk env', () => {
-      expect(() => fableVoiceEnabled(null).not.toThrow());
-      expect(() => responseFormattingItems(null).not.toThrow());
-      expect(() => toneAndStyleItems(undefined).not.toThrow());
-      expect(() => errorHandlingItems({ KHY_FABLE_VOICE: {} }).not.toThrow());
+      expect(() => fableVoiceEnabled(null)).not.toThrow();
+      expect(() => responseFormattingItems(null)).not.toThrow();
+      expect(() => toneAndStyleItems(undefined)).not.toThrow();
+      expect(() => errorHandlingItems({ KHY_FABLE_VOICE: {} })).not.toThrow();
   });
 
 });

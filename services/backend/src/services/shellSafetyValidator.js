@@ -51,6 +51,16 @@ const INTERPRETER_EVAL_SPECS = [
   { names: ['awk', 'gawk', 'mawk', 'nawk'], flags: new Set(['-e', '--source']) },
   { names: ['sed', 'gsed'], flags: new Set(['-e']) },
   { names: ['osascript'], flags: new Set(['-e']) },
+  // PowerShell. -Command carries a visible script the unwrapper can still
+  // analyse; -EncodedCommand carries base64 it cannot see, so that flag is
+  // marked opaque (opaqueFlags) and escalated to critical at the call site.
+  // Abbreviated switch forms (-Comm, -Enc) are deliberately not matched — the
+  // table is exact by design, matching every other spec above.
+  {
+    names: ['powershell', 'pwsh', 'powershell_ise'],
+    flags: new Set(['-command', '-encodedcommand']),
+    opaqueFlags: new Set(['-encodedcommand']),
+  },
 ];
 
 // Regex patterns
@@ -623,12 +633,22 @@ function detectInlineEval(argv) {
       }
       const lower = token.toLowerCase();
       if (spec.flags.has(lower)) {
-        return { detected: true, interpreter: exe, flag: lower };
+        return {
+          detected: true,
+          interpreter: exe,
+          flag: lower,
+          opaque: !!(spec.opaqueFlags && spec.opaqueFlags.has(lower)),
+        };
       }
       // Prefix flags like --eval=...
       for (const flag of spec.flags) {
         if (flag.startsWith('--') && lower.startsWith(flag + '=')) {
-          return { detected: true, interpreter: exe, flag };
+          return {
+            detected: true,
+            interpreter: exe,
+            flag,
+            opaque: !!(spec.opaqueFlags && spec.opaqueFlags.has(flag)),
+          };
         }
       }
     }
@@ -901,12 +921,20 @@ function analyzeCommand(command) {
   }
 
   // Layer 5: Inline eval
+  //
+  // Visible payloads stay at 'warning' on purpose: they are plain text, so
+  // Layer 1 already unwraps them and they keep getting analysed (e.g.
+  // `bash -c "rm -rf /"` lands critical through that path). An OPAQUE payload
+  // is base64 the unwrapper cannot read, so the only safe assumption is
+  // "arbitrary code" — hence critical. It is a different property, not a
+  // tighter bar on the same family.
   const inlineEval = detectInlineEval(effective);
   if (inlineEval) {
     risks.push({
       type: 'inline_eval',
-      severity: 'warning',
-      detail: `Inline eval: ${inlineEval.interpreter} ${inlineEval.flag}`,
+      severity: inlineEval.opaque ? 'critical' : 'warning',
+      detail: `Inline eval: ${inlineEval.interpreter} ${inlineEval.flag}` +
+        (inlineEval.opaque ? ' (opaque payload, content not inspectable)' : ''),
     });
   }
 

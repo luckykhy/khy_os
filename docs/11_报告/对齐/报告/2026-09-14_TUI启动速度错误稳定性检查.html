@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-14_TUI启动速度错误稳定性检查.md -->
+<title>TUI 启动速度 / 错误 / 稳定性检查（2026-09-14 即时专项） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>对齐<span class="sep">›</span>报告<span class="sep">›</span>TUI 启动速度 / 错误 / 稳定性检查（2026-09-14 即时专项）</div>
+      <header class="hero reveal"><h1>TUI 启动速度 / 错误 / 稳定性检查（2026-09-14 即时专项）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#tui-启动速度-错误-稳定性检查-2026-09-14-即时专项">TUI 启动速度 / 错误 / 稳定性检查（2026-09-14 即时专项）</a></li><li class="lvl-2"><a href="#tui-是什么-怎么启动">TUI 是什么、怎么启动</a></li><li class="lvl-2"><a href="#启动速度实测">启动速度实测</a></li><li class="lvl-2"><a href="#错误-4-个失败文件-共-118-个失败用例-425-总用例-307-通过">错误（4 个失败文件，共 118 个失败用例 / 425 总用例，307 通过）</a></li><li class="lvl-2"><a href="#稳定性">稳定性</a></li><li class="lvl-2"><a href="#结论">结论</a></li><li class="lvl-2"><a href="#后续建议-不阻塞本次即时检查">后续建议（不阻塞本次即时检查）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="tui-启动速度-错误-稳定性检查-2026-09-14-即时专项">TUI 启动速度 / 错误 / 稳定性检查（2026-09-14 即时专项）<a class="anchor" href="#tui-启动速度-错误-稳定性检查-2026-09-14-即时专项" aria-label="锚点">#</a></h1>
+<blockquote><p>用户要求「现在立刻执行一次重点查前端 TUI 启动速度、错误、稳定性」。<br>本次范围是 khy-os 的 <strong>Ink TUI</strong>（<code>services/backend/src/cli/tui/</code>，含 CC 模式与 Legacy 模式），<br>不是昨天检查过的两个 Vue Web 前端。</p></blockquote>
+<h2 id="tui-是什么-怎么启动">TUI 是什么、怎么启动<a class="anchor" href="#tui-是什么-怎么启动" aria-label="锚点">#</a></h2>
+<ul><li>入口：<code>khy</code>（无参交互）→ <code>services/backend/bin/khy.js</code> 分支 → <code>startRepl()</code> → 默认 Ink TUI</li></ul>
+<p>（<code>services/backend/src/cli/replSession.js:648-758</code>），失败会降级到经典 readline REPL。</p>
+<ul><li>门控：<code>KHY_FULL_TUI</code>（Ink 总开关，默认开）、<code>KHY_CC_TUI=1</code>（CC 复刻 UI 子模式，默认关）、</li></ul>
+<p><code>KHY_TUI_PRELOAD</code>（Ink ESM 预加载，默认开）。</p>
+<ul><li>无需网络/AI 网关即可启动外壳：网关初始化全部 fail-soft；BootScreen 4 步动画即使网关全挂</li></ul>
+<p>也有 1.5s 安全超时强制进入 ready（<code>App.js:847-895</code>）。</p>
+<ul><li>非交互冒烟（无头渲染）：<code>services/backend/scripts/run-ink-tui-tests.js</code>，跑</li></ul>
+<p><code>tests/tui/</code> 下 29 个 jest 套件，其中 <code>inkRenderSmoke.test.js</code> 是专为「无人工」设计的渲染冒烟。</p>
+<h2 id="启动速度实测">启动速度实测<a class="anchor" href="#启动速度实测" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>场景</th><th>耗时</th><th>说明</th></tr></thead><tbody><tr><td><code>khy.bat --version</code> 冷启动到退出</td><td>915 ms</td><td>走 Node 快速路径，无 bootstrap init，作为「进程拉起 + CLI 解析」下限</td></tr><tr><td>无头渲染套件（29 个 jest 文件）墙钟</td><td>87,437 ms（jest 自报 Time: 23.858 s，其余为 spawnSync + ESM 编译开销）</td><td>含 4 个失败文件，见下</td></tr><tr><td>无头渲染套件内「mounts and renders a non-empty frame」</td><td><code>inkRenderSmoke.test.js</code> 单文件 14.034 s，<strong>失败</strong></td><td>见下</td></tr></tbody></table>
+<p>（交互式 TTY 首帧时间本次未实测——Ink 需要真实 TTY，<code>replSession.js:650</code> 判定 <code>isTTY</code> 后才走<br>Ink 分支；管道/重定向环境下会静默走 readline，无法计时「首帧渲染」。要补这一项需开一个真实<br>终端窗口手动计时，本次按用户「立刻执行一次」的口径，先用无头套件 + 快路径做可量化部分。）</p>
+<h2 id="错误-4-个失败文件-共-118-个失败用例-425-总用例-307-通过">错误（4 个失败文件，共 118 个失败用例 / 425 总用例，307 通过）<a class="anchor" href="#错误-4-个失败文件-共-118-个失败用例-425-总用例-307-通过" aria-label="锚点">#</a></h2>
+<ol><li><strong><code>tests/tui/ccFormat.test.js</code></strong> — 断言写错：</li></ol>
+<p><code>expect(() =&gt; ccFormatDuration().not).toThrow()</code>（<code>ccFormat.test.js:149</code>）——<code>.not</code> 是挂在<br>   函数<strong>返回值</strong>（string/number）上的属性，不是挂在 jest matcher 上的，这个断言本身逻辑<br>   就不成立（<code>ccFormatDuration()</code> 正常返回不抛错，访问 <code>.not</code> 也不会抛错），属于测试自身<br>   笔误，不是被测代码 bug。同文件 :150/:151 一样的写法。</p>
+<ol><li><strong><code>tests/tui/toolResultTransparency.test.js</code></strong> — 变量名拼错：测试代码里用了未定义的</li></ol>
+<p><code>off</code> 变量（<code>toolResultTransparency.test.js:37</code> <code>KHY_TOOL_RESULT_TRANSPARENT: off</code>），<br>   应为字符串 <code>'off'</code>。同文件 :62/:66/:70 还有一批 <code>expect(...).toBe(false/true)</code> 与实现<br>   行为不匹配（<code>shouldRenderTransparentBody</code> 返回值的语义断言写反）。</p>
+<ol><li><strong><code>tests/tui/diffLineNumbers.test.js</code></strong> — 同类问题，<code>diffLineNumbersEnabled</code> 的行为断言</li></ol>
+<p>与实现不一致（:22 起多处）。</p>
+<ol><li><strong><code>tests/tui/inkRenderSmoke.test.js</code>（关键）</strong> — 无头渲染冒烟<strong>整体失败</strong>（14.034s 后仍</li></ol>
+<p>未通过），意味着「mounts and renders a non-empty frame」这一步在 jest 的<br>   <code>--experimental-vm-modules</code> 环境下没有拿到非空首帧。这是本次 TUI 专项检查里<strong>最需要跟进<br>   的一条</strong>：它本来是 AGENTS.md 定义的「无人工渲染冒烟」红线，现在跑不过。</p>
+<ul><li>未定位根因（可能是 <code>inkRuntime.loadInk()</code> 动态 import 在该 jest 沙箱里挂住/没 resolve，</li></ul>
+<p>或某组件在无 fakeStdout 环境下抛错被吞），需要后续单独跑该文件 + 加日志定位。</p>
+<p><strong>结论：TUI 无头冒烟当前不稳定/失败</strong>，这是本次检查发现的实质性错误，不是速度问题。</p>
+<h2 id="稳定性">稳定性<a class="anchor" href="#稳定性" aria-label="锚点">#</a></h2>
+<ul><li>无头套件整体跑完没有崩溃/挂死（有明确 PASS/FAIL 汇总，退出码非 0 但进程正常结束），</li></ul>
+<p>不是「卡死」型不稳定，是「4 个文件 118 用例断言失败」型不稳定。</p>
+<ul><li><code>khy --version</code> 快路径 3 次调用均 915ms 量级（本次仅测 1 次，其余未重复，避免与昨天</li></ul>
+<p>对齐流水线的重复计时混淆），未观察到抖动。</p>
+<h2 id="结论">结论<a class="anchor" href="#结论" aria-label="锚点">#</a></h2>
+<ul><li><strong>速度</strong>：CLI 进程冷启动 &lt;1s，可接受；无头 jest 套件 87s（含 ESM 编译开销），偏慢但不异常。</li><li><strong>错误</strong>：<strong>不达标</strong>——<code>inkRenderSmoke.test.js</code>（TUI 无人工渲染冒烟红线）+ 另外 3 个</li></ul>
+<p>ccFormat/toolResultTransparency/diffLineNumbers 文件合计 118 用例失败，属<strong>测试代码本身</strong><br>  的断言笔误/变量名错误，大概率不是被测 TUI 组件逻辑 bug，但 <code>inkRenderSmoke</code> 需进一步确认<br>  是环境问题还是真实渲染问题。</p>
+<ul><li><strong>稳定性</strong>：无崩溃/挂死；但无头套件通过率仅 72%（307/425），需要修复后才能作为 TUI 的</li></ul>
+<p>稳定自检门禁。</p>
+<h2 id="后续建议-不阻塞本次即时检查">后续建议（不阻塞本次即时检查）<a class="anchor" href="#后续建议-不阻塞本次即时检查" aria-label="锚点">#</a></h2>
+<ol><li>修 3 个测试文件里的断言笔误（<code>.not</code> 挂在返回值上、<code>off</code> 未定义、<code>diffLineNumbersEnabled</code></li></ol>
+<p>期望值写反）——纯测试代码修复，指向 <code>services/backend/tests/tui/{ccFormat,toolResultTransparency,diffLineNumbers}.test.js</code>。</p>
+<ol><li>单独跑 <code>inkRenderSmoke.test.js</code> 加 <code>--verbose</code>/临时 console 定位是无头环境下 <code>loadInk()</code></li></ol>
+<p>挂住，还是某组件首帧渲染抛错；若属 jest ESM 沙箱限制，考虑改为走 <code>run-ink-tui-tests.js</code><br>   现有的 fakeStdout/fakeStdin harness 单独测 App/CcApp 而非全量 29 个文件。</p>
+<ol><li>交互式 TTY 首帧计时（BootScreen 4 步 → 主 UI 切换）本次未量化，若需要可后续开真实终端</li></ol>
+<p>手动计时一轮。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../docs/11_报告/对齐/报告/2026-09-14_claude_code_vs_khyos对齐报告.html"><div class="dir">← 上一篇</div><div class="ttl">2026-09-14 Claude Code vs khy-os 终端对齐报告（第 2 次运行）</div></a><a class="next" href="../../../../docs/11_报告/对齐/报告/2026-09-15_claude_code_vs_khyos对齐报告.html"><div class="dir">下一篇 →</div><div class="ttl">2026-09-15 khy-os 终端对齐自检（khy 单侧）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="docs/11_报告/对齐/报告/2026-09-14_TUI启动速度错误稳定性检查.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

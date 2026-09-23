@@ -7,7 +7,7 @@ jest.mock('../src/utils/logger', () => ({
   error: jest.fn(),
 }));
 
-jest.mock('../src/services/extensions/extensionManager', () => ({
+jest.mock('../src/services/domain/extensions/extensions/extensionManager.js', () => ({
   listExtensions: jest.fn(() => []),
   installExtension: jest.fn(),
   uninstallExtension: jest.fn(),
@@ -155,7 +155,7 @@ describe('extensionMarketplace', () => {
     });
 
     test('delegates to listExtensions()', () => {
-      const { listExtensions } = require('../src/services/extensions/extensionManager');
+      const { listExtensions } = require('../src/services/domain/extensions/extensions/extensionManager.js');
       listExtensions.mockReturnValueOnce([
         { name: 'ext-a', version: '1.0.0', enabled: true },
       ]);

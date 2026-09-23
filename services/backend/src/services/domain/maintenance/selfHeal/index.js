@@ -5,8 +5,8 @@
  *
  * 把五大件收成稳定 API，供上层（toolUseLoop / 子代理 / 网关）以零侵入方式接入：
  *
- *   const { FallbackTreeWithHeal } = require('../../../../cli/handlers/selfHeal');
- *   const { makeToolRunner } = require('.../resilience');
+ *   const { FallbackTreeWithHeal } = require('.../maintenance/selfHeal');
+ *   const { makeToolRunner } = require('.../security/resilience');
  *   const heal = new FallbackTreeWithHeal({
  *     runner: makeToolRunner(executeTool),
  *     confirm: async ({diagnosis}) => askUser(diagnosis.action),  // L1 获批

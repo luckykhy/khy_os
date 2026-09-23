@@ -1,15 +1,16 @@
 'use strict';
 /**
- * glmAdaptationWiring.test.js �?GLM-5.2 适配的三处接�?+ OpenAI thinking 透传�?
+ * glmAdaptationWiring.test.js — GLM-5.2 适配的三处接线 + OpenAI thinking 透传线
  *
  * 锁死:
- *   1. providerPresets.getProviderPresets() zhipu 条目:门开 �?defaultModel/​models 收敛�?glm-5.2 打头;
- *      门关 �?逐字节回退静�?preset(glm-4 默认 / �?models)�?
- *   2. builtinProviderConfig list/find:门开 �?glm 条目 models �?glm-5.2 打头;门关 �?历史 glm-4 清单�?
- *   3. _protocolPipeline OpenAI 请求�?门开(KHY_OPENAI_THINKING_PASSTHROUGH)�?透传 thinking;
- *      门关 �?丢弃(逐字节回退历史「只透传 reasoning_effort�?�?
- * 模块均在**调用�?*�?env,故直接切 process.env 即可(无需�?require 缓存)�?
+ *   1. providerPresets.getProviderPresets() zhipu 条目:门开 → defaultModel/models 收敛为
+ *      glm-5.2 打头;门关 → 逐字节回退静态 preset(glm-4 默认 / 空 models)。
+ *   2. builtinProviderConfig list/find:门开 → glm 条目 models 以 glm-5.2 打头;门关 → 历史 glm-4 清单。
+ *   3. _protocolPipeline OpenAI 请求:门开(KHY_OPENAI_THINKING_PASSTHROUGH) → 透传 thinking;
+ *      门关 → 丢弃(逐字节回退历史「只透传 reasoning_effort」)。
+ * 模块均在**调用点**读 env,故直接切 process.env 即可(无需清 require 缓存)。
  */
+const assert = require('node:assert');
 const GLM_KEY = 'KHY_GLM_LATEST_MODEL';
 const THINK_KEY = 'KHY_OPENAI_THINKING_PASSTHROUGH';
 let saved;
@@ -28,7 +29,7 @@ function buildOpenAIBody(options) {
 }
 
 describe('Glm Adaptation Wiring', () => {
-  test('providerPresets: gate-on zhipu �?glm-5.2 default + list leads with glm-5.2', () => {
+  test('providerPresets: gate-on zhipu → glm-5.2 default + list leads with glm-5.2', () => {
       delete process.env[GLM_KEY]; // default-on
       const { getProviderPresets } = require('../../src/services/gateway/providerPresets');
       const zhipu = getProviderPresets().find((p) => p.id === 'zhipu');
@@ -37,7 +38,7 @@ describe('Glm Adaptation Wiring', () => {
       expect(zhipu.models[0]).toBe('glm-5.2');
   });
 
-  test('providerPresets: gate-off zhipu �?byte-reverts to static glm-4 default + empty models', () => {
+  test('providerPresets: gate-off zhipu → byte-reverts to static glm-4 default + empty models', () => {
       process.env[GLM_KEY] = 'off';
       const { getProviderPresets } = require('../../src/services/gateway/providerPresets');
       const zhipu = getProviderPresets().find((p) => p.id === 'zhipu');
@@ -46,7 +47,7 @@ describe('Glm Adaptation Wiring', () => {
       assert.deepEqual(zhipu.models, []);
   });
 
-  test('builtinProviderConfig: gate-on glm �?models lead with glm-5.2 (list + find)', () => {
+  test('builtinProviderConfig: gate-on glm → models lead with glm-5.2 (list + find)', () => {
       delete process.env[GLM_KEY];
       const { listBuiltinProviders, findBuiltinProvider } = require('../../src/services/gateway/builtinProviderConfig');
       const fromList = listBuiltinProviders().find((p) => p.poolKey === 'glm');
@@ -55,7 +56,7 @@ describe('Glm Adaptation Wiring', () => {
       expect(fromFind.models[0]).toBe('glm-5.2');
   });
 
-  test('builtinProviderConfig: gate-off glm �?byte-reverts to [glm-4, glm-4-flash, glm-4-air]', () => {
+  test('builtinProviderConfig: gate-off glm → byte-reverts to [glm-4, glm-4-flash, glm-4-air]', () => {
       process.env[GLM_KEY] = '0';
       const { listBuiltinProviders, findBuiltinProvider } = require('../../src/services/gateway/builtinProviderConfig');
       assert.deepEqual(listBuiltinProviders().find((p) => p.poolKey === 'glm').models, ['glm-4', 'glm-4-flash', 'glm-4-air']);
@@ -83,11 +84,10 @@ describe('Glm Adaptation Wiring', () => {
       expect(body.reasoning_effort).toBe('max');
   });
 
-  test('OpenAI path: no thinking option �?no thinking field either way', () => {
+  test('OpenAI path: no thinking option → no thinking field either way', () => {
       delete process.env[THINK_KEY];
       const body = buildOpenAIBody({ model: 'glm-5.2' });
       expect(body.thinking).toBe(undefined);
   });
 
 });
-

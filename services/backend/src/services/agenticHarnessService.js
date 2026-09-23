@@ -2271,12 +2271,19 @@ function _shouldAutoContinue(userMessage) {
     /* intentGate 失败不阻断 */
   }
 
-  // 复杂任务启发式: 消息较长(>200字)且包含动作性关键词也触发续接
+  // 复杂任务启发式: 消息较长(>200字)且包含动作性关键词也触发续接。
+  // ⚠ 中英必须分成两条正则（2026-09-23 实测修复，[DESIGN-ARCH-135]）：
+  // 原先把中文词与英文词放进同一个 `\b(...)\b` —— 而 `\b` 基于 `\w`（仅 ASCII
+  // 字母数字下划线），中文两侧都不构成单词边界，于是 `\b实现\b` **永不匹配**，
+  // 「设计|实现|创建|重构|编写|开发|搭建|迁移」这半边是**死码**。
+  // 后果：中文长任务（本仓主要场景）的 Ralph 续跑从不触发 —— 长任务达到迭代上限
+  // 只能停住，用户感受为「长任务莫名中断、不会自动接续」。
+  // 英文侧保留 `\b`，否则 `add` 会命中 `address`。
   const msg = String(userMessage || '');
   if (msg.length > 200) {
-    const actionPatterns =
-      /\b(create|implement|build|refactor|migrate|add|write|develop|设计|实现|创建|重构|编写|开发|搭建|迁移)\b/i;
-    if (actionPatterns.test(msg)) {
+    const enAction = /\b(create|implement|build|refactor|migrate|add|write|develop)\b/i;
+    const cnAction = /(设计|实现|创建|重构|编写|开发|搭建|迁移)/;
+    if (enAction.test(msg) || cnAction.test(msg)) {
       return true;
     }
   }
@@ -2380,6 +2387,20 @@ function _buildContinuationInput(originalMessage, summary, round, maxRounds) {
 module.exports = {
   createAgenticHarness,
   DEFAULTS,
+  // 续跑**策略**的单一真源（[DESIGN-ARCH-135] 三期）。
+  // 背景：TUI 直调 runToolUseLoop（绕过 harness），因此从不消费 maxIterationsReached，
+  // 长任务达到上限/超时就静默停在半路。修法是让 TUI 用**同一批函数**决定
+  // 「该不该续 / 续什么 / 最多几轮」，而不是再写第二份策略 —— 否则两边的续跑条件
+  // 会像压缩阈值那样各自漂移。
+  // 刻意只导出策略、不导出循环骨架：harness 的骨架绑死了 taskHandle / boulder 检查点 /
+  // _buildLoopInput 的上下文构造，TUI 不适用；TUI 侧的骨架只有十几行，见
+  // cli/tui/hooks/useQueryBridge.js 的 runLoopRoundWithContinuation。
+  continuation: {
+    shouldAutoContinue: _shouldAutoContinue,
+    assessTaskComplexity: _assessTaskComplexity,
+    buildContinuationSummary: _buildContinuationSummary,
+    buildContinuationInput: _buildContinuationInput,
+  },
   // 测试逃生阀:复现先行守卫收口的纯/IO helper(非公开 API,供 harness 单测验证沉淀幂等等)。
   _internals: {
     _appendFalsePositiveFixSummary,

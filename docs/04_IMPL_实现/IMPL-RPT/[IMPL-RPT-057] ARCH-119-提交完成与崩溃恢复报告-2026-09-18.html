@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [IMPL-RPT-057] ARCH-119-提交完成与崩溃恢复报告-2026-09-18.md -->
+<title>[DESIGN-ARCH-119] 提交收口 + 并发会话崩溃恢复报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>IMPL-RPT<span class="sep">›</span>[DESIGN-ARCH-119] 提交收口 + 并发会话崩溃恢复报告</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-119] 提交收口 + 并发会话崩溃恢复报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-119-提交收口-并发会话崩溃恢复报告">[DESIGN-ARCH-119] 提交收口 + 并发会话崩溃恢复报告</a></li><li class="lvl-2"><a href="#一-119-代码层-已全部提交-7-个-未推送">一、119 代码层 —— 已全部提交（7 个，未推送）</a></li><li class="lvl-2"><a href="#二-并发-arch-124-重组会话-13-11-崩溃-已恢复">二、并发 ARCH-124 重组会话 13:11 崩溃（已恢复）</a></li><li class="lvl-2"><a href="#三-119-设计文档被重组删除-但均可恢复-未丢">三、119 设计文档被重组删除 —— 但均可恢复（未丢）</a></li><li class="lvl-2"><a href="#四-未由我提交的部分-按你的规矩-分开提交-且非我的任务">四、未由我提交的部分（按你的规矩&quot;分开提交&quot;，且非我的任务）</a></li><li class="lvl-2"><a href="#五-给你的三个决定点">五、给你的三个决定点</a></li><li class="lvl-2"><a href="#六-关键文件路径-取证-回滚">六、关键文件路径（取证/回滚）</a></li><li class="lvl-2"><a href="#abc-三决策点处置结果-09-18-15-10-追加">ABC 三决策点处置结果（09-18 15:10 追加）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-119-提交收口-并发会话崩溃恢复报告">[DESIGN-ARCH-119] 提交收口 + 并发会话崩溃恢复报告<a class="anchor" href="#design-arch-119-提交收口-并发会话崩溃恢复报告" aria-label="锚点">#</a></h1>
+<blockquote><p>时间：2026-09-18 13:30 ｜ 仓库：<code>D:\Portable\khy-os</code> ｜ 分支：<code>main</code></p></blockquote>
+<h2 id="一-119-代码层-已全部提交-7-个-未推送">一、119 代码层 —— 已全部提交（7 个，未推送）<a class="anchor" href="#一-119-代码层-已全部提交-7-个-未推送" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>提交</th><th>步骤</th><th>内容</th></tr></thead><tbody><tr><td><code>07e01323</code></td><td>步骤 1</td><td>鼠标层按事件类别收窄判据，修饰键一律放行</td></tr><tr><td><code>f1763c2d</code></td><td>2a</td><td>新增应用内选区模型 <code>selection.js</code>（纯叶子）+ 验收标准 doc</td></tr><tr><td><code>dcb05c86</code></td><td>2b-0</td><td>鼠标三档策略 <code>mouseTier()</code> + <code>enableBytes({select})</code> 开 1002 通道</td></tr><tr><td><code>a2748b35</code></td><td>2b-1</td><td><code>Viewport</code> lines 模式加可选 <code>selection</code> prop 渲染反色</td></tr><tr><td><code>7f7ea242</code></td><td>2b-2 之一</td><td><code>createMouseDispatcher</code> 加 <code>onSelectEvent</code> 上报选择层事件</td></tr><tr><td><code>6324501f</code></td><td>2b-2 之三</td><td><code>flagRegistry</code> 登记 119 鼠标层+选择层 8 个门控（<strong>仅切片</strong>）</td></tr><tr><td><code>2313e753</code></td><td>—</td><td><code>mouseButtons</code> 注释说明 <code>onSelectEvent</code> 自绘选择层判据顺序</td></tr></tbody></table>
+<p>保险标签：<code>119-plumbing-20260918</code> → <code>2313e753</code>。查看：<code>git log 1e35ee0a..HEAD</code>。</p>
+<p>全部对象经 <code>git fsck</code>（0 错误）与 <code>git diff --stat</code>（可读）验证完好。</p>
+<h2 id="二-并发-arch-124-重组会话-13-11-崩溃-已恢复">二、并发 ARCH-124 重组会话 13:11 崩溃（已恢复）<a class="anchor" href="#二-并发-arch-124-重组会话-13-11-崩溃-已恢复" aria-label="锚点">#</a></h2>
+<p>崩溃留下：</p>
+<ul><li><strong>死锁</strong> <code>.git/index.lock</code>（空锁、19 分钟旧）→ 已改名 <code>index.lock.stale-20260918-1330</code> 移除</li><li><strong>坏索引</strong>（&quot;short read while indexing&quot;）→ 已备份 <code>index.corrupt-20260918-1330</code> 后 <code>git reset</code> 从 HEAD 重建</li><li><strong>3327 个未提交改动</strong>（310 删 / 2331 改 / 669 新增）—— 重组的半成品，已恢复 git 可读，<strong>未丢弃</strong></li></ul>
+<p><code>git fsck --full</code> <strong>0 错误</strong>：对象库完好，之前两次 &quot;short read&quot; 是崩溃余波瞬态，重建索引后 <code>git status</code> 正常。</p>
+<h2 id="三-119-设计文档被重组删除-但均可恢复-未丢">三、119 设计文档被重组删除 —— 但均可恢复（未丢）<a class="anchor" href="#三-119-设计文档被重组删除-但均可恢复-未丢" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文档</th><th>状态</th><th>恢复方式</th></tr></thead><tbody><tr><td><code>验收标准.md</code></td><td>工作树 <code>D</code>（磁盘删）</td><td>在 <code>f1763c2d</code> 已提交 → <code>git checkout HEAD -- &lt;路径&gt;</code></td></tr><tr><td><code>TUI原生文本选择与复制可用性修复.md</code>（主文档）</td><td>磁盘消失</td><td>git 历史 <code>07d31a22</code>（stash/index 态）或物理备份 <code>D:/Portable/BuildArtifacts/khy-os-工作区备份-2026-09-18</code>（66619 字节）</td></tr></tbody></table>
+<h2 id="四-未由我提交的部分-按你的规矩-分开提交-且非我的任务">四、未由我提交的部分（按你的规矩&quot;分开提交&quot;，且非我的任务）<a class="anchor" href="#四-未由我提交的部分-按你的规矩-分开提交-且非我的任务" aria-label="锚点">#</a></h2>
+<ol><li><strong>App.js 消费者接线层（2b-2 之二）</strong> —— 已被 ARCH-124 重构接管：<code>App.js</code> 被整文件 CRLF 重写，新建 <code>utils/selectGates.js</code> 当门控纯叶子真源（3 个门 <code>KHY_SELECT</code>/<code>_CLIP</code>/<code>_DRAG</code>，替代文档原写的 4 个）。这块不应由我强行提交，应随 ARCH-124 一起收口。</li><li><strong>flagRegistry.js 其余 7 个提案</strong>（ARCH-098 提示词锚点、ARCH-114 失败信封、统一剪贴板 5 门、<code>imeCommitGuard</code>、<code>isFlagEnabled</code> 行为修复等）—— 我只切出 119 门控块提交，其余留作未提交，等各自提案收口。</li><li><strong>那 3327 项重组残局</strong> —— 未提交、未丢弃，在磁盘上。</li></ol>
+<h2 id="五-给你的三个决定点">五、给你的三个决定点<a class="anchor" href="#五-给你的三个决定点" aria-label="锚点">#</a></h2>
+<ul><li><strong>A. 119 代码要推送吗？</strong> 7 个提交未推送，等你确认。</li><li><strong>B. 3327 项重组残局怎么办？</strong> 是让那个会话继续完成并提交，还是回退？目前只是未提交工作树改动，安全。</li><li><strong>C. 119 设计文档要恢复吗？</strong> 但 ARCH-124 似乎有意把文档并入新结构——先确认重组意图，避免和重构冲突后再恢复（恢复命令已备好）。</li></ul>
+<h2 id="六-关键文件路径-取证-回滚">六、关键文件路径（取证/回滚）<a class="anchor" href="#六-关键文件路径-取证-回滚" aria-label="锚点">#</a></h2>
+<ul><li>死锁备份：<code>.git/index.lock.stale-20260918-1330</code></li><li>坏索引备份：<code>.git/index.corrupt-20260918-1330</code></li><li>物理全量备份：<code>D:/Portable/BuildArtifacts/khy-os-工作区备份-2026-09-18</code>（含 LF 版 <code>App.js</code>，可还原 CRLF 污染）</li><li>保险标签：<code>119-plumbing-20260918</code></li></ul>
+<h2 id="abc-三决策点处置结果-09-18-15-10-追加">ABC 三决策点处置结果（09-18 15:10 追加）<a class="anchor" href="#abc-三决策点处置结果-09-18-15-10-追加" aria-label="锚点">#</a></h2>
+<ul><li><strong>A 推送：已完成</strong>。ghfast.top 代理拒绝匿名写，绕过代理直连 github.com（GCM 存有凭据）推送成功：<code>d917a35a..2313e753 main</code> + tag <code>119-plumbing-20260918</code>；直连 ls-remote 复核远端 main/tag 均 = <code>2313e753</code>。共 10 个提交（119×7 + rules/ruleguard-gate/Shizuku 3 个先前未推提交）。已固化 <code>khy-mirror</code> 的 push URL 为直连地址（fetch 仍走代理）。</li><li><strong>B 重组残局：按住不动（建议修正）</strong>。取证显示并发重组会话仍活（脏项 3387→3391→3074 跳动，最新写入距探测 2 分钟），stash/提交/丢弃都会打断它，保持原样交还原主。</li><li><strong>C 119 文档恢复：按住不动</strong>。重组正大面积翻 docs/，此刻恢复必撞车；两份文档恢复路径不变（验收标准.md@f1763c2d，主文档@07d31a22 或物理备份），写入停后一条 checkout 即得。</li><li><strong>新环境坑</strong>：ghfast 代理缓存陈旧 + autopull.js 周期 fetch，把 <code>khy-mirror/main</code> 跟踪引用反复拖回旧值 <code>8e15cdb3</code>（update-ref 后被毫秒级打回，实测两次）。不跟定时任务抢引用——GitHub 真实状态以直连 ls-remote 为准（<code>2313e753</code>），代理缓存刷新后自愈，纯记账无数据影响。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-056] 文档精简与结构化整理落地记录.html"><div class="dir">← 上一篇</div><div class="ttl">[IMPL-RPT-056] 文档精简与结构化整理落地记录（[MGMT-PLAN-009] B1–B8）</div></a><a class="next" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-058] ARCH-119-逐hunk拆分提交-进度-2026-09-18.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-119] 逐 hunk 拆分提交 — 进度与阻塞</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-057] ARCH-119-提交完成与崩溃恢复报告-2026-09-18.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

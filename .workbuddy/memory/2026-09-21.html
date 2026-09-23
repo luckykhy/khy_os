@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-21.md -->
+<title>2026-09-21 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>.workbuddy<span class="sep">›</span>memory<span class="sep">›</span>2026-09-21</div>
+      <header class="hero reveal"><h1>2026-09-21</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#2026-09-21">2026-09-21</a></li><li class="lvl-2"><a href="#软著标准化-把-process-010-从-人工-升级为有执行器的规则">软著标准化：把 PROCESS-010 从「人工」升级为有执行器的规则</a></li><li class="lvl-3"><a href="#落地机制-本仓机制现成-缺的只是执行器">落地机制（本仓机制现成，缺的只是执行器）</a></li><li class="lvl-3"><a href="#与官方脚本对账-守卫可信的前提">🎯 与官方脚本对账（守卫可信的前提）</a></li><li class="lvl-3"><a href="#s1-阶段纪律-本仓硬规矩-不能直接设阻断">S1 阶段纪律（本仓硬规矩，不能直接设阻断）</a></li><li class="lvl-3"><a href="#关键教训">关键教训</a></li><li class="lvl-3"><a href="#产出">产出</a></li><li class="lvl-3"><a href="#状态">状态</a></li><li class="lvl-2"><a href="#软著交付包卫生处置-用新名真实重出-60-页-第二轮">软著交付包卫生处置 + 用新名真实重出 60 页（第二轮）</a></li><li class="lvl-3"><a href="#最大发现-交付包里藏了一个浏览器用户档案-安全项">🔴 最大发现：交付包里藏了一个浏览器用户档案（安全项）</a></li><li class="lvl-3"><a href="#同时纠正了一个-成本估算错误-这条比清理更重要">🎯 同时纠正了一个「成本估算错误」（这条比清理更重要）</a></li><li class="lvl-3"><a href="#搬移清单-全部只搬不删-交付包内新增-整档-隔离归档区">搬移清单（全部只搬不删，交付包内新增 `_整档/` 隔离归档区）</a></li><li class="lvl-3"><a href="#新增-空目录原因说明-落实-缺一项要说明原因-不许静默省略">新增「空目录原因说明」（落实「缺一项要说明原因，不许静默省略」）</a></li><li class="lvl-3"><a href="#顺带修正的过期数字">顺带修正的过期数字</a></li><li class="lvl-3"><a href="#关键教训-2">关键教训</a></li><li class="lvl-3"><a href="#状态-2">状态</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="2026-09-21">2026-09-21<a class="anchor" href="#2026-09-21" aria-label="锚点">#</a></h1>
+<h2 id="软著标准化-把-process-010-从-人工-升级为有执行器的规则">软著标准化：把 PROCESS-010 从「人工」升级为有执行器的规则<a class="anchor" href="#软著标准化-把-process-010-从-人工-升级为有执行器的规则" aria-label="锚点">#</a></h2>
+<p>任务来源：用户问「希望 khyos 以后可以申请软著怎么标准化」。</p>
+<p><strong>核心认知修正</strong>：软著的判据不是「代码写得好不好」，而是 <code>[DESIGN-IP-001]</code> 的四组——<br><code>C-M</code> 人的意愿可追溯 / <code>C-E</code> 证据留痕 / <code>C-X</code> 产出可解释 / <code>C-MAT</code> 材料就绪。<br>所以「标准化」= <strong>把可机器判的那几条做成门，让「能不能申请」变成每次提交自动回答的问题</strong>，<br>而不是靠人的记性。机器判不了的两条（<code>C-M4</code> 痕迹内容、<code>C-X1</code> 抽 3 处能解释）<strong>故意不设守卫</strong><br>——给它们设守卫只会制造形式主义。</p>
+<h3 id="落地机制-本仓机制现成-缺的只是执行器">落地机制（本仓机制现成，缺的只是执行器）<a class="anchor" href="#落地机制-本仓机制现成-缺的只是执行器" aria-label="锚点">#</a></h3>
+<p><code>[DESIGN-ARCH-111]</code> 规定门成员从 <code>RULES-REGISTRY.json</code> 派生；<code>PROCESS-010</code> 此前 <code>gate=manual</code><br>无执行器。本次按 <code>PROCESS-008</code> 的 <strong>S1 观察者档</strong>落地（恒 exit 0、只记录不阻断）。</p>
+<p><strong>改动清单（9 个文件）：</strong></p>
+<table><thead><tr><th>文件</th><th>动作</th></tr></thead><tbody><tr><td><code>scripts/ci/check-copyright-readiness.js</code></td><td>新增执行器（7 项检查 + 自我体检死指针）</td></tr><tr><td><code>docs/10_规范/registry/COPYRIGHT.json</code></td><td>新增：登记真源（全称/简称/版本/著作权人 + 阶段 0 空字段）</td></tr><tr><td><code>docs/10_规范/registry/COPYRIGHT-MATERIALS.json</code></td><td>新增：选材真源（前/后 30 页 + 排除清单核验）</td></tr><tr><td><code>docs/10_规范/registry/RULES-REGISTRY.json</code></td><td><code>PROCESS-010</code>：<code>gate manual→pr</code> + <code>severity=advisory</code> + <code>exec</code>（18 个 finding id）</td></tr><tr><td><code>docs/10_规范/registry/FEATURE-OWNERSHIP.json</code></td><td>登记机制 <code>copyright-readiness-guard</code>，<code>stage=S1</code></td></tr><tr><td><code>.githooks/pre-commit</code></td><td>新增 4.2 段（AI 署名是唯一必须在提交时挡住的判据）</td></tr><tr><td><code>package.json</code></td><td><code>check:copyright</code> / <code>:all</code> / <code>:explain</code> 三个入口</td></tr><tr><td><code>[DESIGN-IP-001]…规范.md</code></td><td>「本期无执行器」→ 执行器阶段说明 + 精度纪律</td></tr><tr><td><code>docs/10_规范/registry/00_INDEX_registry-总目录.md</code></td><td>补 2 个新 JSON（顺带补此前漏登记的 2 个）</td></tr></tbody></table>
+<h3 id="与官方脚本对账-守卫可信的前提">🎯 与官方脚本对账（守卫可信的前提）<a class="anchor" href="#与官方脚本对账-守卫可信的前提" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>本守卫</th><th>官方 <code>scan_copyright_readiness.py</code></th></tr></thead><tbody><tr><td><code>.vue</code> style ≥50% 命中</td><td><strong>20</strong></td><td><strong>20</strong> ✅</td></tr><tr><td>全量 AI 署名</td><td><strong>88 / 251 = 35.1%</strong></td><td><strong>88 / 251 = 35.1%</strong> ✅</td></tr><tr><td>界面占位名</td><td><strong>0</strong></td><td><strong>0</strong> ✅</td></tr><tr><td>命名规范（<code>KhyOS人工智能平台操作系统</code>）</td><td>—</td><td><strong>未发现问题</strong> ✅</td></tr></tbody></table>
+<blockquote><p>⚠️ 数值与会话早期（88/243=36.2%、.vue 19）不同，是并行会话提交了新 commit + 新增 .vue 文件所致；<br>两边同时复跑仍完全一致，说明是仓库真变化而非守卫漂移。</p></blockquote>
+<h3 id="s1-阶段纪律-本仓硬规矩-不能直接设阻断">S1 阶段纪律（本仓硬规矩，不能直接设阻断）<a class="anchor" href="#s1-阶段纪律-本仓硬规矩-不能直接设阻断" aria-label="锚点">#</a></h3>
+<p><code>PROCESS-008</code> PP-3：<strong>S1/S2 的机制不得派生为 blocking，必须旁路记录</strong>。所以执行器有<br><code>STAGE = 'S1'</code> 常量 + <code>degradeForStage()</code> 把 error 降 WARN。一步到位设阻断会踩<br><code>check-rollout-stage.js</code> 的 <code>rollout-stage-blocks-too-early</code> error。<br><strong>升阶只改这个常量</strong> —— 预提交钩子与 PR 门都读它，不需要改任何接线。</p>
+<p><strong>实测验证 S1 生效</strong>：对一条已知含 AI 署名的历史提交跑 <code>--range</code> → 报 WARN 但 exit 0。</p>
+<h3 id="关键教训">关键教训<a class="anchor" href="#关键教训" aria-label="锚点">#</a></h3>
+<ol><li><strong>工作区有并行会话的大规模未提交删除</strong>：<code>services/ai-backend/</code> 125 个文件被删</li></ol>
+<p>（porcelain 342 条、127 条 D 状态）。导致 <code>check-version-sync</code> / <code>check-gov-status</code> /<br>   <code>check-repo-layout</code> 报错。<strong>必须区分「我引入的」与「既有的」</strong> —— 验证方式是<br>   对比改动前后的守卫 counts（实测 dangling-task 76 / cross-layer-require 18 零漂移）<br>   并独立跑守卫看 ERROR 详情指向何处。</p>
+<ol><li><strong><code>check-repo-layout</code> 的 3 个 error 全部是既有</strong>：根目录 2 个事故残留（<code>0)</code>、<code>x[1].toUpperCase()+'</code>）、</li></ol>
+<p><code>docs/tui-interaction-optimize/</code> 缺索引、<code>gui-test-screenshots/</code> 未登记层级 —— 与本次改动无关。</p>
+<ol><li><strong>预提交钩子会在规则检查处 exit 1</strong>（<code>check-change-safety</code> 因 258 个未提交文件超 20 阈值），</li></ol>
+<p>所以我加的 4.2 段在本次没被执行到 —— 但单独跑该命令已验证正确。</p>
+<h3 id="产出">产出<a class="anchor" href="#产出" aria-label="锚点">#</a></h3>
+<ul><li>仓库内：见上表 9 个文件</li><li>交付包：<code>D:\Portable\软著交付\Khy-OS\05_待办\标准化机制_软著就绪守卫.md</code>（完整说明）</li><li><code>00_决策入口.md</code> 的 D14 已更新为「已落地」</li></ul>
+<h3 id="状态">状态<a class="anchor" href="#状态" aria-label="锚点">#</a></h3>
+<p>0 commit / 0 push。守卫全绿：<code>check-rules-registry</code> / <code>check-gov-rules</code> / <code>check-wiring</code> /<br><code>check-rollout-stage</code> / <code>check-debt-ledger</code> / <code>check-agent-docs</code> / <code>check-copyright</code> 全部 exit 0。</p>
+<hr>
+<h2 id="软著交付包卫生处置-用新名真实重出-60-页-第二轮">软著交付包卫生处置 + 用新名真实重出 60 页（第二轮）<a class="anchor" href="#软著交付包卫生处置-用新名真实重出-60-页-第二轮" aria-label="锚点">#</a></h2>
+<p>任务来源：用户说「手抄承诺书我说要提交了再做，先整理其他值得你整理的材料」<br>→ <strong>D0 推迟</strong>，转而整理交付包内其余材料。交付包 = <code>D:\Portable\软著交付\Khy-OS</code>。</p>
+<h3 id="最大发现-交付包里藏了一个浏览器用户档案-安全项">🔴 最大发现：交付包里藏了一个浏览器用户档案（安全项）<a class="anchor" href="#最大发现-交付包里藏了一个浏览器用户档案-安全项" aria-label="锚点">#</a></h3>
+<p><code>01_草稿/_calib/_chromeprof/</code> 有 <strong>294 个文件 / 12 MB</strong> 的 Edge 用户档案，含<br><code>Default/Login Data</code>、<code>Default/Network/Cookies</code>、<code>Default/Sync Data/Nigori.bin</code>、<br><code>History</code>、<code>Web Data</code>、<code>Local State</code> —— 全是敏感文件。</p>
+<p><strong>根因不是误操作，是工具副作用</strong>：<code>calibrate_final.py:47</code> / <code>verify_material.py:54</code> /<br><code>calibrate_pages.py:38</code> 三处都把 <code>--user-data-dir</code> 指向交付包内的 <code>_calib/</code>。<br>调 Edge 无头打印 PDF 必须给这个参数，Edge 就会在那里落一整套档案。</p>
+<p><strong>处置</strong>：搬入 <code>_整档/_隔离_浏览器档案/</code>（只搬不删）<strong>+ 修根因</strong><br>（三个脚本统一改为写 <code>D:\WorkBuddyData\.workbuddy\tmp\softreg-prof</code>，<br>支持 <code>KHY_SOFTREG_PROFILE_ROOT</code> 覆盖、不可写回退 <code>tempfile</code>）。<br><strong>不修根因的话，下一次渲染会重建同样的 12 MB 目录。</strong></p>
+<h3 id="同时纠正了一个-成本估算错误-这条比清理更重要">🎯 同时纠正了一个「成本估算错误」（这条比清理更重要）<a class="anchor" href="#同时纠正了一个-成本估算错误-这条比清理更重要" aria-label="锚点">#</a></h3>
+<p>多份文档（<code>页数校准报告.md</code> §六/§九、<code>命名候选对照_2026-09-20.md</code>、<code>人工待办清单.md</code> 12-B）<br>都写着「页眉是旧占位名，故 60 页属历史校准证据，<strong>定名后必须整体重跑 / 重新校准页数</strong>」。</p>
+<p><strong>实测证伪</strong>：<code>extract_code.py --page-chunks 55</code> 已把「页」变成<strong>文档结构</strong> ——<br>生成的 HTML 里恰好 <strong>30 个 <code>.page</code> 块</strong>，每块 55 代码行 + 1 行自带页眉。<br>数学：<code>1649 代码行 + 1 行末页标注 = 1650 = 30 × 55</code>。<br>→ <strong>换页眉不改变块数 ⇒ 页数恒为 30、每页恒为 56 行，不需要重新校准、也不需要重跑选材。</strong></p>
+<p><strong>并且已经真的跑了</strong>：<code>verify_material.py --name &quot;KhyOS人工智能平台操作系统&quot; --version V1.1</code><br>→ 两端各 <strong>30 页</strong>、含页眉 <strong>30/30</strong>、每页 <strong>56</strong> 行、末页标注在位 ✅<br>（页眉已是新名 <code>KhyOS人工智能平台操作系统 V1.1</code>）</p>
+<p><strong>意义</strong>：改名的时间成本比原先文档估计的低得多。已在 4 处文档加更正块（不改写原结论，<br>而是并列标注「原说法 → 实测更正」）。</p>
+<h3 id="搬移清单-全部只搬不删-交付包内新增-整档-隔离归档区">搬移清单（全部只搬不删，交付包内新增 <code>_整档/</code> 隔离归档区）<a class="anchor" href="#搬移清单-全部只搬不删-交付包内新增-整档-隔离归档区" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>动作</th><th>内容</th><th>可否删</th></tr></thead><tbody><tr><td><code>01_草稿/_calib/_chromeprof/</code> → <code>_整档/_隔离_浏览器档案/</code></td><td>294 文件 / 12 MB</td><td>⚠️ 建议优先删（安全项）</td></tr><tr><td><code>_calib/</code> 40 项历代产物 → <code>_整档/_归档_旧校准产物/</code></td><td><code>*_official.*</code> / <code>*_strict.*</code> / <code>paged_*</code> / <code>FINAL_*</code> / <code>final_*</code> / <code>calibration.json</code></td><td>✅ 可删（结论已固化）</td></tr><tr><td><code>06_工具/proposed-ci/</code> → <code>_整档/_归档_旧工具_proposed-ci/</code></td><td>执行器旧副本，README 还写「待批准，未执行」与现实矛盾</td><td>✅ 可删（仓内 <code>scripts/ci/</code> 为现行版）</td></tr><tr><td>新增 <code>_整档/README.md</code></td><td>逐项说明「是什么/为什么/可否删/依据」</td><td>—</td></tr></tbody></table>
+<p><strong>效果：提交材料区 390 文件 / 21 MB → 62 文件 / 6.0 MB（−84% 文件数）。</strong></p>
+<h3 id="新增-空目录原因说明-落实-缺一项要说明原因-不许静默省略">新增「空目录原因说明」（落实「缺一项要说明原因，不许静默省略」）<a class="anchor" href="#新增-空目录原因说明-落实-缺一项要说明原因-不许静默省略" aria-label="锚点">#</a></h3>
+<ul><li><code>02_正式资料/_状态说明.md</code> —— 空是<strong>「不许提前放」</strong>（版本号未拍板 + 页眉刚换名），合规</li><li><code>03_截图/_状态说明.md</code> —— 空是<strong>「还不该开始拍」</strong>（顺序铁律：先改名后截图，否则全部作废），合规</li></ul>
+<h3 id="顺带修正的过期数字">顺带修正的过期数字<a class="anchor" href="#顺带修正的过期数字" aria-label="锚点">#</a></h3>
+<ul><li><code>.vue</code> style ≥50%：19 → <strong>20</strong></li><li>AI 署名：88 / 243 = 36.2% → 88 / <strong>251 = 35.1%</strong>（绝对数 88 未变，是分母涨了）</li><li><code>_calib/</code> 27 项 → 6 项（只留现行 <code>VERIFY_*</code>）</li><li>D14 在生成器里从「待决策」改成「✅ 已落地」，并给 <code>00_决策入口.md</code> §一 加了本轮卫生处置块</li></ul>
+<h3 id="关键教训-2">关键教训<a class="anchor" href="#关键教训-2" aria-label="锚点">#</a></h3>
+<ol><li><strong>交付前必须做一次「敏感文件体检」</strong>：软著交付包会被归档与外发，</li></ol>
+<p><code>_chromeprof</code> 这类工具副产物（Login Data / Cookies / Nigori.bin）留在包里是实质风险。<br>   排查口径：<code>find . -type f \( -iname &quot;Login*&quot; -o -iname &quot;Cookies*&quot; -o -iname &quot;*Nigori*&quot; -o -iname &quot;History&quot; \)</code></p>
+<ol><li><strong>「只搬不删」+ 写明「可否删/依据」是正确姿势</strong> —— 交付包里有大量「证据类」产物</li></ol>
+<p>（PDF 是真实页数证据），不能因为过时就删；搬走并写清处置依据，人再决定。</p>
+<ol><li><strong>改文件前先确认「权威稿在哪」</strong>：本轮的 60 页有 <code>01_草稿/代码-*30页.md</code>（权威稿，21:49 已新名）</li></ol>
+<p>与 <code>_calib/</code> 下 4 代校验产物（17:0x 旧名）两套，混起来极易误判「页眉没改」。</p>
+<ol><li><strong>生成器会覆盖手工补充</strong>：<code>collect_decisions.py</code> 是整文件重写，我先改的 §一 被覆盖了 →</li></ol>
+<p>正确做法是<strong>改生成器源</strong>，不是改产物。</p>
+<ol><li><strong>改完必须清 <code>__pycache__</code></strong> —— <code>py_compile</code> 会在交付包里留下 <code>.pyc</code>。</li></ol>
+<h3 id="状态-2">状态<a class="anchor" href="#状态-2" aria-label="锚点">#</a></h3>
+<p>0 commit / 0 push（交付包在仓库外，不影响仓内）。交付包自洽：无过期引用、无敏感文件、无临时产物。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../.workbuddy/memory/2026-09-20.html"><div class="dir">← 上一篇</div><div class="ttl">2026-09-20</div></a><a class="next" href="../../.workbuddy/memory/2026-09-22.html"><div class="dir">下一篇 →</div><div class="ttl">2026-09-22</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__=".workbuddy/memory/2026-09-21.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

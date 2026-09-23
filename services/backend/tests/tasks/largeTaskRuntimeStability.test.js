@@ -1,6 +1,6 @@
 'use strict';
 /**
- * largeTaskRuntimeStability.test.js â€?regression suite for the two runtime
+ * largeTaskRuntimeStability.test.js â€” regression suite for the two runtime
  * stability fixes:
  *   Fix 1: idempotent in_progress records gain a TTL-based takeover so a
  *          crashed process can no longer permanently block retries.
@@ -10,6 +10,7 @@
  * node:test style (Jest excludes this style automatically).
  */
 const fs = require('fs');
+const assert = require('node:assert');
 const os = require('os');
 const path = require('path');
 const { createLargeTaskRuntimeStore } = require('../../src/tasks/largeTaskRuntimeStore');

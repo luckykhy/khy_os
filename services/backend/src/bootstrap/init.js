@@ -180,7 +180,36 @@ async function _doInit(options) {
       }
     };
     if (_deferDbHealth) {
-      _dbHealthInitPromise = Promise.resolve().then(_initDbHealth);
+      // Truly off the boot path.
+      //
+      // This used to be `Promise.resolve().then(_initDbHealth)`, which *looked*
+      // deferred but was not: a microtask still drains BEFORE the caller's
+      // `await init()` continuation resumes, so the synchronous `PRAGMA
+      // quick_check` bursts inside dbHealthService.init() (hundreds of ms per
+      // large database, measured ~1.0-1.5s on a 28MB sessions.db) ran before
+      // main() could take a single further step. The checkpoint timeline showed
+      // `init:done` -> `main:start` as a ~1.1s gap that the boot path paid in
+      // full, on every launch.
+      //
+      // A macrotask timer only fires once the current run-to-completion is done
+      // AND the microtask queue is empty, i.e. after main() has resumed, mounted
+      // the REPL/TUI and printed the first prompt. The integrity check is pure
+      // defence — nothing in the boot path consumes its result — so running it
+      // late costs nothing.
+      //
+      // KHY_DB_HEALTH_DEFER_MS tunes how late (default 2500ms; 0 = next macrotask).
+      // The timer is unref'd so a one-shot command (`khy status`) still exits
+      // immediately instead of waiting for the check.
+      const _delayRaw = Number.parseInt(String(process.env.KHY_DB_HEALTH_DEFER_MS ?? ''), 10);
+      const _delayMs = Number.isFinite(_delayRaw) && _delayRaw >= 0 ? _delayRaw : 2500;
+      _dbHealthInitPromise = new Promise((resolve) => {
+        const _timer = setTimeout(() => {
+          _initDbHealth().finally(resolve);
+        }, _delayMs);
+        if (_timer.unref) {
+          _timer.unref();
+        }
+      });
     } else {
       await _initDbHealth();
     }

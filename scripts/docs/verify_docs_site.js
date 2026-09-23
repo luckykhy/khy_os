@@ -5,7 +5,7 @@
  * 断言三件事，任一不满足即以非零退出（红灯）：
  *   1) 每个参与生成的 .md 都有一份同名 .html（旁边）。
  *   2) 每个生成的 .html 里指向本地文件的链接（href/src）都能落到真实存在的文件。
- *   3) 离线资源齐全：docs/_assets 下 mermaid.min.js / docs-site.css / docs-site.js /
+ *   3) 离线资源齐全：docs/19_资产 下 mermaid.min.js / docs-site.css / docs-site.js /
  *      hljs 主题 css / nav-data.js 都在。
  *
  * 用法：node scripts/docs/verify_docs_site.js
@@ -21,8 +21,13 @@ const SKIP_DIRS = new Set([
   ".git", "node_modules", "build", "dist", ".venv", "venv", "coverage",
   "__pycache__", ".pytest_cache", ".tox", "muya-embed", "national-exam-site",
   "_archive_已删除孤儿引擎", ".claude", ".khy",
+  // ⚠️ 必须与 build_docs_site.js 的 SKIP_DIRS 逐项保持一致（两份是各自维护的副本，
+  // 只改一处会立刻漂移：2026-09-15 实测只改 build 后，verify 报出 352 处误报）。
+  ".research-tmp",
 ]);
-const SKIP_PATH_PARTS = ["/bundled/", "/_assets/"];
+// 路径片段命中即跳过（bundled 是打包时生成的副本，非源文；
+// `/housekeeping/` 是 [DESIGN-LAY-003] HK-3 隔离区，见 build_docs_site.js 同处注释）
+const SKIP_PATH_PARTS = ["/bundled/", "/19_资产/", "/housekeeping/", "/.khyos/", "/.khyquant/"];
 
 function walkMarkdown(dir, acc) {
   let entries;
@@ -89,11 +94,11 @@ for (const htmlRel of htmlRels) {
 
 // ---- 3) 资源齐全 ----
 const REQUIRED_ASSETS = [
-  "docs/_assets/mermaid.min.js",
-  "docs/_assets/docs-site.css",
-  "docs/_assets/docs-site.js",
-  "docs/_assets/hljs-github-dark.min.css",
-  "docs/_assets/nav-data.js",
+  "docs/19_资产/site/mermaid.min.js",
+  "docs/19_资产/site/docs-site.css",
+  "docs/19_资产/site/docs-site.js",
+  "docs/19_资产/site/hljs-github-dark.min.css",
+  "docs/19_资产/site/nav-data.js",
   "docs/index.html",
 ];
 for (const a of REQUIRED_ASSETS) {

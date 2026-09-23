@@ -10,7 +10,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const resolver = require('../../../src/services/dependency/resolver');
+const resolver = require('../../../src/services/domain/network/dependency/resolver.js');
 
 /** 纯内存 env(linux),避免真实 which/require。 */
 function envLinux() {

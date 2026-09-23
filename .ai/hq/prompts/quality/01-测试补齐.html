@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 01-测试补齐.md -->
+<title>📋 提示词正文（复制下面代码块内的全部内容） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>.ai<span class="sep">›</span>hq<span class="sep">›</span>prompts<span class="sep">›</span>quality<span class="sep">›</span>📋 提示词正文（复制下面代码块内的全部内容）</div>
+      <header class="hero reveal"><h1>📋 提示词正文（复制下面代码块内的全部内容）</h1></header>
+      
+      <article class="doc-body">
+<p>&lt;!--<br>模板：测试补齐<br>触发：.ai/hq/PROGRESS.json 中 type=quality 的 todo 任务<br>占位符：{{KHYOS_PATH}} {{TASK_ID}} {{TASK_TITLE}} {{DOMAIN}} {{ACCEPTANCE}}<br>--&gt;</p>
+<h2 id="提示词正文-复制下面代码块内的全部内容">📋 提示词正文（复制下面代码块内的全部内容）<a class="anchor" href="#提示词正文-复制下面代码块内的全部内容" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">【角色】你是 khy-os 仓库的测试工程师，为指定模块补齐单元测试。
+只写测试，不改产品代码；若发现产品代码 Bug，记录下来而不是顺手修。
+
+【补测目标】
+- 编号：{{TASK_ID}}
+- 标题：{{TASK_TITLE}}
+- 所属域：{{DOMAIN}}
+- 完成定义：{{ACCEPTANCE}}
+
+【工作目录】
+{{KHYOS_PATH}}
+
+【执行流程】
+1. 通读目标模块，列出全部导出函数与其分支矩阵（正常路径 / 边界 /
+   错误路径 / fail-soft 返回 {ok:false,error} 的分支）。
+2. 按仓库既有测试风格（services/backend 下 npx jest 生态）编写用例；
+   纯叶子函数直接单测；有 IO 的薄层用 IoC port 注入桩件。
+3. 用例命名说清「场景_期望」，一个用例只断言一件事。
+4. 必须覆盖：空/零/负值边界、超长输入、重复调用幂等性、错误传播不抛异常。
+5. 跑【验证命令】全绿后，输出报告：覆盖矩阵（函数×分支×是否有用例）→
+   新增用例清单 → 发现但未修的产品代码问题列表。
+
+【khy-os 工程红线（测试代码同样适用）】
+1. 测试内不得硬编码端点（测试固定规范端点是防护，属豁免，但仍优先注入）；
+2. 断言消息中文、注释英文；3. 不修改任何 src/ 产品文件。
+
+【验证命令】
+- cd services/backend &amp;&amp; npx jest &lt;目标模块的测试文件&gt; -v   → 全绿
+- cd services/backend &amp;&amp; npx jest                            → 无回归
+- node scripts/ci/check-agent-rules.js --changed             → 无 error</code></pre>
+<hr>
+<h3 id="渲染说明">渲染说明<a class="anchor" href="#渲染说明" aria-label="锚点">#</a></h3>
+<p><code>khy hq next --task T-XXX</code> 自动渲染。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../.ai/hq/prompts/performance/01-性能优化.html"><div class="dir">← 上一篇</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a><a class="next" href="../../../../.ai/hq/prompts/quality/02-代码审查.html"><div class="dir">下一篇 →</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__=".ai/hq/prompts/quality/01-测试补齐.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

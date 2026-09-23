@@ -23,20 +23,25 @@
     "tolerancePct 定为 5：字节侧受平台 optional 依赖、换行与文件系统差异影响；",
     "包数侧不吃这个容差，多一个包就是多一个包。"
   ],
-  "measuredAt": "2026-08-25",
+  "measuredAt": "2026-09-11",
   "tolerancePct": 5,
   "budgets": {
-    "devPackages": 1588,
-    "prodPackages": 589,
-    "directTotal": 146,
-    "devBytes": 353112736,
-    "bundleBytes": 100115386
+    "devPackages": 2227,
+    "prodPackages": 794,
+    "directTotal": 140,
+    "devBytes": 1553189279,
+    "bundleBytes": 196893231
   },
   "directDeps": {
     "package.json": [
       "ajv",
       "c8",
-      "esbuild"
+      "electron",
+      "electron-builder",
+      "electron-rebuild",
+      "esbuild",
+      "node-pty",
+      "ws"
     ],
     "services/backend/package.json": [
       "@aws/codewhisperer-streaming-client",
@@ -137,23 +142,6 @@
       "vue",
       "vue-router"
     ],
-    "apps/khy-mobile/package.json": [
-      "@capacitor/android",
-      "@capacitor/app",
-      "@capacitor/barcode-scanner",
-      "@capacitor/cli",
-      "@capacitor/core",
-      "@capacitor/network",
-      "@capacitor/preferences",
-      "@vitejs/plugin-vue",
-      "capacitor-secure-storage-plugin",
-      "pinia",
-      "typescript",
-      "vite",
-      "vitest",
-      "vue",
-      "vue-router"
-    ],
     "software/khyquant/frontend/package.json": [
       "@capacitor/android",
       "@capacitor/cli",
@@ -162,12 +150,15 @@
       "@capacitor/status-bar",
       "@element-plus/icons-vue",
       "@khy/ui-shared",
+      "@resvg/resvg-js",
       "@vitejs/plugin-vue",
+      "@vue/test-utils",
       "axios",
       "dompurify",
       "element-plus",
       "eslint",
       "highlight.js",
+      "jsdom",
       "lightweight-charts",
       "marked",
       "pinia",
@@ -177,6 +168,7 @@
       "typescript",
       "vite",
       "vite-plugin-pwa",
+      "vitest",
       "vue",
       "vue-router",
       "workbox-window"

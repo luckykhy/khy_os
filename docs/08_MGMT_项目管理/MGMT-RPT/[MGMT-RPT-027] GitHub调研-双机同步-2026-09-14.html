@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [MGMT-RPT-027] GitHub调研-双机同步-2026-09-14.md -->
+<title>GitHub 调研 — 双机流水线与指挥部状态同步板块 — 2026-09-14 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>MGMT-RPT<span class="sep">›</span>GitHub 调研 — 双机流水线与指挥部状态同步板块 — 2026-09-14</div>
+      <header class="hero reveal"><h1>GitHub 调研 — 双机流水线与指挥部状态同步板块 — 2026-09-14</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#github-调研-双机流水线与指挥部状态同步板块-2026-09-14">GitHub 调研 — 双机流水线与指挥部状态同步板块 — 2026-09-14</a></li><li class="lvl-2"><a href="#调研对象">调研对象</a></li><li class="lvl-2"><a href="#对标项目">对标项目</a></li><li class="lvl-2"><a href="#值得借鉴的点">值得借鉴的点</a></li><li class="lvl-3"><a href="#1-统一状态视图-一条命令看全-p0">1. 统一状态视图：一条命令看全（P0）</a></li><li class="lvl-3"><a href="#2-同步清单-manifest-状态真源完整性-p0">2. 同步清单 manifest：状态真源完整性（P0）</a></li><li class="lvl-3"><a href="#3-增量-delta-计算-自上次同步以来的新增-p0">3. 增量 delta 计算：自上次同步以来的新增（P0）</a></li><li class="lvl-3"><a href="#4-导入前冲突预检-dry-run-p1">4. 导入前冲突预检 / dry-run（P1）</a></li><li class="lvl-3"><a href="#5-逐仓-fail-soft-调度器友好-batch-p1">5. 逐仓 fail-soft + 调度器友好 batch（P1）</a></li><li class="lvl-3"><a href="#6-per-repo-merge-策略配置化-p2">6. per-repo merge 策略配置化（P2）</a></li><li class="lvl-2"><a href="#落地建议-排序">落地建议（排序）</a></li><li class="lvl-2"><a href="#参考链接">参考链接</a></li><li class="lvl-2"><a href="#落地记录">落地记录</a></li><li class="lvl-3"><a href="#已实现条目-3-条-p0-1-条-p1-顺带">已实现条目（3 条 P0 + 1 条 P1 顺带）</a></li><li class="lvl-3"><a href="#改动文件清单">改动文件清单</a></li><li class="lvl-3"><a href="#检查结果">检查结果</a></li><li class="lvl-3"><a href="#未实现项-标-待人工决策-p1-p2">未实现项（标「待人工决策」，P1/P2）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="github-调研-双机流水线与指挥部状态同步板块-2026-09-14">GitHub 调研 — 双机流水线与指挥部状态同步板块 — 2026-09-14<a class="anchor" href="#github-调研-双机流水线与指挥部状态同步板块-2026-09-14" aria-label="锚点">#</a></h1>
+<blockquote><p>每日板块轮转调研（索引 5/12）：khy-os 双机同步板块（<code>scripts/sync/export-sync.{sh,bat}</code>、<code>import-sync.{sh,bat}</code>、<code>mirror-sync.js</code>、<code>scripts/lib/mirrorSyncQueue.js</code>、指挥部 <code>khy-os-hq/scripts/sync.py</code> + <code>autopull.bat</code>）对标 GitHub 开源双仓/双机同步工具，寻找可借鉴点。</p></blockquote>
+<h2 id="调研对象">调研对象<a class="anchor" href="#调研对象" aria-label="锚点">#</a></h2>
+<p>khy-os 双机同步板块现状（三套并存机制）：</p>
+<table><thead><tr><th>机制</th><th>位置</th><th>形态</th></tr></thead><tbody><tr><td>离线 bundle 传输</td><td><code>scripts/sync/export-sync.sh/.bat</code> + <code>import-sync.sh/.bat</code></td><td>本机 <code>git add -A &amp;&amp; commit</code> → <code>git bundle create</code> → 文件搬到另一台 → <code>git bundle verify</code> + <code>fetch</code> + <code>merge --ff-only</code>；支持 <code>--merge</code>/<code>--dry-run</code>/<code>--no-commit</code></td></tr><tr><td>镜像推送 + 补推队列</td><td><code>scripts/sync/mirror-sync.js</code> + <code>scripts/lib/mirrorSyncQueue.js</code></td><td>post-commit hook 推 origin+gitee，失败分类 network/auth/diverged/unknown，欠账落 <code>.khy/sync/mirror-queue.json</code>，45s 空闲窗口软杀（滑动超时），凭据抹除；<code>--non-interactive</code>/<code>--strict</code>/<code>--json</code>；GitHub Actions 兜底</td></tr><tr><td>双仓 pull/push 门禁</td><td>指挥部 <code>khy-os-hq/scripts/sync.py</code>（Windows 计划任务 <code>khy-hq-autopull</code> 每 10 分钟）</td><td><code>--ff-only</code> 拉取、hq_check 全绿才允许推、<code>--clean-only</code>/<code>--push-only</code> 无人值守模式、<code>--status</code> 只读方向报告、并行 fetch、自动分支合并建议</td></tr></tbody></table>
+<p><strong>短板（5 条）</strong>：</p>
+<ol><li><strong>导入前无冲突预检</strong>：<code>import-sync.bat</code> 直接 <code>git fetch bundle</code> + <code>merge</code>，冲突在 merge 中途才暴露，无 dry-run 级的「会撞哪些文件」预览。</li><li><strong>状态侧无完整性清单</strong>：hq 仓库是任务/Bug 状态真源，但同步时不校验「搬过去的到底是不是我这边这版」，缺 per-file sha256 + HEAD SHA + 同步时间戳的 manifest。</li><li><strong>bundle 全量导出无增量语义</strong>：<code>export-sync</code> 每次 <code>git bundle create</code> 整个分支历史，没有「自上次同步以来新增了多少 commit」的 delta 判断；0 个新提交也照样导一个大文件。</li><li><strong>三套机制无统一状态视图</strong>：bundle / mirror 队列 / hq sync.py 各说各话，没有一个命令能同时看到「两个仓库各 ahead/behind/dirty 多少、队列欠几条、上次同步何时」。</li><li><strong>单向同步无 merge 策略配置化</strong>：hq 必须 ff-only（状态真源），code 仓可 rebase；目前是各脚本写死，不统一。</li></ol>
+<h2 id="对标项目">对标项目<a class="anchor" href="#对标项目" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>Star（2026-09-14）</th><th>技术栈</th><th>相关度</th><th>链接</th></tr></thead><tbody><tr><td>Unison</td><td>~5.5k</td><td>OCaml</td><td>高：纯双副本双向同步、archive 增量、冲突预检、batch/dry 模式</td><td>https://github.com/bcpierce00/unison</td></tr><tr><td>Syncthing</td><td>~88.6k</td><td>Go</td><td>高：本地/全局索引分离、REST 状态视图、delta 传输目标</td><td>https://github.com/syncthing/syncthing</td></tr><tr><td>rclone</td><td>~59.8k</td><td>Go</td><td>高：<code>--files-from</code> + mtime/校验和 delta、<code>--dry-run</code>、单向镜像</td><td>https://github.com/rclone/rclone</td></tr><tr><td>git-town</td><td>~3.4k</td><td>Go</td><td>中：多仓 workspace 统一 sync + 逐仓 <code>--dry-run</code> 命令打印</td><td>https://github.com/git-town/git-town</td></tr><tr><td>multi-gitter</td><td>~1.2k</td><td>Go</td><td>中：一命令 fan-out N 仓、逐仓失败隔离、聚合 status</td><td>https://github.com/lindell/multi-gitter</td></tr><tr><td>dulwich</td><td>~2.3k</td><td>Python</td><td>中：纯 Python git（bundle/merge/range_diff），可做冲突预检</td><td>https://github.com/jelmer/dulwich</td></tr></tbody></table>
+<h2 id="值得借鉴的点">值得借鉴的点<a class="anchor" href="#值得借鉴的点" aria-label="锚点">#</a></h2>
+<h3 id="1-统一状态视图-一条命令看全-p0">1. 统一状态视图：一条命令看全（P0）<a class="anchor" href="#1-统一状态视图-一条命令看全-p0" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：Syncthing <code>/rest/db/status</code> 每文件夹返回 <code>globalFiles/localFiles/needFiles/inSyncFiles/pullErrors</code>；git-town <code>git town sync</code> 跨 workspace 逐仓打印「Up to date / N behind」；multi-gitter <code>status</code> 聚合多仓。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>sync.py --status</code> 只读两仓 ahead/behind/dirty，不含 mirror 队列欠账、manifest 校验、上次同步时间。三套机制状态割裂。</p>
+<p><strong>改哪些文件</strong>：新增 <code>scripts/sync/sync-status.js</code>（Node，纯读），聚合 <code>git rev-list --left-right</code>（两仓 ahead/behind）+ <code>.khy/sync/mirror-queue.json</code>（欠账）+ manifest（哈希一致性），输出统一表格 / <code>--json</code>。</p>
+<h3 id="2-同步清单-manifest-状态真源完整性-p0">2. 同步清单 manifest：状态真源完整性（P0）<a class="anchor" href="#2-同步清单-manifest-状态真源完整性-p0" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：Unison 的 private archive（路径 + 文件指纹/inode+modtime）让下次 sync 能 diff 出「上次同步后的变化」；Syncthing 的全局索引保证 truth 侧一致性。</p>
+<p><strong>khy-os 现状差在哪</strong>：hq 是任务/Bug 真源，但 bundle 导入后无法回答「这台机器上的 hq 状态和我导出时那份逐字节一致吗」。</p>
+<p><strong>改哪些文件</strong>：<code>export-sync</code> 导出时写 <code>manifest.json</code>（HEAD SHA、commit 列表、关键文件 sha256、时间戳）随 bundle 同目录；<code>import-sync</code> 导入后校验，缺/多条目即快速失败并报具体条目。</p>
+<h3 id="3-增量-delta-计算-自上次同步以来的新增-p0">3. 增量 delta 计算：自上次同步以来的新增（P0）<a class="anchor" href="#3-增量-delta-计算-自上次同步以来的新增-p0" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：rclone <code>--files-from</code> + size/modtime/MD5 三级 delta；Syncthing 跳过 0 变更的 rescan；git-town <code>rev-list</code> 判 0 new 则跳过。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>export-sync</code> 每次全量 bundle 整个分支，没有「上次同步 ref」记录，0 个新提交也导大文件。</p>
+<p><strong>改哪些文件</strong>：<code>export-sync</code> 记录 <code>last-sync-ref</code> 进 manifest；下次先 <code>git rev-list --count last-sync-ref..HEAD</code>，为 0 则跳过 bundle 并提示「无新增，无需传输」。</p>
+<h3 id="4-导入前冲突预检-dry-run-p1">4. 导入前冲突预检 / dry-run（P1）<a class="anchor" href="#4-导入前冲突预检-dry-run-p1" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：Unison「冲突先检测并显示，不冲突自动传播」；git-town <code>--dry-run</code> 打印将执行的每条 git 命令；dulwich <code>range_diff</code> 在不 checkout 的情况下算三方差异。</p>
+<p><strong>khy-os 现状差在哪</strong>：<code>import-sync</code> 无预检，冲突在 merge 中途才暴露。</p>
+<p><strong>改哪些文件</strong>：<code>import-sync</code> 加 <code>--preview</code>：<code>git rev-list --left-right</code> + 文件列表交集，列出会撞的文件；非交互时直接报冲突清单而非 mid-merge 报错。</p>
+<h3 id="5-逐仓-fail-soft-调度器友好-batch-p1">5. 逐仓 fail-soft + 调度器友好 batch（P1）<a class="anchor" href="#5-逐仓-fail-soft-调度器友好-batch-p1" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：multi-gitter 单仓失败跳过不阻断其他仓；Unison <code>-batch</code>（不提示，冲突即非零退出）+ <code>-dry</code>。</p>
+<p><strong>khy-os 现状差在哪</strong>：10 分钟计划任务（autopull）目前全有或全无；缺统一的「快进就自动拉、冲突就报告并退出码 2、绝不弹窗」契约。</p>
+<p><strong>改哪些文件</strong>：<code>sync.py</code> 与 bundle 脚本加 <code>--batch --dry</code> 统一 flag，10 分钟任务跑只读 + 快进自动拉，冲突时落机器可读报告。</p>
+<h3 id="6-per-repo-merge-策略配置化-p2">6. per-repo merge 策略配置化（P2）<a class="anchor" href="#6-per-repo-merge-策略配置化-p2" aria-label="锚点">#</a></h3>
+<p><strong>对方怎么做</strong>：git-town <code>branch.&lt;name&gt;.sync-strategy</code>（no-ff/rebase/merge）存 git config。</p>
+<p><strong>khy-os 现状差在哪</strong>：hq 必须 ff-only、code 可 rebase，目前各脚本写死。</p>
+<p><strong>改哪些文件</strong>：<code>.khy/sync/workspace.json</code>（两仓 + remote + 策略），单一真源。</p>
+<h2 id="落地建议-排序">落地建议（排序）<a class="anchor" href="#落地建议-排序" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>行动</th><th>优先级</th><th>工作量</th></tr></thead><tbody><tr><td>1</td><td>统一状态视图 <code>scripts/sync/sync-status.js</code>（两仓 ahead/behind/dirty + 队列欠账 + manifest 一致性，表格/<code>--json</code>）</td><td>P0</td><td>半天</td></tr><tr><td>2</td><td>同步清单 manifest：export 写 <code>manifest.json</code>（HEAD SHA/commit 列表/关键文件 sha256/ts），import 校验</td><td>P0</td><td>半天</td></tr><tr><td>3</td><td>增量 delta：export 记 <code>last-sync-ref</code>，<code>rev-list --count</code> 为 0 时跳过 bundle</td><td>P0</td><td>2 小时</td></tr><tr><td>4</td><td>导入前冲突预检 <code>--preview</code>（rev-list + 文件交集）</td><td>P1</td><td>半天</td></tr><tr><td>5</td><td>逐仓 fail-soft + <code>--batch --dry</code> 调度器契约</td><td>P1</td><td>半天</td></tr><tr><td>6</td><td>per-repo merge 策略配置化（workspace.json）</td><td>P2</td><td>数小时</td></tr></tbody></table>
+<h2 id="参考链接">参考链接<a class="anchor" href="#参考链接" aria-label="锚点">#</a></h2>
+<ul><li>https://github.com/bcpierce00/unison — archive 增量、冲突预检、<code>-batch</code>/<code>-dry</code></li><li>https://github.com/syncthing/syncthing — 本地/全局索引、<code>/rest/db/status</code>、delta 传输</li><li>https://github.com/rclone/rclone — <code>--files-from</code> + mtime/校验和 delta、<code>--dry-run</code></li><li>https://github.com/git-town/git-town — workspace 统一 sync、<code>--dry-run</code> 命令打印</li><li>https://github.com/lindell/multi-gitter — 一命令 fan-out、逐仓失败隔离、聚合 status</li><li>https://github.com/jelmer/dulwich — 纯 Python git、<code>range_diff</code> 冲突预检</li></ul>
+<h2 id="落地记录">落地记录<a class="anchor" href="#落地记录" aria-label="锚点">#</a></h2>
+<h3 id="已实现条目-3-条-p0-1-条-p1-顺带">已实现条目（3 条 P0 + 1 条 P1 顺带）<a class="anchor" href="#已实现条目-3-条-p0-1-条-p1-顺带" aria-label="锚点">#</a></h3>
+<p><strong>P0-1 统一状态视图 <code>sync-status.js</code>（Syncthing /git-town / multi-gitter 模式）</strong> — ✅ 已实现</p>
+<ul><li>新增 <code>scripts/sync/sync-status.js</code>（Node，纯读、零写操作）：聚合三套机制的状态为一张表——<ul><li>两仓 <code>ahead/behind/dirty</code>（<code>git rev-list --left-right --count</code> + <code>status --porcelain</code>），detached / 无上游时诚实报 0</li><li><code>.khy/sync/mirror-queue.json</code> 镜像补推队列欠账条数与逐条明细（复用 <code>mirrorSyncQueue.describeQueue</code>）</li><li><code>manifest.json</code> 一致性校验（见 P0-2）</li></ul></li><li>仓库根发现<strong>不写死绝对路径</strong>：<code>KHY_OS_DIR</code> / <code>KHY_OS_HQ_DIR</code> env 优先，回落到脚本所在仓库的相对位置；<code>.git</code> 不存在的仓库自动跳过（fail-soft，绝不崩）</li><li>输出人类可读表格 + <code>--json</code> 给 10 分钟计划任务 / CI；<code>--manifest-dir</code> 指向 bundle 目录校验清单</li><li>git 解析沿用 <code>mirror-sync.js</code> 的 <code>KHY_GIT</code> env 约定（零硬编码）</li></ul>
+<p><strong>P0-2 同步清单 manifest（Unison archive / Syncthing global index 模式）</strong> — ✅ 已实现</p>
+<ul><li><code>export-sync.bat</code>：导出成功后写 <code>&lt;OUT_DIR&gt;\manifest.json</code>（<code>khy-sync-manifest/v1</code>：<code>headSha</code>、本次新增 commit 列表、<code>newCommitCount</code>、时间戳、bundle 文件名），并更新 <code>.last-sync-ref</code></li><li><code>import-sync.bat</code>：bundle 校验后、merge 前，若同目录有 <code>manifest.json</code>，用 <code>git cat-file -e</code> 逐条核对清单里的 commit 是否真实存在；缺失即列出具体 sha 并<strong>拒绝导入</strong>（状态真源漂移不能静默吞掉）</li><li><code>sync-status.js</code> 的 <code>checkManifest</code> 提供只读校验视角</li></ul>
+<p><strong>P0-3 增量 delta（rclone <code>--files-from</code> / Syncthing rescan 跳过 0 变更模式）</strong> — ✅ 已实现</p>
+<ul><li><code>export-sync.bat</code>：记录 <code>.last-sync-ref</code>；下次导出先 <code>git rev-list --count last-sync-ref..BRANCH</code>，<strong>为 0 直接跳过 bundle</strong> 并提示「无新增，无需传输」；有新增才 <code>git bundle create</code>，导出成功后刷新基线</li><li>解决短板 #3（全量 bundle 无增量语义）</li></ul>
+<p><strong>P1-4 导入前冲突预检（顺带，低成本）</strong> — ✅ 已实现</p>
+<ul><li><code>import-sync.bat</code>：目标分支已存在时，merge 前打印本地 tip（<code>git rev-parse --short</code>），让操作者在冲突发生前看到「即将合入什么」；非交互场景不阻塞</li></ul>
+<h3 id="改动文件清单">改动文件清单<a class="anchor" href="#改动文件清单" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td><code>scripts/sync/sync-status.js</code></td><td>新增</td><td>统一只读状态视图（两仓 ahead/behind/dirty + 队列欠账 + manifest 校验），<code>--json</code>/<code>--manifest-dir</code>，仓库发现走 env 不写死路径</td></tr><tr><td><code>scripts/sync/export-sync.bat</code></td><td>改</td><td>P0-3 增量 delta（<code>.last-sync-ref</code> + <code>rev-list --count</code> 0 则跳过）+ P0-2 写 <code>manifest.json</code></td></tr><tr><td><code>scripts/sync/import-sync.bat</code></td><td>改</td><td>P0-2 manifest 完整性预检（<code>git cat-file -e</code> 逐条，缺失即拒绝）+ P1 本地 tip 预览</td></tr></tbody></table>
+<h3 id="检查结果">检查结果<a class="anchor" href="#检查结果" aria-label="锚点">#</a></h3>
+<ul><li><code>node -e &quot;require('./scripts/sync/sync-status.js')&quot;</code>：✅ 加载成功</li><li><code>node scripts/sync/sync-status.js</code>：✅ 正常输出（当前环境 khy-os 为 detached、无上游，诚实报 0/0/0；镜像队列空；manifest 未找到）</li><li><code>node scripts/sync/sync-status.js --json</code>：✅ 机器可读输出</li><li><code>.bat</code> 文件为 Windows 批处理，本环境无法直接执行验证；语法沿用原脚本既有模式（<code>setlocal enabledelayedexpansion</code> + <code>!VAR!</code> 延迟展开 + <code>for /f</code> + <code>^</code> 转义），与文件其余部分风格一致</li></ul>
+<h3 id="未实现项-标-待人工决策-p1-p2">未实现项（标「待人工决策」，P1/P2）<a class="anchor" href="#未实现项-标-待人工决策-p1-p2" aria-label="锚点">#</a></h3>
+<ul><li><strong>P1 逐仓 fail-soft + <code>--batch --dry</code> 调度器契约</strong>：10 分钟任务（autopull）与 mirror 看门狗尚未共享统一的「快进就自动拉、冲突就退 2 并落机器可读报告、绝不弹窗」契约，建议下一步给 <code>sync.py</code> 与 bundle 脚本加 <code>--batch</code>/<code>--dry</code> 统一 flag</li><li><strong>P2 per-repo merge 策略配置化（workspace.json）</strong>：hq 必须 ff-only、code 可 rebase，目前各脚本写死；建议落 <code>.khy/sync/workspace.json</code> 单一真源</li><li><strong><code>export-sync.sh</code> / <code>import-sync.sh</code>（POSIX 版）未同步改</strong>：本次只改了 <code>.bat</code>（Windows 便携机主用）；POSIX 版的 manifest/增量 delta 需另行移植，留后续</li><li><strong>manifest 的 commit 列表在 bundle 跨机传输后需连同 bundle 一起拷走</strong>：当前约定 manifest 与 bundle 同目录（<code>&lt;OUT_DIR&gt;\</code>），使用者需两个文件都传给对端——<code>import-sync.bat</code> 已校验「同目录无 manifest 则跳过校验」，不会误报</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-026] GitHub调研-回测引擎-2026-09-13.html"><div class="dir">← 上一篇</div><div class="ttl">GitHub 调研 — 回测引擎与策略模拟板块 — 2026-09-13</div></a><a class="next" href="../../../docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-028] GitHub调研-版本治理-2026-09-15.html"><div class="dir">下一篇 →</div><div class="ttl">GitHub 调研 — 版本同步与治理检查板块 — 2026-09-15</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-027] GitHub调研-双机同步-2026-09-14.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

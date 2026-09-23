@@ -204,6 +204,26 @@ function escapeHtml(s) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
+// URL scheme 白名单：只放行 http(s)://、mailto: 与相对/锚点/查询地址。
+// 拦截 javascript:、data:text/html、vbscript:、file: 等可执行 scheme，
+// 杜绝经 v-html 渲染的 href/src 在点击时于本应用源上执行脚本。
+// 入参 url 是「转义前」的原始 markdown 值；返回值是可直接拼进属性的已转义串。
+function safeUrl(url) {
+  const u = String(url || '');
+  // 先去掉控制/零宽字符（\u0000-\u001f、\u200b-\u200f、\u2028、\u2029）——
+  // 常见 scheme 混淆手法（`java\nscript:`、`j\u200bavascript:`）就靠这些绕过正则前缀。
+  const clean = u.replace(/[\u0000-\u001f\u200b-\u200f\u2028\u2029]/g, '');
+  const lower = clean.toLowerCase();
+  const isSafe =
+    /^https?:\/\//i.test(lower) ||
+    /^mailto:/i.test(lower) ||
+    lower.startsWith('/') ||
+    lower.startsWith('./') ||
+    lower.startsWith('../') ||
+    lower.startsWith('#') ||
+    lower.startsWith('?');
+  return isSafe ? escapeHtml(clean) : '';
+}
 function renderInline(input) {
   const codes = [];
   let s = input.replace(/`([^`]+)`/g, (_, c) => {
@@ -213,11 +233,13 @@ function renderInline(input) {
   s = escapeHtml(s);
   s = s.replace(
     /!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g,
-    (_, alt, src, title) => `<img src="${src}" alt="${alt}"${title ? ` title="${title}"` : ''} />`
+    (_, alt, src, title) =>
+      `<img src="${safeUrl(src)}" alt="${alt}"${title ? ` title="${title}"` : ''} />`
   );
   s = s.replace(
     /\[([^\]]+)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g,
-    (_, t, href, title) => `<a href="${href}"${title ? ` title="${title}"` : ''}>${t}</a>`
+    (_, t, href, title) =>
+      `<a href="${safeUrl(href)}"${title ? ` title="${title}"` : ''}>${t}</a>`
   );
   s = s
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
@@ -226,7 +248,9 @@ function renderInline(input) {
     .replace(/(^|[^_])_([^_]+)_/g, '$1<em>$2</em>')
     .replace(/~~([^~]+)~~/g, '<del>$1</del>')
     .replace(/==([^=]+)==/g, '<mark>$1</mark>');
-  s = s.replace(/(^|[\s(])((?:https?:\/\/)[^\s<)]+)/g, '$1<a href="$2">$2</a>');
+  s = s.replace(/(^|[\s(])((?:https?:\/\/)[^\s<)]+)/g, (_, pre, url) =>
+    pre + `<a href="${safeUrl(url)}">${url}</a>`
+  );
   s = s.replace(/ (\d+) /g, (_, i) => codes[+i]);
   return s;
 }
@@ -675,7 +699,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  background: var(--el-bg-color, #fff);
+  background: var(--el-bg-color, var(--khy-white));
 }
 
 /* ── 顶栏 ── */
@@ -684,7 +708,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
-  border-bottom: 1px solid var(--el-border-color, #d1d9e0);
+  border-bottom: 1px solid var(--el-border-color, var(--khy-gray-200));
   flex: 0 0 auto;
   flex-wrap: wrap;
 }
@@ -693,7 +717,7 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 .md-brand small {
-  color: var(--el-text-color-secondary, #59636e);
+  color: var(--el-text-color-secondary, var(--khy-gray-600));
   font-weight: 400;
 }
 .md-viewseg {
@@ -703,7 +727,7 @@ onBeforeUnmount(() => {
   flex: 1 1 auto;
 }
 .md-filename {
-  color: var(--el-text-color-secondary, #59636e);
+  color: var(--el-text-color-secondary, var(--khy-gray-600));
   font-size: 12px;
   max-width: 32vw;
   overflow: hidden;
@@ -729,15 +753,15 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-right: 1px solid var(--el-border-color, #d1d9e0);
-  background: var(--el-fill-color-light, #f6f8fa);
+  border-right: 1px solid var(--el-border-color, var(--khy-gray-200));
+  background: var(--el-fill-color-light, var(--khy-gray-50));
 }
 .md-files-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 6px 10px;
-  border-bottom: 1px solid var(--el-border-color, #d1d9e0);
+  border-bottom: 1px solid var(--el-border-color, var(--khy-gray-200));
   font-size: 12px;
   font-weight: 600;
 }
@@ -749,7 +773,7 @@ onBeforeUnmount(() => {
 .md-files-err {
   padding: 6px 10px;
   font-size: 12px;
-  color: var(--el-color-danger, #cf222e);
+  color: var(--el-color-danger, var(--khy-md-red));
 }
 .md-files-scroll {
   flex: 1 1 auto;
@@ -767,18 +791,18 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--el-text-color-primary, #1f2328);
+  color: var(--el-text-color-primary, var(--khy-gray-900));
 }
 .md-file-item:hover {
-  background: var(--el-fill-color, #eef1f4);
+  background: var(--el-fill-color, var(--khy-md-surface));
 }
 .md-file-item.active {
-  background: var(--el-color-primary-light-9, #ecf5ff);
-  color: var(--el-color-primary, #409eff);
+  background: var(--el-color-primary-light-9, var(--khy-primary-soft));
+  color: var(--el-color-primary, var(--khy-primary));
   font-weight: 600;
 }
 .md-file-item.is-dir {
-  color: var(--el-text-color-secondary, #59636e);
+  color: var(--el-text-color-secondary, var(--khy-gray-600));
   font-weight: 600;
   cursor: default;
   user-select: none;
@@ -789,21 +813,21 @@ onBeforeUnmount(() => {
 .md-files-empty {
   padding: 10px;
   font-size: 12px;
-  color: var(--el-text-color-secondary, #59636e);
+  color: var(--el-text-color-secondary, var(--khy-gray-600));
 }
 .md-files-foot {
   padding: 8px 10px;
-  border-top: 1px solid var(--el-border-color, #d1d9e0);
+  border-top: 1px solid var(--el-border-color, var(--khy-gray-200));
 }
 .md-files-foot .el-button {
   width: 100%;
 }
 .md-pane-source {
   display: flex;
-  border-right: 1px solid var(--el-border-color, #d1d9e0);
+  border-right: 1px solid var(--el-border-color, var(--khy-gray-200));
 }
 .md-pane-muya {
-  border-right: 1px solid var(--el-border-color, #d1d9e0);
+  border-right: 1px solid var(--el-border-color, var(--khy-gray-200));
 }
 .md-pane-muya :deep(.mu-mount) {
   min-height: 100%;
@@ -825,20 +849,20 @@ onBeforeUnmount(() => {
   font-size: 13.5px;
   line-height: 1.7;
   tab-size: 4;
-  color: var(--el-text-color-primary, #1f2328);
-  background: var(--el-bg-color, #fff);
+  color: var(--el-text-color-primary, var(--khy-gray-900));
+  background: var(--el-bg-color, var(--khy-white));
 }
 
 /* ── 内联预览（回退渲染器）── */
 .md-preview {
-  --md-fg: #1f2328;
-  --md-muted: #59636e;
-  --md-border: #d1d9e0;
-  --md-accent: #0969da;
-  --md-code-bg: #f6f8fa;
-  --md-quote: #d0d7de;
-  --md-stripe: #f6f8fa;
-  --md-mark: #fff8c5;
+  --md-fg: var(--khy-gray-900);
+  --md-muted: var(--khy-gray-600);
+  --md-border: var(--khy-gray-200);
+  --md-accent: var(--khy-md-link);
+  --md-code-bg: var(--khy-gray-50);
+  --md-quote: var(--khy-md-border);
+  --md-stripe: var(--khy-gray-50);
+  --md-mark: var(--khy-md-highlight);
   padding: 24px 40px;
   max-width: 980px;
   margin: 0 auto;
@@ -847,14 +871,14 @@ onBeforeUnmount(() => {
   font-size: 15px;
 }
 :global(html.dark) .md-preview {
-  --md-fg: #e6edf3;
-  --md-muted: #9198a1;
-  --md-border: #30363d;
-  --md-accent: #4493f8;
-  --md-code-bg: #161b22;
-  --md-quote: #30363d;
-  --md-stripe: #161b22;
-  --md-mark: #574c1c;
+  --md-fg: var(--khy-md-bg);
+  --md-muted: var(--khy-md-muted);
+  --md-border: var(--khy-md-code-border);
+  --md-accent: var(--khy-md-blue);
+  --md-code-bg: var(--khy-md-code-bg);
+  --md-quote: var(--khy-md-code-border);
+  --md-stripe: var(--khy-md-code-bg);
+  --md-mark: var(--khy-md-amber);
 }
 .md-preview :deep(h1),
 .md-preview :deep(h2) {
@@ -971,21 +995,21 @@ onBeforeUnmount(() => {
 /* ── 状态条 ── */
 .md-status {
   flex: 0 0 auto;
-  border-top: 1px solid var(--el-border-color, #d1d9e0);
+  border-top: 1px solid var(--el-border-color, var(--khy-gray-200));
   padding: 4px 14px;
   font-size: 12px;
-  color: var(--el-text-color-secondary, #59636e);
+  color: var(--el-text-color-secondary, var(--khy-gray-600));
   display: flex;
   gap: 16px;
   align-items: center;
 }
 .md-engine.ok {
-  color: var(--el-color-success, #1a7f37);
+  color: var(--el-color-success, var(--khy-md-green));
 }
 .md-stat.ok {
-  color: var(--el-color-success, #1a7f37);
+  color: var(--el-color-success, var(--khy-md-green));
 }
 .md-stat.err {
-  color: var(--el-color-danger, #cf222e);
+  color: var(--el-color-danger, var(--khy-md-red));
 }
 </style>

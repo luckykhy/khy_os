@@ -2,7 +2,7 @@
 /**
  * @pattern Visitor, Template Method
  *
- * 设计模式注册表守卫 —— 校验 docs/_设计模式/模式注册表.json 与磁盘的一致性。
+ * 设计模式注册表守卫 —— 校验 docs/16_设计模式/registry/模式注册表.json 与磁盘的一致性。
  *
  * 三条规则，都是 warning + 基线棘轮（与 check-repo-layout.js 同一套机制）：
  *   pattern-uncovered  本仓跟踪的源文件没有注册表条目
@@ -32,7 +32,7 @@ const repoRoot = process.env.KHY_PATTERN_COVERAGE_ROOT
   // 规则逻辑必须能脱离本仓库当时的真实状态被验证，否则「基线一改测试就绿」。
   ? path.resolve(process.env.KHY_PATTERN_COVERAGE_ROOT)
   : path.resolve(__dirname, '..', '..');
-const REGISTRY_PATH = path.join(repoRoot, 'docs', '_设计模式', '模式注册表.json');
+const REGISTRY_PATH = path.join(repoRoot, 'docs', '16_设计模式', 'registry', '模式注册表.json');
 const BASELINE_PATH = path.join(repoRoot, 'scripts', 'ci', 'pattern-coverage-baseline.json');
 
 const args = process.argv.slice(2);
@@ -204,7 +204,7 @@ function main() {
   const effectiveSeverity = (finding) =>
     regressions.some(r => r.id === finding.id) ? 'error' : finding.severity;
 
-  console.log('check-pattern-coverage: 设计模式注册表守卫（真源 docs/_设计模式/模式注册表.json）');
+  console.log('check-pattern-coverage: 设计模式注册表守卫（真源 docs/16_设计模式/registry/模式注册表.json）');
   console.log('源文件(git 跟踪): ' + sourceFiles.length
     + ' · 注册表条目: ' + Object.keys(registry).length
     + ' · 模式覆盖: ' + usedPatterns.size + '/23');

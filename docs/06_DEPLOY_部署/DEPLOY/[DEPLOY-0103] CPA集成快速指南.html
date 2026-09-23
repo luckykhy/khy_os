@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DEPLOY-0103] CPA集成快速指南.md -->
+<title>[DEPLOY-0103] CPA 集成快速指南（与 provider-hub 集成版） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>DEPLOY<span class="sep">›</span>[DEPLOY-0103] CPA 集成快速指南（与 provider-hub 集成版）</div>
+      <header class="hero reveal"><h1>[DEPLOY-0103] CPA 集成快速指南（与 provider-hub 集成版）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#deploy-0103-cpa-集成快速指南-与-provider-hub-集成版">[DEPLOY-0103] CPA 集成快速指南（与 provider-hub 集成版）</a></li><li class="lvl-2"><a href="#一句话总结">一句话总结</a></li><li class="lvl-2"><a href="#架构图">架构图</a></li><li class="lvl-2"><a href="#快速开始">快速开始</a></li><li class="lvl-3"><a href="#1-启动-cpa-服务器">1. 启动 CPA 服务器</a></li><li class="lvl-3"><a href="#2-添加-cpa-provider-card">2. 添加 CPA Provider Card</a></li><li class="lvl-3"><a href="#3-配置-api-key-可选">3. 配置 API Key（可选）</a></li><li class="lvl-3"><a href="#4-应用卡片到-cpa">4. 应用卡片到 CPA</a></li><li class="lvl-3"><a href="#5-使用-cpa">5. 使用 CPA</a></li><li class="lvl-2"><a href="#cli-命令速查-复用-cc-switch">CLI 命令速查（复用 cc-switch）</a></li><li class="lvl-2"><a href="#配置文件-复用现有">配置文件（复用现有）</a></li><li class="lvl-3"><a href="#card-配置-cc-switch-json">Card 配置 (cc_switch.json)</a></li><li class="lvl-3"><a href="#密钥配置-api-keys-json">密钥配置 (api_keys.json)</a></li><li class="lvl-2"><a href="#常见问题">常见问题</a></li><li class="lvl-3"><a href="#q-为什么复用-ccswitch-而不新建配置">Q: 为什么复用 ccSwitch 而不新建配置？</a></li><li class="lvl-3"><a href="#q-cpa-和-new-api-有什么区别">Q: CPA 和 New API 有什么区别？</a></li><li class="lvl-3"><a href="#q-如何选择">Q: 如何选择？</a></li><li class="lvl-3"><a href="#q-cpa-支持哪些模型">Q: CPA 支持哪些模型？</a></li><li class="lvl-3"><a href="#q-多账号如何轮询">Q: 多账号如何轮询？</a></li><li class="lvl-2"><a href="#文件清单">文件清单</a></li><li class="lvl-3"><a href="#新建文件">新建文件</a></li><li class="lvl-3"><a href="#修改文件">修改文件</a></li><li class="lvl-3"><a href="#复用文件-无需修改">复用文件（无需修改）</a></li><li class="lvl-2"><a href="#下一步">下一步</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="deploy-0103-cpa-集成快速指南-与-provider-hub-集成版">[DEPLOY-0103] CPA 集成快速指南（与 provider-hub 集成版）<a class="anchor" href="#deploy-0103-cpa-集成快速指南-与-provider-hub-集成版" aria-label="锚点">#</a></h1>
+<blockquote><p>为 KhyOS 个人用户设计的 CPA 反代集成方案  <br><strong>核心原则：复用现有系统，避免重复实现</strong></p></blockquote>
+<hr>
+<h2 id="一句话总结">一句话总结<a class="anchor" href="#一句话总结" aria-label="锚点">#</a></h2>
+<p><strong>CPA</strong> 作为一个 Provider Card 集成到 ccSwitch 系统，复用现有的 Card、Key Pool、App Writer 机制。</p>
+<hr>
+<h2 id="架构图">架构图<a class="anchor" href="#架构图" aria-label="锚点">#</a></h2>
+<pre><code>KhyOS CLI (khy cc-switch) → Provider Card (cc_switch.json)
+                                    ↓
+                           CPA App Writer (cpaWriter.js)
+                                    ↓
+                           CPA Adapter (cpaAdapter.js)
+                                    ↓
+                           CPA Server (http://localhost:8317)</code></pre>
+<hr>
+<h2 id="快速开始">快速开始<a class="anchor" href="#快速开始" aria-label="锚点">#</a></h2>
+<h3 id="1-启动-cpa-服务器">1. 启动 CPA 服务器<a class="anchor" href="#1-启动-cpa-服务器" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 方式一：Docker（推荐）</span>
+git <span class="hljs-built_in">clone</span> https://github.com/router-for-me/CLIProxyAPI.git
+<span class="hljs-built_in">cd</span> CLIProxyAPI
+<span class="hljs-built_in">cp</span> config.example.yaml config.yaml
+<span class="hljs-comment"># 编辑 config.yaml 添加你的账号</span>
+docker compose up -d
+
+<span class="hljs-comment"># 方式二：直接运行</span>
+./cli-proxy-api</code></pre>
+<h3 id="2-添加-cpa-provider-card">2. 添加 CPA Provider Card<a class="anchor" href="#2-添加-cpa-provider-card" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 通过 CLI 添加卡片</span>
+khy cc-switch add \
+  --name=<span class="hljs-string">&quot;My CPA Server&quot;</span> \
+  --endpoint=<span class="hljs-string">&quot;http://localhost:8317&quot;</span> \
+  --protocol=openai \
+  --apps=cpa
+
+<span class="hljs-comment"># 或通过 provider-hub UI 添加</span></code></pre>
+<h3 id="3-配置-api-key-可选">3. 配置 API Key（可选）<a class="anchor" href="#3-配置-api-key-可选" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 添加密钥到池</span>
+khy cc-switch key add \
+  --provider=cpa \
+  --key=your-api-key \
+  --label=<span class="hljs-string">&quot;CPA Access Key&quot;</span>
+
+<span class="hljs-comment"># 绑定密钥到卡片</span>
+khy cc-switch update &lt;card-id&gt; --keyId=&lt;key-id&gt;</code></pre>
+<h3 id="4-应用卡片到-cpa">4. 应用卡片到 CPA<a class="anchor" href="#4-应用卡片到-cpa" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 激活卡片</span>
+khy cc-switch apply &lt;card-id&gt; cpa
+
+<span class="hljs-comment"># 查看状态</span>
+khy cc-switch status cpa</code></pre>
+<h3 id="5-使用-cpa">5. 使用 CPA<a class="anchor" href="#5-使用-cpa" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 通过网关使用</span>
+khy ai <span class="hljs-string">&quot;Hello, world!&quot;</span> --adapter=cpa
+
+<span class="hljs-comment"># 或在 REPL 中</span>
+khy
+&gt; /adapter cpa
+&gt; Hello, world!</code></pre>
+<hr>
+<h2 id="cli-命令速查-复用-cc-switch">CLI 命令速查（复用 cc-switch）<a class="anchor" href="#cli-命令速查-复用-cc-switch" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>命令</th><th>说明</th></tr></thead><tbody><tr><td><code>khy cc-switch list</code></td><td>查看所有卡片</td></tr><tr><td><code>khy cc-switch add</code></td><td>添加 CPA 卡片</td></tr><tr><td><code>khy cc-switch apply &lt;id&gt; cpa</code></td><td>应用到 CPA</td></tr><tr><td><code>khy cc-switch status cpa</code></td><td>查看 CPA 状态</td></tr><tr><td><code>khy cc-switch key add</code></td><td>添加密钥</td></tr><tr><td><code>khy cc-switch key list</code></td><td>查看密钥（脱敏）</td></tr></tbody></table>
+<hr>
+<h2 id="配置文件-复用现有">配置文件（复用现有）<a class="anchor" href="#配置文件-复用现有" aria-label="锚点">#</a></h2>
+<h3 id="card-配置-cc-switch-json">Card 配置 (cc_switch.json)<a class="anchor" href="#card-配置-cc-switch-json" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;cards&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;c_xxx&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;My CPA Server&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;baseUrl&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;http://localhost:8317&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;protocol&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;openai&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;apps&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;cpa&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;defaultModel&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;gpt-4&quot;</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;active&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;cpa&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;c_xxx&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="密钥配置-api-keys-json">密钥配置 (api_keys.json)<a class="anchor" href="#密钥配置-api-keys-json" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;cpa&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;key&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;your-api-key&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;label&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;CPA Access Key&quot;</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+<h2 id="常见问题">常见问题<a class="anchor" href="#常见问题" aria-label="锚点">#</a></h2>
+<h3 id="q-为什么复用-ccswitch-而不新建配置">Q: 为什么复用 ccSwitch 而不新建配置？<a class="anchor" href="#q-为什么复用-ccswitch-而不新建配置" aria-label="锚点">#</a></h3>
+<p><strong>A</strong>: 避免重复实现：</p>
+<ul><li>存储：复用 <code>cc_switch.json</code></li><li>密钥：复用 <code>api_keys.json</code></li><li>CLI：复用 <code>khy cc-switch</code></li><li>UI：复用 provider-hub</li></ul>
+<h3 id="q-cpa-和-new-api-有什么区别">Q: CPA 和 New API 有什么区别？<a class="anchor" href="#q-cpa-和-new-api-有什么区别" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>CPA</th><th>New API</th></tr></thead><tbody><tr><td>定位</td><td>CLI/OAuth → API 桥接器</td><td>通用 LLM 网关</td></tr><tr><td>上游</td><td>CLI 账号 (Codex/Claude)</td><td>标准 API</td></tr><tr><td>计费</td><td>无</td><td>有</td></tr><tr><td>适合</td><td>个人自用</td><td>团队使用</td></tr></tbody></table>
+<h3 id="q-如何选择">Q: 如何选择？<a class="anchor" href="#q-如何选择" aria-label="锚点">#</a></h3>
+<ul><li><strong>个人自用 + CLI 开发</strong> → CPA</li><li><strong>团队统一网关</strong> → New API</li><li><strong>共享订阅拼车</strong> → Sub2API</li></ul>
+<h3 id="q-cpa-支持哪些模型">Q: CPA 支持哪些模型？<a class="anchor" href="#q-cpa-支持哪些模型" aria-label="锚点">#</a></h3>
+<ul><li>Codex (GPT-4, GPT-4o)</li><li>Claude (Claude 3 Opus, Sonnet)</li><li>Gemini (Gemini Pro)</li><li>Qwen (通义千问)</li><li>等更多...</li></ul>
+<h3 id="q-多账号如何轮询">Q: 多账号如何轮询？<a class="anchor" href="#q-多账号如何轮询" aria-label="锚点">#</a></h3>
+<p>在 CPA 的 <code>config.yaml</code> 中配置多个账号，CPA 会自动轮询。</p>
+<hr>
+<h2 id="文件清单">文件清单<a class="anchor" href="#文件清单" aria-label="锚点">#</a></h2>
+<h3 id="新建文件">新建文件<a class="anchor" href="#新建文件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>位置</th></tr></thead><tbody><tr><td><code>cpaWriter.js</code></td><td><code>services/backend/src/services/domain/config/ccSwitch/</code></td></tr><tr><td><code>cpaAdapter.js</code></td><td><code>services/backend/src/services/gateway/adapters/</code></td></tr></tbody></table>
+<h3 id="修改文件">修改文件<a class="anchor" href="#修改文件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>修改内容</th></tr></thead><tbody><tr><td><code>constants.js</code></td><td>添加 <code>APPS.CPA</code></td></tr><tr><td><code>appWriters.js</code></td><td>注册 <code>cpaWriter</code></td></tr><tr><td><code>aiGateway.js</code></td><td>注册 <code>cpaAdapter</code></td></tr></tbody></table>
+<h3 id="复用文件-无需修改">复用文件（无需修改）<a class="anchor" href="#复用文件-无需修改" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>复用内容</th></tr></thead><tbody><tr><td><code>providers.ts</code></td><td>Card CRUD、Key Pool</td></tr><tr><td><code>modelCatalog.ts</code></td><td>模型目录拉取</td></tr><tr><td><code>store.js</code></td><td>ccSwitch 数据存储</td></tr></tbody></table>
+<hr>
+<h2 id="下一步">下一步<a class="anchor" href="#下一步" aria-label="锚点">#</a></h2>
+<ol><li>阅读完整设计文档：<code>docs/03_DESIGN_设计/[DESIGN-CPA-001] CPA 反代集成方案.md</code></li><li>查看 <code>cpaWriter.js</code> 实现</li><li>查看 <code>cpaAdapter.js</code> 实现</li><li>运行测试：<code>npm run test -- --grep=&quot;cpa&quot;</code></li></ol>
+<hr>
+<p><em>最后更新：2026-09-11</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/06_DEPLOY_部署/DEPLOY/[DEPLOY-0102] CPA+NewAPI分层架构快速指南.html"><div class="dir">← 上一篇</div><div class="ttl">[DEPLOY-0102] CPA + New API 分层架构快速指南</div></a><a class="next" href="../../../docs/06_DEPLOY_部署/DEPLOY/00_INDEX_DEPLOY-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">DEPLOY</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/DEPLOY/[DEPLOY-0103] CPA集成快速指南.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

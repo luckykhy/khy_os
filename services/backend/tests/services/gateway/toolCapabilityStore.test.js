@@ -210,3 +210,121 @@ describe('旧文件自愈 — 带前缀的历史键就地迁移', () => {
     assert.deepEqual(Object.keys(onDisk.entries), ['glm-4.7-flash']);
   });
 });
+
+describe('非对称继承（P4 余项）— 负面不扩散,正面共享', () => {
+  test('native 全局共享:换任何适配器都是 native', () => {
+    store.recordVerdict('m1', 'native', { source: 'probe', adapter: 'api' });
+    assert.equal(store.getVerdictFor('m1', { adapter: 'api' }), 'native');
+    assert.equal(store.getVerdictFor('m1', { adapter: 'relay_api' }), 'native', '正面证据跨适配器');
+    assert.equal(store.getVerdictFor('m1', {}), 'native', '不给适配器也照样是 native');
+  });
+
+  test('text 只在测出它的那条适配器上生效（负面不扩散）', () => {
+    store.recordVerdict('m2', 'text', { source: 'probe', adapter: 'api' });
+    assert.equal(store.getVerdictFor('m2', { adapter: 'api' }), 'text');
+    assert.equal(
+      store.getVerdictFor('m2', { adapter: 'relay_api' }),
+      null,
+      '一条通道的负面结论不得替另一条通道做决定(否则重演 BUG-014)'
+    );
+    assert.equal(
+      store.getVerdictFor('m2', { adapter: 'claude' }),
+      null,
+      '换适配器后应重新以「未测」对待'
+    );
+  });
+
+  test('来源未知按「适用」处理（向后兼容:历史记录没有 adapter 字段）', () => {
+    fs.writeFileSync(
+      tmpFile,
+      JSON.stringify({
+        version: 1,
+        entries: { legacy: { verdict: 'text', source: 'probe', measuredAt: Date.now() } },
+      })
+    );
+    store._resetCache();
+    assert.equal(store.getVerdictFor('legacy', { adapter: 'api' }), 'text', '记录无来源 → 适用');
+    assert.equal(store.getVerdictFor('legacy', {}), 'text', '查询无来源 → 适用');
+  });
+
+  test('getVerdict 不受来源影响（不做过滤的语义保持,供拿不到适配器身份的调用点使用）', () => {
+    store.recordVerdict('m3', 'text', { source: 'probe', adapter: 'api' });
+    assert.equal(store.getVerdict('m3'), 'text');
+    assert.equal(store.getVerdictFor('m3', { adapter: 'relay_api' }), null);
+  });
+
+  test('缺失来源在磁盘上落成 null,不与空串混淆', () => {
+    store.recordVerdict('m4', 'text', { source: 'probe' });
+    store._resetCache();
+    const raw = JSON.parse(fs.readFileSync(tmpFile, 'utf-8'));
+    assert.equal(raw.entries.m4.adapter, null);
+  });
+
+  test('绝不抛:junk 输入', () => {
+    for (const j of [null, undefined, 42, {}, []]) {
+      assert.doesNotThrow(() => store.getVerdictFor(j));
+      assert.doesNotThrow(() => store.getVerdictFor('m1', j));
+    }
+  });
+});
+
+describe('通道级记录 — 某条通道收不收 tools（与模型级记录分区）', () => {
+  const ROUTE = 'relay_api::relay.example::step-3.7-flash';
+
+  test('写入/读取往返；未记录 → false', () => {
+    assert.equal(store.routeRejectsTools(ROUTE), false, '未记录不得被当成拒收');
+    assert.equal(store.recordRouteRejects(ROUTE, { source: 'http-400' }), true);
+    assert.equal(store.routeRejectsTools(ROUTE), true);
+    assert.equal(store.recordRouteRejects('', {}), false, '空 routeId → 不写');
+    assert.equal(store.routeRejectsTools(null), false);
+  });
+
+  test('按通道隔离：A 通道的拒收不污染 B 通道、也不污染任何模型键', () => {
+    store.recordRouteRejects('relay_api::a.example::m1', {});
+    assert.equal(store.routeRejectsTools('relay_api::a.example::m1'), true);
+    assert.equal(store.routeRejectsTools('relay_api::b.example::m1'), false, '另一条通道不受影响');
+    // 关键:通道拒绝绝不能被解读为「这个模型不支持原生工具」。
+    assert.equal(store.getVerdict('m1'), null, '模型级档案必须保持干净');
+    assert.equal(store.getVerdict('relay_api::a.example::m1'), null);
+  });
+
+  test('有界 TTL：过期通道记录自行失效（端点支持情况会变）', () => {
+    store.recordRouteRejects(ROUTE, {});
+    assert.equal(store.routeRejectsTools(ROUTE), true);
+    process.env.KHY_TOOL_CAP_TTL_MS = '1000';
+    store._resetCache(); // 重新加载,读新的 TTL
+    const raw = JSON.parse(fs.readFileSync(tmpFile, 'utf-8'));
+    raw.entries[`route:${ROUTE}`].measuredAt = Date.now() - 5000;
+    fs.writeFileSync(tmpFile, JSON.stringify(raw));
+    store._resetCache();
+    assert.equal(store.routeRejectsTools(ROUTE), false, '过期后必须重新尝试发 tools');
+  });
+
+  test('通道键不参与模型键规范化（route: 前缀不是模型命名空间）', () => {
+    store.recordRouteRejects(ROUTE, {});
+    store._resetCache(); // 触发加载 + 迁移
+    const keys = Object.keys(JSON.parse(fs.readFileSync(tmpFile, 'utf-8')).entries);
+    assert.ok(
+      keys.includes(`route:${ROUTE}`),
+      `通道键必须原样保留,实得: ${JSON.stringify(keys)}`
+    );
+  });
+
+  test('通道记录不混进模型级的通过/新鲜列表', () => {
+    store.recordRouteRejects(ROUTE, {});
+    store.recordVerdict('m1', 'native', {});
+    assert.deepEqual(store.listPassing().map((e) => e.model), ['m1']);
+    assert.deepEqual(store.listFresh().map((e) => e.model), ['m1']);
+    const routes = store.listRouteRejections();
+    assert.equal(routes.length, 1);
+    assert.equal(routes[0].route, ROUTE);
+  });
+
+  test('便捷入口：由物理身份算键（适配器侧不做键运算）', () => {
+    const id = { adapter: 'relay_api', endpoint: 'https://relay.example/v1', model: 'step-3.7-flash' };
+    assert.equal(store.recordRouteRejectsFrom({ ...id, source: 'http-400' }), true);
+    assert.equal(store.routeRejectsToolsFor(id), true);
+    assert.equal(store.recordRouteRejectsFrom({ ...id, model: '' }), false, '缺 model → 放弃');
+    assert.equal(store.routeRejectsToolsFor({ adapter: 'relay_api', model: '' }), false);
+  });
+});

@@ -731,6 +731,31 @@ try {
   /* port unavailable — ultraplan/workflow chat fallback degrades */
 }
 try {
+  // CLI session-control surface for the messaging channel (ilink) so it stops
+  // reaching up into cli/ai directly — same seam, same cli → services direction.
+  require('../services/aiChatPort').registerAiSessionControl({
+    clearHistory: _aiConversationOps.clearHistory,
+    cancelActiveRequest: _aiGatewayClient.cancelActiveRequest,
+    scopeSession: _aiSession.scopeSession,
+    maybeAutoCheckpointProgress: _aiConversationOps.maybeAutoCheckpointProgress,
+  });
+} catch {
+  /* port unavailable — channel session-control falls back to lazy CLI load */
+}
+try {
+  // Forest primitives for sessionForestService, so the service layer stops
+  // require()ing cli/sessionTopology, cli/sessionSlots, cli/crossBranchSynthesis
+  // and cli/ai directly (archDebtScan R1 reverse-layering edges).
+  require('../services/sessionForestPort').registerSessionForest({
+    topology: require('./sessionTopology'),
+    slots: require('./sessionSlots'),
+    synthesis: require('./crossBranchSynthesis'),
+    session: { getLiveSessionId: _aiSession.getLiveSessionId },
+  });
+} catch {
+  /* port unavailable — forest service degrades to its fail-soft paths */
+}
+try {
   require('../services/aiConversationPort').registerAiConversation({
     getEffort,
     saveConversation: _aiSession.saveConversation,
@@ -739,4 +764,17 @@ try {
   });
 } catch {
   /* port unavailable — queryEngine conversation-state ops degrade to no-op */
+}
+try {
+  // Pure-leaf utilities authored inside cli/ (full-width folding, status-message
+  // formatting, diff hunking). Service-layer callers — intentPreprocess,
+  // noiseFilter, diffCapture — would otherwise reach up into cli/ for functions
+  // that carry no CLI coupling at all (archDebtScan R1 reverse-layering edges).
+  require('../services/cliLeafPort').registerCliLeaves({
+    fullWidthInput: require('./fullWidthInput'),
+    statusMessageFormatter: require('./statusMessageFormatter'),
+    diffRenderer: require('./diffRenderer'),
+  });
+} catch {
+  /* port unavailable — callers fall back to their own lazy cli/ require */
 }

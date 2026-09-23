@@ -1,5 +1,5 @@
 <template>
-  <div class="prompt-library-page">
+  <div class="khy-page prompt-library-page">
     <KhyPageHeader title="提示词库">
       <template #actions>
         <el-input
@@ -165,6 +165,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { usePromptLibrary } from '@/composables/usePromptLibrary';
 import KhyPageHeader from '@/components/KhyPageHeader.vue';
 
+import { showSuccess, showError, showWarning, showInfo } from '@/api/notify';
 const {
   prompts,
   pending,
@@ -304,7 +305,7 @@ function openEdit(row) {
 async function handleSave() {
   const content = form.value.content.trim();
   if (!content) {
-    ElMessage.warning('内容不能为空');
+    showWarning('内容不能为空');
     return;
   }
   const payload = {
@@ -320,10 +321,10 @@ async function handleSave() {
     saving.value = true;
     if (editing.value) await updatePrompt(editing.value.id, payload);
     else await createPrompt(payload);
-    ElMessage.success('已保存');
+    showSuccess('已保存');
     dialogVisible.value = false;
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || '保存失败');
+    showError(err?.response?.data?.message || '保存失败');
   } finally {
     saving.value = false;
   }
@@ -332,9 +333,9 @@ async function handleSave() {
 async function handleCopy(row) {
   try {
     await navigator.clipboard.writeText(row.content || '');
-    ElMessage.success('已复制到剪贴板');
+    showSuccess('已复制到剪贴板');
   } catch {
-    ElMessage.warning('复制失败，请手动选择');
+    showWarning('复制失败，请手动选择');
   }
 }
 
@@ -343,9 +344,9 @@ async function handleCopy(row) {
 async function handleUseTemplate(t) {
   try {
     await navigator.clipboard.writeText(t.prompt || '');
-    ElMessage.success('模板已复制，去对话里粘贴使用');
+    showSuccess('模板已复制，去对话里粘贴使用');
   } catch {
-    ElMessage.warning('复制失败，请手动选择');
+    showWarning('复制失败，请手动选择');
   }
 }
 
@@ -358,9 +359,9 @@ async function handleSaveTemplate(t) {
       category: t.category || '',
       tags: [],
     });
-    ElMessage.success('已存入我的提示词库');
+    showSuccess('已存入我的提示词库');
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || '保存失败');
+    showError(err?.response?.data?.message || '保存失败');
   }
 }
 
@@ -369,16 +370,16 @@ async function handleUse(row) {
     await usePrompt(row.id);
     await handleCopy(row);
   } catch {
-    ElMessage.error('操作失败');
+    showError('操作失败');
   }
 }
 
 async function handleApprove(row) {
   try {
     await approvePrompt(row.id);
-    ElMessage.success('已留存到提示词库');
+    showSuccess('已留存到提示词库');
   } catch {
-    ElMessage.error('操作失败');
+    showError('操作失败');
   }
 }
 
@@ -390,9 +391,9 @@ async function handleDelete(row, verb) {
   }
   try {
     await removePrompt(row.id);
-    ElMessage.success(`已${verb}`);
+    showSuccess(`已${verb}`);
   } catch {
-    ElMessage.error('操作失败');
+    showError('操作失败');
   }
 }
 

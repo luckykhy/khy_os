@@ -18,11 +18,11 @@
 
 const path = require('path');
 
-const catalog = require('../src/services/diskCleanup/junkCatalog');
-const guard = require('../src/services/diskCleanup/protectedGuard');
-const scanner = require('../src/services/diskCleanup/scanner');
-const planner = require('../src/services/diskCleanup/planner');
-const executor = require('../src/services/diskCleanup/executor');
+const catalog = require('../src/services/domain/backup/diskCleanup/junkCatalog.js');
+const guard = require('../src/services/domain/backup/diskCleanup/protectedGuard.js');
+const scanner = require('../src/services/domain/backup/diskCleanup/scanner.js');
+const planner = require('../src/services/domain/backup/diskCleanup/planner.js');
+const executor = require('../src/services/domain/backup/diskCleanup/executor.js');
 const engine = require('../src/services/diskCleanup');
 
 // ── 模拟磁盘（纯内存 fsImpl，posix 风格） ───────────────────────────────

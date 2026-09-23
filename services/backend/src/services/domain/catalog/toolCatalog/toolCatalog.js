@@ -141,7 +141,7 @@ function buildToolCatalog(deps = {}, env = process.env) {
   let tools = [];
   try {
     const getAll =
-      deps && typeof deps.getAll === 'function' ? deps.getAll : require('../../../../cli/handlers/tools').getAll;
+      deps && typeof deps.getAll === 'function' ? deps.getAll : require('../../../../tools').getAll;
     const map = getAll();
     // Map<name,tool> | Array | iterable → 值数组
     if (map && typeof map.values === 'function') {

@@ -47,7 +47,11 @@ function searchSkills(query, options = {}) {
 
   // Search manifest-based skills
   try {
-    const skillModule = require('./skills/index');
+    // Real skill registry lives at src/skills (../../skills from here);
+    // ./skills/index is an auto-generated shim that only re-exports four
+    // domain-skill files — requiring it made every catalog call throw and
+    // fail silently to an empty listing.
+    const skillModule = require('../skills');
     const skills = skillModule.getCachedSkills();
 
     for (const skill of skills.values()) {
@@ -157,7 +161,7 @@ function surfaceRelevantSkills(message) {
   if (triggerMatch) {
     const trigger = triggerMatch[0];
     try {
-      const skillModule = require('./skills/index');
+      const skillModule = require('../skills');
       const skill = skillModule.findSkill(trigger);
       if (skill) {
         result.explicit = _toSearchResult(skill);
@@ -201,8 +205,12 @@ function buildSystemReminder(options = {}) {
 
   // Native skills
   try {
-    const skillModule = require('./skills/index');
-    const listing = skillModule.formatSkillListing(Math.floor(charBudget * 0.7), {
+    const skillModule = require('../skills');
+    // When MCP is excluded, do not reserve the 30% MCP slice: the caller
+    // (getSkillCatalogSection) passes includeMcp:false because MCP tools get
+    // their own dynamic section, so reserving would waste a third of the budget.
+    const skillBudget = includeMcp ? Math.floor(charBudget * 0.7) : charBudget;
+    const listing = skillModule.formatSkillListing(skillBudget, {
       cwd: process.cwd(),
     });
     if (listing) {

@@ -4,8 +4,8 @@ const childProcess = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const { ERRNO, negErrno } = require('../src/services/wasm-sandbox/m1Constants');
-const { createKhySysHost } = require('../src/services/wasm-sandbox/khySysHost');
+const { ERRNO, negErrno } = require('../src/services/domain/system/wasm-sandbox/m1Constants.js');
+const { createKhySysHost } = require('../src/services/domain/system/wasm-sandbox/khySysHost.js');
 
 function _repoRoot() {
   return path.resolve(__dirname, '..', '..');

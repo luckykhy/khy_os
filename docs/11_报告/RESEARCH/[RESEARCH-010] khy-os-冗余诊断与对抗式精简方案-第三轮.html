@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [RESEARCH-010] khy-os-冗余诊断与对抗式精简方案-第三轮.md -->
+<title>Khy-OS 冗余诊断与对抗式精简方案（第三轮） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>RESEARCH<span class="sep">›</span>Khy-OS 冗余诊断与对抗式精简方案（第三轮）</div>
+      <header class="hero reveal"><h1>Khy-OS 冗余诊断与对抗式精简方案（第三轮）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-冗余诊断与对抗式精简方案-第三轮">Khy-OS 冗余诊断与对抗式精简方案（第三轮）</a></li><li class="lvl-2"><a href="#扫描结果摘要">扫描结果摘要</a></li><li class="lvl-1"><a href="#第一部分-不足诊断">第一部分：不足诊断</a></li><li class="lvl-2"><a href="#一-shim-壳文件-73-个">一、Shim 壳文件（73 个）</a></li><li class="lvl-3"><a href="#问题">问题</a></li><li class="lvl-3"><a href="#对抗方案">对抗方案</a></li><li class="lvl-2"><a href="#二-重复实现-5-个功能各自独立实现">二、重复实现（5 个功能各自独立实现）</a></li><li class="lvl-3"><a href="#问题-2">问题</a></li><li class="lvl-3"><a href="#对抗方案-2">对抗方案</a></li><li class="lvl-2"><a href="#三-巨石文件-15-个-2000-行">三、巨石文件（15 个 &gt;2000 行）</a></li><li class="lvl-3"><a href="#问题-3">问题</a></li><li class="lvl-3"><a href="#对抗方案-3">对抗方案</a></li><li class="lvl-2"><a href="#四-冗余依赖-1-499-处单行-require">四、冗余依赖（1,499 处单行 require）</a></li><li class="lvl-3"><a href="#问题-4">问题</a></li><li class="lvl-3"><a href="#对抗方案-4">对抗方案</a></li><li class="lvl-1"><a href="#第二部分-修复实施">第二部分：修复实施</a></li><li class="lvl-2"><a href="#优先级矩阵">优先级矩阵</a></li><li class="lvl-2"><a href="#修复记录-2026-09-03">修复记录（2026-09-03）</a></li><li class="lvl-3"><a href="#已完成">已完成</a></li><li class="lvl-3"><a href="#已完成-2">已完成</a></li><li class="lvl-3"><a href="#进行中">进行中</a></li><li class="lvl-3"><a href="#待实施">待实施</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-冗余诊断与对抗式精简方案-第三轮">Khy-OS 冗余诊断与对抗式精简方案（第三轮）<a class="anchor" href="#khy-os-冗余诊断与对抗式精简方案-第三轮" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>文档定位</strong>：第三轮分析 — 代码冗余、死代码、巨石文件、shim 壳文件诊断与精简。<br><strong>分析范围</strong>：services/backend/src 全量 2478 个 JS 文件。<br><strong>分析方法</strong>：静态扫描 + 代码度量 + 依赖分析。<br><strong>生成时间</strong>：2026-09-03<br><strong>修复状态</strong>：进行中</p></blockquote>
+<hr>
+<h2 id="扫描结果摘要">扫描结果摘要<a class="anchor" href="#扫描结果摘要" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>指标</th><th>数值</th><th>健康阈值</th><th>状态</th></tr></thead><tbody><tr><td>JS 文件总数</td><td>2478</td><td>&lt;500</td><td>❌ 严重超标</td></tr><tr><td>代码总行数</td><td>686,329</td><td>&lt;100,000</td><td>❌ 严重超标</td></tr><tr><td>Shim 壳文件</td><td>73</td><td>0</td><td>❌ 全部可删</td></tr><tr><td>死代码文件(&lt;30行)</td><td>31</td><td>0</td><td>❌ 可删</td></tr><tr><td>巨石文件(&gt;2000行)</td><td>15</td><td>0</td><td>❌ 需拆分</td></tr><tr><td>最大文件</td><td>12,762 行</td><td>&lt;500</td><td>❌ 需拆分</td></tr><tr><td>单行 require</td><td>1,499</td><td>&lt;200</td><td>❌ 需清理</td></tr></tbody></table>
+<hr>
+<h1 id="第一部分-不足诊断">第一部分：不足诊断<a class="anchor" href="#第一部分-不足诊断" aria-label="锚点">#</a></h1>
+<h2 id="一-shim-壳文件-73-个">一、Shim 壳文件（73 个）<a class="anchor" href="#一-shim-壳文件-73-个" aria-label="锚点">#</a></h2>
+<h3 id="问题">问题<a class="anchor" href="#问题" aria-label="锚点">#</a></h3>
+<p><code>services/backend/src/services/</code> 下有 73 个文件仅 1-3 行：</p>
+<ul><li>25 个 quantApp shim → <code>require('./extensions/quantApp').loadModule('services/xxx')</code></li><li>1 个 @khy/shared shim → <code>require('@khy/shared/services/cacheService')</code></li><li>1 个别名 shim → <code>require('./bugfixRegressionGate')</code></li><li>1 个空引用 shim → <code>llmService.js</code> 仅导出 <code>multiFreeService</code></li></ul>
+<p>这些文件增加构建时间、混淆模块边界、无实际逻辑。</p>
+<h3 id="对抗方案">对抗方案<a class="anchor" href="#对抗方案" aria-label="锚点">#</a></h3>
+<p><strong>方案 A：全部删除（激进）</strong></p>
+<ul><li>删除所有 shim，调用方直接 require 真实路径</li><li>优点：彻底消除冗余</li><li>缺点：需修改 73+ 调用点</li></ul>
+<p><strong>方案 B：保留 shim + 添加 JSDoc（渐进）</strong></p>
+<ul><li>保留 shim 但标记 <code>@deprecated</code></li><li>优点：向后兼容</li><li>缺点：冗余依旧</li></ul>
+<p><strong>方案 C：标记废弃 + 渐进删除（对抗综合）</strong></p>
+<ul><li>标记 <code>@deprecated</code>，新代码禁止使用</li><li>3 个月后批量删除</li><li>优点：零破坏、渐进收敛</li></ul>
+<p><strong>最终推荐</strong>：方案 C（已实施：25 个文件已标记）</p>
+<hr>
+<h2 id="二-重复实现-5-个功能各自独立实现">二、重复实现（5 个功能各自独立实现）<a class="anchor" href="#二-重复实现-5-个功能各自独立实现" aria-label="锚点">#</a></h2>
+<h3 id="问题-2">问题<a class="anchor" href="#问题-2" aria-label="锚点">#</a></h3>
+<ul><li><code>humanBytes</code>：3 个独立实现（byteFormat.js、ccFormat.js、archiveManifestPolicy.js、cleanupService.js）</li><li><code>_ensureDir</code>：15+ 个独立实现</li><li><code>parseBoolean</code>：7+ 个独立实现</li><li><code>formatBytes</code>：4 个独立实现</li><li><code>safeJsonParse</code>：3+ 个独立实现</li></ul>
+<h3 id="对抗方案-2">对抗方案<a class="anchor" href="#对抗方案-2" aria-label="锚点">#</a></h3>
+<p><strong>方案 A：全部统一（激进）</strong></p>
+<ul><li>全部替换为 <code>utils/</code> 下的单一真源</li><li>优点：彻底消除重复</li><li>缺点：改动大</li></ul>
+<p><strong>方案 B：新增统一工具，旧实现保留（渐进）</strong></p>
+<ul><li>新代码使用统一工具</li><li>优点：零破坏</li><li>缺点：旧代码重复依旧</li></ul>
+<p><strong>方案 C：统一工具 + 渐进替换（对抗综合）</strong></p>
+<ul><li>创建统一工具函数</li><li>修改文件时顺手替换</li><li>CI 检测新增的重复实现</li></ul>
+<p><strong>最终推荐</strong>：方案 C</p>
+<hr>
+<h2 id="三-巨石文件-15-个-2000-行">三、巨石文件（15 个 &gt;2000 行）<a class="anchor" href="#三-巨石文件-15-个-2000-行" aria-label="锚点">#</a></h2>
+<h3 id="问题-3">问题<a class="anchor" href="#问题-3" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>行数</th><th>职责</th></tr></thead><tbody><tr><td>replSession.js</td><td>12,762</td><td>REPL 会话管理</td></tr><tr><td>toolUseLoopCore.js</td><td>11,215</td><td>工具调用循环</td></tr><tr><td>aiChatCore.js</td><td>4,198</td><td>AI 聊天核心</td></tr><tr><td>toolCalling.js</td><td>3,341</td><td>工具调用</td></tr><tr><td>aiManagementServer.js</td><td>3,156</td><td>管理服务器</td></tr><tr><td>toolUseLoopHelpers.js</td><td>2,709</td><td>工具循环辅助</td></tr><tr><td>localBrainService.js</td><td>2,592</td><td>本地大脑</td></tr><tr><td>khyUpgradeRuntime.js</td><td>2,356</td><td>升级运行时</td></tr><tr><td>flagRegistry.js</td><td>2,331</td><td>功能标志注册表</td></tr><tr><td>agenticHarnessService.js</td><td>2,177</td><td>Agent 执行框架</td></tr><tr><td>localLLMService.js</td><td>2,170</td><td>本地 LLM</td></tr><tr><td>multiFreeService.js</td><td>2,152</td><td>免费模型聚合</td></tr><tr><td>webSearchService.js</td><td>2,121</td><td>网络搜索</td></tr><tr><td>aiManagementGatewayAdmin.js</td><td>2,022</td><td>网关管理</td></tr><tr><td>cleanupService.js</td><td>1,875</td><td>清理服务</td></tr></tbody></table>
+<h3 id="对抗方案-3">对抗方案<a class="anchor" href="#对抗方案-3" aria-label="锚点">#</a></h3>
+<p><strong>方案 A：按职责拆分为多文件</strong></p>
+<ul><li>每个类/功能独立文件</li><li>优点：可维护</li><li>缺点：文件数增加</li></ul>
+<p><strong>方案 B：按层级拆分</strong></p>
+<ul><li>核心逻辑 / 辅助逻辑 / 配置 分离</li><li>优点：清晰</li><li>缺点：需重构</li></ul>
+<p><strong>方案 C：提取公共模块 + 保留核心（对抗综合）</strong></p>
+<ul><li>提取重复逻辑到 <code>utils/</code></li><li>核心逻辑保留但精简</li><li>优点：平衡</li><li>缺点：需要判断</li></ul>
+<p><strong>最终推荐</strong>：方案 C</p>
+<hr>
+<h2 id="四-冗余依赖-1-499-处单行-require">四、冗余依赖（1,499 处单行 require）<a class="anchor" href="#四-冗余依赖-1-499-处单行-require" aria-label="锚点">#</a></h2>
+<h3 id="问题-4">问题<a class="anchor" href="#问题-4" aria-label="锚点">#</a></h3>
+<p>大量 <code>const x = require('y');</code> 增加启动时间、耦合度高。</p>
+<h3 id="对抗方案-4">对抗方案<a class="anchor" href="#对抗方案-4" aria-label="锚点">#</a></h3>
+<ul><li>合并同类 require</li><li>使用 <code>require('./')</code> 目录导入</li><li>延迟加载非必要模块</li></ul>
+<hr>
+<h1 id="第二部分-修复实施">第二部分：修复实施<a class="anchor" href="#第二部分-修复实施" aria-label="锚点">#</a></h1>
+<h2 id="优先级矩阵">优先级矩阵<a class="anchor" href="#优先级矩阵" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>编号</th><th>问题</th><th>方案</th><th>预计收益</th><th>状态</th></tr></thead><tbody><tr><td>RD-1</td><td>73 shim 壳文件</td><td>C: 标记废弃 + 渐进删除</td><td>减少 73 文件</td><td>✅ 25 已标记</td></tr><tr><td>RD-2</td><td>31 死代码文件</td><td>全部删除</td><td>减少 31 文件</td><td>待实施</td></tr><tr><td>RD-3</td><td>5 个重复实现</td><td>C: 统一工具 + 渐进替换</td><td>减少 30% 重复</td><td>待实施</td></tr><tr><td>RD-4</td><td>9 巨石文件</td><td>C: 提取公共模块</td><td>减少 50% 行数</td><td>待实施</td></tr><tr><td>RD-5</td><td>1499 单行 require</td><td>合并 + 延迟加载</td><td>减少 30% require</td><td>待实施</td></tr></tbody></table>
+<hr>
+<h2 id="修复记录-2026-09-03">修复记录（2026-09-03）<a class="anchor" href="#修复记录-2026-09-03" aria-label="锚点">#</a></h2>
+<h3 id="已完成">已完成<a class="anchor" href="#已完成" aria-label="锚点">#</a></h3>
+<ul><li>RD-1: 25 个 quantApp shim 标记 @deprecated</li><li>RD-2: llmService.shim 已删除（调用方已改为 require multiFreeService）</li><li>RD-3: 统一 humanBytes 工具函数已创建，4 个重复实现已替换<ul><li><code>utils/humanBytes.js</code> — 新建统一工具</li><li><code>services/cleanupService.js</code> — humanSize 改为委托调用</li><li><code>services/aiUploadStore.js</code> — humanSize 改为委托调用</li><li><code>services/imageMetadataProbe.js</code> — _humanSize 改为委托调用</li><li><code>services/localBrainEnvOptimize.js</code> — _humanBytes 改为委托调用</li></ul></li></ul>
+<h3 id="已完成-2">已完成<a class="anchor" href="#已完成-2" aria-label="锚点">#</a></h3>
+<ul><li>RD-1: 25 个 quantApp shim 标记 @deprecated</li><li>RD-2: llmService.shim 已删除</li><li>RD-3: 统一工具函数已创建 5 个：<ul><li><code>utils/humanBytes.js</code> — 字节格式化</li><li><code>utils/cryptoRandom.js</code> — 密码学安全随机</li><li><code>utils/safeJsonParse.js</code> — 安全 JSON 解析</li><li><code>utils/deepClone.js</code> — 深拷贝</li><li><code>security-scan.js</code> — 安全扫描器</li></ul></li><li>已替换 4 个重复 humanBytes 实现</li><li>已替换 4 个 eval/new Function 为 vm 沙箱</li><li>已标记 4 个空 catch 块添加注释</li></ul>
+<h3 id="进行中">进行中<a class="anchor" href="#进行中" aria-label="锚点">#</a></h3>
+<ul><li>RD-3: 继续统一 _ensureDir / parseBoolean / formatBytes（长期）</li><li>RD-4: 拆分巨石文件（可选）</li><li>RD-5: 清理单行 require（长期）</li></ul>
+<h3 id="待实施">待实施<a class="anchor" href="#待实施" aria-label="锚点">#</a></h3>
+<ul><li>RD-1: 3 个月后删除标记的 shim</li><li>RD-2: 清理其他死代码文件</li></ul>
+<hr>
+<p><em>本文档由 AI 辅助分析生成，基于 khy-os 仓库的全量静态扫描。</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/11_报告/RESEARCH/[RESEARCH-009] khy-os-深度不足诊断与对抗式修复-第二轮.html"><div class="dir">← 上一篇</div><div class="ttl">Khy-OS 深度不足诊断与自对抗式修复方案（第二轮）</div></a><a class="next" href="../../../docs/11_报告/RESEARCH/[RESEARCH-011] khy-os-用户体感诊断与修复-第四轮.html"><div class="dir">下一篇 →</div><div class="ttl">Khy-OS 第四轮诊断：用户体感与可用性</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/11_报告/RESEARCH/[RESEARCH-010] khy-os-冗余诊断与对抗式精简方案-第三轮.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

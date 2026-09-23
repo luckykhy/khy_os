@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-FE-008] 组件API设计-数据组件.md -->
+<title>[DESIGN-FE-008] 组件 API 设计 · 数据组件 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-FE<span class="sep">›</span>[DESIGN-FE-008] 组件 API 设计 · 数据组件</div>
+      <header class="hero reveal"><h1>[DESIGN-FE-008] 组件 API 设计 · 数据组件</h1></header>
+      
+      <article class="doc-body">
+<h1 id="design-fe-008-组件-api-设计-数据组件">[DESIGN-FE-008] 组件 API 设计 · 数据组件<a class="anchor" href="#design-fe-008-组件-api-设计-数据组件" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：数据组件（Table/List/Tree/Chart 等）的 API 目标态。<br><strong>隶属</strong>：本文是 [<code>[DESIGN-FE-002]</code> 前端组件库规范]([DESIGN-FE-002] 前端组件库规范.md) 的<strong>子篇</strong>；主篇是唯一入口与 scope 裁决真源，本文只承载细则。<br><strong>状态</strong>：随主篇——主篇 §0 声明为「目标态、非现状」，本文同样在组件库真正落地后才生效；在此之前一切以 [<code>[DESIGN-FE-001]</code> 前端页面规范]([DESIGN-FE-001] 前端页面规范.md) 为准。</p></blockquote>
+<hr>
+<p><strong>Table 组件 (KhyTable)</strong>：</p>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;div class=&quot;khy-table-wrapper&quot;&gt;
+    &lt;table :class=&quot;tableClasses&quot;&gt;
+      &lt;thead&gt;
+        &lt;tr&gt;
+          &lt;th
+            v-for=&quot;column in columns&quot;
+            :key=&quot;column.key&quot;
+            :class=&quot;[
+              'khy-table__th',
+              {
+                'khy-table__th--sortable': column.sortable,
+                'khy-table__th--sorted': sortKey === column.key
+              }
+            ]&quot;
+            :style=&quot;{ width: column.width }&quot;
+            @click=&quot;handleSort(column)&quot;
+          &gt;
+            &lt;div class=&quot;khy-table__th-content&quot;&gt;
+              &lt;span&gt;{{ column.title }}&lt;/span&gt;
+              &lt;span v-if=&quot;column.sortable&quot; class=&quot;khy-table__sort-icon&quot;&gt;
+                {{ getSortIcon(column.key) }}
+              &lt;/span&gt;
+            &lt;/div&gt;
+          &lt;/th&gt;
+        &lt;/tr&gt;
+      &lt;/thead&gt;
+      &lt;tbody&gt;
+        &lt;tr
+          v-for=&quot;(row, index) in data&quot;
+          :key=&quot;row[rowKey] || index&quot;
+          :class=&quot;[
+            'khy-table__row',
+            {
+              'khy-table__row--selected': isSelected(row),
+              'khy-table__row--striped': striped &amp;&amp; index % 2 === 1
+            }
+          ]&quot;
+          @click=&quot;handleRowClick(row)&quot;
+        &gt;
+          &lt;td
+            v-for=&quot;column in columns&quot;
+            :key=&quot;column.key&quot;
+            class=&quot;khy-table__td&quot;
+          &gt;
+            &lt;slot
+              :name=&quot;column.key&quot;
+              :row=&quot;row&quot;
+              :column=&quot;column&quot;
+              :value=&quot;row[column.key]&quot;
+            &gt;
+              {{ row[column.key] }}
+            &lt;/slot&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/tbody&gt;
+    &lt;/table&gt;
+    
+    &lt;div v-if=&quot;loading&quot; class=&quot;khy-table__loading&quot;&gt;
+      &lt;slot name=&quot;loading&quot;&gt;
+        &lt;div class=&quot;khy-table__spinner&quot; /&gt;
+      &lt;/slot&gt;
+    &lt;/div&gt;
+    
+    &lt;div v-if=&quot;data.length === 0 &amp;&amp; !loading&quot; class=&quot;khy-table__empty&quot;&gt;
+      &lt;slot name=&quot;empty&quot;&gt;
+        &lt;p&gt;暂无数据&lt;/p&gt;
+      &lt;/slot&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+const props = defineProps({
+  // 数据源
+  data: {
+    type: Array,
+    default: () =&gt; []
+  },
+  // 列配置
+  columns: {
+    type: Array,
+    required: true
+  },
+  // 行键
+  rowKey: {
+    type: String,
+    default: 'id'
+  },
+  // 是否可选择
+  selectable: Boolean,
+  // 选中的行
+  selectedRows: {
+    type: Array,
+    default: () =&gt; []
+  },
+  // 是否斑马纹
+  striped: Boolean,
+  // 是否加载中
+  loading: Boolean,
+  // 排序
+  sortable: Boolean
+});
+
+const emit = defineEmits([
+  'row-click',
+  'selection-change',
+  'sort-change'
+]);
+
+const sortKey = ref('');
+const sortOrder = ref('asc');
+
+const tableClasses = computed(() =&gt; [
+  'khy-table',
+  {
+    'khy-table--striped': props.striped,
+    'khy-table--selectable': props.selectable,
+    'khy-table--loading': props.loading
+  }
+]);
+
+const isSelected = (row) =&gt; {
+  return props.selectedRows.some(item =&gt; item[props.rowKey] === row[props.rowKey]);
+};
+
+const handleRowClick = (row) =&gt; {
+  emit('row-click', row);
+};
+
+const handleSort = (column) =&gt; {
+  if (!column.sortable) return;
+  
+  if (sortKey.value === column.key) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortKey.value = column.key;
+    sortOrder.value = 'asc';
+  }
+  
+  emit('sort-change', { key: sortKey.value, order: sortOrder.value });
+};
+
+const getSortIcon = (key) =&gt; {
+  if (sortKey.value !== key) return '↕';
+  return sortOrder.value === 'asc' ? '↑' : '↓';
+};
+&lt;/script&gt;</code></pre>
+<hr>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-FE/[DESIGN-FE-007] 组件API设计-反馈组件.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-FE-007] 组件 API 设计 · 反馈组件</div></a><a class="next" href="../../../docs/10_规范/DESIGN-FE/[DESIGN-FE-009] 组件测试规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-FE-009] 组件测试规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-FE/[DESIGN-FE-008] 组件API设计-数据组件.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-038] Khyos双轨淬火-确定性保底与模型辅助增强的Bug升维引擎.md -->
+<title>[DESIGN-ARCH-038] Khyos 双轨淬火——确定性保底 + 模型辅助增强的 Bug 升维引擎 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>18_归档<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-038] Khyos 双轨淬火——确定性保底 + 模型辅助增强的 Bug 升维引擎</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-038] Khyos 双轨淬火——确定性保底 + 模型辅助增强的 Bug 升维引擎</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-038-khyos-双轨淬火-确定性保底-模型辅助增强的-bug-升维引擎">[DESIGN-ARCH-038] Khyos 双轨淬火——确定性保底 + 模型辅助增强的 Bug 升维引擎</a></li><li class="lvl-2"><a href="#1-目标与定位">1. 目标与定位</a></li><li class="lvl-3"><a href="#1-1-三方对比-自调查">1.1 三方对比（自调查）</a></li><li class="lvl-2"><a href="#2-meta-plan-扫栈自决">2. Meta-Plan（扫栈自决）</a></li><li class="lvl-2"><a href="#3-架构蓝图-双轨流转">3. 架构蓝图（双轨流转）</a></li><li class="lvl-2"><a href="#4-骨架实现-核心模块">4. 骨架实现（核心模块）</a></li><li class="lvl-3"><a href="#4-1-3-2-确定性升维映射-保底-零模型">4.1 §3.2 确定性升维映射（保底，零模型）</a></li><li class="lvl-3"><a href="#4-2-最终-evorequirement-双轨特征-3-4">4.2 最终 EvoRequirement 双轨特征（§3.4）</a></li><li class="lvl-2"><a href="#5-场景验证-4">5. 场景验证（§4）</a></li><li class="lvl-2"><a href="#6-防呆规则与硬边界-5">6. 防呆规则与硬边界（§5）</a></li><li class="lvl-2"><a href="#7-验证">7. 验证</a></li></ul></nav>
+      <article class="doc-body">
+<blockquote><p>⚠️ <strong>已归档（孤儿设计稿）· 请勿据此实现</strong> ⚠️</p>
+<p>本规范描述的治理引擎 <code>dualTrackForge（与已在产 evoEngine/painPointScanner 真重叠）</code> 经 2026-06-14「接线或删除」证据级核实为 <strong>ORPHAN</strong><br>（零消费者、从 <code>executeTool</code>/<code>toolUseLoop</code>/<code>aiManagementServer</code> 三入口均不可达），<br>已按 <code>.ai/GOVERNANCE-LEDGER.md</code> §B.0 <strong>删除其实现代码</strong>（基线 <code>0437b6b</code>，删除提交<br><code>a76785e</code> + <code>99ea828</code>）。本文件仅作<strong>历史可追溯</strong>留存，<strong>非在产、不得作为实现依据</strong>。<br>判「在产」唯一标准见 <code>.ai/GUARDS-AI.md</code> §0。</p>
+<p>——归档于 2026-06-14</p></blockquote>
+<h1 id="design-arch-038-khyos-双轨淬火-确定性保底-模型辅助增强的-bug-升维引擎">[DESIGN-ARCH-038] Khyos 双轨淬火——确定性保底 + 模型辅助增强的 Bug 升维引擎<a class="anchor" href="#design-arch-038-khyos-双轨淬火-确定性保底-模型辅助增强的-bug-升维引擎" aria-label="锚点">#</a></h1>
+<blockquote><p>架构与设计规范 · 遵循 [MGMT-STD-001] · 关联 [DESIGN-ARCH-037] 自举创世闭环自愈、[DESIGN-ARCH-044] 自愈微循环、[DESIGN-ARCH-028] 通信防御零静默、[DESIGN-ARCH-025] 元规划约束注入</p></blockquote>
+<h2 id="1-目标与定位">1. 目标与定位<a class="anchor" href="#1-目标与定位" aria-label="锚点">#</a></h2>
+<p>把「一切 Bug 皆需求」从口号落成<strong>双轨</strong>工程：一次执行现场被淬火成进化需求，两条轨各司其职、主干永远保底。</p>
+<ul><li><strong>主干（确定性保底轨）</strong>：纯代码物理断言判出硬伤 → 查表确定性升维 → 保底需求。<strong>零模型依赖、永远可产出</strong>。模型宕机，系统仍能持续把 Bug 转化为需求。</li><li><strong>旁路（模型辅助增益轨）</strong>：模型对软性逻辑异常做深度自省，产出带置信度的增益假设。<strong>绝不允许成为需求生成的阻塞点或唯一依赖</strong>——超时/抛错/低置信一律静默丢弃，降级为纯确定性输出。</li></ul>
+<p>这是 [DESIGN-ARCH-037] 自举创世引擎「需求生成核心」的双轨升级：复用其 <code>evoRequirement</code>/<code>evoLevels</code>/<code>evoLedger</code> 单源，落为零侵入纯子系统 <code>src/services/dualTrackForge/</code>。模型 brain 为注入式，引擎模型无关、可确定性单测。</p>
+<h3 id="1-1-三方对比-自调查">1.1 三方对比（自调查）<a class="anchor" href="#1-1-三方对比-自调查" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>纯静态拦截</th><th>纯模型自省</th><th>双轨淬火（本架构）</th></tr></thead><tbody><tr><td>错误感知</td><td>仅物理异常</td><td>试图理解语义但常放过</td><td>物理断言必捕硬伤 + 模型尝试捕软伤</td></tr><tr><td>归因深度</td><td>浅层（缺校验器）</td><td>深但不可靠（可能幻觉根因）</td><td>确定性映射保底 + 模型推演增益（带置信度）</td></tr><tr><td>需求产出</td><td>稳定但颗粒粗（L0/L1）</td><td>不稳定，模型犯错则无需求</td><td>永远有保底，偶尔增益出 L2 架构需求</td></tr><tr><td>系统鲁棒性</td><td>极高</td><td>极低（模型波动即进化能力波动）</td><td>极高，模型宕机仍持续将 Bug 转化为需求</td></tr></tbody></table>
+<h2 id="2-meta-plan-扫栈自决">2. Meta-Plan（扫栈自决）<a class="anchor" href="#2-meta-plan-扫栈自决" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>决策</th><th>选择</th><th>复用既有真源</th></tr></thead><tbody><tr><td>物理网关部署位置</td><td>包裹模型执行器（<code>gate.wrap(fn)</code>），对结果/抛错断言</td><td>新建 <code>PhysicalAssertionGate</code></td></tr><tr><td>逻辑网关部署位置</td><td>模型输出后置处理（执行后自评），软异常静默旁路</td><td>新建 <code>LogicalSelfAssessor</code>（注入 brain）</td></tr><tr><td>需求级别格</td><td>复用 L0⊏L1⊏L2 升级格 + planL2 强制降级闸门</td><td><code>evoEngine/evoLevels</code></td></tr><tr><td>需求规格真源</td><td>复用七要素 EvoRequirement + forge/validate</td><td><code>evoEngine/evoRequirement</code></td></tr><tr><td>需求池持久化</td><td>复用 append-only 哈希链（分支 <code>dualtrack_pool</code>）</td><td><code>evoEngine/evoLedger</code></td></tr><tr><td>归因起点</td><td>物理码 → 校准 why（锁 classify 落 L0/L1）</td><td>新建 <code>physicalCodes</code> 单源</td></tr></tbody></table>
+<h2 id="3-架构蓝图-双轨流转">3. 架构蓝图（双轨流转）<a class="anchor" href="#3-架构蓝图-双轨流转" aria-label="锚点">#</a></h2>
+<pre><code>                         执行尝试 / 失败现场 observation
+                                     │
+                 ┌───────────────────┴────────────────────┐
+                 │ 主干（同步·最先·零模型）               │ 旁路（异步·可失败·静默）
+                 ▼                                         ▼
+        PhysicalAssertionGate.assert            LogicalSelfAssessor.assess
+        ├─ ERR_SCHEMA_VIOLATION                  ├─ brain(snapshot) + 超时 race
+        ├─ ERR_TOOL_HALLUCINATION                ├─ 解析 {root_cause, suggestion, confidence}
+        ├─ ERR_BEHAVIOR_FORBIDDEN                ├─ 置信度阈值 0.6 过滤
+        └─ ERR_RESOURCE_OVERFLOW                 └─ 超时/抛错/坏格式/低置信 → null（静默）
+                 │ 命中                                     │
+                 ▼ [防呆③ 先发保底]                        │
+        DeterministicElevator.elevate                      │
+        → 保底 EvoRequirement（L0/L1）                      │
+        → 立即落需求池（source=deterministic）              │
+                 │                                         │
+                 └────────────┬────────────────────────────┘
+                              ▼
+              DualTrackRequirementMerger.merge
+              ├─ 仅保底 → source_track=Deterministic
+              ├─ 保底+合格增益 → Dual-Track（merged_action 双段）
+              ├─ 增益带合规 l2Plan → 建议升 L2 → planL2 强制降级 L0+3步（防呆②）
+              └─ 无保底·仅软增益 → fromAssisted → Assisted
+                              ▼
+                  需求池（不可变哈希链，防呆⑤）</code></pre>
+<h2 id="4-骨架实现-核心模块">4. 骨架实现（核心模块）<a class="anchor" href="#4-骨架实现-核心模块" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>模块</th><th>职责</th></tr></thead><tbody><tr><td><code>physicalCodes.js</code></td><td>4 物理码 + 确定性升维映射单源（signal/why/proposedModules/action/intendedLevel/priority）；why 校准避开 classify 的 L2 触发词</td></tr><tr><td><code>physicalAssertionGate.js</code></td><td><code>PhysicalAssertionGate</code>：显式信号检测 + 错误签名兜底 + <code>wrap(fn)</code> 包裹执行器；<code>PhysicalException</code>。确定性、不抛（返回值或 null，把发序攥在门面）</td></tr><tr><td><code>deterministicElevator.js</code></td><td><code>DeterministicElevator</code>：物理异常 → 保底 EvoRequirement（经 forge），零模型必成功，级别锁 L0/L1</td></tr><tr><td><code>logicalSelfAssessor.js</code></td><td><code>LogicalSelfAssessor</code>：注入 brain + 超时 race + 解析 + 置信度过滤；<code>assess</code> 契约「合格增益或 null，永不抛」；<code>LogicalException</code></td></tr><tr><td><code>dualTrackMerger.js</code></td><td><code>DualTrackRequirementMerger</code>：合并标 <code>source_track</code>（Deterministic/Assisted/Dual-Track）；<code>fromAssisted</code> 纯辅助轨；l2Plan 合规才升 L2</td></tr><tr><td><code>index.js</code></td><td><code>DualTrackForge</code> 门面：物理断言→确定性升维（先落盘）+逻辑评估（可失败）→合并→需求池</td></tr></tbody></table>
+<h3 id="4-1-3-2-确定性升维映射-保底-零模型">4.1 §3.2 确定性升维映射（保底，零模型）<a class="anchor" href="#4-1-3-2-确定性升维映射-保底-零模型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>物理异常码</th><th>保底需求处方</th></tr></thead><tbody><tr><td><code>ERR_SCHEMA_VIOLATION</code></td><td>增加/强化输出格式校验拦截器与自动重试解析器</td></tr><tr><td><code>ERR_TOOL_HALLUCINATION</code></td><td>增加工具路由白名单校验与降级兜底工具</td></tr><tr><td><code>ERR_BEHAVIOR_FORBIDDEN</code></td><td>增加细粒度权限沙箱与行为前置审批网关</td></tr><tr><td><code>ERR_RESOURCE_OVERFLOW</code></td><td>增加上下文预算硬限网关与异步快照执行器</td></tr></tbody></table>
+<h3 id="4-2-最终-evorequirement-双轨特征-3-4">4.2 最终 EvoRequirement 双轨特征（§3.4）<a class="anchor" href="#4-2-最终-evorequirement-双轨特征-3-4" aria-label="锚点">#</a></h3>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;requirementId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;evo_…&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;title&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;增加工具路由白名单校验与降级兜底工具（+模型增益）&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;source_track&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Dual-Track&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;deterministic_finding&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ERR_TOOL_HALLUCINATION: 调用了不存在的工具 tool_x&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;assisted_hypothesis&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;指令中的\&quot;查询\&quot;被误映射为不存在的 tool_x (置信度: 0.8)&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;merged_action&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;[保底] 增加工具路由白名单校验与降级兜底工具&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;[增益] 优化指令到工具名的映射 Prompt，增加 Few-shot 示例&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;priority&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;High&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h2 id="5-场景验证-4">5. 场景验证（§4）<a class="anchor" href="#5-场景验证-4" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>场景</th><th>纯模型方案</th><th>双轨方案</th></tr></thead><tbody><tr><td>A 模型严重幻觉/宕机</td><td>唯一依赖崩塌 → <strong>无任何需求产出</strong>（报错失败）</td><td>物理断言保底 → <strong>成功产出 Deterministic 需求</strong></td></tr><tr><td>B 复杂逻辑死锁</td><td>时好时坏</td><td>保底（ERR_RESOURCE_OVERFLOW）+ 模型增益架构根因 + 合规 l2Plan → <strong>Dual-Track，增益出 L2 架构需求</strong>，经 planL2 强制降级 L0 + 3 步验证</td></tr><tr><td>B 反证</td><td>—</td><td>模型给 L2 根因但<strong>无 l2Plan</strong> → 增益并入但<strong>绝不擅自升 L2</strong>（防呆②）</td></tr></tbody></table>
+<h2 id="6-防呆规则与硬边界-5">6. 防呆规则与硬边界（§5）<a class="anchor" href="#6-防呆规则与硬边界-5" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>铁律</th><th>落实点</th></tr></thead><tbody><tr><td>①</td><td>模型辅助轨绝不阻塞主干；超时/异常静默丢弃降级</td><td><code>assess</code> 自带超时 race + 全程 try/catch → null；保底需求在 await 模型前已铸成落盘</td></tr><tr><td>②</td><td>增益需求置信度阈值（默认 0.6）无情过滤；l2Plan 不合规绝不升 L2</td><td><code>LogicalSelfAssessor.evaluate</code> 阈值门 + <code>merger</code> 经 <code>evoLevels.planL2</code> 强制降级</td></tr><tr><td>③</td><td>物理异常被拦截时绝不跳过确定性映射等模型</td><td>门面 <code>forge</code>：<code>physical → elevate → _log</code> 无条件先于 <code>assessor.assess</code></td></tr><tr><td>④</td><td>EvoRequirement 必标 source_track</td><td><code>merger.merge</code>/<code>fromAssisted</code> 恒置 <code>source_track</code></td></tr><tr><td>⑤</td><td>进化历史不可篡改</td><td>复用 <code>evoLedger</code> append-only 哈希链，<code>verifyPool</code> 定位篡改</td></tr></tbody></table>
+<h2 id="7-验证">7. 验证<a class="anchor" href="#7-验证" aria-label="锚点">#</a></h2>
+<p><code>tests/services/dualTrackForge/dualTrackForge.test.js</code> 31 绿：物理网关 4 码确定性判别 + 多命中优先级 + 干净现场；确定性升维 4 码级别锁定；模型轨置信度过滤 + fail-soft（超时/抛错/坏格式/低置信/无 brain）；合并器 source_track 四态；门面四防呆；两场景对比 + L2 反证；需求池哈希链。邻近 evoEngine/frictionBridge/metaplan/selfHeal 91 绿零回归。</p>
+<p>零侵入：自成纯子系统，不接管 <code>executeTool</code>；可由 [DESIGN-ARCH-037] <code>frictionBridge</code>/<code>evolve</code> 后续路由消费其需求池（后续 PR）。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/18_归档/03_DESIGN_设计/[DESIGN-ARCH-035] 上下文永续与认知压缩引擎.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-035] 上下文永续与认知压缩引擎</div></a><a class="next" href="../../../docs/18_归档/03_DESIGN_设计/[DESIGN-ARCH-039] Khyos环境共生-环境感知与原生亲和架构.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-039] Khyos 环境共生——环境感知与原生亲和架构</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/18_归档/03_DESIGN_设计/[DESIGN-ARCH-038] Khyos双轨淬火-确定性保底与模型辅助增强的Bug升维引擎.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

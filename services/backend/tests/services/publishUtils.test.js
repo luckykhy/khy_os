@@ -1,20 +1,18 @@
 'use strict';
 /**
- * publishUtils.test.js �?pins the generic helpers extracted from the
+ * publishUtils.test.js — pins the generic helpers extracted from the
  * cli/handlers/publish.js god-file (B1 split, second seam).
  */
 const u = require('../../src/services/domain/deploy/publish/publishUtils.js');
-describe('publish/publishUtils', () => {
+
+describe('Publish Utils', () => {
+  // merged from describe: publish/publishUtils
   // �?2 公理化收敛：_isTruthyFlag 委托 utils/parseBoolean(base tier) 后，逐字节复�?
   // 原内�?`value === true || ['1','true','yes','on'].includes(String(value||'').trim().toLowerCase())`
   // 的采样域。期望值全部按原实现手算写死�?
-  describe('_markFailure', () => {
+  // merged section: _markFailure
     let prev;
     afterEach(() => { process.exitCode = prev; });
-  });
-});
-
-describe('Publish Utils', () => {
   test('_toInt coerces, clamps to min, and falls back', () => {
         expect(u._toInt('5', 1)).toBe(5);
         expect(u._toInt('abc', 7)).toBe(7);

@@ -90,9 +90,9 @@ describe('ai cli feedback stability', () => {
   });
 
   test.each([
-    ['localLLM', '请求 AI 服务...（本地模型首轮可能需要 30-120 秒预热）'],
-    ['codex', '请求 AI 服务...'],
-  ])('same-task strict preferred timeout keeps feedback for %s', async (preferredAdapter, expectedRequestStatus) => {
+    ['localLLM'],
+    ['codex'],
+  ])('same-task strict preferred timeout keeps feedback for %s', async (preferredAdapter) => {
     process.env.KHY_DISABLE_SESSION_PERSIST = '1';
     process.env.GATEWAY_PREFERRED_ADAPTER = preferredAdapter;
     process.env.GATEWAY_PREFERRED_STRICT = 'true';
@@ -118,12 +118,12 @@ describe('ai cli feedback stability', () => {
     expect(result.reply).toContain('AI 网关异常');
     expect(result.reply).toContain('已跳过云端兜底');
     expect(result.reply.toLowerCase()).toContain(preferredAdapter.toLowerCase());
-    const requestStatusMatched = preferredAdapter === 'localLLM'
-      ? statuses.some(s => (
-        s.includes('请求 AI 服务...（本地模型首轮可能需要 30-120 秒预热）')
-        || s.includes('请求 AI 服务...（检测到本地模型已热启动，预计更快返回）')
-      ))
-      : statuses.some(s => s.includes(expectedRequestStatus));
+    // The request status names the adapter the request is actually being sent
+    // to (e.g. "请求 localLLM（本地模型首轮可能需要 30-120 秒预热）" /
+    // "请求 localLLM（本地模型已热启动，预计更快返回）" / "请求 codex").
+    const requestStatusMatched = statuses.some(
+      (s) => s.includes('请求 ') && s.toLowerCase().includes(preferredAdapter.toLowerCase())
+    );
     expect(requestStatusMatched).toBe(true);
     expect(statuses.some(s => s.includes('失败原因:'))).toBe(true);
     expect(phases).toContain('init');

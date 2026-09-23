@@ -27,10 +27,16 @@ export function ElicitationPanel({ questions, onSubmit, onDismiss }: Elicitation
   }
 
   const handleSubmit = () => {
+    // 自定义回答必须并入本次提交的快照：handleSelect 走 setState 是异步的，
+    // 旧实现直接 onSubmit(answers) 会把刚输入的自定义答案丢掉（单题卡必现）。
+    const merged =
+      current.allowCustom && customAnswer.trim()
+        ? { ...answers, [current.id]: customAnswer.trim() }
+        : answers
     if (current.allowCustom && customAnswer.trim()) {
       handleSelect(current.id, customAnswer.trim())
     }
-    onSubmit(answers)
+    onSubmit(merged)
   }
 
   const handleNext = () => {

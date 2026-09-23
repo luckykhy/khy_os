@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [IMPL-RPT-059] 上下状态显示一致-修复方案-2026-09-17.md -->
+<title>上下状态显示不一致：根因分析与修复方案 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>IMPL-RPT<span class="sep">›</span>上下状态显示不一致：根因分析与修复方案</div>
+      <header class="hero reveal"><h1>上下状态显示不一致：根因分析与修复方案</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#上下状态显示不一致-根因分析与修复方案">上下状态显示不一致：根因分析与修复方案</a></li><li class="lvl-2"><a href="#零-实施摘要-先看这个">零、实施摘要（先看这个）</a></li><li class="lvl-2"><a href="#一-先把-不一致-拆成三个具体错位">一、先把「不一致」拆成三个具体错位</a></li><li class="lvl-3"><a href="#错位-a-①-显示-agnes-③-实际连-windsurf">错位 A：① 显示 agnes，③ 实际连 windsurf</a></li><li class="lvl-3"><a href="#错位-b-②-页脚通道字段显示错误">错位 B：② 页脚通道字段显示错误</a></li><li class="lvl-3"><a href="#错位-c-失败时页脚不刷新">错位 C：失败时页脚不刷新</a></li><li class="lvl-2"><a href="#二-要修的不是-显示-是-口径">二、要修的不是「显示」，是「口径」</a></li><li class="lvl-3"><a href="#设计-routefact-路由事实快照">设计：`RouteFact`（路由事实快照）</a></li><li class="lvl-2"><a href="#三-修复清单-按依赖顺序-5-步">三、修复清单（按依赖顺序，5 步）</a></li><li class="lvl-3"><a href="#step-1-建立-routefact-地基-必须最先做">Step 1｜建立 `RouteFact`（地基，必须最先做）</a></li><li class="lvl-3"><a href="#step-2-修错位-a-getactiveadapter-与-generate-口径统一">Step 2｜修错位 A：`getActiveAdapter()` 与 `generate()` 口径统一</a></li><li class="lvl-3"><a href="#step-3-修错位-b-页脚通道字段改读实际值">Step 3｜修错位 B：页脚通道字段改读实际值</a></li><li class="lvl-3"><a href="#step-4-修错位-c-失败路径也刷新页脚">Step 4｜修错位 C：失败路径也刷新页脚</a></li><li class="lvl-3"><a href="#step-5-修配置-消除现场-非代码问题">Step 5｜修配置（消除现场，非代码问题）</a></li><li class="lvl-2"><a href="#四-验收标准-必须逐条可测">四、验收标准（必须逐条可测）</a></li><li class="lvl-2"><a href="#五-附带发现-建议同批处理">五、附带发现（建议同批处理）</a></li><li class="lvl-2"><a href="#六-决策点-已裁决">六、决策点（已裁决）</a></li><li class="lvl-2"><a href="#七-实施记录-2026-09-17">七、实施记录（2026-09-17）</a></li><li class="lvl-3"><a href="#7-1-新增-gateway-routefact-js-纯叶子">7.1 新增：`gateway/routeFact.js`（纯叶子）</a></li><li class="lvl-3"><a href="#7-2-统一选路口径-aigatewaymodelmethods-js">7.2 统一选路口径：`aiGatewayModelMethods.js`</a></li><li class="lvl-3"><a href="#7-3-页脚三处修复">7.3 页脚三处修复</a></li><li class="lvl-3"><a href="#7-4-防第三次复发-baseselfcheckservice-js">7.4 防第三次复发：`baseSelfCheckService.js`</a></li><li class="lvl-3"><a href="#7-5-配置-services-backend-env">7.5 配置：`services/backend/.env`</a></li><li class="lvl-3"><a href="#7-6-验证">7.6 验证</a></li><li class="lvl-3"><a href="#7-7-tests-cli-全量跑的阻塞-已排查-与本次改动无关">7.7 `tests/cli` 全量跑的阻塞（已排查，与本次改动无关）</a></li><li class="lvl-2"><a href="#附-证据索引-全部实测">附：证据索引（全部实测）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="上下状态显示不一致-根因分析与修复方案">上下状态显示不一致：根因分析与修复方案<a class="anchor" href="#上下状态显示不一致-根因分析与修复方案" aria-label="锚点">#</a></h1>
+<blockquote><p>日期 2026-09-17｜现场：<code>D:/Portable</code> 会话 <code>6ff1a791</code>，页脚显示 <code>agnes-3.0-flash</code>，报错显示 <code>windsurf [unavailable]</code>。<br>结论：<strong>这不是一个 bug，是三个独立 bug 叠加</strong>。三个数据源各说各话，且没有任何一处负责它们的一致性。</p>
+<p><strong>状态：已按本方案实施完成（2026-09-17 15:2x）。</strong> 实施记录见文末「七、实施记录」。</p></blockquote>
+<hr>
+<h2 id="零-实施摘要-先看这个">零、实施摘要（先看这个）<a class="anchor" href="#零-实施摘要-先看这个" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Step</th><th>内容</th><th>落地文件</th><th>状态</th></tr></thead><tbody><tr><td>1</td><td>建立 <code>RouteFact</code> 单一真源</td><td>新增 <code>gateway/routeFact.js</code></td><td>✅ 完成</td></tr><tr><td>2</td><td>统一选路口径（选 <strong>A2</strong>）</td><td><code>aiGatewayModelMethods.js</code></td><td>✅ 完成</td></tr><tr><td>3</td><td>页脚实际优先 + 失败即刷新</td><td><code>App.js</code> / <code>useQueryBridge.js</code> / <code>footerStability.js</code> / <code>FooterBar.js</code></td><td>✅ 完成</td></tr><tr><td>4</td><td>失败当帧刷新页脚</td><td>同上（<code>turnFailureAt</code>）</td><td>✅ 完成</td></tr><tr><td>5</td><td>修配置现场</td><td><code>services/backend/.env</code></td><td>✅ 完成</td></tr><tr><td>6</td><td><strong>防第三次复发</strong>（原方案的「附带建议」已升级为必做）</td><td><code>baseSelfCheckService.js</code></td><td>✅ 完成</td></tr></tbody></table>
+<p>测试：新增 2 个测试文件 + 扩充 2 个既有文件，<code>tests/gateway</code>（67 套 556 例）、<code>tests/tui</code>、<br><code>tests/cli/tui</code> 全绿；<code>check-leaf-contract</code> 与 <code>check-wiring</code> 守卫通过。改动 8 个源文件 + 4 个测试文件。</p>
+<hr>
+<h2 id="一-先把-不一致-拆成三个具体错位">一、先把「不一致」拆成三个具体错位<a class="anchor" href="#一-先把-不一致-拆成三个具体错位" aria-label="锚点">#</a></h2>
+<p>页脚那一行本身就有两个字段，加上报错，共三处数据，来自三个互不联动的源：</p>
+<table><thead><tr><th>#</th><th>显示位置</th><th>显示值</th><th>数据源</th><th>语义</th></tr></thead><tbody><tr><td>①</td><td>页脚 <code>[...]</code> 模型名</td><td><code>agnes-3.0-flash</code></td><td><code>gateway.getActiveAdapter().activeModel</code></td><td>「我<strong>打算</strong>用谁」</td></tr><tr><td>②</td><td>页脚 <code>[...]</code> 通道</td><td>（截图中被裁切）</td><td><code>process.env.GATEWAY_PREFERRED_ADAPTER</code></td><td>「环境变量<strong>声明</strong>用谁」</td></tr><tr><td>③</td><td>报错正文</td><td><code>windsurf [unavailable]</code></td><td><code>aiGatewayGenerateMethod</code> 的 <code>allAttempts</code></td><td>「我<strong>实际去连</strong>了谁，失败」</td></tr></tbody></table>
+<h3 id="错位-a-①-显示-agnes-③-实际连-windsurf">错位 A：① 显示 agnes，③ 实际连 windsurf<a class="anchor" href="#错位-a-①-显示-agnes-③-实际连-windsurf" aria-label="锚点">#</a></h3>
+<p><strong>根因</strong>：<code>getActiveAdapter()</code> 的 Tier 2 分支。</p>
+<p><code>aiGatewayModelMethods.js:430-530</code> 的解析顺序是：</p>
+<pre><code>Tier 1  GATEWAY_PREFERRED_ADAPTER（env 显式钉选）
+Tier 2  lastVerifiedModelStore（上次成功的 model+adapter）
+Tier 3  getDefaultRouteRecommendation()
+Tier 4  按优先级取第一个 available</code></pre>
+<p>当前 env 里 <code>GATEWAY_PREFERRED_ADAPTER=windsurf</code>，但本机：</p>
+<ul><li><code>~/AppData/Roaming/Windsurf/User/globalStorage/storage.json</code> → <strong>不存在</strong></li><li><code>AppData/Local/Programs/Windsurf</code> → <strong>不存在</strong></li></ul>
+<p>于是 <code>windsurfAdapter.detect()</code> 返回 <code>false</code>，<strong>Tier 1 被跳过</strong>，落到 <strong>Tier 2</strong>：</p>
+<pre><code class="language-js"><span class="hljs-keyword">const</span> lastVerified = <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_getLastVerifiedActiveAdapter</span>();
+<span class="hljs-keyword">if</span> (lastVerified) { <span class="hljs-keyword">return</span> lastVerified; }   <span class="hljs-comment">// ← 这里返回了 api / agnes-3.0-flash</span></code></pre>
+<p><code>.khy/last_verified_model.json</code> 里存的正是 <code>{model: agnes-3.0-flash, adapter: api}</code>。</p>
+<p><strong>但 Tier 1 的「跳过」只发生在 <code>getActiveAdapter()</code> 这个只读展示函数里，不影响真正的请求寻路。</strong> 真正的寻路走 <code>aiGatewayGenerateMethod.js:4026</code>：</p>
+<pre><code class="language-js"><span class="hljs-keyword">if</span> (strictPreferredOnly &amp;&amp; entry.<span class="hljs-property">key</span> === preferredAdapter) {
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">finishResult</span>({ ... <span class="hljs-attr">errorType</span>: <span class="hljs-string">&#x27;unavailable&#x27;</span> }, ...);   <span class="hljs-comment">// 直接返回，不回退</span>
+}</code></pre>
+<p><code>GATEWAY_PREFERRED_STRICT=true</code> → <code>strictPreferredOnly=true</code> → 请求被<strong>硬钉在 windsurf 上直接失败</strong>。</p>
+<blockquote><p><strong>一句话</strong>：<code>getActiveAdapter()</code> 会<strong>聪明地绕开</strong>不可用的钉选通道，而 <code>generate()</code> 会<strong>死板地死在</strong>那个通道上。同一个 <code>GATEWAY_PREFERRED_ADAPTER</code>，两个消费点的容错策略完全相反 —— 这是错位 A 的全部原因。</p></blockquote>
+<h3 id="错位-b-②-页脚通道字段显示错误">错位 B：② 页脚通道字段显示错误<a class="anchor" href="#错位-b-②-页脚通道字段显示错误" aria-label="锚点">#</a></h3>
+<p><code>App.js:737</code>：</p>
+<pre><code class="language-js"><span class="hljs-attr">adapter</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">GATEWAY_PREFERRED_ADAPTER</span> || active?.<span class="hljs-property">name</span> || f.<span class="hljs-property">adapter</span> || <span class="hljs-string">&#x27;auto&#x27;</span>,</code></pre>
+<p>这里<strong>优先读 env</strong>，而不是读 <code>active?.key</code>。env 是 <code>windsurf</code>，所以页脚通道段会显示 windsurf，<strong>而实际活动适配器是 api</strong>。这一行把「声明」写进了「实际」的位置。</p>
+<h3 id="错位-c-失败时页脚不刷新">错位 C：失败时页脚不刷新<a class="anchor" href="#错位-c-失败时页脚不刷新" aria-label="锚点">#</a></h3>
+<p><code>refreshFooter()</code> 的触发条件（<code>App.js:3714-3728</code>）：</p>
+<pre><code class="language-js"><span class="hljs-keyword">const</span> _querySettled = query.<span class="hljs-property">status</span> === <span class="hljs-string">&#x27;idle&#x27;</span> || query.<span class="hljs-property">status</span> === <span class="hljs-string">&#x27;done&#x27;</span>;
+<span class="hljs-title class_">React</span>.<span class="hljs-title function_">useEffect</span>(<span class="hljs-function">() =&gt;</span> { <span class="hljs-title function_">refreshFooter</span>(); }, [refreshFooter, query.<span class="hljs-property">adapterInfo</span>, _querySettled]);</code></pre>
+<p>只在 <code>adapterInfo</code> 变化或 turn 落到 <code>idle</code>/<code>done</code> 时触发。<strong>失败路径既不更新 <code>adapterInfo</code> 也不进入 <code>done</code></strong>，因此页脚停留在失败前的乐观值 —— 用户看到 agnes 一直挂着，而实际每次都在 windsurf 上撞墙。</p>
+<hr>
+<h2 id="二-要修的不是-显示-是-口径">二、要修的不是「显示」，是「口径」<a class="anchor" href="#二-要修的不是-显示-是-口径" aria-label="锚点">#</a></h2>
+<p><strong>核心问题</strong>：现在没有任何一个对象同时掌握「用户想要什么 / 实际用了什么 / 结果如何」。</p>
+<p>三处各自推导，必然漂移。修复方向不是把三处改成同一个字符串（治标），而是<strong>建立一个单一真源的「路由事实」对象</strong>，三处都只读它。</p>
+<h3 id="设计-routefact-路由事实快照">设计：<code>RouteFact</code>（路由事实快照）<a class="anchor" href="#设计-routefact-路由事实快照" aria-label="锚点">#</a></h3>
+<p>每次 <code>generate()</code> 结束时（无论成败）产出一个事实快照，字段语义必须唯一：</p>
+<pre><code class="language-js">{
+  <span class="hljs-attr">requested</span>:   { <span class="hljs-attr">adapter</span>: <span class="hljs-string">&#x27;windsurf&#x27;</span>, <span class="hljs-attr">model</span>: <span class="hljs-string">&#x27;claude-3.5-sonnet&#x27;</span> },  <span class="hljs-comment">// 用户/环境声明的意图</span>
+  <span class="hljs-attr">resolved</span>:    { <span class="hljs-attr">adapter</span>: <span class="hljs-string">&#x27;api&#x27;</span>,      <span class="hljs-attr">model</span>: <span class="hljs-string">&#x27;agnes-3.0-flash&#x27;</span>  },  <span class="hljs-comment">// 网关解析后的选路</span>
+  <span class="hljs-attr">attempted</span>:   { <span class="hljs-attr">adapter</span>: <span class="hljs-string">&#x27;windsurf&#x27;</span>, <span class="hljs-attr">model</span>: <span class="hljs-string">&#x27;claude-3.5-sonnet&#x27;</span> },  <span class="hljs-comment">// 实际发出的第一个请求</span>
+  <span class="hljs-attr">served</span>:      { <span class="hljs-attr">adapter</span>: <span class="hljs-string">&#x27;api&#x27;</span>,      <span class="hljs-attr">model</span>: <span class="hljs-string">&#x27;agnes-3.0-flash&#x27;</span>  },  <span class="hljs-comment">// 成功的那个（失败则为 null）</span>
+  <span class="hljs-attr">outcome</span>:     <span class="hljs-string">&#x27;failed&#x27;</span>,                                             <span class="hljs-comment">// ok | failed | partial</span>
+  <span class="hljs-attr">strictPinned</span>: <span class="hljs-literal">true</span>,                                                <span class="hljs-comment">// 是否被 strict 硬钉</span>
+  <span class="hljs-attr">reason</span>:      <span class="hljs-string">&#x27;windsurf unavailable&#x27;</span>,
+  <span class="hljs-attr">at</span>: <span class="hljs-number">1789.</span>..
+}</code></pre>
+<p><strong>字段语义是唯一的</strong>，不允许任何消费点自行推导。这是全部修复的地基。</p>
+<hr>
+<h2 id="三-修复清单-按依赖顺序-5-步">三、修复清单（按依赖顺序，5 步）<a class="anchor" href="#三-修复清单-按依赖顺序-5-步" aria-label="锚点">#</a></h2>
+<h3 id="step-1-建立-routefact-地基-必须最先做">Step 1｜建立 <code>RouteFact</code>（地基，必须最先做）<a class="anchor" href="#step-1-建立-routefact-地基-必须最先做" aria-label="锚点">#</a></h3>
+<ul><li><strong>新增</strong>：<code>services/backend/src/services/gateway/routeFact.js</code>（纯叶子，零 IO）</li><li>提供 <code>buildRouteFact(result, options)</code> 与 <code>createEmptyRouteFact()</code></li><li><strong>接线点</strong>：<code>aiGatewayGenerateMethod.js</code> 的 <code>finishResult()</code> —— 所有成功/失败出口都汇聚于此，是唯一不需要改 N 处的挂载点</li><li><strong>不改</strong>任何既有返回字段（<code>actualAdapter</code> / <code>attempts</code> 全部保留），只<strong>追加</strong> <code>routeFact</code></li></ul>
+<blockquote><p>落点选择理由：<code>finishResult</code> 已是现有收敛点，避开在 20+ 个 <code>return</code> 语句处逐个埋点。</p></blockquote>
+<h3 id="step-2-修错位-a-getactiveadapter-与-generate-口径统一">Step 2｜修错位 A：<code>getActiveAdapter()</code> 与 <code>generate()</code> 口径统一<a class="anchor" href="#step-2-修错位-a-getactiveadapter-与-generate-口径统一" aria-label="锚点">#</a></h3>
+<p>两个选项，需你裁决：</p>
+<table><thead><tr><th>选项</th><th>做法</th><th>影响</th></tr></thead><tbody><tr><td><strong>A1（推荐）</strong></td><td><code>getActiveAdapter()</code> 增加 <code>strictPinned</code> 标记；检测到「Tier 1 因不可用被跳过」时，回落到 Tier 1 通道的<strong>失败态</strong>而非 Tier 2 的成功态</td><td>页脚会显示 <code>windsurf (不可用)</code>，与报错一致 —— <strong>诚实但难看</strong></td></tr><tr><td><strong>A2</strong></td><td>保持 <code>getActiveAdapter()</code> 现行为，但页脚在 <code>strictPinned &amp;&amp; 实际失败</code> 时叠加告警标记</td><td>页脚显示 <code>agnes-3.0-flash ⚠ 钉选通道 windsurf 不可用</code> —— <strong>信息更全，但需新增渲染逻辑</strong></td></tr></tbody></table>
+<p>两者都能做到一致；A1 改后端语义，A2 改前端展示。<strong>建议 A2</strong>，因为 agnes 确实是「打算用它」的那个，抹掉它反而丢失信息。</p>
+<h3 id="step-3-修错位-b-页脚通道字段改读实际值">Step 3｜修错位 B：页脚通道字段改读实际值<a class="anchor" href="#step-3-修错位-b-页脚通道字段改读实际值" aria-label="锚点">#</a></h3>
+<p><code>App.js:737</code> 改为：</p>
+<pre><code class="language-js"><span class="hljs-attr">adapter</span>: active?.<span class="hljs-property">key</span> || process.<span class="hljs-property">env</span>.<span class="hljs-property">GATEWAY_PREFERRED_ADAPTER</span> || f.<span class="hljs-property">adapter</span> || <span class="hljs-string">&#x27;auto&#x27;</span>,</code></pre>
+<p>即<strong>实际优先，声明兜底</strong>。同时在页脚新增「意图 ≠ 实际」的视觉区分（如 <code>windsurf→api</code>）。</p>
+<h3 id="step-4-修错位-c-失败路径也刷新页脚">Step 4｜修错位 C：失败路径也刷新页脚<a class="anchor" href="#step-4-修错位-c-失败路径也刷新页脚" aria-label="锚点">#</a></h3>
+<p><code>App.js:3714</code> 的依赖数组加入失败信号：</p>
+<pre><code class="language-js"><span class="hljs-keyword">const</span> _querySettled = query.<span class="hljs-property">status</span> === <span class="hljs-string">&#x27;idle&#x27;</span> || query.<span class="hljs-property">status</span> === <span class="hljs-string">&#x27;done&#x27;</span>;
+<span class="hljs-title class_">React</span>.<span class="hljs-title function_">useEffect</span>(<span class="hljs-function">() =&gt;</span> { <span class="hljs-title function_">refreshFooter</span>(); },
+  [refreshFooter, query.<span class="hljs-property">adapterInfo</span>, _querySettled, query.<span class="hljs-property">lastErrorAt</span>]);  <span class="hljs-comment">// ← 新增</span></code></pre>
+<p>需在 query bridge 侧暴露 <code>lastErrorAt</code>（失败时递增的时间戳）。</p>
+<h3 id="step-5-修配置-消除现场-非代码问题">Step 5｜修配置（消除现场，非代码问题）<a class="anchor" href="#step-5-修配置-消除现场-非代码问题" aria-label="锚点">#</a></h3>
+<p><code>services/backend/.env:19-20</code> 当前值与文件内 09-14 注释自相矛盾 —— 注释明确写了「改用 auto」，值却是 <code>windsurf</code> + <code>strict=true</code>：</p>
+<pre><code>GATEWAY_PREFERRED_ADAPTER=windsurf     # 注释说该改 auto，实际没改
+GATEWAY_PREFERRED_STRICT=true          # strict 抑制回退 → 硬失败</code></pre>
+<p>这正是 <code>.env:12-18</code> 记录过的 <strong>codex 事故的第二次复发</strong>（上次钉 codex，这次钉 windsurf，机制完全相同）。建议：</p>
+<ul><li><code>GATEWAY_PREFERRED_ADAPTER=auto</code></li><li>或钉到真实可用的 <code>api</code>（模型需带池前缀 <code>agnes:agnes-3.0-flash</code>）</li><li>清理 <code>RELAY_API_KEY=quality-gate-windsurf-access-token-fixture</code>（测试夹具值，导致 relay 通道必然 404，已实测留存于 <code>relay_api_runtime_diagnostics.json</code>）</li></ul>
+<hr>
+<h2 id="四-验收标准-必须逐条可测">四、验收标准（必须逐条可测）<a class="anchor" href="#四-验收标准-必须逐条可测" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>场景</th><th>期望</th></tr></thead><tbody><tr><td>1</td><td>env 钉一个不可用通道 + strict=true，发请求</td><td>页脚与报错<strong>指向同一个通道名</strong>；页脚带不可用标记</td></tr><tr><td>2</td><td>同上，但 strict=false（允许回退）</td><td>页脚显示实际成功的通道；不出现「页脚说 A、报错说 B」</td></tr><tr><td>3</td><td>通道从可用变不可用</td><td>失败当帧页脚即更新，不等下一轮</td></tr><tr><td>4</td><td><code>GATEWAY_PREFERRED_ADAPTER=auto</code></td><td>页脚无告警，显示实际选路结果</td></tr><tr><td>5</td><td>任一场景</td><td><code>routeFact</code> 三字段（requested/resolved/served）<strong>逻辑自洽</strong>：resolved 非空时 served 为 null 则 outcome 必为 failed</td></tr></tbody></table>
+<p><strong>回归红线</strong>：不得改动 <code>attempts</code> / <code>actualAdapter</code> / <code>errorType</code> 的既有语义 —— 大量测试依赖它们（<code>buildChannelFailureAdvice.test.js</code>、<code>visionFailureSummaryDisplayName.test.js</code> 等）。</p>
+<hr>
+<h2 id="五-附带发现-建议同批处理">五、附带发现（建议同批处理）<a class="anchor" href="#五-附带发现-建议同批处理" aria-label="锚点">#</a></h2>
+<p>这两处不是本次主因，但会持续制造误判：</p>
+<ol><li><strong><code>relayApiAdapter.js:969/990</code> 的 <code>[RELAY-REQ]/[RELAY-RES]</code> 是无门控的 <code>process.stderr.write</code></strong> —— 无条件刷屏到终端，截图中就出现了。建议加环境门控（如 <code>KHY_RELAY_TRACE</code>）。</li><li><strong><code>_buildFailureReasonSection</code> 默认只取前 4~6 条</strong>（<code>aiGateway.js:216</code>）—— 在 strict 分支下会把真正有价值的上游错误挤掉，只留下 <code>unavailable</code> 这种无信息量的结论。</li></ol>
+<hr>
+<h2 id="六-决策点-已裁决">六、决策点（已裁决）<a class="anchor" href="#六-决策点-已裁决" aria-label="锚点">#</a></h2>
+<ol><li><strong>Step 2 → 选 A2</strong>：页脚保留「意图通道」，同时叠加钉选通道告警。理由：agnes 确实是「打算用它」的那个，</li></ol>
+<p>抹掉它反而丢失信息；A2 让两个通道名同时在屏，用户一眼可对上报错。</p>
+<ol><li><strong><code>.env</code> → 本轮改</strong>，但在做完 Step 1-4 的代码侧验证<strong>之后</strong>。理由：先证明代码自洽，再消除现场，</li></ol>
+<p>避免「改配置把问题盖过去」。</p>
+<hr>
+<h2 id="七-实施记录-2026-09-17">七、实施记录（2026-09-17）<a class="anchor" href="#七-实施记录-2026-09-17" aria-label="锚点">#</a></h2>
+<h3 id="7-1-新增-gateway-routefact-js-纯叶子">7.1 新增：<code>gateway/routeFact.js</code>（纯叶子）<a class="anchor" href="#7-1-新增-gateway-routefact-js-纯叶子" aria-label="锚点">#</a></h3>
+<p>零 IO、零 require、不读 env、绝不抛。导出 <code>createEmptyRouteFact</code> / <code>buildRouteFact</code> /<br><code>formatRouteFactLabel</code> / <code>isPinnedAdapter</code> / <code>isStrictPinned</code> / <code>_assertCoherent</code>。</p>
+<p>字段语义唯一：<code>requested</code>（意图）/ <code>resolved</code>（解析）/ <code>attempted</code>（实发）/ <code>served</code>（成功者）/<br><code>outcome</code> / <code>strictPinned</code> / <code>pinnedUnavailable</code>。</p>
+<p>三条一致性不变式由 <code>_assertCoherent</code> 校验（返回违规清单，<strong>不抛</strong> —— 诊断设施不该成为故障源）：</p>
+<ul><li><code>outcome==='ok'</code> ⟺ <code>served</code> 非空</li><li><code>outcome==='failed'</code> → <code>served === null</code></li><li><code>strictPinned &amp;&amp; pinnedUnavailable</code> → 必为 <code>failed</code></li></ul>
+<p><strong>接线点</strong>：<code>aiGatewayGenerateMethod.js</code> 的 <code>finishResult()</code>。它是全部出口（成功 + 20 余处失败 return）<br>的既有收敛点，在此<strong>追加</strong> <code>routeFact</code> 字段，既有 <code>attempts</code>/<code>actualAdapter</code>/<code>errorType</code> 逐字节不变。</p>
+<h3 id="7-2-统一选路口径-aigatewaymodelmethods-js">7.2 统一选路口径：<code>aiGatewayModelMethods.js</code><a class="anchor" href="#7-2-统一选路口径-aigatewaymodelmethods-js" aria-label="锚点">#</a></h3>
+<p><code>getActiveAdapter()</code> 在 Tier1 落空时记下 <code>pinnedSkipped = {active, adapter, strict}</code>，<br>挂到后续分支返回的 status 对象上。<strong>不改选路行为</strong>（仍会回落到可用通道），<br>只让「我绕开了一个钉选通道」这件事可被观测。</p>
+<h3 id="7-3-页脚三处修复">7.3 页脚三处修复<a class="anchor" href="#7-3-页脚三处修复" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>App.js</code></td><td>通道字段改 `active?.key \</td></tr><tr><td><code>App.js</code></td><td><code>refreshFooter</code> 依赖数组加入 <code>query.turnFailureAt</code></td></tr><tr><td><code>useQueryBridge.js</code></td><td>新增 <code>turnFailureAt</code> state，非中断失败时递增</td></tr><tr><td><code>footerStability.js</code></td><td>新增 <code>FOOTER_VALUE_KEYS</code>（<code>modelStatus</code>/<code>pinnedSkip</code>）按<strong>值</strong>比较</td></tr><tr><td><code>FooterBar.js</code></td><td>新增 <code>pinnedSkipSeg</code>：strict 时红字硬预警，非 strict 时黄字回退提示</td></tr></tbody></table>
+<p><strong><code>footerStability</code> 这处是实施中发现的隐藏陷阱</strong>：<code>modelStatus</code> 每次都是新对象字面量，<br>若用 <code>!==</code> 比较会永远判不等（守卫失效 → 渲染风暴复发）；若完全不比较，告警就不会重绘<br>（等于没修）。故必须做<strong>稳定摘要的按值比较</strong>，并显式按 key 排序以免疫键序差异。</p>
+<h3 id="7-4-防第三次复发-baseselfcheckservice-js">7.4 防第三次复发：<code>baseSelfCheckService.js</code><a class="anchor" href="#7-4-防第三次复发-baseselfcheckservice-js" aria-label="锚点">#</a></h3>
+<p>原方案把这条列为「附带建议」，实施时升级为必做 —— 因为这是同一 bug 的<strong>第二次</strong>复发<br>（codex 09-14 → windsurf 09-17），不加固必会有第三次。</p>
+<p><code>_checkGatewayPreferred</code> 在「通道已注册但不可用」时，新增判定 <code>strict</code>：</p>
+<ul><li><code>strict=true</code> → <strong>error</strong> 级、扣 20 分、明说「strict 禁止回退…所有 AI 调用将硬失败」并给出修法</li><li><code>strict=false</code> → warning 级、扣 8 分（原行为）</li></ul>
+<h3 id="7-5-配置-services-backend-env">7.5 配置：<code>services/backend/.env</code><a class="anchor" href="#7-5-配置-services-backend-env" aria-label="锚点">#</a></h3>
+<pre><code>GATEWAY_PREFERRED_ADAPTER=api      # 原 windsurf（本机无安装/无 token，必 404）
+GATEWAY_PREFERRED_MODEL=agnes-3.0-flash   # 原 claude-3.5-sonnet
+GATEWAY_PREFERRED_STRICT=true      # 保持</code></pre>
+<p>备份：<code>.env.bak-20260917-statusfix</code>。其余键（含 <code>RELAY_API_COMPATIBILITY</code>）经 diff 校验未变动。</p>
+<blockquote><p><strong>未改</strong>：<code>RELAY_API_ENDPOINT=https://api.codeium.com/windsurf/v1</code> 与<br><code>RELAY_API_KEY=quality-gate-windsurf-access-token-fixture</code> 仍是死配置（实测 404）。<br>因当前首选通道已切到 <code>api</code>，它不再影响正常调用；但若回退到 relay 仍会失败。<br>建议后续单独清理，本轮不动以免扩大改动面。</p></blockquote>
+<h3 id="7-6-验证">7.6 验证<a class="anchor" href="#7-6-验证" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>手段</th><th>结果</th></tr></thead><tbody><tr><td><code>routeFact.test.js</code>（新增 20 例）</td><td>✅ 20/20，含事故现场精确复现</td></tr><tr><td><code>footerStability.test.js</code>（扩充 8 例）</td><td>✅ 18/18</td></tr><tr><td><code>baseSelfCheck.preferredAdapter.test.js</code>（扩充 2 例）</td><td>✅ 4/4</td></tr><tr><td><code>tests/gateway</code> 全量</td><td>✅ 67 套 556 例</td></tr><tr><td><code>tests/tui</code> + <code>tests/cli/tui</code></td><td>✅ 26 套 307 例</td></tr><tr><td><code>check-leaf-contract</code>（routeFact）</td><td>✅ 通过</td></tr><tr><td><code>check-wiring</code></td><td>✅ 74 检查器全接线</td></tr></tbody></table>
+<p><strong>端到端复现</strong>：注入事故原始输入后，<code>routeFact</code> 输出的 label 为 <code>✗ claude-3.5-sonnet (windsurf)</code>，<br>一致性检查自洽；切到 <code>auto</code> 或修好的配置后 label 为 <code>agnes-3.0-flash (api)</code>，<strong>无虚假告警</strong>。</p>
+<p>四场景验收（全部自洽）：</p>
+<table><thead><tr><th>场景</th><th>意图</th><th>实发</th><th>served</th><th>页脚标签</th></tr></thead><tbody><tr><td>修复前现场（钉 windsurf + strict，无凭据）</td><td>windsurf</td><td>windsurf</td><td>—</td><td><code>✗ claude-3.5-sonnet (windsurf)</code></td></tr><tr><td>修复后配置（钉 api/agnes）</td><td>api</td><td>api</td><td>api</td><td><code>agnes-3.0-flash (api)</code></td></tr><tr><td>auto 模式</td><td>auto</td><td>api</td><td>api</td><td><code>agnes-3.0-flash (api)</code>（无虚假告警）</td></tr><tr><td>钉 windsurf 但 strict=false（成功回退）</td><td>windsurf</td><td>api</td><td>api</td><td><code>windsurf → agnes-3.0-flash (api)</code></td></tr></tbody></table>
+<h3 id="7-7-tests-cli-全量跑的阻塞-已排查-与本次改动无关">7.7 <code>tests/cli</code> 全量跑的阻塞（已排查，与本次改动无关）<a class="anchor" href="#7-7-tests-cli-全量跑的阻塞-已排查-与本次改动无关" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>现象</th><th>真实原因</th><th>结论</th></tr></thead><tbody><tr><td>安全策略拦截 <code>reg.exe</code></td><td>沙箱把 <code>C:\Windows\system32\reg.exe</code> 列入程序黑名单；<code>tests/services/mdEditor/mdEditorRegister.test.js</code> 等经 <code>mdEditorRegister.js</code> / <code>nativeUninstaller.js</code> 间接触发</td><td><strong>环境限制</strong>，非代码缺陷</td></tr><tr><td><code>tasteWatchService</code> 定时器在 Jest 拆除后仍触发</td><td>该叶子在测试环境下未清理 timer（<code>tasteWatchService.js:461</code> 的 <code>Timeout._onTimeout</code>）</td><td><strong>既有泄漏</strong>，与本轮无关</td></tr><tr><td><code>Your test suite must contain at least one test</code></td><td><code>commandAutoRegistryLazy.test.js</code> 等用 <code>node:test</code> 写的套件被 Jest 收集（runner 配置不匹配）。用 <code>node --test</code> 跑：<strong>9/9 通过</strong></td><td><strong>runner 配置问题</strong>，非测试失败</td></tr></tbody></table>
+<p>以上三项均已逐一复现并定性；本次改动未触碰 <code>reg</code>、XDG、taste 相关代码路径。</p>
+<hr>
+<h2 id="附-证据索引-全部实测">附：证据索引（全部实测）<a class="anchor" href="#附-证据索引-全部实测" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>证据</th><th>位置</th></tr></thead><tbody><tr><td>页脚模型来源</td><td><code>App.js:697-745</code> <code>refreshFooter()</code></td></tr><tr><td>页脚通道来源</td><td><code>App.js:737</code></td></tr><tr><td>页脚渲染</td><td><code>FooterBar.js:236-247</code></td></tr><tr><td>选路 Tier 1/2</td><td><code>aiGatewayModelMethods.js:430-530</code></td></tr><tr><td>strict 硬失败</td><td><code>aiGatewayGenerateMethod.js:4026-4055</code></td></tr><tr><td>失败原因拼接</td><td><code>aiGateway.js:216-291</code> <code>_buildFailureReasonSection</code></td></tr><tr><td>会话记录</td><td><code>.khy/sessions/D-Portable/6ff1a791-*.json</code> → <code>model: agnes-3.0-flash</code></td></tr><tr><td>上次成功模型</td><td><code>.khy/last_verified_model.json</code></td></tr><tr><td>配置现场</td><td><code>services/backend/.env:3-23</code></td></tr><tr><td>relay 404 痕迹</td><td><code>.khy/gateway/relay_api_runtime_diagnostics.json</code></td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-058] ARCH-119-逐hunk拆分提交-进度-2026-09-18.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-119] 逐 hunk 拆分提交 — 进度与阻塞</div></a><a class="next" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-060] KhyOS规范落地自查报告-2026-09-21.html"><div class="dir">下一篇 →</div><div class="ttl">Khy OS 规范落地自查报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-059] 上下状态显示一致-修复方案-2026-09-17.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

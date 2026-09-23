@@ -1,6 +1,6 @@
 'use strict';
 
-const restore = require('../../src/services/restore/index');
+const restore = require('../../../src/services/restore/index.js');
 
 describe('restore index', () => {
   test('module is defined', () => {

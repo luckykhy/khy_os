@@ -32,9 +32,9 @@ const repoRoot = process.env.KHY_RULES_REGISTRY_ROOT
 
 const RULE_ID = 'TOOLING-007';
 const CARD_RULE_ID = 'TOOLING-008';
-const REGISTRY_REL = 'docs/_规范/RULES-REGISTRY.json';
+const REGISTRY_REL = 'docs/10_规范/registry/RULES-REGISTRY.json';
 const CARD_GEN_REL = 'scripts/docs/gen-rules-cards.js';
-const CARD_DIR_REL = 'docs/_规范/规则卡';
+const CARD_DIR_REL = 'docs/10_规范/规则卡';
 // 扩展名按长度降序排列：正则 alternation 从左到右尝试，`js` 必须排在 `json`
 // 之后，否则 `package.json` 会被截断成 `package.js`。
 const HOME_EXTS = ['md', 'js', 'cjs', 'mjs', 'json', 'yml', 'yaml', 'py', 'vue', 'ts']

@@ -6,7 +6,8 @@ const {
   SSH_TIMEOUT_MS,
   DUMB_TERM_TIMEOUT_MS,
   DEFAULT_TIMEOUT_MS,
-} = require('./escapeTimeoutDetector');
+} = require('../../src/cli/escapeTimeoutDetector.js');
+const assert = require('node:assert');
 // ── Constants ────────────────────────────────────────────────────────────────
 // ── resolveEscapeCodeTimeout ─────────────────────────────────────────────────
 
@@ -34,11 +35,11 @@ describe('Escape Timeout Detector', () => {
       expect(resolveEscapeCodeTimeout({ [OVERRIDE_ENV]: '-100' })).toBe(MIN_TIMEOUT_MS);
   });
 
-  test('resolveEscapeCodeTimeout: SSH session �?200ms', () => {
+  test('resolveEscapeCodeTimeout: SSH session �?200ms', () => {
       expect(resolveEscapeCodeTimeout({ SSH_CONNECTION: '192.168.1.1' })).toBe(SSH_TIMEOUT_MS);
   });
 
-  test('resolveEscapeCodeTimeout: dumb terminal �?200ms', () => {
+  test('resolveEscapeCodeTimeout: dumb terminal �?200ms', () => {
       expect(resolveEscapeCodeTimeout({ TERM: 'dumb' })).toBe(DUMB_TERM_TIMEOUT_MS);
       expect(resolveEscapeCodeTimeout({ TERM: 'DUMB' })).toBe(DUMB_TERM_TIMEOUT_MS);
       expect(resolveEscapeCodeTimeout({ TERM: 'Dumb' })).toBe(DUMB_TERM_TIMEOUT_MS);
@@ -63,19 +64,19 @@ describe('Escape Timeout Detector', () => {
       );
   });
 
-  test('resolveEscapeCodeTimeout: non-numeric override �?default', () => {
+  test('resolveEscapeCodeTimeout: non-numeric override �?default', () => {
       expect(resolveEscapeCodeTimeout({ [OVERRIDE_ENV]: 'abc' })).toBe(DEFAULT_TIMEOUT_MS);
   });
 
-  test('resolveEscapeCodeTimeout: whitespace-only override �?default', () => {
+  test('resolveEscapeCodeTimeout: whitespace-only override �?default', () => {
       expect(resolveEscapeCodeTimeout({ [OVERRIDE_ENV]: '   ' })).toBe(DEFAULT_TIMEOUT_MS);
   });
 
-  test('resolveEscapeCodeTimeout: null env �?default', () => {
+  test('resolveEscapeCodeTimeout: null env �?default', () => {
       expect(resolveEscapeCodeTimeout(null)).toBe(DEFAULT_TIMEOUT_MS);
   });
 
-  test('resolveEscapeCodeTimeout: Windows Terminal (WT_SESSION) �?default', () => {
+  test('resolveEscapeCodeTimeout: Windows Terminal (WT_SESSION) �?default', () => {
       expect(resolveEscapeCodeTimeout({ WT_SESSION: 'uuid' })).toBe(DEFAULT_TIMEOUT_MS);
   });
 

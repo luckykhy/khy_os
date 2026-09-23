@@ -31,7 +31,7 @@ describe('toolUseLoop shell->web_search recovery', () => {
       return { success: false, error: 'unexpected tool' };
     });
 
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool,
       clearPreflightContext: jest.fn(),
     }));
@@ -81,7 +81,7 @@ describe('toolUseLoop shell->web_search recovery', () => {
       return { success: false, error: 'unexpected tool' };
     });
 
-    jest.doMock('../src/services/toolCalling', () => ({
+    jest.doMock('../src/services/tool/toolCalling', () => ({
       executeTool,
       clearPreflightContext: jest.fn(),
     }));

@@ -259,10 +259,13 @@ function parseResultDate(text, nowMs) {
     return now;
   }
 
-  // 相对(英文)e.g. "3 days ago", "an hour ago"
-  m = s.match(/(\d+)\s*(minute|hour|day|week|month|year)s?\s+ago/i);
+  // 相对(英文)e.g. "3 days ago", "an hour ago", "a day ago"
+  // The count slot accepts a/an (→ 1) because SERP snippets routinely show
+  // "an hour ago" / "a day ago"; without it those results date-resolve to null
+  // and sink in recency ranking despite being the freshest hits.
+  m = s.match(/\b(an?|\d+)\s*(minute|hour|day|week|month|year)s?\s+ago/i);
   if (m) {
-    const n = parseInt(m[1], 10);
+    const n = /\D/.test(m[1]) ? 1 : parseInt(m[1], 10);
     const unit = m[2].toLowerCase();
     const mult = {
       minute: 60 * SEC,

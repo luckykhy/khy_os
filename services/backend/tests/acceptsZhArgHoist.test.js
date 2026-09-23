@@ -1,6 +1,6 @@
 'use strict';
 /**
- * acceptsZhArgHoist.test.js �?Ch2「不要每轮重建可复用结构�?
+ * acceptsZhArgHoist.test.js —Ch2「不要每轮重建可复用结构�?
  *
  * Verifies the pure module-const hoist of ACCEPTS_ZH_ARG out of parseInput's
  * body. This literal Set (commands that accept a Chinese positional argument)

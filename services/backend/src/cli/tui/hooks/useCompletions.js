@@ -170,8 +170,12 @@ function computeFile(value, offset) {
         // the accepted mention stays resolvable by referencesService.
         let rel;
         if (refRoot) {
+          // `first` (the alias segment) lives in the resolveMentionAbs block
+          // scope above; rederive it here so the ReferenceError cannot silently
+          // zero out the whole listing.
+          const alias = partial.slice(0, partial.indexOf('/'));
           const inRef = path.relative(refRoot, listDir).split(path.sep).join('/');
-          rel = inRef ? `${first}/${inRef}/${e.name}` : `${first}/${e.name}`;
+          rel = inRef ? `${alias}/${inRef}/${e.name}` : `${alias}/${e.name}`;
         } else {
           const dir = partial.includes('/') ? path.dirname(partial) : '.';
           rel = dir === '.' ? e.name : `${dir}/${e.name}`;
@@ -192,21 +196,32 @@ function computeFile(value, offset) {
   return { kind: 'file', items: entries, start: atStart, end: offset };
 }
 
-function useCompletions(value, offset) {
-  return useMemo(() => {
-    if (!value) {
-      return { active: false, items: [] };
-    }
-    const slash = computeSlash(value);
-    if (slash) {
-      return { active: true, ...slash };
-    }
-    const file = computeFile(value, offset);
-    if (file) {
-      return { active: true, ...file };
-    }
+/**
+ * Pure derivation behind the hook — one source of truth for "which menu would
+ * this buffer open?". App also calls it on the *live* input mirror when a second
+ * key arrives inside the same input packet, before React committed the first
+ * one, so the menu branch is not skipped on a stale closure (BUG-64).
+ */
+function computeCompletions(value, offset) {
+  if (!value) {
     return { active: false, items: [] };
-  }, [value, offset]);
+  }
+  const slash = computeSlash(value);
+  if (slash) {
+    return { active: true, ...slash };
+  }
+  const file = computeFile(value, offset);
+  if (file) {
+    return { active: true, ...file };
+  }
+  return { active: false, items: [] };
+}
+
+function useCompletions(value, offset) {
+  return useMemo(
+    () => computeCompletions(value, offset),
+    [value, offset]
+  );
 }
 
 /** Build the replacement buffer when an item is accepted. */
@@ -225,4 +240,4 @@ function applyCompletion(value, comp, item) {
   return { text, offset: (before + insert).length };
 }
 
-module.exports = { useCompletions, applyCompletion, computeFile, computeSlash };
+module.exports = { useCompletions, applyCompletion, computeCompletions, computeFile, computeSlash };

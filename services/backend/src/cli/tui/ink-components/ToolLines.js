@@ -39,6 +39,9 @@ const _toolDiffRowsMemo = require('./toolDiffRowsMemo');
 // 门控 KHY_TOOL_LITERAL_OUTPUT_MEMO 关 → 直接构造(逐字节回退)。见 toolLiteralOutputMemo.js 头注释。
 const _toolHeaderSummaryMemo = require('./toolHeaderSummaryMemo');
 const _toolLiteralOutputMemo = require('./toolLiteralOutputMemo');
+// 视觉行计费单一真源(DESIGN-ARCH-103 H6):折叠行预截断(1 逻辑行 = 1 视觉行),
+// 故经 visualRowsUnwrapped 计费;将来若引入宽度感知渲染,同一处切到 visualRows 即可。
+const { visualRowsUnwrapped } = require('../wrapCell');
 
 // 已完成/运行中工具的头行(显示名 resolveToolHeaderName + 入参摘要 summarizeArgs)按 (tool, cwd)
 // 身份记忆:消每帧对每工具的 2×require+主题查表、JSON.parse 大入参、以及 summarizeArgs 内的
@@ -172,7 +175,12 @@ function shorten(v) {
     return '';
   }
   const s = typeof v === 'string' ? v : JSON.stringify(v);
-  return s.length > 24 ? s.slice(0, 23) + '…' : s;
+  // Budget is 24 characters — slice by CODE POINT so an astral char (emoji /
+  // CJK ext-B) is never bisected into a lone surrogate on the header line.
+  // For all-BMP text code points == UTF-16 units, so ASCII/CJK output stays
+  // byte-identical to the previous `s.slice(0, 23)`.
+  const g = Array.from(s);
+  return g.length > 24 ? g.slice(0, 23).join('') + '…' : s;
 }
 
 // ── 工具头行内联耗时标记 ──
@@ -275,6 +283,13 @@ function buildResultTruncationTag(fullText, shownLines) {
   }
 }
 
+// A UTF-16 surrogate code unit anywhere in the string → it carries astral
+// chars. `displayWidth(s) !== s.length` alone misses these: an astral emoji is
+// 2 display columns AND 2 UTF-16 code units, so it compares equal and the
+// legacy `.length`-based path below would bisect the pair into a lone surrogate
+// (乱码). Route such strings through the code-point-aware truncater instead.
+const _SURROGATE_RE = /[\uD800-\uDFFF]/;
+
 function truncate(s, n) {
   s = String(s).replace(/\s+/g, ' ').trim();
   // Width-aware truncation only when the string contains wide chars (CJK =
@@ -284,7 +299,7 @@ function truncate(s, n) {
   // never break tool-line rendering.
   try {
     const { displayWidth, truncateToWidth } = require('../../formatters');
-    if (displayWidth(s) !== s.length) {
+    if (displayWidth(s) !== s.length || _SURROGATE_RE.test(s)) {
       return truncateToWidth(s, n);
     }
   } catch {
@@ -295,8 +310,24 @@ function truncate(s, n) {
 
 // Length-only clip that PRESERVES whitespace — diff lines must keep their
 // indentation (collapsing it would mangle code), unlike the arg-summary path.
+// `n` is a DISPLAY-COLUMN budget (e.g. cols - 10), not a char count, so a CJK
+// line (2 columns per glyph) must be measured in columns: the legacy `.length`
+// compare wrongly deems a 48-char/76-column line "short enough" for a 70-column
+// budget and leaves it intact → ink soft-wraps it → the foldOutput row budget
+// is breached. Route wide strings through the width-aware truncater (which does
+// NOT collapse whitespace); narrow-only strings keep the byte-identical legacy
+// path so existing ASCII output/tests are untouched.
 function clip(s, n) {
   s = String(s ?? '');
+  if (!Number.isFinite(n)) return s; // Infinity → full line, let ink wrap (Ctrl+O 全貌)
+  try {
+    const { displayWidth, truncateToWidth } = require('../../formatters');
+    if (displayWidth(s) !== s.length || _SURROGATE_RE.test(s)) {
+      return displayWidth(s) > n ? truncateToWidth(s, n) : s;
+    }
+  } catch {
+    /* formatters unavailable — legacy fallback below */
+  }
   return s.length > n ? s.slice(0, n - 1) + '…' : s;
 }
 
@@ -820,6 +851,140 @@ function renderLiteralOutput(result, expanded, h, Box, Text) {
   return out;
 }
 
+/**
+ * Estimate the VISUAL row count of a completed tool result's literal body — the
+ * pure counting twin of `renderLiteralOutput` above. Feeds the live tail budget
+ * (toolEntryRows → liveHeightClamp.toolCostOf) so a 20-row tool result charges
+ * ~20 rows to the live window in the SAME frame it appears, instead of the
+ * historical flat 1 (systematic underestimate → live frame ≥ rows → ink
+ * fullscreen repaint → duplicated transcript, [IMPL-RPT-044]).
+ *
+ * Branch-mirrors the render contract exactly (per branch, the counted rows are
+ * what that branch would push into `out`):
+ *   - write-diff (`result._khyWriteDiff`) → buildWriteDiffRows row count
+ *     (deduped vs. render via the SAME _toolDiffRowsMemo cache — zero per-frame
+ *     recompute once the rows exist);
+ *   - shell-family → renderLiteralOutput row count: diff-shaped stdout counts
+ *     memoDiffRows; folded stdout counts memoFoldedLines + the truncation-tag
+ *     row (gate-on only); a non-zero exitCode adds its annotation row;
+ *   - non-shell + collapsed → 1 summary row (⎿ 摘要, the render pushes exactly
+ *     one Text);
+ *   - non-shell + expanded → transparency gate on → renderLiteralOutput(true)
+ *     count; off/empty → the 12-line preview fallback + its truncation row;
+ *   - no usable output → 0 (the caller's header row remains the only row).
+ *
+ * Columns do NOT enter the estimate on purpose: the folded-line counts above
+ * are column-independent by construction (folding happens pre-truncate; ink
+ * wraps post-count), and diff/literal lines are clipped (not wrapped) in the
+ * collapsed render path, so counting 1 source row as 1 visual row is the same
+ * contract renderDiffRows/renderLiteralOutput honor. Never throws (→ 0).
+ *
+ * @param {*} result - completed tool result object
+ * @param {{expanded?: boolean, live?: boolean, shell?: boolean, env?: object}} [opts]
+ * @returns {number} ≥ 0 body rows (header NOT included)
+ */
+function estimateLiteralRows(result, opts = {}) {
+  try {
+    if (!result || typeof result !== 'object') {
+      return 0;
+    }
+    const env = opts.env || process.env;
+    const expanded = !!opts.expanded;
+    let rows = 0;
+
+    // Write/Edit/MultiEdit ±diff: same memo the render reads → deduped across
+    // estimator + renderer within a frame.
+    if (result._khyWriteDiff) {
+      const diffRows = _toolDiffRowsMemo.memoDiffRows(
+        result._khyWriteDiff,
+        expanded,
+        () => buildWriteDiffRows(result._khyWriteDiff, expanded),
+        env
+      );
+      if (Array.isArray(diffRows) && diffRows.length) {
+        return diffRows.length;
+      }
+      // null/empty diff → the render falls through to the shell/summary
+      // branches below; mirror that fallthrough.
+    }
+
+    if (opts.shell) {
+      // Mirror renderLiteralOutput row-for-row (same memos, same folds).
+      const preview = _toolLiteralOutputMemo.memoPreview(
+        result,
+        () => formatShellOutputJson(resultPreview(result), env),
+        env
+      );
+      if (!preview || !preview.trim()) {
+        return 0; // no stdout → render shows the ✓ summary row (counted by caller)
+      }
+      const shellDiffRows = _toolDiffRowsMemo.memoDiffRows(
+        result,
+        expanded,
+        () => (looksLikeUnifiedDiff(preview) ? buildShellDiffRows(preview, expanded) : null),
+        env
+      );
+      if (shellDiffRows && shellDiffRows.length) {
+        rows = shellDiffRows.length;
+      } else {
+        const shownLines = _toolLiteralOutputMemo.memoFoldedLines(
+          result,
+          expanded,
+          () => {
+            const allLines = preview.split('\n');
+            while (allLines.length && allLines[allLines.length - 1].trim() === '') {
+              allLines.pop();
+            }
+            const sourceLines = expanded
+              ? allLines
+              : collapseConsecutiveDuplicates(allLines).lines;
+            const policy = expanded
+              ? { maxLines: Infinity, foldHead: Infinity, foldTail: 0 }
+              : SHELL_COLLAPSED_POLICY;
+            return foldOutput(sourceLines, policy).lines;
+          },
+          env
+        );
+        rows = Array.isArray(shownLines)
+          ? visualRowsUnwrapped(shownLines.join('\n'))
+          : 0;
+        if (toolResultTruncationTagEnabled(env)) {
+          if (buildResultTruncationTag(preview, shownLines)) {
+            rows += 1;
+          }
+        }
+      }
+      const exitCode = typeof result.exitCode === 'number' ? result.exitCode : null;
+      if (exitCode !== null && exitCode !== 0) {
+        rows += 1;
+      }
+      return rows;
+    }
+
+    // Non-shell: collapsed always pushes exactly one summary row.
+    if (!expanded) {
+      return 1;
+    }
+    // Expanded: transparency gate on + real body → literal render count;
+    // otherwise the 12-line preview fallback (+ its truncation row).
+    if (shouldRenderTransparentBody(result, env)) {
+      return estimateLiteralRows(result, { expanded: true, live: opts.live, shell: true, env });
+    }
+    const preview = resultPreview(result);
+    if (!preview) {
+      return 0;
+    }
+    const lines = preview.split('\n').slice(0, 12);
+    rows = visualRowsUnwrapped(lines.join('\n'));
+    if (toolResultTruncationTagEnabled(env) && buildResultTruncationTag(preview, lines)) {
+      rows += 1;
+    }
+    return rows;
+  } catch {
+    return 0;
+  }
+}
+
 // Extract a human-readable failure reason from a tool result so it can be shown
 // proactively on the ✗ line — the user should never have to ask "why did it fail".
 function errorText(result, env = process.env) {
@@ -1292,6 +1457,23 @@ module.exports = _componentMemoOff(process.env)
 // plain), so consumers (ProcessGroup, unit tests) keep reaching them via
 // require('./ToolLines').xxx regardless of the memo gate.
 module.exports.toolsPropsEqual = toolsPropsEqual;
+// Width-aware, whitespace-preserving line clip shared by the diff / literal-stdout
+// renderers. Exposed for unit tests (the CJK column-budget regression).
+module.exports.clip = clip;
+// Literal-body row estimator — the counting twin of renderLiteralOutput, feeding
+// the live tail budget (toolEntryRows) so tool-heavy turns stop overflowing the
+// viewport into ink's fullscreen repaint. Pure (no ink dependency), shares the
+// renderer's memo caches so estimate + render never double-compute.
+module.exports.estimateLiteralRows = estimateLiteralRows;
+// H5 fold model (DESIGN-ARCH-103 P1): tool cards are collapsible elements.
+// `lineHeightSignature` MUST include the expanded state (foldModel.js) so an
+// expand-then-resize recomputes layout instead of feeding a stale row height
+// back to the layout scan and reproducing the staircase ghost. Exposed for the
+// render path + regression tests; click-to-expand routes through the App's
+// `expanded` state (the same source Ctrl+O already uses).
+const _foldModel = require('../foldModel');
+module.exports.lineHeightSignature = _foldModel.lineHeightSignature;
+module.exports.makeFoldItem = _foldModel.makeFoldItem;
 // Pure helpers exported for unit tests (no ink dependency).
 module.exports.buildWriteDiffRows = buildWriteDiffRows;
 module.exports.renderDiffRows = renderDiffRows;

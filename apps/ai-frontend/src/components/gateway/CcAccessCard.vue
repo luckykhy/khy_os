@@ -78,6 +78,7 @@ import { ref, computed, watch } from 'vue';
 import { Link } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 
+import { showSuccess, showError, showWarning, showInfo } from '@/api/notify';
 const props = defineProps({
   scope: { type: String, default: 'user' },
   endpoint: { type: Object, default: null },
@@ -131,9 +132,9 @@ async function onRevoke(id) {
 async function copy(text) {
   try {
     await navigator.clipboard.writeText(text);
-    ElMessage.success('已复制');
+    showSuccess('已复制');
   } catch {
-    ElMessage.warning('复制失败，请手动选择');
+    showWarning('复制失败，请手动选择');
   }
 }
 

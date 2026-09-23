@@ -20,7 +20,7 @@
  */
 
 // 相对 require(叶子→叶子,leaf-contract 放行):复用 ConfigScope 常量,避免另造字符串。
-const { ConfigScope } = require('../../../../agents/types');
+const { ConfigScope } = require('./types');
 
 /**
  * 描述 MCP 配置的加载/优先级关系(单一真源)。路径由 caller 注入以保持纯函数。

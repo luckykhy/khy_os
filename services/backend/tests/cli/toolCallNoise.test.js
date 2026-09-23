@@ -231,6 +231,55 @@ test('does NOT strip prose merely containing function= mid-sentence', () => {
   assert.strictEqual(tcn.stripInlineToolCallNoise(input, ON), input);
 });
 
+// ---------------------------------------------------------------------------
+// Bracketed wire-marker leaks: `[Tool Call: name(args)]` / `[Tool Result: …]`
+// (the gateway's strip-tools text fallback, _toolSchemaConverter hasTools=false,
+// echoes these into the transcript; text-protocol models repeat them verbatim —
+// the "工具裸露且无法复制" symptom).
+// ---------------------------------------------------------------------------
+
+test('strips a whole-line [Tool Call: name({})] marker (screenshot shape)', () => {
+  const input = [
+    '我先查一下 C 盘空间。',
+    '[Tool Call: shell_command({})]',
+    'C 盘 111.8GB 已用。',
+  ].join('\n');
+  const out = tcn.stripInlineToolCallNoise(input, ON);
+  assert.doesNotMatch(out, /\[Tool\s+Call/);
+  assert.match(out, /我先查一下/);
+  assert.match(out, /111\.8GB/);
+});
+
+test('strips a whole-line marker with JSON args', () => {
+  const input = '[Tool Call: shellCommand({"command":"dir /b","timeoutMs":15000}])';
+  assert.strictEqual(tcn.stripInlineToolCallNoise(input, ON), '');
+});
+
+test('strips a marker glued to narration, keeps the prose', () => {
+  const input = '继续执行 [Tool Call: shellCommand({"command":"ls"})] 然后看结果';
+  const out = tcn.stripInlineToolCallNoise(input, ON);
+  assert.doesNotMatch(out, /\[Tool\s+Call/);
+  assert.match(out, /继续执行/);
+  assert.match(out, /然后看结果/);
+});
+
+test('preserves a [Tool Call …] marker INSIDE a fenced block', () => {
+  const input = '```\n[Tool Call: shell_command({})]\n```';
+  assert.strictEqual(tcn.stripInlineToolCallNoise(input, ON), input);
+});
+
+test('splitPendingToolTag holds a partial [Tool Call: … head, releases on complete', () => {
+  const r1 = tcn.splitPendingToolTag('前文\n[Tool Call: shell_command({');
+  assert.strictEqual(r1.emit, '前文\n');
+  assert.strictEqual(r1.pending, '[Tool Call: shell_command({');
+  // full marker on the next chunk → joined, complete → released for the settle
+  // pass (which strips the whole-line marker).
+  const full = r1.pending + 'command":"dir"})]';
+  const r2 = tcn.splitPendingToolTag(full);
+  assert.strictEqual(r2.pending, '');
+  assert.match(r2.emit, /\[Tool Call: shell_command/);
+});
+
 test('fragment forms inside a fenced block are preserved', () => {
   const input = '```\nfunction=webSearch>\n<arguments={"q":1}}\n```';
   assert.strictEqual(tcn.stripInlineToolCallNoise(input, ON), input);

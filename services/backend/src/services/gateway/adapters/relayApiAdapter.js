@@ -92,8 +92,13 @@ function getRequestId(options = {}) {
  * tools 声明 → 严格 OpenAI 兼容端点(stepfun step_plan 等)返回 HTTP 400
  * "Unrecognized chat message"(实测 step-3.7-flash 工具回合反复 400)。
  * 与 multiFreeService 同源(单一真源 modelToolingCapability),门控关 → 名字正则。
+ *
+ * 两个输入维度(2026-09-23 起只认正面证据,见 BUG-014):模型维 measured + 通道维
+ * routeRejects。名字不再决定这里。
  * @param {string} model
  * @param {object} options
+ * @param {boolean} [options._toolCapProbe] - 能力探测必须真发 tools,绝不剥离
+ * @param {string} [options.__relayEndpoint] - 通道身份:本次实际请求的端点
  * @returns {boolean}
  */
 function _shouldStripToolsForRelay(model, options = {}) {
@@ -104,12 +109,28 @@ function _shouldStripToolsForRelay(model, options = {}) {
     const _toolCap = require('../modelToolingCapability');
     if (_toolCap.isEnabled()) {
       let _measured = null;
+      let _routeRejects = false;
+      let _challenge = false;
       try {
-        _measured = require('../toolCapabilityStore').getVerdict(model);
+        const _store = require('../toolCapabilityStore');
+        // 按来源读(P4):text 只在测出它的那条适配器上生效;native 全局共享。
+        _measured = _store.getVerdictFor(model, { adapter: 'relay_api' });
+        const _routeParts = { adapter: 'relay_api', endpoint: options.__relayEndpoint, model };
+        _routeRejects = _store.routeRejectsToolsFor(_routeParts);
+        // 隔离式挑战(P3):被剥离的模型每 N 次请求放行一次原生,好让模型有机会推翻判定。
+        // 通道已被记为拒收时不挑战 —— 那是通道的定论,改由它自己的 TTL 到期重试。
+        if (!_routeRejects) {
+          const _routeId = require('../capabilityModelKey').routeKey(_routeParts);
+          _challenge = require('../toolChallengeCadence').shouldChallenge(_routeId);
+        }
       } catch {
         /* best effort */
       }
-      return _toolCap.shouldStripUpstreamTools(model, { measured: _measured });
+      return _toolCap.shouldStripUpstreamTools(model, {
+        measured: _measured,
+        routeRejects: _routeRejects,
+        challenge: _challenge,
+      });
     }
   } catch {
     /* capability store 不可用 → 名字启发 */
@@ -841,9 +862,16 @@ async function _generateOnce(prompt, options = {}) {
   // 之前判定:剥离 tools 时消息转换须以 useToolRole=false 降级(工具块内联为文本),
   // 否则 messages 残留 role:'tool'/'tool_calls' 而顶层无 tools 声明 → 严格 OpenAI
   // 兼容端点(stepfun step_plan 等)返回 HTTP 400 "Unrecognized chat message"。
-  const _willStripTools = hasTools && _shouldStripToolsForRelay(model, options);
+  // 通道身份(本次实际 endpoint)一并传入:判定要看「这条端点收不收 tools」。
+  const _willStripTools =
+    hasTools &&
+    _shouldStripToolsForRelay(model, { ...options, __relayEndpoint: endpoint });
 
   let _toolsStripped = false;
+  // 与 _toolsStripped 区分开:那个还包含「发请求前就按判定剥掉」的情形,不能拿来当
+  // 「端点拒收 tools」的证据。只有 400 分支置起的这个才是那次对照。
+  let _toolsStrippedFor400 = false;
+  let _recordedRouteStrip = false;
   const _strippedParams = new Set();
 
   let body;
@@ -896,7 +924,7 @@ async function _generateOnce(prompt, options = {}) {
         try {
           options.onChunk({
             type: 'notice',
-            text: `模型 ${model} 不支持工具调用 (function calling)，将以纯文本模式回答。如需使用工具，请切换到支持 function calling 的模型。`,
+            text: require('../modelToolingCapability').stripToolsNotice(model),
           });
         } catch {
           /* best effort */
@@ -996,6 +1024,24 @@ async function _generateOnce(prompt, options = {}) {
           '\n'
       );
 
+      // 「带 tools 被拒 → 去掉 tools 重试 → 本次成功」= 这条端点拒收 tools 的**对照证据**。
+      // 按通道记(不是按模型):收不收 tools 是端点的属性,记到模型头上就是 BUG-014 里
+      // 「一条严格端点的拒绝变成该模型的永久属性」的成因。记下之后下一轮剥离门直接剥,
+      // 不再重复付这个 400 往返。
+      if (res.status === 200 && _toolsStrippedFor400 && !_recordedRouteStrip) {
+        _recordedRouteStrip = true;
+        try {
+          require('../toolCapabilityStore').recordRouteRejectsFrom({
+            adapter: 'relay_api',
+            endpoint: url,
+            model,
+            source: 'http-400',
+          });
+        } catch {
+          /* best effort —— 记忆失败绝不影响本次请求 */
+        }
+      }
+
       if (res.status !== 200 && !res.stream) {
         // 诊断根治:GLM/智谱把真错误码藏在结构化体里(`{ error: { code, message } }` 或顶层
         // `{ code, message }`)。errMsg 从解析后的 data 里逐层取;若 data 解析为空/非对象,回退到
@@ -1033,6 +1079,7 @@ async function _generateOnce(prompt, options = {}) {
         // 400 + tools present → likely tool payload rejected; strip tools and retry immediately
         if (res.status === 400 && body.tools && !_toolsStripped) {
           _toolsStripped = true;
+          _toolsStrippedFor400 = true;
           delete body.tools;
           delete body.tool_choice;
           if (typeof options.onChunk === 'function') {

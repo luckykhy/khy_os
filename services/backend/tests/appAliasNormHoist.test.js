@@ -27,7 +27,9 @@ describe('App Alias Norm Hoist', () => {
         '   ': [],
       };
       for (const [input, want] of Object.entries(expected)) {
-        expect(build(input)).toBe(want, `candidates for ${JSON.stringify(input)}`);
+        // node:test-style message args are silently ignored by jest's toBe and
+        // toBe on arrays is reference equality anyway — compare structurally.
+        expect(build(input)).toEqual(want);
       }
   });
 

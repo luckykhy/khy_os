@@ -36,8 +36,22 @@ describe('flagRegistry', () => {
   });
 
   describe('isFlagEnabled', () => {
-    test('returns true for unknown flags (conservative)', () => {
+    test('returns true for unknown flags when env is unset (default on)', () => {
       expect(isFlagEnabled('KHY_UNKNOWN_FLAG', {})).toBe(true);
+      expect(isFlagEnabled('KHY_UNKNOWN_FLAG', { KHY_UNKNOWN_FLAG: undefined })).toBe(true);
+    });
+
+    test('unknown flags with explicit env values resolve via CANON (kill-switch works)', () => {
+      // 190+ delegating consumers (isEnabledDefaultOn / gateOn / modernKeyRedaction / …)
+      // route ALL lookups through this resolver; if an unregistered name ignored its
+      // env value, every KHY_X=0 kill-switch for unseeded flags would silently no-op.
+      expect(isFlagEnabled('KHY_UNKNOWN_FLAG', { KHY_UNKNOWN_FLAG: '0' })).toBe(false);
+      expect(isFlagEnabled('KHY_UNKNOWN_FLAG', { KHY_UNKNOWN_FLAG: 'false' })).toBe(false);
+      expect(isFlagEnabled('KHY_UNKNOWN_FLAG', { KHY_UNKNOWN_FLAG: 'off' })).toBe(false);
+      expect(isFlagEnabled('KHY_UNKNOWN_FLAG', { KHY_UNKNOWN_FLAG: 'no' })).toBe(false);
+      expect(isFlagEnabled('KHY_UNKNOWN_FLAG', { KHY_UNKNOWN_FLAG: 'FALSE' })).toBe(false);
+      expect(isFlagEnabled('KHY_UNKNOWN_FLAG', { KHY_UNKNOWN_FLAG: '1' })).toBe(true);
+      expect(isFlagEnabled('KHY_UNKNOWN_FLAG', { KHY_UNKNOWN_FLAG: 'true' })).toBe(true);
     });
 
     test('returns default for known flags when not set', () => {

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-OTHER-005] desktop-rd-桌面端调研指针.md -->
+<title>DESIGN-OTHER-005 · desktop-rd 调研指针 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-OTHER<span class="sep">›</span>DESIGN-OTHER-005 · desktop-rd 调研指针</div>
+      <header class="hero reveal"><h1>DESIGN-OTHER-005 · desktop-rd 调研指针</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-other-005-desktop-rd-调研指针">DESIGN-OTHER-005 · desktop-rd 调研指针</a></li><li class="lvl-2"><a href="#一-为什么需要这条指针">一、为什么需要这条指针</a></li><li class="lvl-2"><a href="#二-调研档案目录">二、调研档案目录</a></li><li class="lvl-2"><a href="#四-当前结论摘要">四、当前结论摘要</a></li><li class="lvl-2"><a href="#五-引用规范">五、引用规范</a></li><li class="lvl-2"><a href="#六-变更日志">六、变更日志</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-other-005-desktop-rd-调研指针">DESIGN-OTHER-005 · desktop-rd 调研指针<a class="anchor" href="#design-other-005-desktop-rd-调研指针" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>调研档案位置</strong>：<code>extensions/scripts/khy-desktop-rd/</code><br><strong>调研日期</strong>：2026-08-31<br><strong>状态</strong>：调研完成，等待用户/团队路线评审<br><strong>目的</strong>：给 khy-os 加独立桌面端时，参考外部开源项目，避免从零设计</p></blockquote>
+<hr>
+<h2 id="一-为什么需要这条指针">一、为什么需要这条指针<a class="anchor" href="#一-为什么需要这条指针" aria-label="锚点">#</a></h2>
+<p><code>docs/03_DESIGN_设计/</code> 严格遵循&quot;架构与设计规范&quot;类目边界，<strong>不收实现报告（归 <code>04_IMPL_实现/</code>）、不收调研档案（应归 <code>extensions/scripts/</code> 下的合规拓展）</strong>。</p>
+<p>但调研档案是设计选型的&quot;前置输入&quot;——如果新设计师/AI 助手接手桌面端选型时不知道档案在哪，可能走错路。所以本文件作为<strong>唯一的索引指针</strong>存在，从设计类目侧引用 <code>extensions/scripts/khy-desktop-rd/</code>。</p>
+<h2 id="二-调研档案目录">二、调研档案目录<a class="anchor" href="#二-调研档案目录" aria-label="锚点">#</a></h2>
+<pre><code>extensions/scripts/khy-desktop-rd/
+├── README.md                  ← 主索引（必读）
+├── khy.extension.json         ← kind: asset（只读参考拓展）
+├── openflux/                  ← ① Tauri v2 + Node Sidecar（与 khy-os 同构）
+├── goose/                     ← ② Electron 43 + React 19（工程化最成熟）
+├── chatml/                    ← ③ Tauri 2 + Go Backend（多层架构清晰）
+├── one-api/                   ← ④ khy-os 视觉风格的源头
+└── cmdk/                      ← 附 Cmd+K 组件（ZCode 风格关键）</code></pre>
+<p>详细目录说明、文件清单、推荐路线、IPC 体系、khy-os 对照表均在 <code>extensions/scripts/khy-desktop-rd/README.md</code>。</p>
+<h2 id="四-当前结论摘要">四、当前结论摘要<a class="anchor" href="#四-当前结论摘要" aria-label="锚点">#</a></h2>
+<ul><li><strong>桌面端目标视觉</strong>：参考 <code>D:\Portable\4-output\ZCode-UI\running\</code> 14 张截图（深色 IDE + 暖橙 #f76b1c）</li><li><strong>候选技术路线</strong>：A (Electron + 内嵌 Vue + 内嵌 Node) / B (Tauri 2 + Rust 命令层) / C (MVP 先出)</li><li><strong>初步倾向</strong>：路线 A（参考 goose 的 IPC 体系 + OpenFlux 的 Sidecar 模式）</li><li><strong>下一步</strong>：用户/团队评审后，进入实施阶段（预计新建 <code>apps/desktop/</code>）</li></ul>
+<h2 id="五-引用规范">五、引用规范<a class="anchor" href="#五-引用规范" aria-label="锚点">#</a></h2>
+<p>后续任何&quot;桌面端相关&quot;的实现报告（<code>04_IMPL_实现/[IMPL-RPT-*]</code>）或设计文档（<code>03_DESIGN_设计/[DESIGN-ARCH-*]</code>）应在开头引用本指针：</p>
+<pre><code class="language-markdown"><span class="hljs-quote">&gt; 调研档案：`extensions/scripts/khy-desktop-rd/`</span>
+<span class="hljs-quote">&gt; 调研指针：`docs/03<span class="hljs-emphasis">_DESIGN_</span>设计/[DESIGN-OTHER-005]`</span></code></pre>
+<h2 id="六-变更日志">六、变更日志<a class="anchor" href="#六-变更日志" aria-label="锚点">#</a></h2>
+<ul><li>2026-08-31：初版建立，调研 4 个核心项目 + 1 个 UI 组件范式</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-OTHER/[DESIGN-OTHER-004] 特性访问-提示词胶囊-2026-06-01.html"><div class="dir">← 上一篇</div><div class="ttl">Feature Access / Proxy Boundary 系统提示词 Capsule</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-OTHER/00_INDEX_DESIGN-OTHER-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">DESIGN-OTHER</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-OTHER/[DESIGN-OTHER-005] desktop-rd-桌面端调研指针.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -45,7 +45,10 @@ describe('Tool Syntax Healer integration', () => {
         require(indexPath);
       } catch (err) {
         threwBefore = true;
-        expect(err instanceof SyntaxError).toBeTruthy();
+        // Under jest the babel transformer wraps parse errors in its own
+        // realm's SyntaxError (code BABEL_PARSE_ERROR), so instanceof fails
+        // cross-realm; assert the realm-independent signature instead.
+        expect(err.constructor.name).toBe('SyntaxError');
       }
       expect(threwBefore).toBeTruthy();
     
@@ -55,7 +58,11 @@ describe('Tool Syntax Healer integration', () => {
       expect(result.changes.length > 0).toBeTruthy();
     
       // Verify it can be required AFTER healing
-      delete require.cache[require.resolve(indexPath)];
+      // jest's script transformer caches transform results by content hash and
+      // `delete require.cache` does NOT invalidate it — the cached parse error
+      // would be re-thrown even though the healed file on disk is fine.
+      // jest.resetModules() clears that transformer registry for this file.
+      jest.resetModules();
       let exported;
       let threwAfter = false;
       try {
@@ -64,7 +71,7 @@ describe('Tool Syntax Healer integration', () => {
         threwAfter = true;
       }
       expect(threwAfter).toBe(false, 'should not throw after healing');
-    
+
       // Verify the export is usable
       expect(exported).toBeTruthy();
       expect(exported.toolName).toBe('BrokenTool', 'should have correct toolName');

@@ -101,7 +101,6 @@ const MANIFESTS = [
   'services/backend/package.json',
   'services/ai-backend/package.json',
   'apps/ai-frontend/package.json',
-  'apps/khy-mobile/package.json',
   'software/khyquant/frontend/package.json',
   'platform/packages/shared/package.json',
   'platform/packages/ui-shared/package.json',

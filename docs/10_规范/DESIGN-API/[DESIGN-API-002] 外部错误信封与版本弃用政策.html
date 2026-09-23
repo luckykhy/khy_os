@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-API-002] 外部错误信封与版本弃用政策.md -->
+<title>[DESIGN-API-002] 外部错误信封与版本弃用政策 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-API<span class="sep">›</span>[DESIGN-API-002] 外部错误信封与版本弃用政策</div>
+      <header class="hero reveal"><h1>[DESIGN-API-002] 外部错误信封与版本弃用政策</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-api-002-外部错误信封与版本弃用政策">[DESIGN-API-002] 外部错误信封与版本弃用政策</a></li><li class="lvl-2"><a href="#1-内部-外部边界-gov-api-001">1. 内部/外部边界（GOV-API-001）</a></li><li class="lvl-2"><a href="#2-统一外部错误信封-gov-api-003-目标态">2. 统一外部错误信封（GOV-API-003 目标态）</a></li><li class="lvl-2"><a href="#3-sse-ws-终态-gov-api-003">3. SSE/WS 终态（GOV-API-003）</a></li><li class="lvl-2"><a href="#4-版本与弃用政策-gov-api-002">4. 版本与弃用政策（GOV-API-002）</a></li><li class="lvl-2"><a href="#5-跨-transport-最小披露-gov-api-004">5. 跨 transport 最小披露（GOV-API-004）</a></li><li class="lvl-2"><a href="#6-迁移排期-登记-不阻塞冻结">6. 迁移排期（登记，不阻塞冻结）</a></li><li class="lvl-2"><a href="#7-api-目录-占位表-迁移第-1-步填实">7. API 目录（占位表，迁移第 1 步填实）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-api-002-外部错误信封与版本弃用政策">[DESIGN-API-002] 外部错误信封与版本弃用政策<a class="anchor" href="#design-api-002-外部错误信封与版本弃用政策" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: API-001, API-002, API-003, API-004 -->
+<blockquote><p><strong>定位</strong>：<code>[DESIGN-GOV-001]</code> GOV-API-001–004 的契约冻结真源 + UC-005 裁决。<br>上位 <code>[DESIGN-API-001]</code> 管「API 怎么设计」；本文管「对外错误与生命周期长什么样」。<br>冻结的是<strong>目标态契约</strong>：存量接口按 §6 分阶段迁移，迁移期新旧并存、以本文为准，本文不改任何业务路由。</p></blockquote>
+<h2 id="1-内部-外部边界-gov-api-001">1. 内部/外部边界（GOV-API-001）<a class="anchor" href="#1-内部-外部边界-gov-api-001" aria-label="锚点">#</a></h2>
+<p>内部 adapter 的 canonical 形状（<code>services/backend/src/services/gateway/adapters/_responseBuilder.js</code>）：<br><code>{ success, content, provider, adapter, model, tokenUsage, toolUseBlocks, stopReason, attempts }</code>。</p>
+<p><strong>红线</strong>：该形状是<strong>内部契约</strong>，禁止以任何形式（含字段子集）直接作为公开 REST/SSE/WS 响应体；<br>公开响应一律经 §2 信封转换；内部字段（<code>attempts</code>、<code>toolUseBlocks</code>、adapter 名）只允许出现在 §5 最小披露白名单内。</p>
+<h2 id="2-统一外部错误信封-gov-api-003-目标态">2. 统一外部错误信封（GOV-API-003 目标态）<a class="anchor" href="#2-统一外部错误信封-gov-api-003-目标态" aria-label="锚点">#</a></h2>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;ok&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>  <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> … <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;traceId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;…&quot;</span> <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;ok&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;RATE_LIMITED&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;httpStatus&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">429</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;限流 (429)：请求过多&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;hint&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;稍后重试或运行 khy gateway config 切换通道&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;traceId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;…&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;details&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span> <span class="hljs-punctuation">}</span> <span class="hljs-punctuation">}</span></code></pre>
+<ul><li><code>code</code>：稳定机器码——<strong>新增机器码必须先入下表再用</strong>；<code>message</code>/<code>hint</code> 遵循 <code>AGENTS.md</code> 规则 2.2（中文、可执行）；<code>details</code> 只放 §5 白名单字段，不放堆栈/内部对象。</li></ul>
+<p><strong>机器码登记表（初版，随迁移逐端点覆盖；分类依据沿用 <code>gatewayErrorClassifier</code> 的 errorType 映射）</strong></p>
+<table><thead><tr><th>code</th><th>触发</th><th>人话模板（AGENTS.md 2.2）</th></tr></thead><tbody><tr><td><code>RATE_LIMITED</code></td><td>上游 429 / 本地限流</td><td>限流 (429)：请求过多，稍后重试或运行 khy gateway config 切换通道</td></tr><tr><td><code>UNAUTHORIZED</code></td><td>401</td><td>认证失败 (401)：API key 无效或过期，请运行 khy gateway config 更新密钥</td></tr><tr><td><code>FORBIDDEN</code></td><td>403</td><td>权限不足 (403)：无权访问该模型，请检查订阅或更换密钥</td></tr><tr><td><code>MODEL_NOT_FOUND</code></td><td>404/模型不存在</td><td>模型不存在 (404)：请用 /model 查看可用模型</td></tr><tr><td><code>CONTEXT_TOO_LONG</code></td><td>413/超长</td><td>上下文超限：对话过长，请 /compact 压缩或新建会话</td></tr><tr><td><code>CREDITS_EXHAUSTED</code></td><td>额度不足</td><td>额度已用完：请充值或更换模型通道</td></tr><tr><td><code>UPSTREAM_ERROR</code></td><td>上游 5xx</td><td>上游异常 ({status})：模型服务暂不可用，请稍后重试</td></tr><tr><td><code>TIMEOUT</code></td><td>请求超时</td><td>请求超时：网络或服务响应慢，请稍后重试</td></tr><tr><td><code>NETWORK_ERROR</code></td><td>连接失败</td><td>网络连接失败：请检查网络代理设置</td></tr><tr><td><code>OUTPUT_TRUNCATED</code></td><td>输出截断</td><td>输出被截断：请说「继续」续写，或调大 maxTokens</td></tr><tr><td><code>CONTENT_BLOCKED</code></td><td>安全拦截</td><td>内容安全拦截：模型拒绝生成，请调整措辞后重试</td></tr><tr><td><code>INTERNAL</code></td><td>未分类服务端错误</td><td>服务端异常：请运行 khy doctor 自检，或查 traceId {traceId} 的网关日志</td></tr></tbody></table>
+<h2 id="3-sse-ws-终态-gov-api-003">3. SSE/WS 终态（GOV-API-003）<a class="anchor" href="#3-sse-ws-终态-gov-api-003" aria-label="锚点">#</a></h2>
+<p>流式通道<strong>必须</strong>以且仅以一个终态事件收尾，四终态互斥（与 <code>[DESIGN-ACP-001]</code> §3 同构）：</p>
+<table><thead><tr><th>终态事件</th><th>载荷</th><th>语义</th></tr></thead><tbody><tr><td><code>done</code></td><td><code>{ ok:true, summary, usage? }</code></td><td>正常完成</td></tr><tr><td><code>degraded</code></td><td><code>{ ok:false, code:&quot;DEGRADED&quot;, message, hint }</code></td><td>降级完成（结果仍可用，如视觉池失败回退 OCR）</td></tr><tr><td><code>cancelled</code></td><td><code>{ ok:false, code:&quot;CANCELLED&quot; }</code></td><td>用户/系统主动取消</td></tr><tr><td><code>failed</code></td><td>完整 §2 错误信封</td><td>失败（超时/上游异常/拦截）</td></tr></tbody></table>
+<p><strong>红线</strong>：上游异常后只允许 <code>failed</code>/<code>degraded</code>，不得再发 <code>done</code>（v1 反例：upstream 异常后仍发 <code>stop</code> + 成功标记）；取消后只允许 <code>cancelled</code>。</p>
+<h2 id="4-版本与弃用政策-gov-api-002">4. 版本与弃用政策（GOV-API-002）<a class="anchor" href="#4-版本与弃用政策-gov-api-002" aria-label="锚点">#</a></h2>
+<ul><li><strong>版本化</strong>：公开路径按大版本分段（<code>/api/v1/…</code>）；破坏性变更（删字段/改语义/改鉴权）只进<strong>新大版本</strong>；非破坏变更不升版；</li><li><strong>弃用</strong>：被弃端点继续可用期携带响应头 <code>Deprecation: true</code> + <code>Sunset: &lt;RFC 1123 日期&gt;</code>，并在 <code>CHANGELOG.md</code> 写一行迁移说明；最短兼容期 = 一个 khy-os 发布大版本（与 <code>[DESIGN-TOOL-001]</code> §2 同窗）；</li><li><strong>登记制</strong>：新增/变更公开 API 必须登记五要素——版本、请求/响应字段、认证方式、错误码（§2 表内）、迁移说明；登记位置：§7 目录表（先登记后实现）。</li></ul>
+<h2 id="5-跨-transport-最小披露-gov-api-004">5. 跨 transport 最小披露（GOV-API-004）<a class="anchor" href="#5-跨-transport-最小披露-gov-api-004" aria-label="锚点">#</a></h2>
+<p><code>traceId</code> 自 HTTP 入口生成，经 gateway → ACP（字段见 <code>[DESIGN-ACP-001]</code> §2）→ SSE/WS 全程传播。</p>
+<table><thead><tr><th>可外露</th><th>不可外露</th></tr></thead><tbody><tr><td><code>traceId</code></td><td>堆栈、内部文件路径、adapter 尝试日志（<code>attempts</code>）</td></tr><tr><td>信封 <code>code</code>/<code>httpStatus</code></td><td>上游供应商原始响应体、密钥、token</td></tr><tr><td><code>deadline</code> 是否超时的布尔摘要</td><td>内部服务名、端口、进程拓扑</td></tr></tbody></table>
+<p>日志侧可见性仍由 <code>[DESIGN-ARCH-031]</code>（网关日志租界隔离）管，本节只管响应体侧。</p>
+<h2 id="6-迁移排期-登记-不阻塞冻结">6. 迁移排期（登记，不阻塞冻结）<a class="anchor" href="#6-迁移排期-登记-不阻塞冻结" aria-label="锚点">#</a></h2>
+<ol><li><strong>建目录</strong>：管理 REST/SSE/WS/兼容 API 端点清点进 §7 表（含认证方式与现行错误形状）；</li><li><strong>信封落地</strong>：新端点直接用 §2/§3 形态；存量端点逐端点改写，旧响应体兼容一个发布周期；</li><li><strong>守卫</strong>：目录表 + 信封校验做成 <code>scripts/ci/</code> 守卫并入 <code>check:structure</code> 与 PR gate（GOV-TOOL-005），同步 <code>scripts/tests/</code> 用例（070 §7 条款）。</li></ol>
+<h2 id="7-api-目录-占位表-迁移第-1-步填实">7. API 目录（占位表，迁移第 1 步填实）<a class="anchor" href="#7-api-目录-占位表-迁移第-1-步填实" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>面</th><th>端点/通道</th><th>认证</th><th>现行错误形状</th><th>目标</th></tr></thead><tbody><tr><td>管理 REST</td><td><code>services/backend</code> Express 路由</td><td>JWT</td><td>分裂（逐路由自带）</td><td>§2 信封</td></tr><tr><td>网关 SSE</td><td>流式完成通道</td><td>session</td><td>分裂（v1 <code>stop</code> 语义）</td><td>§3 四终态</td></tr><tr><td>网关 WS</td><td>实时共享（9222 bridge 等）</td><td>session</td><td>失败被吞</td><td>§3 四终态</td></tr><tr><td>兼容 API</td><td>OpenAI 协议兼容端点</td><td>API key</td><td>200 + 内嵌 error</td><td>§2 表（兼容面保留 200+error 双形态，文档标注）</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-API/[DESIGN-API-001] API 设计规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-API-001] API 设计规范</div></a><a class="next" href="../../../docs/10_规范/DESIGN-API/[DESIGN-API-003] API 幂等性规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-API-003] API 幂等性规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-API/[DESIGN-API-002] 外部错误信封与版本弃用政策.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

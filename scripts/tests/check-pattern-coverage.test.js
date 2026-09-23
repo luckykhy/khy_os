@@ -60,7 +60,7 @@ function makeFixture(mutate) {
 }
 
 function writeRegistry(root, obj) {
-  writeFile(root, 'docs/_设计模式/模式注册表.json', JSON.stringify(obj, null, 2) + '\n');
+  writeFile(root, 'docs/16_设计模式/registry/模式注册表.json', JSON.stringify(obj, null, 2) + '\n');
 }
 
 function writeBaseline(root, counts) {
@@ -222,7 +222,7 @@ describe('check-pattern-coverage: 用法错误', () => {
 
   test('注册表解析不了退 2，而不是当成「零条目」全库报未覆盖', () => {
     const root = makeFixture((dir) => {
-      writeFile(dir, 'docs/_设计模式/模式注册表.json', '{ 坏掉的 json\n');
+      writeFile(dir, 'docs/16_设计模式/registry/模式注册表.json', '{ 坏掉的 json\n');
     });
     const { status, stdout } = runGuard(root, []);
     assert.equal(status, 2, stdout);

@@ -11,11 +11,11 @@ const path = require('path');
 const test = require('node:test');
 const assert = require('node:assert');
 
-const importGraph = require('../../src/services/projectCoherence/importGraph');
-const resolver = require('../../src/services/projectCoherence/resolver');
-const analyzer = require('../../src/services/projectCoherence/coherenceAnalyzer');
-const gate = require('../../src/services/projectCoherence/coherenceGate');
-const closure = require('../../src/services/projectCoherence/deliverableClosure');
+const importGraph = require('../../src/services/domain/project/projectCoherence/importGraph.js');
+const resolver = require('../../src/services/domain/project/projectCoherence/resolver.js');
+const analyzer = require('../../src/services/domain/project/projectCoherence/coherenceAnalyzer.js');
+const gate = require('../../src/services/domain/project/projectCoherence/coherenceGate.js');
+const closure = require('../../src/services/domain/project/projectCoherence/deliverableClosure.js');
 const facade = require('../../src/services/projectCoherence');
 
 const ROOT = `/khyc_test_${process.pid}`;

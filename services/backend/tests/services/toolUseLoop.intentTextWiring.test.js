@@ -13,9 +13,12 @@
  * traceContext.intentText === 原始 userMessage。
  */
 const toolCalling = require('../../src/services/toolCalling');
+const assert = require('node:assert');
 const toolUseLoop = require('../../src/services/toolUseLoop');
 const PROBE = '__producer_probe__';
-describe('toolUseLoop — intentText 生产侧接线', () => {
+
+describe('Tool Use Loop intent Text Wiring', () => {
+  // merged from describe: toolUseLoop - intentText 生产侧接线
   let _origExec;
   let _savedGate;
   let captured;
@@ -43,9 +46,6 @@ describe('toolUseLoop — intentText 生产侧接线', () => {
     if (_savedGate === undefined) delete process.env.KHY_TASK_CAPABILITY_GATE;
     else process.env.KHY_TASK_CAPABILITY_GATE = _savedGate;
   });
-});
-
-describe('Tool Use Loop intent Text Wiring', () => {
   test('executeTool 收到的 traceContext.intentText === 原始 userMessage', async () => {
         const USER_MSG = '请运行检查工具处理这个任务';
         let turn = 0;

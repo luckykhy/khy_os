@@ -1,7 +1,7 @@
 /**
  * markdownWorkbench.js — 「谁提供 Markdown 工作台」的**单一解析点**。
  *
- * 背景（[DESIGN-ARCH-069] §1.3 第四条：核里不允许出现拓展 id 的硬编码分支）：
+ * 背景（[DESIGN-TOOL-002] §1.3 第四条：核里不允许出现拓展 id 的硬编码分支）：
  * 此前同一个拓展在核里有**三份互不认识的定位逻辑**——
  *   - cli/handlers/md.js         三段式解析，正确，但困在 L2 的 cli 子层里；
  *   - cli/handlers/docs.js       自己拼 `tools/khyos-markdown`，迁移后**指向空气**，
@@ -19,11 +19,7 @@
  * 解析顺序（可信度降序，全程不抛，落空返回 null 由调用方给提示）：
  *   ① KHY_MD_TOOLS_DIR 显式覆盖 —— 保留历史变量名，既有部署与测试不受迁移影响。
  *   ② provides 契约发现 —— extensionRoots.findProvider() 扫全部根。**这是正路**。
- *   ③ id 兜底 —— 老 manifest 还没写 provides 时按 id 命中，仅为迁移期存在。
- *   ④ 相对路径兜底 —— **仅当契约模块本身不可用时**（被裁剪的模块化构建）。
  *     契约在位却说「没有」，那就是真的没有 —— 禁用与删除必须能压住兜底，否则 §4.1 失效。
- *
- * ③④ 是 fail-soft 冗余，不是真源；③ 在 provides 普及后可删。
  *
  * @module services/extensions/markdownWorkbench
  * @pattern Facade, Strategy
@@ -37,8 +33,6 @@ const path = require('path');
 const SERVICE = 'markdown-workbench';
 /** 入口探针：声明了服务却没带着桥接器的目录不算数，否则同名空目录就能骗过解析。 */
 const ENTRY_PROBE = 'khyos-md-bridge.js';
-/** 迁移期兜底用的 id。**不是**分派依据——只在 manifest 尚未声明 provides 时兜底。 */
-const LEGACY_ID = 'khy-markdown';
 
 function hasEntry(dir) {
   try {
@@ -71,37 +65,9 @@ function resolveDir() {
     /* 契约模块缺失/异常 → 往下兜底 */
   }
 
-  // ③ id 兜底（迁移期）
-  if (roots) {
-    try {
-      for (const ext of roots.discover()) {
-        if (ext.id === LEGACY_ID && hasEntry(ext.dir)) {
-          return ext.dir;
-        }
-      }
-    } catch (_) {
-      /* 继续 ④ */
-    }
-  }
-
-  // ④ 相对路径兜底 —— **仅当契约模块不可用时**。
-  //
-  // 这个前置条件不是优化，是正确性：若无条件执行，它会绕过契约的**全部**判决
-  // —— 拓展被显式禁用、目录被删、仓库根被门控关闭，三种情形下契约都已给出
-  // 「不可见」，而一条硬目录探测会把它捧回来，使 [DESIGN-ARCH-069] §4.1 第二条
-  // 「目录不在 → 拓展不存在」失效。契约模块在位时，它的结论就是终局结论。
-  if (roots) {
-    return null;
-  }
-  const fallbacks = [
-    path.resolve(__dirname, '..', '..', '..', '..', '..', 'extensions', LEGACY_ID),
-    path.resolve(__dirname, '..', '..', '..', '..', '..', '..', 'extensions', LEGACY_ID),
-  ];
-  for (const c of fallbacks) {
-    if (hasEntry(c)) {
-      return c;
-    }
-  }
+  // 契约在位却说「没有」，那就是真的没有 —— 禁用与删除必须能压住兜底。
+  // 契约模块本身不可用时（被裁剪的模块化构建）也无兜底：此时全部拓展均不可用，
+  // 单给一个拓展开例外只会制造不一致（[DESIGN-TOOL-002] §4.1）。
   return null;
 }
 

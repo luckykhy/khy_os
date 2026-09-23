@@ -49,3 +49,68 @@ describe('aiChatPort', () => {
     assert.deepEqual(await prim.chat('go'), { reply: 'p:go' });
   });
 });
+
+/**
+ * CLI session-control surface — added so the ilink messaging channel stops
+ * reaching up into cli/ai and cli/aiConversationOps at four call sites
+ * (clearHistory / cancelActiveRequest / scopeSession / maybeAutoCheckpointProgress).
+ * Same inversion contract: cli/ai registers on load, a non-CLI process gets null
+ * and the caller keeps its existing fail-soft behaviour.
+ */
+describe('aiChatPort — session-control surface', () => {
+  beforeEach(() => port._resetForTest());
+
+  test('all four getters return null before any registration', () => {
+    assert.equal(port.getClearHistory(), null);
+    assert.equal(port.getCancelActiveRequest(), null);
+    assert.equal(port.getScopeSession(), null);
+    assert.equal(port.getMaybeAutoCheckpointProgress(), null);
+  });
+
+  test('registerAiSessionControl wires each operation and returns the same references', () => {
+    const clearHistory = () => {};
+    const cancelActiveRequest = () => {};
+    const scopeSession = () => {};
+    const maybeAutoCheckpointProgress = () => {};
+    port.registerAiSessionControl({
+      clearHistory, cancelActiveRequest, scopeSession, maybeAutoCheckpointProgress,
+    });
+    assert.equal(port.getClearHistory(), clearHistory);
+    assert.equal(port.getCancelActiveRequest(), cancelActiveRequest);
+    assert.equal(port.getScopeSession(), scopeSession);
+    assert.equal(port.getMaybeAutoCheckpointProgress(), maybeAutoCheckpointProgress);
+  });
+
+  test('non-function entries normalize to null (partial CLI load cannot half-wire)', () => {
+    port.registerAiSessionControl({
+      clearHistory: 'not-a-fn',
+      cancelActiveRequest: null,
+      scopeSession: 42,
+      maybeAutoCheckpointProgress: undefined,
+    });
+    assert.equal(port.getClearHistory(), null);
+    assert.equal(port.getCancelActiveRequest(), null);
+    assert.equal(port.getScopeSession(), null);
+    assert.equal(port.getMaybeAutoCheckpointProgress(), null);
+  });
+
+  test('registerAiSessionControl() with no args leaves every slot null', () => {
+    port.registerAiSessionControl();
+    assert.equal(port.getClearHistory(), null);
+    assert.equal(port.getScopeSession(), null);
+  });
+
+  test('_resetForTest clears the session-control slots too', () => {
+    port.registerAiSessionControl({ clearHistory: () => {}, scopeSession: () => {} });
+    port._resetForTest();
+    assert.equal(port.getClearHistory(), null);
+    assert.equal(port.getScopeSession(), null);
+  });
+
+  test('session-control registration does not clobber the chat slot (independent state)', () => {
+    const chat = async () => 'ok';
+    port.registerAiChat(chat);
+    port.registerAiSessionControl({ clearHistory: () => {} });
+    assert.equal(port.getAiChat(), chat, 'chat 槽必须与会话控制槽相互独立');
+  });
+});

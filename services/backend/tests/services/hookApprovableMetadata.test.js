@@ -12,7 +12,7 @@ function fnHook(handler, source = 'test:guard') {
   return { type: 'function', handler, timeout: 1000, source };
 }
 
-describe('hookRunner â€?approvable block metadata pass-through', () => {
+describe('hookRunner â€”approvable block metadata pass-through', () => {
   test('approvable block carries approvable=true and source to hr', async () => {
     const hooks = [fnHook(() => ({
       action: 'block', reason: 'outside root',

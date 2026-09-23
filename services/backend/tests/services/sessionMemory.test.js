@@ -10,7 +10,7 @@
  * in-process singleton, so each test starts from a cleared store.
  */
 
-const SM = require('../../src/services/memoryEngine/sessionMemory');
+const SM = require('../../src/services/domain/memory/memoryEngine/sessionMemory.js');
 
 const SAVED = {};
 beforeEach(() => {

@@ -18,7 +18,7 @@ const {
   FallbackTreeWithHeal, ErrorDiagnostician, MicroLoopExecutor,
   PrescriptionDeadLoopDetector, FixActions, diagnosisDictionary, MAX_LOOP, RISK,
 } = selfHeal;
-const { FixActions: FixActionsClass } = require('../../../src/services/selfHeal/fixActions');
+const { FixActions: FixActionsClass } = require('../../../src/services/domain/maintenance/selfHeal/fixActions.js');
 const resilience = require('../../../src/services/resilience');
 
 // ── 诊断字典：六行病因表 ────────────────────────────────────────────

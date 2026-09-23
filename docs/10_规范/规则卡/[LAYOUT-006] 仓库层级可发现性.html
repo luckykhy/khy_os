@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [LAYOUT-006] 仓库层级可发现性.md -->
+<title>[LAYOUT-006] 仓库层级可发现性 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[LAYOUT-006] 仓库层级可发现性</div>
+      <header class="hero reveal"><h1>[LAYOUT-006] 仓库层级可发现性</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#layout-006-仓库层级可发现性">[LAYOUT-006] 仓库层级可发现性</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 仓库层级可发现性<br>id: LAYOUT-006<br>domain: LAYOUT<br>nature: 约束为主，兼权力与福利<br>scope: &quot;L0–L6 各层内部（kernel/<strong>, platform/</strong>, services/<strong>, apps/</strong>, software/<strong>, extensions/</strong>, tools/<strong>）、横切层（scripts/</strong>, docs/<strong>, packaging/</strong>）及其任何子目录（一切「东西放在哪个目录里」的容量与检索判定；不含仓库顶层目录的层归属——那是 [DESIGN-LAY-005] / LAYOUT-001 的辖区）&quot;<br>priority: P1<br>trigger: &quot;在一个目录里新增第 N 个直接条目时；把一个平铺目录拆成子目录时；给超预算目录写 00_INDEX_* 时；审计「新人为什么找不到东西」时&quot;<br>constraint: &quot;任何目录的直接条目数不得超过其可发现性预算（top 50 / category 50 / implementation 40 / docs 30，见 [DESIGN-LAY-006] §2）；超预算的目录必须按前缀家族拆分为子目录，或（仅文档目录）提供一个真编组的 00_INDEX_*（单个标题块内条目行数 ≤ 80，见 §3）；拆分必须整族一次移动并留下纯 re-export 壳，不得逐文件迁移；⚠ 实测（§1.3.1）：壳<strong>计入</strong>可发现性预算，故「迁移 + 留壳」使父目录条目 +1 —— 真正的降档必须「迁移 + 清壳」两步，且须改边数按<strong>目标解析</strong>判定（ 前缀 ≠ 兄弟边，实测 386 条  中仅 76 条是真兄弟）；.zcode / node_modules / vendor / 产物目录 / 一切点目录不计入。&quot;<br>grants: &quot;授权任何人在不询问维护者的前提下，对超预算目录执行「整族拆分子目录 + 留 re-export 壳」的标准动作（[DESIGN-LAY-006] §4 给出精确步骤与实测代价模型）；授权对平铺目录执行大规模 git mv（判定依据是可发现性预算这一客观量，不是主观审美）；授权维护者按 §7 分层分批推进而不必一次做完。边界：本授权只覆盖「移动 + 留壳」，不覆盖删除任何业务文件；删除仍受 check-change-safety.js 与 [DESIGN-ARCH-113] 管辖。&quot;<br>benefit: &quot;新人第一次进仓就能凭目录名预判内容，不必先 ls | grep；把「这个函数在哪」的检索成本从「全仓 grep + 人眼筛」压到「按层走一次路径」；同时从根因上减少一类长期潜伏 bug——本仓实测有 24 处深层 require 因历史搬迁时 ../ 级数算错而指向不存在的路径（[DESIGN-LAY-005] §2.1 已登记），本规范的「整族一次移动 + 出边计数」正是该缺陷的疗法。&quot;<br>exception: &quot;五类：① 生成物目录（docs/10_规范/规则卡/）由生成器产出，手拆会被覆盖；② 外部工具按名/按序读取的目录（migrations/、assets/）；③ 第三方代码落点（vendor/、node_modules/）；④ 产物目录（dist/build/out/release/coverage/_build/dist-electron，与 [DESIGN-LAY-004] 共用豁免名单）；⑤ 一切点目录（.github/、.claude/、.zcode/ 等，按工具约定命名，改它们等于改工具契约）。五类均须在本文 §5 登记并在叶子常量同步落地，不得裸豁免。&quot;<br>version: &quot;1.0.0 (2026-09-18) 初版；配套原型 scripts/ci/discoverability-demo.js 14 场景实测；实测存量 40 error + 3 warning 已逐条核验为真&quot;<br>status: draft<br>ssot: &quot;docs/10_规范/DESIGN-LAY/[DESIGN-LAY-006] 仓库层级可发现性规范.md&quot;<br>formerly: 无<br>owner: architecture-team<br>enforcement: &quot;scripts/ci/check-discoverability.js&quot;</p>
+<hr>
+<h1 id="layout-006-仓库层级可发现性">[LAYOUT-006] 仓库层级可发现性<a class="anchor" href="#layout-006-仓库层级可发现性" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: LAYOUT-006 -->
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/10_规范/DESIGN-LAY/[DESIGN-LAY-006] 仓库层级可发现性规范.md。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>任何目录的直接条目数不得超过其可发现性预算（top 50 / category 50 / implementation 40 / docs 30，见 [DESIGN-LAY-006] §2）；超预算的目录必须按前缀家族拆分为子目录，或（仅文档目录）提供一个真编组的 00_INDEX_*（单个标题块内条目行数 ≤ 80，见 §3）；拆分必须整族一次移动并留下纯 re-export 壳，不得逐文件迁移；⚠ 实测（§1.3.1）：壳<strong>计入</strong>可发现性预算，故「迁移 + 留壳」使父目录条目 +1 —— 真正的降档必须「迁移 + 清壳」两步，且须改边数按<strong>目标解析</strong>判定（ 前缀 ≠ 兄弟边，实测 386 条  中仅 76 条是真兄弟）；.zcode / node_modules / vendor / 产物目录 / 一切点目录不计入。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>授权任何人在不询问维护者的前提下，对超预算目录执行「整族拆分子目录 + 留 re-export 壳」的标准动作（[DESIGN-LAY-006] §4 给出精确步骤与实测代价模型）；授权对平铺目录执行大规模 git mv（判定依据是可发现性预算这一客观量，不是主观审美）；授权维护者按 §7 分层分批推进而不必一次做完。边界：本授权只覆盖「移动 + 留壳」，不覆盖删除任何业务文件；删除仍受 check-change-safety.js 与 [DESIGN-ARCH-113] 管辖。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>新人第一次进仓就能凭目录名预判内容，不必先 ls | grep；把「这个函数在哪」的检索成本从「全仓 grep + 人眼筛」压到「按层走一次路径」；同时从根因上减少一类长期潜伏 bug——本仓实测有 24 处深层 require 因历史搬迁时 ../ 级数算错而指向不存在的路径（[DESIGN-LAY-005] §2.1 已登记），本规范的「整族一次移动 + 出边计数」正是该缺陷的疗法。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>见 <code>ssot</code> 指向的真源原文；本卡不复制反例，以免与真源漂移。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>人工评审（该规则暂无机械守卫）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>五类：① 生成物目录（docs/10_规范/规则卡/）由生成器产出，手拆会被覆盖；② 外部工具按名/按序读取的目录（migrations/、assets/）；③ 第三方代码落点（vendor/、node_modules/）；④ 产物目录（dist/build/out/release/coverage/_build/dist-electron，与 [DESIGN-LAY-004] 共用豁免名单）；⑤ 一切点目录（.github/、.claude/、.zcode/ 等，按工具约定命名，改它们等于改工具契约）。五类均须在本文 §5 登记并在叶子常量同步落地，不得裸豁免。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-18) 初版；配套原型 scripts/ci/discoverability-demo.js 14 场景实测；实测存量 40 error + 3 warning 已逐条核验为真 初版 / 迁移自 无</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/规则卡/[LAYOUT-005] 构建产物单一根.html"><div class="dir">← 上一篇</div><div class="ttl">[LAYOUT-005] 构建产物单一根</div></a><a class="next" href="../../../docs/10_规范/规则卡/[LAYOUT-007] 三态目录立体分层.html"><div class="dir">下一篇 →</div><div class="ttl">[LAYOUT-007] 三态目录立体分层</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/规则卡/[LAYOUT-006] 仓库层级可发现性.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

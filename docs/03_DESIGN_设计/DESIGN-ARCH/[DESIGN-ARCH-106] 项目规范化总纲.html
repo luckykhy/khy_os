@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-106] 项目规范化总纲.md -->
+<title>[DESIGN-ARCH-106] 项目规范化总纲 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-106] 项目规范化总纲</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-106] 项目规范化总纲</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-106-项目规范化总纲">[DESIGN-ARCH-106] 项目规范化总纲</a></li><li class="lvl-2"><a href="#1-规范化体系概览">1. 规范化体系概览</a></li><li class="lvl-3"><a href="#1-1-规范化层次结构">1.1 规范化层次结构</a></li><li class="lvl-3"><a href="#1-2-规范状态矩阵">1.2 规范状态矩阵</a></li><li class="lvl-2"><a href="#2-mcp-协议规范-工具集成">2. MCP 协议规范（工具集成）</a></li><li class="lvl-3"><a href="#2-1-协议概述">2.1 协议概述</a></li><li class="lvl-3"><a href="#2-2-核心组件">2.2 核心组件</a></li><li class="lvl-3"><a href="#2-3-协议规范">2.3 协议规范</a></li><li class="lvl-3"><a href="#2-4-配置规范">2.4 配置规范</a></li><li class="lvl-3"><a href="#2-5-相关文档">2.5 相关文档</a></li><li class="lvl-2"><a href="#3-a2a-协议规范-智能体通信">3. A2A 协议规范（智能体通信）</a></li><li class="lvl-3"><a href="#3-1-协议概述">3.1 协议概述</a></li><li class="lvl-3"><a href="#3-2-设计目标">3.2 设计目标</a></li><li class="lvl-3"><a href="#3-3-协议架构">3.3 协议架构</a></li><li class="lvl-3"><a href="#3-4-核心消息类型">3.4 核心消息类型</a></li><li class="lvl-3"><a href="#3-5-实现计划">3.5 实现计划</a></li><li class="lvl-2"><a href="#4-记忆系统规范-存储管理">4. 记忆系统规范（存储管理）</a></li><li class="lvl-3"><a href="#4-1-规范概述">4.1 规范概述</a></li><li class="lvl-3"><a href="#4-2-核心组件">4.2 核心组件</a></li><li class="lvl-3"><a href="#4-3-相关文档">4.3 相关文档</a></li><li class="lvl-2"><a href="#5-通信协议规范-服务间通信">5. 通信协议规范（服务间通信）</a></li><li class="lvl-3"><a href="#5-1-协议概述">5.1 协议概述</a></li><li class="lvl-3"><a href="#5-2-协议层次">5.2 协议层次</a></li><li class="lvl-3"><a href="#5-3-消息格式规范">5.3 消息格式规范</a></li><li class="lvl-3"><a href="#5-4-ipc-协议规范">5.4 IPC 协议规范</a></li><li class="lvl-3"><a href="#5-5-创建通信协议文档">5.5 创建通信协议文档</a></li><li class="lvl-2"><a href="#6-代码规范">6. 代码规范</a></li><li class="lvl-3"><a href="#6-1-代码风格">6.1 代码风格</a></li><li class="lvl-3"><a href="#6-2-文件组织">6.2 文件组织</a></li><li class="lvl-3"><a href="#6-3-错误处理">6.3 错误处理</a></li><li class="lvl-2"><a href="#7-文档规范">7. 文档规范</a></li><li class="lvl-3"><a href="#7-1-文档命名">7.1 文档命名</a></li><li class="lvl-3"><a href="#7-2-文档结构">7.2 文档结构</a></li><li class="lvl-3"><a href="#7-3-文档管理">7.3 文档管理</a></li><li class="lvl-2"><a href="#8-测试规范">8. 测试规范</a></li><li class="lvl-3"><a href="#8-1-测试类型">8.1 测试类型</a></li><li class="lvl-3"><a href="#8-2-测试命名">8.2 测试命名</a></li><li class="lvl-3"><a href="#8-3-测试运行">8.3 测试运行</a></li><li class="lvl-2"><a href="#9-部署规范">9. 部署规范</a></li><li class="lvl-3"><a href="#9-1-环境管理">9.1 环境管理</a></li><li class="lvl-3"><a href="#9-2-版本管理">9.2 版本管理</a></li><li class="lvl-3"><a href="#9-3-发布流程">9.3 发布流程</a></li><li class="lvl-2"><a href="#10-规范执行机制">10. 规范执行机制</a></li><li class="lvl-3"><a href="#10-1-ci-cd-强制">10.1 CI/CD 强制</a></li><li class="lvl-3"><a href="#10-2-预提交钩子">10.2 预提交钩子</a></li><li class="lvl-3"><a href="#10-3-代码审查">10.3 代码审查</a></li><li class="lvl-2"><a href="#11-规范演进">11. 规范演进</a></li><li class="lvl-3"><a href="#11-1-规范变更流程">11.1 规范变更流程</a></li><li class="lvl-3"><a href="#11-2-版本管理">11.2 版本管理</a></li><li class="lvl-3"><a href="#11-3-反馈机制">11.3 反馈机制</a></li><li class="lvl-2"><a href="#12-相关文档">12. 相关文档</a></li><li class="lvl-3"><a href="#12-1-核心规范">12.1 核心规范</a></li><li class="lvl-3"><a href="#12-2-协议规范">12.2 协议规范</a></li><li class="lvl-3"><a href="#12-3-实施工具">12.3 实施工具</a></li><li class="lvl-2"><a href="#13-版本历史">13. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-106-项目规范化总纲">[DESIGN-ARCH-106] 项目规范化总纲<a class="anchor" href="#design-arch-106-项目规范化总纲" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档定义 khy-os 项目的完整规范化体系，涵盖工具协议、智能体通信、记忆系统、通信协议等核心领域。</p></blockquote>
+<hr>
+<h2 id="1-规范化体系概览">1. 规范化体系概览<a class="anchor" href="#1-规范化体系概览" aria-label="锚点">#</a></h2>
+<h3 id="1-1-规范化层次结构">1.1 规范化层次结构<a class="anchor" href="#1-1-规范化层次结构" aria-label="锚点">#</a></h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                    项目规范化总纲                              │
+├─────────────────────────────────────────────────────────────┤
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐      │
+│  │ MCP 协议 │ │ A2A 协议 │ │ 记忆规范 │ │ 通信协议 │      │
+│  │  (工具)  │ │ (智能体) │ │ (存储)   │ │ (服务)   │      │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘      │
+├─────────────────────────────────────────────────────────────┤
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐      │
+│  │ 代码规范 │ │ 文档规范 │ │ 测试规范 │ │ 部署规范 │      │
+│  │ (质量)   │ │ (管理)   │ │ (验证)   │ │ (运维)   │      │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘      │
+└─────────────────────────────────────────────────────────────┘</code></pre>
+<h3 id="1-2-规范状态矩阵">1.2 规范状态矩阵<a class="anchor" href="#1-2-规范状态矩阵" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规范领域</th><th>状态</th><th>文档</th><th>实现</th><th>CI 强制</th></tr></thead><tbody><tr><td><strong>MCP 协议</strong></td><td>✅ 成熟</td><td>✅ 3 份文档</td><td>✅ 客户端+服务端+桥接</td><td>✅ 15+ 测试</td></tr><tr><td><strong>A2A 协议</strong></td><td>❌ 缺失</td><td>❌ 无</td><td>❌ 无</td><td>❌ 无</td></tr><tr><td><strong>记忆规范</strong></td><td>✅ 完成</td><td>✅ 6 份文档</td><td>🟡 部分实现</td><td>✅ 蒸馏机制</td></tr><tr><td><strong>通信协议</strong></td><td>🟡 部分</td><td>❌ 缺失总纲</td><td>✅ 代码实现</td><td>🟡 部分强制</td></tr><tr><td><strong>代码规范</strong></td><td>✅ 强制</td><td>✅ ARCH-015</td><td>✅ ESLint/Prettier</td><td>✅ CI</td></tr><tr><td><strong>文档规范</strong></td><td>✅ 强制</td><td>✅ MGMT-STD-001</td><td>✅ 索引系统</td><td>✅ 检查脚本</td></tr><tr><td><strong>测试规范</strong></td><td>✅ 强制</td><td>✅ 多份文档</td><td>✅ 测试框架</td><td>✅ CI</td></tr><tr><td><strong>部署规范</strong></td><td>✅ 完成</td><td>✅ 多份文档</td><td>✅ 脚本</td><td>✅ 门禁</td></tr></tbody></table>
+<hr>
+<h2 id="2-mcp-协议规范-工具集成">2. MCP 协议规范（工具集成）<a class="anchor" href="#2-mcp-协议规范-工具集成" aria-label="锚点">#</a></h2>
+<h3 id="2-1-协议概述">2.1 协议概述<a class="anchor" href="#2-1-协议概述" aria-label="锚点">#</a></h3>
+<p><strong>MCP (Model Context Protocol)</strong> 是 AI 工具集成的标准协议，定义了 AI 模型与外部工具之间的通信方式。</p>
+<p><strong>当前状态</strong>：✅ 成熟实现</p>
+<h3 id="2-2-核心组件">2.2 核心组件<a class="anchor" href="#2-2-核心组件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>组件</th><th>文件</th><th>功能</th></tr></thead><tbody><tr><td>MCP 客户端</td><td><code>services/backend/src/services/domain/messaging/mcp/index.js</code></td><td>连接外部 MCP 服务器</td></tr><tr><td>MCP 服务端</td><td><code>services/backend/src/services/domain/messaging/mcp/mcpServerProtocol.js</code></td><td>暴露 khy 工具</td></tr><tr><td>生态桥接</td><td><code>mcpEcosystemRegistry.js</code></td><td>支持 14+ IDE/Agent</td></tr><tr><td>治理策略</td><td><code>mcpGovernance.js</code></td><td>配置优先级和审批</td></tr></tbody></table>
+<h3 id="2-3-协议规范">2.3 协议规范<a class="anchor" href="#2-3-协议规范" aria-label="锚点">#</a></h3>
+<p><strong>传输方式</strong>：</p>
+<ul><li><strong>stdio</strong>：标准输入输出（本地进程）</li><li><strong>HTTP</strong>：流式 HTTP（远程服务）</li><li><strong>SSE</strong>：服务器推送事件（实时更新）</li></ul>
+<p><strong>消息格式</strong>：JSON-RPC 2.0</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;jsonrpc&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2.0&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;method&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;tools/call&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;params&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;tool_name&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;arguments&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>协议版本</strong>：<code>2024-11-05</code></p>
+<h3 id="2-4-配置规范">2.4 配置规范<a class="anchor" href="#2-4-配置规范" aria-label="锚点">#</a></h3>
+<p><strong>配置文件位置</strong>：</p>
+<ul><li>用户级：<code>~/.khy/mcp.json</code></li><li>项目级：<code>./.khy/mcp.json</code></li></ul>
+<p><strong>配置格式</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;mcpServers&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;server-name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;node&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;args&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;server.js&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;env&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;disabled&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="2-5-相关文档">2.5 相关文档<a class="anchor" href="#2-5-相关文档" aria-label="锚点">#</a></h3>
+<ul><li><code>[OPS-MAN-173]</code> MCP 工具接入快速上手</li><li><code>[DESIGN-RES-003]</code> 跨 Agent 技能/MCP 统一管理-阶段一调研</li><li><code>[DESIGN-LEGISLATION]</code> 跨 Agent 技能 MCP 统一管理-阶段二立法清单</li></ul>
+<hr>
+<h2 id="3-a2a-协议规范-智能体通信">3. A2A 协议规范（智能体通信）<a class="anchor" href="#3-a2a-协议规范-智能体通信" aria-label="锚点">#</a></h2>
+<h3 id="3-1-协议概述">3.1 协议概述<a class="anchor" href="#3-1-协议概述" aria-label="锚点">#</a></h3>
+<p><strong>A2A (Agent-to-Agent)</strong> 是智能体间通信的标准协议，定义了智能体如何发现、协商和协作。</p>
+<p><strong>当前状态</strong>：❌ 完全缺失</p>
+<h3 id="3-2-设计目标">3.2 设计目标<a class="anchor" href="#3-2-设计目标" aria-label="锚点">#</a></h3>
+<ol><li><strong>智能体发现</strong>：自动发现网络中的其他智能体</li><li><strong>能力广播</strong>：智能体广播自己的能力和服务</li><li><strong>任务协商</strong>：智能体之间协商任务分配</li><li><strong>状态同步</strong>：智能体状态实时同步</li><li><strong>安全通信</strong>：加密和认证机制</li></ol>
+<h3 id="3-3-协议架构">3.3 协议架构<a class="anchor" href="#3-3-协议架构" aria-label="锚点">#</a></h3>
+<pre><code>┌─────────────────────────────────────────────────────────┐
+│                    A2A 协议栈                              │
+├─────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────┐   │
+│  │              应用层 (Application)                │   │
+│  │  • 任务协商  • 能力发现  • 状态同步  • 结果聚合  │   │
+│  └─────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │              消息层 (Messaging)                   │   │
+│  │  • JSON-RPC 2.0  • 消息路由  • 优先级队列        │   │
+│  └─────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │              传输层 (Transport)                   │   │
+│  │  • WebSocket  • HTTP/2  • gRPC  • P2P            │   │
+│  └─────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │              安全层 (Security)                    │   │
+│  │  • mTLS  • JWT  • RBAC  • 审计日志               │   │
+│  └─────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘</code></pre>
+<h3 id="3-4-核心消息类型">3.4 核心消息类型<a class="anchor" href="#3-4-核心消息类型" aria-label="锚点">#</a></h3>
+<p><strong>1. 发现消息 (Discovery)</strong></p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;discovery&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;action&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;announce&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;agent&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent-001&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;khy-quant&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;capabilities&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;trading&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;analysis&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;backtest&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;endpoint&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ws://localhost:3001&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;available&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>2. 能力查询 (Capability Query)</strong></p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;capability&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;action&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;query&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;filter&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;capability&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;trading&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;&gt;=1.0.0&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>3. 任务请求 (Task Request)</strong></p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;task&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;action&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;request&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;task&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;task-001&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;analysis&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;payload&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;priority&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;high&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;deadline&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00Z&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>4. 状态同步 (Status Sync)</strong></p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;status&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;action&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;sync&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;agent&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent-001&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;busy&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;currentTask&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;task-001&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;progress&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0.75</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="3-5-实现计划">3.5 实现计划<a class="anchor" href="#3-5-实现计划" aria-label="锚点">#</a></h3>
+<p><strong>阶段 1：基础框架</strong>（1-2 周）</p>
+<ul><li>定义消息格式和协议规范</li><li>实现智能体注册和发现机制</li><li>建立基础通信通道</li></ul>
+<p><strong>阶段 2：核心功能</strong>（2-3 周）</p>
+<ul><li>实现能力广播和查询</li><li>实现任务协商和分配</li><li>实现状态同步机制</li></ul>
+<p><strong>阶段 3：高级特性</strong>（3-4 周）</p>
+<ul><li>实现安全认证机制</li><li>实现负载均衡和故障转移</li><li>实现审计和监控</li></ul>
+<hr>
+<h2 id="4-记忆系统规范-存储管理">4. 记忆系统规范（存储管理）<a class="anchor" href="#4-记忆系统规范-存储管理" aria-label="锚点">#</a></h2>
+<h3 id="4-1-规范概述">4.1 规范概述<a class="anchor" href="#4-1-规范概述" aria-label="锚点">#</a></h3>
+<p><strong>记忆系统</strong>定义了 AI 助手如何存储、检索和管理持久化信息。</p>
+<p><strong>当前状态</strong>：✅ 规范完成，🟡 部分实现</p>
+<h3 id="4-2-核心组件">4.2 核心组件<a class="anchor" href="#4-2-核心组件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>组件</th><th>说明</th><th>状态</th></tr></thead><tbody><tr><td>记忆分类</td><td>user/feedback/project/reference</td><td>✅ 定义完成</td></tr><tr><td>保留层级</td><td>short_term/cross_session/permanent</td><td>✅ 定义完成</td></tr><tr><td>生命周期</td><td>创建→活跃→老化→归档→恢复</td><td>✅ 定义完成</td></tr><tr><td>蒸馏机制</td><td>去重、清理、归档</td><td>✅ 实现完成</td></tr><tr><td>检索机制</td><td>关键词、向量、主动回忆</td><td>🟡 部分实现</td></tr></tbody></table>
+<h3 id="4-3-相关文档">4.3 相关文档<a class="anchor" href="#4-3-相关文档" aria-label="锚点">#</a></h3>
+<ul><li><code>[DESIGN-MEM-000]</code> 记忆系统总结</li><li><code>[DESIGN-MEM-001]</code> 记忆系统标准规范</li><li><code>[DESIGN-MEM-002]</code> 记忆时机指南</li><li><code>[DESIGN-MEM-003]</code> 记忆模板库</li><li><code>[DESIGN-MEM-004]</code> 记忆快速参考卡</li><li><code>[DESIGN-MEM-005]</code> 记忆系统使用指南</li></ul>
+<hr>
+<h2 id="5-通信协议规范-服务间通信">5. 通信协议规范（服务间通信）<a class="anchor" href="#5-通信协议规范-服务间通信" aria-label="锚点">#</a></h2>
+<h3 id="5-1-协议概述">5.1 协议概述<a class="anchor" href="#5-1-协议概述" aria-label="锚点">#</a></h3>
+<p><strong>通信协议</strong>定义了 khy-os 内部服务之间、以及与外部系统的通信方式。</p>
+<p><strong>当前状态</strong>：🟡 部分实现，❌ 缺少统一文档</p>
+<h3 id="5-2-协议层次">5.2 协议层次<a class="anchor" href="#5-2-协议层次" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>层次</th><th>协议</th><th>用途</th><th>状态</th></tr></thead><tbody><tr><td><strong>应用层</strong></td><td>HTTP REST API</td><td>前端↔后端通信</td><td>✅ 实现</td></tr><tr><td><strong>应用层</strong></td><td>WebSocket</td><td>实时通信</td><td>✅ 实现</td></tr><tr><td><strong>应用层</strong></td><td>SSE</td><td>服务器推送</td><td>✅ 实现</td></tr><tr><td><strong>传输层</strong></td><td>HTTP/2</td><td>高性能传输</td><td>✅ 实现</td></tr><tr><td><strong>传输层</strong></td><td>gRPC</td><td>高效 RPC</td><td>🟡 部分</td></tr><tr><td><strong>传输层</strong></td><td>TCP/UDP</td><td>底层传输</td><td>✅ 实现</td></tr><tr><td><strong>安全层</strong></td><td>TLS/SSL</td><td>加密传输</td><td>✅ 实现</td></tr><tr><td><strong>安全层</strong></td><td>JWT</td><td>身份认证</td><td>✅ 实现</td></tr></tbody></table>
+<h3 id="5-3-消息格式规范">5.3 消息格式规范<a class="anchor" href="#5-3-消息格式规范" aria-label="锚点">#</a></h3>
+<p><strong>HTTP 响应信封</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;操作成功&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;pagination&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;page&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;pageSize&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">20</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;total&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">100</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>HTTP 错误信封</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;错误描述&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;statusCode&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">400</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;errorType&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;VALIDATION_ERROR&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;requestId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;req-001&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>WebSocket 消息格式</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;message_type&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;payload&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-09-04T12:00:00Z&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;msg-001&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="5-4-ipc-协议规范">5.4 IPC 协议规范<a class="anchor" href="#5-4-ipc-协议规范" aria-label="锚点">#</a></h3>
+<p><strong>二进制协议</strong>（内核桥接）：</p>
+<pre><code>┌─────────┬─────────┬─────────┬─────────┐
+│ Verb    │ Length  │ Payload │ CRC     │
+│ (2B)    │ (4B)    │ (nB)    │ (2B)    │
+└─────────┴─────────┴─────────┴─────────┘</code></pre>
+<p><strong>控制面 Verb</strong>：</p>
+<ul><li>STAT (0x0001)：获取状态</li><li>LIST (0x0002)：列表目录</li><li>READ (0x0003)：读取文件</li><li>WRITE (0x0004)：写入文件</li><li>MKDIR (0x0005)：创建目录</li><li>REMOVE (0x0006)：删除文件</li><li>PS (0x0007)：进程列表</li></ul>
+<p><strong>事件面 Verb</strong>：</p>
+<ul><li>SPAWN (0x0001)：进程创建</li><li>EXIT (0x0002)：进程退出</li><li>FAULT (0x0003)：故障通知</li></ul>
+<h3 id="5-5-创建通信协议文档">5.5 创建通信协议文档<a class="anchor" href="#5-5-创建通信协议文档" aria-label="锚点">#</a></h3>
+<p><strong>需要创建</strong>：<code>COMMUNICATION-PROTOCOL.md</code></p>
+<p><strong>内容框架</strong>：</p>
+<ol><li>协议概述和设计原则</li><li>消息格式规范（HTTP/WebSocket/IPC）</li><li>认证和授权机制</li><li>错误处理和重试策略</li><li>性能和扩展性考虑</li><li>安全和合规要求</li></ol>
+<hr>
+<h2 id="6-代码规范">6. 代码规范<a class="anchor" href="#6-代码规范" aria-label="锚点">#</a></h2>
+<h3 id="6-1-代码风格">6.1 代码风格<a class="anchor" href="#6-1-代码风格" aria-label="锚点">#</a></h3>
+<p><strong>JavaScript/TypeScript</strong>：</p>
+<ul><li>缩进：2 空格</li><li>引号：单引号</li><li>分号：必须</li><li>命名：camelCase</li><li>注释：英文</li></ul>
+<p><strong>Python</strong>：</p>
+<ul><li>缩进：4 空格</li><li>命名：snake_case</li><li>注释：英文</li><li>类型提示：推荐</li></ul>
+<h3 id="6-2-文件组织">6.2 文件组织<a class="anchor" href="#6-2-文件组织" aria-label="锚点">#</a></h3>
+<p><strong>目录结构</strong>：</p>
+<pre><code>src/
+├── cli/              # CLI 命令处理
+├── services/         # 业务服务
+├── routes/           # API 路由
+├── middleware/       # 中间件
+├── utils/            # 工具函数
+├── constants/        # 常量定义
+└── types/            # 类型定义</code></pre>
+<h3 id="6-3-错误处理">6.3 错误处理<a class="anchor" href="#6-3-错误处理" aria-label="锚点">#</a></h3>
+<p><strong>统一错误格式</strong>：</p>
+<pre><code class="language-javascript">{
+  <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;ERROR_CODE&#x27;</span>,
+  <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;错误描述&#x27;</span>,
+  <span class="hljs-attr">details</span>: {},
+  <span class="hljs-attr">stack</span>: <span class="hljs-string">&#x27;堆栈信息&#x27;</span>
+}</code></pre>
+<p><strong>错误分类</strong>：</p>
+<ul><li>用户错误（USER_ERROR）</li><li>配置错误（CONFIG_ERROR）</li><li>认证错误（AUTH_ERROR）</li><li>网络错误（NETWORK_ERROR）</li><li>内部错误（INTERNAL_ERROR）</li></ul>
+<hr>
+<h2 id="7-文档规范">7. 文档规范<a class="anchor" href="#7-文档规范" aria-label="锚点">#</a></h2>
+<h3 id="7-1-文档命名">7.1 文档命名<a class="anchor" href="#7-1-文档命名" aria-label="锚点">#</a></h3>
+<p><strong>格式</strong>：<code>[TYPE-CATEGORY-NNN] 标题.md</code></p>
+<p><strong>类型</strong>：</p>
+<ul><li>DESIGN：设计文档</li><li>OPS：运维文档</li><li>MGMT：管理文档</li><li>API：API 文档</li><li>GUIDE：指南文档</li></ul>
+<h3 id="7-2-文档结构">7.2 文档结构<a class="anchor" href="#7-2-文档结构" aria-label="锚点">#</a></h3>
+<p><strong>标准结构</strong>：</p>
+<pre><code class="language-markdown"><span class="hljs-section"># [TYPE-CATEGORY-NNN] 标题</span>
+
+<span class="hljs-quote">&gt; 摘要</span>
+
+---
+
+<span class="hljs-section">## 1. 概述</span>
+<span class="hljs-section">## 2. 详细内容</span>
+<span class="hljs-section">## 3. 示例</span>
+<span class="hljs-section">## 4. 相关文档</span>
+<span class="hljs-section">## 5. 版本历史</span></code></pre>
+<h3 id="7-3-文档管理">7.3 文档管理<a class="anchor" href="#7-3-文档管理" aria-label="锚点">#</a></h3>
+<p><strong>索引维护</strong>：</p>
+<ul><li>所有文档必须在索引中注册</li><li>文档变更必须更新索引</li><li>定期检查文档完整性</li></ul>
+<hr>
+<h2 id="8-测试规范">8. 测试规范<a class="anchor" href="#8-测试规范" aria-label="锚点">#</a></h2>
+<h3 id="8-1-测试类型">8.1 测试类型<a class="anchor" href="#8-1-测试类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>目的</th><th>工具</th><th>覆盖率要求</th></tr></thead><tbody><tr><td>单元测试</td><td>函数/模块测试</td><td>Jest/Vitest</td><td>≥80%</td></tr><tr><td>集成测试</td><td>模块间交互</td><td>Jest/Vitest</td><td>≥70%</td></tr><tr><td>端到端测试</td><td>完整流程</td><td>Playwright</td><td>关键路径</td></tr><tr><td>性能测试</td><td>性能基准</td><td>k6/artillery</td><td>按需</td></tr></tbody></table>
+<h3 id="8-2-测试命名">8.2 测试命名<a class="anchor" href="#8-2-测试命名" aria-label="锚点">#</a></h3>
+<p><strong>格式</strong>：<code>describe &gt; it &gt; expect</code></p>
+<pre><code class="language-javascript"><span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;ModuleName&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;functionName&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;should do something when condition&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-title function_">expect</span>(result).<span class="hljs-title function_">toBe</span>(expected);
+    });
+  });
+});</code></pre>
+<h3 id="8-3-测试运行">8.3 测试运行<a class="anchor" href="#8-3-测试运行" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 运行所有测试</span>
+npm <span class="hljs-built_in">test</span>
+
+<span class="hljs-comment"># 运行单元测试</span>
+npm run <span class="hljs-built_in">test</span>:unit
+
+<span class="hljs-comment"># 运行集成测试</span>
+npm run <span class="hljs-built_in">test</span>:integration
+
+<span class="hljs-comment"># 生成覆盖率报告</span>
+npm run <span class="hljs-built_in">test</span>:coverage</code></pre>
+<hr>
+<h2 id="9-部署规范">9. 部署规范<a class="anchor" href="#9-部署规范" aria-label="锚点">#</a></h2>
+<h3 id="9-1-环境管理">9.1 环境管理<a class="anchor" href="#9-1-环境管理" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>环境</th><th>用途</th><th>配置</th><th>部署方式</th></tr></thead><tbody><tr><td>开发</td><td>本地开发</td><td>.env.local</td><td>手动</td></tr><tr><td>测试</td><td>功能测试</td><td>.env.test</td><td>CI/CD</td></tr><tr><td>预发</td><td>预发布验证</td><td>.env.staging</td><td>自动</td></tr><tr><td>生产</td><td>正式环境</td><td>.env.production</td><td>审批后自动</td></tr></tbody></table>
+<h3 id="9-2-版本管理">9.2 版本管理<a class="anchor" href="#9-2-版本管理" aria-label="锚点">#</a></h3>
+<p><strong>语义化版本</strong>：<code>MAJOR.MINOR.PATCH</code></p>
+<ul><li>MAJOR：不兼容的 API 变更</li><li>MINOR：向下兼容的功能性新增</li><li>PATCH：向下兼容的问题修正</li></ul>
+<p><strong>版本同步</strong>：</p>
+<ul><li><code>pyproject.toml</code></li><li><code>services/backend/package.json</code></li><li><code>packaging/npm/package.json</code></li><li><code>packaging/modules/modules.json</code></li></ul>
+<h3 id="9-3-发布流程">9.3 发布流程<a class="anchor" href="#9-3-发布流程" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 版本检查</span>
+npm run check:version-sync
+
+<span class="hljs-comment"># 2. 质量门禁</span>
+npm run quality:gate
+
+<span class="hljs-comment"># 3. 构建产物</span>
+npm run build
+
+<span class="hljs-comment"># 4. 发布</span>
+npm run publish</code></pre>
+<hr>
+<h2 id="10-规范执行机制">10. 规范执行机制<a class="anchor" href="#10-规范执行机制" aria-label="锚点">#</a></h2>
+<h3 id="10-1-ci-cd-强制">10.1 CI/CD 强制<a class="anchor" href="#10-1-ci-cd-强制" aria-label="锚点">#</a></h3>
+<p><strong>检查脚本</strong>：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 代码规范检查</span>
+npm run check:agent-rules
+
+<span class="hljs-comment"># 文件格式检查</span>
+npm run check:change-safety
+
+<span class="hljs-comment"># 协议契约检查</span>
+npm run check:protocol-contracts
+
+<span class="hljs-comment"># 可靠性检查</span>
+npm run check:reliability</code></pre>
+<h3 id="10-2-预提交钩子">10.2 预提交钩子<a class="anchor" href="#10-2-预提交钩子" aria-label="锚点">#</a></h3>
+<p><strong>Git Hooks</strong>：</p>
+<ul><li><code>pre-commit</code>：代码格式化、lint 检查</li><li><code>commit-msg</code>：提交信息格式检查</li><li><code>pre-push</code>：测试运行、构建检查</li></ul>
+<h3 id="10-3-代码审查">10.3 代码审查<a class="anchor" href="#10-3-代码审查" aria-label="锚点">#</a></h3>
+<p><strong>审查清单</strong>：</p>
+<ul><li>[ ] 代码符合风格规范</li><li>[ ] 错误处理完整</li><li>[ ] 测试覆盖充分</li><li>[ ] 文档更新完整</li><li>[ ] 安全考虑充分</li></ul>
+<hr>
+<h2 id="11-规范演进">11. 规范演进<a class="anchor" href="#11-规范演进" aria-label="锚点">#</a></h2>
+<h3 id="11-1-规范变更流程">11.1 规范变更流程<a class="anchor" href="#11-1-规范变更流程" aria-label="锚点">#</a></h3>
+<ol><li><strong>提案</strong>：提交规范变更提案</li><li><strong>讨论</strong>：团队讨论和评审</li><li><strong>批准</strong>：负责人批准</li><li><strong>实施</strong>：更新文档和代码</li><li><strong>验证</strong>：CI 检查和测试</li></ol>
+<h3 id="11-2-版本管理">11.2 版本管理<a class="anchor" href="#11-2-版本管理" aria-label="锚点">#</a></h3>
+<p><strong>规范版本</strong>：<code>vMAJOR.MINOR</code></p>
+<ul><li>MAJOR：不兼容的变更</li><li>MINOR：向下兼容的新增</li></ul>
+<h3 id="11-3-反馈机制">11.3 反馈机制<a class="anchor" href="#11-3-反馈机制" aria-label="锚点">#</a></h3>
+<p><strong>反馈渠道</strong>：</p>
+<ul><li>GitHub Issues</li><li>文档评论</li><li>团队会议</li><li>用户反馈</li></ul>
+<hr>
+<h2 id="12-相关文档">12. 相关文档<a class="anchor" href="#12-相关文档" aria-label="锚点">#</a></h2>
+<h3 id="12-1-核心规范">12.1 核心规范<a class="anchor" href="#12-1-核心规范" aria-label="锚点">#</a></h3>
+<ul><li><code>[DESIGN-LAY-005]</code> 仓库层级板块规范</li><li><code>[MGMT-STD-001]</code> 文档结构与索引铁律</li><li><code>[OPS-MAN-169]</code> 项目规则总索引</li></ul>
+<h3 id="12-2-协议规范">12.2 协议规范<a class="anchor" href="#12-2-协议规范" aria-label="锚点">#</a></h3>
+<ul><li><code>[DESIGN-MEM-001]</code> 记忆系统标准规范</li><li><code>[DESIGN-A2A-001]</code> A2A 协议规范</li><li><code>[DESIGN-COMM-001]</code> 通信协议规范</li><li><code>[DESIGN-FE-001]</code> 前端页面规范</li><li><code>[DESIGN-FE-002]</code> 前端组件库规范</li><li><code>[DESIGN-FE-003]</code> 前端快速参考卡</li></ul>
+<h3 id="12-3-实施工具">12.3 实施工具<a class="anchor" href="#12-3-实施工具" aria-label="锚点">#</a></h3>
+<ul><li><code>scripts/ci/check-agent-rules.js</code> - 代理规则检查</li><li><code>scripts/ci/check-change-safety.js</code> - 变更安全检查</li><li><code>scripts/ci/validate-protocol-contracts.js</code> - 协议契约验证</li><li><code>scripts/ci/validate-reliability.js</code> - 可靠性验证</li></ul>
+<hr>
+<h2 id="13-版本历史">13. 版本历史<a class="anchor" href="#13-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义项目规范化总纲</td></tr></tbody></table>
+<hr>
+<p><em>本总纲由 khy-os 架构团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-105] ycode 第三轮增量借鉴调研报告.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-105] ycode（星瑶）第三轮增量借鉴调研报告</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-107] TUI组件实现提示词.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-107] TUI 组件实现提示词</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-106] 项目规范化总纲.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

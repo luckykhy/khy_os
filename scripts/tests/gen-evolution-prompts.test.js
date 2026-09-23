@@ -69,7 +69,7 @@ test('isSafeVerify 接受只读/自检类命令', () => {
   const safe = [
     'node --check foo.js',
     'npm run arch:god',
-    'npm run maintainer:check',
+    'npm run check:maintainer:safety',
     'npm run test:maintainer:all',
     'khy doctor',
   ];

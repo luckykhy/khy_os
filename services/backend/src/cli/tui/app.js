@@ -26,10 +26,19 @@ async function startInkApp(options = {}) {
   // sync stalls on the interactive surface become observable (honest log +
   // diagnostics + onHang hook). It never kills — governance Rule 3. Fail-soft
   // by design and idempotent per process (safe across TUI retry/fallback).
+  //
+  // onReport (BUG-17): while ink owns the terminal, the watchdog's own
+  // `process.stderr.write` is outside ink's frame ledger, so the line lands
+  // below the status bar and no repaint can ever erase it. Hand the line to the
+  // TUI notice inbox instead; when nothing has subscribed yet (boot, or a
+  // surface that doesn't read the inbox) push() returns false and the watchdog
+  // falls back to its historical stderr write — the diagnosis is never dropped.
+  // Gate KHY_WATCHDOG_NOTICE=0 → push() always declines → byte-for-byte old behaviour.
   try {
     require('../../services/sessionWatchdog').installSessionWatchdog({
       env: process.env,
       logger: console,
+      onReport: (line) => require('./noticeInbox').push(line),
     });
   } catch { /* watchdog optional — never blocks TUI startup */ }
 
@@ -141,7 +150,7 @@ async function startInkApp(options = {}) {
       // 保证不滚屏;rows 取不到(部分 Windows 终端报 0)→ 叶子侧不切,逐字节回退。
       getRows: () => process.stdout.rows,
       getColumns: () => process.stdout.columns,
-      measureWidth: (s) => require('../../formatters').displayWidth(s),
+      measureWidth: (s) => require('../formatters').displayWidth(s),
     }
   );
   const _tuiStdout = new Proxy(_realOut, {
@@ -196,20 +205,39 @@ async function startInkApp(options = {}) {
   //    disableBytes() resets all tracking modes; DECRST on a mode that was never
   //    set is a no-op, so writing it unconditionally costs nothing and heals a
   //    terminal a previous crash left broken.
-  // 2. Opt-in enable. KHY_MOUSE_BUTTONS is OFF by default on every platform
-  //    (see mouseButtons.js「为什么默认全关」): tracking is exclusive, so buying
-  //    clickable <Box onClick> buttons costs the user scrollback + copy. The two
-  //    clickable elements both have keyboard equivalents (Alt+M for the mic, Esc
-  //    to clear pending images), so the default keeps the terminal intact.
-  //    Enabled BEFORE ink mounts so no click is lost; exit hooks restore.
+  // 2. Enable by tier (see mouseButtons.mouseTier). The default is no longer
+  //    "off everywhere": inside the alternate screen (KHY_ALT_SCREEN, default on)
+  //    the wheel MUST have an owner. Leaving it to the terminal is not neutral —
+  //    alternate-scroll synthesizes ↑/↓ into stdin, and arrowRouting reads those as
+  //    `history:previous/next` → the user's「滚轮变成输入历史回溯」report. The
+  //    Legacy TUI has an in-app viewport that consumes the wheel, so it takes over;
+  //    CC mode has none (`hasWheelConsumer: false`) and therefore stays out of the
+  //    way rather than swallowing the wheel into nothing. Enabled BEFORE ink mounts
+  //    so no click is lost; exit hooks restore.
+  // 3. The tracking MODE must match what App.js re-enables after a native
+  //    passthrough (`_reEnableTrackingBytes`): `select` is what picks 1002 over
+  //    1000. Writing 1000 here while the selection layer is on leaves drag-select
+  //    with no motion reports — the highlight only appears on release. Both sites
+  //    read the same gates (./utils/selectGates), so they cannot drift apart.
   try {
     const mouseButtons = require('./mouseButtons');
     if (_realOut.isTTY) {
       _realOut.write(mouseButtons.disableBytes());
     }
-    if (mouseButtons.mouseButtonsEnabled(process.env, process.platform) && _realOut.isTTY) {
-      const _hover = mouseButtons.mouseHoverEnabled(process.env);
-      _realOut.write(mouseButtons.enableBytes({ hover: _hover }));
+    if (
+      mouseButtons.mouseButtonsEnabled(process.env, process.platform, {
+        hasWheelConsumer: !isCc,
+      }) &&
+      _realOut.isTTY
+    ) {
+      const _mouseOpts = { hover: mouseButtons.mouseHoverEnabled(process.env) };
+      try {
+        const _gates = require('./utils/selectGates');
+        _mouseOpts.select = _gates.selectEnabled(process.env) && _gates.selectDragEnabled(process.env);
+      } catch {
+        /* 叶子不可用 → 维持 1000(逐字节回退到旧行为),绝不阻断启动 */
+      }
+      _realOut.write(mouseButtons.enableBytes(_mouseOpts));
       let _mouseHooked = false;
       const offMouse = () => {
         if (_mouseHooked) return;
@@ -221,6 +249,24 @@ async function startInkApp(options = {}) {
       process.once('SIGTERM', offMouse);
     }
   } catch { /* cosmetic — never block the TUI on mouse setup */ }
+
+  // Internal logs must not fight the live frame for the screen (BUG-13). A
+  // winston Console write goes to `console._stdout/_stderr.write`, which ink's
+  // patchConsole does NOT hook — so those bytes land on the terminal behind
+  // ink's back and its eraseLines can never remove them (the「日志压在状态栏
+  // 下面、重绘后残留」reports). Mute the console channel for the session; the
+  // file transport keeps recording. Restore on the way out and on any exit,
+  // so a later classic-REPL turn in this process is not left log-silent.
+  let _restoreConsoleLogs = () => false;
+  try {
+    const _mute = require('./consoleMute').muteConsoleForSession(
+      require('../../utils/logger'), process.env
+    );
+    if (_mute.muted) {
+      _restoreConsoleLogs = _mute.restore;
+      process.once('exit', () => { try { _restoreConsoleLogs(); } catch { /* exiting */ } });
+    }
+  } catch { /* logging volume is cosmetic — never block the TUI on it */ }
 
   const app = render(React.createElement(App, { options }), {
     stdout: _tuiStdout,
@@ -239,6 +285,11 @@ async function startInkApp(options = {}) {
   inkRuntime.setRenderStdout(_tuiStdout);
 
   await app.waitUntilExit();
+
+  // Hand the console channel back to winston (see the mute at mount). Idempotent
+  // with the 'exit' hook above; the plain call covers the normal clean return so
+  // a subsequent classic-REPL turn in this same process logs as it did before.
+  try { _restoreConsoleLogs(); } catch { /* fail-soft */ }
 
   // A stream wrapper may split an ANSI token across writes. Do not strand the
   // final incomplete suffix when Ink exits before another frame completes it.

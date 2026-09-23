@@ -1,3 +1,3 @@
-'use strict';
+﻿'use strict';
 
-module.exports = require('../../services/backend/src/services/restore/restoreConflictDetector');
+module.exports = require('../../services/backend/src/services/restore').restoreConflictDetector;

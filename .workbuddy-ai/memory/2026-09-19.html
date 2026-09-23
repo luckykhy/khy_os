@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-19.md -->
+<title>2026-09-19 工作日志 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>.workbuddy-ai<span class="sep">›</span>memory<span class="sep">›</span>2026-09-19 工作日志</div>
+      <header class="hero reveal"><h1>2026-09-19 工作日志</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#2026-09-19-工作日志">2026-09-19 工作日志</a></li><li class="lvl-2"><a href="#目录结构诊断与-恰到好处-方案设计">目录结构诊断与&quot;恰到好处&quot;方案设计</a></li><li class="lvl-3"><a href="#产出物-均在-khyos-diag">产出物（均在 `.khyos/diag/`）</a></li><li class="lvl-3"><a href="#关键实测数据">关键实测数据</a></li><li class="lvl-3"><a href="#核心结论">核心结论</a></li><li class="lvl-3"><a href="#p0-清单">P0 清单</a></li><li class="lvl-3"><a href="#纪律应用-重要方法论点">纪律应用（重要方法论点）</a></li><li class="lvl-3"><a href="#自身犯的错与修正-值得记">自身犯的错与修正（值得记）</a></li><li class="lvl-3"><a href="#待用户决策">待用户决策</a></li><li class="lvl-2"><a href="#提交时机规范-process-009-design-git-004-用户诉求-小白不知道什么时候该提交">提交时机规范（PROCESS-009 / [DESIGN-GIT-004]）—— 用户诉求：「小白不知道什么时候该提交」</a></li><li class="lvl-3"><a href="#诊断-一个被漏掉的空白-实测证据">诊断：一个被漏掉的空白（实测证据）</a></li><li class="lvl-3"><a href="#交付物-第一阶段-规则">交付物（第一阶段：规则）</a></li><li class="lvl-3"><a href="#三个实测得出的新判据-值得进长期记忆">★ 三个实测得出的新判据（值得进长期记忆）</a></li><li class="lvl-3"><a href="#观察到的既有技术债-未处理-供后续">观察到的既有技术债（未处理，供后续）</a></li><li class="lvl-2"><a href="#续-结构整理执行-phase-3-4-dangling-task-判据修复">续：结构整理执行（Phase 3/4）+ dangling-task 判据修复</a></li><li class="lvl-3"><a href="#phase-4-dangling-task-ci-红灯解除-103-88">Phase 4 —— `dangling-task` CI 红灯解除（103 → 88）</a></li><li class="lvl-3"><a href="#本次最贵的坑-改守卫时-重复定义了函数">★★ 本次最贵的坑：改守卫时**重复定义了函数**</a></li><li class="lvl-3"><a href="#phase-3-整体撤回-误报">Phase 3 —— **整体撤回**（误报）</a></li><li class="lvl-3"><a href="#坑-不能跑-build-docs-site-js-同步孪生件">坑：**不能跑 `build_docs_site.js` 同步孪生件**</a></li><li class="lvl-3"><a href="#既有缺陷-非我引入-已实证">既有缺陷（非我引入，已实证）</a></li><li class="lvl-3"><a href="#剩余欠账">剩余欠账</a></li><li class="lvl-2"><a href="#续-收尾工作三项方案-commit-拆分-build-root-sync-a-类-18-缺口">续：收尾工作三项方案（commit 拆分 / build:root:sync / A 类 18 缺口）</a></li><li class="lvl-3"><a href="#三项调研的关键实测数据">三项调研的关键实测数据</a></li><li class="lvl-3"><a href="#教训">教训</a></li><li class="lvl-2"><a href="#续二-phase-0-1-实际执行-授权后">续二：Phase 0+1 实际执行（授权后）</a></li><li class="lvl-3"><a href="#已完成">已完成</a></li><li class="lvl-3"><a href="#本轮四条新判据-都是踩出来的">★ 本轮四条新判据（都是踩出来的）</a></li><li class="lvl-3"><a href="#顺带发现-未处理">顺带发现（未处理）</a></li><li class="lvl-3"><a href="#产出">产出</a></li><li class="lvl-2"><a href="#续三-星瑶-xingyao-y-code-vs-khy-os-外部比较-先定规矩再列矩阵">续三：星瑶 xingyao-y-code vs khy-os 外部比较（先定规矩再列矩阵）</a></li><li class="lvl-3"><a href="#事实订正-本次最重要的产出">★ 事实订正（本次最重要的产出）</a></li><li class="lvl-3"><a href="#新判据-既有-sourcing-规则族可直接复用作外部比较框架">★ 新判据：既有 SOURCING 规则族可直接复用作外部比较框架</a></li><li class="lvl-3"><a href="#关键发现-khy-os-对星瑶已有-记录在案-的借鉴">★ 关键发现：khy-os 对星瑶已有「记录在案」的借鉴</a></li><li class="lvl-3"><a href="#星瑶侧实测规模-供后续引用">星瑶侧实测规模（供后续引用）</a></li><li class="lvl-3"><a href="#框架性结论">框架性结论</a></li><li class="lvl-3"><a href="#产出与纪律">产出与纪律</a></li><li class="lvl-3"><a href="#续-第二轮机制实现层对照-订正第一轮一处误判">续：第二轮机制实现层对照 —— **订正第一轮一处误判**</a></li><li class="lvl-3"><a href="#最深发现-非法状态转移的-两条对立路线-两边都对">★★ 最深发现：非法状态转移的「两条对立路线」，两边都对</a></li><li class="lvl-3"><a href="#星瑶最值得借鉴的一处-turnprogressguard-的-有界进展-预算">★ 星瑶最值得借鉴的一处：`TurnProgressGuard` 的「有界进展」预算</a></li><li class="lvl-3"><a href="#产出-2">产出</a></li><li class="lvl-3"><a href="#续-第三轮深读-core-llm-py-6998-行-最大发现-两边独立发明了同一个护栏">续：第三轮深读 `core/llm.py`（6998 行）—— ★★ 最大发现：**两边独立发明了同一个护栏**</a></li><li class="lvl-3"><a href="#星瑶两处真-可借鉴点-khy-侧缺失">★ 星瑶两处真·可借鉴点（khy 侧缺失）</a></li><li class="lvl-3"><a href="#最终汇总判据-写入报告-8">最终汇总判据（写入报告 §8）</a></li><li class="lvl-2"><a href="#提交时机-阶段三-实现-判据落到-ai-的实际决策路径">提交时机 · 阶段三（实现）—— 判据落到 AI 的实际决策路径</a></li><li class="lvl-3"><a href="#关键发现-gitcommit-工具描述是-ai-不知道何时提交-的-机制根源">★★ 关键发现：`gitCommit` 工具描述是「AI 不知道何时提交」的**机制根源**</a></li><li class="lvl-3"><a href="#落地三层-执行面与阶段迁移-正交解耦">落地三层（执行面与阶段迁移**正交解耦**）</a></li><li class="lvl-3"><a href="#踩到的致命假阴性-写了一遍才发现">⚠⚠ 踩到的致命假阴性（写了一遍才发现）</a></li><li class="lvl-3"><a href="#khy-commit-help-会被顶层拦走-全仓既有行为-非本命令问题">⚠ `khy commit --help` 会被顶层拦走（全仓既有行为，非本命令问题）</a></li><li class="lvl-3"><a href="#测试-42-个-全绿-都在-os-tmpdir-里跑真-git-commit">测试（42 个，全绿，都在 `os.tmpdir()` 里跑真 `git commit`）</a></li><li class="lvl-3"><a href="#守门全绿">守门全绿</a></li><li class="lvl-3"><a href="#产出-3">产出</a></li><li class="lvl-2"><a href="#续三-订正-已退役入口名-的-121-处引用-修两个被-shim-掩盖的守卫">续三：订正「已退役入口名」的 121 处引用 + 修两个被 shim 掩盖的守卫</a></li><li class="lvl-3"><a href="#做了什么">做了什么</a></li><li class="lvl-3"><a href="#两个被-shim-掩盖的真实守卫缺陷-新发现-非我引入">两个被 shim 掩盖的真实守卫缺陷（新发现，非我引入）</a></li><li class="lvl-3"><a href="#新踩的坑-三条-都已回写工具">新踩的坑（三条，都已回写工具）</a></li><li class="lvl-3"><a href="#守门现状-全绿">守门现状（全绿）</a></li><li class="lvl-3"><a href="#一个守卫设计缺口-未改-留作建议">一个守卫设计缺口（未改，留作建议）</a></li><li class="lvl-3"><a href="#并发状态-重要">并发状态（重要）</a></li><li class="lvl-2"><a href="#续四-收口三项-映射表真源订正-悬空检测守卫-域迁移溯源">续四：收口三项（映射表真源订正 + 悬空检测守卫 + 域迁移溯源）</a></li><li class="lvl-3"><a href="#一-维护映射表-json-从-刻意不动-改为-真源订正-推翻上轮结论">一、`维护映射表.json` 从「刻意不动」改为「真源订正」（推翻上轮结论）</a></li><li class="lvl-3"><a href="#二-发现并修复一条-静默失效-链路-比报错更危险">二、发现并修复一条**静默失效**链路（比报错更危险）</a></li><li class="lvl-3"><a href="#三-新增守卫-映射表-paths-悬空检测-check-change-safety-js">三、新增守卫：映射表 `paths[]` 悬空检测（`check-change-safety.js`）</a></li><li class="lvl-3"><a href="#四-域迁移溯源-解释了-54-条悬空的绝大部分">四、域迁移溯源（解释了 54 条悬空的绝大部分）</a></li><li class="lvl-3"><a href="#五-暂存区的一个真实损坏-未修-仅记录">五、暂存区的一个真实损坏（未修，仅记录）</a></li><li class="lvl-3"><a href="#六-本轮守门-全绿">六、本轮守门（全绿）</a></li><li class="lvl-3"><a href="#七-提交仍被阻塞-方案-c-未变">七、提交仍被阻塞（方案 C 未变）</a></li><li class="lvl-2"><a href="#续五-孪生件同步的正确姿势-一轮自我纠错">续五：孪生件同步的正确姿势（★ 一轮自我纠错）</a></li><li class="lvl-3"><a href="#我犯的错-手改了生成物-md">我犯的错：手改了生成物 `.md`</a></li><li class="lvl-3"><a href="#孪生件-html-的正确重建-走-worktree-副本">孪生件 `.html` 的正确重建：走 worktree 副本</a></li><li class="lvl-3"><a href="#判据-孪生件一致性要-逐条比对条目号-验证命令">判据：孪生件一致性要**逐条比对条目号 + 验证命令**</a></li><li class="lvl-2"><a href="#续六-悬空-paths-批量订正-54-6-剩余-6-条的定性">续六：悬空 paths 批量订正（54 → 6）+ 剩余 6 条的定性</a></li><li class="lvl-3"><a href="#已落地-48-54-条机械可解-全部指向-已跟踪-文件">已落地：48/54 条机械可解，全部指向**已跟踪**文件</a></li><li class="lvl-3"><a href="#剩余-6-条-不是-搬走了-是-从未存在-或-已删除-性质与前-48-条完全不同">剩余 6 条：**不是「搬走了」，是「从未存在」或「已删除」** —— 性质与前 48 条完全不同</a></li><li class="lvl-3"><a href="#本轮验证工具-grep-rln-会超时-一律用-git-grep">⚠ 本轮验证工具：`grep -rln` 会超时，一律用 `git grep`</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="2026-09-19-工作日志">2026-09-19 工作日志<a class="anchor" href="#2026-09-19-工作日志" aria-label="锚点">#</a></h1>
+<h2 id="目录结构诊断与-恰到好处-方案设计">目录结构诊断与&quot;恰到好处&quot;方案设计<a class="anchor" href="#目录结构诊断与-恰到好处-方案设计" aria-label="锚点">#</a></h2>
+<p><strong>任务</strong>：以架构师视角调研 khy-os 仓库结构，基于认知负荷 + 工程实践双重标准，<br>设计&quot;不多不少&quot;的目录层次，并给出分阶段执行脚本。</p>
+<h3 id="产出物-均在-khyos-diag">产出物（均在 <code>.khyos/diag/</code>）<a class="anchor" href="#产出物-均在-khyos-diag" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>说明</th></tr></thead><tbody><tr><td><code>scan-structure.py</code></td><td>广度/深度/密度/扩展名分布扫描</td></tr><tr><td><code>scan-junk.py</code></td><td>垃圾文件模式扫描（备份/临时/系统/缓存/IDE/空文件）</td></tr><tr><td><code>scan-signal.py</code></td><td><strong>信噪分离</strong>：按 git 跟踪状态区分运行态噪声与真实源码</td></tr><tr><td><code>scan-hotspot.py</code></td><td>重灾区内部构成拆解</td></tr><tr><td><code>scan-slap.py</code></td><td>混乱度 + SLAP 违规 + 深度超限 + 噪声目录</td></tr><tr><td><code>structure-diagnosis.md</code></td><td><strong>主交付：完整诊断报告 + 目标结构 + 移动映射</strong></td></tr><tr><td><code>restructure.sh</code></td><td>分阶段执行脚本（<strong>默认 dry-run</strong>）</td></tr></tbody></table>
+<h3 id="关键实测数据">关键实测数据<a class="anchor" href="#关键实测数据" aria-label="锚点">#</a></h3>
+<ul><li>全盘 50,135 文件 / 3,068 目录；<strong>已跟踪仅 10,115（20.1%）</strong>，未跟踪 79.9%</li><li>最大深度 16 层（野生克隆 <code>khy/tmp/quarantine-*/.../httpapi/</code>，非源码）</li><li>真正源码主体落在深度 3–5，符合理想区间</li><li>已跟踪文件深度 &gt;6 的共 772 个，<strong>绝大多数是 Kotlin 包路径（语言强制，不应整改）</strong></li><li><code>.khy/</code> 与 <code>khy-Trajectory/</code> <strong>完全镜像</strong>，各 259.8MB</li></ul>
+<h3 id="核心结论">核心结论<a class="anchor" href="#核心结论" aria-label="锚点">#</a></h3>
+<ol><li><strong>本项目结构问题不在&quot;目录排得不好&quot;，而在&quot;运行态数据与源码混居&quot;</strong>。</li></ol>
+<p>剥掉噪声后，真实源码树健康度远好于第一印象。</p>
+<ol><li>仓库<strong>已有</strong>权威层级规范 <code>[DESIGN-LAY-005]</code>（L0–L6）+ <code>check-repo-layout.js</code> 守卫，</li></ol>
+<p><strong>方案不推翻它</strong>，只补三件事：运行态出口、构建产物归位、P0 断点修复。</p>
+<ol><li><strong>P0-3 是唯一&quot;CI 已红&quot;项</strong>：<code>dangling-task</code> 实测 <strong>103</strong> vs 基线 <strong>98</strong>（超 5）。</li></ol>
+<p>根因：<code>package.json</code> 只定义 7 个 <code>test:*</code>，但文档/CI 引用了 40+ 个 <code>test:ocr-*</code>/<code>test:vision-*</code>。</p>
+<h3 id="p0-清单">P0 清单<a class="anchor" href="#p0-清单" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>问题</th></tr></thead><tbody><tr><td>P0-1</td><td>根目录字面量 <code>nul</code> —— Python 遍历即崩（本次亲自踩到），需 <code>\\?\</code> 前缀删</td></tr><tr><td>P0-2</td><td><code>khy-Trajectory/</code> ≡ <code>.khy/</code>，519.6MB 冗余</td></tr><tr><td>P0-3</td><td><code>dangling-task</code> 超基线，<strong>CI 已红</strong></td></tr><tr><td>P0-4</td><td><code>apps/khyos-desktop/docs/s.readUInt32LE(o)</code> 文件名含代码片段</td></tr><tr><td>P0-5</td><td><code>.khyos/housekeeping/.../</code> 内含废止 <code>_规范/</code> 镜像 3 份（~470 文件）</td></tr></tbody></table>
+<h3 id="纪律应用-重要方法论点">纪律应用（重要方法论点）<a class="anchor" href="#纪律应用-重要方法论点" aria-label="锚点">#</a></h3>
+<p>按本仓公理 A4「<strong>误报比漏报更贵</strong> —— 修判据而不是改仓库去满足错误判据」，<br><strong>主动撤回</strong>了一条建议：把 <code>docs/**/[DESIGN-*].js</code> 移入 <code>design/</code> 子目录。<br>核查发现这些 <code>.js</code> 是<strong>绑定文档编号的探针/验证脚本</strong>（前缀即 <code>[DESIGN-XXX-NNN]</code>），<br>与文档属<strong>同一抽象层级</strong>，强制分离反而破坏&quot;文档与验证脚本同址&quot;的可用性。</p>
+<h3 id="自身犯的错与修正-值得记">自身犯的错与修正（值得记）<a class="anchor" href="#自身犯的错与修正-值得记" aria-label="锚点">#</a></h3>
+<p>首版 <code>restructure.sh</code> 的 <code>mkdir -p &quot;$ARCHIVE&quot;</code> <strong>未受 <code>--apply</code> 保护</strong>，<br>dry-run 时竟在仓库根凭空造出 <code>_archive/</code>，随即被 <code>check-repo-layout</code> 判为<br>「未登记的顶层目录」error（<code>layer-registry</code>）——<strong>反向实证了守卫有效</strong>。<br>已修正为 dry-run 不留盘痕迹，并清理误建目录。<br>⇒ 写入长期记忆：<strong>新增任何根级目录都会触发 <code>layer-registry</code> error</strong>。</p>
+<h3 id="待用户决策">待用户决策<a class="anchor" href="#待用户决策" aria-label="锚点">#</a></h3>
+<ul><li><code>khy-Trajectory/</code> 是否真为冗余镜像？它在 <code>.gitignore:60</code> 被显式登记，</li></ul>
+<p>说明<strong>可能有工具仍在写入</strong>，脚本刻意不自动处理。</p>
+<ul><li><code>dangling-task</code> 修法二选一：补 <code>package.json</code> 脚本 / 订正文档引用。</li></ul>
+<hr>
+<h2 id="提交时机规范-process-009-design-git-004-用户诉求-小白不知道什么时候该提交">提交时机规范（PROCESS-009 / [DESIGN-GIT-004]）—— 用户诉求：「小白不知道什么时候该提交」<a class="anchor" href="#提交时机规范-process-009-design-git-004-用户诉求-小白不知道什么时候该提交" aria-label="锚点">#</a></h2>
+<h3 id="诊断-一个被漏掉的空白-实测证据">诊断：一个被漏掉的空白（实测证据）<a class="anchor" href="#诊断-一个被漏掉的空白-实测证据" aria-label="锚点">#</a></h3>
+<p>本仓 Git 治理是<strong>成对</strong>的，但只覆盖了两半：</p>
+<ul><li>提交<strong>格式</strong> → <code>[DESIGN-GIT-001]</code> §2 / <code>[DESIGN-GIT-002]</code>，守卫 <code>check-commit-message.js</code>（pre-commit 第 5 项）</li><li>提交<strong>内容</strong> → <code>[DESIGN-GIT-003]</code> §4，pre-commit 第 1–3 项（tmp/大文件/密钥）</li><li>提交<strong>时机</strong> → <strong>空白</strong>。全仓检索「提交时机/什么时候该提交/commit timing」，<code>docs/</code>+<code>scripts/</code></li></ul>
+<p>只命中 3 处<strong>无关巧合</strong>（<code>RULES-REGISTRY.json:2744</code> 是 PROCESS-006 的 grants；2 张规则卡是它的镜像）。</p>
+<p>⇒ 判据缺失被转嫁给人：AI 要么改完就提交（半成品入库），要么永不提交（实测暂存区 <strong>3993</strong> 项）。<br><strong>两条路都不会被任何既有守卫报出来</strong> —— 机制缺失伪装成个人习惯问题。</p>
+<h3 id="交付物-第一阶段-规则">交付物（第一阶段：规则）<a class="anchor" href="#交付物-第一阶段-规则" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>件</th><th>路径</th></tr></thead><tbody><tr><td>规范（ssot）</td><td><code>docs/10_规范/DESIGN-GIT/[DESIGN-GIT-004] 提交时机规范.md</code>（+ <code>.html</code> 孪生件）</td></tr><tr><td>执行器</td><td><code>scripts/ci/check-commit-timing.js</code>（零依赖、纯函数判定、6 预置场景）</td></tr><tr><td>测试</td><td><code>scripts/tests/check-commit-timing.test.js</code>（23 用例，<code>node:test</code>）</td></tr><tr><td>接线四处</td><td><code>package.json</code> <code>check:commit-timing</code>；<code>RULES-REGISTRY.json</code> <code>PROCESS-009</code>（ruleCount 85→86）；<code>FEATURE-OWNERSHIP.json</code> <code>commit-timing-contract</code>（S1）；规则卡已重生成</td></tr></tbody></table>
+<p><strong>五判据</strong>：T1 单元闭合 / T2 可运行（验证证据）/ T3 仓库自洽（未卷入并发方改动）/ T4 无游离产物 / T5 可回滚。<br>T1–T4 是 R（S3 起升 error），T5 是 S（永远 warning）。</p>
+<h3 id="三个实测得出的新判据-值得进长期记忆">★ 三个实测得出的新判据（值得进长期记忆）<a class="anchor" href="#三个实测得出的新判据-值得进长期记忆" aria-label="锚点">#</a></h3>
+<ol><li><strong>⚠⚠ 执行器强度写死 warning ⇒ <code>STAGE</code> 常量变成装饰。</strong></li></ol>
+<p>初版所有 finding 都 <code>SEV_WARNING</code>，结果 <strong>S1 与 S3 跑出完全相同的输出与退出码</strong><br>   ⇒ 升到 S3 后<strong>仍然不拦截</strong>，而所有守卫全绿（登记表说 S3、源码常量 S3、漂移比对也过）。<br>   <strong>表现恰好伪装成 S1 的预期行为</strong> —— 与 <code>[DESIGN-ARCH-113]</code> 踩过的坑<strong>同形</strong>。<br>   修法：<code>severityFor(criterion)</code> 单点派生（按阶段 + R/S 判据）。<br>   <strong>验收判据：同一改动集在 S1/S3 下 <code>Summary</code> 的 error 数必须不同</strong><br>   （实测：S1 <code>0 error</code> exit 0；S3 <code>1 error</code> exit 1）。<strong>这条已写成测试用例。</strong></p>
+<ol><li><strong>⚠ 测试副本</strong>不能<strong>落在 <code>scripts/ci/</code>。</strong></li></ol>
+<p>初版把 S3 副本写 <code>scripts/ci/_ct-timing-S3.js</code>，而那正是 <code>check-wiring.js</code> 的扫描范围 ——<br>   测试跑的几秒里另一个终端跑 <code>check:wiring</code> 会看到它「零接线」而报 <strong>1 error</strong>，<br>   且<strong>间歇性、极难归因</strong>（「没改任何东西却突然变红」）。<br>   ⇒ 副本落 <code>scripts/.ct-timing-tmp/</code>：仍是 <code>scripts/</code> 子目录（<code>__dirname/../..</code> 推根层数不变），<br>   但不在任何守卫 glob 里。<strong>推论：任何「临时脚本」都不要放守卫的扫描目录。</strong></p>
+<ol><li><strong>⚠ <code>--files=</code>（空值）与「未提供 <code>--files</code>」必须可区分。</strong></li></ol>
+<p>初版 <code>argValue()</code> 对两者都返回 <code>''</code> ⇒ 空 <code>--files=</code> 会<strong>静默 fall through 到真实暂存集</strong>，<br>   在本仓读到 3993 项。调用方以为在测空集，其实在测仓库现状。<br>   ⇒ 单开 <code>filesArgOrNull()</code> 返回 <code>null</code>。</p>
+<ol><li><strong><code>--changed</code> 必须读 <code>--cached</code>（暂存区）而非工作区全量。</strong></li></ol>
+<p>本仓工作区长期 3000~4000 项未提交，按全量判会得到「跨 10 板块 / 3993 文件」<br>   这种<strong>真实但不可行动</strong>的结论 ⇒ 4 条 finding 变成常驻噪声 ⇒ 噪声被整体忽略<br>   （<strong>比没有守卫更糟</strong>）。暂存区 = 提交单元，且与 <code>.githooks/pre-commit</code> 的<br>   <code>git diff --cached</code> 对齐。工作区视角保留为显式的 <code>--worktree</code>。</p>
+<h3 id="观察到的既有技术债-未处理-供后续">观察到的既有技术债（未处理，供后续）<a class="anchor" href="#观察到的既有技术债-未处理-供后续" aria-label="锚点">#</a></h3>
+<ul><li>暂存区里堆积 <strong>3993 项</strong>（含 686 R 重命名、58 个 <code>.khyos/</code> 本机态文件、<code>.ai/.metahash.json</code>）</li></ul>
+<p>—— 说明历史上确实发生过 <code>git add -A</code> 类操作，正是本规范 T3 要防的行为。</p>
+<ul><li>真实暂存集跑出 4 条 warning <strong>全部为真</strong>（不是误报）：跨 10 板块 / 无验证证据 /</li></ul>
+<p>58 个本机态 / 3993 文件。<strong>精度已核验。</strong></p>
+<hr>
+<h2 id="续-结构整理执行-phase-3-4-dangling-task-判据修复">续：结构整理执行（Phase 3/4）+ dangling-task 判据修复<a class="anchor" href="#续-结构整理执行-phase-3-4-dangling-task-判据修复" aria-label="锚点">#</a></h2>
+<p><strong>任务</strong>：按诊断报告实际执行整理方案。</p>
+<h3 id="phase-4-dangling-task-ci-红灯解除-103-88">Phase 4 —— <code>dangling-task</code> CI 红灯解除（103 → 88）<a class="anchor" href="#phase-4-dangling-task-ci-红灯解除-103-88" aria-label="锚点">#</a></h3>
+<ol><li><strong>补齐 5 个 <code>test:maintainer:*</code> 脚本</strong>（<code>cli-routing</code> / <code>gateway</code> / <code>runtime</code> /</li></ol>
+<p><code>ai-management</code> / <code>publish</code>），每个都实测过绿灯后才写入。scripts 234 → 239。<br>   ⇒ dangling 103 → <strong>98 = 当时基线</strong>，红灯解除。</p>
+<ol><li><strong>判据修复（关键）</strong>：对全量 98 条做四分类，发现 <strong>14 条是误报</strong>：</li></ol>
+<table><thead><tr><th>类别</th><th>数量</th><th>实例</th></tr></thead><tbody><tr><td>通配符被正则截断</td><td>5</td><td><code>check:</code> <code>test:</code> <code>portable:</code> <code>quality:</code> <code>memory:restore:</code></td></tr><tr><td>占位符 / <strong>测试夹具里的假命令名</strong></td><td>5</td><td><code>X</code> <code>x</code> <code>does-not-exist</code> <code>rebuild-me</code> <code>targets</code></td></tr><tr><td>诊断/对照引述（描述别人或缺缺失）</td><td>~4</td><td><code>test:ci</code>（<code>[MGMT-RPT-005]</code> 写「KHY <strong>缺</strong> CI」）</td></tr></tbody></table>
+<p>⇒ 在 <code>collectReferencedTasks()</code> 加 <code>isNonTargetTask()</code>：排除 <code>:</code> 结尾、纯占位名单、<br>   尖括号形式。<strong>98 → 88</strong>，基线同步下调（<code>--update-baseline</code>，日期自动改 2026-09-19）。<br>   <code>counts</code> 与 <code>baseline</code> 现已一致（88 = 88）。</p>
+<ol><li><strong>规范侧同步</strong>：<code>[DESIGN-LAY-005]</code> §5.1 原来要求「占位符一律写 <code>npm run &lt;目标&gt;</code>」——</li></ol>
+<p>这是<strong>用写作规约绕过判据缺陷</strong>（违反公理 A4）。判据修好后该规约已放宽，<br>   <code>.md</code> 与 <code>.html</code> 孪生件均已改（<strong>手工同步，未跑 <code>docs:build</code></strong>，见下方坑）。</p>
+<h3 id="本次最贵的坑-改守卫时-重复定义了函数">★★ 本次最贵的坑：改守卫时<strong>重复定义了函数</strong><a class="anchor" href="#本次最贵的坑-改守卫时-重复定义了函数" aria-label="锚点">#</a></h3>
+<p><code>check-repo-layout.js</code> 里 <code>collectReferencedTasks</code> / <code>collectDefinedScripts</code> <strong>各出现两次</strong><br>（我新增的一份 + 原有的一份），JS 后定义覆盖前者 ⇒ 改了半天不生效，读数纹丝不动。<br>⇒ <strong>改守卫/大文件前先 <code>grep -c &quot;^function &lt;名&gt;&quot;</code> 确认唯一性</strong>，别假设只有一处。</p>
+<h3 id="phase-3-整体撤回-误报">Phase 3 —— <strong>整体撤回</strong>（误报）<a class="anchor" href="#phase-3-整体撤回-误报" aria-label="锚点">#</a></h3>
+<p>原方案要把 <code>extensions/tools/khy-markdown/*.{exe,vbs,command,cs}</code> 移入 <code>bin/</code><br>以&quot;消除 13 种扩展名共存&quot;。逐条核查后<strong>撤回</strong>，五处证据：</p>
+<table><thead><tr><th>#</th><th>证据</th><th>内容</th></tr></thead><tbody><tr><td>①</td><td><code>khy.extension.json</code></td><td><code>main: &quot;khyos-md-bridge.js&quot;</code>、<code>mcp.args: [&quot;khyos-md-mcp.js&quot;]</code></td></tr><tr><td>②</td><td><code>package.json</code></td><td><code>main</code> / <code>bin</code>(3) / <code>scripts</code> / <code>files</code>(14 项) <strong>四处</strong>按根级裸文件名</td></tr><tr><td>③</td><td><strong>核代码</strong></td><td><code>services/backend/src/services/mdSuggestedAppsPlan.js</code> 以 <code>APP_KEY='khyos-md-launch.vbs'</code> 硬编码查找</td></tr><tr><td>④</td><td>启动器耦合</td><td><code>khyosmarkdown.command</code> 内 <code>exec &quot;$SCRIPT_DIR/khyosmarkdown&quot;</code></td></tr><tr><td>⑤</td><td><strong>文档背书</strong></td><td><code>README.md</code> §「目录文件」<strong>逐行列出</strong>每个根级文件职责</td></tr></tbody></table>
+<p>⇒ 移动会破坏扩展契约、npm 发布白名单，以及<strong>已写入操作系统的 <code>.md</code> 文件关联</strong><br>（HKCU 注册表里的路径全失效，用户右键「打开方式」直接坏）。<br>对照：其余 8 个 L5 拓展根级扩展名种类为 <strong>2–5</strong>，仅此例 13 —— 因为它是<strong>唯一</strong><br>真正会 <code>npm publish</code> + 注册进 OS 的拓展；且它 <code>vendor/</code> <code>test/</code> <code>muya-embed/</code><br>都下沉了，说明作者会建子目录而<strong>刻意</strong>让发布物留根。</p>
+<p><strong>这是本项目第三次同类撤回</strong>（前两次：<code>DESIGN-*.js</code> 移入 <code>design/</code>、<code>AGENTS.md</code> 拆分）。<br><strong>共同模式：把「契约/文档绑定」误读为「混乱」。</strong><br>⇒ 推论：<strong>扁平发布清单目录应从&quot;混乱度&quot;指标豁免</strong> —— 该指标默认&quot;同目录文件属同一抽象<br>层级&quot;，而发布物是<strong>并列的分发制品</strong>，本就该彼此平级。</p>
+<h3 id="坑-不能跑-build-docs-site-js-同步孪生件">坑：<strong>不能跑 <code>build_docs_site.js</code> 同步孪生件</strong><a class="anchor" href="#坑-不能跑-build-docs-site-js-同步孪生件" aria-label="锚点">#</a></h3>
+<p><code>docs/</code> 下当时有 <strong>143 个 <code>.html</code> 处于改动状态</strong>，且 <code>DESIGN-LAY/</code> 里大量是 <code>A</code>（已暂存）。<br>该脚本<strong>无条件重写全站</strong>孪生件 ⇒ 会覆盖本仓其他智能体的未提交工作。<br>⇒ 只<strong>手工</strong>同步了 <code>[DESIGN-LAY-005]</code> 的那一个 <code>.html</code>。</p>
+<h3 id="既有缺陷-非我引入-已实证">既有缺陷（非我引入，已实证）<a class="anchor" href="#既有缺陷-非我引入-已实证" aria-label="锚点">#</a></h3>
+<ul><li><code>scripts/tests/check-repo-layout.test.js:117</code> 的用例</li></ul>
+<p><code>docs-index-first: 分类目录缺 00_INDEX_* 是 error</code> <strong>失败</strong>（48 pass / 1 fail）。<br>  <strong>实证与我的改动无关</strong>：① 我对该文件是纯新增 37 行、0 删除，<code>grep</code> 确认未碰<br>  <code>docs-index-first</code>；② 用 <code>KHY_REPO_LAYOUT_ROOT</code> 完整复现该 fixture（连预建索引<br>  <code>docs/03_DESIGN_设计/00_INDEX_*</code> 都一致），守卫输出「无结构发现，层级规范全绿」，<br>  而测试断言 <code>status === 1</code>。⇒ <strong>实现与测试脱节</strong>，疑为 9-18「B8 口径调整」<br>  （主索引不再要求逐篇点名）后测试没跟上。</p>
+<ul><li>⚠ <code>.git/index.lock</code> 存在且<strong>有 4 个 git 进程在跑</strong> ⇒ 本仓确实多智能体并发写。</li></ul>
+<p><strong>不删锁</strong>（删了会破坏别人操作），改用 fixture 隔离验证。</p>
+<ul><li>⚠ Git Bash 会把 <code>KHY_REPO_LAYOUT_ROOT=$PWD/...</code> 二次转换成 <code>D:/d/Portable/...</code>，</li></ul>
+<p>必须用<strong>单引号 Windows 路径</strong> <code>'D:/Portable/khy-os/...'</code>。</p>
+<h3 id="剩余欠账">剩余欠账<a class="anchor" href="#剩余欠账" aria-label="锚点">#</a></h3>
+<ul><li><strong>真缺口 ~80 个</strong>：<code>test:ocr-*</code>(11) <code>test:vision-*</code>(10) <code>test:restore-*</code>(5) <code>test:a2a</code>(3) 等，</li></ul>
+<p>文档引用了不存在的测试入口。已出对账清单 <code>.khyos/diag/reconcile-dangling.md</code><br>  （A 类=被可执行代码引用=18；B 类=仅文档引用=70）。<br>  ⚠ <strong>对账清单的初版判据（子串命中测试文件）假阳性率 7/8</strong>，已改判据为「引用方是否可执行代码」。</p>
+<ul><li><strong><code>build:root:sync</code></strong> 仍未创建（规范 §8 步骤 2 的待办，已登记在 <code>BUILD-OUTPUTS.json</code>）。</li><li>逐阶段 git commit 尚未做（工作区 4010 项未提交）。</li></ul>
+<hr>
+<h2 id="续-收尾工作三项方案-commit-拆分-build-root-sync-a-类-18-缺口">续：收尾工作三项方案（commit 拆分 / build:root:sync / A 类 18 缺口）<a class="anchor" href="#续-收尾工作三项方案-commit-拆分-build-root-sync-a-类-18-缺口" aria-label="锚点">#</a></h2>
+<p><strong>任务</strong>：为三项收尾给出可执行方案。产出 <code>.khyos/diag/wrap-up-plan.md</code>。</p>
+<h3 id="三项调研的关键实测数据">三项调研的关键实测数据<a class="anchor" href="#三项调研的关键实测数据" aria-label="锚点">#</a></h3>
+<p><strong>① 提交拆分</strong>：工作区 4010 项 = 暂存区 3993 + 未暂存 47 + 未跟踪 14。<br>顶层分布：<code>services</code> 1691 / <code>docs</code> 1443（含 <strong>630 项 R 重命名</strong>）/ <code>apps</code> 300 / <code>scripts</code> 187。<br>⚠ <strong>95 项是本机态不该入仓</strong>：<code>.khyos</code> 58 / <code>.workbuddy-ai</code> 14 / <code>.workbuddy</code> 12 / <code>.zcode</code> 11。<br>⇒ 方案第一步是 <code>git restore --staged</code> 撤回这 4 个目录（<strong>Phase 0 前置</strong>）。<br>⚠ 但 <code>.ai/hq/</code>（54 项）<strong>相反，必须入仓</strong>（任务状态真源，<code>MEMORY-003</code>）——别混为一谈。</p>
+<p><strong>② <code>build:root:sync</code></strong>：</p>
+<ul><li>不存在；<code>build:*</code> 只有 3 个 installer 脚本。</li><li>规范 <code>[DESIGN-LAY-004]</code> §约束 6 要求它派生 <code>.gitignore</code>+<code>.dockerignore</code>；§8 步骤 2 第 3 点</li></ul>
+<p>要求与 <code>build:all</code> <strong>同一次提交</strong>创建。</p>
+<ul><li><strong><code>clean.js</code> TARGETS(16) vs 登记表(26) 差异 18 条</strong>（4 条只 clean 有、14 条只登记表有）</li></ul>
+<p>—— 规范 §1.2 说的「三份手写清单互相打架」实测确认。<br>  ⚠ <code>clean.js</code> 里有一条 <code>rel: 'services'</code> —— <strong>指向整个 services 目录</strong>，明显脏条目。</p>
+<ul><li>职责三件：读登记表 → 生成两个 ignore 文件的<strong>受保护区块</strong> → 生成 <code>clean.js</code> 的 TARGETS。</li></ul>
+<p><strong>不做</strong>构建/删文件/改登记表。</p>
+<p><strong>③ A 类 18 缺口</strong>（关键：<strong>先验证实体是否存在，别急着补脚本</strong>）：</p>
+<ul><li>🟢 <strong>10 个纯接线缺失</strong>：6 个 <code>restore-*</code> 脚本<strong>真实存在</strong>于 <code>scripts/restore/</code>，</li></ul>
+<p>且注释里<strong>本就写着</strong> <code>npm run restore-plan  # 同上（经 npm 别名）</code> —— 作者预期存在但没建；<br>  <code>hydration-doctor</code>(在 <code>extensions/scripts/khy-diagnostics/</code>)、<code>test:evolution-prompts</code>、<br>  <code>test:maintainer:env-optimize</code>、<code>test:md-suggested-apps</code> 的实体也都在。</p>
+<ul><li>🟡 <strong><code>maintainer:check</code></strong>：<strong>128 处引用</strong>（含 <code>gen-evolution-prompts.js</code> 生成的 1000 条提示词</li></ul>
+<p>模板！）；真实实体是 <code>scripts/tests/maintainerMapDocCoverage.test.js</code>。<br>  ⇒ <strong>补别名 = package.json 加 1 行消掉 128 处</strong>，单位成本收益最高。</p>
+<ul><li>🔴 <strong><code>check:maintainer:bootstrap</code> 的重大发现</strong>：它出现在</li></ul>
+<p><code>services/backend/src/cli/handlers/docs.js:627</code> 的 <strong>CLI 帮助文案</strong>里 ——<br>  <code>khy docs maintainer</code> 列出 8 条「直接可执行命令」，<strong>其中 2 条不存在</strong>（另一条是<br>  <code>maintainer:check</code>），<strong>用户照帮助跑会直接失败</strong>。<br>  ⇒ 真实映射表里 <code>bootstrap-packaging</code> 域的 verify 是 <strong><code>npm run check:manifest-sync</code></strong>（已核实存在）。<br>  ⚠ <code>maintainerTriage.test.js:25</code> 里那条是<strong>刻意的内联 fixture</strong>（注释写明「使打分逻辑与登记<br>  步骤解耦」），<strong>不该算 A 类</strong> —— 这是判据的又一处遗漏：<strong>fixture 里的引用无法靠名字识别</strong><br>  （不像 <code>X</code>/<code>x</code>/<code>rebuild-me</code> 是明显占位），只能靠「引用方是不是契约真源」判。</p>
+<ul><li>🔴 <code>dev:frontend</code>：真实命令是 <strong><code>npm run dev --prefix apps/ai-frontend</code></strong></li></ul>
+<p>（根 <code>package.json</code> 无 <code>dev:frontend</code>；<code>apps/ai-frontend</code> 有 <code>dev: vite</code>）。</p>
+<ul><li>🔴 <code>portable:build</code>：真实名是 <code>portable:build:dev</code>。</li><li>⚪ <code>test:ci</code>：描述 Qwen Code 做法，已豁免。</li></ul>
+<p><strong>预期收益：88 → 约 73</strong>。</p>
+<h3 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h3>
+<ol><li><strong>「被可执行代码引用」≠「该补脚本」</strong> —— 必须再分两种：代码在<strong>承诺</strong>它（<code>console.log</code></li></ol>
+<p>提示、文档步骤）→ 补；代码只是<strong>夹具数据</strong>（测试断言里的字符串、fixture 里的 <code>verify</code> 字段）<br>   → 不该补。A 类 18 个里有 <strong>3 个属后者</strong>。</p>
+<ol><li><strong>补别名前必须先跑一次原脚本</strong> —— 否则把已坏的脚本接上别名，只是把「dangling」换成</li></ol>
+<p>「一跑就红」。本次实测 <code>restore-plan.js --json</code> 输出合法 JSON 才敢推荐。</p>
+<ol><li>⚠ <strong><code>dev:frontend</code> 这类&quot;看着像根命令&quot;的目标，真实命令可能在子包</strong> —— 查 <code>package.json</code></li></ol>
+<p>时不能只看根，要看 <code>--prefix</code> 指向的子包。</p>
+<hr>
+<h2 id="续二-phase-0-1-实际执行-授权后">续二：Phase 0+1 实际执行（授权后）<a class="anchor" href="#续二-phase-0-1-实际执行-授权后" aria-label="锚点">#</a></h2>
+<h3 id="已完成">已完成<a class="anchor" href="#已完成" aria-label="锚点">#</a></h3>
+<ul><li><strong>Phase 0</strong>：解除 <code>.git/index.lock</code> 死锁 + 撤回 95 项暂存本机态（残留 0，文件完好）。</li></ul>
+<p>死锁判据：<strong>0 字节 + mtime 55 分钟未变 + 唯一 git 进程是 <code>fsmonitor--daemon</code>（非写操作）</strong>。<br>  处置沿用既有先例：<code>.git/</code> 下已有两个 <code>index.lock.stale-20260918-*</code> 归档，<br>  且 <code>.khyos/housekeeping/2026-09-18/from-_产物/_tmp_unlock.txt</code> 明确记录「RENAME …（已解除死锁）」<br>  ⇒ <strong>重命名归档，不删除</strong>。</p>
+<ul><li><strong>Phase 1 代码改动</strong>：8 文件 +40/−29。<code>dangling-task</code> <strong>88 → 76（−12）</strong>，0 error，无新增目标。</li></ul>
+<p><code>check-wiring</code> 通过（85 检查器）。</p>
+<h3 id="本轮四条新判据-都是踩出来的">★ 本轮四条新判据（都是踩出来的）<a class="anchor" href="#本轮四条新判据-都是踩出来的" aria-label="锚点">#</a></h3>
+<ol><li><strong>⚠ <code>node:test</code> 与 jest 是两套 runner，补别名必须按文件实际 runner 写。</strong></li></ol>
+<p><code>services/backend/jest.config.js</code> 用 <code>findNodeTestFiles()</code> <strong>按 <code>require('node:test')</code> 标记<br>   自动发现</strong>并把它们塞进 <code>testPathIgnorePatterns</code>（实查 <strong>1251 条</strong>）。<br>   ⇒ 对这类文件写 <code>npm test --prefix services/backend -- &lt;file&gt;</code> 会得到<br>   <strong><code>No tests found, exit 1</code></strong>（我实测撞上）。<br>   <strong>正确写法是本仓既有约定 <code>node --test &lt;file&gt;</code></strong>（先例 <code>check:maintainer:safety</code>）。</p>
+<ol><li><strong><code>ext-run</code> 派发用「拓展声明的命令名」，不是脚本文件名。</strong></li></ol>
+<p><code>hydration-doctor.js</code> 的命令名是 <strong><code>doctor-hydration</code></strong>（<code>khy.extension.json</code>）。<br>   写错时 <code>ext-run</code> 给<strong>可读提示并列出全部可用命令</strong>，不崩 —— 这是它的设计意图，善用。</p>
+<ol><li><strong>本机态三个目录</strong>（<code>.workbuddy-ai</code> / <code>.workbuddy</code> / <code>.zcode</code>）<strong>并未被 gitignore</strong></li></ol>
+<p>（只有 <code>.khyos</code> 命中；<code>.gitignore:221-225</code> 注释明说「只忽略 <code>.opencode/node_modules</code> 与<br>   <code>.zcode/tmp</code>，整目录忽略会与『已跟踪文件出现在忽略目录里』不一致」）。<br>   ⇒ 撤回它们的语义是「取消误暂存的未跟踪文件」，不是「剔除本机态」；<br>   <strong>没有 gitignore 兜底，不主动撤就会真被提交</strong>。</p>
+<ol><li><strong>⚠⚠ 暂存区被他人占用时绝不能 commit。</strong> <code>git diff --cached</code> = <strong>3956 项</strong>（我只有 8 个文件）。</li></ol>
+<p><code>check-commit-timing.js</code>（今天新建的 <code>PROCESS-009</code> 执行器，S1 恒 exit 0）当场报出<br>   T1 跨 10 板块 / T2 无验证证据 / T5 3956 项不可回滚。<br>   <strong><code>git commit -- &lt;paths&gt;</code> 无法干净剥离</strong> —— 它提交这些路径的<strong>暂存态</strong>，<br>   而 <code>package.json</code> / <code>restore-*.js</code> / <code>hydration-doctor.js</code> 的暂存态<strong>已含他人改动</strong>。</p>
+<h3 id="顺带发现-未处理">顺带发现（未处理）<a class="anchor" href="#顺带发现-未处理" aria-label="锚点">#</a></h3>
+<ul><li><strong><code>scripts/restore-&lt;n&gt;.js</code> 陈旧路径全仓 274 处 / 69 文件</strong>，其中 <strong>117 处可执行</strong>。</li></ul>
+<p>含 <code>.github/CODEOWNERS</code> <strong>18 条 pattern 全部指向不存在路径</strong>（GitHub <strong>静默不生效</strong>）+<br>  <code>维护映射表.json</code> 18 条真源 + 46 份 OPS-MAN 手册 + <code>restoreNavigator.js</code> 等 16 处<strong>运行时拼接</strong>。<br>  <strong>订正一处误判</strong>：这不是在途重构的副作用 —— 实查 <code>HEAD</code> 里 <code>scripts/restore/</code> 早已提交、<br>  根级形式不存在、暂存态是 <code>M</code> 非 <code>R</code> ⇒ 是<strong>更早那次移动的存量债</strong>。</p>
+<ul><li><code>.github/CODEOWNERS</code> 是<strong>手写遗留版</strong>（581 条、头部写「Replace @&lt;area-id&gt; placeholders」），</li></ul>
+<p>与其生成器 <code>gen-codeowners.js</code>（<strong>从维护映射表派生、无效 owner 一律不写、last-match-wins</strong>）<br>  的设计<strong>正好相反</strong>；<code>gen-codeowners.js --check</code> 已红（触发条件限定 5 文件故 CI 长期休眠）。<br>  ⇒ <strong>「手写第二份真源」的典型样本</strong>，与 <code>[DESIGN-LAY-004]</code> 约束 6 同型。</p>
+<ul><li>两个别名暴露<strong>真实缺陷</strong>（非我引入）：<code>mdSuggestedAppsPlan</code> 的 Windows「建议的应用」</li></ul>
+<p>注册项未实现全（2 fail）；<code>envProbes</code>/<code>envRepair</code> 的修复幂等性与损坏保护未达成（2 fail）。<br>  二者<strong>有设计文档背书</strong>且 <code>envProbes.js:329</code> / <code>envRepair.js:121</code> 注释里写着<br>  <code>// 4. Verify: npm run test:maintainer:env-optimize</code> ⇒ 补别名是<strong>兑现承诺</strong>，红灯另立 bug 跟踪。</p>
+<h3 id="产出">产出<a class="anchor" href="#产出" aria-label="锚点">#</a></h3>
+<ul><li><code>.khyos/diag/dangling-truth.md</code>（缺口真实构成：A 代码引用 13 / B 仅文档 68 / C 幽灵 0）</li><li><code>.khyos/diag/phase0-1-report.md</code>（执行报告 + A/B/C 三个出路的取舍）</li><li>诊断脚本：<code>classify-dangling.js</code>、<code>probe-refs.js</code>、<code>read-dangling.js</code>（均只读）</li></ul>
+<hr>
+<h2 id="续三-星瑶-xingyao-y-code-vs-khy-os-外部比较-先定规矩再列矩阵">续三：星瑶 xingyao-y-code vs khy-os 外部比较（先定规矩再列矩阵）<a class="anchor" href="#续三-星瑶-xingyao-y-code-vs-khy-os-外部比较-先定规矩再列矩阵" aria-label="锚点">#</a></h2>
+<p><strong>任务</strong>：分析 <code>gitee.com/feng-chenhao/xingyao-y-code</code> 的「分支 1.3.0」并与 khy-os 比较。</p>
+<h3 id="事实订正-本次最重要的产出">★ 事实订正（本次最重要的产出）<a class="anchor" href="#事实订正-本次最重要的产出" aria-label="锚点">#</a></h3>
+<p><strong>该仓库不存在 1.3.0 分支。</strong> 实测：</p>
+<ul><li><code>git ls-remote</code> heads 仅 <code>dev</code> / <code>master</code>；<code>git for-each-ref | grep 1.3</code> <strong>零命中</strong>；</li><li>最新 tag <code>v1.2.28</code>，而 <code>dev</code> HEAD = <code>cb258cb</code>（<code>版本号更新至 1.2.30</code>，2026-09-19）；</li><li><code>master</code> HEAD = <code>v1.2.23</code> 的提交。</li></ul>
+<p>⇒ 经用户确认，比较对象改钉 <strong><code>dev @ cb258cb</code></strong>。</p>
+<p><strong>同源不同名陷阱（新增判据）</strong>：khy-os 已有<br><code>services/backend/src/services/domain/network/externalApps/ycodeAdapter.js</code>，<br>但其注释指向 <strong><code>github.com/yuzu-ux/ycode</code></strong> —— 与 Gitee 星瑶<strong>不是同一项目</strong>。<br>两者同名（都叫 ycode）却来源/作者/托管平台皆异。⇒ <strong>碰「ycode」必先核来源标识</strong>。</p>
+<h3 id="新判据-既有-sourcing-规则族可直接复用作外部比较框架">★ 新判据：既有 SOURCING 规则族可直接复用作外部比较框架<a class="anchor" href="#新判据-既有-sourcing-规则族可直接复用作外部比较框架" aria-label="锚点">#</a></h3>
+<p>khy-os 已有权威规矩 <code>[DESIGN-SOURCING-001] 借鉴与实现统一规则</code><br>（B-S 范围 / B-M 方式 / B-P 流程 / B-U 唯一性 / B-L 生命周期 / B-G 门 六组），<br>外加 <code>docs/10_规范/registry/SOURCING-PROVENANCE.json</code> 台账<br>（<code>source</code> + <code>localPath</code> + <code>relationship</code> 必需三字段，关系枚举<br><code>vendored/fork/generated/reference/idea/adapter</code>）。<br>⇒ <strong>做任何「外部仓库 vs khy-os」比较，先找这套规矩，不要自创框架。</strong></p>
+<h3 id="关键发现-khy-os-对星瑶已有-记录在案-的借鉴">★ 关键发现：khy-os 对星瑶已有「记录在案」的借鉴<a class="anchor" href="#关键发现-khy-os-对星瑶已有-记录在案-的借鉴" aria-label="锚点">#</a></h3>
+<p><code>services/backend/src/services/turnCheckpointService.js</code> 文件头注释原文含<br><strong><code>borrowed from ycode's core/turn_undo/ design</code></strong>（并挂 <code>[DESIGN-ARCH-096]</code> §2-A）。<br>逐条对应四原则：逐文件原子+冲突零写入 / 启动校验撤销覆盖 / 语义纠正块 / 诚实不假装。<br>⇒ 属 <code>idea</code> 档（借思路、重新实现），<strong>不违反</strong> B-S3 拷贝红线。<br><strong>但仍有可继续借鉴点</strong>：星瑶用 <strong>content-addressed 仓库（SHA-256 寻址 + GC）</strong>，<br>khy-os 用 <strong>JSON manifest 快照</strong> —— 前者在大文件/高频改动下更省空间（属 B-S1 第 1 类）。</p>
+<h3 id="星瑶侧实测规模-供后续引用">星瑶侧实测规模（供后续引用）<a class="anchor" href="#星瑶侧实测规模-供后续引用" aria-label="锚点">#</a></h3>
+<p>920 tracked 文件 / Python <strong>15.3 万行</strong> / <code>core/</code> 131 文件 <strong>5.9 万行</strong> / <code>tests/</code> 192 文件；<br><code>core/harness/</code> 11 文件单内核（Turn 8 态 + Step 10 态，<code>frozenset</code> 白名单转移表，<br>非法转移抛 <code>InvalidHarnessTransition</code>）；<code>core/computer/</code> 22 文件（UIA + 三平台后端）；<br><code>core/automation/</code> 定时引擎；MIT 许可。</p>
+<h3 id="框架性结论">框架性结论<a class="anchor" href="#框架性结论" aria-label="锚点">#</a></h3>
+<p><strong>形态差异是全部差异的钥匙</strong>：星瑶 = 单进程编程助手（把内核<strong>收拢</strong>进 <code>core/harness/</code>）；<br>khy-os = 多板块平台（等价能力<strong>分散</strong>在 <code>domain/state/orchestrator</code>、<code>domain/state/stateMachine</code>、<br><code>services/tool</code> 等处）。⇒ <strong>「分散」不是缺陷</strong>，是 <code>[DESIGN-LAY-005]</code> 分层的代价；<br>但代价是<strong>无法对整个内核做一致性论证</strong>（<code>check:layout</code> 只管层级方向，不管内核自洽）。</p>
+<h3 id="产出与纪律">产出与纪律<a class="anchor" href="#产出与纪律" aria-label="锚点">#</a></h3>
+<ul><li><code>.khyos/diag/xingyao-vs-khyos-comparison.md</code>（含六条前置规矩 + 十一域矩阵）。</li><li>⚠ 比较前先定规矩并<strong>当面钉死对象身份</strong>（用户原话「先定规矩，再列矩阵」）——</li></ul>
+<p>本次若跳过这步，整张矩阵都会建立在「1.3.0」这个虚构前提上。</p>
+<ul><li><strong>只读</strong>：未改任何业务代码、未新增规则、未动登记表。</li><li>临时克隆落 <code>.khyos/tmp/xingyao/</code>（该目录被 gitignore）。</li><li>新增坑：<code>git ls-files</code> 在 <code>.khyos/tmp/</code> 下克隆的仓库里返回 0</li></ul>
+<p>（index 显示为 staged deletion），<strong>须改用 <code>git ls-tree -r HEAD --name-only</code></strong>。</p>
+<h3 id="续-第二轮机制实现层对照-订正第一轮一处误判">续：第二轮机制实现层对照 —— <strong>订正第一轮一处误判</strong><a class="anchor" href="#续-第二轮机制实现层对照-订正第一轮一处误判" aria-label="锚点">#</a></h3>
+<p><strong>★ 重要教训（已写入长期记忆）：判「某侧有没有 X」不能只搜 X 的字面词。</strong><br>第一轮把「工具管线」判为「khy 侧 idea 档」，依据是只搜到 <code>toolLoopJournal</code>。<br>第二轮实读后<strong>结论反转</strong>：</p>
+<ul><li>khy-os <code>services/tool/toolLoopDetector.js</code> 有 <strong>11 个检测器 + 4 级严重度</strong></li></ul>
+<p>（自陈借鉴 OpenClaw + Qwen Code）；</p>
+<ul><li>khy-os <code>services/tool/toolGuards.js</code> 有 <strong>6 个守卫</strong>（PriorReadGuard G5 / FileStaleGuard</li></ul>
+<p>G5 TOCTOU / LspDiagnosticsGuard G1 等）；</p>
+<ul><li>星瑶侧对应物是<strong>单一 <code>RepeatCallGuard</code></strong>。</li></ul>
+<p>⇒ <strong>工具循环防护上 khy-os 显著更厚</strong>，与原判相反。<br><strong>根因</strong>：本仓实现命名多样（循环检测在 <code>toolLoopDetector</code>、执行前拦截在 <code>toolGuards</code>），<br><strong>必须按能力语义搜或直接列目录</strong>，别只搜 <code>dedup</code>/<code>repeatGuard</code>。</p>
+<h3 id="最深发现-非法状态转移的-两条对立路线-两边都对">★★ 最深发现：非法状态转移的「两条对立路线」，两边都对<a class="anchor" href="#最深发现-非法状态转移的-两条对立路线-两边都对" aria-label="锚点">#</a></h3>
+<table><thead><tr><th></th><th>星瑶</th><th>khy-os</th></tr></thead><tbody><tr><td>处置</td><td><code>raise InvalidHarnessTransition</code></td><td><code>fire()</code> <strong>永不抛</strong>，记 illegal 记录返回 <code>ok:false</code></td></tr><tr><td>状态机角色</td><td><strong>内核本体</strong>（非插件化，不可替换）</td><td><strong>影子观察者</strong>（注释明写「不发明新状态机」）</td></tr></tbody></table>
+<p>khy-os 的 <code>fsm.js</code> 文件头三条 fail-soft 红线：<code>fire()</code> 永不抛 /<br>hook 走 <code>queueMicrotask</code> 且异常吞掉（&quot;观察者绝不能拖垮宿主热路径&quot;）/ O(1) 转移查找 +<br>环形缓冲历史（无 <code>shift()</code> 成本）+ null-prototype 表（防 <code>__proto__</code> 碰撞）。</p>
+<p>⇒ <strong>判据：先问「这个状态机错了会怎样」，再决定它该不该抛。</strong><br>不是优劣，是角色不同，两边各自自洽。<strong>不要试图统一它们。</strong></p>
+<h3 id="星瑶最值得借鉴的一处-turnprogressguard-的-有界进展-预算">★ 星瑶最值得借鉴的一处：<code>TurnProgressGuard</code> 的「有界进展」预算<a class="anchor" href="#星瑶最值得借鉴的一处-turnprogressguard-的-有界进展-预算" aria-label="锚点">#</a></h3>
+<p><code>core/harness/progress_guard.py</code>（全文仅 ~100 行）：</p>
+<ul><li>停滞判定<strong>只比较状态哈希 + 修改类提交标记，绝不读模型自然语言</strong>（防话术欺骗）；</li><li><strong><code>MAX_UNIQUE_READS = 48</code></strong>：新读取签名算&quot;有界进展&quot;，<strong>超限后不再重置停滞计数</strong></li></ul>
+<p>⇒ 防模型靠&quot;无限换读取路径&quot;绕过熔断；真实进展则<strong>重置预算为满额</strong>；</p>
+<ul><li>参数是<strong>按真实回合校准的</strong>（注释写明大型代码库纯只读调查单回合涉及 20–40 目标）。</li></ul>
+<p><strong>另一高信号点</strong>：<code>llm.py:4553</code> 显式写下对抗性漏洞认知 ——</p>
+<blockquote><p>「文案之间来回切换，就会令 <code>tool_results_sha256</code> 每步变化并永久绕过无进展熔断。」</p></blockquote>
+<p>⇒ <strong>它知道自己检测器能被绕过并写下来了</strong>。本仓守卫注释多为「为什么这样判」，<br><strong>少见「这样判会被怎么绕过」</strong> —— 这个习惯值得引入。</p>
+<p><strong>第三处</strong>：<code>tool_pipeline.py:72</code> —— 通用机制（去重）<strong>为具体语义（<code>plan_retry</code> 重试语义）<br>刻意开例外并写清理由</strong>。是「机制不该压过语义」的正面样本。</p>
+<h3 id="产出-2">产出<a class="anchor" href="#产出-2" aria-label="锚点">#</a></h3>
+<ul><li>报告已追加 §4b（8 机制点矩阵 + 订正说明 + 三个深挖结论）、§4c（llm.py 深读）、§7、§8。</li><li>仍未读完：星瑶 <code>core/computer/</code> 22 文件、<code>memory_kairos.py</code>、多 provider 路由特判。</li></ul>
+<h3 id="续-第三轮深读-core-llm-py-6998-行-最大发现-两边独立发明了同一个护栏">续：第三轮深读 <code>core/llm.py</code>（6998 行）—— ★★ 最大发现：<strong>两边独立发明了同一个护栏</strong><a class="anchor" href="#续-第三轮深读-core-llm-py-6998-行-最大发现-两边独立发明了同一个护栏" aria-label="锚点">#</a></h3>
+<p><strong>同一失败模式</strong>（模型声称&quot;测试通过&quot;但其实没跑过），两边各自实现了护栏：</p>
+<table><thead><tr><th></th><th>星瑶</th><th>khy-os</th></tr></thead><tbody><tr><td>位置</td><td><code>core/llm.py</code> <code>_claims_verification_without_evidence()</code></td><td><code>services/goalStopGate.js</code> <code>claimsVerificationWithoutEvidence()</code></td></tr><tr><td>判据</td><td><strong>单层</strong>：用过 write 类 + 未用过 command 类 + 正文命中强表述</td><td><strong>三层</strong>：文本声称 / 文本证据 / <strong>行为证据</strong></td></tr><tr><td>强度</td><td>提醒 1 次</td><td>提醒 / redrive</td></tr></tbody></table>
+<p><strong>khy 的第三层是关键</strong>：<code>verificationCommandRan(toolCallLog)</code> <strong>查整轮工具调用记录</strong>，<br>而 <code>_VERIFY_CMD_RE</code> 要求命令与关键字间必须有空白，<strong>明确排除 <code>cat x-test.log</code> 这类旁路</strong>。</p>
+<p><strong>星瑶自陈的漏洞正好是这个</strong>（docstring 原文）：</p>
+<blockquote><p>「<strong>只按工具名称分类，不检查命令的执行结果</strong>，因此模型<strong>跑一条无关或失败的命令<br>即可让护栏失效</strong>……护栏只做一次提醒、不做强拦截，故接受该边界。」</p></blockquote>
+<p>⇒ <strong>khy 在这一点上更强，无需借鉴。</strong> 但两边都选「只提醒不强拦」且理由一致<br>（误拦合法回答比放过谎报更伤信任）——与 <code>[DESIGN-SOURCING-001]</code> 「误报比漏报更贵」同源。</p>
+<h3 id="星瑶两处真-可借鉴点-khy-侧缺失">★ 星瑶两处真·可借鉴点（khy 侧缺失）<a class="anchor" href="#星瑶两处真-可借鉴点-khy-侧缺失" aria-label="锚点">#</a></h3>
+<ol><li><strong>慢步熔断</strong>（khy 侧未见等价）：<code>SLOW_STEP_ABORT_SECONDS = 60.0</code> +</li></ol>
+<p><code>SLOW_STEP_MAX_NUDGES = 1</code>。注释给出全部取舍：<strong>&quot;思考型大模型单步 30~60s 属正常，<br>   阈值过低会误判深度思考为空转（neohorse-1-9b 实测失控 46.9s，60s 仍可捕获）&quot;</strong><br>   ⇒ <strong>参数有实测锚点，且解释了为什么不取更严的值（防误杀）</strong>。纯利润、无冲突。</p>
+<ol><li><strong>无进展检测的「排除清单」</strong>：<code>_PLAN_STATE_RESULT_TOOLS</code> 注释——</li></ol>
+<blockquote><p>「计划控制工具的结果正文<strong>不作为进展信号</strong>……否则模型只需在<br><code>plan_update</code>/<code>plan_retry</code>/<code>plan_finish</code> 返回<strong>文案之间来回切换，就会令<br><code>tool_results_sha256</code> 每步变化并永久绕过无进展熔断</strong>。」</p></blockquote>
+<p>⇒ <strong>先列&quot;什么不算进展&quot;</strong>，而非只列&quot;什么算进展&quot;。khy 的 <code>noProgressStreak</code><br>   做同样哈希比对但<strong>未见对应排除清单</strong> ⇒ 可补。</p>
+<ol><li>另：<code>_canonical_arguments_signature</code> 先 <code>sort_keys</code> 规范化再 sha256</li></ol>
+<p>⇒ 参数顺序不同但语义相同的调用识别为同一签名。</p>
+<h3 id="最终汇总判据-写入报告-8">最终汇总判据（写入报告 §8）<a class="anchor" href="#最终汇总判据-写入报告-8" aria-label="锚点">#</a></h3>
+<ul><li><strong>可借鉴 3 条</strong>：慢步熔断 / 排除清单 / 撤销存储内容寻址</li><li><strong>流程改进 1 条</strong>：守卫注释引入「这样判会被怎么绕过」的写法</li><li><strong>反向结论 2 条</strong>（khy 更强，别动）：工具循环防护、谎报验证护栏</li><li><strong>明确不动作 2 条</strong>：非法转移两条路线都对不要统一、内核收拢vs分散不是欠债</li><li>⚠ 引入「自陈边界」注释风格前需确认不会被 <code>check-agent-rules.js</code> 等扫描器误命中。</li></ul>
+<hr>
+<h2 id="提交时机-阶段三-实现-判据落到-ai-的实际决策路径">提交时机 · 阶段三（实现）—— 判据落到 AI 的实际决策路径<a class="anchor" href="#提交时机-阶段三-实现-判据落到-ai-的实际决策路径" aria-label="锚点">#</a></h2>
+<p>用户三步走「先改规则，再做测试，最后实现」的<strong>最后一步</strong>。阶段一交付了规范+守卫+接线，<br>但<strong>判据光有守卫不够</strong>：守卫答「这次提交<strong>合不合</strong>判据」，不答「<strong>现在该不该</strong>提交」。<br>判据不落到 AI 的实际决策路径上，就只是文档里的一段话 —— 正是规范 §1.2<br>「判据缺失被转嫁给人」的原地复发。</p>
+<h3 id="关键发现-gitcommit-工具描述是-ai-不知道何时提交-的-机制根源">★★ 关键发现：<code>gitCommit</code> 工具描述是「AI 不知道何时提交」的<strong>机制根源</strong><a class="anchor" href="#关键发现-gitcommit-工具描述是-ai-不知道何时提交-的-机制根源" aria-label="锚点">#</a></h3>
+<p><code>services/backend/src/tools/gitCommit.js</code>（AI 真正用来提交的工具）原描述是<br><strong><code>Use it only when the user asks to commit</code></strong> —— AI 被明确告知<strong>不要主动提交</strong>。<br>这就是用户抱怨的成因。⇒ <strong>改机制先改这句</strong>，而不是去教育 AI。</p>
+<h3 id="落地三层-执行面与阶段迁移-正交解耦">落地三层（执行面与阶段迁移<strong>正交解耦</strong>）<a class="anchor" href="#落地三层-执行面与阶段迁移-正交解耦" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>件</th><th>位置</th><th>角色</th></tr></thead><tbody><tr><td>纯叶子</td><td><code>services/backend/src/cli/commitTiming.js</code>（330 行）</td><td>判据纯函数（零 IO·绝不抛·<code>KHY_COMMIT_TIMING</code> 门控）。三结论 <code>commit-now</code>/<code>ask-first</code>/<code>do-not-commit</code></td></tr><tr><td>人用命令</td><td><code>services/backend/src/cli/handlers/commit.js</code> → <code>khy commit</code></td><td>采 git → 交叶子 → 渲染。<strong>默认只判断</strong>，真提交要显式 <code>--yes</code></td></tr><tr><td>AI 用工具</td><td><code>services/backend/src/tools/gitCommit.js</code> 新增 <code>checkTiming</code></td><td><code>enforce</code> 判据不满足<strong>直接拒绝</strong>；<code>warn</code>（默认）提交但回传判断；<code>off</code> 逐字节回退</td></tr></tbody></table>
+<blockquote><p><strong>为什么不违反 PP-3「S1/S2 禁止阻断」</strong>：阶段（S1→S4）管<strong>守卫的拦截强度</strong>，<br>执行面管<strong>判据有没有被用</strong>。执行面不引入新拦截通道 —— <code>khy commit</code> 是人主动敲的，<br><code>gitCommit</code> 是 AI 主动调的，都不是「自动门」。二者正交，执行面在 S1 即可生效。</p></blockquote>
+<h3 id="踩到的致命假阴性-写了一遍才发现">⚠⚠ 踩到的致命假阴性（写了一遍才发现）<a class="anchor" href="#踩到的致命假阴性-写了一遍才发现" aria-label="锚点">#</a></h3>
+<p><code>hasVerifyEvidence</code> 初版用 <strong><code>process.uptime()</code> 当「会话开工时间」</strong> ⇒ CLI 是短命进程，<br><code>uptime</code> ≈ 0.2s，于是 <code>since ≈ now</code>，任何 <code>verify.txt</code> 都被判「太旧」<br>⇒ <strong>T2 永远失败，提交被永久阻断</strong>。且它<strong>伪装成保守</strong>（看着像「宁可不让提交」），<br>所有守卫全绿，只有真跑一次 git 提交才暴露。<br><strong>正确锚点 = 暂存集里最老的改动 mtime</strong>：问的不是「是不是我这进程产生的」，<br>而是「有没有一份证据比我要提交的这批改动更新」。</p>
+<h3 id="khy-commit-help-会被顶层拦走-全仓既有行为-非本命令问题">⚠ <code>khy commit --help</code> 会被顶层拦走（全仓既有行为，非本命令问题）<a class="anchor" href="#khy-commit-help-会被顶层拦走-全仓既有行为-非本命令问题" aria-label="锚点">#</a></h3>
+<p><code>services/backend/bin/khy.js:1383</code> 在 bootstrap 前拦截 argv 里<strong>任意位置</strong>的 <code>--help</code><br>（打印全局命令列表）。实测 <code>khy repo --help</code>、<code>khy hq --help</code> <strong>同样如此</strong>。<br>⇒ 本命令额外接受 <strong><code>help</code> 子命令</strong>（<code>khy commit help</code>），让帮助始终可达。</p>
+<h3 id="测试-42-个-全绿-都在-os-tmpdir-里跑真-git-commit">测试（42 个，全绿，都在 <code>os.tmpdir()</code> 里跑真 <code>git commit</code>）<a class="anchor" href="#测试-42-个-全绿-都在-os-tmpdir-里跑真-git-commit" aria-label="锚点">#</a></h3>
+<pre><code>services/backend/tests/commitTiming.test.js      34 passed
+services/backend/tests/gitCommitTiming.test.js    8 passed
+scripts/tests/check-commit-timing.test.js        23 passed（阶段一，未受影响）</code></pre>
+<blockquote><p>临时仓库<strong>绝不落仓库树</strong> —— 落 <code>scripts/ci/</code> 会让 <code>check-wiring</code> 看到<br>「零接线检查器」而<strong>间歇性</strong>报 error（阶段一踩过，见 <code>MEMORY.md</code> §七）。<br><code>services/backend/tests/</code> 用 <code>node:test</code>（<code>npm run test:node</code>），非 jest。</p></blockquote>
+<h3 id="守门全绿">守门全绿<a class="anchor" href="#守门全绿" aria-label="锚点">#</a></h3>
+<p><code>check:wiring</code>（85 检查器全接线）/ <code>check:rules-registry</code> / <code>check:rollout-stage</code>（0e0w）/<br><code>check:gov-rules</code> / <code>check:layout</code>（77 dangling / 39 cross-layer，<strong>均未新增</strong>）/<br><code>check-leaf-contract</code>（0 违规）/ <code>check-tool-contract</code>（<code>gitCommit</code> <strong>0 finding</strong>，516 字符 ≤ 600 上限）/<br><code>test:scripts</code> 阶段一 23 用例。</p>
+<blockquote><p>工具描述有 <strong>≤600 字符</strong>硬约束（<code>_baseTool.js</code> §Tool Description Guidelines）；<br>enum 参数<strong>必须有 <code>example</code></strong>，否则 <code>check-tool-contract</code> 报 <code>enum-example-missing</code><br>（82 个既有工具踩了这条）。</p></blockquote>
+<h3 id="产出-3">产出<a class="anchor" href="#产出-3" aria-label="锚点">#</a></h3>
+<ul><li>新建：<code>services/backend/src/cli/handlers/commit.js</code>、<code>services/backend/tests/commitTiming.test.js</code>、</li></ul>
+<p><code>services/backend/tests/gitCommitTiming.test.js</code></p>
+<ul><li>修改：<code>services/backend/src/tools/gitCommit.js</code>（描述 + <code>checkTiming</code> 参数 + <code>_assessTiming</code>）、</li></ul>
+<p><code>docs/10_规范/DESIGN-GIT/[DESIGN-GIT-004] 提交时机规范.md</code>（§7.1 执行面 + v1.1.0）</p>
+<hr>
+<h2 id="续三-订正-已退役入口名-的-121-处引用-修两个被-shim-掩盖的守卫">续三：订正「已退役入口名」的 121 处引用 + 修两个被 shim 掩盖的守卫<a class="anchor" href="#续三-订正-已退役入口名-的-121-处引用-修两个被-shim-掩盖的守卫" aria-label="锚点">#</a></h2>
+<h3 id="做了什么">做了什么<a class="anchor" href="#做了什么" aria-label="锚点">#</a></h3>
+<p>按 <code>[OPS-MAN-174]</code> §「原目标 → 现入口」的规范名，把两个<strong>已裁定不存在</strong>的入口名<br>的引用全量订正（<code>maintainer:check</code> → <code>check:maintainer:safety</code>；<br><code>hydration-doctor</code> → <code>doctor:hydration</code>），并顺手修两个因目录迁移 shim 而失效的守卫。</p>
+<table><thead><tr><th>面</th><th>动作</th><th>结果</th></tr></thead><tbody><tr><td>生成器真源</td><td><code>scripts/docs/gen-evolution-prompts.js</code> 4 处（<code>VERIFY_KEYS.maint</code> + 兜底注释 + 收尾五门文案 + header 门速查）</td><td>重跑生成 → 手册 41 处自动新生</td></tr><tr><td>文档+孪生件</td><td>65 个文件 / 121 处（<code>.md</code> 与 <code>.html</code> <strong>同批</strong>改，逐件配对核对通过）</td><td>全仓仅剩 8 处（见下）</td></tr><tr><td>代码侧</td><td><code>completionContract.js</code>、<code>goalStopGate.js</code> + 3 个测试</td><td><code>node --test</code> 60/60 绿</td></tr><tr><td>生成物</td><td><code>[OPS-MAN-066].md</code>（重跑生成器）、<code>[OPS-MAN-070].md</code>（重跑 <code>--gen-doc</code>）、<code>[OPS-MAN-070].html</code> 手工同步（3 处陈旧路径）</td><td>手册 md/html 各 41 处，<strong>逐字节契约测试 13/13 绿</strong></td></tr></tbody></table>
+<p><strong>刻意保留的 8 处</strong>（改写它 = 抹掉改名依据）：<code>[OPS-MAN-174]</code>(md/html)、<br><code>[MGMT-STD-008]</code> X-003(md/html)、<code>[OPS-MAN-169]</code> §一(md/html)、<br><code>docs/11_报告/历史/stash_patch.txt</code>；另 <code>维护映射表.json</code> 1 处（见「未做」）。</p>
+<h3 id="两个被-shim-掩盖的真实守卫缺陷-新发现-非我引入">两个被 shim 掩盖的真实守卫缺陷（新发现，非我引入）<a class="anchor" href="#两个被-shim-掩盖的真实守卫缺陷-新发现-非我引入" aria-label="锚点">#</a></h3>
+<p><code>services/backend/src/services/</code> 下有 <strong>54 个一行 re-export shim</strong><br>（<code>module.exports = require('./tool/xxx')</code>），来自 <strong>2026-09-18 10:22 的一次目录迁移</strong>，<br>该迁移<strong>只进了暂存区、30 小时未提交</strong>。shim 让运行时 require 正常，<br>但<strong>按旧路径做源码文本扫描的测试会失效</strong>——探针 <code>probe-shim-scans.js</code> 扫出 2 处：</p>
+<ol><li><code>goalStopGateVerifyRan.test.js</code> 断言<strong>正向</strong>（&quot;调用块须传入 toolCallLog&quot;）</li></ol>
+<p>→ 读空壳 → <strong>假红</strong>（1 fail）。修法：跟随 shim 读真实文件。</p>
+<ol><li><code>planModeSink.test.js</code> 断言<strong>反向</strong>（&quot;不得 require planModeService&quot;）</li></ol>
+<p>→ 读空壳 → <strong>无条件通过</strong> → <strong>假绿</strong>（静默失效）。同一个修法。</p>
+<p>⇒ <strong>新判据</strong>：修完自证「守卫真的读到了实现文件」（实测读到 3600 行 + 该边确已断）。</p>
+<h3 id="新踩的坑-三条-都已回写工具">新踩的坑（三条，都已回写工具）<a class="anchor" href="#新踩的坑-三条-都已回写工具" aria-label="锚点">#</a></h3>
+<ol><li><strong><code>Edit</code> 工具对含全角标点（。、：（））的行会「报成功但未生效」</strong>——</li></ol>
+<p>实测 2 处全角标点的替换静默失败，而纯 ASCII/半角的行成功。⇒ 这类替换一律<br>   写<strong>脚本文件</strong>再 <code>node &lt;file&gt;</code>（与「不要 <code>node -e</code> 内联中文」同源）。</p>
+<ol><li><strong><code>docs/**</code> 是 CRLF，而 JS 的 <code>.</code> 不匹配 <code>\r</code></strong>——<code>/^(\s+)(#.*)$/</code> 静默失配，</li></ol>
+<p>退到兜底分支导致 <code>#</code> 注释右移 8 列。⇒ 正则必须写 <code>#[^\r\n]*(\r?)</code>。</p>
+<ol><li><strong>「保持原列位」的对齐修复不可幂等</strong>（按「当前列 − 差值」反推，第 2 跑会继续左移）</li></ol>
+<p>⇒ 用哨兵文件挡住重复执行，而不是假装幂等。</p>
+<ol><li><strong>对齐微调脚本不能扫生成物</strong>：它把 <code>[OPS-MAN-066]</code> 的收尾五门行削掉 8 空格，</li></ol>
+<p>直接打破「落盘 == 生成器输出」的逐字节测试。⇒ 生成物只能改<strong>生成器里的字面量</strong>再重跑。</p>
+<h3 id="守门现状-全绿">守门现状（全绿）<a class="anchor" href="#守门现状-全绿" aria-label="锚点">#</a></h3>
+<p><code>check:layout</code> <strong>dangling-task 77 → 76</strong>（<code>hydration-doctor</code> 出列；基线仍 88）/<br><code>check:wiring</code> 通过（85 检查器，豁免 11）/ <code>check:rules</code> 通过 / <code>check:manifest-sync</code> exit 0 /<br><code>check-agent-rules</code>（4 文件）0 违规 / <code>maintainerMapDocCoverage</code> 4/4 /<br>受影响测试合计 <strong>60/60</strong>。</p>
+<h3 id="一个守卫设计缺口-未改-留作建议">一个守卫设计缺口（未改，留作建议）<a class="anchor" href="#一个守卫设计缺口-未改-留作建议" aria-label="锚点">#</a></h3>
+<p><code>maintainer:check</code> <strong>无法从 dangling 列表消失</strong>——保持它 dangling 的正是那两份<br><strong>死指针裁定文档</strong>（<code>[MGMT-STD-008]</code> X-003、<code>[OPS-MAN-169]</code> §一），<br>而 <code>check-repo-layout.js</code> 的 <code>collectReferencedTasks()</code> 用 <code>git grep -o -h</code><br>（<code>-h</code> <strong>丢掉了文件名</strong>）⇒ 只能按「名字」全局豁免。<br><strong>故意不加全局豁免</strong>：那会让 X-003 明令「勿再引用」的名字反而获得永久免检。<br>正解是<strong>按文件/语境豁免 + 理由 + 到期日</strong>（先例：<code>check:wiring</code> 的豁免机制），<br>但需去掉 <code>-h</code> 并处理 <code>file:lineno:match</code> 解析（早期踩过），属<strong>守卫设计变更</strong>，<br>应单独走规则落地流程，不做顺手改。</p>
+<h3 id="并发状态-重要">并发状态（重要）<a class="anchor" href="#并发状态-重要" aria-label="锚点">#</a></h3>
+<ul><li><code>scripts/ci/check-repo-layout.js</code> + <code>repo-layout-baseline.json</code> <strong>有他人未暂存改动</strong>：</li></ul>
+<p>已加入 <code>isNonTargetTask()</code> / <code>TASK_NON_TARGETS</code>（消四类误报，含 <code>npm run X</code> 占位、<br>  测试夹具假名、<code>check:*</code> 通配截断），基线 <code>dangling-task</code> 98 → 88。<br>  ⇒ 我读到的判据含其 WIP；<strong>别以为那是 HEAD 行为</strong>。</p>
+<ul><li><code>services/backend/src/services/tool/</code>（33 文件 <code>A</code>）+ 54 个 shim（<code>M</code>）<strong>仍是暂存态</strong>，</li></ul>
+<p>30 小时未提交。<strong>别 <code>git add -A</code></strong>、别 <code>git restore --staged .</code>。</p>
+<ul><li>本轮我改动 <strong>~80 个文件</strong>（65 docs + 8 代码/生成物 + 前轮），</li></ul>
+<p>但 <code>git diff --name-only</code> 报 131 —— 差额是他人未暂存改动（desktop/tsx、tui、crossPlatform、<br>  imageService、gitCommit、check-repo-layout 等）。</p>
+<hr>
+<h2 id="续四-收口三项-映射表真源订正-悬空检测守卫-域迁移溯源">续四：收口三项（映射表真源订正 + 悬空检测守卫 + 域迁移溯源）<a class="anchor" href="#续四-收口三项-映射表真源订正-悬空检测守卫-域迁移溯源" aria-label="锚点">#</a></h2>
+<h3 id="一-维护映射表-json-从-刻意不动-改为-真源订正-推翻上轮结论">一、<code>维护映射表.json</code> 从「刻意不动」改为「真源订正」（推翻上轮结论）<a class="anchor" href="#一-维护映射表-json-从-刻意不动-改为-真源订正-推翻上轮结论" aria-label="锚点">#</a></h3>
+<p>上轮我把映射表里 1 处 <code>maintainer:check</code> 标为「刻意未动」，理由是「属 docs 真源 + 正被并发迁移」。<br><strong>这两条理由都不成立</strong>：它是<strong>被消费的真源</strong>，不是被引用的文档，订正它不抹掉任何裁定依据。</p>
+<p>改动（<code>docs/14_维护者/registry/维护映射表.json</code>，<code>hydration-health</code> area）：</p>
+<ul><li><code>paths[]</code>：<code>scripts/hydration-doctor.js</code> → <code>extensions/scripts/khy-diagnostics/hydration-doctor.js</code>（<strong>真实存在的路径</strong>）</li><li><code>verify[]</code>：追加 <code>npm run doctor:hydration</code>（首条），保留 <code>npm run test:one -- scripts/tests/hydrationHealth.test.js</code></li><li><code>goal-endurance.whenToUse</code>：签名示例 <code>…arch:god·maintainer:check·pytest·jest…</code></li></ul>
+<p>→ <code>…arch:god·npm run check:maintainer:safety·npm run doctor:*·pytest·jest…</code></p>
+<p><strong>为什么 <code>verify</code> 必须补真命令</strong>：<code>scripts/ci/check-change-safety.js:311-327</code> 把<br>area 的 <code>verify[]</code> <strong>直接加进「建议跑的验证命令」</strong>。旧值只给一个 node:test 文件路径 ⇒<br>维护者按映射表收到「跑个测试」而非「跑 doctor」。⇒ <strong>映射表 <code>verify</code> 是运行时输入，不是注释</strong>。</p>
+<p>生成器重跑（映射表 → 手册）→ <code>[OPS-MAN-066]</code> <strong>205 增 / 205 删</strong>，全为名字订正，<br>其中 6 处把 hydration area 的验证从测试文件换成 <code>doctor:hydration</code>。<br><code>gen-evolution-prompts.test.js</code> <strong>13/13 绿</strong>、<code>maintainerMapDocCoverage.test.js</code> <strong>4/4 绿</strong>。</p>
+<h3 id="二-发现并修复一条-静默失效-链路-比报错更危险">二、发现并修复一条<strong>静默失效</strong>链路（比报错更危险）<a class="anchor" href="#二-发现并修复一条-静默失效-链路-比报错更危险" aria-label="锚点">#</a></h3>
+<p><strong><code>\bmaintainer\b</code> 兜住子串但没有 word-boundary 钉死</strong>：<code>goalStopGate.js:334</code> 的<br><code>npm\s+(?:run\s+)?(?:…|maintainer|…)</code> 之所以能匹配 <code>npm run check:maintainer:safety</code>，<br>靠的是 <code>maintainer</code> 在 <code>check:maintainer:safety</code> 里<strong>没有词边界</strong>（<code>:</code> 非字母数字）⇒ 子串命中。<br><strong>纯属偶然</strong>：若命令叫 <code>npm run doctor:hydration</code>（do<strong>ct</strong>or 前有冒号、<code>doctor</code> 之后是 <code>:hyd…</code>），<br><strong>完全无法命中</strong> ⇒ verify-ran 门会把「真跑过 doctor」误判成「没跑」，把 <code>clear</code> 降级 <code>redrive</code>。</p>
+<p>修复：</p>
+<ul><li><code>goalStopGate.js:334</code> 正则补 <code>|doctor</code>（新增 <code>npm run doctor:*</code> 一族）</li><li><code>goalStopGateVerifyRan.test.js</code> 补一条断言 <code>npm run doctor:hydration → true</code> 并注明来由</li><li>同时把 <code>goalStopGate.js:478</code> 的提示文案从裸名 <code>maintainer:check</code> 改为全称</li></ul>
+<p><code>npm run check:maintainer:safety</code>、并补 <code>npm run doctor:*</code>（否则 AI 被提示去跑一个不存在的入口）</p>
+<p>⇒ <strong>新判据</strong>：正则用「叶子名」当备忘录用时，<strong>必须用真实命令形取样验证</strong>；<br><code>\bX\b</code> 对 <code>a:X:b</code> <strong>不成立</strong>（<code>:</code> 非 <code>\w</code>，但 <code>\b</code> 要求一侧是 <code>\w</code> 另一侧不是，<code>:</code>两侧都是非 <code>\w</code><code> ⇒ 无边界）。<br>**判据**：命令签名正则的每条分支，都要有一条 </code>verificationCommandRan(['&lt;真实命令&gt;']) === true` 的测试。</p>
+<h3 id="三-新增守卫-映射表-paths-悬空检测-check-change-safety-js">三、新增守卫：映射表 <code>paths[]</code> 悬空检测（<code>check-change-safety.js</code>）<a class="anchor" href="#三-新增守卫-映射表-paths-悬空检测-check-change-safety-js" aria-label="锚点">#</a></h3>
+<p><strong>问题</strong>：<code>maintainerMapDocCoverage.test.js</code> 只守 <code>docs[]</code> 引用完整性，<strong>不守 <code>paths[]</code></strong>。<br>而 <code>paths[]</code> 悬空会让 area <strong>静默失效</strong>——匹配恒 false ⇒ 其 <code>verify</code> 永不进入建议命令，<br><strong>守卫自身全绿</strong>。这是「静默失效」而非「报错」，最难发现。</p>
+<p>实测：<strong>111 个 area / 582 条 paths / 54 条悬空（9.3%）</strong>，跨 35 个 area。</p>
+<p>新增（<code>scripts/ci/check-change-safety.js</code>，+40 行）：</p>
+<pre><code class="language-js"><span class="hljs-keyword">function</span> <span class="hljs-title function_">collectDanglingMaintainerPaths</span>(<span class="hljs-params">maintainerMap</span>) {
+  <span class="hljs-keyword">const</span> dangling = [];
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> area <span class="hljs-title function_">of</span> (maintainerMap &amp;&amp; maintainerMap.<span class="hljs-property">areas</span>) || []) {
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> areaPath <span class="hljs-title function_">of</span> (<span class="hljs-title class_">Array</span>.<span class="hljs-title function_">isArray</span>(area.<span class="hljs-property">paths</span>) ? area.<span class="hljs-property">paths</span> : [])) {
+      <span class="hljs-keyword">const</span> normalized = <span class="hljs-title function_">normalizeRepoPath</span>(areaPath);
+      <span class="hljs-keyword">if</span> (!normalized) <span class="hljs-keyword">continue</span>;
+      <span class="hljs-keyword">if</span> (<span class="hljs-title function_">getMaintainerPathType</span>(normalized) === <span class="hljs-string">&#x27;missing&#x27;</span>) {
+        dangling.<span class="hljs-title function_">push</span>({ <span class="hljs-attr">area</span>: area.<span class="hljs-property">id</span>, <span class="hljs-attr">path</span>: normalized });
+      }
+    }
+  }
+  <span class="hljs-keyword">return</span> dangling;
+}</code></pre>
+<p>复用既有私有 <code>getMaintainerPathType()</code>（已判 file/dir/missing 且带缓存）。finding id<br><code>dangling-maintainer-paths</code>，<strong>severity <code>warning</code></strong>（非 error：54 条是存量，判 error 会让门红<br>——先例 <code>LAYOUT-002</code>「只记录不拦截」）。⚠ 该 finding <strong>独立于改动集</strong>：这是刻意的<br>「存量体检」——若只跟改动集无关就不报，迁移造成的静默失效会被「这次改了啥」的视角永久漏掉。</p>
+<p>⚠ <strong><code>git show :&lt;path&gt;</code> ≠ 暂存区版本</strong>——实测 <code>git show :f</code> 拿到的是<strong>索引基线（HEAD 侧）</strong>。<br>要读暂存内容用 <code>git show :0:&lt;path&gt;</code>。我差点据此误判「索引版手册没有我的改动」。</p>
+<h3 id="四-域迁移溯源-解释了-54-条悬空的绝大部分">四、域迁移溯源（解释了 54 条悬空的绝大部分）<a class="anchor" href="#四-域迁移溯源-解释了-54-条悬空的绝大部分" aria-label="锚点">#</a></h3>
+<ul><li><strong>域迁移提交 <code>f0df1795</code>（2026-09-04 17:05）</strong> 把 <strong>505 个文件</strong>从</li></ul>
+<p><code>services/backend/src/services/&lt;name&gt;/…</code> 重命名到 <code>services/backend/src/services/domain/&lt;板块&gt;/&lt;name&gt;/…</code><br>  （<code>R099</code>/<code>R100</code>）——<strong>服务根层扁平化 → 域 &gt; 板块 &gt; 模块 三级</strong>，<br>  这正是 <code>[DESIGN-LAY-005]</code> 的板层级治理。33 个顶层板块：account/agents/build/collab/data/deploy/<br>  desktop/docs/eval/extensions/gateway-stuff/maintenance/memory/messaging/network/onboarding/<br>  project/quality/query/security/session/skills/state/structured/system/trajectory/workspace…</p>
+<ul><li>迁移同时<strong>留了旧位置 shim</strong>（<code>services/…/proxy/index.js</code> 等，<code>// Auto-generated shim - … Do not edit</code>），</li></ul>
+<p>且该提交的 message 是 <code>fix(tui): banner duplication…</code>——<strong>内容与消息完全无关</strong>（一个 505 文件重命名<br>  混进 TUI 修复提交）。⇒ 追溯「这文件为什么搬了」时，<strong>不能信 commit message，要信 name-status</strong>。</p>
+<ul><li>54 条悬空里 34 条落在<strong>「从 services 根搬到 domain」这一类</strong>（只需前缀平移），</li></ul>
+<p>其余 20 条是更早的 <code>scripts/</code> 根扁平化（<code>scripts/restore-*.js</code> 一整族 14 条已不存在）。</p>
+<h3 id="五-暂存区的一个真实损坏-未修-仅记录">五、暂存区的一个真实损坏（未修，仅记录）<a class="anchor" href="#五-暂存区的一个真实损坏-未修-仅记录" aria-label="锚点">#</a></h3>
+<p><code>check-change-safety.js</code> 暂存版把映射表路径从 <strong><code>docs/_维护者/维护映射表.json</code><br>（该路径从来不存在）</strong> 改成 <code>docs/14_维护者/registry/维护映射表.json</code>——<br>即<strong>他人已暂存的改动修好了一个真 bug</strong>。我未碰这一行，只在<strong>工作区</strong>追加了新函数。</p>
+<h3 id="六-本轮守门-全绿">六、本轮守门（全绿）<a class="anchor" href="#六-本轮守门-全绿" aria-label="锚点">#</a></h3>
+<p><code>check-agent-rules</code>（3 文件）0 违规 / <code>check-repo-layout</code> dangling-task <strong>76（基线 88）</strong>、<br><code>hydration-doctor</code> 已出列、<code>maintainer:check</code> 仍 2 处（裁定文档，见上轮结论）/<br>受影响测试 <strong>43/43</strong>（goalStopGateVerifyRan + completionContract + planModeSink）+<br><code>maintainerMapDocCoverage</code> 4/4 + <code>gen-evolution-prompts</code> 13/13 = <strong>60/60</strong>。<br><code>check-repo-layout</code> 另有 <code>layer-registry</code> error：顶层 <code>gui-test-screenshots</code> 未登记<br>（<strong>他人遗留，非本轮</strong>——且我全程未产截图）。</p>
+<h3 id="七-提交仍被阻塞-方案-c-未变">七、提交仍被阻塞（方案 C 未变）<a class="anchor" href="#七-提交仍被阻塞-方案-c-未变" aria-label="锚点">#</a></h3>
+<p>暂存区 3956 项 / 工作区 3999 项。<strong>本轮全程零 <code>git add</code> / 零 <code>git commit</code></strong>。<br><code>scripts/ci/check-change-safety.js</code> 呈 <code>MM</code>（我改工作区 + 他人改暂存）——<strong>这是本仓新常态形态</strong>。</p>
+<hr>
+<h2 id="续五-孪生件同步的正确姿势-一轮自我纠错">续五：孪生件同步的正确姿势（★ 一轮自我纠错）<a class="anchor" href="#续五-孪生件同步的正确姿势-一轮自我纠错" aria-label="锚点">#</a></h2>
+<h3 id="我犯的错-手改了生成物-md">我犯的错：手改了生成物 <code>.md</code><a class="anchor" href="#我犯的错-手改了生成物-md" aria-label="锚点">#</a></h3>
+<p>给映射表补了第 2 条 verify（<code>doctor:hydration</code>）后重跑生成器，发现生成器<strong>为每条 verify<br>产出一个独立条目</strong>（<code>gen-evolution-prompts.js:272-281</code> 双层循环）⇒ 第三篇<strong>多出 1 条</strong>，<br>其后全部条目号顺移 +1。我<strong>错误地手工编辑了 <code>.md</code></strong>（生成物！），把第 280 条的<br><code>test:one</code> 行改成 <code>doctor:hydration</code> ⇒ 落盘 ≠ 生成器输出。</p>
+<p><strong>正确姿势</strong>：<code>.md</code> 是生成物，<strong>只能重跑生成器</strong>。手改它 = 制造「落盘与生成器不一致」，<br><code>gen-evolution-prompts.test.js</code> 第 12 项就会红。⇒ 立即回退手改、重跑生成器。</p>
+<h3 id="孪生件-html-的正确重建-走-worktree-副本">孪生件 <code>.html</code> 的正确重建：走 worktree 副本<a class="anchor" href="#孪生件-html-的正确重建-走-worktree-副本" aria-label="锚点">#</a></h3>
+<p><code>.html</code> 由 <code>build_docs_site.js</code> 产出，但它是<strong>清空重写全站</strong>（901 个 html）⇒<br>当前并发状态不能跑。<strong>正解</strong>：</p>
+<pre><code class="language-bash">git worktree add --detach .khyos/tmp/twin-sim HEAD
+<span class="hljs-built_in">cp</span> <span class="hljs-string">&quot;&lt;改好的.md&gt;&quot;</span>    .khyos/tmp/twin-sim/&lt;同路径&gt;
+<span class="hljs-built_in">cp</span> <span class="hljs-string">&quot;维护映射表.json&quot;</span>  .khyos/tmp/twin-sim/docs/14_维护者/registry/
+<span class="hljs-built_in">cd</span> .khyos/tmp/twin-sim &amp;&amp; node scripts/docs/build_docs_site.js --quiet
+<span class="hljs-built_in">cp</span> <span class="hljs-string">&quot;.khyos/tmp/twin-sim/&lt;产出&gt;.html&quot;</span>  <span class="hljs-string">&quot;&lt;工作区原路径&gt;.html&quot;</span>
+git worktree remove --force .khyos/tmp/twin-sim &amp;&amp; git worktree prune</code></pre>
+<p>⚠ <strong>head 版路径与工作区不同</strong>：HEAD 里手册在 <code>docs/07_OPS_运维/</code>（<strong>无 <code>OPS-MAN/</code> 子目录</strong>），<br><code>OPS-MAN/</code> 是<strong>未提交的搬目录</strong>。⇒ 复制时要按两侧各自的真实路径，别照抄。<br>⚠ <code>docs/14_维护者/registry/</code> 在 HEAD 里<strong>不存在</strong>（同样是未提交搬目录）⇒ 需 <code>mkdir -p</code>。</p>
+<h3 id="判据-孪生件一致性要-逐条比对条目号-验证命令">判据：孪生件一致性要<strong>逐条比对条目号 + 验证命令</strong><a class="anchor" href="#判据-孪生件一致性要-逐条比对条目号-验证命令" aria-label="锚点">#</a></h3>
+<p>只 grep「某字符串出现次数」会漏掉<strong>漏插/重编号</strong>这类结构性偏差。用：</p>
+<pre><code class="language-js"><span class="hljs-comment">// md:  /^\*\*(\d+)\.\*\*[\s\S]*?  - 验证：`([^`]+)`/gm</span>
+<span class="hljs-comment">// html:/&lt;strong&gt;(\d+)\.&lt;\/strong&gt;[\s\S]*?&lt;li&gt;验证：&lt;code&gt;([^&lt;]+)&lt;\/code&gt;/g</span></code></pre>
+<p>本轮实测：<strong>md/html 各 1000 条、最大号均 1000、逐条一致</strong>（仅 2 处 <code>&quot;</code>→<code>&amp;quot;</code> 是<br>HTML 转义的正确行为，非差异）。</p>
+<p>⇒ <strong>新判据</strong>：孪生件同步的验收 = <strong>条目数相等 + 逐条命令相等</strong>，不是「关键词出现次数相等」。</p>
+<hr>
+<h2 id="续六-悬空-paths-批量订正-54-6-剩余-6-条的定性">续六：悬空 paths 批量订正（54 → 6）+ 剩余 6 条的定性<a class="anchor" href="#续六-悬空-paths-批量订正-54-6-剩余-6-条的定性" aria-label="锚点">#</a></h2>
+<h3 id="已落地-48-54-条机械可解-全部指向-已跟踪-文件">已落地：48/54 条机械可解，全部指向<strong>已跟踪</strong>文件<a class="anchor" href="#已落地-48-54-条机械可解-全部指向-已跟踪-文件" aria-label="锚点">#</a></h3>
+<p>写了 <code>.khyos/diag/resolve-dangling-paths.js</code>（三级策略）+ <code>apply-dangling-fix.js</code>（带<br>「目标必须存在」前置复核、任一不过则整体中止，不做部分写入）。<strong>改前先备份到<br><code>.khyos/diag/维护映射表.json.bak</code>，验证通过后删除。</strong></p>
+<table><thead><tr><th>策略</th><th>条数</th><th>形态</th></tr></thead><tbody><tr><td><code>domain-move</code></td><td>29</td><td><code>services/.../services/&lt;name&gt;/x.js</code> → <code>.../services/domain/&lt;板块&gt;/&lt;name&gt;/x.js</code>（<strong>板块靠扫 domain 反推</strong>）</td></tr><tr><td><code>restore-dir</code></td><td>14</td><td><code>scripts/restore-&lt;x&gt;.js</code> → <code>scripts/restore/restore-&lt;x&gt;.js</code></td></tr><tr><td><code>basename-unique</code></td><td>5</td><td>全局唯一同名命中（如 <code>scripts/check-duplication.js</code> → <code>scripts/ci/</code>）</td></tr></tbody></table>
+<p><strong>二次校验</strong>：48 个目标<strong>全部</strong>通过 <code>git ls-files --error-unmatch</code> ⇒ 不会指到垃圾/临时文件。<br><strong>结果</strong>：<code>missing 54 → 6</code>，<code>exists 528 → 576</code>。</p>
+<h3 id="剩余-6-条-不是-搬走了-是-从未存在-或-已删除-性质与前-48-条完全不同">剩余 6 条：<strong>不是「搬走了」，是「从未存在」或「已删除」</strong> —— 性质与前 48 条完全不同<a class="anchor" href="#剩余-6-条-不是-搬走了-是-从未存在-或-已删除-性质与前-48-条完全不同" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>area</th><th>悬空路径</th><th>定性</th></tr></thead><tbody><tr><td><code>slash-menu-ssot</code></td><td><code>…/cli/tui/app.jsx</code></td><td>该目录只有 <code>app.js</code>，<strong>从无 <code>.jsx</code></strong>；area 内其余 7 条 paths 都在 ⇒ 单条笔误</td></tr><tr><td><code>npm-node-preflight</code></td><td><code>packaging/npm/scripts/nodeVersionPreflight.js</code>&lt;br&gt;<code>packaging/npm/test/nodeVersionPreflight.test.js</code></td><td><strong>机制整体未落地</strong>：<code>git grep nodeVersionPreflight</code> 只命中<strong>文档与 CODEOWNERS</strong>，无实现；<code>bin/khy.js</code> 无 require、无 <code>engines</code>、无 <code>test:node-preflight</code> 别名 ⇒ <code>[OPS-MAN-081]</code> 是<strong>设计文档，实现从未写</strong></td></tr><tr><td><code>ocr-fallback-confidence</code></td><td><code>tests/unit/test_dochelper_ocr_confidence.py</code></td><td><code>tests/</code> 下只剩 <code>DEBT.md</code> ⇒ <code>tests/unit/</code> <strong>已删除</strong></td></tr><tr><td><code>docs-site-generator</code></td><td><code>setup.py</code>&lt;br&gt;<code>tests/unit/test_docs_site_build.py</code></td><td><strong><code>setup.py</code> 已被 <code>pyproject.toml</code> 取代</strong>（根目录只剩后者）⇒ 属<strong>技术栈迁移后的残留</strong></td></tr></tbody></table>
+<p>⇒ <strong>这 6 条不能机械订正</strong>，须「补实现 / 订正文档 / 删条目」三选一，<strong>属独立治理决策</strong><br>（<code>[OPS-MAN-081]</code> 若要补实现，是一整个新子系统的工作量）。留给用户决策。</p>
+<h3 id="本轮验证工具-grep-rln-会超时-一律用-git-grep">⚠ 本轮验证工具：<code>grep -rln</code> 会超时，一律用 <code>git grep</code><a class="anchor" href="#本轮验证工具-grep-rln-会超时-一律用-git-grep" aria-label="锚点">#</a></h3>
+<p>对大仓做全量 <code>grep -rln</code>（即使带 <code>--include</code>）<strong>会跑到 5 分钟以上并被 auto-background</strong>。<br><code>git grep</code> 只扫已跟踪文件、有索引、<strong>秒级返回</strong> ⇒ <strong>本轮起，全仓文本搜索一律 <code>git grep</code></strong>。<br>（未跟踪文件另用 <code>Grep</code> 工具按需搜。）</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../.workbuddy-ai/memory/2026-09-18.html"><div class="dir">← 上一篇</div><div class="ttl">2026-09-18 工作日志</div></a><a class="next" href="../../.workbuddy-ai/memory/2026-09-20.html"><div class="dir">下一篇 →</div><div class="ttl">2026-09-20 工作日志</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__=".workbuddy-ai/memory/2026-09-19.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

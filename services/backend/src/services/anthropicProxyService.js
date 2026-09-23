@@ -31,7 +31,7 @@ function getConfig() {
   return { enabled: enabled, upstream: upstream, apiKey: apiKey, model: model, displayModel: displayModel };
 }
 
-// ── Anthropic �?OpenAI message conversion ──
+// ── Anthropic → OpenAI message conversion ──
 function convertMessages(anthropicMessages) {
   const openaiMessages = [];
 
@@ -87,7 +87,7 @@ function convertMessages(anthropicMessages) {
   return openaiMessages;
 }
 
-// ── Anthropic request �?OpenAI request ──
+// ── Anthropic request → OpenAI request ──
 function anthropicToOpenAI(anthReq) {
   const config = getConfig();
   const msgs = [];
@@ -122,7 +122,7 @@ function anthropicToOpenAI(anthReq) {
   return result;
 }
 
-// ── OpenAI response �?Anthropic response ──
+// ── OpenAI response → Anthropic response ──
 function openaiToAnthropic(openaiResp, displayModel) {
   const choice = openaiResp.choices && openaiResp.choices[0];
   const message = choice ? choice.message : null;
@@ -173,7 +173,7 @@ function openaiToAnthropic(openaiResp, displayModel) {
   };
 }
 
-// ── Streaming: OpenAI SSE �?Anthropic SSE ──
+// ── Streaming: OpenAI SSE → Anthropic SSE ──
 function openaiStreamToAnthropic(streamReq, res, displayModel) {
   const config = getConfig();
   const upstreamUrl = new URL(config.upstream);

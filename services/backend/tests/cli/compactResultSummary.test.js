@@ -7,6 +7,7 @@ const {
   compactTwinAlignEnabled,
   buildCompactSuccessLine,
 } = require('../../src/cli/compactResultSummary');
+const assert = require('node:assert');
 const LEGACY = (p, n) => `会话已压缩：${p} -> ${n}`;
 // 刀108:交互 /compact 孪生对齐总开关 KHY_COMPACT_TWIN_ALIGN。
 

@@ -5,7 +5,7 @@
  */
 
 const assert = require('assert');
-const watchdog = require('./watchdogService');
+const watchdog = require('../../src/services/watchdogService.js');
 
 describe('watchdogService', () => {
   afterEach(() => {

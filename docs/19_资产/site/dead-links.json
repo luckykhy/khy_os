@@ -1,0 +1,185 @@
+{
+  "total": 36,
+  "items": [
+    {
+      "from": "CONTRIBUTING.html",
+      "type": "a",
+      "href": "services/backend/src/services/browser/engine.js"
+    },
+    {
+      "from": "docs/01_INIT_立项/INIT-PRD/[INIT-PRD-001] Khy-OS-定位与已实现能力-2026-06-12.html",
+      "type": "a",
+      "href": "../../../LICENSE"
+    },
+    {
+      "from": "docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-043] khy-agent-sdk-Claude对齐与D1-D6融合规范.html",
+      "type": "a",
+      "href": "../../platform/packages/agent-sdk/docs/差异图谱.html"
+    },
+    {
+      "from": "docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-043] khy-agent-sdk-Claude对齐与D1-D6融合规范.html",
+      "type": "a",
+      "href": "../../platform/packages/agent-sdk/docs/融合架构.html"
+    },
+    {
+      "from": "docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-043] khy-agent-sdk-Claude对齐与D1-D6融合规范.html",
+      "type": "a",
+      "href": "../../platform/packages/agent-sdk/docs/llms.txt"
+    },
+    {
+      "from": "docs/05_TEST_测试/TEST-RPT/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/frontend/Dockerfile:7"
+    },
+    {
+      "from": "docs/05_TEST_测试/TEST-RPT/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/frontend/package.json:40"
+    },
+    {
+      "from": "docs/05_TEST_测试/TEST-RPT/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/frontend/package-lock.json:30"
+    },
+    {
+      "from": "docs/05_TEST_测试/TEST-RPT/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/docker-compose.yml:53"
+    },
+    {
+      "from": "docs/05_TEST_测试/TEST-RPT/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/docker-compose.yml:11"
+    },
+    {
+      "from": "docs/05_TEST_测试/TEST-RPT/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/frontend/src/views/Dashboard.vue"
+    },
+    {
+      "from": "docs/05_TEST_测试/TEST-RPT/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/backend/src/cli/router.js"
+    },
+    {
+      "from": "docs/05_TEST_测试/TEST-RPT/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/backend/src/routes/largeTasks.js"
+    },
+    {
+      "from": "docs/05_TEST_测试/TEST-RPT/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/backend/src/controllers/comprehensiveDataController.js:149"
+    },
+    {
+      "from": "docs/05_TEST_测试/TEST-RPT/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/backend/src/routes/marketData.js:37"
+    },
+    {
+      "from": "docs/05_TEST_测试/TEST-RPT/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/frontend/src/views/Dashboard.vue:1251"
+    },
+    {
+      "from": "docs/05_TEST_测试/TEST-RPT/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/frontend/src/api/marketData.js:54"
+    },
+    {
+      "from": "docs/05_TEST_测试/TEST-RPT/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/backend/src/controllers/marketController.js:27"
+    },
+    {
+      "from": "docs/06_DEPLOY_部署/DEPLOY-MAN/[DEPLOY-MAN-010] pip-打包对等-发现-2026-05-17.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/MANIFEST.in"
+    },
+    {
+      "from": "docs/07_OPS_运维/OPS-MAN/[OPS-MAN-021] opencode-任务编排经验.html",
+      "type": "a",
+      "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/agent/agent.ts"
+    },
+    {
+      "from": "docs/07_OPS_运维/OPS-MAN/[OPS-MAN-021] opencode-任务编排经验.html",
+      "type": "a",
+      "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/tool/task.ts"
+    },
+    {
+      "from": "docs/07_OPS_运维/OPS-MAN/[OPS-MAN-021] opencode-任务编排经验.html",
+      "type": "a",
+      "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/tool/task_status.ts"
+    },
+    {
+      "from": "docs/07_OPS_运维/OPS-MAN/[OPS-MAN-021] opencode-任务编排经验.html",
+      "type": "a",
+      "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/background/job.ts"
+    },
+    {
+      "from": "docs/07_OPS_运维/OPS-MAN/[OPS-MAN-021] opencode-任务编排经验.html",
+      "type": "a",
+      "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/session/run-state.ts"
+    },
+    {
+      "from": "docs/07_OPS_运维/OPS-MAN/[OPS-MAN-021] opencode-任务编排经验.html",
+      "type": "a",
+      "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/session/status.ts"
+    },
+    {
+      "from": "docs/07_OPS_运维/OPS-MAN/[OPS-MAN-021] opencode-任务编排经验.html",
+      "type": "a",
+      "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/session/processor.ts"
+    },
+    {
+      "from": "docs/07_OPS_运维/OPS-MAN/[OPS-MAN-021] opencode-任务编排经验.html",
+      "type": "a",
+      "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/session/retry.ts"
+    },
+    {
+      "from": "docs/07_OPS_运维/OPS-MAN/[OPS-MAN-021] opencode-任务编排经验.html",
+      "type": "a",
+      "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/tool/plan.ts"
+    },
+    {
+      "from": "docs/07_OPS_运维/incident-runbooks/00_INDEX_事件响应剧本-总目录.html",
+      "type": "a",
+      "href": "postmortem-template.html"
+    },
+    {
+      "from": "docs/07_OPS_运维/runbooks/00_INDEX_灾备演练剧本-总目录.html",
+      "type": "a",
+      "href": "drill-schedule.html"
+    },
+    {
+      "from": "docs/08_MGMT_项目管理/MGMT-STD/[MGMT-STD-006] khy-vibecoding与speccoding能力对齐-可量化验收标准.html",
+      "type": "a",
+      "href": "文档结构铁律"
+    },
+    {
+      "from": "docs/08_MGMT_项目管理/MGMT-STD/[MGMT-STD-006] khy-vibecoding与speccoding能力对齐-可量化验收标准.html",
+      "type": "a",
+      "href": "证据→计划→落地方法论"
+    },
+    {
+      "from": "docs/10_规范/其它规范/FILE-FORMAT-PROTOCOL.html",
+      "type": "a",
+      "href": "./COMMUNICATION-PROTOCOL.html"
+    },
+    {
+      "from": "services/backend/src/data/cliAnythingRegistry/skills/cli-anything-unimol-tools/SKILL.html",
+      "type": "a",
+      "href": "../UNIMOL_TOOLS.html"
+    },
+    {
+      "from": "services/backend/src/data/cliAnythingRegistry/skills/cli-anything-unimol-tools/SKILL.html",
+      "type": "a",
+      "href": "../docs/guides/02-QUICK-START.html"
+    },
+    {
+      "from": "services/backend/src/data/cliAnythingRegistry/skills/cli-anything-unimol-tools/SKILL.html",
+      "type": "a",
+      "href": "../docs/README.html"
+    }
+  ]
+}

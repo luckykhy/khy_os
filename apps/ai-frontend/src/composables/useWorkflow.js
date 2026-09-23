@@ -160,11 +160,14 @@ export function useWorkflow() {
 
     (async () => {
       try {
-        // 走统一带认证入口:token 注入 + 401 登出;stream:true 关闭超时(SSE 长连接),
+        // 走统一带认证入口:token 注入 + 401 刷新;stream:true 关闭超时(SSE 长连接),
         // 并把本地 controller 的 signal 传入以支持 stop()。
+        // retry401:false —— 长流中瞬时 401 不应破坏本次运行状态,交回 401 由调用方
+        // 的 onError(回退 getRun 轮询)处理,而非硬跳登录。
         const resp = await authedFetch(`${base}/api/workflow/runs/${runId}/events`, {
           signal: controller.signal,
           stream: true,
+          retry401: false,
         });
         if (!resp.ok || !resp.body) throw new Error(`SSE failed: ${resp.status}`);
 

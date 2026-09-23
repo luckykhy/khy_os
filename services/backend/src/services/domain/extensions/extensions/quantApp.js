@@ -1,7 +1,7 @@
 /**
  * quantApp.js — 「谁提供 khyquant 量化应用」的**单一解析点**。
  *
- * 背景（[DESIGN-ARCH-069] §1.5「入向耦合三档」）：khyquant 是全仓最严重的一处
+ * 背景（[DESIGN-TOOL-002] §1.5「入向耦合三档」）：khyquant 是全仓最严重的一处
  * **硬入向**——`services/backend/src` 里有 57 个纯 re-export 壳各自写死
  * `require('../../../../software/khyquant/<模块>')`，其中 19 个路由壳被
  * `server.js` 在启动期直接 require。后果有两条，第二条是致命的：

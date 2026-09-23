@@ -4,8 +4,8 @@
  * denialGuidance.test.js — 高危拒绝可执行指引叶子(纯函数、门控)单测。
  */
 
-const { buildDenialGuidance, isDenialGuidanceEnabled } = require('../../src/services/syscallGateway/denialGuidance');
-const { DENY_CAUSES } = require('../../src/services/syscallGateway/approvalRouter');
+const { buildDenialGuidance, isDenialGuidanceEnabled } = require('../../src/services/domain/system/syscallGateway/denialGuidance.js');
+const { DENY_CAUSES } = require('../../src/services/domain/system/syscallGateway/approvalRouter.js');
 
 describe('buildDenialGuidance', () => {
   test('no-interactive-channel → 产出可执行指引(含为何被拒 + 三条合规途径)', () => {

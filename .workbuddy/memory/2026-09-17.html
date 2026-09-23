@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-17.md -->
+<title>2026-09-17 工作日志 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>.workbuddy<span class="sep">›</span>memory<span class="sep">›</span>2026-09-17 工作日志</div>
+      <header class="hero reveal"><h1>2026-09-17 工作日志</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#2026-09-17-工作日志">2026-09-17 工作日志</a></li><li class="lvl-2"><a href="#每日代码审查-自动化任务-第-3-次运行">每日代码审查（自动化任务，第 3 次运行）</a></li><li class="lvl-3"><a href="#环境教训-后续复用">环境教训（后续复用）</a></li><li class="lvl-2"><a href="#cli-错误标准化-排障用户截图-所有-ai-通道均不可用">CLI 错误标准化（排障用户截图「所有 AI 通道均不可用」）</a></li><li class="lvl-2"><a href="#cli-错误标准化-第二轮-接线落地-清钉选-同日续">CLI 错误标准化 —— 第二轮：接线落地 + 清钉选（同日续）</a></li><li class="lvl-3"><a href="#①-清掉-env-钉选残留-这是真因-不是展示问题">① 清掉 `.env` 钉选残留（这是真因，不是展示问题）</a></li><li class="lvl-3"><a href="#②-把信封接进真实失败路径">② 把信封接进真实失败路径</a></li><li class="lvl-3"><a href="#本轮踩到的坑-重要">本轮踩到的坑（重要）</a></li><li class="lvl-2"><a href="#文档体系精简方案-mgmt-plan-009">文档体系精简方案（[MGMT-PLAN-009]）</a></li><li class="lvl-2"><a href="#开始执行整理-方案-落地">开始执行整理（方案 → 落地）</a></li><li class="lvl-2"><a href="#钉选残留第-4-次复发-repl-讲个故事-所有-ai-通道均不可用">钉选残留第 4 次复发（REPL「讲个故事」→ 所有 AI 通道均不可用）</a></li><li class="lvl-3"><a href="#收尾-成功跑通-khy-gateway-status-新增防复发守卫">收尾：成功跑通 `khy gateway status` + 新增防复发守卫</a></li><li class="lvl-2"><a href="#tui-鼠标-滚轮-vs-原生拖选的-两全-方案-design-arch-119-续-只讨论未改码">TUI 鼠标：滚轮 vs 原生拖选的&quot;两全&quot;方案（[DESIGN-ARCH-119] 续，只讨论未改码）</a></li><li class="lvl-3"><a href="#第二轮全仓筛查-结论加固-三处新发现">第二轮全仓筛查（结论加固 + 三处新发现）</a></li><li class="lvl-3"><a href="#第三轮-三家参照项目的实际做法-决定性证据">第三轮：三家参照项目的实际做法（决定性证据）</a></li><li class="lvl-2"><a href="#防-越改越差-诊断-方案-只诊断未改码">防「越改越差」诊断 + 方案（只诊断未改码）</a></li><li class="lvl-2"><a href="#tui-鼠标-拖选专题-第四轮-三参考项目-正文可复制-点击选择-选择复制-上下文回滚-的真实做法">TUI 鼠标/拖选专题 —— 第四轮：三参考项目「正文可复制 + 点击选择 + 选择复制 + 上下文回滚」的真实做法</a></li><li class="lvl-3"><a href="#claude-code-全屏模式">Claude Code（全屏模式）</a></li><li class="lvl-3"><a href="#opencode">opencode</a></li><li class="lvl-3"><a href="#claude-code-best">claude-code-best</a></li><li class="lvl-3"><a href="#映射到-khy-os-可行性已实测">映射到 khy-os（可行性已实测）</a></li><li class="lvl-3"><a href="#架构判断-本轮最重要的一条">架构判断（本轮最重要的一条）</a></li><li class="lvl-2"><a href="#design-arch-119-v2-重写完成-同日续">[DESIGN-ARCH-119] v2 重写完成（同日续）</a></li><li class="lvl-2"><a href="#design-arch-119-第二层验收标准-参考实现-同日续">[DESIGN-ARCH-119] 第二层验收标准 + 参考实现（同日续）</a></li><li class="lvl-2"><a href="#文档精简方案-mgmt-plan-009-b1-收尾-b2-执行-2026-09-17-下午">文档精简方案（[MGMT-PLAN-009]）B1 收尾 + B2 执行（2026-09-17 下午）</a></li><li class="lvl-2"><a href="#身份落盘-防越改越差-phase-0-落地-2026-09-17-傍晚">身份落盘 + 防越改越差 Phase 0 落地（2026-09-17 傍晚）</a></li><li class="lvl-2"><a href="#arch-119-计划核验与完善-第二轮-发现-6-处真实缺口">ARCH-119 计划核验与完善（第二轮）—— 发现 6 处真实缺口</a></li><li class="lvl-2"><a href="#防越改越差-l1-落地-phase-0-之后-同日续">防越改越差 L1 落地（Phase 0 之后，同日续）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="2026-09-17-工作日志">2026-09-17 工作日志<a class="anchor" href="#2026-09-17-工作日志" aria-label="锚点">#</a></h1>
+<h2 id="每日代码审查-自动化任务-第-3-次运行">每日代码审查（自动化任务，第 3 次运行）<a class="anchor" href="#每日代码审查-自动化任务-第-3-次运行" aria-label="锚点">#</a></h2>
+<p>结论一行摘要：本轮唯一新提交 <code>e12bfa3f</code>（ruleguard 规则遵守保障机制入版本控制）范围内发现并修复 <strong>2 项 A 类缺陷</strong> —— ① <code>scripts/ruleguard/lib/run.js:282</code> 的 <strong>fail-open 漏洞</strong>（检查器退出码非 0 且其 error finding 无规则认领时，门报 <code>pass</code> 且 exit 0；实测 <code>check-change-safety.js</code> exit=1 却让 <code>rules:gate --mode commit</code> 假绿），已重定义「非零退出是否已被解释」并补回归守卫；② <code>scripts/tests/externalRules.test.js</code> 的探针 ID <code>SEC-001</code> 被该提交正式登记导致断言过期（换用 <code>ARCH-068</code>）。修复后 <code>test:scripts</code> 红灯 3 → 2，门从假绿变为如实红灯；其余 9 处红灯全归 B 类历史欠账。</p>
+<p>报告：<code>.khy/reports/code-review/2026-09-17.md</code>（3 个文件改动，未提交 —— 工作区脏，<code>main</code> 原地改）。</p>
+<h3 id="环境教训-后续复用">环境教训（后续复用）<a class="anchor" href="#环境教训-后续复用" aria-label="锚点">#</a></h3>
+<ul><li><code>check:structure</code> 与 <code>check:changed</code> 都是 <code>&amp;&amp;</code> 链且在<strong>第一格</strong>就短路（<code>check:layout</code> / <code>check:change-safety</code>），只信整条 exit code 会漏掉 18 / 8 个子检查，必须逐项补跑。</li><li><code>scripts/ci/check-node-syntax.js</code> 并发时顶 15 分钟上限（exit 124），单独跑 13m14s 成功 —— 别放进并发批次。</li><li><code>services/backend</code> 的 <code>tests/gateway/**</code> 是 <strong>jest</strong> 用例（用 <code>describe</code>/<code>expect</code>），不能拿 <code>node --test</code> 跑（会报 <code>describe is not defined</code>，看着像回归其实是用错 runner）。正确入口：<code>node node_modules/jest/bin/jest.js &lt;file&gt;</code>（<code>npx jest</code> 在本机 PATH 下退出 127）。</li><li>本机 Git Bash 被 shim 破坏（<code>dirname</code>/<code>ls</code>/<code>head</code>/<code>cat</code> 全 not found）。跑 shell 一律改走 <code>python -c</code> 或 PowerShell；重定向产物会落在仓库根并被 <code>root-whitelist</code> 判 error，用完即删。</li></ul>
+<h2 id="cli-错误标准化-排障用户截图-所有-ai-通道均不可用">CLI 错误标准化（排障用户截图「所有 AI 通道均不可用」）<a class="anchor" href="#cli-错误标准化-排障用户截图-所有-ai-通道均不可用" aria-label="锚点">#</a></h2>
+<p>用户实测：一次网关级联耗尽后 TUI 只显示「⚠ 本次请求未能完成，AI 服务没有返回回答。失败信息: 所有 AI 通道均不可用。」+ 静态推广清单。</p>
+<p><strong>根因定位</strong>：</p>
+<ol><li><strong>真因是钉选残留复发</strong>。<code>services/backend/.env</code> 里 <code>GATEWAY_PREFERRED_ADAPTER=windsurf</code> + <code>GATEWAY_PREFERRED_STRICT=true</code>，而本机未装 Windsurf → strict 前置块（<code>aiGatewayGenerateMethod.js:3695</code>）直接对未启用通道返 <code>unavailable</code> 且<strong>不回退</strong>。这个 <code>.env</code> 里 09-14 修过一次（当时钉在 codex），09-17 又换通道名复发了 —— 与 09-13→15 三天误诊「密钥失效」是同一个 bug。</li><li><strong>展示层把真因吃掉了</strong>。<code>aiChatCore.js:3243</code> 对 <code>result.content</code> 做 <code>.slice(0,180)</code>，恰好切在「⚠ 通道失败原因与下一步:」表头之后，机器码/通道名/钉选元原因全丢；再叠加 <code>_formatGatewayFailureDetails</code> + <code>_buildRecoveryAttemptsNote</code> 两份近义散文，首屏还被 12 行推广清单占据。</li></ol>
+<p><strong>产出</strong>（全部通过门禁）：</p>
+<ul><li><code>docs/03_DESIGN_设计/[DESIGN-ARCH-114] CLI 错误标准化规范.md</code>（+html 孪生）—— 冻结「人面」错误契约，补 API-003（机器面）/COMMS-004（进程面）之后的第三个面。含机器码登记表、信封字段规约、三屏渲染秩序。</li><li><code>services/backend/src/services/gateway/cliFailureEnvelope.js</code> —— 纯叶子（零 IO/绝不抛/门控 <code>KHY_CLI_FAILURE_ENVELOPE</code> 默认开），<code>buildCliFailureEnvelope</code> + <code>renderCliFailureEnvelope</code>。</li><li><code>docs/10_规范/registry/RULES-REGISTRY.json</code> 登记 <code>RUNTIME-005</code>（gate=commit，finding <code>cli-raw-error-truncate</code>），registry 2.3.0→2.4.0，72→73 条。</li></ul>
+<p><strong>设计上最值得记住的一处</strong>：<code>_resolveCode</code> 的「钉选优先」<strong>不可无条件前置</strong>。首版实现让 <code>routing.pinned</code> 一票否决所有表象码，实测把真实 401 也报成「是钉选问题」—— 那是把 09-13→15 的误诊<strong>反向重犯一次</strong>（那次把钉选读成密钥，这次会把密钥读成钉选）。正确边界：<strong>由证据决定谁解释谁</strong> —— 被钉通道 <code>statusCode===0</code>/文本含 <code>disabled by configuration</code> 才算「通道不存在」，报 <code>CHANNEL_ABSENT_PINNED</code>；给出真实 HTTP 拒绝（401/403/404/429/5xx）时照实报 <code>AUTH_FAILED_PINNED</code> 等，两种情形都保留「回退被抑制」披露。</p>
+<p><strong>未做</strong>（下一步）：<code>check-agent-rules.js</code> 的 <code>cli-raw-error-truncate</code> finding 只是登记未实现；<code>aiGatewayGenerateHelpers.js</code> 的 <code>_buildRecoverySuggestions</code> 尚未并进 <code>hint[]</code>（当前仍是独立第 2 屏）。两项都不阻塞验收。</p>
+<h2 id="cli-错误标准化-第二轮-接线落地-清钉选-同日续">CLI 错误标准化 —— 第二轮：接线落地 + 清钉选（同日续）<a class="anchor" href="#cli-错误标准化-第二轮-接线落地-清钉选-同日续" aria-label="锚点">#</a></h2>
+<p>用户&quot;按你的建议修复&quot;，做了两件事：</p>
+<h3 id="①-清掉-env-钉选残留-这是真因-不是展示问题">① 清掉 <code>.env</code> 钉选残留（这是真因，不是展示问题）<a class="anchor" href="#①-清掉-env-钉选残留-这是真因-不是展示问题" aria-label="锚点">#</a></h3>
+<p><code>services/backend/.env</code>：<code>GATEWAY_PREFERRED_ADAPTER</code> windsurf→auto、<code>STRICT</code> true→false、删 <code>GATEWAY_PREFERRED_MODEL</code>（auto 模式下该键是全局模型名，会跨适配器串味）。加载后实测 <code>ADAPTER=&quot;auto&quot; / STRICT=&quot;false&quot; / MODEL=undefined</code>。<br><strong>注意</strong>：<code>GATEWAY_PREFERRED_MODEL</code> 全仓有 90+ 处消费点，但<strong>全部是 fallback 语义</strong>（<code>|| 'auto'</code>），删除安全。</p>
+<h3 id="②-把信封接进真实失败路径">② 把信封接进真实失败路径<a class="anchor" href="#②-把信封接进真实失败路径" aria-label="锚点">#</a></h3>
+<p><code>aiChatCore.js</code> 失败分支（约 3259-3317）：改为<strong>先渲染信封</strong>，成功则首屏=信封（码+主因通道+路由披露+hint）、第 2 屏=旧 <code>rawFailureText</code>+<code>failureDetails</code>、第 3 屏=推广清单（仅 <code>showPromoPanel</code> 为真时保留）；信封不可用/门关 → <strong>逐字节回退</strong>旧 <code>errorMsg</code> 拼接。返回值新增 <code>failureCode</code>。<br>推广清单剔除用按行过滤（🆓/💰/⚡ 三段及各自链接行 + <code>\n{3,}</code> 压平），不动 <code>guidanceContent</code> 原文。<br><code>flagRegistry.js</code> 补登 <code>KHY_CLI_FAILURE_ENVELOPE</code>（default-on / off:CANON）。<br>新增 <code>tests/gateway/cliFailureEnvelope.test.js</code> <strong>27 用例全绿</strong>；连 <code>aiGateway.networkResume</code> 共 33 通过。</p>
+<h3 id="本轮踩到的坑-重要">本轮踩到的坑（重要）<a class="anchor" href="#本轮踩到的坑-重要" aria-label="锚点">#</a></h3>
+<ul><li><strong><code>git stash push &lt;paths&gt;</code> + <code>pop</code> 会把 <code>.env</code> 一起还原</strong>：我用 stash 做「无我方改动」基线对照，pop 之后 <code>.env</code> 的值被打回 windsurf（注释留下了、值回退了 —— 恰好又一次复刻「注释与值背离」这个 bug 本身）。<strong>教训：用 git stash 做基线对照时，先确认哪些文件会被顺带还原，pop 后必须逐个复核值而不只是复核注释。</strong></li><li><code>tests/gateway</code> 里的 jest 用例跑全套约 3 分钟，前台必超时 → 一律 <code>run_in_background</code>，且<strong>输出文件读完再删</strong>（我这次提前删了 <code>.jestout.txt</code> 导致要重跑一轮）。</li><li>全套 <code>tests/gateway tests/cli</code> = 1919 用例，<strong>3 个套件既有失败</strong>（与本次改动无关，已用 stash 基线证实）：<code>makeSourceSnapshot</code>（本机 <code>tar</code> 缺失，<code>spawnSync('tar')</code> status=2）、<code>repl.tierA.fallbackMenu</code>（jest 假时钟 <code>advanceTimersByTimeAsync</code> 不兼容 → 30s 超时）、<code>gatewayManage.portDrift</code>（基线即失败）。</li><li>另一个进程在 16:04:51 创建了 <code>docs/03_DESIGN_设计/[DESIGN-ARCH-121] khyos-CC-Harness借鉴清单.md</code>（80KB）但<strong>未挂主索引</strong>，导致 <code>check-repo-layout</code> 的 <code>docs-index-complete</code> 报 1。<strong>不是我的文件，未代改</strong>——留待其作者收尾。</li><li>编号避坑：<code>[DESIGN-ARCH-112]</code> 已被「khyos-Harness架构对照」占用，本文档最终落 <strong>ARCH-114</strong>（113/115-118 也已占用）。</li></ul>
+<p><strong>门禁终审</strong>：<code>check-gov-rules</code> / <code>check-rules-registry</code> / <code>check-agent-rules</code> / <code>check-repo-layout</code> 全 exit 0。</p>
+<h2 id="文档体系精简方案-mgmt-plan-009">文档体系精简方案（[MGMT-PLAN-009]）<a class="anchor" href="#文档体系精简方案-mgmt-plan-009" aria-label="锚点">#</a></h2>
+<p>用户诉求「文档太多、重复冗余，要精简结构化」。先做只读体检再出方案，<strong>没有动任何存量文档</strong>。</p>
+<p><strong>实测基线</strong>（探针脚本落 <code>.khyos/housekeeping/2026-09-17-doc-plan/</code>，可复现）：755 篇 md / 168,069 行 / 756 孪生件；<br><strong>230 篇零入站引用</strong>（占 30.5%）；逐字节重复 <strong>0 组</strong>（没有低级复制粘贴）；<br><code>10_规范/</code> 162 篇里 <strong>138 篇零入站</strong>（最严重）；<code>02_概念入门/</code> 33 篇拿 326 次入站（最健康）。</p>
+<p><strong>关键判断转变</strong>：用户以为问题是「写重了」，实测最大问题是<strong>「写完了没人链」</strong>。<br>且零入站 ≠ 该删 —— <code>11_报告/</code>31、<code>09_STORY/</code>29、<code>04_IMPL/</code> 的零入站是<strong>档案的正常状态</strong>。<br>据此提出「三态生命周期」（在产/存档/派生）：约 180 篇可合法冻结，<br>真正待办从 230 收缩到 <code>10_规范/</code> 的 138 篇。</p>
+<p><strong>重复分五形态</strong>（比单一「重复率」有用）：同簇拆分（TUI 20 篇 / 还原 30 篇 / OCR 17 篇）·<br>同类散落（部署-域名 vs 无域名 942/935 行对半）· 同源派生（RESEARCH-013/014 包含度 0.95）·<br>规范重复描述（10 个主题 2~3 篇各说一遍，含「核心」一词两处定义）· 索引三重（主索引 660 行 + 就近索引 + 情景速查）。</p>
+<p><strong>方案正本</strong>：<code>docs/08_MGMT_项目管理/[MGMT-PLAN-009] 文档精简与结构化整理方案.md</code>（342 行）<br>—— 五条策略（情景索引取代清单索引 / 同簇合并 / 三态冻结 / scope 裁决 / 散落收敛）、<br>五层骨架（L-D0 入口→L-D4 教材）、4 个新执行器（簇检测 / 零入站 / 三态标注 / 孪生漂移）、<br>8 批路线图、6 条红线、3 组反例→正例。</p>
+<p><strong>踩到的坑（复用）</strong>：</p>
+<ul><li>体检脚本用 <code>os.path.relpath</code> 处理 Markdown 链接目标时，遇到 <code>?:</code> 等伪盘符会抛</li></ul>
+<p><code>ValueError: path is on mount '?:'</code>；先 <code>re.match(r&quot;^[A-Za-z]:&quot;, target)</code> 过滤绝对路径。</p>
+<ul><li><strong>「近重复」机械判定会误伤同源异构文档</strong>：<code>[OPS-MAN-066]</code>（给弱模型执行）与</li></ul>
+<p><code>[OPS-MAN-067]</code>（给人排障）包含度 0.73，但是<strong>不同读者的合法派生</strong>，合并即错。<br>  判「重复」必须叠加「是否同读者/同用途」，纯文本相似度不够。</p>
+<ul><li>新增文档必须<strong>同时</strong>补就近 <code>00_INDEX_*</code> 与主索引两处，否则 <code>check:layout</code> 的</li></ul>
+<p><code>docs-index-complete</code> 从 warning 提级为 <strong>error</strong>（该规则已被 promote）。</p>
+<ul><li>脚本里存在<strong>硬编码文档路径常量</strong>（<code>scripts/restore/*.js</code> 7 处、<code>gen-evolution-prompts.js</code>），</li></ul>
+<p>删/移这类文档前必须先 grep 全仓 —— 已写进方案红线 DR4。</p>
+<hr>
+<h2 id="开始执行整理-方案-落地">开始执行整理（方案 → 落地）<a class="anchor" href="#开始执行整理-方案-落地" aria-label="锚点">#</a></h2>
+<p><strong>用户指令</strong>：「现在开始按照方案整理，遵守规范」→「按照规范整理文档，确保每个文档符合规范」。</p>
+<p><strong>批次 B1「索引三重 → 一处」已完成</strong>（<code>10_规范/</code> 内两索引合并）：</p>
+<ul><li><code>docs/10_规范/00_INDEX_规范-总目录.md</code> 重写为唯一入口：§1 内容边界（收/不收判据）、</li></ul>
+<p>§2 情景速查（原 <code>[DESIGN-INDEX-001]</code> 的 24 条扩为 <strong>48 条</strong>，按 6 组域重排并新增<br>  <strong>「一条红线」列</strong>）、§3 文件清单（补 <strong>「状态」列</strong>：定稿/目标态/参考卡/机器可读/构建产物，<br>  并补全 6 个此前未收录的机器可读注册表）、§4 跨分类关联、§5 版本历史。</p>
+<ul><li>原 <code>[DESIGN-INDEX-001] 规范索引.md</code> 按 HK-3 <strong>隔离不删除</strong> →</li></ul>
+<p><code>.khyos/housekeeping/2026-09-17-doc-plan/10_规范/</code>。</p>
+<ul><li>修正 8 处入站引用（主索引 2 行、<code>DESIGN-DOC-001</code>、<code>IMPL-RPT-049</code>、<code>IMPL-RPT-050</code>、</li></ul>
+<p><code>OPS-MAN-204</code> 的真实 md 链接、<code>MGMT-PLAN-009</code>）。</p>
+<ul><li><strong>§1.4 边界块也开始落地</strong>（scope 裁决，依据 <code>[MGMT-STD-008]</code> §2.2「重叠即违规」）：</li></ul>
+<p><code>[DESIGN-ARCH-023]</code> §13 ↔ <code>[DESIGN-DOC-001]</code> §13 逐条重复 → 真源归后者，前者降为指针；<br>  DOCS 域四篇分工表（<code>[MGMT-STD-007]</code> 总纲 / <code>DOC-001</code> 结构+排版 / <code>DOC-002</code> AI 指令文件 /<br>  <code>DOC-003</code> README）分别写入 <code>DOC-002</code> 与 <code>DOC-003</code> 首部。</p>
+<p><strong>本轮发现的关键系统性缺陷（重要，值得写进规范）</strong>：</p>
+<p><code>docs:build</code> 与 <code>docs:verify</code> <strong>都会遍历 <code>.khyos/housekeeping/**</code>（HK-3 隔离区）</strong>，造成两个后果：</p>
+<ol><li><strong>隔离形同失效</strong> —— build 为隔离区的 <code>.md</code> 原地生成 <code>.html</code>，并写进</li></ol>
+<p><code>docs/19_资产/site/nav-data.js</code>，已撤下的文档<strong>重新出现在站点导航里</strong>；</p>
+<ol><li>verify 校验隔离区的 <code>.html</code> 孪生，撤下文档后必然误报「缺少 HTML」+「断链」。</li></ol>
+<p>实测隔离区里已有 <strong>11 个</strong>这类被误生成的 <code>.html</code>（早于本批次，属既有问题）。<br>修法：两个脚本的 <code>SKIP_PATH_PARTS</code> 同步增 <code>&quot;/housekeeping/&quot;</code>（verify 第 24 行原文要求两份<br>SKIP 清单逐项一致，只改一处会立刻漂移）。</p>
+<blockquote><p><strong>推论给后续批次</strong>：任何「只隔离不删除」的动作，都必须同时确认生成器已跳过隔离区，<br>否则隔离物会被重新拉回站点与导航。这条应进 <code>[DESIGN-LAY-003]</code> 的 HK 清单。</p></blockquote>
+<p><strong>验证结果（全绿）</strong>：</p>
+<ul><li><code>docs:verify</code> → 1025 源 MD / 1026 HTML / 12265 链接，<strong>全部通过</strong></li></ul>
+<p>（改前 1029/1030，差额 = 隔离的 2 篇 md + 隔离区 3 篇 md 不再计入）</p>
+<ul><li><code>check:layout</code> → <code>docs-index-complete: 0</code>（未触碰基线）</li><li><code>check-rules-registry</code> / <code>check-gov-rules</code> / <code>check-agent-docs</code> → 全 0 error</li></ul>
+<p><strong>规范遵守要点（复用）</strong>：</p>
+<ul><li>合并索引<strong>没有新增分类目录</strong>，<code>LAYOUT-005</code>（<code>_build/</code> 单一根）不涉及；</li><li>隔离走 <code>HK-3</code> + manifest（<code>.khyos/housekeeping/&lt;日期&gt;/manifest.json</code>），<strong>绝不 <code>rm</code></strong>；</li><li>被隔离编号<strong>不回收</strong>（<code>DOCS-001</code>「编号删除不回收」口径），但自此无文档承载该编号；</li><li>改 <code>.md</code> 后必须 <code>docs:build</code> 重生成 <code>.html</code>，<strong>不得手改 <code>.html</code></strong>；</li><li>历史记录类文档（<code>IMPL-RPT-*</code>）用<strong>追加「2026-09-17 追记」</strong>的方式说明变更，</li></ul>
+<p>不回改其当初的陈述 —— 符合 <code>[MGMT-STD-008]</code> §4.3「追加不重写」。</p>
+<hr>
+<h2 id="钉选残留第-4-次复发-repl-讲个故事-所有-ai-通道均不可用">钉选残留第 4 次复发（REPL「讲个故事」→ 所有 AI 通道均不可用）<a class="anchor" href="#钉选残留第-4-次复发-repl-讲个故事-所有-ai-通道均不可用" aria-label="锚点">#</a></h2>
+<p>用户在 REPL 输入「讲个故事」得到信封：<code>[NONE] 路由: 钉选 strict(GATEWAY_PREFERRED_ADAPTER=api),本轮不回退</code>。</p>
+<p><strong>根因</strong>：钉选残留<strong>第 4 次</strong>复活，且这次是<strong>两份 <code>.env</code> 同时钉</strong>：</p>
+<ul><li><code>services/backend/.env</code>：<code>GATEWAY_PREFERRED_ADAPTER=api</code> + <code>STRICT=true</code>（注释写着改 auto/false，值没跟上）</li><li><code>services/.env</code>：<strong>同一组值也在</strong>（此前每次只修了 backend 那一份，services 这份从未被清理过 —— 这是复发查不干净的直接原因）</li></ul>
+<p>已改：两份均 → <code>ADAPTER=auto</code> / <code>STRICT=false</code> / <code>GATEWAY_PREFERRED_MODEL=</code> 清空，并在 backend 那份补「第 4 次复发」注释。</p>
+<p><strong>实测反证（关键，避免再误诊为密钥问题）</strong>：<code>.khy/api_keys.json</code> 与 <code>services/.env</code> 里的 agnes key 有效 ——<br>直连 <code>POST https://apihub.agnes-ai.com/v1/chat/completions</code>（model=agnes-3.0-flash）<strong>200 / 1.3s</strong>。<br>即被钉的通道健康，硬失败来自 strict 抑制回退后的<strong>单点判死</strong>（信封 <code>code=NONE</code>、attempts 为空 = 请求根本没发出去）。</p>
+<p><strong>下次排查这类报错的固定顺序</strong>：① 两份 <code>.env</code> 都 grep <code>GATEWAY_PREFERRED_ADAPTER/STRICT</code> → ② 直连实测被钉通道的上游（绕过网关）→ ③ 再谈密钥。</p>
+<p><strong>环境坑（复用）</strong>：</p>
+<ul><li>本机跑 <code>node services/backend/bin/khy.js</code> 会被安全策略拦（启动链调 <code>reg.exe</code>，在程序黑名单里）→ 无法在本会话内跑 <code>khy gateway status</code> 复核，只能交给用户。</li><li>Git Bash 的 <code>rm</code>/<code>ls</code> 被 shim 破坏，删临时文件改用 <code>node -e &quot;fs.unlinkSync(...)&quot;</code>。</li><li>PowerShell 工具本会话 stdout 恒为空（exit 0），<strong>不能靠它取值</strong>，只能用 Read/Glob/node 验证结果。</li></ul>
+<p><strong>顺带发现（未动）</strong>：<code>RELAY_API_KEY=quality-gate-windsurf-access-token-fixture</code> 是质量门 fixture 假值 → relay_api 通道必然 401，级联命中它属预期失败，不应据此判「全局无通道」。</p>
+<h3 id="收尾-成功跑通-khy-gateway-status-新增防复发守卫">收尾：成功跑通 <code>khy gateway status</code> + 新增防复发守卫<a class="anchor" href="#收尾-成功跑通-khy-gateway-status-新增防复发守卫" aria-label="锚点">#</a></h3>
+<p>用户要求「想办法直接跑 khy gateway status，并设计错误避免钉选残留再次出现」。</p>
+<p><strong>运行方式（纠正此前误判）</strong>：之前以为本机会话安全策略拦了 <code>reg.exe</code> 导致跑不了 —— 实测<strong>用 Git Bash 跑 <code>node services/backend/bin/khy.js gateway status</code> 完全正常（exit 0）</strong>；先前「跑不通」是 PowerShell 工具 stdout 恒为空造成的假象（非真正被拦）。Bash 下 <code>reg.exe</code> 只拦子进程、khy 自身照常跑完。</p>
+<p><strong>实测结果</strong>：解钉后 <code>khy gateway status</code> 显示多通道 ✓ 可用（api/agnes、Claude、CLI 桥接、relay、OpenCode 等），不再报「所有 AI 通道均不可用」。</p>
+<p><strong>防复发守卫（新增，已入门）</strong>：</p>
+<ul><li>执行器 <code>scripts/ci/check-env-gateway-pin.js</code>：扫描所有 <code>.env</code>（排除 <code>node_modules</code>/构建产物/隔离区/备份石）、<code>.env.*</code> 与手写 <code>*.env</code>；命中 <code>GATEWAY_PREFERRED_ADAPTER</code> 非 <code>auto</code>（且 <code>STRICT=true</code>）→ <strong>ERROR</strong> <code>gateway-pin-hard</code>；仅钉选但 STRICT=false → <strong>WARNING</strong> <code>gateway-pin-soft</code>；注释与值背离 → <strong>WARNING</strong> <code>gateway-pin-drift</code>。自检：全量 0 error；fixture 反例正确报 1 error + 1 drift。</li><li><code>docs/10_规范/registry/RULES-REGISTRY.json</code> 登记 <strong><code>RUNTIME-006</code>「网关首选通道不得硬钉」</strong>（注意：不是 RUNTIME-005——RUNTIME-005 是早先的「CLI 错误标准化」规则，两者并存、互不被覆盖）；<code>gate=commit</code>，<code>findings: gateway-pin-hard/soft/drift</code>；总规则数 73→<strong>74</strong>。</li><li><code>package.json</code> 加 <code>check:env-gateway-pin</code> 入口。</li><li>规则卡 <code>[RUNTIME-006] 网关首选通道不得硬钉.html/.md</code> 已生成。</li><li>门禁 <code>rules:gate --mode pr</code> 中该执行器 <strong>PASS</strong>（exit=0/0 err/0 warn）；<code>check-wiring</code>/<code>check-rules-registry</code>/<code>check-gov-rules</code> 全绿。</li><li><strong>关键修正</strong>：之前每次复发只清 <code>services/backend/.env</code>，漏了 <code>services/.env</code> —— 守卫现在同时扫这两份，杜绝「清不干净」。</li><li><strong>真实全仓扫描结果</strong>：<code>0 error / 4 warning</code>——4 个 warning 全在 <code>services/**/.env.bak-*</code>（codex/windsurf/opencode 三朝钉选的化石备份），按设计降级为 warning 不阻塞；建议按 <code>LAYOUT-004</code> 隔离到 <code>.khyos/housekeeping/</code> 消除隐患（未执行）。</li></ul>
+<p><strong>门里仍有的两个既有失败（与本次无关，未动）</strong>：<code>check-code-standards</code>（全仓 2173 处 COMP-001 函数超长）、<code>check-change-safety</code>（无匹配变更时执行器退出码 1 但无规则认领，gate 配置怪癖）。均非本任务引入。</p>
+<h2 id="tui-鼠标-滚轮-vs-原生拖选的-两全-方案-design-arch-119-续-只讨论未改码">TUI 鼠标：滚轮 vs 原生拖选的&quot;两全&quot;方案（[DESIGN-ARCH-119] 续，只讨论未改码）<a class="anchor" href="#tui-鼠标-滚轮-vs-原生拖选的-两全-方案-design-arch-119-续-只讨论未改码" aria-label="锚点">#</a></h2>
+<p>已确认的判据（用户实测）：<code>?1000h</code> 一开，press/wheel 全进 stdin，终端不再做原生拖选；<br><code>return false</code> 只是「不吞」，事件已被 ink 从 stdin 读走、物理上回不到终端。<br>⇒ 在鼠标通道内部做「收窄 C」无解，Press 起点永远拿不回来。</p>
+<p><strong>本次结论：冲突不在档位，在投递通道。</strong> 滚轮不必走鼠标通道 ——<br><code>?1007h</code>（alternate scroll）把备屏滚轮投递成 ↑/↓，走键盘通道。<br>于是鼠标通道可整个关闭 → 原生拖选（无需 Shift）恢复，滚轮不丢。</p>
+<ul><li><strong>方案 A（推荐）</strong>：备屏不写 <code>?1000h</code>，改写 <code>?1007h</code>；↑/↓ 按 §0.9.1 已有的</li></ul>
+<p>「视口贴底哨兵」分流（贴底 = 输入历史，离底 = 视口滚动）；<br>  <strong>滚轮合成的 ↓ 在贴底时必须 no-op</strong>，否则立刻退化成「回溯历史」。</p>
+<ul><li><strong>方案 B</strong>：保留鼠标层，应用自绘选区 + OSC 52 复制。写入侧已有 <code>ccClipboard</code></li></ul>
+<p>（OSC 52 + native），只需补「选中 + 取文本」那半程。</p>
+<ul><li><strong>待实测三项</strong>：① 1007 在 WT / kitty / iTerm / conhost 的支持矩阵；</li></ul>
+<p>② 不支持 1007 时终端默认的 alt-scroll 行为；③ 合成 ↑/↓ 与真实 ↑/↓ 字节是否可区分<br>  （若可区分则无需上下文分流，判据更硬）。</p>
+<p>落地位置：<code>mouseButtons.js</code>（enableBytes/disableBytes 补 1007l）、<br><code>app.js:294-316</code>（备屏强制接管分支）、<code>arrowRouting</code>（↑/↓ 路由）。</p>
+<h3 id="第二轮全仓筛查-结论加固-三处新发现">第二轮全仓筛查（结论加固 + 三处新发现）<a class="anchor" href="#第二轮全仓筛查-结论加固-三处新发现" aria-label="锚点">#</a></h3>
+<p><strong>三需求的正交性（这是&quot;两全&quot;存在的根本理由）</strong>：</p>
+<ul><li>滚轮 —— <strong>可走键盘通道</strong>（1007 或 1001+1003）→ 不独占</li><li>原生拖选 —— <strong>要求鼠标通道完全关闭</strong>（任何追踪模式下 press 都被读走）</li><li>点击 —— <strong>要求鼠标通道开启</strong> → 与拖选<strong>物理互斥</strong>，只能靠等价键位满足</li></ul>
+<p>即：滚轮能解放，拖选与点击不能。而 P6 已经承诺&quot;每个鼠标动作必须有等价键位&quot;，<br>所以点击的收益本就被压缩到接近零。</p>
+<p><strong>全仓可点元素实测（纠正了一个长期误信）</strong>：<code>mouseButtons.js</code> 头部说&quot;只有两个可点元素<br>（麦克风按钮、待发图片的 ×）&quot;——<strong>不准确</strong>：</p>
+<table><thead><tr><th>元素</th><th>位置</th><th>等价键</th></tr></thead><tbody><tr><td>麦克风</td><td><code>PromptFrame.js:390</code></td><td>✅ <code>Alt+M</code></td></tr><tr><td>工具卡展开</td><td><code>ToolLines.js:1371</code></td><td>✅ <code>Ctrl+O</code></td></tr><tr><td>右栏折行</td><td><code>RightPanel.js:114</code></td><td>❌ 无等价键（<strong>违反 P6</strong>，建议补键）</td></tr><tr><td>会话列表</td><td><code>SessionSidebar.js:78</code></td><td>⚠ <code>ThreeColumnLayout</code> <strong>未接线</strong>（<code>App.js:5773-5794</code> 自述），死代码</td></tr><tr><td>待发图片 ×</td><td>—</td><td>❌ <strong>未找到任何 onClick 实现</strong>，需核实是否已 abandon</td></tr></tbody></table>
+<p>⇒ 关掉鼠标层实际只损失 <strong>1 个</strong> 元素（右栏折行），且它本来就违约。</p>
+<p><strong>候选②（新，之前未考虑）</strong>：<code>1001</code>（X11 鼠标、只报 press/release）+ <code>1003</code>（任意移动），<br>在 dispatcher 里<strong>只吞 button 64/65</strong>，press 按坐标白名单放行。<br>好处：滚轮保持&quot;精确滚轮事件&quot;（不依赖 1007 支持矩阵），且不送 AnyEvent。<br>代价/风险：1003 不再有任何节制（1001 下鼠标不移动就不发）；备屏里驱动<br><code>onInput → collectLayout</code>（整树 DFS）易卡；且<strong>必然有终端不发 1003</strong>（否则现有<br>hover 就够用），→ 需 1007 兜底 → 复杂度翻倍而<strong>仍有 1007 风险</strong>。故 1007 直做更优。</p>
+<p><strong>新发现的轻量选项</strong>：TUI 已启用 bracketed paste（<code>useTextInput</code> 有粘贴路径）。<br>若终端把拖选写入发成 paste 事件，则还有两条路：① 保留鼠标层、靠终端 Shift 拖选 +<br>OSC 52 兜底（需确认发送方是否兼容选择缓冲区）；② 干脆把 TUI 输出镜像到日志文件，<br>用户去编辑器复制（缺陷是从&quot;复制不了&quot;变成&quot;不好方便&quot;）。</p>
+<h3 id="第三轮-三家参照项目的实际做法-决定性证据">第三轮：三家参照项目的实际做法（决定性证据）<a class="anchor" href="#第三轮-三家参照项目的实际做法-决定性证据" aria-label="锚点">#</a></h3>
+<p><strong>核心结论：三家没有一个做到&quot;三全&quot;，全都接受&quot;滚轮与拖选二选一&quot;。</strong><br>我之前提的&quot;通道分离&quot;是本仓独有的（有 1007 这个额度可用），但<strong>参照实现全都放弃了它</strong>。</p>
+<h4 id="claude-code-anthropic-提供双档-escape-hatch-不是-两全">Claude Code（anthropic）—— 提供双档 ESCAPE HATCH，不是&quot;两全&quot;<a class="anchor" href="#claude-code-anthropic-提供双档-escape-hatch-不是-两全" aria-label="锚点">#</a></h4>
+<p>全屏渲染（备屏）默认<strong>捕获鼠标</strong>。官方文档原文：</p>
+<blockquote><p>&quot;当 Claude Code 捕获鼠标事件时，您终端的原生选择复制功能会停止工作。您通过点击和拖动<br>进行的选择存在于 Claude Code 内部，而不是在您终端的选择缓冲区中&quot;</p></blockquote>
+<p><strong>且 CC 是自绘选区，不是原生选择</strong>：双击选词（对齐 iTerm2 词边界）、三击选行、<br>松开即复制、<code>/config</code> 有&quot;选择时复制&quot;开关。写入走 native 工具链<br>（<code>pbcopy</code> / <code>wl-copy|xclip|xsel</code> / PowerShell <code>Set-Clipboard</code>），tmux 写粘贴缓冲区，<br><strong>SSH 回退 OSC 52</strong>。</p>
+<p>两个 env 的分工正是本仓需求的镜像：</p>
+<table><thead><tr><th>变量</th><th>保留</th><th>失去</th></tr></thead><tbody><tr><td><code>CLAUDE_CODE_DISABLE_MOUSE=1</code></td><td>原生选择、键盘滚动</td><td>点击定位/展开/URL、<strong>内部滚轮</strong></td></tr><tr><td><code>CLAUDE_CODE_DISABLE_MOUSE_CLICKS=1</code>（v2.1.195+）</td><td><strong>滚轮滚动</strong>、右键/中键</td><td>左键点击、拖动、悬停</td></tr></tbody></table>
+<p>⇒ <strong>CC 的答案就是本仓已有的 <code>KHY_MOUSE=off|click</code> 两档。它没解决，它给了逃生舱。</strong><br>⇒ 而且 <code>DISABLE_MOUSE</code> 在备屏下<strong>滚轮同样失效</strong>（备屏无 scrollback）——<br><strong>与本仓 §0.9.3 是同一个问题，CC 选的就是&quot;让用户忍&quot;。</strong></p>
+<p>CC 的三条补救值得本仓直接抄：</p>
+<ol><li><strong>启动时打印本终端对应的&quot;原生选择修饰键&quot;</strong>（Terminal.app <code>Fn</code> / iTerm2 <code>Option</code> /</li></ol>
+<p>VS Code <code>Shift</code>）—— 本仓 §6.2 只说&quot;Shift 永远走原生&quot;，<strong>漏了 iTerm2/Terminal.app</strong>。</p>
+<ol><li><strong><code>Ctrl+O</code> 转录模式 + <code>[</code></strong> 把完整对话<strong>写回终端原生 scrollback</strong>，此后 <code>Cmd+F</code>、</li></ol>
+<p>tmux 复制模式全部可用（退出转录模式即收回）。<strong>这是&quot;要看就看全部&quot;的解法。</strong></p>
+<ol><li><strong><code>v</code></strong> 把转录写入临时文件并 <code>$EDITOR</code> 打开 —— 本仓 <code>v</code> 是 deferred，</li></ol>
+<p><strong>但 CC 的 <code>v</code> 是&quot;导出到编辑器&quot;，语义更窄也更好实现</strong>，值得重新定义本仓的 <code>v</code>。</p>
+<ol><li><code>tmux -CC</code> 集成模式<strong>与全屏渲染不兼容</strong>（滚轮失效、双击可能损坏终端状态）。</li></ol>
+<h4 id="opencode-一个布尔-无折中">opencode —— 一个布尔，无折中<a class="anchor" href="#opencode-一个布尔-无折中" aria-label="锚点">#</a></h4>
+<p><code>~/.config/opencode/tui.json</code> 的 <code>&quot;mouse&quot;: true|false</code>（默认 <code>true</code>），<br>或 env <code>OPENCODE_DISABLE_MOUSE=1</code>。文档一句：</p>
+<blockquote><p>&quot;mouse - 在 TUI 中启用或禁用鼠标捕获（默认：true）。禁用后，会保留<strong>终端原生的<br>鼠标选择和滚动行为</strong>&quot;</p></blockquote>
+<p><code>packages/</code> 是 OpenTUI（作者 sst）自研 Go/Rust TUI 框架——<strong>自绘选区</strong>。<br>有 <code>scroll_acceleration</code>（macOS 风格惯性，<strong>需要逐格精确滚轮事件</strong>），<br>这印证了&quot;鼠标通道下才有精确滚轮&quot;这一点。<br>⇒ <strong>opencode 连&quot;保留滚轮&quot;那一档都没做，只有全开/全关。</strong></p>
+<h4 id="claude-code-best-cc-反编译还原版-没动这块">claude-code-best（CC 反编译还原版）—— 没动这块<a class="anchor" href="#claude-code-best-cc-反编译还原版-没动这块" aria-label="锚点">#</a></h4>
+<p>反编译还原工程（Bun 可编译）。有 <code>feat: 开启鼠标点击功能</code> 提交，<br><code>@ant/ink</code> 补过 <code>MouseActionEvent</code> 类，<code>ink.tsx</code> 的 <code>needsEraseBeforePaint</code> /<br><code>prevFrameContaminated</code> 服务于 selection 高亮。<br><strong>但它没有独立解决滚轮/拖选冲突——继承 CC 的行为与 env。</strong><br>⇒ 作为参照价值低：它证明&quot;这个问题在 CC 系里没人另解&quot;。</p>
+<p><strong>给本仓的最终判断</strong>：<br>处置排序 = <strong>抄 CC 的三条补救（成本低、确定有效）+ 再上 1007 赌一把（超出三家）</strong>。<br>CC 那条 <code>Ctrl+O → [ → 写回 scrollback</code> 是最值钱的一条：它不解决&quot;就地拖选&quot;，<br>但彻底解决&quot;我要复制某段内容&quot;——<strong>而后者才是用户的真实目的</strong>。</p>
+<h2 id="防-越改越差-诊断-方案-只诊断未改码">防「越改越差」诊断 + 方案（只诊断未改码）<a class="anchor" href="#防-越改越差-诊断-方案-只诊断未改码" aria-label="锚点">#</a></h2>
+<p>用户诉求：「仓库太大容易被小模型改坏，怎么做一个措施防止越改越差」。</p>
+<p><strong>核心结论：不要再加第 75 个检查器。</strong> 缺口不在数量，在<strong>位置</strong>与<strong>分母</strong>：</p>
+<ul><li>位置：所有拦截都在写入<strong>之后</strong> → 小模型一次 pass 改 40 个文件，全落盘后才有声音；</li><li>分母：棘轮以全仓为分母 → 容忍度是实测的 5.6 倍，只能拦「翻倍级」恶化。</li></ul>
+<p><strong>实测证据（可复核，全部本机实跑）</strong>：</p>
+<ol><li><code>toolUseLoopCore.js:10733</code> 注释自认「事后顾问不硬拦(编辑已发生)」；</li></ol>
+<p><code>check-weak-model-guard</code> 今日输出唯一 WARN <code>guard-declared-deny-unconsumed</code> ——<br>   唯一调用点只读 advisory 文案、<strong>从不读 <code>allow=false</code></strong> ⇒ SECURITY-003 的「拒绝」<br>   实为事后唠叨。<strong>这是用户的痛点本身。</strong></p>
+<ol><li><code>debt-ledger.json</code>：<code>_why</code> 自承「容忍度是实际的 5.6x」「红着的门等于没有门」。</li></ol>
+<p>今日：open 9 条 / 累计债务 <strong>15934 处</strong>；<code>consoleLog 4584→3000</code>、<br>   <code>functionLines 2144→1600</code>、<code>fileLines 352→300</code>（目标全在年底）。<br>   <code>nestingDepth</code> 的 target(8707) 反而 &gt; measured(8703)，靠 <code>targetPending</code> 声明豁免。</p>
+<ol><li><code>pr-gate.yml</code> 有 <strong>4 处 continue-on-error</strong>：L68/L167/L337/<strong>L363 整个 test-baseline job</strong></li></ol>
+<p>⇒ 测试完全不把关。</p>
+<ol><li>本地无任何钩子（无 .husky / .pre-commit-config，.git/hooks 仅 sample），</li></ol>
+<p><code>rules:gate:commit</code> 快档存在但无触发点 ⇒ 直推主干是零防护区。</p>
+<ol><li>体系近饱和：73 规则 / 74 检查器 / 91.8% 可执行覆盖 / 9 个零接线豁免 / 26 个脚本未被任何规则登记。</li></ol>
+<p><strong>方案三层</strong>（正本 <code>_产物/防止越改越差-方案-2026-09-17.md</code>）：</p>
+<ul><li><strong>L0 写入前硬拦截</strong>（半天，性价比最高）：把已有 <code>assessWeakModelChange()</code> 接到</li></ul>
+<p><code>FileEdit/FileWrite/MultiEdit/ApplyPatch</code> 的 fs 写之前，<code>allow=false</code> → 抛工具级错误。<br>  复用 SECURITY-002 <code>isUnbypassableGate</code> 的 fail-closed 模式（不受 bypass/yolo 影响）。<br>  副作用是自检：<code>guard-declared-deny-unconsumed</code> 会自然从 WARN 升 ERROR。</p>
+<ul><li><strong>L1 逐文件「改前 vs 改后」棘轮</strong>（换分母）：存量债冻结，但<strong>摸过的文件不许更脏</strong>。</li></ul>
+<p>同一例子：全仓视角 consoleLog 4584→4592（+0.17% 不可见）；单文件 12→20（<strong>+67% 立刻红</strong>）。</p>
+<ul><li><strong>L2 计数棘轮替代「全绿才过」</strong>：断言 failed 不增 / passed 不减 —— 既解开</li></ul>
+<p>「9 个失败用例导致 job 整体 continue-on-error」的两难，又立刻拦住新劣化。</p>
+<p><strong>明确反模式</strong>：别加检查器 / 别让 guard 认识更多红线（劣化主要来自普通文件堆积，<br>如 aiChatCore.js 4738 行）/ 别一把删 continue-on-error（会训练所有人忽略红色）。</p>
+<p><strong>环境坑（复用）</strong>：本机 Git Bash 的 <code>tail</code>/<code>grep</code>/<code>head</code> 全 not found（比前几日更多命令失效），<br>PowerShell 工具 stdout 恒为空。<strong>可用套路</strong>：写一个临时 node 脚本用 <code>spawnSync</code> 收集多个命令<br>输出并 <code>fs.writeFileSync(…, 'utf8')</code>，再用 Read 读 —— 这是本机唯一可靠的取值方式。</p>
+<h2 id="tui-鼠标-拖选专题-第四轮-三参考项目-正文可复制-点击选择-选择复制-上下文回滚-的真实做法">TUI 鼠标/拖选专题 —— 第四轮：三参考项目「正文可复制 + 点击选择 + 选择复制 + 上下文回滚」的真实做法<a class="anchor" href="#tui-鼠标-拖选专题-第四轮-三参考项目-正文可复制-点击选择-选择复制-上下文回滚-的真实做法" aria-label="锚点">#</a></h2>
+<p>用户纠正了我的框架：这三个项目（claude-code / claude-code-best / opencode）<strong>并非只是给逃生舱</strong>，<br>它们确实同时交付了「正文可复制、可点击选择、选择后复制、上下文可回滚」。要求研究它们<strong>怎么做</strong>。</p>
+<p><strong>结论：决定性机制不是终端原生选择，而是「应用内自绘选择 + 松手即复制」。</strong></p>
+<h3 id="claude-code-全屏模式">Claude Code（全屏模式）<a class="anchor" href="#claude-code-全屏模式" aria-label="锚点">#</a></h3>
+<ol><li><strong>上下文回滚靠自绘视口虚拟化</strong>，不靠终端 scrollback：FullscreenLayout.tsx +</li></ol>
+<p>VirtualMessageList.tsx（窗口化 + blit 复用未变化屏幕段）+ Messages.tsx。<br>   备屏无回滚缓冲这一点被视口接管消化掉。</p>
+<ol><li><strong>选择靠自绘</strong>：拖选任意文本；<strong>双击选中一个词</strong>（明确对齐 iTerm2 的 word boundary，</li></ol>
+<p>所以一条文件路径整体选中）；<strong>三击选整行</strong>；<strong>松手即自动复制</strong>到剪贴板；<br>   /config 的「Copy on select」可关掉自动复制。</p>
+<ol><li><strong>键盘等价</strong>：有选区时 Shift+方向键 从键盘扩展选区；Shift+↑/↓ 在选区抵达上下边缘时滚动视口；</li></ol>
+<p>有选区时 Ctrl+c 复制。</p>
+<ol><li><strong>剪贴板多通道</strong>：本机工具链（pbcopy/xclip/wl-copy/PowerShell）→ tmux buffer → SSH 下 OSC 52 兜底。</li><li><strong>三条逃生舱</strong>：启动时打印本终端对应的原生选择修饰键；Ctrl+O 转录模式把整段会话灌进原生 scrollback；</li></ol>
+<p>v 写临时文件并开 $VISUAL/$EDITOR。</p>
+<h3 id="opencode">opencode<a class="anchor" href="#opencode" aria-label="锚点">#</a></h3>
+<ul><li>mouse: true|false（tui.json，默认 true）/ OPENCODE_DISABLE_MOUSE=1。</li><li>viewport 有 MouseWheelEnabled / MouseWheelDelta = 3（逐格精确滚轮事件 —— scroll_acceleration</li></ul>
+<p>惯性滚动依赖它，所以滚轮不能被合成方向键替代）。</p>
+<ul><li>另有 HighlightStyle / SelectedHighlightStyle / SetHighlights / HighlightNext / HighlightPrevious</li></ul>
+<p>—— 这是<strong>高亮区间 API，与自由文本选择不是一回事</strong>：它服务于自身导航，不产出可复制文本。</p>
+<ul><li>真复制走 textarea 的 ctrl+e 开 $EDITOR。即 opencode 的「可复制」偏向<strong>原生选择 + 外部编辑器</strong>。</li></ul>
+<h3 id="claude-code-best">claude-code-best<a class="anchor" href="#claude-code-best" aria-label="锚点">#</a></h3>
+<ul><li>继承 CC，无独立实现。</li></ul>
+<h3 id="映射到-khy-os-可行性已实测">映射到 khy-os（可行性已实测）<a class="anchor" href="#映射到-khy-os-可行性已实测" aria-label="锚点">#</a></h3>
+<ul><li><strong>复制写入半边已经齐了</strong>：utils/ccClipboard.js 的 writeClipboard() native 优先；</li></ul>
+<p>本地 TTY 下 shouldEmitOsc52 返回 {on:false, reason:'tty'} ⇒ <strong>走 native-only</strong>，<br>  正是 copy-on-release 需要的路径（SSH 场景才需另验）。</p>
+<ul><li><strong>行模型天然适配</strong>：_mainContentLines（App.js:5275）是<strong>扁平纯字符串数组</strong>，</li></ul>
+<p>且 Viewport lines 模式按 height 切片渲染 ⇒ <strong>屏幕行 == 数组下标（1:1）</strong>，<br>  行列 ↔ 文本位置换算不需要任何布局反查。</p>
+<ul><li><strong>高亮原语已在生产使用</strong>：ink Text 的 inverse prop 在 PromptFrame.js:408、</li></ul>
+<p>QuestionPrompt.js:440 已被用于光标块 ⇒ 选区着色是已验证能力，不是新赌注。</p>
+<ul><li><strong>坐标已到位</strong>：createMouseDispatcher 的 press/release 分支已拿到 ev.col/ev.row，</li></ul>
+<p>且 hitTest(layout, col, row, offset) + offset = screenOffset(layout.height, ctx) 已能算屏幕行。</p>
+<ul><li><strong>缺口</strong>：_transcriptLines.buildTranscriptLines() 产出的是<strong>纯字符串</strong>，没有</li></ul>
+<p>「第 N 行属于哪条消息/哪个角色」的元数据 ⇒ 要支持按消息复制、双击选词、三击选行，<br>  需要给行投影加一层 sidecar 元数据（或新增一个 buildTranscriptLineRecords）。</p>
+<h3 id="架构判断-本轮最重要的一条">架构判断（本轮最重要的一条）<a class="anchor" href="#架构判断-本轮最重要的一条" aria-label="锚点">#</a></h3>
+<p>现方案在「鼠标通道」里二选一（拖选 × 点击互斥，物理上无法两全）；<br>CC 路线<strong>跳出该通道</strong>：鼠标通道全开（点击/滚轮都由应用消化），<br><strong>选择不向终端要，而是应用自己画、自己复制</strong>。这样三个需求同时成立，<br>且 ?1007h（备屏滚轮合成方向键）这条「单个硬赌注」被彻底绕开 —— 不再需要验证各终端兼容性。</p>
+<h2 id="design-arch-119-v2-重写完成-同日续">[DESIGN-ARCH-119] v2 重写完成（同日续）<a class="anchor" href="#design-arch-119-v2-重写完成-同日续" aria-label="锚点">#</a></h2>
+<p>用户「现在重写一个方案」→ 把 §4.3 的「保留 1000 + 有条件的吞」从<strong>终点</strong>降为<strong>第一层</strong>，<br>新增第二层「应用内自绘选择」。文件已全文重写（原 422 行 → v2）。</p>
+<p><strong>改动落点（3 个文件，全部已过守卫）</strong>：</p>
+<ul><li><code>docs/03_DESIGN_设计/[DESIGN-ARCH-119] TUI原生文本选择与复制可用性修复.md</code> —— 全文重写</li><li>同名 <code>.html</code> 孪生 —— 由 <code>node scripts/docs/build_docs_site.js --quiet</code> 重新生成（exit 0）</li><li><code>docs/03_DESIGN_设计/00_INDEX_设计-分类索引.md</code> —— 更新摘要行</li></ul>
+<p><strong>v2 的实质结构变化</strong>：</p>
+<ul><li>原「一、二、三、四…」线性结构 → <strong>三层结构</strong>：第一层判据收窄（✅已完成）/</li></ul>
+<p>第二层自绘选择（新增，未开工）/ 第三层门控与登记收口。</p>
+<ul><li>新增 §三「为什么二选一不再是约束」——三项目实证（CC 的 FullscreenLayout +</li></ul>
+<p>VirtualMessageList + 松手即复制 + 双击选词对齐 iTerm2 边界 + 三击选行；<br>  opencode 的 HighlightStyle 是导航 API 不是文本选择、真复制走 ctrl+e $EDITOR；<br>  claude-code-best 继承 CC）。</p>
+<ul><li>新增 §4.2 第二层设计：<code>selection.js</code> 纯叶子 API（9 个函数）、<code>Viewport</code> 加可选</li></ul>
+<p><code>selection</code> prop（三段 Text 中段 inverse）、<code>Ctrl+C</code> 取值优先级（有选区→复制／<br>  无选区→中断）、四个 <code>KHY_SELECT_*</code> 门控。</p>
+<ul><li>§4.4 把 <code>?1007h</code> 从<strong>主路</strong>降为<strong>可独立回滚的实验</strong>（v1 里它是唯一出路与唯一硬赌注）。</li><li>§六「不做的事」从 4 条 → 6 条（新增：不做软换行逻辑行还原、不引入 <code>$EDITOR</code> 往返、</li></ul>
+<p>不做按消息整体复制）。</p>
+<ul><li>§七 风险从 4 条 → 7 条（新增风险 1「行投影缺元数据」= 第二层唯一结构性缺口、</li></ul>
+<p>风险 7「第二层性能边界」）。</p>
+<ul><li>§八 落地清单：步骤 1 ✅ / 步骤 2 拆成 <strong>2a 纯逻辑（可独立测试）+ 2b 渲染接线</strong> / 步骤 3。</li></ul>
+<p><strong>v2 最重要的一条设计判断</strong>：第二层的可行性几乎全部来自一个既有事实 ——<br><code>_mainContentLines</code> 是扁平 <code>string[]</code> 且 <code>Viewport</code> lines 模式按 <code>height</code> 直接切片<br>⇒ <strong>屏幕行 == 数组下标</strong>，坐标换算零布局反查。加上 <code>inverse</code> 已在<br><code>PromptFrame.js:408</code>/<code>QuestionPrompt.js:454</code> 生产使用、<code>ccClipboard.writeClipboard</code> 的<br>本地路径实测就是 native-only ⇒ <strong>第二层只缺「选择模型」这一半</strong>。</p>
+<p><strong>守卫实测</strong>：</p>
+<ul><li><code>scripts/docs/verify_docs_site.js</code> exit 0 —— 1027 md / 1028 html / 12287 本地链接全通过</li><li><code>scripts/ci/check-repo-layout.js</code> exit 0（87 dangling / 39 cross-layer 为 09-16 存量基线，未变）</li><li><code>scripts/ci/check-agent-docs.js</code> exit 0（0 error 0 warning）</li><li><code>scripts/ci/check-build-root.js</code> advisory，2 error + 11 warning <strong>全是存量</strong>，与本次无关</li></ul>
+<p><strong>环境坑（复用）</strong>：<code>check:layout</code> 的真实脚本是 <code>scripts/ci/check-repo-layout.js</code><br>（不是 check-layout.js，猜路径会 MODULE_NOT_FOUND）。本机 <code>tail</code> 也 not found<br>（比前几日又多一个命令失效）。<strong>唯一可靠套路仍是</strong>：<code>node -e</code> 里用 <code>spawnSync</code> 收集<br>输出 + <code>fs.writeFileSync</code> 落盘 + Read 读取。</p>
+<h2 id="design-arch-119-第二层验收标准-参考实现-同日续">[DESIGN-ARCH-119] 第二层验收标准 + 参考实现（同日续）<a class="anchor" href="#design-arch-119-第二层验收标准-参考实现-同日续" aria-label="锚点">#</a></h2>
+<p>用户「编写清晰、完整、可执行的验收测试作为验收标准…确保标准独立可读、便于后续由小模型<br>直接据此实现」→ 产出验收标准文档 + 可直接运行的验收测试 + 为证可执行而落地的参考实现。</p>
+<p><strong>产出（4 个新文件 + 2 处文档回写）</strong>：</p>
+<ul><li><code>docs/03_DESIGN_设计/[DESIGN-ARCH-119] TUI文本选择与复制-验收标准.md</code>（新增，验收标准真源）</li><li><code>services/backend/src/cli/tui/selection.js</code>（<strong>参考实现</strong>，纯叶子，12 个导出）</li><li><code>services/backend/tests/cli/tui/selection.test.js</code>（<code>S-01</code>–<code>S-37</code>，27 条）</li><li>回写：设计真源 ARCH-119 §八 步骤 2a 指向验收标准；两份索引各加一行</li></ul>
+<p><strong>验收标准的结构</strong>：用例分五组，每条三段式（输入 → 期望输出 → 通过条件）——<br><code>S-xx</code> 选择模型 37 条 / <code>V-xx</code> 渲染层 5 条 / <code>A-xx</code> 交互层 13 条 / <code>X-xx</code> 集成回归 5 条 /<br><code>N-xx</code> <strong>反例矩阵 12 条</strong>。另有 §10「明确未覆盖项」10 条（SSH/OSC 52、软换行逻辑行还原、<br>按消息复制、<code>?1007h</code> 兼容性、<code>1003</code> 档性能…），写明实现者<strong>不得声称已完成</strong>。</p>
+<p><strong>实跑自验（这是本轮最有价值的部分）</strong>：</p>
+<ul><li>模型层 <strong>27/27 绿</strong>；全 TUI <strong>771/771</strong>（= 基线 744 + 新增 27），fail 0 —— <code>X-02</code> 无回归</li><li><code>X-03</code> 纯叶子纪律静态检查 5 项禁令零命中</li><li><strong><code>N-xx</code> 反例核验 5/5 检出</strong>：逐个向 <code>selection.js</code> 注入错误实现，确认测试确实由绿转红</li></ul>
+<p>（N-02 闭区间→S-06 红；N-03 词集退化→S-21 红；N-04 filter(Boolean)→S-09 红；<br>  N-05 原地改入参→S-36 红；N-09 hasSelection 只比 line→S-05 红）。<br>  <strong>这一步值得固化成习惯</strong>：测试写完不算完，「错误实现必须让它红」才算。</p>
+<p><strong>实现期发现并修正的两处口径问题</strong>（已回写文档 + 实现）：</p>
+<ol><li><code>selectionRangeFor</code> 端点必须<strong>解析成具体列号</strong>，不得返回 <code>Infinity</code>（否则把「查行长度」</li></ol>
+<p>漏给渲染层）。签名因此是 <code>(lines, sel, line)</code>，验证前是 <code>(sel, line)</code>。</p>
+<ol><li><code>S-35</code> 的<strong>测试断言本身写错</strong>（期望 <code>'line 49'</code>，实为 <code>'line 4'</code>，</li></ol>
+<p><code>'line 4999'.slice(0,6)</code>）—— 不是实现问题。<strong>测试自己也会错，跑一遍才知道。</strong></p>
+<p><strong>踩到的门禁（自查出来的，值得记住）</strong>：新增文档只进了就近索引<br><code>docs/03_DESIGN_设计/00_INDEX_设计-分类索引.md</code>，<strong>没进主索引</strong> <code>docs/00_INDEX_文档索引.md</code><br>→ <code>check-repo-layout</code> 的 <code>docs-index-complete</code> 从基线 0 升到 1，<br><strong>warning 被 promote 成 error</strong>（&quot;只允许下降&quot;），exit 1。<br>⇒ <strong>纪律：本仓新增任何 <code>docs/**</code> 下的文档，必须同时登进就近索引 AND 主索引。</strong><br>两份索引都要写，漏一份就红。</p>
+<p><strong>守卫终态</strong>：<code>check-repo-layout</code> exit 0（87 dangling / 39 cross-layer 为 09-16 存量基线，未变）；<br><code>check-agent-docs</code> exit 0；<code>docs:verify</code> exit 0（1028 md / 1029 html / 12273 链接全通过）。</p>
+<p><strong>下一步</strong>：<code>V-xx</code>（Viewport 加可选 <code>selection</code> prop）与 <code>A-xx</code>（App 接线 + 4 个<br><code>KHY_SELECT*</code> 门控 + <code>Ctrl+C</code> 优先级）待实现，即设计真源的步骤 2b。</p>
+<hr>
+<h2 id="文档精简方案-mgmt-plan-009-b1-收尾-b2-执行-2026-09-17-下午">文档精简方案（[MGMT-PLAN-009]）B1 收尾 + B2 执行（2026-09-17 下午）<a class="anchor" href="#文档精简方案-mgmt-plan-009-b1-收尾-b2-执行-2026-09-17-下午" aria-label="锚点">#</a></h2>
+<p><strong>B1 收尾</strong>：主索引 <code>docs/00_INDEX_文档索引.md</code> 顶部加「一分钟导读」+「10 组边界裁决速查」。<br>⚠️ <strong>关键约束发现</strong>：方案原想「主索引降为 30 行纯导读、删逐篇清单」，但 <code>check-repo-layout.js</code><br>的 <code>checkDocsIndexComplete</code>（规则 2.5）<strong>强制主索引逐篇列举 01–09 阶段文档</strong>，基线 0、超出即 error。<br>→ 主索引的清单冗余是<strong>守卫强制保留</strong>的，不能删。改为「导读 + 完整清单并存」。要彻底去重须改守卫（B8）。</p>
+<p><strong>B2 三态标注</strong>：表感知脚本（<code>.khyos/housekeeping/2026-09-17-doc-plan/_b2_normalize_status.py</code>）<br>为 22 个 <code>00_INDEX_*</code> 索引补齐/归一「状态」列 → 在产 594 / 存档 94 / 派生 81，769 行全覆盖。</p>
+<ul><li>状态列其实已普遍存在，取值不统一（定稿/冻结快照）→ 归一为三态。</li><li>存档 94 ≈ 真正冻结的快照目录（11_报告/09_STORY/13_传承/15_维护记录/18_归档）；</li></ul>
+<p>方案原估 180 是过高——活跃目录（03/04/10）的零入站文档仍是「在产」，保守标在产不误判。</p>
+<p><strong>踩坑（重要）</strong>：手改 <code>docs/10_规范/规则卡/00_INDEX_规则卡总目录.md</code> 触发 <code>check-rules-registry</code><br>的 TOOLING-008 报错——<strong>规则卡是 <code>gen-rules-cards.js</code> 构建产物，禁手改</strong>。已重跑生成器还原。<br>→ <strong>纪律：派生态（规则卡、OPS-MAN-066/067 等机器生成件）不加手改状态列，其派生态由生成器隐含。</strong></p>
+<p><strong>全守卫绿</strong>：docs:verify 1028/1029/12273；check:layout docs-index-complete=0；check-rules-registry PASS；<br>check-agent-docs 0/0；check-gov-rules PASS。方案 §9 升至 1.3.0。</p>
+<p><strong>待续批次</strong>：B3(TUI 20→5)、B4a(还原子系统加隶属头)、B5(OCR 17→3)、B6(散落合并)、B7(长文档拆分)、B8(收口+改守卫去重)。</p>
+<hr>
+<h2 id="身份落盘-防越改越差-phase-0-落地-2026-09-17-傍晚">身份落盘 + 防越改越差 Phase 0 落地（2026-09-17 傍晚）<a class="anchor" href="#身份落盘-防越改越差-phase-0-落地-2026-09-17-傍晚" aria-label="锚点">#</a></h2>
+<p><strong>身份（用户确认）</strong>：用户=学生，我=老师（用户原话「你叫我学生，你叫我老师」）。已写入 IDENTITY.md(Name:老师)/USER.md(Name:学生)，并删除已完成的 BOOTSTRAP.md。用户认可「先给证据再结论、带反模式」的讲法。</p>
+<p><strong>Phase 0 落地（写入前硬拦截，L0）—— 已实跑验证全绿</strong>：</p>
+<ul><li>与原方案不同：没去改 4 个写工具的 <code>fs.writeFileSync</code>，而是在既有 <code>services/backend/src/services/toolGuards.js</code> 新增 <code>WeakModelEditGuard</code>（PreToolUse 守卫），挂进 <code>registerBuiltinGuards</code>，pattern 覆盖 <code>FileEdit/FileWrite/MultiEdit/ApplyPatch</code>（含别名 <code>MultiEdit/multiEdit/multi_edit</code>）。</li><li>弱档 T2/T3 碰红线文件 → 返回 <code>{action:'block'}</code> 且<strong>不设 <code>approvable</code></strong> ⇒ 硬底，连 bypass/yolo/acceptEdits 都绕不过（对齐 <code>guardApproval.js</code> 约定：硬守卫永不进审批路径）。</li><li>当前能力档 <code>tier</code> 在 3 个 PreToolUse 触发点注入 payload：<code>toolUseLoopCore.js:8165</code>(并行) / <code>:9088</code>(顺序) / <code>toolCalling.js:1999</code>(executeTool 单一漏斗，罩住主循环/localToolLoop/子代理/直连所有路径)。</li><li>自测：弱档+红线→block；强档/普通文件/敏感核心(aiGateway)→allow；<code>apply_patch</code> 多文件→block；MultiEdit 已覆盖。临时 node 脚本 require 模块 + mock hookSystem 跑用例后删除。</li></ul>
+<p><strong>关键教训（复用）</strong>：同一文件一次消息里发多个 Edit，某个编辑可能<strong>「报成功但未落盘」</strong>（Phase 0 注册编辑第一次就静默没写上，靠 <code>grep</code> 复检才发现）。⇒ 批量改同文件后必须 grep/read 复核每一处真的在。</p>
+<p><strong>未做 / 待续</strong>：L1 逐文件「改前 vs 改后」棘轮、L2 计数棘轮未动；<code>toolUseLoopCore.js:10733</code> 那条「事后顾问不硬拦(编辑已发生)」注释现对红线弱模型用例已不准确，可顺手更新。</p>
+<hr>
+<h2 id="arch-119-计划核验与完善-第二轮-发现-6-处真实缺口">ARCH-119 计划核验与完善（第二轮）—— 发现 6 处真实缺口<a class="anchor" href="#arch-119-计划核验与完善-第二轮-发现-6-处真实缺口" aria-label="锚点">#</a></h2>
+<p>对 <code>[DESIGN-ARCH-119]</code> v2 计划做「小模型可逐步执行」级核验，实测发现并修掉 <strong>6 处缺口</strong>，<br>其中 2 处是<strong>会让实现者白干</strong>的致命缺口：</p>
+<p><strong>缺口 1（致命）：tracking 档位缺失。</strong> <code>enableBytes()</code>（<code>mouseButtons.js:261-267</code>）<strong>只写</strong><br><code>\x1b[?1000h\x1b[?1006h</code> —— 全仓库从未写过 <code>?1002h</code>（grep 确认只有 1000h/1003h/1006h）。<br><code>1000</code>（X11 basic）<strong>一个位移事件都不报</strong> ⇒ 第二层的拖动（<code>extendSelection</code>）<br>在真机上永远收不到事件，<code>A-01</code>/<code>A-02</code>/<code>S-03</code> 会「单测全绿、真机一片死」。<br>修：新增 2b-0 前置步骤 —— <code>enableBytes</code> 加 <code>select</code> 参数，为真时把 <code>1000</code> <strong>换成</strong> <code>1002</code><br>（不是叠加；<code>1002</code> 已含 1000 语义）⇒ <code>'\x1b[?1002h\x1b[?1006h'</code>。<br>代价已显式登记：按住键期间原生拖选不可用（作用域从 v1 的「永久」缩到「仅按住期间」）。</p>
+<p><strong>缺口 2（致命）：接线点会静默丢弃选择层。</strong> <code>App.js:4200</code> 调用<br><code>mouseDispatcherRef.current.onInput(...)</code> <strong>丢弃返回值</strong>，且 <code>App.js:4214</code> 无条件 <code>return</code>。<br>⇒ 在选择层若接在该 block <strong>之后</strong>，永远不执行。修：改为 dispatcher 层加 <code>onSelectEvent</code><br>回调（照抄既有 <code>onWheel</code>/<code>onNative</code> 建模），<strong>不改 <code>onInput</code> 返回值</strong> —— 改返回值不解决问题，<br>只会制造新假路径。</p>
+<p><strong>缺口 3：不变式未言明。</strong> 「屏幕行号 == 数组下标」依赖 <code>buildTranscriptLines</code> 预折行</p>
+<ul><li><code>Viewport</code> 的 <code>overflow:'hidden'</code> <strong>截断</strong>（非 wrap）。且 <code>App.js:5943</code> 传给 Viewport 的</li></ul>
+<p><code>width</code> prop 是<strong>死 prop</strong>（<code>Viewport</code> 从不读它，grep 零命中），造成「宽度可控」的错觉。</p>
+<p><strong>缺口 4：跨文档引用是断的。</strong> 文档引 <code>[DESIGN-ARCH-101]</code> §6 台账第 6 条 与 §339 ——<br>实测 <code>[DESIGN-ARCH-101]</code> 真实标题是「TUI 交互与展示规则细则」，其 §6 讲的是<strong>中文换行</strong><br>不是鼠标台账；台账实际在 <strong>§8「需要裁决的冲突」第 6 条</strong>，档位表在 <strong>§4.5</strong>。<br>全部改对。⇒ <strong>教训：写「依据」引用时必须先打开目标文件核对章节号</strong>，凭记忆写必错。</p>
+<p><strong>缺口 5：文档写死了机器绝对路径。</strong> 设计文档 5 处、验收标准 6 处写死<br><code>D:/Portable/WorkBuddy/.workbuddy/binaries/node/.../node.exe</code> —— 该路径<strong>根本不存在</strong><br>（真路径是 <code>D:/WorkBuddyData/.workbuddy/binaries/node/...</code>）。且这属于 <code>RUNTIME-001</code><br>禁止的硬编码。改为一律 <code>node --test ...</code>（<code>node</code> 指可用的 Node 22）。</p>
+<p><strong>缺口 6（反向发现）：计划里两项「待办」其实已完成。</strong></p>
+<ul><li><code>flagRegistry.js</code> <strong>五个</strong> <code>KHY_MOUSE*</code> + <code>KHY_ALT_SCREEN</code> <strong>已登记</strong></li></ul>
+<p>（<code>flagRegistry.js:2828-2832</code>，带 2810-2827 注释块指向 ARCH-119）；仅 <code>KHY_SELECT_*</code> 未登记。</p>
+<ul><li><code>tui/AGENTS.md</code> §1.2 <strong>五行都已补</strong>（<code>AGENTS.md:285-288</code>）。</li><li><code>[DESIGN-ARCH-102]</code> §6.1 的 <code>v</code>/<code>y</code> <strong>已标 deferred 并指向 ARCH-119</strong>。</li></ul>
+<p>⇒ 原「风险 4 / 步骤 12 / 步骤 15」是<strong>过期信息</strong>，已改为「核对」而非「重写」。<br>新增 <code>X-06</code> 回归护栏，守住这五个既有 flag 不被新增 <code>KHY_SELECT</code> 的整块替换误删。</p>
+<p><strong>同时新增</strong>：验收标准 <code>A-00</code>（tracking 档位字节级断言 + 唯一不可用单测替代的真机冒烟）、<br>规划 <code>§七 风险 8</code>（<code>1002</code> 异常退出后残留于终端）、<code>§六 第 7 条</code>（按住期间原生拖选<br>不可用是<strong>无法消除</strong>的固有代价，禁止用「延迟开关 1002」的花招）。</p>
+<p><strong>验证</strong>：TUI 测试 771/771 绿（44/44 含选区层）；<code>verify_docs_site</code> 1029md/1030html/12284 链接 全过；<br><code>check-repo-layout</code> / <code>check-agent-docs</code> exit 0。</p>
+<p><strong>并发写入警告（重要）</strong>：本次跑 <code>build_docs_site.js</code> 时 <code>docs-index-complete</code> 由 0 变 1 ——<br>排查发现 <code>docs/03_DESIGN_设计/[DESIGN-ARCH-122] TUI 设计族总纲.md</code> 是<strong>另一个会话<br>116 分钟前建的</strong>（<code>[MGMT-PLAN-009]</code> 文档精简 B3 批次的族总纲），未登记主索引。<br>我的文档本身在<strong>双索引都在</strong>。⇒ <strong>教训：多会话共用同一工作区时，门禁变红不一定是自己造成的；<br>先看 mtime 区分归属，再决定修不修。</strong> 我把它按格式登记进主索引以恢复门禁（并注明来源）。</p>
+<p><strong>下一轮可直接开工</strong>：2b-0（<code>enableBytes</code> 加 <code>select</code> → 写 <code>?1002h</code> + <code>mouseWheel.test.js</code><br>两条字节断言 + 真机冒烟）→ 2b-1（Viewport <code>selection</code> prop，复用 <code>resolveViewportOffset</code>）<br>→ 2b-2（dispatcher <code>onSelectEvent</code> + App 接线 + 四个 <code>KHY_SELECT_*</code>）。<br><strong>顺序不可换：先 2b-0 再 2b-2</strong>，否则单测仍绿而真机死。</p>
+<hr>
+<h2 id="防越改越差-l1-落地-phase-0-之后-同日续">防越改越差 L1 落地（Phase 0 之后，同日续）<a class="anchor" href="#防越改越差-l1-落地-phase-0-之后-同日续" aria-label="锚点">#</a></h2>
+<p>用户确认做 L1（逐文件「改前 vs 改后」棘轮）。已实跑验证全绿。</p>
+<p><strong>新增/改动</strong>：</p>
+<ul><li><code>scripts/ci/check-file-ratchet.js</code>（新建，AST-free、零依赖）：列改动集（<code>git diff base...HEAD</code>，复用 check-change-safety 的 name-status 解析 + <code>--cached</code>/<code>HEAD</code> 回退）→ 对每文件算 7 指标 → 比对 base（git show）与 head（工作树）。<ul><li>HARD（变差即红）：<code>maxFuncLines</code>/<code>maxNesting</code>/<code>consoleCount</code>/<code>debuggerCount</code>/<code>todoCount</code>；</li></ul></li></ul>
+<p>SOFT（只报）：<code>lines</code>/<code>dupBlock</code>（dupBlock = 归一化滑动窗口去重计数，避免误伤正常增长）。</p>
+<ul><li>M/R 文件走 delta（after&gt;before→error）；A 文件走 <code>file-ratchet.config.json</code> 的 <code>caps</code> 绝对上限。</li><li>例外机制 <code>exceptions:[{path,reason,by}]</code> 有期豁免；<code>GITHUB_ACTIONS</code> 下发 <code>::error::</code>/<code>::warning::</code> 注解。</li></ul>
+<p><strong>测试（19 断言全绿）</strong>：单测覆盖指标/评估/例外/解析；集成用临时 git 仓库验证「改坏既有文件→exit1+FAIL」「新增脏文件→over-cap」「无变化→exit0」。</p>
+<p><strong>关键设计判断（复用）</strong>：</p>
+<ul><li>原方案 L1 表列了 lint error+warning 作为指标，但每文件跑全量 eslint 会拖慢门禁，且 pr-gate 已有 lint 步骤覆盖该维度 → L1 不内置 lint，只做 AST-free 的复杂度债。</li><li><code>resolveBaseRef</code> 优先 <code>GIT_BASE_REF</code>；本地回退用 <code>git rev-parse --abbrev-ref @{upstream}</code> 动态取上游（本仓 main 实际上游是 <code>khy-mirror/main</code>，勿硬编码 <code>origin/main</code>），再回退 <code>origin/main</code> → <code>HEAD~1</code>。</li><li>真实 PR 走 <code>base...HEAD</code> 三点点路径（已验证）；本沙箱 <code>git diff HEAD</code> 返回 2673 处改动（工作树极脏），但只有 180 暂存，脚本走 <code>--cached</code> 回退拿到这 180 个（全非源码）→ 干跑 <code>scanned:0</code>。属环境产物，非脚本 bug。</li></ul>
+<p><strong>验证未做（真实 PR 才见）</strong>：L1 在 CI 中的实际表现；L2 计数棘轮（test-baseline 去 continue-on-error）未动。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../.workbuddy/memory/2026-09-16.html"><div class="dir">← 上一篇</div><div class="ttl">2026-09-16</div></a><a class="next" href="../../.workbuddy/memory/2026-09-18.html"><div class="dir">下一篇 →</div><div class="ttl">2026-09-18 工作日志</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__=".workbuddy/memory/2026-09-17.html";</script>
+<script src="../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

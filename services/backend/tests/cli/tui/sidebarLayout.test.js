@@ -43,15 +43,15 @@ test('isFullscreen: 地板边界(120 列 / 24 行)恰好达到 → true', () => 
   assert.equal(isFullscreen(120, 24, 120, 24, {}), true);
 });
 
-test('isFullscreen: KHY_SIDEBAR_FULLSCREEN_TOL 自定义容差生效', () => {
-  const env = { KHY_SIDEBAR_FULLSCREEN_TOL: '0' };
-  assert.equal(isFullscreen(150, 40, 150, 40, env), true, 'tol=0 等于最大 → true');
-  assert.equal(isFullscreen(149, 40, 150, 40, env), false, 'tol=0 少 1 列 → false');
-  const env5 = { KHY_SIDEBAR_FULLSCREEN_TOL: '5' };
-  assert.equal(isFullscreen(145, 35, 150, 40, env5), true, 'tol=5 差 5 → true');
+test('isFullscreen: 会话最大尺寸容差已固定为 2(env 覆写 2026-09-16 门控收敛后移除)', () => {
+  // KHY_SIDEBAR_FULLSCREEN_TOL env override removed (zero live consumers);
+  // the tolerance is fixed at 2, so any env value leaves behavior unchanged.
+  const anyVal = { KHY_SIDEBAR_FULLSCREEN_TOL: '0' };
+  assert.equal(isFullscreen(148, 38, 150, 40, anyVal), true, 'fixed tol=2: 差 2 → true');
+  assert.equal(isFullscreen(147, 40, 150, 40, anyVal), false, 'fixed tol=2: 差 3 → false');
 });
 
-test('isFullscreen: 容差非法值回退默认 2', () => {
+test('isFullscreen: 容差固定值对垃圾 env 不再敏感(行为恒定)', () => {
   for (const v of ['abc', '-1', '']) {
     assert.equal(isFullscreen(148, 38, 150, 40, { KHY_SIDEBAR_FULLSCREEN_TOL: v }), true, `value ${v}`);
     assert.equal(isFullscreen(147, 40, 150, 40, { KHY_SIDEBAR_FULLSCREEN_TOL: v }), false, `value ${v}`);
@@ -247,14 +247,10 @@ test('sidebarFillRows: KHY_SIDEBAR_MIN_CHROME 覆盖结构下界生效', () => {
   assert.equal(sidebarFillRows(40, { KHY_SIDEBAR_MIN_CHROME: 'abc' }), 30, '非法回退 10');
 });
 
-test('sidebarFillRows: KHY_SIDEBAR_STACK_MAX_RATIO 显式设置才施加上限保护(可选)', () => {
-  assert.equal(sidebarFillRows(50, { KHY_SIDEBAR_STACK_MAX_RATIO: '0.2' }), 10, 'round(10)=10 < fill 40');
-  assert.equal(sidebarFillRows(50, { KHY_SIDEBAR_STACK_MAX_RATIO: '0.8' }), 40, 'round(40)=40 = fill 40');
-  assert.equal(sidebarFillRows(50, { KHY_SIDEBAR_STACK_MAX_RATIO: '1' }), 40, 'ratio=1 → 仍受 fill 钳制');
-});
-
-test('sidebarFillRows: 比例非法(>1/负/文本/空/0) → 无上限(默认行为=填满)', () => {
-  for (const v of ['abc', '1.5', '-0.5', '', '0']) {
+test('sidebarFillRows: STACK_MAX_RATIO 门控已删除(零消费者,2026-09-16 门控收敛) → 固定无额外上限', () => {
+  // The optional extra ceiling cap was never read by a live caller; its
+  // default (no extra cap → fill = rows - minChrome) is now fixed in code.
+  for (const v of ['0.2', '0.8', '1', 'abc', '-0.5', '']) {
     assert.equal(sidebarFillRows(50, { KHY_SIDEBAR_STACK_MAX_RATIO: v }), 40, `value ${v}`);
   }
 });
@@ -468,14 +464,14 @@ test('classifyResize: 新尺寸非法 → none', () => {
   assert.equal(classifyResize(150, 40, 150, undefined, {}), 'none');
 });
 
-test('classifyResize: KHY_SIDEBAR_ZOOM_TOL 自定义容差生效', () => {
-  // 收紧到 0.01:原本 zoom 的近似等比(diff≈0.017)判为 resize。
-  assert.equal(classifyResize(150, 40, 170, 46, { KHY_SIDEBAR_ZOOM_TOL: '0.01' }), 'resize');
-  // 放宽到 0.5:原本 resize 的非等比(diff≈0.208)判为 zoom。
-  assert.equal(classifyResize(150, 40, 200, 45, { KHY_SIDEBAR_ZOOM_TOL: '0.5' }), 'zoom');
+test('classifyResize: 字体缩放容差已固定为 0.15(env 覆写 2026-09-16 门控收敛后移除)', () => {
+  // KHY_SIDEBAR_ZOOM_TOL env override removed (zero live consumers); the
+  // tolerance is fixed at 0.15, so any env value leaves the verdict unchanged.
+  assert.equal(classifyResize(150, 40, 170, 46, { KHY_SIDEBAR_ZOOM_TOL: '0.01' }), 'zoom', '固定 0.15: 近似等比(diff≈0.017)仍判 zoom');
+  assert.equal(classifyResize(150, 40, 200, 45, { KHY_SIDEBAR_ZOOM_TOL: '0.5' }), 'resize', '固定 0.15: 非等比(diff≈0.208)仍判 resize');
 });
 
-test('classifyResize: 容差非法回退默认 0.15', () => {
+test('classifyResize: 容差固定值对垃圾 env 不再敏感(行为恒定)', () => {
   for (const v of ['abc', '-1', '0', '']) {
     assert.equal(classifyResize(150, 40, 170, 46, { KHY_SIDEBAR_ZOOM_TOL: v }), 'zoom', `value ${v}`);
     assert.equal(classifyResize(150, 40, 200, 45, { KHY_SIDEBAR_ZOOM_TOL: v }), 'resize', `value ${v}`);

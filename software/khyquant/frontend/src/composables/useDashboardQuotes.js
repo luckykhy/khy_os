@@ -698,10 +698,10 @@ export function useDashboardQuotes(options = {}) {
         return
       }
 
-      if (import.meta.env.DEV) { console.log('📤 准备发送到后端的数据:', { }
+      if (import.meta.env.DEV) { console.log('📤 准备发送到后端的数据:', {
         favorites: favoritesData,
         count: favoritesData.length
-      })
+      }) }
 
       const response = await axios.post('/api/favorites/batch', {
         favorites: favoritesData

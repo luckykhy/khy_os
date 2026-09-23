@@ -1,383 +1,302 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { GeneralSettings } from './GeneralSettings'
+import { AppearanceSettings } from './AppearanceSettings'
+import { McpSettings } from './McpSettings'
+import { BrowserSettings, CuaSettings } from './BrowserCuaSettings'
+import { UsageSettings } from './UsageSettings'
+import { OnboardingSettings } from './OnboardingSettings'
+import { OnboardingDialog } from './OnboardingDialog'
+import { ListSettingsPage } from './ListSettingsPage'
+import { IndexSettingsPage } from './IndexSettingsPage'
+import { PluginSettings } from './PluginSettings'
 import { KeyManagerPage } from '../keyManager/KeyManagerPage'
 
-interface SettingGroup {
+// ── Nav structure (mirrors ZCode v3.11.2 a11y s-30/s-42, ZC-ALIGN-003 §1-4) ──
+// Full-screen replacement layout: left nav (~240px) + right content scroll area.
+// Three groups + standalone 引导 + 返回工作区 at top + account row at bottom.
+
+interface NavItem {
   id: string
   label: string
-  icon: string
+}
+interface NavGroup {
+  id: string
+  label: string
+  items: NavItem[]
 }
 
-const SETTING_GROUPS: SettingGroup[] = [
-  { id: 'general', label: '通用', icon: '⚙️' },
-  { id: 'models', label: '模型配置', icon: '🧠' },
-  { id: 'providers', label: 'Provider 管理', icon: '🔌' },
-  { id: 'permissions', label: '权限控制', icon: '🔒' },
-  { id: 'plugins', label: '插件管理', icon: '🧩' },
-  { id: 'skills', label: '技能', icon: '⚡' },
-  { id: 'subagents', label: '子智能体', icon: '🤖' },
-  { id: 'mcp', label: 'MCP', icon: '🔗' },
-  { id: 'browser', label: '浏览器控制', icon: '🌐' },
-  { id: 'automations', label: '自动化', icon: '⏰' },
-  { id: 'usage', label: '用量统计', icon: '📊' },
-  { id: 'feedback', label: '用户反馈与支持', icon: '💬' },
+const NAV_GROUPS: NavGroup[] = [
+  {
+    id: 'basic',
+    label: '基础设置',
+    items: [
+      { id: 'general', label: '常规' },
+      { id: 'appearance', label: '外观' },
+      { id: 'models', label: '模型设置' },
+      { id: 'browser', label: '浏览器控制' },
+      { id: 'cua', label: '电脑控制' },
+    ],
+  },
+  {
+    id: 'agent',
+    label: 'Agent 能力',
+    items: [
+      { id: 'memory', label: '记忆' },
+      { id: 'subagents', label: '子智能体' },
+      { id: 'plugins', label: '插件' },
+      { id: 'mcp', label: 'MCP 服务器' },
+      { id: 'skills', label: '技能' },
+      { id: 'commands', label: '命令' },
+      { id: 'hooks', label: '钩子' },
+    ],
+  },
+  {
+    id: 'data',
+    label: '数据与统计',
+    items: [
+      { id: 'index', label: '索引库' },
+      { id: 'usage', label: '使用统计' },
+    ],
+  },
 ]
 
-function Toggle({ enabled, onChange, label, description }: { enabled: boolean; onChange: (v: boolean) => void; label: string; description?: string }) {
-  return (
-    <div className="flex items-center justify-between py-4">
-      <div className="flex-1 mr-4">
-        <div className="text-sm font-medium text-foreground">{label}</div>
-        {description && <div className="text-xs text-foreground/50 mt-1">{description}</div>}
-      </div>
-      <button
-        onClick={() => onChange(!enabled)}
-        className={`relative w-11 h-6 rounded-full transition-colors duration-200 flex-shrink-0 ${
-          enabled ? 'bg-brand' : 'bg-foreground/20'
-        }`}
-      >
-        <span
-          className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-            enabled ? 'translate-x-6' : 'translate-x-1'
-          }`}
-        />
-      </button>
-    </div>
-  )
-}
-
-function Select({ value, onChange, label, description, options }: { value: string; onChange: (v: string) => void; label: string; description?: string; options: { value: string; label: string }[] }) {
-  return (
-    <div className="flex items-center justify-between py-4">
-      <div className="flex-1 mr-4">
-        <div className="text-sm font-medium text-foreground">{label}</div>
-        {description && <div className="text-xs text-foreground/50 mt-1">{description}</div>}
-      </div>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="bg-input border border-input-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-input-border-focused min-w-[120px]"
-      >
-        {options.map(opt => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
-        ))}
-      </select>
-    </div>
-  )
-}
-
-function SettingSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="mb-8">
-      <h3 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider mb-3 px-1">{title}</h3>
-      <div className="bg-card border border-card-border rounded-xl px-5 divide-y divide-card-border">
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function PermissionRow({ toolName, riskLevel, description, override, onOverride }: {
-  toolName: string
-  riskLevel: 'low' | 'medium' | 'high' | 'critical'
-  description: string
-  override?: 'allow' | 'ask' | 'deny'
-  onOverride: (decision: 'allow' | 'ask' | 'deny') => void
-}) {
-  const riskColors = {
-    low: 'text-success',
-    medium: 'text-warning',
-    high: 'text-destructive',
-    critical: 'text-destructive',
-  }
-
-  return (
-    <div className="flex items-center justify-between py-4">
-      <div className="flex-1 mr-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-foreground">{toolName}</span>
-          <span className={`text-xs px-1.5 py-0.5 rounded ${riskColors[riskLevel]} bg-current/10`}>
-            {riskLevel}
-          </span>
-        </div>
-        {description && <div className="text-xs text-foreground/50 mt-1">{description}</div>}
-      </div>
-      <div className="flex items-center gap-1">
-        {(['allow', 'ask', 'deny'] as const).map(decision => (
-          <button
-            key={decision}
-            onClick={() => onOverride(decision)}
-            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-              override === decision
-                ? decision === 'allow' ? 'bg-success/20 text-success'
-                  : decision === 'deny' ? 'bg-destructive/20 text-destructive'
-                  : 'bg-brand/20 text-brand'
-                : 'text-foreground/50 hover:text-foreground hover:bg-surface-hover'
-            }`}
-          >
-            {decision === 'allow' ? '允许' : decision === 'ask' ? '询问' : '拒绝'}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
+// Page metadata: title + subtitle for the right pane header (from a11y s-30)
+const PAGE_META: Record<string, { title: string; subtitle?: string }> = {
+  general: { title: '常规' },
+  appearance: { title: '外观' },
+  models: { title: '模型设置', subtitle: '管理自定义模型供应商，配置后可在聊天时选择使用。' },
+  browser: { title: '浏览器控制', subtitle: '配置内置浏览器的行为与安全策略。' },
+  cua: { title: '电脑控制', subtitle: '配置 Agent 操作电脑的权限与安全边界。' },
+  memory: { title: '记忆', subtitle: '管理 Agent 记忆库，存储跨会话的上下文信息。' },
+  subagents: { title: '子智能体', subtitle: '管理可委派的子智能体。' },
+  plugins: { title: '插件', subtitle: '启用或停用已安装的插件。插件可打包技能、命令、Hooks 和 MCP 服务器。' },
+  mcp: { title: 'MCP 服务器', subtitle: '管理 MCP 服务器，配置后可在对话中使用其工具。' },
+  skills: { title: '技能', subtitle: '管理 Agent 技能，扩展其能力范围。' },
+  commands: { title: '命令', subtitle: '管理自定义命令，配置后可用 / 触发。' },
+  hooks: { title: '钩子', subtitle: '配置 Agent 生命周期事件的处理逻辑。' },
+  index: { title: '索引库', subtitle: '管理代码索引库，用于增强 Agent 的代码理解能力。' },
+  usage: { title: '使用统计', subtitle: '查看模型用量与 Token 消耗趋势。' },
+  onboarding: { title: '引导' },
 }
 
 export function SettingsPage() {
-  const [activeGroup, setActiveGroup] = useState('general')
-  const [theme, setTheme] = useState('dark')
-  const [reasoning, setReasoning] = useState(true)
-  const [streaming, setStreaming] = useState(true)
-  const [autoCompact, setAutoCompact] = useState(true)
-  const [thoughtLevel, setThoughtLevel] = useState('max')
-  const [contextWindow, setContextWindow] = useState('128000')
-  const [autoAccept, setAutoAccept] = useState(false)
-  const [confirmHighRisk, setConfirmHighRisk] = useState(true)
-  const [toolOverrides, setToolOverrides] = useState<Record<string, 'allow' | 'ask' | 'deny'>>({})
+  // Deep-link support: #/settings/plugins → start on the 插件 page.
+  const [activePage, setActivePage] = useState(() => {
+    const suffix = window.location.hash.replace(/^#\/settings\/?/, '')
+    return PAGE_META[suffix] ? suffix : 'general'
+  })
+  // Local-mode account name — same neutral value as the sidebar footer. The old
+  // value was the ZCode account observed in the audit screenshots (another
+  // product's user data, not ours).
+  const [accountName] = useState('本地用户')
+  const [settings, setSettings] = useState<Record<string, unknown>>({})
 
-  const tools = [
-    { name: 'read', riskLevel: 'low' as const, description: '读取文件内容' },
-    { name: 'write', riskLevel: 'high' as const, description: '写入或创建文件' },
-    { name: 'edit', riskLevel: 'medium' as const, description: '编辑现有文件' },
-    { name: 'bash', riskLevel: 'critical' as const, description: '执行终端命令' },
-    { name: 'grep', riskLevel: 'low' as const, description: '搜索文件内容' },
-    { name: 'glob', riskLevel: 'low' as const, description: '查找文件' },
-    { name: 'websearch', riskLevel: 'medium' as const, description: '联网搜索' },
-    { name: 'webfetch', riskLevel: 'medium' as const, description: '抓取网页内容' },
-  ]
+  // Load persisted settings on mount (preload IPC: settings:get)
+  useEffect(() => {
+    const api = (window as unknown as {
+      __KHYOS__?: { getSettings?: () => Promise<Record<string, unknown>> }
+    }).__KHYOS__
+    api?.getSettings?.().then((s) => setSettings(s || {})).catch(() => {})
+  }, [])
+
+  // Persist a single setting key (preload IPC: settings:set)
+  const updateSetting = useCallback((key: string, value: unknown) => {
+    setSettings((prev) => ({ ...prev, [key]: value }))
+    const api = (window as unknown as {
+      __KHYOS__?: { setSetting?: (k: string, v: unknown) => Promise<void> }
+    }).__KHYOS__
+    api?.setSetting?.(key, value).catch(() => {})
+  }, [])
+
+  const handleBack = () => {
+    window.location.hash = ''
+  }
+
+  const meta = PAGE_META[activePage] || { title: activePage }
 
   return (
-    <div className="flex h-full">
-      {/* 左侧导航 */}
-      <div className="w-56 border-r border-border py-4 overflow-auto flex-shrink-0">
-        <div className="px-4 mb-4">
-          <input
-            type="text"
-            placeholder="搜索设置..."
-            className="w-full bg-input border border-input-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:outline-none focus:border-input-border-focused"
-          />
+    <div className="flex flex-col h-full bg-background">
+      {/* OnboardingDialog: mounted once, opens on khy:open-onboarding (D5/s-8).
+          打开引导 rows on 常规/引导 pages dispatch that event. */}
+      <OnboardingDialog />
+      {/* Top bar: ZCode logo + window menu + caption (caption buttons are in TitleBar overlay) */}
+      <div className="flex items-center justify-between h-[60px] px-4 border-b border-border flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-foreground">KhyOS</span>
         </div>
-        {SETTING_GROUPS.map(group => (
+        <div className="flex items-center gap-1">
           <button
-            key={group.id}
-            onClick={() => setActiveGroup(group.id)}
-            className={`w-full px-4 py-2.5 text-sm text-left flex items-center gap-3 transition-colors ${
-              activeGroup === group.id
-                ? 'bg-selected text-brand font-medium'
-                : 'text-foreground/70 hover:text-foreground hover:bg-surface-hover'
-            }`}
+            onClick={handleBack}
+            className="px-3 py-1.5 text-sm text-foreground/70 hover:text-foreground hover:bg-surface-hover rounded-lg transition-colors"
           >
-            <span className="text-base">{group.icon}</span>
-            <span>{group.label}</span>
+            返回工作区
           </button>
-        ))}
+        </div>
       </div>
 
-      {/* 右侧内容 */}
-      <div className="flex-1 overflow-auto p-8">
-        <h2 className="text-xl font-bold text-foreground mb-1">
-          {SETTING_GROUPS.find(g => g.id === activeGroup)?.label}
-        </h2>
-        <p className="text-sm text-foreground/50 mb-8">
-          管理你的偏好与配置
-        </p>
-
-        {activeGroup === 'general' && (
-          <div>
-            <SettingSection title="外观">
-              <Select
-                label="主题"
-                description="选择应用外观主题"
-                value={theme}
-                onChange={setTheme}
-                options={[
-                  { value: 'light', label: '浅色' },
-                  { value: 'dark', label: '暗色' },
-                  { value: 'system', label: '跟随系统' },
-                ]}
-              />
-            </SettingSection>
-
-            <SettingSection title="对话">
-              <Toggle
-                label="显示思考轨迹"
-                description="在消息中显示模型的思考过程"
-                enabled={reasoning}
-                onChange={setReasoning}
-              />
-              <Toggle
-                label="流式输出"
-                description="实时显示模型生成的内容"
-                enabled={streaming}
-                onChange={setStreaming}
-              />
-              <Toggle
-                label="自动压缩上下文"
-                description="当对话过长时自动压缩历史消息"
-                enabled={autoCompact}
-                onChange={setAutoCompact}
-              />
-              <Select
-                label="思考强度"
-                description="控制模型思考的深度"
-                value={thoughtLevel}
-                onChange={setThoughtLevel}
-                options={[
-                  { value: 'off', label: '关闭' },
-                  { value: 'low', label: '低' },
-                  { value: 'high', label: '高' },
-                  { value: 'max', label: '最高' },
-                ]}
-              />
-            </SettingSection>
-
-            <SettingSection title="上下文">
-              <Select
-                label="上下文窗口"
-                description="单次对话的最大 token 数"
-                value={contextWindow}
-                onChange={setContextWindow}
-                options={[
-                  { value: '32000', label: '32K' },
-                  { value: '64000', label: '64K' },
-                  { value: '128000', label: '128K' },
-                  { value: '200000', label: '200K' },
-                ]}
-              />
-            </SettingSection>
+      <div className="flex flex-1 overflow-hidden">
+        {/* ── Left navigation ── */}
+        <nav className="w-[240px] flex-shrink-0 border-r border-border flex flex-col overflow-hidden">
+          {/* Top: 返回工作区 */}
+          <div className="p-3 border-b border-border">
+            <button
+              onClick={handleBack}
+              className="w-full px-3 py-2 text-sm text-left text-foreground/70 hover:text-foreground hover:bg-surface-hover rounded-lg transition-colors flex items-center gap-2"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M8.5 3L4.5 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              返回工作区
+            </button>
           </div>
-        )}
 
-        {activeGroup === 'permissions' && (
-          <div>
-            <SettingSection title="执行模式">
-              <div className="py-4">
-                <p className="text-sm text-foreground/60 mb-4">控制 Agent 执行工具时的权限策略</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { id: 'default', label: '默认模式', desc: '高风险操作前询问' },
-                    { id: 'plan', label: '计划模式', desc: '先计划后执行' },
-                    { id: 'acceptEdits', label: '自动接受编辑', desc: '自动接受文件编辑' },
-                    { id: 'dontAsk', label: '静默模式', desc: '跳过常规确认' },
-                    { id: 'bypassPermissions', label: '跳过权限检查', desc: '跳过所有权限（危险）' },
-                  ].map(mode => (
-                    <button
-                      key={mode.id}
-                      className={`p-4 rounded-xl border text-left transition-all ${
-                        autoAccept ? 'border-brand/30 bg-brand/5' : 'border-card-border hover:border-brand/30 hover:bg-surface-hover'
-                      }`}
-                    >
-                      <div className="text-sm font-semibold text-foreground">{mode.label}</div>
-                      <div className="text-xs text-foreground/50 mt-1">{mode.desc}</div>
-                    </button>
-                  ))}
+          {/* Nav groups (scrollable) */}
+          <div className="flex-1 overflow-y-auto py-2">
+            {NAV_GROUPS.map((group) => (
+              <div key={group.id} className="mb-3">
+                <div className="px-4 py-1.5 text-xs font-semibold text-foreground/40 uppercase tracking-wider">
+                  {group.label}
                 </div>
+                {group.items.map((item) => (
+                  <NavButton
+                    key={item.id}
+                    label={item.label}
+                    active={activePage === item.id}
+                    onClick={() => setActivePage(item.id)}
+                  />
+                ))}
               </div>
-            </SettingSection>
+            ))}
 
-            <SettingSection title="工具权限">
-              <div className="py-2">
-                <p className="text-xs text-foreground/40 px-1 pb-3">为每个工具设置独立的权限策略</p>
-              </div>
-              {tools.map(tool => (
-                <PermissionRow
-                  key={tool.name}
-                  toolName={tool.name}
-                  riskLevel={tool.riskLevel}
-                  description={tool.description}
-                  override={toolOverrides[tool.name]}
-                  onOverride={(decision) => {
-                    setToolOverrides(prev => {
-                      const next = { ...prev }
-                      if (decision === 'ask') delete next[tool.name]
-                      else next[tool.name] = decision
-                      return next
-                    })
-                  }}
-                />
-              ))}
-            </SettingSection>
-
-            <SettingSection title="安全">
-              <Toggle
-                label="高风险操作确认"
-                description="执行写入、删除等高风险操作前要求确认"
-                enabled={confirmHighRisk}
-                onChange={setConfirmHighRisk}
-              />
-              <Toggle
-                label="自动接受低风险操作"
-                description="自动接受读取、搜索等低风险操作"
-                enabled={autoAccept}
-                onChange={setAutoAccept}
-              />
-            </SettingSection>
+            {/* Standalone: 引导 (no group header — ZCode a11y s-25 has none) */}
+            <NavButton
+              label="引导"
+              active={activePage === 'onboarding'}
+              onClick={() => setActivePage('onboarding')}
+            />
           </div>
-        )}
 
-        {activeGroup === 'models' && (
-          <div>
-            <SettingSection title="模型配置">
-              <div className="py-4">
-                <p className="text-sm text-foreground/60 mb-4">配置 AI 模型通道与 API Key</p>
-                <div className="space-y-3">
-                  {[
-                    { name: 'Claude', icon: '🧠', status: '未配置' },
-                    { name: 'GPT', icon: '⚡', status: '未配置' },
-                    { name: 'Gemini', icon: '💎', status: '未配置' },
-                    { name: 'GLM', icon: '🔮', status: '已配置' },
-                  ].map(model => (
-                    <div key={model.name} className="flex items-center justify-between p-4 bg-input rounded-xl border border-card-border">
-                      <div className="flex items-center gap-3">
-                        <span className="w-10 h-10 rounded-xl bg-card flex items-center justify-center text-lg border border-card-border">
-                          {model.icon}
-                        </span>
-                        <div>
-                          <div className="text-sm font-semibold text-foreground">{model.name}</div>
-                          <div className={`text-xs ${model.status === '已配置' ? 'text-success' : 'text-foreground/40'}`}>
-                            {model.status}
-                          </div>
-                        </div>
-                      </div>
-                      <button className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-                        model.status === '已配置'
-                          ? 'text-foreground/60 border border-card-border hover:bg-surface-hover'
-                          : 'text-brand border border-brand/30 hover:bg-brand/10'
-                      }`}>
-                        {model.status === '已配置' ? '修改' : '配置'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </SettingSection>
-          </div>
-        )}
-
-        {activeGroup === 'providers' && (
-          <div>
-            <p className="text-sm text-foreground/50 mb-4">
-              密钥与端点中心管理：一处配置，全 Agent 点击激活即用（DESIGN-ARCH-091）。
-            </p>
-            <div className="border border-card-border rounded-xl overflow-hidden">
-              <KeyManagerPage embedded />
+          {/* Bottom: account chip + 返回工作区 */}
+          <div className="border-t border-border p-3 flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-brand/20 flex items-center justify-center text-xs font-semibold text-brand flex-shrink-0">
+              {accountName.slice(0, 1).toUpperCase()}
             </div>
+            <span className="text-sm font-medium text-foreground truncate flex-1">{accountName}</span>
+            <button
+              onClick={handleBack}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-foreground/60 hover:text-foreground hover:bg-surface-hover transition-colors flex-shrink-0"
+              title="返回工作区"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M8.5 3L4.5 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
           </div>
-        )}
+        </nav>
 
-        {activeGroup !== 'general' && activeGroup !== 'models' && activeGroup !== 'permissions' && activeGroup !== 'providers' && (
-          <div className="bg-card border border-card-border rounded-xl p-12 text-center">
-            <span className="text-5xl block mb-4">
-              {SETTING_GROUPS.find(g => g.id === activeGroup)?.icon}
-            </span>
-            <h3 className="text-lg font-semibold text-foreground mb-2">
-              {SETTING_GROUPS.find(g => g.id === activeGroup)?.label}
-            </h3>
-            <p className="text-sm text-foreground/50">
-              设置项将在后续 Phase 完善
-            </p>
+        {/* ── Right content area ── */}
+        <main className="flex-1 overflow-y-auto">
+          {/* Page header — centered column so content doesn't hug the left nav */}
+          <div className="px-8 pt-8 pb-2 max-w-3xl mx-auto w-full">
+            <h1 className="text-xl font-semibold text-foreground">{meta.title}</h1>
+            {meta.subtitle && (
+              <p className="text-sm text-foreground/50 mt-1">{meta.subtitle}</p>
+            )}
           </div>
-        )}
+
+          {/* Page content */}
+          <div className="px-8 pb-16 max-w-3xl mx-auto w-full">
+            {activePage === 'general' && (
+              <GeneralSettings settings={settings} onChange={updateSetting} />
+            )}
+            {activePage === 'appearance' && (
+              <AppearanceSettings settings={settings} onChange={updateSetting} />
+            )}
+            {activePage === 'models' && (
+              <div className="border border-card-border rounded-xl overflow-hidden">
+                <KeyManagerPage embedded />
+              </div>
+            )}
+            {activePage === 'browser' && (
+              <BrowserSettings settings={settings} onChange={updateSetting} />
+            )}
+            {activePage === 'cua' && (
+              <CuaSettings settings={settings} onChange={updateSetting} />
+            )}
+            {activePage === 'mcp' && <McpSettings />}
+            {activePage === 'usage' && <UsageSettings />}
+            {activePage === 'onboarding' && (
+              <OnboardingSettings settings={settings} onChange={updateSetting} />
+            )}
+            {/* Pattern B: list pages backed by agentItemStore (P13 real wiring) */}
+            {activePage === 'commands' && (
+              <ListSettingsPage
+                kind="command"
+                noun="命令"
+                description="新建命令，或从外部 Agent 导入已有命令。"
+                contentLabel="命令内容"
+                contentPlaceholder="/ 前缀触发的提示词，支持 $ARGUMENTS 占位符"
+              />
+            )}
+            {activePage === 'hooks' && (
+              <ListSettingsPage
+                kind="hook"
+                noun="钩子"
+                description="新建钩子，配置 Agent 生命周期事件的处理逻辑。"
+                contentLabel="钩子脚本"
+                contentPlaceholder="事件名 + 处理命令，例如 PreToolUse: node check.js"
+              />
+            )}
+            {activePage === 'skills' && (
+              <ListSettingsPage
+                kind="skill"
+                noun="技能"
+                description="从技能市场浏览并安装技能。"
+                contentLabel="技能说明"
+                contentPlaceholder="技能的指令内容（SKILL.md 正文）"
+              />
+            )}
+            {activePage === 'subagents' && (
+              <ListSettingsPage
+                kind="subagent"
+                noun="子智能体"
+                description="新建子智能体，或从外部 Agent 导入已有配置。"
+                contentLabel="配置"
+                contentPlaceholder="子智能体的职责描述与提示词"
+              />
+            )}
+            {activePage === 'plugins' && <PluginSettings />}
+            {activePage === 'memory' && (
+              <ListSettingsPage
+                kind="memory"
+                noun="记忆"
+                description="管理 Agent 记忆库，存储跨会话的上下文信息。"
+                contentLabel="记忆内容"
+                contentPlaceholder="希望 Agent 跨会话记住的信息"
+              />
+            )}
+            {activePage === 'index' && <IndexSettingsPage />}
+          </div>
+        </main>
       </div>
     </div>
   )
 }
+
+// ── Nav button (matches ZCode left nav item style) ──
+function NavButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full px-4 py-2 text-sm text-left transition-colors rounded-lg mx-1 ${
+        active
+          ? 'bg-selected text-foreground font-medium'
+          : 'text-foreground/70 hover:text-foreground hover:bg-surface-hover'
+      }`}
+      style={{ width: 'calc(100% - 8px)' }}
+    >
+      {label}
+    </button>
+  )
+}
+

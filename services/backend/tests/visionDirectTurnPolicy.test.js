@@ -51,7 +51,7 @@ describe('Vision Direct Turn Policy', () => {
       const note = buildInlineImageNote({ count: 1, env: {} });
       expect(note && note).toContain('内联');
       expect(note).toContain('一张图片');
-      expect(/不要用 Read/.test(note).toBeTruthy());
+      expect(/不要用 Read/.test(note)).toBeTruthy();
   });
 
   test('多张图片 → 复数措辞', () => {

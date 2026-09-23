@@ -68,8 +68,8 @@ describe('Usage Token Count Shape', () => {
   });
 
   test('fail-soft: never throws on bad env', () => {
-      expect(() => leaf.shapeTokenCount(1000, undefined).not.toThrow());
-      expect(() => leaf.usageTokenPromotionEnabled(null).not.toThrow());
+      expect(() => leaf.shapeTokenCount(1000, undefined)).not.toThrow();
+      expect(() => leaf.usageTokenPromotionEnabled(null)).not.toThrow();
   });
 
   test('formatTokenCount: gate ON → boundary fixed', () => {

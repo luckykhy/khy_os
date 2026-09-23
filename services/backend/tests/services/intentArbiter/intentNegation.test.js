@@ -5,7 +5,8 @@
  * 验证:门控梯、前向邻接否定、后向情态否定、`不仅/不但` 让步词不误伤、
  *      `别执行A但执行B` 保留主动命令、门控关字节回退、防呆非串入参不抛。
  */
-const neg = require('../../../src/services/intentArbiter/intentNegation');
+const neg = require('../../../src/services/domain/state/intentArbiter/intentNegation.js');
+const assert = require('node:assert');
 // 与 intentLexicon 同表(测试内联,避免对词库顺序耦合)。
 const LEX = {
   markers: ['不要', '别', '不用', '不必', '无需', '别再', '先别', '不想', '不需要', '没', '没有', '勿', '甭', '不'],
@@ -41,7 +42,7 @@ describe('Intent Negation', () => {
       expect(neg.isEnabled({ KHY_INTENT_NEGATION: '' })).toBe(true);
       expect(neg.isEnabled({ KHY_INTENT_NEGATION: '1' })).toBe(true);
       for (const v of ['0', 'false', 'off', 'no', 'OFF', 'No']) {
-        expect(neg.isEnabled({ KHY_INTENT_NEGATION: v })).toBe(false, v);
+        expect(neg.isEnabled({ KHY_INTENT_NEGATION: v })).toBe(false);
       }
   });
 
@@ -61,12 +62,12 @@ describe('Intent Negation', () => {
   });
 
   test('防呆:非串/空/非数组/空词表入参绝不抛', () => {
-      expect(neg.selectNegatedVerbs(null).toEqual(['执行'], {}, LEX), []);
-      expect(neg.selectNegatedVerbs('').toEqual(['执行'], {}, LEX), []);
-      expect(neg.selectNegatedVerbs('不要执行').toEqual(null, {}, LEX), []);
-      expect(neg.selectNegatedVerbs('不要执行').toEqual([], {}, LEX), []);
-      expect(neg.selectNegatedVerbs('不要执行').toEqual(['执行'], {}, {}), []);
-      expect(neg.selectNegatedVerbs('不要执行').toEqual(['执行', 42, ''], {}, LEX), ['执行']);
+      expect(neg.selectNegatedVerbs(null, ['执行'], {}, LEX)).toEqual([]);
+      expect(neg.selectNegatedVerbs('', ['执行'], {}, LEX)).toEqual([]);
+      expect(neg.selectNegatedVerbs('不要执行', null, {}, LEX)).toEqual([]);
+      expect(neg.selectNegatedVerbs('不要执行', [], {}, LEX)).toEqual([]);
+      expect(neg.selectNegatedVerbs('不要执行', ['执行'], {}, {})).toEqual([]);
+      expect(neg.selectNegatedVerbs('不要执行', ['执行', 42, ''], {}, LEX)).toEqual(['执行']);
   });
 
   test('_occurrenceNegated:前向/后向邻接判据直测', () => {

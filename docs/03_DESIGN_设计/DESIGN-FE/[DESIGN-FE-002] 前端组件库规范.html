@@ -1,0 +1,1374 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-FE-002] 前端组件库规范.md -->
+<title>[DESIGN-FE-002] 前端组件库规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-FE<span class="sep">›</span>[DESIGN-FE-002] 前端组件库规范</div>
+      <header class="hero reveal"><h1>[DESIGN-FE-002] 前端组件库规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-fe-002-前端组件库规范">[DESIGN-FE-002] 前端组件库规范</a></li><li class="lvl-2"><a href="#1-组件库概述">1. 组件库概述</a></li><li class="lvl-3"><a href="#1-1-组件库架构">1.1 组件库架构</a></li><li class="lvl-3"><a href="#1-2-组件分类">1.2 组件分类</a></li><li class="lvl-3"><a href="#1-3-组件命名规范">1.3 组件命名规范</a></li><li class="lvl-2"><a href="#2-组件开发规范">2. 组件开发规范</a></li><li class="lvl-3"><a href="#2-1-组件结构">2.1 组件结构</a></li><li class="lvl-3"><a href="#2-2-props-规范">2.2 Props 规范</a></li><li class="lvl-3"><a href="#2-3-events-规范">2.3 Events 规范</a></li><li class="lvl-3"><a href="#2-4-slots-规范">2.4 Slots 规范</a></li><li class="lvl-3"><a href="#2-5-样式规范">2.5 样式规范</a></li><li class="lvl-2"><a href="#3-组件-api-设计">3. 组件 API 设计</a></li><li class="lvl-3"><a href="#3-1-基础组件-api">3.1 基础组件 API</a></li><li class="lvl-3"><a href="#3-2-反馈组件-api">3.2 反馈组件 API</a></li><li class="lvl-3"><a href="#3-3-数据组件-api">3.3 数据组件 API</a></li><li class="lvl-2"><a href="#4-组件测试规范">4. 组件测试规范</a></li><li class="lvl-3"><a href="#4-1-单元测试">4.1 单元测试</a></li><li class="lvl-3"><a href="#4-2-集成测试">4.2 集成测试</a></li><li class="lvl-3"><a href="#4-3-视觉回归测试">4.3 视觉回归测试</a></li><li class="lvl-2"><a href="#5-组件文档规范">5. 组件文档规范</a></li><li class="lvl-3"><a href="#5-1-文档结构">5.1 文档结构</a></li><li class="lvl-3"><a href="#5-2-示例代码">5.2 示例代码</a></li><li class="lvl-2"><a href="#6-组件发布规范">6. 组件发布规范</a></li><li class="lvl-3"><a href="#6-1-版本管理">6.1 版本管理</a></li><li class="lvl-3"><a href="#6-2-发布流程">6.2 发布流程</a></li><li class="lvl-3"><a href="#6-3-changelog-规范">6.3 CHANGELOG 规范</a></li><li class="lvl-2"><a href="#7-组件质量保证">7. 组件质量保证</a></li><li class="lvl-3"><a href="#7-1-代码质量">7.1 代码质量</a></li><li class="lvl-3"><a href="#7-2-测试覆盖率">7.2 测试覆盖率</a></li><li class="lvl-3"><a href="#7-3-性能监控">7.3 性能监控</a></li><li class="lvl-2"><a href="#8-版本历史">8. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-fe-002-前端组件库规范">[DESIGN-FE-002] 前端组件库规范<a class="anchor" href="#design-fe-002-前端组件库规范" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档定义 khy-os 项目前端组件库的设计标准、开发规范和发布流程。</p></blockquote>
+<blockquote><p>⚠️ <strong>状态标注（2026-09-09）——目标态，非现状</strong>：本文描述的 <code>KhyButton</code>/<code>KhyInput</code>/<code>KhyCard</code> 等独立组件库在当前代码中<strong>不存在</strong>。实测现状（[DESIGN-FE-001] §5）：基座是 Element Plus（不重新封装），共享组件仅 <code>KhyPageHeader</code>/<code>KhyEmpty</code>/<code>KhyIcon</code>/<code>LoadErrorBanner</code>/<code>GlobalProgressBar</code>/<code>KhyFloatBall</code> 六个，跨前端共享逻辑走 <code>@khy/ui-shared</code>（纯 JS 原语，无 UI 组件）。第 6 章「发布到 npm」流程亦不适用——<code>@khy/ui-shared</code> 是 <code>private: true</code> 的 workspace 包。<strong>在组件库真正落地前，一切以 [DESIGN-FE-001] 为准</strong>；本文仅在那时才转为生效规范。</p></blockquote>
+<hr>
+<h2 id="1-组件库概述">1. 组件库概述<a class="anchor" href="#1-组件库概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-组件库架构">1.1 组件库架构<a class="anchor" href="#1-1-组件库架构" aria-label="锚点">#</a></h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                    khy-os 组件库架构                          │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              基础组件 (Base Components)              │   │
+│  │  • Button  • Input  • Card  • Modal  • Table        │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              业务组件 (Business Components)          │   │
+│  │  • UserCard  • OrderList  • PaymentForm             │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              布局组件 (Layout Components)            │   │
+│  │  • PageHeader  • Sidebar  • Footer                  │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              反馈组件 (Feedback Components)          │   │
+│  │  • Toast  • Alert  • Skeleton  • Empty              │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘</code></pre>
+<h3 id="1-2-组件分类">1.2 组件分类<a class="anchor" href="#1-2-组件分类" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>分类</th><th>说明</th><th>示例</th></tr></thead><tbody><tr><td><strong>基础组件</strong></td><td>通用 UI 原子组件</td><td>Button, Input, Card, Modal</td></tr><tr><td><strong>业务组件</strong></td><td>特定业务场景组件</td><td>UserCard, OrderList, PaymentForm</td></tr><tr><td><strong>布局组件</strong></td><td>页面布局相关组件</td><td>PageHeader, Sidebar, Footer</td></tr><tr><td><strong>反馈组件</strong></td><td>用户反馈相关组件</td><td>Toast, Alert, Skeleton, Empty</td></tr><tr><td><strong>导航组件</strong></td><td>导航相关组件</td><td>Menu, Breadcrumb, Tabs, Pagination</td></tr><tr><td><strong>数据组件</strong></td><td>数据展示相关组件</td><td>Table, List, Tree, Chart</td></tr></tbody></table>
+<h3 id="1-3-组件命名规范">1.3 组件命名规范<a class="anchor" href="#1-3-组件命名规范" aria-label="锚点">#</a></h3>
+<p><strong>命名规则</strong>：</p>
+<ul><li>使用 PascalCase：<code>KhyButton</code>、<code>KhyCard</code></li><li>以 <code>Khy</code> 前缀标识品牌组件</li><li>使用描述性名称：<code>UserProfileCard</code> 而非 <code>Card1</code></li></ul>
+<p><strong>文件命名</strong>：</p>
+<pre><code>components/
+├── base/
+│   ├── KhyButton.vue
+│   ├── KhyInput.vue
+│   └── KhyCard.vue
+├── business/
+│   ├── UserProfileCard.vue
+│   └── OrderList.vue
+├── layout/
+│   ├── KhyPageHeader.vue
+│   └── KhySidebar.vue
+└── feedback/
+    ├── KhyToast.vue
+    └── KhyAlert.vue</code></pre>
+<hr>
+<h2 id="2-组件开发规范">2. 组件开发规范<a class="anchor" href="#2-组件开发规范" aria-label="锚点">#</a></h2>
+<h3 id="2-1-组件结构">2.1 组件结构<a class="anchor" href="#2-1-组件结构" aria-label="锚点">#</a></h3>
+<p><strong>标准组件模板</strong>：</p>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;div :class=&quot;componentClasses&quot;&gt;
+    &lt;!-- 组件内容 --&gt;
+  &lt;/div&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+import { computed } from 'vue';
+
+// Props 定义
+const props = defineProps({
+  variant: {
+    type: String,
+    default: 'default',
+    validator: (value) =&gt; ['default', 'primary', 'success', 'warning', 'danger'].includes(value)
+  },
+  size: {
+    type: String,
+    default: 'md',
+    validator: (value) =&gt; ['sm', 'md', 'lg'].includes(value)
+  },
+  disabled: {
+    type: Boolean,
+    default: false
+  }
+});
+
+// Emits 定义
+const emit = defineEmits(['click', 'focus', 'blur']);
+
+// 计算属性
+const componentClasses = computed(() =&gt; [
+  'khy-component',
+  `khy-component--${props.variant}`,
+  `khy-component--${props.size}`,
+  {
+    'khy-component--disabled': props.disabled
+  }
+]);
+
+// 方法
+const handleClick = (event) =&gt; {
+  if (!props.disabled) {
+    emit('click', event);
+  }
+};
+&lt;/script&gt;
+
+&lt;style scoped&gt;
+.khy-component {
+  /* 基础样式 */
+}
+
+.khy-component--primary {
+  /* 主要样式 */
+}
+
+.khy-component--disabled {
+  /* 禁用样式 */
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+&lt;/style&gt;</code></pre>
+<h3 id="2-2-props-规范">2.2 Props 规范<a class="anchor" href="#2-2-props-规范" aria-label="锚点">#</a></h3>
+<p><strong>Props 定义</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> props = <span class="hljs-title function_">defineProps</span>({
+  <span class="hljs-comment">// 必填属性</span>
+  <span class="hljs-attr">value</span>: {
+    <span class="hljs-attr">type</span>: [<span class="hljs-title class_">String</span>, <span class="hljs-title class_">Number</span>],
+    <span class="hljs-attr">required</span>: <span class="hljs-literal">true</span>
+  },
+  
+  <span class="hljs-comment">// 可选属性</span>
+  <span class="hljs-attr">variant</span>: {
+    <span class="hljs-attr">type</span>: <span class="hljs-title class_">String</span>,
+    <span class="hljs-attr">default</span>: <span class="hljs-string">&#x27;default&#x27;</span>,
+    <span class="hljs-attr">validator</span>: <span class="hljs-function">(<span class="hljs-params">value</span>) =&gt;</span> [<span class="hljs-string">&#x27;default&#x27;</span>, <span class="hljs-string">&#x27;primary&#x27;</span>, <span class="hljs-string">&#x27;success&#x27;</span>].<span class="hljs-title function_">includes</span>(value)
+  },
+  
+  <span class="hljs-comment">// 复杂属性</span>
+  <span class="hljs-attr">options</span>: {
+    <span class="hljs-attr">type</span>: <span class="hljs-title class_">Array</span>,
+    <span class="hljs-attr">default</span>: <span class="hljs-function">() =&gt;</span> [],
+    <span class="hljs-attr">validator</span>: <span class="hljs-function">(<span class="hljs-params">value</span>) =&gt;</span> value.<span class="hljs-title function_">every</span>(<span class="hljs-function"><span class="hljs-params">item</span> =&gt;</span> item.<span class="hljs-property">label</span> &amp;&amp; item.<span class="hljs-property">value</span>)
+  },
+  
+  <span class="hljs-comment">// 对象属性</span>
+  <span class="hljs-attr">config</span>: {
+    <span class="hljs-attr">type</span>: <span class="hljs-title class_">Object</span>,
+    <span class="hljs-attr">default</span>: <span class="hljs-function">() =&gt;</span> ({
+      <span class="hljs-attr">size</span>: <span class="hljs-string">&#x27;md&#x27;</span>,
+      <span class="hljs-attr">disabled</span>: <span class="hljs-literal">false</span>
+    })
+  }
+});</code></pre>
+<p><strong>Props 命名</strong>：</p>
+<ul><li>使用 camelCase：<code>userName</code>、<code>isActive</code></li><li>布尔类型以 <code>is</code>、<code>has</code>、<code>can</code> 开头：<code>isLoading</code>、<code>hasError</code></li><li>事件处理以 <code>on</code> 开头：<code>onClick</code>、<code>onChange</code></li></ul>
+<h3 id="2-3-events-规范">2.3 Events 规范<a class="anchor" href="#2-3-events-规范" aria-label="锚点">#</a></h3>
+<p><strong>Events 定义</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> emit = <span class="hljs-title function_">defineEmits</span>([
+  <span class="hljs-comment">// 基础事件</span>
+  <span class="hljs-string">&#x27;click&#x27;</span>,
+  <span class="hljs-string">&#x27;focus&#x27;</span>,
+  <span class="hljs-string">&#x27;blur&#x27;</span>,
+  
+  <span class="hljs-comment">// 带数据事件</span>
+  <span class="hljs-string">&#x27;change&#x27;</span>,
+  <span class="hljs-string">&#x27;input&#x27;</span>,
+  <span class="hljs-string">&#x27;submit&#x27;</span>,
+  
+  <span class="hljs-comment">// 自定义事件</span>
+  <span class="hljs-string">&#x27;update:modelValue&#x27;</span>,
+  <span class="hljs-string">&#x27;item-click&#x27;</span>,
+  <span class="hljs-string">&#x27;selection-change&#x27;</span>
+]);</code></pre>
+<p><strong>Events 命名</strong>：</p>
+<ul><li>使用 kebab-case：<code>item-click</code>、<code>selection-change</code></li><li>双向绑定使用 <code>update:modelValue</code></li><li>动词开头：<code>click</code>、<code>change</code>、<code>submit</code></li></ul>
+<h3 id="2-4-slots-规范">2.4 Slots 规范<a class="anchor" href="#2-4-slots-规范" aria-label="锚点">#</a></h3>
+<p><strong>Slots 定义</strong>：</p>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;div class=&quot;khy-component&quot;&gt;
+    &lt;!-- 默认插槽 --&gt;
+    &lt;div class=&quot;khy-component__content&quot;&gt;
+      &lt;slot /&gt;
+    &lt;/div&gt;
+    
+    &lt;!-- 具名插槽 --&gt;
+    &lt;div v-if=&quot;$slots.header&quot; class=&quot;khy-component__header&quot;&gt;
+      &lt;slot name=&quot;header&quot; /&gt;
+    &lt;/div&gt;
+    
+    &lt;!-- 作用域插槽 --&gt;
+    &lt;div class=&quot;khy-component__list&quot;&gt;
+      &lt;slot
+        v-for=&quot;item in items&quot;
+        :key=&quot;item.id&quot;
+        name=&quot;item&quot;
+        :item=&quot;item&quot;
+        :index=&quot;items.indexOf(item)&quot;
+      /&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/template&gt;</code></pre>
+<p><strong>Slots 命名</strong>：</p>
+<ul><li>使用 kebab-case：<code>header</code>、<code>item</code>、<code>footer</code></li><li>默认插槽无需命名</li><li>作用域插槽提供清晰的数据结构</li></ul>
+<h3 id="2-5-样式规范">2.5 样式规范<a class="anchor" href="#2-5-样式规范" aria-label="锚点">#</a></h3>
+<p><strong>样式组织</strong>：</p>
+<pre><code class="language-vue">&lt;style scoped&gt;
+/* 1. 基础样式 */
+.khy-component {
+  /* 布局 */
+  display: flex;
+  align-items: center;
+  
+  /* 盒模型 */
+  padding: var(--khy-space-2);
+  border: 1px solid var(--khy-gray-200);
+  border-radius: var(--khy-radius);
+  
+  /* 排版 */
+  font-size: var(--khy-text-base);
+  color: var(--khy-text-main);
+  
+  /* 视觉 */
+  background: var(--khy-bg-elevated);
+  box-shadow: var(--khy-shadow-sm);
+  
+  /* 动画 */
+  transition: all 0.2s ease;
+}
+
+/* 2. 变体样式 */
+.khy-component--primary {
+  background: var(--khy-primary);
+  color: var(--khy-white);
+}
+
+/* 3. 尺寸样式 */
+.khy-component--sm {
+  padding: var(--khy-space-1);
+  font-size: var(--khy-text-sm);
+}
+
+/* 4. 状态样式 */
+.khy-component--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 5. 子元素样式 */
+.khy-component__header {
+  margin-bottom: var(--khy-space-2);
+}
+
+/* 6. 修饰符样式 */
+.khy-component--rounded {
+  border-radius: var(--khy-radius-full);
+}
+&lt;/style&gt;</code></pre>
+<p><strong>CSS 变量</strong>：</p>
+<pre><code class="language-css"><span class="hljs-selector-pseudo">:root</span> {
+  <span class="hljs-comment">/* 组件级变量 */</span>
+  <span class="hljs-attr">--khy-component-bg</span>: <span class="hljs-built_in">var</span>(--khy-bg-elevated);
+  <span class="hljs-attr">--khy-component-border</span>: <span class="hljs-built_in">var</span>(--khy-gray-<span class="hljs-number">200</span>);
+  <span class="hljs-attr">--khy-component-radius</span>: <span class="hljs-built_in">var</span>(--khy-radius);
+  <span class="hljs-attr">--khy-component-padding</span>: <span class="hljs-built_in">var</span>(--khy-space-<span class="hljs-number">2</span>);
+}</code></pre>
+<hr>
+<h2 id="3-组件-api-设计">3. 组件 API 设计<a class="anchor" href="#3-组件-api-设计" aria-label="锚点">#</a></h2>
+<h3 id="3-1-基础组件-api">3.1 基础组件 API<a class="anchor" href="#3-1-基础组件-api" aria-label="锚点">#</a></h3>
+<p><strong>按钮组件 (KhyButton)</strong>：</p>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;button
+    :class=&quot;buttonClasses&quot;
+    :disabled=&quot;disabled || loading&quot;
+    @click=&quot;handleClick&quot;
+  &gt;
+    &lt;span v-if=&quot;loading&quot; class=&quot;khy-button__spinner&quot; /&gt;
+    &lt;slot /&gt;
+  &lt;/button&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+const props = defineProps({
+  // 按钮类型
+  variant: {
+    type: String,
+    default: 'default',
+    validator: (value) =&gt; ['default', 'primary', 'success', 'warning', 'danger', 'ghost'].includes(value)
+  },
+  // 按钮大小
+  size: {
+    type: String,
+    default: 'md',
+    validator: (value) =&gt; ['sm', 'md', 'lg'].includes(value)
+  },
+  // 是否禁用
+  disabled: Boolean,
+  // 是否加载中
+  loading: Boolean,
+  // 是否块级
+  block: Boolean,
+  // 图标
+  icon: String
+});
+
+const emit = defineEmits(['click']);
+
+const buttonClasses = computed(() =&gt; [
+  'khy-button',
+  `khy-button--${props.variant}`,
+  `khy-button--${props.size}`,
+  {
+    'khy-button--block': props.block,
+    'khy-button--loading': props.loading,
+    'khy-button--icon-only': props.icon &amp;&amp; !props.$slots.default
+  }
+]);
+
+const handleClick = (event) =&gt; {
+  if (!props.disabled &amp;&amp; !props.loading) {
+    emit('click', event);
+  }
+};
+&lt;/script&gt;</code></pre>
+<p><strong>输入框组件 (KhyInput)</strong>：</p>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;div :class=&quot;inputClasses&quot;&gt;
+    &lt;label v-if=&quot;label&quot; class=&quot;khy-input__label&quot;&gt;
+      {{ label }}
+      &lt;span v-if=&quot;required&quot; class=&quot;khy-input__required&quot;&gt;*&lt;/span&gt;
+    &lt;/label&gt;
+    &lt;div class=&quot;khy-input__wrapper&quot;&gt;
+      &lt;span v-if=&quot;$slots.prefix&quot; class=&quot;khy-input__prefix&quot;&gt;
+        &lt;slot name=&quot;prefix&quot; /&gt;
+      &lt;/span&gt;
+      &lt;input
+        ref=&quot;inputRef&quot;
+        :type=&quot;type&quot;
+        :value=&quot;modelValue&quot;
+        :placeholder=&quot;placeholder&quot;
+        :disabled=&quot;disabled&quot;
+        :readonly=&quot;readonly&quot;
+        :maxlength=&quot;maxlength&quot;
+        @input=&quot;handleInput&quot;
+        @change=&quot;handleChange&quot;
+        @focus=&quot;handleFocus&quot;
+        @blur=&quot;handleBlur&quot;
+      /&gt;
+      &lt;span v-if=&quot;$slots.suffix&quot; class=&quot;khy-input__suffix&quot;&gt;
+        &lt;slot name=&quot;suffix&quot; /&gt;
+      &lt;/span&gt;
+    &lt;/div&gt;
+    &lt;p v-if=&quot;error&quot; class=&quot;khy-input__error&quot;&gt;{{ error }}&lt;/p&gt;
+    &lt;p v-else-if=&quot;hint&quot; class=&quot;khy-input__hint&quot;&gt;{{ hint }}&lt;/p&gt;
+    &lt;p v-if=&quot;maxlength&quot; class=&quot;khy-input__count&quot;&gt;
+      {{ modelValue?.length || 0 }}/{{ maxlength }}
+    &lt;/p&gt;
+  &lt;/div&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+const props = defineProps({
+  // 绑定值
+  modelValue: {
+    type: [String, Number],
+    default: ''
+  },
+  // 输入类型
+  type: {
+    type: String,
+    default: 'text'
+  },
+  // 标签
+  label: String,
+  // 占位符
+  placeholder: String,
+  // 提示信息
+  hint: String,
+  // 错误信息
+  error: String,
+  // 是否禁用
+  disabled: Boolean,
+  // 是否只读
+  readonly: Boolean,
+  // 是否必填
+  required: Boolean,
+  // 最大长度
+  maxlength: Number,
+  // 尺寸
+  size: {
+    type: String,
+    default: 'md',
+    validator: (value) =&gt; ['sm', 'md', 'lg'].includes(value)
+  }
+});
+
+const emit = defineEmits(['update:modelValue', 'change', 'focus', 'blur']);
+
+const inputRef = ref(null);
+
+const inputClasses = computed(() =&gt; [
+  'khy-input',
+  `khy-input--${props.size}`,
+  {
+    'khy-input--disabled': props.disabled,
+    'khy-input--error': props.error
+  }
+]);
+
+const handleInput = (event) =&gt; {
+  emit('update:modelValue', event.target.value);
+};
+
+const handleChange = (event) =&gt; {
+  emit('change', event.target.value);
+};
+
+const handleFocus = (event) =&gt; {
+  emit('focus', event);
+};
+
+const handleBlur = (event) =&gt; {
+  emit('blur', event);
+};
+
+// 暴露方法
+defineExpose({
+  focus: () =&gt; inputRef.value?.focus(),
+  blur: () =&gt; inputRef.value?.blur(),
+  select: () =&gt; inputRef.value?.select()
+});
+&lt;/script&gt;</code></pre>
+<p><strong>卡片组件 (KhyCard)</strong>：</p>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;div :class=&quot;cardClasses&quot;&gt;
+    &lt;div v-if=&quot;$slots.header&quot; class=&quot;khy-card__header&quot;&gt;
+      &lt;slot name=&quot;header&quot; /&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;khy-card__body&quot;&gt;
+      &lt;slot /&gt;
+    &lt;/div&gt;
+    &lt;div v-if=&quot;$slots.footer&quot; class=&quot;khy-card__footer&quot;&gt;
+      &lt;slot name=&quot;footer&quot; /&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+const props = defineProps({
+  // 卡片类型
+  variant: {
+    type: String,
+    default: 'default',
+    validator: (value) =&gt; ['default', 'elevated', 'outlined'].includes(value)
+  },
+  // 内边距
+  padding: {
+    type: String,
+    default: 'md',
+    validator: (value) =&gt; ['none', 'sm', 'md', 'lg'].includes(value)
+  },
+  // 是否可悬停
+  hoverable: Boolean,
+  // 是否可点击
+  clickable: Boolean
+});
+
+const emit = defineEmits(['click']);
+
+const cardClasses = computed(() =&gt; [
+  'khy-card',
+  `khy-card--${props.variant}`,
+  `khy-card--padding-${props.padding}`,
+  {
+    'khy-card--hoverable': props.hoverable,
+    'khy-card--clickable': props.clickable
+  }
+]);
+
+const handleClick = (event) =&gt; {
+  if (props.clickable) {
+    emit('click', event);
+  }
+};
+&lt;/script&gt;</code></pre>
+<h3 id="3-2-反馈组件-api">3.2 反馈组件 API<a class="anchor" href="#3-2-反馈组件-api" aria-label="锚点">#</a></h3>
+<p><strong>Toast 组件 (KhyToast)</strong>：</p>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;Teleport to=&quot;body&quot;&gt;
+    &lt;Transition name=&quot;khy-toast&quot;&gt;
+      &lt;div
+        v-if=&quot;visible&quot;
+        :class=&quot;toastClasses&quot;
+        @mouseenter=&quot;pauseTimer&quot;
+        @mouseleave=&quot;resumeTimer&quot;
+      &gt;
+        &lt;span class=&quot;khy-toast__icon&quot;&gt;{{ icon }}&lt;/span&gt;
+        &lt;div class=&quot;khy-toast__content&quot;&gt;
+          &lt;p class=&quot;khy-toast__title&quot;&gt;{{ title }}&lt;/p&gt;
+          &lt;p v-if=&quot;message&quot; class=&quot;khy-toast__message&quot;&gt;{{ message }}&lt;/p&gt;
+        &lt;/div&gt;
+        &lt;button
+          v-if=&quot;closable&quot;
+          class=&quot;khy-toast__close&quot;
+          @click=&quot;close&quot;
+        &gt;
+          ×
+        &lt;/button&gt;
+      &lt;/div&gt;
+    &lt;/Transition&gt;
+  &lt;/Teleport&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+const props = defineProps({
+  // 类型
+  type: {
+    type: String,
+    default: 'info',
+    validator: (value) =&gt; ['success', 'warning', 'error', 'info'].includes(value)
+  },
+  // 标题
+  title: {
+    type: String,
+    required: true
+  },
+  // 消息
+  message: String,
+  // 持续时间
+  duration: {
+    type: Number,
+    default: 3000
+  },
+  // 是否可关闭
+  closable: {
+    type: Boolean,
+    default: true
+  },
+  // 自动关闭
+  autoClose: {
+    type: Boolean,
+    default: true
+  }
+});
+
+const emit = defineEmits(['close']);
+
+const visible = ref(false);
+let timer = null;
+
+const toastClasses = computed(() =&gt; [
+  'khy-toast',
+  `khy-toast--${props.type}`
+]);
+
+const icon = computed(() =&gt; {
+  const icons = {
+    success: '✓',
+    warning: '⚠',
+    error: '✕',
+    info: 'ℹ'
+  };
+  return icons[props.type];
+});
+
+const show = () =&gt; {
+  visible.value = true;
+  if (props.autoClose) {
+    startTimer();
+  }
+};
+
+const close = () =&gt; {
+  visible.value = false;
+  emit('close');
+};
+
+const startTimer = () =&gt; {
+  if (props.duration &gt; 0) {
+    timer = setTimeout(close, props.duration);
+  }
+};
+
+const pauseTimer = () =&gt; {
+  if (timer) {
+    clearTimeout(timer);
+    timer = null;
+  }
+};
+
+const resumeTimer = () =&gt; {
+  if (props.autoClose) {
+    startTimer();
+  }
+};
+
+// 暴露方法
+defineExpose({
+  show,
+  close
+});
+&lt;/script&gt;</code></pre>
+<p><strong>Modal 组件 (KhyModal)</strong>：</p>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;Teleport to=&quot;body&quot;&gt;
+    &lt;Transition name=&quot;khy-modal&quot;&gt;
+      &lt;div
+        v-if=&quot;visible&quot;
+        class=&quot;khy-modal-overlay&quot;
+        @click.self=&quot;handleOverlayClick&quot;
+      &gt;
+        &lt;div
+          :class=&quot;modalClasses&quot;
+          :style=&quot;modalStyle&quot;
+          role=&quot;dialog&quot;
+          aria-modal=&quot;true&quot;
+          :aria-labelledby=&quot;titleId&quot;
+        &gt;
+          &lt;div class=&quot;khy-modal__header&quot;&gt;
+            &lt;h2 :id=&quot;titleId&quot; class=&quot;khy-modal__title&quot;&gt;
+              &lt;slot name=&quot;title&quot;&gt;{{ title }}&lt;/slot&gt;
+            &lt;/h2&gt;
+            &lt;button
+              v-if=&quot;closable&quot;
+              class=&quot;khy-modal__close&quot;
+              aria-label=&quot;关闭&quot;
+              @click=&quot;close&quot;
+            &gt;
+              ×
+            &lt;/button&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;khy-modal__body&quot;&gt;
+            &lt;slot /&gt;
+          &lt;/div&gt;
+          &lt;div v-if=&quot;$slots.footer&quot; class=&quot;khy-modal__footer&quot;&gt;
+            &lt;slot name=&quot;footer&quot; /&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/Transition&gt;
+  &lt;/Teleport&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+const props = defineProps({
+  // 标题
+  title: String,
+  // 宽度
+  width: {
+    type: [String, Number],
+    default: '500px'
+  },
+  // 是否可见
+  modelValue: Boolean,
+  // 是否可关闭
+  closable: {
+    type: Boolean,
+    default: true
+  },
+  // 点击遮罩关闭
+  closeOnOverlay: {
+    type: Boolean,
+    default: true
+  },
+  // 是否显示遮罩
+  showOverlay: {
+    type: Boolean,
+    default: true
+  },
+  // 是否居中
+  centered: Boolean
+});
+
+const emit = defineEmits(['update:modelValue', 'close', 'open']);
+
+const visible = computed({
+  get: () =&gt; props.modelValue,
+  set: (value) =&gt; emit('update:modelValue', value)
+});
+
+const titleId = computed(() =&gt; `khy-modal-title-${Math.random().toString(36).substr(2, 9)}`);
+
+const modalClasses = computed(() =&gt; [
+  'khy-modal',
+  {
+    'khy-modal--centered': props.centered
+  }
+]);
+
+const modalStyle = computed(() =&gt; ({
+  width: typeof props.width === 'number' ? `${props.width}px` : props.width
+}));
+
+const handleOverlayClick = () =&gt; {
+  if (props.closeOnOverlay) {
+    close();
+  }
+};
+
+const close = () =&gt; {
+  visible.value = false;
+  emit('close');
+};
+
+const open = () =&gt; {
+  visible.value = true;
+  emit('open');
+};
+
+// 暴露方法
+defineExpose({
+  open,
+  close
+});
+&lt;/script&gt;</code></pre>
+<h3 id="3-3-数据组件-api">3.3 数据组件 API<a class="anchor" href="#3-3-数据组件-api" aria-label="锚点">#</a></h3>
+<p><strong>Table 组件 (KhyTable)</strong>：</p>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;div class=&quot;khy-table-wrapper&quot;&gt;
+    &lt;table :class=&quot;tableClasses&quot;&gt;
+      &lt;thead&gt;
+        &lt;tr&gt;
+          &lt;th
+            v-for=&quot;column in columns&quot;
+            :key=&quot;column.key&quot;
+            :class=&quot;[
+              'khy-table__th',
+              {
+                'khy-table__th--sortable': column.sortable,
+                'khy-table__th--sorted': sortKey === column.key
+              }
+            ]&quot;
+            :style=&quot;{ width: column.width }&quot;
+            @click=&quot;handleSort(column)&quot;
+          &gt;
+            &lt;div class=&quot;khy-table__th-content&quot;&gt;
+              &lt;span&gt;{{ column.title }}&lt;/span&gt;
+              &lt;span v-if=&quot;column.sortable&quot; class=&quot;khy-table__sort-icon&quot;&gt;
+                {{ getSortIcon(column.key) }}
+              &lt;/span&gt;
+            &lt;/div&gt;
+          &lt;/th&gt;
+        &lt;/tr&gt;
+      &lt;/thead&gt;
+      &lt;tbody&gt;
+        &lt;tr
+          v-for=&quot;(row, index) in data&quot;
+          :key=&quot;row[rowKey] || index&quot;
+          :class=&quot;[
+            'khy-table__row',
+            {
+              'khy-table__row--selected': isSelected(row),
+              'khy-table__row--striped': striped &amp;&amp; index % 2 === 1
+            }
+          ]&quot;
+          @click=&quot;handleRowClick(row)&quot;
+        &gt;
+          &lt;td
+            v-for=&quot;column in columns&quot;
+            :key=&quot;column.key&quot;
+            class=&quot;khy-table__td&quot;
+          &gt;
+            &lt;slot
+              :name=&quot;column.key&quot;
+              :row=&quot;row&quot;
+              :column=&quot;column&quot;
+              :value=&quot;row[column.key]&quot;
+            &gt;
+              {{ row[column.key] }}
+            &lt;/slot&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/tbody&gt;
+    &lt;/table&gt;
+    
+    &lt;div v-if=&quot;loading&quot; class=&quot;khy-table__loading&quot;&gt;
+      &lt;slot name=&quot;loading&quot;&gt;
+        &lt;div class=&quot;khy-table__spinner&quot; /&gt;
+      &lt;/slot&gt;
+    &lt;/div&gt;
+    
+    &lt;div v-if=&quot;data.length === 0 &amp;&amp; !loading&quot; class=&quot;khy-table__empty&quot;&gt;
+      &lt;slot name=&quot;empty&quot;&gt;
+        &lt;p&gt;暂无数据&lt;/p&gt;
+      &lt;/slot&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+const props = defineProps({
+  // 数据源
+  data: {
+    type: Array,
+    default: () =&gt; []
+  },
+  // 列配置
+  columns: {
+    type: Array,
+    required: true
+  },
+  // 行键
+  rowKey: {
+    type: String,
+    default: 'id'
+  },
+  // 是否可选择
+  selectable: Boolean,
+  // 选中的行
+  selectedRows: {
+    type: Array,
+    default: () =&gt; []
+  },
+  // 是否斑马纹
+  striped: Boolean,
+  // 是否加载中
+  loading: Boolean,
+  // 排序
+  sortable: Boolean
+});
+
+const emit = defineEmits([
+  'row-click',
+  'selection-change',
+  'sort-change'
+]);
+
+const sortKey = ref('');
+const sortOrder = ref('asc');
+
+const tableClasses = computed(() =&gt; [
+  'khy-table',
+  {
+    'khy-table--striped': props.striped,
+    'khy-table--selectable': props.selectable,
+    'khy-table--loading': props.loading
+  }
+]);
+
+const isSelected = (row) =&gt; {
+  return props.selectedRows.some(item =&gt; item[props.rowKey] === row[props.rowKey]);
+};
+
+const handleRowClick = (row) =&gt; {
+  emit('row-click', row);
+};
+
+const handleSort = (column) =&gt; {
+  if (!column.sortable) return;
+  
+  if (sortKey.value === column.key) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortKey.value = column.key;
+    sortOrder.value = 'asc';
+  }
+  
+  emit('sort-change', { key: sortKey.value, order: sortOrder.value });
+};
+
+const getSortIcon = (key) =&gt; {
+  if (sortKey.value !== key) return '↕';
+  return sortOrder.value === 'asc' ? '↑' : '↓';
+};
+&lt;/script&gt;</code></pre>
+<hr>
+<h2 id="4-组件测试规范">4. 组件测试规范<a class="anchor" href="#4-组件测试规范" aria-label="锚点">#</a></h2>
+<h3 id="4-1-单元测试">4.1 单元测试<a class="anchor" href="#4-1-单元测试" aria-label="锚点">#</a></h3>
+<p><strong>测试文件结构</strong>：</p>
+<pre><code>components/
+├── KhyButton.vue
+├── KhyButton.test.js
+├── KhyInput.vue
+└── KhyInput.test.js</code></pre>
+<p><strong>测试用例模板</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">import</span> { describe, it, expect, vi } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;vitest&#x27;</span>;
+<span class="hljs-keyword">import</span> { mount } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;@vue/test-utils&#x27;</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KhyButton</span> <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;../KhyButton.vue&#x27;</span>;
+
+<span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;KhyButton&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-comment">// 基础渲染</span>
+  <span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;rendering&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;renders correctly with default props&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">slots</span>: { <span class="hljs-attr">default</span>: <span class="hljs-string">&#x27;Button&#x27;</span> }
+      });
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">text</span>()).<span class="hljs-title function_">toBe</span>(<span class="hljs-string">&#x27;Button&#x27;</span>);
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">classes</span>()).<span class="hljs-title function_">toContain</span>(<span class="hljs-string">&#x27;khy-button&#x27;</span>);
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">classes</span>()).<span class="hljs-title function_">toContain</span>(<span class="hljs-string">&#x27;khy-button--default&#x27;</span>);
+    });
+    
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;renders with variant&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">props</span>: { <span class="hljs-attr">variant</span>: <span class="hljs-string">&#x27;primary&#x27;</span> },
+        <span class="hljs-attr">slots</span>: { <span class="hljs-attr">default</span>: <span class="hljs-string">&#x27;Button&#x27;</span> }
+      });
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">classes</span>()).<span class="hljs-title function_">toContain</span>(<span class="hljs-string">&#x27;khy-button--primary&#x27;</span>);
+    });
+    
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;renders with size&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">props</span>: { <span class="hljs-attr">size</span>: <span class="hljs-string">&#x27;lg&#x27;</span> },
+        <span class="hljs-attr">slots</span>: { <span class="hljs-attr">default</span>: <span class="hljs-string">&#x27;Button&#x27;</span> }
+      });
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">classes</span>()).<span class="hljs-title function_">toContain</span>(<span class="hljs-string">&#x27;khy-button--lg&#x27;</span>);
+    });
+  });
+  
+  <span class="hljs-comment">// Props 验证</span>
+  <span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;props&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;validates variant prop&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-keyword">const</span> consoleSpy = vi.<span class="hljs-title function_">spyOn</span>(<span class="hljs-variable language_">console</span>, <span class="hljs-string">&#x27;warn&#x27;</span>).<span class="hljs-title function_">mockImplementation</span>(<span class="hljs-function">() =&gt;</span> {});
+      
+      <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">props</span>: { <span class="hljs-attr">variant</span>: <span class="hljs-string">&#x27;invalid&#x27;</span> }
+      });
+      
+      <span class="hljs-title function_">expect</span>(consoleSpy).<span class="hljs-title function_">toHaveBeenCalled</span>();
+      consoleSpy.<span class="hljs-title function_">mockRestore</span>();
+    });
+  });
+  
+  <span class="hljs-comment">// 事件处理</span>
+  <span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;events&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;emits click event&#x27;</span>, <span class="hljs-title function_">async</span> () =&gt; {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>);
+      
+      <span class="hljs-keyword">await</span> wrapper.<span class="hljs-title function_">trigger</span>(<span class="hljs-string">&#x27;click&#x27;</span>);
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">emitted</span>(<span class="hljs-string">&#x27;click&#x27;</span>)).<span class="hljs-title function_">toBeTruthy</span>();
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">emitted</span>(<span class="hljs-string">&#x27;click&#x27;</span>)[<span class="hljs-number">0</span>][<span class="hljs-number">0</span>]).<span class="hljs-title function_">toBeInstanceOf</span>(<span class="hljs-title class_">MouseEvent</span>);
+    });
+    
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;does not emit click when disabled&#x27;</span>, <span class="hljs-title function_">async</span> () =&gt; {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">props</span>: { <span class="hljs-attr">disabled</span>: <span class="hljs-literal">true</span> }
+      });
+      
+      <span class="hljs-keyword">await</span> wrapper.<span class="hljs-title function_">trigger</span>(<span class="hljs-string">&#x27;click&#x27;</span>);
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">emitted</span>(<span class="hljs-string">&#x27;click&#x27;</span>)).<span class="hljs-title function_">toBeFalsy</span>();
+    });
+    
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;does not emit click when loading&#x27;</span>, <span class="hljs-title function_">async</span> () =&gt; {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">props</span>: { <span class="hljs-attr">loading</span>: <span class="hljs-literal">true</span> }
+      });
+      
+      <span class="hljs-keyword">await</span> wrapper.<span class="hljs-title function_">trigger</span>(<span class="hljs-string">&#x27;click&#x27;</span>);
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">emitted</span>(<span class="hljs-string">&#x27;click&#x27;</span>)).<span class="hljs-title function_">toBeFalsy</span>();
+    });
+  });
+  
+  <span class="hljs-comment">// 插槽</span>
+  <span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;slots&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;renders default slot&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">slots</span>: { <span class="hljs-attr">default</span>: <span class="hljs-string">&#x27;Custom Content&#x27;</span> }
+      });
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">text</span>()).<span class="hljs-title function_">toBe</span>(<span class="hljs-string">&#x27;Custom Content&#x27;</span>);
+    });
+    
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;renders icon slot&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">slots</span>: {
+          <span class="hljs-attr">icon</span>: <span class="hljs-string">&#x27;&lt;span class=&quot;icon&quot;&gt;🔍&lt;/span&gt;&#x27;</span>
+        }
+      });
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">find</span>(<span class="hljs-string">&#x27;.icon&#x27;</span>).<span class="hljs-title function_">exists</span>()).<span class="hljs-title function_">toBe</span>(<span class="hljs-literal">true</span>);
+    });
+  });
+  
+  <span class="hljs-comment">// 可访问性</span>
+  <span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;accessibility&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;has correct aria attributes when disabled&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">props</span>: { <span class="hljs-attr">disabled</span>: <span class="hljs-literal">true</span> }
+      });
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">attributes</span>(<span class="hljs-string">&#x27;disabled&#x27;</span>)).<span class="hljs-title function_">toBeDefined</span>();
+    });
+    
+    <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;has correct aria attributes when loading&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">KhyButton</span>, {
+        <span class="hljs-attr">props</span>: { <span class="hljs-attr">loading</span>: <span class="hljs-literal">true</span> }
+      });
+      
+      <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">attributes</span>(<span class="hljs-string">&#x27;aria-busy&#x27;</span>)).<span class="hljs-title function_">toBe</span>(<span class="hljs-string">&#x27;true&#x27;</span>);
+    });
+  });
+});</code></pre>
+<h3 id="4-2-集成测试">4.2 集成测试<a class="anchor" href="#4-2-集成测试" aria-label="锚点">#</a></h3>
+<p><strong>页面级测试</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">import</span> { describe, it, expect } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;vitest&#x27;</span>;
+<span class="hljs-keyword">import</span> { mount } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;@vue/test-utils&#x27;</span>;
+<span class="hljs-keyword">import</span> { createTestingPinia } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;@pinia/testing&#x27;</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">UserProfile</span> <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;../UserProfile.vue&#x27;</span>;
+
+<span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;UserProfile&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-keyword">const</span> <span class="hljs-title function_">createWrapper</span> = (<span class="hljs-params">options = {}</span>) =&gt; {
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">mount</span>(<span class="hljs-title class_">UserProfile</span>, {
+      <span class="hljs-attr">global</span>: {
+        <span class="hljs-attr">plugins</span>: [
+          <span class="hljs-title function_">createTestingPinia</span>({
+            <span class="hljs-attr">initialState</span>: {
+              <span class="hljs-attr">user</span>: {
+                <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;John Doe&#x27;</span>,
+                <span class="hljs-attr">email</span>: <span class="hljs-string">&#x27;john@example.com&#x27;</span>,
+                <span class="hljs-attr">avatar</span>: <span class="hljs-string">&#x27;https://example.com/avatar.jpg&#x27;</span>
+              }
+            }
+          })
+        ],
+        <span class="hljs-attr">stubs</span>: {
+          <span class="hljs-title class_">KhyButton</span>: <span class="hljs-literal">false</span>,
+          <span class="hljs-title class_">KhyCard</span>: <span class="hljs-literal">false</span>
+        }
+      },
+      ...options
+    });
+  };
+  
+  <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;displays user information&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">createWrapper</span>();
+    
+    <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">text</span>()).<span class="hljs-title function_">toContain</span>(<span class="hljs-string">&#x27;John Doe&#x27;</span>);
+    <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">text</span>()).<span class="hljs-title function_">toContain</span>(<span class="hljs-string">&#x27;john@example.com&#x27;</span>);
+  });
+  
+  <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;renders avatar&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">createWrapper</span>();
+    
+    <span class="hljs-keyword">const</span> avatar = wrapper.<span class="hljs-title function_">find</span>(<span class="hljs-string">&#x27;.user-avatar&#x27;</span>);
+    <span class="hljs-title function_">expect</span>(avatar.<span class="hljs-title function_">exists</span>()).<span class="hljs-title function_">toBe</span>(<span class="hljs-literal">true</span>);
+    <span class="hljs-title function_">expect</span>(avatar.<span class="hljs-title function_">attributes</span>(<span class="hljs-string">&#x27;src&#x27;</span>)).<span class="hljs-title function_">toBe</span>(<span class="hljs-string">&#x27;https://example.com/avatar.jpg&#x27;</span>);
+  });
+  
+  <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;emits logout event&#x27;</span>, <span class="hljs-title function_">async</span> () =&gt; {
+    <span class="hljs-keyword">const</span> wrapper = <span class="hljs-title function_">createWrapper</span>();
+    
+    <span class="hljs-keyword">await</span> wrapper.<span class="hljs-title function_">find</span>(<span class="hljs-string">&#x27;[data-testid=&quot;logout-button&quot;]&#x27;</span>).<span class="hljs-title function_">trigger</span>(<span class="hljs-string">&#x27;click&#x27;</span>);
+    
+    <span class="hljs-title function_">expect</span>(wrapper.<span class="hljs-title function_">emitted</span>(<span class="hljs-string">&#x27;logout&#x27;</span>)).<span class="hljs-title function_">toBeTruthy</span>();
+  });
+});</code></pre>
+<h3 id="4-3-视觉回归测试">4.3 视觉回归测试<a class="anchor" href="#4-3-视觉回归测试" aria-label="锚点">#</a></h3>
+<p><strong>Storybook 配置</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// Button.stories.js</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+  <span class="hljs-attr">title</span>: <span class="hljs-string">&#x27;Components/Base/KhyButton&#x27;</span>,
+  <span class="hljs-attr">component</span>: <span class="hljs-title class_">KhyButton</span>,
+  <span class="hljs-attr">argTypes</span>: {
+    <span class="hljs-attr">variant</span>: {
+      <span class="hljs-attr">control</span>: { <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;select&#x27;</span> },
+      <span class="hljs-attr">options</span>: [<span class="hljs-string">&#x27;default&#x27;</span>, <span class="hljs-string">&#x27;primary&#x27;</span>, <span class="hljs-string">&#x27;success&#x27;</span>, <span class="hljs-string">&#x27;warning&#x27;</span>, <span class="hljs-string">&#x27;danger&#x27;</span>, <span class="hljs-string">&#x27;ghost&#x27;</span>]
+    },
+    <span class="hljs-attr">size</span>: {
+      <span class="hljs-attr">control</span>: { <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;select&#x27;</span> },
+      <span class="hljs-attr">options</span>: [<span class="hljs-string">&#x27;sm&#x27;</span>, <span class="hljs-string">&#x27;md&#x27;</span>, <span class="hljs-string">&#x27;lg&#x27;</span>]
+    },
+    <span class="hljs-attr">disabled</span>: { <span class="hljs-attr">control</span>: <span class="hljs-string">&#x27;boolean&#x27;</span> },
+    <span class="hljs-attr">loading</span>: { <span class="hljs-attr">control</span>: <span class="hljs-string">&#x27;boolean&#x27;</span> }
+  }
+};
+
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">Template</span> = (<span class="hljs-params">args</span>) =&gt; ({
+  <span class="hljs-attr">components</span>: { <span class="hljs-title class_">KhyButton</span> },
+  <span class="hljs-title function_">setup</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-keyword">return</span> { args };
+  },
+  <span class="hljs-attr">template</span>: <span class="hljs-string">&#x27;&lt;KhyButton v-bind=&quot;args&quot;&gt;{{ args.default }}&lt;/KhyButton&gt;&#x27;</span>
+});
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-title class_">Default</span> = <span class="hljs-title class_">Template</span>.<span class="hljs-title function_">bind</span>({});
+<span class="hljs-title class_">Default</span>.<span class="hljs-property">args</span> = {
+  <span class="hljs-attr">default</span>: <span class="hljs-string">&#x27;Button&#x27;</span>,
+  <span class="hljs-attr">variant</span>: <span class="hljs-string">&#x27;default&#x27;</span>
+};
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-title class_">Primary</span> = <span class="hljs-title class_">Template</span>.<span class="hljs-title function_">bind</span>({});
+<span class="hljs-title class_">Primary</span>.<span class="hljs-property">args</span> = {
+  <span class="hljs-attr">default</span>: <span class="hljs-string">&#x27;Button&#x27;</span>,
+  <span class="hljs-attr">variant</span>: <span class="hljs-string">&#x27;primary&#x27;</span>
+};
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-title class_">Disabled</span> = <span class="hljs-title class_">Template</span>.<span class="hljs-title function_">bind</span>({});
+<span class="hljs-title class_">Disabled</span>.<span class="hljs-property">args</span> = {
+  <span class="hljs-attr">default</span>: <span class="hljs-string">&#x27;Button&#x27;</span>,
+  <span class="hljs-attr">variant</span>: <span class="hljs-string">&#x27;primary&#x27;</span>,
+  <span class="hljs-attr">disabled</span>: <span class="hljs-literal">true</span>
+};
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-title class_">Loading</span> = <span class="hljs-title class_">Template</span>.<span class="hljs-title function_">bind</span>({});
+<span class="hljs-title class_">Loading</span>.<span class="hljs-property">args</span> = {
+  <span class="hljs-attr">default</span>: <span class="hljs-string">&#x27;Button&#x27;</span>,
+  <span class="hljs-attr">variant</span>: <span class="hljs-string">&#x27;primary&#x27;</span>,
+  <span class="hljs-attr">loading</span>: <span class="hljs-literal">true</span>
+};</code></pre>
+<hr>
+<h2 id="5-组件文档规范">5. 组件文档规范<a class="anchor" href="#5-组件文档规范" aria-label="锚点">#</a></h2>
+<h3 id="5-1-文档结构">5.1 文档结构<a class="anchor" href="#5-1-文档结构" aria-label="锚点">#</a></h3>
+<p><strong>组件文档模板</strong>：</p>
+<pre><code class="language-markdown"><span class="hljs-section"># KhyButton 按钮</span>
+
+<span class="hljs-section">## 基本用法</span>
+
+<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span>&gt;</span></span>默认按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">variant</span>=<span class="hljs-string">&quot;primary&quot;</span>&gt;</span></span>主要按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">variant</span>=<span class="hljs-string">&quot;success&quot;</span>&gt;</span></span>成功按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span></span>
+
+<span class="hljs-section">## 属性</span>
+
+| 属性 | 说明 | 类型 | 默认值 | 可选值 |
+|------|------|------|--------|--------|
+| variant | 按钮类型 | String | &#x27;default&#x27; | &#x27;default&#x27;, &#x27;primary&#x27;, &#x27;success&#x27;, &#x27;warning&#x27;, &#x27;danger&#x27;, &#x27;ghost&#x27; |
+| size | 按钮大小 | String | &#x27;md&#x27; | &#x27;sm&#x27;, &#x27;md&#x27;, &#x27;lg&#x27; |
+| disabled | 是否禁用 | Boolean | false | - |
+| loading | 是否加载中 | Boolean | false | - |
+| block | 是否块级 | Boolean | false | - |
+
+<span class="hljs-section">## 事件</span>
+
+| 事件名 | 说明 | 回调参数 |
+|--------|------|----------|
+| click | 点击事件 | (event: MouseEvent) |
+
+<span class="hljs-section">## 插槽</span>
+
+| 插槽名 | 说明 |
+|--------|------|
+| default | 按钮内容 |
+| icon | 按钮图标 |
+
+<span class="hljs-section">## 示例</span>
+
+<span class="hljs-section">### 不同类型</span>
+
+<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span>&gt;</span></span>默认按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">variant</span>=<span class="hljs-string">&quot;primary&quot;</span>&gt;</span></span>主要按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">variant</span>=<span class="hljs-string">&quot;success&quot;</span>&gt;</span></span>成功按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">variant</span>=<span class="hljs-string">&quot;warning&quot;</span>&gt;</span></span>警告按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">variant</span>=<span class="hljs-string">&quot;danger&quot;</span>&gt;</span></span>危险按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span></span>
+
+<span class="hljs-section">### 不同大小</span>
+
+<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">size</span>=<span class="hljs-string">&quot;sm&quot;</span>&gt;</span></span>小按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">size</span>=<span class="hljs-string">&quot;md&quot;</span>&gt;</span></span>中按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">size</span>=<span class="hljs-string">&quot;lg&quot;</span>&gt;</span></span>大按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span></span>
+
+<span class="hljs-section">### 加载状态</span>
+
+<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">loading</span>&gt;</span></span>加载中...<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span></span>
+
+<span class="hljs-section">### 禁用状态</span>
+
+<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">KhyButton</span> <span class="hljs-attr">disabled</span>&gt;</span></span>禁用按钮<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">KhyButton</span>&gt;</span></span>
+<span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span></span>
+
+<span class="hljs-section">## 设计指南</span>
+
+<span class="hljs-section">### 使用场景</span>
+
+<span class="hljs-bullet">-</span> 用于触发操作或事件
+<span class="hljs-bullet">-</span> 用于提交表单
+<span class="hljs-bullet">-</span> 用于打开对话框
+<span class="hljs-bullet">-</span> 用于导航
+
+<span class="hljs-section">### 最佳实践</span>
+
+<span class="hljs-bullet">-</span> 使用清晰的动作词（如&quot;保存&quot;、&quot;删除&quot;、&quot;提交&quot;）
+<span class="hljs-bullet">-</span> 主要操作使用 primary 变体
+<span class="hljs-bullet">-</span> 危险操作使用 danger 变体
+<span class="hljs-bullet">-</span> 避免在页面中使用过多主要按钮
+
+<span class="hljs-section">### 可访问性</span>
+
+<span class="hljs-bullet">-</span> 按钮应有清晰的文本标签
+<span class="hljs-bullet">-</span> 禁用状态应有视觉提示
+<span class="hljs-bullet">-</span> 加载状态应有进度指示
+<span class="hljs-bullet">-</span> 支持键盘导航</code></pre>
+<h3 id="5-2-示例代码">5.2 示例代码<a class="anchor" href="#5-2-示例代码" aria-label="锚点">#</a></h3>
+<p><strong>在线示例</strong>：</p>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;div class=&quot;example&quot;&gt;
+    &lt;KhyButton variant=&quot;primary&quot; @click=&quot;handleClick&quot;&gt;
+      点击我
+    &lt;/KhyButton&gt;
+    &lt;p v-if=&quot;clicked&quot;&gt;已点击！&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+import { ref } from 'vue';
+
+const clicked = ref(false);
+
+const handleClick = () =&gt; {
+  clicked.value = true;
+};
+&lt;/script&gt;</code></pre>
+<hr>
+<h2 id="6-组件发布规范">6. 组件发布规范<a class="anchor" href="#6-组件发布规范" aria-label="锚点">#</a></h2>
+<h3 id="6-1-版本管理">6.1 版本管理<a class="anchor" href="#6-1-版本管理" aria-label="锚点">#</a></h3>
+<p><strong>语义化版本</strong>：</p>
+<ul><li>MAJOR：不兼容的 API 变更</li><li>MINOR：向下兼容的功能性新增</li><li>PATCH：向下兼容的问题修正</li></ul>
+<p><strong>版本号格式</strong>：<code>v1.0.0</code></p>
+<h3 id="6-2-发布流程">6.2 发布流程<a class="anchor" href="#6-2-发布流程" aria-label="锚点">#</a></h3>
+<p><strong>发布步骤</strong>：</p>
+<ol><li>更新版本号</li><li>更新 CHANGELOG</li><li>运行测试</li><li>构建组件库</li><li>发布到 npm</li><li>创建 Git Tag</li></ol>
+<p><strong>发布命令</strong>：</p>
+<pre><code class="language-bash"><span class="hljs-comment"># 更新版本</span>
+npm version patch|minor|major
+
+<span class="hljs-comment"># 构建组件库</span>
+npm run build
+
+<span class="hljs-comment"># 发布到 npm</span>
+npm publish
+
+<span class="hljs-comment"># 创建 Git Tag</span>
+git tag v1.0.0
+git push origin v1.0.0</code></pre>
+<h3 id="6-3-changelog-规范">6.3 CHANGELOG 规范<a class="anchor" href="#6-3-changelog-规范" aria-label="锚点">#</a></h3>
+<p><strong>CHANGELOG 格式</strong>：</p>
+<pre><code class="language-markdown"><span class="hljs-section"># Changelog</span>
+
+<span class="hljs-section">## [1.0.0] - 2026-09-04</span>
+
+<span class="hljs-section">### Added</span>
+<span class="hljs-bullet">-</span> 新增 KhyButton 组件
+<span class="hljs-bullet">-</span> 新增 KhyInput 组件
+<span class="hljs-bullet">-</span> 新增 KhyCard 组件
+
+<span class="hljs-section">### Changed</span>
+<span class="hljs-bullet">-</span> 更新设计令牌系统
+
+<span class="hljs-section">### Fixed</span>
+<span class="hljs-bullet">-</span> 修复按钮禁用状态样式问题
+
+<span class="hljs-section">### Deprecated</span>
+<span class="hljs-bullet">-</span> 无
+
+<span class="hljs-section">### Removed</span>
+<span class="hljs-bullet">-</span> 无
+
+<span class="hljs-section">### Security</span>
+<span class="hljs-bullet">-</span> 无</code></pre>
+<hr>
+<h2 id="7-组件质量保证">7. 组件质量保证<a class="anchor" href="#7-组件质量保证" aria-label="锚点">#</a></h2>
+<h3 id="7-1-代码质量">7.1 代码质量<a class="anchor" href="#7-1-代码质量" aria-label="锚点">#</a></h3>
+<p><strong>ESLint 规则</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// .eslintrc.js</span>
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = {
+  <span class="hljs-attr">extends</span>: [
+    <span class="hljs-string">&#x27;eslint:recommended&#x27;</span>,
+    <span class="hljs-string">&#x27;plugin:vue/vue3-recommended&#x27;</span>,
+    <span class="hljs-string">&#x27;prettier&#x27;</span>
+  ],
+  <span class="hljs-attr">rules</span>: {
+    <span class="hljs-string">&#x27;vue/multi-word-component-names&#x27;</span>: <span class="hljs-string">&#x27;off&#x27;</span>,
+    <span class="hljs-string">&#x27;vue/no-v-html&#x27;</span>: <span class="hljs-string">&#x27;warn&#x27;</span>,
+    <span class="hljs-string">&#x27;vue/require-default-prop&#x27;</span>: <span class="hljs-string">&#x27;error&#x27;</span>,
+    <span class="hljs-string">&#x27;vue/require-prop-types&#x27;</span>: <span class="hljs-string">&#x27;error&#x27;</span>
+  }
+};</code></pre>
+<p><strong>Prettier 配置</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;printWidth&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">100</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;tabWidth&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">2</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;singleQuote&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;trailingComma&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;es5&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;arrowParens&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;always&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;endOfLine&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;lf&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="7-2-测试覆盖率">7.2 测试覆盖率<a class="anchor" href="#7-2-测试覆盖率" aria-label="锚点">#</a></h3>
+<p><strong>覆盖率要求</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// vitest.config.js</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+  <span class="hljs-attr">test</span>: {
+    <span class="hljs-attr">coverage</span>: {
+      <span class="hljs-attr">provider</span>: <span class="hljs-string">&#x27;v8&#x27;</span>,
+      <span class="hljs-attr">reporter</span>: [<span class="hljs-string">&#x27;text&#x27;</span>, <span class="hljs-string">&#x27;json&#x27;</span>, <span class="hljs-string">&#x27;html&#x27;</span>],
+      <span class="hljs-attr">exclude</span>: [<span class="hljs-string">&#x27;node_modules/&#x27;</span>, <span class="hljs-string">&#x27;src/__tests__/&#x27;</span>],
+      <span class="hljs-attr">thresholds</span>: {
+        <span class="hljs-attr">branches</span>: <span class="hljs-number">80</span>,
+        <span class="hljs-attr">functions</span>: <span class="hljs-number">80</span>,
+        <span class="hljs-attr">lines</span>: <span class="hljs-number">80</span>,
+        <span class="hljs-attr">statements</span>: <span class="hljs-number">80</span>
+      }
+    }
+  }
+};</code></pre>
+<h3 id="7-3-性能监控">7.3 性能监控<a class="anchor" href="#7-3-性能监控" aria-label="锚点">#</a></h3>
+<p><strong>Bundle 大小</strong>：</p>
+<pre><code class="language-javascript"><span class="hljs-comment">// rollup.config.js</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+  <span class="hljs-attr">output</span>: {
+    <span class="hljs-attr">file</span>: <span class="hljs-string">&#x27;dist/khy-components.esm.js&#x27;</span>,
+    <span class="hljs-attr">format</span>: <span class="hljs-string">&#x27;esm&#x27;</span>,
+    <span class="hljs-attr">sourcemap</span>: <span class="hljs-literal">true</span>
+  },
+  <span class="hljs-attr">plugins</span>: [
+    <span class="hljs-title function_">visualizer</span>({
+      <span class="hljs-attr">open</span>: <span class="hljs-literal">true</span>,
+      <span class="hljs-attr">gzipSize</span>: <span class="hljs-literal">true</span>
+    })
+  ]
+};</code></pre>
+<p><strong>性能预算</strong>：</p>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;budgets&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;initial&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;maximumWarning&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;500kb&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;maximumError&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1mb&quot;</span>
+    <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;anyComponentStyle&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;maximumWarning&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2kb&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;maximumError&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;4kb&quot;</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<hr>
+<h2 id="8-版本历史">8. 版本历史<a class="anchor" href="#8-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义前端组件库规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 前端团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-FE/[DESIGN-FE-001] 前端页面规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-FE-001] 网页端设计规范（实测对齐版）</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-FE/[DESIGN-FE-003] 前端快速参考卡.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-FE-003] 前端快速参考卡（实测对齐版）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-FE/[DESIGN-FE-002] 前端组件库规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

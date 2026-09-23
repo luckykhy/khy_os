@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-TEST-001] 测试规范.md -->
+<title>[DESIGN-TEST-001] 测试规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>其它设计<span class="sep">›</span>[DESIGN-TEST-001] 测试规范</div>
+      <header class="hero reveal"><h1>[DESIGN-TEST-001] 测试规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-test-001-测试规范">[DESIGN-TEST-001] 测试规范</a></li><li class="lvl-2"><a href="#1-测试概述">1. 测试概述</a></li><li class="lvl-3"><a href="#1-1-测试原则">1.1 测试原则</a></li><li class="lvl-3"><a href="#1-2-测试类型">1.2 测试类型</a></li><li class="lvl-2"><a href="#2-测试文件组织">2. 测试文件组织</a></li><li class="lvl-3"><a href="#2-1-后端测试">2.1 后端测试</a></li><li class="lvl-3"><a href="#2-2-前端测试">2.2 前端测试</a></li><li class="lvl-3"><a href="#2-3-测试文件命名">2.3 测试文件命名</a></li><li class="lvl-2"><a href="#3-测试命名规范">3. 测试命名规范</a></li><li class="lvl-3"><a href="#3-1-describe-块">3.1 describe 块</a></li><li class="lvl-3"><a href="#3-2-it-块">3.2 it 块</a></li><li class="lvl-3"><a href="#3-3-命名规则">3.3 命名规则</a></li><li class="lvl-2"><a href="#4-测试结构">4. 测试结构</a></li><li class="lvl-3"><a href="#4-1-aaa-模式">4.1 AAA 模式</a></li><li class="lvl-3"><a href="#4-2-given-when-then">4.2 Given-When-Then</a></li><li class="lvl-2"><a href="#5-覆盖率要求">5. 覆盖率要求</a></li><li class="lvl-3"><a href="#5-1-最低覆盖率">5.1 最低覆盖率</a></li><li class="lvl-3"><a href="#5-2-关键模块覆盖率">5.2 关键模块覆盖率</a></li><li class="lvl-3"><a href="#5-3-覆盖率检查">5.3 覆盖率检查</a></li><li class="lvl-2"><a href="#6-单元测试规范">6. 单元测试规范</a></li><li class="lvl-3"><a href="#6-1-测试范围">6.1 测试范围</a></li><li class="lvl-3"><a href="#6-2-mock-和-stub">6.2 Mock 和 Stub</a></li><li class="lvl-3"><a href="#6-3-测试数据">6.3 测试数据</a></li><li class="lvl-2"><a href="#7-集成测试规范">7. 集成测试规范</a></li><li class="lvl-3"><a href="#7-1-测试范围">7.1 测试范围</a></li><li class="lvl-3"><a href="#7-2-测试数据库">7.2 测试数据库</a></li><li class="lvl-3"><a href="#7-3-api-测试">7.3 API 测试</a></li><li class="lvl-2"><a href="#8-端到端测试规范">8. 端到端测试规范</a></li><li class="lvl-3"><a href="#8-1-测试场景">8.1 测试场景</a></li><li class="lvl-3"><a href="#8-2-playwright-配置">8.2 Playwright 配置</a></li><li class="lvl-3"><a href="#8-3-e2e-测试示例">8.3 E2E 测试示例</a></li><li class="lvl-2"><a href="#9-测试数据管理">9. 测试数据管理</a></li><li class="lvl-3"><a href="#9-1-测试数据原则">9.1 测试数据原则</a></li><li class="lvl-3"><a href="#9-2-fixtures">9.2 Fixtures</a></li><li class="lvl-3"><a href="#9-3-seeders">9.3 Seeders</a></li><li class="lvl-2"><a href="#10-性能测试规范">10. 性能测试规范</a></li><li class="lvl-3"><a href="#10-1-性能指标">10.1 性能指标</a></li><li class="lvl-3"><a href="#10-2-性能测试工具">10.2 性能测试工具</a></li><li class="lvl-3"><a href="#10-3-性能测试示例">10.3 性能测试示例</a></li><li class="lvl-2"><a href="#11-安全测试规范">11. 安全测试规范</a></li><li class="lvl-3"><a href="#11-1-安全扫描">11.1 安全扫描</a></li><li class="lvl-3"><a href="#11-2-安全测试场景">11.2 安全测试场景</a></li><li class="lvl-2"><a href="#12-版本历史">12. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-test-001-测试规范">[DESIGN-TEST-001] 测试规范<a class="anchor" href="#design-test-001-测试规范" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档定义 khy-os 项目的测试标准，包括测试策略、覆盖率要求、命名规范等。</p></blockquote>
+<hr>
+<h2 id="1-测试概述">1. 测试概述<a class="anchor" href="#1-测试概述" aria-label="锚点">#</a></h2>
+<h3 id="1-1-测试原则">1.1 测试原则<a class="anchor" href="#1-1-测试原则" aria-label="锚点">#</a></h3>
+<ol><li><strong>测试驱动</strong>：优先编写测试</li><li><strong>自动化</strong>：尽可能自动化测试</li><li><strong>独立性</strong>：测试之间相互独立</li><li><strong>可重复</strong>：测试结果可重复</li></ol>
+<h3 id="1-2-测试类型">1.2 测试类型<a class="anchor" href="#1-2-测试类型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>说明</th><th>工具</th></tr></thead><tbody><tr><td>单元测试</td><td>测试单个函数/模块</td><td>Jest, Vitest</td></tr><tr><td>集成测试</td><td>测试模块间交互</td><td>Jest, Vitest</td></tr><tr><td>端到端测试</td><td>测试完整流程</td><td>Playwright</td></tr><tr><td>性能测试</td><td>测试性能基准</td><td>k6, Artillery</td></tr><tr><td>安全测试</td><td>测试安全漏洞</td><td>CodeQL, npm audit</td></tr></tbody></table>
+<hr>
+<h2 id="2-测试文件组织">2. 测试文件组织<a class="anchor" href="#2-测试文件组织" aria-label="锚点">#</a></h2>
+<h3 id="2-1-后端测试">2.1 后端测试<a class="anchor" href="#2-1-后端测试" aria-label="锚点">#</a></h3>
+<pre><code>services/backend/tests/
+├── unit/                    # 单元测试
+│   ├── services/
+│   └── utils/
+├── integration/             # 集成测试
+│   ├── api/
+│   └── database/
+└── __fixtures__/            # 测试数据</code></pre>
+<h3 id="2-2-前端测试">2.2 前端测试<a class="anchor" href="#2-2-前端测试" aria-label="锚点">#</a></h3>
+<pre><code>apps/ai-frontend/src/__tests__/     # 单元测试
+apps/ai-frontend/tests/e2e/         # 端到端测试
+software/khyquant/frontend/src/__tests__/</code></pre>
+<h3 id="2-3-测试文件命名">2.3 测试文件命名<a class="anchor" href="#2-3-测试文件命名" aria-label="锚点">#</a></h3>
+<p><strong>格式</strong>：<code>{module}.test.js</code> 或 <code>{module}.spec.js</code></p>
+<p><strong>示例</strong>：</p>
+<pre><code>auth.test.js
+user.service.test.js
+button.component.spec.js</code></pre>
+<hr>
+<h2 id="3-测试命名规范">3. 测试命名规范<a class="anchor" href="#3-测试命名规范" aria-label="锚点">#</a></h2>
+<h3 id="3-1-describe-块">3.1 describe 块<a class="anchor" href="#3-1-describe-块" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;UserService&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;createUser&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-comment">// ...</span>
+  });
+});</code></pre>
+<h3 id="3-2-it-块">3.2 it 块<a class="anchor" href="#3-2-it-块" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;should create a user with valid data&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-comment">// ...</span>
+});
+
+<span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;should throw error with invalid email&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-comment">// ...</span>
+});</code></pre>
+<h3 id="3-3-命名规则">3.3 命名规则<a class="anchor" href="#3-3-命名规则" aria-label="锚点">#</a></h3>
+<ul><li>describe：模块名或功能名</li><li>it：描述预期行为</li><li>使用 should + 动词开头</li></ul>
+<hr>
+<h2 id="4-测试结构">4. 测试结构<a class="anchor" href="#4-测试结构" aria-label="锚点">#</a></h2>
+<h3 id="4-1-aaa-模式">4.1 AAA 模式<a class="anchor" href="#4-1-aaa-模式" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;should calculate total price&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-comment">// Arrange（准备）</span>
+  <span class="hljs-keyword">const</span> items = [
+    { <span class="hljs-attr">price</span>: <span class="hljs-number">10</span>, <span class="hljs-attr">quantity</span>: <span class="hljs-number">2</span> },
+    { <span class="hljs-attr">price</span>: <span class="hljs-number">20</span>, <span class="hljs-attr">quantity</span>: <span class="hljs-number">1</span> }
+  ];
+  
+  <span class="hljs-comment">// Act（执行）</span>
+  <span class="hljs-keyword">const</span> total = <span class="hljs-title function_">calculateTotal</span>(items);
+  
+  <span class="hljs-comment">// Assert（断言）</span>
+  <span class="hljs-title function_">expect</span>(total).<span class="hljs-title function_">toBe</span>(<span class="hljs-number">40</span>);
+});</code></pre>
+<h3 id="4-2-given-when-then">4.2 Given-When-Then<a class="anchor" href="#4-2-given-when-then" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;should login with valid credentials&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-comment">// Given</span>
+  <span class="hljs-keyword">const</span> user = { <span class="hljs-attr">email</span>: <span class="hljs-string">&#x27;test@example.com&#x27;</span>, <span class="hljs-attr">password</span>: <span class="hljs-string">&#x27;password123&#x27;</span> };
+  
+  <span class="hljs-comment">// When</span>
+  <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> <span class="hljs-title function_">login</span>(user.<span class="hljs-property">email</span>, user.<span class="hljs-property">password</span>);
+  
+  <span class="hljs-comment">// Then</span>
+  <span class="hljs-title function_">expect</span>(result.<span class="hljs-property">success</span>).<span class="hljs-title function_">toBe</span>(<span class="hljs-literal">true</span>);
+  <span class="hljs-title function_">expect</span>(result.<span class="hljs-property">token</span>).<span class="hljs-title function_">toBeDefined</span>();
+});</code></pre>
+<hr>
+<h2 id="5-覆盖率要求">5. 覆盖率要求<a class="anchor" href="#5-覆盖率要求" aria-label="锚点">#</a></h2>
+<h3 id="5-1-最低覆盖率">5.1 最低覆盖率<a class="anchor" href="#5-1-最低覆盖率" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>最低覆盖率</th></tr></thead><tbody><tr><td>行覆盖率</td><td>80%</td></tr><tr><td>分支覆盖率</td><td>80%</td></tr><tr><td>函数覆盖率</td><td>80%</td></tr><tr><td>语句覆盖率</td><td>80%</td></tr></tbody></table>
+<h3 id="5-2-关键模块覆盖率">5.2 关键模块覆盖率<a class="anchor" href="#5-2-关键模块覆盖率" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>模块</th><th>最低覆盖率</th></tr></thead><tbody><tr><td>认证模块</td><td>90%</td></tr><tr><td>支付模块</td><td>95%</td></tr><tr><td>安全模块</td><td>90%</td></tr></tbody></table>
+<h3 id="5-3-覆盖率检查">5.3 覆盖率检查<a class="anchor" href="#5-3-覆盖率检查" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 生成覆盖率报告</span>
+npm run <span class="hljs-built_in">test</span>:coverage
+
+<span class="hljs-comment"># 查看覆盖率</span>
+<span class="hljs-built_in">cat</span> coverage/lcov-report/index.html</code></pre>
+<hr>
+<h2 id="6-单元测试规范">6. 单元测试规范<a class="anchor" href="#6-单元测试规范" aria-label="锚点">#</a></h2>
+<h3 id="6-1-测试范围">6.1 测试范围<a class="anchor" href="#6-1-测试范围" aria-label="锚点">#</a></h3>
+<ul><li>公共方法</li><li>边界条件</li><li>错误处理</li><li>复杂逻辑</li></ul>
+<h3 id="6-2-mock-和-stub">6.2 Mock 和 Stub<a class="anchor" href="#6-2-mock-和-stub" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// Mock 外部依赖</span>
+jest.<span class="hljs-title function_">mock</span>(<span class="hljs-string">&#x27;../services/emailService&#x27;</span>, <span class="hljs-function">() =&gt;</span> ({
+  <span class="hljs-attr">sendEmail</span>: jest.<span class="hljs-title function_">fn</span>().<span class="hljs-title function_">mockResolvedValue</span>(<span class="hljs-literal">true</span>)
+}));
+
+<span class="hljs-comment">// Stub 方法</span>
+<span class="hljs-keyword">const</span> stub = jest.<span class="hljs-title function_">spyOn</span>(service, <span class="hljs-string">&#x27;getData&#x27;</span>).<span class="hljs-title function_">mockResolvedValue</span>(mockData);</code></pre>
+<h3 id="6-3-测试数据">6.3 测试数据<a class="anchor" href="#6-3-测试数据" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 使用工厂函数创建测试数据</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">createUser</span> = (<span class="hljs-params">overrides = {}</span>) =&gt; ({
+  <span class="hljs-attr">id</span>: <span class="hljs-number">1</span>,
+  <span class="hljs-attr">username</span>: <span class="hljs-string">&#x27;testuser&#x27;</span>,
+  <span class="hljs-attr">email</span>: <span class="hljs-string">&#x27;test@example.com&#x27;</span>,
+  ...overrides
+});
+
+<span class="hljs-comment">// 使用</span>
+<span class="hljs-keyword">const</span> user = <span class="hljs-title function_">createUser</span>({ <span class="hljs-attr">email</span>: <span class="hljs-string">&#x27;other@example.com&#x27;</span> });</code></pre>
+<hr>
+<h2 id="7-集成测试规范">7. 集成测试规范<a class="anchor" href="#7-集成测试规范" aria-label="锚点">#</a></h2>
+<h3 id="7-1-测试范围">7.1 测试范围<a class="anchor" href="#7-1-测试范围" aria-label="锚点">#</a></h3>
+<ul><li>API 端点</li><li>数据库操作</li><li>外部服务集成</li></ul>
+<h3 id="7-2-测试数据库">7.2 测试数据库<a class="anchor" href="#7-2-测试数据库" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 使用测试数据库</span>
+<span class="hljs-title function_">beforeAll</span>(<span class="hljs-title function_">async</span> () =&gt; {
+  <span class="hljs-keyword">await</span> sequelize.<span class="hljs-title function_">sync</span>({ <span class="hljs-attr">force</span>: <span class="hljs-literal">true</span> });
+});
+
+<span class="hljs-title function_">afterEach</span>(<span class="hljs-title function_">async</span> () =&gt; {
+  <span class="hljs-keyword">await</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">destroy</span>({ <span class="hljs-attr">where</span>: {}, <span class="hljs-attr">truncate</span>: <span class="hljs-literal">true</span> });
+});
+
+<span class="hljs-title function_">afterAll</span>(<span class="hljs-title function_">async</span> () =&gt; {
+  <span class="hljs-keyword">await</span> sequelize.<span class="hljs-title function_">close</span>();
+});</code></pre>
+<h3 id="7-3-api-测试">7.3 API 测试<a class="anchor" href="#7-3-api-测试" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> request = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;supertest&#x27;</span>);
+<span class="hljs-keyword">const</span> app = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../app&#x27;</span>);
+
+<span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;POST /api/users&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;should create a new user&#x27;</span>, <span class="hljs-title function_">async</span> () =&gt; {
+    <span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> <span class="hljs-title function_">request</span>(app)
+      .<span class="hljs-title function_">post</span>(<span class="hljs-string">&#x27;/api/users&#x27;</span>)
+      .<span class="hljs-title function_">send</span>({
+        <span class="hljs-attr">username</span>: <span class="hljs-string">&#x27;testuser&#x27;</span>,
+        <span class="hljs-attr">email</span>: <span class="hljs-string">&#x27;test@example.com&#x27;</span>,
+        <span class="hljs-attr">password</span>: <span class="hljs-string">&#x27;password123&#x27;</span>
+      })
+      .<span class="hljs-title function_">expect</span>(<span class="hljs-number">201</span>);
+    
+    <span class="hljs-title function_">expect</span>(response.<span class="hljs-property">body</span>.<span class="hljs-property">success</span>).<span class="hljs-title function_">toBe</span>(<span class="hljs-literal">true</span>);
+    <span class="hljs-title function_">expect</span>(response.<span class="hljs-property">body</span>.<span class="hljs-property">data</span>.<span class="hljs-property">username</span>).<span class="hljs-title function_">toBe</span>(<span class="hljs-string">&#x27;testuser&#x27;</span>);
+  });
+});</code></pre>
+<hr>
+<h2 id="8-端到端测试规范">8. 端到端测试规范<a class="anchor" href="#8-端到端测试规范" aria-label="锚点">#</a></h2>
+<h3 id="8-1-测试场景">8.1 测试场景<a class="anchor" href="#8-1-测试场景" aria-label="锚点">#</a></h3>
+<ul><li>用户注册流程</li><li>用户登录流程</li><li>核心业务流程</li></ul>
+<h3 id="8-2-playwright-配置">8.2 Playwright 配置<a class="anchor" href="#8-2-playwright-配置" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// playwright.config.js</span>
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = {
+  <span class="hljs-attr">testDir</span>: <span class="hljs-string">&#x27;./tests/e2e&#x27;</span>,
+  <span class="hljs-attr">timeout</span>: <span class="hljs-number">30000</span>,
+  <span class="hljs-attr">use</span>: {
+    <span class="hljs-attr">baseURL</span>: <span class="hljs-string">&#x27;http://localhost:3000&#x27;</span>,
+    <span class="hljs-attr">headless</span>: <span class="hljs-literal">true</span>
+  }
+};</code></pre>
+<h3 id="8-3-e2e-测试示例">8.3 E2E 测试示例<a class="anchor" href="#8-3-e2e-测试示例" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-title function_">test</span>(<span class="hljs-string">&#x27;user can login&#x27;</span>, <span class="hljs-title function_">async</span> ({ page }) =&gt; {
+  <span class="hljs-keyword">await</span> page.<span class="hljs-title function_">goto</span>(<span class="hljs-string">&#x27;/login&#x27;</span>);
+  <span class="hljs-keyword">await</span> page.<span class="hljs-title function_">fill</span>(<span class="hljs-string">&#x27;[data-testid=&quot;email&quot;]&#x27;</span>, <span class="hljs-string">&#x27;user@example.com&#x27;</span>);
+  <span class="hljs-keyword">await</span> page.<span class="hljs-title function_">fill</span>(<span class="hljs-string">&#x27;[data-testid=&quot;password&quot;]&#x27;</span>, <span class="hljs-string">&#x27;password123&#x27;</span>);
+  <span class="hljs-keyword">await</span> page.<span class="hljs-title function_">click</span>(<span class="hljs-string">&#x27;[data-testid=&quot;submit&quot;]&#x27;</span>);
+  
+  <span class="hljs-keyword">await</span> <span class="hljs-title function_">expect</span>(page).<span class="hljs-title function_">toHaveURL</span>(<span class="hljs-string">&#x27;/dashboard&#x27;</span>);
+  <span class="hljs-keyword">await</span> <span class="hljs-title function_">expect</span>(page.<span class="hljs-title function_">locator</span>(<span class="hljs-string">&#x27;[data-testid=&quot;user-name&quot;]&#x27;</span>)).<span class="hljs-title function_">toHaveText</span>(<span class="hljs-string">&#x27;John Doe&#x27;</span>);
+});</code></pre>
+<hr>
+<h2 id="9-测试数据管理">9. 测试数据管理<a class="anchor" href="#9-测试数据管理" aria-label="锚点">#</a></h2>
+<h3 id="9-1-测试数据原则">9.1 测试数据原则<a class="anchor" href="#9-1-测试数据原则" aria-label="锚点">#</a></h3>
+<ul><li>使用独立的测试数据</li><li>测试后清理数据</li><li>不依赖生产数据</li></ul>
+<h3 id="9-2-fixtures">9.2 Fixtures<a class="anchor" href="#9-2-fixtures" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// tests/__fixtures__/users.js</span>
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = {
+  <span class="hljs-attr">validUser</span>: {
+    <span class="hljs-attr">username</span>: <span class="hljs-string">&#x27;testuser&#x27;</span>,
+    <span class="hljs-attr">email</span>: <span class="hljs-string">&#x27;test@example.com&#x27;</span>,
+    <span class="hljs-attr">password</span>: <span class="hljs-string">&#x27;password123&#x27;</span>
+  },
+  <span class="hljs-attr">invalidUser</span>: {
+    <span class="hljs-attr">username</span>: <span class="hljs-string">&#x27;&#x27;</span>,
+    <span class="hljs-attr">email</span>: <span class="hljs-string">&#x27;invalid-email&#x27;</span>,
+    <span class="hljs-attr">password</span>: <span class="hljs-string">&#x27;123&#x27;</span>
+  }
+};</code></pre>
+<h3 id="9-3-seeders">9.3 Seeders<a class="anchor" href="#9-3-seeders" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// 测试数据种子</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">seedUsers</span> = <span class="hljs-keyword">async</span> (<span class="hljs-params"></span>) =&gt; {
+  <span class="hljs-keyword">await</span> <span class="hljs-title class_">User</span>.<span class="hljs-title function_">bulkCreate</span>([
+    { <span class="hljs-attr">username</span>: <span class="hljs-string">&#x27;user1&#x27;</span>, <span class="hljs-attr">email</span>: <span class="hljs-string">&#x27;user1@example.com&#x27;</span> },
+    { <span class="hljs-attr">username</span>: <span class="hljs-string">&#x27;user2&#x27;</span>, <span class="hljs-attr">email</span>: <span class="hljs-string">&#x27;user2@example.com&#x27;</span> }
+  ]);
+};</code></pre>
+<hr>
+<h2 id="10-性能测试规范">10. 性能测试规范<a class="anchor" href="#10-性能测试规范" aria-label="锚点">#</a></h2>
+<h3 id="10-1-性能指标">10.1 性能指标<a class="anchor" href="#10-1-性能指标" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>目标值</th></tr></thead><tbody><tr><td>API 响应时间 P95</td><td>&lt; 500ms</td></tr><tr><td>首字节时间（TTFB）</td><td>&lt; 200ms</td></tr><tr><td>页面加载时间</td><td>&lt; 3s</td></tr></tbody></table>
+<h3 id="10-2-性能测试工具">10.2 性能测试工具<a class="anchor" href="#10-2-性能测试工具" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>工具</th><th>用途</th></tr></thead><tbody><tr><td>k6</td><td>负载测试</td></tr><tr><td>Artillery</td><td>性能测试</td></tr><tr><td>Lighthouse</td><td>前端性能</td></tr></tbody></table>
+<h3 id="10-3-性能测试示例">10.3 性能测试示例<a class="anchor" href="#10-3-性能测试示例" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// k6 负载测试</span>
+<span class="hljs-keyword">import</span> http <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;k6/http&#x27;</span>;
+<span class="hljs-keyword">import</span> { check, sleep } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;k6&#x27;</span>;
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> options = {
+  <span class="hljs-attr">stages</span>: [
+    { <span class="hljs-attr">duration</span>: <span class="hljs-string">&#x27;1m&#x27;</span>, <span class="hljs-attr">target</span>: <span class="hljs-number">20</span> },
+    { <span class="hljs-attr">duration</span>: <span class="hljs-string">&#x27;3m&#x27;</span>, <span class="hljs-attr">target</span>: <span class="hljs-number">50</span> },
+    { <span class="hljs-attr">duration</span>: <span class="hljs-string">&#x27;1m&#x27;</span>, <span class="hljs-attr">target</span>: <span class="hljs-number">0</span> }
+  ]
+};
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> res = http.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;https://api.example.com/users&#x27;</span>);
+  <span class="hljs-title function_">check</span>(res, {
+    <span class="hljs-string">&#x27;status is 200&#x27;</span>: <span class="hljs-function">(<span class="hljs-params">r</span>) =&gt;</span> r.<span class="hljs-property">status</span> === <span class="hljs-number">200</span>,
+    <span class="hljs-string">&#x27;response time &lt; 500ms&#x27;</span>: <span class="hljs-function">(<span class="hljs-params">r</span>) =&gt;</span> r.<span class="hljs-property">timings</span>.<span class="hljs-property">duration</span> &lt; <span class="hljs-number">500</span>
+  });
+  <span class="hljs-title function_">sleep</span>(<span class="hljs-number">1</span>);
+};</code></pre>
+<hr>
+<h2 id="11-安全测试规范">11. 安全测试规范<a class="anchor" href="#11-安全测试规范" aria-label="锚点">#</a></h2>
+<h3 id="11-1-安全扫描">11.1 安全扫描<a class="anchor" href="#11-1-安全扫描" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-comment"># 依赖漏洞扫描</span>
+npm audit --audit-level=high
+
+<span class="hljs-comment"># 静态代码扫描</span>
+<span class="hljs-comment"># CodeQL 集成在 CI 中</span></code></pre>
+<h3 id="11-2-安全测试场景">11.2 安全测试场景<a class="anchor" href="#11-2-安全测试场景" aria-label="锚点">#</a></h3>
+<ul><li>SQL 注入</li><li>XSS 攻击</li><li>CSRF 攻击</li><li>认证绕过</li><li>权限提升</li></ul>
+<hr>
+<h2 id="12-版本历史">12. 版本历史<a class="anchor" href="#12-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本，定义测试规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 质量团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/其它设计/[DESIGN-SIZE-001] khy-os 体积优化方案.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-SIZE-001] khy-os 体积优化方案</div></a><a class="next" href="../../../docs/03_DESIGN_设计/其它设计/00_INDEX_其它设计-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">其它设计</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/其它设计/[DESIGN-TEST-001] 测试规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

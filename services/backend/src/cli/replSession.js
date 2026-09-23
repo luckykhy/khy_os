@@ -312,6 +312,67 @@ function setReplSessionDeps(deps = {}) {
 /**
  * Start the interactive REPL loop.
  */
+// ── 启动期网关钉选预检（[DESIGN-ARCH-136] §9.5，非阻断）────────────────────────
+// 实测：env-gateway-pin 的 error 判据早已存在（baseSelfCheckService._checkGatewayPreferred，
+// 判得对、判得重、还带 autoRepair），但两条启动路径都没把它送到用户眼前：
+//   (a) 经典 REPL：runOnce 的结果只写日志文件，界面无呈现；
+//   (b) TUI：下方 `await startInkApp` 是早返回，经典模式的自检块**从未到达** ——
+//       与上方 clipboard bridge 注释承认的是同一形态的坑（"the TUI path never reached it"）。
+// 修法：判据 100% 复用 baseSelfCheckService.checkGatewayPreferredOnce（零新告警体系、
+// 零新增 env），完成后按路径呈现：TUI → notificationPort.emitNotification（挂载前进
+// 通知缓冲、挂载时 seed 回放，时序天然安全；error 级窄屏还会 inline 打一次）；
+// 经典 REPL → console 直接打印（无 ink，安全）。
+// **绝不 await、绝不抛** —— 自检失败不得阻塞启动。
+function _kickoffGatewayPinStartupCheck({ toTui = false } = {}) {
+  try {
+    Promise.resolve(require('../services/baseSelfCheckService').checkGatewayPreferredOnce())
+      .then(({ issues }) => {
+        const hit = (Array.isArray(issues) ? issues : []).find(
+          (it) =>
+            it &&
+            it.source === 'gateway' &&
+            typeof it.message === 'string' &&
+            it.message.trim()
+        );
+        if (!hit) {
+          return;
+        }
+        const severity = String(hit.severity || 'warning');
+        const text = hit.message.trim();
+        if (toTui) {
+          try {
+            require('../services/notificationPort').emitNotification({
+              type: 'gateway-pin',
+              level: severity === 'error' || severity === 'high' ? 'error' : 'warn',
+              title: text,
+              detail:
+                '运行 khy doctor 可按实测可用通道自动修复；或把 GATEWAY_PREFERRED_ADAPTER 清空/设为 auto',
+              timestamp: Date.now(),
+            });
+          } catch {
+            /* aux UI — never throw */
+          }
+          return;
+        }
+        try {
+          const fmt = require('./formatters');
+          if ((severity === 'error' || severity === 'high') && typeof fmt.printError === 'function') {
+            fmt.printError(text);
+          } else if (typeof fmt.printWarn === 'function') {
+            fmt.printWarn(text);
+          } else {
+            process.stdout.write(`${text}\n`);
+          }
+        } catch {
+          process.stdout.write(`${text}\n`);
+        }
+      })
+      .catch(() => {});
+  } catch {
+    /* 预检绝不阻塞/加重启动路径 */
+  }
+}
+
 async function startRepl(options = {}) {
   // ── 清除 boot indicator（"⌛ khy 正在启动..."）────────────
   // bin/khy.js main() 在引导阶段向 stderr 输出了启动提示；
@@ -668,11 +729,29 @@ async function startRepl(options = {}) {
       } catch {
         /* non-critical on unsupported environments */
       }
+      // 启动期网关钉选预检（[DESIGN-ARCH-136] §9.5）：必须在 startInkApp 早返回**之前** ——
+      // 经典模式里那段自检（下方 :1086 一带）TUI 永远走不到。fire-and-forget，非阻断。
+      _kickoffGatewayPinStartupCheck({ toTui: true });
       const { startInkApp } = require('./tui/app.js');
       await startInkApp(options);
       return;
     } catch (err) {
       process.stderr.write(`Ink TUI init failed: ${err.message}\n${err.stack}\n`);
+      // ── 崩溃归因（RUNTIME-002 2.2「错误消息具体化」）──
+      // 裸 stack 只说明「哪里抛的」，不说明「为什么 + 怎么办」：依赖被清/hydrate 中断时
+      // 用户看到的是一屏 node:internal/modules/esm/resolve。这里复用 bin/khy.js _emitFatal
+      // 的同一颗纯叶子（同样的门 KHY_STARTUP_FAILURE_EXPLAIN、同样的 fail-soft：叶子缺失或
+      // 无法归因 → 逐字节回退今日输出）。下面的源自愈阶梯管不到这类崩溃——它只管
+      // services/backend/src，node_modules 在其 _SKIP_DIRS 内，所以归因必须在此单独给。
+      try {
+        const explain = require('../bootstrap/startupFailureExplain')
+          .explainStartupFailure(err, process.platform, process.env);
+        if (explain) {
+          process.stderr.write(`${explain}\n`);
+        }
+      } catch {
+        /* 归因本身绝不加重崩溃路径 */
+      }
       // ── TUI self-heal ladder (KHY_TUI_SELF_HEAL, default on) ──
       // A TUI crash no longer kills the session:
       //   1) restore terminal basics (ink may have died with raw mode on);
@@ -1072,6 +1151,10 @@ async function startRepl(options = {}) {
   } catch {
     /* self-check is non-critical */
   }
+
+  // 经典 REPL 的同款启动预检（[DESIGN-ARCH-136] §9.5；TUI 版在上方 startInkApp 之前）：
+  // 结果直接打印（此处无 ink，console 安全）。上方 autoStartFromEnv 的全量周期自检照旧。
+  _kickoffGatewayPinStartupCheck({ toTui: false });
 
   // Start each session with a clean slate.
   // Previous conversations are saved on exit and can be restored explicitly
@@ -6231,12 +6314,12 @@ async function startRepl(options = {}) {
           } else if (selected.cmd === '/new' || selected.cmd === '/reset') {
             // ── /new · /reset — 新建/重置会话(清后端历史 + 复位网关熔断 + 清可见 transcript) ──
             try {
-              require('../../ai').clearHistory();
+              require('./ai').clearHistory();
             } catch {
               /* best-effort */
             }
             try {
-              require('../../sessionClear').resetGatewayBreakerOnSessionClear(process.env);
+              require('./sessionClear').resetGatewayBreakerOnSessionClear(process.env);
             } catch {
               /* best-effort */
             }

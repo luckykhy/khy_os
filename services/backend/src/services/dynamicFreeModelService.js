@@ -31,8 +31,9 @@ const FETCH_TIMEOUT_MS = parseInt(process.env.KHY_FREE_MODEL_FETCH_TIMEOUT_MS ||
 
 // models.dev 数据源（OpenCode 使用的中央模型注册库）
 const MODELS_DEV_URL = 'https://models.dev/api.json';
-// OpenCode Zen 网关免费模型端点
-const ZEN_FREE_MODELS_URL = 'https://opencode.ai/zen/v1/models';
+// OpenCode Zen 网关免费模型端点 — endpoint SSOT in constants/serviceDefaults (Zero Hardcoding)
+const { ZEN_BASE_URL, OPENCODE_USER_AGENT } = require('../constants/serviceDefaults');
+const ZEN_FREE_MODELS_URL = `${ZEN_BASE_URL.replace(/\/+$/, '')}/models`;
 
 // ── 缓存路径 ─────────────────────────────────────────────────────────────────
 
@@ -203,7 +204,10 @@ function saveToCache(models) {
 
 async function fetchZenFreeModels() {
   try {
-    const data = await fetchWithTimeout(ZEN_FREE_MODELS_URL);
+    // Free gate may fingerprint the UA on catalog fetches too (same SSOT as chat).
+    const data = await fetchWithTimeout(ZEN_FREE_MODELS_URL, {
+      headers: { 'User-Agent': OPENCODE_USER_AGENT },
+    });
     if (!data) {
       return [];
     }

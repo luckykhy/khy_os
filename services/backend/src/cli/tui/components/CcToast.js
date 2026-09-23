@@ -14,7 +14,7 @@
  */
 
 const React = require('react');
-const { Text, Box } = require('../inkRuntime').get();
+const inkRuntime = require('../inkRuntime');
 const { CC_COLORS } = require('../theme/ccTheme');
 const { TIMING } = require('../utils/ccTimers');
 
@@ -43,6 +43,7 @@ const DURATIONS = Object.freeze({
  * Toast 瞬态消息
  */
 function CcToast({ message, type = 'info', onDismiss }) {
+  const { Text, Box } = inkRuntime.get();
   const duration = DURATIONS[type] || DURATIONS.info;
   const [visible, setVisible] = React.useState(true);
 
@@ -71,6 +72,7 @@ function CcToast({ message, type = 'info', onDismiss }) {
  * Toast 容器（管理多个 Toast）
  */
 function CcToastContainer({ toasts = [], onDismiss }) {
+  const { Box } = inkRuntime.get();
   if (!toasts || toasts.length === 0) return null;
 
   return (

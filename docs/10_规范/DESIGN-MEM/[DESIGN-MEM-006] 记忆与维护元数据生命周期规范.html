@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-MEM-006] 记忆与维护元数据生命周期规范.md -->
+<title>[DESIGN-MEM-006] 记忆与维护元数据生命周期规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-MEM<span class="sep">›</span>[DESIGN-MEM-006] 记忆与维护元数据生命周期规范</div>
+      <header class="hero reveal"><h1>[DESIGN-MEM-006] 记忆与维护元数据生命周期规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-mem-006-记忆与维护元数据生命周期规范">[DESIGN-MEM-006] 记忆与维护元数据生命周期规范</a></li><li class="lvl-2"><a href="#1-session-persistent-判定-gov-mem-001">1. session / persistent 判定（GOV-MEM-001）</a></li><li class="lvl-2"><a href="#2-persistent-记录五字段-gov-mem-002">2. persistent 记录五字段（GOV-MEM-002）</a></li><li class="lvl-2"><a href="#3-指定读写入口-gov-mem-003">3. 指定读写入口（GOV-MEM-003）</a></li><li class="lvl-2"><a href="#4-生命周期与清理-gov-mem-004">4. 生命周期与清理（GOV-MEM-004）</a></li><li class="lvl-2"><a href="#5-uc-001-裁决-ai-三件套">5. UC-001 裁决（`.ai/` 三件套）</a></li><li class="lvl-2"><a href="#6-守卫计划-待工具化">6. 守卫计划（待工具化）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-mem-006-记忆与维护元数据生命周期规范">[DESIGN-MEM-006] 记忆与维护元数据生命周期规范<a class="anchor" href="#design-mem-006-记忆与维护元数据生命周期规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: MEMORY-001, MEMORY-002, MEMORY-003, MEMORY-004 -->
+<blockquote><p><strong>定位</strong>：<code>[DESIGN-GOV-001]</code> GOV-MEM-001–004 的契约冻结真源 + UC-001 裁决。<br>管<strong>治理情景</strong>（记忆分类、<code>.ai/</code> 维护元数据）；khy 运行时记忆系统的功能文档是 MEM-000–005，两者互补。</p></blockquote>
+<h2 id="1-session-persistent-判定-gov-mem-001">1. session / persistent 判定（GOV-MEM-001）<a class="anchor" href="#1-session-persistent-判定-gov-mem-001" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>问</th><th>答「是」</th></tr></thead><tbody><tr><td>只在当前任务/会话内有意义？</td><td>归 <strong>session</strong>，禁止落盘</td></tr><tr><td>跨会话稳定事实（架构决定、契约形状、真源位置）？</td><td>归 <strong>persistent</strong>，必须走 §2 格式 + §3 入口</td></tr><tr><td>进程状态/队列/临时日志？</td><td>归 session，按 §4 清理</td></tr></tbody></table>
+<p><strong>禁止</strong>：把一次性命令输出、临时 diff 写入长期记忆或 <code>.ai/</code>。</p>
+<h2 id="2-persistent-记录五字段-gov-mem-002">2. persistent 记录五字段（GOV-MEM-002）<a class="anchor" href="#2-persistent-记录五字段-gov-mem-002" aria-label="锚点">#</a></h2>
+<p>落盘必带五字段，缺一不得写；<strong>凭据（key/密码/token）只引用存放位置，不复制值</strong>：</p>
+<pre><code class="language-yaml"><span class="hljs-attr">subject:</span>   <span class="hljs-string">记录主体（哪个模块/契约）</span>
+<span class="hljs-attr">source:</span>    <span class="hljs-string">来源（文档编号</span> <span class="hljs-string">/</span> <span class="hljs-string">文件路径</span> <span class="hljs-string">/</span> <span class="hljs-string">命令输出引用）</span>
+<span class="hljs-attr">writtenAt:</span> <span class="hljs-string">写入时间（ISO</span> <span class="hljs-string">日期）</span>
+<span class="hljs-attr">scope:</span>     <span class="hljs-string">适用范围（仓库级</span> <span class="hljs-string">/</span> <span class="hljs-string">板块级</span> <span class="hljs-string">/</span> <span class="hljs-string">模块级）</span>
+<span class="hljs-attr">cleanup:</span>   <span class="hljs-string">清理条件（触发事件；无条件则写</span> <span class="hljs-string">永久）</span></code></pre>
+<h2 id="3-指定读写入口-gov-mem-003">3. 指定读写入口（GOV-MEM-003）<a class="anchor" href="#3-指定读写入口-gov-mem-003" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>存储</th><th>指定入口</th><th>禁止</th></tr></thead><tbody><tr><td><code>.ai/</code> 维护元数据</td><td><code>khy metadata gen / refresh / link</code></td><td>手写过 <code>.ai/MAP.md</code>；绕过 <code>projectMetadataService</code> 改机器文件</td></tr><tr><td>会话/持久上下文</td><td>ACP <code>context.share</code>（scope，见 <code>[DESIGN-ACP-001]</code>）</td><td>路由/服务层直写持久记忆文件</td></tr></tbody></table>
+<p>新增记忆持久化模块：先在本表加行登记，再动码。</p>
+<h2 id="4-生命周期与清理-gov-mem-004">4. 生命周期与清理（GOV-MEM-004）<a class="anchor" href="#4-生命周期与清理-gov-mem-004" aria-label="锚点">#</a></h2>
+<ul><li>session 数据（缓存/队列/临时上下文）：会话结束、进程退出、主体删除时<strong>清除或显式归档</strong>（归档带 §2 五字段）；重启后残留的临时上下文<strong>不得</strong>自动升格为 persistent。</li><li>persistent 记录：按 <code>cleanup</code> 字段触发；删除动作本身留一行台账，禁止静默删。</li><li><code>.ai/</code> 机器文件：结构变化由 <code>khy metadata refresh</code> 就地更新（非破坏；人工文件只刷派生骨架）。</li></ul>
+<h2 id="5-uc-001-裁决-ai-三件套">5. UC-001 裁决（<code>.ai/</code> 三件套）<a class="anchor" href="#5-uc-001-裁决-ai-三件套" aria-label="锚点">#</a></h2>
+<ol><li><strong>生成责任</strong>：<code>MAP.md</code>/<code>CONTEXT.yaml</code>/<code>GUARDS.md</code> 由 <code>khy metadata gen</code>（确定性生成器）生成，<strong>不手写</strong>；人工 <code>.ai/</code> 件（如 <code>GOVERNANCE-LEDGER.md</code>）按 skeleton 模式，机器不覆盖。</li><li><strong>提交策略</strong>：三件套随仓库提交；git 仓库挂 <code>khy metadata hook install</code>（pre-commit 自动刷新）。</li><li><strong>缺失门禁</strong>：<code>khy metadata check</code> 缺失/stale 时退出非零，可作 CI/提交前门禁；非 git 环境人工运行兜底。</li><li><strong>执行记录</strong>：登记日缺失三件套，已按本裁决运行生成器补齐（批次台账见 <code>[IMPL-RPT-049]</code> 同日批次）。</li></ol>
+<h2 id="6-守卫计划-待工具化">6. 守卫计划（待工具化）<a class="anchor" href="#6-守卫计划-待工具化" aria-label="锚点">#</a></h2>
+<p>落地三条并进 <code>check:structure</code> + PR gate（GOV-TOOL-005）：<br>① persistent 五字段 + 无凭据校验；② 非指定入口写 <code>.ai/</code> 机器文件的检测；③ 重启后 session 残留扫描。<br>脚本放 <code>scripts/ci/</code>，同步 <code>scripts/tests/</code> 用例（070 §7 条款）。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-MEM/[DESIGN-MEM-005] 记忆系统使用指南.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-MEM-005] 记忆系统使用指南</div></a><a class="next" href="../../../docs/10_规范/DESIGN-MEM/00_INDEX_DESIGN-MEM-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">DESIGN-MEM</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-MEM/[DESIGN-MEM-006] 记忆与维护元数据生命周期规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

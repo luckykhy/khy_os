@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [IMPL-RPT-056] 文档精简与结构化整理落地记录.md -->
+<title>[IMPL-RPT-056] 文档精简与结构化整理落地记录（[MGMT-PLAN-009] B1–B8） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>IMPL-RPT<span class="sep">›</span>[IMPL-RPT-056] 文档精简与结构化整理落地记录（[MGMT-PLAN-009] B1–B8）</div>
+      <header class="hero reveal"><h1>[IMPL-RPT-056] 文档精简与结构化整理落地记录（[MGMT-PLAN-009] B1–B8）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#impl-rpt-056-文档精简与结构化整理落地记录-mgmt-plan-009-b1-b8">[IMPL-RPT-056] 文档精简与结构化整理落地记录（[MGMT-PLAN-009] B1–B8）</a></li><li class="lvl-2"><a href="#1-批次总账">1. 批次总账</a></li><li class="lvl-2"><a href="#2-实测推翻的三处前提-本轮最大价值">2. 实测推翻的三处前提（本轮最大价值）</a></li><li class="lvl-2"><a href="#3-收敛范式-本轮确立-可复用">3. 收敛范式（本轮确立，可复用）</a></li><li class="lvl-2"><a href="#4-b8-守卫去重">4. B8 守卫去重</a></li><li class="lvl-2"><a href="#5-守卫结果">5. 守卫结果</a></li><li class="lvl-2"><a href="#6-遗留-followup">6. 遗留（followup）</a></li><li class="lvl-2"><a href="#7-b9-按标签归夹-全仓分文件夹">7. B9 按标签归夹（全仓分文件夹）</a></li><li class="lvl-3"><a href="#7-1-追记-2026-09-18-16-40-还原事故与重复件清理">7.1 追记（2026-09-18 16:40）：还原事故与重复件清理</a></li><li class="lvl-3"><a href="#7-2-追记-2026-09-18-17-45-改号残留孤儿-html-清理">7.2 追记（2026-09-18 17:45）：改号残留孤儿 HTML 清理</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="impl-rpt-056-文档精简与结构化整理落地记录-mgmt-plan-009-b1-b8">[IMPL-RPT-056] 文档精简与结构化整理落地记录（[MGMT-PLAN-009] B1–B8）<a class="anchor" href="#impl-rpt-056-文档精简与结构化整理落地记录-mgmt-plan-009-b1-b8" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：<code>[MGMT-PLAN-009] 文档精简与结构化整理方案</code> 的<strong>执行落地记录</strong>。方案留在 <code>08_MGMT_项目管理/</code>，<br>本文件记录「实际做了什么、实测推翻了哪些前提、守卫结果如何」，供复盘与下一轮接手者查阅。<br><strong>留痕</strong>：全部一次性脚本与原文快照在 <code>.khyos/housekeeping/2026-09-17-doc-plan/</code><br>（<code>manifest.json</code> 可原路撤回；只隔离不删除，HK-3）。</p></blockquote>
+<h2 id="1-批次总账">1. 批次总账<a class="anchor" href="#1-批次总账" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>批次</th><th>范围</th><th>状态</th><th>主要产出</th></tr></thead><tbody><tr><td>B1</td><td>索引三重 → 一处</td><td>✅</td><td><code>10_规范/</code> 两索引合并；主索引降为导读；10 个 scope 边界块</td></tr><tr><td>B2</td><td>三态标注</td><td>✅</td><td>16/19 目录索引状态列归一（在产 / 存档 / 派生）</td></tr><tr><td>B3</td><td>TUI 簇 20 → 5</td><td>✅</td><td><code>[DESIGN-ARCH-122] TUI 设计族总纲</code> + 21 篇隶属头</td></tr><tr><td>B4a</td><td>还原簇加隶属头</td><td>✅</td><td><code>[OPS-MAN-207] 还原子系统总纲</code> + 5 篇手写文档加头</td></tr><tr><td>B4b</td><td>路径常量收敛</td><td>✅</td><td><code>scripts/lib/docsPaths.js</code> 单一真源；<code>scripts/</code>+<code>extensions/scripts/</code> 20 处替换</td></tr><tr><td>B5</td><td>OCR 族 17 → 3</td><td>✅</td><td><code>[OPS-MAN-208] OCR 兜底族总纲</code> + 17 篇隶属头</td></tr><tr><td>B6</td><td>散落形态收敛</td><td>✅（含订正）</td><td><code>[OPS-MAN-209] AI 供应商接入族总纲</code> + 4 篇姊妹篇边界块</td></tr><tr><td>B7</td><td>长文档处置</td><td>✅（含改判）</td><td><code>[DESIGN-FE-002]</code> 1,490 → 主篇 103 行 + 7 子篇；<code>081</code> 改判不拆</td></tr><tr><td>B8</td><td>收口 + 守卫去重</td><td>✅</td><td>基线下调；<code>checkDocsIndexComplete</code> 接受就近索引覆盖；主索引 706 → 325 行</td></tr><tr><td>B9</td><td>按标签归夹（全仓分文件夹）</td><td>✅</td><td>377 篇移入 <code>[TAG-XXX]/</code> 子目录；46 篇 DR7 留根；合并 38 / 隔离 38；入站链接重写 924 处；HTML 孪生重建 1197 件</td></tr></tbody></table>
+<h2 id="2-实测推翻的三处前提-本轮最大价值">2. 实测推翻的三处前提（本轮最大价值）<a class="anchor" href="#2-实测推翻的三处前提-本轮最大价值" aria-label="锚点">#</a></h2>
+<blockquote><p>方案是<strong>假设</strong>，实测才是<strong>事实</strong>。三处假设在执行中被证伪，均已回写方案 §1.2 / §9。</p></blockquote>
+<table><thead><tr><th>#</th><th>方案原判</th><th>实测</th><th>改判</th></tr></thead><tbody><tr><td>1</td><td>§1.2：部署对 <code>016</code>/<code>017</code>「结构完全同构，只有 CORS/证书段落差 7 行」</td><td>行级重合 <strong>23.5%</strong>、章节骨架序列重合仅 <strong>6.4%</strong>、差异约 <strong>700 行</strong></td><td><strong>不合并</strong>。实为「有域名·一键 <code>khy deploy</code>+SSL」与「无域名·手动 IP-only」两条路径；改为互加姊妹篇边界块</td></tr><tr><td>2</td><td>§1.2：AI 供应商接入 6 篇（含 <code>002</code>/<code>003</code>）</td><td><code>002</code>（管理页 NewAPI 对齐·UI 对比度）与 <code>003</code>（管理页访问与登录）<strong>主题不符</strong></td><td>剔出 2 篇、补入 <code>096</code>，真实成员 <strong>4 篇</strong>；组数由「6 组」订正为 <strong>4 组</strong></td></tr><tr><td>3</td><td>B7：按 <code>[DESIGN-DOC-001]</code> §12（≤150 行）拆 <code>081</code>/<code>FE-002</code></td><td>全仓 <strong>388/779 篇（49.8%）</strong> 超 150 行；且 §12 标题即「<strong>新写规范必遵</strong>…<strong>存量不追溯</strong>」、正文「<strong>不强制整篇重写</strong>」</td><td>≤150 行<strong>不是存量强制预算</strong>。<code>FE-002</code>（真规范）真拆；<code>081</code>（6 Phase 实施计划）<strong>不适用</strong>→ 改为脚本生成阅读导航</td></tr></tbody></table>
+<h2 id="3-收敛范式-本轮确立-可复用">3. 收敛范式（本轮确立，可复用）<a class="anchor" href="#3-收敛范式-本轮确立-可复用" aria-label="锚点">#</a></h2>
+<p>本仓「收敛一族文档」的<strong>标准动作</strong>不是物理合并，而是：</p>
+<ol><li><strong>一篇总纲</strong>（唯一导航入口 + scope 裁决真源 + 代码耦合表 + 生成层边界）</li><li><strong>逐篇「隶属」头</strong>（指向总纲）</li><li><strong>零路径改动</strong>（DR7：手册编号被代码当路径常量用，禁移动/重命名）</li></ol>
+<p>原因：DR1 禁删、DR7 禁移。物理合并的收益是文件数，风险是运行时静默失效——不划算。<br>B3 / B4a / B5 / B6 四批全部走此范式，共 5 篇总纲（<code>ARCH-122</code>、<code>OPS-MAN-207/208/209</code>）。</p>
+<blockquote><p><strong>生成层边界</strong>（B4a 发现）：<code>scripts/restore/*.js --gen-doc</code> 产出 18 篇带「请勿手改」banner 的文档，<br>手改会被下次生成覆盖。故 B4a 只给 5 篇<strong>手写</strong>还原文档加头；<code>096</code> 同理跳过。<br>要给生成层文档加导航，必须改生成器——已列 followup。</p></blockquote>
+<h2 id="4-b8-守卫去重">4. B8 守卫去重<a class="anchor" href="#4-b8-守卫去重" aria-label="锚点">#</a></h2>
+<p><strong>问题</strong>：<code>checkDocsIndexComplete</code> 要求阶段目录（<code>01</code>–<code>09</code>）的每一篇 <code>.md</code> 在<strong>主索引</strong>里逐字出现，<br>导致主索引必须与 7 个就近索引重复同一份清单，B1「主索引降为导读」的意图被这条守卫卡死。</p>
+<p><strong>改法</strong>（<code>scripts/ci/check-repo-layout.js</code>）：覆盖判据由「主索引里有」放宽为<br>「<strong>主索引里有</strong> 或 <strong>本阶段就近 <code>00_INDEX_*</code> 里有</strong>」；被就近索引接管的份数另计入<br><code>docs-index-delegated</code>（观察口径，不入基线、不判违规）。仍亮红的只剩「两处都没有」的真漏链。</p>
+<p><strong>去重执行</strong>：先验证各阶段就近索引覆盖度（<code>_b8_measure.py</code>），确认 <code>01</code>/<code>05</code>/<code>07</code>/<code>08</code> 全覆盖、<br><code>03</code>/<code>04</code>/<code>06</code> 有 45 篇缺口；再按「只删已收录行、缺口行保留」删 402 行。</p>
+<table><thead><tr><th>阶段</th><th style="text-align:right">删除行</th><th style="text-align:right">分区剩余</th><th style="text-align:right">就近索引缺口</th></tr></thead><tbody><tr><td><code>01_INIT_立项</code></td><td style="text-align:right">3</td><td style="text-align:right">6</td><td style="text-align:right">0</td></tr><tr><td><code>03_DESIGN_设计</code></td><td style="text-align:right">88</td><td style="text-align:right">80</td><td style="text-align:right">40</td></tr><tr><td><code>04_IMPL_实现</code></td><td style="text-align:right">48</td><td style="text-align:right">15</td><td style="text-align:right">3</td></tr><tr><td><code>05_TEST_测试</code></td><td style="text-align:right">11</td><td style="text-align:right">6</td><td style="text-align:right">0</td></tr><tr><td><code>06_DEPLOY_部署</code></td><td style="text-align:right">23</td><td style="text-align:right">8</td><td style="text-align:right">2</td></tr><tr><td><code>07_OPS_运维</code></td><td style="text-align:right">179</td><td style="text-align:right">32</td><td style="text-align:right">0</td></tr><tr><td><code>08_MGMT_项目管理</code></td><td style="text-align:right">50</td><td style="text-align:right">10</td><td style="text-align:right">0</td></tr></tbody></table>
+<p><strong>结果</strong>：主索引 <strong>706 → 325 行</strong>；<code>docs-index-complete = 0</code>、<code>docs-index-delegated = 389</code>。<br>基线 <code>dangling-task</code> 88 → <strong>87</strong> 下调。</p>
+<h2 id="5-守卫结果">5. 守卫结果<a class="anchor" href="#5-守卫结果" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>守卫</th><th>结果</th></tr></thead><tbody><tr><td><code>docs:verify</code></td><td>1056 源 md / 1057 html / 12594 本地链接 <strong>全通过</strong></td></tr><tr><td><code>check:repo-layout</code></td><td><code>docs-index-complete 0</code>、<code>unresolved-require 0</code>、<code>extension-* 0</code>；<code>dangling-task 87</code>（≤基线）、<code>cross-layer-require 39</code>（与基线持平）</td></tr><tr><td><code>scripts/tests/check-repo-layout.test.js</code></td><td><strong>49/49 通过</strong></td></tr><tr><td><code>check-rules-registry</code></td><td>通过（TOOLING-007 双向一致、TOOLING-008 规则卡逐字节一致）</td></tr><tr><td><code>check-gov-rules</code></td><td>通过（GOV-MOD-004 十板块 / GOV-TOOL-004/005/006）</td></tr><tr><td><code>check-agent-docs</code>（DOCS-003）</td><td>0 error / 0 warning</td></tr><tr><td>还原测试 15 文件（B4b）</td><td>276/276 通过；18 个 <code>--gen-doc</code> 生成器 ok=18</td></tr></tbody></table>
+<h2 id="6-遗留-followup">6. 遗留（followup）<a class="anchor" href="#6-遗留-followup" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项</th><th>说明</th></tr></thead><tbody><tr><td>生成层导航注入</td><td>18 篇还原文档 + <code>096</code> 等生成层文档的「隶属」头须改生成器后重跑，不能手改</td></tr><tr><td><code>03_DESIGN_设计</code> 就近索引缺口 40</td><td>该目录 128 篇中有 40 篇未被就近索引收录，主索引仍需兜底；补齐后主索引可再降约 40 行</td></tr><tr><td><code>02</code>/<code>09</code> 就近索引缺口 32/29</td><td>两个目录是 exempt 目录（由 <code>docs:check-beginner</code> 另行保证），但就近索引本身不完整</td></tr><tr><td>子篇行数未全部达标</td><td><code>FE-005/006/007/009/010</code> 仍超 150 行（103–263）；按 §12「逐步靠拢」本轮到此，建议配长度棘轮守卫持续度量</td></tr><tr><td>根 README / 指令文件</td><td>DOCS-004 为人工评审（gate=manual），未有自动执行器</td></tr><tr><td><strong>跨阶段同号族：DESIGN-FE / DESIGN-MEM</strong>（下一批次待办，2026-09-18 登记）</td><td>同一标签号在 `03_DESIGN_设计/DESIGN-FE</td></tr><tr><td><strong>DESIGN-ARCH-072 / 079 / 119 同号不同名</strong>（下一批次待办，2026-09-18 登记）</td><td>同号下挂了不同主题文件：<code>072</code>（模型上下文窗口探测规范 vs 项目规范化总纲）、<code>079</code>（TUI组件实现提示词[子目录] vs TUI界面设计规范[阶段根，DR7 被 check-agent-feedback.js 引用]）、<code>119</code>（TUI原生文本选择与复制可用性修复 vs TUI文本选择与复制-验收标准）。须拆号重编或改名区分，暂不动</td></tr></tbody></table>
+<h2 id="7-b9-按标签归夹-全仓分文件夹">7. B9 按标签归夹（全仓分文件夹）<a class="anchor" href="#7-b9-按标签归夹-全仓分文件夹" aria-label="锚点">#</a></h2>
+<p><strong>指令</strong>：不止 OCR/重复件，而是「所有文档都按 <code>[TAG-XXX]</code> 标签放到不同子文件夹」。</p>
+<p><strong>做法</strong>：</p>
+<ul><li>遍历全仓可移动 <code>.md</code>，按 <code>[TAG-XXX]</code> 标签归入其阶段目录下的 <code>[TAG-XXX]/</code> 子文件夹；</li><li>族规模 ≥3 篇 → 独立成夹；≤2 篇 → 并入「其它」桶（如 <code>其它设计/</code>、<code>其它规范/</code>）；</li><li><strong>DR7 红线</strong>：被代码当路径常量引用的 46 篇（移动范围）留根目录不移动——门禁红不可擅移；</li><li>合并 38 篇重复件（同簇整合）、HK-3 隔离 38 篇冗余件（<strong>只隔离不删除</strong>，隔离区 <code>_dup_quarantine/</code>）。</li></ul>
+<p><strong>链接修复（B9 不可分割的收尾）</strong>：物理移动使 377 篇文档旧相对路径全部失效。</p>
+<ul><li>初版修复器（v2）用「循环内复用原文本偏移」重写，对 URL 长度变化（如 <code>%5B</code>→<code>[</code>、<code>%20</code>→空格）的链接发生 <strong>offset-mutation 交错污染</strong>，损坏 10 个多链接文件；</li><li>修正版修复器（<code>_b9_links_fix.py</code>）改用<strong>逆序偏移落地 + 子串/文件名双匹配</strong>，并应用前备份到 <code>_linkfix_bak/</code>；统一重写 <strong>924 处 / 97 文件</strong>断裂链接；</li><li>损坏文件最终核验 = <strong>0</strong>（8 个从 git HEAD 恢复、1 个无历史文档手工修复、其余经修正器修复）；</li><li>剩余 <strong>11 处断链全部为既有损坏</strong>（目标在仓内不存在：<code>COMMUNICATION-PROTOCOL.md</code>、<code>[DESIGN-PROMPT-002]</code>、<code>[DESIGN-ARCH-011]</code> 编码链接、<code>platform/packages/agent-sdk/docs/*</code> 外部路径、<code>postmortem-template.md</code>、<code>drill-schedule.md</code> 模板缺件）——B9 与修复均未新增断链。</li></ul>
+<p><strong>HTML 孪生重建</strong>：<code>npm run docs:build</code> 重生成 <strong>1197 个 <code>.html</code></strong>（链接解析器只换 <code>.md</code>→<code>.html</code>、不改路径，浏览器按相对路径解析）；<code>docs/19_资产/site/dead-links.json</code> 审计 66 条陈旧引用（pre-existing 内容缺陷，非 B9）。</p>
+<p><strong>守卫结果</strong>：</p>
+<table><thead><tr><th>守卫</th><th>结果</th></tr></thead><tbody><tr><td><code>docs:verify</code></td><td>1468 源 md / 1469 html / 16480 本地链接 <strong>全通过</strong></td></tr><tr><td><code>check:repo-layout</code></td><td><code>docs-index-complete</code> <strong>0</strong>（B9 重写就近索引误删 <code>03_DESIGN_设计</code> 根级 2 篇 <code>[DESIGN-BACKUP-001]</code>/<code>[DESIGN-SEC-001]</code> 已补回）；<code>dangling-task</code> 88（B9 未新增，为旧基线漂移）；<code>cross-layer-require</code> 39（持平）</td></tr></tbody></table>
+<p><strong>留痕</strong>：一次性脚本与原文快照在 <code>.khyos/housekeeping/2026-09-17-doc-plan/</code>（<code>_b9_*.py</code>、<code>_linkfix_bak/</code>、<code>_dup_quarantine/</code>），可原路撤回。</p>
+<h3 id="7-1-追记-2026-09-18-16-40-还原事故与重复件清理">7.1 追记（2026-09-18 16:40）：还原事故与重复件清理<a class="anchor" href="#7-1-追记-2026-09-18-16-40-还原事故与重复件清理" aria-label="锚点">#</a></h3>
+<p>B9 落地后当天，并发会话的多次 <code>git reset</code> / <code>git checkout</code>（reflog 佐证 12:03/12:24/13:32，另有 mtime 群指向 10:55–14:23 的多批 checkout）把<strong>所有未提交移动/改名的旧路径文件按 HEAD 内容批量复活</strong>，形成&quot;阶段根旧件 + 子目录正本&quot;双份（守卫按 basename 匹配索引，未能发现）。处置（HK-3 只隔离不删除）：</p>
+<table><thead><tr><th>项</th><th>数</th></tr></thead><tbody><tr><td>阶段根真重复隔离（含 dirty 件逐行校验）</td><td><strong>203 篇</strong></td></tr><tr><td>旧下划线目录（<code>_报告</code>/<code>_规范</code>/<code>_设计模式</code> 等 8 个）残件隔离</td><td><strong>99 篇</strong></td></tr><tr><td><code>_AI协作预设包/skills/README.md</code>（唯一正本）迁 <code>17_AI协作预设包</code> + 4 条入站链接改指</td><td>1 篇 / 4 链</td></tr><tr><td><code>[INIT-PRD-003]</code> 交错损坏修复</td><td>4 处（L5/32/33/35）</td></tr></tbody></table>
+<p>隔离区 <code>_dup_quarantine/restored_2026-09-18/</code>（302 篇 md + html 孪生，保留原路径）。复核：<code>docs:build</code> EXIT 0；<code>docs:verify</code> 1166 md / 13096 链接全通过；<code>check-repo-layout</code> <strong>EXIT 0</strong>（<code>dangling-task</code> 84 &lt; 基线 88）。此前 §7 表中 <code>dangling-task</code> 88、<code>docs-index-complete</code> 的 2 篇补录行，以本追记为准（2 篇已随隔离归位 <code>docs/10_规范/</code>，索引行同步移除）。</p>
+<p><strong>结论</strong>：B9 移动本身无过错；<strong>未提交的大重组在共享仓库中随时可能被并发会话的 git 还原操作复活</strong>——大重组的最终落地必须以 commit 为准。</p>
+<h3 id="7-2-追记-2026-09-18-17-45-改号残留孤儿-html-清理">7.2 追记（2026-09-18 17:45）：改号残留孤儿 HTML 清理<a class="anchor" href="#7-2-追记-2026-09-18-17-45-改号残留孤儿-html-清理" aria-label="锚点">#</a></h3>
+<p><code>03_DESIGN_设计</code> 根上的 <code>[DESIGN-ARCH-067] opencode高含金量功能教学…html</code> 为改号残留（正文 .md 已改号 <strong>075</strong> 并归夹至 <code>DESIGN-ARCH/</code>），无 .md 配对。全阶段根孤儿 HTML 扫描仅此 1 例，按 HK-3 移入隔离区 <code>orphan_html_2026-09-18/</code>。根上其余 4 篇 .md 均为 DR7 红线（079/113←check-agent-feedback.js、100←check-model-list-truth.js、OTHER-005←khy.extension.json），按设计留根。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-055] khy-os-规范修复最终验证报告-2026-09-04.html"><div class="dir">← 上一篇</div><div class="ttl">khy-os 规范修复最终验证报告</div></a><a class="next" href="../../../docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-057] ARCH-119-提交完成与崩溃恢复报告-2026-09-18.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-119] 提交收口 + 并发会话崩溃恢复报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/04_IMPL_实现/IMPL-RPT/[IMPL-RPT-056] 文档精简与结构化整理落地记录.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

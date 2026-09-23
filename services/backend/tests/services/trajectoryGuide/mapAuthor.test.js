@@ -28,8 +28,8 @@ const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-g5-home-'));
 process.env.KHY_PROJECT_DATA_HOME = TMP_HOME;
 process.env.KHY_DEP_HEALING = 'off';
 
-const mapAuthor = require('../../../src/services/trajectoryGuide/mapAuthor');
-const mapStore = require('../../../src/services/trajectoryGuide/mapStore');
+const mapAuthor = require('../../../src/services/domain/trajectory/trajectoryGuide/mapAuthor.js');
+const mapStore = require('../../../src/services/domain/trajectory/trajectoryGuide/mapStore.js');
 const { parseSkillContent } = require('../../../src/skills/skillLoader');
 
 function manifest() {

@@ -46,31 +46,32 @@ const aiManagementServer = require('../src/services/aiManagementServer');
 // enqueues `workflow_runs` (via ai-backend's router mounted in the management
 // server). Without a worker in-process nothing claims those rows, so runs sit
 // in `queued` forever. The atomic claim makes co-running with server.js safe.
-const { workflowRunWorker } = require('../src/services/workflow');
-const { getDataHome, getLegacyDataHome } = require('../src/utils/dataHome');
-
-// Ensure the JWT signing secret exists before the management server handles any
-// login. This daemon does not load dotenv; ensureJwtSecret reads the canonical
-// .env from disk and self-provisions + persists a strong secret if it is absent
-// (otherwise username/password login fails with "JWT_SECRET is not configured").
+// Fail-soft: a broken workflow module must not crash the daemon at require time
+// (before main() can run) — degrade to no-worker and let the management stack
+// (API + frontend) still come up. Downstream users null-check workflowRunWorker.
+let workflowRunWorker = null;
 try {
-  require('../src/bootstrap/ensureAuthSecret').ensureJwtSecret({
-    log: (m) => {
-      try {
-        process.stdout.write(`[daemon] ${m}\n`);
-      } catch {
-        /* ignore */
-      }
-    },
-  });
-} catch {
-  /* helper unavailable — login will surface a clear error itself */
+  ({ workflowRunWorker } = require('../src/services/workflow'));
+} catch (err) {
+  // eslint-disable-next-line no-console
+  console.log(
+    `[ai-manage-daemon] workflow 模块加载失败，已降级为无 worker 模式（API/前端照常启动）: ${err && err.message ? err.message : String(err)}`
+  );
 }
+const { getDataHome, getLegacyDataHome, isPortableDeployment } = require('../src/utils/dataHome');
 
 const KHY_DIR = getDataHome();
 const RUNTIME_FILE = path.join(KHY_DIR, 'ai_manage_runtime.json');
 const LEGACY_RUNTIME_FILE = path.join(getLegacyDataHome(), 'ai_manage_runtime.json');
 const LOG_DIR = path.join(KHY_DIR, 'logs');
+
+// Portable installs keep ALL state under the install root (getDataHome()), so
+// we must NOT also write the runtime file to the legacy system-drive home
+// (~/.khyquant on C:) — that leaked state to C: on every GC tick.
+function _runtimeFiles() {
+  if (isPortableDeployment()) return [RUNTIME_FILE];
+  return [RUNTIME_FILE, LEGACY_RUNTIME_FILE];
+}
 
 const DEFAULT_API_PORT = 9090;
 const DEFAULT_FRONTEND_PORT = 8090;
@@ -78,6 +79,7 @@ const DEFAULT_IDLE_MS = 10 * 60_000;
 const DEFAULT_SESSION_TTL_MS = 35_000;
 const DEFAULT_STARTUP_GRACE_MS = 10 * 60_000;
 const DEFAULT_FRONTEND_WAIT_MS = 30_000;
+const GC_TICK_MS = 5000;
 
 let controlServer = null;
 let controlPort = 0;
@@ -95,8 +97,76 @@ const sessions = new Map(); // sid -> lastSeenAt
 let startupAt = Date.now();
 let lastActiveAt = Date.now();
 let seenAnySession = false;
+// Wall-clock of the most recent HTTP request the API server answered, refreshed
+// by the request hook wired in start(). Serving traffic is productive work, so
+// it refreshes the idle clock independently of the browser-side session bridge —
+// otherwise a tab whose /open /ping never reaches the control port (sandboxed or
+// cross-origin-restricted guests, offline networks) lets a fully serving daemon
+// classify itself as idle and self-terminate with ERR_CONNECTION_REFUSED.
+let lastRequestAt = 0;
 let gcTimer = null;
 let shuttingDown = false;
+
+// Liveness probes: zero-arg functions returning truthy when the daemon is doing
+// work that must NOT be reaped as idle (e.g. the workflow worker is mid-run).
+// A truthy probe counts as activity in the GC loop — it refreshes lastActiveAt
+// so a long-running headless task is never killed mid-flight.
+const activityProbes = [];
+
+function addActivityProbe(fn) {
+  if (typeof fn === 'function') activityProbes.push(fn);
+}
+
+function anyProbeActive() {
+  for (const probe of activityProbes) {
+    try {
+      if (probe()) return true;
+    } catch {
+      /* a broken probe must never block the GC loop */
+    }
+  }
+  return false;
+}
+
+/**
+ * Mark an answered API request as daemon activity.
+ *
+ * Called from the API server's request hook. Deliberately does NOT touch
+ * `seenAnySession` or the session map: those mean "a browser tab registered
+ * itself", which stays the source of the reason label (`idle` vs
+ * `startup-timeout`). Request activity only widens what counts as "not idle".
+ */
+function noteRequestActivity() {
+  lastRequestAt = Date.now();
+}
+
+function getState() {
+  return {
+    sessions: new Map(sessions),
+    seenAnySession,
+    lastActiveAt,
+    lastRequestAt,
+    shuttingDown,
+    controlPort,
+    apiPort,
+    frontendPort,
+  };
+}
+
+// Test seam: reset the module-level reaping state without touching servers.
+function _resetForTests() {
+  sessions.clear();
+  seenAnySession = false;
+  shuttingDown = false;
+  activityProbes.length = 0;
+  if (gcTimer) {
+    clearInterval(gcTimer);
+    gcTimer = null;
+  }
+  startupAt = Date.now();
+  lastActiveAt = Date.now();
+  lastRequestAt = 0;
+}
 
 // Bootstrap auth pushed by the CLI (`khy chat` → POST /auth/bootstrap) and
 // fetched by the manage page (`main.js` → GET /auth/bootstrap) to auto-login
@@ -153,7 +223,7 @@ function writeRuntime(extra = {}) {
     ...extra,
   };
   const json = JSON.stringify(payload, null, 2);
-  for (const filePath of [RUNTIME_FILE, LEGACY_RUNTIME_FILE]) {
+  for (const filePath of _runtimeFiles()) {
     try {
       ensureDir(path.dirname(filePath));
       fs.writeFileSync(filePath, json, 'utf-8');
@@ -164,7 +234,7 @@ function writeRuntime(extra = {}) {
 }
 
 function clearRuntime() {
-  for (const filePath of [RUNTIME_FILE, LEGACY_RUNTIME_FILE]) {
+  for (const filePath of _runtimeFiles()) {
     try {
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     } catch {
@@ -299,7 +369,13 @@ function readBody(req) {
 }
 
 function readAuthToken(req, urlObj) {
-  const headerToken = String(req.headers['x-khy-token'] || '').trim();
+  // Accept the control token from either header spelling. The daemon's own API
+  // historically used `x-khy-token`; the lifecycle module's `requestShutdown`
+  // sends `X-Control-Token`. Supporting both avoids a silent 401 that makes a
+  // lifecycle-initiated shutdown appear to succeed while the daemon keeps running.
+  const headerToken = String(
+    req.headers['x-khy-token'] || req.headers['x-control-token'] || ''
+  ).trim();
   if (headerToken) return headerToken;
   return String(urlObj.searchParams.get('token') || '').trim();
 }
@@ -311,6 +387,43 @@ function quoteForCmd(token) {
   const s = String(token);
   if (s !== '' && !/[\s"&|<>^()%!]/.test(s)) return s;
   return `"${s.replace(/"/g, '\\"')}"`;
+}
+
+// The dev server is spawned through cmd.exe on Windows. cmd's own diagnostic
+// messages (e.g. "'npm.cmd' is not recognized") are emitted in the OEM codepage
+// (cp936 on zh-CN) while Vite's stream is UTF-8; redirecting that mixed byte
+// stream straight to a file yields invalid UTF-8. So capture the child's pipes
+// and normalize per line: strict UTF-8 when valid, otherwise decoded from the
+// OEM codepage — guaranteeing a UTF-8-clean log. Newline-splitting is safe for
+// both UTF-8 and GBK (0x0a never appears inside their multi-byte sequences).
+function _decodeConsoleLine(lineBuf) {
+  try {
+    return new TextDecoder('utf8', { fatal: true }).decode(lineBuf);
+  } catch {
+    try {
+      return new TextDecoder('gbk').decode(lineBuf);
+    } catch {
+      return lineBuf.toString('utf8');
+    }
+  }
+}
+
+function _pipeConsoleToUtf8Log(stream, outStream) {
+  if (!stream) return;
+  let pending = Buffer.alloc(0);
+  const flushLine = (buf) => outStream.write(_decodeConsoleLine(buf) + '\n');
+  stream.on('data', (chunk) => {
+    pending = Buffer.concat([pending, chunk]);
+    let nl;
+    while ((nl = pending.indexOf(0x0a)) !== -1) {
+      flushLine(pending.subarray(0, nl));
+      pending = pending.subarray(nl + 1);
+    }
+  });
+  stream.on('end', () => {
+    if (pending.length) flushLine(pending);
+    pending = Buffer.alloc(0);
+  });
 }
 
 async function startFrontendProcess({ host, basePort, frontendDir, apiPort: backendPort }) {
@@ -340,7 +453,9 @@ async function startFrontendProcess({ host, basePort, frontendDir, apiPort: back
 
   ensureDir(LOG_DIR);
   const logFile = path.join(LOG_DIR, 'ai_frontend_dev.log');
-  const fd = fs.openSync(logFile, 'a');
+  // Capture via a WriteStream so we can transcode the child's mixed OEM/UTF-8
+  // byte stream into UTF-8-clean lines before it hits disk (see helpers above).
+  const logStream = fs.createWriteStream(logFile, { flags: 'a' });
 
   // Node hardening (CVE-2024-27980) makes spawning a .cmd/.bat shim such as npm.cmd without a
   // shell throw `spawn EINVAL` on Windows. Run through a shell on Windows and quote each token
@@ -364,27 +479,25 @@ async function startFrontendProcess({ host, basePort, frontendDir, apiPort: back
         VITE_AI_PROXY_TARGET: `http://127.0.0.1:${backendPort}`,
         BROWSER: 'none',
       },
-      stdio: ['ignore', fd, fd],
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
   } catch (err) {
     // A dev-server spawn failure must never crash the daemon — degrade to static dist upstream.
-    try {
-      fs.closeSync(fd);
-    } catch {
-      /* ignore */
-    }
+    logStream.destroy();
     return {
       ok: false,
       reason: `启动前端 dev server (端口 ${port}) 失败: ${describeSystemError(err)}`,
       logFile,
     };
   }
+  _pipeConsoleToUtf8Log(child.stdout, logStream);
+  _pipeConsoleToUtf8Log(child.stderr, logStream);
   // Async spawn errors are emitted, not thrown; absorb them so they don't become an
   // uncaughtException. The port-wait below turns a dead child into a clean fallback.
   child.on('error', () => {
     /* surfaced via port-wait timeout + ai_frontend_dev.log */
   });
-  fs.closeSync(fd);
+  child.on('close', () => logStream.end());
 
   const ready = await waitPortOpen(host, port);
   if (!ready) {
@@ -457,6 +570,7 @@ function buildStatusPayload() {
       seenAnySession,
       startupAt,
       lastActiveAt,
+      lastRequestAt,
     },
   };
 }
@@ -498,7 +612,7 @@ async function shutdown(reason = 'unknown') {
   }
 
   try {
-    workflowRunWorker.stop();
+    if (workflowRunWorker) workflowRunWorker.stop();
   } catch {
     // best effort
   }
@@ -514,7 +628,7 @@ async function shutdown(reason = 'unknown') {
   process.exit(0);
 }
 
-function startGcLoop({ idleMs, sessionTtlMs, startupGraceMs }) {
+function startGcLoop({ idleMs, sessionTtlMs, startupGraceMs, tickMs = GC_TICK_MS }) {
   gcTimer = setInterval(() => {
     const now = Date.now();
 
@@ -524,13 +638,16 @@ function startGcLoop({ idleMs, sessionTtlMs, startupGraceMs }) {
 
     writeRuntime({ sessions: sessions.size });
 
-    if (sessions.size > 0) {
+    if (sessions.size > 0 || anyProbeActive()) {
       lastActiveAt = now;
       return;
     }
 
+    // Serve-side activity counts as liveness too: a request answered by the API
+    // server means the daemon is doing real work, whatever the browser-side
+    // session bridge is doing. See lastRequestAt.
     const limit = seenAnySession ? idleMs : startupGraceMs;
-    const inactiveMs = now - lastActiveAt;
+    const inactiveMs = now - Math.max(lastActiveAt, lastRequestAt);
     if (inactiveMs >= limit) {
       const reason = seenAnySession ? 'idle' : 'startup-timeout';
       // Diagnostic context for restart analysis: which watchdog fired
@@ -542,7 +659,7 @@ function startGcLoop({ idleMs, sessionTtlMs, startupGraceMs }) {
       );
       shutdown(reason).catch(() => process.exit(1));
     }
-  }, 5000);
+  }, tickMs);
   gcTimer.unref();
 }
 
@@ -663,19 +780,35 @@ async function main() {
   const frontendDistDir = parseStringArg(argv, '--frontend-dist-dir', '');
   frontendHost = parseStringArg(argv, '--frontend-host', '127.0.0.1');
 
-  apiPort = await aiManagementServer.start(requestedApiPort);
+  apiPort = await aiManagementServer.start(requestedApiPort, {
+    onRequest: noteRequestActivity,
+  });
 
   // Claim/execute queued workflow runs in this serving process (see require note).
-  try {
-    workflowRunWorker.start();
-  } catch (err) {
-    // A worker failure must never prevent the management stack from serving.
-    // eslint-disable-next-line no-console
-    console.error(
-      '[ai-manage-daemon] workflow worker start failed:',
-      err && err.message ? err.message : String(err)
-    );
+  // Skipped entirely when the workflow module failed to load (fail-soft above).
+  if (workflowRunWorker) {
+    try {
+      workflowRunWorker.start();
+    } catch (err) {
+      // A worker failure must never prevent the management stack from serving.
+      // eslint-disable-next-line no-console
+      console.error(
+        '[ai-manage-daemon] workflow worker start failed:',
+        err && err.message ? err.message : String(err)
+      );
+    }
   }
+
+  // Liveness: a workflow run in flight must not be reaped as idle. The GC loop
+  // treats a busy worker as activity so a long headless task is never killed
+  // mid-run (which would re-queue it and flap the daemon).
+  addActivityProbe(() => {
+    try {
+      return !!(workflowRunWorker && workflowRunWorker.isBusy());
+    } catch {
+      return false;
+    }
+  });
 
   const frontend = await resolveFrontend({
     host: frontendHost,
@@ -748,35 +881,129 @@ function describeSystemError(err) {
   return advice ? `${msg} [${code}] — ${advice}` : msg;
 }
 
-process.on('SIGTERM', () => {
+function handleSigterm() {
   shutdown('sigterm').catch(() => process.exit(1));
-});
-process.on('SIGINT', () => {
+}
+
+function handleSigint() {
   shutdown('sigint').catch(() => process.exit(1));
-});
-process.on('uncaughtException', (err) => {
+}
+
+const {
+  isTransientError,
+  isAbortError,
+  isBenignUncaughtException,
+} = require('../src/services/crashRecovery');
+
+// A single transient fault (a reset socket, a busy SQLite row, a missing
+// interpreter from a stale config) must NOT take the whole management stack
+// down. Only fatal / unknown faults do. This is what stops the "any
+// unhandled rejection → exit → respawn" flapping loop.
+function isSurvivableProcessError(err) {
+  if (isAbortError(err)) return true;
+  if (isBenignUncaughtException(err)) return true;
+  if (isTransientError(err)) return true;
+  return false;
+}
+
+function handleUncaughtException(err) {
+  if (isSurvivableProcessError(err)) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[ai-manage-daemon] uncaughtException transient, continuing:',
+      describeSystemError(err)
+    );
+    return;
+  }
   // eslint-disable-next-line no-console
   console.error(
-    '[ai-manage-daemon] uncaughtException: 守护进程发生未捕获异常，即将关闭 AI 管理会话:',
+    '[ai-manage-daemon] uncaughtException fatal/unknown: closing AI management session:',
     describeSystemError(err)
   );
   shutdown('uncaught-exception').catch(() => process.exit(1));
-});
-process.on('unhandledRejection', (err) => {
+}
+
+function handleUnhandledRejection(err) {
+  if (isSurvivableProcessError(err)) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[ai-manage-daemon] unhandledRejection transient, continuing:',
+      describeSystemError(err)
+    );
+    return;
+  }
   // eslint-disable-next-line no-console
   console.error(
-    '[ai-manage-daemon] unhandledRejection: 守护进程发生未处理的 Promise 拒绝，即将关闭 AI 管理会话:',
+    '[ai-manage-daemon] unhandledRejection fatal/unknown: closing AI management session:',
     describeSystemError(err)
   );
   shutdown('unhandled-rejection').catch(() => process.exit(1));
-});
+}
 
-main().catch((err) => {
-  // eslint-disable-next-line no-console
-  console.error(
-    '[ai-manage-daemon] start failed: 启动 AI 管理守护进程失败:',
-    describeSystemError(err)
-  );
-  clearRuntime();
-  process.exit(1);
-});
+// Install the process-level handlers. Kept separate from module load so the
+// script can be required by unit tests without hijacking the host process's
+// crash reporting.
+function installProcessHandlers() {
+  process.on('SIGTERM', handleSigterm);
+  process.on('SIGINT', handleSigint);
+  process.on('uncaughtException', handleUncaughtException);
+  process.on('unhandledRejection', handleUnhandledRejection);
+}
+
+if (require.main === module) {
+  // Self-provision the JWT signing secret only when running as the detached
+  // script — a unit test that imports this module must not write .env files.
+  try {
+    require('../src/bootstrap/ensureAuthSecret').ensureJwtSecret({
+      log: (m) => {
+        try {
+          process.stdout.write(`[daemon] ${m}\n`);
+        } catch {
+          /* ignore */
+        }
+      },
+    });
+  } catch {
+    /* helper unavailable — login will surface a clear error itself */
+  }
+
+  installProcessHandlers();
+
+  main().catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error(
+      '[ai-manage-daemon] start failed: 启动 AI 管理守护进程失败:',
+      describeSystemError(err)
+    );
+    clearRuntime();
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  // Reaping / lifecycle
+  startGcLoop,
+  addActivityProbe,
+  noteRequestActivity,
+  shutdown,
+  clearRuntime,
+  writeRuntime,
+  upsertSession,
+  removeSession,
+  // Control surface (exported so tests can build the real control server)
+  createControlServer,
+  listenControlServer,
+  readAuthToken,
+  // Process-level fault handlers (exported so tests can drive them directly)
+  handleUncaughtException,
+  handleUnhandledRejection,
+  installProcessHandlers,
+  // Helpers reused by tests
+  isPidAlive,
+  findAvailablePort,
+  getState,
+  _resetForTests,
+  // Console transcode helpers (exported so tests can drive the real UTF-8 path)
+  _decodeConsoleLine,
+  _pipeConsoleToUtf8Log,
+};

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [RESEARCH-006] khy-os-规则合规检查报告-2026-09-15.md -->
+<title>khy-os 规则合规检查报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>RESEARCH<span class="sep">›</span>khy-os 规则合规检查报告</div>
+      <header class="hero reveal"><h1>khy-os 规则合规检查报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-规则合规检查报告">khy-os 规则合规检查报告</a></li><li class="lvl-2"><a href="#一-对照基准-规则真源">一、对照基准（规则真源）</a></li><li class="lvl-2"><a href="#二-规则-1-零硬编码-违规场景-71-处">二、规则 1（零硬编码）违规场景——71 处</a></li><li class="lvl-3"><a href="#2-1-第一方代码需整改-error-12-类场景">2.1 第一方代码需整改（ERROR，12 类场景）</a></li><li class="lvl-3"><a href="#2-2-生成物未清理-error-62-处-建议-gitignore-而非改码">2.2 生成物未清理（ERROR，62 处，建议 gitignore 而非改码）</a></li><li class="lvl-2"><a href="#三-规则-2-状态透明-违规场景-215-处-其中第一方场景">三、规则 2（状态透明）违规场景——215 处（其中第一方场景）</a></li><li class="lvl-2"><a href="#四-规则-3-基于活动的超时-违规场景-1-处">四、规则 3（基于活动的超时）违规场景——1 处</a></li><li class="lvl-2"><a href="#五-审计报告未处理项复核-30-项中关键项">五、审计报告未处理项复核（30 项中关键项）</a></li><li class="lvl-3"><a href="#已修复项确认-代码交叉验证-无回归">已修复项确认（代码交叉验证，无回归）</a></li><li class="lvl-2"><a href="#六-整改优先级建议">六、整改优先级建议</a></li><li class="lvl-2"><a href="#附录-复现方法">附录：复现方法</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-规则合规检查报告">khy-os 规则合规检查报告<a class="anchor" href="#khy-os-规则合规检查报告" aria-label="锚点">#</a></h1>
+<ul><li><strong>检查日期</strong>：2026-09-15</li><li><strong>检查对象</strong>：<code>D:\Portable\khy-os</code> 全仓（1515 个一级文件 + 子模块 <code>services/backend/src</code> 2831 文件 + <code>tools/deepseek-eyes</code>）</li><li><strong>检查方法</strong>：官方守卫脚本 <code>scripts/ci/check-agent-rules.js</code> 全仓扫描 + 审计报告未处理项逐条代码复核</li><li><strong>结果统计</strong>：<strong>71 ERROR / 215 WARN</strong>（backend 子模块另 +3 ERROR / +3 WARN，deepseek-eyes 零违规）</li></ul>
+<hr>
+<h2 id="一-对照基准-规则真源">一、对照基准（规则真源）<a class="anchor" href="#一-对照基准-规则真源" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>基准</th><th>位置</th><th>内容</th></tr></thead><tbody><tr><td>工程规则 1</td><td><code>AGENTS.md</code> §工程规则</td><td>零硬编码——动态配置（禁止字面量 IP/端口/绝对路径/第一方生产域名，须走 <code>constants/serviceDefaults.js</code> 或 env）</td></tr><tr><td>工程规则 2</td><td><code>AGENTS.md</code> §工程规则</td><td>状态透明——面向用户状态/日志必须「动作 + 目标 + 进度」</td></tr><tr><td>工程规则 3</td><td><code>AGENTS.md</code> §工程规则</td><td>基于活动的超时——不得固定时长无条件 kill 长任务</td></tr><tr><td>工程规则 4</td><td><code>AGENTS.md</code> §工程规则</td><td>终端渲染——内联 UI 不用 ANSI 滚动区</td></tr><tr><td>自动守卫</td><td><code>scripts/ci/check-agent-rules.js</code></td><td>上述规则的可执行检查（<code>--changed</code> / 全量目录扫描）</td></tr><tr><td>规范合规审计</td><td><code>khy-os/_产物/规范合规审计报告-2026-09-15.md</code></td><td>MCP / A2A / 工具循环 / 安全 41 项问题，11 项已修，<strong>30 项待处理</strong></td></tr></tbody></table>
+<hr>
+<h2 id="二-规则-1-零硬编码-违规场景-71-处">二、规则 1（零硬编码）违规场景——71 处<a class="anchor" href="#二-规则-1-零硬编码-违规场景-71-处" aria-label="锚点">#</a></h2>
+<h3 id="2-1-第一方代码需整改-error-12-类场景">2.1 第一方代码需整改（ERROR，12 类场景）<a class="anchor" href="#2-1-第一方代码需整改-error-12-类场景" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>位置</th><th>违规内容</th><th>建议修法</th></tr></thead><tbody><tr><td>1</td><td><code>scripts/release/build-android.ps1:105,122,137</code></td><td><code>D:\Portable\Tools\flutter\bin\flutter.bat</code> 机器路径硬编码</td><td>改 <code>$PSScriptRoot</code> 推算或 <code>FLUTTER_HOME</code> env 扫描</td></tr><tr><td>2</td><td><code>scripts/release/verify-android-signature.js:61</code></td><td><code>D:\Portable\Tools\android-sdk</code> 硬编码</td><td><code>ANDROID_SDK_ROOT</code> env / 动态定位</td></tr><tr><td>3</td><td><code>apps/khyos-desktop/.build_run.cjs:2-3</code>、<code>.launch_verify.cjs:5</code>、<code>create-shortcut.ps1:4</code></td><td><code>D:/Portable/khy-os/...</code> 绝对路径</td><td><code>$PSScriptRoot</code> / <code>__dirname</code> 推算</td></tr><tr><td>4</td><td><code>apps/khyos-desktop/docs/*.py</code>（18 个 search/parse 脚本）、<code>zcode-pages/shot.ps1</code>、<code>scripts/scan-asar*.cjs</code>（2 个）、<code>scripts/ci/brand-replace.cjs:22</code></td><td>机器本地路径 / 生产域名字面量</td><td>临时分析脚本应归档 <code>_deprecated/</code> 或加 gitignore</td></tr><tr><td>5</td><td><code>apps/provider-hub/scripts/acceptance.mjs:6,39</code></td><td>绝对路径</td><td>相对路径推算</td></tr><tr><td>6</td><td><code>apps/khyos-desktop/package.json:100</code></td><td><strong>生产域名 <code>update.khyquant.top</code> 硬编码</strong>（更新源 URL）</td><td>从 <code>constants/serviceDefaults.js</code> 导入或 env 可覆盖</td></tr><tr><td>7</td><td><code>services/ai-backend/src/routes/aiGatewayAdmin.js:1100</code></td><td><code>http://127.0.0.1:9100</code> 硬编码端点（env 回退行）</td><td>端口纳入 <code>serviceDefaults</code> 单一真源</td></tr><tr><td>8</td><td><code>services/backend/src/services/a2a/agentCardSpec.js:251</code>、<code>src/routes/wellKnown.js:110</code></td><td><code>http://127.0.0.1:0</code> 硬编码</td><td>端口 0 占位语义改用 <code>process.env</code> 或 <code>serviceDefaults</code> 命名常量</td></tr><tr><td>9</td><td><code>extensions/scripts/khy-desktop-rd/openflux/tauri.conf.json:8</code></td><td><code>devUrl: http://localhost:1420</code></td><td>env 注入</td></tr></tbody></table>
+<blockquote><p>第 6 项（<code>package.json</code> 生产域）与第 7/8 项（端点回退字面量）是 <code>AGENTS.md</code> 规则 1 明确点名的两类最高频违规——<strong>域名字面量只允许存在于 <code>constants/serviceDefaults.js</code>，端点回退行中的 <code>127.0.0.1:&lt;端口&gt;</code> 亦属违规</strong>。</p></blockquote>
+<h3 id="2-2-生成物未清理-error-62-处-建议-gitignore-而非改码">2.2 生成物未清理（ERROR，62 处，建议 gitignore 而非改码）<a class="anchor" href="#2-2-生成物未清理-error-62-处-建议-gitignore-而非改码" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>位置</th><th>数量</th><th>说明</th></tr></thead><tbody><tr><td><code>apps/khy-os-client-app/.dart_tool/</code></td><td>22</td><td>Flutter 构建缓存（<code>hook.dependencies_hash_file.json</code>、<code>input.json</code> 含机器路径）</td></tr><tr><td><code>docs/_assets/dead-links.json:137,142</code></td><td>2</td><td>死链报告中残留 <code>/home/kodehu03/...</code> 机器路径</td></tr><tr><td><code>scripts/check_keys.ps1:1</code></td><td>1</td><td>键检查脚本绝对路径</td></tr><tr><td><code>apps/khy-mobile/android/.../public/assets/*.js</code></td><td>37</td><td>打包生成物（混淆 Vue 资产），守卫误扫</td></tr></tbody></table>
+<hr>
+<h2 id="三-规则-2-状态透明-违规场景-215-处-其中第一方场景">三、规则 2（状态透明）违规场景——215 处（其中第一方场景）<a class="anchor" href="#三-规则-2-状态透明-违规场景-215-处-其中第一方场景" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>位置</th><th>场景</th><th>判定</th></tr></thead><tbody><tr><td><code>apps/ai-frontend/src/composables/useWxBinding.js:257</code></td><td><code>status: 'connecting'</code> 裸枚举值，无动作+目标+进度</td><td><strong>需修</strong></td></tr><tr><td><code>apps/ai-frontend/src/views/KhyOsDesktop.vue:31</code></td><td><code>booting / capturing</code> 状态直接展示</td><td><strong>需修</strong></td></tr><tr><td><code>software/khyquant/frontend/src/views/admin/Dashboard.vue:398,485,1441</code></td><td><code>&lt;el-option label=&quot;处理中&quot;&gt;</code> 选项标签</td><td>数据类（AGENTS 枚举标签例外），<strong>人工评审通过</strong></td></tr><tr><td><code>software/khyquant/frontend/src/views/Feedback.vue:208</code></td><td>示例数据 <code>status: 'processing'</code></td><td>数据类，<strong>通过</strong></td></tr><tr><td><code>services/backend/src/routes/feedback.js:196,249</code>、<code>remoteSsh.js:367</code></td><td><code>processing</code> 枚举状态</td><td>数据类，<strong>通过</strong></td></tr><tr><td><code>apps/khyos-desktop/zcode-analysis/unpacked/**</code>（20+ 处）</td><td>第三方 zcode 解包分析文件</td><td>范围外，建议 gitignore</td></tr></tbody></table>
+<p><strong>结论</strong>：第一方面向用户的真实违规 2 处（<code>useWxBinding.js</code>、<code>KhyOsDesktop.vue</code>）；其余为枚举数据或第三方产物。</p>
+<hr>
+<h2 id="四-规则-3-基于活动的超时-违规场景-1-处">四、规则 3（基于活动的超时）违规场景——1 处<a class="anchor" href="#四-规则-3-基于活动的超时-违规场景-1-处" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>位置</th><th>场景</th><th>说明</th></tr></thead><tbody><tr><td><code>apps/khyos-desktop/.launch_verify.cjs:17</code></td><td><code>setTimeout(() =&gt; process.exit(0), 3000)</code> 硬超时结束 electron 验证进程，无活动重置</td><td>临时验证脚本，建议删除或归档 <code>_deprecated/</code></td></tr></tbody></table>
+<p><strong>规则 4（终端渲染）</strong>：全仓零违规。</p>
+<hr>
+<h2 id="五-审计报告未处理项复核-30-项中关键项">五、审计报告未处理项复核（30 项中关键项）<a class="anchor" href="#五-审计报告未处理项复核-30-项中关键项" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>编号</th><th>严重度</th><th>内容</th><th>2026-09-15 状态</th><th>本次复核</th></tr></thead><tbody><tr><td><strong>M9</strong></td><td>P2</td><td><code>GET /</code>（传统 SSE）与 <code>POST /</code>（Streamable HTTP）双传输混用同一端点</td><td>待处理</td><td><strong>仍存在</strong>（<code>mcpHttpServer.js</code> 文件头自述现状）</td></tr><tr><td><strong>S4</strong></td><td>P1</td><td><code>execSync(\</code>git clone --depth 1 ${url} ${dest}\<code>)</code> 命令注入面</td><td>待处理</td><td><strong>仍存在</strong> <code>services/backend/src/services/domain/extensions/extensions/extensionManager.js:101</code></td></tr><tr><td><strong>S5</strong></td><td>P1</td><td>两套 CORS 策略：monolith 白名单 vs gateway 默认 <code>*</code></td><td>待处理</td><td><strong>仍存在</strong>——<code>ai-backend/server.js:37</code> `origin: ... \</td></tr><tr><td><strong>S3</strong></td><td>P1</td><td><code>/api/cache</code>（可写文件）与 <code>/api/llm</code>（免费模型代理）无鉴权挂载</td><td>待处理</td><td><strong>仍存在</strong> <code>services/backend/server.js:588,626</code> 裸挂载</td></tr><tr><td><strong>T1</strong></td><td>P1</td><td>工具循环无逐轮 journal；checkpoint 按 cwd 单槽覆盖</td><td>待处理</td><td>仍存在</td></tr><tr><td><strong>T2/T3/T6/T7</strong></td><td>P2</td><td>结果层无 schema 校验 / 畸形调用静默丢弃 / 取消受 flag 门控 / 可观测性默认关闭</td><td>待处理</td><td>仍存在</td></tr><tr><td><strong>M10/M11/M12/A2-A7/A9/A10/S6/S7/S8/S9/S10/T4/T5/T8</strong></td><td>P1–P3</td><td>见审计报告原文</td><td>待处理</td><td>未复核</td></tr></tbody></table>
+<h3 id="已修复项确认-代码交叉验证-无回归">已修复项确认（代码交叉验证，无回归）<a class="anchor" href="#已修复项确认-代码交叉验证-无回归" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>编号</th><th>内容</th><th>验证点</th></tr></thead><tbody><tr><td>M5</td><td>MCP HTTP server Origin 校验</td><td><code>mcpHttpServer.js</code> 已实现白名单 + 403 拒绝</td></tr><tr><td>M1/M2/M3/M4</td><td>协议版本协商 / 客户端能力 / 服务端请求响应 / 按能力调用</td><td><code>mcpServerProtocol.js</code> + <code>mcp/index.js</code> 已改</td></tr><tr><td>M6/M7</td><td><code>MCP-Protocol-Version</code> 头 + 会话校验</td><td><code>checkProtocolVersionHeader</code> + <code>streamSessions</code> 已实现</td></tr><tr><td>A8</td><td>A2A 客户端 undefined header 必然失败</td><td><code>_cleanHeaders()</code> 入口级过滤已加</td></tr><tr><td>S1</td><td><code>/api/system</code> 无鉴权</td><td><code>services/backend/server.js:599</code> 已挂 <code>authMiddleware</code></td></tr><tr><td>S2</td><td>凭据明文落盘</td><td>默认 0600 + 严格模式开关已加</td></tr><tr><td>daemon</td><td>宿主控制端点</td><td><code>routes/daemon.js:38</code> <code>requireLoopback + originGuard</code> 已挂</td></tr></tbody></table>
+<hr>
+<h2 id="六-整改优先级建议">六、整改优先级建议<a class="anchor" href="#六-整改优先级建议" aria-label="锚点">#</a></h2>
+<ol><li><strong>本周必修</strong>：2.1 表中 9 类第一方硬编码 ERROR（重点 <code>package.json:100</code> 生产域 + <code>aiGatewayAdmin.js:1100</code> 端点回退）——这是「域迁移 / 便携移动」场景下会静默分叉的真违规。</li><li><strong>本周必修</strong>：审计报告 P1 安全项——M9 端点拆分（需破坏性变更决策）、S4 <code>execSync</code> 拼串改 <code>spawn</code>、S3 <code>/api/cache</code> <code>/api/llm</code> 挂鉴权、S5 CORS 统一白名单。</li><li><strong>清理项</strong>：62 处生成物（<code>.dart_tool/</code>、<code>zcode-analysis/</code>、<code>dead-links.json</code>）加入 <code>.gitignore</code>，让守卫扫描变绿、暴露真实违规。</li><li><strong>归档项</strong>：<code>.launch_verify.cjs</code>、<code>.build_run.cjs</code> 等临时验证脚本按 <code>_deprecated/</code> 规范处理。</li><li><strong>P2 批次</strong>：T1 journal、M11 结果保真、T6/T7 可观测性。</li></ol>
+<hr>
+<h2 id="附录-复现方法">附录：复现方法<a class="anchor" href="#附录-复现方法" aria-label="锚点">#</a></h2>
+<pre><code class="language-powershell"><span class="hljs-comment"># 全仓扫描（排除子模块）</span>
+<span class="hljs-built_in">cd</span> D:\Portable\khy<span class="hljs-literal">-os</span>
+node scripts/ci/check<span class="hljs-literal">-agent-rules</span>.js apps electron extensions kernel packaging patches platform scripts services software tests tools
+
+<span class="hljs-comment"># 子模块显式扫描</span>
+node scripts/ci/check<span class="hljs-literal">-agent-rules</span>.js services\backend\src tests
+
+<span class="hljs-comment"># 仅改动文件（PR gate）</span>
+node scripts/ci/check<span class="hljs-literal">-agent-rules</span>.js <span class="hljs-literal">--changed</span></code></pre>
+<p>完整扫描日志：<code>D:\Portable\Temp\agent-rules-full.txt</code>（71 errors + 215 warnings 明细）。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/11_报告/RESEARCH/[RESEARCH-005] khy-os-能力缺口闭环执行计划-2026-09-15.html"><div class="dir">← 上一篇</div><div class="ttl">khy-os 能力缺口闭环执行计划（2026-09-15）</div></a><a class="next" href="../../../docs/11_报告/RESEARCH/[RESEARCH-007] khy-os-规范合规审计报告-2026-09-15.html"><div class="dir">下一篇 →</div><div class="ttl">khy-os 规范合规审计报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/11_报告/RESEARCH/[RESEARCH-006] khy-os-规则合规检查报告-2026-09-15.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

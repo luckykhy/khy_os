@@ -14,9 +14,10 @@
 const fs = require('fs');
 const path = require('path');
 const { triageSymptom, loadMap } = require('../../../scripts/lib/maintainerTriage');
+const { opsDocPath, opsDocRelPath } = require('../../../scripts/lib/docsPaths');
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
-const DOC_PATH = path.join(ROOT, 'docs', '07_OPS_运维', '[OPS-MAN-067] 症状分诊速查表.md');
+const DOC_PATH = opsDocPath('[OPS-MAN-067] 症状分诊速查表.md');
 
 const C = {
   reset: '\x1b[0m', bold: '\x1b[1m', dim: '\x1b[2m',
@@ -31,7 +32,7 @@ function runTriage(symptom) {
     process.stdout.write(
       `${C.yellow}没有匹配到明确的子系统。${C.reset}\n` +
       `建议：把报错原文或更具体的现象再描述一遍；或直接查总入口 docs/00_INDEX_文档索引.md。\n` +
-      `也可以打开速查表逐条对照：docs/07_OPS_运维/[OPS-MAN-067] 症状分诊速查表.md\n`
+      `也可以打开速查表逐条对照：${opsDocRelPath('[OPS-MAN-067] 症状分诊速查表.md')}\n`
     );
     return;
   }
@@ -55,7 +56,7 @@ function buildDoc() {
   lines.push('# [OPS-MAN-067] Khy-OS 症状分诊速查表');
   lines.push('');
   lines.push('> 出问题时的第一站：用 `Ctrl-F` 搜你看到的现象/报错词，跳到对应子系统，照着「先读文件」和「跑这条验证」做。');
-  lines.push('> 本表由 `docs/_维护者/维护映射表.json` 确定性生成，子系统长大后重跑 `npm run maintenance:triage-doc` 即自动覆盖。');
+  lines.push('> 本表由 `docs/14_维护者/registry/维护映射表.json` 确定性生成，子系统长大后重跑 `npm run maintenance:triage-doc` 即自动覆盖。');
   lines.push('');
   lines.push('## 更快的用法：直接问分诊器');
   lines.push('');
@@ -111,7 +112,7 @@ function buildDoc() {
   lines.push('');
   lines.push('- 把报错原文完整贴给分诊器：`npm run maintainer:triage -- "<把报错粘这里>"`。');
   lines.push('- 仍无匹配就查总入口 `docs/00_INDEX_文档索引.md`，或读 `.ai/MAP.md` 了解全局骨架。');
-  lines.push('- 新子系统请先登记进 `docs/_维护者/维护映射表.json`，本表下次重生会自动收录它。');
+  lines.push('- 新子系统请先登记进 `docs/14_维护者/registry/维护映射表.json`，本表下次重生会自动收录它。');
   lines.push('');
   return lines.join('\n');
 }

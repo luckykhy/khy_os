@@ -290,8 +290,130 @@ test('coze.usable: returns raw apiKey from yaml conn_config', () => {
   assert.equal(u.providers[0].defaultModel, 'deepseek-v4-flash');
 });
 
+// ── zcode(~/.zcode/cli/config.json,zai 槽位 + model 双角色)────────────────
+test('zcode: add writes zai slot + model roles, merge preserves unrelated keys', () => {
+  const a = require('../../../src/services/domain/network/externalApps/zcodeAdapter.js');
+  const dir = mkTmp('zcode');
+  const env = { HOME: dir };
+  const file = a.configPath(env);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify({
+    ui: { theme: 'dark' },
+    modelStream: { idleTimeoutMs: 60000 },
+    provider: { bigmodel: { kind: 'openai-compatible', options: { apiKey: 'sk-bm' } } },
+  }, null, 2), 'utf8');
+
+  const added = a.add({ provider: 'khy', model: 'khy/gpt-4o', apiKey: 'khy-token', endpoint: 'https://api.example.com/v1', protocol: 'openai' }, env);
+  assert.equal(added.success, true);
+  assert.equal(added.slot, 'zai');
+  assert.equal(added.keyWritten, true);
+
+  const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.equal(doc.provider.zai.kind, 'openai-compatible');
+  assert.equal(doc.provider.zai.name, 'khy');
+  assert.equal(doc.provider.zai.options.baseURL, 'https://api.example.com/v1');
+  assert.equal(doc.provider.zai.options.apiKey, 'khy-token');
+  assert.ok(doc.provider.zai.models['gpt-4o']);
+  assert.equal(doc.model.main, 'zai/gpt-4o');
+  assert.equal(doc.model.lite, 'zai/gpt-4o');
+  assert.equal(doc.ui.theme, 'dark');                     // 无关设置保留
+  assert.equal(doc.modelStream.idleTimeoutMs, 60000);       // 无关设置保留
+  assert.ok(doc.provider.bigmodel);                          // 其它槽位保留
+
+  const listed = a.list(env);
+  assert.equal(listed.success, true);
+  const zai = listed.providers.find((p) => p.id === 'zai');
+  assert.equal(zai.isGateSlot, true);
+  assert.equal(zai.hasKey, true);
+  assert.deepEqual(zai.models, ['gpt-4o']);
+  assert.equal(listed.model.main, 'zai/gpt-4o');
+
+  const got = a.get('zai', env);
+  assert.equal(got.provider.endpoint, 'https://api.example.com/v1');
+
+  const preview = a.remove({ target: 'zai' }, env);
+  assert.equal(preview.preview, true);
+  assert.ok(JSON.parse(fs.readFileSync(file, 'utf8')).provider.zai);   // 未落盘
+
+  const removed = a.remove({ target: 'zai', confirmed: true }, env);
+  assert.equal(removed.confirmed, true);
+  const after = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.equal(after.provider.zai, undefined);
+  assert.equal(after.model.main, undefined);                 // 角色引用已清理
+  assert.ok(after.provider.bigmodel);                       // 其它槽位仍在
+});
+
+test('zcode: non-gate slot rejected, unknown kind rejected', () => {
+  const a = require('../../../src/services/domain/network/externalApps/zcodeAdapter.js');
+  const dir = mkTmp('zcode-slot');
+  const env = { HOME: dir };
+  const bad = a.add({ slot: 'deepseek', endpoint: 'https://api.example.com/v1' }, env);
+  assert.equal(bad.success, false);
+  assert.match(bad.error, /登录门/);
+  const badKind = a.add({ slot: 'zai', kind: 'gemini' }, env);
+  assert.equal(badKind.success, false);
+});
+
+test('zcode: no key keeps existing inline key and warns', () => {
+  const a = require('../../../src/services/domain/network/externalApps/zcodeAdapter.js');
+  const dir = mkTmp('zcode-nokey');
+  const env = { HOME: dir };
+  a.add({ provider: 'khy', model: 'glm-5.2', apiKey: 'sk-old', endpoint: 'https://api.example.com/anthropic', protocol: 'anthropic' }, env);
+  const r = a.add({ provider: 'khy2', model: 'glm-5.2', endpoint: 'https://api2.example.com/anthropic', protocol: 'anthropic' }, env);
+  assert.equal(r.success, true);
+  assert.equal(r.keyWritten, false);
+  assert.ok(r.warning);
+  const doc = JSON.parse(fs.readFileSync(a.configPath(env), 'utf8'));
+  assert.equal(doc.provider.zai.options.apiKey, 'sk-old');   // 既有内联 key 保留
+  assert.equal(doc.provider.zai.options.baseURL, 'https://api2.example.com/anthropic');
+});
+
+test('zcode: configPath honors ZCODE_CLI_CONFIG_FILE override', () => {
+  const a = require('../../../src/services/domain/network/externalApps/zcodeAdapter.js');
+  const dir = mkTmp('zcode-override');
+  const custom = path.join(dir, 'custom', 'zcode.json');
+  const env = { HOME: path.join(dir, 'home'), ZCODE_CLI_CONFIG_FILE: custom };
+  assert.equal(a.configPath(env), custom);
+});
+
+test('zcode: fail-soft on corrupt config', () => {
+  const a = require('../../../src/services/domain/network/externalApps/zcodeAdapter.js');
+  const dir = mkTmp('zcode-corrupt');
+  const env = { HOME: dir };
+  const file = a.configPath(env);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, '{ not json', 'utf8');
+  const r = a.add({ model: 'glm-5.2', endpoint: 'https://api.example.com/v1' }, env);
+  assert.equal(r.success, false);
+  assert.ok(r.error);
+});
+
+test('zcode.usable: returns raw inline apiKey, filters keyless slots', () => {
+  const a = require('../../../src/services/domain/network/externalApps/zcodeAdapter.js');
+  const dir = mkTmp('zcode-usable');
+  const env = { HOME: dir };
+  a.add({ provider: 'khy', model: 'glm-5.2', apiKey: 'khy-token', endpoint: 'https://api.example.com/v1', protocol: 'openai' }, env);
+  const file = a.configPath(env);
+  const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
+  doc.provider.bigmodel = { kind: 'openai', options: {}, models: {} };  // 无 key 槽位
+  fs.writeFileSync(file, JSON.stringify(doc, null, 2), 'utf8');
+  const u = a.usable(env);
+  assert.equal(u.success, true);
+  assert.equal(u.providers.length, 1);
+  assert.equal(u.providers[0].id, 'zai');
+  assert.equal(u.providers[0].apiKey, 'khy-token');
+});
+
+test('zcode.kindForProtocol: anthropic/openai/responses mapping', () => {
+  const a = require('../../../src/services/domain/network/externalApps/zcodeAdapter.js');
+  assert.equal(a.kindForProtocol('anthropic'), 'anthropic');
+  assert.equal(a.kindForProtocol('openai'), 'openai-compatible');
+  assert.equal(a.kindForProtocol('openai_responses'), 'openai-compatible');
+  assert.equal(a.kindForProtocol(undefined), 'anthropic');
+});
+
 test('all adapters: usable() fail-soft on nonexistent config', () => {
-  const names = ['opencodeAdapter', 'openclawAdapter', 'claudeCodeAdapter', 'reasonixAdapter', 'deepseekTuiAdapter', 'cozeAdapter'];
+  const names = ['opencodeAdapter', 'openclawAdapter', 'claudeCodeAdapter', 'reasonixAdapter', 'deepseekTuiAdapter', 'cozeAdapter', 'zcodeAdapter'];
   for (const n of names) {
     const a = require(`../../../src/services/externalApps/${n}`);
     assert.doesNotThrow(() => a.usable({ HOME: '/nonexistent-khy-test' }));

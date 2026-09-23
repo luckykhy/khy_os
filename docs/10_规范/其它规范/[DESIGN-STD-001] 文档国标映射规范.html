@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-STD-001] 文档国标映射规范.md -->
+<title>[DESIGN-STD-001] 软件文档标准映射规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-STD-001] 软件文档标准映射规范</div>
+      <header class="hero reveal"><h1>[DESIGN-STD-001] 软件文档标准映射规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-std-001-软件文档标准映射规范">[DESIGN-STD-001] 软件文档标准映射规范</a></li><li class="lvl-2"><a href="#1-标准-khy-os-映射">1. 标准 → khy-os 映射</a></li><li class="lvl-2"><a href="#2-文档元数据-iso-15289-6-1-强制">2. 文档元数据（ISO 15289 §6.1 强制）</a></li><li class="lvl-2"><a href="#3-文档内容模板-清晰版">3. 文档内容模板（清晰版）</a></li><li class="lvl-2"><a href="#4-清晰不啰嗦的三条纪律">4. 清晰不啰嗦的三条纪律</a></li><li class="lvl-2"><a href="#6-文档生命周期-iso-15289-5">6. 文档生命周期（ISO 15289 §5）</a></li><li class="lvl-2"><a href="#7-与既有规范的关系">7. 与既有规范的关系</a></li><li class="lvl-2"><a href="#8-版本历史">8. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-std-001-软件文档标准映射规范">[DESIGN-STD-001] 软件文档标准映射规范<a class="anchor" href="#design-std-001-软件文档标准映射规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：将国际软件文档标准（ISO/IEC/IEEE 15289:2019 + IEEE 1063 + ISO/IEC 26514）与中国国标（GB/T 8567-2006）映射到 khy-os 仓库，保证<strong>清晰不啰嗦</strong>——只保留与开源/AI 平台相关的类别。<br><strong>与 [DESIGN-DOC-001] 的关系</strong>：[DESIGN-DOC-001] 管「怎么命名」，本文管「文档内容该长什么样」。</p></blockquote>
+<hr>
+<h2 id="1-标准-khy-os-映射">1. 标准 → khy-os 映射<a class="anchor" href="#1-标准-khy-os-映射" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>ISO/IEC/IEEE 15289 类别</th><th>GB/T 8567 对应</th><th>khy-os 目录</th><th>编号</th></tr></thead><tbody><tr><td>概念与愿景文档</td><td>可行性研究报告</td><td><code>01_INIT_立项/</code></td><td><code>[INIT-PRD-NNN]</code></td></tr><tr><td>需求规格</td><td>软件需求规格说明书</td><td><code>02_CONCEPTS_概念入门/</code></td><td><code>[CONCEPT-NNN]</code></td></tr><tr><td>架构/设计描述</td><td>概要+详细设计</td><td><code>03_DESIGN_设计/</code></td><td><code>[DESIGN-ARCH-NNN]</code></td></tr><tr><td>接口控制文档</td><td>(无国标对应)</td><td><code>03_DESIGN_设计/</code></td><td><code>[DESIGN-TOOL-002]</code> 拓展契约</td></tr><tr><td>测试规格与报告</td><td>测试计划+分析报告</td><td><code>05_TEST_测试/</code></td><td><code>[TEST-RPT-NNN]</code></td></tr><tr><td>用户文档</td><td>用户手册</td><td><code>06A_GUIDE_指南/</code></td><td><code>[GUIDE-NNN]</code></td></tr><tr><td>运维文档</td><td>操作手册+维护手册</td><td><code>07_OPS_运维/</code></td><td><code>[OPS-MAN-NNN]</code></td></tr><tr><td>项目管理文档</td><td>开发计划+总结报告</td><td><code>08_MGMT_项目管理/</code></td><td><code>[MGMT-PLAN/RPT-NNN]</code></td></tr><tr><td>跨阶段规范</td><td>数据库设计+维护</td><td><code>10_规范/</code></td><td><code>[DESIGN-&lt;域&gt;-NNN]</code></td></tr></tbody></table>
+<p><strong>已丢弃的类别</strong>（开源/AI 平台不适用）：</p>
+<ul><li>数据要求规格说明书 → 已被架构设计吸收</li><li>模块开发卷宗 → 已在代码注释中体现</li><li>软件开发进度月报 → 由 Git 提交历史替代</li><li>项目改动报告 → 由 CHANGELOG + PR 替代</li></ul>
+<hr>
+<h2 id="2-文档元数据-iso-15289-6-1-强制">2. 文档元数据（ISO 15289 §6.1 强制）<a class="anchor" href="#2-文档元数据-iso-15289-6-1-强制" aria-label="锚点">#</a></h2>
+<p>每份文档<strong>必须</strong>在首行后包含以下元数据，缺一即不合规：</p>
+<table><thead><tr><th>元数据</th><th>khy-os 实现</th><th>说明</th></tr></thead><tbody><tr><td>文档标识符</td><td><code>[STAGE-TYPE-NNN]</code> 编号</td><td>全局唯一，见 [DESIGN-DOC-001] §2</td></tr><tr><td>版本与日期</td><td>版本历史表格末行</td><td>必须含日期</td></tr><tr><td>适用范围</td><td><code>&gt; **定位**：管什么 + 与哪篇真源的关系</code></td><td>一句话，禁止超 50 字</td></tr><tr><td>引用文档</td><td><code>## 相关文档</code> 章节（可选）</td><td>引用编号 + 路径</td></tr><tr><td>术语与缩略语</td><td><code>## 术语</code> 章节（可选，按需）</td><td>仅含本文首次出现的术语</td></tr></tbody></table>
+<blockquote><p><strong>判定</strong>：缺少编号/版本/适用范围任一项 = 违规，必须补齐。</p></blockquote>
+<hr>
+<h2 id="3-文档内容模板-清晰版">3. 文档内容模板（清晰版）<a class="anchor" href="#3-文档内容模板-清晰版" aria-label="锚点">#</a></h2>
+<p>每篇文档<strong>必须</strong>包含以下 4 部分，不多不少：</p>
+<pre><code class="language-markdown"><span class="hljs-section"># [STAGE-TYPE-NNN] 中文标题</span>
+
+<span class="hljs-quote">&gt; <span class="hljs-strong">**定位**</span>：管什么 + 与哪篇真源的关系</span>
+<span class="hljs-quote">&gt; <span class="hljs-strong">**结论**</span>：核心要求（≤30 字）</span>
+
+<span class="hljs-section">## 1. 做什么</span>
+
+用 1-3 句说明本规范约束的对象和范围。禁止背景铺垫。
+
+<span class="hljs-section">## 2. 怎么做</span>
+
+用表格或列表给出具体要求。每行必须可判定。
+
+<span class="hljs-section">## 3. 破了怎么办</span>
+
+给出违规判定方式或替代方案。
+
+<span class="hljs-section">## 4. 版本</span>
+
+| 版本 | 日期 | 变更 |
+|------|------|------|</code></pre>
+<hr>
+<h2 id="4-清晰不啰嗦的三条纪律">4. 清晰不啰嗦的三条纪律<a class="anchor" href="#4-清晰不啰嗦的三条纪律" aria-label="锚点">#</a></h2>
+<ol><li><strong>结论先行</strong>：首段 <code>&gt; **一句话结论**：...</code>，禁止先写 200 字背景再说结论；</li><li><strong>表格优于段落</strong>：同一意思有 3 个以上要点 → 必须用表格，不用连续段落；</li><li><strong>一个概念一篇</strong>：每个规范只讲一个概念。跨概念 → 拆子篇或引用相邻规范。</li></ol>
+<hr>
+<h2 id="6-文档生命周期-iso-15289-5">6. 文档生命周期（ISO 15289 §5）<a class="anchor" href="#6-文档生命周期-iso-15289-5" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>阶段</th><th>khy-os 实现</th><th>说明</th></tr></thead><tbody><tr><td>创建</td><td>AI 按骨架写 + 编号</td><td>[DESIGN-DOC-001] §12</td></tr><tr><td>审查</td><td><code>npm run check:layout</code> + <code>check-gov-rules.js</code></td><td>CI 守卫强制</td></tr><tr><td>发布</td><td>Git commit + CHANGELOG 记录</td><td>版本号同步见 [DESIGN-SEMVER-001]</td></tr><tr><td>维护</td><td>版本历史表格追加行</td><td>不删旧版，只追加</td></tr><tr><td>归档</td><td>移入 <code>11_报告/历史/</code> 或 <code>_deprecated/</code></td><td>不删除，保留追溯</td></tr></tbody></table>
+<blockquote><p><strong>判定</strong>：文档无版本历史 = 不可追溯 = 违规。</p></blockquote>
+<hr>
+<h2 id="7-与既有规范的关系">7. 与既有规范的关系<a class="anchor" href="#7-与既有规范的关系" aria-label="锚点">#</a></h2>
+<ul><li>命名规则：<code>[DESIGN-DOC-001]</code> §2</li><li>骨架约束：<code>[DESIGN-DOC-001]</code> §12</li><li>中文排版：<code>[DESIGN-DOC-001]</code> §13</li><li>排版工具：<code>[DESIGN-ARCH-023]</code></li><li>治理总纲：<code>[DESIGN-GOV-001]</code></li></ul>
+<h2 id="8-版本历史">8. 版本历史<a class="anchor" href="#8-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-12</td><td>初始版本，GB/T 8567 映射</td></tr><tr><td>1.1.0</td><td>2026-09-13</td><td>扩展为 ISO/IEC/IEEE 15289:2019 + GB/T 8567 双标映射；新增 §2 元数据、§6 生命周期</td></tr><tr><td>1.2.0</td><td>2026-09-13</td><td>§3 模板标题保留中文；文件命名国际化约束对齐 [DESIGN-DOC-001] §2.3</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-SOURCING-001] 借鉴与实现统一规则.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-SOURCING-001] 借鉴与实现统一规则</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-TEST-001] 测试规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-TEST-001] 测试规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-STD-001] 文档国标映射规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

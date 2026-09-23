@@ -25,9 +25,16 @@ const TeamDelete = new TeamDeleteTool();
 // Wait for the async dispatch chain (runner -> status -> sendToLead) to settle.
 const flush = () => new Promise((r) => setImmediate(r));
 
+// Host-leak isolation: SendMessage.isEnabled() short-circuits to true when
+// KHY_COORDINATOR_MODE is active, so a dev shell that exported the flag would
+// break the "enabled once a teammate exists" transition on one machine and
+// pass on another. These suites exercise the in-process bus only â€” pin the
+// mode off for the whole file.
+delete process.env.KHY_COORDINATOR_MODE;
+
 afterEach(() => bus._resetForTest());
 
-describe('s15 â€?teammateBus registry', () => {
+describe('s15 â€”teammateBus registry', () => {
   test('createTeammate registers a running teammate with a real id', async () => {
     bus.setTeammateRunner(() => 'done'); // deterministic, no LLM
     const t = bus.createTeammate({ name: 'scout', task: 'survey the repo' });
@@ -64,7 +71,7 @@ describe('s15 â€?teammateBus registry', () => {
   });
 });
 
-describe('s15 â€?message flow', () => {
+describe('s15 â€”message flow', () => {
   test('a teammate completion lands in the lead inbox and formats as <teammate-message>', async () => {
     bus.setTeammateRunner((tm) => `finished: ${tm.task}`);
     bus.createTeammate({ name: 'analyst', task: 'summarize logs' });
@@ -76,7 +83,7 @@ describe('s15 â€?message flow', () => {
     expect(text).toContain('type="completion"');
     expect(text).toContain('finished: summarize logs');
 
-    // Draining is destructive â€?a second read returns nothing.
+    // Draining is destructive â€”a second read returns nothing.
     expect(bus.collectTeammateMessagesAsText()).toBe(null);
   });
 
@@ -106,7 +113,7 @@ describe('s15 â€?message flow', () => {
   });
 });
 
-describe('s15 â€?tools operate on the shared bus', () => {
+describe('s15 â€”tools operate on the shared bus', () => {
   test('TeamCreate -> SendMessage -> TeamDelete round-trip', async () => {
     bus.setTeammateRunner(() => new Promise(() => {})); // keep it running
 

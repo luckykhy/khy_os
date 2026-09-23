@@ -13,11 +13,11 @@ describe('System Prompt Split', () => {
       const { staticPrefix, dynamicSuffix } = splitSystemPromptAtBoundary(sys);
       expect(staticPrefix).toBe('STATIC PREFIX CONTENT');
       expect(dynamicSuffix).toBe('DYNAMIC SUFFIX CONTENT');
-      expect(!staticPrefix).toContain(M);
-      expect(!dynamicSuffix).toContain(M);
+      expect(!staticPrefix.includes(M)).toBeTruthy();
+      expect(!dynamicSuffix.includes(M)).toBeTruthy();
   });
 
-  test('splitSystemPromptAtBoundary with no marker â†?empty prefix, whole text as suffix', () => {
+  test('splitSystemPromptAtBoundary with no marker ï¿½?empty prefix, whole text as suffix', () => {
       const sys = 'PLAIN SYSTEM PROMPT WITH NO MARKER';
       const { staticPrefix, dynamicSuffix } = splitSystemPromptAtBoundary(sys);
       expect(staticPrefix).toBe('');
@@ -66,11 +66,12 @@ describe('System Prompt Split', () => {
           ? [{ type: 'text', text: plain, cache_control: { type: 'ephemeral' } }]
           : plain;
       }
-      expect(Array.isArray(systemPart).toBeTruthy());
+      expect(Array.isArray(systemPart)).toBeTruthy();
       expect(systemPart.length).toBe(2);
       expect(systemPart[0].cache_control).toEqual({ type: 'ephemeral' });
       expect(systemPart[1].cache_control).toBe(undefined);
-      expect(!systemPart[0].text.includes(M) && !systemPart[1].text).toContain(M);
+      expect(!systemPart[0].text.includes(M)).toBeTruthy();
+      expect(!systemPart[1].text.includes(M)).toBeTruthy();
   });
 
   test('no-marker system falls back to single-block behavior (>500 chars cached)', () => {
@@ -81,7 +82,7 @@ describe('System Prompt Split', () => {
       const systemPart = plain.length > 500
         ? [{ type: 'text', text: plain, cache_control: { type: 'ephemeral' } }]
         : plain;
-      expect(Array.isArray(systemPart).toBeTruthy());
+      expect(Array.isArray(systemPart)).toBeTruthy();
       expect(systemPart.length).toBe(1);
       expect(systemPart[0].cache_control).toEqual({ type: 'ephemeral' });
   });

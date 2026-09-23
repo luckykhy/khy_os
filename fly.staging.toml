@@ -14,18 +14,51 @@ app = 'khy-os-staging'
 primary_region = 'sjc'  # San Jose — nearest to CN with good latency
 
 [build]
-  image = 'ghcr.io/khy-os/khy-os:main'  # Built by docker.yml on every push to main
+  # ⚠️ 镜像路径与 tag 都必须与 .github/workflows/deploy-staging.yml 推送的完全一致。
+  #
+  # 历史问题（两个叠加的错误）：
+  #   1. tag 不一致：workflow 推 `:staging`，这里写 `:main` → 部署的不是本次构建
+  #   2. **仓库路径不一致**：workflow 用 `ghcr.io/${{ github.repository }}`
+  #      （本仓实际解析为 `ghcr.io/luckykhy/khy_os`），这里却写
+  #      `ghcr.io/khy-os/khy-os` —— 一个**根本不存在**的镜像路径。
+  #      两者任一都会导致「部署成功但跑的是旧代码/拉不到镜像」。
+  #
+  # 现在与 docker.yml / deploy-staging.yml 统一为 ghcr.io/luckykhy/khy_os。
+  # 改这里时请同步核对 workflow 的
+  # `tags: ghcr.io/${{ github.repository }}:staging`。
+  image = 'ghcr.io/luckykhy/khy_os:staging'
 
 [env]
-  # Minimal env for smoke tests — no secrets needed for --version / --help.
-  KHY_HOME = '/tmp/khy-home'
+  # 数据目录：必须与 Dockerfile 里已 chown 给 khy 用户的路径一致。
+  # 历史值 '/tmp/khy-home' 是「宿主机 khy CLI」时代的假设 —— 容器里 khy 用户
+  # 对 /tmp/khy-home 没有预建权限，SQLite/日志初始化可能失败。
+  # Dockerfile 已 `mkdir -p /home/khy/.khy && chown -R khy:khy`，直接沿用。
+  KHY_HOME = '/home/khy/.khy'
+  # 容器模式标记：让运行时代码知道自己在容器里（不写 .env、不做交互式探测）。
+  KHY_CONTAINER = '1'
+  # 端口与 Dockerfile ENV PORT / http_service.internal_port 三处对齐。
+  PORT = '3000'
 
 [http_service]
-  internal_port = 3000        # khy-os TUI HTTP gateway port
+  internal_port = 3000        # 与 Dockerfile 的 EXPOSE 3000 / PORT=3000 对齐
   force_https = true
   auto_stop_machines = true    # Scale to zero when idle (staging cost control)
   auto_start_machines = true
   min_machines_count = 0
+
+  # ── 健康检查 ────────────────────────────────────────────────────────────────
+  # 指向**存活探针** /healthz，而不是 /health：
+  #   /healthz 不查 DB，进程活着就回 200 → 不会因为 DB/环境问题把机器误判为不健康
+  #   /health  会查 DB，DB 不可用时回 503 → 用它做编排探针会把环境故障升级成
+  #            「机器被反复重启」，掩盖真正原因
+  # 这与 smoke test 用同一个端点，保证「Fly 认为健康」与「workflow 认为健康」
+  # 是同一个判据（三处字符串同源：本文件、workflow、server.js）。
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "20s"      # 给 Node 冷启动留余量
+    method = "GET"
+    path = "/healthz"
 
 [[vm]]
   memory = '512mb'

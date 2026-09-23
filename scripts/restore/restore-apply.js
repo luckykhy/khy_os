@@ -28,14 +28,10 @@ const { deriveStrategyLedger } = require('../lib/restoreStrategyLedger');
 // 复用已有 CLI 的采集/读盘器(零重复)。
 const { gatherAssessments } = require('./restore-plan');
 const { readAllSessions } = require('./restore-ledger');
+const { opsDocPath, opsDocRelPath } = require('../lib/docsPaths');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const DOC_PATH = path.join(
-  ROOT,
-  'docs',
-  '07_OPS_运维',
-  '[OPS-MAN-089] 还原学习应用器.md'
-);
+const DOC_PATH = opsDocPath('[OPS-MAN-089] 还原学习应用器.md');
 const NPM_PKG_NAME = '@khy-os/khy-os';
 const PIP_PKG_NAME = 'khy-os';
 
@@ -98,7 +94,7 @@ function runRestoreApply(opts = {}) {
     }
   }
   out += `\n${C.dim}诚实边界：学习只标注、不删除、不重排安全序；死策略若是唯一出路绝不跳过(不搁浅冲突)。${C.reset}\n`;
-  out += `${C.dim}详情见：docs/07_OPS_运维/[OPS-MAN-089] 还原学习应用器.md${C.reset}\n`;
+  out += `${C.dim}详情见：${opsDocRelPath('[OPS-MAN-089] 还原学习应用器.md')}${C.reset}\n`;
   process.stdout.write(out);
   return 0;
 }

@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-129] TUI 滚动-选择-历史-固定底部共存设计.md -->
+<title>[DESIGN-ARCH-129] TUI 滚动 / 文本选择 / 输入历史 / 固定底部 —— 共存机制设计 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-129] TUI 滚动 / 文本选择 / 输入历史 / 固定底部 —— 共存机制设计</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-129] TUI 滚动 / 文本选择 / 输入历史 / 固定底部 —— 共存机制设计</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-129-tui-滚动-文本选择-输入历史-固定底部-共存机制设计">[DESIGN-ARCH-129] TUI 滚动 / 文本选择 / 输入历史 / 固定底部 —— 共存机制设计</a></li><li class="lvl-2"><a href="#0-一分钟结论">0. 一分钟结论</a></li><li class="lvl-2"><a href="#1-问题定义-这四件事为什么天然打架">1. 问题定义：这四件事为什么天然打架</a></li><li class="lvl-2"><a href="#2-三层架构总览">2. 三层架构总览</a></li><li class="lvl-2"><a href="#3-逐项机制">3. 逐项机制</a></li><li class="lvl-3"><a href="#3-1-滚动-视口偏移-贴底哨兵">3.1 滚动：视口偏移 + 贴底哨兵</a></li><li class="lvl-3"><a href="#3-2-固定底部-帧高硬约束-chrome-账本">3.2 固定底部：帧高硬约束 + chrome 账本</a></li><li class="lvl-3"><a href="#3-3-滚轮-必须在应用内消化-a-d-冲突的根因">3.3 滚轮：必须在应用内消化（A↔D 冲突的根因）</a></li><li class="lvl-3"><a href="#3-4-拖选与跨页复制">3.4 拖选与跨页复制</a></li><li class="lvl-3"><a href="#3-5-历史回溯-context-栈-草稿暂存">3.5 `↑`/`↓` 历史回溯：context 栈 + 草稿暂存</a></li><li class="lvl-2"><a href="#4-冲突消解-一张完整的优先级表">4. 冲突消解：一张完整的优先级表</a></li><li class="lvl-3"><a href="#4-1-鼠标追踪三档互斥-enablebytes-是唯一真源">4.1 鼠标追踪三档互斥：`enableBytes` 是唯一真源</a></li><li class="lvl-2"><a href="#5-布局与帧高-四件事共享的物理预算">5. 布局与帧高：四件事共享的物理预算</a></li><li class="lvl-2"><a href="#6-门控总表-共存机制的逃生舱">6. 门控总表（共存机制的逃生舱）</a></li><li class="lvl-3"><a href="#6-1-排障表-症状-成因-修">6.1 排障表（症状 → 成因 → 修）</a></li><li class="lvl-2"><a href="#7-业内对照">7. 业内对照</a></li><li class="lvl-3"><a href="#7-1-与本仓同构的实现-claude-code-全屏渲染">7.1 与本仓同构的实现：Claude Code 全屏渲染</a></li><li class="lvl-3"><a href="#7-2-其他路线-为什么它们不能直接照搬">7.2 其他路线：为什么它们不能直接照搬</a></li><li class="lvl-3"><a href="#7-3-备屏副作用的三层对抗-本仓独有">7.3 备屏副作用的三层对抗（本仓独有）</a></li><li class="lvl-2"><a href="#8-三条不变量为什么不可让步">8. 三条不变量为什么不可让步</a></li><li class="lvl-3"><a href="#i1-视口偏移是唯一坐标系">I1 —— 视口偏移是唯一坐标系</a></li><li class="lvl-3"><a href="#i2-填充与渲染走同一把尺子">I2 —— 填充与渲染走同一把尺子</a></li><li class="lvl-3"><a href="#i3-单写者-只有-ink-注入流能画屏">I3 —— 单写者：只有 ink 注入流能画屏</a></li><li class="lvl-2"><a href="#9-已知偏差与待改进项">9. 已知偏差与待改进项</a></li><li class="lvl-3"><a href="#9-1-复制保真">9.1 复制保真</a></li><li class="lvl-3"><a href="#9-2-交互语义差距-对齐-cc">9.2 交互语义差距（对齐 CC）</a></li><li class="lvl-3"><a href="#9-3-机制层面">9.3 机制层面</a></li><li class="lvl-2"><a href="#10-维护纪律-改这四个功能前必读">10. 维护纪律（改这四个功能前必读）</a></li><li class="lvl-2"><a href="#11-变更记录">11. 变更记录</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-129-tui-滚动-文本选择-输入历史-固定底部-共存机制设计">[DESIGN-ARCH-129] TUI 滚动 / 文本选择 / 输入历史 / 固定底部 —— 共存机制设计<a class="anchor" href="#design-arch-129-tui-滚动-文本选择-输入历史-固定底部-共存机制设计" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>隶属</strong>：本文属 <strong>TUI 设计族</strong>（21 编号 / 22 文件），总纲与 scope 裁决见 <code>[DESIGN-ARCH-122] TUI 设计族总纲</code>；<br>规则冲突一律以 <code>[DESIGN-ARCH-102] Khy TUI 统一规则手册</code> 为准。</p>
+<p><strong>定位</strong>：把「转录滚动、拖选跨页复制、输入框钉在底部、<code>↑</code>/<code>↓</code> 历史回溯」这四件<br><strong>互斥诉求</strong>在当前实现里<strong>怎么同时成立</strong>讲清楚，并给出<strong>业内对照</strong>与<strong>取舍代价</strong>。<br>本文是<strong>机制真源</strong>（记录「现在为什么能共存」），不是新提案；不新增门禁规则，<br>因此不携带 <code>&lt;!-- RULES-REGISTRY --&gt;</code> 标记行，不改 <code>RULES-REGISTRY.json</code>。</p>
+<p><strong>与相邻文档的边界</strong>：</p>
+<ul><li><code>[DESIGN-ARCH-119]</code> 回答「<strong>怎么修好</strong>拖选复制」——缺陷根因 + 三层方案 + 验收标准；</li><li><code>[DESIGN-ARCH-102]</code> 回答「<strong>规则是什么</strong>」——键位表、鼠标约定、组件尺寸；</li><li><strong>本文回答「四件事为什么互不打架」</strong>——不变量、坐标契约、优先级次序、代价清单。</li></ul>
+<p><strong>依据</strong>：<code>services/backend/src/cli/tui/AGENTS.md</code> §0.9.1–§0.9.7、§1.2；<br><code>arrowRouting.js</code> / <code>selection.js</code> / <code>Viewport.js</code> / <code>mouseButtons.js</code> / <code>useTextInput.js</code> /<br><code>scrollbackPreserve.js</code> / <code>chromeBudget.js</code> 头部注释；<code>[DESIGN-ARCH-102]</code> §6.1/§6.2；<br><code>[DESIGN-ARCH-119]</code> §4.2；业内实现见 §8（含 Claude Code 官方全屏渲染文档）。</p>
+<p><strong>代码坐标时点</strong>：2026-09-22，分支 <code>chore/tui-ux-nightly</code>。行号为<strong>指路</strong>，不构成契约；<br>判读前以文件头部注释为准（本仓注释密度高于行号稳定性）。</p></blockquote>
+<hr>
+<h2 id="0-一分钟结论">0. 一分钟结论<a class="anchor" href="#0-一分钟结论" aria-label="锚点">#</a></h2>
+<p>四件事能共存，靠的是<strong>三条不变量</strong>加<strong>一张优先级表</strong>，而不是靠某个开关：</p>
+<table><thead><tr><th>#</th><th>不变量</th><th>一句话</th><th>真源</th></tr></thead><tbody><tr><td><strong>I1</strong></td><td><strong>视口偏移是唯一坐标系</strong></td><td>屏幕行 == <code>_mainContentLines</code> 下标（1:1），任何坐标换算都走 <code>resolveViewportOffset</code>，不许手写数字判断</td><td><code>Viewport.js</code></td></tr><tr><td><strong>I2</strong></td><td><strong>填充与渲染走同一把尺子</strong></td><td>折行宽度、<code>viewH</code>（内容行数）、列宽换算三者必须同源；任一处口径不同 → 整屏错位</td><td><code>wrapCell.js</code> / <code>viewportContentRows</code> / <code>charColForDisplay</code></td></tr><tr><td><strong>I3</strong></td><td><strong>单写者：只有 ink 注入流能画屏</strong></td><td>TUI 存活期任何绕过注入 stdout 的写入都会留下擦不掉的残行</td><td><code>AGENTS.md</code> §0.9.7 / <code>consoleMute.js</code></td></tr></tbody></table>
+<p>优先级表（键位归属）：<strong>子视图独占 → 忙时队列 → 空闲 → 输入中</strong>，四种 context 由<br><code>arrowRouting.resolveArrowContext()</code> 一个函数产出，<code>↑</code>/<code>↓</code>/<code>←</code>/<code>→</code> 的归属<strong>只在这一处定义</strong>。</p>
+<blockquote><p>一句话记忆：<strong>滚动驱动的是「视口偏移」，历史回溯驱动的是「缓冲区文本」，两者读写的<br>是完全不同的 state</strong> —— 它们冲突的不是实现，而是<strong>同一个物理按键</strong>。共存的第一步是让<br>按键有唯一裁决者，第二步是让滚轮<strong>不经过键盘通道</strong>（§3.3）。</p></blockquote>
+<hr>
+<h2 id="1-问题定义-这四件事为什么天然打架">1. 问题定义：这四件事为什么天然打架<a class="anchor" href="#1-问题定义-这四件事为什么天然打架" aria-label="锚点">#</a></h2>
+<p>先把冲突摆明，否则后面每一条设计都像「随手选的」。</p>
+<table><thead><tr><th>诉求</th><th>想要的行为</th><th>与谁冲突</th><th>冲突的物理根源</th></tr></thead><tbody><tr><td>A. 转录滚动</td><td>滚轮/<code>↑</code> 让内容区上下移动</td><td>C、D</td><td>备屏下终端<strong>把滚轮合成为 <code>↑</code>/<code>↓</code> 键</strong>（§3.3）</td></tr><tr><td>B. 拖选跨页复制</td><td>按住拖、反色、松手即复制；拖到边缘能继续</td><td>A、C</td><td>开鼠标追踪后<strong>终端原生选择被吃掉</strong>，且指针<strong>只能停在窗口内</strong></td></tr><tr><td>C. 输入框钉底</td><td>输入框/页脚<strong>滚动时位置不动</strong></td><td>A、B</td><td>终端只有一张画布：转录一动，若不重排，输入框会跟着走</td></tr><tr><td>D. <code>↑</code>/<code>↓</code> 历史回溯</td><td>空输入时召回上一条命令</td><td>A</td><td>同一个按键，两种诉求</td></tr><tr><td>E. 粘贴/长输入回显</td><td>输入框内多行、软换行不溢出</td><td>C、A</td><td>ink 的擦行账本按<strong>逻辑行</strong>记，终端按<strong>视觉行</strong>显示</td></tr></tbody></table>
+<p><strong>关键判断</strong>：A/C/D 的冲突是<strong>按键分配问题</strong>（可解，靠优先级表）；<br>A/B 的冲突是<strong>通道问题</strong>（可解，靠滚轮不进键盘通道 + 自绘选择）；<br>B/C 的冲突是<strong>坐标问题</strong>（可解，靠 I1/I2 两条不变量）；<br>E 是<strong>账本问题</strong>（可解，靠预折行 + 高度硬闸）。</p>
+<hr>
+<h2 id="2-三层架构总览">2. 三层架构总览<a class="anchor" href="#2-三层架构总览" aria-label="锚点">#</a></h2>
+<pre><code>               ┌────────────────────────────────────────────────┐
+   物理输入  →  │ ① 事件层  mouseButtons.parseSgrMouse           │  SGR → 结构化事件
+  (stdin)      │           arrowRouting.arrowDirection          │  方向键 → 方向
+               └────────────────────┬───────────────────────────┘
+                                    ▼
+               ┌────────────────────────────────────────────────┐
+               │ ② 裁决层  arrowRouting.resolveArrowAction      │  context 栈 → 动作名
+               │           mouseButtons.createMouseDispatcher   │  滚轮/拖选 → 语义事件
+               └────────────────────┬───────────────────────────┘
+                                    ▼
+               ┌────────────────────────────────────────────────┐
+               │ ③ 状态层  App.js useInput 的 switch            │  动作名 → 副作用
+               │           mainViewportScroll / previewView…    │  视口偏移（数字 | null）
+               │           useTextInput 的 history/draft        │  缓冲区 + 历史游标
+               │           selectRegion                         │  选区 {anchor, head}
+               └────────────────────┬───────────────────────────┘
+                                    ▼
+               ┌────────────────────────────────────────────────┐
+               │ ④ 渲染层  Viewport(lines, scroll, selection)   │  切片 + 反色三段 Text
+               │           PromptFrame / FooterBar / 布局固定   │  钉底 chrome
+               │           chromeBudget.liveBudget(rows, …)     │  帧高 ≤ rows − 1
+               └────────────────────────────────────────────────┘</code></pre>
+<p>四层各自都是<strong>可单测的纯叶子</strong>（<code>arrowRouting</code> / <code>selection</code> / <code>scrollActions</code> / <code>scrollbackPreserve</code><br>零 IO、零 env、绝不抛）。<strong>env 门控一律在最外层读</strong>（App.js），叶子只吃布尔参数 ——<br>这是「同一份逻辑能被确定性测试驱动」的前提，也是这四件事能各自独立演进的原因。</p>
+<hr>
+<h2 id="3-逐项机制">3. 逐项机制<a class="anchor" href="#3-逐项机制" aria-label="锚点">#</a></h2>
+<h3 id="3-1-滚动-视口偏移-贴底哨兵">3.1 滚动：视口偏移 + 贴底哨兵<a class="anchor" href="#3-1-滚动-视口偏移-贴底哨兵" aria-label="锚点">#</a></h3>
+<p><strong>不变量 I1 的落地</strong>：转录被投影成<strong>扁平字符串数组</strong> <code>_mainContentLines</code>，<br><code>Viewport</code> 的 lines 模式按 <code>height</code> 直接 <code>lines.slice(start, end)</code> 渲染 ——<br>所以<strong>屏幕第 n 行 == 数组下标 n + 偏移</strong>，不需要任何布局反查（不用 yoga <code>hitTest</code>）。</p>
+<p>偏移的<strong>两种语义</strong>（<code>AGENTS.md</code> §0.9.1）：</p>
+<table><thead><tr><th>值</th><th>含义</th></tr></thead><tbody><tr><td><code>null</code> / <code>undefined</code> / 负数</td><td><strong>贴底</strong> —— 追随最新内容，新内容进来继续跟</td></tr><tr><td>数字</td><td>固定行偏移，用户滚到哪停在哪</td></tr></tbody></table>
+<p><strong>「滚回最底」必须回写 <code>null</code></strong>，跟随会自动恢复，不需要额外的 sticky 标志位。<br>真源是 <code>Viewport.js</code> 的 <code>resolveViewportOffset</code> / <code>applyStickyViewportAction</code>（纯叶子、与<br><code>applyViewportScroll</code> 同处、有单测 <code>viewportSticky.test.js</code>）。<strong>任何调用方都不得另抄一份。</strong></p>
+<blockquote><p>为什么必须有哨兵值：历史实现把 state 初值写成 <code>0</code>，再用 <code>scroll &gt;= maxScroll</code> 判断<br>「之前在底部」。内容一旦长过视口，<code>0 &gt;= maxScroll</code> 恒假 —— 视口就永远停在<strong>顶部</strong>，<br>用户看到的是最早那几行。「输出回显看不见」的体感一半来自这里。</p></blockquote>
+<p><strong><code>viewH</code> 的唯一合法实参是 <code>viewportContentRows(height, total, showIndicator)</code></strong>，<br>不是盒子高。指示器（<code>↑N ↓M</code>）占掉一行，长度是 <code>height + 1</code>，yoga 会把多出来的行摊到<br>所有子节点上 → 中间那行高度取整成 0 → <strong>内容在视口正中凭空少一行</strong>。故指示器要占位<br>就必须先从预算里扣一行。传盒子高会让 <code>maxScroll</code> 比渲染侧小 1，<strong>贴底哨兵与选区行号<br>整体错位一行</strong>（同一类 bug 的第二次发生）。</p>
+<h3 id="3-2-固定底部-帧高硬约束-chrome-账本">3.2 固定底部：帧高硬约束 + chrome 账本<a class="anchor" href="#3-2-固定底部-帧高硬约束-chrome-账本" aria-label="锚点">#</a></h3>
+<p>输入框钉底不是「用 CSS 固定在底部」，而是<strong>帧高必须 ≤ <code>rows − 1</code></strong>：<br>ink 把 live 区整体重画，只要它不滚动、输入框在帧内的相对位置自然不变。</p>
+<p>ink 的 fullscreen 判定是 <code>lastOutputHeight &gt;= stdout.rows</code>（<code>node_modules/ink/build/ink.js:320</code>，<br>用的是<strong>上一帧</strong>的 <code>outputHeight</code>，且 <code>outputHeight = output.split('\n').length</code>）。<br>一旦命中就走 <code>clearTerminal + fullStaticOutput + output</code> —— 本 TUI 跑在备用缓冲区里，<br>没有回滚缓冲，那条清屏会<strong>连转录一起抹掉</strong>；而且判定会<strong>自锁</strong>：一旦某帧高度 ≥ rows，<br>此后<strong>每一帧</strong>都清屏。</p>
+<pre><code>❌ 禁止让 live 区（含所有 chrome 兄弟节点）合计高度 ≥ rows
+❌ 禁止新增固定高度的兄弟节点却不登记进 chrome 账本
+✅ 高度一律走 chromeBudget.liveBudget(rows, shares)，shares 逐项列出
+✅ 排障先开 KHY_TUI_DIAG_H=1 打印账本，再和实测帧行数对照</code></pre>
+<p><strong>容易漏计的 chrome</strong>（按实测，不是按注释）：</p>
+<table><thead><tr><th>项</th><th>PreviewLayout</th><th>legacy</th></tr></thead><tbody><tr><td>标题栏 Topbar</td><td>1</td><td>—</td></tr><tr><td>底部固定层顶上的分隔线</td><td>1</td><td>—</td></tr><tr><td>PromptFrame</td><td>3</td><td>3</td></tr><tr><td>FooterBar</td><td>1</td><td>1</td></tr><tr><td>忙态 spinner 块</td><td>3</td><td>3</td></tr><tr><td>任务清单</td><td><code>3 + 条数 (+1 尾切提示)</code>，无清单 0</td><td>同左</td></tr><tr><td>slack（conpty pending-wrap 纪律）</td><td>1</td><td>1</td></tr></tbody></table>
+<p><strong>实测下限：可用高度 ≈ 14 行</strong>（legacy 13 行边缘可用）。低于此值固定 chrome 物理上装不下 ——<br>这不是 bug，是几何不可能。</p>
+<h4 id="3-2-1-输入框自身也要防溢出-e-类冲突">3.2.1 输入框自身也要防溢出（E 类冲突）<a class="anchor" href="#3-2-1-输入框自身也要防溢出-e-类冲突" aria-label="锚点">#</a></h4>
+<p><code>PromptFrame</code> 面对一个 ink 的账本 bug：<strong>ink 按逻辑行记擦除量，终端按视觉行显示</strong>。<br>一行超宽输入被终端硬折成 2+ 视觉行后，ink 记「1 行」→ 下一次重绘<strong>少擦</strong> → 输入内容<br>漏到框下方，渗进输出区。</p>
+<p>处方是<strong>预折行 + 高度窗口化</strong>（<code>layoutPromptRows</code>，纯函数、导出可单测）：</p>
+<ul><li>每行先按可用列宽（CJK 感知，<code>cols - 1</code> slack）折成视觉行，<strong>逐段各占一行</strong>渲染</li></ul>
+<p>⇒ 逻辑行数恒等于视觉行数，ink 擦得干净；</p>
+<ul><li>折到超过 <code>maxRows</code> 时，渲染<strong>以光标行为中心的窗口</strong>，隐藏的头/尾用灰色 <code>⋯</code> 标记；</li></ul>
+<p><code>value</code> 一字不动（纯显示层窗口化，无数据损失）；</p>
+<ul><li>盒子高度<strong>硬上界</strong>，永远不会自己顶穿视口。</li></ul>
+<h3 id="3-3-滚轮-必须在应用内消化-a-d-冲突的根因">3.3 滚轮：必须在应用内消化（A↔D 冲突的根因）<a class="anchor" href="#3-3-滚轮-必须在应用内消化-a-d-冲突的根因" aria-label="锚点">#</a></h3>
+<p>这是四件事里<strong>最反直觉</strong>的一条。备用缓冲区<strong>没有回滚缓冲</strong>，所以终端会把滚轮<br><strong>合成为 <code>↑</code>/<code>↓</code> 键</strong>送进 stdin；而 <code>arrowRouting</code> 把 <code>↑</code>/<code>↓</code> 绑定在<br><code>history:previous/next</code> —— 用户看到的「滚轮回溯历史记录」<strong>其实是键位串扰</strong>，<br>不是设计如此。</p>
+<pre><code>❌ 禁止在备用缓冲区下把滚轮交给 onNative（= 交还终端）
+✅ 滚轮优先走 dispatcher 的 onWheel(dir)，驱动应用内视口
+✅ onWheel 缺失时才回退 onNative（逐字节保留旧行为）
+✅ onWheel 抛异常必须被吞掉，且**不得**顺带触发 onNative</code></pre>
+<p><strong>判据顺序是根因级的</strong>（<code>mouseButtons.createMouseDispatcher</code>）：<br><code>isWheel</code> 分支走在<strong>修饰键放行之前</strong>，因为 <code>Shift+滚轮</code> 在终端里是<strong>横向滚动</strong>，<br>不是「我要拖选」。步长 <code>WHEEL_LINES_PER_NOTCH = 3</code>（终端惯例，与 <code>scroll:lineUp</code> 同族），<br>逐格累加且<strong>共用贴底语义</strong>（滚到底自动回写 <code>null</code>）。</p>
+<p>门控 <code>KHY_MOUSE_WHEEL</code> 默认开；<code>app.js</code> 在 <code>ALT_SCREEN_ENABLED &amp;&amp; !mouseExplicitlyDisabled()</code> 时<br><strong>强制接管</strong>鼠标。回归测试 <code>mouseWheel.test.js</code>。</p>
+<blockquote><p><strong>设计后果（诚实记录）</strong>：一旦滚轮被应用接管，<strong>主屏模式下的原生滚动也就被剥夺了</strong>。<br>这是为了让备屏可用而付出的对称代价；退路是 <code>KHY_MOUSE=off</code>（整层不接管）。</p></blockquote>
+<h3 id="3-4-拖选与跨页复制">3.4 拖选与跨页复制<a class="anchor" href="#3-4-拖选与跨页复制" aria-label="锚点">#</a></h3>
+<p><strong>为什么不能「把事件还给终端」</strong>：鼠标追踪一旦开启，事件就被 ink 从 stdin 读走，而<br><code>node_modules/ink/build/hooks/use-input.js:112-114</code> 把 handler 返回值<strong>直接丢弃</strong><br>（<code>inputHandler(input, key)</code> 无人消费）—— <code>return false</code> <strong>物理上回不到终端</strong>。<br>所以唯一解法是<strong>本进程内自绘</strong>：</p>
+<pre><code>拖按下 → dispatcher onSelectEvent('down')  → 记 anchor，丢弃旧选区
+拖位移 → dispatcher onSelectEvent('move')  → normalizeSelection → setState
+拖松开 → dispatcher onSelectEvent('up')    → extractText + writeClipboard（唯一产出点）</code></pre>
+<h4 id="3-4-1-坐标契约-i1-i2-的具体化">3.4.1 坐标契约（I1/I2 的具体化）<a class="anchor" href="#3-4-1-坐标契约-i1-i2-的具体化" aria-label="锚点">#</a></h4>
+<p>三层职责分明，<strong>每层只做自己那段换算</strong>：</p>
+<table><thead><tr><th>层</th><th>输入</th><th>输出</th><th>谁负责</th></tr></thead><tbody><tr><td>dispatcher</td><td>SGR 字节</td><td><strong>0-based 屏幕绝对坐标</strong></td><td><code>parseSgrMouse</code>（已减 1）；<strong>不减视口偏移</strong> —— 那是 App 层 state</td></tr><tr><td>App.onSelectEvent</td><td>屏幕 row/col</td><td>行数组下标 + 字符下标</td><td>见下方公式</td></tr><tr><td><code>selection.js</code></td><td>行数组下标 + 字符下标</td><td>选区模型 / 文本</td><td>纯叶子，零 IO</td></tr></tbody></table>
+<pre><code>行下标  = ev.row − _viewportScreenTopRef + offset      （加号！见下）
+字符下标 = charColForDisplay(lines[行], displayCol)     （显示列 → 字符下标）</code></pre>
+<p>三条<strong>必须知道</strong>的坑（都是端到端探针抓的，单测各自自洽发现不了）：</p>
+<ol><li><strong><code>+ offset</code> 不是 <code>− offset</code></strong>。真源是 <code>Viewport.js</code>：</li></ol>
+<p><code>const start = clampedScroll; const visible = lines.slice(start, end);</code><br>   即<strong>视口第 0 行 = 数组下标 <code>clampedScroll</code></strong>。写成 <code>− offset</code> 的后果是<br>   「只要滚动过，选中的行就整体偏移」，看起来像随机选错行。</p>
+<ol><li><strong><code>ev.row</code> 是物理终端行，不是「视口内第几行」</strong>。ink 把 <code>&lt;Static&gt;</code> 横幅先写进屏幕，</li></ol>
+<p>live 帧被推到它下面（实测 118 列、真 App：<code>rows=40</code> 时帧高 38 ⇒ 帧首行 1）。<br>   校正值由鼠标事件入口每次重算写入 <code>_viewportScreenTopRef</code>；<code>NaN</code> ⇒ 不校正（逐字节退回旧行为）。</p>
+<ol><li><strong>显示列 ≠ 字符下标</strong>。SGR 上报的是终端<strong>单元格</strong>列，而 <code>selection.js</code> 与</li></ol>
+<p><code>Viewport.sliceLineForSelection</code> 一律按<strong>字符串下标</strong> <code>slice(from, to)</code>。<br>   中文行上两个口径差近一倍 ⇒ 「反色跑不到指针底下、复制比选中的多一截」。<br>   换算复用 <code>wrapCell.visWidth</code> —— 与把这些行折成视觉行的<strong>同一把尺子</strong>（I2）。<br>   宽字符右半格归到该字符起始下标，<strong>不劈开字形</strong>。</p>
+<ol><li><strong>不要用 <code>hitTest</code> 反查坐标</strong>：那是 yoga 树的<strong>实时</strong>几何，与按列宽预折好的视觉行</li></ol>
+<p>在软换行处不一致，拿它的结果索引 <code>lines</code> 会整体错位。选择层走「视口偏移」这条算术路径<br>   （与滚轮同源）。</p>
+<h4 id="3-4-2-跨页复制-边缘自动滚动-a-09">3.4.2 跨页复制：边缘自动滚动（A-09）<a class="anchor" href="#3-4-2-跨页复制-边缘自动滚动-a-09" aria-label="锚点">#</a></h4>
+<p>终端只把指针报告到<strong>窗口边界</strong>为止 —— 指针到了最后一行就不再产生新行号，选区于是被<br><strong>一屏</strong>卡死。用户看到的正是「能选中，但只能选当前这一页，跨页就复制不出来」。</p>
+<p>处方是 <code>Viewport.dragAutoScroll(rawLine, offset, viewH, total)</code>（纯叶子）：</p>
+<ul><li>指针在<strong>可见区下沿或更下</strong> → 下滚一格；在上沿或更上 → 上滚一格；内容不超视口／已到端点 → 不动；</li><li><strong>靠位移事件天然限速，不需要定时器</strong>（一次一格）；</li><li>返回的 <code>line</code> 是<strong>滚动之后</strong>指针所指的绝对行 —— <strong>锚点不动、活动端跟到新行</strong>，</li></ul>
+<p>这才是「继续扩展」而不是「跳回起点」；<code>offset</code> 可直接回写 App 侧滚动 ref。</p>
+<p>内容与视口等高时 <code>delta</code> 恒为 0，退化为「clamp 不崩」（A-09 允许的简化）。</p>
+<h4 id="3-4-3-产出点唯一-松手即定稿">3.4.3 产出点唯一：松手即定稿<a class="anchor" href="#3-4-3-产出点唯一-松手即定稿" aria-label="锚点">#</a></h4>
+<pre><code class="language-javascript"><span class="hljs-comment">// App.js onSelectEvent, kind === &#x27;up&#x27;</span>
+<span class="hljs-keyword">const</span> dragged  = sel.<span class="hljs-title function_">extendSelection</span>(_selectRegionRef.<span class="hljs-property">current</span>, pt.<span class="hljs-property">line</span>, pt.<span class="hljs-property">col</span>);  <span class="hljs-comment">// 松手点也进选区</span>
+<span class="hljs-keyword">const</span> finished = sel.<span class="hljs-title function_">endSelection</span>(dragged);
+<span class="hljs-keyword">const</span> range    = sel.<span class="hljs-title function_">normalizeSelection</span>(finished);   <span class="hljs-comment">// 零宽 → null（普通点击，不成选区）</span>
+<span class="hljs-keyword">if</span> (!range) { …清空… <span class="hljs-keyword">return</span>; }
+<span class="hljs-keyword">const</span> text = sel.<span class="hljs-title function_">extractText</span>(_mainContentLinesRef.<span class="hljs-property">current</span>, finished);  <span class="hljs-comment">// ← 唯一产出点</span>
+<span class="hljs-keyword">if</span> (<span class="hljs-title function_">_selectClipEnabled</span>(process.<span class="hljs-property">env</span>) &amp;&amp; text) clip.<span class="hljs-title function_">writeClipboard</span>(text);</code></pre>
+<p>三个细节各有原因：</p>
+<ul><li><strong>松手点也要算进选区</strong>：1002 的位移上报是「尽力而为」，快速小拖动可能**一个 <code>move</code></li></ul>
+<p>都没到** —— 那样 <code>head</code> 还停在按下点，选区零宽，用户看到反色画出来了却复制不出东西<br>  （最迷惑的一种「复制失灵」）。</p>
+<ul><li><strong>零宽用 <code>normalizeSelection</code> 判</strong>：与 <code>extractText</code> 内部同源，不会出现</li></ul>
+<p>「画了但提取为空」的不一致。</p>
+<ul><li><strong>反色延迟 1.5s 自动清除</strong>（<code>KHY_SELECT_CLEAR_MS</code>，<code>0</code> = 立即清）：对齐「复制完成即消失」直觉；</li></ul>
+<p>清除前用户若继续拖选/按键，<code>cancel</code>/<code>down</code> 分支会撤销定时器，不会擦掉进行中的手势；<br>  卸载时 <code>useEffect</code> 兜底撤销（fail-soft，绝不抛）。</p>
+<h4 id="3-4-4-剪贴板出口-ccclipboard-单源两层">3.4.4 剪贴板出口：<code>ccClipboard</code> 单源两层<a class="anchor" href="#3-4-4-剪贴板出口-ccclipboard-单源两层" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>层</th><th>通道</th><th>触发条件</th></tr></thead><tbody><tr><td>1</td><td><strong>native 先行</strong></td><td>本地终端有系统工具：<code>powershell Set-Clipboard</code> / <code>pbcopy</code> / <code>xclip</code> / <code>wl-copy</code>。载荷走 <strong>stdin 管道，绝不进命令行</strong>（注入安全 + CJK 安全）</td></tr><tr><td>2</td><td><strong>OSC 52 兜底</strong></td><td><strong>仅</strong>非 TTY stdout（存在转发层：SSH / tmux）。TTY 下喷 <code>\x1b]52;…</code> 会污染画面/进 scrollback，纪律是<strong>不发</strong></td></tr></tbody></table>
+<p>附加规则：tmux/screen 下 OSC 52 须包 <code>\x1bPtmux;…</code> 外层 DCS 才能穿透；载荷 base64 后</p>
+<blockquote><p>100KB 不再发（<code>KHY_CLIPBOARD_MAX_BYTES</code>，保守值，Windows Terminal 曾对大载荷冻结）。</p></blockquote>
+<p>返回<strong>统一状态对象</strong>（绝不抛）：<code>{ ok, channels, bytes, reasons }</code>，调用方按 <code>reasons</code><br>打印「问题 + 原因 + 修复」。</p>
+<h3 id="3-5-历史回溯-context-栈-草稿暂存">3.5 <code>↑</code>/<code>↓</code> 历史回溯：context 栈 + 草稿暂存<a class="anchor" href="#3-5-历史回溯-context-栈-草稿暂存" aria-label="锚点">#</a></h3>
+<h4 id="3-5-1-归属判定-一张表-一个函数">3.5.1 归属判定：一张表，一个函数<a class="anchor" href="#3-5-1-归属判定-一张表-一个函数" aria-label="锚点">#</a></h4>
+<p><code>arrowRouting.js</code> 照抄 Claude Code 的 <code>context → bindings</code> 结构。<strong>khy 的 App.js 块 4.7<br>本来就是一个 context 栈</strong>，只是历史上写成一串有序 <code>if</code>，判定条件与动作实现缠在一起，<br>读的人得从缩进反推优先级。现在判定全下沉到叶子：</p>
+<pre><code class="language-javascript"><span class="hljs-title function_">resolveContext</span>({ shellViewOpen, busy, empty })   <span class="hljs-comment">// → &#x27;shellView&#x27; | &#x27;executing&#x27; | &#x27;idle&#x27; | &#x27;editing&#x27;</span>
+<span class="hljs-title function_">resolveArrowAction</span>({ key, …state, queueLen })    <span class="hljs-comment">// → 动作名</span></code></pre>
+<table><thead><tr><th>context</th><th>何时进入</th><th><code>↑</code></th><th><code>↓</code></th><th><code>←</code></th><th><code>→</code></th></tr></thead><tbody><tr><td><code>shellView</code></td><td>shell 窥视面板打开</td><td><code>scroll:lineUp</code></td><td><code>scroll:lineDown</code></td><td><code>subview:exit</code></td><td><code>noop</code></td></tr><tr><td><code>executing</code></td><td>忙 <strong>且</strong> 输入为空</td><td><code>queue:editLast</code>（<strong>仅队列非空</strong>，否则 <code>noop</code>）</td><td><code>subview:openShell</code></td><td><code>noop</code></td><td><code>noop</code></td></tr><tr><td><code>idle</code></td><td>闲 <strong>且</strong> 输入为空</td><td><code>history:previous</code></td><td><code>history:next</code></td><td><code>noop</code></td><td><code>input:forward</code></td></tr><tr><td><code>editing</code></td><td>其余（输入非空）</td><td><code>history:previous</code></td><td><code>history:next</code></td><td><code>input:forward</code></td><td><code>input:forward</code></td></tr></tbody></table>
+<p><strong><code>editing</code> 下 <code>↑</code>/<code>↓</code> 是「无条件」绑到历史的</strong> —— 不看缓冲区是否为空、不看有没有换行，<br>与 CC 的 <code>Chat</code> context 一致。</p>
+<blockquote><p><strong>这条曾经是 bug，值得记下</strong>：早期实现在「缓冲区非空」时<strong>吞掉</strong>竖直方向键。后果是<br>第一次 <code>↑</code> 召回最近一条后缓冲区不再为空，于是后续 <code>↑</code> <strong>全被吞</strong> —— 用户只能回溯<br><strong>一条</strong>，想再往前必须先清空整行。当初留了个 env 旋钮 <code>KHY_HISTORY_BROWSE_EDITING</code><br>给这条「字节级回退」，已随 Stage 2 一并退役：既然对齐 CC 就意味「无条件转发」是唯一<br>正确解，留着回退等于<strong>留一个开关让人把 bug 再打开</strong>。<br><code>historyBrowseDecision.js</code> 现在只剩兼容外壳（两个函数<strong>恒返回 <code>true</code></strong>，不再读 env）。</p></blockquote>
+<h4 id="3-5-2-草稿暂存-转发不丢输入">3.5.2 草稿暂存：转发不丢输入<a class="anchor" href="#3-5-2-草稿暂存-转发不丢输入" aria-label="锚点">#</a></h4>
+<p><code>useTextInput</code> 的 <code>historyPrev</code> / <code>historyNext</code>（<code>histIdx</code> 游标 + <code>draft</code> 暂存）：</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">function</span> <span class="hljs-title function_">historyPrev</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> h = history.<span class="hljs-property">current</span>;
+  <span class="hljs-keyword">if</span> (h.<span class="hljs-property">length</span> === <span class="hljs-number">0</span>) <span class="hljs-keyword">return</span>;
+  <span class="hljs-keyword">if</span> (histIdx.<span class="hljs-property">current</span> === -<span class="hljs-number">1</span>) {          <span class="hljs-comment">// 第一次 ↑：暂存实时草稿</span>
+    draft.<span class="hljs-property">current</span> = cur.<span class="hljs-property">text</span>;
+    histIdx.<span class="hljs-property">current</span> = h.<span class="hljs-property">length</span>;
+  }
+  histIdx.<span class="hljs-property">current</span> = <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">max</span>(<span class="hljs-number">0</span>, histIdx.<span class="hljs-property">current</span> - <span class="hljs-number">1</span>);
+  <span class="hljs-title function_">setText</span>(h[histIdx.<span class="hljs-property">current</span>]);
+}
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">historyNext</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">if</span> (histIdx.<span class="hljs-property">current</span> === -<span class="hljs-number">1</span>) <span class="hljs-keyword">return</span>;    <span class="hljs-comment">// 没在浏览中 → 不响应</span>
+  histIdx.<span class="hljs-property">current</span> += <span class="hljs-number">1</span>;
+  <span class="hljs-keyword">if</span> (histIdx.<span class="hljs-property">current</span> &gt;= h.<span class="hljs-property">length</span>) {     <span class="hljs-comment">// ↓ 走过最新一条：还原草稿</span>
+    histIdx.<span class="hljs-property">current</span> = -<span class="hljs-number">1</span>;
+    <span class="hljs-title function_">setText</span>(draft.<span class="hljs-property">current</span> || <span class="hljs-string">&#x27;&#x27;</span>);
+    <span class="hljs-keyword">if</span> (onHistoryEmpty) <span class="hljs-title function_">onHistoryEmpty</span>();
+    <span class="hljs-keyword">return</span>;
+  }
+  <span class="hljs-title function_">setText</span>(h[histIdx.<span class="hljs-property">current</span>]);
+}</code></pre>
+<p>不变量：<strong>每次 <code>↑</code>/<code>↓</code> 移动的是一条「提交记录」，不是一个视觉行</strong>。<code>useTextInput</code><br>把含内嵌换行的提交视为<strong>一条</strong>历史 ⇒ 多行缓冲区下转发 <code>↑</code> <strong>也不丢任何输入</strong>。</p>
+<h4 id="3-5-3-跨会话持久化-复用既有真源">3.5.3 跨会话持久化：复用既有真源<a class="anchor" href="#3-5-3-跨会话持久化-复用既有真源" aria-label="锚点">#</a></h4>
+<ul><li>门控 <code>KHY_TUI_HISTORY_PERSIST</code>（默认开，<code>0/false/off/no</code> 关 → 逐字节退回「仅本会话内存历史」）；</li><li>落盘<strong>复用</strong> <code>cli/repl/history.js</code>（经典 REPL 用的同一个 <code>~/.khyquant_history</code>）——</li></ul>
+<p><strong>绝不另造一份存储</strong>；</p>
+<ul><li><code>mergeHistory(persisted, session, max)</code>：旧→新合并、去空白、截到最近 <code>max</code> 条（最近的先出）；</li><li>挂载时 <code>loadHistory()</code> 预填 ⇒ 首次 <code>↑</code> 就能召回上一会话的命令；<strong>每次 fs 触碰都 fail-soft</strong>，</li></ul>
+<p>坏文件/被锁历史绝不阻断 TUI 挂载。</p>
+<h4 id="3-5-4-与-视口滚动键-的分工">3.5.4 与「视口滚动键」的分工<a class="anchor" href="#3-5-4-与-视口滚动键-的分工" aria-label="锚点">#</a></h4>
+<p><code>PgUp/PgDn</code>、<code>j/k</code>、<code>g/G</code>、<code>space</code> 绑<strong>视口滚动</strong>（块 4.8 / 4.9），<code>↑</code>/<code>↓</code> 在 <code>idle</code>/<code>editing</code><br>绑<strong>历史</strong>。两族键<strong>不共用按键</strong>，所以「键盘滚动」与「键盘历史」本身不冲突。<br>真正的冲突只在 <code>↑</code>/<code>↓</code> 上 —— 而它被 context 栈裁决：<strong>输入非空时看历史、子视图打开时看滚动</strong>。</p>
+<blockquote><p>⚠ 转录子视图（<code>Ctrl+O</code>）与 <code>shellView</code> 都<strong>独占全部输入</strong>，在 App.js 更早的分支里<br><code>return</code> 掉，<strong>根本到不了</strong>块 4.7。vim / plan / help / 补全菜单各自持有自己的按键处理，<br>块 4.7 整体被跳过。这就是「<code>↑↓</code> 在四种 context 下解析成不同动作」之外，<br><strong>还有一层更早的独占</strong>——两层合起来才是完整的键位归属图。</p></blockquote>
+<hr>
+<h2 id="4-冲突消解-一张完整的优先级表">4. 冲突消解：一张完整的优先级表<a class="anchor" href="#4-冲突消解-一张完整的优先级表" aria-label="锚点">#</a></h2>
+<p><code>App.js</code> 的 <code>useInput</code> 是唯一的键盘入口，分支<strong>自上而下短路</strong>：</p>
+<table><thead><tr><th>序</th><th>分支</th><th>条件</th><th>说明</th></tr></thead><tbody><tr><td>1</td><td>权限提示</td><td><code>query.controlRequest</code></td><td>顶层让位，由 overlay 自己的 <code>useInput</code> 消费</td></tr><tr><td>1.5</td><td>看板聚焦 / <code>Ctrl+G</code> / 图片删除</td><td><code>navOn</code> 等</td><td>各自 <code>return</code></td></tr><tr><td>—</td><td>子视图独占</td><td><code>transcriptOpen</code>（块 4.7 之前）</td><td><code>Ctrl+O</code> 转录：<code>ctrl+u/d/b/f</code>、<code>p/n</code>、<code>j/k</code>、<code>↑↓</code> 全部归<strong>滚动</strong>；<code>esc/q/ctrl+c/ctrl+o</code> 关闭</td></tr><tr><td>—</td><td>vim / plan / help / 补全</td><td>各自 handler</td><td>块 4.7 整体跳过</td></tr><tr><td><strong>4.7</strong></td><td><strong>方向键归属</strong></td><td><code>isArrow &amp;&amp; !vim &amp;&amp; !plan &amp;&amp; !help</code></td><td><strong><code>arrowRouting</code> 裁决 → 动作名 switch</strong></td></tr><tr><td>4.8</td><td>主视口滚动</td><td>非 Preview、无 overlay、无补全</td><td><code>↑↓ jk</code>、<code>space</code>、<code>PgUp/PgDn</code>、<code>g/G</code></td></tr><tr><td>4.9</td><td>Preview 视口 + 右栏滚动</td><td>Preview 布局</td><td>同一组键，主视口与右栏<strong>独立偏移</strong></td></tr><tr><td>5</td><td>其余 → 文本编辑</td><td>兜底</td><td><code>textInput.onInput</code></td></tr></tbody></table>
+<p><strong>鼠标事件</strong>走独立通道（<code>mouseButtons.createMouseDispatcher</code>），判据顺序同样是根因级的：</p>
+<pre><code>① 滚轮最先（Shift+滚轮 = 横向滚动，不是拖选）
+② 修饰键放行早于 motion / press / release 全部（Shift 放行是硬承诺）
+③ motion 早于 hover 限流（否则 30ms 节流吞掉选区轨迹 → 选区「跳格」）
+④ press 落空上报 down 后仍返回 false（「不消费」只是不去吞，事件已到过我们手里）
+⑤ release 的 up 在 return 之前上报（松手是唯一产出点）</code></pre>
+<p><strong>「修饰键绕过」不能只写 Shift</strong>（<code>AGENTS.md</code> §0.8）：各终端的「我要终端原生选择」<br>约定键不一致，只认 <code>Shift</code> 会让相当一部分用户的原生拖选仍然失效。<code>parseSgrMouse</code><br>把 <code>isShift</code> / <code>isAlt</code> / <code>isCtrl</code> <strong>三个位都拆出来</strong>，任一为真即放行：</p>
+<table><thead><tr><th>终端</th><th>用户实际按的</th><th>SGR 位</th></tr></thead><tbody><tr><td>VS Code 集成终端 / Windows Terminal / xterm</td><td><code>Shift</code></td><td>位 4</td></tr><tr><td>iTerm2</td><td><code>Option</code></td><td>位 8（iTerm2 的 Shift 默认不发序列）</td></tr><tr><td>Terminal.app</td><td><code>Fn</code></td><td>部分映射为 <code>Alt</code>，同走位 8</td></tr><tr><td>任意（显式回退）</td><td>—</td><td><code>KHY_SELECT=0</code> 关自绘层；<code>KHY_MOUSE=off</code> 连滚轮也不接管</td></tr></tbody></table>
+<p>⚠ <strong>诚实边界</strong>：<code>return false</code> 物理上回不到终端，放行的真实价值在于<strong>不去吞它、<br>也不去画自己的选区</strong>。终端能否真的接管 <code>Shift+鼠标</code>，取决于终端<strong>是否上报修饰序列</strong> ——<br>部分终端不上报，那种情况下 Shift 与不按 Shift 无法区分。</p>
+<h3 id="4-1-鼠标追踪三档互斥-enablebytes-是唯一真源">4.1 鼠标追踪三档互斥：<code>enableBytes</code> 是唯一真源<a class="anchor" href="#4-1-鼠标追踪三档互斥-enablebytes-是唯一真源" aria-label="锚点">#</a></h3>
+<p>DECSET 的三个追踪模式是<strong>同一能力的不同档位，互斥</strong>，只能开一个：</p>
+<table><thead><tr><th>模式</th><th>上报内容</th><th>谁需要</th></tr></thead><tbody><tr><td><code>1000</code> X11 basic</td><td>按下 / 松开</td><td>点击层（按钮高亮）</td></tr><tr><td><code>1002</code> button-event</td><td>按下 / 松开 / <strong>按住时的位移</strong></td><td><strong>应用内自绘选择</strong>（选区要跟手扩展）</td></tr><tr><td><code>1003</code> any-motion</td><td>一切移动（60~120Hz 洪流）</td><td>悬停高亮（<strong>必然</strong>吞掉拖选）</td></tr></tbody></table>
+<p><code>1006</code> 是 SGR 坐标编码，与追踪模式<strong>正交</strong>，永远都要带。</p>
+<pre><code>❌ 禁止叠加写 1000h 与 1002h（终端按哪一档解释变得不确定）
+✅ enableBytes({ select: true }) 写 1002h 时**不写** 1000h（替换语义）
+✅ 1003 只在 hover=true 时追加，与 select 正交
+✅ 重新接管追踪（enterNativePassthrough 的超时回调）必须与初始开启**同档** ——
+   漏了 select 会退回 1000，拖动位移从此不再上报，表现为
+   「滚一下滚轮之后拖选就失灵了」这类间歇性故障</code></pre>
+<blockquote><p>⚠ <strong>一条曾被写反的因果</strong>（2026-09-17 修正）：历史注释称「1002 报位移意味着按下已被<br>吃掉，所以必须降到 1000」。<strong>因果是反的</strong> —— 按下被吃掉是因为 dispatcher 对 <code>press</code><br>无条件 <code>return true</code>，与开哪一档无关；1000 下 press 照样上报、照样被吃。降档只是<br>顺手删掉了自绘选择唯一需要的位移信息。<br>⇒ 纪律：<strong>「不报 X」不等于「不报 Y」</strong>，判据要按<strong>事件类别</strong>逐项写清。</p></blockquote>
+<hr>
+<h2 id="5-布局与帧高-四件事共享的物理预算">5. 布局与帧高：四件事共享的物理预算<a class="anchor" href="#5-布局与帧高-四件事共享的物理预算" aria-label="锚点">#</a></h2>
+<pre><code class="language-javascript"><span class="hljs-comment">// chromeBudget.js —— 唯一的 chrome 账本（DESIGN-ARCH-103 P0-5 / H1）</span>
+<span class="hljs-title function_">chromeRows</span>(shares)               <span class="hljs-comment">// 固定（非滚动）行数之和</span>
+<span class="hljs-title function_">liveBudget</span>(rows, shares)         <span class="hljs-comment">// rows − chrome − 1，clamp 到 [LIVE_MIN, rows]</span></code></pre>
+<p><code>-1</code> 是两条纪律的合成：<strong>绝不写最后一行</strong>（conpty pending-wrap）+ <strong>不进 ink 的<br>fullscreen 触发条件</strong>。历史上这套算术散在<strong>三处</strong>（<code>ccLayout.messageAreaCap</code>、<br><code>liveRegionBudget</code>、<code>railLayout.railBottomChrome</code>），各有各的常量 —— 改一处就会脱钩、<br>帧静默顶穿视口。现在三处降级为账本的薄适配器，签名不变。</p>
+<p><strong>几何分工</strong>（一帧从上到下）：</p>
+<pre><code>┌─ Topbar (1)                       ← 仅 PreviewLayout
+├─ 分隔线 (1)                        ← 仅 PreviewLayout
+├─ 主内容视口  Viewport(height=H)     ← 可滚，H 由 liveBudget 分配
+│    └─ 可选指示器 (占 1，从 H 里扣)   ← viewportContentRows 扣行
+├─ spinner 块 (忙时 3) / 任务清单       ← 可选 chrome，必须进 shares
+├─ PromptFrame (3)                   ← 钉底，不受滚动影响
+├─ FooterBar (1)                     ← 钉底
+└─ slack (1)                         ← conpty 纪律
+   ─────────────────────────────────
+   合计 ≤ rows − 1</code></pre>
+<p><strong>输入框钉底是「帧内固定 + 帧不滚」的合成结果</strong>，不是独立机制。所以 §3.2 的<br><code>≤ rows − 1</code> 硬约束<strong>同时也是</strong>「固定底部」的前提 —— 这是 A/C 两类诉求<strong>共用一个<br>约束</strong>的地方，也是设计上最经济的一笔。</p>
+<hr>
+<h2 id="6-门控总表-共存机制的逃生舱">6. 门控总表（共存机制的逃生舱）<a class="anchor" href="#6-门控总表-共存机制的逃生舱" aria-label="锚点">#</a></h2>
+<p>所有门控<strong>在最外层读</strong>，叶子只吃布尔参数。<code>0/false/off/no</code> 一律等于「关」，关掉时<br><strong>逐字节回退</strong>旧行为。</p>
+<table><thead><tr><th>门控</th><th>默认</th><th>作用</th><th>关掉后的代价</th></tr></thead><tbody><tr><td><code>KHY_INLINE_TRANSCRIPT</code></td><td>开</td><td>转录由<strong>应用内 Viewport</strong> 承载</td><td>回退「整段转录走 <code>&lt;Static&gt;</code>」，可滚性丧失</td></tr><tr><td><code>KHY_MOUSE</code></td><td><code>click</code>（<code>off</code>/<code>click</code>/<code>full</code>）</td><td>鼠标层主开关</td><td><code>off</code> = 完全不接管（原生滚轮 + 拖选全保留）</td></tr><tr><td><code>KHY_MOUSE_WHEEL</code></td><td>开</td><td>滚轮驱动应用内视口</td><td>交还终端原生滚动 ⚠ <strong>仅主屏有意义</strong></td></tr><tr><td><code>KHY_MOUSE_HOVER</code></td><td>仅 <code>full</code> 档</td><td>1003 悬停（60~120Hz）</td><td>—（默认关，开了<strong>必然</strong>吞拖选）</td></tr><tr><td><code>KHY_SELECT</code></td><td><strong>开</strong></td><td>自绘选择总闸（开 1002、画反色、松手写剪贴板）</td><td>回退旧行为，追踪态下<strong>无可用选择通道</strong></td></tr><tr><td><code>KHY_SELECT_CLIP</code></td><td>开</td><td>松手自动写剪贴板</td><td>能选中能看但<strong>不自动复制</strong></td></tr><tr><td><code>KHY_SELECT_DRAG</code></td><td>开</td><td>1002 位移追踪</td><td>只认按下/松开两点式（<strong>诊断用</strong>）</td></tr><tr><td><code>KHY_SELECT_CLEAR_MS</code></td><td><code>1500</code></td><td>复制后选区延时清除</td><td><code>0</code> = 立即清</td></tr><tr><td><code>KHY_PRESERVE_SCROLLBACK</code></td><td>开</td><td>剥离 <code>\x1b[3J</code>，保住原生回滚</td><td>两平台都退回 ink 原始行为</td></tr><tr><td><code>KHY_SUPPRESS_STATIC_REPRINT</code></td><td>开</td><td>全屏帧「整段转录重发」抑制</td><td>历史在 scrollback 里堆叠副本</td></tr><tr><td><code>KHY_FULLSCREEN_TAILCUT</code></td><td>开</td><td>全屏帧「活区尾切」到 <code>rows−1</code></td><td>帧逐次滚屏 → scrollback 串副本</td></tr><tr><td><code>KHY_TUI_HISTORY_PERSIST</code></td><td>开</td><td>跨会话历史持久化</td><td>仅本会话内存历史</td></tr><tr><td><code>KHY_MOUSE_BUTTONS</code></td><td>未设</td><td>旧版布尔覆写</td><td><strong>优先于</strong> <code>KHY_MOUSE</code> 档位</td></tr><tr><td><code>KHY_ALT_SCREEN</code></td><td>legacy 开 / CC 关</td><td>备用缓冲区（1049h）</td><td>见 §7 架构反转</td></tr><tr><td><code>KHY_TUI_DIAG_H</code></td><td><code>0</code></td><td>打印帧高账本到 stderr</td><td>—</td></tr><tr><td><code>KHY_TUI_DIAG</code></td><td><code>0</code></td><td>打印鼠标事件解析结果</td><td>—</td></tr></tbody></table>
+<h3 id="6-1-排障表-症状-成因-修">6.1 排障表（症状 → 成因 → 修）<a class="anchor" href="#6-1-排障表-症状-成因-修" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>症状</th><th>成因</th><th>修</th></tr></thead><tbody><tr><td><strong>拖选选不中 / 复不出文本</strong></td><td>自绘层被关，或终端未上报修饰序列</td><td>① 确认 <code>KHY_SELECT</code> 未被显式关；② 按住<strong>本终端的原生选择修饰键</strong>拖（§4）；③ 退路 <code>KHY_MOUSE=off</code></td></tr><tr><td>滚轮翻不了历史（备屏下变成 <code>↑</code>/<code>↓</code> 回溯）</td><td>滚轮被交还终端，而备屏无回滚缓冲</td><td>确认 <code>KHY_MOUSE_WHEEL</code> 未被设 <code>0</code></td></tr><tr><td>拖动会输出 <code>[&lt;32;…M</code> 之类文本</td><td><strong><code>1002</code> 残留在终端</strong>（进程被 <code>SIGKILL</code> / 终端崩溃 / 断电 → 不走 teardown）</td><td><code>printf '\033[?1002l\033[?1000l\033[?1003l\033[?1006l'</code> 复位，或<strong>重开终端</strong></td></tr><tr><td>选中了但剪贴板没内容</td><td><code>writeClipboard</code> 走 OSC 52 而当前是 SSH/tmux 嵌套</td><td>看 <code>reasons</code> 的可见提示；必要时 <code>KHY_CLIPBOARD_DUAL=1</code></td></tr><tr><td>转录被整片抹掉</td><td>某帧高度 ≥ <code>rows</code> → ink fullscreen 分支自锁</td><td><code>KHY_TUI_DIAG_H=1</code> 核对账本，把漏计项补进 <code>shares</code></td></tr><tr><td>状态栏下方一行幽灵文本</td><td>有模块绕过 ink 注入流直写 stdio（winston <code>console._stdout</code>）</td><td>走 ink 树，或纳入 <code>consoleMute</code> 同族处理（§8.3）</td></tr></tbody></table>
+<hr>
+<h2 id="7-业内对照">7. 业内对照<a class="anchor" href="#7-业内对照" aria-label="锚点">#</a></h2>
+<h3 id="7-1-与本仓同构的实现-claude-code-全屏渲染">7.1 与本仓同构的实现：Claude Code 全屏渲染<a class="anchor" href="#7-1-与本仓同构的实现-claude-code-全屏渲染" aria-label="锚点">#</a></h3>
+<p>CC 官方文档（<code>code.claude.com/docs/en/fullscreen</code>）的描述与本仓高度同构，逐条对照：</p>
+<table><thead><tr><th>维度</th><th>Claude Code</th><th>khy（本仓）</th></tr></thead><tbody><tr><td>画布</td><td>备选屏幕缓冲区，像 vim / htop</td><td>同（<code>KHY_ALT_SCREEN</code>；legacy 默认开、CC 默认关）</td></tr><tr><td>渲染树</td><td>只保留可见消息，长对话内存平稳</td><td>同（<code>_mainContentLines</code> 预折行 + <code>lines.slice</code>）</td></tr><tr><td>滚动键</td><td><code>PgUp/PgDn</code> 半屏、<code>Ctrl+Home/End</code> 顶/底、滚轮每格几行</td><td>同族（<code>halfPage/fullPage</code> + <code>top/bottom</code>，动作名共享 <code>scrollActions</code>）</td></tr><tr><td>自动跟随</td><td>向上滚暂停跟随；底部浮动 <code>Jump to bottom</code>，显示 <code>3 new messages</code></td><td><strong>贴底哨兵 <code>null</code></strong> + <code>↑N ↓M</code> 指示器（无浮动按钮，用 dim 行）</td></tr><tr><td>鼠标滚轮</td><td>需终端转发鼠标事件；<code>CLAUDE_CODE_SCROLL_SPEED</code> 调倍速；快速滚轮加速</td><td><code>KHY_MOUSE_WHEEL</code>；步长固定 3 行（无倍速，见 §9 差距）</td></tr><tr><td>原生选择被吃</td><td>「当你捕获鼠标事件，<strong>终端原生 copy-on-select 停止工作</strong>」；选区在 CC 内</td><td>同判定（§3.4），且<strong>自绘反色</strong></td></tr><tr><td>复制时机</td><td><strong>鼠标释放时自动复制</strong></td><td>同（松手即 <code>extractText + writeClipboard</code>）</td></tr><tr><td>剪贴板路径</td><td>macOS <code>pbcopy</code> / Linux <code>wl-copy</code>·<code>xclip</code>·<code>xsel</code>（同时写 PRIMARY）/ Windows PowerShell <code>Set-Clipboard</code> / tmux 写自身缓冲 / SSH 降级 OSC 52</td><td><strong>同构</strong>（<code>ccClipboard</code> 两层 + tmux DCS 包裹）</td></tr><tr><td>保留原生选择</td><td>按住 <strong>Fn</strong>（Terminal.app）/ <strong>Option</strong>（iTerm2）/ <strong>Shift</strong>（VS Code 等）</td><td><strong>同位拆分</strong>（<code>isShift/isAlt/isCtrl</code> 三位，§4）</td></tr><tr><td>选择键行为</td><td><code>Esc</code>/<code>PgUp</code>/<code>Ctrl+Home</code>/修饰键+方向 ⇒ 选择<strong>保留</strong>；普通方向键/<code>Enter</code>/输入字符 ⇒ <strong>清除</strong></td><td>部分：<code>cancel</code> 手势清；<strong>「按键清除」语义本仓未实现</strong>（§9）</td></tr><tr><td>逃生门</td><td><code>CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN</code> / <code>DISABLE_MOUSE</code> / <code>DISABLE_MOUSE_CLICKS</code> / <code>NO_FLICKER</code> / <code>ALT_SCREEN_FULL_REPAINT</code></td><td><code>KHY_ALT_SCREEN</code> / <code>KHY_MOUSE=off</code> / <code>KHY_MOUSE_WHEEL=0</code> / <code>KHY_SELECT=0</code> / <code>KHY_TUI_CONSOLE_LOG</code></td></tr><tr><td>备屏副作用（诚实记录）</td><td>「终端的 <code>Cmd+f</code> 和 tmux 搜索<strong>看不到</strong>对话内容」；需转录模式 + <code>[</code> 写回滚</td><td>同（本仓还有 <code>scrollbackPreserve</code> 四层去砸备屏副作用，见 §7.3）</td></tr><tr><td>已知终端坑</td><td>Windows Terminal / ConPTY <strong>合并定位写入</strong> → 残片；<code>tmux -CC</code> 不兼容</td><td>同族（<code>KHY_ALT_SCREEN_FULL_REPAINT</code> 在 CC 侧；本仓走 <code>scrollbackPreserve</code> 的 win32 改写 <code>[2J[0f</code> → <code>[H[J</code>）</td></tr></tbody></table>
+<p><strong>结论</strong>：本仓的键盘/鼠标/选择/剪贴板四层与 CC <strong>基本 1:1</strong>，差异集中在<br>① CC 有滚轮倍速与加速、② CC 有「按键清除选区」的细粒度语义、③ CC 的浮动<br><code>Jump to bottom</code> 带消息计数按钮。这三条列入 §9 差距清单。</p>
+<h3 id="7-2-其他路线-为什么它们不能直接照搬">7.2 其他路线：为什么它们不能直接照搬<a class="anchor" href="#7-2-其他路线-为什么它们不能直接照搬" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>实现</th><th>路线</th><th>与本仓的差别</th></tr></thead><tbody><tr><td><strong>less / more</strong></td><td>独占全屏，<strong>自己实现</strong>滚动与搜索，不依赖终端回滚</td><td>是「分页器」不是「常驻 REPL」：没有钉底输入框，也没有历史回溯共存问题</td></tr><tr><td><strong>tmux copy-mode</strong></td><td><code>Prefix+[</code> <strong>模式化</strong>：进入后方向键归滚动，<code>Space</code> 起选、<code>Enter</code> 复制、<code>q</code> 退出</td><td>与本仓 <code>shellView</code>/<code>transcriptOpen</code> 的「子视图独占」<strong>同构</strong>；差别是 tmux 需要一个显式模式键，本仓靠 context 栈<strong>自动</strong>切换</td></tr><tr><td><strong>vim / htop</strong></td><td>备屏 + 自绘，退出恢复原终端</td><td>无输入历史共存诉求（vim 的 <code>:</code> 历史是另一套）</td></tr><tr><td><strong>readline / bash</strong></td><td><strong>主屏</strong> + 终端原生回滚；<code>↑↓</code> 无条件历史</td><td><strong>不能照搬</strong>：主屏方案下滚轮由终端处理，但备屏下滚轮被合成 <code>↑↓</code> → 历史回溯串扰（§3.3）</td></tr><tr><td><strong>ink-scroll-view</strong>（社区库）</td><td>给 ink 补 <code>Viewport</code> 语义</td><td>本仓 <code>Viewport.js</code> <strong>自带</strong>，且多了选区反色、贴底哨兵、<code>viewportContentRows</code> 扣行、<code>dragAutoScroll</code> 四项 —— 通用库不含这些产品约束</td></tr></tbody></table>
+<p><strong>共同规律</strong>：<strong>所有能同时满足「可滚 + 可复制 + 钉底输入」的实现，都不向终端要滚动，<br>而是自己维护视口</strong>。终端原生回滚与「应用自管视口」<strong>只能二选一</strong>——这是本仓<br><code>scrollbackPreserve</code> 的存在理由，也是 CC <code>CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN</code> 的存在理由。</p>
+<h3 id="7-3-备屏副作用的三层对抗-本仓独有">7.3 备屏副作用的三层对抗（本仓独有）<a class="anchor" href="#7-3-备屏副作用的三层对抗-本仓独有" aria-label="锚点">#</a></h3>
+<p>备屏丢回滚缓冲，本仓不靠「不用备屏」而是<strong>四层叠加</strong>把副作用压到可接受<br>（<code>scrollbackPreserve.js</code>，纯叶子、门控 <code>KHY_PRESERVE_SCROLLBACK</code>）：</p>
+<table><thead><tr><th>层</th><th>做什么</th><th>门控</th></tr></thead><tbody><tr><td>1</td><td>从写给 ink 的 stdout 边界剥掉 <code>\x1b[3J</code>（仅它），保留 <code>\x1b[2J</code>/<code>\x1b[H</code></td><td>同上</td></tr><tr><td>2</td><td>win32 额外把 <code>[2J[0f</code> 改写为等价的 <code>[H[J</code>（ED0 <strong>就地擦除</strong>，不滚屏 ⇒ 不留重复副本）</td><td>同上</td></tr><tr><td>3</td><td>全屏帧「整段转录重发」抑制：字节级前缀校验后剥掉冗余 static 段</td><td><code>KHY_SUPPRESS_STATIC_REPRINT</code></td></tr><tr><td>4</td><td>全屏帧「活区尾切」到 <code>rows−1</code>：整帧不滚屏 ⇒ scrollback 零副本</td><td><code>KHY_FULLSCREEN_TAILCUT</code></td></tr></tbody></table>
+<blockquote><p>层 3/4 的因果值得记住：上游 ink 用 <code>3J</code> <strong>每帧清空 scrollback</strong> 来掩盖「帧滚屏」，<br>而层 1 恰恰为<strong>保全 scrollback</strong> 剥掉了 <code>3J</code> —— 副本于是从「被掩盖」变成<strong>永久积累</strong>。<br>正解不是恢复 <code>3J</code>，而是<strong>从源头不让它滚</strong>。</p></blockquote>
+<hr>
+<h2 id="8-三条不变量为什么不可让步">8. 三条不变量为什么不可让步<a class="anchor" href="#8-三条不变量为什么不可让步" aria-label="锚点">#</a></h2>
+<h3 id="i1-视口偏移是唯一坐标系">I1 —— 视口偏移是唯一坐标系<a class="anchor" href="#i1-视口偏移是唯一坐标系" aria-label="锚点">#</a></h3>
+<p>任何一处「自己算偏移」都会与渲染侧脱钩。历史三次翻车<strong>同源</strong>：<br>① 初值 <code>0</code> 当「在底部」→ 视口永远停在顶部；<br>② <code>hitTest</code> 反查 → 软换行处整体错位；<br>③ <code>Number(null) === 0</code> 手写解析 → 贴底被误读成停在顶部，屏幕第 0 行映射到数组第 0 行<br>（<strong>根本看不见的最早那几行</strong>，用户拖动时反色不出现、复制出陈年旧消息）。<br>⇒ <strong>纪律：偏移只经 <code>resolveViewportOffset</code>，<code>viewH</code> 只经 <code>viewportContentRows</code>。</strong></p>
+<h3 id="i2-填充与渲染走同一把尺子">I2 —— 填充与渲染走同一把尺子<a class="anchor" href="#i2-填充与渲染走同一把尺子" aria-label="锚点">#</a></h3>
+<p><code>wrapCell.visWidth</code> 是<strong>唯一</strong>宽度度量。折行用一把尺、列宽换算用另一把，正是<br><code>[DESIGN-ARCH-103]</code> H6 反复踩的「折行与计费不同源」。<code>charColForDisplay</code> 显式复用<br><code>visWidth</code> 就是为此。</p>
+<blockquote><p>⚠ <strong>「折与计算不同源」还有一个未解的残留</strong>（<code>[DESIGN-ARCH-113]</code> / H6 同族）：<br><code>_mainContentLines</code> 是<strong>按列宽预折</strong>的，而 <code>wrapCell</code> 的宽度度量与<br><code>ink</code> 内建 <code>string-width</code> 在<strong>歧义宽度字符</strong>（East Asian Ambiguous，如 <code>→</code> <code>±</code> <code>§</code><br>以及部分 emoji）上可能取不同值。此时<strong>终端按更窄的宽度显示</strong>、应用按更宽的宽度填充，<br>视觉行数比 <code>_mainContentLines</code> 记录的多，导致：选区坐标整体偏一行、<code>viewH</code> 低估、<br>帧高算少 —— 三者又互相跨层叠加（与 §8 I3 的「跨层失真是乘性而非加性」同一族）。<br>目前<strong>未复现出稳定反例</strong>，故不列为缺陷、只列为判读警示：遇到「错位一行」类报告，<br>先查报告者终端/字体是否把某个歧义字符判成双宽。</p></blockquote>
+<h3 id="i3-单写者-只有-ink-注入流能画屏">I3 —— 单写者：只有 ink 注入流能画屏<a class="anchor" href="#i3-单写者-只有-ink-注入流能画屏" aria-label="锚点">#</a></h3>
+<p><code>app.js</code> 把渲染流换成 <code>scrollbackPreserve(process.stdout)</code> 的 Proxy，ink 每帧按<br><code>lastOutputHeight</code> <code>eraseLines(n)</code> 重画。而 <code>patch-console</code> 只替换 <code>console.log/warn/…</code><br>这 18 个方法，<strong>不碰 <code>console._stdout</code></strong>；winston 的 Console transport 恰好写的就是<br><code>console._stdout.write</code>。于是日志字节<strong>绕开了注入流与它的帧高账本</strong>，<br><code>eraseLines</code> 永远擦不到它 —— 状态栏下方一行幽灵文本（BUG-13）。</p>
+<p><strong>已登记的绕过者</strong>与处方：</p>
+<table><thead><tr><th>绕过者</th><th>处方</th><th>逃生门</th></tr></thead><tbody><tr><td>winston Console transport</td><td><code>consoleMute.js</code> 在 <code>render()</code> 前把该 transport 的 level 设 <code>silent</code>，<code>waitUntilExit()</code> 后恢复（<code>process.once('exit')</code> 兜底）</td><td><code>KHY_TUI_CONSOLE_LOG=1</code></td></tr><tr><td><code>sessionWatchdog.report()</code> 直写 <code>process.stderr</code></td><td>先问宿主（<code>opts.onReport</code>），宿主接走就不写；TUI 订阅 <code>noticeInbox</code> 落成 <code>role:'notice'</code></td><td><code>KHY_WATCHDOG_NOTICE=0</code></td></tr></tbody></table>
+<p>同族约束：宿主钩子只有<strong>显式 <code>true</code></strong> 算「接走」，返回 <code>false</code> / 抛错 / 无钩子一律回落 ——<br><strong>诊断宁可多一行也不许静默丢</strong>（Rule 3 诚实上报）。另附：任何<strong>包裹 stdio <code>.write</code> 的机制</strong><br>在卸载时必须<strong>按身份还原</strong>（<code>stream.write === myPatch</code> 才还原，别人套在外面就不动）。</p>
+<hr>
+<h2 id="9-已知偏差与待改进项">9. 已知偏差与待改进项<a class="anchor" href="#9-已知偏差与待改进项" aria-label="锚点">#</a></h2>
+<p>诚实边界清单（<strong>记录现状，不构成本文改动</strong>；每条给出代价与可选修法）。</p>
+<h3 id="9-1-复制保真">9.1 复制保真<a class="anchor" href="#9-1-复制保真" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>偏差</th><th>后果</th><th>可选修法</th></tr></thead><tbody><tr><td>K1</td><td><strong>跨软换行复制带硬 <code>\n</code></strong>：<code>_mainContentLines</code> 含按列宽折好的软换行，视觉行 ≠ 逻辑行</td><td>复制一段换行折过的长文本，中间多出 <code>\n</code>，粘到 shell 里会当成回车</td><td>行投影补 <code>softWrap</code> 元数据，<code>extractText</code> 在软换行处用 <code>''</code> 而非 <code>'\n'</code> 连接（需另立提案，<code>selection.js</code> 头部已登记）</td></tr><tr><td>K2</td><td><strong>双击选词不含 CJK 分词</strong>：<code>WORD_CHARS = [A-Za-z0-9_./\\:~@+\-]</code>，中文按连续串成一个「词」</td><td>双击中文只选中一整段（与主流编辑器一致，属<strong>刻意</strong>取舍）</td><td>引入 CJK 分词字典；代价是体积与误切</td></tr><tr><td>K3</td><td>选区<strong>跨屏滚动不落屏幕外内容</strong>：<code>dragAutoScroll</code> 一次一格，靠位移事件限速</td><td>极快甩动到边缘时扩展速度受事件率限制</td><td>边缘处加定时器加速（代价：引入定时器与「拖出窗口不松手」的边界态）</td></tr><tr><td>K4</td><td><strong><code>1002</code> 残留</strong>：<code>SIGKILL</code> / 崩溃 / 断电不走 teardown，终端停在 mouse-tracking 态</td><td>拖动输出 <code>[&lt;32;…M</code> 文本</td><td>无法彻底消除（<code>1000h</code> 本就有同风险）；文档给复位命令（§6.1）</td></tr></tbody></table>
+<h3 id="9-2-交互语义差距-对齐-cc">9.2 交互语义差距（对齐 CC）<a class="anchor" href="#9-2-交互语义差距-对齐-cc" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>差距</th><th>CC 行为</th><th>本仓现状</th></tr></thead><tbody><tr><td>K5</td><td><strong>「按键清除选区」缺失</strong></td><td><code>Esc</code>/<code>PgUp</code>/修饰键+方向 ⇒ 选区<strong>保留</strong>；普通方向键/<code>Enter</code>/输入字符 ⇒ <strong>清除</strong></td><td>仅 <code>cancel</code> 手势（resize/切视图）清；普通按键不清 —— 选区会一直挂着到 1.5s 定时器或下次拖选</td></tr><tr><td>K6</td><td><strong>无滚轮倍速/加速</strong></td><td><code>CLAUDE_CODE_SCROLL_SPEED</code>（0.25–20）+ 快速转动加速；JetBrains 终端忽略该变量</td><td>步长固定 3 行；高速滚轮体验弱于 CC</td></tr><tr><td>K7</td><td><strong>无浮动 <code>Jump to bottom</code> 按钮</strong></td><td>底部浮动按钮 + <code>3 new messages</code> 计数</td><td>仅 <code>↑N ↓M</code> dim 指示器（信息等价，可点性缺失）</td></tr><tr><td>K8</td><td><strong><code>v</code> / <code>y</code> 键位入口 deferred</strong></td><td>——</td><td>功能已被鼠标自绘选择覆盖；键位表<strong>不得</strong>宣称存在（<code>[DESIGN-ARCH-102]</code> §6.1）</td></tr><tr><td>K9</td><td>选区<strong>跨视图切换不保留</strong></td><td>——</td><td>切视图触发 <code>cancel</code> 清空（刻意：避免悬空选区）</td></tr></tbody></table>
+<h3 id="9-3-机制层面">9.3 机制层面<a class="anchor" href="#9-3-机制层面" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>项</th><th>说明</th></tr></thead><tbody><tr><td>K10</td><td>滚轮接管<strong>剥夺主屏原生滚动</strong></td><td>备屏可用的对称代价；退路 <code>KHY_MOUSE=off</code>（§3.3）</td></tr><tr><td>K11</td><td><code>historyBrowseDecision.js</code> 只剩<strong>兼容外壳</strong></td><td>两个函数恒返回 <code>true</code>、不读 env；保留仅为不打断外部引用。<strong>新代码请直接用 <code>arrowRouting.resolveArrowAction()</code></strong></td></tr><tr><td>K12</td><td><code>↑</code>/<code>↓</code> 在 <code>editing</code> 下<strong>无法移动多行光标</strong></td><td>这是「无条件绑历史」的直接代价（对齐 CC）。多行内移动光标暂无绑定 —— 若用户反馈强烈，可考虑 <code>Ctrl+P/N</code> 或 <code>Alt+↑↓</code></td></tr><tr><td>K13</td><td>帧高几何下限 ≈ 14 行</td><td>低于此值固定 chrome 物理装不下；<strong>不是 bug，是几何不可能</strong>（<code>AGENTS.md</code> §0.9.2）</td></tr></tbody></table>
+<hr>
+<h2 id="10-维护纪律-改这四个功能前必读">10. 维护纪律（改这四个功能前必读）<a class="anchor" href="#10-维护纪律-改这四个功能前必读" aria-label="锚点">#</a></h2>
+<ol><li><strong>改方向键归属</strong> → 只改 <code>arrowRouting.js</code> 的 <code>_BINDINGS</code> 或 <code>resolveContext()</code>，</li></ol>
+<p>并同步 <code>[DESIGN-ARCH-102]</code> §6.1 键盘总表。<strong>不要在 App.js 里加 <code>if</code></strong>。</p>
+<ol><li><strong>改偏移语义</strong> → 只改 <code>Viewport.js</code> 的 <code>resolveViewportOffset</code> / <code>applyStickyViewportAction</code>。</li></ol>
+<p>调用方<strong>不得</strong>手写数字判断（<code>Number(null) === 0</code> 陷阱）。</p>
+<ol><li><strong>改视口几何</strong> → <code>viewH</code> 一律取 <code>viewportContentRows(...)</code>，<strong>绝不传盒子高</strong>。</li><li><strong>改帧高</strong> → 先读 <code>chromeBudget.js</code>，每个新增固定高度节点<strong>必须登记进 <code>shares</code></strong>，</li></ol>
+<p>然后用 <code>KHY_TUI_DIAG_H=1</code> 与实测帧行数对账。</p>
+<ol><li><strong>加鼠标事件判据</strong> → 遵守 §4 的五步顺序。<strong>修一条判据的顺序前，先想清楚它在谁之前/之后</strong></li></ol>
+<p>—— 本仓三条根因级顺序（滚轮最先、修饰键最前、up 在 return 前）都是端到端探针抓的。</p>
+<ol><li><strong>改宽度度量</strong> → 只认 <code>wrapCell.visWidth</code>。另起一把尺 = 折行与计费不同源。</li><li><strong>新增绕过 ink 画屏的模块</strong> → 先问「它是否可能在 TUI 存活期被调用」。是，则要么走 ink 树，</li></ol>
+<p>要么纳入 <code>consoleMute</code> 同族处理，<strong>不要</strong>指望「反正只是日志」（I3）。</p>
+<ol><li><strong>写渲染探针</strong> → 三条硬前置（<code>AGENTS.md</code> §0.9.6）：① 走仓库自己的 <code>inkRuntime.loadInk()</code>；</li></ol>
+<p>② <code>FORCE_COLOR</code> 必须在 require 任何 ink/chalk 模块<strong>之前</strong>设；③ 被测代码读的<br>   <strong>每一个环境量</strong>（尤其 <code>process.stdout.rows</code>）探针都得如实改。<br>   <strong>探针报红先怀疑探针的启动环境，再怀疑产品代码。</strong></p>
+<ol><li><strong>改测试运行器</strong> → <code>tests/tui/**</code> 需要 <code>--experimental-vm-modules</code>（走 <code>test:tui</code> 脚本）；</li></ol>
+<p>缺了会<strong>静默 skip，看起来像全绿</strong>。</p>
+<ol><li><strong>验收</strong> → 改完必须过 <code>npm run --workspace services/backend test:tui</code> 与</li></ol>
+<p><code>tests/cli/tui/*</code>（含 <code>viewportSticky</code> / <code>mouseWheel</code> / <code>selection</code> / <code>mouseSelectEvent</code>）。</p>
+<hr>
+<h2 id="11-变更记录">11. 变更记录<a class="anchor" href="#11-变更记录" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>2026-09-22</td><td>初版。汇总四件互斥诉求的共存机制（三条不变量 + 优先级表）、业内对照（Claude Code 官方全屏文档 / tmux copy-mode / less / readline / ink-scroll-view）、门控与排障总表、13 条已知偏差（K1–K13）与维护纪律十条。机制与代码坐标时点 <code>chore/tui-ux-nightly</code>。</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-128] khyos结构化输出方案-输出卫生层与语义渲染契约.html"><div class="dir">← 上一篇</div><div class="ttl">《khyos 结构化输出方案 — 输出卫生层与语义渲染契约》</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-130] 前台与后台任务编排方案.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-130] 前台与后台任务编排方案</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-129] TUI 滚动-选择-历史-固定底部共存设计.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

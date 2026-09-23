@@ -128,6 +128,24 @@ function detectCapabilities(stdout) {
     supportsHyperlinks,
     supportsItalic,
     supportsStrikethrough,
+    // DESIGN-ARCH-102 §6.2: mouse tier + auto-detect verdict live in the SAME
+    // singleton — every consumer resolves mouse policy from one detection.
+    // Lazy require avoids the mouseButtons→(formatters?) cycle; fail-soft to
+    // 'click'/false when the leaf is unavailable.
+    mouseTier: (() => {
+      try {
+        return require('../mouseButtons').mouseTier(process.env);
+      } catch {
+        return 'click';
+      }
+    })(),
+    mouseAuto: (() => {
+      try {
+        return require('../mouseButtons').autoDetectTerminal(process.env);
+      } catch {
+        return false;
+      }
+    })(),
   };
 
   _cached = result;

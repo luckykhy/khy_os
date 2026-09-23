@@ -217,6 +217,55 @@ async function ensureManageDbSeeded(env) {
       columnsAdded = 0; // 列自愈失败不影响 table 自愈 / admin 写入
     }
 
+    // 2b. 共享模型(@khy/shared)的列 drift。守护态命名空间(workflow / marketplace /
+    //     plugins / userGateway,以及 /api/ai-gateway-admin)的鉴权走 @khy/shared 的
+    //     User 模型。注意本仓存在**两份**同版本号但内容不同的共享包:
+    //     services/backend/vendor/shared(旧快照,无 aliases)与
+    //     platform/packages/shared(新,ARCH-074 的 aliases 列)。workflow 等路由经
+    //     khy-ai-backend 解析到**新版**,其 User SELECT aliases,老库没有该列 →
+    //     authenticateToken 摔在「no such column: aliases」,整组路由 401 认证失败
+    //     (workflow 画布整个不可用)。此处把各解析视角下的共享实例逐一 additive
+    //     补列:只补缺列,绝不动既有数据。
+    try {
+      const { createRequire } = require('module');
+      const resolverRoots = [
+        __filename, // 本进程视角(backend → vendor/shared)
+        require.resolve('khy-ai-backend/routes/workflow'), // 路由视角(khy-ai-backend → platform/packages/shared)
+      ];
+      const seen = new Set();
+      for (const root of resolverRoots) {
+        let modelsPath;
+        try {
+          modelsPath = createRequire(root).resolve('@khy/shared/models');
+        } catch {
+          continue; // 该视角解析不到共享包(精简安装)
+        }
+        if (seen.has(modelsPath)) {
+          continue;
+        }
+        seen.add(modelsPath);
+        try {
+          const shared = require(modelsPath);
+          if (shared && shared.sequelize) {
+            columnsAdded += await backfillMissingColumns(shared.sequelize);
+            // 老行补默认值:addColumn 只加可空列,既有行是 NULL;登录别名读取侧期望
+            // 数组,统一刷成 '[]'(JSON 列的空数组)。best-effort。
+            try {
+              await shared.sequelize.query(
+                "UPDATE users SET aliases = '[]' WHERE aliases IS NULL"
+              );
+            } catch {
+              /* 列不存在或方言不支持时跳过 */
+            }
+          }
+        } catch {
+          /* 单个共享包加载失败不影响其它视角 */
+        }
+      }
+    } catch {
+      // 共享包体系不可用时跳过——不影响本进程其余自愈步骤
+    }
+
     // 3. 幂等确保默认管理员(预哈希 + raw SQL 避免 model hook 双哈希)。凭据来自统一
     //    模块 credentialGenerator(与 adminAutoInit 同源:OS 用户名 + 机器派生密码,
     //    明文持久化到 .khy/credentials/default-admin.json),保证两条播种路径生成

@@ -1,21 +1,21 @@
 'use strict';
-const { rankSlashCommands } = require('./slashCommandFilter');
+const { rankSlashCommands } = require('../../../src/cli/repl/slashCommandFilter.js');
 // Sample command table for testing
 const SAMPLE_COMMANDS = [
   { cmd: '/model', label: '模型', desc: '切换 AI 模型' },
   { cmd: '/subscribe', label: '订阅', desc: '管理订阅' },
   { cmd: '/config', label: '配置', desc: '系统配置' },
   { cmd: '/help', label: '帮助', desc: '显示帮助信息' },
-  { cmd: '/new', label: '新会�?, desc: '新建会话' },
+  { cmd: '/new', label: '新会�?', desc: '新建会话' },
 ];
 // ── rankSlashCommands ────────────────────────────────────────────────────────
 describe('Slash Command Filter', () => {
-  test('rankSlashCommands: "/" only �?returns all commands', () => {
+  test('rankSlashCommands: "/" only �?returns all commands', () => {
     const result = rankSlashCommands(SAMPLE_COMMANDS, '/');
     expect(result.length).toBe(SAMPLE_COMMANDS.length);
   });
   
-  test('rankSlashCommands: empty filter �?returns all commands', () => {
+  test('rankSlashCommands: empty filter �?returns all commands', () => {
       const result = rankSlashCommands(SAMPLE_COMMANDS, '');
       expect(result.length).toBe(SAMPLE_COMMANDS.length);
   });
@@ -40,7 +40,7 @@ describe('Slash Command Filter', () => {
       expect(result[0].cmd).toBe('/help');
   });
 
-  test('rankSlashCommands: no match �?empty array', () => {
+  test('rankSlashCommands: no match �?empty array', () => {
       const result = rankSlashCommands(SAMPLE_COMMANDS, '/xyz');
       expect(result).toEqual([]);
   });
@@ -60,14 +60,14 @@ describe('Slash Command Filter', () => {
       expect(result[1].cmd).toBe('/beta');
   });
 
-  test('rankSlashCommands: non-array cmds �?empty array', () => {
-      expect(rankSlashCommands(null).toEqual('/mo'), []);
-      expect(rankSlashCommands('string').toEqual('/mo'), []);
-      expect(rankSlashCommands(123).toEqual('/mo'), []);
+  test('rankSlashCommands: non-array cmds �?empty array', () => {
+      expect(rankSlashCommands(null, '/mo')).toEqual([]);
+      expect(rankSlashCommands('string', '/mo')).toEqual([]);
+      expect(rankSlashCommands(123, '/mo')).toEqual([]);
   });
 
-  test('rankSlashCommands: empty cmds array �?empty array', () => {
-      expect(rankSlashCommands([]).toEqual('/mo'), []);
+  test('rankSlashCommands: empty cmds array �?empty array', () => {
+      expect(rankSlashCommands([], '/mo')).toEqual([]);
   });
 
   test('rankSlashCommands: prefix match ranks above substring', () => {

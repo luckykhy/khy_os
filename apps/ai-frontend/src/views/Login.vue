@@ -1,20 +1,22 @@
 <template>
-  <div class="login-shell">
-    <div aria-hidden="true" class="login-orb login-orb--1"></div>
-    <div aria-hidden="true" class="login-orb login-orb--2"></div>
-
+  <PublicLayout :branded="false">
     <el-card class="login-card" shadow="always">
       <div class="login-brand">
         <span class="khy-brand-logo khy-brand-logo--md">K</span>
         <div class="login-brand-meta">
-          <h2 class="login-title">KHY AI 统一入口</h2>
-          <p class="login-subtitle">登录以进入你的 AI 网关与工作台</p>
+          <h2 class="login-title">KHY AI</h2>
+          <p class="login-subtitle">管理你的 AI 渠道与用量</p>
         </div>
       </div>
 
       <el-form class="login-form" :model="form" @submit.prevent="handleLogin">
         <el-form-item>
-          <el-input v-model="form.username" placeholder="用户名" prefix-icon="User" size="large" />
+          <el-input
+            v-model="form.username"
+            placeholder="用户名或邮箱"
+            prefix-icon="User"
+            size="large"
+          />
         </el-form-item>
         <el-form-item>
           <el-input
@@ -24,7 +26,11 @@
             show-password
             size="large"
             type="password"
-          />
+          >
+            <template v-if="caps.passwordReset.mode !== 'none'" #suffix>
+              <router-link class="login-forget" to="/forgot-password">忘记密码?</router-link>
+            </template>
+          </el-input>
         </el-form-item>
 
         <div v-if="caps.defaultAdminAvailable" class="login-row">
@@ -37,10 +43,6 @@
           >
             填充默认管理员用户名
           </el-button>
-        </div>
-
-        <div v-if="caps.passwordReset.mode !== 'none'" class="login-row">
-          <router-link class="login-fill-btn" to="/forgot-password">忘记密码?</router-link>
         </div>
 
         <el-form-item v-if="fillHint" class="login-error-item">
@@ -60,24 +62,24 @@
           size="large"
           type="primary"
         >
-          校验账号并进入用户首页
+          {{ loading ? '正在校验账号' : '登录' }}
         </el-button>
       </el-form>
-
-      <p class="login-hint">
-        登录后可直接进入工作台；管理员账号会自动进入管理概览。
-      </p>
     </el-card>
-  </div>
+  </PublicLayout>
 </template>
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import PublicLayout from '@/layouts/PublicLayout.vue';
+import KhyIcon from '@/components/KhyIcon.vue';
 import { useUserStore } from '@/stores/user';
 import { getAuthCapabilities } from '@/api/auth';
 import request from '@/api/request';
 import { safeRedirectPath } from '@/utils/safeRedirect';
+
+defineOptions({ name: 'Login' });
 
 const router = useRouter();
 const route = useRoute();
@@ -114,41 +116,46 @@ async function fillDefaultAdmin() {
     const username = String(payload?.username || '').trim();
     if (username) {
       form.username = username;
-      fillHint.value = '已填充默认管理员用户名；密码见数据目录 .khy/credentials/default-admin.json';
+      fillHint.value = '已填充默认管理员用户名，密码请查看本机凭据文件';
     } else {
-      fillHint.value = '未获取到默认管理员；密码见数据目录 .khy/credentials/default-admin.json';
+      fillHint.value = '未获取到默认管理员用户名，请检查本机凭据文件';
     }
   } catch {
-    fillHint.value = '无法获取默认管理员用户名；凭据见数据目录 .khy/credentials/default-admin.json';
+    fillHint.value = '无法获取默认管理员用户名，请检查后端是否已启动';
   } finally {
     filling.value = false;
   }
 }
 
+// Every answer follows the repo's error contract (规则 2.2):
+// {问题一句话}：{识别码}，{用户能做的具体动作}. The old versions returned bare
+// "登录失败" style strings, which forced the user to guess.
 function mapLoginError(err) {
-  const serverMsg = String(err?.response?.data?.message || err?.response?.data?.error || '').trim();
+  const status = err?.response?.status;
+  const serverMsg = String(err?.response?.data?.message || '').trim();
   const localMsg = String(err?.message || '').trim();
-  const raw = serverMsg || localMsg;
-  const lower = raw.toLowerCase();
 
-  if (!raw) return '登录失败，请稍后重试';
-  if (err?.response?.status === 401 || lower.includes('invalid username or password')) {
-    return '用户名或密码错误。默认管理员初始密码保存在数据目录 .khy/credentials/default-admin.json。';
+  if (status === 429) {
+    return '限流 (429)：登录请求过多，请稍后重试或稍等 1 分钟';
   }
-  if (err?.response?.status === 403 || lower.includes('not active')) {
-    return '账号未激活，请检查用户状态。';
+  if (status === 401 || /invalid username or password/i.test(serverMsg)) {
+    return '认证失败 (401)：用户名或密码错误，请核对后重试；默认管理员初始密码见本机凭据文件';
   }
-  if (lower.includes('jwt_secret') || lower.includes('not configured')) {
-    return '后端认证配置缺失（JWT_SECRET）。请先检查 .env 后重启服务。';
+  if (status === 403) {
+    return '账户不可用 (403)：账号可能已被禁用或未激活，请联系管理员';
+  }
+  if (status === 400) {
+    return `输入不合法 (400)：${serverMsg || '请确认用户名和密码都已填写'}`;
+  }
+  if (/jwt_secret|not configured/i.test(serverMsg + localMsg)) {
+    return '认证配置缺失 (JWT_SECRET)：请检查 .env 后重启后端服务';
   }
   if (
-    lower.includes('network error') ||
-    lower.includes('econnrefused') ||
-    lower.includes('failed to fetch')
+    /network error|econnrefused|failed to fetch|网络连接异常/i.test(serverMsg + localMsg)
   ) {
-    return '无法连接 AI 管理后端（Network Error）。请确认 ai-backend 服务 healthy，且当前页面 API 代理配置正确。';
+    return '网络连接失败：后端服务不可达，请确认服务已启动后刷新页面';
   }
-  return raw;
+  return serverMsg || localMsg || '登录失败：请重试，或运行 khy doctor 检查后端';
 }
 
 async function handleLogin() {
@@ -174,53 +181,6 @@ function loginDestination() {
 </script>
 
 <style scoped>
-.login-shell {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  padding: 12px;
-  overflow: hidden;
-}
-
-/* Ambient brand glow behind the card */
-.login-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.5;
-  pointer-events: none;
-  animation: login-float 14s ease-in-out infinite;
-}
-
-.login-orb--1 {
-  width: 420px;
-  height: 420px;
-  top: -120px;
-  left: -80px;
-  background: radial-gradient(circle, var(--khy-primary), transparent 70%);
-}
-
-.login-orb--2 {
-  width: 360px;
-  height: 360px;
-  bottom: -120px;
-  right: -60px;
-  background: radial-gradient(circle, var(--khy-primary-strong), transparent 70%);
-  animation-delay: -7s;
-}
-
-@keyframes login-float {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  50% {
-    transform: translate(20px, -24px) scale(1.08);
-  }
-}
-
 .login-card {
   position: relative;
   z-index: 1;
@@ -284,10 +244,16 @@ function loginDestination() {
   padding: 0;
   font-size: 13px;
   color: var(--khy-primary);
+}
+
+.login-forget {
+  padding: 0;
+  font-size: 13px;
+  color: var(--khy-primary);
   text-decoration: none;
 }
 
-.login-fill-btn:hover {
+.login-forget:hover {
   color: var(--khy-primary-strong);
   text-decoration: underline;
 }
@@ -300,13 +266,5 @@ function loginDestination() {
   width: 100%;
   font-weight: 600;
   letter-spacing: 0.3px;
-}
-
-.login-hint {
-  margin-top: 18px;
-  text-align: center;
-  font-size: 12px;
-  color: var(--khy-text-secondary);
-  line-height: 1.45;
 }
 </style>

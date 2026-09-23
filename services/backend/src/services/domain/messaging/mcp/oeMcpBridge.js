@@ -3,8 +3,8 @@
 /**
  * oeMcpBridge.js — 纯叶子:opencode MCP 配置的单一真源。
  *
- * opencode 是一个开源终端 AI 编程工具,其 MCP 配置存储在:
- *   - ~/.config/opencode/config.json  →  `mcp` 键(标准 mcpServers schema)
+ * opencode 是一个开源终端 AI 编程工具,MCP 配置存储:
+ *   - ~/.config/opencode/config.json  →  `mcp`(标准 mcpServers schema)
  *   - ~/.opencode/config.json         →  同上(备用路径)
  *   - <project>/.opencode/config.json →  项目级配置
  *   - <project>/opencode.json         →  项目级配置(备用)
@@ -20,7 +20,7 @@
  *     }
  *   }
  *
- * 契约:零 IO(homedir / env / 已读文件 TEXT 由壳注入)、确定性、绝不抛。
+ * 契约:零 IO(homedir / env / 已读文件 TEXT 由壳注入)、确定性、绝不抛错
  * 门控 KHY_MCP_ECODE_BRIDGE 默认开;关 → 生态注册表整体跳过 opencode。
  *
  * @module services/mcp/oeMcpBridge
@@ -44,7 +44,7 @@ function isOeMcpBridgeEnabled(env = process.env) {
 const _join = require('../../../../utils/pathJoinSafe');
 
 /**
- * 枚举 opencode 的 MCP 配置源(不碰 fs,壳决定存在性 + 读 TEXT)。
+ * 枚举 opencode → MCP 配置(不碰 fs,壳决定存在性 + 注入 TEXT)。
  * @param {object} args
  * @param {string} [args.homedir]
  * @param {object} [args.env]
@@ -129,12 +129,12 @@ function extractMcpServers(parsed) {
   if (!parsed || typeof parsed !== 'object') {
     return {};
   }
-  // opencode 使用 "mcp" 键(而非 "mcpServers")
+  // opencode 使用 "mcp"(而非 "mcpServers")
   const mcp = parsed.mcp || parsed.mcpServers;
   if (!mcp || typeof mcp !== 'object') {
     return {};
   }
-  // 过滤掉非对象值(如 _meta 等)
+  // 过滤掉非对象(如 _meta 等)
   const result = {};
   for (const [name, cfg] of Object.entries(mcp)) {
     if (cfg && typeof cfg === 'object' && !Array.isArray(cfg)) {
@@ -144,7 +144,7 @@ function extractMcpServers(parsed) {
   return result;
 }
 
-/** 简易 JSONC 剥离(去 // 和 /* */ 注释 + 尾逗号)。 */
+/** 去 JSONC 注释与尾逗号(将 JSONC 文本容错解析为可 JSON.parse 的形式)。 */
 function _stripJsonc(text) {
   if (!text) return '';
   // 去注释

@@ -3,7 +3,7 @@
 /**
  * freeModelChannels.test.js — 「问 khyos 也给其他免费模型渠道」纯叶子契约锁死。
  *
- *   - 门开(default)→ 内置 3 渠道(zhipu/siliconflow/openrouter),仅公开 URL,无凭据;
+ *   - 门开(default)→ 内置 4 渠道(zhipu/siliconflow/openrouter/opencode-zen),仅公开 URL,无凭据;
  *   - env KHY_FREE_MODEL_CHANNELS(JSON 数组)按 key 覆盖/新增;非 JSON 开关词不当覆盖;
  *   - buildFreeModelChannelsMessage 出一行式摘要;
  *   - 门关(0/false/off/no)→ list 空、message 空(逐字节回退);
@@ -24,9 +24,14 @@ test('gate default-on', () => {
   assert.strictEqual(freeModelChannelsEnabled({ KHY_FREE_MODEL_CHANNELS: 'on' }), true);
 });
 
-test('built-in seed: 3 channels, public URLs only, no secret leakage', () => {
+test('built-in seed: 4 channels(zhipu/siliconflow/openrouter/opencode-zen), public URLs only, no secret', () => {
   const list = listFreeModelChannels({});
-  assert.deepStrictEqual(list.map((c) => c.key), ['zhipu', 'siliconflow', 'openrouter']);
+  assert.deepStrictEqual(list.map((c) => c.key), [
+    'zhipu',
+    'siliconflow',
+    'openrouter',
+    'opencode-zen',
+  ]);
   for (const c of list) {
     assert.ok(/^https?:\/\//.test(c.console), `console is url: ${c.key}`);
     assert.ok(!('apiKey' in c) && !('secret' in c), `no secret field: ${c.key}`);
@@ -43,6 +48,7 @@ test('buildFreeModelChannelsMessage: one-line summary joining all channels', () 
   assert.ok(msg.includes('智谱'));
   assert.ok(msg.includes('硅基流动'));
   assert.ok(msg.includes('OpenRouter'));
+  assert.ok(msg.includes('OpenCode Zen'));
   assert.ok(msg.includes('；')); // channels joined by ；
 });
 
@@ -72,9 +78,9 @@ test('env override drops untrusted URL scheme', () => {
 });
 
 test('non-JSON toggle word for KHY_FREE_MODEL_CHANNELS is not treated as override', () => {
-  // 'true'/'1' 是开关词而非 JSON 数组 → 不当覆盖,仍返回内置 3 条
-  assert.strictEqual(listFreeModelChannels({ KHY_FREE_MODEL_CHANNELS: 'true' }).length, 3);
-  assert.strictEqual(listFreeModelChannels({ KHY_FREE_MODEL_CHANNELS: '1' }).length, 3);
+  // 'true'/'1' 是开关词而非 JSON 数组 → 不当覆盖,仍返回内置 4 条
+  assert.strictEqual(listFreeModelChannels({ KHY_FREE_MODEL_CHANNELS: 'true' }).length, 4);
+  assert.strictEqual(listFreeModelChannels({ KHY_FREE_MODEL_CHANNELS: '1' }).length, 4);
 });
 
 test('gate off (0/false/off/no) → byte-revert (empty list + empty message)', () => {

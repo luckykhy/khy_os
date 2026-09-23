@@ -14,7 +14,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { syncTree, shouldExclude, isInside, DEFAULT_EXCLUDES } = require('../src/services/deploy/syncEngine');
+const { syncTree, shouldExclude, isInside, DEFAULT_EXCLUDES } = require('../src/services/domain/deploy/deploy/syncEngine.js');
 
 describe('shouldExclude', () => {
   test('default excludes match node_modules / .git / dist', () => {

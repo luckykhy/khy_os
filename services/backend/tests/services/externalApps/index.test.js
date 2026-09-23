@@ -56,6 +56,11 @@ describe('services/externalApps/index', () => {
     expect(mod.ycodeAdapter).toBeDefined();
   });
 
+  it('should export zcodeAdapter', () => {
+    const mod = require('../../../src/services/externalApps');
+    expect(mod.zcodeAdapter).toBeDefined();
+  });
+
   it('should export _shared', () => {
     const mod = require('../../../src/services/externalApps');
     expect(mod._shared).toBeDefined();

@@ -25,8 +25,8 @@ describe('Fable Voice Wiring', () => {
     
       process.env[KEY] = 'off';
       const off = prompts.getResponseFormattingSection();
-      for (const item of RESPONSE_FORMATTING_ITEMS) expect(!off).toContain(item);
-      expect(off.startsWith('# Response formatting').toBeTruthy());
+      for (const item of RESPONSE_FORMATTING_ITEMS) expect(off).not.toContain(item);
+      expect(off.startsWith('# Response formatting')).toBeTruthy();
   });
 
   test('tone and style: gate-on appends tone items; gate-off byte-reverts', () => {
@@ -36,8 +36,8 @@ describe('Fable Voice Wiring', () => {
     
       process.env[KEY] = '0';
       const off = prompts.getToneAndStyleSection();
-      for (const item of TONE_AND_STYLE_ITEMS) expect(!off).toContain(item);
-      expect(off.startsWith('# Tone and style').toBeTruthy());
+      for (const item of TONE_AND_STYLE_ITEMS) expect(off).not.toContain(item);
+      expect(off.startsWith('# Tone and style')).toBeTruthy();
   });
 
   test('error handling: gate-on appends own-mistakes item; gate-off byte-reverts', () => {
@@ -47,8 +47,8 @@ describe('Fable Voice Wiring', () => {
     
       process.env[KEY] = 'false';
       const off = prompts.getErrorHandlingAndFallbackSection();
-      for (const item of ERROR_HANDLING_ITEMS) expect(!off).toContain(item);
-      expect(off.startsWith('# Error handling and fallback').toBeTruthy());
+      for (const item of ERROR_HANDLING_ITEMS) expect(off).not.toContain(item);
+      expect(off.startsWith('# Error handling and fallback')).toBeTruthy();
   });
 
   test('gate-off section text is byte-identical to legacy (no trailing artifact from append)', () => {
@@ -56,8 +56,8 @@ describe('Fable Voice Wiring', () => {
       process.env[KEY] = 'off';
       const rf = prompts.getResponseFormattingSection();
       // 结尾行仍是历史最后一条 legacy item(over-formatting 那条),末尾无空行/悬挂 ` - `。
-      expect(rf.endsWith('a paragraph or short list is clearer.').toBeTruthy());
-      expect(!rf.includes(' - \n').toBeTruthy() && !rf.endsWith(' - '));
+      expect(rf.endsWith('a paragraph or short list is clearer.')).toBeTruthy();
+      expect(!rf.includes(' - \n') && !rf.endsWith(' - ')).toBe(true);
   });
 
 });

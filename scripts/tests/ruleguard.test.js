@@ -90,7 +90,7 @@ test('execFromEnforcement: 区分检查器、载体与锚点', () => {
   const exists = (p) => fs.existsSync(path.join(REPO_ROOT, p));
 
   const parsed = execFromEnforcement(
-    'docs/_规范/RULES-REGISTRY.json / scripts/ci/check-gov-rules.js checkRulesRegistry',
+    'docs/10_规范/registry/RULES-REGISTRY.json / scripts/ci/check-gov-rules.js checkRulesRegistry',
     exists,
   );
   assert.equal(parsed.script, 'scripts/ci/check-gov-rules.js');
@@ -280,10 +280,10 @@ test('suppression: 检查器输出绝对路径时仍能在同一文件里找到�
 
 // ─── 端到端：夹具仓库负例 ───────────────────────────────────────────────────
 
-function makeFixture({ deadPointer = false } = {}) {
+function makeFixture({ deadPointer = false, unclaimedError = false } = {}) {
   const root = tmpDir('ruleguard-e2e-');
   const secondScript = deadPointer ? 'check-missing.js' : 'check-second.js';
-  fs.mkdirSync(path.join(root, 'docs', '_规范'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'docs', '10_规范', 'registry'), { recursive: true });
   fs.mkdirSync(path.join(root, 'scripts', 'ci'), { recursive: true });
   fs.mkdirSync(path.join(root, 'services', 'backend', 'src'), { recursive: true });
   fs.mkdirSync(path.join(root, '.github', 'workflows'), { recursive: true });
@@ -300,7 +300,7 @@ function makeFixture({ deadPointer = false } = {}) {
   fs.writeFileSync(path.join(root, '.github', 'workflows', 'pr.yml'), 'run: node scripts/ci/check-fixture.js\n');
 
   fs.writeFileSync(
-    path.join(root, 'docs', '_规范', 'rules-registry.json'),
+    path.join(root, 'docs', '10_规范', 'registry', 'rules-registry.json'),
     JSON.stringify({
       meta: { name: 'fixture', version: '1.0.0', domains: ['RUNTIME', 'TOOLING'], ruleCount: 2 },
       rules: [
@@ -309,7 +309,7 @@ function makeFixture({ deadPointer = false } = {}) {
           scope: 'services/**', priority: 'P1', status: 'active',
           trigger: '新增端点时', constraint: '禁止字面量端点', grants: '无新增权力',
           benefit: '域名迁移不分叉', exception: '测试夹具', version: '1.0.0',
-          formerly: '无', ssot: 'docs/_规范/a.md', owner: 'test',
+          formerly: '无', ssot: 'docs/10_规范/a.md', owner: 'test',
           gate: 'pr',
           paths: ['services/**'],
           exec: { script: 'scripts/ci/check-fixture.js', args: [], findings: ['no-hardcoded-endpoint'] },
@@ -319,7 +319,7 @@ function makeFixture({ deadPointer = false } = {}) {
           scope: 'scripts/**', priority: 'P1', status: 'active',
           trigger: '新增检查器时', constraint: '必须接线', grants: '无新增权力',
           benefit: '检查器不会静默失效', exception: '见豁免登记', version: '1.0.0',
-          formerly: '无', ssot: 'docs/_规范/b.md', owner: 'test',
+          formerly: '无', ssot: 'docs/10_规范/b.md', owner: 'test',
           gate: 'pr',
           paths: ['scripts/**'],
           exec: { script: `scripts/ci/${secondScript}`, args: [], findings: [] },
@@ -345,8 +345,21 @@ function makeFixture({ deadPointer = false } = {}) {
 
   // 非死指针夹具提供一个真实存在的第二个检查器，避免它因路径缺失而
   // 额外贡献一条 checker-failure 阻断，干扰对被测行为的断言。
+  //
+  // `unclaimedError` 让它退化成「退出码非零 + 打印了一条没有规则认领的
+  // error finding」—— 这正是 check-change-safety 的 changed-count-error 在真
+  // 仓库里的形状，也是绑定层曾经读成通过的那一格。
   if (!deadPointer) {
-    fs.writeFileSync(path.join(root, 'scripts', 'ci', secondScript), 'console.log("Summary: 0 error(s), 0 warning(s)");\n');
+    fs.writeFileSync(
+      path.join(root, 'scripts', 'ci', secondScript),
+      unclaimedError
+        ? [
+          "console.log('[ERROR] unclaimed-fixture-error services/backend/src/api.js:3');",
+          'process.exitCode = 1;',
+          '',
+        ].join('\n')
+        : 'console.log("Summary: 0 error(s), 0 warning(s)");\n',
+    );
   }
 
   return root;
@@ -426,6 +439,26 @@ test('e2e: 执行器路径不存在的规则构成死指针红线', () => {
   }
 });
 
+test('e2e: 执行器非零退出且其 error finding 无规则认领 → 仍然必须阻断', () => {
+  // 回归守卫（2026-09-17）。绑定层原先只在「退出码非零 **且** 一条 error 级
+  // finding 都没解析出来」时才按失败处理。一旦检查器确实报了 error、而那条
+  // finding 的 id 没有任何登记规则认领，mapToRules 就把它丢进 unmapped：它既
+  // 进不了 violations，也不影响退出码 —— 检查器失败了，门却是绿的。
+  // 真仓库里的现成实例是 check-change-safety 的 changed-count-error。
+  const root = makeFixture({ unclaimedError: true });
+  try {
+    const { code, report } = run({ repoRoot: root, mode: 'pr', ledger: false });
+    assert.equal(code, 1, '无规则认领的执行器失败不得读成通过');
+    const violation = report.violations.find((v) => v.finding === 'checker-failure');
+    assert.ok(violation, '必须留下 checker-failure 证据');
+    assert.equal(violation.blocking, true);
+    assert.match(violation.message, /无规则认领的 error finding：unclaimed-fixture-error/);
+    assert.equal(report.unmappedFindings.length, 1, '未登记 finding 仍须单列，不因阻断而消失');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 // ─── 真实仓库不变量（golden，但只断言结构性质不锁死计数） ─────────────────────
 
 test('registry: 真实登记表可加载且每条规则都有明确归类', () => {
@@ -467,7 +500,11 @@ test('apply: 按路径查规则且按优先级排序', () => {
     '适用规则必须按优先级升序',
   );
 
-  const outside = applyToPaths(registry.rules, ['非存在目录/x.js']);
+  // 探针不能用 `.js`：RUNTIME-009（删除先报部位）的 paths 是 `**/*.js` 等
+  // 「全仓代码文件」——`.js` 路径**正是**它应当命中的，用它会测得「规则命中」而不是
+  // 「未命中」。这里改用一个不属于任何已登记 paths 的扩展名（`.zzz`），
+  // 才真正构造出「paths 全不匹配」的输入。登记表全部 133 个 glob 中无一含 `.zzz`。
+  const outside = applyToPaths(registry.rules, ['非存在目录/x.zzz']);
   assert.equal(outside.length, 0, '未命中任何 paths 的路径不得返回规则');
 });
 

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [OPS-MAN-207] 还原子系统总纲.md -->
+<title>[OPS-MAN-207] 还原子系统总纲 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>OPS-MAN<span class="sep">›</span>[OPS-MAN-207] 还原子系统总纲</div>
+      <header class="hero reveal"><h1>[OPS-MAN-207] 还原子系统总纲</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-207-还原子系统总纲">[OPS-MAN-207] 还原子系统总纲</a></li><li class="lvl-2"><a href="#0-一分钟导读-按意图分流">0. 一分钟导读（按意图分流）</a></li><li class="lvl-2"><a href="#1-五组全景">1. 五组全景</a></li><li class="lvl-2"><a href="#2-各组详情">2. 各组详情</a></li><li class="lvl-3"><a href="#组-1-离机渠道与安装后还原">组 1 · 离机渠道与安装后还原</a></li><li class="lvl-3"><a href="#组-2-方案合成-授权-应用-导航">组 2 · 方案合成 · 授权 · 应用 · 导航</a></li><li class="lvl-3"><a href="#组-3-三面镜子-矛盾检测-消解-收敛">组 3 · 三面镜子（矛盾检测 → 消解 → 收敛）</a></li><li class="lvl-3"><a href="#组-4-对账族">组 4 · 对账族</a></li><li class="lvl-3"><a href="#组-5-台账-轨迹-追索-探针">组 5 · 台账 · 轨迹 · 追索 · 探针</a></li><li class="lvl-2"><a href="#3-生成层-vs-手写层-关键边界">3. 生成层 vs 手写层（关键边界）</a></li><li class="lvl-2"><a href="#4-scope-裁决-依据-mgmt-std-008-2-2-重叠即违规">4. Scope 裁决（依据 `[MGMT-STD-008]` §2.2「重叠即违规」）</a></li><li class="lvl-2"><a href="#5-状态">5. 状态</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-207-还原子系统总纲">[OPS-MAN-207] 还原子系统总纲<a class="anchor" href="#ops-man-207-还原子系统总纲" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：本文件是 <code>docs/07_OPS_运维/</code> 中<strong>还原子系统</strong>（restore）的唯一导航入口与 scope 裁决真源。<br>本族共 <strong>23 篇</strong>，分 5 组（§1–§2）；其中 <strong>18 篇由 <code>scripts/restore/*.js --gen-doc</code> 确定性生成</strong>、5 篇手写（§3）。<br><strong>硬约束（DR7）</strong>：18 篇生成文档的路径与编号被 <code>scripts/restore/*.js</code> 当作<strong>代码常量</strong>引用，<strong>禁止移动或重命名</strong>；本批次只加导航、不动路径。<br><strong>适用边界</strong>：只覆盖「离机还原」这一子系统的运维文档；还原实现代码见 <code>scripts/restore/</code>，还原运行时接线见 117/119/130。</p></blockquote>
+<h2 id="0-一分钟导读-按意图分流">0. 一分钟导读（按意图分流）<a class="anchor" href="#0-一分钟导读-按意图分流" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>你想做什么</th><th>直接读</th></tr></thead><tbody><tr><td><strong>新机器离机还原</strong>前自检</td><td><code>[OPS-MAN-078]</code> → <code>[OPS-MAN-068]</code></td></tr><tr><td>pip 装完怎么<strong>开全功能</strong></td><td><code>[OPS-MAN-037]</code></td></tr><tr><td>生成<strong>还原方案</strong>并授权执行</td><td><code>[OPS-MAN-075]</code> → <code>[OPS-MAN-084]</code> → <code>[OPS-MAN-090]</code></td></tr><tr><td>处理<strong>矛盾与冲突</strong></td><td><code>[OPS-MAN-076]</code>（检测）→ <code>[OPS-MAN-079]</code>（消解）→ <code>[OPS-MAN-082]</code>（收敛防循环）</td></tr><tr><td>查<strong>对账</strong>类（完整性/格式/来源/归档/解密）</td><td>§2 组 4，<code>095</code>/<code>105</code>/<code>107</code>/<code>108</code>/<code>110</code></td></tr><tr><td>查<strong>台账 / 轨迹 / 追索 / 探针</strong></td><td>§2 组 5，<code>088</code>/<code>086</code>/<code>085</code>/<code>113</code>/<code>114</code></td></tr><tr><td>改<strong>运行时接线</strong>层</td><td><code>[OPS-MAN-117]</code> / <code>[OPS-MAN-119]</code> / <code>[OPS-MAN-130]</code>（<strong>手写</strong>，非生成器产出）</td></tr></tbody></table>
+<h2 id="1-五组全景">1. 五组全景<a class="anchor" href="#1-五组全景" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>组</th><th>主题</th><th>成员（编号）</th><th>阅读顺序</th></tr></thead><tbody><tr><td><strong>1</strong></td><td>离机渠道与安装后还原</td><td><code>037</code> <code>078</code> <code>068</code></td><td><code>078</code> → <code>068</code>；装完看 <code>037</code></td></tr><tr><td><strong>2</strong></td><td>方案合成 · 授权 · 应用 · 导航</td><td><code>075</code> <code>084</code> <code>089</code> <code>090</code></td><td><code>075</code> → <code>084</code> → <code>090</code>（<code>089</code> 为学习反馈）</td></tr><tr><td><strong>3</strong></td><td>三面镜子（检测/消解/收敛）</td><td><code>076</code> <code>079</code> <code>082</code></td><td><code>076</code> → <code>079</code> → <code>082</code></td></tr><tr><td><strong>4</strong></td><td>对账族（五类 + 三篇接线）</td><td><code>095</code> <code>105</code> <code>107</code> <code>108</code> <code>110</code> <code>117</code> <code>119</code> <code>130</code></td><td>按对账对象查</td></tr><tr><td><strong>5</strong></td><td>台账 · 轨迹 · 追索 · 探针</td><td><code>088</code> <code>086</code> <code>085</code> <code>113</code> <code>114</code></td><td>按用途查</td></tr></tbody></table>
+<h2 id="2-各组详情">2. 各组详情<a class="anchor" href="#2-各组详情" aria-label="锚点">#</a></h2>
+<h3 id="组-1-离机渠道与安装后还原">组 1 · 离机渠道与安装后还原<a class="anchor" href="#组-1-离机渠道与安装后还原" aria-label="锚点">#</a></h3>
+<ul><li><code>[OPS-MAN-078] khy doctor 离机还原自检</code> — <strong>手写</strong>。离机还原的「送别礼 / capstone」视角：pip 与 npm 是<strong>唯二</strong>离机渠道。</li><li><code>[OPS-MAN-068] 离机还原自检清单</code> — <strong>生成</strong>（<code>restore-check.js</code>）。拦路项 / 提醒两类判据的确定性输出。</li><li><code>[OPS-MAN-037] pip安装后-完整还原与全功能开启指南</code> — <strong>手写</strong>。pip 安装后的完整还原与全功能开启步骤。</li></ul>
+<h3 id="组-2-方案合成-授权-应用-导航">组 2 · 方案合成 · 授权 · 应用 · 导航<a class="anchor" href="#组-2-方案合成-授权-应用-导航" aria-label="锚点">#</a></h3>
+<ul><li><code>[OPS-MAN-075] Agent 还原方案合成器</code> — <strong>生成</strong>（<code>restore-plan.js</code>）。</li><li><code>[OPS-MAN-084] 还原自驱授权门</code> — <strong>生成</strong>（<code>restore-authorize.js</code>）。</li><li><code>[OPS-MAN-089] 还原学习应用器</code> — <strong>生成</strong>（<code>restore-apply.js</code>）。</li><li><code>[OPS-MAN-090] 还原导航器</code> — <strong>生成</strong>（<code>restore-navigate.js</code>）。</li></ul>
+<h3 id="组-3-三面镜子-矛盾检测-消解-收敛">组 3 · 三面镜子（矛盾检测 → 消解 → 收敛）<a class="anchor" href="#组-3-三面镜子-矛盾检测-消解-收敛" aria-label="锚点">#</a></h3>
+<ul><li><code>[OPS-MAN-076] 三面镜子矛盾冲突检测</code> — <strong>生成</strong>（<code>restore-conflicts.js</code>）。</li><li><code>[OPS-MAN-079] 三面镜子矛盾冲突消解</code> — <strong>生成</strong>（<code>restore-resolve.js</code>）。</li><li><code>[OPS-MAN-082] 三面镜子还原收敛与防循环</code> — <strong>生成</strong>（<code>restore-converge.js</code>）。</li></ul>
+<blockquote><p>三篇是<strong>同一机制的三个阶段</strong>（先检测、再消解、最后防循环），<strong>不合并</strong>：每篇对应独立脚本与独立判据。</p></blockquote>
+<h3 id="组-4-对账族">组 4 · 对账族<a class="anchor" href="#组-4-对账族" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>编号</th><th>对账对象</th><th>生成脚本</th></tr></thead><tbody><tr><td><code>095</code></td><td>解包完整性</td><td><code>restore-verify-complete.js</code></td></tr><tr><td><code>105</code></td><td>快照格式兼容性</td><td><code>restore-check-format.js</code></td></tr><tr><td><code>107</code></td><td>来源可溯性</td><td><code>restore-provenance.js</code></td></tr><tr><td><code>108</code></td><td>归档形制可提取性</td><td><code>restore-check-archive.js</code></td></tr><tr><td><code>110</code></td><td>解密套件可执行性</td><td><code>restore-check-crypto.js</code></td></tr><tr><td><code>117</code></td><td>完整性对账·<strong>运行时接线</strong></td><td>手写（无生成器）</td></tr><tr><td><code>119</code></td><td>解密前兼容性预检·<strong>运行时接线</strong></td><td>手写（无生成器）</td></tr><tr><td><code>130</code></td><td>来源可溯性·<strong>接线运行时横幅</strong></td><td>手写（承接 107）</td></tr></tbody></table>
+<blockquote><p>五篇生成对账<strong>互不重叠</strong>（各管一类对账对象）；三篇「接线」是<strong>运行时落点记录</strong>，与生成层互补而非重复。</p></blockquote>
+<h3 id="组-5-台账-轨迹-追索-探针">组 5 · 台账 · 轨迹 · 追索 · 探针<a class="anchor" href="#组-5-台账-轨迹-追索-探针" aria-label="锚点">#</a></h3>
+<ul><li><code>[OPS-MAN-088] 还原策略台账</code> — <strong>生成</strong>（<code>restore-ledger.js</code>）。</li><li><code>[OPS-MAN-086] 还原轨迹日志</code> — <strong>生成</strong>（<code>restore-trace.js</code>）。</li><li><code>[OPS-MAN-085] 还原补救追索</code> — <strong>生成</strong>（<code>restore-recourse.js</code>）。</li><li><code>[OPS-MAN-113] 还原字段效应探针（雅可比透镜）</code> — <strong>生成</strong>（<code>restore-effect-probe.js</code>）。</li><li><code>[OPS-MAN-114] 还原字段归属探针（label preservation）</code> — <strong>生成</strong>（<code>restore-field-attribution.js</code>）。</li></ul>
+<h2 id="3-生成层-vs-手写层-关键边界">3. 生成层 vs 手写层（关键边界）<a class="anchor" href="#3-生成层-vs-手写层-关键边界" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>层</th><th>篇数</th><th>特征</th><th>修改方式</th></tr></thead><tbody><tr><td><strong>生成层</strong></td><td>18</td><td>首行声明「由 <code>scripts/restore/*.js --gen-doc</code> 确定性生成，<strong>请勿手改</strong>」</td><td><strong>只能改生成器</strong>，再重跑 <code>--gen-doc</code>；手改会被下次生成覆盖</td></tr><tr><td><strong>手写层</strong></td><td>5</td><td><code>037</code> <code>078</code> <code>117</code> <code>119</code> <code>130</code></td><td>可直接编辑；已加「隶属」头</td></tr></tbody></table>
+<p><strong>生成器 → 文档映射</strong>（改哪篇就跑哪个脚本）：</p>
+<table><thead><tr><th>脚本</th><th>文档</th></tr></thead><tbody><tr><td><code>restore-check.js</code></td><td><code>068</code></td></tr><tr><td><code>restore-plan.js</code></td><td><code>075</code></td></tr><tr><td><code>restore-conflicts.js</code></td><td><code>076</code></td></tr><tr><td><code>restore-resolve.js</code></td><td><code>079</code></td></tr><tr><td><code>restore-converge.js</code></td><td><code>082</code></td></tr><tr><td><code>restore-authorize.js</code></td><td><code>084</code></td></tr><tr><td><code>restore-recourse.js</code></td><td><code>085</code></td></tr><tr><td><code>restore-trace.js</code></td><td><code>086</code></td></tr><tr><td><code>restore-ledger.js</code></td><td><code>088</code></td></tr><tr><td><code>restore-apply.js</code></td><td><code>089</code></td></tr><tr><td><code>restore-navigate.js</code></td><td><code>090</code></td></tr><tr><td><code>restore-verify-complete.js</code></td><td><code>095</code></td></tr><tr><td><code>restore-check-format.js</code></td><td><code>105</code></td></tr><tr><td><code>restore-provenance.js</code></td><td><code>107</code></td></tr><tr><td><code>restore-check-archive.js</code></td><td><code>108</code></td></tr><tr><td><code>restore-check-crypto.js</code></td><td><code>110</code></td></tr><tr><td><code>restore-effect-probe.js</code></td><td><code>113</code></td></tr><tr><td><code>restore-field-attribution.js</code></td><td><code>114</code></td></tr></tbody></table>
+<h2 id="4-scope-裁决-依据-mgmt-std-008-2-2-重叠即违规">4. Scope 裁决（依据 <code>[MGMT-STD-008]</code> §2.2「重叠即违规」）<a class="anchor" href="#4-scope-裁决-依据-mgmt-std-008-2-2-重叠即违规" aria-label="锚点">#</a></h2>
+<ul><li><strong>三面镜子三篇不合并</strong>（<code>076</code>/<code>079</code>/<code>082</code>）：三阶段、三脚本、三套判据，属<strong>同源异构</strong>而非重复。</li><li><strong>五篇对账不合并</strong>：对账对象互斥。</li><li><strong>生成层与手写接线层不合并</strong>：前者是判据，后者是运行时落点，读者不同。</li><li>本族与 <code>[OPS-MAN-066]</code>（进化提示词）、<code>[OPS-MAN-067]</code>（症状分诊）<strong>边界清晰</strong>，互不覆盖。</li></ul>
+<h2 id="5-状态">5. 状态<a class="anchor" href="#5-状态" aria-label="锚点">#</a></h2>
+<ul><li>生成层 18 篇：<strong>派生</strong>（机器生成，改生成器不改文档）。</li><li>手写层 5 篇：<strong>在产</strong>。</li><li>本族<strong>禁止移动/重命名</strong>（DR7：路径被 18 个 <code>restore-*.js</code> 当常量引用）；本批次只新增总纲与加「隶属」头。</li></ul>
+<hr>
+<p><em>本总纲由 <code>[MGMT-PLAN-009] 文档精简与结构化整理方案</code> B4a 批次产出。</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/07_OPS_运维/OPS-MAN/[OPS-MAN-206] 工作树清洁方案.html"><div class="dir">← 上一篇</div><div class="ttl">khy-os 工作树清洁方案</div></a><a class="next" href="../../../docs/07_OPS_运维/OPS-MAN/[OPS-MAN-208] OCR 兜底族总纲.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-208] OCR 兜底族总纲</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/07_OPS_运维/OPS-MAN/[OPS-MAN-207] 还原子系统总纲.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

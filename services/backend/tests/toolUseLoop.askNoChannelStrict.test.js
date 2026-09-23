@@ -47,11 +47,9 @@ function makeChat(captured) {
     return { reply: 'Proceeding with postgres as the reasonable default.', stopReason: 'stop', provider: 'mock' };
   };
 }
-describe('AskUserQuestion no-channel conservative pause (P3)', () => {
-  afterEach(() => { delete process.env.KHY_ASK_NOCHANNEL_STRICT; });
-});
-
 describe('Tool Use Loop ask No Channel Strict', () => {
+  afterEach(() => { delete process.env.KHY_ASK_NOCHANNEL_STRICT; });
+
   test('default (strict on): re-injects a conservative instruction, not the queued stub', async () => {
         delete process.env.KHY_ASK_NOCHANNEL_STRICT; // default = on
         const captured = {};

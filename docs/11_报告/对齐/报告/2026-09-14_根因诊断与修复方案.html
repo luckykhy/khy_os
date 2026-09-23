@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-14_根因诊断与修复方案.md -->
+<title>2026-09-14 根因诊断与修复方案 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>对齐<span class="sep">›</span>报告<span class="sep">›</span>2026-09-14 根因诊断与修复方案</div>
+      <header class="hero reveal"><h1>2026-09-14 根因诊断与修复方案</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#2026-09-14-根因诊断与修复方案">2026-09-14 根因诊断与修复方案</a></li><li class="lvl-2"><a href="#零-先纠正三份报告里的三个误判">零、先纠正三份报告里的三个误判</a></li><li class="lvl-2"><a href="#一-ai-通道-真因是首选通道钉选残留">一、AI 通道：真因是首选通道钉选残留</a></li><li class="lvl-3"><a href="#证据链">证据链</a></li><li class="lvl-3"><a href="#已实现改动">已实现改动</a></li><li class="lvl-3"><a href="#验收">验收</a></li><li class="lvl-3"><a href="#未能完成的部分-诚实标注">未能完成的部分（诚实标注）</a></li><li class="lvl-2"><a href="#二-结构门禁早已是红的-本轮最大意外发现">二、结构门禁早已是红的（本轮最大意外发现）</a></li><li class="lvl-3"><a href="#一个已确证的潜伏崩溃">一个已确证的潜伏崩溃</a></li><li class="lvl-2"><a href="#三-根目录卫生-规则存在-但视野太窄">三、根目录卫生：规则存在，但视野太窄</a></li><li class="lvl-3"><a href="#已实现改动-2">已实现改动</a></li><li class="lvl-3"><a href="#验收-2">验收</a></li><li class="lvl-3"><a href="#待你决策-未擅自删除">待你决策（未擅自删除）</a></li><li class="lvl-2"><a href="#四-tui-冒烟-改超时是必要但不充分-未解决">四、TUI 冒烟：改超时是必要但不充分（未解决）</a></li><li class="lvl-3"><a href="#已做">已做</a></li><li class="lvl-3"><a href="#但它没修好问题-诊断结论">但它没修好问题 —— 诊断结论</a></li><li class="lvl-3"><a href="#真正的下一步-建议单独一轮做-不建议顺手改">真正的下一步（建议单独一轮做，不建议顺手改）</a></li><li class="lvl-2"><a href="#五-自检系统的-4-个真-bug-本轮未动-建议下一轮">五、自检系统的 4 个真 bug（本轮未动，建议下一轮）</a></li><li class="lvl-2"><a href="#六-待人工确认-我没敢动">六、待人工确认（我没敢动）</a></li><li class="lvl-2"><a href="#七-本轮改动清单">七、本轮改动清单</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="2026-09-14-根因诊断与修复方案">2026-09-14 根因诊断与修复方案<a class="anchor" href="#2026-09-14-根因诊断与修复方案" aria-label="锚点">#</a></h1>
+<blockquote><p>本文是一次「测试先行」修复的产物：先为本节各项补测试作为验收标准，再出方案，最后实现。<br>起点是 2026-09-13～15 三份对齐报告连续三天把同一个问题误判为「密钥失效」。</p></blockquote>
+<hr>
+<h2 id="零-先纠正三份报告里的三个误判">零、先纠正三份报告里的三个误判<a class="anchor" href="#零-先纠正三份报告里的三个误判" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>报告记载</th><th>实测真相</th><th>证据</th></tr></thead><tbody><tr><td>「本机所有 AI 渠道鉴权失效，需修复 key 后重测」</td><td><strong>密钥完全有效</strong>，不是鉴权问题</td><td>用 <code>.khy/api_keys.json</code> 里的 agnes key 直接打 <code>POST https://apihub.agnes-ai.com/v1/chat/completions</code>，<code>agnes-2.5-flash</code> 与 <code>agnes-3.0-flash</code> <strong>均返回 HTTP 200</strong></td></tr><tr><td>「khy 默认渠道已切至 codex 且直接 unavailable，未回退到 relay/agnes」</td><td>方向对，但<strong>没找到原因</strong>：是 <code>.env</code> 里的<strong>首选通道钉选残留</strong></td><td><code>services/backend/.env</code> 第 14–16 行原值 <code>GATEWAY_PREFERRED_ADAPTER=codex</code> + <code>GATEWAY_PREFERRED_STRICT=true</code> + <code>GATEWAY_PREFERRED_MODEL=gpt-5.3-codex-review</code></td></tr><tr><td>「inkRenderSmoke 未定位根因，可能是 <code>loadInk()</code> 动态 import 在 jest 沙箱里挂住/没 resolve」</td><td><strong><code>loadInk()</code> 本身是好的</strong>——实测 424ms 成功返回、<code>typeof render === 'function'</code></td><td>临时诊断用例 <code>Promise.race</code> 计时</td></tr><tr><td>（09-13）「3 个测试文件的断言笔误导致 118 用例失败」</td><td>那 3 个文件<strong>早已修好、当前全绿</strong></td><td>本轮实跑：<code>ccFormat</code> / <code>toolResultTransparency</code> / <code>diffLineNumbers</code> 全部 PASS</td></tr></tbody></table>
+<p><strong>为什么这个误判代价最大</strong>：<code>buildChannelFailureAdvice</code> 只认 5xx / auth / 限流 / 网络 / 模型不存在五类信号，<br><strong>没有「首选通道被 strict 钉死导致不回退」这一类</strong>。于是真因被翻译成 auth / 404 之类的表象，<br>排障者自然一天天去查密钥——真因三天未浮出。这是本次修复第 1 项要堵的结构性缺口。</p>
+<hr>
+<h2 id="一-ai-通道-真因是首选通道钉选残留">一、AI 通道：真因是首选通道钉选残留<a class="anchor" href="#一-ai-通道-真因是首选通道钉选残留" aria-label="锚点">#</a></h2>
+<h3 id="证据链">证据链<a class="anchor" href="#证据链" aria-label="锚点">#</a></h3>
+<ol><li><code>services/backend/.env</code> 被每次启动加载：<code>src/cli/bootstrap.js:42</code> → <code>path.resolve(__dirname, '../../.env')</code></li></ol>
+<p>= <code>services/backend/.env</code>。</p>
+<ol><li><code>aiGatewayGenerateMethod.js:2072-2081</code>：</li></ol>
+<pre><code class="language-js">   <span class="hljs-keyword">const</span> strictPreferredByEnv = !!(preferredAdapter &amp;&amp; preferredAdapter !== <span class="hljs-string">&#x27;auto&#x27;</span> &amp;&amp;
+     <span class="hljs-title class_">String</span>(preferredStrictRaw).<span class="hljs-title function_">toLowerCase</span>() !== <span class="hljs-string">&#x27;false&#x27;</span>);</code></pre>
+<p>→ <code>adapter=codex</code>（≠auto）+ <code>strict=true</code> ⇒ strict 生效。</p>
+<ol><li>仓库自己的注释写明 strict 语义：<code>ilinkDispatcher.js:1293</code></li></ol>
+<p>「<code>GATEWAY_PREFERRED_STRICT=true</code> 的含义是「首选通道不可用就硬失败」」。</p>
+<ol><li>本机 codex 无凭据 ⇒ 硬失败，报 <code>codex [unavailable]: OpenAI Codex unavailable</code>，且不回退。</li><li><code>api_keys.json</code> 只有 <code>agnes</code> 一个 provider，而 <code>.env</code> 里 <code>GATEWAY_API_POOL_PROVIDER=relay</code></li></ol>
+<p>—— 池 provider 名与池内容不一致，进一步削弱回退能力（本次未改，见「待人工确认」）。</p>
+<h3 id="已实现改动">已实现改动<a class="anchor" href="#已实现改动" aria-label="锚点">#</a></h3>
+<ul><li><strong><code>.env</code> 修复</strong>（已备份 <code>.env.bak-20260914-codexpin</code>，只改钉选三行，密钥未触碰）：</li></ul>
+<pre><code>  GATEWAY_PREFERRED_ADAPTER=auto      # 原 codex
+  GATEWAY_PREFERRED_STRICT=false      # 原 true
+  # GATEWAY_PREFERRED_MODEL=gpt-5.3-codex-review   # 原启用</code></pre>
+<p>选 <code>auto</code> 而非指定某通道：让网关按健康度级联，不对具体通道做任何预设。</p>
+<ul><li><strong>诊断缺口封堵</strong>：<code>buildChannelFailureAdvice</code> 新增 <code>channelPinned</code> 信号</li></ul>
+<p>（<code>src/services/gateway/buildChannelFailureAdvice.js</code>），并在调用点<br>  <code>aiGatewayGenerateMethod.js:6303</code> 传入 <code>pin: { adapter, strict, hard, fallbackSuppressed }</code>。<br>  钉选是<strong>元原因</strong>，指引置顶输出，点名被钉通道与两个 env 开关。</p>
+<h3 id="验收">验收<a class="anchor" href="#验收" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> services/backend
+node --<span class="hljs-built_in">test</span> tests/gateway/buildChannelFailureAdvice.test.js   <span class="hljs-comment"># 17/17 通过</span></code></pre>
+<h3 id="未能完成的部分-诚实标注">未能完成的部分（诚实标注）<a class="anchor" href="#未能完成的部分-诚实标注" aria-label="锚点">#</a></h3>
+<p>端到端复验 <strong>在本沙箱内跑不通</strong>：<code>khy -p &quot;…&quot;</code> 启动时会调用 <code>reg.exe</code>（硬件探测），<br>被当前环境的程序黑名单拦截并终止，输出为空。因此「<code>.env</code> 改完后 <code>khy -p</code> 立即恢复」<br>这条<strong>尚未实测确认</strong>，只完成了代码路径与配置层面的证明。</p>
+<p>请在有权限的终端跑一次以终验：</p>
+<pre><code class="language-bash">khy provider status          <span class="hljs-comment"># 应显示 adapter=auto / strict=false</span>
+khy -p <span class="hljs-string">&quot;1+1等于几？只回答数字&quot;</span>  <span class="hljs-comment"># 应拿到正常回答；若仍失败，输出里现在会直接给出钉选指引</span></code></pre>
+<hr>
+<h2 id="二-结构门禁早已是红的-本轮最大意外发现">二、结构门禁早已是红的（本轮最大意外发现）<a class="anchor" href="#二-结构门禁早已是红的-本轮最大意外发现" aria-label="锚点">#</a></h2>
+<p><code>node scripts/ci/check-repo-layout.js</code> <strong>exit=1</strong>，且已持续至少一天。当前违规：</p>
+<table><thead><tr><th>规则</th><th>数量</th><th>说明</th></tr></thead><tbody><tr><td><code>root-whitelist</code></td><td>24</td><td>根目录 <code>.md</code>/<code>.txt</code> 垃圾</td></tr><tr><td><strong><code>root-junk</code>（本次新增）</strong></td><td><strong>297</strong></td><td>根目录临时/事故残留 —— 见下</td></tr><tr><td><code>layer-registry</code></td><td>7</td><td>未登记顶层目录：<code>-p</code>、<code>_产物</code>、<code>deploy</code>、<code>lib</code>、<code>patches</code>、<code>test</code>、<code>对齐</code></td></tr><tr><td><code>dangling-task</code></td><td>88</td><td>被引用但无定义的 <code>npm run</code> 目标（基线 0）</td></tr><tr><td><code>cross-layer-require</code></td><td>37</td><td>跨 workspace 深层相对 require（基线 0）</td></tr><tr><td><code>unresolved-require</code></td><td>26</td><td><strong>require 指向不存在的文件（潜伏崩溃）</strong>（基线 0）</td></tr><tr><td><code>docs-index-complete</code></td><td>14</td><td>阶段文档未进主索引（基线 10）</td></tr><tr><td><code>extension-id-hardcode</code></td><td>1</td><td>核心硬编码扩展 id（基线 0）</td></tr></tbody></table>
+<h3 id="一个已确证的潜伏崩溃">一个已确证的潜伏崩溃<a class="anchor" href="#一个已确证的潜伏崩溃" aria-label="锚点">#</a></h3>
+<p><code>services/backend/src/cli/autoConnect.js</code> 位于 <code>src/cli/</code>，却写成：</p>
+<pre><code class="language-js"><span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../../services/crossPlatform/clients/terminalClient&#x27;</span>)  <span class="hljs-comment">// → services/backend/services/… ✗</span>
+<span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../../constants/serviceDefaults&#x27;</span>)                       <span class="hljs-comment">// → services/backend/constants/… ✗</span></code></pre>
+<p>真实位置是 <code>src/services/…</code> 与 <code>src/constants/…</code>，<strong>只需上一级 <code>../</code></strong>。<br>两条 require 都指向不存在的路径，加载即 <code>MODULE_NOT_FOUND</code>。已修复 + 加回归锁。</p>
+<p>其余 25 处 <code>unresolved-require</code> 属同一类 off-by-one，应从该规则的全量清单逐条回收：</p>
+<pre><code class="language-bash">node scripts/ci/check-repo-layout.js --list=unresolved-require</code></pre>
+<hr>
+<h2 id="三-根目录卫生-规则存在-但视野太窄">三、根目录卫生：规则存在，但视野太窄<a class="anchor" href="#三-根目录卫生-规则存在-但视野太窄" aria-label="锚点">#</a></h2>
+<p>规则 1（<code>root-whitelist</code>）只扫 <code>.md</code>/<code>.txt</code> <strong>且只扫文件</strong>（见该文件第 125 行注释自述），<br>因此现场真实的垃圾全部漏网：</p>
+<ul><li><code>1</code>、<code>console.log(r))</code>、<code>console.log((11441+i)+'</code> —— 重定向/贴错的截断名</li><li><code>tmp-*.js</code> / <code>tmp-*.log</code> / <code>tmp-*.out</code> / <code>tmp-*.txt</code> —— 20+ 个，实为 <strong>约 270 个</strong>探测残留</li><li><code>_flagcheck.txt</code>、<code>_gitst.txt</code>、<code>_p*.txt</code> —— 下划线开头的一次性笔记</li><li><code>.coverage</code>、<code>.tmp_startup_lines.txt</code> —— 构建残留</li><li><code>-p/</code> —— shell 事故目录</li><li>还有 <code>tmp-bb.py;</code>、<code>tmp-lean.json;</code> 这类<strong>带尾分号</strong>的 shell 打字事故</li></ul>
+<p>历史 commit <code>dafef34c</code>（「remove 7 stray junk/debug files」）曾手工清过同类垃圾<br>—— 说明这是<strong>复发问题</strong>，必须由门禁兜住，而不是靠人记得清。</p>
+<h3 id="已实现改动-2">已实现改动<a class="anchor" href="#已实现改动-2" aria-label="锚点">#</a></h3>
+<p><code>scripts/ci/check-repo-layout.js</code> 新增 <code>root-junk</code> 规则：</p>
+<ul><li><strong>文件</strong>签名（高精度，不试图枚举合法根文件）：<code>^tmp[-_.]</code>、<code>^_</code>、<code>^\d+$</code>、</li></ul>
+<p><code>^\.(tmp|coverage|nyc_output|eslintcache)</code>、<code>[-+]{1,}$</code>、含 shell/jest 元字符 <code>[(){}'&quot;</code>\s]`</p>
+<ul><li><strong>目录</strong>签名更窄（<code>^-</code>、<code>^tmp[-_.]</code>、元字符）：<code>_产物</code>/<code>对齐</code> 这类是「未登记」而非「垃圾」，</li></ul>
+<p>归 <code>layer-registry</code> 管，本规则不得误伤</p>
+<ul><li>新增导出 <code>isRootJunkName</code> / <code>findRootJunkEntries</code> / <code>checkRootJunk</code>，</li></ul>
+<p>并把 <code>main()</code> 包进 <code>if (require.main === module)</code>——否则 require 它就会因 <code>process.exit(1)</code> 直接杀掉测试进程</p>
+<h3 id="验收-2">验收<a class="anchor" href="#验收-2" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> services/backend
+npx jest --runInBand --testPathPattern <span class="hljs-string">&quot;repoLayoutRootJunk&quot;</span>   <span class="hljs-comment"># 6/6 通过</span>
+node ../../scripts/ci/check-repo-layout.js --list=root-junk   <span class="hljs-comment"># 打印全部 297 条</span></code></pre>
+<h3 id="待你决策-未擅自删除">待你决策（未擅自删除）<a class="anchor" href="#待你决策-未擅自删除" aria-label="锚点">#</a></h3>
+<p>297 个残留我一个都没删——多数是历史探测脚本，可能有你想留的。<br><code>--list=root-junk</code> 会给全量清单。<strong>建议</strong>：只保留确实需要的，其余整体挪进 <code>.khy/tmp/</code><br>（<code>.khy/</code> 已 gitignore），然后重跑门禁确认清零。</p>
+<hr>
+<h2 id="四-tui-冒烟-改超时是必要但不充分-未解决">四、TUI 冒烟：改超时是必要但不充分（未解决）<a class="anchor" href="#四-tui-冒烟-改超时是必要但不充分-未解决" aria-label="锚点">#</a></h2>
+<h3 id="已做">已做<a class="anchor" href="#已做" aria-label="锚点">#</a></h3>
+<p><code>tests/tui/inkRenderSmoke.test.js:214</code> 的 <code>beforeAll</code> 补了 <code>, 15000</code>。<br>理由：同文件每个 test 都显式给了 <code>15000</code>（第 242 行，注释还专门解释了冷缓存与 babel 变换的开销），<br><strong>唯独 hook 漏了</strong>，用 jest 默认 5s。Hook 一超时，<strong>全部 112 个用例一起失败</strong>，<br>现场读起来像「整个 TUI 树炸了」，而实际什么都没渲染过。</p>
+<h3 id="但它没修好问题-诊断结论">但它没修好问题 —— 诊断结论<a class="anchor" href="#但它没修好问题-诊断结论" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>运行</th><th>inkRenderSmoke</th><th>套件总计</th></tr></thead><tbody><tr><td>改前（5s hook）</td><td>FAIL 18.1s</td><td><strong>112 失败 / 323 通过 / 435</strong></td></tr><tr><td>改后（15s hook）</td><td>FAIL 34.9s（hook 在 15000ms 超时）</td><td>112 失败 / 323 通过 / 435</td></tr><tr><td>带诊断文件一起跑</td><td>FAIL 87.7s</td><td><strong>7 失败 / 429 通过 / 436</strong></td></tr></tbody></table>
+<p>同一个 hook，一次烧满 15s 全灭、一次 424ms 顺利通过 —— <strong>是间歇性的，不是「慢」</strong>。</p>
+<p>进一步实测（临时诊断用例，已删）：</p>
+<pre><code>DIAG_LOADINK &gt;&gt;&gt; RESOLVED in 424ms; typeof render=function
+DIAG_REGISTERJSX &gt;&gt;&gt; ok</code></pre>
+<p>⇒ <code>loadInk()</code> 与 <code>registerJsx()</code> <strong>本身都是好的</strong>。09-13 报告猜的「loadInk 挂住/没 resolve」也不成立。<br>失败概率随运行顺序/文件集合变化，形态是「永不 settle」，指向 <strong>jest 的 VM-modules 运行时对<br>动态 ESM <code>import()</code> 的处理</strong>（<code>ink</code> 6.8.0 是纯 ESM：<code>type: module</code>，<code>exports.default = ./build/index.js</code>）。</p>
+<h3 id="真正的下一步-建议单独一轮做-不建议顺手改">真正的下一步（建议单独一轮做，不建议顺手改）<a class="anchor" href="#真正的下一步-建议单独一轮做-不建议顺手改" aria-label="锚点">#</a></h3>
+<ol><li>先量化抖动：把 <code>tests/tui</code> 连跑 5 次，统计 hook 失败率，确认是稳定复现还是概率性。</li><li>主要嫌疑：<code>inkRuntime.js:66-83</code> 的 <code>loadInk()</code> 在<strong>同一个 <code>_loading</code> promise</strong> 里串了两个动态 import</li></ol>
+<p>（<code>import('ink')</code> 之后又 eager <code>import(pathToFileURL(instances.js))</code>）。<br>   <code>instances.js</code> 已确认存在，但第二个 import 是<strong>为 <code>getInkInstance()</code> 的同步访问服务的可选优化</strong><br>   （代码注释自称 best-effort）—— 它失败/挂起会<strong>连带拖死整个 <code>_loading</code></strong>。<br>   <strong>建议</strong>：把该 eager import 移出关键路径（改为首次用时再做，或加 <code>fs.existsSync</code> 前置 + 独立超时），<br>   让「ink 本体已就绪」不再被一个可选优化阻塞。</p>
+<ol><li>若仍抖动，检查 jest 配置对 <code>ink</code> 的 ESM 处理（<code>transformIgnorePatterns</code> / 独立 project），</li></ol>
+<p>让这个套件以真正的 ESM 入口跑，而不是在 CJS 测试里动态 import。</p>
+<hr>
+<h2 id="五-自检系统的-4-个真-bug-本轮未动-建议下一轮">五、自检系统的 4 个真 bug（本轮未动，建议下一轮）<a class="anchor" href="#五-自检系统的-4-个真-bug-本轮未动-建议下一轮" aria-label="锚点">#</a></h2>
+<p>证据均来自 <code>khy doctor</code> 与 <code>.khy/selfcheck.log</code>：</p>
+<ol><li><strong>重复告警风暴</strong>：同一组 5 个 issue 以 <code>trigger:&quot;start&quot;</code> 每约 10 秒重写一次</li></ol>
+<p>（23:40→00:57 上百条），<code>score</code> 恒为 55/critical，无去重。</p>
+<ol><li><strong>自愈不落盘（真 bug）</strong>：<code>trigger:&quot;test&quot;</code> 那次自愈把首选通道写进</li></ol>
+<p><code>C:\Users\…\AppData\Local\Temp\khy-selfcheck-*\\.env</code>，下次运行照旧报<br>   <code>首选项道配置无效: &quot;__missing__&quot; 未注册或已禁用</code> —— 修复目标是临时文件，等于没修。</p>
+<ol><li><strong>服务健康检查空转</strong>：<code>services.unhealthy: []</code> 但 <code>unknownCount: 30</code>，30 个服务全 unknown 却判 healthy。</li><li><code>suspicious_port: 3333</code> 被判「Common mining pool port」。若 3333 是自家服务则为误报，否则需查。</li></ol>
+<hr>
+<h2 id="六-待人工确认-我没敢动">六、待人工确认（我没敢动）<a class="anchor" href="#六-待人工确认-我没敢动" aria-label="锚点">#</a></h2>
+<p><code>services/backend/.env</code> 里这两行与本次真因同源，但影响面我没有完全摸清：</p>
+<pre><code>GATEWAY_API_POOL_PROVIDER=relay          # 池里只有 agnes，没有 relay
+RELAY_API_ENDPOINT=https://api.codeium.com/windsurf/v1   # 用 windsurf 端点当 relay</code></pre>
+<p><code>khy doctor</code> 曾报 <code>api adapter returned a failed result via openai: 404</code>，有可能出自这条路。<br>建议：跑 <code>khy gateway status</code> 看实测通道健康度，再决定是否清理。</p>
+<hr>
+<h2 id="七-本轮改动清单">七、本轮改动清单<a class="anchor" href="#七-本轮改动清单" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>services/backend/.env</code></td><td>首选通道钉选残留 → <code>auto</code> / <code>strict=false</code>（已备份）</td></tr><tr><td><code>src/services/gateway/buildChannelFailureAdvice.js</code></td><td>新增 <code>channelPinned</code> 信号 + <code>_resolveStrictPin</code></td></tr><tr><td><code>src/services/gateway/aiGatewayGenerateMethod.js</code></td><td>调用点传入 <code>pin</code>（钉选元原因）</td></tr><tr><td><code>src/cli/autoConnect.js</code></td><td>修 2 处 off-by-one require</td></tr><tr><td><code>scripts/ci/check-repo-layout.js</code></td><td>新增 <code>root-junk</code> 规则；导出纯函数；<code>main()</code> 加 <code>require.main</code> 守卫</td></tr><tr><td><code>tests/gateway/buildChannelFailureAdvice.test.js</code></td><td>+8 条钉选诊断测试（验收标准）</td></tr><tr><td><code>tests/ci/repoLayoutRootJunk.test.js</code></td><td>新增（验收标准，6 条）</td></tr><tr><td><code>tests/cli/requireResolution.autoConnect.test.js</code></td><td>新增（验收标准，4 条）</td></tr><tr><td><code>tests/tui/inkRenderSmoke.test.js</code></td><td>hook 补 15s 超时（必要不充分，见第四节）</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../docs/11_报告/对齐/报告/2026-09-13_claude_code_vs_khyos对齐报告.html"><div class="dir">← 上一篇</div><div class="ttl">2026-09-13 Claude Code vs khy-os 终端对齐报告（第 1 次运行）</div></a><a class="next" href="../../../../docs/11_报告/对齐/报告/2026-09-14_前端启动速度错误稳定性检查.html"><div class="dir">下一篇 →</div><div class="ttl">前端启动速度 / 错误 / 稳定性检查（2026-09-14 即时专项）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="docs/11_报告/对齐/报告/2026-09-14_根因诊断与修复方案.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

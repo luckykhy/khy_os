@@ -10,14 +10,14 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
 const SCRIPT = path.join(ROOT, 'scripts', 'ci', 'check-rules-registry.js');
 const CARD_GEN = path.join(ROOT, 'scripts', 'docs', 'gen-rules-cards.js');
-const REG = 'docs/_规范/RULES-REGISTRY.json';
+const REG = 'docs/10_规范/registry/RULES-REGISTRY.json';
 const CARD_GEN_REL = 'scripts/docs/gen-rules-cards.js';
-const CARD_DIR = 'docs/_规范/规则卡';
-const LAY = 'docs/_规范/[DESIGN-LAY-002] 目录层级与文件归类规范.md';
-const DOC = 'docs/08_MGMT_项目管理/[MGMT-STD-007] 文档规则总纲.md';
-const ARCH104 = 'docs/03_DESIGN_设计/[DESIGN-ARCH-104] 借鉴与实现统一规则.md';
-const GOV = 'docs/03_DESIGN_设计/[DESIGN-ARCH-070] 治理总纲与可执行规则.md';
-const OWNERS = 'docs/_规范/FEATURE-OWNERSHIP.json';
+const CARD_DIR = 'docs/10_规范/规则卡';
+const LAY = 'docs/10_规范/DESIGN-LAY/[DESIGN-LAY-002] 目录层级与文件归类规范.md';
+const DOC = 'docs/08_MGMT_项目管理/MGMT-STD/[MGMT-STD-007] 文档规则总纲.md';
+const ARCH104 = 'docs/10_规范/其它规范/[DESIGN-SOURCING-001] 借鉴与实现统一规则.md';
+const GOV = 'docs/10_规范/其它规范/[DESIGN-GOV-001] 治理总纲与可执行规则.md';
+const OWNERS = 'docs/10_规范/registry/FEATURE-OWNERSHIP.json';
 const dirs = [];
 
 after(() => dirs.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
@@ -70,7 +70,7 @@ function fixture(mutate) {
   // 三种真源形态各一：Markdown（HTML 注释标记）、代码（行注释标记）、数据文件。
   write(root, LAY, '# [DESIGN-LAY-002] 目录层级与文件归类规范\n\n<!-- RULES-REGISTRY: LAYOUT-001 -->\n');
   write(root, DOC, '# 文档规则总纲\n\n<!-- RULES-REGISTRY: DOCS-001 -->\n');
-  write(root, ARCH104, '# [DESIGN-ARCH-104] 借鉴与实现统一规则\n\n<!-- RULES-REGISTRY: SOURCING-004 -->\n');
+  write(root, ARCH104, '# [DESIGN-SOURCING-001] 借鉴与实现统一规则\n\n<!-- RULES-REGISTRY: SOURCING-004 -->\n');
   write(root, 'scripts/ci/check-tool-contract.js',
     "// RULES-REGISTRY: TOOLING-001\n'use strict';\n");
   write(root, OWNERS, '{}\n');

@@ -307,8 +307,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0b0e14;
-  border: 1px solid var(--el-border-color, #2a2f3a);
+  background: var(--khy-code-bg);
+  border: 1px solid var(--el-border-color, var(--khy-code-border));
   border-radius: 8px;
   overflow: hidden;
 }
@@ -320,7 +320,7 @@ onBeforeUnmount(() => {
   outline: none;
 }
 .khyos-canvas--focused {
-  box-shadow: 0 0 0 2px var(--el-color-primary, #409eff);
+  box-shadow: 0 0 0 2px var(--el-color-primary, var(--khy-primary));
   cursor: none;
 }
 .khyos-overlay {
@@ -331,7 +331,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  color: var(--el-text-color-secondary, #909399);
+  color: var(--el-text-color-secondary, var(--khy-gray-400));
   background: rgba(11, 14, 20, 0.85);
 }
 .khyos-overlay .el-icon {
@@ -343,10 +343,10 @@ onBeforeUnmount(() => {
 .khyos-hint {
   margin-top: 8px;
   font-size: 12px;
-  color: var(--el-text-color-secondary, #909399);
+  color: var(--el-text-color-secondary, var(--khy-gray-400));
 }
 .khyos-hint code {
-  background: var(--el-fill-color-light, #1f2430);
+  background: var(--el-fill-color-light, var(--khy-code-surface));
   padding: 1px 5px;
   border-radius: 4px;
 }

@@ -25,6 +25,19 @@
  *   - Vim 链   src/cli/tui/hooks/useVimInput.js(/vim 开启时)
  *   - 入口提示 App.js 状态行 '/ 命令,@ 文件,! shell,# 记忆,? 快捷键'
  *   - 语音入口 App.js 全局链 Alt+M → services/voiceInputService.triggerWinH(Win+H 听写,仅 Windows)
+ *
+ * **第二重核对:终端能否真的送达这个字节**(BUG-35 的教训)。上面那份对照只看了
+ * 「处理器有没有这条分支」,漏了「终端送不送得出可区分的字节」。处理器写得再对,
+ * 终端把 Shift+Enter 和 Enter 送成同一个 `\r` 时,浮层宣称的换行键就是假承诺。
+ * 实测(Windows Terminal 1.24，真终端逐键字节捕获 + 挂载线上 useTextInput 复诊)：
+ *   Enter `\r` · Shift+Enter `\r`(与 Enter 同一串 ⇒ 直接发送) · Ctrl+Enter **零字节**(终端自用为全屏)
+ *   Alt+Enter 一个孤立的 ESC(终端自用为全屏 ⇒ 不但换不了行,khy 还会把它读成 Esc) · Ctrl+J `\n` ✅ 换行
+ * 因此「本机真能按出来的换行键」只有 Ctrl+J 与 `\`+Enter 两条;浮层与 /keybindings 只列这两条为可用,
+ * Shift/Ctrl/Alt+Enter 一律标注终端前提。该 kitty(CSI-u) 协议在 ink 6.8 是 opt-in
+ * (`render({kittyKeyboard})`,本仓未开启),且需终端应答 `CSI ? u`,本机实测未应答,
+ * 属终端物理边界,不是本仓可改的代码缺陷。新增/修改键位条目时,除处理器外还须在
+ * 真终端跑一次字节捕获复核(探针见 `.khy/feedback/tui-ux-audit-20260919/Z/` 下
+ * `repro-keybytes.cjs` 与 `repro-after-altenter.cjs`)。
  */
 
 /**
@@ -41,9 +54,10 @@ const KEYBINDING_CATALOG = Object.freeze([
       { keys: 'Ctrl + L', desc: '清屏(清除已提交的对话记录)' },
       { keys: 'Ctrl + O', desc: '打开/关闭会话记录视图(可滚动回看整段会话并展开任意段落)' },
       { keys: 'Ctrl + T', desc: '显示/隐藏任务清单面板(仅宽屏终端，默认 ≥120 列)' },
-      { keys: 'Ctrl + V', desc: '粘贴/暂存剪贴板图片到下一回合(Windows 为 Alt + V)' },
+      { keys: 'Ctrl + Y', desc: '复制上一条 AI 回复到剪贴板(仅 CC 模式;默认 TUI 里 Ctrl+Y 是「粘回删除内容」,见编辑组)' },
+      { keys: 'Ctrl + V', desc: '粘贴/暂存剪贴板图片到下一回合(Windows 为 Alt + V;此处 Ctrl+V 会被终端自用为文本粘贴)' },
       { keys: 'Alt + M', desc: '语音输入：触发 Win+H 听写，识别文字落入输入框(仅 Windows)' },
-      { keys: 'Shift + Tab', desc: '切换权限模式(循环 4 档)' },
+      { keys: 'Shift + Tab', desc: '切换权限模式(在 /permissions 的全部档位间循环)' },
       { keys: 'Esc', desc: '取消计划评审 / 中断当前回合 / 连按两次清空输入或回溯' },
       { keys: '?', desc: '在空输入框显示/隐藏键盘快捷键浮层' },
     ]),
@@ -62,7 +76,10 @@ const KEYBINDING_CATALOG = Object.freeze([
     label: '编辑',
     bindings: Object.freeze([
       { keys: 'Enter', desc: '发送消息' },
-      { keys: 'Shift / Alt / Ctrl + Enter', desc: '插入换行(多行输入)' },
+      { keys: 'Ctrl + J', desc: '插入换行(多行输入);终端送裸 LF,实测可用' },
+      { keys: 'Alt + Enter', desc: '换行——仅当终端把 LF 交给应用时生效;Windows Terminal 自用为全屏,实测只送回一个 ESC(会被当作 Esc),本机不可用' },
+      { keys: 'Shift + Enter', desc: '换行——终端须能送出可区分的字节(kitty/CSI-u 或自配 ESC+CR 绑定,见 /terminalSetup);Windows Terminal 实测与 Enter 同字节,会直接发送' },
+      { keys: 'Ctrl + Enter', desc: '换行——仅支持 kitty/CSI-u 键协议的终端;Windows Terminal 自用为全屏,零字节送达' },
       { keys: '\\ + Enter', desc: '行尾反斜杠续行:删掉反斜杠并换行(对齐 Claude Code)' },
       { keys: 'Backspace', desc: '向前删除一个字符' },
       { keys: 'Meta + Backspace', desc: '删除前一个词' },
@@ -131,7 +148,7 @@ const KEYBINDING_CATALOG = Object.freeze([
     bindings: Object.freeze([
       { keys: 'Esc', desc: '回到 NORMAL 模式' },
       { keys: 'i', desc: '进入 INSERT 模式' },
-      { keys: 'v', desc: '进入 VISUAL 模式' },
+      { keys: 'v', desc: '进入 VISUAL 模式(仅 CC 模式;默认 Vim 链尚未实现该模式)' },
       { keys: 'h / j / k / l', desc: '左 / 下 / 上 / 右移动' },
     ]),
   },
@@ -144,7 +161,7 @@ const KEYBINDING_CATALOG = Object.freeze([
  */
 const ESSENTIAL_SHORTCUTS = Object.freeze([
   Object.freeze(['Enter', '发送消息']),
-  Object.freeze(['Shift/Alt + Enter', '换行（多行输入）']),
+  Object.freeze(['Ctrl + J', '换行（多行输入）']),
   Object.freeze(['/', '斜杠命令菜单']),
   Object.freeze(['@', '引用文件路径']),
   Object.freeze(['↑ / ↓', '逐条浏览历史 / 在菜单中移动']),

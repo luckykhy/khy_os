@@ -23,7 +23,7 @@ const flush = () => new Promise((r) => setImmediate(r));
 
 afterEach(() => bus._resetForTest());
 
-describe('s16 â€?shutdown handshake', () => {
+describe('s16 â€”shutdown handshake', () => {
   test('full request -> confirm -> remove cycle, correlated by requestId', async () => {
     bus.setTeammateRunner(() => new Promise(() => {})); // keep it running
     const t = bus.createTeammate({ name: 'alice', task: 'write config' });
@@ -62,7 +62,7 @@ describe('s16 â€?shutdown handshake', () => {
   });
 });
 
-describe('s16 â€?plan approval', () => {
+describe('s16 â€”plan approval', () => {
   test('teammate requests, lead approves, decision reaches the teammate', () => {
     bus.setTeammateRunner(() => new Promise(() => {}));
     const t = bus.createTeammate({ name: 'carol', task: 'refactor auth' });
@@ -104,7 +104,7 @@ describe('s16 â€?plan approval', () => {
   });
 });
 
-describe('s16 â€?match_response correlation guarantees', () => {
+describe('s16 â€”match_response correlation guarantees', () => {
   test('type mismatch does not resolve the wrong protocol', () => {
     bus.setTeammateRunner(() => new Promise(() => {}));
     const t = bus.createTeammate({ name: 'eve', task: 'work' });
@@ -143,7 +143,7 @@ describe('s16 â€?match_response correlation guarantees', () => {
   });
 });
 
-describe('s16 â€?TeamDelete graceful vs force', () => {
+describe('s16 â€”TeamDelete graceful vs force', () => {
   test('default delete starts a graceful handshake for a running teammate', async () => {
     bus.setTeammateRunner(() => new Promise(() => {}));
     const t = bus.createTeammate({ name: 'heidi', task: 'long job' });

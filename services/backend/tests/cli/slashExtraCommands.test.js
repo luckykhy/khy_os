@@ -1,12 +1,12 @@
 'use strict';
 
-const { SLASH_EXTRA_COMMANDS, mergeExtraCommands } = require('./slashExtraCommands');
+const { SLASH_EXTRA_COMMANDS, mergeExtraCommands } = require('../../src/cli/slashExtraCommands.js');
 
 describe('slashExtraCommands', () => {
   describe('SLASH_EXTRA_COMMANDS', () => {
     it('should be a frozen array', () => {
-      expect(Array.isArray(SLASH_EXTRA_COMMANDS).toBe(true);
-      expect(Object.isFrozen(SLASH_EXTRA_COMMANDS).toBe(true);
+      expect(Array.isArray(SLASH_EXTRA_COMMANDS)).toBe(true);
+      expect(Object.isFrozen(SLASH_EXTRA_COMMANDS)).toBe(true);
     });
 
     it('should contain expected commands', () => {
@@ -32,13 +32,13 @@ describe('slashExtraCommands', () => {
         expect(entry).toHaveProperty('label');
         expect(entry).toHaveProperty('desc');
         expect(typeof entry.cmd).toBe('string');
-        expect(entry.cmd.startsWith('/').toBe(true);
+        expect(entry.cmd.startsWith('/')).toBe(true);
       });
     });
 
     it('entries are frozen', () => {
       SLASH_EXTRA_COMMANDS.forEach((entry) => {
-        expect(Object.isFrozen(entry).toBe(true);
+        expect(Object.isFrozen(entry)).toBe(true);
       });
     });
   });

@@ -3,7 +3,7 @@ const launcher = require('../src/services/backgroundTaskLauncher');
 const runtime = require('../src/tasks/largeTaskRuntimeStore');
 const diskOutput = require('../src/tasks/diskOutput');
 // The default store fixes its path at module load, and the detached runner is a
-// separate process â€?so launcher (in-process) and runner (child) must share the
+// separate process â€”so launcher (in-process) and runner (child) must share the
 // real default store/output dir. We therefore run against the default store and
 // clean up every task we create. The in-process singleton never re-reads disk,
 // so to observe the child's cross-process writes we read via a fresh instance.
@@ -55,7 +55,7 @@ describe('Background Task Launcher', () => {
       expect(r.error).toMatch(/shell/);
   });
 
-  test('launch â†?detached shell task runs to completion, writes log', () => {
+  test('launch â†’detached shell task runs to completion, writes log', () => {
       if (process.platform === 'win32') return; // uses /bin/sh
       const r = launcher.launch({ kind: 'shell', command: 'echo hello-bg-task' });
       expect(r.ok).toBe(true, r.error);
@@ -74,7 +74,7 @@ describe('Background Task Launcher', () => {
       }
   });
 
-  test('launch â†?stop cancels a long-running task', () => {
+  test('launch â†’stop cancels a long-running task', () => {
       if (process.platform === 'win32') return;
       const r = launcher.launch({ kind: 'shell', command: 'sleep 30' });
       expect(r.ok).toBe(true, r.error);
@@ -105,7 +105,7 @@ describe('Background Task Launcher', () => {
       }
   });
 
-  test('stop on unknown task â†?ok:false', () => {
+  test('stop on unknown task â†’ok:false', () => {
       const r = launcher.stop('does-not-exist-xyz');
       expect(r.ok).toBe(false);
   });

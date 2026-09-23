@@ -30,9 +30,9 @@ process.env.KHY_WRITE_EXTRA_ROOTS = WORK;
 
 const { executeTool } = require('../../../src/services/toolCalling');
 const { EXEC_APPROVED } = require('../../../src/services/execApproval');
-const replayLedger = require('../../../src/services/trajectoryReplay/replayLedger');
-const replayBundle = require('../../../src/services/trajectoryReplay/replayBundle');
-const replayEngine = require('../../../src/services/trajectoryReplay/replayEngine');
+const replayLedger = require('../../../src/services/domain/trajectory/trajectoryReplay/replayLedger.js');
+const replayBundle = require('../../../src/services/domain/trajectory/trajectoryReplay/replayBundle.js');
+const replayEngine = require('../../../src/services/domain/trajectory/trajectoryReplay/replayEngine.js');
 const { sha256Hex } = require('../../../src/services/sourceSnapshotCrypto');
 
 // Simulate the recording hot-path seam: run a real tool through the funnel, then

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-138] 工具调用能力判定与文本拦截协议.md -->
+<title>[DESIGN-ARCH-138] 工具调用能力判定与文本拦截协议 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-138] 工具调用能力判定与文本拦截协议</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-138] 工具调用能力判定与文本拦截协议</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-138-工具调用能力判定与文本拦截协议">[DESIGN-ARCH-138] 工具调用能力判定与文本拦截协议</a></li><li class="lvl-2"><a href="#0-一句话结论">0. 一句话结论</a></li><li class="lvl-2"><a href="#1-判定链的两种-三态-两维度">1. 判定链的两种、三态、两维度</a></li><li class="lvl-3"><a href="#1-1-工具调用的两类-按-载体-划分-不按模型大小-家族">1.1 工具调用的两类（按**载体**划分，不按模型大小/家族）</a></li><li class="lvl-3"><a href="#1-2-三态不对称">1.2 三态不对称</a></li><li class="lvl-3"><a href="#1-3-两个维度">1.3 两个维度</a></li><li class="lvl-2"><a href="#2-落地内容">2. 落地内容</a></li><li class="lvl-3"><a href="#2-1-a-判据要求正面证据-p1">2.1 A — 判据要求正面证据（P1）</a></li><li class="lvl-3"><a href="#2-2-a-对照组-把通道问题与模型问题分开-p1">2.2 A′ — 对照组：把通道问题与模型问题分开（P1）</a></li><li class="lvl-3"><a href="#2-3-b-wire-侧只认正面证据-p2">2.3 B — wire 侧只认正面证据（P2）</a></li><li class="lvl-3"><a href="#2-4-通道分区与身份-p2-p4-部分前移">2.4 通道分区与身份（P2，P4 部分前移）</a></li><li class="lvl-3"><a href="#2-5-c-隔离式挑战-p3">2.5 C — 隔离式挑战（P3）</a></li><li class="lvl-3"><a href="#2-6-d-逃生舱与文案-p0">2.6 D — 逃生舱与文案（P0）</a></li><li class="lvl-2"><a href="#3-不变量-不得放宽">3. 不变量（不得放宽）</a></li><li class="lvl-2"><a href="#4-机制落地阶段登记-process-008">4. 机制落地阶段登记（`PROCESS-008`）</a></li><li class="lvl-3"><a href="#4-1-为什么剥离门不进-rollout-mechanisms">4.1 为什么剥离门不进 `rollout.mechanisms[]`</a></li><li class="lvl-2"><a href="#5-复现与验收">5. 复现与验收</a></li><li class="lvl-2"><a href="#6-用户可见的变化">6. 用户可见的变化</a></li><li class="lvl-2"><a href="#7-遗留">7. 遗留</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-138-工具调用能力判定与文本拦截协议">[DESIGN-ARCH-138] 工具调用能力判定与文本拦截协议<a class="anchor" href="#design-arch-138-工具调用能力判定与文本拦截协议" aria-label="锚点">#</a></h1>
+<blockquote><p>状态：<strong>已落地</strong>（P0/P1/P2/P3；P4 余项见 §7）<br>范围：<code>modelToolingCapability.js</code>（判定单一真源）、<code>toolCallingProbe.js</code>（实测判据）、<code>toolCapabilityStore.js</code>（缓存与通道分区）、<code>capabilityModelKey.js</code>（键命名空间）、<code>multiFreeService.js</code> / <code>relayApiAdapter.js</code>（两处剥离门与 400 降级链）、<code>toolChallengeCadence.js</code>（挑战节流）、<code>gatewayRuntimeProbes.js</code>（排障入口）<br>上游依赖：<code>RUNTIME-001</code>（零硬编码）、<code>RUNTIME-002</code>（状态透明）、<code>SECURITY-004</code>（fail-closed）、<code>RUNTIME-010</code>（未明确授予不得可获得）<br>触发：2026-09-23 用户实测 —— 界面提示「模型 agnes-3.0-flash 不支持工具调用…请切换到支持 function calling 的模型」，但同一轮已执行 6 个工具<br>取证：<code>.khy/feedback/toolcall-capability-falseneg-20260923/</code>（复现脚本 + 前后对照 + 差分诊断 + 交付记录）<br>借用申报：<strong>不适用</strong>（本方案修复的是本仓自有的判定链，未借鉴任何外部实现；按 <code>[DESIGN-SOURCING-001]</code> §3 据实声明）</p></blockquote>
+<hr>
+<h2 id="0-一句话结论">0. 一句话结论<a class="anchor" href="#0-一句话结论" aria-label="锚点">#</a></h2>
+<p><strong>「所有模型都不支持工具调用」不是模型的事实，是判定链的事实：判据把「没有看到原生调用」当成了「不会原生调用」，而一旦这么判，工具就从每个后续请求里被删掉 —— 模型再也无法用原生调用证明自己，误判于是无法被现实推翻。</strong></p>
+<p>四条互相独立的病灶，各自可修、可回滚：</p>
+<table><thead><tr><th>#</th><th>病灶</th><th>位置</th><th>症状</th></tr></thead><tbody><tr><td><strong>A</strong></td><td>「回文字、没回 tool_calls」= 不支持</td><td><code>toolCallingProbe.js</code>（旧 <code>interpretProbeResult</code>）</td><td>散文 / 截断 / 自述不会调用工具，三种无定论证据被判成同一个负向结论</td></tr><tr><td><strong>B</strong></td><td>名字启发决定 wire</td><td><code>modelToolingCapability.js</code>（旧 <code>shouldStripUpstreamTools</code>）</td><td>未实测的 <code>*-flash</code> 模型开局即被剥离</td></tr><tr><td><strong>C</strong></td><td>负向裁决自我焊死</td><td>剥离门 × 被动学习（只晋升不降级）</td><td>判错之后无翻案路径，只能等 7 天 TTL</td></tr><tr><td><strong>D</strong></td><td>逃生舱半坏 + 文案说反</td><td>env 名单裸名比较；内联提示文案</td><td><code>KHY_NATIVE_TOOL_MODELS</code> 修得了剥离门、修不了教学门；提示让用户去换模型</td></tr></tbody></table>
+<hr>
+<h2 id="1-判定链的两种-三态-两维度">1. 判定链的两种、三态、两维度<a class="anchor" href="#1-判定链的两种-三态-两维度" aria-label="锚点">#</a></h2>
+<h3 id="1-1-工具调用的两类-按-载体-划分-不按模型大小-家族">1.1 工具调用的两类（按<strong>载体</strong>划分，不按模型大小/家族）<a class="anchor" href="#1-1-工具调用的两类-按-载体-划分-不按模型大小-家族" aria-label="锚点">#</a></h3>
+<table><thead><tr><th></th><th>原生工具调用（native）</th><th>文本拦截式（text）</th></tr></thead><tbody><tr><td>wire</td><td><code>tools</code> 随请求上行</td><td>不上行（或上行被上游丢弃）</td></tr><tr><td>模型产出</td><td>结构化 <code>tool_calls</code> / <code>tool_use</code> blocks</td><td>正文里的显式调用语法</td></tr><tr><td>判据</td><td><code>toolUseBlocks</code> 非空 或 <code>finish_reason ∈ {tool_calls, tool_use}</code></td><td><code>toolCallParser.hasExplicitToolCallSyntax</code></td></tr><tr><td>解析</td><td><code>nativeAdapter.parseToolCalls</code></td><td><code>textAdapter.parseToolCalls</code> → 多方言</td></tr><tr><td>回灌</td><td>结构化 <code>tool_result</code> / <code>role:'tool'</code></td><td>纯文本</td></tr><tr><td>可用前提</td><td>适配器有原生通道 ∧ 模型具备 ∧ 上游不拒 <code>tools</code></td><td>教学门已注入 ∧ 解析器覆盖该方言 ∧ 工具名可执行</td></tr></tbody></table>
+<p><strong>两条纪律</strong>：判据是载体而不是模型大小；两类必须共用同一条执行链（同一 <code>executeTool</code>、同一权限门、同一审计），只在「解析」与「回灌格式」两个函数上分叉（<code>toolProtocolAdapter.js</code>）。<code>syntheticToolLayer</code> 不属于第三类 —— 它是宿主代发起，性质不同，留在兜底层。</p>
+<h3 id="1-2-三态不对称">1.2 三态不对称<a class="anchor" href="#1-2-三态不对称" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>裁决</th><th>证据强度</th><th>有效期</th><th>wire 行为</th></tr></thead><tbody><tr><td><code>native</code></td><td>正面证据，可确证</td><td>永久 sticky</td><td>发</td></tr><tr><td><code>text</code></td><td><strong>要求正文出现显式调用语法</strong></td><td>有界 TTL（默认 7 天）</td><td>剥 + 教文本协议</td></tr><tr><td><code>unknown</code></td><td>不下结论（失败/截断/空/散文）</td><td>不落库</td><td>发</td></tr></tbody></table>
+<h3 id="1-3-两个维度">1.3 两个维度<a class="anchor" href="#1-3-两个维度" aria-label="锚点">#</a></h3>
+<p>模型维（<code>measured</code>）与<strong>通道维</strong>（<code>routeRejects</code>）。「收不收 <code>tools</code> 字段」是端点的属性：同一条通道拒绝 <code>tools</code> 不代表模型不支持，更不代表换条通道也拒绝。此前能力档案只有模型名一个维度，一条严格端点的拒绝会被记成模型的永久属性。</p>
+<hr>
+<h2 id="2-落地内容">2. 落地内容<a class="anchor" href="#2-落地内容" aria-label="锚点">#</a></h2>
+<h3 id="2-1-a-判据要求正面证据-p1">2.1 A — 判据要求正面证据（P1）<a class="anchor" href="#2-1-a-判据要求正面证据-p1" aria-label="锚点">#</a></h3>
+<p><code>interpretProbeResult(result, opts)</code> 的判定顺序：</p>
+<ol><li>原生信号（<code>toolUseBlocks</code> / <code>finish_reason</code>）→ <code>native</code></li><li><code>success === false</code> → <code>unknown</code>（瞬时失败绝不判成不支持）</li><li><code>finish_reason ∈ {length, max_tokens, max_output_tokens, content_filter}</code> → <code>unknown</code></li></ol>
+<p>（<strong>必须早于</strong>文本判定：否则一段被截断的前言会被读成「回了文字 = 不支持」）</p>
+<ol><li>正文非空且 <code>opts.hasExplicitToolCallSyntax(text) === true</code> → <code>text</code></li><li>其余 → <code>unknown</code></li></ol>
+<p>判据经 <code>opts</code> 注入（单一真源 <code>tool/toolCallParser.hasExplicitToolCallSyntax</code>），<strong>不注入则永远得不到 <code>text</code></strong> —— 刻意的 fail-safe 方向。判据排除自然语言档（Format 3）：意图检测是概率的，不能支撑粘性能力裁决。</p>
+<p>探测参数：<code>maxTokens</code> 64 → 256，提示词要求「不要前言」——前言会吃光输出预算，把「没来得及生成」伪装成「没有调用」。</p>
+<h3 id="2-2-a-对照组-把通道问题与模型问题分开-p1">2.2 A′ — 对照组：把通道问题与模型问题分开（P1）<a class="anchor" href="#2-2-a-对照组-把通道问题与模型问题分开-p1" aria-label="锚点">#</a></h3>
+<p>主组<strong>失败</strong>时补一次「同提示词、不带 tools」：A 败 B 成 → <code>route-rejects-tools</code>（通道拒绝 <code>tools</code>）。该态属通道，<strong>不按模型键落库</strong>。</p>
+<h3 id="2-3-b-wire-侧只认正面证据-p2">2.3 B — wire 侧只认正面证据（P2）<a class="anchor" href="#2-3-b-wire-侧只认正面证据-p2" aria-label="锚点">#</a></h3>
+<p><code>shouldStripUpstreamTools</code> 档位：env 钉子 → 实测 <code>text</code>/<code>native</code> → 通道拒收 → <strong>其余一律发</strong>。<br>名字启发退出 wire 判定，但<strong>保留在提示词侧</strong>（<code>modelLacksReliableToolCalling</code>）。<br>两门不锁步是安全的：教学文案是<strong>加性</strong>的（<code>_toolCallingFallbackProfile</code> 标题即 <code>Tool calling (text-based fallback)</code>，不断言「你没有原生工具」），且文本调用在两条协议下都会被 <code>resolveToolCalls</code> 解析执行 —— 暂定档有两条成功路径，任一条走通都算成功。<strong>不得把两门改成耦合</strong>。</p>
+<p>未知档的代价是明账：真拒收 <code>tools</code> 的通道第一次请求多一个 400 往返，而那一趟正是把 <code>routeRejects</code> 记下来的对照证据，记下之后不再付第二次。</p>
+<h3 id="2-4-通道分区与身份-p2-p4-部分前移">2.4 通道分区与身份（P2，P4 部分前移）<a class="anchor" href="#2-4-通道分区与身份-p2-p4-部分前移" aria-label="锚点">#</a></h3>
+<ul><li><code>capabilityModelKey.routeKey()</code> → <code>&lt;adapter或provider&gt;::&lt;host&gt;[:port]::&lt;裸模型名&gt;</code>（不硬编码任何主机名，只解析调用方报上来的 endpoint）</li><li><code>toolCapabilityStore</code> 的 <code>route:</code> 前缀分区：与模型级记录同文件、不同命名空间、独立 TTL、不参与模型键迁移</li><li>两处 400 链在<strong>重试成功之后</strong>才记（<code>_toolsStrippedFor400</code> / <code>_toolsStrippedForRetry</code>）：仅凭「看到 400 且当时带着 tools」不足以下结论，那个 400 可能因为别的字段</li></ul>
+<h3 id="2-5-c-隔离式挑战-p3">2.5 C — 隔离式挑战（P3）<a class="anchor" href="#2-5-c-隔离式挑战-p3" aria-label="锚点">#</a></h3>
+<p><code>toolChallengeCadence</code> 按 <code>(通道 × 模型)</code> 计请求数，每 N 次（默认 10，<code>KHY_TOOL_CAP_CHALLENGE_EVERY</code>）放行一次原生挑战：那一轮照发 <code>tools</code>，模型若原生调用即被被动学习晋升 <code>native</code>，错误结论当场推翻，不必等 TTL。</p>
+<p><strong>只做单边</strong>（跳过剥离、不动提示词）：教学文案是加性的，模型在挑战轮有「原生调用 / 回退文本语法」两条路，后者照样被解析执行 —— 因此不需要两侧协调，也就没有失同步风险。</p>
+<p><strong>不越权</strong>：通道已被判拒收时不挑战（那是端点的定论，该由它自己的 TTL 到期重试）；env 钉子连挑战轮也不越过。两条都由判据层强制，不依赖调用方自觉（<code>SECURITY-004</code> / <code>RUNTIME-010</code> 同精神）。</p>
+<p>计数粒度是<strong>每 (通道 × 模型) 的请求数</strong>，不是严格回合语义 —— 一次工具循环内有多次请求，本机制按请求采样。这是采样节奏，不是精确回数。</p>
+<h3 id="2-6-d-逃生舱与文案-p0">2.6 D — 逃生舱与文案（P0）<a class="anchor" href="#2-6-d-逃生舱与文案-p0" aria-label="锚点">#</a></h3>
+<ul><li>env 强制名单改用与实测缓存同一套键（<code>capabilityModelKey</code> 规范化）：<code>KHY_NATIVE_TOOL_MODELS=agnes-3.0-flash</code> 对路由 id 形态同样生效</li><li>提示文案收口为 <code>stripToolsNotice()</code> 单一真源，两个剥离门不再各持一份字符串；文案陈述事实（未确证 / 工具仍可用）并给出复测命令，不再引导用户换模型</li></ul>
+<hr>
+<h2 id="3-不变量-不得放宽">3. 不变量（不得放宽）<a class="anchor" href="#3-不变量-不得放宽" aria-label="锚点">#</a></h2>
+<ol><li><strong>权限门不因协议放宽</strong>：文本协议解析出的调用仍走同一 <code>executeTool</code> 审批链。</li><li><strong><code>native → text</code> 降级必须显式 <code>force</code></strong>（用户主动重测或 env 钉死）。</li><li><strong>门控语义保持</strong>：<code>KHY_MODEL_TOOLING_CAPABILITY=0</code> 时字节回退旧内联逻辑（注意：旧正则同样带 <code>flash</code>，关掉它并不能解决 flash 误判）。</li><li><strong>纯叶子合约</strong>：<code>modelToolingCapability</code> / <code>toolCallingProbe</code> / <code>capabilityModelKey</code> / <code>toolChallengeCadence</code> 的纯判定部分零 IO、绝不抛。</li><li><strong>通道裁决不写模型键</strong>，模型裁决不写通道键。</li><li><strong>两个门不锁步</strong>（§2.3 的理由）。</li></ol>
+<hr>
+<h2 id="4-机制落地阶段登记-process-008">4. 机制落地阶段登记（<code>PROCESS-008</code>）<a class="anchor" href="#4-机制落地阶段登记-process-008" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>机制</th><th>阶段</th><th>说明</th></tr></thead><tbody><tr><td>隔离式挑战（<code>toolChallengeCadence</code>）</td><td><strong>S1</strong></td><td>非拦截型：它<strong>放宽</strong>剥离（每 N 次多发一次 <code>tools</code>），从不阻断任何流程。登记 S1 是保守取值。回退动作 = <code>KHY_TOOL_CAP_CHALLENGE=0</code>（纯配置，满足 PP-4）</td></tr><tr><td>剥离门本身（<code>shouldStripUpstreamTools</code> 的实际剥离行为）</td><td><strong>不登记，且判定为 <code>PROCESS-008</code> 范围外</strong></td><td>理由见下，可被推翻</td></tr></tbody></table>
+<h3 id="4-1-为什么剥离门不进-rollout-mechanisms">4.1 为什么剥离门不进 <code>rollout.mechanisms[]</code><a class="anchor" href="#4-1-为什么剥离门不进-rollout-mechanisms" aria-label="锚点">#</a></h3>
+<p>按 <code>[DESIGN-PROCESS-002]</code> 对触发面的定义，那条规则管的是「<strong>新的拦截型机制</strong>（会阻断 AI 或 CI 的<strong>钩子/检查器/门禁</strong>）」。剥离门三条都不满足：</p>
+<ol><li><strong>不是新的</strong> —— 它早于该规则存在（<code>multiFreeService</code> / <code>relayApiAdapter</code> 的 <code>_decideStripTools</code> 历史内联正则可溯）。规则不溯及既往。</li><li><strong>不是钩子/检查器/门禁</strong> —— 它是网关发请求前的一次 payload 协商，作用对象是上游请求体，不是 AI 的决策流或 CI 的流水线。</li><li><strong>不阻断任何东西</strong> —— 请求照样发出、模型照样回答，只是不带 <code>tools</code> 字段；调用改由文本协议承载（§1.1 第二类），<strong>工具仍然可执行</strong>。没有任何一步被拒绝。</li></ol>
+<p><strong>明确的反方向判据</strong>（什么情况下这个结论会翻转）：若评审认为「<strong>减少 agent 可用通道</strong>」本身就该受 PP-1 管制 —— 即把「静默降掉一个能力，而 agent 无从知道」视为 gate 级伤害 —— 那么正确做法是登记为 <strong>S3</strong>，并接受 <code>rollout-stage-skip-s1</code> / <code>rollout-stage-samples-insufficient</code> 点亮。<strong>那两条红点不是误报，而是正确的信号</strong>：该机制确实没有观察期历史（它比规则年长），需要的是补一个观察期方案（例如先把剥离决策改为「记录 + 放行」跑够样本，再恢复剥离），而不是补填一行登记表。本仓没有可用的历史样本，所以我不代填：填 S3 会让仓库变红且无解，填 S1 会让「登记说 S1、代码其实在介入」成为一句假话。</p>
+<p><strong>旁观证据</strong>：自 P2 起剥离已改为「只认正面证据」（未实测一律发、<code>text</code> 要求显式调用语法、通道拒收来自带对照的 400），机制自身的冒进面已大幅收窄 —— 这使得「先按现状记录、把观察期方案留作独立决定」在风险上是可接受的。</p>
+<hr>
+<h2 id="5-复现与验收">5. 复现与验收<a class="anchor" href="#5-复现与验收" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">node .khy/feedback/toolcall-capability-falseneg-20260923/repro.js        <span class="hljs-comment"># 同一条命令的前后对照</span>
+node .khy/feedback/toolcall-capability-falseneg-20260923/repro-p1-wired.js
+node .khy/feedback/toolcall-capability-falseneg-20260923/check-p2.js
+node .khy/feedback/toolcall-capability-falseneg-20260923/check-p3.js</code></pre>
+<p>回归护栏：<code>toolCapabilityFalsenegRegression.test.js</code>（把四条病灶各自钉成断言）、<code>toolChallengeCadence.test.js</code>、<code>toolCallParser.explicitSyntax.test.js</code>。</p>
+<hr>
+<h2 id="6-用户可见的变化">6. 用户可见的变化<a class="anchor" href="#6-用户可见的变化" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>场景</th><th>修复前</th><th>修复后</th></tr></thead><tbody><tr><td>未实测的 <code>*-flash</code> 模型</td><td>提示「不支持工具调用，请切换到支持 function calling 的模型」，wire 无 tools</td><td>照发 tools；提示仅在确有证据时出现，且给出 <code>khy gateway probe-tools</code> 复测入口</td></tr><tr><td>严格端点拒收 <code>tools</code></td><td>每次请求都付一个 400</td><td>首次付一次（构成对照证据），此后该通道直接剥</td></tr><tr><td>被判 <code>text</code> 的模型</td><td>只能等 7 天 TTL 才能翻案</td><td>每 N 次请求获得一次原生挑战，可当场翻案</td></tr><tr><td><code>khy gateway probe-tools list</code></td><td>只有模型级两组</td><td>第三组「通道拒收 tools」，与模型问题分开显示</td></tr></tbody></table>
+<hr>
+<h2 id="7-遗留">7. 遗留<a class="anchor" href="#7-遗留" aria-label="锚点">#</a></h2>
+<ol><li><strong><code>text</code> 裁决的适配器来源粒度</strong>：已按适配器收敛（<code>getVerdictFor</code>，负面不扩散），但记录里仍是适配器级而非<strong>端点级</strong>（同一适配器下两个 pool 共享一条 <code>text</code>）。要做到端点级，探测必须报出它实际请求的 endpoint（目前 <code>verifyToolCalling</code> 只知道适配器键）。收益递减、改动面不小，暂留。</li><li><strong>剥离门的阶段定性</strong>（§4.1）：已给出「范围外」的完整理由与反方向判据，等一次评审确认；若被推翻，后续是补观察期方案，不是补登记行。</li><li><strong>khyquant 分叉副本</strong>：<code>software/khyquant/services/</code> 下同名文件是独立分支（已分叉，且无 <code>capabilityModelKey</code>），仍是旧判定与旧文案。已登记为 BUG-015 待专门决定收敛还是各自维护。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-137] khyos运行时信息获取规则与读取预算接线方案.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-137] khyos 运行时信息获取规则与读取预算接线方案</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-139] 网关零尝试(NO_ATTEMPT)与钉选残留第6次复发修复方案.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-139] 网关零尝试(NOATTEMPT)与钉选残留第 6 次复发修复方案</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-138] 工具调用能力判定与文本拦截协议.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -141,4 +141,52 @@ function buildCopyPayload(texts, opts = {}) {
   return { ok: true, payload: picked.text, description: `${ord}(${picked.text.length} 字)` };
 }
 
-module.exports = { isEnabled, parseCopyArgs, selectReply, extractCodeBlocks, buildCopyPayload };
+/**
+ * 把统一剪贴板出口(tui/utils/ccClipboard.writeClipboard)的失败 reasons 翻译成
+ * 「问题:原因,修复建议」人读文案(工程规则 2.2)。纯函数、绝不抛。
+ * @param {object} reasons - { empty?, gate?, native?, osc52? }
+ * @param {{ bytes?: number }} [meta]
+ * @returns {string}
+ */
+function describeClipboardFailure(reasons, meta = {}) {
+  const r = reasons || {};
+  if (r.gate === 'off') {
+    return '统一剪贴板出口已关闭(KHY_CC_CLIPBOARD=off):set KHY_CC_CLIPBOARD=1 后重试';
+  }
+  if (r.empty === 'no-content') {
+    return '载荷为空:没有可写入剪贴板的文本内容';
+  }
+  const parts = [];
+  if (r.native) {
+    parts.push(
+      r.native === 'no-tool'
+        ? '系统剪贴板工具不可用(未找到 pbcopy/xclip/wl-copy/Set-Clipboard)'
+        : `系统剪贴板工具执行失败(${r.native})`
+    );
+  }
+  if (r.osc52 === 'tty') {
+    parts.push('OSC 52 兜底未发射:当前是交互终端(TTY),直接喷转义会污染画面');
+  } else if (r.osc52 === 'oversize') {
+    const kb = meta && meta.bytes ? Math.ceil(meta.bytes / 1024) : 0;
+    parts.push(
+      `OSC 52 载荷超限(${kb}KB > KHY_CLIPBOARD_MAX_BYTES):请分段复制,或 set KHY_CLIPBOARD_MAX_BYTES=0 解除上限`
+    );
+  } else if (r.osc52 === 'gate-off') {
+    parts.push('OSC 52 兜底已关闭(KHY_CLIPBOARD_OSC52=off)');
+  } else if (r.osc52) {
+    parts.push(`OSC 52 兜底失败(${r.osc52})`);
+  }
+  if (parts.length === 0) {
+    parts.push('未知原因:所有剪贴板通道均未成功');
+  }
+  return parts.join('；');
+}
+
+module.exports = {
+  isEnabled,
+  parseCopyArgs,
+  selectReply,
+  extractCodeBlocks,
+  buildCopyPayload,
+  describeClipboardFailure,
+};

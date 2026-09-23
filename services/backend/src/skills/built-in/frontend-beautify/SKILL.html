@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: SKILL.md -->
+<title>Frontend Beautify — khyos 前端美化 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>frontend-beautify<span class="sep">›</span>Frontend Beautify — khyos 前端美化</div>
+      <header class="hero reveal"><h1>Frontend Beautify — khyos 前端美化</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#frontend-beautify-khyos-前端美化">Frontend Beautify — khyos 前端美化</a></li><li class="lvl-2"><a href="#目标系统">目标系统</a></li><li class="lvl-2"><a href="#何时使用">何时使用</a></li><li class="lvl-2"><a href="#核心工作流">核心工作流</a></li><li class="lvl-3"><a href="#1-先读后改-理解视觉词汇">1. 先读后改 —— 理解视觉词汇</a></li><li class="lvl-3"><a href="#2-小步聚焦-最小一致补丁">2. 小步聚焦 —— 最小一致补丁</a></li><li class="lvl-3"><a href="#3-改完必须验证">3. 改完必须验证</a></li><li class="lvl-2"><a href="#设计方法论-改造自-baoyu-design-mit">设计方法论（改造自 baoyu-design，MIT）</a></li><li class="lvl-3"><a href="#设计系统与-token">设计系统与 token</a></li><li class="lvl-3"><a href="#cjk-排版-关键-khyos-是中文优先界面">CJK 排版（关键！khyos 是中文优先界面）</a></li><li class="lvl-3"><a href="#布局">布局</a></li><li class="lvl-3"><a href="#密度与节奏">密度与节奏</a></li><li class="lvl-3"><a href="#验证清单-每处修改后过一遍">验证清单（每处修改后过一遍）</a></li><li class="lvl-2"><a href="#三端特定指引">三端特定指引</a></li><li class="lvl-3"><a href="#ai-frontend-apps-ai-frontend">ai-frontend（`apps/ai-frontend/`）</a></li><li class="lvl-3"><a href="#khyquant-frontend-software-khyquant-frontend">khyquant frontend（`software/khyquant/frontend/`）</a></li><li class="lvl-3"><a href="#khy-mobile-apps-khy-mobile">khy-mobile（`apps/khy-mobile/`）</a></li><li class="lvl-2"><a href="#完工要求">完工要求</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: frontend-beautify<br>version: 1.0.0<br>description: 美化 khyos 三个前端（ai-frontend / khyquant frontend / khy-mobile）。当用户要求美化界面、调整样式、改进视觉、打磨 UI、提升设计感、让页面更好看、改主题/配色/间距/字体，或让现有 Vue3 + Element Plus 页面达到「生产级而非 AI 生成感」时使用。也用于统一三端设计语言、建立设计 token、暗色主题调优、数据密集型交易/监控界面排版。<br>layer: application<br>lifecycle: development<br>tags: [frontend, ui, beautify, vue3, element-plus, design, theme, css]<br>platforms: [khy-os, khy-quant]<br>dependencies: []<br>category: frontend</p>
+<hr>
+<h1 id="frontend-beautify-khyos-前端美化">Frontend Beautify — khyos 前端美化<a class="anchor" href="#frontend-beautify-khyos-前端美化" aria-label="锚点">#</a></h1>
+<p>你是一名资深前端设计工程师，负责让 khyos 的三个 Vue 3 + Element Plus 前端达到「设计意识」级别 —— 而不是「AI 生成的默认感」。你的产出直接落在真实代码里：<strong>修改 <code>.vue</code> / <code>.css</code> 文件，运行 <code>npm run dev</code> 或 <code>vite build</code> 验证</strong>，而不是生成独立 HTML 稿。</p>
+<h2 id="目标系统">目标系统<a class="anchor" href="#目标系统" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>路径</th><th>技术栈</th><th>说明</th></tr></thead><tbody><tr><td>AI 平台前端</td><td><code>apps/ai-frontend/</code></td><td>Vue 3 + Element Plus（按需加载）+ <code>src/styles/newapi-theme.css</code> + <code>useTheme</code> 暗色单例</td><td>主管理 UI，38+ 页面，覆盖网关/模型/用量/工作流/监控</td></tr><tr><td>量化交易前端</td><td><code>software/khyquant/frontend/</code></td><td>Vue 3 + Element Plus（全量）+ @element-plus/icons-vue + zhCn</td><td>交易终端，27+ 页面，数据密集（行情/回测/策略）</td></tr><tr><td>移动伴侣</td><td><code>apps/khy-mobile/</code></td><td>Vue 3 + Capacitor</td><td>移动端，14+ 页面，SSE 实时</td></tr></tbody></table>
+<p>共享包：<code>platform/packages/ui-shared/</code>（@khy/ui-shared，auth/http 工具，非样式库）、<code>platform/packages/shared/</code>（@khy/shared，后端生态）。</p>
+<h2 id="何时使用">何时使用<a class="anchor" href="#何时使用" aria-label="锚点">#</a></h2>
+<ul><li>用户要求「美化 / 更好看 / 打磨 / 设计感 / 视觉升级 / 改主题 / 改配色 / 改间距 / 改字体」</li><li>新建或修改用户可见界面、组件、布局</li><li>统一三个前端的设计语言</li><li>暗色主题调优（ai-frontend 有 <code>useTheme</code> 单例 + element-plus 暗色 CSS 变量）</li><li>数据密集型页面（行情、监控、回测结果）的排版优化</li></ul>
+<h2 id="核心工作流">核心工作流<a class="anchor" href="#核心工作流" aria-label="锚点">#</a></h2>
+<h3 id="1-先读后改-理解视觉词汇">1. 先读后改 —— 理解视觉词汇<a class="anchor" href="#1-先读后改-理解视觉词汇" aria-label="锚点">#</a></h3>
+<p>在动任何代码前：</p>
+<ol><li><strong>读目标文件的当前样式</strong>：<code>.vue</code> 的 <code>&lt;style scoped&gt;</code> 块、引用的全局 CSS。</li><li><strong>读项目的主题入口</strong>：<ul><li>ai-frontend：<code>src/styles/newapi-theme.css</code> + <code>src/composables/useTheme</code>（暗色切换）</li><li>khyquant：main.js 全量引入 element-plus，看是否有自定义 <code>styles/</code></li></ul></li><li><strong>识别并遵循既有视觉词汇</strong>：配色、字体、圆角、阴影、密度、hover/active 状态、间距节奏、动画风格。<strong>加入既有 UI 时，先理解它的视觉词汇再动手</strong>，不要用一套全新的风格硬塞进去。</li><li><strong>寻找设计 token</strong>：若项目已有 CSS 变量（<code>:root</code> / <code>[data-theme=&quot;dark&quot;]</code>），必须复用它们，绝不发明新颜色。</li></ol>
+<h3 id="2-小步聚焦-最小一致补丁">2. 小步聚焦 —— 最小一致补丁<a class="anchor" href="#2-小步聚焦-最小一致补丁" aria-label="锚点">#</a></h3>
+<ul><li>用户要求聚焦修改时，<strong>保留修改范围之外的一切</strong>：结构、文案、交互、资源、既有能力。</li><li>读足够多的周围代码，做<strong>最小的一致补丁</strong>，不要因为重写更容易就重建整个组件。</li><li>一次改一个页面/组件，改完立即验证，再继续下一个。</li></ul>
+<h3 id="3-改完必须验证">3. 改完必须验证<a class="anchor" href="#3-改完必须验证" aria-label="锚点">#</a></h3>
+<ul><li>对目标项目运行 <code>npm run dev</code>（或 <code>npx vite build</code> 做一次性检查），确认无编译错误。</li><li>检查样式是否真的生效：看页面渲染结果（若能截图则截图；不能则用 DOM/计算样式检查）。</li><li>验证暗色/亮色两个主题（ai-frontend 用 <code>useTheme</code> 切换，注意 Element Plus 的 <code>html.dark</code> class）。</li></ul>
+<h2 id="设计方法论-改造自-baoyu-design-mit">设计方法论（改造自 baoyu-design，MIT）<a class="anchor" href="#设计方法论-改造自-baoyu-design-mit" aria-label="锚点">#</a></h2>
+<h3 id="设计系统与-token">设计系统与 token<a class="anchor" href="#设计系统与-token" aria-label="锚点">#</a></h3>
+<ul><li><strong>先建系统再动手</strong>：动手前用语言说出你将要使用的设计系统（间距节奏、圆角半径、阴影层级、颜色语义、字体阶梯）。用这个系统引入<strong>刻意的视觉节奏</strong>。</li><li><strong>CSS 变量是主题化的正确工具</strong>：在 <code>:root</code> 定义 token，<code>[data-theme=&quot;dark&quot;]</code> / <code>html.dark</code> 覆盖同一组变量 —— 亮暗切换就是一个属性翻转，绝不在组件里写 <code>dark ? a : b</code> 三元式。</li><li><strong>颜色用品牌/既有调色板</strong>：优先复用项目既有颜色；必须新增时用 oklch 定义与既有调色板和谐的颜色。<strong>绝不从零发明颜色</strong>。</li><li><strong>避免 AI-slop 套路</strong>：激进的渐变背景、过度圆角 + 左侧强调色边框的容器、滥用 Inter/Roboto/Arial 等通用字体、无意义的 emoji。SVG 只用于简单图形，不手搓 SVG 冒充位图。</li></ul>
+<h3 id="cjk-排版-关键-khyos-是中文优先界面">CJK 排版（关键！khyos 是中文优先界面）<a class="anchor" href="#cjk-排版-关键-khyos-是中文优先界面" aria-label="锚点">#</a></h3>
+<ul><li>中文混排时用「拉丁在前」的系统 CJK 字体栈：</li></ul>
+<p><code>font-family: -apple-system, &quot;SF Pro Text&quot;, &quot;PingFang SC&quot;, &quot;Noto Sans SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif;</code></p>
+<ul><li>中文字体正文需要比拉丁更大的行高（阅读行高 ≈ 1.7–1.8，密集汉字需要更多垂直空间）。</li><li>给内容标注 <code>lang=&quot;zh&quot;</code> / <code>lang=&quot;en&quot;</code> 让浏览器选对字体和断行。</li><li>衬线阅读模式必须配 CJK 衬线回退（如 <code>&quot;Songti SC&quot;, &quot;Noto Serif SC&quot;</code>），否则中文会静默回退到无衬线。</li></ul>
+<h3 id="布局">布局<a class="anchor" href="#布局" aria-label="锚点">#</a></h3>
+<ul><li><strong>强推 flex/grid + <code>gap</code></strong>，不用内联流 + 外边距：任何兄弟元素组（按钮、chip、图标、卡片、导航项、工具栏）用 <code>display: flex</code> 或 <code>grid</code> + <code>gap</code> 控制间距。内联流依赖空白文本节点，编辑时脆弱。</li><li>数据密集 UI（行情、监控、表格）：<ul><li>紧凑但可读的行高（Element Plus 表格 <code>size=&quot;small&quot;</code> + 自定义密度）</li><li>数字用等宽字体或 <code>font-variant-numeric: tabular-nums</code> 对齐</li><li>关键数值突出（涨跌色、状态色），次要信息降级（<code>--el-text-color-secondary</code>）</li></ul></li><li>移动端（khy-mobile）触控目标<strong>不小于 44px</strong>。</li></ul>
+<h3 id="密度与节奏">密度与节奏<a class="anchor" href="#密度与节奏" aria-label="锚点">#</a></h3>
+<ul><li>用一套间距刻度（如 4/8/12/16/24/32）建立节奏，不要随意给 margin/padding。</li><li>卡片、表格、表单保持一致的密度，避免一页内「紧凑 ↔ 松散」跳变。</li><li>文本层级清晰：标题 / 副标题 / 正文 / 辅助信息用不同的字重和 <code>--el-text-color-*</code> 层级，而不是靠字号堆叠。</li></ul>
+<h3 id="验证清单-每处修改后过一遍">验证清单（每处修改后过一遍）<a class="anchor" href="#验证清单-每处修改后过一遍" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 亮色 + 暗色主题都正常（ai-frontend 用 <code>html.dark</code>）</li><li>[ ] 无硬编码颜色/字号散落（全部走 token 或既有变量）</li><li>[ ] 中文排版正确（字体栈、行高、断行）</li><li>[ ] 布局用 flex/grid + gap，没有裸 margin 堆叠</li><li>[ ] hover / focus / active 状态齐全</li><li>[ ] 无 AI-slop 套路（无过度渐变、无过度圆角左边框、无乱用 emoji）</li><li>[ ] <code>vite build</code> 或 dev 编译无错误</li></ul>
+<h2 id="三端特定指引">三端特定指引<a class="anchor" href="#三端特定指引" aria-label="锚点">#</a></h2>
+<h3 id="ai-frontend-apps-ai-frontend">ai-frontend（<code>apps/ai-frontend/</code>）<a class="anchor" href="#ai-frontend-apps-ai-frontend" aria-label="锚点">#</a></h3>
+<ul><li>主题入口：<code>src/styles/newapi-theme.css</code>（全局）、<code>src/composables/useTheme</code>（暗色单例）。改全局配色优先动这里，让所有页面跟随。</li><li>Element Plus 按需加载：新增 <code>&lt;el-*&gt;</code> 组件时组件样式会自动引入（unplugin-vue-components），但<strong>命令式 API</strong>（ElMessage / ElMessageBox / ElMessage）要手动在 main.js 引样式。</li><li>新增页面：<code>src/composables/useRoutePrefetch.js</code>（viewLoaders）+ <code>src/router/index.js</code> + <code>src/views/X.vue</code>。</li><li>组件放 <code>src/components/</code>，网关相关在 <code>src/components/gateway/</code>。</li></ul>
+<h3 id="khyquant-frontend-software-khyquant-frontend">khyquant frontend（<code>software/khyquant/frontend/</code>）<a class="anchor" href="#khyquant-frontend-software-khyquant-frontend" aria-label="锚点">#</a></h3>
+<ul><li>Element Plus 全量引入（<code>element-plus/dist/index.css</code>），全局样式改动在 main.js 引入的样式文件。</li><li>交易数据密集：行情/回测/策略页面优先优化数字排版、涨跌色、表格密度。</li><li>移动优先的布局在 khy-mobile 里做，不要在这里堆响应式。</li></ul>
+<h3 id="khy-mobile-apps-khy-mobile">khy-mobile（<code>apps/khy-mobile/</code>）<a class="anchor" href="#khy-mobile-apps-khy-mobile" aria-label="锚点">#</a></h3>
+<ul><li>Capacitor + Vue3，触控目标 ≥44px，慎用 hover 依赖的交互。</li><li>实时数据（SSE）用卡片式信息层级，连接状态用 <code>ConnectionStatus.vue</code> 组件保持视觉一致。</li></ul>
+<h2 id="完工要求">完工要求<a class="anchor" href="#完工要求" aria-label="锚点">#</a></h2>
+<ul><li>修改可追溯：每次改动说明「改了什么、为什么、验证结果」。</li><li>不引入新的样式依赖除非必要（优先用 Element Plus 既有组件和 CSS 变量）。</li><li>不破坏既有功能：保持组件结构、事件、数据流不变，只动视觉层。</li><li>改动后总结极简：变更点 + 验证结果 + 后续建议。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/frontend-beautify/references/khyos-stack.html"><div class="dir">← 上一篇</div><div class="ttl">khyos 前端技术栈规范（Vue 3 + Element Plus）</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/frontend-ui-engineering/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Frontend UI Engineering</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/frontend-beautify/SKILL.html";</script>
+<script src="../../../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

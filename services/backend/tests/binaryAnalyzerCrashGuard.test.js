@@ -1,6 +1,6 @@
 'use strict';
 /**
- * binaryAnalyzerCrashGuard.test.js �?regression for the RangeError crash fix.
+ * binaryAnalyzerCrashGuard.test.js — regression for the RangeError crash fix.
  *
  * parseELF/parsePE walk attacker-controlled section/program-header offsets. A
  * crafted binary with valid magic but a bogus shentsize (e.g. 0 or 8) whose
@@ -10,10 +10,11 @@
  *
  * The KHY_BINARY_PARSE_GUARD gate (default-on) wraps the risky header walks and
  * degrades to a partial header result instead of throwing. With the gate OFF the
- * legacy (throwing) behavior is preserved byte-for-byte �?proving the guard is
+ * legacy (throwing) behavior is preserved byte-for-byte �?proving the guard is
  * load-bearing, not cosmetic.
  */
 const { parseELF, parsePE, binaryParseGuardEnabled } = require('../src/services/binaryAnalyzer');
+const assert = require('node:assert');
 // ── crafted corpus (mirrors extensions/scripts/khy-diagnostics/fuzzFileCorpus.js) ──
 // 64-bit ELF header, little-endian. e_shoff points near EOF, e_shentsize = 0.
 function craftedElfShentsizeZero() {
@@ -24,7 +25,7 @@ function craftedElfShentsizeZero() {
   buf.writeUInt16LE(2, 16);          // e_type = ET_EXEC
   buf.writeUInt16LE(0x3e, 18);       // e_machine = x86-64
   buf.writeBigUInt64LE(64n, 40);     // e_shoff = 64 (near the 72-byte EOF)
-  buf.writeUInt16LE(0, 58);          // e_shentsize = 0  (bogus �?off+32 overflows)
+  buf.writeUInt16LE(0, 58);          // e_shentsize = 0  (bogus �?off+32 overflows)
   buf.writeUInt16LE(4, 60);          // e_shnum = 4
   return buf;
 }
@@ -50,7 +51,7 @@ function craftedPeImportOverflow() {
   buf.writeUInt16LE(1, peOff + 6);       // NumberOfSections
   buf.writeUInt16LE(optHeaderSize, peOff + 20); // SizeOfOptionalHeader
   buf.writeUInt16LE(0x20b, optOff);      // PE32+ magic
-  buf.writeUInt32LE(16, optOff + 108);   // numDirs = 16 (>1 �?import walk reads past EOF)
+  buf.writeUInt32LE(16, optOff + 108);   // numDirs = 16 (>1 �?import walk reads past EOF)
   return buf;
 }
 // ── gate default is ON ──────────────────────────────────────────────
@@ -73,7 +74,7 @@ describe('Binary Analyzer Crash Guard', () => {
   test('parseELF does not throw on shentsize=0 near EOF (guard on)', () => {
       const buf = craftedElfShentsizeZero();
       let result;
-      expect(() => { result = parseELF(buf, { KHY_BINARY_PARSE_GUARD: '1' }).not.toThrow(); });
+      expect(() => { result = parseELF(buf, { KHY_BINARY_PARSE_GUARD: '1' }); }).not.toThrow();
       expect(result && typeof result === 'object').toBeTruthy();
       expect(result.format).toBe('ELF');
       // header fields parsed before the risky walk survive
@@ -83,35 +84,35 @@ describe('Binary Analyzer Crash Guard', () => {
 
   test('parseELF does not throw on shentsize=8 (guard on)', () => {
       const buf = craftedElfShentsizeSmall();
-      expect(() => parseELF(buf, { KHY_BINARY_PARSE_GUARD: '1' }).not.toThrow());
+      expect(() => parseELF(buf, { KHY_BINARY_PARSE_GUARD: '1' })).not.toThrow();
   });
 
   test('parsePE does not throw on import-directory overflow (guard on)', () => {
       const buf = craftedPeImportOverflow();
       let result;
-      expect(() => { result = parsePE(buf, { KHY_BINARY_PARSE_GUARD: '1' }).not.toThrow(); });
+      expect(() => { result = parsePE(buf, { KHY_BINARY_PARSE_GUARD: '1' }); }).not.toThrow();
       expect(result && typeof result === 'object').toBeTruthy();
       expect(result.format).toBe('PE');
   });
 
   test('parsePE throws on import-directory overflow when guard disabled', () => {
       const buf = craftedPeImportOverflow();
-      expect(() => parsePE(buf, { KHY_BINARY_PARSE_GUARD: '0' }).toThrow(), /out of range|RangeError|bounds/i);
+      expect(() => parsePE(buf, { KHY_BINARY_PARSE_GUARD: '0' })).toThrow(/out of range|RangeError|bounds/i);
   });
 
   test('parseELF throws on shentsize=0 when guard disabled (proves guard is load-bearing)', () => {
       const buf = craftedElfShentsizeZero();
-      expect(() => parseELF(buf, { KHY_BINARY_PARSE_GUARD: '0' }).toThrow(), /out of range|RangeError|bounds/i);
+      expect(() => parseELF(buf, { KHY_BINARY_PARSE_GUARD: '0' })).toThrow(/out of range|RangeError|bounds/i);
   });
 
   test('parseELF on a clean minimal ELF returns identical result guard on/off', () => {
-      // Minimal valid header with e_shoff = 0 (no section walk) �?both paths agree.
+      // Minimal valid header with e_shoff = 0 (no section walk) �?both paths agree.
       const buf = Buffer.alloc(64, 0);
       buf.write('\x7fELF', 0, 'latin1');
       buf[4] = 2; buf[5] = 1;
       buf.writeUInt16LE(2, 16);
       buf.writeUInt16LE(0x3e, 18);
-      // e_shoff stays 0 �?no section header walk attempted
+      // e_shoff stays 0 �?no section header walk attempted
       const on = parseELF(buf, { KHY_BINARY_PARSE_GUARD: '1' });
       const off = parseELF(buf, { KHY_BINARY_PARSE_GUARD: '0' });
       assert.deepEqual(on, off);

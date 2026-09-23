@@ -40,10 +40,10 @@ describe('Gateway Model Choices Leaf', () => {
 
   test('setGatewayModelChoicesDeps is a guarded, idempotent, non-throwing DI setter', () => {
       const { setGatewayModelChoicesDeps } = require(LEAF);
-      expect(() => setGatewayModelChoicesDeps().not.toThrow());
-      expect(() => setGatewayModelChoicesDeps({}).not.toThrow());
+      expect(() => setGatewayModelChoicesDeps()).not.toThrow();
+      expect(() => setGatewayModelChoicesDeps({})).not.toThrow();
       // Non-function deps ignored; falsy STRICT ignored.
-      expect(() => setGatewayModelChoicesDeps({ promptWithReplGuard: 1, isAdapterOperational: null, STRICT_OPERATIONAL_ADAPTERS: null }).not.toThrow());
+      expect(() => setGatewayModelChoicesDeps({ promptWithReplGuard: 1, isAdapterOperational: null, STRICT_OPERATIONAL_ADAPTERS: null })).not.toThrow();
       // Idempotent re-injection across the full 24-fn surface + the shared Set value.
       const fakeDeps = { STRICT_OPERATIONAL_ADAPTERS: new Set(['codex']) };
       for (const n of ['promptWithReplGuard', '_getDeepProbeCache', '_setDeepProbeCache', '_getAdapterProbeTimeoutMs',
@@ -55,8 +55,8 @@ describe('Gateway Model Choices Leaf', () => {
         'persistGatewayPreference']) {
         fakeDeps[n] = () => undefined;
       }
-      expect(() => setGatewayModelChoicesDeps(fakeDeps).not.toThrow());
-      expect(() => setGatewayModelChoicesDeps(fakeDeps).not.toThrow());
+      expect(() => setGatewayModelChoicesDeps(fakeDeps)).not.toThrow();
+      expect(() => setGatewayModelChoicesDeps(fakeDeps)).not.toThrow();
   });
 
 });

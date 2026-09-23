@@ -490,12 +490,37 @@ async function handleGatewayStatus(options = {}) {
       printInfo(`配置默认路由: ${preferredRoute.routeLabel}`);
     }
     if (preferredIssue) {
+      // [DESIGN-ARCH-136] 第 3 期:同一事实在 selfcheck 里被判成 error 级
+      // (baseSelfCheckService.js:540-543「所有 AI 调用将硬失败」),而这里原先只陈述
+      // 「首选通道当前不可用」—— 两个真源对同一事实轻重不一,用户看不出它会让
+      // 每轮请求全灭。此处统一披露 strict 这个放大器,并给出有源码背书的解钉路径。
       if (preferredIssue.type === 'invalid') {
         printError(preferredIssue.message);
-        printInfo('修复建议: 运行 khy gateway model 重新选择可执行通道');
+        if (preferredIssue.strict) {
+          printError(
+            '  ⚠ GATEWAY_PREFERRED_STRICT 未关闭:首选通道不可用且禁止回退，每次 AI 调用都会失败在它上面'
+          );
+        }
+        printInfo(
+          '修复建议: 把 GATEWAY_PREFERRED_ADAPTER 清空或设为 auto（要保留钉选就改 GATEWAY_PREFERRED_STRICT=false 放行回退）'
+        );
+        printInfo('  或运行 `khy doctor`（会检出并按实测可用通道自动改写该项）');
+        printInfo('  或运行 `khy gateway model` 重新选择可执行通道');
       } else if (preferredIssue.type === 'unavailable') {
         printInfo(preferredIssue.message);
-        printInfo('建议: 运行 khy gateway test <adapter> 复测，或用 khy gateway model 切换通道');
+        if (preferredIssue.strict) {
+          printError(
+            '  ⚠ GATEWAY_PREFERRED_STRICT 未关闭:首选不可用时禁止回退，每次 AI 调用都会硬失败在它上面'
+          );
+        }
+        printInfo(
+          '修复建议: 把 GATEWAY_PREFERRED_ADAPTER 清空或设为 auto（要保留钉选就改 GATEWAY_PREFERRED_STRICT=false 放行回退）'
+        );
+        printInfo('  或运行 `khy doctor`（会检出并按实测可用通道自动改写该项）');
+        printInfo('  或运行 `khy gateway model` 重新选择可执行通道');
+        printInfo(
+          `  复测: \`khy gateway test ${preferredIssue.adapterType || '<adapter>'}\`，改完重跑 \`khy gateway status\` 复核`
+        );
       }
     }
     _printLatencyAutoTuneSnapshot();

@@ -23,6 +23,10 @@ router.get('/data/:symbol', flexibleAuth, comprehensiveDataController.getCompreh
 // GET /range/:symbol —— 获取指定标的的可用数据时间范围
 router.get('/range/:symbol', flexibleAuth, comprehensiveDataController.getDataRange);
 
+// GET /market-quotes —— 获取热门标的实时行情列表（指数+热门股）
+// 消费方：khyquant 前端 api/marketData.getMarketQuotes() 二级降级路径
+router.get('/market-quotes', flexibleAuth, comprehensiveDataController.getMarketQuotes);
+
 // POST /batch —— 批量获取多个标的的行情数据
 router.post('/batch', flexibleAuth, comprehensiveDataController.getBatchData);
 

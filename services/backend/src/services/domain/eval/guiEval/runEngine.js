@@ -111,7 +111,7 @@ class RunEngine {
   async _prepareEnvironment(env = {}) {
     // Start required applications before execution.
     const apps = Array.isArray(env.apps) ? env.apps : [];
-    const { DesktopController } = require('../desktopControl');
+    const { DesktopController } = require('../../desktop/desktopControl');
     const controller = new DesktopController({ sessionId: '__eval-env__' });
     for (const appName of apps) {
       try {

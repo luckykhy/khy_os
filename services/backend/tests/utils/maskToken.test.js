@@ -16,11 +16,12 @@ describe('maskToken', () => {
   });
 
   test('masks long tokens (>10 chars)', () => {
-    expect(maskToken('12345678901')).toBe('123456***01');
+    // Contract: first 6 + *** + last 4
+    expect(maskToken('12345678901')).toBe('123456***8901');
     expect(maskToken('abcdefghijklmnop')).toBe('abcdef***mnop');
   });
 
   test('trims whitespace', () => {
-    expect(maskToken('  12345678901  ')).toBe('123456***01');
+    expect(maskToken('  12345678901  ')).toBe('123456***8901');
   });
 });

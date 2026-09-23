@@ -41,9 +41,9 @@ describe('Cache Usage Normalizer', () => {
   });
 
   test('missing / empty usage yields zeros', () => {
-      expect(normalizeCacheUsage(null)).toBe({ cacheReadInputTokens: 0, cacheWriteInputTokens: 0 });
-      expect(normalizeCacheUsage({})).toBe({ cacheReadInputTokens: 0, cacheWriteInputTokens: 0 });
-      expect(normalizeCacheUsage('nope')).toBe({ cacheReadInputTokens: 0, cacheWriteInputTokens: 0 });
+      expect(normalizeCacheUsage(null)).toEqual({ cacheReadInputTokens: 0, cacheWriteInputTokens: 0 });
+      expect(normalizeCacheUsage({})).toEqual({ cacheReadInputTokens: 0, cacheWriteInputTokens: 0 });
+      expect(normalizeCacheUsage('nope')).toEqual({ cacheReadInputTokens: 0, cacheWriteInputTokens: 0 });
   });
 
   test('negative / non-finite values are clamped to 0', () => {

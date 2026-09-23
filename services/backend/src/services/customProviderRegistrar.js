@@ -439,6 +439,65 @@ function ensureBuiltinQoder(options = {}) {
   }
 }
 
+// ── Built-in OpenCode Zen free provider (always-on) ──────────────────────────
+// Free tier needs no account key: the gate is client UA + local session headers
+// injected by zenGatekeeper at call time. The pool key "public" is the documented
+// non-secret bearer. Endpoint comes from serviceDefaults.ZEN_BASE_URL (SSOT).
+const BUILTIN_ZEN = Object.freeze({
+  poolKey: 'opencode-zen',
+  displayName: 'OpenCode Zen',
+  endpoint: `${require('../constants/serviceDefaults').ZEN_BASE_URL.replace(/\/+$/, '')}`,
+  key: 'public',
+  defaultModel: 'claude-fable-5',
+  // Offline fallback only — remote /v1/models discovery (apiAdapter) and
+  // dynamicFreeModelService override this list when reachable.
+  models: ['claude-fable-5', 'claude-fable-5-1', 'gemini-3-flash', 'gpt-6-astra'],
+});
+
+/**
+ * Seed the built-in OpenCode Zen free channel (idempotent, same shape as
+ * ensureBuiltinSenseNova). Call at init / gateway / management-server startup
+ * so fresh machines get a zero-registration free model path.
+ *
+ * @param {{force?: boolean}} [options]
+ * @returns {{seeded: boolean, poolKey: string}}
+ */
+function ensureBuiltinZen(options = {}) {
+  const force = !!options.force;
+  try {
+    pool.init();
+  } catch {
+    /* already initialised */
+  }
+
+  const hasKey = (pool.getPoolStatus(BUILTIN_ZEN.poolKey) || []).length > 0;
+  const provider = customRegistry.getProvider(BUILTIN_ZEN.poolKey);
+  const existingModels = provider && Array.isArray(provider.models) ? provider.models : [];
+  const haveAllModels = BUILTIN_ZEN.models.every((m) => existingModels.includes(m));
+
+  if (!force && hasKey && haveAllModels) {
+    return { seeded: false, poolKey: BUILTIN_ZEN.poolKey };
+  }
+
+  const extraModels = [];
+  for (const m of [...existingModels, ...BUILTIN_ZEN.models]) {
+    if (m && m !== BUILTIN_ZEN.defaultModel && !extraModels.includes(m)) {
+      extraModels.push(m);
+    }
+  }
+
+  registerCustomProvider({
+    displayName: BUILTIN_ZEN.displayName,
+    poolKey: BUILTIN_ZEN.poolKey,
+    endpoint: BUILTIN_ZEN.endpoint,
+    keyInput: BUILTIN_ZEN.key,
+    defaultModel: BUILTIN_ZEN.defaultModel,
+    extraModels,
+    ensureInit: true,
+  });
+  return { seeded: true, poolKey: BUILTIN_ZEN.poolKey };
+}
+
 /**
  * Replace ALL keys of an already-registered custom provider with a new key (or
  * keys). Provider metadata and env routing are left untouched — only the pool's
@@ -517,4 +576,6 @@ module.exports = {
   BUILTIN_SENSENOVA,
   ensureBuiltinSenseNova,
   ensureBuiltinQoder,
+  BUILTIN_ZEN,
+  ensureBuiltinZen,
 };

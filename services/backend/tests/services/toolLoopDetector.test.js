@@ -1,13 +1,15 @@
 'use strict';
 /**
- * Tests for toolLoopDetector.js �?8+ detector tool loop detection.
+ * Tests for toolLoopDetector.js — 8+ detector tool loop detection.
  *
- * node:test 风格（jest 通道通过 findStandaloneTestFiles 排除本文件，�?test:node）�?
- * contextWasm 提供真实 fnv1aHash（纯 JS 实现，可离线加载），无需 mock�?
+ * node:test 风格（jest 通道通过 findStandaloneTestFiles 排除本文件，�?test:node）�?
+ * contextWasm 提供真实 fnv1aHash（纯 JS 实现，可离线加载），无需 mock�?
  */
 const mod = require('../../src/services/toolLoopDetector');
 const { ToolLoopDetector, DEFAULT_CONFIG } = mod;
-describe('ToolLoopDetector', () => {
+
+describe('Tool Loop Detector', () => {
+  // merged from describe: ToolLoopDetector
   let detector;
   beforeEach(() => {
     detector = new ToolLoopDetector({
@@ -19,7 +21,7 @@ describe('ToolLoopDetector', () => {
     });
   });
   // ── Detector 8: actionStagnation (param-diversity aware) ────────────
-  describe('Detector 8: actionStagnation param diversity', () => {
+  // merged section: Detector 8: actionStagnation param diversity
     // Raise other thresholds so only actionStagnation is in play, and assert
     // on _checkActionStagnation() directly to avoid detector-order coupling.
     function makeDetector(extra = {}) {
@@ -31,9 +33,8 @@ describe('ToolLoopDetector', () => {
         ...extra,
       });
     }
-  });
   // ── Detector 8: env-overridable thresholds ───────────────────────
-  describe('Detector 8: env threshold overrides', () => {
+  // merged section: Detector 8: env threshold overrides
     const ENV_KEYS = [
       'KHY_TOOL_STAGNATION_THRESHOLD',
       'KHY_TOOL_STAGNATION_CRITICAL_THRESHOLD',
@@ -48,7 +49,9 @@ describe('ToolLoopDetector', () => {
         if (env[k] === undefined) delete process.env[k];
         else process.env[k] = env[k];
       }
-      delete require.cache[MODULE_PATH];
+      // jest's sandbox module registry ignores require.cache deletion, so
+      // resetModules() is required to make the re-require re-run module load.
+      jest.resetModules();
       try {
         return require(MODULE_PATH);
       } finally {
@@ -56,12 +59,11 @@ describe('ToolLoopDetector', () => {
           if (saved[k] === undefined) delete process.env[k];
           else process.env[k] = saved[k];
         }
-        delete require.cache[MODULE_PATH];
+        jest.resetModules();
       }
     }
-  });
   // ── Detector 11: web-retrieval failure streak (死缠烂打) ──────────────
-  describe('Detector 11: webRetrievalFailureStreak', () => {
+  // merged section: Detector 11: webRetrievalFailureStreak
     function attempt(d, toolName, params, success) {
       const verdict = d.check(toolName, params);
       d.recordCall(toolName, params);
@@ -70,10 +72,6 @@ describe('ToolLoopDetector', () => {
         : { success: false, error: 'fetch failed' });
       return verdict;
     }
-  });
-});
-
-describe('Tool Loop Detector', () => {
   test('check returns ok for first tool call', () => {
         const result = detector.check('read_file', { path: '/foo' });
         expect(result.level).toBe('ok');
@@ -126,8 +124,8 @@ describe('Tool Loop Detector', () => {
   });
 
   test('actionStagnation does NOT trip when params change (normal scan)', () => {
-        // 相同工具名但参数全部不同(扫描不同目录/文件)= 正常批量操作�?
-        // read_file �?FS �?�?pathIntentRepeat 兜底),多样性豁免适用�?
+        // 相同工具名但参数全部不同(扫描不同目录/文件)= 正常批量操作�?
+        // read_file �?FS �?�?pathIntentRepeat 兜底),多样性豁免适用�?
         for (let i = 0; i < 8; i++) {
           detector.recordCall('read_file', { path: `/file_${i}` });
         }
@@ -137,9 +135,9 @@ describe('Tool Loop Detector', () => {
   });
 
   test('actionStagnation suppressed by param diversity across a long streak', () => {
-        // 同一工具连续多次、参数全部不�?= 持续有进�?多样性抑制永不阻断�?
-        // 注意:①参数必须每次不�?genericRepeat 按「同参数总次数」判�?重复参数会触发它);
-        // ②调用次数须低于 circuitBreakerThreshold(10),否则 circuitBreaker 会抢先触发�?
+        // 同一工具连续多次、参数全部不�?= 持续有进�?多样性抑制永不阻断�?
+        // 注意:①参数必须每次不�?genericRepeat 按「同参数总次数」判�?重复参数会触发它);
+        // ②调用次数须低于 circuitBreakerThreshold(10),否则 circuitBreaker 会抢先触发�?
         for (let i = 0; i < 9; i++) {
           detector.recordCall('read_file', { path: `/file_${i}` });
         }
@@ -149,7 +147,7 @@ describe('Tool Loop Detector', () => {
   });
 
   test('shell_command with different commands does NOT stagnate (scan pattern)', () => {
-        // 用户报告场景:同一 shell_command 工具扫描多个不同路径被误判停滞�?
+        // 用户报告场景:同一 shell_command 工具扫描多个不同路径被误判停滞�?
         for (let i = 0; i < 8; i++) {
           detector.recordCall('shell_command', { command: `Get-ChildItem C:/path_${i}` });
         }
@@ -189,7 +187,7 @@ describe('Tool Loop Detector', () => {
 
   test('all-distinct params on a scan-class tool never trigger critical', () => {
           const d = makeDetector();
-          // read_file is an FS tool �?pathIntentRepeat backstops it, so the
+          // read_file is an FS tool �?pathIntentRepeat backstops it, so the
           // diversity exemption applies.
           for (let i = 0; i < 9; i++) {
             d.recordCall('read_file', { path: `/file_${i}` });
@@ -215,7 +213,7 @@ describe('Tool Loop Detector', () => {
 
   test('low param diversity (ratio below 0.75) still triggers critical on scan tool', () => {
           const d = makeDetector();
-          // 8 shell calls, only 2 distinct param sets �?ratio 0.25 < 0.75.
+          // 8 shell calls, only 2 distinct param sets �?ratio 0.25 < 0.75.
           for (let i = 0; i < 8; i++) {
             d.recordCall('shell_command', { command: i < 4 ? 'ls /a' : 'ls /b' });
           }
@@ -228,7 +226,7 @@ describe('Tool Loop Detector', () => {
 
   test('diversity exactly at the ratio threshold suppresses stagnation (scan tool)', () => {
           const d = makeDetector();
-          // 8 fs calls, 6 distinct param sets �?ratio 0.75 �?0.75 �?suppressed.
+          // 8 fs calls, 6 distinct param sets �?ratio 0.75 �?0.75 �?suppressed.
           const paths = ['/a', '/a', '/b', '/b', '/c', '/d', '/e', '/f'];
           for (const p of paths) {
             d.recordCall('read_file', { path: p });
@@ -239,7 +237,7 @@ describe('Tool Loop Detector', () => {
 
   test('custom stagnationDistinctRatio config is honored', () => {
           const d = makeDetector({ stagnationDistinctRatio: 0.9 });
-          // 6 distinct of 8 �?0.75 < 0.9 �?triggers under the stricter ratio.
+          // 6 distinct of 8 �?0.75 < 0.9 �?triggers under the stricter ratio.
           const paths = ['/a', '/a', '/b', '/b', '/c', '/d', '/e', '/f'];
           for (const p of paths) {
             d.recordCall('read_file', { path: p });

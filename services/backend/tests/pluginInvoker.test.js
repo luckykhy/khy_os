@@ -1,6 +1,6 @@
 'use strict';
 /**
- * pluginInvoker.test.js �?runtime invocation of a Coze-compatible plugin
+ * pluginInvoker.test.js — runtime invocation of a Coze-compatible plugin
  * operation as an HTTP call. Asserts:
  *   1. Argument binding �?path/query/header params + JSON body land in the
  *      right place; the final URL is built from servers[0].url + the path.
@@ -14,6 +14,7 @@
  * stubbed via urlSafety.__setDnsLookupForTests so the SSRF guard runs offline.
  */
 const invoker = require('../src/services/domain/extensions/plugins/pluginInvoker.js');
+const assert = require('node:assert');
 const urlSafety = require('../src/services/urlSafety');
 const OPENAPI = {
   openapi: '3.0.0',

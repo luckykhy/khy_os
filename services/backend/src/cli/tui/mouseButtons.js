@@ -33,17 +33,35 @@
  * 与 caretGeometry.js 的 parentNode 链累加同源;命中测试只需跳过 internal_static
  * 子树(静态区早已滚入 scrollback,不可点)。
  *
- * ── 门控:为什么默认全关 ──────────────────────────
+ * ── 门控:滚轮在备用缓冲区里**必须**有主 ──────────────────────────
  * 终端的鼠标追踪是**独占**的:一旦开启,滚轮与按住拖动都被送进本进程的 stdin,
  * 终端自己再也收不到 —— 用户同时失去「滚轮翻 scrollback」和「拖选复制」这两个最
  * 基础的终端能力。补偿是补不回来的:触发的那一下已经进了 stdin、终端没收到,
  * 无法回灌。慢速一格一格地滚(阅读时最常见的滚法)每一格都被吞掉。
  *
+ * ⚠ 但「不接管」在**备用缓冲区**里不是中立的,而是把滚轮让给了另一个接管者:
+ * 终端的 alternate-scroll(xterm / Windows Terminal 的 DECSET 1007)。备屏没有回滚
+ * 缓冲可滚,终端于是把滚轮**合成 ↑/↓ 键**写进 stdin;而本仓 arrowRouting 把
+ * idle / editing 两个 context 的 ↑/↓ 绑成 `history:previous` / `history:next`
+ * —— 用户滚一下滚轮,输入框里的**历史记录被召回**(2026-09-20 用户报告:
+ * 「鼠标滚动会历史回溯,这是不对的」)。这不是键位设计错了:合成键与本进程自己
+ * 收到的真按键**共用同一条 stdin、逐字节相同**,在应用侧无法区分,只能从源头
+ * (谁来接管滚轮)解决。
+ *
+ * ⇒ 判据按**缓冲区**分档,不再按「接管 = 坏」一刀切(唯一判据见 mouseTier):
+ *     备屏开(KHY_ALT_SCREEN 默认开) → 滚轮必须由本进程接管:默认 click 档,
+ *                                     滚轮经 onWheel 喂给应用内视口(Viewport)。
+ *     备屏关(KHY_ALT_SCREEN=0,主屏幕) → 默认 off:原生 scrollback 与拖选全保留,
+ *                                     这才是「不接管」真正划算的那一侧。
+ *   两侧都由 KHY_MOUSE=off/click/full 显式覆盖;`off` 恒关,任何默认都压不过它。
+ *
  * 参照实现(Claude Code,2026-08 实测):全量检索其 307MB 单文件 bundle,鼠标追踪
  * 序列只有 `?1000h`/`?1006h` 各一处,且上下文是一个 vendored 的多选提示组件;**没有
- * 1002,也没有 1003**。即 CC 的主 REPL 根本不接管鼠标,原生滚轮与拖选全程可用;
- * 展开与滚动全走键盘 —— Ctrl+O 开 Transcript 视图,视图内用 `scroll:*` 动作族
- * (j/k、Ctrl+U/D、g/G、Ctrl+E 全展开)。本模块因此也降到 1000(见 enableBytes)。
+ * 1002,也没有 1003**。即 CC 的主 REPL 根本不接管鼠标 —— 因为**它不跑在备用缓冲区
+ * 里**:转录留在真回滚缓冲中,原生滚轮滚的就是转录本身。本仓为防残影默认进备屏,
+ * 那条路就断了,只能自己接管滚轮。展开与滚动另走键盘 —— Ctrl+O 开 Transcript 视图,
+ * 视图内用 `scroll:*` 动作族(j/k、Ctrl+U/D、g/G、Ctrl+E 全展开)。本模块因此仍从
+ * 1000 起步(见 enableBytes),不引入 1003 的悬停洪流。
  *
  * ⚠ **一处曾被写错、且直接造成用户可见故障的推理(2026-09-17 修正)**:
  * 历史注释写「1000 不报位移,拖选从来不会变成本进程的事件,原生选择完整保留」——
@@ -126,21 +144,25 @@ function parseSgrMouse(input) {
 }
 
 /**
- * 鼠标按钮层总闸。**默认全平台关**,只有显式 env 才开 —— 见头部「为什么默认全关」:
- * 追踪态是独占的,开着就没有滚轮翻页与拖选复制,而透传补偿补不回触发事件本身。
+ * 鼠标按钮层总闸。**默认值由 mouseTier 决定**(备屏开 → 接管;主屏幕 → 不接管),
+ * 显式 env 永远优先 —— 判词见头部「滚轮在备用缓冲区里必须有主」。
  * @param {NodeJS.ProcessEnv} [env]
  * @param {string} [_platform] 保留形参:平台已不参与判定,仅为不破坏既有调用点签名
+ * @param {{hasWheelConsumer?: boolean}} [opts] 透传给 mouseTier,见其说明
  * @returns {boolean}
  */
 /**
- * 终端能力自动检测:当 KHY_MOUSE_BUTTONS 未显式设置时,根据环境变量推断终端是否支持
- * SGR 鼠标协议。默认认为现代终端支持（保守回退 true,因为不开比开更安全——关是用户显式选择）。
+ * 终端能力自动检测:当 KHY_MOUSE 档位与 KHY_MOUSE_BUTTONS 都未显式表态时,判断终端
+ * 是否**被识别**为支持 SGR 鼠标协议。识别不出来一律不接管。
  *
  * 检测顺序:
  *  1. Windows Terminal (WT_SESSION 非空)
  *  2. 已知 GUI 终端 (TERM_PROGRAM)
  *  3. 已知 TUI 终端 (TERM 包含)
- *  4. 兜底 true（现代终端大概率支持，不支持时用户可显式 KHY_MOUSE_BUTTONS=0 关闭）
+ *  4. 兜底 **false**(2026-09-17 起):未知终端不接管。开了会把老式 X10 编码的鼠标
+ *     字节当字面文本喂进输入框 —— 比滚轮失灵糟得多。用户仍可显式 KHY_MOUSE=click
+ *     接管。⚠ 本段曾写作「兜底 true」,与下面 `return false` 相反 —— 文档说要开、
+ *     代码不开,读的人只会照着文档推错。
  *
  * @param {NodeJS.ProcessEnv} [env]
  * @returns {boolean}
@@ -169,29 +191,61 @@ function autoDetectTerminal(env = process.env) {
 }
 
 /**
- * 三档鼠标策略(DESIGN-ARCH-102 §6.2,取代旧的「全开/全关」布尔):
- *   off   —— 完全不接管(原生滚轮+拖选保留)
- *   click —— 只开 1000+1006(按下/松开,不报位移);滚轮事件一律 fireNative()
- *   full  —— 额外开 1003 悬停高亮(事件洪流,明确 opt-in)
- * KHY_MOUSE_BUTTONS / KHY_MOUSE_HOVER 保留为显式覆盖(旧 env 优先),否则由档位决定。
+ * 备用缓冲区(alternate screen)是否生效。判据与 app.js 写 `\x1B[?1049h` 的那一行
+ * **同源**:默认开,只有显式 '0' 才关。
+ *
+ * 为什么值得下沉成叶子:它是「滚轮该不该被本进程接管」的**唯一前置条件**
+ * (见 mouseTier)。藏在 app.js 的启动流程里就没法被纯单测覆盖,而这条判据一旦判反,
+ * 用户看到的就是「滚轮变成输入历史回溯」—— 正是本模块头部 ⚠ 记的那个故障。
  * @param {NodeJS.ProcessEnv} [env]
- * @returns {'off'|'click'|'full'}
+ * @returns {boolean}
  */
-function mouseTier(env = process.env) {
-  const v = String((env && env.KHY_MOUSE) || '').trim().toLowerCase();
-  if (v === 'off' || v === '0' || v === 'no') return 'off';
-  if (v === 'full') return 'full';
-  if (v === 'click' || v === '1' || v === 'on' || v === 'yes' || v === '') return 'click';
-  return 'click';
+function altScreenEnabled(env = process.env) {
+  try {
+    const raw = (env || process.env).KHY_ALT_SCREEN;
+    if (raw === undefined || raw === null) return true;
+    return String(raw).trim() !== '0';
+  } catch {
+    return true;
+  }
 }
 
-function mouseButtonsEnabled(env = process.env, _platform = process.platform) {
+/**
+ * 三档鼠标策略(DESIGN-ARCH-102 §6.2,取代旧的「全开/全关」布尔):
+ *   off   —— 完全不接管(原生滚轮+拖选保留;备屏下等价于把滚轮交给终端合成 ↑/↓)
+ *   click —— 只开 1000+1006(按下/松开,不报位移);滚轮经 onWheel 走应用内视口
+ *   full  —— 额外开 1003 悬停高亮(事件洪流,明确 opt-in)
+ * KHY_MOUSE_BUTTONS / KHY_MOUSE_HOVER 保留为显式覆盖(旧 env 优先),否则由档位决定。
+ *
+ * 未显式表态时的默认值**按缓冲区定**(判词见头部「滚轮在备用缓冲区里必须有主」):
+ *   备屏开 → click;备屏关 → off。
+ * 2026-09-19 的实测结论(见 .khy/feedback/tui-ux-audit-20260919:click 档默认开启后
+ * WT 里滚轮/拖选体感变差)在**主屏幕**下依然成立,故主屏幕的默认值保持 off 不动;
+ * 备屏是另一回事 —— 那里没有回滚缓冲可丢,不接管的代价是滚轮被合成为方向键。
+ * @param {NodeJS.ProcessEnv} [env]
+ * @param {{hasWheelConsumer?: boolean}} [opts] 调用方声明「本界面有没有应用内视口
+ *        能消化滚轮」。`false` → 默认不接管(接管只会把滚轮吞掉,比不接管更糟)。
+ * @returns {'off'|'click'|'full'}
+ */
+function mouseTier(env = process.env, opts = {}) {
+  const v = String((env && env.KHY_MOUSE) || '').trim().toLowerCase();
+  if (v === 'full') return 'full';
+  if (v === 'click' || v === '1' || v === 'on' || v === 'yes') return 'click';
+  // ⚠ 显式 off 族必须在**这里**返回。默认分支已经从「恒 off」变成「按缓冲区定」,
+  // 少了这一行,`KHY_MOUSE=off` 在备屏下反而被判成 click —— 用户唯一的救命开关
+  // 反向生效,而且它看着像一条多余的分支,不会有任何测试天然发现。
+  if (OFF_VALUES.includes(v)) return 'off';
+  if (opts && opts.hasWheelConsumer === false) return 'off';
+  return altScreenEnabled(env) ? 'click' : 'off';
+}
+
+function mouseButtonsEnabled(env = process.env, _platform = process.platform, opts = {}) {
   const v = String((env && env.KHY_MOUSE_BUTTONS) || '').trim().toLowerCase();
   if (v === '1' || v === 'true' || v === 'on' || v === 'yes') return true;
   if (v === '0' || v === 'false' || v === 'off' || v === 'no') return false;
-  // 三档 + 未知终端不接管的组合语义:click/full 档默认接管,但仅当终端被**识别**;
-  // off 档恒不接管。
-  if (mouseTier(env) === 'off') return false;
+  // 三档 + 未知终端不接管的组合语义:click/full 档才接管,且必须终端被**识别**;
+  // off 档恒不接管。两条否决条件都与滚轮归属直接相关,别把任一条当成冗余。
+  if (mouseTier(env, opts) === 'off') return false;
   return autoDetectTerminal(env);
 }
 
@@ -222,8 +276,10 @@ function wheelDirection(button) {
 
 /**
  * 用户是否**显式**关掉了鼠标层(`KHY_MOUSE=off` / `KHY_MOUSE_BUTTONS=0`)。
- * 与 `mouseButtonsEnabled` 的区别:那个是「自动检测后的结论」,本函数只看用户有没有
- * 明确表态 —— 备用缓冲区里要强制接管滚轮时,只有显式表态才允许否决。
+ * 与 `mouseButtonsEnabled` 的区别:那个是「判据算出来的结论」,本函数只看用户有没有
+ * 明确表态。用途:备屏下的滚轮接管是**默认**行为,能推翻它的只有用户本人的显式表态
+ * —— 需要「默认接管 vs 用户否决」这个二分时用它,而不是用 `mouseButtonsEnabled`
+ * (那个在未知终端上也会是 false,与「用户不想接管」是两回事)。
  * @param {NodeJS.ProcessEnv} [env]
  * @returns {boolean}
  */
@@ -356,13 +412,85 @@ function collectLayout(rootNode) {
 }
 
 /**
+ * ink 的 `<Static>` 累计输出占掉多少**终端行**。
+ *
+ * 口径来自 ink 自己的组装规则(`ink/build/renderer.js`):每一批新 static 项输出为
+ * `${content}\n`,即「行与行以 \n 分隔 + 结尾再补一个 \n」,并附带一句注释说明补这个
+ * 换行是必须的 —— 否则 live 帧的第一行会盖掉 static 的最后一行。所以
+ *   终端行数 == `\n` 的个数
+ * 空 static 时 ink 得到 `'\n'`,而 `ink.js` 用 `staticOutput !== '\n'` 把它挡在
+ * `fullStaticOutput` 之外,不会虚增一行。
+ *
+ * @param {string|null|undefined} output ink 实例的 `fullStaticOutput`
+ * @returns {number} 非字符串 / 空串 → 0
+ */
+function staticRowCount(output) {
+  if (typeof output !== 'string' || output === '') {
+    return 0;
+  }
+  let n = 0;
+  for (let i = 0; i < output.length; i++) {
+    if (output.charCodeAt(i) === 10) n++;
+  }
+  return n;
+}
+
+/**
+ * live 帧在终端里的首行(= 树内 y=0 落在屏幕第几行)。
+ *
+ * 为什么不能恒等于 0:ink 把 `<Static>` 的输出**先**写进终端,再在其下方反复重绘 live
+ * 帧。备用缓冲区里光标从第 0 行起,内容一旦超过终端高度就整体上滚:
+ *   staticRows + frameRows + 1 ≤ rows  →  帧首行 = staticRows(还没滚)
+ *   否则                               →  帧首行 = rows − frameRows − 1
+ * 合起来是 `max(0, min(staticRows, rows − frameRows − 1))`。
+ *
+ * 那个 `− 1` 不是笔误,是 ink 的行尾约定:非全屏写的是 `log.update(output + '\n')`
+ * (`ink.js` 的 `outputToRender`),末尾那个换行把光标再往下推一行,于是稳态下帧下方
+ * 恒空一行。全屏分支(`lastOutputHeight ≥ rows`)写的是 `clearTerminal + static + output`,
+ * 没有那个换行 ⇒ 稳态帧首行 = rows − frameRows;但该分支成立时 frameRows ≥ rows,
+ * 两个式子都 ≤ 0、都夹成 0,所以一条公式覆盖两种情形。
+ *
+ * 实测(2026-09-21 复核,headless 挂真 App,118 列,字节流喂进最小 VT 屏幕模型):
+ *   rows=40 → S=8 F=38 帧首行 1   |   rows=26 → S=8 F=24 帧首行 1   |   rows=18 → S=8 F=16 帧首行 1
+ * 真 App 的视口把帧撑到 `rows − 2`,所以恒走右支、取到 1;左支(帧比终端矮得多、
+ * static 接得住)由「小 static + 单行 live」的最小 ink 应用钉住:S=6 → 帧首行 6。
+ * ⚠ 早先记的「rows=40 → 帧首行 8、rows=18 → 帧顶滚出屏幕」是**探针假象**:那版只
+ * 注入了假 stdout,而 App 的行高读的是 `process.stdout.rows`(`_resRows`),于是三种
+ * 行高下帧高恒为同一个 22。同一处陷阱还一度让我误录「帧高不随终端收缩」一条缺陷
+ * (原 BUG-28),复核后已撤销。
+ *
+ * 而改动前 `screenOffset()` 在非 anchorBottom 下恒返回 0 ⇒ 点击与拖选的行号整体偏移
+ * 这么多行(用户看到的就是「指针在第 5 行却复制到第 6 行」「图标点不中」)。稳态下那个
+ * 偏移正好是 **1 行**,与用户原话「第 5 行复制到第 6 行」逐字吻合。
+ *
+ * 纯函数、零 IO。非数字 / 缺失入参归 0(= 老行为),小数向下取整,绝不抛。
+ *
+ * @param {{staticRows?:number, frameRows?:number, rows?:number}} [info]
+ *        ink 实例的 `fullStaticOutput` 行数(用 `staticRowCount` 数)/ `lastOutputHeight` / 终端行数
+ * @returns {number}
+ */
+function liveFrameTop(info = {}) {
+  const s = Math.max(0, Math.floor(Number(info && info.staticRows) || 0));
+  const f = Math.max(0, Math.floor(Number(info && info.frameRows) || 0));
+  const r = Math.max(1, Math.floor(Number(info && info.rows) || 0));
+  return Math.max(0, Math.min(s, r - f - 1));
+}
+
+/**
  * 把 root 原点(相对坐标 y=0)换算成屏幕行偏移。
  * @param {number} rootHeight collectLayout().height(live 区高度)
- * @param {{rows:number, anchorBottom:boolean}} ctx
+ * @param {{rows:number, anchorBottom:boolean, screenTop?:number}} ctx
+ *        `screenTop` 是调用方(App)用 ink 自己的账本算出的权威值(见 `liveFrameTop`);
+ *        给了就优先用它 —— 它同时覆盖「Static 横幅占位」与「anchorBottom 贴底」两种来源。
  * @returns {number} 屏幕行 = y + 返回值
  */
 function screenOffset(rootHeight, ctx = {}) {
   const rows = Number(ctx.rows) > 0 ? Number(ctx.rows) : 24;
+  if (Number.isFinite(ctx.screenTop)) {
+    // 上界:帧比终端还高时(账本漏项/超宽软折行)偏移只能是 0 —— 负数会把命中区
+    // 推到屏幕外,那是比「差几行」更坏的失败。
+    return Math.max(0, Math.min(Math.floor(ctx.screenTop), Math.max(0, rows - rootHeight)));
+  }
   if (ctx.anchorBottom === true) {
     return rows - rootHeight;
   }
@@ -400,7 +528,9 @@ function hitTest(layout, col, row, offset) {
  *
  * ctx 形如 `{ rootNode, rows, anchorBottom }`:
  *   rootNode    = inkRuntime.getInkInstance().rootNode
- *   rows        = 物理终端行数(process.stdout.rows 或 fallback)
+ *   rows        = 宿主**绘制本帧所用**的终端行数(Legacy `_resRows` / CcApp 的 rows
+ *                 state)。不要在这里现读 process.stdout:坐标解释必须与所画的帧同源,
+ *                 防抖中的 resize 或 conpty 的垃圾读数都会让两者错开(BUG-83)。
  *   anchorBottom = startupAnchor.anchorBottomEnabled(process.env)(默认 false)
  *
  * 语义对齐 opencode:在**松开**(onMouseUp)触发点击(命中松开点);
@@ -686,6 +816,7 @@ module.exports = {
   isMouseSequence,
   parseSgrMouse,
   autoDetectTerminal,
+  altScreenEnabled,
   mouseTier,
   mouseButtonsEnabled,
   mouseHoverEnabled,
@@ -694,6 +825,8 @@ module.exports = {
   enableBytes,
   disableBytes,
   collectLayout,
+  staticRowCount,
+  liveFrameTop,
   screenOffset,
   hitTest,
   createMouseDispatcher,

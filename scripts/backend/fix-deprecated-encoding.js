@@ -59,7 +59,7 @@ const DEPRECATED_HEADER = `/**
  * 如需使用，请改为 require('./domain/extensions/extensions/quantApp').loadModule('services/FILENAME')
  */`;
 
-const DEPRECATED_COMMENT_1 = '// 兼容别名：核心不依赖 khyquant 的磁盘位置，只点名服务 quant-app（[DESIGN-ARCH-069] §3.4）';
+const DEPRECATED_COMMENT_1 = '// 兼容别名：核心不依赖 khyquant 的磁盘位置，只点名服务 quant-app（[DESIGN-TOOL-002] §3.4）';
 const DEPRECATED_COMMENT_2 = '// 应用缺席时这里返回 null 而不是加载期抛出 MODULE_NOT_FOUND —— 那是 §4.1「删目录即卸载」的前提';
 
 /**

@@ -44,7 +44,7 @@
  *
  * NOT applicable to the rail (they bound the live region's height, which the
  * rail no longer contributes to): KHY_SIDEBAR_MAX_RATIO, KHY_SIDEBAR_MIN_CHROME,
- * KHY_SIDEBAR_STACK_MAX_RATIO.
+ * and the extra fill ceiling (env read removed 2026-09-16, zero consumers).
  */
 
 const sidebarLayout = require('./sidebarLayout');
@@ -66,13 +66,43 @@ function _off(env, name) {
  * @returns {boolean}
  */
 function railGateOn(env = process.env) {
-  if (_off(env, 'KHY_SIDEBAR_RAIL')) {
+  // P0-2 / DESIGN-ARCH-102 §10: the out-of-band rail is NOT the default path
+  // anymore. It is opt-in: KHY_SIDEBAR_RAIL must be an explicit on-writing
+  // (1/true/on/yes). The KHY_SIDEBAR master switch still disables it.
+  const raw = String((env && env.KHY_SIDEBAR_RAIL) || '').trim().toLowerCase();
+  if (raw !== '1' && raw !== 'true' && raw !== 'on' && raw !== 'yes') {
     return false;
   }
   if (_off(env, 'KHY_SIDEBAR')) {
     return false;
   }
   return true;
+}
+/**
+ * Union of two rail geometries — the set of screen cells to erase so that a
+ * SHRINK wipes BOTH the old paint (root cause B ghosting) and the new one in a
+ * single pass. Used by buildRailClear(unionGeom(old, new)) on resize.
+ * @param {{on:boolean,left:number,top:number,width:number,height:number}|null} a
+ * @param {{on:boolean,left:number,top:number,width:number,height:number}|null} b
+ * @returns {{on:boolean,left:number,top:number,width:number,height:number}}
+ */
+function unionGeom(a, b) {
+  const empty = { on: false, width: 0, left: 0, top: 1, height: 0 };
+  const A = a && a.on && a.left > 0 && a.top > 0 && a.width > 0 && a.height > 0 ? a : null;
+  const B = b && b.on && b.left > 0 && b.top > 0 && b.width > 0 && b.height > 0 ? b : null;
+  if (!A && !B) {
+    return empty;
+  }
+  const s = A || B;
+  const other = A ? B : A;
+  if (!other) {
+    return s;
+  }
+  const left = Math.min(A.left, B.left);
+  const top = Math.min(A.top, B.top);
+  const right = Math.max(A.left + A.width, B.left + B.width);
+  const bottom = Math.max(A.top + A.height, B.top + B.height);
+  return { on: true, left, top, width: right - left, height: bottom - top };
 }
 
 /**
@@ -86,13 +116,15 @@ function railGateOn(env = process.env) {
  * size with the RELAXED threshold (sidebarLayout.minColsFallback), so the
  * board is not permanently hidden. Garbage cols (NaN/0/negative) stay false.
  *
- * `lastActive` (optional): when a boolean is passed, the wide-terminal axis
- * uses sidebarLayout.railActiveHysteresis(cols, lastActive, env) instead of the
- * plain isWideTerminal gate, so a caller that threads the previous verdict gets
- * a dead-band around the min-cols boundary (119↔120 anti-flip). When omitted
- * (undefined) the verdict is byte-identical to the pre-hysteresis behavior —
- * every internal caller (contentCols/railGeometry) deliberately omits it, so
- * hysteresis is driven ONLY where the previous state is tracked (effectiveCols).
+ * `lastActive` (optional, back-compat): when a boolean is passed, the wide-terminal
+ * axis uses sidebarLayout.railActiveHysteresis(cols, lastActive, env) instead of
+ * the plain isWideTerminal gate. Note: DESIGN-ARCH-103 R1-2's band model
+ * (effectiveDims.bandCols, enter at >= 120 / exit only at <= 108) SUPERSEDES
+ * this 2-column dead-band for rail activation; new call sites must thread
+ * effectiveDims.bandCols, and this legacy hook stays only so existing callers
+ * and their tests keep the byte-identical verdict. When omitted (undefined) the
+ * verdict is byte-identical to the pre-hysteresis behavior — every internal
+ * caller (contentCols/railGeometry) deliberately omits it.
  * @param {number|null|undefined} cols - current terminal columns (null/undefined = unknown)
  * @param {NodeJS.ProcessEnv} [env]
  * @param {boolean} [lastActive] - previous activation verdict; enables hysteresis
@@ -195,7 +227,15 @@ function railTopOffset(env = process.env) {
  * @returns {number} footer rows below the prompt border (>= 0)
  */
 function railBottomChrome(opts = {}, env = process.env) {
-  let base = DEFAULT_BOTTOM_CHROME;
+  // Single chrome ledger (DESIGN-ARCH-103 P0-5): the base is shared with
+  // ccLayout / liveRegionBudget via chromeBudget — the ledger's rail shape
+  // (input=1, status=1, slack=0) sums to the historical DEFAULT_BOTTOM_CHROME,
+  // keeping behavior byte-identical while the definition converges.
+  let base = require('./chromeBudget').chromeRows({
+    inputRows: 1,
+    statusRows: 1,
+    slack: 0,
+  });
   const raw = env && env.KHY_SIDEBAR_RAIL_BOTTOM_CHROME;
   const n = Number(raw);
   if (raw != null && String(raw).trim() !== '' && Number.isFinite(n) && n >= 0) {
@@ -468,6 +508,7 @@ function buildRailClear(geom) {
 
 module.exports = {
   railGateOn,
+  unionGeom,
   railActive,
   contentCols,
   railBottomChrome,

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: README.md -->
+<title>prompts/ — 自包含提示词库 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>.ai<span class="sep">›</span>hq<span class="sep">›</span>prompts<span class="sep">›</span>prompts/ — 自包含提示词库</div>
+      <header class="hero reveal"><h1>prompts/ — 自包含提示词库</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#prompts-自包含提示词库">prompts/ — 自包含提示词库</a></li><li class="lvl-2"><a href="#两种使用位置">两种使用位置</a></li><li class="lvl-2"><a href="#推荐工作流-让-khy-hq-替你填占位符">推荐工作流（让 `khy hq` 替你填占位符）</a></li><li class="lvl-2"><a href="#模板索引">模板索引</a></li><li class="lvl-2"><a href="#手工使用">手工使用</a></li><li class="lvl-2"><a href="#维护约定">维护约定</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="prompts-自包含提示词库">prompts/ — 自包含提示词库<a class="anchor" href="#prompts-自包含提示词库" aria-label="锚点">#</a></h1>
+<p>每条提示词自带：角色定义、执行流程、khy-os 工程红线、验收标准、验证命令。<br><strong>拿到即可独立完成任务，无需补充上下文。</strong></p>
+<h2 id="两种使用位置">两种使用位置<a class="anchor" href="#两种使用位置" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>模式</th><th>操作</th><th>KHYOS_PATH 填法</th></tr></thead><tbody><tr><td>A</td><td>在 khy-os 根目录里打开 AI，粘贴提示词</td><td>「当前目录」</td></tr><tr><td>B</td><td>在本项目目录打开 AI，远程指挥</td><td>khy-os 绝对路径</td></tr></tbody></table>
+<h2 id="推荐工作流-让-khy-hq-替你填占位符">推荐工作流（让 <code>khy hq</code> 替你填占位符）<a class="anchor" href="#推荐工作流-让-khy-hq-替你填占位符" aria-label="锚点">#</a></h2>
+<p>在 khy-os 仓库根目录执行（模板已随 HQ 能力吸收并入本仓库的 <code>.ai/hq/prompts/</code>）：</p>
+<pre><code class="language-bat">:: 登记一个 Bug：
+
+khy hq bug new &quot;状态栏卡在<span class="hljs-number">99</span>%&quot; --severity P1 --domain cli ^
+       --symptom &quot;...&quot; --repro &quot;...&quot; --suspect &quot;...&quot;
+
+khy hq next                    <span class="hljs-built_in">REM</span> 自动选下一步并渲染提示词
+khy hq next --bug BUG-<span class="hljs-number">001</span>      <span class="hljs-built_in">REM</span> 指定 Bug
+khy hq next --<span class="hljs-built_in">verify</span> BUG-<span class="hljs-number">001</span>   <span class="hljs-built_in">REM</span> 修复后回归验证
+khy hq next --task T-<span class="hljs-number">002</span>       <span class="hljs-built_in">REM</span> 指定路线图任务
+khy hq next --<span class="hljs-built_in">copy</span>             <span class="hljs-built_in">REM</span> 结果直接进剪贴板
+khy hq status                  <span class="hljs-built_in">REM</span> 只看总览
+
+khy hq bug <span class="hljs-built_in">set</span> BUG-<span class="hljs-number">001</span> in_progress --note &quot;已定位&quot;
+khy hq bug <span class="hljs-built_in">set</span> BUG-<span class="hljs-number">001</span> pending_verify --root-cause &quot;...&quot; --fix &quot;...&quot;
+khy hq task <span class="hljs-built_in">set</span> T-<span class="hljs-number">002</span> doing
+
+khy hq next --kind distill     <span class="hljs-built_in">REM</span> 模型强项工具化提示词
+khy hq next --kind onboard     <span class="hljs-built_in">REM</span> 新机器接入流水线（发给那台机器的 AI）
+khy hq next --kind gov         <span class="hljs-built_in">REM</span> 板块规则治理（发给 khy-os 的 AI）
+khy hq <span class="hljs-built_in">verify</span>                  <span class="hljs-built_in">REM</span> 改完必跑：数据一致性 + 模板结构体检</code></pre>
+<p><code>--json</code> 输出机读结果（供 AI/工具程序化消费）；<code>--out FILE</code> 写入文件。<br>渲染时自动判断 KHYOS_PATH 填「当前目录」还是绝对路径（单仓下通常就是当前目录）。</p>
+<h2 id="模板索引">模板索引<a class="anchor" href="#模板索引" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>场景</th><th>文件</th><th>触发方式</th></tr></thead><tbody><tr><td>Bug 修复（主）</td><td><code>bugfix/01-修复指定Bug.md</code></td><td>open 状态 Bug 自动选中</td></tr><tr><td>回归验证</td><td><code>bugfix/02-回归验证.md</code></td><td><code>--verify BUG-XXX</code></td></tr><tr><td>新功能开发</td><td><code>feature/01-新功能开发.md</code></td><td>type=feature 任务</td></tr><tr><td>手机端APK开发</td><td><code>feature/02-手机端APK开发.md</code></td><td>手机端APK相关任务</td></tr><tr><td>手机端APK参考项目</td><td><code>feature/手机端APK参考项目.md</code></td><td>手机端APK参考项目</td></tr><tr><td>CRDT 实时协作</td><td><code>feature/CRDT-实时协作编辑引擎.md</code></td><td>多人同时编辑需求</td></tr><tr><td>模块重构</td><td><code>refactor/01-模块重构.md</code></td><td>type=refactor 任务</td></tr><tr><td>性能优化</td><td><code>performance/01-性能优化.md</code></td><td>type=performance 任务</td></tr><tr><td>测试补齐</td><td><code>quality/01-测试补齐.md</code></td><td>type=quality 任务</td></tr><tr><td>代码审查</td><td><code>quality/02-代码审查.md</code></td><td>合并前手动使用</td></tr><tr><td>文档完善</td><td><code>docs/01-文档完善.md</code></td><td>type=docs 任务</td></tr><tr><td>能力沉淀</td><td><code>meta/01-能力沉淀.md</code></td><td><code>khy hq next --kind distill</code>（把模型强项工具化）</td></tr><tr><td>新机器接入</td><td><code>meta/02-新机器接入.md</code></td><td><code>khy hq next --kind onboard</code>（让新机的 AI 自主部署 khy-os + 计划任务）</td></tr><tr><td>同步就绪验证</td><td><code>meta/03-同步就绪验证.md</code></td><td><code>khy hq next --kind verify-sync</code>（验证单仓同步就绪状态）</td></tr><tr><td>协作开发端</td><td><code>meta/04-协作开发端.md</code></td><td><code>khy hq next --kind worker</code>（协作开发端提示词）</td></tr><tr><td>板块规则治理</td><td><code>governance/01-板块规则与协议总纲.md</code></td><td><code>khy hq next --kind gov</code>（收拢板块/记忆/工具/通信/API 五大规则并工具化）</td></tr></tbody></table>
+<h2 id="手工使用">手工使用<a class="anchor" href="#手工使用" aria-label="锚点">#</a></h2>
+<p>模板文件头部注释说明占位符；正文都在 ``<code>text 围栏内，<br>手工替换 </code>{{XX}}` 后整段复制给 AI 即可。</p>
+<h2 id="维护约定">维护约定<a class="anchor" href="#维护约定" aria-label="锚点">#</a></h2>
+<ol><li>修改红线措辞时，同步更新 <code>.ai/hq/CONTEXT.md</code> 第四节与 khy-os 的 <code>AGENTS.md</code></li><li>新增模板后在本表登记，并在 <code>services/backend/src/cli/hqStore.js</code> 的 <code>TYPE_TO_TEMPLATE</code> 注册</li><li>提示词语言：中文指令 + 英文代码术语；面向 AI 的命令一律可复制执行</li><li>模板受 <code>khy hq verify</code> 的模板结构检查保护：必须有 ```text 围栏、【角色】、【验证命令】，</li></ol>
+<p>且正文占位符必须在头部注释声明——跑一下 <code>khy hq verify</code> 就知道哪个模板改坏了</p>
+<hr>
+<p><em>最后更新：2026-09-17</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../.ai/hq/prompts/quality/02-代码审查.html"><div class="dir">← 上一篇</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a><a class="next" href="../../../.ai/hq/prompts/refactor/01-模块重构.html"><div class="dir">下一篇 →</div><div class="ttl">📋 提示词正文（复制下面代码块内的全部内容）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__=".ai/hq/prompts/README.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

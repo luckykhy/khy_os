@@ -56,7 +56,7 @@ export function useConfigSync(opts = {}) {
     if (key in _cache) return _cache[key];
     // 尝试云端拉取
     try {
-      const { data } = await request.get(`/config-sync/${encodeURIComponent(key)}`, {
+      const { data } = await request.get(`/api/config-sync/${encodeURIComponent(key)}`, {
         timeout: SYNC_TIMEOUT,
         __skipErrorNotify: true,
       });
@@ -100,7 +100,7 @@ export function useConfigSync(opts = {}) {
         for (const key of _dirty) {
           if (key in _cache) settings[key] = _cache[key];
         }
-        await request.post('/config-sync/bulk', { settings }, { timeout: SYNC_TIMEOUT });
+        await request.post('/api/config-sync/bulk', { settings }, { timeout: SYNC_TIMEOUT });
         _dirty.clear();
       }
       // 拉云端最新
@@ -129,7 +129,7 @@ export function useConfigSync(opts = {}) {
 // 此前 _init 直接调闭包内的 getAll 会抛 ReferenceError, 导致每次 onMounted 静默走离线分支。
 async function _pullAll() {
   try {
-    const { data } = await request.get('/config-sync', {
+    const { data } = await request.get('/api/config-sync', {
       timeout: SYNC_TIMEOUT,
       __skipErrorNotify: true,
     });
@@ -204,7 +204,7 @@ async function _pushToCloud() {
   }
 
   try {
-    await request.post('/config-sync/bulk', { settings }, { timeout: SYNC_TIMEOUT });
+    await request.post('/api/config-sync/bulk', { settings }, { timeout: SYNC_TIMEOUT });
     _saveToStorage();
   } catch {
     // 推送失败, 重新标记 dirty

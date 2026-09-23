@@ -922,7 +922,11 @@ function _buildRecoverySuggestions(errorType, result = {}) {
   const s = [];
   if (/timeout|network|overloaded|server_error|process|unknown|cancelled/.test(t)) {
     s.push('网络/超时类：稍后说「继续」自动重试，或运行 khy gateway status 检查通道健康');
-    s.push('可切换其他通道：khy gateway config 调整首选模型通道');
+    // [DESIGN-ARCH-139] 三期:去诱导。旧文案引导用户「gateway config 调整首选通道」
+    // ——照做就写入下一个钉选,钉到本机不可用的通道又硬失败,正是钉选残留
+    // 连续 6 次复发的机制本身。改为推荐选模型不钉通道,并明示钉选风险。
+    s.push('可运行 khy gateway model 查看并切换可用模型(选模型,不钉通道)');
+    s.push('不要用 gateway config 钉死首选通道:钉选+strict 已多次导致全局硬失败');
   } else if (/rate_limit|billing/.test(t)) {
     s.push('限流/额度类：已自动重试仍受限，稍后说「继续」再试，或降低请求频率 / 更换通道');
   } else if (/auth/.test(t)) {

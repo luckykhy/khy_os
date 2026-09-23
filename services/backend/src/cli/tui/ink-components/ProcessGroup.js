@@ -162,6 +162,21 @@ function classifyTool(name) {
 
 function truncateTitle(s, n) {
   s = String(s).replace(/\s+/g, ' ').trim();
+  // `n` is a DISPLAY-COLUMN budget for the collapsed process-group header, not a
+  // char count. Pure code-unit `.slice` both (a) overflows on CJK (2 columns but
+  // 1 UTF-16 unit each → ink soft-wraps the header, breaching its row budget) and
+  // (b) bisects an astral pair when a filename/command carries an emoji straddling
+  // the cut → lone surrogate → 乱码 (BUG-114, same family as ToolLines clip/
+  // truncate/shorten BUG-113). Route wide/astral strings through the code-point-
+  // aware truncater; narrow-only input keeps the byte-identical legacy path.
+  try {
+    const { displayWidth, truncateToWidth } = require('../../formatters');
+    if (displayWidth(s) !== s.length || /[\uD800-\uDFFF]/.test(s)) {
+      return truncateToWidth(s, n);
+    }
+  } catch {
+    /* formatters unavailable — legacy fallback below */
+  }
   return s.length > n ? s.slice(0, n - 1) + '…' : s;
 }
 

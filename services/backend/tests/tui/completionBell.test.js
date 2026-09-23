@@ -1,14 +1,14 @@
 'use strict';
 
 /**
- * completionBell �?unit coverage for the opt-in "ring the terminal on a long
+ * completionBell —unit coverage for the opt-in "ring the terminal on a long
  * turn's completion" experience knob (体感: 完成提醒). Exercises the PURE
  * decision `shouldRingCompletionBell`; the emit wrapper (env read + BEL write
  * to the TTY) is a thin best-effort shell around this predicate and is not
  * worth a process-level harness.
  *
  * Contract locked here:
- *   - off unless explicitly enabled (default silent �?never surprise the user),
+ *   - off unless explicitly enabled (default silent —never surprise the user),
  *   - never rings without a real TTY (piped/CI output stays clean),
  *   - only rings for turns at or past the min duration (quick replies silent),
  *   - the min boundary is inclusive (elapsed == min rings).

@@ -15,7 +15,7 @@ afterAll(() => {
   try { fs.rmSync(TMP, { recursive: true, force: true }); } catch { /* ignore */ }
 });
 
-describe('skillStateService â€?enable/disable ledger (A2)', () => {
+describe('skillStateService â€”enable/disable ledger (A2)', () => {
   test('unknown skills are enabled by default (fail-open)', () => {
     expect(skillState.isEnabled('never-seen')).toBe(true);
     expect(skillState.isEnabled('')).toBe(true);

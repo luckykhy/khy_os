@@ -11,6 +11,7 @@
  * 一条顺序断言(guardIdx < readTextFileSmart/image 分支 idx),并补一条 execute 行为断言。
  */
 const fs = require('fs');
+const assert = require('node:assert');
 const os = require('os');
 const path = require('path');
 const cp = require('child_process');

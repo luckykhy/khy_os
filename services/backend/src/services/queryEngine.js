@@ -262,6 +262,10 @@ class QueryEngine {
     this._totalTokens = 0;
     this._aborted = false;
     this._turnHistoryMark = 0;
+    // Internal abort channel for abort(). Kept separate from the caller's
+    // options.abortSignal so BOTH can interrupt: the caller's (repl ESC handler)
+    // and ours (programmatic abort()). Merged in submitMessage.
+    this._abortController = null;
   }
 
   /**
@@ -273,16 +277,52 @@ class QueryEngine {
    * @param {object} [options]
    * @param {string} [options.effort] - AI effort level (low/medium/high/max)
    * @param {Array}  [options.images] - Image attachments
+   * @param {AbortSignal} [options.abortSignal] - Caller interrupt (repl ESC).
+   *   Forwarded into the tool loop so in-flight tools release immediately
+   *   instead of waiting out their own timeout. Without it the loop is
+   *   uninterruptible from the host side.
    * @yields {{ type: string, data: any }}
    */
   async *submitMessage(userMessage, options = {}) {
     this._aborted = false;
+
+    // Merge the caller's interrupt signal with our internal one (abort()).
+    // No AbortSignal.any() — that needs Node 20.3+ and this package does not
+    // pin engines that high; a manual forward keeps both sources working.
+    const external = options.abortSignal;
+    this._abortController = new AbortController();
+    const _forward = () => {
+      try {
+        this._abortController.abort('aborted by caller');
+      } catch {
+        /* already aborted */
+      }
+    };
+    if (external) {
+      if (external.aborted) {
+        _forward();
+      } else {
+        try {
+          external.addEventListener('abort', _forward, { once: true });
+        } catch {
+          /* non-critical: an unlistenable signal just means no forwarding */
+        }
+      }
+    }
+
     // Single execution path: the generator adapter over the authoritative
     // toolUseLoop (Phase 3). The former V2 state machine and inline legacy loop
     // were removed; _submitMessageLegacy now only does preprocessing/security/
     // system-prompt assembly, then delegates to _submitMessageViaToolLoop (or
     // the harness path when enabled).
-    yield* this._submitMessageLegacy(userMessage, options);
+    try {
+      yield* this._submitMessageLegacy(userMessage, {
+        ...options,
+        abortSignal: this._abortController.signal,
+      });
+    } finally {
+      this._abortController = null;
+    }
   }
 
   // ── Legacy: Original query loop (zero changes) ──────────────────
@@ -543,6 +583,26 @@ class QueryEngine {
         chatOpts: {},
         loopOptions: {
           maxIterations: this._maxTurns,
+          // Host interrupt (repl ESC / abort()). Forwarded via `...loopOptions`
+          // into agenticHarnessService's runToolUseLoop calls.
+          abortSignal: options.abortSignal,
+          // Loop-level tool-approval channel (preflight batch check + per-tool
+          // permission prompts). Must be forwarded or the loop's preflight step
+          // cannot reach the host and denies every tool in a 2+ batch. Forwarded
+          // via `...loopOptions` into agenticHarnessService's runToolUseLoop.
+          onControlRequest: options.onControlRequest,
+          // Parallel-batch notice — same contract as the toolLoop adapter path
+          // above (`calls` are the loop's live objects, kept by reference so
+          // consumers can attach _traceContext). Forwarded via `...loopOptions`
+          // into agenticHarnessService's runToolUseLoop calls, so the harness
+          // path reports batches too.
+          onParallelBatch: (calls, iteration) => {
+            const list = Array.isArray(calls) ? calls : [];
+            if (list.length === 0) {
+              return;
+            }
+            pushEvent({ type: 'parallel_batch', data: { iteration, calls: list } });
+          },
           onIteration: (iteration) => {
             pushEvent({
               type: 'thinking',
@@ -935,6 +995,9 @@ class QueryEngine {
         chatOpts: {},
         maxIterations: this._maxTurns,
         initialMessages: priorMessages,
+        // Host interrupt (repl ESC / abort()). Forwarded so in-flight tools
+        // release immediately instead of running out their own 120s timeout.
+        abortSignal: options.abortSignal,
         onCheckpoint: _boulderCheckpoint,
         // Authenticated user (when the caller carries identity) so preference-aware
         // tools (e.g. image_generate per-user model) resolve correctly; undefined
@@ -943,6 +1006,21 @@ class QueryEngine {
         // Loop-level interactive channel (preflight tool approval); distinct from
         // the chat-streamed control_request above and fired at a different moment.
         onControlRequest: options.onControlRequest,
+        // Parallel-batch notice: the loop groups concurrency-safe calls into one
+        // parallel batch and reports it here BEFORE running it. Surfaced as an
+        // event so consumers (repl agent tree, web UI) can render "N tools in
+        // flight" instead of inferring it from interleaved tool_call events.
+        // `calls` are the loop's LIVE call objects (not copies): consumers may
+        // attach `_traceContext.onAgentProgress` to them, exactly as the legacy
+        // path's onParallelBatch does for the agent tree. Copying them here would
+        // silently drop that channel.
+        onParallelBatch: (calls, iteration) => {
+          const list = Array.isArray(calls) ? calls : [];
+          if (list.length === 0) {
+            return;
+          }
+          pushEvent({ type: 'parallel_batch', data: { iteration, calls: list } });
+        },
         onToolCall: (toolName, toolParams) => {
           pushEvent({ type: 'tool_call', data: { name: toolName, params: toolParams || {} } });
         },
@@ -1207,9 +1285,23 @@ class QueryEngine {
 
   /**
    * Abort the current submitMessage loop.
+   *
+   * Signals the merged AbortController created in submitMessage — that is what
+   * actually reaches the tool loop and releases in-flight tools. `_aborted` is
+   * kept for callers that only inspect the flag. Before this, abort() set the
+   * flag but nothing ever read it, so it was a silent no-op.
+   *
+   * @param {string} [reason]
    */
-  abort() {
+  abort(reason = 'aborted by caller') {
     this._aborted = true;
+    try {
+      if (this._abortController) {
+        this._abortController.abort(reason);
+      }
+    } catch {
+      /* already aborted — nothing to do */
+    }
   }
 
   /**

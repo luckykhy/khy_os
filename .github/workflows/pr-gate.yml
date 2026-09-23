@@ -11,6 +11,11 @@ on:
 # 未声明 permissions 时会继承仓库默认（可能是读写），属于不必要的权限暴露。
 permissions:
   contents: read
+  # actions:write 是 actions/upload-artifact@v4 的硬性要求（否则报
+  # "The actions:write permission is required to upload artifacts"）。
+  # test-baseline job 需要上传测试证据 artifact，故在此声明。
+  # 参见 conformance.yml 的同款说明。
+  actions: write
 
 # 同一 PR 连续 push 时取消上一次运行，避免堆积无意义的 CI 消耗。
 # PR gate 只关心最新一次 commit 的结论，取消旧运行没有信息损失。
@@ -38,6 +43,11 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
+        with:
+          # 显式 pin，与根 package.json 的 packageManager 保持一致。
+          # 这是**门档执行器**：版本漂移会让门本身出现难查的假红/假绿，
+          # 因此这里的 pin 比其他位置更关键。
+          version: 10.18.0
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -88,7 +98,7 @@ jobs:
       - name: Check architecture debt (R1/R2/R2b/R3 vs baseline)
         run: node services/backend/scripts/archDebtScan.js
 
-      # 仓库层级/结构守卫（真源 docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范）。
+      # 仓库层级/结构守卫（真源 docs/10_规范/[DESIGN-LAY-005] 仓库层级板块规范）。
       # 刻意**不**传 --changed：层级是仓库的全局属性，只看改动集会漏掉
       # 「别人搬走了索引文件」「新顶层目录未登记」这类破坏，脚本本身也不接受该参数。
       # --promote 精确挑选三条 error 级规则阻断；四条 warning 规则走
@@ -100,7 +110,74 @@ jobs:
       - name: Check governance rules
         run: node scripts/ci/check-gov-rules.js
 
-      # 设计模式注册表守卫（真源 docs/_设计模式/模式注册表.json）。与上一步同档：
+      # TUI 门控 token 预算（DESIGN-ARCH-102 H7：cli/tui/ 唯一 KHY_* ≤ 目标上限）。
+      # 与治理档同类的全局检查，不传 --changed：只看改动集会漏掉「门控在 tui 外被
+      # 悄悄新增」的情形。
+      - name: Check TUI gate budget
+        run: node scripts/ci/check-tui-gates.js
+
+      # 规则登记表与真源的双向可达（GOV-TOOL-007），以及逐条规则卡与登记表的
+      # 逐字节一致性（GOV-TOOL-008，卡片为 gen-rules-cards.js 的构建产物）。
+      # 与上一步同档、同样不传 --changed：登记表是仓库的全局属性，只看改动集会
+      # 漏掉「真源文档被删而登记表条目还在」这类断链，也漏掉「手改某张卡片」。
+      # 脚本对「无登记表 / 非 git 检出」静默跳过，不会误伤外部 fixture。
+      - name: Check rules registry and rule cards
+        run: node scripts/ci/check-rules-registry.js
+
+      # 发布触发链路（PROCESS-005，P1，真源 docs/10_规范/[DESIGN-SEMVER-002] §2.5）：
+      # 把「改一个字符就静默失效、且不会报错」的四类事实变成可机判的 finding ——
+      # ① release 档 workflow 的 on: 块非空且含明确触发器（触发器不匹配时
+      #    workflow 只会静默不跑，不报错）；② 镜像 workflow 的 branches 覆盖当前
+      #    默认分支（分支改名即静默不同步）；③ 发布链路四条硬条件 step 未被加
+      #    continue-on-error；④ 发布 workflow 的 concurrency 为 cancel-in-progress:
+      #    false（否则中途取消会留下「npm 已发、PyPI 未发」的半成品）。
+      # 不传 --changed：这些是仓库全局属性，只看改动集会漏掉「过滤器被改坏」。
+      # 豁免走 `# release-trigger-exempt: <理由>`（理由必填）。
+      - name: Check release triggers
+        run: node scripts/ci/check-release-triggers.js
+
+      # 委派边界（PROCESS-004，P1，真源 docs/10_规范/[DESIGN-PROCESS-001]）：
+      # 默认档是「自做」，委派须命中 G1/G2/G3 三闸门之一。这一步静态校验
+      # ① 代码闸门集合未漂离规范；② 注入给模型的文案没有复活开放式授权句式；
+      # ③ 委派决策必经准入判定；④ 没有绕过闸门的旁路 spawn。
+      # 不传 --changed：同登记表，默认档是仓库全局属性。
+      - name: Check delegation boundary
+        run: node scripts/ci/check-delegation-boundary.js
+
+      # 反孤儿守卫（TOOLING-005，[DESIGN-ARCH-111]）：每个 scripts/ci 检查器
+      # 必须被至少一个门引用，否则它在 CI 中永远不会运行，等价于没写。
+      # 零接线的合法例外必须登记在 scripts/ci/wiring-exemptions.json，
+      # 且带 reason 与 until 到期日 —— 到期未处理即判 error，豁免不是永久通行证。
+      # 同时校验 package.json 的 check:* 别名不死指针、登记表规则绑定不失效。
+      - name: Check checker wiring
+        run: node scripts/ci/check-wiring.js
+
+      # 覆盖率红线（[DESIGN-ARCH-111] §4）：阻断只针对两类不可辩护的状态 ——
+      # P0 规则完全无执行器、规则声明的执行器路径不存在或零接线。
+      # 软指标（覆盖率百分比、未接线数）只打印不阻断，供趋势观察。
+      # 不传 --ci：本地与 CI 口径一致，避免 CI 上更严导致本地绿 CI 红。
+      - name: Check rule enforcement coverage
+        run: node scripts/ruleguard/index.js coverage
+
+      # 规则门总入口（[DESIGN-ARCH-111]）：门档成员资格从 RULES-REGISTRY.json 派生，
+      # 一次跑完 pr 档全部执行器，是上面逐个步骤的「总门」—— 上面漏接一个检查器，
+      # 这一步仍会执行它。
+      #
+      # 刻意先以**上报档**接入（continue-on-error），不直接阻断。三条理由均可复核：
+      #   1) 这条执行链此前从未在 CI 跑过（本文件原只跑 coverage，不跑 run），
+      #      一次转阻断等于让此后每个 PR 为存量债买单，且失败点不可预期；
+      #   2) scripts/ci/check-code-standards.js 与 check-protocol-naming.js 目前
+      #      尚未纳入版本控制（git ls-files 无记录），CI 检出里不存在这两个文件；
+      #   3) COMMS-002 的执行器实际扫描 .khy/，而 .khy/ 被 .gitignore 整体覆盖
+      #      （入仓文件 0 个），作为 pr 门输入恒为空。
+      # 转阻断的前置条件（全部满足后删除 continue-on-error 与本段理由）：
+      #   ① 上述两个执行器入仓；② COMMS-002 的登记 paths 与执行器扫描范围对齐；
+      #   ③ 一次干净检出下 `npm run rules:gate` 无 blocking。
+      - name: Check rule gate (report only — shadow mode)
+        continue-on-error: true
+        run: npm run rules:gate
+
+      # 设计模式注册表守卫（真源 docs/16_设计模式/registry/模式注册表.json）。与上一步同档：
       # 同样不传 --changed —— 注册表是仓库的全局属性，只看改动集看不见
       # 「别人删了文件而条目还在」这类幽灵条目。三条规则全走
       # scripts/ci/pattern-coverage-baseline.json 棘轮（只降不升，超基线自动升 error），
@@ -108,8 +185,94 @@ jobs:
       - name: Check pattern coverage
         run: node scripts/ci/check-pattern-coverage.js
 
+      # 以下为 ruleguard 绑定层（[DESIGN-ARCH-111]）纳入的四条原「人工兜底」规则：
+      # 它们此前的缺口是「无检查器」而非「检查器坏了」，故单列步骤便于定位。
+      # 许可证分级硬门槛（SOURCING-002，P0）：GPL/AGPL 家族是 error 直接阻断；
+      # 源码可用档与发布包缺 license 是 warning 不阻断。
+      - name: Check license tiers
+        run: node scripts/ci/check-license-tiers.js
+
+      # 权限档 fail-closed 不变量（SECURITY-004，P0）：静态校验「未知档不得落到
+      # 宽松档」「deny 先于 allow 求值」「档表冻结」「yolo 别名显式映射」。
+      - name: Check permission invariants
+        run: node scripts/ci/check-permission-invariants.js
+
+      # critical gate 不可绕过（SECURITY-002，P0）：行为断言 isUnbypassableGate，
+      # 覆盖「不可逆必阻断」「判定与 KHY_SYSCALL_GATEWAY / bypass / yolo 无关」
+      # 「critical 与 destructive 双通道独立」三条红线。
+      - name: Check unbypassable gate
+        run: node scripts/ci/check-unbypassable-gate.js
+
+      # 能力域归属登记（SOURCING-004，P1）：登记表早已存在但守卫一直没落地
+      # （登记表 $schemaNote 自述「check:feature-ownership 尚未落地」），本步补齐。
+      - name: Check feature ownership
+        run: node scripts/ci/check-feature-ownership.js
+
+      # 弱模型改动护栏（SECURITY-003，P1）：行为断言 classifyChangeRisk /
+      # assessWeakModelChange，覆盖「6 类红线分类全覆盖」「弱档+红线必拦、
+      # 弱档+敏感须确认」「判定与 bypass/yolo 无关」「拒绝信号有生产消费者」。
+      - name: Check weak model guard
+        run: node scripts/ci/check-weak-model-guard.js
+
+      # 记忆记录 schema + 指定读写入口（MEMORY-002/003，P1）：此前无检查器，
+      # 缺口是「无可断言对象」而非「检查器坏了」——真源工件为
+      # docs/10_规范/registry/MEMORY-RECORD-SCHEMA.json。断言五要素各带字段名/类型/取值约束/
+      # 必填性、「缺一不得写」与凭据策略可断言、指定入口载体可核实、
+      # DESIGN-MEM-006 §2 字段名未与 schema 分叉。
+      - name: Check memory schema
+        run: node scripts/ci/check-memory-schema.js
+
+      # 来源出处台账（SOURCING-001，P1）：真源工件为
+      # docs/10_规范/registry/SOURCING-PROVENANCE.json。断言上游来源标识/本地路径/对应关系
+      # 三项必填、台账路径真实存在、relationship 落在 B-M 枚举内、
+      # vendored 关系须同时在 FEATURE-OWNERSHIP.json 登记（B-M1 第 6 条）。
+      - name: Check provenance ledger
+        run: node scripts/ci/check-provenance.js
+
+      # 提案工件索引（SOURCING-003/006，P1）：真源工件为
+      # docs/10_规范/registry/PROPOSAL-ARTIFACT-INDEX.json。断言 B-P2 七编号字段齐全
+      # （缺一不落地）、先提案后编码规则可断言、B-L2 三步分离与 B-L3 只追加可断言，
+      # 并实测 [DESIGN-ARCH-105] 内 7 条【借鉴提案】是否真的填齐 1-7。
+      - name: Check proposal artifact index
+        run: node scripts/ci/check-proposal-index.js
+
       - name: Check Node syntax
         run: node scripts/ci/check-node-syntax.js
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # 层级可发现性往返（LAYOUT-006，[DESIGN-LAY-006] §7 步骤3）。
+  #
+  # 为什么单列一个作业而不是塞进 contract-checks：这一步验的是**生成器/守卫的
+  # 一致性**（往返性质），不是「本 PR 是否合规」。
+  #
+  # 三条断言（全部只读、确定性、离线）：
+  #   ① 反例矩阵 14 场景全绿 —— 证明守卫不是无脑拦（9 条「应放行」必须 0 发现）；
+  #   ② 二次扫描幂等 —— 同一棵树扫两遍，发现集合逐字节一致；
+  #   ③ 基线未被上调 —— 实测 counts 不得高于 discoverability-baseline.json
+  #      （「只降不升」纪律的机器执行；上调基线让 CI 变绿是最常见的绕过手法）。
+  #
+  # ⚠ 本作业**不**跑 --strict：存量 flat-overflow 未清零前，strict 必然红。
+  # 升 error 的前置条件见 [DESIGN-LAY-006] §7 步骤3（存量家族须先「迁移 + 清壳」）。
+  # ───────────────────────────────────────────────────────────────────────────
+  discoverability-roundtrip:
+    name: Discoverability roundtrip
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      # ① 反例矩阵：14 场景，含 9 条「应放行」。任一场景强度/条数漂移即红。
+      - name: Guard counter-example matrix
+        run: node scripts/ci/discoverability-demo.js --all
+
+      # ②③ 幂等 + 基线只降不升
+      - name: Baseline ratchet (no upward drift)
+        run: node scripts/ci/check-discoverability.js --verify-baseline
 
   # ───────────────────────────────────────────────────────────────────────────
   # Python 语法检查：scripts/ci/check-python-syntax.py 一直存在，但此前
@@ -177,6 +340,11 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
+        with:
+          # 显式 pin，与根 package.json 的 packageManager 保持一致。
+          # 这是**门档执行器**：版本漂移会让门本身出现难查的假红/假绿，
+          # 因此这里的 pin 比其他位置更关键。
+          version: 10.18.0
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -225,6 +393,16 @@ jobs:
             exit 0
           }
 
+      # L1 防劣化：逐文件「改前→改后」棘轮（阻断项）。
+      # 与上方 report-only 的 eslint 不同 —— eslint 只看存量问题且不阻断；
+      # 这里看「被改文件是否比 base 更脏」：任一 HARD 指标（最长函数/嵌套/
+      # console/debugger/TODO）变差即红。存量债不动，但凡你碰过的文件，
+      # 改完不许比改前更脏。细节见 scripts/ci/check-file-ratchet.js。
+      - name: Check per-file change ratchet (touched files must not get dirtier)
+        run: node scripts/ci/check-file-ratchet.js
+        env:
+          GIT_BASE_REF: ${{ github.event.pull_request.base.sha }}
+
   # ───────────────────────────────────────────────────────────────────────────
   # 测试基线 + 测试债务追踪
   #
@@ -249,6 +427,11 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
+        with:
+          # 显式 pin，与根 package.json 的 packageManager 保持一致。
+          # 这是**门档执行器**：版本漂移会让门本身出现难查的假红/假绿，
+          # 因此这里的 pin 比其他位置更关键。
+          version: 10.18.0
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -262,15 +445,70 @@ jobs:
         # install:core is a root-level pnpm filtered install; run from root.
         run: npm run install:core
 
+      # ⚠️ 这两步当前是 **report-only**（continue-on-error: true），因为存在已登记的
+      # 测试债务（见下方 Report test debt status 的 notice 与 tests/DEBT.md）。
+      #
+      # 但「report-only」有个副作用必须堵住：**结果不留档**。一个既不断阻断、
+      # 又不产出可查证据的测试步，实际效果等于「谁都没跑过」—— 出问题时会发现
+      # 无从回溯「上次跑是什么时候、失败的是哪几条」。
+      #
+      # 因此：写完日志摘要到 GITHUB_STEP_SUMMARY（在 Actions 页面直接可读），
+      # 并把完整输出作为 artifact 上传（保留 14 天），让「非阻断」不等于「无证据」。
+      # 注意：这里不改变阻断语义 —— 仅增加证据留存。
       - name: Jest
+        id: jest
         continue-on-error: true
         working-directory: services/backend
-        run: npm test -- --passWithNoTests --ci
+        run: |
+          set -o pipefail
+          # 先把退出码存下来再记录：`echo "exit=$?" >> f` 紧跟在管道后会读到
+          # 已被 echo 自己覆盖的值（$? 在命令替换后即失效），必须显式暂存。
+          npm test -- --passWithNoTests --ci 2>&1 | tee /tmp/jest.log
+          status=$?
+          echo "exit=$status" > /tmp/jest.status
 
       - name: Node built-in tests
+        id: node_tests
         continue-on-error: true
         working-directory: services/backend
-        run: npm run test:node
+        run: |
+          set -o pipefail
+          npm run test:node 2>&1 | tee /tmp/node-test.log
+          status=$?
+          echo "exit=$status" > /tmp/node-test.status
+
+      # 无论上面两步成败都跑：把「到底绿没绿」变成 Actions 页面上一眼可见的证据。
+      - name: Record test evidence
+        if: always()
+        run: |
+          {
+            echo "## 测试证据（report-only 阶段）"
+            echo ""
+            echo "本次运行的原始输出已作为 artifact \`test-evidence\` 上传（保留 14 天）。"
+            echo ""
+            echo "### Jest"
+            echo '```'
+            tail -n 40 /tmp/jest.log 2>/dev/null || echo "(无输出 —— 步骤可能未执行)"
+            echo '```'
+            echo ""
+            echo "### node:test"
+            echo '```'
+            tail -n 40 /tmp/node-test.log 2>/dev/null || echo "(无输出 —— 步骤可能未执行)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-evidence
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            /tmp/jest.log
+            /tmp/jest.status
+            /tmp/node-test.log
+            /tmp/node-test.status
 
       - name: Report test debt status
         if: always()
@@ -301,6 +539,11 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
+        with:
+          # 显式 pin，与根 package.json 的 packageManager 保持一致。
+          # 这是**门档执行器**：版本漂移会让门本身出现难查的假红/假绿，
+          # 因此这里的 pin 比其他位置更关键。
+          version: 10.18.0
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:

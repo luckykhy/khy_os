@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: README.md -->
+<title>one-api — 多 LLM API 管理 &amp; 分发系统 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>extensions<span class="sep">›</span>scripts<span class="sep">›</span>khy-desktop-rd<span class="sep">›</span>one-api<span class="sep">›</span>one-api — 多 LLM API 管理 &amp; 分发系统</div>
+      <header class="hero reveal"><h1>one-api — 多 LLM API 管理 &amp; 分发系统</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#one-api-多-llm-api-管理-分发系统">one-api — 多 LLM API 管理 &amp; 分发系统</a></li><li class="lvl-2"><a href="#一-为什么列为第四">一、为什么列为第四</a></li><li class="lvl-2"><a href="#二-技术栈">二、技术栈</a></li><li class="lvl-2"><a href="#三-关键架构亮点-与-khy-os-相关">三、关键架构亮点（与 khy-os 相关）</a></li><li class="lvl-3"><a href="#3-1-多-llm-统一适配">3.1 多 LLM 统一适配</a></li><li class="lvl-3"><a href="#3-2-令牌模型">3.2 令牌模型</a></li><li class="lvl-3"><a href="#3-3-主题切换">3.3 主题切换</a></li><li class="lvl-3"><a href="#3-4-截图-来自仓库-readme">3.4 截图（来自仓库 README）</a></li><li class="lvl-3"><a href="#3-5-app-js-路由结构">3.5 App.js 路由结构</a></li><li class="lvl-2"><a href="#四-给-khy-os-的可借鉴项总结">四、给 khy-os 的可借鉴项总结</a></li><li class="lvl-2"><a href="#五-本地文件">五、本地文件</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="one-api-多-llm-api-管理-分发系统">one-api — 多 LLM API 管理 &amp; 分发系统<a class="anchor" href="#one-api-多-llm-api-管理-分发系统" aria-label="锚点">#</a></h1>
+<blockquote><p>调研日期: 2026-08-31<br>仓库: <a href="https://github.com/songquanpeng/one-api" target="_blank" rel="noopener">https://github.com/songquanpeng/one-api</a><br>License: MIT<br>Stars: 36.7k · Forks: 6.8k · 1,210 commits</p></blockquote>
+<h2 id="一-为什么列为第四">一、为什么列为第四<a class="anchor" href="#一-为什么列为第四" aria-label="锚点">#</a></h2>
+<p>one-api 跟 khy-os <strong>不是同一个产品形态</strong>——one-api 是&quot;LLM API 网关管理后台&quot;（类似 new-api），khy-os 是&quot;AI 量化平台 + 桌面应用&quot;。<strong>但 khy-os 的前端设计 token 直接源自 new-api 视觉体系</strong>（<code>apps/ai-frontend/src/styles/newapi-theme.css:1</code> 注释明确写&quot;design language is adapted from new-api's shadcn/oklch palette&quot;）。</p>
+<p>one-api 跟 new-api 同源，所以本档案的核心价值是：</p>
+<ul><li><strong>追溯 khy-os 当前视觉风格的源头</strong></li><li><strong>参考其&quot;支持主题切换&quot;的设计</strong>（<code>THEME</code> 环境变量 + <code>web/default/public/themes/</code>）</li><li><strong>借鉴它&quot;多 LLM 分发&quot;的产品抽象</strong>（已经做了：渠道、令牌、兑换码、用户分组、倍率计算）</li></ul>
+<h2 id="二-技术栈">二、技术栈<a class="anchor" href="#二-技术栈" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>层</th><th>技术</th></tr></thead><tbody><tr><td>后端</td><td>Go（单可执行文件 + go.mod）</td></tr><tr><td>前端</td><td>React + React Router + 半自动构建</td></tr><tr><td>数据库</td><td>SQLite（默认）/ MySQL / PostgreSQL</td></tr><tr><td>部署</td><td>单二进制 / Docker / Docker Compose / 宝塔</td></tr><tr><td>多 LLM 协议</td><td>OpenAI / Azure / Anthropic / Gemini / DeepSeek / Moonshot / Ollama 等 25+</td></tr></tbody></table>
+<h2 id="三-关键架构亮点-与-khy-os-相关">三、关键架构亮点（与 khy-os 相关）<a class="anchor" href="#三-关键架构亮点-与-khy-os-相关" aria-label="锚点">#</a></h2>
+<h3 id="3-1-多-llm-统一适配">3.1 多 LLM 统一适配<a class="anchor" href="#3-1-多-llm-统一适配" aria-label="锚点">#</a></h3>
+<p>one-api 把 25+ LLM 提供商抽象成统一的 OpenAI API 格式：</p>
+<pre><code>graph LR
+A(用户) --&gt;|使用 One API 分发的 key 进行请求| B(One API)
+B --&gt;|中继请求| C(OpenAI)
+B --&gt;|中继请求| D(Azure)
+B --&gt;|中继请求| E(其他 OpenAI API 格式下游渠道)
+B --&gt;|中继并修改请求体和返回体| F(非 OpenAI API 格式下游渠道)</code></pre>
+<p><strong>给 khy-os 的启示</strong>：</p>
+<ul><li>khy-os 的 <code>services/backend/src/services/gateway/aiGateway.js</code> 已经实现了<strong>这个抽象</strong></li><li>适配器模式（<code>adapters/</code>）就是 one-api 的&quot;渠道&quot;</li><li><strong>khy-os 已经走在正确的路径上</strong></li></ul>
+<h3 id="3-2-令牌模型">3.2 令牌模型<a class="anchor" href="#3-2-令牌模型" aria-label="锚点">#</a></h3>
+<pre><code>用户 → 渠道（API Key + 模型列表）
+        ↓
+     令牌（用户创建，绑定额度 + 过期时间 + IP 白名单）
+        ↓
+     请求带 Bearer ONE_API_KEY-CHANNEL_ID（可选指定渠道）
+        ↓
+     负载均衡 / 倍率计算</code></pre>
+<p><strong>给 khy-os 的启示</strong>：</p>
+<ul><li>khy-os 当前没有&quot;令牌&quot;概念（直连模式）—— <strong>可以引入</strong>，让用户能&quot;分享额度&quot;</li><li>倍率计算（<code>额度 = 分组倍率 × 模型倍率 × (提示 token 数 + 补全 token 数 × 补全倍率)</code>）可以直接借用</li></ul>
+<h3 id="3-3-主题切换">3.3 主题切换<a class="anchor" href="#3-3-主题切换" aria-label="锚点">#</a></h3>
+<blockquote><p>&quot;支持主题切换，设置环境变量 <code>THEME</code> 即可，默认为 <code>default</code>，欢迎 PR 更多主题，具体参考此处的 <code>web/README.md</code>。&quot;</p></blockquote>
+<p><strong>给 khy-os 的启示</strong>：</p>
+<ul><li>khy-os 当前主题切换走 <code>&lt;html class=&quot;dark&quot;&gt;</code> + Element Plus <code>theme-chalk/dark/css-vars.css</code>，<strong>跟 one-api 思路一致</strong></li><li>但 one-api 走&quot;环境变量切换主题目录&quot;是另一种模式 —— 多主题打包在一起，启动时选择</li></ul>
+<h3 id="3-4-截图-来自仓库-readme">3.4 截图（来自仓库 README）<a class="anchor" href="#3-4-截图-来自仓库-readme" aria-label="锚点">#</a></h3>
+<p>从仓库 README 截图看，one-api 的视觉风格是：</p>
+<ul><li>浅色 + 深色双套</li><li>主色系基于 shadcn oklch 调色板（蓝/绿/橙）</li><li>卡片 + 表格 + 标签页的经典 admin 风</li><li>渐变 logo + 简洁卡片</li></ul>
+<p><strong>与 khy-os 当前的关系</strong>：</p>
+<ul><li>khy-os 的 <code>newapi-theme.css</code> 直接源自此</li><li>one-api 是浅色主导，khy-os 已经把它改成浅+深双套</li></ul>
+<h3 id="3-5-app-js-路由结构">3.5 App.js 路由结构<a class="anchor" href="#3-5-app-js-路由结构" aria-label="锚点">#</a></h3>
+<p>源码 <code>web/default/src/App.js</code> 关键路由（节选自抓取）：</p>
+<pre><code>/                          → Home（公开）
+/login /register /reset     → 认证
+/channel, /channel/:id      → 渠道管理
+/token, /token/:id          → 令牌管理
+/redred, /redred/:id        → 兑换码管理
+/user, /user/:id            → 用户管理
+/setting                    → 设置
+/topup                      → 充值
+/log                        → 日志
+/about                      → 关于
+/chat                       → 内嵌 chat
+/dashboard                  → 仪表盘</code></pre>
+<p><strong>给 khy-os 的启示</strong>：</p>
+<ul><li>khy-os 的 <code>apps/ai-frontend/src/router/index.js:142</code> 已经有约 30 个路由</li><li>路由设计模式（公开 + 私有路由 + Suspense lazy）是稳定范式</li><li><strong>khy-os 桌面端的 <code>khy://</code> 协议可以借鉴</strong> one-api 的 <code>?id=</code> 链接模式（虽然 one-api 没有协议）</li></ul>
+<h2 id="四-给-khy-os-的可借鉴项总结">四、给 khy-os 的可借鉴项总结<a class="anchor" href="#四-给-khy-os-的可借鉴项总结" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>one-api 特性</th><th>khy-os 借鉴路径</th><th>优先级</th></tr></thead><tbody><tr><td>主题切换</td><td><strong>已实现</strong></td><td>—</td></tr><tr><td>多 LLM 适配</td><td><strong>已实现</strong></td><td>—</td></tr><tr><td>统一 OpenAI 协议</td><td><strong>已实现</strong></td><td>—</td></tr><tr><td>额度倍率计算</td><td>khy-os 的 <code>tokenUsageService.js</code> 已用人民币计价，可补&quot;分组倍率&quot;</td><td>中</td></tr><tr><td>兑换码 / 邀请奖励</td><td><strong>远期</strong></td><td>低</td></tr><tr><td>多机部署 (master/slave)</td><td><strong>远期</strong>（khy-os 主要单用户）</td><td>低</td></tr><tr><td>Docker 部署</td><td><strong>已实现</strong>（<code>Dockerfile</code>）</td><td>—</td></tr><tr><td>主题目录 + env 切换</td><td>可作为&quot;多主题发布&quot;的&quot;参考</td><td>中</td></tr><tr><td>时区 <code>TZ=Asia/Shanghai</code></td><td><strong>已实现</strong></td><td>—</td></tr></tbody></table>
+<h2 id="五-本地文件">五、本地文件<a class="anchor" href="#五-本地文件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>来源</th></tr></thead><tbody><tr><td><code>App.js</code></td><td><code>web/default/src/App.js</code>（路由参考）</td></tr></tbody></table>
+<p>抓取自 <a href="https://raw.githubusercontent.com/songquanpeng/one-api/main/web/default/src/App.js" target="_blank" rel="noopener">https://raw.githubusercontent.com/songquanpeng/one-api/main/web/default/src/App.js</a></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../extensions/scripts/khy-desktop-rd/goose/README.html"><div class="dir">← 上一篇</div><div class="ttl">goose — 桌面 + CLI + API 三端 AI Agent（Electron）</div></a><a class="next" href="../../../../extensions/scripts/khy-desktop-rd/openflux/README.html"><div class="dir">下一篇 →</div><div class="ttl">OpenFlux — 桌面 AI Agent 客户端（Tauri v2）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="extensions/scripts/khy-desktop-rd/one-api/README.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [PROCESS-005] 版本管理与发布触发.md -->
+<title>[PROCESS-005] 版本管理与发布触发 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[PROCESS-005] 版本管理与发布触发</div>
+      <header class="hero reveal"><h1>[PROCESS-005] 版本管理与发布触发</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#process-005-版本管理与发布触发">[PROCESS-005] 版本管理与发布触发</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 版本管理与发布触发<br>id: PROCESS-005<br>domain: PROCESS<br>nature: 约束为主，兼福利<br>scope: &quot;四条轨道：① bump 触发判定（CHANGELOG 段位 → 递增位）② 版本号递增语义（与 [DESIGN-SEMVER-001] 同义）③ 推送分层（GitHub / Gitee 双远端与 tag）④ 发布链路的 workflow 触发条件与自动化边界（.github/workflows/dual-channel-release.yml、sync-gitee.yml、scripts/release/publish-dual.sh）&quot;<br>priority: P1<br>trigger: &quot;需要改动版本号（bump）、打 tag、推送远端或调整任何发布 workflow 的触发条件时&quot;<br>constraint: &quot;R-1 bump 只在三种情形发生：T1 面向用户的功能新增（CHANGELOG ### Added 非空）→ MINOR；T2 行为/破坏性变更（### Changed / ### Removed / ### Security 非空）→ MAJOR 或 MINOR；T3 仅缺陷修复（### Fixed 非空且 Added/Changed/Removed 三段均空）→ PATCH；其余一律不 bump（仅文档/注释/测试/CI/.gitignore 改动、对外行为不变的内部重构、上游依赖小版本、工作区尚未收口）。R-2 版本号格式与递增语义依 [DESIGN-SEMVER-001]，规则不得比 check-version-sync.js 的 isSemver() 更宽或更窄。R-3 推送分层：git push origin main 与 git push origin vX.Y.Z 均须用户点头（P0 红线 PROCESS-001 不得放宽；推 tag 是「发布须人工确认」的最后一道闸）。R-4 tag 推送之后的一切（构建/签名/SBOM/发包/镜像/Release 资产）全自动、无条件触发，不允许第二次人工判断。R-5 发布链路的 mechanical 条件：每个 release 档 workflow 的 on: 块非空且含明确触发器；sync-gitee.yml 的 branches 覆盖当前默认分支；四条硬条件 step（check-version-sync / changelog-new --check / release-gate / updateIndex.test）均不得设 continue-on-error: true；dual-channel-release.yml 的 concurrency 必须 cancel-in-progress: false。豁免须以 # release-trigger-exempt: &lt;理由&gt; 显式声明，理由必填。&quot;<br>grants: &quot;见约束边界：授权在 T1/T2/T3 判定成立时自行 bump 三源（pyproject.toml / packaging/npm/package.json / services/backend/package.json 同一次提交内齐变）并写 CHANGELOG；授权在 tag 推送后按 workflow 定义全自动完成整条发布链路，无需逐次审批。&quot;<br>benefit: &quot;「什么时候 bump、bump 成几、什么时候推、推完谁接手」有一份可机判的答案，不必靠人记；发布时机的判断从「人的记忆」搬进 workflow 的 on: 块，改一个字符就静默失效的那类事实（触发器、并发开关、硬条件豁免）变成会红的 finding。&quot;<br>exception: &quot;纯 re-export 与生成目录不适用本规则；workflow_dispatch 单独存在、tags: ['v*'] 通配、branches 同时列 main 与 master（迁移期兼容）、concurrency 组名任意 —— 四种写法均判绿。本规则只自动化「发布链路」，不触碰 PROCESS-001 的推送红线；若未来要把「推 tag」也自动化，须先改 PROCESS-001 并单独评审。&quot;<br>version: &quot;1.0.0 (2026-09-17)&quot;<br>status: active<br>ssot: &quot;docs/10_规范/其它规范/[DESIGN-SEMVER-002] 版本管理与发布触发规范.md&quot;<br>formerly: 无<br>owner: governance-team<br>enforcement: &quot;scripts/ci/check-release-triggers.js / scripts/ci/check-version-sync.js&quot;</p>
+<hr>
+<h1 id="process-005-版本管理与发布触发">[PROCESS-005] 版本管理与发布触发<a class="anchor" href="#process-005-版本管理与发布触发" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: PROCESS-005 -->
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/10_规范/registry/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/10_规范/其它规范/[DESIGN-SEMVER-002] 版本管理与发布触发规范.md。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>R-1 bump 只在三种情形发生：T1 面向用户的功能新增（CHANGELOG ### Added 非空）→ MINOR；T2 行为/破坏性变更（### Changed / ### Removed / ### Security 非空）→ MAJOR 或 MINOR；T3 仅缺陷修复（### Fixed 非空且 Added/Changed/Removed 三段均空）→ PATCH；其余一律不 bump（仅文档/注释/测试/CI/.gitignore 改动、对外行为不变的内部重构、上游依赖小版本、工作区尚未收口）。R-2 版本号格式与递增语义依 [DESIGN-SEMVER-001]，规则不得比 check-version-sync.js 的 isSemver() 更宽或更窄。R-3 推送分层：git push origin main 与 git push origin vX.Y.Z 均须用户点头（P0 红线 PROCESS-001 不得放宽；推 tag 是「发布须人工确认」的最后一道闸）。R-4 tag 推送之后的一切（构建/签名/SBOM/发包/镜像/Release 资产）全自动、无条件触发，不允许第二次人工判断。R-5 发布链路的 mechanical 条件：每个 release 档 workflow 的 on: 块非空且含明确触发器；sync-gitee.yml 的 branches 覆盖当前默认分支；四条硬条件 step（check-version-sync / changelog-new --check / release-gate / updateIndex.test）均不得设 continue-on-error: true；dual-channel-release.yml 的 concurrency 必须 cancel-in-progress: false。豁免须以 # release-trigger-exempt: &lt;理由&gt; 显式声明，理由必填。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>见约束边界：授权在 T1/T2/T3 判定成立时自行 bump 三源（pyproject.toml / packaging/npm/package.json / services/backend/package.json 同一次提交内齐变）并写 CHANGELOG；授权在 tag 推送后按 workflow 定义全自动完成整条发布链路，无需逐次审批。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>「什么时候 bump、bump 成几、什么时候推、推完谁接手」有一份可机判的答案，不必靠人记；发布时机的判断从「人的记忆」搬进 workflow 的 on: 块，改一个字符就静默失效的那类事实（触发器、并发开关、硬条件豁免）变成会红的 finding。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>见 <code>ssot</code> 指向的真源原文；本卡不复制反例，以免与真源漂移。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>人工评审（该规则暂无机械守卫）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>纯 re-export 与生成目录不适用本规则；workflow_dispatch 单独存在、tags: ['v*'] 通配、branches 同时列 main 与 master（迁移期兼容）、concurrency 组名任意 —— 四种写法均判绿。本规则只自动化「发布链路」，不触碰 PROCESS-001 的推送红线；若未来要把「推 tag」也自动化，须先改 PROCESS-001 并单独评审。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-17) 初版 / 迁移自 无</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/规则卡/[PROCESS-004] 委派边界.html"><div class="dir">← 上一篇</div><div class="ttl">[PROCESS-004] 委派边界</div></a><a class="next" href="../../../docs/10_规范/规则卡/[PROCESS-006] 新机制落地四阶段.html"><div class="dir">下一篇 →</div><div class="ttl">[PROCESS-006] 新机制落地四阶段</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/规则卡/[PROCESS-005] 版本管理与发布触发.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

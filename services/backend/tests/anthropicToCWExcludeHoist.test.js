@@ -1,6 +1,6 @@
 'use strict';
 /**
- * anthropicToCWExcludeHoist.test.js �?Ch2「不要每轮重建可复用结构�?
+ * anthropicToCWExcludeHoist.test.js — Ch2「不要每轮重建可复用结构�?
  *
  * Verifies the pure module-const hoist of the default exclude-Set in
  * anthropicToCW(): the default `web_search`/`websearch` exclusion is now a
@@ -14,6 +14,7 @@
  *   5. The converter output never leaks the Set.
  */
 const conv = require('../src/services/gateway/adapters/_toolSchemaConverter.js');
+const assert = require('node:assert');
 const { anthropicToCW, _DEFAULT_CW_EXCLUDE } = conv;
 function names(out) {
   return (out || []).map((t) => t.toolSpecification.name);
@@ -27,7 +28,7 @@ describe('Anthropic To C W Exclude Hoist', () => {
         { name: 'Read', description: 'r', input_schema: {} },
         { name: 'Bash', description: 'b', input_schema: {} },
       ];
-      expect(names(anthropicToCW(tools))).toBe(['Read', 'Bash']);
+      expect(names(anthropicToCW(tools))).toEqual(['Read', 'Bash']);
   });
 
   test('explicit excludeNames overrides the default', () => {

@@ -20,7 +20,7 @@ const { assess } = require('../../security/marshal/capabilityVector');
 const artifactHash = require('../trajectoryReplay/artifactHash');
 const tierRegistry = require('../trajectoryReplay/tierRegistry');
 
-const config = require('../../../../cli/handlers/config');
+const config = require('./config');
 
 /** Short human intent for one step (deterministic, path-basename based). */
 function _stepIntent(step) {

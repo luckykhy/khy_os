@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * frontend-blueprint.test.js �?fast regression suite pinning the "khyos can
+ * frontend-blueprint.test.js — fast regression suite pinning the "khyos can
  * autonomously generate a large frontend project" acceptance criteria.
  *
  * Runs in milliseconds (no IO beyond loading the bundled JSON templates /
@@ -15,8 +15,8 @@
  * Style: 2-space indent, single quotes, semicolons; code/comments in English.
  */
 
-const blueprint = require('../services/projectBlueprint');
-const projectTemplateService = require('../services/projectTemplateService');
+const blueprint = require('../../src/services/projectBlueprint');
+const projectTemplateService = require('../../src/services/projectTemplateService.js');
 
 const TEMPLATE_NAME = 'vue-multipage';
 const ARCHETYPE_ID = 'vue-multipage';
@@ -73,7 +73,7 @@ describe('vue-multipage template rendering', () => {
 
 describe('vue-multipage blueprint planning', () => {
   it('matches the archetype from a natural-language goal', () => {
-    const result = blueprint.match('创建一个大�?Vue 管理后台前端项目');
+    const result = blueprint.match('创建一个大�?Vue 管理后台前端项目');
 
     expect(result.kind).toBe('archetype');
     expect(result.match).toBeTruthy();

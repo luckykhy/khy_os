@@ -2,11 +2,32 @@
  * Real backtest engine
  * Runs a strategy's signal function against historical kline data and computes
  * equity curve, drawdown, Sharpe ratio, and trade log.
+ *
+ * A-share realism (borrowed from qlib / backtrader execution models):
+ *  - T+1 settlement: shares bought on bar i cannot be sold until bar i+1
+ *    (`lockedShares` tracks same-day purchases). Default on; opt out via
+ *    `options.tPlus1 = false` for non-A-share instruments.
+ *  - Transaction costs: commission (default 0.0003, both sides), stamp duty
+ *    (default 0.001, sell side only — A-share rule), and optional slippage
+ *    (default 0.001 = 0.1%). All overridable via `options` so legacy callers
+ *    keep byte-identical behavior when they pass the old signature.
  */
 const vm = require('vm');
+const crypto = require('crypto');
 const klineDataService = require('./klineDataService');
 const comprehensiveDataService = require('./comprehensiveDataService');
 const logger = require('../utils/logger');
+
+// A-share default transaction cost model (single source of truth for this
+// engine). Callers may override each value via options; the defaults mirror
+// strategyEngine.js's existing 0.0003 commission / 0.001 stamp duty so the
+// two engines stop diverging.
+const DEFAULT_COSTS = Object.freeze({
+  commissionRate: 0.0003, // 0.03%, charged on both buy and sell notional
+  stampDutyRate: 0.001, // 0.1%, sell side only (A-share)
+  slippage: 0.001, // 0.1% adverse price move per fill
+  tPlus1: true, // A-share: same-day purchase locked until next bar
+});
 
 function toFiniteNumber(value, fallback = null) {
   const num = Number(value);
@@ -17,6 +38,49 @@ function roundFinite(value, digits = 2) {
   const num = Number(value);
   if (!Number.isFinite(num)) return 0;
   return Number(num.toFixed(digits));
+}
+
+/**
+ * Resolve the effective cost model from options, falling back to the A-share
+ * defaults. Boolean `tPlus1` defaults to true (A-share); numeric rates fall
+ * back to DEFAULT_COSTS when not provided.
+ */
+function resolveCosts(options) {
+  return {
+    commissionRate: toFiniteNumber(options.commissionRate, DEFAULT_COSTS.commissionRate),
+    stampDutyRate: toFiniteNumber(options.stampDutyRate, DEFAULT_COSTS.stampDutyRate),
+    slippage: toFiniteNumber(options.slippage, DEFAULT_COSTS.slippage),
+    tPlus1: options.tPlus1 === undefined ? DEFAULT_COSTS.tPlus1 : options.tPlus1 === true,
+  };
+}
+
+/**
+ * Reproducibility fingerprint (borrowed from freqtrade's backtest cache key):
+ * a short SHA-1 over everything that deterministically determines a result.
+ * Identical inputs always yield an identical fingerprint, so a stored backtest
+ * row can be matched against its code+params+data range later. Callers persist
+ * it alongside the result.
+ *
+ * @param {object} p
+ * @param {string} p.signalCode - raw strategy source (string form of signalFn)
+ * @param {object} p.params - strategy parameters
+ * @param {string} p.symbol
+ * @param {string} p.startDate
+ * @param {string} p.endDate
+ * @param {object} p.costs - resolved cost model
+ * @returns {string} 16-char hex fingerprint
+ */
+function buildFingerprint({ signalCode, params, symbol, startDate, endDate, costs }) {
+  const payload = JSON.stringify({
+    v: 1,
+    code: String(signalCode || ''),
+    params: params || {},
+    symbol,
+    startDate,
+    endDate,
+    costs: costs || {},
+  });
+  return crypto.createHash('sha1').update(payload, 'utf-8').digest('hex').slice(0, 16);
 }
 
 function normalizeBars(rawBars = []) {
@@ -63,7 +127,18 @@ class BacktestEngine {
    * @param {Object} options.params - Strategy parameters
    * @returns {Object} Backtest results
    */
-  async run({ symbol, startDate, endDate, initialCapital = 100000, signalFn, params = {} }) {
+  async run({
+    symbol,
+    startDate,
+    endDate,
+    initialCapital = 100000,
+    signalFn,
+    params = {},
+    ...costOpts
+  }) {
+    // A-share cost + settlement model (T+1, commission, stamp duty, slippage).
+    const costs = resolveCosts(costOpts);
+
     // 1. Load historical data
     let barsResult = await klineDataService.getKlineData(symbol, 'daily', startDate, endDate, 10000);
     // getKlineData returns { kline: [...], ... } or an array (legacy)
@@ -163,6 +238,7 @@ class BacktestEngine {
     let cash = initialCapital;
     let position = 0;
     let entryPrice = 0;
+    let lockedShares = 0; // A-share T+1: shares bought today, sellable from next bar
     const trades = [];
     const equity = [];
     let peakEquity = initialCapital;
@@ -172,6 +248,12 @@ class BacktestEngine {
     const frozenParams = Object.freeze({ ...params });
 
     for (let i = 0; i < bars.length; i++) {
+      // T+1 settlement: shares locked on the previous bar become sellable now.
+      if (i > 0) {
+        position += lockedShares;
+        lockedShares = 0;
+      }
+
       const bar = bars[i];
       const closePrice = bar.close;
       const portfolioValue = cash + position * closePrice;
@@ -199,31 +281,64 @@ class BacktestEngine {
         sig = signal(bar, i, frozenBars, frozenParams);
       } catch { /* ignore signal errors */ }
 
+      // Apply slippage: buys fill higher, sells fill lower (adverse move).
+      const buyFill = closePrice * (1 + costs.slippage);
+      const sellFill = closePrice * (1 - costs.slippage);
+
       if (sig === 'buy' && position === 0) {
-        // Buy with all available cash
-        const qty = Math.floor(cash / closePrice / 100) * 100; // Round to lots of 100
+        // Buy with all available cash; round to 100-share lots (A-share rule).
+        const qty = Math.floor(cash / buyFill / 100) * 100;
         if (qty > 0) {
-          position = qty;
-          entryPrice = closePrice;
-          cash -= qty * closePrice;
-          trades.push({ date: bar.date, side: 'buy', price: closePrice, quantity: qty });
+          const notional = qty * buyFill;
+          const commission = notional * costs.commissionRate;
+          if (cash >= notional + commission) {
+            position = costs.tPlus1 ? 0 : qty; // T+1: held in lockedShares
+            lockedShares = costs.tPlus1 ? qty : 0;
+            entryPrice = buyFill;
+            cash -= notional + commission;
+            trades.push({
+              date: bar.date, side: 'buy', price: buyFill, quantity: qty,
+              commission, slippageCost: qty * (buyFill - closePrice), totalCost: commission,
+            });
+          }
         }
       } else if (sig === 'sell' && position > 0) {
-        const profit = (closePrice - entryPrice) * position;
-        cash += position * closePrice;
-        trades.push({ date: bar.date, side: 'sell', price: closePrice, quantity: position, profit });
+        // A-share T+1: only shares already unlocked (bought on earlier bars)
+        // are sellable. `position` here is the unlocked portion; same-day
+        // purchases sit in `lockedShares` until the next bar's unlock.
+        const notional = position * sellFill;
+        const commission = notional * costs.commissionRate;
+        const stampDuty = notional * costs.stampDutyRate; // sell side only
+        const proceeds = notional - commission - stampDuty;
+        const profit = (sellFill - entryPrice) * position - commission - stampDuty;
+        cash += proceeds;
+        trades.push({
+          date: bar.date, side: 'sell', price: sellFill, quantity: position, profit,
+          commission, stampDuty, slippageCost: position * (closePrice - sellFill),
+          totalCost: commission + stampDuty,
+        });
         position = 0;
         entryPrice = 0;
       }
     }
 
-    // Force close remaining position at last bar
-    if (position > 0) {
+    // Force close remaining position at last bar (including T+1-locked shares).
+    if (position > 0 || lockedShares > 0) {
+      const closeQty = position + lockedShares;
       const lastBar = bars[bars.length - 1];
-      const profit = (lastBar.close - entryPrice) * position;
-      cash += position * lastBar.close;
-      trades.push({ date: lastBar.date, side: 'sell', price: lastBar.close, quantity: position, profit, forced: true });
+      const sellFill = lastBar.close * (1 - costs.slippage);
+      const notional = closeQty * sellFill;
+      const commission = notional * costs.commissionRate;
+      const stampDuty = notional * costs.stampDutyRate;
+      const profit = (sellFill - entryPrice) * closeQty - commission - stampDuty;
+      cash += notional - commission - stampDuty;
+      trades.push({
+        date: lastBar.date, side: 'sell', price: sellFill, quantity: closeQty, profit,
+        commission, stampDuty, forced: true,
+        slippageCost: closeQty * (lastBar.close - sellFill), totalCost: commission + stampDuty,
+      });
       position = 0;
+      lockedShares = 0;
     }
 
     // 4. Compute metrics
@@ -243,6 +358,10 @@ class BacktestEngine {
       : 0;
     const sharpeRatio = stdReturn > 0 ? (avgReturn / stdReturn) * Math.sqrt(252) : 0;
 
+    const totalCommission = trades.reduce((s, t) => s + (t.commission || 0), 0);
+    const totalStampDuty = trades.reduce((s, t) => s + (t.stampDuty || 0), 0);
+    const totalSlippageCost = trades.reduce((s, t) => s + (t.slippageCost || 0), 0);
+
     const result = {
       symbol,
       startDate,
@@ -257,9 +376,33 @@ class BacktestEngine {
       winningTrades: winningTrades.length,
       losingTrades: losingTrades.length,
       winRate: roundFinite(winRate * 100, 2),
+      totalCommission: roundFinite(totalCommission, 2),
+      totalStampDuty: roundFinite(totalStampDuty, 2),
+      totalSlippageCost: roundFinite(totalSlippageCost, 2),
       trades,
       equity,
-      tradingDays
+      tradingDays,
+      // A-share execution realism metadata, so consumers can tell which
+      // assumptions produced the numbers (and reproduce them).
+      execution: {
+        tPlus1: costs.tPlus1,
+        commissionRate: costs.commissionRate,
+        stampDutyRate: costs.stampDutyRate,
+        slippage: costs.slippage,
+        totalCommission: roundFinite(totalCommission, 2),
+        totalStampDuty: roundFinite(totalStampDuty, 2),
+        totalSlippageCost: roundFinite(totalSlippageCost, 2),
+      },
+      // Reproducibility: sha1 over strategy code + params + symbol + range +
+      // cost model. Identical inputs → identical fingerprint (freqtrade-style).
+      fingerprint: buildFingerprint({
+        signalCode: typeof signalFn === 'string' ? signalFn : String(signalFn),
+        params: frozenParams,
+        symbol,
+        startDate,
+        endDate,
+        costs,
+      }),
     };
 
     logger.info('Backtest completed', { symbol, totalReturn: result.totalReturn, sharpe: result.sharpeRatio });
@@ -267,4 +410,12 @@ class BacktestEngine {
   }
 }
 
-module.exports = new BacktestEngine();
+// The engine is exposed as a singleton (existing call sites use
+// `backtestEngine.run(...)`), with the helper functions attached for reuse by
+// routes that build a fingerprint outside a run() call.
+const engine = new BacktestEngine();
+engine.DEFAULT_COSTS = DEFAULT_COSTS;
+engine.resolveCosts = resolveCosts;
+engine.buildFingerprint = buildFingerprint;
+
+module.exports = engine;

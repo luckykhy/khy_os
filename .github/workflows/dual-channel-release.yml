@@ -41,6 +41,10 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
+        with:
+          # 显式 pin，与根 package.json 的 packageManager 保持一致。
+          # 版本漂移会在发布流程里表现为「本地能打包、CI 报 ERR_PNPM_*」。
+          version: 10.18.0
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:

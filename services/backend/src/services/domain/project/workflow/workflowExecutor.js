@@ -201,14 +201,14 @@ function defaultPrimitives(ctx = {}) {
       return executeTool(name, params || {}, userId != null ? { userId } : {});
     },
     async executeSkill(name, params) {
-      const skills = require('../../skills');
+      const skills = require('../../../../skills');
       return skills.executeSkill(name, params || {}, {});
     },
     async runSubAgent(spec) {
       // Best-effort: route through the Agent/Task tool; fall back to a plain
       // prompt if the tool surface differs.
       try {
-        const AgentTool = require('../../tools/AgentTool');
+        const AgentTool = require('../../../../tools/AgentTool');
         const tool = AgentTool.execute ? AgentTool : AgentTool.default || AgentTool.AgentTool;
         if (tool && typeof tool.execute === 'function') {
           return tool.execute(

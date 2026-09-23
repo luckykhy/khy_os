@@ -192,6 +192,12 @@
 
           </el-button>
 
+          <el-button @click="navigateToBacktestAnalysis" type="warning" plain>
+
+            回测分析
+
+          </el-button>
+
           <el-button v-if="isFuturesSymbol" @click="showUploadDialog = true" type="info" plain>
 
             上传数据
@@ -291,6 +297,8 @@
             :current-price="currentPrice"
 
             :available-funds="availableFunds"
+
+            @order-submitted="handleOrderSubmitted"
 
           />
 

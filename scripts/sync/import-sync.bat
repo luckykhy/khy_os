@@ -75,6 +75,46 @@ if !ERRORLEVEL! neq 0 (
     exit /b 1
 )
 
+:: P0-2: manifest integrity pre-check —— 若与 bundle 同目录有 manifest.json，
+:: 导入前先用 git cat-file 逐条核对清单里的 commit 是否都真实存在。
+:: 缺/多即列出具体条目并拒绝继续（不静默吞掉状态漂移）。
+set "MANIFEST="
+for %%F in ("%BUNDLE%") do set "MANIFEST_DIR=%%~dp0"
+if exist "%MANIFEST_DIR%manifest.json" set "MANIFEST=%MANIFEST_DIR%manifest.json"
+if defined MANIFEST (
+    echo [INFO] Manifest found: %MANIFEST% —— verifying commit integrity ...
+    set "MISSING=0"
+    for /f "delims=" %%M in ('findstr /r /c:"^[0-9a-f]\{40\}$" "%MANIFEST%" 2^>nul') do (
+        git cat-file -e %%M 2>nul
+        if !ERRORLEVEL! neq 0 (
+            echo   [MISSING] %%M
+            set "MISSING=1"
+        )
+    )
+    if "%MISSING%"=="1" (
+        echo [ERROR] Manifest integrity check failed: one or more recorded commits are absent locally.
+        echo   The sync bundle and the state-truth side have drifted. Aborting import.
+        exit /b 1
+    )
+    echo [OK] Manifest integrity verified.
+)
+
+:: --- P0-4: conflict pre-flight (P1 item, cheap enough to ship now) -------
+:: If the target branch already exists locally, show the incoming commit range
+:: so the operator knows what's about to merge BEFORE git runs. Not a full
+:: three-way diff, but enough to catch "oh, this bundle is from a different
+:: fork" surprises early.
+if not "%DRY_RUN%"=="1" (
+    git rev-parse --verify --quiet "refs/heads/%BRANCH%" >nul 2>&1
+    if !ERRORLEVEL! equ 0 (
+        set "LOCAL_TIP="
+        for /f "delims=" %%T in ('git rev-parse --short "refs/heads/%BRANCH%" 2^>nul') do set "LOCAL_TIP=%%T"
+        if defined LOCAL_TIP (
+            echo [INFO] Local branch %BRANCH% is at !LOCAL_TIP!; incoming commits will be merged.
+        )
+    )
+)
+
 :: --- Discover branch from bundle ---
 if not defined BRANCH (
     set "REFNAME="

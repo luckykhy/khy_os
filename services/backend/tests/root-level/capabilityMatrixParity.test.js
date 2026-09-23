@@ -13,9 +13,9 @@
 
 const path = require('path');
 
-const MATRIX_PATH = path.resolve(__dirname, '../src/services/capabilityMatrix');
+const MATRIX_PATH = path.resolve(__dirname, '../../src/services/capabilityMatrix');
 const { makeCapabilityMatrix } = require(MATRIX_PATH);
-const { SEAMS } = require(path.resolve(__dirname, '../src/services/capabilityMatrix/seams'));
+const { SEAMS } = require('../../src/services/domain/catalog/capabilityMatrix/seams');
 
 // The canonical _envFlagEnabled from the loop, replicated here ONLY to compute
 // the "expected" side of the parity assertion independently of the matrix.

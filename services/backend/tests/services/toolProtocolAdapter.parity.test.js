@@ -1,18 +1,18 @@
 'use strict';
 /**
- * toolProtocolAdapter.parity.test.js â€?the protocol seam, proven symmetric.
+ * toolProtocolAdapter.parity.test.js â€” the protocol seam, proven symmetric.
  *
  * The whole point of collapsing the two tool loops into one is that the protocol
- * (native tool_use â†?text <tool_call>) becomes a pluggable axis. These tests pin
+ * (native tool_use ï¿½?text <tool_call>) becomes a pluggable axis. These tests pin
  * the contract both adapters must honor:
  *
- *   1. Same model turn, two transports â†?equivalent {name, params}. A native
+ *   1. Same model turn, two transports ï¿½?equivalent {name, params}. A native
  *      tool_use block and the text <tool_call> form of the same call parse to the
  *      same canonical tool name + params.
  *   2. Native parse carries structure (_structured, _toolUseId); text parse does
  *      not (the loop canonicalizes it downstream).
- *   3. Result formatting diverges by design: native â†?structured (delegated, null
- *      here), text â†?plain text turn the weak model can read.
+ *   3. Result formatting diverges by design: native ï¿½?structured (delegated, null
+ *      here), text ï¿½?plain text turn the weak model can read.
  *   4. selectTools / buildSystemAddendum are text-only; native injects nothing.
  *   5. resolveAdapter routes by protocol string and defaults to native.
  */
@@ -23,21 +23,21 @@ const {
   TEXT_PROTOCOL,
   NATIVE_PROTOCOL,
 } = require('../../src/services/toolProtocolAdapter');
-describe('toolProtocolAdapter â€?parse parity across transports', () => {
-});
-describe('toolProtocolAdapter â€?result formatting diverges by design', () => {
-});
-describe('toolProtocolAdapter â€?system addendum & tool selection are text-only', () => {
+const assert = require('node:assert');
+describe('toolProtocolAdapter ï¿½?system addendum & tool selection are text-only', () => {
   const allDefs = [
     { name: 'Read', description: 'read a file', parameters: { properties: { file_path: {} }, required: ['file_path'] } },
     { name: 'Write', description: 'write a file', parameters: { properties: { file_path: {}, content: {} }, required: ['file_path', 'content'] } },
     { name: 'deploy', description: 'too powerful', parameters: {} },
   ];
 });
-describe('toolProtocolAdapter â€?resolveAdapter routing', () => {
-});
 
 describe('Tool Protocol Adapter parity', () => {
+  const allDefs = [
+    { name: 'Read', description: 'read a file', parameters: { properties: { file_path: {} }, required: ['file_path'] } },
+    { name: 'Write', description: 'write a file', parameters: { properties: { file_path: {}, content: {} }, required: ['file_path', 'content'] } },
+    { name: 'deploy', description: 'too powerful', parameters: {} },
+  ];
   test('native tool_use block and text <tool_call> of the SAME call parse equivalently', () => {
         // A weak model would emit this as text; a cloud model as a native block.
         const call = { name: 'Read', params: { file_path: 'src/index.js' } };
@@ -51,7 +51,7 @@ describe('Tool Protocol Adapter parity', () => {
     
         expect(nativeParsed.length).toBe(1);
         expect(textParsed.length).toBe(1);
-        // Both canonicalize Read â†?readFile via claudeCompat, so names match.
+        // Both canonicalize Read ï¿½?readFile via claudeCompat, so names match.
         expect(nativeParsed[0].name).toBe(textParsed[0].name);
         assert.deepEqual(nativeParsed[0].params, textParsed[0].params);
   });
@@ -114,7 +114,7 @@ describe('Tool Protocol Adapter parity', () => {
   test('text formatToolResults honors a maxLen cap', () => {
         const big = 'A'.repeat(5000);
         const out = textAdapter.formatToolResults([{ tool: 'Read', result: { success: true, output: big } }], { maxLen: 100 });
-        // header + capped body â€?far below the raw 5000 chars.
+        // header + capped body ï¿½?far below the raw 5000 chars.
         expect(out.text.length < 200).toBeTruthy();
   });
 
@@ -160,8 +160,8 @@ describe('Tool Protocol Adapter parity', () => {
   });
 
   test('adapters are frozen (single source, not mutable at runtime)', () => {
-        expect(Object.isFrozen(nativeAdapter).toBeTruthy());
-        expect(Object.isFrozen(textAdapter).toBeTruthy());
+        expect(Object.isFrozen(nativeAdapter)).toBeTruthy();
+        expect(Object.isFrozen(textAdapter)).toBeTruthy();
   });
 
 });

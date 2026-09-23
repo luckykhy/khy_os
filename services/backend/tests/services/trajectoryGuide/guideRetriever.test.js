@@ -1,11 +1,11 @@
 'use strict';
 /**
- * guideRetriever.test.js â€?DESIGN-ARCH-049 G7 (weak-model guide retrieval).
+ * guideRetriever.test.js â€” DESIGN-ARCH-049 G7 (weak-model guide retrieval).
  *
  * findGuide reuses learningRetrieval.buildContext with stored maps as extra
  * corpus paths. Verifies:
- *   - RAG off â†?null (best-effort, never an error);
- *   - no maps â†?null;
+ *   - RAG off ï¿½?null (best-effort, never an error);
+ *   - no maps ï¿½?null;
  *   - with a relevant map present, it is retrieved and the blended score folds in
  *     the deterministic qualityScore;
  *   - _mapIdFromSource recovers the id from a `fetched:<id>.map.json` source.
@@ -15,15 +15,16 @@
  * allowVector defaults off so retrieval is pure lexical/offline.
  */
 const fs = require('fs');
+const assert = require('node:assert');
 const os = require('os');
 const path = require('path');
 const TMP_PROJ = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-g7-proj-'));
 process.env.KHY_PROJECT_DATA_HOME = TMP_PROJ;
 process.env.KHY_DEP_HEALING = 'off';
 const learningRetrieval = require('../../../src/services/learningRetrieval');
-const guideRetriever = require('../../../src/services/trajectoryGuide/guideRetriever');
-const mapAuthor = require('../../../src/services/trajectoryGuide/mapAuthor');
-const mapStore = require('../../../src/services/trajectoryGuide/mapStore');
+const guideRetriever = require('../../../src/services/domain/trajectory/trajectoryGuide/guideRetriever.js');
+const mapAuthor = require('../../../src/services/domain/trajectory/trajectoryGuide/mapAuthor.js');
+const mapStore = require('../../../src/services/domain/trajectory/trajectoryGuide/mapStore.js');
 function seedMap(task, files) {
   const steps = files.map((f, i) => ({
     seq: i, name: 'write_file', tier: 'FILE',
@@ -45,7 +46,7 @@ describe('Guide Retriever', () => {
       expect(guideRetriever._mapIdFromSource('something-else.md')).toBe(null);
   });
 
-  test('RAG disabled â†?null (best-effort, no error)', async () => {
+  test('RAG disabled ï¿½?null (best-effort, no error)', async () => {
       seedMap('build a kubernetes deployment manifest', ['/work/deploy.yaml']);
       const prev = learningRetrieval.RAG_ENABLED;
       learningRetrieval.RAG_ENABLED = false;
@@ -57,7 +58,7 @@ describe('Guide Retriever', () => {
       }
   });
 
-  test('no stored maps â†?null', async () => {
+  test('no stored maps ï¿½?null', async () => {
       const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-g7-empty-'));
       const prevHome = process.env.KHY_PROJECT_DATA_HOME;
       process.env.KHY_PROJECT_DATA_HOME = empty;
@@ -66,7 +67,7 @@ describe('Guide Retriever', () => {
       try {
         // mapStore caches nothing; listMaps reads the (empty) dir for this home.
         const out = await guideRetriever.findGuide('anything at all', {});
-        // Either no maps dir yet, or no relevant chunk â†?null.
+        // Either no maps dir yet, or no relevant chunk ï¿½?null.
         expect(out).toBe(null);
       } finally {
         learningRetrieval.RAG_ENABLED = prev;

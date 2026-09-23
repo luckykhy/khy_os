@@ -280,6 +280,98 @@ function _resolveAiFrontendDistDir(options = {}, frontendDir = null) {
   return null;
 }
 
+/**
+ * Can the frontend dev server actually be spawned from `frontendDir`?
+ *
+ * Replaces the old `node_modules/.package-lock.json` probe. npm writes that marker
+ * only at the WORKSPACE ROOT, and apps/ai-frontend is a member of the root `Khy-OS`
+ * workspace — its own node_modules holds just the hoist-stragglers and legitimately
+ * never carries the marker. The old check therefore reported "未就绪" for a fully
+ * hydrated install and sent healthy users to run a pointless `npm install`. Same
+ * defect class already fixed for services/backend in freshInstallDoctor.js.
+ * The real question is "does the `dev` script's binary resolve?", so we ask that,
+ * walking ancestors the way npm resolves member bins.
+ *
+ * Fail-soft: any error yields { usable: false, command: '' }.
+ *
+ * @returns {{usable: boolean, command: string}}
+ */
+function _frontendDevUsable(frontendDir) {
+  const result = { usable: false, command: '' };
+  if (!frontendDir) {
+    return result;
+  }
+
+  let pkg = null;
+  try {
+    pkg = JSON.parse(fs.readFileSync(path.join(frontendDir, 'package.json'), 'utf8'));
+  } catch {
+    return result; // unreadable manifest: cannot verify the dev tool
+  }
+  const command = String((pkg.scripts && pkg.scripts.dev) || '')
+    .trim()
+    .split(/\s+/)[0];
+  if (!command || command.includes('=')) {
+    return result;
+  }
+  result.command = command;
+
+  const variants =
+    process.platform === 'win32'
+      ? [command, `${command}.cmd`, `${command}.CMD`, `${command}.ps1`, `${command}.exe`]
+      : [command];
+
+  // npm resolves a member's bins against every ancestor node_modules/.bin, so the
+  // hoisted root bin dir counts — walking up is what makes workspace installs pass.
+  const binDirs = [];
+  let cursor = frontendDir;
+  for (let depth = 0; depth < 6; depth += 1) {
+    binDirs.push(path.join(cursor, 'node_modules', '.bin'));
+    const parent = path.dirname(cursor);
+    if (parent === cursor) {
+      break;
+    }
+    cursor = parent;
+  }
+
+  for (const binDir of binDirs) {
+    for (const variant of variants) {
+      try {
+        if (fs.existsSync(path.join(binDir, variant))) {
+          result.usable = true;
+          return result;
+        }
+      } catch {
+        // unreadable dir: keep walking
+      }
+    }
+  }
+
+  // Some setups skip the .bin shims entirely; plain resolution still proves the dep.
+  try {
+    const pkgJson = require.resolve(`${command}/package.json`, { paths: [frontendDir] });
+    result.usable = fs.existsSync(pkgJson);
+  } catch {
+    // unresolved
+  }
+  return result;
+}
+
+/**
+ * The daemon/frontend log paths as they actually exist on disk, for failure hints.
+ *
+ * These were hardcoded as `~/.khy/logs/...`, which is wrong whenever the checkout
+ * ships its own `.khy/` directory: `getDataHome()` then resolves project-local,
+ * the hint pointed at a directory that never gets created, and users (including
+ * the author) wasted time reading a path that does not exist.
+ *
+ * @returns {string} "daemon.log 与 frontend.log" with resolved absolute paths
+ */
+function _daemonLogHint() {
+  const logsDir = path.join(getDataHome(), 'logs');
+  return `${path.join(logsDir, 'ai_manage_daemon.log')} 与 ${path.join(logsDir, 'ai_frontend_dev.log')}`;
+}
+
 const _sleep = require('../../utils/sleep'); // single-source sleep ([MGMT-RPT-020] REQ-2026-010)
 const { printSuccess, printError, printInfo } = require('../formatters');
 
@@ -719,6 +811,8 @@ function _formatManageRecommendedEntry({ frontendAvailable, frontendReachable, a
   if (frontendAvailable) {
     return '前端地址（当前不可达，请先恢复 Web 入口）';
   }
+  // 「API 直管」推荐只在 API 探针已验证可达时成立；探针失败（未就绪/不可达）
+  // 时如实退回 status 提示，不宣称未验证的 API 可用。
   if (apiReachable) {
     return 'API 直管（当前无可用前端）';
   }
@@ -1128,12 +1222,21 @@ async function handleGatewayManage(args = [], options = {}) {
     // 无法启动 dev server，自动跳过避免 spawn EINVAL / 启动超时
     let noAutoFrontend =
       _truthyFlag(options['no-auto-frontend']) || _truthyFlag(options.noAutoFrontend);
+    let frontendSkipReason = '';
+    if (noAutoFrontend) {
+      frontendSkipReason = '显式禁用（--no-auto-frontend）';
+    }
     if (!noAutoFrontend && frontendDir) {
-      const nmDir = path.join(frontendDir, 'node_modules');
-      const nmUsable =
-        fs.existsSync(nmDir) && fs.existsSync(path.join(nmDir, '.package-lock.json'));
-      if (!nmUsable) {
+      // Guard the dev-server spawn: a pip install ships ai-frontend source without
+      // node_modules (or with only an empty shell), which makes the spawn fail with
+      // EINVAL or time out. Verify the `dev` binary resolves instead of probing for
+      // npm's workspace-root-only .package-lock.json marker.
+      const devCheck = _frontendDevUsable(frontendDir);
+      if (!devCheck.usable) {
         noAutoFrontend = true;
+        frontendSkipReason = devCheck.command
+          ? `未解析到 dev 脚本依赖 ${devCheck.command}（node_modules/.bin）`
+          : 'package.json 无 scripts.dev';
       }
     }
 
@@ -1141,8 +1244,8 @@ async function handleGatewayManage(args = [], options = {}) {
       printInfo('未检测到 ai-frontend 目录或预构建 dist。管理页将以纯 API 模式启动。');
       printInfo('如需完整管理页：cd ai-frontend && npm install && npm run build');
     } else if (noAutoFrontend && !frontendDistDir) {
-      printInfo('ai-frontend/node_modules 未就绪，前端 dev server 已跳过。');
-      printInfo('如需前端：cd ai-frontend && npm install && npm run build');
+      printInfo(`ai-frontend dev server 已跳过：${frontendSkipReason || '依赖不可用'}。`);
+      printInfo('如需前端：在仓库根执行 npm install（工作区依赖提升到根 node_modules），或传 --frontend-dist-dir 指向预构建产物。');
     }
     printInfo(`正在启动 AI 管理会话 (API:${apiPort}, 前端:${frontendPort})...`);
     _spawnAiManageDaemon({
@@ -1158,7 +1261,7 @@ async function handleGatewayManage(args = [], options = {}) {
     const ready = await _waitAiManageRuntimeReady(AI_MANAGE_READY_TIMEOUT_MS);
     if (!ready) {
       printError(`启动 AI 管理会话失败或超时 (API:${apiPort}, 前端:${frontendPort})`);
-      printInfo('可检查日志: ~/.khy/logs/ai_manage_daemon.log 与 ~/.khy/logs/ai_frontend_dev.log');
+      printInfo(`可检查日志: ${_daemonLogHint()}`);
       // Surface last few lines of daemon log if available, plus targeted advice
       // when an OS-level error code (ENOMEM/EACCES/...) appears in the tail.
       try {
@@ -1290,9 +1393,7 @@ async function handleGatewayManage(args = [], options = {}) {
       printInfo(
         '检测到管理会话未完全就绪。可先运行: khy gateway manage stop && khy gateway manage start --daemon'
       );
-      printInfo(
-        '若仍失败，请检查日志: ~/.khy/logs/ai_manage_daemon.log 与 ~/.khy/logs/ai_frontend_dev.log'
-      );
+      printInfo(`若仍失败，请检查日志: ${_daemonLogHint()}`);
     }
     _printWindowsAccessHint(runtimeForOpen);
     console.log('');
@@ -1381,10 +1482,8 @@ async function handleGatewayManage(args = [], options = {}) {
     printInfo(
       '可选：显式指定前端目录 `--frontend-dir <ai-frontend绝对路径>`，或静态目录 `--frontend-dist-dir <dist绝对路径>`。'
     );
-    printInfo('若使用源码前端开发模式，请先在 ai-frontend 目录执行 `npm install`。');
-    printInfo(
-      '若仍失败，请检查日志: ~/.khy/logs/ai_manage_daemon.log 与 ~/.khy/logs/ai_frontend_dev.log'
-    );
+    printInfo('若使用源码前端开发模式，请先在仓库根执行 `npm install`（工作区依赖提升到根 node_modules）。');
+    printInfo(`若仍失败，请检查日志: ${_daemonLogHint()}`);
   }
 }
 

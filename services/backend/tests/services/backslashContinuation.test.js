@@ -3,7 +3,7 @@
 const {
   isEnabled,
   shouldContinue,
-} = require('../../../src/services/backslashContinuation');
+} = require('../../src/services/backslashContinuation.js');
 
 describe('backslashContinuation', () => {
   describe('isEnabled', () => {
@@ -25,15 +25,15 @@ describe('backslashContinuation', () => {
     });
 
     test('detects single trailing backslash', () => {
-      expect(shouldContinue('text\\', 4, {})).toBe(true);
+      expect(shouldContinue('text\\', 5, {})).toBe(true);
     });
 
     test('detects triple backslash (odd)', () => {
-      expect(shouldContinue('text\\\\\\', 6, {})).toBe(true);
+      expect(shouldContinue('text\\\\\\', 7, {})).toBe(true);
     });
 
     test('rejects double backslash (even)', () => {
-      expect(shouldContinue('text\\\\', 5, {})).toBe(false);
+      expect(shouldContinue('text\\\\', 6, {})).toBe(false);
     });
 
     test('returns false when cursor at start', () => {

@@ -1,0 +1,15 @@
+{
+  "_comment": "L1 逐文件改前改后棘轮配置。HARD 指标变差即红（阻断），SOFT 只报告。exceptions 为有期限豁免（path 命中且 by 未过期 → 跳过）。",
+  "caps": {
+    "maxFuncLines": 300,
+    "maxNesting": 6,
+    "consoleCount": 5,
+    "debuggerCount": 0,
+    "todoCount": 40,
+    "lines": 2000,
+    "dupBlock": 40
+  },
+  "softMetrics": ["lines", "dupBlock"],
+  "window": 6,
+  "exceptions": []
+}

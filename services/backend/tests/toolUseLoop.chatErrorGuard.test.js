@@ -1,12 +1,13 @@
 'use strict';
 /**
- * toolUseLoop.chatErrorGuard.test.js �?主循环模型调用防御纵深接�?goal 2026-07-11「包括错误的处理�?�?
+ * toolUseLoop.chatErrorGuard.test.js — 主循环模型调用防御纵深接�?goal 2026-07-11「包括错误的处理�?�?
  *
- * 网关契约�?generate() 返回 success:false 而非�?�?意外*异常会从 `await chat(...)` 穿透并
- * 杀掉整个多�?run。门 KHY_TOOL_LOOP_CHAT_GUARD(默认开)开启时:意外异常被归一成「诚实的本轮
- * 结束」返回结果——本轮优雅收尾、会话继�?不掉线。门�?�?逐字节回退:重新抛出�?
+ * 网关契约�?generate() 返回 success:false 而非�?�?意外*异常会从 `await chat(...)` 穿透并
+ * 杀掉整个多�?run。门 KHY_TOOL_LOOP_CHAT_GUARD(默认开)开启时:意外异常被归一成「诚实的本轮
+ * 结束」返回结果——本轮优雅收尾、会话继�?不掉线。门�?�?逐字节回退:重新抛出�?
  */
 const os = require('os');
+const assert = require('node:assert');
 const path = require('path');
 const fs = require('fs');
 const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-chatguard-'));
@@ -55,7 +56,7 @@ describe('Tool Use Loop chat Error Guard', () => {
         expect(result.resumable).toBe(true);
   });
 
-  test('gate off (explicit falsy): re-throws �?byte-identical legacy behavior', async () => {
+  test('gate off (explicit falsy): re-throws �?byte-identical legacy behavior', async () => {
         process.env.KHY_TOOL_LOOP_CHAT_GUARD = 'off';
         await assert.rejects(
           () => toolUseLoop.runToolUseLoop('Do the multi-day work', {

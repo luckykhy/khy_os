@@ -172,6 +172,31 @@ describe('forceWindowsUtf8 (Fix B) — cmd 中文 find 跳过 chcp', () => {
     expect(r.outputEncoding).toBe('utf-8');
   });
 
+  // 乱码根因:Git Bash/MSYS 恒以 UTF-8 输出,但历史对 bash 返回 outputEncoding:null →
+  // spawn 侧退回 getSystemEncoding()(中文 Windows=gbk)把 UTF-8 字节按 GBK 解 → 中文乱码。
+  // 现声明 utf-8(且**不前置 chcp**,bash 不认),走 smartWinUtf8:UTF-8 优先、含 U+FFFD 才回落 OEM。
+  test('bash → 声明 utf-8 但不前置 chcp(命令逐字节不变)', () => {
+    asWin();
+    const cmd = 'node -e "console.log(1)"';
+    const r = forceWindowsUtf8({ shell: 'bash' }, cmd, {});
+    expect(r.command).toBe(cmd);
+    expect(r.outputEncoding).toBe('utf-8');
+  });
+
+  test('sh → 同 bash 声明 utf-8', () => {
+    asWin();
+    const r = forceWindowsUtf8({ shell: 'sh' }, 'echo hi', {});
+    expect(r.command).toBe('echo hi');
+    expect(r.outputEncoding).toBe('utf-8');
+  });
+
+  test('bash + 逃生阀 KHY_WIN_FORCE_UTF8=0 → 不声明(null,回落自动探测)', () => {
+    asWin();
+    const r = forceWindowsUtf8({ shell: 'bash' }, 'echo hi', { KHY_WIN_FORCE_UTF8: '0' });
+    expect(r.command).toBe('echo hi');
+    expect(r.outputEncoding).toBeNull();
+  });
+
   test('非 Windows → 原样透传', () => {
     restore();
     const r = forceWindowsUtf8({ shell: 'cmd' }, 'dir "X" | find "文件"', {});

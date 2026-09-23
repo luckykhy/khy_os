@@ -12,9 +12,9 @@
 const { describe, test, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { validateContract, SOURCE_KINDS } = require('../src/services/management/resourceContract');
-const registry = require('../src/services/management/managementRegistry');
-const { checkParity } = require('../src/services/management/parityGuard');
+const { validateContract, SOURCE_KINDS } = require('../src/services/domain/project/management/resourceContract.js');
+const registry = require('../src/services/domain/project/management/managementRegistry.js');
+const { checkParity } = require('../src/services/domain/project/management/parityGuard.js');
 
 function fakeContract(over = {}) {
   return {

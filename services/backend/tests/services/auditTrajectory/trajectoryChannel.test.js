@@ -15,14 +15,14 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const diffCapture = require('../../../src/services/auditTrajectory/diffCapture');
-const parser = require('../../../src/services/auditTrajectory/parser');
+const diffCapture = require('../../../src/services/domain/trajectory/auditTrajectory/diffCapture.js');
+const parser = require('../../../src/services/domain/trajectory/auditTrajectory/parser.js');
 const {
   AuditTrajectoryRecorder,
   normalizeOrigin,
   isoWithOffset,
-} = require('../../../src/services/auditTrajectory/recorder');
-const wire = require('../../../src/services/auditTrajectory/wire');
+} = require('../../../src/services/domain/trajectory/auditTrajectory/recorder.js');
+const wire = require('../../../src/services/domain/trajectory/auditTrajectory/wire.js');
 const hookSystem = require('../../../src/services/domain/extensions/hooks/hookSystem.js');
 
 let _tmpRoots = [];
@@ -348,7 +348,7 @@ describe('审计轨迹：任何情况下不压缩、不裁剪、不摘要', () =
 
   test('模块内不存在任何 truncate / 覆盖写 的代码路径', () => {
     const raw = fs.readFileSync(
-      path.join(__dirname, '../../../src/services/auditTrajectory/recorder.js'),
+      path.join(__dirname, '../../../src/services/domain/trajectory/auditTrajectory/recorder.js'),
       'utf-8'
     );
     // 头部 docstring 会「提到」compactHistory 来解释为什么另开通道，所以先剥注释，

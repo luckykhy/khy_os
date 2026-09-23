@@ -13,9 +13,21 @@
     "./http/errors": "./src/http/errors.js",
     "./auth/token": "./src/auth/token.js",
     "./auth/state": "./src/auth/state.js",
-    "./auth/guard": "./src/auth/guard.js"
+    "./auth/guard": "./src/auth/guard.js",
+    "./board": "./src/board/index.js",
+    "./board/model": "./src/board/model.js",
+    "./board/TaskBoard.vue": "./src/board/TaskBoard.vue",
+    "./board/TaskCard.vue": "./src/board/TaskCard.vue"
   },
   "scripts": {
     "test": "node --test tests/**/*.test.js"
+  },
+  "peerDependencies": {
+    "vue": "^3.4.0"
+  },
+  "peerDependenciesMeta": {
+    "vue": {
+      "optional": true
+    }
   }
 }

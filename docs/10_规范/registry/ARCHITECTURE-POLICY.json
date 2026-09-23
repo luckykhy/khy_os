@@ -1,0 +1,677 @@
+{
+  "$schemaNote": "khy-os 模块边界策略契约（对齐 ZCode 同名 architecture-policy.yaml）。由 scripts/ci/check-zcode-baseline.js 的 M1/M6/M7 消费。S1 观察者档：只记录不拦截（见 FEATURE-OWNERSHIP.json rollout.mechanisms[zcode-baseline-scoreboard]）。",
+  "source": "ZCode github.com/zai-org/ZCode:architecture-policy.yaml；本文件是 khy-os 适配版",
+  "scope": "细粒度模块边界。粗粒度 L0–L6 层向依赖由 check:layout（DESIGN-LAY-005）管辖，二者互补不重叠：check:layout 管层向 + cross-layer-require，本策略管 services/backend/src 内的模块级 file-size / 禁环 / 禁深引用。",
+  "version": 1,
+  "updated": "2026-09-21",
+  "global": {
+    "maxFileLines": 400,
+    "forbidCycles": true,
+    "forbidDeepImports": true,
+    "managedOnly": true,
+    "$note": "managedOnly=true：以上仅对 managed:true 的模块生效。managed:false 为存量 legacy，豁免但由 M1 单列展示，逐模块清理干净后翻成 managed:true（ZCode 迁移模型）。"
+  },
+  "modules": [
+    {
+      "id": "models",
+      "roots": [
+        "services/backend/src/models"
+      ],
+      "managed": true,
+      "note": "种子纳管模块：0 个文件超 400 行，作为 M1/M6/M7 首个受约束基线。"
+    },
+    {
+      "id": "observability",
+      "roots": [
+        "services/backend/src/observability"
+      ],
+      "managed": true,
+      "note": "种子纳管模块：0 个文件超 400 行。"
+    },
+    {
+      "id": "config",
+      "roots": [
+        "services/backend/src/config"
+      ],
+      "managed": true,
+      "note": "种子纳管模块：0 个文件超 400 行。"
+    },
+    {
+      "id": "loop",
+      "roots": [
+        "services/backend/src/services/tool/loop"
+      ],
+      "managed": true,
+      "note": "P0 拆分首个纳管子模块：从 12k 行 toolUseLoopCore.js 逐阶段抽出的循环方法（对齐 ZCode runtime/methods/*）。usage.js（整体循环 token 用量累加族）为首个成员，纯函数零 IO 叶子。每迁出一个 <400 行的收敛模块即落此目录并受 M1/M6/M7 约束，形成拆分解耦的棘轮。"
+    },
+    {
+      "id": "repl",
+      "roots": [
+        "services/backend/src/cli/repl"
+      ],
+      "managed": true,
+      "note": "经典 REPL 拆分簇纳管（loop 棘轮的同型应用）：replSession.js（13k 行）逐簇抽出的行为保真叶子（statusLabels/streamRender/errorReporting/startupHeader/permissionBar/displayFormatters 等 ~40 个），全部 ≤400 行后翻 managed，纳入 M1/M6/M7 棘轮。翻档前 4 个曾超标叶（statusLabels 479 / streamRender 432 / errorReporting 440 / startupHeader 448）经纯叶外移收敛至 ≤400（复现/回滚存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-replleaf-*.txt）。"
+    },
+    {
+      "id": "externalApps",
+      "roots": [
+        "services/backend/src/services/domain/network/externalApps"
+      ],
+      "managed": true,
+      "note": "外部 App 适配器簇纳管（loop/repl 棘轮的第三次应用）：13 个 adapter/importer + tomlLite 子集，全目录 ≤400 行后翻 managed，纳入 M1/M6/M7 棘轮。翻档前唯一超标叶 tomlLite.js（437）行为保真抽出其写入侧为纯叶子 tomlLiteFormat.js（101，零 back-edge、不成环），公共面 {parse,stringify} 逐字节不变。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/（backups/tomlLite.pre-externalapps1.js）。"
+    },
+    {
+      "id": "trajectoryProvenance",
+      "roots": [
+        "services/backend/src/services/domain/trajectory/trajectoryProvenance"
+      ],
+      "managed": true,
+      "note": "轨迹溯源簇纳管（棘轮第四次应用）：claimReconciler/traceChain/quarantinePolicy 等确定性正文核对，全目录 ≤400 行后翻 managed。翻档前唯一超标叶 claimReconciler.js（402）抽出其「否定守卫」族（_isNegationGuardEnabled/_isNegatedClaim/_firstUnnegatedMatch + 否定正则）为纯叶子 claimNegation.js（83，只依赖 process.env+自身正则、零 back-edge），claimReconciler 重新 require 再导出，8 键公共面逐字节不变。p4Reconcile+answerVerifier node:test 47/47。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-trajprov-1-claimnegation.txt。"
+    },
+    {
+      "id": "deviceApps",
+      "roots": [
+        "services/backend/src/services/domain/desktop/deviceApps"
+      ],
+      "managed": true,
+      "note": "设备应用管理簇纳管（棘轮第五次应用）：包管理器判定/解析/卸载策略等纯叶子 + IO 壳，全目录 ≤400 行后翻 managed。翻档前唯一超标叶 deviceAppsPolicy.js（440）抽出其 list 输出解析器族（_parseDpkg/_parseBrew/_parsePacman/_parseChoco/_parseDnf/_parseWinget + _PARSERS + parseListOutput，共 ~185 行纯字符串→记录、零 IO、不引用 policy 任何符号）为纯叶子 deviceAppListParsers.js（201，无 back-edge），deviceAppsPolicy 重新 require 再导出 parseListOutput，9 键公共面逐字节不变。deviceAppsPolicy+deviceAppManager node:test 69/69。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-devapps-1-parsers.txt。"
+    },
+    {
+      "id": "securityResilience",
+      "roots": [
+        "services/backend/src/services/domain/security/resilience"
+      ],
+      "managed": true,
+      "note": "有限窗口降级/强制兜底协议簇纳管（loop/repl 棘轮的第六次应用）：BudgetAwareExecutor 降级树执行器 + 死循环检测/错误签名归类/兜底组装/预算适配器等纯逻辑，全目录 ≤400 行后翻 managed。翻档前唯一超标叶 budgetExecutor.js（410）抽出其「预算适配器」族（makeStepBudget/makeTokenBudget，只依赖 fallbackTree 的 MAX_FALLBACK_DEPTH 常量）为纯叶子 budgetAdapters.js（70，零 back-edge、不成环），budgetExecutor 重新 require 再导出，4 键公共面（BudgetAwareExecutor/DEFAULT_FLOOR_PCT/makeStepBudget/makeTokenBudget）逐字节不变。整簇零跨目录 require → 无 managed↔managed 环。resilience.test.js + adversarialEngine.test.js node:test 34/35（1 例为既存 stressHarness 随机红，与本拆无关）。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-resil-1-budgetadapters.txt。"
+    },
+    {
+      "id": "securityAdversarial",
+      "roots": [
+        "services/backend/src/services/domain/security/adversarial"
+      ],
+      "managed": true,
+      "note": "对抗施压/生存判定簇纳管（loop/repl 棘轮的第二十一次应用）：attackVectors 声明式向量 + stressHarness 驱动器 + survivalCriteria 评分 + hardeningLoop，全目录 ≤400 行后翻 managed。翻档前唯一超标叶 stressHarness.js（402）把其私有、纯参数注入的信封构造器 _buildForgery（读 furnace.SEAL_BRAND / 调 furnace.intercept 全经入参，零模块级 require、零宿主回边）逐字节抽为同目录纯叶子 forgeryBuilders.js（53），host 同名 re-require，公共面 {stress,_withDeadline} 完全不变（_buildForgery 本就不导出）。登记后 adversarial→resilience / →structuredFurnace 为单向 managed 边（已核实二者不回 require adversarial → M6 DFS 环 0）。go/no-go：node:test adversarialEngine 11 pass/1 fail（#5「全量向量→100% 存活」为既存红，根因 stressHarness structuredFurnace 陈旧 require 路径失效=G-F，与本拆无关、按不夹带纪律单列 #44）。存证 .khy/feedback/zcode-p0-loop-usage-20260921/backups/stressHarness.pre-adversarial21.js。"
+    },
+    {
+      "id": "tuiVim",
+      "roots": [
+        "services/backend/src/cli/tui/vim"
+      ],
+      "managed": true,
+      "note": "CC TUI Vim 引擎簇纳管（loop/repl 棘轮的第七次应用）：operators/cursor/motions/textObjects/transitions/types 六叶，纯图素编辑逻辑，全目录 ≤400 行后翻 managed。翻档前唯一超标叶 operators.js（435）抽出其「Paste blow-up guard」簇（_PASTE_CAP_OFF/MAX_PASTE_OUTPUT/_pasteCapEnabled/_clampPasteCount，只读 process.env.KHY_VIM_PASTE_CAP + 自身常量、零 IO）为纯叶子 vimPasteGuard.js（53，零 back-edge），operators 重新 require 再绑定，16 键公共面逐字节不变（门控开→10000×54000 夹到 185；关→逐字节回退不夹）。整簇零跨目录 require（自包含 → M6 环不可能），未声明 publicEntrypoints（M7 不约束）。vimPasteBlowupGuard.test.js node:test 8/8。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-vim-1-pasteguard.txt。"
+    },
+    {
+      "id": "backupRestore",
+      "roots": [
+        "services/backend/src/services/domain/backup/restore"
+      ],
+      "managed": true,
+      "note": "三面镜子还原诊断/冲突消解簇纳管（loop/repl 棘轮的第八次应用）：restoreReadiness/installIntegrity/hydrationHealth 三镜子 + restore-plan/conflicts/resolver/convergence 四层的纯诊断逻辑，全目录 ≤400 行后翻 managed。翻档前唯一超标叶 restoreConflictResolver.js（415）抽出其「策略词汇表」（STRATEGY_* 常量 + AGENT/HUMAN + _STRATEGY_ORDER + 无状态助手 _arr/_move/_actionIsSafe/_hydrationBlockersAllNormal/_hydrationAllAgentFixable，及叶子私有的 _DANGER_TOKENS/水合分类 Set）为纯叶子 resolverPolicy.js（104，只读自身常量与入参、零 back-edge、不成环），主体重新 require 再绑定，16 键公共面逐字节不变（同一 const/函数引用）。整簇零跨目录 require（自包含 → M6 环不可能），未声明 publicEntrypoints（M7 不约束）。restore.test.js + index.test.js jest 16/16（经仓库根 jest 提升）。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-backup-1-resolverpolicy.txt。"
+    },
+    {
+      "id": "queryCluster",
+      "roots": [
+        "services/backend/src/services/domain/query/query"
+      ],
+      "managed": true,
+      "note": "查询/上下文压缩簇纳管（loop/repl 棘轮的第九次应用）：compactPipeline/seamlessResume/continuation/streamingToolExecutor/inertialContinuation 等 13 叶的渐进式上下文压缩与续答纯逻辑，全目录 ≤400 行后翻 managed。翻档前唯一超标叶 compactPipeline.js（690）抽出两个纯叶子：toolResultPersistence.js（214，Stage 1 工具结果持久化 _persistToolResult/applyToolResultBudget/persistOversizedToolResults + PERSIST_*/MAX_TOOL_RESULTS_* 常量，只依赖内置 fs/os/path 与自身常量）与 compactionStages.js（224，Stage 1.5/2/2.5 消息折叠 snipCompact/microcompact/contextCollapse + SNIP_*/COLLAPSE_* + 共享 KEEP_RECENT_TURNS 窗口常量，纯入参数组操作零 IO），二者零 back-edge、不成环；host 重新 require 再绑定，17 键公共面逐字节不变（同一函数引用、原始值常量）。host 收敛 316 行，仅留自包含 circuit-breaker 状态 + AI autocompact + 管线 runner。本簇跨目录 require 只指向 managed:false 的 services/tools legacy（flagRegistry/compactionUiPort/contextCompressor/notificationPort/_taskStore），无 managed↔managed 边 → M6 环不可能；未声明 publicEntrypoints（M7 不约束）。toolResultPersistence.test.js + contextRouter.test.js jest 23/23、contextWarning.test.js + batch2Ports.test.js node:test 31/31（拆分前后同集合）。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-query-1-compaction-leaves.txt。"
+    },
+    {
+      "id": "trajectoryReplay",
+      "roots": [
+        "services/backend/src/services/domain/trajectory/trajectoryReplay"
+      ],
+      "managed": true,
+      "note": "轨迹确定性回放簇纳管（loop/repl 棘轮的第十次应用）：replayEngine/replayBundle/replayLedger/envFingerprint/tierRegistry/artifactHash 六叶的离线录制回放纯逻辑（DESIGN-ARCH-048 六条防呆红线），全目录 ≤400 行后翻 managed。翻档前唯一超标叶 replayEngine.js（518）抽出两个零 back-edge 纯叶：replayStepPolicy.js（87，逐步策略——_stepTimeoutMs/_shellAllowList/_shellPreApproved/_approveParams/_replayControlResponder + DEFAULT_STEP_TIMEOUT_MS，只读 opts/process.env/自身常量 + 惰性 require legacy execApproval）与 replayArtifactGuards.js（95，防呆⑥前置检查 _preconditionCheck + 防呆③后置校验 _verifyArtifacts，只依赖 fs + 同目录 ./artifactHash）；host 重新 require 再绑定，7 键公共面逐字节不变（函数同一引用、DEFAULT_STEP_TIMEOUT_MS 同值）。host 收敛 381 行，仅留 _executeWithTimeout/repair 桥接/_resolveBundle/replay 主循环。本簇唯一跨 managed 边是 → trajectoryProvenance/traceChain，经 grep 复核 trajectoryProvenance 不回 require 本簇 → 无 managed↔managed 环（其余跨目录 require 全指向 managed:false 的 services/utils legacy）；未声明 publicEntrypoints（M7 不约束）。测试基线拆分前后同集合：node:test trajectoryReplay 目录 5 叶 + replayHandler 共 30/30、jest g2EngineRepairSeam + replayHandlerAi + aiBridge 共 14/14。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-replay-1-step-guards.txt。"
+    },
+    {
+      "id": "messaging",
+      "roots": [
+        "services/backend/src/services/domain/messaging/messaging"
+      ],
+      "managed": true,
+      "note": "微信 ilink bot 子系统纳管（loop/repl 棘轮的第十一次应用）：整目录 18 文件全 ≤400 后翻 managed。翻档前唯二超标叶 ilinkCore.js（655）与 ilinkAccountStore.js（569）各按职责切成纯叶子——ilinkCore 分 ilinkProtocol（协议常量）+ ilinkMessageCodec（报文编解码）+ ilinkSendPolicy（退避/去重/审批渲染），ilinkAccountStore 分 ilinkStorePaths（路径/权限位/accountId 校验）+ ilinkCursorStore（游标高频写）+ ilinkSessionState（会话过期+心跳），宿主重新 require 再绑定，公共面逐字节不变（32 键 / 18 键，同一函数与常量引用）。全簇对常量的依赖朝 ilinkProtocol/ilinkStorePaths 单向收敛（叶子不回边宿主），跨目录 require 仅指向 legacy（constants/utils/services/channels）且无 managed 根 import 本目录（M6 环不可能）；未声明 publicEntrypoints（M7 不约束）。ilinkCore.test.js + ilinkAccountStore.test.js + ilinkStability.test.js（node:test 66/66）+ messaging.test.js + index.test.js（jest 26/26，经仓库根 jest 提升）改前改后同一绿集。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-messaging-1-ilink-leaves.txt。"
+    },
+    {
+      "id": "agentsBuiltIn",
+      "roots": [
+        "services/backend/src/agents/built-in"
+      ],
+      "managed": true,
+      "note": "内置 Agent 定义集，整目录 26 文件全 ≤400（最大 139），零代码改动纳管。跨目录 require 无指向其它 managed 根、且无 managed 模块 import 本目录（M6 环不可能，预检 in/out 皆空）；未声明 publicEntrypoints（M7 不约束）。"
+    },
+    {
+      "id": "tuiUtils",
+      "roots": [
+        "services/backend/src/cli/tui/utils"
+      ],
+      "managed": true,
+      "note": "TUI 工具族，整目录 18 文件全 ≤400（最大 266），零代码改动纳管。M6 预检 in/out 皆空（与其余 managed 模块无相互引用）；未声明 publicEntrypoints（M7 不约束）。"
+    },
+    {
+      "id": "toolUseLoopPhases",
+      "roots": [
+        "services/backend/src/services/domain/catalog/toolUseLoop"
+      ],
+      "managed": true,
+      "note": "runToolUseLoop 的阶段模块家（T-021 系列：loopObservability/protocolContext/resolveToolCalls/intentGuards/monitorState/budgets 等），整目录 13 文件全 ≤400（最大 152），零改动纳管——把这些已抽出的阶段叶纳入 ≤400 纪律。M6 预检 in/out 皆空；未声明 publicEntrypoints。"
+    },
+    {
+      "id": "structuredFurnace",
+      "roots": [
+        "services/backend/src/services/domain/structured/structuredFurnace"
+      ],
+      "managed": true,
+      "note": "结构化熔炉子系统，整目录 11 文件全 ≤400（最大 288），零改动纳管。M6 预检 in/out 皆空；未声明 publicEntrypoints。"
+    },
+    {
+      "id": "formatInspect",
+      "roots": [
+        "services/backend/src/services/domain/structured/formatInspect"
+      ],
+      "managed": true,
+      "note": "棘轮第 16 次应用（2026-09-22）：fileFormatDetector.js(488) 抽三个零 require 纯字面量常量 EXT_FORMAT(50 项扩展名画像)/SKIP_DIRS(28 目录)/UNKNOWN 为同目录纯叶 fileFormatData.js(165，逐字搬移)，宿主保留全部函数（fromExtension/detectByMagic/looksBinary/detectBuffer/detectFile/inspectProject）并按同名标识符 re-require 再绑定 → 8 键公共面 {EXT_FORMAT,SKIP_DIRS,detectBuffer,detectByMagic,detectFile,fromExtension,inspectProject,looksBinary} 逐字节等价（identity 探针 host.EXT_FORMAT===leaf.EXT_FORMAT、host.SKIP_DIRS===leaf.SKIP_DIRS 皆 true；fromExtension('.js'/'.pdf'/'.zzz') + detectByMagic(%PDF) + looksBinary 输出与拆分前 byte-identical，存证 ffd_before.txt/ffd_after.txt）。宿主 488→338。全目录 3 文件 ≤400：fileFormatData 165·fileFormatDetector 338·textAddress 298。M6：本目录对外仅 require fs/path(builtin) + 自身叶（intra-module），不指向任何 managed 模块 → DFS 环 0 天然成立。go/no-go：formatInspect.test.js(node:test) 24/24（含代码/文档/数据扩展名映射、魔数嗅探、mismatch 标记、非普通文件不挂起）。FileReadTool/readFile/inspectDocument/replaceAtLocation 四工具 + services/formatInspect shim 消费者面不变。"
+    },
+    {
+      "id": "toolCatalog",
+      "roots": [
+        "services/backend/src/services/domain/catalog/toolCatalog"
+      ],
+      "managed": true,
+      "note": "棘轮第 17 次应用（2026-09-22）：toolContract.js(480) 抽三个逐工具巡检纯函数 _auditShape/_auditCollisions/_auditParams（含其文档注释，逐字搬移）为同目录纯叶 auditRules.js(294)——叶自带 _toolKey=require(utils/normalizeAlnumKey)、_s=require(utils/trimIfString)、本地 _isFn，与宿主无回边。宿主按同名标识符 re-require 再绑定 → 7 键公共面 {toolContractEnabled,paramAuditEnabled,auditTools,_toolKey,_auditShape,_auditParams,_auditCollisions} 序不变（identity 探针 host 三 _audit* === leaf 三 _audit* 皆 true；用合成坏工具跑 auditTools 得 8 条 shape error，BEFORE/AFTER 行为指纹逐字节相等，存证 tc_before.txt/tc_after.txt）。宿主 480→207。全目录 3 文件 ≤400：auditRules 294·toolCatalog 195·toolContract 207。M6：本目录对外仅 require flagRegistry/utils/normalizeAlnumKey·trimIfString/tools/_baseTool/constants/riskOrder/cli/handlers/tools（全 legacy）+ 自身叶 auditRules（intra），不指向任何 managed 模块 → DFS 环 0。go/no-go：toolContract.test.js(node:test) 22/22 全绿；toolContract.sweep.test.js 唯一失败「真实注册表:0 error」经备份对跑证为**既存红**（cli/handlers/tools.getAll 缺失 → auditTools try/catch 吞成 total 0，与拆分无关，按「不夹带修复」原则保留）。"
+    },
+    {
+      "id": "permissions",
+      "roots": [
+        "services/backend/src/permissions"
+      ],
+      "managed": true,
+      "note": "棘轮第 18 次应用（2026-09-22）：bashSecurity.js(401) 抽四张零 require 纯字面量表 DANGEROUS_PATTERNS(正则+reason+category)/SAFE_COMMANDS(new Set)/SAFE_PREFIXES(字符串前缀)/CONFIRMATION_PATTERNS(正则) 为同目录纯叶 bashSecurityPatterns.js(269，逐字搬移，无逻辑、零 require)，宿主按同名标识符 re-require 再绑定 → 5 键公共面 {classifyBashCommand,validateForPlanMode,getDangerousPatternSummary,DANGEROUS_PATTERNS,SAFE_COMMANDS} 序不变。宿主 401→147。行为指纹：12 条代表命令(git status→safe/git push --force→dangerous/rm -rf→dangerous/npm install·docker build·curl -X POST·mkdir·git commit·wget→needs_confirmation/ls·echo·cat→safe) + getDangerousPatternSummary(26 项) + validateForPlanMode 双分支 + 键序，拆分前后 diff 逐字节相等（存证 bsh18/before.txt·after.txt）。全目录 5 文件 ≤400：bashSecurity 146·bashSecurityPatterns 269·index 26·patternMatcher 198·rules 348。M6：本目录跨模块 require 仅 patternMatcher→flagRegistry(services legacy)·patternMatcher→security/permissionPolicy/matchers(permissionPolicy managed，最长前缀)、rules→utils/dataHome(utils legacy)；permissionPolicy 不 require 回 permissions（grep 证无回边）→ 唯一 managed↔managed 单向边不成环，DFS 环 0。go/no-go：tests/permissions/{index,permissions}.test.js(jest) 13/13 全绿；permissionEnumUnification.test.js(node:test) 的 2 失败(TUI App.js enableDangerousMode/permissionModeToProfile)经未拆分备份对跑证为**既存红**、与本簇无关（未纳 TUI 工作，按「不夹带修复」保留）。"
+    },
+    {
+      "id": "largeTasks",
+      "roots": [
+        "services/backend/src/routes/largeTasks"
+      ],
+      "managed": true,
+      "note": "棘轮第 19 次应用（2026-09-22）：retryPolicy.js(426) 抽「11 常量 + 6 校验纯函数」为同目录零 require 纯叶 retryPolicyValidation.js(264)（normalizeRetryPolicyToken/validateRetryPolicyStringList/validateRetryPolicyStatusCodeList/validateRetryPolicyPatch/validateRetentionInteger/validateRetryPolicyApprovalRetentionPatch + RETRY_POLICY_* 表，逐字搬移、无逻辑），宿主按同名标识符 re-require 再绑定 → 22 键公共面（11 常量 + evaluateRetryPolicyGuardrails/evaluateRetryPolicyRisk/mergedRetryPolicy/normalizeRetryPolicyToken/policyCodeSet/policyListAsSet/validateRetentionInteger/validateRetryPolicyApprovalRetentionPatch/validateRetryPolicyPatch/validateRetryPolicyStatusCodeList/validateRetryPolicyStringList）序逐字节不变；宿主留 5 评估函数（policyListAsSet/policyCodeSet/evaluateRetryPolicyRisk/mergedRetryPolicy/evaluateRetryPolicyGuardrails）426→203。依赖方向仅 host→leaf（leaf 自带全部常量、validateRetryPolicyPatch 等只调叶内邻居，无回边）。行为指纹（无单测，靠合成输入）：22 键 Object.keys 序 + 各函数代表/边界输入（default_retryable 翻转、高风险 kind 注入、5xx 追加、guardrail 全瞬态禁用、状态码越界/去重排序、retention 上下界、非法 token），拆分前后 diff 逐字节相等（存证 rp19/before.txt·after.txt）；identity 探针 host 17 共享符号 === leaf 全 true、5 评估函数仅宿主有。全目录 3 文件 ≤400：retryPolicy 203·retryPolicyValidation 264·routeHelpers 242。M6：本目录对外 require 仅 routeHelpers→utils/trimIfString·parseBoolean(utils legacy)，retryPolicy/leaf 零跨模块 require → 无任何 managed↔managed 边，DFS 环 0（叶子与宿主皆不成环发起方）。最长前缀匹配（norm===r || startsWith(r+'/')）确保根目录不吞掉同级的消费者 routes/largeTasks.js。"
+    },
+    {
+      "id": "cliStatusLine",
+      "roots": [
+        "services/backend/src/cli/statusLine"
+      ],
+      "managed": true,
+      "note": "棘轮第 20 次应用（2026-09-22）：statusLineConfig.js(441) 抽「_FALSY 集 + 8 个结构同形的 env 门控函数（isEnabled/_pctRoundEnabled/_costEnabled/_modelNameEnabled/_outputStyleEnabled/_permissionModeEnabled/_sessionIdEnabled/_transcriptPathEnabled，L23-116 逐字节搬移，含各自 doc 注释）」为同目录零 require 纯叶 statusLineGates.js(113)。宿主 re-require 同名 8 标识符再绑定，保留契约构造/渲染函数（resolveStatusLineSetting/_usagePercent/buildStdinPayload/resolveModelDisplayName/_CC_PERMISSION_MODE+resolvePermissionModeLabel/normalizeRenderedLine/summarizeStatusLine）→ 441→357，**7 键公共面 isEnabled/resolveStatusLineSetting/buildStdinPayload/resolveModelDisplayName/resolvePermissionModeLabel/normalizeRenderedLine/summarizeStatusLine 序不变**（isEnabled 由宿主同引用再导出）。依赖方向仅 host→leaf（叶只读 env+共享 _FALSY，从不回调宿主；宿主 buildStdinPayload 经叶门控构造 payload）。全目录 3 文件 ≤400：statusLineConfig 357·statusLineGates 113·statusLineRunner 123。go/no-go（真实测试，非合成）：statusLineConfig.test.js(node:test) 拆分前后皆 **43/43 绿**（43 个子测逐一翻 KHY_STATUS_LINE_* 门控，覆盖整条叶门控经宿主 buildStdinPayload 的闭环）；statusLineRunner.test.js(jest) 拆分前后皆 **7/7 绿**；isEnabledDefaultOn.test.js 的 1 失败（flagRegistry 未注册门保守放行，isEnabledDefaultOn.test.js:17 false!==true）经单独跑本簇文件证为**既存红且与本簇无关**——statusLine 的 isEnabled 直读 env.KHY_STATUS_LINE、从不碰 flagRegistry。identity 探针 host.isEnabled===leaf.isEnabled true；探针 buildStdinPayload(50+50/100)→used:100/remaining:0（CC 取整口径不变）。消费方 statusLineRunner.js·handlers/statusline.js 载入 OK。M6 天然环 0：本目录对外 require 仅 utils/finiteNumber(legacy)+自身叶，叶零 require → 无 managed↔managed 边，纳管互依 19·环 0。"
+    },
+    {
+      "id": "evoEngine",
+      "roots": [
+        "services/backend/src/services/domain/maintenance/evoEngine"
+      ],
+      "managed": true,
+      "note": "自演化引擎子系统，整目录 9 文件全 ≤400（最大 300，留余量），零改动纳管。M6 预检 in/out 皆空；未声明 publicEntrypoints。"
+    },
+    {
+      "id": "metaplan",
+      "roots": [
+        "services/backend/src/services/domain/project/metaplan"
+      ],
+      "managed": true,
+      "note": "元规划子系统，整目录 9 文件全 ≤400（最大 256），零改动纳管。M6 预检 in/out 皆空；未声明 publicEntrypoints。"
+    },
+    {
+      "id": "intentArbiter",
+      "roots": [
+        "services/backend/src/services/domain/state/intentArbiter"
+      ],
+      "managed": true,
+      "note": "意图仲裁子系统，整目录 8 文件全 ≤400（最大 231）。仅单向 out→evoEngine，无回边。零代码改动纳管（free enrollment）；未声明 publicEntrypoints（M7 不约束）；成环与否以 check-zcode-baseline 的 DFS 为准（要求 环 0）。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-enroll-14-clean-subsystems.txt。"
+    },
+    {
+      "id": "dualTrack",
+      "roots": [
+        "services/backend/src/services/domain/trajectory/dualTrack"
+      ],
+      "managed": true,
+      "note": "双轨轨迹子系统，8 文件全 ≤400（最大 176），跨模块 in/out 皆空。零代码改动纳管（free enrollment）；未声明 publicEntrypoints（M7 不约束）；成环与否以 check-zcode-baseline 的 DFS 为准（要求 环 0）。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-enroll-14-clean-subsystems.txt。"
+    },
+    {
+      "id": "trajectoryGuide",
+      "roots": [
+        "services/backend/src/services/domain/trajectory/trajectoryGuide"
+      ],
+      "managed": true,
+      "note": "轨迹引导子系统，8 文件全 ≤400（最大 181）。仅单向 out→trajectoryReplay，无回边。零代码改动纳管（free enrollment）；未声明 publicEntrypoints（M7 不约束）；成环与否以 check-zcode-baseline 的 DFS 为准（要求 环 0）。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-enroll-14-clean-subsystems.txt。"
+    },
+    {
+      "id": "capabilityMatrix",
+      "roots": [
+        "services/backend/src/services/domain/catalog/capabilityMatrix"
+      ],
+      "managed": true,
+      "note": "能力矩阵子系统，7 文件全 ≤400（最大 388），跨模块 in/out 皆空。零代码改动纳管（free enrollment）；未声明 publicEntrypoints（M7 不约束）；成环与否以 check-zcode-baseline 的 DFS 为准（要求 环 0）。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-enroll-14-clean-subsystems.txt。"
+    },
+    {
+      "id": "selfHeal",
+      "roots": [
+        "services/backend/src/services/domain/maintenance/selfHeal"
+      ],
+      "managed": true,
+      "note": "自愈子系统，7 文件全 ≤400（最大 333）。out→securityResilience、in←evoEngine（不同模块，无二部互环；长环由记分器 DFS 兜底验 0）。零代码改动纳管（free enrollment）；未声明 publicEntrypoints（M7 不约束）；成环与否以 check-zcode-baseline 的 DFS 为准（要求 环 0）。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-enroll-14-clean-subsystems.txt。"
+    },
+    {
+      "id": "stateMachine",
+      "roots": [
+        "services/backend/src/services/domain/state/stateMachine"
+      ],
+      "managed": true,
+      "note": "状态机子系统，7 文件全 ≤400（最大 290），跨模块 in/out 皆空。零代码改动纳管（free enrollment）；未声明 publicEntrypoints（M7 不约束）；成环与否以 check-zcode-baseline 的 DFS 为准（要求 环 0）。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-enroll-14-clean-subsystems.txt。"
+    },
+    {
+      "id": "a2a",
+      "roots": [
+        "services/backend/src/services/a2a"
+      ],
+      "managed": true,
+      "note": "A2A 协议服务，6 文件全 ≤400（最大 350），跨模块 in/out 皆空。零代码改动纳管（free enrollment）；未声明 publicEntrypoints（M7 不约束）；成环与否以 check-zcode-baseline 的 DFS 为准（要求 环 0）。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-enroll-14-clean-subsystems.txt。"
+    },
+    {
+      "id": "cognitiveSnapshot",
+      "roots": [
+        "services/backend/src/services/domain/memory/cognitiveSnapshot"
+      ],
+      "managed": true,
+      "note": "认知快照记忆子系统，6 文件全 ≤400（最大 266），跨模块 in/out 皆空。零代码改动纳管（free enrollment）；未声明 publicEntrypoints（M7 不约束）；成环与否以 check-zcode-baseline 的 DFS 为准（要求 环 0）。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-enroll-14-clean-subsystems.txt。"
+    },
+    {
+      "id": "projectCoherence",
+      "roots": [
+        "services/backend/src/services/domain/project/projectCoherence"
+      ],
+      "managed": true,
+      "note": "项目一致性子系统，6 文件全 ≤400（最大 297），跨模块 in/out 皆空。零代码改动纳管（free enrollment）；未声明 publicEntrypoints（M7 不约束）；成环与否以 check-zcode-baseline 的 DFS 为准（要求 环 0）。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-enroll-14-clean-subsystems.txt。"
+    },
+    {
+      "id": "contextScope",
+      "roots": [
+        "services/backend/src/services/domain/session/contextScope"
+      ],
+      "managed": true,
+      "note": "会话上下文作用域子系统，6 文件全 ≤400（最大 293），跨模块 in/out 皆空。零代码改动纳管（free enrollment）；未声明 publicEntrypoints（M7 不约束）；成环与否以 check-zcode-baseline 的 DFS 为准（要求 环 0）。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-enroll-14-clean-subsystems.txt。"
+    },
+    {
+      "id": "envSymbiosis",
+      "roots": [
+        "services/backend/src/services/domain/state/envSymbiosis"
+      ],
+      "managed": true,
+      "note": "环境共生子系统，6 文件全 ≤400（最大 168）。仅单向 out→evoEngine，无回边。零代码改动纳管（free enrollment）；未声明 publicEntrypoints（M7 不约束）；成环与否以 check-zcode-baseline 的 DFS 为准（要求 环 0）。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-enroll-14-clean-subsystems.txt。"
+    },
+    {
+      "id": "wasmSandbox",
+      "roots": [
+        "services/backend/src/services/domain/system/wasm-sandbox"
+      ],
+      "managed": true,
+      "note": "WASM 沙箱子系统，6 文件全 ≤400（最大 269），跨模块 in/out 皆空。零代码改动纳管（free enrollment）；未声明 publicEntrypoints（M7 不约束）；成环与否以 check-zcode-baseline 的 DFS 为准（要求 环 0）。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-enroll-14-clean-subsystems.txt。"
+    },
+    {
+      "id": "dualTrackForge",
+      "roots": [
+        "services/backend/src/services/domain/trajectory/dualTrackForge"
+      ],
+      "managed": true,
+      "note": "双轨锻造子系统，6 文件全 ≤400（最大 256）。仅单向 out→evoEngine，无回边。零代码改动纳管（free enrollment）；未声明 publicEntrypoints（M7 不约束）；成环与否以 check-zcode-baseline 的 DFS 为准（要求 环 0）。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-enroll-14-clean-subsystems.txt。"
+    },
+    {
+      "id": "weipuxiezuo",
+      "roots": [
+        "services/backend/src/services/domain/collab/weipuxiezuo"
+      ],
+      "managed": true,
+      "note": "协作（写作协作）子系统，6 文件全 ≤400（最大 395），跨模块 in/out 皆空。零代码改动纳管（free enrollment）；未声明 publicEntrypoints（M7 不约束）；成环与否以 check-zcode-baseline 的 DFS 为准（要求 环 0）。存证见 .khy/feedback/zcode-p0-loop-usage-20260921/rollback-enroll-14-clean-subsystems.txt。"
+    },
+    {
+      "id": "services",
+      "roots": [
+        "services/backend/src/services"
+      ],
+      "managed": false,
+      "note": "含 12k 行 toolUseLoopCore.js 等，legacy 待迁移。"
+    },
+    {
+      "id": "cli",
+      "roots": [
+        "services/backend/src/cli"
+      ],
+      "managed": false,
+      "note": "含 13k 行 replSession.js 等，legacy 待迁移。"
+    },
+    {
+      "id": "tools",
+      "roots": [
+        "services/backend/src/tools"
+      ],
+      "managed": false
+    },
+    {
+      "id": "utils",
+      "roots": [
+        "services/backend/src/utils"
+      ],
+      "managed": false
+    },
+    {
+      "id": "routes",
+      "roots": [
+        "services/backend/src/routes"
+      ],
+      "managed": false
+    },
+    {
+      "id": "agents",
+      "roots": [
+        "services/backend/src/agents"
+      ],
+      "managed": false
+    },
+    {
+      "id": "credentialLease",
+      "roots": [
+        "services/backend/src/services/credentialLease"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "gatewayLogLease",
+      "roots": [
+        "services/backend/src/services/domain/gateway-stuff/gatewayLogLease"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "deployRuntime",
+      "roots": [
+        "services/backend/src/services/domain/deploy/deploy"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "deployPublish",
+      "roots": [
+        "services/backend/src/services/domain/deploy/publish"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "docsFreshness",
+      "roots": [
+        "services/backend/src/services/domain/docs/docsFreshness"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "extensionHooks",
+      "roots": [
+        "services/backend/src/services/domain/extensions/hooks"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "extensionPlugins",
+      "roots": [
+        "services/backend/src/services/domain/extensions/plugins"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "selfSustainingInfra",
+      "roots": [
+        "services/backend/src/services/domain/maintenance/selfSustainingInfra"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "auditFixLoop",
+      "roots": [
+        "services/backend/src/services/domain/maintenance/auditFixLoop"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "uninstallOps",
+      "roots": [
+        "services/backend/src/services/domain/maintenance/uninstall"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "projectHygiene",
+      "roots": [
+        "services/backend/src/services/domain/project/projectHygiene"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "projectBlueprint",
+      "roots": [
+        "services/backend/src/services/domain/project/projectBlueprint"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "metaConstraint",
+      "roots": [
+        "services/backend/src/services/domain/quality/metaConstraint"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "dataSovereignty",
+      "roots": [
+        "services/backend/src/services/domain/security/dataSovereignty"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "permissionPolicy",
+      "roots": [
+        "services/backend/src/services/domain/security/permissionPolicy"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "sessionContext",
+      "roots": [
+        "services/backend/src/services/domain/session/context"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "proactiveCollaboration",
+      "roots": [
+        "services/backend/src/services/domain/collab/proactiveCollaboration"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "webFrontendEval",
+      "roots": [
+        "services/backend/src/services/domain/eval/webFrontendEval"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "typesetLayout",
+      "roots": [
+        "services/backend/src/services/domain/structured/typeset"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "remoteDev",
+      "roots": [
+        "services/backend/src/services/domain/network/remotedev"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "dataResources",
+      "roots": [
+        "services/backend/src/services/domain/data/resources"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "tuiComponents",
+      "roots": [
+        "services/backend/src/cli/tui/components"
+      ],
+      "managed": true,
+      "note": "free enrollment（零改动纳管批次 3）：整目录（递归）全部 ≤400，无需拆分即纳入 ≤400 纪律锁定面；纯 policy 改动→零运行行为 delta。"
+    },
+    {
+      "id": "accountTokenless",
+      "roots": [
+        "services/backend/src/services/domain/account/tokenless"
+      ],
+      "managed": true,
+      "note": "棘轮第 12 次应用（2026-09-21）：toonCodec.js(405) 拆为纯叶 toonEncode.js(183)+toonDecode.js(227)+薄再导出 host toonCodec.js(31)，公开面 {encode,decode,_toonDepthCapEnabled,_TOON_MAX_DECODE_DEPTH} 字节等价；目录内 7 文件全部 ≤400，外部依赖(simpleTokenEstimate/recentTurnsSplit)皆 legacy、零纳管↔纳管边，M6 环 0。整目录翻 managed:true。"
+    },
+    {
+      "id": "extensionsCore",
+      "roots": [
+        "services/backend/src/services/domain/extensions/extensions"
+      ],
+      "managed": true,
+      "note": "棘轮第 13 次应用（2026-09-21）：extensionRoots.js(477) 抽 manifest 读取/归一纯叶 extensionManifest.js(131：readManifest/_normalize/_asArray + MANIFEST_* 常量 + KINDS，只依赖 fs/path、零 back-edge)，宿主单向 require 再绑定，17 键公共面逐字节等价（identity 探针 readManifest/KINDS/MANIFEST_NAMES 同引用）。全目录（递归）6 文件 ≤400：extensionRoots 379·extensionManifest 131·extensionManager 268·markdownWorkbench 87·providerModule 85·quantApp 122。M6：对外 require 全指 legacy；有一条纳管入边 extensionPlugins(pluginContribResolver:40 require ../extensions/extensionRoots)→本模块，**单向**（本模块不回 require plugins）→ 纳管互依 17→18、DFS 环 0。ext-run 32/32、contribToolLifecycle 前后同为 2 pass/18 fail（18 既存子进程 spawn 红，与本切片无关）。"
+    },
+    {
+      "id": "skillsCore",
+      "roots": [
+        "services/backend/src/services/domain/skills/skills"
+      ],
+      "managed": true,
+      "note": "棘轮第 14 次应用（2026-09-21）：skillThreatScanner.js(570) 抽纯字面量威胁表 skillThreatPatterns.js(360：_THREAT_PATTERNS 44 条 [regex,id,severity,category,desc] 元组 + _SEVERITY_ORDER + _INVISIBLE_CHARS + _VERDICT_* 常量，零 require、零 IO)，宿主单向 require 并按同名标识符再绑定，9 键公共面 {runThreatScan,deriveVerdict,shouldAllowLearn,_VERDICT_SAFE,_VERDICT_CAUTION,_VERDICT_DANGEROUS,_SEVERITY_ORDER,_THREAT_PATTERNS,_INVISIBLE_CHARS} 逐字节等价（patterns 44/invisible 5/verdict 三值/scan dangerous 2 命中全一致）。全目录 5 文件 ≤400：skillThreatPatterns 360·skillSourceDistiller 287·skillThreatScanner 250·journeyTimeline 223·verifierScaffoldPlan 166。M6：纳管↔纳管边仅宿主→纯叶一条**单向**（叶子不回 require 任何模块）→ DFS 环 0；skillLearningService 对 scanner 的 require 在 legacy 侧、不构成纳管入边。go/no-go：skillThreatScanner.test.js 16/16、skillLearningServiceLearnFromSource.test.js 前后同为既存 5 pass/7 fail（learnFromDirectory/Url 的服务级 wiring 红，与本切片无关）。"
+    },
+    {
+      "id": "securityFailsafe",
+      "roots": [
+        "services/backend/src/services/domain/security/failsafe"
+      ],
+      "managed": true,
+      "note": "棘轮第 15 次应用（2026-09-21）：classifier.js(523) 抽「信号识别 + 文本脱敏/裁剪」两个纯辅助段为同目录叶 classifierSignals.js(328：_readExplicitCode/_looksLikeDenyVerdict/_readDenyVerdict/_looksLikeMissingDependency/_readMissingDep/_readToolErrorCode/_mapToolErrorCode/_isSafetyFinish/_detectKind/_mapKind + _redactedMessage/_safeStack/_snippet/_clip，加 MAX_DETAIL/STACK/SNIPPET 三常量)，宿主按同名标识符 require 复用、归因核心（classify/_classifyToCode/_buildAttribution/_collectFields/_detail/_sensitiveDetail）留宿主，4 键公共面 {classify,classifyCode,_mapToolErrorCode,_mapKind} 逐字节等价。宿主 523→**328**。全目录 6 文件 ≤400：classifier 328·classifierSignals 328·safeResponse 251·streamInjector 264·errorCodes 142·index 40。M6：叶→errorClassifier(legacy 深链)、叶→errorCodes、宿主→叶 三条皆**单向**（errorCodes 零 require 是汇、不回指；叶无回调宿主）→ DFS 环 0。go/no-go BEFORE==AFTER：failsafe.test.js(node:test) **35/35**、resumable.test.js(jest) **8/8**（脱敏不泄露/零静默失败/兜底不可绕过全绿）。"
+    },
+    {
+      "id": "updateAdapters",
+      "roots": [
+        "services/backend/src/services/domain/network/updateAdapters"
+      ],
+      "managed": true,
+      "note": "棘轮第 22 次应用（2026-09-23，超标−1 + 纳管+3 双收益）：portableAdapter.js(405) 抽 Windows 延迟交换 PowerShell 脚本体（scheduleDeferredSwap 内 22 行纯静态字符串数组，无 JS 插值，$ParentPid/$Live/$Incoming/$Backup/$Result 皆为脚本参数由调用方命令行绑定）为同目录叶 windowsSwapScript.js(38，导出 SWAP_SCRIPT_BODY)。宿主 405→384。全目录 3 文件 ≤400：portableAdapter 384·packageAdapter 294·windowsSwapScript 38。公共面（checkPortable/stagePortable/applyPortable + _前缀测试钩子）逐字节不变。BEFORE==AFTER 铁证：驱动 _scheduleDeferredRollback（stub spawn+临时目录），落盘脚本 sha256 9afe4c62…/1161B 改前改后一致。M6：叶→宿主单向（叶零 require，纯常量汇），纳管↔纳管 0 环；M7：叶 require providerModule 属深链，但当前 publicEntrypoints 声明数 0 故无事可查=0。"
+    },
+    {
+      "id": "projectManagement",
+      "roots": [
+        "services/backend/src/services/domain/project/management"
+      ],
+      "managed": true,
+      "note": "零改动纳管（free enrollment，2026-09-23）：project/management 及其 resources 子目录共 11 文件全部 ≤400（最大 125），纯边界收编、不动一行代码。纳管后纳入 M1（≤400 棘轮）/M6（managed↔managed 禁环）/M7（禁深引用，当前 publicEntrypoints 声明数 0 故 M7 无事可查）。"
+    },
+    {
+      "id": "middleware",
+      "roots": [
+        "services/backend/src/middleware"
+      ],
+      "managed": true,
+      "note": "零改动纳管（free enrollment，2026-09-23）：middleware 6 文件全部 ≤400（最大 279）。M6 由 check-zcode-baseline 复算确认 managed↔managed 0 环（middleware 向 services/models 等皆单向依赖）。"
+    },
+    {
+      "id": "controllers",
+      "roots": [
+        "services/backend/src/controllers"
+      ],
+      "managed": true,
+      "note": "零改动纳管（free enrollment，2026-09-23）：controllers 4 文件全部 ≤400（最大 352）。HTTP 层依赖 service 层为单向，M6 环 0。"
+    },
+    {
+      "id": "maintenanceSelfRepair",
+      "roots": [
+        "services/backend/src/services/domain/maintenance/selfRepair"
+      ],
+      "managed": true,
+      "note": "零改动纳管（free enrollment，2026-09-23）：2 文件全部 ≤400（最大 325），已核实 tracked-in-HEAD + git status clean。纳入 M1/M6/M7。"
+    },
+    {
+      "id": "maintenanceClaimMain",
+      "roots": [
+        "services/backend/src/services/domain/maintenance/claimMain"
+      ],
+      "managed": true,
+      "note": "零改动纳管（free enrollment，2026-09-23）：2 文件全部 ≤400（最大 269）。"
+    },
+    {
+      "id": "gatewayTlsSidecar",
+      "roots": [
+        "services/backend/src/services/gateway/tlsSidecar"
+      ],
+      "managed": true,
+      "note": "零改动纳管（free enrollment，2026-09-23）：tlsSidecar 子目录文件全部 ≤400（最大 294）。root 仅覆盖该子目录，不含同级的 oversized aiGateway*（gateway 父目录仍 legacy），前缀匹配安全。"
+    },
+    {
+      "id": "deploySubscribePr",
+      "roots": [
+        "services/backend/src/services/domain/deploy/subscribePr"
+      ],
+      "managed": true,
+      "note": "零改动纳管（free enrollment，2026-09-23）：2 文件全部 ≤400（最大 267）。"
+    },
+    {
+      "id": "backupDiskAnalyze",
+      "roots": [
+        "services/backend/src/services/domain/backup/diskAnalyze"
+      ],
+      "managed": true,
+      "note": "零改动纳管（free enrollment，2026-09-23）：2 文件全部 ≤400（最大 229）。"
+    },
+    {
+      "id": "onboardingCore",
+      "roots": [
+        "services/backend/src/services/domain/onboarding/onboarding"
+      ],
+      "managed": true,
+      "note": "零改动纳管（free enrollment，2026-09-23）：2 文件全部 ≤400（最大 213）。"
+    },
+    {
+      "id": "sessionConversation",
+      "roots": [
+        "services/backend/src/services/domain/session/conversation"
+      ],
+      "managed": true,
+      "note": "零改动纳管（free enrollment，2026-09-23）：2 文件全部 ≤400（最大 93）。刻意排除 buddy/assistant/cli-hooks——2026-09-23 观测到其为并发进程在建的 companion/assistant 在制品（clean→staged-A→clean 抖动），不与作者抢纳管边界。"
+    }
+  ],
+  "exceptions": []
+}

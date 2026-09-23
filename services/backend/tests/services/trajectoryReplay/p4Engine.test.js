@@ -25,9 +25,9 @@ process.env.KHY_PROJECT_DATA_HOME = TMP_HOME;
 process.env.KHY_DEP_HEALING = 'off';
 delete process.env.KHY_REPLAY_SHELL_ALLOW;
 
-const replayLedger = require('../../../src/services/trajectoryReplay/replayLedger');
-const replayBundle = require('../../../src/services/trajectoryReplay/replayBundle');
-const replayEngine = require('../../../src/services/trajectoryReplay/replayEngine');
+const replayLedger = require('../../../src/services/domain/trajectory/trajectoryReplay/replayLedger.js');
+const replayBundle = require('../../../src/services/domain/trajectory/trajectoryReplay/replayBundle.js');
+const replayEngine = require('../../../src/services/domain/trajectory/trajectoryReplay/replayEngine.js');
 const { sha256Hex } = require('../../../src/services/sourceSnapshotCrypto');
 
 // A scratch workspace for actual file artifacts. The write-path boundary guard

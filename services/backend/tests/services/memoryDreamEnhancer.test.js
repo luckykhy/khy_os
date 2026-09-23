@@ -9,7 +9,7 @@ const {
   HealthThreshold,
   createDreamTools,
   DreamScheduler,
-} = require('./memoryDreamEnhancer');
+} = require('../../src/services/memoryDreamEnhancer.js');
 
 let passed = 0;
 let failed = 0;

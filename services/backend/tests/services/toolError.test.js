@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for toolError.js â€?ToolError class, error codes,
+ * Tests for toolError.js â€”ToolError class, error codes,
  * structured results, AI context formatting, and error inference.
  */
 

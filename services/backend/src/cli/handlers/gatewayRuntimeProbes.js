@@ -583,9 +583,15 @@ async function handleGatewayProbeTools(args = [], options = {}) {
   ) {
     const passing = store.listPassing();
     const fresh = store.listFresh();
+    const routeRejections =
+      typeof store.listRouteRejections === 'function' ? store.listRouteRejections() : [];
     if (asJson) {
       console.log(
-        JSON.stringify({ ok: true, action: 'probe-tools-list', passing, fresh }, null, 2)
+        JSON.stringify(
+          { ok: true, action: 'probe-tools-list', passing, fresh, routeRejections },
+          null,
+          2
+        )
       );
       return;
     }
@@ -609,6 +615,18 @@ async function handleGatewayProbeTools(args = [], options = {}) {
       for (const e of negatives) {
         console.log(`  ${chalk.dim(`· ${e.model}`)}`);
       }
+    }
+    // 通道级记录与模型级记录分开显示:这是「端点问题」而非「模型问题」,排障方向完全不同
+    // (一个是换通道/查端点,一个是换模型)。混在一起列会把用户引向错误结论。
+    if (routeRejections.length > 0) {
+      console.log('');
+      console.log(`  ${chalk.dim('通道拒收 tools(端点属性·带 tools 被拒、去掉后成功·有界 TTL):')}`);
+      for (const e of routeRejections) {
+        console.log(`  ${chalk.dim(`· ${e.route} (${e.source || 'http-400'})`)}`);
+      }
+      console.log(
+        `  ${chalk.dim('  —— 这是通道问题,不是模型问题;换通道或核查该端点是否支持 function calling')}`
+      );
     }
     console.log('');
     return;
@@ -699,9 +717,15 @@ async function handleGatewayProbeTools(args = [], options = {}) {
     printInfo(
       `无原生工具调用 (text) · ${result.latencyMs ?? '?'}ms — 此后剥离 tools、教学 <tool_call> 文本协议`
     );
+  } else if (result.verdict === 'route-rejects-tools') {
+    // 通道属性而非模型属性:该端点拒绝 tools 字段(带 tools 失败、去掉 tools 成功)。
+    // 不能据此刻画模型能力,故刻意不落库;换一条通道可能就正常。
+    printError(
+      `通道拒绝 tools (route-rejects-tools) · ${result.latencyMs ?? '?'}ms — 带 tools 的请求被上游拒绝,去掉 tools 后同一提示词成功。这是通道问题,不是模型问题;未写入模型能力缓存。请换通道复测或检查该端点是否支持 function calling。`
+    );
   } else {
     printError(
-      `探测未能判定 (unknown)${result.error ? ` · ${result.error}` : ''} — 未写入缓存,留待重测`
+      `探测未能判定 (unknown)${result.reason ? ` · ${result.reason}` : ''}${result.error ? ` · ${result.error}` : ''} — 未写入缓存,留待重测`
     );
   }
   if (record) {

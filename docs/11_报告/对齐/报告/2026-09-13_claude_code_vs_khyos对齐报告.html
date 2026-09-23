@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: 2026-09-13_claude_code_vs_khyos对齐报告.md -->
+<title>2026-09-13 Claude Code vs khy-os 终端对齐报告（第 1 次运行） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>对齐<span class="sep">›</span>报告<span class="sep">›</span>2026-09-13 Claude Code vs khy-os 终端对齐报告（第 1 次运行）</div>
+      <header class="hero reveal"><h1>2026-09-13 Claude Code vs khy-os 终端对齐报告（第 1 次运行）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#2026-09-13-claude-code-vs-khy-os-终端对齐报告-第-1-次运行">2026-09-13 Claude Code vs khy-os 终端对齐报告（第 1 次运行）</a></li><li class="lvl-2"><a href="#本次实测项">本次实测项</a></li><li class="lvl-2"><a href="#工具可用性基线">工具可用性基线</a></li><li class="lvl-2"><a href="#实测数据表">实测数据表</a></li><li class="lvl-2"><a href="#结论">结论</a></li><li class="lvl-2"><a href="#剩余待实测项清单-来自任务单">剩余待实测项清单（来自任务单）</a></li><li class="lvl-2"><a href="#建议修复项-不阻塞本次流水线">建议修复项（不阻塞本次流水线）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="2026-09-13-claude-code-vs-khy-os-终端对齐报告-第-1-次运行">2026-09-13 Claude Code vs khy-os 终端对齐报告（第 1 次运行）<a class="anchor" href="#2026-09-13-claude-code-vs-khy-os-终端对齐报告-第-1-次运行" aria-label="锚点">#</a></h1>
+<h2 id="本次实测项">本次实测项<a class="anchor" href="#本次实测项" aria-label="锚点">#</a></h2>
+<p>任务单中的「项1：<code>khy doctor</code> 健康自检」与「项2：单轮问答速度」两项合并为一次运行（本日为流水线首次运行，任务单尚不存在，已同步创建）。</p>
+<h2 id="工具可用性基线">工具可用性基线<a class="anchor" href="#工具可用性基线" aria-label="锚点">#</a></h2>
+<ul><li>khy CLI：<code>D:\Portable\khy-os\khy.bat</code>，版本 v1.1.15（<code>--help</code> 输出），<code>khy doctor</code> exit=0</li><li>Claude Code：<code>D:\Portable\Tools\nodejs\npm-global\claude.cmd</code>，版本 2.1.263</li></ul>
+<h2 id="实测数据表">实测数据表<a class="anchor" href="#实测数据表" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>命令</th><th>启动/命令耗时</th><th>结果</th><th>输出一致性</th><th>功能等价性</th></tr></thead><tbody><tr><td>khy doctor R1</td><td><code>khy doctor</code></td><td>906 ms</td><td>exit 0，输出 5 项检查（Node/npm/依赖/端口/claude CLI）+ 1 警告（双渠道 PATH 共存提示）</td><td>与 Claude Code 无对等物</td><td>khy-os 独有能力，不适用</td></tr><tr><td>khy doctor R2</td><td><code>khy doctor</code></td><td>825 ms</td><td>同上</td><td>同上</td><td>同上</td></tr><tr><td>khy doctor R3</td><td><code>khy doctor</code></td><td>692 ms</td><td>同上</td><td>同上</td><td>同上</td></tr><tr><td>claude -p R1</td><td><code>claude -p &quot;回答：Khy OS 项目的版本同步有哪两条轨道？&quot;</code></td><td>181,262 ms</td><td><strong>exit 1</strong>：<code>[claude-code:unrecognized_model] step-3.7-flash</code>，<code>Failed to authenticate. API Error: 401</code></td><td>无有效输出</td><td>不适用（鉴权失败，未产生回答）</td></tr><tr><td>claude -p R2</td><td>同上</td><td>183,259 ms</td><td><strong>exit 1</strong>：同上</td><td>无有效输出</td><td>不适用</td></tr><tr><td>khy -p R1（默认渠道）</td><td><code>khy -p &quot;1+1 等于几？只用一句话回答。&quot;</code></td><td>219,993 ms</td><td>exit 2，JSON 错误：多渠道全部失败（Claude Direct ECONNREFUSED 127.0.0.1:3000；Trae 类渠道不可用）</td><td>无有效回答</td><td>不适用</td></tr><tr><td>khy -p R2（relay 渠道）</td><td>同上 + <code>KHY_FORCE_CHANNEL=relay</code></td><td>187,520 ms</td><td>exit 0，输出 <code>Failed to authenticate. API Error: 401</code>（Codeium relay 渠道）</td><td>无有效回答</td><td>不适用</td></tr><tr><td>khy -p R3（agnes 渠道）</td><td>同上 + <code>KHY_FORCE_CHANNEL=agnes</code></td><td>391,556 ms</td><td>exit 0，输出 <code>Failed to authenticate. API Error: 401</code></td><td>无有效回答</td><td>不适用</td></tr></tbody></table>
+<h2 id="结论">结论<a class="anchor" href="#结论" aria-label="锚点">#</a></h2>
+<ol><li><strong><code>khy doctor</code>（项1）—— 已对齐（khy-os 独有能力）</strong>：三次运行 692–906 ms，稳定、输出含「动作+目标」且 5 项检查项均有状态标记；Claude Code 无对应 CLI 自检命令，按规则如实记录为 khy-os 独有，不做强行对齐。</li><li><strong>单轮问答速度（项2）—— 未对齐，需修改</strong>：<ul><li>本机当前<strong>所有 AI 渠道鉴权均失效</strong>：khy 的 relay/agnes 渠道 401，Claude Code 本身也是 401（且提示 <code>unrecognized_model: step-3.7-flash</code>，指向某处配置的模型名失效）。</li><li>因此<strong>本次未获得任何一方的有效 AI 回答</strong>，速度对比暂无法完成；两侧失败耗时都异常长（180s+ / 390s），疑似上游超时+重试逻辑拖累，建议后续排查（指向 <code>services/backend/src/services/gateway/aiGateway.js</code> 的重试/超时策略，以及 <code>~/.khyquant/config.json</code> / <code>.khy/api_keys.json</code> 的 key 有效性）。</li><li>结论标记：<strong>未对齐（需先修复鉴权，非代码功能缺失）</strong>。</li></ul></li></ol>
+<h2 id="剩余待实测项清单-来自任务单">剩余待实测项清单（来自任务单）<a class="anchor" href="#剩余待实测项清单-来自任务单" aria-label="锚点">#</a></h2>
+<ul><li>[x] 项1：khy doctor —— 本次完成</li><li>[ ] 项2：单轮问答速度 —— 本次尝试，因双方鉴权 401 无法获得有效输出，需修复 key 后重测</li><li>[ ] 项3：文件读取能力（AGENTS.md）</li><li>[ ] 项4：CLI 命令执行（<code>dir /b .</code>）</li><li>[ ] 项5：多轮上下文保持</li></ul>
+<h2 id="建议修复项-不阻塞本次流水线">建议修复项（不阻塞本次流水线）<a class="anchor" href="#建议修复项-不阻塞本次流水线" aria-label="锚点">#</a></h2>
+<ol><li>更新 <code>services/backend/.env</code> 中 Codeium relay 与 Anthropic 的 API key（401）。</li><li>排查 Claude Code 配置的 <code>step-3.7-flash</code> 模型名来源（<code>[claude-code:unrecognized_model]</code> 报错），可能是某处遗留的环境变量指向已下线模型。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../docs/11_报告/00_INDEX_报告-分类索引.html"><div class="dir">← 上一篇</div><div class="ttl">00INDEX 报告分类索引</div></a><a class="next" href="../../../../docs/11_报告/对齐/报告/2026-09-14_根因诊断与修复方案.html"><div class="dir">下一篇 →</div><div class="ttl">2026-09-14 根因诊断与修复方案</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="docs/11_报告/对齐/报告/2026-09-13_claude_code_vs_khyos对齐报告.html";</script>
+<script src="../../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [RESEARCH-015] HQ合并入khyos-可行性调研-2026-09-17.md -->
+<title>khy-os-hq 合并入 khy-os 可行性调研与实施方案 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>RESEARCH<span class="sep">›</span>khy-os-hq 合并入 khy-os 可行性调研与实施方案</div>
+      <header class="hero reveal"><h1>khy-os-hq 合并入 khy-os 可行性调研与实施方案</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-hq-合并入-khy-os-可行性调研与实施方案">khy-os-hq 合并入 khy-os 可行性调研与实施方案</a></li><li class="lvl-2"><a href="#零-一句话回答">零、一句话回答</a></li><li class="lvl-2"><a href="#一-hq-是什么-实测盘点">一、HQ 是什么（实测盘点）</a></li><li class="lvl-2"><a href="#二-五条硬约束-决定方案取舍">二、五条硬约束（决定方案取舍）</a></li><li class="lvl-3"><a href="#c1-路径自推算-是合并的-阻断性-约束">C1 🔴 「路径自推算」是合并的**阻断性**约束</a></li><li class="lvl-3"><a href="#c2-hq-check-py-会把整个-khy-os-当成自己的源码来扫">C2 🔴 `hq_check.py` 会把整个 khy-os 当成自己的源码来扫</a></li><li class="lvl-3"><a href="#c3-文件命名正面冲突">C3 🔴 文件命名正面冲突</a></li><li class="lvl-3"><a href="#c4-已有-嵌套仓库导致自动同步瘫痪-的-真实前科">C4 🟠 已有「嵌套仓库导致自动同步瘫痪」的**真实前科**</a></li><li class="lvl-3"><a href="#c5-ai-指令文件-预算与角色冲突">C5 🟠 「AI 指令文件」预算与角色冲突</a></li><li class="lvl-2"><a href="#三-收益-vs-代价-诚实对账">三、收益 vs 代价（诚实对账）</a></li><li class="lvl-3"><a href="#合并能拿到什么">合并能拿到什么</a></li><li class="lvl-3"><a href="#合并必须支付的代价">合并必须支付的代价</a></li><li class="lvl-2"><a href="#四-三个方案">四、三个方案</a></li><li class="lvl-3"><a href="#方案-a-完全并入-丢弃-hq-仓库">方案 A：完全并入（丢弃 HQ 仓库）</a></li><li class="lvl-3"><a href="#方案-b-submodule-引入-保留-hq-仓库-khy-os-里挂一个引用">方案 B：submodule 引入（保留 HQ 仓库，khy-os 里挂一个引用）</a></li><li class="lvl-3"><a href="#方案-c-契约-指针-推荐">方案 C：契约 + 指针（**推荐**）</a></li><li class="lvl-2"><a href="#五-推荐执行路径-若采纳方案-c">五、推荐执行路径（若采纳方案 C）</a></li><li class="lvl-2"><a href="#六-需要你决策的三点">六、需要你决策的三点</a></li><li class="lvl-2"><a href="#附-复现命令-供你自行验证结论">附：复现命令（供你自行验证结论）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-hq-合并入-khy-os-可行性调研与实施方案">khy-os-hq 合并入 khy-os 可行性调研与实施方案<a class="anchor" href="#khy-os-hq-合并入-khy-os-可行性调研与实施方案" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>调研日期</strong>：2026-09-17 · <strong>结论</strong>：<strong>不建议按「丢弃 HQ + 直接内嵌」执行</strong>；<br>推荐<strong>方案 C（保留 HQ 为独立仓库，在 khy-os 内只放契约与指针）</strong>，<br>或<strong>方案 B（先以 submodule 引入，验证 3 个月后再决定是否真正并入）</strong>。<br>以下所有判断均基于本机实测，非推测；每条都附可复现证据。</p></blockquote>
+<hr>
+<h2 id="零-一句话回答">零、一句话回答<a class="anchor" href="#零-一句话回答" aria-label="锚点">#</a></h2>
+<p><strong>&quot;可以合，但代价与收益不成比例，且有一条硬技术约束让&quot;直接内嵌&quot;必然踩坑。&quot;</strong></p>
+<p>HQ 不是 khy-os 的附属物，而是<strong>指向 khy-os 的另一个仓库</strong>：<br>它的 7 个脚本全部靠 <strong>从自身位置向上推算</strong> 来定位 khy-os<br>（<code>HQ_ROOT → PROJECTS_DIR → PORTABLE_ROOT → &lt;PORTABLE_ROOT&gt;/khy-os</code>）。<br>HQ 一旦被放进 khy-os <strong>内部</strong>，这个推算就会指向 <code>khy-os/khy-os</code>（不存在）——<br><strong>HQ 的全部脚本在一夜之间集体失效</strong>。</p>
+<hr>
+<h2 id="一-hq-是什么-实测盘点">一、HQ 是什么（实测盘点）<a class="anchor" href="#一-hq-是什么-实测盘点" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>维度</th><th>实测值</th></tr></thead><tbody><tr><td>位置</td><td><code>D:\Portable\Projects\khy-os-hq</code>（<strong>与 khy-os 平级</strong>，不在其内部）</td></tr><tr><td>文件数</td><td>35 个（不含 <code>.git</code>）</td></tr><tr><td>体积</td><td><code>_meta/</code> 合计 <strong>59 KB</strong>（<code>bugs.json</code> 21 KB / <code>PROGRESS.json</code> 17.5 KB / <code>CONTEXT.md</code> 11 KB / <code>ROADMAP.md</code> 5.8 KB / <code>MODELS.json</code> 3.6 KB）</td></tr><tr><td>提示词</td><td><code>prompts/</code> 下 <strong>19 个 <code>.md</code></strong>（13 类模板）</td></tr><tr><td>脚本</td><td>7 个 Python（<code>hq_common</code> / <code>hq_check</code> / <code>next</code> / <code>new_bug</code> / <code>update_status</code> / <code>sync</code> / <code>check_sync</code>）</td></tr><tr><td>独立历史</td><td><strong>57 个 commit</strong>（khy-os 是 152 个）；<code>git cat-file</code> 实测<strong>无共享对象 → 两仓历史完全独立</strong></td></tr><tr><td>远端</td><td><code>origin</code> = <code>github.com/luckykhy/khy-os-hq.git</code>（<strong>私有</strong>）</td></tr><tr><td>CI</td><td>HQ <strong>无 <code>.github/</code></strong>，即<strong>零 CI</strong>；khy-os 的 workflow <strong>也不引用 HQ</strong>（已 grep 确认）</td></tr><tr><td>活跃数据</td><td><strong>23 个任务</strong>（todo 14 / done 5 / review 3 / doing 1）、<strong>8 个 Bug</strong>（pending_verify 7 / in_progress 1）</td></tr></tbody></table>
+<p><strong>HQ 的真实职责</strong>（源自其 <code>CLAUDE.md</code>）：</p>
+<ol><li><strong>提示词库</strong> —— 每条自包含（角色+流程+工程红线+验收+验证命令）；</li><li><strong>状态真源</strong> —— <code>bugs.json</code> 状态机 + <code>PROGRESS.json</code> 任务状态；</li><li><strong>机械检查</strong> —— <code>hq_check.py</code> 七组检查（portability / meta / prompts / drivability / autopull_task / sync_readonly / merge_flow）；</li><li><strong>多机同步</strong> —— <code>sync.py</code> 双仓 git 编排 + Windows 计划任务 <code>khy-hq-autopull</code>（每 10 分钟）。</li></ol>
+<hr>
+<h2 id="二-五条硬约束-决定方案取舍">二、五条硬约束（决定方案取舍）<a class="anchor" href="#二-五条硬约束-决定方案取舍" aria-label="锚点">#</a></h2>
+<h3 id="c1-路径自推算-是合并的-阻断性-约束">C1 🔴 「路径自推算」是合并的<strong>阻断性</strong>约束<a class="anchor" href="#c1-路径自推算-是合并的-阻断性-约束" aria-label="锚点">#</a></h3>
+<p><code>scripts/hq_common.py:26-29</code>：</p>
+<pre><code class="language-python">SCRIPT_DIR   = os.path.dirname(os.path.abspath(__file__))
+HQ_ROOT      = os.path.dirname(SCRIPT_DIR)
+PROJECTS_DIR = os.path.dirname(HQ_ROOT)
+PORTABLE_ROOT= os.path.dirname(PROJECTS_DIR)          <span class="hljs-comment"># ← 关键</span>
+...
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">find_khyos</span>():
+    candidates.append(os.path.join(PORTABLE_ROOT, <span class="hljs-string">&quot;khy-os&quot;</span>))   <span class="hljs-comment"># ← 靠这个找 khy-os</span></code></pre>
+<p><strong>现状</strong>（实测有效）：<code>HQ_ROOT=D:\Portable\Projects\khy-os-hq</code> → <code>PORTABLE_ROOT=D:\Portable</code><br>→ 找到 <code>D:\Portable\khy-os</code> ✅</p>
+<p><strong>若把 HQ 放进 khy-os，例如 <code>khy-os/Projects/hq/</code></strong>：<br><code>PORTABLE_ROOT</code> 变成 <code>D:\Portable\khy-os\Projects</code> → 去探测<br><code>D:\Portable\khy-os\Projects\khy-os</code> → <strong>不存在</strong> ❌</p>
+<p><strong>后果</strong>：<code>sync.py</code> 只处理 HQ 自身、<code>next.py</code> 渲染的 <code>{{KHYOS_PATH}}</code> 变成<br>「(未找到 khy-os 目录…)」、<code>khy-os-hq.bat</code> 报错。<strong>7 个脚本全部要改</strong>，<br>且这会<strong>同时违反 HQ 自己的第一铁律</strong>（零盘符硬编码 → 只能改探测算法而不能写死路径）。</p>
+<p><strong>唯一可行修法</strong>：把 <code>find_khyos()</code> 改为「先向上找含 <code>package.json</code> + <code>pyproject.toml</code> 的目录」，<br>但这等于<strong>重写 HQ 的路径地基</strong>，且要重跑 <code>hq_check.py portability</code> 全量回归。</p>
+<h3 id="c2-hq-check-py-会把整个-khy-os-当成自己的源码来扫">C2 🔴 <code>hq_check.py</code> 会把整个 khy-os 当成自己的源码来扫<a class="anchor" href="#c2-hq-check-py-会把整个-khy-os-当成自己的源码来扫" aria-label="锚点">#</a></h3>
+<p><code>iter_files()</code> 只跳过 <code>{.git, node_modules, __pycache__, logs}</code>，<strong>会递归进入同级目录树</strong>。<br>若 HQ 嵌套在 khy-os 内：</p>
+<ul><li>扫描量从 <strong>35 个文件</strong> 暴涨到 <strong>3985 个</strong>（<code>.py/.md/.json/.bat/.ps1</code>）；</li><li><code>check_portability</code> 会对 khy-os 的 <strong>407 个含盘符引用的文件</strong>逐一报 ERROR</li></ul>
+<p>（实测：<code>khy.bat</code>、<code>platform/khy_platform/*.py</code>、<code>scripts/release/*.ps1</code> 等）；</p>
+<ul><li><strong><code>hq_check.py</code> 从此永远不可能全绿 → <code>sync.py</code> 的收工门禁永久卡死 → 自动同步彻底瘫痪。</strong></li></ul>
+<blockquote><p>这条比undefined更致命：C1 让脚本「找不到 khy-os」，C2 让门禁「必然红」。<br>两者叠加 = <strong>双机流水线当场死亡</strong>。</p></blockquote>
+<h3 id="c3-文件命名正面冲突">C3 🔴 文件命名正面冲突<a class="anchor" href="#c3-文件命名正面冲突" aria-label="锚点">#</a></h3>
+<p>HQ 与 khy-os 的<strong>根目录都有</strong> <code>README.md</code>、<code>AGENTS.md</code>、<code>CLAUDE.md</code>（实测均存在）。<br>若把 HQ 内容摊平或按原样嵌到可被扫描的位置，会与 khy-os 的<br><code>ROOT_DOC_WHITELIST</code>（<code>scripts/ci/check-repo-layout.js:124</code>）及其<br><code>DESIGN-LAY-005</code> §1.3 根目录白名单<strong>直接冲突</strong>。</p>
+<h3 id="c4-已有-嵌套仓库导致自动同步瘫痪-的-真实前科">C4 🟠 已有「嵌套仓库导致自动同步瘫痪」的<strong>真实前科</strong><a class="anchor" href="#c4-已有-嵌套仓库导致自动同步瘫痪-的-真实前科" aria-label="锚点">#</a></h3>
+<p><code>khy-os/.gitignore:172-180</code> 明文记录了完全相同的故障：</p>
+<blockquote><p><code>tools/deepseek-eyes</code>: originally an <strong>accidental phantom git link</strong> (mode 160000,<br>with no <code>.gitmodules</code> mapping). A nested repo <strong>can't be checked out on clone</strong>,<br>and its local HEAD drifting made <code>git status</code> permanently dirty — which in turn<br><strong>kept the dual-machine autopull <code>--clean-only</code> gate from ever firing<br>(the direct cause of the task loop never closing)</strong>.</p></blockquote>
+<p><strong>这段就是本次合并的预言</strong>：嵌套仓库 → 工作树永远脏 → <code>--clean-only</code> 永不触发 → 流水线死锁。</p>
+<h3 id="c5-ai-指令文件-预算与角色冲突">C5 🟠 「AI 指令文件」预算与角色冲突<a class="anchor" href="#c5-ai-指令文件-预算与角色冲突" aria-label="锚点">#</a></h3>
+<p>依据已完成的 <code>DOCS-003</code>（真源 <code>docs/10_规范/[DESIGN-DOC-002]</code>）与实测：</p>
+<ul><li>khy-os 的 <code>AGENTS.md</code> 当前 <strong>42,155 字节</strong>，走 <strong>compat 链路</strong>（<code>constants/prompts.js</code></li></ul>
+<p>的 <code>_findCompatInstructionFiles()</code>），<code>readFileSync().trim()</code> <strong>无预算、不截断</strong>，<br>  全文注入 <code>project_instructions</code>；</p>
+<ul><li>HQ 另有自己的 <code>AGENTS.md</code> + <code>CLAUDE.md</code>，且 <code>hq_check.py drivability</code> <strong>强制要求双入口同步</strong>。</li><li><strong>若把 HQ 的指令文件合并进 khy-os 的 <code>AGENTS.md</code></strong>：单文件继续膨胀（每会话全量注入，</li></ul>
+<p>成本线性上升），且<strong>两套角色定义</strong>（「khy-os 维护指南」vs「khy-os 指挥部」）在同一文件内打架。</p>
+<ul><li><strong>若保留两份</strong>：<code>DESIGN-DOC-002</code> 的 <code>DOCS-003</code> 场景矩阵会面临&quot;根目录多份指令文件&quot;的新形态，</li></ul>
+<p>需额外场景与回归锁 —— 不是不能做，但是<strong>明确的额外工作</strong>。</p>
+<hr>
+<h2 id="三-收益-vs-代价-诚实对账">三、收益 vs 代价（诚实对账）<a class="anchor" href="#三-收益-vs-代价-诚实对账" aria-label="锚点">#</a></h2>
+<h3 id="合并能拿到什么">合并能拿到什么<a class="anchor" href="#合并能拿到什么" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>收益</th><th>实际强度</th></tr></thead><tbody><tr><td>少一个仓库要 pull/push</td><td>⚠️ <strong>弱</strong> —— autopull 计划任务已自动化，人工只需「收工清干净」</td></tr><tr><td>提交时版本/任务状态原子一致</td><td>⚠️ <strong>弱</strong> —— 实际工作中两者天然分属不同节奏（HQ 状态更新频繁、khy-os 代码提交较少）</td></tr><tr><td>提示词/状态离代码更近</td><td>✅ <strong>真收益</strong> —— 冷启动时少一次「换目录」</td></tr><tr><td>少一份 AGENTS/CLAUDE 维护</td><td>❌ <strong>反向</strong> —— 见 C5，合并后要处理角色冲突，不省反增</td></tr></tbody></table>
+<h3 id="合并必须支付的代价">合并必须支付的代价<a class="anchor" href="#合并必须支付的代价" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>代价</th><th>量级</th></tr></thead><tbody><tr><td>重写 <code>find_khyos()</code> 路径地基 + 全量回归</td><td><strong>中高</strong>（7 脚本 + <code>portability</code> 检查）</td></tr><tr><td><code>hq_check.py</code> 加扫描边界（否则undefined必然红）</td><td><strong>中</strong>（并需新增&quot;排除宿主仓库&quot;的回归锁）</td></tr><tr><td>解决 3 个根文件命名冲突</td><td><strong>低</strong></td></tr><tr><td>解除 <code>.git</code> 嵌套（去掉 HQ 的 <code>.git</code>，历史并入 khy-os）</td><td><strong>中高</strong> —— 57 个 commit 的历史合并，且<strong>HQ 远端私有仓库要决定废弃还是保留</strong></td></tr><tr><td>双机同步逻辑重写（从&quot;两仓编排&quot;变成&quot;单仓先行&quot;）</td><td><strong>高</strong> —— <code>sync.py</code> 的核心价值就是跨仓门禁，541 行里大半围绕它</td></tr><tr><td>首台/第二台机器的接入流程重写（<code>AGENTS.md</code> 自举节 + <code>prompts/meta/02-新机器接入.md</code>）</td><td><strong>中</strong></td></tr><tr><td>计划任务 <code>khy-hq-autopull</code> 重新定义</td><td><strong>低</strong></td></tr></tbody></table>
+<blockquote><p><strong>关键判断</strong>：合并的<strong>技术代价集中在「推倒 HQ 的路径与同步地基」</strong>，<br>而这块地基恰好是 HQ 最稳、最有价值的部分（57 commit 打磨出的双机健壮性）。<br><strong>用高代价换低收益</strong> —— 这就是不建议执行的根本原因。</p></blockquote>
+<hr>
+<h2 id="四-三个方案">四、三个方案<a class="anchor" href="#四-三个方案" aria-label="锚点">#</a></h2>
+<h3 id="方案-a-完全并入-丢弃-hq-仓库">方案 A：完全并入（丢弃 HQ 仓库）<a class="anchor" href="#方案-a-完全并入-丢弃-hq-仓库" aria-label="锚点">#</a></h3>
+<p>把 HQ 内容移入 khy-os（如 <code>khy-os/hq/</code>），删除 HQ 的 <code>.git</code>，历史并入，废弃私有远端。</p>
+<ul><li><strong>工作量</strong>：大（C1+C2+C3+C4+C5 全要处理）</li><li><strong>风险</strong>：<strong>高</strong> —— 触碰双机流水线地基，且undefined会导致门禁长期红</li><li><strong>适用</strong>：只有当&quot;单人单机、彻底放弃双机协作&quot;时才合理</li><li><strong>判定</strong>：❌ <strong>不推荐</strong></li></ul>
+<h3 id="方案-b-submodule-引入-保留-hq-仓库-khy-os-里挂一个引用">方案 B：submodule 引入（保留 HQ 仓库，khy-os 里挂一个引用）<a class="anchor" href="#方案-b-submodule-引入-保留-hq-仓库-khy-os-里挂一个引用" aria-label="锚点">#</a></h3>
+<p><code>git submodule add &lt;hq-url&gt; .khyos-hq/</code>（或 <code>vendor/hq/</code>），HQ 仍是独立仓库。</p>
+<ul><li><strong>收益</strong>：khy-os 检出即含 HQ 指针；版本对应关系被 git 记录</li><li><strong>风险</strong>：🟠 <strong>正中undefined前科</strong> —— 嵌套 <code>.git</code> 会让 khy-os 的 <code>git status</code> 长期显示</li></ul>
+<p>submodule 脏，<strong>同样会卡死 autopull 的 <code>--clean-only</code></strong></p>
+<ul><li><strong>额外成本</strong>：khy-os 是全仓 <code>git add -A</code> 频繁的工作区，submodule 冲突面大</li><li><strong>判定</strong>：⚠️ <strong>可试，但必须先验证不触发 C4</strong>（建议先只读共存观察 2 周）</li></ul>
+<h3 id="方案-c-契约-指针-推荐">方案 C：契约 + 指针（<strong>推荐</strong>）<a class="anchor" href="#方案-c-契约-指针-推荐" aria-label="锚点">#</a></h3>
+<p><strong>HQ 保持独立仓库不动</strong>，只在 khy-os 内建立<strong>双向契约与指针</strong>：</p>
+<ol><li>在 khy-os <code>AGENTS.md</code> 的自举节补一段「<strong>HQ 契约</strong>」：<ul><li>HQ 的<strong>预期位置</strong>（<code>&lt;PORTABLE_ROOT&gt;/Projects/khy-os-hq</code>，或 <code>KHY_OS_DIR</code> 式环境变量）；</li><li><strong>缺失时的降级行为</strong>（无 HQ 则纯手工模式，khy-os 功能零影响）；</li><li><strong>接口冻结</strong>：HQ 通过哪些命令读写 khy-os（<code>sync.py --push-khyos</code> 等）。</li></ul></li><li>在 khy-os 新增一条<strong>规则</strong>（<code>PROCESS-006</code> 或并入 <code>PROCESS-004</code> 的兄弟）：<ul><li>明确 <strong>HQ ⇄ khy-os 的边界</strong>：HQ 只存指令与状态，<strong>khy-os 代码改动永远发生在 khy-os</strong>；</li><li>明确 <strong>哪一侧是版本/状态真源</strong>（避免双写漂移）。</li></ul></li><li>用<strong>守卫</strong>把契约机械固化（而非靠文档自觉）：<ul><li>一条检查：khy-os 内<strong>不得</strong>出现 <code>khy-os-hq</code> 的实体副本（防有人偷偷内嵌）；</li><li>一条检查：HQ 存在时 <code>KHY_OS_DIR</code> / 相对位置可解析（防探测失效无人察觉）。</li></ul></li><li><strong>可选增强</strong>：给 HQ 增加 <code>khy-os</code> 侧的<strong>只读视图命令</strong>（如 <code>khy hq status</code>），</li></ol>
+<p>让&quot;在 khy-os 里就能看 HQ 下一步&quot;，<strong>拿走方案 A 唯一的真收益（少换目录）</strong>。</p>
+<ul><li><strong>工作量</strong>：小（1 篇规范 + 1 个守卫 + 2 处指针）</li><li><strong>风险</strong>：低 —— 完全不触碰 HQ 的路径与同步地基</li><li><strong>判定</strong>：✅ <strong>推荐</strong></li></ul>
+<hr>
+<h2 id="五-推荐执行路径-若采纳方案-c">五、推荐执行路径（若采纳方案 C）<a class="anchor" href="#五-推荐执行路径-若采纳方案-c" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>步骤</th><th>动作</th><th>验收</th></tr></thead><tbody><tr><td>1</td><td>写规范 <code>docs/10_规范/[DESIGN-HQ-001] 指挥部契约与边界.md</code>（含 HQ⇄khy-os 接口、真源分工、降级行为）</td><td>孪生件生成，索引登记</td></tr><tr><td>2</td><td>登记规则 <code>PROCESS-006</code>（HQ 边界）到 <code>RULES-REGISTRY.json</code></td><td><code>check:rules</code> 绿</td></tr><tr><td>3</td><td>写守卫 <code>scripts/ci/check-hq-contract.js</code>（防内嵌 + 探测可用性）</td><td><code>check:wiring</code> 绿，<code>pr-gate.yml</code> 有引用</td></tr><tr><td>4</td><td>khy-os <code>AGENTS.md</code> 自举节补 HQ 契约指针</td><td><code>check:agent-docs</code> 0 error</td></tr><tr><td>5</td><td><strong>可选</strong>：<code>khy hq status</code> 只读视图</td><td>真收益落地</td></tr></tbody></table>
+<blockquote><p><strong>本次只交付调研与方案。</strong> 任何写入动作（规范/规则/守卫）须你点头后再执行，<br>且按 <code>SOURCING-006</code>「一次提交只做一步」分批。</p></blockquote>
+<hr>
+<h2 id="六-需要你决策的三点">六、需要你决策的三点<a class="anchor" href="#六-需要你决策的三点" aria-label="锚点">#</a></h2>
+<ol><li><strong>是否仍坚持&quot;丢弃 HQ&quot;</strong>？</li></ol>
+<p>实测表明收益弱、代价高，且undefined有真实前科。若你只是想「少维护一个仓库」，<br>   方案 C 的只读视图能拿到同样的体感收益，风险低一个数量级。</p>
+<ol><li><strong>双机协作还要不要</strong>？</li></ol>
+<p>这是<strong>唯一</strong>能正当化方案 A 的前提。若只剩一台机器在跑，<br>   <code>sync.py</code> 的 541 行跨仓门禁就失去了存在理由，方案 A 的代价会大幅下降。</p>
+<ol><li><strong>HQ 的 57 个 commit 历史要不要留</strong>？</li></ol>
+<p>方案 A 必须回答（并入 / 归档 / 丢弃）；方案 C 则<strong>无需回答</strong>（历史原地保留）。</p>
+<hr>
+<h2 id="附-复现命令-供你自行验证结论">附：复现命令（供你自行验证结论）<a class="anchor" href="#附-复现命令-供你自行验证结论" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-comment"># C1 路径自推算（读 hq_common.py 的 26-29 行与 find_khyos）</span>
+sed -n <span class="hljs-string">&#x27;26,29p;77,91p&#x27;</span> /d/Portable/Projects/khy-os-hq/scripts/hq_common.py
+
+<span class="hljs-comment"># C2 扫描边界（只跳 4 个目录）</span>
+sed -n <span class="hljs-string">&#x27;26,27p;51,58p&#x27;</span> /d/Portable/Projects/khy-os-hq/scripts/hq_check.py
+
+<span class="hljs-comment"># C3 根文件冲突</span>
+<span class="hljs-built_in">ls</span> /d/Portable/Projects/khy-os-hq/*.md; <span class="hljs-built_in">ls</span> /d/Portable/khy-os/{README,AGENTS,CLAUDE}.md
+
+<span class="hljs-comment"># C4 嵌套仓库前科</span>
+sed -n <span class="hljs-string">&#x27;172,180p&#x27;</span> /d/Portable/khy-os/.gitignore
+
+<span class="hljs-comment"># 历史独立性</span>
+git -C /d/Portable/Projects/khy-os-hq rev-list --count HEAD   <span class="hljs-comment"># 57</span>
+git -C /d/Portable/khy-os rev-list --count HEAD               <span class="hljs-comment"># 152</span></code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/11_报告/RESEARCH/[RESEARCH-014] khy-os-四轮对抗式诊断与修复-最终总结.html"><div class="dir">← 上一篇</div><div class="ttl">Khy-OS 四轮对抗式诊断与修复 — 最终总结</div></a><a class="next" href="../../../docs/11_报告/RESEARCH/[RESEARCH-016] HQ丢弃-多机协作保留-方案-2026-09-17.html"><div class="dir">下一篇 →</div><div class="ttl">丢弃 HQ + 保留多机协作：可行方案（修订版）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/11_报告/RESEARCH/[RESEARCH-015] HQ合并入khyos-可行性调研-2026-09-17.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

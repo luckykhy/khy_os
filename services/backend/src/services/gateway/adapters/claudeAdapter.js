@@ -1058,9 +1058,69 @@ function buildDefaultControlResponse(requestId, request = {}) {
   };
 }
 
+/**
+ * Turn a PRIMITIVE permission verdict into the control_response envelope.
+ *
+ * @param {string} requestId
+ * @param {object} request  the `can_use_tool` request payload
+ * @param {*} verdict       `true` | 'always' | 'allow-always' | `false` | junk
+ * @returns {object} control_response envelope
+ */
+function controlEnvelopeFromDecision(requestId, request, verdict) {
+  const toolInput = request && typeof request === 'object' && request.input ? request.input : {};
+  let decision = 'deny';
+  try {
+    // Lazy require: the adapter must stay cheap to load and the tool layer is
+    // never on its module-init path. Unreadable verdict → deny, because the
+    // failure mode of guessing wrong here is running a tool the user refused.
+    decision = require('../../tool/toolCallingPermissions')._decisionFromControl(verdict);
+  } catch {
+    decision = 'deny';
+  }
+  // 'allow-always' has no CLI counterpart (KHY persists the trust rule itself),
+  // so for this subprocess turn it is an ordinary allow.
+  return decision === 'allow' || decision === 'allow-always'
+    ? {
+      type: 'control_response',
+      response: {
+        subtype: 'success',
+        request_id: requestId,
+        response: { behavior: 'allow', updatedInput: toolInput },
+      },
+    }
+    : {
+      type: 'control_response',
+      response: {
+        subtype: 'success',
+        request_id: requestId,
+        response: { behavior: 'deny', message: 'Permission denied' },
+      },
+    };
+}
+
 function normalizeControlResponse(requestId, request, rawResponse) {
   const fallback = buildDefaultControlResponse(requestId, request);
-  if (!rawResponse || typeof rawResponse !== 'object') {
+  if (rawResponse === null || rawResponse === undefined) {
+    // Genuine "nobody answered": onControlRequest is absent (non-interactive
+    // gateway mode) or returned nothing → the documented auto-allow default.
+    return fallback;
+  }
+  if (typeof rawResponse !== 'object') {
+    // The Ink TUI resolves the control promise with a PRIMITIVE (`true` /
+    // 'always' / `false`), while the classic REPL host resolves with an
+    // `{behavior}` object. Both are the same verdict contract, so decode it
+    // with the canonical reader instead of re-spelling the mapping here.
+    // Passing a primitive through the old `typeof !== 'object'` branch used to
+    // reach `fallback`, i.e. an explicit Esc/deny became `behavior:'allow'`
+    // and the Claude CLI subprocess ran the tool anyway.
+    //
+    // Scoped to `can_use_tool` because that is the only subtype the primitive
+    // contract covers: on any other subtype a bare `false` carries no defined
+    // meaning, and inventing a deny there would break the handshake.
+    const subtype = String(request && typeof request === 'object' ? request.subtype || '' : '');
+    if (subtype === 'can_use_tool') {
+      return controlEnvelopeFromDecision(requestId, request, rawResponse);
+    }
     return fallback;
   }
 
@@ -1934,7 +1994,7 @@ function buildDirectToolDefs() {
 
     // 拓展经 manifest 声明、但尚未加载的工具 —— 补进清单，否则模型看不见它们。
     //
-    // `pool` 只含**已加载**的工具，而惰性拓展按定义还没加载（[DESIGN-ARCH-069] §4：
+    // `pool` 只含**已加载**的工具，而惰性拓展按定义还没加载（[DESIGN-TOOL-002] §4：
     // 发现阶段只读 manifest，入口等首次调用）。不补这一段，一个从核里迁出去的工具就
     // 「executeTool 叫得动、模型却从没在清单里见过」—— khy-notebook 试点实测出的缺口。
     //
@@ -3335,6 +3395,12 @@ module.exports = {
     },
     bridgeToolUseRawInputEnabled: (env) => _bridgeToolUseRawInputEnabled(env),
     buildStreamUserMessage,
+    // Permission-verdict envelope: the TUI resolves onControlRequest with a
+    // PRIMITIVE (true / 'always' / false) while the REPL host resolves with an
+    // {behavior} object. Both must land in the right control_response, so the
+    // mapping is exercised directly instead of by reading the source.
+    normalizeControlResponse,
+    buildDefaultControlResponse,
     resolveAnthropicCredentialFromEnv: (env) => _resolveAnthropicCredentialFromEnv(env),
     resolveAnthropicAuthScheme: (source, env) => _resolveAnthropicAuthScheme(source, env),
     buildAnthropicAuthHeaders: (apiKey, scheme) => _buildAnthropicAuthHeaders(apiKey, scheme),

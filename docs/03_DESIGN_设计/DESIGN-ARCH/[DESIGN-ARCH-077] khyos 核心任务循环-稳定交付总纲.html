@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-ARCH-077] khyos 核心任务循环-稳定交付总纲.md -->
+<title>[DESIGN-ARCH-073] khyos 核心任务循环 — 稳定交付总纲 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH<span class="sep">›</span>[DESIGN-ARCH-073] khyos 核心任务循环 — 稳定交付总纲</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-073] khyos 核心任务循环 — 稳定交付总纲</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-073-khyos-核心任务循环-稳定交付总纲">[DESIGN-ARCH-073] khyos 核心任务循环 — 稳定交付总纲</a></li><li class="lvl-2"><a href="#0-闭环全景">0. 闭环全景</a></li><li class="lvl-2"><a href="#1-入口与路径矩阵">1. 入口与路径矩阵</a></li><li class="lvl-2"><a href="#2-想停-轮门序-模型不再调工具时的完整序列">2. 「想停」轮门序（模型不再调工具时的完整序列）</a></li><li class="lvl-3"><a href="#2-1-任务收尾仲裁门-11-闭环的权威裁决">2.1 任务收尾仲裁门（#11，闭环的权威裁决）</a></li><li class="lvl-3"><a href="#2-2-工具执行失败的多分支恢复梯子-toolfailurerecovery">2.2 工具执行失败的多分支恢复梯子（toolFailureRecovery）</a></li><li class="lvl-3"><a href="#2-3-输出区分级显示-核心抢占焦点-次要折叠防凌乱">2.3 输出区分级显示（核心抢占焦点 / 次要折叠防凌乱）</a></li><li class="lvl-2"><a href="#3-验证与裁决层-harness">3. 验证与裁决层（harness）</a></li><li class="lvl-2"><a href="#4-台账与查询">4. 台账与查询</a></li><li class="lvl-2"><a href="#5-失败模式与恢复">5. 失败模式与恢复</a></li><li class="lvl-2"><a href="#6-环境变量总表-闭环相关-全部默认开-默认值即生产值">6. 环境变量总表（闭环相关，全部默认开/默认值即生产值）</a></li><li class="lvl-2"><a href="#7-稳定交付操作规程-操作者-ai-助手">7. 稳定交付操作规程（操作者 / AI 助手）</a></li><li class="lvl-2"><a href="#8-已知边界与后续演进">8. 已知边界与后续演进</a></li><li class="lvl-2"><a href="#9-测试锚点">9. 测试锚点</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-073-khyos-核心任务循环-稳定交付总纲">[DESIGN-ARCH-073] khyos 核心任务循环 — 稳定交付总纲<a class="anchor" href="#design-arch-073-khyos-核心任务循环-稳定交付总纲" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：khyos 执行一个用户任务时从「受理」到「交付」的<strong>核心循环单一真源</strong>——即任务最小闭环<br>（登记 → 执行 → 裁决 → 交付 → 台账）的完整运行时契约。任何人（AI 助手、维护者、操作者）要回答<br>「khyos 怎么做任务、凭什么算交付完、坏了怎么查」都以本文为准。<br><strong>适用边界</strong>：只描述任务执行循环本体；层级与依赖方向见 <code>[DESIGN-LAY-005]</code>，通道选择见<br><code>[DESIGN-ARCH-071]</code>，收尾裁决接线与交付台账的实现细节见 <code>[DESIGN-ARCH-072]</code>，持久任务（队列/租约）<br>的状态机见 <code>docs/10_规范/其它规范/RELIABILITY-PROTOCOL.md</code>（2026-09-10 规范目录拆分后迁至 <code>10_规范/</code>）。<br><strong>代码锚点</strong>：<code>services/backend/src/services/toolUseLoopCore.js</code>（循环本体，各门以文件内中文门名注释<br>为 grep 锚点）、<code>services/backend/src/services/agenticHarnessService.js</code>（harness 验证层）、<br><code>services/backend/src/services/backgroundTaskManager.js</code>（终态咽喉）、<br><code>services/backend/src/services/deliveryLedger.js</code>（台账）。</p></blockquote>
+<hr>
+<h2 id="0-闭环全景">0. 闭环全景<a class="anchor" href="#0-闭环全景" aria-label="锚点">#</a></h2>
+<pre><code class="language-text"> 用户任务
+    │
+    ▼
+┌─ 登记 ────────────────────────────────────────────────────────┐
+│ backgroundTaskManager.register() → durable 任务库            │
+│ （.khy/tasks/large_task_runtime.json，canonical 状态机）      │
+└──────────────┬───────────────────────────────────────────────┘
+               ▼
+┌─ 执行 ────────────────────────────────────────────────────────┐
+│ runToolUseLoop（toolUseLoopCore）                             │
+│   工具轮：解析计划 → &lt;tool_call&gt; → 权限网关 → 执行 →          │
+│           写后回读自证 → 结果透明化 → 下一轮                  │
+│   「想停」轮：门序见 §2（一致性门 → 软门 → 仲裁门 → 硬门）     │
+│   有界性：MAX_ITERATIONS=100 · 墙钟 10 分钟 · 每门独立预算     │
+└──────────────┬───────────────────────────────────────────────┘
+               ▼
+┌─ 验证（harness 路径；headless 为最小版）──────────────────────┐
+│ 交付门 deliveryGate：验收包（空 criteria → 最小兜底）→        │
+│   逐条评估 → 不过 → 修复循环 ≤3 轮                            │
+│ VerificationAgent：语法/lint/test/build + 一次修复            │
+│ 回归门：基线对比                                              │
+└──────────────┬───────────────────────────────────────────────┘
+               ▼
+┌─ 裁决 ────────────────────────────────────────────────────────┐
+│ buildHarnessDeliveryVerdict → pass/fail；fail 时把缺口        │
+│ 如实追加进最终回复，绝不假装成功收尾                          │
+└──────────────┬───────────────────────────────────────────────┘
+               ▼
+┌─ 交付 + 台账 ─────────────────────────────────────────────────┐
+│ 终态咽喉 backgroundTaskManager.complete/fail/cancel →        │
+│ deliveryLedger 追加 JSONL → khy deliveries 回查               │
+│ headless -p 路径在 bin/khy.js 退出前入账（含循环报错回退）    │
+└──────────────────────────────────────────────────────────────┘</code></pre>
+<p><strong>不变式（违反任何一条即闭环破损，评审按红线对待）</strong>：</p>
+<ol><li><strong>登记必达</strong>——凡走 harness/后台的任务必先 <code>register()</code>，有 ID 可查可取消。</li><li><strong>终态必达</strong>——任务不得滞留 running；崩溃/中断走 boulder 断点（§5），可 <code>khy resume</code>。</li><li><strong>诚实收尾</strong>——<code>close_partial</code> / 交付门 fail / 达上限时，缺口必须写进用户可见的最终回复与台账，绝不把过程当结果。</li><li><strong>有界续跑</strong>——任何再驱动（nudge / redrive / remediation）都有独立预算，预算耗尽即降级收尾，绝不无限循环。</li><li><strong>证据门</strong>——声称「测试通过/已验证」却拿不出真实验证命令记录 → 必须再驱动，声称即接受被禁止。</li><li><strong>台账必记</strong>——每个终态（含失败与取消）都进交付台账，5 分钟 TTL 只清活动列表 UI，不灭台账。</li></ol>
+<hr>
+<h2 id="1-入口与路径矩阵">1. 入口与路径矩阵<a class="anchor" href="#1-入口与路径矩阵" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>入口</th><th>命令</th><th>执行路径</th><th>验证层级</th><th>台账</th></tr></thead><tbody><tr><td>交互 REPL（默认）</td><td><code>khy</code> + 任务文本</td><td><code>agenticHarnessService.run()</code>（<code>KHY_REPL_HARNESS</code> 默认开）</td><td>完整：交付门 + 验证代理 + 回归门 + 裁决</td><td>✓（经终态咽喉）</td></tr><tr><td>Headless 一次性</td><td><code>khy -p &quot;任务&quot;</code></td><td><code>runToolUseLoop</code> 原生循环（<code>KHY_HEADLESS_NATIVE_LOOP</code> 默认开）</td><td>最小：循环内门序 + 台账如实入账</td><td>✓（bin/khy.js 退出前）</td></tr><tr><td>一次性纯问答</td><td><code>khy --ai &quot;问题&quot;</code></td><td>单发 chat，无工具循环</td><td>无（问答非任务，不入账避免噪音）</td><td>—</td></tr><tr><td>后台任务</td><td>AgentTool/Task 工具/<code>agent run</code></td><td>durable 队列 + worker</td><td>循环内门序</td><td>✓（经终态咽喉）</td></tr><tr><td>断点续跑</td><td><code>khy resume &lt;taskId&gt;</code> / <code>khy resume list</code></td><td>boulder 检查点重激活</td><td>继承原路径</td><td>✓</td></tr></tbody></table>
+<hr>
+<h2 id="2-想停-轮门序-模型不再调工具时的完整序列">2. 「想停」轮门序（模型不再调工具时的完整序列）<a class="anchor" href="#2-想停-轮门序-模型不再调工具时的完整序列" aria-label="锚点">#</a></h2>
+<blockquote><p>这是闭环的裁决核心。顺序即代码顺序（<code>toolUseLoopCore.js</code> 内按门名注释 grep 可定位）；<br>「一次性」指每轮循环至多触发一次，「有界」指带显式预算。</p></blockquote>
+<table><thead><tr><th>#</th><th>门</th><th>预算</th><th>门控（默认态）</th><th>作用</th></tr></thead><tbody><tr><td>1</td><td>项目一致性门 projectCoherence</td><td>≤2 轮</td><td><code>KHY_PROJECT_COHERENCE_ROUNDS</code>（2）</td><td>文件聚合后导入断链/入口失配 → 续推</td></tr><tr><td>2</td><td>concludeNow 短路</td><td>—</td><td>—</td><td>≥400 字实质非占位答复直接进入收尾装配（省一轮模型调用）</td></tr><tr><td>3</td><td>承诺式结尾 nudge</td><td>≤2 次</td><td>—</td><td>「让我…/我将…」结尾却零工具调用 → 推它真执行</td></tr><tr><td>4</td><td>软门抑制判定</td><td>—</td><td><code>KHY_SUPPRESS_SOFT_REDRIVE</code>（开）</td><td>实质答复已交付本轮 → 抑制后续软门，防同一答案重复生成</td></tr><tr><td>5</td><td>deliverableClosure 收尾兜底</td><td>有界 2</td><td><code>CAP_SEAMS.EMPTY_TOOLCALLS</code></td><td>空壳收尾检测（[DESIGN-ARCH-050]）</td></tr><tr><td>6</td><td>selfKickoff 启动兜底</td><td>≤3 次</td><td>同上</td><td>「干了一半又回前言」→ 续推</td></tr><tr><td>7</td><td>选择腔 nudge</td><td>一次性</td><td>harness profile</td><td>列选项不执行 → 推它执行</td></tr><tr><td>8</td><td>过短无结论 nudge</td><td>一次性</td><td>harness profile</td><td>零工具+短回复+无结论 → 挑战</td></tr><tr><td>9</td><td>失败恢复 nudge</td><td>一次性</td><td>harness profile</td><td>工具失败后短回复放弃 → 推它换方法</td></tr><tr><td>10</td><td>伪成功拒绝 nudge</td><td>一次性</td><td>harness profile</td><td>已取回数据却回套话拒绝 → 用数据作答</td></tr><tr><td>11</td><td><strong>任务收尾仲裁门</strong></td><td>≤6（默认 1）</td><td><code>KHY_TASK_CLOSURE_GATE</code>（开）；预算 <code>KHY_TASK_CLOSURE_REDRIVE_MAX</code>（1）</td><td><strong>权威三态仲裁</strong>（§2.1）</td></tr><tr><td>12</td><td>持久目标门 goalStopGate</td><td>≤10（默认 1）</td><td><code>KHY_GOAL_STOP_GATE</code>（开，父门控 <code>KHY_GOAL</code>）</td><td>仅 <code>/goal set</code> 后生效；达成可自动清除</td></tr><tr><td>13</td><td>coding 验证引导</td><td>一次性</td><td>harness profile</td><td>改了文件没跑 build/test → 推它验证</td></tr><tr><td>14</td><td>交付结论 nudge</td><td>一次性</td><td>harness profile</td><td>有工具、回复短且无结论 → 要求补交付说明</td></tr><tr><td>15</td><td>覆盖率检查</td><td>一次性</td><td>harness profile</td><td>用户请求关键词覆盖率 &lt;30% → 推它查漏</td></tr><tr><td>16</td><td>失败静默披露</td><td>被动</td><td>—</td><td>有失败工具调用且回复未提 → 追加披露</td></tr><tr><td>17</td><td>结果守卫 C</td><td>一次性</td><td><code>KHY_RESULT_GUARD</code></td><td>承诺式前言未交付 → 追加诚实收尾</td></tr><tr><td>18</td><td>Stop hook</td><td>可否决 1 次</td><td>hook 配置</td><td>外部 hook 可拦截自然停机</td></tr><tr><td>19</td><td>answerVerifier</td><td>被动</td><td><code>KHY_ANSWER_VERIFIER</code>（开）</td><td>算式真值/动作声称与工具日志对账，证伪处如实追加</td></tr><tr><td>20</td><td>空回复兜底 → <strong>close_partial 标注追加</strong> → terminalNotice → return</td><td>—</td><td>—</td><td>空回复由工具日志合成诚实小结；仲裁门降级标注经此通道流式必达</td></tr></tbody></table>
+<h3 id="2-1-任务收尾仲裁门-11-闭环的权威裁决">2.1 任务收尾仲裁门（#11，闭环的权威裁决）<a class="anchor" href="#2-1-任务收尾仲裁门-11-闭环的权威裁决" aria-label="锚点">#</a></h3>
+<p>判定在纯叶子 <code>taskClosure.decideClosure</code>（零 IO、可单测），接线处只做落地：</p>
+<ul><li><strong>close</strong>——终态交付 + 无未完成步骤 + 验证声称有真实命令记录 → 放行交付。</li><li><strong>redrive</strong>——注入 <code>buildRedriveMessage</code>（含原始请求 + 未完成步骤清单）再驱动一轮。<ul><li>结构化信号（<code>steps-incomplete</code> 计划步骤未完成 / <code>verification-missing</code> 声称验证却未真跑）是<strong>硬门</strong>：不受软门抑制（#4）拦截——实质性假完成正是抑制门的盲区；</li><li>非结构化「无收尾词」再驱动尊重抑制，避免对已交付答案重复生成。</li></ul></li><li><strong>close_partial</strong>——预算耗尽即诚实降级：未完成步骤/未经证实的验证/无证据逐条写入标注，随交付返回，绝不假装成功。</li><li><strong>证据门</strong>：<code>verificationCommandRan</code> 要求工具日志里真有验证命令（<code>params.command</code> 命中 build/test 模式），「口头上说测过了」不算。</li><li>作用域：仅 <code>actionTask</code>（<code>_looksLikeActionRequest</code> 命中）；纯问答/闲聊不受此门。</li></ul>
+<h3 id="2-2-工具执行失败的多分支恢复梯子-toolfailurerecovery">2.2 工具执行失败的多分支恢复梯子（toolFailureRecovery）<a class="anchor" href="#2-2-工具执行失败的多分支恢复梯子-toolfailurerecovery" aria-label="锚点">#</a></h3>
+<p>工具调用链路的异常按层次各有分支，<strong>每个分支都有界</strong>；判定在纯叶子<br><code>toolFailureRecovery.js</code>（零 IO、可单测），接线处（并行/串行执行路径）只做 IO：</p>
+<p><strong>A. 单次工具调用内部</strong>（executeTool → ToolError 结构化，绝不崩循环）：<br>executeTool 自身把超时/取消塑成诚实可重试的结构化结果；循环侧 catch 再给一层<br><code>toolRegistry</code> 直调二次兜底（并行/串行两条路径<strong>同构</strong>），仍抛才 ToolError 结构化入账。</p>
+<p><strong>B. 工具执行后钩子</strong>（既有意图等价替换，执行失败时依次尝试顶替）：<br>shell 失败 + 打开应用意图 → <code>open_app</code> 候选试跑；shell 失败 + 信息搜索意图 →<br><code>web_search</code> → <code>search</code> → <code>toolSearch</code>；错误结果附平台命令提示（Windows/Linux hint）。</p>
+<p><strong>B+. Branch N（工具名执行前确定性纠正，2026-08 新增）</strong>：<br>近似错误的工具名（<code>read_fiel</code> / <code>web_serch</code> / <code>ReadFile</code> / <code>web-search</code>）此前原样进<br>executeTool → TOOL_UNAVAILABLE → 错误文本回灌模型，模型要花一整轮自行纠正。现在在<br>解析汇合后、执行前，用已知工具名集合（含别名/变体）做<strong>保守</strong>纠正：键归一（大小写/<br>分隔符/首尾空白偏差）→ 唯一编辑距离命中（短名 ≤1、长名 ≤2，键空间去重防同工具变体<br>互相顶票）；<strong>歧义（并列最小）一律不猜</strong>、完全无关名原样放行——错误信号不丢失，交<br>后续失败分支。纠正成功标 <code>_originalName</code> 留痕。判定在纯叶子 <code>toolCallCorrection.js</code>，<br>门控 <code>KHY_TOOL_NAME_CORRECTION</code>（默认开）。</p>
+<p><strong>C. Branch R（工具级瞬态自动重跑，2026-08 新增）</strong>：<br>失败结果满足「瞬态（<code>error.retryable</code> 标记 / <code>TIMEOUT</code>·<code>NETWORK_ERROR</code> 码 / 瞬态文本特征：<br>ECONNRESET、socket hang up、rate limit、429/529/503…）<strong>且</strong>工具在只读白名单<br>（read/grep/ls/web_search/web_fetch/git 只读等，幂等重跑无副作用）<strong>且</strong>循环级预算<br>未耗尽（<code>KHY_TOOL_TRANSIENT_RETRY_MAX</code>，默认 2，clamp [0,5]）」→ 以新中断计划 + 原执行<br>契约自动重跑一次，成功顶替结果并标 <code>_transientRetried</code>。<strong>写类工具（shell/write/edit）<br>绝不自动重跑</strong>——副作用不可重复，失败一律交回模型裁决（Branch H）。</p>
+<p><strong>D. Branch C（chat() 意外抛出的循环内重试，2026-08 新增）</strong>：<br>适配器抛异常此前一律归一为「诚实本轮结束」——网络抖动类抛出在无人值守 run 里直接终止<br>本轮（headless 甚至终局）。现在守卫归一<strong>之前</strong>先给一条有界分支：异常文本命中瞬态特征、<br>非 cooldown、预算未耗尽（<code>KHY_TOOL_LOOP_CHAT_THROW_RETRIES</code>，默认 1，clamp [0,3]）→<br>退避后原地重发同一轮；耗尽/非瞬态 → 原诚实收尾逐字节保留。</p>
+<p><strong>E. Branch H（诚实失败 = 安全默认）</strong>：其余失败原样放行——错误文本（含 <code>hint</code>）回灌<br>模型，由模型决定换参/换工具/拆步；反复同参失败由 doomLoopGuard / loopDetector 断路器<br>接管；空回复守卫、transient 通道恢复、maxTokens 恢复各自有独立预算（§2 门序）。</p>
+<p><strong>分支裁决准确性红线</strong>（<code>toolFailureRecovery.decideToolRecovery</code>）：</p>
+<ul><li><strong>确定性失败码优先</strong>——<code>PERMISSION_DENIED</code> / <code>INVALID_ARGS</code> / <code>RESOURCE_NOT_FOUND</code> /</li></ul>
+<p><code>TOOL_UNAVAILABLE</code> / <code>MISSING_DEPENDENCY</code> 五码<strong>压过</strong> <code>retryable</code> 标记与文本特征：<br>  上游误标 retryable 的参数错误绝不触发自动重跑；</p>
+<ul><li><strong>负向文本守卫优先于正向特征</strong>——错误文本同时含确定性签名与瞬态字样时（如</li></ul>
+<p>&quot;invalid argument: timeoutMs must be &lt; 120000&quot;）判非瞬态，防 &quot;timeout&quot; 字样误判空跑；</p>
+<ul><li><strong>只读白名单门槛</strong>——写类工具（shell/write/edit…）瞬态失败绝不自动重跑，副作用</li></ul>
+<p>不可重复；</p>
+<ul><li><strong>纠正歧义不猜</strong>——工具名纠正遇并列最小编辑距离一律放行，错误信号交模型与探索分支。</li></ul>
+<h3 id="2-3-输出区分级显示-核心抢占焦点-次要折叠防凌乱">2.3 输出区分级显示（核心抢占焦点 / 次要折叠防凌乱）<a class="anchor" href="#2-3-输出区分级显示-核心抢占焦点-次要折叠防凌乱" aria-label="锚点">#</a></h3>
+<p><strong>单一真源</strong>：<code>cli/toolDisplayPolicy.js</code> 的<strong>显示矩阵</strong>（家族 × tier × 渲染样式 × 说明文案，<br>同一注册表）。分级依据＝工具名清单（ALIASES 把注册表 <strong>151 个工具全部</strong>归一到 ~55 个家族），<br>不看参数；<strong>未注册工具默认 core（宁可见到，不可漏掉）</strong>。<br><code>toolDisplayMatrix.test.js</code> 是完整性强制门：注册表新增工具而矩阵未分类 → 测试失败，<br>逼着维护者给新工具一个明确的显示位（tier + 说明 + 样式）。</p>
+<p><strong>视觉语言三级层次</strong>：<code>▌ 加粗焦点行</code>（core 说明，抢占焦点）＞ <code>⏺/◆ 头行</code> ＞ <code>⎿ dim 结果行</code>。<br>说明文案（intentLabel）是矩阵字段：<code>_describeToolIntent</code> 的 switch 只保留高频家族的<br>参数感知文案（&quot;看看 x.js 里的内容&quot;），<strong>其余全部家族回退到矩阵 intentLabel</strong>——<br>此前 ~100 个工具没有说明行，现在全部有。目标摘要由调用方拼参数链<br>（path/file_path/url/query/command/prompt/code/symbol…）。</p>
+<p><strong>家族 → 显示方式矩阵</strong>（★=core 抢占焦点常驻；○=minor 显示后折叠；样式列见下注）：</p>
+<table><thead><tr><th>家族（代表性工具）</th><th>级</th><th>说明文案</th><th>结果样式</th></tr></thead><tbody><tr><td>bash（PowerShell/shellCommand/REPL）</td><td>★</td><td>执行命令</td><td><strong>命令预览块</strong>（boxPreview 底色块）+ ⎿ tree 6行</td></tr><tr><td>codeexec / testrun / build / deps</td><td>★</td><td>执行代码 / 运行测试 / 构建编译 / 管理依赖</td><td>tree 8行</td></tr><tr><td>write（writeFile/createFile）</td><td>★</td><td>写入文件</td><td>diff 红绿 10行</td></tr><tr><td>edit（editFile/MultiEdit/apply_patch）</td><td>★</td><td>编辑文件</td><td>diff 红绿 10行</td></tr><tr><td>open_app / desktop（ComputerUse/RPA）</td><td>★</td><td>打开应用 / 桌面控制</td><td>tree 6行</td></tr><tr><td>browser（WebBrowser）</td><td>★</td><td>操作浏览器</td><td>tree 6行</td></tr><tr><td>agent（Workflow/adoptRole/Team）</td><td>★</td><td>委派子代理</td><td>delegate（子代理树接管）</td></tr><tr><td>gitcommit / gitpush / gitclone（forgeCommits）</td><td>★</td><td>提交变更 / 推送远端 / 克隆仓库</td><td>tree 6行</td></tr><tr><td>taskstop（KillShell）</td><td>★</td><td>终止任务</td><td>tree 6行</td></tr><tr><td>docwrite（createDocument/renderDocument）</td><td>★</td><td>生成文档</td><td>tree 8行</td></tr><tr><td>convert（pdfToWord/image2web）</td><td>★</td><td>转换/发布文件</td><td>tree 6行</td></tr><tr><td>scaffold（scaffoldFiles/createTool）</td><td>★</td><td>创建文件结构</td><td>tree 8行</td></tr><tr><td>mediagen（image_generate/video_generate）</td><td>★</td><td>生成图片/视频</td><td>tree 6行</td></tr><tr><td>mediaedit（image_edit）</td><td>★</td><td>编辑图片/视频</td><td>tree 6行</td></tr><tr><td>configwrite / importfam（Config/Configure 系）</td><td>★</td><td>修改配置 / 导入模型配置</td><td>tree 6行</td></tr><tr><td>cron / trigger / deploy / shutdown / khyupdate / diskcleanup</td><td>★</td><td>管理计划任务 / 远程触发 / 部署 / 关闭系统 / 更新 khyOS / 清理磁盘</td><td>tree</td></tr><tr><td>worktree / planmode</td><td>★</td><td>切换工作树 / 切换规划模式</td><td>tree 4行</td></tr><tr><td>mcp（MCPTool/McpAuth）</td><td>★</td><td>MCP 操作</td><td>tree 6行</td></tr><tr><td>skillload（Skill） / askuser（AskUserQuestion）</td><td>★</td><td>加载技能 / 向你提问</td><td>tree 4行</td></tr><tr><td>read（readFile/notebookRead）</td><td>○</td><td>读取文件</td><td>collapsed 3行</td></tr><tr><td>grep（search/searchContent）</td><td>○</td><td>搜索内容</td><td>tree 8行</td></tr><tr><td>glob（find/ls/ListDir）</td><td>○</td><td>查找文件</td><td>tree 8行</td></tr><tr><td>websearch（news/forgeSearch 系）</td><td>○</td><td>搜索网页</td><td>collapsed 4行</td></tr><tr><td>webfetch（httpRequest/VaultHttpFetch）</td><td>○</td><td>抓取网页</td><td>collapsed 4行</td></tr><tr><td>dataread / quote / dataquery / backtest</td><td>○★</td><td>拉取数据 / 查询行情 / 查询数据库 / 运行回测★</td><td>collapsed 4行（backtest★ tree 8行）</td></tr><tr><td>gitread（gitStatus/gitDiff/gitLog/gitBlame）</td><td>○</td><td>查看 Git 仓库</td><td>tree 8行</td></tr><tr><td>taskmgmt（TaskCreate 系/TodoWrite/GoalTool/Brief）</td><td>○</td><td>更新任务清单</td><td>inline 3行</td></tr><tr><td>memory（SaveMemory/LocalMemoryRecall）</td><td>○</td><td>记忆读写</td><td>collapsed 4行</td></tr><tr><td>mediaread（imageOcr/RecognizeImage/video_analyze）</td><td>○</td><td>分析图片/视频</td><td>collapsed 4行</td></tr><tr><td>verify（lint/security_scan/repoAudit/coverage）</td><td>○</td><td>验证/检查</td><td>tree 6行</td></tr><tr><td>docread（Artifact/ReviewArtifact/inspectDocument）</td><td>○</td><td>查看文档/产出物</td><td>collapsed 4行</td></tr><tr><td>mcpread（ListMcpResources/ReadMcpResource）</td><td>○</td><td>查看 MCP 资源</td><td>collapsed 4行</td></tr><tr><td>appquery（DeviceApps/GetLocation）</td><td>○</td><td>查询应用/位置</td><td>tree 6行</td></tr><tr><td>notify（SendMessage/PushNotify/SendUserFile）</td><td>○</td><td>发送消息/通知</td><td>collapsed 4行</td></tr><tr><td>screencap（Snip）</td><td>○</td><td>截取屏幕</td><td>collapsed 4行</td></tr><tr><td>cronread（CronList）</td><td>○</td><td>查看计划任务</td><td>collapsed 4行</td></tr><tr><td>lsp / registryread / toolssearch</td><td>○</td><td>LSP 查询 / 检索注册表 / 搜索可用工具</td><td>6行/collapsed</td></tr><tr><td>aux（Sleep/unpack/Monitor 等内部辅助）</td><td>○</td><td>辅助操作</td><td>tree 4行</td></tr></tbody></table>
+<p>四条渲染路径消费同一份矩阵（判定在叶子、着色/布局在接线处）：</p>
+<ul><li><strong>经典 REPL（TTY）</strong>：<code>printStepLine</code> 接 <code>{toolName}</code> → 核心工具 <code>▌</code> 焦点锚点 + 加粗标签/目标，次要保持 dim（<code>steps.js</code> + <code>replSession</code> onToolCall 接线）；<code>toolProgressStart</code> 未收录家族回退矩阵 intentLabel（此前 ~100 个工具在 TTY 无进度行）；</li><li><strong>管道/重定向输出</strong>：<code>toolDisplay.printToolCallStart</code> 核心工具说明行以 <code>▌ + bold</code> 抢占焦点，次要保持 dim；</li><li><strong>Ink TUI</strong>（TTY 默认）：次要工具完成态收成 <code>⎿ 摘要 (ctrl+o 展开)</code> 一行；核心工具执行中 <code>↳</code> 叙述行 yellow+bold 强调（<code>ToolLines.js</code>）；</li><li><strong>headless <code>-p</code></strong>：<code>headlessProgress.formatToolStart</code> 核心工具加 <code>▌</code> 前缀，次保持原轻量行（stderr，stdout 机器契约不动）。</li></ul>
+<p>全文回取不变：折叠只是显示层——<code>_expandableOutputs</code> + Ctrl+O（REPL）、expanded<br>prop（TUI）仍可取回完整输出，信息不丢失。</p>
+<hr>
+<h2 id="3-验证与裁决层-harness">3. 验证与裁决层（harness）<a class="anchor" href="#3-验证与裁决层-harness" aria-label="锚点">#</a></h2>
+<p><code>runToolUseLoop</code> 返回后，harness（<code>agenticHarnessService.js</code>）继续：</p>
+<ol><li><strong>交付门</strong>：<code>intentGate.detectModes</code> → <code>buildAcceptancePack</code>（按意图模式生成验收标准；</li></ol>
+<p><strong>criteria 为空时注入最小兜底</strong> <code>substantive_final_response</code>——最终回复 ≥30 非空白字符，<br>   空壳/套话拒绝会被拦下）→ <code>evaluateDelivery</code> 逐条评估 → 不过进修复循环<br>   （<code>buildRemediationPrompt</code>，<code>KHY_DELIVERY_MAX_REMEDIATION</code> ≤3 轮）。</p>
+<ol><li><strong>验证代理</strong>：VerificationAgent 对改动文件跑语法/lint/test/build（每步 60s 上限）+ 一次修复。</li><li><strong>回归门</strong>：与任务前基线对比，防「修好一个弄坏三个」。</li><li><strong>裁决</strong>：<code>buildHarnessDeliveryVerdict</code> 汇总 → <code>pass/fail</code>；**fail 时把「缺什么证据」如实追加进</li></ol>
+<p>最终回复**，并把 <code>delivery-gate-report.md</code> 落盘到项目轨迹目录（<code>KHY_DELIVERY_GATE_REPORT</code> 开）。</p>
+<ol><li><strong>收尾</strong>：清 boulder 检查点 → <code>backgroundTaskManager.complete/fail</code> → 交付台账入账</li></ol>
+<p>（verdict=fail 的「完成」在台账记 <code>closure: delivery-gate-fail</code>，不谎报完整闭环）。</p>
+<hr>
+<h2 id="4-台账与查询">4. 台账与查询<a class="anchor" href="#4-台账与查询" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>需求</th><th>用什么</th></tr></thead><tbody><tr><td>「上次任务交付了什么、缺什么」</td><td><code>khy deliveries</code>（别名：<code>交付</code> / <code>交付记录</code> / <code>台账</code> / <code>jiaofu</code>）；`--status succeeded\</td></tr><tr><td>「这次执行跑了哪些操作、什么风险」</td><td><code>khy receipts list/show/search</code>（执行粒度回执，与台账互补：receipts 记操作，deliveries 记结论）</td></tr><tr><td>「当前/历史活动任务」</td><td><code>/tasks</code>（REPL）或 <code>khy session</code>；活动列表终态 5 分钟 TTL 清理</td></tr><tr><td>「断了的任务从哪续」</td><td><code>khy resume list</code> → <code>khy resume &lt;taskId&gt;</code></td></tr></tbody></table>
+<p>台账为追加式 JSONL（<code>&lt;dataHome&gt;/tasks/delivery_ledger.jsonl</code>），自裁剪<br><code>KHY_DELIVERY_LEDGER_MAX</code>（默认 500，clamp [1,5000]）；读取 fail-soft，坏行跳过、文件缺失返回空。</p>
+<hr>
+<h2 id="5-失败模式与恢复">5. 失败模式与恢复<a class="anchor" href="#5-失败模式与恢复" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>失败模式</th><th>系统行为</th><th>恢复手段</th></tr></thead><tbody><tr><td>用户 Ctrl+C 中断</td><td><code>markBoulderInterrupted</code> 打断点（<code>.khy/boulder/boulder.db</code>，TTL 24h，512KB 上限）</td><td><code>khy resume &lt;taskId&gt;</code> 或 REPL 提示恢复</td></tr><tr><td>循环达 100 轮 / 10 分钟墙钟</td><td>停止并如实标注「未完整闭环」（headless 可配 <code>KHY_HEADLESS_EXIT_ON_LIMIT</code> 反映退出码 3）</td><td>拆小任务重跑，或 <code>khy resume</code></td></tr><tr><td>模型假完成（声称完成/验证）</td><td>仲裁门 redrive → 预算耗尽 close_partial；harness 交付门 fail → 修复循环 ≤3 轮</td><td>交付门报告 + 台账缺口即「差什么」清单</td></tr><tr><td>近似错误的工具名（read_fiel 等）</td><td>Branch N：键归一 / 唯一编辑距离纠正后执行（留 <code>_originalName</code> 痕）；歧义不猜</td><td>歧义/无关名走 TOOL_UNAVAILABLE 失败 → unknown exploration 探索</td></tr><tr><td>工具循环整体抛错（headless）</td><td>先走 Branch C：瞬态样抛出循环内有界重试（默认 1 次）；非瞬态/预算耗尽 → stderr 诊断（<code>KHY_HEADLESS_PROGRESS</code>）+ 台账记 <code>closure: error</code>，回退单发 chat</td><td>依错误信息修复环境后重跑</td></tr><tr><td>只读工具瞬态失败（超时/网络抖动）</td><td>Branch R：只读白名单内自动重跑（默认 ≤2 次），成功顶替结果并标 <code>_transientRetried</code>；写类工具不自动重跑</td><td>非只读失败由模型换方法（Branch H）</td></tr><tr><td>进程崩溃</td><td>任务滞留 running → 租约过期被 sweeper 回收重排（RELIABILITY-PROTOCOL）</td><td>worker 重新认领；无 checkpoint 则重跑</td></tr><tr><td>交付门误拦（真完成被判缺）</td><td>修复循环后仍 fail → verdict fail 但如实附缺口，不静默丢弃成果</td><td>人工复核 <code>delivery-gate-report.md</code> 后放行</td></tr></tbody></table>
+<hr>
+<h2 id="6-环境变量总表-闭环相关-全部默认开-默认值即生产值">6. 环境变量总表（闭环相关，全部默认开/默认值即生产值）<a class="anchor" href="#6-环境变量总表-闭环相关-全部默认开-默认值即生产值" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>变量</th><th>默认</th><th>管什么</th></tr></thead><tbody><tr><td><code>KHY_REPL_HARNESS</code></td><td>开</td><td>REPL 走 harness 完整闭环</td></tr><tr><td><code>KHY_TASK_CLOSURE_GATE</code></td><td>开</td><td>任务收尾仲裁门总开关</td></tr><tr><td><code>KHY_TASK_CLOSURE_REDRIVE_MAX</code></td><td>1</td><td>仲裁门再驱动预算（clamp [0,6]）</td></tr><tr><td><code>KHY_GOAL_STOP_GATE</code> / <code>KHY_GOAL</code></td><td>开 / 开</td><td>持久目标门（嵌套父门控）</td></tr><tr><td><code>KHY_DELIVERY_GATE</code> / <code>KHY_DELIVERY_MAX_REMEDIATION</code></td><td>开 / 3</td><td>交付门与修复循环</td></tr><tr><td><code>KHY_DELIVERY_GATE_REPORT</code></td><td>开</td><td>交付门报告落盘</td></tr><tr><td><code>KHY_ANSWER_VERIFIER</code></td><td>开</td><td>可证伪声称复核</td></tr><tr><td><code>KHY_PROJECT_COHERENCE_ROUNDS</code></td><td>2</td><td>一致性门轮次预算</td></tr><tr><td><code>KHY_SUPPRESS_SOFT_REDRIVE</code></td><td>开</td><td>已交付答案的软门抑制</td></tr><tr><td><code>KHY_TOOL_TRANSIENT_RETRY_MAX</code></td><td>2</td><td>Branch R 工具级瞬态自动重跑预算（clamp [0,5]，仅只读工具）</td></tr><tr><td><code>KHY_TOOL_LOOP_CHAT_THROW_RETRIES</code></td><td>1</td><td>Branch C chat() 瞬态抛出的循环内重试预算（clamp [0,3]）</td></tr><tr><td><code>KHY_TOOL_NAME_CORRECTION</code></td><td>开</td><td>Branch N 工具名执行前纠正总开关</td></tr><tr><td><code>KHY_HEADLESS_NATIVE_LOOP</code></td><td>开</td><td>headless -p 走原生工具循环</td></tr><tr><td><code>KHY_HEADLESS_PROGRESS</code> / <code>_TEXT</code> / <code>_HEARTBEAT</code></td><td>auto/开/开</td><td>headless stderr 进度反馈（stdout 契约不动）</td></tr><tr><td><code>KHY_HEADLESS_EXIT_ON_LIMIT</code></td><td>关</td><td>达上限时退出码 3 + json 如实标注</td></tr><tr><td><code>KHY_DELIVERY_LEDGER_MAX</code></td><td>500</td><td>台账自裁剪上限（clamp [1,5000]）</td></tr></tbody></table>
+<hr>
+<h2 id="7-稳定交付操作规程-操作者-ai-助手">7. 稳定交付操作规程（操作者 / AI 助手）<a class="anchor" href="#7-稳定交付操作规程-操作者-ai-助手" aria-label="锚点">#</a></h2>
+<ol><li><strong>派任务</strong>：能一句话说清验收标准的任务直接给；长任务先 <code>/goal set</code>——goalStopGate 会经 <code>completionContract</code> 从目标文本解析完成标准并逐条对证据，达成前拦截停止。</li><li><strong>跑任务</strong>：交互用 REPL（完整验证）；脚本/CI 用 <code>khy -p</code>（最小闭环 + 台账）；重任务用后台（durable 队列，崩溃可续）。</li><li><strong>收工核对</strong>：<code>khy deliveries</code> 看最近交付——<code>完整闭环</code> 才算完；<code>部分闭环</code>/<code>交付门未过</code> 的条目自带缺口清单，照单补课或重派。</li><li><strong>中断续跑</strong>：任务被断后先 <code>khy resume list</code>，有检查点就 <code>khy resume &lt;taskId&gt;</code>，不要凭记忆重做。</li><li><strong>AI 助手维护守则</strong>：改循环内任何门时——判定逻辑进纯叶子（照 taskClosure/goalStopGate 形状：零 IO、绝不抛、可单测）、接线处只做 IO 且整块 try/catch fail-soft、每门必须有独立预算、新终态必须入台账。</li></ol>
+<hr>
+<h2 id="8-已知边界与后续演进">8. 已知边界与后续演进<a class="anchor" href="#8-已知边界与后续演进" aria-label="锚点">#</a></h2>
+<ul><li>REPL 非 harness 路径（纯 chat 降级、harness 抛错回退）不写台账——已由循环内门序兜底诚实标注，台账覆盖待后续版本统一。</li><li>模型侧 Task 工具（TaskCreate/TaskUpdate）创建的计划与循环的 <code>_parseExecutionPlan</code> 解析尚未完全打通，计划步骤完成度以循环内解析为准。</li><li>外层 harness <code>retryWithBackoff</code> 仍被「本轮零工具调用」门槛限制（<code>toolCallLog.length===0</code>）——跑过工具的 timeout/network 结局不整体重跑，防副作用重复；该层补偿由 Branch R/C 的循环内分支承担。</li><li>指挥部仓库 khy-os-hq 未部署时，任务/Bug 状态真源离线，台账是本机唯一交付事实来源（详见根目录 <code>AGENTS.md</code> 双机流水线自举）。</li></ul>
+<h2 id="9-测试锚点">9. 测试锚点<a class="anchor" href="#9-测试锚点" aria-label="锚点">#</a></h2>
+<ul><li><code>taskClosure.decideClosure.test.js</code> — 三态仲裁/预算/证据门（纯叶子契约）</li><li><code>toolFailureRecovery.test.js</code> — 多分支恢复梯子：瞬态分类/确定性码优先/负向守卫/只读白名单/预算/分支裁决</li><li><code>toolCallCorrection.test.js</code> — 工具名纠正阶梯：键归一/唯一编辑距离/歧义不猜/门控</li><li><code>cli/toolDisplayTier.render.test.js</code> — 输出区分级：tier 注册表/焦点说明行/printStepLine 强调/headless ▌ 前缀</li><li><code>cli/toolDisplayMatrix.test.js</code> — <strong>显示矩阵完整性强制门</strong>：注册表每个工具必有分类、每条家族必有说明文案</li><li><code>toolUseLoop.taskClosureGate.smoke.test.js</code> — 假 chat 驱动循环：redrive 注入 + close_partial 标注 + 有界终止</li><li><code>deliveryLedger.test.js</code> / <code>backgroundTaskManager.ledger.test.js</code> — 台账契约与终态咽喉集成</li><li><code>toolUseLoop.streamingExecGate.test.js</code> / <code>goalStopGate.test.js</code> — 相邻门既有契约</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-076] 任务最小闭环-裁决接线与交付台账.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-072] 任务最小闭环-裁决接线与交付台账</div></a><a class="next" href="../../../docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-078] khyos桌面端与CLI-TUI互联共享方案.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-078] khyos桌面端与CLI-TUI互联共享方案</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/03_DESIGN_设计/DESIGN-ARCH/[DESIGN-ARCH-077] khyos 核心任务循环-稳定交付总纲.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

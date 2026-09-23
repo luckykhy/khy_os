@@ -1,6 +1,6 @@
 'use strict';
 
-const workflow = require('../../src/services/workflow/index');
+const workflow = require('../../../src/services/workflow/index.js');
 
 describe('workflow index', () => {
   test('module is defined', () => {

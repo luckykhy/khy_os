@@ -950,10 +950,10 @@ async function generateAndEmitSignals(strategy) {
       auxiliaryData: auxiliaryData  // 🔥 新增：传递辅助线数据
     })
     
-    if (import.meta.env.DEV) { console.log('✅ 策略信号已生成并发送:', { }
+    if (import.meta.env.DEV) { console.log('✅ 策略信号已生成并发送:', {
       signals: signals.length,
       auxiliaryLines: Object.keys(auxiliaryData).length
-    })
+    }) }
     
     // 显示成功消息
     if (Object.keys(auxiliaryData).length > 0) {
@@ -1041,21 +1041,21 @@ async function executeStrategyForSignals(strategy) {
           // 🔥 提取辅助线数据
           auxiliaryData = strategyResults.auxiliaryData || {}
           
-          if (import.meta.env.DEV) { console.log('✅ 新格式解析成功:', { }
+          if (import.meta.env.DEV) { console.log('✅ 新格式解析成功:', {
             signals: signals.length,
             auxiliaryLines: Object.keys(auxiliaryData).length,
             auxiliaryLineNames: Object.keys(auxiliaryData)
-          })
+          }) }
           
           // 🔥 调试：检查辅助线数据的详细信息
           if (Object.keys(auxiliaryData).length > 0) {
             Object.keys(auxiliaryData).forEach(lineName => {
               const lineData = auxiliaryData[lineName]
-              if (import.meta.env.DEV) { console.log(`📊 辅助线 "${lineName}":`, { }
+              if (import.meta.env.DEV) { console.log(`📊 辅助线 "${lineName}":`, {
                 dataPoints: lineData.data?.length || 0,
                 firstPoint: lineData.data?.[0],
                 lastPoint: lineData.data?.[lineData.data.length - 1]
-              })
+              }) }
             })
           }
         } else if (Array.isArray(strategyResults)) {
@@ -1119,18 +1119,18 @@ async function executeStrategyForSignals(strategy) {
     }
     
     if (import.meta.env.DEV) { console.log('✅ 策略信号生成成功:', signals.length, '个信号，', Object.keys(auxiliaryData).length, '条辅助线') }
-    if (import.meta.env.DEV) { console.log('📍 信号详情:', Array.isArray(signals) ? signals.slice(0, 3).map(s => ({ }
+    if (import.meta.env.DEV) { console.log('📍 信号详情:', Array.isArray(signals) ? signals.slice(0, 3).map(s => ({
       type: s.type,
       index: s.index,
       time: new Date(s.time).toLocaleDateString(),
       price: s.price
-    })) : [])
+    })) : []) }
     
     if (Object.keys(auxiliaryData).length > 0) {
-      if (import.meta.env.DEV) { console.log('📍 辅助线详情:', Object.keys(auxiliaryData).map(key => ({ }
+      if (import.meta.env.DEV) { console.log('📍 辅助线详情:', Object.keys(auxiliaryData).map(key => ({
         name: key,
         dataPoints: auxiliaryData[key]?.data?.length || 0
-      })))
+      }))) }
     }
     
     // 🔥 返回包含辅助线数据的对象

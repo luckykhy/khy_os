@@ -49,17 +49,17 @@ describe('Ai Gateway Model Methods Leaf', () => {
 
   test('setAiGatewayModelMethodsDeps is a guarded, idempotent, non-throwing DI setter', () => {
       const { setAiGatewayModelMethodsDeps } = require(LEAF);
-      expect(() => setAiGatewayModelMethodsDeps().not.toThrow());
-      expect(() => setAiGatewayModelMethodsDeps({}).not.toThrow());
-      expect(() => setAiGatewayModelMethodsDeps({ _parseMs: 1, _ADAPTER_SOURCE_LABELS: null }).not.toThrow());
+      expect(() => setAiGatewayModelMethodsDeps()).not.toThrow();
+      expect(() => setAiGatewayModelMethodsDeps({})).not.toThrow();
+      expect(() => setAiGatewayModelMethodsDeps({ _parseMs: 1, _ADAPTER_SOURCE_LABELS: null })).not.toThrow();
       const fake = {
         safeKillChildProc: () => {}, _shouldUseFastFail: () => false, _parseMs: () => 0,
         _getKhyProtocolPriorityRisk: () => 0, _extractResultErrorMessage: () => '',
         resolvePreferredModelForAdapter: () => null,
         _ADAPTER_SOURCE_LABELS: {}, CODEX_GENERATION_PROBE_PROMPT: 'x',
       };
-      expect(() => setAiGatewayModelMethodsDeps(fake).not.toThrow());
-      expect(() => setAiGatewayModelMethodsDeps(fake).not.toThrow());
+      expect(() => setAiGatewayModelMethodsDeps(fake)).not.toThrow();
+      expect(() => setAiGatewayModelMethodsDeps(fake)).not.toThrow();
   });
 
 });

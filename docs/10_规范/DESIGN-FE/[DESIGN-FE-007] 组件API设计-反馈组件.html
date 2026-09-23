@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-FE-007] 组件API设计-反馈组件.md -->
+<title>[DESIGN-FE-007] 组件 API 设计 · 反馈组件 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-FE<span class="sep">›</span>[DESIGN-FE-007] 组件 API 设计 · 反馈组件</div>
+      <header class="hero reveal"><h1>[DESIGN-FE-007] 组件 API 设计 · 反馈组件</h1></header>
+      
+      <article class="doc-body">
+<h1 id="design-fe-007-组件-api-设计-反馈组件">[DESIGN-FE-007] 组件 API 设计 · 反馈组件<a class="anchor" href="#design-fe-007-组件-api-设计-反馈组件" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>定位</strong>：反馈组件（Toast/Alert/Skeleton/Empty 等）的 API 目标态。<br><strong>隶属</strong>：本文是 [<code>[DESIGN-FE-002]</code> 前端组件库规范]([DESIGN-FE-002] 前端组件库规范.md) 的<strong>子篇</strong>；主篇是唯一入口与 scope 裁决真源，本文只承载细则。<br><strong>状态</strong>：随主篇——主篇 §0 声明为「目标态、非现状」，本文同样在组件库真正落地后才生效；在此之前一切以 [<code>[DESIGN-FE-001]</code> 前端页面规范]([DESIGN-FE-001] 前端页面规范.md) 为准。</p></blockquote>
+<hr>
+<p><strong>Toast 组件 (KhyToast)</strong>：</p>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;Teleport to=&quot;body&quot;&gt;
+    &lt;Transition name=&quot;khy-toast&quot;&gt;
+      &lt;div
+        v-if=&quot;visible&quot;
+        :class=&quot;toastClasses&quot;
+        @mouseenter=&quot;pauseTimer&quot;
+        @mouseleave=&quot;resumeTimer&quot;
+      &gt;
+        &lt;span class=&quot;khy-toast__icon&quot;&gt;{{ icon }}&lt;/span&gt;
+        &lt;div class=&quot;khy-toast__content&quot;&gt;
+          &lt;p class=&quot;khy-toast__title&quot;&gt;{{ title }}&lt;/p&gt;
+          &lt;p v-if=&quot;message&quot; class=&quot;khy-toast__message&quot;&gt;{{ message }}&lt;/p&gt;
+        &lt;/div&gt;
+        &lt;button
+          v-if=&quot;closable&quot;
+          class=&quot;khy-toast__close&quot;
+          @click=&quot;close&quot;
+        &gt;
+          ×
+        &lt;/button&gt;
+      &lt;/div&gt;
+    &lt;/Transition&gt;
+  &lt;/Teleport&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+const props = defineProps({
+  // 类型
+  type: {
+    type: String,
+    default: 'info',
+    validator: (value) =&gt; ['success', 'warning', 'error', 'info'].includes(value)
+  },
+  // 标题
+  title: {
+    type: String,
+    required: true
+  },
+  // 消息
+  message: String,
+  // 持续时间
+  duration: {
+    type: Number,
+    default: 3000
+  },
+  // 是否可关闭
+  closable: {
+    type: Boolean,
+    default: true
+  },
+  // 自动关闭
+  autoClose: {
+    type: Boolean,
+    default: true
+  }
+});
+
+const emit = defineEmits(['close']);
+
+const visible = ref(false);
+let timer = null;
+
+const toastClasses = computed(() =&gt; [
+  'khy-toast',
+  `khy-toast--${props.type}`
+]);
+
+const icon = computed(() =&gt; {
+  const icons = {
+    success: '✓',
+    warning: '⚠',
+    error: '✕',
+    info: 'ℹ'
+  };
+  return icons[props.type];
+});
+
+const show = () =&gt; {
+  visible.value = true;
+  if (props.autoClose) {
+    startTimer();
+  }
+};
+
+const close = () =&gt; {
+  visible.value = false;
+  emit('close');
+};
+
+const startTimer = () =&gt; {
+  if (props.duration &gt; 0) {
+    timer = setTimeout(close, props.duration);
+  }
+};
+
+const pauseTimer = () =&gt; {
+  if (timer) {
+    clearTimeout(timer);
+    timer = null;
+  }
+};
+
+const resumeTimer = () =&gt; {
+  if (props.autoClose) {
+    startTimer();
+  }
+};
+
+// 暴露方法
+defineExpose({
+  show,
+  close
+});
+&lt;/script&gt;</code></pre>
+<p><strong>Modal 组件 (KhyModal)</strong>：</p>
+<pre><code class="language-vue">&lt;template&gt;
+  &lt;Teleport to=&quot;body&quot;&gt;
+    &lt;Transition name=&quot;khy-modal&quot;&gt;
+      &lt;div
+        v-if=&quot;visible&quot;
+        class=&quot;khy-modal-overlay&quot;
+        @click.self=&quot;handleOverlayClick&quot;
+      &gt;
+        &lt;div
+          :class=&quot;modalClasses&quot;
+          :style=&quot;modalStyle&quot;
+          role=&quot;dialog&quot;
+          aria-modal=&quot;true&quot;
+          :aria-labelledby=&quot;titleId&quot;
+        &gt;
+          &lt;div class=&quot;khy-modal__header&quot;&gt;
+            &lt;h2 :id=&quot;titleId&quot; class=&quot;khy-modal__title&quot;&gt;
+              &lt;slot name=&quot;title&quot;&gt;{{ title }}&lt;/slot&gt;
+            &lt;/h2&gt;
+            &lt;button
+              v-if=&quot;closable&quot;
+              class=&quot;khy-modal__close&quot;
+              aria-label=&quot;关闭&quot;
+              @click=&quot;close&quot;
+            &gt;
+              ×
+            &lt;/button&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;khy-modal__body&quot;&gt;
+            &lt;slot /&gt;
+          &lt;/div&gt;
+          &lt;div v-if=&quot;$slots.footer&quot; class=&quot;khy-modal__footer&quot;&gt;
+            &lt;slot name=&quot;footer&quot; /&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/Transition&gt;
+  &lt;/Teleport&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+const props = defineProps({
+  // 标题
+  title: String,
+  // 宽度
+  width: {
+    type: [String, Number],
+    default: '500px'
+  },
+  // 是否可见
+  modelValue: Boolean,
+  // 是否可关闭
+  closable: {
+    type: Boolean,
+    default: true
+  },
+  // 点击遮罩关闭
+  closeOnOverlay: {
+    type: Boolean,
+    default: true
+  },
+  // 是否显示遮罩
+  showOverlay: {
+    type: Boolean,
+    default: true
+  },
+  // 是否居中
+  centered: Boolean
+});
+
+const emit = defineEmits(['update:modelValue', 'close', 'open']);
+
+const visible = computed({
+  get: () =&gt; props.modelValue,
+  set: (value) =&gt; emit('update:modelValue', value)
+});
+
+const titleId = computed(() =&gt; `khy-modal-title-${Math.random().toString(36).substr(2, 9)}`);
+
+const modalClasses = computed(() =&gt; [
+  'khy-modal',
+  {
+    'khy-modal--centered': props.centered
+  }
+]);
+
+const modalStyle = computed(() =&gt; ({
+  width: typeof props.width === 'number' ? `${props.width}px` : props.width
+}));
+
+const handleOverlayClick = () =&gt; {
+  if (props.closeOnOverlay) {
+    close();
+  }
+};
+
+const close = () =&gt; {
+  visible.value = false;
+  emit('close');
+};
+
+const open = () =&gt; {
+  visible.value = true;
+  emit('open');
+};
+
+// 暴露方法
+defineExpose({
+  open,
+  close
+});
+&lt;/script&gt;</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-FE/[DESIGN-FE-006] 组件API设计-基础组件.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-FE-006] 组件 API 设计 · 基础组件</div></a><a class="next" href="../../../docs/10_规范/DESIGN-FE/[DESIGN-FE-008] 组件API设计-数据组件.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-FE-008] 组件 API 设计 · 数据组件</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-FE/[DESIGN-FE-007] 组件API设计-反馈组件.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

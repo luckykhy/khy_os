@@ -14,7 +14,7 @@
  *   「反例/校验方式」来自治理总纲 §3 表格与下方 ENRICH 表。
  *
  * 校验：`node scripts/ci/check-rules-registry.js` 重生成后比对
- * `git diff --exit-code docs/_规范/规则卡/`，与 CODEOWNERS 的同款棘轮。
+ * `git diff --exit-code docs/10_规范/规则卡/`，与 CODEOWNERS 的同款棘轮。
  *
  * Usage: node scripts/docs/gen-rules-cards.js [--check]
  *        --check 只比对不落盘，产物不一致时 exit 1（CI 用）。
@@ -25,9 +25,9 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const REGISTRY_REL = 'docs/_规范/RULES-REGISTRY.json';
-const GOV_REL = 'docs/03_DESIGN_设计/[DESIGN-ARCH-070] 治理总纲与可执行规则.md';
-const OUT_DIR_REL = 'docs/_规范/规则卡';
+const REGISTRY_REL = 'docs/10_规范/registry/RULES-REGISTRY.json';
+const GOV_REL = 'docs/10_规范/其它规范/[DESIGN-GOV-001] 治理总纲与可执行规则.md';
+const OUT_DIR_REL = 'docs/10_规范/规则卡';
 const INDEX_REL = '00_INDEX_规则卡总目录.md';
 const CHECK_ONLY = process.argv.includes('--check');
 const TODAY = '2026-09-15';
@@ -170,7 +170,7 @@ function renderCard(rule, govRows) {
     '',
     `> **规则卡** · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。`,
     `>`,
-    `> **字段真源**是 \`docs/_规范/RULES-REGISTRY.json\`（GOV-TOOL-006 校验），`,
+    `> **字段真源**是 \`docs/10_规范/registry/RULES-REGISTRY.json\`（GOV-TOOL-006 校验），`,
     `> 本文件由 \`node scripts/docs/gen-rules-cards.js\` 生成，**禁止手改**（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。`,
     `> 正文原文在 \`ssot\` 指向的位置：${rule.ssot || '（未登记）'}。`,
     '',
@@ -212,11 +212,16 @@ function renderIndex(rules) {
     if (!byDomain.has(rule.domain)) byDomain.set(rule.domain, []);
     byDomain.get(rule.domain).push(rule);
   }
-  const rows = [];
+  const sections = [];
   for (const domain of [...byDomain.keys()].sort()) {
-    for (const rule of byDomain.get(domain).sort((a, b) => a.id.localeCompare(b.id))) {
-      rows.push(`| [${rule.id}] ${rule.name}.md | ${rule.name} | ${rule.priority} / ${rule.status} |`);
-    }
+    const list = byDomain.get(domain).sort((a, b) => a.id.localeCompare(b.id));
+    sections.push(
+      `### ${domain}（${list.length} 张）`,
+      '',
+      '| 文件名(含编号) | 核心职责(10字内) | 状态 |',
+      '| --- | --- | --- |',
+      ...list.map(rule => `| [${rule.id}] ${rule.name}.md | ${rule.name} | ${rule.priority} / ${rule.status} |`)
+    );
   }
   return [
     '# 00_INDEX 规则卡总目录',
@@ -226,7 +231,7 @@ function renderIndex(rules) {
     `> 逐条规则卡，格式依据 [MGMT-STD-008] §1。共 ${rules.length} 张，覆盖 §3.1 十大域。`,
     '>',
     '> **本目录全部文件由 `node scripts/docs/gen-rules-cards.js` 生成，禁止手改。**',
-    '> 字段真源是 `docs/_规范/RULES-REGISTRY.json`；正文原文在各卡 `ssot` 指向的位置。',
+    '> 字段真源是 `docs/10_规范/registry/RULES-REGISTRY.json`；正文原文在各卡 `ssot` 指向的位置。',
     '',
     '## 一、分类内容边界',
     '',
@@ -236,16 +241,14 @@ function renderIndex(rules) {
     '',
     '## 二、文件清单',
     '',
-    '| 文件名(含编号) | 核心职责(10字内) | 状态 |',
-    '| --- | --- | --- |',
-    ...rows,
+    ...sections,
     '',
     '## 三、跨分类关联指引',
     '',
-    '- 规则格式与生命周期：`docs/08_MGMT_项目管理/[MGMT-STD-008] 规则编写与管理规范（元规则）.md`',
-    '- 字段级单一真源：`docs/_规范/RULES-REGISTRY.json`',
-    '- 板块入口与反例总表：`docs/03_DESIGN_设计/[DESIGN-ARCH-070] 治理总纲与可执行规则.md`',
-    '- 本目录所属的 `_` 前缀轴：`docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范.md` 第三节',
+    '- 规则格式与生命周期：`docs/08_MGMT_项目管理/MGMT-STD/[MGMT-STD-008] 规则编写与管理规范（元规则）.md`',
+    '- 字段级单一真源：`docs/10_规范/registry/RULES-REGISTRY.json`',
+    '- 板块入口与反例总表：`docs/10_规范/其它规范/[DESIGN-GOV-001] 治理总纲与可执行规则.md`',
+    '- 本目录所属的编号段：`10`–`19` 跨阶段资产（`docs/10_规范/DESIGN-LAY/[DESIGN-LAY-005] 仓库层级板块规范.md` 第三节）',
     '- 起草新规则：`npm run rules:scaffold -- <DOMAIN> "规则名"`',
     '',
   ].join('\n');

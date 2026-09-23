@@ -6,7 +6,7 @@
 
 const { safeRunHook, getHookMetrics, _hookMetrics } = require('../../src/cli/hooks/hookRunner');
 
-describe('hook telemetry â€?getHookMetrics', () => {
+describe('hook telemetry â€”getHookMetrics', () => {
   beforeEach(() => {
     _hookMetrics.length = 0;
   });

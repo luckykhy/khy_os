@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-CORS-001] CORS 跨域资源共享规范.md -->
+<title>[DESIGN-CORS-001] CORS 跨域资源共享规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>其它规范<span class="sep">›</span>[DESIGN-CORS-001] CORS 跨域资源共享规范</div>
+      <header class="hero reveal"><h1>[DESIGN-CORS-001] CORS 跨域资源共享规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-cors-001-cors-跨域资源共享规范">[DESIGN-CORS-001] CORS 跨域资源共享规范</a></li><li class="lvl-2"><a href="#1-cors-原则">1. CORS 原则</a></li><li class="lvl-2"><a href="#2-允许的来源">2. 允许的来源</a></li><li class="lvl-3"><a href="#2-1-环境分级">2.1 环境分级</a></li><li class="lvl-3"><a href="#2-2-动态来源匹配">2.2 动态来源匹配</a></li><li class="lvl-2"><a href="#3-允许的方法">3. 允许的方法</a></li><li class="lvl-3"><a href="#3-1-全局方法">3.1 全局方法</a></li><li class="lvl-3"><a href="#3-2-端点级方法限制">3.2 端点级方法限制</a></li><li class="lvl-2"><a href="#4-允许的请求头">4. 允许的请求头</a></li><li class="lvl-3"><a href="#4-1-必选请求头">4.1 必选请求头</a></li><li class="lvl-3"><a href="#4-2-可选请求头">4.2 可选请求头</a></li><li class="lvl-3"><a href="#4-3-暴露的响应头">4.3 暴露的响应头</a></li><li class="lvl-2"><a href="#5-预检请求缓存">5. 预检请求缓存</a></li><li class="lvl-2"><a href="#6-凭证模式">6. 凭证模式</a></li><li class="lvl-3"><a href="#6-1-何时开启-credentials-true">6.1 何时开启 `credentials: true`</a></li><li class="lvl-3"><a href="#6-2-凭证模式约束">6.2 凭证模式约束</a></li><li class="lvl-2"><a href="#7-csrf-防护集成">7. CSRF 防护集成</a></li><li class="lvl-3"><a href="#7-1-samesite-cookie-策略">7.1 SameSite Cookie 策略</a></li><li class="lvl-3"><a href="#7-2-csrf-token-双重验证">7.2 CSRF Token 双重验证</a></li><li class="lvl-2"><a href="#8-特殊端点-cors">8. 特殊端点 CORS</a></li><li class="lvl-3"><a href="#8-1-websocket-端点">8.1 WebSocket 端点</a></li><li class="lvl-3"><a href="#8-2-sse-端点">8.2 SSE 端点</a></li><li class="lvl-2"><a href="#9-cors-调试">9. CORS 调试</a></li><li class="lvl-3"><a href="#9-1-开发环境日志">9.1 开发环境日志</a></li><li class="lvl-3"><a href="#9-2-常见问题">9.2 常见问题</a></li><li class="lvl-2"><a href="#10-版本历史">10. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-cors-001-cors-跨域资源共享规范">[DESIGN-CORS-001] CORS 跨域资源共享规范<a class="anchor" href="#design-cors-001-cors-跨域资源共享规范" aria-label="锚点">#</a></h1>
+<!-- RULES-REGISTRY: CORS-001 -->
+<blockquote><p><strong>用途</strong>：定义 khy-os 项目的 CORS（跨域资源共享）配置标准。<br>ENV-001 §5 和 SEC-001 §7 给出了 CORS 的基本配置，本文档补全策略细节。</p></blockquote>
+<hr>
+<h2 id="1-cors-原则">1. CORS 原则<a class="anchor" href="#1-cors-原则" aria-label="锚点">#</a></h2>
+<ol><li><strong>最小权限</strong>：只允许必要的来源、方法、请求头</li><li><strong>严格 SameSite</strong>：所有认证相关 Cookie 使用 <code>strict</code> 或 <code>lax</code></li><li><strong>预检缓存</strong>：合理设置 <code>Access-Control-Max-Age</code> 减少 OPTIONS 请求</li><li><strong>凭证隔离</strong>：<code>credentials: true</code> 时不允许通配符来源</li></ol>
+<hr>
+<h2 id="2-允许的来源">2. 允许的来源<a class="anchor" href="#2-允许的来源" aria-label="锚点">#</a></h2>
+<h3 id="2-1-环境分级">2.1 环境分级<a class="anchor" href="#2-1-环境分级" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>环境</th><th>允许来源</th><th>说明</th></tr></thead><tbody><tr><td><strong>开发</strong></td><td><code>http://localhost:*</code>、<code>http://127.0.0.1:*</code>、<code>http://localhost:5173</code>（Vite dev）</td><td>本地开发</td></tr><tr><td><strong>Staging</strong></td><td><code>https://staging.khyquant.top</code>、<code>https://*.staging.khyquant.top</code></td><td>预发布</td></tr><tr><td><strong>生产</strong></td><td><code>https://khyquant.top</code>、<code>https://*.khyquant.top</code></td><td>仅正式域名</td></tr></tbody></table>
+<h3 id="2-2-动态来源匹配">2.2 动态来源匹配<a class="anchor" href="#2-2-动态来源匹配" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-variable constant_">ALLOWED_ORIGINS</span> = {
+  <span class="hljs-attr">development</span>: [
+    <span class="hljs-string">&#x27;http://localhost:5173&#x27;</span>,    <span class="hljs-comment">// Vite dev server</span>
+    <span class="hljs-string">&#x27;http://localhost:8090&#x27;</span>,    <span class="hljs-comment">// Legacy dev frontend</span>
+    <span class="hljs-string">&#x27;http://127.0.0.1:5173&#x27;</span>
+  ],
+  <span class="hljs-attr">staging</span>: [
+    <span class="hljs-string">&#x27;https://staging.khyquant.top&#x27;</span>,
+    <span class="hljs-string">&#x27;https://app.staging.khyquant.top&#x27;</span>
+  ],
+  <span class="hljs-attr">production</span>: [
+    <span class="hljs-string">&#x27;https://khyquant.top&#x27;</span>,
+    <span class="hljs-string">&#x27;https://app.khyquant.top&#x27;</span>,
+    <span class="hljs-string">&#x27;https://admin.khyquant.top&#x27;</span>
+  ]
+};
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">getCorsOrigin</span>(<span class="hljs-params">env</span>) {
+  <span class="hljs-keyword">const</span> envName = process.<span class="hljs-property">env</span>.<span class="hljs-property">NODE_ENV</span> || <span class="hljs-string">&#x27;development&#x27;</span>;
+  <span class="hljs-keyword">const</span> allowed = <span class="hljs-variable constant_">ALLOWED_ORIGINS</span>[envName] || <span class="hljs-variable constant_">ALLOWED_ORIGINS</span>.<span class="hljs-property">development</span>;
+  
+  <span class="hljs-keyword">return</span> <span class="hljs-function">(<span class="hljs-params">origin, callback</span>) =&gt;</span> {
+    <span class="hljs-keyword">if</span> (allowed.<span class="hljs-title function_">includes</span>(origin) || process.<span class="hljs-property">env</span>.<span class="hljs-property">ALLOW_CORS_ORIGIN</span> === origin) {
+      <span class="hljs-title function_">callback</span>(<span class="hljs-literal">null</span>, <span class="hljs-literal">true</span>);
+    } <span class="hljs-keyword">else</span> {
+      <span class="hljs-title function_">callback</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">`Origin <span class="hljs-subst">${origin}</span> not allowed by CORS policy`</span>));
+    }
+  };
+}</code></pre>
+<hr>
+<h2 id="3-允许的方法">3. 允许的方法<a class="anchor" href="#3-允许的方法" aria-label="锚点">#</a></h2>
+<h3 id="3-1-全局方法">3.1 全局方法<a class="anchor" href="#3-1-全局方法" aria-label="锚点">#</a></h3>
+<pre><code>GET, POST, PUT, PATCH, DELETE, OPTIONS</code></pre>
+<h3 id="3-2-端点级方法限制">3.2 端点级方法限制<a class="anchor" href="#3-2-端点级方法限制" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>端点</th><th>允许方法</th><th>说明</th></tr></thead><tbody><tr><td><code>/api/v1/auth/*</code></td><td><code>POST, OPTIONS</code></td><td>认证端点仅 POST</td></tr><tr><td><code>/api/v1/public/*</code></td><td><code>GET, OPTIONS</code></td><td>公开端点仅 GET</td></tr><tr><td><code>/api/v1/admin/*</code></td><td><code>GET, POST, PUT, DELETE, OPTIONS</code></td><td>管理端点全开</td></tr><tr><td><code>/api/v1/upload/*</code></td><td><code>POST, OPTIONS</code></td><td>上传端点仅 POST</td></tr></tbody></table>
+<pre><code class="language-javascript"><span class="hljs-comment">// 端点级 CORS</span>
+app.<span class="hljs-title function_">options</span>(<span class="hljs-string">&#x27;/api/v1/auth/*&#x27;</span>, <span class="hljs-title function_">cors</span>({ <span class="hljs-attr">origin</span>: <span class="hljs-title function_">getCorsOrigin</span>(), <span class="hljs-attr">methods</span>: [<span class="hljs-string">&#x27;POST&#x27;</span>, <span class="hljs-string">&#x27;OPTIONS&#x27;</span>] }));</code></pre>
+<hr>
+<h2 id="4-允许的请求头">4. 允许的请求头<a class="anchor" href="#4-允许的请求头" aria-label="锚点">#</a></h2>
+<h3 id="4-1-必选请求头">4.1 必选请求头<a class="anchor" href="#4-1-必选请求头" aria-label="锚点">#</a></h3>
+<pre><code>Content-Type
+Authorization
+X-Request-ID
+X-CSRF-Token        ← 见 §7 CSRF 防护</code></pre>
+<h3 id="4-2-可选请求头">4.2 可选请求头<a class="anchor" href="#4-2-可选请求头" aria-label="锚点">#</a></h3>
+<pre><code>Accept
+Accept-Language: zh-CN, en-US
+X-Client-Version
+X-Client-Platform: web | mobile | cli
+X-Request-Id       ← 客户端自生成（服务端可覆盖）</code></pre>
+<h3 id="4-3-暴露的响应头">4.3 暴露的响应头<a class="anchor" href="#4-3-暴露的响应头" aria-label="锚点">#</a></h3>
+<pre><code>X-Request-ID        ← 全链路追踪
+X-RateLimit-Limit   ← 限流信息
+X-RateLimit-Remaining
+X-RateLimit-Reset</code></pre>
+<pre><code class="language-javascript">app.<span class="hljs-title function_">use</span>(<span class="hljs-title function_">cors</span>({
+  <span class="hljs-attr">origin</span>: <span class="hljs-title function_">getCorsOrigin</span>(),
+  <span class="hljs-attr">credentials</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-attr">allowedHeaders</span>: [
+    <span class="hljs-string">&#x27;Content-Type&#x27;</span>,
+    <span class="hljs-string">&#x27;Authorization&#x27;</span>,
+    <span class="hljs-string">&#x27;X-Request-ID&#x27;</span>,
+    <span class="hljs-string">&#x27;X-Request-Id&#x27;</span>,       <span class="hljs-comment">// 客户端自生成</span>
+    <span class="hljs-string">&#x27;X-CSRF-Token&#x27;</span>,
+    <span class="hljs-string">&#x27;X-Client-Version&#x27;</span>,
+    <span class="hljs-string">&#x27;X-Client-Platform&#x27;</span>
+  ],
+  <span class="hljs-attr">exposedHeaders</span>: [
+    <span class="hljs-string">&#x27;X-Request-ID&#x27;</span>,
+    <span class="hljs-string">&#x27;X-RateLimit-Limit&#x27;</span>,
+    <span class="hljs-string">&#x27;X-RateLimit-Remaining&#x27;</span>,
+    <span class="hljs-string">&#x27;X-RateLimit-Reset&#x27;</span>
+  ]
+}));</code></pre>
+<hr>
+<h2 id="5-预检请求缓存">5. 预检请求缓存<a class="anchor" href="#5-预检请求缓存" aria-label="锚点">#</a></h2>
+<pre><code class="language-javascript"><span class="hljs-comment">// 缓存 24 小时</span>
+<span class="hljs-title class_">Access</span>-<span class="hljs-title class_">Control</span>-<span class="hljs-title class_">Max</span>-<span class="hljs-title class_">Age</span>: <span class="hljs-number">86400</span>
+
+<span class="hljs-comment">// 实际配置</span>
+app.<span class="hljs-title function_">options</span>(<span class="hljs-string">&#x27;*&#x27;</span>, <span class="hljs-title function_">cors</span>({
+  <span class="hljs-attr">origin</span>: <span class="hljs-title function_">getCorsOrigin</span>(),
+  <span class="hljs-attr">methods</span>: [<span class="hljs-string">&#x27;GET&#x27;</span>, <span class="hljs-string">&#x27;POST&#x27;</span>, <span class="hljs-string">&#x27;PUT&#x27;</span>, <span class="hljs-string">&#x27;PATCH&#x27;</span>, <span class="hljs-string">&#x27;DELETE&#x27;</span>, <span class="hljs-string">&#x27;OPTIONS&#x27;</span>],
+  <span class="hljs-attr">allowedHeaders</span>: [...],
+  <span class="hljs-attr">credentials</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-attr">maxAge</span>: <span class="hljs-number">86400</span>  <span class="hljs-comment">// 24h in seconds</span>
+}));</code></pre>
+<blockquote><p><strong>注意</strong>：<code>maxAge</code> 过长意味着配置变更后客户端需要等缓存过期才能感知。24 小时是合理平衡。</p></blockquote>
+<hr>
+<h2 id="6-凭证模式">6. 凭证模式<a class="anchor" href="#6-凭证模式" aria-label="锚点">#</a></h2>
+<h3 id="6-1-何时开启-credentials-true">6.1 何时开启 <code>credentials: true</code><a class="anchor" href="#6-1-何时开启-credentials-true" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>场景</th><th>需要凭证</th><th>说明</th></tr></thead><tbody><tr><td>前端 Web 应用</td><td>✅</td><td>Refresh Token 存 httpOnly cookie</td></tr><tr><td>移动端 App</td><td>✅</td><td>原生 Cookie 存储</td></tr><tr><td>第三方 API 调用</td><td>❌</td><td>走 API Key header</td></tr></tbody></table>
+<h3 id="6-2-凭证模式约束">6.2 凭证模式约束<a class="anchor" href="#6-2-凭证模式约束" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-comment">// credentials: true 时不允许通配符 origin</span>
+<span class="hljs-comment">// ✅ 正确</span>
+app.<span class="hljs-title function_">use</span>(<span class="hljs-title function_">cors</span>({
+  <span class="hljs-attr">origin</span>: <span class="hljs-string">&#x27;https://khyquant.top&#x27;</span>,      <span class="hljs-comment">// 明确域名</span>
+  <span class="hljs-attr">credentials</span>: <span class="hljs-literal">true</span>
+}));
+
+<span class="hljs-comment">// ❌ 错误 — credentials + wildcard 会被浏览器拒绝</span>
+app.<span class="hljs-title function_">use</span>(<span class="hljs-title function_">cors</span>({
+  <span class="hljs-attr">origin</span>: <span class="hljs-string">&#x27;*&#x27;</span>,
+  <span class="hljs-attr">credentials</span>: <span class="hljs-literal">true</span>   <span class="hljs-comment">// CORS 协议禁止此组合</span>
+}));</code></pre>
+<hr>
+<h2 id="7-csrf-防护集成">7. CSRF 防护集成<a class="anchor" href="#7-csrf-防护集成" aria-label="锚点">#</a></h2>
+<h3 id="7-1-samesite-cookie-策略">7.1 SameSite Cookie 策略<a class="anchor" href="#7-1-samesite-cookie-策略" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">res.<span class="hljs-title function_">cookie</span>(<span class="hljs-string">&#x27;refresh_token&#x27;</span>, token, {
+  <span class="hljs-attr">httpOnly</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-attr">secure</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">NODE_ENV</span> === <span class="hljs-string">&#x27;production&#x27;</span>,
+  <span class="hljs-attr">sameSite</span>: <span class="hljs-string">&#x27;strict&#x27;</span>,     <span class="hljs-comment">// 跨站请求不携带 cookie</span>
+  <span class="hljs-attr">maxAge</span>: <span class="hljs-number">7</span> * <span class="hljs-number">24</span> * <span class="hljs-number">60</span> * <span class="hljs-number">60</span> * <span class="hljs-number">1000</span>,
+  <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/api/v1/auth&#x27;</span>    <span class="hljs-comment">// 限制 cookie 作用域</span>
+});</code></pre>
+<h3 id="7-2-csrf-token-双重验证">7.2 CSRF Token 双重验证<a class="anchor" href="#7-2-csrf-token-双重验证" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> csrf = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;csrf-cookie-token&#x27;</span>);
+
+<span class="hljs-comment">// 响应中返回 CSRF token</span>
+app.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/api/v1/auth/csrf-token&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">req, res</span>) =&gt;</span> {
+  res.<span class="hljs-title function_">json</span>({ <span class="hljs-attr">csrfToken</span>: req.<span class="hljs-title function_">csrfToken</span>() });
+});
+
+<span class="hljs-comment">// 变更请求的中间件校验</span>
+app.<span class="hljs-title function_">use</span>(<span class="hljs-string">&#x27;/api/&#x27;</span>, <span class="hljs-title function_">csrfProtection</span>({
+  <span class="hljs-attr">ignoreMethods</span>: [<span class="hljs-string">&#x27;GET&#x27;</span>, <span class="hljs-string">&#x27;HEAD&#x27;</span>, <span class="hljs-string">&#x27;OPTIONS&#x27;</span>]
+}));</code></pre>
+<hr>
+<h2 id="8-特殊端点-cors">8. 特殊端点 CORS<a class="anchor" href="#8-特殊端点-cors" aria-label="锚点">#</a></h2>
+<h3 id="8-1-websocket-端点">8.1 WebSocket 端点<a class="anchor" href="#8-1-websocket-端点" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> wsServer = <span class="hljs-keyword">new</span> <span class="hljs-title class_">WebSocket</span>.<span class="hljs-title class_">Server</span>({ 
+  <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/ws&#x27;</span>,
+  <span class="hljs-attr">noServer</span>: <span class="hljs-literal">true</span> 
+});
+
+<span class="hljs-keyword">const</span> server = http.<span class="hljs-title function_">createServer</span>(app);
+
+server.<span class="hljs-title function_">on</span>(<span class="hljs-string">&#x27;upgrade&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">req, socket, head</span>) =&gt;</span> {
+  <span class="hljs-keyword">const</span> origin = req.<span class="hljs-property">headers</span>.<span class="hljs-property">origin</span>;
+  <span class="hljs-keyword">if</span> (!<span class="hljs-title function_">isAllowedOrigin</span>(origin)) {
+    socket.<span class="hljs-title function_">write</span>(<span class="hljs-string">&#x27;HTTP/1.1 403 Forbidden\r\n\r\n&#x27;</span>);
+    socket.<span class="hljs-title function_">destroy</span>();
+    <span class="hljs-keyword">return</span>;
+  }
+  
+  wsServer.<span class="hljs-title function_">handleUpgrade</span>(req, socket, head, <span class="hljs-function">(<span class="hljs-params">ws</span>) =&gt;</span> {
+    wsServer.<span class="hljs-title function_">emit</span>(<span class="hljs-string">&#x27;connection&#x27;</span>, ws, req);
+  });
+});</code></pre>
+<h3 id="8-2-sse-端点">8.2 SSE 端点<a class="anchor" href="#8-2-sse-端点" aria-label="锚点">#</a></h3>
+<p>SSE（Server-Sent Events）不受 CORS 限制（同 fetch），但需确保预检通过：</p>
+<pre><code class="language-javascript">app.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/api/v1/stream/events&#x27;</span>, <span class="hljs-title function_">cors</span>({
+  <span class="hljs-attr">origin</span>: <span class="hljs-title function_">getCorsOrigin</span>(),
+  <span class="hljs-attr">methods</span>: [<span class="hljs-string">&#x27;GET&#x27;</span>],
+  <span class="hljs-attr">exposedHeaders</span>: [<span class="hljs-string">&#x27;Content-Type&#x27;</span>]
+}), <span class="hljs-function">(<span class="hljs-params">req, res</span>) =&gt;</span> {
+  res.<span class="hljs-title function_">setHeader</span>(<span class="hljs-string">&#x27;Content-Type&#x27;</span>, <span class="hljs-string">&#x27;text/event-stream&#x27;</span>);
+  res.<span class="hljs-title function_">setHeader</span>(<span class="hljs-string">&#x27;Cache-Control&#x27;</span>, <span class="hljs-string">&#x27;no-cache&#x27;</span>);
+  <span class="hljs-comment">// ...</span>
+});</code></pre>
+<hr>
+<h2 id="9-cors-调试">9. CORS 调试<a class="anchor" href="#9-cors-调试" aria-label="锚点">#</a></h2>
+<h3 id="9-1-开发环境日志">9.1 开发环境日志<a class="anchor" href="#9-1-开发环境日志" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">app.<span class="hljs-title function_">use</span>(<span class="hljs-function">(<span class="hljs-params">req, res, next</span>) =&gt;</span> {
+  <span class="hljs-keyword">if</span> (req.<span class="hljs-property">method</span> === <span class="hljs-string">&#x27;OPTIONS&#x27;</span>) {
+    logger.<span class="hljs-title function_">debug</span>(<span class="hljs-string">&#x27;CORS preflight&#x27;</span>, {
+      <span class="hljs-attr">origin</span>: req.<span class="hljs-property">headers</span>.<span class="hljs-property">origin</span>,
+      <span class="hljs-attr">method</span>: req.<span class="hljs-property">headers</span>[<span class="hljs-string">&#x27;access-control-request-method&#x27;</span>],
+      <span class="hljs-attr">headers</span>: req.<span class="hljs-property">headers</span>[<span class="hljs-string">&#x27;access-control-request-headers&#x27;</span>]
+    });
+  }
+  <span class="hljs-title function_">next</span>();
+});</code></pre>
+<h3 id="9-2-常见问题">9.2 常见问题<a class="anchor" href="#9-2-常见问题" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>问题</th><th>原因</th><th>解决</th></tr></thead><tbody><tr><td><code>Access-Control-Allow-Origin</code> 缺失</td><td>Origin 不在白名单</td><td>添加到环境变量或白名单</td></tr><tr><td><code>Credentials flag not allowed</code></td><td>使用了 <code>origin: '*'</code> + <code>credentials: true</code></td><td>显式指定 origin</td></tr><tr><td>Preflight 循环</td><td><code>Access-Control-Max-Age</code> 为 0</td><td>设置合理的 maxAge</td></tr><tr><td>Cookie 不发送</td><td><code>sameSite</code> 太严格或跨站</td><td>按场景选择 <code>strict</code>/<code>lax</code>/<code>none</code></td></tr></tbody></table>
+<hr>
+<h2 id="10-版本历史">10. 版本历史<a class="anchor" href="#10-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-10</td><td>初始版本，定义 CORS 跨域资源共享规范</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 平台团队维护</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/其它规范/[DESIGN-COMP-001] 代码复杂度规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-COMP-001] 代码复杂度规范</div></a><a class="next" href="../../../docs/10_规范/其它规范/[DESIGN-DB-001] 数据库规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-DB-001] 数据库规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/其它规范/[DESIGN-CORS-001] CORS 跨域资源共享规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

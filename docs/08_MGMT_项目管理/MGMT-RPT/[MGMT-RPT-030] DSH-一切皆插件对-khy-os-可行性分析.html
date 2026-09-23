@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [MGMT-RPT-030] DSH-一切皆插件对-khy-os-可行性分析.md -->
+<title>DSH「一切皆插件」khy-os 可行性分析 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>MGMT-RPT<span class="sep">›</span>DSH「一切皆插件」khy-os 可行性分析</div>
+      <header class="hero reveal"><h1>DSH「一切皆插件」khy-os 可行性分析</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#dsh-一切皆插件-khy-os-可行性分析">DSH「一切皆插件」khy-os 可行性分析</a></li><li class="lvl-2"><a href="#1-dsh-的-一切皆插件-到底是什么">1. DSH 的&quot;一切皆插件&quot;到底是什么</a></li><li class="lvl-2"><a href="#2-khy-os-现状逐条对照">2. khy-os 现状逐条对照</a></li><li class="lvl-2"><a href="#3-真正的缺口-khy-os-有-插件外壳-但核心仍是特权内核">3. 真正的缺口：khy-os 有&quot;插件外壳&quot;，但核心仍是特权内核</a></li><li class="lvl-2"><a href="#4-落地路径建议-分阶段">4. 落地路径建议（分阶段）</a></li><li class="lvl-2"><a href="#5-代价提示-源自-dsh-白皮书-khy-os-需注意">5. 代价提示（源自 DSH 白皮书，khy-os 需注意）</a></li><li class="lvl-2"><a href="#6-一句话总结">6. 一句话总结</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="dsh-一切皆插件-khy-os-可行性分析">DSH「一切皆插件」khy-os 可行性分析<a class="anchor" href="#dsh-一切皆插件-khy-os-可行性分析" aria-label="锚点">#</a></h1>
+<blockquote><p>结论先行：<strong>能实现，而且 khy-os 已经是主流 harness 里最接近 DSH 模型的一个——但它目前把&quot;插件外壳&quot;做得很好，还没把&quot;自己的核心&quot;吃掉。</strong> 离真正的&quot;一切皆插件&quot;还差最关键的一跳：让宿主自己的核心（agent 主循环、CLI 路由器、会话/持久化、前端 UI）也成为插件，从而不再有&quot;特权内核&quot;。</p></blockquote>
+<hr>
+<h2 id="1-dsh-的-一切皆插件-到底是什么">1. DSH 的&quot;一切皆插件&quot;到底是什么<a class="anchor" href="#1-dsh-的-一切皆插件-到底是什么" aria-label="锚点">#</a></h2>
+<p>DSH = <strong>DeepSeek Harness</strong>，基于 <strong>Cordis</strong> 插件元框架。它的架构事实是：</p>
+<ul><li><strong>没有特权内核</strong>。Cordis 只负责插件的加载/卸载/依赖管理，自身不承载任何业务。</li><li>模型适配器、工具注册表、会话日志、Agent 主循环、UI 界面……<strong>全部是插件</strong>，全部可替换。</li><li>插件之间通过稳定的 <code>ctx</code> 键协作：<code>ctx.tools</code>、<code>ctx.llm</code>、<code>ctx.agentLoop</code>、<code>ctx.fs</code>、<code>ctx.shell</code>……</li><li>通过<strong>类型化事件</strong>通信（<code>emit</code> / <code>waterfall</code> / <code>parallel</code> / <code>serial</code>）。</li><li><strong>可逆效应（revertible effects）</strong>：插件卸载时它对环境的所有修改必须被完整、安全地撤销——不需要重启。</li><li><strong>反应式余效应（reactive coeffects）</strong>：插件能动态响应自身依赖的&quot;新增/消失/变更&quot;，支持运行时重组。</li><li><strong>分层配置组合</strong>：<code>profile → bundle → cordis.patch.yml</code> 叠加出一棵插件树，改模型/沙箱/循环全在配置层完成，不 fork 代码。</li></ul>
+<hr>
+<h2 id="2-khy-os-现状逐条对照">2. khy-os 现状逐条对照<a class="anchor" href="#2-khy-os-现状逐条对照" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>DSH 支柱</th><th>khy-os 对应实现</th><th>成熟度</th></tr></thead><tbody><tr><td>微内核 + 插件加载器</td><td><code>services/backend/src/plugin-loader/index.js</code>：6 个发现源（config / workspace / global npm / extension roots / plugin dir / env）、manifest 校验、惰性激活、版本门、命名空间预约、基于 <code>disposables</code> 的优雅 <code>shutdown()</code></td><td>✅ 已具备</td></tr><tr><td><code>ctx</code> 服务仓库</td><td><code>plugin-loader/contextFactory.js</code>：每个插件拿到隔离的 <code>commands / tools / ai / storage / config / events / http / spawn / database / host</code></td><td>✅ 已具备</td></tr><tr><td>可逆效应（卸载回滚）</td><td>插件注册全部登记为 <code>disposables</code>，<code>shutdown()</code> / <code>activateNamespace</code> 撤销</td><td>✅ 已具备（时间可组合）</td></tr><tr><td>事件总线</td><td><code>ctx.events.on/emit</code>（简单 EventEmitter）</td><td>🟡 有，但非类型化、无 <code>waterfall/parallel/serial</code> 分发</td></tr><tr><td>能力接缝（扩展点）</td><td><code>domain/catalog/capabilityMatrix/seams.js</code>：已命名 5 个 seam，composer 按 phase 排序；但注释承认&quot;目前每个能力还硬编码在循环物理位置&quot;</td><td>🟡 命名阶段，尚未成为可替换服务</td></tr><tr><td>拦截钩子</td><td><code>domain/extensions/hooks/</code>：<code>hookSystem / hookRunner / hookRegistry / hookContribSeams</code></td><td>✅ 已具备</td></tr><tr><td>可替换实现（适配器）</td><td>AI 网关适配器、IM 适配器（飞书等）、模型适配器</td><td>✅ 已具备</td></tr><tr><td>技能 / 工具 / MCP</td><td>skills 系统、MCP 生态注册表、<code>tools/index.js</code> 工具注册表</td><td>✅ 已具备</td></tr><tr><td>权限闸门</td><td>manifest <code>permissions: { network, spawn, database }</code>，在 <code>ctx</code> 强制</td><td>✅ 已具备（比 DSH 的&quot;两旋钮&quot;更细）</td></tr><tr><td>多源分发 + 市场</td><td>extension roots + <code>extensionMarketplace.js</code> + <code>KHY_PLUGINS</code> 环境变量 + npm/global</td><td>🟡 部分（缺 bundle/profile 分层 patch）</td></tr><tr><td>分层配置组合</td><td>——</td><td>❌ 缺失（用 <code>flagRegistry</code> + <code>config.json</code>，无插件树 patch 模型）</td></tr><tr><td>依赖声明 + 依赖序激活</td><td>——</td><td>❌ 缺失（插件拿到的是现成 <code>ctx</code>，不声明 <code>inject:['tools']</code>，加载器不等待依赖）</td></tr><tr><td>UI 即插件</td><td>——</td><td>❌ 缺失（<code>apps/ai-frontend</code>、<code>software/khyquant/frontend</code> 是单体 Vue 应用，非插件 bundle）</td></tr><tr><td>Agent 循环即插件</td><td>——</td><td>❌ 缺失（<code>toolUseLoopCore.js</code> 是硬编码特权主循环；能力正在 seam 化，但循环本身不可替换）</td></tr><tr><td>会话/存储即插件</td><td><code>sessionPersistence</code> 等是中心服务</td><td>🟡 可做插桩，目前仍偏中心</td></tr></tbody></table>
+<p><strong>覆盖率约 9/15 完全具备，3/15 部分，3/15 缺失。</strong> 缺失的恰好是&quot;一切&quot;二字的核心。</p>
+<hr>
+<h2 id="3-真正的缺口-khy-os-有-插件外壳-但核心仍是特权内核">3. 真正的缺口：khy-os 有&quot;插件外壳&quot;，但核心仍是特权内核<a class="anchor" href="#3-真正的缺口-khy-os-有-插件外壳-但核心仍是特权内核" aria-label="锚点">#</a></h2>
+<p>khy-os 的插件系统是<strong>宿主内部的一个子系统</strong>——<code>plugin-loader</code> 在 <code>services/backend</code> 里被 <code>require</code>，插件往宿主注册 commands/tools/hooks。这是&quot;宿主包住插件&quot;。</p>
+<p>DSH 的&quot;一切皆插件&quot;是反过来：<strong>宿主本身就是一棵插件树</strong>——Cordis 先起来，然后 agent 循环、会话、模型、UI 作为插件挂上去。没有谁在插件&quot;外面&quot;。</p>
+<p>所以 khy-os 差的那一跳，是把下面这些从&quot;硬编码中心&quot;变成&quot;默认插件&quot;：</p>
+<ol><li><strong>agent 主循环</strong>（<code>toolUseLoopCore.js</code>）→ 暴露为 <code>ctx.agentLoop</code> seam + 一个默认 loop 插件。</li><li><strong>CLI 路由器</strong>（<code>cli/router.js</code>）→ 命令发现/分派本就靠 <code>commandRegistry</code>，可进一步 plugin 化。</li><li><strong>会话 / 持久化 / 存储 provider</strong> → 做成 <code>ctx.session</code> / <code>ctx.fs</code> / <code>ctx.store</code> 服务，带默认实现插件。</li><li><strong>前端 UI</strong> → 把 shell 抽成 <code>khy-web-app</code> 式 bundle，业务 UI 拆成独立插件。</li></ol>
+<hr>
+<h2 id="4-落地路径建议-分阶段">4. 落地路径建议（分阶段）<a class="anchor" href="#4-落地路径建议-分阶段" aria-label="锚点">#</a></h2>
+<p><strong>阶段 A — 已完成（守成）</strong>：loader、ctx、disposables、hooks、seams 命名、adapters、skills、MCP、权限闸门。保持并强化。</p>
+<p><strong>阶段 B — 把宿主&quot;吃&quot;进来（关键）</strong>：</p>
+<ol><li>将 <code>plugin-loader</code> 从&quot;后端子系统&quot;提升为<strong>启动微内核</strong>：先 boot loader，再由它组装 backend；或干脆嵌入 Cordis 作为内核。</li><li>把 <code>toolUseLoopCore</code> 移到 <code>ctx.agentLoop</code> 之后，随包发布一个 <code>khy-base-loop</code> 默认插件。</li><li>把 session / fs / shell / storage 提升为 ctx 服务，提供默认 provider 插件。</li><li>加 <code>inject</code> 依赖声明 + 依赖序激活（loader 等依赖存在再执行，顺序由依赖而非文件顺序决定）。</li><li>引入分层组合：<code>profile → bundle → patch overlay</code>，让改模型/沙箱/循环在配置层完成（对齐 <code>DESIGN-TOOL-002/070</code>）。</li></ol>
+<p><strong>阶段 C — 缝合</strong>：将 <code>capabilityMatrix/seams.js</code> 从&quot;命名符号&quot;升级为<strong>可替换服务 seam</strong>（Provider/Consumer），能力可整块换；事件总线上 <code>waterfall/parallel/serial</code>；前端 shell 插件化。</p>
+<hr>
+<h2 id="5-代价提示-源自-dsh-白皮书-khy-os-需注意">5. 代价提示（源自 DSH 白皮书，khy-os 需注意）<a class="anchor" href="#5-代价提示-源自-dsh-白皮书-khy-os-需注意" aria-label="锚点">#</a></h2>
+<ul><li><strong>概念门槛上升一个量级</strong>：无特权内核 = 调试时要理解整棵插件树。</li><li><strong>同进程无隔离</strong>：装一个插件 = 交出全部权限。khy-os 已有 <code>network/spawn/database</code> 细粒度权限闸门，<strong>优于</strong> DSH 的&quot;两旋钮&quot;，务必保留而非退化。</li><li><strong>所有操作痕迹被完整记录</strong>：khy-os 的 trajectory / audit 体系已天然满足&quot;日志即真相&quot;，这是优势。</li><li>不是所有人都该用&quot;一切皆插件&quot;：需求停在一/二层（换模型、加工具）用成熟产品即可；只有要自研沙箱/存储/审批流（第三层）才值得。</li></ul>
+<hr>
+<h2 id="6-一句话总结">6. 一句话总结<a class="anchor" href="#6-一句话总结" aria-label="锚点">#</a></h2>
+<p>khy-os 已经把 DSH 的&quot;插件外壳四件套&quot;（加载器、ctx 服务仓库、可逆注册、事件/hooks/权限）基本做齐了，还多了更细的权限闸门和 capability seams 的雏形。<strong>它能不能&quot;一切皆插件&quot;？能。</strong> 剩下的是哲学上最硬的一跃——让 agent 循环、CLI、会话、UI 自己也成为插件，从而消灭特权内核。这一步工程量大、风险高，但是一条清晰的、与现有架构方向一致的路，不是推倒重来。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-029] khy-os-vs-ycode-能力矩阵与学习点.html"><div class="dir">← 上一篇</div><div class="ttl">khy-os vs Y-code：能力矩阵（源码核实版）与 Y-code 值得学习点</div></a><a class="next" href="../../../docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-031] GitHub调研-终端渲染TUI-2026-09-17.html"><div class="dir">下一篇 →</div><div class="ttl">GitHub 调研 — 终端渲染 / TUI / ANSI 规范板块 — 2026-09-17</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/MGMT-RPT/[MGMT-RPT-030] DSH-一切皆插件对-khy-os-可行性分析.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

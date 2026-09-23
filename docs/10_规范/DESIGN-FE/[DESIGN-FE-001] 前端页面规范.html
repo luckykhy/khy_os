@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [DESIGN-FE-001] 前端页面规范.md -->
+<title>[DESIGN-FE-001] 网页端设计规范（实测对齐版） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>10_规范<span class="sep">›</span>DESIGN-FE<span class="sep">›</span>[DESIGN-FE-001] 网页端设计规范（实测对齐版）</div>
+      <header class="hero reveal"><h1>[DESIGN-FE-001] 网页端设计规范（实测对齐版）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-fe-001-网页端设计规范-实测对齐版">[DESIGN-FE-001] 网页端设计规范（实测对齐版）</a></li><li class="lvl-2"><a href="#1-适用范围与文档分工">1. 适用范围与文档分工</a></li><li class="lvl-3"><a href="#1-1-两个网页前端-一个共享包">1.1 两个网页前端 + 一个共享包</a></li><li class="lvl-3"><a href="#1-2-本文与相关规范的分工">1.2 本文与相关规范的分工</a></li><li class="lvl-2"><a href="#2-共享层-khy-ui-shared">2. 共享层：@khy/ui-shared</a></li><li class="lvl-2"><a href="#3-设计令牌系统">3. 设计令牌系统</a></li><li class="lvl-3"><a href="#3-1-唯一真源-newapi-theme-css">3.1 唯一真源：`newapi-theme.css`</a></li><li class="lvl-3"><a href="#3-2-现行-token-分层-实测值">3.2 现行 token 分层（实测值）</a></li><li class="lvl-3"><a href="#3-3-khyquant-端的令牌现状与收敛方向">3.3 khyquant 端的令牌现状与收敛方向</a></li><li class="lvl-3"><a href="#3-4-暗色主题验收">3.4 暗色主题验收</a></li><li class="lvl-2"><a href="#4-页面与信息架构">4. 页面与信息架构</a></li><li class="lvl-2"><a href="#5-组件规范">5. 组件规范</a></li><li class="lvl-3"><a href="#5-1-分层-element-plus-是基座-khy-是共享壳">5.1 分层：Element Plus 是基座，Khy* 是共享壳</a></li><li class="lvl-3"><a href="#5-2-现有共享组件的职责边界-实测">5.2 现有共享组件的职责边界（实测）</a></li><li class="lvl-3"><a href="#5-3-新组件准入与写法">5.3 新组件准入与写法</a></li><li class="lvl-2"><a href="#6-api-层与服务发现-强制">6. API 层与服务发现（强制）</a></li><li class="lvl-3"><a href="#6-1-零硬编码-agents-md-规则-1-的网页端落地">6.1 零硬编码（AGENTS.md 规则 1 的网页端落地）</a></li><li class="lvl-3"><a href="#6-2-axios-实例纪律-src-api-request-js-为模板">6.2 axios 实例纪律（`src/api/request.js` 为模板）</a></li><li class="lvl-3"><a href="#6-3-api-层文件分工-ai-frontend-src-api-新模块对号入座">6.3 API 层文件分工（ai-frontend `src/api/`，新模块对号入座）</a></li><li class="lvl-2"><a href="#7-状态与错误文案-强制">7. 状态与错误文案（强制）</a></li><li class="lvl-3"><a href="#7-1-加载态三档">7.1 加载态三档</a></li><li class="lvl-3"><a href="#7-2-空态与错误态">7.2 空态与错误态</a></li><li class="lvl-3"><a href="#7-3-长任务">7.3 长任务</a></li><li class="lvl-2"><a href="#8-响应式与移动端">8. 响应式与移动端</a></li><li class="lvl-2"><a href="#9-性能">9. 性能</a></li><li class="lvl-2"><a href="#10-可访问性">10. 可访问性</a></li><li class="lvl-2"><a href="#11-质量门与工具链-全部真实存在">11. 质量门与工具链（全部真实存在）</a></li><li class="lvl-2"><a href="#12-已知缺口登记表-只降不升">12. 已知缺口登记表（只降不升）</a></li><li class="lvl-2"><a href="#13-pr-验收清单-网页端改动逐项过">13. PR 验收清单（网页端改动逐项过）</a></li><li class="lvl-2"><a href="#14-版本历史">14. 版本历史</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-fe-001-网页端设计规范-实测对齐版">[DESIGN-FE-001] 网页端设计规范（实测对齐版）<a class="anchor" href="#design-fe-001-网页端设计规范-实测对齐版" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>本文是 khy-os 网页端设计规范的单一入口</strong>。与一份「放之四海皆准」的前端模板不同，本文每条规则都锚定在仓库真实文件上：能给出路径的给路径，能给出实测数字的给数字。凡本文与代码现状冲突，以代码为准并登记进 §12「已知缺口表」——缺口只降不升。</p>
+<p><strong>2.0 重写说明</strong>：1.0 版（2026-09-04）是一套泛用模板，描述的 <code>--khy-space-*</code> 间距令牌、<code>KhyButton/KhyInput/KhyCard</code> 组件、Playwright/Chromatic 工具链在代码中均不存在。本版改为完全从实测出发。</p></blockquote>
+<hr>
+<h2 id="1-适用范围与文档分工">1. 适用范围与文档分工<a class="anchor" href="#1-适用范围与文档分工" aria-label="锚点">#</a></h2>
+<h3 id="1-1-两个网页前端-一个共享包">1.1 两个网页前端 + 一个共享包<a class="anchor" href="#1-1-两个网页前端-一个共享包" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>应用</th><th>路径</th><th>层级</th><th>技术栈（实测自 package.json）</th><th>用途</th></tr></thead><tbody><tr><td><strong>ai-frontend</strong></td><td><code>apps/ai-frontend/</code></td><td>L3（平台自带）</td><td>Vue 3.4 + Vite 5 + Element Plus 2.5 + Pinia 2 + vue-router 4 + axios；@vue-flow（工作流）、xterm（终端）</td><td>AI 平台管理界面</td></tr><tr><td><strong>khyquant-frontend</strong></td><td><code>software/khyquant/frontend/</code></td><td>L4（内置应用）</td><td>同上基座 + Capacitor 8（Android）+ vite-plugin-pwa/workbox + sass + lightweight-charts + marked/dompurify</td><td>量化交易终端（含移动端）</td></tr><tr><td><strong>@khy/ui-shared</strong></td><td><code>platform/packages/ui-shared/</code></td><td>L1 共享包</td><td>纯 JS，无 UI 组件</td><td>跨前端的浏览器安全原语</td></tr></tbody></table>
+<p>两个前端<strong>不得互相 import</strong>（ARCH-068 禁止边 <code>L3 ↔ L4</code>），共用代码只能下沉到 <code>@khy/ui-shared</code>。</p>
+<h3 id="1-2-本文与相关规范的分工">1.2 本文与相关规范的分工<a class="anchor" href="#1-2-本文与相关规范的分工" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>主题</th><th>真源</th></tr></thead><tbody><tr><td>信息架构、路由结构、导航数据化、四个页面重设计</td><td><code>[DESIGN-ARCH-080] 网页端信息架构与四页重设计</code></td></tr><tr><td>可访问性（WCAG）</td><td><code>[DESIGN-A11Y-001] 可访问性规范</code></td></tr><tr><td>零硬编码 / 状态文案 / 超时红线（全仓强制）</td><td>根 <code>AGENTS.md</code> 工程规则 1–4</td></tr><tr><td>通道选择（前端何时走 Web API / CLI）</td><td><code>[DESIGN-ARCH-071] 通道选择决策矩阵</code></td></tr><tr><td>组件 API 目标态（组件库落地后生效）</td><td><code>[DESIGN-FE-002] 前端组件库规范</code></td></tr><tr><td>速查</td><td><code>[DESIGN-FE-003] 前端快速参考卡</code></td></tr></tbody></table>
+<p>本文管的是「两个前端共享的、与代码现状对齐的工程与设计纪律」：令牌、组件分层、API 层、状态文案、主题、质量门。</p>
+<hr>
+<h2 id="2-共享层-khy-ui-shared">2. 共享层：@khy/ui-shared<a class="anchor" href="#2-共享层-khy-ui-shared" aria-label="锚点">#</a></h2>
+<p>这是两个前端目前<strong>唯一</strong>的共用代码通道（<code>&quot;private&quot;: true</code>，按 workspace 引用，不发 npm）。</p>
+<pre><code>platform/packages/ui-shared/src/
+├── http/authHeaders.js      # 鉴权头拼装
+├── http/fetchWithTimeout.js # 带超时的 fetch 封装
+├── http/response.js         # 响应解包
+├── http/errors.js           # isNetworkLikeError 等错误判定
+└── auth/  token.js / state.js / guard.js   # 令牌存取与路由守卫</code></pre>
+<p><strong>规则</strong>：</p>
+<ol><li>浏览器侧可复用的 <strong>逻辑</strong>（无 DOM 依赖的 http/auth 原语）一律放这里，两个前端按子路径导入（<code>@khy/ui-shared/http/errors</code>）。</li><li>该包<strong>不收 UI 组件</strong>。共享 UI 的归口见 §5——当前共享 UI 的事实标准是「各自实现、视觉对齐」，组件库是目标态而非现状。</li><li>改该包必须跑 <code>node --test tests/**/*.test.js</code>（包内自带测试）。</li></ol>
+<hr>
+<h2 id="3-设计令牌系统">3. 设计令牌系统<a class="anchor" href="#3-设计令牌系统" aria-label="锚点">#</a></h2>
+<h3 id="3-1-唯一真源-newapi-theme-css">3.1 唯一真源：<code>newapi-theme.css</code><a class="anchor" href="#3-1-唯一真源-newapi-theme-css" aria-label="锚点">#</a></h3>
+<p>ai-frontend 的令牌真源是 <code>apps/ai-frontend/src/styles/newapi-theme.css</code>（实测 111 个 <code>--khy-*</code> 定义，44 个源文件消费）。它的结构即标准结构：</p>
+<pre><code>:root        → 浅色主题：Surfaces / Text / Lines / Brand / Geometry / Accent / Skeleton
+html.dark    → 深色主题：同一组 token 整体重指
+同文件尾部   → Element Plus 变量映射（--el-* 全部指向 --khy-*）</code></pre>
+<p><strong>双主题机制</strong>（实测）：<code>html.dark</code> 类切换由 <code>src/composables/useTheme.js</code> 驱动；Element Plus 的 <code>element-plus/theme-chalk/dark/css-vars.css</code> 在 <code>main.js</code> 中先于本文件导入，因此本文件里的 <code>--el-*</code> 覆盖靠源码顺序生效。<strong>新增 token 必须同时在 <code>:root</code> 与 <code>html.dark</code> 给出两个值</strong>，否则暗色下会静默穿透成浅色。</p>
+<h3 id="3-2-现行-token-分层-实测值">3.2 现行 token 分层（实测值）<a class="anchor" href="#3-2-现行-token-分层-实测值" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>层</th><th>token（浅色值）</th><th>用途</th></tr></thead><tbody><tr><td>表面</td><td><code>--khy-bg-main: #f4f7fc</code>、<code>--khy-bg-elevated</code>、<code>--khy-bg-card</code>、<code>--khy-bg-soft: #eff4ff</code>、<code>--khy-bg-hover</code></td><td>页面/卡片/悬浮底</td></tr><tr><td>文本</td><td><code>--khy-text-main: #1f2937</code>、<code>--khy-text-strong: #101828</code>、<code>--khy-text-secondary: #475467</code>、<code>--khy-text-muted: #667085</code></td><td>四级文字</td></tr><tr><td>线条</td><td><code>--khy-border: #d6e0ef</code>、<code>--khy-border-light: #e5ebf5</code></td><td>边框</td></tr><tr><td>品牌</td><td><code>--khy-primary: #2f7ef7</code>、<code>--khy-primary-strong: #1f68df</code>、<code>--khy-primary-soft: #eaf2ff</code></td><td>主色三态</td></tr><tr><td>状态</td><td><code>--khy-success: #079455</code>、<code>--khy-warning: #dc6803</code>、<code>--khy-danger: #d92d20</code></td><td>语义色（暗色下整体提亮，见真源文件）</td></tr><tr><td>几何</td><td><code>--khy-radius: 12px</code>、<code>--khy-radius-sm: 8px</code>、<code>--khy-radius-lg: 16px</code>、<code>--khy-shadow</code>、<code>--khy-shadow-lift</code></td><td>圆角与投影</td></tr><tr><td>灰阶</td><td><code>--khy-gray-50</code> 至 <code>--khy-gray-900</code>（10 级，双主题成对）</td><td>灰色系：背景/边框/文字/禁用态</td></tr><tr><td>字体</td><td><code>--khy-font</code>（Public Sans 栈）、<code>--khy-font-mono</code>（JetBrains Mono 栈，用于 Key/ID/模型名）</td><td>字体族</td></tr><tr><td>品牌点缀</td><td><code>--khy-accent: #6d5efc</code> → <code>--khy-accent-end: #d946ef</code> 紫色渐变族</td><td>仅浮动球等品牌场景，<strong>不做常规 UI 主色</strong></td></tr><tr><td>骨架屏</td><td><code>--khy-skeleton-base</code>、<code>--khy-skeleton-highlight</code></td><td>shimmer 动画两色</td></tr></tbody></table>
+<p><strong>纪律</strong>：</p>
+<ol><li>新代码颜色/圆角/阴影一律 <code>var(--khy-*)</code>，禁止写字面量 hex。存量硬编码用 <code>npm run frontend:fix-colors</code>（预览）→ <code>frontend:fix-colors:apply</code>（执行）收敛。</li><li>不新增与 Element Plus 重复的 token：EP 组件的颜色走 §3.1 的 <code>--el-*</code> 映射自动跟随主题，不要给 <code>el-button</code> 再包一层颜色类。</li><li>间距与字号<strong>目前没有 token</strong>（实测 <code>--khy-space-*</code>、<code>--khy-text-*</code> 不存在，1.0 版文档写的是虚构值）。现状约定：间距用 4px 倍数（8/12/16/24 为主），正文字号沿用 EP 默认（14px），页面标题 20px。何时引入 token 见 §12 缺口表 G5——未引入前禁止在新文档里引用不存在的变量名。</li></ol>
+<h3 id="3-3-khyquant-端的令牌现状与收敛方向">3.3 khyquant 端的令牌现状与收敛方向<a class="anchor" href="#3-3-khyquant-端的令牌现状与收敛方向" aria-label="锚点">#</a></h3>
+<p>khyquant 的真源是 <code>software/khyquant/frontend/src/styles/theme.css</code>，它是一套<strong>平行命名体系</strong>（<code>--primary-color</code>、<code>--text-primary</code>、<code>--spacing-md</code>），其中若干值写成 <code>var(--khy-primary)</code> 等引用——<strong>但 khyquant 全端没有任何 <code>--khy-*</code> 定义</strong>（实测 0 处，含 <code>index.html</code> 与 <code>public/</code>），这些引用当前是无回退的悬空变量。<code>SimpleTradingInterface.css</code>、<code>Trading.css</code> 里也有同类悬空引用（缺口 G2）。</p>
+<p>收敛方向（<strong>只许向这个方向改</strong>）：</p>
+<ul><li>khyquant 新代码直接使用 <code>--khy-*</code> 命名；</li><li>在 <code>theme.css</code> 头部补定义所引用的 <code>--khy-*</code> 基础值（与 ai-frontend 真源对齐），让存量 <code>var(--khy-*)</code> 引用落地；</li><li>两套命名的映射保留在 <code>theme.css</code> 一个文件里，不再扩散到组件内。</li></ul>
+<h3 id="3-4-暗色主题验收">3.4 暗色主题验收<a class="anchor" href="#3-4-暗色主题验收" aria-label="锚点">#</a></h3>
+<p>任何含自定义样式的 PR，提交前必须双主题自查：</p>
+<pre><code>1. useTheme 切换到 dark，肉眼检查：表面层级是否仍分明（bg-main &lt; bg-card &lt; bg-elevated）
+2. 文本四级对比度是否仍可读（muted 不得消失在 bg-main 上）
+3. 自定义投影是否过黑（暗色下用真源文件里的 rgba(0,0,0,0.35~0.45) 量级）</code></pre>
+<hr>
+<h2 id="4-页面与信息架构">4. 页面与信息架构<a class="anchor" href="#4-页面与信息架构" aria-label="锚点">#</a></h2>
+<p><strong>IA 真源是 [DESIGN-ARCH-080]</strong>，本文只固化其中已交付的纪律：</p>
+<ol><li><strong>路由前缀</strong>：用户高频路由不带前缀（<code>/login</code>、<code>/chat</code>、<code>/home</code>），管理类统一 <code>/admin/*</code>。23 个裸路径 → <code>/admin/*</code> 的迁移映射见 ARCH-080 附录 A。<strong>新增管理页直接落在 <code>/admin/*</code>，不再产生新裸路径。</strong></li><li><strong>导航数据化</strong>：<code>apps/ai-frontend/src/nav/index.js</code> 是唯一真源——侧栏渲染、路由表、页面标题查找都从 <code>NAV</code> 数组派生。<strong>加页面 = 改这一个文件</strong>，禁止回到「加一页改四处」（路由表、<code>USER_MENU</code>、<code>ADMIN_MENU</code>、<code>CACHED_VIEWS</code>）的旧耦合。</li><li><strong>命名纪律</strong>：运维者认证侧统一 <code>auth</code>/<code>login</code>/<code>session</code>；上游凭证侧统一叫 <code>channel-apis</code>（沿用 <code>ChannelApis.vue</code> / <code>channelApiCrypto.js</code>）。UI 文案里说上游 Key 必须带限定词，禁止裸写「凭证/凭据」。</li><li><strong>页面骨架</strong>：页面 = <code>KhyPageHeader</code>（标题+操作区）+ 内容区。布局壳只有一套 <code>AuthenticatedLayout</code>——khyos 不做独立 admin shell、不做第二套登录（7/7 同类项目的共同约束，ARCH-080 §2.1）。</li></ol>
+<hr>
+<h2 id="5-组件规范">5. 组件规范<a class="anchor" href="#5-组件规范" aria-label="锚点">#</a></h2>
+<h3 id="5-1-分层-element-plus-是基座-khy-是共享壳">5.1 分层：Element Plus 是基座，Khy* 是共享壳<a class="anchor" href="#5-1-分层-element-plus-是基座-khy-是共享壳" aria-label="锚点">#</a></h3>
+<pre><code>┌─ Element Plus（基座，不重新封装）────────────────────────┐
+│  el-button / el-input / el-table / el-dialog ...         │
+│  颜色由 §3.1 的 --el-* 映射跟随主题，样式零定制优先        │
+└──────────────────────────────────────────────────────────┘
+┌─ Khy* 共享组件（跨页面复用才造，现状 6 个）───────────────┐
+│  KhyPageHeader / KhyEmpty / KhyIcon / KhyFloatBall /     │
+│  LoadErrorBanner / GlobalProgressBar                     │
+└──────────────────────────────────────────────────────────┘
+┌─ 业务组件（views/ 或 components/&lt;domain&gt;/ 内，不加前缀）──┐
+│  AgentDashboard、ChannelApis、EnhancedKLineChart ...      │
+└──────────────────────────────────────────────────────────┘</code></pre>
+<p><strong>铁律：不要用 <code>KhyButton</code>/<code>KhyInput</code>/<code>KhyCard</code> 重新封装 <code>el-button</code>/<code>el-input</code>/<code>el-card</code>。</strong> 1.0 版文档把这三个当成既有组件描述，实测它们在代码中不存在——那是目标态组件库的设想，不是现状。每包一层 EP 基础组件，就多一层属性透传与主题断链风险。FE-002 的组件 API 表只有在组件库真正落地后才生效（其文头有状态标注）。</p>
+<h3 id="5-2-现有共享组件的职责边界-实测">5.2 现有共享组件的职责边界（实测）<a class="anchor" href="#5-2-现有共享组件的职责边界-实测" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>组件</th><th>位置（<code>apps/ai-frontend/src/components/</code>）</th><th>什么时候用</th></tr></thead><tbody><tr><td><code>KhyPageHeader</code></td><td><code>KhyPageHeader.vue</code></td><td>每个管理页顶部的标题 + 描述 + 右侧操作区</td></tr><tr><td><code>KhyEmpty</code></td><td><code>KhyEmpty.vue</code></td><td>列表/表格无数据；带标题、描述、操作插槽</td></tr><tr><td><code>KhyIcon</code></td><td><code>KhyIcon.vue</code>（附 <code>KhyIcon.test.js</code>）</td><td>统一图标出口，不直接在页面里散落 SVG</td></tr><tr><td><code>LoadErrorBanner</code></td><td><code>LoadErrorBanner.vue</code></td><td>页面/区块加载失败的内联错误条（配 <code>src/api/loadError.js</code>）</td></tr><tr><td><code>GlobalProgressBar</code></td><td><code>GlobalProgressBar.vue</code></td><td>全局 HTTP 进度条，由 <code>useGlobalLoading</code> 的 <code>httpStart/httpDone</code> 计数驱动</td></tr><tr><td><code>KhyFloatBall</code></td><td><code>KhyFloatBall.vue</code></td><td>品牌浮动球（唯一允许使用 accent 紫色族的常规组件）</td></tr></tbody></table>
+<p>khyquant 侧的移动端组件族（<code>MobileLayout</code>/<code>MobileNav</code>/<code>MobileToast</code>/<code>MobileStrategySelector</code> 等）遵循同一逻辑：<strong>移动端有独立交互时造 <code>Mobile*</code> 变体，而不是在桌面组件里塞媒体查询分支</strong>。</p>
+<h3 id="5-3-新组件准入与写法">5.3 新组件准入与写法<a class="anchor" href="#5-3-新组件准入与写法" aria-label="锚点">#</a></h3>
+<p><strong>准入</strong>：跨 ≥2 个页面复用 → 可进 <code>components/</code>；只服务单页 → 留在该页目录。<code>Khy</code> 前缀只给「跨页面通用壳」，业务组件不戴前缀。</p>
+<p><strong>写法</strong>（与现存组件一致）：</p>
+<ul><li><code>&lt;script setup&gt;</code> + Composition API；props 带 <code>validator</code>；emits 显式声明；</li><li>样式 <code>scoped</code>，全部走 <code>var(--khy-*)</code>；禁止内联 hex；</li><li>组件有可复用逻辑就抽 composable 放 <code>src/composables/</code>（现状 26 个 <code>use*.js</code>，如 <code>useGateway.js</code>、<code>useProjects.js</code>——这是本仓库前端的既定分层：组件管渲染，composable 管状态与取数）；</li><li>对外行为（props/emits/插槽）变更时补一个 <code>*.test.js</code>（参照 <code>KhyIcon.test.js</code>）。</li></ul>
+<hr>
+<h2 id="6-api-层与服务发现-强制">6. API 层与服务发现（强制）<a class="anchor" href="#6-api-层与服务发现-强制" aria-label="锚点">#</a></h2>
+<h3 id="6-1-零硬编码-agents-md-规则-1-的网页端落地">6.1 零硬编码（AGENTS.md 规则 1 的网页端落地）<a class="anchor" href="#6-1-零硬编码-agents-md-规则-1-的网页端落地" aria-label="锚点">#</a></h3>
+<p><strong>端点来源只允许三种</strong>：env 注入 / 运行时 JSON / 服务注册表。源码里出现字面量 host:port 一律违规。</p>
+<p>ai-frontend 的实测机制，即标准做法：</p>
+<table><thead><tr><th>场景</th><th>机制</th><th>真源文件</th></tr></thead><tbody><tr><td>生产部署</td><td><strong>同源</strong>：后端 <code>server.js</code> 直接托管 <code>dist/</code>，<code>baseURL</code> 留空</td><td><code>src/api/request.js</code></td></tr><tr><td>dev 调试</td><td><code>VITE_AI_API_BASE_URL</code>（<strong>必须带 <code>/api</code> 前缀</strong>），或 Vite dev proxy</td><td><code>apps/ai-frontend/.env.example</code></td></tr><tr><td>dev proxy 目标</td><td><code>backendDiscovery.mjs</code>：后端端口自愈漂移后，从运行时 JSON 读真实端口</td><td><code>apps/ai-frontend/backendDiscovery.mjs</code></td></tr><tr><td>端口默认值</td><td><code>BACKEND_PORT=3000</code>、<code>WEB_FRONTEND_PORT=8090</code></td><td><code>services/backend/src/constants/serviceDefaults.js</code>（唯一真源）</td></tr></tbody></table>
+<p><code>backendDiscovery.mjs</code> 的四级优先级（新增前端需要发现后端时<strong>复刻这个模式</strong>，不要发明第二种）：</p>
+<pre><code>1. 显式 env（VITE_AI_PROXY_TARGET / VITE_AI_API_BASE_URL）
+2. 运行时文件 ai_manage_runtime.json 的 apiPort
+   （数据目录优先级：KHY_DATA_HOME → ~/.khy/.location.json 指针 → ~/.khy → ~/.khyquant）
+3. 端口提示 env（KHY_DAEMON_PORT / AI_MGMT_PORT）
+4. 兜底 127.0.0.1:9090（镜像 serviceDefaults.AI_BACKEND_DEFAULT_URL，改动须同步）</code></pre>
+<p><strong>端口韧性</strong>：后端端口被占时必须自动探测下一个可用端口并写入运行时 JSON（而非 <code>EADDRINUSE</code> 崩溃），前端 dev proxy 经上面的机制自动跟随——这条链路是「后端自愈、前端跟随」的闭环，不允许在前端写死端口把环断开。</p>
+<h3 id="6-2-axios-实例纪律-src-api-request-js-为模板">6.2 axios 实例纪律（<code>src/api/request.js</code> 为模板）<a class="anchor" href="#6-2-axios-实例纪律-src-api-request-js-为模板" aria-label="锚点">#</a></h3>
+<p>现状即规范，新前端/新实例照此对齐：</p>
+<ul><li><strong>超时</strong>：单次 REST 默认 30s（<code>VITE_AI_HTTP_TIMEOUT_MS</code> 可调）——这属于 AGENTS.md 规则 3 豁免的「短生命周期 fetch 超时」；<strong>流式对话走原生 <code>fetch()</code> 不经 axios</strong>，不受此限，长生成不会被误杀。</li><li><strong>重试</strong>：仅网络类错误（<code>isNetworkLikeError</code>，来自 <code>@khy/ui-shared/http/errors</code>）且幂等方法（GET/HEAD/OPTIONS）自动重试一次，间隔 350ms。POST 一律不自动重试。</li><li><strong>计数</strong>：请求/响应拦截器成对调用 <code>httpStart/httpDone</code> 驱动 GlobalProgressBar；重试路径有专门的计数平衡保护（改拦截器时不得破坏，见 request.js 内注释）。</li><li><strong>401</strong>：非登录请求 401 → <code>userStore.logout()</code> + 跳 <code>/login</code>，不弹 toast（页面随即卸载）。</li><li><strong>403</strong>：识别管理员文案，改写为「当前账号没有管理员权限，请改用管理员账号登录」。</li><li><strong>集中报错</strong>：失败请求默认弹一条去重 toast（<code>notifyError(deriveErrorMessage(error))</code>）；调用方自带降级 UI 时传 <code>config.silent = true</code> 抑制（参照 <code>FeatureCatalog</code>、<code>AgentDashboard</code> 轮询）。</li></ul>
+<h3 id="6-3-api-层文件分工-ai-frontend-src-api-新模块对号入座">6.3 API 层文件分工（ai-frontend <code>src/api/</code>，新模块对号入座）<a class="anchor" href="#6-3-api-层文件分工-ai-frontend-src-api-新模块对号入座" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>职责</th></tr></thead><tbody><tr><td><code>request.js</code></td><td>axios 实例与拦截器（§6.2）</td></tr><tr><td><code>authedFetch.js</code></td><td>流式/非 axios 场景的带鉴权 fetch</td></tr><tr><td><code>unwrap.js</code></td><td>后端统一错误格式（code/reason/suggestions）解包</td></tr><tr><td><code>notify.js</code></td><td>toast 文案推导与去重</td></tr><tr><td><code>loadError.js</code> + <code>LoadErrorBanner.vue</code></td><td>区块级加载失败的内联展示</td></tr><tr><td><code>daemonProbe.js</code></td><td>后端守护进程探活</td></tr></tbody></table>
+<hr>
+<h2 id="7-状态与错误文案-强制">7. 状态与错误文案（强制）<a class="anchor" href="#7-状态与错误文案-强制" aria-label="锚点">#</a></h2>
+<p>AGENTS.md 规则 2 全部适用于网页端。网页端特有的落地形式：</p>
+<h3 id="7-1-加载态三档">7.1 加载态三档<a class="anchor" href="#7-1-加载态三档" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>场景</th><th>做法</th></tr></thead><tbody><tr><td>全局导航/请求进行中</td><td><code>GlobalProgressBar</code>（自动，由 axios 拦截器计数，无需手动调用）</td></tr><tr><td>区块加载</td><td>骨架屏，两色用 <code>--khy-skeleton-base/highlight</code>， shimmer 动画 ≤1.5s 周期</td></tr><tr><td>首次启动等待后端</td><td>khyquant 的 <code>FirstLaunchLoader.vue</code> 模式：明确显示「正在启动后端服务（第 n 次探测）」而非裸 spinner</td></tr></tbody></table>
+<p>任何加载态文案必须满足<strong>动作 + 目标 + 进度</strong>：<code>加载渠道列表（第 2 次重试）…</code> ✅，<code>加载中…</code> ❌。</p>
+<h3 id="7-2-空态与错误态">7.2 空态与错误态<a class="anchor" href="#7-2-空态与错误态" aria-label="锚点">#</a></h3>
+<ul><li>空态统一 <code>KhyEmpty</code>：标题说「没有什么」，描述说「如何有」，操作插槽给入口按钮。</li><li>区块错误统一 <code>LoadErrorBanner</code>：遵循错误模板 <strong><code>{问题}：{原因}，{修复建议}</code></strong>——<code>加载渠道失败：后端未响应（连接超时），请确认 ai-backend 已启动后重试</code> ✅，<code>加载失败</code> ❌。</li><li>toast 走 <code>notify.js</code> 集中出口，禁止在组件里直接 <code>ElMessage.error('出错了')</code>。</li></ul>
+<h3 id="7-3-长任务">7.3 长任务<a class="anchor" href="#7-3-长任务" aria-label="锚点">#</a></h3>
+<p>AI 对话等流式场景的超时必须是<strong>空闲/滑动超时</strong>（收到分块即重置），配置走 <code>VITE_AI_WS_IDLE_TIMEOUT_MS</code> 等 env（见 <code>.env.example</code> 的 WS 段）；禁止固定时长硬杀活跃连接。</p>
+<hr>
+<h2 id="8-响应式与移动端">8. 响应式与移动端<a class="anchor" href="#8-响应式与移动端" aria-label="锚点">#</a></h2>
+<ul><li><strong>断点</strong>（与现状样式一致）：<code>&lt;640px</code> 手机、<code>640–1023px</code> 平板、<code>≥1024px</code> 桌面。khyquant 的布局间距用 <code>clamp()</code> 流式值（<code>--content-padding: clamp(12px, 2vw, 32px)</code>，见 <code>theme.css</code>），新页面优先沿用这个模式而非堆媒体查询。</li><li><strong>khyquant 移动端三件套</strong>：<code>src/styles/mobile.css</code>（组件级移动适配）、<code>responsive.css</code>（布局断点）、<code>mobile-scroll.css</code>（滚动行为）。改移动端样式先定位进对应文件，不要在组件里新开第四处。</li><li><strong>移动端交互变体</strong>：造 <code>Mobile*</code> 组件（§5.2），触控目标 ≥44px，输入框字号 ≥16px 防 iOS 自动缩放。</li><li><strong>Capacitor 打包</strong>：<code>mobile:sync</code> / <code>mobile:apk:debug</code> 等入口在 <code>software/khyquant/frontend/package.json</code>；PWA 更新提示统一用 <code>PwaUpdatePrompt.vue</code>，离线提示用 <code>OfflineIndicator.vue</code>。</li></ul>
+<hr>
+<h2 id="9-性能">9. 性能<a class="anchor" href="#9-性能" aria-label="锚点">#</a></h2>
+<ul><li><strong>代码分割</strong>：路由级懒加载是默认（<code>component: () =&gt; import(...)</code>）；重组件（Vue Flow 编辑器、xterm 终端、K 线图）必须 <code>defineAsyncComponent</code> 或独立 chunk。</li><li><strong>体积门禁</strong>：<code>npm run check:frontend-size</code>（<code>scripts/ci/check-frontend-size.js</code> + <code>frontend-size-baseline.json</code>）——与仓库其他基线同一套路，<strong>只降不升</strong>。</li><li><strong>预取</strong>：路由级预取走 <code>useRoutePrefetch.js</code> composable，不在组件里手写 <code>import()</code> 预取。</li><li><strong>图片</strong>：懒加载 <code>loading=&quot;lazy&quot;</code> + <code>decoding=&quot;async&quot;</code>；图标优先 SVG/图标库，不引位图图标包。</li></ul>
+<hr>
+<h2 id="10-可访问性">10. 可访问性<a class="anchor" href="#10-可访问性" aria-label="锚点">#</a></h2>
+<p>真源是 <code>[DESIGN-A11Y-001]</code>。网页端最低执行线（并入 §13 验收清单）：</p>
+<ol><li>交互元素键盘可达，focus 态可见（EP 默认可靠，自定义组件必须补 <code>:focus-visible</code> 样式）；</li><li>状态变化区（toast、进度）有 <code>aria-live</code>；加载区有 <code>aria-busy</code>；</li><li>文本对比度满足 WCAG AA（正文 ≥4.5:1），双主题各自达标——暗色下 <code>--khy-text-muted</code> 对 <code>--khy-bg-main</code> 是已知临界项，自查时重点看；</li><li>尊重 <code>prefers-reduced-motion</code>：骨架屏 shimmer、浮动球动画在该偏好下停用。</li></ol>
+<hr>
+<h2 id="11-质量门与工具链-全部真实存在">11. 质量门与工具链（全部真实存在）<a class="anchor" href="#11-质量门与工具链-全部真实存在" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>命令</th><th>作用</th><th>何时跑</th></tr></thead><tbody><tr><td><code>npm run check:frontend-size</code></td><td>前端体积基线门禁（只降不升）</td><td>构建相关 PR</td></tr><tr><td><code>npm run frontend:fix-colors</code> / <code>:apply</code></td><td>硬编码 hex → CSS 变量 扫描/修复</td><td>含样式改动时</td></tr><tr><td><code>npm run frontend:fix-var</code> / <code>:apply</code></td><td>CSS 变量声明问题修复</td><td>含样式改动时</td></tr><tr><td><code>npm run frontend:cleanup-console</code></td><td>前端 console 调试残留清理</td><td>提交前</td></tr><tr><td><code>npm run test:frontend</code></td><td>ai-frontend 的 vitest</td><td>提交前</td></tr><tr><td><code>node scripts/ci/check-agent-rules.js --changed</code></td><td>全仓红线（硬编码端点/含糊状态/硬超时等）</td><td>提交前</td></tr><tr><td><code>npm run lint</code>（各前端目录内）</td><td>eslint（ai-frontend 走 <code>scripts/lint.mjs</code>，门禁覆盖 <code>.vue</code>，error 硬 0、warning 预算只减不增）</td><td>提交前</td></tr></tbody></table>
+<p><strong>测试约定</strong>：本仓库前端测试的特色是 <strong>wiring test</strong>（<code>*.wiring.test.js</code>，如 <code>nav.wiring.test.js</code>、<code>useProjects.wiring.test.js</code>）——验证「声明的数据/路由/调用」与「真实接线」一致，而非测渲染像素。新增导航项、新增 API 模块时，同步补对应 wiring test。</p>
+<hr>
+<h2 id="12-已知缺口登记表-只降不升">12. 已知缺口登记表（只降不升）<a class="anchor" href="#12-已知缺口登记表-只降不升" aria-label="锚点">#</a></h2>
+<blockquote><p>这是规范与现状之间的差异清单，性质同仓库其他 baseline：新增缺口视同违规，收敛一条划掉一条。</p></blockquote>
+<table><thead><tr><th>#</th><th>缺口</th><th>实测证据</th><th>收敛方向</th></tr></thead><tbody><tr><td>G1</td><td><del><code>--khy-white</code> 被引用 24 次但 0 处定义</del></td><td>✅ 已在 <code>:root</code> 补 <code>--khy-white: #ffffff</code></td><td>已收敛</td></tr><tr><td>G2</td><td><del>khyquant 全端 0 个 <code>--khy-*</code> 定义，却有多处 <code>var(--khy-primary/success/gray-*)</code> 悬空引用</del></td><td>✅ 已在 <code>theme.css :root</code> 补 22 个 <code>--khy-*</code> 基础定义（含双主题灰阶），全部悬空引用已消除</td><td>已收敛</td></tr><tr><td>G3</td><td><del>khyquant 平行令牌命名（<code>--primary-color</code> 等）与 <code>--khy-*</code> 双轨并存</del></td><td>✅ <code>--primary-color: var(--khy-primary)</code> 等映射已在 <code>theme.css</code> 单文件收敛，新代码只用 <code>--khy-*</code></td><td>已收敛</td></tr><tr><td>G4</td><td><del><code>frontend:fix-colors</code> 的 COLOR_MAP 目标含 <code>--khy-gray-*</code>，该灰阶在任何端都未定义</del></td><td>✅ 已在 <code>:root</code> + <code>html.dark</code> 补 <code>--khy-gray-50</code> 至 <code>--khy-gray-900</code></td><td>已收敛</td></tr><tr><td>G5</td><td>间距/字号无 token，文档曾虚构 <code>--khy-space-*</code></td><td>✅ 已评估：ai-frontend 无间距令牌（px 硬编码），khyquant 有 <code>--spacing-*</code>/<code>--radius-*</code> 但非 <code>--khy-*</code> 前缀。引入 <code>--khy-space-*</code> 需全量重构数千处 px 值，属未来重大重构</td><td>已评估·延后</td></tr><tr><td>G6</td><td>FE-002/FE-003（1.0）描述的 <code>KhyButton/KhyInput/KhyCard</code> 不存在于代码</td><td>✅ 已评估：当前方案为 Element Plus 原组件直用 + 6 个真实 Khy* 组件（KhyIcon 等），组件库封装属未来工作</td><td>已评估·延后</td></tr><tr><td>G7</td><td><del>ai-frontend 26 个文件含硬编码 hex 颜色</del></td><td>✅ 已批量替换 260 处，26→0 文件（含灰阶/终端/metric/markdown 全量令牌化）</td><td>已收敛</td></tr><tr><td>G8</td><td><del>views/ + components/ 共 32 个文件 389 处直接 ElMessage 调用未走集中出口</del></td><td>✅ 已全量迁移到 <code>notify.js</code>（showSuccess/showError/showWarning/showInfo），0 处剩余直接调用</td><td>已收敛</td></tr></tbody></table>
+<hr>
+<h2 id="13-pr-验收清单-网页端改动逐项过">13. PR 验收清单（网页端改动逐项过）<a class="anchor" href="#13-pr-验收清单-网页端改动逐项过" aria-label="锚点">#</a></h2>
+<ul><li>[ ] 无端点硬编码：新代码没有字面量 host:port，端点走 env / 运行时 JSON / <code>serviceDefaults.js</code></li><li>[ ] 无颜色硬编码：样式全部 <code>var(--khy-*)</code>，<code>frontend:fix-colors</code> 预览零新增</li><li>[ ] 新增 token 双主题成对定义（<code>:root</code> + <code>html.dark</code>）</li><li>[ ] 加载/空/错误三态齐备：骨架屏或进度条、<code>KhyEmpty</code>、<code>LoadErrorBanner</code>（或 <code>silent</code> 降级）</li><li>[ ] 面向用户文案满足「动作+目标+进度」与「问题：原因，修复建议」</li><li>[ ] 新页面已登记 <code>src/nav/index.js</code>，管理页落在 <code>/admin/*</code>，并补 wiring test</li><li>[ ] 基础交互用 Element Plus 原组件，未新造 <code>Khy*</code> 封装基础控件</li><li>[ ] 双主题自查通过；移动端（如涉及）触控目标与输入字号达标</li><li>[ ] <code>lint</code> / <code>test:frontend</code> / <code>check:frontend-size</code> / <code>check-agent-rules --changed</code> 全绿</li></ul>
+<hr>
+<h2 id="14-版本历史">14. 版本历史<a class="anchor" href="#14-版本历史" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-09-04</td><td>初始版本（泛用模板，与代码实测脱节）</td></tr><tr><td>2.0.0</td><td>2026-09-09</td><td>全面重写为实测对齐版：令牌真源锁定 <code>newapi-theme.css</code>、组件分层改为「EP 基座 + 6 个真实 Khy*」、补服务发现/API 层/状态文案强制节、建立已知缺口登记表 G1–G6</td></tr><tr><td>2.1.0</td><td>2026-09-10</td><td>修复 G1（<code>--khy-white</code> 补定义）、修复 G4（补 <code>--khy-gray-50</code> 至 <code>--khy-gray-900</code> 灰阶，双主题成对）、批量替换 193 处硬编码 hex（26→15 文件）、修复 3 处模糊文案「加载中...」、新增 G7 硬编码颜色收敛记录</td></tr><tr><td>2.2.0</td><td>2026-09-10</td><td>修复 G2（khyquant <code>theme.css</code> 补 22 个 <code>--khy-*</code> 基础定义含双主题灰阶）、修复 G3（平行令牌映射收敛）、G7 全量完成（260 处 hex 替换，26→0 文件，含代码/终端/metric/markdown 专用令牌）、新增 G8 ElMessage 集中化（389 处直接调用迁移到 <code>notify.js</code>，0 处剩余）、<code>notify.js</code> 扩充 showSuccess/showError/showWarning/showInfo</td></tr></tbody></table>
+<hr>
+<p><em>本规范由 khy-os 前端方向维护；与代码冲突时以代码为准并登记 §12 缺口。</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/10_规范/DESIGN-DOC/00_INDEX_DESIGN-DOC-总目录.html"><div class="dir">← 上一篇</div><div class="ttl">DESIGN-DOC</div></a><a class="next" href="../../../docs/10_规范/DESIGN-FE/[DESIGN-FE-002] 前端组件库规范.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-FE-002] 前端组件库规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/10_规范/DESIGN-FE/[DESIGN-FE-001] 前端页面规范.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

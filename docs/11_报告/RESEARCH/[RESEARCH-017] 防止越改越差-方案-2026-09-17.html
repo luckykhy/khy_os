@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- MIRROR: [RESEARCH-017] 防止越改越差-方案-2026-09-17.md -->
+<title>防止 khy-os「越改越差」——写入前拦截 + 逐文件棘轮 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/19_资产/site/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/19_资产/site/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>11_报告<span class="sep">›</span>RESEARCH<span class="sep">›</span>防止 khy-os「越改越差」——写入前拦截 + 逐文件棘轮</div>
+      <header class="hero reveal"><h1>防止 khy-os「越改越差」——写入前拦截 + 逐文件棘轮</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#防止-khy-os-越改越差-写入前拦截-逐文件棘轮">防止 khy-os「越改越差」——写入前拦截 + 逐文件棘轮</a></li><li class="lvl-2"><a href="#0-结论先行">0. 结论先行</a></li><li class="lvl-2"><a href="#1-五条实测证据">1. 五条实测证据</a></li><li class="lvl-3"><a href="#证据-1-弱模型护栏的-拒绝-没有消费者-最关键">证据 1 — 弱模型护栏的「拒绝」没有消费者（最关键）</a></li><li class="lvl-3"><a href="#证据-2-棘轮只能拦-翻倍级-恶化">证据 2 — 棘轮只能拦「翻倍级」恶化</a></li><li class="lvl-3"><a href="#证据-3-pr-门禁有-4-处-continue-on-error-红灯已常态化">证据 3 — PR 门禁有 4 处 `continue-on-error`，红灯已常态化</a></li><li class="lvl-3"><a href="#证据-4-本地无任何钩子">证据 4 — 本地无任何钩子</a></li><li class="lvl-3"><a href="#证据-5-规则体系已近饱和-边际收益递减">证据 5 — 规则体系已近饱和，边际收益递减</a></li><li class="lvl-2"><a href="#2-三层措施">2. 三层措施</a></li><li class="lvl-3"><a href="#l0-写入前硬拦截-把-事后唠叨-变成-事前拦截">L0 — 写入前硬拦截（把「事后唠叨」变成「事前拦截」）</a></li><li class="lvl-3"><a href="#l1-逐文件-改前-vs-改后-棘轮-换分母">L1 — 逐文件「改前 vs 改后」棘轮（换分母）</a></li><li class="lvl-3"><a href="#l2-计数棘轮-替代-全绿才过">L2 — 计数棘轮，替代「全绿才过」</a></li><li class="lvl-3"><a href="#l3-健康快照时间序列-回滚锚点">L3 — 健康快照时间序列 + 回滚锚点</a></li><li class="lvl-2"><a href="#3-分阶段落地建议">3. 分阶段落地建议</a></li><li class="lvl-2"><a href="#4-明确的反模式-不要做">4. 明确的反模式（不要做）</a></li><li class="lvl-2"><a href="#5-验收标准-可机判">5. 验收标准（可机判）</a></li><li class="lvl-2"><a href="#附-本次诊断所用命令-可复核">附：本次诊断所用命令（可复核）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="防止-khy-os-越改越差-写入前拦截-逐文件棘轮">防止 khy-os「越改越差」——写入前拦截 + 逐文件棘轮<a class="anchor" href="#防止-khy-os-越改越差-写入前拦截-逐文件棘轮" aria-label="锚点">#</a></h1>
+<p>日期：2026-09-17<br>性质：方案提案（<strong>Phase 0 与 L1 已编码落地</strong>；L2/L3 待实施）<br>作者：诊断会话实测输出</p>
+<hr>
+<h2 id="0-结论先行">0. 结论先行<a class="anchor" href="#0-结论先行" aria-label="锚点">#</a></h2>
+<p><strong>不要再新增检查器。</strong></p>
+<p>本仓库已有 <strong>74 个检查器、73 条规则、91.8% 可执行覆盖</strong>（<code>npm run rules:coverage</code> 实测）。<br>数量不是缺口。缺口在两处结构性位置上：</p>
+<table><thead><tr><th>缺口</th><th>现状</th><th>后果</th></tr></thead><tbody><tr><td><strong>位置错</strong></td><td>所有拦截都发生在写入<strong>之后</strong></td><td>小模型一次 pass 改 40 个文件，全部落盘后才有声音</td></tr><tr><td><strong>分母错</strong></td><td>棘轮以<strong>全仓</strong>为分母</td><td>容忍度是实际值的 5.6 倍，只能拦「翻倍级」恶化</td></tr></tbody></table>
+<p>「越改越差」的机制不是缺檢查器，是<strong>劣化发生在检查之前</strong>，且<strong>单次劣化量在噪声以下</strong>。</p>
+<hr>
+<h2 id="1-五条实测证据">1. 五条实测证据<a class="anchor" href="#1-五条实测证据" aria-label="锚点">#</a></h2>
+<blockquote><p>全部为 2026-09-17 本机实跑结果，可复核。</p></blockquote>
+<h3 id="证据-1-弱模型护栏的-拒绝-没有消费者-最关键">证据 1 — 弱模型护栏的「拒绝」没有消费者（最关键）<a class="anchor" href="#证据-1-弱模型护栏的-拒绝-没有消费者-最关键" aria-label="锚点">#</a></h3>
+<p><code>services/backend/src/services/toolUseLoopCore.js:10733</code> 注释原文：</p>
+<blockquote><p><code>// ... 事后顾问不硬拦(编辑已发生), 与 selfEditAdvisory 一致的 best-effort 姿态。</code></p></blockquote>
+<p><code>npm run check:weak-model-guard</code> 实测（0 error / <strong>1 warning</strong>）：</p>
+<pre><code>[WARN ] guard-declared-deny-unconsumed services/backend/src/services/toolUseLoopCore.js:1
+  护栏调用点 toolUseLoopCore.js 只投递提醒文案（humanLine/aiNote），从不读取拒绝信号
+  （allow / require-strong-review）：SECURITY-003 声明的「拒绝」实际只是事后提醒，编辑已发生。</code></pre>
+<p>即：<strong>SECURITY-003 名义上是&quot;拒绝&quot;，实际是&quot;事后唠叨&quot;</strong>。这正是「小模型搞破坏」的直接通道。</p>
+<h3 id="证据-2-棘轮只能拦-翻倍级-恶化">证据 2 — 棘轮只能拦「翻倍级」恶化<a class="anchor" href="#证据-2-棘轮只能拦-翻倍级-恶化" aria-label="锚点">#</a></h3>
+<p><code>scripts/ci/debt-ledger.json</code> 的 <code>_why</code> 自述：</p>
+<blockquote><p>容忍度是实际的 5.6x……红着的门等于没有门。</p></blockquote>
+<p>今日实测台账：开放条目 9 条，累计债务 <strong>15934 处</strong>。典型一例：</p>
+<pre><code>standards.consoleLog     4584 → 3000   dueBy 2026-12-31
+standards.fileLines       352 →  300   dueBy 2026-12-31
+standards.functionLines  2144 → 1600   dueBy 2026-12-31
+standards.nestingDepth   8703 → 8707   ← target 反而比 measured 更差（靠 targetPending 字段声明豁免）</code></pre>
+<p>目标全在年底。以 <code>consoleLog</code> 为例：全仓 4584 条，小模型一次加 8 条 → 4592，<strong>漂移 0.17%</strong>，<br>在全仓棘轮下完全不可见。这就是「N 次微小劣化累积成灾难」的数学原因。</p>
+<h3 id="证据-3-pr-门禁有-4-处-continue-on-error-红灯已常态化">证据 3 — PR 门禁有 4 处 <code>continue-on-error</code>，红灯已常态化<a class="anchor" href="#证据-3-pr-门禁有-4-处-continue-on-error-红灯已常态化" aria-label="锚点">#</a></h3>
+<p><code>.github/workflows/pr-gate.yml</code>：</p>
+<table><thead><tr><th>行</th><th>步骤</th><th>状态</th></tr></thead><tbody><tr><td>L68</td><td>Check change safety (strict)</td><td><code>continue-on-error: true</code></td></tr><tr><td>L167</td><td>Check rule gate</td><td>shadow mode, <code>continue-on-error: true</code></td></tr><tr><td>L337</td><td>Lint modified files</td><td>report only, <code>continue-on-error: true</code></td></tr><tr><td>L363</td><td><strong>test-baseline 整个 job</strong></td><td><code>continue-on-error: true</code></td></tr></tbody></table>
+<p><strong>测试完全不把关。</strong> 仓库注释已自承 Phase 1→2→3 升级路径（&quot;3 个月后&quot;、&quot;6 个月后&quot;），<br>但按 E. 的可膨胀原则，<code>continue-on-error</code> 一旦登记就倾向永久化。</p>
+<h3 id="证据-4-本地无任何钩子">证据 4 — 本地无任何钩子<a class="anchor" href="#证据-4-本地无任何钩子" aria-label="锚点">#</a></h3>
+<p>无 <code>.husky/</code>、无 <code>.pre-commit-config.yaml</code>、<code>.git/hooks/</code> 仅剩 sample。<br><code>rules:gate:commit</code>（快档）已存在，<strong>但没有自动触发点</strong>。<br>→ 直推主干 / 本地修改，是零防护区。</p>
+<h3 id="证据-5-规则体系已近饱和-边际收益递减">证据 5 — 规则体系已近饱和，边际收益递减<a class="anchor" href="#证据-5-规则体系已近饱和-边际收益递减" aria-label="锚点">#</a></h3>
+<pre><code>规则 73 条 / 已执行 67 条 (91.8%)
+检查器 65/74 已接线（零接线豁免 9 项）
+未被任何规则登记的守卫脚本 26 个
+人工评审兜底 5 条：MEMORY-001/004, PROCESS-001/101, DOCS-004</code></pre>
+<p>再加第 75 个检查器，收益接近 0，维护成本线性增长。</p>
+<hr>
+<h2 id="2-三层措施">2. 三层措施<a class="anchor" href="#2-三层措施" aria-label="锚点">#</a></h2>
+<h3 id="l0-写入前硬拦截-把-事后唠叨-变成-事前拦截">L0 — 写入前硬拦截（把「事后唠叨」变成「事前拦截」）<a class="anchor" href="#l0-写入前硬拦截-把-事后唠叨-变成-事前拦截" aria-label="锚点">#</a></h3>
+<p><strong>这是唯一一处能真正翻转时间顺序的改动，优先级最高。</strong></p>
+<ul><li><strong>位置</strong>：<code>services/backend/src/tools/{FileEdit,FileWrite,MultiEdit,ApplyPatch}Tool/index.js</code>，</li></ul>
+<p>在真正 <code>fs.writeFileSync</code> <strong>之前</strong>调用已有的 <code>weakModelChangeGuard.assessWeakModelChange()</code>。</p>
+<ul><li><strong>契约</strong>：<code>allow === false</code> → 返回<strong>工具级错误</strong>（而非 advisory 文案），写入不发生。</li><li><strong>fail-closed</strong>：未知 tier 按最弱档处理（对齐 SECURITY-004 不变量）；</li></ul>
+<p>判定必须与 <code>KHY_PERMISSION_MODE=bypass/yolo</code>、<code>KHY_SYSCALL_GATEWAY=off</code> 无关<br>  （复用 SECURITY-002 <code>isUnbypassableGate</code> 的既有模式与断言）。</p>
+<ul><li><strong>门限不变</strong>：仅 <code>tier ∈ {T2,T3}</code> 且 <code>risk === 'red-line'</code> 才挡；<code>sensitive</code> 仍为 confirm。</li></ul>
+<p>不会误伤 T0/T1 与日常编辑。</p>
+<ul><li><strong>反哺现有守卫</strong>：<code>check-weak-model-guard</code> 的第 8 条断言（<code>guard-declared-deny-unconsumed</code>）</li></ul>
+<p>会从 WARN 自然升级为 ERROR —— 因为拒绝信号终于有消费者了。这是<strong>自检效果</strong>，不需要手写。</p>
+<blockquote><p>配套警戒：<code>KHY_WEAK_MODEL_EDIT_GUARD=off</code> 逃生阀保留，但必须<strong>默认开</strong>，<br>且需要一条守卫防止它被写进默认配置（否则等于把锁焊死在开门位）。</p></blockquote>
+<h3 id="l1-逐文件-改前-vs-改后-棘轮-换分母">L1 — 逐文件「改前 vs 改后」棘轮（换分母）<a class="anchor" href="#l1-逐文件-改前-vs-改后-棘轮-换分母" aria-label="锚点">#</a></h3>
+<p>取代全仓基线对小漂移的无力。核心规则一句话：</p>
+<blockquote><p><strong>存量债冻结不动，但文件一旦被摸过，它的债不许增加。</strong></p></blockquote>
+<p>对每个变更文件 F，采集同一组指标，对比 <code>git diff &lt;base&gt;...HEAD</code>：</p>
+<table><thead><tr><th>指标</th><th>方向</th><th>备注</th></tr></thead><tbody><tr><td><code>lines</code></td><td>只降</td><td>行数</td></tr><tr><td><code>maxFunctionLines</code></td><td>只降</td><td>—</td></tr><tr><td><code>maxNesting</code></td><td>只降</td><td>需先修计量口径（见 debt-ledger <code>nestingDepth</code> 条）</td></tr><tr><td><code>consoleCalls</code></td><td>只降</td><td>非测试文件</td></tr><tr><td><code>lintErrors</code></td><td>只降</td><td>缺口正是 pr-gate L337 的 report-only</td></tr><tr><td><code>lintWarnings</code></td><td>只降</td><td>同上</td></tr><tr><td><code>duplicateBlocks</code></td><td>只降</td><td>复用 check-duplication 已有能力</td></tr><tr><td><code>todoCount</code></td><td>只降</td><td>防「标记代替修复」</td></tr></tbody></table>
+<p><strong>判定</strong>：</p>
+<ul><li>新增文件（状态 A）→ 零容忍档，全部指标不得超过新文件阈值。</li><li>修改文件（状态 M）→ <code>metric_after(F) ≤ metric_before(F)</code>，严格成立。</li><li>违反 → error + 退出码 1；显式豁免走 <code>--accept=&lt;file&gt;:&lt;理由&gt;</code>，</li></ul>
+<p>写入 <code>regression-exemptions.json</code>，带 <code>owner</code> + <code>dueBy</code> + 到期自动复检（不得是永久通行证）。</p>
+<p><strong>为什么比全仓棘轮强</strong>：同一个 <code>consoleLog</code> 例子 ——<br>全仓视角 4584→4592（+0.17%，不可见）；<br>被改的那个文件视角 12→20（<strong>+67%，立刻红</strong>）。</p>
+<p><strong>副作用是正面的</strong>：它把&quot;还债&quot;的激励放对了地方 —— 你想改一个脏文件，就得顺手把它弄干净，<br>而不是像现在这样随便改、脏债原样留下。</p>
+<blockquote><p>全仓棘轮<strong>不废弃</strong>，两者并存：全仓棘轮拦「别人搬走文件、新增未登记目录」这类全局破坏，<br>逐文件棘轮拦「每次 +3 行」的漂移。</p></blockquote>
+<h4 id="l1-实现状态-2026-09-17-已落地">L1 实现状态（2026-09-17 已落地）<a class="anchor" href="#l1-实现状态-2026-09-17-已落地" aria-label="锚点">#</a></h4>
+<ul><li><strong>脚本</strong>：<code>scripts/ci/check-file-ratchet.js</code>（AST-free、零依赖、秒级）。</li><li><strong>配置</strong>：<code>scripts/ci/file-ratchet.config.json</code>（caps / softMetrics / exceptions）。</li><li><strong>指标模型</strong>：HARD（变差即红）= <code>maxFuncLines</code> / <code>maxNesting</code> / <code>consoleCount</code> /</li></ul>
+<p><code>debuggerCount</code> / <code>todoCount</code>；SOFT（只报告）= <code>lines</code> / <code>dupBlock</code>。<br>  lint 指标（原提案表里的 <code>lintErrors/lintWarnings</code>）默认不内置，避免每文件跑全量 eslint<br>  拖慢门禁；现有 pr-gate 的 lint 步骤已覆盖该维度，故不重复。</p>
+<ul><li><strong>判定</strong>：M/R 文件比 base 与 head 的同一指标，任一 HARD 变差 → error；A 文件按 <code>caps</code> 绝对上限卡。</li><li><strong>接线</strong>：<ul><li><code>pr-gate.yml</code> 在 report-only lint 步骤后新增<strong>阻断</strong>步骤 <code>Check per-file change ratchet</code></li></ul></li></ul>
+<p>（无 <code>continue-on-error</code>，<code>GIT_BASE_REF = PR base.sha</code>）。</p>
+<ul><li><code>package.json</code> 新增 <code>check:file-ratchet</code>；并接入 <code>check:changed</code> 本地链尾（本地提交前即可拦）。</li></ul>
+<p>改坏既有文件→exit 1、新增脏文件→over-cap、无变化→exit 0）。</p>
+<ul><li><strong>已知约束</strong>：本机 Git Bash 的 <code>tail/grep/cd/rm</code> 被 shim 截断，取值一律走 node + <code>spawnSync</code> 收集；</li></ul>
+<p>仓库实际上游是 <code>khy-mirror/main</code>（勿硬编码 <code>origin/main</code>）。</p>
+<h3 id="l2-计数棘轮-替代-全绿才过">L2 — 计数棘轮，替代「全绿才过」<a class="anchor" href="#l2-计数棘轮-替代-全绿才过" aria-label="锚点">#</a></h3>
+<p>这是解开「红灯常态化」两难的正确姿势。现状：9 个失败用例 → 整个 test job 不阻断。<br>不是桩上墙——而是在拦住新劣化的同时不打死主干。</p>
+<ul><li>记录基线 <code>{ passed, failed, skipped }</code>。</li><li>断言：<strong><code>failed</code> 不得增加、<code>passed</code> 不得减少</strong>。</li><li>存量 9 个失败可以躺债去还，但<strong>谁弄坏一个新的，立刻红</strong>。</li><li>达标后可平滑升级为&quot;全绿才过&quot;，届时删掉 <code>continue-on-error</code> 即可。</li></ul>
+<p>同理适用于 E：并不能让 rules:gate 立刻转阻断，但可以先把 gate 内的计数棘轮起来。</p>
+<h3 id="l3-健康快照时间序列-回滚锚点">L3 — 健康快照时间序列 + 回滚锚点<a class="anchor" href="#l3-健康快照时间序列-回滚锚点" aria-label="锚点">#</a></h3>
+<ul><li><code>npm run health:snapshot</code> → 产出 <code>{ commit, date, metrics{} }</code>，追加到时间序列。</li><li>劣化发生时输出：<strong>「上次绿在 &lt;sha&gt;，差 &lt;n&gt; 项」</strong>，让回溯有锚点。</li><li>每次绿灯的发展分支的 commit sha 都能成为回滚点。</li></ul>
+<hr>
+<h2 id="3-分阶段落地建议">3. 分阶段落地建议<a class="anchor" href="#3-分阶段落地建议" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>阶段</th><th>内容</th><th>交付物</th><th>估时</th><th>状态</th></tr></thead><tbody><tr><td>Phase 0</td><td>写入前硬拦截</td><td><code>WeakModelEditGuard</code>（PreToolUse 硬底）+ 第 8 条断言升级为 error</td><td>半天</td><td>✅ 已落地</td></tr><tr><td>Phase 1</td><td>健康向量采集（先采集不阻断）</td><td><code>health-metrics.js</code> + <code>health:snapshot</code></td><td>1–2 天</td><td>⬜ 待实施</td></tr><tr><td>Phase 2</td><td>逐文件回归对比，pr-gate 增阻断步骤</td><td><code>scripts/ci/check-file-ratchet.js</code> + pr-gate 阻断接线</td><td>2–3 天</td><td>✅ 已落地</td></tr><tr><td>Phase 3</td><td>测试计数棘轮，test-baseline 转半阻断</td><td>改 pr-gate L363</td><td>1 天</td><td>⬜ 待实施</td></tr><tr><td>Phase 4</td><td>pre-commit 钩子 + 健康时间序列看板</td><td><code>.husky/pre-commit</code> 跑 <code>rules:gate:commit</code></td><td>1 天</td><td>⬜ 待实施</td></tr></tbody></table>
+<p>Phase 0 单独成 bulletin：它是唯一的「时间顺序翻转」，也是成本最低、收益最高的一步，<br>不必等其他阶段。</p>
+<hr>
+<h2 id="4-明确的反模式-不要做">4. 明确的反模式（不要做）<a class="anchor" href="#4-明确的反模式-不要做" aria-label="锚点">#</a></h2>
+<ol><li><strong>不要再加第 75 个检查器。</strong> 91.8% 覆盖说明瓶颈不在这。</li><li><strong>不要试图让 <code>weakModelChangeGuard</code> 认识更多红线路径。</strong> 6 类红线已足够；</li></ol>
+<p>「改坏」的主要来源不是改红线文件，而是<strong>在普通文件里堆积劣化</strong><br>   （<code>aiChatCore.js</code> 涨到 4738 行就是这么来的）。</p>
+<ol><li><strong>不要把 <code>continue-on-error</code> 一把删掉。</strong> 那会让主干永久红灯，然后所有人学会忽略红色 ——</li></ol>
+<p>这正是债务台账 <code>_why</code> 记下的教训。用计数棘轮过渡。</p>
+<ol><li><strong>不要让新守卫可被 <code>--yolo</code> 绕过。</strong> 必须复用 <code>isUnbypassableGate</code> 的 fail-closed 模式。</li></ol>
+<hr>
+<h2 id="5-验收标准-可机判">5. 验收标准（可机判）<a class="anchor" href="#5-验收标准-可机判" aria-label="锚点">#</a></h2>
+<ul><li>[x] T2/T3 改 <code>flagRegistry.js</code> → 工具返回错误，<strong>文件内容未变</strong>（<code>git diff</code> 为空）。（Phase 0 已验证）</li><li>[x] 上述行为在 <code>KHY_PERMISSION_MODE=bypass/yolo</code>、<code>KHY_SYSCALL_GATEWAY=off</code> 下同样成立。（Phase 0 已验证）</li><li>[x] <code>check-weak-model-guard</code> 的 <code>guard-declared-deny-unconsumed</code> 消失（拒绝信号已有消费者）。（Phase 0 已验证）</li><li>[x] 构造「在既有文件加 console.log / 加长函数」的 PR → <code>check-file-ratchet</code> 退出码 1，且精确定位到该文件。（L1 已验证）</li><li>[x] 构造「新增带 debugger 的文件」的 PR → <code>check-file-ratchet</code> over-cap 退出码 1。（L1 已验证）</li><li>[ ] 构造「弄坏 1 个测试」的 PR → test job 红；不变的情况 → 绿。（L2 待实施）</li><li>[ ] pre-commit 在 &lt;15s 内返回（快档），不拖慢本地循环。（Phase 4 待实施）</li></ul>
+<hr>
+<h2 id="附-本次诊断所用命令-可复核">附：本次诊断所用命令（可复核）<a class="anchor" href="#附-本次诊断所用命令-可复核" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">node scripts/ci/check-weak-model-guard.js      <span class="hljs-comment"># 0 error / 1 warning ← 证据 1</span>
+node scripts/ci/check-debt-ledger.js           <span class="hljs-comment"># open 9 / 累计 15934 处 ← 证据 2</span>
+node scripts/ruleguard/index.js coverage       <span class="hljs-comment"># 73 规则 / 91.8% ← 证据 5</span>
+node scripts/ci/check-wiring.js                <span class="hljs-comment"># 74 检查器全部接线（豁免 9）</span></code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/11_报告/RESEARCH/[RESEARCH-016] HQ丢弃-多机协作保留-方案-2026-09-17.html"><div class="dir">← 上一篇</div><div class="ttl">丢弃 HQ + 保留多机协作：可行方案（修订版）</div></a><a class="next" href="../../../docs/11_报告/RESEARCH/00_INDEX_RESEARCH-总目录.html"><div class="dir">下一篇 →</div><div class="ttl">RESEARCH</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/11_报告/RESEARCH/[RESEARCH-017] 防止越改越差-方案-2026-09-17.html";</script>
+<script src="../../../docs/19_资产/site/nav-data.js"></script>
+<script src="../../../docs/19_资产/site/mermaid.min.js"></script>
+<script src="../../../docs/19_资产/site/docs-site.js"></script>
+</body>
+</html>

@@ -7,7 +7,7 @@
 module.exports = async function handleVersion(parsed, ctx) {
   const { printSuccess } = ctx || {};
   try {
-    const v = process.env.KHYQUANT_PKG_VERSION || require('../../package.json').version;
+    const v = process.env.KHYQUANT_PKG_VERSION || require('../../../../package.json').version;
     if (printSuccess) printSuccess(`Khy-OS v${v}`);
     else console.log(`Khy-OS v${v}`);
     return true;

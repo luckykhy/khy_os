@@ -6,11 +6,36 @@ import vue from '@vitejs/plugin-vue'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import path from 'path'
-import { resolveBackendTarget } from './backendDiscovery.mjs'
+import { resolveBackendTarget, resolveWebBackendTarget } from './backendDiscovery.mjs'
 
-// Track the backend's actual (possibly self-healed) port via its runtime file
-// instead of a hardcoded 9090, so "backend healed, frontend follows".
+// Two backends, two jobs:
+//   • AI daemon (services/backend/start-daemon.js → aiManagementServer): serves
+//     only the daemon-native namespaces — workflow canvas, marketplace, plugins,
+//     user-gateway, mesh, gui-eval, wx, /api/daemon.
+//   • Web backend (services/backend/server.js): serves everything else — auth,
+//     api-keys, the user-scoped ai-gateway/payments route, proxy-subscriptions,
+//     commands, config-sync, and the /ws/cross-platform WebSocket.
+// Pointing ALL of /api at one of them is what produced the console errors:
+// against the daemon → api-keys 404 + payments 403 + WS handshake failures;
+// against the web backend → workflow/marketplace 404. So the proxy splits by
+// path: daemon namespaces first, everything else to the web backend.
 const backendTarget = resolveBackendTarget()
+const webBackendTarget = await resolveWebBackendTarget()
+
+// Daemon-only namespaces, in match-priority order (must precede the '/api'
+// catch-all below — Vite applies proxy rules in registration order).
+const DAEMON_ONLY_NAMESPACES = [
+  '/api/workflow',
+  '/api/marketplace',
+  '/api/plugins',
+  '/api/user-gateway',
+  '/api/mesh',
+  '/api/gui-eval',
+  '/api/web-frontend-eval',
+  '/gui-eval-screenshots',
+  '/api/wx',
+  '/api/daemon',
+]
 
 export default defineConfig({
   plugins: [
@@ -70,12 +95,17 @@ export default defineConfig({
     port: parseInt(process.env.AI_FRONTEND_PORT) || 8090,
     host: process.env.AI_FRONTEND_HOST || '127.0.0.1',
     proxy: {
+      // Daemon-native namespaces → AI daemon.
+      ...Object.fromEntries(
+        DAEMON_ONLY_NAMESPACES.map((ns) => [ns, { target: backendTarget, changeOrigin: true }])
+      ),
+      // Everything else → web backend.
       '/api': {
-        target: backendTarget,
+        target: webBackendTarget,
         changeOrigin: true,
       },
       '/ws': {
-        target: backendTarget,
+        target: webBackendTarget,
         ws: true,
       },
     },
